@@ -1,0 +1,7 @@
+[tools]
+node = '25.9.0'
+pnpm = '10.33.0'
+'github:rhysd/actionlint' = '1'
+'github:gitleaks/gitleaks' = '8'
+yamllint = '1.37'
+markdownlint-cli2 = '0.18'

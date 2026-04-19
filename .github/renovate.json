@@ -1,0 +1,76 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    ":semanticCommits",
+    "group:monorepos"
+  ],
+  "labels": ["dependencies"],
+  "schedule": ["before 6am on Monday"],
+  "timezone": "UTC",
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 2,
+  "commitMessagePrefix": "chore(deps):",
+  "packageRules": [
+    {
+      "description": "Automerge patch updates for devDependencies",
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["patch"],
+      "automerge": true,
+      "automergeType": "pr",
+      "automergeStrategy": "squash"
+    },
+    {
+      "description": "Group React ecosystem updates",
+      "matchPackageNames": ["react", "react-dom", "@types/react", "@types/react-dom"],
+      "groupName": "React"
+    },
+    {
+      "description": "Group Expo and React Native packages",
+      "matchPackageNames": ["expo", "expo-*", "react-native", "@react-native/*", "@expo/*"],
+      "groupName": "Expo / React Native"
+    },
+    {
+      "description": "Group NestJS packages",
+      "matchPackageNames": ["@nestjs/*"],
+      "groupName": "NestJS"
+    },
+    {
+      "description": "Group Vitest and testing libraries",
+      "matchPackageNames": [
+        "vitest",
+        "@vitest/*",
+        "@testing-library/*",
+        "jsdom"
+      ],
+      "groupName": "Testing"
+    },
+    {
+      "description": "Group Tailwind CSS packages",
+      "matchPackageNames": ["tailwindcss", "@tailwindcss/*"],
+      "groupName": "Tailwind CSS"
+    },
+    {
+      "description": "Group TypeScript and type packages",
+      "matchPackageNames": ["typescript", "@types/node", "@typescript/*"],
+      "groupName": "TypeScript"
+    },
+    {
+      "description": "Group Turbo and build tooling",
+      "matchPackageNames": ["turbo", "lefthook", "oxlint", "oxfmt"],
+      "groupName": "Build tooling"
+    },
+    {
+      "description": "Group TanStack packages",
+      "matchPackageNames": ["@tanstack/*"],
+      "groupName": "TanStack"
+    },
+    {
+      "description": "Pin major versions for Expo — requires manual Expo SDK upgrade",
+      "matchPackageNames": ["expo"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    }
+  ]
+}

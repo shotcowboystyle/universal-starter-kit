@@ -1,0 +1,35 @@
+# root is relative to git repo root — required because
+# the git root is ~ (home dir) while the project lives in a subdirectory.
+root: "www/shotcowboystyle/universal-starter-kit/"
+
+pre-commit:
+  parallel: true
+  commands:
+    oxfmt:
+      glob: "**/*.{js,jsx,ts,tsx,css,scss}"
+      run: oxfmt --no-error-on-unmatched-pattern --config ./.config/oxfmtrc.json {staged_files}
+      stage_fixed: true
+    oxlint:
+      glob: "**/*.{js,jsx,ts,tsx}"
+      run: npx oxlint --config ./.config/oxlintrc.json --type-aware --fix {staged_files}
+      stage_fixed: true
+    cspell:
+      glob: "**/*.{ts,tsx,js,jsx,md}"
+      run: npx cspell lint --no-progress --no-must-find-files --config ./.config/cspell.json {staged_files}
+    markdownlint:
+      glob: "**/*.md"
+      run: npx markdownlint-cli2 --config ./.config/markdownlint-cli2.jsonc {staged_files}
+    yamllint:
+      glob: "**/*.{yml,yaml}"
+      exclude: "pnpm-lock.yaml"
+      run: npx yamllint -c ./.config/yamllint.yml {staged_files}
+    gitleaks:
+      run: gitleaks protect --staged --verbose --config ./.config/gitleaks.toml
+      skip:
+        - merge
+        - rebase
+
+commit-msg:
+  commands:
+    commitlint:
+      run: npx commitlint --config ./.config/commitlint.config.mjs --edit {1}

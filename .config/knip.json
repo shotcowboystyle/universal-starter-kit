@@ -1,0 +1,47 @@
+{
+  "$schema": "https://unpkg.com/knip@latest/schema.json",
+  "workspaces": {
+    ".": {
+      "entry": ["turbo.json"]
+    },
+    "apps/api": {
+      "project": ["src/**/*.ts", "database/**/*.ts"],
+      "ignoreDependencies": [
+        "@nestjs/schematics",
+        "@nestjs/cli"
+      ]
+    },
+    "apps/web": {
+      "entry": [
+        "src/app/**/page.tsx",
+        "src/app/**/layout.tsx",
+        "src/app/**/loading.tsx",
+        "src/app/**/error.tsx",
+        "src/app/**/not-found.tsx"
+      ],
+      "project": ["src/**/*.{ts,tsx}"]
+    },
+    "apps/mobile": {
+      "entry": ["app/**/*.tsx"],
+      "project": ["**/*.{ts,tsx}"],
+      "ignoreDependencies": [
+        "@tamagui/metro-plugin",
+        "expo-splash-screen"
+      ]
+    },
+    "packages/store": {
+      "project": ["src/**/*.ts"]
+    },
+    "packages/i18n": {
+      "project": ["src/**/*.ts"]
+    },
+    "packages/ui": {
+      "entry": ["src/**/index.ts"],
+      "project": ["src/**/*.{ts,tsx}"]
+    },
+    "packages/global-tsconfig": {
+      "entry": [],
+      "project": []
+    }
+  }
+}
