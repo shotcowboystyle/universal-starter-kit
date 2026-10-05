@@ -1,7 +1,21 @@
+# Toolchain for this repo, local and CI. https://mise.jdx.dev
+#
+# First-time setup:
+#   curl https://mise.run | sh                        # install mise
+#   echo 'eval "$(mise activate zsh)"' >> ~/.zshrc     # or bash/fish
+#   mise trust && mise run setup
+#
+# Versions are exact so local and CI (jdx/mise-action) resolve the same binaries.
+# Bump here; CI follows. Keep `pnpm` in sync with package.json#packageManager.
 [tools]
-node = '25.9.0'
-pnpm = '10.33.0'
-'github:rhysd/actionlint' = '1'
-'github:gitleaks/gitleaks' = '8'
-yamllint = '1.37'
-markdownlint-cli2 = '0.18'
+node = '26.9.0'
+pnpm = '12.5.1'
+# Binaries for lefthook and the CI hygiene/secrets jobs. JS tools (turbo, oxfmt,
+# oxlint, fallow) are devDependencies, run through `pnpm <tool>`.
+actionlint = '1.7.12'
+shellcheck = '0.11.0' # actionlint shells out to it
+yamllint = '1.38.0'
+betterleaks = '1.8.1'
+markdownlint-cli2 = '0.22.1'
+python = '3.14'
+uv = '0.12.9'

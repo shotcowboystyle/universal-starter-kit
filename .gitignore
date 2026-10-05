@@ -29,6 +29,8 @@ apps/web/next-env.d.ts
 # General Build Artifacts
 **/build/
 **/dist/
+packages/*/lib/
+packages/*/types/
 
 # Storybook
 **/storybook-static/

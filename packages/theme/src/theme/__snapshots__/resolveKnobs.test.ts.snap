@@ -1,0 +1,197 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`resolveKnobs > matches snapshot for defaultKnobs 1`] = `
+{
+  "control": {
+    "focusKnobProps": undefined,
+    "focusVisibleKnobProps": {
+      "outlineColor": "$outlineColor",
+      "outlineOffset": 0,
+      "outlineStyle": "solid",
+      "outlineWidth": 2,
+    },
+    "hoverKnobProps": {
+      "backgroundColor": "$backgroundHover",
+    },
+    "pressKnobProps": {
+      "backgroundColor": "$backgroundPress",
+    },
+  },
+  "disabledState": {
+    "assemblyKnobProps": {},
+    "chromeKnobProps": {
+      "cursor": "not-allowed",
+      "opacity": 0.5,
+    },
+    "selectedSurfaceKnobProps": {
+      "backgroundColor": "$color5",
+      "borderColor": "$color8",
+      "cursor": "not-allowed",
+    },
+    "style": "keepLabel",
+    "surfaceKnobProps": {
+      "backgroundColor": "$color3",
+      "borderColor": "$color6",
+      "cursor": "not-allowed",
+    },
+    "textKnobProps": {
+      "color": "$color11",
+    },
+  },
+  "elevation": {
+    "focusKnobProps": undefined,
+    "focusVisibleKnobProps": undefined,
+    "hoverKnobProps": undefined,
+    "pressKnobProps": undefined,
+  },
+  "knobProps": {
+    "body": {
+      "fontFamily": "$body",
+      "fontWeight": "400",
+    },
+    "borderRadius": {
+      "borderColor": "$borderColor",
+      "borderRadius": "$4",
+      "borderWidth": 1,
+    },
+    "borderRadiusNested": {
+      "borderRadius": "$3",
+    },
+    "borderRadiusOuter": {
+      "borderRadius": "$3",
+    },
+    "bulkBarPlacement": "top",
+    "cardSurface": {
+      "backgroundColor": "$background",
+      "borderRadius": "$4",
+      "padding": "$4",
+    },
+    "containerRadius": {
+      "borderRadius": "$4",
+    },
+    "control": {
+      "gap": 9,
+      "height": 44,
+      "paddingHorizontal": 18,
+    },
+    "controlBorderFilled": {
+      "borderColor": "transparent",
+      "borderWidth": 1,
+    },
+    "controlBorderOutlined": {
+      "borderColor": "$borderColor",
+      "borderWidth": 1,
+    },
+    "controlIcon": {
+      "height": 16,
+      "width": 16,
+    },
+    "controlType": {
+      "fontSize": 14,
+    },
+    "density": "comfortable",
+    "disabledStyle": "keepLabel",
+    "elevatedSurface": {
+      "backgroundColor": "$background",
+      "borderColor": "$borderColor",
+      "borderRadius": "$4",
+      "borderWidth": 1,
+      "elevation": "$2",
+      "shadowColor": "#000",
+      "shadowOffset": {
+        "height": 3,
+        "width": 0,
+      },
+      "shadowOpacity": 0.15,
+      "shadowRadius": 6,
+      "style": {
+        "boxShadow": "0 3px 6px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.10)",
+      },
+    },
+    "elevation": undefined,
+    "elevationChrome": {},
+    "featureSurface": {
+      "backgroundColor": "$background",
+      "borderRadius": "$10",
+      "padding": "$6",
+      "shadowColor": "rgba(0,0,0,0.02)",
+      "shadowOffset": {
+        "height": 9,
+        "width": 0,
+      },
+      "shadowOpacity": 1,
+      "shadowRadius": 12,
+    },
+    "fieldLabelPlacement": "top",
+    "formAutofocus": "off",
+    "gap": {
+      "gap": "$4",
+    },
+    "gapLg": {
+      "gap": "$5",
+    },
+    "heading": {
+      "fontFamily": "$heading",
+      "fontWeight": "400",
+    },
+    "inputBackground": "$background",
+    "inputSurface": {
+      "borderWidth": 1,
+    },
+    "label": {
+      "fontFamily": "$body",
+      "fontSize": "$3",
+      "fontWeight": "400",
+    },
+    "nestedControl": {
+      "height": 32,
+      "hitSlop": {
+        "bottom": 6,
+        "left": 6,
+        "right": 6,
+        "top": 6,
+      },
+      "maxHeight": 32,
+      "maxWidth": 32,
+      "minHeight": 32,
+      "minWidth": 32,
+      "px": 32,
+      "width": 32,
+    },
+    "outlined": false,
+    "overlayElevation": "$2",
+    "pageTitle": {
+      "size": "$8",
+    },
+    "panelPadding": {
+      "padding": "$4",
+    },
+    "pointy": false,
+    "requiredMarking": "minority",
+    "scheme": "light",
+    "selectAllScope": "page",
+    "size": "medium",
+    "sizeToken": "$4",
+    "space": "medium",
+    "surface": {
+      "backgroundColor": "$background",
+      "borderColor": "$borderColor",
+      "borderWidth": 1,
+    },
+    "tableZebra": "off",
+    "textAccent": "high",
+    "textAccentColor": "$color",
+    "textWeight": {
+      "fontWeight": "400",
+    },
+    "timestampStyle": "absolute",
+    "transition": "quick",
+  },
+  "text": {
+    "focusKnobProps": undefined,
+    "focusVisibleKnobProps": undefined,
+    "hoverKnobProps": undefined,
+    "pressKnobProps": undefined,
+  },
+}
+`;

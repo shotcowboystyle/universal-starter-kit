@@ -38,10 +38,6 @@
     "packages/ui": {
       "entry": ["src/**/index.ts"],
       "project": ["src/**/*.{ts,tsx}"]
-    },
-    "packages/global-tsconfig": {
-      "entry": [],
-      "project": []
     }
   }
 }

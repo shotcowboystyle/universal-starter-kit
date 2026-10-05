@@ -17,16 +17,21 @@ set -euo pipefail
 INPUT=$(cat)
 NAME=$(echo "$INPUT" | jq -r '.name')
 REPO_PATH="$CLAUDE_PROJECT_DIR"
-WORKTREE_PATH="${REPO_PATH}/.worktrees/${NAME}"
+# Absolute, and one directory per worktree: the contract is an absolute path on
+# stdout, and a shared path would collide on the second `create`.
+WORKTREE_PATH="${REPO_PATH}/.claude/worktrees/${NAME}"
 BRANCH="worktree-${NAME}"
 
-# Progress goes to /dev/tty — stdout is reserved for Claude
-TTY=/dev/tty
+# Progress goes to /dev/tty — stdout is reserved for Claude.
+# Resolve the target once: `> /dev/tty` with no controlling terminal fails at
+# redirection time, and bash prints that error before any `2>/dev/null` applies.
+if [ -w /dev/tty ]; then TTY=/dev/tty; else TTY=/dev/null; fi
 log() { echo "$*" > "$TTY" 2>/dev/null || true; }
 
+# cksum is POSIX; md5sum is GNU-only and absent on a stock macOS.
 hash_port() {
   local hash
-  hash=$(echo -n "$1" | md5sum | tr -d -c '0-9' | head -c 5)
+  hash=$(echo -n "$1" | cksum | cut -d' ' -f1)
   echo $(( (hash % 6900) + 3100 ))
 }
 DEV_PORT=$(hash_port "$BRANCH")
@@ -35,7 +40,7 @@ log "Creating worktree (branch: $BRANCH, port: $DEV_PORT)..."
 
 # --- Create the git worktree ---
 # IMPORTANT: redirect git output away from stdout — Claude parses stdout for the path
-mkdir -p "${REPO_PATH}/.worktrees"
+mkdir -p "${REPO_PATH}/.claude/worktrees"
 if git rev-parse --verify "$BRANCH" >/dev/null 2>&1; then
   git worktree add "$WORKTREE_PATH" "$BRANCH" >/dev/null 2>&1
 else
@@ -59,21 +64,18 @@ for d in "${COPY_DIRS[@]}"; do
   fi
 done
 
-# --- Generate .env.local with a deterministic port ---
-cat > "${WORKTREE_PATH}/.env.local" << EOF
-DEV_PORT=${DEV_PORT}
-EOF
+# --- Append a deterministic dev port ---
+# Append, never truncate: .env.local may have just been copied from the main repo.
+printf '\nDEV_PORT=%s\n' "${DEV_PORT}" >> "${WORKTREE_PATH}/.env.local"
 
 # --- Install dependencies ---
 # Customize for your stack. Verbose output goes to a log file.
 LOGFILE="${WORKTREE_PATH}/.worktree-setup.log"
 SETUP_ERRORS=()
 
-# Uncomment and customize:
-# log "  Installing Node dependencies..."
-# (cd "${WORKTREE_PATH}" && npm install) >> "$LOGFILE" 2>&1 || SETUP_ERRORS+=("'npm install' failed")
-# log "  Installing Python dependencies..."
-# (cd "${WORKTREE_PATH}" && pip install -e '.[dev]') >> "$LOGFILE" 2>&1 || SETUP_ERRORS+=("'pip install' failed")
+log "  Installing dependencies (pnpm install)..."
+(cd "${WORKTREE_PATH}" && pnpm install) >> "$LOGFILE" 2>&1 \
+  || SETUP_ERRORS+=("'pnpm install' failed")
 
 # --- Done ---
 if [ ${#SETUP_ERRORS[@]} -gt 0 ]; then

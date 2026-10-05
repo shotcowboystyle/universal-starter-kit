@@ -1,0 +1,79 @@
+{
+  "name": "@repo/storybook",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Cross-platform Storybook addon-actions for universal starter kit",
+  "license": "Apache-2.0",
+  "sideEffects": false,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "types": "./src/index.ts",
+      "react-native": "./src/index.native.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsgo --noEmit",
+    "format": "cd ../.. && oxfmt --no-error-on-unmatched-pattern --config .config/oxfmtrc.json packages/storybook",
+    "lint": "npx oxlint --config ../../.config/oxlintrc.json --fix",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@storybook/addon-ondevice-actions": "catalog:",
+    "react-cookie": "catalog:"
+  },
+  "devDependencies": {
+    "@repo/config": "workspace:*",
+    "@repo/test-utils": "workspace:*",
+    "@repo/theme": "workspace:*",
+    "@testing-library/jest-dom": "catalog:",
+    "@testing-library/react": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "@vxrn/color-scheme": "catalog:",
+    "happy-dom": "catalog:",
+    "react": "catalog:",
+    "storybook": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "@multiplatform.one/frappe": "*",
+    "@repo/platform": "workspace:*",
+    "@repo/theme": "workspace:*",
+    "@storybook-community/storybook-dark-mode": "^7.1.1",
+    "@tamagui/web": "^2.0.0-rc",
+    "react": "^19.1.0",
+    "storybook": "^10.0.0",
+    "tamagui": "^2.0.0-rc"
+  },
+  "peerDependenciesMeta": {
+    "@multiplatform.one/frappe": {
+      "optional": true
+    },
+    "@repo/platform": {
+      "optional": true
+    },
+    "@repo/theme": {
+      "optional": true
+    },
+    "@storybook-community/storybook-dark-mode": {
+      "optional": true
+    },
+    "@tamagui/web": {
+      "optional": true
+    },
+    "storybook": {
+      "optional": true
+    },
+    "tamagui": {
+      "optional": true
+    }
+  },
+  "module:jsx": "dist/jsx"
+}

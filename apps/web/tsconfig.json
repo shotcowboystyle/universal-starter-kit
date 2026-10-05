@@ -1,5 +1,5 @@
 {
-  "extends": "../../packages/global-tsconfig/base-tsconfig.json",
+  "extends": "@repo/config/tsconfig/app.json",
   "compilerOptions": {
     "target": "esnext",
     "lib": ["dom", "dom.iterable", "esnext"],
@@ -14,13 +14,13 @@
     "types": ["node", "@testing-library/jest-dom", "vitest/globals"],
     "paths": {
       "@/*": ["./src/*"],
-      "@repo/*": ["../../packages/*/src"]
+      "@repo/*": ["../../packages/*/src"],
     },
     "plugins": [
       {
-        "name": "next"
-      }
-    ]
+        "name": "next",
+      },
+    ],
   },
   "include": [
     "next-env.d.ts",
@@ -29,6 +29,6 @@
     "types.d.ts",
     ".next/types/**/*.ts",
     "vitest.setup.ts",
-    "vitest.config.ts"
-  ]
+    "vitest.config.ts",
+  ],
 }

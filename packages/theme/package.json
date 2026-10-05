@@ -1,0 +1,81 @@
+{
+  "name": "@repo/theme",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Tamagui theme system",
+  "license": "Apache-2.0",
+  "sideEffects": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    "./src/*": "./src/*",
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./audit": {
+      "types": "./src/audit/index.ts",
+      "default": "./src/audit/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsgo --noEmit",
+    "format": "cd ../.. && oxfmt --no-error-on-unmatched-pattern --config .config/oxfmtrc.json packages/theme",
+    "lint": "npx oxlint --config ../../.config/oxlintrc.json --fix",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@repo/platform": "workspace:*",
+    "@repo/store": "workspace:*",
+    "@tamagui/animations-react-native": "catalog:",
+    "@tamagui/colors": "catalog:",
+    "@tamagui/config": "catalog:",
+    "@tamagui/get-token": "catalog:",
+    "@tamagui/shorthands": "catalog:",
+    "@tamagui/theme-builder": "catalog:",
+    "@tamagui/themes": "catalog:",
+    "@tamagui/toast": "catalog:",
+    "@tamagui/web": "catalog:",
+    "react-cookie": "catalog:"
+  },
+  "devDependencies": {
+    "@repo/config": "workspace:*",
+    "@repo/test-utils": "workspace:*",
+    "@tamagui/animations-css": "catalog:",
+    "@tamagui/animations-reanimated": "catalog:",
+    "@tamagui/font-inter": "catalog:",
+    "@testing-library/react": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "happy-dom": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "tamagui": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "@tamagui/animations-css": "^2.0.0-rc",
+    "@tamagui/animations-reanimated": "^2.0.0-rc",
+    "@tamagui/font-inter": "^2.0.0-rc",
+    "react": "^19.1.0",
+    "react-native": ">=0.83.0",
+    "tamagui": "^2.0.0-rc"
+  },
+  "peerDependenciesMeta": {
+    "@tamagui/animations-css": {
+      "optional": true
+    },
+    "@tamagui/animations-reanimated": {
+      "optional": true
+    },
+    "@tamagui/font-inter": {
+      "optional": true
+    },
+    "react-native": {
+      "optional": true
+    }
+  }
+}

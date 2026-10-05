@@ -1,0 +1,133 @@
+{
+  "$name": "darkmode",
+  "$description": "Dark surfaces, cyan glow accents, tech/professional aesthetic",
+
+  "color": {
+    "$type": "color",
+    "primary": {
+      "$value": "#00FFD1",
+      "$description": "Cyan - main accent with glow"
+    },
+    "secondary": {
+      "$value": "#00FF87",
+      "$description": "Green - charge indicator"
+    },
+    "accent": { "$value": "#06B6D4", "$description": "Darker cyan for fills" },
+    "background": {
+      "$value": "#0F1419",
+      "$description": "Deepest dark - page bg"
+    },
+    "surface": { "$value": "#1A1F26", "$description": "Card backgrounds" },
+    "surfaceHover": { "$value": "#252B33", "$description": "Card hover" },
+    "surfaceElevated": {
+      "$value": "#2A3038",
+      "$description": "Elevated cards"
+    },
+    "border": { "$value": "#2D3748", "$description": "Subtle dark border" },
+    "borderAccent": {
+      "$value": "#00FFD1",
+      "$description": "Accent borders with glow"
+    },
+    "text": {
+      "$value": "#E2E8F0",
+      "$description": "Primary text - high contrast"
+    },
+    "textMuted": { "$value": "#94A3B8", "$description": "Secondary text" },
+    "textAccent": { "$value": "#00FFD1", "$description": "Accent text" },
+    "error": {
+      "$value": "#FF6B6B",
+      "$description": "Coral red - visible on dark"
+    },
+    "glowColor": {
+      "$value": "rgba(0, 255, 209, 0.4)",
+      "$description": "Glow effect color"
+    }
+  },
+
+  "borderWidth": {
+    "$type": "dimension",
+    "default": { "$value": "0px", "$description": "No borders on cards" },
+    "accent": { "$value": "2px", "$description": "Accent element borders" },
+    "input": { "$value": "2px", "$description": "Input borders" }
+  },
+
+  "borderRadius": {
+    "$type": "dimension",
+    "sm": { "$value": "8px" },
+    "default": { "$value": "12px" },
+    "lg": { "$value": "16px" },
+    "full": { "$value": "9999px" }
+  },
+
+  "shadow": {
+    "$type": "shadow",
+    "$description": "Subtle shadows + glow effects on accent elements",
+
+    "default": {
+      "$value": {
+        "offsetX": "0px",
+        "offsetY": "4px",
+        "blur": "12px",
+        "spread": "0px",
+        "color": "rgba(0, 0, 0, 0.3)"
+      }
+    },
+    "glow": {
+      "$value": {
+        "offsetX": "0px",
+        "offsetY": "0px",
+        "blur": "20px",
+        "spread": "0px",
+        "color": "rgba(0, 255, 209, 0.4)"
+      },
+      "$description": "Cyan glow for accent elements"
+    },
+    "glowStrong": {
+      "$value": {
+        "offsetX": "0px",
+        "offsetY": "0px",
+        "blur": "30px",
+        "spread": "4px",
+        "color": "rgba(0, 255, 209, 0.5)"
+      },
+      "$description": "Stronger glow for active/focus states"
+    },
+    "glowGreen": {
+      "$value": {
+        "offsetX": "0px",
+        "offsetY": "0px",
+        "blur": "16px",
+        "spread": "0px",
+        "color": "rgba(0, 255, 135, 0.3)"
+      },
+      "$description": "Green glow for charge indicators"
+    }
+  },
+
+  "fontFamily": {
+    "$type": "fontFamily",
+    "primary": { "$value": "Exo2" },
+    "mono": {
+      "$value": "JetBrains Mono, monospace",
+      "$description": "For data values"
+    }
+  },
+
+  "gradient": {
+    "$description": "Area chart fills",
+    "chartFill": {
+      "$value": "linear-gradient(180deg, rgba(0, 255, 209, 0.3) 0%, rgba(0, 255, 209, 0) 100%)"
+    }
+  },
+
+  "special": {
+    "$description": "Implementation notes for Claude Code",
+    "glowShadow": {
+      "$value": "0 0 20px rgba(0, 255, 209, 0.4)",
+      "$description": "CSS box-shadow for glow effect"
+    },
+    "borderGlow": {
+      "$value": "Apply glow shadow + accent border together for full effect"
+    }
+  }
+}

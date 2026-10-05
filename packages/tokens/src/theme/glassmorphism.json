@@ -1,0 +1,124 @@
+{
+  "$name": "glassmorphism",
+  "$description": "Translucent cards, gradient borders, backdrop blur, ethereal feel",
+
+  "color": {
+    "$type": "color",
+    "primary": {
+      "$value": "#00D4AA",
+      "$description": "Cyan/teal - battery fill, accents"
+    },
+    "secondary": {
+      "$value": "#E879F9",
+      "$description": "Pink/magenta - Power value"
+    },
+    "accent": {
+      "$value": "#818CF8",
+      "$description": "Purple - borders, labels"
+    },
+    "background": { "$value": "#FFFFFF", "$description": "Page background" },
+    "surface": {
+      "$value": "rgba(255, 255, 255, 0.6)",
+      "$description": "Frosted card - semi-transparent"
+    },
+    "surfaceHover": {
+      "$value": "rgba(255, 255, 255, 0.75)",
+      "$description": "Card hover state"
+    },
+    "border": {
+      "$value": "rgba(100, 100, 120, 0.6)",
+      "$description": "Visible gray border"
+    },
+    "text": { "$value": "#6B7280", "$description": "Muted gray text" },
+    "textMuted": { "$value": "#9CA3AF", "$description": "Even lighter text" },
+    "error": {
+      "$value": "#F472B6",
+      "$description": "Pink - matches gradient palette"
+    },
+    "gradientStart": {
+      "$value": "#A855F7",
+      "$description": "Purple - border gradient start"
+    },
+    "gradientMid": {
+      "$value": "#06B6D4",
+      "$description": "Cyan - border gradient middle"
+    },
+    "gradientEnd": {
+      "$value": "#EC4899",
+      "$description": "Pink - border gradient end"
+    }
+  },
+
+  "borderWidth": {
+    "$type": "dimension",
+    "default": { "$value": "0px", "$description": "No borders on cards" },
+    "emphasis": {
+      "$value": "2px",
+      "$description": "Slightly thicker for focus"
+    },
+    "input": { "$value": "2px", "$description": "Input borders" }
+  },
+
+  "borderRadius": {
+    "$type": "dimension",
+    "sm": { "$value": "12px" },
+    "default": { "$value": "16px", "$description": "Soft rounded corners" },
+    "lg": { "$value": "24px" }
+  },
+
+  "shadow": {
+    "$type": "shadow",
+    "$description": "Soft glow shadows for glass effect",
+    "default": {
+      "$value": {
+        "offsetX": "0px",
+        "offsetY": "8px",
+        "blur": "32px",
+        "spread": "0px",
+        "color": "rgba(0, 0, 0, 0.15)"
+      }
+    },
+    "none": {
+      "$value": {
+        "offsetX": "0px",
+        "offsetY": "0px",
+        "blur": "0px",
+        "spread": "0px",
+        "color": "transparent"
+      }
+    }
+  },
+
+  "blur": {
+    "$type": "dimension",
+    "$description": "backdrop-filter blur values",
+    "default": { "$value": "12px" },
+    "strong": { "$value": "20px" }
+  },
+
+  "fontFamily": {
+    "$type": "fontFamily",
+    "primary": { "$value": "Inter, system-ui, sans-serif" }
+  },
+
+  "gradient": {
+    "$description": "Border gradients - apply via CSS/styled component",
+    "border": {
+      "$value": "linear-gradient(135deg, #A855F7, #06B6D4, #EC4899)"
+    },
+    "borderSubtle": {
+      "$value": "linear-gradient(135deg, rgba(168,85,247,0.5), rgba(6,182,212,0.5), rgba(236,72,153,0.5))"
+    }
+  },
+
+  "special": {
+    "$description": "Implementation notes for Claude Code",
+    "backdropFilter": {
+      "$value": "blur(12px)",
+      "$description": "Apply to card surfaces"
+    },
+    "borderGradient": {
+      "$value": "Use border-image or pseudo-element for gradient borders"
+    }
+  }
+}

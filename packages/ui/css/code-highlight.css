@@ -1,0 +1,43 @@
+/**
+ * Code highlighting structural styles.
+ *
+ * NOTE: Token colors are now handled inline by shiki.
+ * This file only contains structural/layout styles for code blocks.
+ * It is kept for backward compatibility but is no longer required
+ * when using the default HighlightedCode component.
+ */
+
+/* Line highlighting hover */
+.highlight-line:hover {
+  background-color: var(--backgroundHover);
+}
+
+/* Line structure */
+.highlight-line {
+  white-space: pre;
+  word-wrap: initial;
+}
+
+/* Diff styles */
+.token.deleted:not(.prefix),
+.token.inserted:not(.prefix) {
+  display: block;
+  padding-left: 20px;
+  padding-right: 20px;
+  margin-left: -20px;
+  margin-right: -20px;
+}
+
+.token.deleted:not(.prefix) {
+  color: var(--red9);
+}
+
+.token.inserted:not(.prefix) {
+  color: var(--green9);
+}
+
+.token.deleted.prefix,
+.token.inserted.prefix {
+  user-select: none;
+  -webkit-user-select: none;
+}

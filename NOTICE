@@ -1,0 +1,24 @@
+universal-starter-kit
+
+The following packages contain code derived from multiplatform.one
+(https://multiplatform.one), Copyright BitSpur, licensed under the
+Apache License, Version 2.0:
+
+  packages/config
+  packages/forms
+  packages/i18n
+  packages/platform
+  packages/router
+  packages/store
+  packages/storybook
+  packages/table-primitives
+  packages/test-utils
+  packages/theme
+  packages/ui
+  packages/utils
+
+These files have been modified from the originals: packages were renamed
+from @multiplatform.one/* to @repo/*, build and test configuration was
+adapted to this monorepo, upstream-specific references were removed, and
+repository-specific code was merged in. A copy of the Apache License 2.0
+is included in each of the packages listed above.

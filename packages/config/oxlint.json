@@ -1,0 +1,22 @@
+{
+  "jsPlugins": ["@repo/config/oxlint"],
+  "rules": {
+    "mpo-conventions/no-hex-literals": "error",
+    "mpo-conventions/no-raw-typography": "error",
+    "mpo-conventions/no-chrome-props": "warn",
+    "mpo-conventions/no-raw-geometry": "warn",
+    "mpo-conventions/no-child-margin": "warn",
+    "mpo-conventions/no-parameter-properties": "error"
+  },
+  "overrides": [
+    {
+      "files": ["**/*.spec.{ts,tsx,js,jsx}", "**/*.test.{ts,tsx,js,jsx}", "**/tests/**"],
+      "rules": {
+        "mpo-conventions/no-hex-literals": "off",
+        "mpo-conventions/no-chrome-props": "off",
+        "mpo-conventions/no-raw-geometry": "off",
+        "mpo-conventions/no-child-margin": "off"
+      }
+    }
+  ]
+}

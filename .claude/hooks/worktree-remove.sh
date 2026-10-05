@@ -15,7 +15,9 @@ WORKTREE_PATH=$(echo "$INPUT" | jq -r '.worktree_path')
 
 # Kill any process running on the worktree's dev port
 if [ -f "${WORKTREE_PATH}/.env.local" ]; then
-  DEV_PORT=$(grep -oP 'DEV_PORT=\K\d+' "${WORKTREE_PATH}/.env.local" 2>/dev/null || true)
+  # sed, not `grep -oP`: -P is a GNU extension and BSD grep on macOS has no such flag,
+  # so the port lookup silently returned nothing and the process was never killed.
+  DEV_PORT=$(sed -n 's/^DEV_PORT=\([0-9][0-9]*\).*/\1/p' "${WORKTREE_PATH}/.env.local" 2>/dev/null | tail -1 || true)
   if [ -n "$DEV_PORT" ]; then
     lsof -ti :"$DEV_PORT" | xargs kill 2>/dev/null || true
   fi

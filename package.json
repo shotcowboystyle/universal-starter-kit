@@ -1,5 +1,5 @@
 {
-  "name": "turborepo-starter-kit",
+  "name": "universal-starter-kit",
   "version": "1.0.0",
   "private": true,
   "author": {
@@ -8,6 +8,7 @@
   },
   "scripts": {
     "build": "turbo run build",
+    "clean": "find . -name 'node_modules' -type d -prune -exec rm -rf {} + ; find . \\( -name 'dist' -o -name 'build' -o -name '.next' -o -name '.expo' -o -name '.turbo' -o -name 'out' -o -name 'storybook-static' -o -name '.cache' \\) -type d -not -path '*/node_modules/*' -prune -exec rm -rf {} +",
     "commit": "git-cz",
     "dev": "turbo run dev",
     "format": "turbo run format",
@@ -24,10 +25,11 @@
     "playwright:install": "pnpm --filter=./apps/web exec playwright install --with-deps",
     "knip": "knip --config .config/knip.json",
     "lint:actions": "actionlint",
-    "lint:md": "markdownlint-cli2 --config .config/markdownlint-cli2.jsonc \"**/*.md\"",
+    "lint:md": "markdownlint-cli2 --config .config/.markdownlint-cli2.jsonc \"**/*.md\"",
     "lint:yaml": "yamllint -c .config/yamllint.yml \"**/*.{yml,yaml}\" --ignore node_modules --ignore pnpm-lock.yaml --ignore dist",
-    "prepare": "if [ \"$NODE_ENV\" != \"production\" ]; then GIT_ROOT=$(git rev-parse --show-toplevel) && ln -sf \"$(pwd)/lefthook.yml\" \"$GIT_ROOT/lefthook.yml\" && lefthook install; fi",
-    "secrets": "gitleaks detect --source . --verbose --config .config/gitleaks.toml",
+    "postprepare": "if [ \"$NODE_ENV\" != \"production\" ]; then lefthook install; fi",
+    "preinstall": "node -e \"if(process.env.CI == 'true') {console.log('Skipping preinstall...')} else {process.exit(1)}\" || npx -y only-allow pnpm",
+    "secrets": "betterleaks git . --verbose --config .config/gitleaks.toml",
     "spellcheck": "cspell lint --no-progress --config .config/cspell.json \"**/*.{ts,tsx,js,jsx,md,json}\"",
     "storybook": "turbo run storybook --filter=@repo/ui",
     "storybook:build": "turbo run storybook:build --filter=@repo/ui",
@@ -36,9 +38,9 @@
     "test:watch": "turbo run test:watch"
   },
   "devDependencies": {
-    "@commitlint/cli": "^20.5.0",
-    "@commitlint/config-conventional": "^20.5.0",
-    "@commitlint/cz-commitlint": "^20.5.1",
+    "@commitlint/cli": "^21.0.1",
+    "@commitlint/config-conventional": "^21.0.1",
+    "@commitlint/cz-commitlint": "^21.0.1",
     "@testing-library/jest-dom": "catalog:",
     "@testing-library/react": "catalog:",
     "@types/node": "catalog:",
@@ -53,11 +55,11 @@
     "knip": "^5.0.0",
     "lefthook": "^1.11.0",
     "markdownlint-cli2": "^0.17.0",
-    "oxfmt": "^0.45.0",
-    "oxlint": "^1.60.0",
-    "oxlint-tsgolint": "^0.21.1",
-    "start-server-and-test": "^3.0.2",
-    "turbo": "^2.9.6",
+    "oxfmt": "^0.50.0",
+    "oxlint": "^1.65.0",
+    "oxlint-tsgolint": "^0.22.1",
+    "start-server-and-test": "^3.0.5",
+    "turbo": "^2.9.14",
     "vitest": "catalog:",
     "yaml-lint": "^1.7.0"
   },
@@ -67,23 +69,8 @@
     }
   },
   "engines": {
-    "node": ">=24.15.0"
+    "node": ">=26.9.0",
+    "pnpm": ">=12.5.1"
   },
-  "packageManager": "pnpm@10.33.0",
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@nestjs/core",
-      "@parcel/watcher",
-      "@scarf/scarf",
-      "@swc/core",
-      "@tailwindcss/oxide",
-      "esbuild",
-      "lefthook",
-      "sharp",
-      "unrs-resolver"
-    ],
-    "overrides": {
-      "lightningcss": "1.30.1"
-    }
-  }
+  "packageManager": "pnpm@12.5.1"
 }

@@ -1,17 +1,10 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalEnv": [
-    "NODE_ENV",
-    "ENABLE_EXPERIMENTAL_COREPACK"
-  ],
-  "globalDependencies": [
-    "packages/global-tsconfig/*"
-  ],
+  "globalEnv": ["NODE_ENV", "ENABLE_EXPERIMENTAL_COREPACK"],
+  "globalDependencies": ["packages/config/*"],
   "tasks": {
     "build": {
-      "dependsOn": [
-        "^build"
-      ],
+      "dependsOn": ["^build"],
       "outputs": [
         "dist/**",
         ".next/**",
@@ -22,27 +15,16 @@
     "storybook": {
       "cache": false,
       "persistent": true,
-      "dependsOn": [
-        "^build"
-      ],
-      "inputs": [
-        "src/**/*.{ts,tsx,js,jsx}",
-        ".storybook/**/*"
-      ]
+      "dependsOn": ["^build"],
+      "inputs": ["src/**/*.{ts,tsx,js,jsx}", ".storybook/**/*"]
     },
     "storybook:build": {
-      "dependsOn": [
-        "^build"
-      ],
-      "outputs": [
-        "storybook-static/**"
-      ]
+      "dependsOn": ["^build"],
+      "outputs": ["storybook-static/**"]
     },
     "storybook:test": {
       "cache": false,
-      "dependsOn": [
-        "^build"
-      ]
+      "dependsOn": ["^build"]
     },
     "lint": {
       "inputs": [
@@ -64,24 +46,14 @@
     "dev": {
       "cache": false,
       "persistent": true,
-      "dependsOn": [
-        "^build"
-      ]
+      "dependsOn": ["^build"]
     },
     "test": {
-      "inputs": [
-        "src/**/*.{ts,tsx,js,jsx}",
-        "__tests__/**/*.{ts,tsx,js,jsx}"
-      ],
-      "outputs": [
-        "coverage/**"
-      ]
+      "inputs": ["src/**/*.{ts,tsx,js,jsx}", "__tests__/**/*.{ts,tsx,js,jsx}"],
+      "outputs": ["coverage/**"]
     },
     "playwright": {
-      "inputs": [
-        "src/**/*.{ts,tsx,js,jsx}",
-        "__tests__/**/*.{ts,tsx,js,jsx}"
-      ],
+      "inputs": ["src/**/*.{ts,tsx,js,jsx}", "__tests__/**/*.{ts,tsx,js,jsx}"],
       "cache": false
     },
     "test:watch": {
@@ -89,28 +61,17 @@
       "persistent": true
     },
     "spellcheck": {
-      "inputs": [
-        "**/*.{ts,tsx,js,jsx,md,json}",
-        "../../.config/cspell.json"
-      ]
+      "inputs": ["**/*.{ts,tsx,js,jsx,md,json}", "../../.config/cspell.json"]
     },
     "init-db": {
-      "env": [
-        "DATABASE_URL"
-      ],
+      "env": ["DATABASE_URL"],
       "cache": false,
-      "dependsOn": [
-        "^build"
-      ]
+      "dependsOn": ["^build"]
     },
     "init-db:force": {
-      "env": [
-        "DATABASE_URL"
-      ],
+      "env": ["DATABASE_URL"],
       "cache": false,
-      "dependsOn": [
-        "^build"
-      ]
+      "dependsOn": ["^build"]
     }
   }
 }

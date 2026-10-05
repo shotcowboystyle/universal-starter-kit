@@ -1,0 +1,149 @@
+{
+  "$name": "liquidglass",
+  "$description": "Soft gradients, frosted surfaces, subtle iridescence, elegant and refined",
+
+  "color": {
+    "$type": "color",
+    "primary": { "$value": "#64748B", "$description": "Slate - icons, text" },
+    "secondary": {
+      "$value": "#7DD3FC",
+      "$description": "Light blue - chart lines"
+    },
+    "accent": {
+      "$value": "#A78BFA",
+      "$description": "Purple - subtle accents"
+    },
+    "error": {
+      "$value": "#E879A0",
+      "$description": "Soft pink - elegant error"
+    },
+    "background": { "$value": "#E8ECF4", "$description": "Light grayish base" },
+    "backgroundGradientStart": {
+      "$value": "#DBEAFE",
+      "$description": "Light blue"
+    },
+    "backgroundGradientEnd": {
+      "$value": "#E9D5FF",
+      "$description": "Light purple/lavender"
+    },
+    "surface": {
+      "$value": "rgba(255, 255, 255, 0.85)",
+      "$description": "Frosted white cards"
+    },
+    "surfaceHover": {
+      "$value": "rgba(255, 255, 255, 0.95)",
+      "$description": "Card hover"
+    },
+    "surfaceSolid": {
+      "$value": "#FFFFFF",
+      "$description": "Solid white when needed"
+    },
+    "border": {
+      "$value": "rgba(100, 116, 139, 0.5)",
+      "$description": "Visible slate border"
+    },
+    "borderSubtle": {
+      "$value": "rgba(148, 163, 184, 0.2)",
+      "$description": "Very subtle gray border"
+    },
+    "text": { "$value": "#475569", "$description": "Slate gray text" },
+    "textMuted": { "$value": "#94A3B8", "$description": "Lighter muted text" },
+    "textHeading": { "$value": "#64748B", "$description": "Heading color" },
+    "iridescent1": {
+      "$value": "rgba(167, 139, 250, 0.1)",
+      "$description": "Purple tint"
+    },
+    "iridescent2": {
+      "$value": "rgba(125, 211, 252, 0.1)",
+      "$description": "Blue tint"
+    }
+  },
+
+  "borderWidth": {
+    "$type": "dimension",
+    "default": { "$value": "0px", "$description": "No borders on cards" },
+    "container": { "$value": "1.5px", "$description": "Main container border" },
+    "input": { "$value": "2px", "$description": "Input borders" }
+  },
+
+  "borderRadius": {
+    "$type": "dimension",
+    "sm": { "$value": "12px" },
+    "default": { "$value": "16px" },
+    "lg": { "$value": "24px" },
+    "container": { "$value": "28px", "$description": "Outer container radius" }
+  },
+
+  "shadow": {
+    "$type": "shadow",
+    "$description": "Very soft, diffuse shadows",
+
+    "default": {
+      "$value": {
+        "offsetX": "0px",
+        "offsetY": "4px",
+        "blur": "20px",
+        "spread": "0px",
+        "color": "rgba(148, 163, 184, 0.15)"
+      }
+    },
+    "elevated": {
+      "$value": {
+        "offsetX": "0px",
+        "offsetY": "8px",
+        "blur": "32px",
+        "spread": "0px",
+        "color": "rgba(148, 163, 184, 0.2)"
+      }
+    },
+    "inner": {
+      "$value": {
+        "offsetX": "0px",
+        "offsetY": "2px",
+        "blur": "8px",
+        "spread": "0px",
+        "color": "rgba(148, 163, 184, 0.1)",
+        "inset": true
+      },
+      "$description": "Subtle inner shadow for depth"
+    }
+  },
+
+  "fontFamily": {
+    "$type": "fontFamily",
+    "primary": { "$value": "Inter" }
+  },
+
+  "gradient": {
+    "$description": "Background and accent gradients",
+    "background": {
+      "$value": "linear-gradient(135deg, #DBEAFE 0%, #E9D5FF 100%)"
+    },
+    "iridescent": {
+      "$value": "linear-gradient(135deg, rgba(167,139,250,0.1) 0%, rgba(125,211,252,0.1) 50%, rgba(244,114,182,0.1) 100%)"
+    },
+    "border": {
+      "$value": "linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,255,255,0.6))"
+    }
+  },
+
+  "blur": {
+    "$type": "dimension",
+    "default": { "$value": "8px" },
+    "strong": { "$value": "16px" }
+  },
+
+  "special": {
+    "$description": "Implementation notes for Claude Code",
+    "pageBackground": {
+      "$value": "linear-gradient(135deg, #DBEAFE 0%, #E9D5FF 100%)",
+      "$description": "Apply to body/page container"
+    },
+    "cardEffect": {
+      "$value": "Semi-transparent white + subtle shadow + optional backdrop-filter"
+    },
+    "iridescentBorder": {
+      "$value": "Very subtle - use gradient border or animated hue-shift on hover"
+    }
+  }
+}

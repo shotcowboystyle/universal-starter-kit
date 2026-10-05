@@ -7,24 +7,24 @@ pre-commit:
   commands:
     oxfmt:
       glob: "**/*.{js,jsx,ts,tsx,css,scss}"
-      run: oxfmt --no-error-on-unmatched-pattern --config ./.config/oxfmtrc.json {staged_files}
+      run: npx oxfmt --no-error-on-unmatched-pattern --config ./.config/oxfmtrc.json {staged_files}
       stage_fixed: true
     oxlint:
       glob: "**/*.{js,jsx,ts,tsx}"
-      run: npx oxlint --config ./.config/oxlintrc.json --type-aware --fix {staged_files}
+      run: npx oxlint --config ./.config/oxlintrc.json --fix {staged_files}
       stage_fixed: true
     cspell:
       glob: "**/*.{ts,tsx,js,jsx,md}"
       run: npx cspell lint --no-progress --no-must-find-files --config ./.config/cspell.json {staged_files}
     markdownlint:
       glob: "**/*.md"
-      run: npx markdownlint-cli2 --config ./.config/markdownlint-cli2.jsonc {staged_files}
+      run: npx markdownlint-cli2 --config ./.config/.markdownlint-cli2.jsonc {staged_files}
     yamllint:
       glob: "**/*.{yml,yaml}"
       exclude: "pnpm-lock.yaml"
       run: npx yamllint -c ./.config/yamllint.yml {staged_files}
-    gitleaks:
-      run: gitleaks protect --staged --verbose --config ./.config/gitleaks.toml
+    betterleaks:
+      run: betterleaks git . --staged --verbose --config ./.config/gitleaks.toml
       skip:
         - merge
         - rebase

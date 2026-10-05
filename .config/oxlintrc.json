@@ -83,8 +83,6 @@
   "ignorePatterns": [
     "ai_docs/**/*",
     "node_modules/**/*",
-    "dist/**/*",
-    "../../apps/api/database/mongodb/**/*",
-    "../../apps/api/database/docker-compose.yml"
+    "dist/**/*"
   ]
 }

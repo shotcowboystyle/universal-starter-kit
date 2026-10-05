@@ -1,60 +1,174 @@
 {
   "name": "@repo/ui",
-  "version": "0.0.1",
+  "version": "0.0.0",
   "private": true,
+  "license": "Apache-2.0",
+  "sideEffects": [
+    "**/*.css"
+  ],
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {
+    "./package.json": "./package.json",
+    "./src/*": "./src/*",
     ".": {
       "types": "./src/index.ts",
-      "import": "./src/index.ts"
+      "default": "./src/index.ts"
     },
-    "./components/*": {
-      "types": "./src/components/ui/*.tsx",
-      "import": "./src/components/ui/*.tsx"
-    },
-    "./lib/*": {
-      "types": "./src/lib/*.ts",
-      "import": "./src/lib/*.ts"
-    },
-    "./styles.css": "./src/styles/globals.css",
-    "./package.json": "./package.json"
+    "./css/code-highlight.css": {
+      "import": "./css/code-highlight.css",
+      "require": "./css/code-highlight.css"
+    }
   },
   "scripts": {
     "build": "tsgo --noEmit",
+    "format": "cd ../.. && oxfmt --no-error-on-unmatched-pattern --config .config/oxfmtrc.json packages/ui",
+    "lint": "npx oxlint --config ../../.config/oxlintrc.json --fix",
     "storybook": "storybook dev -p 6006",
     "storybook:build": "storybook build",
-    "storybook:test": "start-server-and-test storybook http://127.0.0.1:6006 \"pnpm exec test-storybook\""
+    "storybook:test": "start-server-and-test storybook http://127.0.0.1:6006 \"pnpm exec test-storybook\"",
+    "test": "vitest run"
   },
   "dependencies": {
-    "@radix-ui/react-icons": "catalog:",
-    "@radix-ui/react-slot": "^1.2.4",
-    "class-variance-authority": "catalog:",
-    "clsx": "^2.1.1",
-    "cmdk": "^1.1.1",
-    "lucide-react": "catalog:",
-    "radix-ui": "latest",
-    "react-day-picker": "^9.14.0",
-    "react-hook-form": "catalog:",
-    "tailwind-merge": "^3.5.0",
-    "tailwindcss": "catalog:"
+    "@floating-ui/react": "catalog:",
+    "@phosphor-icons/react": "catalog:",
+    "@repo/forms": "workspace:*",
+    "@repo/i18n": "workspace:*",
+    "@repo/platform": "workspace:*",
+    "@repo/router": "workspace:*",
+    "@repo/theme": "workspace:*",
+    "@shopify/flash-list": "^2.3.1",
+    "@tamagui/colors": "catalog:",
+    "@tamagui/core": "catalog:",
+    "@tamagui/font-inter": "catalog:",
+    "@tamagui/get-token": "catalog:",
+    "@tamagui/linear-gradient": "catalog:",
+    "@tamagui/logo": "catalog:",
+    "@tamagui/lucide-icons-2": "catalog:",
+    "@tamagui/react-native-media-driver": "catalog:",
+    "@tamagui/react-native-svg": "catalog:",
+    "@tamagui/shorthands": "catalog:",
+    "@tamagui/themes": "catalog:",
+    "@tamagui/toast": "catalog:",
+    "@tanstack/react-form": "catalog:",
+    "@tanstack/react-hotkeys": "^0.5.1",
+    "@tanstack/react-virtual": "^3.13.24",
+    "d3-scale": "^4.0.2",
+    "d3-shape": "^3.2.0",
+    "fast-xml-parser": "^5.7.2",
+    "shiki": "^4.0.2",
+    "tamagui": "catalog:"
   },
   "devDependencies": {
-    "@storybook/addon-a11y": "^10.3.5",
-    "@storybook/addon-docs": "^10.3.5",
-    "@storybook/addon-links": "^10.3.5",
-    "@storybook/addon-themes": "^10.3.5",
-    "@storybook/react": "^10.3.5",
-    "@storybook/react-vite": "^10.3.5",
-    "@storybook/test-runner": "0.24.3",
+    "@repo/config": "workspace:*",
+    "@repo/storybook": "workspace:*",
+    "@repo/test-utils": "workspace:*",
+    "@storybook/react-native": "catalog:",
+    "@storybook/react-native-web-vite": "catalog:",
+    "@storybook/react-vite": "catalog:",
+    "@testing-library/jest-dom": "catalog:",
+    "@testing-library/react": "catalog:",
+    "@types/d3-scale": "^4.0.9",
+    "@types/d3-shape": "^3.1.8",
     "@typescript/native-preview": "catalog:",
-    "global-tsconfig": "workspace:*",
-    "playwright": "1.59.1",
-    "playwright-core": "1.59.1",
-    "storybook": "^10.3.5"
+    "@vitejs/plugin-react": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "expo-video": "~55.0.19",
+    "happy-dom": "catalog:",
+    "matchmedia-polyfill": "catalog:",
+    "moti": "^0.30.0",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "react-i18next": "catalog:",
+    "react-native-reanimated": "catalog:",
+    "react-native-svg": "catalog:",
+    "react-native-web": "catalog:",
+    "storybook": "catalog:",
+    "vitest": "catalog:"
   },
   "peerDependencies": {
-    "react": "catalog:",
-    "react-dom": "catalog:"
-  }
+    "@mdx-js/mdx": "^3.1.1",
+    "@mdx-js/react": "^3.1.1",
+    "@vxrn/color-scheme": "^1.0.0",
+    "expo-asset": "*",
+    "expo-video": "*",
+    "gray-matter": "^4.0.3",
+    "hast-util-to-html": "8.0.4",
+    "moti": "^0.25.3",
+    "parse-numeric-range": "^1.3.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-i18next": ">=14",
+    "react-native": ">=0.83.0",
+    "react-native-reanimated": "^4.2.0",
+    "react-native-safe-area-context": "*",
+    "react-native-svg": "*",
+    "refractor": "^4.9.0",
+    "rehype-autolink-headings": "^6.1.1 || ^7.0.0",
+    "rehype-parse": "~8.0.5",
+    "rehype-slug": "^5.1.0 || ^6.0.0",
+    "remark-frontmatter": "^5.0.0",
+    "remark-mdx-frontmatter": "^4.0.0 || ^5.0.0",
+    "unist-util-visit": "^5.1.0"
+  },
+  "peerDependenciesMeta": {
+    "@mdx-js/mdx": {
+      "optional": true
+    },
+    "@mdx-js/react": {
+      "optional": true
+    },
+    "@vxrn/color-scheme": {
+      "optional": true
+    },
+    "expo-asset": {
+      "optional": true
+    },
+    "expo-video": {
+      "optional": true
+    },
+    "gray-matter": {
+      "optional": true
+    },
+    "hast-util-to-html": {
+      "optional": true
+    },
+    "parse-numeric-range": {
+      "optional": true
+    },
+    "react-i18next": {
+      "optional": true
+    },
+    "react-native": {
+      "optional": true
+    },
+    "react-native-safe-area-context": {
+      "optional": true
+    },
+    "react-native-svg": {
+      "optional": true
+    },
+    "refractor": {
+      "optional": true
+    },
+    "rehype-autolink-headings": {
+      "optional": true
+    },
+    "rehype-parse": {
+      "optional": true
+    },
+    "rehype-slug": {
+      "optional": true
+    },
+    "remark-frontmatter": {
+      "optional": true
+    },
+    "remark-mdx-frontmatter": {
+      "optional": true
+    },
+    "unist-util-visit": {
+      "optional": true
+    }
+  },
+  "module:jsx": "dist/jsx"
 }

@@ -1,5 +1,5 @@
 {
-  "extends": "../../packages/global-tsconfig/base-tsconfig.json",
+  "extends": "@repo/config/tsconfig/app.json",
   "compilerOptions": {
     "declaration": true,
     "removeComments": true,
@@ -15,8 +15,8 @@
     "noFallthroughCasesInSwitch": false,
     "types": ["vitest/globals"],
     "paths": {
-      "@/*": ["./src/*"]
-    }
+      "@/*": ["./src/*"],
+    },
   },
-  "exclude": ["dist", "**/*spec.ts", "database/mongodb/**/*", "__tests__"]
+  "exclude": ["dist", "**/*spec.ts", "database/mongodb/**/*", "__tests__"],
 }

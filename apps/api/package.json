@@ -1,5 +1,5 @@
 {
-  "name": "turborepo-starter-kit-api",
+  "name": "api",
   "version": "1.0.0",
   "private": true,
   "author": {
@@ -9,10 +9,8 @@
   "scripts": {
     "build": "cross-env BUILD=true rspack build",
     "dev": "rspack dev",
-    "format": "cd ../.. && oxfmt --no-error-on-unmatched-pattern --config .config/oxfmtrc.json apps/api",
     "init-db": "tsx database/init-db-data.ts",
     "init-db:force": "tsx database/init-db-data.ts --force",
-    "lint": "npx oxlint --config ../../.config/oxlintrc.json --fix",
     "start": "node dist/main.js",
     "test": "vitest run --coverage",
     "test:watch": "vitest --watch"
@@ -44,6 +42,7 @@
     "@nestjs/cli": "^11.0.19",
     "@nestjs/schematics": "^11.0.10",
     "@nestjs/testing": "^11.1.19",
+    "@repo/config": "workspace:*",
     "@rspack/cli": "2.0.0-rc.2",
     "@rspack/core": "2.0.0-rc.2",
     "@rspack/dev-server": "2.0.0-rc.3",
