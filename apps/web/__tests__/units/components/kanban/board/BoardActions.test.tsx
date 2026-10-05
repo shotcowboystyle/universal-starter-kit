@@ -1,235 +1,193 @@
-import { render, screen } from "@testing-library/react";
-/// <reference types="react" />
-import React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderWithProviders } from '@repo/test-utils';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { toast } from 'sonner';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { BoardActions } from "@/components/kanban/board/BoardActions";
-import type { Board } from "@/types/dbInterface";
+import { BoardActions } from '@/components/kanban/board/BoardActions';
+import { useRouter } from '@/i18n/navigation';
+import { useDeleteBoard, useUpdateBoard } from '@/lib/api/boards/queries';
+import type { Board } from '@/types/dbInterface';
 
-// Ensure React is globally available
-globalThis.React = React;
-
-// Mock dependencies
-vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string) => key
+vi.mock('next-intl', () => ({
+  useTranslations: () => (key: string) => key,
 }));
 
-vi.mock("@/i18n/navigation", () => ({
-  useRouter: vi.fn(() => ({
-    push: vi.fn(),
-    replace: vi.fn(),
-    refresh: vi.fn(),
-    prefetch: vi.fn(),
-    back: vi.fn(),
-    forward: vi.fn()
-  }))
+vi.mock('@/i18n/navigation', () => ({
+  useRouter: vi.fn(),
 }));
 
-vi.mock("sonner", () => ({
+vi.mock('sonner', () => ({
   toast: {
     success: vi.fn(),
-    error: vi.fn()
-  }
+    error: vi.fn(),
+  },
 }));
 
-vi.mock("@/lib/api/boards/queries", () => ({
+vi.mock('@/lib/api/boards/queries', () => ({
   useDeleteBoard: vi.fn(),
-  useUpdateBoard: vi.fn()
+  useUpdateBoard: vi.fn(),
 }));
 
-vi.mock("@/components/kanban/board/BoardForm", () => ({
-  BoardForm: ({ children, onSubmit }: any) => (
-    <form
-      data-testid="board-form"
-      onSubmit={(e) => {
-        e.preventDefault();
-        onSubmit({ title: "Updated Board", description: "Updated Description" });
-      }}
-    >
-      {children}
-    </form>
-  )
-}));
+interface MutationOptions {
+  onSuccess?: () => void;
+  onError?: (error: Error) => void;
+}
 
-describe("BoardActions", () => {
+// Tamagui renders the confirm dialog in a <dialog> element that jsdom treats as
+// hidden for role queries, so locate it directly.
+const findConfirmDialog = () =>
+  waitFor(() => {
+    const el = document.querySelector<HTMLElement>('[role="alertdialog"]');
+    expect(el).toBeTruthy();
+    return el!;
+  });
+
+describe('BoardActions', () => {
   const mockBoard: Board = {
-    _id: "board-1",
-    title: "Test Board",
-    description: "Test Description",
-    owner: "user-1",
-    members: [{ _id: "user-1", name: "John", email: "john@example.com" }],
+    _id: 'board-1',
+    title: 'Test Board',
+    description: 'Test Description',
+    owner: 'user-1',
+    members: [{ _id: 'user-1', name: 'John', email: 'john@example.com' }],
     projects: [],
     createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
   };
 
-  beforeEach(async () => {
+  const router = { push: vi.fn(), refresh: vi.fn() };
+  const updateMutateAsync = vi.fn();
+  const deleteMutateAsync = vi.fn();
+
+  beforeEach(() => {
     vi.clearAllMocks();
-
-    const { useDeleteBoard, useUpdateBoard } = await import("@/lib/api/boards/queries");
-
-    vi.mocked(useDeleteBoard).mockReturnValue({
-      mutate: vi.fn(),
-      mutateAsync: vi.fn().mockResolvedValue(undefined),
-      isPending: false
-    } as any);
-
-    vi.mocked(useUpdateBoard).mockReturnValue({
-      mutate: vi.fn(),
-      mutateAsync: vi.fn().mockResolvedValue(mockBoard),
-      isPending: false
-    } as any);
+    vi.mocked(useRouter).mockReturnValue(router as any);
+    updateMutateAsync.mockImplementation(async (_vars: unknown, options: MutationOptions) => {
+      options.onSuccess?.();
+    });
+    deleteMutateAsync.mockImplementation(async (_id: string, options: MutationOptions) => {
+      options.onSuccess?.();
+    });
+    vi.mocked(useUpdateBoard).mockReturnValue({ mutateAsync: updateMutateAsync } as any);
+    vi.mocked(useDeleteBoard).mockReturnValue({ mutate: vi.fn(), mutateAsync: deleteMutateAsync } as any);
   });
 
-  it("should render board actions button", () => {
-    render(<BoardActions board={mockBoard} />);
-    expect(screen.getByTestId("board-option-button")).toBeInTheDocument();
+  const openMenu = async () => {
+    fireEvent.click(screen.getByTestId('board-option-button'));
+    await screen.findByRole('menu');
+  };
+
+  it('renders the default actions trigger', () => {
+    renderWithProviders(<BoardActions board={mockBoard} />);
+    const trigger = screen.getByTestId('board-option-button');
+    expect(trigger).toHaveAttribute('aria-label', 'Test Board actions');
+    expect(trigger).toHaveAttribute('aria-haspopup', 'menu');
   });
 
-  it("should render with asChild prop", () => {
-    const { container } = render(
-      <BoardActions board={mockBoard} asChild>
-        <button data-testid="custom-trigger">Custom Trigger</button>
-      </BoardActions>
+  it('uses a custom trigger when children are given', () => {
+    renderWithProviders(
+      <BoardActions board={mockBoard}>
+        <button type="button" data-testid="custom-trigger">
+          Custom Trigger
+        </button>
+      </BoardActions>,
     );
-    expect(container).toBeTruthy();
+    expect(screen.getByTestId('custom-trigger')).toHaveAttribute('aria-haspopup', 'menu');
+    expect(screen.queryByTestId('board-option-button')).not.toBeInTheDocument();
   });
 
-  it("should render without asChild prop", () => {
-    render(<BoardActions board={mockBoard} />);
-    expect(screen.getByTestId("board-option-button")).toBeInTheDocument();
+  it('shows edit and delete items in the menu', async () => {
+    renderWithProviders(<BoardActions board={mockBoard} />);
+    await openMenu();
+    expect(screen.getByTestId('edit-board-button')).toHaveTextContent('edit');
+    expect(screen.getByTestId('delete-board-button')).toHaveTextContent('delete');
   });
 
-  it("should handle board with description", () => {
-    render(<BoardActions board={mockBoard} />);
-    expect(screen.getByTestId("board-option-button")).toBeInTheDocument();
+  it('edits the board through the prefilled form', async () => {
+    renderWithProviders(<BoardActions board={mockBoard} />);
+    await openMenu();
+    fireEvent.click(screen.getByTestId('edit-board-button'));
+
+    const titleInput = await screen.findByTestId('board-title-input');
+    expect(screen.getByText('editBoardTitle')).toBeInTheDocument();
+    expect(titleInput).toHaveValue('Test Board');
+    expect(screen.getByTestId('board-description-input')).toHaveValue('Test Description');
+
+    fireEvent.change(titleInput, { target: { value: 'Renamed' } });
+    fireEvent.click(screen.getByTestId('save-board-button'));
+
+    await waitFor(() => {
+      expect(updateMutateAsync).toHaveBeenCalledWith(
+        { id: 'board-1', title: 'Renamed', description: 'Test Description' },
+        expect.any(Object),
+      );
+    });
+    expect(toast.success).toHaveBeenCalledWith('boardUpdated');
+    expect(router.refresh).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(screen.queryByText('editBoardTitle')).not.toBeInTheDocument();
+    });
   });
 
-  it("should handle board without description", () => {
-    const boardWithoutDesc = { ...mockBoard, description: undefined };
-    render(<BoardActions board={boardWithoutDesc} />);
-    expect(screen.getByTestId("board-option-button")).toBeInTheDocument();
+  it('reports update failures', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    updateMutateAsync.mockRejectedValue(new Error('Server down'));
+    renderWithProviders(<BoardActions board={mockBoard} />);
+    await openMenu();
+    fireEvent.click(screen.getByTestId('edit-board-button'));
+    await screen.findByTestId('board-title-input');
+    fireEvent.click(screen.getByTestId('save-board-button'));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('Failed to update board: Server down');
+    });
   });
 
-  it("should handle onDelete callback when provided", () => {
-    const mockOnDelete = vi.fn();
-    render(<BoardActions board={mockBoard} onDelete={mockOnDelete} />);
-    expect(screen.getByTestId("board-option-button")).toBeInTheDocument();
+  it('deletes the board after confirmation', async () => {
+    const onDelete = vi.fn();
+    renderWithProviders(<BoardActions board={mockBoard} onDelete={onDelete} />);
+    await openMenu();
+    fireEvent.click(screen.getByTestId('delete-board-button'));
+
+    const dialog = await findConfirmDialog();
+    expect(within(dialog).getByText('confirmDeleteTitle')).toBeInTheDocument();
+    expect(within(dialog).getByText('confirmDeleteDescription')).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'delete', hidden: true }));
+
+    await waitFor(() => {
+      expect(deleteMutateAsync).toHaveBeenCalledWith('board-1', expect.any(Object));
+    });
+    expect(onDelete).toHaveBeenCalled();
+    expect(toast.success).toHaveBeenCalledWith('boardDeleted');
+    expect(router.push).toHaveBeenCalledWith('/boards');
   });
 
-  it("should render with custom className", () => {
-    render(<BoardActions board={mockBoard} className="custom-class" />);
-    expect(screen.getByTestId("board-option-button")).toBeInTheDocument();
+  it('does not delete when the confirmation is cancelled', async () => {
+    renderWithProviders(<BoardActions board={mockBoard} />);
+    await openMenu();
+    fireEvent.click(screen.getByTestId('delete-board-button'));
+
+    const dialog = await findConfirmDialog();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'cancel', hidden: true }));
+
+    await waitFor(() => {
+      expect(document.querySelector('[role="alertdialog"]')).not.toBeInTheDocument();
+    });
+    expect(deleteMutateAsync).not.toHaveBeenCalled();
   });
 
-  it("should render board actions trigger", () => {
-    render(<BoardActions board={mockBoard} />);
-    const trigger = screen.getByTestId("board-option-button");
-    expect(trigger).toBeInTheDocument();
-  });
+  it('reports delete failures', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    deleteMutateAsync.mockImplementation(async (_id: string, options: MutationOptions) => {
+      options.onError?.(new Error('nope'));
+    });
+    renderWithProviders(<BoardActions board={mockBoard} />);
+    await openMenu();
+    fireEvent.click(screen.getByTestId('delete-board-button'));
+    const dialog = await findConfirmDialog();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'delete', hidden: true }));
 
-  it("should handle board with all fields populated", () => {
-    const fullBoard: Board = {
-      ...mockBoard,
-      description: "Full Description",
-      members: [
-        { _id: "user-1", name: "John", email: "john@example.com" },
-        { _id: "user-2", name: "Jane", email: "jane@example.com" }
-      ],
-      projects: [{ _id: "proj-1", title: "Project 1" } as any]
-    };
-    render(<BoardActions board={fullBoard} />);
-    expect(screen.getByTestId("board-option-button")).toBeInTheDocument();
-  });
-
-  it("should handle board with minimal fields", () => {
-    const minimalBoard: Board = {
-      _id: "board-2",
-      title: "Minimal Board",
-      owner: "user-1",
-      members: [],
-      projects: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    render(<BoardActions board={minimalBoard} />);
-    expect(screen.getByTestId("board-option-button")).toBeInTheDocument();
-  });
-
-  it("should render correctly when mutations are pending", async () => {
-    const { useUpdateBoard } = await import("@/lib/api/boards/queries");
-    vi.mocked(useUpdateBoard).mockReturnValue({
-      mutate: vi.fn(),
-      mutateAsync: vi.fn().mockImplementation(async () => new Promise(() => {})),
-      isPending: true
-    } as any);
-
-    render(<BoardActions board={mockBoard} />);
-    expect(screen.getByTestId("board-option-button")).toBeInTheDocument();
-  });
-
-  it("should render correctly when delete is pending", async () => {
-    const { useDeleteBoard } = await import("@/lib/api/boards/queries");
-    vi.mocked(useDeleteBoard).mockReturnValue({
-      mutate: vi.fn(),
-      mutateAsync: vi.fn().mockImplementation(async () => new Promise(() => {})),
-      isPending: true
-    } as any);
-
-    render(<BoardActions board={mockBoard} />);
-    expect(screen.getByTestId("board-option-button")).toBeInTheDocument();
-  });
-
-  it("should use forwardRef correctly", () => {
-    const ref = React.createRef<HTMLButtonElement>();
-    render(<BoardActions board={mockBoard} ref={ref} />);
-    expect(screen.getByTestId("board-option-button")).toBeInTheDocument();
-  });
-
-  it("should handle board with owner as string", () => {
-    const boardWithStringOwner = { ...mockBoard, owner: "user-id-string" };
-    render(<BoardActions board={boardWithStringOwner} />);
-    expect(screen.getByTestId("board-option-button")).toBeInTheDocument();
-  });
-
-  it("should handle board with owner as object", () => {
-    const boardWithObjectOwner = {
-      ...mockBoard,
-      owner: {
-        _id: "user-1",
-        name: "John",
-        email: "john@example.com",
-        createdAt: new Date()
-      } as any
-    };
-    render(<BoardActions board={boardWithObjectOwner} />);
-    expect(screen.getByTestId("board-option-button")).toBeInTheDocument();
-  });
-
-  it("should render component with valid board data", () => {
-    const { container } = render(<BoardActions board={mockBoard} />);
-    expect(container.firstChild).toBeTruthy();
-  });
-
-  it("should pass board title to dialogs", () => {
-    render(<BoardActions board={mockBoard} />);
-    // Component renders successfully with board title
-    expect(screen.getByTestId("board-option-button")).toBeInTheDocument();
-  });
-
-  it("should handle empty projects array", () => {
-    render(<BoardActions board={mockBoard} />);
-    expect(screen.getByTestId("board-option-button")).toBeInTheDocument();
-  });
-
-  it("should handle empty members array", () => {
-    const boardWithNoMembers = { ...mockBoard, members: [] };
-    render(<BoardActions board={boardWithNoMembers} />);
-    expect(screen.getByTestId("board-option-button")).toBeInTheDocument();
-  });
-
-  it("should render without children when asChild is false", () => {
-    render(<BoardActions board={mockBoard} asChild={false} />);
-    expect(screen.getByTestId("board-option-button")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('boardDeleteFailed');
+    });
   });
 });

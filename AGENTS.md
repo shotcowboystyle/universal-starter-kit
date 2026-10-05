@@ -79,11 +79,19 @@ When a task matches conditions below, load the corresponding skill **before writ
 
 Packages derived from [multiplatform.one](https://multiplatform.one) are Apache-2.0 — keep each package `LICENSE` and the root `NOTICE` intact.
 
-**Key tech**: TypeScript strict, PNPM (catalog versions in `pnpm-workspace.yaml`), Turborepo, Vitest, Playwright, Tamagui, Zustand + TanStack Query, Zod
+**Key tech**: TypeScript strict, PNPM (catalog versions in `pnpm-workspace.yaml`), Turborepo, Vitest, Playwright, Tamagui, TanStack Form, Zustand + TanStack Query, Zod
 
-#### Shadcn UI Components
+#### Web UI (Tamagui)
 
-In `packages/ui/components/ui` — modify `packages/ui/src/styles/globals.css` and `apps/web/src/components` first, only modify Shadcn components as a last resort.
+`apps/web` renders `@repo/ui` (catalog: layout shell, Dialog, ConfirmDialog, DropdownMenu, Card, Chip, Skeleton, typography) and `@repo/forms` (TanStack Form: `Form`, `Input`, `TextArea`, `Select`, `RadioGroup`, `DatePicker`, `Combobox`). No Tailwind/shadcn.
+
+- Wiring: `next.config.ts` (`react-native` → `react-native-web`, `.next.*` / `.web.*` resolve extensions, `transpilePackages`), theme config `src/lib/tamagui/themeConfig.ts`, provider `src/providers/TamaguiRoot.tsx` (SSR CSS via `useServerInsertedHTML`)
+- Scheme: `next-themes` owns light/dark (writes `t_light`/`t_dark` on `<html>`); the resolved scheme is mirrored to the `color-scheme` cookie and read by `providers/SchemeProviders.tsx` so SSR matches
+- Render-time values that differ between server and client (resolved scheme, `useMedia()` → JS props) must be gated with `useHydrated()` (`src/hooks/useHydrated.ts`)
+- Events use `onPress`; buttons use tone booleans (`accent`, `outlined`, `chromeless`, `error`); semantic elements via `render="main"`; test ids via `testID` / `inputProps={{ testID }}`
+- Every file rendering `@repo/ui` is a client component (`"use client"`)
+- `@repo/router` resolves its Next.js variant (`router/index.next.tsx`) through the `.next.*` extension; use `@/i18n/navigation` for locale-aware navigation
+- Toasts stay on `sonner`
 
 #### Shared i18n Package (`packages/i18n`)
 

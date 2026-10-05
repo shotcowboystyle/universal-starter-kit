@@ -144,13 +144,13 @@ const Cell = styled(ThemeableStack, {
         minWidth: val,
       }),
       '...size': (name, { tokens }) => ({
-        width: tokens.size[name],
-        minWidth: tokens.size[name],
+        width: (tokens.size as Record<string, any>)[name],
+        minWidth: (tokens.size as Record<string, any>)[name],
       }),
     },
     cellHeight: {
       '...size': (name, { tokens, props }) =>
-        rowMinimum((props as { displayMode?: DisplayMode }).displayMode, tokens.size[name]),
+        rowMinimum((props as { displayMode?: DisplayMode }).displayMode, (tokens.size as Record<string, any>)[name]),
     },
     // Row-flex axis map: y → alignItems (vertical), x →
     // justifyContent (horizontal).
@@ -206,8 +206,8 @@ const HeaderCell = styled(ThemeableStack, {
         minWidth: val,
       }),
       '...size': (name, { tokens }) => ({
-        width: tokens.size[name],
-        minWidth: tokens.size[name],
+        width: (tokens.size as Record<string, any>)[name],
+        minWidth: (tokens.size as Record<string, any>)[name],
       }),
     },
     // Row-flex axis map: y → alignItems (vertical), x →
@@ -220,7 +220,7 @@ const HeaderCell = styled(ThemeableStack, {
     },
     cellHeight: {
       '...size': (name, { tokens, props }) =>
-        rowMinimum((props as { displayMode?: DisplayMode }).displayMode, tokens.size[name]),
+        rowMinimum((props as { displayMode?: DisplayMode }).displayMode, (tokens.size as Record<string, any>)[name]),
     },
     cellLocation: {
       first: () => ({}),

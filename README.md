@@ -27,8 +27,8 @@ A production-grade Kanban application demonstrating monorepo architecture, test-
 | **Development Cycle** | Tightly coupled; one change can impact all | Independent development cycles                                        | **Web & Mobile iterate independently on shared foundations**        | Platform teams move at their own pace                   |
 | **Deployment**        | Single, monolithic deployment              | Independent Frontend/Backend deployment                               | **+ OTA updates for Mobile via Expo**                               | Three independent release channels                      |
 | **Scalability**       | Vertical scaling of the entire app         | Targeted horizontal scaling (e.g., scale only the API service)        | **Same API serves Web & Mobile clients**                            | Single backend; multiple frontends                      |
-| **Technology Stack**  | Locked into Next.js for backend            | Flexible backend choice (Nest.js); can add more services (Go, Python) | **+ React Native (Expo) with NativeWind**                           | Best tool per platform; shared logic layer              |
-| **Code Reusability**  | Limited to the Next.js app                 | Centralized `ui` & `config` packages                                  | **+ Shared `store` and `i18n` packages (types, state, validation)** | Write once for logic; platform-specific for UI          |
+| **Technology Stack**  | Locked into Next.js for backend            | Flexible backend choice (Nest.js); can add more services (Go, Python) | **+ React Native (Expo) with Tamagui**                              | Best tool per platform; shared logic layer              |
+| **Code Reusability**  | Limited to the Next.js app                 | Centralized `ui` & `config` packages                                  | **+ Shared Tamagui `ui`/`forms`/`theme`, `store` and `i18n` packages** | Write once for logic and UI primitives; platform-specific navigation |
 
 ### Code Sharing Strategy
 
@@ -38,16 +38,18 @@ The monorepo shares business logic across platforms while keeping UI and navigat
 ┌──────────────────────────────────────────────────────────────────┐
 │                       Shared Packages                            │
 │                                                                  │
-│  @repo/store         @repo/i18n      @repo/ui     global-tsconfig│
-│  ├── Types           ├── en.json     ├── Shadcn UI └── Base TS   │
-│  ├── Zustand Stores  ├── de.json     └── Storybook    configs    │
-│  └── Storage Adapter └── Locale                                  │
-│       (injectable)       config                                  │
+│  @repo/store       @repo/i18n       @repo/ui       @repo/forms   │
+│  ├── Types         ├── en.json      Tamagui        TanStack Form │
+│  ├── Zustand       ├── de.json      components    + Tamagui      │
+│  │   stores        └── Locale                       fields       │
+│  └── Storage           config +     @repo/theme    @repo/tokens  │
+│      Adapter           i18next      @repo/router   @repo/config  │
+│                        helpers      @repo/platform ...and more   │
 ├───────────────────┬──────────────────┬───────────────────────────┤
 │    apps/web       │   apps/mobile    │   apps/api                │
 │    Next.js        │   Expo latest    │   Nest.js                 │
 │    App Router     │   Expo Router    │   Express                 │
-│    Tailwind CSS   │   Nativewind     │   Rspack                  │
+│    Tamagui        │   Tamagui        │   Rspack                  │
 │    localStorage   │   SecureStore    │   MongoDB                 │
 │    next-intl      │   i18next        │   EventEmitter2           │
 └───────────────────┴──────────────────┴───────────────────────────┘
@@ -57,6 +59,9 @@ The monorepo shares business logic across platforms while keeping UI and navigat
 
 - `@repo/store` exports a `createAuthStore()` factory with an injectable `StorageAdapter`, allowing Web to use `localStorage` and Mobile to use `expo-secure-store` — same state logic, platform-appropriate persistence.
 - `@repo/i18n` provides a single source of truth for translation strings (EN/DE), consumed by `next-intl` on Web and `i18next` on Mobile. App-specific text (e.g., app name) uses `{appName}` interpolation resolved at runtime by each platform.
+- `@repo/ui`, `@repo/forms` and `@repo/theme` provide the Tamagui component catalog, form fields (TanStack Form) and theme config used by both apps.
+
+Most packages are derived from [multiplatform.one](https://multiplatform.one) and are Apache-2.0 licensed; each package keeps its `LICENSE`, and the root `NOTICE` file lists the attribution.
 
 ### Features
 
@@ -90,13 +95,14 @@ The monorepo shares business logic across platforms while keeping UI and navigat
 | E2E               | Playwright | Cross-browser support, lighter than Cypress   |
 | Static Analysis   | SonarQube  | Enterprise-grade quality gates in CI          |
 | Coverage Tracking | Codecov    | Automated PR integration                      |
-| Documentation     | Storybook  | SSOT for UI components, auto-generated docs   |
-| Visual Testing    | Storybook  | Isolated component dev, dark/light mode check |
+| Documentation     | Storybook  | Stories exist for the Tamagui catalog; Storybook config is being reworked |
+| Visual Testing    | Storybook  | Planned once the Tamagui Storybook setup is wired |
 | Accessibility     | a11y-addon | WCAG compliance checks during development     |
 
 **Testing Strategy:**
 
 - Unit tests target store logic, validations, and isolated components
+- Package tests live next to source as `*.test.ts(x)`; apps keep theirs in `__tests__/`
 - **Mobile**: test files covering hooks, API clients, auth service, i18n, theme, and store — with monorepo-aware Vitest config that aliases `react-native` to `react-native-web` and deduplicates React across workspaces
 - E2E tests validate critical flows (auth)
 - Every PR triggers the full pipeline before merge
@@ -107,11 +113,13 @@ The monorepo shares business logic across platforms while keeping UI and navigat
 | --------- | ------------------------ | ------------------------------------------------------- |
 | Framework | Next.js (App Router)     | Cache Components (PPR) for mixed static/dynamic content |
 | State     | Zustand (shared)         | 40% less boilerplate than Redux, simpler testing        |
-| Forms     | React Hook Form + Zod    | Type-safe validation, composable schemas                |
+| Forms     | TanStack Form + Zod      | Type-safe validation, composable schemas                |
 | Database  | MongoDB + Mongoose       | Document model fits board/project/task hierarchy        |
-| DnD       | dnd-kit                  | Lightweight, accessible, extensible                     |
+| DnD       | @dnd-kit                 | Lightweight, accessible, extensible                     |
 | i18n      | next-intl                | App Router native support, auto locale routing          |
-| UI        | Tailwind CSS + Shadcn/ui | Consistent design system, rapid iteration               |
+| UI        | Tamagui (`@repo/ui`, `@repo/forms`) | Shared cross-platform design system, tokens and themes |
+| Theme     | next-themes + Tamagui themes | Scheme mirrored to a cookie for SSR                 |
+| Toasts    | sonner                   | Lightweight, accessible notifications                   |
 
 ### Mobile
 
@@ -119,7 +127,7 @@ The monorepo shares business logic across platforms while keeping UI and navigat
 | ------------ | ---------------------------------------------- | ---------------------------------------------------------------------- |
 | Framework    | Expo latest                                    | Rapid iteration, OTA updates, New Architecture                         |
 | Navigation   | Expo Router (typed routes)                     | File-based routing, consistent with Next.js model                      |
-| Styling      | Nativewind + react-native-css                  | CSS-native theming with `useCssElement` wrappers, dark/light mode      |
+| Styling      | Tamagui (`@tamagui/core`)                      | Theme tokens shared with web via `@repo/ui`/`@repo/theme`, dark/light  |
 | State        | Zustand (shared via `@repo/store`)             | Same auth store as web with injectable StorageAdapter                  |
 | Data Fetch   | TanStack Query                                 | Same caching strategy as web, query key factories                      |
 | Gestures     | Gesture Handler + Reanimated                   | Swipe-to-cycle-status, swipe-to-move, spring animations                |
@@ -225,8 +233,9 @@ pnpm dev                   # Development (including api, web and ios simulator)
 pnpm test                  # Unit tests (including api, web and mobile)
 pnpm playwright:install    # Install browsers before E2E tests for web
 pnpm playwright            # E2E tests for web
-pnpm storybook             # Execute Storybook for web UI components
-pnpm storybook:test        # Run Storybook interaction tests for web UI components
+pnpm storybook             # Storybook for @repo/ui (config being reworked for Tamagui, may not run yet)
+pnpm storybook:build       # Build Storybook (same caveat)
+pnpm storybook:test        # Storybook interaction tests (same caveat)
 pnpm build                 # Production build (including api, web and mobile)
 ```
 
@@ -261,23 +270,19 @@ const useAuthStore = createAuthStore(secureStorageAdapter);
 
 This pattern enables shared state logic without platform-specific imports leaking across boundaries.
 
-### Mobile CSS Wrapper Pattern
+### Tamagui Styling (Web & Mobile)
 
-The mobile app uses `react-native-css`'s `useCssElement` to bridge Tailwind CSS `className` props to React Native `style` objects. All UI components are imported from `lib/tw/` — never bare React Native:
+Both apps style with Tamagui. Mobile uses `@tamagui/core` configured in `apps/mobile/lib/tamagui/tamagui.config.ts`; web consumes the shared catalog from `@repo/ui` and form fields from `@repo/forms`. Components use theme tokens (`$background`, `$color`, ...) rather than hardcoded colors, and `useTheme()` for inline values:
 
-```typescript
-// lib/tw/index.tsx — wraps RN components with CSS-in-JS support
-import { useCssElement, useNativeVariable } from "react-native-css";
+```tsx
+import { YStack, Text } from "@repo/ui";
 
-export const View = (props) => useCssElement(RNView, props, { className: "style" });
-export const useCSSVariable = useNativeVariable; // theme-aware CSS custom properties
-
-// Usage in screens:
-import { View, Text, Pressable } from "@/lib/tw";
-<View className="flex-1 items-center justify-center bg-background">
+<YStack flex={1} alignItems="center" justifyContent="center" backgroundColor="$background">
+  <Text color="$color">Hello</Text>
+</YStack>
 ```
 
-This pattern enables the same Tailwind utility classes on both web and native, with dark mode reactively driven by `Appearance.setColorScheme()` and CSS `@media (prefers-color-scheme)` overrides. Theme colors defined once in `global.css` are consumed by both the Tailwind class engine and `useCSSVariable()` for inline style access.
+Mobile dark mode is driven by `Appearance.setColorScheme()`. On web, `next-themes` switches the Tamagui theme and mirrors the scheme to a cookie so the server can render the right theme.
 
 ### i18n Shared Package
 
@@ -359,18 +364,17 @@ apps/
 │   ├── components/         # board-card, task-card (swipe gestures), project-column, move-task-sheet
 │   ├── constants/          # API_ROUTES (configurable via EXPO_PUBLIC_API_URL), APP_NAME
 │   ├── hooks/              # useAuth, useBoards, useProjects, useTasks, useUsers (TanStack Query)
-│   ├── lib/                # API clients (fetchWithAuth), auth service, i18n, theme, CSS wrappers
+│   ├── lib/                # API clients (fetchWithAuth), auth service, i18n, theme, Tamagui config
 │   │   ├── api/            # board-api, project-api, task-api, user-api, fetch-with-auth
 │   │   ├── auth/           # auth-service (SecureStore token management)
 │   │   ├── i18n/           # i18next init with @repo/i18n shared translations
-│   │   └── tw/             # CSS wrapper components (View, Text, etc.) via react-native-css
+│   │   └── tamagui/        # tamagui.config.ts
 │   ├── stores/             # Auth store (SecureStore adapter via @repo/store factory)
-│   ├── types/              # Environment types (EXPO_PUBLIC_API_URL)
-│   └── global.css          # Tailwind theme (light/dark CSS custom properties)
+│   └── types/              # Environment types (EXPO_PUBLIC_API_URL)
 ├── web/                    # Next.js Web app (Cache Components enabled)
 │   ├── __tests__/
 │   │   ├── e2e/            # End-to-end tests (by Playwright)
-│   │   └── unit/           # Unit tests (by Vitest)
+│   │   └── units/          # Unit tests (by Vitest)
 │   ├── messages/           # i18n translations (en, de)
 │   ├── public/             # Static files such as images
 │   ├── src/
@@ -395,56 +399,49 @@ apps/
 │   │   │   ├── api/                # API clients + TanStack Query hooks
 │   │   │   ├── auth/               # Auth service
 │   │   │   └── config/             # Environment config
-│   │   ├── providers/              # React Query + Theme providers
+│   │   ├── providers/              # React Query + Tamagui/theme providers
 │   │   ├── stores/                 # Zustand stores (board, project, task slices)
 │   │   ├── types/                  # Type definitions + Zod schemas
 │   │   └── proxy.ts                # Middleware (i18n + auth guard)
 │   └── types/              # Type definitions
 packages/
-├── global-tsconfig/        # Base TypeScript configuration
+├── config/                 # tsconfig presets (base.json, app.json), vite/vitest/storybook presets, oxlint plugin
+├── forms/                  # Tamagui form fields + Form on TanStack Form (@repo/forms)
 ├── i18n/                   # Shared translations (@repo/i18n)
 │   └── src/
 │       ├── locales/
 │       │   ├── en.json     # English translations (single source of truth)
 │       │   └── de.json     # German translations
-│       └── index.ts        # Locale config, Messages type export
+│       └── ...             # Locale config, Messages type, i18next helpers
+├── platform/               # Platform detection flags, runtime config, file save helpers
+├── router/                 # Cross-platform router facade (Next.js variant via .next.* extension)
 ├── store/                  # Shared state & types (@repo/store)
 │   └── src/
 │       ├── types.ts        # Domain types (Board, Task, User, etc.)
 │       ├── auth-store.ts   # Auth store factory with StorageAdapter
 │       ├── storage.ts      # StorageAdapter interface
 │       └── workspace-types.ts  # Shared workspace interface
-└── ui/                     # Shared UI components (@repo/ui)
-    ├── .storybook/         # Storybook configuration
-    ├── src/components/ui/  # Shadcn UI components + storybooks
-    └── styles/             # Global styles
+├── storybook/              # Storybook 10 helpers
+├── table-primitives/       # Knob-aware table primitives
+├── test-utils/             # Vitest setup + renderWithProviders
+├── theme/                  # Tamagui theme config, knobs, presets
+├── tokens/                 # DTCG design token JSON themes
+├── ui/                     # Tamagui component catalog (@repo/ui)
+│   ├── .storybook/         # Storybook config (being reworked for Tamagui)
+│   └── src/                # Components, *.stories.tsx and *.test.tsx side by side
+└── utils/                  # Node-only build utilities
 ```
+
+Packages are source-consumed and keep tests next to source as `*.test.ts(x)`.
 
 ---
 
 ## Storybook: Component Documentation & Visual Testing
 
-Storybook serves as the Single Source of Truth (SSOT) for UI components, providing living documentation that stays synchronized with the codebase.
+> [!NOTE]
+> Status: stories exist for the Tamagui catalog in `packages/ui/src/*.stories.tsx`; Storybook configuration is being reworked. `packages/ui/.storybook` still targets the removed Tailwind styles, so `pnpm storybook`, `pnpm storybook:build` and `pnpm storybook:test` (which run the `@repo/ui` scripts) may not work yet. There is no live demo at the moment.
 
-[Live Demo of Storybook](https://turborepo-starter-kit-storybook.vercel.app/)
-
-### Implementation Highlights
-
-| Feature                   | Implementation                                | Value                                        |
-| ------------------------- | --------------------------------------------- | -------------------------------------------- |
-| **MDX Documentation**     | Rich component guides with usage examples     | Reduces onboarding time for new team members |
-| **Interaction Testing**   | Automated behavior tests using play functions | Catches UI regressions before E2E stage      |
-| **Accessibility Testing** | WCAG validation via @storybook/addon-a11y     | Ensures compliance from development start    |
-| **Theme Testing**         | Dark/Light mode verification                  | Maintains design consistency across themes   |
-
-### Component Test Coverage
-
-| Component  | Documentation                                                | Interaction Tests                                           | Scenarios        |
-| ---------- | ------------------------------------------------------------ | ----------------------------------------------------------- | ---------------- |
-| **Button** | Usage patterns, A11y guidelines, Keyboard shortcuts          | Click, Keyboard navigation, Disabled state, Multi-variant   | 4 test scenarios |
-| **Input**  | Form integration, Validation patterns, Type variants         | Text input, Email validation, Focus/Blur, Keyboard controls | 7 test scenarios |
-| **Card**   | Composition patterns, Real-world examples, Layout guides     | N/A (Presentational)                                        | N/A              |
-| **Badge**  | Semantic usage, Color meanings, Accessibility best practices | N/A (Presentational)                                        | N/A              |
+The goal is for Storybook to serve as the Single Source of Truth (SSOT) for the `@repo/ui` Tamagui components, with interaction tests (play functions), accessibility checks (`@storybook/addon-a11y`) and light/dark theme verification. Shared Storybook helpers live in `packages/storybook`, and presets in `packages/config`.
 
 ---
 
@@ -503,7 +500,6 @@ Based on [expo-skills](https://github.com/expo/skills)
 | `building-native-ui`   | Expo Router UI guide             | Building screens, navigation, animations, native tabs, or styling      |
 | `expo-api-routes`      | Expo Router API routes           | Creating server-side API endpoints with EAS Hosting                    |
 | `expo-dev-client`      | Dev client builds & TestFlight   | Custom native code, Apple targets, or third-party native modules       |
-| `expo-tailwind-setup`  | Tailwind + NativeWind setup      | Setting up or configuring Tailwind CSS styling in Expo                 |
 | `native-data-fetching` | Networking & data fetching       | Any API call, fetch, caching, offline support, or auth token handling  |
 | `upgrading-expo`       | Expo SDK upgrades                | Upgrading Expo SDK versions or fixing dependency compatibility issues  |
 | `use-dom`              | DOM components for web-in-native | Using web libraries on native, migrating web code, Canvas/WebGL embeds |

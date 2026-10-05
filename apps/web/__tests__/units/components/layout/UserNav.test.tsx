@@ -1,144 +1,60 @@
-import { render, screen } from "@testing-library/react";
-/// <reference types="react" />
-import React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderWithProviders } from '@repo/test-utils';
+import { fireEvent, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { UserNav } from "@/components/layout/UserNav";
+import { UserNav } from '@/components/layout/UserNav';
+import { useAuth } from '@/hooks/useAuth';
 
-// Ensure React is globally available
-globalThis.React = React;
-
-// Mock dependencies
-vi.mock("@/hooks/useAuth", () => ({
-  useAuth: vi.fn()
+vi.mock('@/hooks/useAuth', () => ({
+  useAuth: vi.fn(),
 }));
 
-vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string) => key
+vi.mock('next-intl', () => ({
+  useTranslations: () => (key: string) => key,
 }));
 
-describe("UserNav", () => {
-  const mockUser: any = {
-    _id: "user-1",
-    email: "test@example.com",
-    name: "Test User"
-  };
-
+describe('UserNav', () => {
+  const mockLogout = vi.fn();
   const mockAuth: any = {
-    user: mockUser,
+    user: { _id: 'user-1', email: 'test@example.com', name: 'Test User' },
     isAuthenticated: true,
     isLoading: false,
-    login: vi.fn(),
-    loginWithEmail: vi.fn(),
-    logout: vi.fn(),
-    loginMutation: {},
-    error: null,
-    session: null
+    logout: mockLogout,
   };
 
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks();
-
-    const { useAuth } = await import("@/hooks/useAuth");
     vi.mocked(useAuth).mockReturnValue(mockAuth);
   });
 
-  it("should render user nav when authenticated", () => {
-    const { container } = render(<UserNav />);
-    expect(container.firstChild).toBeTruthy();
+  it('renders the avatar trigger with the email initial', () => {
+    renderWithProviders(<UserNav />);
+    expect(screen.getByRole('button', { name: 'test@example.com' })).toBeInTheDocument();
+    expect(screen.getByText('T')).toBeInTheDocument();
   });
 
-  it("should render user avatar fallback", () => {
-    const { container } = render(<UserNav />);
-    // Avatar should render with first letter of email
-    expect(container.firstChild).toBeTruthy();
+  it('shows a placeholder while loading', () => {
+    vi.mocked(useAuth).mockReturnValue({ ...mockAuth, user: undefined, isAuthenticated: false, isLoading: true });
+    renderWithProviders(<UserNav />);
+    expect(screen.getByTestId('user-nav-loading')).toBeInTheDocument();
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 
-  it("should show loading state", async () => {
-    const { useAuth } = await import("@/hooks/useAuth");
-    vi.mocked(useAuth).mockReturnValue({
-      ...mockAuth,
-      user: undefined,
-      isAuthenticated: false,
-      isLoading: true
-    });
-
-    const { container } = render(<UserNav />);
-    expect(container.querySelector(".animate-pulse")).toBeInTheDocument();
+  it.each([
+    ['not authenticated', { user: undefined, isAuthenticated: false }],
+    ['user is missing', { user: undefined, isAuthenticated: true }],
+  ])('renders nothing when %s', (_label, overrides) => {
+    vi.mocked(useAuth).mockReturnValue({ ...mockAuth, ...overrides });
+    renderWithProviders(<UserNav />);
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 
-  it("should not render when not authenticated", async () => {
-    const { useAuth } = await import("@/hooks/useAuth");
-    vi.mocked(useAuth).mockReturnValue({
-      ...mockAuth,
-      user: undefined,
-      isAuthenticated: false,
-      isLoading: false
-    });
-
-    const { container } = render(<UserNav />);
-    expect(container).toBeEmptyDOMElement();
-  });
-
-  it("should not render when user is null", async () => {
-    const { useAuth } = await import("@/hooks/useAuth");
-    vi.mocked(useAuth).mockReturnValue({
-      ...mockAuth,
-      user: undefined,
-      isAuthenticated: true,
-      isLoading: false
-    });
-
-    const { container } = render(<UserNav />);
-    expect(container).toBeEmptyDOMElement();
-  });
-
-  it("should handle email without @ symbol", async () => {
-    const { useAuth } = await import("@/hooks/useAuth");
-    vi.mocked(useAuth).mockReturnValue({
-      ...mockAuth,
-      user: { ...mockUser, email: "invalidemailformat" }
-    });
-
-    const { container } = render(<UserNav />);
-    expect(container.firstChild).toBeTruthy();
-  });
-
-  it("should handle uppercase email", async () => {
-    const { useAuth } = await import("@/hooks/useAuth");
-    vi.mocked(useAuth).mockReturnValue({
-      ...mockAuth,
-      user: { ...mockUser, email: "TEST@EXAMPLE.COM" }
-    });
-
-    render(<UserNav />);
-    expect(screen.getByText("T")).toBeInTheDocument();
-  });
-
-  it("should handle email with special characters", async () => {
-    const { useAuth } = await import("@/hooks/useAuth");
-    vi.mocked(useAuth).mockReturnValue({
-      ...mockAuth,
-      user: { ...mockUser, email: "test+special@example.com" }
-    });
-
-    const { container } = render(<UserNav />);
-    expect(container.firstChild).toBeTruthy();
-  });
-
-  it("should handle long email addresses", async () => {
-    const { useAuth } = await import("@/hooks/useAuth");
-    vi.mocked(useAuth).mockReturnValue({
-      ...mockAuth,
-      user: { ...mockUser, email: "verylongemailaddress12345@example.com" }
-    });
-
-    const { container } = render(<UserNav />);
-    expect(container.firstChild).toBeTruthy();
-  });
-
-  it("should render component structure correctly", () => {
-    const { container } = render(<UserNav />);
-    expect(container.firstChild).toBeTruthy();
+  it('shows user details and logs out from the menu', async () => {
+    renderWithProviders(<UserNav />);
+    fireEvent.click(screen.getByRole('button', { name: 'test@example.com' }));
+    expect(await screen.findByText('test')).toBeInTheDocument();
+    expect(screen.getAllByText('test@example.com').length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'logOut' }));
+    expect(mockLogout).toHaveBeenCalledTimes(1);
   });
 });

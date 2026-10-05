@@ -1,17 +1,21 @@
-import { Button } from "@repo/ui/components/button";
-import { useTranslations } from "next-intl";
-import Link from "next/link";
+'use client';
+
+import { Button, H2, Paragraph, YStack } from '@repo/ui';
+import { useTranslations } from 'next-intl';
+
+import { useRouter } from '@/i18n/navigation';
 
 export default function NotFound() {
-  const t = useTranslations("error");
+  const t = useTranslations('error');
+  const router = useRouter();
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4">
-      <h2 className="text-4xl font-bold">404</h2>
-      <p className="text-muted-foreground">{t("notFound")}</p>
-      <Button asChild>
-        <Link href="/">{t("goHome")}</Link>
+    <YStack minHeight="100vh" alignItems="center" justifyContent="center" gap="$4">
+      <H2 size="$10">404</H2>
+      <Paragraph color="$color10">{t('notFound')}</Paragraph>
+      <Button accent onPress={() => router.push('/')}>
+        {t('goHome')}
       </Button>
-    </div>
+    </YStack>
   );
 }

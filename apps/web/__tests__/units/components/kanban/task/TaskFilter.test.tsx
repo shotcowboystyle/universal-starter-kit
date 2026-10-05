@@ -1,303 +1,138 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-/// <reference types="react" />
-import React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderWithProviders as render } from '@repo/test-utils';
+import { fireEvent, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { TaskFilter } from "@/components/kanban/task/TaskFilter";
-import { TaskStatus } from "@/types/dbInterface";
+import { TaskFilter } from '@/components/kanban/task/TaskFilter';
+import { TaskStatus } from '@/types/dbInterface';
 
-// Ensure React is globally available
-globalThis.React = React;
-
-// Mock dependencies
-vi.mock("@/stores/workspace-store", () => ({
-  useWorkspaceStore: vi.fn()
+vi.mock('@/stores/workspace-store', () => ({
+  useWorkspaceStore: vi.fn(),
 }));
 
-vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string) => key
+vi.mock('next-intl', () => ({
+  useTranslations: () => (key: string) => key,
 }));
 
-// Mock Select components to simplify testing
-vi.mock("@repo/ui/components/select", () => ({
-  Select: ({ children, value, onValueChange }: any) => (
-    <button
-      data-testid="select"
-      data-value={value}
-      onClick={() => onValueChange && onValueChange("TODO")}
-      onKeyDown={() => onValueChange && onValueChange("TODO")}
-      type="button"
-    >
-      {children}
-    </button>
-  ),
-  SelectTrigger: ({ children }: any) => <div data-testid="status-select">{children}</div>,
-  SelectValue: ({ placeholder }: any) => <span>{placeholder}</span>,
-  SelectContent: ({ children }: any) => <div>{children}</div>,
-  SelectItem: ({ children, value }: any) => (
-    <div data-testid={`${value.toLowerCase()}-item`} data-value={value}>
-      {children}
-    </div>
-  )
-}));
+const mockSetFilter = vi.fn();
 
-describe("TaskFilter", () => {
-  const mockSetFilter = vi.fn();
+const mockProjects = [
+  {
+    _id: 'project-1',
+    title: 'Project 1',
+    tasks: [
+      { _id: 'task-1', title: 'Task 1', status: TaskStatus.TODO },
+      { _id: 'task-2', title: 'Task 2', status: TaskStatus.IN_PROGRESS },
+      { _id: 'task-3', title: 'Task 3', status: TaskStatus.DONE },
+    ],
+  },
+  {
+    _id: 'project-2',
+    title: 'Project 2',
+    tasks: [
+      { _id: 'task-4', title: 'Task 4', status: TaskStatus.TODO },
+      { _id: 'task-5', title: 'Task 5', status: TaskStatus.TODO },
+    ],
+  },
+];
 
-  const mockProjects = [
-    {
-      _id: "project-1",
-      title: "Project 1",
-      tasks: [
-        { _id: "task-1", title: "Task 1", status: TaskStatus.TODO },
-        { _id: "task-2", title: "Task 2", status: TaskStatus.IN_PROGRESS },
-        { _id: "task-3", title: "Task 3", status: TaskStatus.DONE }
-      ]
-    },
-    {
-      _id: "project-2",
-      title: "Project 2",
-      tasks: [
-        { _id: "task-4", title: "Task 4", status: TaskStatus.TODO },
-        { _id: "task-5", title: "Task 5", status: TaskStatus.TODO }
-      ]
-    }
-  ];
+async function mockStore(state: { filter?: { status: string | null; search: string }; projects?: unknown }) {
+  const { useWorkspaceStore } = await import('@/stores/workspace-store');
+  vi.mocked(useWorkspaceStore).mockReturnValue({
+    filter: { status: null, search: '' },
+    setFilter: mockSetFilter,
+    projects: mockProjects,
+    ...state,
+  } as any);
+}
 
+const chip = (name: RegExp) => screen.getByRole('button', { name });
+
+describe('TaskFilter', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
-
-    const { useWorkspaceStore } = await import("@/stores/workspace-store");
-
-    vi.mocked(useWorkspaceStore).mockReturnValue({
-      filter: { status: null, search: "" },
-      setFilter: mockSetFilter,
-      projects: mockProjects
-    } as any);
+    await mockStore({});
   });
 
-  it("should render task filter component", () => {
+  it('renders the search input with placeholder', () => {
     render(<TaskFilter />);
-    expect(screen.getByTestId("search-input")).toBeInTheDocument();
-    expect(screen.getByTestId("status-select")).toBeInTheDocument();
+    expect(screen.getByTestId('search-input')).toHaveAttribute('placeholder', 'searchPlaceholder');
   });
 
-  it("should render search input", () => {
+  it('displays the current search value', async () => {
+    await mockStore({ filter: { status: null, search: 'test query' } });
     render(<TaskFilter />);
-    const searchInput = screen.getByTestId("search-input");
-    expect(searchInput).toBeInTheDocument();
-    expect(searchInput).toHaveAttribute("placeholder", "searchPlaceholder");
+    expect(screen.getByTestId('search-input')).toHaveValue('test query');
   });
 
-  it("should render status select", () => {
+  it('calls setFilter on every search change', () => {
     render(<TaskFilter />);
-    expect(screen.getByTestId("status-select")).toBeInTheDocument();
+    const input = screen.getByTestId('search-input');
+    fireEvent.change(input, { target: { value: 'a' } });
+    fireEvent.change(input, { target: { value: 'ab' } });
+    expect(mockSetFilter).toHaveBeenNthCalledWith(1, { search: 'a' });
+    expect(mockSetFilter).toHaveBeenNthCalledWith(2, { search: 'ab' });
   });
 
-  it("should display search value", async () => {
-    const { useWorkspaceStore } = await import("@/stores/workspace-store");
-    vi.mocked(useWorkspaceStore).mockReturnValue({
-      filter: { status: null, search: "test query" },
-      setFilter: mockSetFilter,
-      projects: mockProjects
-    } as any);
-
+  it('renders status chips with per-status counts', () => {
     render(<TaskFilter />);
-    const searchInput = screen.getByTestId("search-input");
-    expect(searchInput.value).toBe("test query");
+    expect(chip(/^total 5$/)).toBeInTheDocument();
+    expect(chip(/^statusTodo 3$/)).toBeInTheDocument();
+    expect(chip(/^statusInProgress 1$/)).toBeInTheDocument();
+    expect(chip(/^statusDone 1$/)).toBeInTheDocument();
   });
 
-  it("should call setFilter when search input changes", () => {
+  it('marks the TOTAL chip as selected when no status filter is set', () => {
     render(<TaskFilter />);
-    const searchInput = screen.getByTestId("search-input");
-    fireEvent.change(searchInput, { target: { value: "new search" } });
-    expect(mockSetFilter).toHaveBeenCalledWith({ search: "new search" });
+    expect(chip(/^total/)).toHaveAttribute('aria-pressed', 'true');
+    expect(chip(/^statusTodo/)).toHaveAttribute('aria-pressed', 'false');
   });
 
-  it("should render clear filter button when filter is active", async () => {
-    const { useWorkspaceStore } = await import("@/stores/workspace-store");
-    vi.mocked(useWorkspaceStore).mockReturnValue({
-      filter: { status: TaskStatus.TODO, search: "" },
-      setFilter: mockSetFilter,
-      projects: mockProjects
-    } as any);
-
+  it('marks the active status chip as selected', async () => {
+    await mockStore({ filter: { status: TaskStatus.DONE, search: '' } });
     render(<TaskFilter />);
-    expect(screen.getByTestId("clear-filter-button")).toBeInTheDocument();
+    expect(chip(/^statusDone/)).toHaveAttribute('aria-pressed', 'true');
+    expect(chip(/^total/)).toHaveAttribute('aria-pressed', 'false');
   });
 
-  it("should not render clear filter button when no filter is active", () => {
+  it('sets the status filter when a status chip is pressed', () => {
     render(<TaskFilter />);
-    expect(screen.queryByTestId("clear-filter-button")).not.toBeInTheDocument();
+    fireEvent.click(chip(/^statusInProgress/));
+    expect(mockSetFilter).toHaveBeenCalledWith({ status: TaskStatus.IN_PROGRESS });
   });
 
-  it("should call setFilter when clear button is clicked", async () => {
-    const { useWorkspaceStore } = await import("@/stores/workspace-store");
-    vi.mocked(useWorkspaceStore).mockReturnValue({
-      filter: { status: TaskStatus.TODO, search: "test" },
-      setFilter: mockSetFilter,
-      projects: mockProjects
-    } as any);
-
+  it('clears the status filter when TOTAL is pressed', async () => {
+    await mockStore({ filter: { status: TaskStatus.TODO, search: '' } });
     render(<TaskFilter />);
-    const clearButton = screen.getByTestId("clear-filter-button");
-    fireEvent.click(clearButton);
-    expect(mockSetFilter).toHaveBeenCalledWith({ status: null, search: "" });
+    fireEvent.click(chip(/^total/));
+    expect(mockSetFilter).toHaveBeenCalledWith({ status: null });
   });
 
-  it("should calculate status counts correctly", () => {
+  it('hides the clear button when no filter is active', () => {
     render(<TaskFilter />);
-    // Component should render with calculated counts
-    expect(screen.getByTestId("total-item")).toBeInTheDocument();
-    expect(screen.getByTestId("todo-item")).toBeInTheDocument();
-    expect(screen.getByTestId("in_progress-item")).toBeInTheDocument();
-    expect(screen.getByTestId("done-item")).toBeInTheDocument();
+    expect(screen.queryByTestId('clear-filter-button')).not.toBeInTheDocument();
   });
 
-  it("should handle empty projects array", async () => {
-    const { useWorkspaceStore } = await import("@/stores/workspace-store");
-    vi.mocked(useWorkspaceStore).mockReturnValue({
-      filter: { status: null, search: "" },
-      setFilter: mockSetFilter,
-      projects: []
-    } as any);
-
+  it('shows the clear button for an active search', async () => {
+    await mockStore({ filter: { status: null, search: 'some query' } });
     render(<TaskFilter />);
-    expect(screen.getByTestId("search-input")).toBeInTheDocument();
+    expect(screen.getByTestId('clear-filter-button')).toBeInTheDocument();
   });
 
-  it("should handle null projects", async () => {
-    const { useWorkspaceStore } = await import("@/stores/workspace-store");
-    vi.mocked(useWorkspaceStore).mockReturnValue({
-      filter: { status: null, search: "" },
-      setFilter: mockSetFilter,
-      projects: null
-    } as any);
-
+  it('resets status and search when clear is pressed', async () => {
+    await mockStore({ filter: { status: TaskStatus.TODO, search: 'test' } });
     render(<TaskFilter />);
-    expect(screen.getByTestId("search-input")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('clear-filter-button'));
+    expect(mockSetFilter).toHaveBeenCalledWith({ status: null, search: '' });
   });
 
-  it("should handle projects with no tasks", async () => {
-    const { useWorkspaceStore } = await import("@/stores/workspace-store");
-    vi.mocked(useWorkspaceStore).mockReturnValue({
-      filter: { status: null, search: "" },
-      setFilter: mockSetFilter,
-      projects: [{ _id: "project-1", title: "Empty Project", tasks: [] }]
-    } as any);
-
+  it.each([
+    ['empty projects', []],
+    ['null projects', null],
+    ['projects with null tasks', [{ _id: 'p', title: 'P', tasks: null }]],
+    ['tasks without status', [{ _id: 'p', title: 'P', tasks: [{ _id: 't', status: undefined }] }]],
+  ])('handles %s with zero status counts', async (_label, projects) => {
+    await mockStore({ projects });
     render(<TaskFilter />);
-    expect(screen.getByTestId("search-input")).toBeInTheDocument();
-  });
-
-  it("should handle projects with null tasks", async () => {
-    const { useWorkspaceStore } = await import("@/stores/workspace-store");
-    vi.mocked(useWorkspaceStore).mockReturnValue({
-      filter: { status: null, search: "" },
-      setFilter: mockSetFilter,
-      projects: [{ _id: "project-1", title: "Project", tasks: null }]
-    } as any);
-
-    render(<TaskFilter />);
-    expect(screen.getByTestId("search-input")).toBeInTheDocument();
-  });
-
-  it("should handle tasks with missing status", async () => {
-    const { useWorkspaceStore } = await import("@/stores/workspace-store");
-    vi.mocked(useWorkspaceStore).mockReturnValue({
-      filter: { status: null, search: "" },
-      setFilter: mockSetFilter,
-      projects: [
-        {
-          _id: "project-1",
-          title: "Project",
-          tasks: [{ _id: "task-1", title: "Task without status", status: undefined }]
-        }
-      ]
-    } as any);
-
-    render(<TaskFilter />);
-    expect(screen.getByTestId("search-input")).toBeInTheDocument();
-  });
-
-  it("should handle filter with status", async () => {
-    const { useWorkspaceStore } = await import("@/stores/workspace-store");
-    vi.mocked(useWorkspaceStore).mockReturnValue({
-      filter: { status: TaskStatus.TODO, search: "" },
-      setFilter: mockSetFilter,
-      projects: mockProjects
-    } as any);
-
-    render(<TaskFilter />);
-    expect(screen.getByTestId("search-input")).toBeInTheDocument();
-  });
-
-  it("should handle filter with search query", async () => {
-    const { useWorkspaceStore } = await import("@/stores/workspace-store");
-    vi.mocked(useWorkspaceStore).mockReturnValue({
-      filter: { status: null, search: "some query" },
-      setFilter: mockSetFilter,
-      projects: mockProjects
-    } as any);
-
-    render(<TaskFilter />);
-    expect(screen.getByTestId("clear-filter-button")).toBeInTheDocument();
-  });
-
-  it("should render all status filter options", () => {
-    render(<TaskFilter />);
-    expect(screen.getByTestId("total-item")).toBeInTheDocument();
-    expect(screen.getByTestId("todo-item")).toBeInTheDocument();
-    expect(screen.getByTestId("in_progress-item")).toBeInTheDocument();
-    expect(screen.getByTestId("done-item")).toBeInTheDocument();
-  });
-
-  it("should update search input value", () => {
-    render(<TaskFilter />);
-    const searchInput = screen.getByTestId("search-input");
-    fireEvent.change(searchInput, { target: { value: "updated search" } });
-    expect(mockSetFilter).toHaveBeenCalledWith({ search: "updated search" });
-  });
-
-  it("should handle rapid search input changes", () => {
-    render(<TaskFilter />);
-    const searchInput = screen.getByTestId("search-input");
-
-    fireEvent.change(searchInput, { target: { value: "a" } });
-    fireEvent.change(searchInput, { target: { value: "ab" } });
-    fireEvent.change(searchInput, { target: { value: "abc" } });
-
-    expect(mockSetFilter).toHaveBeenCalledTimes(3);
-  });
-
-  it("should render component structure correctly", () => {
-    const { container } = render(<TaskFilter />);
-    expect(container.firstChild).toBeTruthy();
-  });
-
-  it("should handle component lifecycle", () => {
-    const { unmount } = render(<TaskFilter />);
-    expect(screen.getByTestId("search-input")).toBeInTheDocument();
-    unmount();
-  });
-
-  it("should call setFilter when status select changes to TOTAL", () => {
-    render(<TaskFilter />);
-    const selectElement = screen.getByTestId("select");
-
-    // Create a custom event to simulate selecting TOTAL
-    const totalItem = screen.getByTestId("total-item");
-    fireEvent.click(totalItem);
-
-    // The mock should have been called through onValueChange
-    expect(selectElement).toBeInTheDocument();
-  });
-
-  it("should call setFilter when status select changes to TODO", () => {
-    render(<TaskFilter />);
-    const todoItem = screen.getByTestId("todo-item");
-
-    // Verify the item exists
-    expect(todoItem).toBeInTheDocument();
+    expect(chip(/^statusTodo 0$/)).toBeInTheDocument();
   });
 });

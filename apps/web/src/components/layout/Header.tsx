@@ -1,29 +1,45 @@
-import { Separator } from "@repo/ui/components/separator";
-import { SidebarTrigger } from "@repo/ui/components/sidebar";
+'use client';
 
-import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
+import { Button, Separator, XStack } from '@repo/ui';
+import { PanelLeftIcon } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
-import LanguageSwitcher from "./LanguageSwitcher";
-import ThemeToggle from "./ThemeToggle";
-import { UserNav } from "./UserNav";
+import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
 
-export default function Header() {
+import LanguageSwitcher from './LanguageSwitcher';
+import ThemeToggle from './ThemeToggle';
+import { UserNav } from './UserNav';
+
+export default function Header({ onToggleSidebar }: { onToggleSidebar?: () => void }) {
+  const t = useTranslations('sidebar');
   return (
-    <header className="flex h-auto shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 p-2 transition-all ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 md:h-16 md:flex-nowrap md:px-4">
-      <div className="flex items-center gap-2">
-        <SidebarTrigger className="-ml-1" />
-        <Separator orientation="vertical" className="mr-2 h-4" />
-      </div>
+    <XStack
+      render="header"
+      alignItems="center"
+      gap="$2"
+      padding="$2"
+      $md={{ gap: '$4', minHeight: 64, paddingHorizontal: '$4' }}>
+      <XStack alignItems="center" gap="$2">
+        <Button
+          chromeless
+          size="$3"
+          icon={PanelLeftIcon}
+          aria-label={t('toggle')}
+          testID="sidebar-trigger"
+          onPress={onToggleSidebar}
+        />
+        <Separator vertical height={16} />
+      </XStack>
 
-      <div className="order-last w-full flex-grow md:order-none md:w-auto">
+      <XStack flex={1} minWidth={0}>
         <Breadcrumbs />
-      </div>
+      </XStack>
 
-      <div className="flex items-center gap-2">
+      <XStack alignItems="center" gap="$2">
         <UserNav />
         <ThemeToggle />
         <LanguageSwitcher />
-      </div>
-    </header>
+      </XStack>
+    </XStack>
   );
 }

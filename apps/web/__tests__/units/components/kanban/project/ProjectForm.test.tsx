@@ -1,77 +1,61 @@
-import { render, screen } from "@testing-library/react";
-/// <reference types="react" />
-import React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Button } from '@repo/forms';
+import { renderWithProviders } from '@repo/test-utils';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ProjectForm } from "@/components/kanban/project/ProjectForm";
+import { ProjectForm } from '@/components/kanban/project/ProjectForm';
 
-globalThis.React = React;
-
-vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string) => key
+vi.mock('next-intl', () => ({
+  useTranslations: () => (key: string) => key,
 }));
 
-vi.mock("@repo/ui/components/form", () => ({
-  Form: ({ children }: any) => <div data-testid="form">{children}</div>,
-  FormField: ({ render }: any) => {
-    const field = { value: "", onChange: vi.fn(), onBlur: vi.fn(), name: "test" };
-    return render({ field });
-  },
-  FormItem: ({ children }: any) => <div data-testid="form-item">{children}</div>,
-  FormLabel: ({ children }: any) => <label>{children}</label>,
-  FormControl: ({ children }: any) => <div data-testid="form-control">{children}</div>,
-  FormMessage: () => <span data-testid="form-message" />
-}));
+function renderForm(props: Partial<React.ComponentProps<typeof ProjectForm>> = {}) {
+  const onSubmit = vi.fn().mockResolvedValue(undefined);
+  renderWithProviders(
+    <ProjectForm onSubmit={onSubmit} {...props}>
+      <Button action="submit" testID="submit">
+        Submit
+      </Button>
+    </ProjectForm>,
+  );
+  return { onSubmit };
+}
 
-describe("ProjectForm", () => {
-  const mockOnSubmit = vi.fn();
-
+describe('ProjectForm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("should render project form", () => {
-    render(<ProjectForm onSubmit={mockOnSubmit} />);
-    expect(screen.getByTestId("form")).toBeInTheDocument();
+  it('renders labelled title and description fields', () => {
+    renderForm();
+    expect(screen.getByText(/titleLabel/)).toBeInTheDocument();
+    expect(screen.getByText(/descriptionLabel/)).toBeInTheDocument();
+    expect(screen.getByTestId('project-title-input')).toHaveAttribute('placeholder', 'titlePlaceholder');
+    expect(screen.getByTestId('project-description-input')).toHaveAttribute('placeholder', 'descriptionPlaceholder');
   });
 
-  it("should render title input", () => {
-    render(<ProjectForm onSubmit={mockOnSubmit} />);
-    expect(screen.getByText("titleLabel")).toBeInTheDocument();
+  it('prefills default values in edit mode', () => {
+    renderForm({ defaultValues: { title: 'Test Project', description: 'Test Description' } });
+    expect(screen.getByTestId('project-title-input')).toHaveValue('Test Project');
+    expect(screen.getByTestId('project-description-input')).toHaveValue('Test Description');
   });
 
-  it("should render description textarea", () => {
-    render(<ProjectForm onSubmit={mockOnSubmit} />);
-    expect(screen.getByText("descriptionLabel")).toBeInTheDocument();
+  it('submits the entered values', async () => {
+    const { onSubmit } = renderForm();
+    fireEvent.change(screen.getByTestId('project-title-input'), { target: { value: 'Roadmap' } });
+    fireEvent.change(screen.getByTestId('project-description-input'), { target: { value: 'Q3 plan' } });
+    fireEvent.click(screen.getByTestId('submit'));
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith({ title: 'Roadmap', description: 'Q3 plan' });
+    });
   });
 
-  it("should render with default values", () => {
-    render(
-      <ProjectForm
-        defaultValues={{ title: "Test Project", description: "Test Description" }}
-        onSubmit={mockOnSubmit}
-      />
-    );
-    expect(screen.getByTestId("form")).toBeInTheDocument();
-  });
+  it('blocks submit and shows the zod error when the title is empty', async () => {
+    const { onSubmit } = renderForm();
+    fireEvent.click(screen.getByTestId('submit'));
 
-  it("should render with children", () => {
-    render(
-      <ProjectForm onSubmit={mockOnSubmit}>
-        <button data-testid="custom-button">Save</button>
-      </ProjectForm>
-    );
-    expect(screen.getByTestId("custom-button")).toBeInTheDocument();
-  });
-
-  it("should render without default values", () => {
-    render(<ProjectForm onSubmit={mockOnSubmit} />);
-    expect(screen.getByTestId("form")).toBeInTheDocument();
-  });
-
-  it("should handle form structure", () => {
-    const { container } = render(<ProjectForm onSubmit={mockOnSubmit} />);
-    const form = container.querySelector("form");
-    expect(form).toBeInTheDocument();
+    expect(await screen.findByText('Title is required')).toBeInTheDocument();
+    expect(onSubmit).not.toHaveBeenCalled();
   });
 });

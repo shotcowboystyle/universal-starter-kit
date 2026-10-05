@@ -267,11 +267,13 @@ const SwitchIconFrame = styled(View, {
   variants: {
     placement: {
       right: (_, { props, tokens }) => {
-        const amount = tokens.space[(props as any).size]?.val * 0.35 || 4;
+        const amount =
+          (tokens.space as Record<string, { val: number }>)[(props as { size: string }).size]?.val * 0.35 || 4;
         return { right: amount };
       },
       left: (_, { props, tokens }) => {
-        const amount = tokens.space[(props as any).size]?.val * 0.35 || 4;
+        const amount =
+          (tokens.space as Record<string, { val: number }>)[(props as { size: string }).size]?.val * 0.35 || 4;
         return { left: amount };
       },
     },

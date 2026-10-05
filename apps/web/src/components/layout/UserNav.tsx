@@ -1,51 +1,45 @@
-"use client";
+'use client';
 
-import { Avatar, AvatarFallback } from "@repo/ui/components/avatar";
-import { Button } from "@repo/ui/components/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger
-} from "@repo/ui/components/dropdown-menu";
-import { useTranslations } from "next-intl";
+import { Avatar, Button, DropdownMenu, Paragraph, Skeleton, YStack } from '@repo/ui';
+import { useTranslations } from 'next-intl';
 
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from '@/hooks/useAuth';
 
 export function UserNav() {
   const { user, isAuthenticated, isLoading, logout } = useAuth();
-  const t = useTranslations("user");
+  const t = useTranslations('user');
 
   // While loading, show a placeholder to prevent flicker
   if (isLoading) {
-    return <div className="h-9 w-9 animate-pulse rounded-full bg-gray-200" />;
+    return <Skeleton variant="circular" width={36} height={36} testID="user-nav-loading" />;
   }
 
-  // If the user is logged in, show the avatar and dropdown menu
-  if (isAuthenticated && user) {
-    return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="relative h-9 w-9 rounded-full">
-            <Avatar className="h-9 w-9">
-              {/* The new backend doesn't provide an image, so we use a fallback */}
-              <AvatarFallback>{user.email?.[0].toUpperCase()}</AvatarFallback>
-            </Avatar>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-56" align="end" forceMount>
-          <DropdownMenuLabel className="font-normal">
-            <div className="flex flex-col space-y-1">
-              <p className="text-sm leading-none font-medium">{user.email?.split("@")[0]}</p>
-              <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
-            </div>
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={logout}>{t("logOut")}</DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    );
+  if (!isAuthenticated || !user) {
+    return null;
   }
+
+  return (
+    <DropdownMenu placement="bottom-end">
+      <DropdownMenu.Trigger asChild>
+        <Button chromeless circular size="$3" padding={0} aria-label={user.email}>
+          {/* The backend doesn't provide an image, so the avatar shows initials */}
+          <Avatar size="$3" initials={user.email?.[0].toUpperCase()} />
+        </Button>
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Content minWidth={224}>
+        <DropdownMenu.Label>
+          <YStack gap="$1">
+            <Paragraph size="$3" fontWeight="500">
+              {user.email?.split('@')[0]}
+            </Paragraph>
+            <Paragraph size="$2" color="$color10">
+              {user.email}
+            </Paragraph>
+          </YStack>
+        </DropdownMenu.Label>
+        <DropdownMenu.Separator />
+        <DropdownMenu.Item onSelect={logout}>{t('logOut')}</DropdownMenu.Item>
+      </DropdownMenu.Content>
+    </DropdownMenu>
+  );
 }

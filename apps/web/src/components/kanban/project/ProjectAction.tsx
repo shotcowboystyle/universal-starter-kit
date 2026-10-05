@@ -1,34 +1,17 @@
-"use client";
+'use client';
 
-import { DotsHorizontalIcon } from "@radix-ui/react-icons";
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle
-} from "@repo/ui/components/alert-dialog";
-import { Button } from "@repo/ui/components/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@repo/ui/components/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger
-} from "@repo/ui/components/dropdown-menu";
-import { useTranslations } from "next-intl";
-import * as React from "react";
-import { toast } from "sonner";
-import { z } from "zod";
+import { Button, ConfirmDialog, Dialog, DialogContent, DialogOverlay, DropdownMenu, XStack } from '@repo/ui';
+import { MoreHorizontal } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import * as React from 'react';
+import { toast } from 'sonner';
+import { z } from 'zod';
 
-import { useDeleteProject, useUpdateProject } from "@/lib/api/projects/queries";
-import { useWorkspaceStore } from "@/stores/workspace-store";
-import { projectSchema } from "@/types/projectForm";
+import { useDeleteProject, useUpdateProject } from '@/lib/api/projects/queries';
+import { useWorkspaceStore } from '@/stores/workspace-store';
+import { projectSchema } from '@/types/projectForm';
 
-import { ProjectForm } from "./ProjectForm";
+import { ProjectForm } from './ProjectForm';
 
 interface ProjectActionsProps {
   id: string;
@@ -36,6 +19,8 @@ interface ProjectActionsProps {
   description?: string;
   ownerId: string; // Add ownerId to check permissions
 }
+
+type ProjectFormData = z.infer<typeof projectSchema>;
 
 export function ProjectActions({ id, title, description, ownerId }: ProjectActionsProps) {
   // Check if current user is the project owner
@@ -47,15 +32,13 @@ export function ProjectActions({ id, title, description, ownerId }: ProjectActio
   const removeProject = useWorkspaceStore((state) => state.removeProject);
   const deleteProjectMutation = useDeleteProject();
   const updateProjectMutation = useUpdateProject();
-  const [isMenuOpen, setIsMenuOpen] = React.useState(false); // State for controlling menu
 
-  type ProjectFormData = z.infer<typeof projectSchema>;
-
-  const t = useTranslations("kanban.project");
+  const t = useTranslations('kanban.project');
+  const tKanban = useTranslations('kanban');
 
   async function onSubmit(values: ProjectFormData) {
     if (!userId) {
-      toast.error(t("userNotAuthenticated"));
+      toast.error(t('userNotAuthenticated'));
       return;
     }
 
@@ -69,110 +52,93 @@ export function ProjectActions({ id, title, description, ownerId }: ProjectActio
             id,
             title: data.title,
             description: data.description || null,
-            owner: userId
+            owner: userId,
           };
 
           return updateProjectMutation.mutateAsync(updateData);
-        }
+        },
       );
-      toast.success(t("updateSuccess"));
+      toast.success(t('updateSuccess'));
       setEditEnable(false);
     } catch (error) {
-      toast.error(t("updateFailed", { error: (error as Error).message }));
+      toast.error(t('updateFailed', { error: (error as Error).message }));
+    }
+  }
+
+  async function onConfirmDelete() {
+    try {
+      await removeProject(id, async (projectId) => deleteProjectMutation.mutateAsync(projectId));
+      toast.success(t('deleteSuccess', { title }));
+    } catch (error) {
+      toast.error(t('deleteFailed', { error: (error as Error).message }));
     }
   }
 
   return (
     <>
-      <Dialog open={editEnable} onOpenChange={setEditEnable}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{t("editProjectTitle")}</DialogTitle>
-          </DialogHeader>
-          <ProjectForm onSubmit={onSubmit} defaultValues={{ title, description }}>
-            <div className="flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setEditEnable(false);
-                }}
-              >
-                {t("cancel")}
-              </Button>
-              <Button type="submit">{t("save")}</Button>
-            </div>
-          </ProjectForm>
-        </DialogContent>
+      <Dialog modal open={editEnable} onOpenChange={setEditEnable}>
+        <Dialog.Portal>
+          <DialogOverlay key="overlay" />
+          <DialogContent key="content" maxWidth={480} width="90%" testID="edit-project-dialog">
+            <Dialog.Title size="$7">{t('editProjectTitle')}</Dialog.Title>
+            <ProjectForm onSubmit={onSubmit} defaultValues={{ title, description }}>
+              <XStack justifyContent="flex-end" gap="$2">
+                <Dialog.Close asChild>
+                  <Button outlined>{t('cancel')}</Button>
+                </Dialog.Close>
+                <Button accent action="submit" testID="save-project-button">
+                  {t('save')}
+                </Button>
+              </XStack>
+            </ProjectForm>
+          </DialogContent>
+        </Dialog.Portal>
       </Dialog>
 
-      <DropdownMenu modal={false} open={isMenuOpen} onOpenChange={setIsMenuOpen}>
-        <DropdownMenuTrigger asChild>
+      <DropdownMenu placement="bottom-end">
+        <DropdownMenu.Trigger asChild>
           <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-12 bg-background p-0 text-muted-foreground hover:bg-secondary/80 hover:text-foreground"
-            data-testid="project-option-button"
-          >
-            <DotsHorizontalIcon className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem
+            chromeless
+            size="$3"
+            icon={MoreHorizontal}
+            testID="project-option-button"
+            aria-label={`${title} actions`}
+          />
+        </DropdownMenu.Trigger>
+        <DropdownMenu.Content>
+          <DropdownMenu.Item
+            testID="edit-project-button"
+            disabled={!isOwner}
+            disabledReason={tKanban('noPermission')}
             onSelect={() => {
               setEditEnable(true);
-            }}
-            data-testid="edit-project-button"
-            className={!isOwner ? "cursor-not-allowed text-muted-foreground line-through" : ""}
+            }}>
+            {t('edit')}
+          </DropdownMenu.Item>
+          <DropdownMenu.Separator />
+          <DropdownMenu.Item
+            destructive
+            testID="delete-project-button"
             disabled={!isOwner}
-          >
-            {t("edit")}
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
+            disabledReason={tKanban('noPermission')}
             onSelect={() => {
               setShowDeleteDialog(true);
-            }}
-            className={
-              !isOwner
-                ? "cursor-not-allowed text-muted-foreground line-through"
-                : "text-red-600 hover:!bg-destructive/10 hover:!text-red-600"
-            }
-            data-testid="delete-project-button"
-            disabled={!isOwner}
-          >
-            {t("delete")}
-          </DropdownMenuItem>
-        </DropdownMenuContent>
+            }}>
+            {t('delete')}
+          </DropdownMenu.Item>
+        </DropdownMenu.Content>
       </DropdownMenu>
 
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("confirmDeleteTitle", { title })}</AlertDialogTitle>
-            <AlertDialogDescription>{t("confirmDeleteDescription")}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
-            <Button
-              variant="destructive"
-              onClick={async () => {
-                setShowDeleteDialog(false);
-                try {
-                  await removeProject(id, async (projectId) =>
-                    deleteProjectMutation.mutateAsync(projectId)
-                  );
-                  toast.success(t("deleteSuccess", { title }));
-                } catch (error) {
-                  toast.error(t("deleteFailed", { error: (error as Error).message }));
-                }
-              }}
-            >
-              {t("delete")}
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        destructive
+        title={t('confirmDeleteTitle', { title })}
+        body={t('confirmDeleteDescription')}
+        confirmLabel={t('delete')}
+        cancelLabel={t('cancel')}
+        onConfirm={onConfirmDelete}
+      />
     </>
   );
 }

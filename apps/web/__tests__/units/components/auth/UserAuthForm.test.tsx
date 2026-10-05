@@ -1,133 +1,106 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import React from "react";
-import { expect, vi } from "vitest";
+import { renderWithProviders } from '@repo/test-utils';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
+import React from 'react';
+import { expect, vi } from 'vitest';
 
-import UserAuthForm from "@/components/auth/UserAuthForm";
-import { useAuthForm } from "@/hooks/useAuth";
+import UserAuthForm from '@/components/auth/UserAuthForm';
+import { defaultEmail } from '@/constants/demoData';
+import { useAuthForm } from '@/hooks/useAuth';
 
-// Mock next-intl's useTranslations
-vi.mock("next-intl", () => ({
+vi.mock('next-intl', () => ({
   useTranslations: vi.fn(() => (key: string) => {
-    if (key === "emailLabel") {
-      return "Email";
-    }
-    if (key === "emailPlaceholder") {
-      return "m@example.com";
-    }
-    if (key === "continueButton") {
-      return "Continue";
-    }
-    if (key === "invalidEmail") {
-      return "Invalid email address";
-    }
-    return key;
-  })
+    const copy: Record<string, string> = {
+      emailLabel: 'Email',
+      emailPlaceholder: 'm@example.com',
+      continueButton: 'Continue',
+      invalidEmail: 'Invalid email address',
+    };
+    return copy[key] ?? key;
+  }),
 }));
 
-// Mock the useAuthForm hook
 const mockHandleSubmit = vi.fn();
-vi.mock("@/hooks/useAuth", () => ({
+vi.mock('@/hooks/useAuth', () => ({
   useAuthForm: vi.fn(() => ({
     handleSubmit: mockHandleSubmit,
     isLoading: false,
     error: null,
-    isNavigating: false
-  }))
+    isNavigating: false,
+  })),
 }));
 
-// Mock @hookform/resolvers/zod and react-hook-form
-vi.mock("@hookform/resolvers/zod", () => ({
-  zodResolver: vi.fn(() => (schema: any) => (values: any) => {
-    try {
-      schema.parse(values);
-      return { values, errors: {} };
-      // oxlint-disable-next-line no-unused-vars
-    } catch (error: any) {
-      return { values: {}, errors: { email: { message: "Invalid email address" } } };
-    }
-  })
-}));
-
-vi.mock("react-hook-form", async (importOriginal) => {
-  const actual = await importOriginal<Record<string, any>>();
-  return {
-    ...actual,
-    useForm: vi.fn(() => ({
-      control: {},
-      handleSubmit: vi.fn((cb) => (e: any) => {
-        e.preventDefault();
-        cb({ email: "test@example.com" });
-      }),
-      formState: { errors: {} },
-      register: vi.fn(),
-      setValue: vi.fn(),
-      getValues: vi.fn(() => ({ email: "test@example.com" }))
-    }))
-  };
-});
-
-// Mock @repo/ui components
-vi.mock("@repo/ui", () => ({
-  Button: vi.fn(({ children, ...props }) => <button {...props}>{children}</button>),
-  Form: vi.fn(({ children }) => <div>{children}</div>),
-  FormControl: vi.fn(({ children }) => <div>{children}</div>),
-  FormField: vi.fn(({ render }) =>
-    render({ field: { name: "email", value: "test@example.com", onChange: vi.fn(), id: "email" } })
-  ),
-  FormItem: vi.fn(({ children }) => <div>{children}</div>),
-  FormLabel: vi.fn(({ children }) => <label htmlFor="email">{children}</label>),
-  FormMessage: vi.fn(() => <div data-testid="form-message" />),
-  Input: vi.fn((props) => <input {...props} />)
-}));
-
-describe("UserAuthForm", () => {
+describe('UserAuthForm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("should render the form with email input and submit button", () => {
-    render(<UserAuthForm />);
+  it('renders the email field and submit button', () => {
+    renderWithProviders(<UserAuthForm />);
 
-    expect(screen.getByLabelText("Email")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Continue" })).toBeInTheDocument();
+    expect(screen.getByTestId('email-input')).toBeInTheDocument();
+    expect(screen.getByText('Email')).toBeInTheDocument();
+    expect(screen.getByTestId('submit-button')).toHaveTextContent('Continue');
   });
 
-  it("should call handleSubmit on form submission with valid email", async () => {
-    render(<UserAuthForm />);
+  it('submits the prefilled demo email', async () => {
+    renderWithProviders(<UserAuthForm />);
 
-    const submitButton = screen.getByRole("button", { name: "Continue" });
-    fireEvent.click(submitButton);
+    fireEvent.click(screen.getByTestId('submit-button'));
 
     await waitFor(() => {
-      expect(mockHandleSubmit).toHaveBeenCalledWith("test@example.com");
+      expect(mockHandleSubmit).toHaveBeenCalledWith(defaultEmail);
     });
   });
 
-  it("should display an error message if login fails", () => {
-    // Mock useAuthForm to return an error
+  it('does not submit an invalid email', async () => {
+    renderWithProviders(<UserAuthForm />);
+
+    fireEvent.change(screen.getByTestId('email-input'), { target: { value: 'not-an-email' } });
+    fireEvent.click(screen.getByTestId('submit-button'));
+
+    await waitFor(() => {
+      expect(screen.getByText('Invalid email address')).toBeInTheDocument();
+    });
+    expect(mockHandleSubmit).not.toHaveBeenCalled();
+  });
+
+  it('maps the backend error to a localized message', () => {
     vi.mocked(useAuthForm).mockReturnValueOnce({
       handleSubmit: mockHandleSubmit,
       isLoading: false,
-      error: "Login failed",
-      isNavigating: false
+      error: 'The login email is incorrect',
+      isNavigating: false,
     });
 
-    render(<UserAuthForm />);
+    renderWithProviders(<UserAuthForm />);
 
-    expect(screen.getByTestId("error-message")).toHaveTextContent("Login failed");
+    expect(screen.getByTestId('error-message')).toHaveTextContent('Invalid email address');
   });
 
-  it("should disable inputs and button when loading or navigating", () => {
+  it('shows other backend errors verbatim', () => {
+    vi.mocked(useAuthForm).mockReturnValueOnce({
+      handleSubmit: mockHandleSubmit,
+      isLoading: false,
+      error: 'Login failed',
+      isNavigating: false,
+    });
+
+    renderWithProviders(<UserAuthForm />);
+
+    expect(screen.getByTestId('error-message')).toHaveTextContent('Login failed');
+  });
+
+  it('disables the field and button while loading or navigating', () => {
     vi.mocked(useAuthForm).mockReturnValueOnce({
       handleSubmit: mockHandleSubmit,
       isLoading: true,
       error: null,
-      isNavigating: true
+      isNavigating: true,
     });
 
-    render(<UserAuthForm />);
+    renderWithProviders(<UserAuthForm />);
 
-    expect(screen.getByLabelText("Email")).toBeDisabled();
-    expect(screen.getByTestId("submit-button")).toBeDisabled();
+    expect(screen.getByTestId('email-input')).toBeDisabled();
+    expect(screen.getByTestId('submit-button')).toHaveAttribute('aria-disabled', 'true');
   });
 });

@@ -1,11 +1,14 @@
-"use client";
+'use client';
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { ThemeProvider } from "next-themes";
-import React, { useState } from "react";
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { ThemeProvider } from 'next-themes';
+import React, { useState } from 'react';
 
-import { useAuthStore } from "@/stores/auth-store";
+import { type ColorScheme } from '@/lib/colorScheme';
+import { useAuthStore } from '@/stores/auth-store';
+
+import { TamaguiRoot } from './TamaguiRoot';
 
 function makeQueryClient() {
   return new QueryClient({
@@ -13,9 +16,9 @@ function makeQueryClient() {
       queries: {
         staleTime: 5 * 60 * 1000, // 5 minutes
         retry: 1,
-        refetchOnWindowFocus: false
-      }
-    }
+        refetchOnWindowFocus: false,
+      },
+    },
   });
 }
 
@@ -30,14 +33,27 @@ function SyncAuthStore() {
   return null;
 }
 
-export function ClientProviders({ children }: { children: React.ReactNode }) {
+export function ClientProviders({
+  children,
+  initialScheme,
+}: {
+  children: React.ReactNode;
+  initialScheme?: ColorScheme;
+}) {
   const [queryClient] = useState(makeQueryClient);
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-        <SyncAuthStore />
-        {children}
-        <ReactQueryDevtools initialIsOpen={false} />
+      <ThemeProvider
+        attribute="class"
+        value={{ light: 't_light', dark: 't_dark' }}
+        defaultTheme="system"
+        enableSystem
+        disableTransitionOnChange>
+        <TamaguiRoot initialScheme={initialScheme}>
+          <SyncAuthStore />
+          {children}
+          <ReactQueryDevtools initialIsOpen={false} />
+        </TamaguiRoot>
       </ThemeProvider>
     </QueryClientProvider>
   );

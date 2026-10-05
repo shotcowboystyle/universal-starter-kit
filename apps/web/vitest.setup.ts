@@ -93,53 +93,6 @@ window.matchMedia =
 
 // 4. Component & Library Mocks
 
-// Mock @repo/ui components using async factories with vi.importActual
-// to avoid no-require-imports lint warnings
-vi.mock('@repo/ui/components/button', async () => {
-  const React = await vi.importActual<typeof import('react')>('react');
-  return {
-    Button: ({ children, className, onClick, ...props }: any) =>
-      React.createElement('button', { className, onClick, ...props }, children),
-  };
-});
-
-vi.mock('@repo/ui/components/card', async () => {
-  const React = await vi.importActual<typeof import('react')>('react');
-  return {
-    Card: ({ children, className, onClick }: any) => React.createElement('div', { className, onClick }, children),
-    CardHeader: ({ children }: any) => React.createElement('div', null, children),
-    CardTitle: ({ children }: any) => React.createElement('h3', null, children),
-    CardContent: ({ children }: any) => React.createElement('div', null, children),
-  };
-});
-
-vi.mock('@repo/ui/components/input', async () => {
-  const React = await vi.importActual<typeof import('react')>('react');
-  return {
-    Input: (props: any) => React.createElement('input', props),
-  };
-});
-
-vi.mock('@repo/ui/components/select', async () => {
-  const React = await vi.importActual<typeof import('react')>('react');
-  return {
-    Select: ({ children, value, onValueChange }: any) =>
-      React.createElement('div', { 'data-value': value, onClick: () => onValueChange?.('test') }, children),
-    SelectTrigger: ({ children, ...props }: any) => React.createElement('div', props, children),
-    SelectValue: ({ placeholder }: any) => React.createElement('span', null, placeholder),
-    SelectContent: ({ children }: any) => React.createElement('div', null, children),
-    SelectItem: ({ children, value, ...props }: any) =>
-      React.createElement('div', { ...props, 'data-value': value }, children),
-  };
-});
-
-vi.mock('@repo/ui/components/skeleton', async () => {
-  const React = await vi.importActual<typeof import('react')>('react');
-  return {
-    Skeleton: ({ className }: any) => React.createElement('div', { className, 'data-testid': 'skeleton' }),
-  };
-});
-
 // Mock next/navigation
 vi.mock('next/navigation', async () => {
   const actual = await vi.importActual('next/navigation');

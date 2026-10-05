@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { renderWithProviders as render } from '@repo/test-utils';
+import { screen } from '@testing-library/react';
 /// <reference types="react" />
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -126,8 +127,8 @@ describe('TaskCard', () => {
 
   it('should return null for deleted task', () => {
     const deletedTask = { ...mockTask, _deleted: true };
-    const { container } = render(<TaskCard task={deletedTask} />);
-    expect(container).toBeEmptyDOMElement();
+    render(<TaskCard task={deletedTask} />);
+    expect(screen.queryByTestId('task-card')).not.toBeInTheDocument();
   });
 
   it('should render without description', () => {
@@ -137,13 +138,13 @@ describe('TaskCard', () => {
   });
 
   it('should render without creator', () => {
-    const taskWithoutCreator = { ...mockTask, creator: undefined };
+    const taskWithoutCreator = { ...mockTask, creator: undefined } as unknown as Task;
     render(<TaskCard task={taskWithoutCreator} />);
     expect(screen.queryByText(/createdBy/)).not.toBeInTheDocument();
   });
 
   it('should render without last modifier', () => {
-    const taskWithoutModifier = { ...mockTask, lastModifier: undefined };
+    const taskWithoutModifier = { ...mockTask, lastModifier: undefined } as unknown as Task;
     render(<TaskCard task={taskWithoutModifier} />);
     expect(screen.queryByText(/lastModifiedBy/)).not.toBeInTheDocument();
   });
@@ -206,13 +207,31 @@ describe('TaskCard', () => {
   });
 
   it('should render drag handle when drag is enabled', () => {
-    const { container } = render(<TaskCard task={mockTask} isDragEnabled={true} />);
-    expect(container.firstChild).toBeTruthy();
+    render(<TaskCard task={mockTask} isDragEnabled={true} />);
+    expect(screen.getByLabelText('drag task: Test Task')).toBeInTheDocument();
   });
 
   it('should not render drag handle when drag is disabled', () => {
-    const { container } = render(<TaskCard task={mockTask} isDragEnabled={false} />);
-    expect(container.firstChild).toBeTruthy();
+    render(<TaskCard task={mockTask} isDragEnabled={false} />);
+    expect(screen.queryByLabelText('drag task: Test Task')).not.toBeInTheDocument();
+  });
+
+  it('should apply the sortable transform to the card wrapper', async () => {
+    const { useSortable } = await import('@dnd-kit/sortable');
+    const setNodeRef = vi.fn();
+    vi.mocked(useSortable).mockReturnValue({
+      setNodeRef,
+      attributes: {},
+      listeners: {},
+      transform: null,
+      transition: 'transform 200ms ease',
+      isDragging: false,
+    } as any);
+
+    render(<TaskCard task={mockTask} isDragEnabled={true} />);
+    const card = screen.getByTestId('task-card');
+    expect(setNodeRef).toHaveBeenCalledWith(card);
+    expect(card.style.transition).toBe('transform 200ms ease');
   });
 
   it('should render with dragging state', async () => {

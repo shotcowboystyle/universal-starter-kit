@@ -1,19 +1,17 @@
-import { render, screen } from "@testing-library/react";
-/// <reference types="react" />
-import React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderWithProviders } from '@repo/test-utils';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { toast } from 'sonner';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ProjectActions } from "@/components/kanban/project/ProjectAction";
+import { ProjectActions } from '@/components/kanban/project/ProjectAction';
+import { useDeleteProject, useUpdateProject } from '@/lib/api/projects/queries';
+import { useWorkspaceStore } from '@/stores/workspace-store';
 
-// Ensure React is globally available
-globalThis.React = React;
-
-// Mock dependencies
-vi.mock("@/stores/workspace-store", () => ({
-  useWorkspaceStore: vi.fn()
+vi.mock('@/stores/workspace-store', () => ({
+  useWorkspaceStore: vi.fn(),
 }));
 
-vi.mock("next-intl", () => ({
+vi.mock('next-intl', () => ({
   useTranslations: () => (key: string, values?: any) => {
     if (values?.title) {
       return `${key}: ${values.title}`;
@@ -22,218 +20,170 @@ vi.mock("next-intl", () => ({
       return `${key}: ${values.error}`;
     }
     return key;
-  }
+  },
 }));
 
-vi.mock("sonner", () => ({
+vi.mock('sonner', () => ({
   toast: {
     success: vi.fn(),
-    error: vi.fn()
-  }
+    error: vi.fn(),
+  },
 }));
 
-vi.mock("@/lib/api/projects/queries", () => ({
+vi.mock('@/lib/api/projects/queries', () => ({
   useDeleteProject: vi.fn(),
-  useUpdateProject: vi.fn()
+  useUpdateProject: vi.fn(),
 }));
 
-vi.mock("@/components/kanban/project/ProjectForm", () => ({
-  ProjectForm: ({ children, onSubmit }: any) => (
-    <form
-      data-testid="project-form"
-      onSubmit={(e) => {
-        e.preventDefault();
-        onSubmit({ title: "Updated Project", description: "Updated Description" });
-      }}
-    >
-      {children}
-    </form>
-  )
-}));
+// Tamagui renders the confirm dialog in a <dialog> element that jsdom treats as
+// hidden for role queries, so locate it directly.
+const findConfirmDialog = () =>
+  waitFor(() => {
+    const el = document.querySelector<HTMLElement>('[role="alertdialog"]');
+    expect(el).toBeTruthy();
+    return el!;
+  });
 
-describe("ProjectActions", () => {
-  const mockProps = {
-    id: "project-1",
-    title: "Test Project",
-    description: "Test Description",
-    ownerId: "user-1"
+describe('ProjectActions', () => {
+  const props = {
+    id: 'project-1',
+    title: 'Test Project',
+    description: 'Test Description',
+    ownerId: 'user-1',
   };
 
-  beforeEach(async () => {
+  const updateProject = vi.fn();
+  const removeProject = vi.fn();
+  const updateMutateAsync = vi.fn();
+  const deleteMutateAsync = vi.fn();
+
+  const mockStore = (userId: string | null) => {
+    vi.mocked(useWorkspaceStore).mockImplementation((selector?: any) => {
+      const state = { userId, updateProject, removeProject };
+      return selector ? selector(state) : state;
+    });
+  };
+
+  beforeEach(() => {
     vi.clearAllMocks();
+    mockStore('user-1');
+    updateProject.mockResolvedValue(undefined);
+    removeProject.mockResolvedValue(undefined);
+    vi.mocked(useUpdateProject).mockReturnValue({ mutateAsync: updateMutateAsync } as any);
+    vi.mocked(useDeleteProject).mockReturnValue({ mutateAsync: deleteMutateAsync } as any);
+  });
 
-    const { useWorkspaceStore } = await import("@/stores/workspace-store");
-    const { useDeleteProject, useUpdateProject } = await import("@/lib/api/projects/queries");
+  const openMenu = async () => {
+    fireEvent.click(screen.getByTestId('project-option-button'));
+    await screen.findByRole('menu');
+  };
 
-    vi.mocked(useWorkspaceStore).mockImplementation((selector?: any) => {
-      const state = {
-        userId: "user-1",
-        updateProject: vi.fn().mockResolvedValue(undefined)
-      };
-      return selector ? selector(state) : state;
+  it('renders the actions trigger', () => {
+    renderWithProviders(<ProjectActions {...props} />);
+    expect(screen.getByTestId('project-option-button')).toHaveAttribute('aria-label', 'Test Project actions');
+  });
+
+  it('enables edit and delete for the owner', async () => {
+    renderWithProviders(<ProjectActions {...props} />);
+    await openMenu();
+    expect(screen.getByTestId('edit-project-button')).not.toHaveAttribute('aria-disabled');
+    expect(screen.getByTestId('delete-project-button')).not.toHaveAttribute('aria-disabled');
+  });
+
+  it('disables edit and delete for non-owners', async () => {
+    mockStore('user-2');
+    renderWithProviders(<ProjectActions {...props} />);
+    await openMenu();
+    expect(screen.getByTestId('edit-project-button')).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByTestId('delete-project-button')).toHaveAttribute('aria-disabled', 'true');
+
+    fireEvent.click(screen.getByTestId('delete-project-button'));
+    expect(document.querySelector('[role="alertdialog"]')).not.toBeInTheDocument();
+  });
+
+  it('updates the project through the prefilled form', async () => {
+    renderWithProviders(<ProjectActions {...props} />);
+    await openMenu();
+    fireEvent.click(screen.getByTestId('edit-project-button'));
+
+    const titleInput = await screen.findByTestId('project-title-input');
+    expect(screen.getByText('editProjectTitle')).toBeInTheDocument();
+    expect(titleInput).toHaveValue('Test Project');
+    fireEvent.change(titleInput, { target: { value: 'Renamed' } });
+    fireEvent.click(screen.getByTestId('save-project-button'));
+
+    await waitFor(() => {
+      expect(updateProject).toHaveBeenCalledWith('project-1', 'Renamed', 'Test Description', expect.any(Function));
     });
+    expect(toast.success).toHaveBeenCalledWith('updateSuccess');
 
-    vi.mocked(useDeleteProject).mockReturnValue({
-      mutate: vi.fn(),
-      mutateAsync: vi.fn().mockResolvedValue(undefined),
-      isPending: false
-    } as any);
-
-    vi.mocked(useUpdateProject).mockReturnValue({
-      mutate: vi.fn(),
-      mutateAsync: vi.fn().mockResolvedValue(mockProps),
-      isPending: false
-    } as any);
-  });
-
-  it("should render project actions trigger", () => {
-    render(<ProjectActions {...mockProps} />);
-    expect(screen.getByTestId("project-option-button")).toBeInTheDocument();
-  });
-
-  it("should render with owner permissions", () => {
-    render(<ProjectActions {...mockProps} />);
-    expect(screen.getByTestId("project-option-button")).toBeInTheDocument();
-  });
-
-  it("should render without owner permissions", async () => {
-    const { useWorkspaceStore } = await import("@/stores/workspace-store");
-    vi.mocked(useWorkspaceStore).mockImplementation((selector?: any) => {
-      const state = {
-        userId: "user-2",
-        updateProject: vi.fn().mockResolvedValue(undefined)
-      };
-      return selector ? selector(state) : state;
+    // The store callback maps to the update mutation with the current user as owner
+    const persist = updateProject.mock.calls[0][3];
+    await persist('project-1', { title: 'Renamed', description: '' });
+    expect(updateMutateAsync).toHaveBeenCalledWith({
+      id: 'project-1',
+      title: 'Renamed',
+      description: null,
+      owner: 'user-1',
     });
-
-    render(<ProjectActions {...mockProps} />);
-    expect(screen.getByTestId("project-option-button")).toBeInTheDocument();
   });
 
-  it("should render with description", () => {
-    render(<ProjectActions {...mockProps} description="Test Description" />);
-    expect(screen.getByTestId("project-option-button")).toBeInTheDocument();
-  });
+  it('reports update failures', async () => {
+    updateProject.mockRejectedValue(new Error('Server down'));
+    renderWithProviders(<ProjectActions {...props} />);
+    await openMenu();
+    fireEvent.click(screen.getByTestId('edit-project-button'));
+    await screen.findByTestId('project-title-input');
+    fireEvent.click(screen.getByTestId('save-project-button'));
 
-  it("should render without description", () => {
-    render(<ProjectActions {...mockProps} description={undefined} />);
-    expect(screen.getByTestId("project-option-button")).toBeInTheDocument();
-  });
-
-  it("should handle project with minimal props", () => {
-    const minimalProps = {
-      id: "project-2",
-      title: "Minimal Project",
-      ownerId: "user-1"
-    };
-    render(<ProjectActions {...minimalProps} />);
-    expect(screen.getByTestId("project-option-button")).toBeInTheDocument();
-  });
-
-  it("should determine owner correctly when user is owner", () => {
-    render(<ProjectActions {...mockProps} ownerId="user-1" />);
-    expect(screen.getByTestId("project-option-button")).toBeInTheDocument();
-  });
-
-  it("should determine owner correctly when user is not owner", async () => {
-    const { useWorkspaceStore } = await import("@/stores/workspace-store");
-    vi.mocked(useWorkspaceStore).mockImplementation((selector?: any) => {
-      const state = {
-        userId: "user-3",
-        updateProject: vi.fn()
-      };
-      return selector ? selector(state) : state;
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('updateFailed: Server down');
     });
-
-    render(<ProjectActions {...mockProps} ownerId="user-1" />);
-    expect(screen.getByTestId("project-option-button")).toBeInTheDocument();
   });
 
-  it("should handle null userId", async () => {
-    const { useWorkspaceStore } = await import("@/stores/workspace-store");
-    vi.mocked(useWorkspaceStore).mockImplementation((selector?: any) => {
-      const state = {
-        userId: null,
-        updateProject: vi.fn()
-      };
-      return selector ? selector(state) : state;
+  it('deletes the project after confirmation', async () => {
+    renderWithProviders(<ProjectActions {...props} />);
+    await openMenu();
+    fireEvent.click(screen.getByTestId('delete-project-button'));
+
+    const dialog = await findConfirmDialog();
+    expect(within(dialog).getByText('confirmDeleteTitle: Test Project')).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'delete', hidden: true }));
+
+    await waitFor(() => {
+      expect(removeProject).toHaveBeenCalledWith('project-1', expect.any(Function));
     });
+    expect(toast.success).toHaveBeenCalledWith('deleteSuccess: Test Project');
 
-    render(<ProjectActions {...mockProps} />);
-    expect(screen.getByTestId("project-option-button")).toBeInTheDocument();
+    const persist = removeProject.mock.calls[0][1];
+    await persist('project-1');
+    expect(deleteMutateAsync).toHaveBeenCalledWith('project-1');
   });
 
-  it("should render dropdown menu trigger", () => {
-    render(<ProjectActions {...mockProps} />);
-    const trigger = screen.getByTestId("project-option-button");
-    expect(trigger).toBeInTheDocument();
-    expect(trigger).toHaveClass("bg-background");
+  it('reports delete failures', async () => {
+    removeProject.mockRejectedValue(new Error('nope'));
+    renderWithProviders(<ProjectActions {...props} />);
+    await openMenu();
+    fireEvent.click(screen.getByTestId('delete-project-button'));
+    const dialog = await findConfirmDialog();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'delete', hidden: true }));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('deleteFailed: nope');
+    });
   });
 
-  it("should handle project with different owner", () => {
-    render(<ProjectActions {...mockProps} ownerId="different-user" />);
-    expect(screen.getByTestId("project-option-button")).toBeInTheDocument();
-  });
+  it('refuses to update when the user is not authenticated', async () => {
+    mockStore(null);
+    renderWithProviders(<ProjectActions {...props} ownerId={null as any} />);
+    await openMenu();
+    fireEvent.click(screen.getByTestId('edit-project-button'));
+    await screen.findByTestId('project-title-input');
+    fireEvent.click(screen.getByTestId('save-project-button'));
 
-  it("should handle same user as owner", () => {
-    render(<ProjectActions {...mockProps} ownerId="user-1" />);
-    expect(screen.getByTestId("project-option-button")).toBeInTheDocument();
-  });
-
-  it("should render correctly with empty description", () => {
-    render(<ProjectActions {...mockProps} description="" />);
-    expect(screen.getByTestId("project-option-button")).toBeInTheDocument();
-  });
-
-  it("should render correctly with long description", () => {
-    const longDescription = "A".repeat(500);
-    render(<ProjectActions {...mockProps} description={longDescription} />);
-    expect(screen.getByTestId("project-option-button")).toBeInTheDocument();
-  });
-
-  it("should render correctly with special characters in title", () => {
-    render(<ProjectActions {...mockProps} title="Test & Project <>" />);
-    expect(screen.getByTestId("project-option-button")).toBeInTheDocument();
-  });
-
-  it("should render with pending delete mutation", async () => {
-    const { useDeleteProject } = await import("@/lib/api/projects/queries");
-    vi.mocked(useDeleteProject).mockReturnValue({
-      mutate: vi.fn(),
-      mutateAsync: vi.fn().mockImplementation(async () => new Promise(() => {})),
-      isPending: true
-    } as any);
-
-    render(<ProjectActions {...mockProps} />);
-    expect(screen.getByTestId("project-option-button")).toBeInTheDocument();
-  });
-
-  it("should render with pending update mutation", async () => {
-    const { useUpdateProject } = await import("@/lib/api/projects/queries");
-    vi.mocked(useUpdateProject).mockReturnValue({
-      mutate: vi.fn(),
-      mutateAsync: vi.fn().mockImplementation(async () => new Promise(() => {})),
-      isPending: true
-    } as any);
-
-    render(<ProjectActions {...mockProps} />);
-    expect(screen.getByTestId("project-option-button")).toBeInTheDocument();
-  });
-
-  it("should initialize with correct state", () => {
-    const { container } = render(<ProjectActions {...mockProps} />);
-    expect(container).toBeTruthy();
-    expect(screen.getByTestId("project-option-button")).toBeInTheDocument();
-  });
-
-  it("should handle component lifecycle", () => {
-    const { unmount } = render(<ProjectActions {...mockProps} />);
-    expect(screen.getByTestId("project-option-button")).toBeInTheDocument();
-    unmount();
-  });
-
-  it("should render component structure correctly", () => {
-    const { container } = render(<ProjectActions {...mockProps} />);
-    expect(container.firstChild).toBeTruthy();
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('userNotAuthenticated');
+    });
+    expect(updateProject).not.toHaveBeenCalled();
   });
 });
