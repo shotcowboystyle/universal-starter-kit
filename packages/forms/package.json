@@ -1,0 +1,120 @@
+{
+  "name": "@repo/forms",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Cross-platform form components with URL state management",
+  "license": "Apache-2.0",
+  "sideEffects": false,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    "./src/*": "./src/*",
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsgo --noEmit",
+    "format": "cd ../.. && oxfmt --no-error-on-unmatched-pattern --config .config/oxfmtrc.json packages/forms",
+    "lint": "npx oxlint --config ../../.config/oxlintrc.json --fix",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@floating-ui/react": "catalog:",
+    "@phosphor-icons/react": "catalog:",
+    "@repo/platform": "workspace:*",
+    "@repo/router": "workspace:*",
+    "@repo/table-primitives": "workspace:*",
+    "@repo/theme": "workspace:*",
+    "@tamagui/get-font-sized": "catalog:",
+    "@tamagui/get-token": "catalog:",
+    "@tamagui/lucide-icons-2": "catalog:",
+    "@tamagui/roving-focus": "catalog:",
+    "@tamagui/stacks": "catalog:",
+    "@tamagui/web": "catalog:",
+    "@tanstack/form-core": "^1.29.1",
+    "@tanstack/react-form": "catalog:",
+    "@tanstack/react-store": "catalog:",
+    "expo-camera": "~55.0.18",
+    "expo-linear-gradient": "~55.0.13",
+    "html5-qrcode": "^2.3.8",
+    "perfect-freehand": "^1.2.3",
+    "react-native-svg": "catalog:",
+    "tamagui": "catalog:"
+  },
+  "devDependencies": {
+    "@repo/config": "workspace:*",
+    "@repo/storybook": "workspace:*",
+    "@repo/test-utils": "workspace:*",
+    "@storybook/react-native-web-vite": "catalog:",
+    "@tamagui/config": "catalog:",
+    "@tamagui/vite-plugin": "catalog:",
+    "@testing-library/jest-dom": "catalog:",
+    "@testing-library/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "expo-document-picker": "~55.0.16",
+    "expo-image-picker": "~55.0.23",
+    "expo-maps": "~55.0.21",
+    "happy-dom": "catalog:",
+    "i18next": "catalog:",
+    "matchmedia-polyfill": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "react-i18next": "catalog:",
+    "react-native-web": "catalog:",
+    "storybook": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "@react-native-community/datetimepicker": ">=8.0.1",
+    "expo-document-picker": "*",
+    "expo-haptics": "55.0.17",
+    "expo-image-picker": "*",
+    "expo-maps": "*",
+    "expo-modules-core": "*",
+    "i18next": "^25.0.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-i18next": ">=14",
+    "react-native": ">=0.83.0",
+    "react-native-safe-area-context": "*"
+  },
+  "peerDependenciesMeta": {
+    "@react-native-community/datetimepicker": {
+      "optional": true
+    },
+    "expo-document-picker": {
+      "optional": true
+    },
+    "expo-haptics": {
+      "optional": true
+    },
+    "expo-image-picker": {
+      "optional": true
+    },
+    "expo-maps": {
+      "optional": true
+    },
+    "expo-modules-core": {
+      "optional": true
+    },
+    "i18next": {
+      "optional": true
+    },
+    "react-i18next": {
+      "optional": true
+    },
+    "react-native": {
+      "optional": true
+    },
+    "react-native-safe-area-context": {
+      "optional": true
+    }
+  },
+  "module:jsx": "dist/jsx"
+}

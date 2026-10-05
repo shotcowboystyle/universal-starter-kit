@@ -1,0 +1,50 @@
+{
+  "name": "@repo/table-primitives",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Semantic Table primitives and cell context (no forms or data-table)",
+  "license": "Apache-2.0",
+  "sideEffects": false,
+  "main": "./src/index.tsx",
+  "types": "./src/index.tsx",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "types": "./src/index.tsx",
+      "default": "./src/index.tsx"
+    },
+    "./tableCellContext": {
+      "types": "./src/tableCellContext.ts",
+      "default": "./src/tableCellContext.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsgo --noEmit",
+    "format": "cd ../.. && oxfmt --no-error-on-unmatched-pattern --config .config/oxfmtrc.json packages/table-primitives",
+    "lint": "npx oxlint --config ../../.config/oxlintrc.json --fix",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@repo/theme": "workspace:*",
+    "tamagui": "catalog:"
+  },
+  "devDependencies": {
+    "@repo/config": "workspace:*",
+    "@repo/test-utils": "workspace:*",
+    "@testing-library/jest-dom": "catalog:",
+    "@testing-library/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "happy-dom": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "module:jsx": "dist/jsx"
+}

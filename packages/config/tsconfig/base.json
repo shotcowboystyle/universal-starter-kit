@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "allowJs": false,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "noEmit": true,
+    // Node-loaded config code (vite/vitest presets) keeps .ts import extensions.
+    "allowImportingTsExtensions": true,
+    "noImplicitAny": false,
+    "noImplicitReturns": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "preserveConstEnums": true,
+    "removeComments": false,
+    "skipLibCheck": true,
+    "strictNullChecks": true,
+    "target": "ES2020",
+    // An explicit `types` array turns OFF automatic @types inclusion, so this
+    // list is the whole set of ambient packages every program in the workspace
+    // gets. `chai` is not decoration: @vitest/expect declares
+    //   interface Assertion<T> extends VitestAssertion<Chai.Assertion, T>, ...
+    // and without the global `Chai` namespace that base interface collapses,
+    // taking `.not` and the jest-dom matchers with it. That is where a past
+    // ~800 TS2339 regression came from. Do not trim this
+    // list without recounting.
+    "types": ["node", "react", "vite/client", "@testing-library/jest-dom/vitest", "vitest/globals", "chai"],
+    "lib": ["DOM", "DOM.Iterable", "ESNext"]
+  },
+  "typeAcquisition": {
+    "enable": true
+  }
+}

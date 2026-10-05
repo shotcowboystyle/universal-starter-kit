@@ -1,0 +1,76 @@
+{
+  "name": "universal-starter-kit",
+  "version": "1.0.0",
+  "private": true,
+  "author": {
+    "name": "curt.blanton",
+    "url": "https://github.com/shotcowboystyle/universal-starter-kit"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "clean": "find . -name 'node_modules' -type d -prune -exec rm -rf {} + ; find . \\( -name 'dist' -o -name 'build' -o -name '.next' -o -name '.expo' -o -name '.turbo' -o -name 'out' -o -name 'storybook-static' -o -name '.cache' \\) -type d -not -path '*/node_modules/*' -prune -exec rm -rf {} +",
+    "commit": "git-cz",
+    "dev": "turbo run dev",
+    "format": "turbo run format",
+    "init-db": "turbo run init-db",
+    "init-db:force": "turbo run init-db:force",
+    "lint": "turbo run lint",
+    "mobile": "turbo run dev --filter=mobile",
+    "mobile:android": "turbo run android --filter=mobile",
+    "mobile:build": "turbo run build --filter=mobile",
+    "mobile:build:eas": "turbo run build:eas --filter=mobile",
+    "mobile:expo:fix": "turbo run expo:fix --filter=mobile",
+    "mobile:expo:upgrade": "turbo run expo:upgrade --filter=mobile",
+    "playwright": "turbo run playwright --filter=./apps/web",
+    "playwright:install": "pnpm --filter=./apps/web exec playwright install --with-deps",
+    "knip": "knip --config .config/knip.json",
+    "lint:actions": "actionlint",
+    "lint:md": "markdownlint-cli2 --config .config/.markdownlint-cli2.jsonc \"**/*.md\"",
+    "lint:yaml": "yamllint -c .config/yamllint.yml \"**/*.{yml,yaml}\" --ignore node_modules --ignore pnpm-lock.yaml --ignore dist",
+    "postprepare": "if [ \"$NODE_ENV\" != \"production\" ]; then lefthook install; fi",
+    "preinstall": "node -e \"if(process.env.CI == 'true') {console.log('Skipping preinstall...')} else {process.exit(1)}\" || npx -y only-allow pnpm",
+    "secrets": "betterleaks git . --verbose --config .config/gitleaks.toml",
+    "spellcheck": "cspell lint --no-progress --config .config/cspell.json \"**/*.{ts,tsx,js,jsx,md,json}\"",
+    "storybook": "turbo run storybook --filter=@repo/ui",
+    "storybook:build": "turbo run storybook:build --filter=@repo/ui",
+    "storybook:test": "turbo run storybook:test --filter=@repo/ui",
+    "test": "turbo run test",
+    "test:watch": "turbo run test:watch"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.0.1",
+    "@commitlint/config-conventional": "^21.0.1",
+    "@commitlint/cz-commitlint": "^21.0.1",
+    "@testing-library/jest-dom": "catalog:",
+    "@testing-library/react": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "commitizen": "^4.3.1",
+    "cspell": "^9.0.0",
+    "dotenv": "catalog:",
+    "jsdom": "catalog:",
+    "knip": "^5.0.0",
+    "lefthook": "^1.11.0",
+    "markdownlint-cli2": "^0.17.0",
+    "oxfmt": "^0.50.0",
+    "oxlint": "^1.65.0",
+    "oxlint-tsgolint": "^0.22.1",
+    "start-server-and-test": "^3.0.5",
+    "turbo": "^2.9.14",
+    "vitest": "catalog:",
+    "yaml-lint": "^1.7.0"
+  },
+  "config": {
+    "commitizen": {
+      "path": "@commitlint/cz-commitlint"
+    }
+  },
+  "engines": {
+    "node": ">=26.9.0",
+    "pnpm": ">=12.5.1"
+  },
+  "packageManager": "pnpm@12.5.1"
+}

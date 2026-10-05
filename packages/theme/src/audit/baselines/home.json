@@ -1,0 +1,194 @@
+{
+  "url": "http://localhost:3000/",
+  "timestamp": "2026-03-25T06:05:33.532Z",
+  "preset": "unknown",
+  "scheme": "light",
+  "summary": {
+    "totalElements": 34,
+    "auditedElements": 10,
+    "totalViolations": 0,
+    "byProperty": {
+      "borderRadius": 0,
+      "borderWidth": 0,
+      "gap": 0,
+      "padding": 0,
+      "fontWeight": 0,
+      "fontFamily": 0,
+      "inlineColor": 0
+    }
+  },
+  "violations": [],
+  "elements": [
+    {
+      "label": "span._dsp_contents.font_body",
+      "tag": "span",
+      "id": "",
+      "classes": ["_dsp_contents", "font_body"],
+      "violations": [],
+      "fontFamily": {
+        "value": "Inter, -apple-system, system-ui, BlinkMacSystemFont, \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif",
+        "knob": "sans-serif ($body/$heading)",
+        "offScale": false
+      }
+    },
+    {
+      "label": "nav.is_View",
+      "tag": "nav",
+      "id": "",
+      "classes": ["is_View"],
+      "violations": [],
+      "borderWidth": {
+        "value": 1,
+        "unit": "px",
+        "knob": "medium",
+        "offScale": false
+      }
+    },
+    {
+      "label": "div.is_View",
+      "tag": "div",
+      "id": "",
+      "classes": ["is_View"],
+      "violations": [],
+      "rowGap": {
+        "value": 13,
+        "unit": "px",
+        "knob": "medium",
+        "offScale": false
+      }
+    },
+    {
+      "label": "h4.is_H4.is_Text.font_heading",
+      "tag": "h4",
+      "id": "",
+      "classes": ["is_H4", "is_Text", "font_heading"],
+      "violations": [],
+      "fontWeight": {
+        "value": 700,
+        "unit": "px",
+        "knob": "bold",
+        "offScale": false
+      }
+    },
+    {
+      "label": "div.t_unmounted.is_View",
+      "tag": "div",
+      "id": "",
+      "classes": ["t_unmounted", "is_View"],
+      "violations": [],
+      "borderRadius": {
+        "value": 9,
+        "unit": "px",
+        "knob": "medium",
+        "offScale": false
+      },
+      "borderWidth": {
+        "value": 1,
+        "unit": "px",
+        "knob": "medium",
+        "offScale": false
+      }
+    },
+    {
+      "label": "div.is_GroupFrame.is_View._outlineStyle-none[role=tablist]",
+      "tag": "div",
+      "id": "",
+      "classes": ["is_GroupFrame", "is_View", "_outlineStyle-none"],
+      "violations": [],
+      "borderRadius": {
+        "value": 9,
+        "unit": "px",
+        "knob": "medium",
+        "offScale": false
+      },
+      "rowGap": {
+        "value": 13,
+        "unit": "px",
+        "knob": "medium",
+        "offScale": false
+      }
+    },
+    {
+      "label": "div.is_View",
+      "tag": "div",
+      "id": "",
+      "classes": ["is_View"],
+      "violations": [],
+      "rowGap": {
+        "value": 13,
+        "unit": "px",
+        "knob": "medium",
+        "offScale": false
+      }
+    },
+    {
+      "label": "button.is_Button.is_View._outlineColor-0focus-visible-outlineColo114[role=button]",
+      "tag": "button",
+      "id": "",
+      "classes": [
+        "is_Button",
+        "is_View",
+        "_outlineColor-0focus-visible-outlineColo114",
+        "_outlineStyle-0focus-visible-solid",
+        "_outlineWidth-0focus-visible-2px"
+      ],
+      "violations": [],
+      "borderRadius": {
+        "value": 5,
+        "unit": "px",
+        "knob": "small",
+        "offScale": false
+      },
+      "borderWidth": {
+        "value": 1,
+        "unit": "px",
+        "knob": "medium",
+        "offScale": false
+      },
+      "rowGap": {
+        "value": 5,
+        "unit": "px",
+        "knob": "size-token(5px)",
+        "offScale": false
+      },
+      "paddingRight": {
+        "value": 7,
+        "unit": "px",
+        "knob": "size-token(7px)",
+        "offScale": false
+      },
+      "paddingLeft": {
+        "value": 7,
+        "unit": "px",
+        "knob": "size-token(7px)",
+        "offScale": false
+      }
+    },
+    {
+      "label": "span.is_SizableText.is_Text.font_body",
+      "tag": "span",
+      "id": "",
+      "classes": ["is_SizableText", "is_Text", "font_body", "_textOverflow-ellipsis"],
+      "violations": [],
+      "fontWeight": {
+        "value": 300,
+        "unit": "px",
+        "knob": "light",
+        "offScale": false
+      }
+    },
+    {
+      "label": "div.is_View",
+      "tag": "div",
+      "id": "",
+      "classes": ["is_View"],
+      "violations": [],
+      "rowGap": {
+        "value": 13,
+        "unit": "px",
+        "knob": "medium",
+        "offScale": false
+      }
+    }
+  ]
+}

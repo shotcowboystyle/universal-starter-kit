@@ -1,0 +1,56 @@
+{
+  "name": "@repo/store",
+  "version": "0.0.0",
+  "private": true,
+  "description": "universal starter kit TanStack Store with cross-platform persistent storage",
+  "license": "Apache-2.0",
+  "sideEffects": false,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsgo --noEmit",
+    "format": "cd ../.. && oxfmt --no-error-on-unmatched-pattern --config .config/oxfmtrc.json packages/store",
+    "lint": "npx oxlint --config ../../.config/oxlintrc.json --fix",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@tanstack/react-store": "catalog:",
+    "@tanstack/store": "catalog:",
+    "react-native-mmkv": "^4.3.1",
+    "zustand": "catalog:"
+  },
+  "devDependencies": {
+    "@repo/config": "workspace:*",
+    "@repo/test-utils": "workspace:*",
+    "@testing-library/jest-dom": "catalog:",
+    "@testing-library/react": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "happy-dom": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "@react-native-async-storage/async-storage": "*",
+    "react": "^19.1.0"
+  },
+  "peerDependenciesMeta": {
+    "@react-native-async-storage/async-storage": {
+      "optional": true
+    }
+  },
+  "optionalDependencies": {
+    "@tauri-apps/plugin-store": "^2.4.2"
+  }
+}

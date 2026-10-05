@@ -1,0 +1,96 @@
+{
+  "$name": "neobrutalism",
+  "$description": "Bold borders, hard offset shadows, high contrast, playful saturated colors",
+
+  "color": {
+    "$type": "color",
+    "primary": { "$value": "#00C8E0", "$description": "Cyan - main accent" },
+    "secondary": { "$value": "#FFE500", "$description": "Yellow - data/info" },
+    "accent": { "$value": "#FF0080", "$description": "Hot pink - highlights" },
+    "background": { "$value": "#F5F5F0", "$description": "Warm off-white" },
+    "surface": { "$value": "#FFFFFF", "$description": "Card backgrounds" },
+    "border": {
+      "$value": "#000000",
+      "$description": "All borders and shadows"
+    },
+    "text": { "$value": "#000000", "$description": "Primary text" },
+    "textMuted": { "$value": "#333333", "$description": "Secondary text" },
+    "error": { "$value": "#FF3333", "$description": "Bold red for errors" }
+  },
+
+  "borderWidth": {
+    "$type": "dimension",
+    "default": { "$value": "4px", "$description": "Thick brutalist borders" },
+    "thin": { "$value": "3px" },
+    "input": { "$value": "4px", "$description": "Input field borders" }
+  },
+
+  "borderRadius": {
+    "$type": "dimension",
+    "none": { "$value": "0px", "$description": "Sharp corners = more brutal" },
+    "sm": { "$value": "4px", "$description": "Slight softening if needed" }
+  },
+
+  "shadow": {
+    "$type": "shadow",
+    "$description": "Hard offset shadows - no blur, creates 3D popup effect",
+    "default": {
+      "$value": {
+        "offsetX": "6px",
+        "offsetY": "6px",
+        "blur": "0px",
+        "spread": "0px",
+        "color": "#000000"
+      }
+    },
+    "hover": {
+      "$value": {
+        "offsetX": "8px",
+        "offsetY": "8px",
+        "blur": "0px",
+        "spread": "0px",
+        "color": "#000000"
+      },
+      "$description": "Grows on hover - element lifts up"
+    },
+    "pressed": {
+      "$value": {
+        "offsetX": "2px",
+        "offsetY": "2px",
+        "blur": "0px",
+        "spread": "0px",
+        "color": "#000000"
+      },
+      "$description": "Shrinks on press - element pushes down"
+    },
+    "none": {
+      "$value": {
+        "offsetX": "0px",
+        "offsetY": "0px",
+        "blur": "0px",
+        "spread": "0px",
+        "color": "transparent"
+      }
+    }
+  },
+
+  "fontFamily": {
+    "$type": "fontFamily",
+    "primary": {
+      "$value": "SpaceGrotesk",
+      "$description": "Bold geometric sans"
+    }
+  },
+
+  "effect": {
+    "$description": "Interaction transforms - use with shadows",
+    "hoverTranslate": {
+      "$value": "-2px",
+      "$description": "Move up/left on hover"
+    },
+    "pressedTranslate": {
+      "$value": "4px",
+      "$description": "Move down/right on press"
+    }
+  }
+}

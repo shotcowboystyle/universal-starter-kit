@@ -1,0 +1,144 @@
+{
+  "$name": "neomorphism",
+  "$description": "Soft UI - dual shadows create embossed/raised effect. Monochromatic, tactile feel.",
+
+  "color": {
+    "$type": "color",
+    "primary": {
+      "$value": "#7C9AB5",
+      "$description": "Muted blue - accent color"
+    },
+    "secondary": {
+      "$value": "#A8C0D8",
+      "$description": "Lighter blue - battery fill"
+    },
+    "accent": {
+      "$value": "#7C9AB5",
+      "$description": "Same as primary for monochromatic feel"
+    },
+    "background": {
+      "$value": "#E0E5EC",
+      "$description": "Base gray - SAME as surface"
+    },
+    "surface": {
+      "$value": "#E0E5EC",
+      "$description": "Card color - SAME as background"
+    },
+    "surfaceRaised": {
+      "$value": "#E0E5EC",
+      "$description": "Raised elements - same color, shadows create depth"
+    },
+    "surfaceInset": {
+      "$value": "#D1D9E6",
+      "$description": "Pressed/inset elements - slightly darker"
+    },
+    "border": {
+      "$value": "rgba(107, 124, 147, 0.4)",
+      "$description": "Subtle visible border"
+    },
+    "text": { "$value": "#6B7C93", "$description": "Muted blue-gray text" },
+    "textMuted": { "$value": "#9BA8B9", "$description": "Even more muted" },
+    "error": { "$value": "#C97B7B", "$description": "Muted rose - soft error" },
+    "shadowLight": {
+      "$value": "#FFFFFF",
+      "$description": "Light shadow (top-left)"
+    },
+    "shadowDark": {
+      "$value": "#A3B1C6",
+      "$description": "Dark shadow (bottom-right)"
+    }
+  },
+
+  "borderWidth": {
+    "$type": "dimension",
+    "default": { "$value": "0px", "$description": "No borders in neomorphism" },
+    "input": { "$value": "2px", "$description": "Input borders" }
+  },
+
+  "borderRadius": {
+    "$type": "dimension",
+    "sm": { "$value": "16px" },
+    "default": { "$value": "20px", "$description": "Soft, rounded" },
+    "lg": { "$value": "28px" },
+    "full": { "$value": "9999px", "$description": "Circular elements" }
+  },
+
+  "shadow": {
+    "$type": "shadow",
+    "$description": "DUAL shadows - subtle, no glow. Based on neumorphism.io specs",
+
+    "default": {
+      "$value": {
+        "offsetX": "5px",
+        "offsetY": "5px",
+        "blur": "10px",
+        "spread": "0px",
+        "color": "rgba(0, 0, 0, 0.1)"
+      },
+      "$description": "Dark shadow only for cards"
+    },
+    "raisedLight": {
+      "$value": {
+        "offsetX": "-5px",
+        "offsetY": "-5px",
+        "blur": "10px",
+        "spread": "0px",
+        "color": "rgba(255, 255, 255, 0.2)"
+      },
+      "$description": "Light shadow - top left, 20% white"
+    },
+    "raisedDark": {
+      "$value": {
+        "offsetX": "5px",
+        "offsetY": "5px",
+        "blur": "10px",
+        "spread": "0px",
+        "color": "rgba(0, 0, 0, 0.1)"
+      },
+      "$description": "Dark shadow - bottom right, 10% black"
+    },
+
+    "insetLight": {
+      "$value": {
+        "offsetX": "-3px",
+        "offsetY": "-3px",
+        "blur": "6px",
+        "spread": "0px",
+        "color": "rgba(255, 255, 255, 0.2)",
+        "inset": true
+      },
+      "$description": "Inset light - for pressed state"
+    },
+    "insetDark": {
+      "$value": {
+        "offsetX": "3px",
+        "offsetY": "3px",
+        "blur": "6px",
+        "spread": "0px",
+        "color": "rgba(0, 0, 0, 0.1)",
+        "inset": true
+      },
+      "$description": "Inset dark - for pressed state"
+    }
+  },
+
+  "fontFamily": {
+    "$type": "fontFamily",
+    "primary": { "$value": "Inter" }
+  },
+
+  "special": {
+    "$description": "Implementation notes - based on neumorphism.io specs",
+    "raisedShadow": {
+      "$value": "-5px -5px 10px rgba(255,255,255,0.2), 5px 5px 10px rgba(0,0,0,0.1)",
+      "$description": "Combined CSS box-shadow for raised effect"
+    },
+    "insetShadow": {
+      "$value": "inset -3px -3px 6px rgba(255,255,255,0.2), inset 3px 3px 6px rgba(0,0,0,0.1)",
+      "$description": "Combined CSS box-shadow for pressed/inset effect"
+    },
+    "note": {
+      "$value": "Background and surface MUST be same color for effect to work"
+    }
+  }
+}

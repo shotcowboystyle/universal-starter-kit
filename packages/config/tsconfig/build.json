@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "Build configuration for workspace packages",
+  "extends": "./base.json",
+  "compilerOptions": {
+    "outDir": "${configDir}/dist",
+    "declarationDir": "${configDir}/types",
+    "tsBuildInfoFile": "${configDir}/types/.tsbuildinfo",
+    // Resolve sibling workspace packages through their exports `source`
+    // condition (listed first in every @repo exports map) during
+    // declaration emission. This keeps emission order-independent — the
+    // components <-> forms <-> rich-text <-> markdown dependency cycles make
+    // sibling `types` conditions (emitted types/) unusable as emission inputs —
+    // and node_modules resolution (+ preserveSymlinks) keeps sibling sources
+    // classified as external library files, not emit candidates.
+    "customConditions": ["source"],
+    // @react-navigation/* also list `source` (raw .tsx) before `types` in
+    // their exports and their sources do not compile under this config; pin
+    // them to their published declarations (paths take precedence over
+    // exports conditions). Extensionless on purpose: a literal .ts/.d.ts
+    // candidate flips resolvedUsingTsExtension and crashes tsc 5.9 when the
+    // import specifier has no extension.
+    "paths": {
+      "@react-navigation/*": [
+        "${configDir}/node_modules/@react-navigation/*/lib/typescript/src/index",
+        "${configDir}/../../node_modules/@react-navigation/*/lib/typescript/src/index"
+      ]
+    }
+  },
+  // ${configDir} prefixes keep these patterns anchored to the EXTENDING
+  // package (relative patterns in an extended config rebase against this
+  // file's directory, which silently disabled the excludes and let stories/
+  // specs into every extender's declaration emission). Only src/ (what
+  // packages publish and emit declarations for) plus root-level ambient
+  // @types/ are compiled; package-root dev scaffolding (webview/, scratch/,
+  // tests/) stays out.
+  "include": ["${configDir}/src/**/*", "${configDir}/@types/**/*"],
+  "exclude": [
+    "${configDir}/tests",
+    "${configDir}/types",
+    "${configDir}/dist",
+    "${configDir}/**/*.spec.ts",
+    "${configDir}/**/*.spec.tsx",
+    "${configDir}/**/*.test.ts",
+    "${configDir}/**/*.test.tsx",
+    "${configDir}/**/*.stories.ts",
+    "${configDir}/**/*.stories.tsx",
+    "${configDir}/vitest.config.ts",
+    "${configDir}/vitest.config.mjs"
+  ]
+}
