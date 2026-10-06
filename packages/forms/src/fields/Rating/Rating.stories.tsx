@@ -10,6 +10,115 @@ import { Form } from '../../Form';
 
 import { Rating } from './index';
 
+const RATE_HELPER = 'Rate your experience';
+
+const FormExample = () => {
+  const form = useForm({
+    defaultValues: {
+      quality: 0.6,
+      service: 0.8,
+    },
+    onSubmit: async ({ value }) => {
+      action('onSubmit')(value);
+    },
+  });
+
+  return (
+    <Form
+      form={form}
+      maxWidth={400}>
+      <YStack gap="$4">
+        <Rating
+          label="Quality"
+          name="quality"
+          helperText="Rate the product quality"
+          starIcon={StarIcon}
+        />
+        <Rating
+          label="Service"
+          name="service"
+          helperText="Rate the customer service"
+          starIcon={StarIcon}
+        />
+        <Button action="submit">Submit Review</Button>
+      </YStack>
+    </Form>
+  );
+};
+
+const BareExample = () => {
+  const [value, setValue] = useState(0.6);
+  return (
+    <Rating
+      label="Rating"
+      helperText="No starIcon prop — package default star"
+      value={value}
+      onChange={(v) => {
+        setValue(v);
+        action('onChange')(v);
+      }}
+    />
+  );
+};
+
+const PointyExample = () => {
+  const [value, setValue] = useState(0.6);
+  return (
+    <YStack
+      gap="$4"
+      maxWidth={300}>
+      <Rating
+        label="Pointy (explicit prop)"
+        helperText="Sharp-pointed stars via the pointy prop"
+        value={value}
+        onChange={setValue}
+        starIcon={StarIcon}
+        pointy
+      />
+      <Rating
+        label="Regular"
+        helperText="Default star icon"
+        value={value}
+        onChange={setValue}
+        starIcon={StarIcon}
+        pointy={false}
+      />
+    </YStack>
+  );
+};
+
+const InteractiveExample = () => {
+  const [value, setValue] = useState(0.4);
+  return (
+    <YStack
+      gap="$4"
+      maxWidth={300}>
+      <Rating
+        label="How would you rate this?"
+        helperText="Click a star, or hover to preview"
+        value={value}
+        onChange={(v) => {
+          setValue(v);
+          action('onChange')(v);
+        }}
+        starIcon={StarIcon}
+      />
+      <Rating
+        label="Read only"
+        value={0.8}
+        readOnly
+        starIcon={StarIcon}
+      />
+      <Rating
+        label="Disabled"
+        value={0.8}
+        disabled
+        starIcon={StarIcon}
+      />
+    </YStack>
+  );
+};
+
 const meta: Meta<typeof Rating> = {
   title: 'Forms/Rating',
   component: Rating,
@@ -40,48 +149,13 @@ type Story = StoryObj<typeof Rating>;
 
 export const Main: Story = {
   name: 'Main',
-  render: () => {
-    const FormExample = () => {
-      const form = useForm({
-        defaultValues: {
-          quality: 0.6,
-          service: 0.8,
-        },
-        onSubmit: async ({ value }) => {
-          action('onSubmit')(value);
-        },
-      });
-
-      return (
-        <Form
-          form={form}
-          maxWidth={400}>
-          <YStack gap="$4">
-            <Rating
-              label="Quality"
-              name="quality"
-              helperText="Rate the product quality"
-              starIcon={StarIcon}
-            />
-            <Rating
-              label="Service"
-              name="service"
-              helperText="Rate the customer service"
-              starIcon={StarIcon}
-            />
-            <Button action="submit">Submit Review</Button>
-          </YStack>
-        </Form>
-      );
-    };
-    return <FormExample />;
-  },
+  render: () => <FormExample />,
 };
 
 export const Standalone: Story = {
   args: {
     label: 'Rating',
-    helperText: 'Rate your experience',
+    helperText: RATE_HELPER,
     // Rating `value` is a 0..1 fraction of maxStars (0.6 * 5 = 3 stars).
     // `3` rendered all five stars filled (round(3*5)=15 >= 5).
     value: 0.6,
@@ -101,29 +175,13 @@ export const Standalone: Story = {
  * Enter/Space, arrows).
  */
 export const Bare: Story = {
-  render: () => {
-    const BareExample = () => {
-      const [value, setValue] = useState(0.6);
-      return (
-        <Rating
-          label="Rating"
-          helperText="No starIcon prop — package default star"
-          value={value}
-          onChange={(v) => {
-            setValue(v);
-            action('onChange')(v);
-          }}
-        />
-      );
-    };
-    return <BareExample />;
-  },
+  render: () => <BareExample />,
 };
 
 export const Basic: Story = {
   args: {
     label: 'Rating',
-    helperText: 'Rate your experience',
+    helperText: RATE_HELPER,
     value: 0.6,
     starIcon: StarIcon,
     onChange: action('onChange'),
@@ -144,7 +202,7 @@ export const Disabled: Story = {
 export const WithError: Story = {
   args: {
     label: 'Rating',
-    helperText: 'Rate your experience',
+    helperText: RATE_HELPER,
     value: 0,
     required: true,
     error: 'A rating is required',
@@ -187,71 +245,11 @@ export const Sizes: Story = {
 };
 
 export const Pointy: Story = {
-  render: () => {
-    const PointyExample = () => {
-      const [value, setValue] = useState(0.6);
-      return (
-        <YStack
-          gap="$4"
-          maxWidth={300}>
-          <Rating
-            label="Pointy (explicit prop)"
-            helperText="Sharp-pointed stars via the pointy prop"
-            value={value}
-            onChange={setValue}
-            starIcon={StarIcon}
-            pointy
-          />
-          <Rating
-            label="Regular"
-            helperText="Default star icon"
-            value={value}
-            onChange={setValue}
-            starIcon={StarIcon}
-            pointy={false}
-          />
-        </YStack>
-      );
-    };
-    return <PointyExample />;
-  },
+  render: () => <PointyExample />,
 };
 
 export const Interactive: Story = {
-  render: () => {
-    const InteractiveExample = () => {
-      const [value, setValue] = useState(0.4);
-      return (
-        <YStack
-          gap="$4"
-          maxWidth={300}>
-          <Rating
-            label="How would you rate this?"
-            helperText="Click a star, or hover to preview"
-            value={value}
-            onChange={(v) => {
-              setValue(v);
-              action('onChange')(v);
-            }}
-            starIcon={StarIcon}
-          />
-          <Rating
-            label="Read only"
-            value={0.8}
-            readOnly
-            starIcon={StarIcon}
-          />
-          <Rating
-            label="Disabled"
-            value={0.8}
-            disabled
-            starIcon={StarIcon}
-          />
-        </YStack>
-      );
-    };
-    return <InteractiveExample />;
-  },
+  render: () => <InteractiveExample />,
 };
 
 /** Loading placeholder — the skeleton mirrors the star row anatomy. */

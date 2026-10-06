@@ -1,5 +1,5 @@
 interface SubmissionForm {
-  handleSubmit(): Promise<void>;
+  handleSubmit: () => Promise<void>;
   state: { isSubmitting: boolean; isSubmitSuccessful: boolean };
 }
 
@@ -15,13 +15,14 @@ const createSubmissionController = (form: SubmissionForm) => {
       return;
     }
     snapshot = { error, submitting };
-    listeners.forEach((listener) => {
+    for (const listener of listeners) {
       listener();
-    });
+    }
   };
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- boundary for caught values (always unknown): it converts whatever was thrown into a display message
   const reportError = (error: unknown) => {
     const text = error instanceof Error ? error.message : String(error);
-    update(text || 'network unreachable');
+    update(text === '' ? 'network unreachable' : text);
   };
 
   return {
@@ -42,16 +43,17 @@ const createSubmissionController = (form: SubmissionForm) => {
         return 'busy';
       }
       update(null, true);
-      return await Promise.resolve()
-        .then(async () => await form.handleSubmit())
-        .then((): SubmissionOutcome => (form.state.isSubmitSuccessful ? 'success' : 'invalid'))
-        .catch((error): SubmissionOutcome => {
-          reportError(error);
-          return 'failed';
-        })
-        .finally(() => {
-          update(snapshot.error, false);
-        });
+      try {
+        // One microtask hop so a synchronous throw from handleSubmit is captured like a rejection.
+        await Promise.resolve();
+        await form.handleSubmit();
+        return form.state.isSubmitSuccessful ? 'success' : 'invalid';
+      } catch (error) {
+        reportError(error);
+        return 'failed';
+      } finally {
+        update(snapshot.error, false);
+      }
     },
   };
 };

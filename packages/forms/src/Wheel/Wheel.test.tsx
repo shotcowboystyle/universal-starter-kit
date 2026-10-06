@@ -5,9 +5,31 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { Wheel } from './index';
 
-afterEach(cleanup);
+const rowTransform = (index: number): string => {
+  const row = screen
+    .getByTestId('wheel')
+    .querySelector<HTMLElement>(`[data-testid="wheel-item"][data-index="${index}"]`);
+  return row?.style.transform ?? '(virtualized out)';
+};
+
+const installFrameClock = () => {
+  vi.useFakeTimers({
+    toFake: ['setTimeout', 'clearTimeout', 'requestAnimationFrame', 'cancelAnimationFrame', 'performance'],
+  });
+};
+
+const flick = (wrapper: HTMLElement) => {
+  fireEvent.pointerDown(wrapper, { clientY: 300, pointerId: 1 });
+  act(() => {
+    vi.advanceTimersByTime(16);
+  });
+  fireEvent.pointerMove(wrapper, { clientY: 80, pointerId: 1 });
+  fireEvent.pointerUp(wrapper, { clientY: 80, pointerId: 1 });
+};
 
 describe('Wheel contrast contract', () => {
+  afterEach(cleanup);
+
   it('keeps the selected row on the body weight and rounding on the selection band', () => {
     renderWithProviders(
       <Preset overrides={{ borderRadius: 'full' }}>
@@ -23,8 +45,8 @@ describe('Wheel contrast contract', () => {
     const idle = wheel.querySelector('[data-testid="wheel-item"]:not([data-selected="true"])')?.firstElementChild;
     expect(selected).toBeTruthy();
     expect(idle).toBeTruthy();
-    expect(getComputedStyle(selected as Element).fontWeight).toBe('400');
-    expect(getComputedStyle(selected as Element).fontWeight).toBe(getComputedStyle(idle as Element).fontWeight);
+    expect(getComputedStyle(selected!).fontWeight).toBe('400');
+    expect(getComputedStyle(selected!).fontWeight).toBe(getComputedStyle(idle!).fontWeight);
     expect(['', '0px']).toContain(getComputedStyle(wheel).borderTopLeftRadius);
     expect(getComputedStyle(screen.getByTestId('wheel-selection')).borderStartStartRadius).not.toBe('0px');
   });
@@ -58,7 +80,7 @@ describe('Wheel contrast contract', () => {
       />,
     );
     const wheel = screen.getByTestId('wheel');
-    expect(wheel.getAttribute('data-disabled')).toBe('true');
+    expect(wheel.dataset.disabled).toBe('true');
     expect(wheel.getAttribute('aria-disabled')).toBe('true');
     expect(getComputedStyle(wheel).opacity).toBe('1');
   });
@@ -74,28 +96,16 @@ describe('Wheel contrast contract', () => {
 describe('Wheel snaps ride the animation knob', () => {
   const items = [10, 20, 30, 40, 50];
 
-  const rowTransform = (index: number): string => {
-    const row = screen
-      .getByTestId('wheel')
-      .querySelector(`[data-testid="wheel-item"][data-index="${index}"]`) as HTMLElement | null;
-    return row?.style.transform ?? '(virtualized out)';
-  };
-
   const wheelSnapshot = (): string => items.map((_, index) => rowTransform(index)).join(' | ');
 
   afterEach(() => {
+    cleanup();
     vi.useRealTimers();
   });
 
-  const useFrameClock = () => {
-    vi.useFakeTimers({
-      toFake: ['setTimeout', 'clearTimeout', 'requestAnimationFrame', 'cancelAnimationFrame', 'performance'],
-    });
-  };
-
   it('jumps instantly on keyboard snap at animation none — settled within one frame', () => {
-    useFrameClock();
-    const onChange = vi.fn();
+    installFrameClock();
+    const onChange = vi.fn<(value: number) => void>();
     renderWithProviders(
       <Preset overrides={{ animation: 'none' }}>
         <Wheel
@@ -110,8 +120,7 @@ describe('Wheel snaps ride the animation knob', () => {
     fireEvent.keyDown(wrapper, { key: 'ArrowDown' });
 
     // Snap completed synchronously: selection committed, no tween scheduled.
-    expect(onChange).toHaveBeenCalledOnce();
-    expect(onChange).toHaveBeenCalledWith(20);
+    expect(onChange).toHaveBeenCalledExactlyOnceWith(20);
     expect(wrapper.getAttribute('aria-valuenow')).toBe('1');
 
     // Positions are already settled — 500ms of frames changes nothing.
@@ -124,8 +133,8 @@ describe('Wheel snaps ride the animation knob', () => {
   });
 
   it('tweens the same snap with motion on (positive control)', () => {
-    useFrameClock();
-    const onChange = vi.fn();
+    installFrameClock();
+    const onChange = vi.fn<(value: number) => void>();
     renderWithProviders(
       // Default knobs: animation "quick" — knobProps.transition is defined.
       <Wheel
@@ -152,23 +161,13 @@ describe('Wheel snaps ride the animation knob', () => {
     act(() => {
       vi.advanceTimersByTime(500);
     });
-    expect(onChange).toHaveBeenCalledOnce();
-    expect(onChange).toHaveBeenCalledWith(20);
+    expect(onChange).toHaveBeenCalledExactlyOnceWith(20);
     expect(wrapper.getAttribute('aria-valuenow')).toBe('1');
   });
 
-  const flick = (wrapper: HTMLElement) => {
-    fireEvent.pointerDown(wrapper, { clientY: 300, pointerId: 1 });
-    act(() => {
-      vi.advanceTimersByTime(16);
-    });
-    fireEvent.pointerMove(wrapper, { clientY: 80, pointerId: 1 });
-    fireEvent.pointerUp(wrapper, { clientY: 80, pointerId: 1 });
-  };
-
   it('skips momentum coast at animation none — flick snaps in the same turn', () => {
-    useFrameClock();
-    const onChange = vi.fn();
+    installFrameClock();
+    const onChange = vi.fn<(value: number) => void>();
     renderWithProviders(
       <Preset overrides={{ animation: 'none' }}>
         <Wheel
@@ -182,7 +181,7 @@ describe('Wheel snaps ride the animation knob', () => {
     flick(wrapper);
 
     // No rAF coast: selection committed before any frames.
-    expect(onChange).toHaveBeenCalled();
+    expect(onChange).toHaveBeenCalledWith(expect.any(Number));
     const settled = wheelSnapshot();
     const calls = onChange.mock.calls.length;
     act(() => {
@@ -193,8 +192,8 @@ describe('Wheel snaps ride the animation knob', () => {
   });
 
   it('coasts after a flick with motion on (positive control)', () => {
-    useFrameClock();
-    const onChange = vi.fn();
+    installFrameClock();
+    const onChange = vi.fn<(value: number) => void>();
     renderWithProviders(
       <Wheel
         items={items}
@@ -215,11 +214,13 @@ describe('Wheel snaps ride the animation knob', () => {
     act(() => {
       vi.advanceTimersByTime(2000);
     });
-    expect(onChange).toHaveBeenCalled();
+    expect(onChange).toHaveBeenCalledWith(expect.any(Number));
   });
 });
 
 describe('Wheel iOS picker contract', () => {
+  afterEach(cleanup);
+
   it('paints the selection band as a fill with no hairline borders', () => {
     renderWithProviders(
       <Wheel
@@ -247,9 +248,11 @@ describe('Wheel iOS picker contract', () => {
     );
     const selected = screen
       .getByTestId('wheel')
-      .querySelector('[data-testid="wheel-item"][data-selected="true"]') as HTMLElement;
+      .querySelector<HTMLElement>('[data-testid="wheel-item"][data-selected="true"]')!;
     expect(selected).toBeTruthy();
-    const translateY = Number(/translateY\(([-\d.]+)px\)/u.exec(selected.style.transform)?.[1] ?? Number.NaN);
+    const translateY = Number(
+      /translateY\((?<offset>[-\d.]+)px\)/u.exec(selected.style.transform)?.groups?.offset ?? Number.NaN,
+    );
     expect(translateY).toBeCloseTo(2 * 36, 1);
   });
 
@@ -270,7 +273,7 @@ describe('Wheel iOS picker contract', () => {
     vi.useFakeTimers({
       toFake: ['setTimeout', 'clearTimeout', 'requestAnimationFrame', 'cancelAnimationFrame', 'performance'],
     });
-    const onChange = vi.fn();
+    const onChange = vi.fn<(value: number) => void>();
     renderWithProviders(
       <Wheel
         items={[10, 20, 30, 40, 50]}
@@ -280,10 +283,10 @@ describe('Wheel iOS picker contract', () => {
       />,
     );
     const wrapper = screen.getByTestId('wheel-wrapper');
-    const row = wrapper.querySelector('[data-testid="wheel-item"][data-index="1"]') as HTMLElement | null;
+    const row = wrapper.querySelector<HTMLElement>('[data-testid="wheel-item"][data-index="1"]');
     expect(row).toBeTruthy();
-    const translateY = Number(/translateY\(([-\d.]+)px\)/u.exec(row!.style.transform)?.[1] ?? 0);
-    const rowHeight = Number.parseFloat(row!.style.height) || 32;
+    const translateY = Number(/translateY\((?<offset>[-\d.]+)px\)/u.exec(row!.style.transform)?.groups?.offset ?? 0);
+    const rowHeight = Number(row!.style.height.replace('px', '')) || 32;
     const tapY = translateY + rowHeight / 2;
     fireEvent.pointerDown(wrapper, { clientY: tapY, pointerId: 1 });
     fireEvent.pointerUp(wrapper, { clientY: tapY, pointerId: 1 });
@@ -298,7 +301,7 @@ describe('Wheel iOS picker contract', () => {
     vi.useFakeTimers({
       toFake: ['setTimeout', 'clearTimeout', 'requestAnimationFrame', 'cancelAnimationFrame', 'performance'],
     });
-    const onChange = vi.fn();
+    const onChange = vi.fn<(value: number) => void>();
     const minutes = Array.from({ length: 60 }, (_, i) => i);
     renderWithProviders(
       <Wheel
@@ -322,7 +325,7 @@ describe('Wheel iOS picker contract', () => {
     vi.useFakeTimers({
       toFake: ['setTimeout', 'clearTimeout', 'requestAnimationFrame', 'cancelAnimationFrame', 'performance'],
     });
-    const onItemCross = vi.fn();
+    const onItemCross = vi.fn<(value: number, index: number) => void>();
     renderWithProviders(
       <Wheel
         items={[10, 20, 30]}

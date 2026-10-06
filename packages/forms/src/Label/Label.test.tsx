@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { Label } from './index';
 
-describe('Label', () => {
+describe(Label, () => {
   it('associates with a control via htmlFor', () => {
     const { container } = renderWithProviders(
       <>
@@ -78,6 +78,6 @@ describe('Label', () => {
     const label = container.querySelector('label') as HTMLElement;
     expect(label).toBeTruthy();
     const weight = label.style.fontWeight || getComputedStyle(label).fontWeight;
-    expect(['400', 'normal']).toContain(String(weight));
+    expect(['400', 'normal']).toContain(weight);
   });
 });

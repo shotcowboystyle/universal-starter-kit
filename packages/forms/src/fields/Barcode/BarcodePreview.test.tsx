@@ -16,10 +16,10 @@ const toModuleString = (value: string): string | null => {
   return runs.map((run) => (run.bar ? '1' : '0').repeat(run.modules)).join('');
 };
 
-describe('encodeCode128B', () => {
+describe(encodeCode128B, () => {
   it('encodes "A" as start B + data + checksum + stop (exact modules)', () => {
     // Sequence: START_B(104), "A"(33), check (104 + 33*1) % 103 = 34, STOP(106)
-    expect(toModuleString('A')).toBe('11010010000' + '10100011000' + '10001011000' + '1100011101011');
+    expect(toModuleString('A')).toBe('1101001000010100011000100010110001100011101011');
   });
 
   it('computes the published check symbol 88 for "Wikipedia"', () => {
@@ -34,8 +34,8 @@ describe('encodeCode128B', () => {
   it('always starts and ends with a bar and alternates runs', () => {
     const runs = encodeCode128B('SKU-001234')!;
     expect(runs[0].bar).toBe(true);
-    expect(runs[runs.length - 1].bar).toBe(true);
-    for (let i = 1; i < runs.length; i++) {
+    expect(runs.at(-1)?.bar).toBe(true);
+    for (let i = 1; i < runs.length; i += 1) {
       expect(runs[i].bar).toBe(!runs[i - 1].bar);
     }
     // (start + data + check) symbols × 11 modules + 13-module stop
@@ -49,7 +49,7 @@ describe('encodeCode128B', () => {
   });
 });
 
-describe('BarcodePreview', () => {
+describe(BarcodePreview, () => {
   it('draws bars for an encodable value (labeled image, real content)', () => {
     const result = renderWithProviders(<BarcodePreview value="SKU-001234" />);
     const preview = result.container.querySelector('[data-testid="barcode-preview"]');
@@ -96,26 +96,26 @@ describe('barcodePreviewSymbology — scanner round trip', () => {
   });
 
   it('keeps the historical strip for absent or unknown tokens (never a false qr)', () => {
-    expect(barcodePreviewSymbology(undefined)).toBe('code128');
+    expect(barcodePreviewSymbology()).toBe('code128');
     expect(barcodePreviewSymbology('')).toBe('code128');
     expect(barcodePreviewSymbology('not-a-format')).toBe('code128');
   });
 });
 
+/** Nearest Tamagui theme scope above an element (`t_light` / `t_dark`). */
+const themeScope = (el: Element | null): string | undefined => {
+  for (let node = el?.parentElement; node; node = node.parentElement) {
+    const scope = /\bt_(?<scheme>light|dark)\b/u.exec(node.className);
+    if (scope?.groups) {
+      return scope.groups.scheme;
+    }
+  }
+  return undefined;
+};
+
 describe('BarcodePreview — qr format', () => {
   /** The field's own default bound (Barcode/index.tsx): 36 comfortable, 24 compact. */
   const formHeight = 36;
-
-  /** Nearest Tamagui theme scope above an element (`t_light` / `t_dark`). */
-  const themeScope = (el: Element | null): string | undefined => {
-    for (let node = el?.parentElement; node; node = node.parentElement) {
-      const scope = /\bt_(light|dark)\b/u.exec(String(node.className));
-      if (scope) {
-        return scope[1];
-      }
-    }
-    return undefined;
-  };
 
   it('the QR face pins dark-on-light in both schemes; the Code 128 strip follows the scheme', () => {
     for (const scheme of ['light', 'dark'] as const) {
@@ -133,15 +133,15 @@ describe('BarcodePreview — qr format', () => {
           />
         </Theme>,
       );
-      const square = result.container.querySelector('[data-testid="barcode-preview-qr"]') as HTMLElement | null;
+      const square = result.container.querySelector<HTMLElement>('[data-testid="barcode-preview-qr"]');
       expect(square).not.toBeNull();
       expect(themeScope(square), `${scheme}: QR face scope`).toBe('light');
       expect(square!.className).toContain('_bg-background');
       const darkModule = [...square!.querySelectorAll('*')].find((el) =>
-        (el as HTMLElement).className?.toString().includes('_bg-color'),
-      ) as HTMLElement | undefined;
+        el.getAttribute('class')?.includes('_bg-color'),
+      );
       expect(darkModule).toBeTruthy();
-      const strip = result.container.querySelectorAll('[data-testid="barcode-preview"]')[1];
+      const [, strip] = result.container.querySelectorAll('[data-testid="barcode-preview"]');
       expect(themeScope(strip), `${scheme}: strip scope`).toBe(scheme);
       result.unmount();
     }
@@ -222,6 +222,24 @@ describe('BarcodePreview — qr format', () => {
   });
 });
 
+const qrSquare = (ui: React.ReactElement) =>
+  renderWithProviders(ui).container.querySelector<HTMLElement>('[data-testid="barcode-preview-qr"]');
+
+/**
+ * Tamagui compiles geometry to atomic classes (`_w-87px`, `_pt-12px`), not
+ * inline style, so the measurement reads the class list. Same numbers, and
+ * it is the class the browser actually applies.
+ */
+const px = (el: HTMLElement, prefix: string) => {
+  const hit = (el.getAttribute('class') ?? '').split(/\s+/u).find((c) => c.startsWith(`_${prefix}-`));
+  return hit === undefined ? Number.NaN : Number(hit.slice(prefix.length + 2).replace('px', ''));
+};
+const edgeOf = (el: HTMLElement) => px(el, 'w');
+const quietOf = (el: HTMLElement) => px(el, 'pt');
+
+/** Modules per side including the 4-module quiet zone on each side. */
+const totalModules = (value: string) => encodeQr(value)!.size + 2 * QR_QUIET_ZONE_MODULES;
+
 /**
  * Whole-pixel modules. Measured on the media-11 board at DPR 2 BEFORE this
  * rule existed: bounds 33, 72 and 96 decoded and bounds 18, 24, 44 and 56 did
@@ -233,24 +251,6 @@ describe('BarcodePreview — qr format', () => {
  * scan-to-draw round trip exists to close.
  */
 describe('BarcodePreview — qr geometry is whole-pixel or nothing', () => {
-  const qrSquare = (ui: React.ReactElement) =>
-    renderWithProviders(ui).container.querySelector('[data-testid="barcode-preview-qr"]') as HTMLElement | null;
-
-  /**
-   * Tamagui compiles geometry to atomic classes (`_w-87px`, `_pt-12px`), not
-   * inline style, so the measurement reads the class list. Same numbers, and
-   * it is the class the browser actually applies.
-   */
-  const px = (el: HTMLElement, prefix: string) => {
-    const hit = (el.getAttribute('class') ?? '').split(/\s+/u).find((c) => c.startsWith(`_${prefix}-`));
-    return hit ? Number.parseFloat(hit.slice(prefix.length + 2)) : Number.NaN;
-  };
-  const edgeOf = (el: HTMLElement) => px(el, 'w');
-  const quietOf = (el: HTMLElement) => px(el, 'pt');
-
-  /** Modules per side including the 4-module quiet zone on each side. */
-  const totalModules = (value: string) => encodeQr(value)!.size + 2 * QR_QUIET_ZONE_MODULES;
-
   it('draws at the natural size when moduleWidth fits under the bound', () => {
     // 6 bytes → version 1 → 21 + 8 = 29 modules. moduleWidth 3 asks for 3px
     // modules and the 120px bound allows 4, so 3 wins: 29 × 3 = 87.
@@ -267,7 +267,8 @@ describe('BarcodePreview — qr geometry is whole-pixel or nothing', () => {
     expect(square).not.toBeNull();
     expect(edgeOf(square!)).toBe(87);
     expect(px(square!, 'h')).toBe(87);
-    expect(quietOf(square!)).toBe(12); // 4 modules × 3px
+    // 4 modules × 3px
+    expect(quietOf(square!)).toBe(12);
   });
 
   it('treats the height bound as a CEILING, never a target', () => {
@@ -314,16 +315,18 @@ describe('BarcodePreview — qr geometry is whole-pixel or nothing', () => {
               moduleWidth={moduleWidth}
             />,
           );
+          // No square means the honest text fallback, asserted separately below.
           if (!square) {
             continue;
-          } // honest text fallback — asserted below
+          }
           const edge = edgeOf(square);
           const pad = quietOf(square);
           const cell = edge / totalModules(value);
           expect(Number.isInteger(cell)).toBe(true);
           expect(cell).toBeGreaterThanOrEqual(1);
           expect(cell).toBeLessThanOrEqual(moduleWidth);
-          expect(edge).toBeLessThanOrEqual(height); // containment
+          // Containment: the symbol never exceeds its bound.
+          expect(edge).toBeLessThanOrEqual(height);
           expect(pad).toBe(cell * QR_QUIET_ZONE_MODULES);
         }
       }

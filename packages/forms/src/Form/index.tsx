@@ -1,12 +1,13 @@
 import { useUrlState } from '@repo/router';
 import { Preset, useResolvedKnobs } from '@repo/theme';
-import { useForm } from '@tanstack/react-form';
-import type { FormApi, FormOptions } from '@tanstack/react-form';
-import { createContext, useContext, useEffect, useMemo, useRef } from 'react';
-import type { FormEvent, ReactNode } from 'react';
+import { useForm, useSelector } from '@tanstack/react-form';
+import type { AnyFormApi, FormApi, FormOptions } from '@tanstack/react-form';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode, SyntheticEvent } from 'react';
 import { Form as TamaguiForm, XStack, YStack, isWeb } from 'tamagui';
-import type { FormProps as TamaguiFormProps } from 'tamagui';
+import type { TamaguiElement, FormProps as TamaguiFormProps } from 'tamagui';
 
+// oxlint-disable-next-line import/no-cycle -- Form renders the save bar and the bar reads the form context; splitting the context out would move exported modules
 import { ContextualSaveBar } from '../ContextualSaveBar';
 import type { ContextualSaveBarProps } from '../ContextualSaveBar';
 import { ErrorSummary, collectFormFieldErrors } from '../ErrorSummary';
@@ -20,12 +21,26 @@ import type { FormValidateOn } from './validate-on';
 export type { FormValidateOn } from './validate-on';
 export { resolveEffectiveValidateOn, remapValidatorsForTiming, type EffectiveValidateOn } from './validate-on';
 
-export const FormContext = createContext<
-  FormApi<any, any, any, any, any, any, any, any, any, any, any, any> | undefined
->(undefined);
+// oxlint-disable-next-line typescript/no-explicit-any -- FormApi carries 11 validator type parameters that differ per form; `any` is the only argument that accepts them all
+type FormApiFor<TFormData> = FormApi<TFormData, any, any, any, any, any, any, any, any, any, any, any>;
 
-export const useFormContext = <TParentData, _TFormValidator = any>() =>
-  useContext(FormContext) as FormApi<TParentData, any, any, any, any, any, any, any, any, any, any, any>;
+// oxlint-disable-next-line typescript/no-explicit-any -- same 11 per-form validator type parameters as FormApiFor
+type FormOptionsFor<TFormData> = FormOptions<TFormData, any, any, any, any, any, any, any, any, any, any, any>;
+
+// oxlint-disable-next-line react-doctor/only-export-components -- the context is part of the Form public API and must live beside the provider
+export const FormContext = createContext<AnyFormApi | undefined>(undefined);
+
+/**
+ * The enclosing form. Outside a `<Form>` the value is `undefined` at runtime
+ * (callers such as `useFormField` fall back to an explicit `form` prop).
+ */
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- the default shape of a form's values when the caller names none
+type DefaultFormValues = Record<string, unknown>;
+
+export const useFormContext = <TParentData = DefaultFormValues,>(): FormApiFor<TParentData> =>
+  // SAFETY: every field and action rendered inside a <Form> sees the form it provides; callers outside one pass an explicit `form` and never read this value.
+  // oxlint-disable-next-line typescript/no-non-null-assertion -- see the SAFETY note above
+  useContext(FormContext)!;
 
 export interface FormValidateContextValue {
   validateOn: FormValidateOn;
@@ -38,6 +53,7 @@ const defaultValidateContext: FormValidateContextValue = {
   hasSubmitted: false,
 };
 
+// oxlint-disable-next-line react-doctor/only-export-components -- the context is part of the Form public API and must live beside the provider
 export const FormValidateContext = createContext<FormValidateContextValue>(defaultValidateContext);
 
 export const useFormValidate = (): FormValidateContextValue => useContext(FormValidateContext);
@@ -46,20 +62,22 @@ export type FormSaveMode = 'embedded' | 'declarative';
 
 export interface FormSaveModeContextValue {
   mode: FormSaveMode;
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- a committed field value can be of any field type; the consumer owns the interpretation
   onAutoCommit?: (name: string, value: unknown) => void;
 }
 
 const defaultSaveMode: FormSaveModeContextValue = { mode: 'embedded' };
 
 /** Declarative forms stage text/checkbox/radio; switches auto-commit. */
+// oxlint-disable-next-line react-doctor/only-export-components -- the context is part of the Form public API and must live beside the provider
 export const FormSaveModeContext = createContext<FormSaveModeContextValue>(defaultSaveMode);
 
 export const useFormSaveMode = (): FormSaveModeContextValue => useContext(FormSaveModeContext);
 
-export interface FormProps<TFormData, _TFormValidator = any> extends Omit<TamaguiFormProps, 'onSubmit'> {
+export interface FormProps<TFormData, _TFormValidator = unknown> extends Omit<TamaguiFormProps, 'onSubmit'> {
   children: ReactNode;
-  form?: FormApi<TFormData, any, any, any, any, any, any, any, any, any, any, any>;
-  formOptions?: FormOptions<TFormData, any, any, any, any, any, any, any, any, any, any, any>;
+  form?: FormApiFor<TFormData>;
+  formOptions?: FormOptionsFor<TFormData>;
   onSubmit?: (values: TFormData) => void | Promise<void>;
   syncWithUrl?: boolean;
   urlDebounceMs?: number;
@@ -100,43 +118,25 @@ const AutoErrorSummary = ({
   title,
   formElement,
 }: {
-  form: FormApi<any, any, any, any, any, any, any, any, any, any, any, any>;
+  form: AnyFormApi;
   title?: string;
   formElement: HTMLElement | null;
 }) => {
-  const { Subscribe } = form as unknown as {
-    Subscribe: (props: { selector: (state: any) => any; children: (value: any) => ReactNode }) => ReactNode;
-  };
-
+  const fieldMeta = useSelector(form.store, (state) => state.fieldMeta);
+  const submissionAttempts = useSelector(form.store, (state) => state.submissionAttempts);
+  if (submissionAttempts < 1) {
+    return null;
+  }
+  const errors: ErrorSummaryItem[] = collectFormFieldErrors(fieldMeta);
+  if (errors.length === 0) {
+    return null;
+  }
   return (
-    <Subscribe
-      selector={(state: any) => ({
-        fieldMeta: state.fieldMeta,
-        submissionAttempts: state.submissionAttempts ?? 0,
-      })}>
-      {({
-        fieldMeta,
-        submissionAttempts,
-      }: {
-        fieldMeta: Record<string, { errors?: unknown[] } | undefined>;
-        submissionAttempts: number;
-      }) => {
-        if (submissionAttempts < 1) {
-          return null;
-        }
-        const errors: ErrorSummaryItem[] = collectFormFieldErrors(fieldMeta);
-        if (errors.length === 0) {
-          return null;
-        }
-        return (
-          <ErrorSummary
-            errors={errors}
-            title={title}
-            formElement={formElement}
-          />
-        );
-      }}
-    </Subscribe>
+    <ErrorSummary
+      errors={errors}
+      title={title}
+      formElement={formElement}
+    />
   );
 };
 
@@ -145,30 +145,26 @@ const FormValidateProvider = ({
   validateOn,
   children,
 }: {
-  form: FormApi<any, any, any, any, any, any, any, any, any, any, any, any>;
+  form: AnyFormApi;
   validateOn: FormValidateOn;
   children: ReactNode;
 }) => {
-  const { Subscribe } = form as unknown as {
-    Subscribe: (props: { selector: (state: any) => any; children: (value: any) => ReactNode }) => ReactNode;
-  };
-
-  return (
-    <Subscribe selector={(state: any) => state.submissionAttempts ?? 0}>
-      {(submissionAttempts: number) => (
-        <FormValidateContext.Provider
-          value={{
-            validateOn,
-            hasSubmitted: submissionAttempts >= 1,
-          }}>
-          {children}
-        </FormValidateContext.Provider>
-      )}
-    </Subscribe>
-  );
+  const submissionAttempts = useSelector(form.store, (state) => state.submissionAttempts);
+  const hasSubmitted = submissionAttempts >= 1;
+  const value = useMemo(() => ({ validateOn, hasSubmitted }), [validateOn, hasSubmitted]);
+  return <FormValidateContext.Provider value={value}>{children}</FormValidateContext.Provider>;
 };
 
-export const Form = <TFormData extends Record<string, any>, TFormValidator = any>({
+/** Nothing to tear down when an effect has no subscription to remove. */
+const noopCleanup = () => {
+  // Intentionally empty: the effect registered nothing.
+};
+
+/** Props for the save bar: the object form's own props, nothing for `true`, `false` or omitted. */
+const saveBarPropsFor = (saveBar: FormProps<object>['saveBar']): ContextualSaveBarProps =>
+  saveBar === true || saveBar === false || saveBar === undefined ? {} : saveBar;
+
+export const Form = <TFormData extends object>({
   children,
   form: providedForm,
   formOptions,
@@ -182,15 +178,20 @@ export const Form = <TFormData extends Record<string, any>, TFormValidator = any
   compact,
   saveBar,
   ...tamaguiFormProps
-}: FormProps<TFormData, TFormValidator>) => {
+}: FormProps<TFormData>) => {
   const { knobProps } = useResolvedKnobs(compact === undefined ? undefined : { compact });
   const requiredMarkMode = mapHouseRequiredMarking(knobProps.requiredMarking);
   const formAutofocusOn = knobProps.formAutofocus === 'on';
 
   // Get URL state — always call the hook, only use its values when syncWithUrl is true
-  const [urlState, setUrlState] = useUrlState<TFormData>(formOptions?.defaultValues || ({} as TFormData), {
-    debounceMs: urlDebounceMs,
-  });
+  const [urlState, setUrlState] = useUrlState<TFormData>(
+    // SAFETY: an empty object is only a placeholder default; it is read back only when syncWithUrl is true, and then the router deserializes URL params against these defaults.
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- placeholder default described above
+    formOptions?.defaultValues ?? ({} as TFormData),
+    {
+      debounceMs: urlDebounceMs,
+    },
+  );
 
   // Use a ref to always call the latest onSubmit
   const onSubmitRef = useRef(onSubmit);
@@ -198,12 +199,12 @@ export const Form = <TFormData extends Record<string, any>, TFormValidator = any
     onSubmitRef.current = onSubmit;
   }, [onSubmit]);
 
-  const formElementRef = useRef<HTMLElement | null>(null);
+  const [formElement, setFormElement] = useState<HTMLElement | null>(null);
   const didAutofocusRef = useRef(false);
 
   // Create form with URL state as default values.
   // Pass a minimal empty config when providedForm is given so the inner form is a no-op.
-  const defaultForm = useForm<TFormData, any, any, any, any, any, any, any, any, any, any, any>(
+  const defaultForm = useForm(
     providedForm
       ? {}
       : {
@@ -216,18 +217,18 @@ export const Form = <TFormData extends Record<string, any>, TFormValidator = any
             }
             // Also call formOptions onSubmit if provided (but not twice)
             else if (formOptions?.onSubmit) {
-              await formOptions.onSubmit({ value, formApi, meta: {} } as any);
+              await formOptions.onSubmit({ value, formApi, meta: {} });
             }
           },
         },
   );
 
-  const form = providedForm || defaultForm;
+  const form = providedForm ?? defaultForm;
 
   // Sync form state to URL when enabled
   useEffect(() => {
     if (!syncWithUrl) {
-      return;
+      return noopCleanup;
     }
 
     const subscription = form.store.subscribe(() => {
@@ -241,7 +242,7 @@ export const Form = <TFormData extends Record<string, any>, TFormValidator = any
   }, [form, syncWithUrl, setUrlState]);
 
   const handleSubmit = useMemo(
-    () => (e?: FormEvent) => {
+    () => (e?: SyntheticEvent) => {
       e?.preventDefault();
       e?.stopPropagation();
       // Guard against double-fire while a submission is already in flight
@@ -255,48 +256,45 @@ export const Form = <TFormData extends Record<string, any>, TFormValidator = any
   );
 
   // Capture the native form element for ErrorSummary focus targeting (web).
-  const setFormRef = (node: any) => {
-    if (!isWeb) {
-      formElementRef.current = null;
+  const setFormRef = useCallback((node: TamaguiElement | null) => {
+    if (!isWeb || !(node instanceof HTMLElement)) {
+      setFormElement(null);
       return;
     }
-    const el =
-      (node as HTMLElement | null)?.tagName === 'FORM'
-        ? (node as HTMLElement)
-        : (((node as HTMLElement | null)?.querySelector?.('form') as HTMLElement | null) ??
-          (node as HTMLElement | null));
-    formElementRef.current = el;
-  };
+    setFormElement(node.tagName === 'FORM' ? node : (node.querySelector<HTMLElement>('form') ?? node));
+  }, []);
 
   // House `formAutofocus`: default off (a11y). Only focus first control when knob is on.
+  // `children` is deliberately a dependency: fields mount with the children, and the
+  // first control can only be focused once it exists.
   useEffect(() => {
     if (!formAutofocusOn || !isWeb || didAutofocusRef.current) {
       return;
     }
-    const formEl = formElementRef.current;
-    if (!formEl || typeof formEl.querySelector !== 'function') {
-      return;
-    }
-    const first = formEl.querySelector(
+    const first = formElement?.querySelector<HTMLElement>(
       'input:not([disabled]):not([type="hidden"]), textarea:not([disabled]), select:not([disabled])',
-    ) as HTMLElement | null;
-    if (!first || typeof first.focus !== 'function') {
+    );
+    if (!first) {
       return;
     }
     first.focus();
     didAutofocusRef.current = true;
-  }, [formAutofocusOn, children]);
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- re-run when children change so the first control is found once it mounts
+  }, [formAutofocusOn, children, formElement]);
 
-  const saveBarProps = typeof saveBar === 'object' ? saveBar : {};
-  const saveMode: FormSaveModeContextValue = {
-    mode: saveBar ? 'declarative' : 'embedded',
-    onAutoCommit: saveBarProps.onAutoCommit,
-  };
+  const saveBarProps = saveBarPropsFor(saveBar);
+  const hasSaveBar = saveBar !== undefined && saveBar !== false;
+  const { onAutoCommit } = saveBarProps;
+  const saveMode = useMemo<FormSaveModeContextValue>(
+    () => ({ mode: hasSaveBar ? 'declarative' : 'embedded', onAutoCommit }),
+    [hasSaveBar, onAutoCommit],
+  );
+  const requiredMarking = useMemo(() => ({ mode: requiredMarkMode }), [requiredMarkMode]);
 
   const formNode = (
     <FormContext.Provider value={form}>
       <FormSaveModeContext.Provider value={saveMode}>
-        <RequiredMarkingContext.Provider value={{ mode: requiredMarkMode }}>
+        <RequiredMarkingContext.Provider value={requiredMarking}>
           <FormValidateProvider
             form={form}
             validateOn={validateOn}>
@@ -313,16 +311,16 @@ export const Form = <TFormData extends Record<string, any>, TFormValidator = any
                 width="100%"
                 minWidth={0}
                 {...knobProps.gap}
-                {...(tamaguiFormProps.flex == null ? {} : { flex: tamaguiFormProps.flex as never })}>
+                {...(tamaguiFormProps.flex == null ? {} : { flex: tamaguiFormProps.flex })}>
                 {showErrorSummary ? (
                   <AutoErrorSummary
                     form={form}
                     title={errorSummaryTitle}
-                    formElement={formElementRef.current}
+                    formElement={formElement}
                   />
                 ) : null}
                 {children}
-                {saveBar ? <ContextualSaveBar {...(typeof saveBar === 'object' ? saveBar : {})} /> : null}
+                {hasSaveBar ? <ContextualSaveBar {...saveBarProps} /> : null}
               </YStack>
             </TamaguiForm>
           </FormValidateProvider>
@@ -353,6 +351,8 @@ export const FormActions = ({ children, gap }: FormActionsProps) => {
       data-gap={String(resolvedGap)}
       data-density={knobProps.density}
       data-size={knobProps.size}
+      // SAFETY: `gap` is a space token or a px number at every call site; Tamagui types token strings more narrowly than `string`.
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see the SAFETY note above
       gap={resolvedGap as never}
       alignSelf="flex-start"
       alignItems="center"
@@ -362,7 +362,10 @@ export const FormActions = ({ children, gap }: FormActionsProps) => {
   );
 };
 
-/** @internal test helper — effective timing for current FormValidate context. */
+/**
+ * Effective timing for the current FormValidate context.
+ * @internal
+ */
 export const useEffectiveValidateOn = () => {
   const { validateOn, hasSubmitted } = useFormValidate();
   return resolveEffectiveValidateOn(validateOn, hasSubmitted);

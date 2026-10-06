@@ -50,62 +50,66 @@ export const NATIVE_BARCODE_TYPES = [
 
 export type NativeBarcodeType = (typeof NATIVE_BARCODE_TYPES)[number];
 
-const NATIVE_FORMAT_ALIASES: Record<string, NativeBarcodeType> = {
-  qr: 'qr',
-  qrcode: 'qr',
-  qr_code: 'qr',
-  ean13: 'ean13',
-  ean_13: 'ean13',
-  ean8: 'ean8',
-  ean_8: 'ean8',
-  code128: 'code128',
-  code_128: 'code128',
-  code39: 'code39',
-  code_39: 'code39',
-  code93: 'code93',
-  code_93: 'code93',
-  upc_a: 'upc_a',
-  upca: 'upc_a',
-  upc_e: 'upc_e',
-  upce: 'upc_e',
-  codabar: 'codabar',
-  itf: 'itf14',
-  itf14: 'itf14',
-  datamatrix: 'datamatrix',
-  data_matrix: 'datamatrix',
-  pdf417: 'pdf417',
-  pdf_417: 'pdf417',
-  aztec: 'aztec',
-};
+const NATIVE_FORMAT_ALIASES = new Map<string, NativeBarcodeType>(
+  Object.entries({
+    qr: 'qr',
+    qrcode: 'qr',
+    qr_code: 'qr',
+    ean13: 'ean13',
+    ean_13: 'ean13',
+    ean8: 'ean8',
+    ean_8: 'ean8',
+    code128: 'code128',
+    code_128: 'code128',
+    code39: 'code39',
+    code_39: 'code39',
+    code93: 'code93',
+    code_93: 'code93',
+    upc_a: 'upc_a',
+    upca: 'upc_a',
+    upc_e: 'upc_e',
+    upce: 'upc_e',
+    codabar: 'codabar',
+    itf: 'itf14',
+    itf14: 'itf14',
+    datamatrix: 'datamatrix',
+    data_matrix: 'datamatrix',
+    pdf417: 'pdf417',
+    pdf_417: 'pdf417',
+    aztec: 'aztec',
+  } as const satisfies Record<string, NativeBarcodeType>),
+);
 
 /** html5-qrcode `Html5QrcodeSupportedFormats` enum keys. */
-const HTML5_FORMAT_ALIASES: Record<string, string> = {
-  qr: 'QR_CODE',
-  qrcode: 'QR_CODE',
-  qr_code: 'QR_CODE',
-  aztec: 'AZTEC',
-  codabar: 'CODABAR',
-  code39: 'CODE_39',
-  code_39: 'CODE_39',
-  code93: 'CODE_93',
-  code_93: 'CODE_93',
-  code128: 'CODE_128',
-  code_128: 'CODE_128',
-  datamatrix: 'DATA_MATRIX',
-  data_matrix: 'DATA_MATRIX',
-  itf: 'ITF',
-  itf14: 'ITF',
-  ean13: 'EAN_13',
-  ean_13: 'EAN_13',
-  ean8: 'EAN_8',
-  ean_8: 'EAN_8',
-  pdf417: 'PDF_417',
-  pdf_417: 'PDF_417',
-  upca: 'UPC_A',
-  upc_a: 'UPC_A',
-  upce: 'UPC_E',
-  upc_e: 'UPC_E',
-};
+const HTML5_FORMAT_ALIASES = new Map<string, string>(
+  Object.entries({
+    qr: 'QR_CODE',
+    qrcode: 'QR_CODE',
+    qr_code: 'QR_CODE',
+    aztec: 'AZTEC',
+    codabar: 'CODABAR',
+    code39: 'CODE_39',
+    code_39: 'CODE_39',
+    code93: 'CODE_93',
+    code_93: 'CODE_93',
+    code128: 'CODE_128',
+    code_128: 'CODE_128',
+    datamatrix: 'DATA_MATRIX',
+    data_matrix: 'DATA_MATRIX',
+    itf: 'ITF',
+    itf14: 'ITF',
+    ean13: 'EAN_13',
+    ean_13: 'EAN_13',
+    ean8: 'EAN_8',
+    ean_8: 'EAN_8',
+    pdf417: 'PDF_417',
+    pdf_417: 'PDF_417',
+    upca: 'UPC_A',
+    upc_a: 'UPC_A',
+    upce: 'UPC_E',
+    upc_e: 'UPC_E',
+  } as const satisfies Record<string, string>),
+);
 
 const normalizeFormatToken = (value: string): string =>
   value
@@ -120,10 +124,10 @@ const normalizeFormatToken = (value: string): string =>
  * symbology to DRAW, and an unknown token must not accidentally read as one.
  */
 export const resolveNativeBarcodeType = (format?: string): NativeBarcodeType | undefined => {
-  if (!format) {
+  if (format === undefined || format === '') {
     return undefined;
   }
-  return NATIVE_FORMAT_ALIASES[normalizeFormatToken(format)];
+  return NATIVE_FORMAT_ALIASES.get(normalizeFormatToken(format));
 };
 
 /**
@@ -132,14 +136,14 @@ export const resolveNativeBarcodeType = (format?: string): NativeBarcodeType | u
  * a typo cannot silently disable scanning.
  */
 export const resolveNativeBarcodeTypes = (formats?: string[]): NativeBarcodeType[] => {
-  if (!formats?.length) {
+  if (formats === undefined || formats.length === 0) {
     return [...NATIVE_BARCODE_TYPES];
   }
   const seen = new Set<NativeBarcodeType>();
   const resolved: NativeBarcodeType[] = [];
   for (const raw of formats) {
     const mapped = resolveNativeBarcodeType(raw);
-    if (!mapped || seen.has(mapped)) {
+    if (mapped === undefined || seen.has(mapped)) {
       continue;
     }
     seen.add(mapped);
@@ -157,25 +161,22 @@ export const resolveHtml5FormatIds = (
   formats: string[] | undefined,
   enumObj: Record<string, number | string>,
 ): number[] | undefined => {
-  if (!formats?.length) {
+  if (formats === undefined || formats.length === 0) {
     return undefined;
   }
   const ids: number[] = [];
   const seen = new Set<number>();
   for (const raw of formats) {
-    const key = HTML5_FORMAT_ALIASES[normalizeFormatToken(raw)];
-    if (!key) {
-      continue;
+    const key = HTML5_FORMAT_ALIASES.get(normalizeFormatToken(raw));
+    const val = key === undefined ? undefined : enumObj[key];
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- numeric enums also carry reverse name mappings, and a missing key reads undefined: only numeric members are format ids
+    if (typeof val === 'number' && !seen.has(val)) {
+      seen.add(val);
+      ids.push(val);
     }
-    const val = enumObj[key];
-    if (typeof val !== 'number' || seen.has(val)) {
-      continue;
-    }
-    seen.add(val);
-    ids.push(val);
   }
   return ids.length ? ids : undefined;
 };
 
 /** Contained scanner viewport height. Compact steps down. */
-export const scannerViewportHeight = (compact?: boolean): number => (compact ? 180 : 240);
+export const scannerViewportHeight = (compact = false): number => (compact ? 180 : 240);

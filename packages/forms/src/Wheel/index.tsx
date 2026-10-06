@@ -1,10 +1,17 @@
 import { useResolvedKnobs } from '@repo/theme';
-import type { CSSProperties, ReactNode } from 'react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { KnobProps } from '@repo/theme';
+import type {
+  CSSProperties,
+  KeyboardEvent as ReactKeyboardEvent,
+  WheelEvent as ReactWheelEvent,
+  ReactNode,
+  RefObject,
+} from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { PanResponder } from 'react-native';
 import type { GestureResponderEvent } from 'react-native';
 import type { GetProps, SizeTokens } from 'tamagui';
-import { View, getTokens, isWeb, styled, Text } from 'tamagui';
+import { View, getTokens, getVariableValue, isWeb, styled, Text } from 'tamagui';
 
 import { t } from '../shared/t';
 
@@ -64,10 +71,14 @@ export interface WheelProps<T = string | number> {
 // ── iOS Physics Constants ─────────────────────────────────────
 // Based on Apple's UIScrollView deceleration behavior
 
-const friction = 0.95; // Apple's PKScrollViewDecelerationFrictionFactor
-const minVelocity = 0.5; // Minimum velocity before snapping
-const momentumMultiplier = 0.8; // Velocity multiplier for momentum feel
-const rubberBandConstant = 0.55; // Apple's rubber-banding constant
+/** Apple's PKScrollViewDecelerationFrictionFactor */
+const friction = 0.95;
+/** Minimum velocity before snapping */
+const minVelocity = 0.5;
+/** Velocity multiplier for momentum feel */
+const momentumMultiplier = 0.8;
+/** Apple's rubber-banding constant */
+const rubberBandConstant = 0.55;
 const tapSlopPx = 8;
 
 interface WheelPointer {
@@ -86,14 +97,14 @@ const perspectivePx = 400;
 const defaultColumnWidth = 88;
 
 /** Type scale for wheel numerals — iOS UIPickerView is ~21pt at default size. */
-const wheelFontBySize: Record<'small' | 'medium' | 'large', SizeTokens> = {
+const wheelFontBySize = {
   small: '$6',
   medium: '$8',
   large: '$9',
-};
+} as const satisfies Record<'small' | 'medium' | 'large', SizeTokens>;
 
 /** Durations for discrete snaps (mirrors theme animationConfig). */
-const transitionDurationsMs: Record<string, number> = {
+const transitionDurationsMs = {
   bouncy: 200,
   lazy: 600,
   slow: 500,
@@ -102,7 +113,19 @@ const transitionDurationsMs: Record<string, number> = {
   tooltip: 400,
   snappy: 80,
   gentle: 450,
-};
+} as const satisfies Record<string, number>;
+
+const defaultSnapDurationMs = 100;
+
+/** Snap duration for a knob transition token; unknown tokens use the default, `undefined` (animation "none") means jump. */
+const snapDurationFor = (transition: KnobProps['transition']): number =>
+  transition == null
+    ? 0
+    : (Object.entries(transitionDurationsMs).find(([name]) => name === transition)?.[1] ?? defaultSnapDurationMs);
+
+/** Wheel numeral size: the explicit prop, else the density knob's step, else the medium step. */
+const fontSizeFor = (sizeProp: SizeTokens | undefined, sizeKnob: string): SizeTokens =>
+  sizeProp ?? Object.entries(wheelFontBySize).find(([name]) => name === sizeKnob)?.[1] ?? wheelFontBySize.medium;
 
 // The interactive wrapper is a raw <div>, so the non-removable focus-visible
 // ring (2px solid $outlineColor) has to come from
@@ -113,7 +136,7 @@ const ensureWheelFocusStyles = () => {
   if (!isWeb || typeof document === 'undefined') {
     return;
   }
-  if (document.getElementById(WHEEL_FOCUS_STYLE_ID)) {
+  if (document.querySelector(`#${WHEEL_FOCUS_STYLE_ID}`)) {
     return;
   }
   const style = document.createElement('style');
@@ -129,6 +152,22 @@ const wheelMaskStyle: CSSProperties | undefined = isWeb
       maskImage: 'linear-gradient(to bottom, rgba(0,0,0,0.28) 0%, #000 32%, #000 68%, rgba(0,0,0,0.28) 100%)',
     }
   : undefined;
+
+/** Static part of a web row's inline style; only height/transform/opacity vary per render. */
+const webRowBaseStyle: CSSProperties = {
+  position: 'absolute',
+  left: 0,
+  right: 0,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  pointerEvents: 'none',
+  transformOrigin: 'center center',
+  transformStyle: 'preserve-3d',
+  backfaceVisibility: 'hidden',
+};
+
+const wheelCursor = (disabled: boolean): 'not-allowed' | 'grab' => (disabled ? 'not-allowed' : 'grab');
 
 // ── Styled components ─────────────────────────────────────────
 
@@ -160,6 +199,7 @@ const SelectionIndicator = styled(View, {
 // ── Helper functions ──────────────────────────────────────────
 
 const normalizeItem = <T,>(item: T | WheelItem<T>): WheelItem<T> => {
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- items are either a bare value or a { value, label } descriptor with no discriminant; the shape is the only way to tell them apart
   if (typeof item === 'object' && item !== null && 'value' in item) {
     return item;
   }
@@ -182,6 +222,15 @@ const modIndex = (row: number, n: number): number => {
     return 0;
   }
   return ((row % n) + n) % n;
+};
+
+/** Data index seated in the centre band for a scroll offset (wrapped when looping, clamped otherwise). */
+const liveIndexFor = (n: number, loopEnabled: boolean, scrollOffset: number, itemHeight: number): number => {
+  if (n === 0) {
+    return 0;
+  }
+  const row = Math.round(scrollOffset / itemHeight);
+  return loopEnabled ? modIndex(row, n) : Math.max(0, Math.min(row, n - 1));
 };
 
 /**
@@ -226,12 +275,7 @@ const rubberBand = (offset: number, dimension: number): number => {
  * band; off-center rows recede with rotateX + foreshortening (not opacity —
  * row text stays on the AA $color11 ramp).
  */
-const getItemTransform = (
-  index: number,
-  scrollOffset: number,
-  itemHeight: number,
-  containerHeight: number,
-): { translateY: number; rotateX: number; scale: number; opacity: number } => {
+const getItemTransform = (index: number, scrollOffset: number, itemHeight: number, containerHeight: number) => {
   const radius = (containerHeight * diameterRatio) / 2;
   const angle = (index * itemHeight - scrollOffset) / squeeze / Math.max(radius, 1);
   const clamped = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, angle));
@@ -247,23 +291,17 @@ const getItemTransform = (
   };
 };
 
-const tokenPx = (token: string | number, scale: 'radius' | 'space'): number => {
-  if (typeof token === 'number') {
-    return token;
-  }
-  const key = String(token).replace(/^\$/u, '');
-  const val = (getTokens() as { [k: string]: Record<string, { val?: number }> })[scale]?.[key]?.val;
-  if (typeof val === 'number') {
-    return val;
+const tokenPx = (token: string, scale: 'radius' | 'space'): number => {
+  const key = token.replace(/^\$/u, '');
+  const entry = Object.entries(getTokens()[scale]).find(([name]) => name === key)?.[1];
+  const px = entry === undefined ? Number.NaN : Number(getVariableValue(entry));
+  if (Number.isFinite(px)) {
+    return px;
   }
   return scale === 'radius' ? 9 : 8;
 };
 
-const highlightBandStyle = (
-  edges: WheelHighlightEdges,
-  radiusToken: string | number,
-  pointy: boolean,
-): CSSProperties => {
+const highlightBandStyle = (edges: WheelHighlightEdges, radiusToken: string, pointy: boolean): CSSProperties => {
   const r = pointy ? 0 : tokenPx(radiusToken, 'radius');
   const inset = tokenPx('$2', 'space');
   const capStart = edges === 'all' || edges === 'start';
@@ -278,78 +316,68 @@ const highlightBandStyle = (
   };
 };
 
-// ── Wheel Component ───────────────────────────────────────────
+const itemColor = (disabled: boolean, isSelected: boolean): '$color10' | '$color11' | '$color12' => {
+  if (disabled) {
+    return '$color10';
+  }
+  return isSelected ? '$color12' : '$color11';
+};
 
-export const Wheel = <T = string | number,>({
-  items,
-  value,
-  onChange,
-  visibleItems = 5,
-  itemHeight: itemHeightProp,
-  width: widthProp,
-  renderItem,
-  disabled = false,
-  size: sizeProp,
-  loop = false,
-  highlightEdges = 'all',
-  flex,
-  onItemCross,
-  'aria-label': ariaLabel,
-}: WheelProps<T>) => {
-  const { knobProps } = useResolvedKnobs();
-  const sizeKnob = (knobProps.size as 'small' | 'medium' | 'large') ?? 'medium';
-  const size = sizeProp ?? wheelFontBySize[sizeKnob] ?? '$8';
-  // Row geometry rides nestedControl (density-aware, 32px at medium — iOS
-  // UIPickerView item extent). Explicit itemHeight ejects.
-  const itemHeight = itemHeightProp ?? knobProps.nestedControl.px ?? 32;
-  const columnWidth = widthProp ?? defaultColumnWidth;
-  ensureWheelFocusStyles();
-  // Discrete snaps (keyboard / controlled value) tween; drag stays 1:1.
-  // knobProps.transition is undefined at animation "none" (which also carries
-  // prefers-reduced-motion) — snaps must JUMP then, not fall back to a tween.
-  const motionTransition = knobProps.transition as string | undefined;
-  const snapDurationMs = motionTransition ? (transitionDurationsMs[motionTransition] ?? 100) : 0;
-  const containerRef = useRef<HTMLDivElement>(null);
+/** Nothing to tear down when an effect has no listener to remove. */
+const noopCleanup = () => {
+  // Intentionally empty: the effect registered nothing.
+};
+
+// ── Motion: scroll state, snapping, momentum, controlled sync ──
+
+interface WheelGeometry {
+  n: number;
+  itemHeight: number;
+  visibleItems: number;
+  loopEnabled: boolean;
+  containerHeight: number;
+  paddingItems: number;
+  minOffset: number;
+  maxOffset: number;
+  snapDurationMs: number;
+}
+
+interface WheelMotionInput<T> {
+  items: (T | WheelItem<T>)[];
+  value: T | undefined;
+  onChange: ((value: T) => void) | undefined;
+  onItemCross: ((value: T, index: number) => void) | undefined;
+  geometry: WheelGeometry;
+}
+
+const useWheelMotion = <T,>({ items, value, onChange, onItemCross, geometry }: WheelMotionInput<T>) => {
+  const { n, itemHeight, loopEnabled, containerHeight, paddingItems, minOffset, maxOffset, snapDurationMs } = geometry;
   const [scrollOffset, setScrollOffset] = useState(0);
   const [selectedIndex, setSelectedIndex] = useState(0);
 
-  const n = items.length;
-  const loopEnabled = Boolean(loop && n > 1);
-
   // Keep a ref in sync with scrollOffset to avoid stale closures
   const scrollOffsetRef = useRef(scrollOffset);
-  scrollOffsetRef.current = scrollOffset;
+  useLayoutEffect(() => {
+    scrollOffsetRef.current = scrollOffset;
+  });
 
   // Animation state
   const animationRef = useRef<number | null>(null);
   const isAnimatingRef = useRef(false);
   const hasMountedRef = useRef(false);
   const selectedIndexRef = useRef(selectedIndex);
-  selectedIndexRef.current = selectedIndex;
-
-  // Drag state
+  useLayoutEffect(() => {
+    selectedIndexRef.current = selectedIndex;
+  });
   const isDraggingRef = useRef(false);
-  const lastYRef = useRef(0);
-  const downYRef = useRef(0);
-  const dragDistanceRef = useRef(0);
-  const lastTimeRef = useRef(0);
-  const dragVelocitiesRef = useRef<number[]>([]);
 
-  const containerHeight = itemHeight * visibleItems;
-  const paddingItems = Math.floor(visibleItems / 2);
-  const minOffset = 0;
-  const maxOffset = n > 0 ? (n - 1) * itemHeight : 0;
-
-  const liveDataIndex =
-    n === 0
-      ? 0
-      : loopEnabled
-        ? modIndex(Math.round(scrollOffset / itemHeight), n)
-        : Math.max(0, Math.min(Math.round(scrollOffset / itemHeight), n - 1));
+  const liveDataIndex = liveIndexFor(n, loopEnabled, scrollOffset, itemHeight);
 
   const lastCrossIndexRef = useRef<number | null>(null);
   const onItemCrossRef = useRef(onItemCross);
-  onItemCrossRef.current = onItemCross;
+  useLayoutEffect(() => {
+    onItemCrossRef.current = onItemCross;
+  });
   useEffect(() => {
     if (n === 0) {
       return;
@@ -366,6 +394,7 @@ export const Wheel = <T = string | number,>({
     if (item === undefined) {
       return;
     }
+    // oxlint-disable-next-line react-doctor/no-pass-live-state-to-parent -- onItemCross is an event the consumer asked for, fired when the centre row changes; it carries the item, not state to mirror
     onItemCrossRef.current?.(getItemValue(item), liveDataIndex);
     fireSelectionHaptic();
   }, [liveDataIndex, items, n]);
@@ -417,7 +446,7 @@ export const Wheel = <T = string | number,>({
       };
 
       isAnimatingRef.current = true;
-      if (animationRef.current) {
+      if (animationRef.current !== null) {
         cancelAnimationFrame(animationRef.current);
       }
       animationRef.current = requestAnimationFrame(animate);
@@ -448,6 +477,18 @@ export const Wheel = <T = string | number,>({
     [n, itemHeight, loopEnabled, animateToOffset],
   );
 
+  /** First paint: land on `index` instantly (no entrance tween from 0). */
+  const landInstantly = useCallback(
+    (index: number) => {
+      setSelectedIndex(index);
+      const raw = index * itemHeight;
+      const settled = loopEnabled && n > 1 ? equivalentOffsetNear(0, raw, n, itemHeight) : raw;
+      scrollOffsetRef.current = settled;
+      setScrollOffset(settled);
+    },
+    [itemHeight, loopEnabled, n],
+  );
+
   // Sync from controlled value — discrete jumps animate; drag stays live.
   useEffect(() => {
     if (value === undefined) {
@@ -458,19 +499,15 @@ export const Wheel = <T = string | number,>({
       return;
     }
 
-    // First paint: land instantly (no entrance tween from 0).
     if (!hasMountedRef.current) {
       hasMountedRef.current = true;
-      setSelectedIndex(index);
-      const raw = index * itemHeight;
-      const settled = loopEnabled && n > 1 ? equivalentOffsetNear(0, raw, n, itemHeight) : raw;
-      scrollOffsetRef.current = settled;
-      setScrollOffset(settled);
+      landInstantly(index);
       return;
     }
 
     // Continuous drag owns the offset — don't fight the pointer.
     if (isDraggingRef.current) {
+      // oxlint-disable-next-line react-doctor/no-chain-state-updates -- an independent branch: while dragging, only the selected index follows the controlled value
       setSelectedIndex(index);
       return;
     }
@@ -481,7 +518,7 @@ export const Wheel = <T = string | number,>({
     }
 
     snapToIndex(index, true);
-  }, [value, items, itemHeight, loopEnabled, n, snapToIndex]);
+  }, [value, items, landInstantly, snapToIndex]);
 
   /** After free scroll, land on the nearest row (drag / wheel / momentum). */
   const snapToNearestRow = useCallback(
@@ -511,7 +548,7 @@ export const Wheel = <T = string | number,>({
       const centerRow = Math.round(offset / itemHeight);
       const rowBuffer = paddingItems + 5;
       let best: { dataIndex: number; dist: number } | null = null;
-      for (let vr = centerRow - rowBuffer; vr <= centerRow + rowBuffer; vr++) {
+      for (let vr = centerRow - rowBuffer; vr <= centerRow + rowBuffer; vr += 1) {
         if (!loopEnabled && (vr < 0 || vr >= n)) {
           continue;
         }
@@ -567,13 +604,112 @@ export const Wheel = <T = string | number,>({
       };
 
       isAnimatingRef.current = true;
-      if (animationRef.current) {
+      if (animationRef.current !== null) {
         cancelAnimationFrame(animationRef.current);
       }
       animationRef.current = requestAnimationFrame(animate);
     },
     [loopEnabled, minOffset, maxOffset, containerHeight, snapToNearestRow, snapDurationMs],
   );
+
+  // Cleanup animation on unmount
+  useEffect(
+    () => () => {
+      if (animationRef.current !== null) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    },
+    [],
+  );
+
+  return {
+    scrollOffset,
+    setScrollOffset,
+    selectedIndex,
+    liveDataIndex,
+    scrollOffsetRef,
+    animationRef,
+    isAnimatingRef,
+    isDraggingRef,
+    snapToIndex,
+    snapToNearestRow,
+    hitTestDataIndex,
+    startMomentum,
+  };
+};
+
+// ── Input: pointer drag, mouse wheel, keyboard, native pan responder ──
+
+interface WheelPanRefs {
+  disabledRef: RefObject<boolean>;
+  pointerDownRef: RefObject<(e: WheelPointer) => void>;
+  pointerMoveRef: RefObject<(e: WheelPointer) => void>;
+  pointerUpRef: RefObject<(e: WheelPointer) => void>;
+}
+
+/** Native drag gesture; it reaches the latest handlers through refs so it is created once. */
+const createWheelPanResponder = ({ disabledRef, pointerDownRef, pointerMoveRef, pointerUpRef }: WheelPanRefs) =>
+  PanResponder.create({
+    onStartShouldSetPanResponder: () => !disabledRef.current,
+    onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dy) > 1,
+    onPanResponderTerminationRequest: () => false,
+    onShouldBlockNativeResponder: () => true,
+    onPanResponderGrant: (evt: GestureResponderEvent) => {
+      pointerDownRef.current({
+        clientY: evt.nativeEvent.pageY,
+        pointerId: 1,
+      });
+    },
+    onPanResponderMove: (evt: GestureResponderEvent) => {
+      pointerMoveRef.current({
+        clientY: evt.nativeEvent.pageY,
+        pointerId: 1,
+      });
+    },
+    onPanResponderRelease: (evt: GestureResponderEvent) => {
+      pointerUpRef.current({
+        clientY: evt.nativeEvent.pageY,
+        pointerId: 1,
+        locationY: evt.nativeEvent.locationY,
+      });
+    },
+    onPanResponderTerminate: (evt: GestureResponderEvent) => {
+      pointerUpRef.current({
+        clientY: evt.nativeEvent.pageY,
+        pointerId: 1,
+        locationY: evt.nativeEvent.locationY,
+      });
+    },
+  });
+
+interface WheelInputConfig {
+  geometry: WheelGeometry;
+  disabled: boolean;
+  motion: ReturnType<typeof useWheelMotion>;
+}
+
+const useWheelInput = ({ geometry, disabled, motion }: WheelInputConfig) => {
+  const { n, visibleItems, loopEnabled, containerHeight, minOffset, maxOffset } = geometry;
+  const {
+    setScrollOffset,
+    selectedIndex,
+    scrollOffsetRef,
+    animationRef,
+    isAnimatingRef,
+    isDraggingRef,
+    snapToIndex,
+    snapToNearestRow,
+    hitTestDataIndex,
+    startMomentum,
+  } = motion;
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Drag state
+  const lastYRef = useRef(0);
+  const downYRef = useRef(0);
+  const dragDistanceRef = useRef(0);
+  const lastTimeRef = useRef(0);
+  const dragVelocitiesRef = useRef<number[]>([]);
 
   // Handle pointer/mouse down
   const handlePointerDown = useCallback(
@@ -583,7 +719,7 @@ export const Wheel = <T = string | number,>({
       }
 
       // Stop any ongoing animation
-      if (animationRef.current) {
+      if (animationRef.current !== null) {
         cancelAnimationFrame(animationRef.current);
         isAnimatingRef.current = false;
       }
@@ -600,7 +736,7 @@ export const Wheel = <T = string | number,>({
         containerRef.current.style.cursor = 'grabbing';
       }
     },
-    [disabled],
+    [disabled, animationRef, isAnimatingRef, isDraggingRef],
   );
 
   // Handle pointer/mouse move
@@ -618,7 +754,8 @@ export const Wheel = <T = string | number,>({
 
       // Calculate velocity
       if (deltaTime > 0) {
-        const velocity = (deltaY / deltaTime) * 16; // Normalize to ~60fps
+        // Normalize to ~60fps
+        const velocity = (deltaY / deltaTime) * 16;
         dragVelocitiesRef.current.push(velocity);
         // Keep only last 5 velocities for averaging
         if (dragVelocitiesRef.current.length > 5) {
@@ -642,7 +779,7 @@ export const Wheel = <T = string | number,>({
       lastYRef.current = currentY;
       lastTimeRef.current = currentTime;
     },
-    [disabled, loopEnabled, minOffset, maxOffset, containerHeight],
+    [disabled, loopEnabled, minOffset, maxOffset, containerHeight, isDraggingRef, scrollOffsetRef, setScrollOffset],
   );
 
   // Handle pointer/mouse up
@@ -660,14 +797,13 @@ export const Wheel = <T = string | number,>({
         } catch {
           // already released
         }
-        containerRef.current.style.cursor = disabled ? 'not-allowed' : 'grab';
+        containerRef.current.style.cursor = wheelCursor(disabled);
       }
 
       // iOS: a tap on a visible row snaps that row to center.
       if (dragDistanceRef.current < tapSlopPx) {
-        const localY = e.locationY;
         const rect = containerRef.current?.getBoundingClientRect();
-        const tapY = typeof localY === 'number' ? localY : e.clientY - (rect?.top ?? 0);
+        const tapY = e.locationY ?? e.clientY - (rect?.top ?? 0);
         const tapped = hitTestDataIndex(tapY);
         if (tapped != null) {
           snapToIndex(tapped, true);
@@ -689,66 +825,45 @@ export const Wheel = <T = string | number,>({
         snapToNearestRow(true);
       }
     },
-    [snapToNearestRow, startMomentum, hitTestDataIndex, snapToIndex, disabled],
+    [snapToNearestRow, startMomentum, hitTestDataIndex, snapToIndex, disabled, isDraggingRef],
   );
 
+  // The pan responder is created once; it reaches the latest handlers through these refs.
   const disabledRef = useRef(disabled);
-  disabledRef.current = disabled;
+  useLayoutEffect(() => {
+    disabledRef.current = disabled;
+  });
   const pointerDownRef = useRef(handlePointerDown);
-  pointerDownRef.current = handlePointerDown;
+  useLayoutEffect(() => {
+    pointerDownRef.current = handlePointerDown;
+  });
   const pointerMoveRef = useRef(handlePointerMove);
-  pointerMoveRef.current = handlePointerMove;
+  useLayoutEffect(() => {
+    pointerMoveRef.current = handlePointerMove;
+  });
   const pointerUpRef = useRef(handlePointerUp);
-  pointerUpRef.current = handlePointerUp;
+  useLayoutEffect(() => {
+    pointerUpRef.current = handlePointerUp;
+  });
 
   const panResponder = useMemo(() => {
     if (isWeb) {
-      return { panHandlers: {} as Record<string, unknown> };
+      return { panHandlers: {} };
     }
-    return PanResponder.create({
-      onStartShouldSetPanResponder: () => !disabledRef.current,
-      onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dy) > 1,
-      onPanResponderTerminationRequest: () => false,
-      onShouldBlockNativeResponder: () => true,
-      onPanResponderGrant: (evt: GestureResponderEvent) => {
-        pointerDownRef.current({
-          clientY: evt.nativeEvent.pageY,
-          pointerId: 1,
-        });
-      },
-      onPanResponderMove: (evt: GestureResponderEvent) => {
-        pointerMoveRef.current({
-          clientY: evt.nativeEvent.pageY,
-          pointerId: 1,
-        });
-      },
-      onPanResponderRelease: (evt: GestureResponderEvent) => {
-        pointerUpRef.current({
-          clientY: evt.nativeEvent.pageY,
-          pointerId: 1,
-          locationY: evt.nativeEvent.locationY,
-        });
-      },
-      onPanResponderTerminate: (evt: GestureResponderEvent) => {
-        pointerUpRef.current({
-          clientY: evt.nativeEvent.pageY,
-          pointerId: 1,
-          locationY: evt.nativeEvent.locationY,
-        });
-      },
-    });
+    // oxlint-disable-next-line react/refs -- created once; the gesture reaches the latest handlers through these refs when it fires, never during render
+    return createWheelPanResponder({ disabledRef, pointerDownRef, pointerMoveRef, pointerUpRef });
   }, []);
 
   // Handle mouse wheel
   const handleWheel = useCallback(
-    (e: React.WheelEvent | WheelEvent) => {
+    (e: ReactWheelEvent | WheelEvent) => {
       if (disabled) {
         return;
       }
       e.preventDefault();
 
       // Stop any ongoing animation
-      if (animationRef.current) {
+      if (animationRef.current !== null) {
         cancelAnimationFrame(animationRef.current);
         isAnimatingRef.current = false;
       }
@@ -769,7 +884,7 @@ export const Wheel = <T = string | number,>({
       scrollOffsetRef.current = newOffset;
       setScrollOffset(newOffset);
 
-      if (animationRef.current) {
+      if (animationRef.current !== null) {
         cancelAnimationFrame(animationRef.current);
       }
       animationRef.current = requestAnimationFrame(() => {
@@ -780,12 +895,23 @@ export const Wheel = <T = string | number,>({
         }, 100);
       });
     },
-    [disabled, loopEnabled, minOffset, maxOffset, snapToNearestRow],
+    [
+      disabled,
+      loopEnabled,
+      minOffset,
+      maxOffset,
+      snapToNearestRow,
+      animationRef,
+      isAnimatingRef,
+      isDraggingRef,
+      scrollOffsetRef,
+      setScrollOffset,
+    ],
   );
 
   // Handle keyboard
   const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent | KeyboardEvent) => {
+    (e: ReactKeyboardEvent | KeyboardEvent) => {
       if (disabled) {
         return;
       }
@@ -826,32 +952,26 @@ export const Wheel = <T = string | number,>({
       }
 
       e.preventDefault();
-      if (loopEnabled) {
-        const newIndex = modIndex(selectedIndex + delta, n);
-        snapToIndex(newIndex);
-      } else {
-        const newIndex = Math.max(0, Math.min(selectedIndex + delta, n - 1));
-        snapToIndex(newIndex);
-      }
+      const newIndex = loopEnabled
+        ? modIndex(selectedIndex + delta, n)
+        : Math.max(0, Math.min(selectedIndex + delta, n - 1));
+      snapToIndex(newIndex);
     },
     [disabled, selectedIndex, n, visibleItems, snapToIndex, loopEnabled],
   );
 
   // Set up event listeners for web
   useEffect(() => {
-    if (!isWeb) {
-      return;
-    }
-
     const container = containerRef.current;
-    if (!container) {
-      return;
+    if (!isWeb || !container) {
+      return noopCleanup;
     }
 
     // Wheel event with passive: false to allow preventDefault
     const wheelHandler = (e: WheelEvent) => {
       handleWheel(e);
     };
+    // oxlint-disable-next-line github/require-passive-events -- the handler calls preventDefault() to stop page scroll while the wheel is over the picker, which a passive listener forbids
     container.addEventListener('wheel', wheelHandler, { passive: false });
 
     return () => {
@@ -859,75 +979,255 @@ export const Wheel = <T = string | number,>({
     };
   }, [handleWheel]);
 
-  // Cleanup animation on unmount
-  useEffect(
-    () => () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
-    },
-    [],
-  );
-
-  const renderRows = useMemo(() => {
-    if (n === 0) {
-      return [];
-    }
-    if (loopEnabled) {
-      const centerRow = Math.round(scrollOffset / itemHeight);
-      const rowBuffer = paddingItems + 5;
-      const list: { virtualRow: number; dataIndex: number }[] = [];
-      for (let vr = centerRow - rowBuffer; vr <= centerRow + rowBuffer; vr++) {
-        list.push({ virtualRow: vr, dataIndex: modIndex(vr, n) });
-      }
-      return list;
-    }
-    const start = Math.max(0, Math.floor(scrollOffset / itemHeight) - paddingItems - 1);
-    const end = Math.min(n - 1, Math.ceil((scrollOffset + containerHeight) / itemHeight) + paddingItems + 1);
-    return Array.from({ length: end - start + 1 }, (_, i) => {
-      const virtualRow = start + i;
-      return { virtualRow, dataIndex: virtualRow };
-    });
-  }, [n, loopEnabled, scrollOffset, itemHeight, paddingItems, containerHeight]);
-
-  const itemColor = (isSelected: boolean) => (disabled ? '$color10' : isSelected ? '$color12' : '$color11');
-
-  const radiusToken = knobProps.borderRadius.borderRadius as string | number;
-  const highlightStyle = highlightBandStyle(highlightEdges, radiusToken, Boolean(knobProps.pointy));
-  const highlightSmoothClass =
-    'className' in knobProps.borderRadius && typeof knobProps.borderRadius.className === 'string'
-      ? knobProps.borderRadius.className
-      : undefined;
-
-  const renderItemNode = (dataIndex: number, isSelected: boolean) => {
-    const item = items[dataIndex];
-    const itemValue = getItemValue(item);
-    if (renderItem) {
-      return renderItem(itemValue, dataIndex, isSelected);
-    }
-    return (
-      <Text
-        {...knobProps.body}
-        fontSize={size}
-        color={itemColor(isSelected)}
-        numberOfLines={1}
-        ellipsizeMode="tail"
-        maxWidth="100%"
-        paddingHorizontal="$2">
-        {getItemLabel(item)}
-      </Text>
-    );
+  return {
+    containerRef,
+    handlePointerDown,
+    handlePointerMove,
+    handlePointerUp,
+    handleKeyDown,
+    panHandlers: panResponder.panHandlers,
   };
+};
+
+// ── Rendering ─────────────────────────────────────────────────
+
+interface WheelRowModel {
+  virtualRow: number;
+  dataIndex: number;
+  isSelected: boolean;
+  transform: ReturnType<typeof getItemTransform>;
+  content: ReactNode;
+}
+
+/** Virtual rows to paint: the whole circle neighbourhood when looping, else the visible window. */
+const visibleRowsFor = (geometry: WheelGeometry, scrollOffset: number): { virtualRow: number; dataIndex: number }[] => {
+  const { n, loopEnabled, itemHeight, paddingItems, containerHeight } = geometry;
+  if (n === 0) {
+    return [];
+  }
+  if (loopEnabled) {
+    const centerRow = Math.round(scrollOffset / itemHeight);
+    const rowBuffer = paddingItems + 5;
+    const list: { virtualRow: number; dataIndex: number }[] = [];
+    for (let vr = centerRow - rowBuffer; vr <= centerRow + rowBuffer; vr += 1) {
+      list.push({ virtualRow: vr, dataIndex: modIndex(vr, n) });
+    }
+    return list;
+  }
+  const start = Math.max(0, Math.floor(scrollOffset / itemHeight) - paddingItems - 1);
+  const end = Math.min(n - 1, Math.ceil((scrollOffset + containerHeight) / itemHeight) + paddingItems + 1);
+  return Array.from({ length: end - start + 1 }, (_, i) => {
+    const virtualRow = start + i;
+    return { virtualRow, dataIndex: virtualRow };
+  });
+};
+
+const DefaultWheelItem = ({
+  label,
+  size,
+  color,
+  knobProps,
+}: {
+  label: string;
+  size: SizeTokens;
+  color: '$color10' | '$color11' | '$color12';
+  knobProps: KnobProps;
+}) => (
+  <Text
+    {...knobProps.body}
+    fontSize={size}
+    color={color}
+    numberOfLines={1}
+    ellipsizeMode="tail"
+    maxWidth="100%"
+    paddingHorizontal="$2">
+    {label}
+  </Text>
+);
+
+const WebWheelRows = ({ rows, itemHeight }: { rows: readonly WheelRowModel[]; itemHeight: number }) =>
+  rows.map(({ virtualRow, dataIndex, isSelected, transform, content }) => (
+    <div
+      key={`${dataIndex}-${virtualRow}`}
+      data-testid="wheel-item"
+      data-index={dataIndex}
+      data-selected={isSelected ? true : undefined}
+      aria-hidden={isSelected ? undefined : true}
+      style={{
+        ...webRowBaseStyle,
+        height: itemHeight,
+        transform: `translateY(${transform.translateY}px) rotateX(${transform.rotateX}deg) scale(${transform.scale})`,
+        opacity: transform.opacity,
+      }}>
+      {content}
+    </div>
+  ));
+
+const NativeWheelRows = ({ rows, itemHeight }: { rows: readonly WheelRowModel[]; itemHeight: number }) =>
+  rows.map(({ virtualRow, dataIndex, isSelected, transform, content }) => (
+    <View
+      key={`${dataIndex}-${virtualRow}`}
+      position="absolute"
+      left={0}
+      right={0}
+      height={itemHeight}
+      alignItems="center"
+      justifyContent="center"
+      opacity={transform.opacity}
+      pointerEvents="none"
+      y={transform.translateY}
+      scale={transform.scale}
+      rotateX={`${transform.rotateX}deg`}
+      data-testid="wheel-item"
+      data-index={dataIndex}
+      data-selected={isSelected ? true : undefined}>
+      {content}
+    </View>
+  ));
+
+/** Screen-reader text of the selected row, or nothing when the selection is out of range. */
+const valueTextFor = <T,>(items: (T | WheelItem<T>)[], selectedIndex: number): string | undefined => {
+  const item = items[selectedIndex];
+  return item === undefined ? undefined : getItemLabel(item);
+};
+
+const wheelGeometry = ({
+  n,
+  itemHeight,
+  visibleItems,
+  loop,
+  snapDurationMs,
+}: {
+  n: number;
+  itemHeight: number;
+  visibleItems: number;
+  loop: boolean;
+  snapDurationMs: number;
+}): WheelGeometry => ({
+  n,
+  itemHeight,
+  visibleItems,
+  loopEnabled: loop && n > 1,
+  containerHeight: itemHeight * visibleItems,
+  paddingItems: Math.floor(visibleItems / 2),
+  minOffset: 0,
+  maxOffset: n > 0 ? (n - 1) * itemHeight : 0,
+  snapDurationMs,
+});
+
+/** Beyond this rotation a row is edge-on to the viewer and is not painted. */
+const MAX_ROW_ROTATION_DEG = 85;
+
+const buildWheelRows = <T,>({
+  renderRows,
+  scrollOffset,
+  geometry,
+  liveDataIndex,
+  items,
+  renderItem,
+  size,
+  disabled,
+  knobProps,
+}: {
+  renderRows: { virtualRow: number; dataIndex: number }[];
+  scrollOffset: number;
+  geometry: WheelGeometry;
+  liveDataIndex: number;
+  items: (T | WheelItem<T>)[];
+  renderItem: WheelProps<T>['renderItem'];
+  size: SizeTokens;
+  disabled: boolean;
+  knobProps: KnobProps;
+}): WheelRowModel[] => {
+  const rows: WheelRowModel[] = [];
+  for (const { virtualRow, dataIndex } of renderRows) {
+    const transform = getItemTransform(virtualRow, scrollOffset, geometry.itemHeight, geometry.containerHeight);
+    if (Math.abs(transform.rotateX) <= MAX_ROW_ROTATION_DEG) {
+      const isSelected = dataIndex === liveDataIndex;
+      const item = items[dataIndex];
+      const content =
+        renderItem === undefined ? (
+          <DefaultWheelItem
+            label={getItemLabel(item)}
+            size={size}
+            color={itemColor(disabled, isSelected)}
+            knobProps={knobProps}
+          />
+        ) : (
+          renderItem(getItemValue(item), dataIndex, isSelected)
+        );
+      rows.push({ virtualRow, dataIndex, isSelected, transform, content });
+    }
+  }
+  return rows;
+};
+
+// ── Wheel Component ───────────────────────────────────────────
+
+export const Wheel = <T = string | number,>({
+  items,
+  value,
+  onChange,
+  visibleItems = 5,
+  itemHeight: itemHeightProp,
+  width: widthProp,
+  renderItem,
+  disabled = false,
+  size: sizeProp,
+  loop = false,
+  highlightEdges = 'all',
+  flex,
+  onItemCross,
+  'aria-label': ariaLabel,
+}: WheelProps<T>) => {
+  const { knobProps } = useResolvedKnobs();
+  const size = fontSizeFor(sizeProp, knobProps.size);
+  // Row geometry rides nestedControl (density-aware, 32px at medium — iOS
+  // UIPickerView item extent). Explicit itemHeight ejects.
+  const itemHeight = itemHeightProp ?? knobProps.nestedControl.px ?? 32;
+  const columnWidth = widthProp ?? defaultColumnWidth;
+  ensureWheelFocusStyles();
+  // Discrete snaps (keyboard / controlled value) tween; drag stays 1:1.
+  // knobProps.transition is undefined at animation "none" (which also carries
+  // prefers-reduced-motion) — snaps must JUMP then, not fall back to a tween.
+  const snapDurationMs = snapDurationFor(knobProps.transition);
+
+  const geometry = wheelGeometry({ n: items.length, itemHeight, visibleItems, loop, snapDurationMs });
+  const { n, containerHeight, paddingItems } = geometry;
+
+  const motion = useWheelMotion({ items, value, onChange, onItemCross, geometry });
+  const { scrollOffset, selectedIndex, liveDataIndex } = motion;
+  const { containerRef, handlePointerDown, handlePointerMove, handlePointerUp, handleKeyDown, panHandlers } =
+    useWheelInput({ geometry, disabled, motion });
+
+  const renderRows = visibleRowsFor(geometry, scrollOffset);
+
+  const radiusToken = knobProps.borderRadius.borderRadius;
+  const highlightStyle = highlightBandStyle(highlightEdges, radiusToken, knobProps.pointy);
+  const highlightSmoothClass = knobProps.borderRadius.className;
+
+  const rows = buildWheelRows({
+    renderRows,
+    scrollOffset,
+    geometry,
+    liveDataIndex,
+    items,
+    renderItem,
+    size,
+    disabled,
+    knobProps,
+  });
+  const stretches = flex !== undefined && flex !== 0;
 
   return (
     <WheelContainer
       height={containerHeight}
-      width={flex ? '100%' : columnWidth}
-      minWidth={flex ? 0 : columnWidth}
+      width={stretches ? '100%' : columnWidth}
+      minWidth={stretches ? 0 : columnWidth}
       flex={flex}
       data-testid="wheel"
       data-disabled={disabled ? true : undefined}
-      aria-disabled={disabled || undefined}
+      aria-disabled={disabled ? true : undefined}
       opacity={1}>
       {/* iOS 14+ selection fill — selected=fill, never hairline borders */}
       <SelectionIndicator
@@ -945,14 +1245,15 @@ export const Wheel = <T = string | number,>({
           ref={containerRef}
           className="mp1-wheel-wrapper"
           tabIndex={disabled ? -1 : 0}
+          // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a drag/wheel/keyboard picker over absolutely positioned rows; <input type="range"> cannot host them
           role="slider"
           aria-label={ariaLabel ?? t('Value picker')}
           aria-orientation="vertical"
           aria-valuemin={0}
           aria-valuemax={Math.max(0, n - 1)}
           aria-valuenow={selectedIndex}
-          aria-valuetext={items[selectedIndex] === undefined ? undefined : getItemLabel(items[selectedIndex])}
-          aria-disabled={disabled || undefined}
+          aria-valuetext={valueTextFor(items, selectedIndex)}
+          aria-disabled={disabled ? true : undefined}
           data-disabled={disabled ? true : undefined}
           style={{
             width: '100%',
@@ -963,49 +1264,19 @@ export const Wheel = <T = string | number,>({
             overflow: 'hidden',
             userSelect: 'none',
             touchAction: 'none',
-            cursor: disabled ? 'not-allowed' : 'grab',
+            cursor: wheelCursor(disabled),
             ...wheelMaskStyle,
           }}
-          onPointerDown={handlePointerDown as any}
-          onPointerMove={handlePointerMove as any}
-          onPointerUp={handlePointerUp as any}
-          onPointerCancel={handlePointerUp as any}
-          onKeyDown={handleKeyDown as any}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          onKeyDown={handleKeyDown}
           data-testid="wheel-wrapper">
-          {renderRows.map(({ virtualRow, dataIndex }) => {
-            const isSelected = dataIndex === liveDataIndex;
-            const transform = getItemTransform(virtualRow, scrollOffset, itemHeight, containerHeight);
-
-            if (Math.abs(transform.rotateX) > 85) {
-              return null;
-            }
-
-            return (
-              <div
-                key={`${dataIndex}-${virtualRow}`}
-                data-testid="wheel-item"
-                data-index={dataIndex}
-                data-selected={isSelected ? true : undefined}
-                aria-hidden={isSelected ? undefined : true}
-                style={{
-                  position: 'absolute',
-                  left: 0,
-                  right: 0,
-                  height: itemHeight,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transform: `translateY(${transform.translateY}px) rotateX(${transform.rotateX}deg) scale(${transform.scale})`,
-                  opacity: transform.opacity,
-                  pointerEvents: 'none',
-                  transformOrigin: 'center center',
-                  transformStyle: 'preserve-3d',
-                  backfaceVisibility: 'hidden',
-                }}>
-                {renderItemNode(dataIndex, isSelected)}
-              </div>
-            );
-          })}
+          <WebWheelRows
+            rows={rows}
+            itemHeight={itemHeight}
+          />
         </div>
       ) : (
         <View
@@ -1013,40 +1284,15 @@ export const Wheel = <T = string | number,>({
           height={containerHeight}
           position="relative"
           overflow="hidden"
-          cursor={disabled ? 'not-allowed' : 'grab'}
+          cursor={wheelCursor(disabled)}
           data-testid="wheel-wrapper"
           data-disabled={disabled ? true : undefined}
-          aria-disabled={disabled || undefined}
-          {...panResponder.panHandlers}>
-          {renderRows.map(({ virtualRow, dataIndex }) => {
-            const isSelected = dataIndex === liveDataIndex;
-            const transform = getItemTransform(virtualRow, scrollOffset, itemHeight, containerHeight);
-
-            if (Math.abs(transform.rotateX) > 85) {
-              return null;
-            }
-
-            return (
-              <View
-                key={`${dataIndex}-${virtualRow}`}
-                position="absolute"
-                left={0}
-                right={0}
-                height={itemHeight}
-                alignItems="center"
-                justifyContent="center"
-                opacity={transform.opacity}
-                pointerEvents="none"
-                y={transform.translateY}
-                scale={transform.scale}
-                rotateX={`${transform.rotateX}deg`}
-                data-testid="wheel-item"
-                data-index={dataIndex}
-                data-selected={isSelected ? true : undefined}>
-                {renderItemNode(dataIndex, isSelected)}
-              </View>
-            );
-          })}
+          aria-disabled={disabled ? true : undefined}
+          {...panHandlers}>
+          <NativeWheelRows
+            rows={rows}
+            itemHeight={itemHeight}
+          />
           <WheelEdgeFade height={paddingItems * itemHeight} />
         </View>
       )}

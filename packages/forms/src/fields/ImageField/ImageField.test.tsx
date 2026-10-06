@@ -8,16 +8,18 @@ import { TableCellContext } from '../../shared/table-cell-context';
 
 import { ImageField } from './index';
 
-afterEach(cleanup);
+type ImageValue = string | File | null;
 
-const mediaTile = (container: HTMLElement) => container.querySelector('[data-media-tile]') as HTMLElement | null;
+const tableCellValue = { inTableCell: true, isHeader: false, editable: true };
+
+const mediaTile = (container: HTMLElement) => container.querySelector<HTMLElement>('[data-media-tile]');
 
 const radiusClasses = (el: HTMLElement | null) =>
-  String(el?.className || '')
-    .split(' ')
-    .filter((c) => c.startsWith('_btlr-'));
+  (el?.className ?? '').split(' ').filter((c) => c.startsWith('_btlr-'));
 
-describe('ImageField', () => {
+describe(ImageField, () => {
+  afterEach(cleanup);
+
   describe('without form context', () => {
     it('renders with label', () => {
       const result = renderWithProviders(
@@ -103,10 +105,10 @@ describe('ImageField', () => {
           name="avatar"
         />,
       );
-      const label = result.container.querySelector('label[for]') as HTMLLabelElement | null;
+      const label = result.container.querySelector('label[for]');
       expect(label?.textContent).toContain('Avatar');
-      const forId = label?.getAttribute('for') as string;
-      const frame = result.container.querySelector(`[id="${forId}"]`) as HTMLElement | null;
+      const forId = label!.getAttribute('for')!;
+      const frame = result.container.querySelector(`[id="${forId}"]`);
       expect(frame?.getAttribute('role')).toBe('button');
       expect(frame?.getAttribute('tabindex')).toBe('0');
     });
@@ -118,7 +120,7 @@ describe('ImageField', () => {
           name="avatar"
         />,
       );
-      const input = result.container.querySelector("input[type='file']") as HTMLInputElement | null;
+      const input = result.container.querySelector("input[type='file']");
       expect(input?.getAttribute('tabindex')).toBe('-1');
       expect(input?.getAttribute('aria-hidden')).toBe('true');
     });
@@ -131,14 +133,14 @@ describe('ImageField', () => {
           name="avatar"
         />,
       );
-      const frame = result.container.querySelector('[role="button"]') as HTMLElement | null;
+      const frame = result.container.querySelector('[role="button"]');
       expect(frame).toBeTruthy();
       await act(async () => {
         if (frame) {
           fireEvent.keyDown(frame, { key: 'Enter' });
         }
       });
-      expect(click).toHaveBeenCalled();
+      expect(click).toHaveBeenCalledWith();
       click.mockRestore();
     });
 
@@ -152,7 +154,7 @@ describe('ImageField', () => {
           imageHeight={96}
         />,
       );
-      const img = result.container.querySelector('img') as HTMLImageElement | null;
+      const img = result.container.querySelector('img');
       expect(img).toBeTruthy();
       await act(async () => {
         if (img) {
@@ -164,7 +166,7 @@ describe('ImageField', () => {
     });
 
     it('clears the value from the Remove action', async () => {
-      const onChange = vi.fn();
+      const onChange = vi.fn<(value: ImageValue) => void>();
       const result = renderWithProviders(
         <ImageField
           label="Photo"
@@ -186,18 +188,19 @@ describe('ImageField', () => {
     });
 
     it('fires canonical onChange and the deprecated onValueChange alias once when an image is chosen', async () => {
-      const onChange = vi.fn();
-      const onValueChange = vi.fn();
+      const onChange = vi.fn<(value: ImageValue) => void>();
+      const onValueChange = vi.fn<(value: ImageValue) => void>();
       const result = renderWithProviders(
         <ImageField
           label="Avatar"
           name="avatar"
           onChange={onChange}
+          // oxlint-disable-next-line typescript/no-deprecated -- exercises the deprecated alias
           onValueChange={onValueChange}
         />,
       );
 
-      const input = result.container.querySelector("input[type='file']") as HTMLInputElement | null;
+      const input = result.container.querySelector("input[type='file']");
       expect(input).toBeTruthy();
       const file = new File(['fake-image'], 'avatar.png', { type: 'image/png' });
       await act(async () => {
@@ -207,10 +210,8 @@ describe('ImageField', () => {
       });
 
       // Exactly once each — guards against the standalone double-fire bug.
-      expect(onChange).toHaveBeenCalledOnce();
-      expect(onChange).toHaveBeenCalledWith(file);
-      expect(onValueChange).toHaveBeenCalledOnce();
-      expect(onValueChange).toHaveBeenCalledWith(file);
+      expect(onChange).toHaveBeenCalledExactlyOnceWith(file);
+      expect(onValueChange).toHaveBeenCalledExactlyOnceWith(file);
     });
   });
 
@@ -287,7 +288,7 @@ describe('ImageField', () => {
 
     it('does not grow a table cell with a Remove sibling', () => {
       const result = renderWithProviders(
-        <TableCellContext.Provider value={{ inTableCell: true, isHeader: false, editable: true }}>
+        <TableCellContext.Provider value={tableCellValue}>
           <ImageField
             label="Photo"
             name="photo"

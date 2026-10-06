@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { resolveStepperPlacement } from './resolve-stepper-placement';
 
-describe('resolveStepperPlacement', () => {
+describe(resolveStepperPlacement, () => {
   it('defaults to both', () => {
     expect(resolveStepperPlacement(undefined, false)).toBe('both');
     expect(resolveStepperPlacement(undefined, true)).toBe('both');

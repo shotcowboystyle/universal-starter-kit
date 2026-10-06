@@ -23,6 +23,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { WheelEdgeFade } from './WheelEdgeFade';
 import { WheelEdgeFade as NativeWheelEdgeFade } from './WheelEdgeFade.native';
 
+// oxlint-disable-next-line vitest/prefer-import-in-mock -- the real LinearGradient is a class component; this probe is a function component, so a typed factory cannot be satisfied
 vi.mock('expo-linear-gradient', () => ({
   LinearGradient: (props: { colors?: string[]; start?: unknown; end?: unknown }) => (
     <div
@@ -34,17 +35,19 @@ vi.mock('expo-linear-gradient', () => ({
   ),
 }));
 
-afterEach(cleanup);
+const bands = (container: HTMLElement): HTMLElement[] => [
+  ...container.querySelectorAll<HTMLElement>("[style*='height']"),
+];
 
-const bands = (container: HTMLElement): HTMLElement[] =>
-  Array.from(container.querySelectorAll("[style*='height']")) as HTMLElement[];
+const gradients = (container: HTMLElement): HTMLElement[] => [
+  ...container.querySelectorAll<HTMLElement>('[data-gradient]'),
+];
 
-const gradients = (container: HTMLElement): HTMLElement[] =>
-  Array.from(container.querySelectorAll('[data-gradient]')) as HTMLElement[];
-
-const colorsOf = (node: HTMLElement): string[] => String(node.getAttribute('data-colors') ?? '').split('|');
+const colorsOf = (node: HTMLElement): string[] => (node.dataset.colors ?? '').split('|');
 
 describe('WheelEdgeFade — web', () => {
+  afterEach(cleanup);
+
   it("renders nothing, because the viewport's CSS mask already does the fade", () => {
     const { container } = renderWithProviders(<WheelEdgeFade height={24} />);
     expect(container.querySelector('[data-gradient]')).toBeNull();
@@ -61,6 +64,8 @@ describe('WheelEdgeFade — web', () => {
 });
 
 describe('WheelEdgeFade — native', () => {
+  afterEach(cleanup);
+
   it('paints one band per edge, never a single one', () => {
     const { container } = renderWithProviders(<NativeWheelEdgeFade height={24} />);
     expect(gradients(container)).toHaveLength(2);
@@ -83,12 +88,16 @@ describe('WheelEdgeFade — native', () => {
 
   it('gives each band the height it was handed, so the caller sets the fade depth', () => {
     const { container } = renderWithProviders(<NativeWheelEdgeFade height={30} />);
-    const heights = bands(container).map((node) => /height:\s*(\d+)px/u.exec(node.getAttribute('style') ?? '')?.[1]);
+    const heights = bands(container).map(
+      (node) => /height:\s*(?<px>\d+)px/u.exec(node.getAttribute('style') ?? '')?.groups?.px,
+    );
     expect(heights.filter(Boolean)).toStrictEqual(['30', '30']);
     cleanup();
     const taller = renderWithProviders(<NativeWheelEdgeFade height={64} />);
     expect(
-      bands(taller.container).map((node) => /height:\s*(\d+)px/u.exec(node.getAttribute('style') ?? '')?.[1]),
+      bands(taller.container).map(
+        (node) => /height:\s*(?<px>\d+)px/u.exec(node.getAttribute('style') ?? '')?.groups?.px,
+      ),
     ).toStrictEqual(['64', '64']);
   });
 
@@ -120,15 +129,15 @@ describe('WheelEdgeFade — native', () => {
     expect(opaque).not.toBe('transparent');
     // The clear stop is the SAME colour at zero alpha, so the band never
     // shifts hue across its length.
-    const channels = /rgba\(([^)]+),\s*0\)$/u.exec(clear)?.[1];
+    const channels = /rgba\((?<channels>[^)]+),\s*0\)$/u.exec(clear)?.groups?.channels;
     expect(channels, `clear stop ${clear} must be the opaque stop at alpha 0`).toBeTruthy();
   });
 
   it('runs both gradients vertically down the centre line', () => {
     const { container } = renderWithProviders(<NativeWheelEdgeFade height={24} />);
     for (const gradient of gradients(container)) {
-      expect(gradient.getAttribute('data-start')).toBe(JSON.stringify({ x: 0.5, y: 0 }));
-      expect(gradient.getAttribute('data-end')).toBe(JSON.stringify({ x: 0.5, y: 1 }));
+      expect(gradient.dataset.start).toBe(JSON.stringify({ x: 0.5, y: 0 }));
+      expect(gradient.dataset.end).toBe(JSON.stringify({ x: 0.5, y: 1 }));
     }
   });
 });

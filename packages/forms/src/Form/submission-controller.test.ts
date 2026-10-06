@@ -4,19 +4,17 @@ import { getFormSubmission } from './submission-controller';
 
 describe('submission controller', () => {
   it('shares one guarded attempt per form and keeps other forms independent', async () => {
-    let finish!: () => void;
+    const gate = Promise.withResolvers<null>();
     const form = {
       state: { isSubmitting: false, isSubmitSuccessful: false },
-      handleSubmit: vi.fn(async () => {
-        await new Promise<void>((resolve) => {
-          finish = resolve;
-        });
+      handleSubmit: vi.fn<() => Promise<void>>(async () => {
+        await gate.promise;
         form.state.isSubmitSuccessful = true;
       }),
     };
     const other = {
       state: { isSubmitting: false, isSubmitSuccessful: false },
-      handleSubmit: vi.fn(async () => {}),
+      handleSubmit: vi.fn<() => Promise<void>>(async () => {}),
     };
     const controller = getFormSubmission(form);
     expect(getFormSubmission(form)).toBe(controller);
@@ -26,7 +24,7 @@ describe('submission controller', () => {
     await Promise.resolve();
     expect(form.handleSubmit).toHaveBeenCalledOnce();
     await expect(duplicate).resolves.toBe('busy');
-    finish();
+    gate.resolve(null);
     await expect(first).resolves.toBe('success');
     expect(other.handleSubmit).not.toHaveBeenCalled();
   });
@@ -34,19 +32,19 @@ describe('submission controller', () => {
   it('captures sync throws, exposes stable reactive snapshots and unsubscribes', async () => {
     const form = {
       state: { isSubmitting: false, isSubmitSuccessful: false },
-      handleSubmit: vi.fn(() => {
+      handleSubmit: vi.fn<() => Promise<void>>(() => {
         throw new Error('Service unavailable');
       }),
     };
     const controller = getFormSubmission(form);
     const initial = controller.getSnapshot();
     expect(controller.getSnapshot()).toBe(initial);
-    const listener = vi.fn();
+    const listener = vi.fn<() => void>();
     const unsubscribe = controller.subscribe(listener);
     await expect(controller.submit()).resolves.toBe('failed');
     expect(controller.getSnapshot().error).toBe('Service unavailable');
     expect(controller.getSnapshot()).toBe(controller.getSnapshot());
-    expect(listener).toHaveBeenCalled();
+    expect(listener).toHaveBeenCalledWith();
     unsubscribe();
     listener.mockClear();
     controller.clearError();
@@ -59,10 +57,7 @@ describe('submission controller', () => {
   it('clears a prior refusal when retry starts and does not treat validation as success', async () => {
     const form = {
       state: { isSubmitting: false, isSubmitSuccessful: false },
-      handleSubmit: vi
-        .fn<() => Promise<void>>()
-        .mockRejectedValueOnce(new Error('Try again'))
-        .mockResolvedValue(undefined),
+      handleSubmit: vi.fn<() => Promise<void>>().mockRejectedValueOnce(new Error('Try again')).mockResolvedValue(),
     };
     const controller = getFormSubmission(form);
     await expect(controller.submit()).resolves.toBe('failed');

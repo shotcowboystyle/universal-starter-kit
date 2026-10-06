@@ -13,7 +13,7 @@ const barcodeIcon = <span data-testid="barcode-icon" />;
 const scanIcon = <span data-testid="scan-icon" />;
 const stopIcon = <span data-testid="stop-icon" />;
 
-describe('Barcode', () => {
+describe(Barcode, () => {
   describe('without form context', () => {
     it('renders with label', () => {
       const result = renderWithProviders(
@@ -154,14 +154,14 @@ describe('Barcode', () => {
 
     it('standalone without onChange still types via internal state', () => {
       const result = renderWithProviders(<Barcode label="Code" />);
-      const input = result.container.querySelector('input') as HTMLInputElement;
+      const input = result.container.querySelector('input')!;
       expect(input).not.toBeNull();
       fireEvent.change(input, { target: { value: 'SKU-001234' } });
       expect(input.value).toBe('SKU-001234');
     });
 
     it('clear empties the value', () => {
-      const onChange = vi.fn();
+      const onChange = vi.fn<(value: string) => void>();
       const result = renderWithProviders(
         <Barcode
           label="Code"
@@ -174,7 +174,7 @@ describe('Barcode', () => {
       );
       const clear = result.container.querySelector("[aria-label='Clear barcode']");
       expect(clear).not.toBeNull();
-      fireEvent.click(clear as Element);
+      fireEvent.click(clear!);
       expect(onChange).toHaveBeenCalledWith('');
     });
 
@@ -239,10 +239,7 @@ describe('Barcode', () => {
     it('preflightCamera fails when no camera capability exists', async () => {
       // jsdom has no navigator.mediaDevices — pre-flight must fail, not throw
       const result = await preflightCamera();
-      expect(result.ok).toBe(false);
-      if (!result.ok) {
-        expect(result.reason).toContain('Camera unavailable');
-      }
+      expect(result).toStrictEqual({ ok: false, reason: expect.stringContaining('Camera unavailable') });
     });
 
     it('scan press without camera shows inline error and never mounts the scanner', async () => {
@@ -257,7 +254,7 @@ describe('Barcode', () => {
       );
       const button = result.container.querySelector("[aria-label='Scan barcode']");
       expect(button).not.toBeNull();
-      fireEvent.click(button as Element);
+      fireEvent.click(button!);
       await waitFor(() => {
         expect(result.container.textContent).toContain('Camera unavailable');
       });

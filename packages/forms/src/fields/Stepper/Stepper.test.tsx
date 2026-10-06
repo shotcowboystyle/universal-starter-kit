@@ -9,7 +9,44 @@ import { Form } from '../../Form';
 
 import { Stepper } from './index';
 
-describe('Stepper', () => {
+const noopSubmit = async (_value: Record<string, number>) => {};
+
+const FormExample = ({
+  defaultValue = 0,
+  name = 'quantity',
+  onSubmit = noopSubmit,
+}: {
+  defaultValue?: number;
+  name?: string;
+  onSubmit?: (value: Record<string, number>) => Promise<void>;
+}) => {
+  const form = useForm({
+    defaultValues: {
+      [name]: defaultValue,
+    },
+    onSubmit: async ({ value }) => {
+      await onSubmit(value);
+    },
+  });
+
+  return (
+    <Form form={form}>
+      <Stepper
+        label="Quantity"
+        name={name}
+        min={0}
+        max={100}
+      />
+      <Button action="submit">Submit</Button>
+    </Form>
+  );
+};
+
+const currencyGlyph = (container: HTMLElement) => container.querySelector("[data-testid='stepper-currency']");
+const currencyInput = (container: HTMLElement) =>
+  container.querySelector<HTMLInputElement>('input[data-stepper-value]')!;
+
+describe(Stepper, () => {
   describe('without form context', () => {
     it('should render with label and helper text correctly', () => {
       const result = renderWithProviders(
@@ -91,15 +128,15 @@ describe('Stepper', () => {
           max={10}
         />,
       );
-      const input = result.container.querySelector('[role="spinbutton"]') as HTMLInputElement;
+      const input = result.container.querySelector<HTMLInputElement>('[role="spinbutton"]')!;
       expect(input).toBeTruthy();
       expect(input.value).toBe('0');
       expect(input.getAttribute('aria-valuenow')).toBe('0');
       expect(input.getAttribute('aria-valuemin')).toBe('0');
       expect(input.getAttribute('aria-valuemax')).toBe('10');
 
-      const decrease = result.container.querySelector('[aria-label="Decrease"]') as HTMLElement;
-      const increase = result.container.querySelector('[aria-label="Increase"]') as HTMLElement;
+      const decrease = result.container.querySelector<HTMLElement>('[aria-label="Decrease"]')!;
+      const increase = result.container.querySelector<HTMLElement>('[aria-label="Increase"]')!;
       expect(decrease.getAttribute('aria-disabled')).toBe('true');
       expect(increase.getAttribute('aria-disabled')).toBeFalsy();
 
@@ -110,7 +147,7 @@ describe('Stepper', () => {
     });
 
     it('steps with arrow keys and clamps Home/End (Spectrum NumberField)', async () => {
-      const onChange = vi.fn();
+      const onChange = vi.fn<(value: number | null) => void>();
       const result = renderWithProviders(
         <Stepper
           label="Quantity"
@@ -121,7 +158,7 @@ describe('Stepper', () => {
           onChange={onChange}
         />,
       );
-      const input = result.container.querySelector('[role="spinbutton"]') as HTMLInputElement;
+      const input = result.container.querySelector<HTMLInputElement>('[role="spinbutton"]')!;
       await act(async () => {
         fireEvent.keyDown(input, { key: 'ArrowUp' });
       });
@@ -137,7 +174,7 @@ describe('Stepper', () => {
         fireEvent.keyDown(input, { key: 'End' });
       });
       expect(input.value).toBe('10');
-      const increase = result.container.querySelector('[aria-label="Increase"]') as HTMLElement;
+      const increase = result.container.querySelector<HTMLElement>('[aria-label="Increase"]')!;
       expect(increase.getAttribute('aria-disabled')).toBe('true');
     });
 
@@ -149,11 +186,11 @@ describe('Stepper', () => {
           min={0}
         />,
       );
-      const input = result.container.querySelector('[role="spinbutton"]') as HTMLInputElement;
+      const input = result.container.querySelector<HTMLInputElement>('[role="spinbutton"]')!;
       await act(async () => {
         input.focus();
       });
-      const increase = result.container.querySelector('[aria-label="Increase"]') as HTMLElement;
+      const increase = result.container.querySelector<HTMLElement>('[aria-label="Increase"]')!;
       await act(async () => {
         expect(fireEvent.pointerDown(increase)).toBe(false);
         fireEvent.pointerUp(increase);
@@ -166,65 +203,40 @@ describe('Stepper', () => {
   });
 
   describe('with form context', () => {
-    const FormExample = ({ defaultValue = 0, name = 'quantity', onSubmit = async (_value: any) => {} }) => {
-      const form = useForm({
-        defaultValues: {
-          [name]: defaultValue,
-        },
-        onSubmit: async ({ value }) => {
-          await onSubmit(value);
-        },
-      });
-
-      return (
-        <Form form={form}>
-          <Stepper
-            label="Quantity"
-            name={name}
-            min={0}
-            max={100}
-          />
-          <Button action="submit">Submit</Button>
-        </Form>
-      );
-    };
-
     it('should render with form context and handle form submission', async () => {
-      const onSubmit = vi.fn();
+      const onSubmit = vi.fn<(value: Record<string, number>) => Promise<void>>();
       const result = renderWithProviders(
         <YStack>
           <FormExample onSubmit={onSubmit} />
         </YStack>,
       );
       const input = result.getInput() as HTMLInputElement;
-      const submitButton = result.getSubmitButton();
+      const submitButton = result.getSubmitButton()!;
       expect(input?.value).toBe('0');
 
       // First submission with default value
-      if (submitButton) {
-        await act(async () => {
-          fireEvent.click(submitButton);
-        });
-        await waitFor(() => {
-          expect(onSubmit).toHaveBeenCalledWith({ quantity: 0 });
-        });
+      await act(async () => {
+        fireEvent.click(submitButton);
+      });
+      await waitFor(() => {
+        expect(onSubmit).toHaveBeenCalledWith({ quantity: 0 });
+      });
 
-        // Change input value
-        await act(async () => {
-          fireEvent.change(input, { target: { value: '25' } });
-        });
+      // Change input value
+      await act(async () => {
+        fireEvent.change(input, { target: { value: '25' } });
+      });
 
-        await act(async () => {
-          fireEvent.click(submitButton);
-        });
-      }
+      await act(async () => {
+        fireEvent.click(submitButton);
+      });
       await waitFor(() => {
         expect(onSubmit).toHaveBeenCalledWith({ quantity: 25 });
       });
     });
 
     it('should display error message when error prop is passed in form context', async () => {
-      const onSubmit = vi.fn();
+      const onSubmit = vi.fn<(value: Record<string, number>) => Promise<void>>();
       const result = renderWithProviders(
         <YStack>
           <FormExample onSubmit={onSubmit} />
@@ -241,7 +253,7 @@ describe('Stepper', () => {
 
   describe('with useForm hook directly', () => {
     it('should handle form submission with useForm', async () => {
-      const onSubmitMock = vi.fn();
+      const onSubmitMock = vi.fn<(value: { quantity: number }) => void>();
       const TestComponent = () => {
         const form = useForm({
           defaultValues: {
@@ -266,24 +278,20 @@ describe('Stepper', () => {
       const result = renderWithProviders(<TestComponent />);
       const input = result.getInput() as HTMLInputElement;
       const submitButton =
-        result.getSubmitButton() ||
-        (Array.from(result.container.querySelectorAll('button')) as Element[]).find((btn) =>
-          (btn as HTMLElement).textContent?.includes('Submit'),
-        );
-      if (submitButton) {
-        await act(async () => {
-          fireEvent.click(submitButton);
-        });
-        await waitFor(() => {
-          expect(onSubmitMock).toHaveBeenCalledWith({ quantity: 5 });
-        });
-        await act(async () => {
-          fireEvent.change(input, { target: { value: '30' } });
-        });
-        await act(async () => {
-          fireEvent.click(submitButton);
-        });
-      }
+        result.getSubmitButton() ??
+        [...result.container.querySelectorAll('button')].find((btn) => btn.textContent?.includes('Submit'))!;
+      await act(async () => {
+        fireEvent.click(submitButton);
+      });
+      await waitFor(() => {
+        expect(onSubmitMock).toHaveBeenCalledWith({ quantity: 5 });
+      });
+      await act(async () => {
+        fireEvent.change(input, { target: { value: '30' } });
+      });
+      await act(async () => {
+        fireEvent.click(submitButton);
+      });
       await waitFor(() => {
         expect(onSubmitMock).toHaveBeenCalledWith({ quantity: 30 });
       });
@@ -328,7 +336,7 @@ describe('Stepper', () => {
       await act(async () => fireEvent.keyDown(input, { key: 'Home' }));
       await act(async () => fireEvent.keyDown(input, { key: 'ArrowDown' }));
       expect(result.container.textContent).toContain('Minimum reached');
-      await act(async () => fireEvent.blur(input));
+      await act(async () => fireEvent.focusOut(input));
       expect(result.container.textContent).not.toContain('Minimum reached');
       expect(result.container.textContent).toContain('Choose quantity');
     });
@@ -358,7 +366,7 @@ describe('Stepper', () => {
       const decrease = result.container.querySelector('[aria-label="Decrease"]');
       expect(decrease).toBeTruthy();
       await act(async () => {
-        fireEvent.click(decrease as Element);
+        fireEvent.click(decrease!);
       });
       expect(result.container.textContent).toContain('Minimum reached');
       const input = result.getInput() as HTMLInputElement;
@@ -372,8 +380,8 @@ describe('Stepper', () => {
           defaultValue={5}
         />,
       );
-      const box = result.container.querySelector('[data-stepper]');
-      expect(box?.getAttribute('data-stepper-placement')).toBe('both');
+      const box = result.container.querySelector<HTMLElement>('[data-stepper]');
+      expect(box?.dataset.stepperPlacement).toBe('both');
       expect(result.container.querySelector('[aria-label="Decrease"]')).toBeTruthy();
       expect(result.container.querySelector('[aria-label="Increase"]')).toBeTruthy();
     });
@@ -397,9 +405,6 @@ describe('Stepper', () => {
 });
 
 describe('Stepper currency', () => {
-  const glyph = (container: HTMLElement) => container.querySelector("[data-testid='stepper-currency']");
-  const input = (container: HTMLElement) => container.querySelector('input[data-stepper-value]') as HTMLInputElement;
-
   it('writes the currency glyph beside the value and aligns the value to the end', () => {
     const { container } = renderWithProviders(
       <Stepper
@@ -409,8 +414,8 @@ describe('Stepper currency', () => {
         showButtons={false}
       />,
     );
-    expect(glyph(container)?.textContent).toBe('$');
-    expect(input(container).className).toMatch(/_ta-right/u);
+    expect(currencyGlyph(container)?.textContent).toBe('$');
+    expect(currencyInput(container).className).toMatch(/_ta-right/u);
   });
 
   it('resolves a Frappe-style symbol to its glyph', () => {
@@ -422,7 +427,7 @@ describe('Stepper currency', () => {
         showButtons={false}
       />,
     );
-    expect(glyph(container)?.textContent).toBe('₹');
+    expect(currencyGlyph(container)?.textContent).toBe('₹');
   });
 
   it('without a currency the value stays centred and no glyph renders', () => {
@@ -433,7 +438,7 @@ describe('Stepper currency', () => {
         showButtons={false}
       />,
     );
-    expect(glyph(container)).toBeNull();
-    expect(input(container).className).toMatch(/_ta-center/u);
+    expect(currencyGlyph(container)).toBeNull();
+    expect(currencyInput(container).className).toMatch(/_ta-center/u);
   });
 });

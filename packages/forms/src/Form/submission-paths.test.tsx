@@ -5,31 +5,39 @@
  * only field, Button action=submit, the save bar's Save, and Ctrl-S / Cmd-S.
  */
 import { renderWithProviders } from '@repo/test-utils';
+import type { AnyFormApi } from '@tanstack/react-form';
 import { act, cleanup, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useEffect } from 'react';
 import type { ReactElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { Button } from '../Button';
-import * as saveBarStories from '../ContextualSaveBar/ContextualSaveBar.stories';
+import type { ContextualSaveBarProps } from '../ContextualSaveBar';
+import { SubmissionPaths } from '../ContextualSaveBar/ContextualSaveBar.stories';
 import { Input } from '../fields/Input';
 
 import { Form, useFormContext } from './index';
 
-afterEach(cleanup);
-
 const routes = ['html', 'enter', 'action', 'save', 'ctrl-s', 'cmd-s'] as const;
 type Route = (typeof routes)[number];
-const saveBarRoutes: readonly Route[] = ['save', 'ctrl-s', 'cmd-s'];
+const saveBarRoutes = new Set<Route>(['save', 'ctrl-s', 'cmd-s']);
 
-let formState = () => ({ isDirty: false, submissionAttempts: 0 });
+type Values = Record<string, string>;
+type SavedHandler = NonNullable<ContextualSaveBarProps['onSaved']>;
+
+const probe = new Map<'form', AnyFormApi>();
+
+const formState = () => ({
+  isDirty: probe.get('form')?.state.isDirty ?? false,
+  submissionAttempts: probe.get('form')?.state.submissionAttempts ?? 0,
+});
 
 const StateProbe = () => {
   const form = useFormContext();
-  formState = () => ({
-    isDirty: form.state.isDirty,
-    submissionAttempts: form.state.submissionAttempts,
-  });
+  useEffect(() => {
+    probe.set('form', form);
+  }, [form]);
   return null;
 };
 
@@ -41,14 +49,14 @@ const PathForm = ({
   required = false,
 }: {
   route: Route;
-  onSubmit: (values: Record<string, unknown>) => unknown;
-  onSaved?: (values: Record<string, unknown>) => void;
+  onSubmit: (values: Values) => void | Promise<void>;
+  onSaved?: SavedHandler;
   defaultName?: string;
   required?: boolean;
 }) => (
   <Form
     formOptions={{ defaultValues: { name: defaultName } }}
-    onSubmit={onSubmit as never}
+    onSubmit={onSubmit}
     saveBar={{ forceVisible: true, onSaved }}>
     <StateProbe />
     <Input
@@ -69,45 +77,45 @@ const activate = async (route: Route, view: View) => {
   switch (route) {
     case 'html': {
       await act(async () => fireEvent.click(view.getByRole('button', { name: 'Submit HTML' })));
-      return;
+      break;
     }
     case 'enter': {
       const user = userEvent.setup();
       await user.type(nameInput(view), '{Enter}');
-      return;
+      break;
     }
     case 'action': {
       await act(async () => fireEvent.click(view.getByRole('button', { name: 'Submit action' })));
-      return;
+      break;
     }
     case 'save': {
       await act(async () => fireEvent.click(view.getByRole('button', { name: 'Save' })));
-      return;
+      break;
     }
     case 'ctrl-s': {
       await act(async () => fireEvent.keyDown(document, { key: 's', ctrlKey: true }));
-      return;
+      break;
     }
     case 'cmd-s': {
       await act(async () => fireEvent.keyDown(document, { key: 's', metaKey: true }));
-      return;
+      break;
+    }
+    default: {
+      break;
     }
   }
 };
 
 describe('every submission path shares one outcome', () => {
+  afterEach(cleanup);
+
   it.each(routes)('%s: a retry clears the failure while it runs, and a failed retry shows its own', async (route) => {
-    let rejectRetry!: (error: Error) => void;
+    const retry = Promise.withResolvers<never>();
     const submit = vi
-      .fn()
+      .fn<(values: Values) => Promise<void>>()
       .mockRejectedValueOnce(new Error('First refusal.'))
-      .mockImplementationOnce(
-        async () =>
-          await new Promise((_, reject) => {
-            rejectRetry = reject;
-          }),
-      );
-    const saved = vi.fn();
+      .mockImplementationOnce(async () => await retry.promise);
+    const saved = vi.fn<SavedHandler>();
     const view = renderWithProviders(
       <PathForm
         route={route}
@@ -132,7 +140,7 @@ describe('every submission path shares one outcome', () => {
     });
 
     await act(async () => {
-      rejectRetry(new Error('Second refusal.'));
+      retry.reject(new Error('Second refusal.'));
     });
     await waitFor(() => {
       expect(view.getByText(/Couldn't save/u).textContent).toContain('Second refusal.');
@@ -146,8 +154,8 @@ describe('every submission path shares one outcome', () => {
   it.each(routes)(
     '%s: a validation refusal keeps the field error, the summary and the attempt count',
     async (route) => {
-      const submit = vi.fn();
-      const saved = vi.fn();
+      const submit = vi.fn<(values: Values) => void>();
+      const saved = vi.fn<SavedHandler>();
       const view = renderWithProviders(
         <PathForm
           route={route}
@@ -171,8 +179,8 @@ describe('every submission path shares one outcome', () => {
   );
 
   it.each(routes)("%s: a success calls the handler once and keeps its path's success policy", async (route) => {
-    const submit = vi.fn().mockResolvedValue(undefined);
-    const saved = vi.fn();
+    const submit = vi.fn<(values: Values) => Promise<void>>().mockResolvedValue();
+    const saved = vi.fn<SavedHandler>();
     const view = renderWithProviders(
       <PathForm
         route={route}
@@ -186,7 +194,7 @@ describe('every submission path shares one outcome', () => {
     await waitFor(() => {
       expect(submit).toHaveBeenCalledOnce();
     });
-    const viaSaveBar = saveBarRoutes.includes(route);
+    const viaSaveBar = saveBarRoutes.has(route);
     await waitFor(() => {
       expect(saved).toHaveBeenCalledTimes(viaSaveBar ? 1 : 0);
     });
@@ -197,41 +205,59 @@ describe('every submission path shares one outcome', () => {
   });
 });
 
-describe('the SubmissionPaths story counts onSubmit calls', () => {
-  const mountStory = () => {
-    const story = saveBarStories.SubmissionPaths as { render?: () => ReactElement };
-    if (!story.render) {
-      throw new Error('SubmissionPaths has no render');
-    }
-    return renderWithProviders(story.render());
-  };
+const mountStory = () => {
+  const story = SubmissionPaths as { render?: () => ReactElement };
+  if (!story.render) {
+    throw new Error('SubmissionPaths has no render');
+  }
+  return renderWithProviders(story.render());
+};
 
-  const calls = (view: View) => view.getByTestId('submit-calls').textContent;
+const calls = (view: View) => view.getByTestId('submit-calls').textContent;
+
+describe('the SubmissionPaths story counts onSubmit calls', () => {
+  afterEach(cleanup);
 
   it('adds exactly one call per activation on every path and shows the same refusal', async () => {
     const view = mountStory();
     expect(calls(view)).toBe('onSubmit calls: 0');
     const user = userEvent.setup();
 
-    const paths: [string, () => Promise<unknown>][] = [
-      ['enter', async () => await user.type(view.getByLabelText('Service name'), '{Enter}')],
-      ['action', async () => await act(async () => fireEvent.click(view.getByRole('button', { name: 'Submit' })))],
-      ['save', async () => await act(async () => fireEvent.click(view.getByRole('button', { name: 'Save' })))],
-      ['ctrl-s', async () => await act(async () => fireEvent.keyDown(document, { key: 's', ctrlKey: true }))],
-      ['cmd-s', async () => await act(async () => fireEvent.keyDown(document, { key: 's', metaKey: true }))],
+    const paths: (() => Promise<void>)[] = [
+      async () => {
+        await user.type(view.getByLabelText('Service name'), '{Enter}');
+      },
+      async () => {
+        await act(async () => fireEvent.click(view.getByRole('button', { name: 'Submit' })));
+      },
+      async () => {
+        await act(async () => fireEvent.click(view.getByRole('button', { name: 'Save' })));
+      },
+      async () => {
+        await act(async () => fireEvent.keyDown(document, { key: 's', ctrlKey: true }));
+      },
+      async () => {
+        await act(async () => fireEvent.keyDown(document, { key: 's', metaKey: true }));
+      },
     ];
 
-    let expected = 0;
-    for (const [, run] of paths) {
+    // Each activation builds on the state the previous one left behind, so they run strictly in order.
+    const runInOrder = async (index: number): Promise<void> => {
+      const run = paths.at(index);
+      if (run === undefined) {
+        return;
+      }
       await run();
-      expected += 1;
+      const expected = index + 1;
       await waitFor(() => {
         expect(calls(view)).toBe(`onSubmit calls: ${expected}`);
       });
       await waitFor(() => {
         expect(view.getByText(/Couldn't save/u).textContent).toContain('The record changed. Refresh and retry.');
       });
-    }
+      await runInOrder(index + 1);
+    };
+    await runInOrder(0);
     expect((view.getByLabelText('Service name') as HTMLInputElement).value).toBe('service-example');
   });
 });

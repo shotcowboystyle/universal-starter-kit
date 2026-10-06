@@ -7,33 +7,25 @@ import { Input } from '../fields/Input';
 
 import { Form, useEffectiveValidateOn } from './index';
 
+const Probe = () => <span data-testid="effective-validate-on">{useEffectiveValidateOn()}</span>;
+
 describe('Form validateOn remapping', () => {
   it('stays on submit before the first attempt', () => {
-    let effective: string | undefined;
-    const Probe = () => {
-      effective = useEffectiveValidateOn();
-      return null;
-    };
-    renderWithProviders(
+    const view = renderWithProviders(
       <Form
         validateOn="submit"
-        onSubmit={vi.fn()}>
+        onSubmit={vi.fn<() => void>()}>
         <Probe />
       </Form>,
     );
-    expect(effective).toBe('submit');
+    expect(view.getByTestId('effective-validate-on').textContent).toBe('submit');
   });
 
   it('upgrades to blur-then-change after a failed submit', async () => {
-    let effective = 'submit';
-    const Probe = () => {
-      effective = useEffectiveValidateOn();
-      return null;
-    };
     const result = renderWithProviders(
       <Form
         formOptions={{ defaultValues: { name: '' } }}
-        onSubmit={vi.fn()}
+        onSubmit={vi.fn<(values: { name: string }) => void>()}
         validateOn="submit">
         <Probe />
         <Input
@@ -50,7 +42,7 @@ describe('Form validateOn remapping', () => {
       </Form>,
     );
 
-    expect(effective).toBe('submit');
+    expect(result.getByTestId('effective-validate-on').textContent).toBe('submit');
 
     const button = result.container.querySelector('[data-testid="submit-button"]');
     await act(async () => {
@@ -61,23 +53,18 @@ describe('Form validateOn remapping', () => {
 
     await waitFor(() => {
       expect(result.container.querySelector('[data-testid="error-summary"]')).toBeTruthy();
-      expect(effective).toBe('blur-then-change');
+      expect(result.getByTestId('effective-validate-on').textContent).toBe('blur-then-change');
     });
   });
 
   it('honors explicit validateOn=blur without waiting for submit', () => {
-    let effective: string | undefined;
-    const Probe = () => {
-      effective = useEffectiveValidateOn();
-      return null;
-    };
-    renderWithProviders(
+    const view = renderWithProviders(
       <Form
         validateOn="blur"
-        onSubmit={vi.fn()}>
+        onSubmit={vi.fn<() => void>()}>
         <Probe />
       </Form>,
     );
-    expect(effective).toBe('blur');
+    expect(view.getByTestId('effective-validate-on').textContent).toBe('blur');
   });
 });

@@ -13,6 +13,73 @@ const ATTACHED = `data:image/svg+xml;utf8,${encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="120"><rect width="240" height="120" fill="#4a90d9"/><circle cx="120" cy="60" r="36" fill="#fff"/></svg>',
 )}`;
 
+type ImageValue = string | File | null;
+
+const describeImage = (image: ImageValue): string => {
+  if (image instanceof File) {
+    return `File: ${image.name}`;
+  }
+  return image === null || image === '' ? 'No image selected' : 'URL loaded';
+};
+
+const FormExample = () => {
+  const form = useForm({
+    defaultValues: {
+      avatar: null as ImageValue,
+      logo: ATTACHED as ImageValue,
+    },
+    onSubmit: async ({ value }) => {
+      action('onSubmit')(value);
+    },
+  });
+
+  return (
+    <Form form={form}>
+      <YStack gap="$4">
+        <ImageField
+          {...({
+            label: 'Profile Avatar',
+            name: 'avatar',
+            helperText: 'Drop or click to attach',
+            imageWidth: 96,
+            imageHeight: 96,
+          } as any)}
+        />
+        <ImageField
+          {...({
+            label: 'Company Logo',
+            name: 'logo',
+            helperText: 'Click to replace · Remove clears the attachment',
+            imageWidth: 160,
+            imageHeight: 72,
+            objectFit: 'contain',
+          } as any)}
+        />
+        <Button action="submit">Submit</Button>
+      </YStack>
+    </Form>
+  );
+};
+
+const InteractiveExample = () => {
+  const [image, setImage] = useState<ImageValue>(null);
+  return (
+    <YStack gap="$4">
+      <ImageField
+        label="Upload Image"
+        value={image}
+        onChange={(val) => {
+          setImage(val);
+          action('onChange')(val);
+        }}
+        imageWidth={96}
+        imageHeight={96}
+        helperText={describeImage(image)}
+      />
+    </YStack>
+  );
+};
+
 const meta: Meta<typeof ImageField> = {
   title: 'Forms/ImageField',
   component: ImageField,
@@ -44,47 +111,7 @@ type Story = StoryObj<typeof ImageField>;
 
 export const Main: Story = {
   name: 'Main',
-  render: () => {
-    const FormExample = () => {
-      const form = useForm({
-        defaultValues: {
-          avatar: null as string | File | null,
-          logo: ATTACHED as string | File | null,
-        },
-        onSubmit: async ({ value }) => {
-          action('onSubmit')(value);
-        },
-      });
-
-      return (
-        <Form form={form}>
-          <YStack gap="$4">
-            <ImageField
-              {...({
-                label: 'Profile Avatar',
-                name: 'avatar',
-                helperText: 'Drop or click to attach',
-                imageWidth: 96,
-                imageHeight: 96,
-              } as any)}
-            />
-            <ImageField
-              {...({
-                label: 'Company Logo',
-                name: 'logo',
-                helperText: 'Click to replace · Remove clears the attachment',
-                imageWidth: 160,
-                imageHeight: 72,
-                objectFit: 'contain',
-              } as any)}
-            />
-            <Button action="submit">Submit</Button>
-          </YStack>
-        </Form>
-      );
-    };
-    return <FormExample />;
-  },
+  render: () => <FormExample />,
 };
 
 export const Standalone: Story = {
@@ -208,29 +235,7 @@ export const RectangularSizes: Story = {
 };
 
 export const Interactive: Story = {
-  render: () => {
-    const InteractiveExample = () => {
-      const [image, setImage] = useState<string | File | null>(null);
-      return (
-        <YStack gap="$4">
-          <ImageField
-            label="Upload Image"
-            value={image}
-            onChange={(val) => {
-              setImage(val);
-              action('onChange')(val);
-            }}
-            imageWidth={96}
-            imageHeight={96}
-            helperText={
-              image ? (typeof image === 'string' ? 'URL loaded' : `File: ${image.name}`) : 'No image selected'
-            }
-          />
-        </YStack>
-      );
-    };
-    return <InteractiveExample />;
-  },
+  render: () => <InteractiveExample />,
 };
 
 export const NoRemoveButton: Story = {

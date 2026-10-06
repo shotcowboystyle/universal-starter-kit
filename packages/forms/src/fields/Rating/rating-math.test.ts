@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { filledCount } from './rating-math';
 
-describe('filledCount', () => {
+describe(filledCount, () => {
   it('maps the 0–1 fraction onto discrete stars', () => {
     expect(filledCount(0, 5)).toBe(0);
     expect(filledCount(0.1, 5)).toBe(1);

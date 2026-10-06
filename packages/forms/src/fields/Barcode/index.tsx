@@ -1,24 +1,142 @@
 import { BarcodeIcon, CameraIcon, XIcon } from '@phosphor-icons/react';
 import { ensureFocusVisibleRing } from '@repo/theme';
 import type { KnobProps } from '@repo/theme';
-import type { ReactNode } from 'react';
+import type { KeyboardEvent, ReactNode, RefObject } from 'react';
 import { useRef, useState } from 'react';
 import type { LabelProps, SizeTokens } from 'tamagui';
 import { Text } from 'tamagui';
 
 import { Field, FieldLayout } from '../../FieldLayout';
+import type { FieldLayoutProps } from '../../FieldLayout';
 import { Input as InputParts } from '../../InputParts';
 import { formButtonColors, formCommonColors } from '../../shared/color-ramps';
 import { t } from '../../shared/t';
 import { useIsInTableCell } from '../../shared/table-cell-context';
 import { getFieldError, mergeFieldHandler, useFormField, useResolvedValidators } from '../../shared/utils';
+import type { FieldValidators } from '../../shared/utils';
 import { Skeleton } from '../../Skeleton';
 import type { AnyFormApi } from '../../types';
 
 import { BarcodePreview } from './BarcodePreview';
 import { BarcodeScanner, preflightCamera } from './BarcodeScanner';
+import type { CameraPreflightResult } from './scanner-types';
 
 const adornmentRing = ensureFocusVisibleRing({ outlineOffset: -2 });
+
+/** True when a ReactNode would actually render something (React drops null/undefined/booleans/empty string). */
+const hasContent = (node: ReactNode): boolean => node != null && node !== false && node !== '' && node !== 0;
+
+const hasErrorValue = (error: string | boolean | undefined): boolean =>
+  error !== undefined && error !== false && error !== '';
+
+/** One pre-flight at a time: undefined means one was already in flight and this call did nothing. */
+const preflightOnce = async (inFlight: RefObject<boolean>): Promise<CameraPreflightResult | undefined> => {
+  if (inFlight.current) {
+    return undefined;
+  }
+  inFlight.current = true;
+  try {
+    return await preflightCamera();
+  } finally {
+    inFlight.current = false;
+  }
+};
+
+const ScanToggleButton = ({
+  isScanning,
+  icon,
+  disabled,
+  onPress,
+}: {
+  isScanning: boolean;
+  icon: ReactNode;
+  disabled: boolean;
+  onPress: () => void;
+}) => {
+  const hasIcon = hasContent(icon);
+  let content: ReactNode;
+  if (hasIcon) {
+    content = <InputParts.Icon>{icon}</InputParts.Icon>;
+  } else {
+    content = isScanning ? t('Stop') : t('Scan');
+  }
+  return (
+    <InputParts.Button
+      tabIndex={0}
+      disabled={disabled}
+      onPress={onPress}
+      aria-label={isScanning ? t('Stop scanning') : t('Scan barcode')}
+      aria-pressed={isScanning ? true : undefined}
+      aria-expanded={isScanning ? true : undefined}
+      focusVisibleStyle={adornmentRing}
+      backgroundColor={isScanning ? formButtonColors.background.active : 'transparent'}
+      {...(hasIcon ? undefined : { width: 'auto', paddingHorizontal: '$3' })}>
+      {content}
+    </InputParts.Button>
+  );
+};
+
+const ClearButton = ({ disabled, onPress }: { disabled: boolean; onPress: () => void }) => (
+  <InputParts.Button
+    tabIndex={0}
+    aria-label={t('Clear barcode')}
+    disabled={disabled}
+    focusVisibleStyle={adornmentRing}
+    onPress={onPress}>
+    <InputParts.Icon>
+      <XIcon />
+    </InputParts.Icon>
+  </InputParts.Button>
+);
+
+const BarcodeArea = ({
+  id,
+  value,
+  onValueChange,
+  readOnly,
+  disabled,
+  required,
+  hasError,
+  hasLabel,
+  onEscape,
+}: {
+  id?: string;
+  value: string;
+  onValueChange: (v: string) => void;
+  readOnly: boolean;
+  disabled: boolean;
+  required?: boolean;
+  hasError?: boolean;
+  hasLabel?: boolean;
+  onEscape: () => void;
+}) => (
+  <InputParts.Area
+    id={id}
+    value={value}
+    onChangeText={readOnly ? undefined : onValueChange}
+    readOnly={readOnly}
+    aria-readonly={readOnly ? true : undefined}
+    placeholder={t('Enter or scan barcode')}
+    disabled={disabled}
+    aria-label={hasLabel ? undefined : t('Barcode')}
+    aria-required={required ? true : undefined}
+    aria-invalid={hasError ? true : undefined}
+    autoComplete="off"
+    autoCapitalize="none"
+    spellCheck={false}
+    fontFamily="$mono"
+    onKeyDown={
+      readOnly || disabled
+        ? undefined
+        : (e: KeyboardEvent<HTMLInputElement>) => {
+            if (e.key === 'Escape' && value !== '') {
+              e.preventDefault();
+              onEscape();
+            }
+          }
+    }
+  />
+);
 
 const BarcodeInput = ({
   value,
@@ -71,20 +189,15 @@ const BarcodeInput = ({
       setIsScanning(false);
       return;
     }
-    if (preflightingRef.current) {
+    const result = await preflightOnce(preflightingRef);
+    if (result === undefined) {
       return;
     }
-    preflightingRef.current = true;
-    try {
-      const result = await preflightCamera();
-      if (result.ok) {
-        setScanError(null);
-        setIsScanning(true);
-      } else {
-        setScanError(result.reason);
-      }
-    } finally {
-      preflightingRef.current = false;
+    if (result.ok) {
+      setScanError(null);
+      setIsScanning(true);
+    } else {
+      setScanError(result.reason);
     }
   };
 
@@ -105,64 +218,33 @@ const BarcodeInput = ({
           testID="barcode-field"
           disabled={disabled}
           theme={hasError ? 'error' : undefined}>
-          {barcodeIcon ? <InputParts.Icon adornment="leading">{barcodeIcon}</InputParts.Icon> : null}
-          <InputParts.Area
+          {hasContent(barcodeIcon) ? <InputParts.Icon adornment="leading">{barcodeIcon}</InputParts.Icon> : null}
+          <BarcodeArea
             id={id}
             value={value}
-            onChangeText={readOnly ? undefined : onValueChange}
+            onValueChange={onValueChange}
             readOnly={readOnly}
-            aria-readonly={readOnly || undefined}
-            placeholder={t('Enter or scan barcode')}
             disabled={disabled}
-            aria-label={hasLabel ? undefined : t('Barcode')}
-            aria-required={required || undefined}
-            aria-invalid={hasError || undefined}
-            autoComplete="off"
-            autoCapitalize="none"
-            spellCheck={false}
-            fontFamily="$mono"
-            onKeyDown={
-              readOnly || disabled
-                ? undefined
-                : (((e: { key?: string; preventDefault?: () => void }) => {
-                    if (e.key === 'Escape' && value) {
-                      e.preventDefault?.();
-                      handleClear();
-                    }
-                  }) as unknown as () => void)
-            }
+            required={required}
+            hasError={hasError}
+            hasLabel={hasLabel}
+            onEscape={handleClear}
           />
           {showClear ? (
-            <InputParts.Button
-              tabIndex={0}
-              aria-label={t('Clear barcode')}
+            <ClearButton
               disabled={disabled}
-              focusVisibleStyle={adornmentRing}
-              onPress={handleClear}>
-              <InputParts.Icon>
-                <XIcon />
-              </InputParts.Icon>
-            </InputParts.Button>
+              onPress={handleClear}
+            />
           ) : null}
           {showScan ? (
-            <InputParts.Button
-              tabIndex={0}
+            <ScanToggleButton
+              isScanning={isScanning}
+              icon={activeScanIcon}
               disabled={disabled}
-              onPress={handleScanPress}
-              aria-label={isScanning ? t('Stop scanning') : t('Scan barcode')}
-              aria-pressed={isScanning || undefined}
-              aria-expanded={isScanning || undefined}
-              focusVisibleStyle={adornmentRing}
-              backgroundColor={isScanning ? formButtonColors.background.active : 'transparent'}
-              {...(activeScanIcon ? undefined : { width: 'auto', paddingHorizontal: '$3' })}>
-              {activeScanIcon ? (
-                <InputParts.Icon>{activeScanIcon}</InputParts.Icon>
-              ) : isScanning ? (
-                t('Stop')
-              ) : (
-                t('Scan')
-              )}
-            </InputParts.Button>
+              onPress={() => {
+                void handleScanPress();
+              }}
+            />
           ) : null}
         </InputParts.Box>
         {showPreview ? (
@@ -188,7 +270,7 @@ const BarcodeInput = ({
         formats={formats}
         compact={compact}
       />
-      {scanError && (
+      {scanError !== null && scanError !== '' && (
         <Text
           {...knobProps.body}
           color={formCommonColors.error}
@@ -203,7 +285,7 @@ const BarcodeInput = ({
 export interface BarcodeProps {
   name?: string;
   form?: AnyFormApi;
-  validators?: Record<string, unknown>;
+  validators?: FieldValidators;
   label?: ReactNode;
   labelProps?: Omit<LabelProps, 'htmlFor' | 'ref'>;
   helperText?: string;
@@ -214,7 +296,7 @@ export interface BarcodeProps {
   value?: string;
   defaultValue?: string;
   onChange?: (value: string) => void;
-  onBlur?: (...args: any[]) => void;
+  onBlur?: FieldLayoutProps['onBlur'];
   disabled?: boolean;
   readOnly?: boolean;
   enableScan?: boolean;
@@ -277,7 +359,7 @@ export const Barcode = ({
   });
   const resolvedValidators = useResolvedValidators(required, validators, label, name);
   const isControlled = value !== undefined;
-  const [uncontrolled, setUncontrolled] = useState(() => String(defaultValue ?? ''));
+  const [uncontrolled, setUncontrolled] = useState(() => defaultValue ?? '');
 
   const iconProps = { barcodeIcon, scanIcon, stopIcon };
 
@@ -309,7 +391,7 @@ export const Barcode = ({
     );
   }
 
-  if (!resolvedForm || !name) {
+  if (resolvedForm === undefined || name === undefined || name === '') {
     return (
       <FieldLayout
         id={id}
@@ -334,9 +416,9 @@ export const Barcode = ({
           compact={compact}
           knobProps={knobProps}
           required={required}
-          hasError={!!error}
+          hasError={hasErrorValue(error)}
           id={id}
-          hasLabel={Boolean(label)}
+          hasLabel={hasContent(label)}
           {...iconProps}
         />
       </FieldLayout>
@@ -370,7 +452,7 @@ export const Barcode = ({
                 if (disabled || readOnly) {
                   return;
                 }
-                field.handleChange(v as any);
+                field.handleChange(v);
                 onChange?.(v);
               }}
               disabled={!!disabled}
@@ -380,9 +462,9 @@ export const Barcode = ({
               compact={compact}
               knobProps={knobProps}
               required={required}
-              hasError={!!resolvedError}
+              hasError={hasErrorValue(resolvedError)}
               id={id}
-              hasLabel={Boolean(label)}
+              hasLabel={hasContent(label)}
               {...iconProps}
             />
           </FieldLayout>

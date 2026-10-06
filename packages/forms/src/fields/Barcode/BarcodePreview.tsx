@@ -43,6 +43,7 @@ export type BarcodePreviewSymbology = 'qr' | 'code128';
  * draws, the scanner resolves back to the same format id). Absent or unknown
  * tokens keep the historical Code 128 strip.
  */
+// oxlint-disable-next-line react-doctor/only-export-components -- pure helper kept beside the component whose symbology it decides; shared by the field and tests
 export const barcodePreviewSymbology = (format?: string): BarcodePreviewSymbology =>
   resolveNativeBarcodeType(format) === 'qr' ? 'qr' : 'code128';
 
@@ -127,6 +128,7 @@ const QrPreview = ({
   const rows = qrRowRuns(matrix);
   return (
     <View
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a View-drawn symbol: the module Views cannot be children of an <img>
       role="img"
       aria-label={t('QR code: {{value}}', { value })}
       testID="barcode-preview"
@@ -173,7 +175,7 @@ export const BarcodePreview = ({
   format,
   textFallback = true,
 }: BarcodePreviewProps) => {
-  if (!value) {
+  if (value === undefined || value === '') {
     return null;
   }
   if (barcodePreviewSymbology(format) === 'qr') {
@@ -194,6 +196,7 @@ export const BarcodePreview = ({
   const quietZone = moduleWidth * 10;
   return (
     <View
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a View-drawn symbol: the run Views cannot be children of an <img>
       role="img"
       aria-label={t('Barcode: {{value}}', { value })}
       testID="barcode-preview"

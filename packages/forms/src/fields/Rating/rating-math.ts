@@ -4,7 +4,7 @@
  * `maxStars` is zero stars (no crash).
  */
 export const filledCount = (value: number, maxStars: number): number => {
-  if (!(maxStars > 0)) {
+  if (Number.isNaN(maxStars) || maxStars <= 0) {
     return 0;
   }
   if (!Number.isFinite(value)) {

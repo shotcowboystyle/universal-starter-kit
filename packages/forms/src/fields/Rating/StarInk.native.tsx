@@ -16,12 +16,17 @@ import type { StarInkProps } from './types';
  * resolves to `{}` and falls back to a DEFAULT SPRING, which is
  * motion wearing the name of silence.
  */
-export const inkMotionProps = (transition: TransitionProp | undefined) =>
-  // `TransitionProp` is the whole union (token, per-property map, tuple), but
-  // the per-property SLOT only accepts the token form. The knob always
-  // resolves to a token name — `resolveKnobs` sets `transition` straight from
-  // the `animation` knob — so this narrows rather than widens.
-  transition ? { transition: { opacity: transition as TransitionKeys } } : {};
+// oxlint-disable-next-line react-doctor/only-export-components -- native-only file where Fast Refresh does not apply; exported so the motion-prop contract is unit-testable
+export const inkMotionProps = (transition?: TransitionProp) =>
+  transition == null
+    ? {}
+    : {
+        // `TransitionProp` is the whole union (token, per-property map, tuple), but
+        // the per-property SLOT only accepts the token form.
+        // SAFETY: the knob always resolves to a token name — `resolveKnobs` sets `transition` straight from the `animation` knob — so this narrows rather than widens.
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- TransitionProp's object and tuple forms are never produced by the animation knob
+        transition: { opacity: transition as TransitionKeys },
+      };
 
 /**
  * Native ink layer (star fill).

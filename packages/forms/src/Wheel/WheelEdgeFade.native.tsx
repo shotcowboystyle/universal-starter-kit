@@ -3,15 +3,15 @@ import { StyleSheet, View as RNView } from 'react-native';
 import { useTheme } from 'tamagui';
 
 const toTransparent = (color: string): string => {
-  const fnMatch = /^(rgb|hsl)a?\(([^)]+)\)$/iu.exec(color);
+  const fnMatch = /^(?<fn>rgb|hsl)a?\((?<args>[^)]+)\)$/iu.exec(color)?.groups;
   if (fnMatch) {
-    const parts = fnMatch[2].split(',').map((part) => part.trim());
+    const parts = fnMatch.args.split(',').map((part) => part.trim());
     const [a, b, c] = parts;
-    return `${fnMatch[1].toLowerCase()}a(${a}, ${b}, ${c}, 0)`;
+    return `${fnMatch.fn.toLowerCase()}a(${a}, ${b}, ${c}, 0)`;
   }
-  const hexMatch = /^#([0-9a-f]{3}|[0-9a-f]{6})$/iu.exec(color);
+  const hexMatch = /^#(?<hex>[0-9a-f]{3}|[0-9a-f]{6})$/iu.exec(color)?.groups;
   if (hexMatch) {
-    let hex = hexMatch[1];
+    let { hex } = hexMatch;
     if (hex.length === 3) {
       hex = hex
         .split('')
@@ -26,13 +26,22 @@ const toTransparent = (color: string): string => {
   return 'transparent';
 };
 
+const styles = StyleSheet.create({
+  band: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    zIndex: 2,
+  },
+});
+
 /**
  * Cylinder fade toward the edges. Overlay (not row opacity) so inactive
  * numerals stay on the $color11 ramp (Wheel contrast contract).
  */
 export const WheelEdgeFade = ({ height }: { height: number }) => {
   const theme = useTheme();
-  const background = theme.background?.val ?? '#ffffff';
+  const background = String(theme.background?.val ?? '#ffffff');
   const transparent = toTransparent(background);
   if (height <= 0) {
     return null;
@@ -62,12 +71,3 @@ export const WheelEdgeFade = ({ height }: { height: number }) => {
     </>
   );
 };
-
-const styles = StyleSheet.create({
-  band: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    zIndex: 2,
-  },
-});

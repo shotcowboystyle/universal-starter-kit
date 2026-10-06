@@ -2,7 +2,17 @@ import { describe, expect, it } from 'vitest';
 
 import { remapValidatorsForTiming, resolveEffectiveValidateOn } from './validate-on';
 
-describe('resolveEffectiveValidateOn', () => {
+type Validator = (args: { value: unknown }) => string | undefined;
+
+const onSubmit: Validator = ({ value }) => (value === '' ? 'required' : undefined);
+const onBlur: Validator = ({ value }) => (value === 'x' ? 'bad x' : undefined);
+
+/** The function remapValidatorsForTiming installed under `key`. */
+// SAFETY: every caller first asserts that the key holds a function, which is the only thing remapValidatorsForTiming installs there.
+const validatorAt = (remapped: ReturnType<typeof remapValidatorsForTiming>, key: 'onBlur' | 'onChange'): Validator =>
+  remapped?.[key] as Validator;
+
+describe(resolveEffectiveValidateOn, () => {
   it('keeps submit before any attempt', () => {
     expect(resolveEffectiveValidateOn('submit', false)).toBe('submit');
   });
@@ -19,9 +29,7 @@ describe('resolveEffectiveValidateOn', () => {
   });
 });
 
-describe('remapValidatorsForTiming', () => {
-  const onSubmit = ({ value }: { value: unknown }) => (value ? undefined : 'required');
-
+describe(remapValidatorsForTiming, () => {
   it('leaves validators alone for submit-only timing', () => {
     const validators = { onSubmit };
     expect(remapValidatorsForTiming(validators, 'submit')).toBe(validators);
@@ -30,14 +38,14 @@ describe('remapValidatorsForTiming', () => {
   it('copies onSubmit onto onBlur for blur timing', () => {
     const remapped = remapValidatorsForTiming({ onSubmit }, 'blur');
     expect(remapped?.onBlur).toBeTypeOf('function');
-    expect((remapped?.onBlur as typeof onSubmit)({ value: '' })).toBe('required');
+    expect(validatorAt(remapped, 'onBlur')({ value: '' })).toBe('required');
     expect(remapped?.onChange).toBeUndefined();
   });
 
   it('copies onSubmit onto onChange for change timing', () => {
     const remapped = remapValidatorsForTiming({ onSubmit }, 'change');
     expect(remapped?.onChange).toBeTypeOf('function');
-    expect((remapped?.onChange as typeof onSubmit)({ value: 'ok' })).toBeUndefined();
+    expect(validatorAt(remapped, 'onChange')({ value: 'ok' })).toBeUndefined();
     expect(remapped?.onBlur).toBeUndefined();
   });
 
@@ -48,9 +56,8 @@ describe('remapValidatorsForTiming', () => {
   });
 
   it('composes with existing onBlur without dropping it', () => {
-    const onBlur = ({ value }: { value: unknown }) => (value === 'x' ? 'bad x' : undefined);
     const remapped = remapValidatorsForTiming({ onSubmit, onBlur }, 'blur');
-    expect((remapped?.onBlur as typeof onBlur)({ value: 'x' })).toBe('bad x');
-    expect((remapped?.onBlur as typeof onBlur)({ value: '' })).toBe('required');
+    expect(validatorAt(remapped, 'onBlur')({ value: 'x' })).toBe('bad x');
+    expect(validatorAt(remapped, 'onBlur')({ value: '' })).toBe('required');
   });
 });

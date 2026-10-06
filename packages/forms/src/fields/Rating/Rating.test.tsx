@@ -31,7 +31,9 @@ const houseConfig = createTamagui({
   themes: houseThemes as any,
 });
 
-describe('Rating', () => {
+const tableCellValue = { inTableCell: true, isHeader: false, editable: true };
+
+describe(Rating, () => {
   describe('without form context', () => {
     it('renders with label', () => {
       const result = renderWithProviders(
@@ -123,7 +125,7 @@ describe('Rating', () => {
 
     // Stars are keyboard-focusable and operable.
     it('stars form one roving tab stop and activate with Enter/Space', () => {
-      const onChange = vi.fn();
+      const onChange = vi.fn<(value: number) => void>();
       const result = renderWithProviders(
         <Rating
           label="Kbd"
@@ -131,22 +133,22 @@ describe('Rating', () => {
           onChange={onChange}
         />,
       );
-      const stars = Array.from(result.container.querySelectorAll('[data-rating-star]'));
+      const stars = [...result.container.querySelectorAll<HTMLElement>('[data-rating-star]')];
       expect(stars).toHaveLength(5);
       const tabStops = stars.filter((s) => s.getAttribute('tabindex') === '0');
       // Exactly one tab stop (roving) — the committed value star (2 of 5)
       expect(tabStops).toHaveLength(1);
-      expect(tabStops[0]?.getAttribute('data-rating-index')).toBe('2');
+      expect(tabStops[0]?.dataset.ratingIndex).toBe('2');
       // Every other star stays reachable by arrows (tabindex -1, not absent)
       for (const star of stars) {
-        expect(star.getAttribute('tabindex')).toMatch(/^(0|-1)$/u);
+        expect(star.getAttribute('tabindex')).toMatch(/^(?:0|-1)$/u);
       }
       // Enter on star 4 commits 4/5
-      const star4 = result.container.querySelector("[data-rating-index='4']") as HTMLElement;
+      const star4 = result.container.querySelector("[data-rating-index='4']")!;
       fireEvent.keyDown(star4, { key: 'Enter' });
       expect(onChange).toHaveBeenCalledWith(0.8);
       // Space on the current star (2) toggles the rating off
-      const star2 = result.container.querySelector("[data-rating-index='2']") as HTMLElement;
+      const star2 = result.container.querySelector("[data-rating-index='2']")!;
       fireEvent.keyDown(star2, { key: ' ' });
       expect(onChange).toHaveBeenCalledWith(0);
     });
@@ -159,7 +161,7 @@ describe('Rating', () => {
           disabled
         />,
       );
-      const stars = Array.from(result.container.querySelectorAll('[data-rating-star]'));
+      const stars = [...result.container.querySelectorAll<HTMLElement>('[data-rating-star]')];
       expect(stars).toHaveLength(5);
       for (const star of stars) {
         expect(star.getAttribute('tabindex')).toBeNull();
@@ -184,16 +186,16 @@ describe('Rating', () => {
           />
         </TamaguiProvider>,
       );
-      const filled = container.querySelector("[data-rating-star='filled'] [data-testid='star']");
-      const empty = container.querySelector("[data-rating-star='empty'] [data-testid='star']");
+      const filled = container.querySelector<HTMLElement>("[data-rating-star='filled'] [data-testid='star']");
+      const empty = container.querySelector<HTMLElement>("[data-rating-star='empty'] [data-testid='star']");
       expect(filled).toBeTruthy();
       expect(empty).toBeTruthy();
-      expect(filled!.getAttribute('data-color')).toContain('accentBackground');
-      expect(empty!.getAttribute('data-color')).not.toContain('accentBackground');
+      expect(filled!.dataset.color).toContain('accentBackground');
+      expect(empty!.dataset.color).not.toContain('accentBackground');
       // WCAG 1.4.11: empty stars are graphical objects — $color7 is
       // below the 3:1 boundary floor; the empty ring uses the same boundary
       // token as Radio.
-      expect(empty!.getAttribute('data-color')).toContain('color10');
+      expect(empty!.dataset.color).toContain('color10');
     });
 
     // Material Rating is a radio group: one checked value, stars 1..N fill as
@@ -208,7 +210,7 @@ describe('Rating', () => {
       );
       const group = result.container.querySelector('[data-rating-row]');
       expect(group?.getAttribute('role')).toBe('radiogroup');
-      const radios = Array.from(result.container.querySelectorAll('[data-rating-star]'));
+      const radios = [...result.container.querySelectorAll<HTMLElement>('[data-rating-star]')];
       expect(radios.map((el) => el.getAttribute('role'))).toStrictEqual(['radio', 'radio', 'radio', 'radio', 'radio']);
       expect(radios.map((el) => el.getAttribute('aria-checked'))).toStrictEqual([
         'false',
@@ -229,13 +231,13 @@ describe('Rating', () => {
           starIcon={MockStarIcon}
         />,
       );
-      const star = result.container.querySelector("[data-rating-index='2']") as HTMLElement;
+      const star = result.container.querySelector("[data-rating-index='2']")!;
       fireEvent.focus(star);
       expect(result.container.querySelector('[data-rating-ring]')).toBeNull();
     });
 
     it('read-only rating is an image, not a tab stop', () => {
-      const onChange = vi.fn();
+      const onChange = vi.fn<(value: number) => void>();
       const result = renderWithProviders(
         <Rating
           label="Score"
@@ -247,13 +249,13 @@ describe('Rating', () => {
       );
       const row = result.container.querySelector('[data-rating-row]');
       expect(row?.getAttribute('role')).toBe('img');
-      const stars = Array.from(result.container.querySelectorAll('[data-rating-star]'));
+      const stars = [...result.container.querySelectorAll<HTMLElement>('[data-rating-star]')];
       expect(stars).toHaveLength(5);
       for (const star of stars) {
         expect(star.getAttribute('tabindex')).toBeNull();
         expect(star.getAttribute('role')).toBeNull();
       }
-      fireEvent.click(stars[0] as HTMLElement);
+      fireEvent.click(stars[0]);
       expect(onChange).not.toHaveBeenCalled();
     });
 
@@ -274,8 +276,8 @@ describe('Rating', () => {
           starIcon={MockStarIcon}
         />,
       );
-      const smallSize = Number(small.container.querySelector("[data-testid='star']")?.getAttribute('data-size'));
-      const largeSize = Number(large.container.querySelector("[data-testid='star']")?.getAttribute('data-size'));
+      const smallSize = Number(small.container.querySelector<HTMLElement>("[data-testid='star']")?.dataset.size);
+      const largeSize = Number(large.container.querySelector<HTMLElement>("[data-testid='star']")?.dataset.size);
       expect(smallSize).toBeGreaterThan(0);
       expect(largeSize).toBeGreaterThan(smallSize);
     });
@@ -296,7 +298,7 @@ describe('Rating', () => {
     });
 
     it('arrow keys move focus and commit the rating', () => {
-      const onChange = vi.fn();
+      const onChange = vi.fn<(value: number) => void>();
       const result = renderWithProviders(
         <Rating
           label="Kbd"
@@ -305,13 +307,13 @@ describe('Rating', () => {
           onChange={onChange}
         />,
       );
-      const star2 = result.container.querySelector("[data-rating-index='2']") as HTMLElement;
+      const star2 = result.container.querySelector("[data-rating-index='2']")!;
       fireEvent.keyDown(star2, { key: 'ArrowRight' });
       expect(onChange).toHaveBeenCalledWith(0.6);
     });
 
     it('Home and End commit the first and last star', () => {
-      const onChange = vi.fn();
+      const onChange = vi.fn<(value: number) => void>();
       const result = renderWithProviders(
         <Rating
           label="Kbd"
@@ -320,7 +322,7 @@ describe('Rating', () => {
           onChange={onChange}
         />,
       );
-      const star2 = result.container.querySelector("[data-rating-index='2']") as HTMLElement;
+      const star2 = result.container.querySelector("[data-rating-index='2']")!;
       fireEvent.keyDown(star2, { key: 'Home' });
       expect(onChange).toHaveBeenCalledWith(0.2);
       fireEvent.keyDown(star2, { key: 'End' });
@@ -360,7 +362,7 @@ describe('Rating', () => {
           starIcon={MockStarIcon}
         />,
       );
-      expect(pointed.container.querySelector('[data-rating-row]')?.getAttribute('data-rating-pointy')).toBe('true');
+      expect(pointed.container.querySelector<HTMLElement>('[data-rating-row]')?.dataset.ratingPointy).toBe('true');
       const rounded = renderWithProviders(
         <Rating
           label="Round"
@@ -369,12 +371,12 @@ describe('Rating', () => {
           starIcon={MockStarIcon}
         />,
       );
-      expect(rounded.container.querySelector('[data-rating-row]')?.getAttribute('data-rating-pointy')).toBeNull();
+      expect(rounded.container.querySelector<HTMLElement>('[data-rating-row]')?.dataset.ratingPointy).toBeUndefined();
     });
 
     it('does not grow 44px wells or paint a live value inside a table cell', () => {
       const result = renderWithProviders(
-        <TableCellContext.Provider value={{ inTableCell: true, isHeader: false, editable: true }}>
+        <TableCellContext.Provider value={tableCellValue}>
           <Rating
             label="Score"
             value={0.6}
@@ -382,8 +384,8 @@ describe('Rating', () => {
           />
         </TableCellContext.Provider>,
       );
-      const row = result.container.querySelector('[data-rating-row]');
-      expect(row?.getAttribute('data-rating-cell')).toBe('true');
+      const row = result.container.querySelector<HTMLElement>('[data-rating-row]');
+      expect(row?.dataset.ratingCell).toBe('true');
       expect(result.container.querySelector('[data-rating-value]')).toBeNull();
       expect(result.container.querySelector('[data-rating-grow]')).toBeNull();
       expect(result.container.querySelector('label')).toBeNull();
@@ -407,7 +409,7 @@ describe('Rating', () => {
     });
 
     it('read-only form field does not commit', () => {
-      const onChange = vi.fn();
+      const onChange = vi.fn<(value: number) => void>();
       const result = renderWithProviders(
         <Form
           formOptions={{ defaultValues: { rating: 0.6 } }}
@@ -421,14 +423,14 @@ describe('Rating', () => {
           />
         </Form>,
       );
-      const star = result.container.querySelector("[data-rating-index='5']") as HTMLElement;
+      const star = result.container.querySelector("[data-rating-index='5']")!;
       fireEvent.click(star);
       expect(onChange).not.toHaveBeenCalled();
       expect(result.container.querySelector('[data-rating-row]')?.getAttribute('role')).toBe('img');
     });
 
     it('commits through the canonical onChange when a star is pressed', () => {
-      const onChange = vi.fn();
+      const onChange = vi.fn<(value: number) => void>();
       const result = renderWithProviders(
         <Form
           formOptions={{ defaultValues: { rating: 0.2 } }}
@@ -441,7 +443,7 @@ describe('Rating', () => {
           />
         </Form>,
       );
-      const star = result.container.querySelector("[data-rating-index='4']") as HTMLElement;
+      const star = result.container.querySelector("[data-rating-index='4']")!;
       fireEvent.click(star);
       expect(onChange).toHaveBeenCalledWith(0.8);
     });

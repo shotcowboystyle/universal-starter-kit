@@ -12,12 +12,7 @@ import { cleanup } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import * as storiesModule from './Wheel.stories';
-
-afterEach(cleanup);
-
-const meta = storiesModule.default;
-const {
+import meta, {
   Basic,
   PlainValues,
   VisibleItems,
@@ -27,15 +22,17 @@ const {
   CustomRenderItem,
   EdgeCases,
   MotionOff,
-} = storiesModule;
+} from './Wheel.stories';
+
+type StoryArgs = NonNullable<typeof meta.args>;
 
 interface StoryLike {
-  render?: (args: Record<string, unknown>) => ReactElement;
+  render?: (args: StoryArgs) => ReactElement;
 }
 
 /** Resolve a story the way Storybook does: story args over meta args. */
 const mount = (story: StoryLike) => {
-  const args = { ...(meta.args as Record<string, unknown>) };
+  const args = { ...meta.args };
   if (!story.render) {
     throw new Error('story has no render');
   }
@@ -55,6 +52,8 @@ const stories = {
 } as const;
 
 describe('Forms/Wheel stories', () => {
+  afterEach(cleanup);
+
   it('files under a Forms title so the gallery buckets it with the fields it serves', () => {
     expect(meta.title).toBe('Forms/Wheel');
   });
@@ -89,7 +88,7 @@ describe('Forms/Wheel stories', () => {
     }
     // Tamagui compiles height to a class, not an inline style, so the three
     // depths show up as three distinct _h-* classes on the containers.
-    const heightClasses = Array.from(container.querySelectorAll("[data-testid='wheel']")).map((w) =>
+    const heightClasses = [...container.querySelectorAll("[data-testid='wheel']")].map((w) =>
       (w.getAttribute('class') ?? '').split(' ').find((c) => c.startsWith('_h-')),
     );
     expect(new Set(heightClasses).size).toBe(3);
@@ -108,12 +107,12 @@ describe('Forms/Wheel stories', () => {
     const { container } = mount(JoinedColumns as StoryLike);
     const sliders = container.querySelectorAll("[role='slider']");
     expect(sliders).toHaveLength(3);
-    expect(Array.from(sliders).map((s) => s.getAttribute('aria-label'))).toStrictEqual(['Hour', 'Minute', 'AM/PM']);
+    expect([...sliders].map((s) => s.getAttribute('aria-label'))).toStrictEqual(['Hour', 'Minute', 'AM/PM']);
   });
 
   it('Disabled marks the disabled wheel for a11y and leaves the enabled one alone', () => {
     const { container } = mount(Disabled as StoryLike);
-    const wheels = Array.from(container.querySelectorAll("[data-testid='wheel']"));
+    const wheels = [...container.querySelectorAll("[data-testid='wheel']")];
     expect(wheels).toHaveLength(2);
     expect(wheels[0].getAttribute('aria-disabled')).toBeNull();
     expect(wheels[1].getAttribute('aria-disabled')).toBe('true');

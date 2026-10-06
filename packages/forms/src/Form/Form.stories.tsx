@@ -197,8 +197,8 @@ export const WithErrorSummary = () => (
       label="Full name"
       required
       validators={{
-        onSubmit: ({ value }) =>
-          String(value || '').trim()
+        onSubmit: ({ value }: { value?: string | null }) =>
+          (value ?? '').trim()
             ? undefined
             : formatFieldError({
                 problem: 'Full name is empty.',
@@ -212,21 +212,20 @@ export const WithErrorSummary = () => (
       label="Email"
       required
       validators={{
-        onSubmit: ({ value }) => {
-          const v = String(value || '');
+        onSubmit: ({ value }: { value?: string | null }) => {
+          const v = value ?? '';
           if (!v.trim()) {
             return formatFieldError({
               problem: 'Email is empty.',
               action: 'Enter an email address.',
             });
           }
-          if (!v.includes('@')) {
-            return formatFieldError({
-              problem: 'Email is incomplete.',
-              action: 'Include an @ and a domain.',
-            });
-          }
-          return undefined;
+          return v.includes('@')
+            ? undefined
+            : formatFieldError({
+                problem: 'Email is incomplete.',
+                action: 'Include an @ and a domain.',
+              });
         },
       }}
     />
@@ -259,7 +258,9 @@ export const DynamicFields = () => {
   return (
     <Form
       form={form}
-      onSubmit={async () => await form.handleSubmit()}>
+      onSubmit={async () => {
+        await form.handleSubmit();
+      }}>
       <Select
         label="Account Type"
         name="accountType"
@@ -275,35 +276,24 @@ export const DynamicFields = () => {
         ]}
       />
 
-      {(() => {
-        const FormSubscribe = (
-          form as {
-            Subscribe: (p: { selector: (s: any) => any[]; children: (v: any[]) => any }) => any;
-          }
-        ).Subscribe;
-        return (
-          <FormSubscribe selector={(state: any) => [state.values.accountType]}>
-            {([accountType]) => (
-              <>
-                {accountType === 'business' ? (
-                  <Input
-                    label="Company Name"
-                    name="companyName"
-                    required
-                    helperText="Enter your company name"
-                  />
-                ) : (
-                  <Input
-                    label="Personal Info"
-                    name="personalInfo"
-                    helperText="Tell us about yourself"
-                  />
-                )}
-              </>
-            )}
-          </FormSubscribe>
-        );
-      })()}
+      <form.Subscribe selector={(state) => state.values.accountType}>
+        {(accountType) =>
+          accountType === 'business' ? (
+            <Input
+              label="Company Name"
+              name="companyName"
+              required
+              helperText="Enter your company name"
+            />
+          ) : (
+            <Input
+              label="Personal Info"
+              name="personalInfo"
+              helperText="Tell us about yourself"
+            />
+          )
+        }
+      </form.Subscribe>
 
       <FormActions>
         <Button action="submit">Submit</Button>
@@ -362,7 +352,8 @@ export const InputWithLinkResolver = () => (
       label="Item Code (readOnly + linkResolver)"
       name="itemCode"
       readOnly
-      linkResolver={(v) => (v ? (`/items/${String(v)}` as any) : null)}
+      // oxlint-disable-next-line typescript/no-base-to-string -- this story's item codes are strings; the resolver receives the field value as `unknown`
+      linkResolver={(v) => (v == null || v === '' ? null : `/items/${String(v)}`)}
     />
     <FormActions>
       <Button action="submit">Submit</Button>
@@ -400,6 +391,10 @@ const shortCountryOptions: ComboboxOption[] = [
   { value: 'jp', label: 'Japan', keywords: 'asia tokyo' },
 ];
 
+const CENTRAL_AMERICA = 'central america';
+const SOUTH_AMERICA = 'south america';
+const OCEANIA_PACIFIC = 'oceania pacific';
+
 const countryOptions: ComboboxOption[] = [
   { value: 'af', label: 'Afghanistan', keywords: 'asia kabul' },
   { value: 'al', label: 'Albania', keywords: 'europe tirana' },
@@ -418,10 +413,10 @@ const countryOptions: ComboboxOption[] = [
   { value: 'bb', label: 'Barbados', keywords: 'caribbean' },
   { value: 'by', label: 'Belarus', keywords: 'europe minsk' },
   { value: 'be', label: 'Belgium', keywords: 'europe brussels' },
-  { value: 'bz', label: 'Belize', keywords: 'central america' },
+  { value: 'bz', label: 'Belize', keywords: CENTRAL_AMERICA },
   { value: 'bj', label: 'Benin', keywords: 'africa' },
   { value: 'bt', label: 'Bhutan', keywords: 'asia thimphu' },
-  { value: 'bo', label: 'Bolivia', keywords: 'south america' },
+  { value: 'bo', label: 'Bolivia', keywords: SOUTH_AMERICA },
   { value: 'ba', label: 'Bosnia and Herzegovina', keywords: 'europe sarajevo' },
   { value: 'bw', label: 'Botswana', keywords: 'africa gaborone' },
   { value: 'br', label: 'Brazil', keywords: 'south america brasilia' },
@@ -452,13 +447,13 @@ const countryOptions: ComboboxOption[] = [
   { value: 'do', label: 'Dominican Republic', keywords: 'caribbean santo domingo' },
   { value: 'ec', label: 'Ecuador', keywords: 'south america quito' },
   { value: 'eg', label: 'Egypt', keywords: 'africa cairo' },
-  { value: 'sv', label: 'El Salvador', keywords: 'central america' },
+  { value: 'sv', label: 'El Salvador', keywords: CENTRAL_AMERICA },
   { value: 'gq', label: 'Equatorial Guinea', keywords: 'africa' },
   { value: 'er', label: 'Eritrea', keywords: 'africa asmara' },
   { value: 'ee', label: 'Estonia', keywords: 'europe tallinn baltic' },
   { value: 'sz', label: 'Eswatini', keywords: 'africa swaziland' },
   { value: 'et', label: 'Ethiopia', keywords: 'africa addis ababa' },
-  { value: 'fj', label: 'Fiji', keywords: 'oceania pacific' },
+  { value: 'fj', label: 'Fiji', keywords: OCEANIA_PACIFIC },
   { value: 'fi', label: 'Finland', keywords: 'europe helsinki nordic' },
   { value: 'fr', label: 'France', keywords: 'europe paris' },
   { value: 'ga', label: 'Gabon', keywords: 'africa' },
@@ -468,12 +463,12 @@ const countryOptions: ComboboxOption[] = [
   { value: 'gh', label: 'Ghana', keywords: 'africa accra' },
   { value: 'gr', label: 'Greece', keywords: 'europe athens' },
   { value: 'gd', label: 'Grenada', keywords: 'caribbean' },
-  { value: 'gt', label: 'Guatemala', keywords: 'central america' },
+  { value: 'gt', label: 'Guatemala', keywords: CENTRAL_AMERICA },
   { value: 'gn', label: 'Guinea', keywords: 'africa conakry' },
   { value: 'gw', label: 'Guinea-Bissau', keywords: 'africa' },
-  { value: 'gy', label: 'Guyana', keywords: 'south america' },
+  { value: 'gy', label: 'Guyana', keywords: SOUTH_AMERICA },
   { value: 'ht', label: 'Haiti', keywords: 'caribbean port-au-prince' },
-  { value: 'hn', label: 'Honduras', keywords: 'central america' },
+  { value: 'hn', label: 'Honduras', keywords: CENTRAL_AMERICA },
   { value: 'hu', label: 'Hungary', keywords: 'europe budapest' },
   { value: 'is', label: 'Iceland', keywords: 'europe reykjavik nordic' },
   { value: 'in', label: 'India', keywords: 'asia new delhi mumbai' },
@@ -489,7 +484,7 @@ const countryOptions: ComboboxOption[] = [
   { value: 'jo', label: 'Jordan', keywords: 'middle east amman' },
   { value: 'kz', label: 'Kazakhstan', keywords: 'asia astana' },
   { value: 'ke', label: 'Kenya', keywords: 'africa nairobi' },
-  { value: 'ki', label: 'Kiribati', keywords: 'oceania pacific' },
+  { value: 'ki', label: 'Kiribati', keywords: OCEANIA_PACIFIC },
   { value: 'kw', label: 'Kuwait', keywords: 'middle east' },
   { value: 'kg', label: 'Kyrgyzstan', keywords: 'asia bishkek' },
   { value: 'la', label: 'Laos', keywords: 'asia vientiane' },
@@ -507,11 +502,11 @@ const countryOptions: ComboboxOption[] = [
   { value: 'mv', label: 'Maldives', keywords: 'asia' },
   { value: 'ml', label: 'Mali', keywords: 'africa bamako' },
   { value: 'mt', label: 'Malta', keywords: 'europe valletta' },
-  { value: 'mh', label: 'Marshall Islands', keywords: 'oceania pacific' },
+  { value: 'mh', label: 'Marshall Islands', keywords: OCEANIA_PACIFIC },
   { value: 'mr', label: 'Mauritania', keywords: 'africa' },
   { value: 'mu', label: 'Mauritius', keywords: 'africa' },
   { value: 'mx', label: 'Mexico', keywords: 'north america mexico city' },
-  { value: 'fm', label: 'Micronesia', keywords: 'oceania pacific' },
+  { value: 'fm', label: 'Micronesia', keywords: OCEANIA_PACIFIC },
   { value: 'md', label: 'Moldova', keywords: 'europe chisinau' },
   { value: 'mc', label: 'Monaco', keywords: 'europe' },
   { value: 'mn', label: 'Mongolia', keywords: 'asia ulaanbaatar' },
@@ -520,7 +515,7 @@ const countryOptions: ComboboxOption[] = [
   { value: 'mz', label: 'Mozambique', keywords: 'africa maputo' },
   { value: 'mm', label: 'Myanmar', keywords: 'asia burma' },
   { value: 'na', label: 'Namibia', keywords: 'africa windhoek' },
-  { value: 'nr', label: 'Nauru', keywords: 'oceania pacific' },
+  { value: 'nr', label: 'Nauru', keywords: OCEANIA_PACIFIC },
   { value: 'np', label: 'Nepal', keywords: 'asia kathmandu' },
   { value: 'nl', label: 'Netherlands', keywords: 'europe amsterdam holland' },
   { value: 'nz', label: 'New Zealand', keywords: 'oceania wellington' },
@@ -532,10 +527,10 @@ const countryOptions: ComboboxOption[] = [
   { value: 'no', label: 'Norway', keywords: 'europe oslo nordic' },
   { value: 'om', label: 'Oman', keywords: 'middle east muscat' },
   { value: 'pk', label: 'Pakistan', keywords: 'asia islamabad' },
-  { value: 'pw', label: 'Palau', keywords: 'oceania pacific' },
+  { value: 'pw', label: 'Palau', keywords: OCEANIA_PACIFIC },
   { value: 'ps', label: 'Palestine', keywords: 'middle east' },
-  { value: 'pa', label: 'Panama', keywords: 'central america' },
-  { value: 'pg', label: 'Papua New Guinea', keywords: 'oceania pacific' },
+  { value: 'pa', label: 'Panama', keywords: CENTRAL_AMERICA },
+  { value: 'pg', label: 'Papua New Guinea', keywords: OCEANIA_PACIFIC },
   { value: 'py', label: 'Paraguay', keywords: 'south america asuncion' },
   { value: 'pe', label: 'Peru', keywords: 'south america lima' },
   { value: 'ph', label: 'Philippines', keywords: 'asia manila' },
@@ -548,7 +543,7 @@ const countryOptions: ComboboxOption[] = [
   { value: 'kn', label: 'Saint Kitts and Nevis', keywords: 'caribbean' },
   { value: 'lc', label: 'Saint Lucia', keywords: 'caribbean' },
   { value: 'vc', label: 'Saint Vincent and the Grenadines', keywords: 'caribbean' },
-  { value: 'ws', label: 'Samoa', keywords: 'oceania pacific' },
+  { value: 'ws', label: 'Samoa', keywords: OCEANIA_PACIFIC },
   { value: 'sm', label: 'San Marino', keywords: 'europe' },
   { value: 'st', label: 'Sao Tome and Principe', keywords: 'africa' },
   { value: 'sa', label: 'Saudi Arabia', keywords: 'middle east riyadh' },
@@ -559,7 +554,7 @@ const countryOptions: ComboboxOption[] = [
   { value: 'sg', label: 'Singapore', keywords: 'asia' },
   { value: 'sk', label: 'Slovakia', keywords: 'europe bratislava' },
   { value: 'si', label: 'Slovenia', keywords: 'europe ljubljana' },
-  { value: 'sb', label: 'Solomon Islands', keywords: 'oceania pacific' },
+  { value: 'sb', label: 'Solomon Islands', keywords: OCEANIA_PACIFIC },
   { value: 'so', label: 'Somalia', keywords: 'africa mogadishu' },
   { value: 'za', label: 'South Africa', keywords: 'africa pretoria cape town' },
   { value: 'kr', label: 'South Korea', keywords: 'asia seoul' },
@@ -567,7 +562,7 @@ const countryOptions: ComboboxOption[] = [
   { value: 'es', label: 'Spain', keywords: 'europe madrid' },
   { value: 'lk', label: 'Sri Lanka', keywords: 'asia colombo' },
   { value: 'sd', label: 'Sudan', keywords: 'africa khartoum' },
-  { value: 'sr', label: 'Suriname', keywords: 'south america' },
+  { value: 'sr', label: 'Suriname', keywords: SOUTH_AMERICA },
   { value: 'se', label: 'Sweden', keywords: 'europe stockholm nordic' },
   { value: 'ch', label: 'Switzerland', keywords: 'europe bern zurich' },
   { value: 'sy', label: 'Syria', keywords: 'middle east damascus' },
@@ -577,12 +572,12 @@ const countryOptions: ComboboxOption[] = [
   { value: 'th', label: 'Thailand', keywords: 'asia bangkok' },
   { value: 'tl', label: 'Timor-Leste', keywords: 'asia' },
   { value: 'tg', label: 'Togo', keywords: 'africa lome' },
-  { value: 'to', label: 'Tonga', keywords: 'oceania pacific' },
+  { value: 'to', label: 'Tonga', keywords: OCEANIA_PACIFIC },
   { value: 'tt', label: 'Trinidad and Tobago', keywords: 'caribbean' },
   { value: 'tn', label: 'Tunisia', keywords: 'africa tunis' },
   { value: 'tr', label: 'Turkey', keywords: 'europe asia ankara istanbul' },
   { value: 'tm', label: 'Turkmenistan', keywords: 'asia ashgabat' },
-  { value: 'tv', label: 'Tuvalu', keywords: 'oceania pacific' },
+  { value: 'tv', label: 'Tuvalu', keywords: OCEANIA_PACIFIC },
   { value: 'ug', label: 'Uganda', keywords: 'africa kampala' },
   { value: 'ua', label: 'Ukraine', keywords: 'europe kyiv' },
   { value: 'ae', label: 'United Arab Emirates', keywords: 'middle east dubai abu dhabi' },
@@ -590,7 +585,7 @@ const countryOptions: ComboboxOption[] = [
   { value: 'us', label: 'United States', keywords: 'north america washington usa' },
   { value: 'uy', label: 'Uruguay', keywords: 'south america montevideo' },
   { value: 'uz', label: 'Uzbekistan', keywords: 'asia tashkent' },
-  { value: 'vu', label: 'Vanuatu', keywords: 'oceania pacific' },
+  { value: 'vu', label: 'Vanuatu', keywords: OCEANIA_PACIFIC },
   { value: 'va', label: 'Vatican City', keywords: 'europe rome' },
   { value: 've', label: 'Venezuela', keywords: 'south america caracas' },
   { value: 'vn', label: 'Vietnam', keywords: 'asia hanoi' },
@@ -649,14 +644,13 @@ export const AllFields = () => {
   const handleUserSearch = useCallback((query: string) => {
     setUserSearchLoading(true);
     const timer = setTimeout(() => {
+      const needle = query.toLowerCase();
       const results = (
-        query.trim()
-          ? mockUserDatabase.filter(
-              (u) =>
-                u.label.toLowerCase().includes(query.toLowerCase()) ||
-                (u.keywords && u.keywords.toLowerCase().includes(query.toLowerCase())),
+        query.trim() === ''
+          ? mockUserDatabase
+          : mockUserDatabase.filter(
+              (u) => u.label.toLowerCase().includes(needle) || (u.keywords ?? '').toLowerCase().includes(needle),
             )
-          : mockUserDatabase
       ).slice(0, mockPageSize);
       setUserSearchOptions(results);
       setUserSearchLoading(false);
@@ -705,7 +699,7 @@ export const AllFields = () => {
       signature: '',
       barcode: '',
       location: JSON.stringify({ lat: 40.7128, lng: -74.006 }),
-      items: [] as Record<string, any>[],
+      items: [] as Record<string, string | number>[],
     },
     onSubmit: async ({ value }) => {
       action('onSubmit')(value);
@@ -1095,7 +1089,7 @@ const shortListDefaults = {
   signature: '',
   barcode: '',
   location: JSON.stringify({ lat: 40.7128, lng: -74.006 }),
-  items: [] as Record<string, any>[],
+  items: [] as Record<string, string | number>[],
 };
 
 export const AllFieldsShortLists = () => {

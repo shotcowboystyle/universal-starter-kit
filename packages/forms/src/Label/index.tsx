@@ -51,7 +51,16 @@ export const Label = ({
     requiredMarkingProp ?? markingCtx?.mode ?? mapHouseRequiredMarking(knobProps.requiredMarking);
   const suffix = formatRequiredMarkSuffix(required, markMode);
   const keepLabelReadable = Boolean(disabled) && disabledState.style !== 'dimWhole';
+  // SAFETY: `size` is a type-scale step here (the prop forbids control-height tokens), and the `$n` names SizeTokens and FontSizeTokens share are the ones that reach this point.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see the SAFETY note above
   const typeSize = (size as FontSizeTokens | undefined) ?? knobProps.label.fontSize;
+  const hasTarget = htmlFor !== undefined && htmlFor !== '';
+  let cursor: 'not-allowed' | 'pointer' | 'default' = 'default';
+  if (disabled) {
+    cursor = 'not-allowed';
+  } else if (hasTarget) {
+    cursor = 'pointer';
+  }
   const color = error ? formCommonColors.error : knobProps.textAccentColor;
   const type = asPageHeading
     ? {
@@ -72,7 +81,7 @@ export const Label = ({
       {...type}
       fontWeight="400"
       color={color}
-      cursor={disabled ? 'not-allowed' : htmlFor ? 'pointer' : 'default'}
+      cursor={cursor}
       display="flex"
       alignItems="flex-start"
       flexWrap="wrap"

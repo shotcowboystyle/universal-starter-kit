@@ -10,6 +10,71 @@ import { Form } from '../../Form';
 
 import { Stepper } from './index';
 
+const FormExample = () => {
+  const form = useForm({
+    defaultValues: {
+      quantity: 5,
+      price: 10.99,
+      // Mid-range: a value at `min` bare-disables the decrement button at
+      // rest and demos nothing.
+      discount: 10,
+    },
+    onSubmit: async ({ value }) => {
+      action('onSubmit')(value);
+    },
+  });
+  return (
+    <Form form={form}>
+      <YStack gap="$4">
+        <Stepper
+          label="Quantity"
+          name="quantity"
+          min={1}
+          max={100}
+          buttonPosition="both"
+        />
+        <Stepper
+          label="Price"
+          name="price"
+          step={0.01}
+          precision={2}
+          min={0}
+        />
+        <Stepper
+          label="Discount (%)"
+          name="discount"
+          min={0}
+          max={50}
+          step={5}
+        />
+        <Button action="submit">Submit</Button>
+      </YStack>
+    </Form>
+  );
+};
+
+const InteractiveExample = () => {
+  const [value, setValue] = useState<number | null>(0);
+  return (
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <Stepper
+        label="Quantity"
+        value={value}
+        onChange={(val: number | null) => {
+          setValue(val);
+          action('onChange')(val);
+        }}
+        min={0}
+        max={100}
+        step={1}
+      />
+      <Paragraph size="$2">Current value: {value ?? 'empty'}</Paragraph>
+    </YStack>
+  );
+};
+
 const meta: Meta<typeof Stepper> = {
   title: 'Forms/Stepper',
   component: Stepper,
@@ -40,51 +105,7 @@ type Story = StoryObj<typeof Stepper>;
 
 export const Main: Story = {
   name: 'Main',
-  render: () => {
-    const FormExample = () => {
-      const form = useForm({
-        defaultValues: {
-          quantity: 5,
-          price: 10.99,
-          // Mid-range: a value at `min` bare-disables the decrement button at
-          // rest and demos nothing.
-          discount: 10,
-        },
-        onSubmit: async ({ value }) => {
-          action('onSubmit')(value);
-        },
-      });
-      return (
-        <Form form={form}>
-          <YStack gap="$4">
-            <Stepper
-              label="Quantity"
-              name="quantity"
-              min={1}
-              max={100}
-              buttonPosition="both"
-            />
-            <Stepper
-              label="Price"
-              name="price"
-              step={0.01}
-              precision={2}
-              min={0}
-            />
-            <Stepper
-              label="Discount (%)"
-              name="discount"
-              min={0}
-              max={50}
-              step={5}
-            />
-            <Button action="submit">Submit</Button>
-          </YStack>
-        </Form>
-      );
-    };
-    return <FormExample />;
-  },
+  render: () => <FormExample />,
 };
 
 export const Standalone: Story = {
@@ -105,7 +126,6 @@ export const Standalone: Story = {
 export const Basic: Story = {
   args: {
     label: 'Quantity',
-    error: undefined,
     helperText: 'Enter a number between 1 and 100',
     defaultValue: 5,
     min: 1,
@@ -164,30 +184,7 @@ export const Sizes: Story = {
 };
 
 export const Interactive: Story = {
-  render: () => {
-    const InteractiveExample = () => {
-      const [value, setValue] = useState<number | null>(0);
-      return (
-        <YStack
-          gap="$4"
-          maxWidth={400}>
-          <Stepper
-            label="Quantity"
-            value={value}
-            onChange={(val: number | null) => {
-              setValue(val);
-              action('onChange')(val);
-            }}
-            min={0}
-            max={100}
-            step={1}
-          />
-          <Paragraph size="$2">Current value: {value ?? 'empty'}</Paragraph>
-        </YStack>
-      );
-    };
-    return <InteractiveExample />;
-  },
+  render: () => <InteractiveExample />,
 };
 
 /** Loading placeholder — the skeleton mirrors the stepper row anatomy. */

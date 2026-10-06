@@ -50,15 +50,15 @@ export const encodeCode128B = (value: string): Code128Run[] | null => {
     return null;
   }
   const codes: number[] = [];
-  for (let i = 0; i < value.length; i++) {
-    const code = value.charCodeAt(i) - 32;
+  for (let i = 0; i < value.length; i += 1) {
+    const code = (value.codePointAt(i) ?? 0) - 32;
     if (code < 0 || code > 94) {
       return null;
     }
     codes.push(code);
   }
   let checksum = START_B;
-  for (let i = 0; i < codes.length; i++) {
+  for (let i = 0; i < codes.length; i += 1) {
     checksum += codes[i] * (i + 1);
   }
   const sequence = [START_B, ...codes, checksum % MODULO, STOP];
@@ -67,8 +67,8 @@ export const encodeCode128B = (value: string): Code128Run[] | null => {
   const runs: Code128Run[] = [];
   for (const char of moduleString) {
     const bar = char === '1';
-    const last = runs[runs.length - 1];
-    if (last && last.bar === bar) {
+    const last = runs.at(-1);
+    if (last !== undefined && last.bar === bar) {
       last.modules += 1;
     } else {
       runs.push({ bar, modules: 1 });
