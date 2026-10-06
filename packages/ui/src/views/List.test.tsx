@@ -10,12 +10,11 @@ import * as ViewExports from './index';
 
 afterEach(cleanup);
 
-const atoms = (el: Element, prefixes: string[]): string[] => {
-  return String((el as HTMLElement).className || '')
+const atoms = (el: Element, prefixes: string[]): string[] =>
+  String((el as HTMLElement).className || '')
     .split(' ')
     .filter((c) => prefixes.some((p) => c.startsWith(p)))
     .sort();
-};
 
 const documents = [
   { id: '1', title: 'Q3 Vendor Contract' },

@@ -125,10 +125,11 @@ export interface CreateThemesBuilderOptions {
  * "undefined" — t_Button's `--backgroundPress`/`--borderColorHover` blanked
  * pressed fills and drew phantom currentColor borders.
  */
-const sanitizeGetTheme = (
-  getTheme: NonNullable<CreateThemesBuilderOptions['getTheme']>,
-): NonNullable<CreateThemesBuilderOptions['getTheme']> => {
-  return (props: GetThemeProps) => {
+const sanitizeGetTheme =
+  (
+    getTheme: NonNullable<CreateThemesBuilderOptions['getTheme']>,
+  ): NonNullable<CreateThemesBuilderOptions['getTheme']> =>
+  (props: GetThemeProps) => {
     const out: Record<string, string | number> = {};
     for (const [key, value] of Object.entries(getTheme(props))) {
       if (value != null) {
@@ -137,7 +138,6 @@ const sanitizeGetTheme = (
     }
     return out;
   };
-};
 
 // Radix hue names whose sub-themes act as decorative TINTS (Tint.tsx cycling,
 // the storybook `color` global). Under a tint,

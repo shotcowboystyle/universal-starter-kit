@@ -36,17 +36,13 @@ vi.mock('expo-linear-gradient', () => ({
 
 afterEach(cleanup);
 
-const bands = (container: HTMLElement): HTMLElement[] => {
-  return Array.from(container.querySelectorAll("[style*='height']")) as HTMLElement[];
-};
+const bands = (container: HTMLElement): HTMLElement[] =>
+  Array.from(container.querySelectorAll("[style*='height']")) as HTMLElement[];
 
-const gradients = (container: HTMLElement): HTMLElement[] => {
-  return Array.from(container.querySelectorAll('[data-gradient]')) as HTMLElement[];
-};
+const gradients = (container: HTMLElement): HTMLElement[] =>
+  Array.from(container.querySelectorAll('[data-gradient]')) as HTMLElement[];
 
-const colorsOf = (node: HTMLElement): string[] => {
-  return String(node.getAttribute('data-colors') ?? '').split('|');
-};
+const colorsOf = (node: HTMLElement): string[] => String(node.getAttribute('data-colors') ?? '').split('|');
 
 describe('WheelEdgeFade — web', () => {
   it("renders nothing, because the viewport's CSS mask already does the fade", () => {

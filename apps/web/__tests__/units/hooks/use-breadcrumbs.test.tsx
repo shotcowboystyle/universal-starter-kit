@@ -7,8 +7,8 @@ import { useWorkspaceStore } from '@/stores/workspace-store';
 import type { Board } from '@/types/db-interface';
 
 // Helper to create mock query results with proper typing
-const createMockQueryResult = (overrides: Partial<UseQueryResult<Board>> = {}): UseQueryResult<Board> => {
-  return {
+const createMockQueryResult = (overrides: Partial<UseQueryResult<Board>> = {}): UseQueryResult<Board> =>
+  ({
     data: undefined,
     error: null,
     isError: false,
@@ -34,8 +34,7 @@ const createMockQueryResult = (overrides: Partial<UseQueryResult<Board>> = {}): 
     fetchStatus: 'idle',
     refetch: vi.fn(),
     ...overrides,
-  } as UseQueryResult<Board>;
-};
+  }) as UseQueryResult<Board>;
 
 // Mock next-intl
 vi.mock('next-intl', () => ({

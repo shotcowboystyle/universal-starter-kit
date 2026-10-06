@@ -63,9 +63,8 @@ const AUDITED_PROPS = [
   'inlineColor',
 ] as const;
 
-const propKey = (el: ElementAudit, prop: string): PropertyAudit | TextPropertyAudit | undefined => {
-  return (el as unknown as Record<string, unknown>)[prop] as PropertyAudit | TextPropertyAudit | undefined;
-};
+const propKey = (el: ElementAudit, prop: string): PropertyAudit | TextPropertyAudit | undefined =>
+  (el as unknown as Record<string, unknown>)[prop] as PropertyAudit | TextPropertyAudit | undefined;
 
 const formatProp = (p: PropertyAudit | TextPropertyAudit | undefined): string => {
   if (!p) {

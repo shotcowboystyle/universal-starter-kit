@@ -24,9 +24,7 @@ export const readPublicConfigKeys = (file: string): string[] => {
   return keys.filter((key): key is string => typeof key === 'string' && key.length > 0);
 };
 
-export const mergePublicConfigKeys = (...lists: string[][]): string[] => {
-  return [...new Set(lists.flat())];
-};
+export const mergePublicConfigKeys = (...lists: string[][]): string[] => [...new Set(lists.flat())];
 
 /**
  * Put the bake on process.env: the values resolved from the environment under
@@ -57,14 +55,13 @@ const nodeModulesPath = /[\\/]node_modules[\\/]/;
  * `process.env.<KEY>` reads change: a string, an assignment target or a
  * `globalThis.process.env.<KEY>` is left as written.
  */
-const bakedDefine = (): Record<string, string> => {
-  return Object.fromEntries(
+const bakedDefine = (): Record<string, string> =>
+  Object.fromEntries(
     [bakedConfigEnvKey, publicConfigKeysEnvKey].map((key) => [
       `process.env.${key}`,
       JSON.stringify(process.env[key] ?? ''),
     ]),
   );
-};
 
 /**
  * The browser caches node_modules files and optimized deps as immutable under
@@ -96,9 +93,7 @@ export const publicConfigPlugin = (options: PublicConfigPluginOptions): Plugin =
   const inlineKeys = options.keys ?? [];
   const bakedModules = new Map<string, Set<string>>();
 
-  const readKeys = (): string[] => {
-    return mergePublicConfigKeys(inlineKeys, readPublicConfigKeys(file));
-  };
+  const readKeys = (): string[] => mergePublicConfigKeys(inlineKeys, readPublicConfigKeys(file));
 
   const bake = (next: string[]) => {
     dotenv.config({ path: envFile, quiet: true });

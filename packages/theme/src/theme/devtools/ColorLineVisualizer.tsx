@@ -13,13 +13,12 @@ import type { Knobs } from '../knobs';
 
 import { contrastTextFor, cellSize } from './viz-constants';
 
-const fallbackGradient = (): string[] => {
-  return Array.from({ length: 12 }, (_, i) => {
+const fallbackGradient = (): string[] =>
+  Array.from({ length: 12 }, (_, i) => {
     const t = i / 11;
     const v = Math.round(240 - t * 200);
     return `rgb(${v},${v},${v})`;
   });
-};
 
 // ── Helpers ──────────────────────────────────────────────────
 

@@ -38,14 +38,11 @@ export const UNKNOWN_VALUE = '\u2014';
 
 const SIZE_TOKEN = { small: '$3', medium: '$4', large: '$5' } as const;
 
-export const resolveMeterRailRadius = (stop: BorderRadius): number => {
-  return resolveRadiusClass(METER_RADIUS_CLASS, stop);
-};
+export const resolveMeterRailRadius = (stop: BorderRadius): number => resolveRadiusClass(METER_RADIUS_CLASS, stop);
 
 /** Track height = round(0.25 × $size) — the Progress formula, unchanged. */
-export const meterTrackHeightPx = (size: 'small' | 'medium' | 'large'): number => {
-  return Math.round(sizeRecipeForToken(SIZE_TOKEN[size]).height * 0.25);
-};
+export const meterTrackHeightPx = (size: 'small' | 'medium' | 'large'): number =>
+  Math.round(sizeRecipeForToken(SIZE_TOKEN[size]).height * 0.25);
 
 export const meterFillRatio = (value: number | null | undefined, min: number, max: number): number | null => {
   if (value == null || !Number.isFinite(value) || max === min) {

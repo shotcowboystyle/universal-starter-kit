@@ -83,11 +83,11 @@ const measured = () => {
   return { ...tree, scroll };
 };
 
-it("uses the primitive's real initial measurement and selection effect", () => {
+test("uses the primitive's real initial measurement and selection effect", () => {
   measured();
 });
 
-it('refreshes selected position after a preceding label grows without resizing the selected trigger', () => {
+test('refreshes selected position after a preceding label grows without resizing the selected trigger', () => {
   const tree = measured();
   precedingGrowth = 100;
   tree.rerender(

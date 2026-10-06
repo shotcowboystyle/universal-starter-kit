@@ -256,7 +256,7 @@ describe('taskApi', () => {
 
       const result = await taskApi.deleteTask('task-1');
 
-      expect(result).toBeNull();
+      expect(result).toBeUndefined();
     });
   });
 

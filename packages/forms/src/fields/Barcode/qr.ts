@@ -290,9 +290,7 @@ const formatInformation = (ecLevel: QrErrorCorrectionLevel, mask: number): numbe
 };
 
 /** 18-bit version information (versions ≥ 7): 6 version bits, BCH(18,6). */
-const versionInformation = (version: number): number => {
-  return (version << 12) | bchRemainder(version << 12, 0x1f_25);
-};
+const versionInformation = (version: number): number => (version << 12) | bchRemainder(version << 12, 0x1f_25);
 
 // ─── Byte-mode bit stream ───
 
@@ -320,9 +318,7 @@ const dataCodewordCount = (version: number, ecLevel: QrErrorCorrectionLevel): nu
 };
 
 /** Byte-mode character count field width (ISO 18004 table 3). */
-const charCountBits = (version: number): number => {
-  return version <= 9 ? 8 : 16;
-};
+const charCountBits = (version: number): number => (version <= 9 ? 8 : 16);
 
 /** Smallest version 1–10 whose byte-mode capacity fits, or null. */
 const pickVersion = (byteCount: number, ecLevel: QrErrorCorrectionLevel): number | null => {

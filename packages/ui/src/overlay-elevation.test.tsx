@@ -49,22 +49,18 @@ const frame = (id: string): HTMLElement => {
 };
 
 /** The value a browser paints: the inline style wins over every base atom. */
-const paintedShadow = (id: string): string => {
-  return frame(id).style.boxShadow;
-};
+const paintedShadow = (id: string): string => frame(id).style.boxShadow;
 
-const shadowAtoms = (id: string): string[] => {
-  return String(frame(id).className || '')
+const shadowAtoms = (id: string): string[] =>
+  String(frame(id).className || '')
     .split(/\s+/)
     .filter((c) => c.startsWith('_bxsh-'))
     .sort();
-};
 
-const bgAtoms = (id: string): string[] => {
-  return String(frame(id).className || '')
+const bgAtoms = (id: string): string[] =>
+  String(frame(id).className || '')
     .split(/\s+/)
     .filter((c) => c.startsWith('_bg-'));
-};
 
 const renderDialogsBesideAButton = (elevation?: 'small' | 'medium' | 'large') => {
   renderWithProviders(

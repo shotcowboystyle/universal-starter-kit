@@ -60,8 +60,8 @@ const MIN_OPACITY_DELTA = 0.3;
 
 type Scheme = (typeof SCHEMES)[number];
 
-const houseRender = (ui: ReactElement, scheme: Scheme, disabledStyle: string) => {
-  return render(
+const houseRender = (ui: ReactElement, scheme: Scheme, disabledStyle: string) =>
+  render(
     <TamaguiProvider
       config={houseConfig.tamagui}
       defaultTheme={scheme}
@@ -71,7 +71,6 @@ const houseRender = (ui: ReactElement, scheme: Scheme, disabledStyle: string) =>
       </Preset>
     </TamaguiProvider>,
   );
-};
 
 const injectedRuleValue = (className: string, property: string): string => {
   for (const sheet of Array.from(document.styleSheets)) {

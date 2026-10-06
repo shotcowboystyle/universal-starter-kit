@@ -3,35 +3,33 @@ import { describe, expect, it } from 'vitest';
 import { getBroadName, getPreciseName } from './platform-base';
 import type { Platform } from './platform-base';
 
-const makePlatform = (overrides: Partial<Platform> = {}): Platform => {
-  return {
-    isAndroid: false,
-    isBrowser: false,
-    isChrome: false,
-    isChromeExtension: false,
-    isClient: false,
-    isDesktop: false,
-    isExpo: false,
-    isFirefox: false,
-    isFirefoxExtension: false,
-    isGnome: false,
-    isIframe: false,
-    isIos: false,
-    isNative: false,
-    isNext: false,
-    isServer: false,
-    isStorybook: false,
-    isTauri: false,
-    isTouchable: false,
-    isWeb: false,
-    isWebExtension: false,
-    isWebTouchable: false,
-    isWindowDefined: false,
-    preciseName: 'unknown',
-    broadName: 'unknown',
-    ...overrides,
-  };
-};
+const makePlatform = (overrides: Partial<Platform> = {}): Platform => ({
+  isAndroid: false,
+  isBrowser: false,
+  isChrome: false,
+  isChromeExtension: false,
+  isClient: false,
+  isDesktop: false,
+  isExpo: false,
+  isFirefox: false,
+  isFirefoxExtension: false,
+  isGnome: false,
+  isIframe: false,
+  isIos: false,
+  isNative: false,
+  isNext: false,
+  isServer: false,
+  isStorybook: false,
+  isTauri: false,
+  isTouchable: false,
+  isWeb: false,
+  isWebExtension: false,
+  isWebTouchable: false,
+  isWindowDefined: false,
+  preciseName: 'unknown',
+  broadName: 'unknown',
+  ...overrides,
+});
 
 describe('getPreciseName', () => {
   it('returns "unknown" when no flags are true', () => {

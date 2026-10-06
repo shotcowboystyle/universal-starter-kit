@@ -36,20 +36,18 @@ import { setSizeRecipeInputs } from './size-recipes';
 // Mirrors the shc app theme config: a consumer getTheme written against the
 // FULL base ramp (theme.colorN) with no outlineColor of its own. Inside
 // component sub-themes (t_Button, ...) every one of these reads undefined.
-const consumerGetTheme = ({ theme }: GetThemeProps): Record<string, string> => {
-  return {
-    backgroundPress: theme.color5,
-    backgroundFocus: theme.color6,
-    backgroundActive: theme.color4,
-    placeholderColor: theme.color10,
-    borderColor: theme.color5,
-    borderColorHover: theme.color6,
-    borderColorFocus: theme.color7,
-    borderColorPress: theme.color7,
-    textMuted: theme.color10,
-    textSubtle: theme.color6,
-  };
-};
+const consumerGetTheme = ({ theme }: GetThemeProps): Record<string, string> => ({
+  backgroundPress: theme.color5,
+  backgroundFocus: theme.color6,
+  backgroundActive: theme.color4,
+  placeholderColor: theme.color10,
+  borderColor: theme.color5,
+  borderColorHover: theme.color6,
+  borderColorFocus: theme.color7,
+  borderColorPress: theme.color7,
+  textMuted: theme.color10,
+  textSubtle: theme.color6,
+});
 
 // With createTamagui mocked pass-through, config.tamagui IS the raw config
 // object, so .themes is the raw built themes record.

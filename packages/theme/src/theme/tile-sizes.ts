@@ -191,9 +191,7 @@ export const resolveTileSizeInputs = (partial: Partial<TileSizeInputs> = {}): Ti
 
 // ── Generation ────────────────────────────────────────────────
 
-const clampWidth = (value: number): number => {
-  return Math.max(1, Math.round(value));
-};
+const clampWidth = (value: number): number => Math.max(1, Math.round(value));
 
 const minWidthForRung = (rung: TileSizeRung, inputs: TileSizeInputs): number => {
   const explicitPx = inputs.rungWidths?.[rung];
@@ -237,14 +235,12 @@ export interface TileRungFlexProps {
  * tiles grow from `minWidth` and stop at `maxWidth`). Spread it on the tile
  * surface; gutters stay on the container's space-knob gap.
  */
-export const tileRungFlexProps = (stop: TileSizeStop): TileRungFlexProps => {
-  return {
-    flexGrow: 1,
-    flexBasis: stop.minWidth,
-    minWidth: stop.minWidth,
-    maxWidth: stop.maxWidth,
-  };
-};
+export const tileRungFlexProps = (stop: TileSizeStop): TileRungFlexProps => ({
+  flexGrow: 1,
+  flexBasis: stop.minWidth,
+  minWidth: stop.minWidth,
+  maxWidth: stop.maxWidth,
+});
 
 /**
  * Column count for a fixed-column tile grid (the ImageGrid / springboard

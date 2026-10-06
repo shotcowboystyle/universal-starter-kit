@@ -12,9 +12,7 @@ export type TimeFormat = '12h' | '24h';
 
 const timeStringRegex = /^([01]?\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
 
-export const isValidTimeString = (value: string): boolean => {
-  return timeStringRegex.test(value.trim());
-};
+export const isValidTimeString = (value: string): boolean => timeStringRegex.test(value.trim());
 
 export const parseTimeString = (value: string): { h: number; m: number; s: number } => {
   if (!value) {
@@ -33,12 +31,10 @@ export const toTimeString = (h: number, m: number, s?: number): string => {
   return s === undefined ? base : `${base}:${String(s).padStart(2, '0')}`;
 };
 
-export const to12Hour = (h24: number): { h: number; period: 'AM' | 'PM' } => {
-  return {
-    h: h24 % 12 === 0 ? 12 : h24 % 12,
-    period: h24 >= 12 ? 'PM' : 'AM',
-  };
-};
+export const to12Hour = (h24: number): { h: number; period: 'AM' | 'PM' } => ({
+  h: h24 % 12 === 0 ? 12 : h24 % 12,
+  period: h24 >= 12 ? 'PM' : 'AM',
+});
 
 export const formatTimeDisplay = (value: string, format: TimeFormat, showSeconds: boolean): string => {
   if (!value) {
@@ -97,22 +93,20 @@ export const TimePanel = ({
   );
 };
 
-export const TimePickerClearButton = ({ onClear, disabled }: { onClear: () => void; disabled?: boolean }) => {
-  return (
-    <InputParts.Button
-      data-testid="time-picker-clear"
-      aria-label={t('Clear time')}
-      disabled={disabled}
-      onPress={(e) => {
-        e.stopPropagation();
-        onClear();
-      }}>
-      <InputParts.Icon>
-        <XIcon />
-      </InputParts.Icon>
-    </InputParts.Button>
-  );
-};
+export const TimePickerClearButton = ({ onClear, disabled }: { onClear: () => void; disabled?: boolean }) => (
+  <InputParts.Button
+    data-testid="time-picker-clear"
+    aria-label={t('Clear time')}
+    disabled={disabled}
+    onPress={(e) => {
+      e.stopPropagation();
+      onClear();
+    }}>
+    <InputParts.Icon>
+      <XIcon />
+    </InputParts.Icon>
+  </InputParts.Button>
+);
 
 interface TimePickerInputTriggerProps {
   value: string;
@@ -142,66 +136,64 @@ export const TimePickerInputTrigger = ({
   'aria-required': ariaRequired,
   'aria-invalid': ariaInvalid,
   'aria-readonly': ariaReadonly,
-}: TimePickerInputTriggerProps) => {
-  return (
-    <View
-      flexDirection="row"
-      alignItems="center"
-      width="100%"
-      cursor={disabled ? 'not-allowed' : 'pointer'}
-      data-testid="time-picker-trigger"
-      pointerEvents={isWeb ? undefined : 'none'}>
-      <InputParts.Box
-        theme={error ? 'error' : undefined}
-        // Yoga has no intrinsic TextInput width: without this the empty
-        // trigger collapses to its clock glyph on native.
-        {...(isWeb ? undefined : { flex: 1, minWidth: 0 })}
-        elevation={undefined}
-        onPress={isWeb && !disabled ? onOpen : undefined}
-        {...(disabled ? { opacity: 0.5, pointerEvents: 'none' as const } : undefined)}>
-        <InputParts.Section data-testid="time-picker-glyph">
-          <InputParts.Icon
-            adornment="leading"
-            color={formCommonColors.muted}>
-            {clockIcon ?? <ClockIcon />}
-          </InputParts.Icon>
-        </InputParts.Section>
-        <InputParts.Section>
-          <InputParts.Area
-            readOnly
-            pointerEvents="none"
-            id={id}
-            value={value}
-            placeholder={placeholder}
-            disabled={disabled}
-            color={formCommonColors.text}
-            placeholderTextColor={formCommonColors.muted}
-            aria-label={ariaLabel}
-            aria-required={ariaRequired}
-            aria-invalid={ariaInvalid}
-            aria-readonly={ariaReadonly}
-            onKeyPress={
-              disabled
-                ? undefined
-                : (e: { nativeEvent?: { key?: string }; key?: string; preventDefault?: () => void }) => {
-                    const key = e?.nativeEvent?.key ?? e?.key;
-                    if (key === 'Enter' || key === ' ' || key === 'Spacebar') {
-                      e?.preventDefault?.();
-                      onOpen();
-                    }
+}: TimePickerInputTriggerProps) => (
+  <View
+    flexDirection="row"
+    alignItems="center"
+    width="100%"
+    cursor={disabled ? 'not-allowed' : 'pointer'}
+    data-testid="time-picker-trigger"
+    pointerEvents={isWeb ? undefined : 'none'}>
+    <InputParts.Box
+      theme={error ? 'error' : undefined}
+      // Yoga has no intrinsic TextInput width: without this the empty
+      // trigger collapses to its clock glyph on native.
+      {...(isWeb ? undefined : { flex: 1, minWidth: 0 })}
+      elevation={undefined}
+      onPress={isWeb && !disabled ? onOpen : undefined}
+      {...(disabled ? { opacity: 0.5, pointerEvents: 'none' as const } : undefined)}>
+      <InputParts.Section data-testid="time-picker-glyph">
+        <InputParts.Icon
+          adornment="leading"
+          color={formCommonColors.muted}>
+          {clockIcon ?? <ClockIcon />}
+        </InputParts.Icon>
+      </InputParts.Section>
+      <InputParts.Section>
+        <InputParts.Area
+          readOnly
+          pointerEvents="none"
+          id={id}
+          value={value}
+          placeholder={placeholder}
+          disabled={disabled}
+          color={formCommonColors.text}
+          placeholderTextColor={formCommonColors.muted}
+          aria-label={ariaLabel}
+          aria-required={ariaRequired}
+          aria-invalid={ariaInvalid}
+          aria-readonly={ariaReadonly}
+          onKeyPress={
+            disabled
+              ? undefined
+              : (e: { nativeEvent?: { key?: string }; key?: string; preventDefault?: () => void }) => {
+                  const key = e?.nativeEvent?.key ?? e?.key;
+                  if (key === 'Enter' || key === ' ' || key === 'Spacebar') {
+                    e?.preventDefault?.();
+                    onOpen();
                   }
-            }
+                }
+          }
+        />
+      </InputParts.Section>
+      {value && isWeb ? (
+        <InputParts.Section>
+          <TimePickerClearButton
+            onClear={onClear}
+            disabled={disabled}
           />
         </InputParts.Section>
-        {value && isWeb ? (
-          <InputParts.Section>
-            <TimePickerClearButton
-              onClear={onClear}
-              disabled={disabled}
-            />
-          </InputParts.Section>
-        ) : null}
-      </InputParts.Box>
-    </View>
-  );
-};
+      ) : null}
+    </InputParts.Box>
+  </View>
+);

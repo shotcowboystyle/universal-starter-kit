@@ -77,9 +77,7 @@ const processEnv = (): Record<string, string | undefined> => {
   }
 };
 
-const readBuildEnv = (key: string): string | undefined => {
-  return bakedEnv()[key] ?? processEnv()[key];
-};
+const readBuildEnv = (key: string): string | undefined => bakedEnv()[key] ?? processEnv()[key];
 
 const parseJson = (raw: string | undefined): unknown => {
   if (!raw) {
@@ -92,14 +90,13 @@ const parseJson = (raw: string | undefined): unknown => {
   }
 };
 
-const stringifyValues = (source: Record<string, unknown>): Record<string, string> => {
-  return Object.entries(source).reduce<Record<string, string>>((acc, [key, value]) => {
+const stringifyValues = (source: Record<string, unknown>): Record<string, string> =>
+  Object.entries(source).reduce<Record<string, string>>((acc, [key, value]) => {
     if (typeof value !== 'undefined' && value !== null) {
       acc[key] = String(value);
     }
     return acc;
   }, {});
-};
 
 /**
  * The PUBLIC key allowlist baked at build time. Empty when the app was not
@@ -151,15 +148,13 @@ export const readRuntimePublicConfig = (): Record<string, string> | undefined =>
   return stringifyValues(raw as Record<string, unknown>);
 };
 
-const safeJsonStringify = (value: unknown): string => {
-  return JSON.stringify(value ?? {})
+const safeJsonStringify = (value: unknown): string =>
+  JSON.stringify(value ?? {})
     .replaceAll('<', '\\u003c')
     .replaceAll('>', '\\u003e')
     .replaceAll('\u2028', '\\u2028')
     .replaceAll('\u2029', '\\u2029');
-};
 
 /** The inline script the SSR document carries so the client can read the config. */
-export const serializeRuntimePublicConfig = (config: Record<string, string> = resolvePublicConfig()): string => {
-  return `globalThis[${JSON.stringify(runtimePublicConfigKey)}]=${safeJsonStringify(config)};`;
-};
+export const serializeRuntimePublicConfig = (config: Record<string, string> = resolvePublicConfig()): string =>
+  `globalThis[${JSON.stringify(runtimePublicConfigKey)}]=${safeJsonStringify(config)};`;

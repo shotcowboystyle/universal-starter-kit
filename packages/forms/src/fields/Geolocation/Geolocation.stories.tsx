@@ -423,9 +423,9 @@ const PendingReverseExample = () => {
   const [resolvePending, setResolvePending] = useState<(() => void) | null>(null);
   const reverseGeocode = useCallback<NonNullable<GeolocationProps['reverseGeocode']>>(async ({ lat }) => {
     if (lat === places[0].lat) {
-      return Promise.resolve(places[0]);
+      return places[0];
     }
-    return new Promise((resolve) => {
+    return await new Promise((resolve) => {
       setResolvePending(() => () => {
         resolve(places[1]);
       });

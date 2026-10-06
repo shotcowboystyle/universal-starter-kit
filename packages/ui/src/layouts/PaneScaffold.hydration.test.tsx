@@ -21,16 +21,14 @@ vi.mock('@repo/theme', async (importOriginal) => ({
   wasKeyboardFocus: () => false,
 }));
 
-const Fixture = () => {
-  return (
-    <TestProviders>
-      <PaneScaffold
-        primary={<Paragraph>List</Paragraph>}
-        secondary={<Paragraph>Detail</Paragraph>}
-      />
-    </TestProviders>
-  );
-};
+const Fixture = () => (
+  <TestProviders>
+    <PaneScaffold
+      primary={<Paragraph>List</Paragraph>}
+      secondary={<Paragraph>Detail</Paragraph>}
+    />
+  </TestProviders>
+);
 
 let root: Root | undefined;
 let container: HTMLDivElement | undefined;

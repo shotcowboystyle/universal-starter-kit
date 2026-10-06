@@ -9,8 +9,7 @@ import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useHydrated } from '@/hooks/use-hydrated';
 import { useWorkspaceStore } from '@/stores/workspace-store';
-import type { Project, UserInfo } from '@/types/db-interface';
-import { type Task } from '@/types/db-interface';
+import { type Project, type UserInfo, type Task } from '@/types/db-interface';
 
 import NewTaskDialog from '../task/NewTaskDialog';
 import { TaskCard } from '../task/TaskCard';

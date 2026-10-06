@@ -41,8 +41,8 @@ const renderMeter = (
   ui: ReactElement,
   scheme: 'light' | 'dark' = 'light',
   knobs?: Partial<Pick<Knobs, 'borderRadius' | 'fillStyle' | 'borderWidth'>>,
-) => {
-  return renderWithProviders(
+) =>
+  renderWithProviders(
     <Theme name={scheme}>
       <Preset
         cascade={false}
@@ -51,7 +51,6 @@ const renderMeter = (
       </Preset>
     </Theme>,
   );
-};
 
 const rail = (container: HTMLElement): HTMLElement => {
   const el = container.querySelector("[role='meter']");

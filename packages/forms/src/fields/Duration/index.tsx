@@ -1,5 +1,6 @@
 import { ClockIcon } from '@phosphor-icons/react';
-import { useTouchSurface, sizeRecipeForToken, type KnobProps } from '@repo/theme';
+import { useTouchSurface, sizeRecipeForToken } from '@repo/theme';
+import type { KnobProps } from '@repo/theme';
 import type { ReactNode } from 'react';
 import { useCallback, useState } from 'react';
 import type { LabelProps, SizeTokens } from 'tamagui';

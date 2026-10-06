@@ -52,13 +52,11 @@ const Probe = () => {
   );
 };
 
-const Fixture = () => {
-  return (
-    <TestProviders>
-      <Probe />
-    </TestProviders>
-  );
-};
+const Fixture = () => (
+  <TestProviders>
+    <Probe />
+  </TestProviders>
+);
 
 beforeEach(() => {
   host.web = true;

@@ -34,7 +34,7 @@ export const useTaskForm = ({ defaultValues, onSubmit }: UseTaskFormProps) => {
 
   const { data: users = [], isFetching: isSearching } = useQuery({
     queryKey: USER_KEYS.list({ search: searchQuery }),
-    queryFn: async () => userApi.searchUsers(searchQuery),
+    queryFn: async () => await userApi.searchUsers(searchQuery),
     placeholderData: keepPreviousData,
     staleTime: 5 * 60 * 1000,
   });
@@ -72,7 +72,7 @@ export const useTaskForm = ({ defaultValues, onSubmit }: UseTaskFormProps) => {
       dueDate: defaultValues?.dueDate ?? null,
       assigneeId: defaultAssignee?._id ?? '',
     } as TaskFormValues,
-    onSubmit: async ({ value }) => handleSubmit(value),
+    onSubmit: async ({ value }) => await handleSubmit(value),
   });
 
   return {

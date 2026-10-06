@@ -25,18 +25,14 @@ const specimen = (style: string, attrs: Record<string, string> = {}) => {
   return el;
 };
 
-const measured = () => {
-  return audit().elements.find((el) => el.id === 'specimen');
-};
+const measured = () => audit().elements.find((el) => el.id === 'specimen');
 
-const card = (radius: string, space: string, tier = 'content') => {
-  return {
-    'data-constraint-container': 'Card',
-    'data-tier': tier,
-    'data-radius-knob': radius,
-    'data-space-knob': space,
-  };
-};
+const card = (radius: string, space: string, tier = 'content') => ({
+  'data-constraint-container': 'Card',
+  'data-tier': tier,
+  'data-radius-knob': radius,
+  'data-space-knob': space,
+});
 
 describe('Card container cap, independently measured against canonical stops', () => {
   for (const tier of ['content', 'elevated']) {

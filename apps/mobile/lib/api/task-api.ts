@@ -35,14 +35,15 @@ export const taskApi = {
       method: 'PATCH',
       body: JSON.stringify(input),
     }),
-  deleteTask: async (id: string) =>
+  deleteTask: async (id: string) => {
     await fetchWithAuth<void>(
       `${API_ROUTES.TASKS}/${id}`,
       {
         method: 'DELETE',
       },
       true,
-    ),
+    );
+  },
   getTaskPermissions: async (taskId: string) =>
     await fetchWithAuth<TaskPermissions>(`${API_ROUTES.TASKS}/${taskId}/permissions`),
   moveTask: async (taskId: string, projectId: string, orderInProject: number) =>

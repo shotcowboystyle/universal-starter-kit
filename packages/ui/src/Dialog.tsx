@@ -42,9 +42,8 @@ const hasText = (node: ReactNode): boolean => {
   return false;
 };
 
-const isLabelled = (props: Labelled): boolean => {
-  return props['aria-label'] != null || props['aria-labelledby'] != null || props.accessibilityLabel != null;
-};
+const isLabelled = (props: Labelled): boolean =>
+  props['aria-label'] != null || props['aria-labelledby'] != null || props.accessibilityLabel != null;
 
 const needsCloseName = (props: Labelled & { asChild?: unknown; children?: ReactNode }): boolean => {
   if (isLabelled(props)) {

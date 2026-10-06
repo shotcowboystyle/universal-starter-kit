@@ -11,38 +11,32 @@ const views: ViewOption[] = [
   { type: 'kanban', label: 'Kanban' },
 ];
 
-const ListIcon = ({ size = 16 }: { size?: number }) => {
-  return (
-    <Text
-      fontSize={size}
-      lineHeight={size}
-      aria-hidden>
-      ≡
-    </Text>
-  );
-};
+const ListIcon = ({ size = 16 }: { size?: number }) => (
+  <Text
+    fontSize={size}
+    lineHeight={size}
+    aria-hidden>
+    ≡
+  </Text>
+);
 
-const GridIcon = ({ size = 16 }: { size?: number }) => {
-  return (
-    <Text
-      fontSize={size}
-      lineHeight={size}
-      aria-hidden>
-      ▦
-    </Text>
-  );
-};
+const GridIcon = ({ size = 16 }: { size?: number }) => (
+  <Text
+    fontSize={size}
+    lineHeight={size}
+    aria-hidden>
+    ▦
+  </Text>
+);
 
-const KanbanIcon = ({ size = 16 }: { size?: number }) => {
-  return (
-    <Text
-      fontSize={size}
-      lineHeight={size}
-      aria-hidden>
-      ▯
-    </Text>
-  );
-};
+const KanbanIcon = ({ size = 16 }: { size?: number }) => (
+  <Text
+    fontSize={size}
+    lineHeight={size}
+    aria-hidden>
+    ▯
+  </Text>
+);
 
 const viewsWithIcons: ViewOption[] = [
   { type: 'list', label: 'List', icon: ListIcon },

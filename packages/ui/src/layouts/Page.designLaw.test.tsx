@@ -9,16 +9,13 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { PageHeader, PageSection, Screen } from './Page';
 import { ListPageLayout } from './PageTemplates';
 
-const readSibling = (name: string) => {
-  return readFileSync(join(import.meta.dirname, name), 'utf-8');
-};
+const readSibling = (name: string) => readFileSync(join(import.meta.dirname, name), 'utf-8');
 
-const atoms = (el: Element, prefixes: string[]): string[] => {
-  return String((el as HTMLElement).className || '')
+const atoms = (el: Element, prefixes: string[]): string[] =>
+  String((el as HTMLElement).className || '')
     .split(' ')
     .filter((c) => prefixes.some((p) => c.startsWith(p)))
     .sort();
-};
 
 afterEach(cleanup);
 

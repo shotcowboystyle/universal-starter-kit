@@ -45,23 +45,21 @@ const PathForm = ({
   onSaved?: (values: Record<string, unknown>) => void;
   defaultName?: string;
   required?: boolean;
-}) => {
-  return (
-    <Form
-      formOptions={{ defaultValues: { name: defaultName } }}
-      onSubmit={onSubmit as never}
-      saveBar={{ forceVisible: true, onSaved }}>
-      <StateProbe />
-      <Input
-        name="name"
-        label="Name"
-        required={required}
-      />
-      {route === 'html' ? <button type="submit">Submit HTML</button> : null}
-      <Button action="submit">Submit action</Button>
-    </Form>
-  );
-};
+}) => (
+  <Form
+    formOptions={{ defaultValues: { name: defaultName } }}
+    onSubmit={onSubmit as never}
+    saveBar={{ forceVisible: true, onSaved }}>
+    <StateProbe />
+    <Input
+      name="name"
+      label="Name"
+      required={required}
+    />
+    {route === 'html' ? <button type="submit">Submit HTML</button> : null}
+    <Button action="submit">Submit action</Button>
+  </Form>
+);
 
 type View = ReturnType<typeof renderWithProviders>;
 
@@ -105,7 +103,7 @@ describe('every submission path shares one outcome', () => {
       .mockRejectedValueOnce(new Error('First refusal.'))
       .mockImplementationOnce(
         async () =>
-          new Promise((_, reject) => {
+          await new Promise((_, reject) => {
             rejectRetry = reject;
           }),
       );
@@ -216,11 +214,11 @@ describe('the SubmissionPaths story counts onSubmit calls', () => {
     const user = userEvent.setup();
 
     const paths: [string, () => Promise<unknown>][] = [
-      ['enter', async () => user.type(view.getByLabelText('Service name'), '{Enter}')],
-      ['action', async () => act(async () => fireEvent.click(view.getByRole('button', { name: 'Submit' })))],
-      ['save', async () => act(async () => fireEvent.click(view.getByRole('button', { name: 'Save' })))],
-      ['ctrl-s', async () => act(async () => fireEvent.keyDown(document, { key: 's', ctrlKey: true }))],
-      ['cmd-s', async () => act(async () => fireEvent.keyDown(document, { key: 's', metaKey: true }))],
+      ['enter', async () => await user.type(view.getByLabelText('Service name'), '{Enter}')],
+      ['action', async () => await act(async () => fireEvent.click(view.getByRole('button', { name: 'Submit' })))],
+      ['save', async () => await act(async () => fireEvent.click(view.getByRole('button', { name: 'Save' })))],
+      ['ctrl-s', async () => await act(async () => fireEvent.keyDown(document, { key: 's', ctrlKey: true }))],
+      ['cmd-s', async () => await act(async () => fireEvent.keyDown(document, { key: 's', metaKey: true }))],
     ];
 
     let expected = 0;

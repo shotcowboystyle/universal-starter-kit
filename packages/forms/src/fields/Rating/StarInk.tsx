@@ -12,12 +12,10 @@ import type { StarInkProps } from './types';
  * The native counterpart has no cascade to borrow and owns its own layer
  * stack instead; see `StarInk.native.tsx`.
  */
-export const StarInk = ({ StarIcon, size, filled, filledColor, emptyColor }: StarInkProps) => {
-  return (
-    <StarIcon
-      size={size}
-      weight={filled ? 'fill' : 'regular'}
-      color={filled ? filledColor : emptyColor}
-    />
-  );
-};
+export const StarInk = ({ StarIcon, size, filled, filledColor, emptyColor }: StarInkProps) => (
+  <StarIcon
+    size={size}
+    weight={filled ? 'fill' : 'regular'}
+    color={filled ? filledColor : emptyColor}
+  />
+);

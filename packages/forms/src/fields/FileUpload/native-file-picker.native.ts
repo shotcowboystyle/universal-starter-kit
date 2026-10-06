@@ -70,9 +70,7 @@ export const isImageOnlyAccept = (accept?: string): boolean => {
   );
 };
 
-export const isNativeFilePickerAvailable = (): boolean => {
-  return loadDocumentPicker() !== null || loadImagePicker() !== null;
-};
+export const isNativeFilePickerAvailable = (): boolean => loadDocumentPicker() !== null || loadImagePicker() !== null;
 
 const pickFromPhotoLibrary = async (request: NativePickRequest): Promise<NativePickOutcome | null> => {
   const picker = loadImagePicker();

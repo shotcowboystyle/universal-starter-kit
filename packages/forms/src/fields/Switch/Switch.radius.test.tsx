@@ -72,8 +72,8 @@ const mountSwitch = (
   stop: BorderRadius,
   scheme: (typeof SCHEMES)[number],
   extra?: Partial<Record<(typeof STATE_BAGS)[number], { borderRadius: BorderRadius }>>,
-) => {
-  return renderWithProviders(
+) =>
+  renderWithProviders(
     <Preset
       overrides={{
         borderRadius: stop,
@@ -89,7 +89,6 @@ const mountSwitch = (
       />
     </Preset>,
   );
-};
 
 const parts = (result: ReturnType<typeof renderWithProviders>) => {
   const track = result.getSwitch();

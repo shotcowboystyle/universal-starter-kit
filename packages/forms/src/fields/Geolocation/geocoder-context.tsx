@@ -13,13 +13,11 @@ const GeocoderContext = createContext<Geocoder | null>(null);
  * opts a field out. Create the geocoder once (module scope or `useMemo`), not
  * per render.
  */
-export const GeocoderProvider = ({ geocoder, children }: { geocoder: Geocoder | null; children?: ReactNode }) => {
-  return <GeocoderContext.Provider value={geocoder}>{children}</GeocoderContext.Provider>;
-};
+export const GeocoderProvider = ({ geocoder, children }: { geocoder: Geocoder | null; children?: ReactNode }) => (
+  <GeocoderContext.Provider value={geocoder}>{children}</GeocoderContext.Provider>
+);
 
-export const useGeocoder = (): Geocoder | null => {
-  return useContext(GeocoderContext);
-};
+export const useGeocoder = (): Geocoder | null => useContext(GeocoderContext);
 
 /**
  * The provider's address for a pair, or null while it resolves, when no

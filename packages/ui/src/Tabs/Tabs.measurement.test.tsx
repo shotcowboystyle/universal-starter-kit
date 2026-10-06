@@ -55,11 +55,12 @@ const fixture = (mode: 'value' | 'defaultValue' = 'value') => {
   const host = rendered.container.querySelector('[data-tabs-scroll="true"]') as any;
   expect(typeof host.scrollTo).toBe('function');
   const scroll = vi.spyOn(host, 'scrollTo').mockImplementation(() => {});
-  const viewport = async (width: number) => act(() => observed.scroll.onLayout({ nativeEvent: { layout: { width } } }));
-  const content = async (width: number) => act(() => observed.scroll.onContentSizeChange(width, 40));
-  const active = async (layout = last) => act(() => observed.interactions.get('tab-5')('select', layout));
+  const viewport = async (width: number) =>
+    await act(() => observed.scroll.onLayout({ nativeEvent: { layout: { width } } }));
+  const content = async (width: number) => await act(() => observed.scroll.onContentSizeChange(width, 40));
+  const active = async (layout = last) => await act(() => observed.interactions.get('tab-5')('select', layout));
   const manualScroll = async (x: number) =>
-    act(() => observed.scroll.onScroll({ nativeEvent: { contentOffset: { x } } }));
+    await act(() => observed.scroll.onScroll({ nativeEvent: { contentOffset: { x } } }));
   return { ...rendered, scroll, viewport, content, active, manualScroll };
 };
 

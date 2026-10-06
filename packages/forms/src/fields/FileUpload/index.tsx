@@ -3,9 +3,8 @@ import { useTouchSurface, ensureFocusVisibleRing, ensureKeyboardModalityTracking
 import type { DeepKeys, DeepValue } from '@tanstack/form-core';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { DragEvent, ReactNode } from 'react';
-import { useProps } from 'tamagui';
+import { useProps, Image, isWeb, Text, XStack, YStack, styled } from 'tamagui';
 import type { SizeTokens } from 'tamagui';
-import { Image, isWeb, Text, XStack, YStack, styled } from 'tamagui';
 
 import { Button } from '../../Button';
 import { Field, FieldLayout } from '../../FieldLayout';

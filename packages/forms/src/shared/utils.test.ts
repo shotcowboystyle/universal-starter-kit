@@ -222,9 +222,7 @@ describe('clampRadiusInStateProps', () => {
 });
 
 describe('getFieldError', () => {
-  const makeField = (errors: string[]) => {
-    return { state: { meta: { errors } } } as any;
-  };
+  const makeField = (errors: string[]) => ({ state: { meta: { errors } } }) as any;
 
   it('returns propError when provided', () => {
     expect(getFieldError(makeField(['field error']), 'prop error')).toBe('prop error');

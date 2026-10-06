@@ -238,23 +238,21 @@ const preferBuiltWorkspaceEntryPlugin = (): Plugin => {
  * Aliasing to react-native-web redirects those imports to the web-safe shim,
  * so the real react-native package is never touched during SSR bundling.
  */
-const ssrReactNativeAliasPlugin = (): Plugin => {
-  return {
-    name: 'multiplatform-ssr-react-native-alias',
-    enforce: 'post',
-    configResolved(config) {
-      const ssrEnv = (config as any).environments?.ssr;
-      if (!ssrEnv?.resolve) {
-        return;
-      }
-      const alias: { find: string | RegExp; replacement: string }[] = ssrEnv.resolve.alias ?? [];
-      if (!alias.some((a: any) => a.find === 'react-native')) {
-        alias.push({ find: 'react-native', replacement: 'react-native-web' });
-      }
-      ssrEnv.resolve.alias = alias;
-    },
-  };
-};
+const ssrReactNativeAliasPlugin = (): Plugin => ({
+  name: 'multiplatform-ssr-react-native-alias',
+  enforce: 'post',
+  configResolved(config) {
+    const ssrEnv = (config as any).environments?.ssr;
+    if (!ssrEnv?.resolve) {
+      return;
+    }
+    const alias: { find: string | RegExp; replacement: string }[] = ssrEnv.resolve.alias ?? [];
+    if (!alias.some((a: any) => a.find === 'react-native')) {
+      alias.push({ find: 'react-native', replacement: 'react-native-web' });
+    }
+    ssrEnv.resolve.alias = alias;
+  },
+});
 
 /**
  * Adds packages that have broken or missing ESM default exports to the client
@@ -265,59 +263,57 @@ const ssrReactNativeAliasPlugin = (): Plugin => {
  * client conditions (["vxrn-web"]) skip "import" and land on "default" →
  * lib/src/index.js (CJS, named-only). Pre-bundling forces the import condition.
  */
-const clientBrokenEsmPlugin = (): Plugin => {
-  return {
-    name: 'multiplatform-client-broken-esm',
-    configResolved(config) {
-      const clientEnv = (config as any).environments?.client;
-      if (!clientEnv?.optimizeDeps) {
-        return;
+const clientBrokenEsmPlugin = (): Plugin => ({
+  name: 'multiplatform-client-broken-esm',
+  configResolved(config) {
+    const clientEnv = (config as any).environments?.client;
+    if (!clientEnv?.optimizeDeps) {
+      return;
+    }
+    const extras = [
+      'use-latest-callback',
+      // CJS packages in vxrn's dedupe list that are not auto-added to the
+      // client environment optimizer, causing "doesn't provide an export
+      // named 'default'" errors when served raw by Vite.
+      'escape-string-regexp',
+      // Pure CJS with no "import" condition — subpath must be pre-bundled
+      // explicitly so named exports (useSyncExternalStoreWithSelector) exist.
+      // Root entry is SSR-external (Node handles it); client needs pre-bundle.
+      'use-sync-external-store/with-selector',
+      // @react-navigation/core ships a nested node_modules/react-is (CJS).
+      // resolve.dedupe forces the root copy to be used; pre-bundling it here
+      // adds ESM interop so named exports like isValidElementType are available.
+      'react-is',
+      // CJS-only packages imported by @react-navigation/* TypeScript source.
+      // When the client loads @react-navigation/* via the "source" condition
+      // (TypeScript), these transitive CJS deps get served raw and lack ESM
+      // named exports. Pre-bundling generates the ESM interop wrappers.
+      'fast-deep-equal',
+      'color',
+      // query-string v7 is CJS-only; imported by @react-navigation/core for URL parsing.
+      'query-string',
+      // react's JSX runtimes are CJS with no "import" condition, so a deep
+      // import of a @repo/* src .tsx served raw fails with
+      // "does not provide an export named 'jsx'".
+      'react/jsx-runtime',
+      'react/jsx-dev-runtime',
+      // Vite never discovers a dep imported from a file inside
+      // node_modules; it serves it raw. A consumer's deep import of a
+      // @repo/* src file sits in node_modules, so its bare
+      // "tamagui" import went raw and dragged react-native-web in raw, whose
+      // CJS deps (@react-native/normalize-colors, inline-style-prefixer/lib)
+      // have no ESM default. The barrel path never meets it.
+      'tamagui',
+    ];
+    const include: string[] = clientEnv.optimizeDeps.include ?? [];
+    for (const dep of extras) {
+      if (!include.includes(dep)) {
+        include.push(dep);
       }
-      const extras = [
-        'use-latest-callback',
-        // CJS packages in vxrn's dedupe list that are not auto-added to the
-        // client environment optimizer, causing "doesn't provide an export
-        // named 'default'" errors when served raw by Vite.
-        'escape-string-regexp',
-        // Pure CJS with no "import" condition — subpath must be pre-bundled
-        // explicitly so named exports (useSyncExternalStoreWithSelector) exist.
-        // Root entry is SSR-external (Node handles it); client needs pre-bundle.
-        'use-sync-external-store/with-selector',
-        // @react-navigation/core ships a nested node_modules/react-is (CJS).
-        // resolve.dedupe forces the root copy to be used; pre-bundling it here
-        // adds ESM interop so named exports like isValidElementType are available.
-        'react-is',
-        // CJS-only packages imported by @react-navigation/* TypeScript source.
-        // When the client loads @react-navigation/* via the "source" condition
-        // (TypeScript), these transitive CJS deps get served raw and lack ESM
-        // named exports. Pre-bundling generates the ESM interop wrappers.
-        'fast-deep-equal',
-        'color',
-        // query-string v7 is CJS-only; imported by @react-navigation/core for URL parsing.
-        'query-string',
-        // react's JSX runtimes are CJS with no "import" condition, so a deep
-        // import of a @repo/* src .tsx served raw fails with
-        // "does not provide an export named 'jsx'".
-        'react/jsx-runtime',
-        'react/jsx-dev-runtime',
-        // Vite never discovers a dep imported from a file inside
-        // node_modules; it serves it raw. A consumer's deep import of a
-        // @repo/* src file sits in node_modules, so its bare
-        // "tamagui" import went raw and dragged react-native-web in raw, whose
-        // CJS deps (@react-native/normalize-colors, inline-style-prefixer/lib)
-        // have no ESM default. The barrel path never meets it.
-        'tamagui',
-      ];
-      const include: string[] = clientEnv.optimizeDeps.include ?? [];
-      for (const dep of extras) {
-        if (!include.includes(dep)) {
-          include.push(dep);
-        }
-      }
-      clientEnv.optimizeDeps.include = include;
-    },
-  };
-};
+    }
+    clientEnv.optimizeDeps.include = include;
+  },
+});
 
 const registerNativeEngineIoBrowserTransports = (): void => {
   const g = globalThis as unknown as { __vxrnAddNativePlugins?: unknown[] };
@@ -700,9 +696,8 @@ const registerNativeWeb3Stub = (): void => {
   });
 };
 
-const requiresReact = (id: string): boolean => {
-  return id === 'use-sync-external-store' || id.startsWith('use-sync-external-store/');
-};
+const requiresReact = (id: string): boolean =>
+  id === 'use-sync-external-store' || id.startsWith('use-sync-external-store/');
 
 /**
  * Force-append CJS-only ids to `ssr.external`. The one() plugin REPLACES
@@ -710,26 +705,24 @@ const requiresReact = (id: string): boolean => {
  * set statically by createViteConfig — configResolved runs after all config
  * hooks are merged, so appends here survive.
  */
-const ssrCjsExternalFixPlugin = (extras: string[]): Plugin => {
-  return {
-    name: 'multiplatform-ssr-cjs-external-fix',
-    configResolved(config) {
-      const external = config.ssr.external ?? [];
-      if (!Array.isArray(external)) {
-        return;
-      } // true = everything external already
-      for (const e of extras) {
-        if (config.command === 'build' && requiresReact(e)) {
-          continue;
-        }
-        if (!external.includes(e)) {
-          external.push(e);
-        }
+const ssrCjsExternalFixPlugin = (extras: string[]): Plugin => ({
+  name: 'multiplatform-ssr-cjs-external-fix',
+  configResolved(config) {
+    const external = config.ssr.external ?? [];
+    if (!Array.isArray(external)) {
+      return;
+    } // true = everything external already
+    for (const e of extras) {
+      if (config.command === 'build' && requiresReact(e)) {
+        continue;
       }
-      (config.ssr as { external?: string[] | boolean }).external = external;
-    },
-  };
-};
+      if (!external.includes(e)) {
+        external.push(e);
+      }
+    }
+    (config.ssr as { external?: string[] | boolean }).external = external;
+  },
+});
 
 /**
  * Creates a shared Vite configuration for workspace apps.

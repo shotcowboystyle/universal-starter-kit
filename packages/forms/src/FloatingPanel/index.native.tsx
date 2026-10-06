@@ -94,9 +94,7 @@ export type { FloatingPanelProps } from './index';
 export { floatingPanelActionProps, isNestedPanelAction } from './nested-action';
 
 /** Native never has a >sm web viewport; AdaptivePopup uses this to pick Sheet mode. */
-export const useViewportGtSm = () => {
-  return false;
-};
+export const useViewportGtSm = () => false;
 
 const sheetMaxHeightRatio = 0.85;
 // Home-indicator / gesture-bar clearance.

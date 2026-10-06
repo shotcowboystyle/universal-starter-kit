@@ -10,18 +10,16 @@ import { Label } from './index';
  * is the one above it. The `Input` field brings its own label, so it cannot
  * stand here.
  */
-const Control = ({ disabled, ...area }: { id: string; placeholder?: string; disabled?: boolean }) => {
-  return (
-    <InputParts>
-      <InputParts.Box disabled={disabled}>
-        <InputParts.Area
-          disabled={disabled}
-          {...area}
-        />
-      </InputParts.Box>
-    </InputParts>
-  );
-};
+const Control = ({ disabled, ...area }: { id: string; placeholder?: string; disabled?: boolean }) => (
+  <InputParts>
+    <InputParts.Box disabled={disabled}>
+      <InputParts.Area
+        disabled={disabled}
+        {...area}
+      />
+    </InputParts.Box>
+  </InputParts>
+);
 
 const meta: Meta<typeof Label> = {
   title: 'Forms/Label',

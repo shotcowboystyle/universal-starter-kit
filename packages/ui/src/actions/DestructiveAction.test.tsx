@@ -15,13 +15,9 @@ import { __resetActionDevWarnSeen } from './dev-warn';
 import { resolveDestructiveSeverity, severityRequiresConfirm, severityUsesDangerTone } from './severity';
 
 /** Dialog portals into document.body — query there, not the RTL container. */
-const root = (): HTMLElement => {
-  return document.body;
-};
+const root = (): HTMLElement => document.body;
 
-const alertdialog = (): Element | null => {
-  return root().querySelector('[role="alertdialog"]');
-};
+const alertdialog = (): Element | null => root().querySelector('[role="alertdialog"]');
 
 const dialogButtonByLabel = (label: string): Element => {
   const scope = alertdialog() ?? root();

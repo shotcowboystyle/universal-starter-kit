@@ -20,34 +20,32 @@ vi.mock('@repo/platform', async (original) => ({
   },
 }));
 const options = ['Alpha', 'Beta', 'Gamma', 'Delta'].map((label) => ({ label, value: label }));
-const Fixture = () => {
-  return (
-    <TestProviders>
-      <Input aria-label="Input" />
-      <TextArea aria-label="Area" />
-      <InputParts>
-        <InputParts.Box>
-          <InputParts.Area aria-label="Compound" />
-          <InputParts.Icon>
-            <span>Icon</span>
-          </InputParts.Icon>
-          <InputParts.Button aria-label="End">End</InputParts.Button>
-        </InputParts.Box>
-      </InputParts>
-      <SearchInput aria-label="Search" />
-      <Select
-        aria-label="Select"
-        options={options}
-        defaultValue="Alpha"
-      />
-      <Combobox
-        aria-label="Combobox"
-        options={options}
-        defaultValue="Alpha"
-      />
-    </TestProviders>
-  );
-};
+const Fixture = () => (
+  <TestProviders>
+    <Input aria-label="Input" />
+    <TextArea aria-label="Area" />
+    <InputParts>
+      <InputParts.Box>
+        <InputParts.Area aria-label="Compound" />
+        <InputParts.Icon>
+          <span>Icon</span>
+        </InputParts.Icon>
+        <InputParts.Button aria-label="End">End</InputParts.Button>
+      </InputParts.Box>
+    </InputParts>
+    <SearchInput aria-label="Search" />
+    <Select
+      aria-label="Select"
+      options={options}
+      defaultValue="Alpha"
+    />
+    <Combobox
+      aria-label="Combobox"
+      options={options}
+      defaultValue="Alpha"
+    />
+  </TestProviders>
+);
 describe('touch recipe hydration', () => {
   it.each([true, false])('hydrates actual controls on repeated coarse mount %s', async (touch) => {
     modality.touch = touch;

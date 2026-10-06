@@ -298,13 +298,12 @@ if (typeof window !== 'undefined' && !window.indexedDB) {
 // Stub fetch to prevent real network calls
 vi.stubGlobal(
   'fetch',
-  vi.fn(async () =>
-    Promise.resolve(
+  vi.fn(
+    async () =>
       new Response(JSON.stringify({ data: [] }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
       }),
-    ),
   ),
 );
 

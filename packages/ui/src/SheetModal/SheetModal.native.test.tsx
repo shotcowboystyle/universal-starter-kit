@@ -53,15 +53,13 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-const panel = (open: boolean) => {
-  return (
-    <SheetModal
-      open={open}
-      onOpenChange={onOpenChange}>
-      <Text>row</Text>
-    </SheetModal>
-  );
-};
+const panel = (open: boolean) => (
+  <SheetModal
+    open={open}
+    onOpenChange={onOpenChange}>
+    <Text>row</Text>
+  </SheetModal>
+);
 
 describe('SheetModal native presentation lifecycle', () => {
   it('enters without onShow and ignores onShow for the same presentation', () => {

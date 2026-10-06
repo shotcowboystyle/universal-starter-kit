@@ -10,9 +10,7 @@ export const zoomFromDelta = (delta: number): number => {
   return Math.max(1, Math.min(19, Math.round(Math.log2(360 / (clamped * 2)))));
 };
 
-export const lngToTile = (lng: number, zoom: number): number => {
-  return ((lng + 180) / 360) * 2 ** zoom;
-};
+export const lngToTile = (lng: number, zoom: number): number => ((lng + 180) / 360) * 2 ** zoom;
 
 export const latToTile = (lat: number, zoom: number): number => {
   const clamped = Math.max(-85.05112878, Math.min(85.05112878, lat));
@@ -20,9 +18,7 @@ export const latToTile = (lat: number, zoom: number): number => {
   return ((1 - Math.log(Math.tan(rad) + 1 / Math.cos(rad)) / Math.PI) / 2) * 2 ** zoom;
 };
 
-export const tileToLng = (x: number, zoom: number): number => {
-  return (x / 2 ** zoom) * 360 - 180;
-};
+export const tileToLng = (x: number, zoom: number): number => (x / 2 ** zoom) * 360 - 180;
 
 export const tileToLat = (y: number, zoom: number): number => {
   const rad = Math.atan(Math.sinh(Math.PI * (1 - (2 * y) / 2 ** zoom)));

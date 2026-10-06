@@ -87,9 +87,7 @@ export const DebugLayout = <DebugViewProps,>({
 export const createWithDebugLayout = <DebugViewProps,>(
   extraLayouts?: WithLayout[],
   debugLayoutProps: CreateWithDebugLayout<DebugViewProps> = {},
-) => {
-  return createWithLayout<DebugLayoutProps<DebugViewProps>>(DebugLayout, extraLayouts, debugLayoutProps);
-};
+) => createWithLayout<DebugLayoutProps<DebugViewProps>>(DebugLayout, extraLayouts, debugLayoutProps);
 
 export const withDebugLayout = createWithDebugLayout();
 

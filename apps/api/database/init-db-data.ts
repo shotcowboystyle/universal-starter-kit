@@ -36,7 +36,7 @@ const requiredEnvVars = ['DATABASE_URL'];
 const missingEnvVars = requiredEnvVars.filter((envVar) => !process.env[envVar]);
 
 if (missingEnvVars.length > 0) {
-  console.error('\x1B[31mError: The following environment variables are required but missing:\x1B[0m');
+  console.error('\u001B[31mError: The following environment variables are required but missing:\u001B[0m');
   missingEnvVars.forEach((envVar) => {
     console.error(`- ${envVar}`);
   });
@@ -72,14 +72,14 @@ console.log('Environment:', {
 
 // Warn if database name is missing or incorrect
 if (!dbName || dbName === 'test') {
-  console.warn('\n\u001b[33m⚠️  WARNING: No database name specified in DATABASE_URL!\u001b[0m');
-  console.warn('\x1B[33mMongoDB will use the default "test" database.\x1B[0m');
-  console.warn('\x1B[33m\nExpected format:\x1B[0m');
-  console.warn(`\u001b[36mmongodb://user:password@host:port/${expectedDbName}?authSource=admin\x1B[0m`);
-  console.warn('\n\x1B[33mPlease update your DATABASE_URL to include the database name.\x1B[0m\n');
+  console.warn('\n\u001B[33m⚠️  WARNING: No database name specified in DATABASE_URL!\u001B[0m');
+  console.warn('\u001B[33mMongoDB will use the default "test" database.\u001B[0m');
+  console.warn('\u001B[33m\nExpected format:\u001B[0m');
+  console.warn(`\u001B[36mmongodb://user:password@host:port/${expectedDbName}?authSource=admin\u001B[0m`);
+  console.warn('\n\u001B[33mPlease update your DATABASE_URL to include the database name.\u001B[0m\n');
 } else if (dbName !== expectedDbName) {
-  console.warn(`\n\x1B[33m⚠️  WARNING: Database name is "${dbName}" but expected "${expectedDbName}"\x1B[0m`);
-  console.warn('\x1B[33mProceeding with the specified database name...\x1B[0m\n');
+  console.warn(`\n\u001B[33m⚠️  WARNING: Database name is "${dbName}" but expected "${expectedDbName}"\u001B[0m`);
+  console.warn('\u001B[33mProceeding with the specified database name...\u001B[0m\n');
 }
 
 const main = async () => {
@@ -88,7 +88,7 @@ const main = async () => {
   const isCI = process.env.CI === 'true' || process.env.VERCEL === 'true';
 
   if (!isForced && !isCI) {
-    console.log('\x1B[33mThis script will reset the database. To run it, use the --force flag.\x1B[0m');
+    console.log('\u001B[33mThis script will reset the database. To run it, use the --force flag.\u001B[0m');
     process.exit(0);
   }
 
@@ -108,10 +108,10 @@ const main = async () => {
     const taskModel = connection.model(Task.name, TaskSchema);
     const userModel = connection.model(User.name, UserSchema);
 
-    console.log('\x1B[36mInitializing database...\x1B[0m');
+    console.log('\u001B[36mInitializing database...\u001B[0m');
 
     // Clear existing data
-    console.log('\x1B[36mClearing existing data...\x1B[0m');
+    console.log('\u001B[36mClearing existing data...\u001B[0m');
     await Promise.all([
       boardModel.deleteMany({}),
       projectModel.deleteMany({}),
@@ -222,8 +222,8 @@ const main = async () => {
       },
     ]);
     console.log(`Created ${tasks.length} tasks`);
-    console.log('\x1B[32mDatabase initialized successfully!\x1B[0m');
-    console.log('\x1B[33mYou can now log in with the following test accounts:\x1B[0m');
+    console.log('\u001B[32mDatabase initialized successfully!\u001B[0m');
+    console.log('\u001B[33mYou can now log in with the following test accounts:\u001B[0m');
     users.forEach((user) => {
       console.log({
         name: user.name,

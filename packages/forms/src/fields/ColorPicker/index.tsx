@@ -256,9 +256,7 @@ const parseColorValue = (value: string | undefined, format: 'hex' | 'rgb' | 'hsl
   return { hex: rgbToHex(r, g, b), alpha, isValid: true };
 };
 
-const formatAlpha = (alpha: number): string => {
-  return (alpha / 100).toFixed(2).replace(/\.?0+$/, '');
-};
+const formatAlpha = (alpha: number): string => (alpha / 100).toFixed(2).replace(/\.?0+$/, '');
 
 const serializeColorValue = (
   hex: string,
@@ -321,9 +319,8 @@ const panelSizeMap: Record<string, number> = {
   large: 224,
 };
 
-const unrecognizedColorError = (format: 'hex' | 'rgb' | 'hsl'): string => {
-  return t('Color must be a recognized {{format}} value', { format: format.toUpperCase() });
-};
+const unrecognizedColorError = (format: 'hex' | 'rgb' | 'hsl'): string =>
+  t('Color must be a recognized {{format}} value', { format: format.toUpperCase() });
 
 const ColorBody = ({
   hue,

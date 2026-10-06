@@ -137,9 +137,8 @@ export const SANCTIONED_FOCUS_RING_OFFSETS = [
 ] as const;
 
 /** True when `offset` is one of the three sanctioned offsets. */
-export const isSanctionedFocusRingOffset = (offset: number): boolean => {
-  return (SANCTIONED_FOCUS_RING_OFFSETS as readonly number[]).includes(offset);
-};
+export const isSanctionedFocusRingOffset = (offset: number): boolean =>
+  (SANCTIONED_FOCUS_RING_OFFSETS as readonly number[]).includes(offset);
 
 /**
  * Material-style state layers as theme tokens.

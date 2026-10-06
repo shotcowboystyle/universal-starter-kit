@@ -80,9 +80,8 @@ export const chartRootA11yProps = (label: string, proof?: ChartProofDeclaration)
 };
 
 /** Audit declarations carry no paint and are never sent to native SVG. */
-export const chartMarkProps = (label: string): Record<string, unknown> => {
-  return isWeb ? { 'data-mpo-chart-mark': label } : {};
-};
+export const chartMarkProps = (label: string): Record<string, unknown> =>
+  isWeb ? { 'data-mpo-chart-mark': label } : {};
 
 /** A bar mark's box and value-end radius, for audits that cannot read a path. */
 export const chartBarProps = (box: {
@@ -91,26 +90,20 @@ export const chartBarProps = (box: {
   width: number;
   height: number;
   radius: number;
-}): Record<string, unknown> => {
-  return isWeb ? { 'data-mpo-chart-bar': [box.x, box.y, box.width, box.height, box.radius].join(',') } : {};
-};
+}): Record<string, unknown> =>
+  isWeb ? { 'data-mpo-chart-bar': [box.x, box.y, box.width, box.height, box.radius].join(',') } : {};
 
-export const chartChromeProps = (kind: 'axis' | 'grid'): Record<string, unknown> => {
-  return isWeb ? { 'data-mpo-chart-chrome': kind } : {};
-};
+export const chartChromeProps = (kind: 'axis' | 'grid'): Record<string, unknown> =>
+  isWeb ? { 'data-mpo-chart-chrome': kind } : {};
 
-export const chartDatumTextProps = (index: number): Record<string, unknown> => {
-  return isWeb ? { 'data-mpo-chart-datum-text': String(index) } : {};
-};
+export const chartDatumTextProps = (index: number): Record<string, unknown> =>
+  isWeb ? { 'data-mpo-chart-datum-text': String(index) } : {};
 
-export const chartWebProps = (props: Record<string, unknown>): Record<string, unknown> => {
-  return isWeb ? props : {};
-};
+export const chartWebProps = (props: Record<string, unknown>): Record<string, unknown> => (isWeb ? props : {});
 
 /** SVG's web presentation attribute and RNSVG's explicit native prop. */
-export const luminanceMaskProps = (): Record<string, unknown> => {
-  return isWeb ? { 'mask-type': 'luminance' } : { maskType: 'luminance' };
-};
+export const luminanceMaskProps = (): Record<string, unknown> =>
+  isWeb ? { 'mask-type': 'luminance' } : { maskType: 'luminance' };
 
 export interface DatumTargetInput {
   /** Per-datum accessible name (describeDatum output). */

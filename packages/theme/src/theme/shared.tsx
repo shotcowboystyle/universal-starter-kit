@@ -18,9 +18,7 @@ export const registerPreset = (name: string, preset: Preset): void => {
   presetRegistry.set(name, preset);
 };
 
-export const getPresetNames = (): string[] => {
-  return Array.from(presetRegistry.keys());
-};
+export const getPresetNames = (): string[] => Array.from(presetRegistry.keys());
 
 /**
  * Look up a registered preset by name.

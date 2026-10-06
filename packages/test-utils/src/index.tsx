@@ -67,8 +67,8 @@ const tamaguiConfig = (() => {
   }
 })();
 
-const createDefaultQueryClient = (): QueryClient => {
-  return new QueryClient({
+const createDefaultQueryClient = (): QueryClient =>
+  new QueryClient({
     defaultOptions: {
       queries: {
         retry: false,
@@ -79,7 +79,6 @@ const createDefaultQueryClient = (): QueryClient => {
       },
     },
   });
-};
 
 const enhanceRenderResult = (result: RenderResult): EnhancedRenderResult => {
   const { container } = result;
@@ -246,20 +245,18 @@ const enhanceRenderResult = (result: RenderResult): EnhancedRenderResult => {
  * Wraps children in TamaguiProvider + YStack.
  * Useful when you need to pass a wrapper directly to `render()`.
  */
-export const TestProviders = ({ children }: { children: ReactNode }) => {
-  return (
-    <TamaguiProvider
-      config={tamaguiConfig}
-      defaultTheme="light"
-      disableInjectCSS>
-      <YStack
-        flex={1}
-        backgroundColor="$background">
-        {children}
-      </YStack>
-    </TamaguiProvider>
-  );
-};
+export const TestProviders = ({ children }: { children: ReactNode }) => (
+  <TamaguiProvider
+    config={tamaguiConfig}
+    defaultTheme="light"
+    disableInjectCSS>
+    <YStack
+      flex={1}
+      backgroundColor="$background">
+      {children}
+    </YStack>
+  </TamaguiProvider>
+);
 
 // ─── Render Functions ────────────────────────────────────────────────────────
 

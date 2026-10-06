@@ -1,8 +1,7 @@
 import { Store } from '@tanstack/store';
 
 import { createPersistStore } from './persist';
-import type { PersistStore } from './persist';
-import type { Storage } from './persist';
+import type { PersistStore, Storage } from './persist';
 import { storage as defaultStorage } from './storage';
 
 export interface StoreOptions {

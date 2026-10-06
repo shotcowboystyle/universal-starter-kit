@@ -154,9 +154,8 @@ const tryFormatWith = (num: number, options: Intl.NumberFormatOptions, locale?: 
   }
 };
 
-const formatWith = (num: number, options: Intl.NumberFormatOptions, locale?: string): string => {
-  return tryFormatWith(num, options, locale) ?? String(num);
-};
+const formatWith = (num: number, options: Intl.NumberFormatOptions, locale?: string): string =>
+  tryFormatWith(num, options, locale) ?? String(num);
 
 /**
  * Cardinal / aggregate register — grouped digits, at most two fraction

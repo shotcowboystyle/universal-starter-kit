@@ -320,8 +320,8 @@ describe('Table Primitives', () => {
     expect(low.querySelector('td [data-text-accent]')).toBeNull();
   });
 
-  const bodyTable = (overrides: Record<string, string>, props: Record<string, unknown> = {}) => {
-    return renderWithProviders(
+  const bodyTable = (overrides: Record<string, string>, props: Record<string, unknown> = {}) =>
+    renderWithProviders(
       <Preset overrides={overrides as any}>
         <Table {...props}>
           <Table.Head>
@@ -340,7 +340,6 @@ describe('Table Primitives', () => {
         </Table>
       </Preset>,
     ).container;
-  };
 
   // Token values render as atomic classes (`_h-t-size-3`), which jsdom's
   // computed style cannot resolve, so the knob is read off the class list.
@@ -388,8 +387,8 @@ describe('Table Primitives', () => {
   });
 
   describe('tableZebra (K4: Table, DataTable, SimpleTable and ChildTable honour it)', () => {
-    const zebraTable = (tableZebra: 'on' | 'off', body: React.ReactNode, props: Record<string, unknown> = {}) => {
-      return renderWithProviders(
+    const zebraTable = (tableZebra: 'on' | 'off', body: React.ReactNode, props: Record<string, unknown> = {}) =>
+      renderWithProviders(
         <Preset overrides={{ tableZebra }}>
           <Table {...props}>
             <Table.Head>
@@ -406,7 +405,6 @@ describe('Table Primitives', () => {
           </Table>
         </Preset>,
       ).container;
-    };
 
     const names = ['Ada', 'Grace', 'Edsger', 'Barbara'];
     const plainRows = names.map((name) => (

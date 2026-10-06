@@ -22,18 +22,13 @@ const mannerheim: GeocodeResult = {
   description: 'Kamppi, Helsinki, Finland',
 };
 
-const mockGeocode = (results: GeocodeResult[] = [mannerheim]) => {
-  return vi.fn().mockResolvedValue(results);
-};
+const mockGeocode = (results: GeocodeResult[] = [mannerheim]) => vi.fn().mockResolvedValue(results);
 
-const mockReverse = (result: GeocodeResult | null = mannerheim) => {
-  return vi.fn().mockResolvedValue(result);
-};
+const mockReverse = (result: GeocodeResult | null = mannerheim) => vi.fn().mockResolvedValue(result);
 
-const searchInput = (container: HTMLElement | Document = document) => {
-  return (container.querySelector("[data-testid='geolocation-search']") ??
+const searchInput = (container: HTMLElement | Document = document) =>
+  (container.querySelector("[data-testid='geolocation-search']") ??
     container.querySelector("[aria-label='Search for a location']")) as HTMLInputElement | null;
-};
 
 const mapControlSelector =
   "button, input, textarea, select, [role='button'], [role='combobox'], [role='option'], [tabindex]";

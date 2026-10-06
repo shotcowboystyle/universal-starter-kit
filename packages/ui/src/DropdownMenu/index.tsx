@@ -238,18 +238,16 @@ const decorateTrigger = (trigger: ReactNode, open: boolean, onArrow: (prefer: 'f
   });
 };
 
-const DropdownMenuSeparator = (props: DropdownMenuSeparatorProps) => {
-  return (
-    <SeparatorLine
-      role="separator"
-      {...hairline.height}
-      {...props}
-    />
-  );
-};
+const DropdownMenuSeparator = (props: DropdownMenuSeparatorProps) => (
+  <SeparatorLine
+    role="separator"
+    {...hairline.height}
+    {...props}
+  />
+);
 
-const renderEntries = (items: DropdownMenuEntry[]) => {
-  return items.map((entry, index) =>
+const renderEntries = (items: DropdownMenuEntry[]) =>
+  items.map((entry, index) =>
     'separator' in entry && entry.separator ? (
       <DropdownMenuSeparator key={`separator-${index}`} />
     ) : 'checked' in entry && entry.checked !== undefined ? (
@@ -278,15 +276,10 @@ const renderEntries = (items: DropdownMenuEntry[]) => {
       </DropdownMenuItem>
     ),
   );
-};
 
-const DropdownMenuTrigger = ({ children }: DropdownMenuTriggerProps) => {
-  return <>{children}</>;
-};
+const DropdownMenuTrigger = ({ children }: DropdownMenuTriggerProps) => <>{children}</>;
 
-const DropdownMenuContent = ({ children }: DropdownMenuContentProps) => {
-  return <>{children}</>;
-};
+const DropdownMenuContent = ({ children }: DropdownMenuContentProps) => <>{children}</>;
 
 const DropdownMenuList = ({
   children,
@@ -367,7 +360,7 @@ const DropdownMenuList = ({
         }
         case 'Enter':
         case ' ': {
-          if (index >= 0) {
+          if (index !== -1) {
             event.preventDefault();
             items[index].click();
           }
@@ -390,7 +383,7 @@ const DropdownMenuList = ({
             state.buffer = now - state.at > 600 ? event.key : state.buffer + event.key;
             state.at = now;
             const query = state.buffer.toLowerCase();
-            const start = index !== -1 ? index : 0;
+            const start = index === -1 ? 0 : index;
             const ordered = [...items.slice(start + 1), ...items.slice(0, start + 1)];
             const match = ordered.find((el) => (el.textContent ?? '').trim().toLowerCase().startsWith(query));
             if (match) {

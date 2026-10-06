@@ -158,7 +158,7 @@ export const ViewSwitcher = ({ views, currentView, onViewChange, testID = 'view-
             return focusIdx;
           }
           const activeIdx = views.findIndex((v) => v.type === currentView);
-          return activeIdx !== -1 ? activeIdx : 0;
+          return activeIdx === -1 ? 0 : activeIdx;
         })();
         const isTabStop = viewIndex === anchorIndex;
         const isSelected = view.type === currentView;

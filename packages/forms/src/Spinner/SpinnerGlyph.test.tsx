@@ -26,13 +26,11 @@ const svg = (container: HTMLElement): SVGElement => {
   return node as unknown as SVGElement;
 };
 
-const circles = (container: HTMLElement): SVGElement[] => {
-  return Array.from(container.querySelectorAll('circle')) as unknown as SVGElement[];
-};
+const circles = (container: HTMLElement): SVGElement[] =>
+  Array.from(container.querySelectorAll('circle')) as unknown as SVGElement[];
 
-const stroke = (container: HTMLElement): string | null => {
-  return container.querySelector('[data-stroke]')?.getAttribute('data-stroke') ?? null;
-};
+const stroke = (container: HTMLElement): string | null =>
+  container.querySelector('[data-stroke]')?.getAttribute('data-stroke') ?? null;
 
 const Probe = ({ color }: { color?: string }) => {
   const stroke = useSpinnerStroke(color);

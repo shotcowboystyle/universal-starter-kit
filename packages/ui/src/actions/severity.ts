@@ -36,11 +36,9 @@ export const resolveDestructiveSeverity = (hints: DestructiveSeverityHints = {})
 };
 
 /** Medium/high tiers require a confirm gate. */
-export const severityRequiresConfirm = (severity: DestructiveSeverity): boolean => {
-  return severity === 'medium' || severity === 'high';
-};
+export const severityRequiresConfirm = (severity: DestructiveSeverity): boolean =>
+  severity === 'medium' || severity === 'high';
 
 /** Danger / error tone is reserved for medium+ (Pajamas / DG-DX). */
-export const severityUsesDangerTone = (severity: DestructiveSeverity): boolean => {
-  return severity === 'medium' || severity === 'high';
-};
+export const severityUsesDangerTone = (severity: DestructiveSeverity): boolean =>
+  severity === 'medium' || severity === 'high';

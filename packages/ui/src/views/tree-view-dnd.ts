@@ -150,9 +150,7 @@ export const toWdIndex = (
   session: Pick<TreeDragSession, 'sourceParentId' | 'sourceIndex'>,
   parentId: string | null,
   childIndex: number,
-): number => {
-  return parentId === session.sourceParentId && childIndex > session.sourceIndex ? childIndex - 1 : childIndex;
-};
+): number => (parentId === session.sourceParentId && childIndex > session.sourceIndex ? childIndex - 1 : childIndex);
 
 // ── Keyboard drag state machine (WAI-ARIA drag pattern) ───────
 

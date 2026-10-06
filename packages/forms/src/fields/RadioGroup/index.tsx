@@ -10,20 +10,13 @@ import type { ControlStateProps, DisabledChromeProps, KnobProps, KnobRecipe } fr
 import { getSize } from '@tamagui/get-token';
 import type { ReactNode } from 'react';
 import { useCallback, useRef, useState } from 'react';
-import {
-  type FontSizeTokens,
-  type LabelProps,
-  type SizeTokens,
-  type TamaguiElement,
-  Label,
-  type RadioGroupProps as TamaguiRadioGroupProps,
-  RadioGroup as TamaguiRadioGroup,
-  View,
-  XStack,
-  YStack,
-  getVariableValue,
-  isWeb,
-  styled,
+import { Label, RadioGroup as TamaguiRadioGroup, View, XStack, YStack, getVariableValue, isWeb, styled } from 'tamagui';
+import type {
+  FontSizeTokens,
+  LabelProps,
+  SizeTokens,
+  TamaguiElement,
+  RadioGroupProps as TamaguiRadioGroupProps,
 } from 'tamagui';
 
 import { Field, FieldLayout } from '../../FieldLayout';
@@ -539,7 +532,7 @@ export const RadioGroup = ({
     // Exactly one radio stays tabbable: the checked enabled one, else the
     // first enabled one (WAI-ARIA radio-group pattern).
     const checkedEnabled = options.findIndex((o) => o.value === currentValue && !(disabled || o.disabled));
-    const tabStopIndex = checkedEnabled !== -1 ? checkedEnabled : options.findIndex((o) => !(disabled || o.disabled));
+    const tabStopIndex = checkedEnabled === -1 ? options.findIndex((o) => !(disabled || o.disabled)) : checkedEnabled;
 
     if (card) {
       const layout = getCheckboxCardLayout(knobProps.space);

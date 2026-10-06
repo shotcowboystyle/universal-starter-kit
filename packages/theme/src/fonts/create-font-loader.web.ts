@@ -1,6 +1,6 @@
 import type { FontLoader, FontLoaderConfig } from './types';
 
-export const createFontLoader = (_config: FontLoaderConfig): FontLoader => {
+export const createFontLoader = (_config: FontLoaderConfig): FontLoader =>
   // On web, Inter is intentionally NOT loaded here. This module previously
   // side-effect imported @tamagui/font-inter/css/{400,700}.css, which embed
   // the faces as base64 woff (font-display: block) — ~270 KB that vite
@@ -16,5 +16,4 @@ export const createFontLoader = (_config: FontLoaderConfig): FontLoader => {
   // .storybook/preview-head.html, and core's CreateRootLayout.web.tsx
   // `interFonts` head flag). Custom font CSS must likewise be imported by
   // the consumer shell, not by this package.
-  return { importFonts: () => ({}) };
-};
+  ({ importFonts: () => ({}) });

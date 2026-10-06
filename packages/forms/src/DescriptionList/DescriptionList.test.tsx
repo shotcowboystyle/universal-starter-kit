@@ -57,13 +57,9 @@ const stubContainerWidth = (width: number) => {
   );
 };
 
-const list = (root: HTMLElement) => {
-  return root.querySelector('[data-mpo-description-list]') as HTMLElement | null;
-};
+const list = (root: HTMLElement) => root.querySelector('[data-mpo-description-list]') as HTMLElement | null;
 
-const host = (root: HTMLElement) => {
-  return root.querySelector('[data-mpo-description-list-host]') as HTMLElement | null;
-};
+const host = (root: HTMLElement) => root.querySelector('[data-mpo-description-list-host]') as HTMLElement | null;
 
 describe('DescriptionList', () => {
   it('composes FieldDisplay for each typed row — never a parallel formatter', () => {

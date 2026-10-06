@@ -6,11 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FieldLayout, useFieldDescribedBy } from './FieldLayout';
 import { __resetDevWarnSeen } from './shared/dev-warn';
 
-const classIncludes = (container: HTMLElement, fragment: string): boolean => {
-  return Array.from(container.querySelectorAll('[class]')).some((el) =>
-    (el.getAttribute('class') ?? '').includes(fragment),
-  );
-};
+const classIncludes = (container: HTMLElement, fragment: string): boolean =>
+  Array.from(container.querySelectorAll('[class]')).some((el) => (el.getAttribute('class') ?? '').includes(fragment));
 
 describe('FieldLayout width-by-purpose', () => {
   it('applies maxWidth from purpose', () => {
@@ -189,9 +186,7 @@ describe('FieldLayout disabledStyle house knob', () => {
 });
 
 describe('FieldLayout error precedence (Axiom 5 eject-last)', () => {
-  const makeField = (errors: string[]) => {
-    return { state: { meta: { errors } } } as any;
-  };
+  const makeField = (errors: string[]) => ({ state: { meta: { errors } } }) as any;
 
   it('explicit error prop wins over field-meta errors', () => {
     const { container } = renderWithProviders(
@@ -250,14 +245,12 @@ describe('FieldLayout error precedence (Axiom 5 eject-last)', () => {
 });
 
 describe('FieldLayout message-before-control anatomy', () => {
-  const Control = () => {
-    return (
-      <input
-        id="ordered"
-        aria-describedby={useFieldDescribedBy()}
-      />
-    );
-  };
+  const Control = () => (
+    <input
+      id="ordered"
+      aria-describedby={useFieldDescribedBy()}
+    />
+  );
 
   for (const mode of ['top', 'side', 'compact'] as const) {
     it(`${mode}: helper and replacement error precede the control and describe only the rendered slot`, () => {

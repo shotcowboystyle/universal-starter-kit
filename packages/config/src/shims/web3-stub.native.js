@@ -13,6 +13,4 @@
  * Plain JS (not TS): vxrn's native pipeline does not transform node_modules
  * TypeScript.
  */
-export const WalletProvider = ({ children }) => {
-  return children ?? null;
-};
+export const WalletProvider = ({ children }) => children ?? null;

@@ -57,8 +57,8 @@ export interface SeriesFillsInput {
  * `palette.categorical` is a third list on purpose (distinguishability,
  * not nest order). Never fold it into `preset.tints`.
  */
-export const resolveSeriesFills = (data: ChartDatum[], palette: ChartPalette, input?: SeriesFillsInput): string[] => {
-  return data.map((datum, index) => {
+export const resolveSeriesFills = (data: ChartDatum[], palette: ChartPalette, input?: SeriesFillsInput): string[] =>
+  data.map((datum, index) => {
     if (datum.color) {
       return datum.color;
     }
@@ -70,7 +70,6 @@ export const resolveSeriesFills = (data: ChartDatum[], palette: ChartPalette, in
     }
     return input?.color ?? palette.single;
   });
-};
 
 /** Widest x label a slot may spend before thinning kicks in (px). */
 const MAX_X_LABEL_SLOT = 72;

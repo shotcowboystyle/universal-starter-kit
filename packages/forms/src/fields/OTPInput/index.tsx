@@ -3,10 +3,9 @@ import { getSize } from '@tamagui/get-token';
 import type { DeepKeys, DeepValue } from '@tanstack/form-core';
 import { Fragment, memo, useCallback, useEffect, useRef, useState } from 'react';
 import type { ClipboardEvent, ComponentProps, KeyboardEvent, RefObject } from 'react';
-import { useProps } from 'tamagui';
+import { useProps, Text, XStack, getVariableValue, isWeb, useDidFinishSSR } from 'tamagui';
 import type { SizeTokens, TamaguiElement } from 'tamagui';
 import type { Input } from 'tamagui';
-import { Text, XStack, getVariableValue, isWeb, useDidFinishSSR } from 'tamagui';
 
 import { Button } from '../../Button';
 import { Field, FieldLayout } from '../../FieldLayout';
@@ -607,7 +606,7 @@ interface OTPFieldRendererProps {
   clearable: boolean;
   separator?: string;
   inputProps?: Omit<ComponentProps<typeof Input>, 'value' | 'onChangeText' | 'ref'>;
-  fieldProps: Omit<FormFieldProps<Record<string, unknown>, string, unknown>, 'children' | 'field'>;
+  fieldProps: Omit<FormFieldProps<Record<string, unknown>, string>, 'children' | 'field'>;
   inputRefs: RefObject<(HTMLElement | null)[]>;
   onComplete?: (code: string) => void;
   onChange?: (value: string) => void;

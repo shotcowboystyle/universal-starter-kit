@@ -36,15 +36,14 @@ interface ObserverRecord {
 }
 const observerRecords: ObserverRecord[] = [];
 
-const makeEntry = (target: Element): ResizeObserverEntry => {
-  return {
+const makeEntry = (target: Element): ResizeObserverEntry =>
+  ({
     target,
     contentRect: { width: layoutWidth, height: 240 } as DOMRectReadOnly,
     borderBoxSize: [],
     contentBoxSize: [],
     devicePixelContentBoxSize: [],
-  } as unknown as ResizeObserverEntry;
-};
+  }) as unknown as ResizeObserverEntry;
 
 vi.stubGlobal(
   'ResizeObserver',
@@ -106,9 +105,7 @@ const fireResize = (width: number) => {
   }
 };
 
-const slides = (container: HTMLElement) => {
-  return container.querySelectorAll('[data-carousel-slide]');
-};
+const slides = (container: HTMLElement) => container.querySelectorAll('[data-carousel-slide]');
 
 /**
  * Tamagui materializes dynamic numeric widths as atomic CSS classes, not
@@ -143,9 +140,7 @@ const elementCarriesWidth = (node: HTMLElement, widthPx: number): boolean => {
   );
 };
 
-const dots = (container: HTMLElement) => {
-  return container.querySelectorAll("[role='button'][aria-label^='Go to item']");
-};
+const dots = (container: HTMLElement) => container.querySelectorAll("[role='button'][aria-label^='Go to item']");
 
 beforeEach(() => {
   layoutWidth = 400;
@@ -355,13 +350,11 @@ describe('Carousel snaps ride the animation knob', () => {
 // scroll viewport. Painted arrow size follows sizeToken; the hit target is
 // floored at MIN_PRESS_TARGET (44). Embla/Polaris/Apple: halo on the control.
 
-const arrow = (container: HTMLElement, side: 'prev' | 'next') => {
-  return container.querySelector(`[data-carousel-arrow='${side}']`) as HTMLElement | null;
-};
+const arrow = (container: HTMLElement, side: 'prev' | 'next') =>
+  container.querySelector(`[data-carousel-arrow='${side}']`) as HTMLElement | null;
 
-const arrowVisual = (container: HTMLElement, side: 'prev' | 'next') => {
-  return container.querySelector(`[data-carousel-arrow-visual='${side}']`) as HTMLElement | null;
-};
+const arrowVisual = (container: HTMLElement, side: 'prev' | 'next') =>
+  container.querySelector(`[data-carousel-arrow-visual='${side}']`) as HTMLElement | null;
 
 describe('Carousel ring anatomy, size recipes, 44px floor', () => {
   it('keeps the viewport out of the tab order with no outline', async () => {

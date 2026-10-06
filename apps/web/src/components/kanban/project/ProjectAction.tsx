@@ -67,7 +67,9 @@ export const ProjectActions = ({ id, title, description, ownerId }: ProjectActio
 
   const onConfirmDelete = async () => {
     try {
-      await removeProject(id, async (projectId) => await deleteProjectMutation.mutateAsync(projectId));
+      await removeProject(id, async (projectId) => {
+        await deleteProjectMutation.mutateAsync(projectId);
+      });
       toast.success(t('deleteSuccess', { title }));
     } catch (error) {
       toast.error(t('deleteFailed', { error: (error as Error).message }));

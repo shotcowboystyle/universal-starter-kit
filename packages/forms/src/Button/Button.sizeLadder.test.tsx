@@ -68,13 +68,9 @@ const radiusPx = (el: HTMLElement): number | null => {
   return found;
 };
 
-const padXPx = (el: HTMLElement): number | null => {
-  return lastPx(el, /^_px-(\d+)px$/) ?? lastPx(el, /^_p[lr]-(\d+)px$/);
-};
+const padXPx = (el: HTMLElement): number | null => lastPx(el, /^_px-(\d+)px$/) ?? lastPx(el, /^_p[lr]-(\d+)px$/);
 
-const gapPx = (el: HTMLElement): number | null => {
-  return lastPx(el, /^_gap-(\d+)px$/);
-};
+const gapPx = (el: HTMLElement): number | null => lastPx(el, /^_gap-(\d+)px$/);
 
 const labelPx = (el: HTMLElement): number | null => {
   for (const node of Array.from(el.querySelectorAll('*'))) {

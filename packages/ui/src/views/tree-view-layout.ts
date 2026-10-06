@@ -22,9 +22,7 @@ export const treeEdgeRowPad = (space: string): TreeEdgeRowPad => {
 };
 
 /** Indent per depth: half the nested row so it stays proportional to size. */
-export const treeIndentStep = (nestedPx: number): number => {
-  return nestedPx / 2;
-};
+export const treeIndentStep = (nestedPx: number): number => nestedPx / 2;
 
 /**
  * Default viewport in nested-row units. Medium nestedControl is 32px, so
@@ -32,9 +30,7 @@ export const treeIndentStep = (nestedPx: number): number => {
  */
 export const TREE_VIEWPORT_ROWS = 12.5;
 
-export const treeDefaultHeight = (nestedPx: number): number => {
-  return nestedPx * TREE_VIEWPORT_ROWS;
-};
+export const treeDefaultHeight = (nestedPx: number): number => nestedPx * TREE_VIEWPORT_ROWS;
 
 /**
  * Lifted-row shadow. Gesture state, not the tree's resting elevation

@@ -244,9 +244,8 @@ const fixedContainingBlockOrigin = (element: HTMLElement): { top: number; left: 
   return { top: 0, left: 0 };
 };
 
-const isRtl = (): boolean => {
-  return isWeb && typeof document !== 'undefined' && document.documentElement.getAttribute('dir') === 'rtl';
-};
+const isRtl = (): boolean =>
+  isWeb && typeof document !== 'undefined' && document.documentElement.getAttribute('dir') === 'rtl';
 
 const panelTransformOrigin = (placement: string): string => {
   const rtl = isRtl();
@@ -278,15 +277,11 @@ const subscribeViewport = (listener: () => void) => {
   };
 };
 
-const viewportSnapshot = () => {
-  return isWeb && typeof window !== 'undefined' && window.innerWidth > overlayFloatBreakpoint;
-};
+const viewportSnapshot = () => isWeb && typeof window !== 'undefined' && window.innerWidth > overlayFloatBreakpoint;
 
 const serverViewportSnapshot = () => false;
 
-export const useViewportGtSm = () => {
-  return useSyncExternalStore(subscribeViewport, viewportSnapshot, serverViewportSnapshot);
-};
+export const useViewportGtSm = () => useSyncExternalStore(subscribeViewport, viewportSnapshot, serverViewportSnapshot);
 
 // ── Sheet (mobile / native / forced) ──────────────────────────
 

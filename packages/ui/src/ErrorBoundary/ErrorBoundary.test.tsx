@@ -11,12 +11,11 @@ const ChildThatThrows = () => {
 };
 const ChildThatRenders = () => <H1>Hello from child!</H1>;
 
-const weightClasses = (el: Element): string[] => {
-  return String((el as HTMLElement).className || '')
+const weightClasses = (el: Element): string[] =>
+  String((el as HTMLElement).className || '')
     .split(' ')
     .filter((c) => c.startsWith('_fow-'))
     .sort();
-};
 
 describe('ErrorBoundary', () => {
   it('should render children when no error occurs', () => {

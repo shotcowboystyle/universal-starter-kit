@@ -8,6 +8,4 @@ export const shouldUseIosNativeSelect = (input: {
   multiple?: boolean;
   isWeb: boolean;
   os: string;
-}): boolean => {
-  return Boolean(input.native) && !input.multiple && !input.isWeb && input.os === 'ios';
-};
+}): boolean => Boolean(input.native) && !input.multiple && !input.isWeb && input.os === 'ios';

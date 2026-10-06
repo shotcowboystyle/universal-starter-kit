@@ -49,9 +49,7 @@ const Harness = ({
   );
 };
 
-const liveRegion = () => {
-  return document.querySelector('[data-sortable-live="true"]');
-};
+const liveRegion = () => document.querySelector('[data-sortable-live="true"]');
 
 describe('SortableList', () => {
   it('completes a keyboard-only reorder and announces each step', () => {

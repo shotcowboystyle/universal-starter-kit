@@ -24,13 +24,11 @@ const Icon = themed(({ size }: { size?: string | number }) => (
     height={size}
   />
 ));
-const Fixture = () => {
-  return (
-    <TestProviders>
-      <Icon size="$4" />
-    </TestProviders>
-  );
-};
+const Fixture = () => (
+  <TestProviders>
+    <Icon size="$4" />
+  </TestProviders>
+);
 
 describe('token icon hydration', () => {
   it('preserves the server SVG before adopting touch sizing', async () => {

@@ -25,12 +25,11 @@ import { Button } from './index';
 
 afterEach(cleanup);
 
-const frameRadiusClasses = (el: HTMLElement): string[] => {
-  return String(el.className || '')
+const frameRadiusClasses = (el: HTMLElement): string[] =>
+  String(el.className || '')
     .split(' ')
     .filter((c) => c.startsWith('_btlr-'))
     .sort();
-};
 
 /** Last `_px-Npx` class wins in source order (runtime fragment after `size=`). */
 const paddingPxFromClass = (el: HTMLElement): number | null => {

@@ -249,9 +249,8 @@ const rampStep = (fill: unknown): number | undefined => {
 
 // A card's own fill climbs the ramp with dark elevation, so a fixed
 // $color2 stripe vanishes on a small-elevation dark card.
-export const tableZebraFill = (hostFill: unknown): `$color${number}` => {
-  return `$color${Math.min((rampStep(hostFill) ?? 1) + 1, 12)}`;
-};
+export const tableZebraFill = (hostFill: unknown): `$color${number}` =>
+  `$color${Math.min((rampStep(hostFill) ?? 1) + 1, 12)}`;
 
 // One step at the foot of the dark ramp is about 4/255 a channel, too faint to
 // read as a press, so the step floors at the old fixed $color4.
@@ -268,8 +267,8 @@ export const tablePressFill = (restFill: unknown): `$color${number}` => {
 
 const BodyRowIndexContext = createContext<number | undefined>(undefined);
 
-const indexBodyRows = (children: React.ReactNode, counter: { next: number }): React.ReactNode => {
-  return Children.map(children, (child) => {
+const indexBodyRows = (children: React.ReactNode, counter: { next: number }): React.ReactNode =>
+  Children.map(children, (child) => {
     if (!isValidElement(child)) {
       return child;
     }
@@ -278,7 +277,6 @@ const indexBodyRows = (children: React.ReactNode, counter: { next: number }): Re
     }
     return <BodyRowIndexContext.Provider value={counter.next++}>{child}</BodyRowIndexContext.Provider>;
   });
-};
 
 const TableBody = styled(ThemeableStack, {
   name: 'TableBody',
@@ -456,25 +454,22 @@ interface CardRowModel {
 }
 
 /** Flatten fragments/arrays into a single element list. */
-const flattenChildren = (children: React.ReactNode): React.ReactNode[] => {
-  return Children.toArray(children).flatMap((child) => {
+const flattenChildren = (children: React.ReactNode): React.ReactNode[] =>
+  Children.toArray(children).flatMap((child) => {
     if (isValidElement(child) && child.type === Fragment) {
       return flattenChildren((child.props as { children?: React.ReactNode }).children);
     }
     return [child];
   });
-};
 
-const ThemedTableHead = (props: React.ComponentProps<typeof TableHead>) => {
+const ThemedTableHead = (props: React.ComponentProps<typeof TableHead>) => (
   // Head/body rule is a divider, not a control border — hairline on
   // high-DPI (Axiom 15). Explicit consumer props still override.
-  return (
-    <TableHead
-      {...hairline.bottom}
-      {...props}
-    />
-  );
-};
+  <TableHead
+    {...hairline.bottom}
+    {...props}
+  />
+);
 
 const ThemedRow = ({ accent, error, warning, success, ...props }: ThemedRowProps) => {
   const { knobProps } = useResolvedKnobs();
@@ -558,17 +553,15 @@ const TableCellSurfaceBody = ({ isHeader, children }: { isHeader: boolean; child
   ));
 };
 
-const TableCellSurface = ({ isHeader, children }: { isHeader: boolean; children: React.ReactNode }) => {
-  return (
-    <TableCellContext.Provider value={{ inTableCell: true, isHeader }}>
-      <Surface
-        size="small"
-        density="compact">
-        <TableCellSurfaceBody isHeader={isHeader}>{children}</TableCellSurfaceBody>
-      </Surface>
-    </TableCellContext.Provider>
-  );
-};
+const TableCellSurface = ({ isHeader, children }: { isHeader: boolean; children: React.ReactNode }) => (
+  <TableCellContext.Provider value={{ inTableCell: true, isHeader }}>
+    <Surface
+      size="small"
+      density="compact">
+      <TableCellSurfaceBody isHeader={isHeader}>{children}</TableCellSurfaceBody>
+    </Surface>
+  </TableCellContext.Provider>
+);
 
 const ThemedHeaderCell = ({ children, style, ...props }: React.ComponentProps<typeof HeaderCell>) => {
   const { knobProps } = useResolvedKnobs();
@@ -587,9 +580,9 @@ const ThemedHeaderCell = ({ children, style, ...props }: React.ComponentProps<ty
   );
 };
 
-const ThemedTableBody = ({ children, ...props }: React.ComponentProps<typeof TableBody>) => {
-  return <TableBody {...props}>{indexBodyRows(children, { next: 0 })}</TableBody>;
-};
+const ThemedTableBody = ({ children, ...props }: React.ComponentProps<typeof TableBody>) => (
+  <TableBody {...props}>{indexBodyRows(children, { next: 0 })}</TableBody>
+);
 
 const ThemedCell = ({ children, style, ...props }: React.ComponentProps<typeof Cell>) => {
   const { knobProps } = useResolvedKnobs();

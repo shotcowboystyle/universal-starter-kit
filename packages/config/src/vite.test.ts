@@ -23,9 +23,8 @@ const globalWithNativePlugins = globalThis as unknown as {
   __vxrnAddNativePlugins?: NativePlugin[];
 };
 
-const findPlugin = (config: ReturnType<typeof createViteConfig>, name: string): Plugin | undefined => {
-  return (config.plugins as Plugin[]).flat().find((p) => p && p.name === name);
-};
+const findPlugin = (config: ReturnType<typeof createViteConfig>, name: string): Plugin | undefined =>
+  (config.plugins as Plugin[]).flat().find((p) => p && p.name === name);
 
 const runConfigResolved = (
   plugin: Plugin,

@@ -68,9 +68,7 @@ export const FIGMA_CORNER_SMOOTHING: Record<string, number> = {
 };
 
 /** Tamagui token key (`1.5`, `true`) → Figma-safe variable name segment. */
-export const figmaTokenName = (prefix: string, key: string): string => {
-  return `${prefix}-${String(key).replaceAll('.', '-')}`;
-};
+export const figmaTokenName = (prefix: string, key: string): string => `${prefix}-${String(key).replaceAll('.', '-')}`;
 
 // ── Output shape ──────────────────────────────────────────────
 
@@ -328,9 +326,7 @@ const radiusPx = (token: string): number => {
   return px;
 };
 
-const tokenToFigma = (token: string, prefix: string): string => {
-  return figmaTokenName(prefix, token.replace(/^\$/, ''));
-};
+const tokenToFigma = (token: string, prefix: string): string => figmaTokenName(prefix, token.replace(/^\$/, ''));
 
 /**
  * Normalize the elevation knob output to `{ sizeToken, px }` regardless of

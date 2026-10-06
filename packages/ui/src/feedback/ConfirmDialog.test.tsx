@@ -18,9 +18,7 @@ afterEach(() => {
 });
 
 /** Dialog portals into document.body — query there, not the RTL container. */
-const root = (): HTMLElement => {
-  return document.body;
-};
+const root = (): HTMLElement => document.body;
 
 const buttonByLabel = (label: string): Element => {
   const buttons = Array.from(root().querySelectorAll('[role="button"]'));
@@ -31,9 +29,7 @@ const buttonByLabel = (label: string): Element => {
   return match;
 };
 
-const alertdialog = (): Element | null => {
-  return root().querySelector('[role="alertdialog"]');
-};
+const alertdialog = (): Element | null => root().querySelector('[role="alertdialog"]');
 
 describe('ConfirmDialog', () => {
   it("inks a disabled destructive label on the error hue's $color12 text step", () => {
@@ -436,16 +432,13 @@ describe('notify() blocking → ConfirmDialog', () => {
   });
 });
 
-const atoms = (el: Element, prefixes: string[]): string[] => {
-  return String((el as HTMLElement).className || '')
+const atoms = (el: Element, prefixes: string[]): string[] =>
+  String((el as HTMLElement).className || '')
     .split(' ')
     .filter((c) => prefixes.some((p) => c.startsWith(p)))
     .sort();
-};
 
-const weightAtoms = (el: Element): string[] => {
-  return atoms(el, ['_fow-']);
-};
+const weightAtoms = (el: Element): string[] => atoms(el, ['_fow-']);
 
 describe('ConfirmDialog action labels — weight 400 on the TEXT NODE', () => {
   afterEach(cleanup);

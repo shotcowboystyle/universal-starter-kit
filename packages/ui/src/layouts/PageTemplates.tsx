@@ -85,22 +85,20 @@ export const ListPageLayout = ({
   toolbar,
   children,
   ...rest
-}: ListPageLayoutProps) => {
-  return (
-    <Screen
-      data-canonical="list-page"
-      {...rest}>
-      {renderTemplateHeader({ title, subtitle, actions, header, nav })}
-      {toolbar}
-      <YStack
-        flex={1}
-        minWidth={0}
-        data-testid="list-page-content">
-        {children}
-      </YStack>
-    </Screen>
-  );
-};
+}: ListPageLayoutProps) => (
+  <Screen
+    data-canonical="list-page"
+    {...rest}>
+    {renderTemplateHeader({ title, subtitle, actions, header, nav })}
+    {toolbar}
+    <YStack
+      flex={1}
+      minWidth={0}
+      data-testid="list-page-content">
+      {children}
+    </YStack>
+  </Screen>
+);
 
 // ── DetailPageLayout ───────────────────────────────────────────────────────
 
@@ -222,14 +220,12 @@ export const SettingsPageLayout = ({
   maxWidth = layoutBreakpoints.expanded,
   children,
   ...rest
-}: SettingsPageLayoutProps) => {
-  return (
-    <Screen
-      data-canonical="settings-page"
-      maxWidth={maxWidth}
-      {...rest}>
-      {renderTemplateHeader({ title, subtitle, actions, header, nav })}
-      {children}
-    </Screen>
-  );
-};
+}: SettingsPageLayoutProps) => (
+  <Screen
+    data-canonical="settings-page"
+    maxWidth={maxWidth}
+    {...rest}>
+    {renderTemplateHeader({ title, subtitle, actions, header, nav })}
+    {children}
+  </Screen>
+);

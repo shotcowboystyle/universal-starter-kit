@@ -29,9 +29,8 @@ export interface FormGridProps {
   children: ReactNode;
 }
 
-const resolveWideColumns = (columns: FormGridColumns, maxColumns: FormGridColumns): FormGridColumns => {
-  return Math.min(columns, maxColumns) as FormGridColumns;
-};
+const resolveWideColumns = (columns: FormGridColumns, maxColumns: FormGridColumns): FormGridColumns =>
+  Math.min(columns, maxColumns) as FormGridColumns;
 
 const FormGridWeb = ({
   columns,

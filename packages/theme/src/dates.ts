@@ -211,9 +211,7 @@ export const formatAbsoluteDate = (value: DateInput, options: AbsoluteDateFormat
 export const formatAbsoluteDateTime = (
   value: DateInput,
   options: Omit<AbsoluteDateFormatOptions, 'withTime'> = {},
-): string => {
-  return formatAbsoluteDate(value, { ...options, withTime: true });
-};
+): string => formatAbsoluteDate(value, { ...options, withTime: true });
 
 /**
  * Relative timestamp ("just now", "5m ago", "2h ago", "10 days ago") — the

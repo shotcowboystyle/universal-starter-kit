@@ -51,52 +51,49 @@ const pickFocusRingColorFromSteps = (step: (n: number) => string | undefined): s
   return best;
 };
 
-const pickFocusRingColor = (theme: Record<string, string>): string => {
-  return pickFocusRingColorFromSteps((n) => theme[`color${n}`]);
-};
+const pickFocusRingColor = (theme: Record<string, string>): string =>
+  pickFocusRingColorFromSteps((n) => theme[`color${n}`]);
 
-const getBaseTheme = (theme: Record<string, string>) => {
-  return {
-    // Solid, scheme-aware focus ring (≥3:1 vs page surfaces).
-    // Additive — Tamagui's own ring is `rgba(ink, 0.2)`, which measured
-    // 1.36:1. This is an improvement and stays (M5).
-    outlineColor: pickFocusRingColor(theme),
-    // Align placeholder/disabled text with the dedicated muted slot.
-    placeholderColor: theme.color10,
-    //
-    // SEVEN LINES DELETED HERE, deliberately.
-    //
-    // `backgroundPress: color5`, `backgroundFocus: color6`,
-    // `backgroundActive: color4`, `borderColor: color5`,
-    // `borderColorHover: color6`, `borderColorFocus: color7` and
-    // `borderColorPress: color7` used to sit in this object, re-anchoring
-    // Tamagui's whole interaction ramp one to three steps deeper. The only
-    // justification written down was "Normalize interaction ramp across
-    // components", and uniformity is an argument for HAVING a ramp, not for
-    // these values. The effect was that every mpo border read heavier and
-    // every focus fill landed darker than the same component in Tamagui.
-    //
-    // The theme builder's own templates already derive all seven from the
-    // background index, so deleting the pins does not leave a hole: it hands
-    // the keys back to the layer that owns them. If uniformity is wanted
-    // again, it gets re-derived from the template offsets rather than pinned
-    // as literal ramp steps.
-    //
-    // The semantic aliases below are a different thing and stay: they name
-    // slots Tamagui has no token for at all, so they contradict nothing.
-    // Project-level semantic aliases for palette slots not covered by Tamagui defaults.
-    // textMuted sits on the $color11 tier: the lowest ramp step that keeps
-    // secondary text AA-readable on color1/2 surfaces (SB-R contrast sweep).
-    textMuted: theme.color11,
-    textSubtle: theme.color6,
-    borderStrong: theme.color7,
-    borderStrongHover: theme.color8,
-    borderStrongPress: theme.color6,
-    surfaceStrong: theme.color7,
-    surfaceMuted: theme.color10,
-    surfacePressStrong: theme.color6,
-  };
-};
+const getBaseTheme = (theme: Record<string, string>) => ({
+  // Solid, scheme-aware focus ring (≥3:1 vs page surfaces).
+  // Additive — Tamagui's own ring is `rgba(ink, 0.2)`, which measured
+  // 1.36:1. This is an improvement and stays (M5).
+  outlineColor: pickFocusRingColor(theme),
+  // Align placeholder/disabled text with the dedicated muted slot.
+  placeholderColor: theme.color10,
+  //
+  // SEVEN LINES DELETED HERE, deliberately.
+  //
+  // `backgroundPress: color5`, `backgroundFocus: color6`,
+  // `backgroundActive: color4`, `borderColor: color5`,
+  // `borderColorHover: color6`, `borderColorFocus: color7` and
+  // `borderColorPress: color7` used to sit in this object, re-anchoring
+  // Tamagui's whole interaction ramp one to three steps deeper. The only
+  // justification written down was "Normalize interaction ramp across
+  // components", and uniformity is an argument for HAVING a ramp, not for
+  // these values. The effect was that every mpo border read heavier and
+  // every focus fill landed darker than the same component in Tamagui.
+  //
+  // The theme builder's own templates already derive all seven from the
+  // background index, so deleting the pins does not leave a hole: it hands
+  // the keys back to the layer that owns them. If uniformity is wanted
+  // again, it gets re-derived from the template offsets rather than pinned
+  // as literal ramp steps.
+  //
+  // The semantic aliases below are a different thing and stay: they name
+  // slots Tamagui has no token for at all, so they contradict nothing.
+  // Project-level semantic aliases for palette slots not covered by Tamagui defaults.
+  // textMuted sits on the $color11 tier: the lowest ramp step that keeps
+  // secondary text AA-readable on color1/2 surfaces (SB-R contrast sweep).
+  textMuted: theme.color11,
+  textSubtle: theme.color6,
+  borderStrong: theme.color7,
+  borderStrongHover: theme.color8,
+  borderStrongPress: theme.color6,
+  surfaceStrong: theme.color7,
+  surfaceMuted: theme.color10,
+  surfacePressStrong: theme.color6,
+});
 
 // Semantic intents whose Buttons render SOLID (one emphasis system with
 // accent — SB-E-01). The accent theme is solid by palette shape already.

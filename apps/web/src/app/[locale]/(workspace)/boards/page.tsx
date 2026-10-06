@@ -17,8 +17,6 @@ export const generateMetadata = async ({ params }: Props): Promise<Metadata> => 
   };
 };
 
-const BoardPage = () => {
-  return <BoardOverview />;
-};
+const BoardPage = () => <BoardOverview />;
 
 export default BoardPage;

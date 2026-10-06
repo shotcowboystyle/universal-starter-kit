@@ -970,7 +970,7 @@ export const TreeView = <T = unknown,>({
         const originFlat = flatNodes.findIndex((f) => f.node.id === ui.session.nodeId);
         dest = {
           x: ui.homeX,
-          y: (originFlat !== -1 ? topOfFlatIndex(originFlat) : 0) - scrollOffsetRef.current,
+          y: (originFlat === -1 ? 0 : topOfFlatIndex(originFlat)) - scrollOffsetRef.current,
         };
       }
 

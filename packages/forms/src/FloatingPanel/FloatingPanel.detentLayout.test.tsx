@@ -55,9 +55,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const px = (value: string) => {
-  return Number.parseFloat(value);
-};
+const px = (value: string) => Number.parseFloat(value);
 
 const open = (props: Partial<FloatingPanelProps> = {}) => {
   const view = renderWithProviders(

@@ -137,7 +137,7 @@ test('positive control: actual scroll delivery reports the transported offset', 
 const dimensions = () => {
   vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(320);
   vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(240);
-  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function dimensions(this: HTMLElement) {
     let y = 0;
     for (let ancestor = this.parentElement; ancestor; ancestor = ancestor.parentElement) {
       y -= ancestor.scrollTop;

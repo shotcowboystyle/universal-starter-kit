@@ -28,9 +28,7 @@ const tooltipDir = dirname(fileURLToPath(import.meta.url));
 /** The web twin, the native twin, and the module they share. */
 const tooltipSources = ['index.tsx', 'index.native.tsx', 'tooltip-shared.tsx'];
 
-const read = (relative: string): string => {
-  return readFileSync(resolve(tooltipDir, relative), 'utf-8');
-};
+const read = (relative: string): string => readFileSync(resolve(tooltipDir, relative), 'utf-8');
 
 describe('Tooltip gap contract', () => {
   it.each(tooltipSources)('%s declares no gap constant of its own', (relative) => {

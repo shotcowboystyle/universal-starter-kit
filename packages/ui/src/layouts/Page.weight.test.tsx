@@ -11,15 +11,14 @@ const config = createTamagui({
   ...defaultConfig,
   fonts: { ...defaultConfig.fonts, heading: defaultHeadingFont },
 });
-const renderWithProviders = (node: ReactElement) => {
-  return render(
+const renderWithProviders = (node: ReactElement) =>
+  render(
     <TamaguiProvider
       config={config}
       defaultTheme="light">
       {node}
     </TamaguiProvider>,
   );
-};
 afterEach(cleanup);
 
 describe('PageHeader rendered Tamagui title recipes', () => {

@@ -12,6 +12,4 @@ export const transitionProps = (
   transition: TransitionProp | undefined,
 ): {
   transition?: TransitionProp;
-} => {
-  return transition ? { transition } : {};
-};
+} => (transition ? { transition } : {});

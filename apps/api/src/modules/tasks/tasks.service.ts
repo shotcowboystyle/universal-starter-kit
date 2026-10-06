@@ -30,10 +30,9 @@ export class TasksService implements OnModuleInit {
   ) {}
 
   onModuleInit(): void {
-    this.eventEmitter.on(
-      'project.deleted',
-      async (event: ProjectDeletedEvent) => await this.handleProjectDeleted(event),
-    );
+    this.eventEmitter.on('project.deleted', async (event: ProjectDeletedEvent) => {
+      await this.handleProjectDeleted(event);
+    });
   }
 
   async handleProjectDeleted(event: ProjectDeletedEvent): Promise<void> {

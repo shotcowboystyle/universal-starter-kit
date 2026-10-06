@@ -64,19 +64,17 @@ export type IconProps<
 const adornmentRing = ensureFocusVisibleRing({ outlineOffset: -2 });
 const NESTED_GLYPH_WELL = 32;
 
-const EmptyGlyphWell = () => {
-  return (
-    <View
-      testID="icon-empty-well"
-      width={16}
-      height={16}
-      borderWidth={1}
-      borderStyle="dashed"
-      borderColor="$borderColor"
-      borderRadius={3}
-    />
-  );
-};
+const EmptyGlyphWell = () => (
+  <View
+    testID="icon-empty-well"
+    width={16}
+    height={16}
+    borderWidth={1}
+    borderStyle="dashed"
+    borderColor="$borderColor"
+    borderRadius={3}
+  />
+);
 
 const IconControl = ({
   value,

@@ -71,9 +71,7 @@ const isControlGroupAddon = (child: ReactElement): boolean => {
   return type === ControlGroupAddon || type.isControlGroupAddon === true;
 };
 
-const groupItems = (children: ReactNode): ReactElement[] => {
-  return Children.toArray(children).filter(isValidElement);
-};
+const groupItems = (children: ReactNode): ReactElement[] => Children.toArray(children).filter(isValidElement);
 
 // ---------------------------------------------------------------------------
 // ControlGroup.Addon — Bootstrap input-group-text / Polaris connected slot

@@ -26,18 +26,16 @@ afterEach(() => {
  * two scaffolds. `sizeClass` is set on the OUTER one only, so this also
  * covers whether the class reaches the inner scaffold.
  */
-const ThreeRegionPage = (props: { sizeClass?: 'compact' | 'medium' | 'expanded' | 'large' | 'xl' }) => {
-  return (
-    <PaneScaffold
-      sizeClass={props.sizeClass}
-      primary={<Paragraph>Rail</Paragraph>}
-      secondary=<PaneScaffold
-        primary={<Paragraph>Centre</Paragraph>}
-        secondary={<Paragraph>Inspector</Paragraph>}
-      />
+const ThreeRegionPage = (props: { sizeClass?: 'compact' | 'medium' | 'expanded' | 'large' | 'xl' }) => (
+  <PaneScaffold
+    sizeClass={props.sizeClass}
+    primary={<Paragraph>Rail</Paragraph>}
+    secondary=<PaneScaffold
+      primary={<Paragraph>Centre</Paragraph>}
+      secondary={<Paragraph>Inspector</Paragraph>}
     />
-  );
-};
+  />
+);
 
 describe('layouts index exports (W11)', () => {
   it('exports PaneScaffold canonical layouts + ReadingWidth', () => {

@@ -503,9 +503,8 @@ export const stackNavigator = new StackNavigator();
  *  stack. */
 export const RouteTagContext = createContext<string | null>(null);
 
-export const useNavState = (): NavSnapshot => {
-  return useSyncExternalStore(stackNavigator.subscribe, stackNavigator.getSnapshot);
-};
+export const useNavState = (): NavSnapshot =>
+  useSyncExternalStore(stackNavigator.subscribe, stackNavigator.getSnapshot);
 
 export const useRouteParams = (): NavParams => {
   const tag = useContext(RouteTagContext);

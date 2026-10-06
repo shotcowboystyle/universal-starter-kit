@@ -238,27 +238,23 @@ describe('AsyncBoundary', () => {
 const houseConfig = createDefaultThemeConfig();
 const SCHEMES = ['light', 'dark'] as const;
 
-const weightClasses = (el: Element): string[] => {
-  return String((el as HTMLElement).className || '')
+const weightClasses = (el: Element): string[] =>
+  String((el as HTMLElement).className || '')
     .split(' ')
     .filter((c) => c.startsWith('_fow-'))
     .sort();
-};
 
-const SchemeWrap = ({ scheme, children }: { scheme: (typeof SCHEMES)[number]; children: ReactNode }) => {
-  return (
-    <TamaguiProvider
-      config={houseConfig.tamagui}
-      defaultTheme={scheme}
-      disableInjectCSS>
-      <YStack backgroundColor="$background">{children}</YStack>
-    </TamaguiProvider>
-  );
-};
+const SchemeWrap = ({ scheme, children }: { scheme: (typeof SCHEMES)[number]; children: ReactNode }) => (
+  <TamaguiProvider
+    config={houseConfig.tamagui}
+    defaultTheme={scheme}
+    disableInjectCSS>
+    <YStack backgroundColor="$background">{children}</YStack>
+  </TamaguiProvider>
+);
 
-const renderInScheme = (scheme: (typeof SCHEMES)[number], ui: ReactElement) => {
-  return renderWithProviders(<SchemeWrap scheme={scheme}>{ui}</SchemeWrap>);
-};
+const renderInScheme = (scheme: (typeof SCHEMES)[number], ui: ReactElement) =>
+  renderWithProviders(<SchemeWrap scheme={scheme}>{ui}</SchemeWrap>);
 
 const expectRetryWeight400 = (pin: string[]) => {
   const node = screen.getByText('Retry');

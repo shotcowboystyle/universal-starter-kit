@@ -33,8 +33,8 @@
  */
 
 import type { BorderRadius } from './knobs';
-import type { RADIUS_RESOLUTION_COMPOSITION } from './radiusClassTable.generated';
 import {
+  type RADIUS_RESOLUTION_COMPOSITION,
   RADIUS_OVERRIDE_TABLE,
   RADIUS_RESOLUTION_TABLE,
   type RadiusOverrideEntry,
@@ -72,9 +72,10 @@ export interface RadiusClassDeclaration {
  * @example
  * <Frame {...radiusClassProps("R-IDENTITY", "Avatar")} circular />
  */
-export const radiusClassProps = (radiusClass: KnobImmuneRadiusClass, part: string): RadiusClassDeclaration => {
-  return { 'data-radius-class': radiusClass, 'data-radius-part': part };
-};
+export const radiusClassProps = (radiusClass: KnobImmuneRadiusClass, part: string): RadiusClassDeclaration => ({
+  'data-radius-class': radiusClass,
+  'data-radius-part': part,
+});
 
 export interface RadiusResolutionDeclaration {
   'data-radius-resolution': 'BINARY';
@@ -90,9 +91,9 @@ export interface RadiusResolutionDeclaration {
  * @example
  * <StyledSwitch.Thumb {...radiusResolutionProps("BINARY")} borderRadius={thumbRadius} />
  */
-export const radiusResolutionProps = (radiusClass: 'BINARY'): RadiusResolutionDeclaration => {
-  return { 'data-radius-resolution': radiusClass };
-};
+export const radiusResolutionProps = (radiusClass: 'BINARY'): RadiusResolutionDeclaration => ({
+  'data-radius-resolution': radiusClass,
+});
 
 // ── Radius resolution ─────────────────────────
 

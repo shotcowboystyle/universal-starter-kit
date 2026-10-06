@@ -39,7 +39,7 @@ for (const mode of ['floating', 'sheet'] as const) {
       const h = setup();
       h.trigger.blur();
       h.rerender({ open: false });
-      await act(async () => vi.advanceTimersByTimeAsync(400));
+      await act(async () => await vi.advanceTimersByTimeAsync(400));
       expect(document.activeElement).toBe(h.trigger);
     });
 
@@ -48,7 +48,7 @@ for (const mode of ['floating', 'sheet'] as const) {
       h.trigger.blur();
       h.rerender({ open: false });
       h.skipReturnFocusRef.current = true;
-      await act(async () => vi.advanceTimersByTimeAsync(400));
+      await act(async () => await vi.advanceTimersByTimeAsync(400));
       expect(document.activeElement).toBe(document.body);
     });
 
@@ -56,7 +56,7 @@ for (const mode of ['floating', 'sheet'] as const) {
       const h = setup();
       h.outside.focus();
       h.rerender({ open: false });
-      await act(async () => vi.advanceTimersByTimeAsync(400));
+      await act(async () => await vi.advanceTimersByTimeAsync(400));
       expect(document.activeElement).toBe(h.outside);
     });
 
@@ -65,7 +65,7 @@ for (const mode of ['floating', 'sheet'] as const) {
       h.trigger.blur();
       h.rerender({ open: false });
       h.rerender({ open: true });
-      await act(async () => vi.advanceTimersByTimeAsync(400));
+      await act(async () => await vi.advanceTimersByTimeAsync(400));
       expect(document.activeElement).not.toBe(h.trigger);
     });
   });

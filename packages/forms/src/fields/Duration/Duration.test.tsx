@@ -16,9 +16,8 @@ import {
   secondsToParts,
 } from './index';
 
-const segmentValue = (el: Element | null): string => {
-  return el?.getAttribute('value') ?? (el as HTMLInputElement | null)?.value ?? '';
-};
+const segmentValue = (el: Element | null): string =>
+  el?.getAttribute('value') ?? (el as HTMLInputElement | null)?.value ?? '';
 
 const segmentWidthPx = (el: Element | null): number => {
   const input = el as HTMLElement | null;

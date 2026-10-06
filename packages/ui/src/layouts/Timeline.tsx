@@ -242,18 +242,15 @@ export const prettifyAuthorName = (raw: string): string => {
 };
 
 /** Display name for an entry: explicit authorName, else prettified author. */
-export const getEntryDisplayName = (entry: Pick<TimelineEntry, 'author' | 'authorName'>): string => {
-  return entry.authorName?.trim() || prettifyAuthorName(entry.author);
-};
+export const getEntryDisplayName = (entry: Pick<TimelineEntry, 'author' | 'authorName'>): string =>
+  entry.authorName?.trim() || prettifyAuthorName(entry.author);
 
 /**
  * Compact absolute timestamp ("Aug 9, 3:30 PM"; adds year when not current).
  * Canonical formatter lives in theme: one register for
  * Timeline, table date cells, and picker display values.
  */
-const defaultFormatTimestamp = (timestamp: string): string => {
-  return formatAbsoluteDateTime(timestamp);
-};
+const defaultFormatTimestamp = (timestamp: string): string => formatAbsoluteDateTime(timestamp);
 
 // Relative register re-exported so existing consumers keep their import path.
 export { formatRelativeTimestamp } from '@repo/theme';
@@ -422,42 +419,40 @@ const TimelineSkeleton = ({
   compact?: boolean;
   avatarPx: number;
   loadingLabel: string;
-}) => {
-  return (
-    <YStack
-      gap={compact ? '$3' : '$4'}
-      width="100%"
-      data-async-skeleton="timeline"
-      aria-busy
-      aria-label={loadingLabel}>
-      {Array.from({ length: 3 }).map((_, i) => (
-        <XStack
-          key={i}
-          gap={compact ? '$2' : '$3'}
-          alignItems="flex-start">
+}) => (
+  <YStack
+    gap={compact ? '$3' : '$4'}
+    width="100%"
+    data-async-skeleton="timeline"
+    aria-busy
+    aria-label={loadingLabel}>
+    {Array.from({ length: 3 }).map((_, i) => (
+      <XStack
+        key={i}
+        gap={compact ? '$2' : '$3'}
+        alignItems="flex-start">
+        <Skeleton
+          variant="rounded"
+          width={avatarPx}
+          height={avatarPx}
+        />
+        <YStack
+          flex={1}
+          gap="$1.5"
+          paddingTop={2}>
           <Skeleton
-            variant="rounded"
-            width={avatarPx}
-            height={avatarPx}
+            width="35%"
+            height={compact ? 10 : 12}
           />
-          <YStack
-            flex={1}
-            gap="$1.5"
-            paddingTop={2}>
-            <Skeleton
-              width="35%"
-              height={compact ? 10 : 12}
-            />
-            <Skeleton
-              width="80%"
-              height={compact ? 12 : 14}
-            />
-          </YStack>
-        </XStack>
-      ))}
-    </YStack>
-  );
-};
+          <Skeleton
+            width="80%"
+            height={compact ? 12 : 14}
+          />
+        </YStack>
+      </XStack>
+    ))}
+  </YStack>
+);
 
 // ---------------------------------------------------------------------------
 // Component

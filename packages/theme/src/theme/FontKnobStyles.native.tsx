@@ -7,18 +7,12 @@
  */
 import type { FontCategory } from './knobs';
 
-export const getConfiguredFontFamily = (_category: FontCategory): string | undefined => {
-  return undefined;
-};
+export const getConfiguredFontFamily = (_category: FontCategory): string | undefined => undefined;
 
 export const buildFontKnobCss = (
   _headingFont: FontCategory,
   _bodyFont: FontCategory,
   _resolveFamily?: (category: FontCategory) => string | undefined,
-): string => {
-  return '';
-};
+): string => '';
 
-export const FontKnobStyles = () => {
-  return null;
-};
+export const FontKnobStyles = () => null;

@@ -10,21 +10,12 @@ import {
   useReadableTextOn,
   useResolvedKnobs,
   wasKeyboardFocus,
-  type BorderRadius,
 } from '@repo/theme';
-import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
-import {
-  type LabelProps,
-  type SizeTokens,
-  type SliderProps as TamaguiSliderProps,
-  Slider as TamaguiSlider,
-  Paragraph,
-  View,
-  XStack,
-  isWeb,
-  styled,
-  useTheme,
-} from 'tamagui';
+import type { BorderRadius } from '@repo/theme';
+import { useEffect, useRef, useState } from 'react';
+import type { KeyboardEvent, ReactNode } from 'react';
+import { Slider as TamaguiSlider, Paragraph, View, XStack, isWeb, styled, useTheme } from 'tamagui';
+import type { LabelProps, SizeTokens, SliderProps as TamaguiSliderProps } from 'tamagui';
 
 import { Field, FieldLayout, useFieldA11y, useFieldDescribedBy } from '../../FieldLayout';
 import { formCommonColors, formControlColors, formSelectedColors } from '../../shared/color-ramps';

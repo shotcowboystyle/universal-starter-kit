@@ -88,7 +88,7 @@ export class TasksController {
     description: 'Forbidden - Only the task creator can delete the task',
   })
   async remove(@Param('id', ParseObjectIdPipe) id: string, @CurrentUser() user: { _id: string }): Promise<void> {
-    return await this.tasksService.remove(id, user._id);
+    await this.tasksService.remove(id, user._id);
   }
 
   @Patch(':id/move')

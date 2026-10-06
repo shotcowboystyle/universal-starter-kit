@@ -125,13 +125,11 @@ export const getLayoutSizeClass = (width: number): LayoutSizeClass => {
 };
 
 /** Default horizontal pane budget by size class (Material PaneScaffoldDirective). */
-export const defaultMaxPanes = (sizeClass: LayoutSizeClass): 1 | 2 => {
-  return sizeClass === 'compact' || sizeClass === 'medium' ? 1 : 2;
-};
+export const defaultMaxPanes = (sizeClass: LayoutSizeClass): 1 | 2 =>
+  sizeClass === 'compact' || sizeClass === 'medium' ? 1 : 2;
 
-export const layoutSizeClassAtLeast = (current: LayoutSizeClass, minimum: LayoutSizeClass): boolean => {
-  return LAYOUT_SIZE_CLASS_ORDER.indexOf(current) >= LAYOUT_SIZE_CLASS_ORDER.indexOf(minimum);
-};
+export const layoutSizeClassAtLeast = (current: LayoutSizeClass, minimum: LayoutSizeClass): boolean =>
+  LAYOUT_SIZE_CLASS_ORDER.indexOf(current) >= LAYOUT_SIZE_CLASS_ORDER.indexOf(minimum);
 
 /** Web viewport width with an SSR fallback (`medium`). Web-only callers. */
 const readViewportWidth = (): number => {
@@ -161,13 +159,9 @@ const subscribeViewportSizeClass = (onChange: () => void): (() => void) => {
   };
 };
 
-const viewportSizeClass = (): LayoutSizeClass => {
-  return getLayoutSizeClass(readViewportWidth());
-};
+const viewportSizeClass = (): LayoutSizeClass => getLayoutSizeClass(readViewportWidth());
 
-const serverViewportSizeClass = (): LayoutSizeClass => {
-  return getLayoutSizeClass(layoutBreakpoints.medium);
-};
+const serverViewportSizeClass = (): LayoutSizeClass => getLayoutSizeClass(layoutBreakpoints.medium);
 
 /**
  * Live layout size class from viewport width — cross-platform:
@@ -222,18 +216,17 @@ export const readingWidthStyle = (
 export const MIN_PRESS_TARGET = 44;
 
 /** Touch surfaces — native touchable or web touchable. */
-export const isTouchSurface = (): boolean => {
-  return isTouchable || isWebTouchable;
-};
+export const isTouchSurface = (): boolean => isTouchable || isWebTouchable;
 
 export interface PressTargetStyle {
   minWidth: number;
   minHeight: number;
 }
 
-export const pressTargetStyle = (size: number = MIN_PRESS_TARGET): PressTargetStyle => {
-  return { minWidth: size, minHeight: size };
-};
+export const pressTargetStyle = (size: number = MIN_PRESS_TARGET): PressTargetStyle => ({
+  minWidth: size,
+  minHeight: size,
+});
 
 export interface HitSlopInsets {
   top: number;

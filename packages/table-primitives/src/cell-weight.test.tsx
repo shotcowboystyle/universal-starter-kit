@@ -15,12 +15,11 @@ import { Table } from './index';
 
 afterEach(cleanup);
 
-const classes = (el: Element, prefix: string): string[] => {
-  return String(el.className || '')
+const classes = (el: Element, prefix: string): string[] =>
+  String(el.className || '')
     .split(' ')
     .filter((c) => c.startsWith(prefix))
     .sort();
-};
 
 const explicit = (prefix: string, props: Record<string, string>): string[] => {
   renderWithProviders(<RawText {...props}>probe</RawText>);
@@ -29,8 +28,8 @@ const explicit = (prefix: string, props: Record<string, string>): string[] => {
   return got;
 };
 
-const renderTable = (overrides: Record<string, string>) => {
-  return renderWithProviders(
+const renderTable = (overrides: Record<string, string>) =>
+  renderWithProviders(
     <Preset overrides={overrides as never}>
       <Table>
         <Table.Head>
@@ -46,7 +45,6 @@ const renderTable = (overrides: Record<string, string>) => {
       </Table>
     </Preset>,
   );
-};
 
 describe('Table.Cell body values follow the text knobs', () => {
   it.each([

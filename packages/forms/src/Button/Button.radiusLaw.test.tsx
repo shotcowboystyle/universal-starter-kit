@@ -96,9 +96,7 @@ const COMBOS: Combo[] = [
   },
 ];
 
-const lawRadius = (stop: Stop, token: Token): number => {
-  return stop === 'medium' ? RECIPE_RADIUS[token] : STOP_PX[stop];
-};
+const lawRadius = (stop: Stop, token: Token): number => (stop === 'medium' ? RECIPE_RADIUS[token] : STOP_PX[stop]);
 
 const RADIUS_TOKEN_PX: Record<string, number> = {
   '0': 0,

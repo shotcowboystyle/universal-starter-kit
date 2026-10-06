@@ -38,15 +38,13 @@ export const KeyboardAvoidingWrapper = ({
   keyboardVerticalOffset: _offset,
   enabled = true,
   ...stackProps
-}: PropsWithChildren<KeyboardAvoidingWrapperProps>) => {
-  return (
-    <YStack
-      data-testid="keyboard-avoiding-wrapper"
-      data-keyboard-avoiding="web"
-      data-enabled={String(enabled)}
-      flex={1}
-      {...stackProps}>
-      {children}
-    </YStack>
-  );
-};
+}: PropsWithChildren<KeyboardAvoidingWrapperProps>) => (
+  <YStack
+    data-testid="keyboard-avoiding-wrapper"
+    data-keyboard-avoiding="web"
+    data-enabled={String(enabled)}
+    flex={1}
+    {...stackProps}>
+    {children}
+  </YStack>
+);

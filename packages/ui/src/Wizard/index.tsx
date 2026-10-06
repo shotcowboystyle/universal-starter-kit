@@ -121,29 +121,26 @@ const formatReviewValue = (value: unknown): string => {
   return JSON.stringify(value);
 };
 
-const stepCaption = (t: (key: string) => string, index: number, steps: WizardStep[]): string => {
-  return bidiIsolate(
+const stepCaption = (t: (key: string) => string, index: number, steps: WizardStep[]): string =>
+  bidiIsolate(
     withInterp(t('Step {{current}} of {{total}} — {{label}}'), {
       current: index + 1,
       total: steps.length,
       label: steps[index]?.label ?? '',
     }),
   );
-};
 
-const WizardRule = () => {
-  return (
-    <View
-      data-wizard-separator=""
-      role="separator"
-      height={1}
-      backgroundColor="$borderColor"
-      alignSelf="stretch"
-      flexGrow={0}
-      flexShrink={0}
-    />
-  );
-};
+const WizardRule = () => (
+  <View
+    data-wizard-separator=""
+    role="separator"
+    height={1}
+    backgroundColor="$borderColor"
+    alignSelf="stretch"
+    flexGrow={0}
+    flexShrink={0}
+  />
+);
 
 const WizardShell = forwardRef<TamaguiElement, GetProps<typeof YStack> & { compact?: boolean }>(function WizardShell(
   { compact, children, ...props },
@@ -213,15 +210,13 @@ const WizardSkeleton = () => {
 };
 
 /** Real element (not a fragment) so Children.toArray keeps one child per step. */
-export const WizardPanel = ({ children }: { children: ReactNode }) => {
-  return (
-    <YStack
-      data-wizard-panel-body=""
-      width="100%">
-      {children}
-    </YStack>
-  );
-};
+export const WizardPanel = ({ children }: { children: ReactNode }) => (
+  <YStack
+    data-wizard-panel-body=""
+    width="100%">
+    {children}
+  </YStack>
+);
 
 export const WizardClearable = ({ names, children }: { names: readonly string[]; children: ReactNode }) => {
   const { repaintGeneration } = useWizard();

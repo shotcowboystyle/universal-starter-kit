@@ -29,29 +29,27 @@ const MapFallback = ({
   lng: number;
   minHeight?: number;
   hasValue?: boolean;
-}) => {
-  return (
-    <YStack
-      testID="geolocation-map-fallback"
-      flex={1}
-      minHeight={minHeight}
-      alignItems="center"
-      justifyContent="center"
-      backgroundColor="$backgroundHover"
-      gap="$1">
-      <Text
-        color="$color11"
-        fontSize="$2">
-        {t('Map preview unavailable — requires expo-maps')}
-      </Text>
-      <Text
-        color="$color11"
-        fontSize="$1">
-        {hasValue === false ? t('No location set') : `${lat.toFixed(4)}, ${lng.toFixed(4)}`}
-      </Text>
-    </YStack>
-  );
-};
+}) => (
+  <YStack
+    testID="geolocation-map-fallback"
+    flex={1}
+    minHeight={minHeight}
+    alignItems="center"
+    justifyContent="center"
+    backgroundColor="$backgroundHover"
+    gap="$1">
+    <Text
+      color="$color11"
+      fontSize="$2">
+      {t('Map preview unavailable — requires expo-maps')}
+    </Text>
+    <Text
+      color="$color11"
+      fontSize="$1">
+      {hasValue === false ? t('No location set') : `${lat.toFixed(4)}, ${lng.toFixed(4)}`}
+    </Text>
+  </YStack>
+);
 
 /**
  * Native map surface — a real map through the optional `expo-maps` peer

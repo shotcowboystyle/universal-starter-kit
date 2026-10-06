@@ -31,7 +31,7 @@ const fixtureDir = path.resolve(
 const servers: ViteDevServer[] = [];
 
 afterAll(async () => {
-  await Promise.all(servers.map(async (server) => server.close()));
+  await Promise.all(servers.map(async (server) => await server.close()));
 });
 
 /**
@@ -74,9 +74,7 @@ describe('dedupeReact aliases', () => {
   const componentsReact = path.join(componentsDir, 'node_modules/react');
   const componentsReactDom = path.join(componentsDir, 'node_modules/react-dom');
 
-  const aliasMap = () => {
-    return createVitestConfig({ tamaguiConfig: false }).resolve?.alias as Record<string, string>;
-  };
+  const aliasMap = () => createVitestConfig({ tamaguiConfig: false }).resolve?.alias as Record<string, string>;
 
   it('binds react-dom/client and jsx-runtime to the same physical copies as the packages', () => {
     const aliases = aliasMap();

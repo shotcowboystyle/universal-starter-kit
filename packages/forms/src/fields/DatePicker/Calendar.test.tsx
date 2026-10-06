@@ -43,9 +43,8 @@ const opacityOf = (el: HTMLElement): number => {
   return computed === '' ? 1 : Number(computed);
 };
 
-const dayCell = (root: ParentNode, year: number, monthIndex: number, date: number) => {
-  return root.querySelector(`[data-calendar-day="${year}-${monthIndex}-${date}"]`) as HTMLElement | null;
-};
+const dayCell = (root: ParentNode, year: number, monthIndex: number, date: number) =>
+  root.querySelector(`[data-calendar-day="${year}-${monthIndex}-${date}"]`) as HTMLElement | null;
 
 const JuneGrid = ({
   minDate,

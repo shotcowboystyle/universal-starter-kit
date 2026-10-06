@@ -243,159 +243,155 @@ interface SchemeHook {
  * Inline styles that adapt to the devtools chrome theme (light/dark) so the
  * panel looks correct regardless of the devtools panel theme setting.
  */
-const createStyles = (isDark: boolean) => {
-  return {
-    panel: {
-      fontFamily: 'system-ui, -apple-system, sans-serif',
-      fontSize: 13,
-      color: isDark ? '#e8e8e8' : '#1a1a1a',
-      padding: 12,
-      display: 'flex' as const,
-      flexDirection: 'column' as const,
-      gap: 12,
-      height: '100%',
-      overflowY: 'auto' as const,
-      background: 'transparent',
-    },
-    knobsRow: {
-      display: 'flex' as const,
-      flexDirection: 'row' as const,
-      flexWrap: 'wrap' as const,
-      alignItems: 'flex-start' as const,
-      alignContent: 'flex-start' as const,
-      gap: 8,
-    },
-    card: {
-      display: 'flex' as const,
-      flexDirection: 'column' as const,
-      gap: 4,
-      padding: '6px 10px',
-      borderRadius: 6,
-      border: isDark ? '1px solid #333' : '1px solid #e0e0e0',
-      background: isDark ? '#1e1e1e' : '#fafafa',
-      minWidth: 140,
-    },
-    label: {
-      fontSize: 11,
-      fontWeight: 500,
-      color: isDark ? '#888' : '#777',
-      whiteSpace: 'nowrap' as const,
-      textTransform: 'uppercase' as const,
-      letterSpacing: '0.04em',
-    },
-    select: {
-      padding: '3px 6px',
-      borderRadius: 4,
-      border: isDark ? '1px solid #444' : '1px solid #ccc',
-      background: isDark ? '#2a2a2a' : '#fff',
-      color: isDark ? '#e8e8e8' : '#1a1a1a',
+const createStyles = (isDark: boolean) => ({
+  panel: {
+    fontFamily: 'system-ui, -apple-system, sans-serif',
+    fontSize: 13,
+    color: isDark ? '#e8e8e8' : '#1a1a1a',
+    padding: 12,
+    display: 'flex' as const,
+    flexDirection: 'column' as const,
+    gap: 12,
+    height: '100%',
+    overflowY: 'auto' as const,
+    background: 'transparent',
+  },
+  knobsRow: {
+    display: 'flex' as const,
+    flexDirection: 'row' as const,
+    flexWrap: 'wrap' as const,
+    alignItems: 'flex-start' as const,
+    alignContent: 'flex-start' as const,
+    gap: 8,
+  },
+  card: {
+    display: 'flex' as const,
+    flexDirection: 'column' as const,
+    gap: 4,
+    padding: '6px 10px',
+    borderRadius: 6,
+    border: isDark ? '1px solid #333' : '1px solid #e0e0e0',
+    background: isDark ? '#1e1e1e' : '#fafafa',
+    minWidth: 140,
+  },
+  label: {
+    fontSize: 11,
+    fontWeight: 500,
+    color: isDark ? '#888' : '#777',
+    whiteSpace: 'nowrap' as const,
+    textTransform: 'uppercase' as const,
+    letterSpacing: '0.04em',
+  },
+  select: {
+    padding: '3px 6px',
+    borderRadius: 4,
+    border: isDark ? '1px solid #444' : '1px solid #ccc',
+    background: isDark ? '#2a2a2a' : '#fff',
+    color: isDark ? '#e8e8e8' : '#1a1a1a',
+    cursor: 'pointer',
+    fontSize: 13,
+    fontFamily: 'inherit',
+    outline: 'none',
+    width: '100%',
+  },
+  toggleRow: {
+    display: 'flex' as const,
+    alignItems: 'center' as const,
+    gap: 6,
+  },
+  toggle: (active: boolean) =>
+    ({
+      width: 36,
+      height: 20,
+      borderRadius: 10,
+      background: active ? '#7c6cff' : isDark ? '#444' : '#ccc',
+      position: 'relative' as const,
       cursor: 'pointer',
-      fontSize: 13,
-      fontFamily: 'inherit',
-      outline: 'none',
-      width: '100%',
-    },
-    toggleRow: {
+      border: 'none',
+      padding: 0,
+      transition: 'background 0.2s',
+    }) as const,
+  toggleKnob: (active: boolean) =>
+    ({
+      width: 16,
+      height: 16,
+      borderRadius: 8,
+      background: '#fff',
+      position: 'absolute' as const,
+      top: 2,
+      left: active ? 18 : 2,
+      transition: 'left 0.2s',
+    }) as const,
+  iconBtn: (active: boolean) =>
+    ({
+      width: 30,
+      height: 30,
+      borderRadius: 6,
+      border: active
+        ? `1.5px solid ${isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.35)'}`
+        : `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
+      background: active ? (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.06)') : 'transparent',
+      cursor: 'pointer',
       display: 'flex' as const,
       alignItems: 'center' as const,
-      gap: 6,
-    },
-    toggle: (active: boolean) =>
-      ({
-        width: 36,
-        height: 20,
-        borderRadius: 10,
-        background: active ? '#7c6cff' : isDark ? '#444' : '#ccc',
-        position: 'relative' as const,
-        cursor: 'pointer',
-        border: 'none',
-        padding: 0,
-        transition: 'background 0.2s',
-      }) as const,
-    toggleKnob: (active: boolean) =>
-      ({
-        width: 16,
-        height: 16,
-        borderRadius: 8,
-        background: '#fff',
-        position: 'absolute' as const,
-        top: 2,
-        left: active ? 18 : 2,
-        transition: 'left 0.2s',
-      }) as const,
-    iconBtn: (active: boolean) =>
-      ({
-        width: 30,
-        height: 30,
-        borderRadius: 6,
-        border: active
-          ? `1.5px solid ${isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.35)'}`
-          : `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
-        background: active ? (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.06)') : 'transparent',
-        cursor: 'pointer',
-        display: 'flex' as const,
-        alignItems: 'center' as const,
-        justifyContent: 'center' as const,
-        padding: 0,
-        transition: 'all 0.15s ease',
-        outline: 'none',
-      }) as const,
-    iconRow: {
-      display: 'flex' as const,
-      gap: 2,
-      justifyContent: 'flex-end' as const,
-    },
-    resetBtn: {
-      padding: '4px 10px',
-      borderRadius: 4,
-      border: isDark ? '1px solid #555' : '1px solid #ccc',
-      background: isDark ? '#2a2a2a' : '#f5f5f5',
-      color: isDark ? '#e8e8e8' : '#1a1a1a',
-      cursor: 'pointer',
-      fontSize: 11,
-      fontFamily: 'inherit',
-      fontWeight: 500,
-      transition: 'all 0.15s',
-      whiteSpace: 'nowrap' as const,
-    },
-  };
-};
+      justifyContent: 'center' as const,
+      padding: 0,
+      transition: 'all 0.15s ease',
+      outline: 'none',
+    }) as const,
+  iconRow: {
+    display: 'flex' as const,
+    gap: 2,
+    justifyContent: 'flex-end' as const,
+  },
+  resetBtn: {
+    padding: '4px 10px',
+    borderRadius: 4,
+    border: isDark ? '1px solid #555' : '1px solid #ccc',
+    background: isDark ? '#2a2a2a' : '#f5f5f5',
+    color: isDark ? '#e8e8e8' : '#1a1a1a',
+    cursor: 'pointer',
+    fontSize: 11,
+    fontFamily: 'inherit',
+    fontWeight: 500,
+    transition: 'all 0.15s',
+    whiteSpace: 'nowrap' as const,
+  },
+});
 
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
 
-const PinCheckbox = ({ pinned, onToggle, isDark }: { pinned: boolean; onToggle: () => void; isDark: boolean }) => {
-  return (
-    <label
-      title={pinned ? "Pinned — random won't change this" : 'Pin to protect from random'}
+const PinCheckbox = ({ pinned, onToggle, isDark }: { pinned: boolean; onToggle: () => void; isDark: boolean }) => (
+  <label
+    title={pinned ? "Pinned — random won't change this" : 'Pin to protect from random'}
+    style={{
+      position: 'absolute' as const,
+      top: 3,
+      right: 3,
+      display: 'flex',
+      alignItems: 'center',
+      cursor: 'pointer',
+      zIndex: 1,
+      opacity: pinned ? 1 : 0,
+      transition: 'opacity 0.15s',
+    }}
+    className="pin-checkbox">
+    <input
+      type="checkbox"
+      checked={pinned}
+      onChange={onToggle}
       style={{
-        position: 'absolute' as const,
-        top: 3,
-        right: 3,
-        display: 'flex',
-        alignItems: 'center',
+        width: 10,
+        height: 10,
+        margin: 0,
         cursor: 'pointer',
-        zIndex: 1,
-        opacity: pinned ? 1 : 0,
-        transition: 'opacity 0.15s',
+        accentColor: isDark ? '#e8e8e8' : '#1a1a1a',
       }}
-      className="pin-checkbox">
-      <input
-        type="checkbox"
-        checked={pinned}
-        onChange={onToggle}
-        style={{
-          width: 10,
-          height: 10,
-          margin: 0,
-          cursor: 'pointer',
-          accentColor: isDark ? '#e8e8e8' : '#1a1a1a',
-        }}
-      />
-    </label>
-  );
-};
+    />
+  </label>
+);
 
 const Dropdown = <V extends string | number | boolean>({
   label,
@@ -498,43 +494,41 @@ const CollapseButton = ({
   expanded: boolean;
   onToggle: () => void;
   isDark: boolean;
-}) => {
-  return (
-    <button
-      type="button"
-      title={expanded ? 'Collapse state overrides' : 'Expand state overrides'}
-      onClick={onToggle}
-      style={{
-        background: 'none',
-        border: 'none',
-        padding: 0,
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        color: isDark ? '#666' : '#aaa',
-        transition: 'transform 0.15s, color 0.15s',
-        transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
-        flexShrink: 0,
-      }}>
-      <svg
-        width="10"
-        height="10"
-        viewBox="0 0 10 10"
-        fill="none"
-        role="img"
-        aria-label="Toggle">
-        <title>Toggle state overrides</title>
-        <path
-          d="M3 1.5l4 3.5-4 3.5"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    </button>
-  );
-};
+}) => (
+  <button
+    type="button"
+    title={expanded ? 'Collapse state overrides' : 'Expand state overrides'}
+    onClick={onToggle}
+    style={{
+      background: 'none',
+      border: 'none',
+      padding: 0,
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      color: isDark ? '#666' : '#aaa',
+      transition: 'transform 0.15s, color 0.15s',
+      transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
+      flexShrink: 0,
+    }}>
+    <svg
+      width="10"
+      height="10"
+      viewBox="0 0 10 10"
+      fill="none"
+      role="img"
+      aria-label="Toggle">
+      <title>Toggle state overrides</title>
+      <path
+        d="M3 1.5l4 3.5-4 3.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  </button>
+);
 
 const IconGroup = <V extends string | number | boolean>({
   label,
@@ -565,78 +559,76 @@ const IconGroup = <V extends string | number | boolean>({
   onToggleExpand?: () => void;
   onUnset?: () => void;
   children?: ReactNode;
-}) => {
-  return (
-    <div
-      role="group"
-      aria-label={label}
-      style={{ ...styles.card, position: 'relative' as const }}
-      onMouseEnter={(e) => {
-        const element = (e.currentTarget as HTMLElement).querySelector('.pin-checkbox') as HTMLElement | null;
-        if (element && !pinned) {
-          element.style.opacity = '0.5';
-        }
-      }}
-      onMouseLeave={(e) => {
-        const element = (e.currentTarget as HTMLElement).querySelector('.pin-checkbox') as HTMLElement | null;
-        if (element && !pinned) {
-          element.style.opacity = '0';
-        }
-      }}>
-      {onTogglePin && (
-        <PinCheckbox
-          pinned={!!pinned}
-          onToggle={onTogglePin}
+}) => (
+  <div
+    role="group"
+    aria-label={label}
+    style={{ ...styles.card, position: 'relative' as const }}
+    onMouseEnter={(e) => {
+      const element = (e.currentTarget as HTMLElement).querySelector('.pin-checkbox') as HTMLElement | null;
+      if (element && !pinned) {
+        element.style.opacity = '0.5';
+      }
+    }}
+    onMouseLeave={(e) => {
+      const element = (e.currentTarget as HTMLElement).querySelector('.pin-checkbox') as HTMLElement | null;
+      if (element && !pinned) {
+        element.style.opacity = '0';
+      }
+    }}>
+    {onTogglePin && (
+      <PinCheckbox
+        pinned={!!pinned}
+        onToggle={onTogglePin}
+        isDark={isDark}
+      />
+    )}
+    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+      {onToggleExpand && (
+        <CollapseButton
+          expanded={!!expanded}
+          onToggle={onToggleExpand}
           isDark={isDark}
         />
       )}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-        {onToggleExpand && (
-          <CollapseButton
-            expanded={!!expanded}
-            onToggle={onToggleExpand}
-            isDark={isDark}
-          />
-        )}
-        <span style={styles.label}>{label}</span>
-      </div>
-      <div style={styles.iconRow}>
-        {onUnset && (
-          <button
-            type="button"
-            style={{
-              ...styles.iconBtn(value === undefined),
-              padding: '1px 4px',
-              fontSize: 10,
-              minWidth: 0,
-            }}
-            onClick={onUnset}
-            title="unset (inherit)"
-            aria-pressed={value === undefined}>
-            ↺
-          </button>
-        )}
-        {options.map((opt) => {
-          const active = value !== undefined && opt === value;
-          return (
-            <button
-              key={String(opt)}
-              type="button"
-              style={styles.iconBtn(active)}
-              onClick={() => {
-                onChange(opt);
-              }}
-              title={String(opt)}
-              aria-pressed={active}>
-              {icon(opt, active, isDark)}
-            </button>
-          );
-        })}
-      </div>
-      {expanded && children}
+      <span style={styles.label}>{label}</span>
     </div>
-  );
-};
+    <div style={styles.iconRow}>
+      {onUnset && (
+        <button
+          type="button"
+          style={{
+            ...styles.iconBtn(value === undefined),
+            padding: '1px 4px',
+            fontSize: 10,
+            minWidth: 0,
+          }}
+          onClick={onUnset}
+          title="unset (inherit)"
+          aria-pressed={value === undefined}>
+          ↺
+        </button>
+      )}
+      {options.map((opt) => {
+        const active = value !== undefined && opt === value;
+        return (
+          <button
+            key={String(opt)}
+            type="button"
+            style={styles.iconBtn(active)}
+            onClick={() => {
+              onChange(opt);
+            }}
+            title={String(opt)}
+            aria-pressed={active}>
+            {icon(opt, active, isDark)}
+          </button>
+        );
+      })}
+    </div>
+    {expanded && children}
+  </div>
+);
 
 const StateSubRow = ({
   stateName,
@@ -654,147 +646,113 @@ const StateSubRow = ({
   icon: (v: string, active: boolean, dark: boolean) => ReactNode;
   styles: ReturnType<typeof createStyles>;
   isDark: boolean;
-}) => {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
-      <span
+}) => (
+  <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
+    <span
+      style={{
+        fontSize: 9,
+        fontWeight: 500,
+        color: isDark ? '#666' : '#aaa',
+        width: 46,
+        textAlign: 'right',
+        flexShrink: 0,
+      }}>
+      {stateName}
+    </span>
+    <div style={{ ...styles.iconRow, gap: 2 }}>
+      <button
+        type="button"
         style={{
+          ...styles.iconBtn(value === ''),
+          padding: '1px 4px',
           fontSize: 9,
-          fontWeight: 500,
-          color: isDark ? '#666' : '#aaa',
-          width: 46,
-          textAlign: 'right',
-          flexShrink: 0,
-        }}>
-        {stateName}
-      </span>
-      <div style={{ ...styles.iconRow, gap: 2 }}>
-        <button
-          type="button"
-          style={{
-            ...styles.iconBtn(value === ''),
-            padding: '1px 4px',
-            fontSize: 9,
-            minWidth: 0,
-          }}
-          onClick={() => {
-            onChange('');
-          }}
-          title="inherit (no override)">
-          –
-        </button>
-        {options.map((opt) => {
-          const active = opt === value;
-          return (
-            <button
-              key={opt}
-              type="button"
-              style={{ ...styles.iconBtn(active), transform: 'scale(0.85)' }}
-              onClick={() => {
-                onChange(opt);
-              }}
-              title={opt}>
-              {icon(opt, active, isDark)}
-            </button>
-          );
-        })}
-      </div>
+          minWidth: 0,
+        }}
+        onClick={() => {
+          onChange('');
+        }}
+        title="inherit (no override)">
+        –
+      </button>
+      {options.map((opt) => {
+        const active = opt === value;
+        return (
+          <button
+            key={opt}
+            type="button"
+            style={{ ...styles.iconBtn(active), transform: 'scale(0.85)' }}
+            onClick={() => {
+              onChange(opt);
+            }}
+            title={opt}>
+            {icon(opt, active, isDark)}
+          </button>
+        );
+      })}
     </div>
-  );
-};
+  </div>
+);
 
 // ---------------------------------------------------------------------------
 // Icon renderers — wrappers around shared knobIcons with local color logic
 // ---------------------------------------------------------------------------
 
 /** Resolve foreground color for an icon based on active state and theme. */
-const ic = (active: boolean, dark: boolean): string => {
-  return active ? (dark ? '#e8e8e8' : '#1a1a1a') : dark ? '#555' : '#bbb';
-};
+const ic = (active: boolean, dark: boolean): string =>
+  active ? (dark ? '#e8e8e8' : '#1a1a1a') : dark ? '#555' : '#bbb';
 
-const modeIcon = (v: 'system' | 'light' | 'dark', active: boolean, dark: boolean): ReactNode => {
-  return _modeIcon(v, ic(active, dark));
-};
+const modeIcon = (v: 'system' | 'light' | 'dark', active: boolean, dark: boolean): ReactNode =>
+  _modeIcon(v, ic(active, dark));
 
-const fillIcon = (v: string, active: boolean, dark: boolean): ReactNode => {
-  return _fillIcon(v, ic(active, dark));
-};
+const fillIcon = (v: string, active: boolean, dark: boolean): ReactNode => _fillIcon(v, ic(active, dark));
 
-const spaceIcon = (v: string, active: boolean, dark: boolean): ReactNode => {
-  return _spaceIcon(v, ic(active, dark));
-};
+const spaceIcon = (v: string, active: boolean, dark: boolean): ReactNode => _spaceIcon(v, ic(active, dark));
 
-const sizeIcon = (v: string, active: boolean, dark: boolean): ReactNode => {
-  return _sizeIcon(v, ic(active, dark));
-};
+const sizeIcon = (v: string, active: boolean, dark: boolean): ReactNode => _sizeIcon(v, ic(active, dark));
 
-const densityIcon = (v: string, active: boolean, dark: boolean): ReactNode => {
-  return _densityIcon(v, ic(active, dark));
-};
+const densityIcon = (v: string, active: boolean, dark: boolean): ReactNode => _densityIcon(v, ic(active, dark));
 
-const borderRadiusIcon = (v: string, active: boolean, dark: boolean): ReactNode => {
-  return _borderRadiusIcon(v, ic(active, dark));
-};
+const borderRadiusIcon = (v: string, active: boolean, dark: boolean): ReactNode =>
+  _borderRadiusIcon(v, ic(active, dark));
 
-const cornerSmoothingIcon = (v: string, active: boolean, dark: boolean): ReactNode => {
-  return _cornerSmoothingIcon(v, ic(active, dark));
-};
+const cornerSmoothingIcon = (v: string, active: boolean, dark: boolean): ReactNode =>
+  _cornerSmoothingIcon(v, ic(active, dark));
 
-const borderWidthIcon = (v: string, active: boolean, dark: boolean): ReactNode => {
-  return _borderWidthIcon(v, ic(active, dark));
-};
+const borderWidthIcon = (v: string, active: boolean, dark: boolean): ReactNode => _borderWidthIcon(v, ic(active, dark));
 
-const elevationIconWrap = (v: string, active: boolean, dark: boolean): ReactNode => {
-  return _elevationIcon(v, ic(active, dark), dark);
-};
+const elevationIconWrap = (v: string, active: boolean, dark: boolean): ReactNode =>
+  _elevationIcon(v, ic(active, dark), dark);
 
-const textAccentIcon = (v: string, active: boolean, dark: boolean): ReactNode => {
-  return _textAccentIcon(v, ic(active, dark));
-};
+const textAccentIcon = (v: string, active: boolean, dark: boolean): ReactNode => _textAccentIcon(v, ic(active, dark));
 
-const headingFontIcon = (v: string, active: boolean, dark: boolean): ReactNode => {
-  return _headingFontIcon(v, ic(active, dark));
-};
+const headingFontIcon = (v: string, active: boolean, dark: boolean): ReactNode => _headingFontIcon(v, ic(active, dark));
 
-const bodyFontIcon = (v: string, active: boolean, dark: boolean): ReactNode => {
-  return _bodyFontIcon(v, ic(active, dark));
-};
+const bodyFontIcon = (v: string, active: boolean, dark: boolean): ReactNode => _bodyFontIcon(v, ic(active, dark));
 
-const fontWeightIcon = (v: string, active: boolean, dark: boolean): ReactNode => {
-  return _fontWeightIcon(v, ic(active, dark));
-};
+const fontWeightIcon = (v: string, active: boolean, dark: boolean): ReactNode => _fontWeightIcon(v, ic(active, dark));
 
-const fieldLabelPlacementIcon = (v: string, active: boolean, dark: boolean): ReactNode => {
-  return _fieldLabelPlacementIcon(v, ic(active, dark));
-};
+const fieldLabelPlacementIcon = (v: string, active: boolean, dark: boolean): ReactNode =>
+  _fieldLabelPlacementIcon(v, ic(active, dark));
 
-const requiredMarkingIcon = (v: string, active: boolean, dark: boolean): ReactNode => {
-  return _requiredMarkingIcon(v, ic(active, dark));
-};
+const requiredMarkingIcon = (v: string, active: boolean, dark: boolean): ReactNode =>
+  _requiredMarkingIcon(v, ic(active, dark));
 
-const tableZebraIcon = (v: string, active: boolean, dark: boolean): ReactNode => {
-  return _tableZebraIcon(v, ic(active, dark));
-};
+const tableZebraIcon = (v: string, active: boolean, dark: boolean): ReactNode => _tableZebraIcon(v, ic(active, dark));
 
-const bulkBarPlacementIcon = (v: string, active: boolean, dark: boolean): ReactNode => {
-  return _bulkBarPlacementIcon(v, ic(active, dark));
-};
+const bulkBarPlacementIcon = (v: string, active: boolean, dark: boolean): ReactNode =>
+  _bulkBarPlacementIcon(v, ic(active, dark));
 
-const selectAllScopeIcon = (v: string, active: boolean, dark: boolean): ReactNode => {
-  return _selectAllScopeIcon(v, ic(active, dark));
-};
+const selectAllScopeIcon = (v: string, active: boolean, dark: boolean): ReactNode =>
+  _selectAllScopeIcon(v, ic(active, dark));
 
-const timestampStyleIcon = (v: string, active: boolean, dark: boolean): ReactNode => {
-  return _timestampStyleIcon(v, ic(active, dark));
-};
+const timestampStyleIcon = (v: string, active: boolean, dark: boolean): ReactNode =>
+  _timestampStyleIcon(v, ic(active, dark));
 
-const disabledStyleIcon = (v: string, active: boolean, dark: boolean): ReactNode => {
-  return _disabledStyleIcon(v, ic(active, dark));
-};
+const disabledStyleIcon = (v: string, active: boolean, dark: boolean): ReactNode =>
+  _disabledStyleIcon(v, ic(active, dark));
 
-const formAutofocusIcon = (v: string, active: boolean, dark: boolean): ReactNode => {
-  return _formAutofocusIcon(v, ic(active, dark));
-};
+const formAutofocusIcon = (v: string, active: boolean, dark: boolean): ReactNode =>
+  _formAutofocusIcon(v, ic(active, dark));
 
 // ---------------------------------------------------------------------------
 // Main panel

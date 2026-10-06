@@ -73,21 +73,19 @@ const meta: Meta = {
 
 export default meta;
 
-const PhotoPlate = ({ item }: { item: ImageItem }) => {
+const PhotoPlate = ({ item }: { item: ImageItem }) => (
   // Catalog Image. No tile-owned radius (story honesty):
   // ImageGrid's card frame clips items at the knob radius — a pinned $3
   // held a 7px arc at borderRadius:none.
-  return (
-    <Image
-      src={item.src}
-      alt={item.alt}
-      width="100%"
-      aspectRatio={1}
-      objectFit="cover"
-      borderRadius={0}
-    />
-  );
-};
+  <Image
+    src={item.src}
+    alt={item.alt}
+    width="100%"
+    aspectRatio={1}
+    objectFit="cover"
+    borderRadius={0}
+  />
+);
 
 export const Default = {
   name: 'Main',

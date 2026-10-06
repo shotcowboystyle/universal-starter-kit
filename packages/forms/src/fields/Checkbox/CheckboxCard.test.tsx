@@ -34,9 +34,8 @@ const classesOf = (node: Element | null): string => {
   return Array.from(node.classList).join(' ');
 };
 
-const painted = (container: HTMLElement, marker: string): string => {
-  return classesOf(container.querySelector(`[class*='${marker}']`));
-};
+const painted = (container: HTMLElement, marker: string): string =>
+  classesOf(container.querySelector(`[class*='${marker}']`));
 
 describe('getCardDescriptionSize — T-HELPER is one step under the field', () => {
   it('maps each field size onto its helper tier', () => {

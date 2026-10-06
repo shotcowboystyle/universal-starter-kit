@@ -142,8 +142,8 @@ describe('form layout stories mount knob-consuming field chrome', () => {
  * carry the knob's token: a raw tamagui Input pins its own radius and no
  * ancestor moves.
  */
-const inputChromeTokens = (container: HTMLElement): string[] => {
-  return [...container.querySelectorAll<HTMLElement>('input')].map((input) => {
+const inputChromeTokens = (container: HTMLElement): string[] =>
+  [...container.querySelectorAll<HTMLElement>('input')].map((input) => {
     for (let el = input.parentElement; el && el !== container; el = el.parentElement) {
       for (const cls of String(el.className || '').split(/\s+/)) {
         const radius = radiusAtom(cls);
@@ -154,7 +154,6 @@ const inputChromeTokens = (container: HTMLElement): string[] => {
     }
     return 'none found';
   });
-};
 
 const beside = [
   {

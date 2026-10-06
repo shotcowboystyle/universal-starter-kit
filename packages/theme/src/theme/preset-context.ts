@@ -14,9 +14,7 @@ export const PresetContext = createContext<PresetContextValue | null>(null);
 /**
  * Read the nearest Preset context. Returns null if no <Preset> ancestor exists.
  */
-export const usePresetContext = (): PresetContextValue | null => {
-  return useContext(PresetContext);
-};
+export const usePresetContext = (): PresetContextValue | null => useContext(PresetContext);
 
 /**
  * Read the tints array from the nearest Preset context.

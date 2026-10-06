@@ -10,15 +10,12 @@ import { ImageField } from './index';
 
 afterEach(cleanup);
 
-const mediaTile = (container: HTMLElement) => {
-  return container.querySelector('[data-media-tile]') as HTMLElement | null;
-};
+const mediaTile = (container: HTMLElement) => container.querySelector('[data-media-tile]') as HTMLElement | null;
 
-const radiusClasses = (el: HTMLElement | null) => {
-  return String(el?.className || '')
+const radiusClasses = (el: HTMLElement | null) =>
+  String(el?.className || '')
     .split(' ')
     .filter((c) => c.startsWith('_btlr-'));
-};
 
 describe('ImageField', () => {
   describe('without form context', () => {

@@ -51,9 +51,8 @@ const wrapper = ({ children }: { children: ReactNode }) => {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 };
 
-const renderTaskFormHook = (props: Parameters<typeof useTaskForm>[0]) => {
-  return renderHook(() => useTaskForm(props), { wrapper });
-};
+const renderTaskFormHook = (props: Parameters<typeof useTaskForm>[0]) =>
+  renderHook(() => useTaskForm(props), { wrapper });
 
 describe('useTaskForm', () => {
   beforeEach(async () => {

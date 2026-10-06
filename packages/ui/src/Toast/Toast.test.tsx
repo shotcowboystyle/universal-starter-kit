@@ -545,16 +545,13 @@ describe('Toast banned-error-word DEV warn', () => {
   });
 });
 
-const classesByPrefix = (el: Element, prefixes: string[]): string[] => {
-  return String((el as HTMLElement).className || '')
+const classesByPrefix = (el: Element, prefixes: string[]): string[] =>
+  String((el as HTMLElement).className || '')
     .split(' ')
     .filter((c) => prefixes.some((p) => c.startsWith(p)))
     .sort();
-};
 
-const shadowClasses = (el: Element): string[] => {
-  return classesByPrefix(el, ['_bxsh-']);
-};
+const shadowClasses = (el: Element): string[] => classesByPrefix(el, ['_bxsh-']);
 
 const ACTION = 'Undo';
 
@@ -584,16 +581,14 @@ const houseThemes = createThemesBuilder(defaultBaseTheme, defaultAccentTheme, de
  * there; under stock the wrap falls back to the base ramp and the arm
  * certifies a pair the product never paints.
  */
-const ContrastScheme = ({ scheme, children }: { scheme: (typeof CONTRAST_SCHEMES)[number]; children: ReactNode }) => {
-  return (
-    <TamaguiProvider
-      config={houseConfig.tamagui}
-      defaultTheme={scheme}
-      disableInjectCSS>
-      <YStack backgroundColor="$background">{children}</YStack>
-    </TamaguiProvider>
-  );
-};
+const ContrastScheme = ({ scheme, children }: { scheme: (typeof CONTRAST_SCHEMES)[number]; children: ReactNode }) => (
+  <TamaguiProvider
+    config={houseConfig.tamagui}
+    defaultTheme={scheme}
+    disableInjectCSS>
+    <YStack backgroundColor="$background">{children}</YStack>
+  </TamaguiProvider>
+);
 
 /**
  * Accent toasts stay on the BASE theme and take their ink from

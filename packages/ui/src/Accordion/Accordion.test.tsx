@@ -6,15 +6,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { Accordion } from './index';
 
-const atoms = (el: Element, prefixes: string[]): string[] => {
-  return String((el as HTMLElement).className || '')
+const atoms = (el: Element, prefixes: string[]): string[] =>
+  String((el as HTMLElement).className || '')
     .split(' ')
     .filter((c) => prefixes.some((p) => c.startsWith(p)))
     .sort();
-};
 
-const renderAccordion = (props: Record<string, any> = {}) => {
-  return renderWithProviders(
+const renderAccordion = (props: Record<string, any> = {}) =>
+  renderWithProviders(
     <Accordion {...props}>
       <Accordion.Item value="a">
         <Accordion.Trigger>Section A</Accordion.Trigger>
@@ -30,11 +29,8 @@ const renderAccordion = (props: Record<string, any> = {}) => {
       </Accordion.Item>
     </Accordion>,
   );
-};
 
-const getTriggers = (container: HTMLElement) => {
-  return Array.from(container.querySelectorAll('[aria-expanded]'));
-};
+const getTriggers = (container: HTMLElement) => Array.from(container.querySelectorAll('[aria-expanded]'));
 
 describe('Accordion', () => {
   it('renders headers with collapsed content', () => {

@@ -31,9 +31,8 @@ const mount = (story: StoryLike) => {
 };
 
 /** Every bone is a SkeletonFrame, which Tamagui names `is_Skeleton`. */
-const bones = (container: HTMLElement): HTMLElement[] => {
-  return Array.from(container.querySelectorAll<HTMLElement>('.is_Skeleton'));
-};
+const bones = (container: HTMLElement): HTMLElement[] =>
+  Array.from(container.querySelectorAll<HTMLElement>('.is_Skeleton'));
 
 const classesOf = (el: HTMLElement) => (el.getAttribute('class') ?? '').split(' ');
 const widthClass = (el: HTMLElement) => classesOf(el).find((c) => c.startsWith('_w-'));

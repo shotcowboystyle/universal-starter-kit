@@ -58,7 +58,7 @@ export const taskApi = {
 
   // Delete a task
   async deleteTask(id: string): Promise<void> {
-    return await fetchWithAuth(
+    await fetchWithAuth(
       `${TASKS_ENDPOINT}/${id}`,
       {
         method: 'DELETE',

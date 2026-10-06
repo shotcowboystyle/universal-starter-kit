@@ -1,8 +1,6 @@
 import { animationNames } from '../animations/index';
 
-const isRecord = (value: unknown): value is Record<string, unknown> => {
-  return typeof value === 'object' && value !== null;
-};
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
 
 /**
  * The animation names a Tamagui config registers, for the panel's Animation

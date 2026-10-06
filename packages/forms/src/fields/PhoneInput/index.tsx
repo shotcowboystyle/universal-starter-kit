@@ -4,8 +4,7 @@ import type { DeepKeys, DeepValue } from '@tanstack/form-core';
 import type { ComponentProps, FocusEventHandler, ReactNode } from 'react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { TamaguiElement, Input } from 'tamagui';
-import { isWeb, useProps } from 'tamagui';
-import { Text, View, XStack } from 'tamagui';
+import { isWeb, useProps, Text, View, XStack } from 'tamagui';
 
 import { Field, FieldLayout } from '../../FieldLayout';
 import type { FormFieldProps } from '../../FieldLayout';

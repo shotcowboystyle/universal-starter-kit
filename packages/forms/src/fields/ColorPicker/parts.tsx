@@ -179,9 +179,7 @@ export const hexToHsv = (hex: string): { h: number; s: number; v: number } => {
   return rgbToHsv(rgb.r, rgb.g, rgb.b);
 };
 
-export const isValidHex = (hex: string): boolean => {
-  return /^#([a-f\d]{3}|[a-f\d]{6}|[a-f\d]{8})$/i.test(hex);
-};
+export const isValidHex = (hex: string): boolean => /^#([a-f\d]{3}|[a-f\d]{6}|[a-f\d]{8})$/i.test(hex);
 
 /** RGB hex (#RRGGBB). 8-digit input drops the alpha byte (use parseHex for alpha). */
 export const normalizeHex = (hex: string): string => {
@@ -201,9 +199,7 @@ export const hexAlphaByte = (alpha: number): string => {
     .toUpperCase();
 };
 
-export const hexChannelAlpha = (hex: string): number => {
-  return parseHex(hex)?.alpha ?? 100;
-};
+export const hexChannelAlpha = (hex: string): number => parseHex(hex)?.alpha ?? 100;
 
 // ---------------------------------------------------------------------------
 // Styled sub-components
@@ -300,9 +296,7 @@ export type ColorRailOrientation = 'horizontal' | 'vertical';
 const HANDLE_SIZE = 16;
 const RAIL_THICKNESS = 16;
 
-export const binaryRadius = (pointy: boolean | undefined, size: number): number => {
-  return pointy ? 0 : size / 2;
-};
+export const binaryRadius = (pointy: boolean | undefined, size: number): number => (pointy ? 0 : size / 2);
 
 /**
  * Spectrum ColorHandle: current-color fill, white inner ring + dark outer ring
@@ -1034,18 +1028,16 @@ export const ColorPickerPopoverShell = ({
   children,
   disabled,
   triggerA11y,
-}: ColorPickerPopoverShellProps) => {
-  return (
-    <FloatingPanel
-      open={open}
-      onOpenChange={onOpenChange}
-      trigger={trigger}
-      disabled={disabled}
-      sizing="fill"
-      widthMode="at-least-trigger"
-      contentPadding="none"
-      triggerA11y={triggerA11y}>
-      {children}
-    </FloatingPanel>
-  );
-};
+}: ColorPickerPopoverShellProps) => (
+  <FloatingPanel
+    open={open}
+    onOpenChange={onOpenChange}
+    trigger={trigger}
+    disabled={disabled}
+    sizing="fill"
+    widthMode="at-least-trigger"
+    contentPadding="none"
+    triggerA11y={triggerA11y}>
+    {children}
+  </FloatingPanel>
+);

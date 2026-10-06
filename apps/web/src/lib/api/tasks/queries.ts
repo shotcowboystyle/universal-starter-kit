@@ -242,7 +242,9 @@ export const useDeleteTask = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (taskId: string) => await taskApi.deleteTask(taskId),
+    mutationFn: async (taskId: string) => {
+      await taskApi.deleteTask(taskId);
+    },
     onMutate: async (taskId) => {
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: TASK_KEYS.lists() });

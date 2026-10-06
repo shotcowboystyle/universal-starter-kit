@@ -56,9 +56,7 @@ export interface NotifyRoute {
   dismissible: boolean;
 }
 
-const toastDuration = (action?: NotifyAction): number | undefined => {
-  return action ? TOAST_ACTION_MIN_MS : undefined;
-};
+const toastDuration = (action?: NotifyAction): number | undefined => (action ? TOAST_ACTION_MIN_MS : undefined);
 
 /**
  * Decide the feedback surface for a semantic event.

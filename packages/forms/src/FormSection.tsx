@@ -109,9 +109,7 @@ export const FormSection = ({
  * Gallery Fieldset — semantic fieldset/legend grouping.
  * Named export of {@link FormSection} (same API, form-section rhythm tokens).
  */
-export const Fieldset = (props: FormSectionProps) => {
-  return <FormSection {...props} />;
-};
+export const Fieldset = (props: FormSectionProps) => <FormSection {...props} />;
 export type FieldsetProps = FormSectionProps;
 
 export interface FormSectionStackProps {

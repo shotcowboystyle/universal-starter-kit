@@ -22,22 +22,19 @@ const clearThemeCookies = () => {
   }
 };
 
-const Shell = ({ scheme }: { scheme: 'light' | 'dark' }) => {
-  return (
-    <CookiesProvider>
-      <ThemeDevtoolsPanel
-        key={scheme}
-        devtoolsTheme={scheme}
-      />
-    </CookiesProvider>
-  );
-};
+const Shell = ({ scheme }: { scheme: 'light' | 'dark' }) => (
+  <CookiesProvider>
+    <ThemeDevtoolsPanel
+      key={scheme}
+      devtoolsTheme={scheme}
+    />
+  </CookiesProvider>
+);
 
-const pressed = (label: string, title: string) => {
-  return within(screen.getByRole('group', { name: label }))
+const pressed = (label: string, title: string) =>
+  within(screen.getByRole('group', { name: label }))
     .getByTitle(title)
     .getAttribute('aria-pressed');
-};
 
 beforeEach(clearThemeCookies);
 afterEach(() => {

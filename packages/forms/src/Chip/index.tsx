@@ -149,9 +149,7 @@ const resolveVariant = (variant: ChipVariantProp | undefined): ChipVariant => {
 const CHIP_RECIPE_FAMILY = 'controlCompact' as const;
 const CHIP_SIZE_TOKENS = ['$2', '$3', '$4', '$5'] as const;
 
-const chipPadY = (paddingHorizontal: number): number => {
-  return Math.round(paddingHorizontal * 0.25);
-};
+const chipPadY = (paddingHorizontal: number): number => Math.round(paddingHorizontal * 0.25);
 
 const chipFrameGeometry = (token: string) => {
   const recipe = sizeRecipeForToken(token, { family: CHIP_RECIPE_FAMILY });
@@ -251,9 +249,8 @@ const ChipBody = styled(View, {
 });
 
 /** Icon size that pairs with each chip size — the generated recipe's icon channel. */
-export const chipIconSize = (size: ChipSize): number => {
-  return sizeRecipeForToken(size, { family: CHIP_RECIPE_FAMILY }).iconSize;
-};
+export const chipIconSize = (size: ChipSize): number =>
+  sizeRecipeForToken(size, { family: CHIP_RECIPE_FAMILY }).iconSize;
 
 /**
  * Fine-pointer floor for the dismiss target. The 44px coarse
@@ -268,9 +265,7 @@ export const CHIP_DISMISS_MIN_TARGET_FINE = 24;
  * floor up to ≥24 effective (applied as an absolute, unpainted overlay).
  * Exported for the Chip spec, which pins the hit-area decision.
  */
-export const chipDismissFloorOutset = (side: number): number => {
-  return Math.max(0, (CHIP_DISMISS_MIN_TARGET_FINE - side) / 2);
-};
+export const chipDismissFloorOutset = (side: number): number => Math.max(0, (CHIP_DISMISS_MIN_TARGET_FINE - side) / 2);
 
 /**
  * The dismiss ✕ occupies the pill's END CAP: `alignSelf: stretch` spans the

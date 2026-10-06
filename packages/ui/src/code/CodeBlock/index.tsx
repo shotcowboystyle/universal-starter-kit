@@ -44,9 +44,7 @@ const lineHeightBySize: Record<string, number> = {
   $6: 22,
 };
 
-const clampHeightForSize = (sizeToken: string): number => {
-  return VISIBLE_LINES * (lineHeightBySize[sizeToken] ?? 18);
-};
+const clampHeightForSize = (sizeToken: string): number => VISIBLE_LINES * (lineHeightBySize[sizeToken] ?? 18);
 
 export interface CodeBlockProps {
   /** The code to highlight */

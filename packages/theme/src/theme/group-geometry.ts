@@ -101,8 +101,8 @@ export const stackRadiusProps = (
   position: GroupPosition,
   radius: string | number | undefined,
   orientation: GroupOrientation = 'vertical',
-): StackRadiusFragment => {
-  return stackEdgeRadius(
+): StackRadiusFragment =>
+  stackEdgeRadius(
     radius,
     {
       start: position === 'first' || position === 'only',
@@ -110,7 +110,6 @@ export const stackRadiusProps = (
     },
     orientation,
   );
-};
 
 /**
  * Group containers provide each item's position so nested compound parts
@@ -121,6 +120,4 @@ export const stackRadiusProps = (
 export const GroupPositionContext = createContext<GroupPosition | undefined>(undefined);
 
 /** The current row's position within its stacked group, if any. */
-export const useGroupPosition = (): GroupPosition | undefined => {
-  return useContext(GroupPositionContext);
-};
+export const useGroupPosition = (): GroupPosition | undefined => useContext(GroupPositionContext);

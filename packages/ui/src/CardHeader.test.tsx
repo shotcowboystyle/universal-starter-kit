@@ -9,9 +9,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { CardHeader } from './CardHeader';
 import { Card } from './surfaces';
 
-const readSibling = (name: string) => {
-  return readFileSync(join(import.meta.dirname, name), 'utf-8');
-};
+const readSibling = (name: string) => readFileSync(join(import.meta.dirname, name), 'utf-8');
 
 const atoms = (el: Element | null, prefixes: string[]): string[] => {
   if (!el) {
@@ -23,9 +21,8 @@ const atoms = (el: Element | null, prefixes: string[]): string[] => {
     .sort();
 };
 
-const titleText = (container: HTMLElement, label: string): HTMLElement => {
-  return container.querySelector('[data-heading-font]') ?? screen.getByText(label);
-};
+const titleText = (container: HTMLElement, label: string): HTMLElement =>
+  container.querySelector('[data-heading-font]') ?? screen.getByText(label);
 
 describe('CardHeader named exports', () => {
   it('is the Card.Header static and has no default export', async () => {

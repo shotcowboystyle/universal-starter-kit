@@ -48,9 +48,7 @@ vi.mock('expo-linear-gradient', () => ({
     }),
 }));
 
-const loadColorPicker = async () => {
-  return (await import('./index')).ColorPicker;
-};
+const loadColorPicker = async () => (await import('./index')).ColorPicker;
 
 describe('ColorPicker', () => {
   it('should handle disabled state', async () => {

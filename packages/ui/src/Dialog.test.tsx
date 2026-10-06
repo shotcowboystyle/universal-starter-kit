@@ -18,31 +18,27 @@ afterEach(() => {
   catalog.current = {};
 });
 
-const OpenDialog = ({ children }: { children: ReactNode }) => {
-  return (
-    <Dialog open>
-      <Dialog.Portal>
-        <Dialog.Content>
-          <Dialog.Title>Edit profile</Dialog.Title>
-          {children}
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog>
-  );
-};
+const OpenDialog = ({ children }: { children: ReactNode }) => (
+  <Dialog open>
+    <Dialog.Portal>
+      <Dialog.Content>
+        <Dialog.Title>Edit profile</Dialog.Title>
+        {children}
+      </Dialog.Content>
+    </Dialog.Portal>
+  </Dialog>
+);
 
-const OpenAlertDialog = ({ children }: { children: ReactNode }) => {
-  return (
-    <AlertDialog open>
-      <AlertDialog.Portal>
-        <AlertDialog.Content>
-          <AlertDialog.Title>Delete account?</AlertDialog.Title>
-          {children}
-        </AlertDialog.Content>
-      </AlertDialog.Portal>
-    </AlertDialog>
-  );
-};
+const OpenAlertDialog = ({ children }: { children: ReactNode }) => (
+  <AlertDialog open>
+    <AlertDialog.Portal>
+      <AlertDialog.Content>
+        <AlertDialog.Title>Delete account?</AlertDialog.Title>
+        {children}
+      </AlertDialog.Content>
+    </AlertDialog.Portal>
+  </AlertDialog>
+);
 
 const noDialogClose = () => {
   expect(screen.queryAllByRole('button', { name: 'Dialog Close' })).toHaveLength(0);

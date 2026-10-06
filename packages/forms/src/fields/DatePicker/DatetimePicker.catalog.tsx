@@ -74,13 +74,11 @@ export type DatetimePickerProps<
 // Time utilities
 // ---------------------------------------------------------------------------
 
-const parseTimeFromDate = (date: Date): { h: number; m: number; s: number } => {
-  return {
-    h: date.getHours(),
-    m: date.getMinutes(),
-    s: date.getSeconds(),
-  };
-};
+const parseTimeFromDate = (date: Date): { h: number; m: number; s: number } => ({
+  h: date.getHours(),
+  m: date.getMinutes(),
+  s: date.getSeconds(),
+});
 
 /**
  * Timestamp register: one register formats the whole value, date part
@@ -112,20 +110,18 @@ interface DayGridProps {
   maxDate?: Date;
 }
 
-const DayGrid = ({ calendarData, selectedDate, onSelectDate, minDate, maxDate }: DayGridProps) => {
-  return (
-    <CalendarDays
-      calendarData={calendarData}
-      minDate={minDate}
-      maxDate={maxDate}
-      isSelected={(day) => isSameDay(selectedDate, day)}
-      onSelect={onSelectDate}
-      onToday={() => {
-        onSelectDate(new Date());
-      }}
-    />
-  );
-};
+const DayGrid = ({ calendarData, selectedDate, onSelectDate, minDate, maxDate }: DayGridProps) => (
+  <CalendarDays
+    calendarData={calendarData}
+    minDate={minDate}
+    maxDate={maxDate}
+    isSelected={(day) => isSameDay(selectedDate, day)}
+    onSelect={onSelectDate}
+    onToday={() => {
+      onSelectDate(new Date());
+    }}
+  />
+);
 
 // ---------------------------------------------------------------------------
 // TimeSection — time selection within the picker

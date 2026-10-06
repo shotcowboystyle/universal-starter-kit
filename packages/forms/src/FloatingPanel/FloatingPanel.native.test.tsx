@@ -53,16 +53,14 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-const panel = (open: boolean) => {
-  return (
-    <FloatingPanel
-      open={open}
-      onOpenChange={onOpenChange}
-      trigger={<Text>Pick one</Text>}>
-      <Text>row</Text>
-    </FloatingPanel>
-  );
-};
+const panel = (open: boolean) => (
+  <FloatingPanel
+    open={open}
+    onOpenChange={onOpenChange}
+    trigger={<Text>Pick one</Text>}>
+    <Text>row</Text>
+  </FloatingPanel>
+);
 
 describe('FloatingPanel native presentation lifecycle', () => {
   it('keeps full-field triggers stretched and allows content-sized composite adornments', () => {

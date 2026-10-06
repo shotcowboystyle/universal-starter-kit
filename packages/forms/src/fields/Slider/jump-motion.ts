@@ -135,9 +135,8 @@ export const hasMinStepsBetween = (values: number[], minStepsBetweenValues: numb
  * (`$4` is 32, not 44). Radius is not on the recipe; circular vs square
  * does not change diameter.
  */
-export const getSliderThumbRenderSize = (sizeToken: string, _circular?: boolean, touch = isTouchSurface()): number => {
-  return sizeRecipeForToken(sizeToken, { touch }).height;
-};
+export const getSliderThumbRenderSize = (sizeToken: string, _circular?: boolean, touch = isTouchSurface()): number =>
+  sizeRecipeForToken(sizeToken, { touch }).height;
 
 /**
  * Replica of the thumb's internal horizontal translateX (LTR):
@@ -232,9 +231,7 @@ const springEnvelopeRatio = ({ omega, zeta }: SpringPhysics, tSec: number): numb
   return (r2 * Math.exp(-r1 * tSec) - r1 * Math.exp(-r2 * tSec)) / (r2 - r1);
 };
 
-const clampSettleMs = (ms: number): number => {
-  return Math.min(MAX_SETTLE_MS, Math.max(MIN_SETTLE_MS, Math.ceil(ms)));
-};
+const clampSettleMs = (ms: number): number => Math.min(MAX_SETTLE_MS, Math.max(MIN_SETTLE_MS, Math.ceil(ms)));
 
 /**
  * Ms until a jump of `deltaPx` animated with `config` has a residual envelope

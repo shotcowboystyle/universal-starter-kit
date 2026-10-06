@@ -10,8 +10,8 @@ import { useAuthStore } from '@/stores/auth-store';
 
 import { TamaguiRoot } from './TamaguiRoot';
 
-const makeQueryClient = () => {
-  return new QueryClient({
+const makeQueryClient = () =>
+  new QueryClient({
     defaultOptions: {
       queries: {
         staleTime: 5 * 60 * 1000, // 5 minutes
@@ -20,7 +20,6 @@ const makeQueryClient = () => {
       },
     },
   });
-};
 
 // SyncAuthStore ensures auth store is hydrated from persistence on mount
 // Without subscribing to any state, it just triggers hydration once

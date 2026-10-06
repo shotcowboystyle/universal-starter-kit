@@ -21,9 +21,7 @@ import { formatDayLong, formatTimeOfDay } from '@repo/theme';
 export const MINUTES_PER_DAY = 1440;
 
 /** Wall-clock minutes since midnight for a date. */
-export const minutesOfDay = (date: Date): number => {
-  return date.getHours() * 60 + date.getMinutes();
-};
+export const minutesOfDay = (date: Date): number => date.getHours() * 60 + date.getMinutes();
 
 /**
  * Snap minutes to a grid increment, clamped to a single day.
@@ -42,9 +40,7 @@ export const snapMinutes = (minutes: number, increment: number, mode: 'round' | 
 };
 
 /** Vertical pixel offset inside a day column for a minutes-of-day value. */
-export const minutesToY = (minutes: number, hourHeight: number): number => {
-  return (minutes / 60) * hourHeight;
-};
+export const minutesToY = (minutes: number, hourHeight: number): number => (minutes / 60) * hourHeight;
 
 /** Minutes-of-day for a vertical pixel offset inside a day column (clamped). */
 export const yToMinutes = (y: number, hourHeight: number): number => {
@@ -114,9 +110,8 @@ export interface CalendarRange {
   end: Date;
 }
 
-const dateAtMinutes = (day: Date, minutes: number): Date => {
-  return new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, minutes);
-};
+const dateAtMinutes = (day: Date, minutes: number): Date =>
+  new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, minutes);
 
 /**
  * Move an event to a target day + snapped start minutes, preserving its
@@ -202,14 +197,11 @@ export const moveFocusSlot = (minutes: number, key: 'ArrowUp' | 'ArrowDown', slo
 // ── Formatting / accessible names ─────────────────────────────
 
 /** "2:00 PM" — the house time-of-day register. */
-export const formatTimeShort = (date: Date): string => {
-  return formatTimeOfDay(date);
-};
+export const formatTimeShort = (date: Date): string => formatTimeOfDay(date);
 
 /** "2:00 PM – 3:30 PM" visible label used by resize / create sketches. */
-export const formatTimeRangeLabel = (start: Date, end: Date): string => {
-  return `${formatTimeShort(start)} – ${formatTimeShort(end)}`;
-};
+export const formatTimeRangeLabel = (start: Date, end: Date): string =>
+  `${formatTimeShort(start)} – ${formatTimeShort(end)}`;
 
 /**
  * Full accessible name for an event element (Axiom 12):

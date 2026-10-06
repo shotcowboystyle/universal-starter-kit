@@ -34,9 +34,7 @@ export interface RequiredMarkingContextValue {
 
 export const RequiredMarkingContext = createContext<RequiredMarkingContextValue | null>(null);
 
-export const useRequiredMarking = (): RequiredMarkingContextValue | null => {
-  return useContext(RequiredMarkingContext);
-};
+export const useRequiredMarking = (): RequiredMarkingContextValue | null => useContext(RequiredMarkingContext);
 
 /**
  * Resolve the marking mode from field `required` flags.

@@ -53,8 +53,8 @@ const mockRect = (el: HTMLElement, rect: { x: number; y: number; width: number; 
   };
 };
 
-const tabStops = (root: ParentNode) => {
-  return [
+const tabStops = (root: ParentNode) =>
+  [
     ...root.querySelectorAll<HTMLElement>(
       'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
     ),
@@ -65,7 +65,6 @@ const tabStops = (root: ParentNode) => {
     const style = el.getAttribute('style') ?? '';
     return !style.includes('display: none');
   });
-};
 
 const setViewport = (width: number) => {
   Object.defineProperty(window, 'innerWidth', {

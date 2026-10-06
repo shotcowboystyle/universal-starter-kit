@@ -120,17 +120,13 @@ export interface PaneScaffoldProps extends Omit<XStackProps, 'children'> {
  */
 const PaneSizeClassContext = createContext<LayoutSizeClass | null>(null);
 
-const clampFraction = (value: number, min: number, max: number): number => {
-  return Math.min(max, Math.max(min, value));
-};
+const clampFraction = (value: number, min: number, max: number): number => Math.min(max, Math.max(min, value));
 
-const axisSize = (vertical: boolean, rect: { width?: number; height?: number } | null | undefined): number => {
-  return (vertical ? rect?.height : rect?.width) ?? 0;
-};
+const axisSize = (vertical: boolean, rect: { width?: number; height?: number } | null | undefined): number =>
+  (vertical ? rect?.height : rect?.width) ?? 0;
 
-const pointerPos = (vertical: boolean, e: any): number => {
-  return vertical ? (e.clientY ?? e.nativeEvent?.pageY ?? 0) : (e.clientX ?? e.nativeEvent?.pageX ?? 0);
-};
+const pointerPos = (vertical: boolean, e: any): number =>
+  vertical ? (e.clientY ?? e.nativeEvent?.pageY ?? 0) : (e.clientX ?? e.nativeEvent?.pageX ?? 0);
 
 const ResizablePanes = ({
   vertical,
@@ -621,19 +617,17 @@ export const ListDetailLayout = ({
   activePane,
   narrowLayout,
   ...rest
-}: ListDetailLayoutProps) => {
-  return (
-    <PaneScaffold
-      primary={list}
-      secondary={detail}
-      paneFlex={[1, 2]}
-      activePane={activePane ?? (selected ? 'secondary' : 'primary')}
-      narrowLayout={narrowLayout ?? 'swap'}
-      data-canonical="list-detail"
-      {...rest}
-    />
-  );
-};
+}: ListDetailLayoutProps) => (
+  <PaneScaffold
+    primary={list}
+    secondary={detail}
+    paneFlex={[1, 2]}
+    activePane={activePane ?? (selected ? 'secondary' : 'primary')}
+    narrowLayout={narrowLayout ?? 'swap'}
+    data-canonical="list-detail"
+    {...rest}
+  />
+);
 
 // ── Supporting pane ───────────────────────────────────────────────────────
 
@@ -651,17 +645,15 @@ export interface SupportingPaneLayoutProps extends Omit<PaneScaffoldProps, 'prim
  * Below the two-pane budget the supporting content stacks under the primary.
  * It is never dropped: it has no screen of its own to be reached from.
  */
-export const SupportingPaneLayout = ({ children, supporting, ...rest }: SupportingPaneLayoutProps) => {
-  return (
-    <PaneScaffold
-      primary={children}
-      secondary={supporting}
-      paneFlex={[2, 1]}
-      data-canonical="supporting-pane"
-      {...rest}
-    />
-  );
-};
+export const SupportingPaneLayout = ({ children, supporting, ...rest }: SupportingPaneLayoutProps) => (
+  <PaneScaffold
+    primary={children}
+    secondary={supporting}
+    paneFlex={[2, 1]}
+    data-canonical="supporting-pane"
+    {...rest}
+  />
+);
 
 // ── Feed ──────────────────────────────────────────────────────────────────
 
@@ -726,14 +718,12 @@ export interface ReadingWidthProps extends YStackProps {
  * Constrains prose / long-form content to a readable measure (~65–75ch).
  * Full-bleed is the eject (`measure="none"`), not the default.
  */
-export const ReadingWidth = ({ measure = READING_WIDTH_CH, children, ...rest }: ReadingWidthProps) => {
-  return (
-    <YStack
-      alignSelf="flex-start"
-      {...readingWidthStyle(measure)}
-      data-testid="reading-width"
-      {...rest}>
-      {children}
-    </YStack>
-  );
-};
+export const ReadingWidth = ({ measure = READING_WIDTH_CH, children, ...rest }: ReadingWidthProps) => (
+  <YStack
+    alignSelf="flex-start"
+    {...readingWidthStyle(measure)}
+    data-testid="reading-width"
+    {...rest}>
+    {children}
+  </YStack>
+);

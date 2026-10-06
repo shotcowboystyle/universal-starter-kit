@@ -19,45 +19,43 @@ afterEach(cleanup);
 
 const categories = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
-const Frame = ({ showGrid = true }: { showGrid?: boolean }) => {
-  return (
-    <ChartSurface
-      label="Axis frame"
-      width={400}
-      height={200}>
-      {(size) => {
-        const plot = computeCartesianPlot(size, {
-          showXAxis: true,
-          showYAxis: true,
-          yTickLabels: ['0', '25', '50', '75', '100'],
-          fontSize: 12,
-        });
-        const xScale = createBandScale({
-          domain: categories,
-          range: [plot.x, plot.x + plot.width],
-        });
-        const yScale = createLinearScale({
-          domain: [0, 100],
-          range: [plot.y + plot.height, plot.y],
-        });
-        return (
-          <>
-            <YAxis
-              plot={plot}
-              scale={yScale}
-              ticks={4}
-              showGrid={showGrid}
-            />
-            <XAxis
-              plot={plot}
-              scale={xScale}
-            />
-          </>
-        );
-      }}
-    </ChartSurface>
-  );
-};
+const Frame = ({ showGrid = true }: { showGrid?: boolean }) => (
+  <ChartSurface
+    label="Axis frame"
+    width={400}
+    height={200}>
+    {(size) => {
+      const plot = computeCartesianPlot(size, {
+        showXAxis: true,
+        showYAxis: true,
+        yTickLabels: ['0', '25', '50', '75', '100'],
+        fontSize: 12,
+      });
+      const xScale = createBandScale({
+        domain: categories,
+        range: [plot.x, plot.x + plot.width],
+      });
+      const yScale = createLinearScale({
+        domain: [0, 100],
+        range: [plot.y + plot.height, plot.y],
+      });
+      return (
+        <>
+          <YAxis
+            plot={plot}
+            scale={yScale}
+            ticks={4}
+            showGrid={showGrid}
+          />
+          <XAxis
+            plot={plot}
+            scale={xScale}
+          />
+        </>
+      );
+    }}
+  </ChartSurface>
+);
 
 describe('Axis stories', () => {
   it('declares the Components/Axis title against the component', () => {

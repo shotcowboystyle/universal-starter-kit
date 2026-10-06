@@ -41,12 +41,11 @@ export interface EnsureTamaguiWorkspacePathsResult {
 export const tamaguiWorkspacePathsFile = 'tsconfig/tamagui-workspace-paths.generated.json';
 const generatorFile = '../../scripts/generate-tamagui-workspace-paths.mjs';
 
-const thisPackageDir = (): string => {
+const thisPackageDir = (): string =>
   // `src/` (vitest source condition) and `lib/` (tsdown output) both sit one
   // level below the package root, same trick vitest.ts uses for
   // pinReactRequire.cjs.
-  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-};
+  path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 export const ensureTamaguiWorkspacePaths = (
   options: EnsureTamaguiWorkspacePathsOptions = {},

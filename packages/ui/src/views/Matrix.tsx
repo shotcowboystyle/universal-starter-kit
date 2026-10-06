@@ -151,13 +151,10 @@ const CellIntentWrap = ({ intent, children }: { intent?: MatrixIntent; children:
   return <Intent name={intent}>{children}</Intent>;
 };
 
-const resolveFill = (color: string | undefined, intent: MatrixIntent | undefined): string => {
-  return color ?? (intent && intent !== 'accent' ? '$color9' : '$accentBackground');
-};
+const resolveFill = (color: string | undefined, intent: MatrixIntent | undefined): string =>
+  color ?? (intent && intent !== 'accent' ? '$color9' : '$accentBackground');
 
-const fillOpacity = (intensity: number): number => {
-  return FILL_FLOOR + (1 - FILL_FLOOR) * intensity;
-};
+const fillOpacity = (intensity: number): number => FILL_FLOOR + (1 - FILL_FLOOR) * intensity;
 
 // ── Cell ──────────────────────────────────────────────────────
 

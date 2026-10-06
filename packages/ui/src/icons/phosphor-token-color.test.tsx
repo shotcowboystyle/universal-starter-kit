@@ -20,13 +20,11 @@ const ThemeValue = ({ name }: { name: string }) => {
   );
 };
 
-const fillOf = (container: HTMLElement, testId: string) => {
-  return container.querySelector(`[data-testid="${testId}"]`)?.getAttribute('fill') ?? '';
-};
+const fillOf = (container: HTMLElement, testId: string) =>
+  container.querySelector(`[data-testid="${testId}"]`)?.getAttribute('fill') ?? '';
 
-const valueOf = (container: HTMLElement, name: string) => {
-  return container.querySelector(`[data-theme-value="${name}"]`)?.getAttribute('data-val') ?? '';
-};
+const valueOf = (container: HTMLElement, name: string) =>
+  container.querySelector(`[data-theme-value="${name}"]`)?.getAttribute('data-val') ?? '';
 
 describe('phosphor glyph token colour on web', () => {
   it("paints $color9 with the theme's resolved colour, not the token string", () => {

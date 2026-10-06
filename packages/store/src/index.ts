@@ -38,6 +38,4 @@ type AnyStore = Store<any>;
 export const useStore = <TState, TSelected = TState>(
   store: Store<TState>,
   selector?: (state: TState) => TSelected,
-): TSelected => {
-  return tanstackUseStore(store as AnyStore, selector ?? ((s) => s as unknown as TSelected));
-};
+): TSelected => tanstackUseStore(store as AnyStore, selector ?? ((s) => s as unknown as TSelected));

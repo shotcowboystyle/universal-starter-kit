@@ -84,20 +84,18 @@ interface DayGridProps {
   maxDate?: Date;
 }
 
-const DayGrid = ({ calendarData, selectedDate, onSelectDate, minDate, maxDate }: DayGridProps) => {
-  return (
-    <CalendarDays
-      calendarData={calendarData}
-      minDate={minDate}
-      maxDate={maxDate}
-      isSelected={(day) => isSameDay(selectedDate, day)}
-      onSelect={onSelectDate}
-      onToday={() => {
-        onSelectDate(new Date());
-      }}
-    />
-  );
-};
+const DayGrid = ({ calendarData, selectedDate, onSelectDate, minDate, maxDate }: DayGridProps) => (
+  <CalendarDays
+    calendarData={calendarData}
+    minDate={minDate}
+    maxDate={maxDate}
+    isSelected={(day) => isSameDay(selectedDate, day)}
+    onSelect={onSelectDate}
+    onToday={() => {
+      onSelectDate(new Date());
+    }}
+  />
+);
 
 // ---------------------------------------------------------------------------
 // CalendarBody — orchestrates day/month/year views

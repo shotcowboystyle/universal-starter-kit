@@ -37,17 +37,15 @@ import type { ButtonProps as FormsButtonProps } from '@repo/forms';
  */
 export type ButtonProps = FormsButtonProps & { variant?: 'outlined' };
 
-export const Button = ({ variant, outlined, ...props }: ButtonProps) => {
+export const Button = ({ variant, outlined, ...props }: ButtonProps) => (
   // Raw-tamagui prop-compat: `variant="outlined"` is tamagui Button API that
   // pre-shadow consumers pass; the house channel is the `outlined` boolean.
   // An explicit `outlined` wins; with neither, the knob decides downstream.
-  return (
-    <FormsButton
-      outlined={outlined ?? (variant === 'outlined' || undefined)}
-      {...props}
-    />
-  );
-};
+  <FormsButton
+    outlined={outlined ?? (variant === 'outlined' || undefined)}
+    {...props}
+  />
+);
 
 Button.Text = FormsButton.Text;
 Button.Icon = FormsButton.Icon;

@@ -19,9 +19,8 @@ const AnnounceCtx = createContext(true);
 const SKELETON_SIZE_TOKENS = ['$3', '$4', '$5'] as const;
 const skeletonCircleTokenUp: Record<string, string> = { $3: '$4', $4: '$5', $5: '$6' };
 
-const skeletonCircleSize = (sizeToken: string): number => {
-  return sizeRecipeForToken(skeletonCircleTokenUp[sizeToken] ?? '$5').height;
-};
+const skeletonCircleSize = (sizeToken: string): number =>
+  sizeRecipeForToken(skeletonCircleTokenUp[sizeToken] ?? '$5').height;
 
 const SHIMMER_STYLE_ID = '__mp-skeleton-shimmer';
 const ensureShimmerStyles = () => {

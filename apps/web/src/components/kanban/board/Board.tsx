@@ -136,10 +136,8 @@ const BoardContent = () => {
   );
 };
 
-export const Board = () => {
-  return (
-    <BoardProvider>
-      <BoardContent />
-    </BoardProvider>
-  );
-};
+export const Board = () => (
+  <BoardProvider>
+    <BoardContent />
+  </BoardProvider>
+);

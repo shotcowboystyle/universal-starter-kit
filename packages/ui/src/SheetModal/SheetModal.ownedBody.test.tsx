@@ -11,8 +11,8 @@ const hosts = vi.hoisted(() => ({
 vi.mock('@repo/ui', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@repo/ui')>();
   const React = await import('react');
-  const observed = (Component: any) => {
-    return React.forwardRef((props: Record<string, any>, ref) => {
+  const observed = (Component: any) =>
+    React.forwardRef((props: Record<string, any>, ref) => {
       if (props.testID) {
         hosts.props.set(props.testID, props);
       }
@@ -33,7 +33,6 @@ vi.mock('@repo/ui', async (importOriginal) => {
         />
       );
     });
-  };
   return {
     ...actual,
     YStack: observed(actual.YStack),
@@ -54,9 +53,7 @@ afterEach(() => {
   hosts.props.clear();
   hosts.measurements = [];
 });
-const sheetProps = () => {
-  return hosts.props.get('public-sheet-modal')!;
-};
+const sheetProps = () => hosts.props.get('public-sheet-modal')!;
 const renderStory = (name: 'OwnedMeasuredViewport' | 'OwnedScrollView') => {
   const story = (stories as Record<string, any>)[name];
   expect(story, `${name} is a registered story`).toBeDefined();
@@ -65,11 +62,10 @@ const renderStory = (name: 'OwnedMeasuredViewport' | 'OwnedScrollView') => {
 const layout = (id: string, height: number) => {
   act(() => hosts.props.get(id)!.onLayout({ nativeEvent: { layout: { x: 0, y: 44, width: 300, height } } }));
 };
-const readings = (view: ReturnType<typeof renderStory>) => {
-  return JSON.parse(view.getByTestId('owned-sheet-readings').textContent);
-};
+const readings = (view: ReturnType<typeof renderStory>) =>
+  JSON.parse(view.getByTestId('owned-sheet-readings').textContent);
 
-it('keeps the measured subject unmeasured until a delivered layout and distinguishes zero', () => {
+test('keeps the measured subject unmeasured until a delivered layout and distinguishes zero', () => {
   const view = renderStory('OwnedMeasuredViewport');
   fireEvent.click(view.getByText('Open flex subject'));
   expect(readings(view).viewportLayout).toBe('unmeasured');
@@ -83,7 +79,7 @@ it('keeps the measured subject unmeasured until a delivered layout and distingui
   expect(view.getByText('Record 60')).toBeDefined();
 });
 
-it('provides a named fixed control without treating its declared height as a measurement', () => {
+test('provides a named fixed control without treating its declared height as a measurement', () => {
   const view = renderStory('OwnedMeasuredViewport');
   fireEvent.click(view.getByText('Open 240pt control'));
   expect(hosts.props.get('owned-sheet-frame')!.height).toBe(240);
@@ -94,7 +90,7 @@ it('provides a named fixed control without treating its declared height as a mea
   expect(hosts.props.get('owned-sheet-scroll')).toBeDefined();
 });
 
-it('mounts the owned scroller without a measurement gate and records delivered content and offset', () => {
+test('mounts the owned scroller without a measurement gate and records delivered content and offset', () => {
   const view = renderStory('OwnedScrollView');
   fireEvent.click(view.getByText('Open flex subject'));
   expect(view.getByText('Record 60')).toBeDefined();
@@ -111,7 +107,7 @@ it('mounts the owned scroller without a measurement gate and records delivered c
   expect(readings(view).tailPresses).toBe(1);
 });
 
-it('records public window-bound callbacks and rejects callbacks from a closed presentation', () => {
+test('records public window-bound callbacks and rejects callbacks from a closed presentation', () => {
   const view = renderStory('OwnedScrollView');
   fireEvent.click(view.getByText('Open flex subject'));
   fireEvent.click(view.getByText('Measure bounds'));
@@ -133,7 +129,7 @@ it('records public window-bound callbacks and rejects callbacks from a closed pr
   expect(readings(view).frameWindow).toBe('unmeasured');
 });
 
-it('reports invalid readings rather than converting them to zero', () => {
+test('reports invalid readings rather than converting them to zero', () => {
   const view = renderStory('OwnedScrollView');
   fireEvent.click(view.getByText('Open flex subject'));
   layout('owned-sheet-viewport', Number.NaN);

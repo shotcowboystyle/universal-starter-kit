@@ -56,7 +56,9 @@ const chartWidth = rangeDays(range) * 24;
 const anchorX = dateToX(today, range.start, 24);
 
 const flushLayout = async () => {
-  await act(async () => await new Promise((resolve) => setTimeout(resolve, 0)));
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
 };
 
 beforeEach(() => {

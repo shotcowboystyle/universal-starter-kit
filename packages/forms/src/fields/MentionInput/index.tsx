@@ -3,9 +3,8 @@ import { useTouchSurface, ensureFocusVisibleRing, keyboardFocusRingProps, menuRo
 import type { DeepKeys, DeepValue } from '@tanstack/form-core';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { useProps } from 'tamagui';
+import { useProps, Avatar, Text, XStack, YStack, isWeb, styled } from 'tamagui';
 import type { GetProps, SizeTokens } from 'tamagui';
-import { Avatar, Text, XStack, YStack, isWeb, styled } from 'tamagui';
 
 import { Field, FieldLayout } from '../../FieldLayout';
 import type { FormFieldProps } from '../../FieldLayout';
@@ -71,9 +70,8 @@ export const parseMentionValue = (raw: unknown): MentionValue => {
   return { text: '', mentions: [] };
 };
 
-const mentionValuesEqual = (a: MentionValue, b: MentionValue): boolean => {
-  return a.text === b.text && JSON.stringify(a.mentions) === JSON.stringify(b.mentions);
-};
+const mentionValuesEqual = (a: MentionValue, b: MentionValue): boolean =>
+  a.text === b.text && JSON.stringify(a.mentions) === JSON.stringify(b.mentions);
 
 const MentionFieldSync = ({
   fieldValue,

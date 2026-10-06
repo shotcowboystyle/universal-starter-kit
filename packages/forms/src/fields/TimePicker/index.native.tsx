@@ -52,9 +52,8 @@ const timeToDate = (value: string): Date => {
   return d;
 };
 
-const dateToTime = (date: Date, showSeconds: boolean): string => {
-  return toTimeString(date.getHours(), date.getMinutes(), showSeconds ? date.getSeconds() : undefined);
-};
+const dateToTime = (date: Date, showSeconds: boolean): string =>
+  toTimeString(date.getHours(), date.getMinutes(), showSeconds ? date.getSeconds() : undefined);
 
 export const TimePicker = (props: TimePickerProps) => {
   if (props.native === false) {

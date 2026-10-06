@@ -59,9 +59,7 @@ interface ResolvedAddress {
   label: string;
 }
 
-const coordinateKey = ({ lat, lng }: { lat: number; lng: number }): string => {
-  return `${lat},${lng}`;
-};
+const coordinateKey = ({ lat, lng }: { lat: number; lng: number }): string => `${lat},${lng}`;
 
 const SEARCH_DEBOUNCE_MS = 300;
 const COORD_LINE_HEIGHT = 28;
@@ -322,80 +320,76 @@ const ResultRow = ({
   description?: string;
   onPress: () => void;
   disabled?: boolean;
-}) => {
-  return (
-    <YStack
-      testID={testID}
-      role="option"
-      aria-selected={false}
-      aria-disabled={disabled || undefined}
-      {...(isWeb
-        ? {
-            tabIndex: disabled ? -1 : 0,
-            onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
-              if (disabled) {
-                return;
-              }
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                onPress();
-              } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-                event.preventDefault();
-                const rows = [
-                  ...(event.currentTarget.parentElement?.querySelectorAll<HTMLElement>(
-                    "[role='option']:not([aria-disabled='true'])",
-                  ) ?? []),
-                ];
-                const index = rows.indexOf(event.currentTarget);
-                rows[(index + (event.key === 'ArrowDown' ? 1 : -1) + rows.length) % rows.length]?.focus();
-              }
-            },
-          }
-        : {})}
-      minHeight={description ? 62 : 44}
-      justifyContent="center"
-      paddingHorizontal="$3"
-      paddingVertical={description ? '$2' : 0}
-      cursor={disabled ? 'not-allowed' : 'pointer'}
-      hoverStyle={disabled ? undefined : { backgroundColor: '$color3' }}
-      pressStyle={disabled ? undefined : { backgroundColor: '$color3' }}
-      onPress={disabled ? undefined : onPress}
-      opacity={disabled ? 0.5 : 1}>
+}) => (
+  <YStack
+    testID={testID}
+    role="option"
+    aria-selected={false}
+    aria-disabled={disabled || undefined}
+    {...(isWeb
+      ? {
+          tabIndex: disabled ? -1 : 0,
+          onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
+            if (disabled) {
+              return;
+            }
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              onPress();
+            } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+              event.preventDefault();
+              const rows = [
+                ...(event.currentTarget.parentElement?.querySelectorAll<HTMLElement>(
+                  "[role='option']:not([aria-disabled='true'])",
+                ) ?? []),
+              ];
+              const index = rows.indexOf(event.currentTarget);
+              rows[(index + (event.key === 'ArrowDown' ? 1 : -1) + rows.length) % rows.length]?.focus();
+            }
+          },
+        }
+      : {})}
+    minHeight={description ? 62 : 44}
+    justifyContent="center"
+    paddingHorizontal="$3"
+    paddingVertical={description ? '$2' : 0}
+    cursor={disabled ? 'not-allowed' : 'pointer'}
+    hoverStyle={disabled ? undefined : { backgroundColor: '$color3' }}
+    pressStyle={disabled ? undefined : { backgroundColor: '$color3' }}
+    onPress={disabled ? undefined : onPress}
+    opacity={disabled ? 0.5 : 1}>
+    <Text
+      fontSize="$4"
+      lineHeight={25}
+      color="$color12">
+      {label}
+    </Text>
+    {description ? (
       <Text
-        fontSize="$4"
-        lineHeight={25}
-        color="$color12">
-        {label}
-      </Text>
-      {description ? (
-        <Text
-          fontSize="$3"
-          lineHeight={24}
-          color={formCommonColors.muted}>
-          {description}
-        </Text>
-      ) : null}
-    </YStack>
-  );
-};
-
-const StatusRow = ({ children, testID }: { children: ReactNode; testID?: string }) => {
-  return (
-    <XStack
-      testID={testID}
-      minHeight={44}
-      alignItems="center"
-      paddingHorizontal="$3"
-      role="status">
-      <Text
-        fontSize="$4"
-        lineHeight={25}
+        fontSize="$3"
+        lineHeight={24}
         color={formCommonColors.muted}>
-        {children}
+        {description}
       </Text>
-    </XStack>
-  );
-};
+    ) : null}
+  </YStack>
+);
+
+const StatusRow = ({ children, testID }: { children: ReactNode; testID?: string }) => (
+  <XStack
+    testID={testID}
+    minHeight={44}
+    alignItems="center"
+    paddingHorizontal="$3"
+    role="status">
+    <Text
+      fontSize="$4"
+      lineHeight={25}
+      color={formCommonColors.muted}>
+      {children}
+    </Text>
+  </XStack>
+);
 
 const SearchResultsList = ({
   listId,

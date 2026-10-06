@@ -17,13 +17,9 @@
 
 // ── Luminance / contrast utilities ────────────────────────────
 
-const parseChannel = (hex: string, offset: number): number => {
-  return Number.parseInt(hex.slice(offset, offset + 2), 16) / 255;
-};
+const parseChannel = (hex: string, offset: number): number => Number.parseInt(hex.slice(offset, offset + 2), 16) / 255;
 
-const linearize = (c: number): number => {
-  return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-};
+const linearize = (c: number): number => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
 
 /** Parse a CSS color string to a 6-digit hex (handles hex, rgb, hsl, named "white"/"black"). */
 export const normalizeToHex = (raw: string): string | null => {
@@ -64,13 +60,10 @@ export const normalizeToHex = (raw: string): string | null => {
 };
 
 /** WCAG 2.x relative luminance from a 6-digit hex string. */
-export const relativeLuminance = (hex: string): number => {
-  return (
-    0.2126 * linearize(parseChannel(hex, 1)) +
-    0.7152 * linearize(parseChannel(hex, 3)) +
-    0.0722 * linearize(parseChannel(hex, 5))
-  );
-};
+export const relativeLuminance = (hex: string): number =>
+  0.2126 * linearize(parseChannel(hex, 1)) +
+  0.7152 * linearize(parseChannel(hex, 3)) +
+  0.0722 * linearize(parseChannel(hex, 5));
 
 /** WCAG contrast ratio (always >= 1). */
 export const contrastRatio = (l1: number, l2: number): number => {
@@ -313,9 +306,7 @@ export const inputColors: ComponentColorConfig = {
   border: { base: 7, hover: 6, active: 8 },
 };
 
-export const $color = (step: ColorStep) => {
-  return `$color${step}` as const;
-};
+export const $color = (step: ColorStep) => `$color${step}` as const;
 
 // ── Semantic groups ───────────────────────────────────────────
 

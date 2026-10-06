@@ -11,16 +11,14 @@ import { useWorkspaceStore } from '@/stores/workspace-store';
 import type { Session, UserInfo } from '@/types/db-interface';
 
 // Helper function to create session from user data
-const createSession = (user: UserInfo): Session => {
-  return {
-    user: {
-      _id: user._id,
-      email: user.email,
-      name: user.name || user.email.split('@')[0],
-    },
-    accessToken: 'http-only-cookie',
-  };
-};
+const createSession = (user: UserInfo): Session => ({
+  user: {
+    _id: user._id,
+    email: user.email,
+    name: user.name || user.email.split('@')[0],
+  },
+  accessToken: 'http-only-cookie',
+});
 
 // Helper function to update stores with user data
 

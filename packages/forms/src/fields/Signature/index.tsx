@@ -130,14 +130,11 @@ const getScaledStrokeSize = (width: number, height: number): number => {
 };
 
 // Calculate distance between two points
-const pointDistance = (p1: Point, p2: Point): number => {
-  return Math.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2);
-};
+const pointDistance = (p1: Point, p2: Point): number => Math.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2);
 
 // Check if stroke has real stylus pressure (vs mouse/touch default 0.5)
-const hasRealPressure = (points: Stroke): boolean => {
-  return points.some((p) => p[2] !== undefined && p[2] !== 0.5 && p[2] > 0 && p[2] < 1);
-};
+const hasRealPressure = (points: Stroke): boolean =>
+  points.some((p) => p[2] !== undefined && p[2] !== 0.5 && p[2] > 0 && p[2] < 1);
 
 // Fixed thresholds (px) - consistent mapping regardless of stroke
 const slowDistance = 4; // Points closer than this = slow = thick
@@ -173,13 +170,11 @@ const pressureFromSpacing = (points: Stroke): Stroke => {
 };
 
 // Get stroke options with size scaled to canvas dimensions
-const getStrokeOptions = (_points: Stroke, strokeSize: number) => {
-  return {
-    ...strokeOptionsBase,
-    size: strokeSize,
-    simulatePressure: false,
-  };
-};
+const getStrokeOptions = (_points: Stroke, strokeSize: number) => ({
+  ...strokeOptionsBase,
+  size: strokeSize,
+  simulatePressure: false,
+});
 
 const getSvgPathFromStroke = (stroke: number[][]): string => {
   if (!stroke.length) {

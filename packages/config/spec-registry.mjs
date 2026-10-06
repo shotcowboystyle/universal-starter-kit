@@ -161,9 +161,8 @@ const readFileReasonRegistry = (specPath, heading) => {
  * @param {string} [specPath]
  * @returns {{ specPath: string, present: boolean, escapes: { file: string, reason: string }[] }}
  */
-export const readSizeRecipeEscapeRegistry = (specPath = defaultSpecPath()) => {
-  return readFileReasonRegistry(specPath, SIZE_RECIPE_ESCAPE_HEADING);
-};
+export const readSizeRecipeEscapeRegistry = (specPath = defaultSpecPath()) =>
+  readFileReasonRegistry(specPath, SIZE_RECIPE_ESCAPE_HEADING);
 
 /**
  * Files exempt from `mpo-conventions/no-hex-literals`: one `{ file, reason }`
@@ -175,9 +174,8 @@ export const readSizeRecipeEscapeRegistry = (specPath = defaultSpecPath()) => {
  * @param {string} [specPath]
  * @returns {{ specPath: string, present: boolean, escapes: { file: string, reason: string }[] }}
  */
-export const readHexEscapeRegistry = (specPath = defaultSpecPath()) => {
-  return readFileReasonRegistry(specPath, HEX_ESCAPE_HEADING);
-};
+export const readHexEscapeRegistry = (specPath = defaultSpecPath()) =>
+  readFileReasonRegistry(specPath, HEX_ESCAPE_HEADING);
 
 const invokedDirectly = typeof process.argv[1] === 'string' && import.meta.url === pathToFileURL(process.argv[1]).href;
 

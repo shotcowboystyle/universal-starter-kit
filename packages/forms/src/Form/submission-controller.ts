@@ -39,11 +39,11 @@ const createSubmissionController = (form: SubmissionForm) => {
     async submit(): Promise<SubmissionOutcome> {
       // Set the guard before invoking user code, including synchronous throws.
       if (snapshot.submitting || form.state.isSubmitting) {
-        return Promise.resolve('busy');
+        return 'busy';
       }
       update(null, true);
-      return Promise.resolve()
-        .then(async () => form.handleSubmit())
+      return await Promise.resolve()
+        .then(async () => await form.handleSubmit())
         .then((): SubmissionOutcome => (form.state.isSubmitSuccessful ? 'success' : 'invalid'))
         .catch((error): SubmissionOutcome => {
           reportError(error);

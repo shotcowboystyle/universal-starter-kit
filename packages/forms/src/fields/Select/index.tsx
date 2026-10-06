@@ -8,6 +8,7 @@ import {
   FloatingFocusManager,
 } from '@floating-ui/react';
 import { CaretDownIcon, CheckIcon } from '@phosphor-icons/react';
+import type { useResolvedKnobs } from '@repo/theme';
 import {
   useTouchSurface,
   ensureKeyboardModalityTracking,
@@ -15,7 +16,6 @@ import {
   menuRowFrame,
   sizeRecipeForToken,
   useGlyphColor,
-  useResolvedKnobs,
   wasKeyboardFocus,
   transitionProps,
 } from '@repo/theme';
@@ -1357,7 +1357,7 @@ const NativeSelectCore = ({
   const selectedIndex = displayOptions.findIndex((o) => o.value === value);
   useEffect(() => {
     if (open) {
-      setActiveIndex(selectedIndex !== -1 ? selectedIndex : 0);
+      setActiveIndex(selectedIndex === -1 ? 0 : selectedIndex);
       requestAnimationFrame(() => listRef.current?.focus());
     }
   }, [open, selectedIndex]);

@@ -7,8 +7,8 @@ import { getVariable, useProps, useTheme } from 'tamagui';
  * scheme-aware `theme.color`. Never black / `#000` (CheckRegular /
  * MinusRegular contract: SVG defaults MUST NOT fall back to black).
  */
-export const themed = <A extends FC>(Component: A) => {
-  return ((props: any) => {
+export const themed = <A extends FC>(Component: A) =>
+  ((props: any) => {
     const touch = useTouchSurface();
     const { color, disableTheme, size } = useProps(props);
     const theme = useTheme();
@@ -23,4 +23,3 @@ export const themed = <A extends FC>(Component: A) => {
       />
     );
   }) as A;
-};

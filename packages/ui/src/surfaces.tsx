@@ -8,6 +8,7 @@ import type {
   TamaguiElement,
   ViewProps,
 } from 'tamagui';
+
 export { Card, CardFooter, CardHeader } from './Card';
 export type { CardFooterProps, CardHeaderProps, CardProps, SurfaceTier } from './Card';
 
@@ -107,14 +108,14 @@ const focusFirstTabbableOnOpen = (event: Event): void => {
 type OpenAutoFocus = (event: Event) => void;
 
 /** The caller's handler runs first; its `preventDefault()` skips the house open focus. */
-const withHouseOpenFocus = (onOpenAutoFocus?: OpenAutoFocus): OpenAutoFocus => {
-  return (event) => {
+const withHouseOpenFocus =
+  (onOpenAutoFocus?: OpenAutoFocus): OpenAutoFocus =>
+  (event) => {
     onOpenAutoFocus?.(event);
     if (!event.defaultPrevented) {
       focusFirstTabbableOnOpen(event);
     }
   };
-};
 
 const DIALOG_SHOW_FOCUS_EVENT = 'mp.dialogShowFocus';
 
@@ -177,13 +178,9 @@ export const DialogRegionContext = createContext<DialogRegionContextValue>({
   inDialogRegion: false,
 });
 
-export const useDialogRegionContext = (): DialogRegionContextValue => {
-  return useContext(DialogRegionContext);
-};
+export const useDialogRegionContext = (): DialogRegionContextValue => useContext(DialogRegionContext);
 
-export const useIsInDialogRegion = (): boolean => {
-  return useDialogRegionContext().inDialogRegion;
-};
+export const useIsInDialogRegion = (): boolean => useDialogRegionContext().inDialogRegion;
 
 const IN_DIALOG_REGION: DialogRegionContextValue = { inDialogRegion: true };
 

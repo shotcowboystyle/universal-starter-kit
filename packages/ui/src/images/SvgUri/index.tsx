@@ -42,7 +42,7 @@ export const SvgUri = ({
           if (!res.ok) {
             throw new Error(`Failed to fetch SVG: ${res.status}`);
           }
-          return res.text();
+          return await res.text();
         })
     )
       .then((text) => {

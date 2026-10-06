@@ -27,9 +27,7 @@ export interface NotifyHostProps {
   children?: ReactNode;
 }
 
-const useFeedbackEntries = (): FeedbackEntry[] => {
-  return useSyncExternalStore(subscribeFeedback, getFeedback, getFeedback);
-};
+const useFeedbackEntries = (): FeedbackEntry[] => useSyncExternalStore(subscribeFeedback, getFeedback, getFeedback);
 
 /**
  * Alert's convenience `actionLabel` hardcodes 600. The `action`
@@ -54,14 +52,13 @@ const NotifyActionLabel = ({ label, onPress }: { label: string; onPress: () => v
   );
 };
 
-const notifyAction = (entry: FeedbackEntry) => {
-  return entry.action ? (
+const notifyAction = (entry: FeedbackEntry) =>
+  entry.action ? (
     <NotifyActionLabel
       label={entry.action.label}
       onPress={entry.action.onPress}
     />
   ) : undefined;
-};
 
 const BannerStack = ({ entries }: { entries: FeedbackEntry[] }) => {
   // The banner region's stack gap and page inset

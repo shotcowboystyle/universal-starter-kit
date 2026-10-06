@@ -29,19 +29,16 @@ const PaletteProbe = ({ into }: { into: { current?: ChartPalette } }) => {
   return null;
 };
 
-const markRects = (): Element[] => {
+const markRects = (): Element[] =>
   // Bar marks are value-end-rounded paths with a resolved fill.
-  return Array.from(document.querySelectorAll('svg [data-mpo-chart-bar]'));
-};
+  Array.from(document.querySelectorAll('svg [data-mpo-chart-bar]'));
 
 const barBox = (bar: Element) => {
   const [x, y, width, height, radius] = String(bar.getAttribute('data-mpo-chart-bar')).split(',').map(Number);
   return { x, y, width, height, radius };
 };
 
-const targetRects = (): Element[] => {
-  return Array.from(document.querySelectorAll('svg rect[fill="transparent"]'));
-};
+const targetRects = (): Element[] => Array.from(document.querySelectorAll('svg rect[fill="transparent"]'));
 
 // In happy-dom onLayout never fires, so every chart passes an explicit width.
 const WIDTH = 400;

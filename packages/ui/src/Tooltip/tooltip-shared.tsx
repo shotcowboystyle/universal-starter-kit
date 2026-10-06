@@ -66,22 +66,17 @@ export const noteTooltipClosed = (now = Date.now()): void => {
   }
 };
 
-export const resolveTooltipDelay = (delay: number, now = Date.now()): number => {
-  return now < tooltipSkipUntil ? 0 : delay;
-};
+export const resolveTooltipDelay = (delay: number, now = Date.now()): number => (now < tooltipSkipUntil ? 0 : delay);
 
-export const resolveTooltipSizeRecipe = (size: string): TooltipSizeRecipe => {
-  return tooltipSizeRecipes[size as keyof typeof tooltipSizeRecipes] ?? tooltipSizeRecipes.medium;
-};
+export const resolveTooltipSizeRecipe = (size: string): TooltipSizeRecipe =>
+  tooltipSizeRecipes[size as keyof typeof tooltipSizeRecipes] ?? tooltipSizeRecipes.medium;
 
 export const resolveTooltipPadRecipe = (
   space: string,
 ): {
   paddingHorizontal: string;
   paddingVertical: string;
-} => {
-  return tooltipPadRecipes[space as keyof typeof tooltipPadRecipes] ?? tooltipPadRecipes.medium;
-};
+} => tooltipPadRecipes[space as keyof typeof tooltipPadRecipes] ?? tooltipPadRecipes.medium;
 
 /** @internal tests */
 export const __resetTooltipSkipForTests = (): void => {
@@ -135,15 +130,14 @@ export const TooltipText = styled(Text, {
  * case — an array like `{label}{cond ? suffix : ""}` renders web-only and
  * crashes native otherwise.
  */
-export const wrapTooltipContent = (content: ReactNode, bodyProps: Record<string, unknown>): ReactNode => {
-  return wrapBareTextChildren(content, (label, key) => (
+export const wrapTooltipContent = (content: ReactNode, bodyProps: Record<string, unknown>): ReactNode =>
+  wrapBareTextChildren(content, (label, key) => (
     <TooltipText
       key={key}
       {...bodyProps}>
       {label}
     </TooltipText>
   ));
-};
 
 export const resolveThemeColor = (
   token: { get?: () => string; val?: string } | undefined,

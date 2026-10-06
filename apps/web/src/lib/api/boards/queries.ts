@@ -7,11 +7,9 @@ import { boardApi } from '../board-api';
 export const useBoards = () =>
   useQuery({
     queryKey: BOARD_KEYS.list(),
-    queryFn: async () => {
-      return await boardApi.getBoards();
-    },
+    queryFn: async () => await boardApi.getBoards(),
     retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30_000),
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
   });

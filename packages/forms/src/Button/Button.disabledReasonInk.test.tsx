@@ -46,8 +46,8 @@ const CHANNELS: { name: string; themeName: string; props: Partial<ButtonProps> }
   { name: 'theme="accent"', themeName: 'accent', props: { theme: 'accent' } },
 ];
 
-const houseRender = (ui: React.ReactElement, scheme: 'light' | 'dark') => {
-  return render(
+const houseRender = (ui: React.ReactElement, scheme: 'light' | 'dark') =>
+  render(
     <TamaguiProvider
       config={houseConfig.tamagui}
       defaultTheme={scheme}
@@ -55,7 +55,6 @@ const houseRender = (ui: React.ReactElement, scheme: 'light' | 'dark') => {
       <YStack backgroundColor="$background">{ui}</YStack>
     </TamaguiProvider>,
   );
-};
 
 const scopeThemeKey = (node: HTMLElement, scheme: string): string => {
   const names: string[] = [];

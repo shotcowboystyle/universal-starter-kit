@@ -43,26 +43,24 @@ const meta: Meta<typeof FieldDisplay> = {
 export default meta;
 type Story = StoryObj<typeof FieldDisplay>;
 
-const Row = ({ label, children }: { label: string; children: React.ReactNode }) => {
-  return (
+const Row = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  <XStack
+    gap="$3"
+    alignItems="flex-start">
+    <Paragraph
+      size="$2"
+      width={180}
+      color="$placeholderColor"
+      paddingTop="$2">
+      {label}
+    </Paragraph>
     <XStack
-      gap="$3"
-      alignItems="flex-start">
-      <Paragraph
-        size="$2"
-        width={180}
-        color="$placeholderColor"
-        paddingTop="$2">
-        {label}
-      </Paragraph>
-      <XStack
-        flex={1}
-        minWidth={0}>
-        {children}
-      </XStack>
+      flex={1}
+      minWidth={0}>
+      {children}
     </XStack>
-  );
-};
+  </XStack>
+);
 
 export const Basic: Story = {
   render: (args) => <FieldDisplay {...args} />,

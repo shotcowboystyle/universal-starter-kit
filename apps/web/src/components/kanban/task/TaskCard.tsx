@@ -54,19 +54,17 @@ const getLastField = (task: Task): string => {
   return visibleFields.at(-1) ?? '';
 };
 
-const InfoRow = ({ divider, children }: { divider: boolean; children: ReactNode }) => {
-  return (
-    <XStack
-      alignItems="flex-start"
-      gap="$2"
-      paddingHorizontal="$3"
-      paddingVertical="$2"
-      borderBottomWidth={divider ? 1 : 0}
-      borderColor="$borderColor">
-      {children}
-    </XStack>
-  );
-};
+const InfoRow = ({ divider, children }: { divider: boolean; children: ReactNode }) => (
+  <XStack
+    alignItems="flex-start"
+    gap="$2"
+    paddingHorizontal="$3"
+    paddingVertical="$2"
+    borderBottomWidth={divider ? 1 : 0}
+    borderColor="$borderColor">
+    {children}
+  </XStack>
+);
 
 export const TaskCard = ({ task, isOverlay = false, onUpdate, isDragEnabled = false }: TaskCardProps) => {
   const t = useTranslations('kanban.task');

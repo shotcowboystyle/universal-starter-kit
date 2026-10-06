@@ -24,9 +24,8 @@ export const FormContext = createContext<
   FormApi<any, any, any, any, any, any, any, any, any, any, any, any> | undefined
 >(undefined);
 
-export const useFormContext = <TParentData, _TFormValidator = any>() => {
-  return useContext(FormContext) as FormApi<TParentData, any, any, any, any, any, any, any, any, any, any, any>;
-};
+export const useFormContext = <TParentData, _TFormValidator = any>() =>
+  useContext(FormContext) as FormApi<TParentData, any, any, any, any, any, any, any, any, any, any, any>;
 
 export interface FormValidateContextValue {
   validateOn: FormValidateOn;
@@ -41,9 +40,7 @@ const defaultValidateContext: FormValidateContextValue = {
 
 export const FormValidateContext = createContext<FormValidateContextValue>(defaultValidateContext);
 
-export const useFormValidate = (): FormValidateContextValue => {
-  return useContext(FormValidateContext);
-};
+export const useFormValidate = (): FormValidateContextValue => useContext(FormValidateContext);
 
 export type FormSaveMode = 'embedded' | 'declarative';
 
@@ -57,9 +54,7 @@ const defaultSaveMode: FormSaveModeContextValue = { mode: 'embedded' };
 /** Declarative forms stage text/checkbox/radio; switches auto-commit. */
 export const FormSaveModeContext = createContext<FormSaveModeContextValue>(defaultSaveMode);
 
-export const useFormSaveMode = (): FormSaveModeContextValue => {
-  return useContext(FormSaveModeContext);
-};
+export const useFormSaveMode = (): FormSaveModeContextValue => useContext(FormSaveModeContext);
 
 export interface FormProps<TFormData, _TFormValidator = any> extends Omit<TamaguiFormProps, 'onSubmit'> {
   children: ReactNode;

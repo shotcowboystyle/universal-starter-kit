@@ -39,18 +39,13 @@ export const isCircularCheckboxRadius = (radiusPx: number, sidePx: number): bool
   return radiusPx >= sidePx / 2;
 };
 
-export const getCheckboxGlyphSize = (size: SizeTokens): number => {
-  return Math.round(getVariableValue(getSize(size)) * 0.45);
-};
+export const getCheckboxGlyphSize = (size: SizeTokens): number => Math.round(getVariableValue(getSize(size)) * 0.45);
 
 /** Spectrum / Primer: the empty box's edge is the shape (≥2px). */
-export const getCheckboxBoxBorderWidth = (knobBorderWidth: number | undefined): number => {
-  return Math.max(Number(knobBorderWidth) || 1, 2);
-};
+export const getCheckboxBoxBorderWidth = (knobBorderWidth: number | undefined): number =>
+  Math.max(Number(knobBorderWidth) || 1, 2);
 
-export const getCheckboxIconSize = (glyphSize: number): number => {
-  return Math.max(10, Math.round(glyphSize * 0.7));
-};
+export const getCheckboxIconSize = (glyphSize: number): number => Math.max(10, Math.round(glyphSize * 0.7));
 
 /**
  * The 44px role=checkbox is a hit target, never a painted control.

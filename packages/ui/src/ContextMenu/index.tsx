@@ -137,23 +137,17 @@ const freeOverlay = {
   openOn: 'contextmenu' as const,
 };
 
-const ContextMenuSeparator = (props: ContextMenuSeparatorProps) => {
-  return (
-    <SeparatorLine
-      role="separator"
-      {...hairline.height}
-      {...props}
-    />
-  );
-};
+const ContextMenuSeparator = (props: ContextMenuSeparatorProps) => (
+  <SeparatorLine
+    role="separator"
+    {...hairline.height}
+    {...props}
+  />
+);
 
-const ContextMenuTrigger = ({ children }: ContextMenuTriggerProps) => {
-  return <>{children}</>;
-};
+const ContextMenuTrigger = ({ children }: ContextMenuTriggerProps) => <>{children}</>;
 
-const ContextMenuContent = ({ children }: ContextMenuContentProps) => {
-  return <>{children}</>;
-};
+const ContextMenuContent = ({ children }: ContextMenuContentProps) => <>{children}</>;
 
 const ContextMenuList = ({ children, maxHeight }: { children?: ReactNode; maxHeight?: number }) => {
   const ctx = useContextMenuContext('Content');
@@ -224,7 +218,7 @@ const ContextMenuList = ({ children, maxHeight }: { children?: ReactNode; maxHei
         }
         case 'Enter':
         case ' ': {
-          if (index >= 0) {
+          if (index !== -1) {
             event.preventDefault();
             items[index].click();
           }
@@ -247,7 +241,7 @@ const ContextMenuList = ({ children, maxHeight }: { children?: ReactNode; maxHei
             state.buffer = now - state.at > 600 ? event.key : state.buffer + event.key;
             state.at = now;
             const query = state.buffer.toLowerCase();
-            const start = index !== -1 ? index : 0;
+            const start = index === -1 ? 0 : index;
             const ordered = [...items.slice(start + 1), ...items.slice(0, start + 1)];
             const match = ordered.find((el) => (el.textContent ?? '').trim().toLowerCase().startsWith(query));
             if (match) {

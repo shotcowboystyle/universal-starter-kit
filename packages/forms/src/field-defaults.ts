@@ -49,9 +49,8 @@ const AUTOCOMPLETE_TO_PURPOSE: Record<string, FieldPurpose> = {
 
 const PURPOSE_KEYS = new Set<string>(Object.keys(FIELD_WIDTH_BY_PURPOSE));
 
-export const isFieldPurpose = (value: string | undefined | null): value is FieldPurpose => {
-  return typeof value === 'string' && PURPOSE_KEYS.has(value);
-};
+export const isFieldPurpose = (value: string | undefined | null): value is FieldPurpose =>
+  typeof value === 'string' && PURPOSE_KEYS.has(value);
 
 /**
  * Resolve a purpose key from an explicit `purpose` prop or an HTML

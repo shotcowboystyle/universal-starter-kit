@@ -8,9 +8,7 @@ import { getToasts, resetToasts } from '../Toast/store';
 
 import { CopyField } from './index';
 
-const copyOf = (container: HTMLElement) => {
-  return container.querySelector("[aria-label='Copy to clipboard']");
-};
+const copyOf = (container: HTMLElement) => container.querySelector("[aria-label='Copy to clipboard']");
 
 const writeText = vi.fn();
 

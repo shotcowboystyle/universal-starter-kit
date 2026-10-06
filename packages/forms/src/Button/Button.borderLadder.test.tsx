@@ -24,12 +24,11 @@ afterEach(cleanup);
 
 const STOPS = ['none', 'small', 'medium', 'large'] as const;
 
-const widthAtoms = (): string[] => {
-  return String(screen.getByRole('button').className || '')
+const widthAtoms = (): string[] =>
+  String(screen.getByRole('button').className || '')
     .split(/\s+/)
     .filter((c) => c.startsWith('_btw-'))
     .sort();
-};
 
 const renderAt = (stop: (typeof STOPS)[number], outlined: boolean): string[] => {
   renderWithProviders(

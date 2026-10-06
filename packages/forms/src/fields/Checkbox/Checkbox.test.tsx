@@ -220,9 +220,7 @@ describe('Checkbox', () => {
   });
 
   describe('ring anatomy', () => {
-    const isTransparent = (bg: string) => {
-      return bg === 'transparent' || bg === 'rgba(0, 0, 0, 0)' || bg === 'rgba(0,0,0,0)';
-    };
+    const isTransparent = (bg: string) => bg === 'transparent' || bg === 'rgba(0, 0, 0, 0)' || bg === 'rgba(0,0,0,0)';
 
     it('idle box is empty (transparent fill); checked is fill, not a thicker border', () => {
       const { container } = render(

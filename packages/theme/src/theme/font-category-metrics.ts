@@ -47,6 +47,5 @@ export const fontCategoryMetrics: Record<
  * floor when the era's taper falls under it. Never below the base, so a
  * category can only ever ask for MORE room than `$body` takes, never less.
  */
-export const flooredLineHeight = (sizePx: number, baseLineHeightPx: number, minRatio: number): number => {
-  return Math.max(baseLineHeightPx, Math.round(sizePx * minRatio));
-};
+export const flooredLineHeight = (sizePx: number, baseLineHeightPx: number, minRatio: number): number =>
+  Math.max(baseLineHeightPx, Math.round(sizePx * minRatio));

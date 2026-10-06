@@ -20,20 +20,18 @@ const SplitFrame = ({ children, height = 360 }: { children: ReactNode; height?: 
   );
 };
 
-const PaneFill = ({ label, hint, muted }: { label: string; hint?: string; muted?: boolean }) => {
-  return (
-    <YStack
-      flex={1}
-      height="100%"
-      padding="$4"
-      backgroundColor={muted ? componentColors.surface.background : '$background'}
-      justifyContent="center"
-      gap="$2">
-      <Paragraph fontWeight="600">{label}</Paragraph>
-      {hint ? <HouseText fontSize="$2">{hint}</HouseText> : null}
-    </YStack>
-  );
-};
+const PaneFill = ({ label, hint, muted }: { label: string; hint?: string; muted?: boolean }) => (
+  <YStack
+    flex={1}
+    height="100%"
+    padding="$4"
+    backgroundColor={muted ? componentColors.surface.background : '$background'}
+    justifyContent="center"
+    gap="$2">
+    <Paragraph fontWeight="600">{label}</Paragraph>
+    {hint ? <HouseText fontSize="$2">{hint}</HouseText> : null}
+  </YStack>
+);
 
 const LIST_ITEMS = ['Inbox', 'Drafts', 'Sent', 'Archive'];
 

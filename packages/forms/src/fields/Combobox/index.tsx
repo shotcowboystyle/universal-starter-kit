@@ -7,6 +7,7 @@ import {
   FloatingFocusManager,
 } from '@floating-ui/react';
 import { CaretDownIcon, CheckIcon, MagnifyingGlassIcon, PlusIcon, XIcon } from '@phosphor-icons/react';
+import type { useResolvedKnobs } from '@repo/theme';
 import {
   useTouchSurface,
   ensureFocusVisibleRing,
@@ -14,7 +15,6 @@ import {
   keyboardFocusRingProps,
   menuRowFrame,
   useGlyphColor,
-  useResolvedKnobs,
   transitionProps,
 } from '@repo/theme';
 import type { ReactNode } from 'react';
@@ -88,17 +88,12 @@ const ComboboxRow = styled(View, {
   } as const,
 });
 
-const comboboxOptionId = (baseId: string | undefined, index: number) => {
-  return `${baseId ?? 'combobox'}-opt-${index}`;
-};
+const comboboxOptionId = (baseId: string | undefined, index: number) => `${baseId ?? 'combobox'}-opt-${index}`;
 
-const comboboxListboxId = (baseId: string | undefined) => {
-  return `${baseId ?? 'combobox'}-listbox`;
-};
+const comboboxListboxId = (baseId: string | undefined) => `${baseId ?? 'combobox'}-listbox`;
 
-const listItemRingProps = (keyboardRing: boolean) => {
-  return keyboardRing ? keyboardFocusRingProps : { outlineWidth: 0 as const };
-};
+const listItemRingProps = (keyboardRing: boolean) =>
+  keyboardRing ? keyboardFocusRingProps : { outlineWidth: 0 as const };
 
 /**
  * Resolve the selected-mark token to a real paint.

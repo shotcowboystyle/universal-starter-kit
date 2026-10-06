@@ -189,9 +189,7 @@ export const generateBuckets = (
 };
 
 /** Map key for one (row, bucket) intersection. */
-export const matrixCellKey = (rowId: string, bucketKey: string): string => {
-  return `${rowId}\u0000${bucketKey}`;
-};
+export const matrixCellKey = (rowId: string, bucketKey: string): string => `${rowId}\u0000${bucketKey}`;
 
 /** Fold every point into its (row, bucket) intersection under `rule`. */
 export const summarizeMatrixCells = (
@@ -250,9 +248,7 @@ export const matrixMaxValue = (summaries: Iterable<MatrixCellSummary>): number =
   return max;
 };
 
-const clamp01 = (value: number): number => {
-  return Math.min(1, Math.max(0, value));
-};
+const clamp01 = (value: number): number => Math.min(1, Math.max(0, value));
 
 /**
  * Paint strength 0–1 for a cell. An explicit intensity wins; presence with

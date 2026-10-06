@@ -93,8 +93,8 @@ export const useDateAnimation = (current: string | number) => {
 // a locale pinned to en-US at the call site.
 const monthNames = getMonthNames();
 
-export const useCalendarData = (displayDate: Date): CalendarData => {
-  return useMemo(() => {
+export const useCalendarData = (displayDate: Date): CalendarData =>
+  useMemo(() => {
     const year = displayDate.getFullYear();
     const month = displayDate.getMonth();
     const firstDay = new Date(year, month, 1);
@@ -120,7 +120,6 @@ export const useCalendarData = (displayDate: Date): CalendarData => {
       today: new Date(),
     };
   }, [displayDate]);
-};
 
 // ---------------------------------------------------------------------------
 // useDateNavigation — shared month/display date management
@@ -177,14 +176,10 @@ export const dayCellRadius = (knobProps: {
   pointy?: boolean;
 }): {
   style: { borderRadius: number };
-} => {
-  return { style: { borderRadius: knobProps.pointy ? 0 : 9999 } };
-};
+} => ({ style: { borderRadius: knobProps.pointy ? 0 : 9999 } });
 
 /** Calendar chrome sits one density step below the page. */
-export const useCalendarKnobs = () => {
-  return useResolvedKnobs({ compact: true });
-};
+export const useCalendarKnobs = () => useResolvedKnobs({ compact: true });
 
 /** Overlay/dialog calendar frame: compact padding + a 7-cell content width. */
 export const CalendarPanelFrame = ({ children }: { children: ReactNode }) => {
@@ -218,13 +213,11 @@ const splitNestedControl = (nested: {
   return { px, hitSlop, box };
 };
 
-const calendarKeyHandler = (onPress: () => void) => {
-  return (e: { key?: string; preventDefault?: () => void }) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault?.();
-      onPress();
-    }
-  };
+const calendarKeyHandler = (onPress: () => void) => (e: { key?: string; preventDefault?: () => void }) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault?.();
+    onPress();
+  }
 };
 
 export const CalendarChromeButton = ({
@@ -259,24 +252,22 @@ export const CalendarChromeButton = ({
   );
 };
 
-export const CalendarTextButton = ({ onPress, children }: { onPress: () => void; children: ReactNode }) => {
-  return (
-    <View
-      role="button"
-      cursor="pointer"
-      paddingVertical={2}
-      paddingHorizontal={4}
-      onPress={onPress}
-      outlineWidth={0}
-      focusStyle={{ outlineWidth: 0 }}
-      focusVisibleStyle={ensureFocusVisibleRing()}
-      {...(isWeb
-        ? { tabIndex: 0, onKeyDown: calendarKeyHandler(onPress) as unknown as () => void }
-        : { accessible: true })}>
-      {children}
-    </View>
-  );
-};
+export const CalendarTextButton = ({ onPress, children }: { onPress: () => void; children: ReactNode }) => (
+  <View
+    role="button"
+    cursor="pointer"
+    paddingVertical={2}
+    paddingHorizontal={4}
+    onPress={onPress}
+    outlineWidth={0}
+    focusStyle={{ outlineWidth: 0 }}
+    focusVisibleStyle={ensureFocusVisibleRing()}
+    {...(isWeb
+      ? { tabIndex: 0, onKeyDown: calendarKeyHandler(onPress) as unknown as () => void }
+      : { accessible: true })}>
+    {children}
+  </View>
+);
 
 export const CalendarDaySlot = ({ children }: { children?: ReactNode }) => {
   const { knobProps } = useCalendarKnobs();
@@ -900,23 +891,21 @@ export const DatePickerClearButton = ({
   onReset: () => void;
   disabled?: boolean;
   label?: string;
-}) => {
-  return (
-    <InputParts.Button
-      {...floatingPanelActionProps}
-      data-testid="date-picker-clear"
-      aria-label={label ?? t('Clear date')}
-      disabled={disabled}
-      onPress={(e) => {
-        e.stopPropagation();
-        onReset();
-      }}>
-      <InputParts.Icon>
-        <XIcon />
-      </InputParts.Icon>
-    </InputParts.Button>
-  );
-};
+}) => (
+  <InputParts.Button
+    {...floatingPanelActionProps}
+    data-testid="date-picker-clear"
+    aria-label={label ?? t('Clear date')}
+    disabled={disabled}
+    onPress={(e) => {
+      e.stopPropagation();
+      onReset();
+    }}>
+    <InputParts.Icon>
+      <XIcon />
+    </InputParts.Icon>
+  </InputParts.Button>
+);
 
 export const DatePickerInputTrigger = ({
   value,

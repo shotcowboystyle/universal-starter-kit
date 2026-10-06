@@ -1,8 +1,6 @@
 const store = new Map<string, string>();
 
-export const getCookie = (name: string): string | null => {
-  return store.get(name) ?? null;
-};
+export const getCookie = (name: string): string | null => store.get(name) ?? null;
 
 export const setCookie = (name: string, value: string, _options?: object): void => {
   store.set(name, value);

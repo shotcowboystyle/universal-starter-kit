@@ -96,9 +96,9 @@ export const resolveNativeStorage = (loaders: NativeStorageLoaders = defaultLoad
       backend: 'async-storage',
       errors,
       storage: {
-        getItem: async (name: string) => asyncStorage.getItem(name),
-        setItem: async (name: string, value: string) => asyncStorage.setItem(name, value),
-        removeItem: async (name: string) => asyncStorage.removeItem(name),
+        getItem: async (name: string) => await asyncStorage.getItem(name),
+        setItem: async (name: string, value: string) => await asyncStorage.setItem(name, value),
+        removeItem: async (name: string) => await asyncStorage.removeItem(name),
       },
     };
   } catch (err) {
@@ -121,9 +121,7 @@ export const resolveNativeStorage = (loaders: NativeStorageLoaders = defaultLoad
   };
 };
 
-const describeError = (err: unknown): string => {
-  return err instanceof Error ? err.message : String(err);
-};
+const describeError = (err: unknown): string => (err instanceof Error ? err.message : String(err));
 
 /**
  * One dev-mode line naming the winning backend — a console.warn when

@@ -177,9 +177,8 @@ const AccordionTriggerFillCtx = createContext<string | undefined>(undefined);
  * accent tint measured 4.05:1). Bare string titles already get this
  * from the trigger.
  */
-export const useAccordionTriggerInk = (preferred: string): string => {
-  return useLegibleInkOn(useContext(AccordionTriggerFillCtx), preferred);
-};
+export const useAccordionTriggerInk = (preferred: string): string =>
+  useLegibleInkOn(useContext(AccordionTriggerFillCtx), preferred);
 
 const useAccordionKnobs = () => {
   const { compact, size } = useContext(AccordionCtx);
@@ -264,23 +263,21 @@ const Chevron = ({
   size: number;
   color: string | undefined;
   transition: ReturnType<typeof useResolvedKnobs>['knobProps']['transition'];
-}) => {
-  return (
-    <View
-      alignItems="center"
-      justifyContent="center"
-      flexShrink={0}
-      rotate={open ? '180deg' : '0deg'}
-      aria-hidden
-      pointerEvents="none"
-      {...transitionProps(transition)}>
-      <ThemedCaretDown
-        color={color}
-        size={size}
-      />
-    </View>
-  );
-};
+}) => (
+  <View
+    alignItems="center"
+    justifyContent="center"
+    flexShrink={0}
+    rotate={open ? '180deg' : '0deg'}
+    aria-hidden
+    pointerEvents="none"
+    {...transitionProps(transition)}>
+    <ThemedCaretDown
+      color={color}
+      size={size}
+    />
+  </View>
+);
 
 // ── Stacked-group children ────────────────────────────────────
 

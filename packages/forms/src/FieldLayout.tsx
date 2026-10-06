@@ -17,9 +17,7 @@ import { warnBannedErrorWords, warnPlaceholderAsLabel } from './shared/dev-warn'
 import type { AnyFormApi, SimpleFieldApi } from './types';
 
 const FieldDescribedByContext = createContext<string | undefined>(undefined);
-export const useFieldDescribedBy = () => {
-  return useContext(FieldDescribedByContext);
-};
+export const useFieldDescribedBy = () => useContext(FieldDescribedByContext);
 
 /**
  * Accessible-name STRINGS for the current field. The id-based wiring above
@@ -36,9 +34,7 @@ export interface FieldA11y {
 }
 
 const FieldA11yContext = createContext<FieldA11y | undefined>(undefined);
-export const useFieldA11y = () => {
-  return useContext(FieldA11yContext);
-};
+export const useFieldA11y = () => useContext(FieldA11yContext);
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 

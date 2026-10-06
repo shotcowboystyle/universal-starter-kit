@@ -28,14 +28,15 @@ export const boardApi = {
       method: 'PATCH',
       body: JSON.stringify(input),
     }),
-  deleteBoard: async (id: string) =>
+  deleteBoard: async (id: string) => {
     await fetchWithAuth<void>(
       `${API_ROUTES.BOARDS}/${id}`,
       {
         method: 'DELETE',
       },
       true,
-    ),
+    );
+  },
   addBoardMember: async (boardId: string, memberId: string) =>
     await fetchWithAuth<Board>(`${API_ROUTES.BOARDS}/${boardId}/members/${memberId}`, {
       method: 'POST',

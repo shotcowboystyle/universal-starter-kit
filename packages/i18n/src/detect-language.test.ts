@@ -10,9 +10,7 @@ const opts = {
 
 // A browser-realm Request (the DOM test environment) drops the forbidden
 // `cookie` header, so hand detectLanguage a server-shaped request instead.
-const makeRequest = (headers: Record<string, string> = {}): Request => {
-  return { headers: new Headers(headers) } as Request;
-};
+const makeRequest = (headers: Record<string, string> = {}): Request => ({ headers: new Headers(headers) }) as Request;
 
 describe('parseCookieValue', () => {
   it('parses a cookie value from a header string', () => {

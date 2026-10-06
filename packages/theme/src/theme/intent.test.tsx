@@ -36,28 +36,23 @@ import { useResolvedKnobs, useIntentContext } from './use-resolved-knobs';
 // Helpers
 // ---------------------------------------------------------------------------
 
-const makePreset = (intents: PresetType['intents'] = {}): PresetType => {
-  return {
-    theme: 'light' as ThemeName,
-    knobs: defaultKnobs,
-    intents,
-    tints: [],
-  };
-};
+const makePreset = (intents: PresetType['intents'] = {}): PresetType => ({
+  theme: 'light' as ThemeName,
+  knobs: defaultKnobs,
+  intents,
+  tints: [],
+});
 
 const wrapWithPreset = (preset: PresetType, children: ReactNode): ReactNode => {
   const ctx: PresetContextValue = { preset };
   return createElement(PresetContext.Provider, { value: ctx }, children);
 };
 
-const renderToHtml = (node: ReactNode): string => {
-  return renderToString(node as React.ReactElement);
-};
+const renderToHtml = (node: ReactNode): string => renderToString(node as React.ReactElement);
 
 /** Return an array of all `data-tamagui-theme` values in rendered HTML. */
-const collectThemes = (html: string): string[] => {
-  return Array.from(html.matchAll(/data-tamagui-theme="([^"]+)"/g), (m) => m[1]);
-};
+const collectThemes = (html: string): string[] =>
+  Array.from(html.matchAll(/data-tamagui-theme="([^"]+)"/g), (m) => m[1]);
 
 /** Create a probe component that captures resolved knobs from useResolvedKnobs. */
 const createRecipesCapture = (options?: Parameters<typeof useResolvedKnobs>[0]) => {

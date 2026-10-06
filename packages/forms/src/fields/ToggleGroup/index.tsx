@@ -301,7 +301,7 @@ export const ToggleGroup = ({
       return undefined;
     }
     const index = uniqueItemReasons.indexOf(reason.trim());
-    return index !== -1 ? `${id}-item-reason-${index}` : undefined;
+    return index === -1 ? undefined : `${id}-item-reason-${index}`;
   };
   const optionDisabledByValue = (val: string) => Boolean(options?.find((o) => o.value === val)?.disabled);
 
@@ -358,9 +358,9 @@ export const ToggleGroup = ({
     const tabStopIndex =
       focusedIdx >= 0
         ? focusedIdx
-        : firstSelectedEnabled !== -1
-          ? firstSelectedEnabled
-          : options.findIndex((o) => !(disabled || o.disabled));
+        : firstSelectedEnabled === -1
+          ? options.findIndex((o) => !(disabled || o.disabled))
+          : firstSelectedEnabled;
     return options.map((option, index) => {
       const groupedRadius = stackRadiusProps(getGroupPosition(index, count), radius, orientation);
       const selected = isSelected(option.value);

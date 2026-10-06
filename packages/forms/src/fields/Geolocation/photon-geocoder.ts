@@ -109,12 +109,11 @@ const toResults = (body: unknown): GeocodeResult[] => {
   return results;
 };
 
-const query = (params: Record<string, string | number | undefined>): string => {
-  return Object.entries(params)
+const query = (params: Record<string, string | number | undefined>): string =>
+  Object.entries(params)
     .filter((entry): entry is [string, string | number] => entry[1] !== undefined)
     .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
     .join('&');
-};
 
 export const createPhotonGeocoder = (options: PhotonGeocoderOptions = {}): Geocoder => {
   const baseUrl = (options.baseUrl ?? photonPublicUrl).replace(/\/+$/, '');
@@ -122,13 +121,13 @@ export const createPhotonGeocoder = (options: PhotonGeocoderOptions = {}): Geoco
   const limit = options.limit ?? 5;
   const timeoutMs = options.timeoutMs ?? 8000;
   const cacheSize = options.cacheSize ?? 100;
-  const doFetch = options.fetch ?? (async (input, init) => fetch(input, init));
+  const doFetch = options.fetch ?? (async (input, init) => await fetch(input, init));
   const cache = new Map<string, Promise<GeocodeResult[]>>();
 
   const load = async (url: string): Promise<GeocodeResult[]> => {
     const hit = cache.get(url);
     if (hit) {
-      return hit;
+      return await hit;
     }
     const controller = typeof AbortController === 'function' ? new AbortController() : undefined;
     const timer = controller
@@ -159,16 +158,16 @@ export const createPhotonGeocoder = (options: PhotonGeocoderOptions = {}): Geoco
       }
     }
     pending.catch(() => cache.delete(url));
-    return pending;
+    return await pending;
   };
 
   return {
     geocode: async ({ query: text }) => {
       const trimmed = text.trim();
       if (!trimmed) {
-        return Promise.resolve([]);
+        return [];
       }
-      return load(`${baseUrl}/api/?${query({ q: trimmed, limit, lang })}`);
+      return await load(`${baseUrl}/api/?${query({ q: trimmed, limit, lang })}`);
     },
     reverseGeocode: async ({ lat, lng }) => {
       const results = await load(

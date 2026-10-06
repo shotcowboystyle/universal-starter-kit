@@ -80,9 +80,7 @@ export const PageHeadingScope = ({ children, name = 'Screen', insetToken = null 
  * Horizontal inset the nearest page shell applied, or null when the header
  * is not inside a padded `Screen` (isolated stories, `noPadding`).
  */
-export const usePageChromeInset = (): string | null => {
-  return useContext(PageHeadingScopeContext)?.insetToken ?? null;
-};
+export const usePageChromeInset = (): string | null => useContext(PageHeadingScopeContext)?.insetToken ?? null;
 
 /**
  * Register a mounted catalog heading with the nearest PageHeadingScope.

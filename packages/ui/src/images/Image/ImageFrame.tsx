@@ -46,9 +46,7 @@ export interface ImageFrameProps {
   [key: string]: unknown;
 }
 
-const glyphSize = (px: number): number => {
-  return Math.max(14, Math.min(28, Math.round(px * 0.42)));
-};
+const glyphSize = (px: number): number => Math.max(14, Math.min(28, Math.round(px * 0.42)));
 
 const DefaultFallback = ({ px }: { px: number }) => {
   const { knobProps } = useResolvedKnobs();

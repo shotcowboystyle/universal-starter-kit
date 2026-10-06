@@ -359,9 +359,9 @@ export const AUTO_SCROLL_MAX_SPEED = 16;
 /** Overlay scale while lifted (gesture state, not the elevation knob). */
 export const LIFT_SCALE = 1.03;
 
-export const listBoardSnapshot = (count: number, title = ''): KanbanBoardColumnSnapshot[] => {
-  return [{ id: LIST_COLUMN_ID, title, count }];
-};
+export const listBoardSnapshot = (count: number, title = ''): KanbanBoardColumnSnapshot[] => [
+  { id: LIST_COLUMN_ID, title, count },
+];
 
 /**
  * Apply a resolveDrop coordinate pair to an array. `from` is the original
@@ -379,9 +379,8 @@ export const applyReorder = <T>(items: readonly T[], from: number, to: number): 
 };
 
 /** Frappe child-table `idx`: 1-based, rewritten after a committed reorder. */
-export const renumberIdx = <T extends { idx?: number }>(items: readonly T[]): T[] => {
-  return items.map((item, i) => ({ ...item, idx: i + 1 }));
-};
+export const renumberIdx = <T extends { idx?: number }>(items: readonly T[]): T[] =>
+  items.map((item, i) => ({ ...item, idx: i + 1 }));
 
 export const commitReorder = <T>(
   items: readonly T[],

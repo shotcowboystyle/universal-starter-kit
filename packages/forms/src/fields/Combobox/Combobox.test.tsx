@@ -315,15 +315,12 @@ describe('Combobox', () => {
       return search!;
     };
 
-    const triggerText = () => {
-      return document.body.querySelector('[data-testid="combobox-trigger"]')?.textContent;
-    };
+    const triggerText = () => document.body.querySelector('[data-testid="combobox-trigger"]')?.textContent;
 
-    const createRow = (text: string) => {
-      return [...document.body.querySelectorAll('[role="option"]')].find(
+    const createRow = (text: string) =>
+      [...document.body.querySelectorAll('[role="option"]')].find(
         (el) => el.textContent?.trim() === `Create "${text}"`,
       );
-    };
 
     for (const [surface, width] of [
       ['panel', 1200],
@@ -636,15 +633,13 @@ describe('Combobox', () => {
     // REPEAT header and the rows stayed unclustered — two different lists from
     // one set of props. Both cores now go through groupComboboxOptions.
     it('the sheet renders the same headers and row order as the desktop panel', async () => {
-      const shot = (root: HTMLElement) => {
-        return {
-          headers: [...root.querySelectorAll('[data-combobox-group-header]')].map((el) => el.textContent),
-          rows: [...root.querySelectorAll('[role="option"]')].map((el) => ({
-            label: el.textContent,
-            index: el.getAttribute('data-combobox-index'),
-          })),
-        };
-      };
+      const shot = (root: HTMLElement) => ({
+        headers: [...root.querySelectorAll('[data-combobox-group-header]')].map((el) => el.textContent),
+        rows: [...root.querySelectorAll('[role="option"]')].map((el) => ({
+          label: el.textContent,
+          index: el.getAttribute('data-combobox-index'),
+        })),
+      });
 
       window.innerWidth = 1200;
       const desktop = renderWithProviders(

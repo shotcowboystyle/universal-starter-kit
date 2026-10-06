@@ -14,9 +14,9 @@ import { ActionBar } from './ActionBar';
 import { __resetActionDevWarnSeen } from './dev-warn';
 
 /** Simulates rendering inside a `DialogContent` surface. */
-const inDialogRegion = (ui: ReactNode) => {
-  return <DialogRegionContext.Provider value={{ inDialogRegion: true }}>{ui}</DialogRegionContext.Provider>;
-};
+const inDialogRegion = (ui: ReactNode) => (
+  <DialogRegionContext.Provider value={{ inDialogRegion: true }}>{ui}</DialogRegionContext.Provider>
+);
 
 describe('ActionBar', () => {
   let warnSpy: ReturnType<typeof vi.spyOn>;

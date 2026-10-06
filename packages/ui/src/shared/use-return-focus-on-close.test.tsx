@@ -31,7 +31,7 @@ describe('useReturnFocusOnClose', () => {
     const h = setup();
     h.trigger.blur();
     h.rerender({ open: false });
-    await act(async () => vi.advanceTimersByTimeAsync(400));
+    await act(async () => await vi.advanceTimersByTimeAsync(400));
     expect(document.activeElement).toBe(h.trigger);
   });
 

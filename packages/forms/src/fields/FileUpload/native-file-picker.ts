@@ -5,12 +5,11 @@ import type { NativePickOutcome, NativePickRequest } from './file-picker-types';
  * field opens a real `<input type="file">`, so this half exists only to keep
  * `index.tsx` free of a platform branch at import time.
  */
-export const isNativeFilePickerAvailable = (): boolean => {
-  return false;
-};
+export const isNativeFilePickerAvailable = (): boolean => false;
 
-export const pickFilesNatively = async (_request: NativePickRequest): Promise<NativePickOutcome> => {
-  return { files: [], unavailable: true };
-};
+export const pickFilesNatively = async (_request: NativePickRequest): Promise<NativePickOutcome> => ({
+  files: [],
+  unavailable: true,
+});
 
 export type { NativePickedFile, NativePickerMode, NativePickOutcome, NativePickRequest } from './file-picker-types';

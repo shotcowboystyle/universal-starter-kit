@@ -44,6 +44,4 @@ export const Tint = ({ children, alt = 0, disable, ...props }: TintProps) => {
 /**
  * Read the current tint depth from context.
  */
-export const useTintDepth = (): number => {
-  return useContext(TintDepthContext);
-};
+export const useTintDepth = (): number => useContext(TintDepthContext);

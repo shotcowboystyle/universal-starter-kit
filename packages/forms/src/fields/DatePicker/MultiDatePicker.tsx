@@ -84,21 +84,19 @@ const MultiDayGrid = ({
   minDate,
   maxDate,
   selectionCapped,
-}: MultiDayGridProps) => {
-  return (
-    <CalendarDays
-      calendarData={calendarData}
-      minDate={minDate}
-      maxDate={maxDate}
-      selectionCapped={selectionCapped}
-      isSelected={(day) => selectedDates.some((d) => isSameDay(d, day))}
-      onSelect={onToggleDate}
-      onToday={() => {
-        onToggleDate(new Date());
-      }}
-    />
-  );
-};
+}: MultiDayGridProps) => (
+  <CalendarDays
+    calendarData={calendarData}
+    minDate={minDate}
+    maxDate={maxDate}
+    selectionCapped={selectionCapped}
+    isSelected={(day) => selectedDates.some((d) => isSameDay(d, day))}
+    onSelect={onToggleDate}
+    onToday={() => {
+      onToggleDate(new Date());
+    }}
+  />
+);
 
 // ---------------------------------------------------------------------------
 // SingleCalendar — one month panel with header + day grid
@@ -401,13 +399,13 @@ export const MultiDatePicker = <
       const { current } = selectedDatesRef;
       const existing = current.findIndex((d) => isSameDay(d, date));
       let next: Date[];
-      if (existing !== -1) {
-        next = current.filter((_, i) => i !== existing);
-      } else {
+      if (existing === -1) {
         if (current.length >= limit) {
           return;
         }
         next = [...current, date].sort((a, b) => a.getTime() - b.getTime());
+      } else {
+        next = current.filter((_, i) => i !== existing);
       }
       selectedDatesRef.current = next;
       setSelectedDates(next);

@@ -70,6 +70,4 @@ const getServerSnapshot = (): Direction => 'ltr';
  * direction-of-travel. Do NOT mirror direction-neutral glyphs (search,
  * close, checkmarks).
  */
-export const useDirection = (): Direction => {
-  return useSyncExternalStore(subscribe, readDocumentDirection, getServerSnapshot);
-};
+export const useDirection = (): Direction => useSyncExternalStore(subscribe, readDocumentDirection, getServerSnapshot);

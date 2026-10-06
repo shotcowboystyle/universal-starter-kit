@@ -44,18 +44,12 @@ export interface Geocoder {
 
 const LAT_LNG_PAIR = /^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/;
 
-export const clampLat = (val: number): number => {
-  return Math.max(-90, Math.min(90, val));
-};
+export const clampLat = (val: number): number => Math.max(-90, Math.min(90, val));
 
-export const clampLng = (val: number): number => {
-  return Math.max(-180, Math.min(180, val));
-};
+export const clampLng = (val: number): number => Math.max(-180, Math.min(180, val));
 
 /** Quiet mono disclosure / cell fallback — five decimals, board media-13. */
-export const formatCoordPair = (lat: number, lng: number): string => {
-  return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-};
+export const formatCoordPair = (lat: number, lng: number): string => `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
 
 /** Expert path through the same search input: a typed `lat, lng` pair. */
 export const parseLatLngPair = (text: string): GeoValue | null => {
@@ -74,17 +68,14 @@ export const parseLatLngPair = (text: string): GeoValue | null => {
   return { lat, lng };
 };
 
-export const formatPlace = (result: Pick<GeocodeResult, 'label' | 'description'>): string => {
-  return result.description ? `${result.label}, ${result.description}` : result.label;
-};
+export const formatPlace = (result: Pick<GeocodeResult, 'label' | 'description'>): string =>
+  result.description ? `${result.label}, ${result.description}` : result.label;
 
 export const resolveGeocoder = (input: {
   geocode?: GeocodeFn;
   reverseGeocode?: ReverseGeocodeFn;
   geocoder?: Geocoder;
-}): { geocode?: GeocodeFn; reverseGeocode?: ReverseGeocodeFn } => {
-  return {
-    geocode: input.geocode ?? input.geocoder?.geocode,
-    reverseGeocode: input.reverseGeocode ?? input.geocoder?.reverseGeocode,
-  };
-};
+}): { geocode?: GeocodeFn; reverseGeocode?: ReverseGeocodeFn } => ({
+  geocode: input.geocode ?? input.geocoder?.geocode,
+  reverseGeocode: input.reverseGeocode ?? input.geocoder?.reverseGeocode,
+});

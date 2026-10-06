@@ -54,11 +54,8 @@ const targetPropsFor = (callbacks: DatumTargetCallbacks, datum: ChartDatum, inde
   });
 };
 
-const hasTargets = (callbacks: DatumTargetCallbacks): boolean => {
-  return Boolean(
-    callbacks.onDatumPress || callbacks.onDatumHoverIn || callbacks.onDatumHoverOut || callbacks.datumLabel,
-  );
-};
+const hasTargets = (callbacks: DatumTargetCallbacks): boolean =>
+  Boolean(callbacks.onDatumPress || callbacks.onDatumHoverIn || callbacks.onDatumHoverOut || callbacks.datumLabel);
 
 // ── Bar ───────────────────────────────────────────────────────
 
@@ -224,16 +221,14 @@ export interface AreaSeriesProps {
  * Filled area under a series. Non-interactive by design — pair it with a
  * LineSeries on top, which owns points and hit targets.
  */
-export const AreaSeries = ({ points, baseline, color, opacity = 0.18, curve }: AreaSeriesProps) => {
-  return (
-    <Path
-      {...chartMarkProps('series area')}
-      d={areaPath(points, { baseline, curve })}
-      fill={color}
-      opacity={opacity}
-    />
-  );
-};
+export const AreaSeries = ({ points, baseline, color, opacity = 0.18, curve }: AreaSeriesProps) => (
+  <Path
+    {...chartMarkProps('series area')}
+    d={areaPath(points, { baseline, curve })}
+    fill={color}
+    opacity={opacity}
+  />
+);
 
 // ── Pie / Donut ───────────────────────────────────────────────
 

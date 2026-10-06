@@ -254,20 +254,18 @@ const NestedIconWell = ({
   px: number;
   radius: object;
   children: ReactNode;
-}) => {
-  return (
-    <YStack
-      {...box}
-      {...radius}
-      alignItems="center"
-      justifyContent="center"
-      backgroundColor={(color || '$accentBackground') as any}
-      overflow="hidden"
-      data-nested-px={px}>
-      {children}
-    </YStack>
-  );
-};
+}) => (
+  <YStack
+    {...box}
+    {...radius}
+    alignItems="center"
+    justifyContent="center"
+    backgroundColor={(color || '$accentBackground') as any}
+    overflow="hidden"
+    data-nested-px={px}>
+    {children}
+  </YStack>
+);
 
 const TrendPill = ({
   symbol,
@@ -283,33 +281,31 @@ const TrendPill = ({
   px: number;
   radius: object;
   label: object;
-}) => {
-  return (
-    <XStack
-      height={px}
-      minHeight={px}
-      maxHeight={px}
-      paddingHorizontal="$2"
-      alignItems="center"
-      gap="$1"
-      backgroundColor={trendFill(color)}
-      {...radius}
-      data-nested-px={px}>
+}) => (
+  <XStack
+    height={px}
+    minHeight={px}
+    maxHeight={px}
+    paddingHorizontal="$2"
+    alignItems="center"
+    gap="$1"
+    backgroundColor={trendFill(color)}
+    {...radius}
+    data-nested-px={px}>
+    <Text
+      {...label}
+      color={trendInk(color)}>
+      {symbol}
+    </Text>
+    {value != null && value !== '' && (
       <Text
         {...label}
         color={trendInk(color)}>
-        {symbol}
+        {value}
       </Text>
-      {value != null && value !== '' && (
-        <Text
-          {...label}
-          color={trendInk(color)}>
-          {value}
-        </Text>
-      )}
-    </XStack>
-  );
-};
+    )}
+  </XStack>
+);
 
 // ============================================================================
 // KPI Card Component

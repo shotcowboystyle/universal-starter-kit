@@ -97,14 +97,13 @@ export const lookupTamaguiModules = (packageDirs?: string[], { log = true }: Loo
   return tamaguiModules;
 };
 
-export const resolveConfig = (keys: string[] = []): Record<string, string | undefined> => {
-  return keys.reduce<Record<string, string | undefined>>((acc: Record<string, string | undefined>, key: string) => {
+export const resolveConfig = (keys: string[] = []): Record<string, string | undefined> =>
+  keys.reduce<Record<string, string | undefined>>((acc: Record<string, string | undefined>, key: string) => {
     if (process.env[key]) {
       acc[key] = process.env[key];
     }
     return acc;
   }, {});
-};
 
 let _projectRoot: string | undefined;
 
@@ -267,15 +266,13 @@ export const oneServerOnlyBrowserStub = (workspaceRoot?: string): Plugin => {
  * prevents OXC from eliding them), then reports MISSING_EXPORT. Stub these
  * type-only files with empty modules.
  */
-export const stubExpoTypeDeclarations = (): Plugin => {
-  return {
-    name: 'stub-expo-type-declarations',
-    load(id: string) {
-      if (id.includes('/expo-modules-core/src/ts-declarations/')) {
-        return 'export {}';
-      }
-    },
-  };
-};
+export const stubExpoTypeDeclarations = (): Plugin => ({
+  name: 'stub-expo-type-declarations',
+  load(id: string) {
+    if (id.includes('/expo-modules-core/src/ts-declarations/')) {
+      return 'export {}';
+    }
+  },
+});
 
 export * from './wait.ts';

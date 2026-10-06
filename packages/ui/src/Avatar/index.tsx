@@ -153,9 +153,8 @@ const radiusStopFromToken = (token: string | number | undefined): BorderRadius =
 };
 
 /** Square face rides CIRCULAR-AT-FULL — full is h/2, not the $12 token. */
-const squareFaceRadiusPx = (token: string | number | undefined, heightPx: number): number => {
-  return resolveRadiusClass('CIRCULAR-AT-FULL', radiusStopFromToken(token), { heightPx });
-};
+const squareFaceRadiusPx = (token: string | number | undefined, heightPx: number): number =>
+  resolveRadiusClass('CIRCULAR-AT-FULL', radiusStopFromToken(token), { heightPx });
 
 const resolveVisualPx = (
   sizeProp: AvatarSize | undefined,

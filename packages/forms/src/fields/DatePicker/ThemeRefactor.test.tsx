@@ -55,9 +55,7 @@ vi.mock('react-native-reanimated', () => ({
 
 import { renderWithProviders } from '@repo/test-utils';
 
-const loadDatePicker = async () => {
-  return (await import('.')).DatePicker;
-};
+const loadDatePicker = async () => (await import('.')).DatePicker;
 
 describe('DatePicker uses premium patterns', () => {
   it('renders with label and input trigger', async () => {

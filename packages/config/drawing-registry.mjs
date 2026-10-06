@@ -29,9 +29,7 @@ export const DRAWING_PRAGMA = /^\s*(?:\/\/|\/\*)\s*mpo-drawing\b/m;
 /**
  * @param {string} [cwd]
  */
-export const defaultSpecPath = (cwd = process.cwd()) => {
-  return join(cwd, 'docs/theme-propagation-spec.md');
-};
+export const defaultSpecPath = (cwd = process.cwd()) => join(cwd, 'docs/theme-propagation-spec.md');
 
 /** `Members: **Avatar**, **Radio disc**.` → ["Avatar", "Radio disc"]. */
 const parseMembers = (text) => {

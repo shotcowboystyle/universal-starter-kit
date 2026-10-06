@@ -43,9 +43,8 @@ export type BarcodePreviewSymbology = 'qr' | 'code128';
  * draws, the scanner resolves back to the same format id). Absent or unknown
  * tokens keep the historical Code 128 strip.
  */
-export const barcodePreviewSymbology = (format?: string): BarcodePreviewSymbology => {
-  return resolveNativeBarcodeType(format) === 'qr' ? 'qr' : 'code128';
-};
+export const barcodePreviewSymbology = (format?: string): BarcodePreviewSymbology =>
+  resolveNativeBarcodeType(format) === 'qr' ? 'qr' : 'code128';
 
 export interface BarcodePreviewProps {
   value?: string;
@@ -77,18 +76,16 @@ export interface BarcodePreviewProps {
 
 /** Mono value text — both the honest fallback for
  * unencodable values and the optional human-readable line under the symbol. */
-const MonoValue = ({ value }: { value: string }) => {
-  return (
-    <Text
-      fontFamily="$mono"
-      fontSize="$2"
-      numberOfLines={1}
-      color="$color"
-      flexShrink={1}>
-      {value}
-    </Text>
-  );
-};
+const MonoValue = ({ value }: { value: string }) => (
+  <Text
+    fontFamily="$mono"
+    fontSize="$2"
+    numberOfLines={1}
+    color="$color"
+    flexShrink={1}>
+    {value}
+  </Text>
+);
 
 const QrPreview = ({
   value,

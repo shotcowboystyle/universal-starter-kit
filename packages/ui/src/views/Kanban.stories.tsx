@@ -39,32 +39,28 @@ const columns: KanbanColumn<Task>[] = [
   },
 ];
 
-const TaskCard = ({ item }: { item: Task }) => {
-  return (
-    <YStack gap="$1">
-      <Text fontSize="$3">{item.title}</Text>
-      <Text
-        fontSize="$2"
-        color="$color11"
-        textTransform="capitalize">
-        {item.priority}
-      </Text>
-    </YStack>
-  );
-};
+const TaskCard = ({ item }: { item: Task }) => (
+  <YStack gap="$1">
+    <Text fontSize="$3">{item.title}</Text>
+    <Text
+      fontSize="$2"
+      color="$color11"
+      textTransform="capitalize">
+      {item.priority}
+    </Text>
+  </YStack>
+);
 
-const columnAdd = (column: KanbanColumn<Task>) => {
-  return (
-    <Button
-      size="$2"
-      circular
-      chromeless
-      icon=<PlusIcon size={14} />
-      aria-label={`Add card to ${column.title}`}
-      onPress={action('add-card')}
-    />
-  );
-};
+const columnAdd = (column: KanbanColumn<Task>) => (
+  <Button
+    size="$2"
+    circular
+    chromeless
+    icon=<PlusIcon size={14} />
+    aria-label={`Add card to ${column.title}`}
+    onPress={action('add-card')}
+  />
+);
 
 const meta: Meta = {
   title: 'Components/Kanban',

@@ -1348,7 +1348,7 @@ export const evaluateIconContrast = (samples: MatrixIconSample[]): IconContrastR
     result.candidates++;
     const reason =
       sample.unmeasurable ??
-      (sample.backgroundResolved ? (!sample.paint ? 'no-paint' : undefined) : 'unresolved-backdrop');
+      (sample.backgroundResolved ? (sample.paint ? undefined : 'no-paint') : 'unresolved-backdrop');
     if (reason) {
       result.unverified.push({ key: sample.key, context: sample.context, reason });
       continue;
@@ -1384,15 +1384,13 @@ export const evaluateIconContrast = (samples: MatrixIconSample[]): IconContrastR
 };
 
 /** Stable named findings for both absolute cell failures and preset attribution. */
-export const iconContrastSignatures = (result: IconContrastResult): string[] => {
-  return [
-    ...result.violations.map(
-      (item) =>
-        `${item.key} (${item.context}) icon ${item.paint} on ${item.background} = ${item.ratio}:1 (floor ${item.required})`,
-    ),
-    ...result.unverified.map((item) => `${item.key} (${item.context}) icon UNVERIFIED: ${item.reason}`),
-  ];
-};
+export const iconContrastSignatures = (result: IconContrastResult): string[] => [
+  ...result.violations.map(
+    (item) =>
+      `${item.key} (${item.context}) icon ${item.paint} on ${item.background} = ${item.ratio}:1 (floor ${item.required})`,
+  ),
+  ...result.unverified.map((item) => `${item.key} (${item.context}) icon UNVERIFIED: ${item.reason}`),
+];
 
 /** Bounded chart proof. Declarations route samples; measured paint decides. */
 export const evaluateChartProof = (samples: MatrixChartSample[]): ChartProofResult => {
@@ -1530,15 +1528,13 @@ export const evaluateChartProof = (samples: MatrixChartSample[]): ChartProofResu
   return result;
 };
 
-export const chartProofSignatures = (result: ChartProofResult): string[] => {
-  return [
-    ...result.violations.map(
-      (item) =>
-        `${item.key} (${item.context}) chart ${item.rule}${item.ratio === undefined ? '' : ` ${item.paint} on ${item.background} = ${item.ratio}:1 (floor ${item.required})`}`,
-    ),
-    ...result.unverified.map((item) => `${item.key} (${item.context}) chart UNVERIFIED: ${item.reason}`),
-  ];
-};
+export const chartProofSignatures = (result: ChartProofResult): string[] => [
+  ...result.violations.map(
+    (item) =>
+      `${item.key} (${item.context}) chart ${item.rule}${item.ratio === undefined ? '' : ` ${item.paint} on ${item.background} = ${item.ratio}:1 (floor ${item.required})`}`,
+  ),
+  ...result.unverified.map((item) => `${item.key} (${item.context}) chart UNVERIFIED: ${item.reason}`),
+];
 
 /** One matrix cell's no-breakage inputs (preset axis). */
 export interface NoBreakageInput {

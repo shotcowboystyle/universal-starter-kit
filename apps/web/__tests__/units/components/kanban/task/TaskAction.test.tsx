@@ -250,7 +250,7 @@ describe('TaskActions', () => {
 
   // The alertdialog sits in a portal that testing-library's role query treats as inaccessible.
   const findConfirmDialog = async () =>
-    waitFor(() => {
+    await waitFor(() => {
       const el = document.querySelector<HTMLElement>('[role="alertdialog"]');
       expect(el).not.toBeNull();
       return el!;

@@ -75,9 +75,7 @@ export interface DescriptionListProps {
   testID?: string;
 }
 
-const purposeMaxCh = (): number => {
-  return LABEL_COLUMN_MAX_CH;
-};
+const purposeMaxCh = (): number => LABEL_COLUMN_MAX_CH;
 
 const labelColumnGridTrack = (width: string): string => {
   const prefix = 'min(max-content,';
@@ -114,9 +112,7 @@ const resolvePlacement = (
   return 'side';
 };
 
-const rowHasAction = (row: DescriptionListItem): boolean => {
-  return typeof row.onChange === 'function';
-};
+const rowHasAction = (row: DescriptionListItem): boolean => typeof row.onChange === 'function';
 
 const itemsFromChildren = (children: ReactNode | undefined): DescriptionListItem[] => {
   if (children == null) {
@@ -138,22 +134,20 @@ const itemsFromChildren = (children: ReactNode | undefined): DescriptionListItem
 };
 
 /** House Separator recipe — 1px filled `$borderColor`. */
-const ListRule = ({ quiet }: { quiet?: boolean }) => {
-  return (
-    <View
-      role="separator"
-      data-mpo-description-list-rule=""
-      height={1}
-      backgroundColor="$borderColor"
-      opacity={quiet ? 0.5 : 1}
-      alignSelf="stretch"
-      flexGrow={0}
-      flexShrink={0}
-      width="100%"
-      {...(isWeb ? { style: { gridColumn: '1 / -1' } as CSSProperties } : undefined)}
-    />
-  );
-};
+const ListRule = ({ quiet }: { quiet?: boolean }) => (
+  <View
+    role="separator"
+    data-mpo-description-list-rule=""
+    height={1}
+    backgroundColor="$borderColor"
+    opacity={quiet ? 0.5 : 1}
+    alignSelf="stretch"
+    flexGrow={0}
+    flexShrink={0}
+    width="100%"
+    {...(isWeb ? { style: { gridColumn: '1 / -1' } as CSSProperties } : undefined)}
+  />
+);
 
 const TermText = ({ children }: { children: ReactNode }) => {
   const { knobProps } = useResolvedKnobs();
@@ -173,44 +167,40 @@ const TermText = ({ children }: { children: ReactNode }) => {
   );
 };
 
-const ChangeAction = ({ onChange, label }: { onChange: () => void; label?: string }) => {
-  return (
-    <View
-      data-mpo-description-list-action=""
-      alignItems="flex-start"
-      justifyContent="flex-end">
-      <Button
-        nested
-        outlined
-        onPress={onChange}>
-        {label ?? t('Change')}
-      </Button>
-    </View>
-  );
-};
+const ChangeAction = ({ onChange, label }: { onChange: () => void; label?: string }) => (
+  <View
+    data-mpo-description-list-action=""
+    alignItems="flex-start"
+    justifyContent="flex-end">
+    <Button
+      nested
+      outlined
+      onPress={onChange}>
+      {label ?? t('Change')}
+    </Button>
+  </View>
+);
 
-const ValueSlot = ({ row }: { row: DescriptionListItem }) => {
-  return (
-    <View
-      data-mpo-description-list-value=""
-      minWidth={0}
-      width="100%">
-      {row.children == null ? (
-        <FieldDisplay
-          field={row.field ?? 'input'}
-          value={row.value}
-          fieldProps={row.fieldProps}
-          linkedValue={row.linkedValue}
-          chromeless
-          align="left"
-          truncate={row.truncate}
-        />
-      ) : (
-        row.children
-      )}
-    </View>
-  );
-};
+const ValueSlot = ({ row }: { row: DescriptionListItem }) => (
+  <View
+    data-mpo-description-list-value=""
+    minWidth={0}
+    width="100%">
+    {row.children == null ? (
+      <FieldDisplay
+        field={row.field ?? 'input'}
+        value={row.value}
+        fieldProps={row.fieldProps}
+        linkedValue={row.linkedValue}
+        chromeless
+        align="left"
+        truncate={row.truncate}
+      />
+    ) : (
+      row.children
+    )}
+  </View>
+);
 
 const DescriptionListRowView = ({
   row,
@@ -566,9 +556,7 @@ export const DescriptionList = ({
   );
 };
 
-export const DescriptionListRow = (_props: DescriptionListRowProps): ReactElement | null => {
-  return null;
-};
+export const DescriptionListRow = (_props: DescriptionListRowProps): ReactElement | null => null;
 
 DescriptionList.Row = DescriptionListRow;
 

@@ -20,9 +20,7 @@ vi.mock('@tamagui/lucide-icons-2', () => ({
   X: () => null,
 }));
 
-const loadMultiDatePicker = async () => {
-  return (await import('./MultiDatePicker')).MultiDatePicker;
-};
+const loadMultiDatePicker = async () => (await import('./MultiDatePicker')).MultiDatePicker;
 
 const getEnabledDayButtons = (root: ParentNode): HTMLButtonElement[] => {
   const allButtons = Array.from(root.querySelectorAll('button, [role="button"]')) as HTMLButtonElement[];

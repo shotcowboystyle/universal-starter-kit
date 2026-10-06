@@ -79,14 +79,10 @@ const TRACKING_B = 0.185;
 const TRACKING_C = -0.1745;
 
 /** Inter dynamic tracking for a rendered `sizePx`, in em. */
-export const interTrackingEm = (sizePx: number): number => {
-  return TRACKING_A + TRACKING_B * Math.exp(TRACKING_C * sizePx);
-};
+export const interTrackingEm = (sizePx: number): number => TRACKING_A + TRACKING_B * Math.exp(TRACKING_C * sizePx);
 
 /** Inter dynamic tracking for a rendered `sizePx`, in px (2-decimal). */
-export const interTrackingPx = (sizePx: number): number => {
-  return Math.round(interTrackingEm(sizePx) * sizePx * 100) / 100;
-};
+export const interTrackingPx = (sizePx: number): number => Math.round(interTrackingEm(sizePx) * sizePx * 100) / 100;
 
 /**
  * Legacy `size + 10` leading. Kept for `createDefaultFont` callers that pass
@@ -94,9 +90,7 @@ export const interTrackingPx = (sizePx: number): number => {
  */
 export const BODY_LINE_HEIGHT_OFFSET = 10;
 
-export const bodyLineHeightPx = (sizePx: number): number => {
-  return sizePx + BODY_LINE_HEIGHT_OFFSET;
-};
+export const bodyLineHeightPx = (sizePx: number): number => sizePx + BODY_LINE_HEIGHT_OFFSET;
 
 /**
  * A tamagui font table with Variables unwrapped and `$` prefixes stripped.
@@ -118,14 +112,12 @@ const plain = <T>(raw: unknown): Record<string, T> => {
 const numbers = (raw: unknown) => plain<number>(raw);
 
 /** Inter dynamic tracking for every key of a size table. */
-const trackingFor = (sizes: Record<string, number>): Record<string, number> => {
-  return Object.fromEntries(Object.entries(sizes).map(([key, px]) => [key, interTrackingPx(px)]));
-};
+const trackingFor = (sizes: Record<string, number>): Record<string, number> =>
+  Object.fromEntries(Object.entries(sizes).map(([key, px]) => [key, interTrackingPx(px)]));
 
 /** Zero tracking for every key of a size table (non-Inter faces). */
-const neutralTracking = (sizes: Record<string, number>): Record<string, number> => {
-  return Object.fromEntries(Object.keys(sizes).map((key) => [key, 0]));
-};
+const neutralTracking = (sizes: Record<string, number>): Record<string, number> =>
+  Object.fromEntries(Object.keys(sizes).map((key) => [key, 0]));
 
 const v5Body = defaultConfig.fonts.body;
 const v5Heading = defaultConfig.fonts.heading;
@@ -188,15 +180,14 @@ export const categoryLineHeights = (category: FontCategory): Record<string, numb
  * is what collapsed `$serif`/`$mono`/`$rounded` to the system face at
  * `line-height: normal`.
  */
-export const createCategoryFont = (category: FontCategory, family: string): GenericFont => {
-  return createFont({
+export const createCategoryFont = (category: FontCategory, family: string): GenericFont =>
+  createFont({
     family,
     size: bodySizes,
     lineHeight: categoryLineHeights(category),
     weight: bodyWeights,
     letterSpacing: neutralTracking(bodySizes),
   }) as GenericFont;
-};
 
 export const defaultHeadingFont = createInterFont(
   {

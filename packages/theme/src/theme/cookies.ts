@@ -53,18 +53,14 @@ export const splitCookieValue = (value: string): string[] => {
 /**
  * Reconstruct a cookie value from its split chunks.
  */
-export const joinSplitCookieValues = (chunks: string[]): string => {
-  return chunks.join('');
-};
+export const joinSplitCookieValues = (chunks: string[]): string => chunks.join('');
 
 // ---------------------------------------------------------------------------
 // Internal: chunk key helpers
 // ---------------------------------------------------------------------------
 
 /** Build the cookie key for a given chunk index: `mp.ov.0`, `mp.ov.1`, … */
-const chunkKey = (index: number): string => {
-  return `${cookieOverridesPrefix}.${index}`;
-};
+const chunkKey = (index: number): string => `${cookieOverridesPrefix}.${index}`;
 
 // ---------------------------------------------------------------------------
 // Cookie read helpers (work with raw cookie objects from react-cookie)
@@ -162,9 +158,10 @@ export const readPresetCookie = (cookies: Record<string, unknown>): string | und
  * Write the preset name cookie.
  * Returns the cookie key and value for the caller to pass to setCookie.
  */
-export const writePresetCookie = (presetName: string): { key: string; value: string } => {
-  return { key: cookiePreset, value: presetName };
-};
+export const writePresetCookie = (presetName: string): { key: string; value: string } => ({
+  key: cookiePreset,
+  value: presetName,
+});
 
 /**
  * Write overrides cookie, splitting if necessary.

@@ -252,9 +252,7 @@ const getWeekDays = (date: Date, firstDayOfWeek: 0 | 1): Date[] => {
 };
 
 /** Day-grid key ("2026-03-10") — the local calendar day, never a UTC one. */
-const formatDateKey = (date: Date): string => {
-  return formatCalendarDate(date);
-};
+const formatDateKey = (date: Date): string => formatCalendarDate(date);
 
 const addMonths = (date: Date, delta: number): Date => {
   const next = new Date(date);
@@ -265,13 +263,10 @@ const addMonths = (date: Date, delta: number): Date => {
   return next;
 };
 
-const isSameDay = (d1: Date, d2: Date): boolean => {
-  return d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
-};
+const isSameDay = (d1: Date, d2: Date): boolean =>
+  d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
 
-const isToday = (date: Date): boolean => {
-  return isSameDay(date, new Date());
-};
+const isToday = (date: Date): boolean => isSameDay(date, new Date());
 
 const MS_PER_DAY = 86_400_000;
 
@@ -363,19 +358,15 @@ const dayKeyToDate = (key: string): Date => {
   return new Date(ty, tm - 1, td);
 };
 
-const dateAtMinutes = (day: Date, minutes: number): Date => {
-  return new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, minutes);
-};
+const dateAtMinutes = (day: Date, minutes: number): Date =>
+  new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, minutes);
 
 /** Timed events render as positioned blocks; untimed live in day/all-day rows. */
-const isTimedEvent = (event: CalendarEvent): boolean => {
-  return (
-    event.end !== undefined &&
-    event.end.getTime() > event.start.getTime() &&
-    isSameDay(event.start, event.end) &&
-    event.allDay !== true
-  );
-};
+const isTimedEvent = (event: CalendarEvent): boolean =>
+  event.end !== undefined &&
+  event.end.getTime() > event.start.getTime() &&
+  isSameDay(event.start, event.end) &&
+  event.allDay !== true;
 
 /** Pixels of pointer travel before a press becomes a drag (clicks stay clicks below this). */
 const DRAG_THRESHOLD_PX = 4;
@@ -457,14 +448,10 @@ const DayNumberDisc = ({
   );
 };
 
-const getHours = (): number[] => {
-  return Array.from({ length: 24 }, (_, i) => i);
-};
+const getHours = (): number[] => Array.from({ length: 24 }, (_, i) => i);
 
 /** Hour ticks speak the house time-of-day register without minutes ("2 PM"). */
-const formatHour = (hour: number): string => {
-  return formatTimeOfDay(new Date(2000, 0, 1, hour, 0, 0), { minutes: false });
-};
+const formatHour = (hour: number): string => formatTimeOfDay(new Date(2000, 0, 1, hour, 0, 0), { minutes: false });
 
 const weekdayNames = getWeekdayNames();
 const monthNames = getMonthNames();
@@ -2266,7 +2253,7 @@ export const Calendar = ({
                   MINUTES_PER_DAY,
                   Math.max(
                     minutesOfDay(ev.start) + slotMinutes,
-                    minutesOfDay(ev.start) + ((ev.end?.getTime() ?? ev.start.getTime()) - ev.start.getTime()) / 60000,
+                    minutesOfDay(ev.start) + ((ev.end?.getTime() ?? ev.start.getTime()) - ev.start.getTime()) / 60_000,
                   ),
                 ),
               })),
@@ -2346,7 +2333,7 @@ export const Calendar = ({
                     top={minutesToY(minutesOfDay(draftHere.start), hourHeight)}
                     height={Math.max(
                       MIN_BLOCK_PX,
-                      minutesToY((draftHere.end.getTime() - draftHere.start.getTime()) / 60000, hourHeight),
+                      minutesToY((draftHere.end.getTime() - draftHere.start.getTime()) / 60_000, hourHeight),
                     )}
                     backgroundColor="$accentBackground"
                     opacity={0.45}
@@ -2375,7 +2362,7 @@ export const Calendar = ({
                     top={minutesToY(minutesOfDay(editorHere.start), hourHeight)}
                     height={Math.max(
                       MIN_BLOCK_PX + 6,
-                      minutesToY((editorHere.end.getTime() - editorHere.start.getTime()) / 60000, hourHeight),
+                      minutesToY((editorHere.end.getTime() - editorHere.start.getTime()) / 60_000, hourHeight),
                     )}
                     zIndex={5}>
                     <FloatingPanel

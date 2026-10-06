@@ -77,7 +77,7 @@ describe('shared form submission outcome', () => {
     let finish!: () => void;
     const submit = vi.fn(
       async () =>
-        new Promise<void>((resolve) => {
+        await new Promise<void>((resolve) => {
           finish = resolve;
         }),
     );

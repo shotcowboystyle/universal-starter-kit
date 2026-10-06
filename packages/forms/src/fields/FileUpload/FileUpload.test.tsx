@@ -23,8 +23,8 @@ const houseConfig = createTamagui({
   themes: houseThemes as any,
 });
 
-const renderWithHouseThemes = (ui: ReactElement, scheme: 'light' | 'dark' = 'light') => {
-  return render(
+const renderWithHouseThemes = (ui: ReactElement, scheme: 'light' | 'dark' = 'light') =>
+  render(
     <TamaguiProvider
       config={houseConfig}
       defaultTheme={scheme}
@@ -32,7 +32,6 @@ const renderWithHouseThemes = (ui: ReactElement, scheme: 'light' | 'dark' = 'lig
       {ui}
     </TamaguiProvider>,
   );
-};
 
 const getZone = (container: Element): HTMLElement => {
   const zone = container.querySelector('[data-file-upload="dropzone"]') as HTMLElement | null;
@@ -598,7 +597,7 @@ describe('FileUpload transfer lifecycle', () => {
     expect(container.querySelector('[aria-label="Remove kept.txt"]')).toBeTruthy();
     expect(container.textContent).toContain('kept.txt');
     expect(container.textContent).not.toContain('in-flight.bin');
-    expect(onChange.mock.calls).toHaveLength(committedCalls);
+    expect(onChange).toHaveBeenCalledTimes(committedCalls);
     hold();
   });
 });

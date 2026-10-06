@@ -102,9 +102,7 @@ const emit = () => {
   }
 };
 
-export const getToasts = (): ToastEntry[] => {
-  return entries;
-};
+export const getToasts = (): ToastEntry[] => entries;
 
 export const subscribeToasts = (listener: () => void): (() => void) => {
   listeners.add(listener);
@@ -269,9 +267,7 @@ export const releaseToastViewport = (id: string): void => {
 };
 
 /** @internal Current owning viewport id (undefined while none mounted). */
-export const getToastViewportOwner = (): string | undefined => {
-  return viewportClaimants[0];
-};
+export const getToastViewportOwner = (): string | undefined => viewportClaimants[0];
 
 /** @internal Subscribe to ownership changes (useSyncExternalStore shape). */
 export const subscribeToastViewport = (listener: () => void): (() => void) => {

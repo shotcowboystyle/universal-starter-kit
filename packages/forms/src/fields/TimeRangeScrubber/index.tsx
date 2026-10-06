@@ -126,14 +126,13 @@ const useRadiusStop = (): BorderRadius => {
   return ctx?.preset.knobs.borderRadius ?? defaultKnobs.borderRadius;
 };
 
-const formatClock = (date: Date): string => {
-  return date.toLocaleTimeString(undefined, {
+const formatClock = (date: Date): string =>
+  date.toLocaleTimeString(undefined, {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
     hour12: false,
   });
-};
 
 const formatRangeReadout = (range: DateRange | null): string => {
   if (!range?.start || !range.end) {
@@ -166,35 +165,33 @@ const TimeRangeChip = ({
   onPress: () => void;
   part?: string;
   tabIndex?: number;
-}) => {
-  return (
-    <View
-      height={CHIP_HEIGHT}
-      paddingHorizontal={7}
-      borderRadius={CHIP_RADIUS}
-      borderWidth={1}
-      borderColor={selected ? '$color11' : '$borderColor'}
-      backgroundColor={selected ? '$color11' : 'transparent'}
-      justifyContent="center"
-      alignItems="center"
-      cursor={disabled ? 'not-allowed' : 'pointer'}
-      opacity={disabled ? 0.5 : 1}
-      focusable={!disabled}
-      tabIndex={disabled ? -1 : tabIndex}
-      role="button"
-      data-part={part}
-      onPress={disabled ? undefined : onPress}
-      hoverStyle={disabled ? undefined : { borderColor: '$borderColorHover' }}>
-      <Text
-        fontSize={12}
-        lineHeight={22}
-        color={selected ? '$color1' : '$color11'}
-        fontFamily="$body">
-        {label}
-      </Text>
-    </View>
-  );
-};
+}) => (
+  <View
+    height={CHIP_HEIGHT}
+    paddingHorizontal={7}
+    borderRadius={CHIP_RADIUS}
+    borderWidth={1}
+    borderColor={selected ? '$color11' : '$borderColor'}
+    backgroundColor={selected ? '$color11' : 'transparent'}
+    justifyContent="center"
+    alignItems="center"
+    cursor={disabled ? 'not-allowed' : 'pointer'}
+    opacity={disabled ? 0.5 : 1}
+    focusable={!disabled}
+    tabIndex={disabled ? -1 : tabIndex}
+    role="button"
+    data-part={part}
+    onPress={disabled ? undefined : onPress}
+    hoverStyle={disabled ? undefined : { borderColor: '$borderColorHover' }}>
+    <Text
+      fontSize={12}
+      lineHeight={22}
+      color={selected ? '$color1' : '$color11'}
+      fontFamily="$body">
+      {label}
+    </Text>
+  </View>
+);
 
 const TimeRangeScrubberControl = ({
   id,

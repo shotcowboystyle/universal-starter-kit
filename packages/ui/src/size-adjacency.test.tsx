@@ -94,8 +94,8 @@ const measure = (ui: ReactElement): Row => {
 };
 
 /** The mpo size channel: the size knob, which every house control reads. */
-const atKnob = (knob: Size, token: string) => {
-  return measure(
+const atKnob = (knob: Size, token: string) =>
+  measure(
     <Preset overrides={{ size: knob }}>
       <XStack gap="$2">
         <Button>Save</Button>
@@ -112,11 +112,10 @@ const atKnob = (knob: Size, token: string) => {
       </XStack>
     </Preset>,
   );
-};
 
 /** The same token handed to each component directly. */
-const atSizeProp = (token: '$3' | '$4' | '$5') => {
-  return measure(
+const atSizeProp = (token: '$3' | '$4' | '$5') =>
+  measure(
     <XStack gap="$2">
       <Button size={token}>Save</Button>
       <Input
@@ -135,15 +134,10 @@ const atSizeProp = (token: '$3' | '$4' | '$5') => {
       />
     </XStack>,
   );
-};
 
-const heights = (row: Row) => {
-  return Object.fromEntries(Object.entries(row).map(([name, b]) => [name, b.height]));
-};
+const heights = (row: Row) => Object.fromEntries(Object.entries(row).map(([name, b]) => [name, b.height]));
 
-const radii = (row: Row, names: (keyof Row)[]) => {
-  return Object.fromEntries(names.map((name) => [name, row[name].radius]));
-};
+const radii = (row: Row, names: (keyof Row)[]) => Object.fromEntries(names.map((name) => [name, row[name].radius]));
 
 const agreed = (values: Record<string, number>) => {
   const first = Object.values(values)[0];

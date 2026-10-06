@@ -208,7 +208,9 @@ describe('Icon', () => {
       fireEvent.change(search, { target: { value: 'chev' } });
       fireEvent.click(document.querySelector('[data-testid="icon-option-chev-u"]')!);
       expect(onChange).toHaveBeenCalledWith('chev-u');
-      await act(async () => await new Promise((resolve) => setTimeout(resolve, 400)));
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 400));
+      });
       expect(input).toHaveAttribute('aria-expanded', 'false');
       expect(document.activeElement).toBe(input);
       fireEvent.keyDown(input, { key: 'Enter' });
@@ -230,7 +232,9 @@ describe('Icon', () => {
       return element!;
     });
     fireEvent.click(option);
-    await act(async () => await new Promise((resolve) => setTimeout(resolve, 400)));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 400));
+    });
     expect(input).toHaveAttribute('aria-expanded', 'false');
     expect(document.activeElement).toBe(input);
   });
@@ -255,7 +259,9 @@ describe('Icon', () => {
     });
     fireEvent.pointerDown(next);
     fireEvent.click(next);
-    await act(async () => await new Promise((resolve) => setTimeout(resolve, 400)));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 400));
+    });
     expect(input).toHaveAttribute('aria-expanded', 'false');
     expect(document.activeElement).toBe(next);
   });
@@ -270,7 +276,9 @@ describe('Icon', () => {
         expect(document.querySelector('[data-testid="icon-option-mail"]')).toBeTruthy();
       });
       fireEvent.click(document.querySelector('[data-testid="icon-option-mail"]')!);
-      await act(async () => await new Promise((resolve) => setTimeout(resolve, 500)));
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      });
       expect(input).toHaveAttribute('aria-expanded', 'false');
       await act(async () => {
         input.blur();

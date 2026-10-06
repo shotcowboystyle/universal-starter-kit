@@ -22,33 +22,31 @@ export const useSpinnerStroke = (color?: string): string => {
 };
 
 /** Linear/Polaris arc: round-cap 270° head on a faint track. Scales with the box. */
-export const SpinnerGlyph = ({ color, size }: { color: string; size: number }) => {
-  return (
-    <Svg
-      width={size}
-      height={size}
-      viewBox={`0 0 ${VB} ${VB}`}
-      pointerEvents="none">
-      <Circle
-        cx={CX}
-        cy={CX}
-        r={R}
-        fill="none"
-        stroke={color}
-        strokeWidth={STROKE}
-        opacity={0.2}
-      />
-      <Circle
-        cx={CX}
-        cy={CX}
-        r={R}
-        fill="none"
-        stroke={color}
-        strokeWidth={STROKE}
-        strokeLinecap="round"
-        strokeDasharray={`${ARC} ${CIRCUMFERENCE - ARC}`}
-        transform={`rotate(-90 ${CX} ${CX})`}
-      />
-    </Svg>
-  );
-};
+export const SpinnerGlyph = ({ color, size }: { color: string; size: number }) => (
+  <Svg
+    width={size}
+    height={size}
+    viewBox={`0 0 ${VB} ${VB}`}
+    pointerEvents="none">
+    <Circle
+      cx={CX}
+      cy={CX}
+      r={R}
+      fill="none"
+      stroke={color}
+      strokeWidth={STROKE}
+      opacity={0.2}
+    />
+    <Circle
+      cx={CX}
+      cy={CX}
+      r={R}
+      fill="none"
+      stroke={color}
+      strokeWidth={STROKE}
+      strokeLinecap="round"
+      strokeDasharray={`${ARC} ${CIRCUMFERENCE - ARC}`}
+      transform={`rotate(-90 ${CX} ${CX})`}
+    />
+  </Svg>
+);

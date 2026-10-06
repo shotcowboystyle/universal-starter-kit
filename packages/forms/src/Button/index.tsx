@@ -80,9 +80,8 @@ export const resolveButtonSizeRecipe = (
  * generated table at every token but `$4` — it inverted at `$2`, where
  * `max(8, 7 - 2)` painted a compact Button WIDER than a comfortable one.
  */
-export const buttonDensityFamily = (family: RecipeFamilyName, densityTight: boolean): RecipeFamilyName => {
-  return densityTight ? 'controlCompact' : family;
-};
+export const buttonDensityFamily = (family: RecipeFamilyName, densityTight: boolean): RecipeFamilyName =>
+  densityTight ? 'controlCompact' : family;
 
 /**
  * Tamagui size-token → px (circular variant still uses the token box).

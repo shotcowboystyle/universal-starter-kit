@@ -9,12 +9,11 @@ import * as Layouts from './index';
 
 afterEach(cleanup);
 
-const padAtoms = (el: Element): string[] => {
-  return String((el as HTMLElement).className || '')
+const padAtoms = (el: Element): string[] =>
+  String((el as HTMLElement).className || '')
     .split(' ')
     .filter((c) => c.startsWith('_p-') || c.startsWith('_pt-') || c.startsWith('_pad'))
     .sort();
-};
 
 describe('Screen family named exports', () => {
   it('exports Screen, ScreenToolbar, SafeAreaWrapper, and KeyboardAvoidingWrapper', () => {

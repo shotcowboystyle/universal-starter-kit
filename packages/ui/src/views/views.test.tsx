@@ -881,12 +881,11 @@ describe('ReportBuilder', () => {
     expect(screen.queryByText('No results found')).toBeNull();
   });
 
-  const atoms = (el: Element, prefixes: string[]): string[] => {
-    return String((el as HTMLElement).className || '')
+  const atoms = (el: Element, prefixes: string[]): string[] =>
+    String((el as HTMLElement).className || '')
       .split(' ')
       .filter((c) => prefixes.some((p) => c.startsWith(p)))
       .sort();
-  };
 
   it('header and totals labels ride the fontWeight knob — never 500 or 600', () => {
     renderWithProviders(
@@ -926,13 +925,11 @@ describe('ChartCard palette', () => {
     return null;
   };
 
-  const pieSliceFills = (): (string | null)[] => {
-    return Array.from(document.querySelectorAll('svg [data-mpo-chart-mark]')).map((p) => p.getAttribute('fill'));
-  };
+  const pieSliceFills = (): (string | null)[] =>
+    Array.from(document.querySelectorAll('svg [data-mpo-chart-mark]')).map((p) => p.getAttribute('fill'));
 
-  const barFills = (): (string | null)[] => {
-    return Array.from(document.querySelectorAll('svg [data-mpo-chart-bar]')).map((bar) => bar.getAttribute('fill'));
-  };
+  const barFills = (): (string | null)[] =>
+    Array.from(document.querySelectorAll('svg [data-mpo-chart-bar]')).map((bar) => bar.getAttribute('fill'));
 
   it('pie slices take the categorical palette from useChartPalette()', () => {
     const captured: { current?: ChartPalette } = {};

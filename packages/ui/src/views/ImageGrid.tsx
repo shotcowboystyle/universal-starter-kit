@@ -121,35 +121,33 @@ const ImageGridSkeleton = ({
   /** Resolved width/height ratio — the twin must be the media's shape. */
   aspect: number;
   loadingLabel: string;
-}) => {
-  return (
-    <YStack
-      gap={gutter}
-      data-async-skeleton="image-grid"
-      data-media-aspect={aspect}
-      aria-busy
-      aria-label={loadingLabel}
-      maxWidth="100%">
-      {Array.from({ length: 2 }, (_, row) => (
-        <XStack
-          key={`skel-row-${row}`}
-          gap={gutter}>
-          {Array.from({ length: columns }, (_, col) => (
-            <View
-              key={`skel-${row}-${col}`}
-              {...tileTrack}>
-              <Skeleton
-                variant="rounded"
-                width="100%"
-                aspectRatio={aspect}
-              />
-            </View>
-          ))}
-        </XStack>
-      ))}
-    </YStack>
-  );
-};
+}) => (
+  <YStack
+    gap={gutter}
+    data-async-skeleton="image-grid"
+    data-media-aspect={aspect}
+    aria-busy
+    aria-label={loadingLabel}
+    maxWidth="100%">
+    {Array.from({ length: 2 }, (_, row) => (
+      <XStack
+        key={`skel-row-${row}`}
+        gap={gutter}>
+        {Array.from({ length: columns }, (_, col) => (
+          <View
+            key={`skel-${row}-${col}`}
+            {...tileTrack}>
+            <Skeleton
+              variant="rounded"
+              width="100%"
+              aspectRatio={aspect}
+            />
+          </View>
+        ))}
+      </XStack>
+    ))}
+  </YStack>
+);
 
 /**
  * One Photos/Polar tile: the rounded media frame is the perceived control.

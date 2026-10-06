@@ -75,13 +75,11 @@ describe('mpo-conventions/no-raw-typography', () => {
   }
 
   /** Minimal ESTree ImportDeclaration — the only node shape the rule visits. */
-  const importDeclaration = (source: string, names: string[]) => {
-    return {
-      type: 'ImportDeclaration',
-      source: { value: source },
-      specifiers: names.map((name) => ({ type: 'ImportSpecifier', imported: { name } })),
-    };
-  };
+  const importDeclaration = (source: string, names: string[]) => ({
+    type: 'ImportDeclaration',
+    source: { value: source },
+    specifiers: names.map((name) => ({ type: 'ImportSpecifier', imported: { name } })),
+  });
 
   const reportedNames = (source: string, names: string[]): string[] => {
     const reports: Report[] = [];
@@ -139,37 +137,29 @@ interface Creatable {
   create: (context: unknown) => HouseVisitors;
 }
 
-const houseImport = (source: string, names: string[]) => {
-  return {
-    type: 'ImportDeclaration',
-    source: { value: source },
-    specifiers: names.map((name) => ({
-      type: 'ImportSpecifier',
-      imported: { name },
-      local: { name },
-    })),
-  };
-};
+const houseImport = (source: string, names: string[]) => ({
+  type: 'ImportDeclaration',
+  source: { value: source },
+  specifiers: names.map((name) => ({
+    type: 'ImportSpecifier',
+    imported: { name },
+    local: { name },
+  })),
+});
 
-const jsxOpen = (name: string, attrs: { prop: string; value: unknown }[]) => {
-  return {
-    type: 'JSXOpeningElement',
-    name: { type: 'JSXIdentifier', name },
-    attributes: attrs.map((attr) => ({
-      type: 'JSXAttribute',
-      name: { type: 'JSXIdentifier', name: attr.prop },
-      value: attr.value,
-    })),
-  };
-};
+const jsxOpen = (name: string, attrs: { prop: string; value: unknown }[]) => ({
+  type: 'JSXOpeningElement',
+  name: { type: 'JSXIdentifier', name },
+  attributes: attrs.map((attr) => ({
+    type: 'JSXAttribute',
+    name: { type: 'JSXIdentifier', name: attr.prop },
+    value: attr.value,
+  })),
+});
 
-const token = (value: string) => {
-  return { type: 'Literal', value };
-};
+const token = (value: string) => ({ type: 'Literal', value });
 
-const numeric = (value: number) => {
-  return { type: 'JSXExpressionContainer', expression: { type: 'Literal', value } };
-};
+const numeric = (value: number) => ({ type: 'JSXExpressionContainer', expression: { type: 'Literal', value } });
 
 function escaped(value: number) {
   return {
@@ -408,17 +398,13 @@ describe('mpo-conventions/no-child-margin', () => {
   }
   type Visitors = Record<string, ((node: Node) => void) | undefined>;
 
-  const element = (name: string, attrs: { prop: string; value: unknown }[], children: Node[] = []) => {
-    return {
-      type: 'JSXElement',
-      openingElement: jsxOpen(name, attrs),
-      children,
-    };
-  };
+  const element = (name: string, attrs: { prop: string; value: unknown }[], children: Node[] = []) => ({
+    type: 'JSXElement',
+    openingElement: jsxOpen(name, attrs),
+    children,
+  });
 
-  const fragment = (children: Node[]) => {
-    return { type: 'JSXFragment', children };
-  };
+  const fragment = (children: Node[]) => ({ type: 'JSXFragment', children });
 
   const walk = (visitors: Visitors, node: Node) => {
     visitors[node.type]?.(node);

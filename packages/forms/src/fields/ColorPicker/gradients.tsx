@@ -18,26 +18,24 @@ const fill = {
   bottom: 0,
 };
 
-export const SaturationBackground = ({ hueColor }: { hueColor: string; width?: number; height?: number }) => {
-  return (
+export const SaturationBackground = ({ hueColor }: { hueColor: string; width?: number; height?: number }) => (
+  <View
+    {...fill}
+    overflow="hidden">
     <View
       {...fill}
-      overflow="hidden">
-      <View
-        {...fill}
-        style={{
-          background: `linear-gradient(to right, #fff, ${hueColor})`,
-        }}
-      />
-      <View
-        {...fill}
-        style={{
-          background: 'linear-gradient(to top, #000, transparent)',
-        }}
-      />
-    </View>
-  );
-};
+      style={{
+        background: `linear-gradient(to right, #fff, ${hueColor})`,
+      }}
+    />
+    <View
+      {...fill}
+      style={{
+        background: 'linear-gradient(to top, #000, transparent)',
+      }}
+    />
+  </View>
+);
 
 export const HueBackground = ({
   orientation = 'horizontal',

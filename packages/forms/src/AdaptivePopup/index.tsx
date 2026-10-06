@@ -88,9 +88,8 @@ export const pickAdaptivePopupFace = (options: {
   return 'dialog';
 };
 
-const readRtl = (): boolean => {
-  return isWeb && typeof document !== 'undefined' && document.documentElement.getAttribute('dir') === 'rtl';
-};
+const readRtl = (): boolean =>
+  isWeb && typeof document !== 'undefined' && document.documentElement.getAttribute('dir') === 'rtl';
 
 /**
  * The overlay frame is not a control. Auto-focus on open (Radix /

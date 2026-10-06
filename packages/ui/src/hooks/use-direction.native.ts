@@ -11,6 +11,4 @@ import { I18nManager } from 'react-native';
 export type Direction = 'ltr' | 'rtl';
 
 /** Returns the current writing direction (`"ltr"` | `"rtl"`). */
-export const useDirection = (): Direction => {
-  return I18nManager.isRTL ? 'rtl' : 'ltr';
-};
+export const useDirection = (): Direction => (I18nManager.isRTL ? 'rtl' : 'ltr');

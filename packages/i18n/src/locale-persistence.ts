@@ -4,9 +4,7 @@ import { getCookie, setCookie } from '@repo/platform';
 const cookieName = 'preferred_language';
 
 /** Read the `preferred_language` cookie value (client-side). */
-export const getPersistedLanguage = (): string | null => {
-  return getCookie(cookieName);
-};
+export const getPersistedLanguage = (): string | null => getCookie(cookieName);
 
 /** Set the `preferred_language` cookie (client-side, 1-year expiry). */
 export const persistLanguage = (lang: string): void => {

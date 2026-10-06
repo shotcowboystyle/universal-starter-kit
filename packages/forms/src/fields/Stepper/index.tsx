@@ -4,7 +4,8 @@ import type { DeepKeys, DeepValue } from '@tanstack/form-core';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ComponentProps, MutableRefObject, ReactNode } from 'react';
 import { Pressable } from 'react-native';
-import { isWeb, Text, useProps, View, Input as TamaguiInput } from 'tamagui';
+import type { Input as TamaguiInput } from 'tamagui';
+import { isWeb, Text, useProps, View } from 'tamagui';
 
 import { resolveStepperPlacement } from './resolve-stepper-placement';
 

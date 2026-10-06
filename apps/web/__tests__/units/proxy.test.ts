@@ -7,11 +7,9 @@ import middleware, { config } from '@/proxy';
 vi.mock('next-intl/middleware', () => ({
   default: vi.fn((routingConfig) =>
     // Return a middleware function that can be tested
-    () => {
-      return {
-        routingConfig,
-      };
-    },
+    () => ({
+      routingConfig,
+    }),
   ),
 }));
 

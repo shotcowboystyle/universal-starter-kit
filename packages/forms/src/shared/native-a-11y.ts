@@ -65,16 +65,14 @@ export const choiceItemA11y = ({
   selected: boolean;
   disabled: boolean;
   hint?: string;
-}): ChoiceA11yProps => {
-  return {
-    accessible: true,
-    role: nativeChoiceRole,
-    accessibilityRole: nativeChoiceRole,
-    accessibilityLabel: name,
-    // `selected` is what a reader announces for a segment, `checked` what it
-    // announces for a radio; the iOS tree surfaces them as `selected: true`
-    // and `value: "checked"`. Both are set so one shape serves both controls.
-    accessibilityState: { disabled, selected, checked: selected },
-    ...(hint ? { accessibilityHint: hint } : undefined),
-  };
-};
+}): ChoiceA11yProps => ({
+  accessible: true,
+  role: nativeChoiceRole,
+  accessibilityRole: nativeChoiceRole,
+  accessibilityLabel: name,
+  // `selected` is what a reader announces for a segment, `checked` what it
+  // announces for a radio; the iOS tree surfaces them as `selected: true`
+  // and `value: "checked"`. Both are set so one shape serves both controls.
+  accessibilityState: { disabled, selected, checked: selected },
+  ...(hint ? { accessibilityHint: hint } : undefined),
+});

@@ -71,9 +71,7 @@ type SortDir = 'asc' | 'desc';
 type SortState = { field: string; dir: SortDir } | null;
 type FocusItem = { type: 'group'; key: string } | { type: 'row'; row: Record<string, unknown>; index: number };
 
-const isNumericFieldType = (fieldtype: string): boolean => {
-  return numericFieldTypes.has(fieldtype);
-};
+const isNumericFieldType = (fieldtype: string): boolean => numericFieldTypes.has(fieldtype);
 
 const formatCellValue = (value: unknown, fieldtype: string): string => {
   if (value === null || value === undefined) {

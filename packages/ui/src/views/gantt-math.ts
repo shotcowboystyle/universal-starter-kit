@@ -21,13 +21,11 @@ export type GanttZoom = 'day' | 'week' | 'month';
 export const MS_PER_DAY = 86_400_000;
 
 /** Local start-of-day for a date. */
-export const startOfDay = (date: Date): Date => {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
-};
+export const startOfDay = (date: Date): Date => new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
 /** Add whole calendar days, preserving wall-clock time-of-day across DST. */
-export const addDays = (date: Date, days: number): Date => {
-  return new Date(
+export const addDays = (date: Date, days: number): Date =>
+  new Date(
     date.getFullYear(),
     date.getMonth(),
     date.getDate() + days,
@@ -36,12 +34,10 @@ export const addDays = (date: Date, days: number): Date => {
     date.getSeconds(),
     date.getMilliseconds(),
   );
-};
 
 /** Whole-day difference `to - from` (start-of-day to start-of-day, DST-safe). */
-export const dayDiff = (from: Date, to: Date): number => {
-  return Math.round((startOfDay(to).getTime() - startOfDay(from).getTime()) / MS_PER_DAY);
-};
+export const dayDiff = (from: Date, to: Date): number =>
+  Math.round((startOfDay(to).getTime() - startOfDay(from).getTime()) / MS_PER_DAY);
 
 // ── Span normalization ────────────────────────────────────────
 
@@ -74,9 +70,10 @@ export const normalizeSpanEdges = (span: GanttSpan): { startEdge: Date; endEdge:
 };
 
 /** Shift a span by whole days, preserving duration and wall-clock times. */
-export const shiftSpanByDays = (span: GanttSpan, dayDelta: number): GanttSpan => {
-  return { start: addDays(span.start, dayDelta), end: addDays(span.end, dayDelta) };
-};
+export const shiftSpanByDays = (span: GanttSpan, dayDelta: number): GanttSpan => ({
+  start: addDays(span.start, dayDelta),
+  end: addDays(span.end, dayDelta),
+});
 
 // ── Bar resize (edge drags) ───────────────────────────────────
 
@@ -130,9 +127,7 @@ export const startOfWeek = (date: Date, firstDayOfWeek: 0 | 1): Date => {
 };
 
 /** Local first of the month containing `date`. */
-export const startOfMonth = (date: Date): Date => {
-  return new Date(date.getFullYear(), date.getMonth(), 1);
-};
+export const startOfMonth = (date: Date): Date => new Date(date.getFullYear(), date.getMonth(), 1);
 
 /**
  * Padded, zoom-aligned chart range covering every task (and today, so the
@@ -177,9 +172,7 @@ export const computeGanttRange = (
 };
 
 /** Total whole days spanned by a range (its chart width in day units). */
-export const rangeDays = (range: GanttRange): number => {
-  return Math.max(1, dayDiff(range.start, range.end));
-};
+export const rangeDays = (range: GanttRange): number => Math.max(1, dayDiff(range.start, range.end));
 
 // ── Date ↔ pixel mapping ──────────────────────────────────────
 
@@ -209,14 +202,11 @@ export const scrollAnchorX = (
 };
 
 /** Start-of-day date at a horizontal px offset (fractional days floor). */
-export const xToDate = (x: number, rangeStart: Date, pxPerDay: number): Date => {
-  return addDays(startOfDay(rangeStart), Math.floor(x / pxPerDay));
-};
+export const xToDate = (x: number, rangeStart: Date, pxPerDay: number): Date =>
+  addDays(startOfDay(rangeStart), Math.floor(x / pxPerDay));
 
 /** Snapped whole-day delta for a horizontal drag distance. */
-export const dxToDayDelta = (dx: number, pxPerDay: number): number => {
-  return Math.round(dx / pxPerDay);
-};
+export const dxToDayDelta = (dx: number, pxPerDay: number): number => Math.round(dx / pxPerDay);
 
 export interface GanttBarGeometry {
   x: number;
@@ -253,14 +243,11 @@ export interface GanttOpenSpan {
 }
 
 /** Neither bound set: the span names no date at all and is live throughout. */
-export const isEternalSpan = (span: GanttOpenSpan): boolean => {
-  return span.start === undefined && span.end === undefined;
-};
+export const isEternalSpan = (span: GanttOpenSpan): boolean => span.start === undefined && span.end === undefined;
 
 /** Both bounds set — the only shape drag, resize and keyboard moves accept. */
-export const isBoundedSpan = (span: GanttOpenSpan): span is GanttSpan => {
-  return span.start !== undefined && span.end !== undefined;
-};
+export const isBoundedSpan = (span: GanttOpenSpan): span is GanttSpan =>
+  span.start !== undefined && span.end !== undefined;
 
 /**
  * What an open span contributes to the chart RANGE.
@@ -344,9 +331,8 @@ export const dateLineX = (range: GanttRange, pxPerDay: number, date: Date): numb
 };
 
 /** X offset of the today line, or null when today is outside the range. */
-export const todayLineX = (range: GanttRange, pxPerDay: number, today: Date = new Date()): number | null => {
-  return dateLineX(range, pxPerDay, today);
-};
+export const todayLineX = (range: GanttRange, pxPerDay: number, today: Date = new Date()): number | null =>
+  dateLineX(range, pxPerDay, today);
 
 // ── Axis ticks ────────────────────────────────────────────────
 

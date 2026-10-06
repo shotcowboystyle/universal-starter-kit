@@ -8,7 +8,7 @@ const getStore = async (): Promise<Store> => {
   if (!storePromise) {
     storePromise = Store.load('store.json');
   }
-  return storePromise;
+  return await storePromise;
 };
 
 export const storage: Storage = {

@@ -17,8 +17,8 @@ const virtualIdFilter = new RegExp(`^${virtualPrefix}`);
  * bundled into the optimized phosphor chunk, where a workspace import would
  * freeze a stale second copy of the theme package.
  */
-const tokenColorIconBaseSource = (originalIconBase: string): string => {
-  return `import { createElement, forwardRef } from "react";
+const tokenColorIconBaseSource = (originalIconBase: string): string =>
+  `import { createElement, forwardRef } from "react";
 import { useTheme } from "@tamagui/core";
 import IconBase from ${JSON.stringify(originalIconBase)};
 
@@ -46,11 +46,8 @@ TokenColorIconBase.displayName = "IconBase";
 
 export default TokenColorIconBase;
 `;
-};
 
-const toPosix = (file: string): string => {
-  return file.replaceAll('\\', '/');
-};
+const toPosix = (file: string): string => file.replaceAll('\\', '/');
 
 const resolvePhosphorIconBase = (id: string, importer: string | undefined): string | null => {
   if (!importer || importer.startsWith('\0')) {
@@ -69,23 +66,20 @@ const resolvePhosphorIconBase = (id: string, importer: string | undefined): stri
     : null;
 };
 
-const loadTokenColorIconBase = (id: string): string | null => {
-  return id.startsWith(virtualPrefix) ? tokenColorIconBaseSource(`${id.slice(virtualPrefix.length)}.js`) : null;
-};
+const loadTokenColorIconBase = (id: string): string | null =>
+  id.startsWith(virtualPrefix) ? tokenColorIconBaseSource(`${id.slice(virtualPrefix.length)}.js`) : null;
 
-const rolldownTokenColorPlugin = () => {
-  return {
-    name: 'mpo-phosphor-token-color:deps',
-    resolveId: {
-      filter: { id: iconBaseFilter },
-      handler: resolvePhosphorIconBase,
-    },
-    load: {
-      filter: { id: virtualIdFilter },
-      handler: loadTokenColorIconBase,
-    },
-  };
-};
+const rolldownTokenColorPlugin = () => ({
+  name: 'mpo-phosphor-token-color:deps',
+  resolveId: {
+    filter: { id: iconBaseFilter },
+    handler: resolvePhosphorIconBase,
+  },
+  load: {
+    filter: { id: virtualIdFilter },
+    handler: loadTokenColorIconBase,
+  },
+});
 
 /**
  * Resolves Tamagui tokens handed to `@phosphor-icons/react` glyphs on web,
@@ -101,20 +95,18 @@ const rolldownTokenColorPlugin = () => {
  * and inside the dev dep optimizer, which bundles phosphor with rolldown and
  * never consults Vite plugins for a dependency's relative imports.
  */
-export const phosphorTokenColorPlugin = (): Plugin => {
-  return {
-    name: 'mpo-phosphor-token-color',
-    enforce: 'pre',
-    configEnvironment() {
-      return { optimizeDeps: { rolldownOptions: { plugins: [rolldownTokenColorPlugin()] } } };
-    },
-    resolveId: {
-      filter: { id: iconBaseFilter },
-      handler: resolvePhosphorIconBase,
-    },
-    load: {
-      filter: { id: virtualIdFilter },
-      handler: loadTokenColorIconBase,
-    },
-  };
-};
+export const phosphorTokenColorPlugin = (): Plugin => ({
+  name: 'mpo-phosphor-token-color',
+  enforce: 'pre',
+  configEnvironment() {
+    return { optimizeDeps: { rolldownOptions: { plugins: [rolldownTokenColorPlugin()] } } };
+  },
+  resolveId: {
+    filter: { id: iconBaseFilter },
+    handler: resolvePhosphorIconBase,
+  },
+  load: {
+    filter: { id: virtualIdFilter },
+    handler: loadTokenColorIconBase,
+  },
+});

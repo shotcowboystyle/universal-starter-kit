@@ -15,16 +15,13 @@ import { useTouchSurface } from './use-touch-surface';
 
 export const IntentContext = createContext<string | null>(null);
 
-export const useIntentContext = (): string | null => {
-  return useContext(IntentContext);
-};
+export const useIntentContext = (): string | null => useContext(IntentContext);
 
 const reducedMotionQuery = '(prefers-reduced-motion: reduce)';
 const serverReducedMotion = () => false;
 
-const readReducedMotion = (): boolean => {
-  return typeof window !== 'undefined' && !!window.matchMedia?.(reducedMotionQuery).matches;
-};
+const readReducedMotion = (): boolean =>
+  typeof window !== 'undefined' && !!window.matchMedia?.(reducedMotionQuery).matches;
 
 const subscribeReducedMotion = (notify: () => void) => {
   if (typeof window === 'undefined' || !window.matchMedia) {
@@ -47,9 +44,8 @@ const subscribeReducedMotion = (notify: () => void) => {
 };
 
 /** Adopt the OS motion preference after matching the server's initial markup. */
-const usePrefersReducedMotion = (): boolean => {
-  return useSyncExternalStore(subscribeReducedMotion, readReducedMotion, serverReducedMotion);
-};
+const usePrefersReducedMotion = (): boolean =>
+  useSyncExternalStore(subscribeReducedMotion, readReducedMotion, serverReducedMotion);
 
 const applySurfaceToKnobs = (
   knobs: Knobs,

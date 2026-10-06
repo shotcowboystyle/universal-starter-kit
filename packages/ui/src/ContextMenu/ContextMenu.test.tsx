@@ -6,8 +6,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ContextMenu } from './index';
 
-const renderOpen = (onSelect = vi.fn()) => {
-  return renderWithProviders(
+const renderOpen = (onSelect = vi.fn()) =>
+  renderWithProviders(
     <ContextMenu
       defaultOpen
       items={[
@@ -19,7 +19,6 @@ const renderOpen = (onSelect = vi.fn()) => {
       <Button>Target</Button>
     </ContextMenu>,
   );
-};
 
 describe('ContextMenu', () => {
   it('opens on contextmenu and not on a primary click', async () => {
@@ -153,15 +152,15 @@ describe('ContextMenu', () => {
 const stubPanelBox = (width: number, height: number) => {
   const isPanel = (el: Element) => el.hasAttribute('data-fp-panel');
   const rect = Element.prototype.getBoundingClientRect;
-  vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+  vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function stubPanelBox(this: Element) {
     return isPanel(this) ? new DOMRect(0, 0, width * 0.96, height * 0.96) : rect.call(this);
   });
   const offsetWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetWidth');
-  vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function (this: HTMLElement) {
+  vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function stubPanelBox(this: HTMLElement) {
     return isPanel(this) ? width : (offsetWidth?.get?.call(this) ?? 0);
   });
   const scrollHeight = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollHeight');
-  vi.spyOn(Element.prototype, 'scrollHeight', 'get').mockImplementation(function (this: Element) {
+  vi.spyOn(Element.prototype, 'scrollHeight', 'get').mockImplementation(function stubPanelBox(this: Element) {
     return isPanel(this) ? height : (scrollHeight?.get?.call(this) ?? 0);
   });
 };

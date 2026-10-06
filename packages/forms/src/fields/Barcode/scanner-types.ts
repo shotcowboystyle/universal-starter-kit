@@ -107,12 +107,11 @@ const HTML5_FORMAT_ALIASES: Record<string, string> = {
   upc_e: 'UPC_E',
 };
 
-const normalizeFormatToken = (value: string): string => {
-  return value
+const normalizeFormatToken = (value: string): string =>
+  value
     .trim()
     .toLowerCase()
     .replaceAll(/[\s-]+/g, '_');
-};
 
 /**
  * Resolve ONE consumer format token to its expo-camera barcode type, or
@@ -179,6 +178,4 @@ export const resolveHtml5FormatIds = (
 };
 
 /** Contained scanner viewport height. Compact steps down. */
-export const scannerViewportHeight = (compact?: boolean): number => {
-  return compact ? 180 : 240;
-};
+export const scannerViewportHeight = (compact?: boolean): number => (compact ? 180 : 240);

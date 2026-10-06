@@ -18,9 +18,7 @@ const SIZE_INTENT_ALIASES: Record<SurfaceSizeIntent, SurfaceSize> = {
   large: 'large',
 };
 
-export const normalizeSurfaceSize = (size: SurfaceSizeIntent): SurfaceSize => {
-  return SIZE_INTENT_ALIASES[size];
-};
+export const normalizeSurfaceSize = (size: SurfaceSizeIntent): SurfaceSize => SIZE_INTENT_ALIASES[size];
 
 export const SurfaceContext = createStyledContext<SurfaceIntent>({
   size: 'unset',

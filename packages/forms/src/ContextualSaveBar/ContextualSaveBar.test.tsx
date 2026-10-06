@@ -13,9 +13,8 @@ import { Form } from '../Form';
 import { clientKnownIdentity, ContextualSaveBar } from './index';
 import type { NavigationBlocker } from './index';
 
-const savebar = (root: ParentNode = document.body): HTMLElement | null => {
-  return root.querySelector('[data-mp-contextual-savebar]');
-};
+const savebar = (root: ParentNode = document.body): HTMLElement | null =>
+  root.querySelector('[data-mp-contextual-savebar]');
 
 const barButton = (label: string, root: ParentNode = document.body): HTMLElement => {
   const buttons = Array.from(root.querySelectorAll('[role="button"], button'));
@@ -26,9 +25,7 @@ const barButton = (label: string, root: ParentNode = document.body): HTMLElement
   return match as HTMLElement;
 };
 
-const alertdialog = (): HTMLElement | null => {
-  return document.body.querySelector('[role="alertdialog"]');
-};
+const alertdialog = (): HTMLElement | null => document.body.querySelector('[role="alertdialog"]');
 
 const typeIn = (input: Element, value: string) => {
   fireEvent.change(input, { target: { value } });
@@ -291,7 +288,7 @@ describe('ContextualSaveBar', () => {
       <Form
         saveBar
         formOptions={{ defaultValues: { name: 'svc' } }}
-        onSubmit={async () => hang}>
+        onSubmit={async () => await hang}>
         <Input
           name="name"
           label="Service name"

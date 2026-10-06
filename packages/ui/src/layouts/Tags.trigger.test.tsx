@@ -20,12 +20,11 @@ afterEach(cleanup);
 
 const tags = [{ id: 'tag-1', label: 'urgent' }];
 
-const classesByPrefix = (el: Element, prefixes: string[]): string[] => {
-  return String(el.className || '')
+const classesByPrefix = (el: Element, prefixes: string[]): string[] =>
+  String(el.className || '')
     .split(' ')
     .filter((c) => prefixes.some((p) => c.startsWith(p)))
     .sort();
-};
 
 /** Walk up from the chip label to the ChipFrame (first ancestor with padding classes). */
 const chipFrameOf = (label: HTMLElement): HTMLElement => {
@@ -39,15 +38,14 @@ const chipFrameOf = (label: HTMLElement): HTMLElement => {
   throw new Error('chip frame not found');
 };
 
-const renderTags = () => {
-  return renderWithProviders(
+const renderTags = () =>
+  renderWithProviders(
     <Tags
       tags={tags}
       onAdd={vi.fn()}
       onRemove={vi.fn()}
     />,
   );
-};
 
 /** The chip-scale visual pill nested inside the wrapper trigger. */
 const triggerPillOf = (trigger: HTMLElement): HTMLElement => {

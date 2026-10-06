@@ -71,9 +71,7 @@ const cssOf = (node: HTMLElement, prop: string): string => {
   return getComputedStyle(node).getPropertyValue(prop) || '';
 };
 
-const classesOf = (node: HTMLElement): string => {
-  return Array.from(node.classList).join(' ');
-};
+const classesOf = (node: HTMLElement): string => Array.from(node.classList).join(' ');
 
 describe('CheckboxBox — the target is 44px and the glyph is smaller', () => {
   it('pins the WCAG 2.5.5 pressable floor at 44px', () => {

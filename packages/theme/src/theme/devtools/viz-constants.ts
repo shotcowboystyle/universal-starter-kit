@@ -15,9 +15,7 @@ const luminance = (rgb: string): number => {
   return (0.299 * red + 0.587 * green + 0.114 * blue) / 255;
 };
 
-export const contrastTextFor = (bgColor: string): string => {
-  return luminance(bgColor) > 0.5 ? '#111' : '#f0f0f0';
-};
+export const contrastTextFor = (bgColor: string): string => (luminance(bgColor) > 0.5 ? '#111' : '#f0f0f0');
 
 export const fallbackGray = (step: number): string => {
   const normalizedStep = (step - 1) / 11;
@@ -27,6 +25,4 @@ export const fallbackGray = (step: number): string => {
 
 export const cellSize = 32;
 
-export const stepToPx = (step: number): number => {
-  return (step - 1) * cellSize + cellSize / 2;
-};
+export const stepToPx = (step: number): number => (step - 1) * cellSize + cellSize / 2;

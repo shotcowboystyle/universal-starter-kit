@@ -71,22 +71,18 @@ export const getScrubberGripRenderSize = (size: ScrubberSize | string | number |
 };
 
 /** BINARY: 0 at `none`, h/2 at every other stop. `heightPx` is the shorter edge. */
-export const resolveScrubberRadius = (stop: BorderRadius, heightPx: number): number => {
-  return resolveRadiusClass('BINARY', stop, { heightPx });
-};
+export const resolveScrubberRadius = (stop: BorderRadius, heightPx: number): number =>
+  resolveRadiusClass('BINARY', stop, { heightPx });
 
-export const rectHitSlop = (width: number, height: number, floor: number = MIN_PRESS_TARGET): HitSlopInsets => {
-  return {
-    top: Math.max(0, Math.ceil((floor - height) / 2)),
-    bottom: Math.max(0, Math.ceil((floor - height) / 2)),
-    left: Math.max(0, Math.ceil((floor - width) / 2)),
-    right: Math.max(0, Math.ceil((floor - width) / 2)),
-  };
-};
+export const rectHitSlop = (width: number, height: number, floor: number = MIN_PRESS_TARGET): HitSlopInsets => ({
+  top: Math.max(0, Math.ceil((floor - height) / 2)),
+  bottom: Math.max(0, Math.ceil((floor - height) / 2)),
+  left: Math.max(0, Math.ceil((floor - width) / 2)),
+  right: Math.max(0, Math.ceil((floor - width) / 2)),
+});
 
-export const isRelativeDateString = (value: unknown): boolean => {
-  return typeof value === 'string' && RELATIVE_DATE.test(value.trim());
-};
+export const isRelativeDateString = (value: unknown): boolean =>
+  typeof value === 'string' && RELATIVE_DATE.test(value.trim());
 
 /**
  * The value is DateRangePicker's `{ start, end }` — Dates or null, never
@@ -128,9 +124,7 @@ export const applyQuickRange = (range: QuickRange | string, now: Date): DateRang
   return { start: new Date(now.getTime() - range.durationMs), end: new Date(now) };
 };
 
-export const dateRangeKeys = (value: DateRange): string[] => {
-  return Object.keys(value).sort();
-};
+export const dateRangeKeys = (value: DateRange): string[] => Object.keys(value).sort();
 
 export const timeToFraction = (time: Date, window: TimeWindow): number => {
   const span = window.end.getTime() - window.start.getTime();

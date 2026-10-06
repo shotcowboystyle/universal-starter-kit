@@ -13,9 +13,8 @@ import {
   treeIndentStep,
 } from './tree-view-layout';
 
-const knobs = (overrides: Partial<typeof defaultKnobs> = {}) => {
-  return resolveKnobs({ ...defaultKnobs, ...overrides }).knobProps;
-};
+const knobs = (overrides: Partial<typeof defaultKnobs> = {}) =>
+  resolveKnobs({ ...defaultKnobs, ...overrides }).knobProps;
 
 describe('treeEdgeRowPad', () => {
   it('is the shared SP-EDGE token map (same stops as getTableCellPadding)', () => {

@@ -134,9 +134,7 @@ describe('AdaptivePopup trigger', () => {
   });
 });
 
-const surface = () => {
-  return document.querySelector("[data-testid='adaptive-popup-surface']");
-};
+const surface = () => document.querySelector("[data-testid='adaptive-popup-surface']");
 
 describe('AdaptivePopup focus ring', () => {
   it('close names itself and dismisses', async () => {
@@ -284,12 +282,11 @@ const OpenPopup = ({
   );
 };
 
-const shadowClasses = (el: Element): string[] => {
-  return String(el.className || '')
+const shadowClasses = (el: Element): string[] =>
+  String(el.className || '')
     .split(/\s+/)
     .filter((c) => c.startsWith('_bxsh-'))
     .sort();
-};
 
 describe('pickAdaptivePopupFace (C22 / OVERLAY_BREAKPOINT)', () => {
   it('at the overlay breakpoint and below, any face is sheet', () => {

@@ -32,8 +32,8 @@ const houseConfig = createTamagui({
   themes: houseThemes as any,
 });
 
-const renderWithHouseThemes = (ui: ReactElement) => {
-  return render(
+const renderWithHouseThemes = (ui: ReactElement) =>
+  render(
     <TamaguiProvider
       config={houseConfig}
       defaultTheme="light"
@@ -41,15 +41,12 @@ const renderWithHouseThemes = (ui: ReactElement) => {
       {ui}
     </TamaguiProvider>,
   );
-};
 
 /**
  * First three numeric groups (h, s, l) of an hsla() string — the digit prefix
  * Tamagui embeds in the atomic class it generates for a concrete color value.
  */
-const hslDigits = (hsla: string): string => {
-  return (hsla.match(/\d+/g) ?? []).slice(0, 3).join('');
-};
+const hslDigits = (hsla: string): string => (hsla.match(/\d+/g) ?? []).slice(0, 3).join('');
 
 const options = [
   { label: 'Left', value: 'left' },

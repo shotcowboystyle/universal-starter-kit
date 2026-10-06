@@ -26,8 +26,8 @@ const houseConfig = createTamagui({
   themes: houseThemes as any,
 });
 
-const renderWithHouseThemes = (ui: ReactElement) => {
-  return render(
+const renderWithHouseThemes = (ui: ReactElement) =>
+  render(
     <TamaguiProvider
       config={houseConfig}
       defaultTheme="light"
@@ -35,20 +35,16 @@ const renderWithHouseThemes = (ui: ReactElement) => {
       {ui}
     </TamaguiProvider>,
   );
-};
 
-const getIndicator = (container: Element): Element | null => {
-  return container.querySelector("[role='progressbar'] .is_ProgressIndicator");
-};
+const getIndicator = (container: Element): Element | null =>
+  container.querySelector("[role='progressbar'] .is_ProgressIndicator");
 
 /**
  * First three numeric groups (h, s, l) of an hsla() string — the digit
  * prefix Tamagui embeds in the atomic class it generates for a concrete
  * color value (e.g. hsla(358, 75%, 59%, 1) → `_bg-hsla3587559<hash>`).
  */
-const hslDigits = (hsla: string): string => {
-  return (hsla.match(/\d+/g) ?? []).slice(0, 3).join('');
-};
+const hslDigits = (hsla: string): string => (hsla.match(/\d+/g) ?? []).slice(0, 3).join('');
 
 describe('Progress', () => {
   describe('without form context', () => {

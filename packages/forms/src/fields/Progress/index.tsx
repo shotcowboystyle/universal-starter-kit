@@ -2,19 +2,8 @@ import { Intent } from '@repo/theme';
 import type { KnobProps } from '@repo/theme';
 import { getSize } from '@tamagui/get-token';
 import type { ReactNode } from 'react';
-import {
-  type LabelProps,
-  type SizeTokens,
-  Progress as TamaguiProgress,
-  type ProgressProps as TamaguiProgressProps,
-  Text,
-  View,
-  XStack,
-  getVariableValue,
-  isWeb,
-  styled,
-  useTheme,
-} from 'tamagui';
+import { Progress as TamaguiProgress, Text, View, XStack, getVariableValue, isWeb, styled, useTheme } from 'tamagui';
+import type { LabelProps, SizeTokens, ProgressProps as TamaguiProgressProps } from 'tamagui';
 
 import { Field, FieldLayout, useFieldDescribedBy } from '../../FieldLayout';
 import { formControlColors } from '../../shared/color-ramps';
@@ -66,9 +55,8 @@ const trackHeightPx = (size: SizeTokens): number => {
   }
 };
 
-const resolveMax = (max: number | undefined): number => {
-  return typeof max === 'number' && Number.isFinite(max) && max > 0 ? max : 100;
-};
+const resolveMax = (max: number | undefined): number =>
+  typeof max === 'number' && Number.isFinite(max) && max > 0 ? max : 100;
 
 const clampProgress = (value: unknown, max: number): number => {
   const n = typeof value === 'number' ? value : Number(value);

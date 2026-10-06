@@ -78,6 +78,4 @@ export const encodeCode128B = (value: string): Code128Run[] | null => {
 };
 
 /** Total module count of an encoded symbol (for width math in previews). */
-export const countModules = (runs: Code128Run[]): number => {
-  return runs.reduce((sum, run) => sum + run.modules, 0);
-};
+export const countModules = (runs: Code128Run[]): number => runs.reduce((sum, run) => sum + run.modules, 0);

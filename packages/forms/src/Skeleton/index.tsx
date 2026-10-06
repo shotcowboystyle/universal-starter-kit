@@ -60,9 +60,8 @@ const skeletonTextHeight = (sizeToken: string): number | undefined => {
   return sizeRecipeForToken(sizeToken).fontSize + 2;
 };
 
-const skeletonCircleSize = (sizeToken: string): number => {
-  return sizeRecipeForToken(skeletonCircleTokenUp[sizeToken] ?? '$5').height;
-};
+const skeletonCircleSize = (sizeToken: string): number =>
+  sizeRecipeForToken(skeletonCircleTokenUp[sizeToken] ?? '$5').height;
 // SP-GAP: text-line gap follows the space knob; medium keeps $2.
 const skeletonGapMap: Record<string, string> = { small: '$1', medium: '$2', large: '$3' };
 

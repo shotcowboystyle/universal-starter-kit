@@ -26,18 +26,14 @@ import { clearPresets, createThemeConfig, getPreset, getPresetNames } from './sh
 
 const mockedCreateTamagui = vi.mocked(createTamagui);
 
-const makeThemes = (names: string[]): Record<string, object> => {
-  return Object.fromEntries(names.map((name) => [name, {}]));
-};
+const makeThemes = (names: string[]): Record<string, object> => Object.fromEntries(names.map((name) => [name, {}]));
 
-const makePreset = (): Preset => {
-  return {
-    theme: 'light' as ThemeName,
-    knobs: { ...defaultKnobs },
-    intents: {},
-    tints: [],
-  };
-};
+const makePreset = (): Preset => ({
+  theme: 'light' as ThemeName,
+  knobs: { ...defaultKnobs },
+  intents: {},
+  tints: [],
+});
 
 beforeEach(() => {
   clearPresets();

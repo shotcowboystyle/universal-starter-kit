@@ -27,15 +27,13 @@ const AppProvider = ({
   themeConfig?: ThemeConfig;
   systemTheme?: 'light' | 'dark';
   children?: ReactNode;
-}) => {
-  return (
-    <ThemeProvider
-      config={{ tamagui: activeThemeConfig.tamagui }}
-      systemTheme={systemTheme}>
-      {children}
-    </ThemeProvider>
-  );
-};
+}) => (
+  <ThemeProvider
+    config={{ tamagui: activeThemeConfig.tamagui }}
+    systemTheme={systemTheme}>
+    {children}
+  </ThemeProvider>
+);
 
 export default createPreview({
   themeConfig,

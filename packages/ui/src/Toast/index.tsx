@@ -137,13 +137,9 @@ const DESC_FONT_SIZE = {
   $5: '$4',
 } as const;
 
-const iconPxForSize = (size: string): number => {
-  return size === 'small' ? 16 : size === 'large' ? 20 : 18;
-};
+const iconPxForSize = (size: string): number => (size === 'small' ? 16 : size === 'large' ? 20 : 18);
 
-const closePxForSize = (size: string): number => {
-  return size === 'small' ? 12 : size === 'large' ? 16 : 14;
-};
+const closePxForSize = (size: string): number => (size === 'small' ? 12 : size === 'large' ? 16 : 14);
 
 const toastClosePressProps = (besideAction: boolean, closeVisual: number) => {
   const outset = Math.max(0, Math.ceil((MIN_PRESS_TARGET - closeVisual) / 2));
@@ -274,9 +270,7 @@ export const nativeToastA11y = (text: string | undefined, hasControls: boolean, 
 };
 
 /** Native View controls need accessible as well as their button role and label. */
-export const nativeToastControlA11y = (web = isWeb) => {
-  return web ? {} : { accessible: true as const };
-};
+export const nativeToastControlA11y = (web = isWeb) => (web ? {} : { accessible: true as const });
 
 // Grown transparent press target. Stays UNPAINTED — the keyboard ring lives on the
 // inner pill via `.mp-chip-dismiss:focus-visible .mp-chip-dismiss-ring`.
@@ -678,16 +672,14 @@ const ToastInner = ({
  * receives `onDismiss`. For the imperative/uncontrolled flow use
  * `useToast().show(...)` with a mounted <ToastViewport />.
  */
-export const Toast = ({ intent = 'accent', ...props }: ToastProps) => {
-  return (
-    <IntentWrap intent={intent}>
-      <ToastInner
-        intent={intent}
-        {...props}
-      />
-    </IntentWrap>
-  );
-};
+export const Toast = ({ intent = 'accent', ...props }: ToastProps) => (
+  <IntentWrap intent={intent}>
+    <ToastInner
+      intent={intent}
+      {...props}
+    />
+  </IntentWrap>
+);
 
 // ── Viewport item (imperative flow) ──────────────────────────
 
@@ -808,13 +800,11 @@ const ToastItemInner = ({ entry, isTop, compact }: ToastItemProps) => {
   );
 };
 
-const ToastItem = (props: ToastItemProps) => {
-  return (
-    <IntentWrap intent={props.entry.intent}>
-      <ToastItemInner {...props} />
-    </IntentWrap>
-  );
-};
+const ToastItem = (props: ToastItemProps) => (
+  <IntentWrap intent={props.entry.intent}>
+    <ToastItemInner {...props} />
+  </IntentWrap>
+);
 
 // ── ToastViewport ────────────────────────────────────────────
 

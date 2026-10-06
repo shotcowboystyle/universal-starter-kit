@@ -23,15 +23,13 @@ const Control = (props: {
   value?: string;
   onChangeText?: (text: string) => void;
   secureTextEntry?: boolean;
-}) => {
-  return (
-    <InputParts>
-      <InputParts.Box>
-        <InputParts.Area {...props} />
-      </InputParts.Box>
-    </InputParts>
-  );
-};
+}) => (
+  <InputParts>
+    <InputParts.Box>
+      <InputParts.Area {...props} />
+    </InputParts.Box>
+  </InputParts>
+);
 
 const meta: Meta<typeof FieldLayout> = {
   title: 'Forms/FieldLayout',

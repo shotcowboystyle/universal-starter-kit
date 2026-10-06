@@ -12,9 +12,7 @@ vi.mock('../Highlighter', () => ({
   useShikiTokens: (code: string) => code.split('\n').map((line: string) => [{ content: line }]),
 }));
 
-const copyOf = (container: HTMLElement) => {
-  return container.querySelector("[aria-label='Copy to clipboard']");
-};
+const copyOf = (container: HTMLElement) => container.querySelector("[aria-label='Copy to clipboard']");
 
 const SAMPLE = 'export const token = "mpo_live_4f2a…";';
 const writeText = vi.fn();

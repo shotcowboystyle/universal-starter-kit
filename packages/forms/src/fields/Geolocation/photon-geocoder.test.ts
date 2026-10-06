@@ -58,12 +58,11 @@ const kamppiReverse = {
   ],
 };
 
-const jsonResponse = (body: unknown, status = 200): Response => {
-  return new Response(JSON.stringify(body), {
+const jsonResponse = (body: unknown, status = 200): Response =>
+  new Response(JSON.stringify(body), {
     status,
     headers: { 'Content-Type': 'application/json' },
   });
-};
 
 describe('createPhotonGeocoder', () => {
   it('searches the public instance and maps features to place rows', async () => {
@@ -156,7 +155,7 @@ describe('createPhotonGeocoder', () => {
   it('aborts a request that outlives timeoutMs', async () => {
     const fetch = vi.fn(
       async (_url: string, init?: RequestInit) =>
-        new Promise<Response>((_resolve, reject) => {
+        await new Promise<Response>((_resolve, reject) => {
           init?.signal?.addEventListener('abort', () => {
             reject(new Error('aborted'));
           });

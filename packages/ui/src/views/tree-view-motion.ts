@@ -94,6 +94,4 @@ export const diffVisibleRows = (
 };
 
 /** True when a diff carries no motion (toggle produced an identical list). */
-export const isEmptyDiff = (diff: TreeRowMotionDiff): boolean => {
-  return diff.entering.size === 0 && diff.deltas.size === 0;
-};
+export const isEmptyDiff = (diff: TreeRowMotionDiff): boolean => diff.entering.size === 0 && diff.deltas.size === 0;

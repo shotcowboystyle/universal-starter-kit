@@ -4,14 +4,13 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { SkipLink } from './index';
 
-const renderWithTarget = () => {
-  return renderWithProviders(
+const renderWithTarget = () =>
+  renderWithProviders(
     <div>
       <SkipLink targetId="main-content">Skip to content</SkipLink>
       <div id="main-content">Main</div>
     </div>,
   );
-};
 
 describe('SkipLink', () => {
   it('renders an anchor pointing at the target id', () => {

@@ -26,27 +26,20 @@ const getRelativeTime = (language: string, date: DateInput): string => {
   return rtf.format(Math.round(diffMs / 31_536_000_000), 'year');
 };
 
-export const createDateFormatter = (language: string) => {
-  return {
-    format: (date: DateInput, options?: Intl.DateTimeFormatOptions) =>
-      new Intl.DateTimeFormat(language, options).format(new Date(date)),
-    relative: (date: DateInput) => getRelativeTime(language, date),
-  };
-};
+export const createDateFormatter = (language: string) => ({
+  format: (date: DateInput, options?: Intl.DateTimeFormatOptions) =>
+    new Intl.DateTimeFormat(language, options).format(new Date(date)),
+  relative: (date: DateInput) => getRelativeTime(language, date),
+});
 
-export const createNumberFormatter = (language: string) => {
-  return {
-    format: (value: number, options?: Intl.NumberFormatOptions) =>
-      new Intl.NumberFormat(language, options).format(value),
-  };
-};
+export const createNumberFormatter = (language: string) => ({
+  format: (value: number, options?: Intl.NumberFormatOptions) => new Intl.NumberFormat(language, options).format(value),
+});
 
-export const createCurrencyFormatter = (language: string) => {
-  return {
-    format: (value: number, currency: string, options?: Omit<Intl.NumberFormatOptions, 'style' | 'currency'>) =>
-      new Intl.NumberFormat(language, { ...options, style: 'currency', currency }).format(value),
-  };
-};
+export const createCurrencyFormatter = (language: string) => ({
+  format: (value: number, currency: string, options?: Omit<Intl.NumberFormatOptions, 'style' | 'currency'>) =>
+    new Intl.NumberFormat(language, { ...options, style: 'currency', currency }).format(value),
+});
 
 export const useFormatDate = () => {
   const [language] = useLanguage();

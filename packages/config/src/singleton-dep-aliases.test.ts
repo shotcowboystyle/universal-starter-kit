@@ -164,9 +164,8 @@ describe('createViteConfig context singletons', () => {
   });
 });
 
-const withoutComments = (source: string): string => {
-  return source.replaceAll(/\/\*[\s\S]*?\*\//g, '').replaceAll(/(^|[^:\\])\/\/.*$/gm, '$1');
-};
+const withoutComments = (source: string): string =>
+  source.replaceAll(/\/\*[\s\S]*?\*\//g, '').replaceAll(/(^|[^:\\])\/\/.*$/gm, '$1');
 
 const referencesHook = (dir: string): boolean => {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {

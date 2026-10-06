@@ -393,8 +393,8 @@ describe('DropdownMenu keyboard ring', () => {
 });
 
 describe('DropdownMenu FloatingPanel cover contract', () => {
-  const renderOpen = () => {
-    return renderWithProviders(
+  const renderOpen = () =>
+    renderWithProviders(
       <DropdownMenu
         defaultOpen
         items={[
@@ -406,7 +406,6 @@ describe('DropdownMenu FloatingPanel cover contract', () => {
         <Button>Actions</Button>
       </DropdownMenu>,
     );
-  };
 
   it('uses FloatingPanel, not a second overlay stack', async () => {
     renderOpen();
@@ -542,7 +541,7 @@ describe('DropdownMenu.Content onCloseAutoFocus', () => {
       await waitFor(() => {
         expect(document.querySelector('[role="menu"]')).toBeFalsy();
       });
-      await act(async () => new Promise((resolve) => setTimeout(resolve, 400)));
+      await act(async () => await new Promise((resolve) => setTimeout(resolve, 400)));
       expect(onCloseAutoFocus).toHaveBeenCalledOnce();
       if (preventRestore) {
         expect(document.activeElement).not.toBe(trigger);

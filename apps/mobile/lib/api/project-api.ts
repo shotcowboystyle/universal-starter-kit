@@ -30,12 +30,13 @@ export const projectApi = {
       method: 'PATCH',
       body: JSON.stringify(input),
     }),
-  deleteProject: async (id: string) =>
+  deleteProject: async (id: string) => {
     await fetchWithAuth<void>(
       `${API_ROUTES.PROJECTS}/${id}`,
       {
         method: 'DELETE',
       },
       true,
-    ),
+    );
+  },
 };

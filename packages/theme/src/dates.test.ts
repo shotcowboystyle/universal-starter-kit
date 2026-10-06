@@ -190,8 +190,8 @@ const inZone = <T>(timeZone: string, read: () => T): T => {
  * Local wall-clock reading of a parse, taken INSIDE the zone — a Date is an
  * instant, so its day and hour only mean something against an ambient zone.
  */
-const readLocal = (timeZone: string, value: DateInput) => {
-  return inZone(timeZone, () => {
+const readLocal = (timeZone: string, value: DateInput) =>
+  inZone(timeZone, () => {
     const date = parseCalendarDate(value);
     if (!date) {
       return null;
@@ -202,7 +202,6 @@ const readLocal = (timeZone: string, value: DateInput) => {
       clock: `${pad(date.getHours())}:${pad(date.getMinutes())}`,
     };
   });
-};
 
 describe('parseCalendarDate (day-grid parse)', () => {
   it('reads a date-only string as the same calendar day in every timezone', () => {

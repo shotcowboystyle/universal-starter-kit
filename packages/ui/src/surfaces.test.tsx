@@ -287,19 +287,17 @@ describe('overlay containers take the Axiom 1 child-clip cap', () => {
 // focus. A click into the name field during that wait had focus moved on to
 // the Save button, so every keystroke after it missed the field.
 describe('PopoverContent open focus', () => {
-  const SaveAsPopover = () => {
-    return (
-      <Popover>
-        <Popover.Trigger asChild>
-          <button type="button">Save As</button>
-        </Popover.Trigger>
-        <PopoverContent>
-          <input aria-label="Report name" />
-          <button type="button">Save</button>
-        </PopoverContent>
-      </Popover>
-    );
-  };
+  const SaveAsPopover = () => (
+    <Popover>
+      <Popover.Trigger asChild>
+        <button type="button">Save As</button>
+      </Popover.Trigger>
+      <PopoverContent>
+        <input aria-label="Report name" />
+        <button type="button">Save</button>
+      </PopoverContent>
+    </Popover>
+  );
 
   it('keeps focus on a field focused right after open', async () => {
     renderWithProviders(<SaveAsPopover />);
@@ -325,24 +323,22 @@ describe('PopoverContent open focus', () => {
 // <dialog>.show() focuses inside first; jsdom has no show(), so the deferred
 // pass ran and moved focus off a field focused right after open.
 describe('DialogContent open focus', () => {
-  const RenameDialog = ({ onOpenAutoFocus }: { onOpenAutoFocus?: (event: Event) => void }) => {
-    return (
-      <Dialog modal>
-        <Dialog.Trigger asChild>
-          <button type="button">Rename</button>
-        </Dialog.Trigger>
-        <Dialog.Portal>
-          <DialogContent onOpenAutoFocus={onOpenAutoFocus}>
-            <input aria-label="Name" />
-            <input aria-label="Notes" />
-            <button type="button">Save</button>
-          </DialogContent>
-        </Dialog.Portal>
-      </Dialog>
-    );
-  };
+  const RenameDialog = ({ onOpenAutoFocus }: { onOpenAutoFocus?: (event: Event) => void }) => (
+    <Dialog modal>
+      <Dialog.Trigger asChild>
+        <button type="button">Rename</button>
+      </Dialog.Trigger>
+      <Dialog.Portal>
+        <DialogContent onOpenAutoFocus={onOpenAutoFocus}>
+          <input aria-label="Name" />
+          <input aria-label="Notes" />
+          <button type="button">Save</button>
+        </DialogContent>
+      </Dialog.Portal>
+    </Dialog>
+  );
 
-  const settle = async () => new Promise((resolve) => setTimeout(resolve, 300));
+  const settle = async () => await new Promise((resolve) => setTimeout(resolve, 300));
 
   it.each(['Name', 'Notes'])('keeps focus on the %s field focused right after open', async (label) => {
     renderWithProviders(<RenameDialog />);
@@ -387,24 +383,22 @@ describe('DialogContent open focus', () => {
 // prevents the FocusScope open pass and focuses its Cancel action in the same
 // step, so there is no deferred focus to race.
 describe('AlertDialogContent open focus', () => {
-  const RenameAlertDialog = () => {
-    return (
-      <AlertDialog>
-        <AlertDialog.Trigger asChild>
-          <button type="button">Rename</button>
-        </AlertDialog.Trigger>
-        <AlertDialog.Portal>
-          <AlertDialogContent>
-            <input aria-label="Name" />
-            <AlertDialog.Cancel asChild>
-              <button type="button">Cancel</button>
-            </AlertDialog.Cancel>
-            <button type="button">Save</button>
-          </AlertDialogContent>
-        </AlertDialog.Portal>
-      </AlertDialog>
-    );
-  };
+  const RenameAlertDialog = () => (
+    <AlertDialog>
+      <AlertDialog.Trigger asChild>
+        <button type="button">Rename</button>
+      </AlertDialog.Trigger>
+      <AlertDialog.Portal>
+        <AlertDialogContent>
+          <input aria-label="Name" />
+          <AlertDialog.Cancel asChild>
+            <button type="button">Cancel</button>
+          </AlertDialog.Cancel>
+          <button type="button">Save</button>
+        </AlertDialogContent>
+      </AlertDialog.Portal>
+    </AlertDialog>
+  );
 
   it('focuses its Cancel action on open', async () => {
     renderWithProviders(<RenameAlertDialog />);
@@ -447,22 +441,20 @@ describe('DialogContent open focus behind <dialog>.show()', () => {
   }: {
     helpFirst?: boolean;
     onOpenAutoFocus?: (event: Event) => void;
-  }) => {
-    return (
-      <Dialog modal>
-        <Dialog.Trigger asChild>
-          <button type="button">Rename</button>
-        </Dialog.Trigger>
-        <Dialog.Portal>
-          <DialogContent onOpenAutoFocus={onOpenAutoFocus}>
-            {helpFirst ? <button type="button">Help</button> : null}
-            <Input inputProps={{ 'aria-label': 'Name' }} />
-            <button type="button">Save</button>
-          </DialogContent>
-        </Dialog.Portal>
-      </Dialog>
-    );
-  };
+  }) => (
+    <Dialog modal>
+      <Dialog.Trigger asChild>
+        <button type="button">Rename</button>
+      </Dialog.Trigger>
+      <Dialog.Portal>
+        <DialogContent onOpenAutoFocus={onOpenAutoFocus}>
+          {helpFirst ? <button type="button">Help</button> : null}
+          <Input inputProps={{ 'aria-label': 'Name' }} />
+          <button type="button">Save</button>
+        </DialogContent>
+      </Dialog.Portal>
+    </Dialog>
+  );
 
   it("moves focus off the house Input's group frame onto its field", async () => {
     renderWithProviders(<NameDialog />);

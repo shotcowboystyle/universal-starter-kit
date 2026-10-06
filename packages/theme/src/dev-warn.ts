@@ -77,9 +77,7 @@ export interface GuardrailSpecimenParameter {
 
 const seen = new Set<string>();
 
-const isDev = (): boolean => {
-  return process.env.NODE_ENV !== 'production';
-};
+const isDev = (): boolean => process.env.NODE_ENV !== 'production';
 
 /**
  * Emit a once-per-key console warning in non-production builds.

@@ -259,7 +259,7 @@ export const DynamicFields = () => {
   return (
     <Form
       form={form}
-      onSubmit={async () => form.handleSubmit()}>
+      onSubmit={async () => await form.handleSubmit()}>
       <Select
         label="Account Type"
         name="accountType"

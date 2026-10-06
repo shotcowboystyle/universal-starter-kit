@@ -118,22 +118,20 @@ const ReadyWizard = ({
   );
 };
 
-const ReadyForm = (props: { labels?: 'visible' | 'hidden'; defaultCurrent?: number }) => {
-  return (
-    <Form
-      formOptions={{
-        defaultValues: {
-          source: 'backup-2026-08-27-0300',
-          volume: 'vol-restore-2026-08',
-          region: 'eu-central',
-          checksums: 'After restore',
-        },
-      }}
-      showErrorSummary={false}>
-      <ReadyWizard {...props} />
-    </Form>
-  );
-};
+const ReadyForm = (props: { labels?: 'visible' | 'hidden'; defaultCurrent?: number }) => (
+  <Form
+    formOptions={{
+      defaultValues: {
+        source: 'backup-2026-08-27-0300',
+        volume: 'vol-restore-2026-08',
+        region: 'eu-central',
+        checksums: 'After restore',
+      },
+    }}
+    showErrorSummary={false}>
+    <ReadyWizard {...props} />
+  </Form>
+);
 
 export const Main: Story = {
   name: 'Ready',

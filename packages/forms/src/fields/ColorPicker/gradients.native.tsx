@@ -44,11 +44,10 @@ export const SaturationBackground = ({
   );
 };
 
-const axis = (orientation: 'horizontal' | 'vertical' | undefined) => {
-  return orientation === 'vertical'
+const axis = (orientation: 'horizontal' | 'vertical' | undefined) =>
+  orientation === 'vertical'
     ? { start: { x: 0.5, y: 0 }, end: { x: 0.5, y: 1 } }
     : { start: { x: 0, y: 0.5 }, end: { x: 1, y: 0.5 } };
-};
 
 export const HueBackground = ({
   width,

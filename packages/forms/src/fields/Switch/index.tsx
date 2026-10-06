@@ -12,17 +12,11 @@ import {
   useResolvedKnobs,
   wasKeyboardFocus,
   ensureKeyboardModalityTracking,
-  type BorderRadius,
-  type RadiusResolutionDeclaration,
 } from '@repo/theme';
+import type { BorderRadius, RadiusResolutionDeclaration } from '@repo/theme';
 import type { ReactNode } from 'react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
-  type ColorTokens,
-  type FontSizeTokens,
-  type LabelProps,
-  type SizeTokens,
-  type SwitchProps as TamaguiSwitchProps,
   SwitchStyledContext,
   Label,
   View,
@@ -38,6 +32,7 @@ import {
   useTheme,
   withStaticProperties,
 } from 'tamagui';
+import type { ColorTokens, FontSizeTokens, LabelProps, SizeTokens, SwitchProps as TamaguiSwitchProps } from 'tamagui';
 
 import { commitImmediateField } from '../../ContextualSaveBar/commit-immediate-field';
 import { Field, FieldLayout } from '../../FieldLayout';
@@ -897,25 +892,25 @@ export const Switch = ({
       overrideRadius == null ? withBinaryStateRadius(focusRaw, trackHeight) : stripRadiusFromStateProps(focusRaw);
     const thumbHover = withBinaryStateRadius(
       overrideRadius == null
-        ? hoverRaw?.borderRadius != null
-          ? { borderRadius: hoverRaw.borderRadius }
-          : undefined
+        ? hoverRaw?.borderRadius == null
+          ? undefined
+          : { borderRadius: hoverRaw.borderRadius }
         : undefined,
       thumbPaintedHeight,
     );
     const thumbPress = withBinaryStateRadius(
       overrideRadius == null
-        ? pressRaw?.borderRadius != null
-          ? { borderRadius: pressRaw.borderRadius }
-          : undefined
+        ? pressRaw?.borderRadius == null
+          ? undefined
+          : { borderRadius: pressRaw.borderRadius }
         : undefined,
       thumbPaintedHeight,
     );
     const thumbFocus = withBinaryStateRadius(
       overrideRadius == null
-        ? focusRaw?.borderRadius != null
-          ? { borderRadius: focusRaw.borderRadius }
-          : undefined
+        ? focusRaw?.borderRadius == null
+          ? undefined
+          : { borderRadius: focusRaw.borderRadius }
         : undefined,
       thumbPaintedHeight,
     );

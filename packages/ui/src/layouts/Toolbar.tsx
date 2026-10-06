@@ -241,17 +241,15 @@ const ToolbarInner = ({
   );
 };
 
-export const Toolbar = (props: ToolbarProps) => {
+export const Toolbar = (props: ToolbarProps) => (
   // Toolbar chrome is small + compact (Primer ActionBar / Spectrum quiet /
   // Linear). Previously this rode `compact: true` (which then stepped size AND
   // space); with the axes split, the Surface host declares the same intent
   // lawfully: a subtree ceiling, so hosted actions clamp to
   // small+compact while ambient pages keep their own size.
-  return (
-    <Surface
-      size="small"
-      density="compact">
-      <ToolbarInner {...props} />
-    </Surface>
-  );
-};
+  <Surface
+    size="small"
+    density="compact">
+    <ToolbarInner {...props} />
+  </Surface>
+);

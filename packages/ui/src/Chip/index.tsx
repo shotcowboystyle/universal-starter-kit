@@ -237,9 +237,8 @@ const IconSlot = styled(View, {
 });
 
 /** Icon size that pairs with each chip size — the generated recipe's icon channel. */
-export const chipIconSize = (size: ChipSize): number => {
-  return sizeRecipeForToken(size, { family: CHIP_RECIPE_FAMILY }).iconSize;
-};
+export const chipIconSize = (size: ChipSize): number =>
+  sizeRecipeForToken(size, { family: CHIP_RECIPE_FAMILY }).iconSize;
 
 /**
  * Label size that pairs with each chip size — the generated recipe's font
@@ -249,9 +248,8 @@ export const chipIconSize = (size: ChipSize): number => {
  * a bare text input in the same row as its chips, and typing into it has to
  * land on the same optical line as the chip labels beside it.
  */
-export const chipTextSize = (size: ChipSize): number => {
-  return sizeRecipeForToken(size, { family: CHIP_RECIPE_FAMILY }).fontSize;
-};
+export const chipTextSize = (size: ChipSize): number =>
+  sizeRecipeForToken(size, { family: CHIP_RECIPE_FAMILY }).fontSize;
 
 // This box is the grown transparent press target (pressTargetStyle +
 // compensating negative outsets + hitSlop at the call site). It stays

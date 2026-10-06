@@ -57,35 +57,33 @@ export interface MockFrappeApp {
  * Each module method is a vi.fn() that can be configured with
  * the helper functions below.
  */
-export const createMockFrappeApp = (): MockFrappeApp => {
-  return {
-    db: {
-      getDocList: vi.fn().mockResolvedValue([]),
-      getDoc: vi.fn().mockResolvedValue(null),
-      createDoc: vi.fn().mockResolvedValue({}),
-      updateDoc: vi.fn().mockResolvedValue({}),
-      deleteDoc: vi.fn().mockResolvedValue({ message: 'ok' }),
-      getCount: vi.fn().mockResolvedValue(0),
-      getValue: vi.fn().mockResolvedValue(null),
-      setValue: vi.fn().mockResolvedValue(null),
-      exists: vi.fn().mockResolvedValue(false),
-    },
-    call: {
-      get: vi.fn().mockResolvedValue({ message: {} }),
-      post: vi.fn().mockResolvedValue({ message: {} }),
-    },
-    auth: {
-      getLoggedInUser: vi.fn().mockResolvedValue('Administrator'),
-      login: vi.fn().mockResolvedValue({}),
-      logout: vi.fn().mockResolvedValue({}),
-    },
-    file: {
-      uploadFile: vi.fn().mockResolvedValue({ file_url: '/files/test.pdf' }),
-      deleteFile: vi.fn().mockResolvedValue({ message: 'ok' }),
-      getFileURL: vi.fn().mockReturnValue('/files/test.pdf'),
-    },
-  };
-};
+export const createMockFrappeApp = (): MockFrappeApp => ({
+  db: {
+    getDocList: vi.fn().mockResolvedValue([]),
+    getDoc: vi.fn().mockResolvedValue(null),
+    createDoc: vi.fn().mockResolvedValue({}),
+    updateDoc: vi.fn().mockResolvedValue({}),
+    deleteDoc: vi.fn().mockResolvedValue({ message: 'ok' }),
+    getCount: vi.fn().mockResolvedValue(0),
+    getValue: vi.fn().mockResolvedValue(null),
+    setValue: vi.fn().mockResolvedValue(null),
+    exists: vi.fn().mockResolvedValue(false),
+  },
+  call: {
+    get: vi.fn().mockResolvedValue({ message: {} }),
+    post: vi.fn().mockResolvedValue({ message: {} }),
+  },
+  auth: {
+    getLoggedInUser: vi.fn().mockResolvedValue('Administrator'),
+    login: vi.fn().mockResolvedValue({}),
+    logout: vi.fn().mockResolvedValue({}),
+  },
+  file: {
+    uploadFile: vi.fn().mockResolvedValue({ file_url: '/files/test.pdf' }),
+    deleteFile: vi.fn().mockResolvedValue({ message: 'ok' }),
+    getFileURL: vi.fn().mockReturnValue('/files/test.pdf'),
+  },
+});
 
 /**
  * Mock `db.getDocList` to return specific data for a doctype.

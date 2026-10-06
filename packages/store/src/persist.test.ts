@@ -47,7 +47,7 @@ describe('createPersistStore', () => {
   });
 
   it('does not persist before hydration completes', () => {
-    storage.getItem = vi.fn(async () => new Promise<string | null>(() => {}));
+    storage.getItem = vi.fn(async () => await new Promise<string | null>(() => {}));
     const store = createPersistStore({ count: 0 }, { key: 'test', storage });
     store.setState(() => ({ count: 99 }));
     expect(storage.setItem).not.toHaveBeenCalled();

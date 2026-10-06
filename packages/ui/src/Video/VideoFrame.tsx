@@ -17,15 +17,13 @@ export const VideoFrame = styled(YStack, {
 export const mediaTileFrameProps = (knobProps: {
   surface: { backgroundColor?: unknown };
   borderRadius: { borderRadius?: unknown; className?: string };
-}): Record<string, unknown> => {
-  return {
-    backgroundColor: knobProps.surface.backgroundColor,
-    borderRadius: knobProps.borderRadius.borderRadius,
-    padding: 0,
-    ...(knobProps.borderRadius.className ? { className: knobProps.borderRadius.className } : {}),
-    'data-media-tile': 'video',
-  };
-};
+}): Record<string, unknown> => ({
+  backgroundColor: knobProps.surface.backgroundColor,
+  borderRadius: knobProps.borderRadius.borderRadius,
+  padding: 0,
+  ...(knobProps.borderRadius.className ? { className: knobProps.borderRadius.className } : {}),
+  'data-media-tile': 'video',
+});
 
 export const VideoCaption = ({ children }: { children: ReactNode }) => {
   const { knobProps } = useResolvedKnobs({ component: 'Video' });

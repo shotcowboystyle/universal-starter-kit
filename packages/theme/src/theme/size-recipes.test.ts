@@ -28,9 +28,7 @@ import {
 } from './size-recipes';
 import type { SizeRecipe } from './size-recipes';
 
-const knobsWith = (overrides: Partial<Knobs>): Knobs => {
-  return { ...defaultKnobs, ...overrides };
-};
+const knobsWith = (overrides: Partial<Knobs>): Knobs => ({ ...defaultKnobs, ...overrides });
 
 const RECIPE_KEYS = ['$1', '$1.5', '$2', '$2.5', '$3', '$3.5', '$4', '$true', '$5', '$6'] as const;
 

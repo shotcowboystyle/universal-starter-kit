@@ -18,16 +18,12 @@ export const generateRange = (min: number, max: number, step = 1): number[] => {
   return result;
 };
 
-const pad2 = (n: number): string => {
-  return String(n).padStart(2, '0');
-};
+const pad2 = (n: number): string => String(n).padStart(2, '0');
 
-const to12Hour = (h24: number): { h: number; period: 'AM' | 'PM' } => {
-  return {
-    h: h24 % 12 === 0 ? 12 : h24 % 12,
-    period: h24 >= 12 ? 'PM' : 'AM',
-  };
-};
+const to12Hour = (h24: number): { h: number; period: 'AM' | 'PM' } => ({
+  h: h24 % 12 === 0 ? 12 : h24 % 12,
+  period: h24 >= 12 ? 'PM' : 'AM',
+});
 
 const to24Hour = (displayH: number, period: 'AM' | 'PM'): number => {
   const wrapped = ((displayH - 1) % 12) + 1;

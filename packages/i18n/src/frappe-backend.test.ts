@@ -51,7 +51,7 @@ describe('backend read', () => {
   it('fetches the Frappe translation dict and passes it to the callback', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => Promise.resolve({ message: { Hello: 'నమస్కారం' } }),
+      json: async () => ({ message: { Hello: 'నమస్కారం' } }),
     });
     const backend = enabledBackend();
     initBackend(backend, { baseUrl: 'https://erp.example.com', fetch: fetchMock as never });
@@ -71,7 +71,7 @@ describe('backend read', () => {
   it('URI-encodes the language in the request', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => Promise.resolve({ message: {} }),
+      json: async () => ({ message: {} }),
     });
     const backend = enabledBackend();
     initBackend(backend, { fetch: fetchMock as never });
@@ -88,7 +88,7 @@ describe('backend read', () => {
   it('falls back to an empty dict when the response has no message', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => Promise.resolve({}),
+      json: async () => ({}),
     });
     const backend = enabledBackend();
     initBackend(backend, { fetch: fetchMock as never });

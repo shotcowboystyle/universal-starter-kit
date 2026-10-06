@@ -28,7 +28,7 @@ describe('ThemePlayground', () => {
     await waitFor(() => {
       expect(screen.getByTestId('playground').getAttribute('aria-expanded')).toBe('true');
     });
-    await expect(screen.findByText('Theme playground', {}, { timeout: 10000 })).resolves.toBeTruthy();
+    await expect(screen.findByText('Theme playground', {}, { timeout: 10_000 })).resolves.toBeTruthy();
   });
 
   it('renders nothing on native', () => {

@@ -263,45 +263,43 @@ const AttachmentsSkeleton = ({
   thumbSize: number;
   loadingLabel: string;
   rowPad: string | number | undefined;
-}) => {
-  return (
-    <YStack
-      width="100%"
-      data-async-skeleton="attachments"
-      aria-busy
-      aria-label={loadingLabel}>
-      {Array.from({ length: 3 }).map((_, i) => (
-        <YStack key={i}>
-          {i > 0 ? <Separator {...hairline.line} /> : null}
-          <XStack
-            gap="$3"
-            alignItems="center"
-            paddingVertical="$2"
-            paddingHorizontal={rowPad}
-            minHeight={44}>
+}) => (
+  <YStack
+    width="100%"
+    data-async-skeleton="attachments"
+    aria-busy
+    aria-label={loadingLabel}>
+    {Array.from({ length: 3 }).map((_, i) => (
+      <YStack key={i}>
+        {i > 0 ? <Separator {...hairline.line} /> : null}
+        <XStack
+          gap="$3"
+          alignItems="center"
+          paddingVertical="$2"
+          paddingHorizontal={rowPad}
+          minHeight={44}>
+          <Skeleton
+            variant="rounded"
+            width={thumbSize}
+            height={thumbSize}
+          />
+          <YStack
+            flex={1}
+            gap="$1">
             <Skeleton
-              variant="rounded"
-              width={thumbSize}
-              height={thumbSize}
+              width="55%"
+              height={14}
             />
-            <YStack
-              flex={1}
-              gap="$1">
-              <Skeleton
-                width="55%"
-                height={14}
-              />
-              <Skeleton
-                width="25%"
-                height={12}
-              />
-            </YStack>
-          </XStack>
-        </YStack>
-      ))}
-    </YStack>
-  );
-};
+            <Skeleton
+              width="25%"
+              height={12}
+            />
+          </YStack>
+        </XStack>
+      </YStack>
+    ))}
+  </YStack>
+);
 
 interface AttachmentRowProps {
   attachment: AttachmentItem;

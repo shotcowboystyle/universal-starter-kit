@@ -26,6 +26,4 @@ export const spinnerSizeToken = (size: SpinnerSize | undefined, sizeToken: strin
   return sizeToken as SizeTokens;
 };
 
-export const spinnerSizePx = (token: SizeTokens): number => {
-  return getVariableValue(getSize(token)) as number;
-};
+export const spinnerSizePx = (token: SizeTokens): number => getVariableValue(getSize(token)) as number;

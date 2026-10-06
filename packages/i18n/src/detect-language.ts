@@ -6,8 +6,8 @@ export interface DetectLanguageOptions {
 }
 
 /** Parse Accept-Language header into language codes sorted by quality (descending). */
-const parseAcceptLanguage = (header: string): string[] => {
-  return header
+const parseAcceptLanguage = (header: string): string[] =>
+  header
     .split(',')
     .map((part) => {
       const [lang, ...params] = part.trim().split(';');
@@ -18,7 +18,6 @@ const parseAcceptLanguage = (header: string): string[] => {
     .filter(({ lang }) => lang && lang !== '*')
     .sort((a, b) => b.q - a.q)
     .map(({ lang }) => lang);
-};
 
 /**
  * Detect the user's preferred language from a Request.

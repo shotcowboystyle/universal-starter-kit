@@ -60,9 +60,7 @@ describe('Wheel snaps ride the animation knob', () => {
     return row?.style.transform ?? '(virtualized out)';
   };
 
-  const wheelSnapshot = (): string => {
-    return items.map((_, index) => rowTransform(index)).join(' | ');
-  };
+  const wheelSnapshot = (): string => items.map((_, index) => rowTransform(index)).join(' | ');
 
   afterEach(() => {
     vi.useRealTimers();

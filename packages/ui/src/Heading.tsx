@@ -98,42 +98,34 @@ export const H2 = ({ fontWeight, ...props }: HeadingProps) => {
   );
 };
 
-export const H3 = ({ fontWeight, ...props }: HeadingProps) => {
-  return (
-    <RawH3
-      fontFamily={SUBORDINATE_FAMILY}
-      {...props}
-      fontWeight={fontWeight ?? SUBORDINATE_WEIGHT}
-    />
-  );
-};
+export const H3 = ({ fontWeight, ...props }: HeadingProps) => (
+  <RawH3
+    fontFamily={SUBORDINATE_FAMILY}
+    {...props}
+    fontWeight={fontWeight ?? SUBORDINATE_WEIGHT}
+  />
+);
 
-export const H4 = ({ fontWeight, ...props }: HeadingProps) => {
-  return (
-    <RawH4
-      fontFamily={SUBORDINATE_FAMILY}
-      {...props}
-      fontWeight={fontWeight ?? SUBORDINATE_WEIGHT}
-    />
-  );
-};
+export const H4 = ({ fontWeight, ...props }: HeadingProps) => (
+  <RawH4
+    fontFamily={SUBORDINATE_FAMILY}
+    {...props}
+    fontWeight={fontWeight ?? SUBORDINATE_WEIGHT}
+  />
+);
 
-export const H5 = ({ fontWeight, ...props }: HeadingProps) => {
-  return (
-    <RawH5
-      fontFamily={SUBORDINATE_FAMILY}
-      {...props}
-      fontWeight={fontWeight ?? SUBORDINATE_WEIGHT}
-    />
-  );
-};
+export const H5 = ({ fontWeight, ...props }: HeadingProps) => (
+  <RawH5
+    fontFamily={SUBORDINATE_FAMILY}
+    {...props}
+    fontWeight={fontWeight ?? SUBORDINATE_WEIGHT}
+  />
+);
 
-export const H6 = ({ fontWeight, ...props }: HeadingProps) => {
-  return (
-    <RawH6
-      fontFamily={SUBORDINATE_FAMILY}
-      {...props}
-      fontWeight={fontWeight ?? SUBORDINATE_WEIGHT}
-    />
-  );
-};
+export const H6 = ({ fontWeight, ...props }: HeadingProps) => (
+  <RawH6
+    fontFamily={SUBORDINATE_FAMILY}
+    {...props}
+    fontWeight={fontWeight ?? SUBORDINATE_WEIGHT}
+  />
+);

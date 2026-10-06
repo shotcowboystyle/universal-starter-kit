@@ -34,17 +34,15 @@ afterEach(cleanup);
 type Accent = 'low' | 'medium' | 'high';
 type Scheme = 'light' | 'dark';
 
-const inScheme = (scheme: Scheme, node: ReactElement): ReactElement => {
-  return scheme === 'dark' ? <Theme name="dark">{node}</Theme> : node;
-};
+const inScheme = (scheme: Scheme, node: ReactElement): ReactElement =>
+  scheme === 'dark' ? <Theme name="dark">{node}</Theme> : node;
 
 /** The TEXT NODE's colour atom, by identity — hashed names never asserted. */
-const inkAtoms = (el: Element): string[] => {
-  return String((el as HTMLElement).className || '')
+const inkAtoms = (el: Element): string[] =>
+  String((el as HTMLElement).className || '')
     .split(' ')
     .filter((c) => c.startsWith('_col-'))
     .sort();
-};
 
 const inkOf = (scheme: Scheme, accent: Accent, label: string, node: ReactElement): string[] => {
   renderWithProviders(inScheme(scheme, <Preset overrides={{ textAccent: accent }}>{node}</Preset>));

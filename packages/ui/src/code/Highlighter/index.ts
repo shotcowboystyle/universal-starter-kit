@@ -34,20 +34,18 @@ const getHighlighter = async (): Promise<any> => {
   if (!highlighterPromise) {
     highlighterPromise = Promise.all([import('shiki'), import('shiki/engine/javascript')]).then(
       async ([shiki, jsEngine]) =>
-        shiki.createHighlighter({
+        await shiki.createHighlighter({
           themes: [],
           langs: [],
           engine: jsEngine.createJavaScriptRegexEngine(),
         }),
     );
   }
-  return highlighterPromise;
+  return await highlighterPromise;
 };
 
 /** Plain text fallback when shiki is unavailable */
-const plainTextTokens = (code: string): HighlightLine[] => {
-  return code.split('\n').map((line) => [{ content: line }]);
-};
+const plainTextTokens = (code: string): HighlightLine[] => code.split('\n').map((line) => [{ content: line }]);
 
 /**
  * Highlight code using shiki and return structured tokens.

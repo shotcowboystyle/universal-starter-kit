@@ -154,29 +154,24 @@ interface FixtureReadings {
   tailPresses: number;
 }
 
-const emptyReadings = (): FixtureReadings => {
-  return {
-    frameLayout: 'unmeasured',
-    toolbarLayout: 'unmeasured',
-    viewportLayout: 'unmeasured',
-    scrollLayout: 'unmeasured',
-    frameWindow: 'unmeasured',
-    viewportWindow: 'unmeasured',
-    scrollWindow: 'unmeasured',
-    tailWindow: 'unmeasured',
-    content: 'unmeasured',
-    offset: 'unmeasured',
-    sampleWindow: 'unmeasured',
-    sample: 0,
-    tailPresses: 0,
-  };
-};
+const emptyReadings = (): FixtureReadings => ({
+  frameLayout: 'unmeasured',
+  toolbarLayout: 'unmeasured',
+  viewportLayout: 'unmeasured',
+  scrollLayout: 'unmeasured',
+  frameWindow: 'unmeasured',
+  viewportWindow: 'unmeasured',
+  scrollWindow: 'unmeasured',
+  tailWindow: 'unmeasured',
+  content: 'unmeasured',
+  offset: 'unmeasured',
+  sampleWindow: 'unmeasured',
+  sample: 0,
+  tailPresses: 0,
+});
 
-const bounds = (x: number, y: number, width: number, height: number): Reading<Bounds> => {
-  return [x, y, width, height].every(Number.isFinite) && width >= 0 && height >= 0
-    ? { x, y, width, height }
-    : 'invalid';
-};
+const bounds = (x: number, y: number, width: number, height: number): Reading<Bounds> =>
+  [x, y, width, height].every(Number.isFinite) && width >= 0 && height >= 0 ? { x, y, width, height } : 'invalid';
 
 const OwnedBodyFixture = ({ measured }: { measured: boolean }) => {
   const window = useWindowDimensions();
@@ -219,11 +214,11 @@ const OwnedBodyFixture = ({ measured }: { measured: boolean }) => {
     });
   };
 
-  const onLayout = (key: 'frameLayout' | 'toolbarLayout' | 'viewportLayout' | 'scrollLayout') => {
-    return ({ nativeEvent: { layout } }: LayoutChangeEvent) => {
+  const onLayout =
+    (key: 'frameLayout' | 'toolbarLayout' | 'viewportLayout' | 'scrollLayout') =>
+    ({ nativeEvent: { layout } }: LayoutChangeEvent) => {
       record({ [key]: bounds(layout.x, layout.y, layout.width, layout.height) });
     };
-  };
 
   const measureBounds = () => {
     const currentSample = ++sample.current;

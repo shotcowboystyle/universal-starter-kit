@@ -310,40 +310,38 @@ const SearchRow = ({
   treeId: string;
   activeDescendant?: string;
   sizeToken: string;
-}) => {
-  return (
-    <InputParts size={sizeToken as never}>
-      <InputParts.Box
-        data-search-row=""
-        data-testid="tree-select-search"
-        borderWidth={0}
-        borderBottomWidth={1}
-        borderBottomColor={formCommonColors.divider}
-        borderRadius={0}
-        elevation={undefined}
-        {...(isWeb ? { className: 'mp-composite-ring' } : undefined)}>
-        <InputParts.Section>
-          <InputParts.Icon adornment="leading">
-            <MagnifyingGlassIcon />
-          </InputParts.Icon>
-        </InputParts.Section>
-        <InputParts.Section>
-          <InputParts.Area
-            ref={inputRef as never}
-            value={value}
-            onChangeText={onChange}
-            placeholder={placeholder}
-            onKeyDown={onKeyDown as never}
-            aria-autocomplete="list"
-            aria-controls={treeId}
-            aria-activedescendant={activeDescendant}
-            aria-expanded
-          />
-        </InputParts.Section>
-      </InputParts.Box>
-    </InputParts>
-  );
-};
+}) => (
+  <InputParts size={sizeToken as never}>
+    <InputParts.Box
+      data-search-row=""
+      data-testid="tree-select-search"
+      borderWidth={0}
+      borderBottomWidth={1}
+      borderBottomColor={formCommonColors.divider}
+      borderRadius={0}
+      elevation={undefined}
+      {...(isWeb ? { className: 'mp-composite-ring' } : undefined)}>
+      <InputParts.Section>
+        <InputParts.Icon adornment="leading">
+          <MagnifyingGlassIcon />
+        </InputParts.Icon>
+      </InputParts.Section>
+      <InputParts.Section>
+        <InputParts.Area
+          ref={inputRef as never}
+          value={value}
+          onChangeText={onChange}
+          placeholder={placeholder}
+          onKeyDown={onKeyDown as never}
+          aria-autocomplete="list"
+          aria-controls={treeId}
+          aria-activedescendant={activeDescendant}
+          aria-expanded
+        />
+      </InputParts.Section>
+    </InputParts.Box>
+  </InputParts>
+);
 
 const EmptyFilterRow = ({ message }: { message: string }) => {
   const { knobProps } = useResolvedKnobs();

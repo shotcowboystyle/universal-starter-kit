@@ -23,11 +23,10 @@ const hook = (plugin: { resolveId?: unknown; load?: unknown }, name: 'resolveId'
   return typeof value === 'function' ? value : value.handler;
 };
 
-const hasPlugin = (plugins: unknown): boolean => {
-  return (plugins as unknown[])
+const hasPlugin = (plugins: unknown): boolean =>
+  (plugins as unknown[])
     .flat(Infinity)
     .some((p) => (p as { name?: string } | null)?.name === 'mpo-phosphor-token-color');
-};
 
 describe('phosphorTokenColorPlugin', () => {
   const plugin = phosphorTokenColorPlugin();

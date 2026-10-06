@@ -6,12 +6,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Alert } from './index';
 
-const atoms = (el: Element, prefixes: string[]): string[] => {
-  return String((el as HTMLElement).className || '')
+const atoms = (el: Element, prefixes: string[]): string[] =>
+  String((el as HTMLElement).className || '')
     .split(' ')
     .filter((c) => prefixes.some((p) => c.startsWith(p)))
     .sort();
-};
 
 const renderFrame = (node: ReactElement) => {
   const result = renderWithProviders(node);

@@ -321,24 +321,20 @@ const cloneTokenTable = (table?: SizeRecipeTokenTable): SizeRecipeTokenTable | u
 
 const clonePadX = (
   table?: Partial<Record<SizeRecipeToken, number>>,
-): Partial<Record<SizeRecipeToken, number>> | undefined => {
-  return table ? { ...table } : undefined;
-};
+): Partial<Record<SizeRecipeToken, number>> | undefined => (table ? { ...table } : undefined);
 
-export const cloneSizeRecipeInputs = (inputs: SizeRecipeInputs): SizeRecipeInputs => {
-  return {
-    ...inputs,
-    tokenSteps: { ...inputs.tokenSteps },
-    tokenHeights: inputs.tokenHeights ? { ...inputs.tokenHeights } : undefined,
-    sizeFactors: inputs.sizeFactors ? { ...inputs.sizeFactors } : undefined,
-    tokenTable: cloneTokenTable(inputs.tokenTable),
-    compactTokenTable: cloneTokenTable(inputs.compactTokenTable),
-    inputPadX: clonePadX(inputs.inputPadX),
-    ratios: { ...inputs.ratios },
-    compactRatios: { ...inputs.compactRatios },
-    tile: inputs.tile ? cloneTileSizeInputs(inputs.tile) : undefined,
-  };
-};
+export const cloneSizeRecipeInputs = (inputs: SizeRecipeInputs): SizeRecipeInputs => ({
+  ...inputs,
+  tokenSteps: { ...inputs.tokenSteps },
+  tokenHeights: inputs.tokenHeights ? { ...inputs.tokenHeights } : undefined,
+  sizeFactors: inputs.sizeFactors ? { ...inputs.sizeFactors } : undefined,
+  tokenTable: cloneTokenTable(inputs.tokenTable),
+  compactTokenTable: cloneTokenTable(inputs.compactTokenTable),
+  inputPadX: clonePadX(inputs.inputPadX),
+  ratios: { ...inputs.ratios },
+  compactRatios: { ...inputs.compactRatios },
+  tile: inputs.tile ? cloneTileSizeInputs(inputs.tile) : undefined,
+});
 
 /**
  * Fill defaults. `{ baseHeight: 36 }` drops handwritten tokenHeights /
@@ -401,9 +397,7 @@ export const resolveSizeRecipeInputs = (partial: Partial<SizeRecipeInputs> = {})
 
 export const mergeRecipeInputs = resolveSizeRecipeInputs;
 
-const clampHeight = (value: number): number => {
-  return Math.max(1, Math.round(value));
-};
+const clampHeight = (value: number): number => Math.max(1, Math.round(value));
 
 const heightForToken = (token: string, inputs: SizeRecipeInputs): number => {
   const explicitPx = inputs.tokenHeights?.[token];
@@ -432,20 +426,19 @@ export const sizeRecipeFromHeight = (
   };
 };
 
-export const recipeFromTokenChannels = (height: number, channels: SizeRecipeTokenChannels): SizeRecipe => {
-  return {
-    height,
-    paddingHorizontal: channels.paddingHorizontal,
-    fontSize: channels.fontSize,
-    iconSize: channels.iconSize,
-    gap: channels.radius,
-  };
-};
+export const recipeFromTokenChannels = (height: number, channels: SizeRecipeTokenChannels): SizeRecipe => ({
+  height,
+  paddingHorizontal: channels.paddingHorizontal,
+  fontSize: channels.fontSize,
+  iconSize: channels.iconSize,
+  gap: channels.radius,
+});
 
 /** Explicit recipe transformation; ordinary control shape changes use resolveControlRadius. */
-export const applyRadiusStop = <T extends { gap: number }>(recipe: T, stop: SizeRecipeRadiusStop): T => {
-  return { ...recipe, gap: SIZE_RECIPE_RADIUS_STOPS[stop] };
-};
+export const applyRadiusStop = <T extends { gap: number }>(recipe: T, stop: SizeRecipeRadiusStop): T => ({
+  ...recipe,
+  gap: SIZE_RECIPE_RADIUS_STOPS[stop],
+});
 
 /** Knob fragment token → stop name. Default medium is `$4`. */
 export const SIZE_RECIPE_RADIUS_TOKEN_TO_STOP = {

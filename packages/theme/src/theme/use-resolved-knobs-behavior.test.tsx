@@ -39,13 +39,11 @@ const stubMatchMedia = (impl: (query: string) => Partial<MediaQueryList> & Recor
   window.matchMedia = vi.fn((query: string) => impl(query) as MediaQueryList) as typeof window.matchMedia;
 };
 
-const modernMq = (matches: boolean) => {
-  return {
-    matches,
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-  };
-};
+const modernMq = (matches: boolean) => ({
+  matches,
+  addEventListener: vi.fn(),
+  removeEventListener: vi.fn(),
+});
 
 beforeEach(() => {
   originalMatchMedia = window.matchMedia;
@@ -61,15 +59,13 @@ const presetWrapper = (preset: PresetType) => {
   return ({ children }: { children: ReactNode }) => createElement(PresetContext.Provider, { value: ctx }, children);
 };
 
-const makePreset = (overrides: Partial<PresetType> = {}): PresetType => {
-  return {
-    theme: 'light' as ThemeName,
-    knobs: { ...defaultKnobs },
-    intents: {},
-    tints: [],
-    ...overrides,
-  };
-};
+const makePreset = (overrides: Partial<PresetType> = {}): PresetType => ({
+  theme: 'light' as ThemeName,
+  knobs: { ...defaultKnobs },
+  intents: {},
+  tints: [],
+  ...overrides,
+});
 
 describe('size token mapping', () => {
   it.each([

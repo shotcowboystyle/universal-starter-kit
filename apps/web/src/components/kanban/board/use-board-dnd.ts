@@ -1,5 +1,7 @@
-import type { Active, DataRef, Over } from '@dnd-kit/core';
 import {
+  type Active,
+  type DataRef,
+  type Over,
   useSensor,
   useSensors,
   MouseSensor,
@@ -122,7 +124,7 @@ export const useBoardDnd = (
 
     if (overData.type === 'Task') {
       const overIdx = targetProject.tasks.findIndex((t) => t._id === overData.task._id);
-      targetProject.tasks.splice(overIdx !== -1 ? overIdx : targetProject.tasks.length, 0, movedTask);
+      targetProject.tasks.splice(overIdx === -1 ? targetProject.tasks.length : overIdx, 0, movedTask);
     } else {
       targetProject.tasks.push(movedTask);
     }

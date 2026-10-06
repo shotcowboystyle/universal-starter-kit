@@ -23,9 +23,7 @@ interface Props {
   params: Promise<{ locale: string }>;
 }
 
-export const generateStaticParams = () => {
-  return routing.locales.map((locale) => ({ locale }));
-};
+export const generateStaticParams = () => routing.locales.map((locale) => ({ locale }));
 
 export const generateMetadata = async ({ params }: Omit<Props, 'children'>): Promise<Metadata> => {
   const { locale } = await params;

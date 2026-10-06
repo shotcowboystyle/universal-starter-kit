@@ -72,9 +72,7 @@ const ROUTER = {
   },
 };
 
-export const useRouter = (): typeof ROUTER => {
-  return ROUTER;
-};
+export const useRouter = (): typeof ROUTER => ROUTER;
 
 export interface LinkProps extends Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href' | 'onClick'> {
   href?: Href;
@@ -117,26 +115,19 @@ export const Link = ({ href, replace, children, style, ...rest }: LinkProps): Re
  *  has no nested-layout mounting — every route is its own host page — so
  *  layouts that render <Slot /> contribute chrome only; the child screen is
  *  mounted by the navigation host instead. Renders nothing by design. */
-export const Slot = (_props: Record<string, unknown>): null => {
-  return null;
-};
+export const Slot = (_props: Record<string, unknown>): null => null;
 
-export const useParams = (): NavParams => {
-  return useRouteParams();
-};
+export const useParams = (): NavParams => useRouteParams();
 
-export const useLocalSearchParams = (): NavParams => {
-  return useRouteParams();
-};
+export const useLocalSearchParams = (): NavParams => useRouteParams();
 
-export const usePathname = (): string => {
+export const usePathname = (): string =>
   // First paint of a root layout can run before the host has mounted
   // (CreateRootLayout.native wraps RootLayout around Slot before One's
   // routeInfo exists; the seam's snapshot is likewise unset until a
   // stack host attaches). Unguarded `.pathname` throws and the app never
   // boots.
-  return useNavState()?.pathname ?? '/';
-};
+  useNavState()?.pathname ?? '/';
 
 /** One's history-nav guard. The seam's hosts have no browser history to
  *  block (in-app navigation confirms dirty transitions itself), so this is
@@ -148,18 +139,12 @@ export const useBlocker = (
   state: 'unblocked' | 'blocked' | 'proceeding';
   proceed: () => void;
   reset: () => void;
-} => {
-  return { state: 'unblocked', proceed: () => {}, reset: () => {} };
-};
+} => ({ state: 'unblocked', proceed: () => {}, reset: () => {} });
 
 /** Inert stand-in for One's route-transition progress bar (SSR-era chrome
  *  with no meaning on a stack host). */
-export const LoadProgressBar = (_props: Record<string, unknown>): null => {
-  return null;
-};
+export const LoadProgressBar = (_props: Record<string, unknown>): null => null;
 
 /** One's useMatches returns the matched route chain; the seam mounts one
  *  page at a time, so consumers get an empty chain. */
-export const useMatches = (): unknown[] => {
-  return [];
-};
+export const useMatches = (): unknown[] => [];

@@ -36,7 +36,7 @@ interface MutationOptions {
 // Tamagui renders the confirm dialog in a <dialog> element that jsdom treats as
 // hidden for role queries, so locate it directly.
 const findConfirmDialog = async () =>
-  waitFor(() => {
+  await waitFor(() => {
     const el = document.querySelector<HTMLElement>('[role="alertdialog"]');
     expect(el).toBeTruthy();
     return el!;

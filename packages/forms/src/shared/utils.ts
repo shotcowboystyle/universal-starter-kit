@@ -12,9 +12,8 @@ import type { AnyFormApi, SimpleFieldApi } from '../types';
  * Resolve a size token to its recipe height, optionally multiplied by a row count.
  * e.g. getFieldHeight("$4") → 32, getFieldHeight("$4", 3) → 96
  */
-export const getFieldHeight = (sizeToken: SizeTokens, rows = 1, touch = isTouchSurface()): number => {
-  return sizeRecipeForToken(String(sizeToken), { touch }).height * rows;
-};
+export const getFieldHeight = (sizeToken: SizeTokens, rows = 1, touch = isTouchSurface()): number =>
+  sizeRecipeForToken(String(sizeToken), { touch }).height * rows;
 
 const clampRadius = (radiusToken: string | undefined, maxTokenNum: number, fallback: string): string | 0 => {
   if (!radiusToken) {
@@ -34,9 +33,8 @@ const clampRadius = (radiusToken: string | undefined, maxTokenNum: number, fallb
  * Clamp border radius token so controls (buttons, inputs, checkbox) don't become
  * fully circular/pill-shaped when knob is "full". Returns token string e.g. "$4".
  */
-export const clampRadiusForControl = (radiusToken: string | undefined, maxTokenNum = 6): string | 0 => {
-  return clampRadius(radiusToken, maxTokenNum, '$4');
-};
+export const clampRadiusForControl = (radiusToken: string | undefined, maxTokenNum = 6): string | 0 =>
+  clampRadius(radiusToken, maxTokenNum, '$4');
 
 /**
  * Clamp border radius for large multi-line components (TextArea, RichTextEditor,
@@ -45,9 +43,8 @@ export const clampRadiusForControl = (radiusToken: string | undefined, maxTokenN
  *
  * Max default is $4 which provides subtle rounding without being excessive.
  */
-export const clampRadiusForLargeComponent = (radiusToken: string | undefined, maxTokenNum = 4): string | 0 => {
-  return clampRadius(radiusToken, maxTokenNum, '$3');
-};
+export const clampRadiusForLargeComponent = (radiusToken: string | undefined, maxTokenNum = 4): string | 0 =>
+  clampRadius(radiusToken, maxTokenNum, '$3');
 
 type OtpRadiusStop = keyof typeof borderRadiusMap;
 
@@ -71,9 +68,8 @@ const otpRadiusStop = (radiusToken: string | undefined): OtpRadiusStop => {
  * clamp. Equal-w/h parts; single-line controls are the pill case of the same
  * family (leftover). Thin alias over resolveRadiusClass.
  */
-export const getOTPCellRadius = (radiusToken: string | undefined, heightPx: number): number => {
-  return resolveRadiusClass('CIRCULAR-AT-FULL', otpRadiusStop(radiusToken), { heightPx });
-};
+export const getOTPCellRadius = (radiusToken: string | undefined, heightPx: number): number =>
+  resolveRadiusClass('CIRCULAR-AT-FULL', otpRadiusStop(radiusToken), { heightPx });
 
 /**
  * Build elevation props for a wrapper View around HOC-based components.
@@ -171,16 +167,16 @@ export const useResolvedValidators = (
   }, [required, validators, label, name, isEmpty, effective]);
 };
 
-export const mergeFieldHandler = (
-  field: SimpleFieldApi<any>,
-  name: 'handleBlur' | 'handleChange',
-  handler?: (...args: any[]) => void,
-): ((...args: any[]) => void) => {
-  return (...args: any[]) => {
+export const mergeFieldHandler =
+  (
+    field: SimpleFieldApi<any>,
+    name: 'handleBlur' | 'handleChange',
+    handler?: (...args: any[]) => void,
+  ): ((...args: any[]) => void) =>
+  (...args: any[]) => {
     (field[name] as (...args: any[]) => void)(...args);
     handler?.(...args);
   };
-};
 
 /**
  * State props type for control knob recipes.
@@ -287,9 +283,7 @@ const clampOneStateRadius = (
 
 const isClampOptions = (
   value: number | ClampRadiusInStatePropsOptions | undefined,
-): value is ClampRadiusInStatePropsOptions => {
-  return typeof value === 'object' && value !== null;
-};
+): value is ClampRadiusInStatePropsOptions => typeof value === 'object' && value !== null;
 
 /**
  * Clamp borderRadius in a per-state override bag.

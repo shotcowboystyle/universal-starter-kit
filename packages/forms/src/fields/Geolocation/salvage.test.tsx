@@ -37,9 +37,8 @@ const original = JSON.stringify({
   ],
 });
 
-const input = (container: HTMLElement) => {
-  return container.querySelector("[aria-label='Search for a location']") as HTMLInputElement;
-};
+const input = (container: HTMLElement) =>
+  container.querySelector("[aria-label='Search for a location']") as HTMLInputElement;
 const deferred = <T,>() => {
   let resolve!: (value: T) => void;
   const promise = new Promise<T>((done) => {
@@ -107,7 +106,7 @@ describe('Geolocation salvage regressions', () => {
   it("shows the current pair while a new controlled value's address is pending", async () => {
     const pending = deferred<GeocodeResult | null>();
     const reverseGeocode = vi.fn(async ({ lat }: { lat: number }) =>
-      lat === place.lat ? Promise.resolve(place) : pending.promise,
+      lat === place.lat ? await Promise.resolve(place) : await pending.promise,
     );
     const props = { value: helsinkiValue, readOnly: true, reverseGeocode, renderMap: boundMap };
     const result = renderWithProviders(<Geolocation {...props} />);
@@ -202,7 +201,7 @@ describe('Geolocation salvage regressions', () => {
   it('preserves a typed draft across new bound coordinates and their reverse response', async () => {
     const pending = deferred<GeocodeResult | null>();
     const reverseGeocode = async ({ lat }: { lat: number }) =>
-      lat === place.lat ? Promise.resolve(place) : pending.promise;
+      lat === place.lat ? await Promise.resolve(place) : await pending.promise;
     const props = {
       value: helsinkiValue,
       geocode: async () => [],
@@ -260,7 +259,7 @@ describe('Geolocation salvage regressions', () => {
 
   it('ignores search responses after the query is cleared', async () => {
     const pending = deferred<GeocodeResult[]>();
-    const geocode = vi.fn(async () => pending.promise);
+    const geocode = vi.fn(async () => await pending.promise);
     const result = renderWithProviders(<Geolocation geocode={geocode} />);
     fireEvent.change(input(result.container), { target: { value: 'old' } });
     await waitFor(() => {
@@ -275,7 +274,7 @@ describe('Geolocation salvage regressions', () => {
 
   it('ignores reverse responses after clearing a controlled value', async () => {
     const pending = deferred<GeocodeResult | null>();
-    const reverseGeocode = vi.fn(async () => pending.promise);
+    const reverseGeocode = vi.fn(async () => await pending.promise);
     const result = renderWithProviders(
       <Controlled
         value={original}
@@ -301,7 +300,7 @@ describe('Geolocation salvage regressions', () => {
       <Geolocation
         value={original}
         geocode={async () => []}
-        reverseGeocode={async () => pending.promise}
+        reverseGeocode={async () => await pending.promise}
       />,
     );
     fireEvent.change(input(result.container), { target: { value: 'Sydney' } });

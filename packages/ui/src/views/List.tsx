@@ -60,9 +60,7 @@ const ListItemStateContext = createContext<ListItemState>({
 });
 
 /** Read the current row's selection/focus. Defaults to idle outside a List. */
-export const useListItemState = (): ListItemState => {
-  return useContext(ListItemStateContext);
-};
+export const useListItemState = (): ListItemState => useContext(ListItemStateContext);
 
 /**
  * Subject-led document row (Desk list / Linear / Finder): leading glyph,

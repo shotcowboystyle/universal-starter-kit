@@ -16,9 +16,7 @@ import { UnsavedChangesDialog } from './UnsavedChangesDialog';
 
 afterEach(cleanup);
 
-const dialog = (): HTMLElement | null => {
-  return document.body.querySelector('[role="alertdialog"]');
-};
+const dialog = (): HTMLElement | null => document.body.querySelector('[role="alertdialog"]');
 
 const button = (marker: string): HTMLElement => {
   const node = document.body.querySelector(`[${marker}]`);

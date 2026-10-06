@@ -31,9 +31,7 @@ import {
   resolvePageTitleScale,
 } from './resolve-knobs';
 
-const knobsWith = (overrides: Partial<Knobs>): Knobs => {
-  return { ...defaultKnobs, ...overrides };
-};
+const knobsWith = (overrides: Partial<Knobs>): Knobs => ({ ...defaultKnobs, ...overrides });
 
 const expectedKnobPropKeys: (keyof KnobProps)[] = [
   'borderRadius',

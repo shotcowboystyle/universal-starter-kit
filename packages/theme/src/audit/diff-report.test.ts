@@ -30,16 +30,14 @@ const makeReport = (overrides: Partial<AuditReport> = {}): AuditReport => {
   };
 };
 
-const makeElement = (label: string, overrides: Partial<ElementAudit> = {}): ElementAudit => {
-  return {
-    label,
-    tag: 'div',
-    id: '',
-    classes: [],
-    violations: [],
-    ...overrides,
-  };
-};
+const makeElement = (label: string, overrides: Partial<ElementAudit> = {}): ElementAudit => ({
+  label,
+  tag: 'div',
+  id: '',
+  classes: [],
+  violations: [],
+  ...overrides,
+});
 
 describe('diffAuditReports', () => {
   it('reports no changes for identical reports', () => {

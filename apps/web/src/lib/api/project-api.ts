@@ -39,7 +39,7 @@ export const projectApi = {
 
   // Delete a project
   async deleteProject(id: string): Promise<void> {
-    return await fetchWithAuth(`${PROJECTS_ENDPOINT}/${id}`, {
+    await fetchWithAuth(`${PROJECTS_ENDPOINT}/${id}`, {
       method: 'DELETE',
     });
   },

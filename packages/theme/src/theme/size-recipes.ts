@@ -138,9 +138,7 @@ export const SIZE_RECIPE_FAMILY_NAMES = ['control', 'controlCompact'] as const;
  */
 export const tileSizeLadder = initial.tiles;
 
-export const getTileSizeLadder = (): typeof tileSizeLadder => {
-  return tileSizeLadder;
-};
+export const getTileSizeLadder = (): typeof tileSizeLadder => tileSizeLadder;
 
 const adoptGenerated = (next: GeneratedSizeRecipes): GeneratedSizeRecipes => {
   adoptFamily(recipeFamilies.control, next.families.control);
@@ -163,28 +161,20 @@ const adoptGenerated = (next: GeneratedSizeRecipes): GeneratedSizeRecipes => {
 };
 
 /** Merge `partial` over defaultRecipeInputs (not the previous override) and rewrite live tables. */
-export const setSizeRecipeInputs = (partial: Partial<RecipeInputs> = {}): GeneratedSizeRecipes => {
-  return adoptGenerated(generateSizeRecipes(partial));
-};
+export const setSizeRecipeInputs = (partial: Partial<RecipeInputs> = {}): GeneratedSizeRecipes =>
+  adoptGenerated(generateSizeRecipes(partial));
 
-export const getSizeRecipeInputs = (): RecipeInputs => {
-  return cloneSizeRecipeInputs(current.inputs);
-};
+export const getSizeRecipeInputs = (): RecipeInputs => cloneSizeRecipeInputs(current.inputs);
 
-export const getGeneratedSizeRecipes = (): GeneratedSizeRecipes => {
-  return current;
-};
+export const getGeneratedSizeRecipes = (): GeneratedSizeRecipes => current;
 
-export const getSizeRecipeFamily = (name: RecipeFamilyName = 'control'): SizeRecipeFamily => {
-  return recipeFamilies[name] ?? recipeFamilies.control;
-};
+export const getSizeRecipeFamily = (name: RecipeFamilyName = 'control'): SizeRecipeFamily =>
+  recipeFamilies[name] ?? recipeFamilies.control;
 
 export const sizeRecipeFromHeight = (
   height: number,
   ratios: RecipeInputs['ratios'] = current.inputs.ratios,
-): SizeRecipe => {
-  return recipeFromHeight(height, ratios);
-};
+): SizeRecipe => recipeFromHeight(height, ratios);
 
 const resolveFamily = (family?: RecipeFamilyName | SizeRecipeFamily): SizeRecipeFamily => {
   if (family && typeof family === 'object') {
@@ -234,9 +224,7 @@ export const sizeRecipeForToken = (
  * `docs/theme-propagation-spec.md` `## Size-recipe escapes`; an undeclared
  * escape fails `lint-conventions`.
  */
-export const sizeRecipeEscape = <T>(value: T, _reason?: string): T => {
-  return value;
-};
+export const sizeRecipeEscape = <T>(value: T, _reason?: string): T => value;
 
 /**
  * TEXT-INSET — optical vertical inset of a text field, never larger
@@ -247,6 +235,5 @@ export const sizeRecipeEscape = <T>(value: T, _reason?: string): T => {
  *
  * `$4` (44 / 18 / 14) → 15. Button ladders keep recipe.paddingHorizontal (18).
  */
-export const textFieldInset = (recipe: Pick<SizeRecipe, 'height' | 'paddingHorizontal' | 'fontSize'>): number => {
-  return Math.min(recipe.paddingHorizontal, Math.floor((recipe.height - recipe.fontSize) / 2));
-};
+export const textFieldInset = (recipe: Pick<SizeRecipe, 'height' | 'paddingHorizontal' | 'fontSize'>): number =>
+  Math.min(recipe.paddingHorizontal, Math.floor((recipe.height - recipe.fontSize) / 2));

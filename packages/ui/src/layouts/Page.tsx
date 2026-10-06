@@ -40,14 +40,11 @@ import type { PageHeadingLevel } from './PageHeadingScope';
 const PAGE_HEADING_TAGS = { 1: H1, 2: H2, 3: H3, 4: H4, 5: H5, 6: H6 } as const;
 
 /** `$4` → `$-4` so PageHeader can cancel Screen's panel padding. */
-const negateSpaceToken = (token: string): `$-${string}` => {
-  return `$-${token.startsWith('$') ? token.slice(1) : token}`;
-};
+const negateSpaceToken = (token: string): `$-${string}` => `$-${token.startsWith('$') ? token.slice(1) : token}`;
 
-const knobsFor = (component: string, compact: boolean | undefined) => {
+const knobsFor = (component: string, compact: boolean | undefined) =>
   // An omitted override must leave density under the preset's control.
-  return compact === undefined ? { component } : { component, compact };
-};
+  compact === undefined ? { component } : { component, compact };
 
 /** Nested surfaces step density only; hue remains inherited. */
 const NestedScale = ({ density, children }: { density: string; children: ReactNode }) => {

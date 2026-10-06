@@ -44,12 +44,11 @@ afterEach(cleanup);
 
 const TITLE = 'Workspace Settings';
 
-const classesByPrefix = (el: Element, prefixes: string[]): string[] => {
-  return String((el as HTMLElement).className || '')
+const classesByPrefix = (el: Element, prefixes: string[]): string[] =>
+  String((el as HTMLElement).className || '')
     .split(' ')
     .filter((c) => prefixes.some((p) => c.startsWith(p)))
     .sort();
-};
 
 /** Render, guard the text node's tag, read its prefixed classes, clean up. */
 const renderHeadingClasses = (node: React.ReactElement, prefixes: string[], expectedTag?: string): string[] => {

@@ -98,9 +98,7 @@ export interface ParsedPhone {
   national: string;
 }
 
-export const digitsOnly = (input: string): string => {
-  return input.replaceAll(/\D/g, '');
-};
+export const digitsOnly = (input: string): string => input.replaceAll(/\D/g, '');
 
 export const countryCodeToFlag = (countryCode: string): string => {
   const codePoints = countryCode
@@ -110,17 +108,13 @@ export const countryCodeToFlag = (countryCode: string): string => {
   return String.fromCodePoint(...codePoints);
 };
 
-export const flagSizeForToken = (sizeToken: string | undefined): number => {
-  return sizeRecipeForToken(sizeToken ?? '$4').iconSize;
-};
+export const flagSizeForToken = (sizeToken: string | undefined): number =>
+  sizeRecipeForToken(sizeToken ?? '$4').iconSize;
 
-export const caretSizeForToken = (sizeToken: string | undefined): number => {
-  return Math.round(sizeRecipeForToken(sizeToken ?? '$4').iconSize * 0.75);
-};
+export const caretSizeForToken = (sizeToken: string | undefined): number =>
+  Math.round(sizeRecipeForToken(sizeToken ?? '$4').iconSize * 0.75);
 
-export const dialOf = (region: string): string => {
-  return String(dialCodes[region] ?? 1);
-};
+export const dialOf = (region: string): string => String(dialCodes[region] ?? 1);
 
 const regionName = (code: string): string => {
   try {

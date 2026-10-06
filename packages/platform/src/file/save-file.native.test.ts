@@ -46,7 +46,7 @@ describe('native byte save (native boundary modeled)', () => {
     };
     native.pick.mockReset().mockResolvedValue(directory);
   });
-  const api = async () => import('./save-file.native');
+  const api = async () => await import('./save-file.native');
 
   it('loads FileSystem only on invocation and writes the exact snapshot to the provider child', async () => {
     const { saveFile } = await api();

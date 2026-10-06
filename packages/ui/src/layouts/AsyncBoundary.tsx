@@ -49,9 +49,7 @@ export interface AsyncBoundaryContextValue {
 const AsyncBoundaryContext = createContext<AsyncBoundaryContextValue | null>(null);
 
 /** Read async status from the nearest AsyncBoundary (null outside). */
-export const useAsyncBoundary = (): AsyncBoundaryContextValue | null => {
-  return useContext(AsyncBoundaryContext);
-};
+export const useAsyncBoundary = (): AsyncBoundaryContextValue | null => useContext(AsyncBoundaryContext);
 
 /**
  * Count / badge value that degrades on failure.

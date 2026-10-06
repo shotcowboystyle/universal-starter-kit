@@ -13,9 +13,7 @@ import { Card, CardFooter, CardHeader } from './Card';
 
 const cardConfig = createTamagui(defaultConfig);
 
-const readSibling = (name: string) => {
-  return readFileSync(join(import.meta.dirname, name), 'utf-8');
-};
+const readSibling = (name: string) => readFileSync(join(import.meta.dirname, name), 'utf-8');
 
 const DensityProbe = () => {
   const { knobProps } = useResolvedKnobs();

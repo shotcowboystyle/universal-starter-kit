@@ -23,14 +23,14 @@ export const onAppBlur = (callback: () => void): (() => void) => {
   };
 };
 
-export const onOnline = (callback: () => void): (() => void) => {
+export const onOnline =
+  (callback: () => void): (() => void) =>
   // NetInfo not available without expo-network — no-op for now
-  return () => {};
-};
+  () => {};
 
-export const onOffline = (callback: () => void): (() => void) => {
-  return () => {};
-};
+export const onOffline =
+  (callback: () => void): (() => void) =>
+  () => {};
 
 export const onVisibilityChange = (callback: (visible: boolean) => void): (() => void) => {
   const sub = AppState.addEventListener('change', (state: AppStateStatus) => {

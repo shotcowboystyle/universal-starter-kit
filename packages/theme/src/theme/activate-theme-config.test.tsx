@@ -12,22 +12,18 @@ const subset = createDefaultThemeConfig({
   subset: { components: ['Button'], tints: ['accent', 'error', 'success', 'warning'] },
 });
 
-const Name = () => {
-  return <span data-testid="red">{useThemeName()}</span>;
-};
+const Name = () => <span data-testid="red">{useThemeName()}</span>;
 
-const ResolvedRed = ({ themeConfig }: { themeConfig: ThemeConfig }) => {
-  return (
-    <TamaguiProvider
-      config={themeConfig.tamagui}
-      defaultTheme="light"
-      disableInjectCSS>
-      <Theme name="red">
-        <Name />
-      </Theme>
-    </TamaguiProvider>
-  );
-};
+const ResolvedRed = ({ themeConfig }: { themeConfig: ThemeConfig }) => (
+  <TamaguiProvider
+    config={themeConfig.tamagui}
+    defaultTheme="light"
+    disableInjectCSS>
+    <Theme name="red">
+      <Name />
+    </Theme>
+  </TamaguiProvider>
+);
 
 afterEach(cleanup);
 

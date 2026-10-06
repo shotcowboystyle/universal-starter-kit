@@ -30,9 +30,7 @@ export type DrawnIconName = (typeof DRAWN_ICON_NAMES)[number];
 
 const DRAWN_ICON_NAME_SET = new Set<string>(DRAWN_ICON_NAMES);
 
-export const isDrawnIconName = (value: string): value is DrawnIconName => {
-  return DRAWN_ICON_NAME_SET.has(value);
-};
+export const isDrawnIconName = (value: string): value is DrawnIconName => DRAWN_ICON_NAME_SET.has(value);
 
 type Shape =
   | { kind: 'polyline'; points: string }

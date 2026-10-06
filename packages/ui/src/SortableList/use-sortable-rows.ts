@@ -49,9 +49,8 @@ const SortableSessionContext = createContext<{ sourceId: string | null }>({
 });
 
 /** Lets a remount-prone cell (ChildTable handle) read lift state without recreating column defs. */
-export const SortableSessionProvider = ({ sourceId, children }: { sourceId: string | null; children: ReactNode }) => {
-  return createElement(SortableSessionContext.Provider, { value: { sourceId } }, children);
-};
+export const SortableSessionProvider = ({ sourceId, children }: { sourceId: string | null; children: ReactNode }) =>
+  createElement(SortableSessionContext.Provider, { value: { sourceId } }, children);
 
 export const useSortableDragging = (itemId: string, dragging?: boolean) => {
   const { sourceId } = useContext(SortableSessionContext);

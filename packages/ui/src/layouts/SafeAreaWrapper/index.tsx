@@ -32,14 +32,12 @@ export const SafeAreaWrapper = ({
   edges: _edges,
   mode: _mode,
   ...stackProps
-}: PropsWithChildren<SafeAreaWrapperProps>) => {
-  return (
-    <YStack
-      data-testid="safe-area-wrapper"
-      data-safe-area="web"
-      flex={1}
-      {...stackProps}>
-      {children}
-    </YStack>
-  );
-};
+}: PropsWithChildren<SafeAreaWrapperProps>) => (
+  <YStack
+    data-testid="safe-area-wrapper"
+    data-safe-area="web"
+    flex={1}
+    {...stackProps}>
+    {children}
+  </YStack>
+);

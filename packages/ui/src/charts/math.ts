@@ -55,12 +55,11 @@ export interface PointScaleInput {
 }
 
 /** Categorical x scale for line/area charts: label → point px. */
-export const createPointScale = (input: PointScaleInput): ScalePoint<string> => {
-  return scalePoint()
+export const createPointScale = (input: PointScaleInput): ScalePoint<string> =>
+  scalePoint()
     .domain(input.domain)
     .range(input.range)
     .padding(input.padding ?? 0);
-};
 
 export interface LinearScaleInput {
   domain: [number, number];
@@ -138,14 +137,10 @@ export const valueDomain = (values: number[], options?: ValueDomainOptions): [nu
 };
 
 /** Nice tick values for a continuous scale. */
-export const getLinearTicks = (scale: ScaleLinear<number, number>, count = 4): number[] => {
-  return scale.ticks(count);
-};
+export const getLinearTicks = (scale: ScaleLinear<number, number>, count = 4): number[] => scale.ticks(count);
 
 /** Nice tick dates for a time scale. */
-export const getTimeTicks = (scale: ScaleTime<number, number>, count = 4): Date[] => {
-  return scale.ticks(count);
-};
+export const getTimeTicks = (scale: ScaleTime<number, number>, count = 4): Date[] => scale.ticks(count);
 
 /**
  * Chart AXIS tick register — the one DECLARED exemption to the house number
@@ -157,18 +152,14 @@ export const getTimeTicks = (scale: ScaleTime<number, number>, count = 4): Date[
  * makes it a decision instead of an accident — anything outside this
  * function belongs on the shared channel.
  */
-export const formatAxisTick = (value: number): string => {
-  return value.toLocaleString();
-};
+export const formatAxisTick = (value: number): string => value.toLocaleString();
 
 /**
  * Chart data VALUE labels — NOT exempt. A value printed next to a mark is
  * the same number class as the same figure in a table cell or a KPI tile,
  * so it rides the shared register (`formatNumber`).
  */
-export const formatChartValue = (value: number): string => {
-  return formatNumber(value);
-};
+export const formatChartValue = (value: number): string => formatNumber(value);
 
 // ── Shape generators ──────────────────────────────────────────
 
@@ -370,9 +361,8 @@ export const arcCentroid = (input: ArcPathInput): PixelPoint => {
 const APPROX_CHAR_WIDTH_RATIO = 0.6;
 
 /** Approximate rendered width of a label — cross-platform, no DOM measure. */
-export const approximateTextWidth = (text: string, fontSize: number): number => {
-  return text.length * fontSize * APPROX_CHAR_WIDTH_RATIO;
-};
+export const approximateTextWidth = (text: string, fontSize: number): number =>
+  text.length * fontSize * APPROX_CHAR_WIDTH_RATIO;
 
 /** Truncate a label with an ellipsis so it fits `maxWidth` px. */
 export const truncateLabel = (text: string, fontSize: number, maxWidth: number): string => {

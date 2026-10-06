@@ -2,7 +2,7 @@ import { writeToClipboard } from '@repo/platform';
 import { useEffect, useState } from 'react';
 import { useEvent } from 'tamagui';
 
-export const copyToClipboard = async (text: string) => writeToClipboard(text);
+export const copyToClipboard = async (text: string) => await writeToClipboard(text);
 
 export interface UseClipboardOptions {
   timeout?: number;

@@ -191,21 +191,19 @@ const discoverPublicPackageViteAliases = (workspaceRoot: string): Record<string,
 };
 
 /** Virtual module plugin that stubs `node:async_hooks` for browser environments. */
-const nodeAsyncHooksStub = (): Plugin => {
-  return {
-    name: 'storybook:node-async-hooks-stub',
-    resolveId(id) {
-      if (id === 'node:async_hooks') {
-        return '\0node:async_hooks';
-      }
-    },
-    load(id) {
-      if (id === '\0node:async_hooks') {
-        return 'export class AsyncLocalStorage {}';
-      }
-    },
-  };
-};
+const nodeAsyncHooksStub = (): Plugin => ({
+  name: 'storybook:node-async-hooks-stub',
+  resolveId(id) {
+    if (id === 'node:async_hooks') {
+      return '\0node:async_hooks';
+    }
+  },
+  load(id) {
+    if (id === '\0node:async_hooks') {
+      return 'export class AsyncLocalStorage {}';
+    }
+  },
+});
 
 /**
  * Creates a Vite configuration for Storybook in this monorepo.

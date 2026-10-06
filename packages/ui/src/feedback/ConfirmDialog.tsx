@@ -39,9 +39,7 @@ import { DialogContent, DialogOverlay } from '../surfaces';
 const TAB_STOPS =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"]), [contenteditable="true"]';
 
-const asHtml = (node: unknown): HTMLElement | null => {
-  return node instanceof HTMLElement ? node : null;
-};
+const asHtml = (node: unknown): HTMLElement | null => (node instanceof HTMLElement ? node : null);
 
 const panelNode = (ref: unknown): HTMLElement | null => {
   const fromRef = asHtml(ref);

@@ -42,23 +42,20 @@ const items = [
   { value: 'settings', label: 'Settings', content: <>settings panel</> },
 ];
 
-const Fixture = () => {
-  return (
-    <TestProviders>
-      <Tabs
-        items={items}
-        defaultValue="address"
-      />
-    </TestProviders>
-  );
-};
+const Fixture = () => (
+  <TestProviders>
+    <Tabs
+      items={items}
+      defaultValue="address"
+    />
+  </TestProviders>
+);
 
 /** Every `_h-` height atom painted inside each tab, in document order. */
-const tabHeights = (root: ParentNode): string[][] => {
-  return [...root.querySelectorAll('[role="tab"]')].map((tab) =>
+const tabHeights = (root: ParentNode): string[][] =>
+  [...root.querySelectorAll('[role="tab"]')].map((tab) =>
     [tab, ...tab.querySelectorAll('*')].flatMap((node) => [...node.classList].filter((name) => /^_h-\d/.test(name))),
   );
-};
 
 let container: HTMLDivElement;
 let root: Root | undefined;

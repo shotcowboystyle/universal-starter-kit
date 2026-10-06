@@ -24,10 +24,9 @@ import { Geolocation } from './index';
 const HELSINKI = JSON.stringify({ lat: 60.16952, lng: 24.93545 });
 const SYDNEY = JSON.stringify({ lat: -33.8688, lng: 151.2093 });
 
-const searchInput = (container: HTMLElement) => {
-  return (container.querySelector("[data-testid='geolocation-search']") ??
+const searchInput = (container: HTMLElement) =>
+  (container.querySelector("[data-testid='geolocation-search']") ??
     container.querySelector("[aria-label='Search for a location']")) as HTMLInputElement | null;
-};
 
 const typeSearch = (container: HTMLElement, text: string) => {
   const input = searchInput(container);

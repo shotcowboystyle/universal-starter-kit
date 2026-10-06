@@ -98,13 +98,11 @@ export interface FieldDisplayProps {
 const DescriptionListSlotContext = createContext(false);
 
 /** True when FieldDisplay is mounted as a DescriptionList value. */
-export const useIsInDescriptionList = (): boolean => {
-  return useContext(DescriptionListSlotContext);
-};
+export const useIsInDescriptionList = (): boolean => useContext(DescriptionListSlotContext);
 
-export const DescriptionListSlotProvider = ({ children }: { children: ReactNode }) => {
-  return <DescriptionListSlotContext.Provider value={true}>{children}</DescriptionListSlotContext.Provider>;
-};
+export const DescriptionListSlotProvider = ({ children }: { children: ReactNode }) => (
+  <DescriptionListSlotContext.Provider value={true}>{children}</DescriptionListSlotContext.Provider>
+);
 
 interface DisplaySlot {
   chromeless: boolean;
@@ -119,9 +117,7 @@ const DisplaySlotContext = createContext<DisplaySlot>({
   inDescriptionList: false,
 });
 
-const useDisplaySlot = (): DisplaySlot => {
-  return useContext(DisplaySlotContext);
-};
+const useDisplaySlot = (): DisplaySlot => useContext(DisplaySlotContext);
 
 const CHIP_COLORS = new Set<ChipColor>(['gray', 'red', 'green', 'blue', 'yellow', 'orange', 'purple']);
 

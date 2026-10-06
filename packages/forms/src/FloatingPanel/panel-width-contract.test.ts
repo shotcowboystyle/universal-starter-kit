@@ -32,9 +32,7 @@ const intrinsicGridPickers = ['DatePicker/parts.tsx', 'DatePicker/DatetimePicker
 /** Panels opened from an icon/button trigger, where fit-content is correct. */
 const buttonShapedPickers = ['Geolocation/index.tsx'];
 
-const read = (relative: string): string => {
-  return readFileSync(resolve(fieldsDir, relative), 'utf-8');
-};
+const read = (relative: string): string => readFileSync(resolve(fieldsDir, relative), 'utf-8');
 
 describe('FloatingPanel width contract', () => {
   it.each(intrinsicGridPickers)('%s hugs its calendar grid', (relative) => {

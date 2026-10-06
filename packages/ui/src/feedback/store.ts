@@ -27,9 +27,7 @@ const emit = () => {
   }
 };
 
-export const getFeedback = (): FeedbackEntry[] => {
-  return entries;
-};
+export const getFeedback = (): FeedbackEntry[] => entries;
 
 export const subscribeFeedback = (listener: () => void): (() => void) => {
   listeners.add(listener);

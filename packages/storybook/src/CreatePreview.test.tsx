@@ -39,34 +39,28 @@ const AppProvider = ({
   themeConfig?: ThemeConfig;
   systemTheme?: 'light' | 'dark';
   children?: ReactNode;
-}) => {
-  return (
-    <TamaguiProvider
-      config={themeConfig?.tamagui}
-      defaultTheme={systemTheme}
-      disableInjectCSS>
-      {children}
-    </TamaguiProvider>
-  );
-};
+}) => (
+  <TamaguiProvider
+    config={themeConfig?.tamagui}
+    defaultTheme={systemTheme}
+    disableInjectCSS>
+    {children}
+  </TamaguiProvider>
+);
 
-const ResolvedName = ({ theme }: { theme: string }) => {
-  return <span data-testid={theme}>{useThemeName()}</span>;
-};
+const ResolvedName = ({ theme }: { theme: string }) => <span data-testid={theme}>{useThemeName()}</span>;
 
-const Story = () => {
-  return (
-    <>
-      {(['red', 'error'] as const).map((theme) => (
-        <Theme
-          key={theme}
-          name={theme as ThemeName}>
-          <ResolvedName theme={theme} />
-        </Theme>
-      ))}
-    </>
-  );
-};
+const Story = () => (
+  <>
+    {(['red', 'error'] as const).map((theme) => (
+      <Theme
+        key={theme}
+        name={theme as ThemeName}>
+        <ResolvedName theme={theme} />
+      </Theme>
+    ))}
+  </>
+);
 
 const renderStory = (preview: Preview, globals: Record<string, unknown>) => {
   const [frameworkDecorator] = preview.decorators ?? [];
@@ -152,9 +146,7 @@ describe('createPreview with one config', () => {
 describe('createPreview tableZebra global', () => {
   const preview = createPreview({ themeConfig: full, i18n, AppProvider });
 
-  const Zebra = () => {
-    return <span data-testid="zebra">{useResolvedKnobs().knobProps.tableZebra}</span>;
-  };
+  const Zebra = () => <span data-testid="zebra">{useResolvedKnobs().knobProps.tableZebra}</span>;
 
   const renderZebra = (globals: Record<string, unknown>) => {
     const [frameworkDecorator] = preview.decorators ?? [];
@@ -182,9 +174,7 @@ describe('createPreview tableZebra global', () => {
 describe('createPreview scheme global reaches useUserScheme', () => {
   const preview = createPreview({ themeConfig: full, i18n, AppProvider, setUserScheme });
 
-  const UserScheme = () => {
-    return <span data-testid="user-scheme">{useUserScheme().value}</span>;
-  };
+  const UserScheme = () => <span data-testid="user-scheme">{useUserScheme().value}</span>;
 
   const renderUserScheme = (globals: Record<string, unknown>) => {
     const [frameworkDecorator] = preview.decorators ?? [];

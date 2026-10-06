@@ -184,11 +184,9 @@ export const LineChart = ({
 export type AreaChartProps = Omit<LineChartProps, 'showArea'>;
 
 /** Area chart — the LineChart family with the area fill on by default. */
-export const AreaChart = (props: AreaChartProps) => {
-  return (
-    <LineChart
-      showArea
-      {...props}
-    />
-  );
-};
+export const AreaChart = (props: AreaChartProps) => (
+  <LineChart
+    showArea
+    {...props}
+  />
+);

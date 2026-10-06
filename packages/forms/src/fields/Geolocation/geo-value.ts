@@ -25,9 +25,7 @@ interface GeoJsonPoint {
   coordinates: [number, number];
 }
 
-const isFiniteNumber = (n: unknown): n is number => {
-  return typeof n === 'number' && Number.isFinite(n);
-};
+const isFiniteNumber = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n);
 
 const parseJson = (value: string | undefined): unknown => {
   if (!value || !value.trim()) {
@@ -132,9 +130,8 @@ const asFeatures = (parsed: unknown): GeoJsonFeature[] => {
   return collection.features.filter((feature): feature is GeoJsonFeature => !!feature && typeof feature === 'object');
 };
 
-const isPointFeature = (feature: GeoJsonFeature): boolean => {
-  return !!feature.geometry && (feature.geometry as { type?: unknown }).type === 'Point';
-};
+const isPointFeature = (feature: GeoJsonFeature): boolean =>
+  !!feature.geometry && (feature.geometry as { type?: unknown }).type === 'Point';
 
 /**
  * Serialise coordinates back to disk in the shape the document arrived in.

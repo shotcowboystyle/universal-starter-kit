@@ -31,9 +31,8 @@ export class FileSaveError extends Error {
   }
 }
 
-const hasControlCharacters = (value: string) => {
-  return Array.from(value).some((character) => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127);
-};
+const hasControlCharacters = (value: string) =>
+  Array.from(value).some((character) => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127);
 
 export const prepareFileSave = (options: FileSaveOptions) => {
   if (

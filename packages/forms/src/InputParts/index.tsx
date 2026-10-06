@@ -23,8 +23,7 @@ import type { RecipeFamilyName } from '@repo/theme';
 import { getFontSized } from '@tamagui/get-font-sized';
 import type { SizeVariantSpreadFunction } from '@tamagui/web';
 import { useCallback, useEffect, useState } from 'react';
-import type { ReactNode } from 'react';
-import type { ComponentProps, Ref, RefObject } from 'react';
+import type { ReactNode, ComponentProps, Ref, RefObject } from 'react';
 import { Pressable as RNPressable } from 'react-native';
 import type { ColorTokens, FontSizeTokens, InputKeyboardType, InputTextContentType, TamaguiElement } from 'tamagui';
 import {
@@ -83,14 +82,13 @@ export const InputContext = createStyledContext<{
 }>(defaultContextValues);
 
 /** Square end-cap of recipe.height — generated, never handwritten. */
-const endCapVariantsFromHeights = (heightVariants: Record<string, { height: number }>) => {
-  return Object.fromEntries(
+const endCapVariantsFromHeights = (heightVariants: Record<string, { height: number }>) =>
+  Object.fromEntries(
     Object.entries(heightVariants).map(([token, { height }]) => [
       token,
       { height, width: height, paddingHorizontal: 0 as const },
     ]),
   );
-};
 
 const sizeRecipeEndCapVariants = endCapVariantsFromHeights(recipeFamilies.control.heightVariants);
 
@@ -105,13 +103,11 @@ const sizeRecipeBoxFallback = (val: unknown, extras: { props: { touch?: boolean 
   };
 };
 
-const sizeRecipeTypeFallback = (val: unknown, extras: { props: { touch?: boolean } }) => {
-  return {
-    fontSize: sizeRecipeForToken(String(val ?? '$true'), {
-      touch: extras.props.touch ?? (!isWeb && isTouchSurface()),
-    }).fontSize,
-  };
-};
+const sizeRecipeTypeFallback = (val: unknown, extras: { props: { touch?: boolean } }) => ({
+  fontSize: sizeRecipeForToken(String(val ?? '$true'), {
+    touch: extras.props.touch ?? (!isWeb && isTouchSurface()),
+  }).fontSize,
+});
 
 const sizeRecipeIconFallback = (val: unknown, extras: { props: { touch?: boolean } }) => {
   const { iconSize } = sizeRecipeForToken(String(val ?? '$true'), {
@@ -238,11 +234,10 @@ export const boxRingMode = (overflow: BoxOverflow, paintsRing: boolean): 'inset'
   return overflow === 'hidden' ? 'inset' : 'outset';
 };
 
-export const boxRingOffset = (mode: 'inset' | 'outset' | undefined): number => {
+export const boxRingOffset = (mode: 'inset' | 'outset' | undefined): number =>
   // Both branches are sanctioned offsets: the clipping inset when the
   // Box clips its adornments, the shape halo when it does not.
-  return mode === 'outset' ? FOCUS_RING_HALO_OFFSET : FOCUS_RING_CLIPPED_OFFSET;
-};
+  mode === 'outset' ? FOCUS_RING_HALO_OFFSET : FOCUS_RING_CLIPPED_OFFSET;
 
 export const inputPartsRingCss = `/* LC-71: ring on Box (adornments inside); Area never outlines.
    Inset iff the Box clips (overflow:hidden). Do not :has(:focus-visible) on

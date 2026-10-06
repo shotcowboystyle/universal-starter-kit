@@ -42,16 +42,14 @@ export default meta;
 
 type Story = StoryObj<typeof PageHeader>;
 
-const HeaderCanvas = ({ children }: { children: ReactNode }) => {
-  return (
-    <Screen
-      scroll={false}
-      maxWidth={720}>
-      {children}
-      <Paragraph color="$color11">Page body shares the title inset. The hairline is edge-to-edge.</Paragraph>
-    </Screen>
-  );
-};
+const HeaderCanvas = ({ children }: { children: ReactNode }) => (
+  <Screen
+    scroll={false}
+    maxWidth={720}>
+    {children}
+    <Paragraph color="$color11">Page body shares the title inset. The hairline is edge-to-edge.</Paragraph>
+  </Screen>
+);
 
 export const Default: Story = {
   name: 'Main',

@@ -292,14 +292,11 @@ const resolveAllowlists = (context) => {
 };
 
 /** @param {string | undefined} source */
-const isHousePackage = (source) => {
-  return typeof source === 'string' && source.startsWith('@repo/');
-};
+const isHousePackage = (source) => typeof source === 'string' && source.startsWith('@repo/');
 
 /** @param {{ type?: string, imported?: { name?: string, value?: string }, local?: { name?: string } }} specifier */
-const specifierLocalName = (specifier) => {
-  return specifier.local?.name ?? specifier.imported?.name ?? specifier.imported?.value;
-};
+const specifierLocalName = (specifier) =>
+  specifier.local?.name ?? specifier.imported?.name ?? specifier.imported?.value;
 
 /**
  * Walk a JSX name node into "Card" or "Menu.Content".

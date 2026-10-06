@@ -47,13 +47,9 @@ export interface ContextualSaveBarProps {
 
 type FieldMetaMap = Record<string, { isDirty?: boolean; errors?: unknown[] } | undefined>;
 
-const dirtyCount = (fieldMeta: FieldMetaMap): number => {
-  return Object.values(fieldMeta).filter((meta) => meta?.isDirty).length;
-};
+const dirtyCount = (fieldMeta: FieldMetaMap): number => Object.values(fieldMeta).filter((meta) => meta?.isDirty).length;
 
-const fieldErrorCount = (fieldMeta: FieldMetaMap): number => {
-  return collectFormFieldErrors(fieldMeta).length;
-};
+const fieldErrorCount = (fieldMeta: FieldMetaMap): number => collectFormFieldErrors(fieldMeta).length;
 
 interface SaveBarStoreState {
   isDirty?: boolean;

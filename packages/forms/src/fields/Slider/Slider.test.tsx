@@ -105,7 +105,7 @@ describe('Slider', () => {
       }
       expect(onChange).toHaveBeenCalled();
       expect(onValueChange).toHaveBeenCalled();
-      expect(onChange.mock.calls).toHaveLength(onValueChange.mock.calls.length);
+      expect(onChange).toHaveBeenCalledTimes(onValueChange.mock.calls.length);
       expect(onChange.mock.lastCall).toStrictEqual(onValueChange.mock.lastCall);
     });
   });

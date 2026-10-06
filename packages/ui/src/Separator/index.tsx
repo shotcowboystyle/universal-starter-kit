@@ -77,15 +77,13 @@ const SeparatorFrame = styled(View, {
 
 export interface SeparatorProps extends GetProps<typeof SeparatorFrame> {}
 
-export const Separator = ({ vertical, ...props }: SeparatorProps) => {
-  return (
-    <SeparatorFrame
-      role="separator"
-      vertical={vertical}
-      // role="separator" is horizontal by default; only vertical must say so.
-      // Web-only: RN has no aria-orientation (boundary discipline).
-      {...(isWeb && vertical ? { 'aria-orientation': 'vertical' as const } : undefined)}
-      {...props}
-    />
-  );
-};
+export const Separator = ({ vertical, ...props }: SeparatorProps) => (
+  <SeparatorFrame
+    role="separator"
+    vertical={vertical}
+    // role="separator" is horizontal by default; only vertical must say so.
+    // Web-only: RN has no aria-orientation (boundary discipline).
+    {...(isWeb && vertical ? { 'aria-orientation': 'vertical' as const } : undefined)}
+    {...props}
+  />
+);

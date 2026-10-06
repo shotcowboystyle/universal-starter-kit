@@ -146,9 +146,9 @@ const pageTitleSizeMap: Record<PageTitleScale, FontSizeTokens> = {
  * marketing hero) resolves through the same table as the knob — never a
  * second hardcoded step.
  */
-export const resolvePageTitleScale = (scale: PageTitleScale): { size: FontSizeTokens } => {
-  return { size: pageTitleSizeMap[scale] };
-};
+export const resolvePageTitleScale = (scale: PageTitleScale): { size: FontSizeTokens } => ({
+  size: pageTitleSizeMap[scale],
+});
 
 // ── Container radius cap (Axiom 1 CLIP) ──────────────────────
 // A padded container's effective radius must not exceed its own padding:
@@ -190,9 +190,8 @@ export const capContainerRadius = (borderRadius: Knobs['borderRadius'], space: K
  * can resolve its DG-RAD class at that stop. Undefined for any value the
  * knob did not produce.
  */
-export const radiusStopFromToken = (token: unknown): Knobs['borderRadius'] | undefined => {
-  return (Object.keys(borderRadiusMap) as Knobs['borderRadius'][]).find((stop) => borderRadiusMap[stop] === token);
-};
+export const radiusStopFromToken = (token: unknown): Knobs['borderRadius'] | undefined =>
+  (Object.keys(borderRadiusMap) as Knobs['borderRadius'][]).find((stop) => borderRadiusMap[stop] === token);
 
 /**
  * Containers the constraint audit measures against the cap.

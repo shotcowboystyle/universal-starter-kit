@@ -568,11 +568,10 @@ describe('Input', () => {
    * assertions read `_btlr-*` atoms (same as Button).
    */
   describe('design-law — DEFAULT radius, ring offset 0, label 400', () => {
-    const radiusClasses = (el: HTMLElement | null): string[] => {
-      return String(el?.className || '')
+    const radiusClasses = (el: HTMLElement | null): string[] =>
+      String(el?.className || '')
         .split(' ')
         .filter((c) => c.startsWith('_btlr-'));
-    };
 
     it('declares radius DEFAULT class on the control box', () => {
       const result = renderWithProviders(

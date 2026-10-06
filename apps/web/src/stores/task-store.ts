@@ -1,5 +1,4 @@
-import type { CreateTaskInput, Task, TaskStatus } from '@repo/store';
-import type { UpdateTaskInput } from '@repo/store';
+import type { CreateTaskInput, Task, TaskStatus, UpdateTaskInput } from '@repo/store';
 import type { StateCreator } from 'zustand';
 
 import { taskApi } from '@/lib/api/task-api';

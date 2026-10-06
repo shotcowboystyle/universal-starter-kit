@@ -249,21 +249,19 @@ export const modeIcon = (value: 'system' | 'light' | 'dark', color: string): Rea
 };
 
 /** Compact text glyph used by house-decision knobs in the panel. */
-const glyph = (label: string, color: string, size = 9): ReactNode => {
-  return (
-    <span
-      style={{
-        fontSize: size,
-        fontWeight: 600,
-        color,
-        fontFamily: 'system-ui, sans-serif',
-        lineHeight: 1,
-        letterSpacing: '-0.02em',
-      }}>
-      {label}
-    </span>
-  );
-};
+const glyph = (label: string, color: string, size = 9): ReactNode => (
+  <span
+    style={{
+      fontSize: size,
+      fontWeight: 600,
+      color,
+      fontFamily: 'system-ui, sans-serif',
+      lineHeight: 1,
+      letterSpacing: '-0.02em',
+    }}>
+    {label}
+  </span>
+);
 
 export const fieldLabelPlacementIcon = (value: string, color: string): ReactNode => {
   if (value === 'side') {
@@ -328,9 +326,8 @@ export const selectAllScopeIcon = (value: string, color: string): ReactNode => {
   );
 };
 
-export const timestampStyleIcon = (value: string, color: string): ReactNode => {
-  return glyph(value === 'relative' ? '~t' : '12:00', color, value === 'relative' ? 10 : 7);
-};
+export const timestampStyleIcon = (value: string, color: string): ReactNode =>
+  glyph(value === 'relative' ? '~t' : '12:00', color, value === 'relative' ? 10 : 7);
 
 export const disabledStyleIcon = (value: string, color: string): ReactNode => {
   if (value === 'dimWhole') {
@@ -345,17 +342,15 @@ export const disabledStyleIcon = (value: string, color: string): ReactNode => {
   );
 };
 
-export const formAutofocusIcon = (value: string, color: string): ReactNode => {
-  return (
-    <div
-      style={{
-        width: 14,
-        height: 14,
-        border: `1.5px solid ${color}`,
-        borderRadius: 2,
-        boxShadow: value === 'on' ? `0 0 0 2px ${color}` : undefined,
-        opacity: value === 'on' ? 1 : 0.45,
-      }}
-    />
-  );
-};
+export const formAutofocusIcon = (value: string, color: string): ReactNode => (
+  <div
+    style={{
+      width: 14,
+      height: 14,
+      border: `1.5px solid ${color}`,
+      borderRadius: 2,
+      boxShadow: value === 'on' ? `0 0 0 2px ${color}` : undefined,
+      opacity: value === 'on' ? 1 : 0.45,
+    }}
+  />
+);

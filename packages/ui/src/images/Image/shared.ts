@@ -5,9 +5,8 @@ import { useAssets } from '../../hooks/useAssets';
 
 import type { ImageThumbnailSize } from './types';
 
-export const isThumbnailSize = (size: unknown): size is ImageThumbnailSize => {
-  return size === 'extraSmall' || size === 'small' || size === 'medium' || size === 'large';
-};
+export const isThumbnailSize = (size: unknown): size is ImageThumbnailSize =>
+  size === 'extraSmall' || size === 'small' || size === 'medium' || size === 'large';
 
 export const thumbnailPx = (size: ImageThumbnailSize | number, nestedPx: number, compact: boolean): number => {
   if (typeof size === 'number') {
