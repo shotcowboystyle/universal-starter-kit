@@ -39,7 +39,7 @@ const writePristineFixture = (root: string, { withPackage = true } = {}) => {
   fs.writeFileSync(path.join(pkgDir, 'lib', 'module', 'index.js'), 'export const x = 1;\n');
 };
 
-describe('unexportedDepAliases', () => {
+describe(unexportedDepAliases, () => {
   // realpath: macOS /var is a symlink to /private/var, and require.resolve
   // reports the resolved path.
   const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'unexported-dep-aliases-')));

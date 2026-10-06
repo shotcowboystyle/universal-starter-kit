@@ -1,24 +1,20 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import path from 'node:path';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { DRAWING_PRAGMA, isDrawingFile, readDrawingRegistry } from '../drawing-registry.mjs';
 
-const fixtures: string[] = [];
-
-afterEach(() => {
-  for (const dir of fixtures.splice(0)) {
-    rmSync(dir, { recursive: true, force: true });
-  }
-});
-
 const specWith = (members: { drawing?: string; chrome?: string }) => {
-  const root = mkdtempSync(join(tmpdir(), 'mpo-drawing-'));
-  fixtures.push(root);
-  const drawingMembers = members.drawing ? `Members: **${members.drawing}**` : 'Members: *(none)*';
-  const chromeMembers = members.chrome ? `Members: **${members.chrome}**` : 'Members: *(none)*';
+  const root = mkdtempSync(path.join(tmpdir(), 'mpo-drawing-'));
+  onTestFinished(() => {
+    rmSync(root, { recursive: true, force: true });
+  });
+  const drawingMembers =
+    members.drawing !== undefined && members.drawing !== '' ? `Members: **${members.drawing}**` : 'Members: *(none)*';
+  const chromeMembers =
+    members.chrome !== undefined && members.chrome !== '' ? `Members: **${members.chrome}**` : 'Members: *(none)*';
   const markdown = `# Theme
 
 ## Drawing files
@@ -28,12 +24,12 @@ const specWith = (members: { drawing?: string; chrome?: string }) => {
 | DRAWING      | Glyphs. ${drawingMembers} |
 | CHROME-ALLOW | Exceptions. ${chromeMembers} |
 `;
-  const specPath = join(root, 'spec.md');
+  const specPath = path.join(root, 'spec.md');
   writeFileSync(specPath, markdown);
   return specPath;
 };
 
-describe('readDrawingRegistry', () => {
+describe(readDrawingRegistry, () => {
   it('parses DRAWING and CHROME-ALLOW members from the spec table', () => {
     const specPath = specWith({
       drawing: 'listing/glyphs/CanvasGlyph.tsx',
@@ -46,7 +42,7 @@ describe('readDrawingRegistry', () => {
   });
 
   it('yields empty lists when the spec file is missing', () => {
-    const registry = readDrawingRegistry(join(tmpdir(), 'no-such-spec.md'));
+    const registry = readDrawingRegistry(path.join(tmpdir(), 'no-such-spec.md'));
     expect(registry.present).toBe(false);
     expect(registry.files).toStrictEqual([]);
     expect(registry.chromeAllow).toStrictEqual([]);

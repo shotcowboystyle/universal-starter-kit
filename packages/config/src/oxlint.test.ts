@@ -1,7 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -15,12 +11,63 @@ import {
   plugin,
 } from '../oxlint.mjs';
 
-const pkg = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'package.json'), 'utf-8')) as {
-  exports: Record<string, string | { import?: string; default?: string; types?: string }>;
-  files: string[];
+type FixtureValue = string | number | boolean | FixtureNode | FixtureNode[] | null | undefined;
+
+/** A fixture ESTree node: only the members the rules read. */
+interface FixtureNode {
+  type: string;
+  [member: string]: FixtureValue;
+}
+
+interface Report {
+  messageId?: string;
+  data?: Record<string, string>;
+}
+
+interface RuleOptionsStub {
+  slotMargins?: string[];
+  drawings?: string[];
+  chromeAllow?: string[];
+}
+
+interface RuleContextStub {
+  filename: string;
+  options?: RuleOptionsStub[];
+  sourceCode?: { text: string };
+  report: (report: Report) => void;
+}
+
+type Visitors = Record<string, ((node: FixtureNode) => void) | undefined>;
+
+/** Builds the visitors a registered rule returns for one fixture context. */
+const createVisitors = (ruleName: string, context: RuleContextStub): Visitors => {
+  const rule = plugin.rules?.[ruleName];
+  if (rule === undefined) {
+    throw new Error(`rule ${ruleName} is not registered`);
+  }
+  return rule.create(context);
 };
 
-describe('matchColorLiteral', () => {
+/** Visitors for a rule that is expected to define the named visitor, called with `node`. */
+const visit = (visitors: Visitors, key: string, node: FixtureNode): void => {
+  visitors[key]?.(node);
+};
+
+const reportedNames = (source: string, names: string[]): string[] => {
+  const reports: Report[] = [];
+  const visitors = createVisitors('no-raw-typography', {
+    filename: 'apps/one/app/index.tsx',
+    report: (report) => reports.push(report),
+  });
+  visit(visitors, 'ImportDeclaration', {
+    type: 'ImportDeclaration',
+    source: { type: 'Literal', value: source },
+    specifiers: names.map((name) => ({ type: 'ImportSpecifier', imported: { type: 'Identifier', name } })),
+  });
+  return reports.map((report) => report.data?.name ?? '');
+};
+
+describe(matchColorLiteral, () => {
   it('matches hex and functional CSS colours, not a Pokedex number in isolation of AST', () => {
     expect(matchColorLiteral('#34c759')).toBe('#34c759');
     expect(matchColorLiteral('#fff')).toBe('#fff');
@@ -31,7 +78,7 @@ describe('matchColorLiteral', () => {
   });
 });
 
-describe('isPaletteModule', () => {
+describe(isPaletteModule, () => {
   it('exempts themes/base, themes/accent, and *palette* files', () => {
     expect(isPaletteModule('packages/themes/base.ts')).toBe(true);
     expect(isPaletteModule('packages/themes/accent.ts')).toBe(true);
@@ -62,36 +109,6 @@ describe('export surface', () => {
  * code" is a checked claim rather than a registration.
  */
 describe('mpo-conventions/no-raw-typography', () => {
-  const rule = plugin.rules?.['no-raw-typography'];
-
-  interface Report {
-    data?: { name?: string };
-  }
-  interface ImportVisitor {
-    ImportDeclaration: (node: unknown) => void;
-  }
-  interface Creatable {
-    create: (context: unknown) => ImportVisitor;
-  }
-
-  /** Minimal ESTree ImportDeclaration — the only node shape the rule visits. */
-  const importDeclaration = (source: string, names: string[]) => ({
-    type: 'ImportDeclaration',
-    source: { value: source },
-    specifiers: names.map((name) => ({ type: 'ImportSpecifier', imported: { name } })),
-  });
-
-  const reportedNames = (source: string, names: string[]): string[] => {
-    const reports: Report[] = [];
-    const context = {
-      filename: 'apps/one/app/index.tsx',
-      report: (report: Report) => reports.push(report),
-    };
-    const visitors = (rule as unknown as Creatable).create(context);
-    visitors.ImportDeclaration(importDeclaration(source, names));
-    return reports.map((report) => report.data?.name ?? '');
-  };
-
   const hatches = [
     'TamaguiText',
     'TamaguiSizableText',
@@ -125,29 +142,17 @@ describe('mpo-conventions/no-raw-typography', () => {
   });
 });
 
-interface Report {
-  messageId?: string;
-  data?: Record<string, string>;
-}
-interface HouseVisitors {
-  ImportDeclaration: (node: unknown) => void;
-  JSXOpeningElement: (node: unknown) => void;
-}
-interface Creatable {
-  create: (context: unknown) => HouseVisitors;
-}
-
-const houseImport = (source: string, names: string[]) => ({
+const houseImport = (source: string, names: string[]): FixtureNode => ({
   type: 'ImportDeclaration',
-  source: { value: source },
+  source: { type: 'Literal', value: source },
   specifiers: names.map((name) => ({
     type: 'ImportSpecifier',
-    imported: { name },
-    local: { name },
+    imported: { type: 'Identifier', name },
+    local: { type: 'Identifier', name },
   })),
 });
 
-const jsxOpen = (name: string, attrs: { prop: string; value: unknown }[]) => ({
+const jsxOpen = (name: string, attrs: { prop: string; value: FixtureValue }[]): FixtureNode => ({
   type: 'JSXOpeningElement',
   name: { type: 'JSXIdentifier', name },
   attributes: attrs.map((attr) => ({
@@ -157,41 +162,86 @@ const jsxOpen = (name: string, attrs: { prop: string; value: unknown }[]) => ({
   })),
 });
 
-const token = (value: string) => ({ type: 'Literal', value });
+const token = (value: string): FixtureNode => ({ type: 'Literal', value });
 
-const numeric = (value: number) => ({ type: 'JSXExpressionContainer', expression: { type: 'Literal', value } });
+const numeric = (value: number): FixtureNode => ({
+  type: 'JSXExpressionContainer',
+  expression: { type: 'Literal', value },
+});
 
-function escaped(value: number) {
-  return {
-    type: 'JSXExpressionContainer',
-    expression: {
-      type: 'CallExpression',
-      callee: { type: 'Identifier', name: 'sizeRecipeEscape' },
-      arguments: [{ type: 'Literal', value }],
-    },
-  };
-}
+const escaped = (value: number): FixtureNode => ({
+  type: 'JSXExpressionContainer',
+  expression: {
+    type: 'CallExpression',
+    callee: { type: 'Identifier', name: 'sizeRecipeEscape' },
+    arguments: [{ type: 'Literal', value }],
+  },
+});
+
+const reportsFor = (filename: string, text: string) => {
+  const reports: Report[] = [];
+  const visitors = createVisitors('no-hex-literals', {
+    filename,
+    sourceCode: { text },
+    report: (report) => reports.push(report),
+  });
+  visit(visitors, 'Literal', { type: 'Literal', value: '#ffffff' });
+  return reports.map((r) => r.data?.value);
+};
+
+const element = (
+  name: string,
+  attrs: { prop: string; value: FixtureValue }[],
+  children: FixtureNode[] = [],
+): FixtureNode => ({
+  type: 'JSXElement',
+  openingElement: jsxOpen(name, attrs),
+  children,
+});
+
+const fragment = (children: FixtureNode[]): FixtureNode => ({ type: 'JSXFragment', children });
+
+const walk = (visitors: Visitors, node: FixtureNode) => {
+  visit(visitors, node.type, node);
+  if (node.type === 'JSXElement' && !Array.isArray(node.openingElement) && node.openingElement !== undefined) {
+    walk(visitors, node.openingElement as FixtureNode);
+  }
+  if (node.type === 'JSXElement' || node.type === 'JSXFragment') {
+    for (const child of node.children as FixtureNode[]) {
+      walk(visitors, child);
+    }
+  }
+  visit(visitors, `${node.type}:exit`, node);
+};
+
+const lint = (tree: FixtureNode, options?: { slotMargins?: string[] }) => {
+  const reports: Report[] = [];
+  walk(
+    createVisitors('no-child-margin', {
+      filename: 'features/demo/screen.tsx',
+      options: [options ?? { slotMargins: [] }],
+      report: (report) => reports.push(report),
+    }),
+    tree,
+  );
+  return reports.map((r) => `${r.data?.name}.${r.data?.prop}`);
+};
 
 const driveHouseRule = (
   ruleName: 'no-chrome-props' | 'no-raw-geometry',
   filename: string,
-  nodes: unknown[],
-  options?: { drawings?: string[]; chromeAllow?: string[] },
+  nodes: FixtureNode[],
+  options?: RuleOptionsStub,
 ): Report[] => {
   const reports: Report[] = [];
-  const rule = plugin.rules?.[ruleName] as unknown as Creatable;
-  const visitors = rule.create({
+  const visitors = createVisitors(ruleName, {
     filename,
     options: options ? [options] : [],
-    report: (report: Report) => reports.push(report),
+    report: (report) => reports.push(report),
   });
   for (const node of nodes) {
-    const typed = node as { type?: string };
-    if (typed.type === 'ImportDeclaration') {
-      visitors.ImportDeclaration(node);
-    }
-    if (typed.type === 'JSXOpeningElement') {
-      visitors.JSXOpeningElement(node);
+    if (node.type === 'ImportDeclaration' || node.type === 'JSXOpeningElement') {
+      visit(visitors, node.type, node);
     }
   }
   return reports;
@@ -296,10 +346,9 @@ describe('mpo-conventions/no-raw-geometry', () => {
 
 describe('no-hex-literals comments and palette', () => {
   it('does not visit comments, so a JSDoc #025 never reaches the matcher', () => {
-    const rule = plugin.rules?.['no-hex-literals'] as { create: (c: unknown) => object };
-    const visitors = rule.create({
+    const visitors = createVisitors('no-hex-literals', {
       filename: 'features/pokemon/logic.ts',
-      report() {},
+      report: () => {},
     });
     expect(visitors).not.toHaveProperty('Comment');
     expect(visitors).not.toHaveProperty('Block');
@@ -308,46 +357,26 @@ describe('no-hex-literals comments and palette', () => {
 
   it('stays silent in packages/themes/base.ts even for rgba', () => {
     const reports: Report[] = [];
-    const rule = plugin.rules?.['no-hex-literals'] as {
-      create: (c: unknown) => { Literal?: (n: unknown) => void };
-    };
-    const visitors = rule.create({
+    const visitors = createVisitors('no-hex-literals', {
       filename: 'packages/themes/base.ts',
-      report: (report: Report) => reports.push(report),
+      report: (report) => reports.push(report),
     });
-    visitors.Literal?.({ type: 'Literal', value: 'rgba(0,0,0,0.35)' });
+    visit(visitors, 'Literal', { type: 'Literal', value: 'rgba(0,0,0,0.35)' });
     expect(reports).toStrictEqual([]);
   });
 
   it('errors on an rgba() literal in features/**', () => {
     const reports: Report[] = [];
-    const rule = plugin.rules?.['no-hex-literals'] as {
-      create: (c: unknown) => { Literal: (n: unknown) => void };
-    };
-    const visitors = rule.create({
+    const visitors = createVisitors('no-hex-literals', {
       filename: 'features/console/src/DeskShell.tsx',
-      report: (report: Report) => reports.push(report),
+      report: (report) => reports.push(report),
     });
-    visitors.Literal({ type: 'Literal', value: 'rgba(0,0,0,0.35)' });
+    visit(visitors, 'Literal', { type: 'Literal', value: 'rgba(0,0,0,0.35)' });
     expect(reports.map((r) => r.data?.value ?? r.messageId)).toStrictEqual(['rgba(0,0,0,0.35)']);
   });
 });
 
 describe('no-hex-literals hex-escape comment', () => {
-  const reportsFor = (filename: string, text: string) => {
-    const reports: Report[] = [];
-    const rule = plugin.rules?.['no-hex-literals'] as {
-      create: (c: unknown) => { Literal?: (n: unknown) => void };
-    };
-    const visitors = rule.create({
-      filename,
-      sourceCode: { text },
-      report: (report: Report) => reports.push(report),
-    });
-    visitors.Literal?.({ type: 'Literal', value: '#ffffff' });
-    return reports.map((r) => r.data?.value);
-  };
-
   it('errors on a hex in apps/ when the file carries no hex-escape comment', () => {
     expect(reportsFor('apps/one/gnome/main.tsx', 'export const bg = "#ffffff";\n')).toStrictEqual(['#ffffff']);
   });
@@ -392,52 +421,6 @@ describe('no-hex-literals hex-escape comment', () => {
  * node, visit its children, then fire `<type>:exit`.
  */
 describe('mpo-conventions/no-child-margin', () => {
-  interface Node {
-    type: string;
-    [key: string]: unknown;
-  }
-  type Visitors = Record<string, ((node: Node) => void) | undefined>;
-
-  const element = (name: string, attrs: { prop: string; value: unknown }[], children: Node[] = []) => ({
-    type: 'JSXElement',
-    openingElement: jsxOpen(name, attrs),
-    children,
-  });
-
-  const fragment = (children: Node[]) => ({ type: 'JSXFragment', children });
-
-  const walk = (visitors: Visitors, node: Node) => {
-    visitors[node.type]?.(node);
-    if (node.type === 'JSXElement') {
-      walk(visitors, node.openingElement as Node);
-      for (const child of node.children as Node[]) {
-        walk(visitors, child);
-      }
-    }
-    if (node.type === 'JSXFragment') {
-      for (const child of node.children as Node[]) {
-        walk(visitors, child);
-      }
-    }
-    visitors[`${node.type}:exit`]?.(node);
-  };
-
-  const lint = (tree: Node, options?: { slotMargins?: string[] }) => {
-    const reports: Report[] = [];
-    const rule = plugin.rules?.['no-child-margin'] as unknown as {
-      create: (context: unknown) => Visitors;
-    };
-    walk(
-      rule.create({
-        filename: 'features/demo/screen.tsx',
-        options: [options ?? { slotMargins: [] }],
-        report: (report: Report) => reports.push(report),
-      }),
-      tree,
-    );
-    return reports.map((r) => `${r.data?.name}.${r.data?.prop}`);
-  };
-
   it('covers every long margin prop and every Tamagui shorthand for one', () => {
     expect(MARGIN_PROPS).toStrictEqual(
       expect.arrayContaining(['margin', 'marginTop', 'marginHorizontal', 'm', 'mt', 'mx', 'my']),

@@ -15,45 +15,12 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
-import { createServer } from 'vite';
-import type { ViteDevServer } from 'vite';
-import { afterAll, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { createVitestConfig } from './vitest.js';
 
-const fixtureDir = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '../tests/fixtures/extensionless-resolve',
-);
-
-const servers: ViteDevServer[] = [];
-
-afterAll(async () => {
-  await Promise.all(servers.map(async (server) => await server.close()));
-});
-
-/**
- * Resolve a specifier through a real vite pipeline built from the produced
- * config, so the assertion exercises vite's own extension probing rather than
- * re-implementing it.
- */
-const resolveThroughVite = async (specifier: string, importer: string) => {
-  const config = createVitestConfig({ tamaguiConfig: false, dedupeReact: false });
-  const server = await createServer({
-    configFile: false,
-    logLevel: 'silent',
-    root: fixtureDir,
-    server: { middlewareMode: true },
-    resolve: config.resolve,
-  });
-  servers.push(server);
-  const environment = server.environments?.client ?? server.environments?.ssr;
-  const container = environment ? environment.pluginContainer : (server as any).pluginContainer;
-  const resolved = await container.resolveId(specifier, importer);
-  return resolved?.id ?? null;
-};
+const aliasMap = () => createVitestConfig({ tamaguiConfig: false }).resolve?.alias as Record<string, string>;
 
 describe('resolve.extensions', () => {
   it('does not list any .test.* extension', () => {
@@ -69,12 +36,9 @@ describe('resolve.extensions', () => {
 });
 
 describe('dedupeReact aliases', () => {
-  const configDir = path.dirname(fileURLToPath(import.meta.url));
-  const componentsDir = path.resolve(configDir, '../../components');
+  const componentsDir = path.resolve(import.meta.dirname, '../../components');
   const componentsReact = path.join(componentsDir, 'node_modules/react');
   const componentsReactDom = path.join(componentsDir, 'node_modules/react-dom');
-
-  const aliasMap = () => createVitestConfig({ tamaguiConfig: false }).resolve?.alias as Record<string, string>;
 
   it('binds react-dom/client and jsx-runtime to the same physical copies as the packages', () => {
     const aliases = aliasMap();

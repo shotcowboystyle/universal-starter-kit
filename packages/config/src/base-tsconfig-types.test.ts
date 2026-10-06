@@ -22,12 +22,12 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-const baseTsconfig = path.resolve(__dirname, '../tsconfig/base.json');
+const baseTsconfig = path.resolve(import.meta.dirname, '../tsconfig/base.json');
 
 /** JSONC: whole-line `//` comments only, plus trailing commas. */
 const readJsonc = (file: string): any => {
   const src = fs.readFileSync(file, 'utf-8');
-  return JSON.parse(src.replaceAll(/^[ \t]*\/\/.*$/gmu, '').replaceAll(/,(\s*[}\]])/gu, '$1'));
+  return JSON.parse(src.replaceAll(/^[ \t]*\/\/.*$/gmu, '').replaceAll(/,(?<tail>\s*[}\]])/gu, '$<tail>'));
 };
 
 describe('base tsconfig types', () => {

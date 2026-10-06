@@ -1,5 +1,5 @@
 import { resolveConfig } from 'vite';
-import type { Plugin } from 'vite';
+import type { Plugin, PluginOption } from 'vite';
 /**
  * phosphorTokenColorPlugin: the one place web phosphor glyphs get a
  * Tamagui token resolved to a paint. The render proof lives in
@@ -20,15 +20,15 @@ type Handler = (id: string, importer?: string) => string | null;
 
 const hook = (plugin: { resolveId?: unknown; load?: unknown }, name: 'resolveId' | 'load') => {
   const value = plugin[name] as { handler: Handler } | Handler;
-  return typeof value === 'function' ? value : value.handler;
+  return 'handler' in value ? value.handler : value;
 };
 
-const hasPlugin = (plugins: unknown): boolean =>
-  (plugins as unknown[])
+const hasPlugin = (plugins: PluginOption[] | undefined): boolean =>
+  ((plugins ?? []) as unknown[])
     .flat(Infinity)
     .some((p) => (p as { name?: string } | null)?.name === 'mpo-phosphor-token-color');
 
-describe('phosphorTokenColorPlugin', () => {
+describe(phosphorTokenColorPlugin, () => {
   const plugin = phosphorTokenColorPlugin();
   const resolveId = hook(plugin, 'resolveId');
   const load = hook(plugin, 'load') as (id: string) => string | null;
@@ -43,7 +43,7 @@ describe('phosphorTokenColorPlugin', () => {
 
   it('keeps the virtual id out of extension-filtered loaders (vite-plugin-rnw flow)', () => {
     const fromIcon = resolveId('../lib/IconBase.es.js', `${dist}/csr/Heart.es.js`) ?? '';
-    expect(fromIcon).not.toMatch(/\.(flow|jsx?)$/u);
+    expect(fromIcon).not.toMatch(/\.(?:flow|jsx?)$/u);
   });
 
   it('leaves other importers, the ssr base and its own wrapper alone', () => {

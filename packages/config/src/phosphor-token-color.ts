@@ -4,8 +4,7 @@ import type { Plugin } from 'vite';
 
 const virtualPrefix = '\0mpo-phosphor-token-icon-base:';
 const iconBaseFilter = /IconBase\.es\.js$/u;
-const phosphorLibFile = /\/@phosphor-icons\/react\/dist\/lib\/IconBase\.es\.js$/u;
-const virtualIdFilter = new RegExp(`^${virtualPrefix}`);
+const virtualIdFilter = new RegExp(`^${virtualPrefix}`, 'u');
 
 /**
  * Where a caller's `color` becomes a paint. Tamagui tokens ("$color9",
@@ -50,7 +49,7 @@ export default TokenColorIconBase;
 const toPosix = (file: string): string => file.replaceAll('\\', '/');
 
 const resolvePhosphorIconBase = (id: string, importer: string | undefined): string | null => {
-  if (!importer || importer.startsWith('\0')) {
+  if (importer === undefined || importer === '' || importer.startsWith('\0')) {
     return null;
   }
   const importerPath = toPosix(importer);

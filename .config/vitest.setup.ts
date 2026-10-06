@@ -8,6 +8,7 @@ import dotenv from 'dotenv';
 
 // Determine the correct path to the .env.test file relative to the project root
 // This handles cases where tests are run from root or specific package directories
+// oxlint-disable-next-line sonarjs/no-os-command-from-path -- developer tooling: `git` is looked up on PATH on purpose and the command carries no user input
 const root = execSync('git rev-parse --show-toplevel').toString().trim();
 const envPath = path.resolve(root, '.env.test');
 
@@ -19,7 +20,7 @@ if (fs.existsSync(envPath)) {
 
   if (result.error) {
     console.error('Error loading .env.test file:', result.error);
-  } else if (!process.env.CI) {
+  } else if (process.env.CI === undefined || process.env.CI === '') {
     console.log('.env.test file loaded successfully.');
   }
 }

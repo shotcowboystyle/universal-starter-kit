@@ -25,5 +25,6 @@ declare module '@tamagui/core' {
 
 // Re-export from tamagui/web which is an internal entry point without type declarations
 declare module 'tamagui/web' {
+  // oxlint-disable-next-line sonarjs/no-wildcard-import -- re-exports the whole module under a second specifier; a named list would have to track @tamagui/web's surface
   export * from '@tamagui/web';
 }

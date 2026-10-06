@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import { createRequire } from 'node:module';
 import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
@@ -8,20 +7,33 @@ import { singletonDepAliases } from './singleton-dep-aliases';
 import { createStorybookViteConfig } from './storybook';
 import { createViteConfig } from './vite';
 
-const workspaceRoot = path.resolve(__dirname, '../../..');
+const workspaceRoot = path.resolve(import.meta.dirname, '../../..');
 
-describe('singletonDepAliases', () => {
-  it('pins react-cookie to one existing package directory', () => {
-    // react-cookie runs React.createContext(null) at module scope. Two
-    // realpaths for it means two contexts: @repo/storybook's
-    // framework decorator renders <CookiesProvider> from one and
-    // @repo/theme's useTheme reads useCookies from the other,
-    // which throws "Missing <CookiesProvider>" with the provider sitting two
-    // lines above it in the same tree.
+const pinnedPackages = [
+  {
+    pkg: 'react-cookie',
+    reason: `react-cookie runs React.createContext(null) at module scope. Two realpaths for it means two contexts: @repo/storybook's framework decorator renders <CookiesProvider> from one and @repo/theme's useTheme reads useCookies from the other, which throws "Missing <CookiesProvider>" with the provider sitting two lines above it in the same tree.`,
+  },
+  {
+    pkg: '@tanstack/db',
+    reason: `The frappe data client's collections are TanStack DB, and TanStack reaches React through use-sync-external-store. Two realpaths means the second record subscribes against a store nothing armed, and every data-bound page dies on load with "Cannot read properties of null (reading 'useSyncExternalStore')".`,
+  },
+  {
+    pkg: '@tanstack/react-db',
+    reason: `Measured in the installed tree: @tanstack/db has zero references to useSyncExternalStore and @tanstack/react-db has three, useLiveQuery.js among them. public/frappe depends on both and imports react-db from src/useLiveQuery.ts, so pinning the base package alone leaves the reported crash in place. The pair travels together or neither works.`,
+  },
+  {
+    pkg: '@tanstack/react-store',
+    reason: `The same split as react-db, measured the same way: @tanstack/store has zero references to useSyncExternalStore and @tanstack/react-store has three, all of them useSelector, which is what useStore calls. public/store and public/forms both reach React through it, so a second record subscribes a store nothing armed.`,
+  },
+];
+
+describe(singletonDepAliases, () => {
+  it.each(pinnedPackages)('pins $pkg to one existing package directory', ({ pkg, reason }) => {
     const aliases = singletonDepAliases(workspaceRoot);
-    expect(aliases['react-cookie']).toBeTruthy();
-    expect(path.isAbsolute(aliases['react-cookie'])).toBe(true);
-    expect(fs.existsSync(path.join(aliases['react-cookie'], 'package.json'))).toBe(true);
+    expect(aliases[pkg], `${pkg}: ${reason}`).toBeTruthy();
+    expect(path.isAbsolute(aliases[pkg])).toBe(true);
+    expect(fs.existsSync(path.join(aliases[pkg], 'package.json'))).toBe(true);
   });
 
   it('pins react and react-dom to the root copy, past nested @tamagui/*/node_modules/react', () => {
@@ -54,42 +66,6 @@ describe('singletonDepAliases', () => {
     // target the exports map picks for the browser. Pinning core and web is
     // enough: both tamagui records import @tamagui/core by bare specifier.
     expect(singletonDepAliases(workspaceRoot).tamagui).toBeUndefined();
-  });
-
-  it('pins the tanstack db record to one package directory', () => {
-    // The frappe data client's collections are TanStack DB, and TanStack
-    // reaches React through use-sync-external-store. Two realpaths means the
-    // second record subscribes against a store nothing armed, and every
-    // data-bound page dies on load with "Cannot read properties of null
-    // (reading 'useSyncExternalStore')".
-    const aliases = singletonDepAliases(workspaceRoot);
-    expect(aliases['@tanstack/db']).toBeTruthy();
-    expect(path.isAbsolute(aliases['@tanstack/db'])).toBe(true);
-    expect(fs.existsSync(path.join(aliases['@tanstack/db'], 'package.json'))).toBe(true);
-  });
-
-  it('pins the react-facing half too, which is the one that calls the hook', () => {
-    // Measured in the installed tree: @tanstack/db has zero references to
-    // useSyncExternalStore and @tanstack/react-db has three, useLiveQuery.js
-    // among them. public/frappe depends on both and imports react-db from
-    // src/useLiveQuery.ts, so pinning the base package alone leaves the
-    // reported crash in place. The pair travels together or neither works.
-    const aliases = singletonDepAliases(workspaceRoot);
-    expect(aliases['@tanstack/react-db']).toBeTruthy();
-    expect(path.isAbsolute(aliases['@tanstack/react-db'])).toBe(true);
-    expect(fs.existsSync(path.join(aliases['@tanstack/react-db'], 'package.json'))).toBe(true);
-  });
-
-  it('pins the react half of the store pair, which is the one that calls the hook', () => {
-    // The same split as react-db, measured the same way: @tanstack/store has
-    // zero references to useSyncExternalStore and @tanstack/react-store has
-    // three, all of them useSelector, which is what useStore calls.
-    // public/store and public/forms both reach React through it, so a second
-    // record subscribes a store nothing armed.
-    const aliases = singletonDepAliases(workspaceRoot);
-    expect(aliases['@tanstack/react-store']).toBeTruthy();
-    expect(path.isAbsolute(aliases['@tanstack/react-store'])).toBe(true);
-    expect(fs.existsSync(path.join(aliases['@tanstack/react-store'], 'package.json'))).toBe(true);
   });
 
   it('omits packages that are not installed', () => {
@@ -156,7 +132,7 @@ describe('createViteConfig context singletons', () => {
     // Vite tries object alias entries in insertion order and matches a key or
     // its `key + "/"` prefix, so a subpath entry must precede its package.
     const lengths = Object.keys(alias).map((key) => key.length);
-    expect(lengths).toStrictEqual([...lengths].sort((a, b) => b - a));
+    expect(lengths).toStrictEqual(lengths.toSorted((a, b) => b - a));
   });
 
   it('does not pin tamagui itself on the consumer path either', () => {
@@ -164,30 +140,33 @@ describe('createViteConfig context singletons', () => {
   });
 });
 
-const withoutComments = (source: string): string =>
-  source.replaceAll(/\/\*[\s\S]*?\*\//gu, '').replaceAll(/(^|[^:\\])\/\/.*$/gmu, '$1');
+/** The line up to its first `//`, unless that `//` belongs to a URL scheme or an escape. */
+const withoutLineComment = (line: string): string => {
+  const at = line.search(/(?<![:\\])\/\//u);
+  return at === -1 ? line : line.slice(0, at);
+};
 
-const referencesHook = (dir: string): boolean => {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+const withoutComments = (source: string): string =>
+  source
+    .replaceAll(/\/\*[\s\S]*?\*\//gu, '')
+    .split('\n')
+    .map((line) => withoutLineComment(line))
+    .join('\n');
+
+const referencesHook = (dir: string): boolean =>
+  fs.readdirSync(dir, { withFileTypes: true }).some((entry) => {
     if (entry.name === 'node_modules') {
-      continue;
+      return false;
     }
     const full = path.join(dir, entry.name);
     if (fs.statSync(full).isDirectory()) {
-      if (referencesHook(full)) {
-        return true;
-      }
-      continue;
+      return referencesHook(full);
     }
-    if (!/\.(?:js|cjs|mjs|ts|tsx)$/u.test(entry.name)) {
-      continue;
-    }
-    if (withoutComments(fs.readFileSync(full, 'utf-8')).includes('useSyncExternalStore')) {
-      return true;
-    }
-  }
-  return false;
-};
+    return (
+      /\.(?:js|cjs|mjs|ts|tsx)$/u.test(entry.name) &&
+      withoutComments(fs.readFileSync(full, 'utf-8')).includes('useSyncExternalStore')
+    );
+  });
 
 /**
  * Whether an installed package references `useSyncExternalStore` in the code
@@ -235,27 +214,9 @@ describe('CONTEXT_SINGLETONS membership, measured rather than recited', () => {
   it('locks react-query to one snapshot, so the isolated layout has one copy too', () => {
     const lockfile = fs.readFileSync(path.join(workspaceRoot, 'pnpm-lock.yaml'), 'utf-8');
     const snapshots = lockfile.split(/^snapshots:$/mu)[1] ?? '';
-    const keys = [...snapshots.matchAll(/^ {2}'(@tanstack\/react-query@[^']+)':$/gmu)].map((match) => match[1]);
+    const keys = [...snapshots.matchAll(/^ {2}'(?<key>@tanstack\/react-query@[^']+)':$/gmu)].map(
+      (match) => match.groups?.key,
+    );
     expect(keys).toHaveLength(1);
   });
 });
-
-const workspacePackageDirs = (): string[] => {
-  const dirs = [path.join(workspaceRoot, 'features')];
-  for (const group of ['apps', 'packages', 'public']) {
-    const groupDir = path.join(workspaceRoot, group);
-    for (const entry of fs.readdirSync(groupDir, { withFileTypes: true })) {
-      if (entry.isDirectory()) {
-        dirs.push(path.join(groupDir, entry.name));
-      }
-    }
-  }
-  return dirs.filter((dir) => fs.existsSync(path.join(dir, 'package.json')));
-};
-
-const declares = (dir: string, pkgName: string): boolean => {
-  const manifest = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf-8'));
-  return ['dependencies', 'devDependencies', 'peerDependencies'].some(
-    (field) => manifest[field]?.[pkgName] !== undefined,
-  );
-};

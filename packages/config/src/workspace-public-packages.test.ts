@@ -6,16 +6,18 @@ import { afterAll, describe, expect, it } from 'vitest';
 
 import {
   discoverPublicPackageRoots,
+  exportEntries,
+  exportSubpaths,
   packageSubpathSourceAliases,
+  readPackageManifest,
   resolveExportSource,
   resolvePackageMainSource,
   publicPackageViteSourceAliases,
 } from './workspace-public-packages';
 
-const workspaceRoot = path.resolve(__dirname, '../../..');
-const pub = (p: string) => path.join(workspaceRoot, 'public', p);
+const workspaceRoot = path.resolve(import.meta.dirname, '../../..');
 
-describe('discoverPublicPackageRoots', () => {
+describe(discoverPublicPackageRoots, () => {
   it('returns a Map of package names to their directories', () => {
     const roots = discoverPublicPackageRoots(workspaceRoot);
     expect(roots).toBeInstanceOf(Map);
@@ -41,7 +43,7 @@ describe('discoverPublicPackageRoots', () => {
   });
 });
 
-describe('resolvePackageMainSource', () => {
+describe(resolvePackageMainSource, () => {
   it('resolves the main source file for a known package', () => {
     const roots = discoverPublicPackageRoots(workspaceRoot);
     const platformDir = roots.get('@repo/platform');
@@ -49,7 +51,7 @@ describe('resolvePackageMainSource', () => {
 
     const main = resolvePackageMainSource(platformDir!);
     expect(main).toBeDefined();
-    expect(main).toMatch(/index\.(ts|tsx)$/u);
+    expect(main).toMatch(/index\.(?:ts|tsx)$/u);
   });
 
   it('returns undefined for a directory with no index file', () => {
@@ -58,19 +60,20 @@ describe('resolvePackageMainSource', () => {
   });
 });
 
-describe('publicPackageViteSourceAliases', () => {
+describe(publicPackageViteSourceAliases, () => {
   it('returns an object mapping package names to source files', () => {
     const aliases = publicPackageViteSourceAliases(workspaceRoot);
-    expect(typeof aliases).toBe('object');
+    expect(aliases).toBeTypeOf('object');
     expect(Object.keys(aliases).length).toBeGreaterThan(0);
   });
 
   it('each bare package alias points to a .ts or .tsx file', () => {
     const aliases = publicPackageViteSourceAliases(workspaceRoot);
-    for (const name of discoverPublicPackageRoots(workspaceRoot).keys()) {
-      if (aliases[name]) {
-        expect(aliases[name]).toMatch(/\.(ts|tsx)$/u);
-      }
+    const bareNames = [...discoverPublicPackageRoots(workspaceRoot).keys()].filter(
+      (name) => aliases[name] !== undefined,
+    );
+    for (const name of bareNames) {
+      expect(aliases[name]).toMatch(/\.(?:ts|tsx)$/u);
     }
   });
 
@@ -85,7 +88,7 @@ describe('publicPackageViteSourceAliases', () => {
     const keys = Object.keys(publicPackageViteSourceAliases(workspaceRoot));
     const roots = discoverPublicPackageRoots(workspaceRoot);
     const firstBare = keys.findIndex((k) => roots.has(k));
-    const lastSubpath = keys.reduce((last, k, i) => (roots.has(k) ? last : i), -1);
+    const lastSubpath = keys.findLastIndex((k) => !roots.has(k));
     expect(firstBare).toBeGreaterThan(lastSubpath);
   });
 
@@ -95,27 +98,25 @@ describe('publicPackageViteSourceAliases', () => {
       const hit = aliases.find(([find]) => spec === find || spec.startsWith(`${find}/`));
       return hit ? spec.replace(hit[0], hit[1]) : undefined;
     };
-    for (const [name, dir] of discoverPublicPackageRoots(workspaceRoot)) {
-      const pkg = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf-8'));
-      if (!pkg.exports || typeof pkg.exports !== 'object') {
-        continue;
-      }
-      for (const [key, target] of Object.entries(pkg.exports)) {
-        if (key === '.' || key === './package.json' || key.includes('*')) {
-          continue;
-        }
-        const typesOnly = typeof target === 'object' && target !== null && Object.keys(target).join(',') === 'types';
-        if (typesOnly) {
-          continue;
-        }
-        const spec = `${name}/${key.slice(2)}`;
-        const resolved = viteResolve(spec);
-        if (resolved === undefined) {
-          continue;
-        }
-        const isFile = fs.existsSync(resolved) && fs.statSync(resolved).isFile();
-        expect({ spec, isFile }).toStrictEqual({ spec, isFile: true });
-      }
+    const exportedSubpaths = [...discoverPublicPackageRoots(workspaceRoot)].flatMap(([name, dir]) =>
+      exportEntries(readPackageManifest(path.join(dir, 'package.json'))?.exports)
+        .filter(
+          ([key, target]) =>
+            key !== '.' &&
+            key !== './package.json' &&
+            !key.includes('*') &&
+            exportSubpaths(target).join(',') !== 'types',
+        )
+        .map(([key]) => `${name}/${key.slice(2)}`),
+    );
+    const resolvedSubpaths = exportedSubpaths.flatMap((spec) => {
+      const resolved = viteResolve(spec);
+      return resolved === undefined
+        ? []
+        : [{ spec, isFile: fs.existsSync(resolved) && fs.statSync(resolved).isFile() }];
+    });
+    for (const { spec, isFile } of resolvedSubpaths) {
+      expect({ spec, isFile }).toStrictEqual({ spec, isFile: true });
     }
   });
 
@@ -125,7 +126,7 @@ describe('publicPackageViteSourceAliases', () => {
   });
 });
 
-describe('packageSubpathSourceAliases', () => {
+describe(packageSubpathSourceAliases, () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mpo-subpath-'));
   const touch = (p: string) => {
     fs.mkdirSync(path.dirname(path.join(dir, p)), { recursive: true });
@@ -193,7 +194,7 @@ describe('packageSubpathSourceAliases', () => {
 
   it('returns nothing for a string or absent exports field', () => {
     expect(packageSubpathSourceAliases('@x/pkg', dir, './src/index.ts')).toStrictEqual({});
-    expect(packageSubpathSourceAliases('@x/pkg', dir, undefined)).toStrictEqual({});
+    expect(packageSubpathSourceAliases('@x/pkg', dir)).toStrictEqual({});
   });
 
   it('resolveExportSource prefers TypeScript over an existing dist file', () => {

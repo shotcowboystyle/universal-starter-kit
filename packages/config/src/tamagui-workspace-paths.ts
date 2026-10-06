@@ -1,7 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 /**
  * The repo `tsconfig.base.json` extends
@@ -32,10 +31,12 @@ export interface EnsureTamaguiWorkspacePathsOptions {
   log?: ((message: string) => void) | null;
 }
 
+const workspacePathsStatuses = ['present', 'generated', 'no-generator', 'failed'] as const;
+
 export interface EnsureTamaguiWorkspacePathsResult {
   generatedPath: string;
   generatorPath: string;
-  status: 'present' | 'generated' | 'no-generator' | 'failed';
+  status: (typeof workspacePathsStatuses)[number];
 }
 
 export const tamaguiWorkspacePathsFile = 'tsconfig/tamagui-workspace-paths.generated.json';
@@ -45,12 +46,11 @@ const thisPackageDir = (): string =>
   // `src/` (vitest source condition) and `lib/` (tsdown output) both sit one
   // level below the package root, same trick vitest.ts uses for
   // pinReactRequire.cjs.
-  path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+  path.resolve(import.meta.dirname, '..');
 
 export const ensureTamaguiWorkspacePaths = (
   options: EnsureTamaguiWorkspacePathsOptions = {},
 ): EnsureTamaguiWorkspacePathsResult => {
-  // oxlint-disable-next-line no-console -- the default sink for the one-line regenerate notice
   const { configPackageDir = thisPackageDir(), log = console.warn } = options;
   const generatedPath = path.resolve(configPackageDir, tamaguiWorkspacePathsFile);
   const generatorPath = path.resolve(configPackageDir, generatorFile);

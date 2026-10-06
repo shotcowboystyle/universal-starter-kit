@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { createStorybookViteConfig } from './storybook';
 
-describe('createStorybookViteConfig', () => {
+describe(createStorybookViteConfig, () => {
   const config = createStorybookViteConfig();
   const include = config.optimizeDeps?.include ?? [];
 

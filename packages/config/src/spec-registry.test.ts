@@ -1,31 +1,22 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { readSizeRecipeEscapeRegistry, readSlotMarginRegistry, readSpecTable } from '../spec-registry.mjs';
 
-const fixtures: string[] = [];
-
-afterEach(() => {
-  for (const dir of fixtures.splice(0)) {
-    rmSync(dir, { recursive: true, force: true });
-  }
-});
-
 const specFile = (markdown: string) => {
-  const root = mkdtempSync(join(tmpdir(), 'mpo-spec-registry-'));
-  fixtures.push(root);
-  const specPath = join(root, 'spec.md');
+  const root = mkdtempSync(path.join(tmpdir(), 'mpo-spec-registry-'));
+  onTestFinished(() => {
+    rmSync(root, { recursive: true, force: true });
+  });
+  const specPath = path.join(root, 'spec.md');
   writeFileSync(specPath, markdown);
   return specPath;
 };
 
-const repoSpec = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'docs', 'theme-propagation-spec.md');
-
-describe('readSpecTable', () => {
+describe(readSpecTable, () => {
   it('returns body rows under the heading and stops at the next section', () => {
     const rows = readSpecTable(
       '## A\n\n| X | Y |\n| - | - |\n| a | b |\n\n## B\n\n| X | Y |\n| - | - |\n| c | d |\n',
@@ -39,7 +30,7 @@ describe('readSpecTable', () => {
   });
 });
 
-describe('readSlotMarginRegistry', () => {
+describe(readSlotMarginRegistry, () => {
   it('parses the SLOT-MARGIN members', () => {
     const registry = readSlotMarginRegistry(
       specFile(
@@ -50,7 +41,7 @@ describe('readSlotMarginRegistry', () => {
   });
 
   it('is absent, not an error, when the spec or the section is missing', () => {
-    expect(readSlotMarginRegistry(join(tmpdir(), 'no-such-spec.md')).present).toBe(false);
+    expect(readSlotMarginRegistry(path.join(tmpdir(), 'no-such-spec.md')).present).toBe(false);
     expect(readSlotMarginRegistry(specFile('# Spec\n')).present).toBe(false);
   });
 
@@ -61,7 +52,7 @@ describe('readSlotMarginRegistry', () => {
   });
 });
 
-describe('readSizeRecipeEscapeRegistry', () => {
+describe(readSizeRecipeEscapeRegistry, () => {
   it('reads one { file, reason } per row, unwrapping code spans', () => {
     const registry = readSizeRecipeEscapeRegistry(
       specFile(

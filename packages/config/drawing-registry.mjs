@@ -16,7 +16,7 @@
  *   node drawingRegistry.mjs [--json]
  */
 import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 export const DRAWING_HEADING = '## Drawing files';
@@ -24,25 +24,35 @@ export const DRAWING_CLASS = 'DRAWING';
 export const CHROME_ALLOW_CLASS = 'CHROME-ALLOW';
 
 /** `// mpo-drawing` or `/* mpo-drawing` at the start of a line. */
+// oxlint-disable-next-line sonarjs/super-linear-regex -- exported; `\s` spanning newlines is part of what it matches today, and it only ever tests one source file's text
 export const DRAWING_PRAGMA = /^\s*(?:\/\/|\/\*)\s*mpo-drawing\b/mu;
 
 /**
- * @param {string} [cwd]
+ * @param {string} [cwd] directory the spec path is resolved against
+ * @returns {string} the conventional spec location under `cwd`
  */
-export const defaultSpecPath = (cwd = process.cwd()) => join(cwd, 'docs/theme-propagation-spec.md');
+export const defaultSpecPath = (cwd = process.cwd()) => path.join(cwd, 'docs/theme-propagation-spec.md');
 
-/** `Members: **Avatar**, **Radio disc**.` → ["Avatar", "Radio disc"]. */
+/**
+ * `Members: **Avatar**, **Radio disc**.` → ["Avatar", "Radio disc"].
+ * @param {string} text a table cell
+ * @returns {string[]} the bolded member names
+ */
 const parseMembers = (text) => {
-  const match = text.match(/Members:\s*(.*)$/iu);
-  if (!match) {
+  const rest = /Members:(?<rest>.*)$/iu.exec(text)?.groups?.rest;
+  if (rest === undefined) {
     return [];
   }
-  return [...match[1].matchAll(/\*\*([^*]+)\*\*/gu)].map((m) => m[1].trim()).filter(Boolean);
+  return [...rest.matchAll(/\*\*(?<name>[^*]+)\*\*/gu)].flatMap((m) => {
+    const name = (m.groups?.name ?? '').trim();
+    return name === '' ? [] : [name];
+  });
 };
 
 /**
- * @param {string} markdown
- * @param {string} specPath
+ * @param {string} markdown the whole spec document
+ * @param {string} specPath path of the spec, for error messages
+ * @returns {{ id: string, text: string }[] | null} the class rows, or null when the section is absent
  */
 const parseDrawingTable = (markdown, specPath) => {
   const lines = markdown.split('\n');
@@ -50,37 +60,21 @@ const parseDrawingTable = (markdown, specPath) => {
   if (heading === -1) {
     return null;
   }
-
-  /** @type {{ id: string, text: string }[]} */
-  const rows = [];
-  let seenTable = false;
-  for (let i = heading + 1; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (line.startsWith('##')) {
-      break;
-    }
-    if (!line.startsWith('|')) {
-      if (seenTable) {
-        break;
-      }
-      continue;
-    }
-    seenTable = true;
+  const afterHeading = lines.slice(heading + 1).map((line) => line.trim());
+  const sectionEnd = afterHeading.findIndex((line) => line.startsWith('##'));
+  const section = sectionEnd === -1 ? afterHeading : afterHeading.slice(0, sectionEnd);
+  const tableStart = section.findIndex((line) => line.startsWith('|'));
+  const fromTable = tableStart === -1 ? [] : section.slice(tableStart);
+  const tableEnd = fromTable.findIndex((line) => !line.startsWith('|'));
+  const table = tableEnd === -1 ? fromTable : fromTable.slice(0, tableEnd);
+  const rows = table.flatMap((line) => {
     const cells = line
       .split('|')
       .slice(1, -1)
-      .map((c) => c.trim());
-    if (cells.length < 2) {
-      continue;
-    }
-    if (/^:?-{2,}/u.test(cells[0])) {
-      continue;
-    }
-    if (cells[0].toLowerCase() === 'class') {
-      continue;
-    }
-    rows.push({ id: cells[0], text: cells[1] });
-  }
+      .map((cell) => cell.trim());
+    const isClassRow = cells.length >= 2 && !/^:?-{2,}/u.test(cells[0]) && cells[0].toLowerCase() !== 'class';
+    return isClassRow ? [{ id: cells[0], text: cells[1] }] : [];
+  });
   if (rows.length === 0) {
     throw new Error(`${specPath}: "${DRAWING_HEADING}" has no class rows`);
   }
@@ -88,13 +82,13 @@ const parseDrawingTable = (markdown, specPath) => {
 };
 
 /**
- * @param {string} [specPath]
+ * @param {string} [specPath] path of the spec markdown; defaults to the one under the working directory
  * @returns {{
  *   specPath: string,
  *   present: boolean,
  *   files: string[],
  *   chromeAllow: string[],
- * }}
+ * }} the DRAWING and CHROME-ALLOW members, or `present: false` without the section
  */
 export const readDrawingRegistry = (specPath = defaultSpecPath()) => {
   if (!existsSync(specPath)) {
@@ -105,35 +99,33 @@ export const readDrawingRegistry = (specPath = defaultSpecPath()) => {
     return { specPath, present: false, files: [], chromeAllow: [] };
   }
 
-  /** @type {Record<string, { text: string, members: string[] }>} */
-  const classes = {};
+  /** @type {Map<string, string[]>} */
+  const membersByClass = new Map();
   for (const row of rows) {
-    classes[row.id] = { text: row.text, members: parseMembers(row.text) };
+    membersByClass.set(row.id, parseMembers(row.text));
   }
-  if (!classes[DRAWING_CLASS]) {
+  const files = membersByClass.get(DRAWING_CLASS);
+  if (files === undefined) {
     throw new Error(`${specPath}: "${DRAWING_HEADING}" has no ${DRAWING_CLASS} row`);
   }
-  if (!classes[CHROME_ALLOW_CLASS]) {
+  const chromeAllow = membersByClass.get(CHROME_ALLOW_CLASS);
+  if (chromeAllow === undefined) {
     throw new Error(`${specPath}: "${DRAWING_HEADING}" has no ${CHROME_ALLOW_CLASS} row`);
   }
 
-  return {
-    specPath,
-    present: true,
-    files: classes[DRAWING_CLASS].members,
-    chromeAllow: classes[CHROME_ALLOW_CLASS].members,
-  };
+  return { specPath, present: true, files, chromeAllow };
 };
 
 /**
  * True when `filename` is one of the registered drawing files.
  * Members are path suffixes (`listing/glyphs/CanvasGlyph.tsx`) or basenames.
  *
- * @param {string | undefined} filename
- * @param {string[]} files
+ * @param {string | undefined} filename path being linted
+ * @param {string[]} files registered drawing members
+ * @returns {boolean} true when the filename matches a member
  */
 export const isDrawingFile = (filename, files) => {
-  if (!filename || !files.length) {
+  if (filename == null || filename === '' || files.length === 0) {
     return false;
   }
   const normalized = filename.replaceAll('\\', '/');
@@ -143,7 +135,7 @@ export const isDrawingFile = (filename, files) => {
   });
 };
 
-const invokedDirectly = typeof process.argv[1] === 'string' && import.meta.url === pathToFileURL(process.argv[1]).href;
+const invokedDirectly = process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (invokedDirectly) {
   const registry = readDrawingRegistry();

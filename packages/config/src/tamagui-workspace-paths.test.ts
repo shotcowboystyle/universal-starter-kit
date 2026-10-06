@@ -14,27 +14,19 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { describe, expect, it, onTestFinished } from 'vitest';
 
 import { ensureTamaguiWorkspacePaths, tamaguiWorkspacePathsFile } from './tamagui-workspace-paths';
-
-const realGenerator = path.resolve(__dirname, '../../../scripts/generate-tamagui-workspace-paths.mjs');
-
-const roots: string[] = [];
-
-afterEach(() => {
-  for (const root of roots.splice(0)) {
-    fs.rmSync(root, { recursive: true, force: true });
-  }
-});
 
 /**
  * A minimal repo: `scripts/` holding the generator, `public/config/tsconfig/`,
  * and one public package with a declared TypeScript source entry.
  */
-const fakeRepo = (generatorSource: string | null): { root: string; configDir: string } => {
+const fakeRepo = (generatorSource: string | null) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mpo-97-'));
-  roots.push(root);
+  onTestFinished(() => {
+    fs.rmSync(root, { recursive: true, force: true });
+  });
   const configDir = path.join(root, 'public/config');
   fs.mkdirSync(path.join(configDir, 'tsconfig'), { recursive: true });
   fs.mkdirSync(path.join(root, 'public/widget/src'), { recursive: true });
@@ -50,7 +42,7 @@ const fakeRepo = (generatorSource: string | null): { root: string; configDir: st
   return { root, configDir };
 };
 
-describe('ensureTamaguiWorkspacePaths', () => {
+describe(ensureTamaguiWorkspacePaths, () => {
   it('does nothing outside the monorepo, where no generator exists', () => {
     const { configDir } = fakeRepo(null);
     const notices: string[] = [];

@@ -34,69 +34,74 @@ export const SLOT_MARGIN_CLASS = 'SLOT-MARGIN';
 export const SIZE_RECIPE_ESCAPE_HEADING = '## Size-recipe escapes';
 export const HEX_ESCAPE_HEADING = '## Colour-literal escapes';
 
-/** `` `a — b` `` → `a — b`. */
-const unwrapCode = (cell) => {
-  const match = cell.match(/^`(.*)`$/u);
-  return match ? match[1] : cell;
-};
+/**
+ * `` `a — b` `` → `a — b`.
+ * @param {string} cell a table cell
+ * @returns {string} the cell without its surrounding backticks
+ */
+const unwrapCode = (cell) => /^`(?<inner>.*)`$/u.exec(cell)?.groups?.inner ?? cell;
+
+/**
+ * @param {string} line a trimmed `| a | b |` table line
+ * @returns {string[]} the trimmed cells
+ */
+const tableCells = (line) =>
+  line
+    .split('|')
+    .slice(1, -1)
+    .map((cell) => cell.trim());
 
 /**
  * Body rows of the first markdown table under `heading`, header and separator
  * dropped. `null` when the heading is absent.
- * @param {string} markdown
+ * @param {string} markdown the whole document
  * @param {string} heading e.g. "## Slot margins"
- * @returns {string[][] | null}
+ * @returns {string[][] | null} the body rows' cells, or null when the heading is absent
  */
 export const readSpecTable = (markdown, heading) => {
-  const lines = markdown.split('\n');
-  const start = lines.findIndex((line) => line.trim() === heading);
+  const lines = markdown.split('\n').map((line) => line.trim());
+  const start = lines.indexOf(heading);
   if (start === -1) {
     return null;
   }
-  /** @type {string[][]} */
-  const rows = [];
-  let seenTable = false;
-  let seenHeader = false;
-  for (let i = start + 1; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (/^#{1,2}\s/u.test(line)) {
-      break;
-    }
-    if (!line.startsWith('|')) {
-      if (seenTable) {
-        break;
-      }
-      continue;
-    }
-    seenTable = true;
-    const cells = line
-      .split('|')
-      .slice(1, -1)
-      .map((cell) => cell.trim());
-    if (/^:?-+:?$/u.test(cells[0] ?? '')) {
-      continue;
-    }
-    if (!seenHeader) {
-      seenHeader = true;
-      continue;
-    }
-    rows.push(cells);
-  }
-  return rows;
-};
-
-/** `Members: **Card.Footer**, **Card.Header**.` → ["Card.Footer", "Card.Header"]. */
-const parseMembers = (text) => {
-  const match = text.match(/Members:\s*(.*)$/iu);
-  if (!match) {
+  const afterHeading = lines.slice(start + 1);
+  const sectionEnd = afterHeading.findIndex((line) => /^#{1,2}\s/u.test(line));
+  const section = sectionEnd === -1 ? afterHeading : afterHeading.slice(0, sectionEnd);
+  const tableStart = section.findIndex((line) => line.startsWith('|'));
+  if (tableStart === -1) {
     return [];
   }
-  return [...match[1].matchAll(/\*\*([^*]+)\*\*/gu)].map((m) => m[1].trim()).filter(Boolean);
+  const fromTable = section.slice(tableStart);
+  const tableEnd = fromTable.findIndex((line) => !line.startsWith('|'));
+  const table = tableEnd === -1 ? fromTable : fromTable.slice(0, tableEnd);
+  return table
+    .flatMap((line) => {
+      const cells = tableCells(line);
+      return /^:?-+:?$/u.test(cells[0] ?? '') ? [] : [cells];
+    })
+    .slice(1);
 };
 
 /**
- * @param {string} specPath
- * @param {string} heading
+ * `Members: **Card.Footer**, **Card.Header**.` → ["Card.Footer", "Card.Header"].
+ * @param {string} text a table cell
+ * @returns {string[]} the bolded member names
+ */
+const parseMembers = (text) => {
+  const rest = /Members:(?<rest>.*)$/iu.exec(text)?.groups?.rest;
+  if (rest === undefined) {
+    return [];
+  }
+  return [...rest.matchAll(/\*\*(?<name>[^*]+)\*\*/gu)].flatMap((m) => {
+    const name = (m.groups?.name ?? '').trim();
+    return name === '' ? [] : [name];
+  });
+};
+
+/**
+ * @param {string} specPath path of the spec markdown
+ * @param {string} heading the section heading to read
+ * @returns {string[][] | null} the table's body rows, or null when the spec or section is missing
  */
 const readTable = (specPath, heading) => {
   if (!existsSync(specPath)) {
@@ -109,8 +114,8 @@ const readTable = (specPath, heading) => {
  * Element names that may carry a margin because the spec declares them an
  * internal slot (`Card.Footer` `marginTop: auto` is the precedent).
  *
- * @param {string} [specPath]
- * @returns {{ specPath: string, present: boolean, members: string[] }}
+ * @param {string} [specPath] path of the spec markdown; defaults to the one under the working directory
+ * @returns {{ specPath: string, present: boolean, members: string[] }} the declared slot members, or `present: false` without the section
  */
 export const readSlotMarginRegistry = (specPath = defaultSpecPath()) => {
   const rows = readTable(specPath, SLOT_MARGIN_HEADING);
@@ -128,9 +133,9 @@ export const readSlotMarginRegistry = (specPath = defaultSpecPath()) => {
  * `| File | Reason |` rows under `heading`: one `{ file, reason }` per row,
  * placeholder `_(none)_` rows dropped.
  *
- * @param {string} specPath
- * @param {string} heading
- * @returns {{ specPath: string, present: boolean, escapes: { file: string, reason: string }[] }}
+ * @param {string} specPath path of the spec markdown
+ * @param {string} heading the section heading to read
+ * @returns {{ specPath: string, present: boolean, escapes: { file: string, reason: string }[] }} the declared escapes, or `present: false` without the section
  */
 const readFileReasonRegistry = (specPath, heading) => {
   const rows = readTable(specPath, heading);
@@ -158,8 +163,8 @@ const readFileReasonRegistry = (specPath, heading) => {
  * a path from the tree root; `reason` is compared verbatim with the reason the
  * code writes, so rewording an escape is a spec edit too.
  *
- * @param {string} [specPath]
- * @returns {{ specPath: string, present: boolean, escapes: { file: string, reason: string }[] }}
+ * @param {string} [specPath] path of the spec markdown; defaults to the one under the working directory
+ * @returns {{ specPath: string, present: boolean, escapes: { file: string, reason: string }[] }} the declared escapes, or `present: false` without the section
  */
 export const readSizeRecipeEscapeRegistry = (specPath = defaultSpecPath()) =>
   readFileReasonRegistry(specPath, SIZE_RECIPE_ESCAPE_HEADING);
@@ -171,13 +176,13 @@ export const readSizeRecipeEscapeRegistry = (specPath = defaultSpecPath()) =>
  * content script on third-party pages, the browser badge API, native build
  * config).
  *
- * @param {string} [specPath]
- * @returns {{ specPath: string, present: boolean, escapes: { file: string, reason: string }[] }}
+ * @param {string} [specPath] path of the spec markdown; defaults to the one under the working directory
+ * @returns {{ specPath: string, present: boolean, escapes: { file: string, reason: string }[] }} the declared escapes, or `present: false` without the section
  */
 export const readHexEscapeRegistry = (specPath = defaultSpecPath()) =>
   readFileReasonRegistry(specPath, HEX_ESCAPE_HEADING);
 
-const invokedDirectly = typeof process.argv[1] === 'string' && import.meta.url === pathToFileURL(process.argv[1]).href;
+const invokedDirectly = process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (invokedDirectly) {
   const slots = readSlotMarginRegistry();

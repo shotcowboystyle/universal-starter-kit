@@ -7,7 +7,15 @@ import { phosphorTokenColorPlugin } from './phosphor-token-color.ts';
 import { withSingletonDepAliases } from './singleton-dep-aliases.ts';
 import { ensureTamaguiWorkspacePaths } from './tamagui-workspace-paths.ts';
 import { unexportedDepAliases } from './unexported-dep-aliases.ts';
-import { discoverPublicPackageRoots, resolvePackageMainSource } from './workspace-public-packages.ts';
+import {
+  discoverPublicPackageRoots,
+  exportSubpaths,
+  readPackageManifest,
+  resolvePackageMainSource,
+} from './workspace-public-packages.ts';
+import type { PackageManifest } from './workspace-public-packages.ts';
+
+const PACKAGE_JSON = 'package.json';
 
 export interface CreateStorybookViteConfigOptions {
   /**
@@ -39,16 +47,8 @@ const findWorkspaceRoot = (): string => {
     if (fs.existsSync(path.join(dir, 'pnpm-workspace.yaml'))) {
       return dir;
     }
-    const pkgJsonPath = path.join(dir, 'package.json');
-    if (fs.existsSync(pkgJsonPath)) {
-      try {
-        const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf-8'));
-        if (pkgJson.workspaces) {
-          return dir;
-        }
-      } catch {
-        // ignore parse errors
-      }
+    if (readPackageManifest(path.join(dir, PACKAGE_JSON))?.hasWorkspaces === true) {
+      return dir;
     }
     dir = path.dirname(dir);
   }
@@ -90,40 +90,43 @@ const resolveSubpathSource = (pkgDir: string, subpath: string): string | undefin
   return undefined;
 };
 
+/**
+ * The alias one `exports` key contributes: a subpath → its source, or a file subpath → its parent directory.
+ */
+const exportAlias = (pkgDir: string, pkgName: string, exportKey: string): [string, string] | null => {
+  if (exportKey === '.' || exportKey === './package.json') {
+    return null;
+  }
+  const subpath = exportKey.replace(/^\.\//u, '');
+  if (path.extname(subpath) === '') {
+    const resolved = resolveSubpathSource(pkgDir, subpath);
+    return resolved === undefined ? null : [`${pkgName}/${subpath}`, resolved];
+  }
+  const parentDir = path.dirname(subpath);
+  if (parentDir === '' || parentDir === '.') {
+    return null;
+  }
+  const fullParentDir = path.join(pkgDir, parentDir);
+  return fs.existsSync(fullParentDir) && fs.statSync(fullParentDir).isDirectory()
+    ? [`${pkgName}/${parentDir}`, fullParentDir]
+    : null;
+};
+
 const mergePackageResolveAliases = (
   pkgDir: string,
   pkgName: string,
-  pkgJson: { exports?: Record<string, unknown> },
+  pkgJson: PackageManifest,
   aliases: Record<string, string>,
 ) => {
   const mainEntry = resolvePackageMainSource(pkgDir);
-  if (mainEntry) {
+  if (mainEntry !== undefined) {
     aliases[pkgName] = mainEntry;
   }
-
-  if (pkgJson.exports && typeof pkgJson.exports === 'object') {
-    for (const exportKey of Object.keys(pkgJson.exports)) {
-      if (exportKey === '.' || exportKey === './package.json') {
-        continue;
-      }
-
-      const subpath = exportKey.replace(/^\.\//u, '');
-      const ext = path.extname(subpath);
-
-      if (ext) {
-        const parentDir = path.dirname(subpath);
-        if (parentDir && parentDir !== '.') {
-          const fullParentDir = path.join(pkgDir, parentDir);
-          if (fs.existsSync(fullParentDir) && fs.statSync(fullParentDir).isDirectory()) {
-            aliases[`${pkgName}/${parentDir}`] = fullParentDir;
-          }
-        }
-      } else {
-        const resolved = resolveSubpathSource(pkgDir, subpath);
-        if (resolved) {
-          aliases[`${pkgName}/${subpath}`] = resolved;
-        }
-      }
+  for (const exportKey of exportSubpaths(pkgJson.exports)) {
+    const entry = exportAlias(pkgDir, pkgName, exportKey);
+    if (entry !== null) {
+      const [alias, file] = entry;
+      aliases[alias] = file;
     }
   }
 };
@@ -132,7 +135,7 @@ const mergePackageResolveAliases = (
  * Scans packages/ for workspace packages (the @repo scope)
  * and returns resolve aliases.
  */
-const discoverPackageAliases = (packagesDir: string): Record<string, string> => {
+const discoverPackageAliases = (packagesDir: string) => {
   const aliases: Record<string, string> = {};
 
   if (!fs.existsSync(packagesDir)) {
@@ -142,50 +145,26 @@ const discoverPackageAliases = (packagesDir: string): Record<string, string> => 
   const entries = fs.readdirSync(packagesDir, { withFileTypes: true });
 
   for (const entry of entries) {
-    if (!entry.isDirectory()) {
-      continue;
+    if (entry.isDirectory()) {
+      const pkgDir = path.join(packagesDir, entry.name);
+      const pkgJson = readPackageManifest(path.join(pkgDir, PACKAGE_JSON));
+      if (pkgJson?.name?.startsWith('@repo/') === true) {
+        mergePackageResolveAliases(pkgDir, pkgJson.name, pkgJson, aliases);
+      }
     }
-
-    const pkgDir = path.join(packagesDir, entry.name);
-    const pkgJsonPath = path.join(pkgDir, 'package.json');
-
-    if (!fs.existsSync(pkgJsonPath)) {
-      continue;
-    }
-
-    let pkgJson: { name?: string; exports?: Record<string, unknown> };
-    try {
-      pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf-8'));
-    } catch {
-      continue;
-    }
-
-    const pkgName = pkgJson.name;
-    if (!pkgName) {
-      continue;
-    }
-    if (!pkgName.startsWith('@repo/')) {
-      continue;
-    }
-
-    mergePackageResolveAliases(pkgDir, pkgName, pkgJson, aliases);
   }
 
   return aliases;
 };
 
 /** All workspace packages under packages/ (any npm scope), including export subpaths. */
-const discoverPublicPackageViteAliases = (workspaceRoot: string): Record<string, string> => {
+const discoverPublicPackageViteAliases = (workspaceRoot: string) => {
   const aliases: Record<string, string> = {};
   for (const [pkgName, pkgDir] of discoverPublicPackageRoots(workspaceRoot)) {
-    const pkgJsonPath = path.join(pkgDir, 'package.json');
-    let pkgJson: { name?: string; exports?: Record<string, unknown> };
-    try {
-      pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf-8'));
-    } catch {
-      continue;
+    const pkgJson = readPackageManifest(path.join(pkgDir, PACKAGE_JSON));
+    if (pkgJson !== null) {
+      mergePackageResolveAliases(pkgDir, pkgName, pkgJson, aliases);
     }
-    mergePackageResolveAliases(pkgDir, pkgName, pkgJson, aliases);
   }
   return aliases;
 };
@@ -193,15 +172,17 @@ const discoverPublicPackageViteAliases = (workspaceRoot: string): Record<string,
 /** Virtual module plugin that stubs `node:async_hooks` for browser environments. */
 const nodeAsyncHooksStub = (): Plugin => ({
   name: 'storybook:node-async-hooks-stub',
-  resolveId(id) {
+  resolveId(id): string | undefined {
     if (id === 'node:async_hooks') {
       return '\0node:async_hooks';
     }
+    return undefined;
   },
-  load(id) {
+  load(id): string | undefined {
     if (id === '\0node:async_hooks') {
       return 'export class AsyncLocalStorage {}';
     }
+    return undefined;
   },
 });
 
@@ -225,7 +206,8 @@ const nodeAsyncHooksStub = (): Plugin => ({
 export const createStorybookViteConfig = (options: CreateStorybookViteConfigOptions = {}): UserConfig => {
   // See tamaguiWorkspacePaths.ts.
   ensureTamaguiWorkspacePaths();
-  const workspaceRoot = options.workspaceRoot || findWorkspaceRoot();
+  const workspaceRoot =
+    options.workspaceRoot === undefined || options.workspaceRoot === '' ? findWorkspaceRoot() : options.workspaceRoot;
   const packagesDir = path.join(workspaceRoot, 'packages');
 
   const sortedAliases = withSingletonDepAliases(
@@ -405,6 +387,6 @@ export const createStorybookViteConfig = (options: CreateStorybookViteConfigOpti
         '@react-navigation/native-stack',
       ],
     },
-    plugins: [nodeAsyncHooksStub(), phosphorTokenColorPlugin(), ...(options.plugins || [])],
+    plugins: [nodeAsyncHooksStub(), phosphorTokenColorPlugin(), ...(options.plugins ?? [])],
   };
 };

@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 
+const PACKAGE_JSON = 'package.json';
+
 /**
  * Packages that create a React context at module scope and must therefore
  * resolve to exactly ONE module record across the whole bundle.
@@ -115,7 +117,7 @@ const CONTEXT_SINGLETONS: readonly string[] = [
   '@tanstack/react-store',
 ];
 
-const resolvePackageDir = (pkgName: string, root: string, requireFrom: NodeRequire): string | undefined => {
+const resolvePackageDir = (pkgName: string, root: string, requireFrom: NodeJS.Require): string | undefined => {
   try {
     return path.dirname(requireFrom.resolve(`${pkgName}/package.json`));
   } catch {
@@ -126,7 +128,7 @@ const resolvePackageDir = (pkgName: string, root: string, requireFrom: NodeRequi
     try {
       let dir = path.dirname(requireFrom.resolve(pkgName));
       while (dir !== path.dirname(dir)) {
-        if (fs.existsSync(path.join(dir, 'package.json'))) {
+        if (fs.existsSync(path.join(dir, PACKAGE_JSON))) {
           return dir;
         }
         dir = path.dirname(dir);
@@ -135,7 +137,7 @@ const resolvePackageDir = (pkgName: string, root: string, requireFrom: NodeRequi
       // not installed
     }
     const hoisted = path.join(root, 'node_modules', ...pkgName.split('/'));
-    return fs.existsSync(path.join(hoisted, 'package.json')) ? hoisted : undefined;
+    return fs.existsSync(path.join(hoisted, PACKAGE_JSON)) ? hoisted : undefined;
   }
 };
 
@@ -149,13 +151,13 @@ const resolvePackageDir = (pkgName: string, root: string, requireFrom: NodeRequi
  *
  * @param root Directory whose `node_modules` the packages resolve from.
  */
-export const singletonDepAliases = (root: string = process.cwd()): Record<string, string> => {
+export const singletonDepAliases = (root: string = process.cwd()) => {
   const aliases: Record<string, string> = {};
-  const requireFrom = createRequire(path.join(root, 'package.json'));
+  const requireFrom = createRequire(path.join(root, PACKAGE_JSON));
 
   for (const pkgName of CONTEXT_SINGLETONS) {
     const pkgDir = resolvePackageDir(pkgName, root, requireFrom);
-    if (pkgDir) {
+    if (pkgDir !== undefined) {
       aliases[pkgName] = pkgDir;
     }
   }
@@ -186,10 +188,10 @@ export const withSingletonDepAliases = (
   base: Record<string, string>,
   root: string = process.cwd(),
   overrides: Record<string, string> = {},
-): Record<string, string> => {
+) => {
   const merged = { ...base, ...singletonDepAliases(root), ...overrides };
   const sorted: Record<string, string> = {};
-  for (const key of Object.keys(merged).sort((a, b) => b.length - a.length)) {
+  for (const key of Object.keys(merged).toSorted((a, b) => b.length - a.length)) {
     sorted[key] = merged[key];
   }
   return sorted;

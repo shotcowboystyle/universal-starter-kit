@@ -4,7 +4,9 @@ import path from 'node:path';
 import { resolveConfig } from '@repo/utils/dev';
 import dotenv from 'dotenv';
 import { transformWithOxc } from 'vite';
-import type { Environment, Plugin, ViteDevServer } from 'vite';
+import type { DevEnvironment, Environment, Plugin, ViteDevServer } from 'vite';
+
+import { isObject, isString } from './json-guards.ts';
 
 export const bakedConfigEnvKey = 'VITE_MP_CONFIG';
 export const publicConfigKeysEnvKey = 'VITE_MP_PUBLIC_CONFIG_KEYS';
@@ -17,11 +19,11 @@ export const publicConfigKeysEnvKey = 'VITE_MP_PUBLIC_CONFIG_KEYS';
  */
 export const readPublicConfigKeys = (file: string): string[] => {
   const parsed: unknown = JSON.parse(fs.readFileSync(file, 'utf-8'));
-  const keys = parsed && typeof parsed === 'object' ? (parsed as { public?: unknown }).public : [];
+  const keys = isObject(parsed) ? new Map<string, unknown>(Object.entries(parsed)).get('public') : [];
   if (!Array.isArray(keys)) {
     return [];
   }
-  return keys.filter((key): key is string => typeof key === 'string' && key.length > 0);
+  return keys.filter((key): key is string => isString(key) && key.length > 0);
 };
 
 export const mergePublicConfigKeys = (...lists: string[][]): string[] => [...new Set(lists.flat())];
@@ -108,8 +110,9 @@ export const publicConfigPlugin = (options: PublicConfigPluginOptions): Plugin =
     let next: string[];
     try {
       next = readKeys();
-    } catch (err) {
-      server.config.logger.warn(`${label}: ${(err as Error).message}; keeping the previous public keys`, {
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      server.config.logger.warn(`${label}: ${reason}; keeping the previous public keys`, {
         timestamp: true,
       });
       return;
@@ -120,14 +123,11 @@ export const publicConfigPlugin = (options: PublicConfigPluginOptions): Plugin =
     keys = next;
     bake(keys);
     for (const [name, ids] of bakedModules) {
-      const environment = server.environments[name];
-      if (!environment) {
-        continue;
-      }
+      const environment: DevEnvironment | undefined = server.environments[name];
       for (const id of ids) {
-        const mod = environment.moduleGraph.getModuleById(id);
+        const mod = environment?.moduleGraph.getModuleById(id);
         if (mod) {
-          environment.moduleGraph.invalidateModule(mod);
+          environment?.moduleGraph.invalidateModule(mod);
         }
       }
     }
@@ -142,12 +142,15 @@ export const publicConfigPlugin = (options: PublicConfigPluginOptions): Plugin =
   return {
     name: 'multiplatform-public-config',
     apply: 'serve',
-    async transform(code, id) {
+    async transform(
+      code,
+      id,
+    ): Promise<{ code: string; map: Awaited<ReturnType<typeof transformWithOxc>>['map'] } | undefined> {
       if (nonScriptRequest.test(id) || !bakedExpression.test(code)) {
-        return;
+        return undefined;
       }
       if (browserCached(this.environment, id)) {
-        return;
+        return undefined;
       }
       let result: Awaited<ReturnType<typeof transformWithOxc>>;
       try {
@@ -158,7 +161,7 @@ export const publicConfigPlugin = (options: PublicConfigPluginOptions): Plugin =
           tsconfig: false,
         });
       } catch {
-        return;
+        return undefined;
       }
       const name = this.environment?.name ?? 'client';
       let ids = bakedModules.get(name);

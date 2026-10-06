@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 
+const PACKAGE_JSON = 'package.json';
+
 /**
  * Package subtrees that consumers deep-import but the publisher never declared
  * in its `exports` map.
@@ -9,9 +11,9 @@ import path from 'node:path';
  * `one`'s `fork/SSRNavigationContainer` (every dist flavour plus its source)
  * imports three `@react-navigation/core` internals:
  *
- *   @react-navigation/core/lib/module/NavigationBuilderContext
- *   @react-navigation/core/lib/module/NavigationStateContext
- *   @react-navigation/core/lib/module/EnsureSingleNavigator
+ *   - `@react-navigation/core/lib/module/NavigationBuilderContext`
+ *   - `@react-navigation/core/lib/module/NavigationStateContext`
+ *   - `@react-navigation/core/lib/module/EnsureSingleNavigator`
  *
  * The published package exports only "." and "./package.json", so those are
  * undeclared subpaths of a bare specifier — Node rejects them with
@@ -33,13 +35,13 @@ const splitPackageSubpath = (specifier: string): [pkgName: string, subpath: stri
   return [segments.slice(0, nameLength).join('/'), segments.slice(nameLength).join('/')];
 };
 
-const resolvePackageDir = (pkgName: string, root: string, requireFrom: NodeRequire): string | undefined => {
+const resolvePackageDir = (pkgName: string, root: string, requireFrom: NodeJS.Require): string | undefined => {
   try {
     return path.dirname(requireFrom.resolve(`${pkgName}/package.json`));
   } catch {
     // Packages that don't export "./package.json" can't be resolved that way.
     const hoisted = path.join(root, 'node_modules', ...pkgName.split('/'));
-    return fs.existsSync(path.join(hoisted, 'package.json')) ? hoisted : undefined;
+    return fs.existsSync(path.join(hoisted, PACKAGE_JSON)) ? hoisted : undefined;
   }
 };
 
@@ -57,19 +59,18 @@ const resolvePackageDir = (pkgName: string, root: string, requireFrom: NodeRequi
  *
  * @param root Directory whose `node_modules` the packages resolve from.
  */
-export const unexportedDepAliases = (root: string = process.cwd()): Record<string, string> => {
+export const unexportedDepAliases = (root: string = process.cwd()) => {
   const aliases: Record<string, string> = {};
-  const requireFrom = createRequire(path.join(root, 'package.json'));
+  const requireFrom = createRequire(path.join(root, PACKAGE_JSON));
 
   for (const specifier of UNEXPORTED_SUBTREES) {
     const [pkgName, subpath] = splitPackageSubpath(specifier);
     const pkgDir = resolvePackageDir(pkgName, root, requireFrom);
-    if (!pkgDir) {
-      continue;
-    }
-    const target = path.join(pkgDir, subpath);
-    if (fs.existsSync(target)) {
-      aliases[specifier] = target;
+    if (pkgDir !== undefined) {
+      const target = path.join(pkgDir, subpath);
+      if (fs.existsSync(target)) {
+        aliases[specifier] = target;
+      }
     }
   }
 

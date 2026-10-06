@@ -8,10 +8,10 @@ export default defineConfig({
     environment: 'node',
     include: ['apps/api/__tests__/**/*.test.{ts,tsx}', 'apps/web/__tests__/**/*.test.{ts,tsx}'],
     exclude: ['**/node_modules/**', 'apps/web/e2e/**', 'apps/api/database/**', 'packages'],
-    setupFiles: [path.resolve(__dirname, './vitest.setup.ts')],
+    setupFiles: [path.resolve(import.meta.dirname, './vitest.setup.ts')],
     alias: {
-      '@api': path.resolve(__dirname, '../apps/api/src'),
-      '@web': path.resolve(__dirname, '../apps/web/src'),
+      '@api': path.resolve(import.meta.dirname, '../apps/api/src'),
+      '@web': path.resolve(import.meta.dirname, '../apps/web/src'),
     },
     coverage: {
       provider: 'v8',
@@ -31,8 +31,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@api': path.resolve(__dirname, '../apps/api/src'),
-      '@web': path.resolve(__dirname, '../apps/web/src'),
+      '@api': path.resolve(import.meta.dirname, '../apps/api/src'),
+      '@web': path.resolve(import.meta.dirname, '../apps/web/src'),
     },
   },
 });
