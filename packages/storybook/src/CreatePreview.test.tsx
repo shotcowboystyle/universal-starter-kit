@@ -124,6 +124,13 @@ describe('createPreview tamaguiConfig global', () => {
   });
 });
 
+describe('createPreview actions', () => {
+  it('does not inject implicit on* actions, which throw when fired during render', () => {
+    const preview = createPreview({ themeConfig: full, i18n, AppProvider });
+    expect(preview.parameters?.actions).toBeUndefined();
+  });
+});
+
 describe('createPreview with one config', () => {
   it('registers no tamaguiConfig global', () => {
     const preview = createPreview({ themeConfig: full, i18n, AppProvider });

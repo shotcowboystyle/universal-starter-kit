@@ -1,18 +1,17 @@
-import type { StorybookConfig } from '@storybook/react-vite';
+import { createStorybookViteConfig } from '@repo/config/storybook';
+import type { StorybookConfig } from '@storybook/react-native-web-vite';
+import { mergeConfig } from 'vite';
 
 const config: StorybookConfig = {
-  stories: ['../src/**/*.mdx', '../src/**/*.stories.@(js|jsx|ts|tsx)'],
-  addons: ['@storybook/addon-links', '@storybook/addon-docs', '@storybook/addon-themes', '@storybook/addon-a11y'],
+  stories: ['../src/**/*.stories.@(js|jsx|ts|tsx)'],
   framework: {
-    name: '@storybook/react-vite',
+    name: '@storybook/react-native-web-vite',
     options: {},
-  },
-  docs: {
-    defaultName: 'Docs',
   },
   typescript: {
     check: false,
   },
+  viteFinal: (viteConfig) => mergeConfig(viteConfig, createStorybookViteConfig()),
 };
 
 export default config;

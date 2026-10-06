@@ -637,7 +637,9 @@ export function createPreview(options: CreatePreviewOptions): Preview {
   // -- parameters ------------------------------------------------------------
 
   const defaultParameters = {
-    actions: { argTypesRegex: '^on[A-Z].*' },
+    // No `actions.argTypesRegex`: implicit on* actions throw in Storybook 10
+    // when a component fires one during render (Image onLoad, Wheel onChange)
+    // and skip safeAction's sanitizing. Stories pass `action()` explicitly.
     layout: 'padded',
     viewMode: 'story',
     controls: {

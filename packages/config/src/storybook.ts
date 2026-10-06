@@ -113,6 +113,10 @@ export function createStorybookViteConfig(options: CreateStorybookViteConfigOpti
       alias: sortedAliases,
     },
     optimizeDeps: {
+      // vite-plugin-rnw sets this for `build` but not for the dev optimizer,
+      // so dev dies where build shims: expo-modules-core's src/ts-declarations
+      // import type-only names (EventEmitter, NativeModule, …) as values.
+      rolldownOptions: { shimMissingExports: true },
       include: [
         // Force dedup — these have ESM exports but must share a single instance
         'react',
