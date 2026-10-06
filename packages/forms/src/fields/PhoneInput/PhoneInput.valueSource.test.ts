@@ -1,10 +1,9 @@
 import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'index.tsx'), 'utf-8');
+const src = readFileSync(path.join(import.meta.dirname, 'index.tsx'), 'utf-8');
 
 describe('PhoneInput T-VALUE source contract', () => {
   it('puts dial and Area on $color so textAccent cannot dim them', () => {

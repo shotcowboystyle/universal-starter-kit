@@ -23,9 +23,9 @@ const pressEscape = (defaultPrevented = false) => {
   return event;
 };
 
-describe('useSheetEscapeDismiss', () => {
+describe(useSheetEscapeDismiss, () => {
   it('dismisses on Escape while enabled', () => {
-    const onDismiss = vi.fn();
+    const onDismiss = vi.fn<() => void>();
     renderHook(() => {
       useSheetEscapeDismiss(true, onDismiss);
     });
@@ -34,7 +34,7 @@ describe('useSheetEscapeDismiss', () => {
   });
 
   it('ignores other keys', () => {
-    const onDismiss = vi.fn();
+    const onDismiss = vi.fn<() => void>();
     renderHook(() => {
       useSheetEscapeDismiss(true, onDismiss);
     });
@@ -43,7 +43,7 @@ describe('useSheetEscapeDismiss', () => {
   });
 
   it('does nothing while disabled', () => {
-    const onDismiss = vi.fn();
+    const onDismiss = vi.fn<() => void>();
     renderHook(() => {
       useSheetEscapeDismiss(false, onDismiss);
     });
@@ -52,7 +52,7 @@ describe('useSheetEscapeDismiss', () => {
   });
 
   it('respects inner popups that already handled Escape (defaultPrevented)', () => {
-    const onDismiss = vi.fn();
+    const onDismiss = vi.fn<() => void>();
     renderHook(() => {
       useSheetEscapeDismiss(true, onDismiss);
     });
@@ -61,8 +61,8 @@ describe('useSheetEscapeDismiss', () => {
   });
 
   it('always calls the latest onDismiss callback (no stale closure)', () => {
-    const first = vi.fn();
-    const second = vi.fn();
+    const first = vi.fn<() => void>();
+    const second = vi.fn<() => void>();
     const { rerender } = renderHook(
       ({ cb }) => {
         useSheetEscapeDismiss(true, cb);
@@ -78,7 +78,7 @@ describe('useSheetEscapeDismiss', () => {
   });
 
   it('detaches the listener on unmount', () => {
-    const onDismiss = vi.fn();
+    const onDismiss = vi.fn<() => void>();
     const { unmount } = renderHook(() => {
       useSheetEscapeDismiss(true, onDismiss);
     });
@@ -101,6 +101,7 @@ const WheelHarness = (props: WheelHarnessProps) => {
   return (
     <div
       data-testid="wheel-target"
+      // oxlint-disable-next-line react/refs -- the ref object comes from the hook under test and is only attached, never read, during render
       ref={wheelProps.ref}
     />
   );
@@ -112,7 +113,7 @@ const dispatchWheel = (target: Element, deltaY: number) => {
   return event;
 };
 
-describe('useWheelIncrement', () => {
+describe(useWheelIncrement, () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(0);
@@ -123,8 +124,8 @@ describe('useWheelIncrement', () => {
   });
 
   it('increments on wheel-up and decrements on wheel-down past the threshold', () => {
-    const onIncrement = vi.fn();
-    const onDecrement = vi.fn();
+    const onIncrement = vi.fn<() => void>();
+    const onDecrement = vi.fn<() => void>();
     const { getByTestId } = render(
       <WheelHarness
         onIncrement={onIncrement}
@@ -139,8 +140,8 @@ describe('useWheelIncrement', () => {
   });
 
   it('accumulates small trackpad deltas until the threshold is crossed', () => {
-    const onIncrement = vi.fn();
-    const onDecrement = vi.fn();
+    const onIncrement = vi.fn<() => void>();
+    const onDecrement = vi.fn<() => void>();
     const { getByTestId } = render(
       <WheelHarness
         onIncrement={onIncrement}
@@ -156,8 +157,8 @@ describe('useWheelIncrement', () => {
   });
 
   it('resets the accumulated delta after a pause', () => {
-    const onIncrement = vi.fn();
-    const onDecrement = vi.fn();
+    const onIncrement = vi.fn<() => void>();
+    const onDecrement = vi.fn<() => void>();
     const { getByTestId } = render(
       <WheelHarness
         onIncrement={onIncrement}
@@ -176,8 +177,8 @@ describe('useWheelIncrement', () => {
   it('prevents the page scroll (preventDefault on the wheel event)', () => {
     const { getByTestId } = render(
       <WheelHarness
-        onIncrement={vi.fn()}
-        onDecrement={vi.fn()}
+        onIncrement={vi.fn<() => void>()}
+        onDecrement={vi.fn<() => void>()}
       />,
     );
     const event = dispatchWheel(getByTestId('wheel-target'), -30);
@@ -185,12 +186,12 @@ describe('useWheelIncrement', () => {
   });
 
   it('ignores the wheel when disabled or read-only', () => {
-    const onIncrement = vi.fn();
+    const onIncrement = vi.fn<() => void>();
     for (const props of [{ disabled: true }, { readOnly: true }]) {
       const { getByTestId, unmount } = render(
         <WheelHarness
           onIncrement={onIncrement}
-          onDecrement={vi.fn()}
+          onDecrement={vi.fn<() => void>()}
           {...props}
         />,
       );
@@ -202,11 +203,11 @@ describe('useWheelIncrement', () => {
   });
 
   it('scales the trigger point with a custom threshold', () => {
-    const onIncrement = vi.fn();
+    const onIncrement = vi.fn<() => void>();
     const { getByTestId } = render(
       <WheelHarness
         onIncrement={onIncrement}
-        onDecrement={vi.fn()}
+        onDecrement={vi.fn<() => void>()}
         threshold={2}
       />,
     );

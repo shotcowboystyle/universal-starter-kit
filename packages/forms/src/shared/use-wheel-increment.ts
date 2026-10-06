@@ -69,14 +69,12 @@ export const useWheelIncrement = (options: UseWheelIncrementOptions): UseWheelIn
 
   useEffect(() => {
     const element = ref.current;
-    if (!element) {
-      return;
-    }
 
     // Must use { passive: false } to allow preventDefault() on wheel events
-    element.addEventListener('wheel', handleWheel, { passive: false });
+    // oxlint-disable-next-line github/require-passive-events -- the handler calls preventDefault() to stop page scroll, which a passive listener forbids
+    element?.addEventListener('wheel', handleWheel, { passive: false });
     return () => {
-      element.removeEventListener('wheel', handleWheel);
+      element?.removeEventListener('wheel', handleWheel);
     };
   }, [handleWheel]);
 

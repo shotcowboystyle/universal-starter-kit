@@ -35,53 +35,53 @@ const NANP = new Set([
 ]);
 
 /** National-digit grouping from the start (spaces). US/CA/GB are special-cased. */
-const GROUPS: Record<string, number[]> = {
-  AE: [2, 3, 4],
-  AU: [4, 3, 3],
-  BR: [2, 5, 4],
-  CN: [3, 4, 4],
-  DE: [4, 4, 4],
-  ES: [3, 3, 3],
-  FR: [2, 2, 2, 2, 2],
-  HK: [4, 4],
-  IE: [2, 3, 4],
-  IN: [5, 5],
-  IT: [3, 3, 4],
-  JP: [3, 4, 4],
-  KR: [3, 4, 4],
-  MX: [2, 4, 4],
-  NL: [2, 4, 4],
-  NZ: [2, 3, 4],
-  SA: [2, 3, 4],
-  SG: [4, 4],
-  ZA: [2, 3, 4],
-};
+const GROUPS = new Map<string, number[]>([
+  ['AE', [2, 3, 4]],
+  ['AU', [4, 3, 3]],
+  ['BR', [2, 5, 4]],
+  ['CN', [3, 4, 4]],
+  ['DE', [4, 4, 4]],
+  ['ES', [3, 3, 3]],
+  ['FR', [2, 2, 2, 2, 2]],
+  ['HK', [4, 4]],
+  ['IE', [2, 3, 4]],
+  ['IN', [5, 5]],
+  ['IT', [3, 3, 4]],
+  ['JP', [3, 4, 4]],
+  ['KR', [3, 4, 4]],
+  ['MX', [2, 4, 4]],
+  ['NL', [2, 4, 4]],
+  ['NZ', [2, 3, 4]],
+  ['SA', [2, 3, 4]],
+  ['SG', [4, 4]],
+  ['ZA', [2, 3, 4]],
+]);
 
 /** Example national digits for the selected country (intl-tel placeholderNumberType). */
-const EXAMPLES: Record<string, string> = {
-  AE: '501234567',
-  AU: '0412345678',
-  BR: '11987654321',
-  CA: '4165550123',
-  CN: '13123456789',
-  DE: '03012345678',
-  ES: '612345678',
-  FR: '0612345678',
-  GB: '07400123456',
-  HK: '51234567',
-  IE: '0851234567',
-  IN: '9876543210',
-  IT: '3123456789',
-  JP: '09012345678',
-  KR: '1012345678',
-  MX: '5512345678',
-  NL: '0612345678',
-  NZ: '0211234567',
-  SA: '501234567',
-  SG: '81234567',
-  US: '2015550123',
-  ZA: '0821234567',
-};
+const US_EXAMPLE = '2015550123';
+const EXAMPLES = new Map<string, string>([
+  ['AE', '501234567'],
+  ['AU', '0412345678'],
+  ['BR', '11987654321'],
+  ['CA', '4165550123'],
+  ['CN', '13123456789'],
+  ['DE', '03012345678'],
+  ['ES', '612345678'],
+  ['FR', '0612345678'],
+  ['GB', '07400123456'],
+  ['HK', '51234567'],
+  ['IE', '0851234567'],
+  ['IN', '9876543210'],
+  ['IT', '3123456789'],
+  ['JP', '09012345678'],
+  ['KR', '1012345678'],
+  ['MX', '5512345678'],
+  ['NL', '0612345678'],
+  ['NZ', '0211234567'],
+  ['SA', '501234567'],
+  ['SG', '81234567'],
+  ['ZA', '0821234567'],
+]);
 
 // Flag/caret glyphs are control-internal icons: they ride the
 // generated recipe's icon channel, not a handwritten per-token px map. The
@@ -104,7 +104,7 @@ export const countryCodeToFlag = (countryCode: string): string => {
   const codePoints = countryCode
     .toUpperCase()
     .split('')
-    .map((char) => 127_397 + char.charCodeAt(0));
+    .map((char) => 127_397 + (char.codePointAt(0) ?? 0));
   return String.fromCodePoint(...codePoints);
 };
 
@@ -114,22 +114,29 @@ export const flagSizeForToken = (sizeToken: string | undefined): number =>
 export const caretSizeForToken = (sizeToken: string | undefined): number =>
   Math.round(sizeRecipeForToken(sizeToken ?? '$4').iconSize * 0.75);
 
-export const dialOf = (region: string): string => String(dialCodes[region] ?? 1);
+export const dialOf = (region: string): string => String(dialCodes.get(region) ?? 1);
+
+let regionDisplayNames: Intl.DisplayNames | undefined;
+try {
+  regionDisplayNames = new Intl.DisplayNames(['en'], { type: 'region' });
+} catch {
+  // Hermes: no Intl.DisplayNames; regionName falls back to the static table.
+}
 
 const regionName = (code: string): string => {
   try {
-    const name = new Intl.DisplayNames(['en'], { type: 'region' }).of(code);
-    if (name && name !== code) {
+    const name = regionDisplayNames?.of(code);
+    if (name !== undefined && name !== '' && name !== code) {
       return name;
     }
   } catch {
     // Hermes: no Intl.DisplayNames.
   }
-  return regionNames[code] ?? code;
+  return regionNames.get(code) ?? code;
 };
 
 export const detectRegion = (raw: string, hint = 'US'): string => {
-  const fallback = hint in dialCodes ? hint : 'US';
+  const fallback = dialCodes.has(hint) ? hint : 'US';
   const trimmed = raw.trim();
   if (!trimmed.startsWith('+')) {
     return fallback;
@@ -140,7 +147,7 @@ export const detectRegion = (raw: string, hint = 'US'): string => {
   }
 
   const matches: { region: string; len: number }[] = [];
-  for (const [region, code] of Object.entries(dialCodes)) {
+  for (const [region, code] of dialCodes) {
     const s = String(code);
     if (rest.startsWith(s)) {
       matches.push({ region, len: s.length });
@@ -235,25 +242,24 @@ export const formatNational = (region: string, national: string): string => {
   if (region === 'GB') {
     return formatGb(d);
   }
-  const groups = GROUPS[region];
-  if (groups) {
+  const groups = GROUPS.get(region);
+  if (groups != null) {
     return formatGrouped(d, groups);
   }
   return formatGrouped(d, [3, 3, 3, 3]);
 };
 
 export const parsePhone = (raw: string | undefined, defaultRegion = 'US'): ParsedPhone => {
-  const fallback = defaultRegion in dialCodes ? defaultRegion : 'US';
-  if (!raw || !String(raw).trim()) {
+  const fallback = dialCodes.has(defaultRegion) ? defaultRegion : 'US';
+  if (raw == null || raw.trim() === '') {
     return { region: fallback, national: '' };
   }
-  const text = String(raw);
-  const region = detectRegion(text, fallback);
-  return { region, national: nationalDigitsFromRaw(text, region) };
+  const region = detectRegion(raw, fallback);
+  return { region, national: nationalDigitsFromRaw(raw, region) };
 };
 
 export const examplePlaceholder = (region: string): string => {
-  const digits = EXAMPLES[region] ?? EXAMPLES.US;
+  const digits = EXAMPLES.get(region) ?? US_EXAMPLE;
   return formatNational(region, digits);
 };
 
@@ -262,15 +268,25 @@ export const caretIndexForDigitCount = (formatted: string, digitCount: number): 
     return 0;
   }
   let seen = 0;
-  for (let i = 0; i < formatted.length; i++) {
+  for (let i = 0; i < formatted.length; i += 1) {
     if (/\d/u.test(formatted[i] ?? '')) {
-      seen++;
+      seen += 1;
       if (seen >= digitCount) {
         return i + 1;
       }
     }
   }
   return formatted.length;
+};
+
+const toCountryOption = (code: string): PhoneCountryOption => {
+  const name = regionName(code);
+  const dial = dialOf(code);
+  return {
+    value: code,
+    label: `${countryCodeToFlag(code)}  ${name}  +${dial}`,
+    keywords: `${code} +${dial} ${name}`,
+  };
 };
 
 let countryOptionsCache: PhoneCountryOption[] | undefined;
@@ -280,18 +296,9 @@ export const getCountryOptions = (): PhoneCountryOption[] => {
     return countryOptionsCache;
   }
   const preferred = new Set<string>(PREFERRED_REGIONS);
-  const make = (code: string): PhoneCountryOption => {
-    const name = regionName(code);
-    const dial = dialOf(code);
-    return {
-      value: code,
-      label: `${countryCodeToFlag(code)}  ${name}  +${dial}`,
-      keywords: `${code} +${dial} ${name}`,
-    };
-  };
   const rest = regionCodes
     .filter((code) => !preferred.has(code))
-    .sort((a, b) => regionName(a).localeCompare(regionName(b)));
-  countryOptionsCache = [...PREFERRED_REGIONS.filter((code) => code in dialCodes), ...rest].map(make);
+    .toSorted((a, b) => regionName(a).localeCompare(regionName(b)));
+  countryOptionsCache = [...PREFERRED_REGIONS.filter((code) => dialCodes.has(code)), ...rest].map(toCountryOption);
   return countryOptionsCache;
 };

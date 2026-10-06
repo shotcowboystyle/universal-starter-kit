@@ -6,9 +6,11 @@ const PRESS_SLOP_STYLE_ID = 'mp-button-press-slop';
 
 const pressSlopStylesheet = (): string => {
   const rules = ['[data-mp-press-slop]{position:relative;isolation:isolate}'];
-  for (let n = 1; n <= 16; n++) {
-    rules.push(`[data-mp-press-slop="${n}"]::after{content:"";position:absolute;inset:-${n}px;z-index:-1}`);
-    rules.push(`[data-mp-press-slop="${n}"][data-mp-press-axis="vertical"]::after{inset:-${n}px 0}`);
+  for (let n = 1; n <= 16; n += 1) {
+    rules.push(
+      `[data-mp-press-slop="${n}"]::after{content:"";position:absolute;inset:-${n}px;z-index:-1}`,
+      `[data-mp-press-slop="${n}"][data-mp-press-axis="vertical"]::after{inset:-${n}px 0}`,
+    );
   }
   return rules.join('');
 };
@@ -17,7 +19,7 @@ const ensureButtonPressSlop = (): void => {
   if (!isWeb || typeof document === 'undefined') {
     return;
   }
-  if (document.getElementById(PRESS_SLOP_STYLE_ID)) {
+  if (document.querySelector(`#${PRESS_SLOP_STYLE_ID}`)) {
     return;
   }
   const tag = document.createElement('style');

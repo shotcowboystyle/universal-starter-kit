@@ -26,13 +26,16 @@ export const panelPortalAnchor = (node: Node): Element | null => {
 };
 
 /** `root.contains(target)`, where a portaled panel counts as part of its anchor. */
-export const containsAcrossPanels = (root: Node | null | undefined, target: unknown): boolean => {
+export const containsAcrossPanels = (
+  root: Node | null | undefined,
+  target: EventTarget | null | undefined,
+): boolean => {
   if (!root || typeof Node === 'undefined' || !(target instanceof Node)) {
     return false;
   }
   let node: Node | null = target;
   // Each hop climbs out of one portal; nesting is shallow, the cap stops a cycle.
-  for (let hop = 0; node && hop < 32; hop++) {
+  for (let hop = 0; node && hop < 32; hop += 1) {
     if (root.contains(node)) {
       return true;
     }

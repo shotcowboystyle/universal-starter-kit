@@ -4,25 +4,27 @@ import { pickerTriggerContract } from './picker-trigger-contract';
 import { pressSlopOutsetProps, pressSlopProps } from './press-slop-props';
 
 const platform = vi.hoisted(() => ({ web: true }));
-vi.mock('tamagui', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('tamagui')>()),
+vi.mock(import('tamagui'), async (importOriginal) => ({
+  ...(await importOriginal()),
   get isWeb() {
     return platform.web;
   },
 }));
 
-afterEach(() => {
+const resetPlatform = () => {
   platform.web = true;
-});
+};
 
 describe('press-target deficient dimensions', () => {
+  afterEach(resetPlatform);
+
   it('expands a wide picker only vertically and reserves its own width floor', () => {
     expect(pickerTriggerContract(37)).toMatchObject({
       minWidth: 44,
       'data-mp-press-slop': '4',
       'data-mp-press-axis': 'vertical',
     });
-    expect(document.getElementById('mp-button-press-slop')?.textContent).toContain(
+    expect(document.querySelector('#mp-button-press-slop')?.textContent).toContain(
       '[data-mp-press-slop="4"][data-mp-press-axis="vertical"]::after{inset:-4px 0}',
     );
   });
@@ -42,6 +44,8 @@ describe('press-target deficient dimensions', () => {
 });
 
 describe('pitch-limited outset', () => {
+  afterEach(resetPlatform);
+
   it('writes the given outset on the vertical axis on web, whatever the painted size', () => {
     expect(pressSlopOutsetProps(4, 'vertical')).toStrictEqual({
       'data-mp-press-slop': '4',

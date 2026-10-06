@@ -1,6 +1,7 @@
 import { renderWithProviders } from '@repo/test-utils';
 import { useForm } from '@tanstack/react-form';
 import { act, fireEvent, waitFor } from '@testing-library/react';
+import { useEffect } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { Button } from '../../Button';
@@ -8,14 +9,14 @@ import { Form } from '../../Form';
 
 import { MonthPicker } from './MonthPicker';
 
-const MONTH_ABBREVIATIONS = /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)$/u;
+const MONTH_ABBREVIATIONS = /^(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)$/u;
 
 const getMonthButtons = (root: ParentNode): HTMLButtonElement[] => {
-  const allButtons = Array.from(root.querySelectorAll('button, [role="button"]')) as HTMLButtonElement[];
+  const allButtons = [...root.querySelectorAll<HTMLButtonElement>('button, [role="button"]')];
   return allButtons.filter((btn) => MONTH_ABBREVIATIONS.test(btn.textContent?.trim() ?? ''));
 };
 
-describe('MonthPicker', () => {
+describe(MonthPicker, () => {
   describe('without form context', () => {
     it('renders with label', () => {
       const result = renderWithProviders(
@@ -60,8 +61,8 @@ describe('MonthPicker', () => {
           name="month"
         />,
       );
-      const trigger = result.container.querySelector('[data-testid="date-picker-trigger"]') as HTMLElement;
-      const label = result.container.querySelector('label') as HTMLLabelElement;
+      const trigger = result.container.querySelector<HTMLElement>('[data-testid="date-picker-trigger"]')!;
+      const label = result.container.querySelector<HTMLLabelElement>('label')!;
       expect(trigger?.id).toBeTruthy();
       expect(label.htmlFor).toBe(trigger.id);
       expect(trigger.getAttribute('aria-labelledby')).toBe(`${trigger.id}-label`);
@@ -103,7 +104,7 @@ describe('MonthPicker', () => {
     });
 
     it('fires canonical onChange once when a month is picked', async () => {
-      const onChange = vi.fn();
+      const onChange = vi.fn<(value: { month: number; year: number } | null) => void>();
       const result = renderWithProviders(
         <MonthPicker
           label="Month"
@@ -129,8 +130,7 @@ describe('MonthPicker', () => {
         fireEvent.click(monthButtons[0]);
       });
 
-      expect(onChange).toHaveBeenCalledOnce();
-      expect(onChange).toHaveBeenCalledWith(
+      expect(onChange).toHaveBeenCalledExactlyOnceWith(
         expect.objectContaining({
           month: expect.any(Number),
           year: expect.any(Number),
@@ -155,7 +155,7 @@ describe('MonthPicker', () => {
     });
 
     it('commits the picked month into form state via field.handleChange', async () => {
-      const onSubmit = vi.fn();
+      const onSubmit = vi.fn<(value: { month: { month: number; year: number } | null }) => void>();
       const FormExample = () => {
         const form = useForm({
           defaultValues: { month: null as { month: number; year: number } | null },
@@ -215,7 +215,7 @@ describe('MonthPicker', () => {
     // field value — without emitting onChange (a seeded value is not
     // a user edit).
     it('form-integrated: a field value set after mount displays, without onChange', async () => {
-      const onChange = vi.fn();
+      const onChange = vi.fn<(value: { month: number; year: number } | null) => void>();
       let formApi:
         | { setFieldValue: (name: 'month', value: { month: number; year: number } | null) => void }
         | undefined;
@@ -223,7 +223,9 @@ describe('MonthPicker', () => {
         const form = useForm({
           defaultValues: { month: null as { month: number; year: number } | null },
         });
-        formApi = form as unknown as typeof formApi;
+        useEffect(() => {
+          formApi = form as unknown as typeof formApi;
+        }, [form]);
         return (
           <Form form={form}>
             <MonthPicker
@@ -248,7 +250,7 @@ describe('MonthPicker', () => {
     });
 
     it('form-integrated: a Field-level defaultValue displays at mount', async () => {
-      const onChange = vi.fn();
+      const onChange = vi.fn<(value: { month: number; year: number } | null) => void>();
       const TestComponent = () => {
         const form = useForm({
           defaultValues: { month: undefined as { month: number; year: number } | undefined },

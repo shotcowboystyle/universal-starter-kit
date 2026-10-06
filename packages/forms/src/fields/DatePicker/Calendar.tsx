@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+import type { ComponentProps } from 'react';
 import { Separator, Text, View, XStack, YStack, useMedia } from 'tamagui';
 
 import { formCommonColors, formInputColors } from '../../shared/color-ramps';
@@ -44,22 +45,26 @@ export interface CalendarProps {
 // Range status helpers
 // ---------------------------------------------------------------------------
 
-type RangeStatus = 'none' | 'range-start' | 'range-end' | 'in-range' | 'selected-single';
+const RANGE_START = 'range-start';
+
+type RangeStatus = 'none' | typeof RANGE_START | 'range-end' | 'in-range' | 'selected-single';
+
+const NO_RANGE_STATUS: RangeStatus = 'none';
 
 const getRangeStatus = (day: Date, dates: Date[]): RangeStatus => {
   if (dates.length === 0) {
-    return 'none';
+    return NO_RANGE_STATUS;
   }
   if (dates.length === 1 && isSameDay(day, dates[0])) {
     return 'selected-single';
   }
   if (dates.length < 2) {
-    return 'none';
+    return NO_RANGE_STATUS;
   }
 
   const [start, end] = dates[0] < dates[1] ? [dates[0], dates[1]] : [dates[1], dates[0]];
   if (isSameDay(day, start)) {
-    return 'range-start';
+    return RANGE_START;
   }
   if (isSameDay(day, end)) {
     return 'range-end';
@@ -67,7 +72,7 @@ const getRangeStatus = (day: Date, dates: Date[]): RangeStatus => {
   if (day > start && day < end) {
     return 'in-range';
   }
-  return 'none';
+  return NO_RANGE_STATUS;
 };
 
 // ---------------------------------------------------------------------------
@@ -83,6 +88,43 @@ interface CalendarDayGridProps {
   maxDate?: Date;
   selectionCapped?: boolean;
 }
+
+const rangeStripePlacement = (status: RangeStatus) => {
+  if (status === RANGE_START) {
+    return { insetInlineStart: '50%', insetInlineEnd: 0, width: '50%' } as const;
+  }
+  if (status === 'range-end') {
+    return { insetInlineStart: 0, insetInlineEnd: '50%', width: '50%' } as const;
+  }
+  return { insetInlineStart: 0, insetInlineEnd: 0, width: '100%' } as const;
+};
+
+const renderRangeStripe = (day: Date, selectedDates: Date[], transition: ComponentProps<typeof View>['transition']) => {
+  const rangeStatus = getRangeStatus(day, selectedDates);
+  if (rangeStatus !== 'in-range' && rangeStatus !== RANGE_START && rangeStatus !== 'range-end') {
+    return null;
+  }
+  return (
+    <View
+      transition={transition}
+      position="absolute"
+      height="100%"
+      zIndex={0}
+      backgroundColor={formInputColors.background.focus}
+      enterStyle={{ opacity: 0 }}
+      exitStyle={{ opacity: 0 }}
+      opacity={1}
+      {...rangeStripePlacement(rangeStatus)}
+    />
+  );
+};
+
+const getModeLabel = (mode: CalendarMode) => {
+  if (mode === 'range') {
+    return t('Range');
+  }
+  return mode === 'single' ? t('Single') : t('Multiple');
+};
 
 const CalendarDayGrid = ({
   calendarData,
@@ -104,7 +146,7 @@ const CalendarDayGrid = ({
       isSelected={(day) => {
         if (mode === 'range') {
           const status = getRangeStatus(day, selectedDates);
-          return status === 'range-start' || status === 'range-end' || status === 'selected-single';
+          return status === RANGE_START || status === 'range-end' || status === 'selected-single';
         }
         return selectedDates.some((date) => isSameDay(date, day));
       }}
@@ -113,33 +155,7 @@ const CalendarDayGrid = ({
       onToday={() => {
         onDayPress(new Date());
       }}
-      rangeStripe={
-        mode === 'range'
-          ? (day) => {
-              const rangeStatus = getRangeStatus(day, selectedDates);
-              if (rangeStatus !== 'in-range' && rangeStatus !== 'range-start' && rangeStatus !== 'range-end') {
-                return null;
-              }
-              return (
-                <View
-                  transition={knobProps.transition}
-                  position="absolute"
-                  height="100%"
-                  zIndex={0}
-                  backgroundColor={formInputColors.background.focus}
-                  enterStyle={{ opacity: 0 }}
-                  exitStyle={{ opacity: 0 }}
-                  opacity={1}
-                  {...(rangeStatus === 'range-start'
-                    ? { insetInlineStart: '50%', insetInlineEnd: 0, width: '50%' }
-                    : rangeStatus === 'range-end'
-                      ? { insetInlineStart: 0, insetInlineEnd: '50%', width: '50%' }
-                      : { insetInlineStart: 0, insetInlineEnd: 0, width: '100%' })}
-                />
-              );
-            }
-          : undefined
-      }
+      rangeStripe={mode === 'range' ? (day) => renderRangeStripe(day, selectedDates, knobProps.transition) : undefined}
     />
   );
 };
@@ -287,6 +303,7 @@ export const Calendar = ({
           if (existing !== -1) {
             setSelectedDates(selectedDates.filter((_, i) => i !== existing));
           } else if (selectedDates.length < limit) {
+            // oxlint-disable-next-line unicorn/no-array-sort -- sorts a fresh copy; toSorted is not guaranteed on the Hermes runtime
             setSelectedDates([...selectedDates, date].sort((a, b) => a.getTime() - b.getTime()));
           }
           break;
@@ -303,6 +320,10 @@ export const Calendar = ({
               setSelectedDates(pair);
             }
           }
+          break;
+        }
+
+        default: {
           break;
         }
       }
@@ -353,7 +374,7 @@ export const Calendar = ({
               alignItems="center"
               justifyContent="center"
               cursor="pointer"
-              theme={mode === m ? ('accent' as any) : undefined}
+              theme={mode === m ? 'accent' : undefined}
               backgroundColor={mode === m ? '$background' : 'transparent'}
               onPress={() => {
                 handleModeChange(m);
@@ -363,7 +384,7 @@ export const Calendar = ({
                 {...knobProps.label}
                 {...knobProps.textWeight}
                 fontWeight={mode === m ? '600' : '400'}>
-                {m === 'range' ? t('Range') : m === 'single' ? t('Single') : t('Multiple')}
+                {getModeLabel(m)}
               </Text>
             </View>
           ))}

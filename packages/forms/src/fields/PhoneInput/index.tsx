@@ -1,24 +1,19 @@
 import { CaretDownIcon, GlobeIcon } from '@phosphor-icons/react';
-import { useTouchSurface, ensureCompositeFocusRing, useGlyphColor } from '@repo/theme';
+import { useTouchSurface, ensureCompositeFocusRing, useGlyphColor, sizeRecipeForToken } from '@repo/theme';
+import type { KnobProps } from '@repo/theme';
 import type { DeepKeys, DeepValue } from '@tanstack/form-core';
 import type { ComponentProps, FocusEventHandler, ReactNode } from 'react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { TamaguiElement, Input } from 'tamagui';
+import type { TamaguiElement, Input, SizeTokens } from 'tamagui';
 import { isWeb, useProps, Text, View, XStack } from 'tamagui';
 
 import { Field, FieldLayout } from '../../FieldLayout';
-import type { FormFieldProps } from '../../FieldLayout';
+import type { FieldLayoutProps, FormFieldProps } from '../../FieldLayout';
 import { Input as InputParts } from '../../InputParts';
 import { formButtonColors, formCommonColors } from '../../shared/color-ramps';
 import { t } from '../../shared/t';
 import { useIsInTableCell } from '../../shared/table-cell-context';
-import {
-  getFieldError,
-  getFieldHeight,
-  mergeFieldHandler,
-  useFormField,
-  useResolvedValidators,
-} from '../../shared/utils';
+import { getFieldError, mergeFieldHandler, useFormField, useResolvedValidators } from '../../shared/utils';
 import { Skeleton } from '../../Skeleton';
 import type { SimpleFieldApi, Validator, FieldComponentProps } from '../../types';
 import { Combobox } from '../Combobox';
@@ -60,7 +55,7 @@ const ensurePhoneInputCss = () => {
   if (typeof document === 'undefined') {
     return;
   }
-  if (document.getElementById(PHONE_RING_STYLE_ID)) {
+  if (document.querySelector(`#${PHONE_RING_STYLE_ID}`)) {
     return;
   }
   const tag = document.createElement('style');
@@ -70,16 +65,20 @@ const ensurePhoneInputCss = () => {
 };
 
 export type PhoneInputProps<
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- default mirrors FormFieldProps/FieldComponentProps; untyped forms have no owner shape
   TParentData = Record<string, unknown>,
   TName extends DeepKeys<TParentData> = DeepKeys<TParentData>,
-  TFieldValidator extends Validator<DeepValue<TParentData, TName>> | undefined = undefined,
-  TFormValidator extends Validator<TParentData> | undefined = undefined,
+  TFieldValidator extends Validator<DeepValue<TParentData, TName>> = undefined,
+  TFormValidator extends Validator<TParentData> = undefined,
   TData extends DeepValue<TParentData, TName> = DeepValue<TParentData, TName>,
 > = Omit<
   FormFieldProps<TParentData, TName, TFieldValidator, TFormValidator, TData>,
   'children' | 'field' | 'onChange'
 > &
-  Partial<Omit<FieldComponentProps<TParentData, TName, TFieldValidator, TFormValidator, TData>, 'children'>> & {
+  Partial<
+    Omit<FieldComponentProps<TParentData, TName, TFieldValidator, TFormValidator, TData>, 'children' | 'validators'>
+  > & {
+    validators?: Parameters<typeof useResolvedValidators>[1];
     readOnly?: boolean;
     defaultCountry?: string;
     showFlags?: boolean;
@@ -92,25 +91,45 @@ export type PhoneInputProps<
   };
 
 interface PhoneInputFieldRendererProps<TData> {
-  field: {
-    state: { value: unknown; meta: { errors: readonly (string | undefined)[] } };
-    handleChange: (value: TData) => void;
-    handleBlur: () => void;
-  };
+  field: SimpleFieldApi<TData>;
   serialized: string;
   hydrate: (raw: string) => void;
   errorProp?: string | boolean;
-  size?: string;
-  knobProps: { sizeToken: string };
+  size?: SizeTokens;
+  sizeToken: string;
+  knobProps: KnobProps;
   onBlur?: FocusEventHandler<HTMLDivElement>;
   id?: string;
   label?: ReactNode;
-  labelProps?: any;
+  labelProps?: FieldLayoutProps['labelProps'];
   helperText?: string;
   required?: boolean;
   disabled?: boolean;
   renderPhoneRow: (hasError?: boolean) => ReactNode;
 }
+
+// oxlint-disable-next-line anti-slop/no-runtime-typeof, anti-slop/no-unknown-parameters -- form field values and defaultValue are caller-typed (TData); only a string can seed the phone
+const stringOrEmpty = (value: unknown): string => (typeof value === 'string' ? value : '');
+
+const hasErrorValue = (error: string | boolean | undefined): boolean =>
+  error !== undefined && error !== false && error !== '';
+
+interface CaretHost {
+  setSelectionRange: (start: number, end: number) => void;
+}
+
+const isCaretHost = (node: TamaguiElement | null): node is TamaguiElement & CaretHost =>
+  node != null && 'setSelectionRange' in node && typeof node.setSelectionRange === 'function';
+
+const resolveCaretHost = (node: TamaguiElement | null): CaretHost | null => {
+  if (isCaretHost(node)) {
+    return node;
+  }
+  if (typeof document !== 'undefined' && document.activeElement instanceof HTMLInputElement) {
+    return document.activeElement;
+  }
+  return null;
+};
 
 const PhoneInputFieldRenderer = <TData,>({
   field,
@@ -118,6 +137,7 @@ const PhoneInputFieldRenderer = <TData,>({
   hydrate,
   errorProp,
   size,
+  sizeToken,
   knobProps,
   onBlur,
   id,
@@ -132,9 +152,10 @@ const PhoneInputFieldRenderer = <TData,>({
   const didInitRef = useRef(false);
 
   useEffect(() => {
-    const fieldValue = (field.state.value as string) ?? '';
+    const fieldValue = stringOrEmpty(field.state.value);
     if (fieldValue !== lastSyncedRef.current) {
       lastSyncedRef.current = fieldValue;
+      // oxlint-disable-next-line react-doctor/no-pass-data-to-parent -- hydrate is this field's own state setter; the form value is the source of truth and must flow into the phone state
       hydrate(fieldValue);
     }
   }, [field.state.value, hydrate]);
@@ -142,20 +163,23 @@ const PhoneInputFieldRenderer = <TData,>({
   useEffect(() => {
     if (!didInitRef.current) {
       didInitRef.current = true;
-      const fieldValue = (field.state.value as string) ?? '';
+      const fieldValue = stringOrEmpty(field.state.value);
       lastSyncedRef.current = fieldValue;
       if (fieldValue) {
+        // oxlint-disable-next-line react-doctor/no-pass-data-to-parent -- initial seed of the phone state from the form value
         hydrate(fieldValue);
       }
       return;
     }
     if (serialized !== lastSyncedRef.current) {
       lastSyncedRef.current = serialized;
+      // SAFETY: the phone field always stores its serialized E.164 string; TData is the caller's declared value type for that same field.
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- generic TData cannot be proven to be string
       field.handleChange(serialized as TData);
     }
   }, [field, serialized, hydrate]);
 
-  const resolvedError = getFieldError(field as SimpleFieldApi<any>, errorProp);
+  const resolvedError = getFieldError(field, errorProp);
 
   return (
     <FieldLayout
@@ -165,11 +189,125 @@ const PhoneInputFieldRenderer = <TData,>({
       error={resolvedError}
       helperText={helperText}
       required={required}
-      size={size as any}
-      knobProps={knobProps as any}
-      onBlur={mergeFieldHandler(field as SimpleFieldApi<any>, 'handleBlur', onBlur)}
+      size={size}
+      knobProps={knobProps}
+      onBlur={mergeFieldHandler(field, 'handleBlur', onBlur)}
       disabled={disabled}>
-      <InputParts size={size || knobProps.sizeToken}>{renderPhoneRow(!!resolvedError)}</InputParts>
+      <InputParts size={sizeToken}>{renderPhoneRow(hasErrorValue(resolvedError))}</InputParts>
+    </FieldLayout>
+  );
+};
+
+interface CountryTriggerProps {
+  code: string;
+  disabled?: boolean;
+  showFlags: boolean;
+  flagSize: number;
+  caretSize: number;
+  glyphColor: ReturnType<typeof useGlyphColor>;
+  knobProps: KnobProps;
+  inTableCell: boolean;
+}
+
+const CountryTrigger = ({
+  code,
+  disabled,
+  showFlags,
+  flagSize,
+  caretSize,
+  glyphColor,
+  knobProps,
+  inTableCell,
+}: CountryTriggerProps) => (
+  <XStack
+    data-testid="phone-country"
+    alignItems="center"
+    gap="$1.5"
+    // size-recipe-escape: zero-reset — the country trigger rides inside Input.Box, which owns the inset
+    paddingHorizontal={0}
+    height="100%"
+    cursor={disabled ? 'not-allowed' : 'pointer'}
+    hoverStyle={disabled ? undefined : { backgroundColor: formButtonColors.background.hover }}>
+    {showFlags ? (
+      <Text
+        fontSize={flagSize}
+        lineHeight={flagSize + 4}
+        userSelect="none">
+        {countryCodeToFlag(code)}
+      </Text>
+    ) : (
+      <InputParts.Icon color="$placeholderColor">
+        <GlobeIcon />
+      </InputParts.Icon>
+    )}
+    <Text
+      data-testid="phone-dial"
+      data-text-class="T-VALUE"
+      fontFamily={knobProps.body.fontFamily}
+      fontWeight={knobProps.body.fontWeight}
+      // T-VALUE: dial is the country-code value, never textAccent / muted
+      color="$color"
+      userSelect="none">
+      +{dialOf(code)}
+    </Text>
+    {inTableCell ? null : (
+      <CaretDownIcon
+        size={caretSize}
+        color={glyphColor}
+      />
+    )}
+  </XStack>
+);
+
+interface PhoneInputSkeletonProps {
+  id: string;
+  label?: ReactNode;
+  labelProps?: FieldLayoutProps['labelProps'];
+  size?: SizeTokens;
+  sizeToken: string;
+  flagSize: number;
+  knobProps: KnobProps;
+  disabled?: boolean;
+}
+
+const PhoneInputSkeleton = ({
+  id,
+  label,
+  labelProps,
+  size,
+  sizeToken,
+  flagSize,
+  knobProps,
+  disabled,
+}: PhoneInputSkeletonProps) => {
+  const hydrationTouch = useTouchSurface();
+  const controlH = sizeRecipeForToken(sizeToken, { touch: hydrationTouch }).height;
+  return (
+    <FieldLayout
+      id={id}
+      label={label}
+      labelProps={labelProps}
+      size={size}
+      knobProps={knobProps}
+      disabled={disabled}>
+      <InputParts size={sizeToken}>
+        <InputParts.Box disabled>
+          <InputParts.Section>
+            <Skeleton
+              variant="rounded"
+              width={flagSize + 48}
+              height={Math.max(16, controlH - 12)}
+            />
+          </InputParts.Section>
+          <InputParts.Section>
+            <Skeleton
+              variant="rounded"
+              width="100%"
+              height={Math.max(16, controlH - 12)}
+            />
+          </InputParts.Section>
+        </InputParts.Box>
+      </InputParts>
     </FieldLayout>
   );
 };
@@ -177,13 +315,12 @@ const PhoneInputFieldRenderer = <TData,>({
 export const PhoneInput = <
   TParentData,
   TName extends DeepKeys<TParentData>,
-  TFieldValidator extends Validator<DeepValue<TParentData, TName>> | undefined = undefined,
-  TFormValidator extends Validator<TParentData> | undefined = undefined,
+  TFieldValidator extends Validator<DeepValue<TParentData, TName>> = undefined,
+  TFormValidator extends Validator<TParentData> = undefined,
   TData extends DeepValue<TParentData, TName> = DeepValue<TParentData, TName>,
 >(
   props: PhoneInputProps<TParentData, TName, TFieldValidator, TFormValidator, TData>,
 ) => {
-  const hydrationTouch = useTouchSurface();
   const {
     defaultValue,
     form,
@@ -209,19 +346,18 @@ export const PhoneInput = <
     skeleton,
     compact,
     id: idProp,
-    ..._restProps
   } = useProps(props);
 
   const { resolvedForm, knobProps, id } = useFormField({ form, id: idProp, compact });
   const resolvedValidators = useResolvedValidators(required, validators, label, name);
   const inTableCell = useIsInTableCell();
   const countryOptions = useMemo(() => getCountryOptions(), []);
-  const sizeToken = (size || knobProps.sizeToken) as string;
+  const sizeToken = String(size ?? '') || knobProps.sizeToken;
   const flagSize = flagSizeForToken(sizeToken);
   const caretSize = caretSizeForToken(sizeToken);
   const glyphColor = useGlyphColor();
 
-  const seed = typeof valueProp === 'string' ? valueProp : typeof defaultValue === 'string' ? defaultValue : '';
+  const seed = valueProp ?? stringOrEmpty(defaultValue);
   const initial = parsePhone(seed, defaultCountry);
   const [regionCode, setRegionCode] = useState(initial.region);
   const [national, setNational] = useState(initial.national);
@@ -232,7 +368,9 @@ export const PhoneInput = <
   const areaRef = useRef<TamaguiElement | null>(null);
   const pendingCaretDigits = useRef<number | null>(null);
   const regionCodeRef = useRef(regionCode);
-  regionCodeRef.current = regionCode;
+  useLayoutEffect(() => {
+    regionCodeRef.current = regionCode;
+  }, [regionCode]);
 
   const hydrate = useCallback(
     (raw: string) => {
@@ -243,7 +381,7 @@ export const PhoneInput = <
     [defaultCountry],
   );
 
-  const isControlled = typeof valueProp === 'string';
+  const isControlled = valueProp != null;
   useEffect(() => {
     if (!isControlled) {
       return;
@@ -254,10 +392,13 @@ export const PhoneInput = <
   }, [isControlled, valueProp, defaultCountry]);
 
   const onChangeRef = useRef(onChange);
-  onChangeRef.current = onChange;
+  useLayoutEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+  const isFormBound = resolvedForm != null && name != null && name !== '';
   const standaloneSyncedRef = useRef(serialized);
   useEffect(() => {
-    if (resolvedForm && name) {
+    if (isFormBound) {
       return;
     }
     if (serialized === standaloneSyncedRef.current) {
@@ -265,23 +406,16 @@ export const PhoneInput = <
     }
     standaloneSyncedRef.current = serialized;
     onChangeRef.current?.(serialized);
-  }, [serialized, resolvedForm, name]);
+  }, [serialized, isFormBound]);
 
   useLayoutEffect(() => {
-    if (pendingCaretDigits.current == null) {
+    const caretDigits = pendingCaretDigits.current;
+    if (caretDigits == null) {
       return;
     }
-    const node = areaRef.current as unknown as {
-      setSelectionRange?: (a: number, b: number) => void;
-    };
-    const host =
-      node && typeof node.setSelectionRange === 'function'
-        ? node
-        : typeof document !== 'undefined' && document.activeElement instanceof HTMLInputElement
-          ? document.activeElement
-          : null;
-    if (host && typeof host.setSelectionRange === 'function') {
-      const idx = caretIndexForDigitCount(display, pendingCaretDigits.current);
+    const host = resolveCaretHost(areaRef.current);
+    if (host != null) {
+      const idx = caretIndexForDigitCount(display, caretDigits);
       host.setSelectionRange(idx, idx);
     }
     pendingCaretDigits.current = null;
@@ -308,7 +442,7 @@ export const PhoneInput = <
   };
 
   const handleRegionChange = (next: string) => {
-    if (!next || !dialCodes[next] || next === regionCode) {
+    if (next === '' || !dialCodes.has(next) || next === regionCode) {
       return;
     }
     setRegionCode(next);
@@ -319,7 +453,9 @@ export const PhoneInput = <
     ensurePhoneInputCss();
   }
 
-  const renderPhoneRow = (hasError?: boolean) => (
+  const isInert = disabled === true || readOnly === true;
+
+  const renderPhoneRow = (hasError = false) => (
     <InputParts.Box
       disabled={disabled}
       data-testid="phone-box"
@@ -343,58 +479,27 @@ export const PhoneInput = <
             options={countryOptions}
             value={regionCode}
             onChange={(val) => {
-              handleRegionChange(typeof val === 'string' ? val : (val[0] ?? ''));
+              handleRegionChange(Array.isArray(val) ? (val[0] ?? '') : val);
             }}
             searchPlaceholder={t('Search countries...')}
             emptyMessage={t('No countries found.')}
             popoverWidth={320}
-            tabIndex={disabled || readOnly ? -1 : 0}
-            disabled={disabled || readOnly}
+            tabIndex={isInert ? -1 : 0}
+            disabled={isInert}
             aria-label={t('Country code')}
-            trigger={(selected) => {
-              const opt = Array.isArray(selected) ? selected[0] : selected;
-              const code = opt?.value ?? regionCode;
-              return (
-                <XStack
-                  data-testid="phone-country"
-                  alignItems="center"
-                  gap="$1.5"
-                  // size-recipe-escape: zero-reset — the country trigger rides inside Input.Box, which owns the inset
-                  paddingHorizontal={0}
-                  height="100%"
-                  cursor={disabled ? 'not-allowed' : 'pointer'}
-                  hoverStyle={disabled ? undefined : { backgroundColor: formButtonColors.background.hover }}>
-                  {showFlags ? (
-                    <Text
-                      fontSize={flagSize}
-                      lineHeight={flagSize + 4}
-                      userSelect="none">
-                      {countryCodeToFlag(code)}
-                    </Text>
-                  ) : (
-                    <InputParts.Icon color="$placeholderColor">
-                      <GlobeIcon />
-                    </InputParts.Icon>
-                  )}
-                  <Text
-                    data-testid="phone-dial"
-                    data-text-class="T-VALUE"
-                    fontFamily={knobProps.body.fontFamily}
-                    fontWeight={knobProps.body.fontWeight}
-                    // T-VALUE: dial is the country-code value, never textAccent / muted
-                    color="$color"
-                    userSelect="none">
-                    +{dialOf(code)}
-                  </Text>
-                  {inTableCell ? null : (
-                    <CaretDownIcon
-                      size={caretSize}
-                      color={glyphColor}
-                    />
-                  )}
-                </XStack>
-              );
-            }}
+            // oxlint-disable-next-line react/no-unstable-nested-components -- Combobox `trigger` is a render prop invoked with the selection, not a component type
+            trigger={(selected) => (
+              <CountryTrigger
+                code={(Array.isArray(selected) ? selected[0] : selected)?.value ?? regionCode}
+                disabled={disabled}
+                showFlags={showFlags}
+                flagSize={flagSize}
+                caretSize={caretSize}
+                glyphColor={glyphColor}
+                knobProps={knobProps}
+                inTableCell={inTableCell}
+              />
+            )}
           />
           {inTableCell ? null : (
             <View
@@ -422,9 +527,11 @@ export const PhoneInput = <
           placeholder={placeholder}
           disabled={disabled}
           {...(readOnly ? { readOnly: true } : {})}
-          aria-required={required || undefined}
+          aria-required={required === true || undefined}
           aria-invalid={hasError || undefined}
-          aria-readonly={readOnly || undefined}
+          aria-readonly={readOnly === true || undefined}
+          // SAFETY: InputParts.Area is the tamagui Input styled for this control, and inputProps is typed from that same Input minus value/onChangeText/ref.
+          // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- only the Omit key list differs between the two prop types
           {...(inputProps as ComponentProps<typeof InputParts.Area>)}
           data-testid="phone-input"
           data-text-class="T-VALUE"
@@ -435,38 +542,21 @@ export const PhoneInput = <
   );
 
   if (skeleton) {
-    const controlH = getFieldHeight(sizeToken as any, 1, hydrationTouch);
     return (
-      <FieldLayout
+      <PhoneInputSkeleton
         id={id}
         label={label}
         labelProps={labelProps}
         size={size}
-        knobProps={knobProps as any}
-        disabled={disabled}>
-        <InputParts size={sizeToken}>
-          <InputParts.Box disabled>
-            <InputParts.Section>
-              <Skeleton
-                variant="rounded"
-                width={flagSize + 48}
-                height={Math.max(16, controlH - 12)}
-              />
-            </InputParts.Section>
-            <InputParts.Section>
-              <Skeleton
-                variant="rounded"
-                width="100%"
-                height={Math.max(16, controlH - 12)}
-              />
-            </InputParts.Section>
-          </InputParts.Box>
-        </InputParts>
-      </FieldLayout>
+        sizeToken={sizeToken}
+        flagSize={flagSize}
+        knobProps={knobProps}
+        disabled={disabled}
+      />
     );
   }
 
-  if (!resolvedForm || !name) {
+  if (!isFormBound) {
     return (
       <FieldLayout
         id={id}
@@ -476,10 +566,10 @@ export const PhoneInput = <
         helperText={helperText}
         required={required}
         size={size}
-        knobProps={knobProps as any}
+        knobProps={knobProps}
         onBlur={onBlur}
         disabled={disabled}>
-        <InputParts size={sizeToken}>{renderPhoneRow(!!errorProp)}</InputParts>
+        <InputParts size={sizeToken}>{renderPhoneRow(hasErrorValue(errorProp))}</InputParts>
       </FieldLayout>
     );
   }
@@ -498,8 +588,9 @@ export const PhoneInput = <
           serialized={serialized}
           hydrate={hydrate}
           errorProp={errorProp}
-          size={size as string | undefined}
-          knobProps={knobProps as { sizeToken: string }}
+          size={size}
+          sizeToken={sizeToken}
+          knobProps={knobProps}
           onBlur={onBlur}
           id={id}
           label={label}

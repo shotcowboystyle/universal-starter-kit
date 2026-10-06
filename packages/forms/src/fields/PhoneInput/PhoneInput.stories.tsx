@@ -59,46 +59,61 @@ const meta: Meta<typeof PhoneInput> = {
 export default meta;
 type Story = StoryObj<typeof PhoneInput>;
 
+const FormExample = () => {
+  const form = useForm({
+    defaultValues: {
+      primaryPhone: '',
+      secondaryPhone: '',
+    },
+    onSubmit: async ({ value }) => {
+      action('onSubmit')(value);
+    },
+  });
+
+  return (
+    <Form
+      form={form}
+      className="max-w-md">
+      <YStack gap="$4">
+        <PhoneInput
+          label="Primary Phone"
+          name="primaryPhone"
+          helperText="Your main contact number"
+          required
+        />
+
+        <PhoneInput
+          label="Secondary Phone"
+          name="secondaryPhone"
+          helperText="Alternative contact number (optional)"
+        />
+
+        <Button action="submit">Save Contact Info</Button>
+      </YStack>
+    </Form>
+  );
+};
+
+const InteractiveExample = () => {
+  const [value, setValue] = useState('');
+  return (
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <PhoneInput
+        label="Phone Number"
+        defaultCountry="US"
+        value={value}
+        onChange={setValue}
+      />
+      <Text>Current value: {value || 'Empty'}</Text>
+    </YStack>
+  );
+};
+
 export const Main: Story = {
   name: 'Main',
-  render: () => {
-    const FormExample = () => {
-      const form = useForm({
-        defaultValues: {
-          primaryPhone: '',
-          secondaryPhone: '',
-        },
-        onSubmit: async ({ value }) => {
-          action('onSubmit')(value);
-        },
-      });
-
-      return (
-        <Form
-          form={form}
-          className="max-w-md">
-          <YStack gap="$4">
-            <PhoneInput
-              label="Primary Phone"
-              name="primaryPhone"
-              helperText="Your main contact number"
-              required
-            />
-
-            <PhoneInput
-              label="Secondary Phone"
-              name="secondaryPhone"
-              helperText="Alternative contact number (optional)"
-            />
-
-            <Button action="submit">Save Contact Info</Button>
-          </YStack>
-        </Form>
-      );
-    };
-
-    return <FormExample />;
-  },
+  render: () => <FormExample />,
 };
 
 export const Standalone: Story = {
@@ -161,25 +176,7 @@ export const Sizes: Story = {
 };
 
 export const Interactive: Story = {
-  render: () => {
-    const InteractiveExample = () => {
-      const [value, setValue] = useState('');
-      return (
-        <YStack
-          gap="$4"
-          maxWidth={400}>
-          <PhoneInput
-            label="Phone Number"
-            defaultCountry="US"
-            value={value}
-            onChange={setValue}
-          />
-          <Text>Current value: {value || 'Empty'}</Text>
-        </YStack>
-      );
-    };
-    return <InteractiveExample />;
-  },
+  render: () => <InteractiveExample />,
 };
 
 export const DifferentCountries: Story = {

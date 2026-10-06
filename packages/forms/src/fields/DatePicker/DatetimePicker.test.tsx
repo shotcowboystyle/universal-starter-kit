@@ -1,6 +1,7 @@
 import { renderWithProviders } from '@repo/test-utils';
 import { useForm } from '@tanstack/react-form';
 import { act, fireEvent, waitFor } from '@testing-library/react';
+import { useEffect } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { Button } from '../../Button';
@@ -8,18 +9,28 @@ import { Form } from '../../Form';
 
 import { DatetimePicker } from './DatetimePicker';
 
+const queryRequired = (root: ParentNode, selector: string): HTMLElement => {
+  const el = root.querySelector<HTMLElement>(selector);
+  if (el === null) {
+    throw new Error(`Expected ${selector} to be rendered`);
+  }
+  return el;
+};
+
 const getEnabledDayButtons = (root: ParentNode): HTMLButtonElement[] => {
-  const allButtons = Array.from(root.querySelectorAll('button, [role="button"]')) as HTMLButtonElement[];
+  const allButtons = [...root.querySelectorAll<HTMLButtonElement>('button, [role="button"]')];
   return allButtons.filter((btn) => {
     const text = btn.textContent?.trim() ?? '';
     const isDay = /^\d{1,2}$/u.test(text);
     const disabled =
-      btn.hasAttribute('disabled') || btn.getAttribute('aria-disabled') === 'true' || btn.hasAttribute('data-disabled');
+      btn.hasAttribute('disabled') ||
+      btn.getAttribute('aria-disabled') === 'true' ||
+      btn.dataset.disabled !== undefined;
     return isDay && !disabled;
   });
 };
 
-describe('DatetimePicker', () => {
+describe(DatetimePicker, () => {
   describe('without form context', () => {
     it('renders with label', () => {
       const result = renderWithProviders(
@@ -123,22 +134,23 @@ describe('DatetimePicker', () => {
           name="appt"
         />,
       );
-      const trigger = result.container.querySelector('[data-testid="date-picker-trigger"]') as HTMLElement;
-      const label = result.container.querySelector('label') as HTMLLabelElement;
-      expect(trigger?.id).toBeTruthy();
-      expect(label.htmlFor).toBe(trigger.id);
-      expect(result.container.querySelector(`#${CSS.escape(label.htmlFor)}`)).toBe(trigger);
+      const trigger = queryRequired(result.container, '[data-testid="date-picker-trigger"]');
+      const labelFor = queryRequired(result.container, 'label').getAttribute('for');
+      expect(trigger.id).toBeTruthy();
+      expect(labelFor).toBe(trigger.id);
+      expect(result.container.querySelector(`#${CSS.escape(labelFor ?? '')}`)).toBe(trigger);
       expect(trigger.getAttribute('aria-labelledby')).toBe(`${trigger.id}-label`);
     });
 
     it('fires canonical onChange and the deprecated onValueChange alias once when a day is picked', async () => {
-      const onChange = vi.fn();
-      const onValueChange = vi.fn();
+      const onChange = vi.fn<(value: Date | null) => void>();
+      const onValueChange = vi.fn<(value: Date | null) => void>();
       const result = renderWithProviders(
         <DatetimePicker
           label="Appointment"
           name="appt"
           onChange={onChange}
+          // oxlint-disable-next-line typescript/no-deprecated -- exercises the deprecated alias
           onValueChange={onValueChange}
         />,
       );
@@ -183,7 +195,7 @@ describe('DatetimePicker', () => {
     });
 
     it('commits the picked datetime into form state via field.handleChange', async () => {
-      const onSubmit = vi.fn();
+      const onSubmit = vi.fn<(value: { appt: Date | null }) => void>();
       const FormExample = () => {
         const form = useForm({
           defaultValues: { appt: null as Date | null },
@@ -238,18 +250,21 @@ describe('DatetimePicker', () => {
     // merge) must render. Adopting a programmatic value must not emit
     // onChange (a seeded value is not a user edit).
     it('form-integrated: a field value set after mount displays, without onChange', async () => {
-      const onChange = vi.fn();
-      const onValueChange = vi.fn();
+      const onChange = vi.fn<(value: Date | null) => void>();
+      const onValueChange = vi.fn<(value: Date | null) => void>();
       let formApi: { setFieldValue: (name: 'appt', value: Date | null) => void } | undefined;
       const TestComponent = () => {
         const form = useForm({ defaultValues: { appt: null as Date | null } });
-        formApi = form as unknown as typeof formApi;
+        useEffect(() => {
+          formApi = form as unknown as typeof formApi;
+        }, [form]);
         return (
           <Form form={form}>
             <DatetimePicker
               name="appt"
               label="Appointment"
               onChange={onChange}
+              // oxlint-disable-next-line typescript/no-deprecated -- exercises the deprecated alias
               onValueChange={onValueChange}
             />
           </Form>

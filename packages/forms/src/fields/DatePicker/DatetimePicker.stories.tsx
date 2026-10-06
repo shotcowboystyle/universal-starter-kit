@@ -54,46 +54,48 @@ export const Baseline: Story = {
   ),
 };
 
+const StateContractExample = () => {
+  const [value, setValue] = useState<Date | null>(null);
+  const [edits, setEdits] = useState(0);
+  const saved = new Date(2026, 0, 15, 9, 30);
+  return (
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <DatetimePicker
+        label="Saved date and time"
+        defaultValue={saved}
+      />
+      <DatetimePicker
+        label="Programmatic date and time"
+        value={value}
+        onChange={() => {
+          setEdits((count) => count + 1);
+        }}
+      />
+      <Button
+        onPress={() => {
+          setValue(new Date(2026, 2, 5, 14, 30));
+        }}>
+        Load date and time
+      </Button>
+      <Text>{`User edits: ${edits}`}</Text>
+      <DatetimePicker
+        label="Read-only date and time"
+        value={saved}
+        readOnly
+      />
+      <DatetimePicker
+        label="Disabled date and time"
+        value={saved}
+        disabled
+      />
+    </YStack>
+  );
+};
+
 export const StateContract: Story = {
-  render: () => {
-    const [value, setValue] = useState<Date | null>(null);
-    const [edits, setEdits] = useState(0);
-    const saved = new Date(2026, 0, 15, 9, 30);
-    return (
-      <YStack
-        gap="$4"
-        maxWidth={400}>
-        <DatetimePicker
-          label="Saved date and time"
-          defaultValue={saved}
-        />
-        <DatetimePicker
-          label="Programmatic date and time"
-          value={value}
-          onChange={() => {
-            setEdits((count) => count + 1);
-          }}
-        />
-        <Button
-          onPress={() => {
-            setValue(new Date(2026, 2, 5, 14, 30));
-          }}>
-          Load date and time
-        </Button>
-        <Text>{`User edits: ${edits}`}</Text>
-        <DatetimePicker
-          label="Read-only date and time"
-          value={saved}
-          readOnly
-        />
-        <DatetimePicker
-          label="Disabled date and time"
-          value={saved}
-          disabled
-        />
-      </YStack>
-    );
-  },
+  render: () => <StateContractExample />,
 };
 
 export const TwentyFourHour: Story = {
@@ -135,63 +137,63 @@ export const Compact: Story = {
   args: { compact: true, helperText: 'Compact sizing' },
 };
 
+const pinned = new Date(2026, 5, 15, 10, 30, 0);
+
+const ControlledRejectionExample = () => {
+  const [attempts, setAttempts] = useState(0);
+  return (
+    <YStack
+      gap="$4"
+      maxWidth={480}>
+      <DatetimePicker
+        label="Pinned Value"
+        value={pinned}
+        // oxlint-disable-next-line typescript/no-deprecated -- this story pins the deprecated alias's behavior
+        onValueChange={(v) => {
+          setAttempts((a) => a + 1);
+          action('onValueChange')(v);
+        }}
+        helperText="Parent ignores onValueChange — the value must not drift"
+      />
+      <Text>{`attempts:${attempts}`}</Text>
+    </YStack>
+  );
+};
+
 export const ControlledRejection: Story = {
-  render: () => {
-    const Example = () => {
-      const [pinned] = useState(() => new Date(2026, 5, 15, 10, 30, 0));
-      const [attempts, setAttempts] = useState(0);
-      return (
-        <YStack
-          gap="$4"
-          maxWidth={480}>
-          <DatetimePicker
-            label="Pinned Value"
-            value={pinned}
-            onValueChange={(v) => {
-              setAttempts((a) => a + 1);
-              action('onValueChange')(v);
-            }}
-            helperText="Parent ignores onValueChange — the value must not drift"
-          />
-          <Text>{`attempts:${attempts}`}</Text>
-        </YStack>
-      );
-    };
-    return <Example />;
-  },
+  render: () => <ControlledRejectionExample />,
+};
+
+const FormExample = () => {
+  const form = useForm({
+    defaultValues: { when: null as Date | null },
+    onSubmit: async ({ value }) => {
+      action('onSubmit')(value);
+    },
+  });
+  const FormSubscribe = (form as any).Subscribe;
+  return (
+    <Form form={form}>
+      <YStack
+        gap="$4"
+        maxWidth={480}>
+        <DatetimePicker
+          label="Appointment"
+          name={'when' as any}
+          required
+          helperText="Pick appointment time"
+        />
+        <FormSubscribe selector={(s: any) => [s.values.when]}>
+          {([when]: any[]) => (
+            <Text>{`form-value:${when instanceof Date ? when.toISOString() : JSON.stringify(when)}`}</Text>
+          )}
+        </FormSubscribe>
+        <Button action="submit">Submit</Button>
+      </YStack>
+    </Form>
+  );
 };
 
 export const FormBound: Story = {
-  render: () => {
-    const FormExample = () => {
-      const form = useForm({
-        defaultValues: { when: null as Date | null },
-        onSubmit: async ({ value }) => {
-          action('onSubmit')(value);
-        },
-      });
-      const FormSubscribe = (form as any).Subscribe;
-      return (
-        <Form form={form}>
-          <YStack
-            gap="$4"
-            maxWidth={480}>
-            <DatetimePicker
-              label="Appointment"
-              name={'when' as any}
-              required
-              helperText="Pick appointment time"
-            />
-            <FormSubscribe selector={(s: any) => [s.values.when]}>
-              {([when]: any[]) => (
-                <Text>{`form-value:${when instanceof Date ? when.toISOString() : JSON.stringify(when)}`}</Text>
-              )}
-            </FormSubscribe>
-            <Button action="submit">Submit</Button>
-          </YStack>
-        </Form>
-      );
-    };
-    return <FormExample />;
-  },
+  render: () => <FormExample />,
 };

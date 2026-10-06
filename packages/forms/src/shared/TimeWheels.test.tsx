@@ -3,9 +3,9 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { TimeWheels } from './TimeColumn';
 
-describe('TimeWheels', () => {
+describe(TimeWheels, () => {
   it('renders hour, minute, and AM/PM columns in 12h mode', () => {
-    const onChange = vi.fn();
+    const onChange = vi.fn<(hour24: number, minute: number, second: number) => void>();
     const result = renderWithProviders(
       <TimeWheels
         hour24={13}

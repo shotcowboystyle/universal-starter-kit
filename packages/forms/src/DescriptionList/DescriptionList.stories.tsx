@@ -28,12 +28,18 @@ const meta: Meta<typeof DescriptionList> = {
 export default meta;
 type Story = StoryObj<typeof DescriptionList>;
 
+const HOSTNAME_VALUE = 'compose01.hel1.hetzner';
+
+const noopChange = () => {
+  // Story stub: the Change action only needs to render.
+};
+
 const HOST: DescriptionListItem[] = [
   {
     term: 'Hostname',
     field: 'input',
-    value: 'compose01.hel1.hetzner',
-    onChange: () => undefined,
+    value: HOSTNAME_VALUE,
+    onChange: noopChange,
   },
   {
     term: 'Status',
@@ -45,7 +51,7 @@ const HOST: DescriptionListItem[] = [
     term: 'Region',
     field: 'input',
     value: 'hel1 · Helsinki',
-    onChange: () => undefined,
+    onChange: noopChange,
   },
   { term: 'Instance ID', field: 'input', value: 'i-0f9c2a7d44e1b6c83' },
   {
@@ -55,7 +61,7 @@ const HOST: DescriptionListItem[] = [
     fieldProps: { currency: 'EUR', precision: 2 },
   },
   { term: 'Created', field: 'datepicker', value: new Date(2025, 6, 1) },
-  { term: 'Owner', field: 'input', value: 'Clay Risser', onChange: () => undefined },
+  { term: 'Owner', field: 'input', value: 'Clay Risser', onChange: noopChange },
   {
     term: 'Notes',
     field: 'textarea',
@@ -123,8 +129,8 @@ export const CollapseNarrow: Story = {
           {
             term: 'Hostname',
             field: 'input',
-            value: 'compose01.hel1.hetzner',
-            onChange: () => undefined,
+            value: HOSTNAME_VALUE,
+            onChange: noopChange,
           },
           {
             term: 'Status',
@@ -190,7 +196,7 @@ export const RecordPage: Story = {
             maxWidth="fluid"
             placement="side"
             items={[
-              { term: 'Owner', field: 'input', value: 'Clay Risser', onChange: () => undefined },
+              { term: 'Owner', field: 'input', value: 'Clay Risser', onChange: noopChange },
               {
                 term: 'Team',
                 field: 'combobox',
@@ -242,7 +248,7 @@ export const Slots: Story = {
     <DescriptionList
       placement="side"
       items={[
-        { term: 'Data', field: 'input', value: 'compose01.hel1.hetzner' },
+        { term: 'Data', field: 'input', value: HOSTNAME_VALUE },
         {
           term: 'Long Text',
           field: 'textarea',

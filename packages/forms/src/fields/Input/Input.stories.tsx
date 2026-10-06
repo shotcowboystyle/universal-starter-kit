@@ -10,6 +10,96 @@ import { Form } from '../../Form';
 
 import { Input } from './index';
 
+const isEmail = (text: string): boolean =>
+  /^[^\s@]+@[^\s@]+$/u.test(text) &&
+  text
+    .slice(text.indexOf('@') + 1)
+    .slice(1, -1)
+    .includes('.');
+
+const FormExample = () => {
+  const form = useForm({
+    defaultValues: {
+      firstName: '',
+      email: '',
+    },
+    onSubmit: async ({ value }) => {
+      action('onSubmit')(value);
+    },
+  });
+
+  return (
+    <Form form={form}>
+      <YStack gap="$4">
+        <Input
+          label="First name"
+          name="firstName"
+          placeholder="Jane"
+          required
+        />
+        <Input
+          label="Email"
+          name="email"
+          placeholder="jane@example.com"
+          required
+          validators={{
+            onBlur: ({ value }: { value?: string }) =>
+              value !== undefined && value !== '' && !isEmail(value) ? 'Invalid email address' : undefined,
+          }}
+        />
+        <Button action="submit">Submit</Button>
+      </YStack>
+    </Form>
+  );
+};
+
+const ComparisonExample = () => {
+  const [customVal, setCustomVal] = useState('');
+  const [tamaguiVal, setTamaguiVal] = useState('');
+  return (
+    <XStack
+      gap="$6"
+      alignItems="flex-start"
+      padding="$4">
+      <YStack
+        gap="$3"
+        width={300}>
+        <Paragraph
+          size="$2"
+          color="$placeholderColor">
+          Custom Input
+        </Paragraph>
+        <Input
+          placeholder="Enter your name"
+          value={customVal}
+          onChangeText={(text) => {
+            setCustomVal(text);
+            action('custom.onChangeText')(text);
+          }}
+        />
+      </YStack>
+
+      <YStack
+        gap="$3"
+        width={300}>
+        <Paragraph
+          size="$2"
+          color="$placeholderColor">
+          Tamagui Input
+        </Paragraph>
+        <TamaguiInput
+          placeholder="Enter your name"
+          value={tamaguiVal}
+          onChangeText={(text) => {
+            setTamaguiVal(text);
+            action('tamagui.onChangeText')(text);
+          }}
+        />
+      </YStack>
+    </XStack>
+  );
+};
+
 const meta: Meta<typeof Input> = {
   title: 'Forms/Input',
   component: Input,
@@ -36,47 +126,7 @@ type Story = StoryObj<typeof Input>;
 
 export const Main: Story = {
   name: 'Main',
-  render: () => {
-    const FormExample = () => {
-      const form = useForm({
-        defaultValues: {
-          firstName: '',
-          email: '',
-        },
-        onSubmit: async ({ value }) => {
-          action('onSubmit')(value);
-        },
-      });
-
-      return (
-        <Form form={form}>
-          <YStack gap="$4">
-            <Input
-              label="First name"
-              name="firstName"
-              placeholder="Jane"
-              required
-            />
-            <Input
-              label="Email"
-              name="email"
-              placeholder="jane@example.com"
-              required
-              validators={{
-                onBlur: ({ value }) => {
-                  if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(value as string)) {
-                    return 'Invalid email address';
-                  }
-                },
-              }}
-            />
-            <Button action="submit">Submit</Button>
-          </YStack>
-        </Form>
-      );
-    };
-    return <FormExample />;
-  },
+  render: () => <FormExample />,
 };
 
 export const Basic: Story = {
@@ -210,53 +260,5 @@ export const Comparison: StoryObj = {
       },
     },
   },
-  render: () => {
-    const ComparisonExample = () => {
-      const [customVal, setCustomVal] = useState('');
-      const [tamaguiVal, setTamaguiVal] = useState('');
-      return (
-        <XStack
-          gap="$6"
-          alignItems="flex-start"
-          padding="$4">
-          <YStack
-            gap="$3"
-            width={300}>
-            <Paragraph
-              size="$2"
-              color="$placeholderColor">
-              Custom Input
-            </Paragraph>
-            <Input
-              placeholder="Enter your name"
-              value={customVal}
-              onChangeText={(text) => {
-                setCustomVal(text);
-                action('custom.onChangeText')(text);
-              }}
-            />
-          </YStack>
-
-          <YStack
-            gap="$3"
-            width={300}>
-            <Paragraph
-              size="$2"
-              color="$placeholderColor">
-              Tamagui Input
-            </Paragraph>
-            <TamaguiInput
-              placeholder="Enter your name"
-              value={tamaguiVal}
-              onChangeText={(text) => {
-                setTamaguiVal(text);
-                action('tamagui.onChangeText')(text);
-              }}
-            />
-          </YStack>
-        </XStack>
-      );
-    };
-    return <ComparisonExample />;
-  },
+  render: () => <ComparisonExample />,
 };

@@ -1,3 +1,4 @@
+// oxlint-disable-next-line sonarjs/no-wildcard-import -- namespace access is the point: named imports break when the optional peer is stubbed (see below)
 import * as ReactI18next from 'react-i18next';
 
 /**
@@ -10,9 +11,11 @@ import * as ReactI18next from 'react-i18next';
  * naming the package and the fix — the moment an i18n-using field actually
  * renders.
  */
-export const useTranslation = ((...args: unknown[]) => {
-  const impl = (ReactI18next as { useTranslation?: (...args: unknown[]) => unknown }).useTranslation;
-  if (typeof impl !== 'function') {
+// SAFETY: the wrapper forwards its arguments and result to the real hook unchanged, so it has the hook's own signature.
+export const useTranslation = ((...args: Parameters<typeof ReactI18next.useTranslation>) => {
+  // SAFETY: widening only; when the optional peer is stubbed the namespace has no useTranslation, so it can be undefined at runtime.
+  const impl = ReactI18next.useTranslation as typeof ReactI18next.useTranslation | undefined;
+  if (impl === undefined) {
     throw new TypeError(
       '[@repo/forms] react-i18next is not installed, but a component that ' +
         'translates its built-in copy was rendered. Add react-i18next and i18next to your ' +

@@ -9,6 +9,7 @@ import { t } from './t';
 
 export type TimeFormat = '12h' | '24h';
 
+// oxlint-disable-next-line react-doctor/only-export-components -- generateRange is a public helper shared with other pickers; moving it would change import paths
 export const generateRange = (min: number, max: number, step = 1): number[] => {
   const result: number[] = [];
   const size = Math.max(1, step);
@@ -20,7 +21,12 @@ export const generateRange = (min: number, max: number, step = 1): number[] => {
 
 const pad2 = (n: number): string => String(n).padStart(2, '0');
 
-const to12Hour = (h24: number): { h: number; period: 'AM' | 'PM' } => ({
+interface Hour12 {
+  h: number;
+  period: 'AM' | 'PM';
+}
+
+const to12Hour = (h24: number): Hour12 => ({
   h: h24 % 12 === 0 ? 12 : h24 % 12,
   period: h24 >= 12 ? 'PM' : 'AM',
 });
@@ -88,11 +94,11 @@ export const TimeWheels = ({
     [onChange],
   );
 
-  let col = 0;
-  const hourEdge = columnEdge(col++, columnCount);
-  const minuteEdge = columnEdge(col++, columnCount);
-  const secondEdge = showSeconds ? columnEdge(col++, columnCount) : 'none';
-  const periodEdge = showPeriod ? columnEdge(col++, columnCount) : 'none';
+  const hourEdge = columnEdge(0, columnCount);
+  const minuteEdge = columnEdge(1, columnCount);
+  const secondEdge = showSeconds ? columnEdge(2, columnCount) : 'none';
+  const periodColumn = showSeconds ? 3 : 2;
+  const periodEdge = showPeriod ? columnEdge(periodColumn, columnCount) : 'none';
 
   return (
     <View

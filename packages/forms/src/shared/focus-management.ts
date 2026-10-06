@@ -58,21 +58,38 @@ const focusIsDropped = (insideEl?: HTMLElement | null): boolean => {
 };
 
 /** Render-phase capture of the element focused just before `open` flipped true. */
+const captureOpenTransition = (
+  open: boolean,
+  prevRef: RefObject<HTMLElement | null>,
+  wasOpenRef: RefObject<boolean>,
+  generationRef: RefObject<number>,
+) => {
+  if (!canUseDom()) {
+    return;
+  }
+  if (open !== wasOpenRef.current) {
+    generationRef.current += 1;
+  }
+  if (open && !wasOpenRef.current) {
+    const active = document.activeElement;
+    prevRef.current = active instanceof HTMLElement ? active : null;
+  }
+  wasOpenRef.current = open;
+};
+
 const useCaptureOnOpen = (open: boolean) => {
   const prevRef = useRef<HTMLElement | null>(null);
   const wasOpenRef = useRef(false);
   const generationRef = useRef(0);
-  if (canUseDom()) {
-    if (open !== wasOpenRef.current) {
-      generationRef.current += 1;
-    }
-    if (open && !wasOpenRef.current) {
-      prevRef.current = document.activeElement as HTMLElement | null;
-    }
-    wasOpenRef.current = open;
-  }
+  // oxlint-disable-next-line react/refs -- render-phase capture is the documented contract of this hook (see the module header); the refs are only mutated, never rendered
+  captureOpenTransition(open, prevRef, wasOpenRef, generationRef);
   return { prevRef, generationRef };
 };
+
+/** `focusVisible` is a real browser option that lib.dom's FocusOptions does not declare yet. */
+interface FocusVisibleOptions extends FocusOptions {
+  focusVisible?: boolean;
+}
 
 const restoreLater = (
   prevRef: RefObject<HTMLElement | null>,
@@ -96,29 +113,81 @@ const restoreLater = (
       return;
     }
     if (focusIsDropped(insideRef?.current ?? null)) {
-      target.focus({
-        preventScroll: true,
-        focusVisible: wasKeyboardFocus(),
-      } as FocusOptions);
+      const options: FocusVisibleOptions = { preventScroll: true, focusVisible: wasKeyboardFocus() };
+      target.focus(options);
     }
   };
   // Exit animations unmount / park the overlay a few frames later; retry
   // after the typical exit window. All calls are idempotent.
-  requestAnimationFrame(() => requestAnimationFrame(restore));
+  requestAnimationFrame(() => {
+    requestAnimationFrame(restore);
+  });
   setTimeout(restore, 320);
 };
 
 /** Restore focus to the element focused at open time, on close (web only). */
 export const useReturnFocusOnClose = (open: boolean, skipReturnFocusRef?: RefObject<boolean>) => {
   const { prevRef, generationRef } = useCaptureOnOpen(open);
-  useEffect(() => {
-    if (!canUseDom() || !open) {
+  useEffect(
+    () => () => {
+      if (canUseDom() && open) {
+        restoreLater(prevRef, generationRef, undefined, skipReturnFocusRef);
+      }
+    },
+    [open, prevRef, generationRef, skipReturnFocusRef],
+  );
+};
+
+/** Moves focus into the sheet frame and cycles Tab inside it; returns the detach function. */
+const trapSheetFocus = (frame: HTMLElement): (() => void) => {
+  // Focus moves in once the sheet has mounted its frame (spring start).
+  const focusIn = () => {
+    if (!canUseDom()) {
       return;
     }
-    return () => {
-      restoreLater(prevRef, generationRef, undefined, skipReturnFocusRef);
-    };
-  }, [open, prevRef, generationRef, skipReturnFocusRef]);
+    if (frame.contains(document.activeElement)) {
+      return;
+    }
+    const first = frame.querySelector<HTMLElement>(FOCUSABLE);
+    const options: FocusVisibleOptions = { preventScroll: true, focusVisible: false };
+    (first ?? frame).focus(options);
+  };
+  // Both frames are tracked: cancelling only the outer one leaves the inner
+  // callback live once the outer has already run.
+  let innerRaf = 0;
+  const raf = requestAnimationFrame(() => {
+    innerRaf = requestAnimationFrame(focusIn);
+  });
+
+  // Light Tab trap: cycle within the frame (modal sheet owns focus).
+  const onKeyDown = (e: KeyboardEvent) => {
+    if (e.key !== 'Tab') {
+      return;
+    }
+    const focusables = [...frame.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(
+      (el) => el.offsetWidth > 0 || el.offsetHeight > 0,
+    );
+    if (!focusables.length) {
+      e.preventDefault();
+      return;
+    }
+    const [first] = focusables;
+    const last = focusables.at(-1);
+    const current = document.activeElement;
+    if (e.shiftKey && (current === first || current === frame)) {
+      e.preventDefault();
+      last?.focus();
+    } else if (!e.shiftKey && current === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
+  frame.addEventListener('keydown', onKeyDown);
+  return () => {
+    cancelAnimationFrame(raf);
+    cancelAnimationFrame(innerRaf);
+    frame.removeEventListener('keydown', onKeyDown);
+  };
 };
 
 /**
@@ -134,63 +203,14 @@ export const useSheetModalFocus = (
 ) => {
   const { prevRef, generationRef } = useCaptureOnOpen(open);
   useEffect(() => {
-    if (!canUseDom() || !open) {
-      return;
-    }
-    const frame = frameRef.current;
-    if (!frame || typeof frame.addEventListener !== 'function') {
-      return () => {
-        restoreLater(prevRef, generationRef, frameRef, skipReturnFocusRef);
-      };
-    }
-
-    // Focus moves in once the sheet has mounted its frame (spring start).
-    const focusIn = () => {
-      if (!canUseDom()) {
-        return;
-      }
-      if (frame.contains(document.activeElement)) {
-        return;
-      }
-      const first = frame.querySelector<HTMLElement>(FOCUSABLE);
-      (first ?? frame).focus({ preventScroll: true, focusVisible: false } as FocusOptions);
-    };
-    // Both frames are tracked: cancelling only the outer one leaves the inner
-    // callback live once the outer has already run.
-    let innerRaf = 0;
-    const raf = requestAnimationFrame(() => {
-      innerRaf = requestAnimationFrame(focusIn);
-    });
-
-    // Light Tab trap: cycle within the frame (modal sheet owns focus).
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== 'Tab') {
-        return;
-      }
-      const focusables = Array.from(frame.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
-        (el) => el.offsetWidth > 0 || el.offsetHeight > 0,
-      );
-      if (!focusables.length) {
-        e.preventDefault();
-        return;
-      }
-      const first = focusables[0];
-      const last = focusables[focusables.length - 1];
-      const current = document.activeElement;
-      if (e.shiftKey && (current === first || current === frame)) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && current === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    };
-    frame.addEventListener('keydown', onKeyDown);
+    const active = canUseDom() && open;
+    const frame = active ? frameRef.current : null;
+    const detach = frame instanceof EventTarget ? trapSheetFocus(frame) : undefined;
     return () => {
-      cancelAnimationFrame(raf);
-      cancelAnimationFrame(innerRaf);
-      frame.removeEventListener('keydown', onKeyDown);
-      restoreLater(prevRef, generationRef, frameRef, skipReturnFocusRef);
+      detach?.();
+      if (active) {
+        restoreLater(prevRef, generationRef, frameRef, skipReturnFocusRef);
+      }
     };
   }, [open, frameRef, prevRef, generationRef, skipReturnFocusRef]);
 };
@@ -211,23 +231,23 @@ const DIALOG_SHOW_FOCUS_EVENT = 'mp.dialogShowFocus';
 export const useDialogShowFocus = (onOpenAutoFocus: (event: Event) => void) => {
   const { open, contentId } = useDialogContext();
   useEffect(() => {
-    if (!open || !contentId || !canUseDom()) {
-      return;
+    const content = open && contentId && canUseDom() ? document.querySelector(`[id="${contentId}"]`) : null;
+    const focused = content === null ? null : document.activeElement;
+    const shouldRun =
+      content !== null && focused instanceof HTMLElement && content.contains(focused) && focused.tabIndex < 0;
+    if (shouldRun) {
+      content.addEventListener(DIALOG_SHOW_FOCUS_EVENT, onOpenAutoFocus, { once: true });
+      content.dispatchEvent(new CustomEvent(DIALOG_SHOW_FOCUS_EVENT, { cancelable: true }));
     }
-    const content = document.getElementById(contentId);
-    const focused = document.activeElement;
-    if (!content || !(focused instanceof HTMLElement)) {
-      return;
-    }
-    if (!content.contains(focused) || focused.tabIndex >= 0) {
-      return;
-    }
-    content.addEventListener(DIALOG_SHOW_FOCUS_EVENT, onOpenAutoFocus, { once: true });
-    content.dispatchEvent(new CustomEvent(DIALOG_SHOW_FOCUS_EVENT, { cancelable: true }));
+    return () => {
+      content?.removeEventListener(DIALOG_SHOW_FOCUS_EVENT, onOpenAutoFocus);
+    };
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- onOpenAutoFocus is read once at open; re-running on a new callback identity would refocus an already-open dialog
   }, [open, contentId]);
 };
 
 /** `useDialogShowFocus` for a caller that renders the Dialog itself. */
+// oxlint-disable-next-line sonarjs/function-name -- exported component name; this module is .ts so the PascalCase allowance for .tsx does not apply, and renaming would change the export
 export const DialogShowFocus = ({ onOpenAutoFocus }: { onOpenAutoFocus: (event: Event) => void }): null => {
   useDialogShowFocus(onOpenAutoFocus);
   return null;

@@ -27,7 +27,7 @@ export const useKeyboardInset = (): number => {
 
     const show = Keyboard.addListener(showEvent, (event) => {
       const screen = event?.endCoordinates;
-      if (!screen) {
+      if (screen == null) {
         return;
       }
       const windowHeight = Dimensions.get('window').height;

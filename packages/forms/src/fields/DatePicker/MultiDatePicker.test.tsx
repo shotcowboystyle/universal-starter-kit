@@ -1,47 +1,62 @@
 import { renderWithProviders } from '@repo/test-utils';
 import { useForm } from '@tanstack/react-form';
 import { act, fireEvent, waitFor } from '@testing-library/react';
+import { useEffect } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { Form } from '../../Form';
 import { getFieldHeight } from '../../shared/utils';
 
+// oxlint-disable-next-line vitest/prefer-import-in-mock -- stubs the whole react-native module with a minimal Platform; the real Platform type is not satisfiable
 vi.mock('react-native', () => ({
   Platform: {
     OS: 'web',
-    select: (options: Record<string, unknown>) => options.web ?? options.default,
+    select: <T,>(options: { web?: T; default?: T }) => options.web ?? options.default,
   },
 }));
 
-vi.mock('@tamagui/lucide-icons-2', () => ({
+vi.mock(import('@tamagui/lucide-icons-2'), () => ({
   Calendar: () => null,
   ChevronLeft: () => null,
   ChevronRight: () => null,
   X: () => null,
 }));
 
-const loadMultiDatePicker = async () => (await import('./MultiDatePicker')).MultiDatePicker;
+const loadMultiDatePicker = async () => {
+  const { MultiDatePicker } = await import('./MultiDatePicker');
+  return MultiDatePicker;
+};
+
+const queryRequired = (root: ParentNode, selector: string): HTMLElement => {
+  const el = root.querySelector<HTMLElement>(selector);
+  if (el === null) {
+    throw new Error(`Expected ${selector} to be rendered`);
+  }
+  return el;
+};
 
 const getEnabledDayButtons = (root: ParentNode): HTMLButtonElement[] => {
-  const allButtons = Array.from(root.querySelectorAll('button, [role="button"]')) as HTMLButtonElement[];
+  const allButtons = [...root.querySelectorAll<HTMLButtonElement>('button, [role="button"]')];
   return allButtons.filter((btn) => {
     const text = btn.textContent?.trim() ?? '';
     const isDay = /^\d{1,2}$/u.test(text);
     const disabled =
-      btn.hasAttribute('disabled') || btn.getAttribute('aria-disabled') === 'true' || btn.hasAttribute('data-disabled');
+      btn.hasAttribute('disabled') ||
+      btn.getAttribute('aria-disabled') === 'true' ||
+      btn.dataset.disabled !== undefined;
     return isDay && !disabled;
   });
 };
 
 const skeletonHeight = (el: HTMLElement): number => {
   const attr = el.getAttribute('height');
-  if (attr && /^\d+(\.\d+)?$/u.test(attr)) {
+  if (attr !== null && attr !== '' && /^\d+(?:\.\d+)?$/u.test(attr)) {
     return Number(attr);
   }
   if (el.style.height.endsWith('px')) {
-    return Number.parseFloat(el.style.height);
+    return Number(el.style.height.slice(0, -2));
   }
-  return Number.parseFloat(getComputedStyle(el).height) || 0;
+  return Number(getComputedStyle(el).height.replace('px', '')) || 0;
 };
 
 describe('MultiDatePicker', () => {
@@ -82,10 +97,10 @@ describe('MultiDatePicker', () => {
         name="dates"
       />,
     );
-    const trigger = result.container.querySelector('[data-testid="date-picker-trigger"]') as HTMLElement;
-    const label = result.container.querySelector('label') as HTMLLabelElement;
-    expect(trigger?.id).toBeTruthy();
-    expect(label.htmlFor).toBe(trigger.id);
+    const trigger = queryRequired(result.container, '[data-testid="date-picker-trigger"]');
+    const labelFor = queryRequired(result.container, 'label').getAttribute('for');
+    expect(trigger.id).toBeTruthy();
+    expect(labelFor).toBe(trigger.id);
     expect(trigger.getAttribute('aria-labelledby')).toBe(`${trigger.id}-label`);
   });
 
@@ -142,11 +157,13 @@ describe('MultiDatePicker', () => {
     // rendered. Adopting a programmatic value must not emit onChange.
     it('form-integrated: a field value set after mount displays, without onChange', async () => {
       const MultiDatePicker = await loadMultiDatePicker();
-      const onChange = vi.fn();
+      const onChange = vi.fn<(value: Date[]) => void>();
       let formApi: { setFieldValue: (name: 'dates', value: Date[]) => void } | undefined;
       const TestComponent = () => {
         const form = useForm({ defaultValues: { dates: [] as Date[] } });
-        formApi = form as unknown as typeof formApi;
+        useEffect(() => {
+          formApi = form as unknown as typeof formApi;
+        }, [form]);
         return (
           <Form form={form}>
             <MultiDatePicker
@@ -182,8 +199,7 @@ describe('MultiDatePicker', () => {
         />,
       );
       expect(result.container.querySelector('input')).toBeNull();
-      const skeleton = result.container.querySelector('[data-multidate-skeleton]') as HTMLElement;
-      expect(skeleton).toBeTruthy();
+      const skeleton = queryRequired(result.container, '[data-multidate-skeleton]');
       expect(skeletonHeight(skeleton)).toBe(getFieldHeight('$4'));
     });
 

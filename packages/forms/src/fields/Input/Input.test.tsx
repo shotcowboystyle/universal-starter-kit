@@ -9,7 +9,24 @@ import { TableCellContext } from '../../shared/table-cell-context';
 
 import { Input } from './index';
 
-describe('Input', () => {
+const EDITABLE_CELL = { inTableCell: true, isHeader: false, editable: true };
+
+const radiusClasses = (el: HTMLElement | null): string[] =>
+  (el?.className ?? '').split(' ').filter((c) => c.startsWith('_btlr-'));
+
+const radiusAt = (size: 'small' | 'medium' | 'large'): string[] => {
+  const result = renderWithProviders(
+    <Preset overrides={{ size, borderRadius: 'medium' }}>
+      <Input
+        label="Name"
+        name="n"
+      />
+    </Preset>,
+  );
+  return radiusClasses(result.container.querySelector("[data-ring-target='box']"));
+};
+
+describe(Input, () => {
   describe('without form context', () => {
     it('renders with label and placeholder', () => {
       const result = renderWithProviders(
@@ -88,7 +105,7 @@ describe('Input', () => {
     });
 
     it('calls onChangeText when value changes', async () => {
-      const onChangeText = vi.fn();
+      const onChangeText = vi.fn<(text: string) => void>();
       const result = renderWithProviders(
         <Input
           label="Text"
@@ -108,7 +125,7 @@ describe('Input', () => {
 
   describe('standalone value ownership', () => {
     it('reflects external controlled updates, including clearing, without remounting', () => {
-      const onChange = vi.fn();
+      const onChange = vi.fn<(...args: unknown[]) => void>();
       const result = renderWithProviders(
         <Input
           label="Name"
@@ -116,7 +133,7 @@ describe('Input', () => {
           onChange={onChange}
         />,
       );
-      const input = result.container.querySelector('input') as HTMLInputElement;
+      const input = result.container.querySelector('input')!;
       act(() => {
         input.focus();
       });
@@ -149,7 +166,7 @@ describe('Input', () => {
           defaultValue="corp"
         />,
       );
-      const input = result.container.querySelector('input') as HTMLInputElement;
+      const input = result.container.querySelector('input')!;
       fireEvent.change(input, { target: { value: 'draft' } });
       result.rerender(
         <Input
@@ -160,14 +177,14 @@ describe('Input', () => {
       expect(input.value).toBe('draft');
     });
 
-    it.each(['onChange', 'onChangeText'] as const)('round-trips controlled edits through %s', (callback) => {
+    it.each(['onChange', 'onChangeText'] as const)('round-trips controlled edits through %s', (channel) => {
       const ControlledInput = () => {
         const [value, setValue] = useState('corp');
         return (
           <Input
             label="Name"
             value={value}
-            {...(callback === 'onChange'
+            {...(channel === 'onChange'
               ? {
                   onChange: (event) => {
                     setValue(event.target.value);
@@ -178,7 +195,7 @@ describe('Input', () => {
         );
       };
       const result = renderWithProviders(<ControlledInput />);
-      const input = result.container.querySelector('input') as HTMLInputElement;
+      const input = result.container.querySelector('input')!;
       fireEvent.change(input, { target: { value: 'draft' } });
       expect(input.value).toBe('draft');
       fireEvent.change(input, { target: { value: '' } });
@@ -256,7 +273,7 @@ describe('Input', () => {
 
   describe('with form context', () => {
     it('renders and validates with tanstack form', async () => {
-      const onSubmit = vi.fn();
+      const onSubmit = vi.fn<(...args: unknown[]) => void>();
       const result = renderWithProviders(
         <Form
           formOptions={{ defaultValues: { name: '' } }}
@@ -290,7 +307,7 @@ describe('Input', () => {
           defaultValue="hello"
         />,
       );
-      const input = result.container.querySelector('input') as HTMLInputElement;
+      const input = result.container.querySelector('input')!;
       expect(input).toBeTruthy();
       act(() => {
         input.focus();
@@ -305,7 +322,7 @@ describe('Input', () => {
     });
 
     it('standalone: typing immediately after programmatic focus lands in the same node', async () => {
-      const onChangeText = vi.fn();
+      const onChangeText = vi.fn<(text: string) => void>();
       const result = renderWithProviders(
         <Input
           label="Item"
@@ -314,7 +331,7 @@ describe('Input', () => {
           onChangeText={onChangeText}
         />,
       );
-      const input = result.container.querySelector('input') as HTMLInputElement;
+      const input = result.container.querySelector('input')!;
       act(() => {
         input.focus();
       });
@@ -337,7 +354,7 @@ describe('Input', () => {
           />
         </Form>,
       );
-      const input = result.container.querySelector('input') as HTMLInputElement;
+      const input = result.container.querySelector('input')!;
       act(() => {
         input.focus();
       });
@@ -352,9 +369,9 @@ describe('Input', () => {
     });
 
     it('in table cell (chromeless): programmatic focus on editor open sticks and typing works', async () => {
-      const onChangeText = vi.fn();
+      const onChangeText = vi.fn<(text: string) => void>();
       const result = renderWithProviders(
-        <TableCellContext.Provider value={{ inTableCell: true, isHeader: false, editable: true }}>
+        <TableCellContext.Provider value={EDITABLE_CELL}>
           <Input
             name="item"
             value="Steel bracket"
@@ -362,7 +379,7 @@ describe('Input', () => {
           />
         </TableCellContext.Provider>,
       );
-      const input = result.container.querySelector('input') as HTMLInputElement;
+      const input = result.container.querySelector('input')!;
       expect(input).toBeTruthy();
       // The cell editor contract: focus is set programmatically on open and
       // the user can type immediately.
@@ -387,7 +404,7 @@ describe('Input', () => {
           defaultValue="x"
         />,
       );
-      const input = result.container.querySelector('input') as HTMLInputElement;
+      const input = result.container.querySelector('input')!;
       act(() => {
         input.focus();
       });
@@ -417,8 +434,8 @@ describe('Input', () => {
           rightIcon={<span data-testid="trailing">R</span>}
         />,
       );
-      const box = result.container.querySelector("[data-ring-target='box']") as HTMLElement;
-      const input = result.container.querySelector('input') as HTMLInputElement;
+      const box = result.container.querySelector<HTMLElement>("[data-ring-target='box']")!;
+      const input = result.container.querySelector('input')!;
       expect(box).toBeTruthy();
       expect(box.className).toMatch(/mp-composite-ring/u);
       expect(box.contains(result.getByTestId('leading'))).toBe(true);
@@ -438,8 +455,8 @@ describe('Input', () => {
           leftIcon={<span data-testid="leading">L</span>}
         />,
       );
-      const box = result.container.querySelector("[data-ring-target='box']") as HTMLElement;
-      const input = result.container.querySelector('input') as HTMLInputElement;
+      const box = result.container.querySelector<HTMLElement>("[data-ring-target='box']")!;
+      const input = result.container.querySelector('input')!;
       expect(box.className).toMatch(/mp-composite-ring/u);
       expect(box.contains(result.getByTestId('leading'))).toBe(true);
       expect(input.className).toMatch(/mp-input-area/u);
@@ -455,11 +472,11 @@ describe('Input', () => {
           compact
         />,
       );
-      const box = result.container.querySelector("[data-ring-target='box']") as HTMLElement;
-      expect(box.getAttribute('data-density')).toBe('compact');
+      const box = result.container.querySelector<HTMLElement>("[data-ring-target='box']")!;
+      expect(box.dataset.density).toBe('compact');
       // Compact steps space, never the size axis — the painted height
       // token must be exactly what a comfortable field resolves to.
-      expect(box.getAttribute('data-size')).toBe('$4');
+      expect(box.dataset.size).toBe('$4');
     });
 
     it('size ejects painted height and leaves density comfortable', () => {
@@ -470,9 +487,9 @@ describe('Input', () => {
           size="$5"
         />,
       );
-      const box = result.container.querySelector("[data-ring-target='box']") as HTMLElement;
-      expect(box.getAttribute('data-density')).toBe('comfortable');
-      expect(box.getAttribute('data-size')).toBe('$5');
+      const box = result.container.querySelector<HTMLElement>("[data-ring-target='box']")!;
+      expect(box.dataset.density).toBe('comfortable');
+      expect(box.dataset.size).toBe('$5');
     });
 
     it('compact + size stay orthogonal', () => {
@@ -484,9 +501,9 @@ describe('Input', () => {
           size="$5"
         />,
       );
-      const box = result.container.querySelector("[data-ring-target='box']") as HTMLElement;
-      expect(box.getAttribute('data-density')).toBe('compact');
-      expect(box.getAttribute('data-size')).toBe('$5');
+      const box = result.container.querySelector<HTMLElement>("[data-ring-target='box']")!;
+      expect(box.dataset.density).toBe('compact');
+      expect(box.dataset.size).toBe('$5');
     });
   });
 
@@ -498,9 +515,9 @@ describe('Input', () => {
           name="n"
         />,
       );
-      const box = result.container.querySelector("[data-ring-target='box']") as HTMLElement;
-      expect(Number(box.getAttribute('data-visual-height'))).toBe(44);
-      expect(box.getAttribute('data-press-floor')).toBe('box');
+      const box = result.container.querySelector<HTMLElement>("[data-ring-target='box']")!;
+      expect(Number(box.dataset.visualHeight)).toBe(44);
+      expect(box.dataset.pressFloor).toBe('box');
     });
 
     it('sub-44 sizes restore press via slop, not giant chrome', () => {
@@ -513,10 +530,10 @@ describe('Input', () => {
           size="$2"
         />,
       );
-      const box = result.container.querySelector("[data-ring-target='box']") as HTMLElement;
-      const visual = Number(box.getAttribute('data-visual-height'));
+      const box = result.container.querySelector<HTMLElement>("[data-ring-target='box']")!;
+      const visual = Number(box.dataset.visualHeight);
       expect(visual).toBeLessThan(44);
-      expect(box.getAttribute('data-press-floor')).toBe('slop');
+      expect(box.dataset.pressFloor).toBe('slop');
     });
   });
 
@@ -529,7 +546,7 @@ describe('Input', () => {
           error="Enter a valid email"
         />,
       );
-      const box = result.container.querySelector("[data-ring-target='box']") as HTMLElement;
+      const box = result.container.querySelector<HTMLElement>("[data-ring-target='box']")!;
       expect(box.querySelector('svg')).toBeTruthy();
       expect(result.findTextElement('Enter a valid email')).toBeDefined();
     });
@@ -568,11 +585,6 @@ describe('Input', () => {
    * assertions read `_btlr-*` atoms (same as Button).
    */
   describe('design-law — DEFAULT radius, ring offset 0, label 400', () => {
-    const radiusClasses = (el: HTMLElement | null): string[] =>
-      String(el?.className || '')
-        .split(' ')
-        .filter((c) => c.startsWith('_btlr-'));
-
     it('declares radius DEFAULT class on the control box', () => {
       const result = renderWithProviders(
         <Input
@@ -580,9 +592,9 @@ describe('Input', () => {
           name="n"
         />,
       );
-      const box = result.container.querySelector("[data-ring-target='box']") as HTMLElement;
-      expect(box.getAttribute('data-radius-class')).toBe('DEFAULT');
-      expect(box.getAttribute('data-radius-part')).toBe('Input');
+      const box = result.container.querySelector<HTMLElement>("[data-ring-target='box']")!;
+      expect(box.dataset.radiusClass).toBe('DEFAULT');
+      expect(box.dataset.radiusPart).toBe('Input');
     });
 
     it('rides the DEFAULT radius scale: square at none, $12 at full', () => {
@@ -594,7 +606,7 @@ describe('Input', () => {
           />
         </Preset>,
       );
-      const noneBox = none.container.querySelector("[data-ring-target='box']") as HTMLElement;
+      const noneBox = none.container.querySelector<HTMLElement>("[data-ring-target='box']")!;
       expect(radiusClasses(noneBox)).toStrictEqual(['_btlr-t-radius-0']);
 
       const full = renderWithProviders(
@@ -605,25 +617,14 @@ describe('Input', () => {
           />
         </Preset>,
       );
-      const fullBox = full.container.querySelector("[data-ring-target='box']") as HTMLElement;
+      const fullBox = full.container.querySelector<HTMLElement>("[data-ring-target='box']")!;
       expect(radiusClasses(fullBox)).toStrictEqual(['_btlr-t-radius-12']);
     });
 
     it("paints the size table's corner at medium, as Button does", () => {
-      const at = (size: 'small' | 'medium' | 'large', borderRadius = 'medium' as const) => {
-        const result = renderWithProviders(
-          <Preset overrides={{ size, borderRadius }}>
-            <Input
-              label="Name"
-              name="n"
-            />
-          </Preset>,
-        );
-        return radiusClasses(result.container.querySelector("[data-ring-target='box']")!);
-      };
-      expect(at('small')).toStrictEqual(['_btlr-7px']);
-      expect(at('medium')).toStrictEqual(['_btlr-9px']);
-      expect(at('large')).toStrictEqual(['_btlr-10px']);
+      expect(radiusAt('small')).toStrictEqual(['_btlr-7px']);
+      expect(radiusAt('medium')).toStrictEqual(['_btlr-9px']);
+      expect(radiusAt('large')).toStrictEqual(['_btlr-10px']);
     });
 
     it('an explicit size prop picks the corner too', () => {
@@ -634,7 +635,7 @@ describe('Input', () => {
           size="$5"
         />,
       );
-      const box = result.container.querySelector("[data-ring-target='box']") as HTMLElement;
+      const box = result.container.querySelector<HTMLElement>("[data-ring-target='box']")!;
       expect(radiusClasses(box)).toStrictEqual(['_btlr-10px']);
       expect(box.className).toContain('_h-52px');
     });
@@ -646,9 +647,9 @@ describe('Input', () => {
           name="n"
         />,
       );
-      const box = result.container.querySelector("[data-ring-target='box']") as HTMLElement;
-      expect(box.getAttribute('data-ring-offset')).toBe('0');
-      expect(document.getElementById('mp-input-field-ring-offset')?.textContent).toContain('outline-offset: 0');
+      const box = result.container.querySelector<HTMLElement>("[data-ring-target='box']")!;
+      expect(box.dataset.ringOffset).toBe('0');
+      expect(document.querySelector('#mp-input-field-ring-offset')?.textContent).toContain('outline-offset: 0');
     });
 
     it('paints the field label at weight 400', () => {
@@ -658,10 +659,10 @@ describe('Input', () => {
           name="n"
         />,
       );
-      const label = result.container.querySelector('label') as HTMLElement;
+      const label = result.container.querySelector('label')!;
       expect(label).toBeTruthy();
       const weight = label.style.fontWeight || getComputedStyle(label).fontWeight;
-      expect(['400', 'normal']).toContain(String(weight));
+      expect(['400', 'normal']).toContain(weight);
     });
   });
 });

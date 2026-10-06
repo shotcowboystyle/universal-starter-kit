@@ -2,15 +2,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Hermes ships Intl without DisplayNames. Without a fallback every native
 // country row read "flag DE +49" and a search for "Germ" found nothing.
-beforeEach(() => {
-  vi.resetModules();
-  vi.stubGlobal('Intl', { ...Intl, DisplayNames: undefined });
-});
-afterEach(() => {
-  vi.unstubAllGlobals();
-});
-
 describe('phone country options without Intl.DisplayNames', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.stubGlobal('Intl', { ...Intl, DisplayNames: null });
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it('still names every country', async () => {
     const { getCountryOptions } = await import('./phone');
     const options = getCountryOptions();

@@ -39,13 +39,20 @@ import type { ViewMode } from './parts';
 // ---------------------------------------------------------------------------
 
 export type MultiDatePickerProps<
-  TParentData = any,
-  TName extends DeepKeys<TParentData> = any,
-  TFieldValidator extends Validator<DeepValue<TParentData, TName>> | undefined = undefined,
-  TFormValidator extends Validator<TParentData> | undefined = undefined,
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- default mirrors FormFieldProps/FieldComponentProps; untyped forms have no owner shape
+  TParentData = Record<string, unknown>,
+  TName extends DeepKeys<TParentData> = DeepKeys<TParentData>,
+  TFieldValidator extends Validator<DeepValue<TParentData, TName>> = undefined,
+  TFormValidator extends Validator<TParentData> = undefined,
   TData extends DeepValue<TParentData, TName> = DeepValue<TParentData, TName>,
-> = Omit<FormFieldProps<TParentData, TName, TFieldValidator, TFormValidator, TData>, 'children' | 'field'> &
-  Partial<Omit<FieldComponentProps<TParentData, TName, TFieldValidator, TFormValidator, TData>, 'children'>> & {
+> = Omit<
+  FormFieldProps<TParentData, TName, TFieldValidator, TFormValidator, TData>,
+  'children' | 'field' | 'onChange'
+> &
+  Partial<
+    Omit<FieldComponentProps<TParentData, TName, TFieldValidator, TFormValidator, TData>, 'children' | 'validators'>
+  > & {
+    validators?: Parameters<typeof useResolvedValidators>[1];
     placeholder?: string;
     minDate?: Date;
     maxDate?: Date;
@@ -296,15 +303,18 @@ const formatMultiDates = (dates: Date[]): string => {
 // MultiDatePicker — main component
 // ---------------------------------------------------------------------------
 
+const isDateList = (value: unknown): value is Date[] => Array.isArray(value);
+
 // A required multi-date field is empty when no dates are selected — the
 // default isEmpty only catches null/"" and would let `[]` pass validation.
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- isEmpty predicate contract of useResolvedValidators takes any field value
 const isEmptyDates = (value: unknown) => value == null || value === '' || (Array.isArray(value) && value.length === 0);
 
 export const MultiDatePicker = <
   TParentData,
   TName extends DeepKeys<TParentData>,
-  TFieldValidator extends Validator<DeepValue<TParentData, TName>> | undefined = undefined,
-  TFormValidator extends Validator<TParentData> | undefined = undefined,
+  TFieldValidator extends Validator<DeepValue<TParentData, TName>> = undefined,
+  TFormValidator extends Validator<TParentData> = undefined,
   TData extends DeepValue<TParentData, TName> = DeepValue<TParentData, TName>,
 >(
   props: MultiDatePickerProps<TParentData, TName, TFieldValidator, TFormValidator, TData>,
@@ -315,7 +325,6 @@ export const MultiDatePicker = <
     value: valueProp,
     onChange,
     form,
-    inputProps: _inputProps,
     placeholder = t('Select dates'),
     minDate,
     maxDate,
@@ -336,17 +345,21 @@ export const MultiDatePicker = <
     skeleton,
     compact,
     id: idProp,
-    ..._restProps
   } = useProps(props);
 
   const { resolvedForm, knobProps, id } = useFormField({ form, id: idProp, compact });
   const resolvedValidators = useResolvedValidators(required, validators, label, name, isEmptyDates);
+  // SAFETY: knobProps.sizeToken is always one of the size token names
   const resolvedSize = (size ?? knobProps.sizeToken) as SizeTokens;
   const visualHeight = getFieldHeight(resolvedSize, 1, hydrationTouch);
 
-  const initialDates = (
-    Array.isArray(valueProp) ? valueProp : Array.isArray(defaultValue) ? defaultValue : []
-  ) as Date[];
+  let initialDates: Date[] = [];
+  if (Array.isArray(valueProp)) {
+    initialDates = valueProp;
+  } else if (Array.isArray(defaultValue)) {
+    // SAFETY: a MultiDatePicker's defaultValue is a Date[] (the field value type)
+    initialDates = defaultValue as Date[];
+  }
   const [open, setOpen] = useState(false);
   const [selectedDates, setSelectedDates] = useState<Date[]>(initialDates);
   // Ref mirror so rapid toggles batched into one render still accumulate.
@@ -357,8 +370,8 @@ export const MultiDatePicker = <
   const popoverRef = useRef<Popover>(null);
 
   const openPicker = useCallback(() => {
-    const seed = selectedDatesRef.current[0];
-    if (seed) {
+    const [seed] = selectedDatesRef.current;
+    if (seed != null) {
       setDisplayDate(seed);
     }
     setOpen(true);
@@ -368,8 +381,9 @@ export const MultiDatePicker = <
   // TanStack field value) into the display state without emitting onChange.
   // Skip setState when the calendar days are unchanged so a new
   // array identity from the parent cannot force a render storm.
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- FieldValueSync hands over the raw field value; this callback owns the coercion
   const adoptExternalValue = useCallback((raw: unknown) => {
-    const next = Array.isArray(raw) ? (raw as Date[]) : [];
+    const next = isDateList(raw) ? raw : [];
     const prev = selectedDatesRef.current;
     const same = prev.length === next.length && prev.every((d, i) => next[i] != null && isSameDay(d, next[i]));
     if (same) {
@@ -388,7 +402,7 @@ export const MultiDatePicker = <
   }, [valueProp, adoptExternalValue]);
 
   const handleToggleDate = useCallback(
-    (date: Date, fieldChange?: (value: any) => void) => {
+    (date: Date, fieldChange?: (value: Date[]) => void) => {
       if (minDate && date < minDate) {
         return;
       }
@@ -403,6 +417,7 @@ export const MultiDatePicker = <
         if (current.length >= limit) {
           return;
         }
+        // oxlint-disable-next-line unicorn/no-array-sort -- sorts a fresh spread copy; toSorted is not available on every target runtime
         next = [...current, date].sort((a, b) => a.getTime() - b.getTime());
       } else {
         next = current.filter((_, i) => i !== existing);
@@ -414,13 +429,13 @@ export const MultiDatePicker = <
     [minDate, maxDate, limit],
   );
 
-  const handleClear = useCallback((fieldChange?: (value: any) => void) => {
+  const handleClear = useCallback((fieldChange?: (value: Date[]) => void) => {
     selectedDatesRef.current = [];
     setSelectedDates([]);
     fieldChange?.([]);
   }, []);
 
-  const calendarContent = (fieldChange?: (value: any) => void) => (
+  const calendarContent = (fieldChange?: (value: Date[]) => void) => (
     <DualCalendarBody
       selectedDates={selectedDates}
       onToggleDate={(date) => {
@@ -435,11 +450,7 @@ export const MultiDatePicker = <
     />
   );
 
-  const renderPopover = (
-    hasError?: boolean,
-    blurHandler?: (...args: any[]) => void,
-    fieldChange?: (value: any) => void,
-  ) => {
+  const renderPopover = (hasError = false, blurHandler?: () => void, fieldChange?: (value: Date[]) => void) => {
     if (readOnly) {
       return (
         <InputParts.Box>
@@ -447,7 +458,7 @@ export const MultiDatePicker = <
             value={formatMultiDates(selectedDates)}
             readOnly
             aria-readonly="true"
-            aria-required={required || undefined}
+            aria-required={required === true || undefined}
             aria-invalid={hasError || undefined}
             placeholder={placeholder}
           />
@@ -456,8 +467,9 @@ export const MultiDatePicker = <
     }
     const handleOpenChange = (isOpen: boolean) => {
       // Re-seed the visible month from the current selection on every open.
-      if (isOpen && selectedDatesRef.current[0]) {
-        setDisplayDate(selectedDatesRef.current[0]);
+      const [first] = selectedDatesRef.current;
+      if (isOpen && first != null) {
+        setDisplayDate(first);
       }
       setOpen(isOpen);
       if (!isOpen) {
@@ -480,12 +492,12 @@ export const MultiDatePicker = <
               handleClear(fieldChange);
             }}
             onButtonPress={openPicker}
-            error={!!hasError}
+            error={hasError}
             // SB-KS-04: without the field id the sibling FieldLayout label's
             // `htmlFor` resolves to nothing — a dangling label and a control
             // with no accessible name.
             id={id}
-            aria-required={required || undefined}
+            aria-required={required === true || undefined}
             aria-invalid={hasError || undefined}
           />
         }
@@ -518,7 +530,7 @@ export const MultiDatePicker = <
     );
   }
 
-  if (!resolvedForm || !name) {
+  if (resolvedForm == null || name == null || name === '') {
     return (
       <FieldLayout
         id={id}
@@ -532,7 +544,9 @@ export const MultiDatePicker = <
         // FieldLayout owns the dimWhole assembly dim (keepLabel pins
         // the sibling label/helper readable) — it needs the disabled state.
         disabled={disabled}>
-        <InputParts size={size || knobProps.sizeToken}>{renderPopover(!!errorProp, undefined, onChange)}</InputParts>
+        <InputParts size={size ?? knobProps.sizeToken}>
+          {renderPopover(Boolean(errorProp), undefined, onChange)}
+        </InputParts>
       </FieldLayout>
     );
   }
@@ -567,9 +581,9 @@ export const MultiDatePicker = <
               knobProps={knobProps}
               // See standalone branch — FieldLayout carries dimWhole.
               disabled={disabled}>
-              <InputParts size={size || knobProps.sizeToken}>
+              <InputParts size={size ?? knobProps.sizeToken}>
                 {renderPopover(
-                  !!resolvedError,
+                  Boolean(resolvedError),
                   mergeFieldHandler(field, 'handleBlur', _onBlur),
                   mergeFieldHandler(field, 'handleChange'),
                 )}

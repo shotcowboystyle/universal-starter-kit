@@ -12,27 +12,23 @@ import { cleanup } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import * as storiesModule from './Skeleton.stories';
+import meta, { Basic, Variants, TextLines, Circles, LoadingRow, MotionOff, RadiusKnob } from './Skeleton.stories';
 
-afterEach(cleanup);
-
-const meta = storiesModule.default;
-const { Basic, Variants, TextLines, Circles, LoadingRow, MotionOff, RadiusKnob } = storiesModule;
+import type { SkeletonProps } from './index';
 
 interface StoryLike {
-  render?: (args: Record<string, unknown>) => ReactElement;
+  render?: (args: SkeletonProps) => ReactElement;
 }
 
 const mount = (story: StoryLike) => {
   if (!story.render) {
     throw new Error('story has no render');
   }
-  return renderWithProviders(story.render({ ...(meta.args as Record<string, unknown>) }));
+  return renderWithProviders(story.render({ ...meta.args }));
 };
 
 /** Every bone is a SkeletonFrame, which Tamagui names `is_Skeleton`. */
-const bones = (container: HTMLElement): HTMLElement[] =>
-  Array.from(container.querySelectorAll<HTMLElement>('.is_Skeleton'));
+const bones = (container: HTMLElement): HTMLElement[] => [...container.querySelectorAll<HTMLElement>('.is_Skeleton')];
 
 const classesOf = (el: HTMLElement) => (el.getAttribute('class') ?? '').split(' ');
 const widthClass = (el: HTMLElement) => classesOf(el).find((c) => c.startsWith('_w-'));
@@ -41,6 +37,8 @@ const heightClass = (el: HTMLElement) => classesOf(el).find((c) => c.startsWith(
 const stories = { Basic, Variants, TextLines, Circles, LoadingRow, MotionOff, RadiusKnob } as const;
 
 describe('Forms/Skeleton stories', () => {
+  afterEach(cleanup);
+
   it('files under a Forms title so the gallery buckets it with the fields it fills in for', () => {
     expect(meta.title).toBe('Forms/Skeleton');
   });

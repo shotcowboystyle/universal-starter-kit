@@ -37,13 +37,20 @@ import { coerceToDate } from './utils';
 type TimeFormat = '12h' | '24h';
 
 export type DatetimePickerProps<
-  TParentData = any,
-  TName extends DeepKeys<TParentData> = any,
-  TFieldValidator extends Validator<DeepValue<TParentData, TName>> | undefined = undefined,
-  TFormValidator extends Validator<TParentData> | undefined = undefined,
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- default mirrors FormFieldProps/FieldComponentProps; untyped forms have no owner shape
+  TParentData = Record<string, unknown>,
+  TName extends DeepKeys<TParentData> = DeepKeys<TParentData>,
+  TFieldValidator extends Validator<DeepValue<TParentData, TName>> = undefined,
+  TFormValidator extends Validator<TParentData> = undefined,
   TData extends DeepValue<TParentData, TName> = DeepValue<TParentData, TName>,
-> = Omit<FormFieldProps<TParentData, TName, TFieldValidator, TFormValidator, TData>, 'children' | 'field'> &
-  Partial<Omit<FieldComponentProps<TParentData, TName, TFieldValidator, TFormValidator, TData>, 'children'>> & {
+> = Omit<
+  FormFieldProps<TParentData, TName, TFieldValidator, TFormValidator, TData>,
+  'children' | 'field' | 'onChange'
+> &
+  Partial<
+    Omit<FieldComponentProps<TParentData, TName, TFieldValidator, TFormValidator, TData>, 'children' | 'validators'>
+  > & {
+    validators?: Parameters<typeof useResolvedValidators>[1];
     readOnly?: boolean;
     placeholder?: string;
     minDate?: Date;
@@ -74,7 +81,7 @@ export type DatetimePickerProps<
 // Time utilities
 // ---------------------------------------------------------------------------
 
-const parseTimeFromDate = (date: Date): { h: number; m: number; s: number } => ({
+const parseTimeFromDate = (date: Date) => ({
   h: date.getHours(),
   m: date.getMinutes(),
   s: date.getSeconds(),
@@ -241,7 +248,7 @@ const DatetimePickerBody = ({
               justifyContent="center"
               cursor={tabDisabled ? 'default' : 'pointer'}
               opacity={tabDisabled ? 0.5 : 1}
-              theme={active ? ('accent' as any) : undefined}
+              theme={active ? 'accent' : undefined}
               backgroundColor={active ? '$background' : 'transparent'}
               onPress={() => {
                 if (!tabDisabled) {
@@ -322,8 +329,8 @@ const DatetimePickerBody = ({
 export const DatetimePicker = <
   TParentData,
   TName extends DeepKeys<TParentData>,
-  TFieldValidator extends Validator<DeepValue<TParentData, TName>> | undefined = undefined,
-  TFormValidator extends Validator<TParentData> | undefined = undefined,
+  TFieldValidator extends Validator<DeepValue<TParentData, TName>> = undefined,
+  TFormValidator extends Validator<TParentData> = undefined,
   TData extends DeepValue<TParentData, TName> = DeepValue<TParentData, TName>,
 >(
   props: DatetimePickerProps<TParentData, TName, TFieldValidator, TFormValidator, TData>,
@@ -332,9 +339,9 @@ export const DatetimePicker = <
     defaultValue,
     value: controlledValue,
     onChange,
+    // oxlint-disable-next-line typescript/no-deprecated -- the deprecated alias is still honored until removed
     onValueChange,
     form,
-    inputProps: _inputProps,
     placeholder = t('Select date and time'),
     minDate,
     maxDate,
@@ -357,11 +364,11 @@ export const DatetimePicker = <
     skeleton,
     compact,
     id: idProp,
-    ..._restProps
   } = useProps(props);
 
   const { resolvedForm, knobProps, id } = useFormField({ form, id: idProp, compact });
   const resolvedValidators = useResolvedValidators(required, validators, label, name);
+  const hasLabel = Boolean(label);
 
   const [open, setOpen] = useState(false);
   const [selectedDatetime, setSelectedDatetime] = useState<Date | null>(() =>
@@ -371,24 +378,27 @@ export const DatetimePicker = <
     if (controlledValue === undefined) {
       return;
     }
+    // oxlint-disable-next-line react/set-state-in-effect -- adopts the controlled `value` prop into display state
     setSelectedDatetime(coerceToDate(controlledValue));
   }, [controlledValue]);
   // Axiom 11 VALUE IS DATA: the calendar opens at the selected value's
   // month, not today's — seed from the current value and re-seed per open.
   const { displayDate, setDisplayDate, navigateMonth } = useDateNavigation(selectedDatetime ?? undefined);
   const selectedDatetimeRef = useRef(selectedDatetime);
-  selectedDatetimeRef.current = selectedDatetime;
+  useEffect(() => {
+    selectedDatetimeRef.current = selectedDatetime;
+  }, [selectedDatetime]);
 
   const openPicker = useCallback(() => {
     const seed = selectedDatetimeRef.current;
-    if (seed) {
+    if (seed != null) {
       setDisplayDate(seed);
     }
     setOpen(true);
   }, [setDisplayDate]);
 
   const handleDatetimeSelect = useCallback(
-    (date: Date, fieldChange?: (value: any) => void) => {
+    (date: Date, fieldChange?: (value: Date | null) => void) => {
       if (minDate && date < minDate) {
         return;
       }
@@ -406,7 +416,7 @@ export const DatetimePicker = <
   );
 
   const handleClearDatetime = useCallback(
-    (fieldChange?: (value: any) => void) => {
+    (fieldChange?: (value: Date | null) => void) => {
       setSelectedDatetime(null);
       setDisplayDate(new Date());
       fieldChange?.(null);
@@ -421,7 +431,7 @@ export const DatetimePicker = <
     [selectedDatetime, timeFormat, showSeconds],
   );
 
-  const pickerContent = (fieldChange?: (value: any) => void) => (
+  const pickerContent = (fieldChange?: (value: Date | null) => void) => (
     <DatetimePickerBody
       displayDate={displayDate}
       selectedDatetime={selectedDatetime}
@@ -438,7 +448,7 @@ export const DatetimePicker = <
     />
   );
 
-  const renderTrigger = (value: string, hasError?: boolean, fieldChange?: (value: any) => void) => (
+  const renderTrigger = (value: string, hasError = false, fieldChange?: (value: Date | null) => void) => (
     <DatePickerInputTrigger
       value={value}
       placeholder={placeholder}
@@ -448,19 +458,15 @@ export const DatetimePicker = <
         handleClearDatetime(fieldChange);
       }}
       onButtonPress={openPicker}
-      error={!!hasError}
+      error={hasError}
       id={id}
-      aria-label={label ? undefined : t('Date and time')}
-      aria-required={required || undefined}
+      aria-label={hasLabel ? undefined : t('Date and time')}
+      aria-required={required === true || undefined}
       aria-invalid={hasError || undefined}
     />
   );
 
-  const renderPopover = (
-    hasError?: boolean,
-    blurHandler?: (...args: any[]) => void,
-    fieldChange?: (value: any) => void,
-  ) => {
+  const renderPopover = (hasError = false, blurHandler?: () => void, fieldChange?: (value: Date | null) => void) => {
     if (readOnly) {
       return (
         <InputParts.Box>
@@ -468,9 +474,9 @@ export const DatetimePicker = <
             value={displayValue}
             readOnly
             id={id}
-            aria-label={label ? undefined : t('Date and time')}
+            aria-label={hasLabel ? undefined : t('Date and time')}
             aria-readonly="true"
-            aria-required={required || undefined}
+            aria-required={required === true || undefined}
             aria-invalid={hasError || undefined}
             placeholder={placeholder}
           />
@@ -493,7 +499,7 @@ export const DatetimePicker = <
         onOpenChange={handleOpenChange}
         trigger={renderTrigger(displayValue, hasError, fieldChange)}
         triggerEnd={
-          !isWeb && displayValue ? (
+          !isWeb && displayValue !== '' ? (
             <DatePickerClearButton
               onReset={() => {
                 handleClearDatetime(fieldChange);
@@ -528,7 +534,7 @@ export const DatetimePicker = <
     );
   }
 
-  if (!resolvedForm || !name) {
+  if (resolvedForm == null || name == null || name === '') {
     return (
       <FieldLayout
         id={id}
@@ -542,7 +548,7 @@ export const DatetimePicker = <
         // FieldLayout owns the dimWhole assembly dim (keepLabel pins
         // the sibling label/helper readable) — it needs the disabled state.
         disabled={disabled}>
-        <InputParts size={size || knobProps.sizeToken}>{renderPopover(!!errorProp)}</InputParts>
+        <InputParts size={size ?? knobProps.sizeToken}>{renderPopover(Boolean(errorProp))}</InputParts>
       </FieldLayout>
     );
   }
@@ -577,9 +583,9 @@ export const DatetimePicker = <
               knobProps={knobProps}
               // See standalone branch — FieldLayout carries dimWhole.
               disabled={disabled}>
-              <InputParts size={size || knobProps.sizeToken}>
+              <InputParts size={size ?? knobProps.sizeToken}>
                 {renderPopover(
-                  !!resolvedError,
+                  Boolean(resolvedError),
                   mergeFieldHandler(field, 'handleBlur', _onBlur),
                   mergeFieldHandler(field, 'handleChange'),
                 )}

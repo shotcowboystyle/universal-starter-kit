@@ -24,13 +24,20 @@ import { coerceToDate } from './utils';
 type TimeFormat = '12h' | '24h';
 
 export type DatetimePickerProps<
-  TParentData = any,
-  TName extends DeepKeys<TParentData> = any,
-  TFieldValidator extends Validator<DeepValue<TParentData, TName>> | undefined = undefined,
-  TFormValidator extends Validator<TParentData> | undefined = undefined,
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- default mirrors FormFieldProps/FieldComponentProps; untyped forms have no owner shape
+  TParentData = Record<string, unknown>,
+  TName extends DeepKeys<TParentData> = DeepKeys<TParentData>,
+  TFieldValidator extends Validator<DeepValue<TParentData, TName>> = undefined,
+  TFormValidator extends Validator<TParentData> = undefined,
   TData extends DeepValue<TParentData, TName> = DeepValue<TParentData, TName>,
-> = Omit<FormFieldProps<TParentData, TName, TFieldValidator, TFormValidator, TData>, 'children' | 'field'> &
-  Partial<Omit<FieldComponentProps<TParentData, TName, TFieldValidator, TFormValidator, TData>, 'children'>> & {
+> = Omit<
+  FormFieldProps<TParentData, TName, TFieldValidator, TFormValidator, TData>,
+  'children' | 'field' | 'onChange'
+> &
+  Partial<
+    Omit<FieldComponentProps<TParentData, TName, TFieldValidator, TFormValidator, TData>, 'children' | 'validators'>
+  > & {
+    validators?: Parameters<typeof useResolvedValidators>[1];
     readOnly?: boolean;
     placeholder?: string;
     minDate?: Date;
@@ -48,7 +55,7 @@ export type DatetimePickerProps<
   };
 
 const formatDatetimeDisplay = (date: Date | null, timeFormat: TimeFormat, showSeconds: boolean): string => {
-  if (!date) {
+  if (date == null) {
     return '';
   }
   return formatAbsoluteDateTime(date, {
@@ -58,18 +65,15 @@ const formatDatetimeDisplay = (date: Date | null, timeFormat: TimeFormat, showSe
   });
 };
 
-export const DatetimePicker = <
+const NativeDatetimePicker = <
   TParentData,
   TName extends DeepKeys<TParentData>,
-  TFieldValidator extends Validator<DeepValue<TParentData, TName>> | undefined = undefined,
-  TFormValidator extends Validator<TParentData> | undefined = undefined,
+  TFieldValidator extends Validator<DeepValue<TParentData, TName>> = undefined,
+  TFormValidator extends Validator<TParentData> = undefined,
   TData extends DeepValue<TParentData, TName> = DeepValue<TParentData, TName>,
 >(
   props: DatetimePickerProps<TParentData, TName, TFieldValidator, TFormValidator, TData>,
 ) => {
-  if (props.native === false) {
-    return <CatalogDatetimePicker {...props} />;
-  }
   const {
     defaultValue,
     value: controlledValue,
@@ -108,6 +112,7 @@ export const DatetimePicker = <
     if (controlledValue === undefined) {
       return;
     }
+    // oxlint-disable-next-line react/set-state-in-effect -- adopts the controlled `value` prop into display state
     setSelected(coerceToDate(controlledValue));
   }, [controlledValue]);
 
@@ -117,7 +122,7 @@ export const DatetimePicker = <
   );
 
   const commit = useCallback(
-    (date: Date | null, fieldChange?: (value: unknown) => void) => {
+    (date: Date | null, fieldChange?: (value: Date | null) => void) => {
       setSelected(date);
       fieldChange?.(date);
       onChange?.(date);
@@ -127,11 +132,7 @@ export const DatetimePicker = <
     [onChange, onValueChange],
   );
 
-  const renderControl = (
-    hasError?: boolean,
-    blurHandler?: (...args: unknown[]) => void,
-    fieldChange?: (value: unknown) => void,
-  ) => {
+  const renderControl = (hasError = false, blurHandler?: () => void, fieldChange?: (value: Date | null) => void) => {
     if (readOnly) {
       return (
         <InputParts.Box>
@@ -139,7 +140,7 @@ export const DatetimePicker = <
             value={display}
             readOnly
             aria-readonly="true"
-            aria-required={required || undefined}
+            aria-required={required === true || undefined}
             aria-invalid={hasError || undefined}
             placeholder={placeholder}
           />
@@ -149,11 +150,15 @@ export const DatetimePicker = <
     return (
       <>
         <RNPressable
-          onPress={() => !disabled && setOpen(true)}
+          onPress={() => {
+            if (!disabled) {
+              setOpen(true);
+            }
+          }}
           disabled={disabled}
           accessibilityRole="button"
           accessibilityLabel={hasLabel ? undefined : t('Date and time')}
-          accessibilityValue={{ text: display || placeholder }}
+          accessibilityValue={{ text: display === '' ? placeholder : display }}
           style={{ width: '100%' }}>
           <DatePickerInputTrigger
             value={display}
@@ -163,16 +168,19 @@ export const DatetimePicker = <
             onReset={() => {
               commit(null, fieldChange);
             }}
-            onButtonPress={() => {}}
-            error={!!hasError}
+            onButtonPress={() => {
+              // The wrapping Pressable opens the sheet.
+            }}
+            error={hasError}
             id={id}
             aria-label={hasLabel ? undefined : t('Date and time')}
-            aria-required={required || undefined}
+            aria-required={required === true || undefined}
             aria-invalid={hasError || undefined}
           />
         </RNPressable>
         <OsDateTimeSheet
           open={open}
+          // oxlint-disable-next-line react/purity -- the sheet opens on the current time when nothing is selected yet
           value={selected ?? new Date()}
           mode="datetime"
           minDate={minDate}
@@ -206,7 +214,7 @@ export const DatetimePicker = <
     );
   }
 
-  if (!resolvedForm || !name) {
+  if (resolvedForm == null || name == null || name === '') {
     return (
       <FieldLayout
         id={id}
@@ -219,7 +227,7 @@ export const DatetimePicker = <
         knobProps={knobProps}
         onBlur={onBlur}
         disabled={disabled}>
-        <InputParts size={size || knobProps.sizeToken}>{renderControl(!!errorProp)}</InputParts>
+        <InputParts size={size ?? knobProps.sizeToken}>{renderControl(Boolean(errorProp))}</InputParts>
       </FieldLayout>
     );
   }
@@ -250,9 +258,9 @@ export const DatetimePicker = <
               size={size}
               knobProps={knobProps}
               disabled={disabled}>
-              <InputParts size={size || knobProps.sizeToken}>
+              <InputParts size={size ?? knobProps.sizeToken}>
                 {renderControl(
-                  !!resolvedError,
+                  Boolean(resolvedError),
                   mergeFieldHandler(field, 'handleBlur', onBlur),
                   mergeFieldHandler(field, 'handleChange'),
                 )}
@@ -264,3 +272,13 @@ export const DatetimePicker = <
     </Field>
   );
 };
+
+export const DatetimePicker = <
+  TParentData,
+  TName extends DeepKeys<TParentData>,
+  TFieldValidator extends Validator<DeepValue<TParentData, TName>> = undefined,
+  TFormValidator extends Validator<TParentData> = undefined,
+  TData extends DeepValue<TParentData, TName> = DeepValue<TParentData, TName>,
+>(
+  props: DatetimePickerProps<TParentData, TName, TFieldValidator, TFormValidator, TData>,
+) => (props.native === false ? <CatalogDatetimePicker {...props} /> : <NativeDatetimePicker {...props} />);

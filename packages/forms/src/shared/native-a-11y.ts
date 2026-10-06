@@ -50,7 +50,7 @@ export interface ChoiceA11yProps {
  */
 export const composeA11yName = (groupName: string | undefined, ownName: string): string => {
   const group = groupName?.trim();
-  return group ? `${group}, ${ownName}` : ownName;
+  return group === undefined || group === '' ? ownName : `${group}, ${ownName}`;
 };
 
 export const choiceItemA11y = ({
@@ -74,5 +74,5 @@ export const choiceItemA11y = ({
   // announces for a radio; the iOS tree surfaces them as `selected: true`
   // and `value: "checked"`. Both are set so one shape serves both controls.
   accessibilityState: { disabled, selected, checked: selected },
-  ...(hint ? { accessibilityHint: hint } : undefined),
+  ...(hint === undefined || hint === '' ? undefined : { accessibilityHint: hint }),
 });

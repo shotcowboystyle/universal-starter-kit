@@ -1,5 +1,7 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import type { CSSProperties, PointerEvent as ReactPointerEvent, RefObject } from 'react';
+
+const INTERACTIVE_SELECTOR = 'button, input, a, [role="option"], [role="button"]';
 
 export interface UseDragScrollOptions {
   /** Direction of scroll - vertical or horizontal */
@@ -34,6 +36,14 @@ export const useDragScroll = (options: UseDragScrollOptions = {}): UseDragScroll
   const startPos = useRef(0);
   const startScroll = useRef(0);
   const hasMoved = useRef(false);
+  const listenersAbort = useRef<AbortController | null>(null);
+
+  useEffect(
+    () => () => {
+      listenersAbort.current?.abort();
+    },
+    [],
+  );
 
   const handlePointerMove = useCallback(
     (e: PointerEvent) => {
@@ -60,8 +70,8 @@ export const useDragScroll = (options: UseDragScrollOptions = {}): UseDragScroll
   const handlePointerUp = useCallback(() => {
     if (isDragging.current) {
       isDragging.current = false;
-      document.removeEventListener('pointermove', handlePointerMove);
-      document.removeEventListener('pointerup', handlePointerUp);
+      listenersAbort.current?.abort();
+      listenersAbort.current = null;
       document.body.style.userSelect = '';
       document.body.style.cursor = '';
 
@@ -69,7 +79,7 @@ export const useDragScroll = (options: UseDragScrollOptions = {}): UseDragScroll
         onDragEnd?.();
       }
     }
-  }, [handlePointerMove, onDragEnd]);
+  }, [onDragEnd]);
 
   const handlePointerDown = useCallback(
     (e: ReactPointerEvent) => {
@@ -78,14 +88,8 @@ export const useDragScroll = (options: UseDragScrollOptions = {}): UseDragScroll
         return;
       }
       // Don't interfere with interactive elements
-      const target = e.target as HTMLElement;
-      if (
-        target.closest('button') ||
-        target.closest('input') ||
-        target.closest('a') ||
-        target.closest('[role="option"]') ||
-        target.closest('[role="button"]')
-      ) {
+      const { target } = e;
+      if (target instanceof Element && target.closest(INTERACTIVE_SELECTOR) !== null) {
         return;
       }
 
@@ -95,8 +99,11 @@ export const useDragScroll = (options: UseDragScrollOptions = {}): UseDragScroll
       startScroll.current =
         direction === 'vertical' ? (scrollRef.current?.scrollTop ?? 0) : (scrollRef.current?.scrollLeft ?? 0);
 
-      document.addEventListener('pointermove', handlePointerMove);
-      document.addEventListener('pointerup', handlePointerUp);
+      const controller = new AbortController();
+      listenersAbort.current = controller;
+      // oxlint-disable-next-line react-doctor/effect-needs-cleanup -- listeners are removed through listenersAbort on pointerup and on unmount
+      document.addEventListener('pointermove', handlePointerMove, { signal: controller.signal });
+      document.addEventListener('pointerup', handlePointerUp, { signal: controller.signal });
       document.body.style.userSelect = 'none';
 
       onDragStart?.();

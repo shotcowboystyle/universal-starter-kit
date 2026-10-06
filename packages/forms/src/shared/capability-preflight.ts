@@ -11,11 +11,13 @@ export type CapabilityPreflightResult = { ok: true } | { ok: false; reason: stri
  * Returns `"unknown"` when the API is missing, the name is unsupported, or
  * the query throws — callers treat that as "prompt inside the stable surface".
  */
-export const queryPermissionState = async (
-  name: PermissionName | (string & {}),
-): Promise<'granted' | 'denied' | 'prompt' | 'unknown'> => {
+export type CapabilityPermissionState = 'granted' | 'denied' | 'prompt' | 'unknown';
+
+export const queryPermissionState = async (name: string): Promise<CapabilityPermissionState> => {
   try {
     const status = await navigator.permissions?.query?.({
+      // SAFETY: Browsers reject unsupported names by throwing, which the catch below maps to "unknown"; the string is only ever forwarded to the Permissions API.
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- PermissionName is a closed union per lib.dom but browsers accept more names than it lists
       name: name as PermissionName,
     });
     const state = status?.state;

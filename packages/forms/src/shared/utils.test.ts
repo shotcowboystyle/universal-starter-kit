@@ -12,8 +12,15 @@ import {
   mergeFieldHandler,
 } from './utils';
 
-describe('clampRadiusForControl', () => {
+const expectBinaryRadius = (value: number | undefined, heightPx: number) => {
+  expect(value === 0 || value === heightPx / 2).toBe(true);
+};
+
+const makeField = (errors: string[]) => ({ state: { meta: { errors } } }) as any;
+
+describe(clampRadiusForControl, () => {
   it('returns "$4" fallback when undefined', () => {
+    // oxlint-disable-next-line unicorn/no-useless-undefined -- undefined is the case under test
     expect(clampRadiusForControl(undefined)).toBe('$4');
   });
 
@@ -42,8 +49,9 @@ describe('clampRadiusForControl', () => {
   });
 });
 
-describe('clampRadiusForLargeComponent', () => {
+describe(clampRadiusForLargeComponent, () => {
   it('returns "$3" fallback when undefined', () => {
+    // oxlint-disable-next-line unicorn/no-useless-undefined -- undefined is the case under test
     expect(clampRadiusForLargeComponent(undefined)).toBe('$3');
   });
 
@@ -62,7 +70,7 @@ describe('clampRadiusForLargeComponent', () => {
   });
 });
 
-describe('getOTPCellRadius', () => {
+describe(getOTPCellRadius, () => {
   const H = 44;
 
   it('is a thin CIRCULAR-AT-FULL alias: 0 at none, token scale, height/2 at full', () => {
@@ -80,8 +88,9 @@ describe('getOTPCellRadius', () => {
   });
 });
 
-describe('stripRadiusFromStateProps', () => {
+describe(stripRadiusFromStateProps, () => {
   it('returns undefined/null props as-is', () => {
+    // oxlint-disable-next-line unicorn/no-useless-undefined -- undefined is the case under test
     expect(stripRadiusFromStateProps(undefined)).toBeUndefined();
   });
 
@@ -101,8 +110,9 @@ describe('stripRadiusFromStateProps', () => {
   });
 });
 
-describe('clampRadiusInStateProps', () => {
+describe(clampRadiusInStateProps, () => {
   it('returns undefined/null props as-is', () => {
+    // oxlint-disable-next-line unicorn/no-useless-undefined -- undefined is the case under test
     expect(clampRadiusInStateProps(undefined)).toBeUndefined();
   });
 
@@ -129,10 +139,6 @@ describe('clampRadiusInStateProps', () => {
     const THUMB_H = 44;
     const TRACK_H = 28;
     const INTERMEDIATE = ['$2', '$4', '$6', '$8', '$12', 9, '9px'] as const;
-
-    const expectBinaryRadius = (value: unknown, heightPx: number) => {
-      expect(value === 0 || value === heightPx / 2).toBe(true);
-    };
 
     it.each(STATES)("snaps a %s bag's token clamp to 0 or h/2 (thumb)", (state) => {
       for (const token of INTERMEDIATE) {
@@ -221,9 +227,7 @@ describe('clampRadiusInStateProps', () => {
   });
 });
 
-describe('getFieldError', () => {
-  const makeField = (errors: string[]) => ({ state: { meta: { errors } } }) as any;
-
+describe(getFieldError, () => {
   it('returns propError when provided', () => {
     expect(getFieldError(makeField(['field error']), 'prop error')).toBe('prop error');
   });
@@ -241,10 +245,10 @@ describe('getFieldError', () => {
   });
 });
 
-describe('mergeFieldHandler', () => {
+describe(mergeFieldHandler, () => {
   it('calls both field handler and custom handler', () => {
-    const fieldBlur = vi.fn();
-    const customHandler = vi.fn();
+    const fieldBlur = vi.fn<(...args: string[]) => void>();
+    const customHandler = vi.fn<(...args: string[]) => void>();
     const field = { handleBlur: fieldBlur } as any;
 
     const merged = mergeFieldHandler(field, 'handleBlur', customHandler);
@@ -255,7 +259,7 @@ describe('mergeFieldHandler', () => {
   });
 
   it('works without a custom handler', () => {
-    const fieldChange = vi.fn();
+    const fieldChange = vi.fn<(value: string) => void>();
     const field = { handleChange: fieldChange } as any;
 
     const merged = mergeFieldHandler(field, 'handleChange');

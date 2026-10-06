@@ -1,7 +1,7 @@
 import { useTouchSurface, formatAbsoluteDate, transitionProps, useResolvedKnobs } from '@repo/theme';
 import type { DeepKeys, DeepValue } from '@tanstack/form-core';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ComponentProps } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { Separator, View, useMedia, useProps } from 'tamagui';
 import type { Popover, SizeTokens } from 'tamagui';
 
@@ -17,6 +17,7 @@ import {
   useFormField,
   useResolvedValidators,
 } from '../../shared/utils';
+import type { FieldValidators } from '../../shared/utils';
 import { Skeleton } from '../../Skeleton';
 import type { FieldComponentProps, Validator } from '../../types';
 
@@ -45,13 +46,19 @@ export interface DateRange {
 }
 
 export type DateRangePickerProps<
-  TParentData = any,
-  TName extends DeepKeys<TParentData> = any,
-  TFieldValidator extends Validator<DeepValue<TParentData, TName>> | undefined = undefined,
-  TFormValidator extends Validator<TParentData> | undefined = undefined,
+  TParentData = object,
+  TName extends DeepKeys<TParentData> = DeepKeys<TParentData>,
+  TFieldValidator extends Validator<DeepValue<TParentData, TName>> = undefined,
+  TFormValidator extends Validator<TParentData> = undefined,
   TData extends DeepValue<TParentData, TName> = DeepValue<TParentData, TName>,
-> = Omit<FormFieldProps<TParentData, TName, TFieldValidator, TFormValidator, TData>, 'children' | 'field'> &
-  Partial<Omit<FieldComponentProps<TParentData, TName, TFieldValidator, TFormValidator, TData>, 'children'>> & {
+> = Omit<
+  FormFieldProps<TParentData, TName, TFieldValidator, TFormValidator, TData>,
+  'children' | 'field' | 'onChange'
+> &
+  Partial<
+    Omit<FieldComponentProps<TParentData, TName, TFieldValidator, TFormValidator, TData>, 'children' | 'validators'>
+  > & {
+    validators?: FieldValidators;
     placeholder?: string;
     minDate?: Date;
     maxDate?: Date;
@@ -72,7 +79,15 @@ export type DateRangePickerProps<
 // Range day status helpers
 // ---------------------------------------------------------------------------
 
-type RangeStatus = 'none' | 'range-start' | 'range-end' | 'in-range' | 'selected-single';
+const RANGE_START = 'range-start';
+type RangeStatus = 'none' | typeof RANGE_START | 'range-end' | 'in-range' | 'selected-single';
+type RangeChange = (value: DateRange | null) => void;
+
+const rangeStripeInsets = {
+  [RANGE_START]: { insetInlineStart: '50%', insetInlineEnd: 0, width: '50%' },
+  'range-end': { insetInlineStart: 0, insetInlineEnd: '50%', width: '50%' },
+  'in-range': { insetInlineStart: 0, insetInlineEnd: 0, width: '100%' },
+} as const;
 
 const getRangeStatus = (day: Date, start: Date | null, end: Date | null): RangeStatus => {
   if (!start) {
@@ -82,7 +97,7 @@ const getRangeStatus = (day: Date, start: Date | null, end: Date | null): RangeS
     return 'selected-single';
   }
   if (isSameDay(day, start)) {
-    return 'range-start';
+    return RANGE_START;
   }
   if (end && isSameDay(day, end)) {
     return 'range-end';
@@ -106,6 +121,32 @@ interface RangeDayGridProps {
   maxDate?: Date;
 }
 
+const renderRangeStripe = (
+  day: Date,
+  rangeStart: Date | null,
+  rangeEnd: Date | null,
+  transition: ReturnType<typeof useResolvedKnobs>['knobProps']['transition'],
+) => {
+  const rangeStatus = getRangeStatus(day, rangeStart, rangeEnd);
+  if (rangeStatus !== 'in-range' && rangeStatus !== RANGE_START && rangeStatus !== 'range-end') {
+    return null;
+  }
+  return (
+    <View
+      {...transitionProps(transition)}
+      data-range-stripe={rangeStatus}
+      position="absolute"
+      height="100%"
+      zIndex={0}
+      backgroundColor={formInputColors.background.focus}
+      enterStyle={{ opacity: 0 }}
+      exitStyle={{ opacity: 0 }}
+      opacity={1}
+      {...rangeStripeInsets[rangeStatus]}
+    />
+  );
+};
+
 const RangeDayGrid = ({ calendarData, rangeStart, rangeEnd, onSelectDate, minDate, maxDate }: RangeDayGridProps) => {
   const { knobProps } = useResolvedKnobs();
   return (
@@ -116,37 +157,14 @@ const RangeDayGrid = ({ calendarData, rangeStart, rangeEnd, onSelectDate, minDat
       skipEmptyWeeks
       isSelected={(day) => {
         const status = getRangeStatus(day, rangeStart, rangeEnd);
-        return status === 'range-start' || status === 'range-end' || status === 'selected-single';
+        return status === RANGE_START || status === 'range-end' || status === 'selected-single';
       }}
       onSelect={onSelectDate}
       selectedBackground={formInputColors.background.focus}
       onToday={() => {
         onSelectDate(new Date());
       }}
-      rangeStripe={(day) => {
-        const rangeStatus = getRangeStatus(day, rangeStart, rangeEnd);
-        if (rangeStatus !== 'in-range' && rangeStatus !== 'range-start' && rangeStatus !== 'range-end') {
-          return null;
-        }
-        return (
-          <View
-            {...transitionProps(knobProps.transition)}
-            data-range-stripe={rangeStatus}
-            position="absolute"
-            height="100%"
-            zIndex={0}
-            backgroundColor={formInputColors.background.focus}
-            enterStyle={{ opacity: 0 }}
-            exitStyle={{ opacity: 0 }}
-            opacity={1}
-            {...(rangeStatus === 'range-start'
-              ? { insetInlineStart: '50%', insetInlineEnd: 0, width: '50%' }
-              : rangeStatus === 'range-end'
-                ? { insetInlineStart: 0, insetInlineEnd: '50%', width: '50%' }
-                : { insetInlineStart: 0, insetInlineEnd: 0, width: '100%' })}
-          />
-        );
-      }}
+      rangeStripe={(day) => renderRangeStripe(day, rangeStart, rangeEnd, knobProps.transition)}
     />
   );
 };
@@ -328,17 +346,94 @@ const DualCalendarBody = ({
   );
 };
 
+const keepIfSameDay = (prev: Date | null, next: Date | null): Date | null => {
+  if (prev === next) {
+    return prev;
+  }
+  return prev !== null && next !== null && isSameDay(prev, next) ? prev : next;
+};
+
+const hasErrorValue = (error: string | boolean | undefined): boolean =>
+  error !== undefined && error !== false && error !== '';
+
+// Boundary parser for the untyped form/controlled value.
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- boundary parser: value arrives untyped from TanStack field state
+const parseDateRange = (raw: unknown): DateRange | null => {
+  if (!(raw instanceof Object)) {
+    return null;
+  }
+  return {
+    start: 'start' in raw && raw.start instanceof Date ? raw.start : null,
+    end: 'end' in raw && raw.end instanceof Date ? raw.end : null,
+  };
+};
+
+const RangeReadOnly = ({
+  value,
+  placeholder,
+  required,
+  hasError,
+}: {
+  value: string;
+  placeholder: string;
+  required: boolean | undefined;
+  hasError: boolean;
+}) => (
+  <InputParts.Box>
+    <InputParts.Area
+      value={value}
+      readOnly
+      aria-readonly="true"
+      aria-required={required ? true : undefined}
+      aria-invalid={hasError ? true : undefined}
+      placeholder={placeholder}
+    />
+  </InputParts.Box>
+);
+
+const RangeSkeleton = ({
+  id,
+  label,
+  size,
+  knobProps,
+  resolvedSize,
+  visualHeight,
+}: {
+  id: string;
+  label: ReactNode;
+  size: SizeTokens | undefined;
+  knobProps: ReturnType<typeof useResolvedKnobs>['knobProps'];
+  resolvedSize: SizeTokens;
+  visualHeight: ReturnType<typeof getFieldHeight>;
+}) => (
+  <FieldLayout
+    id={id}
+    label={label}
+    size={size}
+    knobProps={knobProps}>
+    <InputParts size={resolvedSize}>
+      <Skeleton
+        variant="rounded"
+        width="100%"
+        height={visualHeight}
+        data-daterange-skeleton=""
+      />
+    </InputParts>
+  </FieldLayout>
+);
+
 // ---------------------------------------------------------------------------
 // formatRange — display value for date range
 // ---------------------------------------------------------------------------
+
+// House absolute register — never the toDateString()
+// system voice ("Sat Aug 09 2026").
+const formatDate = (date: Date) => formatAbsoluteDate(date, { year: 'always' });
 
 const formatRange = (start: Date | null, end: Date | null): string => {
   if (!start) {
     return '';
   }
-  // House absolute register — never the toDateString()
-  // system voice ("Sat Aug 09 2026").
-  const formatDate = (date: Date) => formatAbsoluteDate(date, { year: 'always' });
   if (!end) {
     return `${formatDate(start)} – end date`;
   }
@@ -352,8 +447,8 @@ const formatRange = (start: Date | null, end: Date | null): string => {
 export const DateRangePicker = <
   TParentData,
   TName extends DeepKeys<TParentData>,
-  TFieldValidator extends Validator<DeepValue<TParentData, TName>> | undefined = undefined,
-  TFormValidator extends Validator<TParentData> | undefined = undefined,
+  TFieldValidator extends Validator<DeepValue<TParentData, TName>> = undefined,
+  TFormValidator extends Validator<TParentData> = undefined,
   TData extends DeepValue<TParentData, TName> = DeepValue<TParentData, TName>,
 >(
   props: DateRangePickerProps<TParentData, TName, TFieldValidator, TFormValidator, TData>,
@@ -364,7 +459,6 @@ export const DateRangePicker = <
     value: valueProp,
     onChange,
     form,
-    inputProps: _inputProps,
     placeholder = t('Start date – End date'),
     minDate,
     maxDate,
@@ -384,15 +478,15 @@ export const DateRangePicker = <
     skeleton,
     compact,
     id: idProp,
-    ..._restProps
   } = useProps(props);
 
   const { resolvedForm, knobProps, id } = useFormField({ form, id: idProp, compact });
   const resolvedValidators = useResolvedValidators(required, validators, label, name);
+  // SAFETY: `size` is a SizeTokens prop and knobProps.sizeToken is a size token; the union is only widened by the knob typing.
   const resolvedSize = (size ?? knobProps.sizeToken) as SizeTokens;
   const visualHeight = getFieldHeight(resolvedSize, 1, hydrationTouch);
 
-  const initialRange = (valueProp ?? defaultValue) as DateRange | null | undefined;
+  const initialRange = parseDateRange(valueProp ?? defaultValue);
   const [open, setOpen] = useState(false);
   const [rangeStart, setRangeStart] = useState<Date | null>(() => initialRange?.start ?? null);
   const [rangeEnd, setRangeEnd] = useState<Date | null>(() => initialRange?.end ?? null);
@@ -400,16 +494,18 @@ export const DateRangePicker = <
   // month, not today's — seed from the value and re-seed per open.
   const { displayDate, setDisplayDate, navigateMonth } = useDateNavigation(rangeStart ?? undefined);
   const popoverRef = useRef<Popover>(null);
-  const rangeStartRef = useRef(rangeStart);
-  rangeStartRef.current = rangeStart;
 
   const openPicker = useCallback(() => {
-    const seed = rangeStartRef.current;
-    if (seed) {
-      setDisplayDate(seed);
+    if (rangeStart !== null) {
+      setDisplayDate(rangeStart);
     }
     setOpen(true);
-  }, [setDisplayDate]);
+  }, [rangeStart, setDisplayDate]);
+
+  const closePopover = useCallback(() => {
+    setOpen(false);
+    popoverRef.current?.close();
+  }, []);
 
   // Adopt an externally-applied value (controlled `value` prop or the live
   // TanStack field value) into the display state without emitting onChange.
@@ -417,41 +513,36 @@ export const DateRangePicker = <
   // first click of a new range used to call onChange(null), and syncing that
   // null wiped rangeStart so the second click could never complete.
   const pickingRangeRef = useRef(false);
-  const adoptExternalValue = useCallback((raw: unknown) => {
-    const next = (raw ?? null) as DateRange | null;
-    if (pickingRangeRef.current && next == null) {
-      return;
-    }
-    pickingRangeRef.current = false;
-    const nextStart = next?.start ?? null;
-    const nextEnd = next?.end ?? null;
-    setRangeStart((prev) =>
-      prev === nextStart || (prev && nextStart && isSameDay(prev, nextStart)) ? prev : nextStart,
-    );
-    setRangeEnd((prev) => (prev === nextEnd || (prev && nextEnd && isSameDay(prev, nextEnd)) ? prev : nextEnd));
-  }, []);
+  const adoptExternalValue = useCallback(
+    // oxlint-disable-next-line anti-slop/no-unknown-parameters -- FieldValueSync's onSync contract is (value: unknown)
+    (raw: unknown) => {
+      const next = parseDateRange(raw);
+      if (pickingRangeRef.current && next === null) {
+        return;
+      }
+      pickingRangeRef.current = false;
+      const nextStart = next?.start ?? null;
+      const nextEnd = next?.end ?? null;
+      setRangeStart((prev) => keepIfSameDay(prev, nextStart));
+      setRangeEnd((prev) => keepIfSameDay(prev, nextEnd));
+      if (nextStart !== null && nextEnd !== null) {
+        closePopover();
+      }
+    },
+    [closePopover],
+  );
 
   // Keep standalone/controlled state in sync when the parent value changes.
   useEffect(() => {
     if (valueProp === undefined) {
       return;
     }
+    // oxlint-disable-next-line react/set-state-in-effect -- syncs the controlled `value` prop into display state (no onChange); no event handler to hook into
     adoptExternalValue(valueProp);
   }, [valueProp, adoptExternalValue]);
 
-  const closePopover = useCallback(() => {
-    setOpen(false);
-    popoverRef.current?.close();
-  }, []);
-
-  useEffect(() => {
-    if (rangeStart && rangeEnd) {
-      closePopover();
-    }
-  }, [rangeStart, rangeEnd, closePopover]);
-
   const handleSelectDate = useCallback(
-    (date: Date, fieldChange?: (value: any) => void) => {
+    (date: Date, fieldChange?: RangeChange) => {
       if (minDate && date < minDate) {
         return;
       }
@@ -459,7 +550,7 @@ export const DateRangePicker = <
         return;
       }
 
-      if (!rangeStart || (rangeStart && rangeEnd)) {
+      if (rangeStart === null || rangeEnd !== null) {
         // Begin a new range locally only — do not commit null to a controlled
         // parent (that would sync-wipe rangeStart before the end date is picked).
         pickingRangeRef.current = true;
@@ -468,19 +559,17 @@ export const DateRangePicker = <
         return;
       }
 
+      pickingRangeRef.current = false;
       if (date < rangeStart) {
-        pickingRangeRef.current = false;
         setRangeEnd(rangeStart);
         setRangeStart(date);
         fieldChange?.({ start: date, end: rangeStart });
         closePopover();
       } else if (isSameDay(date, rangeStart)) {
-        pickingRangeRef.current = false;
         setRangeStart(null);
         setRangeEnd(null);
         fieldChange?.(null);
       } else {
-        pickingRangeRef.current = false;
         setRangeEnd(date);
         fieldChange?.({ start: rangeStart, end: date });
         closePopover();
@@ -489,14 +578,14 @@ export const DateRangePicker = <
     [rangeStart, rangeEnd, minDate, maxDate, closePopover],
   );
 
-  const handleClear = useCallback((fieldChange?: (value: any) => void) => {
+  const handleClear = useCallback((fieldChange?: RangeChange) => {
     pickingRangeRef.current = false;
     setRangeStart(null);
     setRangeEnd(null);
     fieldChange?.(null);
   }, []);
 
-  const calendarContent = (fieldChange?: (value: any) => void) => (
+  const calendarContent = (fieldChange?: RangeChange) => (
     <DualCalendarBody
       rangeStart={rangeStart}
       rangeEnd={rangeEnd}
@@ -511,29 +600,21 @@ export const DateRangePicker = <
     />
   );
 
-  const renderPopover = (
-    hasError?: boolean,
-    blurHandler?: (...args: any[]) => void,
-    fieldChange?: (value: any) => void,
-  ) => {
+  const renderPopover = (hasError = false, blurHandler?: () => void, fieldChange?: RangeChange) => {
     if (readOnly) {
       return (
-        <InputParts.Box>
-          <InputParts.Area
-            value={formatRange(rangeStart, rangeEnd)}
-            readOnly
-            aria-readonly="true"
-            aria-required={required || undefined}
-            aria-invalid={hasError || undefined}
-            placeholder={placeholder}
-          />
-        </InputParts.Box>
+        <RangeReadOnly
+          value={formatRange(rangeStart, rangeEnd)}
+          placeholder={placeholder}
+          required={required}
+          hasError={hasError}
+        />
       );
     }
     const handleOpenChange = (isOpen: boolean) => {
       // Re-seed the visible month from the current range on every open.
-      if (isOpen && rangeStartRef.current) {
-        setDisplayDate(rangeStartRef.current);
+      if (isOpen && rangeStart !== null) {
+        setDisplayDate(rangeStart);
       }
       setOpen(isOpen);
       if (!isOpen) {
@@ -556,13 +637,13 @@ export const DateRangePicker = <
               handleClear(fieldChange);
             }}
             onButtonPress={openPicker}
-            error={!!hasError}
+            error={hasError}
             // SB-KS-04: without the field id the sibling FieldLayout label's
             // `htmlFor` resolves to nothing — a dangling label and a control
             // with no accessible name.
             id={id}
-            aria-required={required || undefined}
-            aria-invalid={hasError || undefined}
+            aria-required={required ? true : undefined}
+            aria-invalid={hasError ? true : undefined}
           />
         }
         clearValue={formatRange(rangeStart, rangeEnd)}
@@ -577,24 +658,18 @@ export const DateRangePicker = <
   // Render skeleton placeholder (after all hooks)
   if (skeleton) {
     return (
-      <FieldLayout
+      <RangeSkeleton
         id={id}
         label={label}
         size={size}
-        knobProps={knobProps}>
-        <InputParts size={resolvedSize}>
-          <Skeleton
-            variant="rounded"
-            width="100%"
-            height={visualHeight}
-            data-daterange-skeleton=""
-          />
-        </InputParts>
-      </FieldLayout>
+        knobProps={knobProps}
+        resolvedSize={resolvedSize}
+        visualHeight={visualHeight}
+      />
     );
   }
 
-  if (!resolvedForm || !name) {
+  if (resolvedForm == null || name == null || name === '') {
     return (
       <FieldLayout
         id={id}
@@ -608,7 +683,7 @@ export const DateRangePicker = <
         // FieldLayout owns the dimWhole assembly dim (keepLabel pins
         // the sibling label/helper readable) — it needs the disabled state.
         disabled={disabled}>
-        <InputParts size={size || knobProps.sizeToken}>{renderPopover(!!errorProp, undefined, onChange)}</InputParts>
+        <InputParts size={resolvedSize}>{renderPopover(hasErrorValue(errorProp), undefined, onChange)}</InputParts>
       </FieldLayout>
     );
   }
@@ -644,9 +719,9 @@ export const DateRangePicker = <
               knobProps={knobProps}
               // See standalone branch — FieldLayout carries dimWhole.
               disabled={disabled}>
-              <InputParts size={size || knobProps.sizeToken}>
+              <InputParts size={resolvedSize}>
                 {renderPopover(
-                  !!resolvedError,
+                  hasErrorValue(resolvedError),
                   mergeFieldHandler(field, 'handleBlur', _onBlur),
                   mergeFieldHandler(field, 'handleChange'),
                 )}

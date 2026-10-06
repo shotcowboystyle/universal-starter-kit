@@ -1,6 +1,4 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 
 import { renderWithProviders } from '@repo/test-utils';
 import { Preset } from '@repo/theme';
@@ -11,11 +9,6 @@ import { EMPTY, formatDateText, formatNumericText } from '../FieldDisplay/format
 import { FORM_GRID_COLLAPSE_WIDTH } from '../FormGrid';
 
 import { DescriptionList, PropertyList } from './index';
-
-afterEach(() => {
-  vi.unstubAllGlobals();
-  vi.restoreAllMocks();
-});
 
 const stubContainerWidth = (width: number) => {
   vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
@@ -33,12 +26,14 @@ const stubContainerWidth = (width: number) => {
   vi.stubGlobal(
     'ResizeObserver',
     class {
-      cb: ResizeObserverCallback;
-      constructor(cb: ResizeObserverCallback) {
-        this.cb = cb;
+      readonly onEntries: ResizeObserverCallback;
+      constructor(onEntries: ResizeObserverCallback) {
+        this.onEntries = onEntries;
       }
+      target: Element | null = null;
       observe(target: Element) {
-        this.cb(
+        this.target = target;
+        this.onEntries(
           [
             {
               target,
@@ -51,17 +46,26 @@ const stubContainerWidth = (width: number) => {
           this as unknown as ResizeObserver,
         );
       }
-      unobserve() {}
-      disconnect() {}
+      unobserve() {
+        this.target = null;
+      }
+      disconnect() {
+        this.target = null;
+      }
     },
   );
 };
 
-const list = (root: HTMLElement) => root.querySelector('[data-mpo-description-list]') as HTMLElement | null;
+const list = (root: HTMLElement) => root.querySelector<HTMLElement>('[data-mpo-description-list]');
 
-const host = (root: HTMLElement) => root.querySelector('[data-mpo-description-list-host]') as HTMLElement | null;
+const host = (root: HTMLElement) => root.querySelector<HTMLElement>('[data-mpo-description-list-host]');
 
-describe('DescriptionList', () => {
+describe(DescriptionList, () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
   it('composes FieldDisplay for each typed row — never a parallel formatter', () => {
     const created = new Date(2025, 6, 1);
     const result = renderWithProviders(
@@ -87,12 +91,12 @@ describe('DescriptionList', () => {
       />,
     );
 
-    const displays = result.container.querySelectorAll("[data-component='FieldDisplay']");
+    const displays = result.container.querySelectorAll<HTMLElement>("[data-component='FieldDisplay']");
     expect(displays).toHaveLength(5);
-    expect(displays[0]?.getAttribute('data-field')).toBe('input');
-    expect(displays[1]?.getAttribute('data-field')).toBe('select');
-    expect(displays[2]?.getAttribute('data-field')).toBe('datepicker');
-    expect(displays[3]?.getAttribute('data-field')).toBe('stepper');
+    expect(displays[0]?.dataset.field).toBe('input');
+    expect(displays[1]?.dataset.field).toBe('select');
+    expect(displays[2]?.dataset.field).toBe('datepicker');
+    expect(displays[3]?.dataset.field).toBe('stepper');
     expect(displays[3]?.textContent).toBe(formatNumericText(38.4, { currency: 'EUR', precision: 2 }));
     expect(displays[2]?.textContent).toBe(formatDateText(created));
     expect(displays[2]?.textContent).not.toMatch(/\d{4}-\d{2}-\d{2}/u);
@@ -110,15 +114,15 @@ describe('DescriptionList', () => {
         <DescriptionList
           placement="side"
           items={[
-            { term: 'Hostname', field: 'input', value: 'compose01', onChange: () => undefined },
+            { term: 'Hostname', field: 'input', value: 'compose01', onChange: vi.fn<() => void>() },
             { term: 'Region', field: 'input', value: 'hel1' },
           ]}
         />,
       );
     });
     const root = list(result.container);
-    expect(root?.getAttribute('data-placement')).toBe('side');
-    expect(root?.getAttribute('data-stacked')).toBe('true');
+    expect(root?.dataset.placement).toBe('side');
+    expect(root?.dataset.stacked).toBe('true');
   });
 
   it('keeps a side list in columns when the container is at least 480', () => {
@@ -133,14 +137,14 @@ describe('DescriptionList', () => {
       );
     });
     const root = list(result.container);
-    expect(root?.getAttribute('data-stacked')).toBe('false');
-    expect(root?.getAttribute('data-label-column-width')).toBe('min(max-content, 24ch)');
+    expect(root?.dataset.stacked).toBe('false');
+    expect(root?.dataset.labelColumnWidth).toBe('min(max-content, 24ch)');
     expect(root?.style.gridTemplateColumns).toContain('fit-content(24ch)');
     expect(root?.style.gridTemplateColumns).toContain('minmax(0, 1fr)');
   });
 
   it('the optional Change action is a keyboard-reachable button', () => {
-    const onChange = vi.fn();
+    const onChange = vi.fn<() => void>();
     const result = renderWithProviders(
       <DescriptionList
         placement="top"
@@ -154,9 +158,9 @@ describe('DescriptionList', () => {
         ]}
       />,
     );
-    const action = result.container.querySelector(
+    const action = result.container.querySelector<HTMLElement>(
       "[data-mpo-description-list-action] [role='button'], [data-mpo-description-list-action] button",
-    ) as HTMLElement | null;
+    );
     expect(action).not.toBeNull();
     expect(action?.getAttribute('aria-disabled')).not.toBe('true');
     expect(action?.textContent).toContain('Change');
@@ -178,8 +182,8 @@ describe('DescriptionList', () => {
         ]}
       />,
     );
-    const display = result.container.querySelector("[data-component='FieldDisplay']") as HTMLElement | null;
-    expect(display?.hasAttribute('data-chromeless')).toBe(true);
+    const display = result.container.querySelector<HTMLElement>("[data-component='FieldDisplay']");
+    expect(display?.dataset.chromeless).toBeDefined();
     expect(display?.textContent).toBe(formatNumericText(47));
     const valueText = display?.querySelector('*');
     const align = valueText ? getComputedStyle(valueText).textAlign : '';
@@ -193,7 +197,7 @@ describe('DescriptionList', () => {
         items={[{ term: 'Owner', field: 'input', value: 'Clay' }]}
       />,
     );
-    expect(list(result.container)?.getAttribute('data-stacked')).toBe('true');
+    expect(list(result.container)?.dataset.stacked).toBe('true');
   });
 
   it('PropertyList is the DescriptionList alias', () => {
@@ -208,7 +212,7 @@ describe('DescriptionList', () => {
         items={[{ term: 'Host', field: 'input', value: 'a' }]}
       />,
     );
-    expect(list(result.container)?.getAttribute('data-framed')).toBe('true');
+    expect(list(result.container)?.dataset.framed).toBe('true');
     expect(host(result.container)).not.toBeNull();
   });
 
@@ -223,7 +227,7 @@ describe('DescriptionList', () => {
         ]}
       />,
     );
-    expect(list(result.container)?.getAttribute('data-quiet')).toBe('true');
+    expect(list(result.container)?.dataset.quiet).toBe('true');
     expect(result.container.querySelectorAll('[data-mpo-description-list-rule]')).toHaveLength(1);
   });
 
@@ -233,8 +237,8 @@ describe('DescriptionList', () => {
         <DescriptionList items={[{ term: 'A', field: 'input', value: '1' }]} />
       </Preset>,
     );
-    expect(list(result.container)?.getAttribute('data-placement')).toBe('top');
-    expect(list(result.container)?.getAttribute('data-stacked')).toBe('true');
+    expect(list(result.container)?.dataset.placement).toBe('top');
+    expect(list(result.container)?.dataset.stacked).toBe('true');
   });
 
   it('compact density marks the list', () => {
@@ -245,7 +249,7 @@ describe('DescriptionList', () => {
         items={[{ term: 'A', field: 'input', value: '1' }]}
       />,
     );
-    expect(list(result.container)?.getAttribute('data-compact')).toBe('true');
+    expect(list(result.container)?.dataset.compact).toBe('true');
   });
 
   it('side rows share the list stacked flag (native host measures via onLayout)', () => {
@@ -260,7 +264,7 @@ describe('DescriptionList', () => {
       );
     });
     const root = list(result.container);
-    expect(root?.getAttribute('data-stacked')).toBe('true');
+    expect(root?.dataset.stacked).toBe('true');
     expect(root?.querySelectorAll('[data-mpo-description-list-row]').length).toBe(1);
   });
 });

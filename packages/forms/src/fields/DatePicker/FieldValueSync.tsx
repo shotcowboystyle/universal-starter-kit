@@ -14,6 +14,9 @@ import { coerceToDate } from './utils';
  * live in the render prop itself — same extraction as Stepper/PhoneInput
  * renderers).
  */
+const isSameInstant = (a: Date | null, b: Date | null) =>
+  a === b || (a !== null && b !== null && a.getTime() === b.getTime());
+
 export const DatePickerFieldValueSync = ({
   value,
   onSync,
@@ -25,9 +28,7 @@ export const DatePickerFieldValueSync = ({
     const next = coerceToDate(value);
     // Keep the previous Date identity when the instant is unchanged so the
     // sync never churns downstream effects (close-on-select watches state).
-    onSync((prev) =>
-      prev === next || (prev !== null && next !== null && prev.getTime() === next.getTime()) ? prev : next,
-    );
+    onSync((prev) => (isSameInstant(prev, next) ? prev : next));
   }, [value, onSync]);
   return null;
 };
@@ -42,6 +43,7 @@ export const DatePickerFieldValueSync = ({
  * onChange from this path (a programmatic value application is not
  * a user edit).
  */
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- shape-agnostic by design; each picker's onSync owns coercion
 export const FieldValueSync = ({ value, onSync }: { value: unknown; onSync: (value: unknown) => void }) => {
   useEffect(() => {
     onSync(value);

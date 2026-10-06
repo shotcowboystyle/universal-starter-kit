@@ -1,6 +1,8 @@
 import { renderWithProviders } from '@repo/test-utils';
 import { useForm } from '@tanstack/react-form';
 import { act, fireEvent, waitFor } from '@testing-library/react';
+import { useEffect } from 'react';
+import type { PressableProps } from 'react-native';
 import { describe, expect, it, vi } from 'vitest';
 
 import { Form } from '../../Form';
@@ -8,18 +10,18 @@ import { Form } from '../../Form';
 import { DatetimePicker } from './DatetimePicker.native';
 import { DatePicker } from './index.native';
 
-vi.mock('tamagui', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('tamagui')>()),
+vi.mock(import('tamagui'), async (importOriginal) => ({
+  ...(await importOriginal()),
   isWeb: false,
 }));
 
 // RNW omits React Native's accessibilityValue object. Bridge that native
 // contract for this harness; the actual iOS AX tree remains the runtime gate.
-vi.mock('react-native-web', async (importOriginal) => {
-  const native = await importOriginal<typeof import('react-native')>();
+vi.mock(import('react-native-web'), async (importOriginal) => {
+  const native = await importOriginal();
   return {
     ...native,
-    Pressable: ({ accessibilityValue, ...props }: import('react-native').PressableProps) => (
+    Pressable: ({ accessibilityValue, ...props }: PressableProps) => (
       <native.Pressable
         {...props}
         aria-valuetext={accessibilityValue?.text}
@@ -29,19 +31,20 @@ vi.mock('react-native-web', async (importOriginal) => {
 });
 
 const picked = new Date(2026, 2, 5, 14, 30);
-vi.mock('../nativeDateTime/OsDateTimeSheet', () => ({
+vi.mock(import('../nativeDateTime/OsDateTimeSheet'), () => ({
   OsDateTimeSheet: ({ open, onConfirm }: { open: boolean; onConfirm: (date: Date) => void }) =>
     open ? (
-      <div
-        role="dialog"
+      <dialog
+        open
         aria-label="OS date and time">
         <button
+          type="button"
           onClick={() => {
             onConfirm(new Date(2026, 2, 5, 14, 30));
           }}>
           Confirm OS selection
         </button>
-      </div>
+      </dialog>
     ) : null,
 }));
 
@@ -62,8 +65,8 @@ describe('native DatetimePicker ownership', () => {
   });
 
   it('opens from its full-width native target and commits exactly once', () => {
-    const onChange = vi.fn();
-    const onValueChange = vi.fn();
+    const onChange = vi.fn<(value: Date | null) => void>();
+    const onValueChange = vi.fn<(value: Date | null) => void>();
     const result = renderWithProviders(
       <DatetimePicker
         onChange={onChange}
@@ -116,8 +119,8 @@ describe('native DatetimePicker ownership', () => {
   });
 
   it('adopts controlled values after mount without emitting changes or opening', async () => {
-    const onChange = vi.fn();
-    const onValueChange = vi.fn();
+    const onChange = vi.fn<(value: Date | null) => void>();
+    const onValueChange = vi.fn<(value: Date | null) => void>();
     const result = renderWithProviders(
       <DatetimePicker
         value={null}
@@ -142,13 +145,15 @@ describe('native DatetimePicker ownership', () => {
   });
 
   it('adopts form values after mount without emitting changes or opening', async () => {
-    const onChange = vi.fn();
+    const onChange = vi.fn<(value: Date | null) => void>();
     let update: ((date: Date) => void) | undefined;
     const Example = () => {
       const form = useForm({ defaultValues: { when: null as Date | null } });
-      update = (date) => {
-        form.setFieldValue('when', date);
-      };
+      useEffect(() => {
+        update = (date) => {
+          form.setFieldValue('when', date);
+        };
+      }, [form]);
       return (
         <Form form={form}>
           <DatetimePicker

@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { Input } from './index';
 
-const copyOf = (container: HTMLElement) => container.querySelector("[aria-label='Copy to clipboard']");
+const copyOf = (container: HTMLElement) => container.querySelector<HTMLElement>("[aria-label='Copy to clipboard']");
 
 describe('Input copy (CopyField slot)', () => {
   it('copy is a real tab stop and rings its own glyph, not the 44px box', () => {
@@ -17,9 +17,9 @@ describe('Input copy (CopyField slot)', () => {
         value="mpo_live_4f2a9c81e0b3"
       />,
     );
-    const input = result.container.querySelector('input') as HTMLInputElement;
+    const input = result.container.querySelector('input')!;
     const copy = copyOf(result.container);
-    if (!input || !copy) {
+    if (copy === null) {
       throw new Error('input or copy not found');
     }
 
@@ -49,7 +49,7 @@ describe('Input copy (CopyField slot)', () => {
       />,
     );
     expect(copyOf(result.container)).toBeNull();
-    const input = result.container.querySelector('input') as HTMLInputElement;
+    const input = result.container.querySelector('input')!;
     expect(input).not.toBeNull();
     const stops = [...result.container.querySelectorAll("[tabindex='0']")].filter((el) => el !== input);
     expect(stops).toHaveLength(0);
@@ -66,10 +66,10 @@ describe('Input copy (CopyField slot)', () => {
       />,
     );
     const copy = copyOf(result.container);
-    if (!copy) {
+    if (copy === null) {
       throw new Error('copy missing when disabled');
     }
-    expect(copy.getAttribute('data-end-cap')).toBe('44');
+    expect(copy.dataset.endCap).toBe('44');
     expect(copy.getAttribute('tabindex')).toBe('-1');
   });
 
@@ -82,13 +82,13 @@ describe('Input copy (CopyField slot)', () => {
         value="mpo_live_4f2a9c81e0b3"
       />,
     );
-    const box = result.container.querySelector("[data-ring-target='box']") as HTMLElement;
+    const box = result.container.querySelector<HTMLElement>("[data-ring-target='box']")!;
     const copy = copyOf(result.container);
-    if (!box || !copy) {
+    if (copy === null) {
       throw new Error('box or copy not found');
     }
-    expect(box.getAttribute('data-visual-height')).toBe('44');
-    expect(copy.getAttribute('data-end-cap')).toBe('44');
+    expect(box.dataset.visualHeight).toBe('44');
+    expect(copy.dataset.endCap).toBe('44');
   });
 
   it('copy cap tracks the size recipe at every step', () => {
@@ -106,13 +106,13 @@ describe('Input copy (CopyField slot)', () => {
           size={token}
         />,
       );
-      const box = result.container.querySelector("[data-ring-target='box']") as HTMLElement;
+      const box = result.container.querySelector<HTMLElement>("[data-ring-target='box']")!;
       const copy = copyOf(result.container);
-      if (!box || !copy) {
+      if (copy === null) {
         throw new Error(`anatomy missing at ${token}`);
       }
-      expect(box.getAttribute('data-visual-height'), token).toBe(String(height));
-      expect(copy.getAttribute('data-end-cap'), token).toBe(String(height));
+      expect([token, box.dataset.visualHeight]).toStrictEqual([token, String(height)]);
+      expect([token, copy.dataset.endCap]).toStrictEqual([token, String(height)]);
     }
   });
 
@@ -125,20 +125,16 @@ describe('Input copy (CopyField slot)', () => {
         value="mpo_live_4f2a9c81e0b3"
       />,
     );
-    const input = result.container.querySelector('input') as HTMLInputElement;
-    if (!input) {
-      throw new Error('input missing');
-    }
-    expect(input.getAttribute('data-register')).toBe('identifier');
+    const input = result.container.querySelector('input')!;
+    expect(input.dataset.register).toBe('identifier');
   });
 
   it('pressing copy writes the value to the clipboard', async () => {
-    const writeText = vi.fn().mockResolvedValue(undefined);
+    const writeText = vi.fn<(text: string) => Promise<void>>().mockResolvedValue();
     vi.stubGlobal('navigator', {
-      ...(typeof navigator === 'undefined' ? {} : navigator),
       clipboard: { writeText },
     });
-    const onCopyResult = vi.fn();
+    const onCopyResult = vi.fn<(ok: boolean) => void>();
     const result = renderWithProviders(
       <Input
         copy
@@ -149,7 +145,7 @@ describe('Input copy (CopyField slot)', () => {
       />,
     );
     const copy = copyOf(result.container);
-    if (!copy) {
+    if (copy === null) {
       throw new Error('copy missing');
     }
     fireEvent.click(copy);

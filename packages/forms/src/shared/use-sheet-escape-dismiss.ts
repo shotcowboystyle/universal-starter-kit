@@ -13,20 +13,20 @@ import { isWeb } from 'tamagui';
  */
 export const useSheetEscapeDismiss = (enabled: boolean, onDismiss: () => void) => {
   const onDismissRef = useRef(onDismiss);
-  onDismissRef.current = onDismiss;
   useEffect(() => {
-    if (!isWeb || !enabled) {
-      return;
-    }
+    onDismissRef.current = onDismiss;
+  });
+  useEffect(() => {
+    const target = isWeb && enabled ? window : null;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape' || event.defaultPrevented) {
         return;
       }
       onDismissRef.current();
     };
-    window.addEventListener('keydown', onKeyDown);
+    target?.addEventListener('keydown', onKeyDown);
     return () => {
-      window.removeEventListener('keydown', onKeyDown);
+      target?.removeEventListener('keydown', onKeyDown);
     };
   }, [enabled]);
 };

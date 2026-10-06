@@ -1,47 +1,55 @@
 import { renderWithProviders } from '@repo/test-utils';
 import { useForm } from '@tanstack/react-form';
 import { act, fireEvent, waitFor } from '@testing-library/react';
+import { useEffect } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { Form } from '../../Form';
 import { getFieldHeight } from '../../shared/utils';
 
-vi.mock('react-native', () => ({
+import type { DateRange } from './DateRangePicker';
+
+vi.mock(import('react-native'), () => ({
   Platform: {
     OS: 'web',
-    select: (options: Record<string, unknown>) => options.web ?? options.default,
-  },
+    select: (options: { web?: unknown; default?: unknown }) => options.web ?? options.default,
+  } as never,
 }));
 
-vi.mock('@tamagui/lucide-icons-2', () => ({
+vi.mock(import('@tamagui/lucide-icons-2'), () => ({
   Calendar: () => null,
   ChevronLeft: () => null,
   ChevronRight: () => null,
   X: () => null,
 }));
 
-const loadDateRangePicker = async () => (await import('./DateRangePicker')).DateRangePicker;
+const loadDateRangePicker = async () => {
+  const { DateRangePicker } = await import('./DateRangePicker');
+  return DateRangePicker;
+};
 
 const getEnabledDayButtons = (root: ParentNode): HTMLButtonElement[] => {
-  const allButtons = Array.from(root.querySelectorAll('button, [role="button"]')) as HTMLButtonElement[];
+  const allButtons = [...root.querySelectorAll<HTMLButtonElement>('button, [role="button"]')];
   return allButtons.filter((btn) => {
     const text = btn.textContent?.trim() ?? '';
     const isDay = /^\d{1,2}$/u.test(text);
     const disabled =
-      btn.hasAttribute('disabled') || btn.getAttribute('aria-disabled') === 'true' || btn.hasAttribute('data-disabled');
+      btn.hasAttribute('disabled') ||
+      btn.getAttribute('aria-disabled') === 'true' ||
+      btn.dataset.disabled !== undefined;
     return isDay && !disabled;
   });
 };
 
 const skeletonHeight = (el: HTMLElement): number => {
   const attr = el.getAttribute('height');
-  if (attr && /^\d+(\.\d+)?$/u.test(attr)) {
+  if (attr !== null && /^\d+(?<fraction>\.\d+)?$/u.test(attr)) {
     return Number(attr);
   }
   if (el.style.height.endsWith('px')) {
-    return Number.parseFloat(el.style.height);
+    return Number(el.style.height.slice(0, -2));
   }
-  return Number.parseFloat(getComputedStyle(el).height) || 0;
+  return Number(getComputedStyle(el).height.replace('px', '')) || 0;
 };
 
 describe('DateRangePicker', () => {
@@ -82,8 +90,8 @@ describe('DateRangePicker', () => {
         name="range"
       />,
     );
-    const trigger = result.container.querySelector('[data-testid="date-picker-trigger"]') as HTMLElement;
-    const label = result.container.querySelector('label') as HTMLLabelElement;
+    const trigger = result.container.querySelector<HTMLElement>('[data-testid="date-picker-trigger"]')!;
+    const label = result.container.querySelector<HTMLLabelElement>('label')!;
     expect(trigger?.id).toBeTruthy();
     expect(label.htmlFor).toBe(trigger.id);
     expect(trigger.getAttribute('aria-labelledby')).toBe(`${trigger.id}-label`);
@@ -140,12 +148,14 @@ describe('DateRangePicker', () => {
     // (a seeded value is not a user edit).
     it('form-integrated: a field value set after mount displays, without onChange', async () => {
       const DateRangePicker = await loadDateRangePicker();
-      const onChange = vi.fn();
+      const onChange = vi.fn<(value: DateRange | null) => void>();
       type Range = { start: Date; end: Date } | null;
       let formApi: { setFieldValue: (name: 'range', value: Range) => void } | undefined;
       const TestComponent = () => {
         const form = useForm({ defaultValues: { range: null as Range } });
-        formApi = form as unknown as typeof formApi;
+        useEffect(() => {
+          formApi = form as unknown as typeof formApi;
+        }, [form]);
         return (
           <Form form={form}>
             <DateRangePicker
@@ -174,7 +184,7 @@ describe('DateRangePicker', () => {
 
     it('form-integrated: clearing the field value programmatically clears the display', async () => {
       const DateRangePicker = await loadDateRangePicker();
-      const onChange = vi.fn();
+      const onChange = vi.fn<(value: DateRange | null) => void>();
       type Range = { start: Date; end: Date } | null;
       let formApi: { setFieldValue: (name: 'range', value: Range) => void } | undefined;
       const TestComponent = () => {
@@ -183,7 +193,9 @@ describe('DateRangePicker', () => {
             range: { start: new Date(2026, 2, 5), end: new Date(2026, 2, 12) } as Range,
           },
         });
-        formApi = form as unknown as typeof formApi;
+        useEffect(() => {
+          formApi = form as unknown as typeof formApi;
+        }, [form]);
         return (
           <Form form={form}>
             <DateRangePicker
@@ -221,7 +233,7 @@ describe('DateRangePicker', () => {
         />,
       );
       expect(result.container.querySelector('input')).toBeNull();
-      const skeleton = result.container.querySelector('[data-daterange-skeleton]') as HTMLElement;
+      const skeleton = result.container.querySelector<HTMLElement>('[data-daterange-skeleton]')!;
       expect(skeleton).toBeTruthy();
       expect(skeletonHeight(skeleton)).toBe(getFieldHeight('$4'));
     });
@@ -260,8 +272,8 @@ describe('DateRangePicker', () => {
       await waitFor(() => {
         expect(document.querySelector('[data-range-stripe]')).toBeTruthy();
       });
-      const stripe = document.querySelector('[data-range-stripe]') as HTMLElement;
-      expect(stripe.getAttribute('data-range-stripe')).toMatch(/in-range|range-start|range-end/u);
+      const stripe = document.querySelector<HTMLElement>('[data-range-stripe]')!;
+      expect(stripe.dataset.rangeStripe).toMatch(/in-range|range-start|range-end/u);
       expect(stripe.getAttribute('transition')).not.toBe('quick');
     });
   });

@@ -1,7 +1,6 @@
 import { action } from '@repo/storybook';
 import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { useForm } from '@tanstack/react-form';
-import { useState } from 'react';
 import { Text, YStack } from 'tamagui';
 
 import { Button } from '../../Button';
@@ -90,41 +89,40 @@ export const MinMax: Story = {
   },
 };
 
+const FormExample = () => {
+  const form = useForm({
+    defaultValues: { dates: [] as Date[] },
+    onSubmit: async ({ value }) => {
+      action('onSubmit')(value);
+    },
+  });
+  const FormSubscribe = (form as any).Subscribe;
+  return (
+    <Form form={form}>
+      <YStack
+        gap="$4"
+        maxWidth={480}>
+        <MultiDatePicker
+          label="Meeting Days"
+          name={'dates' as any}
+          required
+          helperText="Select up to 5 meeting days"
+        />
+        <FormSubscribe selector={(s: any) => [s.values.dates]}>
+          {([dates]: any[]) => (
+            <Text>
+              {`form-value:${JSON.stringify(
+                Array.isArray(dates) ? dates.map((d: any) => (d instanceof Date ? d.toDateString() : d)) : dates,
+              )}`}
+            </Text>
+          )}
+        </FormSubscribe>
+        <Button action="submit">Submit</Button>
+      </YStack>
+    </Form>
+  );
+};
+
 export const FormBound: Story = {
-  render: () => {
-    const FormExample = () => {
-      const form = useForm({
-        defaultValues: { dates: [] as Date[] },
-        onSubmit: async ({ value }) => {
-          action('onSubmit')(value);
-        },
-      });
-      const FormSubscribe = (form as any).Subscribe;
-      return (
-        <Form form={form}>
-          <YStack
-            gap="$4"
-            maxWidth={480}>
-            <MultiDatePicker
-              label="Meeting Days"
-              name={'dates' as any}
-              required
-              helperText="Select up to 5 meeting days"
-            />
-            <FormSubscribe selector={(s: any) => [s.values.dates]}>
-              {([dates]: any[]) => (
-                <Text>
-                  {`form-value:${JSON.stringify(
-                    Array.isArray(dates) ? dates.map((d: any) => (d instanceof Date ? d.toDateString() : d)) : dates,
-                  )}`}
-                </Text>
-              )}
-            </FormSubscribe>
-            <Button action="submit">Submit</Button>
-          </YStack>
-        </Form>
-      );
-    };
-    return <FormExample />;
-  },
+  render: () => <FormExample />,
 };

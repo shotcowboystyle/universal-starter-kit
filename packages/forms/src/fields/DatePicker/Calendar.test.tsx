@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { Calendar } from './Calendar';
 import { CalendarDays, isSameDay, useCalendarData } from './parts';
 
+// oxlint-disable-next-line vitest/prefer-import-in-mock -- factory is a partial stub of the module; a typed import() would require the full module shape
 vi.mock('@phosphor-icons/react', () => ({
   CalendarBlankIcon: () => null,
   CaretLeftIcon: () => null,
@@ -15,26 +16,28 @@ vi.mock('@phosphor-icons/react', () => ({
 }));
 
 const getEnabledDayButtons = (root: ParentNode): HTMLButtonElement[] => {
-  const allButtons = Array.from(root.querySelectorAll('button, [role="button"]')) as HTMLButtonElement[];
+  const allButtons = [...root.querySelectorAll<HTMLButtonElement>('button, [role="button"]')];
   return allButtons.filter((btn) => {
     const text = btn.textContent?.trim() ?? '';
     const isDay = /^\d{1,2}$/u.test(text);
     const disabled =
-      btn.hasAttribute('disabled') || btn.getAttribute('aria-disabled') === 'true' || btn.hasAttribute('data-disabled');
+      btn.hasAttribute('disabled') ||
+      btn.getAttribute('aria-disabled') === 'true' ||
+      btn.dataset.disabled !== undefined;
     return isDay && !disabled;
   });
 };
 
 const getDayButtons = (root: ParentNode): HTMLButtonElement[] => {
-  const allButtons = Array.from(root.querySelectorAll('button, [role="button"]')) as HTMLButtonElement[];
+  const allButtons = [...root.querySelectorAll<HTMLButtonElement>('button, [role="button"]')];
   return allButtons.filter((btn) => /^\d{1,2}$/u.test(btn.textContent?.trim() ?? ''));
 };
 
 /** Tamagui emits opacity as `_o-<value>` (see StarInk.native.spec). */
 const opacityOf = (el: HTMLElement): number => {
-  const fromClass = /(?:^|\s)_o-([\d.]+)(?:\s|$)/u.exec(el.className);
-  if (fromClass) {
-    return Number(fromClass[1]);
+  const fromClass = /(?:^|\s)_o-(?<value>[\d.]+)(?:\s|$)/u.exec(el.className)?.groups?.value;
+  if (fromClass !== undefined) {
+    return Number(fromClass);
   }
   if (el.style.opacity !== '') {
     return Number(el.style.opacity);
@@ -44,7 +47,7 @@ const opacityOf = (el: HTMLElement): number => {
 };
 
 const dayCell = (root: ParentNode, year: number, monthIndex: number, date: number) =>
-  root.querySelector(`[data-calendar-day="${year}-${monthIndex}-${date}"]`) as HTMLElement | null;
+  root.querySelector<HTMLElement>(`[data-calendar-day="${year}-${monthIndex}-${date}"]`);
 
 const JuneGrid = ({
   minDate,
@@ -72,9 +75,9 @@ const JuneGrid = ({
   );
 };
 
-describe('Calendar', () => {
+describe(Calendar, () => {
   it('renders tabs and switches modes', async () => {
-    const onDatesChange = vi.fn();
+    const onDatesChange = vi.fn<(dates: Date[]) => void>();
     const result = renderWithProviders(
       <Calendar
         showTabs
@@ -105,7 +108,7 @@ describe('Calendar', () => {
   });
 
   it('emits single-date selection in single mode', async () => {
-    const onDatesChange = vi.fn();
+    const onDatesChange = vi.fn<(dates: Date[]) => void>();
     const result = renderWithProviders(
       <Calendar
         mode="single"
@@ -117,7 +120,7 @@ describe('Calendar', () => {
       expect(getEnabledDayButtons(result.container).length).toBeGreaterThan(0);
     });
 
-    const firstDay = getEnabledDayButtons(result.container)[0];
+    const [firstDay] = getEnabledDayButtons(result.container);
     await act(async () => {
       fireEvent.click(firstDay);
     });
@@ -125,12 +128,12 @@ describe('Calendar', () => {
     await waitFor(() => {
       const { calls } = onDatesChange.mock;
       expect(calls.length).toBeGreaterThan(0);
-      expect(calls[calls.length - 1][0]).toHaveLength(1);
+      expect(calls.at(-1)?.[0]).toHaveLength(1);
     });
   });
 
   it('respects selection limit in multiple mode', async () => {
-    const onDatesChange = vi.fn();
+    const onDatesChange = vi.fn<(dates: Date[]) => void>();
     const result = renderWithProviders(
       <Calendar
         mode="multiple"
@@ -152,7 +155,7 @@ describe('Calendar', () => {
     await waitFor(() => {
       const { calls } = onDatesChange.mock;
       expect(calls.length).toBeGreaterThan(0);
-      expect(calls[calls.length - 1][0]).toHaveLength(1);
+      expect(calls.at(-1)?.[0]).toHaveLength(1);
     });
   });
 
@@ -167,8 +170,8 @@ describe('Calendar', () => {
     );
     const days = getEnabledDayButtons(result.container);
     expect(days.length).toBeGreaterThan(0);
-    expect(days[0].getAttribute('data-nested-px')).toBe('32');
-    expect(days.every((day) => day.getAttribute('data-nested-px') === '32')).toBe(true);
+    expect(days[0].dataset.nestedPx).toBe('32');
+    expect(days.every((day) => day.dataset.nestedPx === '32')).toBe(true);
   });
 
   // Platform prop boundary: the calendar nav Buttons
@@ -183,7 +186,7 @@ describe('Calendar', () => {
       const result = renderWithProviders(
         <Calendar
           mode="single"
-          onDatesChange={vi.fn()}
+          onDatesChange={vi.fn<(dates: Date[]) => void>()}
         />,
       );
       await waitFor(() => {
@@ -209,37 +212,35 @@ describe('Calendar day-cell unavailable treatment', () => {
   const minDate = new Date(2024, 5, 5);
   const maxDate = new Date(2024, 6, 31);
 
-  (['light', 'dark'] as const).forEach((scheme) => {
-    it(`out-of-range current-month day is aria-disabled and dimmed (${scheme})`, () => {
-      const onSelect = vi.fn();
-      const result = renderWithProviders(
-        <Theme name={scheme}>
-          <JuneGrid
-            minDate={minDate}
-            maxDate={maxDate}
-            onSelect={onSelect}
-          />
-        </Theme>,
-      );
+  it.each(['light', 'dark'] as const)('out-of-range current-month day is aria-disabled and dimmed (%s)', (scheme) => {
+    const onSelect = vi.fn<(day: Date) => void>();
+    const result = renderWithProviders(
+      <Theme name={scheme}>
+        <JuneGrid
+          minDate={minDate}
+          maxDate={maxDate}
+          onSelect={onSelect}
+        />
+      </Theme>,
+    );
 
-      const outOfRange = dayCell(result.container, 2024, 5, 3);
-      const available = dayCell(result.container, 2024, 5, 15);
-      expect(outOfRange).toBeTruthy();
-      expect(available).toBeTruthy();
-      expect(outOfRange?.getAttribute('aria-disabled')).toBe('true');
-      expect(available?.getAttribute('aria-disabled')).toBeFalsy();
-      expect(opacityOf(outOfRange!)).toBe(0.5);
-      expect(opacityOf(available!)).toBe(1);
+    const outOfRange = dayCell(result.container, 2024, 5, 3);
+    const available = dayCell(result.container, 2024, 5, 15);
+    expect(outOfRange).toBeTruthy();
+    expect(available).toBeTruthy();
+    expect(outOfRange?.getAttribute('aria-disabled')).toBe('true');
+    expect(available?.getAttribute('aria-disabled')).toBeFalsy();
+    expect(opacityOf(outOfRange!)).toBe(0.5);
+    expect(opacityOf(available!)).toBe(1);
 
-      const classBefore = outOfRange!.className;
-      fireEvent.mouseEnter(outOfRange!);
-      fireEvent.mouseOver(outOfRange!);
-      fireEvent.click(outOfRange!);
-      fireEvent.keyDown(outOfRange!, { key: 'Enter' });
-      fireEvent.keyDown(outOfRange!, { key: ' ' });
-      expect(onSelect).not.toHaveBeenCalled();
-      expect(outOfRange!.className).toBe(classBefore);
-    });
+    const classBefore = outOfRange!.className;
+    fireEvent.mouseEnter(outOfRange!);
+    fireEvent.mouseOver(outOfRange!);
+    fireEvent.click(outOfRange!);
+    fireEvent.keyDown(outOfRange!, { key: 'Enter' });
+    fireEvent.keyDown(outOfRange!, { key: ' ' });
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(outOfRange!.className).toBe(classBefore);
   });
 
   it('adjacent-month dimming and out-of-range dimming are distinguishable', () => {
@@ -262,13 +263,13 @@ describe('Calendar day-cell unavailable treatment', () => {
     expect(adjacentOutOfRange?.getAttribute('aria-disabled')).toBe('true');
 
     expect(opacityOf(currentOutOfRange!)).toBe(0.5);
-    expect(opacityOf(adjacentInRange!)).toBe(0.45);
+    expect(opacityOf(adjacentInRange!)).toBeCloseTo(0.45);
     expect(opacityOf(adjacentOutOfRange!)).toBe(0.5);
     expect(opacityOf(currentOutOfRange!)).not.toBe(opacityOf(adjacentInRange!));
   });
 
   it('at the multiple-mode limit, unselected cells change appearance', async () => {
-    const onDatesChange = vi.fn();
+    const onDatesChange = vi.fn<(dates: Date[]) => void>();
     const result = renderWithProviders(
       <Calendar
         mode="multiple"
@@ -281,7 +282,7 @@ describe('Calendar day-cell unavailable treatment', () => {
       expect(getEnabledDayButtons(result.container).length).toBeGreaterThan(1);
     });
 
-    const first = getEnabledDayButtons(result.container)[0];
+    const [first] = getEnabledDayButtons(result.container);
     await act(async () => {
       fireEvent.click(first);
     });
@@ -289,14 +290,10 @@ describe('Calendar day-cell unavailable treatment', () => {
       expect(onDatesChange.mock.calls.at(-1)?.[0]).toHaveLength(1);
     });
 
-    const picked = onDatesChange.mock.calls.at(-1)?.[0][0] as Date;
+    const [[picked]] = onDatesChange.mock.calls.at(-1)!;
     const pickedKey = `${picked.getFullYear()}-${picked.getMonth()}-${picked.getDate()}`;
-    const unselected = getDayButtons(result.container).filter(
-      (btn) => btn.getAttribute('data-calendar-day') !== pickedKey,
-    );
-    const selected = getDayButtons(result.container).filter(
-      (btn) => btn.getAttribute('data-calendar-day') === pickedKey,
-    );
+    const unselected = getDayButtons(result.container).filter((btn) => btn.dataset.calendarDay !== pickedKey);
+    const selected = getDayButtons(result.container).filter((btn) => btn.dataset.calendarDay === pickedKey);
     expect(unselected.length).toBeGreaterThan(0);
     expect(unselected.every((btn) => btn.getAttribute('aria-disabled') === 'true')).toBe(true);
     expect(unselected.every((btn) => opacityOf(btn) === 0.5)).toBe(true);

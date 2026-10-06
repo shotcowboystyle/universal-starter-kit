@@ -7,7 +7,7 @@ import {
   useGlyphColor,
   useResolvedKnobs,
 } from '@repo/theme';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { ReactNode, RefObject } from 'react';
 import { AnimatePresence, Text, View, isWeb } from 'tamagui';
 
@@ -35,7 +35,9 @@ export interface CalendarData {
 // Constants
 // ---------------------------------------------------------------------------
 
+// oxlint-disable-next-line react-doctor/only-export-components -- shared calendar primitives and constants are co-located with the components by design; consumers import both from './parts'
 export const weekdays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+// oxlint-disable-next-line react-doctor/only-export-components -- shared calendar primitives and constants are co-located with the components by design; consumers import both from './parts'
 export const months = [
   'January',
   'February',
@@ -60,19 +62,23 @@ export const yearPageSize = 12;
 // useDateAnimation — smooth directional transitions
 // ---------------------------------------------------------------------------
 
+const directionOf = (current: string | number, prev: string | number): -1 | 0 | 1 => {
+  if (current > prev) {
+    return 1;
+  }
+  return current < prev ? -1 : 0;
+};
+
 export const useDateAnimation = (current: string | number) => {
-  const prev = useRef<string | number | null>(null);
-
-  const direction = useMemo(() => {
-    if (prev.current === null) {
-      return 0;
-    }
-    return current > prev.current ? 1 : current < prev.current ? -1 : 0;
-  }, [current]);
-
-  useEffect(() => {
-    prev.current = current;
-  }, [current]);
+  const [tracked, setTracked] = useState<{ value: string | number; direction: -1 | 0 | 1 }>({
+    value: current,
+    direction: 0,
+  });
+  let { direction } = tracked;
+  if (tracked.value !== current) {
+    direction = directionOf(current, tracked.value);
+    setTracked({ value: current, direction });
+  }
 
   const animation = useMemo(
     () => ({
@@ -100,23 +106,16 @@ export const useCalendarData = (displayDate: Date): CalendarData =>
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
 
-    const startDate = new Date(firstDay);
-    startDate.setDate(startDate.getDate() - firstDay.getDay());
-    const endDate = new Date(lastDay);
-    endDate.setDate(endDate.getDate() + (6 - lastDay.getDay()));
-
-    const days: Date[] = [];
-    const current = new Date(startDate);
-    while (current <= endDate) {
-      days.push(new Date(current));
-      current.setDate(current.getDate() + 1);
-    }
+    // Whole weeks: pad back to the Sunday before the 1st and forward to the Saturday after the last day.
+    const dayCount = firstDay.getDay() + lastDay.getDate() + (6 - lastDay.getDay());
+    const days = Array.from({ length: dayCount }, (_, i) => new Date(year, month, 1 - firstDay.getDay() + i));
 
     return {
       year,
       month,
       monthName: monthNames[month],
       days,
+      // oxlint-disable-next-line react/purity -- "today" is the wall clock by definition; recomputed whenever the displayed month changes
       today: new Date(),
     };
   }, [displayDate]);
@@ -126,7 +125,7 @@ export const useCalendarData = (displayDate: Date): CalendarData =>
 // ---------------------------------------------------------------------------
 
 export const useDateNavigation = (initialDate?: Date) => {
-  const [displayDate, setDisplayDate] = useState<Date>(initialDate ?? new Date());
+  const [displayDate, setDisplayDate] = useState<Date>(() => initialDate ?? new Date());
 
   const navigateMonth = useCallback((direction: 'prev' | 'next') => {
     setDisplayDate((prev) => {
@@ -144,6 +143,7 @@ export const useDateNavigation = (initialDate?: Date) => {
 // toWeeks — split days array into 7-day rows
 // ---------------------------------------------------------------------------
 
+// oxlint-disable-next-line react-doctor/only-export-components -- shared calendar primitives and constants are co-located with the components by design; consumers import both from './parts'
 export const toWeeks = (days: Date[]): Date[][] => {
   const result: Date[][] = [];
   for (let i = 0; i < days.length; i += 7) {
@@ -156,6 +156,7 @@ export const toWeeks = (days: Date[]): Date[][] => {
 // isSameDay — date comparison utility
 // ---------------------------------------------------------------------------
 
+// oxlint-disable-next-line react-doctor/only-export-components -- shared calendar primitives and constants are co-located with the components by design; consumers import both from './parts'
 export const isSameDay = (a: Date | null | undefined, b: Date | null | undefined): boolean => {
   if (!a || !b) {
     return false;
@@ -172,11 +173,10 @@ export const isSameDay = (a: Date | null | undefined, b: Date | null | undefined
  * square (binary-pointy, same contract as Switch/Radio). Inline style so a
  * consumer `circular` variant cannot expand past the nested-control box.
  */
-export const dayCellRadius = (knobProps: {
-  pointy?: boolean;
-}): {
-  style: { borderRadius: number };
-} => ({ style: { borderRadius: knobProps.pointy ? 0 : 9999 } });
+// oxlint-disable-next-line react-doctor/only-export-components -- shared calendar primitives and constants are co-located with the components by design; consumers import both from './parts'
+export const dayCellRadius = (knobProps: { pointy?: boolean }) => ({
+  style: { borderRadius: knobProps.pointy ? 0 : 9999 },
+});
 
 /** Calendar chrome sits one density step below the page. */
 export const useCalendarKnobs = () => useResolvedKnobs({ compact: true });
@@ -213,12 +213,20 @@ const splitNestedControl = (nested: {
   return { px, hitSlop, box };
 };
 
-const calendarKeyHandler = (onPress: () => void) => (e: { key?: string; preventDefault?: () => void }) => {
-  if (e.key === 'Enter' || e.key === ' ') {
-    e.preventDefault?.();
-    onPress();
-  }
-};
+interface KeyEventLike {
+  key?: string;
+  preventDefault?: () => void;
+}
+
+// The defaulted event keeps the handler assignable to the zero-arg `onKeyDown` type View exposes.
+const calendarKeyHandler =
+  (onPress: () => void) =>
+  (e: KeyEventLike = {}) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault?.();
+      onPress();
+    }
+  };
 
 export const CalendarChromeButton = ({
   onPress,
@@ -234,6 +242,7 @@ export const CalendarChromeButton = ({
   return (
     <View
       {...box}
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui View is the cross-platform primitive (no native <button> on RN); role supplies the accessibility semantics
       role="button"
       aria-label={label}
       cursor="pointer"
@@ -244,9 +253,7 @@ export const CalendarChromeButton = ({
       focusStyle={{ outlineWidth: 0 }}
       focusVisibleStyle={ensureFocusVisibleRing()}
       {...(isWeb ? {} : { hitSlop })}
-      {...(isWeb
-        ? { tabIndex: 0, onKeyDown: calendarKeyHandler(onPress) as unknown as () => void }
-        : { accessible: true })}>
+      {...(isWeb ? { tabIndex: 0, onKeyDown: calendarKeyHandler(onPress) } : { accessible: true })}>
       {children}
     </View>
   );
@@ -254,6 +261,7 @@ export const CalendarChromeButton = ({
 
 export const CalendarTextButton = ({ onPress, children }: { onPress: () => void; children: ReactNode }) => (
   <View
+    // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui View is the cross-platform primitive (no native <button> on RN); role supplies the accessibility semantics
     role="button"
     cursor="pointer"
     paddingVertical={2}
@@ -262,9 +270,7 @@ export const CalendarTextButton = ({ onPress, children }: { onPress: () => void;
     outlineWidth={0}
     focusStyle={{ outlineWidth: 0 }}
     focusVisibleStyle={ensureFocusVisibleRing()}
-    {...(isWeb
-      ? { tabIndex: 0, onKeyDown: calendarKeyHandler(onPress) as unknown as () => void }
-      : { accessible: true })}>
+    {...(isWeb ? { tabIndex: 0, onKeyDown: calendarKeyHandler(onPress) } : { accessible: true })}>
     {children}
   </View>
 );
@@ -296,6 +302,19 @@ export const CalendarWeekRow = ({ children }: { children: ReactNode }) => {
   );
 };
 
+const TRANSPARENT = 'transparent';
+const POINTER_NONE = 'none';
+const BACKGROUND_TOKEN = '$background';
+
+const dayCellOpacity = (disabled = false, dimmed = false): number => {
+  if (disabled) {
+    return 0.5;
+  }
+  return dimmed ? 0.45 : 1;
+};
+
+const unselectedTextColor = (accentText: string, today = false) => (today ? accentText : formCommonColors.text);
+
 export const CalendarDayCell = ({
   day,
   selected,
@@ -316,7 +335,7 @@ export const CalendarDayCell = ({
   dimmed?: boolean;
   tabIndex?: number;
   onPress: () => void;
-  onKeyDown?: (e: { key?: string; preventDefault?: () => void }) => void;
+  onKeyDown?: (e: KeyEventLike) => void;
   selectedBackground?: string;
 }) => {
   const { knobProps } = useCalendarKnobs();
@@ -339,10 +358,11 @@ export const CalendarDayCell = ({
     <View
       {...box}
       {...dayCellRadius(knobProps)}
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui View is the cross-platform primitive (no native <button> on RN); role supplies the accessibility semantics
       role="button"
       aria-label={String(day.getDate())}
-      aria-disabled={disabled || undefined}
-      aria-pressed={selected || undefined}
+      aria-disabled={disabled ? true : undefined}
+      aria-pressed={selected ? true : undefined}
       aria-current={today ? 'date' : undefined}
       cursor={disabled ? 'not-allowed' : 'pointer'}
       alignItems="center"
@@ -358,12 +378,12 @@ export const CalendarDayCell = ({
       // wins when both apply so an out-of-range adjacent day does not
       // look like a pickable spill-over day. Bento paints this state
       // identical to a choosable cell; we do not adopt that.
-      opacity={disabled ? 0.5 : dimmed ? 0.45 : 1}
-      pointerEvents={disabled ? 'none' : 'auto'}
-      backgroundColor={selected ? (selectedBackground ?? '$background') : 'transparent'}
-      theme={selected ? ('accent' as any) : undefined}
+      opacity={dayCellOpacity(disabled, dimmed)}
+      pointerEvents={disabled ? POINTER_NONE : 'auto'}
+      backgroundColor={selected ? (selectedBackground ?? BACKGROUND_TOKEN) : TRANSPARENT}
+      theme={selected ? 'accent' : undefined}
       borderWidth={showTodayMark ? 2 : 0}
-      borderColor={showTodayMark ? accentText : 'transparent'}
+      borderColor={showTodayMark ? accentText : TRANSPARENT}
       zIndex={1}
       outlineWidth={0}
       focusStyle={{ outlineWidth: 0 }}
@@ -374,19 +394,19 @@ export const CalendarDayCell = ({
       {...(isWeb
         ? {
             tabIndex: resolvedTabIndex,
-            onKeyDown: ((e: { key?: string; preventDefault?: () => void }) => {
+            onKeyDown: (e: KeyEventLike = {}) => {
               if (!disabled) {
                 calendarKeyHandler(onPress)(e);
               }
               onKeyDown?.(e);
-            }) as unknown as () => void,
+            },
           }
         : { accessible: true })}>
       <Text
         {...knobProps.label}
         {...knobProps.textWeight}
         fontWeight={selected ? 'bold' : knobProps.textWeight.fontWeight}
-        color={selected ? undefined : today ? accentText : formCommonColors.text}>
+        color={selected ? undefined : unselectedTextColor(accentText, today)}>
         {day.getDate()}
       </Text>
     </View>
@@ -420,6 +440,13 @@ export const WeekView = () => {
   );
 };
 
+const arrowKeyDeltas = new Map([
+  ['ArrowLeft', -1],
+  ['ArrowRight', 1],
+  ['ArrowUp', -7],
+  ['ArrowDown', 7],
+]);
+
 export const CalendarDays = ({
   calendarData,
   minDate,
@@ -449,27 +476,26 @@ export const CalendarDays = ({
   const weeks = toWeeks(calendarData.days);
   const { px } = knobProps.nestedControl;
 
-  const [focusedDay, setFocusedDay] = useState<Date | null>(() => {
-    const selected = calendarData.days.find((day) => day.getMonth() === calendarData.month && isSelected(day));
-    const today = calendarData.days.find(
-      (day) => day.getMonth() === calendarData.month && isSameDay(calendarData.today, day),
-    );
-    return selected ?? today ?? calendarData.days.find((day) => day.getMonth() === calendarData.month) ?? null;
-  });
-
-  useEffect(() => {
-    const selected = calendarData.days.find((day) => day.getMonth() === calendarData.month && isSelected(day));
-    const today = calendarData.days.find(
-      (day) => day.getMonth() === calendarData.month && isSameDay(calendarData.today, day),
-    );
-    setFocusedDay(selected ?? today ?? calendarData.days.find((day) => day.getMonth() === calendarData.month) ?? null);
-  }, [calendarData.year, calendarData.month]);
+  const pickFocusDay = () => {
+    const inMonth = (day: Date) => day.getMonth() === calendarData.month;
+    const selected = calendarData.days.find((day) => inMonth(day) && isSelected(day));
+    const today = calendarData.days.find((day) => inMonth(day) && isSameDay(calendarData.today, day));
+    return selected ?? today ?? calendarData.days.find(inMonth) ?? null;
+  };
+  const [focusedDay, setFocusedDay] = useState<Date | null>(pickFocusDay);
+  // Re-seed the roving focus target when the displayed month changes.
+  const monthKey = `${calendarData.year}-${calendarData.month}`;
+  const [seededMonthKey, setSeededMonthKey] = useState(monthKey);
+  if (seededMonthKey !== monthKey) {
+    setSeededMonthKey(monthKey);
+    setFocusedDay(pickFocusDay());
+  }
 
   const moveFocus = useCallback(
     (from: Date, delta: number) => {
       const idx = calendarData.days.findIndex((day) => isSameDay(day, from));
-      const next = calendarData.days[idx + delta];
-      if (!next) {
+      const next: Date | undefined = calendarData.days[idx + delta];
+      if (next === undefined) {
         return;
       }
       setFocusedDay(next);
@@ -478,7 +504,7 @@ export const CalendarDays = ({
       }
       const key = `${next.getFullYear()}-${next.getMonth()}-${next.getDate()}`;
       requestAnimationFrame(() => {
-        (document.querySelector(`[data-calendar-day="${key}"]`) as HTMLElement | null)?.focus?.();
+        document.querySelector<HTMLElement>(`[data-calendar-day="${key}"]`)?.focus();
       });
     },
     [calendarData.days],
@@ -529,17 +555,8 @@ export const CalendarDays = ({
                       onSelect(day);
                     }}
                     onKeyDown={(e) => {
-                      const delta =
-                        e.key === 'ArrowLeft'
-                          ? -1
-                          : e.key === 'ArrowRight'
-                            ? 1
-                            : e.key === 'ArrowUp'
-                              ? -7
-                              : e.key === 'ArrowDown'
-                                ? 7
-                                : 0;
-                      if (!delta) {
+                      const delta = e.key === undefined ? 0 : (arrowKeyDeltas.get(e.key) ?? 0);
+                      if (delta === 0) {
                         return;
                       }
                       e.preventDefault?.();
@@ -562,7 +579,12 @@ export const CalendarDays = ({
           );
         })}
         {onToday ? (
-          <CalendarTextButton onPress={todayOutOfRange ? () => {} : onToday}>
+          <CalendarTextButton
+            onPress={() => {
+              if (!todayOutOfRange) {
+                onToday();
+              }
+            }}>
             <Text
               {...knobProps.label}
               {...knobProps.textWeight}
@@ -707,13 +729,14 @@ export const MonthGrid = ({ currentYear, selectedMonth, onSelectMonth }: MonthGr
               height={px}
               minHeight={px}
               maxHeight={px}
+              // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui View is the cross-platform primitive (no native <button> on RN); role supplies the accessibility semantics
               role="button"
-              aria-pressed={isSelected || undefined}
+              aria-pressed={isSelected ? true : undefined}
               cursor="pointer"
               alignItems="center"
               justifyContent="center"
-              theme={isSelected ? ('accent' as any) : undefined}
-              backgroundColor={isSelected ? '$background' : 'transparent'}
+              theme={isSelected ? 'accent' : undefined}
+              backgroundColor={isSelected ? BACKGROUND_TOKEN : TRANSPARENT}
               onPress={() => {
                 onSelectMonth(index);
               }}
@@ -727,7 +750,7 @@ export const MonthGrid = ({ currentYear, selectedMonth, onSelectMonth }: MonthGr
                     tabIndex: 0,
                     onKeyDown: calendarKeyHandler(() => {
                       onSelectMonth(index);
-                    }) as unknown as () => void,
+                    }),
                   }
                 : { accessible: true })}>
               <Text
@@ -761,13 +784,7 @@ export const YearGrid = ({ yearPageStart, selectedYear, onSelectYear, onPrevPage
   const glyphColor = useGlyphColor();
   const { px, hitSlop, box } = splitNestedControl(knobProps.nestedControl);
   const cellW = (px * 7) / 3;
-  const years = useMemo(() => {
-    const result: number[] = [];
-    for (let i = 0; i < yearPageSize; i++) {
-      result.push(yearPageStart + i);
-    }
-    return result;
-  }, [yearPageStart]);
+  const years = useMemo(() => Array.from({ length: yearPageSize }, (_, i) => yearPageStart + i), [yearPageStart]);
 
   const { animation, animationKey } = useDateAnimation(yearPageStart);
 
@@ -792,7 +809,7 @@ export const YearGrid = ({ yearPageStart, selectedYear, onSelectYear, onPrevPage
         <Text
           {...knobProps.label}
           {...knobProps.textWeight}>
-          {years[0]} – {years[years.length - 1]}
+          {years[0]} – {years.at(-1)}
         </Text>
         <CalendarChromeButton
           onPress={onNextPage}
@@ -823,13 +840,14 @@ export const YearGrid = ({ yearPageStart, selectedYear, onSelectYear, onPrevPage
                 height={px}
                 minHeight={px}
                 maxHeight={px}
+                // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui View is the cross-platform primitive (no native <button> on RN); role supplies the accessibility semantics
                 role="button"
-                aria-pressed={isSelected || undefined}
+                aria-pressed={isSelected ? true : undefined}
                 cursor="pointer"
                 alignItems="center"
                 justifyContent="center"
-                theme={isSelected ? ('accent' as any) : undefined}
-                backgroundColor={isSelected ? '$background' : 'transparent'}
+                theme={isSelected ? 'accent' : undefined}
+                backgroundColor={isSelected ? BACKGROUND_TOKEN : TRANSPARENT}
                 onPress={() => {
                   onSelectYear(year);
                 }}
@@ -843,7 +861,7 @@ export const YearGrid = ({ yearPageStart, selectedYear, onSelectYear, onPrevPage
                       tabIndex: 0,
                       onKeyDown: calendarKeyHandler(() => {
                         onSelectYear(year);
-                      }) as unknown as () => void,
+                      }),
                     }
                   : { accessible: true })}>
                 <Text
@@ -923,7 +941,7 @@ export const DatePickerInputTrigger = ({
   'aria-required': ariaRequired,
   'aria-invalid': ariaInvalid,
 }: DatePickerInputTriggerProps) => {
-  const handleTriggerKey = (e: PanelActionEvent & { key?: string; code?: string; preventDefault?: () => void }) => {
+  const handleTriggerKey = (e: PanelActionEvent & KeyEventLike & { code?: string } = {}) => {
     if (disabled || isNestedPanelAction(e)) {
       return;
     }
@@ -952,7 +970,7 @@ export const DatePickerInputTrigger = ({
       width="100%"
       cursor={disabled ? 'not-allowed' : 'pointer'}
       // Native parents own the tap; expanded field paint must not consume it.
-      pointerEvents={isWeb ? undefined : 'none'}>
+      pointerEvents={isWeb ? undefined : POINTER_NONE}>
       <InputParts.Box
         theme={error ? 'error' : undefined}
         // Yoga has no intrinsic TextInput width to size this row child.
@@ -963,7 +981,7 @@ export const DatePickerInputTrigger = ({
         data-testid="date-picker-trigger"
         id={id}
         onPress={isWeb && !disabled ? onButtonPress : undefined}
-        {...(disabled ? { opacity: 0.5, pointerEvents: 'none' } : undefined)}
+        {...(disabled ? { opacity: 0.5, pointerEvents: POINTER_NONE } : undefined)}
         {...(isWeb
           ? {
               role: 'combobox' as const,
@@ -975,7 +993,7 @@ export const DatePickerInputTrigger = ({
               'aria-required': ariaRequired,
               'aria-invalid': ariaInvalid,
               tabIndex: disabled ? -1 : 0,
-              onKeyDown: handleTriggerKey as unknown as () => void,
+              onKeyDown: handleTriggerKey,
             }
           : undefined)}>
         <InputParts.Section data-testid="date-picker-glyph">
@@ -1021,7 +1039,7 @@ interface DatePickerPopoverShellProps {
   triggerEnd?: ReactNode;
   children: ReactNode;
   disabled?: boolean;
-  popoverRef?: RefObject<any>;
+  popoverRef?: RefObject<unknown>;
   /** Native trigger announcement (name / current value / hint) — see FloatingPanel. */
   triggerA11y?: { label?: string; value?: string; hint?: string };
   /** When set, native hosts render Clear outside the pointerEvents-none trigger. */
@@ -1040,8 +1058,9 @@ export const DatePickerPopoverShell = ({
   clearValue,
   onClear,
 }: DatePickerPopoverShellProps) => {
+  const hasClearValue = clearValue !== undefined && clearValue !== '';
   const nativeClear =
-    !isWeb && clearValue && onClear ? (
+    !isWeb && hasClearValue && onClear ? (
       <DatePickerClearButton
         onReset={onClear}
         disabled={disabled}
@@ -1148,6 +1167,7 @@ export const CalendarViewSwitcher = ({
     );
   }
 
+  // oxlint-disable-next-line react/jsx-no-useless-fragment -- children is a ReactNode (may be a Promise type); a component must return a JSX element
   return <>{children}</>;
 };
 
@@ -1160,6 +1180,7 @@ export const CalendarViewSwitcher = ({
  * "Jan 15, 2024" — same voice as table date cells and Timeline, with the
  * year always shown because an editing surface is a precision context.
  */
+// oxlint-disable-next-line react-doctor/only-export-components -- shared calendar primitives and constants are co-located with the components by design; consumers import both from './parts'
 export const formatDateDisplay = (date: Date | null): string => {
   if (!date) {
     return '';

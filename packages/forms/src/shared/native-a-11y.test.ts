@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { choiceItemA11y, composeA11yName } from './native-a-11y';
 
-describe('composeA11yName', () => {
+describe(composeA11yName, () => {
   it("returns the option's own name when the group has none", () => {
     expect(composeA11yName(undefined, 'warning')).toBe('warning');
     expect(composeA11yName('   ', 'warning')).toBe('warning');
@@ -13,7 +13,7 @@ describe('composeA11yName', () => {
   });
 });
 
-describe('choiceItemA11y', () => {
+describe(choiceItemA11y, () => {
   it('carries role, name and both state spellings', () => {
     expect(choiceItemA11y({ kind: 'radio', name: 'DEBITS', selected: true, disabled: false })).toStrictEqual({
       accessible: true,

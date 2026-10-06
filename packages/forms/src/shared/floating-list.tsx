@@ -8,12 +8,13 @@ import { FocusContext, getInputFrameTransitionProps } from '../InputParts';
 
 const dropdownMaxRadiusTokenNum = 8;
 
+// oxlint-disable-next-line react-doctor/only-export-components -- exported radius helper and threshold constant are consumed by sibling dropdown modules; moving them would change import paths
 export const clampDropdownRadius = (fieldRadius: string): string | 0 => {
   if (fieldRadius === '$0') {
     return 0;
   }
-  if (typeof fieldRadius === 'string' && fieldRadius.startsWith('$')) {
-    const num = Number.parseInt(fieldRadius.slice(1), 10);
+  if (fieldRadius.startsWith('$')) {
+    const num = Math.trunc(Number(fieldRadius.slice(1)));
     return num > dropdownMaxRadiusTokenNum ? `$${dropdownMaxRadiusTokenNum}` : fieldRadius;
   }
   return fieldRadius;
@@ -84,11 +85,12 @@ export const ScrollArrow = ({
       animationFrameRef.current = requestAnimationFrame(tick);
     };
     animationFrameRef.current = requestAnimationFrame(tick);
-  }, [isUp, scrollRef]);
+  }, [isUp, scrollRef, arrowScrollDirRef]);
 
   const openTimestampRef = useRef(0);
   useEffect(() => {
     openTimestampRef.current = performance.now();
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- `visible` is the trigger: each open/close restamps the open time
   }, [visible]);
 
   const handlePointerEnter = useCallback(() => {
@@ -96,7 +98,7 @@ export const ScrollArrow = ({
     const elapsed = performance.now() - openTimestampRef.current;
     const wasOverOnOpen = elapsed < 80;
     if (wasOverOnOpen) {
-      if (resumeTimerRef.current) {
+      if (resumeTimerRef.current !== null) {
         clearTimeout(resumeTimerRef.current);
       }
       resumeTimerRef.current = setTimeout(() => {
@@ -112,18 +114,16 @@ export const ScrollArrow = ({
 
   const handlePointerLeave = useCallback(() => {
     hoveringRef.current = false;
-    if (resumeTimerRef.current) {
+    if (resumeTimerRef.current !== null) {
       clearTimeout(resumeTimerRef.current);
       resumeTimerRef.current = null;
     }
     stopLoop();
   }, [stopLoop]);
 
+  // oxlint-disable-next-line react-doctor/effect-needs-cleanup -- the resume timer lives in resumeTimerRef and is cleared by handlePointerLeave on unmount
   useEffect(() => {
-    const el = scrollRef.current;
-    if (!el || !visible) {
-      return;
-    }
+    const el = visible ? scrollRef.current : null;
     const onScroll = () => {
       if (selfScrollingRef.current) {
         selfScrollingRef.current = false;
@@ -133,7 +133,7 @@ export const ScrollArrow = ({
         return;
       }
       stopLoop();
-      if (resumeTimerRef.current) {
+      if (resumeTimerRef.current !== null) {
         clearTimeout(resumeTimerRef.current);
       }
       resumeTimerRef.current = setTimeout(() => {
@@ -143,10 +143,12 @@ export const ScrollArrow = ({
         }
       }, resumeDelay);
     };
-    el.addEventListener('scroll', onScroll);
+    // oxlint-disable-next-line github/prefer-observers -- needs scroll events caused by the user wheel/drag, not visibility changes
+    el?.addEventListener('scroll', onScroll);
     return () => {
-      el.removeEventListener('scroll', onScroll);
+      el?.removeEventListener('scroll', onScroll);
     };
+    // oxlint-disable-next-line react-doctor/prefer-use-effect-event -- startLoop is stable, so the subscription is not churned
   }, [scrollRef, visible, startLoop, stopLoop]);
 
   useEffect(
@@ -160,6 +162,7 @@ export const ScrollArrow = ({
   const { knobProps } = useResolvedKnobs();
   const iconSize = knobProps.controlIcon.width;
   const transitionProps = getInputFrameTransitionProps(
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- TransitionProp is string | object | null; only the string form is forwarded
     typeof knobProps.transition === 'string' ? knobProps.transition : undefined,
   );
   const transitionStyle = transitionProps && 'style' in transitionProps ? transitionProps.style : undefined;

@@ -14,9 +14,7 @@ describe('coerceToDate (forgiving paste normalization)', () => {
   it('accepts `/`, `.`, and space separators (paste normalization)', () => {
     for (const value of ['2024/01/15', '2024.01.15', '2024 01 15']) {
       const d = coerceToDate(value);
-      expect(d?.getFullYear(), value).toBe(2024);
-      expect(d?.getMonth(), value).toBe(0);
-      expect(d?.getDate(), value).toBe(15);
+      expect([value, d?.getFullYear(), d?.getMonth(), d?.getDate()]).toStrictEqual([value, 2024, 0, 15]);
     }
   });
 
