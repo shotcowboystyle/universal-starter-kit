@@ -9,6 +9,73 @@ import { Form } from '../../Form';
 
 import { FileUpload } from './index';
 
+const UPLOAD_FILE_LABEL = 'Upload File';
+
+const FormExample = () => {
+  const form = useForm({
+    defaultValues: {
+      avatar: null,
+      document: null,
+      attachments: null,
+    },
+    onSubmit: async ({ value }) => {
+      action('onSubmit')(value);
+    },
+  });
+
+  return (
+    <Form form={form}>
+      <YStack gap="$4">
+        <FileUpload
+          {...({
+            label: 'Profile Picture',
+            name: 'avatar',
+            accept: 'image/*',
+            helperText: 'Upload your profile picture',
+            showPreview: true,
+          } as any)}
+        />
+        <FileUpload
+          {...({
+            label: 'Document',
+            name: 'document',
+            accept: '.pdf,.doc,.docx',
+            helperText: 'Upload PDF or Word document',
+          } as any)}
+        />
+        <FileUpload
+          {...({
+            label: 'Attachments',
+            name: 'attachments',
+            multiple: true,
+            helperText: 'Upload multiple files',
+          } as any)}
+        />
+        <Button action="submit">Submit</Button>
+      </YStack>
+    </Form>
+  );
+};
+
+const InteractiveExample = () => {
+  const [file, setFile] = useState<File | null>(null);
+  return (
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <FileUpload
+        label={UPLOAD_FILE_LABEL}
+        // @ts-expect-error controlled mode not supported
+        onChange={(f: File | null) => {
+          setFile(f);
+          action('onChange')(f);
+        }}
+        helperText={file ? `Selected: ${file.name}` : 'No file selected'}
+      />
+    </YStack>
+  );
+};
+
 const meta: Meta<typeof FileUpload> = {
   title: 'Forms/FileUpload',
   component: FileUpload,
@@ -40,59 +107,12 @@ type Story = StoryObj<typeof FileUpload>;
 
 export const Main: Story = {
   name: 'Main',
-  render: () => {
-    const FormExample = () => {
-      const form = useForm({
-        defaultValues: {
-          avatar: null,
-          document: null,
-          attachments: null,
-        },
-        onSubmit: async ({ value }) => {
-          action('onSubmit')(value);
-        },
-      });
-
-      return (
-        <Form form={form}>
-          <YStack gap="$4">
-            <FileUpload
-              {...({
-                label: 'Profile Picture',
-                name: 'avatar',
-                accept: 'image/*',
-                helperText: 'Upload your profile picture',
-                showPreview: true,
-              } as any)}
-            />
-            <FileUpload
-              {...({
-                label: 'Document',
-                name: 'document',
-                accept: '.pdf,.doc,.docx',
-                helperText: 'Upload PDF or Word document',
-              } as any)}
-            />
-            <FileUpload
-              {...({
-                label: 'Attachments',
-                name: 'attachments',
-                multiple: true,
-                helperText: 'Upload multiple files',
-              } as any)}
-            />
-            <Button action="submit">Submit</Button>
-          </YStack>
-        </Form>
-      );
-    };
-    return <FormExample />;
-  },
+  render: () => <FormExample />,
 };
 
 export const Standalone: Story = {
   args: {
-    label: 'Upload File',
+    label: UPLOAD_FILE_LABEL,
     helperText: 'Max 10MB',
     accept: '*/*',
     maxSize: 10_485_760,
@@ -103,7 +123,7 @@ export const Standalone: Story = {
 export const Basic: Story = {
   render: (args) => <FileUpload {...args} />,
   args: {
-    label: 'Upload File',
+    label: UPLOAD_FILE_LABEL,
     placeholder: 'Click to upload or drag and drop',
   },
 };
@@ -160,27 +180,7 @@ export const Sizes: Story = {
 };
 
 export const Interactive: Story = {
-  render: () => {
-    const InteractiveExample = () => {
-      const [file, setFile] = useState<File | null>(null);
-      return (
-        <YStack
-          gap="$4"
-          maxWidth={400}>
-          <FileUpload
-            label="Upload File"
-            // @ts-expect-error controlled mode not supported
-            onChange={(f: File | null) => {
-              setFile(f);
-              action('onChange')(f);
-            }}
-            helperText={file ? `Selected: ${file.name}` : 'No file selected'}
-          />
-        </YStack>
-      );
-    };
-    return <InteractiveExample />;
-  },
+  render: () => <InteractiveExample />,
 };
 
 export const ImageOnly: Story = {
@@ -197,7 +197,7 @@ export const ImageOnly: Story = {
 /** Loading placeholder — the skeleton mirrors the dropzone's anatomy. */
 export const SkeletonState: Story = {
   render: (args) => <FileUpload {...args} />,
-  args: { label: 'Upload File', skeleton: true },
+  args: { label: UPLOAD_FILE_LABEL, skeleton: true },
 };
 
 const fireInputFiles = (input: HTMLInputElement, files: FileList) => {
@@ -228,7 +228,8 @@ const TransferStory = ({ fail }: { fail?: boolean }) => {
           if (fail) {
             throw new Error('413 Payload Too Large');
           }
-          await new Promise<void>(() => {});
+          // Never settles: holds the row in its uploading state.
+          await Promise.withResolvers<undefined>().promise;
         }}
       />
     </div>

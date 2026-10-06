@@ -5,7 +5,6 @@ import { getSize } from '@tamagui/get-token';
 import { useForm } from '@tanstack/react-form';
 import { act, fireEvent, waitFor } from '@testing-library/react';
 import { getVariableValue } from 'tamagui';
-import type { SizeTokens } from 'tamagui';
 import { describe, expect, it, vi } from 'vitest';
 
 import { Button } from '../../Button';
@@ -13,13 +12,59 @@ import { Form } from '../../Form';
 
 import { OTPInput, extractOtpCode, otpCellHeightPx } from './index';
 
-describe('OTPInput', () => {
+// oxlint-disable-next-line unicorn/prefer-number-coercion -- Number() yields NaN for '12px'; parseFloat strips the unit
+const parsePx = (value: string): number => Number.parseFloat(value);
+
+const paintedRadiusPx = (el: HTMLElement): number => {
+  const inline = el.style.borderRadius;
+  if (inline !== '') {
+    return parsePx(inline) || 0;
+  }
+  const atom = el.className
+    .split(/\s+/u)
+    .find((c) => c.startsWith('_btlr-') || /^_br\d/u.test(c) || c.startsWith('_br-'));
+  if (atom !== undefined) {
+    // oxlint-disable-next-line sonarjs/super-linear-regex -- atom is a short CSS class name
+    const px = /(?<value>\d+(?:\.\d+)?)px$/u.exec(atom);
+    if (px) {
+      return Number(px.groups?.value);
+    }
+    const token = /t-radius-(?<step>\d+)$/u.exec(atom);
+    if (token) {
+      const tokenPx = new Map([
+        ['0', 0],
+        ['2', 5],
+        ['4', 9],
+        ['6', 16],
+        ['12', 50],
+      ]);
+      const n = tokenPx.get(token.groups?.step ?? '');
+      if (n !== undefined) {
+        return n;
+      }
+    }
+    if (atom.endsWith('-0') || atom === '_btlr-0') {
+      return 0;
+    }
+  }
+  const computed = getComputedStyle(el).borderTopLeftRadius;
+  if (computed !== '') {
+    const n = parsePx(computed);
+    if (!Number.isNaN(n)) {
+      return n;
+    }
+  }
+  return Number.NaN;
+};
+
+describe(OTPInput, () => {
   describe('basic rendering', () => {
     it('should render with default props', () => {
       const result = renderWithProviders(<OTPInput name="otp" />);
 
       const inputs = result.container.querySelectorAll('input');
-      expect(inputs).toHaveLength(6); // default length is 6
+      // default length is 6
+      expect(inputs).toHaveLength(6);
     });
 
     it('should render with custom length', () => {
@@ -44,8 +89,8 @@ describe('OTPInput', () => {
 
       // React Native Web renders labels differently
       const labelElement =
-        result.container.querySelector('[role="label"]') ||
-        Array.from(result.container.querySelectorAll('*')).find((el) =>
+        result.container.querySelector('[role="label"]') ??
+        [...result.container.querySelectorAll('*')].find((el) =>
           (el as HTMLElement).textContent?.includes('Enter OTP'),
         );
       expect(labelElement).toBeTruthy();
@@ -202,7 +247,7 @@ describe('OTPInput', () => {
     });
 
     it('should handle onChange callback', async () => {
-      const onChange = vi.fn();
+      const onChange = vi.fn<(value: string) => void>();
       const result = renderWithProviders(
         <OTPInput
           name="otp"
@@ -228,7 +273,7 @@ describe('OTPInput', () => {
     });
 
     it('should handle onComplete callback', async () => {
-      const onComplete = vi.fn();
+      const onComplete = vi.fn<(code: string) => void>();
       const result = renderWithProviders(
         <OTPInput
           name="otp"
@@ -295,7 +340,7 @@ describe('OTPInput', () => {
       );
 
       // Check for separator text
-      const separators = Array.from(result.container.querySelectorAll('*')).filter(
+      const separators = [...result.container.querySelectorAll('*')].filter(
         (el) => (el as HTMLElement).textContent === '-',
       );
       expect(separators.length).toBeGreaterThan(0);
@@ -323,7 +368,7 @@ describe('OTPInput', () => {
       });
 
       it('should update form value', async () => {
-        const onSubmit = vi.fn();
+        const onSubmit = vi.fn<(value: { otp: string }) => Promise<void>>();
         const FormExample = () => (
           <Form
             formOptions={{
@@ -365,7 +410,7 @@ describe('OTPInput', () => {
       });
 
       it('should handle partial input and submit', async () => {
-        const onSubmit = vi.fn();
+        const onSubmit = vi.fn<(value: { otp: string }) => Promise<void>>();
         const FormExample = () => (
           <Form
             formOptions={{
@@ -408,7 +453,7 @@ describe('OTPInput', () => {
 
     describe('with useForm hook', () => {
       it('should work with useForm', async () => {
-        const onSubmitMock = vi.fn();
+        const onSubmitMock = vi.fn<(value: { verificationCode: string }) => void>();
         const TestComponent = () => {
           const form = useForm({
             defaultValues: {
@@ -509,7 +554,7 @@ describe('OTPInput', () => {
       const inputs = result.container.querySelectorAll('input');
       expect(inputs.length).toBeGreaterThan(0);
       // Tamagui may set required/aria-required on wrapper or inputs; ensure inputs are present
-      const withRequired = Array.from(inputs).filter(
+      const withRequired = [...inputs].filter(
         (input) => input.getAttribute('aria-required') === 'true' || input.hasAttribute('required'),
       );
       expect(withRequired.length).toBeGreaterThanOrEqual(0);
@@ -571,7 +616,7 @@ describe('OTPInput', () => {
     });
 
     it('should handle rapid input changes', async () => {
-      const onChange = vi.fn();
+      const onChange = vi.fn<(value: string) => void>();
       const result = renderWithProviders(
         <OTPInput
           name="otp"
@@ -589,7 +634,7 @@ describe('OTPInput', () => {
       });
 
       // Should handle rapid changes
-      expect(onChange).toHaveBeenCalled();
+      expect(onChange).toHaveBeenCalledWith('3');
     });
 
     it('should handle special characters', async () => {
@@ -622,11 +667,11 @@ describe('OTPInput', () => {
       );
 
       const inputs = result.container.querySelectorAll('input');
-      inputs.forEach((input) => {
+      for (const input of inputs) {
         // Tamagui/React Native Web may use either disabled attribute or aria-disabled
         const isDisabled = input.hasAttribute('disabled') || input.getAttribute('aria-disabled') === 'true';
         expect(isDisabled).toBeTruthy();
-      });
+      }
     });
   });
 
@@ -639,7 +684,7 @@ describe('OTPInput', () => {
         />,
       );
 
-      const errorElement = Array.from(result.container.querySelectorAll('*')).find((el) =>
+      const errorElement = [...result.container.querySelectorAll('*')].find((el) =>
         (el as HTMLElement).textContent?.includes('Code is required'),
       );
       expect(errorElement).toBeTruthy();
@@ -655,7 +700,7 @@ describe('OTPInput', () => {
       );
 
       // Look for asterisk or required indicator
-      const labelElement = Array.from(result.container.querySelectorAll('*')).find(
+      const labelElement = [...result.container.querySelectorAll('*')].find(
         (el) => (el as HTMLElement).textContent?.includes('Code') && (el as HTMLElement).textContent?.includes('*'),
       );
       expect(labelElement).toBeTruthy();
@@ -676,7 +721,7 @@ describe('OTPInput', () => {
     });
 
     it('should debounce onChange calls', async () => {
-      const onChange = vi.fn();
+      const onChange = vi.fn<(value: string) => void>();
       const result = renderWithProviders(
         <OTPInput
           name="otp"
@@ -688,7 +733,7 @@ describe('OTPInput', () => {
 
       // Multiple rapid changes
       await act(async () => {
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < 10; i += 1) {
           fireEvent.change(inputs[0], { target: { value: String(i) } });
         }
       });
@@ -721,7 +766,7 @@ describe('OTPInput', () => {
     });
 
     it('fills all cells when the first cell receives the whole code', async () => {
-      const onChange = vi.fn();
+      const onChange = vi.fn<(value: string) => void>();
       const result = renderWithProviders(
         <OTPInput
           name="otp"
@@ -742,7 +787,7 @@ describe('OTPInput', () => {
     });
 
     it('pastes a code out of an SMS sentence', async () => {
-      const onChange = vi.fn();
+      const onChange = vi.fn<(value: string) => void>();
       const result = renderWithProviders(
         <OTPInput
           name="otp"
@@ -752,7 +797,7 @@ describe('OTPInput', () => {
       const inputs = result.container.querySelectorAll('input');
       const clipboardData = {
         getData: (type?: string) =>
-          type === 'text' || type === 'text/plain' || !type ? 'Your Apple ID code is 482193.' : '',
+          ['text', 'text/plain', undefined, ''].includes(type) ? 'Your Apple ID code is 482193.' : '',
       };
 
       await act(async () => {
@@ -798,69 +843,30 @@ describe('OTPInput', () => {
     const RADIUS_STOPS = ['none', 'small', 'medium', 'large', 'full'] as const satisfies readonly BorderRadius[];
     const TOKEN_SCALE = { none: 0, small: 5, medium: 9, large: 16 } as const;
 
-    const paintedRadiusPx = (el: Element): number => {
-      const inline = (el as HTMLElement).style.borderRadius;
-      if (inline) {
-        return Number.parseFloat(inline) || 0;
-      }
-      const atom = String((el as HTMLElement).className || '')
-        .split(/\s+/u)
-        .find((c) => c.startsWith('_btlr-') || /^_br\d/u.test(c) || c.startsWith('_br-'));
-      if (atom) {
-        const px = /(\d+(?:\.\d+)?)px$/u.exec(atom);
-        if (px) {
-          return Number.parseFloat(px[1]);
-        }
-        const token = /t-radius-(\d+)$/u.exec(atom);
-        if (token) {
-          const tokenPx: Record<string, number> = {
-            '0': 0,
-            '2': 5,
-            '4': 9,
-            '6': 16,
-            '12': 50,
-          };
-          const n = tokenPx[token[1]];
-          if (n !== undefined) {
-            return n;
-          }
-        }
-        if (atom.endsWith('-0') || atom === '_btlr-0') {
-          return 0;
-        }
-      }
-      const computed = getComputedStyle(el).borderTopLeftRadius;
-      if (computed && computed !== '') {
-        const n = Number.parseFloat(computed);
-        if (!Number.isNaN(n)) {
-          return n;
-        }
-      }
-      return Number.NaN;
-    };
-
     it('cell measures height/2 at full and 0 at none, riding the token scale between', () => {
       // the cell's own painted edge — `height={cellSize}` is the `$size` token,
       // so the circle is that token halved. Reading the recipe here instead would
       // pass on a desktop run and lie on a touch one (recipe $4 = 48 vs token 44).
-      const heightPx = getVariableValue(getSize('$4' as SizeTokens)) as number;
+      const heightPx = Number(getVariableValue(getSize('$4')));
       for (const stop of RADIUS_STOPS) {
         const result = renderWithProviders(
           <Preset overrides={{ borderRadius: stop }}>
             <OTPInput name="otp" />
           </Preset>,
         );
-        const cell = result.container.querySelector('[data-otp-part="cell"], .mp-otp-cell') as HTMLElement | null;
-        expect(cell, `missing OTP cell @ ${stop}`).toBeTruthy();
+        const cell = result.container.querySelector<HTMLElement>('[data-otp-part="cell"], .mp-otp-cell');
+        if (cell === null) {
+          throw new Error(`missing OTP cell @ ${stop}`);
+        }
         const expected = stop === 'full' ? heightPx / 2 : TOKEN_SCALE[stop];
         expect(resolveRadiusClass('CIRCULAR-AT-FULL', stop, { heightPx }), `resolver @ ${stop}`).toBe(expected);
-        expect(paintedRadiusPx(cell as HTMLElement), `cell @ ${stop}`).toBe(expected);
+        expect(paintedRadiusPx(cell), `cell @ ${stop}`).toBe(expected);
       }
     });
 
     it("halves the cell's painted token, not the touch-floored recipe height", () => {
       for (const token of ['$2', '$3', '$4', '$6'] as const) {
-        const painted = getVariableValue(getSize(token as SizeTokens)) as number;
+        const painted = Number(getVariableValue(getSize(token)));
         expect(otpCellHeightPx(token), `painted height @ ${token}`).toBe(painted);
         // The recipe's touch column is a different number at EVERY step (44/44/48/68
         // against 28/36/44/64). Halving it puts the radius past the cell's own edge,

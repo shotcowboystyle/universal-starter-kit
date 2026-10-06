@@ -18,7 +18,7 @@ const ensureMotionStyles = () => {
   if (!isWeb || typeof document === 'undefined') {
     return;
   }
-  if (document.getElementById(MOTION_STYLE_ID)) {
+  if (document.querySelector(`#${MOTION_STYLE_ID}`)) {
     return;
   }
   const style = document.createElement('style');
@@ -38,14 +38,16 @@ export const Spinner = ({ size, color, ...props }: SpinnerProps) => {
   const token = spinnerSizeToken(size, knobProps.sizeToken);
   const px = spinnerSizePx(token);
   const stroke = useSpinnerStroke(color);
-  const animationsOff = !knobProps.transition;
+  const animationsOff = knobProps.transition == null;
   ensureMotionStyles();
+  // SAFETY: className is the only passthrough prop read here and callers only supply strings
   const { className: classNameProp, ...rest } = props as { className?: string };
   const className = ['mp1-spinner', animationsOff ? 'mp1-spinner-static' : '', classNameProp].filter(Boolean).join(' ');
   return (
     <View
       width={px}
       height={px}
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui View has no <output> mapping
       role="status"
       aria-label={t('Loading')}
       aria-live="polite"

@@ -1,3 +1,5 @@
+import { setTimeout as sleep } from 'node:timers/promises';
+
 import { renderWithProviders } from '@repo/test-utils';
 import { act, fireEvent, waitFor } from '@testing-library/react';
 import { Theme } from 'tamagui';
@@ -5,7 +7,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { DrawnIcon, Icon } from './index';
 
-describe('Icon', () => {
+describe(Icon, () => {
   it('renders an icon control, not an unsupported-type string', () => {
     const result = renderWithProviders(
       <Icon
@@ -46,7 +48,7 @@ describe('Icon', () => {
   });
 
   it('opens a FloatingPanel grid and commits a drawn-set pick', async () => {
-    const onChange = vi.fn();
+    const onChange = vi.fn<(value: string) => void>();
     const result = renderWithProviders(
       <Icon
         label="Workspace icon"
@@ -82,7 +84,7 @@ describe('Icon', () => {
   });
 
   it('uses fixed glyph cells and keeps search and selection working', async () => {
-    const onChange = vi.fn();
+    const onChange = vi.fn<(value: string) => void>();
     const result = renderWithProviders(
       <Icon
         label="Workspace icon"
@@ -145,7 +147,7 @@ describe('Icon', () => {
   it('lets a narrow sheet search, commit and reopen with a cleared query', async () => {
     const width = window.innerWidth;
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 500 });
-    const onChange = vi.fn();
+    const onChange = vi.fn<(value: string) => void>();
     const result = renderWithProviders(
       <Icon
         label="Workspace icon"
@@ -185,7 +187,7 @@ describe('Icon', () => {
   it('returns focus after a sheet pick without reopening and supports keyboard reopening', async () => {
     const width = window.innerWidth;
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 500 });
-    const onChange = vi.fn();
+    const onChange = vi.fn<(value: string) => void>();
     const result = renderWithProviders(
       <Icon
         label="Workspace icon"
@@ -209,7 +211,7 @@ describe('Icon', () => {
       fireEvent.click(document.querySelector('[data-testid="icon-option-chev-u"]')!);
       expect(onChange).toHaveBeenCalledWith('chev-u');
       await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 400));
+        await sleep(400);
       });
       expect(input).toHaveAttribute('aria-expanded', 'false');
       expect(document.activeElement).toBe(input);
@@ -233,7 +235,7 @@ describe('Icon', () => {
     });
     fireEvent.click(option);
     await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 400));
+      await sleep(400);
     });
     expect(input).toHaveAttribute('aria-expanded', 'false');
     expect(document.activeElement).toBe(input);
@@ -260,7 +262,7 @@ describe('Icon', () => {
     fireEvent.pointerDown(next);
     fireEvent.click(next);
     await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 400));
+      await sleep(400);
     });
     expect(input).toHaveAttribute('aria-expanded', 'false');
     expect(document.activeElement).toBe(next);
@@ -277,10 +279,11 @@ describe('Icon', () => {
       });
       fireEvent.click(document.querySelector('[data-testid="icon-option-mail"]')!);
       await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        await sleep(500);
       });
       expect(input).toHaveAttribute('aria-expanded', 'false');
       await act(async () => {
+        // oxlint-disable-next-line github/no-blur -- the test needs a real blur to leave the field before refocusing it
         input.blur();
       });
       await act(async () => {
@@ -312,7 +315,7 @@ describe('Icon', () => {
     expect(color).not.toBe('currentColor');
     // No token survives to the renderer either: "$color11" is not a paint.
     expect(color?.startsWith('$')).toBe(false);
-    const strokes = Array.from(svg?.querySelectorAll('[stroke]') ?? []).map((el) => el.getAttribute('stroke'));
+    const strokes = [...(svg?.querySelectorAll('[stroke]') ?? [])].map((el) => el.getAttribute('stroke'));
     expect(strokes.length).toBeGreaterThan(0);
     for (const stroke of strokes) {
       expect(stroke).not.toBe('currentColor');
@@ -320,45 +323,41 @@ describe('Icon', () => {
     }
   });
 
-  for (const scheme of ['light', 'dark'] as const) {
-    it(`${scheme} resolves default, token, and filled glyph paint`, () => {
-      const { container } = renderWithProviders(
-        <Theme name={scheme}>
-          <DrawnIcon name="mail" />
-          <DrawnIcon
-            name="mail"
-            color="$color11"
-          />
-          <DrawnIcon
-            name="mail"
-            color="currentColor"
-          />
-          <DrawnIcon
-            name="grip"
-            color="$unknownIconToken"
-          />
-          <DrawnIcon
-            name="mail"
-            color="rebeccapurple"
-          />
-        </Theme>,
-      );
-      const svgs = Array.from(container.querySelectorAll('svg'));
-      const ink = svgs[0].getAttribute('color');
-      expect(ink).toBeTruthy();
-      expect(ink).not.toMatch(/^(currentColor|\$)/u);
-      for (const svg of svgs.slice(0, 4)) {
-        expect(svg.getAttribute('color')).toBe(ink);
-        for (const part of svg.querySelectorAll('[stroke], [fill]')) {
-          for (const attr of ['stroke', 'fill']) {
-            const paint = part.getAttribute(attr);
-            if (paint && paint !== 'none') {
-              expect(paint).toBe(ink);
-            }
-          }
+  it.each(['light', 'dark'] as const)('%s resolves default, token, and filled glyph paint', (scheme) => {
+    const { container } = renderWithProviders(
+      <Theme name={scheme}>
+        <DrawnIcon name="mail" />
+        <DrawnIcon
+          name="mail"
+          color="$color11"
+        />
+        <DrawnIcon
+          name="mail"
+          color="currentColor"
+        />
+        <DrawnIcon
+          name="grip"
+          color="$unknownIconToken"
+        />
+        <DrawnIcon
+          name="mail"
+          color="rebeccapurple"
+        />
+      </Theme>,
+    );
+    const svgs = [...container.querySelectorAll('svg')];
+    const ink = svgs[0].getAttribute('color');
+    expect(ink).toBeTruthy();
+    expect(ink).not.toMatch(/^(?:currentColor|\$)/u);
+    for (const svg of svgs.slice(0, 4)) {
+      expect(svg.getAttribute('color')).toBe(ink);
+      for (const part of svg.querySelectorAll('[stroke], [fill]')) {
+        for (const attr of ['stroke', 'fill']) {
+          const paint = part.getAttribute(attr);
+          expect(paint === null || paint === '' || paint === 'none' || paint === ink).toBe(true);
         }
       }
-      expect(svgs[4].getAttribute('color')).toBe('rebeccapurple');
-    });
-  }
+    }
+    expect(svgs[4].getAttribute('color')).toBe('rebeccapurple');
+  });
 });

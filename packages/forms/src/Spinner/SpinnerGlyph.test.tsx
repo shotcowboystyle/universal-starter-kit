@@ -13,8 +13,6 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { SpinnerGlyph, useSpinnerStroke } from './SpinnerGlyph';
 
-afterEach(cleanup);
-
 const R = 9;
 const CIRCUMFERENCE = 2 * Math.PI * R;
 
@@ -27,17 +25,19 @@ const svg = (container: HTMLElement): SVGElement => {
 };
 
 const circles = (container: HTMLElement): SVGElement[] =>
-  Array.from(container.querySelectorAll('circle')) as unknown as SVGElement[];
+  [...container.querySelectorAll('circle')] as unknown as SVGElement[];
 
 const stroke = (container: HTMLElement): string | null =>
-  container.querySelector('[data-stroke]')?.getAttribute('data-stroke') ?? null;
+  container.querySelector<HTMLElement>('[data-stroke]')?.dataset.stroke ?? null;
 
 const Probe = ({ color }: { color?: string }) => {
-  const stroke = useSpinnerStroke(color);
-  return <span data-stroke={stroke} />;
+  const resolved = useSpinnerStroke(color);
+  return <span data-stroke={resolved} />;
 };
 
 describe('SpinnerGlyph — the arc', () => {
+  afterEach(cleanup);
+
   it('draws a track and a head, never one circle', () => {
     const { container } = renderWithProviders(
       <SpinnerGlyph
@@ -145,7 +145,9 @@ describe('SpinnerGlyph — the arc', () => {
   });
 });
 
-describe('useSpinnerStroke', () => {
+describe(useSpinnerStroke, () => {
+  afterEach(cleanup);
+
   it('passes a literal colour through untouched', () => {
     const { container } = renderWithProviders(<Probe color="#ff0000" />);
     expect(stroke(container)).toBe('#ff0000');

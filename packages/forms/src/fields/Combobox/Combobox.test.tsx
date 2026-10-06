@@ -1,3 +1,5 @@
+import { setTimeout as sleep } from 'node:timers/promises';
+
 import { renderWithProviders } from '@repo/test-utils';
 import { act, fireEvent, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -11,7 +13,7 @@ const findInPage = (text: string): Element | undefined => {
   try {
     return within(document.body).queryByText(text, { exact: false }) ?? undefined;
   } catch {
-    return Array.from(document.body.querySelectorAll('*')).find((el) => el.textContent?.includes(text));
+    return [...document.body.querySelectorAll('*')].find((el) => el.textContent?.includes(text));
   }
 };
 
@@ -21,31 +23,67 @@ const options = [
   { value: 'cherry', label: 'Cherry' },
 ];
 
-describe('Combobox', () => {
+type ChangeValue = string | string[];
+
+const SURFACES = [
+  { surface: 'panel', width: 1200 },
+  { surface: 'sheet', width: 500 },
+] as const;
+
+const toTag = (next: string) => ({ value: next.toLowerCase(), label: next });
+
+const openAndType = async (text: string) => {
+  const trigger = document.body.querySelector<HTMLElement>('[role="combobox"]');
+  expect(trigger).toBeTruthy();
+  await act(async () => fireEvent.keyDown(trigger!, { key: 'Enter' }));
+  const search = document.body.querySelector('input');
+  expect(search).toBeTruthy();
+  await act(async () => fireEvent.change(search!, { target: { value: text } }));
+  return search!;
+};
+
+const triggerText = () => document.body.querySelector('[data-testid="combobox-trigger"]')?.textContent;
+
+const createRow = (text: string) =>
+  [...document.body.querySelectorAll('[role="option"]')].find((el) => el.textContent?.trim() === `Create "${text}"`);
+
+const activeOption = (container: HTMLElement) => {
+  const search = container.querySelector('input');
+  const id = search?.getAttribute('aria-activedescendant');
+  return id === undefined || id === null || id === '' ? null : container.querySelector(`#${CSS.escape(id)}`);
+};
+
+const shot = (root: HTMLElement) => ({
+  headers: [...root.querySelectorAll('[data-combobox-group-header]')].map((el) => el.textContent),
+  rows: [...root.querySelectorAll<HTMLElement>('[role="option"]')].map((el) => ({
+    label: el.textContent,
+    index: el.dataset.comboboxIndex,
+  })),
+});
+
+describe(Combobox, () => {
   describe('custom sheet trigger', () => {
     const initialWidth = window.innerWidth;
     afterEach(() => {
       window.innerWidth = initialWidth;
     });
 
-    it('keeps the same name and keyboard opener on narrow and wide screens', async () => {
-      for (const width of [500, 1200]) {
-        window.innerWidth = width;
-        const result = renderWithProviders(
-          <Combobox
-            options={options}
-            aria-label="Country code"
-            trigger={() => <span>Country</span>}
-          />,
-        );
-        const trigger = result.baseElement.querySelector('[role="combobox"]');
-        expect(trigger?.getAttribute('aria-label')).toBe('Country code');
-        expect(trigger?.getAttribute('tabindex')).toBe('0');
-        expect(trigger?.getAttribute('aria-expanded')).toBe('false');
-        await act(async () => fireEvent.keyDown(trigger!, { key: 'Enter' }));
-        expect(trigger?.getAttribute('aria-expanded')).toBe('true');
-        result.unmount();
-      }
+    it.each([500, 1200])('keeps the same name and keyboard opener at width %i', async (width) => {
+      window.innerWidth = width;
+      const result = renderWithProviders(
+        <Combobox
+          options={options}
+          aria-label="Country code"
+          trigger={() => <span>Country</span>}
+        />,
+      );
+      const trigger = result.baseElement.querySelector('[role="combobox"]');
+      expect(trigger?.getAttribute('aria-label')).toBe('Country code');
+      expect(trigger?.getAttribute('tabindex')).toBe('0');
+      expect(trigger?.getAttribute('aria-expanded')).toBe('false');
+      await act(async () => fireEvent.keyDown(trigger!, { key: 'Enter' }));
+      expect(trigger?.getAttribute('aria-expanded')).toBe('true');
+      result.unmount();
     });
 
     it('lets a custom adornment hug its content while ordinary triggers keep stretching', () => {
@@ -143,8 +181,8 @@ describe('Combobox', () => {
     });
 
     it('fires canonical onChange and the deprecated onValueChange alias once when dismissing a chip', async () => {
-      const onChange = vi.fn();
-      const onValueChange = vi.fn();
+      const onChange = vi.fn<(value: ChangeValue) => void>();
+      const onValueChange = vi.fn<(value: ChangeValue) => void>();
       const result = renderWithProviders(
         <Combobox
           label="Fruits"
@@ -154,6 +192,7 @@ describe('Combobox', () => {
           dismissible
           value={['apple', 'banana']}
           onChange={onChange}
+          // oxlint-disable-next-line typescript/no-deprecated -- this test pins that the deprecated alias keeps firing
           onValueChange={onValueChange}
         />,
       );
@@ -166,10 +205,8 @@ describe('Combobox', () => {
         }
       });
       // Exactly once each — guards against the standalone double-fire bug.
-      expect(onChange).toHaveBeenCalledOnce();
-      expect(onChange).toHaveBeenCalledWith(['banana']);
-      expect(onValueChange).toHaveBeenCalledOnce();
-      expect(onValueChange).toHaveBeenCalledWith(['banana']);
+      expect(onChange).toHaveBeenCalledExactlyOnceWith(['banana']);
+      expect(onValueChange).toHaveBeenCalledExactlyOnceWith(['banana']);
     });
 
     it('stable keeps Cherry in third position when selected and open', async () => {
@@ -247,7 +284,7 @@ describe('Combobox', () => {
     });
 
     it('clearable trigger clears the value through canonical onChange', async () => {
-      const onChange = vi.fn();
+      const onChange = vi.fn<(value: ChangeValue) => void>();
       const result = renderWithProviders(
         <Combobox
           label="Fruit"
@@ -264,8 +301,7 @@ describe('Combobox', () => {
           fireEvent.click(clear);
         }
       });
-      expect(onChange).toHaveBeenCalledOnce();
-      expect(onChange).toHaveBeenCalledWith('');
+      expect(onChange).toHaveBeenCalledExactlyOnceWith('');
     });
 
     it('renders option descriptions in the open dropdown', async () => {
@@ -303,33 +339,12 @@ describe('Combobox', () => {
       window.innerWidth = initialWidth;
     });
 
-    const toTag = (next: string) => ({ value: next.toLowerCase(), label: next });
-
-    const openAndType = async (text: string) => {
-      const trigger = document.body.querySelector<HTMLElement>('[role="combobox"]');
-      expect(trigger).toBeTruthy();
-      await act(async () => fireEvent.keyDown(trigger!, { key: 'Enter' }));
-      const search = document.body.querySelector('input');
-      expect(search).toBeTruthy();
-      await act(async () => fireEvent.change(search!, { target: { value: text } }));
-      return search!;
-    };
-
-    const triggerText = () => document.body.querySelector('[data-testid="combobox-trigger"]')?.textContent;
-
-    const createRow = (text: string) =>
-      [...document.body.querySelectorAll('[role="option"]')].find(
-        (el) => el.textContent?.trim() === `Create "${text}"`,
-      );
-
-    for (const [surface, width] of [
-      ['panel', 1200],
-      ['sheet', 500],
-    ] as const) {
-      it(`${surface}: a created option shows in the trigger of an uncontrolled combobox`, async () => {
+    it.each(SURFACES)(
+      '$surface: a created option shows in the trigger of an uncontrolled combobox',
+      async ({ width }) => {
         window.innerWidth = width;
-        const onCreate = vi.fn(toTag);
-        const onChange = vi.fn();
+        const onCreate = vi.fn<typeof toTag>(toTag);
+        const onChange = vi.fn<(value: ChangeValue) => void>();
         renderWithProviders(
           <Combobox
             label="Fruit"
@@ -349,11 +364,14 @@ describe('Combobox', () => {
         expect(onChange).toHaveBeenCalledWith('durian');
         expect(triggerText()).toContain('Durian');
         expect(triggerText()).not.toContain('Pick a fruit');
-      });
+      },
+    );
 
-      it(`${surface}: a created option is listed and selected, and is not offered again`, async () => {
+    it.each(SURFACES)(
+      '$surface: a created option is listed and selected, and is not offered again',
+      async ({ width }) => {
         window.innerWidth = width;
-        const onCreate = vi.fn(toTag);
+        const onCreate = vi.fn<typeof toTag>(toTag);
         renderWithProviders(
           <Combobox
             label="Fruit"
@@ -372,12 +390,12 @@ describe('Combobox', () => {
           (el) => el.textContent?.trim() === 'Durian',
         );
         expect(listed?.getAttribute('aria-selected')).toBe('true');
-      });
-    }
+      },
+    );
 
     it("multiple: a created option's chip shows its label, not its value", async () => {
       window.innerWidth = 1200;
-      const onChange = vi.fn();
+      const onChange = vi.fn<(value: ChangeValue) => void>();
       renderWithProviders(
         <Combobox
           label="Fruits"
@@ -396,7 +414,7 @@ describe('Combobox', () => {
 
     it('a create that the host handles itself still closes a single-value panel', async () => {
       window.innerWidth = 1200;
-      const onCreate = vi.fn(() => undefined);
+      const onCreate = vi.fn<(value: string) => undefined>();
       renderWithProviders(
         <Combobox
           label="Customer"
@@ -411,13 +429,11 @@ describe('Combobox', () => {
       expect(document.body.querySelector('[role="combobox"]')?.getAttribute('aria-expanded')).toBe('false');
     });
 
-    for (const [surface, width] of [
-      ['panel', 1200],
-      ['sheet', 500],
-    ] as const) {
-      it(`${surface}: a space in the typed text is typed, so a two-word option can be created`, async () => {
+    it.each(SURFACES)(
+      '$surface: a space in the typed text is typed, so a two-word option can be created',
+      async ({ width }) => {
         window.innerWidth = width;
-        const onCreate = vi.fn(toTag);
+        const onCreate = vi.fn<typeof toTag>(toTag);
         renderWithProviders(
           <Combobox
             label="Author"
@@ -439,14 +455,14 @@ describe('Combobox', () => {
         await act(async () => fireEvent.keyDown(search, { key: 'Enter' }));
         expect(onCreate).toHaveBeenCalledWith('Octavia Butler');
         expect(triggerText()).toContain('Octavia Butler');
-      });
-    }
+      },
+    );
   });
 
   describe('search typing', () => {
     it('a space after search text is typed, not taken as a pick', async () => {
       window.innerWidth = 1200;
-      const onChange = vi.fn();
+      const onChange = vi.fn<(value: ChangeValue) => void>();
       const result = renderWithProviders(
         <Combobox
           label="Fruit"
@@ -548,12 +564,6 @@ describe('Combobox', () => {
       { value: 'banana', label: 'Banana', group: 'Fruit' },
     ];
 
-    const activeOption = (container: HTMLElement) => {
-      const search = container.querySelector('input');
-      const id = search?.getAttribute('aria-activedescendant');
-      return id ? container.querySelector(`#${CSS.escape(id)}`) : null;
-    };
-
     it('renders group headers when multiple is set', async () => {
       const result = renderWithProviders(
         <Combobox
@@ -572,7 +582,7 @@ describe('Combobox', () => {
     });
 
     it('ArrowDown/ArrowUp traverse only selectable rows and skip headers', async () => {
-      const onChange = vi.fn();
+      const onChange = vi.fn<(value: ChangeValue) => void>();
       const result = renderWithProviders(
         <Combobox
           label="Produce"
@@ -600,8 +610,8 @@ describe('Combobox', () => {
       });
       expect(activeOption(result.baseElement)?.textContent).toContain('Banana');
       expect(activeOption(result.baseElement)?.getAttribute('role')).toBe('option');
-      for (const header of result.baseElement.querySelectorAll('[data-combobox-group-header]')) {
-        expect(header.getAttribute('data-active')).not.toBe('true');
+      for (const header of result.baseElement.querySelectorAll<HTMLElement>('[data-combobox-group-header]')) {
+        expect(header.dataset.active).not.toBe('true');
       }
 
       // Space must commit the highlighted row (Banana), not sortedFiltered[1] (Carrot).
@@ -633,14 +643,6 @@ describe('Combobox', () => {
     // REPEAT header and the rows stayed unclustered — two different lists from
     // one set of props. Both cores now go through groupComboboxOptions.
     it('the sheet renders the same headers and row order as the desktop panel', async () => {
-      const shot = (root: HTMLElement) => ({
-        headers: [...root.querySelectorAll('[data-combobox-group-header]')].map((el) => el.textContent),
-        rows: [...root.querySelectorAll('[role="option"]')].map((el) => ({
-          label: el.textContent,
-          index: el.getAttribute('data-combobox-index'),
-        })),
-      });
-
       window.innerWidth = 1200;
       const desktop = renderWithProviders(
         <Combobox
@@ -700,9 +702,9 @@ describe('Combobox', () => {
       await act(async () => {
         fireEvent.keyDown(search!, { key: 'ArrowDown' });
       });
-      const active = document.body.querySelector('[data-active="true"]');
+      const active = document.body.querySelector<HTMLElement>('[data-active="true"]');
       expect(active?.textContent).toContain('Banana');
-      expect(active?.getAttribute('data-combobox-index')).toBe('1');
+      expect(active?.dataset.comboboxIndex).toBe('1');
     });
 
     // The sheet focused its list on open, over the search's
@@ -719,7 +721,7 @@ describe('Combobox', () => {
         />,
       );
       await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 50));
+        await sleep(50);
       });
       expect(document.activeElement?.tagName).toBe('INPUT');
       withSearch.unmount();
@@ -734,7 +736,7 @@ describe('Combobox', () => {
         />,
       );
       await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 50));
+        await sleep(50);
       });
       expect(document.activeElement?.getAttribute('role')).toBe('listbox');
     });

@@ -7,21 +7,23 @@ import {
   pickFilesNatively,
 } from './native-file-picker.native';
 import { loadDocumentPicker, loadImagePicker } from './native-picker-loader';
+import type { DocumentPickerModule, ImagePickerModule } from './native-picker-loader';
 
 // The optional-peer loaders are the mock seam: on-device they try/catch-require
 // the pickers (Metro optional dependencies); here the modules are swapped
 // wholesale, the same way GeolocationMap.native.spec mocks `expoMapsLoader`.
-vi.mock('./native-picker-loader', () => ({
-  loadDocumentPicker: vi.fn(() => null),
-  loadImagePicker: vi.fn(() => null),
+vi.mock(import('./native-picker-loader'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  loadDocumentPicker: vi.fn<() => DocumentPickerModule | null>(() => null),
+  loadImagePicker: vi.fn<() => ImagePickerModule | null>(() => null),
 }));
 
 const loadDocumentPickerMock = vi.mocked(loadDocumentPicker);
 const loadImagePickerMock = vi.mocked(loadImagePicker);
 
-const getDocumentAsync = vi.fn();
-const launchImageLibraryAsync = vi.fn();
-const requestMediaLibraryPermissionsAsync = vi.fn();
+const getDocumentAsync = vi.fn<DocumentPickerModule['getDocumentAsync']>();
+const launchImageLibraryAsync = vi.fn<ImagePickerModule['launchImageLibraryAsync']>();
+const requestMediaLibraryPermissionsAsync = vi.fn<ImagePickerModule['requestMediaLibraryPermissionsAsync']>();
 
 const withDocumentPicker = () => {
   loadDocumentPickerMock.mockReturnValue({ getDocumentAsync } as never);
@@ -34,133 +36,139 @@ const withImagePicker = () => {
   } as never);
 };
 
-beforeEach(() => {
-  loadDocumentPickerMock.mockReset().mockReturnValue(null);
-  loadImagePickerMock.mockReset().mockReturnValue(null);
-  getDocumentAsync.mockReset();
-  launchImageLibraryAsync.mockReset();
-  requestMediaLibraryPermissionsAsync.mockReset().mockResolvedValue({ granted: true });
-});
-
-describe('acceptToMimeTypes', () => {
-  it('passes MIME entries through and drops extension entries', () => {
-    expect(acceptToMimeTypes('image/png, .pdf ,application/json')).toStrictEqual(['image/png', 'application/json']);
+describe('native file picker', () => {
+  beforeEach(() => {
+    loadDocumentPickerMock.mockReset().mockReturnValue(null);
+    loadImagePickerMock.mockReset().mockReturnValue(null);
+    getDocumentAsync.mockReset();
+    launchImageLibraryAsync.mockReset();
+    requestMediaLibraryPermissionsAsync.mockReset().mockResolvedValue({ granted: true } as never);
   });
 
-  it('returns undefined when accept is absent or extension-only', () => {
-    expect(acceptToMimeTypes()).toBeUndefined();
-    expect(acceptToMimeTypes('.pdf,.docx')).toBeUndefined();
-  });
-});
+  describe(acceptToMimeTypes, () => {
+    it('passes MIME entries through and drops extension entries', () => {
+      expect(acceptToMimeTypes('image/png, .pdf ,application/json')).toStrictEqual(['image/png', 'application/json']);
+    });
 
-describe('isImageOnlyAccept', () => {
-  it('is true only when every entry is an image', () => {
-    expect(isImageOnlyAccept('image/*')).toBe(true);
-    expect(isImageOnlyAccept('image/png,.jpg')).toBe(true);
-    expect(isImageOnlyAccept('image/png,application/pdf')).toBe(false);
-    expect(isImageOnlyAccept()).toBe(false);
-  });
-});
-
-describe('isNativeFilePickerAvailable', () => {
-  it('is false with neither peer and true with either', () => {
-    expect(isNativeFilePickerAvailable()).toBe(false);
-    withDocumentPicker();
-    expect(isNativeFilePickerAvailable()).toBe(true);
-  });
-});
-
-describe('pickFilesNatively', () => {
-  it('reports unavailable when no picker is linked into the build', async () => {
-    await expect(pickFilesNatively({})).resolves.toStrictEqual({ files: [], unavailable: true });
+    it('returns undefined when accept is absent or extension-only', () => {
+      expect(acceptToMimeTypes()).toBeUndefined();
+      expect(acceptToMimeTypes('.pdf,.docx')).toBeUndefined();
+    });
   });
 
-  it('maps document assets onto the FormData-ready shape', async () => {
-    withDocumentPicker();
-    getDocumentAsync.mockResolvedValue({
-      canceled: false,
-      assets: [
+  describe(isImageOnlyAccept, () => {
+    it('is true only when every entry is an image', () => {
+      expect(isImageOnlyAccept('image/*')).toBe(true);
+      expect(isImageOnlyAccept('image/png,.jpg')).toBe(true);
+      expect(isImageOnlyAccept('image/png,application/pdf')).toBe(false);
+      expect(isImageOnlyAccept()).toBe(false);
+    });
+  });
+
+  describe(isNativeFilePickerAvailable, () => {
+    it('is false with neither peer and true with either', () => {
+      expect(isNativeFilePickerAvailable()).toBe(false);
+      withDocumentPicker();
+      expect(isNativeFilePickerAvailable()).toBe(true);
+    });
+  });
+
+  describe(pickFilesNatively, () => {
+    it('reports unavailable when no picker is linked into the build', async () => {
+      await expect(pickFilesNatively({})).resolves.toStrictEqual({ files: [], unavailable: true });
+    });
+
+    it('maps document assets onto the FormData-ready shape', async () => {
+      withDocumentPicker();
+      getDocumentAsync.mockResolvedValue({
+        canceled: false,
+        assets: [
+          {
+            name: 'report.pdf',
+            size: 2048,
+            uri: 'file:///tmp/report.pdf',
+            mimeType: 'application/pdf',
+            lastModified: 42,
+          },
+        ],
+      } as never);
+
+      const outcome = await pickFilesNatively({ accept: 'application/pdf,.pdf', multiple: true });
+
+      expect(getDocumentAsync).toHaveBeenCalledWith({
+        type: ['application/pdf'],
+        multiple: true,
+        copyToCacheDirectory: true,
+      });
+      expect(outcome.files).toStrictEqual([
         {
           name: 'report.pdf',
           size: 2048,
+          type: 'application/pdf',
           uri: 'file:///tmp/report.pdf',
-          mimeType: 'application/pdf',
           lastModified: 42,
         },
-      ],
+      ]);
     });
 
-    const outcome = await pickFilesNatively({ accept: 'application/pdf,.pdf', multiple: true });
+    it('routes an image-only accept to the photo library', async () => {
+      withDocumentPicker();
+      withImagePicker();
+      launchImageLibraryAsync.mockResolvedValue({
+        canceled: false,
+        assets: [{ uri: 'file:///tmp/IMG_0001.HEIC', fileSize: 900 }],
+      } as never);
 
-    expect(getDocumentAsync).toHaveBeenCalledWith({
-      type: ['application/pdf'],
-      multiple: true,
-      copyToCacheDirectory: true,
+      const outcome = await pickFilesNatively({ accept: 'image/*' });
+
+      expect(getDocumentAsync).not.toHaveBeenCalled();
+      expect(launchImageLibraryAsync).toHaveBeenCalledWith({
+        mediaTypes: ['images'],
+        allowsMultipleSelection: false,
+        quality: 1,
+      });
+      // Android providers omit fileName and mimeType; both are derived from the
+      // URI so an accept="image/*" field does not reject its own pick.
+      expect(outcome.files).toStrictEqual([
+        {
+          name: 'IMG_0001.HEIC',
+          size: 900,
+          type: 'image/heic',
+          uri: 'file:///tmp/IMG_0001.HEIC',
+          lastModified: expect.any(Number),
+        },
+      ]);
     });
-    expect(outcome.files).toStrictEqual([
-      {
-        name: 'report.pdf',
-        size: 2048,
-        type: 'application/pdf',
-        uri: 'file:///tmp/report.pdf',
-        lastModified: 42,
-      },
-    ]);
-  });
 
-  it('routes an image-only accept to the photo library', async () => {
-    withDocumentPicker();
-    withImagePicker();
-    launchImageLibraryAsync.mockResolvedValue({
-      canceled: false,
-      assets: [{ uri: 'file:///tmp/IMG_0001.HEIC', fileSize: 900 }],
+    it('reports a denied photo permission instead of falling back to documents', async () => {
+      withDocumentPicker();
+      withImagePicker();
+      requestMediaLibraryPermissionsAsync.mockResolvedValue({ granted: false } as never);
+
+      const outcome = await pickFilesNatively({ accept: 'image/*' });
+
+      expect(outcome).toStrictEqual({ files: [], denied: true });
+      expect(getDocumentAsync).not.toHaveBeenCalled();
     });
 
-    const outcome = await pickFilesNatively({ accept: 'image/*' });
+    it('falls back to the document browser when only that peer is installed', async () => {
+      withDocumentPicker();
+      getDocumentAsync.mockResolvedValue({ canceled: true } as never);
 
-    expect(getDocumentAsync).not.toHaveBeenCalled();
-    expect(launchImageLibraryAsync).toHaveBeenCalledWith({
-      mediaTypes: ['images'],
-      allowsMultipleSelection: false,
-      quality: 1,
+      const outcome = await pickFilesNatively({ accept: 'image/*', mode: 'image' });
+
+      expect(getDocumentAsync).toHaveBeenCalledWith({
+        type: ['image/*'],
+        multiple: false,
+        copyToCacheDirectory: true,
+      });
+      expect(outcome).toStrictEqual({ files: [], canceled: true });
     });
-    // Android providers omit fileName and mimeType; both are derived from the
-    // URI so an accept="image/*" field does not reject its own pick.
-    expect(outcome.files).toStrictEqual([
-      {
-        name: 'IMG_0001.HEIC',
-        size: 900,
-        type: 'image/heic',
-        uri: 'file:///tmp/IMG_0001.HEIC',
-        lastModified: expect.any(Number),
-      },
-    ]);
-  });
 
-  it('reports a denied photo permission instead of falling back to documents', async () => {
-    withDocumentPicker();
-    withImagePicker();
-    requestMediaLibraryPermissionsAsync.mockResolvedValue({ granted: false });
-
-    const outcome = await pickFilesNatively({ accept: 'image/*' });
-
-    expect(outcome).toStrictEqual({ files: [], denied: true });
-    expect(getDocumentAsync).not.toHaveBeenCalled();
-  });
-
-  it('falls back to the document browser when only that peer is installed', async () => {
-    withDocumentPicker();
-    getDocumentAsync.mockResolvedValue({ canceled: true });
-
-    const outcome = await pickFilesNatively({ accept: 'image/*', mode: 'image' });
-
-    expect(getDocumentAsync).toHaveBeenCalled();
-    expect(outcome).toStrictEqual({ files: [], canceled: true });
-  });
-
-  it('treats a dismissed picker as a no-op', async () => {
-    withDocumentPicker();
-    getDocumentAsync.mockResolvedValue({ canceled: true });
-    await expect(pickFilesNatively({})).resolves.toStrictEqual({ files: [], canceled: true });
+    it('treats a dismissed picker as a no-op', async () => {
+      withDocumentPicker();
+      getDocumentAsync.mockResolvedValue({ canceled: true } as never);
+      await expect(pickFilesNatively({})).resolves.toStrictEqual({ files: [], canceled: true });
+    });
   });
 });

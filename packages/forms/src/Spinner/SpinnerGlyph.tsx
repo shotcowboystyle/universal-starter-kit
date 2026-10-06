@@ -10,15 +10,16 @@ const ARC = CIRCUMFERENCE * 0.75;
 
 export const useSpinnerStroke = (color?: string): string => {
   const theme = useTheme();
-  if (color && !color.startsWith('$')) {
+  if (color !== undefined && color !== '' && !color.startsWith('$')) {
     return color;
   }
   const key = (color ?? '$color').replace(/^\$/u, '');
+  // SAFETY: key is a theme token name derived from the color prop
   const token = theme[key as keyof typeof theme];
   if (!token) {
     return color ?? 'currentColor';
   }
-  return String(getVariable((token as { get?: (p: string) => unknown }).get?.('web') ?? token));
+  return String(getVariable(token.get('web') ?? token));
 };
 
 /** Linear/Polaris arc: round-cap 270° head on a faint track. Scales with the box. */

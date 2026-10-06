@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { DRAWN_ICON_NAMES, filterDrawnIcons, isDrawnIconName, parseIconOptions, resolveIconCatalog } from './drawn-set';
+import {
+  DRAWN_ICON_NAMES,
+  filterDrawnIcons,
+  isDrawnIconName,
+  parseIconOptions,
+  resolveIconCatalog,
+} from './drawn-icon-names';
 
 describe('drawn icon set', () => {
   it('exposes the measured console-sheet names and no more', () => {

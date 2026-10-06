@@ -1,5 +1,16 @@
-export type DocumentPickerModule = typeof import('expo-document-picker');
-export type ImagePickerModule = typeof import('expo-image-picker');
+import type { getDocumentAsync } from 'expo-document-picker';
+import type { launchImageLibraryAsync, requestMediaLibraryPermissionsAsync } from 'expo-image-picker';
+
+/** The slice of `expo-document-picker` the field uses. */
+export interface DocumentPickerModule {
+  getDocumentAsync: typeof getDocumentAsync;
+}
+
+/** The slice of `expo-image-picker` the field uses. */
+export interface ImagePickerModule {
+  launchImageLibraryAsync: typeof launchImageLibraryAsync;
+  requestMediaLibraryPermissionsAsync: typeof requestMediaLibraryPermissionsAsync;
+}
 
 /**
  * The names each picker registers with expo-modules-core. expo-image-picker
@@ -10,8 +21,9 @@ export const pickerNativeModules = {
   image: 'ExponentImagePicker',
 } as const;
 
-let cachedDocumentPicker: DocumentPickerModule | null | undefined;
-let cachedImagePicker: ImagePickerModule | null | undefined;
+// null = not probed yet; the wrapper distinguishes "probed, absent" ({ module: null }).
+let cachedDocumentPicker: { module: DocumentPickerModule | null } | null = null;
+let cachedImagePicker: { module: ImagePickerModule | null } | null = null;
 
 /**
  * Probes an Expo native module without throwing. Both pickers ship a JS half
@@ -24,8 +36,9 @@ let cachedImagePicker: ImagePickerModule | null | undefined;
  */
 const hasNativeModule = (name: string): boolean => {
   try {
+    // oxlint-disable-next-line node/global-require, unicorn/prefer-module, typescript/no-unsafe-type-assertion -- Metro needs a literal require inside try/catch to treat the peer as optional; SAFETY: expo-modules-core exports this shape when present
     const core = require('expo-modules-core') as {
-      requireOptionalNativeModule?: (moduleName: string) => unknown;
+      requireOptionalNativeModule?: (moduleName: string) => object | null;
     };
     if (!core.requireOptionalNativeModule) {
       return true;
@@ -45,36 +58,42 @@ const hasNativeModule = (name: string): boolean => {
  * native picker twin imports this file — web bundles never reach it.
  */
 export const loadDocumentPicker = (): DocumentPickerModule | null => {
-  if (cachedDocumentPicker !== undefined) {
-    return cachedDocumentPicker;
+  if (cachedDocumentPicker !== null) {
+    return cachedDocumentPicker.module;
   }
+  let loaded: DocumentPickerModule | null = null;
   try {
-    cachedDocumentPicker = hasNativeModule(pickerNativeModules.document)
-      ? (require('expo-document-picker') as DocumentPickerModule)
+    loaded = hasNativeModule(pickerNativeModules.document)
+      ? // oxlint-disable-next-line node/global-require, unicorn/prefer-module, typescript/no-unsafe-type-assertion, anti-slop/require-safety-comment-for-type-assertion -- Metro needs a literal require inside try/catch to treat the peer as optional; SAFETY: module is expo-document-picker
+        (require('expo-document-picker') as DocumentPickerModule)
       : null;
   } catch {
-    cachedDocumentPicker = null;
+    loaded = null;
   }
-  return cachedDocumentPicker;
+  cachedDocumentPicker = { module: loaded };
+  return loaded;
 };
 
 /** Same optional-peer contract as `loadDocumentPicker`, for `expo-image-picker`. */
 export const loadImagePicker = (): ImagePickerModule | null => {
-  if (cachedImagePicker !== undefined) {
-    return cachedImagePicker;
+  if (cachedImagePicker !== null) {
+    return cachedImagePicker.module;
   }
+  let loaded: ImagePickerModule | null = null;
   try {
-    cachedImagePicker = hasNativeModule(pickerNativeModules.image)
-      ? (require('expo-image-picker') as ImagePickerModule)
+    loaded = hasNativeModule(pickerNativeModules.image)
+      ? // oxlint-disable-next-line node/global-require, unicorn/prefer-module, typescript/no-unsafe-type-assertion, anti-slop/require-safety-comment-for-type-assertion -- Metro needs a literal require inside try/catch to treat the peer as optional; SAFETY: module is expo-image-picker
+        (require('expo-image-picker') as ImagePickerModule)
       : null;
   } catch {
-    cachedImagePicker = null;
+    loaded = null;
   }
-  return cachedImagePicker;
+  cachedImagePicker = { module: loaded };
+  return loaded;
 };
 
 /** Test seam: drops the memoized modules so a spec can swap them per case. */
 export const resetNativePickerCache = (): void => {
-  cachedDocumentPicker = undefined;
-  cachedImagePicker = undefined;
+  cachedDocumentPicker = null;
+  cachedImagePicker = null;
 };

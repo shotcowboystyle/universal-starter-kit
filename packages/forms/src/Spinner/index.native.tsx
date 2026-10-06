@@ -1,5 +1,5 @@
 import { useResolvedKnobs } from '@repo/theme';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AccessibilityInfo, Animated, Easing } from 'react-native';
 import { View } from 'tamagui';
 
@@ -22,36 +22,36 @@ export const Spinner = ({ size, color, ...props }: SpinnerProps) => {
   const [reduceMotion, setReduceMotion] = useState(false);
   useEffect(() => {
     let cancelled = false;
-    AccessibilityInfo.isReduceMotionEnabled().then((value) => {
+    const syncReduceMotion = async () => {
+      const value = await AccessibilityInfo.isReduceMotionEnabled();
       if (!cancelled) {
         setReduceMotion(value);
       }
-    });
+    };
+    void syncReduceMotion();
     const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
     return () => {
       cancelled = true;
       sub.remove();
     };
   }, []);
-  const spinning = Boolean(knobProps.transition) && !reduceMotion;
-  const spin = useRef(new Animated.Value(0)).current;
+  const spinning = knobProps.transition != null && !reduceMotion;
+  const spin = useMemo(() => new Animated.Value(0), []);
 
   useEffect(() => {
-    if (!spinning) {
-      spin.setValue(0);
-      return;
-    }
-    const loop = Animated.loop(
-      Animated.timing(spin, {
-        toValue: 1,
-        duration: SPIN_MS,
-        easing: Easing.linear,
-        useNativeDriver: true,
-      }),
-    );
-    loop.start();
+    const loop = spinning
+      ? Animated.loop(
+          Animated.timing(spin, {
+            toValue: 1,
+            duration: SPIN_MS,
+            easing: Easing.linear,
+            useNativeDriver: true,
+          }),
+        )
+      : undefined;
+    loop?.start();
     return () => {
-      loop.stop();
+      loop?.stop();
       spin.setValue(0);
     };
   }, [spinning, spin]);
@@ -65,6 +65,7 @@ export const Spinner = ({ size, color, ...props }: SpinnerProps) => {
     <View
       width={px}
       height={px}
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- React Native View has no <output> element
       role="status"
       aria-label={t('Loading')}
       aria-live="polite"

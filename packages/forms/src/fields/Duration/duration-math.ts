@@ -8,13 +8,15 @@ export interface DurationParts {
 }
 
 const UNIT_SECONDS = { d: 86_400, h: 3600, m: 60, s: 1 } as const;
+const SECONDS_BY_UNIT = new Map<string, number>(Object.entries(UNIT_SECONDS));
+const CLOCK_PATTERN = /^(?<h>\d+):(?<m>\d{1,2})(?::(?<s>\d{1,2}))?$/u;
+const UNIT_PATTERN = /(?<!\d)(?<amount>\d+)\s*(?<unit>[dhms])\b/gu;
 
-export const normalizeSeconds = (value: unknown): number => {
-  const n = typeof value === 'number' ? value : Number(value);
-  if (!Number.isFinite(n) || n < 0) {
+export const normalizeSeconds = (value: number): number => {
+  if (!Number.isFinite(value) || value < 0) {
     return 0;
   }
-  return Math.floor(n);
+  return Math.floor(value);
 };
 
 export const secondsToParts = (total: number, hideDays: boolean): DurationParts => {
@@ -36,10 +38,10 @@ export const secondsToParts = (total: number, hideDays: boolean): DurationParts 
 };
 
 export const partsToSeconds = (parts: DurationParts, hideDays: boolean): number => {
-  const days = hideDays ? 0 : Math.max(0, Math.floor(Number(parts.days)) || 0);
-  const hours = Math.max(0, Math.floor(Number(parts.hours)) || 0);
-  const minutes = Math.max(0, Math.floor(Number(parts.minutes)) || 0);
-  const seconds = Math.max(0, Math.floor(Number(parts.seconds)) || 0);
+  const days = hideDays ? 0 : Math.max(0, Math.floor(parts.days) || 0);
+  const hours = Math.max(0, Math.floor(parts.hours) || 0);
+  const minutes = Math.max(0, Math.floor(parts.minutes) || 0);
+  const seconds = Math.max(0, Math.floor(parts.seconds) || 0);
   return days * 86_400 + hours * 3600 + minutes * 60 + seconds;
 };
 
@@ -52,26 +54,26 @@ export const parseDurationText = (text: string): number | null => {
   if (/^-?\d+$/u.test(trimmed)) {
     return normalizeSeconds(Number(trimmed));
   }
-  const clock = /^(\d+):(\d{1,2})(?::(\d{1,2}))?$/u.exec(trimmed);
+  const clock = CLOCK_PATTERN.exec(trimmed)?.groups;
   if (clock) {
     return partsToSeconds(
       {
         days: 0,
-        hours: Number(clock[1]),
-        minutes: Number(clock[2]),
-        seconds: Number(clock[3] || 0),
+        hours: Number(clock.h),
+        minutes: Number(clock.m),
+        seconds: Number(clock.s ?? 0),
       },
       true,
     );
   }
-  const pieces = [...trimmed.matchAll(/(\d+)\s*(d|h|m|s)\b/gu)];
+  const pieces = [...trimmed.matchAll(UNIT_PATTERN)];
   if (pieces.length === 0) {
     return null;
   }
   let total = 0;
   for (const piece of pieces) {
-    const unit = piece[2] as keyof typeof UNIT_SECONDS;
-    total += Number(piece[1]) * UNIT_SECONDS[unit];
+    const { amount, unit } = piece.groups ?? {};
+    total += Number(amount) * (SECONDS_BY_UNIT.get(unit ?? '') ?? 0);
   }
   return total;
 };

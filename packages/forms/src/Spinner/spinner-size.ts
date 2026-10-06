@@ -7,6 +7,7 @@ export type SpinnerSize = 'small' | 'large';
 export interface SpinnerProps {
   size?: SpinnerSize;
   color?: string;
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- open passthrough to the underlying Tamagui View props
   [key: string]: unknown;
 }
 
@@ -23,7 +24,8 @@ export const spinnerSizeToken = (size: SpinnerSize | undefined, sizeToken: strin
   if (size === 'large') {
     return '$3';
   }
+  // SAFETY: callers pass knobProps.sizeToken, which is always a size-token key ($1..$N)
   return sizeToken as SizeTokens;
 };
 
-export const spinnerSizePx = (token: SizeTokens): number => getVariableValue(getSize(token)) as number;
+export const spinnerSizePx = (token: SizeTokens): number => Number(getVariableValue(getSize(token)));

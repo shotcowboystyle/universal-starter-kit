@@ -5,19 +5,25 @@ import { loadDocumentPicker, loadImagePicker } from './native-picker-loader';
 const nameFromUri = (uri: string, fallback: string): string => {
   const withoutQuery = uri.split('?')[0] ?? uri;
   const last = withoutQuery.split('/').pop();
-  return last && last.length > 0 ? decodeURIComponent(last) : fallback;
+  return last !== undefined && last.length > 0 ? decodeURIComponent(last) : fallback;
 };
 
-const extensionMimes: Record<string, string> = {
-  gif: 'image/gif',
-  heic: 'image/heic',
-  jpeg: 'image/jpeg',
-  jpg: 'image/jpeg',
-  mov: 'video/quicktime',
-  mp4: 'video/mp4',
-  png: 'image/png',
-  webp: 'image/webp',
-};
+const extensionMimes = new Map<string, string>([
+  ['gif', 'image/gif'],
+  ['heic', 'image/heic'],
+  ['jpeg', 'image/jpeg'],
+  ['jpg', 'image/jpeg'],
+  ['mov', 'video/quicktime'],
+  ['mp4', 'video/mp4'],
+  ['png', 'image/png'],
+  ['webp', 'image/webp'],
+]);
+
+const imageExtensions = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.heic']);
+
+/** Maps an OS-provided nullable/empty string to `undefined` so `??` falls through like `||` did. */
+const nonEmpty = (value: string | null | undefined): string | undefined =>
+  value === null || value === undefined || value === '' ? undefined : value;
 
 /**
  * The image picker leaves `mimeType` undefined on some Android providers, and
@@ -26,7 +32,7 @@ const extensionMimes: Record<string, string> = {
  */
 const mimeFromName = (name: string): string => {
   const ext = name.split('.').pop()?.toLowerCase();
-  return (ext && extensionMimes[ext]) || '';
+  return ext === undefined ? '' : (extensionMimes.get(ext) ?? '');
 };
 
 /**
@@ -36,7 +42,7 @@ const mimeFromName = (name: string): string => {
  * than one that silently shows nothing.
  */
 export const acceptToMimeTypes = (accept?: string): string[] | undefined => {
-  if (!accept) {
+  if (accept === undefined || accept === '') {
     return undefined;
   }
   const mimes = accept
@@ -48,26 +54,14 @@ export const acceptToMimeTypes = (accept?: string): string[] | undefined => {
 
 /** True when every `accept` entry is an image type, so the photo library is the better surface. */
 export const isImageOnlyAccept = (accept?: string): boolean => {
-  if (!accept) {
+  if (accept === undefined || accept === '') {
     return false;
   }
   const entries = accept
     .split(',')
     .map((entry) => entry.trim().toLowerCase())
     .filter((entry) => entry.length > 0);
-  return (
-    entries.length > 0 &&
-    entries.every(
-      (entry) =>
-        entry.startsWith('image/') ||
-        entry === '.png' ||
-        entry === '.jpg' ||
-        entry === '.jpeg' ||
-        entry === '.gif' ||
-        entry === '.webp' ||
-        entry === '.heic',
-    )
-  );
+  return entries.length > 0 && entries.every((entry) => entry.startsWith('image/') || imageExtensions.has(entry));
 };
 
 export const isNativeFilePickerAvailable = (): boolean => loadDocumentPicker() !== null || loadImagePicker() !== null;
@@ -90,13 +84,13 @@ const pickFromPhotoLibrary = async (request: NativePickRequest): Promise<NativeP
     return { files: [], canceled: true };
   }
   const files: NativePickedFile[] = (result.assets ?? []).map((asset) => {
-    const name = asset.fileName || nameFromUri(asset.uri, 'image');
+    const name = nonEmpty(asset.fileName) ?? nameFromUri(asset.uri, 'image');
     return {
       name,
       // Android's photo provider omits fileSize; 0 keeps `maxSize` permissive
       // rather than rejecting a file whose size the OS never reported.
       size: asset.fileSize ?? 0,
-      type: asset.mimeType || mimeFromName(name),
+      type: nonEmpty(asset.mimeType) ?? mimeFromName(name),
       uri: asset.uri,
       lastModified: Date.now(),
     };
@@ -118,16 +112,30 @@ const pickFromDocuments = async (request: NativePickRequest): Promise<NativePick
     return { files: [], canceled: true };
   }
   const files: NativePickedFile[] = (result.assets ?? []).map((asset) => {
-    const name = asset.name || nameFromUri(asset.uri, 'file');
+    const name = nonEmpty(asset.name) ?? nameFromUri(asset.uri, 'file');
     return {
       name,
       size: asset.size ?? 0,
-      type: asset.mimeType || mimeFromName(name),
+      type: nonEmpty(asset.mimeType) ?? mimeFromName(name),
       uri: asset.uri,
       lastModified: asset.lastModified ?? Date.now(),
     };
   });
   return { files };
+};
+
+type PickAttempt = (request: NativePickRequest) => Promise<NativePickOutcome | null>;
+
+// `mode: "image"` must not silently fall back to the document browser for
+// a DENIED permission — only for a picker that is absent from the build.
+const firstOutcome = async (
+  [attempt, ...rest]: PickAttempt[],
+  request: NativePickRequest,
+): Promise<NativePickOutcome | null> => {
+  if (attempt === undefined) {
+    return null;
+  }
+  return (await attempt(request)) ?? (await firstOutcome(rest, request));
 };
 
 /**
@@ -143,15 +151,7 @@ export const pickFilesNatively = async (request: NativePickRequest): Promise<Nat
   const mode = request.mode ?? 'auto';
   const preferImages = mode === 'image' || (mode === 'auto' && isImageOnlyAccept(request.accept));
   const order = preferImages ? [pickFromPhotoLibrary, pickFromDocuments] : [pickFromDocuments, pickFromPhotoLibrary];
-  for (const attempt of order) {
-    // `mode: "image"` must not silently fall back to the document browser for
-    // a DENIED permission — only for a picker that is absent from the build.
-    const outcome = await attempt(request);
-    if (outcome) {
-      return outcome;
-    }
-  }
-  return { files: [], unavailable: true };
+  return (await firstOutcome(order, request)) ?? { files: [], unavailable: true };
 };
 
 export type { NativePickedFile, NativePickerMode, NativePickOutcome, NativePickRequest } from './file-picker-types';

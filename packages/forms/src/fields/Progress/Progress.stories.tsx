@@ -9,6 +9,63 @@ import { Form } from '../../Form';
 
 import { Progress } from './index';
 
+const FormExample = () => {
+  const form = useForm({
+    defaultValues: {
+      completion: 70,
+    },
+    onSubmit: async ({ value }) => {
+      action('onSubmit')(value);
+    },
+  });
+
+  return (
+    <Form form={form}>
+      <YStack gap="$4">
+        <Progress
+          label="Profile completion"
+          name="completion"
+          helperText="Read from form state"
+        />
+        <Button action="submit">Submit</Button>
+      </YStack>
+    </Form>
+  );
+};
+
+const InteractiveExample = () => {
+  const [value, setValue] = useState(25);
+
+  return (
+    <YStack gap="$4">
+      <Progress
+        label="Task progress"
+        value={value}
+        max={100}
+        helperText="Use the buttons to update"
+      />
+      <XStack gap="$2">
+        <Button
+          onPress={() => {
+            const next = Math.max(0, value - 10);
+            setValue(next);
+            action('onProgressChange')(next);
+          }}>
+          -10
+        </Button>
+        <Button
+          onPress={() => {
+            const next = Math.min(100, value + 10);
+            setValue(next);
+            action('onProgressChange')(next);
+          }}>
+          +10
+        </Button>
+      </XStack>
+    </YStack>
+  );
+};
+
 const meta: Meta<typeof Progress> = {
   title: 'Forms/Progress',
   component: Progress,
@@ -41,33 +98,7 @@ type Story = StoryObj<typeof Progress>;
 
 export const Main: Story = {
   name: 'Main',
-  render: () => {
-    const FormExample = () => {
-      const form = useForm({
-        defaultValues: {
-          completion: 70,
-        },
-        onSubmit: async ({ value }) => {
-          action('onSubmit')(value);
-        },
-      });
-
-      return (
-        <Form form={form}>
-          <YStack gap="$4">
-            <Progress
-              label="Profile completion"
-              name="completion"
-              helperText="Read from form state"
-            />
-            <Button action="submit">Submit</Button>
-          </YStack>
-        </Form>
-      );
-    };
-
-    return <FormExample />;
-  },
+  render: () => <FormExample />,
 };
 
 export const Standalone: Story = {
@@ -185,42 +216,7 @@ export const Intents: Story = {
 };
 
 export const Interactive: Story = {
-  render: () => {
-    const InteractiveExample = () => {
-      const [value, setValue] = useState(25);
-
-      return (
-        <YStack gap="$4">
-          <Progress
-            label="Task progress"
-            value={value}
-            max={100}
-            helperText="Use the buttons to update"
-          />
-          <XStack gap="$2">
-            <Button
-              onPress={() => {
-                const next = Math.max(0, value - 10);
-                setValue(next);
-                action('onProgressChange')(next);
-              }}>
-              -10
-            </Button>
-            <Button
-              onPress={() => {
-                const next = Math.min(100, value + 10);
-                setValue(next);
-                action('onProgressChange')(next);
-              }}>
-              +10
-            </Button>
-          </XStack>
-        </YStack>
-      );
-    };
-
-    return <InteractiveExample />;
-  },
+  render: () => <InteractiveExample />,
 };
 
 /**

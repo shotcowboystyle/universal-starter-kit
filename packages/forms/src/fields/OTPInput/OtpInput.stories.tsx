@@ -65,54 +65,74 @@ const meta: Meta<typeof OTPInput> = {
 export default meta;
 type Story = StoryObj<typeof OTPInput>;
 
+const VERIFICATION_CODE_LABEL = 'Verification Code';
+
+const FormExample = () => {
+  const form = useForm({
+    defaultValues: {
+      phoneNumber: '',
+      verificationCode: '',
+    },
+    onSubmit: async ({ value }) => {
+      action('onSubmit')(value);
+      // Simulate verification process
+      // oxlint-disable-next-line promise/avoid-new -- wrapping callback-based setTimeout
+      await new Promise((resolve) => {
+        setTimeout(resolve, 1000);
+      });
+      action('onSubmit')(value);
+    },
+  });
+
+  return (
+    <Form
+      form={form}
+      maxWidth={400}>
+      <YStack gap="$4">
+        <Input
+          label="Phone Number"
+          placeholder="+1 (555) 123-4567"
+        />
+
+        <OTPInput
+          label={VERIFICATION_CODE_LABEL}
+          name="verificationCode"
+          length={6}
+          helperText="Enter the 6-digit code sent to your phone"
+          required
+        />
+
+        <Button action="submit">Verify Phone Number</Button>
+      </YStack>
+    </Form>
+  );
+};
+
+const InteractiveExample = () => {
+  const [value, setValue] = useState('');
+  return (
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <OTPInput
+        label="Enter Code"
+        length={6}
+        value={value}
+        onChange={setValue}
+      />
+      <Text>Current value: {value || 'Empty'}</Text>
+    </YStack>
+  );
+};
+
 export const Main: Story = {
   name: 'Main',
-  render: () => {
-    const FormExample = () => {
-      const form = useForm({
-        defaultValues: {
-          phoneNumber: '',
-          verificationCode: '',
-        },
-        onSubmit: async ({ value }) => {
-          action('onSubmit')(value);
-          // Simulate verification process
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-          action('onSubmit')(value);
-        },
-      });
-
-      return (
-        <Form
-          form={form}
-          maxWidth={400}>
-          <YStack gap="$4">
-            <Input
-              label="Phone Number"
-              placeholder="+1 (555) 123-4567"
-            />
-
-            <OTPInput
-              label="Verification Code"
-              name="verificationCode"
-              length={6}
-              helperText="Enter the 6-digit code sent to your phone"
-              required
-            />
-
-            <Button action="submit">Verify Phone Number</Button>
-          </YStack>
-        </Form>
-      );
-    };
-
-    return <FormExample />;
-  },
+  render: () => <FormExample />,
 };
 
 export const Standalone: Story = {
   args: {
-    label: 'Verification Code',
+    label: VERIFICATION_CODE_LABEL,
     helperText: 'Enter the 6-digit code',
     length: 6,
   },
@@ -121,7 +141,7 @@ export const Standalone: Story = {
 
 export const Basic: Story = {
   args: {
-    label: 'Verification Code',
+    label: VERIFICATION_CODE_LABEL,
     helperText: 'Enter the 6-digit code sent to your phone',
     name: 'otp',
     length: 6,
@@ -132,7 +152,7 @@ export const Basic: Story = {
 
 export const Filled: Story = {
   args: {
-    label: 'Verification Code',
+    label: VERIFICATION_CODE_LABEL,
     helperText: 'Enter the 6-digit code',
     length: 6,
     value: '482193',
@@ -181,25 +201,7 @@ export const Sizes: Story = {
 };
 
 export const Interactive: Story = {
-  render: () => {
-    const InteractiveExample = () => {
-      const [value, setValue] = useState('');
-      return (
-        <YStack
-          gap="$4"
-          maxWidth={400}>
-          <OTPInput
-            label="Enter Code"
-            length={6}
-            value={value}
-            onChange={setValue}
-          />
-          <Text>Current value: {value || 'Empty'}</Text>
-        </YStack>
-      );
-    };
-    return <InteractiveExample />;
-  },
+  render: () => <InteractiveExample />,
 };
 
 export const AutoSubmit: Story = {
@@ -237,5 +239,5 @@ export const AutoSubmit: Story = {
 
 /** Loading placeholder — the skeleton mirrors the cell row anatomy. */
 export const SkeletonState: Story = {
-  args: { label: 'Verification Code', skeleton: true },
+  args: { label: VERIFICATION_CODE_LABEL, skeleton: true },
 };

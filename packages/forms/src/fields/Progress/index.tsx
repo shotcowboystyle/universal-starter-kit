@@ -1,7 +1,7 @@
 import { Intent } from '@repo/theme';
 import type { KnobProps } from '@repo/theme';
 import { getSize } from '@tamagui/get-token';
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { Progress as TamaguiProgress, Text, View, XStack, getVariableValue, isWeb, styled, useTheme } from 'tamagui';
 import type { LabelProps, SizeTokens, ProgressProps as TamaguiProgressProps } from 'tamagui';
 
@@ -9,6 +9,7 @@ import { Field, FieldLayout, useFieldDescribedBy } from '../../FieldLayout';
 import { formControlColors } from '../../shared/color-ramps';
 import { bidiIsolate, t } from '../../shared/t';
 import { useIsInTableCell } from '../../shared/table-cell-context';
+import type { ElevationWrapperProps, FieldValidators } from '../../shared/utils';
 import {
   getElevationWrapperProps,
   getFieldError,
@@ -18,6 +19,11 @@ import {
 } from '../../shared/utils';
 import { Skeleton } from '../../Skeleton';
 import type { AnyFormApi } from '../../types';
+
+type BlurHandler = NonNullable<ComponentProps<typeof FieldLayout>['onBlur']>;
+
+const hasErrorValue = (error: string | boolean | undefined): boolean =>
+  error !== undefined && error !== false && error !== '';
 
 const ProgressFrame = styled(TamaguiProgress, {
   backgroundColor: formControlColors.background,
@@ -44,8 +50,8 @@ export type ProgressIntent = 'accent' | 'error' | 'warning' | 'success';
  */
 const trackHeightPx = (size: SizeTokens): number => {
   try {
-    const raw = getVariableValue(getSize(size));
-    const n = typeof raw === 'number' ? raw : Number(raw);
+    const raw: unknown = getVariableValue(getSize(size));
+    const n = Number(raw);
     if (!Number.isFinite(n)) {
       return 11;
     }
@@ -56,21 +62,20 @@ const trackHeightPx = (size: SizeTokens): number => {
 };
 
 const resolveMax = (max: number | undefined): number =>
-  typeof max === 'number' && Number.isFinite(max) && max > 0 ? max : 100;
+  max !== undefined && Number.isFinite(max) && max > 0 ? max : 100;
 
-const clampProgress = (value: unknown, max: number): number => {
-  const n = typeof value === 'number' ? value : Number(value);
-  if (!Number.isFinite(n)) {
+const clampProgress = (value: number, max: number): number => {
+  if (!Number.isFinite(value)) {
     return 0;
   }
-  return Math.min(max, Math.max(0, n));
+  return Math.min(max, Math.max(0, value));
 };
 
 const indicatorMotion = (transition: KnobProps['transition']) => {
   // `transition` only — the tamagui 1.x `animation` prop is silently dropped
   // on 2.x (convention lint). Named motion rides the knob; `none` is an
   // explicit stop so Tamagui's Indicator default cannot keep tweening.
-  if (!transition) {
+  if (transition == null || transition === '') {
     return { transition: 'none' as const };
   }
   return { transition };
@@ -88,10 +93,10 @@ const indicatorMotion = (transition: KnobProps['transition']) => {
  */
 const HueFillIndicator = ({ transition }: { transition: KnobProps['transition'] }) => {
   const theme = useTheme();
-  const fill = theme.color9?.val;
+  const fill = String(theme.color9?.val ?? '');
   return (
     <ProgressIndicator
-      {...(fill ? { backgroundColor: fill } : undefined)}
+      {...(fill === '' ? undefined : { backgroundColor: fill })}
       {...indicatorMotion(transition)}
     />
   );
@@ -100,7 +105,7 @@ const HueFillIndicator = ({ transition }: { transition: KnobProps['transition'] 
 export interface ProgressProps {
   name?: string;
   form?: AnyFormApi;
-  validators?: Record<string, unknown>;
+  validators?: FieldValidators;
   label?: ReactNode;
   labelProps?: Omit<LabelProps, 'htmlFor' | 'ref'>;
   helperText?: string;
@@ -118,7 +123,7 @@ export interface ProgressProps {
    * `onChange(value)` so wiring it never silently no-ops at the type layer.
    */
   onChange?: (value: number) => void;
-  onBlur?: (...args: any[]) => void;
+  onBlur?: BlurHandler;
   progressProps?: Omit<TamaguiProgressProps, 'value' | 'max' | 'id' | 'children'>;
   /**
    * Semantic indicator fill resolved via the theme ramps: `accent`
@@ -151,10 +156,10 @@ interface ProgressTrackProps {
   size?: SizeTokens;
   sizeToken: SizeTokens;
   knobProps: KnobProps;
-  elevationWrapperProps: Record<string, any>;
+  elevationWrapperProps: ElevationWrapperProps;
   progressProps?: ProgressProps['progressProps'];
   showValue: boolean;
-  blurHandler?: (...args: any[]) => void;
+  blurHandler?: BlurHandler;
 }
 
 const ProgressTrack = ({
@@ -178,7 +183,11 @@ const ProgressTrack = ({
   const trackSize = size ?? sizeToken;
   const percent = Math.round((progressValue / max) * 100);
   const motion = indicatorMotion(knobProps.transition);
-  const name = typeof label === 'string' && label ? label : t('Progress');
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- label is ReactNode; only a non-empty string can serve as aria-label
+  const name = typeof label === 'string' && label !== '' ? label : t('Progress');
+  const valueTextProps = isWeb
+    ? { 'aria-hidden': true, style: { fontVariantNumeric: 'tabular-nums' } }
+    : { accessible: false };
 
   const progressElement = (
     <ProgressFrame
@@ -190,7 +199,7 @@ const ProgressTrack = ({
       {...(knobProps.outlined ? { borderColor: formControlColors.boundary } : undefined)}
       aria-label={name}
       aria-describedby={describedBy}
-      aria-readonly={readOnly || undefined}
+      aria-readonly={readOnly === true ? true : undefined}
       // Tamagui's size variant pins minWidth ≈ height×20 (~220px). Zero it
       // after `size` so the track fills the cell / form column.
       width="100%"
@@ -199,10 +208,10 @@ const ProgressTrack = ({
       id={id}
       value={progressValue}
       max={max}
-      {...(blurHandler ? { onBlur: blurHandler } : undefined)}
-      aria-required={required || undefined}
-      aria-invalid={hasError || undefined}>
-      {intent && intent !== 'accent' ? (
+      {...(blurHandler === undefined ? undefined : { onBlur: blurHandler })}
+      aria-required={required === true ? true : undefined}
+      aria-invalid={hasError === true ? true : undefined}>
+      {intent !== undefined && intent !== 'accent' ? (
         <Intent name={intent}>
           <HueFillIndicator transition={knobProps.transition} />
         </Intent>
@@ -219,23 +228,24 @@ const ProgressTrack = ({
     </ProgressFrame>
   );
 
-  const bar = elevationWrapperProps.elevation ? (
-    <View
-      {...elevationWrapperProps}
-      borderRadius={knobProps.borderRadius.borderRadius}
-      flex={1}
-      minWidth={0}
-      width="100%">
-      {progressElement}
-    </View>
-  ) : (
-    <View
-      flex={1}
-      minWidth={0}
-      width="100%">
-      {progressElement}
-    </View>
-  );
+  const bar =
+    elevationWrapperProps.elevation !== undefined && elevationWrapperProps.elevation !== 0 ? (
+      <View
+        {...elevationWrapperProps}
+        borderRadius={knobProps.borderRadius.borderRadius}
+        flex={1}
+        minWidth={0}
+        width="100%">
+        {progressElement}
+      </View>
+    ) : (
+      <View
+        flex={1}
+        minWidth={0}
+        width="100%">
+        {progressElement}
+      </View>
+    );
 
   return (
     <XStack
@@ -250,7 +260,7 @@ const ProgressTrack = ({
           minWidth={40}
           textAlign="right"
           flexShrink={0}
-          {...(isWeb ? { 'aria-hidden': true, style: { fontVariantNumeric: 'tabular-nums' } } : { accessible: false })}>
+          {...valueTextProps}>
           {bidiIsolate(`${percent}%`)}
         </Text>
       ) : null}
@@ -328,7 +338,7 @@ export const Progress = ({
     );
   }
 
-  const renderTrack = (rawValue: unknown, blurHandler?: (...args: any[]) => void, hasError?: boolean) => (
+  const renderTrack = (rawValue: number, blurHandler?: BlurHandler, hasError = false) => (
     <ProgressTrack
       id={id}
       label={label}
@@ -348,8 +358,8 @@ export const Progress = ({
     />
   );
 
-  if (!resolvedForm || !name) {
-    const track = renderTrack(value ?? defaultValue ?? 0, undefined, !!error);
+  if (resolvedForm == null || name === undefined || name === '') {
+    const track = renderTrack(value ?? defaultValue ?? 0, undefined, hasErrorValue(error));
     if (inTableCell) {
       return track;
     }
@@ -379,7 +389,7 @@ export const Progress = ({
         const track = renderTrack(
           field.state.value ?? 0,
           mergeFieldHandler(field, 'handleBlur', onBlur),
-          !!resolvedError,
+          hasErrorValue(resolvedError),
         );
         if (inTableCell) {
           return track;

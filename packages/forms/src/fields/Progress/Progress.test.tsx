@@ -44,9 +44,18 @@ const getIndicator = (container: Element): Element | null =>
  * prefix Tamagui embeds in the atomic class it generates for a concrete
  * color value (e.g. hsla(358, 75%, 59%, 1) → `_bg-hsla3587559<hash>`).
  */
+const tableCellValue = { inTableCell: true, isHeader: false, editable: false };
+
+const must = <T,>(value: T | null | undefined): T => {
+  if (value == null) {
+    throw new Error('expected value to be present');
+  }
+  return value;
+};
+
 const hslDigits = (hsla: string): string => (hsla.match(/\d+/gu) ?? []).slice(0, 3).join('');
 
-describe('Progress', () => {
+describe(Progress, () => {
   describe('without form context', () => {
     it('renders with label', () => {
       const result = renderWithProviders(
@@ -136,8 +145,8 @@ describe('Progress', () => {
           value={50}
         />,
       );
-      const bar = container.querySelector("[role='progressbar']") as Element;
-      const indicator = getIndicator(container) as Element;
+      const bar = must(container.querySelector("[role='progressbar']"));
+      const indicator = must(getIndicator(container));
       expect(indicator).toBeTruthy();
       // No intent sub-theme scope anywhere inside the bar
       for (const scope of ['.t_accent', '.t_error', '.t_warning', '.t_success']) {
@@ -159,8 +168,8 @@ describe('Progress', () => {
           intent="accent"
         />,
       );
-      const bar = container.querySelector("[role='progressbar']") as Element;
-      const indicator = getIndicator(container) as Element;
+      const bar = must(container.querySelector("[role='progressbar']"));
+      const indicator = must(getIndicator(container));
       // Accent rides the base theme (the "accent" sub-theme is the SOLID
       // ramp — wrong for a fill), so no t_accent scope is emitted.
       expect(bar.querySelector('.t_accent')).toBeNull();
@@ -179,8 +188,8 @@ describe('Progress', () => {
             intent={intent}
           />,
         );
-        const bar = container.querySelector("[role='progressbar']") as Element;
-        const indicator = getIndicator(container) as Element;
+        const bar = must(container.querySelector("[role='progressbar']"));
+        const indicator = must(getIndicator(container));
         // The Intent wrapper scopes the hue sub-theme around the indicator...
         expect(bar.querySelector(`.t_${intent}`)).toBeTruthy();
         // ...and the fill is the hue sub-theme's $color9 — captured as a
@@ -205,8 +214,8 @@ describe('Progress', () => {
           value={40}
         />,
       );
-      const bar = container.querySelector("[role='progressbar']") as Element;
-      const indicator = getIndicator(container) as Element;
+      const bar = must(container.querySelector("[role='progressbar']"));
+      const indicator = must(getIndicator(container));
       expect(indicator).toBeTruthy();
       // No intent scope and no Theme wrapper beyond Tamagui's own
       // ProgressIndicator component-theme span.
@@ -336,7 +345,7 @@ describe('Progress', () => {
 
   describe('onChange contract', () => {
     it('accepts onChange without throwing on a display-only field', () => {
-      const onChange = vi.fn();
+      const onChange = vi.fn<(value: number) => void>();
       const { container } = renderWithProviders(
         <Progress
           label="Upload"
@@ -352,7 +361,7 @@ describe('Progress', () => {
   describe('table cell chromeless', () => {
     it('drops FieldLayout chrome and the paired percent inside a cell', () => {
       const { container } = renderWithProviders(
-        <TableCellContext.Provider value={{ inTableCell: true, isHeader: false, editable: false }}>
+        <TableCellContext.Provider value={tableCellValue}>
           <Progress
             label="Upload"
             value={65}
@@ -368,7 +377,7 @@ describe('Progress', () => {
 
     it('still pairs the percent when showValue is forced in a cell', () => {
       const { container } = renderWithProviders(
-        <TableCellContext.Provider value={{ inTableCell: true, isHeader: false, editable: false }}>
+        <TableCellContext.Provider value={tableCellValue}>
           <Progress
             value={65}
             showValue
@@ -405,9 +414,7 @@ describe('Progress', () => {
       expect(bar).toBeTruthy();
       // jsdom cannot cascade Tamagui class CSS — read the atomic radius class
       // (Button / FieldDisplay precedent): t-radius-0 is the none token.
-      const radiusAtoms = String(bar.className || '')
-        .split(' ')
-        .filter((c) => c.startsWith('_btlr-'));
+      const radiusAtoms = bar.className.split(' ').filter((c) => c.startsWith('_btlr-'));
       expect(radiusAtoms).toContain('_btlr-t-radius-0');
       expect(radiusAtoms).not.toContain('_btlr-100000px');
     });
@@ -432,7 +439,7 @@ describe('Progress', () => {
       const bones = [...skel.container.querySelectorAll('div')].filter(
         (el) => getComputedStyle(el).height === liveHeight && el !== skel.container,
       );
-      expect(Number.parseFloat(liveHeight)).toBeGreaterThan(6);
+      expect(Number(liveHeight.replace(/px$/u, ''))).toBeGreaterThan(6);
       expect(bones.length).toBeGreaterThan(0);
     });
 
@@ -447,7 +454,7 @@ describe('Progress', () => {
       );
       const indicator = getIndicator(container) as HTMLElement;
       expect(indicator).toBeTruthy();
-      expect(Array.from(indicator.classList)).toContain('_transition-none');
+      expect([...indicator.classList]).toContain('_transition-none');
     });
   });
 });

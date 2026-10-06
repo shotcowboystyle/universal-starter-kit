@@ -16,8 +16,26 @@ import {
   secondsToParts,
 } from './index';
 
+const tableCellValue = { inTableCell: true, isHeader: false, editable: true };
+
 const segmentValue = (el: Element | null): string =>
   el?.getAttribute('value') ?? (el as HTMLInputElement | null)?.value ?? '';
+
+const NUMERIC = /^\d+(?:\.\d+)?$/u;
+const NUMERIC_PX = /^\d+(?:\.\d+)?(?:px)?$/u;
+const px = (value: string): number => Number(value.replace(/px$/u, ''));
+
+const attrHeight = (el: HTMLElement): number => {
+  const a = el.getAttribute('height');
+  if (a !== null && NUMERIC.test(a)) {
+    return Number(a);
+  }
+  const s = el.style.height;
+  if (s !== '' && NUMERIC_PX.test(s)) {
+    return px(s);
+  }
+  return 0;
+};
 
 const segmentWidthPx = (el: Element | null): number => {
   const input = el as HTMLElement | null;
@@ -25,29 +43,29 @@ const segmentWidthPx = (el: Element | null): number => {
     return 0;
   }
   const attr = input.getAttribute('width');
-  if (attr && /^\d+(\.\d+)?$/u.test(attr)) {
+  if (attr !== null && NUMERIC.test(attr)) {
     return Number(attr);
   }
   const style = input.style.width;
   if (style.endsWith('px')) {
-    return Number.parseFloat(style);
+    return px(style);
   }
-  return Number.parseFloat(getComputedStyle(input).width) || 0;
+  return px(getComputedStyle(input).width) || 0;
 };
 
 const skeletonWidthOrHeight = (el: HTMLElement, axis: 'height' | 'width'): number => {
   const attr = el.getAttribute(axis);
-  if (attr && /^\d+(\.\d+)?$/u.test(attr)) {
+  if (attr !== null && NUMERIC.test(attr)) {
     return Number(attr);
   }
   const style = axis === 'height' ? el.style.height : el.style.width;
   if (style.endsWith('px')) {
-    return Number.parseFloat(style);
+    return px(style);
   }
-  return Number.parseFloat(getComputedStyle(el)[axis]) || 0;
+  return px(getComputedStyle(el)[axis]) || 0;
 };
 
-describe('Duration', () => {
+describe(Duration, () => {
   describe('math', () => {
     it('clamps negative and non-finite values to zero', () => {
       expect(normalizeSeconds(-100)).toBe(0);
@@ -240,26 +258,11 @@ describe('Duration', () => {
       expect(box).toBeTruthy();
       expect(hours).toBeTruthy();
       const recipeHeight = sizeRecipeForToken('$3').height;
-      expect(Number(hours.getAttribute('data-duration-input-height'))).toBe(recipeHeight);
-      const attrHeight = (el: HTMLElement) => {
-        const a = el.getAttribute('height');
-        if (a && /^\d+(\.\d+)?$/u.test(a)) {
-          return Number(a);
-        }
-        const s = el.style.height;
-        if (s && /^\d+(\.\d+)?(px)?$/u.test(s)) {
-          return Number.parseFloat(s);
-        }
-        return 0;
-      };
+      expect(Number(hours.dataset.durationInputHeight)).toBe(recipeHeight);
       const inputH = attrHeight(hours);
-      if (inputH > 0) {
-        expect(inputH).toBeLessThanOrEqual(recipeHeight + 0.5);
-      }
+      expect(inputH === 0 || inputH <= recipeHeight + 0.5, 'input height within recipe').toBe(true);
       const boxH = attrHeight(box);
-      if (boxH > 0 && inputH > 0) {
-        expect(inputH).toBeLessThanOrEqual(boxH + 0.5);
-      }
+      expect(boxH === 0 || inputH === 0 || inputH <= boxH + 0.5, 'input height within box').toBe(true);
     });
 
     it('pins six default preset chips at the $2 / 28px family', () => {
@@ -275,13 +278,9 @@ describe('Duration', () => {
       expect(chips).toHaveLength(6);
       for (const chip of chips) {
         const el = chip as HTMLElement;
-        const height =
-          Number.parseFloat(getComputedStyle(el).height) ||
-          Number(el.getAttribute('height')) ||
-          Number.parseFloat(el.style.height);
-        if (Number.isFinite(height) && height > 0) {
-          expect(height).toBe(sizeRecipeForToken(DURATION_PRESET_SIZE).height);
-        }
+        const height = px(getComputedStyle(el).height) || Number(el.getAttribute('height')) || px(el.style.height);
+        const sized = Number.isFinite(height) && height > 0;
+        expect(!sized || height === sizeRecipeForToken(DURATION_PRESET_SIZE).height, 'preset chip height').toBe(true);
       }
     });
 
@@ -349,7 +348,7 @@ describe('Duration', () => {
     });
 
     it('fires onChange with seconds from a preset', () => {
-      const onChange = vi.fn();
+      const onChange = vi.fn<(value: number) => void>();
       const result = renderWithProviders(
         <Duration
           label="P"
@@ -362,12 +361,12 @@ describe('Duration', () => {
       );
       expect(chip).toBeTruthy();
       fireEvent.click(chip as HTMLElement);
-      expect(onChange).toHaveBeenCalled();
-      expect(typeof onChange.mock.calls[0]?.[0]).toBe('number');
+      expect(onChange).toHaveBeenCalledWith(expect.any(Number));
+      expect(onChange.mock.calls[0]?.[0]).toBeTypeOf('number');
     });
 
     it('arrow-up on hours commits via onChange', () => {
-      const onChange = vi.fn();
+      const onChange = vi.fn<(value: number) => void>();
       const result = renderWithProviders(
         <Duration
           label="A"
@@ -381,7 +380,7 @@ describe('Duration', () => {
     });
 
     it('normalises overflow minutes on blur', () => {
-      const onChange = vi.fn();
+      const onChange = vi.fn<(value: number) => void>();
       const result = renderWithProviders(
         <Duration
           label="O"
@@ -392,13 +391,14 @@ describe('Duration', () => {
       const minutes = result.container.querySelector('input[aria-label="Min"]') as HTMLInputElement;
       act(() => {
         fireEvent.change(minutes, { target: { value: '90' } });
+        // oxlint-disable-next-line github/no-blur -- the test exercises the blur-commit path itself
         fireEvent.blur(minutes);
       });
       expect(onChange).toHaveBeenCalledWith(5400);
     });
 
     it('pastes Frappe-style text into the whole value', () => {
-      const onChange = vi.fn();
+      const onChange = vi.fn<(value: number) => void>();
       const result = renderWithProviders(
         <Duration
           label="Paste"
@@ -415,7 +415,7 @@ describe('Duration', () => {
 
     it('hides presets in a table cell', () => {
       const result = renderWithProviders(
-        <TableCellContext.Provider value={{ inTableCell: true, isHeader: false, editable: true }}>
+        <TableCellContext.Provider value={tableCellValue}>
           <Duration
             label="Cell"
             value={3600}

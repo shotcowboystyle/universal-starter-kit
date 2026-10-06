@@ -9,6 +9,64 @@ import { Form } from '../../Form';
 
 import { Duration } from './index';
 
+const FormExample = () => {
+  const form = useForm({
+    defaultValues: {
+      workTime: 28_800,
+      breakTime: 3600,
+    },
+    onSubmit: async ({ value }) => {
+      action('onSubmit')(value);
+    },
+  });
+
+  return (
+    <Form
+      form={form}
+      maxWidth={400}>
+      <YStack gap="$4">
+        <Duration
+          label="Work Duration"
+          name="workTime"
+          helperText="How long did you work?"
+        />
+        <Duration
+          label="Break Duration"
+          name="breakTime"
+          helperText="Total break time"
+        />
+        <Button action="submit">Log Time</Button>
+      </YStack>
+    </Form>
+  );
+};
+
+const InteractiveExample = () => {
+  const [value, setValue] = useState(5400);
+  const h = Math.floor(value / 3600);
+  const m = Math.floor((value % 3600) / 60);
+  return (
+    <YStack
+      gap="$4"
+      maxWidth={300}>
+      <Duration
+        label="Session Length"
+        helperText={`${h}h ${m}m selected`}
+        value={value}
+        onChange={(v) => {
+          setValue(v);
+          action('onChange')(v);
+        }}
+      />
+      <Duration
+        label="Disabled"
+        value={7200}
+        disabled
+      />
+    </YStack>
+  );
+};
+
 const meta: Meta<typeof Duration> = {
   title: 'Forms/Duration',
   component: Duration,
@@ -42,40 +100,7 @@ type Story = StoryObj<typeof Duration>;
 
 export const Main: Story = {
   name: 'Main',
-  render: () => {
-    const FormExample = () => {
-      const form = useForm({
-        defaultValues: {
-          workTime: 28_800,
-          breakTime: 3600,
-        },
-        onSubmit: async ({ value }) => {
-          action('onSubmit')(value);
-        },
-      });
-
-      return (
-        <Form
-          form={form}
-          maxWidth={400}>
-          <YStack gap="$4">
-            <Duration
-              label="Work Duration"
-              name="workTime"
-              helperText="How long did you work?"
-            />
-            <Duration
-              label="Break Duration"
-              name="breakTime"
-              helperText="Total break time"
-            />
-            <Button action="submit">Log Time</Button>
-          </YStack>
-        </Form>
-      );
-    };
-    return <FormExample />;
-  },
+  render: () => <FormExample />,
 };
 
 export const Standalone: Story = {
@@ -193,34 +218,7 @@ export const WithDays: Story = {
 };
 
 export const Interactive: Story = {
-  render: () => {
-    const InteractiveExample = () => {
-      const [value, setValue] = useState(5400);
-      const h = Math.floor(value / 3600);
-      const m = Math.floor((value % 3600) / 60);
-      return (
-        <YStack
-          gap="$4"
-          maxWidth={300}>
-          <Duration
-            label="Session Length"
-            helperText={`${h}h ${m}m selected`}
-            value={value}
-            onChange={(v) => {
-              setValue(v);
-              action('onChange')(v);
-            }}
-          />
-          <Duration
-            label="Disabled"
-            value={7200}
-            disabled
-          />
-        </YStack>
-      );
-    };
-    return <InteractiveExample />;
-  },
+  render: () => <InteractiveExample />,
 };
 
 /** Loading placeholder — the skeleton mirrors the field's anatomy. */

@@ -60,7 +60,7 @@ export const ensureOtpCellCss = (): void => {
   if (!isWeb || typeof document === 'undefined') {
     return;
   }
-  let tag = document.getElementById(OTP_CELL_STYLE_ID) as HTMLStyleElement | null;
+  let tag = document.querySelector<HTMLStyleElement>(`#${OTP_CELL_STYLE_ID}`);
   if (!tag) {
     tag = document.createElement('style');
     tag.id = OTP_CELL_STYLE_ID;

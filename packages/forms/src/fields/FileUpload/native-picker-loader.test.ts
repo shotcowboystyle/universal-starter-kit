@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { dirname, join } from 'node:path';
+import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
@@ -10,14 +10,14 @@ const nodeRequire = createRequire(import.meta.url);
 
 /** Every native module name a package's build asks expo-modules-core for. */
 const registeredNativeModules = (pkg: string): string[] => {
-  const build = join(dirname(nodeRequire.resolve(`${pkg}/package.json`)), 'build');
+  const build = path.join(path.dirname(nodeRequire.resolve(`${pkg}/package.json`)), 'build');
   const names = new Set<string>();
   for (const file of readdirSync(build)) {
     if (!file.endsWith('.js')) {
       continue;
     }
-    const source = readFileSync(join(build, file), 'utf-8');
-    for (const match of source.matchAll(/require(?:Optional)?NativeModule\(\s*['"]([^'"]+)['"]/gu)) {
+    const source = readFileSync(path.join(build, file), 'utf-8');
+    for (const match of source.matchAll(/require(?:Optional)?NativeModule\(\s*['"](?<name>[^'"]+)['"]/gu)) {
       names.add(match[1]);
     }
   }

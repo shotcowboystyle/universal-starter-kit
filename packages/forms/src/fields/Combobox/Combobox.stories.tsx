@@ -2,6 +2,7 @@ import { action } from '@repo/storybook';
 import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { useForm } from '@tanstack/react-form';
 import { useState } from 'react';
+import type { ComponentProps } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 
 import { Button } from '../../Button';
@@ -11,6 +12,189 @@ import { authorOptions } from './author-options';
 
 import { Combobox } from './index';
 import type { ComboboxOption } from './index';
+
+const SEARCH_PLACEHOLDER = 'Type to search...';
+const SELECT_AUTHOR_PLACEHOLDER = 'Select an author...';
+const SELECTED_TEXT_COLOR = '$colorHover';
+
+type TriggerSelection = Parameters<NonNullable<ComponentProps<typeof Combobox>['trigger']>>[0];
+
+const triggerLabel = (selected: TriggerSelection): string => {
+  const label = Array.isArray(selected) ? selected[0]?.label : selected?.label;
+  return label === undefined || label === '' ? 'Pick an author' : label;
+};
+
+const renderAuthorTrigger = (selected: TriggerSelection) => (
+  <XStack
+    gap="$2"
+    alignItems="center"
+    paddingHorizontal="$3"
+    paddingVertical="$2"
+    backgroundColor="$backgroundHover"
+    borderRadius="$3"
+    hoverStyle={{ backgroundColor: '$backgroundPress' }}
+    pressStyle={{ backgroundColor: '$backgroundFocus' }}
+    cursor="pointer">
+    <Text fontSize="$5">📚</Text>
+    <Text color="$colorHover">{triggerLabel(selected)}</Text>
+  </XStack>
+);
+
+const FormExample = () => {
+  const form = useForm({
+    defaultValues: {
+      author: '',
+      favoriteAuthor: 'hemingway',
+    },
+    onSubmit: async ({ value }) => {
+      action('onSubmit')(value);
+    },
+  });
+
+  return (
+    <Form form={form}>
+      <YStack
+        gap="$4"
+        maxWidth={300}>
+        <Combobox
+          label="Author"
+          name="author"
+          options={authorOptions}
+          placeholder={SELECT_AUTHOR_PLACEHOLDER}
+          searchPlaceholder={SEARCH_PLACEHOLDER}
+          required
+        />
+
+        <Combobox
+          label="Favorite author"
+          name="favoriteAuthor"
+          options={authorOptions}
+          placeholder={SELECT_AUTHOR_PLACEHOLDER}
+          searchPlaceholder={SEARCH_PLACEHOLDER}
+        />
+
+        <Button action="submit">Submit</Button>
+      </YStack>
+    </Form>
+  );
+};
+
+const InteractiveExample = () => {
+  const [value, setValue] = useState<string | undefined>();
+  return (
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <Combobox
+        label="Pick an author"
+        options={authorOptions}
+        value={value}
+        onChange={(v) => {
+          setValue(Array.isArray(v) ? v[0] : v);
+        }}
+        placeholder={SELECT_AUTHOR_PLACEHOLDER}
+      />
+      <Text>Selected: {value === undefined || value === '' ? 'None' : value}</Text>
+    </YStack>
+  );
+};
+
+const CustomTriggerExample = () => {
+  const [value, setValue] = useState<string | undefined>();
+  return (
+    <YStack
+      gap="$4"
+      maxWidth={300}>
+      <Text
+        fontWeight="bold"
+        color="$colorHover">
+        Author picker with custom trigger:
+      </Text>
+      <XStack
+        gap="$2"
+        alignItems="center">
+        <Combobox
+          options={authorOptions}
+          value={value}
+          onChange={(v) => {
+            setValue(Array.isArray(v) ? v[0] : v);
+          }}
+          searchPlaceholder={SEARCH_PLACEHOLDER}
+          popoverWidth={260}
+          trigger={renderAuthorTrigger}
+        />
+      </XStack>
+      {value !== undefined && value !== '' && <Text color={SELECTED_TEXT_COLOR}>Selected: {value}</Text>}
+    </YStack>
+  );
+};
+
+const BasicExample = (args: ComponentProps<typeof Combobox>) => {
+  const [value, setValue] = useState<string | undefined>();
+  return (
+    <YStack
+      gap="$4"
+      maxWidth={300}>
+      <Combobox
+        {...args}
+        value={value}
+        onChange={(val) => {
+          setValue(Array.isArray(val) ? val[0] : val);
+          action('onValueChange')(val);
+        }}
+      />
+      {value !== undefined && value !== '' && <Text color={SELECTED_TEXT_COLOR}>Selected: {value}</Text>}
+    </YStack>
+  );
+};
+
+const WithLabelExample = () => {
+  const [value, setValue] = useState<string | undefined>();
+  return (
+    <YStack
+      gap="$4"
+      maxWidth={300}>
+      <Combobox
+        label="Author"
+        helperText="Select an author from the list"
+        options={authorOptions}
+        value={value}
+        onChange={(v) => {
+          setValue(Array.isArray(v) ? v[0] : v);
+        }}
+        placeholder={SELECT_AUTHOR_PLACEHOLDER}
+        searchPlaceholder={SEARCH_PLACEHOLDER}
+      />
+    </YStack>
+  );
+};
+
+const manyOptions: ComboboxOption[] = Array.from({ length: 100 }, (_, i) => ({
+  value: `item-${i + 1}`,
+  label: `Item ${i + 1}`,
+  keywords: `option number ${i + 1}`,
+}));
+
+const ManyOptionsExample = () => {
+  const [value, setValue] = useState<string | undefined>();
+  return (
+    <YStack
+      gap="$4"
+      maxWidth={300}>
+      <Combobox
+        label="Pick an item"
+        options={manyOptions}
+        value={value}
+        onChange={(v) => {
+          setValue(Array.isArray(v) ? v[0] : v);
+        }}
+        placeholder="Select from 100 items..."
+        searchPlaceholder="Type to filter..."
+        emptyMessage="No matching items."
+      />
+    </YStack>
+  );
+};
 
 const meta: Meta<typeof Combobox> = {
   title: 'Forms/Combobox',
@@ -86,47 +270,7 @@ type Story = StoryObj<typeof Combobox>;
 
 export const Main: StoryObj<typeof Combobox> = {
   name: 'Main',
-  render: () => {
-    const FormExample = () => {
-      const form = useForm({
-        defaultValues: {
-          author: '',
-          favoriteAuthor: 'hemingway',
-        },
-        onSubmit: async ({ value }) => {
-          action('onSubmit')(value);
-        },
-      });
-
-      return (
-        <Form form={form}>
-          <YStack
-            gap="$4"
-            maxWidth={300}>
-            <Combobox
-              label="Author"
-              name="author"
-              options={authorOptions}
-              placeholder="Select an author..."
-              searchPlaceholder="Type to search..."
-              required
-            />
-
-            <Combobox
-              label="Favorite author"
-              name="favoriteAuthor"
-              options={authorOptions}
-              placeholder="Select an author..."
-              searchPlaceholder="Type to search..."
-            />
-
-            <Button action="submit">Submit</Button>
-          </YStack>
-        </Form>
-      );
-    };
-    return <FormExample />;
-  },
+  render: () => <FormExample />,
 };
 
 export const Standalone: Story = {
@@ -180,50 +324,14 @@ export const Creatable: Story = {
 export const Basic: Story = {
   args: {
     options: authorOptions,
-    placeholder: 'Select an author...',
-    searchPlaceholder: 'Type to search...',
+    placeholder: SELECT_AUTHOR_PLACEHOLDER,
+    searchPlaceholder: SEARCH_PLACEHOLDER,
   },
-  render: function Render(args) {
-    const [value, setValue] = useState<string | undefined>();
-    return (
-      <YStack
-        gap="$4"
-        maxWidth={300}>
-        <Combobox
-          {...args}
-          value={value}
-          onValueChange={(val) => {
-            setValue(Array.isArray(val) ? val[0] : val);
-            action('onValueChange')(val);
-          }}
-        />
-        {value && <Text color="$colorHover">Selected: {value}</Text>}
-      </YStack>
-    );
-  },
+  render: (args) => <BasicExample {...args} />,
 };
 
 export const WithLabel: Story = {
-  render: function Render() {
-    const [value, setValue] = useState<string | undefined>();
-    return (
-      <YStack
-        gap="$4"
-        maxWidth={300}>
-        <Combobox
-          label="Author"
-          helperText="Select an author from the list"
-          options={authorOptions}
-          value={value}
-          onValueChange={(v) => {
-            setValue(Array.isArray(v) ? v[0] : v);
-          }}
-          placeholder="Select an author..."
-          searchPlaceholder="Type to search..."
-        />
-      </YStack>
-    );
-  },
+  render: () => <WithLabelExample />,
 };
 
 export const Disabled: Story = {
@@ -231,7 +339,7 @@ export const Disabled: Story = {
     label: 'Disabled Combobox',
     disabled: true,
     options: authorOptions,
-    placeholder: 'Select an author...',
+    placeholder: SELECT_AUTHOR_PLACEHOLDER,
   },
 };
 
@@ -241,7 +349,7 @@ export const WithError: Story = {
     error: 'This field is required',
     required: true,
     options: authorOptions,
-    placeholder: 'Select an author...',
+    placeholder: SELECT_AUTHOR_PLACEHOLDER,
   },
 };
 
@@ -273,107 +381,15 @@ export const Sizes: Story = {
 };
 
 export const Interactive: Story = {
-  render: () => {
-    const InteractiveExample = () => {
-      const [value, setValue] = useState<string | undefined>();
-      return (
-        <YStack
-          gap="$4"
-          maxWidth={400}>
-          <Combobox
-            label="Pick an author"
-            options={authorOptions}
-            value={value}
-            onValueChange={(v) => {
-              setValue(Array.isArray(v) ? v[0] : v);
-            }}
-            placeholder="Select an author..."
-          />
-          <Text>Selected: {value || 'None'}</Text>
-        </YStack>
-      );
-    };
-    return <InteractiveExample />;
-  },
+  render: () => <InteractiveExample />,
 };
 
 export const CustomTrigger: StoryObj<typeof Combobox> = {
-  render: () => {
-    const CustomTriggerExample = () => {
-      const [value, setValue] = useState<string | undefined>();
-      return (
-        <YStack
-          gap="$4"
-          maxWidth={300}>
-          <Text
-            fontWeight="bold"
-            color="$colorHover">
-            Author picker with custom trigger:
-          </Text>
-          <XStack
-            gap="$2"
-            alignItems="center">
-            <Combobox
-              options={authorOptions}
-              value={value}
-              onValueChange={(v) => {
-                setValue(Array.isArray(v) ? v[0] : v);
-              }}
-              searchPlaceholder="Type to search..."
-              popoverWidth={260}
-              trigger={(selected) => (
-                <XStack
-                  gap="$2"
-                  alignItems="center"
-                  paddingHorizontal="$3"
-                  paddingVertical="$2"
-                  backgroundColor="$backgroundHover"
-                  borderRadius="$3"
-                  hoverStyle={{ backgroundColor: '$backgroundPress' }}
-                  pressStyle={{ backgroundColor: '$backgroundFocus' }}
-                  cursor="pointer">
-                  <Text fontSize="$5">📚</Text>
-                  <Text color="$colorHover">
-                    {(Array.isArray(selected) ? selected[0]?.label : selected?.label) || 'Pick an author'}
-                  </Text>
-                </XStack>
-              )}
-            />
-          </XStack>
-          {value && <Text color="$colorHover">Selected: {value}</Text>}
-        </YStack>
-      );
-    };
-    return <CustomTriggerExample />;
-  },
+  render: () => <CustomTriggerExample />,
 };
 
 export const ManyOptions: StoryObj<typeof Combobox> = {
-  render: function Render() {
-    const [value, setValue] = useState<string | undefined>();
-    const options: ComboboxOption[] = Array.from({ length: 100 }, (_, i) => ({
-      value: `item-${i + 1}`,
-      label: `Item ${i + 1}`,
-      keywords: `option number ${i + 1}`,
-    }));
-    return (
-      <YStack
-        gap="$4"
-        maxWidth={300}>
-        <Combobox
-          label="Pick an item"
-          options={options}
-          value={value}
-          onValueChange={(v) => {
-            setValue(Array.isArray(v) ? v[0] : v);
-          }}
-          placeholder="Select from 100 items..."
-          searchPlaceholder="Type to filter..."
-          emptyMessage="No matching items."
-        />
-      </YStack>
-    );
-  },
+  render: () => <ManyOptionsExample />,
 };
 
 /** Loading placeholder — the skeleton mirrors the field's anatomy. */
