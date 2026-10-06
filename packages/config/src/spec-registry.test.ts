@@ -31,7 +31,7 @@ describe('readSpecTable', () => {
       '## A\n\n| X | Y |\n| - | - |\n| a | b |\n\n## B\n\n| X | Y |\n| - | - |\n| c | d |\n',
       '## A',
     );
-    expect(rows).toEqual([['a', 'b']]);
+    expect(rows).toStrictEqual([['a', 'b']]);
   });
 
   it('returns null when the heading is absent', () => {
@@ -68,7 +68,7 @@ describe('readSizeRecipeEscapeRegistry', () => {
         '## Size-recipe escapes\n\n| File | Reason |\n| --- | --- |\n| `public/forms/src/A.tsx` | `square end-cap; pad lives on Input.Box` |\n',
       ),
     );
-    expect(registry.escapes).toEqual([
+    expect(registry.escapes).toStrictEqual([
       { file: 'public/forms/src/A.tsx', reason: 'square end-cap; pad lives on Input.Box' },
     ]);
   });

@@ -352,10 +352,10 @@ describe('Table Primitives', () => {
       const cell = bodyTable({ size }).querySelector('tbody td');
       const minHeight = atomic(cell, 'mih');
       expect(minHeight).toHaveLength(1);
-      expect(atomic(cell, 'h')).toEqual([minHeight[0]?.replace('_mih-', '_h-')]);
+      expect(atomic(cell, 'h')).toStrictEqual([minHeight[0]?.replace('_mih-', '_h-')]);
       return minHeight[0];
     });
-    expect(heights).toEqual(['_mih-t-size-3', '_mih-t-size-4', '_mih-t-size-5']);
+    expect(heights).toStrictEqual(['_mih-t-size-3', '_mih-t-size-4', '_mih-t-size-5']);
   });
 
   it('floors a pressable row at the 44px press target and leaves a plain row to the size knob', () => {
@@ -369,8 +369,8 @@ describe('Table Primitives', () => {
   it('gives the flex composition the same floors through min-height alone', () => {
     const container = bodyTable({ size: 'small' }, { displayMode: 'flex' });
     const cell = container.querySelector('tbody td');
-    expect(atomic(cell, 'mih')).toEqual(['_mih-t-size-3']);
-    expect(atomic(cell, 'h')).toEqual([]);
+    expect(atomic(cell, 'mih')).toStrictEqual(['_mih-t-size-3']);
+    expect(atomic(cell, 'h')).toStrictEqual([]);
     const pressable = getComputedStyle(container.querySelectorAll('tbody tr')[1]);
     expect(pressable.minHeight).toBe('44px');
     expect(pressable.height).toBe('');
@@ -378,13 +378,13 @@ describe('Table Primitives', () => {
 
   it('keeps the frame fill at outlined, the same answer the card list gives (SF-CARD)', () => {
     const frame = (fillStyle: string) => atomic(bodyTable({ fillStyle }).querySelector('table'), 'bg');
-    expect(frame('filled')).toEqual(['_bg-background']);
-    expect(frame('outlined')).toEqual(frame('filled'));
+    expect(frame('filled')).toStrictEqual(['_bg-background']);
+    expect(frame('outlined')).toStrictEqual(frame('filled'));
 
     const card = (fillStyle: string) =>
       atomic(bodyTable({ fillStyle }, { layout: 'cards' }).querySelector('[data-testid="table-card"]'), 'bg');
     expect(card('filled')).toHaveLength(1);
-    expect(card('outlined')).toEqual(card('filled'));
+    expect(card('outlined')).toStrictEqual(card('filled'));
   });
 
   describe('tableZebra (K4: Table, DataTable, SimpleTable and ChildTable honour it)', () => {
@@ -421,14 +421,14 @@ describe('Table Primitives', () => {
 
     it('stays off by default and paints no body row', () => {
       const container = zebraTable('off', plainRows);
-      expect(stripes(container)).toEqual(['off', 'off', 'off', 'off']);
-      expect(fills(container)).toEqual([[], [], [], []]);
+      expect(stripes(container)).toStrictEqual(['off', 'off', 'off', 'off']);
+      expect(fills(container)).toStrictEqual([[], [], [], []]);
     });
 
     it('fills odd body rows with $color2 and leaves the head and foot rows alone', () => {
       const container = zebraTable('on', plainRows);
-      expect(stripes(container)).toEqual(['even', 'odd', 'even', 'odd']);
-      expect(fills(container)).toEqual([[], ['_bg-color2'], [], ['_bg-color2']]);
+      expect(stripes(container)).toStrictEqual(['even', 'odd', 'even', 'odd']);
+      expect(fills(container)).toStrictEqual([[], ['_bg-color2'], [], ['_bg-color2']]);
       expect(container.querySelector('thead tr')?.hasAttribute('data-table-zebra')).toBe(false);
       expect(container.querySelector('tfoot tr')?.hasAttribute('data-table-zebra')).toBe(false);
     });
@@ -445,7 +445,7 @@ describe('Table Primitives', () => {
           {plainRows[3]}
         </>,
       );
-      expect(stripes(container)).toEqual(['even', 'odd', 'even', 'odd']);
+      expect(stripes(container)).toStrictEqual(['even', 'odd', 'even', 'odd']);
     });
 
     it("keeps an intent row's tint and a consumer fill, and stripes a consumer's undefined fill", () => {
@@ -475,7 +475,7 @@ describe('Table Primitives', () => {
           <Table.Cell>Frances</Table.Cell>
         </Table.Row>,
       ]);
-      expect(fills(container)).toEqual([[], ['_bg-color3'], [], ['_bg-color4'], [], ['_bg-color2']]);
+      expect(fills(container)).toStrictEqual([[], ['_bg-color3'], [], ['_bg-color4'], [], ['_bg-color2']]);
     });
 
     it('restarts the count in a table nested in a body cell', () => {
@@ -496,13 +496,13 @@ describe('Table Primitives', () => {
       ]);
       const inner = container.querySelector('tbody table') as HTMLElement;
       expect(inner.querySelector('thead tr')?.hasAttribute('data-table-zebra')).toBe(false);
-      expect(stripes(inner)).toEqual(['even', 'odd']);
+      expect(stripes(inner)).toStrictEqual(['even', 'odd']);
     });
 
     it('gives the flex composition the same stripes (native parity)', () => {
       const container = zebraTable('on', plainRows, { displayMode: 'flex' });
-      expect(stripes(container)).toEqual(['even', 'odd', 'even', 'odd']);
-      expect(fills(container)).toEqual([[], ['_bg-color2'], [], ['_bg-color2']]);
+      expect(stripes(container)).toStrictEqual(['even', 'odd', 'even', 'odd']);
+      expect(fills(container)).toStrictEqual([[], ['_bg-color2'], [], ['_bg-color2']]);
     });
 
     it('stripes odd cards in the card layout and leaves intent cards tinted', () => {
@@ -526,7 +526,7 @@ describe('Table Primitives', () => {
         );
       const off = cards('off');
       const on = cards('on');
-      expect(off.map((card) => card.getAttribute('data-table-zebra'))).toEqual([
+      expect(off.map((card) => card.getAttribute('data-table-zebra'))).toStrictEqual([
         'off',
         'off',
         'off',
@@ -534,7 +534,7 @@ describe('Table Primitives', () => {
         'off',
         'off',
       ]);
-      expect(on.map((card) => card.getAttribute('data-table-zebra'))).toEqual([
+      expect(on.map((card) => card.getAttribute('data-table-zebra'))).toStrictEqual([
         'even',
         'odd',
         'even',
@@ -542,11 +542,11 @@ describe('Table Primitives', () => {
         'even',
         'odd',
       ]);
-      expect(atomic(on[0], 'bg')).toEqual(atomic(off[0], 'bg'));
-      expect(atomic(on[1], 'bg')).toEqual(['_bg-color2']);
-      expect(atomic(on[3], 'bg')).toEqual(['_bg-color2']);
-      expect(atomic(on[4], 'bg')).toEqual(atomic(off[4], 'bg'));
-      expect(atomic(on[5], 'bg')).toEqual(['_bg-color2']);
+      expect(atomic(on[0], 'bg')).toStrictEqual(atomic(off[0], 'bg'));
+      expect(atomic(on[1], 'bg')).toStrictEqual(['_bg-color2']);
+      expect(atomic(on[3], 'bg')).toStrictEqual(['_bg-color2']);
+      expect(atomic(on[4], 'bg')).toStrictEqual(atomic(off[4], 'bg'));
+      expect(atomic(on[5], 'bg')).toStrictEqual(['_bg-color2']);
     });
 
     describe('the stripe steps one up the ramp from the surface it sits on', () => {
@@ -570,14 +570,14 @@ describe('Table Primitives', () => {
 
       it("in dark an odd card's background differs from an even card's", () => {
         const [even, odd] = cardFills('dark');
-        expect(odd).not.toEqual(even);
+        expect(odd).not.toStrictEqual(even);
       });
 
       it("takes the card's own elevation tint plus one in dark, at every elevation", () => {
         const pairs = (['none', 'small', 'medium', 'large'] as const).map((elevation) =>
           cardFills('dark', elevation).slice(0, 2),
         );
-        expect(pairs).toEqual([
+        expect(pairs).toStrictEqual([
           [['_bg-background'], ['_bg-color2']],
           [['_bg-color2'], ['_bg-color3']],
           [['_bg-color3'], ['_bg-color4']],
@@ -586,7 +586,7 @@ describe('Table Primitives', () => {
       });
 
       it('leaves light unchanged: cards rest on $background and stripe $color2', () => {
-        expect(cardFills('light', 'large').slice(0, 2)).toEqual([['_bg-background'], ['_bg-color2']]);
+        expect(cardFills('light', 'large').slice(0, 2)).toStrictEqual([['_bg-background'], ['_bg-color2']]);
       });
 
       it('keeps rows on $color2 in dark, one step up from the frame', () => {
@@ -599,13 +599,13 @@ describe('Table Primitives', () => {
             </Preset>
           </Theme>,
         );
-        expect(fills(container)).toEqual([[], ['_bg-color2'], [], ['_bg-color2']]);
+        expect(fills(container)).toStrictEqual([[], ['_bg-color2'], [], ['_bg-color2']]);
       });
 
       it('tableZebraFill names the step above a host fill', () => {
         expect(
           ['$background', '$color1', '$color2', '$color4', '$color12', 'transparent', undefined].map(tableZebraFill),
-        ).toEqual(['$color2', '$color2', '$color3', '$color5', '$color12', '$color2', '$color2']);
+        ).toStrictEqual(['$color2', '$color2', '$color3', '$color5', '$color12', '$color2', '$color2']);
       });
     });
   });
@@ -625,7 +625,7 @@ describe('Table Primitives', () => {
           'transparent',
           undefined,
         ].map(tablePressFill),
-      ).toEqual([
+      ).toStrictEqual([
         '$color4',
         '$color4',
         '$color4',

@@ -27,7 +27,7 @@ describe('matrixMath', () => {
     it('generates one bucket per month over a year, each ending where the next starts', () => {
       const buckets = generateBuckets({ start: d(2026, 0, 1), end: d(2027, 0, 1) }, 'month');
       expect(buckets).toHaveLength(12);
-      expect(buckets.map((b) => b.key)).toEqual([
+      expect(buckets.map((b) => b.key)).toStrictEqual([
         '2026-01-01',
         '2026-02-01',
         '2026-03-01',
@@ -42,24 +42,24 @@ describe('matrixMath', () => {
         '2026-12-01',
       ]);
       for (let i = 0; i < buckets.length - 1; i++) {
-        expect(buckets[i].end).toEqual(buckets[i + 1].start);
+        expect(buckets[i].end).toStrictEqual(buckets[i + 1].start);
       }
-      expect(buckets[11].end).toEqual(d(2027, 0, 1));
+      expect(buckets[11].end).toStrictEqual(d(2027, 0, 1));
       expect(buckets[2].label).toBe(formatMonthYear(d(2026, 2, 1)));
       expect(buckets[2].name).toBe(formatMonthYear(d(2026, 2, 1)));
     });
 
     it('snaps an unaligned window down to its first bucket and up past its last day', () => {
       const buckets = generateBuckets({ start: d(2026, 0, 14), end: d(2026, 2, 3) }, 'month');
-      expect(buckets.map((b) => b.key)).toEqual(['2026-01-01', '2026-02-01', '2026-03-01']);
-      expect(buckets[0].start).toEqual(d(2026, 0, 1));
-      expect(buckets[2].end).toEqual(d(2026, 3, 1));
+      expect(buckets.map((b) => b.key)).toStrictEqual(['2026-01-01', '2026-02-01', '2026-03-01']);
+      expect(buckets[0].start).toStrictEqual(d(2026, 0, 1));
+      expect(buckets[2].end).toStrictEqual(d(2026, 3, 1));
     });
 
     it('aligns week buckets to the configured first day of week, seven days each', () => {
       const window = { start: d(2026, 0, 1), end: d(2026, 1, 1) };
       const monday = generateBuckets(window, 'week', 1);
-      expect(monday[0].start).toEqual(d(2025, 11, 29));
+      expect(monday[0].start).toStrictEqual(d(2025, 11, 29));
       expect(monday[0].start.getDay()).toBe(1);
       for (const bucket of monday) {
         expect(dayDiff(bucket.start, bucket.end)).toBe(7);
@@ -67,7 +67,7 @@ describe('matrixMath', () => {
       expect(monday.at(-1)!.end.getTime()).toBeGreaterThanOrEqual(d(2026, 1, 1).getTime());
 
       const sunday = generateBuckets(window, 'week', 0);
-      expect(sunday[0].start).toEqual(d(2025, 11, 28));
+      expect(sunday[0].start).toStrictEqual(d(2025, 11, 28));
       expect(sunday[0].start.getDay()).toBe(0);
       expect(sunday[0].name).toBe(
         `${formatAbsoluteDate(d(2025, 11, 28), { year: 'never' })} – ${formatAbsoluteDate(d(2026, 0, 3))}`,
@@ -76,7 +76,7 @@ describe('matrixMath', () => {
 
     it('generates one bucket per day with the tick register as its label', () => {
       const buckets = generateBuckets({ start: d(2026, 2, 30), end: d(2026, 3, 3) }, 'day');
-      expect(buckets.map((b) => b.key)).toEqual(['2026-03-30', '2026-03-31', '2026-04-01', '2026-04-02']);
+      expect(buckets.map((b) => b.key)).toStrictEqual(['2026-03-30', '2026-03-31', '2026-04-01', '2026-04-02']);
       expect(buckets[0].label).toBe(formatAbsoluteDate(d(2026, 2, 30), { year: 'never' }));
       expect(buckets[1].label).toBe(formatDayOfMonth(d(2026, 2, 31)));
       expect(buckets[2].label).toBe(formatAbsoluteDate(d(2026, 3, 1), { year: 'never' }));
@@ -91,8 +91,8 @@ describe('matrixMath', () => {
           .filter((tick) => tick.major)
           .map((tick) => tick.date.getTime());
         const buckets = generateBuckets(window, rule, 1);
-        expect(buckets.map((b) => b.start.getTime())).toEqual(majors);
-        expect(buckets.at(-1)!.end).toEqual(aligned.end);
+        expect(buckets.map((b) => b.start.getTime())).toStrictEqual(majors);
+        expect(buckets.at(-1)!.end).toStrictEqual(aligned.end);
       }
     });
 
@@ -100,22 +100,22 @@ describe('matrixMath', () => {
       const buckets = generateBuckets({ start: d(2026, 5, 10), end: d(2026, 5, 10) }, 'month');
       expect(buckets).toHaveLength(1);
       expect(buckets[0].key).toBe('2026-06-01');
-      expect(buckets[0].end).toEqual(d(2026, 6, 1));
+      expect(buckets[0].end).toStrictEqual(d(2026, 6, 1));
     });
   });
 
   describe('computeMatrixRange', () => {
     it('covers exactly the buckets the data spans, with no padding', () => {
       const dates = [d(2026, 1, 3, 9), d(2026, 3, 27, 17)];
-      expect(computeMatrixRange(dates, 'month')).toEqual({
+      expect(computeMatrixRange(dates, 'month')).toStrictEqual({
         start: d(2026, 1, 1),
         end: d(2026, 4, 1),
       });
-      expect(computeMatrixRange(dates, 'week', 0)).toEqual({
+      expect(computeMatrixRange(dates, 'week', 0)).toStrictEqual({
         start: d(2026, 1, 1),
         end: d(2026, 4, 3),
       });
-      expect(computeMatrixRange(dates, 'day')).toEqual({
+      expect(computeMatrixRange(dates, 'day')).toStrictEqual({
         start: d(2026, 1, 3),
         end: d(2026, 3, 28),
       });
@@ -123,7 +123,7 @@ describe('matrixMath', () => {
 
     it('falls back to the bucket containing today when there are no dates', () => {
       const today = d(2026, 6, 14, 11);
-      expect(computeMatrixRange([], 'month', 0, today)).toEqual({
+      expect(computeMatrixRange([], 'month', 0, today)).toStrictEqual({
         start: d(2026, 6, 1),
         end: d(2026, 7, 1),
       });
@@ -151,8 +151,8 @@ describe('matrixMath', () => {
 
     it('a week bucket across the change keeps wall-clock midnight edges and seven whole days', () => {
       const [bucket] = generateBuckets({ start: d(2026, 2, 8), end: d(2026, 2, 15) }, 'week', 0);
-      expect(bucket.start).toEqual(d(2026, 2, 8));
-      expect(bucket.end).toEqual(d(2026, 2, 15));
+      expect(bucket.start).toStrictEqual(d(2026, 2, 8));
+      expect(bucket.end).toStrictEqual(d(2026, 2, 15));
       expect(bucket.end.getHours()).toBe(0);
       expect(dayDiff(bucket.start, bucket.end)).toBe(7);
       expect(bucket.end.getTime() - bucket.start.getTime()).toBe(7 * 86_400_000 - 3_600_000);
@@ -160,7 +160,7 @@ describe('matrixMath', () => {
 
     it('day buckets across the change each end at local midnight, the short day included', () => {
       const buckets = generateBuckets({ start: d(2026, 2, 7), end: d(2026, 2, 10) }, 'day');
-      expect(buckets.map((b) => b.key)).toEqual(['2026-03-07', '2026-03-08', '2026-03-09']);
+      expect(buckets.map((b) => b.key)).toStrictEqual(['2026-03-07', '2026-03-08', '2026-03-09']);
       for (const bucket of buckets) {
         expect(bucket.end.getHours()).toBe(0);
       }
@@ -170,7 +170,7 @@ describe('matrixMath', () => {
 
     it("a point after the skipped hour still lands in the changeover day's bucket", () => {
       const summaries = summarizeMatrixCells([{ rowId: 'a', date: d(2026, 2, 8, 3, 30) }], 'day');
-      expect([...summaries.keys()]).toEqual([matrixCellKey('a', '2026-03-08')]);
+      expect([...summaries.keys()]).toStrictEqual([matrixCellKey('a', '2026-03-08')]);
       expect(localDateKey(bucketStart(d(2026, 2, 8, 23, 59), 'day'))).toBe('2026-03-08');
     });
   });
@@ -234,7 +234,7 @@ describe('matrixMath', () => {
       expect(src).toContain('generateTicks(');
       expect(src).not.toMatch(/getDate\(\)\s*[+-]/);
       expect(src).not.toMatch(/86_?400_?000|MS_PER_DAY|setHours\(/);
-      expect(startOfDay(d(2026, 2, 8, 15))).toEqual(d(2026, 2, 8));
+      expect(startOfDay(d(2026, 2, 8, 15))).toStrictEqual(d(2026, 2, 8));
     });
   });
 });

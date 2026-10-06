@@ -455,7 +455,7 @@ describe('TextArea', () => {
           />
         </Preset>,
       );
-      expect(boxRadiusClasses(none.container)).toEqual(['_btlr-t-radius-0']);
+      expect(boxRadiusClasses(none.container)).toStrictEqual(['_btlr-t-radius-0']);
       none.unmount();
 
       const small = renderWithProviders(
@@ -466,7 +466,7 @@ describe('TextArea', () => {
           />
         </Preset>,
       );
-      expect(boxRadiusClasses(small.container)).toEqual(['_btlr-t-radius-2']);
+      expect(boxRadiusClasses(small.container)).toStrictEqual(['_btlr-t-radius-2']);
       small.unmount();
 
       const medium = renderWithProviders(
@@ -477,7 +477,7 @@ describe('TextArea', () => {
           />
         </Preset>,
       );
-      expect(boxRadiusClasses(medium.container)).toEqual(['_btlr-t-radius-4']);
+      expect(boxRadiusClasses(medium.container)).toStrictEqual(['_btlr-t-radius-4']);
       medium.unmount();
 
       const large = renderWithProviders(
@@ -488,7 +488,7 @@ describe('TextArea', () => {
           />
         </Preset>,
       );
-      expect(boxRadiusClasses(large.container)).toEqual(['_btlr-t-radius-6']);
+      expect(boxRadiusClasses(large.container)).toStrictEqual(['_btlr-t-radius-6']);
       large.unmount();
 
       const full = renderWithProviders(
@@ -500,7 +500,7 @@ describe('TextArea', () => {
         </Preset>,
       );
       const fullClasses = boxRadiusClasses(full.container);
-      expect(fullClasses).toEqual(['_btlr-18px']);
+      expect(fullClasses).toStrictEqual(['_btlr-18px']);
       expect(fullClasses.join(' ')).not.toMatch(/t-radius-12/);
     });
 
@@ -528,7 +528,7 @@ describe('TextArea', () => {
           />
         </Preset>,
       );
-      expect(boxRadiusClasses(result.container)).toEqual(['_btlr-13px']);
+      expect(boxRadiusClasses(result.container)).toStrictEqual(['_btlr-13px']);
     });
 
     it('caps full at the padding px in both schemes, never at the $4 clamp', () => {
@@ -543,7 +543,7 @@ describe('TextArea', () => {
         );
         const result = renderWithProviders(scheme === 'dark' ? <Theme name="dark">{ui}</Theme> : ui);
         const classes = boxRadiusClasses(result.container);
-        expect(classes, scheme).toEqual(['_btlr-18px']);
+        expect(classes, scheme).toStrictEqual(['_btlr-18px']);
         expect(classes.join(' '), scheme).not.toMatch(/t-radius-(4|12)/);
         result.unmount();
       }

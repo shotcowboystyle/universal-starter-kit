@@ -106,7 +106,7 @@ describe('Slider', () => {
       expect(onChange).toHaveBeenCalled();
       expect(onValueChange).toHaveBeenCalled();
       expect(onChange.mock.calls).toHaveLength(onValueChange.mock.calls.length);
-      expect(onChange.mock.lastCall).toEqual(onValueChange.mock.lastCall);
+      expect(onChange.mock.lastCall).toStrictEqual(onValueChange.mock.lastCall);
     });
   });
 
@@ -587,11 +587,11 @@ describe('Slider', () => {
 
       it("adjusts values with tamagui's snap/sort/min-steps semantics (a11y actions)", () => {
         // increment/decrement step math used by onAccessibilityAction
-        expect(getNextSortedValues([50], snapSliderValue(50 + 1, 0, 100, 1), 0)).toEqual([51]);
-        expect(getNextSortedValues([100], snapSliderValue(100 + 1, 0, 100, 1), 0)).toEqual([100]);
-        expect(getNextSortedValues([0], snapSliderValue(0 - 1, 0, 100, 1), 0)).toEqual([0]);
+        expect(getNextSortedValues([50], snapSliderValue(50 + 1, 0, 100, 1), 0)).toStrictEqual([51]);
+        expect(getNextSortedValues([100], snapSliderValue(100 + 1, 0, 100, 1), 0)).toStrictEqual([100]);
+        expect(getNextSortedValues([0], snapSliderValue(0 - 1, 0, 100, 1), 0)).toStrictEqual([0]);
         // range: adjusting the min thumb past the max re-sorts (tamagui semantics)
-        expect(getNextSortedValues([75, 75], snapSliderValue(76, 0, 100, 1), 0)).toEqual([75, 76]);
+        expect(getNextSortedValues([75, 75], snapSliderValue(76, 0, 100, 1), 0)).toStrictEqual([75, 76]);
         // min-steps rejection mirrors tamagui updateValues
         expect(hasMinStepsBetween([70, 75], 10)).toBe(false);
         expect(hasMinStepsBetween([60, 75], 10)).toBe(true);
@@ -663,7 +663,7 @@ describe('Slider', () => {
         const { result } = renderHook(() => useSliderJumpMotion(options() as any));
 
         // mount: no transform residue, no armed token
-        expect(result.current.getThumbMotionProps(0)).toEqual({
+        expect(result.current.getThumbMotionProps(0)).toStrictEqual({
           transition: INSTANT_X_TRANSITION,
         });
 
@@ -679,7 +679,7 @@ describe('Slider', () => {
           trackWidth: 400,
           thumbSize: 20,
         }); // 97.5
-        expect(result.current.getThumbMotionProps(0)).toEqual({
+        expect(result.current.getThumbMotionProps(0)).toStrictEqual({
           transition: INSTANT_X_TRANSITION,
           x: baseX + delta,
         });
@@ -688,7 +688,7 @@ describe('Slider', () => {
         act(() => {
           vi.advanceTimersByTime(16);
         });
-        expect(result.current.getThumbMotionProps(0)).toEqual({
+        expect(result.current.getThumbMotionProps(0)).toStrictEqual({
           transition: { x: 'quick' },
           x: baseX,
         });
@@ -703,7 +703,7 @@ describe('Slider', () => {
         act(() => {
           vi.advanceTimersByTime(NATIVE_JUMP_SETTLE_MS);
         });
-        expect(result.current.getThumbMotionProps(0)).toEqual({
+        expect(result.current.getThumbMotionProps(0)).toStrictEqual({
           transition: INSTANT_X_TRANSITION,
         });
       });
@@ -716,7 +716,7 @@ describe('Slider', () => {
           result.current.onInternalValueChange([55]);
         });
         expect(result.current.flip).toBeNull();
-        expect(result.current.getThumbMotionProps(0)).toEqual({
+        expect(result.current.getThumbMotionProps(0)).toStrictEqual({
           transition: INSTANT_X_TRANSITION,
         });
       });
@@ -738,7 +738,7 @@ describe('Slider', () => {
           result.current.onInternalValueChange([31]);
         });
         expect(result.current.flip).toBeNull();
-        expect(result.current.getThumbMotionProps(0)).toEqual({
+        expect(result.current.getThumbMotionProps(0)).toStrictEqual({
           transition: INSTANT_X_TRANSITION,
         });
       });
@@ -752,12 +752,12 @@ describe('Slider', () => {
         act(() => {
           vi.advanceTimersByTime(16); // phase "animate"
         });
-        expect(result.current.getThumbMotionProps(0).transition).toEqual({ x: 'quick' });
+        expect(result.current.getThumbMotionProps(0).transition).toStrictEqual({ x: 'quick' });
         act(() => {
           result.current.onDragStart();
         });
         expect(result.current.flip).toBeNull();
-        expect(result.current.getThumbMotionProps(0)).toEqual({
+        expect(result.current.getThumbMotionProps(0)).toStrictEqual({
           transition: INSTANT_X_TRANSITION,
         });
       });
@@ -785,7 +785,7 @@ describe('Slider', () => {
           disabled.current.onTrackPress(25);
         });
         expect(disabled.current.flip).toBeNull();
-        expect(disabled.current.getThumbMotionProps(0)).toEqual({});
+        expect(disabled.current.getThumbMotionProps(0)).toStrictEqual({});
 
         // tamagui rejects updates violating minStepsBetweenThumbs → no motion
         const { result: minSteps } = renderHook(() =>
@@ -805,20 +805,20 @@ describe('Slider', () => {
         });
         const context = { min: 0, max: 100, trackWidth: 400, thumbSize: 20 };
         expect(result.current.flip?.movedIndex).toBe(0);
-        expect(result.current.getThumbMotionProps(0)).toEqual({
+        expect(result.current.getThumbMotionProps(0)).toStrictEqual({
           transition: INSTANT_X_TRANSITION,
           x: getThumbBaseX(40, 20) + getJumpDelta(20, 40, context),
         });
         // Non-target thumb: NO override at all, in either phase — it can
         // neither shift when the session arms nor pop back at release (the
         // sweep measured a +2.5pt session shift from the old base-x pin).
-        expect(result.current.getThumbMotionProps(1)).toEqual({
+        expect(result.current.getThumbMotionProps(1)).toStrictEqual({
           transition: INSTANT_X_TRANSITION,
         });
         act(() => {
           vi.advanceTimersByTime(16); // phase "animate"
         });
-        expect(result.current.getThumbMotionProps(1)).toEqual({
+        expect(result.current.getThumbMotionProps(1)).toStrictEqual({
           transition: INSTANT_X_TRANSITION,
         });
         expect(result.current.getThumbMotionProps(1).x).toBeUndefined();
@@ -849,7 +849,7 @@ describe('Slider', () => {
           vi.advanceTimersByTime(settleMs - NATIVE_JUMP_SETTLE_MS);
         });
         expect(result.current.flip).toBeNull();
-        expect(result.current.getThumbMotionProps(0)).toEqual({
+        expect(result.current.getThumbMotionProps(0)).toStrictEqual({
           transition: INSTANT_X_TRANSITION,
         });
       });
@@ -880,7 +880,7 @@ describe('Slider', () => {
         expect(result.current.flip?.phase).toBe('apply');
         // the new session pins the thumb where it visually IS (old-session
         // residual folded in), not where the old glide would have ended
-        expect(result.current.getThumbMotionProps(0)).toEqual({
+        expect(result.current.getThumbMotionProps(0)).toStrictEqual({
           transition: INSTANT_X_TRANSITION,
           x: getThumbBaseX(75, 20) + getJumpDelta(25, 75, context) + inFlightResidual,
         });

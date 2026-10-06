@@ -39,7 +39,7 @@ describe('Button filled border is transparent', () => {
     expect(filled.className).toMatch(/_bbc-transparent\b/);
     expect(filled.className).toMatch(/_blc-transparent\b/);
     expect(filled.className).not.toMatch(/_btc-borderColor\b/);
-    expect(filledWidth).toEqual(['_btw-1px']);
+    expect(filledWidth).toStrictEqual(['_btw-1px']);
     cleanup();
 
     renderWithProviders(<Button outlined>Outlined</Button>);
@@ -49,16 +49,16 @@ describe('Button filled border is transparent', () => {
     expect(outlined.className).toMatch(/_bbc-borderColor\b/);
     expect(outlined.className).toMatch(/_blc-borderColor\b/);
     expect(outlined.className).not.toMatch(/_btc-transparent\b/);
-    expect(atoms(outlined, '_btw-')).toEqual(filledWidth);
-    expect(atoms(outlined, '_h-')).toEqual(filledHeight);
-    expect([...atoms(outlined, '_pr-'), ...atoms(outlined, '_pl-')]).toEqual(filledPad);
+    expect(atoms(outlined, '_btw-')).toStrictEqual(filledWidth);
+    expect(atoms(outlined, '_h-')).toStrictEqual(filledHeight);
+    expect([...atoms(outlined, '_pr-'), ...atoms(outlined, '_pl-')]).toStrictEqual(filledPad);
   });
 
   it('intent filled Buttons keep the invisible 1px edge', () => {
     renderWithProviders(<Button error>Destroy</Button>);
     const filled = frame();
     expect(filled.className).toMatch(/_btc-transparent\b/);
-    expect(atoms(filled, '_btw-')).toEqual(['_btw-1px']);
+    expect(atoms(filled, '_btw-')).toStrictEqual(['_btw-1px']);
     expect(filled.className).toMatch(/_h-44px\b/);
     cleanup();
 
@@ -71,7 +71,7 @@ describe('Button filled border is transparent', () => {
     );
     const outlined = frame();
     expect(outlined.className).toMatch(/_btc-borderColor\b/);
-    expect(atoms(outlined, '_btw-')).toEqual(['_btw-1px']);
+    expect(atoms(outlined, '_btw-')).toStrictEqual(['_btw-1px']);
     expect(outlined.className).toMatch(/_h-44px\b/);
   });
 });

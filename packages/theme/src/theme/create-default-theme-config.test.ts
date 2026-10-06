@@ -128,7 +128,7 @@ describe('createDefaultThemeConfig — builderOptions.getTheme composition', () 
       recipeInputs: { baseHeight: 40 },
     });
     expect(config.recipeFamilies?.control.boxVariants.$4.height).toBe(40);
-    expect(config.recipeFamilies?.control.recipes.$4).toEqual({
+    expect(config.recipeFamilies?.control.recipes.$4).toStrictEqual({
       height: 40,
       paddingHorizontal: Math.round(40 * (18 / 44)),
       fontSize: Math.round(40 * (14 / 44)),
@@ -220,7 +220,7 @@ describe('createDefaultThemeConfig — Tamagui era pin', () => {
   });
 
   it('resolves the v5 media map, and no dead prior-era key survives', () => {
-    expect(config.tamagui.media).toEqual(v5DefaultConfig.media);
+    expect(config.tamagui.media).toStrictEqual(v5DefaultConfig.media);
     // v5 signature: the sm/…/xxl min-width ladder plus the small container steps.
     for (const key of ['xxxs', 'xxs', 'xs', 'sm', 'md', 'lg', 'xl', 'xxl']) {
       expect(config.tamagui.media, `media.${key}`).toHaveProperty(key);
@@ -229,7 +229,7 @@ describe('createDefaultThemeConfig — Tamagui era pin', () => {
     for (const key of ['gtXs', 'gtSm', 'gtMd', 'gtLg', '2xl', '2xs', 'maxSm', 'max2Xl']) {
       expect(config.tamagui.media, `media.${key}`).not.toHaveProperty(key);
     }
-    expect(config.tamagui.settings.mediaQueryDefaultActive).toEqual(v5MediaQueryDefaultActive);
+    expect(config.tamagui.settings.mediaQueryDefaultActive).toStrictEqual(v5MediaQueryDefaultActive);
   });
 
   it('resolves v5 token values exactly for every non-color group', () => {
@@ -238,7 +238,7 @@ describe('createDefaultThemeConfig — Tamagui era pin', () => {
       const resolved = tokenGroupValues(config.tamagui.tokens, group);
       const v5 = tokenGroupValues(v5Tokens as unknown as RawTokens, group);
       expect(Object.keys(v5).length, `${group} group present in v5`).toBeGreaterThan(0);
-      expect(resolved, `tokens.${group}`).toEqual(v5);
+      expect(resolved, `tokens.${group}`).toStrictEqual(v5);
     }
   });
 

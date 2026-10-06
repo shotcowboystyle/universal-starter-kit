@@ -50,7 +50,7 @@ describe('Card container cap, independently measured against canonical stops', (
       for (const [space, inset] of Object.entries({ small: 13, medium: 18, large: 32 })) {
         it(`${tier}/${radius}/${space} accepts all four capped corners`, () => {
           specimen(`border-radius:${Math.min(stop, inset)}px;padding:${inset}px`, card(radius, space, tier));
-          expect(measured()?.violations).toEqual([]);
+          expect(measured()?.violations).toStrictEqual([]);
           expect(measured()?.paddingTop?.value).toBe(inset);
         });
       }
@@ -76,7 +76,7 @@ describe('Card container cap, independently measured against canonical stops', (
 
   it('leaves ordinary control radius rules intact', () => {
     specimen('border-radius:16px;padding:13px');
-    expect(measured()?.violations).toEqual([]);
+    expect(measured()?.violations).toStrictEqual([]);
   });
 
   it.each([
@@ -115,7 +115,7 @@ describe('canonical gapLg parity in the serialized audit', () => {
 
 describe('font weight provenance', () => {
   it('pins the configured heading source behind the self-contained whitelist', () => {
-    expect([...new Set(Object.values(defaultHeadingFont.weight).map(Number))].sort()).toEqual([600, 700, 800]);
+    expect([...new Set(Object.values(defaultHeadingFont.weight).map(Number))].sort()).toStrictEqual([600, 700, 800]);
   });
 
   it.each([600, 800])('accepts configured heading weight %i as unitless', (weight) => {
@@ -161,13 +161,13 @@ describe('BINARY parts measure 0 or their own h/2', () => {
     ['default thumb', 38, 38, 19],
   ])('accepts a %s at h/2', (_part, width, height, radius) => {
     laidOut(specimen(`border-radius:${radius}px`, binary), width, height);
-    expect(measured()?.violations).toEqual([]);
+    expect(measured()?.violations).toStrictEqual([]);
     expect(measured()?.borderRadius?.knob).toBe('BINARY 0 | h/2');
   });
 
   it('accepts a square BINARY part at none', () => {
     laidOut(specimen('border-radius:0', binary), 88, 44);
-    expect(measured()?.violations ?? []).toEqual([]);
+    expect(measured()?.violations ?? []).toStrictEqual([]);
   });
 
   it.each([
@@ -197,7 +197,7 @@ describe('declared capped containers beyond Card', () => {
 
   it('accepts a PageSection surface capped at its own panelPadding', () => {
     specimen('border-radius:13px;padding:13px', declared('PageSection', 'full', 'small'));
-    expect(measured()?.violations).toEqual([]);
+    expect(measured()?.violations).toStrictEqual([]);
   });
 
   it("measures a PageSection surface inset like a Card's", () => {
@@ -207,7 +207,7 @@ describe('declared capped containers beyond Card', () => {
 
   it('accepts a TextArea box at the cap whatever its field inset', () => {
     specimen('border-radius:13px;padding:0', declared('TextArea', 'full', 'small'));
-    expect(measured()?.violations).toEqual([]);
+    expect(measured()?.violations).toStrictEqual([]);
     expect(measured()?.borderRadius?.knob).toBe('TextArea min(radius:full, panelPadding:small)');
   });
 
@@ -250,7 +250,7 @@ describe('stacked rows cap their outer corners and square the inner ones', () =>
     ['only', corners(13, 13, 13, 13)],
   ])('accepts a %s row capped at the row padding', (position, style) => {
     specimen(style, row(position, 'large', 'small'));
-    expect(measured()?.violations).toEqual([]);
+    expect(measured()?.violations).toStrictEqual([]);
   });
 
   it('names the stop it resolved on an outer corner', () => {
@@ -270,10 +270,10 @@ describe('stacked rows cap their outer corners and square the inner ones', () =>
 
   it('says which corner is inner', () => {
     specimen(corners(0, 0, 13, 9), row('last', 'large', 'small'));
-    expect(measured()?.violations).toEqual(['borderBottomLeftRadius: 9px does not match StackedRow cap (13px)']);
+    expect(measured()?.violations).toStrictEqual(['borderBottomLeftRadius: 9px does not match StackedRow cap (13px)']);
     specimen(corners(9, 0, 13, 13), row('last', 'large', 'small')).id = 'other';
     const other = audit().elements.find((el) => el.id === 'other');
-    expect(other?.violations).toEqual(['borderTopLeftRadius: 9px is an inner corner of a last StackedRow (0px)']);
+    expect(other?.violations).toStrictEqual(['borderTopLeftRadius: 9px is an inner corner of a last StackedRow (0px)']);
   });
 });
 
@@ -302,13 +302,13 @@ describe('a fixed-padding container caps at the padding it has', () => {
 
   it('accepts full capped at its own 13px padding whatever the space stop', () => {
     specimen('border-radius:13px;padding:13px', own('full'));
-    expect(measured()?.violations).toEqual([]);
+    expect(measured()?.violations).toStrictEqual([]);
     expect(measured()?.borderRadius?.knob).toBe('OwnInset min(radius:full, own padding)');
   });
 
   it('accepts the token while it fits', () => {
     specimen('border-radius:9px;padding:13px', own('medium'));
-    expect(measured()?.violations).toEqual([]);
+    expect(measured()?.violations).toStrictEqual([]);
   });
 
   it.each([

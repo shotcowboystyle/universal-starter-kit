@@ -34,7 +34,7 @@ describe('composeDocumentTitle', () => {
   it('does not mutate the given trail', () => {
     const trail = [{ label: 'Desk' }, { label: 'Todo' }];
     composeDocumentTitle(trail);
-    expect(trail.map((p) => p.label)).toEqual(['Desk', 'Todo']);
+    expect(trail.map((p) => p.label)).toStrictEqual(['Desk', 'Todo']);
   });
 });
 

@@ -45,7 +45,7 @@ describe('BoardRepository', () => {
       const result = await repository.create(data);
 
       expect(mockModel).toHaveBeenCalledWith(data);
-      expect(result).toEqual(expect.objectContaining(data));
+      expect(result).toStrictEqual(expect.objectContaining(data));
     });
   });
 
@@ -58,7 +58,7 @@ describe('BoardRepository', () => {
 
       const result = await repository.findByOwner(userId);
 
-      expect(result).toEqual(mockBoards);
+      expect(result).toStrictEqual(mockBoards);
     });
   });
 
@@ -71,7 +71,7 @@ describe('BoardRepository', () => {
 
       const result = await repository.findByMemberNotOwner(userId);
 
-      expect(result).toEqual(mockBoards);
+      expect(result).toStrictEqual(mockBoards);
     });
   });
 
@@ -85,7 +85,7 @@ describe('BoardRepository', () => {
 
       const result = await repository.findOneWithAccess(boardId, userId);
 
-      expect(result).toEqual(mockBoard);
+      expect(result).toStrictEqual(mockBoard);
     });
 
     it('should return null if board not found', async () => {
@@ -110,7 +110,7 @@ describe('BoardRepository', () => {
       const result = await repository.findById(boardId);
 
       expect(mockModel.findById).toHaveBeenCalledWith(boardId);
-      expect(result).toEqual(mockBoard);
+      expect(result).toStrictEqual(mockBoard);
     });
   });
 
@@ -125,7 +125,7 @@ describe('BoardRepository', () => {
       const result = await repository.updateById(boardId, updateData);
 
       expect(mockModel.findByIdAndUpdate).toHaveBeenCalledWith(boardId, { $set: updateData }, { new: true });
-      expect(result).toEqual(mockBoard);
+      expect(result).toStrictEqual(mockBoard);
     });
   });
 
@@ -138,7 +138,7 @@ describe('BoardRepository', () => {
       const result = await repository.deleteById(boardId);
 
       expect(mockModel.deleteOne).toHaveBeenCalledWith({ _id: boardId });
-      expect(result).toEqual({ deletedCount: 1 });
+      expect(result).toStrictEqual({ deletedCount: 1 });
     });
   });
 
@@ -158,7 +158,7 @@ describe('BoardRepository', () => {
         { $addToSet: { members: new Types.ObjectId(memberId) } },
         { new: true },
       );
-      expect(result).toEqual(mockBoard);
+      expect(result).toStrictEqual(mockBoard);
     });
   });
 
@@ -182,7 +182,7 @@ describe('BoardRepository', () => {
         { $pull: { members: new Types.ObjectId(memberId) } },
         { new: true },
       );
-      expect(result).toEqual(mockBoard);
+      expect(result).toStrictEqual(mockBoard);
     });
   });
 });

@@ -29,9 +29,9 @@ describe('web byte save', () => {
     });
     const result = saveFile(input);
     input.bytes.fill(7);
-    await expect(result).resolves.toEqual({ status: 'download-requested' });
+    await expect(result).resolves.toStrictEqual({ status: 'download-requested' });
     const blob = vi.mocked(URL.createObjectURL).mock.calls[0][0] as Blob;
-    expect(Array.from(new Uint8Array(await blob.arrayBuffer()))).toEqual([0, 255, 13, 10]);
+    expect(Array.from(new Uint8Array(await blob.arrayBuffer()))).toStrictEqual([0, 255, 13, 10]);
     expect(blob.type).toBe('application/octet-stream');
     expect(HTMLAnchorElement.prototype.click).toHaveBeenCalledOnce();
   });

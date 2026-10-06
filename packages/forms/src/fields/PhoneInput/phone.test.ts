@@ -44,15 +44,15 @@ describe('phone helpers', () => {
   });
 
   it('parses stored E.164 without dropping the national number', () => {
-    expect(parsePhone('+447123456789', 'US')).toEqual({
+    expect(parsePhone('+447123456789', 'US')).toStrictEqual({
       region: 'GB',
       national: '7123456789',
     });
-    expect(parsePhone('+15125551234', 'US')).toEqual({
+    expect(parsePhone('+15125551234', 'US')).toStrictEqual({
       region: 'US',
       national: '5125551234',
     });
-    expect(parsePhone('', 'DE')).toEqual({ region: 'DE', national: '' });
+    expect(parsePhone('', 'DE')).toStrictEqual({ region: 'DE', national: '' });
   });
 
   it('rebases the same national digits onto a new country (SB-M-214)', () => {

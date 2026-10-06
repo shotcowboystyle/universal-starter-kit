@@ -40,7 +40,7 @@ describe('useShareableUrl', () => {
     mockUseParams.mockReturnValue({ tags: ['a', 'b'] });
     const { result } = renderHook(() => useShareableUrl());
     const url = new URL(result.current);
-    expect(url.searchParams.getAll('tags')).toEqual(['a', 'b']);
+    expect(url.searchParams.getAll('tags')).toStrictEqual(['a', 'b']);
   });
 
   it('drops empty and undefined params from the shared link', () => {
@@ -56,7 +56,7 @@ describe('useShareableUrl', () => {
     mockUseParams.mockReturnValue({ only: 'param' });
     const { result } = renderHook(() => useShareableUrl());
     const url = new URL(result.current);
-    expect([...url.searchParams.keys()]).toEqual(['only']);
+    expect([...url.searchParams.keys()]).toStrictEqual(['only']);
   });
 
   it('falls back to the bare URL when the router host throws', () => {
@@ -65,7 +65,7 @@ describe('useShareableUrl', () => {
     });
     const { result } = renderHook(() => useShareableUrl());
     const url = new URL(result.current);
-    expect([...url.searchParams.keys()]).toEqual([]);
+    expect([...url.searchParams.keys()]).toStrictEqual([]);
   });
 });
 
@@ -74,27 +74,27 @@ describe('useUrlState deserialize edge cases', () => {
     mockUseParams.mockReturnValue({ config: '{not-json' });
     const defaults = { config: { theme: 'light' } };
     const { result } = renderHook(() => useUrlState(defaults));
-    expect(result.current[0]).toEqual({ config: { theme: 'light' } });
+    expect(result.current[0]).toStrictEqual({ config: { theme: 'light' } });
   });
 
   it('coerces a single string into an array for array-typed defaults', () => {
     mockUseParams.mockReturnValue({ tags: 'solo' });
     const defaults = { tags: [] as string[] };
     const { result } = renderHook(() => useUrlState(defaults));
-    expect(result.current[0]).toEqual({ tags: ['solo'] });
+    expect(result.current[0]).toStrictEqual({ tags: ['solo'] });
   });
 
   it("parses 'false' strings into boolean false for boolean defaults", () => {
     mockUseParams.mockReturnValue({ active: 'false' });
     const defaults = { active: true };
     const { result } = renderHook(() => useUrlState(defaults));
-    expect(result.current[0]).toEqual({ active: false });
+    expect(result.current[0]).toStrictEqual({ active: false });
   });
 
   it('ignores params that have no matching default key', () => {
     mockUseParams.mockReturnValue({ unknown: 'x', name: 'known' });
     const defaults = { name: '' };
     const { result } = renderHook(() => useUrlState(defaults));
-    expect(result.current[0]).toEqual({ name: 'known' });
+    expect(result.current[0]).toStrictEqual({ name: 'known' });
   });
 });

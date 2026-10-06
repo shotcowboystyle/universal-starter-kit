@@ -21,12 +21,12 @@ const uniform = () => 36;
 
 describe('flattenVisibleIds', () => {
   it('returns only roots when nothing is expanded', () => {
-    expect(flattenVisibleIds(tree, new Set())).toEqual(['src', 'readme']);
+    expect(flattenVisibleIds(tree, new Set())).toStrictEqual(['src', 'readme']);
   });
 
   it('walks expanded branches in visual order', () => {
-    expect(flattenVisibleIds(tree, new Set(['src']))).toEqual(['src', 'components', 'index', 'readme']);
-    expect(flattenVisibleIds(tree, new Set(['src', 'components']))).toEqual([
+    expect(flattenVisibleIds(tree, new Set(['src']))).toStrictEqual(['src', 'components', 'index', 'readme']);
+    expect(flattenVisibleIds(tree, new Set(['src', 'components']))).toStrictEqual([
       'src',
       'components',
       'button',
@@ -38,7 +38,7 @@ describe('flattenVisibleIds', () => {
 
   it('ignores expanded ids for collapsed ancestors', () => {
     // "components" is expanded but its parent is not — children stay hidden.
-    expect(flattenVisibleIds(tree, new Set(['components']))).toEqual(['src', 'readme']);
+    expect(flattenVisibleIds(tree, new Set(['components']))).toStrictEqual(['src', 'readme']);
   });
 });
 
@@ -48,7 +48,7 @@ describe('diffVisibleRows', () => {
     const next = flattenVisibleIds(tree, new Set(['src', 'components']));
     const diff = diffVisibleRows(prev, next, uniform);
 
-    expect([...diff.entering]).toEqual(['button', 'input']);
+    expect([...diff.entering]).toStrictEqual(['button', 'input']);
     // Rows below the expansion start 2 rows above their new slot.
     expect(diff.deltas.get('index')).toBe(-72);
     expect(diff.deltas.get('readme')).toBe(-72);
@@ -93,7 +93,7 @@ describe('diffVisibleRows', () => {
     const prev = flattenVisibleIds(tree, new Set());
     const next = flattenVisibleIds(tree, new Set(['src']));
     const diff = diffVisibleRows(prev, next, uniform);
-    expect([...diff.entering]).toEqual(['components', 'index']);
+    expect([...diff.entering]).toStrictEqual(['components', 'index']);
     expect(diff.deltas.get('readme')).toBe(-72);
     expect(diff.deltas.has('src')).toBe(false);
   });

@@ -119,7 +119,7 @@ describe('useResolvedKnobs inside Surface', () => {
     expect(result.current.knobProps.size).toBe('small');
     expect(result.current.knobProps.sizeToken).toBe('$3');
     expect(result.current.knobProps.density).toBe('compact');
-    expect(result.current.knobProps.gap).toEqual({ gap: '$2' });
+    expect(result.current.knobProps.gap).toStrictEqual({ gap: '$2' });
     expect(result.current.knobProps.control.height).toBe(36);
   });
 
@@ -144,6 +144,6 @@ describe('useResolvedKnobs inside Surface', () => {
       createElement(TestProviders, null, createElement(Surface, { density: 'compact' }, children));
     const { result } = renderHook(() => useResolvedKnobs({ compact: false }), { wrapper });
     expect(result.current.knobProps.density).toBe('compact');
-    expect(result.current.knobProps.gap).toEqual({ gap: '$2' });
+    expect(result.current.knobProps.gap).toStrictEqual({ gap: '$2' });
   });
 });

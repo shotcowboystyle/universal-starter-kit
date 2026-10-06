@@ -30,13 +30,13 @@ function rowAtoms(overrides: Partial<Knobs>) {
 describe('Attachments rows are a CONTAINER-CAP stack', () => {
   it('caps the outer corners at the row padding at full', () => {
     const [first, last] = rowAtoms({ borderRadius: 'full', space: 'medium' });
-    expect(first).toEqual(expect.arrayContaining(['_borderStartStartRadius-18px', '_borderStartEndRadius-18px']));
-    expect(last).toEqual(expect.arrayContaining(['_borderEndStartRadius-18px', '_borderEndEndRadius-18px']));
+    expect(first).toStrictEqual(expect.arrayContaining(['_borderStartStartRadius-18px', '_borderStartEndRadius-18px']));
+    expect(last).toStrictEqual(expect.arrayContaining(['_borderEndStartRadius-18px', '_borderEndEndRadius-18px']));
   });
 
   it('caps large at 13 under space small, where 16 would exceed the padding', () => {
     const [first] = rowAtoms({ borderRadius: 'large', space: 'small' });
-    expect(first).toEqual(expect.arrayContaining(['_borderStartStartRadius-13px', '_borderStartEndRadius-13px']));
+    expect(first).toStrictEqual(expect.arrayContaining(['_borderStartStartRadius-13px', '_borderStartEndRadius-13px']));
   });
 
   it('declares each row a StackedRow cap with the stops it resolved', () => {
@@ -51,7 +51,7 @@ describe('Attachments rows are a CONTAINER-CAP stack', () => {
       radius: row.getAttribute('data-radius-knob'),
       space: row.getAttribute('data-space-knob'),
     }));
-    expect(declared).toEqual([
+    expect(declared).toStrictEqual([
       { container: 'StackedRow', position: 'first', radius: 'large', space: 'small' },
       { container: 'StackedRow', position: 'last', radius: 'large', space: 'small' },
     ]);
@@ -61,7 +61,7 @@ describe('Attachments rows are a CONTAINER-CAP stack', () => {
     for (const row of rowAtoms({ borderRadius: 'none' })) {
       const corners = row.filter((a) => /^_border(Start|End)(Start|End)Radius-(\d+px|t-radius-\d+)$/.test(a));
       expect(corners).toHaveLength(4);
-      expect(corners.filter((a) => !/-(0px|t-radius-0)$/.test(a))).toEqual([]);
+      expect(corners.filter((a) => !/-(0px|t-radius-0)$/.test(a))).toStrictEqual([]);
     }
   });
 });

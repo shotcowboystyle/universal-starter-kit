@@ -42,8 +42,8 @@ describe('PageHeader page-title scale', () => {
     );
 
     expect(byDefault).not.toHaveLength(0);
-    expect(byDefault).toEqual(moderate);
-    expect(byDefault).not.toEqual(display);
+    expect(byDefault).toStrictEqual(moderate);
+    expect(byDefault).not.toStrictEqual(display);
   });
 
   it('the pageTitleScale knob re-scales the title without touching the screen', () => {
@@ -65,8 +65,8 @@ describe('PageHeader page-title scale', () => {
     );
 
     // Both opt-in channels resolve through the one table, so they agree.
-    expect(knobDisplay).toEqual(propDisplay);
-    expect(knobDisplay).not.toEqual(knobModerate);
+    expect(knobDisplay).toStrictEqual(propDisplay);
+    expect(knobDisplay).not.toStrictEqual(knobModerate);
   });
 
   it('the per-instance eject still wins over the surface knob', () => {
@@ -84,7 +84,7 @@ describe('PageHeader page-title scale', () => {
         titleScale="moderate"
       />,
     );
-    expect(ejected).toEqual(moderate);
+    expect(ejected).toStrictEqual(moderate);
   });
 
   it('the heading level is semantics, not scale — h1 either way', () => {

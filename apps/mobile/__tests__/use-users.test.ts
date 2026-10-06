@@ -27,7 +27,7 @@ describe('useUsers', () => {
       expect(result.current.isSuccess).toBe(true);
     });
 
-    expect(result.current.data).toEqual(mockUsers);
+    expect(result.current.data).toStrictEqual(mockUsers);
     expect(userApi.searchUsers).toHaveBeenCalledWith('test');
   });
 

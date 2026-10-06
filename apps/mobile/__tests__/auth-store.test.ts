@@ -28,7 +28,7 @@ describe('useAuthStore', () => {
   it('should call setUser', () => {
     const mockUser = { _id: '1', email: 't@e.com', name: 'N' };
     useAuthStore.getState().setUser(mockUser);
-    expect(useAuthStore.getState().user).toEqual(mockUser);
+    expect(useAuthStore.getState().user).toStrictEqual(mockUser);
   });
 
   it('should call setLoading and setError', () => {

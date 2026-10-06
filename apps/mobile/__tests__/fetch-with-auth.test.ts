@@ -146,7 +146,7 @@ describe('fetchWithAuth', () => {
     } as any);
 
     const res = await fetchWithAuth('/test');
-    expect(res).toEqual({ data: 1 });
+    expect(res).toStrictEqual({ data: 1 });
   });
 
   it('should merge Headers object into request headers', async () => {
@@ -210,6 +210,6 @@ describe('fetchWithAuth', () => {
 
     // Without handleEmptyResponse flag, it calls json() regardless
     const res = await fetchWithAuth('/test');
-    expect(res).toEqual({ result: 'ok' });
+    expect(res).toStrictEqual({ result: 'ok' });
   });
 });

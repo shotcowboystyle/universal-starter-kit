@@ -42,7 +42,7 @@ describe('MatrixView', () => {
     );
 
     const columns = Array.from(container.querySelectorAll('[data-matrix-column]'));
-    expect(columns.map((el) => el.getAttribute('data-matrix-column'))).toEqual([
+    expect(columns.map((el) => el.getAttribute('data-matrix-column'))).toStrictEqual([
       '2026-01-01',
       '2026-02-01',
       '2026-03-01',
@@ -52,7 +52,7 @@ describe('MatrixView', () => {
     expect(container.querySelector('[data-matrix-view="month"]')).toBeTruthy();
 
     const labels = Array.from(container.querySelectorAll('[data-matrix-row-label]'));
-    expect(labels.map((el) => el.textContent)).toEqual(['Checking', 'Savings', 'HSA']);
+    expect(labels.map((el) => el.textContent)).toStrictEqual(['Checking', 'Savings', 'HSA']);
     expect(container.querySelectorAll('[data-matrix-row]')).toHaveLength(3);
     expect(container.querySelectorAll('[data-matrix-cell]')).toHaveLength(9);
     expect(screen.getByText('Subject')).toBeInTheDocument();
@@ -75,7 +75,7 @@ describe('MatrixView', () => {
     expect(container.querySelector('[data-matrix-view="week"]')).toBeTruthy();
     const expected = generateBuckets({ start: new Date(2026, 0, 5), end: new Date(2026, 2, 10) }, 'week');
     const columns = Array.from(container.querySelectorAll('[data-matrix-column]'));
-    expect(columns.map((el) => el.getAttribute('data-matrix-column'))).toEqual(expected.map((b) => b.key));
+    expect(columns.map((el) => el.getAttribute('data-matrix-column'))).toStrictEqual(expected.map((b) => b.key));
     expect(columns.length).toBeGreaterThan(3);
   });
 
@@ -89,7 +89,7 @@ describe('MatrixView', () => {
       />,
     );
     const columns = Array.from(container.querySelectorAll('[data-matrix-column]'));
-    expect(columns.map((el) => el.getAttribute('data-matrix-column'))).toEqual([
+    expect(columns.map((el) => el.getAttribute('data-matrix-column'))).toStrictEqual([
       '2025-11-01',
       '2025-12-01',
       '2026-01-01',
@@ -164,7 +164,7 @@ describe('MatrixView', () => {
     const swatches = Array.from(legend.querySelectorAll('[data-matrix-legend-swatch]')).map((el) =>
       el.getAttribute('data-matrix-legend-swatch'),
     );
-    expect(swatches).toEqual(['empty', '0', '0.25', '0.5', '0.75', '1', '1']);
+    expect(swatches).toStrictEqual(['empty', '0', '0.25', '0.5', '0.75', '1', '1']);
 
     cleanup();
     const { container: bare } = renderWithProviders(
@@ -219,7 +219,7 @@ describe('MatrixView', () => {
     const ref = onCellPress.mock.calls[0][0];
     expect(ref.row.id).toBe('a');
     expect(ref.bucket.key).toBe('2026-01-01');
-    expect(ref.bucket.start).toEqual(new Date(2026, 0, 1));
+    expect(ref.bucket.start).toStrictEqual(new Date(2026, 0, 1));
     expect(ref.summary.value).toBe(10);
     expect(ref.summary.count).toBe(2);
 

@@ -15,7 +15,7 @@ describe('composeA11yName', () => {
 
 describe('choiceItemA11y', () => {
   it('carries role, name and both state spellings', () => {
-    expect(choiceItemA11y({ kind: 'radio', name: 'DEBITS', selected: true, disabled: false })).toEqual({
+    expect(choiceItemA11y({ kind: 'radio', name: 'DEBITS', selected: true, disabled: false })).toStrictEqual({
       accessible: true,
       role: 'button',
       accessibilityRole: 'button',
@@ -46,7 +46,7 @@ describe('choiceItemA11y', () => {
       disabled: true,
     });
     expect('accessibilityHint' in props).toBe(false);
-    expect(props.accessibilityState).toEqual({ disabled: true, selected: false, checked: false });
+    expect(props.accessibilityState).toStrictEqual({ disabled: true, selected: false, checked: false });
   });
 
   it('keeps a hint when one is given', () => {

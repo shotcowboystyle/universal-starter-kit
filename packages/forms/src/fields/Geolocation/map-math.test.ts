@@ -52,7 +52,7 @@ describe('mapMath', () => {
   });
 
   it('tilesForView covers the box and skips empty layout', () => {
-    expect(tilesForView({ lat: 0, lng: 0, zoom: 2, width: 0, height: 200 })).toEqual([]);
+    expect(tilesForView({ lat: 0, lng: 0, zoom: 2, width: 0, height: 200 })).toStrictEqual([]);
     const tiles = tilesForView({ lat: 0, lng: 0, zoom: 2, width: 256, height: 256 });
     expect(tiles.length).toBeGreaterThan(0);
     expect(tiles.every((tile) => tile.tx >= 0 && tile.ty >= 0)).toBe(true);

@@ -65,7 +65,7 @@ describe('Tags Add Tag trigger (chip-scale)', () => {
     const trigger = screen.getByLabelText('Add Tag');
     const pill = triggerPillOf(trigger);
     const paddingPrefixes = ['_pt-', '_pb-', '_pl-', '_pr-'];
-    expect(classesByPrefix(pill, paddingPrefixes)).toEqual(classesByPrefix(chip, paddingPrefixes));
+    expect(classesByPrefix(pill, paddingPrefixes)).toStrictEqual(classesByPrefix(chip, paddingPrefixes));
   });
 
   it('trigger pill height matches the chip pill (size recipe)', () => {
@@ -78,9 +78,9 @@ describe('Tags Add Tag trigger (chip-scale)', () => {
     // border: the trigger is outlined and the tag chips are not, and while
     // the border width lived on the `outline` variant alone the trigger
     // rendered 2px taller than the chips beside it in the same row.
-    expect(classesByPrefix(pill, ['_h-'])).toEqual(classesByPrefix(chip, ['_h-']));
+    expect(classesByPrefix(pill, ['_h-'])).toStrictEqual(classesByPrefix(chip, ['_h-']));
     const borderPrefixes = ['_btw-', '_bbw-', '_blw-', '_brw-', '_bw-'];
-    expect(classesByPrefix(pill, borderPrefixes)).toEqual(classesByPrefix(chip, borderPrefixes));
+    expect(classesByPrefix(pill, borderPrefixes)).toStrictEqual(classesByPrefix(chip, borderPrefixes));
     expect(classesByPrefix(pill, borderPrefixes).length).toBeGreaterThan(0);
   });
 
@@ -110,10 +110,10 @@ describe('Tags Add Tag trigger (chip-scale)', () => {
     const chip = chipFrameOf(screen.getByText('urgent'));
     const edges = ['_btw-', '_bbw-', '_blw-', '_brw-'];
     const expected = edges.map((edge) => `${edge}${px}`).sort();
-    expect(classesByPrefix(pill, edges)).toEqual(expected);
+    expect(classesByPrefix(pill, edges)).toStrictEqual(expected);
     // The trigger and the chips it sits beside share one box at every stop;
     // a floor on only one of them is what pulled their heights apart.
-    expect(classesByPrefix(chip, edges)).toEqual(expected);
+    expect(classesByPrefix(chip, edges)).toStrictEqual(expected);
   });
 
   it('trigger wrapper carries the 44px press-floor (minHeight class)', () => {
@@ -126,7 +126,7 @@ describe('Tags Add Tag trigger (chip-scale)', () => {
     renderTags();
     const chipLabel = screen.getByText('urgent');
     const triggerLabel = screen.getByText('Add Tag');
-    expect(classesByPrefix(triggerLabel, ['_fos-'])).toEqual(classesByPrefix(chipLabel, ['_fos-']));
+    expect(classesByPrefix(triggerLabel, ['_fos-'])).toStrictEqual(classesByPrefix(chipLabel, ['_fos-']));
   });
 
   it('clicking the trigger opens the add-tag panel', async () => {

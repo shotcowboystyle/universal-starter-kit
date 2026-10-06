@@ -23,7 +23,7 @@ describe('Middleware', () => {
 
   it('should have correct config matcher', () => {
     expect(config.matcher).toBeDefined();
-    expect(config.matcher).toEqual(['/((?!api|_next/static|_next/image|favicon.ico).*)']);
+    expect(config.matcher).toStrictEqual(['/((?!api|_next/static|_next/image|favicon.ico).*)']);
   });
 
   it('should exclude API routes from matcher pattern', () => {

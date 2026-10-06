@@ -165,7 +165,7 @@ describe('Badge design-law — T-BODY count text (SB-M-101)', () => {
     const boldWeight = atoms(countText(bold.container), ['_fow-']).join(' ');
     expect(regularWeight).toMatch(/600|weight-6|fow-6/);
     expect(boldWeight).toMatch(/600|weight-6|fow-6/);
-    expect(boldWeight).toEqual(regularWeight);
+    expect(boldWeight).toStrictEqual(regularWeight);
   });
 
   it('lets the bodyFont knob restyle the count text node', () => {
@@ -208,7 +208,7 @@ describe('Badge design-law — size geometry and R-PILL', () => {
       </Preset>,
     );
     expect(smallHeight.length).toBeGreaterThan(0);
-    expect(atoms(large.container.querySelector('[data-badge]'), ['_h-'])).not.toEqual(smallHeight);
+    expect(atoms(large.container.querySelector('[data-badge]'), ['_h-'])).not.toStrictEqual(smallHeight);
   });
 
   it('stays a pill at borderRadius none (R-PILL, Axiom 3 does not square it)', () => {

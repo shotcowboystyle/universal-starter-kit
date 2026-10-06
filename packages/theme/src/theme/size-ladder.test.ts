@@ -38,7 +38,7 @@ describe('size ladder — measured table, not a ratio', () => {
       expect(recipe.fontSize, `${token} label`).toBe(row.fontSize);
       expect(recipe.iconSize, `${token} icon`).toBe(row.iconSize);
       expect(SIZE_RECIPE_RADII[token], `${token} radius`).toBe(row.radius);
-      expect(TAMAGUI_CONTROL_SIZE_TABLE[token]).toEqual(row);
+      expect(TAMAGUI_CONTROL_SIZE_TABLE[token]).toStrictEqual(row);
     }
   });
 

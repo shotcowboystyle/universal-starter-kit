@@ -69,7 +69,7 @@ describe('workspace-store - Project actions', () => {
       await store.fetchProjects('board-1');
 
       const state = useWorkspaceStore.getState();
-      expect(state.projects).toEqual([]);
+      expect(state.projects).toStrictEqual([]);
       expect(state.isLoadingProjects).toBe(false);
     });
 
@@ -274,7 +274,7 @@ describe('workspace-store - Project actions', () => {
       store.setProjects(mockProjects);
 
       const state = useWorkspaceStore.getState();
-      expect(state.projects).toEqual(mockProjects);
+      expect(state.projects).toStrictEqual(mockProjects);
     });
   });
 });

@@ -57,17 +57,17 @@ describe('StarInk (native) motion props', () => {
   // Axiom 4: the token IS the knob's. A hardcoded duration, or a token not
   // scoped to opacity, fails here.
   it('scopes the knob token to opacity', () => {
-    expect(inkMotionProps('quick')).toEqual({ transition: { opacity: 'quick' } });
+    expect(inkMotionProps('quick')).toStrictEqual({ transition: { opacity: 'quick' } });
     // A different knob must produce a different token — pinning only "quick"
     // would pass against a hardcoded default.
-    expect(inkMotionProps('bouncy')).toEqual({ transition: { opacity: 'bouncy' } });
+    expect(inkMotionProps('bouncy')).toStrictEqual({ transition: { opacity: 'bouncy' } });
   });
 
   // Axiom 3. The positive control is the assertion above: the same
   // helper demonstrably yields a transition when a token exists, so the empty
   // object here is a measured absence rather than a probe that sees nothing.
   it('emits NO transition at animation=none / reduced motion', () => {
-    expect(inkMotionProps(undefined)).toEqual({});
+    expect(inkMotionProps(undefined)).toStrictEqual({});
   });
 
   // The web fix deliberately dropped `|| "quick"`; native must not reintroduce
@@ -84,7 +84,7 @@ describe('StarInk (native) layer stack', () => {
     const { container } = renderInk({ filled: false });
     expect(layer(container, 'empty')).not.toBeNull();
     expect(layer(container, 'filled')).not.toBeNull();
-    expect(captured.map((c) => c.weight).sort()).toEqual(['fill', 'regular']);
+    expect(captured.map((c) => c.weight).sort()).toStrictEqual(['fill', 'regular']);
   });
 
   it('cross-fades opacity with the filled state', () => {
@@ -147,7 +147,7 @@ describe('StarInk (native) layer stack', () => {
     renderInk({ filled: true });
     expect(captured).toHaveLength(2);
     for (const props of captured) {
-      expect(props.keys).toEqual(['color', 'size', 'weight']);
+      expect(props.keys).toStrictEqual(['color', 'size', 'weight']);
     }
     expect(captured.find((c) => c.weight === 'fill')?.color).toBe('#634FC4');
     expect(captured.find((c) => c.weight === 'regular')?.color).toBe('#D3D1D6');
@@ -173,7 +173,7 @@ describe('StarInk web/native parity', () => {
     expect(captured).toHaveLength(1);
     expect(captured[0]?.weight).toBe('fill');
     expect(captured[0]?.color).toBe('#634FC4');
-    expect(captured[0]?.keys).toEqual(['color', 'size', 'weight']);
+    expect(captured[0]?.keys).toStrictEqual(['color', 'size', 'weight']);
     // No ink layers on web: the cascade does that job there.
     expect(container.querySelector('[data-rating-ink]')).toBeNull();
   });

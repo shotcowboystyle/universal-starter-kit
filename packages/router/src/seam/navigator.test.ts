@@ -43,7 +43,7 @@ describe('StackNavigator', () => {
     expect(stackNavigator.match('/todos')?.route.tag).toBe('todos');
     const detail = stackNavigator.match('/pokemon/bulbasaur?shiny=1');
     expect(detail?.route.tag).toBe('pokemon-detail');
-    expect(detail?.params).toEqual({ shiny: '1', id: 'bulbasaur' });
+    expect(detail?.params).toStrictEqual({ shiny: '1', id: 'bulbasaur' });
     expect(stackNavigator.match('/nope')).toBeNull();
   });
 
@@ -70,7 +70,7 @@ describe('StackNavigator', () => {
 
     stackNavigator.push('/pokemon/mew');
     expect(stackNavigator.getSnapshot()).toMatchObject({ tag: 'pokemon-detail', depth: 3 });
-    expect(stackNavigator.paramsSnapshot('pokemon-detail')).toEqual({ id: 'mew' });
+    expect(stackNavigator.paramsSnapshot('pokemon-detail')).toStrictEqual({ id: 'mew' });
 
     // Tag already in the stack → interpreted as "navigate back to it".
     stackNavigator.push('/todos');
@@ -135,7 +135,7 @@ describe('StackNavigator', () => {
     stackNavigator.push('/pokemon/mew');
     stackNavigator.replace('/pokemon/ditto');
     expect(stackNavigator.getSnapshot()).toMatchObject({ tag: 'pokemon-detail', depth: 2 });
-    expect(stackNavigator.paramsSnapshot('pokemon-detail')).toEqual({ id: 'ditto' });
+    expect(stackNavigator.paramsSnapshot('pokemon-detail')).toStrictEqual({ id: 'ditto' });
   });
 
   it('replace dedupes a target that already sits in the back stack', () => {
@@ -178,7 +178,7 @@ describe('StackNavigator', () => {
       depth: 2,
       canGoBack: true,
     });
-    expect(stackNavigator.paramsSnapshot('pokemon-detail')).toEqual({ id: 'mew' });
+    expect(stackNavigator.paramsSnapshot('pokemon-detail')).toStrictEqual({ id: 'mew' });
     log.mockRestore();
   });
 
@@ -282,7 +282,7 @@ describe('StackNavigator', () => {
     // Host stack unchanged (param-only), loader data + params updated.
     expect(adapter.get_navigation_stack().get_n_items()).toBe(2);
     expect(stackNavigator.loaderSnapshot('pokemon-detail')).toBe('doc:ditto');
-    expect(stackNavigator.paramsSnapshot('pokemon-detail')).toEqual({ id: 'ditto' });
+    expect(stackNavigator.paramsSnapshot('pokemon-detail')).toStrictEqual({ id: 'ditto' });
   });
 
   it('preload resolves the loader without navigating', async () => {
@@ -307,6 +307,6 @@ describe('StackNavigator', () => {
     attachDomHost();
     stackNavigator.push('/pokemon/mew');
     stackNavigator.setParams({ tab: 'stats' });
-    expect(stackNavigator.paramsSnapshot('pokemon-detail')).toEqual({ id: 'mew', tab: 'stats' });
+    expect(stackNavigator.paramsSnapshot('pokemon-detail')).toStrictEqual({ id: 'mew', tab: 'stats' });
   });
 });

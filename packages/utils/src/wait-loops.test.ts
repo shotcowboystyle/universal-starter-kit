@@ -131,7 +131,7 @@ describe('wait loops', () => {
   describe('waitForPostgres', () => {
     it('connects with defaults, probes SELECT 1, and always closes the client', async () => {
       await expect(waitForPostgres(1000)).resolves.toBeUndefined();
-      expect(pgState.lastConfig).toEqual({
+      expect(pgState.lastConfig).toStrictEqual({
         database: 'postgres',
         host: 'localhost',
         password: 'postgres', // gitleaks:allow -- test fixture
@@ -149,7 +149,7 @@ describe('wait loops', () => {
       process.env.POSTGRES_PORT = '6543';
       process.env.POSTGRES_USERNAME = 'svc';
       await waitForPostgres(1000);
-      expect(pgState.lastConfig).toEqual({
+      expect(pgState.lastConfig).toStrictEqual({
         database: 'appdb',
         host: 'db.internal',
         password: 'secret', // gitleaks:allow -- test fixture

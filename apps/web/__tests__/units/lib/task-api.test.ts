@@ -277,7 +277,7 @@ describe('taskApi', () => {
 
       const result = await taskApi.getTaskPermissions('task-1');
 
-      expect(result).toEqual(mockPermissions);
+      expect(result).toStrictEqual(mockPermissions);
       expect(mockFetch).toHaveBeenCalledWith(expect.stringContaining('/tasks/task-1/permissions'), expect.any(Object));
     });
   });

@@ -400,7 +400,7 @@ describe('TreeView retained scroll (actual list, modeled geometry)', () => {
     tree.emitScroll(128.5);
     tree.emitScroll(128.5);
     tree.emitScroll(256.25);
-    expect(change.mock.calls).toEqual([[128.5], [256.25]]);
+    expect(change.mock.calls).toStrictEqual([[128.5], [256.25]]);
     const later = vi.fn();
     tree.rerender({ onScrollOffsetChange: later });
     tree.commitLayout();
@@ -626,7 +626,7 @@ describe('TreeView retained scroll (actual list, modeled geometry)', () => {
     tree.emitScroll(Number.NaN);
     tree.emitScroll(-25);
     tree.emitScroll(10_000);
-    expect(change.mock.calls).toEqual([[260], [0], [760]]);
+    expect(change.mock.calls).toStrictEqual([[260], [0], [760]]);
   });
 
   it('does not emit or schedule restoration during teardown or a callback-triggered unmount', async () => {
@@ -751,7 +751,7 @@ describe('TreeView retained scroll arbitration', () => {
     tree.emitScroll(300.25);
     act(() => observed.props?.onScrollBeginDrag?.({} as never));
     tree.emitScroll(400.5);
-    expect(change.mock.calls).toEqual([[300.25], [400.5]]);
+    expect(change.mock.calls).toStrictEqual([[300.25], [400.5]]);
   });
 });
 
@@ -872,7 +872,7 @@ describe('TreeView retained scroll lifecycle', () => {
       expect(tree.scroll).toHaveBeenCalled();
     });
     await settle();
-    expect(tree.scroll.mock.calls.map(([args]) => args.offset)).toEqual([192]);
+    expect(tree.scroll.mock.calls.map(([args]) => args.offset)).toStrictEqual([192]);
   });
 
   it("does not let a detached list's delayed load ready the replacement list", async () => {
@@ -918,7 +918,7 @@ test('retains a seed across a stale load with provisional content, then restores
   tree.load();
   tree.contentSize();
   await settle();
-  expect(change.mock.calls).toEqual([[640.5]]);
+  expect(change.mock.calls).toStrictEqual([[640.5]]);
   expect(tree.scroll).toHaveBeenCalledExactlyOnceWith({ offset: 640.5, animated: false });
 });
 

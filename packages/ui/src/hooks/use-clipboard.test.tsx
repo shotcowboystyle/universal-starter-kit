@@ -115,53 +115,53 @@ describe('useAssets', () => {
   it('should return an array with a single module when passed a single module', () => {
     const mockModule = { default: 'mockedImage' };
     const { result } = renderHook(() => useAssets([mockModule]));
-    expect(result.current).toEqual([mockModule.default]);
+    expect(result.current).toStrictEqual([mockModule.default]);
   });
 
   it('should return an array with the modules when passed an array of modules', () => {
     const mockModule1 = { default: 'mockedImage1' };
     const mockModule2 = { default: 'mockedImage2' };
     const { result } = renderHook(() => useAssets([mockModule1, mockModule2]));
-    expect(result.current).toEqual([mockModule1.default, mockModule2.default]);
+    expect(result.current).toStrictEqual([mockModule1.default, mockModule2.default]);
   });
 
   it('should return an empty array when no modules are provided', () => {
     const { result } = renderHook(() => useAssets([]));
-    expect(result.current).toEqual([]);
+    expect(result.current).toStrictEqual([]);
   });
 
   it('should return an array of undefined if an empty module is passed', () => {
     const result = useAssets([]);
-    expect(result).toEqual([]);
+    expect(result).toStrictEqual([]);
   });
 
   it('should return a single module with a default property', () => {
     const result = useAssets([{ default: 'image1' }]);
-    expect(result).toEqual(['image1']);
+    expect(result).toStrictEqual(['image1']);
   });
 
   it('should return a single module without a default property', () => {
     const result = useAssets(['image3']);
-    expect(result).toEqual(['image3']);
+    expect(result).toStrictEqual(['image3']);
   });
 
   it('should return an array of modules with default properties', () => {
     const result = useAssets([{ default: 'image1' }, { default: 'image2' }]);
-    expect(result).toEqual(['image1', 'image2']);
+    expect(result).toStrictEqual(['image1', 'image2']);
   });
 
   it('should return an array of modules without default properties', () => {
     const result = useAssets(['image3', { name: 'image4' }]);
-    expect(result).toEqual(['image3', { name: 'image4' }]);
+    expect(result).toStrictEqual(['image3', { name: 'image4' }]);
   });
 
   it('should handle an empty array and return an empty array', () => {
     const result = useAssets([]);
-    expect(result).toEqual([]);
+    expect(result).toStrictEqual([]);
   });
 
   it('should return an array with a mix of valid and invalid modules', () => {
     const result = useAssets([{ default: 'image1' }, 'image3', { name: 'image4' }]);
-    expect(result).toEqual(['image1', 'image3', { name: 'image4' }]);
+    expect(result).toStrictEqual(['image1', 'image3', { name: 'image4' }]);
   });
 });

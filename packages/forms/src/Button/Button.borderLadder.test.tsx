@@ -44,21 +44,21 @@ function renderAt(stop: (typeof STOPS)[number], outlined: boolean): string[] {
 
 describe('Button borderWidth ladder', () => {
   it('outlined walks the ladder: hairline at none and small, 1 at medium, 2 at large', () => {
-    expect(renderAt('none', true)).toEqual(['_btw-0--5px']);
-    expect(renderAt('small', true)).toEqual(['_btw-0--5px']);
-    expect(renderAt('medium', true)).toEqual(['_btw-1px']);
-    expect(renderAt('large', true)).toEqual(['_btw-2px']);
+    expect(renderAt('none', true)).toStrictEqual(['_btw-0--5px']);
+    expect(renderAt('small', true)).toStrictEqual(['_btw-0--5px']);
+    expect(renderAt('medium', true)).toStrictEqual(['_btw-1px']);
+    expect(renderAt('large', true)).toStrictEqual(['_btw-2px']);
   });
 
   it('outlined at none and at large no longer emit the same edge', () => {
-    expect(renderAt('none', true)).not.toEqual(renderAt('large', true));
+    expect(renderAt('none', true)).not.toStrictEqual(renderAt('large', true));
   });
 
   it('filled walks the same ladder, chromeless at none', () => {
-    expect(renderAt('none', false)).toEqual(['_btw-0px']);
-    expect(renderAt('small', false)).toEqual(['_btw-0--5px']);
-    expect(renderAt('medium', false)).toEqual(['_btw-1px']);
-    expect(renderAt('large', false)).toEqual(['_btw-2px']);
+    expect(renderAt('none', false)).toStrictEqual(['_btw-0px']);
+    expect(renderAt('small', false)).toStrictEqual(['_btw-0--5px']);
+    expect(renderAt('medium', false)).toStrictEqual(['_btw-1px']);
+    expect(renderAt('large', false)).toStrictEqual(['_btw-2px']);
   });
 
   it('the outlined prop and a filled sibling share one width at every stop', () => {
@@ -77,7 +77,7 @@ describe('Button borderWidth ladder', () => {
       );
       const filled = widthAtoms();
       cleanup();
-      expect(outlined, stop).toEqual(filled);
+      expect(outlined, stop).toStrictEqual(filled);
     }
   });
 });

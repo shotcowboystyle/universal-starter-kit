@@ -39,6 +39,6 @@ describe('the gnome platform entry', () => {
   });
 
   it('answers every key the default entry does, so the flag set cannot drift', () => {
-    expect(Object.keys(platform).sort()).toEqual(Object.keys(webPlatform).sort());
+    expect(Object.keys(platform).sort()).toStrictEqual(Object.keys(webPlatform).sort());
   });
 });

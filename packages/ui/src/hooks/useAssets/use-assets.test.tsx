@@ -30,7 +30,7 @@ describe('useAssets (Web)', () => {
       default: { src: 'test.jpg', width: 100, height: 100 },
     };
     const { result } = renderHook(() => useAssetsWeb([mockModule]));
-    expect(result.current).toEqual([mockModule.default]);
+    expect(result.current).toStrictEqual([mockModule.default]);
   });
 
   it('should handle array of modules', () => {
@@ -39,17 +39,17 @@ describe('useAssets (Web)', () => {
       { default: { src: 'test2.jpg', width: 200, height: 200 } },
     ];
     const { result } = renderHook(() => useAssetsWeb(mockModules));
-    expect(result.current).toEqual(mockModules.map((m) => m.default));
+    expect(result.current).toStrictEqual(mockModules.map((m) => m.default));
   });
 
   it('should handle empty input', () => {
     const { result } = renderHook(() => useAssetsWeb([]));
-    expect(result.current).toEqual([]);
+    expect(result.current).toStrictEqual([]);
   });
 
   it('should handle undefined module', () => {
     const { result } = renderHook(() => useAssetsWeb([undefined]));
-    expect(result.current).toEqual([undefined]);
+    expect(result.current).toStrictEqual([undefined]);
   });
 });
 
@@ -57,7 +57,7 @@ describe('useAssets (Native)', () => {
   it('should handle single module input', () => {
     const mockModule = { default: 'test-asset' };
     const { result } = renderHook(() => useAssetsNative(mockModule));
-    expect(result.current).toEqual([
+    expect(result.current).toStrictEqual([
       {
         height: 100,
         width: 200,
@@ -69,7 +69,7 @@ describe('useAssets (Native)', () => {
   it('should handle array of modules', () => {
     const mockModules = [{ default: 'test1' }, { default: 'test2' }];
     const { result } = renderHook(() => useAssetsNative(mockModules));
-    expect(result.current).toEqual([
+    expect(result.current).toStrictEqual([
       {
         height: 100,
         width: 200,
@@ -85,7 +85,7 @@ describe('useAssets (Native)', () => {
 
   it('should handle empty input', () => {
     const { result } = renderHook(() => useAssetsNative([]));
-    expect(result.current).toEqual([]);
+    expect(result.current).toStrictEqual([]);
   });
 
   it('should handle non-object input', () => {
@@ -138,7 +138,7 @@ describe('useAssets (Native) - Unit Tests for expoUseAssets behavior', () => {
     }));
     const { useAssets: useAssetsNative } = await import('./index.native');
     const { result } = renderHook(() => useAssetsNative('dummy-module'));
-    expect(result.current).toEqual([
+    expect(result.current).toStrictEqual([
       {
         height: 100,
         src: 'test-uri',

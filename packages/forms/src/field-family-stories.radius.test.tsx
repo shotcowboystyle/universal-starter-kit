@@ -177,7 +177,7 @@ describe('stories that mount a text control beside a form part use house chrome'
       for (const stop of stops) {
         it(`wraps every input in chrome at radius ${ladder[stop]} at borderRadius:${stop}`, () => {
           const { container } = mountAt(story, meta as { args?: unknown }, stop);
-          expect(inputChromeTokens(container)).toEqual(Array(inputs).fill(ladder[stop]));
+          expect(inputChromeTokens(container)).toStrictEqual(Array(inputs).fill(ladder[stop]));
         });
       }
     });

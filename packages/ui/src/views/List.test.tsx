@@ -106,13 +106,13 @@ describe('ListRow ink — textAccent reaches the TEXT NODE (F11 / data-chrome ho
     const low = titleColor('ink-low', 'low');
     expect(high).not.toHaveLength(0);
     expect(low).not.toHaveLength(0);
-    expect(high).not.toEqual(low);
+    expect(high).not.toStrictEqual(low);
   });
 
   it('low and medium share the AA legibility floor on the title', () => {
     const low = titleColor('ink-floor-low', 'low');
     const medium = titleColor('ink-floor-medium', 'medium');
-    expect(low).toEqual(medium);
+    expect(low).toStrictEqual(medium);
   });
 
   it('moves ListRowMeta default ink with textAccent', () => {
@@ -128,7 +128,7 @@ describe('ListRow ink — textAccent reaches the TEXT NODE (F11 / data-chrome ho
     const low = metaColor('meta-low', 'low');
     expect(high).not.toHaveLength(0);
     expect(low).not.toHaveLength(0);
-    expect(high).not.toEqual(low);
+    expect(high).not.toStrictEqual(low);
   });
 });
 
@@ -156,9 +156,9 @@ describe('List rows are a CONTAINER-CAP stack', () => {
 
   it('caps the outer corners at the row padding at full, square inside', () => {
     const [first, middle, last] = rows({ borderRadius: 'full', space: 'medium' });
-    expect(first.corners).toEqual(['_borderEndEndRadius-0px', '_borderStartStartRadius-18px']);
-    expect(middle.corners).toEqual(['_borderEndEndRadius-0px', '_borderStartStartRadius-0px']);
-    expect(last.corners).toEqual(['_borderEndEndRadius-18px', '_borderStartStartRadius-0px']);
+    expect(first.corners).toStrictEqual(['_borderEndEndRadius-0px', '_borderStartStartRadius-18px']);
+    expect(middle.corners).toStrictEqual(['_borderEndEndRadius-0px', '_borderStartStartRadius-0px']);
+    expect(last.corners).toStrictEqual(['_borderEndEndRadius-18px', '_borderStartStartRadius-0px']);
   });
 
   it('caps large at 13 under space small', () => {
@@ -167,7 +167,7 @@ describe('List rows are a CONTAINER-CAP stack', () => {
   });
 
   it('declares each row a StackedRow with its position', () => {
-    expect(rows({ borderRadius: 'large', space: 'small' }).map((r) => [r.container, r.position])).toEqual([
+    expect(rows({ borderRadius: 'large', space: 'small' }).map((r) => [r.container, r.position])).toStrictEqual([
       ['StackedRow', 'first'],
       ['StackedRow', 'middle'],
       ['StackedRow', 'last'],

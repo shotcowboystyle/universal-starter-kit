@@ -116,7 +116,7 @@ describe('resolveChartPalette', () => {
 
   it('retains the dark cycle order while deepening its failing violet slot', () => {
     const palette = resolveChartPalette({ scheme: 'dark', identitySolid: '#aaaaaa' });
-    expect(palette.categorical.slice(1)).toEqual([
+    expect(palette.categorical.slice(1)).toStrictEqual([
       Colors.blueDark.blue9,
       Colors.orangeDark.orange9,
       Colors.greenDark.green9,
@@ -129,7 +129,7 @@ describe('resolveChartPalette', () => {
   });
 
   it('keeps the valid default light order and every grass-tint series', () => {
-    expect(resolveChartPalette({ scheme: 'light', identitySolid: lightAccent }).categorical).toEqual([
+    expect(resolveChartPalette({ scheme: 'light', identitySolid: lightAccent }).categorical).toStrictEqual([
       lightAccent,
       Colors.blue.blue10,
       Colors.orange.orange11,
@@ -145,7 +145,7 @@ describe('resolveChartPalette', () => {
       identityCandidates: [Colors.grass.grass10, Colors.grass.grass11],
     });
     expect(grass.categorical[0]).toBe(Colors.grass.grass10);
-    expect([...grass.categorical].sort()).toEqual(
+    expect([...grass.categorical].sort()).toStrictEqual(
       [
         Colors.grass.grass10,
         Colors.blue.blue10,
@@ -281,7 +281,7 @@ describe('resolveChartPalette', () => {
   it('is pure and stable for identical input', () => {
     const a = resolveChartPalette({ scheme: 'dark', identitySolid: redTintSolid });
     const b = resolveChartPalette({ scheme: 'dark', identitySolid: redTintSolid });
-    expect(a).toEqual(b);
+    expect(a).toStrictEqual(b);
   });
 });
 
@@ -301,11 +301,11 @@ describe('chart identity under the held dark accent', () => {
   });
 
   it('orders the accent solids nearest-first and skips what does not parse', () => {
-    expect(accentIdentityCandidates('#6d5bc8', ['#3c2d86', undefined, '#7766cc', '#634fc4'])).toEqual([
+    expect(accentIdentityCandidates('#6d5bc8', ['#3c2d86', undefined, '#7766cc', '#634fc4'])).toStrictEqual([
       '#634fc4',
       '#7766cc',
       '#3c2d86',
     ]);
-    expect(accentIdentityCandidates(undefined, ['#7766cc'])).toEqual([]);
+    expect(accentIdentityCandidates(undefined, ['#7766cc'])).toStrictEqual([]);
   });
 });

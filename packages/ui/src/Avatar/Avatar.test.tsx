@@ -28,7 +28,7 @@ describe('getInitials', () => {
 describe('fallbackTone', () => {
   it('is stable for the same seed', () => {
     expect(fallbackToneIndex('Ada Lovelace')).toBe(fallbackToneIndex('Ada Lovelace'));
-    expect(fallbackTone('Ada Lovelace')).toEqual(fallbackTone('Ada Lovelace'));
+    expect(fallbackTone('Ada Lovelace')).toStrictEqual(fallbackTone('Ada Lovelace'));
   });
 
   it('diverges for different names', () => {

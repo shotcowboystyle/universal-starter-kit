@@ -189,7 +189,7 @@ describe('Form', () => {
       });
 
       const payload = onSubmit.mock.calls[0]?.[0];
-      expect(payload).toEqual(
+      expect(payload).toStrictEqual(
         expect.objectContaining({
           editable: 'editable value',
           disabledField: 'disabled value',

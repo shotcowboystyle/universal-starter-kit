@@ -58,7 +58,7 @@ describe('AuthService', () => {
       const result = await AuthService.login('test@example.com');
 
       expect(result.access_token).toBe('test-token');
-      expect(result.user).toEqual(mockResponse.user);
+      expect(result.user).toStrictEqual(mockResponse.user);
       expect(localStorageMock.setItem).toHaveBeenCalledWith('auth_token', 'test-token');
     });
 
@@ -80,7 +80,7 @@ describe('AuthService', () => {
       const result = await AuthService.login('test@example.com');
 
       expect(result.access_token).toBe('http-only-cookie');
-      expect(result.user).toEqual(mockResponse.user);
+      expect(result.user).toStrictEqual(mockResponse.user);
     });
 
     it('should throw error on failed login', async () => {
@@ -138,7 +138,7 @@ describe('AuthService', () => {
 
       const result = await AuthService.getProfile();
 
-      expect(result).toEqual({
+      expect(result).toStrictEqual({
         _id: 'user-123',
         email: 'test@example.com',
         name: 'Test User',
@@ -170,7 +170,7 @@ describe('AuthService', () => {
 
       const result = await AuthService.getProfile();
 
-      expect(result).toEqual({
+      expect(result).toStrictEqual({
         _id: 'user-123',
         email: 'test@example.com',
         name: 'Test User',
@@ -279,7 +279,7 @@ describe('AuthService', () => {
 
       const session = await AuthService.getSession();
 
-      expect(session).toEqual({
+      expect(session).toStrictEqual({
         user: {
           _id: 'user-123',
           email: 'test@example.com',

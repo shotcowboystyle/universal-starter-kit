@@ -55,7 +55,7 @@ describe('lookupTranspileModules', () => {
       transpileModules: ['a-one', 'a-two'],
     });
     const modules = lookupTranspileModules([extra], { log: false });
-    expect(modules).toEqual(expect.arrayContaining(['root-transpile', 'a-one', 'a-two']));
+    expect(modules).toStrictEqual(expect.arrayContaining(['root-transpile', 'a-one', 'a-two']));
   });
 
   it('ignores directories without a package.json', () => {
@@ -68,7 +68,7 @@ describe('lookupTranspileModules', () => {
   it('treats packages without a transpileModules field as empty', () => {
     const bare = writePkg(path.join(fixtureRoot, 'pkg-bare'), { name: 'pkg-bare' });
     const modules = lookupTranspileModules([bare], { log: false });
-    expect(modules).toEqual(expect.arrayContaining(['root-transpile']));
+    expect(modules).toStrictEqual(expect.arrayContaining(['root-transpile']));
   });
 
   it('recovers from malformed package.json instead of throwing', () => {
@@ -111,7 +111,7 @@ describe('lookupTamaguiModules', () => {
       tamaguiModules: ['extra-tamagui'],
     });
     const modules = lookupTamaguiModules([extra], { log: false });
-    expect(modules).toEqual(expect.arrayContaining(['tamagui', 'root-tamagui', 'extra-tamagui']));
+    expect(modules).toStrictEqual(expect.arrayContaining(['tamagui', 'root-tamagui', 'extra-tamagui']));
   });
 });
 
@@ -121,7 +121,7 @@ describe('resolveConfig', () => {
     delete process.env.MPO_DEV_SPEC_UNSET;
     try {
       const config = resolveConfig(['MPO_DEV_SPEC_SET', 'MPO_DEV_SPEC_UNSET']);
-      expect(config).toEqual({ MPO_DEV_SPEC_SET: 'value' });
+      expect(config).toStrictEqual({ MPO_DEV_SPEC_SET: 'value' });
       expect('MPO_DEV_SPEC_UNSET' in config).toBe(false);
     } finally {
       delete process.env.MPO_DEV_SPEC_SET;
@@ -129,7 +129,7 @@ describe('resolveConfig', () => {
   });
 
   it('returns an empty object for no keys', () => {
-    expect(resolveConfig()).toEqual({});
-    expect(resolveConfig([])).toEqual({});
+    expect(resolveConfig()).toStrictEqual({});
+    expect(resolveConfig([])).toStrictEqual({});
   });
 });

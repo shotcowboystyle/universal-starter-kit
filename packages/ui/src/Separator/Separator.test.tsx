@@ -96,9 +96,9 @@ describe('Separator — painted colour (the regression this component exists for
     const { container } = renderWithProviders(<Separator />);
     const separator = getSeparator(container);
     // PAINT: the declared background is the borderColor token, not transparent.
-    expect(declared(separator, 'background-color')).toEqual(['var(--borderColor)']);
+    expect(declared(separator, 'background-color')).toStrictEqual(['var(--borderColor)']);
     // GEOMETRY: exactly 1 CSS px tall — never 0.5.
-    expect(declared(separator, 'height')).toEqual(['1px']);
+    expect(declared(separator, 'height')).toStrictEqual(['1px']);
   });
 
   it('carries a visible $borderColor in BOTH schemes (token values are real colours)', () => {
@@ -120,8 +120,8 @@ describe('Separator — painted colour (the regression this component exists for
       </Theme>,
     );
     const separator = getSeparator(container);
-    expect(declared(separator, 'background-color')).toEqual(['var(--borderColor)']);
-    expect(declared(separator, 'height')).toEqual(['1px']);
+    expect(declared(separator, 'background-color')).toStrictEqual(['var(--borderColor)']);
+    expect(declared(separator, 'height')).toStrictEqual(['1px']);
   });
 });
 
@@ -129,14 +129,14 @@ describe('Separator — quiet variant (opacity 0.5, never a lighter colour)', ()
   it('dims with opacity 0.5 and keeps the exact same paint token', () => {
     const { container } = renderWithProviders(<Separator quiet />);
     const separator = getSeparator(container);
-    expect(declared(separator, 'opacity')).toEqual(['0.5']);
+    expect(declared(separator, 'opacity')).toStrictEqual(['0.5']);
     // Never a lighter colour: the paint token is unchanged from the default.
-    expect(declared(separator, 'background-color')).toEqual(['var(--borderColor)']);
+    expect(declared(separator, 'background-color')).toStrictEqual(['var(--borderColor)']);
   });
 
   it('default separator carries no opacity dim', () => {
     const { container } = renderWithProviders(<Separator />);
-    expect(declared(getSeparator(container), 'opacity')).toEqual([]);
+    expect(declared(getSeparator(container), 'opacity')).toStrictEqual([]);
   });
 });
 
@@ -144,8 +144,8 @@ describe('Separator — vertical (vertical separators are 1px wide)', () => {
   it('is 1px wide, releases the horizontal height, and declares its orientation', () => {
     const { container } = renderWithProviders(<Separator vertical />);
     const separator = getSeparator(container);
-    expect(declared(separator, 'width')).toEqual(['1px']);
-    expect(declared(separator, 'height')).toEqual(['auto']);
+    expect(declared(separator, 'width')).toStrictEqual(['1px']);
+    expect(declared(separator, 'height')).toStrictEqual(['auto']);
     expect(separator.getAttribute('aria-orientation')).toBe('vertical');
   });
 
@@ -161,8 +161,8 @@ describe('Separator — never leftover space', () => {
     const separator = getSeparator(container);
     // The raw primitive it replaced declares `flex: 1` — the defect this block
     // measures — so both ends of the flex story are pinned here.
-    expect(declared(separator, 'flex-grow')).toEqual(['0']);
-    expect(declared(separator, 'flex-shrink')).toEqual(['0']);
+    expect(declared(separator, 'flex-grow')).toStrictEqual(['0']);
+    expect(declared(separator, 'flex-shrink')).toStrictEqual(['0']);
   });
 });
 
@@ -170,6 +170,6 @@ describe('Separator — consumer eject stays the last word (STD-EJECT-LAST)', ()
   it('an explicit backgroundColor prop wins over the house paint', () => {
     const { container } = renderWithProviders(<Separator backgroundColor="$red9" />);
     const separator = getSeparator(container);
-    expect(declared(separator, 'background-color')).toEqual(['var(--red9)']);
+    expect(declared(separator, 'background-color')).toStrictEqual(['var(--red9)']);
   });
 });

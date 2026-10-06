@@ -101,9 +101,9 @@ describe('notify() delivery', () => {
     });
     notify({ severity: 'error', scope: 'field', region: 'second', body: 'Second failed' });
     expect(route.region).toBe('first');
-    expect(getFeedback().map((entry) => entry.region)).toEqual(['first', 'second']);
+    expect(getFeedback().map((entry) => entry.region)).toStrictEqual(['first', 'second']);
     dismissFeedbackByRegion('first');
-    expect(getFeedback().map((entry) => entry.region)).toEqual(['second']);
+    expect(getFeedback().map((entry) => entry.region)).toStrictEqual(['second']);
   });
 
   it('success path shows a one-liner toast', () => {

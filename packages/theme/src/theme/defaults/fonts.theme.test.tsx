@@ -127,8 +127,8 @@ describe('bodyFont text-node family, size and leading', () => {
         const measured = BODY_STOPS.map((s) => measureLabel(s.stop, scheme));
         const sizes = new Set(measured.map((m) => m.fontSize));
         const leadings = new Set(measured.map((m) => m.lineHeightPx));
-        expect([...sizes]).toEqual([LABEL_SIZE_PX]);
-        expect([...leadings]).toEqual([LABEL_LEADING_PX]);
+        expect([...sizes]).toStrictEqual([LABEL_SIZE_PX]);
+        expect([...leadings]).toStrictEqual([LABEL_LEADING_PX]);
       });
 
       it("does not leak Inter's optical tracking onto the other faces", () => {

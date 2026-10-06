@@ -15,7 +15,7 @@ describe('phone country options without Intl.DisplayNames', () => {
     const { getCountryOptions } = await import('./phone');
     const options = getCountryOptions();
     const unnamed = options.filter((option) => option.label.split('  ')[1] === option.value);
-    expect(unnamed.map((option) => option.value)).toEqual([]);
+    expect(unnamed.map((option) => option.value)).toStrictEqual([]);
     expect(options.find((option) => option.value === 'DE')?.label).toContain('Germany');
   });
 
@@ -25,6 +25,6 @@ describe('phone country options without Intl.DisplayNames', () => {
     const hits = getCountryOptions().filter(
       (option) => option.label.toLowerCase().includes(query) || option.keywords.toLowerCase().includes(query),
     );
-    expect(hits.map((option) => option.value)).toEqual(['DE']);
+    expect(hits.map((option) => option.value)).toStrictEqual(['DE']);
   });
 });

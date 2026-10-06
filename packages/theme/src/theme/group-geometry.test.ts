@@ -24,7 +24,7 @@ describe('stackRadiusProps (vertical)', () => {
   const r = '$4';
 
   it('first rounds only the top corners', () => {
-    expect(stackRadiusProps('first', r)).toEqual({
+    expect(stackRadiusProps('first', r)).toStrictEqual({
       borderStartStartRadius: r,
       borderStartEndRadius: r,
       borderEndStartRadius: 0,
@@ -33,7 +33,7 @@ describe('stackRadiusProps (vertical)', () => {
   });
 
   it('last rounds only the bottom corners', () => {
-    expect(stackRadiusProps('last', r)).toEqual({
+    expect(stackRadiusProps('last', r)).toStrictEqual({
       borderStartStartRadius: 0,
       borderStartEndRadius: 0,
       borderEndStartRadius: r,
@@ -42,7 +42,7 @@ describe('stackRadiusProps (vertical)', () => {
   });
 
   it('middle is square on every corner', () => {
-    expect(stackRadiusProps('middle', r)).toEqual({
+    expect(stackRadiusProps('middle', r)).toStrictEqual({
       borderStartStartRadius: 0,
       borderStartEndRadius: 0,
       borderEndStartRadius: 0,
@@ -51,7 +51,7 @@ describe('stackRadiusProps (vertical)', () => {
   });
 
   it('only rounds all four corners', () => {
-    expect(stackRadiusProps('only', r)).toEqual({
+    expect(stackRadiusProps('only', r)).toStrictEqual({
       borderStartStartRadius: r,
       borderStartEndRadius: r,
       borderEndStartRadius: r,
@@ -64,7 +64,7 @@ describe('stackRadiusProps (horizontal)', () => {
   const r = '$4';
 
   it('first rounds only the inline-start corners', () => {
-    expect(stackRadiusProps('first', r, 'horizontal')).toEqual({
+    expect(stackRadiusProps('first', r, 'horizontal')).toStrictEqual({
       borderStartStartRadius: r,
       borderEndStartRadius: r,
       borderStartEndRadius: 0,
@@ -73,7 +73,7 @@ describe('stackRadiusProps (horizontal)', () => {
   });
 
   it('last rounds only the inline-end corners', () => {
-    expect(stackRadiusProps('last', r, 'horizontal')).toEqual({
+    expect(stackRadiusProps('last', r, 'horizontal')).toStrictEqual({
       borderStartStartRadius: 0,
       borderEndStartRadius: 0,
       borderStartEndRadius: r,
@@ -84,13 +84,13 @@ describe('stackRadiusProps (horizontal)', () => {
 
 describe('stackEdgeRadius', () => {
   it('supports conditional edges (open accordion trigger: last item, bottom square)', () => {
-    expect(stackEdgeRadius('$4', { start: false, end: false })).toEqual({
+    expect(stackEdgeRadius('$4', { start: false, end: false })).toStrictEqual({
       borderStartStartRadius: 0,
       borderStartEndRadius: 0,
       borderEndStartRadius: 0,
       borderEndEndRadius: 0,
     });
-    expect(stackEdgeRadius('$4', { start: true })).toEqual({
+    expect(stackEdgeRadius('$4', { start: true })).toStrictEqual({
       borderStartStartRadius: '$4',
       borderStartEndRadius: '$4',
       borderEndStartRadius: 0,
@@ -99,7 +99,7 @@ describe('stackEdgeRadius', () => {
   });
 
   it('treats undefined radius as 0 (radius:none world stays square)', () => {
-    expect(stackEdgeRadius(undefined, { start: true, end: true })).toEqual({
+    expect(stackEdgeRadius(undefined, { start: true, end: true })).toStrictEqual({
       borderStartStartRadius: 0,
       borderStartEndRadius: 0,
       borderEndStartRadius: 0,

@@ -45,7 +45,7 @@ describe('TaskRepository', () => {
       const result = await repository.create(data);
 
       expect(mockModel).toHaveBeenCalledWith(data);
-      expect(result).toEqual(expect.objectContaining(data));
+      expect(result).toStrictEqual(expect.objectContaining(data));
     });
   });
 
@@ -59,7 +59,7 @@ describe('TaskRepository', () => {
       const result = await repository.findByQuery(query);
 
       expect(mockModel.find).toHaveBeenCalledWith(query);
-      expect(result).toEqual(mockTasks);
+      expect(result).toStrictEqual(mockTasks);
     });
 
     it('should accept custom sort order', async () => {
@@ -101,7 +101,7 @@ describe('TaskRepository', () => {
 
       const result = await repository.findByIdPopulated(taskId);
 
-      expect(result).toEqual(mockTask);
+      expect(result).toStrictEqual(mockTask);
     });
   });
 
@@ -116,7 +116,7 @@ describe('TaskRepository', () => {
       const result = await repository.updateById(taskId, updateData);
 
       expect(mockModel.findByIdAndUpdate).toHaveBeenCalledWith(taskId, { $set: updateData }, { new: true });
-      expect(result).toEqual(mockTask);
+      expect(result).toStrictEqual(mockTask);
     });
   });
 
@@ -129,7 +129,7 @@ describe('TaskRepository', () => {
       const result = await repository.deleteById(taskId);
 
       expect(mockModel.deleteOne).toHaveBeenCalled();
-      expect(result).toEqual({ deletedCount: 1 });
+      expect(result).toStrictEqual({ deletedCount: 1 });
     });
   });
 
@@ -142,7 +142,7 @@ describe('TaskRepository', () => {
       const result = await repository.deleteByProjectId(projectId);
 
       expect(mockModel.deleteMany).toHaveBeenCalled();
-      expect(result).toEqual({ deletedCount: 5 });
+      expect(result).toStrictEqual({ deletedCount: 5 });
     });
 
     it('should return 0 if no tasks deleted', async () => {
@@ -152,7 +152,7 @@ describe('TaskRepository', () => {
 
       const result = await repository.deleteByProjectId(projectId);
 
-      expect(result).toEqual({ deletedCount: 0 });
+      expect(result).toStrictEqual({ deletedCount: 0 });
     });
   });
 
@@ -246,7 +246,7 @@ describe('TaskRepository', () => {
       const result = await repository.save(mockTask as any);
 
       expect(mockTask.save).toHaveBeenCalled();
-      expect(result).toEqual(expect.objectContaining({ title: 'Task 1' }));
+      expect(result).toStrictEqual(expect.objectContaining({ title: 'Task 1' }));
     });
   });
 });

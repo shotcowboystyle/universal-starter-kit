@@ -302,8 +302,8 @@ describe('ToggleGroup', () => {
       const [first, middle, last] = segments;
       // Tamagui emits per-corner radius classes from stackRadiusProps.
       expect(middle.className).toMatch(/bssr-0|bstr-0|borderStartStartRadius-0/i);
-      expect(first.className).not.toEqual(middle.className);
-      expect(last.className).not.toEqual(middle.className);
+      expect(first.className).not.toStrictEqual(middle.className);
+      expect(last.className).not.toStrictEqual(middle.className);
     });
 
     it('rings the focused segment, never the group frame', () => {
@@ -434,7 +434,7 @@ describe('ToggleGroup', () => {
       );
       const segments = [...container.querySelectorAll('[data-state]')] as HTMLElement[];
       expect(segments).toHaveLength(3);
-      expect(segments.map((el) => el.getAttribute('tabindex'))).toEqual(['-1', '0', '-1']);
+      expect(segments.map((el) => el.getAttribute('tabindex'))).toStrictEqual(['-1', '0', '-1']);
     });
   });
 

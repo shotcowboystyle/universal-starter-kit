@@ -193,7 +193,7 @@ describe('Calendar', () => {
       const leaks = errorSpy.mock.calls
         .map((args) => args.map(String).join(' '))
         .filter((message) => LEAK.test(message));
-      expect(leaks).toEqual([]);
+      expect(leaks).toStrictEqual([]);
       expect(result.container.querySelector('[scaleicon]')).toBeNull();
     } finally {
       errorSpy.mockRestore();

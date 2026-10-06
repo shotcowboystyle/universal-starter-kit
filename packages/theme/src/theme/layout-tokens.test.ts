@@ -59,14 +59,14 @@ describe('readingWidthStyle', () => {
   it('defaults to ~70ch within 65–75', () => {
     expect(READING_WIDTH_CH).toBeGreaterThanOrEqual(READING_WIDTH_MIN_CH);
     expect(READING_WIDTH_CH).toBeLessThanOrEqual(READING_WIDTH_MAX_CH);
-    expect(readingWidthStyle()).toEqual({ maxWidth: '70ch', width: '100%' });
+    expect(readingWidthStyle()).toStrictEqual({ maxWidth: '70ch', width: '100%' });
   });
 
   it('clamps and supports eject', () => {
-    expect(readingWidthStyle(40)).toEqual({ maxWidth: '65ch', width: '100%' });
-    expect(readingWidthStyle(90)).toEqual({ maxWidth: '75ch', width: '100%' });
-    expect(readingWidthStyle('none')).toEqual({});
-    expect(readingWidthStyle(null)).toEqual({});
+    expect(readingWidthStyle(40)).toStrictEqual({ maxWidth: '65ch', width: '100%' });
+    expect(readingWidthStyle(90)).toStrictEqual({ maxWidth: '75ch', width: '100%' });
+    expect(readingWidthStyle('none')).toStrictEqual({});
+    expect(readingWidthStyle(null)).toStrictEqual({});
   });
 });
 
@@ -80,9 +80,9 @@ describe('overlay anchoring', () => {
 describe('press target', () => {
   it('exports 44px floor + hitSlop expansion', () => {
     expect(MIN_PRESS_TARGET).toBe(44);
-    expect(pressTargetStyle()).toEqual({ minWidth: 44, minHeight: 44 });
-    expect(pressTargetHitSlop(24)).toEqual({ top: 10, bottom: 10, left: 10, right: 10 });
-    expect(pressTargetHitSlop(44)).toEqual({ top: 0, bottom: 0, left: 0, right: 0 });
+    expect(pressTargetStyle()).toStrictEqual({ minWidth: 44, minHeight: 44 });
+    expect(pressTargetHitSlop(24)).toStrictEqual({ top: 10, bottom: 10, left: 10, right: 10 });
+    expect(pressTargetHitSlop(44)).toStrictEqual({ top: 0, bottom: 0, left: 0, right: 0 });
   });
 });
 

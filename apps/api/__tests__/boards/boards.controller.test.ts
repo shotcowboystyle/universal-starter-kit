@@ -41,7 +41,7 @@ describe('BoardController', () => {
 
       service.create.mockResolvedValue(result as any);
 
-      await expect(controller.create(createBoardDto as any, user)).resolves.toEqual(result);
+      await expect(controller.create(createBoardDto as any, user)).resolves.toStrictEqual(result);
       expect(service.create).toHaveBeenCalledWith({ ...createBoardDto, owner: '1' });
     });
   });
@@ -53,7 +53,7 @@ describe('BoardController', () => {
 
       service.findAll.mockResolvedValue(result);
 
-      await expect(controller.findAll(user)).resolves.toEqual(result);
+      await expect(controller.findAll(user)).resolves.toStrictEqual(result);
       expect(service.findAll).toHaveBeenCalledWith('1');
     });
   });
@@ -65,7 +65,7 @@ describe('BoardController', () => {
 
       service.findOne.mockResolvedValue(result as any);
 
-      await expect(controller.findOne('1', user)).resolves.toEqual(result);
+      await expect(controller.findOne('1', user)).resolves.toStrictEqual(result);
       expect(service.findOne).toHaveBeenCalledWith('1', '1');
     });
   });
@@ -78,7 +78,7 @@ describe('BoardController', () => {
 
       service.update.mockResolvedValue(result as any);
 
-      await expect(controller.update('1', updateBoardDto as any, user)).resolves.toEqual(result);
+      await expect(controller.update('1', updateBoardDto as any, user)).resolves.toStrictEqual(result);
       expect(service.update).toHaveBeenCalledWith('1', updateBoardDto, '1');
     });
   });
@@ -90,7 +90,7 @@ describe('BoardController', () => {
 
       service.remove.mockResolvedValue(result as any);
 
-      await expect(controller.remove('1', user)).resolves.toEqual(result);
+      await expect(controller.remove('1', user)).resolves.toStrictEqual(result);
       expect(service.remove).toHaveBeenCalledWith('1', '1');
     });
   });
@@ -102,7 +102,7 @@ describe('BoardController', () => {
 
       service.addMember.mockResolvedValue(result as any);
 
-      await expect(controller.addMember('1', '2', user)).resolves.toEqual(result);
+      await expect(controller.addMember('1', '2', user)).resolves.toStrictEqual(result);
       expect(service.addMember).toHaveBeenCalledWith('1', '1', '2');
     });
   });
@@ -114,7 +114,7 @@ describe('BoardController', () => {
 
       service.removeMember.mockResolvedValue(result as any);
 
-      await expect(controller.removeMember('1', '2', user)).resolves.toEqual(result);
+      await expect(controller.removeMember('1', '2', user)).resolves.toStrictEqual(result);
       expect(service.removeMember).toHaveBeenCalledWith('1', '1', '2');
     });
   });

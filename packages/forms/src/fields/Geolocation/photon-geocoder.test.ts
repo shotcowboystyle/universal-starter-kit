@@ -72,7 +72,7 @@ describe('createPhotonGeocoder', () => {
     const results = await geocoder.geocode({ query: ' mannerheimintie ' });
     expect(fetch).toHaveBeenCalledOnce();
     expect(fetch.mock.calls[0][0]).toBe('https://photon.komoot.io/api/?q=mannerheimintie&limit=5');
-    expect(results).toEqual([
+    expect(results).toStrictEqual([
       {
         lat: 60.1707623,
         lng: 24.9374103,
@@ -87,7 +87,7 @@ describe('createPhotonGeocoder', () => {
     const geocoder = createPhotonGeocoder({ fetch });
     const result = await geocoder.reverseGeocode({ lat: 60.16952, lng: 24.93545 });
     expect(fetch.mock.calls[0][0]).toBe('https://photon.komoot.io/reverse?lat=60.16952&lon=24.93545&limit=1');
-    expect(result).toEqual({
+    expect(result).toStrictEqual({
       lat: 60.1694307,
       lng: 24.9356429,
       label: 'P-Simonkenttä',
@@ -116,7 +116,7 @@ describe('createPhotonGeocoder', () => {
   it('never calls out for a blank query', async () => {
     const fetch = vi.fn();
     const geocoder = createPhotonGeocoder({ fetch });
-    await expect(geocoder.geocode({ query: '   ' })).resolves.toEqual([]);
+    await expect(geocoder.geocode({ query: '   ' })).resolves.toStrictEqual([]);
     expect(fetch).not.toHaveBeenCalled();
   });
 
@@ -183,7 +183,7 @@ describe('photonFeatureToResult', () => {
           country: 'Finland',
         },
       }),
-    ).toEqual({
+    ).toStrictEqual({
       lat: 60.16952,
       lng: 24.93545,
       label: 'Mannerheimintie 3',
@@ -202,6 +202,6 @@ describe('photonFeatureToResult', () => {
         geometry: { type: 'Point', coordinates: [25.9, 64.9] },
         properties: { name: 'Suomi', country: 'Suomi' },
       }),
-    ).toEqual({ lat: 64.9, lng: 25.9, label: 'Suomi' });
+    ).toStrictEqual({ lat: 64.9, lng: 25.9, label: 'Suomi' });
   });
 });

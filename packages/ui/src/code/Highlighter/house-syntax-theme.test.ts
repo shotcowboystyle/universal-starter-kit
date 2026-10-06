@@ -68,7 +68,7 @@ describe('the default highlighter theme paints the held syntax tokens', () => {
     const githubLight = (await bundledThemes['github-light']()).default;
     const scopesOf = (settings: { scope?: string | string[] }[]) =>
       settings.map((setting) => [setting.scope ?? []].flat().join(',')).filter(Boolean);
-    expect(scopesOf(houseSyntaxTheme.settings)).toEqual(
+    expect(scopesOf(houseSyntaxTheme.settings)).toStrictEqual(
       scopesOf(githubLight.tokenColors ?? githubLight.settings ?? []),
     );
     for (const setting of houseSyntaxTheme.settings) {

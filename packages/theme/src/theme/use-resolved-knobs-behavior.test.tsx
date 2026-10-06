@@ -159,7 +159,7 @@ describe('intent + component knob merging', () => {
       withoutComponent.result.current.knobProps.elevation,
     );
     // Intent-level knob override applies to both.
-    expect(withComponent.result.current.knobProps.borderRadius).toEqual(
+    expect(withComponent.result.current.knobProps.borderRadius).toStrictEqual(
       withoutComponent.result.current.knobProps.borderRadius,
     );
   });
@@ -172,7 +172,7 @@ describe('intent + component knob merging', () => {
     expect(compact.result.current.knobProps.sizeToken).toBe(comfortable.result.current.knobProps.sizeToken);
     expect(compact.result.current.knobProps.control.height).toBe(comfortable.result.current.knobProps.control.height);
     expect(compact.result.current.knobProps.density).toBe('compact');
-    expect(comfortable.result.current.knobProps.gap).toEqual({ gap: '$4' });
-    expect(compact.result.current.knobProps.gap).toEqual({ gap: '$2' });
+    expect(comfortable.result.current.knobProps.gap).toStrictEqual({ gap: '$4' });
+    expect(compact.result.current.knobProps.gap).toStrictEqual({ gap: '$2' });
   });
 });

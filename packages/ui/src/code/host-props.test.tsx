@@ -40,7 +40,7 @@ describe.each(['web', 'native'])('code family host props, TAMAGUI_TARGET=%s', (t
       for (const host of hosts) {
         const props = hostProps(host);
         expect(props['data-code-font']).toBe('mono');
-        expect(Object.keys(props).filter((key) => key.toLowerCase() === 'dataset')).toEqual([]);
+        expect(Object.keys(props).filter((key) => key.toLowerCase() === 'dataset')).toStrictEqual([]);
         expect(host.hasAttribute('dataset')).toBe(false);
       }
       // React warns once per prop name per process, so the console alone
@@ -48,7 +48,7 @@ describe.each(['web', 'native'])('code family host props, TAMAGUI_TARGET=%s', (t
       const unknownProps = errorSpy.mock.calls
         .map(formatConsoleCall)
         .filter((message) => /does not recognize the `\w+` prop on a DOM element/.test(message));
-      expect(unknownProps).toEqual([]);
+      expect(unknownProps).toStrictEqual([]);
     } finally {
       errorSpy.mockRestore();
     }

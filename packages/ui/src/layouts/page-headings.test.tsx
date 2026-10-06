@@ -51,7 +51,7 @@ describe('heading structure', () => {
       </Screen>,
     );
 
-    expect(headingSequence(container)).toEqual([
+    expect(headingSequence(container)).toStrictEqual([
       { level: 1, text: 'Pokemon' },
       { level: 2, text: 'Stats' },
       { level: 2, text: 'Moves' },
@@ -144,7 +144,7 @@ describe('multiple-h1 DEV warn (PageHeadingScope)', () => {
       </Screen>,
     );
 
-    expect(multipleH1Warnings(warn)).toEqual([]);
+    expect(multipleH1Warnings(warn)).toStrictEqual([]);
   });
 
   it('does not warn when the second header is demoted via headingLevel', () => {
@@ -160,7 +160,7 @@ describe('multiple-h1 DEV warn (PageHeadingScope)', () => {
       </Screen>,
     );
 
-    expect(multipleH1Warnings(warn)).toEqual([]);
+    expect(multipleH1Warnings(warn)).toStrictEqual([]);
   });
 
   it('scopes the budget: sibling scopes each allow their own h1', () => {
@@ -177,6 +177,6 @@ describe('multiple-h1 DEV warn (PageHeadingScope)', () => {
       </>,
     );
 
-    expect(multipleH1Warnings(warn)).toEqual([]);
+    expect(multipleH1Warnings(warn)).toStrictEqual([]);
   });
 });

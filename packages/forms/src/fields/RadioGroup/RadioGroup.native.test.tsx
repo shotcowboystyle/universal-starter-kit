@@ -34,7 +34,7 @@ describe('native RadioGroup accessibility contract', () => {
         value="DEBITS"
       />,
     );
-    expect(names(container)).toEqual([
+    expect(names(container)).toStrictEqual([
       ['button', 'CREDITS'],
       ['button', 'DEBITS'],
       ['button', 'DISCRETIONARY'],
@@ -70,7 +70,7 @@ describe('native RadioGroup accessibility contract', () => {
         value="up"
       />,
     );
-    expect(names(container)).toEqual([['button', 'Increasing']]);
+    expect(names(container)).toStrictEqual([['button', 'Increasing']]);
   });
 
   // The sibling Label is also told to stay out of the native tree so an option

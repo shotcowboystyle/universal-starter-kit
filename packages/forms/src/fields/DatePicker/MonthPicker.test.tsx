@@ -199,7 +199,7 @@ describe('MonthPicker', () => {
       await waitFor(() => {
         expect(onSubmit).toHaveBeenCalledOnce();
       });
-      expect(onSubmit.mock.calls[0][0].month).toEqual(
+      expect(onSubmit.mock.calls[0][0].month).toStrictEqual(
         expect.objectContaining({
           month: expect.any(Number),
           year: expect.any(Number),
@@ -301,7 +301,7 @@ describe('MonthPicker', () => {
         const leaks = errorSpy.mock.calls
           .map((args) => args.map(String).join(' '))
           .filter((message) => LEAK.test(message));
-        expect(leaks).toEqual([]);
+        expect(leaks).toStrictEqual([]);
         expect(document.querySelector('[scaleicon]')).toBeNull();
       } finally {
         errorSpy.mockRestore();

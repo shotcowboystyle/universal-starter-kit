@@ -89,12 +89,12 @@ describe('focusState tokens', () => {
   });
 
   it('withDefaultStateLayer fills background when unset; knob wins when set', () => {
-    expect(withDefaultStateLayer({}, STATE_LAYER_HOVER)).toEqual(STATE_LAYER_HOVER);
-    expect(withDefaultStateLayer({ borderWidth: 2 }, STATE_LAYER_PRESS)).toEqual({
+    expect(withDefaultStateLayer({}, STATE_LAYER_HOVER)).toStrictEqual(STATE_LAYER_HOVER);
+    expect(withDefaultStateLayer({ borderWidth: 2 }, STATE_LAYER_PRESS)).toStrictEqual({
       backgroundColor: '$backgroundPress',
       borderWidth: 2,
     });
-    expect(withDefaultStateLayer({ backgroundColor: 'transparent' }, STATE_LAYER_HOVER)).toEqual({
+    expect(withDefaultStateLayer({ backgroundColor: 'transparent' }, STATE_LAYER_HOVER)).toStrictEqual({
       backgroundColor: 'transparent',
     });
   });
@@ -187,7 +187,7 @@ describe('the ring still paints inside a clipped / fused group (inset carve-out)
   });
 
   it('keyboardFocusRingProps — the manual ring for roving-focus composites — pins the inset', () => {
-    expect(keyboardFocusRingProps).toEqual(FOCUS_VISIBLE_RING_INSET);
+    expect(keyboardFocusRingProps).toStrictEqual(FOCUS_VISIBLE_RING_INSET);
   });
 
   it('ensureFocusVisibleRing honors the explicit per-call-site inset and defaults to 0', () => {
@@ -229,8 +229,8 @@ describe('keyboard-only; measure the ring / text node, not the frame', () => {
 describe('resolveKnobs control recipes (W12)', () => {
   it('always emits hover/press state layers and focus-visible ring', () => {
     const { control } = resolveKnobs(defaultKnobs);
-    expect(control.hoverKnobProps).toEqual(STATE_LAYER_HOVER);
-    expect(control.pressKnobProps).toEqual(STATE_LAYER_PRESS);
+    expect(control.hoverKnobProps).toStrictEqual(STATE_LAYER_HOVER);
+    expect(control.pressKnobProps).toStrictEqual(STATE_LAYER_PRESS);
     expect(control.focusVisibleKnobProps).toMatchObject(FOCUS_VISIBLE_RING);
     expect(control.focusVisibleKnobProps?.outlineWidth).toBeGreaterThanOrEqual(2);
   });
@@ -301,7 +301,7 @@ describe('theme DEV warn (outline-none / positive-tabindex)', () => {
  */
 describe('the sanctioned focus-ring offset set is closed', () => {
   it('is exactly three offsets — clipping inset, default, shape halo', () => {
-    expect([...SANCTIONED_FOCUS_RING_OFFSETS]).toEqual([-2, 0, 2]);
+    expect([...SANCTIONED_FOCUS_RING_OFFSETS]).toStrictEqual([-2, 0, 2]);
     expect(FOCUS_RING_CLIPPED_OFFSET).toBe(-2);
     expect(FOCUS_VISIBLE_RING.outlineOffset).toBe(0);
     expect(FOCUS_RING_HALO_OFFSET).toBe(2);
@@ -390,6 +390,6 @@ describe('the sanctioned focus-ring offset set is closed', () => {
     expect(
       violations,
       `unsanctioned focus-ring offsets (LC-71 §4 closes the set at -2/0/2):\n${violations.join('\n')}`,
-    ).toEqual([]);
+    ).toStrictEqual([]);
   });
 });

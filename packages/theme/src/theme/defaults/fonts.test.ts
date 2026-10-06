@@ -137,7 +137,7 @@ describe('bodyFont category fonts — one ladder, distinct families', () => {
 
   it('gives the four bodyFont stops four distinct first families', () => {
     const firsts = bodyStops.map((key) => firstFamily(fontFamily(defaultFonts[key])));
-    expect(firsts).toEqual(['Inter', 'Georgia', 'ui-monospace', 'Nunito']);
+    expect(firsts).toStrictEqual(['Inter', 'Georgia', 'ui-monospace', 'Nunito']);
     expect(new Set(firsts).size).toBe(4);
   });
 
@@ -151,7 +151,7 @@ describe('bodyFont category fonts — one ladder, distinct families', () => {
 
   it('puts every category font on the $body SIZE ladder — a family knob never resizes', () => {
     for (const name of categories) {
-      expect(table(defaultFonts[name], 'size'), `${name}.size`).toEqual(bodySize);
+      expect(table(defaultFonts[name], 'size'), `${name}.size`).toStrictEqual(bodySize);
     }
   });
 
@@ -202,7 +202,9 @@ describe('bodyFont category fonts — one ladder, distinct families', () => {
   it("zeroes tracking on every category face so Inter's curve cannot leak in", () => {
     for (const name of categories) {
       const letterSpacing = table(defaultFonts[name], 'letterSpacing');
-      expect(Object.keys(letterSpacing).sort(), `${name}.letterSpacing keys`).toEqual(Object.keys(bodySize).sort());
+      expect(Object.keys(letterSpacing).sort(), `${name}.letterSpacing keys`).toStrictEqual(
+        Object.keys(bodySize).sort(),
+      );
       for (const key of Object.keys(bodySize)) {
         expect(letterSpacing[key], `${name}.letterSpacing[${key}]`).toBe(0);
       }
@@ -222,8 +224,8 @@ describe('createDefaultFont — the era body ramp', () => {
 
   it('lands a consumer font on the same ladder as the built-in category fonts', () => {
     const font = createDefaultFont({ family: 'Georgia, serif' });
-    expect(table(font, 'size')).toEqual(table(defaultFonts.serif, 'size'));
-    expect(table(font, 'lineHeight')).toEqual(table(defaultFonts.rounded, 'lineHeight'));
+    expect(table(font, 'size')).toStrictEqual(table(defaultFonts.serif, 'size'));
+    expect(table(font, 'lineHeight')).toStrictEqual(table(defaultFonts.rounded, 'lineHeight'));
   });
 
   it('defaults to weight 400, never the legacy 300', () => {

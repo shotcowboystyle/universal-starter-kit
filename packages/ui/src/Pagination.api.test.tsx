@@ -355,8 +355,8 @@ describe('Pagination public API — numbered chrome', () => {
   });
 
   it('exports getPaginationItems with its ellipsis windowing', () => {
-    expect(getPaginationItems(20, 5)).toEqual([1, 'ellipsis-start', 4, 5, 6, 'ellipsis-end', 20]);
-    expect(getPaginationItems(0, 1)).toEqual([]);
+    expect(getPaginationItems(20, 5)).toStrictEqual([1, 'ellipsis-start', 4, 5, 6, 'ellipsis-end', 20]);
+    expect(getPaginationItems(0, 1)).toStrictEqual([]);
   });
 
   it('page buttons activate on Enter and Space', () => {

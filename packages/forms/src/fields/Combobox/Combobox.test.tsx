@@ -673,9 +673,9 @@ describe('Combobox', () => {
       await act(async () => {});
       const onSheet = shot(document.body);
 
-      expect(onDesktop.headers).toEqual(['Fruit', 'Vegetable']);
-      expect(onSheet.headers).toEqual(onDesktop.headers);
-      expect(onSheet.rows).toEqual(onDesktop.rows);
+      expect(onDesktop.headers).toStrictEqual(['Fruit', 'Vegetable']);
+      expect(onSheet.headers).toStrictEqual(onDesktop.headers);
+      expect(onSheet.rows).toStrictEqual(onDesktop.rows);
       // One header per group: a repeated label is the defect this guards.
       expect(new Set(onSheet.headers).size).toBe(onSheet.headers.length);
     });
@@ -696,7 +696,7 @@ describe('Combobox', () => {
       await act(async () => {});
 
       const rows = [...document.body.querySelectorAll('[role="option"]')];
-      expect(rows.map((el) => el.textContent?.trim())).toEqual(['Apple', 'Banana', 'Carrot']);
+      expect(rows.map((el) => el.textContent?.trim())).toStrictEqual(['Apple', 'Banana', 'Carrot']);
 
       const search = document.body.querySelector('input');
       expect(search).toBeTruthy();

@@ -553,8 +553,8 @@ describe('Calendar event drag', () => {
         end: new Date(2026, 2, 10, 9, 30),
       };
       const range = computeEventMoveRange(event, new Date(2026, 2, 20));
-      expect(range.start).toEqual(new Date(2026, 2, 20, 9, 0));
-      expect(range.end).toEqual(new Date(2026, 2, 20, 9, 30));
+      expect(range.start).toStrictEqual(new Date(2026, 2, 20, 9, 0));
+      expect(range.end).toStrictEqual(new Date(2026, 2, 20, 9, 30));
       expect(range.end.getTime() - range.start.getTime()).toBe(30 * 60 * 1000);
     });
 
@@ -566,8 +566,8 @@ describe('Calendar event drag', () => {
         end: new Date(2026, 2, 12, 17, 0),
       };
       const range = computeEventMoveRange(event, new Date(2026, 2, 25));
-      expect(range.start).toEqual(new Date(2026, 2, 25, 9, 0));
-      expect(range.end).toEqual(new Date(2026, 2, 27, 17, 0));
+      expect(range.start).toStrictEqual(new Date(2026, 2, 25, 9, 0));
+      expect(range.end).toStrictEqual(new Date(2026, 2, 27, 17, 0));
     });
 
     it('moves backwards and across month boundaries', () => {
@@ -578,8 +578,8 @@ describe('Calendar event drag', () => {
         end: new Date(2026, 2, 10, 15, 45),
       };
       const range = computeEventMoveRange(event, new Date(2026, 1, 27));
-      expect(range.start).toEqual(new Date(2026, 1, 27, 14, 15));
-      expect(range.end).toEqual(new Date(2026, 1, 27, 15, 45));
+      expect(range.start).toStrictEqual(new Date(2026, 1, 27, 14, 15));
+      expect(range.end).toStrictEqual(new Date(2026, 1, 27, 15, 45));
     });
 
     it('returns a zero-duration range for events without an end', () => {
@@ -589,8 +589,8 @@ describe('Calendar event drag', () => {
         start: new Date(2026, 2, 10, 8, 0),
       };
       const range = computeEventMoveRange(event, new Date(2026, 2, 11));
-      expect(range.start).toEqual(new Date(2026, 2, 11, 8, 0));
-      expect(range.end).toEqual(range.start);
+      expect(range.start).toStrictEqual(new Date(2026, 2, 11, 8, 0));
+      expect(range.end).toStrictEqual(range.start);
     });
   });
 
@@ -658,8 +658,8 @@ describe('Calendar event drag', () => {
       expect(onEventMove).toHaveBeenCalledOnce();
       const [movedEvent, range] = onEventMove.mock.calls[0];
       expect(movedEvent.id).toBe('evt-1');
-      expect(range.start).toEqual(new Date(2026, 2, 20, 9, 0));
-      expect(range.end).toEqual(new Date(2026, 2, 20, 9, 30));
+      expect(range.start).toStrictEqual(new Date(2026, 2, 20, 9, 0));
+      expect(range.end).toStrictEqual(new Date(2026, 2, 20, 9, 30));
       expect(onEventClick).not.toHaveBeenCalled();
     });
 
@@ -944,7 +944,7 @@ describe('ChartCard palette', () => {
     );
     expect(captured.current).toBeDefined();
     const fills = pieSliceFills();
-    expect(fills).toEqual(captured.current?.categorical.slice(0, pieData.length));
+    expect(fills).toStrictEqual(captured.current?.categorical.slice(0, pieData.length));
   });
 
   it('single-series bars all take the identity solid', () => {
@@ -1053,7 +1053,7 @@ describe('Views barrel exports', () => {
   // exports, so the interfaces are still covered by the typecheck.
   it('re-exports every ganttMath value export', () => {
     const missing = Object.keys(GanttMathExports).filter((name) => !(name in ViewExports));
-    expect(missing).toEqual([]);
+    expect(missing).toStrictEqual([]);
   });
 
   // Exercised off the BARREL rather than off ganttMath: the thing

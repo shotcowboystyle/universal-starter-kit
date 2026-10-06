@@ -49,7 +49,7 @@ describe('AuthController', () => {
 
       authService.login.mockResolvedValue(result as any);
 
-      await expect(controller.login(user as any, res as any)).resolves.toEqual(result);
+      await expect(controller.login(user as any, res as any)).resolves.toStrictEqual(result);
       expect(res.cookie).toHaveBeenCalledTimes(2);
     });
   });
@@ -58,7 +58,7 @@ describe('AuthController', () => {
     it('should return user from request', () => {
       const user = { _id: '1', email: 'test@test.com', name: 'Test User' };
 
-      expect(controller.getProfile(user as any)).toEqual(user);
+      expect(controller.getProfile(user as any)).toStrictEqual(user);
     });
   });
 
@@ -68,7 +68,7 @@ describe('AuthController', () => {
         clearCookie: vi.fn(),
       };
 
-      await expect(controller.logout(res as any)).resolves.toEqual({ message: 'Successfully logged out' });
+      await expect(controller.logout(res as any)).resolves.toStrictEqual({ message: 'Successfully logged out' });
       expect(res.clearCookie).toHaveBeenCalledTimes(2);
     });
   });

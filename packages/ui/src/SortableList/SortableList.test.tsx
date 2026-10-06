@@ -80,7 +80,7 @@ describe('SortableList', () => {
 
     fireEvent.keyDown(tuesday, { key: ' ' });
     expect(onChange).toHaveBeenCalledOnce();
-    expect(onChange.mock.calls[0][0].map((r: { id: string }) => r.id)).toEqual(['mon', 'dep', 'ret', 'tue']);
+    expect(onChange.mock.calls[0][0].map((r: { id: string }) => r.id)).toStrictEqual(['mon', 'dep', 'ret', 'tue']);
     expect(liveRegion()?.textContent).toBe('Dropped “Tuesday review”, position 4 of 4.');
     expect(document.activeElement?.getAttribute('data-sortable-row')).toBe('tue');
   });

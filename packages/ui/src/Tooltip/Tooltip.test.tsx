@@ -29,13 +29,13 @@ describe('Tooltip size vs space recipes', () => {
     expect(resolveTooltipSizeRecipe('small').maxWidth).toBe(tooltipSizeRecipes.small.maxWidth);
     expect(resolveTooltipSizeRecipe('large').maxWidth).toBe(tooltipSizeRecipes.large.maxWidth);
     expect(resolveTooltipSizeRecipe('small').maxWidth).not.toBe(resolveTooltipSizeRecipe('large').maxWidth);
-    expect(resolveTooltipPadRecipe('medium')).toEqual(tooltipPadRecipes.medium);
+    expect(resolveTooltipPadRecipe('medium')).toStrictEqual(tooltipPadRecipes.medium);
   });
 
   it('space steps pad and does not change max-width', () => {
-    expect(resolveTooltipPadRecipe('small')).toEqual(tooltipPadRecipes.small);
-    expect(resolveTooltipPadRecipe('large')).toEqual(tooltipPadRecipes.large);
-    expect(resolveTooltipPadRecipe('small')).not.toEqual(resolveTooltipPadRecipe('large'));
+    expect(resolveTooltipPadRecipe('small')).toStrictEqual(tooltipPadRecipes.small);
+    expect(resolveTooltipPadRecipe('large')).toStrictEqual(tooltipPadRecipes.large);
+    expect(resolveTooltipPadRecipe('small')).not.toStrictEqual(resolveTooltipPadRecipe('large'));
     expect(resolveTooltipSizeRecipe('medium').maxWidth).toBe(tooltipSizeRecipes.medium.maxWidth);
   });
 
@@ -139,7 +139,7 @@ describe('Tooltip content rides the border, elevation and animation knobs', () =
     const none = await measure(stops[0]);
     const small = await measure(stops[1]);
     const large = await measure(stops[2]);
-    expect(none).toEqual({
+    expect(none).toStrictEqual({
       mounted: true,
       border: '_btw-0px',
       shadow: undefined,

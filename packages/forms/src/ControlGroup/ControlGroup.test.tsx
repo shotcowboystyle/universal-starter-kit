@@ -33,7 +33,7 @@ describe('ControlGroup', () => {
         </ControlGroup>
       </Preset>,
     );
-    expect(radiusClasses(group(result.container))).toEqual(['_btlr-t-radius-12']);
+    expect(radiusClasses(group(result.container))).toStrictEqual(['_btlr-t-radius-12']);
     const inners = result.container.querySelectorAll('[data-mp-group-position]');
     expect(inners).toHaveLength(2);
     for (const node of inners) {

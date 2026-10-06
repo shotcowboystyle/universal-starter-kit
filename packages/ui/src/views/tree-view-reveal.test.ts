@@ -18,12 +18,12 @@ const nodes = [
 describe('tree reveal ancestors', () => {
   it('finds the exact last leaf of a 500-item branch and preserves unrelated expansion', () => {
     const expanded = new Set(['other']);
-    expect(treeRevealExpansion(nodes, expanded, 'item-499')).toEqual(new Set(['other', 'folders', 'archive']));
-    expect(expanded).toEqual(new Set(['other']));
+    expect(treeRevealExpansion(nodes, expanded, 'item-499')).toStrictEqual(new Set(['other', 'folders', 'archive']));
+    expect(expanded).toStrictEqual(new Set(['other']));
   });
 
   it('does not expand the target branch itself', () => {
-    expect(treeRevealExpansion(nodes, new Set(), 'archive')).toEqual(new Set(['folders']));
+    expect(treeRevealExpansion(nodes, new Set(), 'archive')).toStrictEqual(new Set(['folders']));
   });
 
   it('preserves the set when the target is already exposed', () => {

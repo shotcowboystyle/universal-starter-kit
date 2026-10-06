@@ -357,7 +357,7 @@ describe('Wheel design-law', () => {
     const fullAtoms = String(fullFrame.className)
       .split(' ')
       .filter((c) => c.startsWith('_btlr-') && c !== '_btlr-0px');
-    expect(noneAtoms).toEqual([]);
-    expect(fullAtoms).toEqual([]);
+    expect(noneAtoms).toStrictEqual([]);
+    expect(fullAtoms).toStrictEqual([]);
   });
 });

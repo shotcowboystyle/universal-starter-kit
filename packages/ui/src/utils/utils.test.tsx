@@ -56,11 +56,11 @@ describe('unwrapText', () => {
 
   it('should handle empty children', () => {
     const result = unwrapText(null);
-    expect(result).toEqual([]);
+    expect(result).toStrictEqual([]);
   });
 
   it('should handle undefined children', () => {
     const result = unwrapText(undefined);
-    expect(result).toEqual([]);
+    expect(result).toStrictEqual([]);
   });
 });

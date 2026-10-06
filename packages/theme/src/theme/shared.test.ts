@@ -29,13 +29,13 @@ describe('preset registry', () => {
   it('lists registered preset names', () => {
     registerPreset('alpha', testPreset);
     registerPreset('beta', testPreset);
-    expect(getPresetNames()).toEqual(['alpha', 'beta']);
+    expect(getPresetNames()).toStrictEqual(['alpha', 'beta']);
   });
 
   it('clears all presets', () => {
     registerPreset('first', testPreset);
     clearPresets();
-    expect(getPresetNames()).toEqual([]);
+    expect(getPresetNames()).toStrictEqual([]);
     expect(getPreset('first')).toBeUndefined();
   });
 

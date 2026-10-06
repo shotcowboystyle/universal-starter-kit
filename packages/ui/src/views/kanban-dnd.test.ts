@@ -173,7 +173,7 @@ describe('keyboard drag state machine', () => {
 
   it('lifts a card at its own position', () => {
     const drag = keyboardLift(board, 'todo', 1);
-    expect(drag).toEqual({
+    expect(drag).toStrictEqual({
       sourceColumnId: 'todo',
       sourceIndex: 1,
       target: { columnId: 'todo', index: 1 },
@@ -188,12 +188,12 @@ describe('keyboard drag state machine', () => {
   it('moves up/down within the column and clamps at boundaries', () => {
     let drag = keyboardLift(board, 'todo', 1)!;
     drag = keyboardMove(drag, board, 'up');
-    expect(drag.target).toEqual({ columnId: 'todo', index: 0 });
+    expect(drag.target).toStrictEqual({ columnId: 'todo', index: 0 });
     const clamped = keyboardMove(drag, board, 'up');
     expect(clamped).toBe(drag); // boundary no-op returns the same session
     drag = keyboardMove(drag, board, 'down');
     drag = keyboardMove(drag, board, 'down');
-    expect(drag.target).toEqual({ columnId: 'todo', index: 2 });
+    expect(drag.target).toStrictEqual({ columnId: 'todo', index: 2 });
     // source column of 3 has wd insertion range 0..2
     expect(keyboardMove(drag, board, 'down')).toBe(drag);
   });
@@ -201,12 +201,12 @@ describe('keyboard drag state machine', () => {
   it('moves across columns, clamping the index to the destination size', () => {
     let drag = keyboardLift(board, 'todo', 2)!;
     drag = keyboardMove(drag, board, 'right');
-    expect(drag.target).toEqual({ columnId: 'review', index: 2 }); // review holds 2 cards → max 2
+    expect(drag.target).toStrictEqual({ columnId: 'review', index: 2 }); // review holds 2 cards → max 2
     drag = keyboardMove(drag, board, 'right');
-    expect(drag.target).toEqual({ columnId: 'done', index: 0 }); // empty column → index 0
+    expect(drag.target).toStrictEqual({ columnId: 'done', index: 0 }); // empty column → index 0
     expect(keyboardMove(drag, board, 'right')).toBe(drag); // last column no-op
     drag = keyboardMove(drag, board, 'left');
-    expect(drag.target).toEqual({ columnId: 'review', index: 0 });
+    expect(drag.target).toStrictEqual({ columnId: 'review', index: 0 });
   });
 
   it('computes max insertion for source vs foreign columns', () => {
@@ -223,13 +223,13 @@ describe('keyboard drag state machine', () => {
     const moved = keyboardMove(home, board, 'right');
     const result = resolveDrop(moved);
     expect(result.commit).toBe(true);
-    expect(result.from).toEqual({ columnId: 'todo', index: 1 });
-    expect(result.to).toEqual({ columnId: 'review', index: 1 });
+    expect(result.from).toStrictEqual({ columnId: 'todo', index: 1 });
+    expect(result.to).toStrictEqual({ columnId: 'review', index: 1 });
   });
 
   it('announces lift, move, drop, and cancel with 1-based positions', () => {
     let drag = keyboardLift(board, 'todo', 1)!;
-    expect(describeDragState('lift', drag, board, 'Fix login bug')).toEqual({
+    expect(describeDragState('lift', drag, board, 'Fix login bug')).toStrictEqual({
       type: 'lift',
       card: 'Fix login bug',
       column: 'To Do',
@@ -238,7 +238,7 @@ describe('keyboard drag state machine', () => {
     });
 
     drag = keyboardMove(drag, board, 'right');
-    expect(describeDragState('move', drag, board, 'Fix login bug')).toEqual({
+    expect(describeDragState('move', drag, board, 'Fix login bug')).toStrictEqual({
       type: 'move',
       card: 'Fix login bug',
       column: 'Review',
@@ -252,7 +252,7 @@ describe('keyboard drag state machine', () => {
       position: 2,
     });
 
-    expect(describeCancel(drag, board, 'Fix login bug')).toEqual({
+    expect(describeCancel(drag, board, 'Fix login bug')).toStrictEqual({
       type: 'cancel',
       card: 'Fix login bug',
       column: 'To Do',
@@ -266,7 +266,7 @@ describe('flat-list reorder (one machine for List, DataTable, ChildTable)', () =
   it('models a flat list as a single-column board and reuses keyboardLift/Move', () => {
     const board = listBoardSnapshot(labels.length);
     let drag = keyboardLift(board, LIST_COLUMN_ID, 1);
-    expect(drag).toEqual({
+    expect(drag).toStrictEqual({
       sourceColumnId: LIST_COLUMN_ID,
       sourceIndex: 1,
       target: { columnId: LIST_COLUMN_ID, index: 1 },
@@ -288,20 +288,20 @@ describe('flat-list reorder (one machine for List, DataTable, ChildTable)', () =
     const result = resolveDrop(dropped);
     expect(result.commit).toBe(true);
 
-    expect(applyReorder(listItems, result.from.index, result.to.index).map((r) => r.title)).toEqual([
+    expect(applyReorder(listItems, result.from.index, result.to.index).map((r) => r.title)).toStrictEqual([
       'Monday standup',
       'Deploy window',
       'Retro notes',
       'Tuesday review',
     ]);
-    expect(applyReorder(tableRows, result.from.index, result.to.index).map((r) => r.pipeline)).toEqual([
+    expect(applyReorder(tableRows, result.from.index, result.to.index).map((r) => r.pipeline)).toStrictEqual([
       'Monday standup',
       'Deploy window',
       'Retro notes',
       'Tuesday review',
     ]);
     const numbered = renumberIdx(applyReorder(childRows, result.from.index, result.to.index));
-    expect(numbered.map((r) => ({ name: r.name, idx: r.idx }))).toEqual([
+    expect(numbered.map((r) => ({ name: r.name, idx: r.idx }))).toStrictEqual([
       { name: 'Monday standup', idx: 1 },
       { name: 'Deploy window', idx: 2 },
       { name: 'Retro notes', idx: 3 },

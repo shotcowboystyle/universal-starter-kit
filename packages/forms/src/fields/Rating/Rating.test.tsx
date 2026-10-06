@@ -209,8 +209,14 @@ describe('Rating', () => {
       const group = result.container.querySelector('[data-rating-row]');
       expect(group?.getAttribute('role')).toBe('radiogroup');
       const radios = Array.from(result.container.querySelectorAll('[data-rating-star]'));
-      expect(radios.map((el) => el.getAttribute('role'))).toEqual(['radio', 'radio', 'radio', 'radio', 'radio']);
-      expect(radios.map((el) => el.getAttribute('aria-checked'))).toEqual(['false', 'false', 'true', 'false', 'false']);
+      expect(radios.map((el) => el.getAttribute('role'))).toStrictEqual(['radio', 'radio', 'radio', 'radio', 'radio']);
+      expect(radios.map((el) => el.getAttribute('aria-checked'))).toStrictEqual([
+        'false',
+        'false',
+        'true',
+        'false',
+        'false',
+      ]);
     });
 
     // Pointer focus paints no ring (wasKeyboardFocus is pinned false

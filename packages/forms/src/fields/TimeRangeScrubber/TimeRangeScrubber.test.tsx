@@ -136,7 +136,7 @@ describe('TimeRangeScrubber geometry', () => {
 
   it("emits DateRangePicker's keys and rejects EUI relative strings", () => {
     const range = applyQuickRange(DEFAULT_QUICK_RANGES[0], NOW);
-    expect(dateRangeKeys(range)).toEqual(['end', 'start']);
+    expect(dateRangeKeys(range)).toStrictEqual(['end', 'start']);
     expect(range.start).toBeInstanceOf(Date);
     expect(range.end).toBeInstanceOf(Date);
     expect(range.end?.getTime()).toBe(NOW.getTime());
@@ -271,7 +271,7 @@ describe('TimeRangeScrubber', () => {
     });
     expect(onChange).toHaveBeenCalledOnce();
     const emitted = onChange.mock.calls[0][0] as DateRange;
-    expect(dateRangeKeys(emitted)).toEqual(['end', 'start']);
+    expect(dateRangeKeys(emitted)).toStrictEqual(['end', 'start']);
     expect(emitted.start).toBeInstanceOf(Date);
     expect(emitted.end).toBeInstanceOf(Date);
     expect(JSON.stringify(emitted)).not.toMatch(/now-/);
@@ -324,7 +324,7 @@ describe('TimeRangeScrubber', () => {
     });
     expect(onChange).toHaveBeenCalled();
     const emitted = onChange.mock.calls[0][0] as DateRange;
-    expect(dateRangeKeys(emitted)).toEqual(['end', 'start']);
+    expect(dateRangeKeys(emitted)).toStrictEqual(['end', 'start']);
     expect(emitted.end?.getTime()).toBe(new Date('2026-08-28T14:21:00.000Z').getTime());
     expect(result.container.querySelector('[aria-live]')?.textContent).toMatch(/range/i);
   });
@@ -501,7 +501,7 @@ describe('TimeRangeScrubber', () => {
       expect(onSubmit).toHaveBeenCalled();
     });
     const submitted = onSubmit.mock.calls[0][0].window as DateRange;
-    expect(dateRangeKeys(submitted)).toEqual(['end', 'start']);
+    expect(dateRangeKeys(submitted)).toStrictEqual(['end', 'start']);
   });
 
   it('controlled standalone adopts a late value without onChange', async () => {

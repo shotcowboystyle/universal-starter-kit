@@ -272,13 +272,13 @@ describe('Barcode', () => {
 
   describe('format mapping', () => {
     it('maps aliases onto expo-camera types and falls back on unknown', () => {
-      expect(resolveNativeBarcodeTypes(['QR', 'code-128', 'ean_13'])).toEqual(['qr', 'code128', 'ean13']);
-      expect(resolveNativeBarcodeTypes(['nope'])).toEqual(expect.arrayContaining(['qr', 'code128']));
+      expect(resolveNativeBarcodeTypes(['QR', 'code-128', 'ean_13'])).toStrictEqual(['qr', 'code128', 'ean13']);
+      expect(resolveNativeBarcodeTypes(['nope'])).toStrictEqual(expect.arrayContaining(['qr', 'code128']));
     });
 
     it('maps aliases onto html5-qrcode enum ids', () => {
       const fakeEnum = { QR_CODE: 0, CODE_128: 5, EAN_13: 9 };
-      expect(resolveHtml5FormatIds(['qr', 'CODE128'], fakeEnum)).toEqual([0, 5]);
+      expect(resolveHtml5FormatIds(['qr', 'CODE128'], fakeEnum)).toStrictEqual([0, 5]);
       expect(resolveHtml5FormatIds(undefined, fakeEnum)).toBeUndefined();
       expect(resolveHtml5FormatIds(['nope'], fakeEnum)).toBeUndefined();
     });

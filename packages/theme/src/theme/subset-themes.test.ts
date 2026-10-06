@@ -43,7 +43,7 @@ describe('subsetThemes', () => {
   const themes = Object.fromEntries(names.map((name) => [name, { name }]));
 
   it('keeps the bare schemes and every listed tint x component, and nothing else', () => {
-    expect(Object.keys(subsetThemes(themes, narrow))).toEqual([
+    expect(Object.keys(subsetThemes(themes, narrow))).toStrictEqual([
       'light',
       'dark',
       'light_accent',
@@ -63,7 +63,7 @@ describe('subsetThemes', () => {
   });
 
   it('keeps only the schemes when the subset is empty', () => {
-    expect(Object.keys(subsetThemes(themes, { components: [], tints: [] }))).toEqual(['light', 'dark']);
+    expect(Object.keys(subsetThemes(themes, { components: [], tints: [] }))).toStrictEqual(['light', 'dark']);
   });
 });
 
@@ -91,8 +91,8 @@ describe('subsetThemes over the house matrix', () => {
   it('is what createDefaultThemeConfig({ subset }) ships, and omitting it ships everything', () => {
     const full = createDefaultThemeConfig().tamagui.themes as Record<string, unknown>;
     const subset = createDefaultThemeConfig({ subset: narrow }).tamagui.themes as Record<string, unknown>;
-    expect(Object.keys(full)).toEqual(Object.keys(built));
-    expect(Object.keys(subset)).toEqual(Object.keys(subsetThemes(built, narrow)));
-    expect(subset.light).toEqual(full.light);
+    expect(Object.keys(full)).toStrictEqual(Object.keys(built));
+    expect(Object.keys(subset)).toStrictEqual(Object.keys(subsetThemes(built, narrow)));
+    expect(subset.light).toStrictEqual(full.light);
   });
 });

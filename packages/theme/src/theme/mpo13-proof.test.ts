@@ -49,7 +49,7 @@ describe('$4 means ONE height, and it is 44', () => {
   });
 
   it('the $4 control is the measured 44 / 18 / 14 / 16 / 9', () => {
-    expect(sizeRecipeForToken('$4')).toEqual({
+    expect(sizeRecipeForToken('$4')).toStrictEqual({
       height: 44,
       paddingHorizontal: 18,
       fontSize: 14,

@@ -32,7 +32,7 @@ describe('native ToggleGroup accessibility contract', () => {
         value="warning"
       />,
     );
-    expect(names(container)).toEqual([
+    expect(names(container)).toStrictEqual([
       ['button', 'error'],
       ['button', 'warning'],
       ['button', 'info'],
@@ -49,7 +49,7 @@ describe('native ToggleGroup accessibility contract', () => {
         value={['error']}
       />,
     );
-    expect(names(container)).toEqual([
+    expect(names(container)).toStrictEqual([
       ['button', 'error'],
       ['button', 'warning'],
       ['button', 'info'],
@@ -85,6 +85,6 @@ describe('native ToggleGroup accessibility contract', () => {
         value="on"
       />,
     );
-    expect(names(container)).toEqual([['button', 'Filled']]);
+    expect(names(container)).toStrictEqual([['button', 'Filled']]);
   });
 });

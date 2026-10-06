@@ -113,7 +113,7 @@ describe('overlay elevation is a different distance off the surface', () => {
     expect(shadowAtoms('dialog')).toHaveLength(1);
     expect(shadowAtoms('dialog')[0]).toMatch(/^_bxsh-0px12px24px/);
     expect(paintedShadow('dialog')).toContain('12px 24px');
-    expect(shadowAtoms('dialog')).not.toEqual(shadowAtoms('control'));
+    expect(shadowAtoms('dialog')).not.toStrictEqual(shadowAtoms('control'));
   });
 
   it('AlertDialogContent wears the same ladder stop as DialogContent — one dialog row, one distance', () => {
@@ -144,6 +144,6 @@ describe('overlay elevation is a different distance off the surface', () => {
     expect(paintedShadow('dialog')).not.toMatch(/rgba\(0,\s*0,\s*0/);
     // resolveKnobs owns the dark ground: `overlayFill` steps the filled rest
     // fill up the ramp under dark + elevation.
-    expect(bgAtoms('dialog')).toEqual(['_bg-color4']);
+    expect(bgAtoms('dialog')).toStrictEqual(['_bg-color4']);
   });
 });

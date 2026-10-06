@@ -41,17 +41,17 @@ function renderAt(stop: (typeof STOPS)[number], outlined = false): string[] {
 
 describe('Chip borderWidth ladder', () => {
   it("the frame honours the resolver's edge: 0 / 0.5 / 1 / 2", () => {
-    expect(renderAt('none')).toEqual(['_btw-0px']);
-    expect(renderAt('small')).toEqual(['_btw-0--5px']);
-    expect(renderAt('medium')).toEqual(['_btw-1px']);
-    expect(renderAt('large')).toEqual(['_btw-2px']);
+    expect(renderAt('none')).toStrictEqual(['_btw-0px']);
+    expect(renderAt('small')).toStrictEqual(['_btw-0--5px']);
+    expect(renderAt('medium')).toStrictEqual(['_btw-1px']);
+    expect(renderAt('large')).toStrictEqual(['_btw-2px']);
   });
 
   it('medium and large differ, so the chip box moves with the stop', () => {
-    expect(renderAt('medium')).not.toEqual(renderAt('large'));
+    expect(renderAt('medium')).not.toStrictEqual(renderAt('large'));
   });
 
   it("none under fillStyle:outlined is the resolver's hairline, not a local floor", () => {
-    expect(renderAt('none', true)).toEqual(['_btw-0--5px']);
+    expect(renderAt('none', true)).toStrictEqual(['_btw-0--5px']);
   });
 });

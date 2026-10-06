@@ -115,7 +115,7 @@ describe('Layouts Index', () => {
         }
       }
     }
-    expect(unreachable).toEqual([]);
+    expect(unreachable).toStrictEqual([]);
   });
 
   // The import a consumer actually writes. It passed before EmptyState was
@@ -240,8 +240,8 @@ describe('Toolbar', () => {
     const toolbarBtn = frameOf(screen.getByText('Save'));
     const small = frameOf(screen.getByText('Small'));
     const medium = frameOf(screen.getByText('Medium'));
-    expect(classesByPrefix(toolbarBtn, '_h-')).toEqual(classesByPrefix(small, '_h-'));
-    expect(classesByPrefix(toolbarBtn, '_h-')).not.toEqual(classesByPrefix(medium, '_h-'));
+    expect(classesByPrefix(toolbarBtn, '_h-')).toStrictEqual(classesByPrefix(small, '_h-'));
+    expect(classesByPrefix(toolbarBtn, '_h-')).not.toStrictEqual(classesByPrefix(medium, '_h-'));
   });
 
   it('fuses consecutive fused actions into a segmented cluster', () => {

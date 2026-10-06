@@ -230,7 +230,7 @@ describe('TreeSelect sheet at <=640', () => {
       id: el.getAttribute('data-treeselect-row'),
       depth: el.getAttribute('data-depth'),
     }));
-    expect(mobileRows).toEqual(desktopRows);
+    expect(mobileRows).toStrictEqual(desktopRows);
     expect(mobileTree?.getAttribute('data-indent-step')).toBe(desktopIndent);
     expect(mobileTree?.getAttribute('data-row-height')).toBe(desktopRowHeight);
   });

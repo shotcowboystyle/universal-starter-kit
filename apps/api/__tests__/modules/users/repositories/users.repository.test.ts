@@ -28,7 +28,7 @@ describe('UserRepository', () => {
       const result = await repository.findByEmail('test@example.com');
 
       expect(mockModel.findOne).toHaveBeenCalledWith({ email: 'test@example.com' });
-      expect(result).toEqual(mockUser);
+      expect(result).toStrictEqual(mockUser);
     });
 
     it('should return null if user not found', async () => {
@@ -51,7 +51,7 @@ describe('UserRepository', () => {
       const result = await repository.findAll();
 
       expect(mockModel.find).toHaveBeenCalled();
-      expect(result).toEqual(mockUsers);
+      expect(result).toStrictEqual(mockUsers);
     });
 
     it('should return empty array if no users', async () => {
@@ -59,7 +59,7 @@ describe('UserRepository', () => {
 
       const result = await repository.findAll();
 
-      expect(result).toEqual([]);
+      expect(result).toStrictEqual([]);
     });
   });
 
@@ -73,7 +73,7 @@ describe('UserRepository', () => {
       expect(mockModel.find).toHaveBeenCalledWith({
         name: { $regex: 'john', $options: 'i' },
       });
-      expect(result).toEqual(mockUsers);
+      expect(result).toStrictEqual(mockUsers);
     });
 
     it('should return all users when name is empty', async () => {
@@ -86,7 +86,7 @@ describe('UserRepository', () => {
       const result = await repository.searchByName('');
 
       expect(mockModel.find).toHaveBeenCalledWith({});
-      expect(result).toEqual(mockUsers);
+      expect(result).toStrictEqual(mockUsers);
     });
 
     it('should return empty array if no matches', async () => {
@@ -94,7 +94,7 @@ describe('UserRepository', () => {
 
       const result = await repository.searchByName('nonexistent');
 
-      expect(result).toEqual([]);
+      expect(result).toStrictEqual([]);
     });
   });
 });

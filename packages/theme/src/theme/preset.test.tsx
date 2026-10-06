@@ -69,7 +69,7 @@ describe('Preset component', () => {
 
     renderToString(createElement(Preset, null, createElement(capture.Capture)));
 
-    expect(capture.result?.preset.knobs).toEqual(defaultKnobs);
+    expect(capture.result?.preset.knobs).toStrictEqual(defaultKnobs);
   });
 
   // -------------------------------------------------------------------------
@@ -197,7 +197,7 @@ describe('Preset component', () => {
 
     renderToString(createElement(Preset, { preset: 'nonexistent' }, createElement(capture.Capture)));
 
-    expect(capture.result?.preset.knobs).toEqual(defaultKnobs);
+    expect(capture.result?.preset.knobs).toStrictEqual(defaultKnobs);
   });
 
   // -------------------------------------------------------------------------
@@ -218,6 +218,6 @@ describe('Preset component', () => {
       ),
     );
 
-    expect(capture.result?.preset.knobs).toEqual(defaultKnobs);
+    expect(capture.result?.preset.knobs).toStrictEqual(defaultKnobs);
   });
 });

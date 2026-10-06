@@ -10,6 +10,6 @@ describe('transitionProps (web)', () => {
   });
 
   it('passes a knob token through unchanged', () => {
-    expect(transitionProps('bouncy')).toEqual({ transition: 'bouncy' });
+    expect(transitionProps('bouncy')).toStrictEqual({ transition: 'bouncy' });
   });
 });

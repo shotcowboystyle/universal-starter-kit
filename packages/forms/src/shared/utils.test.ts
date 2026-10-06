@@ -92,7 +92,7 @@ describe('stripRadiusFromStateProps', () => {
 
   it('removes borderRadius and keeps other props', () => {
     const result = stripRadiusFromStateProps({ borderRadius: '$4', color: 'blue' });
-    expect(result).toEqual({ color: 'blue' });
+    expect(result).toStrictEqual({ color: 'blue' });
     expect(result).not.toHaveProperty('borderRadius');
   });
 
@@ -113,12 +113,12 @@ describe('clampRadiusInStateProps', () => {
 
   it('clamps borderRadius in the props', () => {
     const result = clampRadiusInStateProps({ borderRadius: '$12', color: 'blue' });
-    expect(result).toEqual({ borderRadius: '$6', color: 'blue' });
+    expect(result).toStrictEqual({ borderRadius: '$6', color: 'blue' });
   });
 
   it('uses custom max token number', () => {
     const result = clampRadiusInStateProps({ borderRadius: '$8', color: 'blue' }, 4);
-    expect(result).toEqual({ borderRadius: '$4', color: 'blue' });
+    expect(result).toStrictEqual({ borderRadius: '$4', color: 'blue' });
   });
 
   // BINARY covers thumb AND track. A per-state override bag may not inject

@@ -131,7 +131,9 @@ describe('declared chart proof keeps uncertainty visible', () => {
         datumText: { declared: true, expected: 13, observed: 12, complete: false },
       }),
     ]);
-    expect(result.violations.map((item) => item.rule)).toEqual(expect.arrayContaining(['missing-label', 'axis-text']));
+    expect(result.violations.map((item) => item.rule)).toStrictEqual(
+      expect.arrayContaining(['missing-label', 'axis-text']),
+    );
     expect(result.unverified.some((item) => item.reason === 'incomplete-datum-text')).toBe(true);
   });
 });
@@ -410,10 +412,10 @@ describe('captureMatrixSnapshot keys survive the theme axis', () => {
     mount(`<span style="display: contents">${card}</span>`);
     const wrapped = captureMatrixSnapshot();
 
-    expect(bare.geometry.map((g) => g.key)).toEqual(wrapped.geometry.map((g) => g.key));
+    expect(bare.geometry.map((g) => g.key)).toStrictEqual(wrapped.geometry.map((g) => g.key));
     const diff = diffGeometry(bare, wrapped);
-    expect(diff.addedKeys).toEqual([]);
-    expect(diff.removedKeys).toEqual([]);
+    expect(diff.addedKeys).toStrictEqual([]);
+    expect(diff.removedKeys).toStrictEqual([]);
   });
 
   it('stays stable when the wrapper count differs the way the colour axis makes it differ', () => {
@@ -487,7 +489,7 @@ describe('icon contrast keeps unsupported conveying paint unverified', () => {
     expect(result.ok).toBe(false);
     expect(result.measured).toBe(0);
     expect(result.candidates).toBe(1);
-    expect(result.unverified).toEqual([{ key: 'button:0/svg:0', context: 'Open', reason }]);
+    expect(result.unverified).toStrictEqual([{ key: 'button:0/svg:0', context: 'Open', reason }]);
   });
 
   it('accounts for every candidate and exclusion, including invalid color', () => {

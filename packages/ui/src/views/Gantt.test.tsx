@@ -69,27 +69,27 @@ describe('ganttMath', () => {
     it('computes whole-day differences and shifts', () => {
       expect(dayDiff(mar(10), mar(13))).toBe(3);
       expect(dayDiff(mar(13), mar(10))).toBe(-3);
-      expect(addDays(mar(10, 9, 30), 2)).toEqual(mar(12, 9, 30));
+      expect(addDays(mar(10, 9, 30), 2)).toStrictEqual(mar(12, 9, 30));
     });
   });
 
   describe('normalizeSpanEdges', () => {
     it('treats midnight ends as inclusive whole days (Frappe date fields)', () => {
       const { startEdge, endEdge } = normalizeSpanEdges({ start: mar(10), end: mar(12) });
-      expect(startEdge).toEqual(mar(10));
-      expect(endEdge).toEqual(mar(13));
+      expect(startEdge).toStrictEqual(mar(10));
+      expect(endEdge).toStrictEqual(mar(13));
     });
 
     it('keeps timed ends as exact edges', () => {
       const { endEdge } = normalizeSpanEdges({ start: mar(10, 9), end: mar(12, 17) });
-      expect(endEdge).toEqual(mar(12, 17));
+      expect(endEdge).toStrictEqual(mar(12, 17));
     });
 
     it('clamps degenerate/inverted spans to at least one day', () => {
       const same = normalizeSpanEdges({ start: mar(10), end: mar(10) });
-      expect(same.endEdge).toEqual(mar(11));
+      expect(same.endEdge).toStrictEqual(mar(11));
       const inverted = normalizeSpanEdges({ start: mar(10, 9), end: mar(8) });
-      expect(inverted.endEdge).toEqual(mar(11));
+      expect(inverted.endEdge).toStrictEqual(mar(11));
     });
   });
 
@@ -128,18 +128,18 @@ describe('ganttMath', () => {
 
     it('aligns the range per zoom level', () => {
       const dayRange = computeGanttRange(tasks, 'day', mar(11));
-      expect(dayRange.start).toEqual(mar(8));
-      expect(dayRange.end).toEqual(mar(15));
+      expect(dayRange.start).toStrictEqual(mar(8));
+      expect(dayRange.end).toStrictEqual(mar(15));
 
       const weekRange = computeGanttRange(tasks, 'week', mar(11));
       // Week-aligned (Sunday) with a week of padding each side.
       expect(weekRange.start.getDay()).toBe(0);
       expect(weekRange.end.getDay()).toBe(0);
-      expect(weekRange.start).toEqual(mar(1));
+      expect(weekRange.start).toStrictEqual(mar(1));
 
       const monthRange = computeGanttRange(tasks, 'month', mar(11));
-      expect(monthRange.start).toEqual(new Date(2026, 1, 1));
-      expect(monthRange.end).toEqual(new Date(2026, 4, 1));
+      expect(monthRange.start).toStrictEqual(new Date(2026, 1, 1));
+      expect(monthRange.end).toStrictEqual(new Date(2026, 4, 1));
     });
 
     it('expands the range to cover today', () => {
@@ -154,7 +154,7 @@ describe('ganttMath', () => {
       const ticks = generateTicks(range, 'day', 64);
       expect(ticks).toHaveLength(4);
       expect(ticks.every((tick) => tick.major && tick.label)).toBe(true);
-      expect(ticks.map((tick) => tick.x)).toEqual([0, 64, 128, 192]);
+      expect(ticks.map((tick) => tick.x)).toStrictEqual([0, 64, 128, 192]);
     });
 
     it('labels only week starts at week zoom', () => {
@@ -187,8 +187,8 @@ describe('ganttMath', () => {
 
     it('shifts spans preserving duration and wall-clock times', () => {
       const moved = shiftSpanByDays({ start: mar(10, 9, 30), end: mar(12, 17, 0) }, 3);
-      expect(moved.start).toEqual(mar(13, 9, 30));
-      expect(moved.end).toEqual(mar(15, 17, 0));
+      expect(moved.start).toStrictEqual(mar(13, 9, 30));
+      expect(moved.end).toStrictEqual(mar(15, 17, 0));
     });
   });
 
@@ -200,14 +200,14 @@ describe('ganttMath', () => {
 
     it('resizes the end edge only, preserving wall-clock times', () => {
       const resized = resizeSpanByDays({ start: mar(10, 9, 30), end: mar(12, 17, 0) }, 'end', 2);
-      expect(resized.start).toEqual(mar(10, 9, 30));
-      expect(resized.end).toEqual(mar(14, 17, 0));
+      expect(resized.start).toStrictEqual(mar(10, 9, 30));
+      expect(resized.end).toStrictEqual(mar(14, 17, 0));
     });
 
     it('resizes the start edge only', () => {
       const resized = resizeSpanByDays({ start: mar(10), end: mar(14) }, 'start', 2);
-      expect(resized.start).toEqual(mar(12));
-      expect(resized.end).toEqual(mar(14));
+      expect(resized.start).toStrictEqual(mar(12));
+      expect(resized.end).toStrictEqual(mar(14));
     });
 
     it('clamps shrinking so at least one inclusive day survives', () => {
@@ -218,8 +218,8 @@ describe('ganttMath', () => {
       expect(clampResizeDayDelta({ start: mar(10), end: mar(12) }, 'start', -30)).toBe(-30);
       expect(clampResizeDayDelta({ start: mar(10), end: mar(12) }, 'end', 30)).toBe(30);
       const collapsed = resizeSpanByDays({ start: mar(10), end: mar(12) }, 'start', 99);
-      expect(collapsed.start).toEqual(mar(12));
-      expect(collapsed.end).toEqual(mar(12));
+      expect(collapsed.start).toStrictEqual(mar(12));
+      expect(collapsed.end).toStrictEqual(mar(12));
     });
   });
 
@@ -247,10 +247,10 @@ describe('ganttMath', () => {
 
     it('contributes only the dates a span actually names to the range', () => {
       expect(openSpanExtent({})).toBeUndefined();
-      expect(openSpanExtent({ start: mar(10) })).toEqual({ start: mar(10), end: mar(10) });
-      expect(openSpanExtent({ end: mar(12) })).toEqual({ start: mar(12), end: mar(12) });
+      expect(openSpanExtent({ start: mar(10) })).toStrictEqual({ start: mar(10), end: mar(10) });
+      expect(openSpanExtent({ end: mar(12) })).toStrictEqual({ start: mar(12), end: mar(12) });
       // An eternal span names nothing, so it must not stretch the axis.
-      expect(openSpanExtents([{}, { start: mar(10) }, { start: mar(1), end: mar(3) }])).toEqual([
+      expect(openSpanExtents([{}, { start: mar(10) }, { start: mar(1), end: mar(3) }])).toStrictEqual([
         { start: mar(10), end: mar(10) },
         { start: mar(1), end: mar(3) },
       ]);
@@ -295,15 +295,15 @@ describe('ganttMath', () => {
       const bounded = openSpanLabelParts({ start: mar(10), end: mar(12) });
       expect(bounded.start).toMatch(/10/);
       expect(bounded.end).toMatch(/12/);
-      expect(openSpanLabelParts({ start: mar(10) })).toEqual({
+      expect(openSpanLabelParts({ start: mar(10) })).toStrictEqual({
         start: bounded.start,
         end: undefined,
       });
-      expect(openSpanLabelParts({ end: mar(12) })).toEqual({
+      expect(openSpanLabelParts({ end: mar(12) })).toStrictEqual({
         start: undefined,
         end: bounded.end,
       });
-      expect(openSpanLabelParts({})).toEqual({});
+      expect(openSpanLabelParts({})).toStrictEqual({});
     });
 
     it("measures any date's line the same way the today line is measured", () => {
@@ -417,8 +417,8 @@ describe('GanttView', () => {
       expect(onItemMove).toHaveBeenCalledOnce();
       const [movedTask, span] = onItemMove.mock.calls[0];
       expect(movedTask.id).toBe('t1');
-      expect(span.start).toEqual(mar(12));
-      expect(span.end).toEqual(mar(14));
+      expect(span.start).toStrictEqual(mar(12));
+      expect(span.end).toStrictEqual(mar(14));
     });
 
     it('does not fire onItemMove when movement stays under the drag threshold', () => {
@@ -510,8 +510,8 @@ describe('GanttView', () => {
       expect(onItemMove).toHaveBeenCalledOnce();
       const [task, span] = onItemMove.mock.calls[0];
       expect(task.id).toBe('t1');
-      expect(span.start).toEqual(mar(11));
-      expect(span.end).toEqual(mar(13));
+      expect(span.start).toStrictEqual(mar(11));
+      expect(span.end).toStrictEqual(mar(13));
       // aria-live announcement carries the task title and the new range.
       const live = document.querySelector('[data-gantt-live="true"]');
       expect(live?.getAttribute('aria-live')).toBe('assertive');
@@ -530,16 +530,16 @@ describe('GanttView', () => {
       const bar = container.querySelector('[data-gantt-bar="t1"]') as Element;
 
       fireEvent.keyDown(bar, { key: 'ArrowLeft' });
-      expect(onItemMove.mock.calls[0][1].start).toEqual(mar(9));
-      expect(onItemMove.mock.calls[0][1].end).toEqual(mar(11));
+      expect(onItemMove.mock.calls[0][1].start).toStrictEqual(mar(9));
+      expect(onItemMove.mock.calls[0][1].end).toStrictEqual(mar(11));
 
       fireEvent.keyDown(bar, { key: 'ArrowRight', shiftKey: true });
-      expect(onItemMove.mock.calls[1][1].start).toEqual(mar(17));
-      expect(onItemMove.mock.calls[1][1].end).toEqual(mar(19));
+      expect(onItemMove.mock.calls[1][1].start).toStrictEqual(mar(17));
+      expect(onItemMove.mock.calls[1][1].end).toStrictEqual(mar(19));
 
       fireEvent.keyDown(bar, { key: 'ArrowLeft', shiftKey: true });
-      expect(onItemMove.mock.calls[2][1].start).toEqual(mar(3));
-      expect(onItemMove.mock.calls[2][1].end).toEqual(mar(5));
+      expect(onItemMove.mock.calls[2][1].start).toStrictEqual(mar(3));
+      expect(onItemMove.mock.calls[2][1].end).toStrictEqual(mar(5));
     });
 
     it('ignores arrows when rescheduling is disabled', () => {
@@ -578,8 +578,8 @@ describe('GanttView', () => {
       expect(onItemMove).toHaveBeenCalledOnce();
       const [task, span] = onItemMove.mock.calls[0];
       expect(task.id).toBe('t1');
-      expect(span.start).toEqual(mar(10));
-      expect(span.end).toEqual(mar(14));
+      expect(span.start).toStrictEqual(mar(10));
+      expect(span.end).toStrictEqual(mar(14));
     });
 
     it('dragging the start handle moves the start only', () => {
@@ -597,8 +597,8 @@ describe('GanttView', () => {
       fireEvent.pointerUp(window, { clientX: 52, clientY: 100 });
 
       const [, span] = onItemMove.mock.calls[0];
-      expect(span.start).toEqual(mar(8));
-      expect(span.end).toEqual(mar(12));
+      expect(span.start).toStrictEqual(mar(8));
+      expect(span.end).toStrictEqual(mar(12));
     });
 
     it('clamps a start resize so one inclusive day survives', () => {
@@ -617,8 +617,8 @@ describe('GanttView', () => {
       fireEvent.pointerUp(window, { clientX: 340, clientY: 100 });
 
       const [, span] = onItemMove.mock.calls[0];
-      expect(span.start).toEqual(mar(12));
-      expect(span.end).toEqual(mar(12));
+      expect(span.start).toStrictEqual(mar(12));
+      expect(span.end).toStrictEqual(mar(12));
     });
 
     it('does not fire for a zero-day snapped resize', () => {
@@ -678,8 +678,8 @@ describe('GanttView', () => {
         key: 'ArrowRight',
       });
       const [, span] = onItemMove.mock.calls[0];
-      expect(span.start).toEqual(mar(9));
-      expect(span.end).toEqual(mar(11));
+      expect(span.start).toStrictEqual(mar(9));
+      expect(span.end).toStrictEqual(mar(11));
     });
 
     it('a rightward pointer drag moves the bar EARLIER under RTL', () => {
@@ -697,8 +697,8 @@ describe('GanttView', () => {
       fireEvent.pointerUp(window, { clientX: 148, clientY: 100 });
 
       const [, span] = onItemMove.mock.calls[0];
-      expect(span.start).toEqual(mar(8));
-      expect(span.end).toEqual(mar(10));
+      expect(span.start).toStrictEqual(mar(8));
+      expect(span.end).toStrictEqual(mar(10));
     });
 
     it('mirrors the marker scrub: a rightward drag moves it EARLIER', () => {
@@ -716,7 +716,7 @@ describe('GanttView', () => {
       fireEvent.pointerMove(window, { clientX: 172, clientY: 10 });
       fireEvent.pointerUp(window, { clientX: 172, clientY: 10 });
 
-      expect(onMarkerDateChange.mock.calls.at(-1)?.[0]).toEqual(mar(12));
+      expect(onMarkerDateChange.mock.calls.at(-1)?.[0]).toStrictEqual(mar(12));
     });
 
     it('mirrors the open-end chevron to the side the span is open at', () => {
@@ -749,8 +749,8 @@ describe('GanttView', () => {
       fireEvent.pointerUp(window, { clientX: 52, clientY: 100 });
 
       const [, span] = onItemMove.mock.calls[0];
-      expect(span.start).toEqual(mar(10));
-      expect(span.end).toEqual(mar(14));
+      expect(span.start).toStrictEqual(mar(10));
+      expect(span.end).toStrictEqual(mar(14));
     });
   });
 
@@ -922,8 +922,8 @@ describe('GanttView', () => {
       expect(onItemMove).toHaveBeenCalledOnce();
       const [task, range, ref] = onItemMove.mock.calls[0];
       expect(task.id).toBe('era');
-      expect(range.start).toEqual(mar(10));
-      expect(range.end).toEqual(mar(14));
+      expect(range.start).toStrictEqual(mar(10));
+      expect(range.end).toStrictEqual(mar(14));
       expect(ref.key).toBe('2027');
       expect(ref.index).toBe(1);
       expect(ref.span.id).toBe('2027');
@@ -989,7 +989,7 @@ describe('GanttView', () => {
       fireEvent.pointerUp(window, { clientX: 172, clientY: 10 });
 
       expect(onMarkerDateChange).toHaveBeenCalled();
-      expect(onMarkerDateChange.mock.calls.at(-1)?.[0]).toEqual(mar(18));
+      expect(onMarkerDateChange.mock.calls.at(-1)?.[0]).toStrictEqual(mar(18));
     });
 
     it('emits once per day crossed, from the date the scrub started', () => {
@@ -1011,8 +1011,8 @@ describe('GanttView', () => {
 
       // Two days crossed, not four moves: +1 then +2, never a repeat.
       expect(onMarkerDateChange).toHaveBeenCalledTimes(2);
-      expect(onMarkerDateChange.mock.calls[0][0]).toEqual(mar(16));
-      expect(onMarkerDateChange.mock.calls[1][0]).toEqual(mar(17));
+      expect(onMarkerDateChange.mock.calls[0][0]).toStrictEqual(mar(16));
+      expect(onMarkerDateChange.mock.calls[1][0]).toStrictEqual(mar(17));
     });
 
     it('puts the marker back where the scrub started on Escape', () => {
@@ -1031,7 +1031,7 @@ describe('GanttView', () => {
       fireEvent.keyDown(window, { key: 'Escape' });
       fireEvent.pointerUp(window, { clientX: 172, clientY: 10 });
 
-      expect(onMarkerDateChange.mock.calls.at(-1)?.[0]).toEqual(mar(15));
+      expect(onMarkerDateChange.mock.calls.at(-1)?.[0]).toStrictEqual(mar(15));
     });
 
     it('steps the focused handle with the arrow keys (Shift = 7 days)', () => {
@@ -1046,9 +1046,9 @@ describe('GanttView', () => {
       const handle = handleOf(container);
 
       fireEvent.keyDown(handle, { key: 'ArrowRight' });
-      expect(onMarkerDateChange.mock.calls.at(-1)?.[0]).toEqual(mar(16));
+      expect(onMarkerDateChange.mock.calls.at(-1)?.[0]).toStrictEqual(mar(16));
       fireEvent.keyDown(handle, { key: 'ArrowLeft', shiftKey: true });
-      expect(onMarkerDateChange.mock.calls.at(-1)?.[0]).toEqual(mar(8));
+      expect(onMarkerDateChange.mock.calls.at(-1)?.[0]).toStrictEqual(mar(8));
     });
 
     it('is read-only, and says so, with no change handler', () => {

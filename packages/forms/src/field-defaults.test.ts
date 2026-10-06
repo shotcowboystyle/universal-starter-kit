@@ -13,7 +13,7 @@ import {
 
 describe('FIELD_WIDTH_BY_PURPOSE', () => {
   it('maps blueprint purposes to ch widths / full', () => {
-    expect(FIELD_WIDTH_BY_PURPOSE).toEqual({
+    expect(FIELD_WIDTH_BY_PURPOSE).toStrictEqual({
       postalCode: 12,
       year: 4,
       phone: 16,
@@ -56,15 +56,15 @@ describe('resolveFieldPurpose', () => {
 describe('resolveFieldWidth / fieldWidthStyle', () => {
   it('returns numeric ch widths', () => {
     expect(resolveFieldWidth('postalCode')).toBe(12);
-    expect(fieldWidthStyle('postalCode')).toEqual({ maxWidth: '12ch' });
-    expect(fieldWidthStyle(undefined, 'email')).toEqual({ maxWidth: '24ch' });
-    expect(fieldWidthStyle(undefined, 'tel')).toEqual({ maxWidth: '16ch' });
-    expect(fieldWidthStyle('year')).toEqual({ maxWidth: '4ch' });
+    expect(fieldWidthStyle('postalCode')).toStrictEqual({ maxWidth: '12ch' });
+    expect(fieldWidthStyle(undefined, 'email')).toStrictEqual({ maxWidth: '24ch' });
+    expect(fieldWidthStyle(undefined, 'tel')).toStrictEqual({ maxWidth: '16ch' });
+    expect(fieldWidthStyle('year')).toStrictEqual({ maxWidth: '4ch' });
   });
 
   it('returns full-width style for description', () => {
     expect(resolveFieldWidth('description')).toBe('full');
-    expect(fieldWidthStyle('description')).toEqual({
+    expect(fieldWidthStyle('description')).toStrictEqual({
       width: '100%',
       maxWidth: '100%',
     });
@@ -86,7 +86,7 @@ describe('isFieldPurpose', () => {
 
 describe('resolveFieldInputProps (DG §32 keyboard/autofill)', () => {
   it('email → email autocomplete + email keyboard', () => {
-    expect(resolveFieldInputProps('email')).toEqual({
+    expect(resolveFieldInputProps('email')).toStrictEqual({
       autoComplete: 'email',
       inputMode: 'email',
       keyboardType: 'email-address',
@@ -94,7 +94,7 @@ describe('resolveFieldInputProps (DG §32 keyboard/autofill)', () => {
   });
 
   it('phone → tel autocomplete + tel keyboard', () => {
-    expect(resolveFieldInputProps('phone')).toEqual({
+    expect(resolveFieldInputProps('phone')).toStrictEqual({
       autoComplete: 'tel',
       inputMode: 'tel',
       keyboardType: 'phone-pad',
@@ -109,14 +109,14 @@ describe('resolveFieldInputProps (DG §32 keyboard/autofill)', () => {
   });
 
   it('year → numeric via text + inputmode (no autocomplete guess)', () => {
-    expect(resolveFieldInputProps('year')).toEqual({
+    expect(resolveFieldInputProps('year')).toStrictEqual({
       inputMode: 'numeric',
       keyboardType: 'number-pad',
     });
   });
 
   it('derives purpose from an autocomplete token and passes the token through', () => {
-    expect(resolveFieldInputProps(undefined, 'tel-national')).toEqual({
+    expect(resolveFieldInputProps(undefined, 'tel-national')).toStrictEqual({
       autoComplete: 'tel-national',
       inputMode: 'tel',
       keyboardType: 'phone-pad',
@@ -131,9 +131,9 @@ describe('resolveFieldInputProps (DG §32 keyboard/autofill)', () => {
   });
 
   it('unknown purposes yield no keyboard/autofill props', () => {
-    expect(resolveFieldInputProps('description')).toEqual({});
-    expect(resolveFieldInputProps()).toEqual({});
-    expect(resolveFieldInputProps(undefined, 'given-name')).toEqual({
+    expect(resolveFieldInputProps('description')).toStrictEqual({});
+    expect(resolveFieldInputProps()).toStrictEqual({});
+    expect(resolveFieldInputProps(undefined, 'given-name')).toStrictEqual({
       autoComplete: 'given-name',
     });
   });

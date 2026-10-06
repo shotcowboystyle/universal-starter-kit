@@ -117,7 +117,7 @@ describe('DatePicker', () => {
       expect(onChange).toHaveBeenCalledOnce();
       expect(onValueChange).toHaveBeenCalledOnce();
       expect(onChange.mock.calls[0][0]).toBeInstanceOf(Date);
-      expect(onChange.mock.calls[0][0]).toEqual(onValueChange.mock.calls[0][0]);
+      expect(onChange.mock.calls[0][0]).toStrictEqual(onValueChange.mock.calls[0][0]);
     });
   });
 

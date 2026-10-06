@@ -13,8 +13,8 @@ afterEach(() => {
 describe('constraint audit scope and painted visibility', () => {
   it('audits the requested surface while keeping the document-wide default', () => {
     document.body.innerHTML = `<div id="outside" style="border-radius:14px"></div><main id="story"><button id="inside" style="border-radius:15px">Inside</button></main>`;
-    expect(audit('#story').violations.map((entry) => entry.id)).toEqual(['inside']);
-    expect(audit().violations.map((entry) => entry.id)).toEqual(['outside', 'inside']);
+    expect(audit('#story').violations.map((entry) => entry.id)).toStrictEqual(['inside']);
+    expect(audit().violations.map((entry) => entry.id)).toStrictEqual(['outside', 'inside']);
   });
 
   it('rejects a missing requested surface instead of returning a clean report', () => {
@@ -25,15 +25,15 @@ describe('constraint audit scope and painted visibility', () => {
     'ignores unpainted descendants under %s and reports them when shown',
     (style) => {
       document.body.innerHTML = `<main id="story"><div id="hidden" style="${style}"><button id="bad" style="border-radius:15px">Hidden error chrome</button></div></main>`;
-      expect(audit('#story').violations).toEqual([]);
+      expect(audit('#story').violations).toStrictEqual([]);
       document.querySelector('#hidden')!.removeAttribute('style');
-      expect(audit('#story').violations.map((entry) => entry.id)).toEqual(['bad']);
+      expect(audit('#story').violations.map((entry) => entry.id)).toStrictEqual(['bad']);
     },
   );
 
   it('keeps painted children that explicitly override inherited visibility', () => {
     document.body.innerHTML = `<main id="story" style="visibility:hidden"><button id="shown" style="visibility:visible;border-radius:15px">Visible</button></main>`;
-    expect(audit('#story').violations.map((entry) => entry.id)).toEqual(['shown']);
+    expect(audit('#story').violations.map((entry) => entry.id)).toStrictEqual(['shown']);
   });
 
   it('retains distinct stable paths for otherwise identical failing controls', () => {
@@ -42,6 +42,6 @@ describe('constraint audit scope and painted visibility', () => {
     expect(first).toHaveLength(2);
     expect(first[0].key).toBeTruthy();
     expect(first[1].key).not.toBe(first[0].key);
-    expect(audit('#story').violations.map((entry) => entry.key)).toEqual(first.map((entry) => entry.key));
+    expect(audit('#story').violations.map((entry) => entry.key)).toStrictEqual(first.map((entry) => entry.key));
   });
 });

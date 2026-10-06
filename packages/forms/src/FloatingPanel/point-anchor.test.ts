@@ -9,16 +9,16 @@ const gap = OVERLAY_ANCHOR_GAP;
 
 describe('pointPanelLeft', () => {
   it("puts the panel's start edge on the point when it fits", () => {
-    expect(pointPanelLeft({ x: 300, y: 0 }, 200, bounds)).toEqual({ left: 300, alignEnd: false });
+    expect(pointPanelLeft({ x: 300, y: 0 }, 200, bounds)).toStrictEqual({ left: 300, alignEnd: false });
   });
 
   it('flips to open toward the start when the end side would overflow', () => {
-    expect(pointPanelLeft({ x: 900, y: 0 }, 200, bounds)).toEqual({ left: 700, alignEnd: true });
+    expect(pointPanelLeft({ x: 900, y: 0 }, 200, bounds)).toStrictEqual({ left: 700, alignEnd: true });
   });
 
   it('clamps into the bounds when neither side fits', () => {
     const narrow: PanelBounds = { top: 10, left: 10, right: 310, bottom: 758 };
-    expect(pointPanelLeft({ x: 200, y: 0 }, 250, narrow)).toEqual({ left: 60, alignEnd: false });
+    expect(pointPanelLeft({ x: 200, y: 0 }, 250, narrow)).toStrictEqual({ left: 60, alignEnd: false });
   });
 
   it('pins to the start bound when the panel is wider than the bounds', () => {
@@ -27,11 +27,11 @@ describe('pointPanelLeft', () => {
   });
 
   it('opens toward the left from the point in RTL and flips right at the left edge', () => {
-    expect(pointPanelLeft({ x: 600, y: 0 }, 200, bounds, true)).toEqual({
+    expect(pointPanelLeft({ x: 600, y: 0 }, 200, bounds, true)).toStrictEqual({
       left: 400,
       alignEnd: false,
     });
-    expect(pointPanelLeft({ x: 100, y: 0 }, 200, bounds, true)).toEqual({
+    expect(pointPanelLeft({ x: 100, y: 0 }, 200, bounds, true)).toStrictEqual({
       left: 100,
       alignEnd: true,
     });
@@ -55,7 +55,7 @@ describe('pointOpensUp', () => {
 
 describe('placeAtPoint', () => {
   it('sits OVERLAY_ANCHOR_GAP below the point, start edge on the point', () => {
-    expect(placeAtPoint({ point: { x: 300, y: 200 }, width: 180, height: 120, bounds, gap })).toEqual({
+    expect(placeAtPoint({ point: { x: 300, y: 200 }, width: 180, height: 120, bounds, gap })).toStrictEqual({
       left: 300,
       top: 200 + gap,
       maxHeight: 758 - (200 + gap),
@@ -98,36 +98,36 @@ describe('contextMenuPoint', () => {
   };
 
   it("takes the pointer's viewport coordinates from a mouse right-click", () => {
-    expect(contextMenuPoint({ clientX: 120, clientY: 130, button: 2, pointerType: 'mouse' }, reference)).toEqual({
+    expect(contextMenuPoint({ clientX: 120, clientY: 130, button: 2, pointerType: 'mouse' }, reference)).toStrictEqual({
       x: 120,
       y: 130,
     });
   });
 
   it('takes the press point from a touch long-press', () => {
-    expect(contextMenuPoint({ clientX: 90, clientY: 110, button: 0, pointerType: 'touch' }, reference)).toEqual({
+    expect(contextMenuPoint({ clientX: 90, clientY: 110, button: 0, pointerType: 'touch' }, reference)).toStrictEqual({
       x: 90,
       y: 110,
     });
   });
 
   it("takes a right-click's coordinates when the event is a plain MouseEvent", () => {
-    expect(contextMenuPoint({ clientX: 150, clientY: 120, button: 2 }, reference)).toEqual({
+    expect(contextMenuPoint({ clientX: 150, clientY: 120, button: 2 }, reference)).toStrictEqual({
       x: 150,
       y: 120,
     });
   });
 
   it("anchors a keyboard open (Shift+F10, the Menu key) to the target's bottom start corner", () => {
-    expect(contextMenuPoint({ clientX: 0, clientY: 0, button: 0, pointerType: '' }, reference)).toEqual({
+    expect(contextMenuPoint({ clientX: 0, clientY: 0, button: 0, pointerType: '' }, reference)).toStrictEqual({
       x: 40,
       y: 144,
     });
-    expect(contextMenuPoint({ clientX: 0, clientY: 0, button: 0 }, reference)).toEqual({
+    expect(contextMenuPoint({ clientX: 0, clientY: 0, button: 0 }, reference)).toStrictEqual({
       x: 40,
       y: 144,
     });
-    expect(contextMenuPoint({ clientX: 0, clientY: 0, button: 0, pointerType: '' }, reference, true)).toEqual({
+    expect(contextMenuPoint({ clientX: 0, clientY: 0, button: 0, pointerType: '' }, reference, true)).toStrictEqual({
       x: 240,
       y: 144,
     });

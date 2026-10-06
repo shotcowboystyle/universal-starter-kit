@@ -24,7 +24,7 @@ describe('Config', () => {
   describe('constructor', () => {
     it('creates an empty config when no arguments are provided', () => {
       const c = new Config();
-      expect(c.get()).toEqual({});
+      expect(c.get()).toStrictEqual({});
     });
 
     it('creates config from provided key-value pairs', () => {
@@ -43,7 +43,7 @@ describe('Config', () => {
   describe('get', () => {
     it('returns the full config object when called without arguments', () => {
       const c = new Config({ A: '1', B: '2' });
-      expect(c.get()).toEqual({ A: '1', B: '2' });
+      expect(c.get()).toStrictEqual({ A: '1', B: '2' });
     });
 
     it('returns a specific value by key', () => {
@@ -106,7 +106,7 @@ describe('Config', () => {
     it('returns the full resolved config', () => {
       const c = new Config({ A: '1' });
       const result = c.add({ B: '2' });
-      expect(result).toEqual({ A: '1', B: '2' });
+      expect(result).toStrictEqual({ A: '1', B: '2' });
     });
   });
 

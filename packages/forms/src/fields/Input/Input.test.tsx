@@ -596,7 +596,7 @@ describe('Input', () => {
         </Preset>,
       );
       const noneBox = none.container.querySelector("[data-ring-target='box']") as HTMLElement;
-      expect(radiusClasses(noneBox)).toEqual(['_btlr-t-radius-0']);
+      expect(radiusClasses(noneBox)).toStrictEqual(['_btlr-t-radius-0']);
 
       const full = renderWithProviders(
         <Preset overrides={{ borderRadius: 'full' }}>
@@ -607,7 +607,7 @@ describe('Input', () => {
         </Preset>,
       );
       const fullBox = full.container.querySelector("[data-ring-target='box']") as HTMLElement;
-      expect(radiusClasses(fullBox)).toEqual(['_btlr-t-radius-12']);
+      expect(radiusClasses(fullBox)).toStrictEqual(['_btlr-t-radius-12']);
     });
 
     it("paints the size table's corner at medium, as Button does", () => {
@@ -622,9 +622,9 @@ describe('Input', () => {
         );
         return radiusClasses(result.container.querySelector("[data-ring-target='box']")!);
       };
-      expect(at('small')).toEqual(['_btlr-7px']);
-      expect(at('medium')).toEqual(['_btlr-9px']);
-      expect(at('large')).toEqual(['_btlr-10px']);
+      expect(at('small')).toStrictEqual(['_btlr-7px']);
+      expect(at('medium')).toStrictEqual(['_btlr-9px']);
+      expect(at('large')).toStrictEqual(['_btlr-10px']);
     });
 
     it('an explicit size prop picks the corner too', () => {
@@ -636,7 +636,7 @@ describe('Input', () => {
         />,
       );
       const box = result.container.querySelector("[data-ring-target='box']") as HTMLElement;
-      expect(radiusClasses(box)).toEqual(['_btlr-10px']);
+      expect(radiusClasses(box)).toStrictEqual(['_btlr-10px']);
       expect(box.className).toContain('_h-52px');
     });
 

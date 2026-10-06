@@ -217,9 +217,9 @@ describe('workspace-store', () => {
       store.resetInBoards();
 
       const state = useWorkspaceStore.getState();
-      expect(state.projects).toEqual([]);
+      expect(state.projects).toStrictEqual([]);
       expect(state.currentBoardId).toBeNull();
-      expect(state.filter).toEqual({ status: null, search: '' });
+      expect(state.filter).toStrictEqual({ status: null, search: '' });
     });
   });
 });

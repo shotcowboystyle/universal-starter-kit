@@ -12,7 +12,7 @@ const insets = { top: 47, bottom: 34, left: 0, right: 0 };
 
 describe('applySafeAreaInsets', () => {
   it('applies padding on every requested edge and zero on the rest', () => {
-    expect(applySafeAreaInsets(insets, ['top', 'bottom'], 'padding')).toEqual({
+    expect(applySafeAreaInsets(insets, ['top', 'bottom'], 'padding')).toStrictEqual({
       paddingTop: 47,
       paddingBottom: 34,
       paddingLeft: 0,
@@ -21,7 +21,7 @@ describe('applySafeAreaInsets', () => {
   });
 
   it('switches to margin without changing inset math', () => {
-    expect(applySafeAreaInsets({ top: 12, bottom: 8, left: 4, right: 6 }, ['left'], 'margin')).toEqual({
+    expect(applySafeAreaInsets({ top: 12, bottom: 8, left: 4, right: 6 }, ['left'], 'margin')).toStrictEqual({
       marginTop: 0,
       marginBottom: 0,
       marginLeft: 4,
@@ -30,7 +30,7 @@ describe('applySafeAreaInsets', () => {
   });
 
   it('zero insets stay zero', () => {
-    expect(applySafeAreaInsets({ top: 0, bottom: 0, left: 0, right: 0 })).toEqual({
+    expect(applySafeAreaInsets({ top: 0, bottom: 0, left: 0, right: 0 })).toStrictEqual({
       paddingTop: 0,
       paddingBottom: 0,
       paddingLeft: 0,

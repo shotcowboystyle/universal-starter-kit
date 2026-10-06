@@ -126,7 +126,7 @@ describe('FieldDisplay', () => {
         />
       </Preset>,
     );
-    expect(radiusClasses(frame(none.container))).toEqual(['_btlr-t-radius-0']);
+    expect(radiusClasses(frame(none.container))).toStrictEqual(['_btlr-t-radius-0']);
     cleanup();
 
     const full = renderWithProviders(
@@ -137,7 +137,7 @@ describe('FieldDisplay', () => {
         />
       </Preset>,
     );
-    expect(radiusClasses(frame(full.container))).toEqual(['_btlr-t-radius-12']);
+    expect(radiusClasses(frame(full.container))).toStrictEqual(['_btlr-t-radius-12']);
   });
 
   it('standalone textarea keeps line breaks', () => {

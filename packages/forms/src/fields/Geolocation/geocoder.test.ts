@@ -8,7 +8,7 @@ describe('geocoder seam helpers', () => {
     expect(parseGeoValue(undefined)).toBeNull();
     expect(parseGeoValue('')).toBeNull();
     expect(parseGeoValue('{')).toBeNull();
-    expect(parseGeoValue(JSON.stringify({ lat: 60.16952, lng: 24.93545 }))).toEqual({
+    expect(parseGeoValue(JSON.stringify({ lat: 60.16952, lng: 24.93545 }))).toStrictEqual({
       lat: 60.16952,
       lng: 24.93545,
     });
@@ -22,8 +22,8 @@ describe('geocoder seam helpers', () => {
   });
 
   it('parses a typed lat, lng pair and rejects out-of-range', () => {
-    expect(parseLatLngPair('60.169, 24.935')).toEqual({ lat: 60.169, lng: 24.935 });
-    expect(parseLatLngPair('  -33.8,  151.2 ')).toEqual({ lat: -33.8, lng: 151.2 });
+    expect(parseLatLngPair('60.169, 24.935')).toStrictEqual({ lat: 60.169, lng: 24.935 });
+    expect(parseLatLngPair('  -33.8,  151.2 ')).toStrictEqual({ lat: -33.8, lng: 151.2 });
     expect(parseLatLngPair('mannerheim')).toBeNull();
     expect(parseLatLngPair('91, 0')).toBeNull();
     expect(parseLatLngPair('0, 200')).toBeNull();

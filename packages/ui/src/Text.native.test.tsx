@@ -67,7 +67,7 @@ describe('house Text — NATIVE environment (isWeb false)', () => {
       ['_col-'],
     );
     expect(high).not.toHaveLength(0);
-    expect(high).not.toEqual(low);
+    expect(high).not.toStrictEqual(low);
   });
 
   it('changes weight on a fontWeight flip, pinned to the 400/700 label law', () => {
@@ -86,9 +86,9 @@ describe('house Text — NATIVE environment (isWeb false)', () => {
     const explicit400 = renderTextClasses(<Text fontWeight="400">{LABEL}</Text>, ['_fow-']);
     const explicit700 = renderTextClasses(<Text fontWeight="700">{LABEL}</Text>, ['_fow-']);
     expect(regular).not.toHaveLength(0);
-    expect(regular).not.toEqual(bold);
-    expect(regular).toEqual(explicit400);
-    expect(bold).toEqual(explicit700);
+    expect(regular).not.toStrictEqual(bold);
+    expect(regular).toStrictEqual(explicit400);
+    expect(bold).toStrictEqual(explicit700);
   });
 
   it('changes family on a bodyFont flip — the props channel, not the CSS rescue', () => {
@@ -128,7 +128,7 @@ describe('house Text — NATIVE environment (isWeb false)', () => {
         ['_col-'],
       );
       expect(high).not.toHaveLength(0);
-      expect(high).not.toEqual(low);
+      expect(high).not.toStrictEqual(low);
     }
   });
 
@@ -140,6 +140,6 @@ describe('house Text — NATIVE environment (isWeb false)', () => {
       ['_fow-'],
     );
     const explicit400 = renderTextClasses(<Text fontWeight="400">{LABEL}</Text>, ['_fow-']);
-    expect(ejected).toEqual(explicit400);
+    expect(ejected).toStrictEqual(explicit400);
   });
 });

@@ -62,7 +62,7 @@ describe('ssrCjsExternal', () => {
     const config = createViteConfig({ one: true });
     const plugin = findPlugin(config, 'multiplatform-ssr-cjs-external-fix');
     const external = runConfigResolved(plugin!, [], 'build') as string[];
-    expect(external.filter((e) => e.startsWith('use-sync-external-store'))).toEqual([]);
+    expect(external.filter((e) => e.startsWith('use-sync-external-store'))).toStrictEqual([]);
     expect(external).toContain('hoist-non-react-statics');
     expect(external).toContain('turndown');
   });
@@ -116,13 +116,13 @@ describe('public config bake', () => {
     // travel instead, and double as the allowlist that keeps a private key out
     // of the served document (@repo/platform runtimeConfig).
     createViteConfig({ publicConfigKeys: ['MARKETPLACE_API_URL', 'FRAPPE_ENABLED'] });
-    expect(JSON.parse(process.env[bakedKeys]!)).toEqual(['MARKETPLACE_API_URL', 'FRAPPE_ENABLED']);
+    expect(JSON.parse(process.env[bakedKeys]!)).toStrictEqual(['MARKETPLACE_API_URL', 'FRAPPE_ENABLED']);
   });
 
   it('still bakes the build-environment VALUES so apps that bake keep working', () => {
     process.env.MPO_VITE_SPEC_PUBLIC = 'baked-in';
     createViteConfig({ publicConfigKeys: ['MPO_VITE_SPEC_PUBLIC'] });
-    expect(JSON.parse(process.env[bakedValues]!)).toEqual({ MPO_VITE_SPEC_PUBLIC: 'baked-in' });
+    expect(JSON.parse(process.env[bakedValues]!)).toStrictEqual({ MPO_VITE_SPEC_PUBLIC: 'baked-in' });
     delete process.env.MPO_VITE_SPEC_PUBLIC;
   });
 
@@ -138,7 +138,7 @@ describe('public config bake', () => {
     fs.writeFileSync(file, JSON.stringify({ private: ['SECRET'], public: ['FRAPPE_ENABLED'] }));
     try {
       const config = createViteConfig({ publicConfigFile: file, publicConfigKeys: ['INLINE'] });
-      expect(JSON.parse(process.env[bakedKeys]!)).toEqual(['INLINE', 'FRAPPE_ENABLED']);
+      expect(JSON.parse(process.env[bakedKeys]!)).toStrictEqual(['INLINE', 'FRAPPE_ENABLED']);
       expect(findPlugin(config, 'multiplatform-public-config')?.apply).toBe('serve');
     } finally {
       fs.rmSync(dir, { recursive: true, force: true });
@@ -157,20 +157,20 @@ describe('One HMR ports', () => {
   it('lets Vite use the actual listener when no proxy port is configured', () => {
     vi.stubEnv('ONE_PORT', '');
     const config = createViteConfig({ one: true, server: { port: 3456 } });
-    expect(config.server?.hmr).toEqual({ path: '/__vxrnhmr' });
+    expect(config.server?.hmr).toStrictEqual({ path: '/__vxrnhmr' });
   });
 
   it('retains an explicitly configured proxy bypass port', () => {
     vi.stubEnv('ONE_PORT', '3000');
     const config = createViteConfig({ one: true });
-    expect(config.server?.hmr).toEqual({ path: '/__vxrnhmr', clientPort: 3000 });
+    expect(config.server?.hmr).toStrictEqual({ path: '/__vxrnhmr', clientPort: 3000 });
   });
 
   it('preserves an explicit consumer HMR override', () => {
     vi.stubEnv('ONE_PORT', '3000');
     const hmr = { path: '/custom-hmr', clientPort: 9000 };
     const config = createViteConfig({ one: true, server: { hmr } });
-    expect(config.server?.hmr).toEqual(hmr);
+    expect(config.server?.hmr).toStrictEqual(hmr);
   });
 });
 

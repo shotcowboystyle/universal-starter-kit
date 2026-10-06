@@ -92,7 +92,7 @@ describe('charts/math scales', () => {
 
 describe('charts/math valueDomain', () => {
   it('anchors at zero by default (honest bars)', () => {
-    expect(valueDomain([400, 870])).toEqual([0, 870]);
+    expect(valueDomain([400, 870])).toStrictEqual([0, 870]);
   });
 
   it('keeps negative minimums', () => {
@@ -111,7 +111,7 @@ describe('charts/math valueDomain', () => {
   });
 
   it('handles empty input', () => {
-    expect(valueDomain([])).toEqual([0, 1]);
+    expect(valueDomain([])).toStrictEqual([0, 1]);
   });
 });
 
@@ -142,7 +142,7 @@ describe('charts/math shape generators', () => {
 
   it('pieSlices preserves input order and covers the full circle', () => {
     const slices = pieSlices([{ value: 1 }, { value: 3 }, { value: 2 }]);
-    expect(slices.map((s) => s.index)).toEqual([0, 1, 2]);
+    expect(slices.map((s) => s.index)).toStrictEqual([0, 1, 2]);
     expect(slices[0].startAngle).toBe(0);
     expect(slices[2].endAngle).toBeCloseTo(Math.PI * 2, 6);
     // Angular size follows value share.

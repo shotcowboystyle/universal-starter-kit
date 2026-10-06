@@ -440,7 +440,7 @@ describe('TasksService', () => {
         populate: vi.fn().mockReturnThis(),
       };
       const result = await (service as any).toTaskResponse(task);
-      expect(result.lastModifier).toEqual(result.creator);
+      expect(result.lastModifier).toStrictEqual(result.creator);
     });
   });
 });

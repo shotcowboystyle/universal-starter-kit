@@ -476,8 +476,8 @@ describe('ConfirmDialog action labels — weight 400 on the TEXT NODE', () => {
       const weight = weightAtoms(textNode);
       expect(weight.length).toBeGreaterThan(0);
       expect(weight.join(' ')).not.toMatch(/600|weight-6|fow-6/);
-      expect(weight).toEqual(explicit400);
-      expect(weight).not.toEqual(explicit600);
+      expect(weight).toStrictEqual(explicit400);
+      expect(weight).not.toStrictEqual(explicit600);
       expect(weightAtoms(floor)).toHaveLength(0);
     }
     expect(alertdialog()?.getAttribute('data-density')).toBeTruthy();
@@ -515,8 +515,8 @@ describe('NotifyHost action labels — weight 400 on the TEXT NODE', () => {
     const weight = weightAtoms(textNode);
     expect(weight.length).toBeGreaterThan(0);
     expect(weight.join(' ')).not.toMatch(/600|weight-6|fow-6/);
-    expect(weight).toEqual(explicit400);
-    expect(weight).not.toEqual(explicit600);
+    expect(weight).toStrictEqual(explicit400);
+    expect(weight).not.toStrictEqual(explicit600);
   });
 
   it('inline section Retry is weight 400 on the text node', () => {
@@ -543,7 +543,7 @@ describe('NotifyHost action labels — weight 400 on the TEXT NODE', () => {
     expect(textNode.tagName).not.toBe('BUTTON');
     const weight = weightAtoms(textNode);
     expect(weight.length).toBeGreaterThan(0);
-    expect(weight).toEqual(explicit400);
+    expect(weight).toStrictEqual(explicit400);
     expect(weight.join(' ')).not.toMatch(/600|weight-6|fow-6/);
   });
 });

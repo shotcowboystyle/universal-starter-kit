@@ -69,10 +69,10 @@ describe('Chip', () => {
       result.unmount();
       return found;
     };
-    expect(atoms('none')).toEqual([['_btlr-0px'], ['_btlr-0px']]);
-    expect(atoms('small')).toEqual([['_btlr-5px'], ['_btlr-5px']]);
-    expect(atoms('large')).toEqual([['_btlr-16px'], ['_btlr-16px']]);
-    expect(atoms('full')).toEqual([['_btlr-1000px'], ['_btlr-1000px']]);
+    expect(atoms('none')).toStrictEqual([['_btlr-0px'], ['_btlr-0px']]);
+    expect(atoms('small')).toStrictEqual([['_btlr-5px'], ['_btlr-5px']]);
+    expect(atoms('large')).toStrictEqual([['_btlr-16px'], ['_btlr-16px']]);
+    expect(atoms('full')).toStrictEqual([['_btlr-1000px'], ['_btlr-1000px']]);
   });
 
   // COLOR: the ✕ glyph must receive a RESOLVED ink. Passing the raw token

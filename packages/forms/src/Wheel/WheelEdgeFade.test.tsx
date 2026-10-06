@@ -88,12 +88,12 @@ describe('WheelEdgeFade — native', () => {
   it('gives each band the height it was handed, so the caller sets the fade depth', () => {
     const { container } = renderWithProviders(<NativeWheelEdgeFade height={30} />);
     const heights = bands(container).map((node) => /height:\s*(\d+)px/.exec(node.getAttribute('style') ?? '')?.[1]);
-    expect(heights.filter(Boolean)).toEqual(['30', '30']);
+    expect(heights.filter(Boolean)).toStrictEqual(['30', '30']);
     cleanup();
     const taller = renderWithProviders(<NativeWheelEdgeFade height={64} />);
     expect(
       bands(taller.container).map((node) => /height:\s*(\d+)px/.exec(node.getAttribute('style') ?? '')?.[1]),
-    ).toEqual(['64', '64']);
+    ).toStrictEqual(['64', '64']);
   });
 
   it('keeps the bands out of the way of a drag, so the wheel still scrolls', () => {

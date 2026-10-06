@@ -44,13 +44,13 @@ function typeTrigger(textArea: HTMLTextAreaElement, value: string) {
 
 describe('parseMentionValue', () => {
   it('normalizes strings, objects, and empty input into MentionValue', () => {
-    expect(parseMentionValue('hello')).toEqual({ text: 'hello', mentions: [] });
-    expect(parseMentionValue({ text: 'hi', mentions: [{ id: 'u1' }] })).toEqual({
+    expect(parseMentionValue('hello')).toStrictEqual({ text: 'hello', mentions: [] });
+    expect(parseMentionValue({ text: 'hi', mentions: [{ id: 'u1' }] })).toStrictEqual({
       text: 'hi',
       mentions: [{ id: 'u1' }],
     });
-    expect(parseMentionValue(undefined)).toEqual({ text: '', mentions: [] });
-    expect(parseMentionValue(null)).toEqual({ text: '', mentions: [] });
+    expect(parseMentionValue(undefined)).toStrictEqual({ text: '', mentions: [] });
+    expect(parseMentionValue(null)).toStrictEqual({ text: '', mentions: [] });
   });
 });
 

@@ -47,23 +47,23 @@ function Trigger(props: Parameters<ReturnType<typeof useToast>['show']>[0]) {
 
 describe('native toast accessibility', () => {
   it('groups text-only content while leaving action and dismiss controls reachable', () => {
-    expect(nativeToastA11y('Saved', false, false)).toEqual({
+    expect(nativeToastA11y('Saved', false, false)).toStrictEqual({
       accessible: true,
       accessibilityLabel: 'Saved',
     });
-    expect(nativeToastA11y('Saved', true, false)).toEqual({ accessible: false });
+    expect(nativeToastA11y('Saved', true, false)).toStrictEqual({ accessible: false });
   });
 
   it('does not wire a second native announcement channel or web grouping', () => {
     expect(nativeToastA11y('Saved', false, false)).not.toHaveProperty('accessibilityLiveRegion');
     expect(nativeToastA11y('Saved', false, false)).not.toHaveProperty('aria-live');
-    expect(nativeToastA11y('Saved', false, true)).toEqual({});
-    expect(nativeToastA11y(undefined, false, false)).toEqual({ accessible: false });
+    expect(nativeToastA11y('Saved', false, true)).toStrictEqual({});
+    expect(nativeToastA11y(undefined, false, false)).toStrictEqual({ accessible: false });
   });
 
   it('makes native action and dismiss controls accessibility elements without leaking to web', () => {
-    expect(nativeToastControlA11y(false)).toEqual({ accessible: true });
-    expect(nativeToastControlA11y(true)).toEqual({});
+    expect(nativeToastControlA11y(false)).toStrictEqual({ accessible: true });
+    expect(nativeToastControlA11y(true)).toStrictEqual({});
   });
 
   it('records the library grouping default and keeps native control props off the DOM', () => {
@@ -686,7 +686,7 @@ describe('Toast overlay shadow (standalone === viewport)', () => {
     );
     const overlayShadow = shadowClasses(screen.getByTestId('overlay-elev'));
     expect(overlayShadow).not.toHaveLength(0);
-    expect(overlayShadow).not.toEqual(controlShadow);
+    expect(overlayShadow).not.toStrictEqual(controlShadow);
     cleanup();
 
     renderWithProviders(
@@ -696,7 +696,7 @@ describe('Toast overlay shadow (standalone === viewport)', () => {
       />,
     );
     const standaloneShadow = shadowClasses(screen.getByTestId('toast'));
-    expect(standaloneShadow).toEqual(overlayShadow);
+    expect(standaloneShadow).toStrictEqual(overlayShadow);
     cleanup();
 
     renderWithProviders(<ToastViewport />);
@@ -704,8 +704,8 @@ describe('Toast overlay shadow (standalone === viewport)', () => {
       showToast({ title: 'Viewport saved', sticky: true });
     });
     const viewportShadow = shadowClasses(screen.getByTestId('toast'));
-    expect(viewportShadow).toEqual(overlayShadow);
-    expect(viewportShadow).toEqual(standaloneShadow);
+    expect(viewportShadow).toStrictEqual(overlayShadow);
+    expect(viewportShadow).toStrictEqual(standaloneShadow);
   });
 
   it('elevation none is flat on both paths; large is a different overlay token', () => {
@@ -717,7 +717,7 @@ describe('Toast overlay shadow (standalone === viewport)', () => {
         />
       </Preset>,
     );
-    expect(shadowClasses(screen.getByTestId('toast'))).toEqual([]);
+    expect(shadowClasses(screen.getByTestId('toast'))).toStrictEqual([]);
     cleanup();
 
     renderWithProviders(
@@ -738,7 +738,7 @@ describe('Toast overlay shadow (standalone === viewport)', () => {
         onDismiss={() => {}}
       />,
     );
-    expect(shadowClasses(screen.getByTestId('toast'))).not.toEqual(large);
+    expect(shadowClasses(screen.getByTestId('toast'))).not.toStrictEqual(large);
   });
 });
 
@@ -878,8 +878,8 @@ describe('Toast density moves padX and gap on the host', () => {
     expect(compact.density).toBe('compact');
     expect(comfortable.padX.length).toBeGreaterThan(0);
     expect(comfortable.gap.length).toBeGreaterThan(0);
-    expect(compact.padX).not.toEqual(comfortable.padX);
-    expect(compact.gap).not.toEqual(comfortable.gap);
+    expect(compact.padX).not.toStrictEqual(comfortable.padX);
+    expect(compact.gap).not.toStrictEqual(comfortable.gap);
   });
 
   it('the compact prop lands the same padX and gap as the density knob', () => {
@@ -899,8 +899,8 @@ describe('Toast density moves padX and gap on the host', () => {
       />,
     );
     expect(prop.density).toBe('compact');
-    expect(prop.padX).toEqual(knob.padX);
-    expect(prop.gap).toEqual(knob.gap);
+    expect(prop.padX).toStrictEqual(knob.padX);
+    expect(prop.gap).toStrictEqual(knob.gap);
   });
 });
 
@@ -916,8 +916,8 @@ describe('Toast action label weight and contrast (TEXT NODE)', () => {
     const explicit400 = renderActionWeight(<SizableText fontWeight="400">{ACTION}</SizableText>);
     const explicit600 = renderActionWeight(<SizableText fontWeight="600">{ACTION}</SizableText>);
     expect(action).not.toHaveLength(0);
-    expect(action).toEqual(explicit400);
-    expect(action).not.toEqual(explicit600);
+    expect(action).toStrictEqual(explicit400);
+    expect(action).not.toStrictEqual(explicit600);
 
     renderWithProviders(
       <Toast

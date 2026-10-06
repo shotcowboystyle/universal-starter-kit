@@ -114,7 +114,7 @@ describe('BarChart', () => {
       </>,
     );
     const fills = markRects().map((bar) => bar.getAttribute('fill'));
-    expect(fills).toEqual(palette.current?.categorical.slice(0, data.length));
+    expect(fills).toStrictEqual(palette.current?.categorical.slice(0, data.length));
   });
 
   it('re-anchors the identity under a tint sub-theme', () => {
@@ -396,7 +396,7 @@ describe('PieChart', () => {
       </>,
     );
     const fills = Array.from(document.querySelectorAll('svg [data-mpo-chart-mark]')).map((p) => p.getAttribute('fill'));
-    expect(fills).toEqual(palette.current?.categorical.slice(0, pieData.length));
+    expect(fills).toStrictEqual(palette.current?.categorical.slice(0, pieData.length));
   });
 
   it('legend rows carry label and formatted value', () => {
@@ -520,12 +520,12 @@ describe('categorical cycle is a third list', () => {
       palette,
       { categorical: true },
     );
-    expect(fills).toEqual(palette.categorical.slice(0, 3));
+    expect(fills).toStrictEqual(palette.categorical.slice(0, 3));
     // Tint family is theme names (orange/blue/…); categorical is solids.
     for (const fill of fills) {
       expect(defaultPreset.tints).not.toContain(fill);
     }
-    expect(palette.categorical).not.toEqual(defaultPreset.tints);
+    expect(palette.categorical).not.toStrictEqual(defaultPreset.tints);
   });
 
   it('bar categorical marks stay on the palette cycle under a tint theme', () => {
@@ -541,7 +541,7 @@ describe('categorical cycle is a third list', () => {
       </Theme>,
     );
     const fills = markRects().map((bar) => bar.getAttribute('fill'));
-    expect(fills).toEqual(palette.current?.categorical.slice(0, data.length));
+    expect(fills).toStrictEqual(palette.current?.categorical.slice(0, data.length));
     for (const fill of fills) {
       expect(defaultPreset.tints).not.toContain(fill);
     }
@@ -598,9 +598,9 @@ describe('BarChart corners: DEFAULT class on the value end only', () => {
   };
 
   it('takes 0 / 5 / 9 / 16 px below full', () => {
-    expect(radii('none').map((b) => b.radius)).toEqual(data.map(() => 0));
-    expect(radii('small').map((b) => b.radius)).toEqual(data.map(() => 5));
-    expect(radii('medium').map((b) => b.radius)).toEqual(data.map(() => 9));
+    expect(radii('none').map((b) => b.radius)).toStrictEqual(data.map(() => 0));
+    expect(radii('small').map((b) => b.radius)).toStrictEqual(data.map(() => 5));
+    expect(radii('medium').map((b) => b.radius)).toStrictEqual(data.map(() => 9));
     for (const box of radii('large')) {
       expect(box.radius).toBe(Math.min(16, box.width / 2));
     }

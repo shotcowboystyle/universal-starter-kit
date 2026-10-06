@@ -41,7 +41,7 @@ describe('useTasks', () => {
       expect(result.current.isSuccess).toBe(true);
     });
 
-    expect(result.current.data).toEqual(mockTasks);
+    expect(result.current.data).toStrictEqual(mockTasks);
     expect(taskApi.getTasks).toHaveBeenCalledWith('p1', undefined);
   });
 
@@ -76,7 +76,7 @@ describe('useTask', () => {
       expect(result.current.isSuccess).toBe(true);
     });
 
-    expect(result.current.data).toEqual(mockTask);
+    expect(result.current.data).toStrictEqual(mockTask);
   });
 
   it('should not fetch when taskId is undefined', () => {

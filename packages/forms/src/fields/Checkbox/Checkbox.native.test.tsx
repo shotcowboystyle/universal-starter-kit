@@ -70,7 +70,7 @@ describe('native Checkbox square tap', () => {
         onChange={onChange}
       />,
     );
-    expect(handlersOnLastFrame()).toEqual([]);
+    expect(handlersOnLastFrame()).toStrictEqual([]);
     const box = result.getByRole('checkbox');
     fireEvent.click(box);
     expect(onChange).toHaveBeenCalledExactlyOnceWith(true);
@@ -82,7 +82,7 @@ describe('native Checkbox square tap', () => {
   it('hands the form-integrated frame no such handler either', () => {
     const onChange = vi.fn();
     const result = renderWithProviders(<FormCheckbox onChange={onChange} />);
-    expect(handlersOnLastFrame()).toEqual([]);
+    expect(handlersOnLastFrame()).toStrictEqual([]);
     fireEvent.click(result.getByRole('checkbox'));
     expect(onChange).toHaveBeenCalledExactlyOnceWith(true);
   });
@@ -100,6 +100,6 @@ describe('native Checkbox square tap', () => {
       </Checkboxes>,
     );
     expect(frameProps.length).toBeGreaterThan(0);
-    expect(handlersOnLastFrame()).toEqual([]);
+    expect(handlersOnLastFrame()).toStrictEqual([]);
   });
 });

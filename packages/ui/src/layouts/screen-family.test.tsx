@@ -67,7 +67,7 @@ describe('Screen density', () => {
     );
     const bareFrame = bare.container.querySelector('[data-testid="screen"]') as HTMLElement;
     expect(padAtoms(paddedFrame).length).toBeGreaterThan(0);
-    expect(padAtoms(bareFrame)).not.toEqual(padAtoms(paddedFrame));
+    expect(padAtoms(bareFrame)).not.toStrictEqual(padAtoms(paddedFrame));
   });
 });
 
@@ -124,6 +124,6 @@ describe('ScreenToolbar padding and containment', () => {
       .split(' ')
       .filter((c) => c.startsWith('_mx-') || c.startsWith('_ml-') || c.startsWith('_mr-'))
       .sort();
-    expect(nestedMargin).not.toEqual(standaloneMargin);
+    expect(nestedMargin).not.toStrictEqual(standaloneMargin);
   });
 });

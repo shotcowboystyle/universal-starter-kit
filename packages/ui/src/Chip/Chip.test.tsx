@@ -59,7 +59,7 @@ describe('Chip', () => {
     const ghostFrame = ghost.container.querySelector('[data-chip]') as HTMLElement;
     expect(filledFrame.className).toMatch(/_bg-/);
     expect(ghostFrame.className).toMatch(/_bg-/);
-    expect(filledFrame.className).not.toEqual(ghostFrame.className);
+    expect(filledFrame.className).not.toStrictEqual(ghostFrame.className);
   });
 
   it('maps solid/subtle/outline onto filled/ghost/outlined', () => {
@@ -188,7 +188,7 @@ describe('Chip', () => {
       String(noneFrame.className)
         .split(' ')
         .filter((c) => c.startsWith('_btlr-')),
-    ).toEqual(['_btlr-t-radius-0']);
+    ).toStrictEqual(['_btlr-t-radius-0']);
     expect(noneFrame.getAttribute('data-radius-class')).toBeNull();
 
     const full = renderWithProviders(
@@ -201,7 +201,7 @@ describe('Chip', () => {
       String(fullFrame.className)
         .split(' ')
         .filter((c) => c.startsWith('_btlr-')),
-    ).toEqual(['_btlr-t-radius-12']);
+    ).toStrictEqual(['_btlr-t-radius-12']);
   });
 
   it('dismiss is CIRCULAR-AT-FULL: the token below full, a circle at full', () => {
@@ -221,9 +221,9 @@ describe('Chip', () => {
       result.unmount();
       return atoms;
     };
-    expect(radiusAt('none')).toEqual([['_btlr-0px'], ['_btlr-0px']]);
-    expect(radiusAt('small')).toEqual([['_btlr-5px'], ['_btlr-5px']]);
-    expect(radiusAt('medium')).toEqual([['_btlr-9px'], ['_btlr-9px']]);
-    expect(radiusAt('full')).toEqual([['_btlr-1000px'], ['_btlr-1000px']]);
+    expect(radiusAt('none')).toStrictEqual([['_btlr-0px'], ['_btlr-0px']]);
+    expect(radiusAt('small')).toStrictEqual([['_btlr-5px'], ['_btlr-5px']]);
+    expect(radiusAt('medium')).toStrictEqual([['_btlr-9px'], ['_btlr-9px']]);
+    expect(radiusAt('full')).toStrictEqual([['_btlr-1000px'], ['_btlr-1000px']]);
   });
 });

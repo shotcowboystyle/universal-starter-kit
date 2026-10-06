@@ -45,7 +45,7 @@ describe('BoardService', () => {
 
       const result = await service.create(createBoardDto as any);
 
-      expect(result).toEqual(expectedBoard);
+      expect(result).toStrictEqual(expectedBoard);
       expect(boardRepository.create).toHaveBeenCalled();
     });
   });

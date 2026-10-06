@@ -26,9 +26,9 @@ function textBoneRadius(borderRadius: 'none' | 'small' | 'large' | 'full') {
 
 describe('Skeleton text bones ride DEFAULT', () => {
   it('takes the token at every stop, square at none', () => {
-    expect(textBoneRadius('none')).toEqual(['_btlr-t-radius-0']);
-    expect(textBoneRadius('small')).toEqual(['_btlr-t-radius-2']);
-    expect(textBoneRadius('large')).toEqual(['_btlr-t-radius-6']);
-    expect(textBoneRadius('full')).toEqual(['_btlr-t-radius-12']);
+    expect(textBoneRadius('none')).toStrictEqual(['_btlr-t-radius-0']);
+    expect(textBoneRadius('small')).toStrictEqual(['_btlr-t-radius-2']);
+    expect(textBoneRadius('large')).toStrictEqual(['_btlr-t-radius-6']);
+    expect(textBoneRadius('full')).toStrictEqual(['_btlr-t-radius-12']);
   });
 });

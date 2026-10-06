@@ -41,7 +41,7 @@ describe('ActionBar', () => {
       />,
     );
     const texts = Array.from(container.querySelectorAll('[role="button"]')).map((el) => el.textContent);
-    expect(texts).toEqual(['Cancel', 'Draft', 'Save']);
+    expect(texts).toStrictEqual(['Cancel', 'Draft', 'Save']);
     expect(warnSpy).not.toHaveBeenCalled();
   });
 

@@ -305,7 +305,7 @@ describe('resolveThemeContrast', () => {
         { light: { color: '#242226', background: '#ffffff' } },
         { theme: 'light', foreground: 'color', background: 'background' },
       ),
-    ).toEqual({
+    ).toStrictEqual({
       foreground: '#242226',
       background: '#ffffff',
       floor: undefined,
@@ -361,7 +361,7 @@ describe('contrast floor on built themes', () => {
         resolveThemeContrast(themes, { theme, foreground: 'color', background: 'background' }),
       ),
     );
-    expect(reports.map((report) => report.ratio)).toEqual([expect.closeTo(7.31, 2), expect.closeTo(7.61, 2)]);
+    expect(reports.map((report) => report.ratio)).toStrictEqual([expect.closeTo(7.31, 2), expect.closeTo(7.61, 2)]);
   });
 
   it('a colour pair below the floor FAILS', () => {
@@ -484,7 +484,7 @@ describe('intent color11 on the base page surfaces', () => {
       .map(measureContrast)
       .filter((report) => !report.pass)
       .map((report) => [report.label, report.ratio] as const);
-    expect(Object.fromEntries(misses)).toEqual({});
+    expect(Object.fromEntries(misses)).toStrictEqual({});
   });
 
   it('pins the two warning/success stops on color2, the ground they used to fail', () => {
@@ -498,7 +498,7 @@ describe('intent color11 on the base page surfaces', () => {
         label: `light_${intent}: color11 on light.color2`,
       })),
     );
-    expect(reports.map((report) => report.ratio)).toEqual([expect.closeTo(4.56, 2), expect.closeTo(4.55, 2)]);
+    expect(reports.map((report) => report.ratio)).toStrictEqual([expect.closeTo(4.56, 2), expect.closeTo(4.55, 2)]);
   });
 
   it('the same warning/success ink still clears the floor on background and color1', () => {
@@ -513,7 +513,7 @@ describe('intent color11 on the base page surfaces', () => {
         })),
       ),
     );
-    expect(reports.map((report) => report.ratio)).toEqual([
+    expect(reports.map((report) => report.ratio)).toStrictEqual([
       expect.closeTo(4.8, 2),
       expect.closeTo(4.8, 2),
       expect.closeTo(4.79, 2),

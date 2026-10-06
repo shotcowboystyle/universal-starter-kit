@@ -31,7 +31,7 @@ describe('useBoards', () => {
       expect(result.current.isSuccess).toBe(true);
     });
 
-    expect(result.current.data).toEqual(mockBoards);
+    expect(result.current.data).toStrictEqual(mockBoards);
     expect(boardApi.getBoards).toHaveBeenCalled();
   });
 });
@@ -51,7 +51,7 @@ describe('useBoard', () => {
       expect(result.current.isSuccess).toBe(true);
     });
 
-    expect(result.current.data).toEqual(mockBoard);
+    expect(result.current.data).toStrictEqual(mockBoard);
   });
 
   it('should not fetch when boardId is undefined', () => {

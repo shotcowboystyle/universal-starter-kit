@@ -41,7 +41,7 @@ describe('Button KNOB-TOTALITY — borderRadius knob', () => {
         <Button>Save</Button>
       </Preset>,
     );
-    expect(frameRadiusClasses()).toEqual(['_btlr-t-radius-0']);
+    expect(frameRadiusClasses()).toStrictEqual(['_btlr-t-radius-0']);
     cleanup();
 
     renderWithProviders(
@@ -49,7 +49,7 @@ describe('Button KNOB-TOTALITY — borderRadius knob', () => {
         <Button>Save</Button>
       </Preset>,
     );
-    expect(frameRadiusClasses()).toEqual(['_btlr-t-radius-12']);
+    expect(frameRadiusClasses()).toStrictEqual(['_btlr-t-radius-12']);
   });
 
   it('outlined variant squares at borderRadius none', () => {
@@ -58,7 +58,7 @@ describe('Button KNOB-TOTALITY — borderRadius knob', () => {
         <Button outlined>Save</Button>
       </Preset>,
     );
-    expect(frameRadiusClasses()).toEqual(['_btlr-t-radius-0']);
+    expect(frameRadiusClasses()).toStrictEqual(['_btlr-t-radius-0']);
   });
 
   it('circular ignores the radius knob and keeps its circle at none', () => {
@@ -72,7 +72,7 @@ describe('Button KNOB-TOTALITY — borderRadius knob', () => {
       </Preset>,
     );
     const frame = screen.getByRole('button');
-    expect(frameRadiusClasses()).toEqual(['_btlr-100000px']);
+    expect(frameRadiusClasses()).toStrictEqual(['_btlr-100000px']);
     // The old implementation squared circles with an inline style eject —
     // the shape eject must not be re-overridden by the knob channel.
     expect(frame.style.borderRadius).toBe('');
@@ -98,7 +98,7 @@ describe('Button KNOB-TOTALITY — borderRadius knob', () => {
         <Button borderRadius="$6">Save</Button>
       </Preset>,
     );
-    expect(frameRadiusClasses()).toEqual(['_btlr-t-radius-6']);
+    expect(frameRadiusClasses()).toStrictEqual(['_btlr-t-radius-6']);
   });
 });
 

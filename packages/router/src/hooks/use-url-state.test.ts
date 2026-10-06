@@ -32,7 +32,7 @@ describe('useUrlState', () => {
       const { result } = renderHook(() => useSearchParams());
       const [params] = result.current;
 
-      expect(params).toEqual({ foo: 'bar', baz: 'qux' });
+      expect(params).toStrictEqual({ foo: 'bar', baz: 'qux' });
     });
 
     it('should update search params', () => {
@@ -97,7 +97,7 @@ describe('useUrlState', () => {
       const { result } = renderHook(() => useUrlState(defaultValues));
       const [state] = result.current;
 
-      expect(state).toEqual(defaultValues);
+      expect(state).toStrictEqual(defaultValues);
     });
 
     it('should deserialize URL params', () => {
@@ -111,7 +111,7 @@ describe('useUrlState', () => {
       const { result } = renderHook(() => useUrlState(defaultValues));
       const [state] = result.current;
 
-      expect(state).toEqual({
+      expect(state).toStrictEqual({
         name: 'John',
         age: 25,
         active: true,
@@ -147,7 +147,7 @@ describe('useUrlState', () => {
       const { result } = renderHook(() => useUrlState(defaultValues));
       const [state] = result.current;
 
-      expect(state).toEqual({
+      expect(state).toStrictEqual({
         tags: ['react', 'typescript'],
       });
     });
@@ -161,7 +161,7 @@ describe('useUrlState', () => {
       const { result } = renderHook(() => useUrlState(defaultValues));
       const [state] = result.current;
 
-      expect(state).toEqual({
+      expect(state).toStrictEqual({
         config: { theme: 'dark', lang: 'en' },
       });
     });
@@ -191,7 +191,7 @@ describe('useUrlState', () => {
 
       const { result } = renderHook(() => useTypedSearchParams(schema));
 
-      expect(result.current).toEqual({
+      expect(result.current).toStrictEqual({
         page: 2,
         limit: 50,
         search: 'test',
@@ -209,7 +209,7 @@ describe('useUrlState', () => {
 
       const { result } = renderHook(() => useTypedSearchParams(schema));
 
-      expect(result.current).toEqual({
+      expect(result.current).toStrictEqual({
         page: 1,
         limit: 20,
         search: '',

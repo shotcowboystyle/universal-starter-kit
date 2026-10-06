@@ -98,7 +98,7 @@ describe('PaneScaffold SSR to hydration', () => {
     expect(html).toContain('data-size-class="medium"');
     expect(html).toContain('data-pane-layout="stack"');
 
-    expect(hydrationErrors()).toEqual([]);
+    expect(hydrationErrors()).toStrictEqual([]);
     expect(scaffold().getAttribute('data-size-class')).toBe(sizeClass);
     expect(scaffold().getAttribute('data-pane-layout')).toBe(layout);
     expect(scaffold().textContent).toContain('List');

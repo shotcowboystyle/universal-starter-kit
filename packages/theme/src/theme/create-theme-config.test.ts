@@ -49,14 +49,14 @@ describe('createThemeConfig — themeColors extraction', () => {
     const config = createThemeConfig({
       themes: makeThemes(['light_blue', 'dark_blue', 'light_red', 'dark_red', 'light', 'dark']),
     } as never);
-    expect(config.themeColors).toEqual(['blue', 'red']);
+    expect(config.themeColors).toStrictEqual(['blue', 'red']);
   });
 
   it('drops colors missing one scheme', () => {
     const config = createThemeConfig({
       themes: makeThemes(['light_blue', 'dark_blue', 'light_orphan']),
     } as never);
-    expect(config.themeColors).toEqual(['blue']);
+    expect(config.themeColors).toStrictEqual(['blue']);
   });
 
   it('excludes semantic and state sub-themes from the picker list', () => {
@@ -80,7 +80,7 @@ describe('createThemeConfig — themeColors extraction', () => {
         'dark_alt2',
       ]),
     } as never);
-    expect(config.themeColors).toEqual(['blue']);
+    expect(config.themeColors).toStrictEqual(['blue']);
   });
 
   it('ignores mixed-case and nested sub-theme names', () => {
@@ -94,12 +94,12 @@ describe('createThemeConfig — themeColors extraction', () => {
         'dark_blue_Button',
       ]),
     } as never);
-    expect(config.themeColors).toEqual(['blue']);
+    expect(config.themeColors).toStrictEqual(['blue']);
   });
 
   it('returns an empty list when the config carries no themes', () => {
     const config = createThemeConfig({} as never);
-    expect(config.themeColors).toEqual([]);
+    expect(config.themeColors).toStrictEqual([]);
   });
 });
 
@@ -128,11 +128,11 @@ describe('createThemeConfig — settings and registration', () => {
     expect(getPresetNames()).toContain('material');
     expect(getPreset('material')).toBe(material);
     expect(config.defaultPreset).toBe('material');
-    expect(config.presets).toEqual({ material });
+    expect(config.presets).toStrictEqual({ material });
   });
 
   it('registers nothing without presets', () => {
     createThemeConfig({ themes: {} } as never);
-    expect(getPresetNames()).toEqual([]);
+    expect(getPresetNames()).toStrictEqual([]);
   });
 });

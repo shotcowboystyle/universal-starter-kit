@@ -93,13 +93,13 @@ describe('calendarMath', () => {
         new Date(2026, 2, 12),
         14 * 60,
       );
-      expect(range.start).toEqual(new Date(2026, 2, 12, 14, 0));
-      expect(range.end).toEqual(new Date(2026, 2, 12, 15, 30));
+      expect(range.start).toStrictEqual(new Date(2026, 2, 12, 14, 0));
+      expect(range.end).toStrictEqual(new Date(2026, 2, 12, 15, 30));
     });
 
     it('keeps zero-duration events zero-duration', () => {
       const range = moveRangeToSlot({ start: new Date(2026, 2, 10, 9, 0) }, day, 600);
-      expect(range.end).toEqual(range.start);
+      expect(range.end).toStrictEqual(range.start);
     });
   });
 
@@ -108,55 +108,55 @@ describe('calendarMath', () => {
 
     it('snaps the end edge to the grid increment', () => {
       const range = computeResizeRange(event, 'end', 11 * 60 + 13, 30);
-      expect(range.start).toEqual(event.start);
-      expect(range.end).toEqual(new Date(2026, 2, 10, 11, 0));
+      expect(range.start).toStrictEqual(event.start);
+      expect(range.end).toStrictEqual(new Date(2026, 2, 10, 11, 0));
     });
 
     it('enforces a minimum duration of one increment (end edge)', () => {
       const range = computeResizeRange(event, 'end', 8 * 60, 30);
-      expect(range.end).toEqual(new Date(2026, 2, 10, 9, 30));
+      expect(range.end).toStrictEqual(new Date(2026, 2, 10, 9, 30));
     });
 
     it('resizes the start edge and clamps against the end', () => {
       const range = computeResizeRange(event, 'start', 9 * 60 + 50, 30);
-      expect(range.start).toEqual(new Date(2026, 2, 10, 9, 30));
-      expect(range.end).toEqual(new Date(2026, 2, 10, 10, 0));
+      expect(range.start).toStrictEqual(new Date(2026, 2, 10, 9, 30));
+      expect(range.end).toStrictEqual(new Date(2026, 2, 10, 10, 0));
       const clamped = computeResizeRange(event, 'start', 12 * 60, 30);
-      expect(clamped.start).toEqual(new Date(2026, 2, 10, 9, 30));
+      expect(clamped.start).toStrictEqual(new Date(2026, 2, 10, 9, 30));
     });
   });
 
   describe('createRangeFromDrag', () => {
     it('floors the anchor and ceils the moving edge', () => {
       const range = createRangeFromDrag(day, 9 * 60 + 10, 10 * 60 + 5, 30);
-      expect(range.start).toEqual(new Date(2026, 2, 10, 9, 0));
-      expect(range.end).toEqual(new Date(2026, 2, 10, 10, 30));
+      expect(range.start).toStrictEqual(new Date(2026, 2, 10, 9, 0));
+      expect(range.end).toStrictEqual(new Date(2026, 2, 10, 10, 30));
     });
 
     it('spans at least one increment for a bare press', () => {
       const range = createRangeFromDrag(day, 9 * 60 + 10, 9 * 60 + 10, 30);
-      expect(range.start).toEqual(new Date(2026, 2, 10, 9, 0));
-      expect(range.end).toEqual(new Date(2026, 2, 10, 9, 30));
+      expect(range.start).toStrictEqual(new Date(2026, 2, 10, 9, 0));
+      expect(range.end).toStrictEqual(new Date(2026, 2, 10, 9, 30));
     });
 
     it('normalizes an upward drag', () => {
       const range = createRangeFromDrag(day, 10 * 60, 9 * 60 + 10, 30);
-      expect(range.start).toEqual(new Date(2026, 2, 10, 9, 0));
-      expect(range.end).toEqual(new Date(2026, 2, 10, 10, 0));
+      expect(range.start).toStrictEqual(new Date(2026, 2, 10, 9, 0));
+      expect(range.end).toStrictEqual(new Date(2026, 2, 10, 10, 0));
     });
   });
 
   describe('moveFocusDate / moveFocusSlot', () => {
     it('steps days horizontally and weeks vertically in month view', () => {
-      expect(moveFocusDate(day, 'ArrowRight', 'month')).toEqual(new Date(2026, 2, 11));
-      expect(moveFocusDate(day, 'ArrowLeft', 'month')).toEqual(new Date(2026, 2, 9));
-      expect(moveFocusDate(day, 'ArrowDown', 'month')).toEqual(new Date(2026, 2, 17));
-      expect(moveFocusDate(day, 'ArrowUp', 'month')).toEqual(new Date(2026, 2, 3));
+      expect(moveFocusDate(day, 'ArrowRight', 'month')).toStrictEqual(new Date(2026, 2, 11));
+      expect(moveFocusDate(day, 'ArrowLeft', 'month')).toStrictEqual(new Date(2026, 2, 9));
+      expect(moveFocusDate(day, 'ArrowDown', 'month')).toStrictEqual(new Date(2026, 2, 17));
+      expect(moveFocusDate(day, 'ArrowUp', 'month')).toStrictEqual(new Date(2026, 2, 3));
     });
 
     it('keeps vertical arrows off the date in week/day views', () => {
-      expect(moveFocusDate(day, 'ArrowDown', 'week')).toEqual(day);
-      expect(moveFocusDate(day, 'ArrowRight', 'week')).toEqual(new Date(2026, 2, 11));
+      expect(moveFocusDate(day, 'ArrowDown', 'week')).toStrictEqual(day);
+      expect(moveFocusDate(day, 'ArrowRight', 'week')).toStrictEqual(new Date(2026, 2, 11));
     });
 
     it('clamps slot focus inside the day', () => {

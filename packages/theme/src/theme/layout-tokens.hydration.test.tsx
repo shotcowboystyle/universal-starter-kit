@@ -92,7 +92,7 @@ describe('useLayoutSizeClass through SSR hydration', () => {
     expect(html).toContain('data-size-class="medium"');
     expect(html).toContain('<ul>');
 
-    expect(hydrationErrors()).toEqual([]);
+    expect(hydrationErrors()).toStrictEqual([]);
     expect(container!.querySelector('nav')).toBe(serverNav);
     expect(serverNav!.getAttribute('data-size-class')).toBe('compact');
     expect(serverNav!.querySelector('ul')).toBeNull();
@@ -101,7 +101,7 @@ describe('useLayoutSizeClass through SSR hydration', () => {
 
   it('hydrates at 1280px with no mismatch and adopts xl', async () => {
     const { serverNav } = await hydrateAt(1280);
-    expect(hydrationErrors()).toEqual([]);
+    expect(hydrationErrors()).toStrictEqual([]);
     expect(container!.querySelector('nav')).toBe(serverNav);
     expect(serverNav!.getAttribute('data-size-class')).toBe('xl');
     expect(serverNav!.querySelector('ul')).not.toBeNull();

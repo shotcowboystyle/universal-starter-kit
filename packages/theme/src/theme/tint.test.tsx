@@ -63,7 +63,7 @@ function nestTints(count: number, innermost: ReactNode = createElement('span', n
 
 describe('Tint', () => {
   it('defaultPreset.tints is the four-name decorative family', () => {
-    expect(defaultPreset.tints).toEqual(FAMILY);
+    expect(defaultPreset.tints).toStrictEqual(FAMILY);
   });
 
   it('selects tints[0] for a single <Tint> (depth 1)', () => {
@@ -71,7 +71,7 @@ describe('Tint', () => {
     const html = renderToHtml(tree);
     const themes = collectThemes(html);
     // depth = 0 (parent) + 1 = 1 → tints[(1 - 1) % 4] = "orange"
-    expect(themes).toEqual(['orange']);
+    expect(themes).toStrictEqual(['orange']);
   });
 
   it('increments depth correctly with nested <Tint>', () => {
@@ -82,7 +82,7 @@ describe('Tint', () => {
     const html = renderToHtml(tree);
     const themes = collectThemes(html);
     // outer: depth=1 → tints[0]="orange", inner: depth=2 → tints[1]="blue"
-    expect(themes).toEqual(['orange', 'blue']);
+    expect(themes).toStrictEqual(['orange', 'blue']);
   });
 
   it('wraps via modulo when depth exceeds tints.length', () => {
@@ -90,7 +90,7 @@ describe('Tint', () => {
     const tree = wrapWithPreset(FAMILY, nestTints(5, createElement('span', null, 'deep')));
     const html = renderToHtml(tree);
     const themes = collectThemes(html);
-    expect(themes).toEqual(['orange', 'blue', 'purple', 'pink', 'orange']);
+    expect(themes).toStrictEqual(['orange', 'blue', 'purple', 'pink', 'orange']);
   });
 
   it('applies alt prop offset', () => {
@@ -98,7 +98,7 @@ describe('Tint', () => {
     const tree = wrapWithPreset(FAMILY, createElement(Tint, { alt: 2 }, createElement('span', null, 'alt')));
     const html = renderToHtml(tree);
     const themes = collectThemes(html);
-    expect(themes).toEqual(['purple']);
+    expect(themes).toStrictEqual(['purple']);
   });
 
   it('skips Theme wrapper when disable is true', () => {
@@ -108,7 +108,7 @@ describe('Tint', () => {
     );
     const html = renderToHtml(tree);
     const themes = collectThemes(html);
-    expect(themes).toEqual([]);
+    expect(themes).toStrictEqual([]);
   });
 
   it('still increments depth when disabled (so children see correct depth)', () => {
@@ -119,14 +119,14 @@ describe('Tint', () => {
     );
     const html = renderToHtml(tree);
     const themes = collectThemes(html);
-    expect(themes).toEqual(['blue']);
+    expect(themes).toStrictEqual(['blue']);
   });
 
   it('renders children without Theme wrapper when tints array is empty', () => {
     const tree = wrapWithPreset([], createElement(Tint, null, createElement('span', null, 'empty')));
     const html = renderToHtml(tree);
     const themes = collectThemes(html);
-    expect(themes).toEqual([]);
+    expect(themes).toStrictEqual([]);
     expect(html).toContain('empty');
   });
 
@@ -135,7 +135,7 @@ describe('Tint', () => {
     const tree = createElement(Tint, null, createElement('span', null, 'no context'));
     const html = renderToHtml(tree);
     const themes = collectThemes(html);
-    expect(themes).toEqual([]);
+    expect(themes).toStrictEqual([]);
     expect(html).toContain('no context');
   });
 });

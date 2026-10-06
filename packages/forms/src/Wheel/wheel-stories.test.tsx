@@ -108,7 +108,7 @@ describe('Forms/Wheel stories', () => {
     const { container } = mount(JoinedColumns as StoryLike);
     const sliders = container.querySelectorAll("[role='slider']");
     expect(sliders).toHaveLength(3);
-    expect(Array.from(sliders).map((s) => s.getAttribute('aria-label'))).toEqual(['Hour', 'Minute', 'AM/PM']);
+    expect(Array.from(sliders).map((s) => s.getAttribute('aria-label'))).toStrictEqual(['Hour', 'Minute', 'AM/PM']);
   });
 
   it('Disabled marks the disabled wheel for a11y and leaves the enabled one alone', () => {

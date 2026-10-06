@@ -24,7 +24,7 @@ describe('safeAction (cycle-safe Storybook action)', () => {
     const handler = action('onPress');
     handler(node);
     const [sanitized] = fireSpy.mock.calls[0];
-    expect(sanitized).toEqual({ type: 'div', self: '[Circular]' });
+    expect(sanitized).toStrictEqual({ type: 'div', self: '[Circular]' });
     expect(() => JSON.stringify(sanitized)).not.toThrow();
   });
 
@@ -37,7 +37,7 @@ describe('safeAction (cycle-safe Storybook action)', () => {
     const handler = action('onPress');
     handler(event);
     const [sanitized] = fireSpy.mock.calls[0];
-    expect(sanitized).toEqual({
+    expect(sanitized).toStrictEqual({
       type: 'press',
       target: '[ReactElement]',
       nativeEvent: { pageX: 1 },

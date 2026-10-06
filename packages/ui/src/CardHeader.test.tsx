@@ -105,7 +105,7 @@ describe('CardHeader design-law — T-HEADING text node', () => {
     const boldWeight = atoms(titleText(bold.container, 'Header title'), ['_fow-']).join(' ');
     expect(regularWeight).not.toMatch(/600|weight-6|fow-6/);
     expect(boldWeight).not.toMatch(/600|weight-6|fow-6/);
-    expect(boldWeight).not.toEqual(regularWeight);
+    expect(boldWeight).not.toStrictEqual(regularWeight);
     expect(boldWeight).toMatch(/700|weight-7|fow-7/);
   });
 

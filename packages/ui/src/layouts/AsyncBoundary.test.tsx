@@ -263,7 +263,7 @@ function renderInScheme(scheme: (typeof SCHEMES)[number], ui: ReactElement) {
 function expectRetryWeight400(pin: string[]) {
   const node = screen.getByText('Retry');
   expect(node.tagName).not.toBe('BUTTON');
-  expect(weightClasses(node)).toEqual(pin);
+  expect(weightClasses(node)).toStrictEqual(pin);
   expect(node.className).toMatch(/_fow-400\b/);
   expect(node.className).not.toMatch(/_fow-500\b/);
   expect(node.className).not.toMatch(/_fow-600\b/);

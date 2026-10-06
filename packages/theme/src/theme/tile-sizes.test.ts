@@ -22,10 +22,10 @@ describe('tile-size ladder', () => {
     const ladder = generateTileSizeLadder(resolveTileSizeInputs());
     // sm..xl are Lookout's TILE_SIZES basis/max (identical to the SPA's
     // TILE_MIN); xs is the launcher icon-plate minmax(104px,1fr) track.
-    expect(ladder.sm).toEqual({ minWidth: 220, maxWidth: 300 });
-    expect(ladder.md).toEqual({ minWidth: 320, maxWidth: 440 });
-    expect(ladder.lg).toEqual({ minWidth: 480, maxWidth: 720 });
-    expect(ladder.xl).toEqual({ minWidth: 720, maxWidth: 1400 });
+    expect(ladder.sm).toStrictEqual({ minWidth: 220, maxWidth: 300 });
+    expect(ladder.md).toStrictEqual({ minWidth: 320, maxWidth: 440 });
+    expect(ladder.lg).toStrictEqual({ minWidth: 480, maxWidth: 720 });
+    expect(ladder.xl).toStrictEqual({ minWidth: 720, maxWidth: 1400 });
     expect(ladder.xs.minWidth).toBe(104);
     // xs has no measured max; it derives from maxRatio (440/320).
     expect(ladder.xs.maxWidth).toBe(Math.round(104 * defaultTileSizeInputs.maxRatio));
@@ -63,13 +63,13 @@ describe('tile-size ladder', () => {
     const ladder = generateTileSizeLadder(
       resolveTileSizeInputs({ baseWidth: 300, maxRatio: 2, rungMaxWidths: { md: 555 } }),
     );
-    expect(ladder.md).toEqual({ minWidth: 300, maxWidth: 555 });
+    expect(ladder.md).toStrictEqual({ minWidth: 300, maxWidth: 555 });
     expect(ladder.lg.maxWidth).toBe(ladder.lg.minWidth * 2);
   });
 
   it('tileRungFlexProps is the wrapping-flex tile fragment (the Lookout idiom)', () => {
     const ladder = generateTileSizeLadder(resolveTileSizeInputs());
-    expect(tileRungFlexProps(ladder.md)).toEqual({
+    expect(tileRungFlexProps(ladder.md)).toStrictEqual({
       flexGrow: 1,
       flexBasis: 320,
       minWidth: 320,
@@ -92,7 +92,7 @@ describe('tile-size ladder', () => {
   });
 
   it('rides recipeInputs: generateSizeRecipes carries tiles and setSizeRecipeInputs rewrites the live ladder in place', () => {
-    expect(generateSizeRecipes().tiles.md).toEqual({ minWidth: 320, maxWidth: 440 });
+    expect(generateSizeRecipes().tiles.md).toStrictEqual({ minWidth: 320, maxWidth: 440 });
 
     const live = tileSizeLadder;
     expect(live.md.minWidth).toBe(320);
@@ -105,8 +105,8 @@ describe('tile-size ladder', () => {
     expect(getSizeRecipeInputs().tile?.baseWidth).toBe(280);
 
     setSizeRecipeInputs();
-    expect(tileSizeLadder.md).toEqual({ minWidth: 320, maxWidth: 440 });
-    expect(tileSizeLadder.sm).toEqual({ minWidth: 220, maxWidth: 300 });
+    expect(tileSizeLadder.md).toStrictEqual({ minWidth: 320, maxWidth: 440 });
+    expect(tileSizeLadder.sm).toStrictEqual({ minWidth: 220, maxWidth: 300 });
   });
 });
 
@@ -118,7 +118,7 @@ describe('media aspect vocabulary', () => {
     expect(resolveMediaAspect('screen')).toBeCloseTo(1.6);
     expect(resolveMediaAspect('video')).toBeCloseTo(16 / 9);
     expect(resolveMediaAspect('portrait')).toBeCloseTo(3 / 4);
-    expect(Object.keys(mediaAspectRatios)).toEqual(['square', 'photo', 'screen', 'video', 'portrait']);
+    expect(Object.keys(mediaAspectRatios)).toStrictEqual(['square', 'photo', 'screen', 'video', 'portrait']);
   });
 
   it('numbers pass through; nullish and junk fall back to square', () => {

@@ -44,7 +44,7 @@ beforeEach(() => {
 
 describe('acceptToMimeTypes', () => {
   it('passes MIME entries through and drops extension entries', () => {
-    expect(acceptToMimeTypes('image/png, .pdf ,application/json')).toEqual(['image/png', 'application/json']);
+    expect(acceptToMimeTypes('image/png, .pdf ,application/json')).toStrictEqual(['image/png', 'application/json']);
   });
 
   it('returns undefined when accept is absent or extension-only', () => {
@@ -72,7 +72,7 @@ describe('isNativeFilePickerAvailable', () => {
 
 describe('pickFilesNatively', () => {
   it('reports unavailable when no picker is linked into the build', async () => {
-    await expect(pickFilesNatively({})).resolves.toEqual({ files: [], unavailable: true });
+    await expect(pickFilesNatively({})).resolves.toStrictEqual({ files: [], unavailable: true });
   });
 
   it('maps document assets onto the FormData-ready shape', async () => {
@@ -97,7 +97,7 @@ describe('pickFilesNatively', () => {
       multiple: true,
       copyToCacheDirectory: true,
     });
-    expect(outcome.files).toEqual([
+    expect(outcome.files).toStrictEqual([
       {
         name: 'report.pdf',
         size: 2048,
@@ -126,7 +126,7 @@ describe('pickFilesNatively', () => {
     });
     // Android providers omit fileName and mimeType; both are derived from the
     // URI so an accept="image/*" field does not reject its own pick.
-    expect(outcome.files).toEqual([
+    expect(outcome.files).toStrictEqual([
       {
         name: 'IMG_0001.HEIC',
         size: 900,
@@ -144,7 +144,7 @@ describe('pickFilesNatively', () => {
 
     const outcome = await pickFilesNatively({ accept: 'image/*' });
 
-    expect(outcome).toEqual({ files: [], denied: true });
+    expect(outcome).toStrictEqual({ files: [], denied: true });
     expect(getDocumentAsync).not.toHaveBeenCalled();
   });
 
@@ -155,12 +155,12 @@ describe('pickFilesNatively', () => {
     const outcome = await pickFilesNatively({ accept: 'image/*', mode: 'image' });
 
     expect(getDocumentAsync).toHaveBeenCalled();
-    expect(outcome).toEqual({ files: [], canceled: true });
+    expect(outcome).toStrictEqual({ files: [], canceled: true });
   });
 
   it('treats a dismissed picker as a no-op', async () => {
     withDocumentPicker();
     getDocumentAsync.mockResolvedValue({ canceled: true });
-    await expect(pickFilesNatively({})).resolves.toEqual({ files: [], canceled: true });
+    await expect(pickFilesNatively({})).resolves.toStrictEqual({ files: [], canceled: true });
   });
 });

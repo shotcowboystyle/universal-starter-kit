@@ -7,7 +7,7 @@ import { extractAnimationNames } from './animation-options';
 describe('extractAnimationNames', () => {
   it("lists the registered animations of a createTamagui config, not the driver's API", () => {
     const names = extractAnimationNames({ animations });
-    expect(names).toEqual([...animationNames]);
+    expect(names).toStrictEqual([...animationNames]);
     for (const member of [
       'usePresence',
       'ResetPresence',
@@ -21,7 +21,7 @@ describe('extractAnimationNames', () => {
   });
 
   it('offers exactly the house names on the house driver', () => {
-    expect(extractAnimationNames({ animations })).toEqual([
+    expect(extractAnimationNames({ animations })).toStrictEqual([
       'bouncy',
       'lazy',
       'slow',
@@ -35,12 +35,12 @@ describe('extractAnimationNames', () => {
 
   it("reads an app's own driver names when it registers different ones", () => {
     const driver = { ...animations, animations: { fast: 'ease-in 50ms', calm: 'ease-in 900ms' } };
-    expect(extractAnimationNames({ animations: driver })).toEqual(['fast', 'calm']);
+    expect(extractAnimationNames({ animations: driver })).toStrictEqual(['fast', 'calm']);
   });
 
   it('falls back to the house names without a config or without named animations', () => {
-    expect(extractAnimationNames(undefined)).toEqual([...animationNames]);
-    expect(extractAnimationNames({})).toEqual([...animationNames]);
-    expect(extractAnimationNames({ animations: { animations: {} } })).toEqual([...animationNames]);
+    expect(extractAnimationNames(undefined)).toStrictEqual([...animationNames]);
+    expect(extractAnimationNames({})).toStrictEqual([...animationNames]);
+    expect(extractAnimationNames({ animations: { animations: {} } })).toStrictEqual([...animationNames]);
   });
 });

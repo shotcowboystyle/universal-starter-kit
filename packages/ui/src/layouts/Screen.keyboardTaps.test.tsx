@@ -54,5 +54,5 @@ test('renders no ScrollView when scroll is off', () => {
       <span>Page body</span>
     </Screen>,
   );
-  expect(houseScrollViews).toEqual([]);
+  expect(houseScrollViews).toStrictEqual([]);
 });

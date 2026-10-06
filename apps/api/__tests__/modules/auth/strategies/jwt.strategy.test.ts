@@ -36,7 +36,7 @@ describe('JwtStrategy', () => {
       const result = await jwtStrategy.validate(payload);
 
       expect(mockUserService.findByEmail).toHaveBeenCalledWith(payload.email);
-      expect(result).toEqual({ _id: mockUser._id, email: mockUser.email });
+      expect(result).toStrictEqual({ _id: mockUser._id, email: mockUser.email });
     });
 
     it('should throw UnauthorizedException if user not found', async () => {

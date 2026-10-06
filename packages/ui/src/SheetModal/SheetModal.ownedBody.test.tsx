@@ -105,8 +105,8 @@ it('mounts the owned scroller without a measurement gate and records delivered c
     scroll.onContentSizeChange(300, 2500.5);
     scroll.onScroll({ nativeEvent: { contentOffset: { x: 0, y: 123.25 } } });
   });
-  expect(readings(view).content).toEqual({ width: 300, height: 2500.5 });
-  expect(readings(view).offset).toEqual({ x: 0, y: 123.25 });
+  expect(readings(view).content).toStrictEqual({ width: 300, height: 2500.5 });
+  expect(readings(view).offset).toStrictEqual({ x: 0, y: 123.25 });
   fireEvent.click(view.getByText('Activate Record 60'));
   expect(readings(view).tailPresses).toBe(1);
 });
@@ -122,7 +122,7 @@ it('records public window-bound callbacks and rejects callbacks from a closed pr
   act(() => {
     frame.callback(18, 300, 354, 240);
   });
-  expect(readings(view).frameWindow).toEqual({ x: 18, y: 300, width: 354, height: 240 });
+  expect(readings(view).frameWindow).toStrictEqual({ x: 18, y: 300, width: 354, height: 240 });
   const viewport = pending.find((item) => item.id === 'owned-sheet-viewport')!;
   fireEvent.click(view.getByText('Close fixture'));
   fireEvent.click(view.getByText('Open 240pt control'));
@@ -160,7 +160,7 @@ test('keeps an absent measured scroller unavailable and ignores superseded sampl
   act(() => {
     current.callback(18, 780, 354, 0);
   });
-  expect(readings(view).frameWindow).toEqual({ x: 18, y: 780, width: 354, height: 0 });
+  expect(readings(view).frameWindow).toStrictEqual({ x: 18, y: 780, width: 354, height: 0 });
 });
 
 test('retains the closed presentation readings and resets actual tail presses on reopening', () => {

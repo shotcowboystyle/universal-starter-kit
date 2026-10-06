@@ -26,7 +26,7 @@ describe('authChecker', () => {
 
       const result = await isAuthenticated();
 
-      expect(result).toEqual({ isAuthenticated: true });
+      expect(result).toStrictEqual({ isAuthenticated: true });
       expect(mockCookieStore.getAll).toHaveBeenCalled();
     });
 
@@ -38,7 +38,7 @@ describe('authChecker', () => {
 
       const result = await isAuthenticated();
 
-      expect(result).toEqual({ isAuthenticated: false });
+      expect(result).toStrictEqual({ isAuthenticated: false });
       expect(mockCookieStore.getAll).toHaveBeenCalled();
     });
 
@@ -50,7 +50,7 @@ describe('authChecker', () => {
 
       const result = await isAuthenticated();
 
-      expect(result).toEqual({ isAuthenticated: false });
+      expect(result).toStrictEqual({ isAuthenticated: false });
     });
 
     it('should return false when no cookies exist', async () => {
@@ -61,7 +61,7 @@ describe('authChecker', () => {
 
       const result = await isAuthenticated();
 
-      expect(result).toEqual({ isAuthenticated: false });
+      expect(result).toStrictEqual({ isAuthenticated: false });
     });
 
     it('should return false and log error on exception', async () => {
@@ -71,7 +71,7 @@ describe('authChecker', () => {
 
       const result = await isAuthenticated();
 
-      expect(result).toEqual({ isAuthenticated: false });
+      expect(result).toStrictEqual({ isAuthenticated: false });
       expect(consoleErrorSpy).toHaveBeenCalledWith('Error checking authentication:', mockError);
 
       consoleErrorSpy.mockRestore();

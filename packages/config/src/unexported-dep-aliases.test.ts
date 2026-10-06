@@ -79,7 +79,7 @@ describe('unexportedDepAliases', () => {
     // Vite matches an alias key exactly or as a `key + "/"` prefix. A bare
     // "@react-navigation/core" key would swallow the package's own entry, and a
     // trailing slash would stop the key matching at all.
-    expect(keys).toEqual(['@react-navigation/core/lib/module']);
+    expect(keys).toStrictEqual(['@react-navigation/core/lib/module']);
     expect(keys[0]).not.toMatch(/\/$/);
   });
 
@@ -87,7 +87,7 @@ describe('unexportedDepAliases', () => {
     const bare = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'unexported-dep-aliases-bare-')));
     writePristineFixture(bare, { withPackage: false });
     try {
-      expect(unexportedDepAliases(bare)).toEqual({});
+      expect(unexportedDepAliases(bare)).toStrictEqual({});
     } finally {
       fs.rmSync(bare, { recursive: true, force: true });
     }

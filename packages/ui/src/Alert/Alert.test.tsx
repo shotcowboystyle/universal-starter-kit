@@ -414,11 +414,11 @@ describe('Alert density — padX and gap move, height holds', () => {
     expect(comfortableMeasure.density).toBe('comfortable');
     expect(compact.frame.getAttribute('data-density')).toBe('compact');
     expect(comfortableMeasure.padX.length).toBeGreaterThan(0);
-    expect(atoms(compact.frame, padX)).not.toEqual(comfortableMeasure.padX);
+    expect(atoms(compact.frame, padX)).not.toStrictEqual(comfortableMeasure.padX);
     expect(comfortableMeasure.gap.length).toBeGreaterThan(0);
-    expect(atoms(compact.frame, gap)).not.toEqual(comfortableMeasure.gap);
-    expect(atoms(compact.frame, padY)).toEqual(comfortableMeasure.padY);
-    expect(atoms(compact.frame, height)).toEqual(comfortableMeasure.height);
+    expect(atoms(compact.frame, gap)).not.toStrictEqual(comfortableMeasure.gap);
+    expect(atoms(compact.frame, padY)).toStrictEqual(comfortableMeasure.padY);
+    expect(atoms(compact.frame, height)).toStrictEqual(comfortableMeasure.height);
     expect(compact.frame.getAttribute('data-nested-px')).toBe(comfortableMeasure.nested);
   });
 
@@ -446,10 +446,10 @@ describe('Alert density — padX and gap move, height holds', () => {
       />,
     );
     expect(compact.frame.getAttribute('data-density')).toBe('compact');
-    expect(atoms(compact.frame, padX)).not.toEqual(comfortableMeasure.padX);
-    expect(atoms(compact.frame, gap)).not.toEqual(comfortableMeasure.gap);
-    expect(atoms(compact.frame, padY)).toEqual(comfortableMeasure.padY);
-    expect(atoms(compact.frame, height)).toEqual(comfortableMeasure.height);
+    expect(atoms(compact.frame, padX)).not.toStrictEqual(comfortableMeasure.padX);
+    expect(atoms(compact.frame, gap)).not.toStrictEqual(comfortableMeasure.gap);
+    expect(atoms(compact.frame, padY)).toStrictEqual(comfortableMeasure.padY);
+    expect(atoms(compact.frame, height)).toStrictEqual(comfortableMeasure.height);
     expect(compact.frame.getAttribute('data-nested-px')).toBe(comfortableMeasure.nested);
   });
 });

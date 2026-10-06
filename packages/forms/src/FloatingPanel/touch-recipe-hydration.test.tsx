@@ -71,7 +71,7 @@ describe('touch recipe hydration', () => {
           onRecoverableError: (error) => errors.push(error),
         });
       });
-      expect(errors.filter((error) => /hydration|hydrated|didn't match/i.test(String(error)))).toEqual([]);
+      expect(errors.filter((error) => /hydration|hydrated|didn't match/i.test(String(error)))).toStrictEqual([]);
       const heights = [...container.querySelectorAll('[data-visual-height]')].map((el) =>
         Number(el.getAttribute('data-visual-height')),
       );

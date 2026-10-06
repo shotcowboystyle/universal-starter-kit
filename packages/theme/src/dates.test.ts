@@ -151,7 +151,7 @@ describe('calendar chrome registers', () => {
   it('names months and weekdays for calendar grids', () => {
     expect(getMonthNames(enUS)[0]).toBe('January');
     expect(getMonthNames({ ...enUS, style: 'short' })[2]).toBe('Mar');
-    expect(getWeekdayNames(enUS)).toEqual(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
+    expect(getWeekdayNames(enUS)).toStrictEqual(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
     expect(getWeekdayNames({ ...enUS, firstDay: 1 })[0]).toBe('Mon');
   });
 });
@@ -207,7 +207,7 @@ function readLocal(timeZone: string, value: DateInput) {
 describe('parseCalendarDate (day-grid parse)', () => {
   it('reads a date-only string as the same calendar day in every timezone', () => {
     for (const timeZone of ZONES) {
-      expect({ timeZone, ...readLocal(timeZone, '2026-03-10') }).toEqual({
+      expect({ timeZone, ...readLocal(timeZone, '2026-03-10') }).toStrictEqual({
         timeZone,
         day: '2026-03-10',
         // Local midnight, which is what day-grid math tests for: Gantt's
@@ -229,15 +229,15 @@ describe('parseCalendarDate (day-grid parse)', () => {
   it('keeps the timezone-aware parse for values that carry a time', () => {
     for (const timeZone of ZONES) {
       // No offset in the string — a local wall-clock reading, unchanged.
-      expect(readLocal(timeZone, '2026-03-10 14:30:00')).toEqual({
+      expect(readLocal(timeZone, '2026-03-10 14:30:00')).toStrictEqual({
         day: '2026-03-10',
         clock: '14:30',
       });
     }
     // An explicit offset names one instant, which lands on different local
     // days by design — genuine datetime semantics are untouched.
-    expect(readLocal('UTC', '2026-03-10T00:00:00Z')).toEqual({ day: '2026-03-10', clock: '00:00' });
-    expect(readLocal('America/Los_Angeles', '2026-03-10T00:00:00Z')).toEqual({
+    expect(readLocal('UTC', '2026-03-10T00:00:00Z')).toStrictEqual({ day: '2026-03-10', clock: '00:00' });
+    expect(readLocal('America/Los_Angeles', '2026-03-10T00:00:00Z')).toStrictEqual({
       day: '2026-03-09',
       clock: '17:00', // PDT — March 10 is past the 2026 DST switch
     });
@@ -306,7 +306,7 @@ describe('formatCalendarDate (local-parts wire serializer)', () => {
         wrote: inZone(timeZone, () => formatCalendarDate(new Date(instant))),
       })),
     );
-    expect(rows).toEqual(
+    expect(rows).toStrictEqual(
       rows.map(({ instant, timeZone }) => ({
         instant,
         timeZone,
@@ -333,7 +333,7 @@ describe('formatCalendarDate (local-parts wire serializer)', () => {
         ),
       )
       .filter(Boolean);
-    expect(disagreements).toEqual([
+    expect(disagreements).toStrictEqual([
       {
         instant: INSTANT_A,
         timeZone: 'America/Los_Angeles',
@@ -367,7 +367,7 @@ describe('formatCalendarDate (local-parts wire serializer)', () => {
           timeZone,
           datetime: inZone(timeZone, () => formatCalendarDate(new Date(instant), 'datetime')),
           time: inZone(timeZone, () => formatCalendarDate(new Date(instant), 'time')),
-        }).toEqual({ instant, timeZone, datetime: `${day} ${clock}`, time: clock });
+        }).toStrictEqual({ instant, timeZone, datetime: `${day} ${clock}`, time: clock });
       }
     }
   });
@@ -390,7 +390,7 @@ describe('formatCalendarDate (local-parts wire serializer)', () => {
           timeZone,
           wire,
           back: inZone(timeZone, () => formatCalendarDate(wire, shape)),
-        }).toEqual({ timeZone, wire, back: wire });
+        }).toStrictEqual({ timeZone, wire, back: wire });
       }
     }
   });
@@ -553,7 +553,7 @@ describe('formatCalendarDate is byte-identical to the copies it replaced', () =>
           }
         }
       }
-      expect(disagreements).toEqual([]);
+      expect(disagreements).toStrictEqual([]);
     });
   }
 

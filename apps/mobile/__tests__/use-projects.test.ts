@@ -30,7 +30,7 @@ describe('useProjects', () => {
       expect(result.current.isSuccess).toBe(true);
     });
 
-    expect(result.current.data).toEqual(mockProjects);
+    expect(result.current.data).toStrictEqual(mockProjects);
     expect(projectApi.getProjects).toHaveBeenCalledWith('b1');
   });
 

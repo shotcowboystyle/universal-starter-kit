@@ -114,7 +114,7 @@ describe('publicPackageViteSourceAliases', () => {
           continue;
         }
         const isFile = fs.existsSync(resolved) && fs.statSync(resolved).isFile();
-        expect({ spec, isFile }).toEqual({ spec, isFile: true });
+        expect({ spec, isFile }).toStrictEqual({ spec, isFile: true });
       }
     }
   });
@@ -151,7 +151,7 @@ describe('packageSubpathSourceAliases', () => {
         import: './dist/esm/signer.mjs',
       },
     });
-    expect(aliases).toEqual({ '@x/pkg/signer': path.join(dir, 'src/signer.ts') });
+    expect(aliases).toStrictEqual({ '@x/pkg/signer': path.join(dir, 'src/signer.ts') });
   });
 
   it('falls back to a TypeScript file among the web conditions when there is no source', () => {
@@ -188,12 +188,12 @@ describe('packageSubpathSourceAliases', () => {
       './types-only': { types: './src/overrides.d.ts' },
       './missing': { source: './src/nope.ts', import: './dist/esm/nope.mjs' },
     });
-    expect(aliases).toEqual({});
+    expect(aliases).toStrictEqual({});
   });
 
   it('returns nothing for a string or absent exports field', () => {
-    expect(packageSubpathSourceAliases('@x/pkg', dir, './src/index.ts')).toEqual({});
-    expect(packageSubpathSourceAliases('@x/pkg', dir, undefined)).toEqual({});
+    expect(packageSubpathSourceAliases('@x/pkg', dir, './src/index.ts')).toStrictEqual({});
+    expect(packageSubpathSourceAliases('@x/pkg', dir, undefined)).toStrictEqual({});
   });
 
   it('resolveExportSource prefers TypeScript over an existing dist file', () => {

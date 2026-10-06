@@ -165,7 +165,7 @@ describe('useAuth', () => {
 
     await waitFor(() => {
       expect(result.current.isAuthenticated).toBe(true);
-      expect(result.current.user).toEqual(mockUser);
+      expect(result.current.user).toStrictEqual(mockUser);
     });
 
     expect(AuthService.login).toHaveBeenCalledWith('test@example.com');

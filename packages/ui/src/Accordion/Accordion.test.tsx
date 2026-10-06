@@ -241,10 +241,10 @@ describe('Accordion density — pad and gap move, control height holds', () => {
     expect(comfortableMeasure.density).toBe('comfortable');
     expect(compactRoot.getAttribute('data-density')).toBe('compact');
     expect(comfortableMeasure.padX.length).toBeGreaterThan(0);
-    expect(atoms(compactTrigger, padX)).not.toEqual(comfortableMeasure.padX);
+    expect(atoms(compactTrigger, padX)).not.toStrictEqual(comfortableMeasure.padX);
     expect(comfortableMeasure.gap.length).toBeGreaterThan(0);
-    expect(atoms(compactTrigger, gap)).not.toEqual(comfortableMeasure.gap);
-    expect(atoms(compactTrigger, height)).toEqual(comfortableMeasure.height);
+    expect(atoms(compactTrigger, gap)).not.toStrictEqual(comfortableMeasure.gap);
+    expect(atoms(compactTrigger, height)).toStrictEqual(comfortableMeasure.height);
   });
 
   it('survives the animation knob flipping live from none to bouncy', () => {

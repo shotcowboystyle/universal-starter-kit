@@ -65,7 +65,7 @@ describe('useTaskForm', () => {
   it('initializes empty create-mode values', () => {
     const { result } = renderTaskFormHook({ onSubmit: vi.fn() });
 
-    expect(result.current.form.state.values).toEqual({
+    expect(result.current.form.state.values).toStrictEqual({
       title: '',
       description: '',
       status: TaskStatus.TODO,
@@ -90,7 +90,7 @@ describe('useTaskForm', () => {
       },
     });
 
-    expect(result.current.form.state.values).toEqual({
+    expect(result.current.form.state.values).toStrictEqual({
       title: 'Test Task',
       description: 'Test Description',
       status: TaskStatus.IN_PROGRESS,
@@ -119,7 +119,7 @@ describe('useTaskForm', () => {
     const { result } = renderTaskFormHook({ onSubmit: vi.fn() });
 
     await waitFor(() => {
-      expect(result.current.users).toEqual(mockUsers);
+      expect(result.current.users).toStrictEqual(mockUsers);
     });
     expect(userApi.searchUsers).toHaveBeenCalledWith('');
   });
@@ -168,7 +168,7 @@ describe('useTaskForm', () => {
     await waitFor(() => {
       expect(result.current.isSearching).toBe(false);
     });
-    expect(result.current.users).toEqual([]);
+    expect(result.current.users).toStrictEqual([]);
   });
 
   it('submits schema-shaped values without an assignee', async () => {

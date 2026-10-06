@@ -27,14 +27,14 @@ describe('ParseObjectIdPipe', () => {
     const objectId = new Types.ObjectId();
     const result = pipe.transform(objectId.toHexString());
     expect(result).toBeInstanceOf(Types.ObjectId);
-    expect(result).toEqual(objectId);
+    expect(result).toStrictEqual(objectId);
   });
 
   it('should return the same Types.ObjectId if the value is already an ObjectId', () => {
     const objectId = new Types.ObjectId();
     const result = pipe.transform(objectId);
     expect(result).toBeInstanceOf(Types.ObjectId);
-    expect(result).toEqual(objectId);
+    expect(result).toStrictEqual(objectId);
   });
 
   it('should throw a BadRequestException if the value is not a valid ObjectId string', () => {

@@ -156,7 +156,7 @@ describe('createViteConfig context singletons', () => {
     // Vite tries object alias entries in insertion order and matches a key or
     // its `key + "/"` prefix, so a subpath entry must precede its package.
     const lengths = Object.keys(alias).map((key) => key.length);
-    expect(lengths).toEqual([...lengths].sort((a, b) => b - a));
+    expect(lengths).toStrictEqual([...lengths].sort((a, b) => b - a));
   });
 
   it('does not pin tamagui itself on the consumer path either', () => {

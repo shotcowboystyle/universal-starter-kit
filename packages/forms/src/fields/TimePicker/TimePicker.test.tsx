@@ -21,9 +21,9 @@ describe('TimePicker', () => {
       expect(to24Hour(12, 'AM')).toBe(0);
       expect(to24Hour(12, 'PM')).toBe(12);
       expect(to24Hour(1, 'PM')).toBe(13);
-      expect(to12Hour(0)).toEqual({ h: 12, period: 'AM' });
-      expect(to12Hour(12)).toEqual({ h: 12, period: 'PM' });
-      expect(to12Hour(14)).toEqual({ h: 2, period: 'PM' });
+      expect(to12Hour(0)).toStrictEqual({ h: 12, period: 'AM' });
+      expect(to12Hour(12)).toStrictEqual({ h: 12, period: 'PM' });
+      expect(to12Hour(14)).toStrictEqual({ h: 2, period: 'PM' });
     });
   });
 

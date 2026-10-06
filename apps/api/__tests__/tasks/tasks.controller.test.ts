@@ -39,7 +39,7 @@ describe('TasksController', () => {
 
       vi.spyOn(service, 'create').mockResolvedValue(result as any);
 
-      await expect(controller.create(createTaskDto as any, user)).resolves.toEqual(result);
+      await expect(controller.create(createTaskDto as any, user)).resolves.toStrictEqual(result);
       expect(service.create).toHaveBeenCalledWith(createTaskDto, '1');
     });
   });
@@ -50,7 +50,7 @@ describe('TasksController', () => {
 
       vi.spyOn(service, 'findAll').mockResolvedValue(result as any);
 
-      await expect(controller.findAll()).resolves.toEqual(result);
+      await expect(controller.findAll()).resolves.toStrictEqual(result);
       expect(service.findAll).toHaveBeenCalled();
     });
   });
@@ -61,7 +61,7 @@ describe('TasksController', () => {
 
       vi.spyOn(service, 'findOne').mockResolvedValue(result as any);
 
-      await expect(controller.findOne('1')).resolves.toEqual(result);
+      await expect(controller.findOne('1')).resolves.toStrictEqual(result);
       expect(service.findOne).toHaveBeenCalledWith('1');
     });
   });
@@ -74,7 +74,7 @@ describe('TasksController', () => {
 
       vi.spyOn(service, 'update').mockResolvedValue(result as any);
 
-      await expect(controller.update('1', updateTaskDto as any, user)).resolves.toEqual(result);
+      await expect(controller.update('1', updateTaskDto as any, user)).resolves.toStrictEqual(result);
       expect(service.update).toHaveBeenCalledWith('1', updateTaskDto, '1');
     });
   });
@@ -98,7 +98,7 @@ describe('TasksController', () => {
 
       vi.spyOn(service, 'moveTask').mockResolvedValue(result as any);
 
-      await expect(controller.moveTask('1', moveData, user)).resolves.toEqual(result);
+      await expect(controller.moveTask('1', moveData, user)).resolves.toStrictEqual(result);
       expect(service.moveTask).toHaveBeenCalledWith('1', '2', 1, '1');
     });
   });

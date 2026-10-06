@@ -109,7 +109,7 @@ describe('fetchWithAuth', () => {
     });
 
     const result = await fetchWithAuth(mockUrl);
-    expect(result).toEqual(mockData);
+    expect(result).toStrictEqual(mockData);
   });
 
   it('should handle empty response when flag is set', async () => {

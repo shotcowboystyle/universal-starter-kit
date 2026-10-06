@@ -71,10 +71,10 @@ describe('GeolocationMap (native)', () => {
     );
     expect(result.getByTestId('apple-maps-view')).toBeTruthy();
     expect(result.container.querySelector("[data-testid='geolocation-native-map']")).not.toBeNull();
-    expect(appleProps?.markers).toEqual([
+    expect(appleProps?.markers).toStrictEqual([
       expect.objectContaining({ coordinates: { latitude: 51.5, longitude: -0.12 } }),
     ]);
-    expect(appleProps?.cameraPosition).toEqual({
+    expect(appleProps?.cameraPosition).toStrictEqual({
       coordinates: { latitude: 51.5, longitude: -0.12 },
       zoom: 13,
     });
@@ -109,7 +109,9 @@ describe('GeolocationMap (native)', () => {
       />,
     );
     expect(result.getByTestId('google-maps-view')).toBeTruthy();
-    expect(googleProps?.markers).toEqual([expect.objectContaining({ coordinates: { latitude: 10, longitude: 20 } })]);
+    expect(googleProps?.markers).toStrictEqual([
+      expect.objectContaining({ coordinates: { latitude: 10, longitude: 20 } }),
+    ]);
     googleProps?.onMapClick?.({ coordinates: { latitude: 1.5, longitude: 2.5 } });
     expect(onChange).toHaveBeenCalledWith(1.5, 2.5);
     googleProps?.onMapLongClick?.({ coordinates: { latitude: -3, longitude: -4 } });
@@ -155,7 +157,7 @@ describe('GeolocationMap (native)', () => {
         onChange={vi.fn()}
       />,
     );
-    expect(appleProps?.markers).toEqual([]);
+    expect(appleProps?.markers).toStrictEqual([]);
   });
 
   it('ignores click events without numeric coordinates', () => {

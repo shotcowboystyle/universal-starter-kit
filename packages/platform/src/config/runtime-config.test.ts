@@ -29,7 +29,7 @@ afterEach(() => {
 describe('resolvePublicConfig', () => {
   it('resolves a public key from the RUNTIME environment, not the build', () => {
     stubAllowlist(['MARKETPLACE_API_URL']);
-    expect(resolvePublicConfig({ MARKETPLACE_API_URL: 'https://api.marketplace.example.org' })).toEqual({
+    expect(resolvePublicConfig({ MARKETPLACE_API_URL: 'https://api.marketplace.example.org' })).toStrictEqual({
       MARKETPLACE_API_URL: 'https://api.marketplace.example.org',
     });
   });
@@ -37,7 +37,7 @@ describe('resolvePublicConfig', () => {
   it('lets the runtime environment override a stale baked value', () => {
     stubAllowlist(['MARKETPLACE_API_URL']);
     stubBaked({ MARKETPLACE_API_URL: 'https://stale.example.org' });
-    expect(resolvePublicConfig({ MARKETPLACE_API_URL: 'https://fresh.example.org' })).toEqual({
+    expect(resolvePublicConfig({ MARKETPLACE_API_URL: 'https://fresh.example.org' })).toStrictEqual({
       MARKETPLACE_API_URL: 'https://fresh.example.org',
     });
   });
@@ -45,13 +45,13 @@ describe('resolvePublicConfig', () => {
   it('falls back to the baked value when the runtime environment is empty', () => {
     stubAllowlist(['MARKETPLACE_API_URL']);
     stubBaked({ MARKETPLACE_API_URL: 'https://baked.example.org' });
-    expect(resolvePublicConfig({})).toEqual({
+    expect(resolvePublicConfig({})).toStrictEqual({
       MARKETPLACE_API_URL: 'https://baked.example.org',
     });
   });
 
   it('resolves nothing when the build baked no public allowlist', () => {
-    expect(resolvePublicConfig({ MARKETPLACE_API_URL: 'https://api.example.org' })).toEqual({});
+    expect(resolvePublicConfig({ MARKETPLACE_API_URL: 'https://api.example.org' })).toStrictEqual({});
   });
 });
 
@@ -63,7 +63,7 @@ describe('public allowlist enforcement', () => {
       SECRET: 'hunter2',
       DATABASE_PASSWORD: 'hunter2', // gitleaks:allow -- test fixture
     });
-    expect(resolved).toEqual({ MARKETPLACE_API_URL: 'https://api.example.org' });
+    expect(resolved).toStrictEqual({ MARKETPLACE_API_URL: 'https://api.example.org' });
     expect(resolved).not.toHaveProperty('SECRET');
     expect(resolved).not.toHaveProperty('DATABASE_PASSWORD');
   });
@@ -111,7 +111,7 @@ describe('readRuntimePublicConfig', () => {
     (globalThis as unknown as Record<string, unknown>)[runtimePublicConfigKey] = {
       MARKETPLACE_API_URL: 'https://api.example.org',
     };
-    expect(readRuntimePublicConfig()).toEqual({
+    expect(readRuntimePublicConfig()).toStrictEqual({
       MARKETPLACE_API_URL: 'https://api.example.org',
     });
   });

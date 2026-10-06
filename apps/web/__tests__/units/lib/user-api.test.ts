@@ -67,7 +67,7 @@ describe('userApi', () => {
 
       const result = await userApi.searchUsers('');
 
-      expect(result).toEqual([]);
+      expect(result).toStrictEqual([]);
     });
 
     it('should handle empty users response', async () => {
@@ -78,7 +78,7 @@ describe('userApi', () => {
 
       const result = await userApi.searchUsers('test');
 
-      expect(result).toEqual([]);
+      expect(result).toStrictEqual([]);
     });
 
     it('should include auth token in request', async () => {

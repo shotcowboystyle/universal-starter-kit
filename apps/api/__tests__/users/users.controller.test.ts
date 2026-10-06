@@ -24,7 +24,7 @@ describe('UserController', () => {
     it('should return an array of users', async () => {
       const result = [];
       service.findAll.mockResolvedValue(result as any);
-      await expect(controller.findAll()).resolves.toEqual({ users: result });
+      await expect(controller.findAll()).resolves.toStrictEqual({ users: result });
     });
   });
 
@@ -32,7 +32,7 @@ describe('UserController', () => {
     it('should return an array of users', async () => {
       const result = [];
       service.searchByName.mockResolvedValue(result as any);
-      await expect(controller.search('test')).resolves.toEqual({ users: result });
+      await expect(controller.search('test')).resolves.toStrictEqual({ users: result });
     });
   });
 });

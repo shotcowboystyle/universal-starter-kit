@@ -161,7 +161,7 @@ describe('encodeQr — reference vectors', () => {
       expect(matrix!.version).toBe(vector.version);
       expect(matrix!.mask).toBe(vector.mask);
       expect(matrix!.size).toBe(17 + 4 * vector.version);
-      expect(toRowStrings(matrix!)).toEqual(vector.rows);
+      expect(toRowStrings(matrix!)).toStrictEqual(vector.rows);
     });
   }
 
@@ -246,7 +246,7 @@ describe('encodeQr — structural invariants', () => {
       for (let i = 0; i < 8; i++) {
         copy2[i] = isDark(matrix, 8, size - 1 - i) ? 1 : 0;
       }
-      expect(copy2).toEqual(bits);
+      expect(copy2).toStrictEqual(bits);
       // Unmask (XOR 0x5412) and check the declared mask and EC level survive.
       const raw = bits.reduce((acc, bit, index) => acc | (bit << index), 0) ^ 0x54_12;
       expect((raw >> 10) & 0b111).toBe(matrix.mask);

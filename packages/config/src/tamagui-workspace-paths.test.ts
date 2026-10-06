@@ -60,7 +60,7 @@ describe('ensureTamaguiWorkspacePaths', () => {
     });
     expect(result.status).toBe('no-generator');
     expect(fs.existsSync(path.join(configDir, tamaguiWorkspacePathsFile))).toBe(false);
-    expect(notices).toEqual([]);
+    expect(notices).toStrictEqual([]);
   });
 
   it('reports a crashing generator instead of throwing', () => {

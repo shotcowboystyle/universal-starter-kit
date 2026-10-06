@@ -219,7 +219,7 @@ describe('Geolocation', () => {
           expandIcon=<span data-testid="expand-icon" />
         />,
       );
-      expect(mapControls(result.container)).toEqual([]);
+      expect(mapControls(result.container)).toStrictEqual([]);
       const map = result.container.querySelector("[data-testid='geolocation-map']") as HTMLElement;
       const footer = result.container.querySelector("[data-testid='geolocation-map-footer']") as HTMLElement;
       expect(footer).not.toBeNull();
@@ -736,7 +736,7 @@ describe('Geolocation', () => {
         permissions: undefined,
       });
       const result = await preflightGeolocation();
-      expect(result).toEqual({
+      expect(result).toStrictEqual({
         ok: false,
         reason: expect.stringContaining('Geolocation unavailable'),
       });
@@ -751,7 +751,7 @@ describe('Geolocation', () => {
         },
       });
       const result = await preflightGeolocation();
-      expect(result).toEqual({
+      expect(result).toStrictEqual({
         ok: false,
         reason: expect.stringContaining('permission denied'),
       });
@@ -766,7 +766,7 @@ describe('Geolocation', () => {
         },
       });
       const result = await preflightGeolocation();
-      expect(result).toEqual({ ok: true });
+      expect(result).toStrictEqual({ ok: true });
     });
 
     it('locate press without geolocation shows inline error and never mounts the locate panel', async () => {
@@ -847,7 +847,7 @@ describe('Geolocation', () => {
         expect(result.container.querySelector("[data-testid='geolocation-locate-panel']")).not.toBeNull();
         expect(result.container.textContent).toContain('timed out');
       });
-      expect(mapControls(result.container)).toEqual([]);
+      expect(mapControls(result.container)).toStrictEqual([]);
       const retry = result.container.querySelector("[aria-label='Retry location']");
       expect(retry).not.toBeNull();
       expect(getCurrentPosition).toHaveBeenCalledOnce();
@@ -893,7 +893,7 @@ describe('Geolocation', () => {
 
     it("a compact {lat,lng} write is invisible to Frappe's parser (negative control)", () => {
       expect(frappeGeoJsonReads(JSON.stringify({ lat: 37.7749, lng: -122.4194 }))).toBeNull();
-      expect(frappeGeoJsonReads(stockFrappePoint)).toEqual({ lat: 37.7749, lng: -122.4194 });
+      expect(frappeGeoJsonReads(stockFrappePoint)).toStrictEqual({ lat: 37.7749, lng: -122.4194 });
     });
 
     it("editing a stock value still reads in Frappe's parser and keeps properties", async () => {
@@ -918,8 +918,8 @@ describe('Geolocation', () => {
       });
       const written = onChange.mock.calls[0][0] as string;
       expect(JSON.parse(written).type).toBe('FeatureCollection');
-      expect(frappeGeoJsonReads(written)).toEqual({ lat: 12.34, lng: -122.4194 });
-      expect(JSON.parse(written).features[0].properties).toEqual({
+      expect(frappeGeoJsonReads(written)).toStrictEqual({ lat: 12.34, lng: -122.4194 });
+      expect(JSON.parse(written).features[0].properties).toStrictEqual({
         point_type: 'circle',
         radius: 10,
       });

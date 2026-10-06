@@ -66,14 +66,14 @@ describe('native byte save (native boundary modeled)', () => {
       expect(native.pick).toHaveBeenCalledOnce();
     });
     choose(directory);
-    await expect(pending).resolves.toEqual({
+    await expect(pending).resolves.toStrictEqual({
       status: 'written',
       uri: file.uri,
       requestedFilename: 'café.bin',
       byteLength: 4,
     });
     expect(directory.createFile).toHaveBeenCalledExactlyOnceWith('café.bin', 'application/octet-stream');
-    expect(Array.from(file.write.mock.calls[0][0])).toEqual([0, 255, 13, 10]);
+    expect(Array.from(file.write.mock.calls[0][0])).toStrictEqual([0, 255, 13, 10]);
     expect(file.delete).not.toHaveBeenCalled();
     expect(directory.delete).not.toHaveBeenCalled();
   });
@@ -84,7 +84,7 @@ describe('native byte save (native boundary modeled)', () => {
     directory.uri = 'file:///selected/';
     file.uri = 'file:///selected/caf%C3%A9%20(1).bin';
     const { saveFile } = await api();
-    await expect(saveFile({ ...options(), bytes: new Uint8Array() })).resolves.toEqual({
+    await expect(saveFile({ ...options(), bytes: new Uint8Array() })).resolves.toStrictEqual({
       status: 'written',
       uri: file.uri,
       requestedFilename: 'café.bin',
@@ -101,7 +101,7 @@ describe('native byte save (native boundary modeled)', () => {
     Object.defineProperty(file, 'name', { get: readName });
     const input = { ...options(), filename: 'fixture.bin' };
     const { saveFile } = await api();
-    await expect(saveFile(input)).resolves.toEqual({
+    await expect(saveFile(input)).resolves.toStrictEqual({
       status: 'written',
       uri: file.uri,
       requestedFilename: 'fixture.bin',
@@ -121,7 +121,7 @@ describe('native byte save (native boundary modeled)', () => {
     const readName = vi.fn(() => 'child-42');
     Object.defineProperty(file, 'name', { get: readName });
     const { saveFile } = await api();
-    await expect(saveFile(options())).resolves.toEqual({
+    await expect(saveFile(options())).resolves.toStrictEqual({
       status: 'written',
       uri: file.uri,
       requestedFilename: 'café.bin',
@@ -137,7 +137,7 @@ describe('native byte save (native boundary modeled)', () => {
     async (code) => {
       const { saveFile } = await api();
       native.pick.mockRejectedValueOnce({ code });
-      await expect(saveFile(options())).resolves.toEqual({
+      await expect(saveFile(options())).resolves.toStrictEqual({
         status: 'not-saved',
         reason: 'cancelled-or-refused',
       });

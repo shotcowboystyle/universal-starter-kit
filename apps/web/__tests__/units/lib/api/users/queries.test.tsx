@@ -50,7 +50,7 @@ describe('user queries', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(result.current.data).toEqual(mockUser);
+      expect(result.current.data).toStrictEqual(mockUser);
       expect(userApi.getUserById).toHaveBeenCalledWith('user-1');
     });
 
@@ -80,7 +80,7 @@ describe('user queries', () => {
         expect(result.current.isError).toBe(true);
       });
 
-      expect(result.current.error).toEqual(error);
+      expect(result.current.error).toStrictEqual(error);
     });
 
     it('should use correct query key', async () => {
@@ -102,7 +102,7 @@ describe('user queries', () => {
       });
 
       const queryData = queryClient.getQueryData(['users', 'detail', userId]);
-      expect(queryData).toEqual(mockUser);
+      expect(queryData).toStrictEqual(mockUser);
     });
   });
 
@@ -133,7 +133,7 @@ describe('user queries', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(result.current.data).toEqual(mockUsers);
+      expect(result.current.data).toStrictEqual(mockUsers);
       expect(userApi.searchUsers).toHaveBeenCalledWith('alice');
     });
 
@@ -155,7 +155,7 @@ describe('user queries', () => {
         expect(result.current.isError).toBe(true);
       });
 
-      expect(result.current.error).toEqual(error);
+      expect(result.current.error).toStrictEqual(error);
     });
 
     it('should use correct query key with search parameter', async () => {
@@ -219,13 +219,13 @@ describe('user queries', () => {
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true);
       });
-      expect(result.current.data).toEqual(mockUsers1);
+      expect(result.current.data).toStrictEqual(mockUsers1);
 
       // Change the query
       rerender({ query: 'bob' });
 
       await waitFor(() => {
-        expect(result.current.data).toEqual(mockUsers2);
+        expect(result.current.data).toStrictEqual(mockUsers2);
       });
 
       expect(userApi.searchUsers).toHaveBeenCalledTimes(2);

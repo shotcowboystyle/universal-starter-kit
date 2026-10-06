@@ -30,7 +30,7 @@ describe('ProjectsController', () => {
 
       vi.spyOn(service, 'create').mockResolvedValue(result as any);
 
-      await expect(controller.create(createProjectDto, user)).resolves.toEqual(result);
+      await expect(controller.create(createProjectDto, user)).resolves.toStrictEqual(result);
       expect(service.create).toHaveBeenCalledWith({ ...createProjectDto, owner: '1' });
     });
   });
@@ -42,7 +42,7 @@ describe('ProjectsController', () => {
 
       vi.spyOn(service, 'findByBoardId').mockResolvedValue(result as any);
 
-      await expect(controller.getProjectsByBoard('1', user as any)).resolves.toEqual(result);
+      await expect(controller.getProjectsByBoard('1', user as any)).resolves.toStrictEqual(result);
       expect(service.findByBoardId).toHaveBeenCalledWith('1');
     });
   });
@@ -55,7 +55,7 @@ describe('ProjectsController', () => {
 
       vi.spyOn(service, 'update').mockResolvedValue(result as any);
 
-      await expect(controller.update('1', updateProjectDto, user as any)).resolves.toEqual(result);
+      await expect(controller.update('1', updateProjectDto, user as any)).resolves.toStrictEqual(result);
       expect(service.update).toHaveBeenCalledWith('1', updateProjectDto, '1');
     });
   });
@@ -67,7 +67,7 @@ describe('ProjectsController', () => {
 
       vi.spyOn(service, 'remove').mockResolvedValue(result as any);
 
-      await expect(controller.remove('1', user as any)).resolves.toEqual(result);
+      await expect(controller.remove('1', user as any)).resolves.toStrictEqual(result);
       expect(service.remove).toHaveBeenCalledWith('1', '1');
     });
   });

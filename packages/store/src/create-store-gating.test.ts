@@ -27,7 +27,7 @@ function createMockStorage(): Storage & { data: Map<string, string> } {
 describe('createStore persistence gating', () => {
   it('returns a plain store without persist methods by default', () => {
     const store = createStore({ n: 1 });
-    expect(store.state).toEqual({ n: 1 });
+    expect(store.state).toStrictEqual({ n: 1 });
     expect((store as Partial<PersistStore<{ n: number }>>).rehydrate).toBeUndefined();
     expect((store as Partial<PersistStore<{ n: number }>>).clearPersistedState).toBeUndefined();
   });
@@ -47,7 +47,7 @@ describe('createStore persistence gating', () => {
     expect(typeof store.rehydrate).toBe('function');
     expect(typeof store.clearPersistedState).toBe('function');
     await store.rehydrate();
-    expect(store.state).toEqual({ n: 42 });
+    expect(store.state).toStrictEqual({ n: 42 });
     expect(storage.getItem).toHaveBeenCalledWith('settings');
   });
 
@@ -90,7 +90,7 @@ describe('createStore persistence gating', () => {
     try {
       const store = createStore({ n: 0 }, { name: 'default-backed', persist: true }) as PersistStore<{ n: number }>;
       await store.rehydrate();
-      expect(store.state).toEqual({ n: 9 });
+      expect(store.state).toStrictEqual({ n: 9 });
     } finally {
       Object.defineProperty(globalThis, 'localStorage', {
         value: previous,

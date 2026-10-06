@@ -445,7 +445,7 @@ describe('CheckboxGroup', () => {
       }
       expect(onChange).toHaveBeenCalledWith(['a']);
       // last emit wins and must be the toggled-on state (no double-fire revert)
-      expect(onChange.mock.calls[onChange.mock.calls.length - 1][0]).toEqual(['a']);
+      expect(onChange.mock.calls[onChange.mock.calls.length - 1][0]).toStrictEqual(['a']);
     });
 
     it('keeps index-based ids unique for duplicate option values', () => {
@@ -617,7 +617,7 @@ describe('Checkbox never circular at any radius stop', () => {
           `none must be 0, got ${classes.join(' ')}`,
         ).toBe(true);
       } else {
-        expect(classes, `stop ${stop}`).toEqual(['_btlr-t-radius-2']);
+        expect(classes, `stop ${stop}`).toStrictEqual(['_btlr-t-radius-2']);
       }
       cleanup();
     }
@@ -637,7 +637,7 @@ describe('Checkbox never circular at any radius stop', () => {
     );
     const classes = glyphRadiusClasses(result.container);
     expect(classes.some((c) => c.includes('radius-12') || c.includes('100000'))).toBe(false);
-    expect(classes).toEqual(['_btlr-t-radius-2']);
+    expect(classes).toStrictEqual(['_btlr-t-radius-2']);
   });
 
   it('role=checkbox hit target is not a disc (Tamagui size variant override)', () => {

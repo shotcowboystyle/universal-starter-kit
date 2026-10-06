@@ -39,7 +39,7 @@ describe('AuthService', () => {
       const user = { email: 'test@test.com' } as User;
       userService.findByEmail.mockResolvedValue(user);
 
-      await expect(service.validateUser('test@test.com')).resolves.toEqual(user);
+      await expect(service.validateUser('test@test.com')).resolves.toStrictEqual(user);
     });
 
     it('should return null if user not found', async () => {
@@ -81,8 +81,8 @@ describe('AuthService', () => {
 
       const result = await service.login(user);
 
-      expect(result.access_token).toEqual(token);
-      expect(result.user).toEqual(user);
+      expect(result.access_token).toStrictEqual(token);
+      expect(result.user).toStrictEqual(user);
     });
 
     it('should throw error if JWT sign fails', async () => {

@@ -162,7 +162,7 @@ describe('surfaces address $background at the FRAME', () => {
       const frame = document.querySelector(`[data-testid="${id}"]`);
       expect(frame, `${id} frame`).toBeTruthy();
       const bg = atomsWithPrefix(frame, '_bg-');
-      expect(bg, `${id} background atom`).toEqual(['_bg-background']);
+      expect(bg, `${id} background atom`).toStrictEqual(['_bg-background']);
       expect(bg.join(' '), `${id} must not address a raw ramp step`).not.toMatch(/_bg-color[12]\b/);
     }
   });
@@ -192,7 +192,7 @@ describe('DialogContent paints the OVERLAY elevation stop, not the control one',
     expect(dialogShadow, 'DialogContent paints exactly one shadow atom').toHaveLength(1);
     expect(dialogShadow[0], 'dialog wears the §8 overlay shadow').toMatch(overlayStopShadowAtom);
     expect(dialogShadow[0], 'dialog must not wear the $4 control stop').not.toMatch(controlStopShadowAtom);
-    expect(dialogShadow, 'dialog and control are different distances off the surface').not.toEqual(
+    expect(dialogShadow, 'dialog and control are different distances off the surface').not.toStrictEqual(
       atomsWithPrefix(button, '_bxsh-'),
     );
   });
@@ -378,7 +378,7 @@ describe('DialogContent open focus', () => {
     fireEvent.click(trigger);
     await waitFor(() => screen.getByLabelText('Name'));
     await settle();
-    expect(seen).toEqual([false]);
+    expect(seen).toStrictEqual([false]);
     expect(document.activeElement).toBe(trigger);
   });
 });

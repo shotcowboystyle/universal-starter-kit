@@ -183,7 +183,7 @@ describe('Button outlined intent label ink', () => {
     const displayed = Object.fromEntries(
       Object.entries(measured).map(([intent, ratio]) => [intent, Math.round(ratio * 100) / 100]),
     );
-    expect(displayed, `light.color2 is ${ground}`).toEqual({
+    expect(displayed, `light.color2 is ${ground}`).toStrictEqual({
       error: 4.95,
       warning: 4.56,
       success: 4.55,

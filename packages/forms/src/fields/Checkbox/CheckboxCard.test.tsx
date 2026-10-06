@@ -73,12 +73,12 @@ describe('getCardDescriptionSize — T-HELPER is one step under the field', () =
 
 describe('getCheckboxCardLayout — compact metrics off the space knob', () => {
   it('gives each space stop its own padding and gap', () => {
-    expect(getCheckboxCardLayout('none')).toEqual({
+    expect(getCheckboxCardLayout('none')).toStrictEqual({
       paddingVertical: '$2.5',
       paddingHorizontal: '$3',
       gap: '$2.5',
     });
-    expect(getCheckboxCardLayout('large')).toEqual({
+    expect(getCheckboxCardLayout('large')).toStrictEqual({
       paddingVertical: '$3.5',
       paddingHorizontal: '$4',
       gap: '$3.5',
@@ -86,12 +86,12 @@ describe('getCheckboxCardLayout — compact metrics off the space knob', () => {
   });
 
   it('makes small and medium deliberately identical', () => {
-    expect(getCheckboxCardLayout('small')).toEqual(getCheckboxCardLayout('medium'));
+    expect(getCheckboxCardLayout('small')).toStrictEqual(getCheckboxCardLayout('medium'));
   });
 
   it('falls back to medium for an unknown stop rather than throwing', () => {
-    expect(getCheckboxCardLayout('enormous')).toEqual(getCheckboxCardLayout('medium'));
-    expect(getCheckboxCardLayout('')).toEqual(getCheckboxCardLayout('medium'));
+    expect(getCheckboxCardLayout('enormous')).toStrictEqual(getCheckboxCardLayout('medium'));
+    expect(getCheckboxCardLayout('')).toStrictEqual(getCheckboxCardLayout('medium'));
   });
 
   it('grows monotonically from none to large', () => {

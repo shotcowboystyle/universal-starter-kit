@@ -32,7 +32,7 @@ describe('UserService', () => {
 
       const result = await service.findByEmail('test@test.com');
 
-      expect(result).toEqual(user);
+      expect(result).toStrictEqual(user);
       expect(userRepository.findByEmail).toHaveBeenCalledWith('test@test.com');
     });
 
@@ -60,7 +60,7 @@ describe('UserService', () => {
 
       const result = await service.findAll();
 
-      expect(result).toEqual([]);
+      expect(result).toStrictEqual([]);
       expect(userRepository.findAll).toHaveBeenCalled();
     });
 

@@ -62,7 +62,7 @@ describe('backend read', () => {
       });
     });
 
-    expect(result).toEqual({ Hello: 'నమస్కారం' });
+    expect(result).toStrictEqual({ Hello: 'నమస్కారం' });
     expect(fetchMock).toHaveBeenCalledWith('https://erp.example.com/api/method/frappe.translate.get_dict?language=te', {
       credentials: 'include',
     });
@@ -98,7 +98,7 @@ describe('backend read', () => {
         err ? reject(err) : resolve(data);
       });
     });
-    expect(result).toEqual({});
+    expect(result).toStrictEqual({});
   });
 
   it('surfaces HTTP failures to the callback as errors', async () => {

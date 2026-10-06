@@ -15,7 +15,7 @@ describe('Button size recipes', () => {
   it('medium is the measured 44 / 18 / 14 / 16 / 9 (tamagui.dev $4)', () => {
     // Generated from recipeFamilies.control: fontSize is the recipe's
     // px number (md 14), no longer a drifted font token ("$3" = 13).
-    expect(buttonSizeRecipes.$4).toEqual({
+    expect(buttonSizeRecipes.$4).toStrictEqual({
       height: 44,
       paddingHorizontal: 18,
       fontSize: 14,
@@ -115,8 +115,8 @@ describe('Button nested scale', () => {
     );
     const [circle, pill] = screen.getAllByRole('button');
     const circleAtoms = (circle.getAttribute('class') ?? '').split(/\s+/);
-    expect(circleAtoms).toEqual(expect.arrayContaining(['_w-32px', '_h-32px', '_btlr-100000px']));
-    expect(circleAtoms).toEqual(expect.arrayContaining(['_pl-0px', '_pr-0px']));
+    expect(circleAtoms).toStrictEqual(expect.arrayContaining(['_w-32px', '_h-32px', '_btlr-100000px']));
+    expect(circleAtoms).toStrictEqual(expect.arrayContaining(['_pl-0px', '_pr-0px']));
     expect(circleAtoms).not.toContain('_pl-18px');
     expect((pill.getAttribute('class') ?? '').split(/\s+/)).toContain('_pl-18px');
   });

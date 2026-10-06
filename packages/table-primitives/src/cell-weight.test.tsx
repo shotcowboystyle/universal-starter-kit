@@ -55,20 +55,20 @@ describe('Table.Cell body values follow the text knobs', () => {
   ] as const)('a bare body value paints the knob weight at %s', (fontWeight, want) => {
     const expected = explicit('_fow-', { fontWeight: want });
     renderTable({ fontWeight });
-    expect(classes(screen.getByText('42 kg'), '_fow-')).toEqual(expected);
+    expect(classes(screen.getByText('42 kg'), '_fow-')).toStrictEqual(expected);
   });
 
   it('a bare body value takes the bodyFont family', () => {
     const expected = explicit('_ff-', { fontFamily: '$mono' });
     renderTable({ bodyFont: 'mono' });
-    expect(classes(screen.getByText('42 kg'), '_ff-')).toEqual(expected);
+    expect(classes(screen.getByText('42 kg'), '_ff-')).toStrictEqual(expected);
   });
 
   it('the header label keeps 600 at both knob stops', () => {
     const expected = explicit('_fow-', { fontWeight: '600' });
     for (const fontWeight of ['regular', 'bold']) {
       renderTable({ fontWeight });
-      expect(classes(screen.getByText('Weight'), '_fow-'), fontWeight).toEqual(expected);
+      expect(classes(screen.getByText('Weight'), '_fow-'), fontWeight).toStrictEqual(expected);
       cleanup();
     }
   });

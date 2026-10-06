@@ -436,7 +436,7 @@ describe('AdaptivePopup drawer contract (overlay ground)', () => {
     const drawerShadow = shadowClasses(surface() as Element);
     const buttonShadow = shadowClasses(button as Element);
     expect(drawerShadow.length, 'drawer paints an overlay shadow').toBeGreaterThan(0);
-    expect(buttonShadow, 'a control paints no resting shadow at the default stop').toEqual([]);
+    expect(buttonShadow, 'a control paints no resting shadow at the default stop').toStrictEqual([]);
   });
 
   it('pins to the inline-end viewport edge at zero gap', async () => {

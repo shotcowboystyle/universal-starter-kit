@@ -465,20 +465,20 @@ describe('Tabs', () => {
 
 describe('tabsOverflowFades (rtl-audit U1)', () => {
   it('LTR: rest state fades only the inline-end (right) edge', () => {
-    expect(tabsOverflowFades(0, 100, 400, 'ltr')).toEqual({ left: false, right: true });
-    expect(tabsOverflowFades(50, 100, 400, 'ltr')).toEqual({ left: true, right: true });
-    expect(tabsOverflowFades(300, 100, 400, 'ltr')).toEqual({ left: true, right: false });
+    expect(tabsOverflowFades(0, 100, 400, 'ltr')).toStrictEqual({ left: false, right: true });
+    expect(tabsOverflowFades(50, 100, 400, 'ltr')).toStrictEqual({ left: true, right: true });
+    expect(tabsOverflowFades(300, 100, 400, 'ltr')).toStrictEqual({ left: true, right: false });
   });
 
   it('RTL: CSSOM scrollLeft is 0 → −range; rest (0) fades the physical left', () => {
-    expect(tabsOverflowFades(0, 100, 400, 'rtl')).toEqual({ left: true, right: false });
-    expect(tabsOverflowFades(-150, 100, 400, 'rtl')).toEqual({ left: true, right: true });
-    expect(tabsOverflowFades(-300, 100, 400, 'rtl')).toEqual({ left: false, right: true });
+    expect(tabsOverflowFades(0, 100, 400, 'rtl')).toStrictEqual({ left: true, right: false });
+    expect(tabsOverflowFades(-150, 100, 400, 'rtl')).toStrictEqual({ left: true, right: true });
+    expect(tabsOverflowFades(-300, 100, 400, 'rtl')).toStrictEqual({ left: false, right: true });
   });
 
   it('no overflow → no fades in either direction', () => {
-    expect(tabsOverflowFades(0, 400, 400, 'ltr')).toEqual({ left: false, right: false });
-    expect(tabsOverflowFades(0, 400, 400, 'rtl')).toEqual({ left: false, right: false });
+    expect(tabsOverflowFades(0, 400, 400, 'ltr')).toStrictEqual({ left: false, right: false });
+    expect(tabsOverflowFades(0, 400, 400, 'rtl')).toStrictEqual({ left: false, right: false });
   });
 });
 

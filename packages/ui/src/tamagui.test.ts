@@ -230,7 +230,7 @@ describe('curated tamagui surface', () => {
         }
       }
     }
-    expect(missing, `stories import names ./tamagui.ts does not export: ${missing.join(', ')}`).toEqual([]);
+    expect(missing, `stories import names ./tamagui.ts does not export: ${missing.join(', ')}`).toStrictEqual([]);
   });
 });
 

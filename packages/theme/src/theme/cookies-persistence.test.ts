@@ -43,17 +43,17 @@ describe('getCookieWatchList', () => {
 describe('persistPresetOverrides / loadPresetOverrides', () => {
   it('round-trips small overrides through document cookies', () => {
     persistPresetOverrides({ borderRadius: 'large', fillStyle: 'filled' } as Partial<Knobs>);
-    expect(loadPresetOverrides()).toEqual({ borderRadius: 'large', fillStyle: 'filled' });
+    expect(loadPresetOverrides()).toStrictEqual({ borderRadius: 'large', fillStyle: 'filled' });
   });
 
   it('returns an empty object when nothing is persisted', () => {
-    expect(loadPresetOverrides()).toEqual({});
+    expect(loadPresetOverrides()).toStrictEqual({});
   });
 
   it('overwrites previous overrides instead of merging them', () => {
     persistPresetOverrides({ borderRadius: 'large' } as Partial<Knobs>);
     persistPresetOverrides({ elevation: 'small' } as Partial<Knobs>);
-    expect(loadPresetOverrides()).toEqual({ elevation: 'small' });
+    expect(loadPresetOverrides()).toStrictEqual({ elevation: 'small' });
   });
 
   it('chunks oversized overrides across multiple cookies and reassembles them', () => {
@@ -62,14 +62,14 @@ describe('persistPresetOverrides / loadPresetOverrides', () => {
     // The serialized JSON exceeds the 3.5 KB split threshold → several chunks.
     expect(document.cookie).toContain(`${cookieOverridesPrefix}.0=`);
     expect(document.cookie).toContain(`${cookieOverridesPrefix}.1=`);
-    expect(loadPresetOverrides()).toEqual({ animation: bigValue });
+    expect(loadPresetOverrides()).toStrictEqual({ animation: bigValue });
   });
 
   it('cleans up stale chunk cookies when the payload shrinks', () => {
     const bigValue = 'y'.repeat(8000);
     persistPresetOverrides({ animation: bigValue } as unknown as Partial<Knobs>);
     persistPresetOverrides({ borderRadius: 'small' } as Partial<Knobs>);
-    expect(loadPresetOverrides()).toEqual({ borderRadius: 'small' });
+    expect(loadPresetOverrides()).toStrictEqual({ borderRadius: 'small' });
     expect(document.cookie).not.toContain(`${cookieOverridesPrefix}.1=`);
   });
 
@@ -77,11 +77,11 @@ describe('persistPresetOverrides / loadPresetOverrides', () => {
     const raw = {
       [`${cookieOverridesPrefix}.0`]: JSON.stringify({ space: 'large' }),
     };
-    expect(loadPresetOverrides(raw)).toEqual({ space: 'large' });
+    expect(loadPresetOverrides(raw)).toStrictEqual({ space: 'large' });
   });
 
   it('treats corrupted cookie JSON as no overrides', () => {
     const raw = { [`${cookieOverridesPrefix}.0`]: '{broken' };
-    expect(loadPresetOverrides(raw)).toEqual({});
+    expect(loadPresetOverrides(raw)).toStrictEqual({});
   });
 });

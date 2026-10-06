@@ -19,10 +19,10 @@ test('keeps browser audit attributes off native SVG props', () => {
       datumText: false,
       datumCount: 13,
     }),
-  ).toEqual({ accessible: true, accessibilityRole: 'image', accessibilityLabel: 'Revenue' });
-  expect(luminanceMaskProps()).toEqual({ maskType: 'luminance' });
-  expect(chartMarkProps('North')).toEqual({});
-  expect(chartChromeProps('grid')).toEqual({});
-  expect(chartDatumTextProps(12)).toEqual({});
-  expect(chartWebProps({ 'data-mpo-chart-owner': 'true' })).toEqual({});
+  ).toStrictEqual({ accessible: true, accessibilityRole: 'image', accessibilityLabel: 'Revenue' });
+  expect(luminanceMaskProps()).toStrictEqual({ maskType: 'luminance' });
+  expect(chartMarkProps('North')).toStrictEqual({});
+  expect(chartChromeProps('grid')).toStrictEqual({});
+  expect(chartDatumTextProps(12)).toStrictEqual({});
+  expect(chartWebProps({ 'data-mpo-chart-owner': 'true' })).toStrictEqual({});
 });

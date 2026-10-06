@@ -36,8 +36,8 @@ describe('useBoards', () => {
 
     const { result } = renderHook(() => useBoards());
 
-    expect(result.current.myBoards).toEqual([]);
-    expect(result.current.teamBoards).toEqual([]);
+    expect(result.current.myBoards).toStrictEqual([]);
+    expect(result.current.teamBoards).toStrictEqual([]);
     expect(result.current.loading).toBe(false);
   });
 
@@ -159,8 +159,8 @@ describe('useBoards', () => {
       expect(result.current.myBoards).toHaveLength(1);
     });
 
-    expect(result.current.myBoards[0].members).toEqual([]);
-    expect(result.current.myBoards[0].projects).toEqual([]);
+    expect(result.current.myBoards[0].members).toStrictEqual([]);
+    expect(result.current.myBoards[0].projects).toStrictEqual([]);
   });
 
   it('should handle owner as object reference', async () => {
@@ -259,8 +259,8 @@ describe('useBoards', () => {
     const { result } = renderHook(() => useBoards());
 
     await waitFor(() => {
-      expect(result.current.myBoards).toEqual([]);
-      expect(result.current.teamBoards).toEqual([]);
+      expect(result.current.myBoards).toStrictEqual([]);
+      expect(result.current.teamBoards).toStrictEqual([]);
     });
   });
 
@@ -277,8 +277,8 @@ describe('useBoards', () => {
     const { result } = renderHook(() => useBoards());
 
     await waitFor(() => {
-      expect(result.current.myBoards).toEqual([]);
-      expect(result.current.teamBoards).toEqual([]);
+      expect(result.current.myBoards).toStrictEqual([]);
+      expect(result.current.teamBoards).toStrictEqual([]);
     });
   });
 

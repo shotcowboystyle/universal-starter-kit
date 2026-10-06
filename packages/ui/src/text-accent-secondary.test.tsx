@@ -73,11 +73,11 @@ describe('Tabs — textAccent reaches the inactive tab label', () => {
       const high = inkOf(scheme, 'high', 'Settings', tabs);
       expect(low).not.toHaveLength(0);
       expect(high).not.toHaveLength(0);
-      expect(high).not.toEqual(low);
+      expect(high).not.toStrictEqual(low);
     });
 
     it(`${scheme}: the inactive label keeps the AA floor at low and medium`, () => {
-      expect(inkOf(scheme, 'low', 'Settings', tabs)).toEqual(inkOf(scheme, 'medium', 'Settings', tabs));
+      expect(inkOf(scheme, 'low', 'Settings', tabs)).toStrictEqual(inkOf(scheme, 'medium', 'Settings', tabs));
     });
   }
 });
@@ -99,11 +99,13 @@ describe('Accordion — textAccent reaches the section description', () => {
       const high = inkOf(scheme, 'high', description, accordion);
       expect(low).not.toHaveLength(0);
       expect(high).not.toHaveLength(0);
-      expect(high).not.toEqual(low);
+      expect(high).not.toStrictEqual(low);
     });
 
     it(`${scheme}: the description keeps the AA floor at low and medium`, () => {
-      expect(inkOf(scheme, 'low', description, accordion)).toEqual(inkOf(scheme, 'medium', description, accordion));
+      expect(inkOf(scheme, 'low', description, accordion)).toStrictEqual(
+        inkOf(scheme, 'medium', description, accordion),
+      );
     });
   }
 });
@@ -130,11 +132,11 @@ describe('Quote — textAccent reaches the attribution', () => {
       const high = citeInk(scheme, 'high');
       expect(low).not.toHaveLength(0);
       expect(high).not.toHaveLength(0);
-      expect(high).not.toEqual(low);
+      expect(high).not.toStrictEqual(low);
     });
 
     it(`${scheme}: the attribution keeps the AA floor at low and medium`, () => {
-      expect(citeInk(scheme, 'low')).toEqual(citeInk(scheme, 'medium'));
+      expect(citeInk(scheme, 'low')).toStrictEqual(citeInk(scheme, 'medium'));
     });
   }
 });

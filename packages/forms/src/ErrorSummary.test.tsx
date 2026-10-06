@@ -37,7 +37,7 @@ describe('formatFieldError / normalizeFieldError', () => {
   });
 
   it('normalizes objects and rejects empty', () => {
-    expect(normalizeFieldError({ problem: 'Missing date' })).toEqual({
+    expect(normalizeFieldError({ problem: 'Missing date' })).toStrictEqual({
       problem: 'Missing date',
     });
     expect(normalizeFieldError('')).toBeUndefined();

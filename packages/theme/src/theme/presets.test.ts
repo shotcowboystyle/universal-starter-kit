@@ -112,7 +112,7 @@ describe('Theme Preset System', () => {
     it('registers a preset and retrieves it by name', () => {
       registerPreset('minimal', minimalPreset);
       const result = getPreset('minimal');
-      expect(result).toEqual(minimalPreset);
+      expect(result).toStrictEqual(minimalPreset);
     });
 
     it('returns undefined for an unregistered preset name', () => {
@@ -124,7 +124,7 @@ describe('Theme Preset System', () => {
       registerPreset('bold', boldPreset);
       registerPreset('rounded', roundedPreset);
       const names = getPresetNames();
-      expect(names).toEqual(expect.arrayContaining(['minimal', 'bold', 'rounded']));
+      expect(names).toStrictEqual(expect.arrayContaining(['minimal', 'bold', 'rounded']));
       expect(names).toHaveLength(3);
     });
 
@@ -218,7 +218,7 @@ describe('Theme Preset System', () => {
     it('handles empty overrides cookie gracefully', () => {
       registerPreset('minimal', minimalPreset);
       const resolved = resolveThemeFromPreset('minimal', {});
-      expect(resolved.knobs).toEqual(minimalPreset.knobs);
+      expect(resolved.knobs).toStrictEqual(minimalPreset.knobs);
     });
   });
 

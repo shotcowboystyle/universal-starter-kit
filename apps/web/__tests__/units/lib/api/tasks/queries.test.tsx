@@ -60,7 +60,7 @@ describe('Task Query Hooks', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(result.current.data).toEqual(mockTasks);
+      expect(result.current.data).toStrictEqual(mockTasks);
       expect(taskApi.getTasks).toHaveBeenCalledWith('project1', undefined);
     });
 
@@ -74,7 +74,7 @@ describe('Task Query Hooks', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(result.current.data).toEqual(mockTasks);
+      expect(result.current.data).toStrictEqual(mockTasks);
       expect(taskApi.getTasks).toHaveBeenCalledWith(undefined, 'user1');
     });
 
@@ -97,7 +97,7 @@ describe('Task Query Hooks', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(result.current.data).toEqual(mockTask);
+      expect(result.current.data).toStrictEqual(mockTask);
       expect(taskApi.getTaskById).toHaveBeenCalledWith('1');
     });
 

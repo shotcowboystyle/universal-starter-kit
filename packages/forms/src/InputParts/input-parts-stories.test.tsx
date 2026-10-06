@@ -65,7 +65,7 @@ describe('Forms/InputParts stories', () => {
   it('Adornments builds three boxes: leading, trailing, and both', () => {
     const { container } = mount(Adornments as StoryLike);
     const placeholders = Array.from(container.querySelectorAll('input')).map((i) => i.getAttribute('placeholder'));
-    expect(placeholders).toEqual(['Leading icon', 'Trailing icon', 'Both ends']);
+    expect(placeholders).toStrictEqual(['Leading icon', 'Trailing icon', 'Both ends']);
   });
 
   it('TrailingButton exposes a labelled reveal toggle beside the field', () => {

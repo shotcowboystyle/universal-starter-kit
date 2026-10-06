@@ -72,7 +72,7 @@ describe('house Text — textAccent reaches the text node', () => {
     );
     expect(high).not.toHaveLength(0);
     expect(low).not.toHaveLength(0);
-    expect(high).not.toEqual(low);
+    expect(high).not.toStrictEqual(low);
   });
 
   it('low and medium share the AA legibility floor ($color11)', () => {
@@ -88,7 +88,7 @@ describe('house Text — textAccent reaches the text node', () => {
       </Preset>,
       ['_col-'],
     );
-    expect(low).toEqual(medium);
+    expect(low).toStrictEqual(medium);
   });
 
   it('measures the TEXT NODE, never the frame', () => {
@@ -127,9 +127,9 @@ describe('house Text — fontWeight and bodyFont reach the text node', () => {
     const explicit400 = renderTextClasses(<Text fontWeight="400">{LABEL}</Text>, ['_fow-']);
     const explicit700 = renderTextClasses(<Text fontWeight="700">{LABEL}</Text>, ['_fow-']);
     expect(regular).not.toHaveLength(0);
-    expect(regular).not.toEqual(bold);
-    expect(regular).toEqual(explicit400);
-    expect(bold).toEqual(explicit700);
+    expect(regular).not.toStrictEqual(bold);
+    expect(regular).toStrictEqual(explicit400);
+    expect(bold).toStrictEqual(explicit700);
   });
 
   it('changes family on a bodyFont flip (props, not the web-only CSS rescue)', () => {
@@ -170,7 +170,7 @@ describe('house Text — fontWeight and bodyFont reach the text node', () => {
       ['_fos-', '_lh-', '_fow-'],
     );
     expect(byDefault).not.toHaveLength(0);
-    expect(byDefault).toEqual(explicit);
+    expect(byDefault).toStrictEqual(explicit);
   });
 
   it('explicit consumer props still eject (STD-EJECT-LAST)', () => {
@@ -181,7 +181,7 @@ describe('house Text — fontWeight and bodyFont reach the text node', () => {
       ['_fow-'],
     );
     const explicit400 = renderTextClasses(<Text fontWeight="400">{LABEL}</Text>, ['_fow-']);
-    expect(ejected).toEqual(explicit400);
+    expect(ejected).toStrictEqual(explicit400);
   });
 });
 
@@ -204,14 +204,14 @@ describe("house Anchor — link chrome is house Text's, in the accent", () => {
     const accented = renderTextClasses(<Anchor color={ink as never}>{LABEL}</Anchor>, ['_col-']);
     const body = renderTextClasses(<Text>{LABEL}</Text>, ['_col-']);
     expect(anchor).not.toHaveLength(0);
-    expect(anchor).toEqual(accented);
-    expect(anchor).not.toEqual(body);
+    expect(anchor).toStrictEqual(accented);
+    expect(anchor).not.toStrictEqual(body);
   });
 
   it('a consumer colour still ejects (STD-EJECT-LAST)', () => {
     const ejected = renderTextClasses(<Anchor color="$color9">{LABEL}</Anchor>, ['_col-']);
     const explicit = renderTextClasses(<Text color="$color9">{LABEL}</Text>, ['_col-']);
-    expect(ejected).toEqual(explicit);
+    expect(ejected).toStrictEqual(explicit);
   });
 });
 

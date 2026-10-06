@@ -60,7 +60,7 @@ describe('EmptyState', () => {
         }
       />,
     );
-    expect(Array.from(container.querySelectorAll('p')).map((node) => node.textContent)).toEqual([
+    expect(Array.from(container.querySelectorAll('p')).map((node) => node.textContent)).toStrictEqual([
       'You are not permitted to access this resource. Login to access',
       'Function frappe.desk.form.load.getdoctype is not whitelisted.',
     ]);
@@ -89,7 +89,7 @@ describe('EmptyState icon well radius (R2e)', () => {
     const emptyWell = screen.getByTestId('empty-icon').parentElement as HTMLElement;
     const kpiWell = screen.getByTestId('kpi-icon').parentElement as HTMLElement;
     expect(radiusAtoms(emptyWell)).not.toHaveLength(0);
-    expect(radiusAtoms(emptyWell)).toEqual(radiusAtoms(kpiWell));
+    expect(radiusAtoms(emptyWell)).toStrictEqual(radiusAtoms(kpiWell));
     // A knob-immunity declaration is what licensed the circle; the well is
     // not immune, so it must carry none.
     expect(emptyWell.getAttribute('data-radius-class')).toBeNull();
@@ -105,6 +105,11 @@ describe('EmptyState icon well radius (R2e)', () => {
       </Preset>,
     );
     const well = screen.getByTestId('empty-icon').parentElement as HTMLElement;
-    expect(radiusAtoms(well)).toEqual(['_bblr-t-radius-0', '_bbrr-t-radius-0', '_btlr-t-radius-0', '_btrr-t-radius-0']);
+    expect(radiusAtoms(well)).toStrictEqual([
+      '_bblr-t-radius-0',
+      '_bbrr-t-radius-0',
+      '_btlr-t-radius-0',
+      '_btrr-t-radius-0',
+    ]);
   });
 });

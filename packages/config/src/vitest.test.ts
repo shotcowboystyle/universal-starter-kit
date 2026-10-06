@@ -58,12 +58,12 @@ async function resolveThroughVite(specifier: string, importer: string) {
 describe('resolve.extensions', () => {
   it('does not list any .test.* extension', () => {
     const extensions = createVitestConfig().resolve?.extensions ?? [];
-    expect(extensions.filter((extension) => extension.startsWith('.test.'))).toEqual([]);
+    expect(extensions.filter((extension) => extension.startsWith('.test.'))).toStrictEqual([]);
   });
 
   it('still resolves platform-specific and plain source extensions, web first', () => {
     const extensions = createVitestConfig().resolve?.extensions ?? [];
-    expect(extensions).toEqual(['.web.ts', '.web.tsx', '.web.js', '.web.jsx', '.ts', '.tsx', '.js', '.jsx']);
+    expect(extensions).toStrictEqual(['.web.ts', '.web.tsx', '.web.js', '.web.jsx', '.ts', '.tsx', '.js', '.jsx']);
     expect(extensions.indexOf('.web.ts')).toBeLessThan(extensions.indexOf('.ts'));
   });
 });

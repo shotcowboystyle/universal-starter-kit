@@ -97,7 +97,7 @@ describe('createPreview tamaguiConfig global', () => {
 
   it('offers full and subset in the toolbar and defaults to full', () => {
     const toolbar = preview.globalTypes?.tamaguiConfig?.toolbar as { items: { value: string }[] };
-    expect(toolbar.items.map((item) => item.value)).toEqual(['full', 'subset']);
+    expect(toolbar.items.map((item) => item.value)).toStrictEqual(['full', 'subset']);
     expect(preview.initialGlobals?.tamaguiConfig).toBe('full');
   });
 
@@ -168,7 +168,7 @@ describe('createPreview tableZebra global', () => {
   }
 
   it('registers tableZebra so a URL global or the toolbar can set it', () => {
-    expect(preview.globalTypes?.tableZebra?.options).toEqual(['on', 'off']);
+    expect(preview.globalTypes?.tableZebra?.options).toStrictEqual(['on', 'off']);
     expect(preview.initialGlobals?.tableZebra).toBe('');
   });
 

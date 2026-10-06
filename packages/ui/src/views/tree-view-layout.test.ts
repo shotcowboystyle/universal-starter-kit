@@ -19,15 +19,15 @@ function knobs(overrides: Partial<typeof defaultKnobs> = {}) {
 
 describe('treeEdgeRowPad', () => {
   it('is the shared SP-EDGE token map (same stops as getTableCellPadding)', () => {
-    expect(TREE_EDGE_ROW_PAD.small).toEqual({
+    expect(TREE_EDGE_ROW_PAD.small).toStrictEqual({
       paddingHorizontal: '$1.5',
       paddingVertical: '$2',
     });
-    expect(TREE_EDGE_ROW_PAD.medium).toEqual({
+    expect(TREE_EDGE_ROW_PAD.medium).toStrictEqual({
       paddingHorizontal: '$2',
       paddingVertical: '$3',
     });
-    expect(TREE_EDGE_ROW_PAD.large).toEqual({
+    expect(TREE_EDGE_ROW_PAD.large).toStrictEqual({
       paddingHorizontal: '$3',
       paddingVertical: '$4',
     });

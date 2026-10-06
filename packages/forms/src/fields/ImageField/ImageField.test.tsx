@@ -274,7 +274,7 @@ describe('ImageField', () => {
           />
         </Preset>,
       );
-      expect(radiusClasses(mediaTile(none.container))).toEqual(['_btlr-t-radius-0']);
+      expect(radiusClasses(mediaTile(none.container))).toStrictEqual(['_btlr-t-radius-0']);
       cleanup();
 
       const full = renderWithProviders(
@@ -285,7 +285,7 @@ describe('ImageField', () => {
           />
         </Preset>,
       );
-      expect(radiusClasses(mediaTile(full.container))).toEqual(['_btlr-t-radius-12']);
+      expect(radiusClasses(mediaTile(full.container))).toStrictEqual(['_btlr-t-radius-12']);
     });
 
     it('does not grow a table cell with a Remove sibling', () => {

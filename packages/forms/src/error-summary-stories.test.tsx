@@ -100,7 +100,7 @@ describe('Forms/ErrorSummary stories', () => {
     const { container, getByText } = mount(FocusesTheFieldOnPress as StoryLike);
     fireEvent.click(getByText('Submit'));
     const hrefs = Array.from(container.querySelectorAll('a')).map((a) => a.getAttribute('href'));
-    expect(hrefs).toEqual(['#email', '#password']);
+    expect(hrefs).toStrictEqual(['#email', '#password']);
     expect(container.querySelector('#email')).toBeTruthy();
     expect(container.querySelector('#password')).toBeTruthy();
   });

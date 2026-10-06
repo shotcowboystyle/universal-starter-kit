@@ -156,7 +156,7 @@ describe('Intent', () => {
       ),
     );
     const themes = collectThemes(html);
-    expect(themes).toEqual(['error', 'success']);
+    expect(themes).toStrictEqual(['error', 'success']);
   });
 });
 

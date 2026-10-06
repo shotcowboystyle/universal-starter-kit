@@ -60,21 +60,21 @@ describe('structure lookups', () => {
   });
 
   it('resolves children of a parent (null = roots)', () => {
-    expect(childrenOf(tree, null).map((n) => n.id)).toEqual(['src', 'readme']);
-    expect(childrenOf(tree, 'components').map((n) => n.id)).toEqual(['button', 'input']);
-    expect(childrenOf(tree, 'button')).toEqual([]);
+    expect(childrenOf(tree, null).map((n) => n.id)).toStrictEqual(['src', 'readme']);
+    expect(childrenOf(tree, 'components').map((n) => n.id)).toStrictEqual(['button', 'input']);
+    expect(childrenOf(tree, 'button')).toStrictEqual([]);
   });
 
   it('collects the dragged subtree', () => {
-    expect([...subtreeIds(tree, 'src')].sort()).toEqual(
+    expect([...subtreeIds(tree, 'src')].sort()).toStrictEqual(
       ['components', 'button', 'hooks', 'index', 'input', 'src', 'use-form'].sort(),
     );
-    expect([...subtreeIds(tree, 'readme')]).toEqual(['readme']);
+    expect([...subtreeIds(tree, 'readme')]).toStrictEqual(['readme']);
   });
 
   it('flattens visible rows with depth and expansion', () => {
     const rows = flattenDndRows(tree, new Set(['src']));
-    expect(rows.map((r) => r.id)).toEqual(['src', 'components', 'hooks', 'index', 'readme']);
+    expect(rows.map((r) => r.id)).toStrictEqual(['src', 'components', 'hooks', 'index', 'readme']);
     expect(rows[1]).toMatchObject({ parentId: 'src', childIndex: 0, depth: 1, isExpanded: false });
   });
 
@@ -91,7 +91,7 @@ describe('structure lookups', () => {
 describe('keyboard drag state machine', () => {
   it('lifts a node at its own position (identity target)', () => {
     const session = treeKeyboardLift(tree, 'input');
-    expect(session).toEqual({
+    expect(session).toStrictEqual({
       nodeId: 'input',
       sourceParentId: 'components',
       sourceIndex: 1,
@@ -106,11 +106,11 @@ describe('keyboard drag state machine', () => {
   it('moves up/down within the parent and clamps at boundaries', () => {
     let session = treeKeyboardLift(tree, 'input')!;
     session = treeKeyboardMove(session, tree, 'up');
-    expect(session.target).toEqual({ parentId: 'components', index: 0 });
+    expect(session.target).toStrictEqual({ parentId: 'components', index: 0 });
     const clamped = treeKeyboardMove(session, tree, 'up');
     expect(clamped).toBe(session); // boundary no-op returns the same session
     session = treeKeyboardMove(session, tree, 'down');
-    expect(session.target).toEqual({ parentId: 'components', index: 1 });
+    expect(session.target).toStrictEqual({ parentId: 'components', index: 1 });
     // components holds 2 children; dragging one leaves wd max = 1
     expect(treeKeyboardMove(session, tree, 'down')).toBe(session);
   });
@@ -119,7 +119,7 @@ describe('keyboard drag state machine', () => {
     // index (child 2 of src) lifted; position above it is hooks
     let session = treeKeyboardLift(tree, 'index')!;
     session = treeKeyboardMove(session, tree, 'right');
-    expect(session.target).toEqual({ parentId: 'hooks', index: 1 }); // hooks has 1 child
+    expect(session.target).toStrictEqual({ parentId: 'hooks', index: 1 }); // hooks has 1 child
   });
 
   it('right at index 0 is a no-op', () => {
@@ -131,10 +131,10 @@ describe('keyboard drag state machine', () => {
     let session = treeKeyboardLift(tree, 'input')!;
     session = treeKeyboardMove(session, tree, 'left');
     // components is child 0 of src → insert after it
-    expect(session.target).toEqual({ parentId: 'src', index: 1 });
+    expect(session.target).toStrictEqual({ parentId: 'src', index: 1 });
     session = treeKeyboardMove(session, tree, 'left');
     // src is root 0 → insert after it at top level
-    expect(session.target).toEqual({ parentId: null, index: 1 });
+    expect(session.target).toStrictEqual({ parentId: null, index: 1 });
     expect(treeKeyboardMove(session, tree, 'left')).toBe(session); // top level → no-op
   });
 
@@ -143,10 +143,10 @@ describe('keyboard drag state machine', () => {
     // lift hooks, nest right into components? components is above it.
     let session = treeKeyboardLift(tree, 'hooks')!;
     session = treeKeyboardMove(session, tree, 'right'); // into components (index 1 → prev sibling)
-    expect(session.target).toEqual({ parentId: 'components', index: 2 });
+    expect(session.target).toStrictEqual({ parentId: 'components', index: 2 });
     session = treeKeyboardMove(session, tree, 'left'); // back out: after components in src
     // components is child 0 of src; hooks (dragged) was child 1 → wd index of components = 0
-    expect(session.target).toEqual({ parentId: 'src', index: 1 });
+    expect(session.target).toStrictEqual({ parentId: 'src', index: 1 });
   });
 
   it('resolves drops: no-op at origin, commit elsewhere', () => {
@@ -155,8 +155,8 @@ describe('keyboard drag state machine', () => {
     const moved = treeKeyboardMove(home, tree, 'up');
     const result = resolveTreeDrop(moved);
     expect(result.commit).toBe(true);
-    expect(result.from).toEqual({ parentId: 'components', index: 1 });
-    expect(result.to).toEqual({ parentId: 'components', index: 0 });
+    expect(result.from).toStrictEqual({ parentId: 'components', index: 1 });
+    expect(result.to).toStrictEqual({ parentId: 'components', index: 0 });
   });
 });
 
@@ -170,42 +170,42 @@ describe('treeDropTargetForY (pointer band model)', () => {
   it('top band inserts before the row', () => {
     // button is flat row 2 → top band at y = 2H + 2
     const hit = treeDropTargetForY({ ...base, localY: 2 * H + 2 })!;
-    expect(hit.target).toEqual({ parentId: 'components', index: 0 });
-    expect(hit.indicator).toEqual({ kind: 'line', flatIndex: 2, depth: 2 });
+    expect(hit.target).toStrictEqual({ parentId: 'components', index: 0 });
+    expect(hit.indicator).toStrictEqual({ kind: 'line', flatIndex: 2, depth: 2 });
   });
 
   it('bottom band inserts after the row', () => {
     // button bottom band: y = 2H + 0.9H
     const hit = treeDropTargetForY({ ...base, localY: 2.9 * H })!;
-    expect(hit.target).toEqual({ parentId: 'components', index: 1 });
-    expect(hit.indicator).toEqual({ kind: 'line', flatIndex: 3, depth: 2 });
+    expect(hit.target).toStrictEqual({ parentId: 'components', index: 1 });
+    expect(hit.indicator).toStrictEqual({ kind: 'line', flatIndex: 3, depth: 2 });
   });
 
   it('bottom band on an expanded branch targets its first-child slot', () => {
     // components is flat row 1 (expanded) → bottom band
     const hit = treeDropTargetForY({ ...base, localY: 1.9 * H })!;
-    expect(hit.target).toEqual({ parentId: 'components', index: 0 });
-    expect(hit.indicator).toEqual({ kind: 'line', flatIndex: 2, depth: 2 });
+    expect(hit.target).toStrictEqual({ parentId: 'components', index: 0 });
+    expect(hit.indicator).toStrictEqual({ kind: 'line', flatIndex: 2, depth: 2 });
   });
 
   it('middle band nests into the row (parent highlight)', () => {
     // hooks is flat row 4 → middle band
     const hit = treeDropTargetForY({ ...base, localY: 4.5 * H })!;
-    expect(hit.target).toEqual({ parentId: 'hooks', index: 1 });
-    expect(hit.indicator).toEqual({ kind: 'into', parentId: 'hooks' });
+    expect(hit.target).toStrictEqual({ parentId: 'hooks', index: 1 });
+    expect(hit.indicator).toStrictEqual({ kind: 'into', parentId: 'hooks' });
   });
 
   it('middle band over a leaf nests into it at index 0', () => {
     // index is flat row 6
     const hit = treeDropTargetForY({ ...base, localY: 6.5 * H })!;
-    expect(hit.target).toEqual({ parentId: 'index', index: 0 });
-    expect(hit.indicator).toEqual({ kind: 'into', parentId: 'index' });
+    expect(hit.target).toStrictEqual({ parentId: 'index', index: 0 });
+    expect(hit.indicator).toStrictEqual({ kind: 'into', parentId: 'index' });
   });
 
   it('beyond the last row appends at the top level', () => {
     const hit = treeDropTargetForY({ ...base, localY: 99 * H })!;
-    expect(hit.target).toEqual({ parentId: null, index: 1 }); // readme dragged → wd root count 1
-    expect(hit.indicator).toEqual({ kind: 'line', flatIndex: rows.length, depth: 0 });
+    expect(hit.target).toStrictEqual({ parentId: null, index: 1 }); // readme dragged → wd root count 1
+    expect(hit.indicator).toStrictEqual({ kind: 'line', flatIndex: rows.length, depth: 0 });
   });
 
   it('returns null over the dragged subtree', () => {
@@ -228,7 +228,7 @@ describe('treeDropTargetForY (pointer band model)', () => {
       draggedSubtree: subtreeIds(tree, 'button'),
       localY: 3 * H + 2, // top band of input (flat row 3)
     })!;
-    expect(hit.target).toEqual({ parentId: 'components', index: 0 });
+    expect(hit.target).toStrictEqual({ parentId: 'components', index: 0 });
   });
 });
 
@@ -239,7 +239,7 @@ describe('indicatorForTarget (keyboard indicator)', () => {
     const session = treeKeyboardLift(tree, 'input')!;
     const moved = treeKeyboardMove(session, tree, 'up');
     // target components[0] → line above button (flat row 2)
-    expect(indicatorForTarget(rows, moved, moved.target)).toEqual({
+    expect(indicatorForTarget(rows, moved, moved.target)).toStrictEqual({
       kind: 'line',
       flatIndex: 2,
       depth: 2,
@@ -249,7 +249,7 @@ describe('indicatorForTarget (keyboard indicator)', () => {
   it("append positions land after the last visible sibling's subtree", () => {
     const session = treeKeyboardLift(tree, 'readme')!;
     // target = top level index 1 (after src's whole subtree)
-    expect(indicatorForTarget(rows, session, { parentId: null, index: 1 })).toEqual({
+    expect(indicatorForTarget(rows, session, { parentId: null, index: 1 })).toStrictEqual({
       kind: 'line',
       flatIndex: 7, // after src + its 6 visible descendants
       depth: 0,
@@ -260,7 +260,7 @@ describe('indicatorForTarget (keyboard indicator)', () => {
     const collapsedRows = flattenDndRows(tree, new Set(['src']));
     const session = treeKeyboardLift(tree, 'index')!;
     const nested = treeKeyboardMove(session, tree, 'right'); // into hooks (collapsed)
-    expect(indicatorForTarget(collapsedRows, nested, nested.target)).toEqual({
+    expect(indicatorForTarget(collapsedRows, nested, nested.target)).toStrictEqual({
       kind: 'into',
       parentId: 'hooks',
     });
@@ -270,35 +270,38 @@ describe('indicatorForTarget (keyboard indicator)', () => {
 describe('applyTreeMove', () => {
   it('reorders within a parent using wd coordinates', () => {
     const next = applyTreeMove(tree, 'input', { parentId: 'components', index: 0 });
-    expect(childrenOf(next, 'components').map((n) => n.id)).toEqual(['button', 'input'].reverse());
+    expect(childrenOf(next, 'components').map((n) => n.id)).toStrictEqual(['button', 'input'].reverse());
   });
 
   it('moves a node (with its subtree) to another parent', () => {
     const next = applyTreeMove(tree, 'components', { parentId: 'hooks', index: 1 });
-    expect(childrenOf(next, 'src').map((n) => n.id)).toEqual(['hooks', 'index']);
-    expect(childrenOf(next, 'hooks').map((n) => n.id)).toEqual(['use-form', 'components']);
-    expect(childrenOf(next, 'components').map((n) => n.id)).toEqual(['button', 'input']);
+    expect(childrenOf(next, 'src').map((n) => n.id)).toStrictEqual(['hooks', 'index']);
+    expect(childrenOf(next, 'hooks').map((n) => n.id)).toStrictEqual(['use-form', 'components']);
+    expect(childrenOf(next, 'components').map((n) => n.id)).toStrictEqual(['button', 'input']);
   });
 
   it('moves to the top level', () => {
     const next = applyTreeMove(tree, 'input', { parentId: null, index: 2 });
-    expect(next.map((n) => n.id)).toEqual(['src', 'readme', 'input']);
+    expect(next.map((n) => n.id)).toStrictEqual(['src', 'readme', 'input']);
   });
 
   it('nests into a leaf, creating its children array', () => {
     const next = applyTreeMove(tree, 'readme', { parentId: 'index', index: 0 });
-    expect(childrenOf(next, 'index').map((n) => n.id)).toEqual(['readme']);
+    expect(childrenOf(next, 'index').map((n) => n.id)).toStrictEqual(['readme']);
   });
 
   it('refuses to move a node into its own subtree', () => {
     const next = applyTreeMove(tree, 'src', { parentId: 'components', index: 0 });
-    expect(next.map((n) => n.id)).toEqual(['src', 'readme']);
-    expect(childrenOf(next, 'components').map((n) => n.id)).toEqual(['button', 'input']);
+    expect(next.map((n) => n.id)).toStrictEqual(['src', 'readme']);
+    expect(childrenOf(next, 'components').map((n) => n.id)).toStrictEqual(['button', 'input']);
   });
 
   it('refuses unknown nodes and unknown targets', () => {
-    expect(applyTreeMove(tree, 'missing', { parentId: null, index: 0 }).map((n) => n.id)).toEqual(['src', 'readme']);
-    expect(applyTreeMove(tree, 'readme', { parentId: 'missing', index: 0 }).map((n) => n.id)).toEqual([
+    expect(applyTreeMove(tree, 'missing', { parentId: null, index: 0 }).map((n) => n.id)).toStrictEqual([
+      'src',
+      'readme',
+    ]);
+    expect(applyTreeMove(tree, 'readme', { parentId: 'missing', index: 0 }).map((n) => n.id)).toStrictEqual([
       'src',
       'readme',
     ]);
@@ -314,7 +317,7 @@ describe('applyTreeMove', () => {
 describe('announcements', () => {
   it('announces lift, move, drop with 1-based positions and parent labels', () => {
     let session = treeKeyboardLift(tree, 'input')!;
-    expect(describeTreeDragState('lift', session, tree, 'Input.tsx')).toEqual({
+    expect(describeTreeDragState('lift', session, tree, 'Input.tsx')).toStrictEqual({
       type: 'lift',
       node: 'Input.tsx',
       parent: 'components',
@@ -322,7 +325,7 @@ describe('announcements', () => {
       count: 2,
     });
     session = treeKeyboardMove(session, tree, 'left');
-    expect(describeTreeDragState('move', session, tree, 'Input.tsx')).toEqual({
+    expect(describeTreeDragState('move', session, tree, 'Input.tsx')).toStrictEqual({
       type: 'move',
       node: 'Input.tsx',
       parent: 'src',
@@ -343,7 +346,7 @@ describe('announcements', () => {
       position: 2,
       count: 2,
     });
-    expect(describeTreeCancel(session, tree, 'README.md')).toEqual({
+    expect(describeTreeCancel(session, tree, 'README.md')).toStrictEqual({
       type: 'cancel',
       node: 'README.md',
       parent: null,

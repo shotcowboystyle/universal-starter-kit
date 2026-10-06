@@ -74,7 +74,7 @@ describe('the default subset keeps the field error tint', () => {
         `${scheme}_error_Button`,
       ]) {
         expect(subset, name).toHaveProperty(name);
-        expect(subset[name]).toEqual(full[name]);
+        expect(subset[name]).toStrictEqual(full[name]);
       }
       expect(full).toHaveProperty(`${scheme}_red`);
       expect(subset).not.toHaveProperty(`${scheme}_red`);

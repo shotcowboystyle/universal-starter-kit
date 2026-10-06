@@ -5,7 +5,7 @@ import { createStore } from './create-store';
 describe('createStore', () => {
   it('creates a basic store with initial state', () => {
     const store = createStore({ count: 0 });
-    expect(store.state).toEqual({ count: 0 });
+    expect(store.state).toStrictEqual({ count: 0 });
   });
 
   it('updates state via setState', () => {
@@ -21,14 +21,14 @@ describe('createStore', () => {
       removeItem: vi.fn(),
     };
     const store = createStore({ n: 0 }, { name: 'test-persist', persist: true, storage: mockStorage });
-    expect(store.state).toEqual({ n: 0 });
+    expect(store.state).toStrictEqual({ n: 0 });
     expect('rehydrate' in store).toBe(true);
     expect('clearPersistedState' in store).toBe(true);
   });
 
   it('creates a non-persist store when persist is false', () => {
     const store = createStore({ n: 0 }, { name: 'test', persist: false });
-    expect(store.state).toEqual({ n: 0 });
+    expect(store.state).toStrictEqual({ n: 0 });
     expect('rehydrate' in store).toBe(false);
   });
 

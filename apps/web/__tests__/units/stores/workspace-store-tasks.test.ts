@@ -89,7 +89,7 @@ describe('workspace-store - Task actions', () => {
       expect(tasks[0]._id).toBe('task-1');
 
       const state = useWorkspaceStore.getState();
-      expect(state.projects[0].tasks).toEqual(mockTasks);
+      expect(state.projects[0].tasks).toStrictEqual(mockTasks);
     });
 
     it('should return empty array when fetching tasks fails', async () => {
@@ -99,14 +99,14 @@ describe('workspace-store - Task actions', () => {
       const store = useWorkspaceStore.getState();
       const tasks = await store.fetchTasksByProject('project-1');
 
-      expect(tasks).toEqual([]);
+      expect(tasks).toStrictEqual([]);
     });
 
     it('should return empty array when projectId is empty', async () => {
       const store = useWorkspaceStore.getState();
       const tasks = await store.fetchTasksByProject('');
 
-      expect(tasks).toEqual([]);
+      expect(tasks).toStrictEqual([]);
     });
 
     it('should return empty array when getTasks does not return an array', async () => {
@@ -116,7 +116,7 @@ describe('workspace-store - Task actions', () => {
       const store = useWorkspaceStore.getState();
       const tasks = await store.fetchTasksByProject('project-1');
 
-      expect(tasks).toEqual([]);
+      expect(tasks).toStrictEqual([]);
     });
 
     it('should add a new task', async () => {

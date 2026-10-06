@@ -82,7 +82,7 @@ describe('house headings keep their weight across headingFont', () => {
             const serif = at('serif');
             expect(sans.family).toBe('Inter');
             expect(serif.family).toBe('Georgia');
-            expect({ size, fontWeight, sans: sans.weight, serif: serif.weight }).toEqual({
+            expect({ size, fontWeight, sans: sans.weight, serif: serif.weight }).toStrictEqual({
               size,
               fontWeight,
               sans: expected,
@@ -108,7 +108,7 @@ describe('house headings keep their weight across headingFont', () => {
             </Preset>,
             scheme,
           );
-          expect({ fontWeight, headingFont, weight }).toEqual({
+          expect({ fontWeight, headingFont, weight }).toStrictEqual({
             fontWeight,
             headingFont,
             weight: '700',
@@ -133,7 +133,7 @@ describe('sized body voices take fontWeight and bodyFont together', () => {
           </Preset>,
           scheme,
         );
-        expect(m).toEqual({ weight: '700', family: 'Georgia' });
+        expect(m).toStrictEqual({ weight: '700', family: 'Georgia' });
       });
     }
   }

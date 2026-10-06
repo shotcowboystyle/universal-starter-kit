@@ -62,8 +62,8 @@ describe('useAuth', () => {
       expect(result.current.isAuthenticated).toBe(true);
     });
 
-    expect(result.current.user).toEqual(mockSession.user);
-    expect(result.current.session).toEqual(mockSession);
+    expect(result.current.user).toStrictEqual(mockSession.user);
+    expect(result.current.session).toStrictEqual(mockSession);
   });
 
   it('should expose login function', () => {

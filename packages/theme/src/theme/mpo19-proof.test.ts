@@ -58,7 +58,7 @@ describe('one Tamagui era, and it is load-bearing', () => {
     // why nothing broke and why nobody noticed for a year.
     const legacy = await import('@tamagui/themes');
     for (const group of ['size', 'space', 'radius', 'zIndex'] as const) {
-      expect(table(defaultConfig.tokens[group]), `tokens.${group}`).toEqual(
+      expect(table(defaultConfig.tokens[group]), `tokens.${group}`).toStrictEqual(
         table((legacy.tokens as Record<string, unknown>)[group]),
       );
     }
@@ -74,9 +74,9 @@ describe("the type scale IS the era's, not a copy of it", () => {
       ['body', defaultBodyFont, defaultConfig.fonts.body],
       ['heading', defaultHeadingFont, defaultConfig.fonts.heading],
     ] as const) {
-      expect(table(ours.size), `${name}.size`).toEqual(table(theirs.size));
-      expect(table(ours.lineHeight), `${name}.lineHeight`).toEqual(table(theirs.lineHeight));
-      expect(table(ours.weight), `${name}.weight`).toEqual(table(theirs.weight));
+      expect(table(ours.size), `${name}.size`).toStrictEqual(table(theirs.size));
+      expect(table(ours.lineHeight), `${name}.lineHeight`).toStrictEqual(table(theirs.lineHeight));
+      expect(table(ours.weight), `${name}.weight`).toStrictEqual(table(theirs.weight));
     }
   });
 
@@ -97,7 +97,7 @@ describe("the type scale IS the era's, not a copy of it", () => {
   });
 
   it('heading rides the body size scale — there is no 1.4x fork', () => {
-    expect(table(defaultHeadingFont.size)).toEqual(table(defaultBodyFont.size));
+    expect(table(defaultHeadingFont.size)).toStrictEqual(table(defaultBodyFont.size));
   });
 
   it('heading weight is the sparse 600/700/800 ramp, so bold still means something', () => {

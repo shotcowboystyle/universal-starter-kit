@@ -152,7 +152,7 @@ describe('resolveKnobs', () => {
   it('is deterministic (same input → same output)', () => {
     const a = resolveKnobs(defaultKnobs);
     const b = resolveKnobs(defaultKnobs);
-    expect(a).toEqual(b);
+    expect(a).toStrictEqual(b);
   });
 
   it('matches snapshot for defaultKnobs', () => {
@@ -223,7 +223,7 @@ describe('resolveKnobs', () => {
     it('maps "small" → undefined: controls paint no resting shadow at the default', () => {
       const { knobProps } = resolveKnobs(knobsWith({ elevation: 'small' }));
       expect(knobProps.elevation).toBeUndefined();
-      expect(knobProps.elevationChrome).toEqual({});
+      expect(knobProps.elevationChrome).toStrictEqual({});
     });
 
     it('overlay elevation at small is $2, not the control $1 token', () => {
@@ -263,7 +263,7 @@ describe('resolveKnobs', () => {
       expect(large.knobProps.inputBackground).toBe('$color5');
       expect(large.knobProps.elevatedSurface.shadowColor).toBe('$color12');
       expect(large.knobProps.elevatedSurface.shadowOpacity).toBe(0.12);
-      expect(none.knobProps.elevationChrome).toEqual({});
+      expect(none.knobProps.elevationChrome).toStrictEqual({});
     });
 
     it('dark outlined inputs stay transparent — tint is for filled surfaces', () => {
@@ -291,7 +291,7 @@ describe('resolveKnobs', () => {
         expect(resolveNative(knobsWith({ elevation: 'none' })).knobProps.elevation).toBeUndefined();
         const small = resolveNative(knobsWith({ elevation: 'small', hover: { elevation: 'medium' } }));
         expect(small.knobProps.elevation).toBeUndefined();
-        expect(small.knobProps.elevationChrome).toEqual({});
+        expect(small.knobProps.elevationChrome).toStrictEqual({});
         expect(small.knobProps.overlayElevation).toBe(28);
         expect(small.knobProps.elevatedSurface.elevation).toBe(28);
         expect(small.knobProps.elevatedSurface.elevation).not.toBe(small.knobProps.elevation);
@@ -339,7 +339,7 @@ describe('resolveKnobs', () => {
 
     it('overlays keep a shadow at the default stop while controls go flat', () => {
       const knobProps = paint('small', 'light');
-      expect(knobProps.elevationChrome).toEqual({});
+      expect(knobProps.elevationChrome).toStrictEqual({});
       expect(knobProps.elevatedSurface.style?.boxShadow).toBe('0 3px 6px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.10)');
     });
   });
@@ -369,8 +369,8 @@ describe('resolveKnobs', () => {
 
     it('empty state knobs still emit default hover/press layers + focus ring (W12)', () => {
       const { control } = resolveKnobs(defaultKnobs);
-      expect(control.hoverKnobProps).toEqual({ backgroundColor: '$backgroundHover' });
-      expect(control.pressKnobProps).toEqual({ backgroundColor: '$backgroundPress' });
+      expect(control.hoverKnobProps).toStrictEqual({ backgroundColor: '$backgroundHover' });
+      expect(control.pressKnobProps).toStrictEqual({ backgroundColor: '$backgroundPress' });
       expect(control.focusKnobProps).toBeUndefined();
       expect(control.focusVisibleKnobProps).toMatchObject({
         outlineWidth: 2,
@@ -462,9 +462,9 @@ describe('resolveKnobs', () => {
       const baseline = resolveKnobs(knobsWith({ size: 'medium', space: 'medium' }));
       for (const sizeVal of Object.values(Size)) {
         const { knobProps } = resolveKnobs(knobsWith({ size: sizeVal, space: 'medium' }));
-        expect(knobProps.panelPadding).toEqual(baseline.knobProps.panelPadding);
-        expect(knobProps.gap).toEqual(baseline.knobProps.gap);
-        expect(knobProps.gapLg).toEqual(baseline.knobProps.gapLg);
+        expect(knobProps.panelPadding).toStrictEqual(baseline.knobProps.panelPadding);
+        expect(knobProps.gap).toStrictEqual(baseline.knobProps.gap);
+        expect(knobProps.gapLg).toStrictEqual(baseline.knobProps.gapLg);
       }
     });
 
@@ -479,13 +479,13 @@ describe('resolveKnobs', () => {
 
     it('fills control / controlType / controlIcon from the size recipe', () => {
       const { knobProps } = resolveKnobs(defaultKnobs);
-      expect(knobProps.control).toEqual({
+      expect(knobProps.control).toStrictEqual({
         height: 44,
         paddingHorizontal: 18,
         gap: 9,
       });
-      expect(knobProps.controlType).toEqual({ fontSize: 14 });
-      expect(knobProps.controlIcon).toEqual({ width: 16, height: 16 });
+      expect(knobProps.controlType).toStrictEqual({ fontSize: 14 });
+      expect(knobProps.controlIcon).toStrictEqual({ width: 16, height: 16 });
       expect(knobProps.control).not.toHaveProperty('borderRadius');
       expect(knobProps.controlType).not.toHaveProperty('borderRadius');
       expect(knobProps.controlIcon).not.toHaveProperty('borderRadius');
@@ -496,7 +496,7 @@ describe('resolveKnobs', () => {
       const large = resolveKnobs(knobsWith({ size: 'large' }));
       expect(small.knobProps.control.height).toBe(36);
       expect(large.knobProps.control.height).toBe(52);
-      expect(small.knobProps.borderRadius).toEqual(large.knobProps.borderRadius);
+      expect(small.knobProps.borderRadius).toStrictEqual(large.knobProps.borderRadius);
     });
   });
 
@@ -505,7 +505,7 @@ describe('resolveKnobs', () => {
   describe('surface tier recipes', () => {
     it('cardSurface = bg + radius + panelPadding, no border/shadow', () => {
       const { knobProps } = resolveKnobs(defaultKnobs);
-      expect(knobProps.cardSurface).toEqual({
+      expect(knobProps.cardSurface).toStrictEqual({
         backgroundColor: '$background',
         borderRadius: '$4',
         padding: '$4',
@@ -552,7 +552,7 @@ describe('resolveKnobs', () => {
       const { knobProps } = resolveKnobs(defaultKnobs);
       expect(knobProps.featureSurface.borderRadius).toBe('$10');
       expect(knobProps.featureSurface.padding).toBe('$6');
-      expect(knobProps.featureSurface.shadowOffset).toEqual({ width: 0, height: 9 });
+      expect(knobProps.featureSurface.shadowOffset).toStrictEqual({ width: 0, height: 9 });
       expect(knobProps.featureSurface.shadowRadius).toBe(12);
       expect(knobProps.featureSurface).not.toHaveProperty('borderWidth');
     });
@@ -624,7 +624,7 @@ describe('resolveKnobs', () => {
   describe('containerRadius (Axiom 1 child-clip cap)', () => {
     it('default knobs are untouched (radius $4 = 9px fits medium padding 18px)', () => {
       const { knobProps } = resolveKnobs(defaultKnobs);
-      expect(knobProps.containerRadius).toEqual({ borderRadius: '$4' });
+      expect(knobProps.containerRadius).toStrictEqual({ borderRadius: '$4' });
       expect(knobProps.cardSurface.borderRadius).toBe('$4');
     });
 
@@ -764,7 +764,7 @@ describe('resolveKnobs', () => {
       const smooth = resolveKnobs(knobsWith({ cornerSmoothing: 'smooth' }));
       for (const fragment of radiusFragments) {
         const { className: _cls, ...smoothRest } = smooth.knobProps[fragment];
-        expect(smoothRest, fragment).toEqual(round.knobProps[fragment]);
+        expect(smoothRest, fragment).toStrictEqual(round.knobProps[fragment]);
       }
     });
 
@@ -819,7 +819,7 @@ describe('resolveKnobs', () => {
     });
 
     it('union is filled | outlined only', () => {
-      expect(Object.values(FillStyle)).toEqual(['filled', 'outlined']);
+      expect(Object.values(FillStyle)).toStrictEqual(['filled', 'outlined']);
       expect(Object.values(FillStyle)).toHaveLength(2);
     });
   });
@@ -936,36 +936,36 @@ describe('resolveKnobs', () => {
 
   describe('pageTitleScale knob', () => {
     it('defaults to the moderate page-title step ($8 = 32px)', () => {
-      expect(resolveKnobs(defaultKnobs).knobProps.pageTitle).toEqual({ size: '$8' });
+      expect(resolveKnobs(defaultKnobs).knobProps.pageTitle).toStrictEqual({ size: '$8' });
     });
 
     it('"display" re-opens the hero step ($10 = 64px)', () => {
-      expect(resolveKnobs(knobsWith({ pageTitleScale: 'display' })).knobProps.pageTitle).toEqual({
+      expect(resolveKnobs(knobsWith({ pageTitleScale: 'display' })).knobProps.pageTitle).toStrictEqual({
         size: '$10',
       });
     });
 
     it('an omitted knob still resolves moderate (preset constructions predate the dial)', () => {
       const { pageTitleScale: _omitted, ...withoutDial } = defaultKnobs;
-      expect(resolveKnobs(withoutDial as Knobs).knobProps.pageTitle).toEqual({ size: '$8' });
+      expect(resolveKnobs(withoutDial as Knobs).knobProps.pageTitle).toStrictEqual({ size: '$8' });
     });
 
     it('resolvePageTitleScale is the one table both channels read', () => {
-      expect(resolvePageTitleScale('moderate')).toEqual({ size: '$8' });
-      expect(resolvePageTitleScale('display')).toEqual({ size: '$10' });
+      expect(resolvePageTitleScale('moderate')).toStrictEqual({ size: '$8' });
+      expect(resolvePageTitleScale('display')).toStrictEqual({ size: '$10' });
     });
 
     it('product presets ship moderate; `hero` is the only display opt-in', () => {
       expect(defaultPreset.knobs.pageTitleScale).toBe('moderate');
       expect(boldPreset.knobs.pageTitleScale).toBe('moderate');
       expect(heroPreset.knobs.pageTitleScale).toBe('display');
-      expect(resolveKnobs(heroPreset.knobs).knobProps.pageTitle).toEqual({ size: '$10' });
+      expect(resolveKnobs(heroPreset.knobs).knobProps.pageTitle).toStrictEqual({ size: '$10' });
     });
 
     it('`hero` differs from the default preset in nothing but the title step', () => {
       const { pageTitleScale: _hero, ...heroRest } = heroPreset.knobs;
       const { pageTitleScale: _default, ...defaultRest } = defaultPreset.knobs;
-      expect(heroRest).toEqual(defaultRest);
+      expect(heroRest).toStrictEqual(defaultRest);
       expect(heroPreset.theme).toBe(defaultPreset.theme);
     });
   });
@@ -1105,14 +1105,14 @@ describe('resolveKnobs', () => {
     it('emptyStateKnobs is still valid (no required size field breaks it)', () => {
       const knobs = knobsWith({ hover: emptyStateKnobs });
       const { control } = resolveKnobs(knobs);
-      expect(control.hoverKnobProps).toEqual({ backgroundColor: '$backgroundHover' });
+      expect(control.hoverKnobProps).toStrictEqual({ backgroundColor: '$backgroundHover' });
     });
 
     // T4.1j — size "large" does not change borderRadius
     it('size "large" does not change borderRadius', () => {
       const baseline = resolveKnobs(knobsWith({ size: 'medium' }));
       const large = resolveKnobs(knobsWith({ size: 'large' }));
-      expect(large.knobProps.borderRadius).toEqual(baseline.knobProps.borderRadius);
+      expect(large.knobProps.borderRadius).toStrictEqual(baseline.knobProps.borderRadius);
     });
   });
 });
@@ -1185,8 +1185,8 @@ describe('applyDensity', () => {
     const comfortable = resolveKnobs(applyDensity(knobsWith({ space: 'medium' })));
     const compact = resolveKnobs(applyDensity(knobsWith({ space: 'medium', density: 'compact' })));
     expect(compact.knobProps.control.gap).toBe(comfortable.knobProps.control.gap);
-    expect(compact.knobProps.gap).not.toEqual(comfortable.knobProps.gap);
-    expect(compact.knobProps.panelPadding).not.toEqual(comfortable.knobProps.panelPadding);
+    expect(compact.knobProps.gap).not.toStrictEqual(comfortable.knobProps.gap);
+    expect(compact.knobProps.panelPadding).not.toStrictEqual(comfortable.knobProps.panelPadding);
     expect(compact.knobProps.control.height).toBe(44);
     expect(comfortable.knobProps.control.height).toBe(44);
   });
@@ -1197,8 +1197,8 @@ describe('applyDensity', () => {
     expect(comfortable.knobProps.sizeToken).toBe('$4');
     expect(compact.knobProps.sizeToken).toBe('$4');
     expect(compact.knobProps.control.height).toBe(comfortable.knobProps.control.height);
-    expect(comfortable.knobProps.gap).toEqual({ gap: '$4' });
-    expect(compact.knobProps.gap).toEqual({ gap: '$2' });
+    expect(comfortable.knobProps.gap).toStrictEqual({ gap: '$4' });
+    expect(compact.knobProps.gap).toStrictEqual({ gap: '$2' });
   });
 
   it('pairs label type to size — never the control-height sizeToken', () => {
@@ -1215,14 +1215,14 @@ describe('applyDensity', () => {
     expect(medium.px).toBe(32);
     expect(medium.width).toBe(32);
     expect(medium.maxWidth).toBe(32);
-    expect(medium.hitSlop).toEqual({ top: 6, bottom: 6, left: 6, right: 6 });
+    expect(medium.hitSlop).toStrictEqual({ top: 6, bottom: 6, left: 6, right: 6 });
 
     const compact = resolveKnobs(applyDensity(knobsWith({ size: 'medium', density: 'compact' }))).knobProps
       .nestedControl;
     // Compact steps space only — nestedControl follows size, so
     // medium+compact stays on the medium nested box.
     expect(compact.px).toBe(32);
-    expect(compact.hitSlop).toEqual({ top: 6, bottom: 6, left: 6, right: 6 });
+    expect(compact.hitSlop).toStrictEqual({ top: 6, bottom: 6, left: 6, right: 6 });
   });
 
   it('compact density preserves house-decision knobs', () => {
@@ -1311,8 +1311,8 @@ describe('house decision knobs', () => {
       }),
     );
     expect(housey.knobProps.sizeToken).toBe(baseline.knobProps.sizeToken);
-    expect(housey.knobProps.gap).toEqual(baseline.knobProps.gap);
-    expect(housey.knobProps.borderRadius).toEqual(baseline.knobProps.borderRadius);
+    expect(housey.knobProps.gap).toStrictEqual(baseline.knobProps.gap);
+    expect(housey.knobProps.borderRadius).toStrictEqual(baseline.knobProps.borderRadius);
     expect(housey.knobProps.density).toBe(baseline.knobProps.density);
   });
 });
@@ -1325,7 +1325,7 @@ describe('disabledState recipe', () => {
     expect(disabledState.style).toBe('keepLabel');
     // Text-bearing chrome: fill/border wash to muted ramp steps, no opacity
     // (inner text keeps its own alpha so it can hold >= AA).
-    expect(disabledState.surfaceKnobProps).toEqual({
+    expect(disabledState.surfaceKnobProps).toStrictEqual({
       backgroundColor: '$color3',
       borderColor: '$color6',
       cursor: 'not-allowed',
@@ -1333,31 +1333,31 @@ describe('disabledState recipe', () => {
     expect(disabledState.surfaceKnobProps).not.toHaveProperty('opacity');
     // Selected-while-disabled tier: one wash step stronger than the plain
     // wash so the chosen segment stays visibly chosen (Axiom 6).
-    expect(disabledState.selectedSurfaceKnobProps).toEqual({
+    expect(disabledState.selectedSurfaceKnobProps).toStrictEqual({
       backgroundColor: '$color5',
       borderColor: '$color8',
       cursor: 'not-allowed',
     });
     // Text-free chrome: opacity dim.
-    expect(disabledState.chromeKnobProps).toEqual({ opacity: 0.5, cursor: 'not-allowed' });
+    expect(disabledState.chromeKnobProps).toStrictEqual({ opacity: 0.5, cursor: 'not-allowed' });
     // Inner text re-anchors to the documented lowest AA step ($color11).
-    expect(disabledState.textKnobProps).toEqual({ color: '$color11' });
+    expect(disabledState.textKnobProps).toStrictEqual({ color: '$color11' });
     // keepLabel never dims the assembly (label/helper stay fully readable).
-    expect(disabledState.assemblyKnobProps).toEqual({});
+    expect(disabledState.assemblyKnobProps).toStrictEqual({});
   });
 
   it('dimWhole dims the assembly once — control fragments carry only the affordance', () => {
     const { disabledState } = resolveKnobs(knobsWith({ disabledStyle: 'dimWhole' }));
     expect(disabledState.style).toBe('dimWhole');
-    expect(disabledState.assemblyKnobProps).toEqual({ opacity: 0.5 });
+    expect(disabledState.assemblyKnobProps).toStrictEqual({ opacity: 0.5 });
     // No chrome-level opacity: the assembly owner applies the single dim.
-    expect(disabledState.surfaceKnobProps).toEqual({ cursor: 'not-allowed' });
-    expect(disabledState.chromeKnobProps).toEqual({ cursor: 'not-allowed' });
-    expect(disabledState.textKnobProps).toEqual({});
+    expect(disabledState.surfaceKnobProps).toStrictEqual({ cursor: 'not-allowed' });
+    expect(disabledState.chromeKnobProps).toStrictEqual({ cursor: 'not-allowed' });
+    expect(disabledState.textKnobProps).toStrictEqual({});
     // Exception: the selected tier still washes — consumers drop the live
     // active fill when disabled, so the assembly dim alone cannot show
     // which option is chosen.
-    expect(disabledState.selectedSurfaceKnobProps).toEqual({
+    expect(disabledState.selectedSurfaceKnobProps).toStrictEqual({
       backgroundColor: '$color5',
       borderColor: '$color8',
       cursor: 'not-allowed',
@@ -1421,7 +1421,7 @@ describe('touch height floor via resolveKnobs', () => {
 
 describe('containerCapProps provenance', () => {
   it('names the knob stop a borderRadiusMap token came from', () => {
-    expect(containerCapProps('PageSection', '$12', 'small')).toEqual({
+    expect(containerCapProps('PageSection', '$12', 'small')).toStrictEqual({
       'data-constraint-container': 'PageSection',
       'data-radius-knob': 'full',
       'data-space-knob': 'small',

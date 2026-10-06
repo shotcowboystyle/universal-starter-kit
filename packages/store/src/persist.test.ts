@@ -26,14 +26,14 @@ describe('createPersistStore', () => {
 
   it('creates a store with the initial state', () => {
     const store = createPersistStore({ count: 0 }, { key: 'test', storage });
-    expect(store.state).toEqual({ count: 0 });
+    expect(store.state).toStrictEqual({ count: 0 });
   });
 
   it('attempts to rehydrate on creation', async () => {
     storage.data.set('test', JSON.stringify({ count: 42 }));
     const store = createPersistStore({ count: 0 }, { key: 'test', storage });
     await store.rehydrate();
-    expect(store.state).toEqual({ count: 42 });
+    expect(store.state).toStrictEqual({ count: 42 });
   });
 
   it('persists state changes after hydration', async () => {
@@ -65,13 +65,13 @@ describe('createPersistStore', () => {
     storage.data.set('mykey', JSON.stringify({ name: 'Alice' }));
     const store = createPersistStore({ name: '' }, { key: 'mykey', storage });
     await store.rehydrate();
-    expect(store.state).toEqual({ name: 'Alice' });
+    expect(store.state).toStrictEqual({ name: 'Alice' });
   });
 
   it('uses initial state when nothing is persisted', async () => {
     const store = createPersistStore({ value: 'default' }, { key: 'empty', storage });
     await store.rehydrate();
-    expect(store.state).toEqual({ value: 'default' });
+    expect(store.state).toStrictEqual({ value: 'default' });
   });
 
   it('supports custom serialize/deserialize', async () => {
@@ -103,6 +103,6 @@ describe('createPersistStore', () => {
       },
     );
     await store.rehydrate();
-    expect(store.state).toEqual({ n: 42 });
+    expect(store.state).toStrictEqual({ n: 42 });
   });
 });

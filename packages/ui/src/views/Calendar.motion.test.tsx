@@ -170,7 +170,7 @@ describe('Calendar keyboard flow (Axiom 12)', () => {
     fireEvent.keyDown(grid, { key: 'ArrowDown' });
     fireEvent.keyDown(grid, { key: 'Enter' });
     expect(onDateSelect).toHaveBeenCalledOnce();
-    expect(onDateSelect.mock.calls[0][0]).toEqual(new Date(2026, 2, 18));
+    expect(onDateSelect.mock.calls[0][0]).toStrictEqual(new Date(2026, 2, 18));
   });
 
   it('marks the focused cell via aria-activedescendant and aria-selected', () => {
@@ -241,6 +241,6 @@ describe('Calendar keyboard flow (Axiom 12)', () => {
     fireEvent.keyDown(grid, { key: 'ArrowDown' }); // 9:30
     fireEvent.keyDown(grid, { key: 'Enter' });
     expect(onDateSelect).toHaveBeenCalledOnce();
-    expect(onDateSelect.mock.calls[0][0]).toEqual(new Date(2026, 2, 10, 9, 30));
+    expect(onDateSelect.mock.calls[0][0]).toStrictEqual(new Date(2026, 2, 10, 9, 30));
   });
 });

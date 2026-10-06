@@ -126,7 +126,9 @@ describe('Skeleton — radius classes', () => {
         />
       </Preset>,
     );
-    expect(radiusClasses(none.container.querySelector('[data-skeleton]') as Element)).toEqual(['_btlr-t-radius-0']);
+    expect(radiusClasses(none.container.querySelector('[data-skeleton]') as Element)).toStrictEqual([
+      '_btlr-t-radius-0',
+    ]);
     cleanup();
 
     const full = renderWithProviders(
@@ -137,7 +139,9 @@ describe('Skeleton — radius classes', () => {
         />
       </Preset>,
     );
-    expect(radiusClasses(full.container.querySelector('[data-skeleton]') as Element)).toEqual(['_btlr-t-radius-12']);
+    expect(radiusClasses(full.container.querySelector('[data-skeleton]') as Element)).toStrictEqual([
+      '_btlr-t-radius-12',
+    ]);
   });
 
   it('rounded bones track the radius knob (R-SCALE)', () => {
@@ -150,7 +154,9 @@ describe('Skeleton — radius classes', () => {
         />
       </Preset>,
     );
-    expect(radiusClasses(none.container.querySelector('[data-skeleton]') as Element)).toEqual(['_btlr-t-radius-0']);
+    expect(radiusClasses(none.container.querySelector('[data-skeleton]') as Element)).toStrictEqual([
+      '_btlr-t-radius-0',
+    ]);
     cleanup();
 
     const full = renderWithProviders(
@@ -162,7 +168,9 @@ describe('Skeleton — radius classes', () => {
         />
       </Preset>,
     );
-    expect(radiusClasses(full.container.querySelector('[data-skeleton]') as Element)).toEqual(['_btlr-t-radius-12']);
+    expect(radiusClasses(full.container.querySelector('[data-skeleton]') as Element)).toStrictEqual([
+      '_btlr-t-radius-12',
+    ]);
   });
 
   it('circular bones declare R-PILL and stay round at radius:none', () => {
@@ -193,7 +201,7 @@ describe('Skeleton — radius classes', () => {
     );
     const bone = container.querySelector('[data-skeleton]') as HTMLElement;
     expect(bone.getAttribute('data-radius-class')).toBeNull();
-    expect(radiusClasses(bone)).toEqual(['_btlr-0px']);
+    expect(radiusClasses(bone)).toStrictEqual(['_btlr-0px']);
   });
 });
 
@@ -245,7 +253,7 @@ describe('SkeletonText', () => {
     );
     const smallGap = String(small.container.querySelector('[data-skeleton-text]')!.className);
     const largeGap = String(large.container.querySelector('[data-skeleton-text]')!.className);
-    expect(smallGap).not.toEqual(largeGap);
+    expect(smallGap).not.toStrictEqual(largeGap);
   });
 });
 

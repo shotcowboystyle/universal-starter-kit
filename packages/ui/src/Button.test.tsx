@@ -59,7 +59,7 @@ describe('components Button — borderRadius knob reaches the frame', () => {
         <Button>Save</Button>
       </Preset>,
     );
-    expect(frameRadiusClasses()).toEqual(['_btlr-t-radius-0']);
+    expect(frameRadiusClasses()).toStrictEqual(['_btlr-t-radius-0']);
     expect(screen.getByRole('button').getAttribute('data-radius-class')).toBeNull();
     cleanup();
 
@@ -68,7 +68,7 @@ describe('components Button — borderRadius knob reaches the frame', () => {
         <Button>Save</Button>
       </Preset>,
     );
-    expect(frameRadiusClasses()).toEqual(['_btlr-t-radius-12']);
+    expect(frameRadiusClasses()).toStrictEqual(['_btlr-t-radius-12']);
   });
 
   it('chromeless squares at none (chrome removed, knobs still tracked)', () => {
@@ -77,7 +77,7 @@ describe('components Button — borderRadius knob reaches the frame', () => {
         <Button chromeless>Save</Button>
       </Preset>,
     );
-    expect(frameRadiusClasses()).toEqual(['_btlr-t-radius-0']);
+    expect(frameRadiusClasses()).toStrictEqual(['_btlr-t-radius-0']);
   });
 
   it('circular stays the consumer shape eject: round even at none, no inline override', () => {
@@ -91,7 +91,7 @@ describe('components Button — borderRadius knob reaches the frame', () => {
       </Preset>,
     );
     const frame = screen.getByRole('button');
-    expect(frameRadiusClasses()).toEqual(['_btlr-100000px']);
+    expect(frameRadiusClasses()).toStrictEqual(['_btlr-100000px']);
     expect(frame.style.borderRadius).toBe('');
     expect(frame.getAttribute('data-radius-class')).toBe('R-IDENTITY');
     expect(frame.getAttribute('data-radius-part')).toBe('circular Button');
@@ -103,7 +103,7 @@ describe('components Button — borderRadius knob reaches the frame', () => {
         <Button borderRadius="$6">Save</Button>
       </Preset>,
     );
-    expect(frameRadiusClasses()).toEqual(['_btlr-t-radius-6']);
+    expect(frameRadiusClasses()).toStrictEqual(['_btlr-t-radius-6']);
   });
 });
 

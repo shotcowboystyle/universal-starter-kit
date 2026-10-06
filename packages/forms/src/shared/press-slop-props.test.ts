@@ -28,7 +28,7 @@ describe('press-target deficient dimensions', () => {
   });
 
   it('retains expansion in both dimensions for small icon controls', () => {
-    expect(pressSlopProps(28, true)).toEqual({ 'data-mp-press-slop': '8' });
+    expect(pressSlopProps(28, true)).toStrictEqual({ 'data-mp-press-slop': '8' });
   });
 
   it('does not expand native picker width but retains icon hitSlop', () => {
@@ -37,20 +37,20 @@ describe('press-target deficient dimensions', () => {
       minWidth: 44,
       hitSlop: { top: 4, bottom: 4, left: 0, right: 0 },
     });
-    expect(pressSlopProps(28, true)).toEqual({ hitSlop: { top: 8, bottom: 8, left: 8, right: 8 } });
+    expect(pressSlopProps(28, true)).toStrictEqual({ hitSlop: { top: 8, bottom: 8, left: 8, right: 8 } });
   });
 });
 
 describe('pitch-limited outset', () => {
   it('writes the given outset on the vertical axis on web, whatever the painted size', () => {
-    expect(pressSlopOutsetProps(4, 'vertical')).toEqual({
+    expect(pressSlopOutsetProps(4, 'vertical')).toStrictEqual({
       'data-mp-press-slop': '4',
       'data-mp-press-axis': 'vertical',
     });
   });
 
   it('floors a fractional outset so the target stays inside its pitch', () => {
-    expect(pressSlopOutsetProps(3.5, 'vertical')).toEqual({
+    expect(pressSlopOutsetProps(3.5, 'vertical')).toStrictEqual({
       'data-mp-press-slop': '3',
       'data-mp-press-axis': 'vertical',
     });
@@ -63,9 +63,9 @@ describe('pitch-limited outset', () => {
 
   it('gives native a vertical-only hitSlop', () => {
     platform.web = false;
-    expect(pressSlopOutsetProps(3, 'vertical')).toEqual({
+    expect(pressSlopOutsetProps(3, 'vertical')).toStrictEqual({
       hitSlop: { top: 3, bottom: 3, left: 0, right: 0 },
     });
-    expect(pressSlopOutsetProps(3)).toEqual({ hitSlop: { top: 3, bottom: 3, left: 3, right: 3 } });
+    expect(pressSlopOutsetProps(3)).toStrictEqual({ hitSlop: { top: 3, bottom: 3, left: 3, right: 3 } });
   });
 });

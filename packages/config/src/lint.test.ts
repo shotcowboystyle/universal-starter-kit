@@ -546,7 +546,7 @@ export const f = <XStack
   paddingHorizontal={0} // size-recipe-escape: square end-cap
 />;
 `);
-    expect(sites.map(({ line, form, reason }) => [line, form, reason])).toEqual([
+    expect(sites.map(({ line, form, reason }) => [line, form, reason])).toStrictEqual([
       [4, 'prop', 'toolbar chrome match'],
       [5, 'prop', 'toolbar chrome match'],
       [6, 'prop', 'LC-81 edges'],
@@ -565,7 +565,7 @@ export const f = <XStack
   </XStack>
 );
 `);
-    expect(sites.map(({ line, form, reason }) => [line, form, reason])).toEqual([
+    expect(sites.map(({ line, form, reason }) => [line, form, reason])).toStrictEqual([
       [3, 'comment', 'square end-cap'],
       [4, 'prop', undefined],
       [5, 'prop', undefined],

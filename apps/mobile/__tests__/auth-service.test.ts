@@ -33,7 +33,7 @@ describe('authService', () => {
     const result = await authService.login('test@e.com');
 
     expect(result.access_token).toBe('tk');
-    expect(result.user).toEqual({ _id: '1', email: 't@e.com' });
+    expect(result.user).toStrictEqual({ _id: '1', email: 't@e.com' });
     expect(SecureStore.setItemAsync).toHaveBeenCalledWith('auth_token', 'tk');
   });
 
@@ -87,7 +87,7 @@ describe('authService', () => {
 
     const profile = await authService.getProfile();
 
-    expect(profile).toEqual({ _id: '1', email: 't@e.com', name: 'Test User' });
+    expect(profile).toStrictEqual({ _id: '1', email: 't@e.com', name: 'Test User' });
     expect(fetch).toHaveBeenCalledWith(
       expect.any(String),
       expect.objectContaining({

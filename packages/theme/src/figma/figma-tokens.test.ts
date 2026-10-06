@@ -44,7 +44,7 @@ describe('buildFigmaTokens', () => {
 
   describe('palette', () => {
     it('exports the 9 spec theme modes with 12-step light+dark ramps', () => {
-      expect(Object.keys(result.palette.themes)).toEqual([...FIGMA_THEME_MODES]);
+      expect(Object.keys(result.palette.themes)).toStrictEqual([...FIGMA_THEME_MODES]);
       for (const theme of Object.values(result.palette.themes)) {
         expect(theme.light).toHaveLength(12);
         expect(theme.dark).toHaveLength(12);
@@ -172,7 +172,7 @@ describe('buildFigmaTokens', () => {
     });
 
     it('exports borderWidth knob modes', () => {
-      expect(result.knobs.borderWidth.modes).toEqual({
+      expect(result.knobs.borderWidth.modes).toStrictEqual({
         none: 0,
         small: 0.5,
         medium: 1,
@@ -182,33 +182,33 @@ describe('buildFigmaTokens', () => {
 
     it('exports platform-normalized elevation modes', () => {
       const { modes } = result.knobs.elevation;
-      expect(modes.none).toEqual({ sizeToken: null, px: null });
-      expect(modes.small).toEqual({ sizeToken: null, px: null });
+      expect(modes.none).toStrictEqual({ sizeToken: null, px: null });
+      expect(modes.small).toStrictEqual({ sizeToken: null, px: null });
       expect(modes.medium.sizeToken).toBe('$2');
       expect(modes.large.sizeToken).toBe('$4');
     });
 
     it('exports fontWeight, space, size and cornerSmoothing modes', () => {
-      expect(result.knobs.fontWeight.modes).toEqual({ regular: '400', bold: '700' });
+      expect(result.knobs.fontWeight.modes).toStrictEqual({ regular: '400', bold: '700' });
       expect(result.knobs.space.modes.medium.paddingFigmaName).toBe('space-4');
       expect(result.knobs.space.modes.medium.gapFigmaName).toBe('space-4');
       expect(result.knobs.space.modes.medium.gapLgFigmaName).toBe('space-5');
-      expect(result.knobs.size.modes).toEqual({
+      expect(result.knobs.size.modes).toStrictEqual({
         small: { token: '$3', figmaName: 'size-3' },
         medium: { token: '$4', figmaName: 'size-4' },
         large: { token: '$5', figmaName: 'size-5' },
       });
-      expect(result.knobs.cornerSmoothing.modes).toEqual({ round: 0, smooth: 0.6 });
+      expect(result.knobs.cornerSmoothing.modes).toStrictEqual({ round: 0, smooth: 0.6 });
     });
 
     it('exports density compact stepping for space only (size is uncoupled)', () => {
       expect(result.knobs.density.default).toBe('comfortable');
-      expect(result.knobs.density.compact.size).toEqual({
+      expect(result.knobs.density.compact.size).toStrictEqual({
         small: 'small',
         medium: 'medium',
         large: 'large',
       });
-      expect(result.knobs.density.compact.space).toEqual({
+      expect(result.knobs.density.compact.space).toStrictEqual({
         small: 'small',
         medium: 'small',
         large: 'medium',

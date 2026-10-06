@@ -92,14 +92,14 @@ function configureServer(plugin: Plugin, server: ViteDevServer) {
 describe('readPublicConfigKeys', () => {
   it('returns the public key names', () => {
     writeConfig(['FRAPPE_ENABLED', 'FRAPPE_URL']);
-    expect(readPublicConfigKeys(file)).toEqual(['FRAPPE_ENABLED', 'FRAPPE_URL']);
+    expect(readPublicConfigKeys(file)).toStrictEqual(['FRAPPE_ENABLED', 'FRAPPE_URL']);
   });
 
   it('drops anything that is not a key name and tolerates a missing list', () => {
     writeConfig(['A', 1, '', null, 'B']);
-    expect(readPublicConfigKeys(file)).toEqual(['A', 'B']);
+    expect(readPublicConfigKeys(file)).toStrictEqual(['A', 'B']);
     fs.writeFileSync(file, JSON.stringify({ private: ['SECRET'] }));
-    expect(readPublicConfigKeys(file)).toEqual([]);
+    expect(readPublicConfigKeys(file)).toStrictEqual([]);
   });
 });
 
@@ -124,7 +124,7 @@ describe('config.json as a vite config dependency', () => {
     const viaRead = await loadConfigFromFile(env, read, dir);
     expect(viaImport?.dependencies.some((dep) => dep.endsWith('config.json'))).toBe(true);
     expect(viaRead?.dependencies.some((dep) => dep.endsWith('config.json'))).toBe(false);
-    expect(viaRead?.config.define).toEqual({ keys: ['A'] });
+    expect(viaRead?.config.define).toStrictEqual({ keys: ['A'] });
   });
 });
 
@@ -134,7 +134,7 @@ describe('publicConfigPlugin', () => {
     process.env.MPO_SPEC_FOO = 'bar';
     const plugin = publicConfigPlugin({ file, projectRoot: dir, keys: ['INLINE'] });
     expect(plugin.apply).toBe('serve');
-    expect(JSON.parse(process.env[bakedKeys]!)).toEqual(['INLINE', 'MPO_SPEC_FOO']);
+    expect(JSON.parse(process.env[bakedKeys]!)).toStrictEqual(['INLINE', 'MPO_SPEC_FOO']);
     const out = await transform(
       plugin,
       'client',
@@ -215,8 +215,8 @@ describe('publicConfigPlugin', () => {
     writeConfig(['MPO_SPEC_FOO', 'MPO_SPEC_BAR']);
     watcher.emit('change', file);
 
-    expect(JSON.parse(process.env[bakedKeys]!)).toEqual(['MPO_SPEC_FOO', 'MPO_SPEC_BAR']);
-    expect(JSON.parse(process.env[bakedValues]!)).toEqual({
+    expect(JSON.parse(process.env[bakedKeys]!)).toStrictEqual(['MPO_SPEC_FOO', 'MPO_SPEC_BAR']);
+    expect(JSON.parse(process.env[bakedValues]!)).toStrictEqual({
       MPO_SPEC_FOO: 'bar',
       MPO_SPEC_BAR: 'from-dotenv',
     });
@@ -250,11 +250,11 @@ describe('publicConfigPlugin', () => {
     fs.writeFileSync(file, '{ "public": ["MPO_SPEC_FOO", ');
     watcher.emit('change', file);
     expect(logger.warn).toHaveBeenCalledOnce();
-    expect(JSON.parse(process.env[bakedKeys]!)).toEqual(['MPO_SPEC_FOO']);
+    expect(JSON.parse(process.env[bakedKeys]!)).toStrictEqual(['MPO_SPEC_FOO']);
     expect(environments.client.hot.send).not.toHaveBeenCalled();
     writeConfig(['MPO_SPEC_FOO', 'MPO_SPEC_BAR']);
     watcher.emit('add', file);
-    expect(JSON.parse(process.env[bakedKeys]!)).toEqual(['MPO_SPEC_FOO', 'MPO_SPEC_BAR']);
+    expect(JSON.parse(process.env[bakedKeys]!)).toStrictEqual(['MPO_SPEC_FOO', 'MPO_SPEC_BAR']);
     expect(environments.client.hot.send).toHaveBeenCalledOnce();
   });
 });

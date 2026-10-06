@@ -252,9 +252,9 @@ describe('Geolocation salvage regressions', () => {
       }
       const value = JSON.parse(onChange.mock.calls[0][0]);
       expect(value.type).toBe('FeatureCollection');
-      expect(value.features[0].geometry.coordinates).toEqual([place.lng, place.lat]);
-      expect(value.features[0].properties).toEqual({ point_type: 'circle', radius: 10 });
-      expect(value.features[1]).toEqual(JSON.parse(original).features[1]);
+      expect(value.features[0].geometry.coordinates).toStrictEqual([place.lng, place.lat]);
+      expect(value.features[0].properties).toStrictEqual({ point_type: 'circle', radius: 10 });
+      expect(value.features[1]).toStrictEqual(JSON.parse(original).features[1]);
     },
   );
 
@@ -348,7 +348,7 @@ describe('Geolocation salvage regressions', () => {
     fireEvent.change(document.querySelector("[aria-label='Latitude']") as Element, {
       target: { value: '11' },
     });
-    expect(JSON.parse(onChange.mock.calls[0][0]).features[0].geometry.coordinates).toEqual([20, 11]);
+    expect(JSON.parse(onChange.mock.calls[0][0]).features[0].geometry.coordinates).toStrictEqual([20, 11]);
   });
 
   it('selects a search result with the keyboard', async () => {
@@ -467,9 +467,9 @@ describe('Geolocation salvage regressions', () => {
     });
     const value = JSON.parse(onChange.mock.calls[0][0]);
     expect(value.type).toBe('FeatureCollection');
-    expect(value.features[0].geometry.coordinates).toEqual([30, 50]);
-    expect(value.features[0].properties).toEqual(JSON.parse(original).features[0].properties);
-    expect(value.features[1]).toEqual(JSON.parse(original).features[1]);
+    expect(value.features[0].geometry.coordinates).toStrictEqual([30, 50]);
+    expect(value.features[0].properties).toStrictEqual(JSON.parse(original).features[0].properties);
+    expect(value.features[1]).toStrictEqual(JSON.parse(original).features[1]);
   });
 
   it.each([false, true])('pins have explicit theme ink (cell=%s)', (cell) => {

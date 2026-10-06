@@ -110,7 +110,7 @@ describe('responsive knob hydration', () => {
     expect(observed[0].height).toBe(serverHeight);
     expect(container.querySelector('button')).toBe(serverControl);
     expect(container.querySelector('button')?.getAttribute('data-height')).toBe('48');
-    expect(errors).toEqual([]);
+    expect(errors).toStrictEqual([]);
   });
 
   it('hydrates before adopting reduced motion and keeps observing preference changes', async () => {
@@ -131,7 +131,7 @@ describe('responsive knob hydration', () => {
       }
     });
     expect(container.querySelector('button')?.getAttribute('data-motion')).toBe(String(serverTransition));
-    expect(errors).toEqual([]);
+    expect(errors).toStrictEqual([]);
     await act(async () => root?.unmount());
     root = undefined;
     expect(motionListeners.size).toBe(0);
@@ -142,6 +142,6 @@ describe('responsive knob hydration', () => {
     host.touch = true;
     container.innerHTML = renderToString(<Fixture />);
     expect(observed[0].height).toBe(48);
-    expect(errors).toEqual([]);
+    expect(errors).toStrictEqual([]);
   });
 });

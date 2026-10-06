@@ -74,7 +74,7 @@ describe('Button SIZE-RECIPE', () => {
 
     expect(smallRadius.length).toBeGreaterThan(0);
     expect(largeRadius.length).toBeGreaterThan(0);
-    expect(smallRadius).not.toEqual(largeRadius);
+    expect(smallRadius).not.toStrictEqual(largeRadius);
   });
 
   it('recipeFamily controlCompact has smaller padding than control at the same size token', () => {

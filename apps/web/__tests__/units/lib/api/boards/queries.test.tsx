@@ -59,7 +59,7 @@ describe('Board Query Hooks', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(result.current.data).toEqual(mockBoards);
+      expect(result.current.data).toStrictEqual(mockBoards);
       expect(boardApi.getBoards).toHaveBeenCalledOnce();
     });
 
@@ -77,7 +77,7 @@ describe('Board Query Hooks', () => {
         { timeout: 60_000 }, // Long timeout for retries with exponential backoff
       );
 
-      expect(result.current.error).toEqual(mockError);
+      expect(result.current.error).toStrictEqual(mockError);
       // Should have retried 3 times (4 total calls)
       expect(boardApi.getBoards).toHaveBeenCalledTimes(4);
     }, 70_000);
@@ -94,7 +94,7 @@ describe('Board Query Hooks', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(result.current.data).toEqual(mockBoard);
+      expect(result.current.data).toStrictEqual(mockBoard);
       expect(boardApi.getBoardById).toHaveBeenCalledWith('1');
     });
 
@@ -126,7 +126,7 @@ describe('Board Query Hooks', () => {
       });
 
       const callArgs = (boardApi.createBoard as Mock).mock.calls[0];
-      expect(callArgs[0]).toEqual({ title: 'New Board' });
+      expect(callArgs[0]).toStrictEqual({ title: 'New Board' });
     });
   });
 

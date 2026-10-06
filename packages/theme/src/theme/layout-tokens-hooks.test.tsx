@@ -90,7 +90,7 @@ describe('useLayoutSizeClass', () => {
     const { unmount } = renderHook(() => useLayoutSizeClass());
     expect(createdQueries).toHaveLength(4);
     const medias = createdQueries.map((mq) => mq.media);
-    expect(medias).toEqual(
+    expect(medias).toStrictEqual(
       expect.arrayContaining([
         `(min-width: ${layoutBreakpoints.medium}px)`,
         `(min-width: ${layoutBreakpoints.expanded}px)`,
@@ -147,8 +147,8 @@ describe('useSemanticGaps', () => {
     setViewportWidth(1000);
     const { result: knobs } = renderHook(() => useResolvedKnobs(), { wrapper: TestProviders });
     const { result } = renderHook(() => useSemanticGaps(), { wrapper: TestProviders });
-    expect(result.current.withinGroup).toEqual(knobs.current.knobProps.gap);
-    expect(result.current.betweenGroups).toEqual(knobs.current.knobProps.gapLg);
+    expect(result.current.withinGroup).toStrictEqual(knobs.current.knobProps.gap);
+    expect(result.current.betweenGroups).toStrictEqual(knobs.current.knobProps.gapLg);
     // The roles must differ, or grouping hierarchy is invisible.
     expect(result.current.withinGroup.gap).not.toBe(result.current.betweenGroups.gap);
   });

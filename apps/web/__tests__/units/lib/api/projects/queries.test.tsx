@@ -57,7 +57,7 @@ describe('Project Query Hooks', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(result.current.data).toEqual(mockProjects);
+      expect(result.current.data).toStrictEqual(mockProjects);
       expect(projectApi.getProjects).toHaveBeenCalledWith('board1');
     });
 
@@ -73,7 +73,7 @@ describe('Project Query Hooks', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(result.current.data).toEqual(mockProjects);
+      expect(result.current.data).toStrictEqual(mockProjects);
       expect(projectApi.getProjects).toHaveBeenCalledWith('board1');
     });
 
@@ -94,7 +94,7 @@ describe('Project Query Hooks', () => {
         expect(result.current.isError).toBe(true);
       });
 
-      expect(result.current.error).toEqual(mockError);
+      expect(result.current.error).toStrictEqual(mockError);
     });
   });
 
@@ -109,7 +109,7 @@ describe('Project Query Hooks', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(result.current.data).toEqual(mockProject);
+      expect(result.current.data).toStrictEqual(mockProject);
       expect(projectApi.getProjectById).toHaveBeenCalledWith('1');
     });
 
@@ -123,7 +123,7 @@ describe('Project Query Hooks', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(result.current.data).toEqual(mockProject);
+      expect(result.current.data).toStrictEqual(mockProject);
       expect(projectApi.getProjectById).toHaveBeenCalledWith('1');
     });
 
@@ -155,7 +155,7 @@ describe('Project Query Hooks', () => {
       });
 
       const callArgs = (projectApi.createProject as Mock).mock.calls[0];
-      expect(callArgs[0]).toEqual({ title: 'New Project', board: 'board1' } as any);
+      expect(callArgs[0]).toStrictEqual({ title: 'New Project', board: 'board1' } as any);
     });
 
     it('should handle board as object in created project', async () => {

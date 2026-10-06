@@ -105,22 +105,22 @@ describe('mpo-conventions/no-raw-typography', () => {
   ];
 
   it.each(hatches)('reports %s imported from the components barrel', (name) => {
-    expect(reportedNames('@repo/ui', [name])).toEqual([name]);
+    expect(reportedNames('@repo/ui', [name])).toStrictEqual([name]);
   });
 
   it('stays silent on the house shadows — the bare names ARE the fix', () => {
-    expect(reportedNames('@repo/ui', ['Text', 'SizableText', 'Paragraph', 'Heading', 'H1', 'H6', 'Anchor'])).toEqual(
-      [],
-    );
+    expect(
+      reportedNames('@repo/ui', ['Text', 'SizableText', 'Paragraph', 'Heading', 'H1', 'H6', 'Anchor']),
+    ).toStrictEqual([]);
   });
 
   it('stays silent on non-typography hatches and on other packages', () => {
-    expect(reportedNames('@repo/ui', ['TamaguiButton', 'TamaguiSeparator'])).toEqual([]);
-    expect(reportedNames('some-other-package', ['TamaguiText'])).toEqual([]);
+    expect(reportedNames('@repo/ui', ['TamaguiButton', 'TamaguiSeparator'])).toStrictEqual([]);
+    expect(reportedNames('some-other-package', ['TamaguiText'])).toStrictEqual([]);
   });
 
   it('reports every offending specifier in one import, not just the first', () => {
-    expect(reportedNames('@repo/ui', ['Text', 'TamaguiText', 'TamaguiHeading'])).toEqual([
+    expect(reportedNames('@repo/ui', ['Text', 'TamaguiText', 'TamaguiHeading'])).toStrictEqual([
       'TamaguiText',
       'TamaguiHeading',
     ]);
@@ -216,13 +216,13 @@ describe('mpo-conventions/no-chrome-props', () => {
       importCard,
       jsxOpen('Card', [{ prop: 'backgroundColor', value: token('$color5') }]),
     ]);
-    expect(chrome.map((r) => r.data?.prop)).toEqual(['backgroundColor']);
+    expect(chrome.map((r) => r.data?.prop)).toStrictEqual(['backgroundColor']);
 
     const layout = driveHouseRule('no-chrome-props', filename, [
       importCard,
       jsxOpen('Card', [{ prop: 'flex', value: numeric(1) }]),
     ]);
-    expect(layout).toEqual([]);
+    expect(layout).toStrictEqual([]);
   });
 
   it('stays silent on a CHROME-ALLOW member and on a non-house import', () => {
@@ -233,13 +233,13 @@ describe('mpo-conventions/no-chrome-props', () => {
         [importCard, jsxOpen('Card', [{ prop: 'bg', value: token('$color2') }])],
         { chromeAllow: ['Card'] },
       ),
-    ).toEqual([]);
+    ).toStrictEqual([]);
     expect(
       driveHouseRule('no-chrome-props', filename, [
         houseImport('somewhere-else', ['Card']),
         jsxOpen('Card', [{ prop: 'backgroundColor', value: token('$color5') }]),
       ]),
-    ).toEqual([]);
+    ).toStrictEqual([]);
   });
 });
 
@@ -252,13 +252,13 @@ describe('mpo-conventions/no-raw-geometry', () => {
       importCard,
       jsxOpen('Card', [{ prop: 'height', value: numeric(20) }]),
     ]);
-    expect(raw.map((r) => r.data?.prop)).toEqual(['height']);
+    expect(raw.map((r) => r.data?.prop)).toStrictEqual(['height']);
 
     const wrapped = driveHouseRule('no-raw-geometry', filename, [
       importCard,
       jsxOpen('Card', [{ prop: 'height', value: escaped(20) }]),
     ]);
-    expect(wrapped).toEqual([]);
+    expect(wrapped).toStrictEqual([]);
   });
 
   it('never flags a zero-reset but still flags any other number', () => {
@@ -280,7 +280,7 @@ describe('mpo-conventions/no-raw-geometry', () => {
         },
       ]),
     ]);
-    expect(zero).toEqual([]);
+    expect(zero).toStrictEqual([]);
 
     const small = driveHouseRule('no-raw-geometry', filename, [
       importCard,
@@ -289,7 +289,7 @@ describe('mpo-conventions/no-raw-geometry', () => {
         { prop: 'minWidth', value: numeric(0.5) },
       ]),
     ]);
-    expect(small.map((r) => r.data?.prop)).toEqual(['padding', 'minWidth']);
+    expect(small.map((r) => r.data?.prop)).toStrictEqual(['padding', 'minWidth']);
   });
 
   it('stays silent inside a registered drawing file', () => {
@@ -300,7 +300,7 @@ describe('mpo-conventions/no-raw-geometry', () => {
         [importCard, jsxOpen('Card', [{ prop: 'height', value: numeric(14) }])],
         { drawings: ['springboard-ui/src/StatusGlyphs.tsx'] },
       ),
-    ).toEqual([]);
+    ).toStrictEqual([]);
   });
 });
 
@@ -326,7 +326,7 @@ describe('no-hex-literals comments and palette', () => {
       report: (report: Report) => reports.push(report),
     });
     visitors.Literal?.({ type: 'Literal', value: 'rgba(0,0,0,0.35)' });
-    expect(reports).toEqual([]);
+    expect(reports).toStrictEqual([]);
   });
 
   it('errors on an rgba() literal in features/**', () => {
@@ -339,7 +339,7 @@ describe('no-hex-literals comments and palette', () => {
       report: (report: Report) => reports.push(report),
     });
     visitors.Literal({ type: 'Literal', value: 'rgba(0,0,0,0.35)' });
-    expect(reports.map((r) => r.data?.value ?? r.messageId)).toEqual(['rgba(0,0,0,0.35)']);
+    expect(reports.map((r) => r.data?.value ?? r.messageId)).toStrictEqual(['rgba(0,0,0,0.35)']);
   });
 });
 
@@ -359,12 +359,12 @@ describe('no-hex-literals hex-escape comment', () => {
   }
 
   it('errors on a hex in apps/ when the file carries no hex-escape comment', () => {
-    expect(reportsFor('apps/one/gnome/main.tsx', 'export const bg = "#ffffff";\n')).toEqual(['#ffffff']);
+    expect(reportsFor('apps/one/gnome/main.tsx', 'export const bg = "#ffffff";\n')).toStrictEqual(['#ffffff']);
   });
 
   it('skips the file whose line comment writes a reason', () => {
     const text = '// hex-escape: GTK widget paint outside TamaguiProvider\nexport const bg = "#ffffff";\n';
-    expect(reportsFor('apps/one/gnome/gtk-paint.ts', text)).toEqual([]);
+    expect(reportsFor('apps/one/gnome/gtk-paint.ts', text)).toStrictEqual([]);
   });
 
   it('does not take a comment with no reason, a JSDoc line or a backticked mention as the marker', () => {
@@ -373,7 +373,7 @@ describe('no-hex-literals hex-escape comment', () => {
       '/**\n * hex-escape: in prose\n */\nexport const bg = "#ffffff";\n',
       '// opt out with `// hex-escape: <reason>`\nexport const bg = "#ffffff";\n',
     ]) {
-      expect(reportsFor('apps/one/spa/main.tsx', text)).toEqual(['#ffffff']);
+      expect(reportsFor('apps/one/spa/main.tsx', text)).toStrictEqual(['#ffffff']);
     }
   });
 
@@ -388,7 +388,7 @@ describe('no-hex-literals hex-escape comment', () => {
           '// hex-escape:',
         ].join('\n'),
       ),
-    ).toEqual([
+    ).toStrictEqual([
       { line: 1, reason: 'content script on third-party pages' },
       { line: 3, reason: 'Storybook manager panel' },
       { line: 5, reason: '' },
@@ -453,7 +453,7 @@ describe('mpo-conventions/no-child-margin', () => {
   }
 
   it('covers every long margin prop and every Tamagui shorthand for one', () => {
-    expect(MARGIN_PROPS).toEqual(
+    expect(MARGIN_PROPS).toStrictEqual(
       expect.arrayContaining(['margin', 'marginTop', 'marginHorizontal', 'm', 'mt', 'mx', 'my']),
     );
     expect(plugin.rules?.['no-child-margin']).toBeDefined();
@@ -470,12 +470,17 @@ describe('mpo-conventions/no-child-margin', () => {
         element('XStack', [{ prop: 'marginLeft', value: token('auto') }]),
       ],
     );
-    expect(lint(tree)).toEqual(['Button.marginTop', 'Paragraph.mb', 'Separator.marginHorizontal', 'XStack.marginLeft']);
+    expect(lint(tree)).toStrictEqual([
+      'Button.marginTop',
+      'Paragraph.mb',
+      'Separator.marginHorizontal',
+      'XStack.marginLeft',
+    ]);
   });
 
   it("errors on a margin under a fragment too: a fragment's children are still siblings", () => {
     const tree = fragment([element('Card', [{ prop: 'margin', value: token('$4') }])]);
-    expect(lint(tree)).toEqual(['Card.margin']);
+    expect(lint(tree)).toStrictEqual(['Card.margin']);
   });
 
   it('leaves the outermost element alone and never flags a zero-reset', () => {
@@ -492,7 +497,7 @@ describe('mpo-conventions/no-child-margin', () => {
         ]),
       ],
     );
-    expect(lint(tree)).toEqual([]);
+    expect(lint(tree)).toStrictEqual([]);
   });
 
   it('stays silent on an element the spec declares a slot, by full or bare name', () => {
@@ -504,7 +509,7 @@ describe('mpo-conventions/no-child-margin', () => {
         element('Header', [{ prop: 'marginBottom', value: token('auto') }]),
       ],
     );
-    expect(lint(tree, { slotMargins: ['Card.Footer', 'Header'] })).toEqual([]);
-    expect(lint(tree, { slotMargins: [] })).toEqual(['Card.Footer.marginTop', 'Header.marginBottom']);
+    expect(lint(tree, { slotMargins: ['Card.Footer', 'Header'] })).toStrictEqual([]);
+    expect(lint(tree, { slotMargins: [] })).toStrictEqual(['Card.Footer.marginTop', 'Header.marginBottom']);
   });
 });

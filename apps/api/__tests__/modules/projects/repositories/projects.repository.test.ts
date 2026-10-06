@@ -48,7 +48,7 @@ describe('ProjectRepository', () => {
 
       const result = await repository.findByBoardId(boardId);
 
-      expect(result).toEqual(mockProjects);
+      expect(result).toStrictEqual(mockProjects);
     });
   });
 
@@ -78,7 +78,7 @@ describe('ProjectRepository', () => {
 
       const result = await repository.findByIdPopulated(projectId);
 
-      expect(result).toEqual(mockProject);
+      expect(result).toStrictEqual(mockProject);
     });
   });
 
@@ -91,7 +91,7 @@ describe('ProjectRepository', () => {
       const result = await repository.create(data);
 
       expect(mockModel).toHaveBeenCalledWith(data);
-      expect(result).toEqual(expect.objectContaining(data));
+      expect(result).toStrictEqual(expect.objectContaining(data));
     });
   });
 
@@ -110,7 +110,7 @@ describe('ProjectRepository', () => {
         { $set: updateData },
         { new: true, runValidators: true },
       );
-      expect(result).toEqual(mockProject);
+      expect(result).toStrictEqual(mockProject);
     });
   });
 
@@ -123,7 +123,7 @@ describe('ProjectRepository', () => {
       const result = await repository.deleteById(projectId);
 
       expect(mockModel.deleteOne).toHaveBeenCalledWith({ _id: projectId });
-      expect(result).toEqual({ deletedCount: 1 });
+      expect(result).toStrictEqual({ deletedCount: 1 });
     });
   });
 
@@ -136,7 +136,7 @@ describe('ProjectRepository', () => {
       const result = await repository.deleteByBoardId(boardId);
 
       expect(mockModel.deleteMany).toHaveBeenCalled();
-      expect(result).toEqual({ deletedCount: 5 });
+      expect(result).toStrictEqual({ deletedCount: 5 });
     });
 
     it('should return 0 if no projects deleted', async () => {
@@ -146,7 +146,7 @@ describe('ProjectRepository', () => {
 
       const result = await repository.deleteByBoardId(boardId);
 
-      expect(result).toEqual({ deletedCount: 0 });
+      expect(result).toStrictEqual({ deletedCount: 0 });
     });
   });
 

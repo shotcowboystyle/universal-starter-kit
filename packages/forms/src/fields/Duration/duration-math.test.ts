@@ -36,7 +36,7 @@ describe('durationMath', () => {
   it('round-trips parts through seconds', () => {
     const seconds = partsToSeconds({ days: 1, hours: 2, minutes: 3, seconds: 4 }, false);
     expect(seconds).toBe(93_784);
-    expect(secondsToParts(seconds, false)).toEqual({
+    expect(secondsToParts(seconds, false)).toStrictEqual({
       days: 1,
       hours: 2,
       minutes: 3,

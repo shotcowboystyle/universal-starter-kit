@@ -103,10 +103,10 @@ describe('Tabs sizing through hydration', () => {
     host.touch = true;
     await hydrate();
 
-    expect(hydrationErrors()).toEqual([]);
-    expect([...container.querySelectorAll('[role="tab"]')]).toEqual(serverTabs);
+    expect(hydrationErrors()).toStrictEqual([]);
+    expect([...container.querySelectorAll('[role="tab"]')]).toStrictEqual(serverTabs);
     const clientHeights = tabHeights(container);
-    expect(clientHeights).not.toEqual(serverHeights);
+    expect(clientHeights).not.toStrictEqual(serverHeights);
     for (const heights of clientHeights) {
       expect(heights).toContain('_h-48px');
     }
@@ -116,8 +116,8 @@ describe('Tabs sizing through hydration', () => {
     container.innerHTML = renderToString(<Fixture />);
     const serverHeights = tabHeights(container);
     await hydrate();
-    expect(hydrationErrors()).toEqual([]);
-    expect(tabHeights(container)).toEqual(serverHeights);
+    expect(hydrationErrors()).toStrictEqual([]);
+    expect(tabHeights(container)).toStrictEqual(serverHeights);
   });
 
   it('sizes native tabs to the touch floor on the first render', () => {

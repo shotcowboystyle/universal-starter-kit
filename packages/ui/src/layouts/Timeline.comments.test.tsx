@@ -47,9 +47,9 @@ describe('threadEntries', () => {
 
   it('groups replies one level under their parent', () => {
     const threads = threadEntries([entry('a'), entry('b'), entry('a1', 'a', '2026-01-02T00:00:00Z')]);
-    expect(threads.map((t) => t.entry.id)).toEqual(['a', 'b']);
-    expect(threads[0].replies.map((r) => r.id)).toEqual(['a1']);
-    expect(threads[1].replies).toEqual([]);
+    expect(threads.map((t) => t.entry.id)).toStrictEqual(['a', 'b']);
+    expect(threads[0].replies.map((r) => r.id)).toStrictEqual(['a1']);
+    expect(threads[1].replies).toStrictEqual([]);
   });
 
   it('flattens reply-to-reply under the thread root (one level max)', () => {
@@ -59,7 +59,7 @@ describe('threadEntries', () => {
       entry('a1a', 'a1', '2026-01-03T00:00:00Z'),
     ]);
     expect(threads).toHaveLength(1);
-    expect(threads[0].replies.map((r) => r.id)).toEqual(['a1', 'a1a']);
+    expect(threads[0].replies.map((r) => r.id)).toStrictEqual(['a1', 'a1a']);
   });
 
   it('sorts replies oldest-first regardless of input order', () => {
@@ -68,12 +68,12 @@ describe('threadEntries', () => {
       entry('a2', 'a', '2026-01-05T00:00:00Z'),
       entry('a1', 'a', '2026-01-02T00:00:00Z'),
     ]);
-    expect(threads[0].replies.map((r) => r.id)).toEqual(['a1', 'a2']);
+    expect(threads[0].replies.map((r) => r.id)).toStrictEqual(['a1', 'a2']);
   });
 
   it('treats orphaned parentIds as top-level', () => {
     const threads = threadEntries([entry('a'), entry('x', 'missing-parent')]);
-    expect(threads.map((t) => t.entry.id)).toEqual(['a', 'x']);
+    expect(threads.map((t) => t.entry.id)).toStrictEqual(['a', 'x']);
   });
 
   it('survives parentId cycles without losing entries', () => {
@@ -81,9 +81,9 @@ describe('threadEntries', () => {
     // cycle: first member promotes to top-level, the other nests under it —
     // every entry stays in the feed
     const rendered = threads.flatMap((t) => [t.entry.id, ...t.replies.map((r) => r.id)]);
-    expect(rendered.sort()).toEqual(['a', 'b', 'c']);
+    expect(rendered.sort()).toStrictEqual(['a', 'b', 'c']);
     // true roots keep input order; cycle fallbacks append after them
-    expect(threads.map((t) => t.entry.id)).toEqual(['a', 'b']);
+    expect(threads.map((t) => t.entry.id)).toStrictEqual(['a', 'b']);
   });
 });
 

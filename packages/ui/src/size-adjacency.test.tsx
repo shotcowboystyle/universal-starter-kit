@@ -156,7 +156,7 @@ describe('adjacency: Button, Input, Select trigger and ListItem at one size toke
   for (const [knob, token] of stops) {
     it(`all four paint one height at size ${knob} (${token})`, () => {
       const row = heights(atKnob(knob, token));
-      expect(row).toEqual(agreed(row));
+      expect(row).toStrictEqual(agreed(row));
     });
   }
 
@@ -183,7 +183,7 @@ describe('adjacency: Button, Input, Select trigger and ListItem at one size toke
       ),
     );
     expect(row.Button).toBe(30);
-    expect(row).not.toEqual(agreed(row));
+    expect(row).not.toStrictEqual(agreed(row));
   });
 
   const sizeTableRadius = { $3: 7, $4: 9, $5: 10 } as const;
@@ -191,7 +191,7 @@ describe('adjacency: Button, Input, Select trigger and ListItem at one size toke
   for (const [knob, token] of stops) {
     it(`Button, Input and Select trigger paint one radius at size ${knob} (${token})`, () => {
       const row = radii(atKnob(knob, token), controls);
-      expect(row).toEqual(agreed(row));
+      expect(row).toStrictEqual(agreed(row));
       expect(row.Button).toBe(sizeTableRadius[token]);
     });
   }
@@ -223,14 +223,14 @@ describe('adjacency: Button, Input, Select trigger and ListItem at one size toke
       ),
       controls,
     );
-    expect(row).toEqual({ Button: 16, Input: 16, 'Select trigger': 16 });
+    expect(row).toStrictEqual({ Button: 16, Input: 16, 'Select trigger': 16 });
   });
 
   for (const token of ['$3', '$4', '$5'] as const) {
     it(`an explicit size=${token} moves all four heights and the controls' radius together`, () => {
       const row = atSizeProp(token);
-      expect(heights(row)).toEqual(agreed(heights(row)));
-      expect(radii(row, controls)).toEqual(agreed(radii(row, controls)));
+      expect(heights(row)).toStrictEqual(agreed(heights(row)));
+      expect(radii(row, controls)).toStrictEqual(agreed(radii(row, controls)));
       expect(row.Button.radius).toBe(sizeTableRadius[token]);
     });
   }

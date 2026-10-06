@@ -41,15 +41,15 @@ describe('readDrawingRegistry', () => {
     });
     const registry = readDrawingRegistry(specPath);
     expect(registry.present).toBe(true);
-    expect(registry.files).toEqual(['listing/glyphs/CanvasGlyph.tsx']);
-    expect(registry.chromeAllow).toEqual(['Card']);
+    expect(registry.files).toStrictEqual(['listing/glyphs/CanvasGlyph.tsx']);
+    expect(registry.chromeAllow).toStrictEqual(['Card']);
   });
 
   it('yields empty lists when the spec file is missing', () => {
     const registry = readDrawingRegistry(join(tmpdir(), 'no-such-spec.md'));
     expect(registry.present).toBe(false);
-    expect(registry.files).toEqual([]);
-    expect(registry.chromeAllow).toEqual([]);
+    expect(registry.files).toStrictEqual([]);
+    expect(registry.chromeAllow).toStrictEqual([]);
   });
 });
 

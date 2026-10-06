@@ -4,7 +4,7 @@ import { DRAWN_ICON_NAMES, filterDrawnIcons, isDrawnIconName, parseIconOptions, 
 
 describe('drawn icon set', () => {
   it('exposes the measured console-sheet names and no more', () => {
-    expect(DRAWN_ICON_NAMES).toEqual([
+    expect(DRAWN_ICON_NAMES).toStrictEqual([
       'chev-d',
       'chev-r',
       'chev-l',
@@ -31,12 +31,12 @@ describe('drawn icon set', () => {
   });
 
   it('filters the catalog by name substring', () => {
-    expect(filterDrawnIcons(DRAWN_ICON_NAMES, 'arr')).toEqual(['arr-d', 'arr-u', 'arr-r']);
-    expect(filterDrawnIcons(DRAWN_ICON_NAMES, 'zzz')).toEqual([]);
+    expect(filterDrawnIcons(DRAWN_ICON_NAMES, 'arr')).toStrictEqual(['arr-d', 'arr-u', 'arr-r']);
+    expect(filterDrawnIcons(DRAWN_ICON_NAMES, 'zzz')).toStrictEqual([]);
   });
 
   it('drops unknown df.options names instead of inventing glyphs', () => {
-    expect(parseIconOptions('mail\nscan\nupload')).toEqual(['mail', 'upload']);
-    expect(resolveIconCatalog(['mail', 'nope'])).toEqual(['mail']);
+    expect(parseIconOptions('mail\nscan\nupload')).toStrictEqual(['mail', 'upload']);
+    expect(resolveIconCatalog(['mail', 'nope'])).toStrictEqual(['mail']);
   });
 });

@@ -45,7 +45,7 @@ describe('auth-store', () => {
     useAuthStore.getState().setSession(mockSession);
 
     const state = useAuthStore.getState();
-    expect(state.session).toEqual(mockSession);
+    expect(state.session).toStrictEqual(mockSession);
   });
 
   it('should set user', () => {
@@ -58,7 +58,7 @@ describe('auth-store', () => {
     useAuthStore.getState().setUser(mockUser);
 
     const state = useAuthStore.getState();
-    expect(state.user).toEqual(mockUser);
+    expect(state.user).toStrictEqual(mockUser);
   });
 
   it('should set loading state', () => {
@@ -127,7 +127,7 @@ describe('auth-store', () => {
     useAuthStore.getState().setLoading(true);
 
     const state = useAuthStore.getState();
-    expect(state.user).toEqual(mockUser);
+    expect(state.user).toStrictEqual(mockUser);
     expect(state.isLoading).toBe(true);
     expect(state.session).toBeNull();
     expect(state.error).toBeNull();
@@ -147,7 +147,7 @@ describe('auth-store', () => {
     };
 
     useAuthStore.getState().setUser(mockUser);
-    expect(useAuthStore.getState().user).toEqual(mockUser);
+    expect(useAuthStore.getState().user).toStrictEqual(mockUser);
 
     useAuthStore.getState().setUser(null);
     expect(useAuthStore.getState().user).toBeNull();

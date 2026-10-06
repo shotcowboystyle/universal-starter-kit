@@ -196,12 +196,12 @@ describe('ColorPicker', () => {
 
     it('converts between RGB and HEX', () => {
       expect(rgbToHex(255, 0, 128)).toBe('#FF0080');
-      expect(hexToRgb('#FF0080')).toEqual({ r: 255, g: 0, b: 128 });
+      expect(hexToRgb('#FF0080')).toStrictEqual({ r: 255, g: 0, b: 128 });
       expect(hexToRgb('invalid')).toBeNull();
     });
 
     it('converts between HSV and RGB/HEX', () => {
-      expect(hsvToRgb(0, 100, 100)).toEqual({ r: 255, g: 0, b: 0 });
+      expect(hsvToRgb(0, 100, 100)).toStrictEqual({ r: 255, g: 0, b: 0 });
       expect(hsvToHex(120, 100, 100)).toBe('#00FF00');
 
       const hsv = rgbToHsv(0, 0, 255);
@@ -217,7 +217,7 @@ describe('ColorPicker', () => {
 
     it('parses 8-digit hex including alpha', async () => {
       const { parseHex, hexAlphaByte } = await import('./parts');
-      expect(parseHex('#11223344')).toEqual({ r: 17, g: 34, b: 51, alpha: 27 });
+      expect(parseHex('#11223344')).toStrictEqual({ r: 17, g: 34, b: 51, alpha: 27 });
       expect(hexAlphaByte(100)).toBe('FF');
       expect(hexAlphaByte(0)).toBe('00');
     });
@@ -373,7 +373,7 @@ describe('ColorPicker', () => {
       expect(grads).toHaveLength(4);
 
       const colorLists = [...grads].map((el) => JSON.parse(el.getAttribute('data-colors') || '[]'));
-      expect(colorLists).toEqual(
+      expect(colorLists).toStrictEqual(
         expect.arrayContaining([
           ['#FFFFFF', '#FF0000'],
           ['rgba(0,0,0,0)', '#000000'],

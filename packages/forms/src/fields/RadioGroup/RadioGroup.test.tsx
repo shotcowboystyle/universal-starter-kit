@@ -289,7 +289,7 @@ describe('RadioGroup Components', () => {
         );
         const radios = [...result.container.querySelectorAll("[role='radio']")];
         expect(radios).toHaveLength(mockOptions.length);
-        expect(radios.map((radio) => radio.getAttribute('tabindex'))).toEqual(['0', '-1', '-1']);
+        expect(radios.map((radio) => radio.getAttribute('tabindex'))).toStrictEqual(['0', '-1', '-1']);
       });
 
       it('moves the tab stop to the checked radio', async () => {
@@ -302,7 +302,7 @@ describe('RadioGroup Components', () => {
           />,
         );
         const radios = [...result.container.querySelectorAll("[role='radio']")];
-        expect(radios.map((radio) => radio.getAttribute('tabindex'))).toEqual(['-1', '0', '-1']);
+        expect(radios.map((radio) => radio.getAttribute('tabindex'))).toStrictEqual(['-1', '0', '-1']);
       });
 
       it('re-strips the wrapper tabindex when the roving group re-applies it', async () => {

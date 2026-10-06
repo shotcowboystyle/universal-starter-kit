@@ -66,7 +66,7 @@ describe('native fill allocates the sheet body', () => {
     const view = renderNative({ fill: true });
     for (const id of ['sheet-modal-surface', 'sheet-modal-content']) {
       const link = classes(view.getByTestId(id));
-      expect(link, `${id} grows`).toEqual(expect.arrayContaining(flexOne));
+      expect(link, `${id} grows`).toStrictEqual(expect.arrayContaining(flexOne));
       expect(link, `${id} can collapse`).toContain(minZero);
     }
     const body = view.getByTestId('sheet-modal-body');
@@ -131,7 +131,7 @@ describe('web fill opens the body inside the snapped frame', () => {
     const filled = renderWeb({ fill: true }).getAllByTestId('sheet-modal-body');
     expect(filled.length).toBeGreaterThan(0);
     for (const slot of filled) {
-      expect(classes(slot)).toEqual(expect.arrayContaining(flexOne));
+      expect(classes(slot)).toStrictEqual(expect.arrayContaining(flexOne));
       expect(classes(slot)).toContain(minZero);
     }
     cleanup();

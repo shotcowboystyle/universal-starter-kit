@@ -162,7 +162,7 @@ describe('Wizard mounted panels and validation', () => {
     expect({
       name: store.form?.getFieldValue?.('name'),
       url: store.form?.getFieldValue?.('url'),
-    }).toEqual({ name: 'Pikachu', url: '' });
+    }).toStrictEqual({ name: 'Pikachu', url: '' });
   });
 
   it('per-step validation blocks advance and focuses the first invalid field', async () => {
@@ -225,7 +225,7 @@ describe('Wizard guardrail-clean at rest', () => {
       const themeWarns = [...warn.mock.calls, ...error.mock.calls]
         .map((args) => String(args[0]))
         .filter((msg) => msg.startsWith('[theme]'));
-      expect(themeWarns).toEqual([]);
+      expect(themeWarns).toStrictEqual([]);
     } finally {
       warn.mockRestore();
       error.mockRestore();

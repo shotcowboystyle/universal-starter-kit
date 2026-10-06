@@ -71,7 +71,7 @@ describe('export surface partition', () => {
         'Either shadow with a knob-consuming house implementation (Button/Spinner precedent), ' +
         'demote to a Tamagui*-prefixed escape hatch in ./tamagui.ts, or declare knob-immune ' +
         'with a reason in ./knob-immune-exports.ts.',
-    ).toEqual([]);
+    ).toStrictEqual([]);
   });
 
   it('keeps every Tamagui*-prefixed escape hatch identical to the raw primitive it names', () => {
@@ -115,7 +115,7 @@ describe('semantic colour layer is importable by a stable name', () => {
   });
 
   it('pins sectionHeading to the subordinate voice (mono 400 at 20/26)', () => {
-    expect(sectionHeading).toEqual({
+    expect(sectionHeading).toStrictEqual({
       fontFamily: '$mono',
       fontSize: 20,
       lineHeight: 26,

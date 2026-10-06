@@ -71,7 +71,7 @@ describe('resolveNativeStorage', () => {
     expect(resolution.backend).toBe('mmkv');
     expect(mmkv.createMMKV).toHaveBeenCalledOnce();
     expect(resolution.errors.mmkv).toBeUndefined();
-    await expect(roundTrip(resolution.storage)).resolves.toEqual({
+    await expect(roundTrip(resolution.storage)).resolves.toStrictEqual({
       afterSet: 'v',
       afterRemove: null,
       missing: null,
@@ -102,7 +102,7 @@ describe('resolveNativeStorage', () => {
 
     expect(resolution.backend).toBe('async-storage');
     expect(String(resolution.errors.mmkv)).toContain('react-native-mmkv unavailable');
-    await expect(roundTrip(resolution.storage)).resolves.toEqual({
+    await expect(roundTrip(resolution.storage)).resolves.toStrictEqual({
       afterSet: 'v',
       afterRemove: null,
       missing: null,
@@ -118,7 +118,7 @@ describe('resolveNativeStorage', () => {
     expect(resolution.backend).toBe('memory');
     expect(resolution.errors.asyncStorage).toBeDefined();
     // Memory storage still honors the Storage contract.
-    await expect(roundTrip(resolution.storage)).resolves.toEqual({
+    await expect(roundTrip(resolution.storage)).resolves.toStrictEqual({
       afterSet: 'v',
       afterRemove: null,
       missing: null,

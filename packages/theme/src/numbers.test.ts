@@ -112,16 +112,16 @@ describe('resolveCurrencyCode', () => {
 
 describe('currencyAffix (money editor glyph)', () => {
   it("takes the glyph and its side from the locale's money register", () => {
-    expect(currencyAffix('USD', 'en-US')).toEqual({ glyph: '$', position: 'leading' });
-    expect(currencyAffix('EUR', 'de-DE')).toEqual({ glyph: '€', position: 'trailing' });
+    expect(currencyAffix('USD', 'en-US')).toStrictEqual({ glyph: '$', position: 'leading' });
+    expect(currencyAffix('EUR', 'de-DE')).toStrictEqual({ glyph: '€', position: 'trailing' });
   });
 
   it('resolves a Frappe-style symbol through its code', () => {
-    expect(currencyAffix('₹', 'en-IN')).toEqual({ glyph: '₹', position: 'leading' });
+    expect(currencyAffix('₹', 'en-IN')).toStrictEqual({ glyph: '₹', position: 'leading' });
   });
 
   it('returns a symbol with no known code as itself, leading', () => {
-    expect(currencyAffix('Fr', 'en-US')).toEqual({ glyph: 'Fr', position: 'leading' });
+    expect(currencyAffix('Fr', 'en-US')).toStrictEqual({ glyph: 'Fr', position: 'leading' });
   });
 
   it('returns nothing without a currency', () => {

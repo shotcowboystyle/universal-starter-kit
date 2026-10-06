@@ -82,16 +82,16 @@ describe('barcodePreviewSymbology — scanner round trip', () => {
   it('draws QR for every alias the scanner resolves to qr', () => {
     for (const alias of ['qr', 'qrcode', 'qr_code', 'QR Code', 'QR-CODE']) {
       expect(barcodePreviewSymbology(alias)).toBe('qr');
-      expect(resolveNativeBarcodeTypes([alias])).toEqual(['qr']);
-      expect(resolveHtml5FormatIds([alias], html5Enum)).toEqual([html5Enum.QR_CODE]);
+      expect(resolveNativeBarcodeTypes([alias])).toStrictEqual(['qr']);
+      expect(resolveHtml5FormatIds([alias], html5Enum)).toStrictEqual([html5Enum.QR_CODE]);
     }
   });
 
   it('draws the Code 128 strip for code128 aliases, resolved identically', () => {
     for (const alias of ['code128', 'code_128', 'Code 128']) {
       expect(barcodePreviewSymbology(alias)).toBe('code128');
-      expect(resolveNativeBarcodeTypes([alias])).toEqual(['code128']);
-      expect(resolveHtml5FormatIds([alias], html5Enum)).toEqual([html5Enum.CODE_128]);
+      expect(resolveNativeBarcodeTypes([alias])).toStrictEqual(['code128']);
+      expect(resolveHtml5FormatIds([alias], html5Enum)).toStrictEqual([html5Enum.CODE_128]);
     }
   });
 
