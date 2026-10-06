@@ -35,14 +35,17 @@ export const TamaguiRoot = ({
   const resolved: ColorScheme = resolvedTheme === 'dark' ? 'dark' : 'light';
 
   useEffect(() => {
-    if (!resolvedTheme) {
+    if (resolvedTheme === undefined || resolvedTheme === '') {
       return;
     }
+    // oxlint-disable-next-line unicorn/no-document-cookie -- Cookie Store API is async and not available in all supported browsers
     document.cookie = `${COLOR_SCHEME_COOKIE}=${resolved}; path=/; max-age=31536000; samesite=lax`;
   }, [resolvedTheme, resolved]);
   const injectedTamaguiCss = useRef(false);
 
   useServerInsertedHTML(() => {
+    // SAFETY: react-native-web's StyleSheet exposes getSheet() on web, but react-native's types omit it.
+    // oxlint-disable-next-line anti-slop/no-chained-type-assertions, typescript/no-unsafe-type-assertion -- RNW-only API missing from RN typings
     const sheet = (StyleSheet as unknown as RNWStyleSheet).getSheet();
     const tamaguiCss = injectedTamaguiCss.current ? '' : themeConfig.tamagui.getCSS();
     injectedTamaguiCss.current = true;
@@ -50,11 +53,13 @@ export const TamaguiRoot = ({
       <>
         <style
           id={sheet.id}
+          // oxlint-disable-next-line react/no-danger -- SSR style injection requires raw CSS text
           dangerouslySetInnerHTML={{ __html: sheet.textContent }}
         />
         {tamaguiCss ? (
           <style
             id="tamagui-css"
+            // oxlint-disable-next-line react/no-danger -- SSR style injection requires raw CSS text
             dangerouslySetInnerHTML={{ __html: tamaguiCss }}
           />
         ) : null}

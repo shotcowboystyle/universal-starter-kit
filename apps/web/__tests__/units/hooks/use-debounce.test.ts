@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useDebounce } from '@/hooks/use-debounce';
 
-describe('useDebounce', () => {
+describe(useDebounce, () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();

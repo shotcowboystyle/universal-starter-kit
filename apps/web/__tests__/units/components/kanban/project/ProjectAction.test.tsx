@@ -5,34 +5,41 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ProjectActions } from '@/components/kanban/project/ProjectAction';
 import { useDeleteProject, useUpdateProject } from '@/lib/api/projects/queries';
+import type { WorkspaceState } from '@/stores/types';
 import { useWorkspaceStore } from '@/stores/workspace-store';
 
+// oxlint-disable-next-line vitest/prefer-import-in-mock -- useWorkspaceStore is an overloaded zustand hook that vi.fn can't satisfy
 vi.mock('@/stores/workspace-store', () => ({
-  useWorkspaceStore: vi.fn(),
+  useWorkspaceStore: vi.fn<typeof useWorkspaceStore>(),
 }));
 
+// oxlint-disable-next-line vitest/prefer-import-in-mock -- useTranslations stub can't satisfy next-intl's Translator type
 vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string, values?: any) => {
-    if (values?.title) {
+  useTranslations: () => (key: string, values?: { title?: string; error?: string }) => {
+    if (values?.title !== undefined && values.title !== '') {
       return `${key}: ${values.title}`;
     }
-    if (values?.error) {
+    if (values?.error !== undefined && values.error !== '') {
       return `${key}: ${values.error}`;
     }
     return key;
   },
 }));
 
-vi.mock('sonner', () => ({
-  toast: {
-    success: vi.fn(),
-    error: vi.fn(),
-  },
-}));
+vi.mock(import('sonner'), async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    toast: Object.assign(vi.fn<typeof toast>(), actual.toast, {
+      success: vi.fn<typeof toast.success>(),
+      error: vi.fn<typeof toast.error>(),
+    }),
+  };
+});
 
-vi.mock('@/lib/api/projects/queries', () => ({
-  useDeleteProject: vi.fn(),
-  useUpdateProject: vi.fn(),
+vi.mock(import('@/lib/api/projects/queries'), () => ({
+  useDeleteProject: vi.fn<typeof useDeleteProject>(),
+  useUpdateProject: vi.fn<typeof useUpdateProject>(),
 }));
 
 // Tamagui renders the confirm dialog in a <dialog> element that jsdom treats as
@@ -44,7 +51,12 @@ const findConfirmDialog = async () =>
     return el!;
   });
 
-describe('ProjectActions', () => {
+const openMenu = async () => {
+  fireEvent.click(screen.getByTestId('project-option-button'));
+  await screen.findByRole('menu');
+};
+
+describe(ProjectActions, () => {
   const props = {
     id: 'project-1',
     title: 'Test Project',
@@ -52,31 +64,29 @@ describe('ProjectActions', () => {
     ownerId: 'user-1',
   };
 
-  const updateProject = vi.fn();
-  const removeProject = vi.fn();
-  const updateMutateAsync = vi.fn();
-  const deleteMutateAsync = vi.fn();
+  const updateProject = vi.fn<WorkspaceState['updateProject']>();
+  const removeProject = vi.fn<WorkspaceState['removeProject']>();
+  const updateMutateAsync =
+    vi.fn<(input: { id: string; title: string; description: string | null; owner: string }) => Promise<void>>();
+  const deleteMutateAsync = vi.fn<(id: string) => Promise<void>>();
 
   const mockStore = (userId: string | null) => {
-    vi.mocked(useWorkspaceStore).mockImplementation((selector?: any) => {
-      const state = { userId, updateProject, removeProject };
-      return selector ? selector(state) : state;
-    });
+    const state = { userId, updateProject, removeProject };
+    vi.mocked(useWorkspaceStore).mockImplementation(
+      // SAFETY: the component only reads userId/updateProject/removeProject, which `state` provides.
+      (<Selected,>(selector?: (current: typeof state) => Selected) =>
+        selector === undefined ? state : selector(state)) as typeof useWorkspaceStore,
+    );
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockStore('user-1');
-    updateProject.mockResolvedValue(undefined);
-    removeProject.mockResolvedValue(undefined);
+    updateProject.mockResolvedValue();
+    removeProject.mockResolvedValue();
     vi.mocked(useUpdateProject).mockReturnValue({ mutateAsync: updateMutateAsync } as any);
     vi.mocked(useDeleteProject).mockReturnValue({ mutateAsync: deleteMutateAsync } as any);
   });
-
-  const openMenu = async () => {
-    fireEvent.click(screen.getByTestId('project-option-button'));
-    await screen.findByRole('menu');
-  };
 
   it('renders the actions trigger', () => {
     renderWithProviders(<ProjectActions {...props} />);
@@ -118,7 +128,8 @@ describe('ProjectActions', () => {
     expect(toast.success).toHaveBeenCalledWith('updateSuccess');
 
     // The store callback maps to the update mutation with the current user as owner
-    const persist = updateProject.mock.calls[0][3];
+    const [updateCall] = updateProject.mock.calls;
+    const { 3: persist } = updateCall;
     await persist('project-1', { title: 'Renamed', description: '' });
     expect(updateMutateAsync).toHaveBeenCalledWith({
       id: 'project-1',
@@ -155,7 +166,8 @@ describe('ProjectActions', () => {
     });
     expect(toast.success).toHaveBeenCalledWith('deleteSuccess: Test Project');
 
-    const persist = removeProject.mock.calls[0][1];
+    const [removeCall] = removeProject.mock.calls;
+    const { 1: persist } = removeCall;
     await persist('project-1');
     expect(deleteMutateAsync).toHaveBeenCalledWith('project-1');
   });

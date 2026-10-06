@@ -2,27 +2,27 @@ import { describe, expect, it } from 'vitest';
 
 import { Icons } from '@/components/layout/icons';
 
-describe('Icons', () => {
+describe('icons', () => {
   it('should export Icons object', () => {
     expect(Icons).toBeDefined();
-    expect(typeof Icons).toBe('object');
+    expect(Icons).toBeTypeOf('object');
   });
 
   it('should have projectLogo icon', () => {
     expect(Icons.projectLogo).toBeDefined();
-    expect(typeof Icons.projectLogo).toBe('object');
+    expect(Icons.projectLogo).toBeTypeOf('object');
   });
 
   it('should have all expected icon properties', () => {
     const expectedIcons = ['projectLogo'];
-    expectedIcons.forEach((iconName) => {
+    for (const iconName of expectedIcons) {
       expect(Icons).toHaveProperty(iconName);
-    });
+    }
   });
 
   it('should be a React component', () => {
     // Icons should be React components from lucide-react
     expect(Icons.projectLogo).toBeDefined();
-    expect(typeof Icons.projectLogo).toBe('object');
+    expect(Icons.projectLogo).toBeTypeOf('object');
   });
 });

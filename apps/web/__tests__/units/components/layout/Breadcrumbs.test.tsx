@@ -5,12 +5,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
 import { useBreadcrumbs } from '@/hooks/use-breadcrumbs';
 
-const mockPush = vi.fn();
+const mockPush = vi.fn<(href: string) => void>();
 
-vi.mock('@/hooks/use-breadcrumbs', () => ({
-  useBreadcrumbs: vi.fn(),
+vi.mock(import('@/hooks/use-breadcrumbs'), () => ({
+  useBreadcrumbs: vi.fn<typeof useBreadcrumbs>(),
 }));
 
+// oxlint-disable-next-line vitest/prefer-import-in-mock -- the stub router exposes only push; a typed factory would need the full next-intl router shape
 vi.mock('@/i18n/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
 }));
@@ -19,7 +20,7 @@ const mockItems = (items: { title: string; link: string }[]) => {
   vi.mocked(useBreadcrumbs).mockReturnValue({ items, rootLink: '/boards' });
 };
 
-describe('Breadcrumbs', () => {
+describe(Breadcrumbs, () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockItems([

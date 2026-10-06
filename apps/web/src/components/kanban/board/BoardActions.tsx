@@ -21,6 +21,8 @@ interface BoardActionsProps {
   children?: React.ReactElement;
 }
 
+const UPDATE_ERROR_LOG = 'Error updating board:';
+
 export const BoardActions = ({ board, onDelete, children }: BoardActionsProps) => {
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
   const [editEnable, setEditEnable] = React.useState(false);
@@ -31,12 +33,25 @@ export const BoardActions = ({ board, onDelete, children }: BoardActionsProps) =
   const router = useRouter();
   const t = useTranslations('kanban.actions');
 
-  const onSubmit = async (values: z.infer<typeof boardSchema>) => {
-    try {
-      if (!board?._id) {
-        throw new Error('Board ID is missing');
-      }
+  const reportUpdateError = (errorMessage: string) => {
+    if (errorMessage.includes('not found')) {
+      toast.error('Board not found. The board may have been deleted.');
+      router.refresh();
+    } else {
+      toast.error(`Failed to update board: ${errorMessage}`);
+    }
+  };
 
+  const onSubmit = async (values: z.infer<typeof boardSchema>) => {
+    if (!board?._id) {
+      const missingIdError = new Error('Board ID is missing');
+      console.error(UPDATE_ERROR_LOG, missingIdError);
+      reportUpdateError(missingIdError.message);
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
       setIsSubmitting(true);
       await updateBoard.mutateAsync(
         { id: board._id, ...values },
@@ -48,31 +63,18 @@ export const BoardActions = ({ board, onDelete, children }: BoardActionsProps) =
             router.refresh();
           },
           onError: (error: Error) => {
-            console.error('Error updating board:', error);
+            console.error(UPDATE_ERROR_LOG, error);
 
-            if (error.message.includes('not found')) {
-              // If board is not found, refresh the board list
-              toast.error('Board not found. The board may have been deleted.');
-              router.refresh();
-            } else {
-              toast.error(`Failed to update board: ${error.message}`);
-            }
+            // If board is not found, refresh the board list
+            reportUpdateError(error.message);
           },
         },
       );
     } catch (error) {
-      console.error('Error updating board:', error);
-      const errorMessage = error instanceof Error ? error.message : String(error);
-
-      if (errorMessage.includes('not found')) {
-        toast.error('Board not found. The board may have been deleted.');
-        router.refresh();
-      } else {
-        toast.error(`Failed to update board: ${errorMessage}`);
-      }
-    } finally {
-      setIsSubmitting(false);
+      console.error(UPDATE_ERROR_LOG, error);
+      reportUpdateError(error instanceof Error ? error.message : String(error));
     }
+    setIsSubmitting(false);
   };
 
   const handleDelete = async () => {
@@ -131,7 +133,7 @@ export const BoardActions = ({ board, onDelete, children }: BoardActionsProps) =
             <BoardForm
               defaultValues={{
                 title: board.title,
-                description: board.description || '',
+                description: board.description ?? '',
               }}
               onSubmit={onSubmit}>
               <XStack
@@ -193,7 +195,9 @@ export const BoardActions = ({ board, onDelete, children }: BoardActionsProps) =
         body={t('confirmDeleteDescription')}
         confirmLabel={t('delete')}
         cancelLabel={t('cancel')}
-        onConfirm={handleDelete}
+        onConfirm={() => {
+          void handleDelete();
+        }}
       />
     </>
   );

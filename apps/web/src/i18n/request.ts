@@ -4,6 +4,7 @@ import { getRequestConfig } from 'next-intl/server';
 
 import { getCachedMessages } from '@/lib/get-cached-messages';
 
+// oxlint-disable-next-line typescript/no-deprecated -- requestLocale is the supported next-intl API until root-params migration
 export default getRequestConfig(async ({ requestLocale }) => {
   const requested = await requestLocale;
   const locale = hasLocale(locales, requested) ? requested : defaultLocale;

@@ -5,8 +5,8 @@ import type { Mock } from 'vitest';
 import { isAuthenticated } from '@/lib/auth/auth-checker';
 
 // Mock next/headers
-vi.mock('next/headers', () => ({
-  cookies: vi.fn(),
+vi.mock(import('next/headers'), () => ({
+  cookies: vi.fn<typeof cookies>(),
 }));
 
 describe('authChecker', () => {
@@ -14,10 +14,10 @@ describe('authChecker', () => {
     vi.clearAllMocks();
   });
 
-  describe('isAuthenticated', () => {
+  describe(isAuthenticated, () => {
     it('should return true when jwt cookie exists', async () => {
       const mockCookieStore = {
-        getAll: vi.fn().mockReturnValue([
+        getAll: vi.fn<() => { name: string; value: string }[]>().mockReturnValue([
           { name: 'jwt', value: 'mock-jwt-token' },
           { name: 'other', value: 'other-value' },
         ]),
@@ -27,24 +27,26 @@ describe('authChecker', () => {
       const result = await isAuthenticated();
 
       expect(result).toStrictEqual({ isAuthenticated: true });
-      expect(mockCookieStore.getAll).toHaveBeenCalled();
+      expect(mockCookieStore.getAll).toHaveBeenCalledWith();
     });
 
     it('should return false when jwt cookie does not exist', async () => {
       const mockCookieStore = {
-        getAll: vi.fn().mockReturnValue([{ name: 'other', value: 'other-value' }]),
+        getAll: vi
+          .fn<() => { name: string; value: string }[]>()
+          .mockReturnValue([{ name: 'other', value: 'other-value' }]),
       };
       (cookies as Mock).mockResolvedValue(mockCookieStore);
 
       const result = await isAuthenticated();
 
       expect(result).toStrictEqual({ isAuthenticated: false });
-      expect(mockCookieStore.getAll).toHaveBeenCalled();
+      expect(mockCookieStore.getAll).toHaveBeenCalledWith();
     });
 
     it('should return false when jwt cookie has empty value', async () => {
       const mockCookieStore = {
-        getAll: vi.fn().mockReturnValue([{ name: 'jwt', value: '' }]),
+        getAll: vi.fn<() => { name: string; value: string }[]>().mockReturnValue([{ name: 'jwt', value: '' }]),
       };
       (cookies as Mock).mockResolvedValue(mockCookieStore);
 
@@ -55,7 +57,7 @@ describe('authChecker', () => {
 
     it('should return false when no cookies exist', async () => {
       const mockCookieStore = {
-        getAll: vi.fn().mockReturnValue([]),
+        getAll: vi.fn<() => { name: string; value: string }[]>().mockReturnValue([]),
       };
       (cookies as Mock).mockResolvedValue(mockCookieStore);
 

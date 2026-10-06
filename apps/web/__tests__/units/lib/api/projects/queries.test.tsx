@@ -12,18 +12,28 @@ import {
   useProjects,
   useUpdateProject,
 } from '@/lib/api/projects/queries';
+import type { Project } from '@/types/db-interface';
 import { PROJECT_KEYS } from '@/types/project-api';
+import type { CreateProjectInput, UpdateProjectInput } from '@/types/project-api';
 
 // Mock projectApi
-vi.mock('@/lib/api/project-api', () => ({
+vi.mock(import('@/lib/api/project-api'), () => ({
   projectApi: {
-    getProjects: vi.fn(),
-    getProjectById: vi.fn(),
-    createProject: vi.fn(),
-    updateProject: vi.fn(),
-    deleteProject: vi.fn(),
+    getProjects: vi.fn<(boardId: string) => Promise<Project[]>>(),
+    getProjectById: vi.fn<(id: string) => Promise<Project>>(),
+    createProject: vi.fn<(input: CreateProjectInput) => Promise<Project>>(),
+    updateProject: vi.fn<(id: string, input: UpdateProjectInput) => Promise<Project>>(),
+    deleteProject: vi.fn<(id: string) => Promise<void>>(),
   },
 }));
+
+const projectApiSpies = {
+  getProjects: vi.spyOn(projectApi, 'getProjects'),
+  getProjectById: vi.spyOn(projectApi, 'getProjectById'),
+  createProject: vi.spyOn(projectApi, 'createProject'),
+  updateProject: vi.spyOn(projectApi, 'updateProject'),
+  deleteProject: vi.spyOn(projectApi, 'deleteProject'),
+};
 
 describe('Project Query Hooks', () => {
   let queryClient: QueryClient;
@@ -43,7 +53,7 @@ describe('Project Query Hooks', () => {
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
 
-  describe('useProjects', () => {
+  describe(useProjects, () => {
     it('should fetch projects with string boardId', async () => {
       const mockProjects = [
         { _id: '1', title: 'Project 1', board: 'board1' },
@@ -58,7 +68,7 @@ describe('Project Query Hooks', () => {
       });
 
       expect(result.current.data).toStrictEqual(mockProjects);
-      expect(projectApi.getProjects).toHaveBeenCalledWith('board1');
+      expect(projectApiSpies.getProjects).toHaveBeenCalledWith('board1');
     });
 
     it('should fetch projects with object boardId', async () => {
@@ -74,14 +84,14 @@ describe('Project Query Hooks', () => {
       });
 
       expect(result.current.data).toStrictEqual(mockProjects);
-      expect(projectApi.getProjects).toHaveBeenCalledWith('board1');
+      expect(projectApiSpies.getProjects).toHaveBeenCalledWith('board1');
     });
 
     it('should not fetch when boardId is undefined', () => {
-      const { result } = renderHook(() => useProjects(undefined), { wrapper });
+      const { result } = renderHook(() => useProjects(), { wrapper });
 
       expect(result.current.data).toBeUndefined();
-      expect(projectApi.getProjects).not.toHaveBeenCalled();
+      expect(projectApiSpies.getProjects).not.toHaveBeenCalled();
     });
 
     it('should handle fetch error', async () => {
@@ -98,7 +108,7 @@ describe('Project Query Hooks', () => {
     });
   });
 
-  describe('useProject', () => {
+  describe(useProject, () => {
     it('should fetch single project with string id', async () => {
       const mockProject = { _id: '1', title: 'Project 1', board: 'board1' };
       (projectApi.getProjectById as Mock).mockResolvedValue(mockProject);
@@ -110,7 +120,7 @@ describe('Project Query Hooks', () => {
       });
 
       expect(result.current.data).toStrictEqual(mockProject);
-      expect(projectApi.getProjectById).toHaveBeenCalledWith('1');
+      expect(projectApiSpies.getProjectById).toHaveBeenCalledWith('1');
     });
 
     it('should fetch single project with object id', async () => {
@@ -124,18 +134,18 @@ describe('Project Query Hooks', () => {
       });
 
       expect(result.current.data).toStrictEqual(mockProject);
-      expect(projectApi.getProjectById).toHaveBeenCalledWith('1');
+      expect(projectApiSpies.getProjectById).toHaveBeenCalledWith('1');
     });
 
     it('should not fetch when id is undefined', () => {
-      const { result } = renderHook(() => useProject(undefined), { wrapper });
+      const { result } = renderHook(({ id }: { id?: string }) => useProject(id), { wrapper, initialProps: {} });
 
       expect(result.current.data).toBeUndefined();
-      expect(projectApi.getProjectById).not.toHaveBeenCalled();
+      expect(projectApiSpies.getProjectById).not.toHaveBeenCalled();
     });
   });
 
-  describe('useCreateProject', () => {
+  describe(useCreateProject, () => {
     it('should create project and invalidate board queries', async () => {
       const newProject = { _id: '3', title: 'New Project', board: 'board1' };
       (projectApi.createProject as Mock).mockResolvedValue(newProject);
@@ -154,7 +164,7 @@ describe('Project Query Hooks', () => {
         });
       });
 
-      const callArgs = (projectApi.createProject as Mock).mock.calls[0];
+      const [callArgs] = (projectApi.createProject as Mock).mock.calls;
       expect(callArgs[0]).toStrictEqual({ title: 'New Project', board: 'board1' } as any);
     });
 
@@ -178,7 +188,7 @@ describe('Project Query Hooks', () => {
     });
   });
 
-  describe('useUpdateProject', () => {
+  describe(useUpdateProject, () => {
     it('should update project with title only', async () => {
       const updatedProject = { _id: '1', title: 'Updated Project', board: 'board1' };
       (projectApi.updateProject as Mock).mockResolvedValue(updatedProject);
@@ -200,7 +210,7 @@ describe('Project Query Hooks', () => {
         });
       });
 
-      expect(projectApi.updateProject).toHaveBeenCalledWith('1', {
+      expect(projectApiSpies.updateProject).toHaveBeenCalledWith('1', {
         title: 'Updated Project',
         description: null,
       });
@@ -229,7 +239,7 @@ describe('Project Query Hooks', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(projectApi.updateProject).toHaveBeenCalledWith('1', {
+      expect(projectApiSpies.updateProject).toHaveBeenCalledWith('1', {
         title: 'Updated Project',
         description: 'New description',
       });
@@ -255,7 +265,7 @@ describe('Project Query Hooks', () => {
     });
   });
 
-  describe('useDeleteProject', () => {
+  describe(useDeleteProject, () => {
     it('should delete project and remove from cache', async () => {
       (projectApi.deleteProject as Mock).mockResolvedValue({ success: true });
 
@@ -275,9 +285,8 @@ describe('Project Query Hooks', () => {
 
       // deleteProject is called with (projectId, mutationContext)
       // We only care about the first argument
-      expect(projectApi.deleteProject).toHaveBeenCalled();
-      expect(projectApi.deleteProject).toHaveBeenCalledOnce();
-      const callArgs = (projectApi.deleteProject as Mock).mock.calls[0];
+      expect(projectApiSpies.deleteProject).toHaveBeenCalledOnce();
+      const [callArgs] = (projectApi.deleteProject as Mock).mock.calls;
       expect(callArgs[0]).toBe('1');
     });
 

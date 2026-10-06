@@ -31,7 +31,7 @@ const NewProjectDialog = ({ onProjectAdd }: NewProjectDialogProps) => {
     try {
       const projectId = await addProject(
         data.title,
-        data.description || '',
+        data.description ?? '',
         async (projectData) => await createProjectMutation.mutateAsync(projectData),
       );
 

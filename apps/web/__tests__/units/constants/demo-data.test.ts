@@ -8,12 +8,12 @@ describe('demoData constants', () => {
   });
 
   it('should have valid email format', () => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/u;
+    const emailRegex = /^[^\s@]+@[^\s@.]+\.[^\s@.]+$/u;
     expect(defaultEmail).toMatch(emailRegex);
   });
 
   it('should be a string type', () => {
-    expect(typeof defaultEmail).toBe('string');
+    expect(defaultEmail).toBeTypeOf('string');
   });
 
   it('should not be empty', () => {

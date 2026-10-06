@@ -14,10 +14,10 @@ export const taskApi = {
   // Get all tasks (with optional filters)
   async getTasks(projectId?: string, assigneeId?: string): Promise<Task[]> {
     const params = new URLSearchParams();
-    if (projectId) {
+    if (projectId !== undefined && projectId !== '') {
       params.append('projectId', projectId);
     }
-    if (assigneeId) {
+    if (assigneeId !== undefined && assigneeId !== '') {
       params.append('assigneeId', assigneeId);
     }
 
@@ -58,12 +58,13 @@ export const taskApi = {
 
   // Delete a task
   async deleteTask(id: string): Promise<void> {
+    // Last argument handles the 204 No Content response
     await fetchWithAuth(
       `${TASKS_ENDPOINT}/${id}`,
       {
         method: 'DELETE',
       },
-      true, // Handle 204 No Content response
+      true,
     );
   },
 

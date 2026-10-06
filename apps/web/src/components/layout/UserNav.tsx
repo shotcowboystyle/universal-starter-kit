@@ -57,7 +57,12 @@ export const UserNav = () => {
           </YStack>
         </DropdownMenu.Label>
         <DropdownMenu.Separator />
-        <DropdownMenu.Item onSelect={logout}>{t('logOut')}</DropdownMenu.Item>
+        <DropdownMenu.Item
+          onSelect={() => {
+            void logout();
+          }}>
+          {t('logOut')}
+        </DropdownMenu.Item>
       </DropdownMenu.Content>
     </DropdownMenu>
   );

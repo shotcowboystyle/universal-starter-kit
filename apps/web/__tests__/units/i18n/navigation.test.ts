@@ -1,17 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
 
+// oxlint-disable-next-line vitest/prefer-import-in-mock -- createNavigation stub returns placeholder strings, not the real navigation components
 vi.mock('next-intl/navigation', () => ({
-  createNavigation: vi.fn(() => ({
+  createNavigation: vi.fn<() => Record<string, string>>(() => ({
     Link: 'Link',
     redirect: 'redirect',
     usePathname: 'usePathname',
     useRouter: 'useRouter',
     getPathname: 'getPathname',
   })),
-}));
-
-vi.mock('./routing', () => ({
-  routing: {},
 }));
 
 describe('navigation', () => {

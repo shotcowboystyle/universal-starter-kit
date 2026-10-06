@@ -4,22 +4,22 @@ import { userApi } from '@/lib/api/user-api';
 import type { ApiUser } from '@/types/user-api';
 
 // Mock fetch
-const mockFetch = vi.fn();
-global.fetch = mockFetch;
+const mockFetch = vi.fn<(input: string, init?: RequestInit) => Promise<Partial<Response>>>();
+vi.stubGlobal('fetch', mockFetch);
 
 // Mock localStorage
 const localStorageMock = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
+  getItem: vi.fn<(key: string) => string | null>(),
+  setItem: vi.fn<(key: string, value: string) => void>(),
+  removeItem: vi.fn<(key: string) => void>(),
+  clear: vi.fn<() => void>(),
 };
 Object.defineProperty(global, 'localStorage', {
   value: localStorageMock,
   writable: true,
 });
 
-describe('userApi', () => {
+describe('user API client', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorageMock.getItem.mockReturnValue(null);

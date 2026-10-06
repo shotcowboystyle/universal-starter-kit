@@ -2,14 +2,15 @@ import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useBoards } from '@/hooks/use-boards';
+import type { useBoards as UseApiBoards } from '@/lib/api/boards/queries';
 import { useWorkspaceStore } from '@/stores/workspace-store';
 import type { Board } from '@/types/db-interface';
 
-vi.mock('@/lib/api/boards/queries', () => ({
-  useBoards: vi.fn(),
+vi.mock(import('@/lib/api/boards/queries'), () => ({
+  useBoards: vi.fn<typeof UseApiBoards>(),
 }));
 
-describe('useBoards', () => {
+describe(useBoards, () => {
   beforeEach(() => {
     useWorkspaceStore.setState({
       userId: 'user-123',
@@ -28,10 +29,10 @@ describe('useBoards', () => {
   it('should return empty arrays when no data is available', async () => {
     const { useBoards: useApiBoards } = await import('@/lib/api/boards/queries');
     vi.mocked(useApiBoards).mockReturnValue({
-      data: undefined,
+      data: null,
       isLoading: false,
       error: null,
-      refetch: vi.fn(),
+      refetch: vi.fn<() => Promise<void>>(),
     } as any);
 
     const { result } = renderHook(() => useBoards());
@@ -71,7 +72,7 @@ describe('useBoards', () => {
       data: { myBoards: [mockBoards[0]], teamBoards: [mockBoards[1]] },
       isLoading: false,
       error: null,
-      refetch: vi.fn(),
+      refetch: vi.fn<() => Promise<void>>(),
     } as any);
 
     const { result } = renderHook(() => useBoards());
@@ -118,7 +119,7 @@ describe('useBoards', () => {
       data: { myBoards: mockMyBoards, teamBoards: mockTeamBoards },
       isLoading: false,
       error: null,
-      refetch: vi.fn(),
+      refetch: vi.fn<() => Promise<void>>(),
     } as any);
 
     const { result } = renderHook(() => useBoards());
@@ -150,7 +151,7 @@ describe('useBoards', () => {
       data: { myBoards: mockBoards as Board[], teamBoards: [] },
       isLoading: false,
       error: null,
-      refetch: vi.fn(),
+      refetch: vi.fn<() => Promise<void>>(),
     } as any);
 
     const { result } = renderHook(() => useBoards());
@@ -183,7 +184,7 @@ describe('useBoards', () => {
       data: { myBoards: mockBoards, teamBoards: [] },
       isLoading: false,
       error: null,
-      refetch: vi.fn(),
+      refetch: vi.fn<() => Promise<void>>(),
     } as any);
 
     const { result } = renderHook(() => useBoards());
@@ -199,10 +200,10 @@ describe('useBoards', () => {
     const { useBoards: useApiBoards } = await import('@/lib/api/boards/queries');
 
     vi.mocked(useApiBoards).mockReturnValue({
-      data: undefined,
+      data: null,
       isLoading: true,
       error: null,
-      refetch: vi.fn(),
+      refetch: vi.fn<() => Promise<void>>(),
     } as any);
 
     const { result } = renderHook(() => useBoards());
@@ -216,10 +217,10 @@ describe('useBoards', () => {
     const mockError = new Error('Failed to fetch boards');
 
     vi.mocked(useApiBoards).mockReturnValue({
-      data: undefined,
+      data: null,
       isLoading: false,
       error: mockError,
-      refetch: vi.fn(),
+      refetch: vi.fn<() => Promise<void>>(),
     } as any);
 
     const { result } = renderHook(() => useBoards());
@@ -230,10 +231,10 @@ describe('useBoards', () => {
   it('should provide refresh function', async () => {
     const { useBoards: useApiBoards } = await import('@/lib/api/boards/queries');
 
-    const mockRefetch = vi.fn();
+    const mockRefetch = vi.fn<() => Promise<void>>();
 
     vi.mocked(useApiBoards).mockReturnValue({
-      data: undefined,
+      data: null,
       isLoading: false,
       error: null,
       refetch: mockRefetch,
@@ -241,9 +242,9 @@ describe('useBoards', () => {
 
     const { result } = renderHook(() => useBoards());
 
-    result.current.refresh();
+    void result.current.refresh();
 
-    expect(mockRefetch).toHaveBeenCalled();
+    expect(mockRefetch).toHaveBeenCalledWith();
   });
 
   it('should handle empty myBoards and teamBoards from API', async () => {
@@ -253,7 +254,7 @@ describe('useBoards', () => {
       data: { myBoards: [], teamBoards: [] },
       isLoading: false,
       error: null,
-      refetch: vi.fn(),
+      refetch: vi.fn<() => Promise<void>>(),
     } as any);
 
     const { result } = renderHook(() => useBoards());
@@ -271,7 +272,7 @@ describe('useBoards', () => {
       data: { myBoards: null, teamBoards: null },
       isLoading: false,
       error: null,
-      refetch: vi.fn(),
+      refetch: vi.fn<() => Promise<void>>(),
     } as any);
 
     const { result } = renderHook(() => useBoards());
@@ -312,7 +313,7 @@ describe('useBoards', () => {
       data: mockBoards,
       isLoading: false,
       error: null,
-      refetch: vi.fn(),
+      refetch: vi.fn<() => Promise<void>>(),
     } as any);
 
     const { result } = renderHook(() => useBoards());

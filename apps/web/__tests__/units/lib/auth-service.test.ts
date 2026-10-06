@@ -1,17 +1,27 @@
+import type Cookies from 'js-cookie';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AuthService } from '@/lib/auth/auth-service';
 
 // Mock fetch
-const mockFetch = vi.fn();
-global.fetch = mockFetch;
+interface MockFetchResponse {
+  ok: boolean;
+  status?: number;
+  statusText?: string;
+  headers?: Headers;
+  json?: () => Promise<object | null>;
+  text?: () => Promise<string>;
+}
+
+const mockFetch = vi.fn<(...args: unknown[]) => Promise<MockFetchResponse>>();
+vi.stubGlobal('fetch', mockFetch);
 
 // Mock localStorage
 const localStorageMock = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
+  getItem: vi.fn<(key: string) => string | null>(),
+  setItem: vi.fn<(key: string, value: string) => void>(),
+  removeItem: vi.fn<(key: string) => void>(),
+  clear: vi.fn<() => void>(),
 };
 Object.defineProperty(global, 'localStorage', {
   value: localStorageMock,
@@ -19,14 +29,23 @@ Object.defineProperty(global, 'localStorage', {
 });
 
 // Mock js-cookie
-vi.mock('js-cookie', () => ({
-  default: {
-    set: vi.fn(),
-    remove: vi.fn(),
-  },
+const { cookieRemove } = vi.hoisted(() => ({
+  cookieRemove: vi.fn<(name: string, attributes?: Cookies.CookieAttributes) => void>(),
 }));
 
-describe('AuthService', () => {
+vi.mock(import('js-cookie'), async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    default: {
+      ...actual.default,
+      set: vi.fn<typeof actual.default.set>(),
+      remove: cookieRemove,
+    },
+  };
+});
+
+describe('auth service', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorageMock.getItem.mockReturnValue(null);
@@ -215,7 +234,7 @@ describe('AuthService', () => {
       await expect(AuthService.getProfile()).rejects.toMatchObject({
         message: expect.stringContaining('Failed to fetch user profile'),
       });
-      expect(logoutSpy).toHaveBeenCalled();
+      expect(logoutSpy).toHaveBeenCalledWith();
     });
 
     it('should throw error on invalid user data', async () => {
@@ -322,11 +341,9 @@ describe('AuthService', () => {
 
   describe('logout', () => {
     it('should remove auth token and jwt cookie', async () => {
-      const { default: Cookies } = await import('js-cookie');
-
       AuthService.logout();
 
-      expect(Cookies.remove).toHaveBeenCalledWith('jwt', { path: '/' });
+      expect(cookieRemove).toHaveBeenCalledWith('jwt', { path: '/' });
       expect(localStorageMock.removeItem).toHaveBeenCalledWith('auth_token');
     });
 

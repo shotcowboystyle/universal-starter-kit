@@ -1,7 +1,8 @@
-import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { createVitestConfig } from '@repo/config/vitest';
 import { mergeConfig } from 'vitest/config';
+import type { ViteUserConfig } from 'vitest/config';
 
 // Shared preset: react-native → react-native-web, one React copy across the
 // workspace, and Tamagui-friendly dependency inlining.
@@ -15,7 +16,7 @@ const base = createVitestConfig({
   inlineDeps: ['zustand', '@testing-library/react', '@testing-library/dom'],
 });
 
-const config = mergeConfig(base, {
+const config: ViteUserConfig = mergeConfig(base, {
   test: {
     coverage: {
       reporter: ['text', 'json', 'html', 'lcov'],
@@ -42,7 +43,7 @@ const config = mergeConfig(base, {
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      '@': fileURLToPath(new URL('src', import.meta.url)),
     },
   },
 });

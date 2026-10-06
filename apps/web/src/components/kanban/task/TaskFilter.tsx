@@ -25,18 +25,19 @@ export const TaskFilter = () => {
       return counts;
     }
 
-    projects.forEach((project) => {
+    for (const project of projects) {
       const tasks = Array.isArray(project?.tasks) ? project.tasks : [];
-      tasks.forEach((task) => {
-        if (!task) {
-          return;
+      for (const task of tasks) {
+        if (task == null) {
+          continue;
         }
-        counts.TOTAL++;
-        if (task.status && Object.hasOwn(counts, task.status)) {
-          counts[task.status as StatusKey]++;
+        counts.TOTAL += 1;
+        if (Object.hasOwn(counts, task.status)) {
+          // SAFETY: Object.hasOwn(counts, task.status) just confirmed the key exists in counts
+          counts[task.status as StatusKey] += 1;
         }
-      });
-    });
+      }
+    }
 
     return counts;
   }, [projects]);
@@ -47,7 +48,10 @@ export const TaskFilter = () => {
     { value: 'IN_PROGRESS', label: t('statusInProgress') },
     { value: 'DONE', label: t('statusDone') },
   ];
-  const activeStatus = filter.status || 'TOTAL';
+  const activeStatus = filter.status == null || filter.status === '' ? 'TOTAL' : filter.status;
+
+  const hasActiveFilter =
+    (filter.status != null && filter.status !== '') || (filter.search != null && filter.search !== '');
 
   return (
     <XStack
@@ -86,7 +90,7 @@ export const TaskFilter = () => {
         ))}
       </XStack>
 
-      {filter.status || filter.search ? (
+      {hasActiveFilter ? (
         <Button
           chromeless
           size="$3"

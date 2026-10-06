@@ -1,15 +1,5 @@
-import {
-  type Active,
-  type DataRef,
-  type Over,
-  useSensor,
-  useSensors,
-  MouseSensor,
-  TouchSensor,
-  type DragEndEvent,
-  type DragOverEvent,
-  type DragStartEvent,
-} from '@dnd-kit/core';
+import { useSensor, useSensors, MouseSensor, TouchSensor } from '@dnd-kit/core';
+import type { Active, Over, UniqueIdentifier, DragEndEvent, DragOverEvent, DragStartEvent } from '@dnd-kit/core';
 import { arrayMove } from '@dnd-kit/sortable';
 import { useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -23,9 +13,9 @@ import { useDndAnnouncements } from './use-dnd-announcements';
 const hasDraggableData = <T extends Active | Over>(
   entry: T | null | undefined,
 ): entry is T & {
-  data: DataRef<DraggableData>;
+  data: { current: DraggableData };
 } => {
-  if (!entry) {
+  if (entry == null) {
     return false;
   }
   const data = entry.data.current;
@@ -33,6 +23,25 @@ const hasDraggableData = <T extends Active | Over>(
     return true;
   }
   return false;
+};
+
+const loadProjectApi = async () => await import('@/lib/api/project-api');
+
+const getOverProjectId = (overData: DraggableData): string | null => {
+  if (overData.type === 'Project') {
+    return overData.project._id;
+  }
+  return overData.task.project;
+};
+
+const findTaskLocation = (projects: Project[], taskId: string) => {
+  for (const project of projects) {
+    const idx = project.tasks.findIndex((t) => t._id === taskId);
+    if (idx !== -1) {
+      return { projectId: project._id, idx };
+    }
+  }
+  return null;
 };
 
 export const useBoardDnd = (
@@ -55,12 +64,12 @@ export const useBoardDnd = (
     originalProjects.current = structuredClone(projects);
 
     const data = event.active.data.current;
-    if (data?.type === 'Project') {
-      setActiveProject(data?.project);
+    if (data.type === 'Project') {
+      setActiveProject(data.project);
       return;
     }
-    if (data?.type === 'Task') {
-      setActiveTask(data?.task);
+    if (data.type === 'Task') {
+      setActiveTask(data.task);
     }
   };
 
@@ -76,25 +85,25 @@ export const useBoardDnd = (
     if (!hasDraggableData(active) || !hasDraggableData(over)) {
       return;
     }
-    if (active.data.current!.type === 'Project') {
+    const activeData = active.data.current;
+    if (activeData.type === 'Project') {
       return;
     }
 
-    const activeTask = active.data.current!.task;
-    const overData = over.data.current!;
+    const draggedTask = activeData.task;
+    const overData = over.data.current;
 
     let activeProjectId: string | null = null;
     for (const p of projects) {
-      if (p.tasks.some((t) => t._id === activeTask._id)) {
+      if (p.tasks.some((t) => t._id === draggedTask._id)) {
         activeProjectId = p._id;
         break;
       }
     }
 
-    const overProjectId =
-      overData.type === 'Project' ? overData.project._id : overData.type === 'Task' ? overData.task.project : null;
+    const overProjectId = getOverProjectId(overData);
 
-    if (!activeProjectId || !overProjectId) {
+    if (activeProjectId === null || activeProjectId === '' || overProjectId === null || overProjectId === '') {
       return;
     }
 
@@ -114,7 +123,7 @@ export const useBoardDnd = (
       return;
     }
 
-    const activeIdx = sourceProject.tasks.findIndex((t) => t._id === activeTask._id);
+    const activeIdx = sourceProject.tasks.findIndex((t) => t._id === draggedTask._id);
     if (activeIdx === -1) {
       return;
     }
@@ -132,21 +141,119 @@ export const useBoardDnd = (
     setProjects(updatedProjects);
   };
 
+  const revertToOriginal = () => {
+    if (originalProjects.current) {
+      setProjects(originalProjects.current);
+    }
+    originalProjects.current = null;
+  };
+
+  const moveTaskWithinProject = (projectId: string, currentIdx: number, overTask: Task): number => {
+    const project = projects.find((p) => p._id === projectId);
+    if (!project) {
+      return currentIdx;
+    }
+    const overIdx = project.tasks.findIndex((t) => t._id === overTask._id);
+    if (overIdx === -1 || currentIdx === overIdx) {
+      return currentIdx;
+    }
+    const newTasks = arrayMove([...project.tasks], currentIdx, overIdx);
+    setProjects(projects.map((p) => (p._id === projectId ? { ...p, tasks: newTasks } : p)));
+    return overIdx;
+  };
+
+  const handleTaskDragEnd = async (movedTask: Task, over: Over) => {
+    const location = findTaskLocation(projects, movedTask._id);
+
+    if (location === null || location.projectId === '') {
+      originalProjects.current = null;
+      return;
+    }
+
+    const currentProjectId = location.projectId;
+    let currentIdx = location.idx;
+
+    if (hasDraggableData(over) && over.data.current.type === 'Task') {
+      const overTask = over.data.current.task;
+
+      if (currentProjectId === overTask.project) {
+        currentIdx = moveTaskWithinProject(currentProjectId, currentIdx, overTask);
+      }
+    }
+
+    const originalProject = originalProjects.current?.find((p) => p.tasks.some((t) => t._id === movedTask._id));
+    const originalIdx = originalProject?.tasks.findIndex((t) => t._id === movedTask._id) ?? -1;
+
+    if (originalProject?._id === currentProjectId && originalIdx === currentIdx) {
+      originalProjects.current = null;
+      return;
+    }
+
+    try {
+      await taskApi.moveTask(movedTask._id, currentProjectId, currentIdx);
+      toast.success(`Task "${movedTask.title}" moved successfully`);
+      originalProjects.current = null;
+    } catch (error) {
+      console.error('Failed to move task:', error);
+      toast.error('Failed to move task. Reverting...');
+      revertToOriginal();
+    }
+  };
+
+  const handleProjectDragEnd = async (activeId: UniqueIdentifier, overId: UniqueIdentifier) => {
+    if (activeId === overId) {
+      originalProjects.current = null;
+      return;
+    }
+
+    const activeProjectIndex = projectsId.indexOf(String(activeId));
+    const overProjectIndex = projectsId.indexOf(String(overId));
+
+    if (activeProjectIndex === -1 || overProjectIndex === -1) {
+      originalProjects.current = null;
+      return;
+    }
+
+    const previousProjects = originalProjects.current ?? [...rawProjects];
+
+    const reorderedProjects = arrayMove(projects, activeProjectIndex, overProjectIndex);
+    const updatedProjects = reorderedProjects.map((project, index) => ({
+      ...project,
+      orderInBoard: index,
+    }));
+
+    setProjects(updatedProjects);
+
+    try {
+      const { projectApi } = await loadProjectApi();
+
+      const updatePromises = updatedProjects.flatMap((project, newIndex) => {
+        const oldProject = previousProjects.find((p) => p._id === project._id);
+        const oldIndex = oldProject?.orderInBoard ?? 0;
+
+        return oldIndex === newIndex ? [] : [projectApi.updateProject(project._id, { orderInBoard: newIndex })];
+      });
+
+      await Promise.all(updatePromises);
+      toast.success('Project order updated successfully');
+      originalProjects.current = null;
+    } catch (error) {
+      console.error('Failed to update project order:', error);
+      toast.error('Failed to update project order. Reverting...');
+      setProjects(previousProjects);
+      originalProjects.current = null;
+    }
+  };
+
   const onDragEnd = async (event: DragEndEvent) => {
     setActiveProject(null);
     setActiveTask(null);
 
     const { active, over } = event;
     if (!over) {
-      if (originalProjects.current) {
-        setProjects(originalProjects.current);
-      }
-      originalProjects.current = null;
+      revertToOriginal();
       return;
     }
-
-    const activeId = active.id;
-    const overId = over.id;
 
     if (!hasDraggableData(active)) {
       originalProjects.current = null;
@@ -155,113 +262,12 @@ export const useBoardDnd = (
 
     const activeData = active.data.current;
 
-    if (activeData?.type === 'Task') {
-      const movedTask = activeData.task;
-
-      let currentProjectId = '';
-      let currentIdx = -1;
-
-      for (const project of projects) {
-        const idx = project.tasks.findIndex((t) => t._id === movedTask._id);
-        if (idx !== -1) {
-          currentProjectId = project._id;
-          currentIdx = idx;
-          break;
-        }
-      }
-
-      if (!currentProjectId || currentIdx === -1) {
-        originalProjects.current = null;
-        return;
-      }
-
-      if (hasDraggableData(over) && over.data.current!.type === 'Task') {
-        const overTask = over.data.current!.task;
-
-        if (currentProjectId === overTask.project) {
-          const project = projects.find((p) => p._id === currentProjectId);
-          if (project) {
-            const overIdx = project.tasks.findIndex((t) => t._id === overTask._id);
-            if (overIdx !== -1 && currentIdx !== overIdx) {
-              const newTasks = arrayMove([...project.tasks], currentIdx, overIdx);
-              const updatedProjects = projects.map((p) => (p._id === currentProjectId ? { ...p, tasks: newTasks } : p));
-              setProjects(updatedProjects);
-              currentIdx = overIdx;
-            }
-          }
-        }
-      }
-
-      const originalProject = originalProjects.current?.find((p) => p.tasks.some((t) => t._id === movedTask._id));
-      const originalIdx = originalProject?.tasks.findIndex((t) => t._id === movedTask._id) ?? -1;
-
-      if (originalProject?._id === currentProjectId && originalIdx === currentIdx) {
-        originalProjects.current = null;
-        return;
-      }
-
-      try {
-        await taskApi.moveTask(movedTask._id, currentProjectId, currentIdx);
-        toast.success(`Task "${movedTask.title}" moved successfully`);
-        originalProjects.current = null;
-      } catch (error) {
-        console.error('Failed to move task:', error);
-        toast.error('Failed to move task. Reverting...');
-        if (originalProjects.current) {
-          setProjects(originalProjects.current);
-        }
-        originalProjects.current = null;
-      }
+    if (activeData.type === 'Task') {
+      await handleTaskDragEnd(activeData.task, over);
       return;
     }
 
-    if (activeData?.type === 'Project') {
-      if (activeId === overId) {
-        originalProjects.current = null;
-        return;
-      }
-
-      const activeProjectIndex = projectsId.indexOf(activeId as string);
-      const overProjectIndex = projectsId.indexOf(overId as string);
-
-      if (activeProjectIndex === -1 || overProjectIndex === -1) {
-        originalProjects.current = null;
-        return;
-      }
-
-      const previousProjects = originalProjects.current || [...rawProjects];
-
-      const reorderedProjects = arrayMove(projects, activeProjectIndex, overProjectIndex);
-      const updatedProjects = reorderedProjects.map((project, index) => ({
-        ...project,
-        orderInBoard: Number(index),
-      }));
-
-      setProjects(updatedProjects);
-
-      try {
-        const { projectApi } = await import('@/lib/api/project-api');
-
-        const updatePromises = updatedProjects.map(async (project, newIndex) => {
-          const oldProject = previousProjects.find((p) => p._id === project._id);
-          const oldIndex = oldProject?.orderInBoard ?? 0;
-
-          if (oldIndex !== newIndex) {
-            return await projectApi.updateProject(project._id, { orderInBoard: newIndex });
-          }
-          return;
-        });
-
-        await Promise.all(updatePromises);
-        toast.success('Project order updated successfully');
-        originalProjects.current = null;
-      } catch (error) {
-        console.error('Failed to update project order:', error);
-        toast.error('Failed to update project order. Reverting...');
-        setProjects(previousProjects);
-        originalProjects.current = null;
-      }
-    }
+    await handleProjectDragEnd(active.id, over.id);
   };
 
   const onDragCancel = () => {

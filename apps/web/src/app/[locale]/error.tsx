@@ -14,7 +14,7 @@ const LocaleError = ({ error, reset }: { error: Error & { digest?: string }; res
       gap="$4">
       <H2>{t('title')}</H2>
       <Paragraph color="$color10">{error.message}</Paragraph>
-      {error.digest ? (
+      {error.digest !== undefined && error.digest !== '' ? (
         <Paragraph
           size="$2"
           color="$color10">

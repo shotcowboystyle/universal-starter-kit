@@ -5,12 +5,12 @@ import { NAVIGATION_DELAY_MS, TOAST_DURATION } from '@/constants/ui';
 describe('ui constants', () => {
   it('should have correct TOAST_DURATION value', () => {
     expect(TOAST_DURATION).toBe(1000);
-    expect(typeof TOAST_DURATION).toBe('number');
+    expect(TOAST_DURATION).toBeTypeOf('number');
   });
 
   it('should have correct NAVIGATION_DELAY_MS value', () => {
     expect(NAVIGATION_DELAY_MS).toBe(500);
-    expect(typeof NAVIGATION_DELAY_MS).toBe('number');
+    expect(NAVIGATION_DELAY_MS).toBeTypeOf('number');
   });
 
   it('should have positive values', () => {

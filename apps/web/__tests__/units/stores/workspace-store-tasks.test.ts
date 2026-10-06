@@ -1,27 +1,37 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { projectApi } from '@/lib/api/project-api';
+import type { taskApi } from '@/lib/api/task-api';
 import { useWorkspaceStore } from '@/stores/workspace-store';
 import { TaskStatus } from '@/types/db-interface';
 import type { Project, Task } from '@/types/db-interface';
+import type { CreateTaskInput } from '@/types/task-api';
 
 // Mock the API modules
-vi.mock('@/lib/api/project-api', () => ({
-  projectApi: {
-    getProjects: vi.fn(),
-    createProject: vi.fn(),
-    updateProject: vi.fn(),
-    deleteProject: vi.fn(),
+const mockApi = vi.hoisted(() => ({
+  project: {
+    getProjects: vi.fn<typeof projectApi.getProjects>(),
+    createProject: vi.fn<typeof projectApi.createProject>(),
+    updateProject: vi.fn<typeof projectApi.updateProject>(),
+    deleteProject: vi.fn<typeof projectApi.deleteProject>(),
+  },
+  task: {
+    getTasks: vi.fn<typeof taskApi.getTasks>(),
+    createTask: vi.fn<typeof taskApi.createTask>(),
+    updateTask: vi.fn<typeof taskApi.updateTask>(),
+    deleteTask: vi.fn<typeof taskApi.deleteTask>(),
   },
 }));
 
-vi.mock('@/lib/api/task-api', () => ({
-  taskApi: {
-    getTasks: vi.fn(),
-    createTask: vi.fn(),
-    updateTask: vi.fn(),
-    deleteTask: vi.fn(),
-  },
-}));
+vi.mock(import('@/lib/api/project-api'), async (importOriginal) => {
+  const actual = await importOriginal();
+  return { ...actual, projectApi: { ...actual.projectApi, ...mockApi.project } };
+});
+
+vi.mock(import('@/lib/api/task-api'), async (importOriginal) => {
+  const actual = await importOriginal();
+  return { ...actual, taskApi: { ...actual.taskApi, ...mockApi.task } };
+});
 
 describe('workspace-store - Task actions', () => {
   const mockUserInfo: any = { _id: 'user-1', name: 'John', email: 'john@example.com' };
@@ -46,7 +56,6 @@ describe('workspace-store - Task actions', () => {
 
   describe('Task actions', () => {
     it('should fetch tasks by project', async () => {
-      const { taskApi } = await import('@/lib/api/task-api');
       const mockTasks: Task[] = [
         {
           _id: 'task-1',
@@ -80,7 +89,7 @@ describe('workspace-store - Task actions', () => {
         projects: [mockProject],
       });
 
-      vi.mocked(taskApi.getTasks).mockResolvedValue(mockTasks);
+      mockApi.task.getTasks.mockResolvedValue(mockTasks);
 
       const store = useWorkspaceStore.getState();
       const tasks = await store.fetchTasksByProject('project-1');
@@ -93,8 +102,7 @@ describe('workspace-store - Task actions', () => {
     });
 
     it('should return empty array when fetching tasks fails', async () => {
-      const { taskApi } = await import('@/lib/api/task-api');
-      vi.mocked(taskApi.getTasks).mockRejectedValue(new Error('Failed to fetch'));
+      mockApi.task.getTasks.mockRejectedValue(new Error('Failed to fetch'));
 
       const store = useWorkspaceStore.getState();
       const tasks = await store.fetchTasksByProject('project-1');
@@ -110,8 +118,7 @@ describe('workspace-store - Task actions', () => {
     });
 
     it('should return empty array when getTasks does not return an array', async () => {
-      const { taskApi } = await import('@/lib/api/task-api');
-      vi.mocked(taskApi.getTasks).mockResolvedValue(null as any);
+      mockApi.task.getTasks.mockResolvedValue(null as any);
 
       const store = useWorkspaceStore.getState();
       const tasks = await store.fetchTasksByProject('project-1');
@@ -120,7 +127,6 @@ describe('workspace-store - Task actions', () => {
     });
 
     it('should add a new task', async () => {
-      const { projectApi } = await import('@/lib/api/project-api');
       const mockTask: Task = {
         _id: 'task-new',
         title: 'New Task',
@@ -154,8 +160,8 @@ describe('workspace-store - Task actions', () => {
         projects: [mockProject],
       });
 
-      const createTaskMock = vi.fn().mockResolvedValue(mockTask);
-      vi.mocked(projectApi.getProjects).mockResolvedValue([{ ...mockProject, tasks: [mockTask] }]);
+      const createTaskMock = vi.fn<(task: CreateTaskInput) => Promise<Task>>().mockResolvedValue(mockTask);
+      mockApi.project.getProjects.mockResolvedValue([{ ...mockProject, tasks: [mockTask] }]);
 
       const store = useWorkspaceStore.getState();
       await store.addTask('project-1', 'New Task', TaskStatus.TODO, createTaskMock, 'New Description');
@@ -177,7 +183,7 @@ describe('workspace-store - Task actions', () => {
         currentBoardId: 'board-1',
       });
 
-      const createTaskMock = vi.fn();
+      const createTaskMock = vi.fn<(task: CreateTaskInput) => Promise<Task>>();
       const store = useWorkspaceStore.getState();
 
       await expect(store.addTask('project-1', 'New Task', TaskStatus.TODO, createTaskMock)).rejects.toMatchObject({
@@ -191,7 +197,7 @@ describe('workspace-store - Task actions', () => {
         currentBoardId: null,
       });
 
-      const createTaskMock = vi.fn();
+      const createTaskMock = vi.fn<(task: CreateTaskInput) => Promise<Task>>();
       const store = useWorkspaceStore.getState();
 
       await expect(store.addTask('project-1', 'New Task', TaskStatus.TODO, createTaskMock)).rejects.toMatchObject({
@@ -200,9 +206,6 @@ describe('workspace-store - Task actions', () => {
     });
 
     it('should update a task', async () => {
-      const { taskApi } = await import('@/lib/api/task-api');
-      const { projectApi } = await import('@/lib/api/project-api');
-
       const mockProject: Project = {
         _id: 'project-1',
         title: 'Project 1',
@@ -222,13 +225,13 @@ describe('workspace-store - Task actions', () => {
         projects: [mockProject],
       });
 
-      vi.mocked(taskApi.updateTask).mockResolvedValue(undefined as any);
-      vi.mocked(projectApi.getProjects).mockResolvedValue([mockProject]);
+      mockApi.task.updateTask.mockResolvedValue(undefined as any);
+      mockApi.project.getProjects.mockResolvedValue([mockProject]);
 
       const store = useWorkspaceStore.getState();
       await store.updateTask('task-1', 'Updated Title', TaskStatus.IN_PROGRESS, 'Updated Description');
 
-      expect(taskApi.updateTask).toHaveBeenCalledWith(
+      expect(mockApi.task.updateTask).toHaveBeenCalledWith(
         'task-1',
         expect.objectContaining({
           title: 'Updated Title',
@@ -253,9 +256,6 @@ describe('workspace-store - Task actions', () => {
     });
 
     it('should remove a task', async () => {
-      const { taskApi } = await import('@/lib/api/task-api');
-      const { projectApi } = await import('@/lib/api/project-api');
-
       const mockTask: Task = {
         _id: 'task-1',
         title: 'Task 1',
@@ -288,21 +288,18 @@ describe('workspace-store - Task actions', () => {
         projects: [mockProject],
       });
 
-      vi.mocked(taskApi.deleteTask).mockResolvedValue(undefined);
-      vi.mocked(projectApi.getProjects).mockResolvedValue([{ ...mockProject, tasks: [] }]);
+      mockApi.task.deleteTask.mockResolvedValue();
+      mockApi.project.getProjects.mockResolvedValue([{ ...mockProject, tasks: [] }]);
 
       const store = useWorkspaceStore.getState();
       await store.removeTask('task-1');
 
-      expect(taskApi.deleteTask).toHaveBeenCalledWith('task-1');
+      expect(mockApi.task.deleteTask).toHaveBeenCalledWith('task-1');
       const state = useWorkspaceStore.getState();
       expect(state.projects[0].tasks).toHaveLength(0);
     });
 
     it('should drag task to another project', async () => {
-      const { taskApi } = await import('@/lib/api/task-api');
-      const { projectApi } = await import('@/lib/api/project-api');
-
       const mockTask: Task = {
         _id: 'task-1',
         title: 'Task 1',
@@ -323,15 +320,15 @@ describe('workspace-store - Task actions', () => {
         projects: [],
       });
 
-      const getTaskMock = vi.fn().mockResolvedValue(mockTask);
-      vi.mocked(taskApi.updateTask).mockResolvedValue(undefined as any);
-      vi.mocked(projectApi.getProjects).mockResolvedValue([]);
+      const getTaskMock = vi.fn<(taskId: string) => Promise<Task | undefined>>().mockResolvedValue(mockTask);
+      mockApi.task.updateTask.mockResolvedValue(undefined as any);
+      mockApi.project.getProjects.mockResolvedValue([]);
 
       const store = useWorkspaceStore.getState();
       await store.dragTaskOnProject('task-1', 'project-2', getTaskMock);
 
       expect(getTaskMock).toHaveBeenCalledWith('task-1');
-      expect(taskApi.updateTask).toHaveBeenCalledWith(
+      expect(mockApi.task.updateTask).toHaveBeenCalledWith(
         'task-1',
         expect.objectContaining({
           projectId: 'project-2',
@@ -344,7 +341,7 @@ describe('workspace-store - Task actions', () => {
         currentBoardId: 'board-1',
       });
 
-      const getTaskMock = vi.fn().mockResolvedValue(undefined);
+      const getTaskMock = vi.fn<(taskId: string) => Promise<Task | undefined>>();
       const store = useWorkspaceStore.getState();
 
       await expect(store.dragTaskOnProject('task-1', 'project-2', getTaskMock)).rejects.toMatchObject({

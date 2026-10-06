@@ -4,17 +4,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import LanguageSwitcher from '@/components/layout/LanguageSwitcher';
 
-const mockReplace = vi.fn();
-const mockUsePathname = vi.fn();
-const mockUseParams = vi.fn();
+const mockReplace = vi.fn<(...args: unknown[]) => void>();
+const mockUsePathname = vi.fn<() => string>();
+const mockUseParams = vi.fn<() => { locale: string }>();
 
-vi.mock('@/i18n/navigation', () => ({
-  useRouter: () => ({ replace: mockReplace, push: vi.fn(), refresh: vi.fn() }),
+vi.mock(import('@/i18n/navigation'), () => ({
+  useRouter: (() => ({ replace: mockReplace, push: vi.fn<() => void>(), refresh: vi.fn<() => void>() })) as never,
   usePathname: () => mockUsePathname(),
 }));
 
-vi.mock('next/navigation', () => ({
-  useParams: () => mockUseParams(),
+vi.mock(import('next/navigation'), () => ({
+  useParams: (() => mockUseParams()) as never,
 }));
 
 const pick = async (label: string) => {
@@ -23,7 +23,7 @@ const pick = async (label: string) => {
   fireEvent.click(item);
 };
 
-describe('LanguageSwitcher', () => {
+describe(LanguageSwitcher, () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUsePathname.mockReturnValue('/boards');

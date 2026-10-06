@@ -1,9 +1,40 @@
+import { z } from 'zod';
+
 import { API_URL } from '@/constants/routes';
+import { parseJson } from '@/lib/api/parse-json';
 import type { CreateBoardInput, UpdateBoardInput } from '@/types/board-api';
 import type { Board } from '@/types/db-interface';
 
 // API Endpoint
 const BOARDS_ENDPOINT = `${API_URL}/boards`;
+
+const DEFAULT_ERROR_MESSAGE = 'Request failed';
+
+const errorBodySchema = z.object({ message: z.string().optional() });
+
+const toHeaderEntries = (inputHeaders?: HeadersInit): [string, string][] => {
+  if (inputHeaders === undefined) {
+    return [];
+  }
+  if (inputHeaders instanceof Headers) {
+    return [...inputHeaders.entries()];
+  }
+  return Array.isArray(inputHeaders) ? inputHeaders : Object.entries(inputHeaders);
+};
+
+const firstNonEmpty = (...values: (string | undefined)[]) =>
+  values.find((value) => value !== undefined && value !== '') ?? DEFAULT_ERROR_MESSAGE;
+
+const getErrorMessage = (responseText: string, statusText: string) => {
+  try {
+    const parsed: unknown = responseText === '' ? {} : JSON.parse(responseText);
+    const result = errorBodySchema.safeParse(parsed);
+    return firstNonEmpty(result.success ? result.data.message : undefined, statusText);
+  } catch (parseError) {
+    console.error('Error parsing error response:', parseError);
+    return firstNonEmpty(responseText);
+  }
+};
 
 // Helper function to handle fetch requests
 const fetchWithAuth = async <T>(url: string, options: RequestInit = {}): Promise<T> => {
@@ -11,61 +42,28 @@ const fetchWithAuth = async <T>(url: string, options: RequestInit = {}): Promise
     // Get token from localStorage for Authorization header
     const token = localStorage.getItem('auth_token');
 
-    // Helper to convert headers to Record<string, string>
-    const getHeadersAsRecord = (
-      inputHeaders?: Headers | string[][] | Record<string, string>,
-    ): Record<string, string> => {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-
-      if (!inputHeaders) {
-        return headers;
-      }
-
-      if (inputHeaders instanceof Headers) {
-        inputHeaders.forEach((value, key) => {
-          headers[key] = value;
-        });
-      } else if (Array.isArray(inputHeaders)) {
-        inputHeaders.forEach(([key, value]) => {
-          if (typeof value === 'string') {
-            headers[key] = value;
-          }
-        });
-      } else {
-        Object.entries(inputHeaders).forEach(([key, value]) => {
-          if (typeof value === 'string') {
-            headers[key] = value;
-          }
-        });
-      }
-
-      return headers;
-    };
-
-    const baseHeaders = getHeadersAsRecord(options.headers);
+    const headers = new Map<string, string>([['Content-Type', 'application/json']]);
+    for (const [key, value] of toHeaderEntries(options.headers)) {
+      headers.set(key, value);
+    }
 
     // Add Authorization header if token exists
-    if (token) {
-      baseHeaders.Authorization = `Bearer ${token}`;
+    if (token !== null && token !== '') {
+      headers.set('Authorization', `Bearer ${token}`);
     }
+    const baseHeaders = Object.fromEntries(headers);
 
     const response = await fetch(url, {
       ...options,
-      credentials: 'include', // Still include for cookie fallback
+      // Still include for cookie fallback
+      credentials: 'include',
       headers: baseHeaders,
     });
 
     const responseText = await response.text();
 
     if (!response.ok) {
-      let errorMessage = 'Request failed';
-      try {
-        const errorData = responseText ? JSON.parse(responseText) : {};
-        errorMessage = errorData.message || response.statusText || 'Request failed';
-      } catch (parseError) {
-        console.error('Error parsing error response:', parseError);
-        errorMessage = responseText || 'Request failed';
-      }
+      const errorMessage = getErrorMessage(responseText, response.statusText);
 
       if (typeof window !== 'undefined' && response.status === 401) {
         console.error('Authentication error - redirecting to login');
@@ -79,7 +77,7 @@ const fetchWithAuth = async <T>(url: string, options: RequestInit = {}): Promise
     if (!responseText) {
       throw new Error('Empty response from server');
     }
-    return JSON.parse(responseText) as T;
+    return parseJson<T>(responseText);
   } catch (error) {
     console.error('Fetch error:', error);
     throw error;
@@ -119,7 +117,7 @@ export const boardApi = {
 
   // Delete a board
   async deleteBoard(id: string): Promise<void> {
-    await fetchWithAuth<void>(`${BOARDS_ENDPOINT}/${id}`, {
+    await fetchWithAuth(`${BOARDS_ENDPOINT}/${id}`, {
       method: 'DELETE',
     });
   },

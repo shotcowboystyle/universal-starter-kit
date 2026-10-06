@@ -19,22 +19,23 @@ export const BoardProvider = ({ children }: { children: React.ReactNode }) => {
   const currentBoardId = useWorkspaceStore((state) => state.currentBoardId);
   const { user: currentUser, isAuthenticated } = useAuth();
   const { myBoards, teamBoards } = useBoards();
-  const currentUserId = currentUser?._id || '';
+  const currentUserId = currentUser?._id ?? '';
 
   const isBoardOwner = useMemo(() => {
-    if (!currentBoardId || !currentUserId || !isAuthenticated) {
+    if (currentBoardId == null || currentBoardId === '' || currentUserId === '' || !isAuthenticated) {
       return false;
     }
     const currentBoard = myBoards.find((board) => board._id === currentBoardId);
     if (!currentBoard) {
       return false;
     }
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- API union is `string | populated object`; a typeof check is the only way to tell them apart
     const ownerId = typeof currentBoard.owner === 'string' ? currentBoard.owner : currentBoard.owner?._id;
     return ownerId === currentUserId;
   }, [currentBoardId, currentUserId, myBoards, isAuthenticated]);
 
   const isBoardMember = useMemo(() => {
-    if (!currentBoardId || !currentUserId || !isAuthenticated) {
+    if (currentBoardId == null || currentBoardId === '' || currentUserId === '' || !isAuthenticated) {
       return false;
     }
     const currentBoard = [...myBoards, ...teamBoards].find((board) => board._id === currentBoardId);

@@ -14,7 +14,8 @@ const makeQueryClient = () =>
   new QueryClient({
     defaultOptions: {
       queries: {
-        staleTime: 5 * 60 * 1000, // 5 minutes
+        // 5 minutes
+        staleTime: 5 * 60 * 1000,
         retry: 1,
         refetchOnWindowFocus: false,
       },
@@ -39,6 +40,7 @@ export const ClientProviders = ({
   children: React.ReactNode;
   initialScheme?: ColorScheme;
 }) => {
+  // oxlint-disable-next-line react/hook-use-state -- lazy-init singleton; the setter is never needed
   const [queryClient] = useState(makeQueryClient);
   return (
     <QueryClientProvider client={queryClient}>

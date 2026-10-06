@@ -6,9 +6,9 @@ import { userApi } from '../user-api';
 
 export const useUser = (id?: string) =>
   useQuery({
-    queryKey: USER_KEYS.detail(id || ''),
-    queryFn: async () => await userApi.getUserById(id || ''),
-    enabled: !!id,
+    queryKey: USER_KEYS.detail(id ?? ''),
+    queryFn: async () => await userApi.getUserById(id ?? ''),
+    enabled: id !== undefined && id !== '',
   });
 
 export const useUserSearch = (query: string) =>
@@ -16,5 +16,6 @@ export const useUserSearch = (query: string) =>
     queryKey: USER_KEYS.list({ search: query }),
     queryFn: async () => await userApi.searchUsers(query),
     enabled: query.length > 0,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    // 5 minutes
+    staleTime: 5 * 60 * 1000,
   });

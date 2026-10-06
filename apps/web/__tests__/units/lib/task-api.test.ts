@@ -5,22 +5,31 @@ import { TaskStatus } from '@/types/db-interface';
 import type { Task } from '@/types/db-interface';
 
 // Mock fetch
-const mockFetch = vi.fn();
-global.fetch = mockFetch;
+interface MockFetchResponse {
+  ok: boolean;
+  status?: number;
+  statusText?: string;
+  headers?: Headers;
+  json?: () => Promise<object | null>;
+  text?: () => Promise<string>;
+}
+
+const mockFetch = vi.fn<(...args: unknown[]) => Promise<MockFetchResponse>>();
+vi.stubGlobal('fetch', mockFetch);
 
 // Mock localStorage
 const localStorageMock = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
+  getItem: vi.fn<(key: string) => string | null>(),
+  setItem: vi.fn<(key: string, value: string) => void>(),
+  removeItem: vi.fn<(key: string) => void>(),
+  clear: vi.fn<() => void>(),
 };
 Object.defineProperty(global, 'localStorage', {
   value: localStorageMock,
   writable: true,
 });
 
-describe('taskApi', () => {
+describe('task api', () => {
   const mockUserInfo: any = { _id: 'user-1', name: 'John', email: 'john@example.com' };
   const mockTask: Task = {
     _id: 'task-1',
@@ -254,9 +263,7 @@ describe('taskApi', () => {
         json: async () => ({}),
       });
 
-      const result = await taskApi.deleteTask('task-1');
-
-      expect(result).toBeUndefined();
+      await expect(taskApi.deleteTask('task-1')).resolves.toBeUndefined();
     });
   });
 

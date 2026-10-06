@@ -25,7 +25,7 @@ const BoardContent = () => {
 
   const projects = useMemo(
     () =>
-      [...rawProjects].sort((a, b) => {
+      rawProjects.toSorted((a, b) => {
         const orderA = a.orderInBoard ?? 0;
         const orderB = b.orderInBoard ?? 0;
         return orderA - orderB;
@@ -42,8 +42,9 @@ const BoardContent = () => {
     if (!Array.isArray(tasks)) {
       return [];
     }
+    // SAFETY: TaskStatus is a string enum, so its values are assignable to string
     return tasks.filter((task) => {
-      if (filter.status && task.status !== filter.status) {
+      if (filter.status !== null && filter.status !== '' && (task.status as string) !== filter.status) {
         return false;
       }
 
@@ -69,7 +70,9 @@ const BoardContent = () => {
         }}
         onDragStart={onDragStart}
         onDragOver={onDragOver}
-        onDragEnd={onDragEnd}
+        onDragEnd={(event) => {
+          void onDragEnd(event);
+        }}
         onDragCancel={onDragCancel}>
         <YStack
           marginBottom="$4"

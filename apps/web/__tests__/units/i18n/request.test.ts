@@ -1,14 +1,20 @@
+import type { getRequestConfig } from 'next-intl/server';
 import { describe, expect, it, vi } from 'vitest';
 
 // Mock next-intl before importing the module
+// oxlint-disable-next-line vitest/prefer-import-in-mock -- hasLocale is a generic type guard; a plain includes() stub can't satisfy its signature
 vi.mock('next-intl', () => ({
-  hasLocale: vi.fn((locales, locale) => locales.includes(locale)),
+  hasLocale: vi.fn<(locales: readonly string[], locale: string) => boolean>((locales, locale) =>
+    locales.includes(locale),
+  ),
 }));
 
-vi.mock('next-intl/server', () => ({
-  getRequestConfig: vi.fn((fn) => fn),
+vi.mock(import('next-intl/server'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  getRequestConfig: vi.fn<typeof getRequestConfig>((fn) => fn),
 }));
 
+// oxlint-disable-next-line vitest/prefer-import-in-mock -- routing stub only carries locales/defaultLocale, not a full defineRouting result
 vi.mock('@/i18n/routing', () => ({
   routing: {
     locales: ['en', 'zh'],
@@ -17,6 +23,7 @@ vi.mock('@/i18n/routing', () => ({
 }));
 
 // Mock @repo/i18n package
+// oxlint-disable-next-line vitest/prefer-import-in-mock -- partial i18n stub with test-only locales and messages
 vi.mock('@repo/i18n', () => ({
   locales: ['en', 'de'],
   defaultLocale: 'en',
@@ -30,7 +37,7 @@ describe('i18n request config', () => {
   it('should export getRequestConfig', async () => {
     const requestModule = await import('@/i18n/request');
     expect(requestModule.default).toBeDefined();
-    expect(typeof requestModule.default).toBe('function');
+    expect(requestModule.default).toBeTypeOf('function');
   });
 
   it('should handle valid locale', async () => {

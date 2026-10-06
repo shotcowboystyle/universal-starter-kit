@@ -4,36 +4,36 @@ import { describe, expect, it, vi } from 'vitest';
 
 import RootWrapper from '@/components/layout/RootWrapper';
 
-vi.mock('@/components/layout/AppSidebar', () => ({
+vi.mock(import('@/components/layout/AppSidebar'), () => ({
   default: () => <div data-testid="app-sidebar">Sidebar</div>,
 }));
 
-vi.mock('@/components/layout/Header', () => ({
-  default: ({ onToggleSidebar }: { onToggleSidebar: () => void }) => (
+vi.mock(import('@/components/layout/Header'), () => ({
+  default: (({ onToggleSidebar }: { onToggleSidebar?: () => void }) => (
     <button
       data-testid="header"
       onClick={onToggleSidebar}
       type="button">
       Header
     </button>
-  ),
+  )) as never,
 }));
 
-vi.mock('@/constants/ui', () => ({
-  TOAST_DURATION: 3000,
+vi.mock(import('@/constants/ui'), () => ({
+  TOAST_DURATION: 3000 as never,
 }));
 
-vi.mock('sonner', () => ({
-  Toaster: (props: { position: string }) => (
+vi.mock(import('sonner'), () => ({
+  Toaster: ((props: { position: string }) => (
     <div
       data-testid="toaster"
       data-position={props.position}>
       Toaster
     </div>
-  ),
+  )) as never,
 }));
 
-describe('RootWrapper', () => {
+describe(RootWrapper, () => {
   it('renders sidebar, header, children and toaster', () => {
     renderWithProviders(
       <RootWrapper>

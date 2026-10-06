@@ -3,7 +3,7 @@
 import { Button, ConfirmDialog, Dialog, DialogContent, DialogOverlay, DropdownMenu, XStack } from '@repo/ui';
 import { MoreHorizontal } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import * as React from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import type { z } from 'zod';
 
@@ -17,7 +17,8 @@ interface ProjectActionsProps {
   id: string;
   title: string;
   description?: string;
-  ownerId: string; // Add ownerId to check permissions
+  // Add ownerId to check permissions
+  ownerId: string;
 }
 
 type ProjectFormData = z.infer<typeof projectSchema>;
@@ -26,8 +27,8 @@ export const ProjectActions = ({ id, title, description, ownerId }: ProjectActio
   // Check if current user is the project owner
   const { userId } = useWorkspaceStore();
   const isOwner = userId === ownerId;
-  const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
-  const [editEnable, setEditEnable] = React.useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [editEnable, setEditEnable] = useState(false);
   const updateProject = useWorkspaceStore((state) => state.updateProject);
   const removeProject = useWorkspaceStore((state) => state.removeProject);
   const deleteProjectMutation = useDeleteProject();
@@ -37,7 +38,7 @@ export const ProjectActions = ({ id, title, description, ownerId }: ProjectActio
   const tKanban = useTranslations('kanban');
 
   const onSubmit = async (values: ProjectFormData) => {
-    if (!userId) {
+    if (userId == null || userId === '') {
       toast.error(t('userNotAuthenticated'));
       return;
     }
@@ -46,12 +47,13 @@ export const ProjectActions = ({ id, title, description, ownerId }: ProjectActio
       await updateProject(
         id,
         values.title,
-        values.description ?? undefined, // Convert null to undefined
-        async (id, data) => {
+        // Convert null to undefined
+        values.description ?? undefined,
+        async (projectId, data) => {
           const updateData = {
-            id,
+            id: projectId,
             title: data.title,
-            description: data.description || null,
+            description: data.description == null || data.description === '' ? null : data.description,
             owner: userId,
           };
 
@@ -61,7 +63,7 @@ export const ProjectActions = ({ id, title, description, ownerId }: ProjectActio
       toast.success(t('updateSuccess'));
       setEditEnable(false);
     } catch (error) {
-      toast.error(t('updateFailed', { error: (error as Error).message }));
+      toast.error(t('updateFailed', { error: error instanceof Error ? error.message : String(error) }));
     }
   };
 
@@ -72,7 +74,7 @@ export const ProjectActions = ({ id, title, description, ownerId }: ProjectActio
       });
       toast.success(t('deleteSuccess', { title }));
     } catch (error) {
-      toast.error(t('deleteFailed', { error: (error as Error).message }));
+      toast.error(t('deleteFailed', { error: error instanceof Error ? error.message : String(error) }));
     }
   };
 
@@ -153,7 +155,9 @@ export const ProjectActions = ({ id, title, description, ownerId }: ProjectActio
         body={t('confirmDeleteDescription')}
         confirmLabel={t('delete')}
         cancelLabel={t('cancel')}
-        onConfirm={onConfirmDelete}
+        onConfirm={() => {
+          void onConfirmDelete();
+        }}
       />
     </>
   );

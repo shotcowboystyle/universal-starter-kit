@@ -4,22 +4,23 @@ import { boardApi } from '@/lib/api/board-api';
 import type { Board } from '@/types/db-interface';
 
 // Mock fetch
-const mockFetch = vi.fn();
-global.fetch = mockFetch;
+const mockFetch = vi.fn<(input: string, init?: RequestInit) => Promise<Partial<Response>>>();
+// SAFETY: tests only provide the Response members boardApi reads
+global.fetch = mockFetch as typeof fetch;
 
 // Mock localStorage
 const localStorageMock = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
+  getItem: vi.fn<(key: string) => string | null>(),
+  setItem: vi.fn<(key: string, value: string) => void>(),
+  removeItem: vi.fn<(key: string) => void>(),
+  clear: vi.fn<() => void>(),
 };
 Object.defineProperty(global, 'localStorage', {
   value: localStorageMock,
   writable: true,
 });
 
-describe('boardApi', () => {
+describe('board API', () => {
   const mockBoard: Board = {
     _id: 'board-1',
     title: 'Test Board',
@@ -309,8 +310,8 @@ describe('boardApi', () => {
 
       await boardApi.getBoards();
 
-      const call = mockFetch.mock.calls[0];
-      const { headers } = call[1];
+      const [[, init]] = mockFetch.mock.calls;
+      const headers = init?.headers;
 
       expect(headers).toHaveProperty('Content-Type', 'application/json');
       expect(headers).toHaveProperty('Authorization', 'Bearer test-token');

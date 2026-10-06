@@ -1,16 +1,18 @@
 import { Button } from '@repo/forms';
 import { renderWithProviders } from '@repo/test-utils';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
+import type { useTranslations } from 'next-intl';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { BoardForm } from '@/components/kanban/board/BoardForm';
 
-vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string) => key,
+// SAFETY: the test double implements only the members the code under test calls
+vi.mock(import('next-intl'), () => ({
+  useTranslations: (() => (key: string) => key) as typeof useTranslations,
 }));
 
 const renderForm = (props: Partial<React.ComponentProps<typeof BoardForm>> = {}) => {
-  const onSubmit = vi.fn().mockResolvedValue(undefined);
+  const onSubmit = vi.fn<(values: { title: string; description?: string }) => Promise<void>>().mockResolvedValue();
   renderWithProviders(
     <BoardForm
       onSubmit={onSubmit}
@@ -25,7 +27,7 @@ const renderForm = (props: Partial<React.ComponentProps<typeof BoardForm>> = {})
   return { onSubmit };
 };
 
-describe('BoardForm', () => {
+describe(BoardForm, () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

@@ -27,6 +27,8 @@ export interface TaskDragData {
   task: Task;
 }
 
+const TASK_NAMESPACE = 'kanban.task';
+
 const STATUS_COLOR: Record<TaskStatus, ChipColor> = {
   TODO: 'gray',
   IN_PROGRESS: 'blue',
@@ -35,19 +37,19 @@ const STATUS_COLOR: Record<TaskStatus, ChipColor> = {
 
 const getLastField = (task: Task): string => {
   const visibleFields = [];
-  if (task.creator) {
+  if (task.creator != null) {
     visibleFields.push('creator');
   }
-  if (task.lastModifier) {
+  if (task.lastModifier != null) {
     visibleFields.push('lastModifier');
   }
-  if (task.assignee) {
+  if (task.assignee != null) {
     visibleFields.push('assignee');
   }
   if (task.dueDate) {
     visibleFields.push('dueDate');
   }
-  if (task.description) {
+  if (task.description != null && task.description !== '') {
     visibleFields.push('description');
   }
 
@@ -66,16 +68,93 @@ const InfoRow = ({ divider, children }: { divider: boolean; children: ReactNode 
   </XStack>
 );
 
-export const TaskCard = ({ task, isOverlay = false, onUpdate, isDragEnabled = false }: TaskCardProps) => {
-  const t = useTranslations('kanban.task');
+const ICON_PROPS = { size: 16, 'aria-hidden': true, style: { flexShrink: 0, marginTop: 2 } };
 
+const TaskStatusChip = ({ status }: { status: Task['status'] }) => {
+  const t = useTranslations(TASK_NAMESPACE);
+  const statusLabel: Record<TaskStatus, string> = {
+    TODO: t('statusTodo'),
+    IN_PROGRESS: t('statusInProgress'),
+    DONE: t('statusDone'),
+  };
+  return (
+    <Chip
+      variant="solid"
+      size="$2"
+      color={status ? STATUS_COLOR[status] : 'gray'}>
+      {status ? statusLabel[status] : t('noStatus')}
+    </Chip>
+  );
+};
+
+const TaskInfoRows = ({ task, lastField }: { task: Task; lastField: string }) => {
+  const t = useTranslations(TASK_NAMESPACE);
+  return (
+    <>
+      {task.creator != null && (
+        <InfoRow divider={lastField !== 'creator'}>
+          <UserIcon {...ICON_PROPS} />
+          <Text
+            fontSize="$3"
+            color="$color10">
+            {t('createdBy', { name: task.creator.name })}
+          </Text>
+        </InfoRow>
+      )}
+      {task.lastModifier != null && (
+        <InfoRow divider={lastField !== 'lastModifier'}>
+          <UserIcon {...ICON_PROPS} />
+          <Text
+            fontSize="$3"
+            color="$color10">
+            {t('lastModifiedBy', { name: task.lastModifier.name })}
+          </Text>
+        </InfoRow>
+      )}
+      {task.assignee != null && (
+        <InfoRow divider={lastField !== 'assignee'}>
+          <UserIcon {...ICON_PROPS} />
+          <Text
+            fontSize="$3"
+            color="$color10">
+            {t('assignee', { name: task.assignee.name })}
+          </Text>
+        </InfoRow>
+      )}
+      {task.dueDate ? (
+        <InfoRow divider={lastField !== 'dueDate'}>
+          <Calendar1Icon {...ICON_PROPS} />
+          <Text
+            fontSize="$3"
+            color="$color10">
+            {t('dueDate')}: {format(new Date(task.dueDate), 'yyyy/MM/dd')}
+          </Text>
+        </InfoRow>
+      ) : null}
+      {task.description != null && task.description !== '' ? (
+        <InfoRow divider={false}>
+          <FileTextIcon {...ICON_PROPS} />
+          <Paragraph
+            fontSize="$3"
+            color="$color10"
+            testID="task-card-description">
+            {task.description}
+          </Paragraph>
+        </InfoRow>
+      ) : null}
+    </>
+  );
+};
+
+export const TaskCard = ({ task, isOverlay = false, onUpdate, isDragEnabled = false }: TaskCardProps) => {
   const { setNodeRef, attributes, listeners, transform, transition, isDragging } = useSortable({
     id: task?._id,
     data: {
       type: 'Task',
       task,
     } satisfies TaskDragData,
-    disabled: isOverlay || !isDragEnabled, // Disable drag if not enabled or in overlay
+    // Disable drag if not enabled or in overlay
+    disabled: isOverlay || !isDragEnabled,
     attributes: {
       roleDescription: 'Task',
       // @ts-expect-error - Adding custom data attributes for debugging
@@ -85,17 +164,11 @@ export const TaskCard = ({ task, isOverlay = false, onUpdate, isDragEnabled = fa
   });
 
   // Return null if task is undefined or marked as deleted
-  if (!task || task._deleted) {
+  if (task == null || task._deleted) {
     return null;
   }
 
-  const statusLabel: Record<TaskStatus, string> = {
-    TODO: t('statusTodo'),
-    IN_PROGRESS: t('statusInProgress'),
-    DONE: t('statusDone'),
-  };
   const lastField = getLastField(task);
-  const iconProps = { size: 16, 'aria-hidden': true, style: { flexShrink: 0, marginTop: 2 } };
 
   return (
     // dnd-kit needs a DOM node for ref/attributes, so it lives on a plain wrapper.
@@ -156,12 +229,7 @@ export const TaskCard = ({ task, isOverlay = false, onUpdate, isDragEnabled = fa
                 {task.title}
               </H3>
             ) : null}
-            <Chip
-              variant="solid"
-              size="$2"
-              color={task.status ? STATUS_COLOR[task.status] : 'gray'}>
-              {task.status ? statusLabel[task.status] : t('noStatus')}
-            </Chip>
+            <TaskStatusChip status={task.status} />
           </YStack>
           <TaskActions
             id={task._id}
@@ -175,57 +243,10 @@ export const TaskCard = ({ task, isOverlay = false, onUpdate, isDragEnabled = fa
             onUpdate={onUpdate}
           />
         </CardHeader>
-        {task.creator && (
-          <InfoRow divider={lastField !== 'creator'}>
-            <UserIcon {...iconProps} />
-            <Text
-              fontSize="$3"
-              color="$color10">
-              {t('createdBy', { name: task.creator.name })}
-            </Text>
-          </InfoRow>
-        )}
-        {task.lastModifier && (
-          <InfoRow divider={lastField !== 'lastModifier'}>
-            <UserIcon {...iconProps} />
-            <Text
-              fontSize="$3"
-              color="$color10">
-              {t('lastModifiedBy', { name: task.lastModifier.name })}
-            </Text>
-          </InfoRow>
-        )}
-        {task.assignee && (
-          <InfoRow divider={lastField !== 'assignee'}>
-            <UserIcon {...iconProps} />
-            <Text
-              fontSize="$3"
-              color="$color10">
-              {t('assignee', { name: task.assignee.name })}
-            </Text>
-          </InfoRow>
-        )}
-        {task.dueDate ? (
-          <InfoRow divider={lastField !== 'dueDate'}>
-            <Calendar1Icon {...iconProps} />
-            <Text
-              fontSize="$3"
-              color="$color10">
-              {t('dueDate')}: {format(new Date(task.dueDate), 'yyyy/MM/dd')}
-            </Text>
-          </InfoRow>
-        ) : null}
-        {task.description ? (
-          <InfoRow divider={false}>
-            <FileTextIcon {...iconProps} />
-            <Paragraph
-              fontSize="$3"
-              color="$color10"
-              testID="task-card-description">
-              {task.description}
-            </Paragraph>
-          </InfoRow>
-        ) : null}
+        <TaskInfoRows
+          task={task}
+          lastField={lastField}
+        />
       </Card>
     </div>
   );

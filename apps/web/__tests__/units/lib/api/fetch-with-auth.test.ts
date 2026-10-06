@@ -2,14 +2,14 @@ import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 import { fetchWithAuth } from '@/lib/api/fetch-with-auth';
 
-describe('fetchWithAuth', () => {
+describe(fetchWithAuth, () => {
   const mockUrl = 'http://example.com/api';
   const mockToken = 'mock-token';
 
   beforeEach(() => {
     vi.resetAllMocks();
     localStorage.clear();
-    global.fetch = vi.fn();
+    vi.spyOn(globalThis, 'fetch');
   });
 
   afterEach(() => {

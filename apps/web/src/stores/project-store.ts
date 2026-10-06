@@ -28,15 +28,15 @@ export const createProjectSlice: StateCreator<
     try {
       const projects = await projectApi.getProjects(boardId);
 
-      if (projects) {
+      if (projects == null) {
+        set({ projects: [] });
+      } else {
         set({
           projects: projects.map((project) => ({
             ...project,
             tasks: [],
           })),
         });
-      } else {
-        set({ projects: [] });
       }
     } catch (error) {
       console.error('Error fetching projects:', error);
@@ -86,14 +86,15 @@ export const createProjectSlice: StateCreator<
   ) => {
     try {
       const { currentBoardId, userId, projects } = get();
-      if (!currentBoardId) {
+      if (currentBoardId == null || currentBoardId === '') {
         throw new Error('No board selected');
       }
-      if (!userId) {
+      if (userId == null || userId === '') {
         throw new Error('User not authenticated');
       }
 
       const currentBoardProjects = projects.filter((p) => {
+        // oxlint-disable-next-line anti-slop/no-runtime-typeof -- API union is `string | populated object`; a typeof check is the only way to tell them apart
         const projectBoardId = typeof p.board === 'string' ? p.board : p.board?._id;
         return projectBoardId === currentBoardId;
       });
@@ -111,7 +112,7 @@ export const createProjectSlice: StateCreator<
         orderInBoard,
       });
 
-      if (newProject) {
+      if (newProject != null) {
         set((state) => ({
           projects: [...state.projects, newProject],
         }));
@@ -146,7 +147,7 @@ export const createProjectSlice: StateCreator<
       }));
 
       const { userId } = get();
-      if (!userId) {
+      if (userId == null || userId === '') {
         throw new Error('User not authenticated');
       }
 
@@ -158,9 +159,7 @@ export const createProjectSlice: StateCreator<
       await updateFn(id, updateData);
     } catch (error) {
       console.error('Error updating project:', error);
-      set((state) => ({
-        projects: state.projects.map((project) => (project._id === id ? project : project)),
-      }));
+      set((state) => ({ projects: [...state.projects] }));
       throw error;
     }
   },

@@ -20,7 +20,19 @@ const createSession = (user: UserInfo): Session => ({
   accessToken: 'http-only-cookie',
 });
 
-// Helper function to update stores with user data
+// Resolves a session for the given email, preferring the user returned by login
+const loginForSession = async (email: string): Promise<Session> => {
+  // Call the login endpoint which now returns user data and token
+  const loginResult = await AuthService.login(email);
+
+  // If login returned user data directly, use it
+  if (loginResult?.user != null) {
+    return createSession(loginResult.user);
+  }
+
+  // Fallback: fetch the user profile using the session
+  return createSession(await AuthService.getProfile());
+};
 
 export interface AuthState {
   isAuthenticated: boolean;
@@ -38,7 +50,7 @@ export const AUTH_KEYS = {
 export const useAuth = () => {
   const setUserInfo = useWorkspaceStore((state) => state.setUserInfo);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
   const router = useRouter();
   const authPathname = usePathname();
 
@@ -48,19 +60,18 @@ export const useAuth = () => {
 
   // Function to manually check session
   const checkSession = useCallback(async (): Promise<Session | null> => {
+    let currentSession: Session | null = null;
+    setIsCheckingAuth(true);
     try {
-      setIsCheckingAuth(true);
       const user = await AuthService.getProfile();
-      const currentSession = createSession(user);
+      currentSession = createSession(user);
       setSession(currentSession);
-      return currentSession;
     } catch (error) {
       console.error('Session check failed:', error);
       setSession(null);
-      return null;
-    } finally {
-      setIsCheckingAuth(false);
     }
+    setIsCheckingAuth(false);
+    return currentSession;
   }, []);
 
   // Check for existing session on mount if we have auth indicators
@@ -82,7 +93,7 @@ export const useAuth = () => {
       // Also check for token in localStorage (fallback for httpOnly cookies)
       const hasStoredToken = localStorage.getItem('auth_token');
 
-      if (hasAuthCookie || hasStoredToken) {
+      if (hasAuthCookie || (hasStoredToken !== null && hasStoredToken !== '')) {
         try {
           await checkSession();
         } catch (error) {
@@ -96,48 +107,40 @@ export const useAuth = () => {
       }
     };
 
-    initAuth();
+    void initAuth();
   }, [checkSession, authPathname]);
 
   // Login mutation
+  // oxlint-disable-next-line react-doctor/query-mutation-missing-invalidation -- login only writes local session/store state; no cached query depends on it
   const loginMutation = useMutation<{ session: Session }, Error, string>({
     mutationFn: async (email: string) => {
       setIsLoading(true);
-      setError(null);
+      setAuthError(null);
+      let outcome: { session: Session } | Error;
       try {
-        // Call the login endpoint which now returns user data and token
-        const loginResult = await AuthService.login(email);
-
-        // If login returned user data directly, use it
-        if (loginResult?.user) {
-          const { user } = loginResult;
-          const session = createSession(user);
-          return { session };
-        }
-
-        // Fallback: fetch the user profile using the session
-        const user = await AuthService.getProfile();
-        const session = createSession(user);
-        return { session };
-      } catch (err) {
-        console.error('[useAuth mutationFn] Login error:', err);
-        const errorMessage = err instanceof Error ? err.message : 'Login failed';
-        setError(errorMessage);
-        throw new Error(errorMessage, { cause: err });
-      } finally {
-        setIsLoading(false);
+        outcome = { session: await loginForSession(email) };
+      } catch (error) {
+        console.error('[useAuth mutationFn] Login error:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Login failed';
+        setAuthError(errorMessage);
+        outcome = new Error(errorMessage, { cause: error });
       }
+      setIsLoading(false);
+      if (outcome instanceof Error) {
+        throw outcome;
+      }
+      return outcome;
     },
     onSuccess: (data) => {
-      if (data?.session?.user) {
+      if (data?.session?.user != null) {
         const { user } = data.session;
         setSession(data.session);
         setUserInfo(user.name || user.email, user._id);
         useAuthStore.getState().setUser(user);
       }
     },
-    onError: (error) => {
-      setError(error.message);
+    onError: (mutationError) => {
+      setAuthError(mutationError.message);
     },
   });
 
@@ -145,7 +148,7 @@ export const useAuth = () => {
   const logout = useCallback(async () => {
     try {
       // Clear the JWT cookie
-      await AuthService.logout();
+      AuthService.logout();
 
       // Clear the local session state
       setSession(null);
@@ -165,7 +168,7 @@ export const useAuth = () => {
 
   // Update user info in store when session changes
   useEffect(() => {
-    if (session?.user) {
+    if (session?.user != null) {
       const { user } = session;
       // Ensure we have both email and _id before updating
       if (user.email && user._id) {
@@ -176,15 +179,16 @@ export const useAuth = () => {
 
   return {
     // Auth state
-    isAuthenticated: !!session,
+    isAuthenticated: session !== null,
     isLoading: isCheckingAuth || isLoading,
-    error,
+    error: authError,
     user: session?.user,
     session,
 
     // Auth methods
     login: loginMutation.mutateAsync,
-    loginWithEmail: loginMutation.mutateAsync, // Alias for backward compatibility
+    // Alias for backward compatibility
+    loginWithEmail: loginMutation.mutateAsync,
     logout,
 
     // Raw mutations for more control
@@ -193,41 +197,40 @@ export const useAuth = () => {
 };
 
 export const useAuthForm = () => {
-  const { login, isLoading, error } = useAuth();
+  const { login, isLoading, error: authError } = useAuth();
   const [, setError] = useState<string | null>(null);
   const [isNavigating, setIsNavigating] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (email: string) => {
+    setIsNavigating(true);
     try {
-      setIsNavigating(true);
-
       const result = await login(email);
 
-      if (!result?.session?.user) {
-        throw new Error('No user data received after login');
+      if (result?.session?.user == null) {
+        setError('No user data received after login');
+      } else {
+        const searchParams = new URLSearchParams(window.location.search);
+        const callbackUrl = searchParams.get('callbackUrl');
+        const cleanCallback = callbackUrl?.replace(/^\/[a-z]{2}\//u, '/');
+        const redirectUrl =
+          cleanCallback === undefined || cleanCallback === '' ? `/boards?${URL_PARAMS.LOGIN_SUCCESS}` : cleanCallback;
+
+        setTimeout(() => {
+          router.push(redirectUrl);
+        }, 500);
       }
-
-      const searchParams = new URLSearchParams(window.location.search);
-      const callbackUrl = searchParams.get('callbackUrl');
-      const cleanCallback = callbackUrl?.replace(/^\/[a-z]{2}\//u, '/');
-      const redirectUrl = cleanCallback || `/boards?${URL_PARAMS.LOGIN_SUCCESS}`;
-
-      setTimeout(() => {
-        router.push(redirectUrl);
-      }, 500);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Login failed';
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Login failed';
       setError(errorMessage);
-    } finally {
-      setIsNavigating(false);
     }
+    setIsNavigating(false);
   };
 
   return {
     handleSubmit,
     isLoading,
-    error,
+    error: authError,
     isNavigating,
   };
 };

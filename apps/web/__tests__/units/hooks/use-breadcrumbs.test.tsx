@@ -1,3 +1,5 @@
+import { setTimeout as sleep } from 'node:timers/promises';
+
 import type { UseQueryResult } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -9,7 +11,6 @@ import type { Board } from '@/types/db-interface';
 // Helper to create mock query results with proper typing
 const createMockQueryResult = (overrides: Partial<UseQueryResult<Board>> = {}): UseQueryResult<Board> =>
   ({
-    data: undefined,
     error: null,
     isError: false,
     isLoading: false,
@@ -32,41 +33,41 @@ const createMockQueryResult = (overrides: Partial<UseQueryResult<Board>> = {}): 
     isRefetching: false,
     isStale: false,
     fetchStatus: 'idle',
-    refetch: vi.fn(),
+    refetch: vi.fn<() => void>(),
     ...overrides,
   }) as UseQueryResult<Board>;
 
 // Mock next-intl
-vi.mock('next-intl', () => ({
-  useTranslations: vi.fn(() => (key: string) => key),
+vi.mock(import('next-intl'), () => ({
+  useTranslations: vi.fn<() => (key: string) => string>(() => (key) => key) as never,
 }));
 
 // Mock next/navigation
-vi.mock('next/navigation', () => ({
-  useParams: vi.fn(),
+vi.mock(import('next/navigation'), () => ({
+  useParams: vi.fn<() => { boardId?: string }>() as never,
 }));
 
 // Mock the board queries
-vi.mock('@/lib/api/boards/queries', () => ({
-  useBoard: vi.fn(),
+vi.mock(import('@/lib/api/boards/queries'), () => ({
+  useBoard: vi.fn<() => void>() as never,
 }));
 
 // Mock workspace-store's transitive dependencies to break circular import:
 // workspace-store → @/lib/api/tasks → tasks/queries → workspace-store
-vi.mock('@/lib/api/tasks', () => ({
-  useDeleteTask: vi.fn(),
+vi.mock(import('@/lib/api/tasks'), () => ({
+  useDeleteTask: vi.fn<() => void>() as never,
 }));
-vi.mock('@/lib/api/board-api', () => ({
-  boardApi: {},
+vi.mock(import('@/lib/api/board-api'), () => ({
+  boardApi: {} as never,
 }));
-vi.mock('@/lib/api/project-api', () => ({
-  projectApi: {},
+vi.mock(import('@/lib/api/project-api'), () => ({
+  projectApi: {} as never,
 }));
-vi.mock('@/lib/api/task-api', () => ({
-  taskApi: {},
+vi.mock(import('@/lib/api/task-api'), () => ({
+  taskApi: {} as never,
 }));
 
-describe('useBreadcrumbs', () => {
+describe(useBreadcrumbs, () => {
   beforeEach(() => {
     // Reset workspace store
     useWorkspaceStore.setState({
@@ -215,7 +216,7 @@ describe('useBreadcrumbs', () => {
     const { result } = renderHook(() => useBreadcrumbs());
 
     expect(result.current.rootLink).toBeDefined();
-    expect(typeof result.current.rootLink).toBe('string');
+    expect(result.current.rootLink).toBeTypeOf('string');
   });
 
   it('should update breadcrumbs when board changes', async () => {
@@ -281,7 +282,8 @@ describe('useBreadcrumbs', () => {
     const { useBoard } = await import('@/lib/api/boards/queries');
 
     const mockBoard: Board = {
-      _id: undefined as unknown as string, // intentionally undefined to test missing ID behavior
+      // intentionally undefined to test missing ID behavior
+      _id: undefined as unknown as string,
       title: 'Test Board',
       description: 'Test description',
       owner: 'user-123',
@@ -305,7 +307,7 @@ describe('useBreadcrumbs', () => {
     renderHook(() => useBreadcrumbs());
 
     // Wait a bit to ensure no update happens
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    await sleep(100);
 
     const state = useWorkspaceStore.getState();
     expect(state.currentBoardId).toBe('old-board-id');

@@ -1,12 +1,14 @@
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import path from 'node:path';
+import { setTimeout as sleep } from 'node:timers/promises';
 
 import { expect, test } from '@playwright/test';
+import type { Response } from '@playwright/test';
 
 import { defaultEmail } from '@/constants/demo-data';
 
 // Read the JSON file synchronously
-const enMessages = JSON.parse(readFileSync(join(process.cwd(), 'messages', 'en.json'), 'utf-8'));
+const enMessages = JSON.parse(readFileSync(path.join(process.cwd(), 'messages', 'en.json'), 'utf-8'));
 
 /**
  * Wait for API server to be ready
@@ -20,6 +22,7 @@ const waitForAPI = async (url: string, timeout = 30_000): Promise<void> => {
 
   while (Date.now() - startTime < timeout) {
     try {
+      // oxlint-disable-next-line eslint/no-await-in-loop -- polling must be sequential: each attempt waits on the previous one
       const response = await fetch(url, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
@@ -30,36 +33,41 @@ const waitForAPI = async (url: string, timeout = 30_000): Promise<void> => {
     }
 
     // Wait 500ms before retry
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    // oxlint-disable-next-line eslint/no-await-in-loop -- polling must be sequential: each attempt waits on the previous one
+    await sleep(500);
   }
 
-  throw new Error(`API server not ready after ${timeout}ms. Last error: ${lastError?.message || 'Unknown'}`);
+  throw new Error(
+    `API server not ready after ${timeout}ms. Last error: ${lastError === null || lastError.message === '' ? 'Unknown' : lastError.message}`,
+  );
+};
+
+const logAuthBody = async (response: Response): Promise<void> => {
+  try {
+    const body = await response.text();
+    console.log(`[Diagnostic]   Body: ${body.slice(0, 200)}`);
+  } catch {
+    // Safe to continue: diagnostic logging only
+    console.log(`[Diagnostic]   Body: (unable to read)`);
+  }
 };
 
 test.describe.serial('SignInPage', () => {
   // Diagnostic: Wait for API to be ready before all tests
   // NOTE: This is a soft check with shorter timeout - tests will continue even if API is not ready
   test.beforeAll(async () => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    const envApiUrl = process.env.NEXT_PUBLIC_API_URL;
+    const apiUrl = envApiUrl === undefined || envApiUrl === '' ? 'http://localhost:3001' : envApiUrl;
 
-    // Use Promise.race to prevent timeout
-    const healthCheckPromise = waitForAPI(`${apiUrl}/health`, 20_000).then(
-      () => {
-        console.log('[Diagnostic] ✓ API health check passed');
-        return true;
-      },
-      (error) => {
-        console.warn('[Diagnostic] ⚠️ API health check failed:', error);
-        return false;
-      },
-    );
-
-    // Always resolve, never throw
-    await healthCheckPromise.catch(() => {
+    // Soft check: never throw, so tests continue even if the API is not ready
+    try {
+      await waitForAPI(`${apiUrl}/health`, 20_000);
+      console.log('[Diagnostic] ✓ API health check passed');
+    } catch (error) {
+      console.warn('[Diagnostic] ⚠️ API health check failed:', error);
       console.warn('[Diagnostic] ⚠️ Tests will continue, but login may fail if API is not ready');
       console.warn('[Diagnostic] ⚠️ This is expected in CI if API takes longer to start than Next.js');
-      return false;
-    });
+    }
   });
 
   test('should load the sign-in page', async ({ page }) => {
@@ -88,7 +96,7 @@ test.describe.serial('SignInPage', () => {
 
     page.on('response', (response) => {
       const url = response.url();
-      const startTime = requestStartTimes.get(url) || Date.now();
+      const startTime = requestStartTimes.get(url) ?? Date.now();
       const duration = Date.now() - startTime;
       const status = response.status();
 
@@ -101,14 +109,7 @@ test.describe.serial('SignInPage', () => {
 
       // Log response body for auth-related requests
       if (url.includes('/auth/')) {
-        response
-          .text()
-          .then((body) => {
-            console.log(`[Diagnostic]   Body: ${body.substring(0, 200)}`);
-          })
-          .catch(() => {
-            console.log(`[Diagnostic]   Body: (unable to read)`);
-          });
+        void logAuthBody(response);
       }
     });
 
@@ -132,7 +133,7 @@ test.describe.serial('SignInPage', () => {
     try {
       // Wait for navigation to complete after clicking submit
       await Promise.all([
-        page.waitForURL(/^http:\/\/localhost:3000\/en\/boards(\?.*)?$/u, {
+        page.waitForURL(/^http:\/\/localhost:3000\/en\/boards(?:\?.*)?$/u, {
           timeout: 30_000,
           waitUntil: 'domcontentloaded',
         }),
@@ -147,9 +148,9 @@ test.describe.serial('SignInPage', () => {
       console.error(`[Diagnostic]   Current URL: ${currentUrl}`);
       console.error(`[Diagnostic]   Expected URL pattern: /^http:\\/\\/localhost:3000\\/en\\/boards(\\?.*)?$/`);
       console.error('[Diagnostic]   Network requests:');
-      requests.forEach((req) => {
+      for (const req of requests) {
         console.error(`[Diagnostic]     ${req.method} ${req.url} - ${req.status} (${req.duration}ms)`);
-      });
+      }
 
       // Take a screenshot for debugging
       await page.screenshot({

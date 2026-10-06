@@ -4,27 +4,27 @@ import { describe, expect, it, vi } from 'vitest';
 
 import Header from '@/components/layout/Header';
 
-vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string) => (key === 'toggle' ? 'Toggle sidebar' : key),
+vi.mock(import('next-intl'), () => ({
+  useTranslations: (() => (key: string) => (key === 'toggle' ? 'Toggle sidebar' : key)) as never,
 }));
 
-vi.mock('@/components/layout/Breadcrumbs', () => ({
+vi.mock(import('@/components/layout/Breadcrumbs'), () => ({
   Breadcrumbs: () => <div data-testid="breadcrumbs">Breadcrumbs</div>,
 }));
 
-vi.mock('@/components/layout/LanguageSwitcher', () => ({
+vi.mock(import('@/components/layout/LanguageSwitcher'), () => ({
   default: () => <div data-testid="language-switcher">Language</div>,
 }));
 
-vi.mock('@/components/layout/ThemeToggle', () => ({
+vi.mock(import('@/components/layout/ThemeToggle'), () => ({
   default: () => <div data-testid="theme-toggle">Theme</div>,
 }));
 
-vi.mock('@/components/layout/UserNav', () => ({
+vi.mock(import('@/components/layout/UserNav'), () => ({
   UserNav: () => <div data-testid="user-nav">User</div>,
 }));
 
-describe('Header', () => {
+describe(Header, () => {
   it('renders a header landmark with all header controls', () => {
     renderWithProviders(<Header />);
     expect(screen.getByRole('banner')).toBeInTheDocument();
@@ -36,7 +36,7 @@ describe('Header', () => {
   });
 
   it('toggles the sidebar from the trigger', () => {
-    const onToggleSidebar = vi.fn();
+    const onToggleSidebar = vi.fn<() => void>();
     renderWithProviders(<Header onToggleSidebar={onToggleSidebar} />);
     fireEvent.click(screen.getByRole('button', { name: 'Toggle sidebar' }));
     expect(onToggleSidebar).toHaveBeenCalledOnce();

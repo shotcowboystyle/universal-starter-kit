@@ -4,7 +4,6 @@ import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Mock } from 'vitest';
 
-import { taskApi } from '@/lib/api/task-api';
 import { useCreateTask, useDeleteTask, useTask, useTasks, useUpdateTask } from '@/lib/api/tasks/queries';
 import { useWorkspaceStore } from '@/stores/workspace-store';
 import { TaskStatus } from '@/types/db-interface';
@@ -12,19 +11,21 @@ import type { Task } from '@/types/db-interface';
 import { TASK_KEYS } from '@/types/task-api';
 
 // Mock taskApi
-vi.mock('@/lib/api/task-api', () => ({
-  taskApi: {
-    getTasks: vi.fn(),
-    getTaskById: vi.fn(),
-    createTask: vi.fn(),
-    updateTask: vi.fn(),
-    deleteTask: vi.fn(),
-  },
+const taskApiMock = vi.hoisted(() => ({
+  getTasks: vi.fn<(...args: unknown[]) => Promise<object>>(),
+  getTaskById: vi.fn<(...args: unknown[]) => Promise<object>>(),
+  createTask: vi.fn<(...args: unknown[]) => Promise<object>>(),
+  updateTask: vi.fn<(...args: unknown[]) => Promise<object>>(),
+  deleteTask: vi.fn<(...args: unknown[]) => Promise<object>>(),
+}));
+
+vi.mock(import('@/lib/api/task-api'), () => ({
+  taskApi: taskApiMock as never,
 }));
 
 // Mock workspace store
-vi.mock('@/stores/workspace-store', () => ({
-  useWorkspaceStore: vi.fn(),
+vi.mock(import('@/stores/workspace-store'), () => ({
+  useWorkspaceStore: vi.fn<() => string>() as never,
 }));
 
 describe('Task Query Hooks', () => {
@@ -46,13 +47,13 @@ describe('Task Query Hooks', () => {
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
 
-  describe('useTasks', () => {
+  describe(useTasks, () => {
     it('should fetch tasks by projectId', async () => {
       const mockTasks = [
         { _id: '1', title: 'Task 1', project: 'project1' },
         { _id: '2', title: 'Task 2', project: 'project1' },
       ];
-      (taskApi.getTasks as Mock).mockResolvedValue(mockTasks);
+      taskApiMock.getTasks.mockResolvedValue(mockTasks);
 
       const { result } = renderHook(() => useTasks('project1'), { wrapper });
 
@@ -61,12 +62,12 @@ describe('Task Query Hooks', () => {
       });
 
       expect(result.current.data).toStrictEqual(mockTasks);
-      expect(taskApi.getTasks).toHaveBeenCalledWith('project1', undefined);
+      expect(taskApiMock.getTasks).toHaveBeenCalledWith('project1', undefined);
     });
 
     it('should fetch tasks by assigneeId', async () => {
       const mockTasks = [{ _id: '1', title: 'Task 1', assignee: 'user1' }];
-      (taskApi.getTasks as Mock).mockResolvedValue(mockTasks);
+      taskApiMock.getTasks.mockResolvedValue(mockTasks);
 
       const { result } = renderHook(() => useTasks(undefined, 'user1'), { wrapper });
 
@@ -75,21 +76,21 @@ describe('Task Query Hooks', () => {
       });
 
       expect(result.current.data).toStrictEqual(mockTasks);
-      expect(taskApi.getTasks).toHaveBeenCalledWith(undefined, 'user1');
+      expect(taskApiMock.getTasks).toHaveBeenCalledWith(undefined, 'user1');
     });
 
     it('should not fetch when both ids are undefined', () => {
       const { result } = renderHook(() => useTasks(), { wrapper });
 
       expect(result.current.data).toBeUndefined();
-      expect(taskApi.getTasks).not.toHaveBeenCalled();
+      expect(taskApiMock.getTasks).not.toHaveBeenCalled();
     });
   });
 
-  describe('useTask', () => {
+  describe(useTask, () => {
     it('should fetch single task', async () => {
       const mockTask = { _id: '1', title: 'Task 1', project: 'project1' };
-      (taskApi.getTaskById as Mock).mockResolvedValue(mockTask);
+      taskApiMock.getTaskById.mockResolvedValue(mockTask);
 
       const { result } = renderHook(() => useTask('1'), { wrapper });
 
@@ -98,26 +99,26 @@ describe('Task Query Hooks', () => {
       });
 
       expect(result.current.data).toStrictEqual(mockTask);
-      expect(taskApi.getTaskById).toHaveBeenCalledWith('1');
+      expect(taskApiMock.getTaskById).toHaveBeenCalledWith('1');
     });
 
     it('should not fetch when taskId is undefined', () => {
-      const { result } = renderHook(() => useTask(undefined), { wrapper });
+      const { result } = renderHook(() => useTask(), { wrapper });
 
       expect(result.current.data).toBeUndefined();
-      expect(taskApi.getTaskById).not.toHaveBeenCalled();
+      expect(taskApiMock.getTaskById).not.toHaveBeenCalled();
     });
 
     it('should respect enabled option', () => {
       const { result } = renderHook(() => useTask('1', { enabled: false }), { wrapper });
 
       expect(result.current.data).toBeUndefined();
-      expect(taskApi.getTaskById).not.toHaveBeenCalled();
+      expect(taskApiMock.getTaskById).not.toHaveBeenCalled();
     });
 
     it('should not retry on 404 error', async () => {
       const mockError = { response: { status: 404 } };
-      (taskApi.getTaskById as Mock).mockRejectedValue(mockError);
+      taskApiMock.getTaskById.mockRejectedValue(mockError);
 
       const { result } = renderHook(() => useTask('1'), { wrapper });
 
@@ -125,7 +126,7 @@ describe('Task Query Hooks', () => {
         expect(result.current.isError).toBe(true);
       });
 
-      expect(taskApi.getTaskById).toHaveBeenCalledOnce();
+      expect(taskApiMock.getTaskById).toHaveBeenCalledOnce();
     });
 
     it('should retry on non-404 errors', async () => {
@@ -133,8 +134,10 @@ describe('Task Query Hooks', () => {
       const retryQueryClient = new QueryClient({
         defaultOptions: {
           queries: {
-            retry: 2, // Retry 2 times = 3 total attempts
-            retryDelay: 1, // Fast retries for testing
+            // Retry 2 times = 3 total attempts
+            retry: 2,
+            // Fast retries for testing
+            retryDelay: 1,
           },
         },
       });
@@ -144,7 +147,7 @@ describe('Task Query Hooks', () => {
       );
 
       const mockError = { response: { status: 500 } };
-      (taskApi.getTaskById as Mock).mockRejectedValue(mockError);
+      taskApiMock.getTaskById.mockRejectedValue(mockError);
 
       const { result } = renderHook(() => useTask('1'), { wrapper: retryWrapper });
 
@@ -152,16 +155,17 @@ describe('Task Query Hooks', () => {
         () => {
           expect(result.current.isError).toBe(true);
         },
-        { timeout: 10_000 }, // Increase timeout for retries
+        // Increase timeout for retries
+        { timeout: 10_000 },
       );
 
       // With retryDelay: 1, it should retry quickly. Check it was called at least 3 times
-      expect(taskApi.getTaskById).toHaveBeenCalled();
-      expect((taskApi.getTaskById as Mock).mock.calls.length).toBeGreaterThanOrEqual(3);
+      expect(taskApiMock.getTaskById).toHaveBeenCalledWith('1');
+      expect(taskApiMock.getTaskById.mock.calls.length).toBeGreaterThanOrEqual(3);
     }, 10_000);
   });
 
-  describe('useCreateTask', () => {
+  describe(useCreateTask, () => {
     it('should create task with string assignee', async () => {
       const newTask = {
         _id: '3',
@@ -169,7 +173,7 @@ describe('Task Query Hooks', () => {
         project: 'project1',
         assignee: 'user1',
       };
-      (taskApi.createTask as Mock).mockResolvedValue(newTask);
+      taskApiMock.createTask.mockResolvedValue(newTask);
 
       const { result } = renderHook(() => useCreateTask(), { wrapper });
 
@@ -193,15 +197,11 @@ describe('Task Query Hooks', () => {
         });
       });
 
-      expect(taskApi.createTask).toHaveBeenCalledWith({
+      expect(taskApiMock.createTask).toHaveBeenCalledWith({
         title: 'New Task',
         board: 'board1',
         project: 'project1',
         assignee: 'user1',
-        description: undefined,
-        status: undefined,
-        dueDate: undefined,
-        orderInProject: undefined,
       });
     });
 
@@ -212,7 +212,7 @@ describe('Task Query Hooks', () => {
         project: 'project1',
         assignee: { _id: 'user1' },
       };
-      (taskApi.createTask as Mock).mockResolvedValue(newTask);
+      taskApiMock.createTask.mockResolvedValue(newTask);
 
       const { result } = renderHook(() => useCreateTask(), { wrapper });
 
@@ -229,7 +229,7 @@ describe('Task Query Hooks', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(taskApi.createTask).toHaveBeenCalledWith(
+      expect(taskApiMock.createTask).toHaveBeenCalledWith(
         expect.objectContaining({
           assignee: 'user1',
         }),
@@ -237,7 +237,7 @@ describe('Task Query Hooks', () => {
     });
   });
 
-  describe('useUpdateTask', () => {
+  describe(useUpdateTask, () => {
     it('should throw error if user is not authenticated', async () => {
       (useWorkspaceStore as unknown as Mock).mockReturnValue(null);
 
@@ -252,7 +252,7 @@ describe('Task Query Hooks', () => {
 
     it('should update task title', async () => {
       const updatedTask = { _id: '1', title: 'Updated Task', project: 'project1' };
-      (taskApi.updateTask as Mock).mockResolvedValue(updatedTask);
+      taskApiMock.updateTask.mockResolvedValue(updatedTask);
 
       // Set up query data for optimistic update
       queryClient.setQueryData<Task>(TASK_KEYS.detail('1'), {
@@ -278,7 +278,7 @@ describe('Task Query Hooks', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(taskApi.updateTask).toHaveBeenCalledWith('1', {
+      expect(taskApiMock.updateTask).toHaveBeenCalledWith('1', {
         title: 'Updated Task',
         lastModifier: 'user-123',
       });
@@ -292,7 +292,7 @@ describe('Task Query Hooks', () => {
         status: TaskStatus.IN_PROGRESS,
         project: 'project1',
       };
-      (taskApi.updateTask as Mock).mockResolvedValue(updatedTask);
+      taskApiMock.updateTask.mockResolvedValue(updatedTask);
 
       const { result } = renderHook(() => useUpdateTask(), { wrapper });
 
@@ -309,7 +309,7 @@ describe('Task Query Hooks', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(taskApi.updateTask).toHaveBeenCalledWith('1', {
+      expect(taskApiMock.updateTask).toHaveBeenCalledWith('1', {
         title: 'Updated Task',
         description: 'New description',
         status: TaskStatus.IN_PROGRESS,
@@ -318,8 +318,8 @@ describe('Task Query Hooks', () => {
     });
 
     it('should handle assignee update to null', async () => {
-      const updatedTask = { _id: '1', title: 'Task', project: 'project1', assignee: undefined };
-      (taskApi.updateTask as Mock).mockResolvedValue(updatedTask);
+      const updatedTask = { _id: '1', title: 'Task', project: 'project1' };
+      taskApiMock.updateTask.mockResolvedValue(updatedTask);
 
       const { result } = renderHook(() => useUpdateTask(), { wrapper });
 
@@ -334,14 +334,14 @@ describe('Task Query Hooks', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(taskApi.updateTask).toHaveBeenCalledWith('1', {
+      expect(taskApiMock.updateTask).toHaveBeenCalledWith('1', {
         assigneeId: null,
         lastModifier: 'user-123',
       });
     });
   });
 
-  describe('useDeleteTask', () => {
+  describe(useDeleteTask, () => {
     it('should delete task and update task list', async () => {
       const taskToDelete: Task = {
         _id: '2',
@@ -385,7 +385,7 @@ describe('Task Query Hooks', () => {
           orderInProject: 2,
         },
       ]);
-      (taskApi.deleteTask as Mock).mockResolvedValue({ success: true });
+      taskApiMock.deleteTask.mockResolvedValue({ success: true });
 
       const { result } = renderHook(() => useDeleteTask(), { wrapper });
 
@@ -402,7 +402,7 @@ describe('Task Query Hooks', () => {
         });
       });
 
-      expect(taskApi.deleteTask).toHaveBeenCalledWith('2');
+      expect(taskApiMock.deleteTask).toHaveBeenCalledWith('2');
     });
 
     it('should handle deletion without task details', async () => {
@@ -420,7 +420,7 @@ describe('Task Query Hooks', () => {
           orderInProject: 0,
         },
       ]);
-      (taskApi.deleteTask as Mock).mockResolvedValue({ success: true });
+      taskApiMock.deleteTask.mockResolvedValue({ success: true });
 
       const { result } = renderHook(() => useDeleteTask(), { wrapper });
 
@@ -432,7 +432,7 @@ describe('Task Query Hooks', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      expect(taskApi.deleteTask).toHaveBeenCalledWith('unknown-task');
+      expect(taskApiMock.deleteTask).toHaveBeenCalledWith('unknown-task');
     });
   });
 });

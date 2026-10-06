@@ -27,6 +27,8 @@ interface UseTaskFormProps {
   onSubmit: (values: TaskFormSubmitValues) => Promise<void>;
 }
 
+const nonEmpty = (value: string | null | undefined) => (value == null || value === '' ? undefined : value);
+
 export const useTaskForm = ({ defaultValues, onSubmit }: UseTaskFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   // Combobox debounces and only calls onSearch while open, so no local debounce/open state.
@@ -41,30 +43,31 @@ export const useTaskForm = ({ defaultValues, onSubmit }: UseTaskFormProps) => {
 
   const defaultAssignee = defaultValues?.assignee;
   // Label for the pre-selected assignee before it shows up in search results.
-  const assigneeLabel = defaultAssignee
-    ? defaultAssignee.name || defaultAssignee.email || defaultAssignee._id
-    : undefined;
+  const assigneeLabel =
+    defaultAssignee == null
+      ? undefined
+      : (nonEmpty(defaultAssignee.name) ?? nonEmpty(defaultAssignee.email) ?? defaultAssignee._id);
 
   const handleSubmit = async (values: TaskFormValues) => {
     const { assigneeId, dueDate, ...rest } = values;
     const name =
       users.find((u) => u._id === assigneeId)?.name ??
       (defaultAssignee?._id === assigneeId ? defaultAssignee.name : null);
+    setIsSubmitting(true);
     try {
-      setIsSubmitting(true);
       await onSubmit({
         ...rest,
         dueDate: dueDate ?? undefined,
         assignee: assigneeId ? { _id: assigneeId, name } : undefined,
       });
     } catch (error) {
-      toast.error(`Failed to submit task: ${error}`);
-    } finally {
-      setIsSubmitting(false);
+      toast.error(`Failed to submit task: ${String(error)}`);
     }
+    setIsSubmitting(false);
   };
 
   const form = useForm({
+    // SAFETY: every TaskFormValues field is populated here; the cast only widens status/dueDate literals from the defaults
     defaultValues: {
       title: defaultValues?.title ?? '',
       description: defaultValues?.description ?? '',
@@ -72,7 +75,9 @@ export const useTaskForm = ({ defaultValues, onSubmit }: UseTaskFormProps) => {
       dueDate: defaultValues?.dueDate ?? null,
       assigneeId: defaultAssignee?._id ?? '',
     } as TaskFormValues,
-    onSubmit: async ({ value }) => await handleSubmit(value),
+    onSubmit: async ({ value }) => {
+      await handleSubmit(value);
+    },
   });
 
   return {

@@ -5,12 +5,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ProjectForm } from '@/components/kanban/project/ProjectForm';
 
-vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string) => key,
-}));
+// SAFETY: translators here only need to map a key to itself
+vi.mock(
+  import('next-intl'),
+  () =>
+    ({
+      useTranslations: () => (key: string) => key,
+    }) as never,
+);
 
 const renderForm = (props: Partial<React.ComponentProps<typeof ProjectForm>> = {}) => {
-  const onSubmit = vi.fn().mockResolvedValue(undefined);
+  const onSubmit = vi.fn<() => Promise<void>>(async () => {
+    await Promise.resolve();
+  });
   renderWithProviders(
     <ProjectForm
       onSubmit={onSubmit}
@@ -25,7 +32,7 @@ const renderForm = (props: Partial<React.ComponentProps<typeof ProjectForm>> = {
   return { onSubmit };
 };
 
-describe('ProjectForm', () => {
+describe(ProjectForm, () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

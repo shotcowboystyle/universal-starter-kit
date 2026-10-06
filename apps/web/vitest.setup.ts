@@ -1,12 +1,16 @@
-// 1. Load Environment Variables
-// Load the app-local .env.test instead of the root (which doesn't exist).
-// The existence check prevents the ENOENT console noise in CI.
+import '@testing-library/jest-dom/vitest';
+
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { cleanup } from '@testing-library/react';
 import dotenv from 'dotenv';
+import { afterEach, vi } from 'vitest';
 
-const envTestPath = path.resolve(__dirname, '.env.test');
+// 1. Load Environment Variables
+// Load the app-local .env.test instead of the root (which doesn't exist).
+// The existence check prevents the ENOENT console noise in CI.
+const envTestPath = path.resolve(import.meta.dirname, '.env.test');
 
 if (fs.existsSync(envTestPath)) {
   dotenv.config({ path: envTestPath });
@@ -17,14 +21,7 @@ if (fs.existsSync(envTestPath)) {
 }
 
 // 2. Testing Library Setup
-import '@testing-library/jest-dom/vitest';
-
-import * as matchers from '@testing-library/jest-dom/matchers';
-import { cleanup } from '@testing-library/react';
-import { afterEach, vi, expect } from 'vitest';
-
-// Extend Vitest's expect method with testing-library matchers
-expect.extend(matchers);
+// jest-dom/vitest (imported above) already extends Vitest's expect with the matchers.
 
 // Cleanup after each test case
 afterEach(() => {
@@ -39,22 +36,22 @@ afterEach(() => {
 // is undefined without it. Replace it with a proper in-memory Storage mock
 // so Zustand persist middleware (and any other code) can use it normally.
 const localStorageMock = (() => {
-  let store: Record<string, string> = {};
+  const store = new Map<string, string>();
   return {
-    getItem: (key: string) => store[key] ?? null,
+    getItem: (key: string) => store.get(key) ?? null,
     setItem: (key: string, value: string) => {
-      store[key] = String(value);
+      store.set(key, value);
     },
     removeItem: (key: string) => {
-      delete store[key];
+      store.delete(key);
     },
     clear: () => {
-      store = {};
+      store.clear();
     },
     get length() {
-      return Object.keys(store).length;
+      return store.size;
     },
-    key: (n: number) => Object.keys(store)[n] ?? null,
+    key: (n: number) => [...store.keys()][n] ?? null,
   };
 })();
 Object.defineProperty(globalThis, 'localStorage', {
@@ -69,27 +66,25 @@ Object.defineProperty(window, 'localStorage', {
 });
 
 // Mock ResizeObserver
-window.ResizeObserver =
-  window.ResizeObserver ||
-  vi.fn().mockImplementation(() => ({
-    disconnect: vi.fn(),
-    observe: vi.fn(),
-    unobserve: vi.fn(),
-  }));
+window.ResizeObserver ||= vi.fn().mockImplementation(() => ({
+  disconnect: vi.fn(),
+  observe: vi.fn(),
+  unobserve: vi.fn(),
+}));
 
 // Mock matchMedia
-window.matchMedia =
-  window.matchMedia ||
-  vi.fn().mockImplementation((query) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: vi.fn(), // deprecated
-    removeListener: vi.fn(), // deprecated
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  }));
+window.matchMedia ||= vi.fn().mockImplementation((query) => ({
+  matches: false,
+  media: query,
+  onchange: null,
+  // deprecated
+  addListener: vi.fn(),
+  // deprecated
+  removeListener: vi.fn(),
+  addEventListener: vi.fn(),
+  removeEventListener: vi.fn(),
+  dispatchEvent: vi.fn(),
+}));
 
 // 4. Component & Library Mocks
 

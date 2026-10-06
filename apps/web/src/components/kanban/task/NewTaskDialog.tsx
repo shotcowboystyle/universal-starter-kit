@@ -25,16 +25,23 @@ const NewTaskDialog = ({ projectId }: NewTaskDialogProps) => {
     // Get the current project to calculate the next orderInProject
     const { projects } = useWorkspaceStore.getState();
     const currentProject = projects.find((p) => p._id === projectId);
-    const currentTasks = currentProject?.tasks || [];
+    const currentTasks = currentProject?.tasks ?? [];
 
     // Calculate the next orderInProject
-    const lastOrder = currentTasks.reduce((max, task) => Math.max(max, task.orderInProject ?? -1), -1);
+    let lastOrder = -1;
+    for (const task of currentTasks) {
+      lastOrder = Math.max(lastOrder, task.orderInProject ?? -1);
+    }
     const nextOrder = lastOrder + 1;
+
+    if (values.status === undefined) {
+      throw new Error('Task status is required');
+    }
 
     await addTask(
       projectId,
       values.title,
-      values.status!,
+      values.status,
       createTask,
       values.description ?? '',
       values.dueDate ?? undefined,

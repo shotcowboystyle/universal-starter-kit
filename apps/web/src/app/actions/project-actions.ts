@@ -2,14 +2,19 @@
 
 import { cookies } from 'next/headers';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+import { parseJson } from '@/lib/api/parse-json';
+import type { Project } from '@/types/db-interface';
+import type { UpdateProjectInput } from '@/types/project-api';
+
+const envApiUrl = process.env.NEXT_PUBLIC_API_URL;
+const API_URL = envApiUrl === undefined || envApiUrl === '' ? 'http://localhost:3001' : envApiUrl;
 
 const getAuthHeaders = async (): Promise<HeadersInit> => {
   const cookieStore = await cookies();
   const token = cookieStore.get('jwt')?.value;
   return {
     'Content-Type': 'application/json',
-    ...(token && { Authorization: `Bearer ${token}` }),
+    ...(token !== undefined && token !== '' && { Authorization: `Bearer ${token}` }),
   };
 };
 
@@ -29,10 +34,10 @@ export const createProject = async (data: {
   if (!response.ok) {
     throw new Error('Failed to create project');
   }
-  return await response.json();
+  return parseJson<Project>(await response.text());
 };
 
-export const updateProject = async (id: string, data: Record<string, unknown>) => {
+export const updateProject = async (id: string, data: UpdateProjectInput) => {
   const headers = await getAuthHeaders();
   const response = await fetch(`${API_URL}/projects/${id}`, {
     method: 'PATCH',
@@ -42,7 +47,7 @@ export const updateProject = async (id: string, data: Record<string, unknown>) =
   if (!response.ok) {
     throw new Error('Failed to update project');
   }
-  return await response.json();
+  return parseJson<Project>(await response.text());
 };
 
 export const deleteProject = async (id: string) => {
@@ -64,5 +69,5 @@ export const getProjects = async (boardId: string) => {
   if (!response.ok) {
     throw new Error('Failed to fetch projects');
   }
-  return await response.json();
+  return parseJson<Project[]>(await response.text());
 };

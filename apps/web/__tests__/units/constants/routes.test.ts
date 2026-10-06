@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { API_URL, ROUTES, URL_PARAMS } from '@/constants/routes';
 
@@ -13,10 +13,10 @@ describe('routes constants', () => {
     process.env.NEXT_PUBLIC_API_URL = originalEnv;
   });
 
-  describe('API_URL', () => {
+  describe('API_URL constant', () => {
     it('should use environment variable when available', () => {
       expect(API_URL).toBeDefined();
-      expect(typeof API_URL).toBe('string');
+      expect(API_URL).toBeTypeOf('string');
     });
 
     it('should be a valid URL format', () => {
@@ -24,18 +24,19 @@ describe('routes constants', () => {
     });
   });
 
-  describe('URL_PARAMS', () => {
+  describe('URL_PARAMS constant', () => {
     it('should have LOGIN_SUCCESS parameter', () => {
       expect(URL_PARAMS.LOGIN_SUCCESS).toBe('login_success=true');
     });
 
     it('should be readonly', () => {
-      expect(Object.isFrozen(URL_PARAMS)).toBe(false); // as const makes type readonly, not runtime frozen
-      expect(typeof URL_PARAMS).toBe('object');
+      // as const makes type readonly, not runtime frozen
+      expect(Object.isFrozen(URL_PARAMS)).toBe(false);
+      expect(URL_PARAMS).toBeTypeOf('object');
     });
   });
 
-  describe('ROUTES', () => {
+  describe('ROUTES constant', () => {
     it('should have HOME route', () => {
       expect(ROUTES.HOME).toBe('/');
     });
@@ -66,17 +67,17 @@ describe('routes constants', () => {
     });
 
     it('should be a nested object structure', () => {
-      expect(typeof ROUTES).toBe('object');
-      expect(typeof ROUTES.AUTH).toBe('object');
-      expect(typeof ROUTES.BOARDS).toBe('object');
+      expect(ROUTES).toBeTypeOf('object');
+      expect(ROUTES.AUTH).toBeTypeOf('object');
+      expect(ROUTES.BOARDS).toBeTypeOf('object');
     });
 
     it('should have all string values for routes', () => {
-      expect(typeof ROUTES.HOME).toBe('string');
-      expect(typeof ROUTES.API).toBe('string');
-      expect(typeof ROUTES.AUTH.LOGIN_API).toBe('string');
-      expect(typeof ROUTES.AUTH.LOGIN_PAGE).toBe('string');
-      expect(typeof ROUTES.BOARDS.OVERVIEW_PAGE).toBe('string');
+      expect(ROUTES.HOME).toBeTypeOf('string');
+      expect(ROUTES.API).toBeTypeOf('string');
+      expect(ROUTES.AUTH.LOGIN_API).toBeTypeOf('string');
+      expect(ROUTES.AUTH.LOGIN_PAGE).toBeTypeOf('string');
+      expect(ROUTES.BOARDS.OVERVIEW_PAGE).toBeTypeOf('string');
     });
   });
 });

@@ -10,6 +10,8 @@ import { useBoards } from '@/hooks/use-boards';
 import { usePathname, useRouter } from '@/i18n/navigation';
 import type { Board } from '@/types/db-interface';
 
+const ProjectLogo = Icons.projectLogo;
+
 const AppSidebar = ({ onNavigate }: { onNavigate?: () => void }) => {
   const t = useTranslations('sidebar');
   const pathname = usePathname();
@@ -49,7 +51,7 @@ const AppSidebar = ({ onNavigate }: { onNavigate?: () => void }) => {
           borderRadius="$3"
           borderWidth={1}
           borderColor="$borderColor">
-          <Icons.projectLogo
+          <ProjectLogo
             size={16}
             aria-hidden
           />

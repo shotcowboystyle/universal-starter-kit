@@ -1,24 +1,36 @@
 import { renderWithProviders as render } from '@repo/test-utils';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import type { useTranslations } from 'next-intl';
+import type { toast } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TaskForm } from '@/components/kanban/task/TaskForm';
+import type { TaskFormSubmitValues } from '@/hooks/use-task-form';
+import type { userApi } from '@/lib/api/user-api';
 import type { User } from '@/types/db-interface';
 import { TaskStatus } from '@/types/db-interface';
 
-vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string) => key,
+const mocks = vi.hoisted(() => ({
+  searchUsers: vi.fn<(search?: string) => Promise<User[]>>(),
+  getUserById: vi.fn<(id: string) => Promise<User | null>>(),
 }));
 
-vi.mock('sonner', () => ({
-  toast: { error: vi.fn(), success: vi.fn() },
+// SAFETY: the test double implements only the members the code under test calls
+vi.mock(import('next-intl'), () => ({
+  useTranslations: (() => (key: string) => key) as typeof useTranslations,
 }));
 
-vi.mock('@/lib/api/user-api', () => ({
-  userApi: {
-    searchUsers: vi.fn(),
-    getUserById: vi.fn(),
-  },
+// SAFETY: the test double implements only the members the code under test calls
+vi.mock(import('sonner'), () => ({
+  toast: {
+    error: vi.fn<(message: string) => void>(),
+    success: vi.fn<(message: string) => void>(),
+  } as unknown as typeof toast,
+}));
+
+// SAFETY: the test double implements only the members the code under test calls
+vi.mock(import('@/lib/api/user-api'), () => ({
+  userApi: mocks as typeof userApi,
 }));
 
 const mockUsers: User[] = [
@@ -41,15 +53,14 @@ const defaultValues = {
 
 const submit = () => fireEvent.click(screen.getByTestId('submit-task-button'));
 
-describe('TaskForm', () => {
-  const mockOnSubmit = vi.fn();
-  const mockOnCancel = vi.fn();
+describe(TaskForm, () => {
+  const mockOnSubmit = vi.fn<(values: TaskFormSubmitValues) => Promise<void>>();
+  const mockOnCancel = vi.fn<() => void>();
 
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks();
-    mockOnSubmit.mockResolvedValue(undefined);
-    const { userApi } = await import('@/lib/api/user-api');
-    vi.mocked(userApi.searchUsers).mockResolvedValue(mockUsers);
+    mockOnSubmit.mockResolvedValue();
+    mocks.searchUsers.mockResolvedValue(mockUsers);
   });
 
   it('renders all labelled fields', () => {
@@ -91,7 +102,7 @@ describe('TaskForm', () => {
     render(<TaskForm onSubmit={mockOnSubmit} />);
     submit();
     // Shown both inline and in the form's error summary.
-    expect((await screen.findAllByText('Title is required')).length).toBeGreaterThan(0);
+    await expect(screen.findAllByText('Title is required')).resolves.not.toHaveLength(0);
     expect(mockOnSubmit).not.toHaveBeenCalled();
   });
 
@@ -107,8 +118,6 @@ describe('TaskForm', () => {
         title: 'New Task',
         description: 'Details',
         status: TaskStatus.DONE,
-        dueDate: undefined,
-        assignee: undefined,
       });
     });
   });
@@ -147,7 +156,7 @@ describe('TaskForm', () => {
   });
 
   it('shows a busy submit button while onSubmit is pending', async () => {
-    mockOnSubmit.mockReturnValue(new Promise(() => {}));
+    mockOnSubmit.mockReturnValue(Promise.withResolvers<undefined>().promise);
     render(
       <TaskForm
         defaultValues={defaultValues}
@@ -164,10 +173,9 @@ describe('TaskForm', () => {
   });
 
   it('loads assignee options from the user search', async () => {
-    const { userApi } = await import('@/lib/api/user-api');
     render(<TaskForm onSubmit={mockOnSubmit} />);
     await waitFor(() => {
-      expect(userApi.searchUsers).toHaveBeenCalledWith('');
+      expect(mocks.searchUsers).toHaveBeenCalledWith('');
     });
     expect(screen.getByTestId('combobox-trigger')).toHaveTextContent('selectUser');
   });

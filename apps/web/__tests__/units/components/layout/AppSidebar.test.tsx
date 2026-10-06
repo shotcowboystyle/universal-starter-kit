@@ -6,19 +6,19 @@ import AppSidebar from '@/components/layout/AppSidebar';
 import { useBoards } from '@/hooks/use-boards';
 import { usePathname } from '@/i18n/navigation';
 
-const mockPush = vi.fn();
+const mockPush = vi.fn<(path: string) => void>();
 
-vi.mock('@/hooks/use-boards', () => ({
-  useBoards: vi.fn(),
+vi.mock(import('@/hooks/use-boards'), () => ({
+  useBoards: vi.fn<typeof useBoards>(),
 }));
 
-vi.mock('@/i18n/navigation', () => ({
-  useRouter: () => ({ push: mockPush }),
-  usePathname: vi.fn(() => '/boards'),
+vi.mock(import('@/i18n/navigation'), () => ({
+  useRouter: (() => ({ push: mockPush })) as never,
+  usePathname: vi.fn<() => string>(() => '/boards'),
 }));
 
-vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string) => key,
+vi.mock(import('next-intl'), () => ({
+  useTranslations: (() => (key: string) => key) as never,
 }));
 
 const board = (id: string, title: string) => ({
@@ -31,7 +31,7 @@ const board = (id: string, title: string) => ({
   updatedAt: '',
 });
 
-const mockBoards = (overrides: Record<string, unknown> = {}) => {
+const mockBoards = (overrides: Partial<ReturnType<typeof useBoards>> = {}) => {
   vi.mocked(useBoards).mockReturnValue({
     myBoards: [board('board-1', 'My Board 1'), board('board-2', 'My Board 2')],
     teamBoards: [board('board-3', 'Team Board 1')],
@@ -40,7 +40,7 @@ const mockBoards = (overrides: Record<string, unknown> = {}) => {
   } as any);
 };
 
-describe('AppSidebar', () => {
+describe(AppSidebar, () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(usePathname).mockReturnValue('/boards');
@@ -73,7 +73,7 @@ describe('AppSidebar', () => {
   });
 
   it('navigates to a board and calls onNavigate', () => {
-    const onNavigate = vi.fn();
+    const onNavigate = vi.fn<() => void>();
     renderWithProviders(<AppSidebar onNavigate={onNavigate} />);
     fireEvent.click(screen.getByText('Team Board 1'));
     expect(mockPush).toHaveBeenCalledWith('/boards/board-3');

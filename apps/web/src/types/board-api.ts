@@ -3,7 +3,8 @@
 export interface CreateBoardInput {
   title: string;
   description?: string;
-  owner: string; // MongoDB ObjectId of the board owner
+  // MongoDB ObjectId of the board owner
+  owner: string;
 }
 
 export interface UpdateBoardInput {

@@ -9,7 +9,7 @@ import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useHydrated } from '@/hooks/use-hydrated';
 import { useWorkspaceStore } from '@/stores/workspace-store';
-import { type Project, type UserInfo, type Task } from '@/types/db-interface';
+import type { Project, Task, UserInfo } from '@/types/db-interface';
 
 import NewTaskDialog from '../task/NewTaskDialog';
 import { TaskCard } from '../task/TaskCard';
@@ -30,10 +30,11 @@ interface BoardProjectProps {
   currentUserId: string;
 }
 
-const getUserDisplayName = (user: string | UserInfo | null | undefined): string => {
-  if (!user) {
+const getUserDisplayName = (user?: string | UserInfo | null): string => {
+  if (user == null || user === '') {
     return 'Unassigned';
   }
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- owner/members are populated by the API as either an id string or a user document
   if (typeof user === 'string') {
     return user;
   }
@@ -53,22 +54,11 @@ const BoardProjectComponent = ({
   const [tasks, setTasks] = useState(initialTasks);
 
   // Update local state when initialTasks changes
-  useEffect(() => {
+  const [prevInitialTasks, setPrevInitialTasks] = useState(initialTasks);
+  if (prevInitialTasks !== initialTasks) {
+    setPrevInitialTasks(initialTasks);
     setTasks(initialTasks);
-  }, [initialTasks]);
-
-  const loadTasks = useCallback(async () => {
-    if (!project._id) {
-      return;
-    }
-
-    try {
-      const fetchedTasks = await fetchTasksByProject(project._id);
-      setTasks(fetchedTasks);
-    } catch (err) {
-      console.error('Failed to load tasks:', err);
-    }
-  }, [project._id, fetchTasksByProject]);
+  }
 
   // Handle task updates from child components
   const handleTaskUpdate = useCallback(async () => {
@@ -82,12 +72,25 @@ const BoardProjectComponent = ({
 
   // Fetch tasks when the project changes
   useEffect(() => {
-    loadTasks();
-  }, [loadTasks]);
+    const loadTasks = async () => {
+      if (project._id == null || project._id === '') {
+        return;
+      }
+
+      try {
+        const fetchedTasks = await fetchTasksByProject(project._id);
+        setTasks(fetchedTasks);
+      } catch (error) {
+        console.error('Failed to load tasks:', error);
+      }
+    };
+
+    void loadTasks();
+  }, [project._id, fetchTasksByProject]);
 
   const filteredTasks = useMemo(() => {
-    if (!filter.status || !tasks?.length) {
-      return tasks || [];
+    if (filter.status == null || filter.status === '' || !tasks?.length) {
+      return tasks ?? [];
     }
     return tasks.filter((task) => task.status === filter.status);
   }, [tasks, filter.status]);
@@ -99,21 +102,30 @@ const BoardProjectComponent = ({
       type: 'Project',
       project,
     } satisfies ProjectDragData,
-    disabled: !isBoardMember, // Disable drag if not board member
+    // Disable drag if not board member
+    disabled: !isBoardMember,
     attributes: {
       roleDescription: `Project: ${project.title}`,
     },
   });
 
   // Button already renders role="button"; dnd-kit's string role clashes with Tamagui's Role type.
-  const { role: _role, ...dragAttributes } = attributes;
+  const dragAttributes: Omit<typeof attributes, 'role'> = attributes;
 
-  const tasksIds = useMemo(() => tasks?.map((task) => task._id) || [], [tasks]);
+  const tasksIds = useMemo(() => tasks?.map((task) => task._id) ?? [], [tasks]);
 
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- owner is populated by the API as either an id string or a user document
   const ownerId = typeof project.owner === 'string' ? project.owner : project.owner._id;
+  const description =
+    project.description == null || project.description === '' ? t('noDescription') : project.description;
   const members =
     Array.isArray(project.members) && project.members.length > 0
-      ? project.members.map(getUserDisplayName).filter(Boolean).join(', ')
+      ? project.members
+          .flatMap((member) => {
+            const name = getUserDisplayName(member);
+            return name ? [name] : [];
+          })
+          .join(', ')
       : '';
 
   // dnd-kit needs a real DOM node + inline transform, so the sortable ref and
@@ -184,7 +196,7 @@ const BoardProjectComponent = ({
                 variant="outline"
                 size="$2"
                 maxWidth="100%">
-                {`${t('description')}: ${project.description || t('noDescription')}`}
+                {`${t('description')}: ${description}`}
               </Chip>
               <Chip
                 variant="outline"
@@ -206,21 +218,25 @@ const BoardProjectComponent = ({
               <YStack
                 gap="$2"
                 paddingBottom="$2">
-                {filteredTasks
-                  .filter((task) => !task._deleted) // Ensure we don't render deleted tasks
-                  .map((task) => {
-                    const isTaskCreator = task.creator?._id === currentUserId;
-                    const isTaskAssignee = task.assignee?._id === currentUserId;
-                    const canDrag = isBoardOwner || isTaskCreator || isTaskAssignee;
-                    return (
-                      <TaskCard
-                        key={task._id}
-                        task={task}
-                        onUpdate={handleTaskUpdate}
-                        isDragEnabled={canDrag}
-                      />
-                    );
-                  })}
+                {filteredTasks.flatMap((task) => {
+                  // Ensure we don't render deleted tasks
+                  if (task._deleted) {
+                    return [];
+                  }
+                  const isTaskCreator = task.creator?._id === currentUserId;
+                  const isTaskAssignee = task.assignee?._id === currentUserId;
+                  const canDrag = isBoardOwner || isTaskCreator || isTaskAssignee;
+                  return [
+                    <TaskCard
+                      key={task._id}
+                      task={task}
+                      onUpdate={() => {
+                        void handleTaskUpdate();
+                      }}
+                      isDragEnabled={canDrag}
+                    />,
+                  ];
+                })}
               </YStack>
             </SortableContext>
           </YStack>
@@ -238,13 +254,12 @@ export const BoardProject = memo(BoardProjectComponent, (prevProps, nextProps) =
   const nextTaskIds = nextProps.tasks.map((t) => t._id);
   const tasksMatch = prevTaskIds.length === nextTaskIds.length && prevTaskIds.every((id, i) => id === nextTaskIds[i]);
 
-  return (
+  const sameProject =
     prevProps.project._id === nextProps.project._id &&
     prevProps.project.title === nextProps.project.title &&
-    prevProps.project.description === nextProps.project.description &&
-    tasksMatch &&
-    prevProps.isOverlay === nextProps.isOverlay
-  );
+    prevProps.project.description === nextProps.project.description;
+
+  return sameProject && tasksMatch && prevProps.isOverlay === nextProps.isOverlay;
 });
 
 // Set display name for better dev tools

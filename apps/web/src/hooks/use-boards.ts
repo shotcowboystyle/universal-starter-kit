@@ -23,27 +23,29 @@ export const useBoards = () => {
 
     if ('myBoards' in data && 'teamBoards' in data) {
       return {
-        myBoards: (data.myBoards || []).map(normalizeBoard),
-        teamBoards: (data.teamBoards || []).map(normalizeBoard),
+        myBoards: (data.myBoards ?? []).map(normalizeBoard),
+        teamBoards: (data.teamBoards ?? []).map(normalizeBoard),
       };
     }
 
     const boards = Array.isArray(data) ? data : [];
-    const myBoards: Board[] = [];
-    const teamBoards: Board[] = [];
+    const mine: Board[] = [];
+    const team: Board[] = [];
 
-    boards.forEach((board: Board) => {
+    // SAFETY: legacy responses were a plain Board[]; Array.isArray only narrows to any[]
+    for (const board of boards as Board[]) {
       const normalizedBoard = normalizeBoard(board);
+      // oxlint-disable-next-line anti-slop/no-runtime-typeof -- owner is either an id string or a populated user object
       const ownerId = typeof normalizedBoard.owner === 'string' ? normalizedBoard.owner : normalizedBoard.owner?._id;
 
       if (ownerId === userId) {
-        myBoards.push(normalizedBoard);
+        mine.push(normalizedBoard);
       } else {
-        teamBoards.push(normalizedBoard);
+        team.push(normalizedBoard);
       }
-    });
+    }
 
-    return { myBoards, teamBoards };
+    return { myBoards: mine, teamBoards: team };
   }, [data, userId]);
 
   return {

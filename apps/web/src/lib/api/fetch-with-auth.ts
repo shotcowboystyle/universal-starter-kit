@@ -1,38 +1,36 @@
-const getHeaders = (optionHeaders: RequestInit['headers'], token: string | null): Record<string, string> => {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
+const getHeaders = (optionHeaders: RequestInit['headers'], token: string | null) => {
+  const entries: [string, string][] = [['Content-Type', 'application/json']];
 
   if (optionHeaders) {
-    if (optionHeaders instanceof Headers) {
-      optionHeaders.forEach((value, key) => {
-        headers[key] = value;
-      });
-    } else if (Array.isArray(optionHeaders)) {
-      optionHeaders.forEach(([key, value]) => {
-        headers[key] = value;
-      });
+    if (optionHeaders instanceof Headers || Array.isArray(optionHeaders)) {
+      for (const [key, value] of optionHeaders) {
+        entries.push([key, value]);
+      }
     } else {
-      Object.entries(optionHeaders).forEach(([key, value]) => {
+      for (const [key, value] of Object.entries(optionHeaders)) {
+        // oxlint-disable-next-line anti-slop/no-runtime-typeof -- caller-supplied header values can be non-strings at runtime
         if (typeof value === 'string') {
-          headers[key] = value;
+          entries.push([key, value]);
         }
-      });
+      }
     }
   }
 
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
+  if (token !== null && token !== '') {
+    entries.push(['Authorization', `Bearer ${token}`]);
   }
 
-  return headers;
+  return Object.fromEntries(entries);
 };
 
 const handleErrorResponse = async (response: Response): Promise<never> => {
   let errorMessage: string;
   try {
-    const errorData = await response.json();
-    errorMessage = errorData.message || JSON.stringify(errorData);
+    // SAFETY: error bodies are expected to be JSON objects; a null/non-object body throws below and falls back to text
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- response.json() is any; shape checked by the optional access below
+    const errorData = (await response.json()) as { message?: string };
+    errorMessage =
+      errorData.message !== undefined && errorData.message !== '' ? errorData.message : JSON.stringify(errorData);
   } catch {
     try {
       errorMessage = await response.text();
@@ -45,13 +43,16 @@ const handleErrorResponse = async (response: Response): Promise<never> => {
 };
 
 const handleSuccessResponse = async <T>(response: Response, handleEmptyResponse: boolean): Promise<T> => {
-  if (handleEmptyResponse) {
-    if (response.status === 204 || response.headers.get('content-length') === '0') {
-      return null as unknown as T;
-    }
+  if (handleEmptyResponse && (response.status === 204 || response.headers.get('content-length') === '0')) {
+    // SAFETY: callers that opt into handleEmptyResponse accept a null result for empty bodies
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion, anti-slop/no-chained-type-assertions -- T is caller-chosen and cannot be proven to include null
+    return null as unknown as T;
   }
+  // oxlint-disable-next-line typescript/no-unsafe-return -- response.json() is untyped; callers pin T to the endpoint's JSON shape
   return await response.json();
-}; /**
+};
+
+/**
  * Helper function to handle fetch requests with authentication
  * This is a shared utility used by all API clients
  */
@@ -65,7 +66,8 @@ export const fetchWithAuth = async <T>(
 
   const response = await fetch(url, {
     ...options,
-    credentials: 'include', // Still include for cookie fallback
+    // Still include for cookie fallback
+    credentials: 'include',
     headers,
   });
 

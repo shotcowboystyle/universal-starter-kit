@@ -14,16 +14,17 @@ const MemoizedBoard = memo(Board);
 const BoardPage = () => {
   const params = useParams();
   const t = useTranslations('kanban');
-  const boardId = params?.boardId as string;
+  const rawBoardId = params?.boardId;
+  const boardId = Array.isArray(rawBoardId) ? rawBoardId[0] : rawBoardId;
   const setCurrentBoardId = useWorkspaceStore((state) => state.setCurrentBoardId);
   const fetchProjects = useWorkspaceStore((state) => state.fetchProjects);
 
   useEffect(() => {
-    if (!boardId) {
+    if (boardId === undefined || boardId === '') {
       return;
     }
     setCurrentBoardId(boardId);
-    fetchProjects(boardId);
+    void fetchProjects(boardId);
   }, [boardId, setCurrentBoardId, fetchProjects]);
 
   return (

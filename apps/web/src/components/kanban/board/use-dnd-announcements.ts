@@ -20,7 +20,7 @@ const hasDraggableData = <T extends Active | Over>(
 };
 
 const getDraggingTaskData = (taskId: string, projectId: string, projects: Project[]) => {
-  const project = projects.find((project: Project) => project._id.toString() === projectId);
+  const project = projects.find((candidate: Project) => candidate._id === projectId);
   if (!project) {
     return {
       tasksInProject: [],
@@ -28,7 +28,7 @@ const getDraggingTaskData = (taskId: string, projectId: string, projects: Projec
       project: null,
     };
   }
-  const tasksInProject = project.tasks.filter((task: Task) => task.project.toString() === projectId);
+  const tasksInProject = project.tasks.filter((task: Task) => task.project === projectId);
   const taskPosition = tasksInProject.findIndex((task: { _id: string }) => task._id === taskId);
   return {
     tasksInProject,
@@ -42,83 +42,81 @@ export const useDndAnnouncements = (projects: Project[], projectsId: string[]): 
 
   return {
     onDragStart({ active }) {
+      let message: string | undefined;
       if (!hasDraggableData(active)) {
-        return;
+        return message;
       }
       if (active.data.current?.type === 'Project') {
-        const startProjectIdx = projectsId.indexOf(active.id as string);
+        const startProjectIdx = projectsId.indexOf(String(active.id));
         const startProject = projects[startProjectIdx];
-        return `Picked up Project ${startProject?.title} at position: ${startProjectIdx + 1} of ${projectsId.length}`;
+        message = `Picked up Project ${startProject?.title} at position: ${startProjectIdx + 1} of ${projectsId.length}`;
       } else if (active.data.current?.type === 'Task') {
         pickedUpTaskProject.current = active.data.current.task.project;
         const { tasksInProject, taskPosition, project } = getDraggingTaskData(
           active.data.current.task._id,
-          active.data.current.task.project.toString(),
+          active.data.current.task.project,
           projects,
         );
-        return `Picked up Task ${active.data.current.task.title} at position: ${taskPosition + 1} of ${
+        message = `Picked up Task ${active.data.current.task.title} at position: ${taskPosition + 1} of ${
           tasksInProject.length
         } in project ${project?.title}`;
       }
+      return message;
     },
     onDragOver({ active, over }) {
+      let message: string | undefined;
       if (!hasDraggableData(active) || !hasDraggableData(over)) {
-        return;
+        return message;
       }
       if (active.data.current?.type === 'Project' && over.data.current?.type === 'Project') {
-        const overProjectIdx = projectsId.indexOf(over.id as string);
-        return `Project ${active.data.current.project.title} was moved over ${
+        const overProjectIdx = projectsId.indexOf(String(over.id));
+        message = `Project ${active.data.current.project.title} was moved over ${
           over.data.current.project.title
         } at position ${overProjectIdx + 1} of ${projectsId.length}`;
       } else if (active.data.current?.type === 'Task' && over.data.current?.type === 'Task') {
         const { tasksInProject, taskPosition, project } = getDraggingTaskData(
           over.data.current.task._id,
-          over.data.current.task.project.toString(),
+          over.data.current.task.project,
           projects,
         );
-        if (over.data.current.task.project !== pickedUpTaskProject.current?.toString()) {
-          return `Task ${active.data.current.task.title} was moved over project ${project?.title} in position ${
-            taskPosition + 1
-          } of ${tasksInProject.length}`;
-        }
-        return `Task was moved over position ${taskPosition + 1} of ${
-          tasksInProject.length
-        } in project ${project?.title}`;
+        message =
+          over.data.current.task.project === pickedUpTaskProject.current
+            ? `Task was moved over position ${taskPosition + 1} of ${tasksInProject.length} in project ${project?.title}`
+            : `Task ${active.data.current.task.title} was moved over project ${project?.title} in position ${
+                taskPosition + 1
+              } of ${tasksInProject.length}`;
       }
+      return message;
     },
     onDragEnd({ active, over }) {
+      let message: string | undefined;
       if (!hasDraggableData(active) || !hasDraggableData(over)) {
         pickedUpTaskProject.current = null;
-        return;
+        return message;
       }
       if (active.data.current?.type === 'Project' && over.data.current?.type === 'Project') {
-        const overProjectPosition = projectsId.indexOf(over.id as string);
+        const overProjectPosition = projectsId.indexOf(String(over.id));
 
-        return `Project ${active.data.current.project.title} was dropped into position ${overProjectPosition + 1} of ${
+        message = `Project ${active.data.current.project.title} was dropped into position ${overProjectPosition + 1} of ${
           projectsId.length
         }`;
       } else if (active.data.current?.type === 'Task' && over.data.current?.type === 'Task') {
         const { tasksInProject, taskPosition, project } = getDraggingTaskData(
           over.data.current.task._id,
-          over.data.current.task.project.toString(),
+          over.data.current.task.project,
           projects,
         );
-        if (over.data.current.task.project !== pickedUpTaskProject.current?.toString()) {
-          return `Task was dropped into project ${project?.title} in position ${
-            taskPosition + 1
-          } of ${tasksInProject.length}`;
-        }
-        return `Task was dropped into position ${taskPosition + 1} of ${
-          tasksInProject.length
-        } in project ${project?.title}`;
+        message =
+          over.data.current.task.project === pickedUpTaskProject.current
+            ? `Task was dropped into position ${taskPosition + 1} of ${tasksInProject.length} in project ${project?.title}`
+            : `Task was dropped into project ${project?.title} in position ${taskPosition + 1} of ${tasksInProject.length}`;
+      } else {
+        pickedUpTaskProject.current = null;
       }
-      pickedUpTaskProject.current = null;
+      return message;
     },
     onDragCancel({ active }) {
-      if (!hasDraggableData(active)) {
-        return;
-      }
-      return `Dragging ${active.data.current?.type} cancelled.`;
+      return hasDraggableData(active) ? `Dragging ${active.data.current?.type} cancelled.` : undefined;
     },
   };
 };

@@ -2,14 +2,23 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useWorkspaceStore } from '@/stores/workspace-store';
 import type { Project } from '@/types/db-interface';
+import type { CreateProjectInput, UpdateProjectInput } from '@/types/project-api';
+
+type StoreState = ReturnType<typeof useWorkspaceStore.getState>;
+type CreateProjectFn = Parameters<StoreState['addProject']>[2];
+type UpdateProjectFn = Parameters<StoreState['updateProject']>[3];
+type DeleteProjectFn = Parameters<StoreState['removeProject']>[1];
+
+const getProjectsMock = vi.hoisted(() => vi.fn<(boardId: string) => Promise<Project[]>>());
 
 // Mock the API modules
-vi.mock('@/lib/api/project-api', () => ({
+vi.mock(import('@/lib/api/project-api'), () => ({
   projectApi: {
-    getProjects: vi.fn(),
-    createProject: vi.fn(),
-    updateProject: vi.fn(),
-    deleteProject: vi.fn(),
+    getProjectById: vi.fn<(id: string) => Promise<Project>>(),
+    getProjects: getProjectsMock,
+    createProject: vi.fn<(input: CreateProjectInput) => Promise<Project>>(),
+    updateProject: vi.fn<(id: string, input: UpdateProjectInput) => Promise<Project>>(),
+    deleteProject: vi.fn<(id: string) => Promise<void>>(),
   },
 }));
 
@@ -50,7 +59,7 @@ describe('workspace-store - Project actions', () => {
         },
       ];
 
-      vi.mocked(projectApi.getProjects).mockResolvedValue(mockProjects);
+      vi.mocked(projectApi).getProjects.mockResolvedValue(mockProjects);
 
       const store = useWorkspaceStore.getState();
       await store.fetchProjects('board-1');
@@ -63,7 +72,7 @@ describe('workspace-store - Project actions', () => {
 
     it('should handle fetch projects error', async () => {
       const { projectApi } = await import('@/lib/api/project-api');
-      vi.mocked(projectApi.getProjects).mockRejectedValue(new Error('Failed to fetch'));
+      vi.mocked(projectApi).getProjects.mockRejectedValue(new Error('Failed to fetch'));
 
       const store = useWorkspaceStore.getState();
       await store.fetchProjects('board-1');
@@ -74,12 +83,10 @@ describe('workspace-store - Project actions', () => {
     });
 
     it('should not fetch projects if boardId is empty', async () => {
-      const { projectApi } = await import('@/lib/api/project-api');
-
       const store = useWorkspaceStore.getState();
       await store.fetchProjects('');
 
-      expect(projectApi.getProjects).not.toHaveBeenCalled();
+      expect(getProjectsMock).not.toHaveBeenCalled();
     });
 
     it('should add a new project', async () => {
@@ -96,7 +103,7 @@ describe('workspace-store - Project actions', () => {
         updatedAt: new Date().toISOString(),
       };
 
-      const createProjectMock = vi.fn().mockResolvedValue(mockProject);
+      const createProjectMock = vi.fn<CreateProjectFn>().mockResolvedValue(mockProject);
 
       useWorkspaceStore.setState({
         userId: 'user-1',
@@ -114,7 +121,7 @@ describe('workspace-store - Project actions', () => {
     });
 
     it('should throw error when adding project without board selected', async () => {
-      const createProjectMock = vi.fn();
+      const createProjectMock = vi.fn<CreateProjectFn>();
 
       useWorkspaceStore.setState({
         userId: 'user-1',
@@ -129,7 +136,7 @@ describe('workspace-store - Project actions', () => {
     });
 
     it('should throw error when adding project without user authenticated', async () => {
-      const createProjectMock = vi.fn();
+      const createProjectMock = vi.fn<CreateProjectFn>();
 
       useWorkspaceStore.setState({
         userId: null,
@@ -162,7 +169,7 @@ describe('workspace-store - Project actions', () => {
         projects: [mockProject],
       });
 
-      const updateFn = vi.fn().mockResolvedValue({ ...mockProject, title: 'New Title' });
+      const updateFn = vi.fn<UpdateProjectFn>().mockResolvedValue({ ...mockProject, title: 'New Title' });
 
       const store = useWorkspaceStore.getState();
       await store.updateProject('project-1', 'New Title', 'New Description', updateFn);
@@ -191,7 +198,7 @@ describe('workspace-store - Project actions', () => {
         projects: [mockProject],
       });
 
-      const updateFn = vi.fn();
+      const updateFn = vi.fn<UpdateProjectFn>();
       const store = useWorkspaceStore.getState();
 
       await expect(store.updateProject('project-1', 'New Title', 'New Description', updateFn)).rejects.toMatchObject({
@@ -218,7 +225,7 @@ describe('workspace-store - Project actions', () => {
         projects: [mockProject],
       });
 
-      const updateFn = vi.fn().mockRejectedValue(new Error('Update failed'));
+      const updateFn = vi.fn<UpdateProjectFn>().mockRejectedValue(new Error('Update failed'));
 
       const store = useWorkspaceStore.getState();
 
@@ -245,7 +252,7 @@ describe('workspace-store - Project actions', () => {
         projects: [mockProject],
       });
 
-      const deleteFn = vi.fn().mockResolvedValue(undefined);
+      const deleteFn = vi.fn<DeleteProjectFn>().mockResolvedValue();
 
       const store = useWorkspaceStore.getState();
       await store.removeProject('project-1', deleteFn);

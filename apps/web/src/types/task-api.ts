@@ -13,8 +13,8 @@ export const TASK_KEYS = {
   list: (filters: { project?: string; assignee?: string } = {}) =>
     [
       ...TASK_KEYS.lists(),
-      ...(filters.project ? [{ project: filters.project }] : []),
-      ...(filters.assignee ? [{ assignee: filters.assignee }] : []),
+      ...(filters.project !== undefined && filters.project !== '' ? [{ project: filters.project }] : []),
+      ...(filters.assignee !== undefined && filters.assignee !== '' ? [{ assignee: filters.assignee }] : []),
     ] as const,
   details: () => [...TASK_KEYS.all, 'detail'] as const,
   detail: (id: string) => [...TASK_KEYS.details(), id] as const,

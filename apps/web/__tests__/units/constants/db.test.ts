@@ -5,17 +5,17 @@ import { CONNECT_TIMEOUT_MS, SERVER_SELECTION_TIMEOUT_MS, SOCKET_TIMEOUT_MS } fr
 describe('db constants', () => {
   it('should have correct CONNECT_TIMEOUT_MS value', () => {
     expect(CONNECT_TIMEOUT_MS).toBe(10_000);
-    expect(typeof CONNECT_TIMEOUT_MS).toBe('number');
+    expect(CONNECT_TIMEOUT_MS).toBeTypeOf('number');
   });
 
   it('should have correct SOCKET_TIMEOUT_MS value', () => {
     expect(SOCKET_TIMEOUT_MS).toBe(45_000);
-    expect(typeof SOCKET_TIMEOUT_MS).toBe('number');
+    expect(SOCKET_TIMEOUT_MS).toBeTypeOf('number');
   });
 
   it('should have correct SERVER_SELECTION_TIMEOUT_MS value', () => {
     expect(SERVER_SELECTION_TIMEOUT_MS).toBe(10_000);
-    expect(typeof SERVER_SELECTION_TIMEOUT_MS).toBe('number');
+    expect(SERVER_SELECTION_TIMEOUT_MS).toBeTypeOf('number');
   });
 
   it('should have SOCKET_TIMEOUT_MS greater than CONNECT_TIMEOUT_MS', () => {

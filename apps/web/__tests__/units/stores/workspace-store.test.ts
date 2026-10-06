@@ -4,37 +4,57 @@ import { useWorkspaceStore } from '@/stores/workspace-store';
 import { TaskStatus } from '@/types/db-interface';
 import type { Board, Project } from '@/types/db-interface';
 
-vi.mock('@/lib/api/board-api', () => ({
-  boardApi: {
-    createBoard: vi.fn(),
-    updateBoard: vi.fn(),
-    deleteBoard: vi.fn(),
-  },
-}));
+// SAFETY: each stub supplies only the API methods the store calls
+vi.mock(
+  import('@/lib/api/board-api'),
+  () =>
+    ({
+      boardApi: {
+        createBoard: vi.fn<() => void>(),
+        updateBoard: vi.fn<() => void>(),
+        deleteBoard: vi.fn<() => void>(),
+      },
+    }) as never,
+);
 
-vi.mock('@/lib/api/project-api', () => ({
-  projectApi: {
-    getProjects: vi.fn(),
-    createProject: vi.fn(),
-    updateProject: vi.fn(),
-    deleteProject: vi.fn(),
-  },
-}));
+// SAFETY: each stub supplies only the API methods the store calls
+vi.mock(
+  import('@/lib/api/project-api'),
+  () =>
+    ({
+      projectApi: {
+        getProjects: vi.fn<() => void>(),
+        createProject: vi.fn<() => void>(),
+        updateProject: vi.fn<() => void>(),
+        deleteProject: vi.fn<() => void>(),
+      },
+    }) as never,
+);
 
-vi.mock('@/lib/api/task-api', () => ({
-  taskApi: {
-    getTasks: vi.fn(),
-    createTask: vi.fn(),
-    updateTask: vi.fn(),
-    deleteTask: vi.fn(),
-  },
-}));
+// SAFETY: each stub supplies only the API methods the store calls
+vi.mock(
+  import('@/lib/api/task-api'),
+  () =>
+    ({
+      taskApi: {
+        getTasks: vi.fn<() => void>(),
+        createTask: vi.fn<() => void>(),
+        updateTask: vi.fn<() => void>(),
+        deleteTask: vi.fn<() => void>(),
+      },
+    }) as never,
+);
 
-vi.mock('@/lib/api/tasks', () => ({
-  useDeleteTask: vi.fn(() => ({
-    mutateAsync: vi.fn(),
-  })),
-}));
+// SAFETY: each stub supplies only the API methods the store calls
+vi.mock(
+  import('@/lib/api/tasks'),
+  () =>
+    ({
+      useDeleteTask: vi.fn<() => { mutateAsync: () => void }>(() => ({
+        mutateAsync: vi.fn<() => void>(),
+      })),
+    }) as never,
+);
 
 describe('workspace-store', () => {
   beforeEach(() => {
@@ -109,7 +129,7 @@ describe('workspace-store', () => {
         updatedAt: new Date().toISOString(),
       };
 
-      vi.mocked(boardApi.createBoard).mockResolvedValue(mockBoard);
+      vi.mocked(boardApi).createBoard.mockResolvedValue(mockBoard);
 
       useWorkspaceStore.setState({
         userId: 'user-1',
@@ -146,16 +166,19 @@ describe('workspace-store', () => {
         updatedAt: new Date().toISOString(),
       };
 
-      vi.mocked(boardApi.updateBoard).mockResolvedValue({ ...mockBoard, title: 'New Title' });
+      const mockedBoardApi = vi.mocked(boardApi);
+      mockedBoardApi.updateBoard.mockResolvedValue({ ...mockBoard, title: 'New Title' });
 
       const store = useWorkspaceStore.getState();
       await store.updateBoard('board-1', { title: 'New Title' });
 
-      expect(boardApi.updateBoard).toHaveBeenCalledWith('board-1', { title: 'New Title' });
+      expect(mockedBoardApi.updateBoard.mock.calls).toStrictEqual([['board-1', { title: 'New Title' }]]);
     });
 
     it('should remove a board', async () => {
-      const deleteFn = vi.fn().mockResolvedValue(undefined);
+      const deleteFn = vi.fn<(id: string) => Promise<void>>(async () => {
+        await Promise.resolve();
+      });
 
       const store = useWorkspaceStore.getState();
       await store.removeBoard('board-1', deleteFn);

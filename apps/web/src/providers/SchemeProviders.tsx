@@ -7,6 +7,7 @@ import { ClientProviders } from './ClientProviders';
 
 /** Reads the persisted color scheme so SSR matches what the client will render. */
 export const SchemeProviders = async ({ children }: { children: ReactNode }) => {
-  const scheme = (await cookies()).get(COLOR_SCHEME_COOKIE)?.value;
+  const cookieStore = await cookies();
+  const scheme = cookieStore.get(COLOR_SCHEME_COOKIE)?.value;
   return <ClientProviders initialScheme={scheme === 'dark' ? 'dark' : 'light'}>{children}</ClientProviders>;
 };

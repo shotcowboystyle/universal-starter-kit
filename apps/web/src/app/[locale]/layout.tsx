@@ -38,6 +38,7 @@ export const generateMetadata = async ({ params }: Omit<Props, 'children'>): Pro
 const LocaleLayout = async ({ children, params }: Readonly<Props>) => {
   const { locale } = await params;
   // Enable static rendering
+  // oxlint-disable-next-line typescript/no-deprecated -- migrating to next/root-params is a routing change beyond lint scope
   setRequestLocale(locale);
 
   if (!hasLocale(routing.locales, locale)) {

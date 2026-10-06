@@ -1,30 +1,61 @@
 import Cookies from 'js-cookie';
+import { z } from 'zod';
 
 import { ROUTES } from '@/constants/routes';
 import type { Session, UserInfo } from '@/types/db-interface';
 
 const API_BASE = ROUTES.API;
 
-export class AuthService {
-  static async login(email: string): Promise<{ access_token: string; user?: UserInfo }> {
+// Shape-only checks: the backend owns the user document, we just need the fields read below
+const loginResponseSchema = z.object({
+  access_token: z.string().optional(),
+  user: z.custom<UserInfo>().optional(),
+});
+
+const profileResponseSchema = z
+  .object({
+    _id: z.string(),
+    email: z.string().optional(),
+    name: z.string().optional(),
+  })
+  .nullable();
+
+const LOGIN_FAILED = 'Login failed';
+const JSON_CONTENT_TYPE = 'application/json';
+
+const isBlank = (value: string | null | undefined): value is '' | null | undefined =>
+  value === undefined || value === null || value === '';
+
+export const AuthService = {
+  async login(email: string): Promise<{ access_token: string; user?: UserInfo }> {
     const response = await fetch(ROUTES.AUTH.LOGIN_API, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
+        'Content-Type': JSON_CONTENT_TYPE,
+        Accept: JSON_CONTENT_TYPE,
       },
       credentials: 'include',
       body: JSON.stringify({ email }),
     });
 
     if (!response.ok) {
-      const errorText = await response.text().catch(() => 'Login failed');
-      throw new Error(errorText || 'Login failed');
+      let errorText = LOGIN_FAILED;
+      try {
+        errorText = await response.text();
+      } catch {
+        // Safe to continue: unreadable body just means we report the generic message
+      }
+      throw new Error(errorText === '' ? LOGIN_FAILED : errorText);
     }
 
-    const data = await response.json();
+    const parsedLogin = loginResponseSchema.safeParse(await response.json());
+    if (!parsedLogin.success) {
+      throw new Error(LOGIN_FAILED);
+    }
+    const { data } = parsedLogin;
 
-    if (data.access_token) {
+    if (!isBlank(data.access_token)) {
+      // oxlint-disable-next-line react-doctor/auth-token-in-web-storage -- existing Authorization-header fallback; the primary session is the HTTP-only cookie
       localStorage.setItem('auth_token', data.access_token);
     }
 
@@ -36,28 +67,26 @@ export class AuthService {
     });
 
     return {
-      access_token: data.access_token || 'http-only-cookie',
+      access_token: isBlank(data.access_token) ? 'http-only-cookie' : data.access_token,
       user: data.user,
     };
-  }
+  },
 
-  static async getProfile(): Promise<UserInfo> {
+  async getProfile(): Promise<UserInfo> {
     // Try to get token from localStorage for Authorization header
     const token = localStorage.getItem('auth_token');
 
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
+    const baseHeaders = {
+      'Content-Type': JSON_CONTENT_TYPE,
+      Accept: JSON_CONTENT_TYPE,
     };
-
     // Add Authorization header if token exists
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
+    const headers = isBlank(token) ? baseHeaders : { ...baseHeaders, Authorization: `Bearer ${token}` };
 
     const response = await fetch(`${API_BASE}/auth/profile`, {
       method: 'GET',
-      credentials: 'include', // Still try cookies as fallback
+      // Still try cookies as fallback
+      credentials: 'include',
       headers,
       // Add cache control to prevent caching issues
       cache: 'no-store',
@@ -65,59 +94,64 @@ export class AuthService {
     });
 
     if (!response.ok) {
-      await response.text().catch(() => 'Failed to fetch profile');
+      try {
+        await response.text();
+      } catch {
+        // Safe to continue: body is only drained, the status check below decides the error
+      }
 
       if (response.status === 401) {
-        this.logout();
+        AuthService.logout();
       }
 
       throw new Error(`Failed to fetch user profile: ${response.status} ${response.statusText}`);
     }
 
-    const user = await response.json();
+    const parsedUser = profileResponseSchema.safeParse(await response.json());
+    const user = parsedUser.success ? parsedUser.data : null;
 
     // Ensure we have required fields
-    if (!user || !user.email) {
+    if (user === null || isBlank(user.email)) {
       throw new Error('Invalid user data received from server');
     }
+
+    const [emailName] = user.email.split('@');
+    const fallbackName = isBlank(emailName) ? 'User' : emailName;
 
     // Map the backend user to our frontend User type
     return {
       _id: user._id,
       email: user.email,
-      name: user.name || user.email.split('@')[0] || 'User',
+      name: isBlank(user.name) ? fallbackName : user.name,
     };
-  }
+  },
 
-  static async getSession(): Promise<Session | null> {
+  async getSession(): Promise<Session | null> {
     try {
       // First try to get the profile using the HTTP-only cookie
-      const user = await this.getProfile();
-
-      if (!user) {
-        return null;
-      }
+      const user = await AuthService.getProfile();
 
       return {
         user: {
           _id: user._id,
           email: user.email,
-          name: user.name || user.email.split('@')[0],
+          name: user.name,
         },
-        accessToken: 'http-only-cookie', // The actual token is in the HTTP-only cookie
+        // The actual token is in the HTTP-only cookie
+        accessToken: 'http-only-cookie',
       };
     } catch (error) {
       console.error('Session validation error:', error);
       // Don't throw here, just return null to indicate no valid session
       return null;
     }
-  }
+  },
 
-  static logout(): void {
+  logout(): void {
     if (typeof window !== 'undefined') {
       Cookies.remove('jwt', { path: '/' });
       Cookies.remove('isAuthenticated', { path: '/' });
       localStorage.removeItem('auth_token');
     }
-  }
-}
+  },
+};

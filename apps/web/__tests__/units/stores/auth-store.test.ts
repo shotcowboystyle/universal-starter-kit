@@ -5,10 +5,10 @@ import type { Session, UserInfo } from '@/types/db-interface';
 
 // Mock localStorage for persist middleware
 const localStorageMock = {
-  getItem: vi.fn(() => null),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
+  getItem: vi.fn<(key: string) => string | null>(() => null),
+  setItem: vi.fn<(key: string, value: string) => void>(),
+  removeItem: vi.fn<(key: string) => void>(),
+  clear: vi.fn<() => void>(),
 };
 
 Object.defineProperty(window, 'localStorage', {

@@ -7,7 +7,7 @@ export const isAuthenticated = async () => {
     const cookieStore = await cookies();
     const allCookies = cookieStore.getAll();
     const jwtCookie = allCookies.find((cookie) => cookie.name === 'jwt');
-    return { isAuthenticated: !!jwtCookie?.value };
+    return { isAuthenticated: jwtCookie?.value !== undefined && jwtCookie.value !== '' };
   } catch (error) {
     console.error('Error checking authentication:', error);
     return { isAuthenticated: false };

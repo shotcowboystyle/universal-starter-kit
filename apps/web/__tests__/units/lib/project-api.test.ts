@@ -4,22 +4,22 @@ import { projectApi } from '@/lib/api/project-api';
 import type { Project } from '@/types/db-interface';
 
 // Mock fetch
-const mockFetch = vi.fn();
-global.fetch = mockFetch;
+const mockFetch = vi.fn<(...args: Parameters<typeof fetch>) => Promise<Partial<Response>>>();
+vi.stubGlobal('fetch', mockFetch);
 
 // Mock localStorage
 const localStorageMock = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
+  getItem: vi.fn<(key: string) => string | null>(),
+  setItem: vi.fn<(key: string, value: string) => void>(),
+  removeItem: vi.fn<(key: string) => void>(),
+  clear: vi.fn<() => void>(),
 };
 Object.defineProperty(global, 'localStorage', {
   value: localStorageMock,
   writable: true,
 });
 
-describe('projectApi', () => {
+describe('project API', () => {
   const mockProject: Project = {
     _id: 'project-1',
     title: 'Test Project',

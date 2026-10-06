@@ -7,7 +7,7 @@ import { useHydrated } from '@/hooks/use-hydrated';
 
 const Probe = () => <span>{useHydrated() ? 'client' : 'server'}</span>;
 
-describe('useHydrated', () => {
+describe(useHydrated, () => {
   it('is false while rendering on the server', () => {
     expect(renderToString(<Probe />)).toContain('server');
   });

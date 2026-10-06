@@ -9,83 +9,153 @@ import type { Project } from '@/types/db-interface';
 
 globalThis.React = React;
 
-const mockUseAuth = vi.fn();
-const mockUseBoards = vi.fn();
-const mockUseWorkspaceStore = vi.fn();
+interface StoreStub {
+  projects: Project[];
+}
+type Selector = (state: StoreStub) => object;
 
-vi.mock('@/hooks/use-auth', () => ({
-  useAuth: () => mockUseAuth(),
-}));
+const mockUseAuth = vi.fn<() => object>();
+const mockUseBoards = vi.fn<() => object>();
+const mockUseWorkspaceStore = vi.fn<(selector?: Selector) => object>();
 
-vi.mock('@/hooks/use-boards', () => ({
-  useBoards: () => mockUseBoards(),
-}));
+// SAFETY: each stub supplies only the exports Board and its children use
+vi.mock(
+  import('@/hooks/use-auth'),
+  () =>
+    ({
+      useAuth: () => mockUseAuth(),
+    }) as never,
+);
 
-vi.mock('@/stores/workspace-store', () => ({
-  useWorkspaceStore: (selector: any) => mockUseWorkspaceStore(selector),
-}));
+// SAFETY: each stub supplies only the exports Board and its children use
+vi.mock(
+  import('@/hooks/use-boards'),
+  () =>
+    ({
+      useBoards: () => mockUseBoards(),
+    }) as never,
+);
 
-vi.mock('@/lib/api/task-api', () => ({
-  taskApi: {
-    moveTask: vi.fn(),
-    updateTask: vi.fn(),
-  },
-}));
+// SAFETY: each stub supplies only the exports Board and its children use
+vi.mock(
+  import('@/stores/workspace-store'),
+  () =>
+    ({
+      useWorkspaceStore: (selector?: Selector) => mockUseWorkspaceStore(selector),
+    }) as never,
+);
 
-vi.mock('@/lib/api/project-api', () => ({
-  projectApi: {
-    updateProject: vi.fn(),
-  },
-}));
+// SAFETY: each stub supplies only the exports Board and its children use
+vi.mock(
+  import('@/lib/api/task-api'),
+  () =>
+    ({
+      taskApi: {
+        moveTask: vi.fn<() => void>(),
+        updateTask: vi.fn<() => void>(),
+      },
+    }) as never,
+);
 
-vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string) => key,
-}));
+// SAFETY: each stub supplies only the exports Board and its children use
+vi.mock(
+  import('@/lib/api/project-api'),
+  () =>
+    ({
+      projectApi: {
+        updateProject: vi.fn<() => void>(),
+      },
+    }) as never,
+);
 
-vi.mock('sonner', () => ({
-  toast: {
-    success: vi.fn(),
-    error: vi.fn(),
-  },
-}));
+// SAFETY: each stub supplies only the exports Board and its children use
+vi.mock(
+  import('next-intl'),
+  () =>
+    ({
+      useTranslations: () => (key: string) => key,
+    }) as never,
+);
 
-vi.mock('@dnd-kit/core', () => ({
-  DndContext: ({ children }: any) => <div data-testid="dnd-context">{children}</div>,
-  DragOverlay: ({ children }: any) => <div data-testid="drag-overlay">{children}</div>,
-  useSensor: vi.fn(),
-  useSensors: vi.fn(() => []),
-  MouseSensor: vi.fn(),
-  TouchSensor: vi.fn(),
-}));
+// SAFETY: each stub supplies only the exports Board and its children use
+vi.mock(
+  import('sonner'),
+  () =>
+    ({
+      toast: {
+        success: vi.fn<() => void>(),
+        error: vi.fn<() => void>(),
+      },
+    }) as never,
+);
 
-vi.mock('@dnd-kit/sortable', () => ({
-  SortableContext: ({ children }: any) => <div data-testid="sortable-context">{children}</div>,
-  arrayMove: (arr: any[], from: number, to: number) => {
-    const newArr = [...arr];
-    const [item] = newArr.splice(from, 1);
-    newArr.splice(to, 0, item);
-    return newArr;
-  },
-}));
+// SAFETY: each stub supplies only the exports Board and its children use
+vi.mock(
+  import('@dnd-kit/core'),
+  () =>
+    ({
+      DndContext: ({ children }: any) => <div data-testid="dnd-context">{children}</div>,
+      DragOverlay: ({ children }: any) => <div data-testid="drag-overlay">{children}</div>,
+      useSensor: vi.fn<() => void>(),
+      useSensors: vi.fn<() => object[]>(() => []),
+      MouseSensor: vi.fn<() => void>(),
+      TouchSensor: vi.fn<() => void>(),
+    }) as never,
+);
 
-vi.mock('@/components/kanban/project/NewProjectDialog', () => ({
-  default: () => <div data-testid="new-project-dialog">New Project</div>,
-}));
+// SAFETY: each stub supplies only the exports Board and its children use
+vi.mock(
+  import('@dnd-kit/sortable'),
+  () =>
+    ({
+      SortableContext: ({ children }: any) => <div data-testid="sortable-context">{children}</div>,
+      arrayMove: (arr: any[], from: number, to: number) => {
+        const newArr = [...arr];
+        const [item] = newArr.splice(from, 1);
+        newArr.splice(to, 0, item);
+        return newArr;
+      },
+    }) as never,
+);
 
-vi.mock('@/components/kanban/project/Project', () => ({
-  BoardContainer: ({ children }: any) => <div data-testid="board-container">{children}</div>,
-  BoardProject: ({ project }: any) => <div data-testid={`project-${project._id}`}>{project.title}</div>,
-}));
+// SAFETY: each stub supplies only the exports Board and its children use
+vi.mock(
+  import('@/components/kanban/project/NewProjectDialog'),
+  () =>
+    ({
+      default: () => <div data-testid="new-project-dialog">New Project</div>,
+    }) as never,
+);
 
-vi.mock('@/components/kanban/task/TaskFilter', () => ({
-  TaskFilter: () => <div data-testid="task-filter">Filter</div>,
-}));
+// SAFETY: each stub supplies only the exports Board and its children use
+vi.mock(
+  import('@/components/kanban/project/Project'),
+  () =>
+    ({
+      BoardContainer: ({ children }: any) => <div data-testid="board-container">{children}</div>,
+      BoardProject: ({ project }: any) => <div data-testid={`project-${project._id}`}>{project.title}</div>,
+    }) as never,
+);
 
-vi.mock('@/components/kanban/task/TaskCard', () => ({
-  TaskCard: ({ task }: any) => <div data-testid={`task-card-${task._id}`}>{task.title}</div>,
-}));
+// SAFETY: each stub supplies only the exports Board and its children use
+vi.mock(
+  import('@/components/kanban/task/TaskFilter'),
+  () =>
+    ({
+      TaskFilter: () => <div data-testid="task-filter">Filter</div>,
+    }) as never,
+);
 
-describe('Board', () => {
+// SAFETY: each stub supplies only the exports Board and its children use
+vi.mock(
+  import('@/components/kanban/task/TaskCard'),
+  () =>
+    ({
+      TaskCard: ({ task }: any) => <div data-testid={`task-card-${task._id}`}>{task.title}</div>,
+    }) as never,
+);
+
+describe(Board, () => {
   const mockUserInfo: any = { _id: 'user-1', name: 'John', email: 'john@example.com' };
   const mockProjects: Project[] = [
     {
@@ -145,19 +215,19 @@ describe('Board', () => {
     projects: mockProjects,
     isLoadingProjects: false,
     filter: { status: null, search: '' },
-    setProjects: vi.fn(),
+    setProjects: vi.fn<() => void>(),
     currentBoardId: 'board-1',
     userId: 'user-1',
-    fetchProjects: vi.fn(),
+    fetchProjects: vi.fn<() => void>(),
   };
 
   const defaultAuthState = {
     user: mockUserInfo,
     isAuthenticated: true,
     isLoading: false,
-    login: vi.fn(),
-    loginWithEmail: vi.fn(),
-    logout: vi.fn(),
+    login: vi.fn<() => void>(),
+    loginWithEmail: vi.fn<() => void>(),
+    logout: vi.fn<() => void>(),
     loginMutation: {},
     error: null,
     session: null,
@@ -168,7 +238,7 @@ describe('Board', () => {
     teamBoards: [],
     loading: false,
     error: null,
-    refresh: vi.fn(),
+    refresh: vi.fn<() => void>(),
   };
 
   const setupMocks = (overrides: any = {}) => {
@@ -203,7 +273,9 @@ describe('Board', () => {
 
     mockUseAuth.mockReturnValue(authState);
     mockUseBoards.mockReturnValue(boardsState);
-    mockUseWorkspaceStore.mockImplementation((selector: any) => (selector ? selector(workspaceState) : workspaceState));
+    mockUseWorkspaceStore.mockImplementation((selector) =>
+      selector == null ? workspaceState : selector(workspaceState),
+    );
   };
 
   beforeEach(() => {
@@ -211,29 +283,17 @@ describe('Board', () => {
     setupMocks();
   });
 
-  it('should render board component', () => {
+  it.each([
+    ['board component', 'board'],
+    ['DndContext', 'dnd-context'],
+    ['new project dialog', 'new-project-dialog'],
+    ['task filter', 'task-filter'],
+    ['board container', 'board-container'],
+    ['drag overlay', 'drag-overlay'],
+    ['board when the user is the owner', 'board'],
+  ])('should render %s', (_label, testId) => {
     render(<Board />);
-    expect(screen.getByTestId('board')).toBeInTheDocument();
-  });
-
-  it('should render DndContext', () => {
-    render(<Board />);
-    expect(screen.getByTestId('dnd-context')).toBeInTheDocument();
-  });
-
-  it('should render new project dialog', () => {
-    render(<Board />);
-    expect(screen.getByTestId('new-project-dialog')).toBeInTheDocument();
-  });
-
-  it('should render task filter', () => {
-    render(<Board />);
-    expect(screen.getByTestId('task-filter')).toBeInTheDocument();
-  });
-
-  it('should render board container', () => {
-    render(<Board />);
-    expect(screen.getByTestId('board-container')).toBeInTheDocument();
+    expect(screen.getByTestId(testId)).toBeInTheDocument();
   });
 
   it('should render all projects', () => {
@@ -250,11 +310,6 @@ describe('Board', () => {
     expect(screen.queryByTestId('project-project-1')).not.toBeInTheDocument();
   });
 
-  it('should render drag overlay', () => {
-    render(<Board />);
-    expect(screen.getByTestId('drag-overlay')).toBeInTheDocument();
-  });
-
   it('should sort projects by orderInBoard', () => {
     const unsortedProjects = [
       { ...mockProjects[1], orderInBoard: 2 },
@@ -268,11 +323,6 @@ describe('Board', () => {
     expect(screen.getByTestId('project-project-2')).toBeInTheDocument();
   });
 
-  it('should determine board owner correctly when user is owner', () => {
-    render(<Board />);
-    expect(screen.getByTestId('board')).toBeInTheDocument();
-  });
-
   it('should determine board owner correctly when user is not owner', () => {
     setupMocks({ user: { _id: 'user-2', name: 'Jane', email: 'jane@example.com' } });
 
@@ -281,7 +331,7 @@ describe('Board', () => {
   });
 
   it('should handle unauthenticated user', () => {
-    setupMocks({ user: undefined, isAuthenticated: false });
+    setupMocks({ user: null, isAuthenticated: false });
 
     render(<Board />);
     expect(screen.getByTestId('board')).toBeInTheDocument();

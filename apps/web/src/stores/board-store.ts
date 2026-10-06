@@ -22,7 +22,7 @@ export const createBoardSlice: StateCreator<
   addBoard: async (title: string, description?: string) => {
     try {
       const { userId } = get();
-      if (!userId) {
+      if (userId == null || userId === '') {
         throw new Error('User not authenticated');
       }
 
@@ -32,7 +32,7 @@ export const createBoardSlice: StateCreator<
         owner: userId,
       });
 
-      if (newBoard) {
+      if (newBoard != null) {
         set((state) => ({
           myBoards: [...state.myBoards, newBoard],
         }));

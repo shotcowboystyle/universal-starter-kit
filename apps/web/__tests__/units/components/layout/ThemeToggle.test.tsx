@@ -5,16 +5,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import ThemeToggle from '@/components/layout/ThemeToggle';
 
-vi.mock('next-themes', () => ({
-  useTheme: vi.fn(),
+vi.mock(import('next-themes'), () => ({
+  useTheme: vi.fn<typeof useTheme>(),
 }));
 
-vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string) => key,
-}));
+vi.mock(import('next-intl'), async () => {
+  const { mockUseTranslations } = await import('../../../helpers/key-translator');
+  return { useTranslations: mockUseTranslations };
+});
 
-describe('ThemeToggle', () => {
-  const mockSetTheme = vi.fn();
+describe(ThemeToggle, () => {
+  const mockSetTheme = vi.fn<(theme: string) => void>();
 
   beforeEach(() => {
     vi.clearAllMocks();

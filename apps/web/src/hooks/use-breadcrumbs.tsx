@@ -17,17 +17,18 @@ interface BreadcrumbItem {
 export const useBreadcrumbs = () => {
   const params = useParams();
   const t = useTranslations('sidebar');
-  const boardId = params.boardId as string;
+  // [boardId] is a single route segment; flat() narrows string | string[] | undefined to string | undefined.
+  const [boardId] = [params.boardId].flat();
 
   // Use the useBoard hook to fetch the current board
-  const { data: board, isLoading: _isLoading, error: _error } = useBoard(boardId);
+  const { data: board } = useBoard(boardId);
 
   // Update the workspace store with the current board ID
   const { setCurrentBoardId } = useWorkspaceStore();
 
   // Update the current board ID in the workspace store when it changes
   useEffect(() => {
-    if (board?._id) {
+    if (board?._id !== undefined && board._id !== '') {
       setCurrentBoardId(board._id);
     }
   }, [board?._id, setCurrentBoardId]);
@@ -40,7 +41,7 @@ export const useBreadcrumbs = () => {
     },
   ];
 
-  if (board) {
+  if (board != null) {
     items.push({
       title: board.title,
       link: `${ROUTES.BOARDS.OVERVIEW_PAGE}/${board._id}`,

@@ -4,7 +4,7 @@ import { Button, Form, Input } from '@repo/forms';
 import { Paragraph } from '@repo/ui';
 import { useTranslations } from 'next-intl';
 import React from 'react';
-import * as z from 'zod';
+import { z } from 'zod';
 
 import { defaultEmail } from '@/constants/demo-data';
 import { useAuthForm } from '@/hooks/use-auth';
@@ -39,7 +39,7 @@ const UserAuthForm = () => {
         }}
       />
 
-      {displayError ? (
+      {displayError != null && displayError !== '' ? (
         <Paragraph
           color="$red10"
           data-testid="error-message">

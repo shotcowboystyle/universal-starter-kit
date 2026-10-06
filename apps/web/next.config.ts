@@ -15,6 +15,10 @@ const REPO_PACKAGES = [
   '@repo/ui',
 ];
 
+interface WebpackConfigLike {
+  resolve: { fallback?: { fs?: false; path?: false; os?: false } };
+}
+
 const nextConfig: NextConfig = {
   transpilePackages: [...REPO_PACKAGES, 'react-native-web'],
   typescript: {
@@ -61,10 +65,11 @@ const nextConfig: NextConfig = {
   distDir: '.next',
   // Configure static files handling
   images: {
-    unoptimized: true, // Disable image optimization if not needed
+    // Disable image optimization if not needed
+    unoptimized: true,
   },
   // Explicitly configure the output directory structure
-  webpack: (config, { isServer }) => {
+  webpack: (config: WebpackConfigLike, { isServer }: { isServer: boolean }) => {
     // Ensure public files are properly copied to the output directory
     if (!isServer) {
       config.resolve.fallback = {

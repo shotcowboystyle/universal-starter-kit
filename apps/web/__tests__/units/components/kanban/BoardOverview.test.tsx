@@ -1,74 +1,94 @@
 import { renderWithProviders as render } from '@repo/test-utils';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 /// <reference types="react" />
+import type { useSearchParams as UseSearchParamsFn } from 'next/navigation';
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { BoardOverview } from '@/components/kanban/BoardOverview';
-import type { Board } from '@/types/db-interface';
+import type { useBoards as useBoardsHook } from '@/hooks/use-boards';
+import type { usePathname as UsePathnameFn, useRouter as UseRouterFn } from '@/i18n/navigation';
+import type { Board, Session } from '@/types/db-interface';
 
 // Ensure React is globally available
 globalThis.React = React;
 
+type RefreshFn = ReturnType<typeof useBoardsHook>['refresh'];
+
+const { mockGetSession } = vi.hoisted(() => ({
+  mockGetSession: vi.fn<() => Promise<Session | null>>(),
+}));
+
 // Mock dependencies
-vi.mock('@/hooks/use-boards', () => ({
-  useBoards: vi.fn(),
+vi.mock(import('@/hooks/use-boards'), () => ({
+  useBoards: vi.fn<typeof useBoardsHook>(),
 }));
 
-vi.mock('@/i18n/navigation', () => ({
-  useRouter: vi.fn(),
-  usePathname: vi.fn(),
+vi.mock(import('@/i18n/navigation'), () => ({
+  useRouter: vi.fn<typeof UseRouterFn>(),
+  usePathname: vi.fn<typeof UsePathnameFn>(),
 }));
 
-vi.mock('next/navigation', async (importOriginal) => ({
-  ...(await importOriginal<Record<string, unknown>>()),
-  useSearchParams: vi.fn(),
+vi.mock(import('next/navigation'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  useSearchParams: vi.fn<typeof UseSearchParamsFn>(),
 }));
 
-vi.mock('@/lib/auth/auth-service', () => ({
-  AuthService: {
-    getSession: vi.fn(),
-  },
-}));
+// SAFETY: the component only calls AuthService.getSession, so the other statics are never reached
+vi.mock(import('@/lib/auth/auth-service'), () => ({ AuthService: { getSession: mockGetSession } }) as never);
 
-vi.mock('@/stores/auth-store', () => ({
-  useAuthStore: vi.fn(() => ({
-    setSession: vi.fn(),
-  })),
-}));
+// SAFETY: the component only destructures setSession from the store hook
+vi.mock(
+  import('@/stores/auth-store'),
+  () =>
+    ({ useAuthStore: vi.fn<() => { setSession: () => void }>(() => ({ setSession: vi.fn<() => void>() })) }) as never,
+);
 
-vi.mock('@/stores/workspace-store', () => {
+// SAFETY: the component only reads userId/setUserInfo via the hook or getState, which the stub provides
+vi.mock(import('@/stores/workspace-store'), () => {
   const store = {
     userId: null,
-    setUserInfo: vi.fn(),
+    setUserInfo: vi.fn<() => void>(),
   };
   return {
     useWorkspaceStore: Object.assign(
-      vi.fn(() => store),
+      vi.fn<() => typeof store>(() => store),
       {
         getState: () => store,
       },
     ),
-  };
+  } as never;
 });
 
-vi.mock('next-intl', () => ({
-  useTranslations: () => (key: string) => key,
-}));
+// SAFETY: translators here only need to map a key to itself
+vi.mock(import('next-intl'), () => ({ useTranslations: () => (key: string) => key }) as never);
 
-vi.mock('sonner', () => ({
-  toast: {
-    success: vi.fn(),
-    error: vi.fn(),
-  },
-}));
+// SAFETY: only toast.success/error are used by the component
+vi.mock(
+  import('sonner'),
+  () =>
+    ({
+      toast: {
+        success: vi.fn<() => void>(),
+        error: vi.fn<() => void>(),
+      },
+    }) as never,
+);
 
-vi.mock('@/lib/api/boards/queries', () => ({
-  useDeleteBoard: vi.fn(() => ({ mutate: vi.fn(), mutateAsync: vi.fn() })),
-  useUpdateBoard: vi.fn(() => ({ mutateAsync: vi.fn() })),
-}));
+// SAFETY: child dialogs only need the mutate/mutateAsync functions of the mutation hooks
+vi.mock(
+  import('@/lib/api/boards/queries'),
+  () =>
+    ({
+      useDeleteBoard: vi.fn<() => { mutate: () => void; mutateAsync: () => void }>(() => ({
+        mutate: vi.fn<() => void>(),
+        mutateAsync: vi.fn<() => void>(),
+      })),
+      useUpdateBoard: vi.fn<() => { mutateAsync: () => void }>(() => ({ mutateAsync: vi.fn<() => void>() })),
+    }) as never,
+);
 
-describe('BoardOverview', () => {
+describe(BoardOverview, () => {
   const mockMyBoards: Board[] = [
     {
       _id: 'board-1',
@@ -111,17 +131,17 @@ describe('BoardOverview', () => {
   ];
 
   const mockRouter = {
-    push: vi.fn(),
-    replace: vi.fn(),
-    prefetch: vi.fn(),
-    back: vi.fn(),
-    forward: vi.fn(),
-    refresh: vi.fn(),
+    push: vi.fn<() => void>(),
+    replace: vi.fn<() => void>(),
+    prefetch: vi.fn<() => void>(),
+    back: vi.fn<() => void>(),
+    forward: vi.fn<() => void>(),
+    refresh: vi.fn<() => void>(),
   };
 
   const mockSearchParams = {
-    get: vi.fn(() => null),
-    toString: vi.fn(() => ''),
+    get: vi.fn<() => string | null>(() => null),
+    toString: vi.fn<() => string>(() => ''),
   };
 
   beforeEach(async () => {
@@ -135,7 +155,7 @@ describe('BoardOverview', () => {
       myBoards: mockMyBoards,
       teamBoards: mockTeamBoards,
       loading: false,
-      refresh: vi.fn(),
+      refresh: vi.fn<RefreshFn>(),
       error: null,
     });
 
@@ -150,7 +170,7 @@ describe('BoardOverview', () => {
       myBoards: [],
       teamBoards: [],
       loading: true,
-      refresh: vi.fn(),
+      refresh: vi.fn<RefreshFn>(),
       error: null,
     });
 
@@ -192,7 +212,8 @@ describe('BoardOverview', () => {
     render(<BoardOverview />);
     const trigger = within(screen.getByTestId('select-filter-trigger')).getByRole('combobox');
     fireEvent.click(trigger);
-    const option = (await screen.findAllByRole('option')).find((el) => el.textContent === 'teamBoards');
+    const options = await screen.findAllByRole('option');
+    const option = options.find((el) => el.textContent === 'teamBoards');
     // Select rows arm selection on pointerdown, then commit on click
     fireEvent.pointerDown(option!);
     fireEvent.click(option!);
@@ -218,7 +239,7 @@ describe('BoardOverview', () => {
       myBoards: [],
       teamBoards: mockTeamBoards,
       loading: false,
-      refresh: vi.fn(),
+      refresh: vi.fn<RefreshFn>(),
       error: null,
     });
 
@@ -232,7 +253,7 @@ describe('BoardOverview', () => {
       myBoards: mockMyBoards,
       teamBoards: [],
       loading: false,
-      refresh: vi.fn(),
+      refresh: vi.fn<RefreshFn>(),
       error: null,
     });
 
@@ -258,17 +279,16 @@ describe('BoardOverview', () => {
 
   it('should handle login success', async () => {
     const { useSearchParams } = await import('next/navigation');
-    const { AuthService } = await import('@/lib/auth/auth-service');
     const { toast } = await import('sonner');
     const { useBoards } = await import('@/hooks/use-boards');
 
-    const mockRefresh = vi.fn();
+    const mockRefresh = vi.fn<RefreshFn>();
 
     vi.mocked(useSearchParams).mockReturnValue({
       ...mockSearchParams,
-      get: vi.fn(() => 'true'),
+      get: vi.fn<() => string>(() => 'true'),
     } as any);
-    vi.mocked(AuthService.getSession).mockResolvedValue({
+    vi.mocked(mockGetSession).mockResolvedValue({
       user: {
         _id: 'user-123',
         email: 'test@example.com',
@@ -287,23 +307,22 @@ describe('BoardOverview', () => {
     render(<BoardOverview />);
 
     await waitFor(() => {
-      expect(AuthService.getSession).toHaveBeenCalled();
+      expect(mockGetSession).toHaveBeenCalledWith();
       expect(toast.success).toHaveBeenCalledWith('success');
-      expect(mockRefresh).toHaveBeenCalled();
-      expect(mockRouter.replace).toHaveBeenCalled();
+      expect(mockRefresh).toHaveBeenCalledWith();
+      expect(mockRouter.replace).toHaveBeenCalledWith(expect.any(String), { scroll: false });
     });
   });
 
   it('should handle login error', async () => {
     const { useSearchParams } = await import('next/navigation');
-    const { AuthService } = await import('@/lib/auth/auth-service');
     const { toast } = await import('sonner');
 
     vi.mocked(useSearchParams).mockReturnValue({
       ...mockSearchParams,
-      get: vi.fn(() => 'true'),
+      get: vi.fn<() => string>(() => 'true'),
     } as any);
-    vi.mocked(AuthService.getSession).mockRejectedValue(new Error('Session error'));
+    vi.mocked(mockGetSession).mockRejectedValue(new Error('Session error'));
 
     render(<BoardOverview />);
 
@@ -314,7 +333,7 @@ describe('BoardOverview', () => {
 
   it('should handle visibility change', async () => {
     const { useBoards } = await import('@/hooks/use-boards');
-    const mockRefresh = vi.fn();
+    const mockRefresh = vi.fn<RefreshFn>();
 
     vi.mocked(useBoards).mockReturnValue({
       myBoards: mockMyBoards,
@@ -335,7 +354,7 @@ describe('BoardOverview', () => {
 
     fireEvent(document, new Event('visibilitychange'));
 
-    expect(mockRefresh).toHaveBeenCalled();
+    expect(mockRefresh).toHaveBeenCalledWith();
   });
 
   it('should render new board button', () => {

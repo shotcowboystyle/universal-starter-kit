@@ -5,34 +5,41 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ClientProviders } from '@/providers/ClientProviders';
 import { useAuthStore } from '@/stores/auth-store';
 
+interface AuthMockState {
+  user: null;
+  isLoading: boolean;
+  error: null;
+}
+
+const authMockState: AuthMockState = { user: null, isLoading: false, error: null };
+
 // Mock auth store
+// oxlint-disable-next-line vitest/prefer-import-in-mock -- the zustand hook stub is a bare function with the store statics; a typed factory would need the full store typing
 vi.mock('@/stores/auth-store', () => ({
   useAuthStore: Object.assign(
-    vi.fn((selector) => {
-      const state = { user: null, isLoading: false, error: null };
-      return selector ? selector(state) : state;
-    }),
+    vi.fn<() => AuthMockState>(() => authMockState),
     {
-      getState: vi.fn(() => ({ user: null, isLoading: false, error: null })),
-      setState: vi.fn(),
-      subscribe: vi.fn(),
-      destroy: vi.fn(),
+      getState: vi.fn<() => AuthMockState>(() => authMockState),
+      setState: vi.fn<() => void>(),
+      subscribe: vi.fn<() => void>(),
+      destroy: vi.fn<() => void>(),
     },
   ),
 }));
 
 // Mock ReactQueryDevtools
-vi.mock('@tanstack/react-query-devtools', () => ({
+vi.mock(import('@tanstack/react-query-devtools'), () => ({
   ReactQueryDevtools: () => null,
 }));
 
 // Mock next-themes
+// oxlint-disable-next-line vitest/prefer-import-in-mock -- partial stub of the next-themes hook result
 vi.mock('next-themes', () => ({
   ThemeProvider: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   useTheme: () => ({ resolvedTheme: 'light' }),
 }));
 
-describe('ClientProviders', () => {
+describe(ClientProviders, () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -54,7 +61,7 @@ describe('ClientProviders', () => {
       </ClientProviders>,
     );
 
-    expect(useAuthStore.getState).toHaveBeenCalled();
+    expect(useAuthStore.getState).toHaveBeenCalledWith();
   });
 
   it('should wrap children with QueryClientProvider and ThemeProvider', () => {

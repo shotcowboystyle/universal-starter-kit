@@ -3,18 +3,17 @@ import { renderHook, waitFor } from '@testing-library/react';
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { userApi } from '@/lib/api/user-api';
 import { useUser, useUserSearch } from '@/lib/api/users/queries';
 import type { User } from '@/types/user-api';
 
-// Mock the userApi module
-vi.mock('@/lib/api/user-api', () => ({
-  userApi: {
-    getUserById: vi.fn(),
-    searchUsers: vi.fn(),
-  },
+const mocks = vi.hoisted(() => ({
+  getUserById: vi.fn<(id: string) => Promise<User | null>>(),
+  searchUsers: vi.fn<(search?: string) => Promise<User[]>>(),
 }));
 
-const { userApi } = await import('@/lib/api/user-api');
+// SAFETY: the test double implements only the members the code under test calls
+vi.mock(import('@/lib/api/user-api'), () => ({ userApi: mocks as typeof userApi }));
 
 describe('user queries', () => {
   let queryClient: QueryClient;
@@ -32,7 +31,7 @@ describe('user queries', () => {
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
 
-  describe('useUser', () => {
+  describe(useUser, () => {
     it('should fetch user by id successfully', async () => {
       const mockUser: User = {
         _id: 'user-1',
@@ -42,7 +41,7 @@ describe('user queries', () => {
         updatedAt: new Date(),
       };
 
-      vi.mocked(userApi.getUserById).mockResolvedValue(mockUser);
+      mocks.getUserById.mockResolvedValue(mockUser);
 
       const { result } = renderHook(() => useUser('user-1'), { wrapper });
 
@@ -51,15 +50,15 @@ describe('user queries', () => {
       });
 
       expect(result.current.data).toStrictEqual(mockUser);
-      expect(userApi.getUserById).toHaveBeenCalledWith('user-1');
+      expect(mocks.getUserById).toHaveBeenCalledWith('user-1');
     });
 
     it('should not fetch when id is undefined', () => {
-      const { result } = renderHook(() => useUser(undefined), { wrapper });
+      const { result } = renderHook(() => useUser(), { wrapper });
 
       expect(result.current.isPending).toBe(true);
       expect(result.current.fetchStatus).toBe('idle');
-      expect(userApi.getUserById).not.toHaveBeenCalled();
+      expect(mocks.getUserById).not.toHaveBeenCalled();
     });
 
     it('should not fetch when id is empty string', () => {
@@ -67,12 +66,12 @@ describe('user queries', () => {
 
       expect(result.current.isPending).toBe(true);
       expect(result.current.fetchStatus).toBe('idle');
-      expect(userApi.getUserById).not.toHaveBeenCalled();
+      expect(mocks.getUserById).not.toHaveBeenCalled();
     });
 
     it('should handle fetch errors', async () => {
       const error = new Error('Failed to fetch user');
-      vi.mocked(userApi.getUserById).mockRejectedValue(error);
+      mocks.getUserById.mockRejectedValue(error);
 
       const { result } = renderHook(() => useUser('user-1'), { wrapper });
 
@@ -93,7 +92,7 @@ describe('user queries', () => {
         updatedAt: new Date(),
       };
 
-      vi.mocked(userApi.getUserById).mockResolvedValue(mockUser);
+      mocks.getUserById.mockResolvedValue(mockUser);
 
       const { result } = renderHook(() => useUser(userId), { wrapper });
 
@@ -106,7 +105,7 @@ describe('user queries', () => {
     });
   });
 
-  describe('useUserSearch', () => {
+  describe(useUserSearch, () => {
     it('should search users successfully', async () => {
       const mockUsers: User[] = [
         {
@@ -125,7 +124,7 @@ describe('user queries', () => {
         },
       ];
 
-      vi.mocked(userApi.searchUsers).mockResolvedValue(mockUsers);
+      mocks.searchUsers.mockResolvedValue(mockUsers);
 
       const { result } = renderHook(() => useUserSearch('alice'), { wrapper });
 
@@ -134,7 +133,7 @@ describe('user queries', () => {
       });
 
       expect(result.current.data).toStrictEqual(mockUsers);
-      expect(userApi.searchUsers).toHaveBeenCalledWith('alice');
+      expect(mocks.searchUsers).toHaveBeenCalledWith('alice');
     });
 
     it('should not search when query is empty', () => {
@@ -142,12 +141,12 @@ describe('user queries', () => {
 
       expect(result.current.isPending).toBe(true);
       expect(result.current.fetchStatus).toBe('idle');
-      expect(userApi.searchUsers).not.toHaveBeenCalled();
+      expect(mocks.searchUsers).not.toHaveBeenCalled();
     });
 
     it('should handle search errors', async () => {
       const error = new Error('Search failed');
-      vi.mocked(userApi.searchUsers).mockRejectedValue(error);
+      mocks.searchUsers.mockRejectedValue(error);
 
       const { result } = renderHook(() => useUserSearch('test'), { wrapper });
 
@@ -170,7 +169,7 @@ describe('user queries', () => {
         },
       ];
 
-      vi.mocked(userApi.searchUsers).mockResolvedValue(mockUsers);
+      mocks.searchUsers.mockResolvedValue(mockUsers);
 
       const { result } = renderHook(() => useUserSearch(searchQuery), { wrapper });
 
@@ -179,7 +178,7 @@ describe('user queries', () => {
       });
 
       // Just verify the search was called correctly
-      expect(userApi.searchUsers).toHaveBeenCalledWith(searchQuery);
+      expect(mocks.searchUsers).toHaveBeenCalledWith(searchQuery);
     });
 
     it('should have correct staleTime configuration', () => {
@@ -209,7 +208,7 @@ describe('user queries', () => {
         },
       ];
 
-      vi.mocked(userApi.searchUsers).mockResolvedValueOnce(mockUsers1).mockResolvedValueOnce(mockUsers2);
+      mocks.searchUsers.mockResolvedValueOnce(mockUsers1).mockResolvedValueOnce(mockUsers2);
 
       const { result, rerender } = renderHook(({ query }) => useUserSearch(query), {
         wrapper,
@@ -228,9 +227,9 @@ describe('user queries', () => {
         expect(result.current.data).toStrictEqual(mockUsers2);
       });
 
-      expect(userApi.searchUsers).toHaveBeenCalledTimes(2);
-      expect(userApi.searchUsers).toHaveBeenNthCalledWith(1, 'alice');
-      expect(userApi.searchUsers).toHaveBeenNthCalledWith(2, 'bob');
+      expect(mocks.searchUsers).toHaveBeenCalledTimes(2);
+      expect(mocks.searchUsers).toHaveBeenNthCalledWith(1, 'alice');
+      expect(mocks.searchUsers).toHaveBeenNthCalledWith(2, 'bob');
     });
   });
 });

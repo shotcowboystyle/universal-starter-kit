@@ -4,19 +4,19 @@ import { routing } from '@/i18n/routing';
 import middleware, { config } from '@/proxy';
 
 // Mock next-intl/middleware
-vi.mock('next-intl/middleware', () => ({
-  default: vi.fn((routingConfig) =>
+vi.mock(import('next-intl/middleware'), () => ({
+  default: vi.fn<(routingConfig: typeof routing) => () => { routingConfig: typeof routing }>((routingConfig) =>
     // Return a middleware function that can be tested
     () => ({
       routingConfig,
     }),
-  ),
+  ) as never,
 }));
 
 describe('Middleware', () => {
   it('should export default middleware', () => {
     expect(middleware).toBeDefined();
-    expect(typeof middleware).toBe('function');
+    expect(middleware).toBeTypeOf('function');
   });
 
   it('should have correct config matcher', () => {
@@ -25,13 +25,13 @@ describe('Middleware', () => {
   });
 
   it('should exclude API routes from matcher pattern', () => {
-    const matcher = config.matcher[0];
+    const [matcher] = config.matcher;
     // Verify that the matcher pattern is designed to exclude API routes
     expect(matcher).toContain('!api');
   });
 
   it('should exclude _next/static from matcher pattern', () => {
-    const matcher = config.matcher[0];
+    const [matcher] = config.matcher;
     // Verify that the matcher pattern is designed to exclude _next/static
     expect(matcher).toContain('_next/static');
   });
