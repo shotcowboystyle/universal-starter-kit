@@ -55,7 +55,7 @@ import {
 } from 'tamagui';
 import type { AnchorProps, ParagraphProps, SizableTextProps, TextProps } from 'tamagui';
 
-export type { AnchorProps, ParagraphProps, SizableTextProps, TextProps };
+export type { AnchorProps, ParagraphProps, SizableTextProps, TextProps } from 'tamagui';
 
 /** Measured $4 label ramp — Inter 14/25, weight from the fontWeight knob. */
 const LABEL_RAMP = { fontSize: 14, lineHeight: 25 } as const;
@@ -69,6 +69,7 @@ const useBodyVoice = (fontWeight: Weight) => {
   return {
     body,
     color: knobProps.textAccentColor,
+    // SAFETY: knob body weights are Tamagui font-weight tokens, the Weight domain.
     weight: fontWeight ?? (knobWeight as Weight),
   };
 };

@@ -11,27 +11,23 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { Paragraph, SizableText, Text } from './Text';
 
-vi.mock('@repo/platform', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@repo/platform')>()),
+vi.mock(import('@repo/platform'), async (importOriginal) => ({
+  ...(await importOriginal()),
   isWeb: false,
   isNative: true,
 }));
 
-afterEach(cleanup);
-
 const LABEL = 'Measure the text node';
 
 const classesByPrefix = (el: Element, prefixes: string[]): string[] =>
-  String((el as HTMLElement).className || '')
+  (el as HTMLElement).className
     .split(' ')
     .filter((c) => prefixes.some((p) => c.startsWith(p)))
-    .sort();
+    .toSorted();
 
 /** Tamagui font-scope class on the TEXT NODE (`font_body` / `font_mono` / …). */
 const fontScopeClass = (el: Element): string =>
-  String((el as HTMLElement).className || '')
-    .split(' ')
-    .find((c) => c.startsWith('font_')) ?? '';
+  (el as HTMLElement).className.split(' ').find((c) => c.startsWith('font_')) ?? '';
 
 /** Render, read the TEXT NODE's prefixed classes, clean up. */
 const renderTextClasses = (node: React.ReactElement, prefixes: string[]): string[] => {
@@ -43,6 +39,8 @@ const renderTextClasses = (node: React.ReactElement, prefixes: string[]): string
 };
 
 describe('house Text — NATIVE environment (isWeb false)', () => {
+  afterEach(cleanup);
+
   it('really is running with the native platform flags', async () => {
     const platform = await import('@repo/platform');
     expect(platform.isWeb).toBe(false);

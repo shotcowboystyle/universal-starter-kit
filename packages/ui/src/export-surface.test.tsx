@@ -1,11 +1,10 @@
-import * as forms from '@repo/forms';
+import type { SpinnerProps as FormsSpinnerProps } from '@repo/forms';
 import { renderWithProviders } from '@repo/test-utils';
 import { Preset } from '@repo/theme';
-import * as toast from '@tamagui/toast';
 /**
  * CURATED-REEXPORT-IS-CATALOG export-surface spec — the VERIFY teeth.
  *
- * Every bare name the @repo/ui barrel exports is catalog
+ * Every bare name the ui package barrel exports is catalog
  * output: it must be a house implementation (knob-consuming), a house shadow
  * over one (Button, Spinner), or a raw framework re-export explicitly
  * declared knob-immune in ./knob-immune-exports.ts with a reason. Raw
@@ -13,7 +12,7 @@ import * as toast from '@tamagui/toast';
  * at the import site.
  *
  * Mechanics: a raw re-export is detected by VALUE IDENTITY with the tamagui /
- * @tamagui/toast export of the same name — a house implementation or shadow
+ * tamagui-toast export of the same name — a house implementation or shadow
  * is never `===` the raw primitive. This spec therefore FAILS the moment
  * someone re-exports a raw primitive under a bare house name, with no list to
  * forget to update (the registry is the only escape valve, and it is locked
@@ -24,47 +23,41 @@ import * as toast from '@tamagui/toast';
  * generic partition invariant.
  */
 import { cleanup } from '@testing-library/react';
-import * as tamagui from 'tamagui';
-import * as tamaguiLinearGradient from 'tamagui/linear-gradient';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { componentColors, sectionHeading } from './component-colors';
 import { knobImmuneExports } from './knob-immune-exports';
 
-import * as pkg from './index';
+import type { SpinnerProps } from './index';
 
-const barrel = pkg as Record<string, unknown>;
-const rawTamagui = tamagui as Record<string, unknown>;
-const rawToast = toast as Record<string, unknown>;
-const rawLinearGradient = tamaguiLinearGradient as Record<string, unknown>;
+const forms = await import('@repo/forms');
+const toast = await import('@tamagui/toast');
+const tamagui = await import('tamagui');
+const tamaguiLinearGradient = await import('tamagui/linear-gradient');
+const pkg = await import('./index');
+
+const barrel = new Map<string, unknown>(Object.entries(pkg));
+const rawTamagui = new Map<string, unknown>(Object.entries(tamagui));
+const rawToast = new Map<string, unknown>(Object.entries(toast));
+const rawLinearGradient = new Map<string, unknown>(Object.entries(tamaguiLinearGradient));
 
 /** Value-identity with the same-name raw export = raw re-export. */
 const isRawReexport = (name: string): boolean => {
-  const value = barrel[name];
-  return (
-    (rawTamagui[name] !== undefined && value === rawTamagui[name]) ||
-    (rawToast[name] !== undefined && value === rawToast[name]) ||
-    (rawLinearGradient[name] !== undefined && value === rawLinearGradient[name])
-  );
+  const value = barrel.get(name);
+  return [rawTamagui, rawToast, rawLinearGradient].some((raw) => {
+    const rawValue = raw.get(name);
+    return rawValue !== undefined && value === rawValue;
+  });
 };
 
 describe('export surface partition', () => {
-  const exportNames = Object.keys(barrel);
+  const exportNames = Object.keys(pkg);
 
   it('exports every bare name as house-or-registered; raw primitives only via Tamagui* prefixes', () => {
-    const violations: string[] = [];
-    for (const name of exportNames) {
-      if (!isRawReexport(name)) {
-        continue;
-      }
-      // TamaguiProvider is tamagui's own name (registry row), not a hatch.
-      if (name.startsWith('Tamagui') && knobImmuneExports[name] === undefined) {
-        continue;
-      }
-      if (knobImmuneExports[name] === undefined) {
-        violations.push(name);
-      }
-    }
+    // TamaguiProvider is tamagui's own name (registry row), not a hatch.
+    const violations = exportNames.filter(
+      (name) => isRawReexport(name) && knobImmuneExports[name] === undefined && !name.startsWith('Tamagui'),
+    );
     expect(
       violations,
       `LC-70: bare barrel export(s) [${violations.join(', ')}] are RAW framework primitives. ` +
@@ -75,26 +68,25 @@ describe('export surface partition', () => {
   });
 
   it('keeps every Tamagui*-prefixed escape hatch identical to the raw primitive it names', () => {
-    for (const name of exportNames) {
-      if (!name.startsWith('Tamagui')) {
-        continue;
-      }
-      // Raw re-exports of tamagui's own Tamagui*-named exports (TamaguiProvider)
-      // are registry rows, not escape hatches.
-      if (isRawReexport(name) && knobImmuneExports[name] !== undefined) {
-        continue;
-      }
+    // Raw re-exports of tamagui's own Tamagui*-named exports (TamaguiProvider)
+    // are registry rows, not escape hatches.
+    const escapeHatches = exportNames.filter(
+      (name) => name.startsWith('Tamagui') && !(isRawReexport(name) && knobImmuneExports[name] !== undefined),
+    );
+    for (const name of escapeHatches) {
       const stripped = name.slice('Tamagui'.length);
-      const raw = rawTamagui[stripped] ?? rawToast[stripped];
+      const raw = rawTamagui.get(stripped) ?? rawToast.get(stripped);
       expect(raw, `escape hatch "${name}" names no raw tamagui/@tamagui-toast export "${stripped}"`).toBeDefined();
-      expect(barrel[name], `escape hatch "${name}" must be the raw "${stripped}" primitive, nothing else`).toBe(raw);
+      expect(barrel.get(name), `escape hatch "${name}" must be the raw "${stripped}" primitive, nothing else`).toBe(
+        raw,
+      );
     }
   });
 
   it('keeps the registry honest: every row is a live raw bare re-export', () => {
     for (const [name, reason] of Object.entries(knobImmuneExports)) {
       expect(reason.length, `registry row "${name}" needs a non-empty reason`).toBeGreaterThan(0);
-      expect(barrel[name], `registry row "${name}" is stale — the barrel no longer exports it`).toBeDefined();
+      expect(barrel.get(name), `registry row "${name}" is stale — the barrel no longer exports it`).toBeDefined();
       expect(
         isRawReexport(name),
         `registry row "${name}" is not a raw re-export — house implementations do not get ` +
@@ -147,14 +139,14 @@ describe('Spinner shadow (census hit)', () => {
         <pkg.Spinner />
       </Preset>,
     );
-    const spinner = container.querySelector("[role='status']") as HTMLElement;
+    const spinner = container.querySelector<HTMLElement>("[role='status']")!;
     expect(spinner).toBeTruthy();
     expect(spinner.className).toContain('mp1-spinner-static');
   });
 
   it('keeps spinning with motion on (positive control proving the probe measures)', () => {
     const { container } = renderWithProviders(<pkg.Spinner />);
-    const spinner = container.querySelector("[role='status']") as HTMLElement;
+    const spinner = container.querySelector<HTMLElement>("[role='status']")!;
     expect(spinner).toBeTruthy();
     expect(spinner.className).toContain('mp1-spinner');
     expect(spinner.className).not.toContain('mp1-spinner-static');
@@ -162,6 +154,6 @@ describe('Spinner shadow (census hit)', () => {
 });
 
 // Type-level lock: the bare SpinnerProps is the forms contract now.
-type _SpinnerPropsIsForms = import('./index').SpinnerProps extends import('@repo/forms').SpinnerProps ? true : never;
+type _SpinnerPropsIsForms = SpinnerProps extends FormsSpinnerProps ? true : never;
 const _spinnerPropsLock: _SpinnerPropsIsForms = true;
 void _spinnerPropsLock;

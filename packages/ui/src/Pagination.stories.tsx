@@ -76,18 +76,20 @@ export const ThreeSteps: Story = {
   render: () => <ControlledPagination total={3} />,
 };
 
+const WithCompletedStepsDemo = () => {
+  const [activeIndex, setActiveIndex] = useState(2);
+  return (
+    <Pagination
+      total={5}
+      activeIndex={activeIndex}
+      onChange={setActiveIndex}
+      completedSteps={new Set([0, 1])}
+    />
+  );
+};
+
 export const WithCompletedSteps: Story = {
-  render: () => {
-    const [activeIndex, setActiveIndex] = useState(2);
-    return (
-      <Pagination
-        total={5}
-        activeIndex={activeIndex}
-        onChange={setActiveIndex}
-        completedSteps={new Set([0, 1])}
-      />
-    );
-  },
+  render: () => <WithCompletedStepsDemo />,
 };
 
 export const BarsVariant: Story = {
@@ -108,31 +110,33 @@ export const AllowJumpTo: Story = {
   ),
 };
 
+const WithSubmitDemo = () => {
+  const [activeIndex, setActiveIndex] = useState(1);
+  const total = 4;
+  return (
+    <YStack
+      gap="$4"
+      alignItems="center">
+      <Pagination
+        total={total}
+        activeIndex={activeIndex}
+        onChange={setActiveIndex}
+        isLastStep={activeIndex === total - 1}
+        onSubmit={() => action('onSubmit')()}
+        completedSteps={new Set(Array.from({ length: activeIndex }, (_, i) => i))}
+      />
+      <Text
+        color="$color11"
+        fontSize="$3">
+        Step {activeIndex + 1} of {total}
+        {activeIndex === total - 1 ? ' — right arrow becomes submit' : ''}
+      </Text>
+    </YStack>
+  );
+};
+
 export const WithSubmit: Story = {
-  render: () => {
-    const [activeIndex, setActiveIndex] = useState(1);
-    const total = 4;
-    return (
-      <YStack
-        gap="$4"
-        alignItems="center">
-        <Pagination
-          total={total}
-          activeIndex={activeIndex}
-          onChange={setActiveIndex}
-          isLastStep={activeIndex === total - 1}
-          onSubmit={() => action('onSubmit')()}
-          completedSteps={new Set(Array.from({ length: activeIndex }, (_, i) => i))}
-        />
-        <Text
-          color="$color11"
-          fontSize="$3">
-          Step {activeIndex + 1} of {total}
-          {activeIndex === total - 1 ? ' — right arrow becomes submit' : ''}
-        </Text>
-      </YStack>
-    );
-  },
+  render: () => <WithSubmitDemo />,
 };
 
 export const Disabled: Story = {
@@ -166,6 +170,18 @@ export const NumberedFewPages: Story = {
   render: () => <ControlledNumbered total={5} />,
 };
 
+const NumberedDemo = () => {
+  const [page, setPage] = useState(5);
+  return (
+    <Pagination
+      variant="numbered"
+      total={20}
+      page={page}
+      onPageChange={setPage}
+    />
+  );
+};
+
 export const NumberedManyPages: Story = {
   parameters: {
     docs: {
@@ -174,17 +190,7 @@ export const NumberedManyPages: Story = {
       },
     },
   },
-  render: () => {
-    const [page, setPage] = useState(5);
-    return (
-      <Pagination
-        variant="numbered"
-        total={20}
-        page={page}
-        onPageChange={setPage}
-      />
-    );
-  },
+  render: () => <NumberedDemo />,
 };
 
 export const NumberedWithSummary: Story = {

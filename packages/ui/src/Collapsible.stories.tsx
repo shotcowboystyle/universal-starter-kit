@@ -34,7 +34,7 @@ export const Default: Story = {
           <Button chromeless>Toggle section</Button>
         </Collapsible.Trigger>
         <Collapsible.Content>
-          <Text>Fold's substrate. The raw primitive opens and closes; Accordion (and Fold) paint the row.</Text>
+          <Text>Fold&apos;s substrate. The raw primitive opens and closes; Accordion (and Fold) paint the row.</Text>
         </Collapsible.Content>
       </Collapsible>
     </YStack>

@@ -1,4 +1,14 @@
-import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  createContext,
+  createElement,
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import type { ReactNode, RefObject } from 'react';
 
 import {
@@ -19,6 +29,8 @@ import {
   siblingOffset,
 } from '../views/kanban-dnd';
 import type { KanbanKeyboardDrag } from '../views/kanban-dnd';
+
+type AnnounceType = Parameters<typeof describeDragState>[0] | 'cancel';
 
 export type SortableMode = 'keyboard' | 'pointer';
 
@@ -42,6 +54,10 @@ export interface UseSortableRowsOptions<T> {
   rowSelector?: string;
 }
 
+const noopCleanup = (): void => {
+  // Nothing was subscribed, so there is nothing to undo.
+};
+
 const DEFAULT_ROW_SELECTOR = '[data-sortable-row], [data-child-row]';
 
 const SortableSessionContext = createContext<{ sourceId: string | null }>({
@@ -49,12 +65,13 @@ const SortableSessionContext = createContext<{ sourceId: string | null }>({
 });
 
 /** Lets a remount-prone cell (ChildTable handle) read lift state without recreating column defs. */
+// oxlint-disable-next-line sonarjs/function-name -- exported React provider component; PascalCase is the public name consumers import
 export const SortableSessionProvider = ({ sourceId, children }: { sourceId: string | null; children: ReactNode }) =>
   createElement(SortableSessionContext.Provider, { value: { sourceId } }, children);
 
-export const useSortableDragging = (itemId: string, dragging?: boolean) => {
+export const useSortableDragging = (itemId: string) => {
   const { sourceId } = useContext(SortableSessionContext);
-  return dragging ?? sourceId === itemId;
+  return sourceId === itemId;
 };
 
 export const useSortableRows = <T>({
@@ -71,9 +88,11 @@ export const useSortableRows = <T>({
   const [announcement, setAnnouncement] = useState('');
   const [focusedIndex, setFocusedIndex] = useState(0);
   const sessionRef = useRef<SortableSession | null>(null);
-  sessionRef.current = session;
   const itemsRef = useRef(items);
-  itemsRef.current = items;
+  useLayoutEffect(() => {
+    sessionRef.current = session;
+    itemsRef.current = items;
+  });
 
   const board = useMemo(() => listBoardSnapshot(items.length), [items.length]);
 
@@ -94,7 +113,7 @@ export const useSortableRows = <T>({
   );
 
   const announce = useCallback(
-    (type: 'lift' | 'move' | 'drop' | 'cancel', drag: KanbanKeyboardDrag, label: string) => {
+    (type: AnnounceType, drag: KanbanKeyboardDrag, label: string) => {
       if (type === 'cancel') {
         setAnnouncement(
           formatListAnnouncement(describeCancel(drag, board, label), {
@@ -124,7 +143,9 @@ export const useSortableRows = <T>({
         return;
       }
       const el = root.querySelector(`[data-sortable-row="${id}"], [data-child-row-id="${id}"]`);
-      (el as HTMLElement | null)?.focus?.();
+      if (el instanceof HTMLElement) {
+        el.focus();
+      }
     },
     [containerRef],
   );
@@ -241,7 +262,7 @@ export const useSortableRows = <T>({
 
   useEffect(() => {
     if (!enabled || typeof window === 'undefined') {
-      return;
+      return noopCleanup;
     }
     const onKey = (e: KeyboardEvent) => {
       const { current } = sessionRef;
@@ -274,11 +295,12 @@ export const useSortableRows = <T>({
       if (e.key !== ' ' && e.key !== 'Enter') {
         return;
       }
-      const handle = (e.target as HTMLElement | null)?.closest?.('[data-sortable-handle]');
+      const { target } = e;
+      const handle = target instanceof HTMLElement ? target.closest<HTMLElement>('[data-sortable-handle]') : null;
       if (!handle) {
         return;
       }
-      const id = handle.getAttribute('data-sortable-handle');
+      const id = handle.dataset.sortableHandle;
       const index = ids.indexOf(id ?? '');
       if (index === -1) {
         return;
@@ -399,13 +421,13 @@ export const useSortableRows = <T>({
         announce('move', toDrag(moved), moved.label);
       };
 
+      const listeners = new AbortController();
+
       const teardown = () => {
         if (hold != null) {
           clearTimeout(hold);
         }
-        window.removeEventListener('pointermove', onMove);
-        window.removeEventListener('pointerup', onUp);
-        window.removeEventListener('pointercancel', onCancel);
+        listeners.abort();
       };
 
       const onUp = () => {
@@ -421,9 +443,9 @@ export const useSortableRows = <T>({
         }
       };
 
-      window.addEventListener('pointermove', onMove);
-      window.addEventListener('pointerup', onUp);
-      window.addEventListener('pointercancel', onCancel);
+      window.addEventListener('pointermove', onMove, { signal: listeners.signal });
+      window.addEventListener('pointerup', onUp, { signal: listeners.signal });
+      window.addEventListener('pointercancel', onCancel, { signal: listeners.signal });
 
       if (pointerType === 'mouse') {
         liftPointer(e.clientY);

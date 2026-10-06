@@ -31,8 +31,6 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { Button } from './Button';
 import { ListItem, XStack } from './tamagui';
 
-afterEach(cleanup);
-
 interface Box {
   height: number;
   radius: number;
@@ -45,30 +43,24 @@ const stops = [
   ['large', '$5'],
 ] as const satisfies readonly (readonly [Size, string])[];
 
-const atom = (el: HTMLElement, prop: string) => {
-  for (const cls of String(el.className || '').split(/\s+/u)) {
-    if (!cls.startsWith(`_${prop}-`)) {
-      continue;
-    }
-    const value = cls.slice(prop.length + 2);
-    if (/^-?\d+(?:\.\d+)?px$|^t-(?:size|radius)-\d+$/u.test(value)) {
-      return value;
-    }
-  }
-  return undefined;
-};
+const atom = (el: HTMLElement, prop: string) =>
+  el.className
+    .split(/\s+/u)
+    .filter((cls) => cls.startsWith(`_${prop}-`))
+    .map((cls) => cls.slice(prop.length + 2))
+    .find((value) => /^-?\d+(?:\.\d+)?px$|^t-(?:size|radius)-\d+$/u.test(value));
 
 const px = (value: string | undefined): number | undefined => {
   if (value === undefined) {
     return undefined;
   }
-  const literal = /^(-?\d+(?:\.\d+)?)px$/u.exec(value);
+  const literal = /^(?<length>-?\d+(?:\.\d+)?)px$/u.exec(value);
   if (literal) {
-    return Number(literal[1]);
+    return Number(literal.groups!.length);
   }
-  const [, scale, step] = /^t-(size|radius)-(\d+)$/u.exec(value) ?? [];
+  const { scale, step } = /^t-(?<scale>size|radius)-(?<step>\d+)$/u.exec(value)?.groups ?? {};
   const tokens = getTokens() as unknown as Record<string, Record<string, { val: unknown }>>;
-  return Number.parseFloat(String(tokens[scale ?? '']?.[`$${step}`]?.val));
+  return Number(tokens[scale ?? '']?.[`$${step}`]?.val);
 };
 
 const box = (el: HTMLElement | null, name: string): Box => {
@@ -140,19 +132,19 @@ const heights = (row: Row) => Object.fromEntries(Object.entries(row).map(([name,
 const radii = (row: Row, names: (keyof Row)[]) => Object.fromEntries(names.map((name) => [name, row[name].radius]));
 
 const agreed = (values: Record<string, number>) => {
-  const first = Object.values(values)[0];
+  const [first] = Object.values(values);
   return Object.fromEntries(Object.keys(values).map((name) => [name, first]));
 };
 
 const controls: (keyof Row)[] = ['Button', 'Input', 'Select trigger'];
 
 describe('adjacency: Button, Input, Select trigger and ListItem at one size token', () => {
-  for (const [knob, token] of stops) {
-    it(`all four paint one height at size ${knob} (${token})`, () => {
-      const row = heights(atKnob(knob, token));
-      expect(row).toStrictEqual(agreed(row));
-    });
-  }
+  afterEach(cleanup);
+
+  it.each(stops)('all four paint one height at size %s (%s)', (knob, token) => {
+    const row = heights(atKnob(knob, token));
+    expect(row).toStrictEqual(agreed(row));
+  });
 
   it('catches a deliberate violation: a Button ejected to its own height', () => {
     const row = heights(
@@ -182,13 +174,11 @@ describe('adjacency: Button, Input, Select trigger and ListItem at one size toke
 
   const sizeTableRadius = { $3: 7, $4: 9, $5: 10 } as const;
 
-  for (const [knob, token] of stops) {
-    it(`Button, Input and Select trigger paint one radius at size ${knob} (${token})`, () => {
-      const row = radii(atKnob(knob, token), controls);
-      expect(row).toStrictEqual(agreed(row));
-      expect(row.Button).toBe(sizeTableRadius[token]);
-    });
-  }
+  it.each(stops)('Button, Input and Select trigger paint one radius at size %s (%s)', (knob, token) => {
+    const row = radii(atKnob(knob, token), controls);
+    expect(row).toStrictEqual(agreed(row));
+    expect(row.Button).toBe(sizeTableRadius[token]);
+  });
 
   it("ListItem stays a flush row beside them: radius 0, never the controls' radius", () => {
     const row = radii(atKnob('medium', '$4'), [...controls, 'ListItem']);
@@ -220,12 +210,13 @@ describe('adjacency: Button, Input, Select trigger and ListItem at one size toke
     expect(row).toStrictEqual({ Button: 16, Input: 16, 'Select trigger': 16 });
   });
 
-  for (const token of ['$3', '$4', '$5'] as const) {
-    it(`an explicit size=${token} moves all four heights and the controls' radius together`, () => {
+  it.each(['$3', '$4', '$5'] as const)(
+    "an explicit size=%s moves all four heights and the controls' radius together",
+    (token) => {
       const row = atSizeProp(token);
       expect(heights(row)).toStrictEqual(agreed(heights(row)));
       expect(radii(row, controls)).toStrictEqual(agreed(radii(row, controls)));
       expect(row.Button.radius).toBe(sizeTableRadius[token]);
-    });
-  }
+    },
+  );
 });

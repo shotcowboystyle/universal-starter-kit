@@ -15,6 +15,7 @@ import {
   useResolvedKnobs,
   wasKeyboardFocus,
 } from '@repo/theme';
+import type { KnobProps } from '@repo/theme';
 import type React from 'react';
 import { useCallback, useState } from 'react';
 import { Text, XStack, isWeb } from 'tamagui';
@@ -23,54 +24,12 @@ import type { XStackProps } from 'tamagui';
 import { componentColors } from './component-colors';
 import { DotIndicator } from './DotIndicator';
 import { useDirection } from './hooks/use-direction';
+import { getPaginationItems, isEllipsis } from './pagination-items';
 import { useTranslation } from './shared/i18n';
 import { bidiIsolate, withInterp } from './shared/t';
 
-export type PaginationItem = number | 'ellipsis-start' | 'ellipsis-end';
-
-const range = (start: number, end: number) => Array.from({ length: Math.max(end - start + 1, 0) }, (_, i) => start + i);
-
-/**
- * Ellipsis windowing for the numbered variant: always show the boundary
- * pages, the current page and its siblings, and collapse the gaps into
- * ellipses — e.g. total=20, page=5 → [1, …, 4, 5, 6, …, 20].
- */
-export const getPaginationItems = (
-  total: number,
-  page: number,
-  siblingCount = 1,
-  boundaryCount = 1,
-): PaginationItem[] => {
-  if (total <= 0) {
-    return [];
-  }
-  const startPages = range(1, Math.min(boundaryCount, total));
-  const endPages = range(Math.max(total - boundaryCount + 1, boundaryCount + 1), total);
-
-  const siblingsStart = Math.max(
-    Math.min(page - siblingCount, total - boundaryCount - siblingCount * 2 - 1),
-    boundaryCount + 2,
-  );
-  const siblingsEnd = Math.min(
-    Math.max(page + siblingCount, boundaryCount + siblingCount * 2 + 2),
-    endPages.length > 0 ? endPages[0] - 2 : total - 1,
-  );
-
-  const items: PaginationItem[] = [...startPages];
-  if (siblingsStart > boundaryCount + 2) {
-    items.push('ellipsis-start');
-  } else if (boundaryCount + 1 < total - boundaryCount) {
-    items.push(boundaryCount + 1);
-  }
-  items.push(...range(siblingsStart, siblingsEnd));
-  if (siblingsEnd < total - boundaryCount - 1) {
-    items.push('ellipsis-end');
-  } else if (total - boundaryCount > boundaryCount) {
-    items.push(total - boundaryCount);
-  }
-  items.push(...endPages);
-  return items;
-};
+export type { PaginationItem } from './pagination-items';
+export { getPaginationItems } from './pagination-items';
 
 /**
  * The size the pager pins its strip at, as steps on the size-token scale.
@@ -91,6 +50,9 @@ const stripSteps = {
 const pageControlFloor = pressTargetStyle();
 
 const restRing = { outlineWidth: 0 } as const;
+
+type StepVariant = 'dots' | 'bars';
+type PageVariant = 'numbered' | 'simple';
 
 export interface PaginationProps extends Omit<XStackProps, 'children' | 'onChange'> {
   /** Total number of pages/steps */
@@ -121,7 +83,7 @@ export interface PaginationProps extends Omit<XStackProps, 'children' | 'onChang
    * step) at the pager's large step — see `DotVariant` for the one rule that
    * governs a strip mark's size.
    */
-  variant?: 'dots' | 'bars' | 'numbered' | 'simple';
+  variant?: StepVariant | PageVariant;
   /** Total number of items across all pages (numbered summary slot) */
   totalItems?: number;
   /** Items per page (numbered summary slot) */
@@ -136,54 +98,87 @@ export interface PaginationProps extends Omit<XStackProps, 'children' | 'onChang
   showFirstLast?: boolean;
 }
 
-export const Pagination = ({
+type TranslateFn = ReturnType<typeof useTranslation>['t'];
+type IconComponent = typeof CaretLeftIcon;
+
+const isTransitionName = (value: unknown): value is string => typeof value === 'string';
+
+const activateOnEnterSpace = (fn: () => void, enabled: boolean) => (e?: React.KeyboardEvent) => {
+  if (e?.key === 'Enter' || e?.key === ' ') {
+    e.preventDefault();
+    if (enabled) {
+      fn();
+    }
+  }
+};
+
+/**
+ * Directional glyphs encode direction-of-travel (Axiom 15), so they must
+ * point toward their targets in RTL too. Mechanism: swap the paired glyph
+ * (CaretLeft ⇄ CaretRight) keyed on useDirection() — pixel-exact for the
+ * symmetric caret/arrow pairs and portable to native, unlike a scaleX(-1)
+ * transform. The checkmark is direction-neutral and never mirrors.
+ */
+const useDirectionalIcons = () => {
+  const isRTL = useDirection() === 'rtl';
+  return {
+    PrevIcon: isRTL ? CaretRightIcon : CaretLeftIcon,
+    NextIcon: isRTL ? CaretLeftIcon : CaretRightIcon,
+    FirstIcon: isRTL ? CaretDoubleRightIcon : CaretDoubleLeftIcon,
+    LastIcon: isRTL ? CaretDoubleLeftIcon : CaretDoubleRightIcon,
+    PrevArrowIcon: isRTL ? ArrowRightIcon : ArrowLeftIcon,
+    NextArrowIcon: isRTL ? ArrowLeftIcon : ArrowRightIcon,
+  };
+};
+
+/**
+ * Ring rides the focused page control only, keyboard-origin, never
+ * mouse. Selected is fill, not this outline channel.
+ */
+const usePageControlProps = () => {
+  const [kbFocus, setKbFocus] = useState<string | null>(null);
+  return (id: string) => ({
+    ...pageControlFloor,
+    elevation: 0,
+    borderWidth: 0,
+    borderColor: 'transparent',
+    shadowColor: 'transparent',
+    focusStyle: restRing,
+    focusVisibleStyle: restRing,
+    ...(isWeb
+      ? {
+          onFocus: () => {
+            if (wasKeyboardFocus()) {
+              setKbFocus(id);
+            }
+          },
+          onBlur: () => {
+            setKbFocus((prev) => (prev === id ? null : prev));
+          },
+        }
+      : undefined),
+    ...(kbFocus === id ? FOCUS_VISIBLE_RING : restRing),
+  });
+};
+
+type PageControlProps = ReturnType<typeof usePageControlProps>;
+
+/** Controlled via `page` (1-based) or `activeIndex` (0-based); uncontrolled otherwise. */
+const usePaginationState = ({
   total,
   activeIndex,
-  onChange,
   page,
   defaultPage,
+  onChange,
   onPageChange,
-  completedSteps,
-  allowJumpTo = false,
-  isLastStep = false,
+  isLastStep,
   onSubmit,
-  disabled = false,
-  variant = 'dots',
-  totalItems,
-  pageSize,
-  showSummary = false,
-  siblingCount = 1,
-  boundaryCount = 1,
-  showFirstLast = false,
-  ...stackProps
-}: PaginationProps) => {
-  const { t } = useTranslation();
-  const { knobProps } = useResolvedKnobs();
-  // Undefined at animation "none" / PRM — a `|| "quick"` fallback
-  // re-enables the tween and is the violation. DotIndicator also drops
-  // host transition when the knob is off.
-  const motionTransition = knobProps.transition as string | undefined;
-  if (isWeb) {
-    ensureKeyboardModalityTracking();
-  }
-  // Ring rides the focused page control only, keyboard-origin, never
-  // mouse. Selected is fill (below), not this outline channel.
-  const [kbFocus, setKbFocus] = useState<string | null>(null);
-
-  // Directional glyphs encode direction-of-travel (Axiom 15), so they must
-  // point toward their targets in RTL too. Mechanism: swap the paired glyph
-  // (CaretLeft ⇄ CaretRight) keyed on useDirection() — pixel-exact for the
-  // symmetric caret/arrow pairs and portable to native, unlike a scaleX(-1)
-  // transform. The checkmark is direction-neutral and never mirrors.
-  const isRTL = useDirection() === 'rtl';
-  const PrevIcon = isRTL ? CaretRightIcon : CaretLeftIcon;
-  const NextIcon = isRTL ? CaretLeftIcon : CaretRightIcon;
-  const FirstIcon = isRTL ? CaretDoubleRightIcon : CaretDoubleLeftIcon;
-  const LastIcon = isRTL ? CaretDoubleLeftIcon : CaretDoubleRightIcon;
-  const PrevArrowIcon = isRTL ? ArrowRightIcon : ArrowLeftIcon;
-  const NextArrowIcon = isRTL ? ArrowLeftIcon : ArrowRightIcon;
-
-  // Controlled via `page` (1-based) or `activeIndex` (0-based); uncontrolled otherwise.
+}: Pick<
+  PaginationProps,
+  'total' | 'activeIndex' | 'page' | 'defaultPage' | 'onChange' | 'onPageChange' | 'onSubmit'
+> & {
+  isLastStep: boolean;
+}) => {
   const [uncontrolledPage, setUncontrolledPage] = useState(defaultPage ?? 1);
   const controlledIndex = page == null ? activeIndex : page - 1;
   const index = controlledIndex ?? uncontrolledPage - 1;
@@ -215,80 +210,357 @@ export const Pagination = ({
     }
   }, [index, total, isLastStep, onSubmit, goTo]);
 
-  const activateOnEnterSpace = (fn: () => void, enabled: boolean) =>
-    ((e: React.KeyboardEvent) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        if (enabled) {
-          fn();
-        }
-      }
-    }) as unknown as () => void;
+  return { index, currentPage, goTo, handlePrev, handleNext };
+};
 
-  const pageControlProps = (id: string) => ({
-    ...pageControlFloor,
-    elevation: 0,
-    borderWidth: 0,
-    borderColor: 'transparent',
-    shadowColor: 'transparent',
-    focusStyle: restRing,
-    focusVisibleStyle: restRing,
-    ...(isWeb
-      ? {
-          onFocus: () => {
-            if (wasKeyboardFocus()) {
-              setKbFocus(id);
-            }
-          },
-          onBlur: () => {
-            setKbFocus((prev) => (prev === id ? null : prev));
-          },
-        }
-      : undefined),
-    ...(kbFocus === id ? FOCUS_VISIBLE_RING : restRing),
-  });
-
+/**
+ * The two idioms differ in which glyphs the controls take, whether the
+ * control is circular, and whether the last step submits — not in structure.
+ */
+const getPagerState = ({
+  variant,
+  disabled,
+  isLastStep,
+  hasSubmit,
+  index,
+  currentPage,
+  total,
+}: {
+  variant: PaginationProps['variant'];
+  disabled: boolean;
+  isLastStep: boolean;
+  hasSubmit: boolean;
+  index: number;
+  currentPage: number;
+  total: number;
+}) => {
   const isSimple = variant === 'simple';
   const isNumbered = variant === 'numbered';
   const isPageNavigation = isNumbered || isSimple;
-
-  // The two idioms differ in which glyphs the controls take, whether the
-  // control is circular, and whether the last step submits — not in structure.
   const canPrev = !disabled && index > 0;
-  const canNext = isPageNavigation
-    ? !disabled && currentPage < total
-    : // dots/bars: an onSubmit makes the last step actionable, so the forward
-      // control is not dead there.
-      !(disabled || (!isLastStep && index >= total - 1 && !onSubmit));
-  const submits = !isPageNavigation && isLastStep;
+  // dots/bars: an onSubmit makes the last step actionable, so the forward
+  // control is not dead there.
+  const canAdvanceSteps = !(disabled || (!isLastStep && index >= total - 1 && !hasSubmit));
+  const canNext = isPageNavigation ? !disabled && currentPage < total : canAdvanceSteps;
+  return { isSimple, isNumbered, isPageNavigation, canPrev, canNext, submits: !isPageNavigation && isLastStep };
+};
 
-  const items = isNumbered ? getPaginationItems(total, currentPage, siblingCount, boundaryCount) : [];
+/**
+ * Bidi-isolate the whole formatted range so an RTL paragraph can't
+ * reorder the latin/numeric runs ("1–5 of 5" ⇏ "of 5 5–1").
+ */
+const formatSummary = (
+  t: TranslateFn,
+  currentPage: number,
+  totalItems: number | undefined,
+  pageSize: number | undefined,
+) => {
+  if (totalItems == null || pageSize == null) {
+    return null;
+  }
+  if (totalItems === 0) {
+    return bidiIsolate(t('0 of 0'));
+  }
+  return bidiIsolate(
+    withInterp(t('{{start}}–{{end}} of {{total}}'), {
+      start: (currentPage - 1) * pageSize + 1,
+      end: Math.min(currentPage * pageSize, totalItems),
+      total: totalItems,
+    }),
+  );
+};
 
-  // Bidi-isolate the whole formatted range so an RTL paragraph can't
-  // reorder the latin/numeric runs ("1–5 of 5" ⇏ "of 5 5–1").
-  const summary =
-    isNumbered && showSummary && totalItems != null && pageSize != null
-      ? bidiIsolate(
-          totalItems === 0
-            ? t('0 of 0')
-            : withInterp(t('{{start}}–{{end}} of {{total}}'), {
-                start: (currentPage - 1) * pageSize + 1,
-                end: Math.min(currentPage * pageSize, totalItems),
-                total: totalItems,
-              }),
-        )
-      : undefined;
+const PagerButton = ({
+  id,
+  label,
+  icon,
+  onPress,
+  enabled,
+  knobProps,
+  pageControlProps,
+  circular = false,
+  submits = false,
+}: {
+  id: string;
+  label: string;
+  icon: IconComponent;
+  onPress: () => void;
+  enabled: boolean;
+  knobProps: KnobProps;
+  pageControlProps: PageControlProps;
+  circular?: boolean;
+  submits?: boolean;
+}) => (
+  <Button
+    size={knobProps.sizeToken}
+    circular={circular}
+    chromeless={!submits}
+    theme={submits ? 'active' : undefined}
+    icon={icon}
+    onPress={onPress}
+    disabled={!enabled}
+    aria-label={label}
+    onKeyDown={activateOnEnterSpace(onPress, enabled)}
+    {...pageControlProps(id)}
+  />
+);
 
+const NumberedPages = ({
+  total,
+  currentPage,
+  siblingCount,
+  boundaryCount,
+  disabled,
+  goTo,
+  knobProps,
+  pageControlProps,
+}: {
+  total: number;
+  currentPage: number;
+  siblingCount: number;
+  boundaryCount: number;
+  disabled: boolean;
+  goTo: (index: number) => void;
+  knobProps: KnobProps;
+  pageControlProps: PageControlProps;
+}) => {
+  const { t } = useTranslation();
+  const items = getPaginationItems(total, currentPage, siblingCount, boundaryCount);
+  return (
+    <XStack
+      alignItems="center"
+      {...knobProps.gap}>
+      {items.map((item) => {
+        if (isEllipsis(item)) {
+          return (
+            <Text
+              key={item}
+              aria-hidden
+              userSelect="none"
+              textAlign="center"
+              minWidth="$2"
+              minHeight={pageControlFloor.minHeight}
+              {...knobProps.body}
+              color={knobProps.textAccentColor}>
+              …
+            </Text>
+          );
+        }
+        const isCurrent = item === currentPage;
+        return (
+          <Button
+            key={item}
+            size={knobProps.sizeToken}
+            accent={isCurrent}
+            chromeless={!isCurrent}
+            disabled={disabled}
+            onPress={() => {
+              goTo(item - 1);
+            }}
+            aria-label={withInterp(t('Page {{number}}'), { number: item })}
+            aria-current={isCurrent ? 'page' : undefined}
+            onKeyDown={activateOnEnterSpace(() => {
+              goTo(item - 1);
+            }, !disabled)}
+            {...pageControlProps(`page-${item}`)}>
+            {String(item)}
+          </Button>
+        );
+      })}
+    </XStack>
+  );
+};
+
+const PaginationMiddle = ({
+  variant,
+  total,
+  index,
+  currentPage,
+  disabled,
+  allowJumpTo,
+  completedSteps,
+  siblingCount,
+  boundaryCount,
+  goTo,
+  knobProps,
+  motionTransition,
+  pageControlProps,
+}: {
+  variant: NonNullable<PaginationProps['variant']>;
+  total: number;
+  index: number;
+  currentPage: number;
+  disabled: boolean;
+  allowJumpTo: boolean;
+  completedSteps: PaginationProps['completedSteps'];
+  siblingCount: number;
+  boundaryCount: number;
+  goTo: (index: number) => void;
+  knobProps: KnobProps;
+  motionTransition: string | undefined;
+  pageControlProps: PageControlProps;
+}) => {
+  const { t } = useTranslation();
+  if (variant === 'simple') {
+    return (
+      <Text
+        {...knobProps.body}
+        color={componentColors.text.primary}
+        aria-live="polite"
+        userSelect="none"
+        numberOfLines={1}
+        flexShrink={1}
+        minWidth={0}>
+        {bidiIsolate(withInterp(t('{{page}} of {{total}}'), { page: currentPage, total }))}
+      </Text>
+    );
+  }
+  if (variant === 'numbered') {
+    return (
+      <NumberedPages
+        total={total}
+        currentPage={currentPage}
+        siblingCount={siblingCount}
+        boundaryCount={boundaryCount}
+        disabled={disabled}
+        goTo={goTo}
+        knobProps={knobProps}
+        pageControlProps={pageControlProps}
+      />
+    );
+  }
   // Resolved: `bars` names the progress-TICK idiom (no completion
   // badge), never a geometry. The pager pins the large step for it — that pin,
   // and nothing about the name, is why this strip is chunkier than a bare
   // `<DotIndicator variant="bars">`.
   const step = variant === 'bars' ? stripSteps.large : stripSteps.base;
+  // The dot strip IS `DotIndicator` — this component owns the
+  // pager frame around it, not a second strip. `completedSteps`, the
+  // wizard a11y idiom and the rail all ride the primitive, so the two
+  // strips in the catalog cannot drift apart again.
+  return (
+    <DotIndicator
+      total={total}
+      activeIndex={index}
+      variant={variant}
+      idiom="step"
+      rail
+      completedSteps={completedSteps}
+      dotSize={step.mark}
+      activeDotSize={step.active}
+      transition={motionTransition}
+      dotStateAttribute="data-pagination-dot"
+      onChange={allowJumpTo && !disabled ? goTo : undefined}
+      // A strip nobody can press has no disabled state — only a jumpable
+      // one is "interactive but blocked".
+      disabled={allowJumpTo && disabled}
+    />
+  );
+};
+
+const pickNextIcon = (isPageNavigation: boolean, submits: boolean, icons: ReturnType<typeof useDirectionalIcons>) => {
+  if (isPageNavigation) {
+    return icons.NextIcon;
+  }
+  return submits ? CheckIcon : icons.NextArrowIcon;
+};
+
+const PaginationSummary = ({
+  show,
+  currentPage,
+  totalItems,
+  pageSize,
+  knobProps,
+}: {
+  show: boolean;
+  currentPage: number;
+  totalItems: number | undefined;
+  pageSize: number | undefined;
+  knobProps: KnobProps;
+}) => {
+  const { t } = useTranslation();
+  const summary = show ? formatSummary(t, currentPage, totalItems, pageSize) : null;
+  if (summary === null || summary === '') {
+    return null;
+  }
+  return (
+    <Text
+      {...knobProps.body}
+      color={knobProps.textAccentColor}
+      aria-live="polite"
+      userSelect="none">
+      {summary}
+    </Text>
+  );
+};
+
+const nextLabel = (isPageNavigation: boolean, submits: boolean, t: TranslateFn) => {
+  if (isPageNavigation) {
+    return t('Go to next page');
+  }
+  return submits ? t('Submit') : t('Next page');
+};
+
+export const Pagination = ({
+  total,
+  activeIndex,
+  onChange,
+  page,
+  defaultPage,
+  onPageChange,
+  completedSteps,
+  allowJumpTo = false,
+  isLastStep = false,
+  onSubmit,
+  disabled = false,
+  variant = 'dots',
+  totalItems,
+  pageSize,
+  showSummary = false,
+  siblingCount = 1,
+  boundaryCount = 1,
+  showFirstLast = false,
+  ...stackProps
+}: PaginationProps) => {
+  const { t } = useTranslation();
+  const { knobProps } = useResolvedKnobs();
+  // Undefined at animation "none" / PRM — a `|| "quick"` fallback
+  // re-enables the tween and is the violation. DotIndicator also drops
+  // host transition when the knob is off.
+  const motionTransition = isTransitionName(knobProps.transition) ? knobProps.transition : undefined;
+  if (isWeb) {
+    ensureKeyboardModalityTracking();
+  }
+  const pageControlProps = usePageControlProps();
+  const { index, currentPage, goTo, handlePrev, handleNext } = usePaginationState({
+    total,
+    activeIndex,
+    page,
+    defaultPage,
+    onChange,
+    onPageChange,
+    isLastStep,
+    onSubmit,
+  });
+  const { isSimple, isNumbered, isPageNavigation, canPrev, canNext, submits } = getPagerState({
+    variant,
+    disabled,
+    isLastStep,
+    hasSubmit: onSubmit != null,
+    index,
+    currentPage,
+    total,
+  });
+  const showEnds = isNumbered && showFirstLast;
+  const icons = useDirectionalIcons();
+  const nextIcon = pickNextIcon(isPageNavigation, submits, icons);
+  const prevIcon = isPageNavigation ? icons.PrevIcon : icons.PrevArrowIcon;
 
   return (
     <XStack
       alignItems="center"
       justifyContent="center"
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui XStack is not a <nav>; role carries the landmark on web and native
       role="navigation"
       aria-label={t('Pagination')}
       data-animation={motionTransition ?? 'none'}
@@ -297,152 +569,82 @@ export const Pagination = ({
       {...knobProps.gap}
       {...(isSimple ? { paddingHorizontal: 0, minWidth: 0, flexShrink: 1 } : undefined)}
       {...stackProps}>
-      {isNumbered && showFirstLast && (
-        <Button
-          size={knobProps.sizeToken}
-          chromeless
-          icon={FirstIcon}
+      {showEnds && (
+        <PagerButton
+          id="first"
+          label={t('Go to first page')}
+          icon={icons.FirstIcon}
           onPress={() => {
             goTo(0);
           }}
-          disabled={!canPrev}
-          aria-label={t('Go to first page')}
-          onKeyDown={activateOnEnterSpace(() => {
-            goTo(0);
-          }, canPrev)}
-          {...pageControlProps('first')}
+          enabled={canPrev}
+          knobProps={knobProps}
+          pageControlProps={pageControlProps}
         />
       )}
 
-      <Button
-        size={knobProps.sizeToken}
-        circular={!isPageNavigation}
-        chromeless
-        icon={isPageNavigation ? PrevIcon : PrevArrowIcon}
-        onPress={handlePrev}
-        disabled={!canPrev}
+      <PagerButton
+        id="prev"
         // The Button's own disabled wash owns the treatment — the
         // legacy opacity 0.3 dim stacked on top of it (double-dim).
-        aria-label={isPageNavigation ? t('Go to previous page') : t('Previous page')}
-        onKeyDown={activateOnEnterSpace(handlePrev, canPrev)}
-        {...pageControlProps('prev')}
-      />
-
-      {isSimple ? (
-        <Text
-          {...knobProps.body}
-          color={componentColors.text.primary}
-          aria-live="polite"
-          userSelect="none"
-          numberOfLines={1}
-          flexShrink={1}
-          minWidth={0}>
-          {bidiIsolate(withInterp(t('{{page}} of {{total}}'), { page: currentPage, total }))}
-        </Text>
-      ) : isNumbered ? (
-        <XStack
-          alignItems="center"
-          {...knobProps.gap}>
-          {items.map((item) => {
-            if (typeof item !== 'number') {
-              return (
-                <Text
-                  key={item}
-                  aria-hidden
-                  userSelect="none"
-                  textAlign="center"
-                  minWidth="$2"
-                  minHeight={pageControlFloor.minHeight}
-                  {...knobProps.body}
-                  color={knobProps.textAccentColor}>
-                  …
-                </Text>
-              );
-            }
-            const isCurrent = item === currentPage;
-            return (
-              <Button
-                key={item}
-                size={knobProps.sizeToken}
-                accent={isCurrent}
-                chromeless={!isCurrent}
-                disabled={disabled}
-                onPress={() => {
-                  goTo(item - 1);
-                }}
-                aria-label={withInterp(t('Page {{number}}'), { number: item })}
-                aria-current={isCurrent ? 'page' : undefined}
-                onKeyDown={activateOnEnterSpace(() => {
-                  goTo(item - 1);
-                }, !disabled)}
-                {...pageControlProps(`page-${item}`)}>
-                {String(item)}
-              </Button>
-            );
-          })}
-        </XStack>
-      ) : (
-        // The dot strip IS `DotIndicator` — this component owns the
-        // pager frame around it, not a second strip. `completedSteps`, the
-        // wizard a11y idiom and the rail all ride the primitive, so the two
-        // strips in the catalog cannot drift apart again.
-        <DotIndicator
-          total={total}
-          activeIndex={index}
-          variant={variant}
-          idiom="step"
-          rail
-          completedSteps={completedSteps}
-          dotSize={step.mark}
-          activeDotSize={step.active}
-          transition={motionTransition}
-          dotStateAttribute="data-pagination-dot"
-          onChange={allowJumpTo && !disabled ? goTo : undefined}
-          // A strip nobody can press has no disabled state — only a jumpable
-          // one is "interactive but blocked".
-          disabled={allowJumpTo && disabled}
-        />
-      )}
-
-      <Button
-        size={knobProps.sizeToken}
+        label={isPageNavigation ? t('Go to previous page') : t('Previous page')}
+        icon={prevIcon}
+        onPress={handlePrev}
+        enabled={canPrev}
         circular={!isPageNavigation}
-        chromeless={!submits}
-        theme={submits ? 'active' : undefined}
-        icon={isPageNavigation ? NextIcon : submits ? CheckIcon : NextArrowIcon}
-        onPress={handleNext}
-        disabled={!canNext}
-        aria-label={isPageNavigation ? t('Go to next page') : submits ? t('Submit') : t('Next page')}
-        onKeyDown={activateOnEnterSpace(handleNext, canNext)}
-        {...pageControlProps(submits ? 'submit' : 'next')}
+        knobProps={knobProps}
+        pageControlProps={pageControlProps}
       />
 
-      {isNumbered && showFirstLast && (
-        <Button
-          size={knobProps.sizeToken}
-          chromeless
-          icon={LastIcon}
+      <PaginationMiddle
+        variant={variant}
+        total={total}
+        index={index}
+        currentPage={currentPage}
+        disabled={disabled}
+        allowJumpTo={allowJumpTo}
+        completedSteps={completedSteps}
+        siblingCount={siblingCount}
+        boundaryCount={boundaryCount}
+        goTo={goTo}
+        knobProps={knobProps}
+        motionTransition={motionTransition}
+        pageControlProps={pageControlProps}
+      />
+
+      <PagerButton
+        id={submits ? 'submit' : 'next'}
+        label={nextLabel(isPageNavigation, submits, t)}
+        icon={nextIcon}
+        onPress={handleNext}
+        enabled={canNext}
+        circular={!isPageNavigation}
+        submits={submits}
+        knobProps={knobProps}
+        pageControlProps={pageControlProps}
+      />
+
+      {showEnds && (
+        <PagerButton
+          id="last"
+          label={t('Go to last page')}
+          icon={icons.LastIcon}
           onPress={() => {
             goTo(total - 1);
           }}
-          disabled={!canNext}
-          aria-label={t('Go to last page')}
-          onKeyDown={activateOnEnterSpace(() => {
-            goTo(total - 1);
-          }, canNext)}
-          {...pageControlProps('last')}
+          enabled={canNext}
+          knobProps={knobProps}
+          pageControlProps={pageControlProps}
         />
       )}
 
-      {summary && (
-        <Text
-          {...knobProps.body}
-          color={knobProps.textAccentColor}
-          aria-live="polite"
-          userSelect="none">
-          {summary}
-        </Text>
-      )}
+      <PaginationSummary
+        show={isNumbered && showSummary}
+        currentPage={currentPage}
+        totalItems={totalItems}
+        pageSize={pageSize}
+        knobProps={knobProps}
+      />
     </XStack>
   );
 };

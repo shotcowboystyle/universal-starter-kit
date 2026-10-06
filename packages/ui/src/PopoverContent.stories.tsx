@@ -4,6 +4,7 @@ import { OVERLAY_ANCHOR_GAP, useResolvedKnobs } from '@repo/theme';
 import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { useState } from 'react';
 import { Paragraph, Popover, SizableText, YStack } from 'tamagui';
+import type { PopoverProps } from 'tamagui';
 
 import { PopoverContent } from './surfaces';
 
@@ -11,7 +12,7 @@ const PopoverHarness = ({
   placement = 'bottom' as const,
   startOpen = true,
 }: {
-  placement?: 'bottom' | 'top' | 'right' | 'left';
+  placement?: PopoverProps['placement'];
   startOpen?: boolean;
 }) => {
   // PopoverContent's contract leaves the inset to the caller (flush menus

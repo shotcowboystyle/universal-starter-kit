@@ -1,6 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 
 import { renderWithProviders } from '@repo/test-utils';
 import { fireEvent } from '@testing-library/react';
@@ -8,8 +7,6 @@ import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { SortableList } from './index';
-
-const here = dirname(fileURLToPath(import.meta.url));
 
 const ITEMS = [
   { id: 'mon', label: 'Monday standup' },
@@ -19,7 +16,7 @@ const ITEMS = [
 ];
 
 const Harness = ({
-  onChange = vi.fn(),
+  onChange = vi.fn<(next: typeof ITEMS) => void>(),
   readOnly,
   disabled,
   compact,
@@ -51,9 +48,9 @@ const Harness = ({
 
 const liveRegion = () => document.querySelector('[data-sortable-live="true"]');
 
-describe('SortableList', () => {
+describe(SortableList, () => {
   it('completes a keyboard-only reorder and announces each step', () => {
-    const onChange = vi.fn();
+    const onChange = vi.fn<(next: typeof ITEMS) => void>();
     const { container } = renderWithProviders(<Harness onChange={onChange} />);
     const rows = container.querySelectorAll('[data-sortable-row]');
     expect(rows).toHaveLength(4);
@@ -80,11 +77,12 @@ describe('SortableList', () => {
     expect(onChange).toHaveBeenCalledOnce();
     expect(onChange.mock.calls[0][0].map((r: { id: string }) => r.id)).toStrictEqual(['mon', 'dep', 'ret', 'tue']);
     expect(liveRegion()?.textContent).toBe('Dropped “Tuesday review”, position 4 of 4.');
-    expect(document.activeElement?.getAttribute('data-sortable-row')).toBe('tue');
+    const active = document.activeElement;
+    expect(active instanceof HTMLElement ? active.dataset.sortableRow : undefined).toBe('tue');
   });
 
   it('cancels a lift with Escape and leaves the list unchanged', () => {
-    const onChange = vi.fn();
+    const onChange = vi.fn<(next: typeof ITEMS) => void>();
     const { container } = renderWithProviders(<Harness onChange={onChange} />);
     const tuesday = container.querySelector('[data-sortable-row="tue"]') as HTMLElement;
     tuesday.focus();
@@ -93,7 +91,7 @@ describe('SortableList', () => {
     fireEvent.keyDown(tuesday, { key: 'Escape' });
     expect(onChange).not.toHaveBeenCalled();
     expect(liveRegion()?.textContent).toBe('Reorder cancelled. “Tuesday review” returned to position 2.');
-    expect(container.querySelectorAll('[data-sortable-row]')[1].getAttribute('data-sortable-row')).toBe('tue');
+    expect(container.querySelectorAll<HTMLElement>('[data-sortable-row]')[1].dataset.sortableRow).toBe('tue');
   });
 
   it('paints the grab handle as a focusable with a 2px offset-0 ring well', () => {
@@ -103,7 +101,7 @@ describe('SortableList', () => {
     expect(handle.getAttribute('aria-label')).toMatch(/Tuesday review/u);
     expect(handle.tabIndex).toBe(0);
     handle.focus();
-    expect(handle.style.outlineWidth === '2px' || handle.getAttribute('data-focus-ring') === '2/0').toBe(true);
+    expect(handle.style.outlineWidth === '2px' || handle.dataset.focusRing === '2/0').toBe(true);
   });
 
   it('omits the handle on a row that cannot drag and reserves the well', () => {
@@ -143,7 +141,7 @@ describe('SortableList', () => {
   });
 
   it('spreads the outer radius fragment on the list frame, not the nested alias', () => {
-    const src = readFileSync(join(here, 'index.tsx'), 'utf-8');
+    const src = readFileSync(path.join(import.meta.dirname, 'index.tsx'), 'utf-8');
     expect(src).toContain('{...knobProps.borderRadius}');
     expect(src).not.toContain('knobProps.borderRadiusOuter');
   });

@@ -1,6 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 
 import { renderWithProviders } from '@repo/test-utils';
 import React from 'react';
@@ -10,14 +9,15 @@ import { formatPlayerTime } from './PlayerChrome';
 
 import { Video } from './index';
 
-const here = dirname(fileURLToPath(import.meta.url));
+const here = import.meta.dirname;
 
+// oxlint-disable-next-line vitest/prefer-import-in-mock -- the stub swaps expo-video's native player and VideoView class for plain test doubles, which the module's real types reject
 vi.mock('expo-video', () => ({
   useVideoPlayer: () => ({
     loop: false,
     muted: false,
-    play: vi.fn(),
-    pause: vi.fn(),
+    play: vi.fn<() => void>(),
+    pause: vi.fn<() => void>(),
   }),
   VideoView: (props: { accessibilityLabel?: string }) =>
     React.createElement('div', {
@@ -26,7 +26,7 @@ vi.mock('expo-video', () => ({
     }),
 }));
 
-describe('Video', () => {
+describe(Video, () => {
   it('renders a figure with video and caption on web', () => {
     const { container } = renderWithProviders(
       <Video
@@ -95,9 +95,9 @@ describe('Video', () => {
 
   it('does not paint a status pip; tile radius stays UNCLAMPED', () => {
     const src = [
-      readFileSync(join(here, 'index.tsx'), 'utf-8'),
-      readFileSync(join(here, 'index.native.tsx'), 'utf-8'),
-      readFileSync(join(here, 'VideoFrame.tsx'), 'utf-8'),
+      readFileSync(path.join(here, 'index.tsx'), 'utf-8'),
+      readFileSync(path.join(here, 'index.native.tsx'), 'utf-8'),
+      readFileSync(path.join(here, 'VideoFrame.tsx'), 'utf-8'),
     ].join('\n');
     expect(src).not.toMatch(/knobProps\.cardSurface|knobProps\.containerRadius|capContainerRadius\(/u);
     expect(src).not.toMatch(/data-status-pip|StatusPip|statusPip/u);
@@ -116,7 +116,7 @@ describe('Video', () => {
   });
 });
 
-describe('formatPlayerTime', () => {
+describe(formatPlayerTime, () => {
   it('formats seconds and hours without NaN', () => {
     expect(formatPlayerTime(0)).toBe('0:00');
     expect(formatPlayerTime(65)).toBe('1:05');

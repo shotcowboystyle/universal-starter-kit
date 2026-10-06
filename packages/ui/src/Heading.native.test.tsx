@@ -34,27 +34,25 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { H1, H3, Heading } from './Heading';
 
-vi.mock('@repo/platform', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@repo/platform')>()),
+vi.mock(import('@repo/platform'), async (importOriginal) => ({
+  ...(await importOriginal()),
   isWeb: false,
   isNative: true,
 }));
 
-afterEach(cleanup);
-
 const TITLE = 'Workspace Settings';
 
 const classesByPrefix = (el: Element, prefixes: string[]): string[] =>
-  String((el as HTMLElement).className || '')
+  (el as HTMLElement).className
     .split(' ')
     .filter((c) => prefixes.some((p) => c.startsWith(p)))
-    .sort();
+    .toSorted();
 
 /** Render, guard the text node's tag, read its prefixed classes, clean up. */
 const renderHeadingClasses = (node: React.ReactElement, prefixes: string[], expectedTag?: string): string[] => {
   renderWithProviders(node);
   const textNode = screen.getByText(TITLE);
-  if (expectedTag) {
+  if (expectedTag !== undefined && expectedTag !== '') {
     // The text node IS the heading element — not a frame around it.
     expect(textNode.tagName).toBe(expectedTag);
   }
@@ -64,6 +62,8 @@ const renderHeadingClasses = (node: React.ReactElement, prefixes: string[], expe
 };
 
 describe('house Heading — NATIVE environment (isWeb false)', () => {
+  afterEach(cleanup);
+
   it('really is running with the native platform flags', async () => {
     const platform = await import('@repo/platform');
     expect(platform.isWeb).toBe(false);

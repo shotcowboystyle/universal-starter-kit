@@ -7,8 +7,6 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { Button } from './Button';
 import { AlertDialogContent, DialogContent } from './surfaces';
 
-afterEach(cleanup);
-
 // ── What this file measures, and why not the class list ──────────────────
 //
 // Acceptance: "DialogContent paints the reference overlay shadow" and "a
@@ -52,14 +50,14 @@ const frame = (id: string): HTMLElement => {
 const paintedShadow = (id: string): string => frame(id).style.boxShadow;
 
 const shadowAtoms = (id: string): string[] =>
-  String(frame(id).className || '')
-    .split(/\s+/u)
+  frame(id)
+    .className.split(/\s+/u)
     .filter((c) => c.startsWith('_bxsh-'))
-    .sort();
+    .toSorted();
 
 const bgAtoms = (id: string): string[] =>
-  String(frame(id).className || '')
-    .split(/\s+/u)
+  frame(id)
+    .className.split(/\s+/u)
     .filter((c) => c.startsWith('_bg-'));
 
 const renderDialogsBesideAButton = (elevation?: 'small' | 'medium' | 'large') => {
@@ -83,6 +81,8 @@ const renderDialogsBesideAButton = (elevation?: 'small' | 'medium' | 'large') =>
 };
 
 describe('overlay elevation is a different distance off the surface', () => {
+  afterEach(cleanup);
+
   it('DialogContent paints the overlay ladder, reaching the reference dialog shadow at large', () => {
     renderDialogsBesideAButton('large');
     expect(paintedShadow('dialog')).toBe(dialogStopPaint);

@@ -1,6 +1,4 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 
 import { Button } from '@repo/forms';
 import { renderWithProviders } from '@repo/test-utils';

@@ -1,6 +1,6 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
+
+import { setTimeout as sleep } from 'node:timers/promises';
 
 import { Button } from '@repo/forms';
 import { renderWithProviders } from '@repo/test-utils';
@@ -89,7 +89,7 @@ describe('Tooltip interaction', () => {
   });
 
   it('Escape closes a controlled open tooltip without moving focus into it', () => {
-    const onOpenChange = vi.fn();
+    const onOpenChange = vi.fn<(open: boolean) => void>();
     renderWithProviders(
       <Tooltip
         content="Hint"
@@ -121,7 +121,7 @@ describe('Tooltip content rides the border, elevation and animation knobs', () =
       </Preset>,
     );
     await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await sleep(50);
     });
     const content = document.querySelector<HTMLElement>("[data-tooltip='content']");
     const classes = content?.className.split(/\s+/u) ?? [];
@@ -139,12 +139,10 @@ describe('Tooltip content rides the border, elevation and animation knobs', () =
     const none = await measure(stops[0]);
     const small = await measure(stops[1]);
     const large = await measure(stops[2]);
-    expect(none).toStrictEqual({
-      mounted: true,
-      border: '_btw-0px',
-      shadow: undefined,
-      transition: undefined,
-    });
+    expect(none.mounted).toBe(true);
+    expect(none.border).toBe('_btw-0px');
+    expect(none.shadow).toBeUndefined();
+    expect(none.transition).toBeUndefined();
     expect(small).toMatchObject({
       mounted: true,
       border: '_btw-0--5px',
@@ -168,7 +166,7 @@ describe('Tooltip native long-press open path', () => {
   });
 
   it('opens after the ~500ms press-in delay and closes on press-out', () => {
-    const setOpen = vi.fn();
+    const setOpen = vi.fn<(open: boolean) => void>();
     const press = createNativeTooltipPressHandlers(setOpen, TOOLTIP_NATIVE_LONG_PRESS_MS);
     press.pressIn();
     vi.advanceTimersByTime(TOOLTIP_NATIVE_LONG_PRESS_MS - 1);
@@ -181,18 +179,17 @@ describe('Tooltip native long-press open path', () => {
   });
 
   it('cancels a pending press-in when the finger lifts early', () => {
-    const setOpen = vi.fn();
+    const setOpen = vi.fn<(open: boolean) => void>();
     const press = createNativeTooltipPressHandlers(setOpen);
     press.pressIn();
     press.pressOut();
     vi.advanceTimersByTime(TOOLTIP_NATIVE_LONG_PRESS_MS);
-    expect(setOpen).toHaveBeenCalledOnce();
-    expect(setOpen).toHaveBeenCalledWith(false);
+    expect(setOpen).toHaveBeenCalledExactlyOnceWith(false);
     press.dispose();
   });
 
   it('opens on long-press and closes on tap outside', () => {
-    const setOpen = vi.fn();
+    const setOpen = vi.fn<(open: boolean) => void>();
     const press = createNativeTooltipPressHandlers(setOpen);
     press.longPress();
     expect(setOpen).toHaveBeenCalledWith(true);

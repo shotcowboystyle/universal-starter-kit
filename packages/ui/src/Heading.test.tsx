@@ -25,27 +25,23 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { H1, H2, H3, Heading } from './Heading';
 
-afterEach(cleanup);
-
 const TITLE = 'Workspace Settings';
 
 const classesByPrefix = (el: Element, prefixes: string[]): string[] =>
-  String((el as HTMLElement).className || '')
+  (el as HTMLElement).className
     .split(' ')
     .filter((c) => prefixes.some((p) => c.startsWith(p)))
-    .sort();
+    .toSorted();
 
 /** Tamagui font-scope class on the TEXT NODE (`font_heading` / `font_mono` / …). */
 const fontScopeClass = (el: Element): string =>
-  String((el as HTMLElement).className || '')
-    .split(' ')
-    .find((c) => c.startsWith('font_')) ?? '';
+  (el as HTMLElement).className.split(' ').find((c) => c.startsWith('font_')) ?? '';
 
 /** Render, guard the text node's tag, read its prefixed classes, clean up. */
 const renderHeadingClasses = (node: React.ReactElement, prefixes: string[], expectedTag?: string): string[] => {
   renderWithProviders(node);
   const textNode = screen.getByText(TITLE);
-  if (expectedTag) {
+  if (expectedTag !== undefined && expectedTag !== '') {
     // The text node IS the heading element — not a frame around it.
     expect(textNode.tagName).toBe(expectedTag);
   }
@@ -55,6 +51,8 @@ const renderHeadingClasses = (node: React.ReactElement, prefixes: string[], expe
 };
 
 describe('house Heading — fontWeight reaches the heading text node', () => {
+  afterEach(cleanup);
+
   it('changes weight on a fontWeight flip, pinned to 400/700', () => {
     const regular = renderHeadingClasses(
       <Preset overrides={{ fontWeight: 'regular' }}>
@@ -122,6 +120,8 @@ describe('house Heading — fontWeight reaches the heading text node', () => {
 });
 
 describe('house H3 — subordinate headings are mono 400 on the TEXT NODE', () => {
+  afterEach(cleanup);
+
   it('pins family and weight to mono 400, ignoring heading knobs', () => {
     const byDefault = renderHeadingClasses(<H3>{TITLE}</H3>, ['_fow-'], 'H3');
     const explicit = renderHeadingClasses(
@@ -174,6 +174,8 @@ describe('house H3 — subordinate headings are mono 400 on the TEXT NODE', () =
 });
 
 describe('house H1 — pageTitleScale reaches the title text node', () => {
+  afterEach(cleanup);
+
   it('changes size on a pageTitleScale flip, and moderate is the default', () => {
     const byDefault = renderHeadingClasses(<H1>{TITLE}</H1>, ['_fos-', '_lh-'], 'H1');
     const moderate = renderHeadingClasses(

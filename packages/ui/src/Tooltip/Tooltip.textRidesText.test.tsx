@@ -1,6 +1,4 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 
 /**
  * TEXT-RIDES-TEXT (catalog arm): Tooltip's content slot wraps ALL bare
@@ -32,8 +30,8 @@ describe('Tooltip TEXT-RIDES-TEXT', () => {
   });
 
   it('renders the origin shape `{label}{cond ? suffix : ""}` when the condition is false', () => {
-    const count: number = 0;
-    renderWithProviders(<View>{wrapTooltipContent(['Refresh', count === 0 ? '' : ` (${count})`], {})}</View>);
+    const count = 0;
+    renderWithProviders(<View>{wrapTooltipContent(['Refresh', count === 0 ? '' : ` (${String(count)})`], {})}</View>);
     const content = screen.getByText('Refresh');
     expect(content.tagName).not.toBe('DIV');
   });

@@ -1,3 +1,5 @@
+import type { shorthands as _shorthands } from '@tamagui/shorthands';
+
 export { Alert } from './Alert';
 export type { AlertFrameProps, AlertIntent, AlertProps } from './Alert';
 export {
@@ -285,15 +287,20 @@ export {
   DialogRegionContext,
   DialogShowFocus,
   KnobCard,
+  // oxlint-disable-next-line typescript/no-deprecated -- public deprecated alias of DialogContent kept for existing consumers
   KnobDialogContent,
+  // oxlint-disable-next-line typescript/no-deprecated -- public deprecated alias of Panel kept for existing consumers
   KnobPanel,
+  // oxlint-disable-next-line typescript/no-deprecated -- public deprecated alias of PopoverContent kept for existing consumers
   KnobPopoverContent,
+  // oxlint-disable-next-line typescript/no-deprecated -- public deprecated alias of SheetFrame kept for existing consumers
   KnobSheetFrame,
-  SheetModal,
   useDialogRegionContext,
   useIsInDialogRegion,
 } from './surfaces';
-export type { DialogRegionContextValue, KnobCardProps, SheetModalProps } from './surfaces';
+export type { DialogRegionContextValue, KnobCardProps } from './surfaces';
+export { SheetModal } from './SheetModal';
+export type { SheetModalProps } from './SheetModal';
 export {
   addDays,
   aggregateData,
@@ -735,8 +742,6 @@ export { componentColors, sectionHeading } from './component-colors';
 // createTamagui config to avoid triggering TamaDefer resolution changes
 // that break styled() component types across workspace boundaries.
 // ---------------------------------------------------------------------------
-import type { shorthands as _shorthands } from '@tamagui/shorthands';
-
 declare module '@tamagui/web' {
   interface TamaguiCustomConfig {
     shorthands: typeof _shorthands;

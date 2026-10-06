@@ -28,7 +28,7 @@ export const Default: Story = {
     <YStack
       maxWidth={420}
       gap="$3">
-      <Text>A fade strip. Stops are the consumer's; the primitive just paints them.</Text>
+      <Text>A fade strip. Stops are the consumer&apos;s; the primitive just paints them.</Text>
       <LinearGradient
         width="100%"
         height={80}

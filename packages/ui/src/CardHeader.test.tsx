@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import path from 'node:path';
 
 import { renderWithProviders } from '@repo/test-utils';
 import { Preset } from '@repo/theme';
@@ -9,16 +9,16 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { CardHeader } from './CardHeader';
 import { Card } from './surfaces';
 
-const readSibling = (name: string) => readFileSync(join(import.meta.dirname, name), 'utf-8');
+const readSibling = (name: string) => readFileSync(path.join(import.meta.dirname, name), 'utf-8');
 
 const atoms = (el: Element | null, prefixes: string[]): string[] => {
   if (!el) {
     return [];
   }
-  return String((el as HTMLElement).className || '')
+  return (el as HTMLElement).className
     .split(' ')
     .filter((c) => prefixes.some((p) => c.startsWith(p)))
-    .sort();
+    .toSorted();
 };
 
 const titleText = (container: HTMLElement, label: string): HTMLElement =>
@@ -54,7 +54,7 @@ describe('CardHeader design-law — T-HEADING text node', () => {
     );
     const title = screen.getByText('Header title');
     expect(title.tagName).not.toBe('DIV');
-    expect(title.getAttribute('data-heading-font')).toBeTruthy();
+    expect(title.dataset.headingFont).toBeTruthy();
   });
 
   it('coalesces array-of-strings children into one wrapped label', () => {
@@ -114,7 +114,7 @@ describe('CardHeader design-law — T-HEADING text node', () => {
         </Card>
       </Preset>,
     );
-    const sansFamily = titleText(sans.container, 'Header title').getAttribute('data-heading-font');
+    const sansFamily = titleText(sans.container, 'Header title').dataset.headingFont;
     cleanup();
 
     const mono = renderWithProviders(
@@ -125,8 +125,8 @@ describe('CardHeader design-law — T-HEADING text node', () => {
       </Preset>,
     );
     expect(sansFamily).toBeTruthy();
-    expect(titleText(mono.container, 'Header title').getAttribute('data-heading-font')).toBe('$mono');
-    expect(titleText(mono.container, 'Header title').getAttribute('data-heading-font')).not.toBe(sansFamily);
+    expect(titleText(mono.container, 'Header title').dataset.headingFont).toBe('$mono');
+    expect(titleText(mono.container, 'Header title').dataset.headingFont).not.toBe(sansFamily);
   });
 
   it('stamps data-slot=header and stays a zero-padding slot', () => {

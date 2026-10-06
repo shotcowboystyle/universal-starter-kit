@@ -19,6 +19,7 @@ import { AlertDialog as TamaguiAlertDialog, Dialog as TamaguiDialog, withStaticP
 import type { GetProps } from 'tamagui';
 
 import { useTranslation } from './shared/i18n';
+import { isBareTextChild } from './shared/text-rides-text';
 
 interface Labelled {
   'aria-label'?: unknown;
@@ -27,10 +28,11 @@ interface Labelled {
 }
 
 const hasText = (node: ReactNode): boolean => {
-  if (typeof node === 'string') {
-    return node.trim().length > 0;
+  if (isBareTextChild(node)) {
+    return String(node).trim().length > 0;
   }
-  if (typeof node === 'number' || typeof node === 'bigint') {
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- bigint is a ReactNode text leaf the shared isBareTextChild guard does not cover
+  if (typeof node === 'bigint') {
     return true;
   }
   if (Array.isArray(node)) {
@@ -50,14 +52,15 @@ const needsCloseName = (props: Labelled & { asChild?: unknown; children?: ReactN
     return false;
   }
   const { asChild, children } = props;
-  if (asChild && isValidElement<Labelled & { children?: ReactNode }>(children)) {
+  if (Boolean(asChild) && isValidElement<Labelled & { children?: ReactNode }>(children)) {
     return !isLabelled(children.props) && !hasText(children.props.children);
   }
   return !hasText(children);
 };
 
+// oxlint-disable-next-line typescript/no-explicit-any -- the bound must admit every tamagui close part, whose prop types all differ
 const namedByContent = <C extends ComponentType<any>>(Part: C, displayName: string) => {
-  const Raw = Part as ComponentType<any>;
+  const Raw: ComponentType<GetProps<C>> = Part;
 
   const LocalizedClose = (props: GetProps<C>) => {
     const { t } = useTranslation();

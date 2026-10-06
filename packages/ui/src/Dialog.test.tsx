@@ -9,14 +9,10 @@ import { AlertDialog, Button, Dialog } from './index';
 
 const catalog = vi.hoisted(() => ({ current: {} as Record<string, string> }));
 
+// oxlint-disable-next-line vitest/prefer-import-in-mock -- the mock supplies only `t`; the real useTranslation returns the full i18next response, so a typed factory cannot compile
 vi.mock('./shared/i18n', () => ({
   useTranslation: () => ({ t: (key: string) => catalog.current[key] ?? key }),
 }));
-
-afterEach(() => {
-  cleanup();
-  catalog.current = {};
-});
 
 const OpenDialog = ({ children }: { children: ReactNode }) => (
   <Dialog open>
@@ -45,6 +41,11 @@ const noDialogClose = () => {
 };
 
 describe('house Dialog.Close is named by what it shows', () => {
+  afterEach(() => {
+    cleanup();
+    catalog.current = {};
+  });
+
   it("keeps each asChild button's visible label as its accessible name", () => {
     renderWithProviders(
       <OpenDialog>
@@ -137,6 +138,11 @@ describe('house Dialog.Close is named by what it shows', () => {
 });
 
 describe('house AlertDialog Cancel and Action are named by what they show', () => {
+  afterEach(() => {
+    cleanup();
+    catalog.current = {};
+  });
+
   it("keeps each asChild button's visible label as its accessible name", () => {
     renderWithProviders(
       <OpenAlertDialog>

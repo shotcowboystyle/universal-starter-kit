@@ -27,21 +27,17 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { Anchor, Text } from './Text';
 
-afterEach(cleanup);
-
 const LABEL = 'Measure the text node';
 
 const classesByPrefix = (el: Element, prefixes: string[]): string[] =>
-  String((el as HTMLElement).className || '')
+  (el as HTMLElement).className
     .split(' ')
     .filter((c) => prefixes.some((p) => c.startsWith(p)))
-    .sort();
+    .toSorted();
 
 /** Tamagui font-scope class on the TEXT NODE (`font_body` / `font_mono` / …). */
 const fontScopeClass = (el: Element): string =>
-  String((el as HTMLElement).className || '')
-    .split(' ')
-    .find((c) => c.startsWith('font_')) ?? '';
+  (el as HTMLElement).className.split(' ').find((c) => c.startsWith('font_')) ?? '';
 
 /** Render, read the TEXT NODE's prefixed classes, clean up. */
 const renderTextClasses = (node: React.ReactElement, prefixes: string[]): string[] => {
@@ -53,6 +49,8 @@ const renderTextClasses = (node: React.ReactElement, prefixes: string[]): string
 };
 
 describe('house Text — textAccent reaches the text node', () => {
+  afterEach(cleanup);
+
   it('changes colour on a textAccent flip', () => {
     const high = renderTextClasses(
       <Preset overrides={{ textAccent: 'high' }}>
@@ -104,6 +102,8 @@ describe('house Text — textAccent reaches the text node', () => {
 });
 
 describe('house Text — fontWeight and bodyFont reach the text node', () => {
+  afterEach(cleanup);
+
   it('changes weight on a fontWeight flip, pinned to the 400/700 label law', () => {
     const regular = renderTextClasses(
       <Preset overrides={{ fontWeight: 'regular' }}>
@@ -181,11 +181,13 @@ describe('house Text — fontWeight and bodyFont reach the text node', () => {
   });
 });
 
+const AccentProbe = ({ onInk }: { onInk: (ink: string) => void }) => {
+  onInk(useAccentOnSurface());
+  return null;
+};
+
 describe("house Anchor — link chrome is house Text's, in the accent", () => {
-  const AccentProbe = ({ onInk }: { onInk: (ink: string) => void }) => {
-    onInk(useAccentOnSurface());
-    return null;
-  };
+  afterEach(cleanup);
 
   it("paints the AA-safe accent ink, not tamagui's link colour", () => {
     let ink = '';

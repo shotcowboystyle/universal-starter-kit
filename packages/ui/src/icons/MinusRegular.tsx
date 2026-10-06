@@ -1,5 +1,6 @@
 import { Line, Rect, Svg } from '@tamagui/react-native-svg';
 import { memo } from 'react';
+import type { ComponentProps } from 'react';
 
 import { themed } from './themed';
 
@@ -7,10 +8,9 @@ const Icon = ({
   color = 'currentColor',
   size = 24,
   ...otherProps
-}: {
+}: Omit<ComponentProps<typeof Svg>, 'color'> & {
   color?: string;
   size?: number | string;
-  [key: string]: unknown;
 }) => (
   <Svg
     viewBox="0 0 256 256"
@@ -37,4 +37,5 @@ const Icon = ({
 );
 Icon.displayName = 'MinusRegular';
 const MinusRegular = memo(themed(Icon));
+MinusRegular.displayName = 'MinusRegular';
 export { MinusRegular };

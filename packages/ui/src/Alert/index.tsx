@@ -14,7 +14,9 @@ import type { ReactNode } from 'react';
 import type { GetProps } from 'tamagui';
 import { SizableText, View, XStack, YStack, isWeb, styled, useTheme } from 'tamagui';
 
+import { hostData } from '../host-data';
 import { useTranslation } from '../shared/i18n';
+import { isBareTextChild } from '../shared/text-rides-text';
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -176,36 +178,14 @@ const AlertActionPill = styled(View, {
   pressStyle: { backgroundColor: '$color6' },
 });
 
-const activateOnEnterSpace = (onPress?: () => void) =>
-  ({
-    onKeyDown: (e: { key?: string; preventDefault?: () => void }) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault?.();
-        onPress?.();
-      }
-    },
-  }) as Record<string, unknown>;
-
-/**
- * Tamagui styled hosts drop JSX `data-*` on native (Toast's empty gallery), so
- * native needs the RN `dataSet` map. On web, spreading `dataSet` onto a DOM
- * host is a React invalid-prop warning (`dataSet` -> `dataset="[object
- * Object]"`) on every Alert consumer, which is why Card/CardHeader/CardFooter
- * already guard on the target. jsdom and Storybook both keep kebab `data-*`,
- * so web writes those only and data-accent-stripe / data-density /
- * data-layout still reach the live-region node.
- */
-const hostData = (attrs: Record<string, string>): Record<string, unknown> => {
-  if (process.env.TAMAGUI_TARGET !== 'native') {
-    return attrs;
-  }
-  const dataSet: Record<string, string> = {};
-  for (const [key, value] of Object.entries(attrs)) {
-    const camel = key.replace(/^data-/u, '').replaceAll(/-([a-z])/gu, (_, c: string) => c.toUpperCase());
-    dataSet[camel] = value;
-  }
-  return { dataSet };
-};
+const activateOnEnterSpace = (onPress?: () => void) => ({
+  onKeyDown: (e: { key?: string; preventDefault?: () => void }) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault?.();
+      onPress?.();
+    }
+  },
+});
 
 const AlertAction = ({
   label,
@@ -258,6 +238,251 @@ const AlertAction = ({
   );
 };
 
+// JSX interpolation splits mixed literals into arrays of strings — those
+// must be wrapped in Text like plain strings or they end up as raw text
+// nodes inside the View row (RN "text node cannot be a child of a View").
+const isString = (value: unknown): value is string => typeof value === 'string';
+
+const getTextualChildren = (children: ReactNode): string | null => {
+  if (children == null) {
+    return null;
+  }
+  if (Array.isArray(children)) {
+    return children.every(isBareTextChild) ? children.join('') : null;
+  }
+  return isBareTextChild(children) ? String(children) : null;
+};
+
+const hasActionContent = (node: ReactNode, label?: string): boolean =>
+  node != null || (label !== undefined && label !== '');
+
+const buildStripe = (stripeColor?: string) =>
+  isWeb
+    ? {
+        style: {
+          borderInlineStartWidth: 3,
+          borderInlineStartStyle: 'solid' as const,
+          borderInlineStartColor: stripeColor,
+        },
+      }
+    : { borderStartWidth: 3, borderStartColor: '$color9' as const };
+
+// Mirrors JSX truthiness for ReactNode slots (null/undefined/false/''/0 render nothing).
+const hasContent = (node: ReactNode): boolean => node != null && node !== false && node !== '' && node !== 0;
+
+const AlertDismiss = ({
+  label,
+  besideAction,
+  visual,
+  outset,
+  iconSize,
+  compactDensity,
+  pointy,
+  iconColor,
+  onPress,
+}: {
+  label: string;
+  besideAction: boolean;
+  visual: number;
+  outset: number;
+  iconSize: number;
+  compactDensity: boolean;
+  pointy: boolean;
+  iconColor?: string;
+  onPress: () => void;
+}) => (
+  <DismissButton
+    aria-label={label}
+    className="mp-chip-dismiss"
+    {...pressTargetStyle()}
+    minWidth={besideAction ? visual + DISMISS_ADJACENT_OUTSET * 2 : undefined}
+    marginVertical={-outset}
+    marginHorizontal={-(besideAction ? DISMISS_ADJACENT_OUTSET : outset)}
+    hitSlop={besideAction ? undefined : pressTargetHitSlop(visual)}
+    onPress={onPress}
+    // role=button divs don't get free keyboard activation on web.
+    {...activateOnEnterSpace(onPress)}>
+    <DismissRing
+      className="mp-chip-dismiss-ring"
+      padding={compactDensity ? '$0.5' : '$1'}
+      borderRadius={pointy ? 0 : '$2'}>
+      <XIcon
+        size={iconSize}
+        color={iconColor}
+      />
+    </DismissRing>
+  </DismissButton>
+);
+
+type AlertActionShared = Omit<Parameters<typeof AlertAction>[0], 'label' | 'onPress'>;
+
+const renderActionSlot = (
+  node: ReactNode,
+  label: string | undefined,
+  onPress: (() => void) | undefined,
+  shared: AlertActionShared,
+): ReactNode => {
+  if (node != null) {
+    return node;
+  }
+  if (label === undefined || label === '') {
+    return null;
+  }
+  return (
+    <AlertAction
+      label={label}
+      onPress={onPress}
+      {...shared}
+    />
+  );
+};
+
+const AlertTitle = ({ id, knobProps, children }: { id: string; knobProps: KnobProps; children: ReactNode }) => (
+  <SizableText
+    id={id}
+    {...knobProps.body}
+    {...knobProps.label}
+    fontWeight="600"
+    color="$color12">
+    {children}
+  </SizableText>
+);
+
+const AlertBody = ({
+  knobProps,
+  children,
+  textualChildren,
+}: {
+  knobProps: KnobProps;
+  children: ReactNode;
+  textualChildren: string | null;
+}): ReactNode => {
+  if (textualChildren === null) {
+    return children;
+  }
+  return (
+    <SizableText
+      {...knobProps.body}
+      {...knobProps.label}
+      // Step 12, not 11: $color11 on the step-3 tint measured 4.2:1
+      // in the light semantic ramps (below the 4.5 floor); weight and
+      // size keep the title/description hierarchy.
+      color="$color12"
+      fontWeight="400">
+      {textualChildren}
+    </SizableText>
+  );
+};
+
+const AlertCopy = ({
+  titleId,
+  title,
+  children,
+  textualChildren,
+  knobProps,
+  trailing,
+}: {
+  titleId: string;
+  title: ReactNode;
+  children: ReactNode;
+  textualChildren: string | null;
+  knobProps: KnobProps;
+  trailing: ReactNode;
+}) => (
+  <YStack
+    flexGrow={1}
+    flexShrink={1}
+    gap="$1"
+    justifyContent="center"
+    minWidth={0}>
+    {hasContent(title) ? (
+      <AlertTitle
+        id={titleId}
+        knobProps={knobProps}>
+        {title}
+      </AlertTitle>
+    ) : null}
+    {children != null && (
+      <AlertBody
+        knobProps={knobProps}
+        textualChildren={textualChildren}>
+        {children}
+      </AlertBody>
+    )}
+    {trailing}
+  </YStack>
+);
+
+const AlertLeadingIcon = ({
+  icon,
+  intent,
+  size,
+  color,
+}: {
+  icon: ReactNode | null | undefined;
+  intent: AlertIntent;
+  size: number;
+  color?: string;
+}) => {
+  const IconComponent = intentIconMap[intent];
+  const node =
+    icon === null
+      ? null
+      : (icon ?? (
+          <IconComponent
+            size={size}
+            weight="fill"
+            color={color}
+          />
+        ));
+  if (!hasContent(node)) {
+    return null;
+  }
+  return (
+    <View
+      flexShrink={0}
+      aria-hidden
+      paddingTop={1}>
+      {node}
+    </View>
+  );
+};
+
+/** Theme color Variables resolve to a CSS var on web and a concrete value on native. */
+const useAlertColors = () => {
+  const theme = useTheme();
+  // Step 11: lowest AA-safe step of the hue on the step-3 tint.
+  const icon: unknown = theme.color11?.get();
+  const stripe: unknown = theme.color9?.get();
+  return { iconColor: isString(icon) ? icon : undefined, stripeColor: isString(stripe) ? stripe : undefined };
+};
+
+const getDismissGeometry = (compactDensity: boolean) => {
+  const icon = compactDensity ? DISMISS_ICON_COMPACT : DISMISS_ICON;
+  const inset = compactDensity ? DISMISS_RING_INSET_COMPACT : DISMISS_RING_INSET;
+  const visual = icon + inset * 2;
+  return { icon, visual, outset: Math.max(0, Math.ceil((MIN_PRESS_TARGET - visual) / 2)) };
+};
+
+/**
+ * Primer: single-line keeps actions inline; title+body or two actions wrap
+ * below the copy so the dismiss X keeps a full 44px floor.
+ */
+const getActionLayout = ({
+  hasPrimary,
+  hasSecondary,
+  hasTitleAndBody,
+}: {
+  hasPrimary: boolean;
+  hasSecondary: boolean;
+  hasTitleAndBody: boolean;
+}) => {
+  const hasActions = hasPrimary || hasSecondary;
+  const stacked = hasActions && (hasTitleAndBody || (hasPrimary && hasSecondary));
+  const dismissBeside = hasActions && !stacked;
+  return { hasActions, stacked, dismissBeside, adjacent: hasSecondary || dismissBeside };
+};
+
 // ── Alert Component ───────────────────────────────────────────
 
 const AlertInner = ({
@@ -293,36 +518,19 @@ const AlertInner = ({
   if (typeof document !== 'undefined') {
     ensureCompositeFocusRing();
   }
-  const theme = useTheme();
-  // Step 11: lowest AA-safe step of the hue on the step-3 tint (resolves to a
-  // CSS var on web, a concrete value on native).
-  const iconColor = theme.color11?.get() as string | undefined;
-  const stripeColor = theme.color9?.get() as string | undefined;
+  const { iconColor, stripeColor } = useAlertColors();
   const [uncontrolledVisible, setUncontrolledVisible] = useState(defaultVisible);
-  const shown = visible === undefined ? uncontrolledVisible : visible;
+  const shown = visible ?? uncontrolledVisible;
   if (!shown) {
     return null;
   }
 
   const compactDensity = knobProps.density === 'compact';
   const nestedPx = knobProps.nestedControl.px;
-  const dismissIcon = compactDensity ? DISMISS_ICON_COMPACT : DISMISS_ICON;
-  const dismissInset = compactDensity ? DISMISS_RING_INSET_COMPACT : DISMISS_RING_INSET;
-  const dismissVisual = dismissIcon + dismissInset * 2;
-  const dismissOutset = Math.max(0, Math.ceil((MIN_PRESS_TARGET - dismissVisual) / 2));
+  const dismiss = getDismissGeometry(compactDensity);
+  const textualChildren = getTextualChildren(children);
 
-  // JSX interpolation splits mixed literals into arrays of strings — those
-  // must be wrapped in Text like plain strings or they end up as raw text
-  // nodes inside the View row (RN "text node cannot be a child of a View").
-  const isTextual = (n: unknown): n is string | number => typeof n === 'string' || typeof n === 'number';
-  const textualChildren =
-    children != null && (isTextual(children) || (Array.isArray(children) && children.every(isTextual)))
-      ? Array.isArray(children)
-        ? children.join('')
-        : String(children)
-      : null;
-
-  if (typeof title === 'string') {
+  if (isString(title)) {
     warnBannedErrorWords(title, { component: 'Alert' });
   }
   if (textualChildren !== null) {
@@ -336,27 +544,11 @@ const AlertInner = ({
     onDismiss?.();
   };
 
-  const IconComponent = intentIconMap[intent];
-  const iconSize = compactDensity ? 16 : 20;
-  const iconNode =
-    icon === null
-      ? null
-      : (icon ?? (
-          <IconComponent
-            size={iconSize}
-            weight="fill"
-            color={iconColor}
-          />
-        ));
-
-  const hasPrimary = action != null || Boolean(actionLabel);
-  const hasSecondary = secondaryAction != null || Boolean(secondaryActionLabel);
-  const hasActions = hasPrimary || hasSecondary;
-  // Primer: single-line keeps actions inline; title+body or two actions wrap
-  // below the copy so the dismiss X keeps a full 44px floor.
-  const stackedActions = Boolean(hasActions && ((title != null && children != null) || (hasPrimary && hasSecondary)));
-  const dismissBesideAction = hasActions && !stackedActions;
-  const actionBesideAdjacent = hasSecondary || dismissBesideAction;
+  const layout = getActionLayout({
+    hasPrimary: hasActionContent(action, actionLabel),
+    hasSecondary: hasActionContent(secondaryAction, secondaryActionLabel),
+    hasTitleAndBody: title != null && children != null,
+  });
   const actionShared = {
     nestedPx,
     hitSlop: knobProps.nestedControl.hitSlop,
@@ -364,51 +556,23 @@ const AlertInner = ({
     labelType: knobProps.label,
     pointy: knobProps.pointy,
     radiusOuter: knobProps.borderRadiusNested,
-    besideAdjacent: actionBesideAdjacent,
+    besideAdjacent: layout.adjacent,
   };
 
-  const primaryAction =
-    action ??
-    (actionLabel ? (
-      <AlertAction
-        label={actionLabel}
-        onPress={onAction}
-        {...actionShared}
-      />
-    ) : null);
-  const secondaryNode =
-    secondaryAction ??
-    (secondaryActionLabel ? (
-      <AlertAction
-        label={secondaryActionLabel}
-        onPress={onSecondaryAction}
-        {...actionShared}
-      />
-    ) : null);
-
-  const actionRow = hasActions ? (
+  const actionRow = layout.hasActions ? (
     <XStack
       flexShrink={0}
       flexWrap="wrap"
       alignItems="center"
       {...knobProps.gap}
       data-alert-actions="">
-      {primaryAction}
-      {secondaryNode}
+      {renderActionSlot(action, actionLabel, onAction, actionShared)}
+      {renderActionSlot(secondaryAction, secondaryActionLabel, onSecondaryAction, actionShared)}
     </XStack>
   ) : null;
 
   const assertive = intent === 'error' || intent === 'warning';
   const hairline = Math.max(knobProps.borderRadius.borderWidth, 1);
-  const stripe = isWeb
-    ? {
-        style: {
-          borderInlineStartWidth: 3,
-          borderInlineStartStyle: 'solid' as const,
-          borderInlineStartColor: stripeColor,
-        },
-      }
-    : { borderStartWidth: 3, borderStartColor: '$color9' as const };
 
   return (
     <AlertFrame
@@ -425,79 +589,42 @@ const AlertInner = ({
       paddingVertical={comfortableKnobs.panelPadding.padding}
       borderColor="$color6"
       borderWidth={hairline}
-      {...stripe}
+      {...buildStripe(stripeColor)}
       transition={knobProps.transition}
       {...props}
       {...hostData({
         'data-density': knobProps.density,
-        'data-layout': stackedActions ? 'stacked' : 'inline',
+        'data-layout': layout.stacked ? 'stacked' : 'inline',
         'data-nested-px': String(nestedPx),
         'data-accent-stripe': '3',
       })}>
-      {iconNode ? (
-        <View
-          flexShrink={0}
-          aria-hidden
-          paddingTop={1}>
-          {iconNode}
-        </View>
-      ) : null}
-      <YStack
-        flexGrow={1}
-        flexShrink={1}
-        gap="$1"
-        justifyContent="center"
-        minWidth={0}>
-        {title ? (
-          <SizableText
-            id={titleId}
-            {...knobProps.body}
-            {...knobProps.label}
-            fontWeight="600"
-            color="$color12">
-            {title}
-          </SizableText>
-        ) : null}
-        {children != null &&
-          (textualChildren === null ? (
-            children
-          ) : (
-            <SizableText
-              {...knobProps.body}
-              {...knobProps.label}
-              // Step 12, not 11: $color11 on the step-3 tint measured 4.2:1
-              // in the light semantic ramps (below the 4.5 floor); weight and
-              // size keep the title/description hierarchy.
-              color="$color12"
-              fontWeight="400">
-              {textualChildren}
-            </SizableText>
-          ))}
-        {stackedActions ? actionRow : null}
-      </YStack>
-      {stackedActions ? null : actionRow}
+      <AlertLeadingIcon
+        icon={icon}
+        intent={intent}
+        size={compactDensity ? 16 : 20}
+        color={iconColor}
+      />
+      <AlertCopy
+        titleId={titleId}
+        title={title}
+        textualChildren={textualChildren}
+        knobProps={knobProps}
+        trailing={layout.stacked ? actionRow : null}>
+        {children}
+      </AlertCopy>
+      {layout.stacked ? null : actionRow}
       {dismissible ? (
-        <DismissButton
-          aria-label={t('Dismiss')}
-          className="mp-chip-dismiss"
-          {...pressTargetStyle()}
-          {...(dismissBesideAction ? { minWidth: dismissVisual + DISMISS_ADJACENT_OUTSET * 2 } : null)}
-          marginVertical={-dismissOutset}
-          marginHorizontal={-(dismissBesideAction ? DISMISS_ADJACENT_OUTSET : dismissOutset)}
-          hitSlop={dismissBesideAction ? undefined : pressTargetHitSlop(dismissVisual)}
+        <AlertDismiss
+          label={t('Dismiss')}
+          besideAction={layout.dismissBeside}
+          visual={dismiss.visual}
+          outset={dismiss.outset}
+          iconSize={dismiss.icon}
+          compactDensity={compactDensity}
+          pointy={knobProps.pointy}
+          iconColor={iconColor}
           onPress={handleDismiss}
-          // role=button divs don't get free keyboard activation on web.
-          {...activateOnEnterSpace(handleDismiss)}>
-          <DismissRing
-            className="mp-chip-dismiss-ring"
-            padding={compactDensity ? '$0.5' : '$1'}
-            borderRadius={knobProps.pointy ? 0 : '$2'}>
-            <XIcon
-              size={dismissIcon}
-              color={iconColor}
-            />
-          </DismissRing>
-        </DismissButton>
+        />
       ) : null}
     </AlertFrame>
   );

@@ -6,7 +6,7 @@ import { Pagination } from './Pagination';
 
 describe('simple page navigation', () => {
   it('keeps page context without a numbered window and navigates once', () => {
-    const change = vi.fn();
+    const change = vi.fn<(page: number) => void>();
     renderWithProviders(
       <Pagination
         variant="simple"

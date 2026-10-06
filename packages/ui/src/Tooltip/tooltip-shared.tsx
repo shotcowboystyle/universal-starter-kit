@@ -3,9 +3,11 @@
  * Platform twins (index.tsx web / index.native.tsx) own open/close.
  */
 
+import { warnTooltipOnDisabled } from '@repo/theme';
 import type { ReactNode } from 'react';
 import React from 'react';
 import { Tooltip as TamaguiTooltip, Text, styled } from 'tamagui';
+import type { GetProps, SpaceTokens } from 'tamagui';
 
 import { wrapBareTextChildren } from '../shared/text-rides-text';
 
@@ -15,6 +17,7 @@ export interface TooltipProps {
   /** The tooltip content - can be a string or ReactNode */
   content: ReactNode;
   /** Placement of the tooltip relative to trigger */
+  // oxlint-disable-next-line sonarjs/max-union-size -- closed four-side public API; a named alias would only move the same union
   placement?: 'top' | 'bottom' | 'left' | 'right';
   /**
    * Delay before showing tooltip in ms. Web: hover warmup (keyboard is
@@ -40,10 +43,12 @@ export const tooltipSizeRecipes: Record<'small' | 'medium' | 'large', TooltipSiz
   large: { maxWidth: 320 },
 };
 
-export const tooltipPadRecipes: Record<
-  'small' | 'medium' | 'large',
-  { paddingHorizontal: string; paddingVertical: string }
-> = {
+export interface TooltipPadRecipe {
+  paddingHorizontal: SpaceTokens;
+  paddingVertical: SpaceTokens;
+}
+
+export const tooltipPadRecipes: Record<'small' | 'medium' | 'large', TooltipPadRecipe> = {
   small: { paddingHorizontal: '$1.5', paddingVertical: '$1' },
   medium: { paddingHorizontal: '$2', paddingVertical: '$1.5' },
   large: { paddingHorizontal: '$3', paddingVertical: '$2' },
@@ -68,17 +73,20 @@ export const noteTooltipClosed = (now = Date.now()): void => {
 
 export const resolveTooltipDelay = (delay: number, now = Date.now()): number => (now < tooltipSkipUntil ? 0 : delay);
 
+const hasOwnKey = <T extends object>(record: T, key: string): key is Extract<keyof T, string> =>
+  Object.hasOwn(record, key);
+
 export const resolveTooltipSizeRecipe = (size: string): TooltipSizeRecipe =>
-  tooltipSizeRecipes[size as keyof typeof tooltipSizeRecipes] ?? tooltipSizeRecipes.medium;
+  hasOwnKey(tooltipSizeRecipes, size) ? tooltipSizeRecipes[size] : tooltipSizeRecipes.medium;
 
-export const resolveTooltipPadRecipe = (
-  space: string,
-): {
-  paddingHorizontal: string;
-  paddingVertical: string;
-} => tooltipPadRecipes[space as keyof typeof tooltipPadRecipes] ?? tooltipPadRecipes.medium;
+export const resolveTooltipPadRecipe = (space: string): TooltipPadRecipe =>
+  hasOwnKey(tooltipPadRecipes, space) ? tooltipPadRecipes[space] : tooltipPadRecipes.medium;
 
-/** @internal tests */
+/**
+ * Test-only reset of the skip window.
+ * @internal
+ */
+// oxlint-disable-next-line sonarjs/function-name, sonarjs/variable-name -- exported test hook; the double-underscore name is consumed by specs and both platform twins
 export const __resetTooltipSkipForTests = (): void => {
   tooltipSkipUntil = 0;
 };
@@ -130,7 +138,7 @@ export const TooltipText = styled(Text, {
  * case — an array like `{label}{cond ? suffix : ""}` renders web-only and
  * crashes native otherwise.
  */
-export const wrapTooltipContent = (content: ReactNode, bodyProps: Record<string, unknown>): ReactNode =>
+export const wrapTooltipContent = (content: ReactNode, bodyProps: GetProps<typeof TooltipText>): ReactNode =>
   wrapBareTextChildren(content, (label, key) => (
     <TooltipText
       key={key}
@@ -144,16 +152,35 @@ export const resolveThemeColor = (
   fallback: string,
 ): string => {
   const raw = token?.val ?? token?.get?.() ?? fallback;
-  if (typeof raw === 'string' && raw.startsWith('var(') && typeof document !== 'undefined') {
+  if (raw.startsWith('var(') && typeof document !== 'undefined') {
     const name = raw.slice(4, -1).trim();
     const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
     if (value) {
       return value;
     }
   }
-  return typeof raw === 'string' ? raw : fallback;
+  return raw;
 };
 
 export const preventTooltipFocus = (event: { preventDefault?: () => void }) => {
   event.preventDefault?.();
+};
+
+export interface TooltipTriggerProps {
+  disabled?: boolean;
+  'aria-disabled'?: boolean | string;
+}
+
+/** Tooltips on disabled triggers are not keyboard-reachable; warn in dev. */
+export const warnIfTriggerDisabled = (children: ReactNode): void => {
+  if (!React.isValidElement<TooltipTriggerProps>(children)) {
+    return;
+  }
+  const childProps = children.props;
+  const childDisabled =
+    childProps.disabled === true || childProps['aria-disabled'] === true || childProps['aria-disabled'] === 'true';
+  warnTooltipOnDisabled({
+    component: 'Tooltip',
+    childDisabled,
+  });
 };

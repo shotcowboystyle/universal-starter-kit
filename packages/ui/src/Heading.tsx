@@ -39,7 +39,7 @@ import {
 } from 'tamagui';
 import type { HeadingProps } from 'tamagui';
 
-export type { HeadingProps };
+export type { HeadingProps } from 'tamagui';
 
 /** Subordinate heading voice: mono, weight 400. Consumer props still eject. */
 const SUBORDINATE_FAMILY = '$mono';
@@ -60,6 +60,7 @@ const useHeadingVoice = (fontWeight: Weight) => {
   return {
     heading,
     pageTitle: knobProps.pageTitle,
+    // SAFETY: knob heading weights are Tamagui font-weight tokens, the Weight domain.
     weight: fontWeight ?? (knobWeight as Weight),
   };
 };

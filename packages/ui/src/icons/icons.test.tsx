@@ -7,6 +7,7 @@ import { MinusRegular } from './MinusRegular';
 const strokeOf = (container: HTMLElement, selector: string) =>
   container.querySelector(selector)?.getAttribute('stroke') ?? '';
 
+// oxlint-disable-next-line vitest/prefer-describe-function-title -- MinusRegular is a memo() exotic component, not a function describe() can title
 describe('MinusRegular', () => {
   it('should render correctly', () => {
     const { container } = renderWithProviders(<MinusRegular />);
@@ -56,6 +57,7 @@ describe('MinusRegular', () => {
   });
 });
 
+// oxlint-disable-next-line vitest/prefer-describe-function-title -- CheckRegular is a memo() exotic component, not a function describe() can title
 describe('CheckRegular', () => {
   it('should render correctly', () => {
     const { container } = renderWithProviders(<CheckRegular />);

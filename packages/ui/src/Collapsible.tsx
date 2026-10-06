@@ -19,11 +19,15 @@ const Trigger = TamaguiCollapsible.Trigger.styleable<CollapsibleTriggerProps>(({
 // A separate root keeps Tamagui's shared compound untouched while preserving
 // its forwarded ref and content implementation.
 export const Collapsible = withStaticProperties(
-  forwardRef<ComponentRef<typeof TamaguiCollapsible>, ComponentProps<typeof TamaguiCollapsible>>((props, ref) => (
-    <TamaguiCollapsible
-      {...props}
-      ref={ref}
-    />
-  )),
+  forwardRef<ComponentRef<typeof TamaguiCollapsible>, ComponentProps<typeof TamaguiCollapsible>>(
+    function CollapsibleRoot(props, ref) {
+      return (
+        <TamaguiCollapsible
+          {...props}
+          ref={ref}
+        />
+      );
+    },
+  ),
   { Trigger, Content: TamaguiCollapsible.Content },
 );

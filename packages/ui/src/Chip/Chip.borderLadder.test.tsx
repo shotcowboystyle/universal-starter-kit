@@ -16,8 +16,6 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { Chip } from './index';
 
-afterEach(cleanup);
-
 const STOPS = ['none', 'small', 'medium', 'large'] as const;
 
 const renderAt = (stop: (typeof STOPS)[number], outlined = false): string[] => {
@@ -30,16 +28,18 @@ const renderAt = (stop: (typeof STOPS)[number], outlined = false): string[] => {
       </Chip>
     </Preset>,
   );
-  const frame = result.container.querySelector('[data-chip]') as HTMLElement;
-  const atoms = String(frame.className || '')
+  const frame = result.container.querySelector<HTMLElement>('[data-chip]')!;
+  const atoms = frame.className
     .split(/\s+/u)
     .filter((c) => c.startsWith('_btw-'))
-    .sort();
+    .toSorted();
   cleanup();
   return atoms;
 };
 
 describe('Chip borderWidth ladder', () => {
+  afterEach(cleanup);
+
   it("the frame honours the resolver's edge: 0 / 0.5 / 1 / 2", () => {
     expect(renderAt('none')).toStrictEqual(['_btw-0px']);
     expect(renderAt('small')).toStrictEqual(['_btw-0--5px']);

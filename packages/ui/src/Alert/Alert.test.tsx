@@ -6,19 +6,27 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Alert } from './index';
 
+const query = (root: ParentNode, selector: string): HTMLElement => {
+  const el = root.querySelector<HTMLElement>(selector);
+  if (el === null) {
+    throw new Error(`No element matches ${selector}`);
+  }
+  return el;
+};
+
 const atoms = (el: Element, prefixes: string[]): string[] =>
-  String((el as HTMLElement).className || '')
+  (el.getAttribute('class') ?? '')
     .split(' ')
     .filter((c) => prefixes.some((p) => c.startsWith(p)))
-    .sort();
+    .toSorted();
 
 const renderFrame = (node: ReactElement) => {
   const result = renderWithProviders(node);
-  const frame = result.container.querySelector('[role="status"], [role="alert"]') as HTMLElement;
+  const frame = query(result.container, '[role="status"], [role="alert"]');
   return { ...result, frame };
 };
 
-describe('Alert', () => {
+describe(Alert, () => {
   it('renders title and description with role=status for info', () => {
     const { container } = renderWithProviders(
       <Alert
@@ -51,7 +59,7 @@ describe('Alert', () => {
   });
 
   it('dismisses itself (uncontrolled) and calls onDismiss', () => {
-    const onDismiss = vi.fn();
+    const onDismiss = vi.fn<() => void>();
     const { container } = renderWithProviders(
       <Alert
         intent="info"
@@ -60,15 +68,14 @@ describe('Alert', () => {
         onDismiss={onDismiss}
       />,
     );
-    const dismiss = container.querySelector('[aria-label="Dismiss"]');
-    expect(dismiss).toBeTruthy();
-    fireEvent.click(dismiss as Element);
+    const dismiss = query(container, '[aria-label="Dismiss"]');
+    fireEvent.click(dismiss);
     expect(onDismiss).toHaveBeenCalledOnce();
     expect(container.querySelector('[role="status"]')).toBeFalsy();
   });
 
   it('stays visible when controlled visible=true despite dismiss press', () => {
-    const onDismiss = vi.fn();
+    const onDismiss = vi.fn<() => void>();
     const { container } = renderWithProviders(
       <Alert
         intent="info"
@@ -78,13 +85,13 @@ describe('Alert', () => {
         onDismiss={onDismiss}
       />,
     );
-    fireEvent.click(container.querySelector('[aria-label="Dismiss"]') as Element);
+    fireEvent.click(query(container, '[aria-label="Dismiss"]'));
     expect(onDismiss).toHaveBeenCalledOnce();
     expect(container.querySelector('[role="status"]')).toBeTruthy();
   });
 
   it('renders the convenience action button', () => {
-    const onAction = vi.fn();
+    const onAction = vi.fn<() => void>();
     const { container } = renderWithProviders(
       <Alert
         intent="error"
@@ -93,9 +100,9 @@ describe('Alert', () => {
         onAction={onAction}
       />,
     );
-    const button = container.querySelector('[aria-label="Retry"]');
-    expect(button?.textContent).toContain('Retry');
-    fireEvent.click(button as Element);
+    const button = query(container, '[aria-label="Retry"]');
+    expect(button.textContent).toContain('Retry');
+    fireEvent.click(button);
     expect(onAction).toHaveBeenCalledOnce();
   });
 
@@ -130,11 +137,11 @@ describe('Alert', () => {
         title="Read-only"
       />,
     );
-    const frame = compact.container.querySelector('[role="status"]') as HTMLElement;
-    expect(frame.getAttribute('data-density')).toBe('compact');
-    expect(Number(frame.getAttribute('data-nested-px'))).toBeGreaterThan(0);
-    expect(Number(frame.getAttribute('data-nested-px'))).toBeLessThan(44);
-    expect(frame.getAttribute('data-accent-stripe')).toBe('3');
+    const frame = query(compact.container, '[role="status"]');
+    expect(frame.dataset.density).toBe('compact');
+    expect(Number(frame.dataset.nestedPx)).toBeGreaterThan(0);
+    expect(Number(frame.dataset.nestedPx)).toBeLessThan(44);
+    expect(frame.dataset.accentStripe).toBe('3');
   });
 
   it('wires aria-labelledby to the title and is programmatically focusable', () => {
@@ -145,10 +152,10 @@ describe('Alert', () => {
         Something changed.
       </Alert>,
     );
-    const region = container.querySelector('[role="status"]') as HTMLElement;
+    const region = query(container, '[role="status"]');
     const titleId = region.getAttribute('aria-labelledby');
     expect(titleId).toBeTruthy();
-    expect(document.getElementById(titleId as string)?.textContent).toContain('Heads up');
+    expect(document.querySelector(`[id="${titleId ?? ''}"]`)?.textContent).toContain('Heads up');
     expect(region.tabIndex).toBe(-1);
     expect(region.getAttribute('aria-live')).toBe('polite');
   });
@@ -160,12 +167,12 @@ describe('Alert', () => {
         title="Save failed"
       />,
     );
-    const region = container.querySelector('[role="alert"]') as HTMLElement;
+    const region = query(container, '[role="alert"]');
     expect(region.getAttribute('aria-live')).toBe('assertive');
   });
 
   it('fires the secondary convenience action', () => {
-    const onSecondaryAction = vi.fn();
+    const onSecondaryAction = vi.fn<() => void>();
     const { container } = renderWithProviders(
       <Alert
         intent="warning"
@@ -175,10 +182,20 @@ describe('Alert', () => {
         onSecondaryAction={onSecondaryAction}
       />,
     );
-    fireEvent.click(container.querySelector('[aria-label="Remind me"]') as Element);
+    fireEvent.click(query(container, '[aria-label="Remind me"]'));
     expect(onSecondaryAction).toHaveBeenCalledOnce();
   });
 });
+
+const renderDismissible = (onDismiss: () => void = () => {}) =>
+  renderWithProviders(
+    <Alert
+      intent="info"
+      title="Bye"
+      dismissible
+      onDismiss={onDismiss}
+    />,
+  );
 
 // In hover/press the element
 // carrying the press-target outset keeps `background-color: transparent` —
@@ -190,26 +207,17 @@ describe('Alert', () => {
 // paint-free in every state.
 describe('Alert dismiss press-floor paint', () => {
   const paintedStateAtom = /_bg-0(?:hover|active)-(?!transparent)/u;
-  const renderDismissible = (onDismiss: () => void = () => {}) =>
-    renderWithProviders(
-      <Alert
-        intent="info"
-        title="Bye"
-        dismissible
-        onDismiss={onDismiss}
-      />,
-    );
 
   it('floor node carries no hover/press background paint', () => {
     const { container } = renderDismissible();
-    const floor = container.querySelector('[aria-label="Dismiss"]') as HTMLElement;
+    const floor = query(container, '[aria-label="Dismiss"]');
     expect(floor).not.toBeNull();
     expect(floor.className).not.toMatch(paintedStateAtom);
   });
 
   it('positive control: the glyph-scale ring is where the hover fill lives', () => {
     const { container } = renderDismissible();
-    const floor = container.querySelector('[aria-label="Dismiss"]') as HTMLElement;
+    const floor = query(container, '[aria-label="Dismiss"]');
     const ring = floor.firstElementChild as HTMLElement;
     expect(ring).not.toBeNull();
     // Proves the atom detector can see hover paint in this harness (the
@@ -220,18 +228,18 @@ describe('Alert dismiss press-floor paint', () => {
   });
 
   it('dismiss activates through the ring (pointer) and via Enter (keyboard)', () => {
-    const onDismiss = vi.fn();
+    const onDismiss = vi.fn<() => void>();
     const { container } = renderDismissible(onDismiss);
-    const floor = container.querySelector('[aria-label="Dismiss"]') as HTMLElement;
+    const floor = query(container, '[aria-label="Dismiss"]');
     const ring = (floor.firstElementChild ?? floor) as HTMLElement;
     fireEvent.click(ring);
     expect(onDismiss).toHaveBeenCalledOnce();
   });
 
   it('dismiss fires on Enter', () => {
-    const onDismiss = vi.fn();
+    const onDismiss = vi.fn<() => void>();
     const { container } = renderDismissible(onDismiss);
-    const floor = container.querySelector('[aria-label="Dismiss"]') as HTMLElement;
+    const floor = query(container, '[aria-label="Dismiss"]');
     fireEvent.keyDown(floor, { key: 'Enter' });
     expect(onDismiss).toHaveBeenCalledOnce();
   });
@@ -248,7 +256,7 @@ describe('Alert nested action press-floor paint', () => {
         actionLabel="Retry"
       />,
     );
-    const floor = container.querySelector('[aria-label="Retry"]') as HTMLElement;
+    const floor = query(container, '[aria-label="Retry"]');
     expect(floor).not.toBeNull();
     expect(floor.className).not.toMatch(paintedStateAtom);
     const pill = floor.firstElementChild as HTMLElement;
@@ -256,7 +264,7 @@ describe('Alert nested action press-floor paint', () => {
   });
 
   it('action activates via Enter on the floor', () => {
-    const onAction = vi.fn();
+    const onAction = vi.fn<() => void>();
     const { container } = renderWithProviders(
       <Alert
         intent="error"
@@ -265,7 +273,7 @@ describe('Alert nested action press-floor paint', () => {
         onAction={onAction}
       />,
     );
-    fireEvent.keyDown(container.querySelector('[aria-label="Retry"]') as HTMLElement, {
+    fireEvent.keyDown(query(container, '[aria-label="Retry"]'), {
       key: 'Enter',
     });
     expect(onAction).toHaveBeenCalledOnce();
@@ -318,9 +326,9 @@ describe('Alert host data attributes reach the DOM', () => {
         Changes are no longer syncing.
       </Alert>,
     );
-    expect(stacked.frame.getAttribute('data-accent-stripe')).toBe('3');
-    expect(stacked.frame.getAttribute('data-density')).toBe('comfortable');
-    expect(stacked.frame.getAttribute('data-layout')).toBe('stacked');
+    expect(stacked.frame.dataset.accentStripe).toBe('3');
+    expect(stacked.frame.dataset.density).toBe('comfortable');
+    expect(stacked.frame.dataset.layout).toBe('stacked');
     cleanup();
 
     const inline = renderFrame(
@@ -330,8 +338,8 @@ describe('Alert host data attributes reach the DOM', () => {
         actionLabel="Retry"
       />,
     );
-    expect(inline.frame.getAttribute('data-accent-stripe')).toBe('3');
-    expect(inline.frame.getAttribute('data-layout')).toBe('inline');
+    expect(inline.frame.dataset.accentStripe).toBe('3');
+    expect(inline.frame.dataset.layout).toBe('inline');
   });
 });
 
@@ -346,7 +354,7 @@ describe('Alert action labels — weight 400 on the TEXT NODE', () => {
         actionLabel="Retry"
       />,
     );
-    const floor = document.querySelector('[aria-label="Retry"]') as HTMLElement;
+    const floor = query(document, '[aria-label="Retry"]');
     const textNode = screen.getByText('Retry');
     expect(textNode).not.toBe(floor);
     const weight = atoms(textNode, ['_fow-']);
@@ -365,7 +373,7 @@ describe('Alert action labels — weight 400 on the TEXT NODE', () => {
       />,
     );
     for (const label of ['Open runbook', 'Mute 24h']) {
-      const floor = document.querySelector(`[aria-label="${label}"]`) as HTMLElement;
+      const floor = query(document, `[aria-label="${label}"]`);
       const textNode = screen.getByText(label);
       expect(textNode).not.toBe(floor);
       const weight = atoms(textNode, ['_fow-']);
@@ -393,8 +401,8 @@ describe('Alert density — padX and gap move, height holds', () => {
       </Preset>,
     );
     const comfortableMeasure = {
-      density: comfortable.frame.getAttribute('data-density'),
-      nested: comfortable.frame.getAttribute('data-nested-px'),
+      density: comfortable.frame.dataset.density,
+      nested: comfortable.frame.dataset.nestedPx,
       padX: atoms(comfortable.frame, padX),
       padY: atoms(comfortable.frame, padY),
       gap: atoms(comfortable.frame, gap),
@@ -411,14 +419,14 @@ describe('Alert density — padX and gap move, height holds', () => {
       </Preset>,
     );
     expect(comfortableMeasure.density).toBe('comfortable');
-    expect(compact.frame.getAttribute('data-density')).toBe('compact');
+    expect(compact.frame.dataset.density).toBe('compact');
     expect(comfortableMeasure.padX.length).toBeGreaterThan(0);
     expect(atoms(compact.frame, padX)).not.toStrictEqual(comfortableMeasure.padX);
     expect(comfortableMeasure.gap.length).toBeGreaterThan(0);
     expect(atoms(compact.frame, gap)).not.toStrictEqual(comfortableMeasure.gap);
     expect(atoms(compact.frame, padY)).toStrictEqual(comfortableMeasure.padY);
     expect(atoms(compact.frame, height)).toStrictEqual(comfortableMeasure.height);
-    expect(compact.frame.getAttribute('data-nested-px')).toBe(comfortableMeasure.nested);
+    expect(compact.frame.dataset.nestedPx).toBe(comfortableMeasure.nested);
   });
 
   it('compact prop tightens padX and gap while height holds', () => {
@@ -433,7 +441,7 @@ describe('Alert density — padX and gap move, height holds', () => {
       padY: atoms(comfortable.frame, padY),
       gap: atoms(comfortable.frame, gap),
       height: atoms(comfortable.frame, height),
-      nested: comfortable.frame.getAttribute('data-nested-px'),
+      nested: comfortable.frame.dataset.nestedPx,
     };
     cleanup();
 
@@ -444,11 +452,11 @@ describe('Alert density — padX and gap move, height holds', () => {
         title="Read-only"
       />,
     );
-    expect(compact.frame.getAttribute('data-density')).toBe('compact');
+    expect(compact.frame.dataset.density).toBe('compact');
     expect(atoms(compact.frame, padX)).not.toStrictEqual(comfortableMeasure.padX);
     expect(atoms(compact.frame, gap)).not.toStrictEqual(comfortableMeasure.gap);
     expect(atoms(compact.frame, padY)).toStrictEqual(comfortableMeasure.padY);
     expect(atoms(compact.frame, height)).toStrictEqual(comfortableMeasure.height);
-    expect(compact.frame.getAttribute('data-nested-px')).toBe(comfortableMeasure.nested);
+    expect(compact.frame.dataset.nestedPx).toBe(comfortableMeasure.nested);
   });
 });

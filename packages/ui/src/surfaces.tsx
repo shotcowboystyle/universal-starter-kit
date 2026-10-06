@@ -1,6 +1,6 @@
 import { Preset, Surface, useResolvedKnobs } from '@repo/theme';
 import type { ReactNode } from 'react';
-import { createContext, forwardRef, useContext, useEffect } from 'react';
+import { forwardRef, useEffect, useLayoutEffect, useRef } from 'react';
 import { AlertDialog, Dialog, isWeb, Popover, Sheet, useDialogContext, View } from 'tamagui';
 import type {
   DialogContentProps as TamaguiDialogContentProps,
@@ -8,6 +8,9 @@ import type {
   TamaguiElement,
   ViewProps,
 } from 'tamagui';
+
+import { DialogRegionContext } from './dialog-region-context';
+import type { DialogRegionContextValue } from './dialog-region-context';
 
 export { Card, CardFooter, CardHeader } from './Card';
 export type { CardFooterProps, CardHeaderProps, CardProps, SurfaceTier } from './Card';
@@ -33,7 +36,7 @@ export type { CardFooterProps, CardHeaderProps, CardProps, SurfaceTier } from '.
 // Never wrap `density: "comfortable"` inside a compact ancestor — that
 // would step nested controls UP.
 
-const NestedScale = ({ density, children }: { density: string; children: ReactNode }) => {
+const NestedScale = ({ density, children }: { density: string; children: ReactNode }): ReactNode => {
   if (density === 'compact') {
     return children;
   }
@@ -47,12 +50,12 @@ const NestedScale = ({ density, children }: { density: string; children: ReactNo
 
 const overlayFrameFocus = {
   outlineWidth: 0,
-  outlineStyle: 'none' as any,
+  outlineStyle: 'none' as const,
 };
 
 const overlayFrameFocusStyle = {
   outlineWidth: 0,
-  outlineStyle: 'none' as any,
+  outlineStyle: 'none' as const,
 } as const;
 
 // ── Overlay open focus ───────────────────────────────────────────────────
@@ -67,10 +70,10 @@ const overlayFrameFocusStyle = {
 // when show() left focus on something that is not a tab stop.
 
 const isTabbableWithin = (node: HTMLElement, container: HTMLElement): boolean => {
-  if (node.tabIndex < 0 || node.hidden || node.tagName === 'A') {
+  if (node.tabIndex < 0 || node.hidden !== false || node.tagName === 'A') {
     return false;
   }
-  if ((node as HTMLInputElement).disabled) {
+  if ('disabled' in node && node.disabled === true) {
     return false;
   }
   if (node instanceof HTMLInputElement && node.type === 'hidden') {
@@ -92,9 +95,7 @@ const focusFirstTabbableOnOpen = (event: Event): void => {
   if (typeof HTMLElement === 'undefined' || !(container instanceof HTMLElement)) {
     return;
   }
-  const first = Array.from(container.querySelectorAll<HTMLElement>('*')).find((node) =>
-    isTabbableWithin(node, container),
-  );
+  const first = [...container.querySelectorAll<HTMLElement>('*')].find((node) => isTabbableWithin(node, container));
   if (!first) {
     return;
   }
@@ -119,6 +120,20 @@ const withHouseOpenFocus =
 
 const DIALOG_SHOW_FOCUS_EVENT = 'mp.dialogShowFocus';
 
+/** The dialog content when `show()` left focus inside it on something that is not a tab stop. */
+const findContentWithStrandedFocus = (open: boolean, contentId: string | undefined): Element | null => {
+  const hasContentId = contentId !== undefined && contentId !== '';
+  if (!open || !hasContentId || !isWeb || typeof document === 'undefined') {
+    return null;
+  }
+  const content = document.querySelector(`[id="${contentId}"]`);
+  const focused = document.activeElement;
+  if (!content || !(focused instanceof HTMLElement)) {
+    return null;
+  }
+  return content.contains(focused) && focused.tabIndex < 0 ? content : null;
+};
+
 /**
  * Chromium and WebKit's `<dialog>.show()` focuses the first focusable
  * descendant, so a tabIndex -1 frame (the house Input's group frame, a
@@ -131,20 +146,23 @@ const DIALOG_SHOW_FOCUS_EVENT = 'mp.dialogShowFocus';
  */
 const useDialogShowFocus = (onOpenAutoFocus: OpenAutoFocus): void => {
   const { open, contentId } = useDialogContext();
+  // Latest handler without re-running the effect: the house handler is rebuilt every render.
+  const onOpenAutoFocusRef = useRef(onOpenAutoFocus);
+  useLayoutEffect(() => {
+    onOpenAutoFocusRef.current = onOpenAutoFocus;
+  });
   useEffect(() => {
-    if (!open || !contentId || !isWeb || typeof document === 'undefined') {
-      return;
+    const content = findContentWithStrandedFocus(open, contentId);
+    const handler = (event: Event) => {
+      onOpenAutoFocusRef.current(event);
+    };
+    if (content !== null) {
+      content.addEventListener(DIALOG_SHOW_FOCUS_EVENT, handler, { once: true });
+      content.dispatchEvent(new CustomEvent(DIALOG_SHOW_FOCUS_EVENT, { cancelable: true }));
     }
-    const content = document.getElementById(contentId);
-    const focused = document.activeElement;
-    if (!content || !(focused instanceof HTMLElement)) {
-      return;
-    }
-    if (!content.contains(focused) || focused.tabIndex >= 0) {
-      return;
-    }
-    content.addEventListener(DIALOG_SHOW_FOCUS_EVENT, onOpenAutoFocus, { once: true });
-    content.dispatchEvent(new CustomEvent(DIALOG_SHOW_FOCUS_EVENT, { cancelable: true }));
+    return () => {
+      content?.removeEventListener(DIALOG_SHOW_FOCUS_EVENT, handler);
+    };
   }, [open, contentId]);
 };
 
@@ -164,43 +182,14 @@ export const DialogShowFocus = ({ onOpenAutoFocus }: { onOpenAutoFocus?: OpenAut
 
 // ── Dialog region context ───────────────────────────────────────────────
 
-export interface DialogRegionContextValue {
-  /** True inside a dialog surface — dialog action rules apply. */
-  inDialogRegion: boolean;
-}
-
-/**
- * `DialogContent` and `AlertDialogContent` provide this automatically. Wrap custom dialog-like
- * surfaces (sheet-as-dialog, hand-rolled dialog chrome) so their action rows
- * inherit dialog rules such as the max-2-actions cap.
- */
-export const DialogRegionContext = createContext<DialogRegionContextValue>({
-  inDialogRegion: false,
-});
-
-export const useDialogRegionContext = (): DialogRegionContextValue => useContext(DialogRegionContext);
-
-export const useIsInDialogRegion = (): boolean => useDialogRegionContext().inDialogRegion;
+export { DialogRegionContext, useDialogRegionContext, useIsInDialogRegion } from './dialog-region-context';
+export type { DialogRegionContextValue } from './dialog-region-context';
 
 const IN_DIALOG_REGION: DialogRegionContextValue = { inDialogRegion: true };
 
 // ── DialogContent ────────────────────────────────────────────────────────
 
 const overlayEnterExit = { opacity: 0, y: -4, scale: 0.97 } as const;
-
-export const DialogContent = forwardRef<TamaguiElement, TamaguiDialogContentProps & { children?: ReactNode }>(
-  function DialogContent({ children, ...props }, ref) {
-    return (
-      <Surface size="md">
-        <DialogContentInner
-          ref={ref}
-          {...props}>
-          {children}
-        </DialogContentInner>
-      </Surface>
-    );
-  },
-);
 
 const DialogContentInner = forwardRef<TamaguiElement, TamaguiDialogContentProps & { children?: ReactNode }>(
   function DialogContentInner({ children, onOpenAutoFocus, ...props }, ref) {
@@ -232,6 +221,20 @@ const DialogContentInner = forwardRef<TamaguiElement, TamaguiDialogContentProps 
           <NestedScale density={knobProps.density}>{children}</NestedScale>
         </DialogRegionContext.Provider>
       </Dialog.Content>
+    );
+  },
+);
+
+export const DialogContent = forwardRef<TamaguiElement, TamaguiDialogContentProps & { children?: ReactNode }>(
+  function DialogContent({ children, ...props }, ref) {
+    return (
+      <Surface size="md">
+        <DialogContentInner
+          ref={ref}
+          {...props}>
+          {children}
+        </DialogContentInner>
+      </Surface>
     );
   },
 );
@@ -270,20 +273,6 @@ export const DialogOverlay = forwardRef<TamaguiElement, TamaguiDialogOverlayProp
 // Tamagui's AlertDialog.Content is Dialog.Content under a different name:
 // the styled frame bakes `elevate: true` (plus bg/border/radius/padding).
 // `unstyled` drops that chrome so elevatedSurface is the only surface source.
-
-export const AlertDialogContent = forwardRef<TamaguiElement, TamaguiDialogContentProps & { children?: ReactNode }>(
-  function AlertDialogContent({ children, ...props }, ref) {
-    return (
-      <Surface size="md">
-        <AlertDialogContentInner
-          ref={ref}
-          {...props}>
-          {children}
-        </AlertDialogContentInner>
-      </Surface>
-    );
-  },
-);
 
 const AlertDialogContentInner = forwardRef<TamaguiElement, TamaguiDialogContentProps & { children?: ReactNode }>(
   function AlertDialogContentInner({ children, ...props }, ref) {
@@ -326,6 +315,20 @@ export const AlertDialogOverlay = forwardRef<TamaguiElement, TamaguiDialogOverla
         {...props}>
         {children}
       </AlertDialog.Overlay>
+    );
+  },
+);
+
+export const AlertDialogContent = forwardRef<TamaguiElement, TamaguiDialogContentProps & { children?: ReactNode }>(
+  function AlertDialogContent({ children, ...props }, ref) {
+    return (
+      <Surface size="md">
+        <AlertDialogContentInner
+          ref={ref}
+          {...props}>
+          {children}
+        </AlertDialogContentInner>
+      </Surface>
     );
   },
 );
@@ -404,8 +407,7 @@ export const SheetFrame = forwardRef<TamaguiElement, ViewProps & { children?: Re
 // (raw `Sheet modal` cannot (re)present from a trigger tap on device — the
 // FloatingPanel-proven workaround). Lives in ./SheetModal (platform pair).
 
-export { SheetModal } from './SheetModal';
-export type { SheetModalProps } from './SheetModal';
+// Exported from ./SheetModal directly (index.ts) — SheetModal imports this module, so re-exporting would form a cycle.
 
 // ── Panel ────────────────────────────────────────────────────────────────
 // Polaris Card / Primer Box: bordered elevated frame. Spec class SF-OVERLAY

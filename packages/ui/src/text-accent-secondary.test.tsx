@@ -29,8 +29,6 @@ import { Meter } from './Meter';
 import { Quote } from './Quote';
 import { Tabs } from './Tabs';
 
-afterEach(cleanup);
-
 type Accent = 'low' | 'medium' | 'high';
 type Scheme = 'light' | 'dark';
 
@@ -39,10 +37,10 @@ const inScheme = (scheme: Scheme, node: ReactElement): ReactElement =>
 
 /** The TEXT NODE's colour atom, by identity — hashed names never asserted. */
 const inkAtoms = (el: Element): string[] =>
-  String((el as HTMLElement).className || '')
+  (el as HTMLElement).className
     .split(' ')
     .filter((c) => c.startsWith('_col-'))
-    .sort();
+    .toSorted();
 
 const inkOf = (scheme: Scheme, accent: Accent, label: string, node: ReactElement): string[] => {
   renderWithProviders(inScheme(scheme, <Preset overrides={{ textAccent: accent }}>{node}</Preset>));
@@ -54,6 +52,8 @@ const inkOf = (scheme: Scheme, accent: Accent, label: string, node: ReactElement
 const schemes: Scheme[] = ['light', 'dark'];
 
 describe('Tabs — textAccent reaches the inactive tab label', () => {
+  afterEach(cleanup);
+
   const items = [
     { value: 'address', label: 'Address & Contact', content: <>address panel</> },
     { value: 'settings', label: 'Settings', content: <>settings panel</> },
@@ -65,22 +65,22 @@ describe('Tabs — textAccent reaches the inactive tab label', () => {
     />
   );
 
-  for (const scheme of schemes) {
-    it(`${scheme}: the inactive label moves between low and high`, () => {
-      const low = inkOf(scheme, 'low', 'Settings', tabs);
-      const high = inkOf(scheme, 'high', 'Settings', tabs);
-      expect(low).not.toHaveLength(0);
-      expect(high).not.toHaveLength(0);
-      expect(high).not.toStrictEqual(low);
-    });
+  it.each(schemes)('%s: the inactive label moves between low and high', (scheme) => {
+    const low = inkOf(scheme, 'low', 'Settings', tabs);
+    const high = inkOf(scheme, 'high', 'Settings', tabs);
+    expect(low).not.toHaveLength(0);
+    expect(high).not.toHaveLength(0);
+    expect(high).not.toStrictEqual(low);
+  });
 
-    it(`${scheme}: the inactive label keeps the AA floor at low and medium`, () => {
-      expect(inkOf(scheme, 'low', 'Settings', tabs)).toStrictEqual(inkOf(scheme, 'medium', 'Settings', tabs));
-    });
-  }
+  it.each(schemes)('%s: the inactive label keeps the AA floor at low and medium', (scheme) => {
+    expect(inkOf(scheme, 'low', 'Settings', tabs)).toStrictEqual(inkOf(scheme, 'medium', 'Settings', tabs));
+  });
 });
 
 describe('Accordion — textAccent reaches the section description', () => {
+  afterEach(cleanup);
+
   const description = 'Where should we deliver the order?';
   const accordion = (
     <Accordion defaultValue="shipping">
@@ -91,24 +91,22 @@ describe('Accordion — textAccent reaches the section description', () => {
     </Accordion>
   );
 
-  for (const scheme of schemes) {
-    it(`${scheme}: the description moves between low and high`, () => {
-      const low = inkOf(scheme, 'low', description, accordion);
-      const high = inkOf(scheme, 'high', description, accordion);
-      expect(low).not.toHaveLength(0);
-      expect(high).not.toHaveLength(0);
-      expect(high).not.toStrictEqual(low);
-    });
+  it.each(schemes)('%s: the description moves between low and high', (scheme) => {
+    const low = inkOf(scheme, 'low', description, accordion);
+    const high = inkOf(scheme, 'high', description, accordion);
+    expect(low).not.toHaveLength(0);
+    expect(high).not.toHaveLength(0);
+    expect(high).not.toStrictEqual(low);
+  });
 
-    it(`${scheme}: the description keeps the AA floor at low and medium`, () => {
-      expect(inkOf(scheme, 'low', description, accordion)).toStrictEqual(
-        inkOf(scheme, 'medium', description, accordion),
-      );
-    });
-  }
+  it.each(schemes)('%s: the description keeps the AA floor at low and medium', (scheme) => {
+    expect(inkOf(scheme, 'low', description, accordion)).toStrictEqual(inkOf(scheme, 'medium', description, accordion));
+  });
 });
 
 describe('Quote — textAccent reaches the attribution', () => {
+  afterEach(cleanup);
+
   const quote = <Quote cite="Alan Kay">The best way to predict the future.</Quote>;
 
   // The attribution renders as `<cite>— {name}</cite>`, two text runs in one
@@ -124,22 +122,41 @@ describe('Quote — textAccent reaches the attribution', () => {
     return atoms;
   };
 
-  for (const scheme of schemes) {
-    it(`${scheme}: the attribution moves between low and high`, () => {
-      const low = citeInk(scheme, 'low');
-      const high = citeInk(scheme, 'high');
-      expect(low).not.toHaveLength(0);
-      expect(high).not.toHaveLength(0);
-      expect(high).not.toStrictEqual(low);
-    });
+  it.each(schemes)('%s: the attribution moves between low and high', (scheme) => {
+    const low = citeInk(scheme, 'low');
+    const high = citeInk(scheme, 'high');
+    expect(low).not.toHaveLength(0);
+    expect(high).not.toHaveLength(0);
+    expect(high).not.toStrictEqual(low);
+  });
 
-    it(`${scheme}: the attribution keeps the AA floor at low and medium`, () => {
-      expect(citeInk(scheme, 'low')).toStrictEqual(citeInk(scheme, 'medium'));
-    });
-  }
+  it.each(schemes)('%s: the attribution keeps the AA floor at low and medium', (scheme) => {
+    expect(citeInk(scheme, 'low')).toStrictEqual(citeInk(scheme, 'medium'));
+  });
 });
 
+const warned = (accent: Accent) => {
+  const { container } = renderWithProviders(
+    <Preset overrides={{ textAccent: accent }}>
+      <Meter
+        label="Disk usage"
+        value={7.5}
+        min={0}
+        max={8}
+        low={2}
+        high={6}
+        unit="GB"
+      />
+    </Preset>,
+  );
+  const token = container.querySelector<HTMLElement>('[data-meter-value]')?.dataset.meterValueColor;
+  cleanup();
+  return token;
+};
+
 describe('Meter — textAccent reaches the ok-zone value readout', () => {
+  afterEach(cleanup);
+
   const meter = (
     <Meter
       label="Disk usage"
@@ -154,38 +171,18 @@ describe('Meter — textAccent reaches the ok-zone value readout', () => {
     const { container } = renderWithProviders(
       inScheme(scheme, <Preset overrides={{ textAccent: accent }}>{meter}</Preset>),
     );
-    const token = container.querySelector('[data-meter-value]')?.getAttribute('data-meter-value-color');
+    const token = container.querySelector<HTMLElement>('[data-meter-value]')?.dataset.meterValueColor;
     cleanup();
     return token ?? null;
   };
 
-  for (const scheme of schemes) {
-    it(`${scheme}: the ok value readout rides the resolver, not a static $color11`, () => {
-      expect(valueInk(scheme, 'low')).toBe('$color11');
-      expect(valueInk(scheme, 'medium')).toBe('$color11');
-      expect(valueInk(scheme, 'high')).toBe('$color');
-    });
-  }
+  it.each(schemes)('%s: the ok value readout rides the resolver, not a static $color11', (scheme) => {
+    expect(valueInk(scheme, 'low')).toBe('$color11');
+    expect(valueInk(scheme, 'medium')).toBe('$color11');
+    expect(valueInk(scheme, 'high')).toBe('$color');
+  });
 
   it('a verdict zone keeps its semantic ink at every stop', () => {
-    const warned = (accent: Accent) => {
-      const { container } = renderWithProviders(
-        <Preset overrides={{ textAccent: accent }}>
-          <Meter
-            label="Disk usage"
-            value={7.5}
-            min={0}
-            max={8}
-            low={2}
-            high={6}
-            unit="GB"
-          />
-        </Preset>,
-      );
-      const token = container.querySelector('[data-meter-value]')?.getAttribute('data-meter-value-color');
-      cleanup();
-      return token;
-    };
     expect(warned('low')).toBe('$orange11');
     expect(warned('high')).toBe('$orange11');
   });
@@ -196,15 +193,11 @@ describe('Meter — textAccent reaches the ok-zone value readout', () => {
  * dim stops are checked against a probe painting the resolver's own colour.
  */
 const restInk = (el: Element): string | undefined => {
-  for (const cls of Array.from(el.classList)) {
-    if (!cls.startsWith('_col-')) {
-      continue;
-    }
+  for (const cls of [...el.classList].filter((c) => c.startsWith('_col-'))) {
     const value = cls.slice('_col-'.length);
-    if (/^\d*(hover|active|focus|press|disabled)/u.test(value)) {
-      continue;
+    if (!/^\d*(?:hover|active|focus|press|disabled)/u.test(value)) {
+      return value;
     }
-    return value;
   }
   return undefined;
 };
@@ -236,17 +229,19 @@ const againstResolver = (
     ),
   );
   const surface = pick(container);
-  const probe = container.querySelector('[data-resolver-ink]');
+  const probe = container.querySelector<HTMLElement>('[data-resolver-ink]');
   const result = {
     surface: surface ? restInk(surface) : undefined,
     resolver: probe ? restInk(probe) : undefined,
-    token: probe?.getAttribute('data-resolver-ink') ?? null,
+    token: probe?.dataset.resolverInk ?? null,
   };
   cleanup();
   return result;
 };
 
 describe("the dim stops paint the resolver's AA floor, not a pinned step", () => {
+  afterEach(cleanup);
+
   const surfaces: [string, ReactElement, (container: HTMLElement) => Element | null][] = [
     [
       'Tabs inactive label',
@@ -283,21 +278,25 @@ describe("the dim stops paint the resolver's AA floor, not a pinned step", () =>
     ],
   ];
 
-  for (const scheme of schemes) {
-    for (const [name, node, pick] of surfaces) {
-      for (const accent of ['low', 'medium'] as const) {
-        it(`${scheme}: ${name} at ${accent} equals the resolver's textAccentColor`, () => {
-          const { surface, resolver, token } = againstResolver(scheme, accent, node, pick);
-          expect(token).toBe('$color11');
-          expect(resolver).toBeDefined();
-          expect(surface).toBe(resolver);
-        });
-      }
-    }
-  }
+  const accents = ['low', 'medium'] as const;
+  const cases = schemes.flatMap((scheme) =>
+    surfaces.flatMap(([name, node, pick]) => accents.map((accent) => ({ scheme, name, node, pick, accent }))),
+  );
+
+  it.each(cases)(
+    "$scheme: $name at $accent equals the resolver's textAccentColor",
+    ({ scheme, node, pick, accent }) => {
+      const { surface, resolver, token } = againstResolver(scheme, accent, node, pick);
+      expect(token).toBe('$color11');
+      expect(resolver).toBeDefined();
+      expect(surface).toBe(resolver);
+    },
+  );
 });
 
 describe('componentColors keeps no second answer for secondary ink', () => {
+  afterEach(cleanup);
+
   it('the text table exposes no static secondary or muted step', () => {
     const text = componentColors.text as Record<string, string | undefined>;
     expect(text.secondary).toBeUndefined();

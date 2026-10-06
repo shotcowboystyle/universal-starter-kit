@@ -48,7 +48,7 @@ const Demo = (props: {
       items={items}
       getId={(item) => item.id}
       getLabel={(item) => item.label}
-      canReorder={props.locked ? (item) => item.id !== props.locked : undefined}
+      canReorder={props.locked !== undefined && props.locked !== '' ? (item) => item.id !== props.locked : undefined}
       readOnly={props.readOnly}
       disabled={props.disabled}
       compact={props.compact}

@@ -1,7 +1,7 @@
 /**
  * CURATED-REEXPORT-IS-CATALOG registry — every bare-name export of the
- * @repo/ui barrel that IS a raw framework re-export
- * (value-identical to the tamagui / @tamagui/toast export of the same name)
+ * `@repo/ui` barrel that IS a raw framework re-export
+ * (value-identical to the tamagui and `@tamagui/toast` export of the same name)
  * must have a row here declaring WHY it is knob-immune, or the export-surface
  * spec (./export-surface.test.test.tsx) fails the suite.
  *
@@ -17,18 +17,26 @@
  *  - every row must correspond to a live raw bare export (no stale rows, no
  *    laundering house implementations through the registry).
  */
-export const knobImmuneExports: Readonly<Record<string, string>> = {
+const LAYOUT_LEGO = 'unopinionated layout lego; knob fragments are spread onto it by composing surfaces';
+const GROUP_LEGO = 'layout grouping lego; knob fragments are spread onto it by composing surfaces';
+const TOKEN_LOOKUP = 'token lookup utility; no rendered output';
+
+export interface KnobImmuneRegistry {
+  readonly [exportName: string]: string;
+}
+
+export const knobImmuneExports: KnobImmuneRegistry = {
   // ── Structural layout lego ────────────────────────────────────────────
   // The knobs system is designed around these: house surfaces SPREAD
   // knobProps.* fragments ONTO View/Stack/etc. The lego
   // itself carries no opinionated chrome; a self-knobbing primitive would
   // double-apply fragments under every house surface.
-  View: 'unopinionated layout lego; knob fragments are spread onto it by composing surfaces',
-  XStack: 'unopinionated layout lego; knob fragments are spread onto it by composing surfaces',
-  YStack: 'unopinionated layout lego; knob fragments are spread onto it by composing surfaces',
-  XGroup: 'layout grouping lego; knob fragments are spread onto it by composing surfaces',
-  YGroup: 'layout grouping lego; knob fragments are spread onto it by composing surfaces',
-  Group: 'layout grouping lego; knob fragments are spread onto it by composing surfaces',
+  View: LAYOUT_LEGO,
+  XStack: LAYOUT_LEGO,
+  YStack: LAYOUT_LEGO,
+  XGroup: GROUP_LEGO,
+  YGroup: GROUP_LEGO,
+  Group: GROUP_LEGO,
   Spacer: 'pure whitespace; no paintable chrome for knobs to reach',
   Square: 'geometric lego (fixed aspect); consumers spread knob fragments onto it',
   Circle: 'geometric lego (identity circle by definition); radius knob story is N/A',
@@ -86,9 +94,9 @@ export const knobImmuneExports: Readonly<Record<string, string>> = {
   styled: 'component factory; output components consume knobs where house code applies them',
   createStyledContext: 'context factory utility; no rendered output',
   withStaticProperties: 'object composition utility; no rendered output',
-  getToken: 'token lookup utility; no rendered output',
-  getTokens: 'token lookup utility; no rendered output',
-  getTokenValue: 'token lookup utility; no rendered output',
+  getToken: TOKEN_LOOKUP,
+  getTokens: TOKEN_LOOKUP,
+  getTokenValue: TOKEN_LOOKUP,
   isClient: 'environment boolean; not a component',
   isWeb: 'environment boolean; not a component',
 };

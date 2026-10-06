@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Card as TamaguiCard, SizableText } from 'tamagui';
 import type { ViewProps } from 'tamagui';
 
+import { hostData } from './host-data';
 import { wrapBareTextChildren } from './shared/text-rides-text';
 
 /**
@@ -13,25 +14,7 @@ import { wrapBareTextChildren } from './shared/text-rides-text';
  * T-HEADING rides the title TEXT node, never the View.
  */
 
-export type CardHeaderProps = ViewProps & { children?: ReactNode };
-
-/**
- * Tamagui styled hosts drop JSX `data-*` on native (Toast gallery hole), so
- * native needs the RN `dataSet` map. On web, spreading `dataSet` onto a DOM
- * host is a React invalid-prop warning (`dataSet` → `dataset`). jsdom and
- * Storybook keep kebab `data-*`, so web writes those only.
- */
-const hostData = (attrs: Record<string, string>): Record<string, unknown> => {
-  if (process.env.TAMAGUI_TARGET !== 'native') {
-    return attrs;
-  }
-  const dataSet: Record<string, string> = {};
-  for (const [key, value] of Object.entries(attrs)) {
-    const camel = key.replace(/^data-/u, '').replaceAll(/-([a-z])/gu, (_, c: string) => c.toUpperCase());
-    dataSet[camel] = value;
-  }
-  return { dataSet };
-};
+export type CardHeaderProps = Omit<ViewProps, 'children'> & { children?: ReactNode };
 
 export const CardHeader = ({ children, ...props }: CardHeaderProps) => {
   const { knobProps } = useResolvedKnobs({ component: 'Card' });
@@ -46,7 +29,7 @@ export const CardHeader = ({ children, ...props }: CardHeaderProps) => {
           key={key}
           flexShrink={1}
           {...knobProps.heading}
-          {...hostData({ 'data-heading-font': String(knobProps.heading.fontFamily) })}>
+          {...hostData({ 'data-heading-font': knobProps.heading.fontFamily })}>
           {label}
         </SizableText>
       ))}

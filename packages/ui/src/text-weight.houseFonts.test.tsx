@@ -21,8 +21,6 @@ import { Paragraph, SizableText, Text } from './Text';
 const themeConfig = createDefaultThemeConfig();
 const LABEL = 'Sign in to see your clusters';
 
-afterEach(cleanup);
-
 const textNodeHost = (root: HTMLElement): HTMLElement => {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
@@ -61,80 +59,85 @@ const knobWeights = [
   ['bold', '700'],
 ] as const;
 
-describe('house headings keep their weight across headingFont', () => {
-  for (const scheme of schemes) {
-    for (const [name, Voice] of [
-      ['Heading', Heading],
-      ['H1', H1],
-      ['H2', H2],
-    ] as const) {
-      it(`${scheme}: ${name} weight is the knob's at every size, sans-serif and serif alike`, () => {
-        for (const [fontWeight, expected] of knobWeights) {
-          for (const size of headingSizes) {
-            const at = (headingFont: 'sans-serif' | 'serif') =>
-              measure(
-                <Preset overrides={{ fontWeight, headingFont }}>
-                  <Voice size={size}>{LABEL}</Voice>
-                </Preset>,
-                scheme,
-              );
-            const sans = at('sans-serif');
-            const serif = at('serif');
-            expect(sans.family).toBe('Inter');
-            expect(serif.family).toBe('Georgia');
-            expect({ size, fontWeight, sans: sans.weight, serif: serif.weight }).toStrictEqual({
-              size,
-              fontWeight,
-              sans: expected,
-              serif: expected,
-            });
-          }
-        }
-      });
-    }
+const headingVoices = [
+  ['Heading', Heading],
+  ['H1', H1],
+  ['H2', H2],
+] as const;
+const bodyVoices = [
+  ['Text', Text],
+  ['SizableText', SizableText],
+  ['Paragraph', Paragraph],
+] as const;
 
-    it(`${scheme}: the portal Band heading keeps its explicit 700 under serif`, () => {
-      for (const [fontWeight] of knobWeights) {
-        for (const headingFont of ['sans-serif', 'serif'] as const) {
-          const { weight } = measure(
-            <Preset overrides={{ fontWeight, headingFont }}>
-              <H2
-                margin={0}
-                size="$1"
-                fontWeight="700"
-                color="$color12">
-                {LABEL}
-              </H2>
-            </Preset>,
-            scheme,
-          );
-          expect({ fontWeight, headingFont, weight }).toStrictEqual({
+describe('house headings keep their weight across headingFont', () => {
+  afterEach(cleanup);
+
+  it.each(schemes.flatMap((scheme) => headingVoices.map(([name, Voice]) => [scheme, name, Voice] as const)))(
+    "%s: %s weight is the knob's at every size, sans-serif and serif alike",
+    (scheme, _name, Voice) => {
+      for (const [fontWeight, expected] of knobWeights) {
+        for (const size of headingSizes) {
+          const at = (headingFont: 'sans-serif' | 'serif') =>
+            measure(
+              <Preset overrides={{ fontWeight, headingFont }}>
+                <Voice size={size}>{LABEL}</Voice>
+              </Preset>,
+              scheme,
+            );
+          const sans = at('sans-serif');
+          const serif = at('serif');
+          expect(sans.family).toBe('Inter');
+          expect(serif.family).toBe('Georgia');
+          expect({ size, fontWeight, sans: sans.weight, serif: serif.weight }).toStrictEqual({
+            size,
             fontWeight,
-            headingFont,
-            weight: '700',
+            sans: expected,
+            serif: expected,
           });
         }
       }
-    });
-  }
-});
+    },
+  );
 
-describe('sized body voices take fontWeight and bodyFont together', () => {
-  for (const scheme of schemes) {
-    for (const [name, Voice] of [
-      ['Text', Text],
-      ['SizableText', SizableText],
-      ['Paragraph', Paragraph],
-    ] as const) {
-      it(`${scheme}: ${name} size $3 is 700 Georgia under bold + serif`, () => {
-        const m = measure(
-          <Preset overrides={{ fontWeight: 'bold', bodyFont: 'serif' }}>
-            <Voice size="$3">{LABEL}</Voice>
+  it.each(schemes)('%s: the portal Band heading keeps its explicit 700 under serif', (scheme) => {
+    for (const [fontWeight] of knobWeights) {
+      for (const headingFont of ['sans-serif', 'serif'] as const) {
+        const { weight } = measure(
+          <Preset overrides={{ fontWeight, headingFont }}>
+            <H2
+              margin={0}
+              size="$1"
+              fontWeight="700"
+              color="$color12">
+              {LABEL}
+            </H2>
           </Preset>,
           scheme,
         );
-        expect(m).toStrictEqual({ weight: '700', family: 'Georgia' });
-      });
+        expect({ fontWeight, headingFont, weight }).toStrictEqual({
+          fontWeight,
+          headingFont,
+          weight: '700',
+        });
+      }
     }
-  }
+  });
+});
+
+describe('sized body voices take fontWeight and bodyFont together', () => {
+  afterEach(cleanup);
+
+  it.each(schemes.flatMap((scheme) => bodyVoices.map(([name, Voice]) => [scheme, name, Voice] as const)))(
+    '%s: %s size $3 is 700 Georgia under bold + serif',
+    (scheme, _name, Voice) => {
+      const m = measure(
+        <Preset overrides={{ fontWeight: 'bold', bodyFont: 'serif' }}>
+          <Voice size="$3">{LABEL}</Voice>
+        </Preset>,
+        scheme,
+      );
+      expect(m).toStrictEqual({ weight: '700', family: 'Georgia' });
+    },
+  );
 });

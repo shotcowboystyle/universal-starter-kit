@@ -15,7 +15,7 @@ import { useState } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 
 import { DropdownMenu } from './index';
-import type { DropdownMenuEntry } from './index';
+import type { DropdownMenuEntry, DropdownMenuProps } from './index';
 
 const meta: Meta<typeof DropdownMenu> = {
   title: 'Components/DropdownMenu',
@@ -133,44 +133,46 @@ export const IconsAndShortcuts: Story = {
   ),
 };
 
+const CheckableDemo = (args: DropdownMenuProps) => {
+  const [showGrid, setShowGrid] = useState(true);
+  const [showRulers, setShowRulers] = useState(false);
+  const [snap, setSnap] = useState(true);
+  return (
+    <YStack
+      minHeight={340}
+      paddingTop="$4"
+      alignItems="center">
+      <DropdownMenu {...args}>
+        <DropdownMenu.Trigger asChild>
+          <Button>View options</Button>
+        </DropdownMenu.Trigger>
+        <DropdownMenu.Content>
+          <DropdownMenu.Label>Canvas</DropdownMenu.Label>
+          <DropdownMenu.CheckboxItem
+            checked={showGrid}
+            onCheckedChange={setShowGrid}>
+            Show grid
+          </DropdownMenu.CheckboxItem>
+          <DropdownMenu.CheckboxItem
+            checked={showRulers}
+            onCheckedChange={setShowRulers}>
+            Show rulers
+          </DropdownMenu.CheckboxItem>
+          <DropdownMenu.Separator />
+          <DropdownMenu.CheckboxItem
+            checked={snap}
+            onCheckedChange={setSnap}>
+            Snap to grid
+          </DropdownMenu.CheckboxItem>
+        </DropdownMenu.Content>
+      </DropdownMenu>
+    </YStack>
+  );
+};
+
 export const Checkable: Story = {
   args: { defaultOpen: true },
-  render: (args) => {
-    const [showGrid, setShowGrid] = useState(true);
-    const [showRulers, setShowRulers] = useState(false);
-    const [snap, setSnap] = useState(true);
-    return (
-      <YStack
-        minHeight={340}
-        paddingTop="$4"
-        alignItems="center">
-        <DropdownMenu {...args}>
-          <DropdownMenu.Trigger asChild>
-            <Button>View options</Button>
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Content>
-            <DropdownMenu.Label>Canvas</DropdownMenu.Label>
-            <DropdownMenu.CheckboxItem
-              checked={showGrid}
-              onCheckedChange={setShowGrid}>
-              Show grid
-            </DropdownMenu.CheckboxItem>
-            <DropdownMenu.CheckboxItem
-              checked={showRulers}
-              onCheckedChange={setShowRulers}>
-              Show rulers
-            </DropdownMenu.CheckboxItem>
-            <DropdownMenu.Separator />
-            <DropdownMenu.CheckboxItem
-              checked={snap}
-              onCheckedChange={setSnap}>
-              Snap to grid
-            </DropdownMenu.CheckboxItem>
-          </DropdownMenu.Content>
-        </DropdownMenu>
-      </YStack>
-    );
-  },
+  render: (args) => <CheckableDemo {...args} />,
 };
 
 export const Destructive: Story = {
@@ -221,6 +223,37 @@ export const LongListScroll: Story = {
   ),
 };
 
+const RadioStyleNavigationDemo = () => {
+  const views = ['List', 'Report', 'Kanban', 'Calendar'];
+  const [view, setView] = useState('List');
+  return (
+    <YStack
+      minHeight={340}
+      paddingTop="$4"
+      alignItems="center"
+      gap="$3">
+      <DropdownMenu
+        closeOnSelect
+        items={views.map((candidate) => ({
+          key: candidate,
+          label: candidate,
+          checked: candidate === view,
+          onSelect: () => {
+            setView(candidate);
+          },
+        }))}>
+        <Button iconAfter=<CaretDownIcon size={14} />>{view}</Button>
+      </DropdownMenu>
+      <Text
+        color="$color11"
+        fontSize="$2"
+        data-testid="current-view">
+        Current view: {view}
+      </Text>
+    </YStack>
+  );
+};
+
 /**
  * Single-select "radio-style" navigation menu — the exact app
  * consumer shape (ViewHeader view switcher, KanbanBoardPicker, SortControl):
@@ -231,83 +264,56 @@ export const LongListScroll: Story = {
  * closes the menu — no controlled-open wiring in the consumer.
  */
 export const RadioStyleNavigation: Story = {
-  render: () => {
-    const views = ['List', 'Report', 'Kanban', 'Calendar'];
-    const [view, setView] = useState('List');
-    return (
-      <YStack
-        minHeight={340}
-        paddingTop="$4"
-        alignItems="center"
-        gap="$3">
+  render: () => <RadioStyleNavigationDemo />,
+};
+
+const ControlledDemo = () => {
+  const [open, setOpen] = useState(false);
+  const [last, setLast] = useState<string | null>(null);
+  return (
+    <YStack
+      minHeight={340}
+      paddingTop="$4"
+      alignItems="center"
+      gap="$3">
+      <XStack
+        gap="$3"
+        alignItems="center">
         <DropdownMenu
-          closeOnSelect
-          items={views.map((candidate) => ({
-            key: candidate,
-            label: candidate,
-            checked: candidate === view,
-            onSelect: () => {
-              setView(candidate);
+          open={open}
+          onOpenChange={setOpen}
+          items={[
+            {
+              label: 'First action',
+              onSelect: () => {
+                setLast('First action');
+              },
             },
-          }))}>
-          <Button iconAfter=<CaretDownIcon size={14} />>{view}</Button>
+            {
+              label: 'Second action',
+              onSelect: () => {
+                setLast('Second action');
+              },
+            },
+          ]}>
+          <Button>Controlled menu</Button>
         </DropdownMenu>
-        <Text
-          color="$color11"
-          fontSize="$2"
-          data-testid="current-view">
-          Current view: {view}
-        </Text>
-      </YStack>
-    );
-  },
+        <Button
+          onPress={() => {
+            setOpen(!open);
+          }}>
+          Toggle from outside
+        </Button>
+      </XStack>
+      <Text
+        color="$color11"
+        fontSize="$2">
+        {last === null ? 'No action selected yet' : `Last action: ${last}`}
+      </Text>
+    </YStack>
+  );
 };
 
 export const Controlled: Story = {
-  render: () => {
-    const [open, setOpen] = useState(false);
-    const [last, setLast] = useState<string | null>(null);
-    return (
-      <YStack
-        minHeight={340}
-        paddingTop="$4"
-        alignItems="center"
-        gap="$3">
-        <XStack
-          gap="$3"
-          alignItems="center">
-          <DropdownMenu
-            open={open}
-            onOpenChange={setOpen}
-            items={[
-              {
-                label: 'First action',
-                onSelect: () => {
-                  setLast('First action');
-                },
-              },
-              {
-                label: 'Second action',
-                onSelect: () => {
-                  setLast('Second action');
-                },
-              },
-            ]}>
-            <Button>Controlled menu</Button>
-          </DropdownMenu>
-          <Button
-            onPress={() => {
-              setOpen(!open);
-            }}>
-            Toggle from outside
-          </Button>
-        </XStack>
-        <Text
-          color="$color11"
-          fontSize="$2">
-          {last ? `Last action: ${last}` : 'No action selected yet'}
-        </Text>
-      </YStack>
-    );
-  },
+  render: () => <ControlledDemo />,
 };

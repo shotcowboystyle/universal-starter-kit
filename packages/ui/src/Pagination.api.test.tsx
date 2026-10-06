@@ -33,12 +33,17 @@ const houseConfig = createTamagui({
   themes: houseThemes as any,
 });
 
-const dots = (c: HTMLElement) => c.querySelectorAll('[data-pagination-dot]');
+// oxlint-disable-next-line unicorn/prefer-number-coercion -- computed CSS lengths carry a unit suffix ("44px"); Number() would return NaN
+const cssPx = (length: string): number => Number.parseFloat(length);
+
+const dots = (c: HTMLElement) => c.querySelectorAll<HTMLElement>('[data-pagination-dot]');
 const activeDot = (c: HTMLElement) => c.querySelectorAll('[data-pagination-dot="active"]');
 const pageButtons = (c: HTMLElement) => c.querySelectorAll('[aria-label^="Page "]');
 const byLabel = (c: HTMLElement, label: string) => c.querySelector(`[aria-label="${label}"]`);
 /** The pressable wrapper the strip primitive puts around each painted dot. */
 const stepTargets = (c: HTMLElement) => c.querySelectorAll('[aria-label^="Go to step"]');
+
+const marked = (c: HTMLElement) => [...dots(c)].findIndex((d) => d.dataset.paginationDot === 'active');
 
 describe('Pagination public API — variants', () => {
   it('defaults to the dots strip and marks exactly one dot current', () => {
@@ -144,8 +149,8 @@ describe('Pagination public API — wizard props', () => {
   });
 
   it('allowJumpTo dots activate on click, Enter and Space', () => {
-    const onChange = vi.fn();
-    const onPageChange = vi.fn();
+    const onChange = vi.fn<(index: number) => void>();
+    const onPageChange = vi.fn<(page: number) => void>();
     const { container } = renderWithProviders(
       <Pagination
         total={5}
@@ -180,8 +185,8 @@ describe('Pagination public API — wizard props', () => {
   });
 
   it('isLastStep + onSubmit turn the forward control into Submit', () => {
-    const onSubmit = vi.fn();
-    const onChange = vi.fn();
+    const onSubmit = vi.fn<() => void>();
+    const onChange = vi.fn<(index: number) => void>();
     const { container } = renderWithProviders(
       <Pagination
         total={3}
@@ -194,13 +199,13 @@ describe('Pagination public API — wizard props', () => {
     const submit = byLabel(container, 'Submit');
     expect(submit).toBeTruthy();
     expect(byLabel(container, 'Next page')).toBeNull();
-    fireEvent.click(submit as Element);
+    fireEvent.click(submit!);
     expect(onSubmit).toHaveBeenCalledOnce();
     expect(onChange).not.toHaveBeenCalled();
   });
 
   it('keeps the forward control live on the last step when an onSubmit exists', () => {
-    const onSubmit = vi.fn();
+    const onSubmit = vi.fn<() => void>();
     const { container } = renderWithProviders(
       <Pagination
         total={3}
@@ -215,7 +220,7 @@ describe('Pagination public API — wizard props', () => {
   });
 
   it('disabled blocks navigation and leaves nothing tabbable', () => {
-    const onChange = vi.fn();
+    const onChange = vi.fn<(index: number) => void>();
     const { container } = renderWithProviders(
       <Pagination
         total={5}
@@ -246,15 +251,13 @@ describe('Pagination public API — control models', () => {
         page={3}
       />,
     );
-    const marked = (c: HTMLElement) =>
-      [...dots(c)].findIndex((d) => d.getAttribute('data-pagination-dot') === 'active');
     expect(marked(byIndex)).toBe(2);
     expect(marked(byPage)).toBe(2);
   });
 
   it('fires both change aliases from one emit site', () => {
-    const onChange = vi.fn();
-    const onPageChange = vi.fn();
+    const onChange = vi.fn<(index: number) => void>();
+    const onPageChange = vi.fn<(page: number) => void>();
     const { container } = renderWithProviders(
       <Pagination
         total={5}
@@ -263,7 +266,7 @@ describe('Pagination public API — control models', () => {
         onPageChange={onPageChange}
       />,
     );
-    fireEvent.click(byLabel(container, 'Next page') as Element);
+    fireEvent.click(byLabel(container, 'Next page')!);
     expect(onChange).toHaveBeenCalledWith(2);
     expect(onPageChange).toHaveBeenCalledWith(3);
   });
@@ -277,12 +280,12 @@ describe('Pagination public API — control models', () => {
       />,
     );
     expect(container.querySelector('[aria-current="page"]')?.textContent).toBe('3');
-    fireEvent.click(byLabel(container, 'Page 5') as Element);
+    fireEvent.click(byLabel(container, 'Page 5')!);
     expect(container.querySelector('[aria-current="page"]')?.textContent).toBe('5');
   });
 
   it('clamps navigation to the strip bounds', () => {
-    const onChange = vi.fn();
+    const onChange = vi.fn<(index: number) => void>();
     const { container } = renderWithProviders(
       <Pagination
         total={3}
@@ -290,7 +293,7 @@ describe('Pagination public API — control models', () => {
         onChange={onChange}
       />,
     );
-    fireEvent.click(byLabel(container, 'Previous page') as Element);
+    fireEvent.click(byLabel(container, 'Previous page')!);
     expect(onChange).not.toHaveBeenCalled();
   });
 });
@@ -323,7 +326,7 @@ describe('Pagination public API — numbered chrome', () => {
   });
 
   it('showFirstLast adds boundary jumps', () => {
-    const onPageChange = vi.fn();
+    const onPageChange = vi.fn<(page: number) => void>();
     const { container } = renderWithProviders(
       <Pagination
         variant="numbered"
@@ -334,7 +337,7 @@ describe('Pagination public API — numbered chrome', () => {
       />,
     );
     expect(byLabel(container, 'Go to first page')).toBeTruthy();
-    fireEvent.click(byLabel(container, 'Go to last page') as Element);
+    fireEvent.click(byLabel(container, 'Go to last page')!);
     expect(onPageChange).toHaveBeenCalledWith(20);
   });
 
@@ -360,7 +363,7 @@ describe('Pagination public API — numbered chrome', () => {
   });
 
   it('page buttons activate on Enter and Space', () => {
-    const onPageChange = vi.fn();
+    const onPageChange = vi.fn<(page: number) => void>();
     // Controlled, so the window does not move between the two presses.
     const { container } = renderWithProviders(
       <Pagination
@@ -370,9 +373,9 @@ describe('Pagination public API — numbered chrome', () => {
         onPageChange={onPageChange}
       />,
     );
-    fireEvent.keyDown(byLabel(container, 'Page 4') as Element, { key: 'Enter' });
+    fireEvent.keyDown(byLabel(container, 'Page 4')!, { key: 'Enter' });
     expect(onPageChange).toHaveBeenLastCalledWith(4);
-    fireEvent.keyDown(byLabel(container, 'Page 5') as Element, { key: ' ' });
+    fireEvent.keyDown(byLabel(container, 'Page 5')!, { key: ' ' });
     expect(onPageChange).toHaveBeenLastCalledWith(5);
   });
 });
@@ -404,21 +407,21 @@ describe('Pagination public API — layout passthrough', () => {
   });
 });
 
+const renderHouse = (ui: Parameters<typeof render>[0]) =>
+  render(
+    <TamaguiProvider
+      config={houseConfig}
+      defaultTheme="light"
+      disableInjectCSS>
+      {ui}
+    </TamaguiProvider>,
+  );
+
 // One emphasis: one Pagination body, one selected
 // language — BOTH variants mark "current" in the accent CHANNEL (the STEP may
 // differ where the contrast floor requires it, per the owner-amended VERIFY).
 // Stock test themes carry no accent ramp, so mount the house builder themes.
 describe('Pagination selected mark', () => {
-  const renderHouse = (ui: Parameters<typeof render>[0]) =>
-    render(
-      <TamaguiProvider
-        config={houseConfig}
-        defaultTheme="light"
-        disableInjectCSS>
-        {ui}
-      </TamaguiProvider>,
-    );
-
   it('dots body: the current dot fills with the accent mark, idle dots stay neutral', () => {
     const { container } = renderHouse(
       <Pagination
@@ -426,8 +429,8 @@ describe('Pagination selected mark', () => {
         activeIndex={2}
       />,
     );
-    const active = container.querySelector('[data-pagination-dot="active"]') as HTMLElement;
-    const idle = container.querySelector('[data-pagination-dot="idle"]') as HTMLElement;
+    const active = container.querySelector<HTMLElement>('[data-pagination-dot="active"]')!;
+    const idle = container.querySelector<HTMLElement>('[data-pagination-dot="idle"]')!;
     expect(active).toBeTruthy();
     expect(idle).toBeTruthy();
     expect(active.className).toContain('_bg-accentBackg');
@@ -442,12 +445,12 @@ describe('Pagination selected mark', () => {
         page={3}
       />,
     );
-    const current = container.querySelector('[aria-current="page"]') as HTMLElement;
+    const current = container.querySelector<HTMLElement>('[aria-current="page"]')!;
     expect(current).toBeTruthy();
     // The house Button's `accent` intent re-themes the frame (<Theme
     // name="accent">), so the accent scope is the detectable channel.
     expect(current.closest('.t_accent')).toBeTruthy();
-    const other = container.querySelector('[aria-label="Page 2"]') as HTMLElement;
+    const other = container.querySelector<HTMLElement>('[aria-label="Page 2"]')!;
     expect(other).toBeTruthy();
     expect(other.closest('.t_accent')).toBeNull();
   });
@@ -475,14 +478,8 @@ describe('Pagination ring anatomy / 44px floor', () => {
       const el = byLabel(container, label) as HTMLElement;
       expect(el, label).toBeTruthy();
       const style = getComputedStyle(el);
-      expect(
-        Number.parseFloat(style.minWidth) || Number.parseFloat(style.width),
-        `${label} minWidth`,
-      ).toBeGreaterThanOrEqual(44);
-      expect(
-        Number.parseFloat(style.minHeight) || Number.parseFloat(style.height),
-        `${label} minHeight`,
-      ).toBeGreaterThanOrEqual(44);
+      expect(cssPx(style.minWidth) || cssPx(style.width), `${label} minWidth`).toBeGreaterThanOrEqual(44);
+      expect(cssPx(style.minHeight) || cssPx(style.height), `${label} minHeight`).toBeGreaterThanOrEqual(44);
     }
   });
 
@@ -494,13 +491,13 @@ describe('Pagination ring anatomy / 44px floor', () => {
         page={3}
       />,
     );
-    const current = container.querySelector('[aria-current="page"]') as HTMLElement;
+    const current = container.querySelector<HTMLElement>('[aria-current="page"]')!;
     const other = byLabel(container, 'Page 2') as HTMLElement;
     expect(current.closest('.t_accent')).toBeTruthy();
     expect(other.closest('.t_accent')).toBeNull();
     const currentStyle = getComputedStyle(current);
     const otherStyle = getComputedStyle(other);
-    expect(Number.parseFloat(currentStyle.outlineWidth) || 0).toBe(0);
-    expect(Number.parseFloat(otherStyle.outlineWidth) || 0).toBe(0);
+    expect(cssPx(currentStyle.outlineWidth) || 0).toBe(0);
+    expect(cssPx(otherStyle.outlineWidth) || 0).toBe(0);
   });
 });

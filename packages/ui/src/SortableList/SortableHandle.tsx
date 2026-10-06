@@ -35,13 +35,33 @@ export const SortableHandle = ({ label, itemId, dragging, compact, onPointerDown
   const { knobProps } = useResolvedKnobs({ compact });
   const well = knobProps.nestedControl.px;
   const [kb, setKb] = useState(false);
-  const isDragging = useSortableDragging(itemId, dragging);
+  const sourceDragging = useSortableDragging(itemId);
+  const isDragging = dragging ?? sourceDragging;
   if (typeof document !== 'undefined') {
     ensureKeyboardModalityTracking();
   }
 
+  const focusRing = kb ? keyboardFocusRingProps : undefined;
+  const hostProps = {
+    tag: 'button' as const,
+    cursor: isDragging ? ('grabbing' as const) : ('grab' as const),
+    hitSlop: knobProps.nestedControl.hitSlop,
+    ...focusRing,
+    'data-sortable-handle': itemId,
+    'data-focus-ring': '2/0',
+    onPointerDown: (e: { pointerType?: string; clientY: number; preventDefault?: () => void }) => onPointerDown?.(e),
+    onKeyDown: (e: { key: string; preventDefault: () => void }) => onKeyDown?.(e),
+    onFocus: () => {
+      setKb(wasKeyboardFocus());
+    },
+    onBlur: () => {
+      setKb(false);
+    },
+  };
+
   return (
     <View
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui View renders as a native <button> through hostProps.tag; the JSX element itself cannot be <button>
       role="button"
       tabIndex={0}
       aria-label={withInterp(t('Reorder {{label}}', { label }), { label })}
@@ -53,23 +73,7 @@ export const SortableHandle = ({ label, itemId, dragging, compact, onPointerDown
       justifyContent="center"
       opacity={isDragging ? 1 : 0.6}
       hoverStyle={{ opacity: 1 }}
-      {...({
-        tag: 'button',
-        cursor: isDragging ? 'grabbing' : 'grab',
-        hitSlop: knobProps.nestedControl.hitSlop,
-        ...(kb ? keyboardFocusRingProps : {}),
-        'data-sortable-handle': itemId,
-        'data-focus-ring': '2/0',
-        onPointerDown: (e: { pointerType?: string; clientY: number; preventDefault?: () => void }) =>
-          onPointerDown?.(e),
-        onKeyDown: (e: { key: string; preventDefault: () => void }) => onKeyDown?.(e),
-        onFocus: () => {
-          setKb(wasKeyboardFocus());
-        },
-        onBlur: () => {
-          setKb(false);
-        },
-      } as Record<string, unknown>)}>
+      {...hostProps}>
       <DotsSixVerticalIcon
         size={GRIP_PX}
         weight="bold"
@@ -81,13 +85,14 @@ export const SortableHandle = ({ label, itemId, dragging, compact, onPointerDown
 export const SortableHandleWell = ({ itemId, compact }: { itemId: string; compact?: boolean }) => {
   const { knobProps } = useResolvedKnobs({ compact });
   const well = knobProps.nestedControl.px;
+  const wellProps = { 'data-sortable-well': itemId };
   return (
     <View
       width={well}
       height={well}
       minWidth={well}
       minHeight={well}
-      {...({ 'data-sortable-well': itemId } as Record<string, unknown>)}
+      {...wellProps}
     />
   );
 };

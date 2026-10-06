@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import path from 'node:path';
 
 import { renderWithProviders } from '@repo/test-utils';
 import { Preset } from '@repo/theme';
@@ -9,16 +9,16 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { CardFooter } from './CardFooter';
 import { Card } from './surfaces';
 
-const readSibling = (name: string) => readFileSync(join(import.meta.dirname, name), 'utf-8');
+const readSibling = (name: string) => readFileSync(path.join(import.meta.dirname, name), 'utf-8');
 
 const atoms = (el: Element | null, prefixes: string[]): string[] => {
   if (!el) {
     return [];
   }
-  return String((el as HTMLElement).className || '')
+  return (el as HTMLElement).className
     .split(' ')
     .filter((c) => prefixes.some((p) => c.startsWith(p)))
-    .sort();
+    .toSorted();
 };
 
 const captionText = (container: HTMLElement, label: string): HTMLElement =>
@@ -54,7 +54,7 @@ describe('CardFooter design-law — T-BODY text node', () => {
     );
     const caption = screen.getByText('Ready to submit');
     expect(caption.tagName).not.toBe('DIV');
-    expect(caption.getAttribute('data-body-font')).toBeTruthy();
+    expect(caption.dataset.bodyFont).toBeTruthy();
   });
 
   it('coalesces array-of-strings children into one wrapped label', () => {
@@ -114,7 +114,7 @@ describe('CardFooter design-law — T-BODY text node', () => {
         </Card>
       </Preset>,
     );
-    const sansFamily = captionText(sans.container, 'Ready to submit').getAttribute('data-body-font');
+    const sansFamily = captionText(sans.container, 'Ready to submit').dataset.bodyFont;
     cleanup();
 
     const mono = renderWithProviders(
@@ -125,8 +125,8 @@ describe('CardFooter design-law — T-BODY text node', () => {
       </Preset>,
     );
     expect(sansFamily).toBeTruthy();
-    expect(captionText(mono.container, 'Ready to submit').getAttribute('data-body-font')).toBe('$mono');
-    expect(captionText(mono.container, 'Ready to submit').getAttribute('data-body-font')).not.toBe(sansFamily);
+    expect(captionText(mono.container, 'Ready to submit').dataset.bodyFont).toBe('$mono');
+    expect(captionText(mono.container, 'Ready to submit').dataset.bodyFont).not.toBe(sansFamily);
   });
 
   it('stamps data-slot=footer and stays a zero-padding slot', () => {

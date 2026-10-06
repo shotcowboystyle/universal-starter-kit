@@ -1,3 +1,5 @@
+import { setTimeout as sleep } from 'node:timers/promises';
+
 import { renderWithProviders } from '@repo/test-utils';
 import { __resetDevWarnSeen } from '@repo/theme';
 import { act, fireEvent, waitFor } from '@testing-library/react';
@@ -6,8 +8,9 @@ import { Button } from 'tamagui';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DropdownMenu } from './index';
+import type { DropdownMenuCloseAutoFocusEvent } from './index';
 
-const renderMenu = (onSelect = vi.fn(), onDelete = vi.fn()) => {
+const renderMenu = (onSelect = vi.fn<() => void>(), onDelete = vi.fn<() => void>()) => {
   const result = renderWithProviders(
     <DropdownMenu defaultOpen>
       <DropdownMenu.Trigger asChild>
@@ -32,7 +35,21 @@ const renderMenu = (onSelect = vi.fn(), onDelete = vi.fn()) => {
   return result;
 };
 
-describe('DropdownMenu', () => {
+const renderOpen = () =>
+  renderWithProviders(
+    <DropdownMenu
+      defaultOpen
+      items={[
+        { label: 'Edit' },
+        { label: 'List', checked: true },
+        { separator: true },
+        { label: 'Delete', destructive: true },
+      ]}>
+      <Button>Actions</Button>
+    </DropdownMenu>,
+  );
+
+describe(DropdownMenu, () => {
   it('renders menu items when open', async () => {
     renderMenu();
     await waitFor(() => {
@@ -49,19 +66,19 @@ describe('DropdownMenu', () => {
     await waitFor(() => {
       expect(document.querySelector('[role="menu"]')).toBeTruthy();
     });
-    const disabled = Array.from(document.querySelectorAll('[role="menuitem"]')).find((el) =>
+    const disabled = [...document.querySelectorAll('[role="menuitem"]')].find((el) =>
       el.textContent?.includes('Duplicate'),
     );
     expect(disabled?.getAttribute('aria-disabled')).toBe('true');
   });
 
   it('selects an item on click and closes the menu', async () => {
-    const onSelect = vi.fn();
+    const onSelect = vi.fn<() => void>();
     renderMenu(onSelect);
     await waitFor(() => {
       expect(document.querySelector('[role="menu"]')).toBeTruthy();
     });
-    const edit = Array.from(document.querySelectorAll('[role="menuitem"]')).find((el) =>
+    const edit = [...document.querySelectorAll('[role="menuitem"]')].find((el) =>
       el.textContent?.includes('Edit'),
     ) as HTMLElement;
     fireEvent.click(edit);
@@ -72,14 +89,14 @@ describe('DropdownMenu', () => {
   });
 
   it('navigates with ArrowDown and selects with Enter', async () => {
-    const onSelect = vi.fn();
-    const onDelete = vi.fn();
+    const onSelect = vi.fn<() => void>();
+    const onDelete = vi.fn<() => void>();
     renderMenu(onSelect, onDelete);
     await waitFor(() => {
       expect(document.querySelector('[role="menu"]')).toBeTruthy();
     });
     const menu = document.querySelector('[role="menu"]') as HTMLElement;
-    const items = Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"]:not([aria-disabled="true"])'));
+    const items = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]:not([aria-disabled="true"])')];
     items[0].focus();
     // ArrowDown skips the disabled item (not in the enabled query) to Delete
     fireEvent.keyDown(menu, { key: 'ArrowDown' });
@@ -95,14 +112,14 @@ describe('DropdownMenu', () => {
       expect(document.querySelector('[role="menu"]')).toBeTruthy();
     });
     const menu = document.querySelector('[role="menu"]') as HTMLElement;
-    const items = Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"]:not([aria-disabled="true"])'));
+    const items = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]:not([aria-disabled="true"])')];
     items[0].focus();
     fireEvent.keyDown(menu, { key: 'ArrowUp' });
-    expect(document.activeElement).toBe(items[items.length - 1]);
+    expect(document.activeElement).toBe(items.at(-1));
   });
 
   it('toggles checkbox items without closing the menu', async () => {
-    const onCheckedChange = vi.fn();
+    const onCheckedChange = vi.fn<(checked: boolean) => void>();
     renderWithProviders(
       <DropdownMenu defaultOpen>
         <DropdownMenu.Trigger asChild>
@@ -161,8 +178,8 @@ describe('DropdownMenu items path — checked entries', () => {
   // their `onSelect` (only `onCheckedChange` was wired), and forwarded no
   // `closeOnSelect` — checked navigation menus stayed open and dead.
   it('fires BOTH onSelect and onCheckedChange for a checked entry', async () => {
-    const onSelect = vi.fn();
-    const onCheckedChange = vi.fn();
+    const onSelect = vi.fn<() => void>();
+    const onCheckedChange = vi.fn<(checked: boolean) => void>();
     renderWithProviders(
       <DropdownMenu
         defaultOpen
@@ -181,7 +198,7 @@ describe('DropdownMenu items path — checked entries', () => {
   });
 
   it('closes the menu when a checked entry sets closeOnSelect', async () => {
-    const onSelect = vi.fn();
+    const onSelect = vi.fn<() => void>();
     renderWithProviders(
       <DropdownMenu
         defaultOpen
@@ -192,7 +209,7 @@ describe('DropdownMenu items path — checked entries', () => {
     await waitFor(() => {
       expect(document.querySelector('[role="menuitemcheckbox"]')).toBeTruthy();
     });
-    fireEvent.click(document.querySelector('[role="menuitemcheckbox"]') as HTMLElement);
+    fireEvent.click(document.querySelector('[role="menuitemcheckbox"]')!);
     expect(onSelect).toHaveBeenCalledOnce();
     await waitFor(() => {
       expect(document.querySelector('[role="menu"]')).toBeFalsy();
@@ -203,7 +220,7 @@ describe('DropdownMenu items path — checked entries', () => {
     // The exact consumer shape (ViewHeader switcher / KanbanBoardPicker /
     // SortControl): every entry is a checkbox item (single-select radio
     // semantics, shared check gutter), the pick navigates AND closes.
-    const navigate = vi.fn();
+    const navigate = vi.fn<(view: string) => void>();
     renderWithProviders(
       <DropdownMenu
         defaultOpen
@@ -212,7 +229,9 @@ describe('DropdownMenu items path — checked entries', () => {
           key: view,
           label: view,
           checked: view === 'List',
-          onSelect: () => navigate(view),
+          onSelect: () => {
+            navigate(view);
+          },
         }))}>
         <Button>List</Button>
       </DropdownMenu>,
@@ -220,7 +239,7 @@ describe('DropdownMenu items path — checked entries', () => {
     await waitFor(() => {
       expect(document.querySelectorAll('[role="menuitemcheckbox"]')).toHaveLength(2);
     });
-    const rows = Array.from(document.querySelectorAll<HTMLElement>('[role="menuitemcheckbox"]'));
+    const rows = [...document.querySelectorAll<HTMLElement>('[role="menuitemcheckbox"]')];
     // CheckboxItem semantics stay intact: aria-checked marks the current view.
     expect(rows[0].getAttribute('aria-checked')).toBe('true');
     expect(rows[1].getAttribute('aria-checked')).toBe('false');
@@ -234,7 +253,7 @@ describe('DropdownMenu items path — checked entries', () => {
   it('keeps the menu open for checked entries by default (COMPOSE)', async () => {
     // Positive control for the close assertions above: without closeOnSelect
     // a checkable toggle composes, so the menu MUST stay open.
-    const onCheckedChange = vi.fn();
+    const onCheckedChange = vi.fn<(checked: boolean) => void>();
     renderWithProviders(
       <DropdownMenu
         defaultOpen
@@ -245,16 +264,16 @@ describe('DropdownMenu items path — checked entries', () => {
     await waitFor(() => {
       expect(document.querySelector('[role="menuitemcheckbox"]')).toBeTruthy();
     });
-    fireEvent.click(document.querySelector('[role="menuitemcheckbox"]') as HTMLElement);
+    fireEvent.click(document.querySelector('[role="menuitemcheckbox"]')!);
     expect(onCheckedChange).toHaveBeenCalledWith(false);
     // Unmount-on-close is async — settle past it so "still open" can fail
     // (the closing specs above are the positive control for this detector).
-    await new Promise((resolve) => setTimeout(resolve, 400));
+    await sleep(400);
     expect(document.querySelector('[role="menu"]')).toBeTruthy();
   });
 
   it('forwards entry-level closeOnSelect=false on plain items', async () => {
-    const onSelect = vi.fn();
+    const onSelect = vi.fn<() => void>();
     renderWithProviders(
       <DropdownMenu
         defaultOpen
@@ -265,9 +284,9 @@ describe('DropdownMenu items path — checked entries', () => {
     await waitFor(() => {
       expect(document.querySelector('[role="menuitem"]')).toBeTruthy();
     });
-    fireEvent.click(document.querySelector('[role="menuitem"]') as HTMLElement);
+    fireEvent.click(document.querySelector('[role="menuitem"]')!);
     expect(onSelect).toHaveBeenCalledOnce();
-    await new Promise((resolve) => setTimeout(resolve, 400));
+    await sleep(400);
     expect(document.querySelector('[role="menu"]')).toBeTruthy();
   });
 });
@@ -286,7 +305,7 @@ describe('DropdownMenu disabledReason', () => {
   });
 
   it('explains disabled items inline (no hover) and blocks selection', async () => {
-    const onSelect = vi.fn();
+    const onSelect = vi.fn<() => void>();
     renderWithProviders(
       <DropdownMenu
         defaultOpen
@@ -350,9 +369,9 @@ describe('DropdownMenu keyboard ring', () => {
     await waitFor(() => {
       expect(document.querySelector('[role="menu"]')).toBeTruthy();
     });
-    const items = Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"]:not([aria-disabled="true"])'));
+    const items = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]:not([aria-disabled="true"])')];
     fireEvent.focus(items[1]);
-    expect(items[1].getAttribute('data-highlighted')).toBe('true');
+    expect(items[1].dataset.highlighted).toBe('true');
     // CONTAINER-CLIP: the overlay clips; rows stay square.
     expect(items[1].className).toMatch(/_btlr-0px/u);
     expect(items[1].className).toMatch(/_bbrr-0px/u);
@@ -366,11 +385,11 @@ describe('DropdownMenu keyboard ring', () => {
     await waitFor(() => {
       expect(document.querySelector('[role="menu"]')).toBeTruthy();
     });
-    const del = Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"]')).find((el) =>
+    const del = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((el) =>
       el.textContent?.includes('Delete'),
-    ) as HTMLElement;
+    )!;
     fireEvent.focus(del);
-    expect(del.getAttribute('data-highlighted')).toBe('true');
+    expect(del.dataset.highlighted).toBe('true');
     expect(del.className).toMatch(/_btlr-0px/u);
     expect(del.className).toMatch(/_outlineWidth-0focus-visible-0px/u);
   });
@@ -393,20 +412,6 @@ describe('DropdownMenu keyboard ring', () => {
 });
 
 describe('DropdownMenu FloatingPanel cover contract', () => {
-  const renderOpen = () =>
-    renderWithProviders(
-      <DropdownMenu
-        defaultOpen
-        items={[
-          { label: 'Edit' },
-          { label: 'List', checked: true },
-          { separator: true },
-          { label: 'Delete', destructive: true },
-        ]}>
-        <Button>Actions</Button>
-      </DropdownMenu>,
-    );
-
   it('uses FloatingPanel, not a second overlay stack', async () => {
     renderOpen();
     await waitFor(() => {
@@ -422,8 +427,8 @@ describe('DropdownMenu FloatingPanel cover contract', () => {
       expect(document.querySelector('[role="menu"]')).toBeTruthy();
     });
     const menu = document.querySelector('[role="menu"]') as HTMLElement;
-    expect(menu.getAttribute('data-mp-width-mode')).toBe('at-least-trigger');
-    expect(menu.getAttribute('data-dismiss-class')).toBe('commit');
+    expect(menu.dataset.mpWidthMode).toBe('at-least-trigger');
+    expect(menu.dataset.dismissClass).toBe('commit');
   });
 
   it('renders the design-law row grammar (44 / padX 13 / weight 400 / $color3 hover)', async () => {
@@ -431,15 +436,15 @@ describe('DropdownMenu FloatingPanel cover contract', () => {
     await waitFor(() => {
       expect(document.querySelector('[role="menu"]')).toBeTruthy();
     });
-    const edit = Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"]')).find((el) =>
+    const edit = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((el) =>
       el.textContent?.includes('Edit'),
-    ) as HTMLElement;
+    )!;
     expect(edit.className).toMatch(/_pl-t-space-3/u);
     expect(edit.className).toMatch(/_pr-t-space-3/u);
-    expect(edit.getAttribute('data-mp-pad-x')).toBe('13');
-    expect(edit.getAttribute('data-mp-row-height')).toBe('44');
-    expect(edit.getAttribute('data-mp-font-weight')).toBe('400');
-    expect(edit.getAttribute('data-mp-hover-fill')).toBe('$color3');
+    expect(edit.dataset.mpPadX).toBe('13');
+    expect(edit.dataset.mpRowHeight).toBe('44');
+    expect(edit.dataset.mpFontWeight).toBe('400');
+    expect(edit.dataset.mpHoverFill).toBe('$color3');
     expect(edit.className).toMatch(/_btlr-0px/u);
   });
 
@@ -450,9 +455,9 @@ describe('DropdownMenu FloatingPanel cover contract', () => {
     });
     const selected = document.querySelector<HTMLElement>('[role="menuitemcheckbox"]');
     expect(selected?.getAttribute('aria-checked')).toBe('true');
-    expect(selected?.getAttribute('data-mp-selected-fill')).toBe('$color2');
-    const check = selected?.querySelector('[data-mp-check]');
-    expect(check?.getAttribute('data-mp-check')).toBe('trailing');
+    expect(selected?.dataset.mpSelectedFill).toBe('$color2');
+    const check = selected?.querySelector<HTMLElement>('[data-mp-check]');
+    expect(check?.dataset.mpCheck).toBe('trailing');
     expect(selected?.lastElementChild).toBe(check);
   });
 
@@ -502,57 +507,58 @@ describe('DropdownMenu FloatingPanel cover contract', () => {
     await waitFor(() => {
       expect(document.querySelector('[role="menu"]')).toBeTruthy();
     });
-    const edit = Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"]')).find((el) =>
+    const edit = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((el) =>
       el.textContent?.includes('Edit'),
-    ) as HTMLElement;
+    )!;
     fireEvent.focus(edit);
-    expect(edit.getAttribute('data-highlighted')).toBe('true');
-    expect(edit.getAttribute('data-mp-ring-offset')).toBe('0');
+    expect(edit.dataset.highlighted).toBe('true');
+    expect(edit.dataset.mpRingOffset).toBe('0');
   });
 });
 
 describe('DropdownMenu.Content onCloseAutoFocus', () => {
-  for (const preventRestore of [false, true]) {
-    it(`${preventRestore ? 'suppresses' : 'performs'} actual delayed trigger restoration on Escape`, async () => {
-      const onCloseAutoFocus = vi.fn((event) => {
-        if (preventRestore) {
-          event.preventDefault();
-        }
-      });
-      const result = renderWithProviders(
-        <DropdownMenu>
-          <DropdownMenu.Trigger asChild>
-            <Button>Heading</Button>
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Content onCloseAutoFocus={onCloseAutoFocus}>
-            <DropdownMenu.Item>H1</DropdownMenu.Item>
-          </DropdownMenu.Content>
-        </DropdownMenu>,
-      );
-      const trigger = result.getByText('Heading').closest('button')!;
-      trigger.focus();
-      fireEvent.click(trigger);
-      await waitFor(() => {
-        expect(document.querySelector('[role="menuitem"]')).toBeTruthy();
-      });
-      const item = document.querySelector('[role="menuitem"]') as HTMLElement;
-      item.focus();
-      fireEvent.keyDown(item, { key: 'Escape' });
-      await waitFor(() => {
-        expect(document.querySelector('[role="menu"]')).toBeFalsy();
-      });
-      await act(async () => await new Promise((resolve) => setTimeout(resolve, 400)));
-      expect(onCloseAutoFocus).toHaveBeenCalledOnce();
+  it.each([
+    { preventRestore: false, verb: 'performs' },
+    { preventRestore: true, verb: 'suppresses' },
+  ])('$verb actual delayed trigger restoration on Escape', async ({ preventRestore }) => {
+    const onCloseAutoFocus = vi.fn<(event: DropdownMenuCloseAutoFocusEvent) => void>((event) => {
       if (preventRestore) {
-        expect(document.activeElement).not.toBe(trigger);
-      } else {
-        expect(document.activeElement).toBe(trigger);
+        event.preventDefault();
       }
     });
-  }
+    const result = renderWithProviders(
+      <DropdownMenu>
+        <DropdownMenu.Trigger asChild>
+          <Button>Heading</Button>
+        </DropdownMenu.Trigger>
+        <DropdownMenu.Content onCloseAutoFocus={onCloseAutoFocus}>
+          <DropdownMenu.Item>H1</DropdownMenu.Item>
+        </DropdownMenu.Content>
+      </DropdownMenu>,
+    );
+    const trigger = result.getByText('Heading').closest('button')!;
+    trigger.focus();
+    fireEvent.click(trigger);
+    await waitFor(() => {
+      expect(document.querySelector('[role="menuitem"]')).toBeTruthy();
+    });
+    const item = document.querySelector('[role="menuitem"]') as HTMLElement;
+    item.focus();
+    fireEvent.keyDown(item, { key: 'Escape' });
+    await waitFor(() => {
+      expect(document.querySelector('[role="menu"]')).toBeFalsy();
+    });
+    await act(async () => {
+      await sleep(400);
+    });
+    expect(onCloseAutoFocus).toHaveBeenCalledOnce();
+    expect(document.activeElement === trigger, 'trigger regains focus unless preventDefault was called').toBe(
+      !preventRestore,
+    );
+  });
 
   it('fires once when an item select closes the menu', async () => {
-    const onCloseAutoFocus = vi.fn();
+    const onCloseAutoFocus = vi.fn<(event: DropdownMenuCloseAutoFocusEvent) => void>();
     renderWithProviders(
       <DropdownMenu defaultOpen>
         <DropdownMenu.Trigger asChild>
@@ -566,18 +572,16 @@ describe('DropdownMenu.Content onCloseAutoFocus', () => {
     await waitFor(() => {
       expect(document.querySelector('[role="menu"]')).toBeTruthy();
     });
-    fireEvent.click(document.querySelector('[role="menuitem"]') as HTMLElement);
+    fireEvent.click(document.querySelector('[role="menuitem"]')!);
     await waitFor(() => {
       expect(document.querySelector('[role="menu"]')).toBeFalsy();
     });
     expect(onCloseAutoFocus).toHaveBeenCalledOnce();
-    const event = onCloseAutoFocus.mock.calls[0][0] as {
-      preventDefault: () => void;
-      defaultPrevented: boolean;
-    };
-    expect(event.defaultPrevented).toBe(false);
-    event.preventDefault();
-    expect(event.defaultPrevented).toBe(true);
+    const [[closeEvent]] = onCloseAutoFocus.mock.calls;
+    expect(closeEvent.defaultPrevented).toBe(false);
+    // oxlint-disable-next-line github/async-preventdefault -- closeEvent is the menu's synthetic close event, not a DOM event; there is no default action to lose after an await
+    closeEvent.preventDefault();
+    expect(closeEvent.defaultPrevented).toBe(true);
   });
 
   it('fires once when a closeOnSelect=false item closes via the parent open state', async () => {
@@ -585,7 +589,7 @@ describe('DropdownMenu.Content onCloseAutoFocus', () => {
     // false so the item does not ctx.close(), then they setOpen(false)
     // themselves after executeCommand. That is a controlled close, not
     // ctx.close() and not FloatingPanel dismissing on its own.
-    const onCloseAutoFocus = vi.fn();
+    const onCloseAutoFocus = vi.fn<(event: DropdownMenuCloseAutoFocusEvent) => void>();
     const Harness = () => {
       const [open, setOpen] = useState(true);
       return (
@@ -611,7 +615,7 @@ describe('DropdownMenu.Content onCloseAutoFocus', () => {
     await waitFor(() => {
       expect(document.querySelector('[role="menu"]')).toBeTruthy();
     });
-    fireEvent.click(document.querySelector('[role="menuitem"]') as HTMLElement);
+    fireEvent.click(document.querySelector('[role="menuitem"]')!);
     await waitFor(() => {
       expect(document.querySelector('[role="menu"]')).toBeFalsy();
     });

@@ -27,7 +27,8 @@ export default meta;
 
 type Story = StoryObj<typeof MinusRegular>;
 
-const parseSize = (size: unknown): number | string => (/^\d+$/u.test(String(size)) ? Number(size) : (size as string));
+const parseSize = (size: number | string | undefined) =>
+  size !== undefined && /^\d+$/u.test(String(size)) ? Number(size) : size;
 
 export const Default: Story = {
   name: 'Main',

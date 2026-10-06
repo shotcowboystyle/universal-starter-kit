@@ -1,6 +1,5 @@
+// @vitest-environment jsdom
 /**
- * @vitest-environment jsdom
- *
  * Five primitives the house barrel could not express.
  *
  * Collapsible / LinearGradient / VisuallyHidden / Unspaced are
@@ -11,17 +10,17 @@
 import { renderWithProviders } from '@repo/test-utils';
 import { cleanup } from '@testing-library/react';
 import { AlertDialog } from 'tamagui';
-import * as tamagui from 'tamagui';
-import * as tamaguiLinearGradient from 'tamagui/linear-gradient';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { AlertDialogContent, AlertDialogOverlay } from './surfaces';
 
-import * as pkg from './index';
-
-afterEach(cleanup);
+const tamagui = await import('tamagui');
+const tamaguiLinearGradient = await import('tamagui/linear-gradient');
+const pkg = await import('./index');
 
 describe('knob-immune primitives on the house barrel', () => {
+  afterEach(cleanup);
+
   it('isolates the safe Collapsible adapter and preserves other primitives', () => {
     expect(pkg.Collapsible).not.toBe(tamagui.Collapsible);
     expect(pkg.Unspaced).toBe(tamagui.Unspaced);
@@ -31,7 +30,7 @@ describe('knob-immune primitives on the house barrel', () => {
   });
 
   it('exports LinearGradient from the tamagui/linear-gradient subpath (not the main barrel)', () => {
-    expect((tamagui as Record<string, unknown>).LinearGradient).toBeUndefined();
+    expect(new Map<string, unknown>(Object.entries(tamagui)).get('LinearGradient')).toBeUndefined();
     expect(pkg.LinearGradient).toBe(tamaguiLinearGradient.LinearGradient);
   });
 
@@ -92,6 +91,8 @@ describe('knob-immune primitives on the house barrel', () => {
 });
 
 describe('house AlertDialog surface', () => {
+  afterEach(cleanup);
+
   it('is not the raw AlertDialog.Content (baked elevate chrome)', () => {
     expect(pkg.AlertDialogContent).toBe(AlertDialogContent);
     expect(pkg.AlertDialogContent).not.toBe(AlertDialog.Content);

@@ -11,7 +11,7 @@ import { Theme, useTheme } from 'tamagui';
 import { describe, expect, it } from 'vitest';
 
 const ThemeValue = ({ name }: { name: string }) => {
-  const theme = useTheme() as unknown as Record<string, { val?: unknown } | undefined>;
+  const theme = useTheme() as unknown as Record<string, { val?: number | string } | undefined>;
   return (
     <span
       data-theme-value={name}
@@ -23,8 +23,8 @@ const ThemeValue = ({ name }: { name: string }) => {
 const fillOf = (container: HTMLElement, testId: string) =>
   container.querySelector(`[data-testid="${testId}"]`)?.getAttribute('fill') ?? '';
 
-const valueOf = (container: HTMLElement, name: string) =>
-  container.querySelector(`[data-theme-value="${name}"]`)?.getAttribute('data-val') ?? '';
+const themeValueOf = (container: HTMLElement, name: string) =>
+  container.querySelector<HTMLElement>(`[data-theme-value="${name}"]`)?.dataset.val ?? '';
 
 describe('phosphor glyph token colour on web', () => {
   it("paints $color9 with the theme's resolved colour, not the token string", () => {
@@ -38,8 +38,8 @@ describe('phosphor glyph token colour on web', () => {
       </>,
     );
     const fill = fillOf(container, 'glyph');
-    expect(valueOf(container, 'color9')).not.toBe('');
-    expect(fill).toBe(valueOf(container, 'color9'));
+    expect(themeValueOf(container, 'color9')).not.toBe('');
+    expect(fill).toBe(themeValueOf(container, 'color9'));
     expect(fill.startsWith('$')).toBe(false);
   });
 
@@ -60,7 +60,7 @@ describe('phosphor glyph token colour on web', () => {
       </>,
     );
     const dark = fillOf(container, 'dark');
-    expect(dark).toBe(valueOf(container, 'color11'));
+    expect(dark).toBe(themeValueOf(container, 'color11'));
     expect(dark).not.toBe(fillOf(container, 'light'));
   });
 
@@ -75,8 +75,8 @@ describe('phosphor glyph token colour on web', () => {
         <ThemeValue name="red11" />
       </>,
     );
-    expect(valueOf(container, 'red11')).not.toBe('');
-    expect(fillOf(container, 'glyph')).toBe(valueOf(container, 'red11'));
+    expect(themeValueOf(container, 'red11')).not.toBe('');
+    expect(fillOf(container, 'glyph')).toBe(themeValueOf(container, 'red11'));
   });
 
   it('leaves a literal colour alone', () => {
@@ -104,7 +104,7 @@ describe('phosphor glyph token colour on web', () => {
         <ThemeValue name="color" />
       </>,
     );
-    expect(valueOf(container, 'color')).not.toBe('');
-    expect(fillOf(container, 'glyph')).toBe(valueOf(container, 'color'));
+    expect(themeValueOf(container, 'color')).not.toBe('');
+    expect(fillOf(container, 'glyph')).toBe(themeValueOf(container, 'color'));
   });
 });

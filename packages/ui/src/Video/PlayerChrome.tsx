@@ -10,7 +10,7 @@ import { MIN_PRESS_TARGET, ensureKeyboardModalityTracking, useResolvedKnobs, tra
 import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { SizableText, Theme, View, XStack, YStack, getTokens } from 'tamagui';
+import { SizableText, Theme, View, XStack, YStack, getTokens, getVariableValue } from 'tamagui';
 
 import { componentColors } from '../component-colors';
 
@@ -33,6 +33,9 @@ export interface PlayerChromeProps {
   onSeekingChange: (seeking: boolean) => void;
 }
 
+const padTwo = (n: number) => String(n).padStart(2, '0');
+
+// oxlint-disable-next-line react-doctor/only-export-components -- pure formatter co-located with the chrome that renders it; unit-tested directly
 export const formatPlayerTime = (seconds: number): string => {
   if (!Number.isFinite(seconds) || seconds < 0) {
     return '0:00';
@@ -41,11 +44,31 @@ export const formatPlayerTime = (seconds: number): string => {
   const h = Math.floor(total / 3600);
   const m = Math.floor((total % 3600) / 60);
   const s = total % 60;
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+  return h > 0 ? `${h}:${padTwo(m)}:${padTwo(s)}` : `${m}:${padTwo(s)}`;
 };
 
-const activateOnKey = (e: { key?: string; preventDefault?: () => void }, action: () => void) => {
+/** House ink for glyphs painted with `currentColor`; Tamagui forwards `color` on stacks at runtime. */
+const INHERIT_INK = { color: '$color12' } as const;
+
+/** Tabular digits keep the clock from jittering as it ticks (web `style` passthrough). */
+const TABULAR_NUMS = { style: { fontVariantNumeric: 'tabular-nums' } };
+
+interface KeyEventLike {
+  key?: string;
+  preventDefault?: () => void;
+  stopPropagation?: () => void;
+}
+
+const sizePxOf = (token: string): number | undefined => {
+  const entry = Object.entries(getTokens().size).find(([name]) => name === token)?.[1];
+  if (entry == null) {
+    return undefined;
+  }
+  const value: unknown = getVariableValue(entry);
+  return Number.isFinite(value) ? Number(value) : undefined;
+};
+
+const activateOnKey = (e: KeyEventLike, action: () => void) => {
   if (e.key === 'Enter' || e.key === ' ') {
     e.preventDefault?.();
     action();
@@ -68,6 +91,7 @@ const ChromeButton = ({
   const { control, knobProps } = useResolvedKnobs({ component: 'Video' });
   return (
     <View
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- cross-platform Tamagui View carrying a custom keyboard contract, not a DOM <button>
       role="button"
       aria-label={label}
       tabIndex={0}
@@ -78,7 +102,7 @@ const ChromeButton = ({
       alignItems="center"
       justifyContent="center"
       cursor="pointer"
-      {...({ color: '$color12' } as Record<string, unknown>)}
+      {...INHERIT_INK}
       borderRadius={radius}
       hoverStyle={{ backgroundColor: '$color4' }}
       pressStyle={{ opacity: 0.85 }}
@@ -88,14 +112,14 @@ const ChromeButton = ({
         e.stopPropagation?.();
         onPress();
       }}
-      {...({
-        onKeyDown: (e: { key?: string; preventDefault?: () => void; stopPropagation?: () => void }) => {
+      {...{
+        onKeyDown: (e: KeyEventLike) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.stopPropagation?.();
           }
           activateOnKey(e, onPress);
         },
-      } as Record<string, unknown>)}>
+      }}>
       {children}
     </View>
   );
@@ -139,6 +163,7 @@ const SeekBar = ({
       flex={1}
       height={MIN_PRESS_TARGET}
       justifyContent="center"
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- custom pointer/keyboard scrubber on a cross-platform Tamagui stack, not a DOM <input type=range>
       role="slider"
       aria-label={t('Seek')}
       aria-valuemin={0}
@@ -148,7 +173,7 @@ const SeekBar = ({
       cursor="pointer"
       direction="ltr"
       focusVisibleStyle={{ ...control.focusVisibleKnobProps }}
-      {...({
+      {...{
         onHoverIn: () => {
           setHot(true);
         },
@@ -164,7 +189,7 @@ const SeekBar = ({
           e.stopPropagation?.();
           e.preventDefault?.();
           const target = e.currentTarget;
-          if (!target || e.clientX == null) {
+          if (target == null || e.clientX == null) {
             return;
           }
           onSeekingChange(true);
@@ -180,7 +205,7 @@ const SeekBar = ({
           window.addEventListener('pointermove', move);
           window.addEventListener('pointerup', up);
         },
-        onKeyDown: (e: { key?: string; preventDefault?: () => void; stopPropagation?: () => void }) => {
+        onKeyDown: (e: KeyEventLike) => {
           if (max <= 0) {
             return;
           }
@@ -203,7 +228,7 @@ const SeekBar = ({
             onSeek(max);
           }
         },
-      } as Record<string, unknown>)}>
+      }}>
       <YStack
         position="relative"
         width="100%"
@@ -268,22 +293,18 @@ export const PlayerChrome = ({
     ensureKeyboardModalityTracking();
   }, []);
 
-  const sizePx =
-    (getTokens().size as Record<string, { val?: number } | undefined>)?.[knobProps.sizeToken]?.val ?? MIN_PRESS_TARGET;
+  const sizePx = sizePxOf(knobProps.sizeToken) ?? MIN_PRESS_TARGET;
   const target = Math.max(sizePx, MIN_PRESS_TARGET);
   const glyph = Math.max(16, Math.round(sizePx / 2));
   const radius = knobProps.pointy ? 0 : 1000;
   const centerToken = knobProps.density === 'compact' ? knobProps.sizeToken : '$6';
-  const centerPx = Math.max(
-    target,
-    (getTokens().size as Record<string, { val?: number } | undefined>)?.[centerToken]?.val ?? 64,
-  );
+  const centerPx = Math.max(target, sizePxOf(centerToken) ?? 64);
   const centerGlyph = Math.round(centerPx * 0.45);
 
   return (
     <Theme name="dark">
       <YStack
-        {...({ 'data-testid': 'video-chrome' } as Record<string, unknown>)}
+        data-testid="video-chrome"
         position="absolute"
         top={0}
         right={0}
@@ -294,8 +315,8 @@ export const PlayerChrome = ({
         pointerEvents={visible ? 'box-none' : 'none'}
         justifyContent="space-between"
         // Web hover + focus-capture handlers Tamagui forwards at runtime; the
-        // RN-flavored View prop type omits them (house Record cast).
-        {...({
+        // RN-flavored View prop type omits them.
+        {...{
           onHoverIn: () => {
             onHoverChange(true);
           },
@@ -305,17 +326,14 @@ export const PlayerChrome = ({
           onFocusCapture: () => {
             onFocusChange(true);
           },
-          onBlurCapture: (e: {
-            currentTarget?: { contains?: (n: unknown) => boolean };
-            nativeEvent?: { relatedTarget?: unknown };
-          }) => {
+          onBlurCapture: (e: { currentTarget?: Node; nativeEvent?: { relatedTarget?: EventTarget | null } }) => {
             const next = e.nativeEvent?.relatedTarget;
-            if (next && e.currentTarget?.contains?.(next)) {
+            if (next instanceof Node && e.currentTarget?.contains(next) === true) {
               return;
             }
             onFocusChange(false);
           },
-        } as Record<string, unknown>)}
+        }}
         {...transitionProps(knobProps.transition)}>
         <YStack
           flex={1}
@@ -336,7 +354,7 @@ export const PlayerChrome = ({
                   justifyContent="center"
                   backgroundColor="$color3"
                   borderRadius={radius}
-                  {...({ color: '$color12' } as Record<string, unknown>)}>
+                  {...INHERIT_INK}>
                   <PlayIcon
                     size={centerGlyph}
                     color="currentColor"
@@ -390,7 +408,7 @@ export const PlayerChrome = ({
               color="$color12"
               minWidth={36}
               textAlign="right"
-              {...({ style: { fontVariantNumeric: 'tabular-nums' } } as Record<string, unknown>)}>
+              {...TABULAR_NUMS}>
               {formatPlayerTime(currentTime)}
             </SizableText>
             <SeekBar
@@ -404,7 +422,7 @@ export const PlayerChrome = ({
               {...knobProps.label}
               color="$color12"
               minWidth={36}
-              {...({ style: { fontVariantNumeric: 'tabular-nums' } } as Record<string, unknown>)}>
+              {...TABULAR_NUMS}>
               {formatPlayerTime(duration)}
             </SizableText>
             <ChromeButton

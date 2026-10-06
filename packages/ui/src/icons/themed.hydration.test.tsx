@@ -9,8 +9,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { themed } from './themed';
 
 const host = vi.hoisted(() => ({ touch: false }));
-vi.mock('@repo/platform', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@repo/platform')>()),
+vi.mock(import('@repo/platform'), async (importOriginal) => ({
+  ...(await importOriginal()),
   isWeb: true,
   isTouchable: false,
   get isWebTouchable() {
@@ -20,6 +20,7 @@ vi.mock('@repo/platform', async (importOriginal) => ({
 
 const Icon = themed(({ size }: { size?: string | number }) => (
   <svg
+    aria-hidden="true"
     width={size}
     height={size}
   />
@@ -34,7 +35,7 @@ describe('token icon hydration', () => {
   it('preserves the server SVG before adopting touch sizing', async () => {
     host.touch = false;
     const container = document.createElement('div');
-    container.innerHTML = renderToString(<Fixture />);
+    container.insertAdjacentHTML('beforeend', renderToString(<Fixture />));
     document.body.append(container);
     const icon = container.querySelector('svg');
     const errors: unknown[] = [];

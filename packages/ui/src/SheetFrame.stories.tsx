@@ -7,6 +7,10 @@ import { isWeb, Paragraph, SizableText, YStack } from 'tamagui';
 import { SheetModal } from './SheetModal';
 import { SheetFrame } from './surfaces';
 
+const noopCleanup = (): void => {
+  // Nothing was subscribed, so there is nothing to undo.
+};
+
 const SheetHarness = ({ long = false, startOpen = true }: { long?: boolean; startOpen?: boolean }) => {
   const [open, setOpen] = useState(startOpen);
   // Tamagui Sheet has no key handling of its own (Dialog dismisses via
@@ -15,7 +19,7 @@ const SheetHarness = ({ long = false, startOpen = true }: { long?: boolean; star
   // that own Escape stopPropagation() and keep the sheet open.
   useEffect(() => {
     if (!isWeb || !open) {
-      return;
+      return noopCleanup;
     }
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape' || event.defaultPrevented) {
