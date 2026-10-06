@@ -112,7 +112,7 @@ export const readComputedCornerShape = (
   return fromProp || fromIdl;
 };
 
-const normalizeCornerShape = (value: string): string => value.trim().toLowerCase().replaceAll(/\s+/g, '');
+const normalizeCornerShape = (value: string): string => value.trim().toLowerCase().replaceAll(/\s+/gu, '');
 
 /** True for specified `squircle` and the measured Chrome computed form `superellipse(2)`. */
 export const isSmoothComputedCornerShape = (value: string): boolean => {

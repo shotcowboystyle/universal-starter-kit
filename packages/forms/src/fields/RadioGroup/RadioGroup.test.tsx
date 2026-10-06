@@ -576,8 +576,8 @@ describe('RadioGroup Components', () => {
         );
         const radios = [...result.container.querySelectorAll('[role="radio"]')];
         for (const radio of radios) {
-          expect(classOf(radio)).toMatch(/outlineWidth-0focus-visible-0px/);
-          expect(classOf(radio)).not.toMatch(/outlineWidth-2px/);
+          expect(classOf(radio)).toMatch(/outlineWidth-0focus-visible-0px/u);
+          expect(classOf(radio)).not.toMatch(/outlineWidth-2px/u);
         }
       });
     });
@@ -610,7 +610,7 @@ describe('RadioGroup Components', () => {
         );
         const el = disc(result.container);
         expect(el).toBeTruthy();
-        expect(classOf(el!)).toMatch(/1000/);
+        expect(classOf(el!)).toMatch(/1000/u);
         expect(el?.getAttribute('data-radius-class')).toBe('R-IDENTITY');
       });
 
@@ -626,7 +626,7 @@ describe('RadioGroup Components', () => {
         );
         const el = disc(result.container);
         expect(el).toBeTruthy();
-        expect(classOf(el!)).toMatch(/1000/);
+        expect(classOf(el!)).toMatch(/1000/u);
         expect(el?.getAttribute('data-radius-class')).toBe('R-IDENTITY');
       });
     });

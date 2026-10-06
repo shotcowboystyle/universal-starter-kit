@@ -251,7 +251,7 @@ const tokenPx = (token: string | number, scale: 'radius' | 'space'): number => {
   if (typeof token === 'number') {
     return token;
   }
-  const key = String(token).replace(/^\$/, '');
+  const key = String(token).replace(/^\$/u, '');
   const val = (getTokens() as { [k: string]: Record<string, { val?: number }> })[scale]?.[key]?.val;
   if (typeof val === 'number') {
     return val;

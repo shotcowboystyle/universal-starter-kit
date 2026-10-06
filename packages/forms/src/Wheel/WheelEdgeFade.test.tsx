@@ -77,18 +77,18 @@ describe('WheelEdgeFade — native', () => {
   it('pins one band to the top and one to the bottom', () => {
     const { container } = renderWithProviders(<NativeWheelEdgeFade height={30} />);
     const edges = bands(container).map((node) => node.getAttribute('style') ?? '');
-    expect(edges.some((style) => /top:\s*0px/.test(style))).toBe(true);
-    expect(edges.some((style) => /bottom:\s*0px/.test(style))).toBe(true);
+    expect(edges.some((style) => /top:\s*0px/u.test(style))).toBe(true);
+    expect(edges.some((style) => /bottom:\s*0px/u.test(style))).toBe(true);
   });
 
   it('gives each band the height it was handed, so the caller sets the fade depth', () => {
     const { container } = renderWithProviders(<NativeWheelEdgeFade height={30} />);
-    const heights = bands(container).map((node) => /height:\s*(\d+)px/.exec(node.getAttribute('style') ?? '')?.[1]);
+    const heights = bands(container).map((node) => /height:\s*(\d+)px/u.exec(node.getAttribute('style') ?? '')?.[1]);
     expect(heights.filter(Boolean)).toStrictEqual(['30', '30']);
     cleanup();
     const taller = renderWithProviders(<NativeWheelEdgeFade height={64} />);
     expect(
-      bands(taller.container).map((node) => /height:\s*(\d+)px/.exec(node.getAttribute('style') ?? '')?.[1]),
+      bands(taller.container).map((node) => /height:\s*(\d+)px/u.exec(node.getAttribute('style') ?? '')?.[1]),
     ).toStrictEqual(['64', '64']);
   });
 
@@ -109,8 +109,8 @@ describe('WheelEdgeFade — native', () => {
     // and ends transparent, the bottom does the reverse.
     expect(top[0]).toBe(bottom[1]);
     expect(top[1]).toBe(bottom[0]);
-    expect(top[1]).toMatch(/,\s*0\)$/);
-    expect(top[0]).not.toMatch(/,\s*0\)$/);
+    expect(top[1]).toMatch(/,\s*0\)$/u);
+    expect(top[0]).not.toMatch(/,\s*0\)$/u);
   });
 
   it('derives the fade colour from the theme background rather than a hardcoded white', () => {
@@ -120,7 +120,7 @@ describe('WheelEdgeFade — native', () => {
     expect(opaque).not.toBe('transparent');
     // The clear stop is the SAME colour at zero alpha, so the band never
     // shifts hue across its length.
-    const channels = /rgba\(([^)]+),\s*0\)$/.exec(clear)?.[1];
+    const channels = /rgba\(([^)]+),\s*0\)$/u.exec(clear)?.[1];
     expect(channels, `clear stop ${clear} must be the opaque stop at alpha 0`).toBeTruthy();
   });
 

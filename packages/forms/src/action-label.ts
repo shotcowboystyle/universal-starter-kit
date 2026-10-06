@@ -2,7 +2,7 @@
  * Action labels are verb (+ optional noun), sentence case, no articles.
  */
 
-const LEADING_ARTICLE = /^(the|a|an)\s+/i;
+const LEADING_ARTICLE = /^(the|a|an)\s+/iu;
 
 export interface ActionLabelParts {
   verb: string;
@@ -17,7 +17,7 @@ const sentenceCaseWord = (word: string): string => {
 };
 
 const normalizePart = (raw: string): string => {
-  const trimmed = raw.trim().replaceAll(/\s+/g, ' ');
+  const trimmed = raw.trim().replaceAll(/\s+/gu, ' ');
   if (!trimmed) {
     return '';
   }

@@ -105,7 +105,7 @@ const scopeOf = (el: Element): string | null => {
 };
 
 const resolveInScope = (value: string, scheme: Scheme, scope: string | null): string => {
-  const token = /^var\(--([\w-]+)\)$/.exec(value)?.[1];
+  const token = /^var\(--([\w-]+)\)$/u.exec(value)?.[1];
   if (!token) {
     return value;
   }
@@ -129,7 +129,7 @@ const resolveInScope = (value: string, scheme: Scheme, scope: string | null): st
 /** What `el` paints for one atomic property: `_bg-` → background-color. */
 const painted = (el: Element, prefix: string, property: string, scheme: Scheme): string => {
   const cls = Array.from(el.classList).find(
-    (c) => c.startsWith(prefix) && !/^_[a-z]+-0(hover|active|focus|press)/.test(c),
+    (c) => c.startsWith(prefix) && !/^_[a-z]+-0(hover|active|focus|press)/u.test(c),
   );
   if (!cls) {
     throw new Error(`${el.tagName} carries no ${prefix} class`);

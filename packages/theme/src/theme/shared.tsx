@@ -113,7 +113,7 @@ const extractThemeColors = (themes: Record<string, unknown>): string[] => {
   const keys = Object.keys(themes);
   const colorSet = new Set<string>();
   for (const key of keys) {
-    const match = /^light_([a-z]+)$/.exec(key);
+    const match = /^light_([a-z]+)$/u.exec(key);
     if (match) {
       const color = match[1];
       if (keys.includes(`dark_${color}`) && !excludedThemeNames.has(color)) {

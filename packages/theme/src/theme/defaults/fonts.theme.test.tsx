@@ -86,7 +86,7 @@ const measureLabel = (bodyFont: (typeof BODY_STOPS)[number]['stop'], scheme: 'li
     host,
     knobs,
     family,
-    firstFamily: family.split(',')[0]?.replaceAll(/['"]/g, '').trim() ?? '',
+    firstFamily: family.split(',')[0]?.replaceAll(/['"]/gu, '').trim() ?? '',
     fontSize: px(cs.fontSize),
     lineHeight: cs.lineHeight.trim(),
     lineHeightPx: px(cs.lineHeight),

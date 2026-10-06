@@ -26,7 +26,7 @@ import { getFieldError, mergeFieldHandler, useFormField, useResolvedValidators }
 import { Skeleton } from '../../Skeleton';
 import type { AnyFormApi } from '../../types';
 
-const IMAGE_EXT = /\.(avif|bmp|gif|heic|heif|jpe?g|png|svg|webp)$/i;
+const IMAGE_EXT = /\.(avif|bmp|gif|heic|heif|jpe?g|png|svg|webp)$/iu;
 const CAPTION_MIN_EDGE = 56;
 
 export interface ImageFieldProps {

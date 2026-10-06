@@ -44,16 +44,16 @@ import { isDrawingFile, readDrawingRegistry } from './drawing-registry.mjs';
 import { readSlotMarginRegistry } from './spec-registry.mjs';
 
 /** Hex + functional CSS colour literals. AST-visited only (not a text scan). */
-export const COLOR_LITERAL = /#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b|(?:rgba?|hsla?)\([^)]*\)/i;
+export const COLOR_LITERAL = /#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b|(?:rgba?|hsla?)\([^)]*\)/iu;
 
 /** Palette modules where a 12-step ramp in hex/hsl is the deliverable (EN-2). */
-export const PALETTE_FILE = /(?:^|\/)themes\/(base|accent)\.(tsx?|jsx?)$|(?:^|\/)[^/]*palette[^/]*\.(tsx?|jsx?)$/i;
+export const PALETTE_FILE = /(?:^|\/)themes\/(base|accent)\.(tsx?|jsx?)$|(?:^|\/)[^/]*palette[^/]*\.(tsx?|jsx?)$/iu;
 
 /**
  * A `hex-escape: <reason>` line or block comment. A JSDoc `*` line or a
  * backticked mention is prose about the marker, not the marker.
  */
-const HEX_ESCAPE_COMMENT = /(?<!`)(?:\/\/|\/\*)\s*hex-escape:\s*(.*?)\s*(?:\*\/.*)?$/;
+const HEX_ESCAPE_COMMENT = /(?<!`)(?:\/\/|\/\*)\s*hex-escape:\s*(.*?)\s*(?:\*\/.*)?$/u;
 
 /**
  * Every `hex-escape:` comment in a source file, with the reason it writes.
@@ -87,8 +87,8 @@ const sourceText = (context) => {
   return ctx?.sourceCode?.text ?? ctx?.getSourceCode?.()?.text ?? '';
 };
 
-const RAW_TYPOGRAPHY_HATCH = /^Tamagui(?:Text|SizableText|Paragraph|Heading|H[1-6]|Anchor)$/;
-const HOUSE_PACKAGE = /^@repo\//;
+const RAW_TYPOGRAPHY_HATCH = /^Tamagui(?:Text|SizableText|Paragraph|Heading|H[1-6]|Anchor)$/u;
+const HOUSE_PACKAGE = /^@repo\//u;
 
 /**
  * Chrome props banned on imported `@repo/*` components
@@ -190,7 +190,7 @@ export const MARGIN_PROPS = Object.freeze([
 
 const CHROME_PROP_SET = new Set(CHROME_PROPS);
 const MARGIN_PROP_SET = new Set(MARGIN_PROPS);
-const ZERO_VALUE = /^(?:-?0(?:\.0+)?(?:px)?|\$0)$/;
+const ZERO_VALUE = /^(?:-?0(?:\.0+)?(?:px)?|\$0)$/u;
 const GEOMETRY_PROP_SET = new Set(GEOMETRY_PROPS);
 
 const RULE_OPTIONS_SCHEMA = [

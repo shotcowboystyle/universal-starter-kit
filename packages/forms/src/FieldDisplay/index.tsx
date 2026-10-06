@@ -658,8 +658,8 @@ const RichTextDisplay = ({ value }: { value: any }) => {
   const text =
     typeof value === 'string'
       ? value
-          .replaceAll(/<[^>]+>/g, ' ')
-          .replaceAll(/\s+/g, ' ')
+          .replaceAll(/<[^>]+>/gu, ' ')
+          .replaceAll(/\s+/gu, ' ')
           .trim()
       : asText(value);
   if (!text) {

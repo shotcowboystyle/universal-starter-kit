@@ -102,23 +102,23 @@ describe('TaskCard', () => {
 
   it('should render creator information', () => {
     render(<TaskCard task={mockTask} />);
-    expect(screen.getByText(/createdBy: John/)).toBeInTheDocument();
+    expect(screen.getByText(/createdBy: John/u)).toBeInTheDocument();
   });
 
   it('should render last modifier information', () => {
     render(<TaskCard task={mockTask} />);
-    expect(screen.getByText(/lastModifiedBy: Jane/)).toBeInTheDocument();
+    expect(screen.getByText(/lastModifiedBy: Jane/u)).toBeInTheDocument();
   });
 
   it('should render assignee information', () => {
     render(<TaskCard task={mockTask} />);
-    expect(screen.getByText(/assignee: Bob/)).toBeInTheDocument();
+    expect(screen.getByText(/assignee: Bob/u)).toBeInTheDocument();
   });
 
   it('should render due date', () => {
     render(<TaskCard task={mockTask} />);
-    expect(screen.getByText(/dueDate/)).toBeInTheDocument();
-    expect(screen.getByText(/2025\/12\/31/)).toBeInTheDocument();
+    expect(screen.getByText(/dueDate/u)).toBeInTheDocument();
+    expect(screen.getByText(/2025\/12\/31/u)).toBeInTheDocument();
   });
 
   it('should render TaskActions component', () => {
@@ -141,25 +141,25 @@ describe('TaskCard', () => {
   it('should render without creator', () => {
     const taskWithoutCreator = { ...mockTask, creator: undefined } as unknown as Task;
     render(<TaskCard task={taskWithoutCreator} />);
-    expect(screen.queryByText(/createdBy/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/createdBy/u)).not.toBeInTheDocument();
   });
 
   it('should render without last modifier', () => {
     const taskWithoutModifier = { ...mockTask, lastModifier: undefined } as unknown as Task;
     render(<TaskCard task={taskWithoutModifier} />);
-    expect(screen.queryByText(/lastModifiedBy/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/lastModifiedBy/u)).not.toBeInTheDocument();
   });
 
   it('should render without assignee', () => {
     const taskWithoutAssignee = { ...mockTask, assignee: undefined };
     render(<TaskCard task={taskWithoutAssignee} />);
-    expect(screen.queryByText(/assignee/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/assignee/u)).not.toBeInTheDocument();
   });
 
   it('should render without due date', () => {
     const taskWithoutDueDate = { ...mockTask, dueDate: undefined };
     render(<TaskCard task={taskWithoutDueDate} />);
-    expect(screen.queryByText(/dueDate/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/dueDate/u)).not.toBeInTheDocument();
   });
 
   it('should render with drag enabled', () => {

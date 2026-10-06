@@ -25,7 +25,7 @@ const segmentWidthPx = (el: Element | null): number => {
     return 0;
   }
   const attr = input.getAttribute('width');
-  if (attr && /^\d+(\.\d+)?$/.test(attr)) {
+  if (attr && /^\d+(\.\d+)?$/u.test(attr)) {
     return Number(attr);
   }
   const style = input.style.width;
@@ -37,7 +37,7 @@ const segmentWidthPx = (el: Element | null): number => {
 
 const skeletonWidthOrHeight = (el: HTMLElement, axis: 'height' | 'width'): number => {
   const attr = el.getAttribute(axis);
-  if (attr && /^\d+(\.\d+)?$/.test(attr)) {
+  if (attr && /^\d+(\.\d+)?$/u.test(attr)) {
     return Number(attr);
   }
   const style = axis === 'height' ? el.style.height : el.style.width;
@@ -223,8 +223,8 @@ describe('Duration', () => {
       const row = result.container.querySelector('[data-duration-row]') as HTMLElement;
       expect(box).toBeTruthy();
       expect(row).toBeTruthy();
-      expect(getComputedStyle(box).justifyContent).toMatch(/flex-start|start/);
-      expect(getComputedStyle(row).justifyContent).toMatch(/flex-start|start/);
+      expect(getComputedStyle(box).justifyContent).toMatch(/flex-start|start/u);
+      expect(getComputedStyle(row).justifyContent).toMatch(/flex-start|start/u);
     });
 
     it('keeps segment inputs inside the box at size $3', () => {
@@ -243,11 +243,11 @@ describe('Duration', () => {
       expect(Number(hours.getAttribute('data-duration-input-height'))).toBe(recipeHeight);
       const attrHeight = (el: HTMLElement) => {
         const a = el.getAttribute('height');
-        if (a && /^\d+(\.\d+)?$/.test(a)) {
+        if (a && /^\d+(\.\d+)?$/u.test(a)) {
           return Number(a);
         }
         const s = el.style.height;
-        if (s && /^\d+(\.\d+)?(px)?$/.test(s)) {
+        if (s && /^\d+(\.\d+)?(px)?$/u.test(s)) {
           return Number.parseFloat(s);
         }
         return 0;
@@ -343,9 +343,9 @@ describe('Duration', () => {
       const box = result.container.querySelector("[data-ring-target='box']") as HTMLElement;
       const hours = result.container.querySelector('input[aria-label="Hours"]') as HTMLInputElement;
       expect(box).toBeTruthy();
-      expect(box.className).toMatch(/mp-composite-ring/);
+      expect(box.className).toMatch(/mp-composite-ring/u);
       expect(box.contains(hours)).toBe(true);
-      expect(hours.className).toMatch(/mp-input-area/);
+      expect(hours.className).toMatch(/mp-input-area/u);
     });
 
     it('fires onChange with seconds from a preset', () => {

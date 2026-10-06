@@ -118,7 +118,7 @@ const compileRoute = (def: RouteDef): CompiledRoute => {
     .split('/')
     .filter(Boolean)
     .map((seg) => {
-      const m = /^\[(\.{3})?(.+)\]$/.exec(seg);
+      const m = /^\[(\.{3})?(.+)\]$/u.exec(seg);
       return m ? { param: m[2] } : { literal: seg };
     });
   return { ...def, segments };

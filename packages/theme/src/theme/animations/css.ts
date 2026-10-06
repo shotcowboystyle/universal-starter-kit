@@ -29,7 +29,7 @@ export const animationNames = Object.keys(animationConfig) as AnimationName[];
 export const animations = createAnimations(animationConfig);
 
 const parseDurationMs = (timing: string): number => {
-  const match = /(\d+)\s*ms/.exec(timing);
+  const match = /(\d+)\s*ms/u.exec(timing);
   return match ? Number.parseInt(match[1], 10) : 200;
 };
 

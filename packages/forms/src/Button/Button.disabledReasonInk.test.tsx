@@ -76,7 +76,7 @@ const scopeThemeKey = (node: HTMLElement, scheme: string): string => {
 };
 
 const resolvedInk = (node: HTMLElement, scheme: string): { key: string; token: string; ink: string } => {
-  const token = /(?:^|\s)_col-(\w+)(?:\s|$)/.exec(node.className)?.[1];
+  const token = /(?:^|\s)_col-(\w+)(?:\s|$)/u.exec(node.className)?.[1];
   expect(token, `reason carries a colour token class: ${node.className}`).toBeTruthy();
   const key = scopeThemeKey(node, scheme);
   const ink = houseThemes[key]?.[token!];

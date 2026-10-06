@@ -40,7 +40,7 @@ export const isSvgUri = (uri: string | undefined, svgFlag?: boolean): boolean =>
   if (!uri) {
     return false;
   }
-  return /\.svg([?#]|$)/.test(uri) || uri.startsWith('data:image/svg+xml');
+  return /\.svg([?#]|$)/u.test(uri) || uri.startsWith('data:image/svg+xml');
 };
 
 export const useResolvedImageSource = (sourceProp: unknown, src: unknown) => {

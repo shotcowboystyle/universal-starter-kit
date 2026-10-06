@@ -804,14 +804,14 @@ describe('OTPInput', () => {
         return Number.parseFloat(inline) || 0;
       }
       const atom = String((el as HTMLElement).className || '')
-        .split(/\s+/)
-        .find((c) => c.startsWith('_btlr-') || /^_br\d/.test(c) || c.startsWith('_br-'));
+        .split(/\s+/u)
+        .find((c) => c.startsWith('_btlr-') || /^_br\d/u.test(c) || c.startsWith('_br-'));
       if (atom) {
-        const px = /(\d+(?:\.\d+)?)px$/.exec(atom);
+        const px = /(\d+(?:\.\d+)?)px$/u.exec(atom);
         if (px) {
           return Number.parseFloat(px[1]);
         }
-        const token = /t-radius-(\d+)$/.exec(atom);
+        const token = /t-radius-(\d+)$/u.exec(atom);
         if (token) {
           const tokenPx: Record<string, number> = {
             '0': 0,

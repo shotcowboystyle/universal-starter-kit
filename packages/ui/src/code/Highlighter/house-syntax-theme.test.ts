@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 
 import { highlightCode, houseSyntaxTheme } from './index';
 
-const houseInk = /^\$(color11|color12|syntax(Purple|Green|Blue|Orange|Red))$/;
+const houseInk = /^\$(color11|color12|syntax(Purple|Green|Blue|Orange|Red))$/u;
 
 const sample = `// Greets a user
 export function greet(user: User, retries = 3): string {

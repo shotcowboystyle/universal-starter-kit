@@ -65,6 +65,6 @@ describe('treeDefaultHeight', () => {
 describe('TREE_LIFT_SHADOW', () => {
   it('uses a theme token, not a hex (design-audit inline color)', () => {
     expect(TREE_LIFT_SHADOW.shadowColor).toBe('$shadowColor');
-    expect(String(TREE_LIFT_SHADOW.shadowColor)).not.toMatch(/^#/);
+    expect(String(TREE_LIFT_SHADOW.shadowColor)).not.toMatch(/^#/u);
   });
 });

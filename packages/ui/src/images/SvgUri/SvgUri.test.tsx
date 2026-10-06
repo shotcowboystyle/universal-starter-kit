@@ -181,7 +181,7 @@ describe('SvgUri', () => {
     const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'index.tsx'), 'utf-8');
     const native = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'index.native.ts'), 'utf-8');
     expect(src).toContain('getVariable(useTheme().color)');
-    expect(src).not.toMatch(/#[0-9A-Fa-f]{3,8}/);
-    expect(native).toMatch(/color: ['"]\$color['"]/);
+    expect(src).not.toMatch(/#[0-9A-Fa-f]{3,8}/u);
+    expect(native).toMatch(/color: ['"]\$color['"]/u);
   });
 });

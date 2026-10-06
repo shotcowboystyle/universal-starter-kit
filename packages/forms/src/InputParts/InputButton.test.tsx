@@ -19,7 +19,7 @@ describe('Input.Button', () => {
     );
     const btn = result.container.querySelector("[aria-label='cap']") as HTMLElement;
     expect(btn).not.toBeNull();
-    expect(btn.className).not.toMatch(/mp-chip-dismiss/);
+    expect(btn.className).not.toMatch(/mp-chip-dismiss/u);
     expect(btn.querySelector('.mp-chip-dismiss-ring')).toBeNull();
   });
 
@@ -39,8 +39,8 @@ describe('Input.Button', () => {
     const btn = result.container.querySelector("[aria-label='Show password']") as HTMLElement;
     expect(btn).not.toBeNull();
     expect(btn.getAttribute('tabindex')).toBe('0');
-    expect(btn.className).toMatch(/mp-chip-dismiss/);
-    expect(btn.className).not.toMatch(/mp-chip-dismiss-ring/);
+    expect(btn.className).toMatch(/mp-chip-dismiss/u);
+    expect(btn.className).not.toMatch(/mp-chip-dismiss-ring/u);
     const ring = btn.querySelector('.mp-chip-dismiss-ring') as HTMLElement;
     expect(ring).not.toBeNull();
     expect(btn.contains(ring)).toBe(true);

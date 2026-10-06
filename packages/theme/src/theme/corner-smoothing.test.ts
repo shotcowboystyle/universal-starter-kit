@@ -255,7 +255,7 @@ document.getElementById("out").textContent = JSON.stringify(out);
         encoding: 'utf-8',
         timeout: 60_000,
       });
-      const match = /<pre id="out">([\s\S]*?)<\/pre>/.exec(dump);
+      const match = /<pre id="out">([\s\S]*?)<\/pre>/u.exec(dump);
       expect(match, 'probe <pre id=out> missing from dump-dom').toBeTruthy();
       const result = JSON.parse(match![1]) as {
         supportsSquircle: boolean;

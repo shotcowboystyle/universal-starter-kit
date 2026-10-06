@@ -407,8 +407,8 @@ describe('Image', () => {
         readFileSync(join(here, 'index.tsx'), 'utf-8'),
         readFileSync(join(here, 'ImageFrame.tsx'), 'utf-8'),
       ].join('\n');
-      expect(src).not.toMatch(/knobProps\.cardSurface|knobProps\.containerRadius|capContainerRadius\(/);
-      expect(src).not.toMatch(/data-status-pip|StatusPip|statusPip/);
+      expect(src).not.toMatch(/knobProps\.cardSurface|knobProps\.containerRadius|capContainerRadius\(/u);
+      expect(src).not.toMatch(/data-status-pip|StatusPip|statusPip/u);
 
       const { container } = renderWithProviders(
         <Image

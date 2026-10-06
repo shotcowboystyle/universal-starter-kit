@@ -182,7 +182,7 @@ describe('Form + ErrorSummary integration', () => {
       const summary = result.container.querySelector('[data-testid="error-summary"]');
       expect(summary).toBeTruthy();
       expect(summary?.getAttribute('role')).toBe('alert');
-      expect(summary?.textContent).toMatch(/required/i);
+      expect(summary?.textContent).toMatch(/required/iu);
     });
     expect(onSubmit).not.toHaveBeenCalled();
   });
@@ -216,7 +216,7 @@ describe('Form + ErrorSummary integration', () => {
 
     await waitFor(() => {
       // Inline field error still appears; summary does not.
-      expect(result.container.textContent).toMatch(/required/i);
+      expect(result.container.textContent).toMatch(/required/iu);
     });
     expect(result.container.querySelector('[data-testid="error-summary"]')).toBeNull();
   });

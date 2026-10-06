@@ -26,7 +26,7 @@ const STOPS = ['none', 'small', 'medium', 'large'] as const;
 
 const widthAtoms = (): string[] =>
   String(screen.getByRole('button').className || '')
-    .split(/\s+/)
+    .split(/\s+/u)
     .filter((c) => c.startsWith('_btw-'))
     .sort();
 

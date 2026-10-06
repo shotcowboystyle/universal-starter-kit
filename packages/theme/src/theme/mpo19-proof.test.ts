@@ -39,7 +39,7 @@ const table = (raw: unknown): Record<string, unknown> => {
   for (const [key, value] of Object.entries((raw ?? {}) as Record<string, unknown>)) {
     const v = value && typeof value === 'object' && 'val' in value ? (value as { val?: unknown }).val : value;
     if (v !== undefined) {
-      out[key.replace(/^\$/, '')] = v;
+      out[key.replace(/^\$/u, '')] = v;
     }
   }
   return out;

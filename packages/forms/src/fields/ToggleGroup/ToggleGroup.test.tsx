@@ -46,7 +46,7 @@ const renderWithHouseThemes = (ui: ReactElement) =>
  * First three numeric groups (h, s, l) of an hsla() string — the digit prefix
  * Tamagui embeds in the atomic class it generates for a concrete color value.
  */
-const hslDigits = (hsla: string): string => (hsla.match(/\d+/g) ?? []).slice(0, 3).join('');
+const hslDigits = (hsla: string): string => (hsla.match(/\d+/gu) ?? []).slice(0, 3).join('');
 
 const options = [
   { label: 'Left', value: 'left' },
@@ -281,8 +281,8 @@ describe('ToggleGroup', () => {
       const segments = [...container.querySelectorAll('[data-state]')] as HTMLElement[];
       expect(segments).toHaveLength(3);
       for (const segment of segments) {
-        expect(segment.className).toMatch(/_bw-0\b|_borderw-0\b|bw-0/);
-        expect(segment.className).not.toMatch(/_bw-1\b/);
+        expect(segment.className).toMatch(/_bw-0\b|_borderw-0\b|bw-0/u);
+        expect(segment.className).not.toMatch(/_bw-1\b/u);
       }
     });
 
@@ -298,7 +298,7 @@ describe('ToggleGroup', () => {
       expect(segments).toHaveLength(3);
       const [first, middle, last] = segments;
       // Tamagui emits per-corner radius classes from stackRadiusProps.
-      expect(middle.className).toMatch(/bssr-0|bstr-0|borderStartStartRadius-0/i);
+      expect(middle.className).toMatch(/bssr-0|bstr-0|borderStartStartRadius-0/iu);
       expect(first.className).not.toStrictEqual(middle.className);
       expect(last.className).not.toStrictEqual(middle.className);
     });
@@ -315,7 +315,7 @@ describe('ToggleGroup', () => {
       expect(group).toBeTruthy();
       // Ring on the container is the known-bad segmented pattern: square
       // outline over a rounded frame, and it paints on mouse via :focus-within.
-      expect(group.className).not.toMatch(/outlineWidth-2px|outlinew-2px|_ow-2px/);
+      expect(group.className).not.toMatch(/outlineWidth-2px|outlinew-2px|_ow-2px/u);
     });
 
     it('paints segment height from the size recipe; press floor is hitSlop not minHeight', () => {
@@ -332,7 +332,7 @@ describe('ToggleGroup', () => {
       for (const segment of segments) {
         expect(segment.className).toContain(`_h-${recipe.height}px`);
         // The 44px floor is hitSlop, never a painted minHeight.
-        expect(segment.className).not.toMatch(/_mih-44px|_minh-44px|minHeight-44px/);
+        expect(segment.className).not.toMatch(/_mih-44px|_minh-44px|minHeight-44px/u);
         expect(MIN_PRESS_TARGET).toBe(44);
       }
     });
@@ -348,9 +348,9 @@ describe('ToggleGroup', () => {
       const segments = [...container.querySelectorAll('[data-state]')] as HTMLElement[];
       expect(segments.length).toBeGreaterThan(0);
       for (const segment of segments) {
-        expect(segment.className).toMatch(/transition|tns-|trs-/i);
-        expect(segment.style.transitionDuration).toMatch(/\d+ms/);
-        expect(segment.style.transitionDuration).not.toMatch(/^0m?s$/);
+        expect(segment.className).toMatch(/transition|tns-|trs-/iu);
+        expect(segment.style.transitionDuration).toMatch(/\d+ms/u);
+        expect(segment.style.transitionDuration).not.toMatch(/^0m?s$/u);
       }
     });
   });
@@ -358,7 +358,7 @@ describe('ToggleGroup', () => {
   describe('per-segment elevation wrapper', () => {
     const elevationWrapperFor = (segment: HTMLElement): HTMLElement => {
       const wrapper = segment.parentElement as HTMLElement;
-      expect(wrapper?.getAttribute('style') ?? '').toMatch(/box-shadow/);
+      expect(wrapper?.getAttribute('style') ?? '').toMatch(/box-shadow/u);
       return wrapper;
     };
 
@@ -415,8 +415,8 @@ describe('ToggleGroup', () => {
       );
       const group = container.querySelector('[role="group"]') as HTMLElement;
       expect(group).toBeTruthy();
-      expect(group.className).not.toMatch(/_bxsh-/);
-      expect(group.getAttribute('style') ?? '').not.toMatch(/box-shadow/);
+      expect(group.className).not.toMatch(/_bxsh-/u);
+      expect(group.getAttribute('style') ?? '').not.toMatch(/box-shadow/u);
     });
   });
 
@@ -463,8 +463,8 @@ describe('ToggleGroup', () => {
       const seams = [...container.querySelectorAll('[data-mp-toggle-seam]')] as HTMLElement[];
       expect(seams.length).toBeGreaterThan(0);
       for (const seam of seams) {
-        expect(seam.className + JSON.stringify(seam.style.cssText)).toMatch(/insetInlineEnd|inset-inline-end/i);
-        expect(seam.getAttribute('style') ?? '').not.toMatch(/(?:^|;)\s*right\s*:/);
+        expect(seam.className + JSON.stringify(seam.style.cssText)).toMatch(/insetInlineEnd|inset-inline-end/iu);
+        expect(seam.getAttribute('style') ?? '').not.toMatch(/(?:^|;)\s*right\s*:/u);
       }
     });
 

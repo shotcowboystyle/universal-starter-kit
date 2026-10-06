@@ -94,7 +94,7 @@ test('mounts the owned scroller without a measurement gate and records delivered
   const view = renderStory('OwnedScrollView');
   fireEvent.click(view.getByText('Open flex subject'));
   expect(view.getByText('Record 60')).toBeDefined();
-  expect(view.getAllByText(/^Record \d+$/)).toHaveLength(60);
+  expect(view.getAllByText(/^Record \d+$/u)).toHaveLength(60);
   expect(readings(view).offset).toBe('unmeasured');
   const scroll = hosts.props.get('owned-sheet-scroll')!;
   act(() => {

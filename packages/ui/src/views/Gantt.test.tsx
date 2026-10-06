@@ -293,8 +293,8 @@ describe('ganttMath', () => {
 
     it('labels only the bounds a span has', () => {
       const bounded = openSpanLabelParts({ start: mar(10), end: mar(12) });
-      expect(bounded.start).toMatch(/10/);
-      expect(bounded.end).toMatch(/12/);
+      expect(bounded.start).toMatch(/10/u);
+      expect(bounded.end).toMatch(/12/u);
       expect(openSpanLabelParts({ start: mar(10) })).toStrictEqual({
         start: bounded.start,
         end: undefined,
@@ -321,8 +321,8 @@ describe('ganttMath', () => {
         end: mar(12),
       });
       expect(label).toContain('Design review');
-      expect(label).toMatch(/10/);
-      expect(label).toMatch(/12/);
+      expect(label).toMatch(/10/u);
+      expect(label).toMatch(/12/u);
     });
 
     it('collapses single-day spans to one date', () => {
@@ -839,10 +839,10 @@ describe('GanttView', () => {
       const { container } = renderWithProviders(<GanttView tasks={openTasks} />);
       const name = (id: string) =>
         container.querySelector(`[data-gantt-bar="${id}"]`)?.getAttribute('aria-label') ?? '';
-      expect(name('from')).toMatch(/no end/i);
-      expect(name('until')).toMatch(/no start/i);
-      expect(name('always')).toMatch(/always/i);
-      expect(name('always')).not.toMatch(/\d/);
+      expect(name('from')).toMatch(/no end/iu);
+      expect(name('until')).toMatch(/no start/iu);
+      expect(name('always')).toMatch(/always/iu);
+      expect(name('always')).not.toMatch(/\d/u);
     });
 
     it('refuses to reschedule a span with only one bound', () => {
@@ -1060,7 +1060,7 @@ describe('GanttView', () => {
       );
       const handle = handleOf(container);
       expect(handle.getAttribute('role')).toBe('slider');
-      expect(handle.getAttribute('aria-valuetext')).toMatch(/15/);
+      expect(handle.getAttribute('aria-valuetext')).toMatch(/15/u);
       expect(handle.getAttribute('tabindex')).toBe('-1');
     });
 
@@ -1091,7 +1091,7 @@ describe('GanttView', () => {
       for (const node of [taskName, axis]) {
         const weight = atoms(node, ['_fow-']);
         expect(weight.length).toBeGreaterThan(0);
-        expect(weight.join(' ')).not.toMatch(/500|600|weight-5|weight-6|fow-5|fow-6/);
+        expect(weight.join(' ')).not.toMatch(/500|600|weight-5|weight-6|fow-5|fow-6/u);
       }
       const frame = container.querySelector('[data-gantt-view]') as HTMLElement;
       expect(frame.getAttribute('data-size')).toBeTruthy();

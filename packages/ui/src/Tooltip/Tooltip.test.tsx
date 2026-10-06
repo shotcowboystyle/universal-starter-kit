@@ -124,12 +124,12 @@ describe('Tooltip content rides the border, elevation and animation knobs', () =
       await new Promise((resolve) => setTimeout(resolve, 50));
     });
     const content = document.querySelector<HTMLElement>("[data-tooltip='content']");
-    const classes = content?.className.split(/\s+/) ?? [];
+    const classes = content?.className.split(/\s+/u) ?? [];
     const measured = {
       mounted: content !== null,
       border: classes.find((c) => c.startsWith('_btw-')),
-      shadow: classes.find((c) => c.startsWith('_bxsh-'))?.match(/^_bxsh-\d+px\d+px\d+px/)?.[0],
-      transition: content?.style.transition.match(/^all \d+ms/)?.[0],
+      shadow: classes.find((c) => c.startsWith('_bxsh-'))?.match(/^_bxsh-\d+px\d+px\d+px/u)?.[0],
+      transition: content?.style.transition.match(/^all \d+ms/u)?.[0],
     };
     result.unmount();
     return measured;
@@ -152,8 +152,8 @@ describe('Tooltip content rides the border, elevation and animation knobs', () =
     });
     // Overlay large is the ladder's own $5 dialog stop, not the control $4.
     expect(large).toMatchObject({ mounted: true, border: '_btw-2px', shadow: '_bxsh-0px12px24px' });
-    expect(small.transition).toMatch(/^all \d+ms$/);
-    expect(large.transition).toMatch(/^all \d+ms$/);
+    expect(small.transition).toMatch(/^all \d+ms$/u);
+    expect(large.transition).toMatch(/^all \d+ms$/u);
     expect(large.transition).not.toBe(small.transition);
   });
 });

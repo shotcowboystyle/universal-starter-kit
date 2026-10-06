@@ -34,7 +34,7 @@ const KNOB_STOPS = {
 
 const lastPx = (el: Element, re: RegExp): number | null => {
   let found: number | null = null;
-  for (const c of String((el as HTMLElement).className || '').split(/\s+/)) {
+  for (const c of String((el as HTMLElement).className || '').split(/\s+/u)) {
     const m = c.match(re);
     if (m) {
       found = Number(m[1]);
@@ -55,12 +55,12 @@ const RADIUS_TOKEN_PX: Record<string, number> = {
 
 const radiusPx = (el: HTMLElement): number | null => {
   let found: number | null = null;
-  for (const c of String(el.className || '').split(/\s+/)) {
-    const px = /^_btlr-(\d+)px$/.exec(c);
+  for (const c of String(el.className || '').split(/\s+/u)) {
+    const px = /^_btlr-(\d+)px$/u.exec(c);
     if (px) {
       found = Number(px[1]);
     }
-    const tok = /^_btlr-t-radius-(\d+)$/.exec(c);
+    const tok = /^_btlr-t-radius-(\d+)$/u.exec(c);
     if (tok) {
       found = RADIUS_TOKEN_PX[tok[1]] ?? found;
     }
@@ -68,18 +68,18 @@ const radiusPx = (el: HTMLElement): number | null => {
   return found;
 };
 
-const padXPx = (el: HTMLElement): number | null => lastPx(el, /^_px-(\d+)px$/) ?? lastPx(el, /^_p[lr]-(\d+)px$/);
+const padXPx = (el: HTMLElement): number | null => lastPx(el, /^_px-(\d+)px$/u) ?? lastPx(el, /^_p[lr]-(\d+)px$/u);
 
-const gapPx = (el: HTMLElement): number | null => lastPx(el, /^_gap-(\d+)px$/);
+const gapPx = (el: HTMLElement): number | null => lastPx(el, /^_gap-(\d+)px$/u);
 
 const labelPx = (el: HTMLElement): number | null => {
   for (const node of Array.from(el.querySelectorAll('*'))) {
-    const n = lastPx(node, /^_fos-(\d+)px$/) ?? lastPx(node, /^_fs-(\d+)px$/);
+    const n = lastPx(node, /^_fos-(\d+)px$/u) ?? lastPx(node, /^_fs-(\d+)px$/u);
     if (n != null) {
       return n;
     }
   }
-  return lastPx(el, /^_fos-(\d+)px$/) ?? lastPx(el, /^_fs-(\d+)px$/);
+  return lastPx(el, /^_fos-(\d+)px$/u) ?? lastPx(el, /^_fs-(\d+)px$/u);
 };
 
 const renderSize = (size: keyof typeof MEASURED) => {

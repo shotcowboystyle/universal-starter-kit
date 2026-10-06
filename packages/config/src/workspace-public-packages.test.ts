@@ -49,7 +49,7 @@ describe('resolvePackageMainSource', () => {
 
     const main = resolvePackageMainSource(platformDir!);
     expect(main).toBeDefined();
-    expect(main).toMatch(/index\.(ts|tsx)$/);
+    expect(main).toMatch(/index\.(ts|tsx)$/u);
   });
 
   it('returns undefined for a directory with no index file', () => {
@@ -69,7 +69,7 @@ describe('publicPackageViteSourceAliases', () => {
     const aliases = publicPackageViteSourceAliases(workspaceRoot);
     for (const name of discoverPublicPackageRoots(workspaceRoot).keys()) {
       if (aliases[name]) {
-        expect(aliases[name]).toMatch(/\.(ts|tsx)$/);
+        expect(aliases[name]).toMatch(/\.(ts|tsx)$/u);
       }
     }
   });

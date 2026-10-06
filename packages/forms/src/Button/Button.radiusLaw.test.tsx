@@ -110,12 +110,12 @@ const RADIUS_TOKEN_PX: Record<string, number> = {
 
 const radiusPx = (el: HTMLElement): number | null => {
   let found: number | null = null;
-  for (const c of String(el.className || '').split(/\s+/)) {
-    const px = /^_btlr-(\d+)px$/.exec(c);
+  for (const c of String(el.className || '').split(/\s+/u)) {
+    const px = /^_btlr-(\d+)px$/u.exec(c);
     if (px) {
       found = Number(px[1]);
     }
-    const tok = /^_btlr-t-radius-(\d+)$/.exec(c);
+    const tok = /^_btlr-t-radius-(\d+)$/u.exec(c);
     if (tok) {
       found = RADIUS_TOKEN_PX[tok[1]] ?? found;
     }

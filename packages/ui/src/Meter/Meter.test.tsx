@@ -78,15 +78,15 @@ describe('threshold intents map to theme intents, never raw brand', () => {
   });
 
   it('paints each zone with theme intent tokens, never hex or $accent', () => {
-    const token = /^\$(color|orange|red)\d+$/;
+    const token = /^\$(color|orange|red)\d+$/u;
     for (const zone of Object.keys(METER_ZONE_PAINT) as MeterZone[]) {
       const paint = METER_ZONE_PAINT[zone];
       expect(paint.fill, `${zone} fill`).toMatch(token);
-      expect(paint.fill).not.toMatch(/^#/);
+      expect(paint.fill).not.toMatch(/^#/u);
       expect(paint.fill).not.toContain('accent');
       if ('value' in paint) {
         expect(paint.value, `${zone} value`).toMatch(token);
-        expect(paint.value).not.toMatch(/^#/);
+        expect(paint.value).not.toMatch(/^#/u);
         expect(paint.value).not.toContain('accent');
       }
     }
@@ -181,7 +181,7 @@ describe('render spec at each intent in both schemes', () => {
         // ok declares no value ink, so the readout rides textAccent — "high"
         // in the default preset these cases render under.
         expect(valueNode?.getAttribute('data-meter-value-color')).toBe('value' in paint ? paint.value : '$color');
-        expect(node.getAttribute('data-meter-fill')).not.toMatch(/^#/);
+        expect(node.getAttribute('data-meter-fill')).not.toMatch(/^#/u);
       });
     }
   }
@@ -204,7 +204,7 @@ describe('Meter a11y and the Progress semantic line', () => {
     expect(node.getAttribute('aria-valuemin')).toBe('0');
     expect(node.getAttribute('aria-valuemax')).toBe('8');
     expect(node.getAttribute('aria-valuenow')).toBe('6.2');
-    expect(node.getAttribute('aria-valuetext')).toMatch(/6\.2/);
+    expect(node.getAttribute('aria-valuetext')).toMatch(/6\.2/u);
     expect(node.getAttribute('aria-label')).toBe('Disk usage');
     expect(node.getAttribute('tabindex')).toBeNull();
   });
@@ -225,7 +225,7 @@ describe('Meter a11y and the Progress semantic line', () => {
 
   it('formats the number channel through the shared number formatter', () => {
     expect(formatMeterValue({ value: 6.2, min: 0, max: 8, unit: 'GB', format: 'number' })).toBe('6.2 of 8 GB');
-    expect(formatMeterValue({ value: 78, min: 0, max: 100, format: 'percent' })).toMatch(/%$/);
+    expect(formatMeterValue({ value: 78, min: 0, max: 100, format: 'percent' })).toMatch(/%$/u);
     expect(formatMeterValue({ value: undefined, min: 0, max: 8, format: 'number' })).toBe('\u2014');
   });
 

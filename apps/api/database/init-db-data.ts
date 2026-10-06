@@ -53,7 +53,7 @@ const getDatabaseNameFromUrl = (url: string): string | null => {
   try {
     // MongoDB URL format: mongodb://[username:password@]host[:port]/[database][?options]
     // Extract database name from the URL
-    const match = /\/\/[^/]+\/([^?]+)/.exec(url);
+    const match = /\/\/[^/]+\/([^?]+)/u.exec(url);
     return match && match[1] ? match[1] : null;
   } catch {
     return null;

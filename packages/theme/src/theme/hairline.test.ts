@@ -35,7 +35,7 @@ describe('hairline (Axiom 15 OPTICS)', () => {
   });
 
   it('falls back to 1px through a resolution media query on low-DPI screens', () => {
-    expect(hairlineFallbackCss).toMatch(/@media \(max-resolution: 1\.49dppx\)/);
+    expect(hairlineFallbackCss).toMatch(/@media \(max-resolution: 1\.49dppx\)/u);
     // every fallback class resolves a full CSS pixel
     for (const cls of ['b', 't', 'r', 'l', 'h', 'w', 'ie']) {
       expect(hairlineFallbackCss).toContain(`.mp-hairline-${cls}`);

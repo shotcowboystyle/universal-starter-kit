@@ -218,8 +218,8 @@ const shadowsOf = (themes: BuiltThemes, scheme: 'light' | 'dark'): Record<string
   return out;
 };
 
-const RAMP_STEP_RE = /^color([1-9]|1[0-2])$/;
-const SHADOW_RE = /^shadow[1-6]$/;
+const RAMP_STEP_RE = /^color([1-9]|1[0-2])$/u;
+const SHADOW_RE = /^shadow[1-6]$/u;
 // Raw Radix hue steps spread into the base themes as extras (amber1,
 // blueA12, ...). They are hue scales — Figma gets those via Palette/Theme
 // modes — not semantic role tokens.
@@ -271,7 +271,7 @@ const textTierEntries = (themes: BuiltThemes): Record<string, FigmaSemanticEntry
   const out: Record<string, FigmaSemanticEntry> = {};
   for (const tier of ['low', 'medium', 'high'] as const) {
     const resolved = resolveKnobs({ ...defaultKnobs, textAccent: tier });
-    const token = String(resolved.knobProps.textAccentColor).replace(/^\$/, '');
+    const token = String(resolved.knobProps.textAccentColor).replace(/^\$/u, '');
     const lightValue = light[token];
     const darkValue = dark[token];
     if (typeof lightValue !== 'string' || typeof darkValue !== 'string') {
@@ -318,7 +318,7 @@ const SIZE_KNOB_MODES: Knobs['size'][] = ['small', 'medium', 'large'];
 
 const radiusPx = (token: string): number => {
   const radius = unwrapTokenGroup(tokens.radius);
-  const key = token.replace(/^\$/, '');
+  const key = token.replace(/^\$/u, '');
   const px = radius[key];
   if (typeof px !== 'number') {
     throw new TypeError(`figmaTokens: unknown radius token ${token}`);
@@ -326,7 +326,7 @@ const radiusPx = (token: string): number => {
   return px;
 };
 
-const tokenToFigma = (token: string, prefix: string): string => figmaTokenName(prefix, token.replace(/^\$/, ''));
+const tokenToFigma = (token: string, prefix: string): string => figmaTokenName(prefix, token.replace(/^\$/u, ''));
 
 /**
  * Normalize the elevation knob output to `{ sizeToken, px }` regardless of
@@ -339,7 +339,7 @@ const normalizeElevation = (value: string | number | undefined): FigmaElevationM
   }
   const size = unwrapTokenGroup(tokens.size);
   if (typeof value === 'string') {
-    const key = value.replace(/^\$/, '');
+    const key = value.replace(/^\$/u, '');
     const px = size[key];
     if (typeof px !== 'number') {
       throw new TypeError(`figmaTokens: unknown size token ${value}`);
@@ -469,7 +469,7 @@ const exportFont = (font: FontLike, label: string): FigmaFontExport => {
 
 const firstFamily = (stack: string): string => {
   const first = stack.split(',')[0] ?? stack;
-  return first.trim().replaceAll(/^['"]|['"]$/g, '');
+  return first.trim().replaceAll(/^['"]|['"]$/gu, '');
 };
 
 // ── Entry point ───────────────────────────────────────────────

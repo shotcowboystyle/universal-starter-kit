@@ -26,8 +26,8 @@ describe('Input copy (CopyField slot)', () => {
     expect(input.getAttribute('aria-readonly')).toBe('true');
     expect(copy.getAttribute('tabindex')).toBe('0');
     expect(copy.getAttribute('aria-label')).toBe('Copy to clipboard');
-    expect(copy.className).toMatch(/mp-chip-dismiss/);
-    expect(copy.className).not.toMatch(/mp-chip-dismiss-ring/);
+    expect(copy.className).toMatch(/mp-chip-dismiss/u);
+    expect(copy.className).not.toMatch(/mp-chip-dismiss-ring/u);
     const ring = copy.querySelector('.mp-chip-dismiss-ring');
     expect(ring).not.toBeNull();
     expect(copy.contains(ring)).toBe(true);

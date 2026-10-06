@@ -18,13 +18,13 @@ export const FOCUS_RING_MIN_CONTRAST = 3;
  */
 const ringColorCarriesAlpha = (color: string): boolean => {
   const s = color.trim().toLowerCase();
-  const fn = /^(?:rgba|hsla)\([^)]*[,/]\s*([\d.]+%?)\s*\)$/.exec(s);
+  const fn = /^(?:rgba|hsla)\([^)]*[,/]\s*([\d.]+%?)\s*\)$/u.exec(s);
   if (fn) {
     const raw = fn[1];
     const a = raw.endsWith('%') ? Number.parseFloat(raw) / 100 : Number.parseFloat(raw);
     return Number.isFinite(a) && a < 0.999;
   }
-  if (/^#[0-9a-f]{8}$/.test(s)) {
+  if (/^#[0-9a-f]{8}$/u.test(s)) {
     return Number.parseInt(s.slice(7, 9), 16) / 255 < 0.999;
   }
   return false;

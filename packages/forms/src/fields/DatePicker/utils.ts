@@ -11,7 +11,7 @@
 // Forgiving date-only match: accepts `-`, `/`, `.`, or spaces as separators
 // and 1–2 digit month/day (paste normalization — DG input-mask dial: parse
 // forgivingly, never reject on separator style).
-const DATE_ONLY = /^(\d{4})[-/. ](\d{1,2})[-/. ](\d{1,2})$/;
+const DATE_ONLY = /^(\d{4})[-/. ](\d{1,2})[-/. ](\d{1,2})$/u;
 
 export const coerceToDate = (input: unknown): Date | null => {
   if (input == null || input === '') {
@@ -23,7 +23,7 @@ export const coerceToDate = (input: unknown): Date | null => {
   if (typeof input === 'string') {
     // Forgiving normalize: trim padding and collapse runs of whitespace so
     // pasted values like " 2024-01-15 " or "2024 01 15" parse.
-    const cleaned = input.trim().replaceAll(/\s+/g, ' ');
+    const cleaned = input.trim().replaceAll(/\s+/gu, ' ');
     if (cleaned === '') {
       return null;
     }

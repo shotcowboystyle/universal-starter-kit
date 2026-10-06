@@ -120,7 +120,7 @@ describe('buildFigmaTokens', () => {
 
     it('excludes raw Radix hue steps (amber1, blueA12, ...) from semantic', () => {
       const keys = Object.keys(result.semantic);
-      expect(keys.some((key) => /^(amber|blue|red|mauve)A?\d+$/.test(key))).toBe(false);
+      expect(keys.some((key) => /^(amber|blue|red|mauve)A?\d+$/u.test(key))).toBe(false);
       // Semantic surface is role tokens only — small, not the 600+ hue dump.
       expect(keys.length).toBeGreaterThan(20);
       expect(keys.length).toBeLessThan(100);
@@ -132,7 +132,7 @@ describe('buildFigmaTokens', () => {
           expect(typeof entry.light).toBe('string');
           expect(typeof entry.dark).toBe('string');
         } else {
-          expect(entry.alias).toMatch(/^color([1-9]|1[0-2])$/);
+          expect(entry.alias).toMatch(/^color([1-9]|1[0-2])$/u);
         }
       }
     });

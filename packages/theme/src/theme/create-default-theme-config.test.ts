@@ -161,7 +161,7 @@ describe('createDefaultThemeConfig — builderOptions.getTheme composition', () 
     const { serif } = config.tamagui.fonts;
     expect(serif, 'serif font').toBeTruthy();
     const family = typeof serif.family === 'string' ? serif.family : serif.family?.val;
-    expect(family).toMatch(/Georgia/);
+    expect(family).toMatch(/Georgia/u);
   });
 
   it('keeps consumer heading/body overrides without dropping the serif category', () => {
@@ -176,7 +176,7 @@ describe('createDefaultThemeConfig — builderOptions.getTheme composition', () 
     expect(config.tamagui.fonts.body).toBe(body);
     const { serif } = config.tamagui.fonts;
     const family = typeof serif?.family === 'string' ? serif.family : serif?.family?.val;
-    expect(family).toMatch(/Georgia/);
+    expect(family).toMatch(/Georgia/u);
   });
 });
 

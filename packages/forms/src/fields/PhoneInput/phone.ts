@@ -98,7 +98,7 @@ export interface ParsedPhone {
   national: string;
 }
 
-export const digitsOnly = (input: string): string => input.replaceAll(/\D/g, '');
+export const digitsOnly = (input: string): string => input.replaceAll(/\D/gu, '');
 
 export const countryCodeToFlag = (countryCode: string): string => {
   const codePoints = countryCode
@@ -263,7 +263,7 @@ export const caretIndexForDigitCount = (formatted: string, digitCount: number): 
   }
   let seen = 0;
   for (let i = 0; i < formatted.length; i++) {
-    if (/\d/.test(formatted[i] ?? '')) {
+    if (/\d/u.test(formatted[i] ?? '')) {
       seen++;
       if (seen >= digitCount) {
         return i + 1;

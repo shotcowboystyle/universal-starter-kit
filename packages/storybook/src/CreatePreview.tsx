@@ -158,7 +158,7 @@ const parseValue = (value: unknown): unknown => {
   }
 };
 
-const toTitleCase = (str: string) => str.replaceAll(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase());
+const toTitleCase = (str: string) => str.replaceAll(/([A-Z])/gu, ' $1').replace(/^./u, (s) => s.toUpperCase());
 
 const createControl = (key: string): InputType => {
   const name = toTitleCase(key);
@@ -646,8 +646,8 @@ export const createPreview = (options: CreatePreviewOptions): Preview => {
       expanded: true,
       hideNoControlsWarning: true,
       matchers: {
-        color: /(background|color)$/i,
-        date: /Date$/,
+        color: /(background|color)$/iu,
+        date: /Date$/u,
       },
     },
     // Disable the built-in backgrounds addon — the CanvasBackground component

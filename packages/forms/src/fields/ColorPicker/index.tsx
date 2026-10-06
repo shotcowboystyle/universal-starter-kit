@@ -230,7 +230,7 @@ const parseColorValue = (value: string | undefined, format: 'hex' | 'rgb' | 'hsl
   }
 
   if (format === 'rgb') {
-    const rgba = /^rgba?\(\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*([0-9]+)(?:\s*,\s*([0-9]*\.?[0-9]+))?\s*\)$/i.exec(raw);
+    const rgba = /^rgba?\(\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*([0-9]+)(?:\s*,\s*([0-9]*\.?[0-9]+))?\s*\)$/iu.exec(raw);
     if (!rgba) {
       return { hex: '', alpha: 100, isValid: false };
     }
@@ -242,7 +242,7 @@ const parseColorValue = (value: string | undefined, format: 'hex' | 'rgb' | 'hsl
   }
 
   const hsla =
-    /^hsla?\(\s*(-?[0-9]*\.?[0-9]+)\s*,\s*([0-9]*\.?[0-9]+)%\s*,\s*([0-9]*\.?[0-9]+)%(?:\s*,\s*([0-9]*\.?[0-9]+))?\s*\)$/i.exec(
+    /^hsla?\(\s*(-?[0-9]*\.?[0-9]+)\s*,\s*([0-9]*\.?[0-9]+)%\s*,\s*([0-9]*\.?[0-9]+)%(?:\s*,\s*([0-9]*\.?[0-9]+))?\s*\)$/iu.exec(
       raw,
     );
   if (!hsla) {
@@ -256,7 +256,7 @@ const parseColorValue = (value: string | undefined, format: 'hex' | 'rgb' | 'hsl
   return { hex: rgbToHex(r, g, b), alpha, isValid: true };
 };
 
-const formatAlpha = (alpha: number): string => (alpha / 100).toFixed(2).replace(/\.?0+$/, '');
+const formatAlpha = (alpha: number): string => (alpha / 100).toFixed(2).replace(/\.?0+$/u, '');
 
 const serializeColorValue = (
   hex: string,

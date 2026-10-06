@@ -6,7 +6,7 @@ const interpolate = (template: string, options?: TOptions): string => {
   if (!options) {
     return template;
   }
-  return template.replaceAll(/\{\{(\w+)\}\}/g, (_, key: string) =>
+  return template.replaceAll(/\{\{(\w+)\}\}/gu, (_, key: string) =>
     options[key] == null ? `{{${key}}}` : String(options[key]),
   );
 };

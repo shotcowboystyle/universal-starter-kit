@@ -53,7 +53,7 @@ describe('shared form submission outcome', () => {
         activate();
       });
       await waitFor(() => {
-        expect(view.getByText(/Couldn't save/).textContent).toContain(refusal);
+        expect(view.getByText(/Couldn't save/u).textContent).toContain(refusal);
       });
       expect((view.getByLabelText('Name') as HTMLInputElement).value).toBe('Edited');
       expect(submit).toHaveBeenCalledOnce();
@@ -65,7 +65,7 @@ describe('shared form submission outcome', () => {
         expect(submit).toHaveBeenCalledTimes(2);
       });
       await waitFor(() => {
-        expect(view.queryByText(/Couldn't save/)).toBeNull();
+        expect(view.queryByText(/Couldn't save/u)).toBeNull();
       });
       expect((view.getByLabelText('Name') as HTMLInputElement).value).toBe('Edited');
       expect(saved).toHaveBeenCalledTimes(route === 'save' || route === 'shortcut' ? 1 : 0);
@@ -150,9 +150,9 @@ describe('shared form submission outcome', () => {
     const view = renderWithProviders(<Harness />);
     await act(async () => fireEvent.click(view.getByRole('button', { name: 'Target second' })));
     await waitFor(() => {
-      expect(within(view.getByTestId('second')).getByText(/Couldn't save/)).toBeTruthy();
+      expect(within(view.getByTestId('second')).getByText(/Couldn't save/u)).toBeTruthy();
     });
-    expect(within(view.getByTestId('first')).queryByText(/Couldn't save/)).toBeNull();
+    expect(within(view.getByTestId('first')).queryByText(/Couldn't save/u)).toBeNull();
     await act(async () => fireEvent.click(view.getByRole('button', { name: 'Standalone submit' })));
     await waitFor(() => {
       expect(secondSubmit).toHaveBeenCalledTimes(2);

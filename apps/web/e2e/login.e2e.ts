@@ -132,7 +132,7 @@ test.describe.serial('SignInPage', () => {
     try {
       // Wait for navigation to complete after clicking submit
       await Promise.all([
-        page.waitForURL(/^http:\/\/localhost:3000\/en\/boards(\?.*)?$/, {
+        page.waitForURL(/^http:\/\/localhost:3000\/en\/boards(\?.*)?$/u, {
           timeout: 30_000,
           waitUntil: 'domcontentloaded',
         }),

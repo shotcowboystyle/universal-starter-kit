@@ -15,7 +15,7 @@ describe('simple page navigation', () => {
         onPageChange={change}
       />,
     );
-    expect(screen.getByText(/50.*100/)).toBeInTheDocument();
+    expect(screen.getByText(/50.*100/u)).toBeInTheDocument();
     expect(screen.getAllByRole('button')).toHaveLength(2);
     fireEvent.click(screen.getByLabelText('Go to next page'));
     expect(change).toHaveBeenCalledExactlyOnceWith(51);

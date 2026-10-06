@@ -49,7 +49,7 @@ const layer = (container: HTMLElement, which: 'empty' | 'filled') =>
 
 /** Tamagui emits opacity as the atomic class `_o-<value>`, not inline style. */
 const opacityOf = (container: HTMLElement, which: 'empty' | 'filled'): number | null => {
-  const match = layer(container, which)?.className.match(/(?:^|\s)_o-([\d.]+)(?:\s|$)/);
+  const match = layer(container, which)?.className.match(/(?:^|\s)_o-([\d.]+)(?:\s|$)/u);
   return match ? Number(match[1]) : null;
 };
 

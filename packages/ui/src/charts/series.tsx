@@ -262,7 +262,7 @@ export const PieSeries = ({
   fills,
   ...callbacks
 }: PieSeriesProps) => {
-  const instanceId = useId().replaceAll(/[^a-zA-Z0-9_-]/g, '_');
+  const instanceId = useId().replaceAll(/[^a-zA-Z0-9_-]/gu, '_');
   const slices = pieSlices(data, { padAngle });
   const maskGaps = padAngle === undefined && canMaskPieSlices(slices, innerRadius, outerRadius);
   const interactive = hasTargets(callbacks);

@@ -65,10 +65,10 @@ describe('Calendar time grid', () => {
         height={600}
       />,
     );
-    const block = screen.getByLabelText(/Team Standup, Tuesday, March 10/);
+    const block = screen.getByLabelText(/Team Standup, Tuesday, March 10/u);
     expect(block).toBeTruthy();
-    expect(block.getAttribute('aria-label')).toMatch(/9:00/);
-    expect(block.getAttribute('aria-label')).toMatch(/9:30/);
+    expect(block.getAttribute('aria-label')).toMatch(/9:00/u);
+    expect(block.getAttribute('aria-label')).toMatch(/9:30/u);
   });
 
   it('renders resize handles only when onEventResize is provided', () => {
@@ -205,7 +205,7 @@ describe('Calendar keyboard flow (Axiom 12)', () => {
     fireEvent.keyDown(grid, { key: 'ArrowRight' }); // anchor focus on Mar 31
     fireEvent.keyDown(grid, { key: 'ArrowRight' }); // cross into April
     // Title + aria-live region both announce the new period.
-    expect(screen.getAllByText(/April 2026/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/April 2026/u).length).toBeGreaterThan(0);
   });
 
   it('announces period changes in the aria-live region', () => {

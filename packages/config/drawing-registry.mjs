@@ -24,7 +24,7 @@ export const DRAWING_CLASS = 'DRAWING';
 export const CHROME_ALLOW_CLASS = 'CHROME-ALLOW';
 
 /** `// mpo-drawing` or `/* mpo-drawing` at the start of a line. */
-export const DRAWING_PRAGMA = /^\s*(?:\/\/|\/\*)\s*mpo-drawing\b/m;
+export const DRAWING_PRAGMA = /^\s*(?:\/\/|\/\*)\s*mpo-drawing\b/mu;
 
 /**
  * @param {string} [cwd]
@@ -33,11 +33,11 @@ export const defaultSpecPath = (cwd = process.cwd()) => join(cwd, 'docs/theme-pr
 
 /** `Members: **Avatar**, **Radio disc**.` → ["Avatar", "Radio disc"]. */
 const parseMembers = (text) => {
-  const match = text.match(/Members:\s*(.*)$/i);
+  const match = text.match(/Members:\s*(.*)$/iu);
   if (!match) {
     return [];
   }
-  return [...match[1].matchAll(/\*\*([^*]+)\*\*/g)].map((m) => m[1].trim()).filter(Boolean);
+  return [...match[1].matchAll(/\*\*([^*]+)\*\*/gu)].map((m) => m[1].trim()).filter(Boolean);
 };
 
 /**
@@ -46,7 +46,7 @@ const parseMembers = (text) => {
  */
 const parseDrawingTable = (markdown, specPath) => {
   const lines = markdown.split('\n');
-  const heading = lines.findIndex((line) => /^##\s+Drawing files\s*$/.test(line));
+  const heading = lines.findIndex((line) => /^##\s+Drawing files\s*$/u.test(line));
   if (heading === -1) {
     return null;
   }
@@ -73,7 +73,7 @@ const parseDrawingTable = (markdown, specPath) => {
     if (cells.length < 2) {
       continue;
     }
-    if (/^:?-{2,}/.test(cells[0])) {
+    if (/^:?-{2,}/u.test(cells[0])) {
       continue;
     }
     if (cells[0].toLowerCase() === 'class') {
@@ -138,7 +138,7 @@ export const isDrawingFile = (filename, files) => {
   }
   const normalized = filename.replaceAll('\\', '/');
   return files.some((entry) => {
-    const needle = entry.replaceAll('\\', '/').replace(/^\.\//, '');
+    const needle = entry.replaceAll('\\', '/').replace(/^\.\//u, '');
     return normalized === needle || normalized.endsWith(`/${needle}`);
   });
 };

@@ -50,7 +50,7 @@ const TagsPlayground = ({
       tags={tags}
       suggestions={allSuggestions}
       onAdd={(name) => {
-        const id = `tag-${name.toLowerCase().replaceAll(/\s+/g, '-')}-${tags.length}`;
+        const id = `tag-${name.toLowerCase().replaceAll(/\s+/gu, '-')}-${tags.length}`;
         setTags((prev) => [...prev, { id, label: name }]);
       }}
       onRemove={(tag) => {

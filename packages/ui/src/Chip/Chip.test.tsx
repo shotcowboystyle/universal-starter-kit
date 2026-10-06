@@ -57,8 +57,8 @@ describe('Chip', () => {
     const ghost = renderWithProviders(<Chip variant="ghost">Tint</Chip>);
     const filledFrame = filled.container.querySelector('[data-chip]') as HTMLElement;
     const ghostFrame = ghost.container.querySelector('[data-chip]') as HTMLElement;
-    expect(filledFrame.className).toMatch(/_bg-/);
-    expect(ghostFrame.className).toMatch(/_bg-/);
+    expect(filledFrame.className).toMatch(/_bg-/u);
+    expect(ghostFrame.className).toMatch(/_bg-/u);
     expect(filledFrame.className).not.toStrictEqual(ghostFrame.className);
   });
 
@@ -121,16 +121,16 @@ describe('Chip', () => {
     expect(floor).not.toBeNull();
     expect(ring).not.toBeNull();
     expect(floor.contains(ring)).toBe(true);
-    expect(floor.className).not.toMatch(/mp-chip-dismiss-ring/);
+    expect(floor.className).not.toMatch(/mp-chip-dismiss-ring/u);
   });
 
   it('dismiss floor carries no hover/press background paint', () => {
-    const paintedStateAtom = /_bg-0(?:hover|active)-(?!transparent)/;
+    const paintedStateAtom = /_bg-0(?:hover|active)-(?!transparent)/u;
     const result = renderWithProviders(<Chip onDismiss={() => {}}>Tag</Chip>);
     const floor = result.container.querySelector("[aria-label='Remove']") as HTMLElement;
     expect(floor.className).not.toMatch(paintedStateAtom);
     const ring = floor.firstElementChild as HTMLElement;
-    expect(ring.className).toMatch(/_bg-0hover-color5/);
+    expect(ring.className).toMatch(/_bg-0hover-color5/u);
   });
 
   it('static chip is not a tab stop; interactive chip is', () => {
@@ -171,9 +171,9 @@ describe('Chip', () => {
     );
     for (const text of ['Ghost-label', 'Filled-label', 'Outlined-label', 'Selected-label']) {
       const node = result.findTextElement(text) as HTMLElement;
-      expect(node.className).toMatch(/_fow-400\b/);
-      expect(node.className).not.toMatch(/_fow-500\b/);
-      expect(node.className).not.toMatch(/_fow-600\b/);
+      expect(node.className).toMatch(/_fow-400\b/u);
+      expect(node.className).not.toMatch(/_fow-500\b/u);
+      expect(node.className).not.toMatch(/_fow-600\b/u);
     }
   });
 

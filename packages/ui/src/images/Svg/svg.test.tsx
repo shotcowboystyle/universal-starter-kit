@@ -195,9 +195,9 @@ describe('Svg Component', () => {
   it('defaults color to the scheme token, not a hardcoded fill', () => {
     const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'index.ts'), 'utf-8');
     const stories = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'Svg.stories.tsx'), 'utf-8');
-    expect(src).toMatch(/color: ['"]\$color['"]/);
-    expect(src).not.toMatch(/#[0-9A-Fa-f]{3,8}/);
-    expect(stories).not.toMatch(/#[0-9A-Fa-f]{3,8}/);
+    expect(src).toMatch(/color: ['"]\$color['"]/u);
+    expect(src).not.toMatch(/#[0-9A-Fa-f]{3,8}/u);
+    expect(stories).not.toMatch(/#[0-9A-Fa-f]{3,8}/u);
     expect(stories).toContain('currentColor');
   });
 });

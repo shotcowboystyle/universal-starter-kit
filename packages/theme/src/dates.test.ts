@@ -50,7 +50,7 @@ describe('formatAbsoluteDate (compact absolute register)', () => {
 
   it('never emits seconds unless asked', () => {
     const out = formatAbsoluteDateTime(new Date(2026, 7, 9, 15, 30, 45), { ...enUS, now });
-    expect(out).not.toMatch(/:\d{2}:\d{2}/);
+    expect(out).not.toMatch(/:\d{2}:\d{2}/u);
   });
 });
 

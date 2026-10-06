@@ -201,7 +201,7 @@ const restInk = (el: Element): string | undefined => {
       continue;
     }
     const value = cls.slice('_col-'.length);
-    if (/^\d*(hover|active|focus|press|disabled)/.test(value)) {
+    if (/^\d*(hover|active|focus|press|disabled)/u.test(value)) {
       continue;
     }
     return value;

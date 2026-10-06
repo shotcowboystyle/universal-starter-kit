@@ -32,8 +32,8 @@ describe('ProjectForm', () => {
 
   it('renders labelled title and description fields', () => {
     renderForm();
-    expect(screen.getByText(/titleLabel/)).toBeInTheDocument();
-    expect(screen.getByText(/descriptionLabel/)).toBeInTheDocument();
+    expect(screen.getByText(/titleLabel/u)).toBeInTheDocument();
+    expect(screen.getByText(/descriptionLabel/u)).toBeInTheDocument();
     expect(screen.getByTestId('project-title-input')).toHaveAttribute('placeholder', 'titlePlaceholder');
     expect(screen.getByTestId('project-description-input')).toHaveAttribute('placeholder', 'descriptionPlaceholder');
   });

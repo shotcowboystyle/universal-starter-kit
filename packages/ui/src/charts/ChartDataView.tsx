@@ -31,7 +31,7 @@ export const ChartDataView = ({ data, title, valueFormatter, children }: ChartDa
   const { knobProps } = useResolvedKnobs();
   const { knobProps: datumKnobs } = useResolvedKnobs({ compact: true });
   const [open, setOpen] = useState(false);
-  const id = `mpo-chart-data-${useId().replaceAll(/[^a-zA-Z0-9_-]/g, '_')}`;
+  const id = `mpo-chart-data-${useId().replaceAll(/[^a-zA-Z0-9_-]/gu, '_')}`;
   const triggerId = `${id}-trigger`;
   const normalized = data.map((datum, index) =>
     typeof datum === 'number' ? { label: String(index + 1), value: datum } : datum,

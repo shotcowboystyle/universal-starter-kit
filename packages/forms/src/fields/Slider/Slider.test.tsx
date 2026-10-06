@@ -934,12 +934,12 @@ describe('Slider', () => {
           }
         }
         const atom = String((el as HTMLElement).className || '')
-          .split(/\s+/)
-          .find((c) => c.startsWith('_btlr-') || /^_br\d/.test(c));
+          .split(/\s+/u)
+          .find((c) => c.startsWith('_btlr-') || /^_br\d/u.test(c));
         if (!atom) {
           return Number.NaN;
         }
-        const px = /(\d+(?:\.\d+)?)px$/.exec(atom);
+        const px = /(\d+(?:\.\d+)?)px$/u.exec(atom);
         if (px) {
           return Number.parseFloat(px[1]);
         }

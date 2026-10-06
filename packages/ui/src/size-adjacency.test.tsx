@@ -46,12 +46,12 @@ const stops = [
 ] as const satisfies readonly (readonly [Size, string])[];
 
 const atom = (el: HTMLElement, prop: string) => {
-  for (const cls of String(el.className || '').split(/\s+/)) {
+  for (const cls of String(el.className || '').split(/\s+/u)) {
     if (!cls.startsWith(`_${prop}-`)) {
       continue;
     }
     const value = cls.slice(prop.length + 2);
-    if (/^-?\d+(?:\.\d+)?px$|^t-(?:size|radius)-\d+$/.test(value)) {
+    if (/^-?\d+(?:\.\d+)?px$|^t-(?:size|radius)-\d+$/u.test(value)) {
       return value;
     }
   }
@@ -62,11 +62,11 @@ const px = (value: string | undefined): number | undefined => {
   if (value === undefined) {
     return undefined;
   }
-  const literal = /^(-?\d+(?:\.\d+)?)px$/.exec(value);
+  const literal = /^(-?\d+(?:\.\d+)?)px$/u.exec(value);
   if (literal) {
     return Number(literal[1]);
   }
-  const [, scale, step] = /^t-(size|radius)-(\d+)$/.exec(value) ?? [];
+  const [, scale, step] = /^t-(size|radius)-(\d+)$/u.exec(value) ?? [];
   const tokens = getTokens() as unknown as Record<string, Record<string, { val: unknown }>>;
   return Number.parseFloat(String(tokens[scale ?? '']?.[`$${step}`]?.val));
 };

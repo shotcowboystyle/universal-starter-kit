@@ -44,7 +44,7 @@ const getIndicator = (container: Element): Element | null =>
  * prefix Tamagui embeds in the atomic class it generates for a concrete
  * color value (e.g. hsla(358, 75%, 59%, 1) → `_bg-hsla3587559<hash>`).
  */
-const hslDigits = (hsla: string): string => (hsla.match(/\d+/g) ?? []).slice(0, 3).join('');
+const hslDigits = (hsla: string): string => (hsla.match(/\d+/gu) ?? []).slice(0, 3).join('');
 
 describe('Progress', () => {
   describe('without form context', () => {

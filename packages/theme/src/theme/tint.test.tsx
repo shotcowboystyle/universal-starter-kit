@@ -42,7 +42,7 @@ const renderToHtml = (node: ReactNode): string => renderToString(node as React.R
 
 /** Render a tree and return an array of all `data-tamagui-theme` values. */
 const collectThemes = (html: string): string[] =>
-  Array.from(html.matchAll(/data-tamagui-theme="([^"]+)"/g), (m) => m[1]);
+  Array.from(html.matchAll(/data-tamagui-theme="([^"]+)"/gu), (m) => m[1]);
 
 const nestTints = (count: number, innermost: ReactNode = createElement('span', null, 'inner')): ReactNode => {
   let node: ReactNode = innermost;

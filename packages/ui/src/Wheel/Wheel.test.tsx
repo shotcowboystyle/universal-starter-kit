@@ -228,7 +228,7 @@ describe('Wheel iOS picker contract', () => {
       .getByTestId('wheel')
       .querySelector('[data-testid="wheel-item"][data-selected="true"]') as HTMLElement;
     expect(selected).toBeTruthy();
-    const translateY = Number(/translateY\(([-\d.]+)px\)/.exec(selected.style.transform)?.[1] ?? Number.NaN);
+    const translateY = Number(/translateY\(([-\d.]+)px\)/u.exec(selected.style.transform)?.[1] ?? Number.NaN);
     expect(translateY).toBeCloseTo(2 * 36, 1);
   });
 
@@ -261,7 +261,7 @@ describe('Wheel iOS picker contract', () => {
     const wrapper = screen.getByTestId('wheel-wrapper');
     const row = wrapper.querySelector('[data-testid="wheel-item"][data-index="1"]') as HTMLElement | null;
     expect(row).toBeTruthy();
-    const translateY = Number(/translateY\(([-\d.]+)px\)/.exec(row!.style.transform)?.[1] ?? 0);
+    const translateY = Number(/translateY\(([-\d.]+)px\)/u.exec(row!.style.transform)?.[1] ?? 0);
     const rowHeight = Number.parseFloat(row!.style.height) || 32;
     const tapY = translateY + rowHeight / 2;
     fireEvent.pointerDown(wrapper, { clientY: tapY, pointerId: 1 });
@@ -319,9 +319,9 @@ describe('Wheel design-law', () => {
       .querySelector('[data-testid="wheel-item"][data-selected="true"]') as HTMLElement;
     expect(selected).toBeTruthy();
     const text = selected.querySelector('[class]') as HTMLElement;
-    expect(text.className).toMatch(/_fow-(400|700|bold)\b/);
-    expect(text.className).not.toMatch(/_fow-600\b/);
-    expect(text.className).not.toMatch(/_fow-500\b/);
+    expect(text.className).toMatch(/_fow-(400|700|bold)\b/u);
+    expect(text.className).not.toMatch(/_fow-600\b/u);
+    expect(text.className).not.toMatch(/_fow-500\b/u);
   });
 
   it('viewport is R-NONE — no knob radius atom on the clip frame', () => {

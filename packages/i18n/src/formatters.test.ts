@@ -7,7 +7,7 @@ describe('createDateFormatter', () => {
 
   it('formats a date with default options', () => {
     const result = formatter.format(new Date('2025-06-15T12:00:00Z'));
-    expect(result).toMatch(/6\/15\/2025|Jun/);
+    expect(result).toMatch(/6\/15\/2025|Jun/u);
   });
 
   it('formats a date with custom options', () => {
@@ -31,13 +31,13 @@ describe('createDateFormatter', () => {
     it('returns a relative time string', () => {
       const future = Date.now() + 3600 * 1000;
       const result = formatter.relative(future);
-      expect(result).toMatch(/hour|in/i);
+      expect(result).toMatch(/hour|in/iu);
     });
 
     it('handles past dates', () => {
       const past = Date.now() - 86_400 * 1000;
       const result = formatter.relative(past);
-      expect(result).toMatch(/day|yesterday|ago/i);
+      expect(result).toMatch(/day|yesterday|ago/iu);
     });
   });
 });
@@ -71,7 +71,7 @@ describe('createNumberFormatter with different locale', () => {
 
   it('uses locale-appropriate separators', () => {
     const result = formatter.format(1234.56);
-    expect(result).toMatch(/1\.234,56|1.234,56/);
+    expect(result).toMatch(/1\.234,56|1.234,56/u);
   });
 });
 

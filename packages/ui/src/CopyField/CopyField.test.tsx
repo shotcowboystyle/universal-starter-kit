@@ -42,7 +42,7 @@ describe('CopyField', () => {
     }
     expect(copy.getAttribute('tabindex')).toBe('0');
     expect(copy.getAttribute('aria-label')).toBe('Copy to clipboard');
-    expect(copy.className).toMatch(/mp-chip-dismiss/);
+    expect(copy.className).toMatch(/mp-chip-dismiss/u);
     expect(copy.querySelector('.mp-chip-dismiss-ring')).not.toBeNull();
   });
 
@@ -67,13 +67,13 @@ describe('CopyField', () => {
     expect(toast?.title).toBe('Copied to clipboard.');
     expect(toast?.intent).toBe('success');
     expect(toast?.description).toBeUndefined();
-    expect(toast?.title).not.toMatch(/success/i);
+    expect(toast?.title).not.toMatch(/success/iu);
     expect(getFeedback()).toHaveLength(0);
     expect(copyOf(result.container)?.querySelector('.mp-chip-dismiss-ring')).not.toBeNull();
     await expect(result.findByText('Copied to clipboard.')).resolves.toBeInTheDocument();
     await vi.waitFor(() => {
       const live = document.querySelector("[aria-live]:not([aria-live='off'])");
-      expect(live?.textContent ?? '').toMatch(/Copied to clipboard/);
+      expect(live?.textContent ?? '').toMatch(/Copied to clipboard/u);
     });
   });
 
@@ -99,7 +99,7 @@ describe('CopyField', () => {
     expect(alert?.severity).toBe('error');
     expect(alert?.scope).toBe('field');
     expect(alert?.body).toBe('Copy failed.');
-    expect(alert?.body).not.toMatch(/success/i);
+    expect(alert?.body).not.toMatch(/success/iu);
     await expect(result.findByText('Copy failed.')).resolves.toBeInTheDocument();
   });
 

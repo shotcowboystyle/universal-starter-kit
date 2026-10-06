@@ -7,7 +7,7 @@ export const getInitials = (name: string): string => {
   if (!trimmed) {
     return '?';
   }
-  const parts = trimmed.split(/[\s@._-]+/).filter(Boolean);
+  const parts = trimmed.split(/[\s@._-]+/u).filter(Boolean);
   if (parts.length >= 2) {
     const a = parts[0][0] ?? '';
     const b = parts[1][0] ?? '';

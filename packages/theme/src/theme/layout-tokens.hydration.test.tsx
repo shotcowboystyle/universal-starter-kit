@@ -72,7 +72,7 @@ const hydrateAt = async (width: number) => {
   return { html, serverNav };
 };
 
-const hydrationErrors = () => errors.filter((error) => /hydration|hydrated|didn't match/i.test(String(error)));
+const hydrationErrors = () => errors.filter((error) => /hydration|hydrated|didn't match/iu.test(String(error)));
 
 afterEach(async () => {
   if (root) {

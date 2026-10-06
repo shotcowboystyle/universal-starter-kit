@@ -468,7 +468,7 @@ describe('ConfirmDialog action labels — weight 400 on the TEXT NODE', () => {
       expect(floor.contains(textNode)).toBe(true);
       const weight = weightAtoms(textNode);
       expect(weight.length).toBeGreaterThan(0);
-      expect(weight.join(' ')).not.toMatch(/600|weight-6|fow-6/);
+      expect(weight.join(' ')).not.toMatch(/600|weight-6|fow-6/u);
       expect(weight).toStrictEqual(explicit400);
       expect(weight).not.toStrictEqual(explicit600);
       expect(weightAtoms(floor)).toHaveLength(0);
@@ -507,7 +507,7 @@ describe('NotifyHost action labels — weight 400 on the TEXT NODE', () => {
     const textNode = screen.getByText('Retry');
     const weight = weightAtoms(textNode);
     expect(weight.length).toBeGreaterThan(0);
-    expect(weight.join(' ')).not.toMatch(/600|weight-6|fow-6/);
+    expect(weight.join(' ')).not.toMatch(/600|weight-6|fow-6/u);
     expect(weight).toStrictEqual(explicit400);
     expect(weight).not.toStrictEqual(explicit600);
   });
@@ -537,6 +537,6 @@ describe('NotifyHost action labels — weight 400 on the TEXT NODE', () => {
     const weight = weightAtoms(textNode);
     expect(weight.length).toBeGreaterThan(0);
     expect(weight).toStrictEqual(explicit400);
-    expect(weight.join(' ')).not.toMatch(/600|weight-6|fow-6/);
+    expect(weight.join(' ')).not.toMatch(/600|weight-6|fow-6/u);
   });
 });

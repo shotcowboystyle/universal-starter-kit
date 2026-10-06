@@ -49,7 +49,7 @@ describe('token icon hydration', () => {
       });
       expect(container.querySelector('svg')).toBe(icon);
       expect(icon?.getAttribute('width')).toBe(String(sizeRecipeForToken('$4', { touch: true }).iconSize));
-      expect(errors.filter((error) => /hydration|hydrated|didn't match/i.test(String(error)))).toStrictEqual([]);
+      expect(errors.filter((error) => /hydration|hydrated|didn't match/iu.test(String(error)))).toStrictEqual([]);
     } finally {
       await act(async () => root?.unmount());
       spy.mockRestore();

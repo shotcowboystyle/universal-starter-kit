@@ -208,21 +208,21 @@ describe('keyboard-only; measure the ring / text node, not the frame', () => {
   });
 
   it('chip dismiss rings the glyph node, not the 44px hit-box frame', () => {
-    const frameRule = /\.mp-chip-dismiss:focus-visible\s*\{([^}]+)\}/.exec(compositeFocusRingCss);
-    const ringRule = /\.mp-chip-dismiss:focus-visible \.mp-chip-dismiss-ring\s*\{([^}]+)\}/.exec(compositeFocusRingCss);
-    expect(frameRule?.[1]).toMatch(/outline:\s*none/);
-    expect(ringRule?.[1]).toMatch(/outline:\s*2px\s+solid/);
-    expect(ringRule?.[1]).toMatch(/outline-offset:\s*0/);
-    expect(ringRule?.[1]).not.toMatch(/outline-offset:\s*2px/);
+    const frameRule = /\.mp-chip-dismiss:focus-visible\s*\{([^}]+)\}/u.exec(compositeFocusRingCss);
+    const ringRule = /\.mp-chip-dismiss:focus-visible \.mp-chip-dismiss-ring\s*\{([^}]+)\}/u.exec(compositeFocusRingCss);
+    expect(frameRule?.[1]).toMatch(/outline:\s*none/u);
+    expect(ringRule?.[1]).toMatch(/outline:\s*2px\s+solid/u);
+    expect(ringRule?.[1]).toMatch(/outline-offset:\s*0/u);
+    expect(ringRule?.[1]).not.toMatch(/outline-offset:\s*2px/u);
   });
 
   it('non-text composites ring on :focus-visible only; text-entry keeps the any-focus carve-out', () => {
-    expect(compositeFocusRingCss).toMatch(/\.mp-composite-ring:focus-visible/);
-    expect(compositeFocusRingCss).toMatch(/\.mp-composite-ring-deep:has\(:focus-visible\)/);
-    expect(compositeFocusRingCss).toMatch(/\.mp-chip-dismiss:focus-visible/);
+    expect(compositeFocusRingCss).toMatch(/\.mp-composite-ring:focus-visible/u);
+    expect(compositeFocusRingCss).toMatch(/\.mp-composite-ring-deep:has\(:focus-visible\)/u);
+    expect(compositeFocusRingCss).toMatch(/\.mp-chip-dismiss:focus-visible/u);
     // Text-entry carve-out: focusing an input means typing.
-    expect(compositeFocusRingCss).toMatch(/:has\(input:focus\)/);
-    expect(compositeFocusRingCss).toMatch(/:has\(textarea:focus\)/);
+    expect(compositeFocusRingCss).toMatch(/:has\(input:focus\)/u);
+    expect(compositeFocusRingCss).toMatch(/:has\(textarea:focus\)/u);
   });
 });
 
@@ -352,10 +352,10 @@ describe('the sanctioned focus-ring offset set is closed', () => {
           continue;
         }
         const { name } = entry;
-        if (!/\.tsx?$/.test(name)) {
+        if (!/\.tsx?$/u.test(name)) {
           continue;
         }
-        if (/\.(spec|test|stories)\./.test(name)) {
+        if (/\.(spec|test|stories)\./u.test(name)) {
           continue;
         }
         if (name.endsWith('.d.ts')) {
@@ -368,7 +368,7 @@ describe('the sanctioned focus-ring offset set is closed', () => {
     expect(files.length).toBeGreaterThan(200);
 
     const violations: string[] = [];
-    const literal = /outlineOffset\s*:\s*(?:"(-?\d+)px"|'(-?\d+)px'|(-?\d+))\b/;
+    const literal = /outlineOffset\s*:\s*(?:"(-?\d+)px"|'(-?\d+)px'|(-?\d+))\b/u;
     for (const file of files) {
       const lines = fs.readFileSync(file, 'utf-8').split('\n');
       lines.forEach((line, index) => {

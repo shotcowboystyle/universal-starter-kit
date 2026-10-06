@@ -14,7 +14,7 @@ const RADIUS_STOPS = ['none', 'small', 'medium', 'large', 'full'] as const;
 const radiusAtoms = (el: Element): string[] =>
   String(el.className || '')
     .split(' ')
-    .filter((c) => /^_(btlr|btrr|bbrr|bblr)-/.test(c))
+    .filter((c) => /^_(btlr|btrr|bbrr|bblr)-/u.test(c))
     .sort();
 
 describe('EmptyState', () => {

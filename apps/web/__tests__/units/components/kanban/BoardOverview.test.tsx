@@ -248,12 +248,12 @@ describe('BoardOverview', () => {
 
   it('should display board projects', () => {
     render(<BoardOverview />);
-    expect(screen.getByText(/Project 1/)).toBeInTheDocument();
+    expect(screen.getByText(/Project 1/u)).toBeInTheDocument();
   });
 
   it('should display board members', () => {
     render(<BoardOverview />);
-    expect(screen.getByText(/John Doe/)).toBeInTheDocument();
+    expect(screen.getByText(/John Doe/u)).toBeInTheDocument();
   });
 
   it('should handle login success', async () => {
@@ -368,12 +368,12 @@ describe('BoardOverview', () => {
 
   it('should show 0 projects when board has no projects', () => {
     render(<BoardOverview />);
-    const zeroProjects = screen.getAllByText(/projects:.*0/);
+    const zeroProjects = screen.getAllByText(/projects:.*0/u);
     expect(zeroProjects.length).toBeGreaterThan(0);
   });
 
   it('should display owner name for team boards', () => {
     render(<BoardOverview />);
-    expect(screen.getByText(/Jane Doe/)).toBeInTheDocument();
+    expect(screen.getByText(/Jane Doe/u)).toBeInTheDocument();
   });
 });

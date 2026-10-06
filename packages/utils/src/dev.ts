@@ -159,7 +159,7 @@ export const workspaceSourceAliases = (workspaceRoot?: string): Record<string, s
           if (key === '.' || key === './package.json' || path.extname(key)) {
             continue;
           }
-          const subpath = key.replace(/^\.\//, '');
+          const subpath = key.replace(/^\.\//u, '');
           const resolved = resolveSource(pkgDir, subpath);
           if (resolved) {
             aliases[`${pkg.name}/${subpath}`] = resolved;

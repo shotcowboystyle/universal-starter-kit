@@ -627,7 +627,7 @@ export const Stepper = <
       }
 
       // Only allow valid number characters
-      const cleanText = text.replaceAll(/[^0-9.-]/g, '');
+      const cleanText = text.replaceAll(/[^0-9.-]/gu, '');
 
       // Prevent multiple decimal points
       if (precision === 0 && cleanText.includes('.')) {

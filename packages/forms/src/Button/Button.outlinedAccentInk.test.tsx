@@ -99,7 +99,7 @@ const scopeOf = (el: Element): string | null => {
 };
 
 const resolveInScope = (value: string, scheme: Scheme, scope: string | null): string => {
-  const token = /^var\(--([\w-]+)\)$/.exec(value)?.[1];
+  const token = /^var\(--([\w-]+)\)$/u.exec(value)?.[1];
   if (!token) {
     return value;
   }
@@ -122,7 +122,7 @@ const resolveInScope = (value: string, scheme: Scheme, scope: string | null): st
 
 const paintedColor = (el: Element, scheme: Scheme): string => {
   const cls = Array.from(el.classList).find(
-    (c) => c.startsWith('_col-') && !/^_col-0(hover|active|focus|press)/.test(c),
+    (c) => c.startsWith('_col-') && !/^_col-0(hover|active|focus|press)/u.test(c),
   );
   if (!cls) {
     throw new Error(`${el.tagName} carries no _col- class`);
@@ -162,7 +162,7 @@ describe("an outlined accent Button's label reads on its host", () => {
     ] as const) {
       it(`${scheme}: a filled ${c.name} Button keeps its on-fill label`, () => {
         houseRender(<Button {...c.props}>Filled</Button>, scheme, c.knob);
-        expect(screen.getByText('Filled').className).toMatch(/_col-color\b/);
+        expect(screen.getByText('Filled').className).toMatch(/_col-color\b/u);
       });
     }
   }

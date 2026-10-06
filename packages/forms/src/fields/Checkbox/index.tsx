@@ -154,7 +154,7 @@ const CheckboxesCheckbox = TamaguiCheckbox.styleable((checkboxProps, ref) => {
   const hasName =
     (props as Record<string, unknown>)['aria-label'] || (props as Record<string, unknown>)['aria-labelledby'];
   const fallbackName = focusItemValue
-    ? focusItemValue.replaceAll(/[-_]+/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
+    ? focusItemValue.replaceAll(/[-_]+/gu, ' ').replace(/^\w/u, (c) => c.toUpperCase())
     : undefined;
   const combinedProps = {
     ...(!hasName && fallbackName ? { 'aria-label': fallbackName } : undefined),

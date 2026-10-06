@@ -99,8 +99,8 @@ describe('Video', () => {
       readFileSync(join(here, 'index.native.tsx'), 'utf-8'),
       readFileSync(join(here, 'VideoFrame.tsx'), 'utf-8'),
     ].join('\n');
-    expect(src).not.toMatch(/knobProps\.cardSurface|knobProps\.containerRadius|capContainerRadius\(/);
-    expect(src).not.toMatch(/data-status-pip|StatusPip|statusPip/);
+    expect(src).not.toMatch(/knobProps\.cardSurface|knobProps\.containerRadius|capContainerRadius\(/u);
+    expect(src).not.toMatch(/data-status-pip|StatusPip|statusPip/u);
     expect(src).toContain('mediaTileFrameProps');
 
     const { container } = renderWithProviders(

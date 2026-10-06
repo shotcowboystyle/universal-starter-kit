@@ -145,7 +145,7 @@ describe('Badge design-law — T-BODY count text (SB-M-101)', () => {
     const { container } = renderWithProviders(<Badge count={5} />);
     const weight = atoms(countText(container), ['_fow-']);
     expect(weight.length).toBeGreaterThan(0);
-    expect(weight.join(' ')).toMatch(/600|weight-6|fow-6/);
+    expect(weight.join(' ')).toMatch(/600|weight-6|fow-6/u);
   });
 
   it('ignores the fontWeight knob so count text stays at 600 (SB-M-101)', () => {
@@ -163,8 +163,8 @@ describe('Badge design-law — T-BODY count text (SB-M-101)', () => {
       </Preset>,
     );
     const boldWeight = atoms(countText(bold.container), ['_fow-']).join(' ');
-    expect(regularWeight).toMatch(/600|weight-6|fow-6/);
-    expect(boldWeight).toMatch(/600|weight-6|fow-6/);
+    expect(regularWeight).toMatch(/600|weight-6|fow-6/u);
+    expect(boldWeight).toMatch(/600|weight-6|fow-6/u);
     expect(boldWeight).toStrictEqual(regularWeight);
   });
 
@@ -220,6 +220,6 @@ describe('Badge design-law — size geometry and R-PILL', () => {
     const pill = container.querySelector('[data-badge]') as HTMLElement;
     expect(pill.getAttribute('data-radius-class')).toBe('R-PILL');
     const radius = atoms(pill, ['_br-', '_btlr-']);
-    expect(radius.join(' ')).not.toMatch(/radius-0\b|_br-0(?:px)?\b|_btlr-t-radius-0/);
+    expect(radius.join(' ')).not.toMatch(/radius-0\b|_br-0(?:px)?\b|_btlr-t-radius-0/u);
   });
 });

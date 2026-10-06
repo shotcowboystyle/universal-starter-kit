@@ -102,7 +102,7 @@ const plain = <T>(raw: unknown): Record<string, T> => {
   for (const [key, value] of Object.entries((raw ?? {}) as Record<string, T | { val?: T }>)) {
     const unwrapped = value && typeof value === 'object' && 'val' in value ? (value as { val?: T }).val : (value as T);
     if (unwrapped !== undefined) {
-      out[key.replace(/^\$/, '')] = unwrapped;
+      out[key.replace(/^\$/u, '')] = unwrapped;
     }
   }
   return out;

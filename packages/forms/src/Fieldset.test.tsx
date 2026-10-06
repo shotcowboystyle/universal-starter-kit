@@ -34,7 +34,7 @@ describe('Fieldset', () => {
     const weight =
       legend?.style.fontWeight ||
       (legend ? getComputedStyle(legend).fontWeight : '') ||
-      (legend?.className.match(/fw-400|fow-400|font-weight-400/) ? '400' : '');
+      (legend?.className.match(/fw-400|fow-400|font-weight-400/u) ? '400' : '');
     expect(['400', 'normal']).toContain(String(weight));
   });
 });

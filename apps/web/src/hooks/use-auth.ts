@@ -210,7 +210,7 @@ export const useAuthForm = () => {
 
       const searchParams = new URLSearchParams(window.location.search);
       const callbackUrl = searchParams.get('callbackUrl');
-      const cleanCallback = callbackUrl?.replace(/^\/[a-z]{2}\//, '/');
+      const cleanCallback = callbackUrl?.replace(/^\/[a-z]{2}\//u, '/');
       const redirectUrl = cleanCallback || `/boards?${URL_PARAMS.LOGIN_SUCCESS}`;
 
       setTimeout(() => {

@@ -42,7 +42,7 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
           throw new Error('MongoDB connection string (DATABASE_URL) is not defined');
         }
 
-        const maskedUri = uri.replace(/:\/\/([^:]+):([^@]+)@/, '://***:***@');
+        const maskedUri = uri.replace(/:\/\/([^:]+):([^@]+)@/u, '://***:***@');
         logger.log(`Connecting to: ${maskedUri}`);
 
         const isProduction = configService.get('NODE_ENV') === 'production';

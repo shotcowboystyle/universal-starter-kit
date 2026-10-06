@@ -203,8 +203,8 @@ describe('SearchInput', () => {
       throw new Error('input not found');
     }
     expect(result.container.querySelector('.mp-composite-ring')).toBeTruthy();
-    expect(input.className).toMatch(/mp-input-area/);
-    expect(input.className).toMatch(/mp-search-input/);
+    expect(input.className).toMatch(/mp-input-area/u);
+    expect(input.className).toMatch(/mp-search-input/u);
     expect(input.getAttribute('type')).toBe('search');
     const leading = result.container.querySelector('.mp-search-leading');
     expect(leading).toBeTruthy();
@@ -215,8 +215,8 @@ describe('SearchInput', () => {
       throw new Error('clear button not rendered');
     }
     expect(clear.getAttribute('tabindex')).toBe('0');
-    expect(clear.className).toMatch(/mp-chip-dismiss/);
-    expect(clear.className).not.toMatch(/mp-chip-dismiss-ring/);
+    expect(clear.className).toMatch(/mp-chip-dismiss/u);
+    expect(clear.className).not.toMatch(/mp-chip-dismiss-ring/u);
     const ring = clear.querySelector('.mp-chip-dismiss-ring');
     expect(ring).not.toBeNull();
     expect(clear.contains(ring)).toBe(true);
@@ -272,9 +272,9 @@ describe('SearchInput', () => {
   it('entered value uses the full input ramp (T-VALUE ignore), not textAccent', () => {
     // InputFrame drops unknown data-* on the raw <input>; the contract is the
     // Area color override. T-VALUE = full ramp; textAccent must not dim it.
-    expect(SEARCH_INPUT_SRC).toMatch(/color: ['"]\$color['"]/);
-    expect(SEARCH_INPUT_SRC).toMatch(/['"]data-mp-t-value['"]: ['"]full['"]/);
-    expect(SEARCH_INPUT_SRC).toMatch(/textAccentColor/);
+    expect(SEARCH_INPUT_SRC).toMatch(/color: ['"]\$color['"]/u);
+    expect(SEARCH_INPUT_SRC).toMatch(/['"]data-mp-t-value['"]: ['"]full['"]/u);
+    expect(SEARCH_INPUT_SRC).toMatch(/textAccentColor/u);
     const result = renderWithProviders(<SearchInput defaultValue="pikachu" />);
     const input = result.container.querySelector('input');
     if (!input) {
@@ -308,8 +308,8 @@ describe('SearchInput', () => {
   it('does not fork a SearchInput-only clear ring stylesheet', () => {
     renderWithProviders(<SearchInput defaultValue="abc" />);
     const chrome = document.getElementById('mp-search-input-chrome')?.textContent ?? '';
-    expect(chrome).not.toMatch(/mp-search-clear/);
-    expect(chrome).toMatch(/mp-search-input/);
+    expect(chrome).not.toMatch(/mp-search-clear/u);
+    expect(chrome).toMatch(/mp-search-input/u);
   });
 
   it('default painted box is 44 tall; end-cap is the size-recipe square', () => {

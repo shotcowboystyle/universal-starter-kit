@@ -114,7 +114,7 @@ describe('components Button — elevation and size knobs reach the frame', () =>
         <Button>Save</Button>
       </Preset>,
     );
-    expect(screen.getByRole('button').className).not.toMatch(/_bxsh-/);
+    expect(screen.getByRole('button').className).not.toMatch(/_bxsh-/u);
     cleanup();
 
     renderWithProviders(
@@ -122,7 +122,7 @@ describe('components Button — elevation and size knobs reach the frame', () =>
         <Button>Save</Button>
       </Preset>,
     );
-    expect(screen.getByRole('button').className).toMatch(/_bxsh-/);
+    expect(screen.getByRole('button').className).toMatch(/_bxsh-/u);
   });
 
   it('size knob drives the frame height', () => {
@@ -134,9 +134,9 @@ describe('components Button — elevation and size knobs reach the frame', () =>
       const atom = screen
         .getByRole('button')
         .className.split(' ')
-        .find((c) => /^_h-\d+px$/.test(c));
+        .find((c) => /^_h-\d+px$/u.test(c));
       expect(atom).toBeDefined();
-      return Number(atom!.replaceAll(/^_h-|px$/g, ''));
+      return Number(atom!.replaceAll(/^_h-|px$/gu, ''));
     };
 
     const heights: number[] = [];

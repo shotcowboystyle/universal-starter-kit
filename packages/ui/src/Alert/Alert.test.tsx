@@ -189,7 +189,7 @@ describe('Alert', () => {
 // anatomy (the floor carried both atoms), green only when the floor is
 // paint-free in every state.
 describe('Alert dismiss press-floor paint', () => {
-  const paintedStateAtom = /_bg-0(?:hover|active)-(?!transparent)/;
+  const paintedStateAtom = /_bg-0(?:hover|active)-(?!transparent)/u;
   const renderDismissible = (onDismiss: () => void = () => {}) =>
     renderWithProviders(
       <Alert
@@ -215,7 +215,7 @@ describe('Alert dismiss press-floor paint', () => {
     // Proves the atom detector can see hover paint in this harness (the
     // no-paint assert above is meaningless without this arm), and pins the
     // fill to the ring: icon + one space token, never the 44px floor.
-    expect(ring.className).toMatch(/_bg-0hover-color5/);
+    expect(ring.className).toMatch(/_bg-0hover-color5/u);
     expect(ring.querySelector('svg')).not.toBeNull();
   });
 
@@ -238,7 +238,7 @@ describe('Alert dismiss press-floor paint', () => {
 });
 
 describe('Alert nested action press-floor paint', () => {
-  const paintedStateAtom = /_bg-0(?:hover|active)-(?!transparent)/;
+  const paintedStateAtom = /_bg-0(?:hover|active)-(?!transparent)/u;
 
   it('action floor is unpainted; hover fill lives on the nested pill', () => {
     const { container } = renderWithProviders(
@@ -252,7 +252,7 @@ describe('Alert nested action press-floor paint', () => {
     expect(floor).not.toBeNull();
     expect(floor.className).not.toMatch(paintedStateAtom);
     const pill = floor.firstElementChild as HTMLElement;
-    expect(pill.className).toMatch(/_bg-0hover-color5/);
+    expect(pill.className).toMatch(/_bg-0hover-color5/u);
   });
 
   it('action activates via Enter on the floor', () => {
@@ -351,7 +351,7 @@ describe('Alert action labels — weight 400 on the TEXT NODE', () => {
     expect(textNode).not.toBe(floor);
     const weight = atoms(textNode, ['_fow-']);
     expect(weight.length).toBeGreaterThan(0);
-    expect(weight.join(' ')).not.toMatch(/600|weight-6|fow-6/);
+    expect(weight.join(' ')).not.toMatch(/600|weight-6|fow-6/u);
     expect(atoms(floor, ['_fow-'])).toHaveLength(0);
   });
 
@@ -370,7 +370,7 @@ describe('Alert action labels — weight 400 on the TEXT NODE', () => {
       expect(textNode).not.toBe(floor);
       const weight = atoms(textNode, ['_fow-']);
       expect(weight.length).toBeGreaterThan(0);
-      expect(weight.join(' ')).not.toMatch(/600|weight-6|fow-6/);
+      expect(weight.join(' ')).not.toMatch(/600|weight-6|fow-6/u);
     }
   });
 });

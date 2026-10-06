@@ -23,24 +23,24 @@ describe('page layouts named exports', () => {
   it('page.tsx and PageTemplates export named functions only', () => {
     const page = readSibling('page.tsx');
     const templates = readSibling('PageTemplates.tsx');
-    expect(page).toMatch(/export const Screen = /);
-    expect(page).toMatch(/export const PageHeader = /);
-    expect(page).toMatch(/export const PageSection = /);
-    expect(templates).toMatch(/export const ListPageLayout = /);
-    expect(templates).toMatch(/export const DetailPageLayout = /);
-    expect(templates).toMatch(/export const SettingsPageLayout = /);
-    expect(page).not.toMatch(/export default/);
-    expect(templates).not.toMatch(/export default/);
+    expect(page).toMatch(/export const Screen = /u);
+    expect(page).toMatch(/export const PageHeader = /u);
+    expect(page).toMatch(/export const PageSection = /u);
+    expect(templates).toMatch(/export const ListPageLayout = /u);
+    expect(templates).toMatch(/export const DetailPageLayout = /u);
+    expect(templates).toMatch(/export const SettingsPageLayout = /u);
+    expect(page).not.toMatch(/export default/u);
+    expect(templates).not.toMatch(/export default/u);
   });
 });
 
 describe('no Tint wrap', () => {
   it('page.tsx does not wrap Tint; NestedScale is the nest dialect', () => {
     const src = readSibling('page.tsx');
-    expect(src).not.toMatch(/from ["'][^"']*Tint["']/);
-    expect(src).not.toMatch(/<[Tt]int[\s/>]/);
-    expect(src).toMatch(/const NestedScale = /);
-    expect(src).not.toMatch(/<Surface density="comfortable">/);
+    expect(src).not.toMatch(/from ["'][^"']*Tint["']/u);
+    expect(src).not.toMatch(/<[Tt]int[\s/>]/u);
+    expect(src).toMatch(/const NestedScale = /u);
+    expect(src).not.toMatch(/<Surface density="comfortable">/u);
   });
 });
 
@@ -50,7 +50,7 @@ describe('PageHeader / PageSection labels — weight 400, never 600', () => {
     const title = screen.getByText('Workspace Settings');
     const weight = atoms(title, ['_fow-']);
     expect(weight.length).toBeGreaterThan(0);
-    expect(weight.join(' ')).not.toMatch(/600|weight-6|fow-6/);
+    expect(weight.join(' ')).not.toMatch(/600|weight-6|fow-6/u);
   });
 
   it('section title rides the fontWeight knob and is not 600', () => {
@@ -58,7 +58,7 @@ describe('PageHeader / PageSection labels — weight 400, never 600', () => {
     const title = screen.getByText('Profile');
     const weight = atoms(title, ['_fow-']);
     expect(weight.length).toBeGreaterThan(0);
-    expect(weight.join(' ')).not.toMatch(/600|weight-6|fow-6/);
+    expect(weight.join(' ')).not.toMatch(/600|weight-6|fow-6/u);
   });
 
   it('bold fontWeight knob restyles the page title without landing on 600', () => {
@@ -70,7 +70,7 @@ describe('PageHeader / PageSection labels — weight 400, never 600', () => {
     const title = screen.getByText('Workspace Settings');
     const weight = atoms(title, ['_fow-']);
     expect(weight.length).toBeGreaterThan(0);
-    expect(weight.join(' ')).not.toMatch(/600|weight-6|fow-6/);
+    expect(weight.join(' ')).not.toMatch(/600|weight-6|fow-6/u);
   });
 });
 

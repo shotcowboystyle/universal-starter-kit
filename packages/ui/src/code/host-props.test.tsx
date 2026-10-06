@@ -47,7 +47,7 @@ describe.each(['web', 'native'])('code family host props, TAMAGUI_TARGET=%s', (t
       // cannot prove a later case clean; the props check above can.
       const unknownProps = errorSpy.mock.calls
         .map(formatConsoleCall)
-        .filter((message) => /does not recognize the `\w+` prop on a DOM element/.test(message));
+        .filter((message) => /does not recognize the `\w+` prop on a DOM element/u.test(message));
       expect(unknownProps).toStrictEqual([]);
     } finally {
       errorSpy.mockRestore();

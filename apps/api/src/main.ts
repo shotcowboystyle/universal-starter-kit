@@ -27,7 +27,7 @@ const bootstrap = async () => {
     // Explicit production frontend URL as fallback
     'https://turborepo-starter-kit-web.vercel.app',
     // Regex for Vercel preview URLs for this project
-    /^https:\/\/turborepo-starter-kit-web-.*\.vercel\.app$/,
+    /^https:\/\/turborepo-starter-kit-web-.*\.vercel\.app$/u,
     // Local development
     'http://localhost:3000',
     // Mobile development (Expo)

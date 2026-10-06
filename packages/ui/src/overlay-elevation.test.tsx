@@ -53,13 +53,13 @@ const paintedShadow = (id: string): string => frame(id).style.boxShadow;
 
 const shadowAtoms = (id: string): string[] =>
   String(frame(id).className || '')
-    .split(/\s+/)
+    .split(/\s+/u)
     .filter((c) => c.startsWith('_bxsh-'))
     .sort();
 
 const bgAtoms = (id: string): string[] =>
   String(frame(id).className || '')
-    .split(/\s+/)
+    .split(/\s+/u)
     .filter((c) => c.startsWith('_bg-'));
 
 const renderDialogsBesideAButton = (elevation?: 'small' | 'medium' | 'large') => {
@@ -107,7 +107,7 @@ describe('overlay elevation is a different distance off the surface', () => {
     // The atom half alone does not discriminate (a class can name one shadow
     // while the inline style paints another), so pair it with the painted value.
     expect(shadowAtoms('dialog')).toHaveLength(1);
-    expect(shadowAtoms('dialog')[0]).toMatch(/^_bxsh-0px12px24px/);
+    expect(shadowAtoms('dialog')[0]).toMatch(/^_bxsh-0px12px24px/u);
     expect(paintedShadow('dialog')).toContain('12px 24px');
     expect(shadowAtoms('dialog')).not.toStrictEqual(shadowAtoms('control'));
   });
@@ -137,7 +137,7 @@ describe('overlay elevation is a different distance off the surface', () => {
     );
     // Dark elevation tint: light-coloured shadow, never a black umbra.
     expect(paintedShadow('dialog')).toBe(dialogStopPaintDark);
-    expect(paintedShadow('dialog')).not.toMatch(/rgba\(0,\s*0,\s*0/);
+    expect(paintedShadow('dialog')).not.toMatch(/rgba\(0,\s*0,\s*0/u);
     // resolveKnobs owns the dark ground: `overlayFill` steps the filled rest
     // fill up the ramp under dark + elevation.
     expect(bgAtoms('dialog')).toStrictEqual(['_bg-color4']);

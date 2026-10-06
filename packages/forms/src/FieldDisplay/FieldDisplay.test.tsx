@@ -68,7 +68,7 @@ describe('FieldDisplay', () => {
       />,
     );
     expect(result.findTextElement('Beta')).toBeDefined();
-    expect(result.container.textContent).not.toMatch(/\bb\b/);
+    expect(result.container.textContent).not.toMatch(/\bb\b/u);
   });
 
   it('escapes HTML as text and does not create a javascript: link', () => {

@@ -243,7 +243,7 @@ const rampStep = (fill: unknown): number | undefined => {
   if (typeof fill !== 'string') {
     return undefined;
   }
-  const step = /^\$color(\d+)$/.exec(fill);
+  const step = /^\$color(\d+)$/u.exec(fill);
   return step ? Number(step[1]) : undefined;
 };
 

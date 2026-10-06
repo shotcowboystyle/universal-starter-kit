@@ -317,7 +317,7 @@ describe('TextArea', () => {
         />,
       );
       const textarea = result.getTextArea() as HTMLTextAreaElement;
-      expect(textarea?.className).toMatch(/mp-input-area/);
+      expect(textarea?.className).toMatch(/mp-input-area/u);
       expect(textarea?.closest('.mp-composite-ring')).toBeTruthy();
       expect(textarea?.getAttribute('aria-multiline')).toBe('true');
     });
@@ -501,7 +501,7 @@ describe('TextArea', () => {
       );
       const fullClasses = boxRadiusClasses(full.container);
       expect(fullClasses).toStrictEqual(['_btlr-18px']);
-      expect(fullClasses.join(' ')).not.toMatch(/t-radius-12/);
+      expect(fullClasses.join(' ')).not.toMatch(/t-radius-12/u);
     });
 
     it('declares the cap on the painted box with the knob stops it resolved', () => {
@@ -544,7 +544,7 @@ describe('TextArea', () => {
         const result = renderWithProviders(scheme === 'dark' ? <Theme name="dark">{ui}</Theme> : ui);
         const classes = boxRadiusClasses(result.container);
         expect(classes, scheme).toStrictEqual(['_btlr-18px']);
-        expect(classes.join(' '), scheme).not.toMatch(/t-radius-(4|12)/);
+        expect(classes.join(' '), scheme).not.toMatch(/t-radius-(4|12)/u);
         result.unmount();
       }
     });
@@ -575,8 +575,8 @@ describe('TextArea', () => {
       if (fromStyle && fromStyle !== 'normal' && fromStyle !== '') {
         return String(fromStyle);
       }
-      for (const cls of String(html.className ?? '').split(/\s+/)) {
-        const match = /(?:^|_)(?:fw|fow|fontWeight)-?(\d+)/i.exec(cls);
+      for (const cls of String(html.className ?? '').split(/\s+/u)) {
+        const match = /(?:^|_)(?:fw|fow|fontWeight)-?(\d+)/iu.exec(cls);
         if (match) {
           return match[1];
         }
@@ -600,7 +600,7 @@ describe('TextArea', () => {
       const cls = String(html.className ?? '');
       // Tamagui atomics (`_col-color11`, `_col-color`) — happy-dom often
       // leaves getComputedStyle().color empty for theme tokens.
-      const match = /_col-(color\d*)\b/.exec(cls);
+      const match = /_col-(color\d*)\b/u.exec(cls);
       if (match) {
         return match[1];
       }
@@ -650,8 +650,8 @@ describe('TextArea', () => {
       expect(lowValue).toBeTruthy();
       expect(lowValue).toBe(highValue);
       // Full ramp, not the accent floor (`$color11`).
-      expect(lowValue).toMatch(/^color$|^rgb|^#/i);
-      expect(lowValue).not.toMatch(/color11/);
+      expect(lowValue).toMatch(/^color$|^rgb|^#/iu);
+      expect(lowValue).not.toMatch(/color11/u);
       low.unmount();
       high.unmount();
     });

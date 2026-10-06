@@ -20,7 +20,7 @@ describe('routes constants', () => {
     });
 
     it('should be a valid URL format', () => {
-      expect(API_URL).toMatch(/^https?:\/\//);
+      expect(API_URL).toMatch(/^https?:\/\//u);
     });
   });
 
@@ -55,7 +55,7 @@ describe('routes constants', () => {
       });
 
       it('should have valid LOGIN_API URL format', () => {
-        expect(ROUTES.AUTH.LOGIN_API).toMatch(/^https?:\/\//);
+        expect(ROUTES.AUTH.LOGIN_API).toMatch(/^https?:\/\//u);
       });
     });
 

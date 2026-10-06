@@ -75,35 +75,35 @@ describe('TaskFilter', () => {
 
   it('renders status chips with per-status counts', () => {
     render(<TaskFilter />);
-    expect(chip(/^total 5$/)).toBeInTheDocument();
-    expect(chip(/^statusTodo 3$/)).toBeInTheDocument();
-    expect(chip(/^statusInProgress 1$/)).toBeInTheDocument();
-    expect(chip(/^statusDone 1$/)).toBeInTheDocument();
+    expect(chip(/^total 5$/u)).toBeInTheDocument();
+    expect(chip(/^statusTodo 3$/u)).toBeInTheDocument();
+    expect(chip(/^statusInProgress 1$/u)).toBeInTheDocument();
+    expect(chip(/^statusDone 1$/u)).toBeInTheDocument();
   });
 
   it('marks the TOTAL chip as selected when no status filter is set', () => {
     render(<TaskFilter />);
-    expect(chip(/^total/)).toHaveAttribute('aria-pressed', 'true');
-    expect(chip(/^statusTodo/)).toHaveAttribute('aria-pressed', 'false');
+    expect(chip(/^total/u)).toHaveAttribute('aria-pressed', 'true');
+    expect(chip(/^statusTodo/u)).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('marks the active status chip as selected', async () => {
     await mockStore({ filter: { status: TaskStatus.DONE, search: '' } });
     render(<TaskFilter />);
-    expect(chip(/^statusDone/)).toHaveAttribute('aria-pressed', 'true');
-    expect(chip(/^total/)).toHaveAttribute('aria-pressed', 'false');
+    expect(chip(/^statusDone/u)).toHaveAttribute('aria-pressed', 'true');
+    expect(chip(/^total/u)).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('sets the status filter when a status chip is pressed', () => {
     render(<TaskFilter />);
-    fireEvent.click(chip(/^statusInProgress/));
+    fireEvent.click(chip(/^statusInProgress/u));
     expect(mockSetFilter).toHaveBeenCalledWith({ status: TaskStatus.IN_PROGRESS });
   });
 
   it('clears the status filter when TOTAL is pressed', async () => {
     await mockStore({ filter: { status: TaskStatus.TODO, search: '' } });
     render(<TaskFilter />);
-    fireEvent.click(chip(/^total/));
+    fireEvent.click(chip(/^total/u));
     expect(mockSetFilter).toHaveBeenCalledWith({ status: null });
   });
 
@@ -133,6 +133,6 @@ describe('TaskFilter', () => {
   ])('handles %s with zero status counts', async (_label, projects) => {
     await mockStore({ projects });
     render(<TaskFilter />);
-    expect(chip(/^statusTodo 0$/)).toBeInTheDocument();
+    expect(chip(/^statusTodo 0$/u)).toBeInTheDocument();
   });
 });

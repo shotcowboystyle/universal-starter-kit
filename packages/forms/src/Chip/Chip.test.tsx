@@ -167,8 +167,8 @@ describe('Chip', () => {
       );
       const frame = result.container.querySelector('[data-mp-chip]') as HTMLElement;
       expect(frame).not.toBeNull();
-      expect(String(frame.className)).toMatch(/bw-1|borderWidth-1/);
-      expect(String(frame.className)).not.toMatch(/bw-2|borderWidth-2/);
+      expect(String(frame.className)).toMatch(/bw-1|borderWidth-1/u);
+      expect(String(frame.className)).not.toMatch(/bw-2|borderWidth-2/u);
     }
   });
 
@@ -184,7 +184,7 @@ describe('Chip', () => {
     expect(frame.getAttribute('data-selected')).toBe('true');
     // Selection is fill (data-selected), not a thicker outline — Tamagui
     // zeros borderWidth via class, not inline style.
-    expect(String(frame.className)).toMatch(/bw-0|borderWidth-0/);
+    expect(String(frame.className)).toMatch(/bw-0|borderWidth-0/u);
   });
 
   it('selected chip renders a leading check when no icon is passed', () => {

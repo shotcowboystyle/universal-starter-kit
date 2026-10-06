@@ -48,7 +48,7 @@ describe('ListRow title — weight 400 on the TEXT NODE (§6.1)', () => {
     const textNode = screen.getByText('Q3 Vendor Contract');
     const weight = atoms(textNode, ['_fow-']);
     expect(weight.length).toBeGreaterThan(0);
-    expect(weight.join(' ')).not.toMatch(/500|600|weight-5|weight-6|fow-5|fow-6/);
+    expect(weight.join(' ')).not.toMatch(/500|600|weight-5|weight-6|fow-5|fow-6/u);
   });
 });
 
@@ -145,7 +145,7 @@ describe('List rows are a CONTAINER-CAP stack', () => {
       </Preset>,
     );
     const found = screen.getAllByRole('listitem').map((row) => ({
-      corners: atoms(row, ['_borderStartStartRadius-', '_borderEndEndRadius-']).filter((a) => /Radius-\d+px$/.test(a)),
+      corners: atoms(row, ['_borderStartStartRadius-', '_borderEndEndRadius-']).filter((a) => /Radius-\d+px$/u.test(a)),
       container: row.getAttribute('data-constraint-container'),
       position: row.getAttribute('data-stack-position'),
     }));

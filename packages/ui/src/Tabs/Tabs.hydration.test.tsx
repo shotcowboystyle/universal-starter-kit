@@ -54,7 +54,7 @@ const Fixture = () => (
 /** Every `_h-` height atom painted inside each tab, in document order. */
 const tabHeights = (root: ParentNode): string[][] =>
   [...root.querySelectorAll('[role="tab"]')].map((tab) =>
-    [tab, ...tab.querySelectorAll('*')].flatMap((node) => [...node.classList].filter((name) => /^_h-\d/.test(name))),
+    [tab, ...tab.querySelectorAll('*')].flatMap((node) => [...node.classList].filter((name) => /^_h-\d/u.test(name))),
   );
 
 let container: HTMLDivElement;
@@ -88,7 +88,7 @@ const hydrate = async () => {
   });
 };
 
-const hydrationErrors = () => errors.filter((error) => /hydration|hydrated|didn't match/i.test(String(error)));
+const hydrationErrors = () => errors.filter((error) => /hydration|hydrated|didn't match/iu.test(String(error)));
 
 describe('Tabs sizing through hydration', () => {
   it("keeps the server's pointer-sized tabs through hydration, then adopts the touch floor", async () => {

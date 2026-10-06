@@ -32,8 +32,8 @@ describe('BoardForm', () => {
 
   it('renders labelled title and description fields', () => {
     renderForm();
-    expect(screen.getByText(/boardTitleLabel/)).toBeInTheDocument();
-    expect(screen.getByText(/descriptionLabel/)).toBeInTheDocument();
+    expect(screen.getByText(/boardTitleLabel/u)).toBeInTheDocument();
+    expect(screen.getByText(/descriptionLabel/u)).toBeInTheDocument();
     expect(screen.getByTestId('board-title-input')).toHaveAttribute('placeholder', 'boardTitlePlaceholder');
     expect(screen.getByTestId('board-description-input')).toHaveAttribute('placeholder', 'descriptionPlaceholder');
   });

@@ -191,11 +191,11 @@ const squareFaceRadiusPx = (container: HTMLElement): number | undefined => {
   if (!token) {
     return undefined;
   }
-  const px = /^_btlr-(\d+(?:\.\d+)?)px$/.exec(token);
+  const px = /^_btlr-(\d+(?:\.\d+)?)px$/u.exec(token);
   if (px) {
     return Number(px[1]);
   }
-  const bare = /^_btlr-(\d+(?:\.\d+)?)$/.exec(token);
+  const bare = /^_btlr-(\d+(?:\.\d+)?)$/u.exec(token);
   return bare ? Number(bare[1]) : undefined;
 };
 
@@ -223,7 +223,7 @@ describe('Avatar square face radius (CIRCULAR-AT-FULL)', () => {
     const radius = squareFaceRadiusPx(container);
     expect(radius).toBe(FACE / 2);
     expect(radius).not.toBe(50);
-    expect(String(face.className)).not.toMatch(/_btlr-t-radius-12/);
+    expect(String(face.className)).not.toMatch(/_btlr-t-radius-12/u);
     expect(container.querySelector('[data-radius-class]')).toBeNull();
   });
 
@@ -255,6 +255,6 @@ describe('Avatar square face radius (CIRCULAR-AT-FULL)', () => {
     const face = container.querySelector('[data-avatar-px]') as HTMLElement;
     expect(face.getAttribute('data-radius-class')).toBe('R-IDENTITY');
     expect(squareFaceRadiusPx(container)).not.toBe(FACE / 2);
-    expect(String(face.className)).toMatch(/_btlr-100000px/);
+    expect(String(face.className)).toMatch(/_btlr-100000px/u);
   });
 });

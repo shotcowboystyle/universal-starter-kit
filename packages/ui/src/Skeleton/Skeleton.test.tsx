@@ -48,8 +48,8 @@ describe('Skeleton — announcer and motion', () => {
     const live = renderWithProviders(<Skeleton width={120} />);
     const liveBone = live.container.querySelector('[data-skeleton]') as HTMLElement;
     expect(liveBone.getAttribute('data-animate')).toBe('true');
-    expect(liveBone.className).toMatch(/mp-skeleton-pulse/);
-    expect(liveBone.className).not.toMatch(/mp-skeleton-static/);
+    expect(liveBone.className).toMatch(/mp-skeleton-pulse/u);
+    expect(liveBone.className).not.toMatch(/mp-skeleton-static/u);
     cleanup();
 
     const still = renderWithProviders(
@@ -60,8 +60,8 @@ describe('Skeleton — announcer and motion', () => {
     );
     const stillBone = still.container.querySelector('[data-skeleton]') as HTMLElement;
     expect(stillBone.getAttribute('data-animate')).toBe('false');
-    expect(stillBone.className).toMatch(/mp-skeleton-static/);
-    expect(stillBone.className).not.toMatch(/mp-skeleton-pulse/);
+    expect(stillBone.className).toMatch(/mp-skeleton-static/u);
+    expect(stillBone.className).not.toMatch(/mp-skeleton-pulse/u);
   });
 
   it('animation:none stops the pulse even when animate is true', () => {
@@ -75,7 +75,7 @@ describe('Skeleton — announcer and motion', () => {
     );
     const bone = container.querySelector('[data-skeleton]') as HTMLElement;
     expect(bone.getAttribute('data-animate')).toBe('false');
-    expect(bone.className).toMatch(/mp-skeleton-static/);
+    expect(bone.className).toMatch(/mp-skeleton-static/u);
   });
 
   it('never accepts pointer events', () => {
@@ -86,7 +86,7 @@ describe('Skeleton — announcer and motion', () => {
       />,
     );
     const bone = container.querySelector('[data-skeleton]') as HTMLElement;
-    expect(bone.className).toMatch(/_pe-none/);
+    expect(bone.className).toMatch(/_pe-none/u);
   });
 
   it('fillStyle does not recolour the bone (neutral chrome)', () => {

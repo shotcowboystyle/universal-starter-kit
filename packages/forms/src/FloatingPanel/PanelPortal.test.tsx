@@ -119,7 +119,7 @@ describe('web panels escape a react-native-web ScrollView', () => {
     const viewport = document.querySelector('[data-testid="floating-panel-viewport"]') as HTMLElement;
     const portal = viewport.closest('[data-fp-portal]') as HTMLElement;
     const themed = Array.from(portal.querySelectorAll<HTMLElement>('.is_Theme')).filter((el) => el.contains(viewport));
-    expect(themed.some((el) => /\bt_dark\b/.test(el.className))).toBe(true);
+    expect(themed.some((el) => /\bt_dark\b/u.test(el.className))).toBe(true);
   });
 });
 

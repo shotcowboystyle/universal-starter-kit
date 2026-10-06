@@ -74,7 +74,7 @@ export const resolveCurrencyCode = (symbol: string | undefined): string | undefi
   if (!symbol) {
     return undefined;
   }
-  if (/^[A-Za-z]{3}$/.test(symbol)) {
+  if (/^[A-Za-z]{3}$/u.test(symbol)) {
     return symbol.toUpperCase();
   }
   return CURRENCY_SYMBOL_TO_CODE[symbol];

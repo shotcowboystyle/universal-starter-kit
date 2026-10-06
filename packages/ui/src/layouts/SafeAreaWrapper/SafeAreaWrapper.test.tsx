@@ -63,6 +63,6 @@ describe('SafeAreaWrapper web', () => {
     const frame = container.querySelector('[data-testid="safe-area-wrapper"]') as HTMLElement;
     expect(frame.textContent).toContain('Padded');
     const haystack = `${frame.className} ${frame.getAttribute('style') ?? ''}`;
-    expect(haystack).toMatch(/_pt-|_pr-|_pb-|_pl-/);
+    expect(haystack).toMatch(/_pt-|_pr-|_pb-|_pl-/u);
   });
 });

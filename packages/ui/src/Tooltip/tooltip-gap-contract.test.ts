@@ -34,18 +34,18 @@ describe('Tooltip gap contract', () => {
   it.each(tooltipSources)('%s declares no gap constant of its own', (relative) => {
     // Named for the constant this AC deleted, but the assertion is the rule,
     // not the name: any local OFFSET/GAP constant is the same drift again.
-    expect(read(relative)).not.toMatch(/\b(?:const|let|var)\s+\w*(?:OFFSET|GAP)\w*\s*=/);
+    expect(read(relative)).not.toMatch(/\b(?:const|let|var)\s+\w*(?:OFFSET|GAP)\w*\s*=/u);
   });
 
   it.each(['index.tsx', 'index.native.tsx'])(
     '%s positions the bubble with the shared FREE-overlay token',
     (relative) => {
       const source = read(relative);
-      expect(source).toMatch(/import\s*\{[^}]*\bOVERLAY_ANCHOR_GAP\b[^}]*\}\s*from\s*['"]@repo\/theme['"]/s);
+      expect(source).toMatch(/import\s*\{[^}]*\bOVERLAY_ANCHOR_GAP\b[^}]*\}\s*from\s*['"]@repo\/theme['"]/su);
       expect(source).toContain('offset={OVERLAY_ANCHOR_GAP}');
       // A literal offset is the regression: it renders the same 4px today and
       // silently stops tracking the token the moment the house rule moves.
-      expect(source).not.toMatch(/offset=\{\s*\d/);
+      expect(source).not.toMatch(/offset=\{\s*\d/u);
     },
   );
 });

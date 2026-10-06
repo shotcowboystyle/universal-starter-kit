@@ -77,11 +77,11 @@ describe('SheetFrame overlay chrome', () => {
     const end = src.indexOf('// ── SheetModal');
     const sheet = src.slice(start, end);
     expect(sheet).toContain('elevatedSurface');
-    expect(sheet).toMatch(/backgroundColor: ['"]\$background['"]/);
+    expect(sheet).toMatch(/backgroundColor: ['"]\$background['"]/u);
     expect(sheet).toContain('knobProps.transition');
     expect(sheet).toContain('containerRadius');
     expect(sheet).not.toContain('knobProps.surface');
-    expect(sheet).not.toMatch(/#[0-9A-Fa-f]{3,8}/);
+    expect(sheet).not.toMatch(/#[0-9A-Fa-f]{3,8}/u);
   });
 });
 
@@ -132,15 +132,15 @@ const atomsWithPrefix = (el: Element | null, prefix: string): string[] => {
     return [];
   }
   return String((el as HTMLElement).className || '')
-    .split(/\s+/)
+    .split(/\s+/u)
     .filter((c) => c.startsWith(prefix))
     .sort();
 };
 
 /** The `$4` control paint at elevation large — `webShadowLight.$4`, "0 10px 20px …". */
-const controlStopShadowAtom = /^_bxsh-0px10px20px/;
+const controlStopShadowAtom = /^_bxsh-0px10px20px/u;
 /** The `$5` overlay stop at elevation large — reference dialog shadow, "0 12px 24px …". */
-const overlayStopShadowAtom = /^_bxsh-0px12px24px/;
+const overlayStopShadowAtom = /^_bxsh-0px12px24px/u;
 
 describe('surfaces address $background at the FRAME', () => {
   it('Card, Panel and DialogContent all paint _bg-background, never a raw ramp step', () => {
@@ -163,7 +163,7 @@ describe('surfaces address $background at the FRAME', () => {
       expect(frame, `${id} frame`).toBeTruthy();
       const bg = atomsWithPrefix(frame, '_bg-');
       expect(bg, `${id} background atom`).toStrictEqual(['_bg-background']);
-      expect(bg.join(' '), `${id} must not address a raw ramp step`).not.toMatch(/_bg-color[12]\b/);
+      expect(bg.join(' '), `${id} must not address a raw ramp step`).not.toMatch(/_bg-color[12]\b/u);
     }
   });
 });

@@ -80,7 +80,7 @@ describe('viewport hydration', () => {
           onRecoverableError: (error) => errors.push(error),
         });
       });
-      expect(errors.filter((error) => /hydration|hydrated|didn't match/i.test(String(error)))).toStrictEqual([]);
+      expect(errors.filter((error) => /hydration|hydrated|didn't match/iu.test(String(error)))).toStrictEqual([]);
       expect(container.querySelector('[data-wide]')?.getAttribute('data-wide')).toBe(String(width > 640));
       if (width === 1200 && kind !== 'FloatingPanel') {
         const trigger = container.querySelector('[role="combobox"]')!;

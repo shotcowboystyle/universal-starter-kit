@@ -34,8 +34,8 @@ const frameRadiusClasses = (el: HTMLElement): string[] =>
 /** Last `_px-Npx` class wins in source order (runtime fragment after `size=`). */
 const paddingPxFromClass = (el: HTMLElement): number | null => {
   let found: number | null = null;
-  for (const c of String(el.className || '').split(/\s+/)) {
-    const m = /^_px-(\d+)px$/.exec(c);
+  for (const c of String(el.className || '').split(/\s+/u)) {
+    const m = /^_px-(\d+)px$/u.exec(c);
     if (m) {
       found = Number(m[1]);
     }
@@ -47,8 +47,8 @@ describe('Button SIZE-RECIPE', () => {
   it('desktop/jsdom medium height is the measured 44 from the recipe, not the token class', () => {
     renderWithProviders(<Button>Save</Button>);
     const frame = screen.getByRole('button');
-    expect(frame.className).toMatch(/_h-44px/);
-    expect(frame.className).not.toMatch(/_h-t-size-4/);
+    expect(frame.className).toMatch(/_h-44px/u);
+    expect(frame.className).not.toMatch(/_h-t-size-4/u);
   });
 
   it('radius steps with the size token', () => {
@@ -58,7 +58,7 @@ describe('Button SIZE-RECIPE', () => {
       </Preset>,
     );
     const small = screen.getByRole('button');
-    expect(small.className).toMatch(/_h-36px/);
+    expect(small.className).toMatch(/_h-36px/u);
     const smallRadius = frameRadiusClasses(small);
     cleanup();
 
@@ -68,7 +68,7 @@ describe('Button SIZE-RECIPE', () => {
       </Preset>,
     );
     const large = screen.getByRole('button');
-    expect(large.className).toMatch(/_h-52px/);
+    expect(large.className).toMatch(/_h-52px/u);
     const largeRadius = frameRadiusClasses(large);
 
     expect(smallRadius.length).toBeGreaterThan(0);
@@ -79,14 +79,14 @@ describe('Button SIZE-RECIPE', () => {
   it('recipeFamily controlCompact has smaller padding than control at the same size token', () => {
     renderWithProviders(<Button>Save</Button>);
     const control = screen.getByRole('button');
-    expect(control.className).toMatch(/_h-44px/);
+    expect(control.className).toMatch(/_h-44px/u);
     const controlPad = paddingPxFromClass(control);
     cleanup();
 
     renderWithProviders(<Button recipeFamily="controlCompact">Save</Button>);
     const compact = screen.getByRole('button');
     const compactPad = paddingPxFromClass(compact);
-    expect(compact.className).toMatch(/_h-44px/);
+    expect(compact.className).toMatch(/_h-44px/u);
     if (controlPad != null && compactPad != null) {
       expect(compactPad).toBeLessThan(controlPad);
     }
@@ -109,7 +109,7 @@ describe('Button sizeRecipeEscape', () => {
   it('warns when numeric height is passed without sizeRecipeEscape', () => {
     renderWithProviders(<Button height={40}>Save</Button>);
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('size-recipe-escape'));
-    expect(screen.getByRole('button').className).toMatch(/_h-44px/);
+    expect(screen.getByRole('button').className).toMatch(/_h-44px/u);
   });
 
   it('sizeRecipeEscape suppresses the numeric-height warn', () => {

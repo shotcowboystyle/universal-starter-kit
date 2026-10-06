@@ -63,7 +63,7 @@ const PathForm = ({
 
 type View = ReturnType<typeof renderWithProviders>;
 
-const nameInput = (view: View) => view.getByLabelText(/^Name/) as HTMLInputElement;
+const nameInput = (view: View) => view.getByLabelText(/^Name/u) as HTMLInputElement;
 
 const activate = async (route: Route, view: View) => {
   switch (route) {
@@ -119,7 +119,7 @@ describe('every submission path shares one outcome', () => {
 
     await activate(route, view);
     await waitFor(() => {
-      expect(view.getByText(/Couldn't save/).textContent).toContain('First refusal.');
+      expect(view.getByText(/Couldn't save/u).textContent).toContain('First refusal.');
     });
     expect(submit).toHaveBeenCalledOnce();
 
@@ -128,16 +128,16 @@ describe('every submission path shares one outcome', () => {
       expect(submit).toHaveBeenCalledTimes(2);
     });
     await waitFor(() => {
-      expect(view.queryByText(/First refusal/)).toBeNull();
+      expect(view.queryByText(/First refusal/u)).toBeNull();
     });
 
     await act(async () => {
       rejectRetry(new Error('Second refusal.'));
     });
     await waitFor(() => {
-      expect(view.getByText(/Couldn't save/).textContent).toContain('Second refusal.');
+      expect(view.getByText(/Couldn't save/u).textContent).toContain('Second refusal.');
     });
-    expect(view.queryByText(/First refusal/)).toBeNull();
+    expect(view.queryByText(/First refusal/u)).toBeNull();
     expect(submit).toHaveBeenCalledTimes(2);
     expect(nameInput(view).value).toBe('Edited');
     expect(saved).not.toHaveBeenCalled();
@@ -160,13 +160,13 @@ describe('every submission path shares one outcome', () => {
 
       await activate(route, view);
       await waitFor(() => {
-        expect(view.container.querySelector('[data-testid="error-summary"]')?.textContent).toMatch(/Name is required/);
+        expect(view.container.querySelector('[data-testid="error-summary"]')?.textContent).toMatch(/Name is required/u);
       });
       expect(nameInput(view).getAttribute('aria-invalid')).toBe('true');
       expect(formState().submissionAttempts).toBe(1);
       expect(submit).not.toHaveBeenCalled();
       expect(saved).not.toHaveBeenCalled();
-      expect(view.queryByText(/Couldn't save/)).toBeNull();
+      expect(view.queryByText(/Couldn't save/u)).toBeNull();
     },
   );
 
@@ -192,7 +192,7 @@ describe('every submission path shares one outcome', () => {
     });
     expect(formState().isDirty).toBe(!viaSaveBar);
     expect(nameInput(view).value).toBe('Edited');
-    expect(view.queryByText(/Couldn't save/)).toBeNull();
+    expect(view.queryByText(/Couldn't save/u)).toBeNull();
     expect(submit).toHaveBeenCalledOnce();
   });
 });
@@ -229,7 +229,7 @@ describe('the SubmissionPaths story counts onSubmit calls', () => {
         expect(calls(view)).toBe(`onSubmit calls: ${expected}`);
       });
       await waitFor(() => {
-        expect(view.getByText(/Couldn't save/).textContent).toContain('The record changed. Refresh and retry.');
+        expect(view.getByText(/Couldn't save/u).textContent).toContain('The record changed. Refresh and retry.');
       });
     }
     expect((view.getByLabelText('Service name') as HTMLInputElement).value).toBe('service-example');

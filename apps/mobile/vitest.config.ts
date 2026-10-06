@@ -49,6 +49,6 @@ export default defineConfig({
     },
   },
   ssr: {
-    noExternal: [/zustand/, /@tanstack\/react-query/, /@tanstack\/query-core/, /@testing-library/],
+    noExternal: [/zustand/u, /@tanstack\/react-query/u, /@tanstack\/query-core/u, /@testing-library/u],
   },
 });

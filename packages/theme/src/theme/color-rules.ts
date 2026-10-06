@@ -36,7 +36,7 @@ export const normalizeToHex = (raw: string): string | null => {
     }
     return s;
   }
-  const hslMatch = /hsla?\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%\s*(?:,\s*([\d.]+)\s*)?\)/.exec(s);
+  const hslMatch = /hsla?\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%\s*(?:,\s*([\d.]+)\s*)?\)/u.exec(s);
   if (hslMatch) {
     // Treat only fully-opaque hsla as a plain color; alpha blends depend on
     // the backdrop and cannot be reduced to a single hex.

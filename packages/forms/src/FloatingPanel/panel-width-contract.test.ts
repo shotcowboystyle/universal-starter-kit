@@ -50,14 +50,14 @@ describe('FloatingPanel width contract', () => {
 
   it.each([...fieldShapedPickers, ...matchTriggerPickers])('%s no longer passes the fitContent boolean', (relative) => {
     const source = read(relative);
-    expect(source).not.toMatch(/^\s*fitContent\s*$/m);
-    expect(source).not.toMatch(/fitContent=\{?true/);
+    expect(source).not.toMatch(/^\s*fitContent\s*$/mu);
+    expect(source).not.toMatch(/fitContent=\{?true/u);
   });
 
   it.each(buttonShapedPickers)('%s keeps fit-content deliberately', (relative) => {
     const source = read(relative);
     // Asserted, not merely tolerated: if this stops being true the exemption
     // list is stale and someone must re-judge it rather than delete a line.
-    expect(source).toMatch(/fitContent/);
+    expect(source).toMatch(/fitContent/u);
   });
 });

@@ -174,7 +174,7 @@ describe('Accordion labels — weight 400 on the TEXT NODE', () => {
     expect(textNode).not.toBe(trigger);
     const weight = atoms(textNode, ['_fow-']);
     expect(weight.length).toBeGreaterThan(0);
-    expect(weight.join(' ')).not.toMatch(/600|weight-6|fow-6/);
+    expect(weight.join(' ')).not.toMatch(/600|weight-6|fow-6/u);
     expect(atoms(trigger, ['_fow-'])).toHaveLength(0);
   });
 
@@ -190,7 +190,7 @@ describe('Accordion labels — weight 400 on the TEXT NODE', () => {
     const textNode = screen.getByText('Where should we deliver?');
     const weight = atoms(textNode, ['_fow-']);
     expect(weight.length).toBeGreaterThan(0);
-    expect(weight.join(' ')).not.toMatch(/600|weight-6|fow-6/);
+    expect(weight.join(' ')).not.toMatch(/600|weight-6|fow-6/u);
   });
 });
 

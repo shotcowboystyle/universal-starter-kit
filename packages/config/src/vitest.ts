@@ -196,7 +196,7 @@ export const createVitestConfig = (options: CreateVitestConfigOptions = {}): Use
           return;
         }
         return {
-          code: code.replaceAll(/from ['"]react-native['"]/g, 'from "react-native-web"'),
+          code: code.replaceAll(/from ['"]react-native['"]/gu, 'from "react-native-web"'),
           map: null,
         };
       },
@@ -302,9 +302,9 @@ export const createVitestConfig = (options: CreateVitestConfigOptions = {}): Use
         inline: [
           'react-native-web',
           'one',
-          /@tamagui\//,
+          /@tamagui\//u,
           'tamagui',
-          /@tanstack\//,
+          /@tanstack\//u,
           'use-sync-external-store',
           // Native ESM bypasses both the Vite React alias and the CJS require
           // pin. Transform react-i18next so useTranslation shares the renderer.

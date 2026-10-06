@@ -520,7 +520,7 @@ describe('PhoneInput', () => {
       const flag = result.container.querySelector('[data-testid="combobox-trigger"]');
       const input = result.container.querySelector('input');
       expect(box).toBeTruthy();
-      expect(box.className).toMatch(/mp-composite-ring/);
+      expect(box.className).toMatch(/mp-composite-ring/u);
       expect(box.contains(flag)).toBe(true);
       expect(box.contains(input)).toBe(true);
     });
@@ -531,7 +531,7 @@ describe('PhoneInput', () => {
       const dial = result.container.querySelector("[data-testid='phone-dial']");
       expect(input?.getAttribute('data-text-class')).toBe('T-VALUE');
       expect(dial?.getAttribute('data-text-class')).toBe('T-VALUE');
-      expect(dial?.textContent).toMatch(/^\+\d+/);
+      expect(dial?.textContent).toMatch(/^\+\d+/u);
     });
 
     it('compact and size still mount without throwing', () => {

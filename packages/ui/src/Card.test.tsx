@@ -23,7 +23,7 @@ const DensityProbe = () => {
 describe('Card named exports', () => {
   it('barrel re-exports the themed surface, not the tamagui primitive', () => {
     const index = readSibling('index.ts');
-    expect(index).toMatch(/export \{ Card, CardFooter, CardHeader \} from ["']\.\/Card["']/);
+    expect(index).toMatch(/export \{ Card, CardFooter, CardHeader \} from ["']\.\/Card["']/u);
     expect(Card).not.toBe(TamaguiCard);
     expect(Card.Header).toBe(CardHeader);
     expect(Card.Footer).toBe(CardFooter);
@@ -33,9 +33,9 @@ describe('Card named exports', () => {
 describe('Card — NestedScale only, no Tint', () => {
   it('source does not wrap Tint; NestedScale is the only nest dialect', () => {
     const src = readSibling('Card.tsx');
-    expect(src).not.toMatch(/from ["'][^"']*Tint["']/);
-    expect(src).not.toMatch(/<[Tt]int[\s/>]/);
-    expect(src).toMatch(/const NestedScale = /);
+    expect(src).not.toMatch(/from ["'][^"']*Tint["']/u);
+    expect(src).not.toMatch(/<[Tt]int[\s/>]/u);
+    expect(src).toMatch(/const NestedScale = /u);
   });
 });
 
@@ -225,11 +225,11 @@ describe('Card header / footer', () => {
     // The parts moved out of Card.tsx into their own modules, so
     // the zero-padding contract is read where it now lives. Card.tsx must not grow a
     // Header/Footer of its own again — that is what put the stub back last time.
-    expect(readSibling('CardHeader.tsx')).toMatch(/TamaguiCard\.Header[\s\S]*padding=\{0\}/);
-    expect(readSibling('CardFooter.tsx')).toMatch(/TamaguiCard\.Footer[\s\S]*padding=\{0\}/);
+    expect(readSibling('CardHeader.tsx')).toMatch(/TamaguiCard\.Header[\s\S]*padding=\{0\}/u);
+    expect(readSibling('CardFooter.tsx')).toMatch(/TamaguiCard\.Footer[\s\S]*padding=\{0\}/u);
     const src = readSibling('Card.tsx');
-    expect(src).not.toMatch(/const CardHeader\b/);
-    expect(src).not.toMatch(/const CardFooter\b/);
+    expect(src).not.toMatch(/const CardHeader\b/u);
+    expect(src).not.toMatch(/const CardFooter\b/u);
 
     const { container } = renderWithProviders(
       <Card>

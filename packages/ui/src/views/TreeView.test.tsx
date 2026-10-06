@@ -110,8 +110,8 @@ describe('TreeView knob wiring', () => {
   });
 
   it('row labels are T-VALUE primary ink, never a secondary ramp step', () => {
-    expect(treeViewSource).not.toMatch(/componentColors\.text\.(secondary|muted)/);
-    expect(treeViewSource).toMatch(/color=\{isSelected && onAccentLabel \? onAccentLabel : ['"]\$color['"]\}/);
+    expect(treeViewSource).not.toMatch(/componentColors\.text\.(secondary|muted)/u);
+    expect(treeViewSource).toMatch(/color=\{isSelected && onAccentLabel \? onAccentLabel : ['"]\$color['"]\}/u);
   });
 });
 

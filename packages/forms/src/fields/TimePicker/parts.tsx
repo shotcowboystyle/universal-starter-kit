@@ -10,7 +10,7 @@ import { TimeWheels } from '../../shared/TimeColumn';
 
 export type TimeFormat = '12h' | '24h';
 
-const timeStringRegex = /^([01]?\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
+const timeStringRegex = /^([01]?\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/u;
 
 export const isValidTimeString = (value: string): boolean => timeStringRegex.test(value.trim());
 

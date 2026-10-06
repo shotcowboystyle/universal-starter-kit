@@ -329,7 +329,7 @@ const registerNativeEngineIoBrowserTransports = (): void => {
       id: string,
       importer?: string,
     ) {
-      if (importer && /engine\.io-client[\\/]build[\\/]/.test(importer) && id.endsWith('.node.js')) {
+      if (importer && /engine\.io-client[\\/]build[\\/]/u.test(importer) && id.endsWith('.node.js')) {
         return this.resolve(`${id.slice(0, -'.node.js'.length)}.js`, importer, { skipSelf: true });
       }
       return null;
@@ -405,7 +405,7 @@ const registerNativeSinglePackageInstances = (): void => {
   const rootModules = path.join(findProjectRoot(), 'node_modules');
   // <...>/node_modules/.pnpm/<pkg>@<ver>_<peerhash>/node_modules/<name>[/<rest>]
   const storePath =
-    /[\\/]node_modules[\\/]\.pnpm[\\/][^\\/]+[\\/]node_modules[\\/]((?:@[^\\/]+[\\/])?[^\\/]+)(?:[\\/](.*))?$/;
+    /[\\/]node_modules[\\/]\.pnpm[\\/][^\\/]+[\\/]node_modules[\\/]((?:@[^\\/]+[\\/])?[^\\/]+)(?:[\\/](.*))?$/u;
 
   const versionOf = (dir: string): string | null => {
     try {

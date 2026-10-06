@@ -36,7 +36,7 @@ export const HEX_ESCAPE_HEADING = '## Colour-literal escapes';
 
 /** `` `a — b` `` → `a — b`. */
 const unwrapCode = (cell) => {
-  const match = cell.match(/^`(.*)`$/);
+  const match = cell.match(/^`(.*)`$/u);
   return match ? match[1] : cell;
 };
 
@@ -59,7 +59,7 @@ export const readSpecTable = (markdown, heading) => {
   let seenHeader = false;
   for (let i = start + 1; i < lines.length; i++) {
     const line = lines[i].trim();
-    if (/^#{1,2}\s/.test(line)) {
+    if (/^#{1,2}\s/u.test(line)) {
       break;
     }
     if (!line.startsWith('|')) {
@@ -73,7 +73,7 @@ export const readSpecTable = (markdown, heading) => {
       .split('|')
       .slice(1, -1)
       .map((cell) => cell.trim());
-    if (/^:?-+:?$/.test(cells[0] ?? '')) {
+    if (/^:?-+:?$/u.test(cells[0] ?? '')) {
       continue;
     }
     if (!seenHeader) {
@@ -87,11 +87,11 @@ export const readSpecTable = (markdown, heading) => {
 
 /** `Members: **Card.Footer**, **Card.Header**.` → ["Card.Footer", "Card.Header"]. */
 const parseMembers = (text) => {
-  const match = text.match(/Members:\s*(.*)$/i);
+  const match = text.match(/Members:\s*(.*)$/iu);
   if (!match) {
     return [];
   }
-  return [...match[1].matchAll(/\*\*([^*]+)\*\*/g)].map((m) => m[1].trim()).filter(Boolean);
+  return [...match[1].matchAll(/\*\*([^*]+)\*\*/gu)].map((m) => m[1].trim()).filter(Boolean);
 };
 
 /**
@@ -142,7 +142,7 @@ const readFileReasonRegistry = (specPath, heading) => {
   for (const cells of rows) {
     const file = unwrapCode(cells[0] ?? '');
     const reason = unwrapCode(cells[1] ?? '');
-    if (!file || /^[_*]?\(none/.test(file)) {
+    if (!file || /^[_*]?\(none/u.test(file)) {
       continue;
     }
     if (!reason) {

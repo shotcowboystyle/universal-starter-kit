@@ -52,7 +52,7 @@ const renderToHtml = (node: ReactNode): string => renderToString(node as React.R
 
 /** Return an array of all `data-tamagui-theme` values in rendered HTML. */
 const collectThemes = (html: string): string[] =>
-  Array.from(html.matchAll(/data-tamagui-theme="([^"]+)"/g), (m) => m[1]);
+  Array.from(html.matchAll(/data-tamagui-theme="([^"]+)"/gu), (m) => m[1]);
 
 /** Create a probe component that captures resolved knobs from useResolvedKnobs. */
 const createRecipesCapture = (options?: Parameters<typeof useResolvedKnobs>[0]) => {

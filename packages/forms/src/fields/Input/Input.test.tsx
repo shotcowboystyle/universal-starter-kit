@@ -420,11 +420,11 @@ describe('Input', () => {
       const box = result.container.querySelector("[data-ring-target='box']") as HTMLElement;
       const input = result.container.querySelector('input') as HTMLInputElement;
       expect(box).toBeTruthy();
-      expect(box.className).toMatch(/mp-composite-ring/);
+      expect(box.className).toMatch(/mp-composite-ring/u);
       expect(box.contains(result.getByTestId('leading'))).toBe(true);
       expect(box.contains(result.getByTestId('trailing'))).toBe(true);
       expect(box.contains(input)).toBe(true);
-      expect(input.className).toMatch(/mp-input-area/);
+      expect(input.className).toMatch(/mp-input-area/u);
       const inputCs = getComputedStyle(input);
       expect(inputCs.outlineStyle === 'none' || inputCs.outlineWidth === '0px').toBe(true);
     });
@@ -440,9 +440,9 @@ describe('Input', () => {
       );
       const box = result.container.querySelector("[data-ring-target='box']") as HTMLElement;
       const input = result.container.querySelector('input') as HTMLInputElement;
-      expect(box.className).toMatch(/mp-composite-ring/);
+      expect(box.className).toMatch(/mp-composite-ring/u);
       expect(box.contains(result.getByTestId('leading'))).toBe(true);
-      expect(input.className).toMatch(/mp-input-area/);
+      expect(input.className).toMatch(/mp-input-area/u);
     });
   });
 

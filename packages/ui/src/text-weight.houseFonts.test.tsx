@@ -43,7 +43,7 @@ const measure = (node: ReactElement, scheme: 'light' | 'dark') => {
   );
   const cs = getComputedStyle(textNodeHost(container));
   const weight = cs.fontWeight.trim();
-  const family = cs.fontFamily.split(',')[0]?.replaceAll(/['"]/g, '').trim() ?? '';
+  const family = cs.fontFamily.split(',')[0]?.replaceAll(/['"]/gu, '').trim() ?? '';
   cleanup();
   if (!weight) {
     throw new Error('no computed font-weight on the text node');

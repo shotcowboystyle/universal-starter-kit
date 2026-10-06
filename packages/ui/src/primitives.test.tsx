@@ -67,7 +67,7 @@ describe('knob-immune primitives on the house barrel', () => {
     );
     const node = getByText('Hidden label for assistive technology');
     expect(node).toBeTruthy();
-    expect(node.className).toMatch(/_o-/);
+    expect(node.className).toMatch(/_o-/u);
   });
 
   it('renders Unspaced as a transparent spacing marker', () => {

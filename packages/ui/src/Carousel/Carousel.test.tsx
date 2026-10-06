@@ -373,7 +373,7 @@ describe('Carousel ring anatomy, size recipes, 44px floor', () => {
     expect(track).toBeTruthy();
     expect(track.tabIndex).toBe(-1);
     const style = track.getAttribute('style') ?? '';
-    expect(style).not.toMatch(/outline-width:\s*[1-9]/);
+    expect(style).not.toMatch(/outline-width:\s*[1-9]/u);
   });
 
   it('floors arrow press targets at 44px and paints the size-recipe visual', async () => {
@@ -473,8 +473,8 @@ describe('Carousel ring anatomy, size recipes, 44px floor', () => {
 describe('Carousel live-media tile', () => {
   it('does not paint a status pip; viewport radius stays UNCLAMPED', async () => {
     const src = readFileSync(join(here, 'index.tsx'), 'utf-8');
-    expect(src).not.toMatch(/knobProps\.containerRadius|knobProps\.cardSurface|capContainerRadius\(/);
-    expect(src).not.toMatch(/data-status-pip|StatusPip|statusPip/);
+    expect(src).not.toMatch(/knobProps\.containerRadius|knobProps\.cardSurface|capContainerRadius\(/u);
+    expect(src).not.toMatch(/data-status-pip|StatusPip|statusPip/u);
     expect(src).toContain('knobProps.borderRadius');
 
     const { container } = renderWithProviders(

@@ -416,7 +416,7 @@ describe('ContextualSaveBar', () => {
     expect(bar?.getAttribute('data-mp-savebar-top-radius')).toBe('18');
     expect(bar?.getAttribute('data-mp-savebar-bottom-radius')).toBe('0');
     const cls = String(bar?.className ?? '');
-    expect(cls).not.toMatch(/t-radius-12/);
+    expect(cls).not.toMatch(/t-radius-12/u);
     const cs = bar ? getComputedStyle(bar) : null;
     expect(cs?.borderBottomLeftRadius === '0px' || cs?.borderBottomLeftRadius === '0').toBe(true);
     expect(cs?.borderBottomRightRadius === '0px' || cs?.borderBottomRightRadius === '0').toBe(true);
@@ -463,8 +463,8 @@ describe('clientKnownIdentity', () => {
   });
 
   it('refuses a missing or envelope-dropped identity', () => {
-    expect(() => clientKnownIdentity(undefined)).toThrow(/client-known/i);
-    expect(() => clientKnownIdentity('')).toThrow(/client-known/i);
-    expect(() => clientKnownIdentity('undefined')).toThrow(/client-known/i);
+    expect(() => clientKnownIdentity(undefined)).toThrow(/client-known/iu);
+    expect(() => clientKnownIdentity('')).toThrow(/client-known/iu);
+    expect(() => clientKnownIdentity('undefined')).toThrow(/client-known/iu);
   });
 });

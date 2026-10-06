@@ -116,7 +116,7 @@ const query = (params: Record<string, string | number | undefined>): string =>
     .join('&');
 
 export const createPhotonGeocoder = (options: PhotonGeocoderOptions = {}): Geocoder => {
-  const baseUrl = (options.baseUrl ?? photonPublicUrl).replace(/\/+$/, '');
+  const baseUrl = (options.baseUrl ?? photonPublicUrl).replace(/\/+$/u, '');
   const { lang } = options;
   const limit = options.limit ?? 5;
   const timeoutMs = options.timeoutMs ?? 8000;

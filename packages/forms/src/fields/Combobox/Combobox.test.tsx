@@ -480,7 +480,7 @@ describe('Combobox', () => {
       );
       await act(async () => {});
       const first = result.baseElement.querySelector('[role="option"]');
-      expect(first?.id).toMatch(/-opt-0$/);
+      expect(first?.id).toMatch(/-opt-0$/u);
       const search = result.baseElement.querySelector('input');
       expect(search?.getAttribute('aria-autocomplete')).toBe('list');
       expect(search?.getAttribute('aria-activedescendant')).toBe(first?.id);

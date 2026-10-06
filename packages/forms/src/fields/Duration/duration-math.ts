@@ -49,10 +49,10 @@ export const parseDurationText = (text: string): number | null => {
   if (!trimmed) {
     return null;
   }
-  if (/^-?\d+$/.test(trimmed)) {
+  if (/^-?\d+$/u.test(trimmed)) {
     return normalizeSeconds(Number(trimmed));
   }
-  const clock = /^(\d+):(\d{1,2})(?::(\d{1,2}))?$/.exec(trimmed);
+  const clock = /^(\d+):(\d{1,2})(?::(\d{1,2}))?$/u.exec(trimmed);
   if (clock) {
     return partsToSeconds(
       {
@@ -64,7 +64,7 @@ export const parseDurationText = (text: string): number | null => {
       true,
     );
   }
-  const pieces = [...trimmed.matchAll(/(\d+)\s*(d|h|m|s)\b/g)];
+  const pieces = [...trimmed.matchAll(/(\d+)\s*(d|h|m|s)\b/gu)];
   if (pieces.length === 0) {
     return null;
   }

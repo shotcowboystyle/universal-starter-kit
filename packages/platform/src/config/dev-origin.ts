@@ -14,14 +14,14 @@ export interface DevOriginSource {
   hostUri?: string;
 }
 
-const loopbackOrigin = /^([a-z][a-z0-9+.-]*:\/\/)(localhost|127\.0\.0\.1)(?=[:/?#]|$)/i;
+const loopbackOrigin = /^([a-z][a-z0-9+.-]*:\/\/)(localhost|127\.0\.0\.1)(?=[:/?#]|$)/iu;
 
 /** The host part of a `host:port`, `scheme://host:port/path` or `[v6]:port` value. */
 export const devHostFromHostUri = (hostUri: string | undefined): string | undefined => {
   if (!hostUri) {
     return undefined;
   }
-  const authority = hostUri.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '').split(/[/?#]/, 1)[0];
+  const authority = hostUri.replace(/^[a-z][a-z0-9+.-]*:\/\//iu, '').split(/[/?#]/u, 1)[0];
   const host = authority.startsWith('[') ? authority.slice(0, authority.indexOf(']') + 1) : authority.split(':', 1)[0];
   return host || undefined;
 };

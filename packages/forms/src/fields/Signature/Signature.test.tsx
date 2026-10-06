@@ -244,8 +244,8 @@ describe('design-law', () => {
     const pad = getPad(result.container);
     const bg = getComputedStyle(pad).backgroundColor;
     expect(bg).not.toBe('white');
-    expect(bg.replaceAll(/\s/g, '')).not.toMatch(/^rgb\(255,255,255\)$/);
-    expect(bg.replaceAll(/\s/g, '')).not.toMatch(/^#fff(fff)?$/i);
+    expect(bg.replaceAll(/\s/gu, '')).not.toMatch(/^rgb\(255,255,255\)$/u);
+    expect(bg.replaceAll(/\s/gu, '')).not.toMatch(/^#fff(fff)?$/iu);
   });
 
   it('elevation knob reaches the pad frame (large-canvas honour, FileUpload sibling)', () => {
@@ -258,7 +258,7 @@ describe('design-law', () => {
         />
       </Preset>,
     );
-    expect(getPad(none.container).className).not.toMatch(/_bxsh-/);
+    expect(getPad(none.container).className).not.toMatch(/_bxsh-/u);
     cleanup();
 
     const large = renderWithProviders(
@@ -270,7 +270,7 @@ describe('design-law', () => {
         />
       </Preset>,
     );
-    expect(getPad(large.container).className).toMatch(/_bxsh-/);
+    expect(getPad(large.container).className).toMatch(/_bxsh-/u);
   });
 
   it('derives pad minHeight from the size token, not a 200px canvas', () => {

@@ -24,7 +24,7 @@ const rowAtoms = (overrides: Partial<Knobs>) => {
       <Attachments items={items} />
     </Preset>,
   );
-  return screen.getAllByRole('listitem').map((row) => (row.getAttribute('class') ?? '').split(/\s+/));
+  return screen.getAllByRole('listitem').map((row) => (row.getAttribute('class') ?? '').split(/\s+/u));
 };
 
 describe('Attachments rows are a CONTAINER-CAP stack', () => {
@@ -59,9 +59,9 @@ describe('Attachments rows are a CONTAINER-CAP stack', () => {
 
   it('squares every corner at none', () => {
     for (const row of rowAtoms({ borderRadius: 'none' })) {
-      const corners = row.filter((a) => /^_border(Start|End)(Start|End)Radius-(\d+px|t-radius-\d+)$/.test(a));
+      const corners = row.filter((a) => /^_border(Start|End)(Start|End)Radius-(\d+px|t-radius-\d+)$/u.test(a));
       expect(corners).toHaveLength(4);
-      expect(corners.filter((a) => !/-(0px|t-radius-0)$/.test(a))).toStrictEqual([]);
+      expect(corners.filter((a) => !/-(0px|t-radius-0)$/u.test(a))).toStrictEqual([]);
     }
   });
 });

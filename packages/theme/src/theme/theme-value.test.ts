@@ -63,7 +63,7 @@ describe('composeGetTheme validates at build (10 B.3 item 3)', () => {
       createDefaultThemeConfig({
         builderOptions: { getTheme: () => ({ borderColor: 'vaR(--x)' }) },
       }),
-    ).toThrow(/unresolvable value for "borderColor".*vaR\(--x\)/s);
+    ).toThrow(/unresolvable value for "borderColor".*vaR\(--x\)/su);
   });
 
   it("throws on the literal string 'undefined', which nullish-dropping lets through", () => {
@@ -71,7 +71,7 @@ describe('composeGetTheme validates at build (10 B.3 item 3)', () => {
       createDefaultThemeConfig({
         builderOptions: { getTheme: () => ({ backgroundPress: 'undefined' }) },
       }),
-    ).toThrow(/unresolvable value for "backgroundPress"/);
+    ).toThrow(/unresolvable value for "backgroundPress"/u);
   });
 
   it('still drops nullish rather than failing on it (nullish dropping is unchanged)', () => {

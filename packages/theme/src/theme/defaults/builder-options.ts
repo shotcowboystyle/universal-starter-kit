@@ -111,7 +111,7 @@ const clampBgForReadableText = (bgRaw: string, fgRaw: string): string => {
     return bgRaw;
   }
   const fgLum = relativeLuminance(fgHex);
-  const hslMatch = /hsla?\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%/.exec(bgRaw);
+  const hslMatch = /hsla?\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%/u.exec(bgRaw);
   if (!hslMatch) {
     return bgRaw;
   }

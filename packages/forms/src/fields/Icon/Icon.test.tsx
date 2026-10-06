@@ -14,7 +14,7 @@ describe('Icon', () => {
       />,
     );
     const text = result.container.textContent ?? '';
-    expect(text).not.toMatch(/Unsupported field type/);
+    expect(text).not.toMatch(/Unsupported field type/u);
     expect(result.container.querySelector('[data-testid="icon-field"]')).toBeTruthy();
     const input = result.container.querySelector('input');
     expect(input?.value).toBe('mail');
@@ -42,7 +42,7 @@ describe('Icon', () => {
     );
     expect(result.container.querySelector('[data-testid="icon-field-readonly"]')).toBeTruthy();
     expect(result.container.querySelector('[data-testid="icon-field"]')).toBeNull();
-    expect(result.container.textContent ?? '').not.toMatch(/Unsupported field type/);
+    expect(result.container.textContent ?? '').not.toMatch(/Unsupported field type/u);
   });
 
   it('opens a FloatingPanel grid and commits a drawn-set pick', async () => {
@@ -346,7 +346,7 @@ describe('Icon', () => {
       const svgs = Array.from(container.querySelectorAll('svg'));
       const ink = svgs[0].getAttribute('color');
       expect(ink).toBeTruthy();
-      expect(ink).not.toMatch(/^(currentColor|\$)/);
+      expect(ink).not.toMatch(/^(currentColor|\$)/u);
       for (const svg of svgs.slice(0, 4)) {
         expect(svg.getAttribute('color')).toBe(ink);
         for (const part of svg.querySelectorAll('[stroke], [fill]')) {

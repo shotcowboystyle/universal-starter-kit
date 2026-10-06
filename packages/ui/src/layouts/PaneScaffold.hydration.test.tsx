@@ -84,7 +84,7 @@ const hydrateAt = async (width: number) => {
   return html;
 };
 
-const hydrationErrors = () => errors.filter((error) => /hydration|hydrated|didn't match/i.test(String(error)));
+const hydrationErrors = () => errors.filter((error) => /hydration|hydrated|didn't match/iu.test(String(error)));
 const scaffold = () => container!.querySelector('[data-testid="pane-scaffold"]')!;
 
 describe('PaneScaffold SSR to hydration', () => {

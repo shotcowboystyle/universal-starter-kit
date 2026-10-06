@@ -239,7 +239,7 @@ describe('AdaptivePopup focus ring', () => {
     await waitFor(() => {
       expect(dialog()).not.toBeNull();
     });
-    expect(dialog()?.textContent).toMatch(/Dialog/);
+    expect(dialog()?.textContent).toMatch(/Dialog/u);
   });
 });
 
@@ -284,7 +284,7 @@ const OpenPopup = ({
 
 const shadowClasses = (el: Element): string[] =>
   String(el.className || '')
-    .split(/\s+/)
+    .split(/\s+/u)
     .filter((c) => c.startsWith('_bxsh-'))
     .sort();
 

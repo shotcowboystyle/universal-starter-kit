@@ -13,7 +13,7 @@ export const useSpinnerStroke = (color?: string): string => {
   if (color && !color.startsWith('$')) {
     return color;
   }
-  const key = (color ?? '$color').replace(/^\$/, '');
+  const key = (color ?? '$color').replace(/^\$/u, '');
   const token = theme[key as keyof typeof theme];
   if (!token) {
     return color ?? 'currentColor';

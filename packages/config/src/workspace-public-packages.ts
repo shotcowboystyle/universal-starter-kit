@@ -66,7 +66,7 @@ type ExportTarget = string | null | ExportTarget[] | { [condition: string]: Expo
 
 const webConditionOrder = ['import', 'default', 'require'];
 const skippedConditions = new Set(['types', 'react-native']);
-const tsSourcePattern = /\.(c|m)?tsx?$/;
+const tsSourcePattern = /\.(c|m)?tsx?$/u;
 
 const collectExportTargets = (target: ExportTarget, out: string[]): void => {
   if (typeof target === 'string') {

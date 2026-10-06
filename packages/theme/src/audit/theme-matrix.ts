@@ -273,7 +273,7 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
     if (s === 'transparent') {
       return [0, 0, 0, 0];
     }
-    const m = /^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)(?:[\s,/]+([\d.%]+))?\s*\)$/.exec(s);
+    const m = /^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)(?:[\s,/]+([\d.%]+))?\s*\)$/u.exec(s);
     if (!m) {
       return null;
     }
@@ -402,7 +402,7 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
     const labelledBy = el.getAttribute('aria-labelledby');
     if (labelledBy) {
       const name = labelledBy
-        .split(/\s+/)
+        .split(/\s+/u)
         .map((id) => document.getElementById(id)?.textContent ?? '')
         .join(' ')
         .trim();
@@ -605,7 +605,7 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
   const collectChart = (el: Element, key: string): void => {
     const backdrop = effectiveBackground(el);
     const rawCount = el.getAttribute('data-mpo-chart-datum-count');
-    const expected = rawCount !== null && /^\d+$/.test(rawCount) ? Number(rawCount) : -1;
+    const expected = rawCount !== null && /^\d+$/u.test(rawCount) ? Number(rawCount) : -1;
     const owner = el.closest('[data-mpo-chart-owner]');
     const rows = owner
       ? Array.from(owner.querySelectorAll('[data-mpo-chart-datum-text]')).filter(
@@ -674,7 +674,7 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
       const pathTokens = (path: string) =>
         JSON.stringify(
           (
-            path.replaceAll(/^path\(["']?|["']?\)$/g, '').match(/[a-zA-Z]|[-+]?(?:\d*\.)?\d+(?:[eE][-+]?\d+)?/g) ?? []
+            path.replaceAll(/^path\(["']?|["']?\)$/gu, '').match(/[a-zA-Z]|[-+]?(?:\d*\.)?\d+(?:[eE][-+]?\d+)?/gu) ?? []
           ).map((token) => (Number.isNaN(Number(token)) ? token : Number(token))),
         );
       const point = (radius: number, angle: number) =>
@@ -716,7 +716,7 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
         if (markStyle.stroke !== 'none') {
           return;
         }
-        const reference = /^url\(["']?#([^"')]+)["']?\)$/.exec(mark.getAttribute('mask') ?? '');
+        const reference = /^url\(["']?#([^"')]+)["']?\)$/u.exec(mark.getAttribute('mask') ?? '');
         if (!reference) {
           return;
         }
@@ -729,7 +729,7 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
         if (definitions?.tagName.toLowerCase() !== 'defs' || definitions.parentElement !== mark.parentElement) {
           return;
         }
-        const computedReference = /^url\(["']?([^"')]+)["']?\)$/.exec(markStyle.maskImage);
+        const computedReference = /^url\(["']?([^"')]+)["']?\)$/u.exec(markStyle.maskImage);
         if (!computedReference || !['match-source', 'luminance'].includes(markStyle.maskMode)) {
           return;
         }

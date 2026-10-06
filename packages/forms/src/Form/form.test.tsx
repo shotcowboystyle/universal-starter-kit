@@ -346,7 +346,7 @@ describe('Form', () => {
       await waitFor(() => {
         const summary = result.container.querySelector('[data-testid="error-summary"]');
         expect(summary?.getAttribute('role')).toBe('alert');
-        expect(summary?.textContent).toMatch(/required/i);
+        expect(summary?.textContent).toMatch(/required/iu);
       });
       expect(onSubmit).not.toHaveBeenCalled();
     });

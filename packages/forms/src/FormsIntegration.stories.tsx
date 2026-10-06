@@ -116,7 +116,7 @@ export const multiStepRegistration: Story = {
               if (!value) {
                 return 'Email is required';
               }
-              if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+              if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(value)) {
                 // No please/invalid — state the requirement.
                 return 'Email must include an @ and a domain';
               }
@@ -151,7 +151,7 @@ export const multiStepRegistration: Story = {
               if (value.length < 8) {
                 return 'Password must be at least 8 characters';
               }
-              if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(value)) {
+              if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/u.test(value)) {
                 return 'Password must contain uppercase, lowercase, and number';
               }
             },

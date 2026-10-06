@@ -17,7 +17,7 @@ const registeredNativeModules = (pkg: string): string[] => {
       continue;
     }
     const source = readFileSync(join(build, file), 'utf-8');
-    for (const match of source.matchAll(/require(?:Optional)?NativeModule\(\s*['"]([^'"]+)['"]/g)) {
+    for (const match of source.matchAll(/require(?:Optional)?NativeModule\(\s*['"]([^'"]+)['"]/gu)) {
       names.add(match[1]);
     }
   }

@@ -112,8 +112,8 @@ describe('RING-ANATOMY — Box ring, Area never outlines, inset iff clip', () =>
 describe('TEXT-INSET — Area chromeless, keyboard map', () => {
   it('zeros padding only on input[data-mp-input-area], not textarea', () => {
     expect(inputPartsRingCss).toContain('input[data-mp-input-area]');
-    expect(inputPartsRingCss).toMatch(/input\[data-mp-input-area\]\s*\{\s*padding:\s*0/);
-    expect(inputPartsRingCss).not.toMatch(/textarea\[data-mp-input-area\][^{]*\{[^}]*padding:\s*0/);
+    expect(inputPartsRingCss).toMatch(/input\[data-mp-input-area\]\s*\{\s*padding:\s*0/u);
+    expect(inputPartsRingCss).not.toMatch(/textarea\[data-mp-input-area\][^{]*\{[^}]*padding:\s*0/u);
   });
 
   it('maps phone-pad↔tel, number-pad↔numeric, decimal-pad↔decimal, email-address↔email', () => {

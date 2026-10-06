@@ -464,9 +464,9 @@ describe('ImageGrid', () => {
 
   it('does not paint a status pip on the media; tile radius stays UNCLAMPED', () => {
     const src = readFileSync(join(here, 'ImageGrid.tsx'), 'utf-8');
-    expect(src).not.toMatch(/capContainerRadius\(|knobProps\.containerRadius|knobProps\.cardSurface/);
+    expect(src).not.toMatch(/capContainerRadius\(|knobProps\.containerRadius|knobProps\.cardSurface/u);
     expect(src).toContain('knobProps.borderRadius');
-    expect(src).not.toMatch(/data-status-pip|StatusPip|statusPip/);
+    expect(src).not.toMatch(/data-status-pip|StatusPip|statusPip/u);
 
     const items = [
       { id: '1', title: 'Photo A' },
@@ -853,7 +853,7 @@ describe('ReportBuilder', () => {
     expect(document.querySelector('[data-async-state="error"]')).toBeTruthy();
     expect(screen.getByText('Report rows failed to load')).toBeInTheDocument();
     // Toolbar column count hides with the toolbar
-    expect(screen.queryByText(/2 \/ 2 columns/)).toBeNull();
+    expect(screen.queryByText(/2 \/ 2 columns/u)).toBeNull();
 
     fireEvent.click(screen.getByText('Retry'));
     expect(onRetry).toHaveBeenCalledOnce();
@@ -899,7 +899,7 @@ describe('ReportBuilder', () => {
     for (const node of [header, totals]) {
       const weight = atoms(node, ['_fow-']);
       expect(weight.length).toBeGreaterThan(0);
-      expect(weight.join(' ')).not.toMatch(/500|600|weight-5|weight-6|fow-5|fow-6/);
+      expect(weight.join(' ')).not.toMatch(/500|600|weight-5|weight-6|fow-5|fow-6/u);
     }
     const root = document.querySelector('[data-testid="report-builder"]') as HTMLElement;
     expect(root.getAttribute('data-size')).toBeTruthy();

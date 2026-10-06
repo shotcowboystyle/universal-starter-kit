@@ -152,6 +152,6 @@ describe('Kanban design law', () => {
     const column = document.querySelector("[data-kanban-column='todo']") as HTMLElement;
     expect(column).toBeTruthy();
     const className = String(column.className || '');
-    expect(className).not.toMatch(/_bw-/);
+    expect(className).not.toMatch(/_bw-/u);
   });
 });

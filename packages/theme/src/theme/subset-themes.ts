@@ -45,7 +45,7 @@ export const subsetThemes = <T>(themes: Record<string, T>, subset: ThemeSubset):
   for (const [name, theme] of Object.entries(themes)) {
     const segments = name.split('_');
     const last = segments[segments.length - 1] ?? '';
-    if (/^[A-Z]/.test(last)) {
+    if (/^[A-Z]/u.test(last)) {
       segments.pop();
       if (!components.has(last)) {
         continue;

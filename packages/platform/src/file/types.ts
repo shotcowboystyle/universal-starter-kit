@@ -42,7 +42,7 @@ export const prepareFileSave = (options: FileSaveOptions) => {
     !options.filename.trim() ||
     options.filename === '.' ||
     options.filename === '..' ||
-    /[/\\]/.test(options.filename) ||
+    /[/\\]/u.test(options.filename) ||
     hasControlCharacters(options.filename) ||
     typeof options.mimeType !== 'string' ||
     hasControlCharacters(options.mimeType)
@@ -50,7 +50,7 @@ export const prepareFileSave = (options: FileSaveOptions) => {
     throw new FileSaveError('invalid-input', 'Provide bytes, a single filename and a MIME type.');
   }
   const nativeMimeType = options.mimeType.split(';', 1)[0].trim();
-  if (!/^[\w!#$%&'*+.^`|~-]+\/[\w!#$%&'*+.^`|~-]+$/.test(nativeMimeType)) {
+  if (!/^[\w!#$%&'*+.^`|~-]+\/[\w!#$%&'*+.^`|~-]+$/u.test(nativeMimeType)) {
     throw new FileSaveError('invalid-input', 'Provide a MIME type with a type and subtype.');
   }
   return {

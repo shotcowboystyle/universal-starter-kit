@@ -198,7 +198,7 @@ describe('Timeline comment section rendering', () => {
     const input = screen.getByPlaceholderText('Add a comment...');
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'hello world' } });
-    fireEvent.click(screen.getByRole('button', { name: /Comment/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Comment/u }));
     expect(onCommentSubmit).toHaveBeenCalledWith('hello world', undefined);
   });
 
@@ -214,7 +214,7 @@ describe('Timeline comment section rendering', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Reply Reply Guy' }));
     const replyInput = screen.getByPlaceholderText('Write a reply...');
     fireEvent.change(replyInput, { target: { value: 'nested answer' } });
-    fireEvent.click(screen.getByRole('button', { name: /Comment/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Comment/u }));
     expect(onCommentSubmit).toHaveBeenCalledWith('nested answer', { parentId: 'c1r1' });
   });
 
@@ -242,7 +242,7 @@ describe('Timeline comment section rendering', () => {
     );
     const input = screen.getByPlaceholderText('Add a comment...');
     fireEvent.change(input, { target: { value: 'legacy path' } });
-    fireEvent.click(screen.getByRole('button', { name: /Comment/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Comment/u }));
     expect(onCommentAdded).toHaveBeenCalledWith('legacy path');
   });
 
@@ -283,8 +283,8 @@ describe('Timeline comment section rendering', () => {
       />,
     );
     const reply = screen.getByRole('button', { name: 'Reply John Doe' });
-    expect(reply.className).toMatch(/_bg-0hover-transparent/);
-    expect(reply.className).toMatch(/_bg-0active-transparent/);
-    expect(reply.className).not.toMatch(/_bg-0(?:hover|active)-(?!transparent)/);
+    expect(reply.className).toMatch(/_bg-0hover-transparent/u);
+    expect(reply.className).toMatch(/_bg-0active-transparent/u);
+    expect(reply.className).not.toMatch(/_bg-0(?:hover|active)-(?!transparent)/u);
   });
 });

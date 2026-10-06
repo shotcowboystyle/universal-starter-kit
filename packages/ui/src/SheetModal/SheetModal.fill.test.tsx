@@ -35,7 +35,7 @@ afterEach(cleanup);
 const flexOne = ['_fg-1', '_fs-1', '_fb-0px'];
 const minZero = '_mih-0px';
 
-const classes = (element: HTMLElement) => element.className.split(/\s+/);
+const classes = (element: HTMLElement) => element.className.split(/\s+/u);
 
 const renderNative = (props: Partial<SheetModalProps> = {}) =>
   renderWithProviders(

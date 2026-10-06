@@ -146,12 +146,12 @@ describe('TreeSelect one tab stop', () => {
     for (const row of rows) {
       expect(row.getAttribute('tabindex')).toBe('-1');
     }
-    expect(search.getAttribute('aria-activedescendant')).toMatch(/-node-0$/);
+    expect(search.getAttribute('aria-activedescendant')).toMatch(/-node-0$/u);
 
     await act(async () => {
       fireEvent.keyDown(search, { key: 'ArrowDown' });
     });
-    expect(search.getAttribute('aria-activedescendant')).toMatch(/-node-1$/);
+    expect(search.getAttribute('aria-activedescendant')).toMatch(/-node-1$/u);
   });
 });
 

@@ -136,7 +136,7 @@ const DurationSegment = ({
           if (locked) {
             return;
           }
-          if (text !== '' && !/^\d+$/.test(text)) {
+          if (text !== '' && !/^\d+$/u.test(text)) {
             return;
           }
           setDraft(text);

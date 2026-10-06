@@ -123,7 +123,7 @@ export const getConfiguredFontTables = (scope: 'heading' | 'body'): FontScopeTab
     for (const [key, value] of Object.entries(table)) {
       const num = typeof value === 'number' ? value : value && typeof value.val === 'number' ? value.val : undefined;
       if (num !== undefined) {
-        out[key.replace(/^\$/, '')] = num;
+        out[key.replace(/^\$/u, '')] = num;
       }
     }
     return Object.keys(out).length > 0 ? out : undefined;

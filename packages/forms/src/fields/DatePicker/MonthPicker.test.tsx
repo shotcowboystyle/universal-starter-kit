@@ -8,7 +8,7 @@ import { Form } from '../../Form';
 
 import { MonthPicker } from './MonthPicker';
 
-const MONTH_ABBREVIATIONS = /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)$/;
+const MONTH_ABBREVIATIONS = /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)$/u;
 
 const getMonthButtons = (root: ParentNode): HTMLButtonElement[] => {
   const allButtons = Array.from(root.querySelectorAll('button, [role="button"]')) as HTMLButtonElement[];
@@ -279,7 +279,7 @@ describe('MonthPicker', () => {
   // Open → zero leak-class console errors.
   describe('DOM prop hygiene', () => {
     it('opens without leaking non-DOM props (scaleIcon class)', async () => {
-      const LEAK = /does not recognize the `.+` prop on a DOM element|non-boolean attribute|Invalid DOM property/i;
+      const LEAK = /does not recognize the `.+` prop on a DOM element|non-boolean attribute|Invalid DOM property/iu;
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       try {
         const result = renderWithProviders(

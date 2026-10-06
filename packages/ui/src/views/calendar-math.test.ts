@@ -175,8 +175,8 @@ describe('calendarMath', () => {
       });
       expect(label).toContain('Deploy to staging');
       expect(label).toContain('Tuesday');
-      expect(label).toMatch(/2:00/);
-      expect(label).toMatch(/3:00/);
+      expect(label).toMatch(/2:00/u);
+      expect(label).toMatch(/3:00/u);
     });
 
     it('omits the time range for untimed events', () => {
@@ -186,7 +186,7 @@ describe('calendarMath', () => {
     });
 
     it('formats visible time ranges', () => {
-      expect(formatTimeRangeLabel(new Date(2026, 2, 10, 9, 0), new Date(2026, 2, 10, 10, 30))).toMatch(/9:00.*10:30/);
+      expect(formatTimeRangeLabel(new Date(2026, 2, 10, 9, 0), new Date(2026, 2, 10, 10, 30))).toMatch(/9:00.*10:30/u);
     });
 
     it('computes minutes of day', () => {

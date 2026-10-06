@@ -25,7 +25,7 @@ const cssEscape = (value: string): string => {
   if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
     return CSS.escape(value);
   }
-  return value.replaceAll(/[^a-zA-Z0-9_-]/g, '\\$&');
+  return value.replaceAll(/[^a-zA-Z0-9_-]/gu, '\\$&');
 };
 
 /**
@@ -418,7 +418,7 @@ export const useOTPFocusManagement = (length: number, _onComplete?: (code: strin
         }
         default: {
           // Auto-advance for digit input
-          if (/^\d$/.test(key) && value && index < length - 1) {
+          if (/^\d$/u.test(key) && value && index < length - 1) {
             focusInput(index + 1);
           }
           break;

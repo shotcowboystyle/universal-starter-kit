@@ -46,9 +46,9 @@ export interface PublicConfigPluginOptions {
   keys?: string[];
 }
 
-const bakedExpression = /\bprocess\??\.env\??\.(?:VITE_MP_CONFIG|VITE_MP_PUBLIC_CONFIG_KEYS)\b/;
-const nonScriptRequest = /\.(?:json|css|html)(?:$|\?)/;
-const nodeModulesPath = /[\\/]node_modules[\\/]/;
+const bakedExpression = /\bprocess\??\.env\??\.(?:VITE_MP_CONFIG|VITE_MP_PUBLIC_CONFIG_KEYS)\b/u;
+const nonScriptRequest = /\.(?:json|css|html)(?:$|\?)/u;
+const nodeModulesPath = /[\\/]node_modules[\\/]/u;
 
 /**
  * The same replacement vite:define makes, done through oxc so only real

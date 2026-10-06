@@ -38,7 +38,7 @@ describe('ScrollArrow design-law', () => {
     const well = result.container.querySelector('[data-mpo-scroll-arrow]') as HTMLElement | null;
     expect(well).toBeTruthy();
     expect(well?.getAttribute('data-icon-size')).toBe('16');
-    expect(well?.getAttribute('style') ?? '').not.toMatch(/height:\s*28px/);
+    expect(well?.getAttribute('style') ?? '').not.toMatch(/height:\s*28px/u);
   });
 
   it('size knob restyles the caret', () => {
@@ -56,7 +56,7 @@ describe('ScrollArrow design-law', () => {
     const result = renderArrow({ animation: 'none' });
     const well = result.container.querySelector('[data-mpo-scroll-arrow]') as HTMLElement | null;
     const style = well?.getAttribute('style') ?? well?.style.cssText ?? '';
-    expect(style).not.toMatch(/opacity\s+[^;]*ease/);
-    expect(style).not.toMatch(/160ms/);
+    expect(style).not.toMatch(/opacity\s+[^;]*ease/u);
+    expect(style).not.toMatch(/160ms/u);
   });
 });

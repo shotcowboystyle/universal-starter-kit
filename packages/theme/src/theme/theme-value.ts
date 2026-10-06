@@ -16,17 +16,17 @@
  */
 
 /** Tamagui resolves a `$`-prefixed value against the token table, not CSS. */
-const TOKEN_REFERENCE = /^\$[\w.-]+$/;
+const TOKEN_REFERENCE = /^\$[\w.-]+$/u;
 
 /** #rgb, #rgba, #rrggbb, #rrggbbaa. */
-const HEX = /^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
+const HEX = /^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/u;
 
 /**
  * Every CSS colour FUNCTION, plus `var()`. Only the head is checked: the
  * argument grammar is CSS's job and re-implementing it here would be a second
  * parser to keep in step with the spec.
  */
-const COLOR_FUNCTION = /^(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color|color-mix|light-dark|var)\(/;
+const COLOR_FUNCTION = /^(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color|color-mix|light-dark|var)\(/u;
 
 /** CSS-wide keywords plus the two the theme layer actually writes. */
 const KEYWORDS = new Set([

@@ -38,14 +38,14 @@ const getSeparator = (container: HTMLElement): HTMLElement => {
   return el as HTMLElement;
 };
 
-const escapeForRegExp = (value: string) => value.replaceAll(/[.*+?^${}()|[\]\\-]/g, '\\$&');
+const escapeForRegExp = (value: string) => value.replaceAll(/[.*+?^${}()|[\]\\-]/gu, '\\$&');
 
 /**
  * Every value Tamagui declared for `property` through one of THIS element's
  * atomic classes. Empty means the element does not carry that property at all.
  */
 const declared = (el: HTMLElement, property: string): string[] => {
-  const atoms = el.className.split(/\s+/).filter(Boolean);
+  const atoms = el.className.split(/\s+/u).filter(Boolean);
   const values: string[] = [];
   for (const sheet of Array.from(document.styleSheets)) {
     let rules: CSSRuleList | undefined;
@@ -55,7 +55,7 @@ const declared = (el: HTMLElement, property: string): string[] => {
       continue; // cross-origin sheet; nothing of ours lives there
     }
     for (const rule of Array.from(rules ?? [])) {
-      const parsed = /^([^{]+)\{([^}]*)\}$/.exec(rule.cssText ?? '');
+      const parsed = /^([^{]+)\{([^}]*)\}$/u.exec(rule.cssText ?? '');
       if (!parsed) {
         continue;
       }
@@ -88,7 +88,7 @@ const isVisibleColor = (value: string): boolean => {
     return false;
   }
   // rgba/hsla with a 0 alpha channel paints nothing.
-  return !/(?:rgba|hsla)\([^)]*,\s*0(?:\.0+)?\s*\)/.test(value);
+  return !/(?:rgba|hsla)\([^)]*,\s*0(?:\.0+)?\s*\)/u.test(value);
 };
 
 describe('Separator — painted colour (the regression this component exists for)', () => {

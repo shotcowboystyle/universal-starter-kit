@@ -41,7 +41,7 @@ describe('CodeBlock copy (Input.Button + notify)', () => {
       throw new Error('copy not found');
     }
     expect(copy.getAttribute('tabindex')).toBe('0');
-    expect(copy.className).toMatch(/mp-chip-dismiss/);
+    expect(copy.className).toMatch(/mp-chip-dismiss/u);
     expect(copy.querySelector('.mp-chip-dismiss-ring')).not.toBeNull();
     expect(copy.getAttribute('data-end-cap')).toBe('44');
     const style = getComputedStyle(copy);
@@ -100,7 +100,7 @@ describe('CodeBlock copy (Input.Button + notify)', () => {
     });
     expect(getToasts()[0]?.title).toBe('Copied to clipboard.');
     expect(getToasts()[0]?.intent).toBe('success');
-    expect(getToasts()[0]?.title).not.toMatch(/success/i);
+    expect(getToasts()[0]?.title).not.toMatch(/success/iu);
     expect(getFeedback()).toHaveLength(0);
     expect(copyOf(result.container)?.getAttribute('aria-label')).toBe('Copy to clipboard');
   });

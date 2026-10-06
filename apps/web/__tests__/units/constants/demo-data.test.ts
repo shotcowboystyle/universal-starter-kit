@@ -8,7 +8,7 @@ describe('demoData constants', () => {
   });
 
   it('should have valid email format', () => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/u;
     expect(defaultEmail).toMatch(emailRegex);
   });
 

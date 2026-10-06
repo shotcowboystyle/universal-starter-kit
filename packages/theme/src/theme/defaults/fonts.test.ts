@@ -16,7 +16,7 @@ const table = (font: unknown, key: 'size' | 'lineHeight' | 'letterSpacing'): Num
   for (const [k, v] of Object.entries(raw)) {
     const num = typeof v === 'number' ? v : v && typeof v.val === 'number' ? v.val : undefined;
     if (num !== undefined) {
-      out[k.replace(/^\$/, '')] = num;
+      out[k.replace(/^\$/u, '')] = num;
     }
   }
   return out;
@@ -29,7 +29,7 @@ const strTable = (font: unknown, key: 'weight'): Record<string, string> => {
   for (const [k, v] of Object.entries(raw)) {
     const str = typeof v === 'string' ? v : v && typeof v.val === 'string' ? v.val : undefined;
     if (str !== undefined) {
-      out[k.replace(/^\$/, '')] = str;
+      out[k.replace(/^\$/u, '')] = str;
     }
   }
   return out;
@@ -126,7 +126,7 @@ const fontFamily = (font: unknown): string => {
 
 describe('bodyFont category fonts — one ladder, distinct families', () => {
   const bodyStops = ['body', 'serif', 'mono', 'rounded'] as const;
-  const firstFamily = (stack: string) => stack.split(',')[0]?.replaceAll(/['"]/g, '').trim();
+  const firstFamily = (stack: string) => stack.split(',')[0]?.replaceAll(/['"]/gu, '').trim();
   const categories = Object.keys(defaultFonts).filter(
     (name) => name !== 'heading' && name !== 'body',
   ) as FontCategory[];

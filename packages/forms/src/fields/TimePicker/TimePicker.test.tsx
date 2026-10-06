@@ -257,8 +257,8 @@ describe('TimePicker', () => {
         if (el.style.fontWeight) {
           weights.add(el.style.fontWeight);
         }
-        for (const cls of String(el.className ?? '').split(/\s+/)) {
-          const match = /(?:^|_)(?:fw|fow|fontWeight)-?(\d+)/i.exec(cls);
+        for (const cls of String(el.className ?? '').split(/\s+/u)) {
+          const match = /(?:^|_)(?:fw|fow|fontWeight)-?(\d+)/iu.exec(cls);
           if (match) {
             weights.add(match[1]);
           }

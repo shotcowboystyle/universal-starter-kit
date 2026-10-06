@@ -316,7 +316,7 @@ describe('DestructiveAction', () => {
     const input =
       marked instanceof HTMLInputElement ? marked : (marked?.querySelector('input') as HTMLInputElement | null);
     expect(input).toBeTruthy();
-    expect(input!.getAttribute('style') ?? input!.style.cssText).not.toMatch(/#ccc/i);
+    expect(input!.getAttribute('style') ?? input!.style.cssText).not.toMatch(/#ccc/iu);
     expect(alertdialog()?.querySelector('[data-mp-confirm-prompt]')?.textContent).toContain(
       'Type "my-project" to confirm.',
     );
@@ -324,7 +324,7 @@ describe('DestructiveAction', () => {
 
   it('typed-confirm TSX has no HTML span/input hosts', () => {
     const src = readFileSync(resolve(process.cwd(), 'src/actions/DestructiveAction.tsx'), 'utf-8');
-    expect(src).not.toMatch(/<span[\s>]/);
-    expect(src).not.toMatch(/<input[\s>]/);
+    expect(src).not.toMatch(/<span[\s>]/u);
+    expect(src).not.toMatch(/<input[\s>]/u);
   });
 });

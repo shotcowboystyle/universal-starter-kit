@@ -36,10 +36,10 @@ describe('CardFooter named exports', () => {
 describe('CardFooter — no Tint wrap', () => {
   it('source does not wrap Tint; NestedScale stays on Card', () => {
     const src = readSibling('CardFooter.tsx');
-    expect(src).not.toMatch(/from ["'][^"']*Tint["']/);
-    expect(src).not.toMatch(/<[Tt]int[\s/>]/);
-    expect(src).not.toMatch(/const NestedScale = /);
-    expect(src).toMatch(/padding=\{0\}/);
+    expect(src).not.toMatch(/from ["'][^"']*Tint["']/u);
+    expect(src).not.toMatch(/<[Tt]int[\s/>]/u);
+    expect(src).not.toMatch(/const NestedScale = /u);
+    expect(src).toMatch(/padding=\{0\}/u);
   });
 });
 
@@ -78,7 +78,7 @@ describe('CardFooter design-law — T-BODY text node', () => {
     );
     const weight = atoms(captionText(container, 'Ready to submit'), ['_fow-']);
     expect(weight.length).toBeGreaterThan(0);
-    expect(weight.join(' ')).not.toMatch(/600|weight-6|fow-6/);
+    expect(weight.join(' ')).not.toMatch(/600|weight-6|fow-6/u);
   });
 
   it('lets the fontWeight knob restyle the caption text node', () => {
@@ -100,10 +100,10 @@ describe('CardFooter design-law — T-BODY text node', () => {
       </Preset>,
     );
     const boldWeight = atoms(captionText(bold.container, 'Ready to submit'), ['_fow-']).join(' ');
-    expect(regularWeight).not.toMatch(/600|weight-6|fow-6/);
-    expect(boldWeight).not.toMatch(/600|weight-6|fow-6/);
+    expect(regularWeight).not.toMatch(/600|weight-6|fow-6/u);
+    expect(boldWeight).not.toMatch(/600|weight-6|fow-6/u);
     expect(boldWeight).not.toStrictEqual(regularWeight);
-    expect(boldWeight).toMatch(/700|weight-7|fow-7/);
+    expect(boldWeight).toMatch(/700|weight-7|fow-7/u);
   });
 
   it('lets the bodyFont knob restyle the caption text node', () => {
@@ -131,7 +131,7 @@ describe('CardFooter design-law — T-BODY text node', () => {
 
   it('stamps data-slot=footer and stays a zero-padding slot', () => {
     const src = readSibling('CardFooter.tsx');
-    expect(src).toMatch(/padding=\{0\}/);
+    expect(src).toMatch(/padding=\{0\}/u);
     const { container } = renderWithProviders(
       <Card>
         <Card.Footer>Actions</Card.Footer>

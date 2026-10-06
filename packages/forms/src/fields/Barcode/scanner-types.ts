@@ -111,7 +111,7 @@ const normalizeFormatToken = (value: string): string =>
   value
     .trim()
     .toLowerCase()
-    .replaceAll(/[\s-]+/g, '_');
+    .replaceAll(/[\s-]+/gu, '_');
 
 /**
  * Resolve ONE consumer format token to its expo-camera barcode type, or

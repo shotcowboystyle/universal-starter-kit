@@ -327,7 +327,7 @@ const reverseMapFontFamily = (computed: string): { knob: string; offScale: boole
   const first = computed
     .split(',')[0]
     .trim()
-    .replaceAll(/^['"]|['"]$/g, '')
+    .replaceAll(/^['"]|['"]$/gu, '')
     .toLowerCase();
   if (!first) {
     return { knob: 'empty', offScale: true };
@@ -570,7 +570,7 @@ export const runConstraintAudit = (rootSelector?: string): AuditReport => {
     const first = computed
       .split(',')[0]
       .trim()
-      .replaceAll(/^['"]|['"]$/g, '')
+      .replaceAll(/^['"]|['"]$/gu, '')
       .toLowerCase();
     if (!first) {
       return { knob: 'empty', offScale: true };
@@ -642,10 +642,10 @@ export const runConstraintAudit = (rootSelector?: string): AuditReport => {
     // Labels are part of the no-breakage signature, so nothing a knob or a
     // render order writes may reach them: React useId ids renumber per mount,
     // and Tamagui atomic classes (always `_`-prefixed) spell resolved values.
-    const generatedId = /^(?:_r_[0-9a-z]+_|:r[0-9a-z]+:|«r[0-9a-z]+»)$/.test(el.id);
+    const generatedId = /^(?:_r_[0-9a-z]+_|:r[0-9a-z]+:|«r[0-9a-z]+»)$/u.test(el.id);
     const id = el.id && !generatedId ? `#${el.id}` : '';
     const classes = Array.from(el.classList)
-      .filter((c) => c.length > 3 && !c.startsWith('_') && !/^[_a-z0-9]{1,8}-/.test(c) && !/^\d/.test(c))
+      .filter((c) => c.length > 3 && !c.startsWith('_') && !/^[_a-z0-9]{1,8}-/u.test(c) && !/^\d/u.test(c))
       .slice(0, 3)
       .join('.');
     const cls = classes ? `.${classes}` : '';
@@ -810,7 +810,7 @@ export const runConstraintAudit = (rootSelector?: string): AuditReport => {
       tag,
       id: el.id || '',
       classes: Array.from(el.classList)
-        .filter((c) => c.length > 3 && !/^[_a-z][a-z0-9]{0,6}-/.test(c))
+        .filter((c) => c.length > 3 && !/^[_a-z][a-z0-9]{0,6}-/u.test(c))
         .slice(0, 5),
       violations: [],
     };
@@ -897,10 +897,10 @@ export const runConstraintAudit = (rootSelector?: string): AuditReport => {
         const inner = stackedRow && stackOuter !== undefined && !stackOuter.includes(prop);
         const expected = inner ? 0 : cap;
         // A corner may have two elliptical axes. Percentages are not px caps.
-        const axes = raw.trim().split(/\s+/);
+        const axes = raw.trim().split(/\s+/u);
         const offScale =
           expected === undefined ||
-          axes.some((axis) => !/^\d+(?:\.\d+)?(?:px)?$/.test(axis) || parsePx(axis) !== expected);
+          axes.some((axis) => !/^\d+(?:\.\d+)?(?:px)?$/u.test(axis) || parsePx(axis) !== expected);
         const result = {
           value: parsePx(raw) ?? 0,
           unit: 'px',
@@ -931,12 +931,12 @@ export const runConstraintAudit = (rootSelector?: string): AuditReport => {
       // box, so a translated thumb measures the same as a resting one.
       const box = el as HTMLElement;
       const half = Math.min(box.offsetWidth, box.offsetHeight) / 2;
-      const measuredCorners = corners.map((prop) => style[prop].trim().split(/\s+/));
+      const measuredCorners = corners.map((prop) => style[prop].trim().split(/\s+/u));
       if (measuredCorners.some((axes) => axes.some((axis) => parsePx(axis) !== 0))) {
         for (const [index, prop] of corners.entries()) {
           const raw = style[prop];
           const offScale = measuredCorners[index].some((axis) => {
-            if (!/^\d+(?:\.\d+)?(?:px)?$/.test(axis)) {
+            if (!/^\d+(?:\.\d+)?(?:px)?$/u.test(axis)) {
               return true;
             }
             const value = parsePx(axis) ?? 0;

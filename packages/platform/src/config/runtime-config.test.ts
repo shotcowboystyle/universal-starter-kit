@@ -138,15 +138,15 @@ describe('runtimeConfig has no import.meta and bakes through static process.env 
   // vitest runs this package with cwd at its root and a browser-like
   // environment where import.meta.url is not a file: URL, so anchor on cwd.
   const here = resolve(process.cwd(), 'src/config');
-  const source = readFileSync(`${here}/runtime-config.ts`, 'utf-8').replaceAll(/\/\*[\s\S]*?\*\//g, '');
+  const source = readFileSync(`${here}/runtime-config.ts`, 'utf-8').replaceAll(/\/\*[\s\S]*?\*\//gu, '');
 
   it('contains no import.meta token, because a classic script (Expo DOM component, Hermes) cannot even parse one', () => {
-    expect(source).not.toMatch(/import\.meta/);
+    expect(source).not.toMatch(/import\.meta/u);
   });
 
   it('reads each baked key as a static process.env member expression, the only spelling bundlers inline', () => {
-    expect(source).toMatch(/process\.env\.VITE_MP_CONFIG\b/);
-    expect(source).toMatch(/process\.env\.VITE_MP_PUBLIC_CONFIG_KEYS\b/);
+    expect(source).toMatch(/process\.env\.VITE_MP_CONFIG\b/u);
+    expect(source).toMatch(/process\.env\.VITE_MP_PUBLIC_CONFIG_KEYS\b/u);
   });
 
   it("has no platform twin, because One's web build and tamagui-build resolve .web.ts like Metro and a twin replaced the bake once", () => {

@@ -53,7 +53,7 @@ export const DEFAULT_QUICK_RANGES: readonly QuickRange[] = [
   { label: '7 d', durationMs: 7 * 24 * 60 * 60 * 1000 },
 ];
 
-const RELATIVE_DATE = /^(now)([+-].+)?$/i;
+const RELATIVE_DATE = /^(now)([+-].+)?$/iu;
 
 /**
  * Grip diameter. Kin of `getSliderThumbRenderSize`; 16 / 20 / 26 is the

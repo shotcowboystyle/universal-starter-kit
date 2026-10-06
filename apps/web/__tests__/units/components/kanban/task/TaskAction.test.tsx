@@ -259,8 +259,8 @@ describe('TaskActions', () => {
   it('enables edit and delete for the creator', async () => {
     render(<TaskActions {...mockProps} />);
     const menu = await openMenu();
-    expect(menu.getByRole('menuitem', { name: /edit/ })).not.toHaveAttribute('aria-disabled', 'true');
-    expect(menu.getByRole('menuitem', { name: /delete/ })).not.toHaveAttribute('aria-disabled', 'true');
+    expect(menu.getByRole('menuitem', { name: /edit/u })).not.toHaveAttribute('aria-disabled', 'true');
+    expect(menu.getByRole('menuitem', { name: /delete/u })).not.toHaveAttribute('aria-disabled', 'true');
   });
 
   it('only enables edit for the assignee', async () => {
@@ -268,8 +268,8 @@ describe('TaskActions', () => {
     vi.mocked(useWorkspaceStore).mockReturnValue({ userId: 'user-2' } as any);
     render(<TaskActions {...mockProps} />);
     const menu = await openMenu();
-    expect(menu.getByRole('menuitem', { name: /edit/ })).not.toHaveAttribute('aria-disabled', 'true');
-    expect(menu.getByRole('menuitem', { name: /delete/ })).toHaveAttribute('aria-disabled', 'true');
+    expect(menu.getByRole('menuitem', { name: /edit/u })).not.toHaveAttribute('aria-disabled', 'true');
+    expect(menu.getByRole('menuitem', { name: /delete/u })).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('disables both actions for other users', async () => {
@@ -277,15 +277,15 @@ describe('TaskActions', () => {
     vi.mocked(useWorkspaceStore).mockReturnValue({ userId: 'user-3' } as any);
     render(<TaskActions {...mockProps} />);
     const menu = await openMenu();
-    expect(menu.getByRole('menuitem', { name: /edit/ })).toHaveAttribute('aria-disabled', 'true');
-    expect(menu.getByRole('menuitem', { name: /delete/ })).toHaveAttribute('aria-disabled', 'true');
+    expect(menu.getByRole('menuitem', { name: /edit/u })).toHaveAttribute('aria-disabled', 'true');
+    expect(menu.getByRole('menuitem', { name: /delete/u })).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('opens the edit dialog and submits the update', async () => {
     const { useUpdateTask } = await import('@/lib/api/tasks/queries');
     render(<TaskActions {...mockProps} />);
     const menu = await openMenu();
-    fireEvent.click(menu.getByRole('menuitem', { name: /edit/ }));
+    fireEvent.click(menu.getByRole('menuitem', { name: /edit/u }));
 
     const dialog = await screen.findByTestId('edit-task-dialog');
     expect(within(dialog).getByText('editTaskTitle')).toBeInTheDocument();
@@ -304,7 +304,7 @@ describe('TaskActions', () => {
     const { useDeleteTask } = await import('@/lib/api/tasks/queries');
     render(<TaskActions {...mockProps} />);
     const menu = await openMenu();
-    fireEvent.click(menu.getByRole('menuitem', { name: /delete/ }));
+    fireEvent.click(menu.getByRole('menuitem', { name: /delete/u }));
 
     const dialog = within(await findConfirmDialog());
     expect(dialog.getByText('confirmDeleteTitle')).toBeInTheDocument();
@@ -320,7 +320,7 @@ describe('TaskActions', () => {
     const { useDeleteTask } = await import('@/lib/api/tasks/queries');
     render(<TaskActions {...mockProps} />);
     const menu = await openMenu();
-    fireEvent.click(menu.getByRole('menuitem', { name: /delete/ }));
+    fireEvent.click(menu.getByRole('menuitem', { name: /delete/u }));
 
     const dialog = within(await findConfirmDialog());
     fireEvent.click(dialog.getByText('cancel'));

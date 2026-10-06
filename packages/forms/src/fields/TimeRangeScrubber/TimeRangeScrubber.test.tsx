@@ -143,8 +143,8 @@ describe('TimeRangeScrubber geometry', () => {
     expect(range.start?.getTime()).toBe(NOW.getTime() - 15 * 60 * 1000);
     const asPicker: DateRange = range;
     expect(asPicker.start).toBe(range.start);
-    expect(() => applyQuickRange('now-15m', NOW)).toThrow(/relative/);
-    expect(() => assertAbsoluteDateRange({ start: 'now-15m', end: 'now' })).toThrow(/relative/);
+    expect(() => applyQuickRange('now-15m', NOW)).toThrow(/relative/u);
+    expect(() => assertAbsoluteDateRange({ start: 'now-15m', end: 'now' })).toThrow(/relative/u);
   });
 
   it('drag and mount stay none; jumps tween quick unless reduced motion', () => {
@@ -212,13 +212,13 @@ describe('TimeRangeScrubber', () => {
     );
     const cap = result.container.querySelector("[data-part='cap']");
     expect(cap).toBeTruthy();
-    expect(cap?.textContent?.trim()).toMatch(/^\d{2}:\d{2}:\d{2}$/);
-    expect(cap?.textContent).not.toMatch(/frame/i);
+    expect(cap?.textContent?.trim()).toMatch(/^\d{2}:\d{2}:\d{2}$/u);
+    expect(cap?.textContent).not.toMatch(/frame/iu);
     const nested = cap?.querySelector("[data-part='frame-stale']");
     expect(nested).toBeFalsy();
     const stale = result.container.querySelector("[data-part='frame-stale']");
     expect(stale).toBeTruthy();
-    expect(stale?.textContent).toMatch(/frame/i);
+    expect(stale?.textContent).toMatch(/frame/iu);
     expect(cap?.contains(stale)).toBe(false);
   });
 
@@ -274,7 +274,7 @@ describe('TimeRangeScrubber', () => {
     expect(dateRangeKeys(emitted)).toStrictEqual(['end', 'start']);
     expect(emitted.start).toBeInstanceOf(Date);
     expect(emitted.end).toBeInstanceOf(Date);
-    expect(JSON.stringify(emitted)).not.toMatch(/now-/);
+    expect(JSON.stringify(emitted)).not.toMatch(/now-/u);
     expect(emitted.end?.getTime()).toBe(NOW.getTime());
     expect(emitted.start?.getTime()).toBe(NOW.getTime() - 15 * 60 * 1000);
   });
@@ -300,7 +300,7 @@ describe('TimeRangeScrubber', () => {
     const next = onScrub.mock.calls[0][0] as Date;
     expect(next.getTime()).toBe(new Date('2026-08-28T14:15:01.000Z').getTime());
     const live = result.container.querySelector('[aria-live]');
-    expect(live?.textContent).toMatch(/playhead|14:15/i);
+    expect(live?.textContent).toMatch(/playhead|14:15/iu);
   });
 
   it('keyboard selects a brush range and announces it', async () => {
@@ -326,7 +326,7 @@ describe('TimeRangeScrubber', () => {
     const emitted = onChange.mock.calls[0][0] as DateRange;
     expect(dateRangeKeys(emitted)).toStrictEqual(['end', 'start']);
     expect(emitted.end?.getTime()).toBe(new Date('2026-08-28T14:21:00.000Z').getTime());
-    expect(result.container.querySelector('[aria-live]')?.textContent).toMatch(/range/i);
+    expect(result.container.querySelector('[aria-live]')?.textContent).toMatch(/range/iu);
   });
 
   it('continuous drag stays 1:1 with the pointer (no jump tween)', async () => {
@@ -410,7 +410,7 @@ describe('TimeRangeScrubber', () => {
     });
     const last = onScrub.mock.calls.at(-1)?.[0] as Date;
     expect(last.getTime()).toBe(origin.getTime());
-    expect(result.container.querySelector('[aria-live]')?.textContent).toMatch(/cancel/i);
+    expect(result.container.querySelector('[aria-live]')?.textContent).toMatch(/cancel/iu);
   });
 
   it('overflow quick ranges open a FloatingPanel', async () => {

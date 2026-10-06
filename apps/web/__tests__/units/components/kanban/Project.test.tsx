@@ -147,7 +147,7 @@ describe('BoardProject', () => {
       />,
     );
 
-    expect(screen.getByText(/Test Description/)).toBeInTheDocument();
+    expect(screen.getByText(/Test Description/u)).toBeInTheDocument();
   });
 
   it('should render project owner', () => {
@@ -161,7 +161,7 @@ describe('BoardProject', () => {
       />,
     );
 
-    expect(screen.getByText(/John Doe/)).toBeInTheDocument();
+    expect(screen.getByText(/John Doe/u)).toBeInTheDocument();
   });
 
   it('should render project members', () => {
@@ -175,7 +175,7 @@ describe('BoardProject', () => {
       />,
     );
 
-    expect(screen.getByText(/Jane Smith, Bob Johnson/)).toBeInTheDocument();
+    expect(screen.getByText(/Jane Smith, Bob Johnson/u)).toBeInTheDocument();
   });
 
   it('should render all non-deleted tasks', () => {
@@ -234,7 +234,7 @@ describe('BoardProject', () => {
       />,
     );
 
-    expect(screen.getByText(/noDescription/)).toBeInTheDocument();
+    expect(screen.getByText(/noDescription/u)).toBeInTheDocument();
   });
 
   it('should render with string owner ID', () => {
@@ -249,7 +249,7 @@ describe('BoardProject', () => {
       />,
     );
 
-    expect(screen.getByText(/user-1/)).toBeInTheDocument();
+    expect(screen.getByText(/user-1/u)).toBeInTheDocument();
   });
 
   it('should not render members badge when project has no members', () => {
@@ -265,7 +265,7 @@ describe('BoardProject', () => {
     );
 
     // Members badge should not be rendered
-    const membersBadges = screen.queryByText(/members:/);
+    const membersBadges = screen.queryByText(/members:/u);
     expect(membersBadges).not.toBeInTheDocument();
   });
 
@@ -371,7 +371,7 @@ describe('BoardProject', () => {
       />,
     );
 
-    expect(screen.getByText(/john@example.com/)).toBeInTheDocument();
+    expect(screen.getByText(/john@example.com/u)).toBeInTheDocument();
   });
 
   it('should render the sortable project container', () => {

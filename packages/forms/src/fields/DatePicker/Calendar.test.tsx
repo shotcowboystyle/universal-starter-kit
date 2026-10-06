@@ -18,7 +18,7 @@ const getEnabledDayButtons = (root: ParentNode): HTMLButtonElement[] => {
   const allButtons = Array.from(root.querySelectorAll('button, [role="button"]')) as HTMLButtonElement[];
   return allButtons.filter((btn) => {
     const text = btn.textContent?.trim() ?? '';
-    const isDay = /^\d{1,2}$/.test(text);
+    const isDay = /^\d{1,2}$/u.test(text);
     const disabled =
       btn.hasAttribute('disabled') || btn.getAttribute('aria-disabled') === 'true' || btn.hasAttribute('data-disabled');
     return isDay && !disabled;
@@ -27,12 +27,12 @@ const getEnabledDayButtons = (root: ParentNode): HTMLButtonElement[] => {
 
 const getDayButtons = (root: ParentNode): HTMLButtonElement[] => {
   const allButtons = Array.from(root.querySelectorAll('button, [role="button"]')) as HTMLButtonElement[];
-  return allButtons.filter((btn) => /^\d{1,2}$/.test(btn.textContent?.trim() ?? ''));
+  return allButtons.filter((btn) => /^\d{1,2}$/u.test(btn.textContent?.trim() ?? ''));
 };
 
 /** Tamagui emits opacity as `_o-<value>` (see StarInk.native.spec). */
 const opacityOf = (el: HTMLElement): number => {
-  const fromClass = /(?:^|\s)_o-([\d.]+)(?:\s|$)/.exec(el.className);
+  const fromClass = /(?:^|\s)_o-([\d.]+)(?:\s|$)/u.exec(el.className);
   if (fromClass) {
     return Number(fromClass[1]);
   }
@@ -177,7 +177,7 @@ describe('Calendar', () => {
   // React's unknown-prop console.error on every calendar open, while never
   // sizing any icon. Render → zero leak-class console errors.
   it('renders without leaking non-DOM props (scaleIcon class)', async () => {
-    const LEAK = /does not recognize the `.+` prop on a DOM element|non-boolean attribute|Invalid DOM property/i;
+    const LEAK = /does not recognize the `.+` prop on a DOM element|non-boolean attribute|Invalid DOM property/iu;
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     try {
       const result = renderWithProviders(
@@ -302,7 +302,7 @@ describe('Calendar day-cell unavailable treatment', () => {
     expect(unselected.every((btn) => opacityOf(btn) === 0.5)).toBe(true);
     expect(selected.length).toBeGreaterThan(0);
     expect(selected.every((btn) => btn.getAttribute('aria-disabled') !== 'true')).toBe(true);
-    expect(result.container.textContent).not.toMatch(/\b\d+\s+of\s+\d+\b/);
+    expect(result.container.textContent).not.toMatch(/\b\d+\s+of\s+\d+\b/u);
   });
 
   it('draws no N-of-N footer on the calendar grid', () => {
@@ -314,6 +314,6 @@ describe('Calendar day-cell unavailable treatment', () => {
         selected={[new Date(2024, 5, 15)]}
       />,
     );
-    expect(result.container.textContent).not.toMatch(/\b\d+\s+of\s+\d+\b/);
+    expect(result.container.textContent).not.toMatch(/\b\d+\s+of\s+\d+\b/u);
   });
 });

@@ -18,7 +18,7 @@ describe('constraint audit scope and painted visibility', () => {
   });
 
   it('rejects a missing requested surface instead of returning a clean report', () => {
-    expect(() => audit('#missing')).toThrow(/scope/i);
+    expect(() => audit('#missing')).toThrow(/scope/iu);
   });
 
   it.each(['display:none', 'visibility:hidden', 'opacity:0'])(

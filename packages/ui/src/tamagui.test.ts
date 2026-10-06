@@ -169,7 +169,7 @@ const walkStoryFiles = (dir: string): string[] => {
     const path = join(dir, entry.name);
     if (entry.isDirectory()) {
       out.push(...walkStoryFiles(path));
-    } else if (/\.stories\.tsx?$/.test(entry.name)) {
+    } else if (/\.stories\.tsx?$/u.test(entry.name)) {
       out.push(path);
     }
   }
@@ -178,7 +178,7 @@ const walkStoryFiles = (dir: string): string[] => {
 
 const namedValueImportsFromHouseTamagui = (src: string): string[] => {
   const names: string[] = [];
-  const re = /import\s+(type\s+)?\{([^}]+)\}\s+from\s+["']\.\/tamagui["']/g;
+  const re = /import\s+(type\s+)?\{([^}]+)\}\s+from\s+["']\.\/tamagui["']/gu;
   for (const match of src.matchAll(re)) {
     const wholeClauseIsType = Boolean(match[1]);
     for (const raw of match[2].split(',')) {
@@ -186,13 +186,13 @@ const namedValueImportsFromHouseTamagui = (src: string): string[] => {
       if (!part) {
         continue;
       }
-      if (wholeClauseIsType || /^type\s/.test(part)) {
+      if (wholeClauseIsType || /^type\s/u.test(part)) {
         continue;
       }
       names.push(
         part
-          .replace(/^type\s+/, '')
-          .split(/\s+as\s+/)[0]
+          .replace(/^type\s+/u, '')
+          .split(/\s+as\s+/u)[0]
           .trim(),
       );
     }

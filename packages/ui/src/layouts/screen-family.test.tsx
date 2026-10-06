@@ -101,7 +101,7 @@ describe('ScreenToolbar padding and containment', () => {
     const bar = container.querySelector('[data-testid="screen-toolbar"]') as HTMLElement;
     expect(bar).toBeTruthy();
     const style = bar.getAttribute('style') || bar.className;
-    expect(style).toMatch(/wrap|flex-wrap|_fw-/);
+    expect(style).toMatch(/wrap|flex-wrap|_fw-/u);
   });
 
   it('bleeds Screen inset so nested toolbars do not double-pad', () => {

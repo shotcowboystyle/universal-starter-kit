@@ -52,7 +52,7 @@ describe('Calendar TZ + month-boundary fixes', () => {
     for (let i = 0; i < 12 && el; i++) {
       const nums = [...el.querySelectorAll('span')]
         .map((s) => s.textContent?.trim() ?? '')
-        .filter((t) => /^\d{1,2}$/.test(t));
+        .filter((t) => /^\d{1,2}$/u.test(t));
       if (nums.length === 1) {
         day = nums[0];
         break;

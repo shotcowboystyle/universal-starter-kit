@@ -12,7 +12,7 @@ const getEnabledDayButtons = (root: ParentNode): HTMLButtonElement[] => {
   const allButtons = Array.from(root.querySelectorAll('button, [role="button"]')) as HTMLButtonElement[];
   return allButtons.filter((btn) => {
     const text = btn.textContent?.trim() ?? '';
-    const isDay = /^\d{1,2}$/.test(text);
+    const isDay = /^\d{1,2}$/u.test(text);
     const disabled =
       btn.hasAttribute('disabled') || btn.getAttribute('aria-disabled') === 'true' || btn.hasAttribute('data-disabled');
     return isDay && !disabled;

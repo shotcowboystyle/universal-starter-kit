@@ -258,7 +258,7 @@ describe('ImageField', () => {
       );
       const tile = mediaTile(result.container);
       expect(tile).not.toBeNull();
-      expect(tile?.textContent ?? '').not.toMatch(/Remove/);
+      expect(tile?.textContent ?? '').not.toMatch(/Remove/u);
       expect(result.findTextElement('Remove')).toBeDefined();
     });
 

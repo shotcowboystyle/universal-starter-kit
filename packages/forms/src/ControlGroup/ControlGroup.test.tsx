@@ -79,7 +79,7 @@ describe('ControlGroup', () => {
     const weight =
       text?.style.fontWeight ||
       (text ? getComputedStyle(text).fontWeight : '') ||
-      (text?.className.match(/fw-400|fow-400|font-weight-400/) ? '400' : '');
+      (text?.className.match(/fw-400|fow-400|font-weight-400/u) ? '400' : '');
     expect(['400', 'normal']).toContain(String(weight));
   });
 });

@@ -239,7 +239,7 @@ describe('measureContrast', () => {
     expect(report.ratio).toBeGreaterThan(pair.floor - 0.005);
     expect(report.ratio).toBeLessThan(pair.floor);
     expect(report.pass).toBe(false);
-    expect(() => assertContrast(pair)).toThrow(/contrast floor missed/);
+    expect(() => assertContrast(pair)).toThrow(/contrast floor missed/u);
   });
 
   it('passes the exact measured floor and fails a higher floor', () => {
@@ -266,13 +266,13 @@ describe('measureContrast', () => {
 
   it('throws on an unparseable foreground — never a skip', () => {
     expect(() => measureContrast({ foreground: 'potato', background: '#ffffff' })).toThrow(
-      /foreground is not an opaque color: potato/,
+      /foreground is not an opaque color: potato/u,
     );
   });
 
   it('throws on an alpha background — never a skip', () => {
     expect(() => measureContrast({ foreground: '#000000', background: 'hsla(0, 0%, 100%, 0.2)' })).toThrow(
-      /background is not an opaque color/,
+      /background is not an opaque color/u,
     );
   });
 });
@@ -293,7 +293,7 @@ describe('assertContrast', () => {
         { foreground: '#808080', background: '#ffffff', label: 'gray' },
       ]),
     ).toThrow(
-      /contrast floor missed \(2 of 3 pairs\):[\s\S]*toast pill: #46349d on #161519 = 1\.937[0-9]+:1[\s\S]*gray: #808080 on #ffffff = 3\.949[0-9]+:1/,
+      /contrast floor missed \(2 of 3 pairs\):[\s\S]*toast pill: #46349d on #161519 = 1\.937[0-9]+:1[\s\S]*gray: #808080 on #ffffff = 3\.949[0-9]+:1/u,
     );
   });
 });
@@ -373,7 +373,7 @@ describe('contrast floor on built themes', () => {
         background: themes.dark.background,
         label: 'MPO-48 dark accent toast action',
       }),
-    ).toThrow(/MPO-48 dark accent toast action: #46349d on #161519 = 1\.937[0-9]+:1/);
+    ).toThrow(/MPO-48 dark accent toast action: #46349d on #161519 = 1\.937[0-9]+:1/u);
 
     // The warning-on-its-own-color1 arm used to sit here as the second
     // negative control at 4.44:1. The `intentInkFloor` step closed it — the
@@ -433,7 +433,7 @@ describe('contrast floor on built themes', () => {
           floor: minContrastRatio,
         }),
       ),
-    ).toThrow(/light_accent: color on background: #f9f8fc on #eeecf9 = 1\.103[0-9]+:1/);
+    ).toThrow(/light_accent: color on background: #f9f8fc on #eeecf9 = 1\.103[0-9]+:1/u);
   });
 });
 

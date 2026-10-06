@@ -43,7 +43,7 @@ const indexFor = (element: HTMLElement) => {
   if (element.getAttribute('role') !== 'tab') {
     return -1;
   }
-  return Number(/Tab (\d)/.exec(element.textContent)?.[1] ?? 0) - 1;
+  return Number(/Tab (\d)/u.exec(element.textContent)?.[1] ?? 0) - 1;
 };
 beforeEach(() => {
   precedingGrowth = 0;

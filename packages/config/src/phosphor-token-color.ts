@@ -3,8 +3,8 @@ import path from 'node:path';
 import type { Plugin } from 'vite';
 
 const virtualPrefix = '\0mpo-phosphor-token-icon-base:';
-const iconBaseFilter = /IconBase\.es\.js$/;
-const phosphorLibFile = /\/@phosphor-icons\/react\/dist\/lib\/IconBase\.es\.js$/;
+const iconBaseFilter = /IconBase\.es\.js$/u;
+const phosphorLibFile = /\/@phosphor-icons\/react\/dist\/lib\/IconBase\.es\.js$/u;
 const virtualIdFilter = new RegExp(`^${virtualPrefix}`);
 
 /**
@@ -62,7 +62,7 @@ const resolvePhosphorIconBase = (id: string, importer: string | undefined): stri
   // first in the dep optimizer (vite-plugin-rnw's flow stripper,
   // /\.(flow|jsx?)$/) don't claim it and readFile a `\0` path.
   return target.endsWith('/@phosphor-icons/react/dist/lib/IconBase.es.js')
-    ? virtualPrefix + target.replace(/\.js$/, '')
+    ? virtualPrefix + target.replace(/\.js$/u, '')
     : null;
 };
 

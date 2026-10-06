@@ -150,10 +150,10 @@ describe('Toast (standalone)', () => {
       />,
     );
     const close = screen.getByLabelText('Dismiss notification');
-    expect(close.className).toMatch(/mp-chip-dismiss/);
+    expect(close.className).toMatch(/mp-chip-dismiss/u);
     expect(close.querySelector('.mp-chip-dismiss-ring')).not.toBeNull();
     const action = screen.getByLabelText('Undo');
-    expect(action.className).toMatch(/mp-chip-dismiss/);
+    expect(action.className).toMatch(/mp-chip-dismiss/u);
     expect(action.querySelector('.mp-chip-dismiss-ring')).not.toBeNull();
   });
 
@@ -293,7 +293,7 @@ describe('useToast + ToastViewport (imperative)', () => {
     await expect(screen.findByText('Copied to clipboard.')).resolves.toBeInTheDocument();
     await vi.waitFor(() => {
       const live = document.querySelector("[aria-live]:not([aria-live='off'])");
-      expect(live?.textContent ?? '').toMatch(/Copied to clipboard/);
+      expect(live?.textContent ?? '').toMatch(/Copied to clipboard/u);
     });
   });
 
@@ -618,7 +618,7 @@ const restAtom = (node: Element, prefix: string): string | undefined => {
       continue;
     }
     const value = cls.slice(prefix.length);
-    if (/^\d*(hover|active|focus|press|disabled)/.test(value)) {
+    if (/^\d*(hover|active|focus|press|disabled)/u.test(value)) {
       continue;
     }
     return value;

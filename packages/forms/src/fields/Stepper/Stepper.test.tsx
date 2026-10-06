@@ -410,7 +410,7 @@ describe('Stepper currency', () => {
       />,
     );
     expect(glyph(container)?.textContent).toBe('$');
-    expect(input(container).className).toMatch(/_ta-right/);
+    expect(input(container).className).toMatch(/_ta-right/u);
   });
 
   it('resolves a Frappe-style symbol to its glyph', () => {
@@ -434,6 +434,6 @@ describe('Stepper currency', () => {
       />,
     );
     expect(glyph(container)).toBeNull();
-    expect(input(container).className).toMatch(/_ta-center/);
+    expect(input(container).className).toMatch(/_ta-center/u);
   });
 });

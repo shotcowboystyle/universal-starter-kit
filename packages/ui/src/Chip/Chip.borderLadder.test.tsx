@@ -32,7 +32,7 @@ const renderAt = (stop: (typeof STOPS)[number], outlined = false): string[] => {
   );
   const frame = result.container.querySelector('[data-chip]') as HTMLElement;
   const atoms = String(frame.className || '')
-    .split(/\s+/)
+    .split(/\s+/u)
     .filter((c) => c.startsWith('_btw-'))
     .sort();
   cleanup();

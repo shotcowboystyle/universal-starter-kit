@@ -80,7 +80,7 @@ describe('unexportedDepAliases', () => {
     // "@react-navigation/core" key would swallow the package's own entry, and a
     // trailing slash would stop the key matching at all.
     expect(keys).toStrictEqual(['@react-navigation/core/lib/module']);
-    expect(keys[0]).not.toMatch(/\/$/);
+    expect(keys[0]).not.toMatch(/\/$/u);
   });
 
   it('emits nothing when the package is not installed', () => {

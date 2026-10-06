@@ -354,11 +354,11 @@ describe('DropdownMenu keyboard ring', () => {
     fireEvent.focus(items[1]);
     expect(items[1].getAttribute('data-highlighted')).toBe('true');
     // CONTAINER-CLIP: the overlay clips; rows stay square.
-    expect(items[1].className).toMatch(/_btlr-0px/);
-    expect(items[1].className).toMatch(/_bbrr-0px/);
+    expect(items[1].className).toMatch(/_btlr-0px/u);
+    expect(items[1].className).toMatch(/_bbrr-0px/u);
     // Kb-only: Tamagui focus/focusVisible styles carry no ring; the
     // keyboard ring is painted via keyboardFocusRingProps on kb-origin focus.
-    expect(items[1].className).toMatch(/_outlineWidth-0focus-visible-0px/);
+    expect(items[1].className).toMatch(/_outlineWidth-0focus-visible-0px/u);
   });
 
   it('keeps destructive rows square and highlighted (no error-intent border)', async () => {
@@ -371,8 +371,8 @@ describe('DropdownMenu keyboard ring', () => {
     ) as HTMLElement;
     fireEvent.focus(del);
     expect(del.getAttribute('data-highlighted')).toBe('true');
-    expect(del.className).toMatch(/_btlr-0px/);
-    expect(del.className).toMatch(/_outlineWidth-0focus-visible-0px/);
+    expect(del.className).toMatch(/_btlr-0px/u);
+    expect(del.className).toMatch(/_outlineWidth-0focus-visible-0px/u);
   });
 
   it('ArrowUp on a closed trigger opens onto the last item', async () => {
@@ -434,13 +434,13 @@ describe('DropdownMenu FloatingPanel cover contract', () => {
     const edit = Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"]')).find((el) =>
       el.textContent?.includes('Edit'),
     ) as HTMLElement;
-    expect(edit.className).toMatch(/_pl-t-space-3/);
-    expect(edit.className).toMatch(/_pr-t-space-3/);
+    expect(edit.className).toMatch(/_pl-t-space-3/u);
+    expect(edit.className).toMatch(/_pr-t-space-3/u);
     expect(edit.getAttribute('data-mp-pad-x')).toBe('13');
     expect(edit.getAttribute('data-mp-row-height')).toBe('44');
     expect(edit.getAttribute('data-mp-font-weight')).toBe('400');
     expect(edit.getAttribute('data-mp-hover-fill')).toBe('$color3');
-    expect(edit.className).toMatch(/_btlr-0px/);
+    expect(edit.className).toMatch(/_btlr-0px/u);
   });
 
   it('trails the check on the selected row at $color2', async () => {

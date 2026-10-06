@@ -100,7 +100,7 @@ describe('SortableList', () => {
     const { container } = renderWithProviders(<Harness />);
     const handle = container.querySelector('[data-sortable-handle="tue"]') as HTMLElement;
     expect(handle.getAttribute('role')).toBe('button');
-    expect(handle.getAttribute('aria-label')).toMatch(/Tuesday review/);
+    expect(handle.getAttribute('aria-label')).toMatch(/Tuesday review/u);
     expect(handle.tabIndex).toBe(0);
     handle.focus();
     expect(handle.style.outlineWidth === '2px' || handle.getAttribute('data-focus-ring') === '2/0').toBe(true);

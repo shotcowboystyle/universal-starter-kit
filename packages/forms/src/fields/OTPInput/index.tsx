@@ -61,16 +61,16 @@ type OTPType = 'numeric' | 'alphanumeric' | 'password';
 const getValidationPattern = (inputType: string) => {
   switch (inputType) {
     case 'numeric': {
-      return /[^0-9]/g;
+      return /[^0-9]/gu;
     }
     case 'alphanumeric': {
-      return /[^a-zA-Z0-9]/g;
+      return /[^a-zA-Z0-9]/gu;
     }
     case 'password': {
-      return /[^a-zA-Z0-9!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/g;
+      return /[^a-zA-Z0-9!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/gu;
     }
     default: {
-      return /[^0-9]/g;
+      return /[^0-9]/gu;
     }
   }
 };
@@ -107,7 +107,7 @@ export const extractOtpCode = (text: string, inputType: string, length: number):
   if (stripped.length === length) {
     return stripped;
   }
-  const splitter = inputType === 'alphanumeric' ? /[^a-zA-Z0-9]+/ : /\D+/;
+  const splitter = inputType === 'alphanumeric' ? /[^a-zA-Z0-9]+/u : /\D+/u;
   if (inputType === 'numeric' || inputType === 'alphanumeric') {
     const tokens = text.split(splitter).filter((token) => token.length === length);
     if (tokens.length) {

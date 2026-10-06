@@ -31,8 +31,8 @@ const inkWeight = (el: HTMLElement): string => {
   if (inline) {
     return String(inline);
   }
-  for (const cls of String(el.className ?? '').split(/\s+/)) {
-    const match = /^_fow-(\d+)$/.exec(cls);
+  for (const cls of String(el.className ?? '').split(/\s+/u)) {
+    const match = /^_fow-(\d+)$/u.exec(cls);
     if (match) {
       return match[1];
     }
@@ -57,20 +57,20 @@ describe('Button fontWeight knob', () => {
   it.each(SCHEMES)('%s: bold takes the label to 700', (scheme) => {
     const node = labelNode('bold', scheme, `bold-${scheme}`);
     expect(inkWeight(node)).toBe('700');
-    expect(node.className).not.toMatch(/_fow-400\b/);
+    expect(node.className).not.toMatch(/_fow-400\b/u);
   });
 
   it.each(SCHEMES)('%s: regular keeps the label at 400', (scheme) => {
     const node = labelNode('regular', scheme, `regular-${scheme}`);
     expect(inkWeight(node)).toBe('400');
-    expect(node.className).not.toMatch(/_fow-700\b/);
+    expect(node.className).not.toMatch(/_fow-700\b/u);
   });
 
   it.each(SCHEMES)('%s: the size variant never leaks 500/600 at either stop', (scheme) => {
     for (const stop of ['regular', 'bold'] as const) {
       const node = labelNode(stop, scheme, `leak-${stop}-${scheme}`);
-      expect(node.className).not.toMatch(/_fow-500\b/);
-      expect(node.className).not.toMatch(/_fow-600\b/);
+      expect(node.className).not.toMatch(/_fow-500\b/u);
+      expect(node.className).not.toMatch(/_fow-600\b/u);
     }
   });
 });

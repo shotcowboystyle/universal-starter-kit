@@ -64,7 +64,7 @@ export const Main: Story = {
               required
               validators={{
                 onBlur: ({ value }) => {
-                  if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value as string)) {
+                  if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(value as string)) {
                     return 'Invalid email address';
                   }
                 },

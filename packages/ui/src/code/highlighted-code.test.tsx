@@ -110,7 +110,7 @@ describe('HighlightedCode', () => {
     );
     const gutter = container.querySelector('[data-line-number]') as HTMLElement | null;
     expect(gutter).toBeTruthy();
-    expect(gutter?.textContent).toMatch(/1/);
+    expect(gutter?.textContent).toMatch(/1/u);
     const width = Number.parseFloat(getComputedStyle(gutter!).width);
     expect(width).toBeGreaterThanOrEqual(40);
   });

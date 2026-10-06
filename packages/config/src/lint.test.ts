@@ -144,7 +144,7 @@ describe('story file shape', () => {
     );
     const { code, lines } = run(root);
     expect(code).toBe(1);
-    expect(lines.join('\n')).toMatch(/Navbar\.stories\.tsx:1 — exports a named `meta` beside `export default`/);
+    expect(lines.join('\n')).toMatch(/Navbar\.stories\.tsx:1 — exports a named `meta` beside `export default`/u);
   });
 
   it('fails a story that re-exports `meta` through `export { meta }`', () => {
@@ -155,7 +155,7 @@ describe('story file shape', () => {
     );
     const { code, lines } = run(root);
     expect(code).toBe(1);
-    expect(lines.join('\n')).toMatch(/Carousel\.stories\.tsx:2 — exports a named `meta`/);
+    expect(lines.join('\n')).toMatch(/Carousel\.stories\.tsx:2 — exports a named `meta`/u);
   });
 
   it('fails a story with no default export', () => {
@@ -166,7 +166,7 @@ describe('story file shape', () => {
     );
     const { code, lines } = run(root);
     expect(code).toBe(1);
-    expect(lines.join('\n')).toMatch(/Orphan\.stories\.tsx — no default export/);
+    expect(lines.join('\n')).toMatch(/Orphan\.stories\.tsx — no default export/u);
   });
 
   it('passes classic CSF and a CSF factory file, and ignores non-story modules', () => {
@@ -223,7 +223,7 @@ describe('undeclared drawing file', () => {
     );
     const { code, lines } = run(root);
     expect(code).toBe(1);
-    expect(lines.join('\n')).toMatch(/CanvasGlyph\.tsx — \/\/ mpo-drawing without a DRAWING Members row/);
+    expect(lines.join('\n')).toMatch(/CanvasGlyph\.tsx — \/\/ mpo-drawing without a DRAWING Members row/u);
   });
 
   it('passes a pragma whose path is listed as a DRAWING member', () => {
@@ -484,7 +484,7 @@ describe('a scaffolded project, where the template app is renamed and public/ is
     writeFileSync(join(root, 'apps', 'demo', 'vscode', 'webview', 'app.css'), 'body {}\n');
     const { code, errors } = run(root);
     expect(code).toBe(1);
-    expect(errors).toMatch(/apps\/demo\/vscode\/webview\/app\.css/);
+    expect(errors).toMatch(/apps\/demo\/vscode\/webview\/app\.css/u);
   });
 
   it('skips the transition check, and says so, when the animation registry is not in the tree', () => {
@@ -492,7 +492,7 @@ describe('a scaffolded project, where the template app is renamed and public/ is
     writeFileSync(join(root, 'apps', 'demo', 'App.tsx'), 'export const App = () => <View transition="medium" />;\n');
     const { code, warnings } = run(root);
     expect(code).toBe(0);
-    expect(warnings).toMatch(/skipped the animation token check/);
+    expect(warnings).toMatch(/skipped the animation token check/u);
   });
 });
 
@@ -711,7 +711,7 @@ describe('enter/exit driver', () => {
     );
     const { code, errors } = run(root);
     expect(code).toBe(1);
-    expect(errors).toMatch(/apps\/demo\/App\.tsx:1 — enter\/exitStyle with no `transition` driver/);
+    expect(errors).toMatch(/apps\/demo\/App\.tsx:1 — enter\/exitStyle with no `transition` driver/u);
   });
 
   it('accepts the transitionProps spread as the driver', () => {
@@ -721,7 +721,7 @@ describe('enter/exit driver', () => {
       'export const App = () => <View enterStyle={{ opacity: 0 }} {...transitionProps(knobProps.transition)} />;\n',
     );
     const { code, errors } = run(root);
-    expect(errors).not.toMatch(/LC-24/);
+    expect(errors).not.toMatch(/LC-24/u);
     expect(code).toBe(0);
   });
 });

@@ -266,9 +266,9 @@ describe('Toolbar', () => {
     renderWithProviders(<Toolbar primaryActions={[{ label: 'Save', onPress: () => {} }]} />);
     const node = screen.getByText('Save');
     expect(node.tagName).not.toBe('BUTTON');
-    expect(node.className).toMatch(/_fow-400\b/);
-    expect(node.className).not.toMatch(/_fow-500\b/);
-    expect(node.className).not.toMatch(/_fow-600\b/);
+    expect(node.className).toMatch(/_fow-400\b/u);
+    expect(node.className).not.toMatch(/_fow-500\b/u);
+    expect(node.className).not.toMatch(/_fow-600\b/u);
   });
 
   it('explains disabled actions via disabledReason; loading is busy, not bare-disabled', () => {
@@ -339,7 +339,7 @@ describe('ViewSwitcher', () => {
     const tint = houseThemes.light.accent11;
     expect(tint).toBeTruthy();
     // Digit prefix Tamagui embeds in the atomic class for a concrete color.
-    const tintDigits = (tint.match(/\d+/g) ?? []).slice(0, 3).join('');
+    const tintDigits = (tint.match(/\d+/gu) ?? []).slice(0, 3).join('');
 
     const views: ViewOption[] = [
       { type: 'list', label: 'List' },
@@ -386,7 +386,7 @@ describe('ViewSwitcher', () => {
     const textNode = screen.getByText('List');
     const weight = atoms(textNode, ['_fow-']);
     expect(weight.length).toBeGreaterThan(0);
-    expect(weight.join(' ')).not.toMatch(/500|600|weight-5|weight-6|fow-5|fow-6/);
+    expect(weight.join(' ')).not.toMatch(/500|600|weight-5|weight-6|fow-5|fow-6/u);
   });
 
   it('puts data-testid, data-density and data-size on the root', () => {
@@ -541,7 +541,7 @@ describe('Attachments', () => {
       />,
     );
 
-    expect(screen.queryByText(/\(0\/10\)/)).toBeNull();
+    expect(screen.queryByText(/\(0\/10\)/u)).toBeNull();
     expect(screen.queryByText('Upload')).toBeNull();
   });
 
@@ -555,9 +555,9 @@ describe('Attachments', () => {
     );
     const node = screen.getByText('Upload');
     expect(node.tagName).not.toBe('BUTTON');
-    expect(node.className).toMatch(/_fow-400\b/);
-    expect(node.className).not.toMatch(/_fow-500\b/);
-    expect(node.className).not.toMatch(/_fow-600\b/);
+    expect(node.className).toMatch(/_fow-400\b/u);
+    expect(node.className).not.toMatch(/_fow-500\b/u);
+    expect(node.className).not.toMatch(/_fow-600\b/u);
   });
 });
 
@@ -646,7 +646,7 @@ describe('Timeline', () => {
     // Composer would invite comments into a feed that failed to load
     expect(screen.queryByLabelText('Add Comment')).toBeNull();
     // Count badge and stale feed rows hide behind the error chrome
-    expect(screen.queryByText(/1 entry/)).toBeNull();
+    expect(screen.queryByText(/1 entry/u)).toBeNull();
     expect(screen.queryByText('Stale entry')).toBeNull();
   });
 

@@ -213,9 +213,9 @@ describe('clampRadiusInStateProps', () => {
     });
 
     it('refuses a BINARY bag with no height instead of guessing one', () => {
-      expect(() => clampRadiusInStateProps({ borderRadius: '$12' }, { radiusClass: 'BINARY' })).toThrow(/heightPx/);
+      expect(() => clampRadiusInStateProps({ borderRadius: '$12' }, { radiusClass: 'BINARY' })).toThrow(/heightPx/u);
       expect(() => clampRadiusInStateProps({ borderRadius: '$0' }, { radiusClass: 'BINARY', heightPx: 0 })).toThrow(
-        /heightPx/,
+        /heightPx/u,
       );
     });
   });

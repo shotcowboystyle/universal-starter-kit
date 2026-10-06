@@ -15,7 +15,7 @@ describe('fallbackGray', () => {
 
   it('returns mid-gray for step 6', () => {
     const rgb = fallbackGray(6);
-    const match = /rgb\((\d+),(\d+),(\d+)\)/.exec(rgb);
+    const match = /rgb\((\d+),(\d+),(\d+)\)/u.exec(rgb);
     expect(match).not.toBeNull();
     const value = Number(match![1]);
     expect(value).toBeGreaterThan(100);
@@ -24,7 +24,7 @@ describe('fallbackGray', () => {
 
   it('produces monotonically decreasing gray values from step 1 to 12', () => {
     const values = Array.from({ length: 12 }, (_, i) => {
-      const match = /(\d+)/.exec(fallbackGray(i + 1));
+      const match = /(\d+)/u.exec(fallbackGray(i + 1));
       return Number(match![1]);
     });
     for (let i = 1; i < values.length; i++) {

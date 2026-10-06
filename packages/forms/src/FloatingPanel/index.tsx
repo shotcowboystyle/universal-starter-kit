@@ -231,8 +231,8 @@ const fixedContainingBlockOrigin = (element: HTMLElement): { top: number; left: 
       set(cs.filter, 'none') ||
       set(cs.backdropFilter, 'none') ||
       set(cs.containerType, 'normal') ||
-      /transform|perspective|filter/.test(cs.willChange) ||
-      /paint|layout|strict|content/.test(cs.contain);
+      /transform|perspective|filter/u.test(cs.willChange) ||
+      /paint|layout|strict|content/u.test(cs.contain);
     if (captures) {
       const rect = node.getBoundingClientRect();
       return {

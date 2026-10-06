@@ -139,7 +139,7 @@ describe('Rating', () => {
       expect(tabStops[0]?.getAttribute('data-rating-index')).toBe('2');
       // Every other star stays reachable by arrows (tabindex -1, not absent)
       for (const star of stars) {
-        expect(star.getAttribute('tabindex')).toMatch(/^(0|-1)$/);
+        expect(star.getAttribute('tabindex')).toMatch(/^(0|-1)$/u);
       }
       // Enter on star 4 commits 4/5
       const star4 = result.container.querySelector("[data-rating-index='4']") as HTMLElement;
@@ -292,7 +292,7 @@ describe('Rating', () => {
       const filled = result.container.querySelectorAll("[data-rating-star='filled']");
       expect(filled).toHaveLength(5);
       const readout = result.container.querySelector('[data-rating-value]');
-      expect(readout?.textContent).toMatch(/5/);
+      expect(readout?.textContent).toMatch(/5/u);
     });
 
     it('arrow keys move focus and commit the rating', () => {

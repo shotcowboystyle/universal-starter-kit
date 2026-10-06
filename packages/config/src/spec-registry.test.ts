@@ -57,7 +57,7 @@ describe('readSlotMarginRegistry', () => {
   it('throws when the section has no SLOT-MARGIN row, so a renamed class cannot empty it', () => {
     expect(() =>
       readSlotMarginRegistry(specFile('## Slot margins\n\n| Class | Meaning |\n| --- | --- |\n| SLOTS | x |\n')),
-    ).toThrow(/no SLOT-MARGIN row/);
+    ).toThrow(/no SLOT-MARGIN row/u);
   });
 });
 
@@ -78,6 +78,6 @@ describe('readSizeRecipeEscapeRegistry', () => {
       readSizeRecipeEscapeRegistry(
         specFile('## Size-recipe escapes\n\n| File | Reason |\n| --- | --- |\n| `public/forms/src/A.tsx` |  |\n'),
       ),
-    ).toThrow(/has no reason/);
+    ).toThrow(/has no reason/u);
   });
 });

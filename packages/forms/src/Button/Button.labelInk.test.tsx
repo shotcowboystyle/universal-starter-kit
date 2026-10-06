@@ -94,10 +94,10 @@ describe('Button outlined intent label ink', () => {
       // TEXT NODE — not the frame. The frame already carried $color11
       // and hid this defect.
       expect(outlined.tagName).not.toBe('BUTTON');
-      expect(outlined.className).toMatch(/_col-color11\b/);
-      expect(outlined.className).not.toMatch(/_col-color\b/);
-      expect(solid.className).toMatch(/_col-color\b/);
-      expect(solid.className).not.toMatch(/_col-color11\b/);
+      expect(outlined.className).toMatch(/_col-color11\b/u);
+      expect(outlined.className).not.toMatch(/_col-color\b/u);
+      expect(solid.className).toMatch(/_col-color\b/u);
+      expect(solid.className).not.toMatch(/_col-color11\b/u);
     }
   });
 
@@ -118,9 +118,9 @@ describe('Button outlined intent label ink', () => {
 
     for (const text of ['Filled-label', 'Outlined-label', 'Outlined-error-label', 'Solid-error-label']) {
       const node = labelNode(text);
-      expect(node.className).toMatch(/_fow-400\b/);
-      expect(node.className).not.toMatch(/_fow-500\b/);
-      expect(node.className).not.toMatch(/_fow-600\b/);
+      expect(node.className).toMatch(/_fow-400\b/u);
+      expect(node.className).not.toMatch(/_fow-500\b/u);
+      expect(node.className).not.toMatch(/_fow-600\b/u);
     }
   });
 

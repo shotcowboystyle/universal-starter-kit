@@ -150,7 +150,7 @@ describe('Geolocation', () => {
       );
       const glyph = result.container.querySelector("[aria-label='Locate'] svg")!;
       const color = glyph.getAttribute('fill');
-      expect(color).toMatch(/^(#|rgb|hsl)/);
+      expect(color).toMatch(/^(#|rgb|hsl)/u);
       expect(color).not.toBe('currentColor');
     });
 
@@ -533,9 +533,9 @@ describe('Geolocation', () => {
       });
       expect(document.querySelector("[aria-label='Apply coordinates']")).toBeNull();
       expect(document.querySelector("[aria-label='Cancel coordinates']")).toBeNull();
-      expect(document.body.textContent).not.toMatch(/\bApply\b/);
-      expect(document.body.textContent).not.toMatch(/\bCancel\b/);
-      expect(document.body.textContent).not.toMatch(/\bDone\b/);
+      expect(document.body.textContent).not.toMatch(/\bApply\b/u);
+      expect(document.body.textContent).not.toMatch(/\bCancel\b/u);
+      expect(document.body.textContent).not.toMatch(/\bDone\b/u);
 
       const latInput = document.querySelector("input[aria-label='Latitude']") as HTMLInputElement;
       const lngInput = document.querySelector("input[aria-label='Longitude']") as HTMLInputElement;

@@ -126,7 +126,7 @@ describe('Button KNOB-TOTALITY — size and elevation fragments', () => {
         <Button>Save</Button>
       </Preset>,
     );
-    expect(screen.getByRole('button').className).not.toMatch(/_bxsh-/);
+    expect(screen.getByRole('button').className).not.toMatch(/_bxsh-/u);
     cleanup();
 
     renderWithProviders(
@@ -134,6 +134,6 @@ describe('Button KNOB-TOTALITY — size and elevation fragments', () => {
         <Button>Save</Button>
       </Preset>,
     );
-    expect(screen.getByRole('button').className).toMatch(/_bxsh-/);
+    expect(screen.getByRole('button').className).toMatch(/_bxsh-/u);
   });
 });

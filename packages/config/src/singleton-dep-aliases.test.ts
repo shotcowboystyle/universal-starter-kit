@@ -165,7 +165,7 @@ describe('createViteConfig context singletons', () => {
 });
 
 const withoutComments = (source: string): string =>
-  source.replaceAll(/\/\*[\s\S]*?\*\//g, '').replaceAll(/(^|[^:\\])\/\/.*$/gm, '$1');
+  source.replaceAll(/\/\*[\s\S]*?\*\//gu, '').replaceAll(/(^|[^:\\])\/\/.*$/gmu, '$1');
 
 const referencesHook = (dir: string): boolean => {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -179,7 +179,7 @@ const referencesHook = (dir: string): boolean => {
       }
       continue;
     }
-    if (!/\.(?:js|cjs|mjs|ts|tsx)$/.test(entry.name)) {
+    if (!/\.(?:js|cjs|mjs|ts|tsx)$/u.test(entry.name)) {
       continue;
     }
     if (withoutComments(fs.readFileSync(full, 'utf-8')).includes('useSyncExternalStore')) {
@@ -234,8 +234,8 @@ describe('CONTEXT_SINGLETONS membership, measured rather than recited', () => {
 
   it('locks react-query to one snapshot, so the isolated layout has one copy too', () => {
     const lockfile = fs.readFileSync(path.join(workspaceRoot, 'pnpm-lock.yaml'), 'utf-8');
-    const snapshots = lockfile.split(/^snapshots:$/m)[1] ?? '';
-    const keys = [...snapshots.matchAll(/^ {2}'(@tanstack\/react-query@[^']+)':$/gm)].map((match) => match[1]);
+    const snapshots = lockfile.split(/^snapshots:$/mu)[1] ?? '';
+    const keys = [...snapshots.matchAll(/^ {2}'(@tanstack\/react-query@[^']+)':$/gmu)].map((match) => match[1]);
     expect(keys).toHaveLength(1);
   });
 });

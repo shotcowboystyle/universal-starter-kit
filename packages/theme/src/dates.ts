@@ -53,7 +53,7 @@ export interface AbsoluteDateFormatOptions {
 }
 
 /** ISO date-only shape ("YYYY-MM-DD"). */
-export const ISO_DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+export const ISO_DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/u;
 
 interface CoercedDate {
   date: Date;
@@ -250,7 +250,7 @@ export const formatRelativeTimestamp = (value: DateInput, now: number = Date.now
 };
 
 /** Clock-time shape ("HH:MM" / "HH:MM:SS") — how Frappe `Time` values arrive. */
-export const CLOCK_TIME = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/;
+export const CLOCK_TIME = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/u;
 
 export interface TimeOfDayFormatOptions {
   /** BCP-47 locale forwarded to Intl. Default: system locale. */

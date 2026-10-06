@@ -260,9 +260,9 @@ const expectRetryWeight400 = (pin: string[]) => {
   const node = screen.getByText('Retry');
   expect(node.tagName).not.toBe('BUTTON');
   expect(weightClasses(node)).toStrictEqual(pin);
-  expect(node.className).toMatch(/_fow-400\b/);
-  expect(node.className).not.toMatch(/_fow-500\b/);
-  expect(node.className).not.toMatch(/_fow-600\b/);
+  expect(node.className).toMatch(/_fow-400\b/u);
+  expect(node.className).not.toMatch(/_fow-500\b/u);
+  expect(node.className).not.toMatch(/_fow-600\b/u);
 };
 
 describe('AsyncBoundary Retry label weight', () => {

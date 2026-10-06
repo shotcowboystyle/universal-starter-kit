@@ -27,7 +27,7 @@ const baseTsconfig = path.resolve(__dirname, '../tsconfig/base.json');
 /** JSONC: whole-line `//` comments only, plus trailing commas. */
 const readJsonc = (file: string): any => {
   const src = fs.readFileSync(file, 'utf-8');
-  return JSON.parse(src.replaceAll(/^[ \t]*\/\/.*$/gm, '').replaceAll(/,(\s*[}\]])/g, '$1'));
+  return JSON.parse(src.replaceAll(/^[ \t]*\/\/.*$/gmu, '').replaceAll(/,(\s*[}\]])/gu, '$1'));
 };
 
 describe('base tsconfig types', () => {

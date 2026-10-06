@@ -9,7 +9,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 describe('ThemeProvider knob injectors', () => {
   it('mounts FontKnobStyles inside KnobBridge so shipped apps inherit heading/body fonts', () => {
     const src = readFileSync(join(here, 'theme.tsx'), 'utf-8');
-    expect(src).toMatch(/import \{ FontKnobStyles \} from ['"]\.\/FontKnobStyles['"]/);
+    expect(src).toMatch(/import \{ FontKnobStyles \} from ['"]\.\/FontKnobStyles['"]/u);
     expect(src).toContain('<FontKnobStyles');
     expect(src).toContain('const KnobBridge =');
     const bridge = src.slice(src.indexOf('const KnobBridge ='));
@@ -18,7 +18,7 @@ describe('ThemeProvider knob injectors', () => {
 
   it('mounts CornerSmoothingStyles inside KnobBridge so the squircle sheet is not tree-shaken', () => {
     const src = readFileSync(join(here, 'theme.tsx'), 'utf-8');
-    expect(src).toMatch(/import \{ CornerSmoothingStyles \} from ['"]\.\/corner-smoothing['"]/);
+    expect(src).toMatch(/import \{ CornerSmoothingStyles \} from ['"]\.\/corner-smoothing['"]/u);
     const bridge = src.slice(src.indexOf('const KnobBridge ='));
     expect(bridge).toContain('<CornerSmoothingStyles');
     const native = readFileSync(join(here, 'theme.native.tsx'), 'utf-8');

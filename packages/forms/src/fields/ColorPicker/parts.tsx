@@ -99,7 +99,7 @@ export const hsvToHex = (h: number, s: number, v: number): string => {
 /** Parse #RGB, #RRGGBB, or #RRGGBBAA. Alpha is 0–100. */
 export const parseHex = (hex: string): { r: number; g: number; b: number; alpha: number } | null => {
   const raw = hex.startsWith('#') ? hex : `#${hex}`;
-  const short = /^#([a-f\d])([a-f\d])([a-f\d])$/i.exec(raw);
+  const short = /^#([a-f\d])([a-f\d])([a-f\d])$/iu.exec(raw);
   if (short) {
     return {
       r: Number.parseInt(short[1] + short[1], 16),
@@ -108,7 +108,7 @@ export const parseHex = (hex: string): { r: number; g: number; b: number; alpha:
       alpha: 100,
     };
   }
-  const six = /^#([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(raw);
+  const six = /^#([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/iu.exec(raw);
   if (six) {
     return {
       r: Number.parseInt(six[1], 16),
@@ -117,7 +117,7 @@ export const parseHex = (hex: string): { r: number; g: number; b: number; alpha:
       alpha: 100,
     };
   }
-  const eight = /^#([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(raw);
+  const eight = /^#([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/iu.exec(raw);
   if (eight) {
     return {
       r: Number.parseInt(eight[1], 16),
@@ -179,7 +179,7 @@ export const hexToHsv = (hex: string): { h: number; s: number; v: number } => {
   return rgbToHsv(rgb.r, rgb.g, rgb.b);
 };
 
-export const isValidHex = (hex: string): boolean => /^#([a-f\d]{3}|[a-f\d]{6}|[a-f\d]{8})$/i.test(hex);
+export const isValidHex = (hex: string): boolean => /^#([a-f\d]{3}|[a-f\d]{6}|[a-f\d]{8})$/iu.test(hex);
 
 /** RGB hex (#RRGGBB). 8-digit input drops the alpha byte (use parseHex for alpha). */
 export const normalizeHex = (hex: string): string => {

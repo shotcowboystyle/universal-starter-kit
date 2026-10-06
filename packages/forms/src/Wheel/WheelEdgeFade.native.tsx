@@ -3,13 +3,13 @@ import { StyleSheet, View as RNView } from 'react-native';
 import { useTheme } from 'tamagui';
 
 const toTransparent = (color: string): string => {
-  const fnMatch = /^(rgb|hsl)a?\(([^)]+)\)$/i.exec(color);
+  const fnMatch = /^(rgb|hsl)a?\(([^)]+)\)$/iu.exec(color);
   if (fnMatch) {
     const parts = fnMatch[2].split(',').map((part) => part.trim());
     const [a, b, c] = parts;
     return `${fnMatch[1].toLowerCase()}a(${a}, ${b}, ${c}, 0)`;
   }
-  const hexMatch = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(color);
+  const hexMatch = /^#([0-9a-f]{3}|[0-9a-f]{6})$/iu.exec(color);
   if (hexMatch) {
     let hex = hexMatch[1];
     if (hex.length === 3) {

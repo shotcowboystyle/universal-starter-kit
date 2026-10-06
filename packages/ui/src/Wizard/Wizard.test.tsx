@@ -199,7 +199,7 @@ describe('Wizard mounted panels and validation', () => {
     });
     const primary = container.querySelector("[data-testid='wizard-primary']") as HTMLElement;
     expect(primary.textContent).toBe('Restore backup');
-    expect(primary.textContent).not.toMatch(/submit/i);
+    expect(primary.textContent).not.toMatch(/submit/iu);
     expect(container.querySelector('[data-primary]')).toBe(primary);
   });
 

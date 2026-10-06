@@ -222,7 +222,7 @@ const isCssIgnored = (absPath) => {
   if (CSS_IGNORE_PREFIXES.some((prefix) => rel === prefix || rel.startsWith(`${prefix}/`))) {
     return true;
   }
-  const parts = rel.split(/[/\\]/);
+  const parts = rel.split(/[/\\]/u);
   if (CSS_IGNORE_APP_FILES.has(parts.slice(1).join('/'))) {
     return true;
   }
@@ -342,10 +342,10 @@ const sourceFiles = () => {
   /** @type {{ abs: string, rel: string, src: string }[]} */
   const files = [];
   const collect = (filePath) => {
-    if (!/\.(tsx|ts|jsx|js)$/.test(filePath)) {
+    if (!/\.(tsx|ts|jsx|js)$/u.test(filePath)) {
       return;
     }
-    if (/\.(spec|test)\./.test(filePath)) {
+    if (/\.(spec|test)\./u.test(filePath)) {
       return;
     }
     files.push({
@@ -427,7 +427,7 @@ const checkTransitionTokens = () => {
   }
   // Only string LITERALS directly on the prop — dynamic values (variables,
   // ternaries, knobProps.transition) resolve at runtime and are out of scope.
-  const re = /\btransition=(?:"([a-zA-Z0-9]+)"|\{\s*"([a-zA-Z0-9]+)"\s*\})/g;
+  const re = /\btransition=(?:"([a-zA-Z0-9]+)"|\{\s*"([a-zA-Z0-9]+)"\s*\})/gu;
   const violations = scanLiterals(re, (m) => {
     const token = m[1] ?? m[2];
     return valid.has(token) ? undefined : `transition="${token}"`;
@@ -470,7 +470,7 @@ const readThemeNames = () => {
   for (const name of Object.keys(stock.themes)) {
     names.add(name);
   }
-  for (const m of sliceBlock(src, 'const grayTheme =', '\n};').matchAll(/^ {2}([a-zA-Z][a-zA-Z0-9_]*)\s*:/gm)) {
+  for (const m of sliceBlock(src, 'const grayTheme =', '\n};').matchAll(/^ {2}([a-zA-Z][a-zA-Z0-9_]*)\s*:/gmu)) {
     names.add(m[1]);
   }
   /** @type {string[]} */
@@ -526,7 +526,7 @@ const readThemeKeys = () => {
       keys.add(k);
     }
   }
-  for (const m of src.matchAll(/\.\.\.Colors\.([A-Za-z0-9]+)\s*,/g)) {
+  for (const m of src.matchAll(/\.\.\.Colors\.([A-Za-z0-9]+)\s*,/gu)) {
     for (const k of Object.keys(colors[m[1]] ?? {})) {
       keys.add(k);
     }
@@ -650,7 +650,7 @@ const checkThemeNames = () => {
   if (!valid.size) {
     return { violations: [], ok: false };
   }
-  const re = /\btheme=(?:"([A-Za-z][A-Za-z0-9_]*)"|\{\s*"([A-Za-z][A-Za-z0-9_]*)"\s*\})/g;
+  const re = /\btheme=(?:"([A-Za-z][A-Za-z0-9_]*)"|\{\s*"([A-Za-z][A-Za-z0-9_]*)"\s*\})/gu;
   const violations = scanLiterals(re, (m) => {
     const name = m[1] ?? m[2];
     return valid.has(name) ? undefined : `theme="${name}"`;
@@ -667,7 +667,7 @@ const readIntentNames = () => {
     return names;
   }
   for (const m of sliceBlock(src, 'export const defaultIntents', '\n};').matchAll(
-    /^ {2}([a-zA-Z][a-zA-Z0-9]*)\s*:\s*\{/gm,
+    /^ {2}([a-zA-Z][a-zA-Z0-9]*)\s*:\s*\{/gmu,
   )) {
     names.add(m[1]);
   }
@@ -686,8 +686,8 @@ const checkIntentTokens = () => {
   if (!valid.size) {
     return { violations: [], valid: [], ok: false };
   }
-  const call = /useResolvedKnobs\(/g;
-  const intentArg = /\bintent:\s*"([A-Za-z0-9]+)"/g;
+  const call = /useResolvedKnobs\(/gu;
+  const intentArg = /\bintent:\s*"([A-Za-z0-9]+)"/gu;
   /** @type {string[]} */
   const violations = [];
   for (const { rel, src } of sourceFiles()) {
@@ -736,10 +736,10 @@ const checkAnimationProps = () => {
   /** @type {string[]} */
   const driverless = [];
   const scan = (filePath) => {
-    if (!/\.(tsx|jsx)$/.test(filePath)) {
+    if (!/\.(tsx|jsx)$/u.test(filePath)) {
       return;
     }
-    if (/\.(spec|test|stories)\./.test(filePath)) {
+    if (/\.(spec|test|stories)\./u.test(filePath)) {
       return;
     }
     const src = readFileSync(filePath, 'utf-8');
@@ -750,19 +750,19 @@ const checkAnimationProps = () => {
     // unrelated config objects that have nothing to do with the tamagui prop.
     // The lookbehind keeps `data-animation={…}` (probe attributes: Spinner,
     // Pagination) out: `\b` alone matches between `-` and `animation`.
-    for (const m of src.matchAll(/(?<![\w-])animation=\{|(?<![\w-])animation:\s*[\w$.[\]?]*\btransition\b/g)) {
+    for (const m of src.matchAll(/(?<![\w-])animation=\{|(?<![\w-])animation:\s*[\w$.[\]?]*\btransition\b/gu)) {
       const line = src.slice(0, m.index).split('\n').length;
       legacyProp.push(`${rel}:${line} — \`${m[0]}\` (tamagui 1.x prop; use \`transition\`)`);
     }
     // Element-scoped: an enter/exitStyle needs a transition on the SAME tag.
     // `=>` is allowed through: a `>` inside an arrow-function prop otherwise
     // truncates the tag and hides everything after it from this check.
-    for (const tag of src.matchAll(/<[A-Z][\w.]*(?:\s(?:=>|[^>])*)?>/gs)) {
+    for (const tag of src.matchAll(/<[A-Z][\w.]*(?:\s(?:=>|[^>])*)?>/gsu)) {
       const t = tag[0];
-      if (!/\b(enterStyle|exitStyle)=/.test(t)) {
+      if (!/\b(enterStyle|exitStyle)=/u.test(t)) {
         continue;
       }
-      if (/\btransition(?:[=:]|Props\()/.test(t)) {
+      if (/\btransition(?:[=:]|Props\()/u.test(t)) {
         continue;
       }
       const line = src.slice(0, tag.index).split('\n').length;
@@ -817,15 +817,15 @@ const checkSizeRecipeEscape = () => {
     'packages/forms/src/fields/Stepper/',
     'packages/forms/src/fields/Switch/',
   ];
-  const re = /\b(height|minHeight|paddingHorizontal|fontSize)=\{\s*(-?\d+(?:\.\d+)?)\s*\}/g;
+  const re = /\b(height|minHeight|paddingHorizontal|fontSize)=\{\s*(-?\d+(?:\.\d+)?)\s*\}/gu;
   /** @type {string[]} */
   const violations = [];
   walkFiles(formsSrc, (filePath) => {
-    if (!/\.(tsx|ts)$/.test(filePath)) {
+    if (!/\.(tsx|ts)$/u.test(filePath)) {
       return;
     }
     const rel = relative(ROOT, filePath);
-    if (/\.(spec|test|stories)\./.test(rel)) {
+    if (/\.(spec|test|stories)\./u.test(rel)) {
       return;
     }
     if (rel.includes('__snapshots__')) {
@@ -845,7 +845,7 @@ const checkSizeRecipeEscape = () => {
       }
       const previous = lines[line - 2] ?? '';
       const window = `${previous}\n${current}\n${m[0]}`;
-      if (/sizeRecipeEscape|size-recipe-escape:/.test(window)) {
+      if (/sizeRecipeEscape|size-recipe-escape:/u.test(window)) {
         continue;
       }
       violations.push(`${rel}:${line} — ${m[1]}={${m[2]}}`);
@@ -857,9 +857,9 @@ const checkSizeRecipeEscape = () => {
 const ESCAPE_REASON = String.raw`(?:"([^"\n]*)"|'([^'\n]*)'|\x60([^\x60$\n]*)\x60)`;
 /** `sizeRecipeEscape="…"`, `sizeRecipeEscape={"…"}`, `sizeRecipeEscape: "…"`. */
 const ESCAPE_PROP_RE = new RegExp(String.raw`\bsizeRecipeEscape(?:=\{?\s*|\s*:\s*)${ESCAPE_REASON}`, 'g');
-const ESCAPE_ATTR_RE = /\bsizeRecipeEscape=\{/g;
-const ESCAPE_CALL_RE = /(?<!function\s+)\bsizeRecipeEscape\s*\(/g;
-const ESCAPE_COMMENT_RE = /(?<!`)(?:\/\/|\/\*)\s*size-recipe-escape:\s*(.*?)\s*(?:\*\/.*)?$/;
+const ESCAPE_ATTR_RE = /\bsizeRecipeEscape=\{/gu;
+const ESCAPE_CALL_RE = /(?<!function\s+)\bsizeRecipeEscape\s*\(/gu;
+const ESCAPE_COMMENT_RE = /(?<!`)(?:\/\/|\/\*)\s*size-recipe-escape:\s*(.*?)\s*(?:\*\/.*)?$/u;
 const ESCAPE_REASON_RE = new RegExp(ESCAPE_REASON, 'g');
 
 /** @param {string} line */
@@ -965,10 +965,10 @@ const checkUndeclaredSizeRecipeEscapes = () => {
   /** @type {string[]} */
   const violations = [];
   const scan = (filePath) => {
-    if (!/\.(tsx|ts|jsx|js)$/.test(filePath) || filePath.endsWith('.d.ts')) {
+    if (!/\.(tsx|ts|jsx|js)$/u.test(filePath) || filePath.endsWith('.d.ts')) {
       return;
     }
-    if (/\.(spec|test)\./.test(filePath)) {
+    if (/\.(spec|test)\./u.test(filePath)) {
       return;
     }
     const src = readFileSync(filePath, 'utf-8');
@@ -1030,10 +1030,10 @@ const checkUndeclaredHexEscapes = () => {
   /** @type {string[]} */
   const violations = [];
   const scan = (filePath) => {
-    if (!/\.(tsx|ts|jsx|js)$/.test(filePath) || filePath.endsWith('.d.ts')) {
+    if (!/\.(tsx|ts|jsx|js)$/u.test(filePath) || filePath.endsWith('.d.ts')) {
       return;
     }
-    if (/\.(spec|test)\./.test(filePath)) {
+    if (/\.(spec|test)\./u.test(filePath)) {
       return;
     }
     const src = readFileSync(filePath, 'utf-8');
@@ -1066,7 +1066,7 @@ const checkUndeclaredHexEscapes = () => {
 
 // ── Story file shape ──────────────────────────────────────────────────────
 
-const STORY_FILE_RE = /\.(stories|story)\.(js|jsx|mjs|ts|tsx)$/;
+const STORY_FILE_RE = /\.(stories|story)\.(js|jsx|mjs|ts|tsx)$/u;
 
 /**
  * Names exported through `export { a, b as c }` statements.
@@ -1075,9 +1075,9 @@ const STORY_FILE_RE = /\.(stories|story)\.(js|jsx|mjs|ts|tsx)$/;
  */
 const braceExportNames = (src) => {
   const names = new Set();
-  for (const m of src.matchAll(/^export\s*\{([^}]*)\}/gm)) {
+  for (const m of src.matchAll(/^export\s*\{([^}]*)\}/gmu)) {
     for (const item of m[1].split(',')) {
-      const parts = item.trim().split(/\s+as\s+/);
+      const parts = item.trim().split(/\s+as\s+/u);
       const name = (parts[1] ?? parts[0] ?? '').trim();
       if (name) {
         names.add(name);
@@ -1109,10 +1109,10 @@ const checkStoryFileShape = () => {
     const src = readFileSync(filePath, 'utf-8');
     const braced = braceExportNames(src);
     const namedMeta =
-      /^export\s+(?:const|let|var|function|class)\s+meta\b/m.exec(src) ??
-      (braced.has('meta') ? /^export\s*\{[^}]*\bmeta\b[^}]*\}/m.exec(src) : null);
-    const hasDefault = /^export\s+default\b/m.test(src) || braced.has('default');
-    const isFactory = /^export\s+(?:const|let|var)\s+meta\b[^=\n]*=\s*[\w$.]+\.meta\s*\(/m.test(src);
+      /^export\s+(?:const|let|var|function|class)\s+meta\b/mu.exec(src) ??
+      (braced.has('meta') ? /^export\s*\{[^}]*\bmeta\b[^}]*\}/mu.exec(src) : null);
+    const hasDefault = /^export\s+default\b/mu.test(src) || braced.has('default');
+    const isFactory = /^export\s+(?:const|let|var)\s+meta\b[^=\n]*=\s*[\w$.]+\.meta\s*\(/mu.test(src);
     if (namedMeta && hasDefault) {
       violations.push(
         `${rel}:${lineAt(src, namedMeta.index ?? 0)} — exports a named \`meta\` beside \`export default\`; drop the \`export\` (\`meta\` is reserved for CSF Factories)`,
@@ -1153,7 +1153,7 @@ const checkUndeclaredDrawings = () => {
   /** @type {string[]} */
   const violations = [];
   const scan = (filePath) => {
-    if (!/\.(tsx|ts|jsx|js)$/.test(filePath)) {
+    if (!/\.(tsx|ts|jsx|js)$/u.test(filePath)) {
       return;
     }
     const src = readFileSync(filePath, 'utf-8');
@@ -1213,7 +1213,7 @@ const checkTsconfigWorkspacePaths = () => {
     const src = readFileSync(file, 'utf-8');
     // Whole-line comments only: a `//` inside a string (the $schema URL) must
     // survive, and these files are JSONC, not JSON5.
-    const stripped = src.replaceAll(/^[ \t]*\/\/.*$/gm, '');
+    const stripped = src.replaceAll(/^[ \t]*\/\/.*$/gmu, '');
     let doc;
     try {
       doc = JSON.parse(stripped);
@@ -1231,7 +1231,7 @@ const checkTsconfigWorkspacePaths = () => {
     if (!extendsBase) {
       continue;
     }
-    const decl = /^[ \t]*"paths"\s*:/m.exec(src);
+    const decl = /^[ \t]*"paths"\s*:/mu.exec(src);
     const index = decl?.index ?? 0;
     const before = src.slice(0, index);
     if (before.split('\n').slice(-3).join('\n').includes('workspace-paths-escape:')) {
@@ -1313,7 +1313,7 @@ const declaresSourceCondition = (target) => {
  * @param {string} subpath an exports key such as `./seam`
  */
 const hasMetroFallback = (pkgRoot, subpath) => {
-  const base = join(pkgRoot, subpath.replace(/^\.\//, ''));
+  const base = join(pkgRoot, subpath.replace(/^\.\//u, ''));
   if (METRO_FALLBACK_EXTS.some((ext) => existsSync(`${base}.${ext}`))) {
     return true;
   }
@@ -1367,7 +1367,7 @@ const checkMetroSubpathFallbacks = () => {
       }
       const packageFromSource =
         typeof pkg.source === 'string' ||
-        (typeof pkg.main === 'string' && /^(\.\/)?src\//.test(pkg.main)) ||
+        (typeof pkg.main === 'string' && /^(\.\/)?src\//u.test(pkg.main)) ||
         declaresSourceCondition(exportsMap['.']);
       for (const [subpath, target] of Object.entries(exportsMap)) {
         if (!subpath.startsWith('./') || subpath.includes('*')) {
@@ -1385,7 +1385,7 @@ const checkMetroSubpathFallbacks = () => {
             continue;
           }
           violations.push(
-            `${relative(ROOT, pkgJsonPath)} — "${subpath}" resolves to ${resolved} on ${platform}, which is unbuilt; add ${relative(ROOT, join(pkgRoot, `${subpath.replace(/^\.\//, '')}.ts`))} re-exporting the source entry`,
+            `${relative(ROOT, pkgJsonPath)} — "${subpath}" resolves to ${resolved} on ${platform}, which is unbuilt; add ${relative(ROOT, join(pkgRoot, `${subpath.replace(/^\.\//u, '')}.ts`))} re-exporting the source entry`,
           );
           break;
         }
@@ -1414,11 +1414,11 @@ const readReactNativeWebExports = () => {
   }
   /** @type {Set<string>} */
   const names = new Set();
-  for (const clause of readFileSync(entry, 'utf-8').matchAll(/export\s*\{([^}]*)\}/g)) {
+  for (const clause of readFileSync(entry, 'utf-8').matchAll(/export\s*\{([^}]*)\}/gu)) {
     for (const specifier of clause[1].split(',')) {
       const name = specifier
         .trim()
-        .split(/\s+as\s+/)
+        .split(/\s+as\s+/u)
         .pop();
       if (name) {
         names.add(name);
@@ -1429,7 +1429,7 @@ const readReactNativeWebExports = () => {
 };
 
 /** Platform-suffixed files the web resolver never reaches. */
-const NATIVE_ONLY_FILE_RE = /\.(native|ios|android)\.(tsx|ts|jsx|js)$/;
+const NATIVE_ONLY_FILE_RE = /\.(native|ios|android)\.(tsx|ts|jsx|js)$/u;
 
 /**
  * `import … from "react-native"`, including the multi-line brace form.
@@ -1438,7 +1438,7 @@ const NATIVE_ONLY_FILE_RE = /\.(native|ios|android)\.(tsx|ts|jsx|js)$/;
  * match from swallowing an earlier `import … from "react"` and attributing
  * ITS names to react-native.
  */
-const REACT_NATIVE_IMPORT_RE = /import\s+([^;'"]*?)from\s*["']react-native["']/g;
+const REACT_NATIVE_IMPORT_RE = /import\s+([^;'"]*?)from\s*["']react-native["']/gu;
 
 /** @param {string} absPath @param {string} dir */
 const isUnder = (absPath, dir) => {
@@ -1486,10 +1486,10 @@ const checkReactNativeWebExports = () => {
     }
     for (const statement of src.matchAll(REACT_NATIVE_IMPORT_RE)) {
       const clause = statement[1].trim();
-      if (/^type\b/.test(clause)) {
+      if (/^type\b/u.test(clause)) {
         continue;
       }
-      const named = clause.match(/\{([\s\S]*)\}/);
+      const named = clause.match(/\{([\s\S]*)\}/u);
       // No brace group means a default or `* as ns` import, and a namespace
       // read of a missing name is `undefined`, never a SyntaxError.
       if (!named) {
@@ -1497,10 +1497,10 @@ const checkReactNativeWebExports = () => {
       }
       for (const specifier of named[1].split(',')) {
         const entry = specifier.trim();
-        if (!entry || /^type\b/.test(entry)) {
+        if (!entry || /^type\b/u.test(entry)) {
           continue;
         }
-        const name = entry.split(/\s+as\s+/)[0].trim();
+        const name = entry.split(/\s+as\s+/u)[0].trim();
         if (!name || exported.has(name)) {
           continue;
         }
@@ -1562,15 +1562,15 @@ const codeOffsets = (src) => {
   return mask;
 };
 
-const IMPORT_META_RE = /\bimport\s*\.\s*meta\b/g;
-const IMPORT_META_SCANNED_RE = /\.(tsx|ts|jsx|js|mjs|cjs|mts|cts)$/;
+const IMPORT_META_RE = /\bimport\s*\.\s*meta\b/gu;
+const IMPORT_META_SCANNED_RE = /\.(tsx|ts|jsx|js|mjs|cjs|mts|cts)$/u;
 
 /**
  * A VALUE import of a node: builtin. `import type { … } from "node:fs"` is
  * erased, so it proves nothing about where the file runs and does not count.
  */
 const NODE_BUILTIN_IMPORT_RE =
-  /(?:^|\n)\s*import\s+(?!type\s)[^;'"]*from\s*["']node:[^"']+["']|require\(\s*["']node:[^"']+["']\s*\)|import\(\s*["']node:[^"']+["']\s*\)/;
+  /(?:^|\n)\s*import\s+(?!type\s)[^;'"]*from\s*["']node:[^"']+["']|require\(\s*["']node:[^"']+["']\s*\)|import\(\s*["']node:[^"']+["']\s*\)/u;
 
 /**
  * `import.meta` in a public package's runtime source.
@@ -1611,7 +1611,7 @@ const checkImportMetaInPublicSource = () => {
       if (!IMPORT_META_SCANNED_RE.test(filePath)) {
         return;
       }
-      if (/\.(spec|test)\./.test(filePath)) {
+      if (/\.(spec|test)\./u.test(filePath)) {
         return;
       }
       const src = readFileSync(filePath, 'utf-8');
@@ -1638,7 +1638,7 @@ const checkImportMetaInPublicSource = () => {
 
 // ── React Flow selectors outside the token bridge ─────────────────────────
 
-const REACT_FLOW_SELECTOR_RE = /\.react-flow__[\w-]+/g;
+const REACT_FLOW_SELECTOR_RE = /\.react-flow__[\w-]+/gu;
 /**
  * The two files a `.react-flow__` string may live in, both DECLARED boundaries.
  *
@@ -1653,7 +1653,7 @@ const REACT_FLOW_SELECTOR_RE = /\.react-flow__[\w-]+/g;
  * rename lands in a `querySelector` that returns null in silence.
  */
 const GRAPH_VARS_EXEMPT = ['theme/graphVars.ts', 'react-flow/xy.ts'];
-const REACT_FLOW_SCANNED_RE = /\.(tsx|ts|jsx|js|mjs|cjs|css)$/;
+const REACT_FLOW_SCANNED_RE = /\.(tsx|ts|jsx|js|mjs|cjs|css)$/u;
 
 /**
  * Offsets that are NOT inside a comment.
@@ -1716,7 +1716,7 @@ const checkGraphVarsCoverage = () => {
       // Specs are exempt for the reason check 10 exempts them: a spec that
       // asserts WHICH classes a variable binds to has to name those classes,
       // and it ships no paint. Nothing else is exempt, including stories.
-      if (/\.(spec|test)\./.test(filePath)) {
+      if (/\.(spec|test)\./u.test(filePath)) {
         return;
       }
       const src = readFileSync(filePath, 'utf-8');
@@ -1763,7 +1763,7 @@ const STORY_FOREIGN_CONTROL_PRIMITIVES = new Set([
  * off the running story, so a specimen is declared in exactly one place for both
  * arms.
  */
-const STORY_HONESTY_MARKER_RE = /\bforeignContrastSpecimen\s*:\s*true\b/;
+const STORY_HONESTY_MARKER_RE = /\bforeignContrastSpecimen\s*:\s*true\b/u;
 
 /**
  * The frappe package is the data client, not a catalog package: its
@@ -1774,7 +1774,7 @@ const STORY_HONESTY_MARKER_RE = /\bforeignContrastSpecimen\s*:\s*true\b/;
  */
 const STORY_HONESTY_EXEMPT_PREFIXES = ['packages/frappe/'];
 
-const TAMAGUI_IMPORT_RE = /import\s+([^;'"]*?)from\s*["']tamagui["']/g;
+const TAMAGUI_IMPORT_RE = /import\s+([^;'"]*?)from\s*["']tamagui["']/gu;
 
 /**
  * Stories are the verify substrate for the knob rules, and a raw
@@ -1806,19 +1806,19 @@ const checkStoryForeignControls = () => {
     const controls = [];
     for (const statement of src.matchAll(TAMAGUI_IMPORT_RE)) {
       const clause = statement[1].trim();
-      if (/^type\b/.test(clause)) {
+      if (/^type\b/u.test(clause)) {
         continue;
       }
-      const named = /\{([\s\S]*)\}/.exec(clause);
+      const named = /\{([\s\S]*)\}/u.exec(clause);
       if (!named) {
         continue;
       }
       for (const specifier of named[1].split(',')) {
         const entry = specifier.trim();
-        if (!entry || /^type\b/.test(entry)) {
+        if (!entry || /^type\b/u.test(entry)) {
           continue;
         }
-        const [imported, alias] = entry.split(/\s+as\s+/).map((part) => part.trim());
+        const [imported, alias] = entry.split(/\s+as\s+/u).map((part) => part.trim());
         if (!STORY_FOREIGN_CONTROL_PRIMITIVES.has(imported)) {
           continue;
         }

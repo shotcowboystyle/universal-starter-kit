@@ -340,7 +340,7 @@ describe('ColorPicker', () => {
       expect(html).toContain('linear-gradient(to right, #fff,');
       expect(html).toContain('linear-gradient(to top, #000, transparent)');
       expect(html).toContain(hsvToHex(210, 100, 100));
-      expect(html).toMatch(/linear-gradient\(to right, #f00/);
+      expect(html).toMatch(/linear-gradient\(to right, #f00/u);
       expect(result.container.querySelectorAll('[data-testid="expo-linear-gradient"]')).toHaveLength(0);
     });
 
@@ -388,7 +388,7 @@ describe('ColorPicker', () => {
     it('consumes FloatingPanel widthMode at-least-trigger (does not reimplement cover)', () => {
       const source = readFileSync(resolve(here, 'parts.tsx'), 'utf-8');
       expect(source).toContain('widthMode="at-least-trigger"');
-      expect(source).not.toMatch(/^\s*fitContent\s*$/m);
+      expect(source).not.toMatch(/^\s*fitContent\s*$/mu);
       expect(source).not.toContain('OVERLAY_ATTACH_GAP');
     });
 
@@ -409,7 +409,7 @@ describe('ColorPicker', () => {
         />,
       );
       const text = result.container.textContent ?? '';
-      expect(text.toLowerCase()).not.toMatch(/\binvalid\b|\bplease\b|\bsorry\b|\boops\b/);
+      expect(text.toLowerCase()).not.toMatch(/\binvalid\b|\bplease\b|\bsorry\b|\boops\b/u);
       expect(result.findTextElement('Color must be a recognized RGB value')).toBeDefined();
     });
 

@@ -47,9 +47,9 @@ describe('ErrorBoundary', () => {
     );
     const node = screen.getByText('Try again?');
     expect(node.tagName).not.toBe('BUTTON');
-    expect(node.className).toMatch(/_fow-400\b/);
-    expect(node.className).not.toMatch(/_fow-500\b/);
-    expect(node.className).not.toMatch(/_fow-600\b/);
+    expect(node.className).toMatch(/_fow-400\b/u);
+    expect(node.className).not.toMatch(/_fow-500\b/u);
+    expect(node.className).not.toMatch(/_fow-600\b/u);
     expect(weightClasses(node).some((c) => c.includes('400'))).toBe(true);
   });
 

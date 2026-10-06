@@ -28,7 +28,7 @@ const getEnabledDayButtons = (root: ParentNode): HTMLButtonElement[] => {
   const allButtons = Array.from(root.querySelectorAll('button, [role="button"]')) as HTMLButtonElement[];
   return allButtons.filter((btn) => {
     const text = btn.textContent?.trim() ?? '';
-    const isDay = /^\d{1,2}$/.test(text);
+    const isDay = /^\d{1,2}$/u.test(text);
     const disabled =
       btn.hasAttribute('disabled') || btn.getAttribute('aria-disabled') === 'true' || btn.hasAttribute('data-disabled');
     return isDay && !disabled;
@@ -45,7 +45,7 @@ describe('DatePicker', () => {
       const label = result.container.querySelector('label') as HTMLLabelElement;
       expect(trigger).toBeTruthy();
       expect(trigger.contains(input)).toBe(true);
-      expect(trigger.className).toMatch(/mp-composite-ring/);
+      expect(trigger.className).toMatch(/mp-composite-ring/u);
       expect(trigger.getAttribute('tabindex')).toBe('0');
       expect(trigger.getAttribute('role')).toBe('combobox');
       expect(input.tabIndex).toBe(-1);

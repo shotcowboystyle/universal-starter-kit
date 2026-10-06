@@ -230,10 +230,10 @@ describe('matrixMath', () => {
   describe('reuse', () => {
     it('takes every boundary from ganttMath and carries no day arithmetic of its own', () => {
       const src = readFileSync(join(here, 'matrix-math.ts'), 'utf-8');
-      expect(src).toMatch(/from ['"]\.\/gantt-math['"]/);
+      expect(src).toMatch(/from ['"]\.\/gantt-math['"]/u);
       expect(src).toContain('generateTicks(');
-      expect(src).not.toMatch(/getDate\(\)\s*[+-]/);
-      expect(src).not.toMatch(/86_?400_?000|MS_PER_DAY|setHours\(/);
+      expect(src).not.toMatch(/getDate\(\)\s*[+-]/u);
+      expect(src).not.toMatch(/86_?400_?000|MS_PER_DAY|setHours\(/u);
       expect(startOfDay(d(2026, 2, 8, 15))).toStrictEqual(d(2026, 2, 8));
     });
   });

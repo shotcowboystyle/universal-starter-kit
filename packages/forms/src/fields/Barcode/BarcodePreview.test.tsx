@@ -109,7 +109,7 @@ describe('BarcodePreview — qr format', () => {
   /** Nearest Tamagui theme scope above an element (`t_light` / `t_dark`). */
   const themeScope = (el: Element | null): string | undefined => {
     for (let node = el?.parentElement; node; node = node.parentElement) {
-      const scope = /\bt_(light|dark)\b/.exec(String(node.className));
+      const scope = /\bt_(light|dark)\b/u.exec(String(node.className));
       if (scope) {
         return scope[1];
       }
@@ -242,7 +242,7 @@ describe('BarcodePreview — qr geometry is whole-pixel or nothing', () => {
    * it is the class the browser actually applies.
    */
   const px = (el: HTMLElement, prefix: string) => {
-    const hit = (el.getAttribute('class') ?? '').split(/\s+/).find((c) => c.startsWith(`_${prefix}-`));
+    const hit = (el.getAttribute('class') ?? '').split(/\s+/u).find((c) => c.startsWith(`_${prefix}-`));
     return hit ? Number.parseFloat(hit.slice(prefix.length + 2)) : Number.NaN;
   };
   const edgeOf = (el: HTMLElement) => px(el, 'w');

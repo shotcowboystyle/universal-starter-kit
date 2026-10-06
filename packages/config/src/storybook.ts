@@ -107,7 +107,7 @@ const mergePackageResolveAliases = (
         continue;
       }
 
-      const subpath = exportKey.replace(/^\.\//, '');
+      const subpath = exportKey.replace(/^\.\//u, '');
       const ext = path.extname(subpath);
 
       if (ext) {

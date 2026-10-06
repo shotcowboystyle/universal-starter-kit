@@ -173,7 +173,7 @@ const MentionSuggestionItem = styled(XStack, {
 // Fallback if nestedControl is missing. Live rows use nestedControl.px.
 const MEDIA_SLOT_FALLBACK = 32;
 
-const SLUG_ID = /^[A-Za-z][\w.-]*$/;
+const SLUG_ID = /^[A-Za-z][\w.-]*$/u;
 
 type MentionTextProps = GetProps<typeof Text>;
 

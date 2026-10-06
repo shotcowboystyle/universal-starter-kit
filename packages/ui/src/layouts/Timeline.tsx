@@ -234,7 +234,7 @@ export const prettifyAuthorName = (raw: string): string => {
     return name;
   }
   const local = name.split('@')[0];
-  const words = local.split(/[._+\-\d]+/).filter(Boolean);
+  const words = local.split(/[._+\-\d]+/u).filter(Boolean);
   if (words.length === 0) {
     return local || 'Unknown';
   }

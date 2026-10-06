@@ -52,12 +52,12 @@ describe('ContextMenu', () => {
     expect(selected?.getAttribute('aria-checked')).toBe('true');
 
     // 44 tall ($4), padX 13 (`$3` → space-3), weight 400 — menuRowFrame.
-    expect(copy.className).toMatch(/_pl-t-space-3/);
-    expect(copy.className).toMatch(/_pr-t-space-3/);
+    expect(copy.className).toMatch(/_pl-t-space-3/u);
+    expect(copy.className).toMatch(/_pr-t-space-3/u);
     expect(copy.getAttribute('data-mp-pad-x')).toBe('13');
     expect(copy.getAttribute('data-mp-row-height')).toBe('44');
     expect(copy.getAttribute('data-mp-font-weight')).toBe('400');
-    expect(copy.className).toMatch(/_btlr-0px/);
+    expect(copy.className).toMatch(/_btlr-0px/u);
 
     // Selected fill is $color2; hover is $color3; check trails the label.
     expect(selected?.getAttribute('data-mp-selected-fill')).toBe('$color2');
@@ -175,7 +175,7 @@ const rightClickAt = async (x: number, y: number) => {
   );
   fireEvent.contextMenu(result.getByText('Target'), { clientX: x, clientY: y, button: 2 });
   await waitFor(() => {
-    expect(panelBox()?.style.top).toMatch(/px$/);
+    expect(panelBox()?.style.top).toMatch(/px$/u);
   });
   return panelBox() as HTMLElement;
 };

@@ -25,8 +25,8 @@ const paintedHeight = (el: HTMLElement): number => {
   if (rect > 0) {
     return rect;
   }
-  for (const cls of String(el.className || '').split(/\s+/)) {
-    const m = /^_h-(\d+(?:--\d+)?)px$/.exec(cls);
+  for (const cls of String(el.className || '').split(/\s+/u)) {
+    const m = /^_h-(\d+(?:--\d+)?)px$/u.exec(cls);
     if (m) {
       return atomPx(m[1]);
     }
@@ -47,7 +47,7 @@ const paintedHeight = (el: HTMLElement): number => {
  */
 const paintedRadius = (el: HTMLElement, state?: 'hover' | 'active' | 'focus'): number => {
   const className = String(el.className || '');
-  const re = state ? new RegExp(`_btlr-0${state}-(\\d+(?:--\\d+)?)px`) : /(?:^|\s)_btlr-(\d+(?:--\d+)?)px(?:\s|$)/;
+  const re = state ? new RegExp(`_btlr-0${state}-(\\d+(?:--\\d+)?)px`) : /(?:^|\s)_btlr-(\d+(?:--\d+)?)px(?:\s|$)/u;
   const m = re.exec(className);
   if (m) {
     return atomPx(m[1]);
@@ -119,8 +119,8 @@ describe('Switch BINARY radius (thumb and track are one member)', () => {
             expectBinary(thumb, restStop);
             expectBinary(track, stop, tamaguiState);
             expectBinary(thumb, stop, tamaguiState);
-            expect(String(track.className)).not.toMatch(/_btlr-t-radius-[246]/);
-            expect(String(thumb.className)).not.toMatch(/_btlr-t-radius-[246]/);
+            expect(String(track.className)).not.toMatch(/_btlr-t-radius-[246]/u);
+            expect(String(thumb.className)).not.toMatch(/_btlr-t-radius-[246]/u);
           });
         }
       }

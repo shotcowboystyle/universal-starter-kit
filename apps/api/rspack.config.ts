@@ -25,7 +25,7 @@ const config: Configuration = {
   module: {
     rules: [
       {
-        test: /\.ts$/,
+        test: /\.ts$/u,
         use: {
           loader: 'builtin:swc-loader',
           options: {
@@ -42,7 +42,7 @@ const config: Configuration = {
             },
           },
         },
-        exclude: /node_modules/,
+        exclude: /node_modules/u,
       },
     ],
   },
@@ -92,8 +92,8 @@ const config: Configuration = {
   cache: true,
   ignoreWarnings: [
     {
-      module: /node_modules\/express\/lib\/view\.js/,
-      message: /the request of a dependency is an expression/,
+      module: /node_modules\/express\/lib\/view\.js/u,
+      message: /the request of a dependency is an expression/u,
     },
   ],
 };

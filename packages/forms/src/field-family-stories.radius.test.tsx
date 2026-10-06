@@ -50,18 +50,18 @@ interface StoryLike {
 }
 
 const radiusAtom = (cls: string): string | undefined => {
-  const token = /^_btlr-t-radius-(\d+)$/.exec(cls);
+  const token = /^_btlr-t-radius-(\d+)$/u.exec(cls);
   if (token) {
     return `$${token[1]}`;
   }
-  return /^_btlr-(\d+px)$/.exec(cls)?.[1];
+  return /^_btlr-(\d+px)$/u.exec(cls)?.[1];
 };
 
 /** Every radius token present in the subtree, deduped — the probe's reading. */
 const radiusTokens = (container: HTMLElement): string[] => {
   const found = new Set<string>();
   for (const el of container.querySelectorAll<HTMLElement>('*')) {
-    for (const cls of String(el.className || '').split(/\s+/)) {
+    for (const cls of String(el.className || '').split(/\s+/u)) {
       const radius = radiusAtom(cls);
       if (radius) {
         found.add(radius);
@@ -145,7 +145,7 @@ describe('form layout stories mount knob-consuming field chrome', () => {
 const inputChromeTokens = (container: HTMLElement): string[] =>
   [...container.querySelectorAll<HTMLElement>('input')].map((input) => {
     for (let el = input.parentElement; el && el !== container; el = el.parentElement) {
-      for (const cls of String(el.className || '').split(/\s+/)) {
+      for (const cls of String(el.className || '').split(/\s+/u)) {
         const radius = radiusAtom(cls);
         if (radius) {
           return radius;

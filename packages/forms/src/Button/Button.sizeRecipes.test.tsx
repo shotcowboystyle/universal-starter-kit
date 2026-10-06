@@ -98,7 +98,7 @@ describe('Button nested scale', () => {
     expect(frame.getAttribute('data-nested-px')).toBe('32');
     expect(frame.getAttribute('data-mp-button-height')).toBe('32');
     expect(frame.getAttribute('data-mp-press-slop')).toBe('6');
-    expect(frame.getAttribute('style') ?? '').not.toMatch(/width:\s*44px/);
+    expect(frame.getAttribute('style') ?? '').not.toMatch(/width:\s*44px/u);
   });
 
   it('pads a nested circle 0, so its label fits the 32px box', () => {
@@ -114,11 +114,11 @@ describe('Button nested scale', () => {
       </>,
     );
     const [circle, pill] = screen.getAllByRole('button');
-    const circleAtoms = (circle.getAttribute('class') ?? '').split(/\s+/);
+    const circleAtoms = (circle.getAttribute('class') ?? '').split(/\s+/u);
     expect(circleAtoms).toStrictEqual(expect.arrayContaining(['_w-32px', '_h-32px', '_btlr-100000px']));
     expect(circleAtoms).toStrictEqual(expect.arrayContaining(['_pl-0px', '_pr-0px']));
     expect(circleAtoms).not.toContain('_pl-18px');
-    expect((pill.getAttribute('class') ?? '').split(/\s+/)).toContain('_pl-18px');
+    expect((pill.getAttribute('class') ?? '').split(/\s+/u)).toContain('_pl-18px');
   });
 });
 
@@ -134,7 +134,7 @@ describe('Button RING-ANATOMY + selected fill', () => {
     const frame = screen.getByRole('button');
     expect(frame.getAttribute('aria-pressed')).toBe('true');
     expect(frame.getAttribute('data-mp-selected')).toBe('true');
-    expect(frame.style.outlineWidth || '').not.toMatch(/[1-9]/);
+    expect(frame.style.outlineWidth || '').not.toMatch(/[1-9]/u);
   });
 
   it('unselected outlined does not carry aria-pressed', () => {

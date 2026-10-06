@@ -42,7 +42,7 @@ export interface Geocoder {
   reverseGeocode: ReverseGeocodeFn;
 }
 
-const LAT_LNG_PAIR = /^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/;
+const LAT_LNG_PAIR = /^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/u;
 
 export const clampLat = (val: number): number => Math.max(-90, Math.min(90, val));
 

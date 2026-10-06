@@ -26,7 +26,7 @@ const getEnabledDayButtons = (root: ParentNode): HTMLButtonElement[] => {
   const allButtons = Array.from(root.querySelectorAll('button, [role="button"]')) as HTMLButtonElement[];
   return allButtons.filter((btn) => {
     const text = btn.textContent?.trim() ?? '';
-    const isDay = /^\d{1,2}$/.test(text);
+    const isDay = /^\d{1,2}$/u.test(text);
     const disabled =
       btn.hasAttribute('disabled') || btn.getAttribute('aria-disabled') === 'true' || btn.hasAttribute('data-disabled');
     return isDay && !disabled;
@@ -35,7 +35,7 @@ const getEnabledDayButtons = (root: ParentNode): HTMLButtonElement[] => {
 
 const skeletonHeight = (el: HTMLElement): number => {
   const attr = el.getAttribute('height');
-  if (attr && /^\d+(\.\d+)?$/.test(attr)) {
+  if (attr && /^\d+(\.\d+)?$/u.test(attr)) {
     return Number(attr);
   }
   if (el.style.height.endsWith('px')) {
@@ -235,7 +235,7 @@ describe('DateRangePicker', () => {
         />,
       );
       const input = result.container.querySelector('input');
-      expect(input?.className).toMatch(/mp-input-area/);
+      expect(input?.className).toMatch(/mp-input-area/u);
       const box = result.container.querySelector('.mp-composite-ring');
       expect(box).toBeTruthy();
       expect(box?.contains(input)).toBe(true);
@@ -261,7 +261,7 @@ describe('DateRangePicker', () => {
         expect(document.querySelector('[data-range-stripe]')).toBeTruthy();
       });
       const stripe = document.querySelector('[data-range-stripe]') as HTMLElement;
-      expect(stripe.getAttribute('data-range-stripe')).toMatch(/in-range|range-start|range-end/);
+      expect(stripe.getAttribute('data-range-stripe')).toMatch(/in-range|range-start|range-end/u);
       expect(stripe.getAttribute('transition')).not.toBe('quick');
     });
   });

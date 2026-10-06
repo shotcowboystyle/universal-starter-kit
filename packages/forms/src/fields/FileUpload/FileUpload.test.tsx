@@ -40,7 +40,7 @@ const getZone = (container: Element): HTMLElement => {
 };
 
 const borderWidthAtomPx = (el: HTMLElement, prefix: string): number => {
-  const atom = el.className.split(/\s+/).find((cls) => cls.startsWith(prefix));
+  const atom = el.className.split(/\s+/u).find((cls) => cls.startsWith(prefix));
   // No atom means the side declares no width and falls through to the UA
   // initial, which is exactly the defect — report it as such, not as 0.
   if (!atom) {
@@ -167,16 +167,16 @@ describe('FileUpload', () => {
     expect(zone.getAttribute('data-kb-ring')).toBe('true');
 
     // Base-state ring (2px solid $outlineColor at offset 0).
-    expect(zone.className).toMatch(/_outlineWidth-2px/);
-    expect(zone.className).toMatch(/_outlineStyle-solid/);
-    expect(zone.className).toMatch(/_outlineOffset-0px/);
+    expect(zone.className).toMatch(/_outlineWidth-2px/u);
+    expect(zone.className).toMatch(/_outlineStyle-solid/u);
+    expect(zone.className).toMatch(/_outlineOffset-0px/u);
 
     // …restated in the focus-visible layer, so the kill cannot outrank it.
-    expect(zone.className).toMatch(/_outlineWidth-0focus-visible-2px/);
-    expect(zone.className).toMatch(/_outlineStyle-0focus-visible-solid/);
+    expect(zone.className).toMatch(/_outlineWidth-0focus-visible-2px/u);
+    expect(zone.className).toMatch(/_outlineStyle-0focus-visible-solid/u);
     // …and the zeroing atoms are gone from that layer while the ring is up.
-    expect(zone.className).not.toMatch(/_outlineWidth-0focus-visible-0px/);
-    expect(zone.className).not.toMatch(/_outlineStyle-0focus-visible-none/);
+    expect(zone.className).not.toMatch(/_outlineWidth-0focus-visible-0px/u);
+    expect(zone.className).not.toMatch(/_outlineStyle-0focus-visible-none/u);
   });
 
   it('keeps Choose File out of the tab order so the dropzone is the one stop', () => {
@@ -254,11 +254,11 @@ describe('FileUpload bento-derived dropzone', () => {
       const zone = getZone(container);
       // The dash rides the legible $color9 step, not the near-invisible
       // $borderColor hairline the pre-Bento zone drew.
-      expect(zone.className).toMatch(/_btc-color9/);
-      expect(zone.className).not.toMatch(/_btc-borderColor/);
+      expect(zone.className).toMatch(/_btc-color9/u);
+      expect(zone.className).not.toMatch(/_btc-borderColor/u);
       // 1px DASHED (media-01 dz-rest: borderTopWidth 1px, borderTopStyle dashed)
-      expect(zone.className).toMatch(/-dashed/);
-      expect(zone.className).toMatch(/_btw-1px/);
+      expect(zone.className).toMatch(/-dashed/u);
+      expect(zone.className).toMatch(/_btw-1px/u);
       // The token resolves to a real per-scheme value on the house table, and
       // it is NOT the $borderColor tier the old dash used.
       const theme = houseThemes[scheme];
@@ -281,8 +281,8 @@ describe('FileUpload bento-derived dropzone', () => {
       // Transparent ground: no rest-state background atom other than
       // `transparent` (hover/press state atoms are allowed — the held mpo
       // $color4 hover flood is a state, not a ground).
-      expect(restZone.className).toMatch(/_bg-transparent/);
-      expect(restZone.className).not.toMatch(/_bg-(?!transparent|0hover|0active|0focus)/);
+      expect(restZone.className).toMatch(/_bg-transparent/u);
+      expect(restZone.className).not.toMatch(/_bg-(?!transparent|0hover|0active|0focus)/u);
 
       const disabled = renderWithHouseThemes(
         <FileUpload
@@ -294,8 +294,8 @@ describe('FileUpload bento-derived dropzone', () => {
       );
       const disabledZone = getZone(disabled.container);
       // keepLabel surface wash: $color3 fill on a $color6 edge.
-      expect(disabledZone.className).toMatch(/_bg-color3/);
-      expect(disabledZone.className).toMatch(/_btc-color6/);
+      expect(disabledZone.className).toMatch(/_bg-color3/u);
+      expect(disabledZone.className).toMatch(/_btc-color6/u);
     },
   );
 
@@ -335,17 +335,17 @@ describe('FileUpload bento-derived dropzone', () => {
     // not the pre-Bento solid $color8 divider.
     const flist = zone.querySelector('[data-file-upload="files"]') as HTMLElement;
     expect(flist).toBeTruthy();
-    expect(flist.className).toMatch(/_btc-color9/);
-    expect(flist.className).toMatch(/-dashed/);
-    expect(flist.className).not.toMatch(/_btc-color8/);
+    expect(flist.className).toMatch(/_btc-color9/u);
+    expect(flist.className).toMatch(/-dashed/u);
+    expect(flist.className).not.toMatch(/_btc-color8/u);
 
     // Name renders at body; the size is a SECOND LINE, BOLD.
     expect(flist.textContent).toContain('hello.txt');
     const sizeLine = Array.from(flist.querySelectorAll('span, div, p')).find((el) =>
-      /^5 Bytes$/.test(el.textContent ?? ''),
+      /^5 Bytes$/u.test(el.textContent ?? ''),
     ) as HTMLElement;
     expect(sizeLine).toBeTruthy();
-    expect(sizeLine.className).toMatch(/_fow-700/);
+    expect(sizeLine.className).toMatch(/_fow-700/u);
 
     // Remove: a circular filled $color12 disc painted at nestedControl (32)
     // with hitSlop restoring the 44 floor (data-mp-press-slop 6 → 32+12=44).
@@ -353,7 +353,7 @@ describe('FileUpload bento-derived dropzone', () => {
     expect(remove).toBeTruthy();
     expect(remove.getAttribute('data-nested-px')).toBe('32');
     expect(remove.getAttribute('data-mp-press-slop')).toBe('6');
-    expect(remove.className).toMatch(/_bg-color12/);
+    expect(remove.className).toMatch(/_bg-color12/u);
     // The inverse ✕ rides inside the disc.
     expect(remove.querySelector('svg')).toBeTruthy();
     // The caption is dropped once files exist; the CTA stays.
@@ -441,9 +441,9 @@ describe('FileUpload bento-derived dropzone', () => {
     const corner = tile.querySelector('[data-file-upload="tile-remove"]') as HTMLElement;
     expect(corner).toBeTruthy();
     expect(corner.contains(remove)).toBe(true);
-    expect(corner.className).toMatch(/_pos-absolute/);
+    expect(corner.className).toMatch(/_pos-absolute/u);
     // No size line inside a tile: Bento's populated Image Picker is thumbs only.
-    expect(tile.textContent ?? '').not.toMatch(/Bytes|KB|MB/);
+    expect(tile.textContent ?? '').not.toMatch(/Bytes|KB|MB/u);
   });
 
   it('keeps non-image picks as rows while images tile — one list, two treatments', async () => {
@@ -504,7 +504,7 @@ describe('FileUpload transfer lifecycle', () => {
     const flist = container.querySelector('[data-file-upload="files"]') as HTMLElement;
     expect(flist).toBeTruthy();
     expect(flist.textContent).toContain('restore-log.txt');
-    expect(flist.textContent).toMatch(/5 Bytes/);
+    expect(flist.textContent).toMatch(/5 Bytes/u);
     const bar = flist.querySelector('[data-file-upload="progress"]') as HTMLElement;
     expect(bar).toBeTruthy();
     expect(bar.getAttribute('role')).toBe('progressbar');

@@ -1390,7 +1390,7 @@ describe('disabledState recipe', () => {
       disabledState.selectedSurfaceKnobProps.borderColor,
       disabledState.textKnobProps.color,
     ]) {
-      expect(value).toMatch(/^\$color\d+$/);
+      expect(value).toMatch(/^\$color\d+$/u);
     }
   });
 });

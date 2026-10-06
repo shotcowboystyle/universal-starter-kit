@@ -25,8 +25,8 @@ const sizes = ['$2', '$3', '$4'] as const;
 /** Last `_pl-Npx` / `_pr-Npx` class wins (paddingHorizontal expands to both). */
 const paddingPxFromClass = (el: HTMLElement): number | null => {
   let found: number | null = null;
-  for (const c of String(el.className || '').split(/\s+/)) {
-    const m = /^_p[lr]-(\d+)px$/.exec(c);
+  for (const c of String(el.className || '').split(/\s+/u)) {
+    const m = /^_p[lr]-(\d+)px$/u.exec(c);
     if (m) {
       found = Number(m[1]);
     }
@@ -35,8 +35,8 @@ const paddingPxFromClass = (el: HTMLElement): number | null => {
 };
 
 const gapPxFromClass = (el: HTMLElement): number | null => {
-  for (const c of String(el.className || '').split(/\s+/)) {
-    const m = /^_gap-(\d+)px$/.exec(c);
+  for (const c of String(el.className || '').split(/\s+/u)) {
+    const m = /^_gap-(\d+)px$/u.exec(c);
     if (m) {
       return Number(m[1]);
     }
@@ -107,18 +107,18 @@ describe('Button density knob = compact PROP', () => {
   it('height stays 44 at comfortable and compact density stops', () => {
     const comfortable = renderComfortable('$4');
     expect(comfortable.getAttribute('data-mp-button-height')).toBe('44');
-    expect(comfortable.className).toMatch(/_h-44px/);
+    expect(comfortable.className).toMatch(/_h-44px/u);
     expect(paddingPxFromClass(comfortable)).toBe(18);
     cleanup();
 
     const viaKnob = renderKnob('$4');
     expect(viaKnob.getAttribute('data-mp-button-height')).toBe('44');
-    expect(viaKnob.className).toMatch(/_h-44px/);
+    expect(viaKnob.className).toMatch(/_h-44px/u);
     cleanup();
 
     const viaProp = renderProp('$4');
     expect(viaProp.getAttribute('data-mp-button-height')).toBe('44');
-    expect(viaProp.className).toMatch(/_h-44px/);
+    expect(viaProp.className).toMatch(/_h-44px/u);
   });
 
   it('density never changes the painted height at any size step', () => {

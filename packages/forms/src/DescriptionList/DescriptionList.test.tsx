@@ -95,9 +95,9 @@ describe('DescriptionList', () => {
     expect(displays[3]?.getAttribute('data-field')).toBe('stepper');
     expect(displays[3]?.textContent).toBe(formatNumericText(38.4, { currency: 'EUR', precision: 2 }));
     expect(displays[2]?.textContent).toBe(formatDateText(created));
-    expect(displays[2]?.textContent).not.toMatch(/\d{4}-\d{2}-\d{2}/);
+    expect(displays[2]?.textContent).not.toMatch(/\d{4}-\d{2}-\d{2}/u);
     expect(result.container.textContent).toContain('Active');
-    expect(result.container.textContent).not.toMatch(/\bactive\b/);
+    expect(result.container.textContent).not.toMatch(/\bactive\b/u);
     expect(displays[4]?.textContent).toBe(EMPTY);
     expect(result.container.textContent).toContain('Hostname');
   });

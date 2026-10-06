@@ -28,26 +28,26 @@ test('keeps a refusal while editing, then clears it on discard or reset', async 
   fireEvent.change(view.getByLabelText('Name'), { target: { value: 'Edited' } });
   await act(async () => fireEvent.click(view.getByRole('button', { name: 'Submit action' })));
   await waitFor(() => {
-    expect(view.getByText(/Couldn't save/)).toBeTruthy();
+    expect(view.getByText(/Couldn't save/u)).toBeTruthy();
   });
   await act(async () => fireEvent.click(view.getByRole('button', { name: 'Discard' })));
   const keep = await view.findByRole('button', { name: 'Keep editing' });
   await act(async () => fireEvent.click(keep));
-  expect(view.getByText(/Couldn't save/)).toBeTruthy();
+  expect(view.getByText(/Couldn't save/u)).toBeTruthy();
   expect((view.getByLabelText('Name') as HTMLInputElement).value).toBe('Edited');
   await act(async () => fireEvent.click(view.getByRole('button', { name: 'Discard' })));
   const confirm = await view.findByRole('button', { name: 'Discard changes' });
   await act(async () => fireEvent.click(confirm));
   await waitFor(() => {
-    expect(view.queryByText(/Couldn't save/)).toBeNull();
+    expect(view.queryByText(/Couldn't save/u)).toBeNull();
   });
   expect((view.getByLabelText('Name') as HTMLInputElement).value).toBe('Original');
   await act(async () => fireEvent.click(view.getByRole('button', { name: 'Submit action' })));
   await waitFor(() => {
-    expect(view.getByText(/Couldn't save/)).toBeTruthy();
+    expect(view.getByText(/Couldn't save/u)).toBeTruthy();
   });
   await act(async () => fireEvent.click(view.getByRole('button', { name: 'Reset form' })));
   await waitFor(() => {
-    expect(view.queryByText(/Couldn't save/)).toBeNull();
+    expect(view.queryByText(/Couldn't save/u)).toBeNull();
   });
 });

@@ -37,13 +37,13 @@ describe('phosphorTokenColorPlugin', () => {
     const fromIcon = resolveId('../lib/IconBase.es.js', `${dist}/csr/Heart.es.js`);
     const fromBarrel = resolveId('./lib/IconBase.es.js', `${dist}/index.es.js?v=1a2b`);
     expect(fromIcon?.startsWith('\0mpo-phosphor-token-icon-base:')).toBe(true);
-    expect(fromIcon?.endsWith(iconBase.replace(/\.js$/, ''))).toBe(true);
+    expect(fromIcon?.endsWith(iconBase.replace(/\.js$/u, ''))).toBe(true);
     expect(fromBarrel).toBe(fromIcon);
   });
 
   it('keeps the virtual id out of extension-filtered loaders (vite-plugin-rnw flow)', () => {
     const fromIcon = resolveId('../lib/IconBase.es.js', `${dist}/csr/Heart.es.js`) ?? '';
-    expect(fromIcon).not.toMatch(/\.(flow|jsx?)$/);
+    expect(fromIcon).not.toMatch(/\.(flow|jsx?)$/u);
   });
 
   it('leaves other importers, the ssr base and its own wrapper alone', () => {

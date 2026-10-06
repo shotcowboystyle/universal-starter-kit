@@ -39,8 +39,8 @@ describe('Breadcrumbs', () => {
     // Distinct token from the warning-surface fix: separators ride textAccentColor (AA floor
     // at $color11), not componentColors.text.subtle ($color8).
     const source = readFileSync(join(import.meta.dirname, 'breadcrumbs.tsx'), 'utf-8');
-    expect(source).toMatch(/color=\{knobProps\.textAccentColor\}/);
-    expect(source).not.toMatch(/color=\{componentColors\.text\.subtle\}/);
+    expect(source).toMatch(/color=\{knobProps\.textAccentColor\}/u);
+    expect(source).not.toMatch(/color=\{componentColors\.text\.subtle\}/u);
   });
 
   it('calls onNavigate from a path crumb and keeps the current page inert', () => {
