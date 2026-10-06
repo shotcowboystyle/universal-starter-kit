@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import {
   splitCookieValue,
@@ -15,7 +15,7 @@ import {
 import { defaultKnobs } from './knobs';
 import type { Knobs } from './knobs';
 
-describe('splitCookieValue', () => {
+describe(splitCookieValue, () => {
   it('returns a single chunk for small values', () => {
     const result = splitCookieValue('small');
     expect(result).toStrictEqual(['small']);
@@ -44,7 +44,7 @@ describe('splitCookieValue', () => {
   });
 });
 
-describe('joinSplitCookieValues', () => {
+describe(joinSplitCookieValues, () => {
   it('joins chunks back together', () => {
     expect(joinSplitCookieValues(['abc', 'def', 'ghi'])).toBe('abcdefghi');
   });
@@ -66,14 +66,14 @@ describe('splitCookieValue + joinSplitCookieValues roundtrip', () => {
   });
 });
 
-describe('readOverridesCookie', () => {
+describe(readOverridesCookie, () => {
   it('returns empty object when no chunks exist', () => {
     expect(readOverridesCookie({})).toStrictEqual({});
   });
 
   it('reads a single chunk override', () => {
     const overrides: Partial<Knobs> = { fillStyle: 'outlined' };
-    const cookies: Record<string, string> = {
+    const cookies = {
       'mp.ov.0': JSON.stringify(overrides),
     };
     expect(readOverridesCookie(cookies)).toStrictEqual(overrides);
@@ -83,7 +83,7 @@ describe('readOverridesCookie', () => {
     const overrides: Partial<Knobs> = { fillStyle: 'outlined', size: 'large' };
     const json = JSON.stringify(overrides);
     const mid = Math.floor(json.length / 2);
-    const cookies: Record<string, string> = {
+    const cookies = {
       'mp.ov.0': json.slice(0, mid),
       'mp.ov.1': json.slice(mid),
     };
@@ -91,14 +91,14 @@ describe('readOverridesCookie', () => {
   });
 
   it('returns empty object for malformed JSON', () => {
-    const cookies: Record<string, string> = {
+    const cookies = {
       'mp.ov.0': 'not{valid json',
     };
     expect(readOverridesCookie(cookies)).toStrictEqual({});
   });
 
   it('stops reading at first missing chunk', () => {
-    const cookies: Record<string, string> = {
+    const cookies = {
       'mp.ov.0': '{"fill',
       'mp.ov.2': 'Style":"outlined"}',
     };
@@ -185,7 +185,7 @@ describe('readOverridesCookie with universal-cookie auto-parsed values', () => {
   });
 });
 
-describe('readPresetCookie', () => {
+describe(readPresetCookie, () => {
   it('returns undefined when cookie is missing', () => {
     expect(readPresetCookie({})).toBeUndefined();
   });
@@ -204,7 +204,7 @@ describe('readPresetCookie', () => {
   });
 });
 
-describe('writePresetCookie', () => {
+describe(writePresetCookie, () => {
   it('returns the correct key and value', () => {
     expect(writePresetCookie('my-preset')).toStrictEqual({
       key: cookiePreset,
@@ -213,7 +213,7 @@ describe('writePresetCookie', () => {
   });
 });
 
-describe('writeOverridesCookie', () => {
+describe(writeOverridesCookie, () => {
   it('returns a single chunk for small overrides', () => {
     const overrides: Partial<Knobs> = { fillStyle: 'outlined' };
     const { toSet, toRemove } = writeOverridesCookie(overrides);
@@ -235,7 +235,7 @@ describe('writeOverridesCookie', () => {
   });
 });
 
-describe('computeOverrides', () => {
+describe(computeOverrides, () => {
   it('returns empty object when current matches base', () => {
     expect(computeOverrides(defaultKnobs, { ...defaultKnobs })).toStrictEqual({});
   });
@@ -285,7 +285,7 @@ describe('computeOverrides', () => {
   });
 });
 
-describe('getCookieWatchList', () => {
+describe(getCookieWatchList, () => {
   it('includes the preset cookie key', () => {
     const list = getCookieWatchList();
     expect(list).toContain(cookiePreset);

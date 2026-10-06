@@ -40,7 +40,7 @@ const darkInk = '#f0eff1';
 
 const lum = (raw: string) => relativeLuminance(normalizeToHex(raw)!);
 
-describe('resolveAccentTintedSurface', () => {
+describe(resolveAccentTintedSurface, () => {
   it("takes the ramp's pale surface end in a light scheme", () => {
     const tint = resolveAccentTintedSurface({
       steps: lightAccent,
@@ -71,8 +71,8 @@ describe('resolveAccentTintedSurface', () => {
 
   it('stays a SURFACE tier — never the solid an accent CTA takes', () => {
     // The solid is accentBackground (= the ramp's mid, palette-shape solid).
-    const lightSolid = lightAccent[2];
-    const darkSolid = darkAccent[9];
+    const lightSolid = lightAccent.at(2);
+    const darkSolid = darkAccent.at(9);
     expect(resolveAccentTintedSurface({ steps: lightAccent, paper: lightPaper, ink: lightInk })).not.toBe(lightSolid);
     expect(resolveAccentTintedSurface({ steps: darkAccent, paper: darkPaper, ink: darkInk })).not.toBe(darkSolid);
   });
@@ -91,7 +91,7 @@ describe('resolveAccentTintedSurface', () => {
 
   it('returns undefined when the accent ramp or an anchor is missing', () => {
     expect(resolveAccentTintedSurface({ steps: [], paper: lightPaper, ink: lightInk })).toBeUndefined();
-    expect(resolveAccentTintedSurface({ steps: lightAccent, paper: undefined, ink: lightInk })).toBeUndefined();
+    expect(resolveAccentTintedSurface({ steps: lightAccent, ink: lightInk })).toBeUndefined();
     expect(
       resolveAccentTintedSurface({
         steps: Array.from({ length: 12 }, () => 'var(--nope)'),
@@ -102,7 +102,7 @@ describe('resolveAccentTintedSurface', () => {
   });
 });
 
-describe('resolveAaSolidFill', () => {
+describe(resolveAaSolidFill, () => {
   it('keeps the preferred solid when it already clears the text floor', () => {
     const solids = lightAccent.slice(0, 10).map((value, i) => ({
       token: `$accent${i + 1}`,
@@ -145,14 +145,13 @@ describe('resolveAaSolidFill', () => {
       resolveAaSolidFill({
         preferred: { token: '$accentBackground', value: darkAccent[9] },
         solids: [],
-        paper: undefined,
         ink: darkInk,
       }),
     ).toBe('$accentBackground');
   });
 });
 
-describe('resolveLegibleInkOn', () => {
+describe(resolveLegibleInkOn, () => {
   it("keeps the component's ink while it clears AA on the fill", () => {
     expect(
       resolveLegibleInkOn({
@@ -189,7 +188,6 @@ describe('resolveLegibleInkOn', () => {
   it('returns the preferred ink when there is no fill to read against', () => {
     expect(
       resolveLegibleInkOn({
-        fill: undefined,
         preferred: '#a09ba6',
         paper: darkPaper,
         ink: darkInk,

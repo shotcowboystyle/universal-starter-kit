@@ -12,6 +12,12 @@ import type { ReactNode } from 'react';
  * Storybook: `ic(active)` → purple accent for active, gray for inactive
  */
 
+const systemFont = 'system-ui, sans-serif';
+
+/** Look a knob stop up in a small pixel/weight table, falling back for unknown stops. */
+const scaleValue = (scale: Partial<Record<string, number>>, key: string, fallback: number): number =>
+  scale[key] ?? fallback;
+
 export const fillIcon = (value: string, color: string): ReactNode => {
   if (value === 'filled') {
     return <div style={{ width: 14, height: 14, background: color, borderRadius: 2 }} />;
@@ -20,12 +26,12 @@ export const fillIcon = (value: string, color: string): ReactNode => {
 };
 
 export const spaceIcon = (value: string, color: string): ReactNode => {
-  const size = ({ small: 8, medium: 12, large: 16 } as Record<string, number>)[value] ?? 12;
+  const size = scaleValue({ small: 8, medium: 12, large: 16 }, value, 12);
   return <div style={{ width: size, height: size, background: color, borderRadius: 2 }} />;
 };
 
 export const sizeIcon = (value: string, color: string): ReactNode => {
-  const height = ({ small: 8, medium: 11, large: 14 } as Record<string, number>)[value] ?? 11;
+  const height = scaleValue({ small: 8, medium: 11, large: 14 }, value, 11);
   return <div style={{ width: 4, height, background: color, borderRadius: 1 }} />;
 };
 
@@ -43,7 +49,7 @@ export const densityIcon = (value: string, color: string): ReactNode => {
 };
 
 export const borderRadiusIcon = (value: string, color: string): ReactNode => {
-  const radius = ({ none: 0, small: 2, medium: 4, large: 7, full: 10 } as Record<string, number>)[value] ?? 0;
+  const radius = scaleValue({ none: 0, small: 2, medium: 4, large: 7, full: 10 }, value, 0);
   return <div style={{ width: 14, height: 14, border: `1.5px solid ${color}`, borderRadius: radius }} />;
 };
 
@@ -57,6 +63,7 @@ export const cornerSmoothingIcon = (value: string, color: string): ReactNode => 
       height="14"
       viewBox="0 0 14 14"
       fill="none"
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- an inline <svg> cannot be an <img>; role="img" with a label names the icon
       role="img"
       aria-label={value}>
       <title>{value}</title>
@@ -85,14 +92,14 @@ export const borderWidthIcon = (value: string, color: string): ReactNode => {
   if (value === 'none') {
     return <div style={{ width: 14, height: 14, background: color, borderRadius: 2, opacity: 0.35 }} />;
   }
-  const width = ({ small: 1, medium: 1.5, large: 2 } as Record<string, number>)[value] ?? 1;
+  const width = scaleValue({ small: 1, medium: 1.5, large: 2 }, value, 1);
   return <div style={{ width: 14, height: 14, border: `${width}px solid ${color}`, borderRadius: 2 }} />;
 };
 
 export const elevationIcon = (value: string, color: string, _isDark: boolean): ReactNode => {
   const shadowColor = 'rgba(128,128,128,0.55)';
-  const offset = ({ none: 0, small: 1, medium: 2, large: 3 } as Record<string, number>)[value] ?? 0;
-  const shadowSize = ({ none: 0, small: 10, medium: 11, large: 12 } as Record<string, number>)[value] ?? 0;
+  const offset = scaleValue({ none: 0, small: 1, medium: 2, large: 3 }, value, 0);
+  const shadowSize = scaleValue({ none: 0, small: 10, medium: 11, large: 12 }, value, 0);
   const squareSize = 10;
   const total = squareSize + offset * 2 + 1;
 
@@ -143,8 +150,8 @@ export const elevationIcon = (value: string, color: string, _isDark: boolean): R
 };
 
 export const textAccentIcon = (value: string, color: string): ReactNode => {
-  const weight = value === 'low' ? 300 : value === 'medium' ? 500 : 700;
-  const opacity = value === 'low' ? 0.35 : value === 'medium' ? 0.7 : 1;
+  const weight = scaleValue({ low: 300, medium: 500 }, value, 700);
+  const opacity = scaleValue({ low: 0.35, medium: 0.7 }, value, 1);
   return (
     <span
       style={{
@@ -152,7 +159,7 @@ export const textAccentIcon = (value: string, color: string): ReactNode => {
         fontWeight: weight,
         color,
         opacity,
-        fontFamily: 'system-ui, sans-serif',
+        fontFamily: systemFont,
         lineHeight: 1,
       }}>
       Aa
@@ -160,25 +167,35 @@ export const textAccentIcon = (value: string, color: string): ReactNode => {
   );
 };
 
-const fontCategoryStyles: Record<string, { family: string; label: string; letterSpacing?: string; style?: string }> = {
-  'sans-serif': {
-    family: "-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-    label: 'Aa',
-  },
-  serif: { family: "Georgia, 'Times New Roman', Times, serif", label: 'Aa' },
-  mono: { family: "'SF Mono', 'Cascadia Code', Menlo, monospace", label: 'Aa' },
-  slab: { family: "'Rockwell', 'Courier New', serif", label: 'Aa' },
-  rounded: { family: "'Nunito', 'Varela Round', system-ui, sans-serif", label: 'Aa' },
-  condensed: { family: "'Arial Narrow', sans-serif", label: 'Aa', letterSpacing: '-0.03em' },
-  cursive: { family: "'Segoe Script', cursive", label: 'Aa', style: 'italic' },
-  handwriting: { family: "'Comic Sans MS', 'Caveat', cursive", label: 'Aa' },
-  pixel: { family: "'Courier New', monospace", label: 'Aa', letterSpacing: '0.05em' },
-  blackletter: { family: "'Old English Text MT', serif", label: 'Aa' },
-  geometric: { family: "'Century Gothic', 'Futura', sans-serif", label: 'Aa' },
-};
+interface FontCategoryStyle {
+  family: string;
+  label: string;
+  letterSpacing?: string;
+  style?: string;
+}
+
+const fontCategoryStyles = new Map<string, FontCategoryStyle>([
+  [
+    'sans-serif',
+    {
+      family: "-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+      label: 'Aa',
+    },
+  ],
+  ['serif', { family: "Georgia, 'Times New Roman', Times, serif", label: 'Aa' }],
+  ['mono', { family: "'SF Mono', 'Cascadia Code', Menlo, monospace", label: 'Aa' }],
+  ['slab', { family: "'Rockwell', 'Courier New', serif", label: 'Aa' }],
+  ['rounded', { family: "'Nunito', 'Varela Round', system-ui, sans-serif", label: 'Aa' }],
+  ['condensed', { family: "'Arial Narrow', sans-serif", label: 'Aa', letterSpacing: '-0.03em' }],
+  ['cursive', { family: "'Segoe Script', cursive", label: 'Aa', style: 'italic' }],
+  ['handwriting', { family: "'Comic Sans MS', 'Caveat', cursive", label: 'Aa' }],
+  ['pixel', { family: "'Courier New', monospace", label: 'Aa', letterSpacing: '0.05em' }],
+  ['blackletter', { family: "'Old English Text MT', serif", label: 'Aa' }],
+  ['geometric', { family: "'Century Gothic', 'Futura', sans-serif", label: 'Aa' }],
+]);
 
 export const headingFontIcon = (value: string, color: string): ReactNode => {
-  const s = fontCategoryStyles[value] ?? { family: 'inherit', label: 'Aa' };
+  const s = fontCategoryStyles.get(value) ?? { family: 'inherit', label: 'Aa' };
   return (
     <span
       style={{
@@ -196,7 +213,7 @@ export const headingFontIcon = (value: string, color: string): ReactNode => {
 };
 
 export const bodyFontIcon = (value: string, color: string): ReactNode => {
-  const s = fontCategoryStyles[value] ?? { family: 'inherit', label: 'Aa' };
+  const s = fontCategoryStyles.get(value) ?? { family: 'inherit', label: 'Aa' };
   return (
     <span
       style={{
@@ -214,14 +231,14 @@ export const bodyFontIcon = (value: string, color: string): ReactNode => {
 };
 
 export const fontWeightIcon = (value: string, color: string): ReactNode => {
-  const weight = ({ light: 300, regular: 400, bold: 700 } as Record<string, number>)[value] ?? 400;
+  const weight = scaleValue({ light: 300, regular: 400, bold: 700 }, value, 400);
   return (
     <span
       style={{
         fontSize: 12,
         fontWeight: weight,
         color,
-        fontFamily: 'system-ui, sans-serif',
+        fontFamily: systemFont,
         lineHeight: 1,
       }}>
       W
@@ -255,7 +272,7 @@ const glyph = (label: string, color: string, size = 9): ReactNode => (
       fontSize: size,
       fontWeight: 600,
       color,
-      fontFamily: 'system-ui, sans-serif',
+      fontFamily: systemFont,
       lineHeight: 1,
       letterSpacing: '-0.02em',
     }}>
@@ -270,7 +287,8 @@ export const fieldLabelPlacementIcon = (value: string, color: string): ReactNode
   if (value === 'floating') {
     return glyph('⬚', color, 12);
   }
-  return glyph('⊞', color, 12); // top
+  // top
+  return glyph('⊞', color, 12);
 };
 
 export const requiredMarkingIcon = (value: string, color: string): ReactNode => {
@@ -280,7 +298,8 @@ export const requiredMarkingIcon = (value: string, color: string): ReactNode => 
   if (value === 'optional') {
     return glyph('opt', color, 8);
   }
-  return glyph('min', color, 8); // minority
+  // minority
+  return glyph('min', color, 8);
 };
 
 export const tableZebraIcon = (value: string, color: string): ReactNode => {
@@ -288,7 +307,7 @@ export const tableZebraIcon = (value: string, color: string): ReactNode => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 1, width: 14 }}>
       <div style={{ height: 3, background: color, borderRadius: 1, opacity: on ? 1 : 0.35 }} />
-      <div style={{ height: 3, background: color, borderRadius: 1, opacity: on ? 0.35 : 0.35 }} />
+      <div style={{ height: 3, background: color, borderRadius: 1, opacity: 0.35 }} />
       <div style={{ height: 3, background: color, borderRadius: 1, opacity: on ? 1 : 0.35 }} />
     </div>
   );

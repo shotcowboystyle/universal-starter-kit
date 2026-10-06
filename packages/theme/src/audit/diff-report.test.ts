@@ -39,7 +39,7 @@ const makeElement = (label: string, overrides: Partial<ElementAudit> = {}): Elem
   ...overrides,
 });
 
-describe('diffAuditReports', () => {
+describe(diffAuditReports, () => {
   it('reports no changes for identical reports', () => {
     const report = makeReport();
     const diff = diffAuditReports(report, report);
@@ -140,7 +140,7 @@ describe('diffAuditReports', () => {
   });
 });
 
-describe('formatAuditReport', () => {
+describe(formatAuditReport, () => {
   it('formats a clean report', () => {
     const report = makeReport({
       elements: [

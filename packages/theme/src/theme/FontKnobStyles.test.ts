@@ -11,7 +11,7 @@ const FAMILIES: Partial<Record<FontCategory, string>> = {
 };
 
 const resolveFamily = (category: FontCategory) => FAMILIES[category];
-const noTables = () => undefined;
+const noTables = (): undefined => undefined;
 
 // Inter-shaped tables: display sizes tight (~1.16), small sizes loose, and
 // negative display tracking — the exact shape the floors exist to correct.
@@ -30,7 +30,7 @@ const TABLES: Record<'heading' | 'body', FontScopeTables> = {
 };
 const resolveTables = (scope: 'heading' | 'body') => TABLES[scope];
 
-describe('buildFontKnobCss', () => {
+describe(buildFontKnobCss, () => {
   it('emits only zero-specificity default leading when both knobs are at the sans-serif default', () => {
     const css = buildFontKnobCss('sans-serif', 'sans-serif', resolveFamily, noTables);
     expect(css).toContain(':where(:root .font_heading) { line-height: 1.25; }');
@@ -92,13 +92,15 @@ describe('buildFontKnobCss', () => {
   it('zeroes all non-zero tracking for neutral-tracking categories only', () => {
     const mono = buildFontKnobCss('mono', 'sans-serif', resolveFamily, resolveTables);
     expect(mono).toContain('--f-letterSpacing-10: 0px !important');
-    expect(mono).not.toContain('--f-letterSpacing-7'); // base 0 stays
+    // base 0 stays
+    expect(mono).not.toContain('--f-letterSpacing-7');
     // positive caption tracking is also Inter-specific: neutral zeroes it too
     const monoBody = buildFontKnobCss('sans-serif', 'mono', resolveFamily, resolveTables);
     expect(monoBody).toContain('--f-letterSpacing-1: 0px !important');
     expect(monoBody).toContain('--f-letterSpacing-10: 0px !important');
     const slab = buildFontKnobCss('slab', 'sans-serif', resolveFamily, resolveTables);
-    expect(slab).not.toContain('--f-letterSpacing'); // "inherit" tracking
+    // "inherit" tracking
+    expect(slab).not.toContain('--f-letterSpacing');
   });
 
   it("keeps every category's heading floor at or above 1.15 and body at or above 1.4", () => {

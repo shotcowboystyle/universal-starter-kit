@@ -26,6 +26,7 @@ export type SizeRecipeToken = (typeof SIZE_RECIPE_TOKENS)[number];
 
 export type SizeRecipeFamilyName = 'control' | 'controlCompact';
 /** @deprecated Use `SizeRecipeFamilyName`. */
+// oxlint-disable-next-line sonarjs/redundant-type-aliases -- deprecated alias kept for consumers
 export type RecipeFamilyName = SizeRecipeFamilyName;
 
 export interface SizeRecipeRatios {
@@ -174,7 +175,7 @@ export const SIZE_TOKEN_EXPONENTS: Record<SizeRecipeToken, number> = {
 // $4/$true:44 $5:52 $6:64. The recipe key "$4" and the raw Tamagui token
 // `$size.4` resolve to the SAME height — the C1 split (recipe 32 vs token
 // 44) is gone.
-const DEFAULT_TOKEN_HEIGHTS: Record<string, number> = {
+const DEFAULT_TOKEN_HEIGHTS = {
   $1: 20,
   '$1.5': 24,
   $2: 28,
@@ -185,7 +186,7 @@ const DEFAULT_TOKEN_HEIGHTS: Record<string, number> = {
   $true: 44,
   $5: 52,
   $6: 64,
-};
+} satisfies Record<string, number>;
 
 /** Lossless relative table: the stock Tamagui 20/24/28/32/36/40/44/52/64 ramp at baseHeight 44. */
 export const defaultSizeFactors: Record<SizeRecipeToken, number> = {
@@ -336,17 +337,57 @@ export const cloneSizeRecipeInputs = (inputs: SizeRecipeInputs): SizeRecipeInput
   tile: inputs.tile ? cloneTileSizeInputs(inputs.tile) : undefined,
 });
 
+const copyRecord = <T extends object>(value: T | undefined): T | undefined =>
+  value == null ? undefined : { ...value };
+
+const resolveHeightInputs = (
+  resolved: SizeRecipeInputs,
+  partial: Partial<SizeRecipeInputs>,
+  scalingOverride: boolean,
+): void => {
+  const hasTokenHeights = Object.hasOwn(partial, 'tokenHeights');
+  const hasSizeFactors = Object.hasOwn(partial, 'sizeFactors');
+  if (hasTokenHeights) {
+    resolved.tokenHeights = copyRecord(partial.tokenHeights);
+  }
+  if (hasSizeFactors) {
+    resolved.sizeFactors = copyRecord(partial.sizeFactors);
+  } else if (!hasTokenHeights && !scalingOverride) {
+    resolved.tokenHeights = { ...DEFAULT_SIZE_RECIPE_INPUTS.tokenHeights };
+    resolved.sizeFactors = { ...DEFAULT_SIZE_RECIPE_INPUTS.sizeFactors };
+  }
+};
+
+const resolveTableInputs = (
+  resolved: SizeRecipeInputs,
+  partial: Partial<SizeRecipeInputs>,
+  scalingOverride: boolean,
+): void => {
+  if (Object.hasOwn(partial, 'tokenTable')) {
+    resolved.tokenTable = cloneTokenTable(partial.tokenTable);
+  } else if (!scalingOverride) {
+    resolved.tokenTable = cloneTokenTable(DEFAULT_SIZE_RECIPE_INPUTS.tokenTable);
+  }
+
+  if (Object.hasOwn(partial, 'compactTokenTable')) {
+    resolved.compactTokenTable = cloneTokenTable(partial.compactTokenTable);
+  } else if (!scalingOverride) {
+    resolved.compactTokenTable = cloneTokenTable(DEFAULT_SIZE_RECIPE_INPUTS.compactTokenTable);
+  }
+
+  if (Object.hasOwn(partial, 'inputPadX')) {
+    resolved.inputPadX = clonePadX(partial.inputPadX);
+  } else if (!scalingOverride) {
+    resolved.inputPadX = clonePadX(DEFAULT_SIZE_RECIPE_INPUTS.inputPadX);
+  }
+};
+
 /**
  * Fill defaults. `{ baseHeight: 36 }` drops handwritten tokenHeights /
  * sizeFactors / token tables so every token regenerates from stepRatio.
  */
 export const resolveSizeRecipeInputs = (partial: Partial<SizeRecipeInputs> = {}): SizeRecipeInputs => {
   const scalingOverride = partial.baseHeight != null || partial.stepRatio != null || partial.tokenSteps != null;
-  const hasTokenHeights = Object.hasOwn(partial, 'tokenHeights');
-  const hasSizeFactors = Object.hasOwn(partial, 'sizeFactors');
-  const hasTokenTable = Object.hasOwn(partial, 'tokenTable');
-  const hasCompactTable = Object.hasOwn(partial, 'compactTokenTable');
-  const hasInputPadX = Object.hasOwn(partial, 'inputPadX');
 
   const resolved: SizeRecipeInputs = {
     baseHeight: partial.baseHeight ?? DEFAULT_SIZE_RECIPE_INPUTS.baseHeight,
@@ -359,38 +400,11 @@ export const resolveSizeRecipeInputs = (partial: Partial<SizeRecipeInputs> = {})
   };
 
   if (partial.tile !== undefined) {
-    resolved.tile = partial.tile ? resolveTileSizeInputs(partial.tile) : undefined;
+    resolved.tile = partial.tile == null ? undefined : resolveTileSizeInputs(partial.tile);
   }
 
-  if (hasTokenHeights) {
-    resolved.tokenHeights = partial.tokenHeights ? { ...partial.tokenHeights } : undefined;
-    if (hasSizeFactors) {
-      resolved.sizeFactors = partial.sizeFactors ? { ...partial.sizeFactors } : undefined;
-    }
-  } else if (hasSizeFactors) {
-    resolved.sizeFactors = partial.sizeFactors ? { ...partial.sizeFactors } : undefined;
-  } else if (!scalingOverride) {
-    resolved.tokenHeights = { ...DEFAULT_SIZE_RECIPE_INPUTS.tokenHeights };
-    resolved.sizeFactors = { ...DEFAULT_SIZE_RECIPE_INPUTS.sizeFactors };
-  }
-
-  if (hasTokenTable) {
-    resolved.tokenTable = partial.tokenTable ? cloneTokenTable(partial.tokenTable) : undefined;
-  } else if (!scalingOverride) {
-    resolved.tokenTable = cloneTokenTable(DEFAULT_SIZE_RECIPE_INPUTS.tokenTable);
-  }
-
-  if (hasCompactTable) {
-    resolved.compactTokenTable = partial.compactTokenTable ? cloneTokenTable(partial.compactTokenTable) : undefined;
-  } else if (!scalingOverride) {
-    resolved.compactTokenTable = cloneTokenTable(DEFAULT_SIZE_RECIPE_INPUTS.compactTokenTable);
-  }
-
-  if (hasInputPadX) {
-    resolved.inputPadX = partial.inputPadX ? clonePadX(partial.inputPadX) : undefined;
-  } else if (!scalingOverride) {
-    resolved.inputPadX = clonePadX(DEFAULT_SIZE_RECIPE_INPUTS.inputPadX);
-  }
+  resolveHeightInputs(resolved, partial, scalingOverride);
+  resolveTableInputs(resolved, partial, scalingOverride);
 
   return resolved;
 };
@@ -404,7 +418,8 @@ const heightForToken = (token: string, inputs: SizeRecipeInputs): number => {
   if (explicitPx != null) {
     return clampHeight(explicitPx);
   }
-  const factor = inputs.sizeFactors?.[token as SizeRecipeToken];
+  const factors: Partial<Record<string, number>> | undefined = inputs.sizeFactors;
+  const factor = factors?.[token];
   if (factor != null) {
     return clampHeight(inputs.baseHeight * factor);
   }
@@ -456,10 +471,7 @@ export const SIZE_RECIPE_RADIUS_TOKEN_TO_STOP = {
  * Other borderRadius stops override the corners only. Internal spacing
  * continues to group the icon and label at the recipe's size.
  */
-export const resolveControlRadius = (
-  recipe: SizeRecipe,
-  stop: SizeRecipeRadiusStop = 'medium',
-): { radius: number; gap: number } => {
+export const resolveControlRadius = (recipe: SizeRecipe, stop: SizeRecipeRadiusStop = 'medium') => {
   if (stop === 'medium') {
     return { radius: recipe.gap, gap: recipe.gap };
   }
@@ -467,11 +479,7 @@ export const resolveControlRadius = (
   return { radius: px, gap: recipe.gap };
 };
 
-const generateTouchHeights = (
-  heights: Record<string, number>,
-  inputs: SizeRecipeInputs,
-  tokens: readonly string[],
-): Record<string, number> => {
+const generateTouchHeights = (heights: Record<string, number>, inputs: SizeRecipeInputs, tokens: readonly string[]) => {
   const { touchFloor, tokenSteps } = inputs;
   const mdDesktop = heights.$4 ?? inputs.baseHeight;
   const floored: Record<string, number> = {};
@@ -508,7 +516,8 @@ const channelsForToken = (
   if (!table) {
     return undefined;
   }
-  return table[token as SizeRecipeToken] ?? (token === '$true' ? table.$4 : undefined);
+  const rows: Partial<Record<string, SizeRecipeTokenChannels>> = table;
+  return rows[token] ?? (token === '$true' ? table.$4 : undefined);
 };
 
 export const generateSizeRecipeTables = (

@@ -25,14 +25,18 @@ export const animationConfig = {
 } as const;
 
 export type AnimationName = keyof typeof animationConfig;
+// SAFETY: keys of a const literal object are exactly its AnimationName members.
+// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- Object.keys is typed string[]; the keys of animationConfig are exactly AnimationName
 export const animationNames = Object.keys(animationConfig) as AnimationName[];
 export const animations = createAnimations(animationConfig);
 
 const parseDurationMs = (timing: string): number => {
-  const match = /(\d+)\s*ms/u.exec(timing);
-  return match ? Number.parseInt(match[1], 10) : 200;
+  const match = /\b(?<ms>\d+)\s?ms/u.exec(timing);
+  return match?.groups === undefined ? 200 : Math.trunc(Number(match.groups.ms));
 };
 
+// SAFETY: built from every key of animationConfig, so all AnimationName keys are present.
+// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- Object.fromEntries yields an index-signature type; the entries cover every AnimationName
 export const animationDurations: Record<AnimationName, number> = Object.fromEntries(
   Object.entries(animationConfig).map(([k, v]) => [k, parseDurationMs(v)]),
 ) as Record<AnimationName, number>;

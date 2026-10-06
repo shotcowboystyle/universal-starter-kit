@@ -22,7 +22,7 @@ const pickFocusRingColorFromSteps = (step: (n: number) => string | undefined): s
   const fallback = step(11) ?? step(12) ?? step(9) ?? 'transparent';
   const bg1 = normalizeToHex(step(1) ?? '');
   const bg2 = normalizeToHex(step(2) ?? '');
-  if (!bg1 || !bg2) {
+  if (bg1 === null || bg2 === null) {
     return fallback;
   }
   const l1 = relativeLuminance(bg1);
@@ -34,8 +34,8 @@ const pickFocusRingColorFromSteps = (step: (n: number) => string | undefined): s
   let bestMin = 0;
   for (const key of candidates) {
     const raw = step(key);
-    const hex = raw ? normalizeToHex(raw) : null;
-    if (!raw || !hex) {
+    const hex = raw === undefined ? null : normalizeToHex(raw);
+    if (raw === undefined || hex === null) {
       continue;
     }
     const l = relativeLuminance(hex);
@@ -107,25 +107,25 @@ const solidIntentParents = new Set(['error', 'warning', 'success']);
 const clampBgForReadableText = (bgRaw: string, fgRaw: string): string => {
   const fgHex = normalizeToHex(fgRaw);
   let bgHex = normalizeToHex(bgRaw);
-  if (!fgHex || !bgHex) {
+  if (fgHex === null || bgHex === null) {
     return bgRaw;
   }
   const fgLum = relativeLuminance(fgHex);
-  const hslMatch = /hsla?\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%/u.exec(bgRaw);
-  if (!hslMatch) {
+  const hslMatch = /hsla?\(\s*(?<h>[\d.]+)\s*,\s*(?<s>[\d.]+)%\s*,\s*(?<l>[\d.]+)%/u.exec(bgRaw);
+  if (hslMatch?.groups === undefined) {
     return bgRaw;
   }
-  const h = Number(hslMatch[1]);
-  const s = Number(hslMatch[2]);
-  let l = Number(hslMatch[3]);
+  const h = Number(hslMatch.groups.h);
+  const s = Number(hslMatch.groups.s);
+  let l = Number(hslMatch.groups.l);
   const dir = fgLum > relativeLuminance(bgHex) ? -1 : 1;
-  for (let i = 0; i < 24; i++) {
+  for (let i = 0; i < 24; i += 1) {
     if (contrastRatio(fgLum, relativeLuminance(bgHex)) >= 4.5) {
       break;
     }
     l = Math.min(100, Math.max(0, l + dir * 1.5));
     const next = normalizeToHex(`hsl(${h}, ${s}%, ${l}%)`);
-    if (!next) {
+    if (next === null) {
       return bgRaw;
     }
     bgHex = next;
@@ -134,7 +134,7 @@ const clampBgForReadableText = (bgRaw: string, fgRaw: string): string => {
 };
 
 export const defaultBuilderOptions: CreateThemesBuilderOptions = {
-  getTheme: ({ name, theme, palette }: GetThemeProps): Record<string, string> => {
+  getTheme: ({ name, theme, palette }: GetThemeProps) => {
     // Component sub-themes (t_Card, t_ListItem, t_Button, ...) are narrow
     // templates -- background/color steps only, NO colorN/border tokens. An
     // element inside one that sets borderColor="$borderColor" resolves
@@ -162,8 +162,9 @@ export const defaultBuilderOptions: CreateThemesBuilderOptions = {
       // inherited text all pair correctly. Every interaction fill is then
       // darkened/lightened until it holds that foreground at the 4.5 AA floor.
       const parts = name.split('_');
-      if (parts[parts.length - 1] === 'Button' && solidIntentParents.has(parts[parts.length - 2])) {
-        const scheme = parts[0];
+      const intentParent = parts.at(-2);
+      if (parts.at(-1) === 'Button' && intentParent !== undefined && solidIntentParents.has(intentParent)) {
+        const [scheme] = parts;
         // Luminance-computed on-fill foreground (Axiom 15): the hue's step-1
         // (pale) or step-12 (deep) anchor, whichever reads better on the fill.
         const fg = pickReadableForeground(step(10), step(0), step(11));

@@ -90,12 +90,15 @@ export interface CreateDefaultThemeConfigOptions {
 const composeGetTheme = (
   custom: CreateThemesBuilderOptions['getTheme'],
 ): NonNullable<CreateThemesBuilderOptions['getTheme']> => {
-  const base = defaultBuilderOptions.getTheme as NonNullable<CreateThemesBuilderOptions['getTheme']>;
+  const base = defaultBuilderOptions.getTheme;
+  if (base === undefined) {
+    throw new Error('defaultBuilderOptions.getTheme must be defined');
+  }
   if (!custom) {
     return base;
   }
   return (props: GetThemeProps) => {
-    const merged: Record<string, string | number | null | undefined> = { ...base(props) };
+    const merged = { ...base(props) };
     const consumer = custom(props);
     // Dropping nullish is not enough: a misspelled
     // colour is not nullish, survives the merge, and resolves to nothing at
@@ -131,7 +134,7 @@ export const createDefaultThemeConfig = (options: CreateDefaultThemeConfigOption
     ...options.builderOptions,
     getTheme: composeGetTheme(options.builderOptions?.getTheme),
   });
-  const builtThemes: Record<string, Record<string, string>> = {
+  const builtThemes = {
     ...themesBuilder.themes(),
   };
   if (options.additionalThemes) {
@@ -159,6 +162,8 @@ export const createDefaultThemeConfig = (options: CreateDefaultThemeConfigOption
       shouldAddPrefersColorThemes: true,
       themeClassNameOnRoot: true,
       themes,
+      // `defaultConfig` sets a top-level allowedStyleValues; clear it so only `settings.allowedStyleValues` applies.
+      // oxlint-disable-next-line sonarjs/no-undefined-assignment -- the key must exist to override the spread default
       allowedStyleValues: undefined,
       // Tokens come from `defaultConfig` above, and from nothing else — see
       // the `tamaguiEra` note. There is no second token source to disagree

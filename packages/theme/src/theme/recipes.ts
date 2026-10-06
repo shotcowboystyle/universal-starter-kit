@@ -5,6 +5,9 @@ import type { HitSlopInsets } from './layout-tokens';
 
 // ── State knob prop types (by concern) ───────────────────────────────────
 
+/** Elevation size token (web) or numeric tokens.size value (native), or none. */
+export type ElevationToken = string | number | undefined;
+
 export interface ControlStateProps {
   borderRadius?: string;
   borderWidth?: number;
@@ -174,13 +177,13 @@ export interface KnobProps {
    */
   containerRadius: { borderRadius: string | number } & CornerSmoothingCarrier;
   /** Size token on web ("$1"); numeric tokens.size value on native (RN-safe). */
-  elevation: string | number | undefined;
+  elevation: ElevationToken;
   /**
    * Overlay elevation token (dialogs, popovers, Panel). Distinct from
    * `elevation` so an overlay over a scrim is not the same $1 stop every
    * Button carries. Spread via `elevatedSurface`; do not reuse `elevation`.
    */
-  overlayElevation: string | number | undefined;
+  overlayElevation: ElevationToken;
   /**
    * Complete shadow fragment for E-CONTROL / wrapper Views. Spread whole.
    * Empty when `elevation=none`. Android `elevation` here is dp (2/4/8).
@@ -201,7 +204,7 @@ export interface KnobProps {
     borderColor: string;
     borderWidth: number;
     borderRadius: string;
-    elevation: string | number | undefined;
+    elevation: ElevationToken;
   } & ElevationPaintProps &
     CornerSmoothingCarrier;
   /** Feature/marketing tier (auth, hero cards): big radius + ultra-soft wide shadow. */

@@ -17,8 +17,10 @@ import type { DateInput } from './dates';
 
 // Pin locale so assertions don't depend on the host machine.
 const enUS = { locale: 'en-US' } as const;
-// Reference "today" for current-year elision.
-const now = new Date(2026, 7, 12); // Aug 12, 2026
+// Reference "today" for current-year elision: Aug 12, 2026.
+const now = new Date(2026, 7, 12);
+
+const pad = (n: number) => String(n).padStart(2, '0');
 
 describe('formatAbsoluteDate (compact absolute register)', () => {
   it('elides the current year by default (display register)', () => {
@@ -130,7 +132,7 @@ describe('formatTimeOfDay (time-of-day register)', () => {
     expect(formatTimeOfDay(new Date(2026, 7, 12, 14, 0), { ...enUS, minutes: false })).toBe('2 PM');
   });
 
-  it('accepts a clock-time string — the wire shape Frappe Time fields send', () => {
+  it('accepts a clock-time string — the wire format Frappe Time fields send', () => {
     expect(formatTimeOfDay('14:30', enUS)).toBe('2:30 PM');
     expect(formatTimeOfDay('14:30:00', enUS)).toBe('2:30 PM');
   });
@@ -196,7 +198,6 @@ const readLocal = (timeZone: string, value: DateInput) =>
     if (!date) {
       return null;
     }
-    const pad = (n: number) => String(n).padStart(2, '0');
     return {
       day: `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`,
       clock: `${pad(date.getHours())}:${pad(date.getMinutes())}`,
@@ -238,7 +239,8 @@ describe('parseCalendarDate (day-grid parse)', () => {
     expect(readLocal('UTC', '2026-03-10T00:00:00Z')).toStrictEqual({ day: '2026-03-10', clock: '00:00' });
     expect(readLocal('America/Los_Angeles', '2026-03-10T00:00:00Z')).toStrictEqual({
       day: '2026-03-09',
-      clock: '17:00', // PDT — March 10 is past the 2026 DST switch
+      // PDT — March 10 is past the 2026 DST switch
+      clock: '17:00',
     });
   });
 
@@ -250,6 +252,7 @@ describe('parseCalendarDate (day-grid parse)', () => {
 
   it('returns null for empty, unparseable and out-of-range input', () => {
     expect(parseCalendarDate(null)).toBeNull();
+    // oxlint-disable-next-line unicorn/no-useless-undefined -- the parameter is required, so an explicit undefined is the case under test
     expect(parseCalendarDate(undefined)).toBeNull();
     expect(parseCalendarDate('')).toBeNull();
     expect(parseCalendarDate('not-a-date')).toBeNull();
@@ -280,8 +283,23 @@ describe('parseCalendarDate (day-grid parse)', () => {
 const INSTANT_A = '2026-08-15T05:00:00Z';
 const INSTANT_B = '2026-08-14T11:00:00Z';
 
+const isoDay = (date: Date) => date.toISOString().slice(0, 10);
+const isoDatetime = (date: Date) => date.toISOString().slice(0, 16).replace('T', ' ');
+
+// Built AND read inside the zone: a Date is an instant, so constructing it
+// on the host clock and reading it at UTC+14 would name a different day.
+const at = (make: () => DateInput, format?: Parameters<typeof formatCalendarDate>[1]) =>
+  inZone('Pacific/Kiritimati', () => formatCalendarDate(make(), format));
+const picked = () => new Date(2026, 7, 15, 14, 30, 5);
+
 /** UTC day, local day, and the local wall clock the value carries per zone. */
-const LOCAL_READINGS: Record<string, Record<string, { day: string; clock: string }>> = {
+interface LocalReading {
+  day: string;
+  clock: string;
+}
+type LocalReadings = Record<string, Record<string, LocalReading>>;
+
+const LOCAL_READINGS = {
   [INSTANT_A]: {
     UTC: { day: '2026-08-15', clock: '05:00:00' },
     'America/Los_Angeles': { day: '2026-08-14', clock: '22:00:00' },
@@ -294,7 +312,7 @@ const LOCAL_READINGS: Record<string, Record<string, { day: string; clock: string
     'America/New_York': { day: '2026-08-14', clock: '07:00:00' },
     'Pacific/Kiritimati': { day: '2026-08-15', clock: '01:00:00' },
   },
-};
+} satisfies LocalReadings;
 
 describe('formatCalendarDate (local-parts wire serializer)', () => {
   it('names the local calendar day at both instants in every timezone', () => {
@@ -320,7 +338,6 @@ describe('formatCalendarDate (local-parts wire serializer)', () => {
     // wrong where the fix is right, and it agrees in the other six rows — so
     // the matrix above is not passing vacuously on instants where every zone
     // happens to land on the same day.
-    const isoDay = (date: Date) => date.toISOString().slice(0, 10);
     const disagreements = [INSTANT_A, INSTANT_B]
       .flatMap((instant) =>
         ZONES.map((timeZone) =>
@@ -374,7 +391,6 @@ describe('formatCalendarDate (local-parts wire serializer)', () => {
   it('negative control: toISOString() shifts a datetime by the whole offset', () => {
     // The other deleted branch: `.slice(0, 16).replace("T", " ")`. Reading it
     // back as local wall clock walks the instant forward on every save.
-    const isoDatetime = (date: Date) => date.toISOString().slice(0, 16).replace('T', ' ');
     expect(inZone('America/Los_Angeles', () => isoDatetime(new Date(INSTANT_A)))).toBe('2026-08-15 05:00');
     expect(inZone('America/Los_Angeles', () => formatCalendarDate(new Date(INSTANT_A), 'datetime'))).toBe(
       '2026-08-14 22:00:00',
@@ -384,22 +400,17 @@ describe('formatCalendarDate (local-parts wire serializer)', () => {
   it('round-trips through parseCalendarDate in every timezone', () => {
     for (const timeZone of ZONES) {
       for (const wire of ['2026-08-15', '2026-08-15 14:30:00']) {
-        const shape = wire.includes(':') ? 'datetime' : 'date';
+        const format = wire.includes(':') ? 'datetime' : 'date';
         expect({
           timeZone,
           wire,
-          back: inZone(timeZone, () => formatCalendarDate(wire, shape)),
+          back: inZone(timeZone, () => formatCalendarDate(wire, format)),
         }).toStrictEqual({ timeZone, wire, back: wire });
       }
     }
   });
 
   it('serializes the input shapes the call sites hand it', () => {
-    // Built AND read inside the zone: a Date is an instant, so constructing it
-    // on the host clock and reading it at UTC+14 would name a different day.
-    const at = (make: () => DateInput, shape?: 'date' | 'datetime' | 'time') =>
-      inZone('Pacific/Kiritimati', () => formatCalendarDate(make(), shape));
-    const picked = () => new Date(2026, 7, 15, 14, 30, 5);
     // A Date — what every replaced copy took.
     expect(at(picked)).toBe('2026-08-15');
     expect(at(picked, 'datetime')).toBe('2026-08-15 14:30:05');
@@ -409,6 +420,7 @@ describe('formatCalendarDate (local-parts wire serializer)', () => {
     expect(at(() => '2026-08-15 14:30:05', 'datetime')).toBe('2026-08-15 14:30:05');
     // Empty and unparseable are "", the honest passthrough the formatters use.
     expect(at(() => null)).toBe('');
+    // oxlint-disable-next-line unicorn/no-useless-undefined -- the call site hands back undefined; that is the case under test
     expect(at(() => undefined)).toBe('');
     expect(at(() => '')).toBe('');
     expect(at(() => 'not-a-date')).toBe('');
@@ -428,32 +440,29 @@ describe('formatCalendarDate (local-parts wire serializer)', () => {
  */
 const COPIES = {
   // public/frappe-ui/src/fields/Date/wire.ts — toFrappeDateValue
-  'frappe-ui wire.ts': (date: Date, shape: string) => {
-    const pad2 = (n: number) => String(n).padStart(2, '0');
-    const datePart = `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
-    const timePart = `${pad2(date.getHours())}:${pad2(date.getMinutes())}:${pad2(date.getSeconds())}`;
-    if (shape === 'time') {
+  'frappe-ui wire.ts': (date: Date, format: string) => {
+    const datePart = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+    const timePart = `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+    if (format === 'time') {
       return timePart;
     }
-    if (shape === 'datetime') {
+    if (format === 'datetime') {
       return `${datePart} ${timePart}`;
     }
     return datePart;
   },
   // public/frappe-ui/src/FrappeCalendar.tsx — toFrappeFieldValue
-  'frappe-ui FrappeCalendar.tsx': (next: Date, shape: string) => {
-    const pad = (n: number) => String(n).padStart(2, '0');
+  'frappe-ui FrappeCalendar.tsx': (next: Date, format: string) => {
     const datePart = `${next.getFullYear()}-${pad(next.getMonth() + 1)}-${pad(next.getDate())}`;
-    if (shape === 'datetime') {
+    if (format === 'datetime') {
       return `${datePart} ${pad(next.getHours())}:${pad(next.getMinutes())}:${pad(next.getSeconds())}`;
     }
     return datePart;
   },
   // public/frappe-ui/src/FrappeGantt.tsx — toFrappeFieldValue (identical body)
-  'frappe-ui FrappeGantt.tsx': (next: Date, shape: string) => {
-    const pad = (n: number) => String(n).padStart(2, '0');
+  'frappe-ui FrappeGantt.tsx': (next: Date, format: string) => {
     const datePart = `${next.getFullYear()}-${pad(next.getMonth() + 1)}-${pad(next.getDate())}`;
-    if (shape === 'datetime') {
+    if (format === 'datetime') {
       return `${datePart} ${pad(next.getHours())}:${pad(next.getMinutes())}:${pad(next.getSeconds())}`;
     }
     return datePart;
@@ -466,36 +475,33 @@ const COPIES = {
     return `${y}-${m}-${d}`;
   },
   // admin app CalendarView.tsx — toFrappeDateValue
-  'backoffice CalendarView.tsx': (date: Date, shape: string) => {
-    const pad = (n: number) => String(n).padStart(2, '0');
+  'backoffice CalendarView.tsx': (date: Date, format: string) => {
     const datePart = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-    if (shape !== 'datetime') {
+    if (format !== 'datetime') {
       return datePart;
     }
     return `${datePart} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
   },
   // admin app dashboard-data.tsx — isoDate
-  'backoffice dashboard-data.tsx': (date: Date) => {
-    const pad = (n: number) => String(n).padStart(2, '0');
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-  },
+  'backoffice dashboard-data.tsx': (date: Date) =>
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`,
   // admin app formLayout.ts — todayISO / nowTime
-  'backoffice formLayout.ts': (now: Date, shape: string) => {
-    if (shape === 'time') {
-      const hours = String(now.getHours()).padStart(2, '0');
-      const minutes = String(now.getMinutes()).padStart(2, '0');
-      const seconds = String(now.getSeconds()).padStart(2, '0');
+  'backoffice formLayout.ts': (moment: Date, format: string) => {
+    if (format === 'time') {
+      const hours = String(moment.getHours()).padStart(2, '0');
+      const minutes = String(moment.getMinutes()).padStart(2, '0');
+      const seconds = String(moment.getSeconds()).padStart(2, '0');
       return `${hours}:${minutes}:${seconds}`;
     }
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    return `${now.getFullYear()}-${month}-${day}`;
+    const month = String(moment.getMonth() + 1).padStart(2, '0');
+    const day = String(moment.getDate()).padStart(2, '0');
+    return `${moment.getFullYear()}-${month}-${day}`;
   },
   // admin app quickEntryPlan.ts — todayISO
-  'backoffice quickEntryPlan.ts': (now: Date) => {
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    return `${now.getFullYear()}-${month}-${day}`;
+  'backoffice quickEntryPlan.ts': (moment: Date) => {
+    const month = String(moment.getMonth() + 1).padStart(2, '0');
+    const day = String(moment.getDate()).padStart(2, '0');
+    return `${moment.getFullYear()}-${month}-${day}`;
   },
   // public/components/src/views/Calendar.tsx — formatDateKey
   'components Calendar.tsx': (date: Date) => {
@@ -504,10 +510,10 @@ const COPIES = {
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   },
-} satisfies Record<string, (date: Date, shape: string) => string>;
+} satisfies Record<string, (date: Date, format: string) => string>;
 
 /** Which shapes each copy could emit — nothing is claimed beyond that. */
-const COPY_SHAPES: Record<keyof typeof COPIES, readonly ('date' | 'datetime' | 'time')[]> = {
+const COPY_FORMATS: Record<keyof typeof COPIES, readonly ('date' | 'datetime' | 'time')[]> = {
   'frappe-ui wire.ts': ['date', 'datetime', 'time'],
   'frappe-ui FrappeCalendar.tsx': ['date', 'datetime'],
   'frappe-ui FrappeGantt.tsx': ['date', 'datetime'],
@@ -536,32 +542,29 @@ describe('formatCalendarDate is byte-identical to the copies it replaced', () =>
     })(),
   ];
 
-  for (const [name, copy] of Object.entries(COPIES)) {
-    it(name, () => {
-      const disagreements: unknown[] = [];
-      for (const timeZone of ZONES) {
-        for (const sample of SAMPLES) {
-          for (const shape of COPY_SHAPES[name as keyof typeof COPIES]) {
-            inZone(timeZone, () => {
-              const was = copy(sample, shape);
-              const now = formatCalendarDate(sample, shape);
-              if (was !== now) {
-                disagreements.push({ timeZone, shape, was, now });
-              }
-            });
-          }
+  it.each(Object.entries(COPIES))('%s', (name, copy) => {
+    const disagreements: unknown[] = [];
+    for (const timeZone of ZONES) {
+      for (const sample of SAMPLES) {
+        for (const format of COPY_FORMATS[name as keyof typeof COPIES]) {
+          inZone(timeZone, () => {
+            const was = copy(sample, format);
+            const current = formatCalendarDate(sample, format);
+            if (was !== current) {
+              disagreements.push({ timeZone, format, was, now: current });
+            }
+          });
         }
       }
-      expect(disagreements).toStrictEqual([]);
-    });
-  }
+    }
+    expect(disagreements).toStrictEqual([]);
+  });
 
   it('the samples are discriminating — a UTC rendering would fail this', () => {
     // Guards the loop above: if every sample landed on the same day in every
     // zone, "byte-identical" would be true of a broken helper too.
-    const utcRendering = (date: Date) => date.toISOString().slice(0, 10);
     const disagreements = ZONES.flatMap((timeZone) =>
-      SAMPLES.filter((sample) => inZone(timeZone, () => formatCalendarDate(sample)) !== utcRendering(sample)),
+      SAMPLES.filter((sample) => inZone(timeZone, () => formatCalendarDate(sample)) !== isoDay(sample)),
     );
     expect(disagreements.length).toBeGreaterThan(0);
   });

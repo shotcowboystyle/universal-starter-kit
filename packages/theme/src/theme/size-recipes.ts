@@ -29,6 +29,22 @@
  * `knobProps.control` after `size`.
  */
 
+import {
+  SIZE_RECIPE_TOKENS,
+  cloneSizeRecipeInputs,
+  defaultRecipeInputs,
+  generateSizeRecipes,
+  sizeRecipeFromHeight as recipeFromHeight,
+} from './recipe-inputs';
+import type {
+  GeneratedSizeRecipes,
+  SizeRecipe,
+  SizeRecipeFamily,
+  SizeRecipeFamilyName,
+  SizeRecipeInputs,
+  SizeRecipeToken,
+} from './recipe-inputs';
+
 export {
   DEFAULT_SIZE_RECIPE_INPUTS,
   SIZE_RECIPE_RADIUS_STOPS,
@@ -54,7 +70,9 @@ export {
 export type {
   GeneratedSizeRecipes,
   RecipeFamilies,
+  // oxlint-disable-next-line typescript/no-deprecated -- re-exported for back-compat consumers
   RecipeFamilyName,
+  // oxlint-disable-next-line typescript/no-deprecated -- re-exported for back-compat consumers
   RecipeInputs,
   SizeRecipe,
   SizeRecipeBoxVariant,
@@ -71,25 +89,10 @@ export type {
   SizeRecipeTypeVariant,
 } from './recipe-inputs';
 
-import {
-  cloneSizeRecipeInputs,
-  defaultRecipeInputs,
-  generateSizeRecipes,
-  sizeRecipeFromHeight as recipeFromHeight,
-} from './recipe-inputs';
-import type {
-  GeneratedSizeRecipes,
-  RecipeFamilyName,
-  RecipeInputs,
-  SizeRecipe,
-  SizeRecipeFamily,
-  SizeRecipeToken,
-} from './recipe-inputs';
-
-const replaceRecord = (target: Record<string, unknown>, source: Record<string, unknown>): void => {
+const replaceRecord = <T extends object>(target: T, source: T): void => {
   for (const key of Object.keys(target)) {
     if (!Object.hasOwn(source, key)) {
-      delete target[key];
+      Reflect.deleteProperty(target, key);
     }
   }
   Object.assign(target, source);
@@ -143,7 +146,7 @@ export const getTileSizeLadder = (): typeof tileSizeLadder => tileSizeLadder;
 const adoptGenerated = (next: GeneratedSizeRecipes): GeneratedSizeRecipes => {
   adoptFamily(recipeFamilies.control, next.families.control);
   adoptFamily(recipeFamilies.controlCompact, next.families.controlCompact);
-  replaceRecord(tileSizeLadder as unknown as Record<string, unknown>, next.tiles as unknown as Record<string, unknown>);
+  replaceRecord(tileSizeLadder, next.tiles);
   current = {
     ...next,
     tiles: tileSizeLadder,
@@ -161,23 +164,24 @@ const adoptGenerated = (next: GeneratedSizeRecipes): GeneratedSizeRecipes => {
 };
 
 /** Merge `partial` over defaultRecipeInputs (not the previous override) and rewrite live tables. */
-export const setSizeRecipeInputs = (partial: Partial<RecipeInputs> = {}): GeneratedSizeRecipes =>
+export const setSizeRecipeInputs = (partial: Partial<SizeRecipeInputs> = {}): GeneratedSizeRecipes =>
   adoptGenerated(generateSizeRecipes(partial));
 
-export const getSizeRecipeInputs = (): RecipeInputs => cloneSizeRecipeInputs(current.inputs);
+export const getSizeRecipeInputs = (): SizeRecipeInputs => cloneSizeRecipeInputs(current.inputs);
 
 export const getGeneratedSizeRecipes = (): GeneratedSizeRecipes => current;
 
-export const getSizeRecipeFamily = (name: RecipeFamilyName = 'control'): SizeRecipeFamily =>
+export const getSizeRecipeFamily = (name: SizeRecipeFamilyName = 'control'): SizeRecipeFamily =>
   recipeFamilies[name] ?? recipeFamilies.control;
 
 export const sizeRecipeFromHeight = (
   height: number,
-  ratios: RecipeInputs['ratios'] = current.inputs.ratios,
+  ratios: SizeRecipeInputs['ratios'] = current.inputs.ratios,
 ): SizeRecipe => recipeFromHeight(height, ratios);
 
-const resolveFamily = (family?: RecipeFamilyName | SizeRecipeFamily): SizeRecipeFamily => {
-  if (family && typeof family === 'object') {
+const resolveFamily = (family?: SizeRecipeFamilyName | SizeRecipeFamily): SizeRecipeFamily => {
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- public API accepts either a family name or a family object
+  if (family !== undefined && typeof family === 'object') {
     return family;
   }
   return recipeFamilies[family ?? 'control'] ?? recipeFamilies.control;
@@ -186,27 +190,30 @@ const resolveFamily = (family?: RecipeFamilyName | SizeRecipeFamily): SizeRecipe
 export const applyTouchFloor = (
   recipe: SizeRecipe,
   touch: boolean,
-  family?: RecipeFamilyName | SizeRecipeFamily,
+  family?: SizeRecipeFamilyName | SizeRecipeFamily,
 ): SizeRecipe => {
   if (!touch) {
     return recipe;
   }
   const tables = resolveFamily(family);
-  const token = (Object.keys(tables.heights) as SizeRecipeToken[]).find((key) => tables.heights[key] === recipe.height);
-  if (token && tables.recipesTouch[token]) {
+  const token = SIZE_RECIPE_TOKENS.find((key) => tables.heights[key] === recipe.height);
+  if (token !== undefined && Object.hasOwn(tables.recipesTouch, token)) {
     return tables.recipesTouch[token];
   }
   return recipeFromHeight(Math.max(recipe.height, tables.inputs.touchFloor), tables.ratios);
 };
 
+const hasKey = (table: Record<SizeRecipeToken, SizeRecipe>, key: string): key is SizeRecipeToken =>
+  Object.hasOwn(table, key);
+
 export const sizeRecipeForToken = (
   token: string,
-  options?: { touch?: boolean; family?: RecipeFamilyName | SizeRecipeFamily },
+  options?: { touch?: boolean; family?: SizeRecipeFamilyName | SizeRecipeFamily },
 ): SizeRecipe => {
   const tables = resolveFamily(options?.family);
-  const table = options?.touch ? tables.recipesTouch : tables.recipes;
-  if (Object.hasOwn(table, token)) {
-    return table[token as SizeRecipeToken];
+  const table = options?.touch === true ? tables.recipesTouch : tables.recipes;
+  if (hasKey(table, token)) {
+    return table[token];
   }
   return table.$4;
 };

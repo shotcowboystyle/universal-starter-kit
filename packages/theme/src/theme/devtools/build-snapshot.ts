@@ -27,6 +27,10 @@ const knobKeys = [
 const stateKnobKeys = ['elevation', 'borderWidth', 'borderRadius'] as const;
 const stateNames = ['hover', 'press', 'focus', 'focusVisible'] as const;
 
+const present = (value: string | undefined): value is string => value !== undefined && value !== '';
+
+const textOr = (value: string | undefined, fallback: string): string => (present(value) ? value : fallback);
+
 export interface SnapshotInput {
   knobValues: Record<string, string | undefined>;
   activePreset?: string;
@@ -50,17 +54,17 @@ export const buildSnapshot = (input: SnapshotInput): string => {
 
   // ── Configuration ──────────────────────────────────────────
   w('## Configuration');
-  w(`- **Preset**: ${activePreset || '(none / custom)'}`);
-  if (activeProfile) {
+  w(`- **Preset**: ${textOr(activePreset, '(none / custom)')}`);
+  if (present(activeProfile)) {
     w(`- **Profile**: ${activeProfile}`);
   }
-  if (schemeSetting) {
+  if (present(schemeSetting)) {
     w(`- **Scheme setting**: ${schemeSetting}`);
   }
-  if (schemeValue) {
+  if (present(schemeValue)) {
     w(`- **Resolved scheme**: ${schemeValue}`);
   }
-  w(`- **Theme color**: ${currentColor || '(none)'}`);
+  w(`- **Theme color**: ${textOr(currentColor, '(none)')}`);
   w('');
 
   // ── Knobs ──────────────────────────────────────────────────
@@ -68,12 +72,12 @@ export const buildSnapshot = (input: SnapshotInput): string => {
   w('| Knob | Value |');
   w('|------|-------|');
   for (const key of knobKeys) {
-    w(`| ${key} | ${knobValues[key] || '(default)'} |`);
+    w(`| ${key} | ${textOr(knobValues[key], '(default)')} |`);
   }
   for (const state of stateNames) {
     for (const key of stateKnobKeys) {
       const val = knobValues[`${state}.${key}`];
-      if (val) {
+      if (present(val)) {
         w(`| ${state}.${key} | ${val} |`);
       }
     }
@@ -101,7 +105,7 @@ export const buildSnapshot = (input: SnapshotInput): string => {
     if (colors.length > 0) {
       w('| Token | Hex |');
       w('|-------|-----|');
-      for (let i = 0; i < Math.min(12, colors.length); i++) {
+      for (let i = 0; i < Math.min(12, colors.length); i += 1) {
         w(`| $color${i + 1} | ${colors[i] || '(empty)'} |`);
       }
     } else {

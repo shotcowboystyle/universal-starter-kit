@@ -6,7 +6,7 @@ import type { FontSizeTokens, TransitionProp } from 'tamagui';
 import { cornerSmoothClassName } from './corner-smoothing';
 import { ensureFocusVisibleRing, STATE_LAYER_HOVER, STATE_LAYER_PRESS, withDefaultStateLayer } from './focus-state';
 import type { CornerSmoothing, Elevation, Knobs, PageTitleScale, StateKnobs } from './knobs';
-import { pressTargetHitSlop } from './layout-tokens';
+import { pressTargetHitSlop } from './press-target';
 import type {
   ControlStateProps,
   DisabledRecipe,
@@ -48,8 +48,9 @@ export const compactSpaceMap: Record<Knobs['space'], Knobs['space']> = {
  * - `compactOverride` wins over the density knob when provided:
  *   `true` forces compact space stepping; `false` forces comfortable (no step).
  */
+// oxlint-disable-next-line sonarjs/bool-param-default -- tri-state: undefined means follow the density knob, so a `false` default would change behavior
 export const applyDensity = (knobs: Knobs, compactOverride?: boolean): Knobs => {
-  const useCompact = compactOverride === undefined ? knobs.density === 'compact' : compactOverride;
+  const useCompact = compactOverride ?? knobs.density === 'compact';
   if (!useCompact) {
     return knobs.density === 'comfortable' ? knobs : { ...knobs, density: 'comfortable' };
   }
@@ -100,9 +101,9 @@ const borderWidthMap = {
 // Tamagui strips unknown keys from the `style` prop (skipProps) but merges
 // `className`. Native resolves to `round` for now (SquircleView adoption is
 // phase 2); GTK has no corner-shape equivalent and stays on the plain arc.
-const cornerSmoothingStyle: Record<CornerSmoothing, { className: string } | undefined> = isWeb
-  ? { round: undefined, smooth: { className: cornerSmoothClassName } }
-  : { round: undefined, smooth: undefined };
+const cornerSmoothingStyle: Partial<Record<CornerSmoothing, { className: string }>> = isWeb
+  ? { smooth: { className: cornerSmoothClassName } }
+  : {};
 
 const panelPaddingMap = {
   small: '$3',
@@ -146,7 +147,7 @@ const pageTitleSizeMap: Record<PageTitleScale, FontSizeTokens> = {
  * marketing hero) resolves through the same table as the knob — never a
  * second hardcoded step.
  */
-export const resolvePageTitleScale = (scale: PageTitleScale): { size: FontSizeTokens } => ({
+export const resolvePageTitleScale = (scale: PageTitleScale) => ({
   size: pageTitleSizeMap[scale],
 });
 
@@ -190,7 +191,10 @@ export const capContainerRadius = (borderRadius: Knobs['borderRadius'], space: K
  * can resolve its DG-RAD class at that stop. Undefined for any value the
  * knob did not produce.
  */
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- exported API: callers pass arbitrary spread style values and the result is a membership lookup
 export const radiusStopFromToken = (token: unknown): Knobs['borderRadius'] | undefined =>
+  // SAFETY: borderRadiusMap is a Record<Knobs['borderRadius'], ...>, so its keys are exactly the knob stops.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- Object.keys is typed string[]; the keys of borderRadiusMap are exactly the knob stops
   (Object.keys(borderRadiusMap) as Knobs['borderRadius'][]).find((stop) => borderRadiusMap[stop] === token);
 
 /**
@@ -222,6 +226,7 @@ export interface ContainerCapDeclaration {
  */
 export const containerCapProps = (
   container: CappedContainer,
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- exported API: callers pass arbitrary spread style values, resolved by radiusStopFromToken
   radiusToken: unknown,
   space: string,
 ): ContainerCapDeclaration | undefined => {
@@ -232,6 +237,8 @@ export const containerCapProps = (
   return {
     'data-constraint-container': container,
     'data-radius-knob': radiusKnob,
+    // SAFETY: Object.hasOwn(panelPaddingPxMap, space) above, and its keys are exactly the space stops.
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- narrowed by the Object.hasOwn check on panelPaddingPxMap, whose keys are the space stops
     'data-space-knob': space as Knobs['space'],
   };
 };
@@ -321,13 +328,16 @@ const fontWeightMap = {
 // a dialog over a scrim and a Button on the page never read as the same
 // distance off the surface. elevatedSurface binds
 // the overlay token — not the control one.
-export const elevationMap: Record<string, string | number | undefined> = isWeb
-  ? { none: undefined, small: undefined, medium: '$2', large: '$4' }
-  : { none: undefined, small: undefined, medium: 28, large: 44 };
+type ElevationValue = string | number | undefined;
 
-export const overlayElevationMap: Record<string, string | number | undefined> = isWeb
-  ? { none: undefined, small: '$2', medium: '$3', large: '$5' }
-  : { none: undefined, small: 28, medium: 36, large: 52 };
+// `none` / `small` (control map) carry no entry: indexing yields undefined.
+export const elevationMap: Record<string, ElevationValue> = isWeb
+  ? { medium: '$2', large: '$4' }
+  : { medium: 28, large: 44 };
+
+export const overlayElevationMap: Record<string, ElevationValue> = isWeb
+  ? { small: '$2', medium: '$3', large: '$5' }
+  : { small: 28, medium: 36, large: 52 };
 
 /** Scheme the resolver was invoked with. Defaults light so unit tests stay stable. */
 export type ColorScheme = 'light' | 'dark';
@@ -363,18 +373,18 @@ const elevationShadowMetrics: Record<ElevationKey, { offsetY: number; radius: nu
   $5: { offsetY: 12, radius: 24, android: 12 },
 };
 
-const elevationKeyAlias: Record<string, ElevationKey> = {
-  $1: '$1',
-  $2: '$2',
-  $3: '$3',
-  $4: '$4',
-  $5: '$5',
-  '20': '$1',
-  '28': '$2',
-  '36': '$3',
-  '44': '$4',
-  '52': '$5',
-};
+const elevationKeyAlias = new Map<string, ElevationKey>([
+  ['$1', '$1'],
+  ['$2', '$2'],
+  ['$3', '$3'],
+  ['$4', '$4'],
+  ['$5', '$5'],
+  ['20', '$1'],
+  ['28', '$2'],
+  ['36', '$3'],
+  ['44', '$4'],
+  ['52', '$5'],
+]);
 
 const webShadowLight: Record<ElevationKey, string> = {
   $1: '0 1px 2px rgba(0,0,0,0.12), 0 0 1px rgba(0,0,0,0.08)',
@@ -409,14 +419,14 @@ const shadowOpacityDark: Record<ElevationKey, number> = {
   $5: 0.12,
 };
 
-const elevationTokenKey = (token: string | number | undefined): ElevationKey | undefined => {
+const elevationTokenKey = (token: ElevationValue): ElevationKey | undefined => {
   if (token == null) {
     return undefined;
   }
-  return elevationKeyAlias[String(token)];
+  return elevationKeyAlias.get(String(token));
 };
 
-const elevationPaint = (token: string | number | undefined, scheme: ColorScheme): ElevationPaintProps => {
+const elevationPaint = (token: ElevationValue, scheme: ColorScheme): ElevationPaintProps => {
   const key = elevationTokenKey(token);
   if (!key) {
     return {};
@@ -435,7 +445,7 @@ const elevationPaint = (token: string | number | undefined, scheme: ColorScheme)
   return paint;
 };
 
-const elevationChromeFor = (token: string | number | undefined, scheme: ColorScheme): ElevationChromeProps => {
+const elevationChromeFor = (token: ElevationValue, scheme: ColorScheme): ElevationChromeProps => {
   const key = elevationTokenKey(token);
   if (!key) {
     return {};
@@ -449,7 +459,7 @@ const elevationChromeFor = (token: string | number | undefined, scheme: ColorSch
 // Legibility floor: body/label text must never land below ~4.5:1 against its
 // surface. $color11 is the lowest ramp step that clears AA on color1/2
 // surfaces, so "low" clamps there ($color9 measured 1.29-3.43:1 — SB-R-01).
-const textAccentColorMap: Record<string, string> = {
+const textAccentColorMap = {
   low: '$color11',
   medium: '$color11',
   high: '$color',
@@ -516,14 +526,7 @@ const resolveDisabled = (disabledStyle: Knobs['disabledStyle']): DisabledRecipe 
 
 // ── State style resolver ──────────────────────────────────────
 
-const resolveStateKnobs = (
-  state: StateKnobs,
-  scheme: ColorScheme,
-): {
-  control: ControlStateProps;
-  text: TextStateProps;
-  elevation: ElevationStateProps;
-} => {
+const resolveStateKnobs = (state: StateKnobs, scheme: ColorScheme) => {
   const control: ControlStateProps = {};
   const text: TextStateProps = {};
   const elevation: ElevationStateProps = {};
@@ -565,6 +568,26 @@ const resolveStateKnobs = (
 
 // ── Resolver ──────────────────────────────────────────────────
 
+const surfaceBackground = '$background';
+const surfaceBorder = '$borderColor';
+
+const nonEmpty = <T extends object>(obj: T): T | undefined => (Object.keys(obj).length > 0 ? obj : undefined);
+
+const resolveSmoothing = (knobs: Knobs) => {
+  const smoothing = cornerSmoothingStyle[knobs.cornerSmoothing ?? 'round'];
+  return {
+    scaleSmoothing: knobs.borderRadius === 'none' || knobs.borderRadius === 'full' ? undefined : smoothing,
+    containerSmoothing: knobs.borderRadius === 'none' ? undefined : smoothing,
+  };
+};
+
+const resolveInputBackground = (outlined: boolean, dark: boolean, elevation: Knobs['elevation']) => {
+  if (outlined) {
+    return 'transparent';
+  }
+  return dark ? elevationTintInput[elevation] : surfaceBackground;
+};
+
 export const resolveKnobs = (
   knobs: Knobs,
   override?: KnobPropsOverride,
@@ -584,6 +607,7 @@ export const resolveKnobs = (
   const gapToken = gapMap[knobs.space];
   const fontWeightValue = fontWeightMap[knobs.fontWeight];
   const bodyFontValue = bodyFontMap[knobs.bodyFont] ?? '$body';
+  // SAFETY: a non-'none' animation knob is one of the animation driver's registered names, which TransitionProp accepts as a string.
   const transition = knobs.animation === 'none' ? undefined : (knobs.animation as TransitionProp);
 
   const containerRadiusValue = capContainerRadius(knobs.borderRadius, knobs.space);
@@ -598,9 +622,7 @@ export const resolveKnobs = (
   // cap = padding px, which superellipse corners under-fill, so the cap
   // remains a safe over-approximation) and smooth whenever a nonzero arc
   // exists. featureSurface smooths on the same rule: `none` has no arc.
-  const smoothing = cornerSmoothingStyle[knobs.cornerSmoothing ?? 'round'];
-  const scaleSmoothing = knobs.borderRadius === 'none' || knobs.borderRadius === 'full' ? undefined : smoothing;
-  const containerSmoothing = knobs.borderRadius === 'none' ? undefined : smoothing;
+  const { scaleSmoothing, containerSmoothing } = resolveSmoothing(knobs);
 
   const outlined = knobs.fillStyle === 'outlined';
   // OUTLINED-HAIRLINE: outlined implies a minimum border. none on an
@@ -615,20 +637,18 @@ export const resolveKnobs = (
   const dark = scheme === 'dark';
   // `$background` (not `$color1`) so surface1/2/3 sub-themes move
   // the fill. Dark + elevation still steps the filled rest fill up the ramp.
-  const overlayFill = dark && knobs.elevation !== 'none' ? elevationTintOverlay[knobs.elevation] : '$background';
+  const overlayFill = dark && knobs.elevation !== 'none' ? elevationTintOverlay[knobs.elevation] : surfaceBackground;
   const textAccentColor = textAccentColorMap[knobs.textAccent] ?? '$color';
   // One input surface (Axiom 5 ONE SOURCE): Timeline's composer,
   // RichEditor and form fields agree on what an input surface is.
   // `$background` not `$color2` so a surface sub-theme can move it.
   // Dark + elevation steps the filled rest fill up the existing ramp.
-  const inputBackground = outlined ? 'transparent' : dark ? elevationTintInput[knobs.elevation] : '$background';
+  const inputBackground = resolveInputBackground(outlined, dark, knobs.elevation);
 
   const hover = resolveStateKnobs(knobs.hover, scheme);
   const press = resolveStateKnobs(knobs.press, scheme);
   const focus = resolveStateKnobs(knobs.focus, scheme);
   const focusVisible = resolveStateKnobs(knobs.focusVisible, scheme);
-
-  const nonEmpty = <T extends object>(obj: T): T | undefined => (Object.keys(obj).length > 0 ? obj : undefined);
 
   // Hover/press always carry on-color state-layer fills.
   // Focus-visible ring is always present and non-removable.
@@ -656,7 +676,7 @@ export const resolveKnobs = (
   const knobProps: KnobProps = {
     borderRadius: {
       borderRadius: radiusToken,
-      borderColor: '$borderColor',
+      borderColor: surfaceBorder,
       borderWidth: borderWidthValue,
       ...scaleSmoothing,
     },
@@ -667,7 +687,7 @@ export const resolveKnobs = (
     borderRadiusOuter: nestedRadius,
     controlBorderFilled: { borderColor: 'transparent', borderWidth: borderWidthValue },
     controlBorderOutlined: {
-      borderColor: '$borderColor',
+      borderColor: surfaceBorder,
       borderWidth: Math.max(borderWidthValue, 1),
     },
     // Axiom 1 child-clip cap: padded containers (Card/Panel/DialogContent)
@@ -679,8 +699,8 @@ export const resolveKnobs = (
     elevationChrome,
     scheme,
     surface: {
-      backgroundColor: '$background',
-      borderColor: '$borderColor',
+      backgroundColor: surfaceBackground,
+      borderColor: surfaceBorder,
       borderWidth: borderWidthValue,
     },
     cardSurface: {
@@ -691,7 +711,7 @@ export const resolveKnobs = (
     },
     elevatedSurface: {
       backgroundColor: overlayFill,
-      borderColor: '$borderColor',
+      borderColor: surfaceBorder,
       borderWidth: borderWidthValue,
       borderRadius: radiusToken,
       elevation: overlayElevationToken,
@@ -699,7 +719,7 @@ export const resolveKnobs = (
       ...scaleSmoothing,
     },
     featureSurface: {
-      backgroundColor: '$background',
+      backgroundColor: surfaceBackground,
       borderRadius: featureRadiusMap[knobs.borderRadius],
       padding: featurePaddingMap[knobs.space],
       // Bento marketing/auth card shadow: ~0px 9px 12px rgba(0,0,0,0.02) —

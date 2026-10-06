@@ -12,6 +12,8 @@ import type { Root } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { useLayoutSizeClass } from './layout-tokens';
+
 const host = vi.hoisted(() => ({ web: true, nativeWidth: 390 }));
 
 vi.mock(import('tamagui'), async (importOriginal) => ({
@@ -21,8 +23,6 @@ vi.mock(import('tamagui'), async (importOriginal) => ({
   },
   useWindowDimensions: () => ({ width: host.nativeWidth, height: 800, scale: 2, fontScale: 1 }),
 }));
-
-import { useLayoutSizeClass } from './layout-tokens';
 
 const NavFixture = () => {
   const sizeClass = useLayoutSizeClass();
@@ -40,12 +40,13 @@ const NavFixture = () => {
   );
 };
 
-let root: Root | undefined;
-let container: HTMLDivElement | undefined;
+let root: Root | null = null;
+let container: HTMLDivElement | null = null;
 let errors: unknown[] = [];
 
 const serverRender = (): string => {
   const browserWindow = window;
+  // oxlint-disable-next-line unicorn/no-useless-undefined -- the server render needs `window` to be exactly undefined, not null
   vi.stubGlobal('window', undefined);
   try {
     return renderToString(<NavFixture />);
@@ -59,7 +60,7 @@ const hydrateAt = async (width: number) => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   const html = serverRender();
   container = document.createElement('div');
-  container.innerHTML = html;
+  container.insertAdjacentHTML('afterbegin', html);
   document.body.append(container);
   const serverNav = container.querySelector('nav');
   errors = [];
@@ -74,19 +75,19 @@ const hydrateAt = async (width: number) => {
 
 const hydrationErrors = () => errors.filter((error) => /hydration|hydrated|didn't match/iu.test(String(error)));
 
-afterEach(async () => {
-  if (root) {
-    await act(async () => root?.unmount());
-  }
-  root = undefined;
-  container?.remove();
-  container = undefined;
-  host.web = true;
-  vi.restoreAllMocks();
-  vi.unstubAllGlobals();
-});
-
 describe('useLayoutSizeClass through SSR hydration', () => {
+  afterEach(async () => {
+    if (root) {
+      await act(async () => root?.unmount());
+    }
+    root = null;
+    container?.remove();
+    container = null;
+    host.web = true;
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
   it("hydrates the server's medium markup at 390px, then adopts compact", async () => {
     const { html, serverNav } = await hydrateAt(390);
     expect(html).toContain('data-size-class="medium"');
@@ -94,7 +95,7 @@ describe('useLayoutSizeClass through SSR hydration', () => {
 
     expect(hydrationErrors()).toStrictEqual([]);
     expect(container!.querySelector('nav')).toBe(serverNav);
-    expect(serverNav!.getAttribute('data-size-class')).toBe('compact');
+    expect(serverNav!.dataset.sizeClass).toBe('compact');
     expect(serverNav!.querySelector('ul')).toBeNull();
     expect(serverNav!.querySelector('button')?.textContent).toBe('Menu');
   });
@@ -103,7 +104,7 @@ describe('useLayoutSizeClass through SSR hydration', () => {
     const { serverNav } = await hydrateAt(1280);
     expect(hydrationErrors()).toStrictEqual([]);
     expect(container!.querySelector('nav')).toBe(serverNav);
-    expect(serverNav!.getAttribute('data-size-class')).toBe('xl');
+    expect(serverNav!.dataset.sizeClass).toBe('xl');
     expect(serverNav!.querySelector('ul')).not.toBeNull();
   });
 

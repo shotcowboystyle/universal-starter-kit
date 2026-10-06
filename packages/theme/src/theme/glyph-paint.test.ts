@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { resolveGlyphPaint } from './glyph-paint';
 
-describe('resolveGlyphPaint', () => {
+describe(resolveGlyphPaint, () => {
   it('falls back to concrete ink when a requested theme token is absent', () => {
     expect(resolveGlyphPaint({ color: { val: '#111' } }, '$accentColor')).toBe('#111');
     expect(resolveGlyphPaint({ color12: { val: '#eee' } }, '$missing')).toBe('#eee');
@@ -19,7 +19,6 @@ describe('resolveGlyphPaint', () => {
 
   it('never returns undefined', () => {
     expect(resolveGlyphPaint({})).toBe('currentColor');
-    expect(resolveGlyphPaint({}, undefined)).toBe('currentColor');
     expect(resolveGlyphPaint({}, null)).toBe('currentColor');
     expect(resolveGlyphPaint({}, '')).toBe('currentColor');
     expect(resolveGlyphPaint({ color: {} })).toBe('currentColor');

@@ -85,7 +85,7 @@ describe('default size-table gap and explicit recipe transformation', () => {
   });
 });
 
-describe('resolveControlRadius', () => {
+describe(resolveControlRadius, () => {
   it('default medium follows the size table, not the 9px knob', () => {
     const two = resolveControlRadius(sizeRecipeForToken('$2'), 'medium');
     expect(two.radius).toBe(5);

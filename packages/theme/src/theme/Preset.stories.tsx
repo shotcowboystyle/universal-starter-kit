@@ -20,11 +20,11 @@ export default {
 const Probe = ({ label }: { label: string }) => {
   const { knobProps } = useResolvedKnobs();
   const attrs = {
-    'data-border-radius': String(knobProps.borderRadius.borderRadius),
+    'data-border-radius': knobProps.borderRadius.borderRadius,
     'data-border-width': String(knobProps.surface.borderWidth),
     'data-fill-style': knobProps.outlined ? 'outlined' : 'filled',
-    'data-space': String(knobProps.space),
-  } as Record<string, unknown>;
+    'data-space': knobProps.space,
+  };
   return (
     <YStack
       {...knobProps.surface}
@@ -40,7 +40,7 @@ const Probe = ({ label }: { label: string }) => {
       <SizableText
         color="$color11"
         fontSize="$2">
-        radius {String(knobProps.borderRadius.borderRadius)}, border {String(knobProps.surface.borderWidth)},{' '}
+        radius {knobProps.borderRadius.borderRadius}, border {String(knobProps.surface.borderWidth)},{' '}
         {knobProps.outlined ? 'outlined' : 'filled'}
       </SizableText>
     </YStack>

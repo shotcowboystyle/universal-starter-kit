@@ -33,28 +33,31 @@ export interface ThemeSubset {
 
 const SCHEMES = new Set(['light', 'dark']);
 
+const keepsTheme = (name: string, components: Set<string>, tints: Set<string>): boolean => {
+  const segments = name.split('_');
+  const last = segments.at(-1) ?? '';
+  if (/^[A-Z]/u.test(last)) {
+    segments.pop();
+    if (!components.has(last)) {
+      return false;
+    }
+  }
+  return !segments.some((segment) => !SCHEMES.has(segment) && !tints.has(segment));
+};
+
 /**
  * Keep a theme when its component suffix (if any) is in `components` and
  * every other non-scheme segment of its name is in `tints`. Names are
  * `[light|dark_]<tint>*[_Component]`, so `light` and `dark` always survive.
  */
-export const subsetThemes = <T>(themes: Record<string, T>, subset: ThemeSubset): Record<string, T> => {
+export const subsetThemes = <T>(themes: Record<string, T>, subset: ThemeSubset) => {
   const components = new Set(subset.components);
   const tints = new Set(subset.tints);
   const kept: Record<string, T> = {};
   for (const [name, theme] of Object.entries(themes)) {
-    const segments = name.split('_');
-    const last = segments[segments.length - 1] ?? '';
-    if (/^[A-Z]/u.test(last)) {
-      segments.pop();
-      if (!components.has(last)) {
-        continue;
-      }
+    if (keepsTheme(name, components, tints)) {
+      kept[name] = theme;
     }
-    if (segments.some((segment) => !SCHEMES.has(segment) && !tints.has(segment))) {
-      continue;
-    }
-    kept[name] = theme;
   }
   return kept;
 };

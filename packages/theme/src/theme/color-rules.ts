@@ -36,16 +36,19 @@ export const normalizeToHex = (raw: string): string | null => {
     }
     return s;
   }
-  const hslMatch = /hsla?\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%\s*(?:,\s*([\d.]+)\s*)?\)/u.exec(s);
-  if (hslMatch) {
+  const hslMatch = /hsla?\(\s*(?<h>[\d.]+)\s*,\s*(?<s>[\d.]+)%\s*,\s*(?<l>[\d.]+)%\s*(?:,\s*(?<a>[\d.]+)\s*)?\)/u.exec(
+    s,
+  );
+  if (hslMatch?.groups !== undefined) {
+    const { h: hRaw, s: satRaw, l: lRaw, a: alphaRaw } = hslMatch.groups;
     // Treat only fully-opaque hsla as a plain color; alpha blends depend on
     // the backdrop and cannot be reduced to a single hex.
-    if (hslMatch[4] !== undefined && Number(hslMatch[4]) < 0.999) {
+    if (alphaRaw !== undefined && Number(alphaRaw) < 0.999) {
       return null;
     }
-    const h = Number(hslMatch[1]);
-    const sat = Number(hslMatch[2]) / 100;
-    const l = Number(hslMatch[3]) / 100;
+    const h = Number(hRaw);
+    const sat = Number(satRaw) / 100;
+    const l = Number(lRaw) / 100;
     const a = sat * Math.min(l, 1 - l);
     const f = (n: number) => {
       const k = (n + h / 30) % 12;
@@ -120,11 +123,11 @@ export const measureContrast = (pair: ContrastPair): ContrastReport => {
   const floor = pair.floor ?? aaTextContrastRatio;
   const label = pair.label ?? `${pair.foreground} on ${pair.background}`;
   const foreground = normalizeToHex(pair.foreground);
-  if (!foreground) {
+  if (foreground === null) {
     throw new Error(`${label}: foreground is not an opaque color: ${pair.foreground}`);
   }
   const background = normalizeToHex(pair.background);
-  if (!background) {
+  if (background === null) {
     throw new Error(`${label}: background is not an opaque color: ${pair.background}`);
   }
   const ratio = contrastRatio(relativeLuminance(foreground), relativeLuminance(background));
@@ -208,7 +211,7 @@ export const pickReadableForeground = (fill: string, candidateA: string, candida
   const fillHex = normalizeToHex(fill);
   const aHex = normalizeToHex(candidateA);
   const bHex = normalizeToHex(candidateB);
-  if (!fillHex || !aHex || !bHex) {
+  if (fillHex === null || aHex === null || bHex === null) {
     return candidateA;
   }
   const fillLum = relativeLuminance(fillHex);
@@ -228,7 +231,7 @@ export const pickReadableForeground = (fill: string, candidateA: string, candida
 export const holdInkFloor = (fill: string, ink: string, floor = aaTextContrastRatio): string => {
   const fillHex = normalizeToHex(fill);
   const inkHex = normalizeToHex(ink);
-  if (!fillHex || !inkHex) {
+  if (fillHex === null || inkHex === null) {
     return ink;
   }
   const fillLum = relativeLuminance(fillHex);
@@ -306,6 +309,7 @@ export const inputColors: ComponentColorConfig = {
   border: { base: 7, hover: 6, active: 8 },
 };
 
+// oxlint-disable-next-line sonarjs/function-name -- exported public token helper; `$color` mirrors Tamagui's `$color1` token prefix and consumers import it by this name
 export const $color = (step: ColorStep) => `$color${step}` as const;
 
 // ── Semantic groups ───────────────────────────────────────────
@@ -334,7 +338,7 @@ export const normalizeColorScale = (raw: string[]): string[] | null => {
   const out: string[] = [];
   for (const c of raw) {
     const hex = normalizeToHex(c);
-    if (!hex) {
+    if (hex === null) {
       return null;
     }
     out.push(hex);

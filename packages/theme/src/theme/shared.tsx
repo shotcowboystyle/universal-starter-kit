@@ -5,7 +5,7 @@ import type { CreateTamaguiProps } from 'tamagui';
 import type { Knobs } from './knobs';
 import { defaultKnobs } from './knobs';
 import type { Preset } from './preset.types';
-import type { RecipeFamilies, RecipeInputs } from './recipe-inputs';
+import type { RecipeFamilies, SizeRecipeInputs } from './recipe-inputs';
 
 // ── Preset registry ───────────────────────────────────────────────────────
 
@@ -18,7 +18,7 @@ export const registerPreset = (name: string, preset: Preset): void => {
   presetRegistry.set(name, preset);
 };
 
-export const getPresetNames = (): string[] => Array.from(presetRegistry.keys());
+export const getPresetNames = (): string[] => [...presetRegistry.keys()];
 
 /**
  * Look up a registered preset by name.
@@ -31,13 +31,8 @@ export const getPresetNames = (): string[] => Array.from(presetRegistry.keys());
  */
 export const getPreset = (name: string): Preset | undefined => {
   const preset = presetRegistry.get(name);
-  if (
-    process.env.NODE_ENV !== 'production' &&
-    !preset &&
-    name &&
-    name !== 'default' &&
-    !warnedUnknownPresets.has(name)
-  ) {
+  const isUnregisteredName = !preset && name !== '' && name !== 'default';
+  if (process.env.NODE_ENV !== 'production' && isUnregisteredName && !warnedUnknownPresets.has(name)) {
     warnedUnknownPresets.add(name);
     const known = getPresetNames();
     console.warn(
@@ -67,6 +62,7 @@ export const clearPresets = (): void => {
 export const resolveThemeFromPreset = (presetName: string, overrides: Partial<Knobs>): Preset => {
   const preset = getPreset(presetName);
   const base: Preset = preset ?? {
+    // SAFETY: the empty name is the "no theme" sentinel consumers treat as unset; it is never passed to Tamagui.
     theme: '' as ThemeName,
     knobs: { ...defaultKnobs },
     intents: {},
@@ -94,7 +90,7 @@ export interface ThemeConfig<T extends CreateTamaguiProps = CreateTamaguiProps> 
    * Size-recipe inputs + generated families. Orthogonal to Tamagui
    * `themes` (those are color palettes from createThemes / theme-builder).
    */
-  recipeInputs?: RecipeInputs;
+  recipeInputs?: SizeRecipeInputs;
   recipeFamilies?: RecipeFamilies;
 }
 
@@ -109,19 +105,16 @@ const excludedThemeNames = new Set(['active', 'alt1', 'alt2', 'warning', 'succes
  * A color "foo" is present when both `light_foo` and `dark_foo` exist as keys,
  * the name is all-lowercase, and it isn't a semantic/state sub-theme.
  */
-const extractThemeColors = (themes: Record<string, unknown>): string[] => {
-  const keys = Object.keys(themes);
+const extractThemeColors = (themes: NonNullable<CreateTamaguiProps['themes']>): string[] => {
+  const keys = new Set(Object.keys(themes));
   const colorSet = new Set<string>();
   for (const key of keys) {
-    const match = /^light_([a-z]+)$/u.exec(key);
-    if (match) {
-      const color = match[1];
-      if (keys.includes(`dark_${color}`) && !excludedThemeNames.has(color)) {
-        colorSet.add(color);
-      }
+    const color = /^light_(?<color>[a-z]+)$/u.exec(key)?.groups?.color;
+    if (color !== undefined && keys.has(`dark_${color}`) && !excludedThemeNames.has(color)) {
+      colorSet.add(color);
     }
   }
-  return [...colorSet].sort();
+  return [...colorSet].toSorted();
 };
 
 export const createThemeConfig = <T extends CreateTamaguiProps>(
@@ -129,13 +122,14 @@ export const createThemeConfig = <T extends CreateTamaguiProps>(
   options?: {
     presets?: Record<string, Preset>;
     defaultPreset?: string;
-    recipeInputs?: RecipeInputs;
+    recipeInputs?: SizeRecipeInputs;
     recipeFamilies?: RecipeFamilies;
   },
 ): ThemeConfig<T> => {
   // Extract color names from the raw themes BEFORE createTamagui processes them.
-  const themeColors = tamagui.themes ? extractThemeColors(tamagui.themes as Record<string, unknown>) : [];
+  const themeColors = tamagui.themes ? extractThemeColors(tamagui.themes) : [];
 
+  // SAFETY: the spread of T is passed through unchanged apart from `settings`, so the result is the config for T.
   const tamaguiConfig = createTamagui({
     ...tamagui,
     settings: {

@@ -34,11 +34,24 @@ import {
  * Switch thumb, Toast and Calendar chip.
  */
 
-const resolveTokenValue = (theme: Record<string, { val?: unknown } | undefined>, token: string): string | undefined => {
+type ThemeValues = Record<string, { val?: unknown } | undefined>;
+
+const useThemeValues = (): ThemeValues => useTamaguiTheme();
+
+const isFilled = (value: string | undefined): value is string => value !== undefined && value !== '';
+
+const resolveTokenValue = (theme: ThemeValues, token: string): string | undefined => {
   const key = token.startsWith('$') ? token.slice(1) : token;
   const val = theme[key]?.val;
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- theme `val` is untyped (Tamagui Variable); this is the boundary that narrows it to a string
   return typeof val === 'string' ? val : undefined;
 };
+
+const splitKey = (key: string): (string | undefined)[] =>
+  key.split('|').map((part) => (part === '' ? undefined : part));
+
+const resolveRamp = (theme: ThemeValues, count: number): (string | undefined)[] =>
+  Array.from({ length: count }, (_, index) => resolveTokenValue(theme, `accent${index + 1}`));
 
 /**
  * Readable text/glyph color to sit ON `fill` (a token like "$accentBackground"
@@ -49,16 +62,16 @@ const resolveTokenValue = (theme: Record<string, { val?: unknown } | undefined>,
  * the fill, the pole that does (`holdInkFloor`). Returns `undefined` when any
  * color fails to resolve/parse — callers keep their own default in that case.
  */
-export const useReadableTextOn = (fill_: string | undefined): string | undefined => {
-  const theme = useTamaguiTheme() as unknown as Record<string, { val?: unknown } | undefined>;
-  const fill = fill_?.startsWith('$') ? resolveTokenValue(theme, fill_) : fill_;
+export const useReadableTextOn = (fillInput: string | undefined): string | undefined => {
+  const theme = useThemeValues();
+  const fill = fillInput?.startsWith('$') ? resolveTokenValue(theme, fillInput) : fillInput;
   const paper = resolveTokenValue(theme, 'color1');
   const ink = resolveTokenValue(theme, 'color12');
-  return useMemo(() => {
-    if (!fill || !paper || !ink) {
+  return useMemo((): string | undefined => {
+    if (!isFilled(fill) || !isFilled(paper) || !isFilled(ink)) {
       return undefined;
     }
-    if (!normalizeToHex(fill) || !normalizeToHex(paper) || !normalizeToHex(ink)) {
+    if (normalizeToHex(fill) === null || normalizeToHex(paper) === null || normalizeToHex(ink) === null) {
       return undefined;
     }
     return holdInkFloor(fill, pickReadableForeground(fill, paper, ink));
@@ -81,17 +94,18 @@ export const resolveLegibleInkOn = ({
   paper?: string;
   ink?: string;
 }): string | undefined => {
-  const fillHex = fill ? normalizeToHex(fill) : null;
-  const preferredHex = preferred ? normalizeToHex(preferred) : null;
-  if (!fill || !fillHex || !preferred || !preferredHex) {
+  const fillHex = isFilled(fill) ? normalizeToHex(fill) : null;
+  const preferredHex = isFilled(preferred) ? normalizeToHex(preferred) : null;
+  if (!isFilled(fill) || fillHex === null || !isFilled(preferred) || preferredHex === null) {
     return preferred;
   }
   const fillLum = relativeLuminance(fillHex);
   if (contrastRatio(relativeLuminance(preferredHex), fillLum) >= aaTextContrastRatio) {
     return preferred;
   }
-  const anchor =
-    paper && ink && normalizeToHex(paper) && normalizeToHex(ink) ? pickReadableForeground(fill, paper, ink) : preferred;
+  const hasReadableAnchors =
+    isFilled(paper) && isFilled(ink) && normalizeToHex(paper) !== null && normalizeToHex(ink) !== null;
+  const anchor = hasReadableAnchors ? pickReadableForeground(fill, paper, ink) : preferred;
   return holdInkFloor(fill, anchor);
 };
 
@@ -102,15 +116,15 @@ export const resolveLegibleInkOn = ({
  * untouched when it passes, so a scheme where the pair already reads keeps
  * its exact paint; a replacement comes back as a concrete color.
  */
-export const useLegibleInkOn = (fill_: string | undefined, preferred: string): string => {
-  const theme = useTamaguiTheme() as unknown as Record<string, { val?: unknown } | undefined>;
-  const fill = fill_?.startsWith('$') ? resolveTokenValue(theme, fill_) : fill_;
+export const useLegibleInkOn = (fillInput: string | undefined, preferred: string): string => {
+  const theme = useThemeValues();
+  const fill = fillInput?.startsWith('$') ? resolveTokenValue(theme, fillInput) : fillInput;
   const preferredValue = preferred.startsWith('$') ? resolveTokenValue(theme, preferred) : preferred;
   const paper = resolveTokenValue(theme, 'color1');
   const ink = resolveTokenValue(theme, 'color12');
   return useMemo(() => {
     const resolved = resolveLegibleInkOn({ fill, preferred: preferredValue, paper, ink });
-    return !resolved || resolved === preferredValue ? preferred : resolved;
+    return !isFilled(resolved) || resolved === preferredValue ? preferred : resolved;
   }, [fill, preferred, preferredValue, paper, ink]);
 };
 
@@ -122,28 +136,24 @@ export const useLegibleInkOn = (fill_: string | undefined, preferred: string): s
  * tint sub-themes, where neutral text is the house default anyway).
  */
 export const useAccentOnSurface = (): string => {
-  const theme = useTamaguiTheme() as unknown as Record<string, { val?: unknown } | undefined>;
+  const theme = useThemeValues();
   const c1 = resolveTokenValue(theme, 'color1');
   const c2 = resolveTokenValue(theme, 'color2');
   const ink = resolveTokenValue(theme, 'color12') ?? '$color12';
-  const steps: (string | undefined)[] = [];
-  for (let i = 1; i <= 12; i++) {
-    steps.push(resolveTokenValue(theme, `accent${i}`));
-  }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const stepsKey = resolveRamp(theme, 12).join('|');
   return useMemo(() => {
-    const bg1 = c1 ? normalizeToHex(c1) : null;
-    const bg2 = c2 ? normalizeToHex(c2) : null;
-    if (!bg1 || !bg2) {
+    const bg1 = isFilled(c1) ? normalizeToHex(c1) : null;
+    const bg2 = isFilled(c2) ? normalizeToHex(c2) : null;
+    if (bg1 === null || bg2 === null) {
       return ink;
     }
     const l1 = relativeLuminance(bg1);
     const l2 = relativeLuminance(bg2);
     let best: string | undefined;
     let bestMin = Number.POSITIVE_INFINITY;
-    for (const step of steps) {
-      const hex = step ? normalizeToHex(step) : null;
-      if (!step || !hex) {
+    for (const step of splitKey(stepsKey)) {
+      const hex = isFilled(step) ? normalizeToHex(step) : null;
+      if (!isFilled(step) || hex === null) {
         continue;
       }
       const stepLum = relativeLuminance(hex);
@@ -156,7 +166,7 @@ export const useAccentOnSurface = (): string => {
       }
     }
     return best ?? ink;
-  }, [c1, c2, ink, steps.join('|')]);
+  }, [c1, c2, ink, stepsKey]);
 };
 
 /**
@@ -198,29 +208,25 @@ export const resolveAccentTintedSurface = ({
   paper,
   ink,
 }: ResolveAccentTintedSurfaceInput): string | undefined => {
-  const paperHex = paper ? normalizeToHex(paper) : null;
-  const inkHex = ink ? normalizeToHex(ink) : null;
-  if (!paperHex || !inkHex) {
+  const paperHex = isFilled(paper) ? normalizeToHex(paper) : null;
+  const inkHex = isFilled(ink) ? normalizeToHex(ink) : null;
+  if (paperHex === null || inkHex === null) {
     return undefined;
   }
   const isLight = relativeLuminance(paperHex) > relativeLuminance(inkHex);
   const step = steps[(isLight ? ACCENT_SURFACE_STEP_LIGHT : ACCENT_SURFACE_STEP_DARK) - 1];
-  if (!step || !normalizeToHex(step)) {
+  if (!isFilled(step) || normalizeToHex(step) === null) {
     return undefined;
   }
   return step;
 };
 
 export const useAccentTintedSurface = (): string | undefined => {
-  const theme = useTamaguiTheme() as unknown as Record<string, { val?: unknown } | undefined>;
+  const theme = useThemeValues();
   const paper = resolveTokenValue(theme, 'color1');
   const ink = resolveTokenValue(theme, 'color12');
-  const steps: (string | undefined)[] = [];
-  for (let i = 1; i <= 12; i++) {
-    steps.push(resolveTokenValue(theme, `accent${i}`));
-  }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  return useMemo(() => resolveAccentTintedSurface({ steps, paper, ink }), [paper, ink, steps.join('|')]);
+  const stepsKey = resolveRamp(theme, 12).join('|');
+  return useMemo(() => resolveAccentTintedSurface({ steps: splitKey(stepsKey), paper, ink }), [paper, ink, stepsKey]);
 };
 
 /**
@@ -248,7 +254,7 @@ export interface ResolveAaSolidFillInput {
 
 const bestAnchorContrast = (fill: string, paperLum: number, inkLum: number): number => {
   const hex = normalizeToHex(fill);
-  if (!hex) {
+  if (hex === null) {
     return 0;
   }
   const fillLum = relativeLuminance(hex);
@@ -274,28 +280,25 @@ export const resolveAaSolidFill = ({
   ink,
   floor = aaTextContrastRatio,
 }: ResolveAaSolidFillInput): string => {
-  const paperHex = paper ? normalizeToHex(paper) : null;
-  const inkHex = ink ? normalizeToHex(ink) : null;
-  if (!paperHex || !inkHex) {
+  const paperHex = isFilled(paper) ? normalizeToHex(paper) : null;
+  const inkHex = isFilled(ink) ? normalizeToHex(ink) : null;
+  if (paperHex === null || inkHex === null) {
     return preferred.token;
   }
   const paperLum = relativeLuminance(paperHex);
   const inkLum = relativeLuminance(inkHex);
 
-  if (preferred.value && bestAnchorContrast(preferred.value, paperLum, inkLum) >= floor) {
+  if (isFilled(preferred.value) && bestAnchorContrast(preferred.value, paperLum, inkLum) >= floor) {
     return preferred.token;
   }
 
-  const preferredHex = preferred.value ? normalizeToHex(preferred.value) : null;
-  const preferredLum = preferredHex ? relativeLuminance(preferredHex) : undefined;
+  const preferredHex = isFilled(preferred.value) ? normalizeToHex(preferred.value) : null;
+  const preferredLum = preferredHex === null ? undefined : relativeLuminance(preferredHex);
   let bestToken: string | undefined;
   let bestDist = Number.POSITIVE_INFINITY;
   for (const { token, value } of solids) {
-    if (!value || bestAnchorContrast(value, paperLum, inkLum) < floor) {
-      continue;
-    }
-    const hex = normalizeToHex(value);
-    if (!hex) {
+    const hex = isFilled(value) && bestAnchorContrast(value, paperLum, inkLum) >= floor ? normalizeToHex(value) : null;
+    if (hex === null) {
       continue;
     }
     const dist = preferredLum === undefined ? 0 : Math.abs(relativeLuminance(hex) - preferredLum);
@@ -312,21 +315,16 @@ export const resolveAaSolidFill = ({
  * See {@link resolveAaSolidFill}.
  */
 export const useAaSolidFill = (preferredToken: string): string => {
-  const theme = useTamaguiTheme() as unknown as Record<string, { val?: unknown } | undefined>;
+  const theme = useThemeValues();
   const paper = resolveTokenValue(theme, 'color1');
   const ink = resolveTokenValue(theme, 'color12');
   const preferredValue = preferredToken.startsWith('$') ? resolveTokenValue(theme, preferredToken) : preferredToken;
-  const solids: AaSolidCandidate[] = [];
-  for (let i = 1; i <= 10; i++) {
-    solids.push({ token: `$accent${i}`, value: resolveTokenValue(theme, `accent${i}`) });
-  }
-  const solidsKey = solids.map((s) => s.value ?? '').join('|');
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const solidsKey = resolveRamp(theme, 10).join('|');
   return useMemo(
     () =>
       resolveAaSolidFill({
         preferred: { token: preferredToken, value: preferredValue },
-        solids,
+        solids: splitKey(solidsKey).map((value, index) => ({ token: `$accent${index + 1}`, value })),
         paper,
         ink,
       }),

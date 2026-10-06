@@ -30,6 +30,9 @@ import {
 import { defaultKnobs } from './knobs';
 import { resolveKnobs } from './resolve-knobs';
 
+const isSourceFile = (name: string) =>
+  /\.tsx?$/u.test(name) && !/\.(?:spec|test|stories)\./u.test(name) && !name.endsWith('.d.ts');
+
 describe('focusState tokens', () => {
   it('FOCUS_VISIBLE_RING meets ≥2px solid outline contract at offset 0 (F1)', () => {
     expect(FOCUS_VISIBLE_RING.outlineWidth).toBeGreaterThanOrEqual(FOCUS_RING_MIN_WIDTH);
@@ -63,7 +66,7 @@ describe('focusState tokens', () => {
     const thick = ensureFocusVisibleRing({
       outlineWidth: 4,
       borderColor: '$borderColorFocus',
-    } as { outlineWidth: number; borderColor: string });
+    });
     expect(thick.outlineWidth).toBe(4);
     expect(thick.borderColor).toBe('$borderColorFocus');
   });
@@ -71,14 +74,10 @@ describe('focusState tokens', () => {
   it('ensureFocusVisibleRing reverts alpha-carrying ring colors', () => {
     // The stock Tamagui ring (20%-alpha ink) can't guarantee ≥3:1.
     for (const outlineColor of ['rgba(36, 34, 38, 0.2)', 'hsla(270, 6%, 14%, 0.2)', '#2422260a']) {
-      expect(ensureFocusVisibleRing({ outlineColor } as { outlineColor: string }).outlineColor).toBe(
-        FOCUS_VISIBLE_RING.outlineColor,
-      );
+      expect(ensureFocusVisibleRing({ outlineColor }).outlineColor).toBe(FOCUS_VISIBLE_RING.outlineColor);
     }
     // A solid override is respected.
-    expect(ensureFocusVisibleRing({ outlineColor: '#5b5563' } as { outlineColor: string }).outlineColor).toBe(
-      '#5b5563',
-    );
+    expect(ensureFocusVisibleRing({ outlineColor: '#5b5563' }).outlineColor).toBe('#5b5563');
   });
 
   it('focusRingColorMeetsContrast enforces the ≥3:1 color floor', () => {
@@ -103,21 +102,19 @@ describe('focusState tokens', () => {
 describe('$outlineColor token contrast', () => {
   const themes = createThemesBuilder(defaultBaseTheme, defaultAccentTheme, defaultBuilderOptions).themes();
 
-  for (const scheme of ['light', 'dark'] as const) {
-    it(`${scheme} $outlineColor clears ≥3:1 against color1 and color2`, () => {
-      const theme = themes[scheme];
-      expect(theme).toBeTruthy();
-      const ring = normalizeToHex(theme.outlineColor);
-      const bg1 = normalizeToHex(theme.color1);
-      const bg2 = normalizeToHex(theme.color2);
-      expect(ring).toBeTruthy();
-      expect(bg1).toBeTruthy();
-      expect(bg2).toBeTruthy();
-      const c1 = contrastRatio(relativeLuminance(ring!), relativeLuminance(bg1!));
-      const c2 = contrastRatio(relativeLuminance(ring!), relativeLuminance(bg2!));
-      expect(Math.min(c1, c2)).toBeGreaterThanOrEqual(FOCUS_RING_MIN_CONTRAST);
-    });
-  }
+  it.each(['light', 'dark'] as const)('%s $outlineColor clears ≥3:1 against color1 and color2', (scheme) => {
+    const theme = themes[scheme];
+    expect(theme).toBeTruthy();
+    const ring = normalizeToHex(theme.outlineColor);
+    const bg1 = normalizeToHex(theme.color1);
+    const bg2 = normalizeToHex(theme.color2);
+    expect(ring).toBeTruthy();
+    expect(bg1).toBeTruthy();
+    expect(bg2).toBeTruthy();
+    const c1 = contrastRatio(relativeLuminance(ring!), relativeLuminance(bg1!));
+    const c2 = contrastRatio(relativeLuminance(ring!), relativeLuminance(bg2!));
+    expect(Math.min(c1, c2)).toBeGreaterThanOrEqual(FOCUS_RING_MIN_CONTRAST);
+  });
 
   // Assert the RATIO on the surface the band actually draws on, not
   // just the declaration. At offset 0 the band paints OUTSIDE the border box,
@@ -125,21 +122,19 @@ describe('$outlineColor token contrast', () => {
   // `$outlineColor` literal on the ring, so the pair that must clear
   // the floor is base `outlineColor` × base ground — for accent and error
   // controls alike, in both schemes.
-  for (const scheme of ['light', 'dark'] as const) {
-    for (const intent of ['accent', 'error'] as const) {
-      it(`${scheme} ${intent}: offset-0 ring clears ≥3:1 on the page ground it draws on`, () => {
-        const base = themes[scheme];
-        expect(themes[`${scheme}_${intent}`]).toBeTruthy();
-        const ring = normalizeToHex(base.outlineColor);
-        const ground = normalizeToHex(base.color1);
-        expect(ring).toBeTruthy();
-        expect(ground).toBeTruthy();
-        expect(contrastRatio(relativeLuminance(ring!), relativeLuminance(ground!))).toBeGreaterThanOrEqual(
-          FOCUS_RING_MIN_CONTRAST,
-        );
-      });
-    }
-  }
+  describe.each(['light', 'dark'] as const)('%s', (scheme) => {
+    it.each(['accent', 'error'] as const)('%s: offset-0 ring clears ≥3:1 on the page ground it draws on', (intent) => {
+      const base = themes[scheme];
+      expect(themes[`${scheme}_${intent}`]).toBeTruthy();
+      const ring = normalizeToHex(base.outlineColor);
+      const ground = normalizeToHex(base.color1);
+      expect(ring).toBeTruthy();
+      expect(ground).toBeTruthy();
+      expect(contrastRatio(relativeLuminance(ring!), relativeLuminance(ground!))).toBeGreaterThanOrEqual(
+        FOCUS_RING_MIN_CONTRAST,
+      );
+    });
+  });
 
   it('the retired flat inset failed the floor over the solid intent fills (why offset is 0)', () => {
     // The failures that forced the flip: a −2 band paints
@@ -208,8 +203,10 @@ describe('keyboard-only; measure the ring / text node, not the frame', () => {
   });
 
   it('chip dismiss rings the glyph node, not the 44px hit-box frame', () => {
-    const frameRule = /\.mp-chip-dismiss:focus-visible\s*\{([^}]+)\}/u.exec(compositeFocusRingCss);
-    const ringRule = /\.mp-chip-dismiss:focus-visible \.mp-chip-dismiss-ring\s*\{([^}]+)\}/u.exec(compositeFocusRingCss);
+    const frameRule = /\.mp-chip-dismiss:focus-visible\s*\{(?<body>[^}]+)\}/u.exec(compositeFocusRingCss);
+    const ringRule = /\.mp-chip-dismiss:focus-visible \.mp-chip-dismiss-ring\s*\{(?<body>[^}]+)\}/u.exec(
+      compositeFocusRingCss,
+    );
     expect(frameRule?.[1]).toMatch(/outline:\s*none/u);
     expect(ringRule?.[1]).toMatch(/outline:\s*2px\s+solid/u);
     expect(ringRule?.[1]).toMatch(/outline-offset:\s*0/u);
@@ -280,7 +277,7 @@ describe('theme DEV warn (outline-none / positive-tabindex)', () => {
     const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     warnPositiveTabIndex({ value: 0, component: 'Test' });
     warnPositiveTabIndex({ value: -1, component: 'Test' });
-    warnPositiveTabIndex({ value: undefined, component: 'Test' });
+    warnPositiveTabIndex({ component: 'Test' });
     expect(spy).not.toHaveBeenCalled();
     warnPositiveTabIndex({ value: 2, component: 'Test' });
     warnPositiveTabIndex({ value: 2, component: 'Test' });
@@ -339,53 +336,37 @@ describe('the sanctioned focus-ring offset set is closed', () => {
     // Raw `outline-offset:` inside CSS template strings is deliberately out of
     // scope: it also carries non-focus decoration (the forced-colors skeleton
     // hairline at -1px), so folding it in would assert a rule §4 does not make.
-    const packagesDir = path.resolve(__dirname, '../../..');
+    const packagesDir = path.resolve(import.meta.dirname, '../../..');
     const skipDirs = new Set(['node_modules', 'dist', 'build', '.turbo', 'types', '__snapshots__']);
     const files: string[] = [];
     const walk = (dir: string) => {
       for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
         if (entry.isDirectory()) {
-          if (skipDirs.has(entry.name)) {
-            continue;
+          if (!skipDirs.has(entry.name)) {
+            walk(path.join(dir, entry.name));
           }
-          walk(path.join(dir, entry.name));
-          continue;
+        } else if (isSourceFile(entry.name)) {
+          files.push(path.join(dir, entry.name));
         }
-        const { name } = entry;
-        if (!/\.tsx?$/u.test(name)) {
-          continue;
-        }
-        if (/\.(spec|test|stories)\./u.test(name)) {
-          continue;
-        }
-        if (name.endsWith('.d.ts')) {
-          continue;
-        }
-        files.push(path.join(dir, name));
       }
     };
     walk(packagesDir);
     expect(files.length).toBeGreaterThan(200);
 
     const violations: string[] = [];
-    const literal = /outlineOffset\s*:\s*(?:"(-?\d+)px"|'(-?\d+)px'|(-?\d+))\b/u;
+    const literal = /outlineOffset\s*:\s*(?:"(?<dq>-?\d+)px"|'(?<sq>-?\d+)px'|(?<bare>-?\d+))\b/u;
     for (const file of files) {
       const lines = fs.readFileSync(file, 'utf-8').split('\n');
-      lines.forEach((line, index) => {
+      for (const [index, line] of lines.entries()) {
         const trimmed = line.trim();
-        if (trimmed.startsWith('//') || trimmed.startsWith('*')) {
-          return;
+        const match = trimmed.startsWith('//') || trimmed.startsWith('*') ? null : literal.exec(line);
+        if (match !== null) {
+          const value = Number(match.groups?.dq ?? match.groups?.sq ?? match.groups?.bare);
+          if (!isSanctionedFocusRingOffset(value)) {
+            violations.push(`${path.relative(packagesDir, file)}:${index + 1} paints outlineOffset ${value}`);
+          }
         }
-        const match = literal.exec(line);
-        if (!match) {
-          return;
-        }
-        const value = Number.parseInt(match[1] ?? match[2] ?? match[3], 10);
-        if (isSanctionedFocusRingOffset(value)) {
-          return;
-        }
-        violations.push(`${path.relative(packagesDir, file)}:${index + 1} paints outlineOffset ${value}`);
-      });
+      }
     }
     expect(
       violations,

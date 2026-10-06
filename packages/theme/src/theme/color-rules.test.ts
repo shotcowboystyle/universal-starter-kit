@@ -21,7 +21,7 @@ import { defaultAccentTheme } from './defaults/accent';
 import { defaultBaseTheme } from './defaults/base';
 import { defaultBuilderOptions } from './defaults/builder-options';
 
-describe('normalizeToHex', () => {
+describe(normalizeToHex, () => {
   it('normalizes "white" to #ffffff', () => {
     expect(normalizeToHex('white')).toBe('#ffffff');
   });
@@ -76,7 +76,7 @@ describe('normalizeToHex', () => {
   });
 });
 
-describe('relativeLuminance', () => {
+describe(relativeLuminance, () => {
   it('returns 1 for white', () => {
     expect(relativeLuminance('#ffffff')).toBeCloseTo(1, 4);
   });
@@ -92,7 +92,7 @@ describe('relativeLuminance', () => {
   });
 });
 
-describe('contrastRatio', () => {
+describe(contrastRatio, () => {
   it('returns 21 for black vs white', () => {
     const lBlack = relativeLuminance('#000000');
     const lWhite = relativeLuminance('#ffffff');
@@ -117,7 +117,7 @@ describe('contrastRatio', () => {
   });
 });
 
-describe('findReadableStep', () => {
+describe(findReadableStep, () => {
   const lightScale = [
     '#fafafa',
     '#f5f5f5',
@@ -144,15 +144,15 @@ describe('findReadableStep', () => {
   });
 
   it('falls back to highest-contrast step if nothing meets threshold', () => {
-    const flatScale = Array(12).fill('#808080');
+    const flatScale = Array.from({ length: 12 }, () => '#808080');
     const step = findReadableStep(flatScale, 1, 6, 1);
     expect(step).toBe(1);
   });
 });
 
-describe('normalizeColorScale', () => {
+describe(normalizeColorScale, () => {
   it('normalizes a valid 12-color hex scale', () => {
-    const input = Array(12).fill('#abc');
+    const input = Array.from({ length: 12 }, () => '#abc');
     const result = normalizeColorScale(input);
     expect(result).toHaveLength(12);
     expect(result![0]).toBe('#aabbcc');
@@ -163,7 +163,7 @@ describe('normalizeColorScale', () => {
   });
 
   it('returns null if any color fails to parse', () => {
-    const input = Array(12).fill('#abc');
+    const input = Array.from({ length: 12 }, () => '#abc');
     input[5] = 'not-a-color';
     expect(normalizeColorScale(input)).toBeNull();
   });
@@ -177,7 +177,7 @@ describe('normalizeColorScale', () => {
   });
 });
 
-describe('$color', () => {
+describe($color, () => {
   it('returns $color{step} token string', () => {
     expect($color(1)).toBe('$color1');
     expect($color(12)).toBe('$color12');
@@ -185,15 +185,15 @@ describe('$color', () => {
   });
 });
 
-describe('semanticGroups', () => {
+describe('semanticGroups table', () => {
   it('has 5 groups covering steps 1-12', () => {
     expect(semanticGroups).toHaveLength(5);
     expect(semanticGroups[0].from).toBe(1);
-    expect(semanticGroups[semanticGroups.length - 1].to).toBe(12);
+    expect(semanticGroups.at(-1)?.to).toBe(12);
   });
 });
 
-describe('measureContrast', () => {
+describe(measureContrast, () => {
   it('reports 21:1 for black on white and passes the AA floor', () => {
     const report = measureContrast({ foreground: '#000000', background: '#ffffff' });
     expect(report).toMatchObject({
@@ -277,7 +277,7 @@ describe('measureContrast', () => {
   });
 });
 
-describe('assertContrast', () => {
+describe(assertContrast, () => {
   it('returns the reports when every pair clears its floor', () => {
     const reports = assertContrast({ foreground: 'black', background: 'white' });
     expect(reports).toHaveLength(1);
@@ -298,7 +298,7 @@ describe('assertContrast', () => {
   });
 });
 
-describe('resolveThemeContrast', () => {
+describe(resolveThemeContrast, () => {
   it('addresses a pair by theme name and keys', () => {
     expect(
       resolveThemeContrast(
@@ -308,6 +308,7 @@ describe('resolveThemeContrast', () => {
     ).toStrictEqual({
       foreground: '#242226',
       background: '#ffffff',
+      // oxlint-disable-next-line sonarjs/no-undefined-assignment -- toStrictEqual distinguishes an absent key from an explicit undefined
       floor: undefined,
       label: 'light: color on background',
     });
@@ -522,10 +523,10 @@ describe('intent color11 on the base page surfaces', () => {
   });
 });
 
-describe('holdInkFloor', () => {
-  const onFill = (ink: string, fill: string) =>
-    contrastRatio(relativeLuminance(normalizeToHex(ink)!), relativeLuminance(normalizeToHex(fill)!));
+const onFill = (ink: string, fill: string) =>
+  contrastRatio(relativeLuminance(normalizeToHex(ink)!), relativeLuminance(normalizeToHex(fill)!));
 
+describe(holdInkFloor, () => {
   it('keeps an ink that already clears the floor', () => {
     expect(holdInkFloor('#6d5bc8', '#f0eff1')).toBe('#f0eff1');
   });

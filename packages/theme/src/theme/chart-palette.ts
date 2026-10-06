@@ -1,4 +1,27 @@
-import * as Colors from '@tamagui/colors';
+import {
+  amber,
+  amberDark,
+  blue,
+  blueDark,
+  gray,
+  grayDark,
+  green,
+  greenDark,
+  mauve,
+  mauveDark,
+  orange,
+  orangeDark,
+  pink,
+  pinkDark,
+  red,
+  redDark,
+  teal,
+  tealDark,
+  violet,
+  violetDark,
+  yellow,
+  yellowDark,
+} from '@tamagui/colors';
 import { themes as stockThemes } from '@tamagui/themes';
 import { useMemo } from 'react';
 import { useTheme as useTamaguiTheme, useThemeName } from 'tamagui';
@@ -58,21 +81,21 @@ export interface ResolveChartPaletteInput {
  * 3:1 on reference cards. Dark violet deepens for tinted card backgrounds.
  */
 const categoricalHueCycle = [
-  { family: 'blue', light: Colors.blue.blue10, dark: Colors.blueDark.blue9 },
-  { family: 'orange', light: Colors.orange.orange11, dark: Colors.orangeDark.orange9 },
-  { family: 'green', light: Colors.green.green10, dark: Colors.greenDark.green9 },
-  { family: 'amber', light: Colors.amber.amber11, dark: Colors.amberDark.amber9 },
-  { family: 'pink', light: Colors.pink.pink9, dark: Colors.pinkDark.pink9 },
-  { family: 'teal', light: Colors.teal.teal10, dark: Colors.tealDark.teal9 },
-  { family: 'violet', light: Colors.violet.violet9, dark: Colors.violetDark.violet10 },
-  { family: 'red', light: Colors.red.red9, dark: Colors.redDark.red9 },
+  { family: 'blue', light: blue.blue10, dark: blueDark.blue9 },
+  { family: 'orange', light: orange.orange11, dark: orangeDark.orange9 },
+  { family: 'green', light: green.green10, dark: greenDark.green9 },
+  { family: 'amber', light: amber.amber11, dark: amberDark.amber9 },
+  { family: 'pink', light: pink.pink9, dark: pinkDark.pink9 },
+  { family: 'teal', light: teal.teal10, dark: tealDark.teal9 },
+  { family: 'violet', light: violet.violet9, dark: violetDark.violet10 },
+  { family: 'red', light: red.red9, dark: redDark.red9 },
 ] as const;
 
 const configuredTintCardSurfaces = (scheme: 'light' | 'dark'): string[] => {
-  const themes = stockThemes as unknown as Record<string, { background?: string }>;
+  const themes: Record<string, { background?: string } | undefined> = stockThemes;
   return [...tintHueNames].flatMap((hue) => {
     const color = themes[`${scheme}_${hue}_Card`]?.background;
-    return color ? [color] : [];
+    return color !== undefined && color !== '' ? [color] : [];
   });
 };
 
@@ -80,19 +103,24 @@ const configuredTintCardSurfaces = (scheme: 'light' | 'dark'): string[] => {
 // colors. Missing theme names are not invented surfaces. The rendered audit
 // still owns actual custom consumer backgrounds and elevation variants.
 const chartReferenceSurfaces = {
-  light: ['#ffffff', Colors.gray.gray2, Colors.mauve.mauve2, ...configuredTintCardSurfaces('light')],
-  dark: [Colors.grayDark.gray2, Colors.mauveDark.mauve2, ...configuredTintCardSurfaces('dark')],
+  light: ['#ffffff', gray.gray2, mauve.mauve2, ...configuredTintCardSurfaces('light')],
+  dark: [grayDark.gray2, mauveDark.mauve2, ...configuredTintCardSurfaces('dark')],
 } as const;
 
+const hexOf = (color: string | undefined): string | null =>
+  color === undefined || color === '' ? null : normalizeToHex(color);
+
 const readableIdentity = (color: string | undefined, scheme: 'light' | 'dark'): color is string => {
-  const hex = color ? normalizeToHex(color) : null;
-  if (!hex) {
+  const hex = hexOf(color);
+  if (hex === null) {
     return false;
   }
   const luminance = relativeLuminance(hex);
   return chartReferenceSurfaces[scheme].every((surface) => {
     const backdrop = normalizeToHex(surface);
-    return !!backdrop && contrastRatio(luminance, relativeLuminance(backdrop)) >= minContrastRatio;
+    return (
+      backdrop !== null && backdrop !== '' && contrastRatio(luminance, relativeLuminance(backdrop)) >= minContrastRatio
+    );
   });
 };
 
@@ -105,14 +133,14 @@ const readableIdentity = (color: string | undefined, scheme: 'light' | 'dark'): 
  */
 const semanticSeries = {
   light: {
-    error: Colors.red.red9,
-    success: Colors.green.green10,
-    warning: Colors.yellow.yellow11,
+    error: red.red9,
+    success: green.green10,
+    warning: yellow.yellow11,
   },
   dark: {
-    error: Colors.redDark.red9,
-    success: Colors.greenDark.green9,
-    warning: Colors.yellowDark.yellow9,
+    error: redDark.red9,
+    success: greenDark.green9,
+    warning: yellowDark.yellow9,
   },
 } as const;
 
@@ -129,7 +157,7 @@ interface Hsl {
 
 const colorToHsl = (color: string): Hsl | null => {
   const hex = normalizeToHex(color);
-  if (!hex) {
+  if (hex === null || hex === '') {
     return null;
   }
   const r = Number.parseInt(hex.slice(1, 3), 16) / 255;
@@ -154,25 +182,39 @@ const colorToHsl = (color: string): Hsl | null => {
   return { h, s, l };
 };
 
+const requireHsl = (color: string): Hsl => {
+  const hsl = colorToHsl(color);
+  if (hsl === null) {
+    throw new Error(`unparseable chart color: ${color}`);
+  }
+  return hsl;
+};
+
+const requireHex = (color: string): string => {
+  const hex = normalizeToHex(color);
+  if (hex === null) {
+    throw new Error(`unparseable chart color: ${color}`);
+  }
+  return hex;
+};
+
 const hueDistance = (a: number, b: number): number => {
   const d = Math.abs(a - b) % 360;
   return d > 180 ? 360 - d : d;
 };
 
+const isHueDistinct = (a: Hsl, b: Hsl): boolean =>
+  a.s >= neutralSaturationFloor && b.s >= neutralSaturationFloor && hueDistance(a.h, b.h) >= hueDedupeThresholdDeg;
+
 /** Keep every solid after dedupe, moving only an invalid adjacent sequence. */
 const orderCategoricalCycle = (identity: string, cycle: string[]): string[] => {
   const colors = [identity, ...cycle];
-  const hsl = colors.map((color) => colorToHsl(color) as Hsl);
-  const luminance = colors.map((color) => relativeLuminance(normalizeToHex(color) as string));
+  const hsl = colors.map((color) => requireHsl(color));
+  const luminance = colors.map((color) => relativeLuminance(requireHex(color)));
   // Any one of hue, saturation or luminance can distinguish a pair.
   const compatible = hsl.map((a, i) =>
     hsl.map(
-      (b, j) =>
-        (a.s >= neutralSaturationFloor &&
-          b.s >= neutralSaturationFloor &&
-          hueDistance(a.h, b.h) >= hueDedupeThresholdDeg) ||
-        Math.abs(a.s - b.s) >= 0.5 ||
-        contrastRatio(luminance[i], luminance[j]) >= 1.5,
+      (b, j) => isHueDistinct(a, b) || Math.abs(a.s - b.s) >= 0.5 || contrastRatio(luminance[i], luminance[j]) >= 1.5,
     ),
   );
   const indices = cycle.map((_, i) => i + 1);
@@ -213,12 +255,12 @@ const orderCategoricalCycle = (identity: string, cycle: string[]): string[] => {
  */
 export const resolveChartPalette = (input: ResolveChartPaletteInput): ChartPalette => {
   const { scheme } = input;
-  const fallbackIdentity = scheme === 'dark' ? Colors.violetDark.violet10 : Colors.violet.violet9;
+  const fallbackIdentity = scheme === 'dark' ? violetDark.violet10 : violet.violet9;
   const single =
     [input.identitySolid, ...(input.identityCandidates ?? [])].find((candidate) =>
       readableIdentity(candidate, scheme),
     ) ?? fallbackIdentity;
-  const identityHsl = colorToHsl(single) as Hsl;
+  const identityHsl = requireHsl(single);
 
   const cycle = categoricalHueCycle.map((entry) => (scheme === 'dark' ? entry.dark : entry.light));
   const deduped =
@@ -251,17 +293,19 @@ export const accentIdentityCandidates = (
   identity: string | undefined,
   solids: readonly (string | undefined)[],
 ): string[] => {
-  const identityHex = identity ? normalizeToHex(identity) : null;
-  if (!identityHex) {
+  const identityHex = hexOf(identity);
+  if (identityHex === null) {
     return [];
   }
   const identityLum = relativeLuminance(identityHex);
   return solids
     .flatMap((solid) => {
-      const hex = solid ? normalizeToHex(solid) : null;
-      return solid && hex ? [{ solid, distance: Math.abs(relativeLuminance(hex) - identityLum) }] : [];
+      const hex = hexOf(solid);
+      return solid !== undefined && hex !== null
+        ? [{ solid, distance: Math.abs(relativeLuminance(hex) - identityLum) }]
+        : [];
     })
-    .sort((a, b) => a.distance - b.distance)
+    .toSorted((a, b) => a.distance - b.distance)
     .map(({ solid }) => solid);
 };
 
@@ -275,8 +319,8 @@ export const accentIdentityCandidates = (
  * data are user values and pass through untouched.
  */
 export const useChartPalette = (): ChartPalette => {
-  const themeName = useThemeName() as string | undefined;
-  const theme = useTamaguiTheme() as unknown as Record<string, { val?: string } | undefined>;
+  const themeName: string | undefined = useThemeName();
+  const theme: Record<string, { val?: string } | undefined> = useTamaguiTheme();
   const scheme: 'light' | 'dark' = themeName?.startsWith('dark') ? 'dark' : 'light';
   const nameParts = (themeName ?? '').split('_');
   const isTint = nameParts.length > 1 && tintHueNames.has(nameParts[1]);

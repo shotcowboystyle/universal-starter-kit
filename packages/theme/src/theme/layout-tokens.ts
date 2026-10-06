@@ -35,7 +35,11 @@ import { isTouchable, isWebTouchable } from '@repo/platform';
 import { useSyncExternalStore } from 'react';
 import { isWeb, useWindowDimensions } from 'tamagui';
 
+import { MIN_PRESS_TARGET } from './press-target';
 import { useResolvedKnobs } from './use-resolved-knobs';
+
+export { MIN_PRESS_TARGET, pressTargetHitSlop } from './press-target';
+export type { HitSlopInsets } from './press-target';
 
 // ── Breakpoint tokens ─────────────────────────────────────────
 
@@ -141,7 +145,9 @@ const readViewportWidth = (): number => {
 
 const subscribeViewportSizeClass = (onChange: () => void): (() => void) => {
   if (!isWeb || typeof window === 'undefined') {
-    return () => {};
+    return () => {
+      // nothing was subscribed off-DOM
+    };
   }
   const queries = [
     layoutBreakpoints.xl,
@@ -212,8 +218,6 @@ export const readingWidthStyle = (
 
 // ── Min press target ──────────────────────────────────────────
 
-/** Platform floor for interactive targets (Fluent/HIG web+iOS 44; M3 48 on Android). */
-export const MIN_PRESS_TARGET = 44;
 
 /** Touch surfaces — native touchable or web touchable. */
 export const isTouchSurface = (): boolean => isTouchable || isWebTouchable;
@@ -227,19 +231,6 @@ export const pressTargetStyle = (size: number = MIN_PRESS_TARGET): PressTargetSt
   minWidth: size,
   minHeight: size,
 });
-
-export interface HitSlopInsets {
-  top: number;
-  bottom: number;
-  left: number;
-  right: number;
-}
-
-/** Expand hit area when the visual control is smaller than the floor. */
-export const pressTargetHitSlop = (visualSize: number, min: number = MIN_PRESS_TARGET): HitSlopInsets => {
-  const pad = Math.max(0, Math.ceil((min - visualSize) / 2));
-  return { top: pad, bottom: pad, left: pad, right: pad };
-};
 
 // ── Overlay anchoring (house rule) ────────────────────────────────────────
 
@@ -287,10 +278,7 @@ export const OVERLAY_ATTACH_GAP = 0;
  * Semantic spacing roles map onto the space-knob recipes:
  * `within-group` → `knobProps.gap`, `between-groups` → `knobProps.gapLg`.
  */
-export const useSemanticGaps = (): {
-  withinGroup: { gap: string };
-  betweenGroups: { gap: string };
-} => {
+export const useSemanticGaps = () => {
   const { knobProps } = useResolvedKnobs();
   return {
     withinGroup: knobProps.gap,

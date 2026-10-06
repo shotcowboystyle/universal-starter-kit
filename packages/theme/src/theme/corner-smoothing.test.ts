@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import path from 'node:path';
 
 import { cleanup, render } from '@testing-library/react';
 import { createElement } from 'react';
@@ -52,14 +52,14 @@ const findHeadlessShells = (): string[] => {
         continue;
       }
       for (const arch of ['mac-arm64', 'mac-x64', 'linux64']) {
-        const bin = join(root, entry, `chrome-headless-shell-${arch}`, 'chrome-headless-shell');
+        const bin = path.join(root, entry, `chrome-headless-shell-${arch}`, 'chrome-headless-shell');
         if (existsSync(bin)) {
           found.push({ revision, bin });
         }
       }
     }
   }
-  return found.sort((a, b) => b.revision - a.revision).map((f) => f.bin);
+  return found.toSorted((a, b) => b.revision - a.revision).map((f) => f.bin);
 };
 
 const findChrome = (): string | undefined => {
@@ -83,7 +83,7 @@ describe('cornerSmoothing (Axiom 15 OPTICS)', () => {
 
   describe('stylesheet mount', () => {
     beforeEach(() => {
-      document.getElementById(CORNER_SMOOTHING_STYLE_TAG_ID)?.remove();
+      document.querySelector(`#${CORNER_SMOOTHING_STYLE_TAG_ID}`)?.remove();
     });
 
     it('mounts the stylesheet once (idempotent)', () => {
@@ -98,7 +98,7 @@ describe('cornerSmoothing (Axiom 15 OPTICS)', () => {
   describe('support detection (measured, not assumed)', () => {
     it('is false when the engine is missing (null) or has no supports()', () => {
       expect(cssSupportsCornerShape(null)).toBe(false);
-      expect(cssSupportsCornerShape({ supports: undefined })).toBe(false);
+      expect(cssSupportsCornerShape({})).toBe(false);
     });
 
     it('is true only when the UA reports the squircle value', () => {
@@ -158,7 +158,7 @@ describe('cornerSmoothing (Axiom 15 OPTICS)', () => {
       el.className = cornerSmoothClassName;
       el.style.borderRadius = '16px';
       document.body.append(el);
-      expect(document.getElementById(CORNER_SMOOTHING_STYLE_TAG_ID)?.textContent).toBe(cornerSmoothingCss);
+      expect(document.querySelector(`#${CORNER_SMOOTHING_STYLE_TAG_ID}`)?.textContent).toBe(cornerSmoothingCss);
       const computed = readComputedCornerShape(getComputedStyle(el));
       // Measured 2026-08-28: this happy-dom applies `squircle`. An engine
       // that drops the unknown declaration reads empty/round. Either stop
@@ -185,7 +185,7 @@ describe('cornerSmoothing (Axiom 15 OPTICS)', () => {
     });
 
     it('CornerSmoothingStyles mounts the stylesheet and follows the preset stop', () => {
-      document.getElementById(CORNER_SMOOTHING_STYLE_TAG_ID)?.remove();
+      document.querySelector(`#${CORNER_SMOOTHING_STYLE_TAG_ID}`)?.remove();
       const value: PresetContextValue = {
         preset: {
           ...defaultPreset,
@@ -193,7 +193,7 @@ describe('cornerSmoothing (Axiom 15 OPTICS)', () => {
         },
       };
       render(createElement(PresetContext.Provider, { value }, createElement(CornerSmoothingStyles) as ReactNode));
-      expect(document.getElementById(CORNER_SMOOTHING_STYLE_TAG_ID)?.textContent).toBe(cornerSmoothingCss);
+      expect(document.querySelector(`#${CORNER_SMOOTHING_STYLE_TAG_ID}`)?.textContent).toBe(cornerSmoothingCss);
       expect(document.documentElement.getAttribute(CORNER_SMOOTHING_ROOT_ATTR)).toBe('smooth');
     });
   });
@@ -201,13 +201,13 @@ describe('cornerSmoothing (Axiom 15 OPTICS)', () => {
   describe('supporting browser (Chromium)', () => {
     it('computed corner-shape DIFFERS between round and smooth', () => {
       const chrome = findChrome();
-      if (!chrome) {
+      if (chrome === undefined) {
         // Held-out: no Chromium binary. The happy-dom arm above records
         // whatever this harness computes as measured, not assumed.
         return;
       }
-      const dir = mkdtempSync(join(tmpdir(), 'mp-corner-shape-'));
-      const htmlPath = join(dir, 'probe.html');
+      const dir = mkdtempSync(path.join(tmpdir(), 'mp-corner-shape-'));
+      const htmlPath = path.join(dir, 'probe.html');
       writeFileSync(
         htmlPath,
         `<!doctype html><style>
@@ -255,7 +255,7 @@ document.getElementById("out").textContent = JSON.stringify(out);
         encoding: 'utf-8',
         timeout: 60_000,
       });
-      const match = /<pre id="out">([\s\S]*?)<\/pre>/u.exec(dump);
+      const match = /<pre id="out">(?<json>[\s\S]*?)<\/pre>/u.exec(dump);
       expect(match, 'probe <pre id=out> missing from dump-dom').toBeTruthy();
       const result = JSON.parse(match![1]) as {
         supportsSquircle: boolean;

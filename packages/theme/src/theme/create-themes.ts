@@ -1,4 +1,117 @@
-import * as Colors from '@tamagui/colors';
+import {
+  amber,
+  amberA,
+  amberDark,
+  amberDarkA,
+  blue,
+  blueA,
+  blueDark,
+  blueDarkA,
+  bronze,
+  bronzeA,
+  bronzeDark,
+  bronzeDarkA,
+  brown,
+  brownA,
+  brownDark,
+  brownDarkA,
+  crimson,
+  crimsonA,
+  crimsonDark,
+  crimsonDarkA,
+  cyan,
+  cyanA,
+  cyanDark,
+  cyanDarkA,
+  gold,
+  goldA,
+  goldDark,
+  goldDarkA,
+  grass,
+  grassA,
+  grassDark,
+  grassDarkA,
+  gray,
+  grayA,
+  grayDark,
+  grayDarkA,
+  green,
+  greenA,
+  greenDark,
+  greenDarkA,
+  indigo,
+  indigoA,
+  indigoDark,
+  indigoDarkA,
+  lime,
+  limeA,
+  limeDark,
+  limeDarkA,
+  mauve,
+  mauveA,
+  mauveDark,
+  mauveDarkA,
+  mint,
+  mintA,
+  mintDark,
+  mintDarkA,
+  olive,
+  oliveA,
+  oliveDark,
+  oliveDarkA,
+  orange,
+  orangeA,
+  orangeDark,
+  orangeDarkA,
+  pink,
+  pinkA,
+  pinkDark,
+  pinkDarkA,
+  plum,
+  plumA,
+  plumDark,
+  plumDarkA,
+  purple,
+  purpleA,
+  purpleDark,
+  purpleDarkA,
+  red,
+  redA,
+  redDark,
+  redDarkA,
+  sage,
+  sageA,
+  sageDark,
+  sageDarkA,
+  sand,
+  sandA,
+  sandDark,
+  sandDarkA,
+  sky,
+  skyA,
+  skyDark,
+  skyDarkA,
+  slate,
+  slateA,
+  slateDark,
+  slateDarkA,
+  teal,
+  tealA,
+  tealDark,
+  tealDarkA,
+  tomato,
+  tomatoA,
+  tomatoDark,
+  tomatoDarkA,
+  violet,
+  violetA,
+  violetDark,
+  violetDarkA,
+  yellow,
+  yellowA,
+  yellowDark,
+  yellowDarkA,
+} from '@tamagui/colors';
 import { createThemes as tamaguiCreateThemes } from '@tamagui/theme-builder';
 import type { CreateThemesProps } from '@tamagui/theme-builder';
 import { themes as tamaguiThemes } from '@tamagui/themes';
@@ -193,31 +306,31 @@ const tintNeutralTextKeys = [
  * and solid steps (1-10) keep the hue. Only keys the tint theme already
  * defines are replaced; returns new objects, never mutates inputs.
  */
-const neutralizeTintText = (themes: Record<string, Record<string, string>>): Record<string, Record<string, string>> => {
-  const out: Record<string, Record<string, string>> = { ...themes };
+const patchTintText = (name: string, theme: Record<string, string>, themes: Record<string, Record<string, string>>) => {
+  const [scheme, hue] = name.split('_');
+  if (hue === undefined || (scheme !== 'light' && scheme !== 'dark') || !tintHueNames.has(hue)) {
+    return null;
+  }
+  const base: Record<string, string> | undefined = themes[scheme];
+  if (base === undefined) {
+    return null;
+  }
+  const patched = { ...theme };
+  for (const key of tintNeutralTextKeys) {
+    if (key in patched && base[key] != null) {
+      patched[key] = base[key];
+    }
+  }
+  return patched;
+};
+
+const neutralizeTintText = (themes: Record<string, Record<string, string>>) => {
+  const out = { ...themes };
   for (const [name, theme] of Object.entries(themes)) {
-    const parts = name.split('_');
-    if (parts.length < 2) {
-      continue;
+    const patched = patchTintText(name, theme, themes);
+    if (patched !== null) {
+      out[name] = patched;
     }
-    const scheme = parts[0];
-    if (scheme !== 'light' && scheme !== 'dark') {
-      continue;
-    }
-    if (!tintHueNames.has(parts[1])) {
-      continue;
-    }
-    const base = themes[scheme];
-    if (!base) {
-      continue;
-    }
-    const patched: Record<string, string> = { ...theme };
-    for (const key of tintNeutralTextKeys) {
-      if (key in patched && base[key] != null) {
-        patched[key] = base[key];
-      }
-    }
-    out[name] = patched;
   }
   return out;
 };
@@ -231,46 +344,54 @@ const entryControlNames = new Set(['Input', 'TextArea']);
  * only entered text (an Input or TextArea value, and the placeholder that
  * stands in for it) goes back to the neutral ink.
  */
-const neutralizeSemanticEntryText = (
+const patchSemanticEntryText = (
+  name: string,
+  theme: Record<string, string>,
   themes: Record<string, Record<string, string>>,
-): Record<string, Record<string, string>> => {
-  const out: Record<string, Record<string, string>> = { ...themes };
+) => {
+  const [scheme, intent, component, ...rest] = name.split('_');
+  if (rest.length > 0 || (scheme !== 'light' && scheme !== 'dark')) {
+    return null;
+  }
+  if (intent === undefined || !semanticIntentNames.has(intent)) {
+    return null;
+  }
+  const base: Record<string, string> | undefined = themes[scheme];
+  if (base === undefined) {
+    return null;
+  }
+  if (component === undefined) {
+    return base.placeholderColor == null ? null : { ...theme, placeholderColor: base.placeholderColor };
+  }
+  if (!entryControlNames.has(component)) {
+    return null;
+  }
+  const neutral = { ...base, ...themes[`${scheme}_${component}`] };
+  const patched = { ...theme };
+  for (const key of tintNeutralTextKeys) {
+    if (neutral[key] != null) {
+      patched[key] = neutral[key];
+    }
+  }
+  return patched;
+};
+
+const neutralizeSemanticEntryText = (themes: Record<string, Record<string, string>>) => {
+  const out = { ...themes };
   for (const [name, theme] of Object.entries(themes)) {
-    const [scheme, intent, component, ...rest] = name.split('_');
-    if (rest.length > 0 || (scheme !== 'light' && scheme !== 'dark')) {
-      continue;
+    const patched = patchSemanticEntryText(name, theme, themes);
+    if (patched !== null) {
+      out[name] = patched;
     }
-    if (!intent || !semanticIntentNames.has(intent)) {
-      continue;
-    }
-    const base = themes[scheme];
-    if (!base) {
-      continue;
-    }
-    if (component === undefined) {
-      if (base.placeholderColor != null) {
-        out[name] = { ...theme, placeholderColor: base.placeholderColor };
-      }
-      continue;
-    }
-    if (!entryControlNames.has(component)) {
-      continue;
-    }
-    const neutral = { ...base, ...themes[`${scheme}_${component}`] };
-    const patched: Record<string, string> = { ...theme };
-    for (const key of tintNeutralTextKeys) {
-      if (neutral[key] != null) {
-        patched[key] = neutral[key];
-      }
-    }
-    out[name] = patched;
   }
   return out;
 };
 
+const hexOf = (color: string | undefined): string | null => (color === undefined ? null : normalizeToHex(color));
+
 const luminanceOf = (color: string | undefined): number | null => {
-  const hex = color ? normalizeToHex(color) : null;
-  return hex ? relativeLuminance(hex) : null;
+  const hex = hexOf(color);
+  return hex === null ? null : relativeLuminance(hex);
 };
 
 /**
@@ -321,48 +442,60 @@ const nearestHoldingStep = (
  * children) takes the corrected pair; one that set its own (the inverse
  * component themes) keeps it.
  */
-const holdAccentFloor = (themes: Record<string, Record<string, string>>): Record<string, Record<string, string>> => {
-  const out: Record<string, Record<string, string>> = { ...themes };
-  for (const scheme of ['light', 'dark'] as const) {
-    const base = themes[scheme];
-    if (!base?.accentBackground || !base.accentColor) {
-      continue;
-    }
-    const paper = luminanceOf(base.color1);
-    const ink = luminanceOf(base.color12);
-    const surfaces = [base.color1, base.color2, base.color3].map(luminanceOf);
-    if (paper === null || ink === null || surfaces.some((lum) => lum === null)) {
-      continue;
-    }
-    const steps = Array.from({ length: 12 }, (_, index) => base[`accent${index + 1}`]);
-    const fill = nearestHoldingStep(
-      base.accentBackground,
-      steps.slice(0, 10),
-      (lum) =>
-        Math.max(contrastRatio(lum, paper), contrastRatio(lum, ink)) >= aaTextContrastRatio &&
-        contrastRatio(lum, paper) >= minContrastRatio,
-    );
-    const accentInk = nearestHoldingStep(base.accentColor, steps, (lum) =>
-      surfaces.every((surface) => contrastRatio(lum, surface as number) >= aaTextContrastRatio),
-    );
-    if (fill === base.accentBackground && accentInk === base.accentColor) {
-      continue;
-    }
-    for (const [name, theme] of Object.entries(themes)) {
-      if (name !== scheme && !name.startsWith(`${scheme}_`)) {
-        continue;
-      }
-      const inheritsFill = theme.accentBackground === base.accentBackground;
-      const inheritsInk = theme.accentColor === base.accentColor;
-      if (!inheritsFill && !inheritsInk) {
-        continue;
-      }
-      out[name] = {
+const correctedAccentPair = (base: Record<string, string>) => {
+  if (!base.accentBackground || !base.accentColor) {
+    return null;
+  }
+  const paper = luminanceOf(base.color1);
+  const ink = luminanceOf(base.color12);
+  const surfaces = [base.color1, base.color2, base.color3].map(luminanceOf);
+  const surfaceLums = surfaces.filter((lum): lum is number => lum !== null);
+  if (paper === null || ink === null || surfaceLums.length !== surfaces.length) {
+    return null;
+  }
+  const steps = Array.from({ length: 12 }, (_, index) => base[`accent${index + 1}`]);
+  const fill = nearestHoldingStep(
+    base.accentBackground,
+    steps.slice(0, 10),
+    (lum) =>
+      Math.max(contrastRatio(lum, paper), contrastRatio(lum, ink)) >= aaTextContrastRatio &&
+      contrastRatio(lum, paper) >= minContrastRatio,
+  );
+  const accentInk = nearestHoldingStep(base.accentColor, steps, (lum) =>
+    surfaceLums.every((surface) => contrastRatio(lum, surface) >= aaTextContrastRatio),
+  );
+  if (fill === base.accentBackground && accentInk === base.accentColor) {
+    return null;
+  }
+  return { fill, accentInk };
+};
+
+const accentPatches = (themes: Record<string, Record<string, string>>, scheme: 'light' | 'dark') => {
+  const patches: Record<string, Record<string, string>> = {};
+  const base: Record<string, string> | undefined = themes[scheme];
+  const pair = base === undefined ? null : correctedAccentPair(base);
+  if (base === undefined || pair === null) {
+    return patches;
+  }
+  for (const [name, theme] of Object.entries(themes)) {
+    const inheritsFill = theme.accentBackground === base.accentBackground;
+    const inheritsInk = theme.accentColor === base.accentColor;
+    const inScheme = name === scheme || name.startsWith(`${scheme}_`);
+    if (inScheme && (inheritsFill || inheritsInk)) {
+      patches[name] = {
         ...theme,
-        ...(inheritsFill ? { accentBackground: fill } : null),
-        ...(inheritsInk ? { accentColor: accentInk } : null),
+        ...(inheritsFill ? { accentBackground: pair.fill } : null),
+        ...(inheritsInk ? { accentColor: pair.accentInk } : null),
       };
     }
+  }
+  return patches;
+};
+
+const holdAccentFloor = (themes: Record<string, Record<string, string>>) => {
+  const out = { ...themes };
+  for (const scheme of ['light', 'dark'] as const) {
+    Object.assign(out, accentPatches(themes, scheme));
   }
   return out;
 };
@@ -391,36 +524,45 @@ const mixHex = (from: string, to: string, share: number): string => {
  * diff lines paint. Dark keeps step 11; a theme where no step holds gets no
  * token and inherits its parent's.
  */
-const holdSyntaxFloor = (themes: Record<string, Record<string, string>>): Record<string, Record<string, string>> => {
-  const out: Record<string, Record<string, string>> = { ...themes };
+const mixedSyntaxInk = (from: string, to: string, surface: number, wash: number): string | null => {
+  for (let step = 0; step <= 20; step += 1) {
+    const candidate = mixHex(from, to, step / 20);
+    const lum = relativeLuminance(candidate);
+    if (contrastRatio(lum, surface) >= aaTextContrastRatio && contrastRatio(lum, wash) >= aaTextContrastRatio) {
+      return candidate;
+    }
+  }
+  return null;
+};
+
+const syntaxInkTokens = (theme: Record<string, string>, surface: number) => {
+  const ink: Record<string, string> = {};
+  for (const hue of syntaxInkHues) {
+    const from = hexOf(theme[`${hue}11`]);
+    const to = hexOf(theme[`${hue}12`]);
+    const wash = luminanceOf(theme[`${hue}3`]);
+    const candidate = from === null || to === null || wash === null ? null : mixedSyntaxInk(from, to, surface, wash);
+    if (candidate !== null) {
+      ink[`syntax${hue[0].toUpperCase()}${hue.slice(1)}`] = candidate;
+    }
+  }
+  return ink;
+};
+
+const holdSyntaxFloor = (themes: Record<string, Record<string, string>>) => {
+  const out = { ...themes };
   for (const [name, theme] of Object.entries(themes)) {
     const surface = luminanceOf(theme.color3);
-    if (surface === null) {
-      continue;
-    }
-    const ink: Record<string, string> = {};
-    for (const hue of syntaxInkHues) {
-      const from = theme[`${hue}11`] ? normalizeToHex(theme[`${hue}11`]) : null;
-      const to = theme[`${hue}12`] ? normalizeToHex(theme[`${hue}12`]) : null;
-      const wash = luminanceOf(theme[`${hue}3`]);
-      if (!from || !to || wash === null) {
-        continue;
-      }
-      for (let step = 0; step <= 20; step++) {
-        const candidate = mixHex(from, to, step / 20);
-        const lum = relativeLuminance(candidate);
-        if (contrastRatio(lum, surface) >= aaTextContrastRatio && contrastRatio(lum, wash) >= aaTextContrastRatio) {
-          ink[`syntax${hue[0].toUpperCase()}${hue.slice(1)}`] = candidate;
-          break;
-        }
-      }
-    }
+    const ink = surface === null ? {} : syntaxInkTokens(theme, surface);
     if (Object.keys(ink).length > 0) {
       out[name] = { ...theme, ...ink };
     }
   }
   return out;
 };
+
+const shadowOr = (value: string | undefined, fallback: string): string =>
+  value === undefined || value === '' ? fallback : value;
 
 const defaultLightShadows: Shadows = {
   shadow1: 'rgba(0,0,0,0.12)',
@@ -453,148 +595,148 @@ export const createThemesBuilder = (
     },
     extra: {
       light: {
-        ...Colors.amber,
-        ...Colors.amberA,
-        ...Colors.blue,
-        ...Colors.blueA,
-        ...Colors.bronze,
-        ...Colors.bronzeA,
-        ...Colors.brown,
-        ...Colors.brownA,
-        ...Colors.crimson,
-        ...Colors.crimsonA,
-        ...Colors.cyan,
-        ...Colors.cyanA,
-        ...Colors.gold,
-        ...Colors.goldA,
-        ...Colors.grass,
-        ...Colors.grassA,
-        ...Colors.gray,
-        ...Colors.grayA,
-        ...Colors.green,
-        ...Colors.greenA,
-        ...Colors.indigo,
-        ...Colors.indigoA,
-        ...Colors.lime,
-        ...Colors.limeA,
-        ...Colors.mauve,
-        ...Colors.mauveA,
-        ...Colors.mint,
-        ...Colors.mintA,
-        ...Colors.olive,
-        ...Colors.oliveA,
-        ...Colors.orange,
-        ...Colors.orangeA,
-        ...Colors.pink,
-        ...Colors.pinkA,
-        ...Colors.plum,
-        ...Colors.plumA,
-        ...Colors.purple,
-        ...Colors.purpleA,
-        ...Colors.red,
-        ...Colors.redA,
-        ...Colors.sage,
-        ...Colors.sageA,
-        ...Colors.sand,
-        ...Colors.sandA,
-        ...Colors.sky,
-        ...Colors.skyA,
-        ...Colors.slate,
-        ...Colors.slateA,
-        ...Colors.teal,
-        ...Colors.tealA,
-        ...Colors.tomato,
-        ...Colors.tomatoA,
-        ...Colors.violet,
-        ...Colors.violetA,
-        ...Colors.yellow,
-        ...Colors.yellowA,
+        ...amber,
+        ...amberA,
+        ...blue,
+        ...blueA,
+        ...bronze,
+        ...bronzeA,
+        ...brown,
+        ...brownA,
+        ...crimson,
+        ...crimsonA,
+        ...cyan,
+        ...cyanA,
+        ...gold,
+        ...goldA,
+        ...grass,
+        ...grassA,
+        ...gray,
+        ...grayA,
+        ...green,
+        ...greenA,
+        ...indigo,
+        ...indigoA,
+        ...lime,
+        ...limeA,
+        ...mauve,
+        ...mauveA,
+        ...mint,
+        ...mintA,
+        ...olive,
+        ...oliveA,
+        ...orange,
+        ...orangeA,
+        ...pink,
+        ...pinkA,
+        ...plum,
+        ...plumA,
+        ...purple,
+        ...purpleA,
+        ...red,
+        ...redA,
+        ...sage,
+        ...sageA,
+        ...sand,
+        ...sandA,
+        ...sky,
+        ...skyA,
+        ...slate,
+        ...slateA,
+        ...teal,
+        ...tealA,
+        ...tomato,
+        ...tomatoA,
+        ...violet,
+        ...violetA,
+        ...yellow,
+        ...yellowA,
         ...baseTheme.lightShadows,
-        shadowColor: baseTheme.lightShadows?.shadow1 || defaultLightShadows.shadow1,
+        shadowColor: shadowOr(baseTheme.lightShadows?.shadow1, defaultLightShadows.shadow1),
       },
       dark: {
-        ...Colors.amberDark,
-        ...Colors.amberDarkA,
-        ...Colors.blueDark,
-        ...Colors.blueDarkA,
-        ...Colors.bronzeDark,
-        ...Colors.bronzeDarkA,
-        ...Colors.brownDark,
-        ...Colors.brownDarkA,
-        ...Colors.crimsonDark,
-        ...Colors.crimsonDarkA,
-        ...Colors.cyanDark,
-        ...Colors.cyanDarkA,
-        ...Colors.goldDark,
-        ...Colors.goldDarkA,
-        ...Colors.grassDark,
-        ...Colors.grassDarkA,
-        ...Colors.grayDark,
-        ...Colors.grayDarkA,
-        ...Colors.greenDark,
-        ...Colors.greenDarkA,
-        ...Colors.indigoDark,
-        ...Colors.indigoDarkA,
-        ...Colors.limeDark,
-        ...Colors.limeDarkA,
-        ...Colors.mauveDark,
-        ...Colors.mauveDarkA,
-        ...Colors.mintDark,
-        ...Colors.mintDarkA,
-        ...Colors.oliveDark,
-        ...Colors.oliveDarkA,
-        ...Colors.orangeDark,
-        ...Colors.orangeDarkA,
-        ...Colors.pinkDark,
-        ...Colors.pinkDarkA,
-        ...Colors.plumDark,
-        ...Colors.plumDarkA,
-        ...Colors.purpleDark,
-        ...Colors.purpleDarkA,
-        ...Colors.redDark,
-        ...Colors.redDarkA,
-        ...Colors.sageDark,
-        ...Colors.sageDarkA,
-        ...Colors.sandDark,
-        ...Colors.sandDarkA,
-        ...Colors.skyDark,
-        ...Colors.skyDarkA,
-        ...Colors.slateDark,
-        ...Colors.slateDarkA,
-        ...Colors.tealDark,
-        ...Colors.tealDarkA,
-        ...Colors.tomatoDark,
-        ...Colors.tomatoDarkA,
-        ...Colors.violetDark,
-        ...Colors.violetDarkA,
-        ...Colors.yellowDark,
-        ...Colors.yellowDarkA,
+        ...amberDark,
+        ...amberDarkA,
+        ...blueDark,
+        ...blueDarkA,
+        ...bronzeDark,
+        ...bronzeDarkA,
+        ...brownDark,
+        ...brownDarkA,
+        ...crimsonDark,
+        ...crimsonDarkA,
+        ...cyanDark,
+        ...cyanDarkA,
+        ...goldDark,
+        ...goldDarkA,
+        ...grassDark,
+        ...grassDarkA,
+        ...grayDark,
+        ...grayDarkA,
+        ...greenDark,
+        ...greenDarkA,
+        ...indigoDark,
+        ...indigoDarkA,
+        ...limeDark,
+        ...limeDarkA,
+        ...mauveDark,
+        ...mauveDarkA,
+        ...mintDark,
+        ...mintDarkA,
+        ...oliveDark,
+        ...oliveDarkA,
+        ...orangeDark,
+        ...orangeDarkA,
+        ...pinkDark,
+        ...pinkDarkA,
+        ...plumDark,
+        ...plumDarkA,
+        ...purpleDark,
+        ...purpleDarkA,
+        ...redDark,
+        ...redDarkA,
+        ...sageDark,
+        ...sageDarkA,
+        ...sandDark,
+        ...sandDarkA,
+        ...skyDark,
+        ...skyDarkA,
+        ...slateDark,
+        ...slateDarkA,
+        ...tealDark,
+        ...tealDarkA,
+        ...tomatoDark,
+        ...tomatoDarkA,
+        ...violetDark,
+        ...violetDarkA,
+        ...yellowDark,
+        ...yellowDarkA,
         ...baseTheme.darkShadows,
-        shadowColor: baseTheme.darkShadows?.shadow1 || defaultDarkShadows.shadow1,
+        shadowColor: shadowOr(baseTheme.darkShadows?.shadow1, defaultDarkShadows.shadow1),
       },
     },
   };
   const childrenThemes = {
     warning: {
       palette: {
-        dark: Object.values(Colors.yellowDark),
-        light: withIntentInkFloor(Object.values(Colors.yellow), intentInkFloor.warning),
+        dark: Object.values(yellowDark),
+        light: withIntentInkFloor(Object.values(yellow), intentInkFloor.warning),
       },
     },
     error: {
       palette: {
-        dark: Object.values(Colors.redDark),
-        light: Object.values(Colors.red),
+        dark: Object.values(redDark),
+        light: Object.values(red),
       },
     },
     success: {
       palette: {
-        dark: Object.values(Colors.greenDark),
-        light: withIntentInkFloor(Object.values(Colors.green), intentInkFloor.success),
+        dark: Object.values(greenDark),
+        light: withIntentInkFloor(Object.values(green), intentInkFloor.success),
       },
     },
   };
-  const createThemesProps: Record<string, unknown> = {
+  const createThemesProps = {
     base,
     childrenThemes,
     accent: {
@@ -603,13 +745,11 @@ export const createThemesBuilder = (
         light: accentTheme.lightPalette,
       },
     },
+    ...(options?.grandChildrenThemes == null ? null : { grandChildrenThemes: options.grandChildrenThemes }),
+    ...(getTheme === undefined ? null : { getTheme }),
   };
-  if (options?.grandChildrenThemes) {
-    createThemesProps.grandChildrenThemes = options.grandChildrenThemes;
-  }
-  if (getTheme) {
-    createThemesProps.getTheme = getTheme;
-  }
+  // SAFETY: sanitizeGetTheme drops nullish entries, so getTheme only yields string | number values, which theme-builder stringifies.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- getTheme's declared return allows nullish values that sanitizeGetTheme has already removed
   const initialTheme = tamaguiCreateThemes(createThemesProps as Parameters<typeof tamaguiCreateThemes>[0]);
   const themes = holdSyntaxFloor(
     holdAccentFloor(
@@ -627,7 +767,7 @@ export const createThemesBuilder = (
       return themes;
     },
     addTheme<K extends string>(name: K, theme: ThemeBuilderDefinition) {
-      const addThemeProps: Record<string, unknown> = {
+      const addThemeProps = {
         base,
         childrenThemes,
         accent: {
@@ -636,14 +776,14 @@ export const createThemesBuilder = (
             light: theme.lightPalette,
           },
         },
+        ...(options?.grandChildrenThemes == null ? null : { grandChildrenThemes: options.grandChildrenThemes }),
+        ...(getTheme === undefined ? null : { getTheme }),
       };
-      if (options?.grandChildrenThemes) {
-        addThemeProps.grandChildrenThemes = options.grandChildrenThemes;
-      }
-      if (getTheme) {
-        addThemeProps.getTheme = getTheme;
-      }
+      // SAFETY: sanitizeGetTheme drops nullish entries, so getTheme only yields string | number values, which theme-builder stringifies.
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- getTheme's declared return allows nullish values that sanitizeGetTheme has already removed
       const createdTheme = tamaguiCreateThemes(addThemeProps as Parameters<typeof tamaguiCreateThemes>[0]);
+      // SAFETY: the object keys are exactly `dark_${name}` / `light_${name}`, both holding the accent theme.
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- computed template keys widen to a string index, which a mapped template-literal Record cannot express
       return {
         [`dark_${name}`]: createdTheme.dark_accent,
         [`light_${name}`]: createdTheme.light_accent,

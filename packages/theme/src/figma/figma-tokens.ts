@@ -25,6 +25,7 @@
  */
 
 import { tokens } from '@tamagui/themes';
+import type { Variable } from '@tamagui/web';
 
 import { createThemesBuilder, tintHueNames } from '../theme/create-themes';
 import { defaultAccentTheme } from '../theme/defaults/accent';
@@ -34,6 +35,7 @@ import { defaultBodyFont, defaultHeadingFont } from '../theme/defaults/fonts';
 import { defaultKnobs } from '../theme/knobs';
 import type { Knobs } from '../theme/knobs';
 import { compactSpaceMap, resolveKnobs } from '../theme/resolve-knobs';
+import { isNumber, isObject, isString } from '../type-guards';
 
 // ── Names / constants ─────────────────────────────────────────
 
@@ -62,13 +64,13 @@ export type FigmaThemeMode = (typeof FIGMA_THEME_MODES)[number];
  * continuous corners (see cornerSmoothing.ts). This is a Figma rendering
  * constant, not a Variable — Figma cannot bind cornerSmoothing to Variables.
  */
-export const FIGMA_CORNER_SMOOTHING: Record<string, number> = {
+export const FIGMA_CORNER_SMOOTHING = {
   round: 0,
   smooth: 0.6,
-};
+} satisfies Record<string, number>;
 
 /** Tamagui token key (`1.5`, `true`) → Figma-safe variable name segment. */
-export const figmaTokenName = (prefix: string, key: string): string => `${prefix}-${String(key).replaceAll('.', '-')}`;
+export const figmaTokenName = (prefix: string, key: string): string => `${prefix}-${key.replaceAll('.', '-')}`;
 
 // ── Output shape ──────────────────────────────────────────────
 
@@ -171,21 +173,35 @@ export interface BuildFigmaTokensOptions {
 
 // ── Internals ─────────────────────────────────────────────────
 
-type BuiltThemes = Record<string, Record<string, string | number>>;
+type ThemeTokens = Record<string, string | number>;
+type BuiltThemes = Partial<Record<string, ThemeTokens>>;
+type NumberTable = Record<string, number>;
+type StringTable = Record<string, string>;
+type SemanticTable = Record<string, FigmaSemanticEntry>;
+/** A Tamagui token group: each entry is a Variable wrapper or a raw number. */
+type TokenGroup = Readonly<Record<string, Variable<number> | number>>;
 
-const unwrapTokenGroup = (group: object | undefined): Record<string, number> => {
-  const out: Record<string, number> = {};
+const unwrapTokenGroup = (group: TokenGroup | undefined) => {
+  const out: NumberTable = {};
   if (!group) {
     return out;
   }
   for (const [key, wrapper] of Object.entries(group)) {
-    const val =
-      wrapper && typeof wrapper === 'object' && 'val' in wrapper ? (wrapper as { val: unknown }).val : wrapper;
-    if (typeof val === 'number') {
+    const val = isObject(wrapper) && 'val' in wrapper ? wrapper.val : wrapper;
+    if (isNumber(val)) {
       out[key] = val;
     }
   }
   return out;
+};
+
+/** The base light/dark themes every derivation reads; fails loudly when the build lacks them. */
+const baseSchemes = (themes: BuiltThemes) => {
+  const { light, dark } = themes;
+  if (!light || !dark) {
+    throw new Error('figmaTokens: base light/dark themes missing');
+  }
+  return { light, dark };
 };
 
 const ramp = (themes: BuiltThemes, themeName: string, scheme: 'light' | 'dark'): string[] => {
@@ -195,9 +211,9 @@ const ramp = (themes: BuiltThemes, themeName: string, scheme: 'light' | 'dark'):
     throw new Error(`figmaTokens: built themes are missing "${key}"`);
   }
   const steps: string[] = [];
-  for (let i = 1; i <= 12; i++) {
+  for (let i = 1; i <= 12; i += 1) {
     const value = theme[`color${i}`];
-    if (typeof value !== 'string') {
+    if (!isString(value)) {
       throw new TypeError(`figmaTokens: theme "${key}" is missing color${i}`);
     }
     steps.push(value);
@@ -205,12 +221,12 @@ const ramp = (themes: BuiltThemes, themeName: string, scheme: 'light' | 'dark'):
   return steps;
 };
 
-const shadowsOf = (themes: BuiltThemes, scheme: 'light' | 'dark'): Record<string, string> => {
+const shadowsOf = (themes: BuiltThemes, scheme: 'light' | 'dark') => {
   const theme = themes[scheme];
-  const out: Record<string, string> = {};
-  for (let i = 1; i <= 6; i++) {
+  const out: StringTable = {};
+  for (let i = 1; i <= 6; i += 1) {
     const value = theme?.[`shadow${i}`];
-    if (typeof value !== 'string') {
+    if (!isString(value)) {
       throw new TypeError(`figmaTokens: base "${scheme}" theme is missing shadow${i}`);
     }
     out[`shadow${i}`] = value;
@@ -218,19 +234,19 @@ const shadowsOf = (themes: BuiltThemes, scheme: 'light' | 'dark'): Record<string
   return out;
 };
 
-const RAMP_STEP_RE = /^color([1-9]|1[0-2])$/u;
+const RAMP_STEP_RE = /^color(?:[1-9]|1[0-2])$/u;
 const SHADOW_RE = /^shadow[1-6]$/u;
 // Raw Radix hue steps spread into the base themes as extras (amber1,
 // blueA12, ...). They are hue scales — Figma gets those via Palette/Theme
 // modes — not semantic role tokens.
-const HUE_STEP_RE = new RegExp(`^(${[...tintHueNames].join('|')})A?\\d+$`);
+const HUE_STEP_RE = new RegExp(`^(?:${[...tintHueNames].join('|')})A?\\d+$`, 'u');
 
 /**
  * Reverse-match a semantic value against the ramp of its own theme: returns
  * `colorN` when the value is exactly step N, else null.
  */
 const stepAliasFor = (theme: Record<string, string | number>, value: string): string | null => {
-  for (let i = 1; i <= 12; i++) {
+  for (let i = 1; i <= 12; i += 1) {
     if (theme[`color${i}`] === value) {
       return `color${i}`;
     }
@@ -238,24 +254,20 @@ const stepAliasFor = (theme: Record<string, string | number>, value: string): st
   return null;
 };
 
-const deriveSemantic = (themes: BuiltThemes): Record<string, FigmaSemanticEntry> => {
-  const { light } = themes;
-  const { dark } = themes;
-  if (!light || !dark) {
-    throw new Error('figmaTokens: base light/dark themes missing');
-  }
-  const out: Record<string, FigmaSemanticEntry> = {};
-  const keys = Object.keys(light)
-    .filter((key) => !RAMP_STEP_RE.test(key) && !SHADOW_RE.test(key) && !HUE_STEP_RE.test(key))
-    .filter((key) => typeof light[key] === 'string' && typeof dark[key] === 'string')
-    .sort();
-  for (const key of keys) {
-    const lightValue = light[key] as string;
-    const darkValue = dark[key] as string;
-    const lightAlias = stepAliasFor(light, lightValue);
-    const darkAlias = stepAliasFor(dark, darkValue);
-    const alias = lightAlias !== null && lightAlias === darkAlias ? lightAlias : null;
-    out[key] = { alias, light: lightValue, dark: darkValue };
+const isRoleKey = (key: string): boolean => !RAMP_STEP_RE.test(key) && !SHADOW_RE.test(key) && !HUE_STEP_RE.test(key);
+
+const deriveSemantic = (themes: BuiltThemes) => {
+  const { light, dark } = baseSchemes(themes);
+  const out: SemanticTable = {};
+  for (const key of Object.keys(light).filter(isRoleKey).toSorted()) {
+    const lightValue = light[key];
+    const darkValue = dark[key];
+    if (isString(lightValue) && isString(darkValue)) {
+      const lightAlias = stepAliasFor(light, lightValue);
+      const darkAlias = stepAliasFor(dark, darkValue);
+      const alias = lightAlias !== null && lightAlias === darkAlias ? lightAlias : null;
+      out[key] = { alias, light: lightValue, dark: darkValue };
+    }
   }
   return out;
 };
@@ -265,16 +277,15 @@ const deriveSemantic = (themes: BuiltThemes): Record<string, FigmaSemanticEntry>
  * derived by running the resolver and matching its `$token` output against
  * the built base themes.
  */
-const textTierEntries = (themes: BuiltThemes): Record<string, FigmaSemanticEntry> => {
-  const { light } = themes;
-  const { dark } = themes;
-  const out: Record<string, FigmaSemanticEntry> = {};
+const textTierEntries = (themes: BuiltThemes) => {
+  const { light, dark } = baseSchemes(themes);
+  const out: SemanticTable = {};
   for (const tier of ['low', 'medium', 'high'] as const) {
     const resolved = resolveKnobs({ ...defaultKnobs, textAccent: tier });
-    const token = String(resolved.knobProps.textAccentColor).replace(/^\$/u, '');
+    const token = resolved.knobProps.textAccentColor.replace(/^\$/u, '');
     const lightValue = light[token];
     const darkValue = dark[token];
-    if (typeof lightValue !== 'string' || typeof darkValue !== 'string') {
+    if (!isString(lightValue) || !isString(darkValue)) {
       throw new TypeError(`figmaTokens: textAccent "${tier}" resolved to unknown token $${token}`);
     }
     const lightAlias = stepAliasFor(light, lightValue);
@@ -285,13 +296,13 @@ const textTierEntries = (themes: BuiltThemes): Record<string, FigmaSemanticEntry
   return out;
 };
 
-const buildSizing = (borderWidthModes: Record<string, number>): Record<string, number> => {
-  const sizing: Record<string, number> = {};
-  const groups: [string, Record<string, number>][] = [
+const buildSizing = (borderWidthModes: NumberTable) => {
+  const sizing: NumberTable = {};
+  const groups: [string, NumberTable][] = [
     ['size', unwrapTokenGroup(tokens.size)],
     ['space', unwrapTokenGroup(tokens.space)],
     ['radius', unwrapTokenGroup(tokens.radius)],
-    ['zIndex', unwrapTokenGroup((tokens as Record<string, object>).zIndex)],
+    ['zIndex', unwrapTokenGroup(tokens.zIndex)],
   ];
   for (const [prefix, group] of groups) {
     if (prefix !== 'zIndex' && Object.keys(group).length === 0) {
@@ -320,7 +331,7 @@ const radiusPx = (token: string): number => {
   const radius = unwrapTokenGroup(tokens.radius);
   const key = token.replace(/^\$/u, '');
   const px = radius[key];
-  if (typeof px !== 'number') {
+  if (!isNumber(px)) {
     throw new TypeError(`figmaTokens: unknown radius token ${token}`);
   }
   return px;
@@ -338,10 +349,10 @@ const normalizeElevation = (value: string | number | undefined): FigmaElevationM
     return { sizeToken: null, px: null };
   }
   const size = unwrapTokenGroup(tokens.size);
-  if (typeof value === 'string') {
+  if (isString(value)) {
     const key = value.replace(/^\$/u, '');
     const px = size[key];
-    if (typeof px !== 'number') {
+    if (!isNumber(px)) {
       throw new TypeError(`figmaTokens: unknown size token ${value}`);
     }
     return { sizeToken: value, px };
@@ -354,8 +365,8 @@ const buildKnobs = (): FigmaKnobsExport => {
   const borderRadius: Record<string, FigmaRadiusMode> = {};
   for (const mode of RADIUS_KNOB_MODES) {
     const { knobProps } = resolveKnobs({ ...defaultKnobs, borderRadius: mode });
-    const token = String(knobProps.borderRadius.borderRadius);
-    const outerToken = String(knobProps.borderRadiusNested.borderRadius);
+    const token = knobProps.borderRadius.borderRadius;
+    const outerToken = knobProps.borderRadiusNested.borderRadius;
     borderRadius[mode] = {
       token,
       figmaName: tokenToFigma(token, 'radius'),
@@ -369,7 +380,7 @@ const buildKnobs = (): FigmaKnobsExport => {
   const borderWidth: Record<string, number> = {};
   for (const mode of BORDER_WIDTH_KNOB_MODES) {
     const { knobProps } = resolveKnobs({ ...defaultKnobs, borderWidth: mode });
-    borderWidth[mode] = Number(knobProps.borderRadius.borderWidth);
+    borderWidth[mode] = knobProps.borderRadius.borderWidth;
   }
 
   const elevation: Record<string, FigmaElevationMode> = {};
@@ -381,15 +392,15 @@ const buildKnobs = (): FigmaKnobsExport => {
   const fontWeight: Record<string, string> = {};
   for (const mode of FONT_WEIGHT_KNOB_MODES) {
     const { knobProps } = resolveKnobs({ ...defaultKnobs, fontWeight: mode });
-    fontWeight[mode] = String(knobProps.textWeight.fontWeight);
+    fontWeight[mode] = knobProps.textWeight.fontWeight;
   }
 
   const space: Record<string, FigmaSpaceMode> = {};
   for (const mode of SPACE_KNOB_MODES) {
     const { knobProps } = resolveKnobs({ ...defaultKnobs, space: mode });
-    const paddingToken = String(knobProps.panelPadding.padding);
-    const gapToken = String(knobProps.gap.gap);
-    const gapLgToken = String(knobProps.gapLg.gap);
+    const paddingToken = knobProps.panelPadding.padding;
+    const gapToken = knobProps.gap.gap;
+    const gapLgToken = knobProps.gapLg.gap;
     space[mode] = {
       paddingToken,
       paddingFigmaName: tokenToFigma(paddingToken, 'space'),
@@ -403,7 +414,7 @@ const buildKnobs = (): FigmaKnobsExport => {
   const size: Record<string, { token: string; figmaName: string }> = {};
   for (const mode of SIZE_KNOB_MODES) {
     const { knobProps } = resolveKnobs({ ...defaultKnobs, size: mode });
-    const token = String(knobProps.sizeToken);
+    const token = knobProps.sizeToken;
     size[mode] = { token, figmaName: tokenToFigma(token, 'size') };
   }
 
@@ -428,21 +439,23 @@ const buildKnobs = (): FigmaKnobsExport => {
   };
 };
 
+type FontTable = Record<string, number | string>;
+
 interface FontLike {
-  family?: unknown;
-  size?: Record<string, unknown>;
-  lineHeight?: Record<string, unknown>;
-  letterSpacing?: Record<string, unknown>;
-  weight?: Record<string, unknown>;
+  family?: string;
+  size?: FontTable;
+  lineHeight?: FontTable;
+  letterSpacing?: FontTable;
+  weight?: FontTable;
 }
 
-const numberTable = (table: Record<string, unknown> | undefined, label: string) => {
-  const out: Record<string, number> = {};
+const numberTable = (table: FontTable | undefined, label: string) => {
+  const out: NumberTable = {};
   if (!table) {
     throw new Error(`figmaTokens: font is missing ${label} table`);
   }
   for (const [key, value] of Object.entries(table)) {
-    const num = typeof value === 'number' ? value : Number(value);
+    const num = Number(value);
     if (Number.isFinite(num)) {
       out[key] = num;
     }
@@ -454,12 +467,12 @@ const numberTable = (table: Record<string, unknown> | undefined, label: string) 
 };
 
 const exportFont = (font: FontLike, label: string): FigmaFontExport => {
-  const weight: Record<string, string> = {};
+  const weight: StringTable = {};
   for (const [key, value] of Object.entries(font.weight ?? {})) {
     weight[key] = String(value);
   }
   return {
-    family: String(font.family ?? ''),
+    family: font.family ?? '',
     size: numberTable(font.size, `${label}.size`),
     lineHeight: numberTable(font.lineHeight, `${label}.lineHeight`),
     letterSpacing: numberTable(font.letterSpacing, `${label}.letterSpacing`),
@@ -475,6 +488,7 @@ const firstFamily = (stack: string): string => {
 // ── Entry point ───────────────────────────────────────────────
 
 export const buildFigmaTokens = (options: BuildFigmaTokensOptions = {}): FigmaTokensExport => {
+  // SAFETY: themes() returns the built theme tables keyed by theme name, each a flat record of token strings and numbers.
   const themes = createThemesBuilder(
     defaultBaseTheme,
     defaultAccentTheme,
@@ -515,8 +529,8 @@ export const buildFigmaTokens = (options: BuildFigmaTokensOptions = {}): FigmaTo
     sizing,
     knobs,
     typography: {
-      heading: exportFont(defaultHeadingFont as FontLike, 'heading'),
-      body: exportFont(defaultBodyFont as FontLike, 'body'),
+      heading: exportFont(defaultHeadingFont, 'heading'),
+      body: exportFont(defaultBodyFont, 'body'),
       categories,
     },
   };

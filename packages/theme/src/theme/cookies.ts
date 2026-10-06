@@ -66,6 +66,13 @@ const chunkKey = (index: number): string => `${cookieOverridesPrefix}.${index}`;
 // Cookie read helpers (work with raw cookie objects from react-cookie)
 // ---------------------------------------------------------------------------
 
+const isString = (value: unknown): value is string => typeof value === 'string';
+
+const isPlainObject = (value: unknown): value is object =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const missingChunkValues = new Set<unknown>([undefined, null, '', 0, false]);
+
 /**
  * Shape-validate a parsed overrides payload before it reaches knob
  * resolution: keep knob-shaped entries — string values plus one-level
@@ -73,24 +80,30 @@ const chunkKey = (index: number): string => `${cookieOverridesPrefix}.${index}`;
  * everything else, so a corrupt or foreign cookie can never spread garbage
  * (arrays, numbers, deep objects) into `{ ...preset.knobs, ...overrides }`.
  */
-const sanitizeOverrides = (parsed: unknown): Partial<Knobs> => {
-  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+const sanitizeOverrides = (
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- parsed JSON of unknown shape; this function is the validator
+  parsed: unknown,
+): Partial<Knobs> => {
+  if (!isPlainObject(parsed)) {
     return {};
   }
-  const overrides: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(parsed)) {
-    if (typeof value === 'string') {
+  const overrides: Record<string, string | Record<string, string>> = {};
+  const entries: [string, unknown][] = Object.entries(parsed);
+  for (const [key, value] of entries) {
+    if (isString(value)) {
       overrides[key] = value;
-    } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+    } else if (isPlainObject(value)) {
       const nested: Record<string, string> = {};
-      for (const [stateKey, stateValue] of Object.entries(value)) {
-        if (typeof stateValue === 'string') {
+      const stateEntries: [string, unknown][] = Object.entries(value);
+      for (const [stateKey, stateValue] of stateEntries) {
+        if (isString(stateValue)) {
           nested[stateKey] = stateValue;
         }
       }
       overrides[key] = nested;
     }
   }
+  // SAFETY: every kept entry is a string or a one-level record of strings, the value shapes Knobs allows; foreign shapes were dropped above.
   return overrides as Partial<Knobs>;
 };
 
@@ -110,12 +123,13 @@ const sanitizeOverrides = (parsed: unknown): Partial<Knobs> => {
  * Anything else (numbers, arrays, mixed chunk types, malformed JSON) reads
  * as no overrides, and every parsed payload is shape-validated before use.
  */
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- exported API: react-cookie's jar hands over arbitrary parsed values, validated below
 export const readOverridesCookie = (cookies: Record<string, unknown>): Partial<Knobs> => {
   // Reconstruct from chunked cookies: mp.ov.0, mp.ov.1, …
   const chunks: unknown[] = [];
-  for (let i = 0; i < maxChunks; i++) {
+  for (let i = 0; i < maxChunks; i += 1) {
     const chunk = cookies[chunkKey(i)];
-    if (!chunk) {
+    if (missingChunkValues.has(chunk)) {
       break;
     }
     chunks.push(chunk);
@@ -125,12 +139,12 @@ export const readOverridesCookie = (cookies: Record<string, unknown>): Partial<K
   }
 
   // universal-cookie path: the jar already parsed the JSON for us.
-  if (chunks.length === 1 && typeof chunks[0] === 'object') {
+  if (chunks.length === 1 && isPlainObject(chunks[0])) {
     return sanitizeOverrides(chunks[0]);
   }
 
   // Raw string path: join chunks and parse the canonical JSON serialization.
-  if (!chunks.every((chunk): chunk is string => typeof chunk === 'string')) {
+  if (!chunks.every(isString)) {
     return {};
   }
   try {
@@ -145,9 +159,10 @@ export const readOverridesCookie = (cookies: Record<string, unknown>): Partial<K
  * jar values, so a numeric-looking name would arrive as a number — preset
  * names are strings by contract, anything else reads as no preset.
  */
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- exported API: react-cookie's jar hands over arbitrary parsed values, validated below
 export const readPresetCookie = (cookies: Record<string, unknown>): string | undefined => {
   const value = cookies[cookiePreset];
-  return typeof value === 'string' && value.length > 0 ? value : undefined;
+  return isString(value) && value.length > 0 ? value : undefined;
 };
 
 // ---------------------------------------------------------------------------
@@ -158,7 +173,7 @@ export const readPresetCookie = (cookies: Record<string, unknown>): string | und
  * Write the preset name cookie.
  * Returns the cookie key and value for the caller to pass to setCookie.
  */
-export const writePresetCookie = (presetName: string): { key: string; value: string } => ({
+export const writePresetCookie = (presetName: string) => ({
   key: cookiePreset,
   value: presetName,
 });
@@ -168,12 +183,7 @@ export const writePresetCookie = (presetName: string): { key: string; value: str
  * Returns an array of { key, value } pairs for the caller to pass to setCookie.
  * Also returns keys to remove (old split cookies that are no longer needed).
  */
-export const writeOverridesCookie = (
-  overrides: Partial<Knobs>,
-): {
-  toSet: { key: string; value: string }[];
-  toRemove: string[];
-} => {
+export const writeOverridesCookie = (overrides: Partial<Knobs>) => {
   const json = JSON.stringify(overrides);
   const chunks = splitCookieValue(json);
 
@@ -184,7 +194,7 @@ export const writeOverridesCookie = (
 
   // Clean up any leftover chunks beyond what we wrote
   const toRemove: string[] = [];
-  for (let i = chunks.length; i < chunks.length + maxChunks; i++) {
+  for (let i = chunks.length; i < chunks.length + maxChunks; i += 1) {
     toRemove.push(chunkKey(i));
   }
 
@@ -201,9 +211,11 @@ export const writeOverridesCookie = (
  */
 export const computeOverrides = (base: Knobs, current: Knobs): Partial<Knobs> => {
   const overrides: Partial<Knobs> = {};
+  // SAFETY: Object.keys(base) lists the own keys of a Knobs object, which are keyof Knobs.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- Object.keys is typed string[]; narrowing to keyof Knobs is the usual key-enumeration cast
   for (const key of Object.keys(base) as (keyof Knobs)[]) {
     if (current[key] !== base[key]) {
-      (overrides as Record<string, unknown>)[key] = current[key];
+      Object.assign(overrides, { [key]: current[key] });
     }
   }
   return overrides;
@@ -218,7 +230,7 @@ export const computeOverrides = (base: Knobs, current: Knobs): Partial<Knobs> =>
  */
 export const getCookieWatchList = (): string[] => {
   const keys = [cookiePreset];
-  for (let i = 0; i < maxChunks; i++) {
+  for (let i = 0; i < maxChunks; i += 1) {
     keys.push(chunkKey(i));
   }
   return keys;
@@ -241,7 +253,7 @@ export const persistPresetOverrides = (overrides: Partial<Knobs>): void => {
 /**
  * Read the cookies relevant to the theme system into a key/value map.
  */
-const parseBrowserCookies = (): Record<string, string | undefined> => {
+const parseBrowserCookies = () => {
   const map: Record<string, string | undefined> = {};
   for (const key of getCookieWatchList()) {
     const value = getCookie(key);

@@ -19,7 +19,7 @@ import {
   readingWidthStyle,
 } from './layout-tokens';
 
-describe('layoutBreakpoints', () => {
+describe('layoutBreakpoints tokens', () => {
   it('pivots overlays at medium 640 (Tamagui $sm); expanded 860 stays the pane class', () => {
     expect(layoutBreakpoints.expanded).toBe(860);
     expect(OVERLAY_BREAKPOINT).toBe(640);
@@ -55,7 +55,7 @@ describe('layoutBreakpoints', () => {
   });
 });
 
-describe('readingWidthStyle', () => {
+describe(readingWidthStyle, () => {
   it('defaults to ~70ch within 65–75', () => {
     expect(READING_WIDTH_CH).toBeGreaterThanOrEqual(READING_WIDTH_MIN_CH);
     expect(READING_WIDTH_CH).toBeLessThanOrEqual(READING_WIDTH_MAX_CH);
@@ -86,7 +86,7 @@ describe('press target', () => {
   });
 });
 
-describe('isTouchSurface', () => {
+describe(isTouchSurface, () => {
   it('is false in the default test environment', () => {
     expect(isTouchSurface()).toBe(false);
   });

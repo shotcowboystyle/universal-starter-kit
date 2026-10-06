@@ -28,7 +28,7 @@ export const Tint = ({ children, alt = 0, disable, ...props }: TintProps) => {
 
   return (
     <TintDepthContext.Provider value={depth}>
-      {disable || !tint ? (
+      {disable || tint === undefined || tint === '' ? (
         children
       ) : (
         <Theme

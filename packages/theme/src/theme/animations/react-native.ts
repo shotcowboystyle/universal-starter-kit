@@ -55,5 +55,7 @@ export const animationConfig = {
 } as const;
 
 export type AnimationName = keyof typeof animationConfig;
+// SAFETY: keys of animationConfig are exactly the AnimationName union.
+// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- Object.keys widens to string[]; keys are exactly AnimationName
 export const animationNames = Object.keys(animationConfig) as AnimationName[];
 export const animations = createAnimations(animationConfig);

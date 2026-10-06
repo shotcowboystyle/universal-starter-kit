@@ -126,11 +126,11 @@ describe('colorRules', () => {
     it('covers all 12 steps without gaps', () => {
       const covered = new Set<number>();
       for (const g of semanticGroups) {
-        for (let s = g.from; s <= g.to; s++) {
+        for (let s = g.from; s <= g.to; s += 1) {
           covered.add(s);
         }
       }
-      for (let i = 1; i <= 12; i++) {
+      for (let i = 1; i <= 12; i += 1) {
         expect(covered.has(i)).toBe(true);
       }
     });
@@ -139,7 +139,16 @@ describe('colorRules', () => {
 
 // ── resolveKnobs tests ───────────────────────────────────────
 
-describe('resolveKnobs', () => {
+const paint = (elevation: 'small' | 'medium' | 'large', scheme: 'light' | 'dark') =>
+  resolveKnobs(knobsWith({ elevation }), undefined, scheme).knobProps;
+
+const omitKey = <T extends object, K extends keyof T>(source: T, omitted: K): Omit<T, K> => {
+  const entries: [string, unknown][] = Object.entries(source);
+  // SAFETY: dropping one key from the entries of T yields exactly Omit<T, K>.
+  return Object.fromEntries(entries.filter(([key]) => key !== omitted)) as Omit<T, K>;
+};
+
+describe(resolveKnobs, () => {
   it('produces all knobProps keys from defaultKnobs', () => {
     const { knobProps } = resolveKnobs(defaultKnobs);
     for (const key of expectedKnobPropKeys) {
@@ -279,7 +288,8 @@ describe('resolveKnobs', () => {
   describe('elevation knob (native)', () => {
     it('emits RN-safe numbers, never token strings', async () => {
       vi.resetModules();
-      vi.doMock('@repo/platform', () => ({
+      vi.doMock(import('@repo/platform'), async (importOriginal) => ({
+        ...(await importOriginal()),
         isWeb: false,
         isTouchable: false,
         isWebTouchable: false,
@@ -305,9 +315,6 @@ describe('resolveKnobs', () => {
   });
 
   describe('overlay elevation ladder', () => {
-    const paint = (elevation: 'small' | 'medium' | 'large', scheme: 'light' | 'dark') =>
-      resolveKnobs(knobsWith({ elevation }), undefined, scheme).knobProps;
-
     it('overlay medium and large paint the reference popper and dialog shadows', () => {
       expect(paint('medium', 'light').overlayElevation).toBe('$3');
       expect(paint('medium', 'light').elevatedSurface.style?.boxShadow).toBe(
@@ -536,9 +543,9 @@ describe('resolveKnobs', () => {
     it('overlay elevation token differs from the control elevation token', () => {
       for (const elevation of ['small', 'medium', 'large'] as const) {
         const { knobProps } = resolveKnobs(knobsWith({ elevation }));
-        expect(knobProps.overlayElevation, elevation).toBeDefined();
-        expect(knobProps.overlayElevation, elevation).not.toBe(knobProps.elevation);
-        expect(knobProps.elevatedSurface.elevation, elevation).toBe(knobProps.overlayElevation);
+        expect(knobProps.overlayElevation).toBeDefined();
+        expect(knobProps.overlayElevation).not.toBe(knobProps.elevation);
+        expect(knobProps.elevatedSurface.elevation).toBe(knobProps.overlayElevation);
       }
       const none = resolveKnobs(knobsWith({ elevation: 'none' }));
       expect(none.knobProps.elevation).toBeUndefined();
@@ -559,12 +566,10 @@ describe('resolveKnobs', () => {
       expect(defaultKnobs.borderRadius).toBe('medium');
       expect(defaultKnobs.space).toBe('medium');
       for (const borderRadius of ['none', 'small', 'large', 'full'] as const) {
-        expect(resolveKnobs(knobsWith({ borderRadius })).knobProps.featureSurface.borderRadius, borderRadius).not.toBe(
-          '$10',
-        );
+        expect(resolveKnobs(knobsWith({ borderRadius })).knobProps.featureSurface.borderRadius).not.toBe('$10');
       }
       for (const space of ['small', 'large'] as const) {
-        expect(resolveKnobs(knobsWith({ space })).knobProps.featureSurface.padding, space).not.toBe('$6');
+        expect(resolveKnobs(knobsWith({ space })).knobProps.featureSurface.padding).not.toBe('$6');
       }
     });
 
@@ -702,15 +707,14 @@ describe('resolveKnobs', () => {
       expect(defaultKnobs.cornerSmoothing).toBe(CornerSmoothing.Round);
       const { knobProps } = resolveKnobs(defaultKnobs);
       for (const fragment of radiusFragments) {
-        expect(knobProps[fragment], fragment).not.toHaveProperty('className');
+        expect(knobProps[fragment]).not.toHaveProperty('className');
       }
     });
 
     it('treats an absent knob as "round" (optional key, older presets)', () => {
-      const { cornerSmoothing: _omit, ...withoutKnob } = defaultKnobs;
-      const { knobProps } = resolveKnobs(withoutKnob as Knobs);
+      const { knobProps } = resolveKnobs(omitKey(defaultKnobs, 'cornerSmoothing') as Knobs);
       for (const fragment of radiusFragments) {
-        expect(knobProps[fragment], fragment).not.toHaveProperty('className');
+        expect(knobProps[fragment]).not.toHaveProperty('className');
       }
     });
 
@@ -761,8 +765,8 @@ describe('resolveKnobs', () => {
       const round = resolveKnobs(knobsWith({ cornerSmoothing: 'round' }));
       const smooth = resolveKnobs(knobsWith({ cornerSmoothing: 'smooth' }));
       for (const fragment of radiusFragments) {
-        const { className: _cls, ...smoothRest } = smooth.knobProps[fragment];
-        expect(smoothRest, fragment).toStrictEqual(round.knobProps[fragment]);
+        const smoothRest = omitKey(smooth.knobProps[fragment], 'className');
+        expect(smoothRest).toStrictEqual(round.knobProps[fragment]);
       }
     });
 
@@ -783,7 +787,8 @@ describe('resolveKnobs', () => {
     // no className may reach RN views regardless of the knob.
     it('native emits no class for either value', async () => {
       vi.resetModules();
-      vi.doMock('@repo/platform', () => ({
+      vi.doMock(import('@repo/platform'), async (importOriginal) => ({
+        ...(await importOriginal()),
         isWeb: false,
         isTouchable: false,
         isWebTouchable: false,
@@ -869,18 +874,8 @@ describe('resolveKnobs', () => {
       expect(knobProps.pointy).toBe(true);
     });
 
-    it('is false when borderRadius is "small"', () => {
-      const { knobProps } = resolveKnobs(knobsWith({ borderRadius: 'small' }));
-      expect(knobProps.pointy).toBe(false);
-    });
-
-    it('is false when borderRadius is "medium"', () => {
-      const { knobProps } = resolveKnobs(knobsWith({ borderRadius: 'medium' }));
-      expect(knobProps.pointy).toBe(false);
-    });
-
-    it('is false when borderRadius is "full"', () => {
-      const { knobProps } = resolveKnobs(knobsWith({ borderRadius: 'full' }));
+    it.each(['small', 'medium', 'full'] as const)('is false when borderRadius is "%s"', (borderRadius) => {
+      const { knobProps } = resolveKnobs(knobsWith({ borderRadius }));
       expect(knobProps.pointy).toBe(false);
     });
 
@@ -944,8 +939,9 @@ describe('resolveKnobs', () => {
     });
 
     it('an omitted knob still resolves moderate (preset constructions predate the dial)', () => {
-      const { pageTitleScale: _omitted, ...withoutDial } = defaultKnobs;
-      expect(resolveKnobs(withoutDial as Knobs).knobProps.pageTitle).toStrictEqual({ size: '$8' });
+      expect(resolveKnobs(omitKey(defaultKnobs, 'pageTitleScale') as Knobs).knobProps.pageTitle).toStrictEqual({
+        size: '$8',
+      });
     });
 
     it('resolvePageTitleScale is the one table both channels read', () => {
@@ -961,8 +957,8 @@ describe('resolveKnobs', () => {
     });
 
     it('`hero` differs from the default preset in nothing but the title step', () => {
-      const { pageTitleScale: _hero, ...heroRest } = heroPreset.knobs;
-      const { pageTitleScale: _default, ...defaultRest } = defaultPreset.knobs;
+      const heroRest = omitKey(heroPreset.knobs, 'pageTitleScale');
+      const defaultRest = omitKey(defaultPreset.knobs, 'pageTitleScale');
       expect(heroRest).toStrictEqual(defaultRest);
       expect(heroPreset.theme).toBe(defaultPreset.theme);
     });
@@ -1022,25 +1018,25 @@ describe('resolveKnobs', () => {
   // ── Group 4: Gap review tests ─────────────────────────────
 
   describe('gap review', () => {
-    const sizeTokenMap: Record<string, string> = {
+    const sizeTokenMap: Record<Knobs['size'], string> = {
       small: '$3',
       medium: '$4',
       large: '$5',
     };
 
-    const gapMap: Record<string, string> = {
+    const gapMap: Record<Knobs['space'], string> = {
       small: '$2',
       medium: '$4',
       large: '$5',
     };
 
-    const panelPaddingMap: Record<string, string> = {
+    const panelPaddingMap: Record<Knobs['space'], string> = {
       small: '$3',
       medium: '$4',
       large: '$6',
     };
 
-    const gapLgMap: Record<string, string> = {
+    const gapLgMap: Record<Knobs['space'], string> = {
       small: '$3',
       medium: '$5',
       large: '$6',
@@ -1117,7 +1113,7 @@ describe('resolveKnobs', () => {
 
 // ── Density ─────────────────────────────────
 
-describe('applyDensity', () => {
+describe(applyDensity, () => {
   it('defaultKnobs.density is "comfortable"', () => {
     expect(defaultKnobs.density).toBe(Density.Comfortable);
   });
@@ -1398,7 +1394,8 @@ describe('disabledState recipe', () => {
 describe('touch height floor via resolveKnobs', () => {
   it('paints control.height >= 44 when isTouchable', async () => {
     vi.resetModules();
-    vi.doMock('@repo/platform', () => ({
+    vi.doMock(import('@repo/platform'), async (importOriginal) => ({
+      ...(await importOriginal()),
       isWeb: true,
       isTouchable: true,
       isWebTouchable: true,

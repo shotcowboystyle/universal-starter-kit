@@ -10,15 +10,14 @@ const makeInput = (overrides: Partial<SnapshotInput> = {}): SnapshotInput => ({
   ...overrides,
 });
 
-describe('buildSnapshot', () => {
-  it('generates a markdown string with a title', () => {
-    const result = buildSnapshot(makeInput());
-    expect(result).toContain('# Theme Snapshot');
-  });
-
-  it('includes the generated timestamp', () => {
-    const result = buildSnapshot(makeInput());
-    expect(result).toContain('Generated:');
+describe(buildSnapshot, () => {
+  it.each([
+    ['generates a markdown string with a title', '# Theme Snapshot'],
+    ['includes the generated timestamp', 'Generated:'],
+    ['shows (none / custom) when no preset', '(none / custom)'],
+    ['shows placeholder when no colors available', '_(no theme colors available)_'],
+  ])('%s', (_name, expected) => {
+    expect(buildSnapshot(makeInput())).toContain(expected);
   });
 
   it('includes configuration section', () => {
@@ -33,11 +32,6 @@ describe('buildSnapshot', () => {
     expect(result).toContain('## Configuration');
     expect(result).toContain('dark-mode');
     expect(result).toContain('blue');
-  });
-
-  it('shows (none / custom) when no preset', () => {
-    const result = buildSnapshot(makeInput());
-    expect(result).toContain('(none / custom)');
   });
 
   it('includes knobs table', () => {
@@ -78,10 +72,5 @@ describe('buildSnapshot', () => {
     expect(result).toContain('### dark mode');
     expect(result).toContain('$color1');
     expect(result).toContain('$color12');
-  });
-
-  it('shows placeholder when no colors available', () => {
-    const result = buildSnapshot(makeInput());
-    expect(result).toContain('_(no theme colors available)_');
   });
 });

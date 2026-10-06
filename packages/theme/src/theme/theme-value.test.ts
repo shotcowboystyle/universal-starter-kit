@@ -6,18 +6,19 @@
  * a fixture fails, and this package's own defaults pass. A check that only
  * does the first is a check nobody can keep.
  */
+import type { CreateTamaguiProps } from 'tamagui';
 import { describe, expect, it, vi } from 'vitest';
-
-vi.mock('tamagui', () => ({
-  createTamagui: vi.fn((config: Record<string, unknown>) => config),
-}));
-// The reanimated driver imports react-native, which has no Node build.
-vi.mock('./animations/index', () => ({ animations: {} }));
 
 import { createDefaultThemeConfig } from './create-default-theme-config';
 import { isResolvableThemeValue } from './theme-value';
 
-describe('isResolvableThemeValue', () => {
+vi.mock(import('tamagui'), () => ({
+  createTamagui: vi.fn<(config: CreateTamaguiProps) => CreateTamaguiProps>((config) => config) as never,
+}));
+// The reanimated driver imports react-native, which has no Node build.
+vi.mock(import('./animations/index'), () => ({ animations: {} as never }));
+
+describe(isResolvableThemeValue, () => {
   it.each([
     ['$color5', 'token reference'],
     ['#fff', '3-digit hex'],
@@ -78,6 +79,7 @@ describe('composeGetTheme validates at build (10 B.3 item 3)', () => {
     expect(() =>
       createDefaultThemeConfig({
         builderOptions: {
+          // oxlint-disable-next-line sonarjs/no-undefined-assignment -- the case under test is literally `undefined` values
           getTheme: () => ({ borderColor: undefined, outlineColor: undefined }),
         },
       }),

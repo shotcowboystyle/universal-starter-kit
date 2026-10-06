@@ -1,3 +1,5 @@
+import type { AnimationName } from './animations/index';
+
 // ── Structure ──────────────────────────────────────────────
 
 /** Structural fill. Exactly two values: `filled` | `outlined`. Ghost is a Chip/Tag variant, not this knob. */
@@ -179,9 +181,11 @@ export const FontCategory = {
 export type FontCategory = (typeof FontCategory)[keyof typeof FontCategory];
 
 export const HeadingFont = FontCategory;
+// oxlint-disable-next-line sonarjs/redundant-type-aliases -- public API: HeadingFont names the knob's role
 export type HeadingFont = FontCategory;
 
 export const BodyFont = FontCategory;
+// oxlint-disable-next-line sonarjs/redundant-type-aliases -- public API: BodyFont names the knob's role
 export type BodyFont = FontCategory;
 
 export const FontWeight = {
@@ -210,8 +214,6 @@ export const PageTitleScale = {
 export type PageTitleScale = (typeof PageTitleScale)[keyof typeof PageTitleScale];
 
 // ── Animation ──────────────────────────────────────────────
-
-import type { AnimationName } from './animations/index';
 
 export type Animation = 'none' | AnimationName;
 
@@ -300,8 +302,8 @@ export const defaultKnobs: Knobs = {
   size: 'medium',
   density: 'comfortable',
   textAccent: 'high',
-  headingFont: 'sans-serif',
-  bodyFont: 'sans-serif',
+  headingFont: FontCategory.SansSerif,
+  bodyFont: FontCategory.SansSerif,
   fontWeight: 'regular',
   pageTitleScale: 'moderate',
   animation: 'quick',

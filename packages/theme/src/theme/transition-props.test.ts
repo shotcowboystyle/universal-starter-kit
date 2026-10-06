@@ -4,6 +4,7 @@ import { transitionProps } from './transition-props';
 
 describe('transitionProps (web)', () => {
   it('keeps the transition key at animation none so a live knob flip adds no hooks', () => {
+    // oxlint-disable-next-line unicorn/no-useless-undefined -- the parameter is required, and undefined is the animation-none value under test
     const atNone = transitionProps(undefined);
     expect('transition' in atNone).toBe(true);
     expect(atNone.transition).toBeUndefined();

@@ -97,19 +97,19 @@ export const bodyLineHeightPx = (sizePx: number): number => sizePx + BODY_LINE_H
  * Upstream hands these back either raw or wrapped depending on where in the
  * config pipeline they were read, and `createInterFont` wants them raw.
  */
-const plain = <T>(raw: unknown): Record<string, T> => {
-  const out: Record<string, T> = {};
-  for (const [key, value] of Object.entries((raw ?? {}) as Record<string, T | { val?: T }>)) {
-    const unwrapped = value && typeof value === 'object' && 'val' in value ? (value as { val?: T }).val : (value as T);
-    if (unwrapped !== undefined) {
-      out[key.replace(/^\$/u, '')] = unwrapped;
-    }
-  }
-  return out;
-};
+type RawFontTable<T> = Record<string, T | { val?: T }>;
+
+const plain = <T extends number | string>(raw: RawFontTable<T> | undefined) =>
+  Object.fromEntries(
+    Object.entries(raw ?? {}).flatMap(([key, value]) => {
+      // oxlint-disable-next-line anti-slop/no-runtime-typeof -- Tamagui font tables hold bare values or `{ val }` Variables depending on pipeline stage
+      const unwrapped = typeof value === 'object' && value !== null ? value.val : value;
+      return unwrapped === undefined ? [] : [[key.replace(/^\$/u, ''), unwrapped] as const];
+    }),
+  );
 
 /** A tamagui font table's numbers, with Variables and `$` prefixes unwrapped. */
-const numbers = (raw: unknown) => plain<number>(raw);
+const numbers = (raw: RawFontTable<number> | undefined) => plain<number>(raw);
 
 /** Inter dynamic tracking for every key of a size table. */
 const trackingFor = (sizes: Record<string, number>): Record<string, number> =>
@@ -187,7 +187,7 @@ export const createCategoryFont = (category: FontCategory, family: string): Gene
     lineHeight: categoryLineHeights(category),
     weight: bodyWeights,
     letterSpacing: neutralTracking(bodySizes),
-  }) as GenericFont;
+  });
 
 export const defaultHeadingFont = createInterFont(
   {

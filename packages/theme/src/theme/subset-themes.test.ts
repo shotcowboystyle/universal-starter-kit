@@ -5,12 +5,8 @@
  * sub-theme matching shows up here rather than as an untinted control.
  */
 
+import type { createTamagui } from 'tamagui';
 import { describe, expect, it, vi } from 'vitest';
-
-vi.mock('tamagui', () => ({
-  createTamagui: vi.fn((config: Record<string, unknown>) => config),
-}));
-vi.mock('./animations/index', () => ({ animations: {} }));
 
 import { createDefaultThemeConfig } from './create-default-theme-config';
 import { createThemesBuilder } from './create-themes';
@@ -20,12 +16,18 @@ import { defaultBuilderOptions } from './defaults/builder-options';
 import { subsetThemes } from './subset-themes';
 import type { ThemeSubset } from './subset-themes';
 
+vi.mock(import('tamagui'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  // SAFETY: the stub returns its config unchanged, and callers here only read `themes` off the result.
+  createTamagui: vi.fn<typeof createTamagui>(((config) => config) as typeof createTamagui),
+}));
+
 const narrow: ThemeSubset = {
   components: ['Button', 'Input'],
   tints: ['accent', 'active', 'error'],
 };
 
-describe('subsetThemes', () => {
+describe(subsetThemes, () => {
   const names = [
     'light',
     'dark',
@@ -68,10 +70,7 @@ describe('subsetThemes', () => {
 });
 
 describe('subsetThemes over the house matrix', () => {
-  const built = createThemesBuilder(defaultBaseTheme, defaultAccentTheme, defaultBuilderOptions).themes() as Record<
-    string,
-    Record<string, unknown>
-  >;
+  const built = createThemesBuilder(defaultBaseTheme, defaultAccentTheme, defaultBuilderOptions).themes();
 
   it('drops the decorative hues and keeps the semantic and state children', () => {
     const kept = subsetThemes(built, {
@@ -89,8 +88,8 @@ describe('subsetThemes over the house matrix', () => {
   });
 
   it('is what createDefaultThemeConfig({ subset }) ships, and omitting it ships everything', () => {
-    const full = createDefaultThemeConfig().tamagui.themes as Record<string, unknown>;
-    const subset = createDefaultThemeConfig({ subset: narrow }).tamagui.themes as Record<string, unknown>;
+    const full = createDefaultThemeConfig().tamagui.themes;
+    const subset = createDefaultThemeConfig({ subset: narrow }).tamagui.themes;
     expect(Object.keys(full)).toStrictEqual(Object.keys(built));
     expect(Object.keys(subset)).toStrictEqual(Object.keys(subsetThemes(built, narrow)));
     expect(subset.light).toStrictEqual(full.light);

@@ -32,7 +32,7 @@ export const Preset = ({ children, preset: presetName, theme, overrides, cascade
       // Start from parent's preset
       base = { ...parentCtx.preset };
       // If a preset name is given, overlay it
-      if (presetName) {
+      if (presetName !== undefined && presetName !== '') {
         const namedPreset = getPreset(presetName);
         if (namedPreset) {
           base = { ...namedPreset };
@@ -54,13 +54,14 @@ export const Preset = ({ children, preset: presetName, theme, overrides, cascade
 
     // cascade=false or no parent — start fresh
     const freshDefault: PresetType = {
+      // SAFETY: '' is the no-theme sentinel; consumers treat a falsy theme as absent.
       theme: '' as ThemeName,
       knobs: { ...defaultKnobs },
       intents: {},
       tints: [],
     };
 
-    if (presetName) {
+    if (presetName !== undefined && presetName !== '') {
       base = getPreset(presetName) ?? freshDefault;
     } else if (cascade) {
       // No parent context exists: use defaults
@@ -83,7 +84,7 @@ export const Preset = ({ children, preset: presetName, theme, overrides, cascade
   let element = <PresetContext.Provider value={ctxValue}>{children}</PresetContext.Provider>;
 
   // Wrap with Tamagui <Theme /> when theme is specified
-  if (theme) {
+  if (theme !== undefined && theme !== '') {
     element = <TamaguiTheme name={theme}>{element}</TamaguiTheme>;
   }
 

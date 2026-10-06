@@ -12,31 +12,31 @@
  * theme building, not Tamagui's config processing.
  */
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
-vi.mock('tamagui', () => ({
-  createTamagui: vi.fn((config: Record<string, unknown>) => config),
-}));
-
-// The reanimated animation driver imports react-native, which has no Node
-// build; themes are what these specs pin, so stub the driver out.
-vi.mock('./animations/index', () => ({ animations: {} }));
-
 import {
   defaultConfig as v5DefaultConfig,
   mediaQueryDefaultActive as v5MediaQueryDefaultActive,
 } from '@tamagui/config/v5';
 import { tokens as v5Tokens } from '@tamagui/themes/v5';
+import type { CreateTamaguiProps } from 'tamagui';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { contrastRatio, minContrastRatio, normalizeToHex, relativeLuminance } from './color-rules';
 import { TAMAGUI_ERA, createDefaultThemeConfig } from './create-default-theme-config';
 import type { GetThemeProps } from './create-themes';
 import { setSizeRecipeInputs } from './size-recipes';
 
+vi.mock(import('tamagui'), () => ({
+  createTamagui: vi.fn<(config: CreateTamaguiProps) => CreateTamaguiProps>((config) => config) as never,
+}));
+
+// The reanimated animation driver imports react-native, which has no Node
+// build; themes are what these specs pin, so stub the driver out.
+vi.mock(import('./animations/index'), () => ({ animations: {} as never }));
+
 // Mirrors the shc app theme config: a consumer getTheme written against the
 // FULL base ramp (theme.colorN) with no outlineColor of its own. Inside
 // component sub-themes (t_Button, ...) every one of these reads undefined.
-const consumerGetTheme = ({ theme }: GetThemeProps): Record<string, string> => ({
+const consumerGetTheme = ({ theme }: GetThemeProps) => ({
   backgroundPress: theme.color5,
   backgroundFocus: theme.color6,
   backgroundActive: theme.color4,
@@ -53,6 +53,8 @@ const consumerGetTheme = ({ theme }: GetThemeProps): Record<string, string> => (
 // object, so .themes is the raw built themes record.
 type RawThemes = Record<string, Record<string, string>>;
 
+const familyName = (family: string | { val?: string } | undefined) => (family instanceof Object ? family.val : family);
+
 const buildThemes = (): RawThemes => {
   const config = createDefaultThemeConfig({
     builderOptions: { getTheme: consumerGetTheme },
@@ -66,21 +68,19 @@ describe('createDefaultThemeConfig — builderOptions.getTheme composition', () 
   });
   const themes = buildThemes();
 
-  for (const scheme of ['light', 'dark'] as const) {
-    it(`${scheme}: custom getTheme keeps the derived solid ≥3:1 $outlineColor`, () => {
-      const theme = themes[scheme];
-      expect(theme).toBeTruthy();
-      const ring = normalizeToHex(theme.outlineColor);
-      const bg1 = normalizeToHex(theme.color1);
-      const bg2 = normalizeToHex(theme.color2);
-      expect(ring).toBeTruthy();
-      expect(bg1).toBeTruthy();
-      expect(bg2).toBeTruthy();
-      const c1 = contrastRatio(relativeLuminance(ring!), relativeLuminance(bg1!));
-      const c2 = contrastRatio(relativeLuminance(ring!), relativeLuminance(bg2!));
-      expect(Math.min(c1, c2)).toBeGreaterThanOrEqual(minContrastRatio);
-    });
-  }
+  it.each(['light', 'dark'] as const)('%s: custom getTheme keeps the derived solid ≥3:1 $outlineColor', (scheme) => {
+    const theme = themes[scheme];
+    expect(theme).toBeTruthy();
+    const ring = normalizeToHex(theme.outlineColor);
+    const bg1 = normalizeToHex(theme.color1);
+    const bg2 = normalizeToHex(theme.color2);
+    expect(ring, `${scheme}.outlineColor`).toBeTruthy();
+    expect(bg1).toBeTruthy();
+    expect(bg2).toBeTruthy();
+    const c1 = contrastRatio(relativeLuminance(ring!), relativeLuminance(bg1!));
+    const c2 = contrastRatio(relativeLuminance(ring!), relativeLuminance(bg2!));
+    expect(Math.min(c1, c2)).toBeGreaterThanOrEqual(minContrastRatio);
+  });
 
   it('consumer keys win over the default derivation per key', () => {
     // Default getTheme anchors textMuted at color11; the consumer moves it
@@ -96,7 +96,7 @@ describe('createDefaultThemeConfig — builderOptions.getTheme composition', () 
     for (const name of subThemeNames) {
       for (const [key, value] of Object.entries(themes[name])) {
         expect(value, `${name}.${key}`).toBeDefined();
-        expect(String(value), `${name}.${key}`).not.toBe('undefined');
+        expect(value, `${name}.${key}`).not.toBe('undefined');
       }
     }
   });
@@ -104,9 +104,9 @@ describe('createDefaultThemeConfig — builderOptions.getTheme composition', () 
   it('component sub-themes still derive a solid outlineColor', () => {
     for (const name of ['light_Button', 'dark_Button']) {
       const subTheme = themes[name];
-      expect(subTheme, name).toBeTruthy();
+      expect(subTheme).toBeTruthy();
       const ring = subTheme.outlineColor;
-      expect(ring, `${name}.outlineColor`).toBeTruthy();
+      expect(ring).toBeTruthy();
       expect(normalizeToHex(ring), `${name}.outlineColor solid`).toBeTruthy();
     }
   });
@@ -115,8 +115,8 @@ describe('createDefaultThemeConfig — builderOptions.getTheme composition', () 
     for (const [name, theme] of Object.entries(themes)) {
       for (const [key, value] of Object.entries(theme)) {
         expect(value, `${name}.${key}`).toBeDefined();
-        expect(value, `${name}.${key}`).not.toBeNull();
-        expect(String(value), `${name}.${key}`).not.toBe('undefined');
+        expect(value).not.toBeNull();
+        expect(value).not.toBe('undefined');
       }
     }
   });
@@ -134,20 +134,20 @@ describe('createDefaultThemeConfig — builderOptions.getTheme composition', () 
       gap: Math.round(40 * (9 / 44)),
     });
     expect(config.recipeInputs?.baseHeight).toBe(40);
-    const { themes } = config.tamagui as unknown as { themes: RawThemes };
-    for (const [name, theme] of Object.entries(themes)) {
-      expect(theme, name).not.toHaveProperty('baseHeight');
-      expect(theme, name).not.toHaveProperty('radiusPx');
-      expect(theme, name).not.toHaveProperty('paddingHorizontal');
-      expect(theme, name).not.toHaveProperty('sizeFactors');
+    const { themes: builtThemes } = config.tamagui as unknown as { themes: RawThemes };
+    for (const theme of Object.values(builtThemes)) {
+      expect(theme).not.toHaveProperty('baseHeight');
+      expect(theme).not.toHaveProperty('radiusPx');
+      expect(theme).not.toHaveProperty('paddingHorizontal');
+      expect(theme).not.toHaveProperty('sizeFactors');
     }
   });
 
   it('zero-options build matches the default getTheme behavior', () => {
     const config = createDefaultThemeConfig();
-    const { themes } = config.tamagui as unknown as { themes: RawThemes };
+    const { themes: builtThemes } = config.tamagui as unknown as { themes: RawThemes };
     for (const scheme of ['light', 'dark'] as const) {
-      const theme = themes[scheme];
+      const theme = builtThemes[scheme];
       expect(normalizeToHex(theme.outlineColor)).toBeTruthy();
       expect(theme.textMuted).toBe(theme.color11);
     }
@@ -160,7 +160,7 @@ describe('createDefaultThemeConfig — builderOptions.getTheme composition', () 
     };
     const { serif } = config.tamagui.fonts;
     expect(serif, 'serif font').toBeTruthy();
-    const family = typeof serif.family === 'string' ? serif.family : serif.family?.val;
+    const family = familyName(serif.family);
     expect(family).toMatch(/Georgia/u);
   });
 
@@ -175,7 +175,7 @@ describe('createDefaultThemeConfig — builderOptions.getTheme composition', () 
     expect(config.tamagui.fonts.heading).toBe(heading);
     expect(config.tamagui.fonts.body).toBe(body);
     const { serif } = config.tamagui.fonts;
-    const family = typeof serif?.family === 'string' ? serif.family : serif?.family?.val;
+    const family = familyName(serif?.family);
     expect(family).toMatch(/Georgia/u);
   });
 });
@@ -191,15 +191,16 @@ describe('createDefaultThemeConfig — builderOptions.getTheme composition', () 
 // surface with live call sites across packages/ — their fate is decided
 // separately, not part of the pin.
 
-type TokenValue = { val?: unknown } | string | number;
+type TokenLeaf = string | number;
+type TokenValue = { val?: TokenLeaf } | TokenLeaf;
 type RawTokens = Record<string, Record<string, TokenValue>>;
 
 /** Flatten one token group to `{ key(without $): primitive value }`. */
-const tokenGroupValues = (tokens: RawTokens, group: string): Record<string, unknown> => {
-  const out: Record<string, unknown> = {};
+const tokenGroupValues = (tokens: RawTokens, group: string) => {
+  const out: Record<string, TokenValue | undefined> = {};
   for (const [key, value] of Object.entries(tokens[group] ?? {})) {
     const name = key.startsWith('$') ? key.slice(1) : key;
-    out[name] = value && typeof value === 'object' && 'val' in value ? (value as { val: unknown }).val : value;
+    out[name] = value instanceof Object && 'val' in value ? value.val : value;
   }
   return out;
 };
@@ -207,8 +208,8 @@ const tokenGroupValues = (tokens: RawTokens, group: string): Record<string, unkn
 describe('createDefaultThemeConfig — Tamagui era pin', () => {
   const config = createDefaultThemeConfig() as unknown as {
     tamagui: {
-      media: Record<string, unknown>;
-      settings: Record<string, unknown>;
+      media: object;
+      settings: { mediaQueryDefaultActive?: unknown };
       tokens: RawTokens;
     };
   };
@@ -225,7 +226,7 @@ describe('createDefaultThemeConfig — Tamagui era pin', () => {
     }
     // Dead eras: gtSm/gtXs (v3-era config) and 2xl/2xs/maxSm (v4) must not resolve.
     for (const key of ['gtXs', 'gtSm', 'gtMd', 'gtLg', '2xl', '2xs', 'maxSm', 'max2Xl']) {
-      expect(config.tamagui.media, `media.${key}`).not.toHaveProperty(key);
+      expect(config.tamagui.media).not.toHaveProperty(key);
     }
     expect(config.tamagui.settings.mediaQueryDefaultActive).toStrictEqual(v5MediaQueryDefaultActive);
   });

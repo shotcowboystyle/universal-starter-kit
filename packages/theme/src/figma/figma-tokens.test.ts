@@ -1,4 +1,4 @@
-import * as Colors from '@tamagui/colors';
+import { green, red, redDark, yellow } from '@tamagui/colors';
 import { defaultConfig } from '@tamagui/config/v5';
 import { describe, expect, it } from 'vitest';
 
@@ -22,7 +22,7 @@ const fontFamilies = {
 const sameColor = (a: string, b: string, tolerance = 3): boolean => {
   const hexA = normalizeToHex(a);
   const hexB = normalizeToHex(b);
-  if (!hexA || !hexB) {
+  if (hexA === null || hexB === null) {
     return false;
   }
   for (let i = 1; i < 7; i += 2) {
@@ -35,7 +35,9 @@ const sameColor = (a: string, b: string, tolerance = 3): boolean => {
   return true;
 };
 
-describe('buildFigmaTokens', () => {
+const includesColor = (ramp: string[], value: string) => ramp.some((step) => sameColor(step, value));
+
+describe(buildFigmaTokens, () => {
   const result = buildFigmaTokens({ fontFamilies });
 
   it('is deterministic (pure transform, golden-comparable)', () => {
@@ -58,7 +60,7 @@ describe('buildFigmaTokens', () => {
       for (const scheme of ['light', 'dark'] as const) {
         const built = result.palette.themes.base[scheme];
         const source = scheme === 'light' ? defaultBaseTheme.lightPalette : defaultBaseTheme.darkPalette;
-        for (let i = 0; i < 12; i++) {
+        for (let i = 0; i < 12; i += 1) {
           expect(sameColor(built[i], source[i])).toBe(true);
         }
       }
@@ -68,11 +70,10 @@ describe('buildFigmaTokens', () => {
 
     it('derives intent ramps from @tamagui/colors (error=red, success=green, warning=yellow)', () => {
       // Built themes carry hsla-normalized values; compare colorimetrically.
-      const includesColor = (ramp: string[], value: string) => ramp.some((step) => sameColor(step, value));
-      expect(includesColor(result.palette.themes.error.light, Colors.red.red9)).toBe(true);
-      expect(includesColor(result.palette.themes.error.dark, Colors.redDark.red9)).toBe(true);
-      expect(includesColor(result.palette.themes.success.light, Colors.green.green9)).toBe(true);
-      expect(includesColor(result.palette.themes.warning.light, Colors.yellow.yellow9)).toBe(true);
+      expect(includesColor(result.palette.themes.error.light, red.red9)).toBe(true);
+      expect(includesColor(result.palette.themes.error.dark, redDark.red9)).toBe(true);
+      expect(includesColor(result.palette.themes.success.light, green.green9)).toBe(true);
+      expect(includesColor(result.palette.themes.warning.light, yellow.yellow9)).toBe(true);
     });
 
     it('exports tint ramps with neutralized text tiers (runtime reality, not stock Radix)', () => {
@@ -120,20 +121,20 @@ describe('buildFigmaTokens', () => {
 
     it('excludes raw Radix hue steps (amber1, blueA12, ...) from semantic', () => {
       const keys = Object.keys(result.semantic);
-      expect(keys.some((key) => /^(amber|blue|red|mauve)A?\d+$/u.test(key))).toBe(false);
+      expect(keys.some((key) => /^(?:amber|blue|red|mauve)A?\d+$/u.test(key))).toBe(false);
       // Semantic surface is role tokens only — small, not the 600+ hue dump.
       expect(keys.length).toBeGreaterThan(20);
       expect(keys.length).toBeLessThan(100);
     });
 
     it('only aliases when light and dark agree; raw entries keep both values', () => {
-      for (const entry of Object.values(result.semantic)) {
-        if (entry.alias === null) {
-          expect(typeof entry.light).toBe('string');
-          expect(typeof entry.dark).toBe('string');
-        } else {
-          expect(entry.alias).toMatch(/^color([1-9]|1[0-2])$/u);
-        }
+      const entries = Object.values(result.semantic);
+      for (const entry of entries.filter((candidate) => candidate.alias === null)) {
+        expect(entry.light).toBeTypeOf('string');
+        expect(entry.dark).toBeTypeOf('string');
+      }
+      for (const entry of entries.filter((candidate) => candidate.alias !== null)) {
+        expect(entry.alias).toMatch(/^color(?:[1-9]|1[0-2])$/u);
       }
     });
   });

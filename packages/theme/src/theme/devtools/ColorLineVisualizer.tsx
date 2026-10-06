@@ -6,7 +6,6 @@
  */
 
 import React, { useEffect, useMemo, useState } from 'react';
-import type { CSSProperties } from 'react';
 
 import { semanticGroups } from '../color-rules';
 import type { Knobs } from '../knobs';
@@ -26,7 +25,7 @@ const readColorsFromElement = (el: Element): string[] | null => {
   const style = getComputedStyle(el);
   const result: string[] = [];
   let found = false;
-  for (let i = 1; i <= 12; i++) {
+  for (let i = 1; i <= 12; i += 1) {
     let color = style.getPropertyValue(`--color${i}`).trim();
     if (!color) {
       color = style.getPropertyValue(`--color-${i}`).trim();
@@ -47,7 +46,7 @@ const useDomThemeColors = (): string[] => {
   useEffect(() => {
     const readColors = () => {
       let result = readColorsFromElement(document.documentElement);
-      if (!result && document.body) {
+      if (!result && document.body != null) {
         result = readColorsFromElement(document.body);
       }
       if (!result) {
@@ -57,7 +56,7 @@ const useDomThemeColors = (): string[] => {
         }
       }
       if (!result) {
-        const root = document.getElementById('root') || document.getElementById('__next');
+        const root = document.querySelector('#root') ?? document.querySelector('#__next');
         if (root) {
           result = readColorsFromElement(root);
         }
@@ -73,7 +72,7 @@ const useDomThemeColors = (): string[] => {
       attributes: true,
       attributeFilter: ['class', 'style'],
     });
-    if (document.body) {
+    if (document.body != null) {
       observer.observe(document.body, {
         attributes: true,
         attributeFilter: ['class', 'style'],
@@ -98,6 +97,7 @@ const NumberLineRow = ({ colorFor, compact }: { colorFor: (step: number) => stri
         const step = i + 1;
         const background = colorFor(step);
         return (
+          // oxlint-disable-next-line github/a11y-no-title-attribute -- the hover title names each color step in this dev visualizer
           <div
             key={step}
             style={{
@@ -140,6 +140,7 @@ const SemanticBrackets = () => {
               display: 'flex',
               flexDirection: 'column',
             }}>
+            {/* oxlint-disable-next-line react-doctor/no-tiny-text -- dense dev-visualizer group label above a 32px cell row */}
             <div
               style={{
                 textAlign: 'center',
@@ -201,6 +202,11 @@ const createVizStyles = (isDark: boolean) => {
 
 // ── Main component ──────────────────────────────────────────
 
+const toColorFn =
+  (arr: string[]) =>
+  (step: number): string =>
+    arr[Math.min(11, Math.max(0, step - 1))];
+
 export interface ColorLineVisualizerProps {
   knobs: Knobs;
   isDark: boolean;
@@ -222,11 +228,6 @@ export const ColorLineVisualizer = ({
   const themeColors = propColors && propColors.length === 12 ? propColors : domColors;
   const styles = useMemo(() => createVizStyles(isDark), [isDark]);
 
-  const toColorFn =
-    (arr: string[]) =>
-    (step: number): string =>
-      arr[Math.min(11, Math.max(0, step - 1))];
-
   const colorFor = toColorFn(themeColors);
   const oppositeColors = propOppositeColors && propOppositeColors.length === 12 ? propOppositeColors : null;
   const accentColors = propAccentColors && propAccentColors.length === 12 ? propAccentColors : null;
@@ -235,7 +236,7 @@ export const ColorLineVisualizer = ({
 
   return (
     <div style={styles.container}>
-      <div style={styles.title as CSSProperties}>Theme</div>
+      <div style={styles.title}>Theme</div>
       <SemanticBrackets />
       <NumberLineRow colorFor={colorFor} />
       {oppositeColors && (
@@ -248,7 +249,7 @@ export const ColorLineVisualizer = ({
         <>
           <div
             style={{
-              ...(styles.title as CSSProperties),
+              ...styles.title,
               fontSize: 11,
               marginTop: 6,
             }}>

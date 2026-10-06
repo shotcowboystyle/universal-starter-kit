@@ -6,6 +6,7 @@ import type { Root } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { KnobProps } from './recipes';
 import { useResolvedKnobs } from './use-resolved-knobs';
 
 const host = vi.hoisted(() => {
@@ -18,8 +19,8 @@ const host = vi.hoisted(() => {
   }));
   return { web: true, touch: false };
 });
-vi.mock('@repo/platform', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@repo/platform')>()),
+vi.mock(import('@repo/platform'), async (importOriginal) => ({
+  ...(await importOriginal()),
   get isWeb() {
     return host.web;
   },
@@ -33,10 +34,13 @@ vi.mock('@repo/platform', async (importOriginal) => ({
 
 let reducedMotion = false;
 const motionListeners = new Set<() => void>();
-let root: Root | undefined;
+let root: Root | null = null;
 let container: HTMLDivElement;
 let errors: unknown[];
-let observed: { height: unknown; transition: unknown }[];
+let observed: { height: unknown; transition: KnobProps['transition'] }[];
+
+const describeMotion = (transition: KnobProps['transition']) =>
+  transition === undefined ? 'undefined' : JSON.stringify(transition);
 
 const Probe = () => {
   const { knobProps } = useResolvedKnobs();
@@ -45,8 +49,9 @@ const Probe = () => {
   observed.push({ height, transition });
   return (
     <button
+      type="button"
       data-height={String(height)}
-      data-motion={String(transition)}>
+      data-motion={describeMotion(transition)}>
       Control
     </button>
   );
@@ -58,37 +63,6 @@ const Fixture = () => (
   </TestProviders>
 );
 
-beforeEach(() => {
-  host.web = true;
-  host.touch = false;
-  reducedMotion = false;
-  motionListeners.clear();
-  observed = [];
-  errors = [];
-  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-  const query = {
-    get matches() {
-      return reducedMotion;
-    },
-    addEventListener: (_event: string, listener: () => void) => motionListeners.add(listener),
-    removeEventListener: (_event: string, listener: () => void) => motionListeners.delete(listener),
-  };
-  vi.stubGlobal('matchMedia', () => query);
-  vi.spyOn(console, 'error').mockImplementation((...args) => errors.push(args));
-  container = document.createElement('div');
-  document.body.append(container);
-});
-
-afterEach(async () => {
-  if (root) {
-    await act(async () => root?.unmount());
-  }
-  root = undefined;
-  container.remove();
-  vi.restoreAllMocks();
-  vi.unstubAllGlobals();
-});
-
 const hydrate = async () => {
   await act(async () => {
     root = hydrateRoot(container, <Fixture />, {
@@ -98,8 +72,39 @@ const hydrate = async () => {
 };
 
 describe('responsive knob hydration', () => {
+  beforeEach(() => {
+    host.web = true;
+    host.touch = false;
+    reducedMotion = false;
+    motionListeners.clear();
+    observed = [];
+    errors = [];
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    const query = {
+      get matches() {
+        return reducedMotion;
+      },
+      addEventListener: (_event: string, listener: () => void) => motionListeners.add(listener),
+      removeEventListener: (_event: string, listener: () => void) => motionListeners.delete(listener),
+    };
+    vi.stubGlobal('matchMedia', () => query);
+    vi.spyOn(console, 'error').mockImplementation((...args) => errors.push(args));
+    container = document.createElement('div');
+    document.body.append(container);
+  });
+
+  afterEach(async () => {
+    if (root) {
+      await act(async () => root?.unmount());
+    }
+    root = null;
+    container.remove();
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
   it('keeps server control markup before adopting the browser touch floor', async () => {
-    container.innerHTML = renderToString(<Fixture />);
+    container.insertAdjacentHTML('afterbegin', renderToString(<Fixture />));
     const serverControl = container.querySelector('button');
     const serverHeight = observed[0].height;
     observed = [];
@@ -107,12 +112,12 @@ describe('responsive knob hydration', () => {
     await hydrate();
     expect(observed[0].height).toBe(serverHeight);
     expect(container.querySelector('button')).toBe(serverControl);
-    expect(container.querySelector('button')?.getAttribute('data-height')).toBe('48');
+    expect(container.querySelector('button')?.dataset.height).toBe('48');
     expect(errors).toStrictEqual([]);
   });
 
   it('hydrates before adopting reduced motion and keeps observing preference changes', async () => {
-    container.innerHTML = renderToString(<Fixture />);
+    container.insertAdjacentHTML('afterbegin', renderToString(<Fixture />));
     const serverControl = container.querySelector('button');
     const serverTransition = observed[0].transition;
     observed = [];
@@ -120,7 +125,7 @@ describe('responsive knob hydration', () => {
     await hydrate();
     expect(observed[0].transition).toBe(serverTransition);
     expect(container.querySelector('button')).toBe(serverControl);
-    expect(container.querySelector('button')?.getAttribute('data-motion')).toBe('undefined');
+    expect(container.querySelector('button')?.dataset.motion).toBe('undefined');
     expect(motionListeners.size).toBe(1);
     await act(async () => {
       reducedMotion = false;
@@ -128,17 +133,17 @@ describe('responsive knob hydration', () => {
         listener();
       }
     });
-    expect(container.querySelector('button')?.getAttribute('data-motion')).toBe(String(serverTransition));
+    expect(container.querySelector('button')?.dataset.motion).toBe(describeMotion(serverTransition));
     expect(errors).toStrictEqual([]);
     await act(async () => root?.unmount());
-    root = undefined;
+    root = null;
     expect(motionListeners.size).toBe(0);
   });
 
   it('keeps native touch sizing on its initial render', () => {
     host.web = false;
     host.touch = true;
-    container.innerHTML = renderToString(<Fixture />);
+    container.insertAdjacentHTML('afterbegin', renderToString(<Fixture />));
     expect(observed[0].height).toBe(48);
     expect(errors).toStrictEqual([]);
   });

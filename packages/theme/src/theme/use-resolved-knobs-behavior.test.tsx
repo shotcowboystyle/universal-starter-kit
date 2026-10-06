@@ -33,30 +33,23 @@ const renderHook: typeof renderHookBase = (hook, options) => {
   });
 };
 
-let originalMatchMedia: typeof window.matchMedia;
-
-const stubMatchMedia = (impl: (query: string) => Partial<MediaQueryList> & Record<string, unknown>) => {
-  window.matchMedia = vi.fn((query: string) => impl(query) as MediaQueryList) as typeof window.matchMedia;
+const stubMatchMedia = (impl: (query: string) => Partial<MediaQueryList>) => {
+  window.matchMedia = vi.fn<(query: string) => MediaQueryList>(
+    (query) => impl(query) as MediaQueryList,
+  ) as typeof window.matchMedia;
 };
 
 const modernMq = (matches: boolean) => ({
   matches,
-  addEventListener: vi.fn(),
-  removeEventListener: vi.fn(),
-});
-
-beforeEach(() => {
-  originalMatchMedia = window.matchMedia;
-  stubMatchMedia(() => modernMq(false));
-});
-
-afterEach(() => {
-  window.matchMedia = originalMatchMedia;
+  addEventListener: vi.fn<() => void>(),
+  removeEventListener: vi.fn<() => void>(),
 });
 
 const presetWrapper = (preset: PresetType) => {
   const ctx: PresetContextValue = { preset };
-  return ({ children }: { children: ReactNode }) => createElement(PresetContext.Provider, { value: ctx }, children);
+  const PresetWrapper = ({ children }: { children: ReactNode }) =>
+    createElement(PresetContext.Provider, { value: ctx }, children);
+  return PresetWrapper;
 };
 
 const makePreset = (overrides: Partial<PresetType> = {}): PresetType => ({
@@ -67,108 +60,121 @@ const makePreset = (overrides: Partial<PresetType> = {}): PresetType => ({
   ...overrides,
 });
 
-describe('size token mapping', () => {
-  it.each([
-    ['$1', 'small'],
-    ['$3', 'small'],
-    ['$4', 'medium'],
-    ['$5', 'large'],
-    ['$6', 'large'],
-    ['$true', 'medium'],
-  ] as const)('maps Tamagui size %s to knob size %s', (token, expected) => {
-    const { result } = renderHook(() => useResolvedKnobs({ size: token as never }));
-    expect(result.current.knobProps.size).toBe(expected);
+describe(useResolvedKnobs, () => {
+  let originalMatchMedia: typeof window.matchMedia;
+
+  beforeEach(() => {
+    originalMatchMedia = window.matchMedia;
+    stubMatchMedia(() => modernMq(false));
   });
 
-  it('keeps the knob size for unmapped tokens', () => {
-    const { result } = renderHook(() => useResolvedKnobs({ size: '$11' as never }));
-    expect(result.current.knobProps.size).toBe(defaultKnobs.size);
-  });
-});
-
-describe('reduced motion', () => {
-  it("keeps the animation knob's transition when the OS does not prefer reduced motion", () => {
-    const { result } = renderHook(() => useResolvedKnobs());
-    expect(result.current.knobProps.transition).toBe(defaultKnobs.animation);
+  afterEach(() => {
+    window.matchMedia = originalMatchMedia;
   });
 
-  it('forces the transition off when prefers-reduced-motion matches', () => {
-    stubMatchMedia((query) => modernMq(query === '(prefers-reduced-motion: reduce)'));
-    const { result } = renderHook(() => useResolvedKnobs());
-    expect(result.current.knobProps.transition).toBeUndefined();
-  });
-
-  it('supports legacy MediaQueryList hosts exposing only addListener', () => {
-    const addListener = vi.fn();
-    const removeListener = vi.fn();
-    stubMatchMedia(() => ({ matches: true, addListener, removeListener }));
-    const { result, unmount } = renderHook(() => useResolvedKnobs());
-    expect(result.current.knobProps.transition).toBeUndefined();
-    expect(addListener).toHaveBeenCalledWith(expect.any(Function));
-    unmount();
-    expect(removeListener).toHaveBeenCalledWith(expect.any(Function));
-  });
-});
-
-describe('semantic-intent Button label color', () => {
-  it('binds filled error Buttons to $color (the on-fill foreground)', () => {
-    // defaultIntents.error sets Button.fillStyle = "filled".
-    const { result } = renderHook(() => useResolvedKnobs({ intent: 'error', component: 'Button' }));
-    expect(result.current.knobProps.body.color).toBe('$color');
-  });
-
-  it('pins outlined error Buttons to $color11 (readable on page surfaces)', () => {
-    const preset = makePreset({
-      intents: { error: { Button: { fillStyle: 'outlined' } } },
+  describe('size token mapping', () => {
+    it.each([
+      ['$1', 'small'],
+      ['$3', 'small'],
+      ['$4', 'medium'],
+      ['$5', 'large'],
+      ['$6', 'large'],
+      ['$true', 'medium'],
+    ] as const)('maps Tamagui size %s to knob size %s', (token, expected) => {
+      const { result } = renderHook(() => useResolvedKnobs({ size: token as never }));
+      expect(result.current.knobProps.size).toBe(expected);
     });
-    const { result } = renderHook(() => useResolvedKnobs({ intent: 'error', component: 'Button' }), {
-      wrapper: presetWrapper(preset),
+
+    it('keeps the knob size for unmapped tokens', () => {
+      const { result } = renderHook(() => useResolvedKnobs({ size: '$11' as never }));
+      expect(result.current.knobProps.size).toBe(defaultKnobs.size);
     });
-    expect(result.current.knobProps.body.color).toBe('$color11');
   });
 
-  it('leaves non-semantic intents without the label override', () => {
-    const { result } = renderHook(() => useResolvedKnobs({ intent: 'accent', component: 'Button' }));
-    const plain = renderHook(() => useResolvedKnobs());
-    expect(result.current.knobProps.body.color).toBe(plain.result.current.knobProps.body.color);
-  });
-});
+  describe('reduced motion', () => {
+    it("keeps the animation knob's transition when the OS does not prefer reduced motion", () => {
+      const { result } = renderHook(() => useResolvedKnobs());
+      expect(result.current.knobProps.transition).toBe(defaultKnobs.animation);
+    });
 
-describe('intent + component knob merging', () => {
-  it('applies intent-level string overrides and component-level objects', () => {
-    const preset = makePreset({
-      intents: {
-        error: {
-          borderRadius: 'small',
-          Card: { elevation: 'large' },
+    it('forces the transition off when prefers-reduced-motion matches', () => {
+      stubMatchMedia((query) => modernMq(query === '(prefers-reduced-motion: reduce)'));
+      const { result } = renderHook(() => useResolvedKnobs());
+      expect(result.current.knobProps.transition).toBeUndefined();
+    });
+
+    it('supports legacy MediaQueryList hosts exposing only addListener', () => {
+      const addListener = vi.fn<() => void>();
+      const removeListener = vi.fn<() => void>();
+      stubMatchMedia(() => ({ matches: true, addListener, removeListener }));
+      const { result, unmount } = renderHook(() => useResolvedKnobs());
+      expect(result.current.knobProps.transition).toBeUndefined();
+      expect(addListener).toHaveBeenCalledWith(expect.any(Function));
+      unmount();
+      expect(removeListener).toHaveBeenCalledWith(expect.any(Function));
+    });
+  });
+
+  describe('semantic-intent Button label color', () => {
+    it('binds filled error Buttons to $color (the on-fill foreground)', () => {
+      // defaultIntents.error sets Button.fillStyle = "filled".
+      const { result } = renderHook(() => useResolvedKnobs({ intent: 'error', component: 'Button' }));
+      expect(result.current.knobProps.body.color).toBe('$color');
+    });
+
+    it('pins outlined error Buttons to $color11 (readable on page surfaces)', () => {
+      const preset = makePreset({
+        intents: { error: { Button: { fillStyle: 'outlined' } } },
+      });
+      const { result } = renderHook(() => useResolvedKnobs({ intent: 'error', component: 'Button' }), {
+        wrapper: presetWrapper(preset),
+      });
+      expect(result.current.knobProps.body.color).toBe('$color11');
+    });
+
+    it('leaves non-semantic intents without the label override', () => {
+      const { result } = renderHook(() => useResolvedKnobs({ intent: 'accent', component: 'Button' }));
+      const plain = renderHook(() => useResolvedKnobs());
+      expect(result.current.knobProps.body.color).toBe(plain.result.current.knobProps.body.color);
+    });
+  });
+
+  describe('intent + component knob merging', () => {
+    it('applies intent-level string overrides and component-level objects', () => {
+      const preset = makePreset({
+        intents: {
+          error: {
+            borderRadius: 'small',
+            Card: { elevation: 'large' },
+          },
         },
-      },
+      });
+      const withComponent = renderHook(() => useResolvedKnobs({ intent: 'error', component: 'Card' }), {
+        wrapper: presetWrapper(preset),
+      });
+      const withoutComponent = renderHook(() => useResolvedKnobs({ intent: 'error' }), {
+        wrapper: presetWrapper(preset),
+      });
+      // Component-scoped override only applies when the component matches.
+      expect(withComponent.result.current.knobProps.elevation).not.toBe(
+        withoutComponent.result.current.knobProps.elevation,
+      );
+      // Intent-level knob override applies to both.
+      expect(withComponent.result.current.knobProps.borderRadius).toStrictEqual(
+        withoutComponent.result.current.knobProps.borderRadius,
+      );
     });
-    const withComponent = renderHook(() => useResolvedKnobs({ intent: 'error', component: 'Card' }), {
-      wrapper: presetWrapper(preset),
-    });
-    const withoutComponent = renderHook(() => useResolvedKnobs({ intent: 'error' }), {
-      wrapper: presetWrapper(preset),
-    });
-    // Component-scoped override only applies when the component matches.
-    expect(withComponent.result.current.knobProps.elevation).not.toBe(
-      withoutComponent.result.current.knobProps.elevation,
-    );
-    // Intent-level knob override applies to both.
-    expect(withComponent.result.current.knobProps.borderRadius).toStrictEqual(
-      withoutComponent.result.current.knobProps.borderRadius,
-    );
-  });
 
-  it('compact option does not shrink size; it shrinks gap and sets density compact', () => {
-    const comfortable = renderHook(() => useResolvedKnobs());
-    const compact = renderHook(() => useResolvedKnobs({ compact: true }));
-    expect(comfortable.result.current.knobProps.size).toBe('medium');
-    expect(compact.result.current.knobProps.size).toBe('medium');
-    expect(compact.result.current.knobProps.sizeToken).toBe(comfortable.result.current.knobProps.sizeToken);
-    expect(compact.result.current.knobProps.control.height).toBe(comfortable.result.current.knobProps.control.height);
-    expect(compact.result.current.knobProps.density).toBe('compact');
-    expect(comfortable.result.current.knobProps.gap).toStrictEqual({ gap: '$4' });
-    expect(compact.result.current.knobProps.gap).toStrictEqual({ gap: '$2' });
+    it('compact option does not shrink size; it shrinks gap and sets density compact', () => {
+      const comfortable = renderHook(() => useResolvedKnobs());
+      const compact = renderHook(() => useResolvedKnobs({ compact: true }));
+      expect(comfortable.result.current.knobProps.size).toBe('medium');
+      expect(compact.result.current.knobProps.size).toBe('medium');
+      expect(compact.result.current.knobProps.sizeToken).toBe(comfortable.result.current.knobProps.sizeToken);
+      expect(compact.result.current.knobProps.control.height).toBe(comfortable.result.current.knobProps.control.height);
+      expect(compact.result.current.knobProps.density).toBe('compact');
+      expect(comfortable.result.current.knobProps.gap).toStrictEqual({ gap: '$4' });
+      expect(compact.result.current.knobProps.gap).toStrictEqual({ gap: '$2' });
+    });
   });
 });

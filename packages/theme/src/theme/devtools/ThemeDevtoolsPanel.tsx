@@ -1,6 +1,6 @@
 /**
  * TanStack Devtools plugin panel for controlling theme knobs at runtime.
- * TODO(native): This panel is web-only for now. TanStack Devtools does not yet
+ * Native: this panel is web-only for now. TanStack Devtools does not yet
  * support React Native; when it does, revisit this panel for native compatibility.
  *
  * Controls:
@@ -47,6 +47,7 @@ import { storage } from '@repo/store';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 
+import { isObject, isString } from '../../type-guards';
 import {
   defaultKnobs,
   FillStyle,
@@ -76,6 +77,7 @@ import { getPresetNames, getPreset } from '../shared';
 import { useTheme } from '../use-theme';
 
 import { extractAnimationNames } from './animation-options';
+import type { AnimationConfigSource } from './animation-options';
 import { buildSnapshot } from './build-snapshot';
 import { ColorLineVisualizer } from './ColorLineVisualizer';
 import {
@@ -166,78 +168,87 @@ interface DesignProfile {
   color?: string;
 }
 
-const designProfiles: Record<string, DesignProfile> = {
-  Bootstrap: {
-    fillStyle: 'filled',
-    borderRadius: 'small',
-    borderWidth: 'medium',
-    elevation: 'none',
-    space: 'medium',
-    size: 'medium',
-    textAccent: 'high',
-    headingFont: 'sans-serif',
-    bodyFont: 'sans-serif',
-    fontWeight: 'regular',
-    animation: 'quick',
-    color: 'blue',
-  },
-  'Material UI': {
-    fillStyle: 'filled',
-    borderRadius: 'large',
-    borderWidth: 'none',
-    elevation: 'small',
-    space: 'medium',
-    size: 'medium',
-    textAccent: 'high',
-    headingFont: 'sans-serif',
-    bodyFont: 'sans-serif',
-    fontWeight: 'bold',
-    animation: 'medium',
-    color: 'purple',
-    'hover.elevation': 'medium',
-  },
-  'GTK4 / Adwaita': {
-    fillStyle: 'filled',
-    borderRadius: 'small',
-    borderWidth: 'small',
-    elevation: 'none',
-    space: 'medium',
-    size: 'medium',
-    textAccent: 'high',
-    headingFont: 'sans-serif',
-    bodyFont: 'sans-serif',
-    fontWeight: 'regular',
-    animation: 'quick',
-    color: 'gray',
-  },
-  'Fluent UI': {
-    fillStyle: 'filled',
-    borderRadius: 'small',
-    borderWidth: 'small',
-    elevation: 'small',
-    space: 'medium',
-    size: 'medium',
-    textAccent: 'high',
-    headingFont: 'sans-serif',
-    bodyFont: 'sans-serif',
-    fontWeight: 'regular',
-    animation: 'quick',
-    color: 'blue',
-    'hover.elevation': 'small',
-  },
-};
+const sansSerifFont = 'sans-serif';
 
-const profileNames = ['', ...Object.keys(designProfiles)] as const;
+const designProfiles = new Map<string, DesignProfile>(
+  Object.entries({
+    Bootstrap: {
+      fillStyle: 'filled',
+      borderRadius: 'small',
+      borderWidth: 'medium',
+      elevation: 'none',
+      space: 'medium',
+      size: 'medium',
+      textAccent: 'high',
+      headingFont: sansSerifFont,
+      bodyFont: sansSerifFont,
+      fontWeight: 'regular',
+      animation: 'quick',
+      color: 'blue',
+    },
+    'Material UI': {
+      fillStyle: 'filled',
+      borderRadius: 'large',
+      borderWidth: 'none',
+      elevation: 'small',
+      space: 'medium',
+      size: 'medium',
+      textAccent: 'high',
+      headingFont: sansSerifFont,
+      bodyFont: sansSerifFont,
+      fontWeight: 'bold',
+      animation: 'medium',
+      color: 'purple',
+      'hover.elevation': 'medium',
+    },
+    'GTK4 / Adwaita': {
+      fillStyle: 'filled',
+      borderRadius: 'small',
+      borderWidth: 'small',
+      elevation: 'none',
+      space: 'medium',
+      size: 'medium',
+      textAccent: 'high',
+      headingFont: sansSerifFont,
+      bodyFont: sansSerifFont,
+      fontWeight: 'regular',
+      animation: 'quick',
+      color: 'gray',
+    },
+    'Fluent UI': {
+      fillStyle: 'filled',
+      borderRadius: 'small',
+      borderWidth: 'small',
+      elevation: 'small',
+      space: 'medium',
+      size: 'medium',
+      textAccent: 'high',
+      headingFont: sansSerifFont,
+      bodyFont: sansSerifFont,
+      fontWeight: 'regular',
+      animation: 'quick',
+      color: 'blue',
+      'hover.elevation': 'small',
+    },
+  } satisfies Record<string, DesignProfile>),
+);
+
+const profileNames = ['', ...designProfiles.keys()] as const;
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
+type SchemeSetting = 'system' | 'light' | 'dark';
+
 interface SchemeHook {
-  setting: 'system' | 'light' | 'dark';
+  setting: SchemeSetting;
   value: 'light' | 'dark';
-  set: (s: 'system' | 'light' | 'dark') => void;
+  set: (s: SchemeSetting) => void;
 }
+
+/** Pick the dark or light variant of a color by scheme. */
+const byScheme = (isDark: boolean, dark: string, light: string): string => (isDark ? dark : light);
 
 /**
  * Inline styles that adapt to the devtools chrome theme (light/dark) so the
@@ -304,7 +315,7 @@ const createStyles = (isDark: boolean) => ({
       width: 36,
       height: 20,
       borderRadius: 10,
-      background: active ? '#7c6cff' : isDark ? '#444' : '#ccc',
+      background: active ? '#7c6cff' : byScheme(isDark, '#444', '#ccc'),
       position: 'relative' as const,
       cursor: 'pointer',
       border: 'none',
@@ -328,9 +339,9 @@ const createStyles = (isDark: boolean) => ({
       height: 30,
       borderRadius: 6,
       border: active
-        ? `1.5px solid ${isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.35)'}`
-        : `1px solid ${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
-      background: active ? (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.06)') : 'transparent',
+        ? `1.5px solid ${byScheme(isDark, 'rgba(255,255,255,0.5)', 'rgba(0,0,0,0.35)')}`
+        : `1px solid ${byScheme(isDark, 'rgba(255,255,255,0.08)', 'rgba(0,0,0,0.08)')}`,
+      background: active ? byScheme(isDark, 'rgba(255,255,255,0.12)', 'rgba(0,0,0,0.06)') : 'transparent',
       cursor: 'pointer',
       display: 'flex' as const,
       alignItems: 'center' as const,
@@ -363,7 +374,11 @@ const createStyles = (isDark: boolean) => ({
 // Sub-components
 // ---------------------------------------------------------------------------
 
+const pinCheckboxClass = 'pin-checkbox';
+const pinCheckboxSelector = `.${pinCheckboxClass}`;
+
 const PinCheckbox = ({ pinned, onToggle, isDark }: { pinned: boolean; onToggle: () => void; isDark: boolean }) => (
+  // oxlint-disable-next-line jsx-a11y/label-has-associated-control, github/a11y-no-title-attribute -- the label wraps its checkbox; the hover title is this dev panel's tooltip
   <label
     title={pinned ? "Pinned — random won't change this" : 'Pin to protect from random'}
     style={{
@@ -377,7 +392,7 @@ const PinCheckbox = ({ pinned, onToggle, isDark }: { pinned: boolean; onToggle: 
       opacity: pinned ? 1 : 0,
       transition: 'opacity 0.15s',
     }}
-    className="pin-checkbox">
+    className={pinCheckboxClass}>
     <input
       type="checkbox"
       checked={pinned}
@@ -425,14 +440,14 @@ const Dropdown = <V extends string | number | boolean>({
     <div
       style={{ ...styles.card, position: 'relative' as const }}
       onMouseEnter={(e) => {
-        const element = (e.currentTarget as HTMLElement).querySelector('.pin-checkbox') as HTMLElement | null;
-        if (element && !pinned) {
+        const element = e.currentTarget.querySelector(pinCheckboxSelector);
+        if (element instanceof HTMLElement && !pinned) {
           element.style.opacity = '0.5';
         }
       }}
       onMouseLeave={(e) => {
-        const element = (e.currentTarget as HTMLElement).querySelector('.pin-checkbox') as HTMLElement | null;
-        if (element && !pinned) {
+        const element = e.currentTarget.querySelector(pinCheckboxSelector);
+        if (element instanceof HTMLElement && !pinned) {
           element.style.opacity = '0';
         }
       }}>
@@ -486,6 +501,20 @@ const Dropdown = <V extends string | number | boolean>({
 // Icon-based toggle group
 // ---------------------------------------------------------------------------
 
+const collapseButtonStyle = (expanded: boolean, isDark: boolean) =>
+  ({
+    background: 'none',
+    border: 'none',
+    padding: 0,
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    color: isDark ? '#666' : '#aaa',
+    transition: 'transform 0.15s, color 0.15s',
+    transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
+    flexShrink: 0,
+  }) as const;
+
 const CollapseButton = ({
   expanded,
   onToggle,
@@ -495,27 +524,18 @@ const CollapseButton = ({
   onToggle: () => void;
   isDark: boolean;
 }) => (
+  // oxlint-disable-next-line github/a11y-no-title-attribute -- the hover title is this dev panel's tooltip for icon-only controls
   <button
     type="button"
     title={expanded ? 'Collapse state overrides' : 'Expand state overrides'}
     onClick={onToggle}
-    style={{
-      background: 'none',
-      border: 'none',
-      padding: 0,
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      color: isDark ? '#666' : '#aaa',
-      transition: 'transform 0.15s, color 0.15s',
-      transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
-      flexShrink: 0,
-    }}>
+    style={collapseButtonStyle(expanded, isDark)}>
     <svg
       width="10"
       height="10"
       viewBox="0 0 10 10"
       fill="none"
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- an inline <svg> cannot be an <img>; role="img" with a label names the icon
       role="img"
       aria-label="Toggle">
       <title>Toggle state overrides</title>
@@ -560,19 +580,21 @@ const IconGroup = <V extends string | number | boolean>({
   onUnset?: () => void;
   children?: ReactNode;
 }) => (
+  // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- the hover handlers only reveal the pin checkbox; they carry no action
   <div
+    // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a <fieldset> would add legend and border styling this card layout does not want
     role="group"
     aria-label={label}
     style={{ ...styles.card, position: 'relative' as const }}
     onMouseEnter={(e) => {
-      const element = (e.currentTarget as HTMLElement).querySelector('.pin-checkbox') as HTMLElement | null;
-      if (element && !pinned) {
+      const element = e.currentTarget.querySelector(pinCheckboxSelector);
+      if (element instanceof HTMLElement && !pinned) {
         element.style.opacity = '0.5';
       }
     }}
     onMouseLeave={(e) => {
-      const element = (e.currentTarget as HTMLElement).querySelector('.pin-checkbox') as HTMLElement | null;
-      if (element && !pinned) {
+      const element = e.currentTarget.querySelector(pinCheckboxSelector);
+      if (element instanceof HTMLElement && !pinned) {
         element.style.opacity = '0';
       }
     }}>
@@ -595,6 +617,7 @@ const IconGroup = <V extends string | number | boolean>({
     </div>
     <div style={styles.iconRow}>
       {onUnset && (
+        // oxlint-disable-next-line github/a11y-no-title-attribute -- the hover title is this dev panel's tooltip for icon-only controls
         <button
           type="button"
           style={{
@@ -612,6 +635,7 @@ const IconGroup = <V extends string | number | boolean>({
       {options.map((opt) => {
         const active = value !== undefined && opt === value;
         return (
+          // oxlint-disable-next-line github/a11y-no-title-attribute -- the hover title is this dev panel's tooltip for icon-only controls
           <button
             key={String(opt)}
             type="button"
@@ -648,6 +672,7 @@ const StateSubRow = ({
   isDark: boolean;
 }) => (
   <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
+    {/* oxlint-disable-next-line react-doctor/no-tiny-text -- dense dev-panel state label; the state name is repeated in each button's title */}
     <span
       style={{
         fontSize: 9,
@@ -660,6 +685,7 @@ const StateSubRow = ({
       {stateName}
     </span>
     <div style={{ ...styles.iconRow, gap: 2 }}>
+      {/* oxlint-disable-next-line github/a11y-no-title-attribute -- the hover title is this dev panel's tooltip for icon-only controls */}
       <button
         type="button"
         style={{
@@ -677,6 +703,7 @@ const StateSubRow = ({
       {options.map((opt) => {
         const active = opt === value;
         return (
+          // oxlint-disable-next-line github/a11y-no-title-attribute -- the hover title is this dev panel's tooltip for icon-only controls
           <button
             key={opt}
             type="button"
@@ -699,10 +726,9 @@ const StateSubRow = ({
 
 /** Resolve foreground color for an icon based on active state and theme. */
 const ic = (active: boolean, dark: boolean): string =>
-  active ? (dark ? '#e8e8e8' : '#1a1a1a') : dark ? '#555' : '#bbb';
+  active ? byScheme(dark, '#e8e8e8', '#1a1a1a') : byScheme(dark, '#555', '#bbb');
 
-const modeIcon = (v: 'system' | 'light' | 'dark', active: boolean, dark: boolean): ReactNode =>
-  _modeIcon(v, ic(active, dark));
+const modeIcon = (v: SchemeSetting, active: boolean, dark: boolean): ReactNode => _modeIcon(v, ic(active, dark));
 
 const fillIcon = (v: string, active: boolean, dark: boolean): ReactNode => _fillIcon(v, ic(active, dark));
 
@@ -758,6 +784,17 @@ const formAutofocusIcon = (v: string, active: boolean, dark: boolean): ReactNode
 // Main panel
 // ---------------------------------------------------------------------------
 
+interface TokenWrapper {
+  val: string | number;
+}
+
+type ThemeTokenTable = Partial<Record<string, string | TokenWrapper>>;
+
+/** The slice of a Tamagui config (from `createTamagui()`) the panel reads. */
+export interface TamaguiConfigLike extends AnimationConfigSource {
+  themes?: Partial<Record<string, ThemeTokenTable>>;
+}
+
 export interface ThemeDevtoolsPanelProps {
   /**
    * Pass `useUserScheme` from `one` or `@vxrn/color-scheme` so the panel can
@@ -798,8 +835,17 @@ export interface ThemeDevtoolsPanelProps {
    * CSS variable reading which doesn't work inside shadow DOM / isolated
    * rendering contexts like TanStack Devtools.
    */
-  tamaguiConfig?: unknown;
+  tamaguiConfig?: TamaguiConfigLike;
 }
+
+const present = (value: string | null | undefined): value is string => value != null && value !== '';
+
+const tokenText = (token: string | TokenWrapper | undefined): string | undefined => {
+  if (isString(token)) {
+    return token;
+  }
+  return isObject(token) && 'val' in token ? String(token.val) : undefined;
+};
 
 /**
  * Extract 12 tokens from a Tamagui config for a given theme name.
@@ -808,19 +854,18 @@ export interface ThemeDevtoolsPanelProps {
  * Tries the exact sub-theme name first, then falls back to the base scheme.
  */
 const extractThemeTokenColors = (
-  tamaguiConfig: unknown,
+  config: TamaguiConfigLike | undefined,
   scheme: 'light' | 'dark',
   colorTheme?: string,
   prefix: 'color' | 'accent' = 'color',
 ): string[] | undefined => {
-  const config = tamaguiConfig as Record<string, unknown> | null;
-  const themes = config?.themes as Record<string, Record<string, unknown>> | undefined;
+  const themes = config?.themes;
   if (!themes) {
     return undefined;
   }
 
   const candidates: string[] = [];
-  if (colorTheme) {
+  if (present(colorTheme)) {
     candidates.push(`${scheme}_${colorTheme}`);
   }
   candidates.push(scheme);
@@ -832,15 +877,9 @@ const extractThemeTokenColors = (
     }
     const colors: string[] = [];
     let found = false;
-    for (let i = 1; i <= 12; i++) {
-      const token = theme[`${prefix}${i}`];
-      let val: string | undefined;
-      if (typeof token === 'string') {
-        val = token;
-      } else if (token && typeof token === 'object' && 'val' in (token as Record<string, unknown>)) {
-        val = String((token as { val: unknown }).val);
-      }
-      if (val) {
+    for (let i = 1; i <= 12; i += 1) {
+      const val = tokenText(theme[`${prefix}${i}`]);
+      if (present(val)) {
         colors.push(val);
         found = true;
       } else {
@@ -854,16 +893,110 @@ const extractThemeTokenColors = (
   return undefined;
 };
 
-export const ThemeDevtoolsPanel = ({
-  useUserScheme,
-  extraPresets,
-  devtoolsTheme,
-  themeColors,
-  currentThemeColor,
-  onThemeColorChange,
-  tamaguiConfig,
-}: ThemeDevtoolsPanelProps) => {
+const readStoredSet = (storageKey: string): Set<string> => {
+  try {
+    const raw = storage.getItem(storageKey);
+    const stored = isString(raw) ? raw : null;
+    if (present(stored)) {
+      const parsed: unknown = JSON.parse(stored);
+      if (Array.isArray(parsed)) {
+        return new Set(parsed.filter(isString));
+      }
+    }
+  } catch {
+    // Safe to continue: unreadable or corrupt persisted panel state falls back to an empty set.
+  }
+  return new Set();
+};
+
+const persistSet = async (storageKey: string, value: ReadonlySet<string>): Promise<void> => {
+  try {
+    await storage.setItem(storageKey, JSON.stringify([...value]));
+  } catch {
+    // Safe to continue: persisting panel state is best-effort (storage may be unavailable).
+  }
+};
+
+const syncDevtoolsSettingsTheme = async (schemeValue: string): Promise<void> => {
+  try {
+    const raw = await storage.getItem(tanstackDevtoolsSettings);
+    const parsed: unknown = present(raw) ? JSON.parse(raw) : {};
+    const settings = isObject(parsed) ? parsed : {};
+    if (!('theme' in settings) || settings.theme !== schemeValue) {
+      await storage.setItem(tanstackDevtoolsSettings, JSON.stringify({ ...settings, theme: schemeValue }));
+    }
+  } catch {
+    // Safe to continue: storage may be unavailable (e.g. SSR, iframe sandbox).
+  }
+};
+
+const stateKnobKeySet = new Set<string>(stateKnobKeys);
+
+// oxlint-disable-next-line sonarjs/pseudo-random -- picks a random UI preset for the randomize button; nothing security-sensitive
+const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(Math.random() * arr.length)];
+
+/** Options per knob for the randomize button; `animation` is added from the live config. */
+const knobEnumOptions = new Map<string, readonly string[]>([
+  ['fillStyle', Object.values(FillStyle)],
+  ['borderRadius', Object.values(BorderRadius)],
+  ['borderWidth', Object.values(BorderWidth)],
+  ['elevation', Object.values(Elevation)],
+  ['space', Object.values(Space)],
+  ['size', Object.values(Size)],
+  ['textAccent', Object.values(TextAccent)],
+  ['headingFont', Object.values(HeadingFont)],
+  ['bodyFont', Object.values(BodyFont)],
+  ['fontWeight', Object.values(FontWeight)],
+]);
+
+/** Randomized per-state knob values for every expanded knob (state rows have no size knob). */
+const randomStateKnobs = (expandedKnobs: ReadonlySet<string>): Partial<Knobs> => {
+  const partial: Partial<Knobs> = {};
+  for (const state of interactionStates) {
+    const statePartial: Record<string, string> = {};
+    for (const key of expandedKnobs) {
+      const values = key === 'size' ? undefined : knobEnumOptions.get(key);
+      if (values) {
+        statePartial[key] = pick(values);
+      }
+    }
+    if (Object.keys(statePartial).length > 0) {
+      Object.assign(partial, { [state]: statePartial });
+    }
+  }
+  return partial;
+};
+
+type CopyStatus = 'idle' | 'copied' | 'error';
+
+const copyButtonLabels = { idle: 'Copy Snapshot', copied: 'Copied!', error: 'Failed' } as const satisfies Record<
+  CopyStatus,
+  string
+>;
+
+const copyButtonStatusStyle = (status: CopyStatus, isDark: boolean) => {
+  if (status === 'copied') {
+    return { background: byScheme(isDark, '#1a3a1a', '#d4edda'), borderColor: byScheme(isDark, '#2d5a2d', '#a3d9a5') };
+  }
+  if (status === 'error') {
+    return { background: byScheme(isDark, '#3a1a1a', '#f8d7da'), borderColor: byScheme(isDark, '#5a2d2d', '#f5c6cb') };
+  }
+  return {};
+};
+
+// oxlint-disable-next-line react-doctor/no-giant-component -- the panel is one stateful surface over every knob; its controls share the state declared here
+export const ThemeDevtoolsPanel = (props: ThemeDevtoolsPanelProps) => {
+  const {
+    useUserScheme,
+    extraPresets,
+    devtoolsTheme,
+    themeColors,
+    currentThemeColor,
+    onThemeColorChange,
+    tamaguiConfig,
+  } = props;
   const [knobs, setKnobs, , setPreset, activePresetName] = useTheme();
+  // oxlint-disable-next-line react/hooks -- useUserScheme is a stable prop for the panel's lifetime (the host either supplies it or not), never toggled between renders
   const scheme = useUserScheme?.();
   const isDark = devtoolsTheme !== 'light';
   const styles = useMemo(() => createStyles(isDark), [isDark]);
@@ -874,59 +1007,42 @@ export const ThemeDevtoolsPanel = ({
   // TanstackDevtools keys the shell on the scheme, so a Scheme click remounts
   // this panel, and a reload does the same.
   const [overrides, setOverrides] = useState<Set<string>>(() => {
-    const presetKnobs = activePresetName ? getPreset(activePresetName)?.knobs : undefined;
+    const presetKnobs = present(activePresetName) ? getPreset(activePresetName)?.knobs : undefined;
     return new Set(knobKeys.filter((key) => knobs[key] !== (presetKnobs?.[key] ?? defaultKnobs[key])));
   });
-  const [pinnedKnobs, setPinnedKnobs] = useState<Set<string>>(() => {
-    try {
-      const raw = storage.getItem(pinnedKnobsStorageKey);
-      const stored = typeof raw === 'string' || raw === null ? raw : null;
-      if (stored) {
-        return new Set(JSON.parse(stored));
-      }
-    } catch {}
-    return new Set();
-  });
+  const [pinnedKnobs, setPinnedKnobs] = useState<Set<string>>(() => readStoredSet(pinnedKnobsStorageKey));
   const [activeProfile, setActiveProfile] = useState('');
 
-  const [expandedKnobs, setExpandedKnobs] = useState<Set<string>>(() => {
-    try {
-      const raw = storage.getItem(expandedKnobsStorageKey);
-      const stored = typeof raw === 'string' || raw === null ? raw : null;
-      if (stored) {
-        const parsed = JSON.parse(stored) as string[];
-        return new Set(parsed.filter((k) => stateKnobKeys.includes(k as keyof Knobs)));
-      }
-    } catch {}
-    return new Set();
-  });
+  const [expandedKnobs, setExpandedKnobs] = useState<Set<string>>(
+    () => new Set([...readStoredSet(expandedKnobsStorageKey)].filter((key) => stateKnobKeySet.has(key))),
+  );
 
   const knobsRef = useRef(knobs);
-  knobsRef.current = knobs;
+  useEffect(() => {
+    knobsRef.current = knobs;
+  }, [knobs]);
 
   useEffect(() => {
-    void Promise.resolve(storage.setItem(pinnedKnobsStorageKey, JSON.stringify([...pinnedKnobs]))).catch(() => {});
+    void persistSet(pinnedKnobsStorageKey, pinnedKnobs);
   }, [pinnedKnobs]);
 
   useEffect(() => {
-    void Promise.resolve(storage.setItem(expandedKnobsStorageKey, JSON.stringify([...expandedKnobs]))).catch(() => {});
+    void persistSet(expandedKnobsStorageKey, expandedKnobs);
   }, [expandedKnobs]);
 
   const clearStateOverridesForKeys = useCallback(
-    (keys: string[]) => {
+    (keys: readonly string[]) => {
       const { current } = knobsRef;
+      const keySet = new Set(keys);
       const partial: Partial<Knobs> = {};
       for (const state of interactionStates) {
-        const stateKnobs = { ...current[state] } as Record<string, unknown>;
-        let mutated = false;
-        for (const key of keys) {
-          if (stateKnobs[key] !== undefined) {
-            stateKnobs[key] = undefined;
-            mutated = true;
-          }
-        }
-        if (mutated) {
-          (partial as Record<string, unknown>)[state] = stateKnobs;
+        const entries = Object.entries<string | undefined>({ ...current[state] });
+        if (entries.some(([name, value]) => value !== undefined && keySet.has(name))) {
+          // An explicit undefined is what clears the key in the merged state knobs.
+          const cleared = Object.fromEntries(
+            entries.map(([name, value]) => [name, keySet.has(name) ? undefined : value]),
+          );
+          Object.assign(partial, { [state]: cleared });
         }
       }
       if (Object.keys(partial).length > 0) {
@@ -984,17 +1100,19 @@ export const ThemeDevtoolsPanel = ({
         collapsingAll = true;
         return new Set();
       }
-      return new Set(stateKnobKeys as readonly string[]);
+      return new Set<string>(stateKnobKeys);
     });
     if (collapsingAll) {
-      clearStateOverridesForKeys(stateKnobKeys as string[]);
+      clearStateOverridesForKeys(stateKnobKeys);
     }
   }, [clearStateOverridesForKeys]);
 
   const set = useCallback(
     <K extends keyof Knobs>(key: K, value: Knobs[K]) => {
       setOverrides((prev) => new Set(prev).add(key));
-      setKnobs({ [key]: value } as Partial<Knobs>);
+      const partial: Partial<Knobs> = {};
+      Object.assign(partial, { [key]: value });
+      setKnobs(partial);
       if (activeProfile) {
         setActiveProfile('');
       }
@@ -1008,26 +1126,26 @@ export const ThemeDevtoolsPanel = ({
         setActiveProfile('');
         return;
       }
-      const profile = designProfiles[profileName];
+      const profile = designProfiles.get(profileName);
       if (!profile) {
         return;
       }
       const partial: Partial<Knobs> = {};
       for (const key of knobKeys) {
-        if (profile[key]) {
-          (partial as Record<string, string>)[key] = profile[key];
+        const value = profile[key];
+        if (present(value)) {
+          Object.assign(partial, { [key]: value });
         }
       }
       const hover: Record<string, string> = {};
       const press: Record<string, string> = {};
       for (const [k, v] of Object.entries(profile)) {
-        if (!v) {
-          continue;
-        }
-        if (k.startsWith('hover.')) {
-          hover[k.slice(6)] = v;
-        } else if (k.startsWith('press.')) {
-          press[k.slice(6)] = v;
+        if (present(v)) {
+          if (k.startsWith('hover.')) {
+            hover[k.slice(6)] = v;
+          } else if (k.startsWith('press.')) {
+            press[k.slice(6)] = v;
+          }
         }
       }
       if (Object.keys(hover).length) {
@@ -1037,10 +1155,10 @@ export const ThemeDevtoolsPanel = ({
         partial.press = press;
       }
       setKnobs(partial);
-      setOverrides(new Set(knobKeys as readonly string[]));
+      setOverrides(new Set<string>(knobKeys));
       setPinnedKnobs(new Set());
       setActiveProfile(profileName);
-      if (profile.color && onThemeColorChange) {
+      if (present(profile.color) && onThemeColorChange) {
         onThemeColorChange(profile.color);
       }
     },
@@ -1048,7 +1166,7 @@ export const ThemeDevtoolsPanel = ({
   );
 
   const handleClearKnobs = useCallback(() => {
-    if (activeProfile && designProfiles[activeProfile]) {
+    if (designProfiles.has(activeProfile)) {
       handleProfileChange(activeProfile);
       setExpandedKnobs(new Set());
       return;
@@ -1057,7 +1175,7 @@ export const ThemeDevtoolsPanel = ({
     setPinnedKnobs(new Set());
     setExpandedKnobs(new Set());
     setActiveProfile('');
-    if (activePresetName) {
+    if (present(activePresetName)) {
       setPreset(activePresetName);
     } else {
       setKnobs({ ...defaultKnobs });
@@ -1065,7 +1183,7 @@ export const ThemeDevtoolsPanel = ({
   }, [activeProfile, handleProfileChange, activePresetName, setPreset, setKnobs]);
 
   const handleApplyDefaults = useCallback(() => {
-    setOverrides(new Set(knobKeys as readonly string[]));
+    setOverrides(new Set<string>(knobKeys));
     setPinnedKnobs(new Set());
     setExpandedKnobs(new Set());
     setActiveProfile('');
@@ -1074,14 +1192,14 @@ export const ThemeDevtoolsPanel = ({
   }, [setPreset, setKnobs]);
 
   // ── Copy Snapshot ───────────────────────────────────────────
-  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
+  const [copyStatus, setCopyStatus] = useState<CopyStatus>('idle');
 
   const handleCopySnapshot = useCallback(async () => {
     const knobValues: Record<string, string> = {};
     for (const [key, value] of Object.entries(knobs)) {
-      if (value && typeof value === 'object') {
-        for (const [sk, sv] of Object.entries(value as Record<string, string>)) {
-          if (sv) {
+      if (isObject(value)) {
+        for (const [sk, sv] of Object.entries(value)) {
+          if (isString(sv) && sv !== '') {
             knobValues[`${key}.${sk}`] = sv;
           }
         }
@@ -1102,69 +1220,26 @@ export const ThemeDevtoolsPanel = ({
       darkColors,
     });
     const success = await writeToClipboard(snapshot);
-    if (success) {
-      setCopyStatus('copied');
-      setTimeout(() => {
-        setCopyStatus('idle');
-      }, 2000);
-    } else {
-      setCopyStatus('error');
-      setTimeout(() => {
-        setCopyStatus('idle');
-      }, 2000);
-    }
+    setCopyStatus(success ? 'copied' : 'error');
+    setTimeout(() => {
+      setCopyStatus('idle');
+    }, 2000);
   }, [knobs, activePresetName, scheme, currentThemeColor, tamaguiConfig]);
 
   const handleRandomize = useCallback(() => {
-    const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(Math.random() * arr.length)];
-    const knobEnums: Record<string, readonly string[]> = {
-      fillStyle: Object.values(FillStyle),
-      borderRadius: Object.values(BorderRadius),
-      borderWidth: Object.values(BorderWidth),
-      elevation: Object.values(Elevation),
-      space: Object.values(Space),
-      size: Object.values(Size),
-      textAccent: Object.values(TextAccent),
-      headingFont: Object.values(HeadingFont),
-      bodyFont: Object.values(BodyFont),
-      fontWeight: Object.values(FontWeight),
-      animation: animationOptions,
-    };
     const partial: Partial<Knobs> = {};
-    const newOverrides = new Set(knobKeys as readonly string[]);
+    const newOverrides = new Set<string>(knobKeys);
     for (const key of knobKeys) {
       if (pinnedKnobs.has(key)) {
         continue;
       }
-      const values = knobEnums[key];
+      const values = key === 'animation' ? animationOptions : knobEnumOptions.get(key);
       if (values) {
-        (partial as Record<string, string>)[key] = pick(values);
+        Object.assign(partial, { [key]: pick(values) });
       }
     }
     if (expandedKnobs.size > 0) {
-      const knobEnumsForState: Record<string, readonly string[]> = {
-        fillStyle: Object.values(FillStyle),
-        borderRadius: Object.values(BorderRadius),
-        borderWidth: Object.values(BorderWidth),
-        elevation: Object.values(Elevation),
-        space: Object.values(Space),
-        textAccent: Object.values(TextAccent),
-        headingFont: Object.values(HeadingFont),
-        bodyFont: Object.values(BodyFont),
-        fontWeight: Object.values(FontWeight),
-      };
-      for (const state of interactionStates) {
-        const statePartial: Record<string, string> = {};
-        for (const key of expandedKnobs) {
-          const values = knobEnumsForState[key];
-          if (values) {
-            statePartial[key] = pick(values);
-          }
-        }
-        if (Object.keys(statePartial).length > 0) {
-          (partial as Record<string, unknown>)[state] = statePartial;
-        }
-      }
+      Object.assign(partial, randomStateKnobs(expandedKnobs));
     }
     setOverrides(newOverrides);
     setKnobs(partial);
@@ -1193,7 +1268,7 @@ export const ThemeDevtoolsPanel = ({
         names.add(name);
       }
     }
-    return ['', ...Array.from(names).filter(Boolean).sort()];
+    return ['', ...[...names].filter(Boolean).toSorted()];
   }, [extraPresets]);
 
   const handlePresetChange = useCallback(
@@ -1208,7 +1283,7 @@ export const ThemeDevtoolsPanel = ({
   );
 
   const handleResetToPreset = useCallback(() => {
-    if (activePresetName) {
+    if (present(activePresetName)) {
       setPreset(activePresetName);
     } else {
       // Anonymous default preset (no `mp.preset` cookie): resetting must
@@ -1226,7 +1301,7 @@ export const ThemeDevtoolsPanel = ({
   // by `useUserScheme` (SchemeProvider / @vxrn/color-scheme). The devtools
   // chrome theme and the website color scheme are kept in sync here.
 
-  const prevDevtoolsTheme = useRef<string | undefined>(undefined);
+  const prevDevtoolsTheme = useRef(devtoolsTheme);
 
   useEffect(() => {
     if (!devtoolsTheme || !scheme) {
@@ -1250,17 +1325,7 @@ export const ThemeDevtoolsPanel = ({
     if (!schemeValue) {
       return;
     }
-    void Promise.resolve(storage.getItem(tanstackDevtoolsSettings))
-      .then((raw) => {
-        const settings = raw ? JSON.parse(raw) : {};
-        if (settings.theme !== schemeValue) {
-          settings.theme = schemeValue;
-          return storage.setItem(tanstackDevtoolsSettings, JSON.stringify(settings));
-        }
-      })
-      .catch(() => {
-        // storage may be unavailable (e.g. SSR, iframe sandbox)
-      });
+    void syncDevtoolsSettingsTheme(schemeValue);
   }, [schemeValue]);
 
   /** Return the value only if the user has explicitly overridden it, else undefined. */
@@ -1269,11 +1334,12 @@ export const ThemeDevtoolsPanel = ({
 
   const inheritedKnob = useCallback(
     <K extends keyof Knobs>(key: K): Knobs[K] => {
-      const activeProfileConfig = activeProfile ? designProfiles[activeProfile] : undefined;
-      if (activeProfileConfig?.[key]) {
-        return activeProfileConfig[key] as Knobs[K];
+      const profileValue = designProfiles.get(activeProfile)?.[key];
+      if (present(profileValue)) {
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- SAFETY: design profile entries are authored as valid values of their own knob
+        return profileValue as Knobs[K];
       }
-      if (activePresetName) {
+      if (present(activePresetName)) {
         const presetKnobs = getPreset(activePresetName)?.knobs;
         if (presetKnobs?.[key] !== undefined) {
           return presetKnobs[key];
@@ -1285,23 +1351,25 @@ export const ThemeDevtoolsPanel = ({
   );
 
   const unset = useCallback(
-    <K extends keyof Knobs>(key: K) => {
+    (key: keyof Knobs) => {
       setOverrides((prev) => {
         const next = new Set(prev);
         next.delete(key);
         return next;
       });
-      setKnobs({ [key]: inheritedKnob(key) } as Partial<Knobs>);
+      const partial: Partial<Knobs> = {};
+      Object.assign(partial, { [key]: inheritedKnob(key) });
+      setKnobs(partial);
     },
     [setKnobs, inheritedKnob],
   );
 
   const setStateKnob = useCallback(
-    (state: 'hover' | 'press' | 'focus' | 'focusVisible', key: string, value: string) => {
+    (state: InteractionState, key: string, value: string) => {
       const { current } = knobsRef;
-      setKnobs({
-        [state]: { ...current[state], [key]: value === '' ? undefined : value },
-      } as Partial<Knobs>);
+      const partial: Partial<Knobs> = {};
+      Object.assign(partial, { [state]: { ...current[state], [key]: value === '' ? undefined : value } });
+      setKnobs(partial);
       setOverrides((prev) => new Set(prev).add(state));
       if (activeProfile) {
         setActiveProfile('');
@@ -1310,9 +1378,9 @@ export const ThemeDevtoolsPanel = ({
     [setKnobs, activeProfile],
   );
 
-  const getStateKnob = (state: 'hover' | 'press' | 'focus' | 'focusVisible', key: string): string => {
-    const stateKnobs = knobs[state];
-    return (stateKnobs as Record<string, string | undefined>)[key] ?? '';
+  const getStateKnob = (state: InteractionState, key: string): string => {
+    const entry = Object.entries<string | undefined>({ ...knobs[state] }).find(([name]) => name === key);
+    return entry?.[1] ?? '';
   };
 
   const stateRows = (
@@ -1335,6 +1403,9 @@ export const ThemeDevtoolsPanel = ({
       />
     ));
 
+  const colorTheme = present(currentThemeColor) ? currentThemeColor : undefined;
+  const statesToggleLabel = allStateKnobsExpanded ? 'Collapse States' : 'Expand States';
+
   return (
     <div style={styles.panel}>
       {/* ── Knobs ── */}
@@ -1347,7 +1418,7 @@ export const ThemeDevtoolsPanel = ({
             onChange={(v) => {
               handlePresetChange(v);
             }}
-            format={(v) => (v === '' ? 'custom' : String(v))}
+            format={(v) => (v === '' ? 'custom' : v)}
             styles={styles}
           />
         )}
@@ -1369,7 +1440,7 @@ export const ThemeDevtoolsPanel = ({
             onChange={(v) => {
               onThemeColorChange(v);
             }}
-            format={(v) => (v === '' ? 'none' : String(v))}
+            format={(v) => (v === '' ? 'none' : v)}
             styles={styles}
             pinned={pinnedKnobs.has('color')}
             onTogglePin={() => {
@@ -1661,6 +1732,7 @@ export const ThemeDevtoolsPanel = ({
           options={animationOptions}
           value={getOverride('animation') ?? ''}
           onChange={(v) => {
+            // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- SAFETY: the options are the registered animation names, which are valid Animation values
             set('animation', v as Knobs['animation']);
           }}
           onUnset={() => {
@@ -1824,6 +1896,7 @@ export const ThemeDevtoolsPanel = ({
             gap: 6,
             flexWrap: 'wrap' as const,
           }}>
+          {/* oxlint-disable-next-line github/a11y-no-title-attribute -- the hover title is this dev panel's tooltip for the select */}
           <select
             title="Design system profile"
             value={activeProfile}
@@ -1848,20 +1921,12 @@ export const ThemeDevtoolsPanel = ({
             type="button"
             style={{
               ...styles.resetBtn,
-              ...(copyStatus === 'copied'
-                ? {
-                    background: isDark ? '#1a3a1a' : '#d4edda',
-                    borderColor: isDark ? '#2d5a2d' : '#a3d9a5',
-                  }
-                : copyStatus === 'error'
-                  ? {
-                      background: isDark ? '#3a1a1a' : '#f8d7da',
-                      borderColor: isDark ? '#5a2d2d' : '#f5c6cb',
-                    }
-                  : {}),
+              ...copyButtonStatusStyle(copyStatus, isDark),
             }}
-            onClick={handleCopySnapshot}>
-            {copyStatus === 'copied' ? 'Copied!' : copyStatus === 'error' ? 'Failed' : 'Copy Snapshot'}
+            onClick={() => {
+              void handleCopySnapshot();
+            }}>
+            {copyButtonLabels[copyStatus]}
           </button>
           <button
             type="button"
@@ -1869,20 +1934,22 @@ export const ThemeDevtoolsPanel = ({
             onClick={handleRandomize}>
             Random
           </button>
+          {/* oxlint-disable-next-line github/a11y-no-title-attribute -- the hover title is this dev panel's tooltip for icon-only controls */}
           <button
             type="button"
             style={styles.iconBtn(false)}
             onClick={handleToggleAllStates}
-            title={allStateKnobsExpanded ? 'Collapse States' : 'Expand States'}
-            aria-label={allStateKnobsExpanded ? 'Collapse States' : 'Expand States'}>
+            title={statesToggleLabel}
+            aria-label={statesToggleLabel}>
             <svg
               width="14"
               height="14"
               viewBox="0 0 16 16"
               fill="none"
+              // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- an inline <svg> cannot be an <img>; role="img" with a label names the icon
               role="img"
               aria-label="States">
-              <title>{allStateKnobsExpanded ? 'Collapse States' : 'Expand States'}</title>
+              <title>{statesToggleLabel}</title>
               <path
                 d="M2.5 4.5h7M2.5 8h7M2.5 11.5h7"
                 stroke="currentColor"
@@ -1898,6 +1965,7 @@ export const ThemeDevtoolsPanel = ({
               />
             </svg>
           </button>
+          {/* oxlint-disable-next-line github/a11y-no-title-attribute -- the hover title is this dev panel's tooltip for icon-only controls */}
           <button
             type="button"
             style={styles.iconBtn(false)}
@@ -1909,6 +1977,7 @@ export const ThemeDevtoolsPanel = ({
               height="14"
               viewBox="0 0 16 16"
               fill="none"
+              // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- an inline <svg> cannot be an <img>; role="img" with a label names the icon
               role="img"
               aria-label="Defaults">
               <title>Apply Defaults</title>
@@ -1938,6 +2007,7 @@ export const ThemeDevtoolsPanel = ({
               />
             </svg>
           </button>
+          {/* oxlint-disable-next-line github/a11y-no-title-attribute -- the hover title is this dev panel's tooltip for icon-only controls */}
           <button
             type="button"
             style={styles.iconBtn(false)}
@@ -1949,6 +2019,7 @@ export const ThemeDevtoolsPanel = ({
               height="14"
               viewBox="0 0 16 16"
               fill="none"
+              // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- an inline <svg> cannot be an <img>; role="img" with a label names the icon
               role="img"
               aria-label="Clear">
               <title>Clear</title>
@@ -1967,24 +2038,10 @@ export const ThemeDevtoolsPanel = ({
       <ColorLineVisualizer
         knobs={knobs}
         isDark={isDark}
-        themeColors={extractThemeTokenColors(tamaguiConfig, isDark ? 'dark' : 'light', currentThemeColor || undefined)}
-        oppositeThemeColors={extractThemeTokenColors(
-          tamaguiConfig,
-          isDark ? 'light' : 'dark',
-          currentThemeColor || undefined,
-        )}
-        accentColors={extractThemeTokenColors(
-          tamaguiConfig,
-          isDark ? 'dark' : 'light',
-          currentThemeColor || undefined,
-          'accent',
-        )}
-        oppositeAccentColors={extractThemeTokenColors(
-          tamaguiConfig,
-          isDark ? 'light' : 'dark',
-          currentThemeColor || undefined,
-          'accent',
-        )}
+        themeColors={extractThemeTokenColors(tamaguiConfig, isDark ? 'dark' : 'light', colorTheme)}
+        oppositeThemeColors={extractThemeTokenColors(tamaguiConfig, isDark ? 'light' : 'dark', colorTheme)}
+        accentColors={extractThemeTokenColors(tamaguiConfig, isDark ? 'dark' : 'light', colorTheme, 'accent')}
+        oppositeAccentColors={extractThemeTokenColors(tamaguiConfig, isDark ? 'light' : 'dark', colorTheme, 'accent')}
       />
     </div>
   );

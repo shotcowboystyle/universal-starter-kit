@@ -105,6 +105,7 @@ export interface MatrixIconSample {
   /** Actual descendant ink, alpha-composited over the effective backdrop. */
   paint?: string;
   paintKinds?: ('fill' | 'stroke')[];
+  // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- field of the exported MatrixIconSample snapshot; renaming it breaks snapshot consumers
   shapeCount: number;
   distinctPaints: number;
   unmeasurable?: IconUnmeasurableReason;
@@ -184,10 +185,12 @@ export interface MatrixChartSample {
   unmeasurable?: ChartUnmeasurableReason;
 }
 
+export type ChartProofRule = 'mark-backdrop' | 'adjacent-pair' | 'axis-text' | 'missing-label';
+
 export interface ChartProofViolation {
   key: string;
   context: string;
-  rule: 'mark-backdrop' | 'adjacent-pair' | 'axis-text' | 'missing-label';
+  rule: ChartProofRule;
   paint?: string;
   background?: string;
   ratio?: number;
@@ -256,9 +259,20 @@ export interface TextContrastResult {
  * `page.evaluate(captureMatrixSnapshot)`.
  */
 export const captureMatrixSnapshot = (): MatrixSnapshot => {
+  // parseFloat tolerates unit suffixes ('2px', '50%'); Number() would turn those into NaN.
+  const toFloat = Number.parseFloat;
+  const NONE = 'none';
+  const UNRESOLVED_BACKDROP = 'unresolved-backdrop' as const;
+  const UNSUPPORTED_PAINT = 'unsupported-paint' as const;
+  // dataset exists on HTMLElement and SVGElement; no other node kind in a story carries data attributes.
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serialises this function alone, so every helper must live inside it
+  const dataOf = (el: Element): DOMStringMap =>
+    el instanceof HTMLElement || el instanceof SVGElement ? el.dataset : {};
   const SKIP_TAGS = new Set(['script', 'style', 'link', 'meta', 'head', 'title', 'noscript', 'br', 'wbr', 'template']);
 
-  const round = (n: number) => Math.round(n * 4) / 4;
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serialises this function alone, so every helper must live inside it
+  const roundTo = (value: number, steps: number) => Math.round(value * steps) / steps;
+  const round = (n: number) => roundTo(n, 4);
 
   const toRect = (r: DOMRect) => ({
     x: round(r.x),
@@ -267,35 +281,39 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
     h: round(r.height),
   });
 
+  const alphaValue = (raw: string) => (raw.endsWith('%') ? toFloat(raw) / 100 : toFloat(raw));
+
   // rgb()/rgba() → [r,g,b,a]; anything else → null (gradients, keywords).
   const parseCssColor = (raw: string): [number, number, number, number] | null => {
     const s = raw.trim().toLowerCase();
     if (s === 'transparent') {
       return [0, 0, 0, 0];
     }
-    const m = /^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)(?:[\s,/]+([\d.%]+))?\s*\)$/u.exec(s);
-    if (!m) {
+    const groups =
+      /^rgba?\(\s*(?<r>[\d.]+)[\s,]+(?<g>[\d.]+)[\s,]+(?<b>[\d.]+)(?:[\s,/]+(?<alpha>[\d.%]+))?\s*\)$/u.exec(s)?.groups;
+    if (!groups) {
       return null;
     }
-    let a = 1;
-    if (m[4] !== undefined) {
-      a = m[4].endsWith('%') ? Number.parseFloat(m[4]) / 100 : Number.parseFloat(m[4]);
-    }
-    return [Number.parseFloat(m[1]), Number.parseFloat(m[2]), Number.parseFloat(m[3]), a];
+    const { r, g, b, alpha } = groups;
+    return [toFloat(r), toFloat(g), toFloat(b), alpha === undefined ? 1 : alphaValue(alpha)];
   };
 
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serialises this function alone, so every helper must live inside it
   const toHex = (rgb: [number, number, number]): string => {
-    const h = (v: number) =>
+    const channels = rgb.map((v) =>
       Math.max(0, Math.min(255, Math.round(v)))
         .toString(16)
-        .padStart(2, '0');
-    return `#${h(rgb[0])}${h(rgb[1])}${h(rgb[2])}`;
+        .padStart(2, '0'),
+    );
+    return `#${channels.join('')}`;
   };
 
   // Composite `top` (with alpha) over opaque `bottom`.
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serialises this function alone, so every helper must live inside it
   const blend = (top: [number, number, number, number], bottom: [number, number, number]): [number, number, number] => {
-    const a = top[3];
-    return [top[0] * a + bottom[0] * (1 - a), top[1] * a + bottom[1] * (1 - a), top[2] * a + bottom[2] * (1 - a)];
+    const [topR, topG, topB, a] = top;
+    const [bottomR, bottomG, bottomB] = bottom;
+    return [topR * a + bottomR * (1 - a), topG * a + bottomG * (1 - a), topB * a + bottomB * (1 - a)];
   };
 
   /**
@@ -304,23 +322,17 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
    * Reports whether the chain actually resolved and whether a
    * background-image sits in it.
    */
-  const effectiveBackground = (
-    el: Element,
-  ): {
-    hex: string;
-    resolved: boolean;
-    overImage: boolean;
-  } => {
+  const effectiveBackground = (el: Element) => {
     const layers: [number, number, number, number][] = [];
     let overImage = false;
     let node: Element | null = el;
     let opaqueBase: [number, number, number] | null = null;
     while (node) {
       const cs = getComputedStyle(node);
-      if (cs.backgroundImage && cs.backgroundImage !== 'none') {
+      if (cs.backgroundImage !== '' && cs.backgroundImage !== NONE) {
         overImage = true;
       }
-      if (node.getAttribute('data-mpo-chart-backdrop') === 'patterned') {
+      if (dataOf(node).mpoChartBackdrop === 'patterned') {
         overImage = true;
       }
       const parsed = parseCssColor(cs.backgroundColor);
@@ -338,7 +350,7 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
       return { hex: '#ffffff', resolved: false, overImage };
     }
     let acc = opaqueBase;
-    for (let i = layers.length - 1; i >= 0; i--) {
+    for (let i = layers.length - 1; i >= 0; i -= 1) {
       acc = blend(layers[i], acc);
     }
     return { hex: toHex(acc), resolved: !overImage, overImage };
@@ -349,13 +361,31 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
     let o = 1;
     let node: Element | null = el;
     while (node) {
-      const v = Number.parseFloat(getComputedStyle(node).opacity);
+      const v = toFloat(getComputedStyle(node).opacity);
       if (!Number.isNaN(v)) {
         o *= v;
       }
       node = node.parentElement;
     }
     return o;
+  };
+
+  const visible = (node: Element): boolean => {
+    const style = getComputedStyle(node);
+    const rect = node.getBoundingClientRect();
+    const hiddenVisibility = style.visibility === 'hidden' || style.visibility === 'collapse';
+    const hasBox = rect.width > 0 || rect.height > 0;
+    return !hiddenVisibility && effectiveOpacity(node) > 0 && hasBox;
+  };
+
+  const roundMilli = (value: number) => roundTo(value, 1000);
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serialises this function alone, so every helper must live inside it
+  const pathTokens = (path: string): string => {
+    const tokens: string[] =
+      path
+        .replaceAll(/^path\(["']?|["']?\)$/gu, '')
+        .match(/[a-zA-Z]|[-+]?(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][-+]?\d+)?/gu) ?? [];
+    return JSON.stringify(tokens.map((token) => (Number.isNaN(Number(token)) ? token : Number(token))));
   };
 
   const GEOMETRY_PROPS = [
@@ -383,13 +413,10 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
   // Prefer the preview's stable inner root. `#storybook-root` also contains
   // the Tamagui `<Theme>` host, which is present only when a colour global
   // is set — capturing there reports a remount as geometry drift.
+  const matrixRoot = document.querySelector('#mpo-matrix-root') ?? document.querySelector('[data-mpo-matrix-root]');
   const root =
-    document.querySelector('#mpo-matrix-root') ??
-    document.querySelector('[data-mpo-matrix-root]') ??
-    document.querySelector('#storybook-root') ??
-    document.querySelector('#root') ??
-    document.body;
-  const storyRendered = !!root && root.children.length > 0;
+    matrixRoot ?? document.querySelector('#storybook-root') ?? document.querySelector('#root') ?? document.body;
+  const storyRendered = root != null && root.children.length > 0;
 
   const geometry: MatrixElementGeometry[] = [];
   const textSamples: MatrixTextSample[] = [];
@@ -398,27 +425,26 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
   let svgRootCount = 0;
   const capturedSvgRoots = new Set<Element>();
 
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serialises this function alone, so every helper must live inside it
   const accessibleName = (el: Element): string => {
     const labelledBy = el.getAttribute('aria-labelledby');
-    if (labelledBy) {
+    if (labelledBy !== null && labelledBy !== '') {
       const name = labelledBy
         .split(/\s+/u)
+        // oxlint-disable-next-line unicorn/prefer-query-selector -- aria-labelledby tokens are raw ids; getElementById needs no CSS escaping
         .map((id) => document.getElementById(id)?.textContent ?? '')
         .join(' ')
         .trim();
-      if (name) {
+      if (name !== '') {
         return name.slice(0, 100);
       }
     }
-    const labels = 'labels' in el ? (el as HTMLInputElement).labels : null;
-    const labelText = labels
-      ? Array.from(labels)
-          .map((label) => label.textContent ?? '')
-          .join(' ')
-      : '';
-    return (el.getAttribute('aria-label') || labelText || el.getAttribute('title') || el.textContent || '')
-      .trim()
-      .slice(0, 100);
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- SAFETY: 'labels' in el means a labelable form control, and every such control types `labels` as NodeListOf<HTMLLabelElement> | null
+    const labels = 'labels' in el ? (el.labels as NodeListOf<HTMLLabelElement> | null) : null;
+    const labelText = labels ? [...labels].map((label) => label.textContent ?? '').join(' ') : '';
+    const candidates = [el.getAttribute('aria-label'), labelText, el.getAttribute('title'), el.textContent];
+    const name = candidates.find((candidate) => candidate !== null && candidate !== '') ?? '';
+    return name.trim().slice(0, 100);
   };
 
   const controlName = (el: Element): string => {
@@ -427,7 +453,12 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
     if (el.matches('[data-mp-input-box]')) {
       const input = el.querySelector('input, textarea, select');
       if (input) {
-        return accessibleName(input) || input.getAttribute('placeholder') || 'input';
+        const inputName = accessibleName(input);
+        if (inputName !== '') {
+          return inputName;
+        }
+        const placeholder = input.getAttribute('placeholder');
+        return placeholder !== null && placeholder !== '' ? placeholder : 'input';
       }
     }
     return accessibleName(el);
@@ -443,7 +474,7 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
       }
       // Alpha on a group containing a background changes both sides of the
       // contrast pair. Multiplying only ink alpha would invent a measurement.
-      if (Number.parseFloat(cs.opacity) < 1 && backgroundInGroup) {
+      if (toFloat(cs.opacity) < 1 && backgroundInGroup) {
         return true;
       }
       if (cs.mixBlendMode && cs.mixBlendMode !== 'normal') {
@@ -453,6 +484,7 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
     return false;
   };
 
+  // oxlint-disable-next-line eslint/complexity, sonarjs/cognitive-complexity -- one ordered list of exclusion and unmeasurable-paint checks; splitting it scatters the verdict order
   const collectIcon = (el: Element, key: string, cs: CSSStyleDeclaration): void => {
     if (el.tagName.toLowerCase() !== 'svg' || el.parentElement?.closest('svg')) {
       return;
@@ -466,18 +498,15 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
       background: backdrop.hex,
       backgroundResolved: backdrop.resolved,
       overImage: backdrop.overImage,
+      // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- field of the exported MatrixIconSample snapshot
       shapeCount: 0,
       distinctPaints: 0,
       rect: toRect(rect),
     };
     iconSamples.push(sample);
-    if (
-      cs.visibility === 'hidden' ||
-      cs.visibility === 'collapse' ||
-      effectiveOpacity(el) === 0 ||
-      rect.width === 0 ||
-      rect.height === 0
-    ) {
+    const collapsedVisibility = cs.visibility === 'hidden' || cs.visibility === 'collapse';
+    const emptyBox = rect.width === 0 || rect.height === 0;
+    if (collapsedVisibility || emptyBox || effectiveOpacity(el) === 0) {
       sample.status = 'hidden';
       return;
     }
@@ -498,21 +527,21 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
       return;
     }
     if (!backdrop.resolved) {
-      sample.unmeasurable = 'unresolved-backdrop';
+      sample.unmeasurable = UNRESOLVED_BACKDROP;
       return;
     }
     if (el.querySelector('use')) {
       sample.unmeasurable = 'use-indirection';
       return;
     }
-    const paintNodes = [el, ...Array.from(el.querySelectorAll('*'))];
+    const paintNodes = [el, ...el.querySelectorAll('*')];
     for (let ancestor = el.parentElement; ancestor; ancestor = ancestor.parentElement) {
       paintNodes.push(ancestor);
     }
     if (
       paintNodes.some((node) => {
         const style = getComputedStyle(node);
-        return (style.filter && style.filter !== 'none') || (style.maskImage && style.maskImage !== 'none');
+        return (style.filter !== '' && style.filter !== NONE) || (style.maskImage !== '' && style.maskImage !== NONE);
       })
     ) {
       sample.unmeasurable = 'masked-or-filtered';
@@ -525,65 +554,60 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
     ];
     const paints = new Set<string>();
     const kinds = new Set<'fill' | 'stroke'>();
-    const alphaValue = (raw: string) => (raw.endsWith('%') ? Number.parseFloat(raw) / 100 : Number.parseFloat(raw));
-    for (const shape of Array.from(
-      el.querySelectorAll('path, rect, circle, ellipse, line, polyline, polygon, text, tspan'),
-    )) {
+    // oxlint-disable-next-line sonarjs/too-many-break-or-continue-in-loop -- guard-clause continues keep this paint walk flat
+    for (const drawable of el.querySelectorAll('path, rect, circle, ellipse, line, polyline, polygon, text, tspan')) {
       // Definitions do not paint until referenced; <use> is scoped out above.
-      if (shape.closest('defs, clipPath, mask, pattern, marker, symbol')) {
+      if (drawable.closest('defs, clipPath, mask, pattern, marker, symbol')) {
         continue;
       }
-      const style = getComputedStyle(shape);
+      const style = getComputedStyle(drawable);
       let hiddenGroup = false;
-      for (let node: Element | null = shape; node && node !== el; node = node.parentElement) {
-        if (getComputedStyle(node).display === 'none') {
+      for (let node: Element | null = drawable; node && node !== el; node = node.parentElement) {
+        if (getComputedStyle(node).display === NONE) {
           hiddenGroup = true;
         }
       }
-      if (
-        hiddenGroup ||
-        style.display === 'none' ||
-        style.visibility === 'hidden' ||
-        style.visibility === 'collapse' ||
-        effectiveOpacity(shape) === 0
-      ) {
+      const hiddenStyle = style.display === NONE || style.visibility === 'hidden' || style.visibility === 'collapse';
+      if (hiddenGroup || hiddenStyle || effectiveOpacity(drawable) === 0) {
         continue;
       }
-      const bounds = (shape as SVGGraphicsElement).getBBox();
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- SAFETY: the selector above yields only SVG painting elements, all of which are SVGGraphicsElement
+      const bounds = (drawable as SVGGraphicsElement).getBBox();
       if (
         typeof SVGGeometryElement !== 'undefined' &&
-        shape instanceof SVGGeometryElement &&
-        shape.getTotalLength() === 0
+        drawable instanceof SVGGeometryElement &&
+        drawable.getTotalLength() === 0
       ) {
         continue;
       }
-      sample.shapeCount++;
-      if (unsupportedCompositing(shape)) {
+      sample.shapeCount += 1;
+      if (unsupportedCompositing(drawable)) {
         sample.unmeasurable = 'unsupported-compositing';
         return;
       }
-      if ([style.markerStart, style.markerMid, style.markerEnd].some((value) => value && value !== 'none')) {
-        sample.unmeasurable = 'unsupported-paint';
+      if ([style.markerStart, style.markerMid, style.markerEnd].some((value) => value !== '' && value !== NONE)) {
+        sample.unmeasurable = UNSUPPORTED_PAINT;
         return;
       }
+      const strokeWidth = toFloat(style.strokeWidth);
+      const noStroke = Number.isNaN(strokeWidth) || strokeWidth <= 0;
+      const noFill = drawable.tagName.toLowerCase() === 'line' || bounds.width === 0 || bounds.height === 0;
+      // oxlint-disable-next-line sonarjs/too-many-break-or-continue-in-loop -- guard-clause continues keep this paint walk flat
       for (const kind of ['fill', 'stroke'] as const) {
-        if (kind === 'fill' && (shape.tagName.toLowerCase() === 'line' || bounds.width === 0 || bounds.height === 0)) {
-          continue;
-        }
-        if (kind === 'stroke' && !(Number.parseFloat(style.strokeWidth) > 0)) {
+        if ((kind === 'fill' && noFill) || (kind === 'stroke' && noStroke)) {
           continue;
         }
         const raw = style[kind].trim().toLowerCase();
-        if (raw === 'none') {
+        if (raw === NONE) {
           continue;
         }
         const ink = parseCssColor(raw === 'currentcolor' ? style.color : raw);
         if (!ink) {
-          sample.unmeasurable = 'unsupported-paint';
+          sample.unmeasurable = UNSUPPORTED_PAINT;
           return;
         }
         const paintOpacity = alphaValue(kind === 'fill' ? style.fillOpacity : style.strokeOpacity);
-        ink[3] *= (Number.isFinite(paintOpacity) ? paintOpacity : 1) * effectiveOpacity(shape);
+        ink[3] *= (Number.isFinite(paintOpacity) ? paintOpacity : 1) * effectiveOpacity(drawable);
         if (ink[3] === 0) {
           continue;
         }
@@ -597,60 +621,50 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
     } else if (paints.size > 1) {
       sample.unmeasurable = 'multicolor';
     } else {
-      sample.paint = Array.from(paints)[0];
-      sample.paintKinds = Array.from(kinds);
+      [sample.paint] = paints;
+      sample.paintKinds = [...kinds];
     }
   };
 
+  // oxlint-disable-next-line eslint/complexity, sonarjs/cognitive-complexity -- one ordered proof pipeline (backdrop, separation, mark, label and chrome channels) that shares the sample being built
   const collectChart = (el: Element, key: string): void => {
     const backdrop = effectiveBackground(el);
-    const rawCount = el.getAttribute('data-mpo-chart-datum-count');
-    const expected = rawCount !== null && /^\d+$/u.test(rawCount) ? Number(rawCount) : -1;
+    const rawCount = dataOf(el).mpoChartDatumCount;
+    const expected = rawCount !== undefined && /^\d+$/u.test(rawCount) ? Number(rawCount) : -1;
     const owner = el.closest('[data-mpo-chart-owner]');
     const rows = owner
-      ? Array.from(owner.querySelectorAll('[data-mpo-chart-datum-text]')).filter(
+      ? [...owner.querySelectorAll('[data-mpo-chart-datum-text]')].filter(
           (row) => row.tagName.toLowerCase() !== 'svg' && row.closest('[data-mpo-chart-owner]') === owner,
         )
       : [];
-    const visible = (node: Element): boolean => {
-      const style = getComputedStyle(node);
-      const rect = node.getBoundingClientRect();
-      return (
-        style.visibility !== 'hidden' &&
-        style.visibility !== 'collapse' &&
-        effectiveOpacity(node) > 0 &&
-        (rect.width > 0 || rect.height > 0)
-      );
-    };
+    const chromeLines: MatrixChartPaint[] = [];
+    const unaccountedPaints: MatrixChartPaint[] = [];
     const completeRows = rows.filter((row, index) => {
       const name = row.querySelector('[data-mpo-chart-datum-label]');
       const value = row.querySelector('[data-mpo-chart-datum-value]');
-      return (
-        row.getAttribute('data-mpo-chart-datum-text') === String(index) &&
-        name &&
-        value &&
-        visible(name) &&
-        visible(value) &&
-        !!name.textContent?.trim() &&
-        !!value.textContent?.trim()
-      );
+      if (dataOf(row).mpoChartDatumText !== String(index) || name === null || value === null) {
+        return false;
+      }
+      const nameText = name.textContent?.trim() ?? '';
+      const valueText = value.textContent?.trim() ?? '';
+      return visible(name) && visible(value) && nameText !== '' && valueText !== '';
     });
     const sample: MatrixChartSample = {
       key,
-      kind: el.getAttribute('data-mpo-chart') ?? '',
+      kind: dataOf(el).mpoChart ?? '',
       context: accessibleName(el),
       label: (el.getAttribute('aria-label') ?? '').trim(),
       background: backdrop.hex,
       backgroundResolved: backdrop.resolved,
       marks: [],
       labels: [],
-      chrome: [],
-      unaccountedPaint: [],
-      separation: { declared: el.getAttribute('data-mpo-chart-separated') === 'true' },
+      chrome: chromeLines,
+      unaccountedPaint: unaccountedPaints,
+      separation: { declared: dataOf(el).mpoChartSeparated === 'true' },
       datumText: {
-        viewId: el.getAttribute('data-mpo-chart-data-view') ?? undefined,
-        expectedValues: el.getAttribute('data-mpo-chart-data-expected') ?? undefined,
-        declared: el.getAttribute('data-mpo-chart-datum-text') === 'true',
+        viewId: dataOf(el).mpoChartDataView,
+        expectedValues: dataOf(el).mpoChartDataExpected,
+        declared: dataOf(el).mpoChartDatumText === 'true',
         expected,
         observed: completeRows.length,
         complete: expected > 0 && rows.length === expected && completeRows.length === expected,
@@ -660,37 +674,32 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
     if (!visible(el)) {
       sample.unmeasurable = 'hidden-chart';
     } else if (!backdrop.resolved) {
-      sample.unmeasurable = 'unresolved-backdrop';
+      sample.unmeasurable = UNRESOLVED_BACKDROP;
     } else if (el.querySelector('use')) {
       sample.unmeasurable = 'use-indirection';
     }
 
-    const marks = Array.from(el.querySelectorAll('[data-mpo-chart-mark]'));
+    const marks = [...el.querySelectorAll('[data-mpo-chart-mark]')];
     const certifiedMasks = new Set<Element>();
     if ((sample.kind === 'pie' || sample.kind === 'donut') && marks.length > 1) {
       // Certification checks the original partition as well as the mask. A
       // matching mask on arbitrary overlapping paths would not prove a gap.
-      const round = (value: number) => Math.round(value * 1000) / 1000;
-      const pathTokens = (path: string) =>
-        JSON.stringify(
-          (
-            path.replaceAll(/^path\(["']?|["']?\)$/gu, '').match(/[a-zA-Z]|[-+]?(?:\d*\.)?\d+(?:[eE][-+]?\d+)?/gu) ?? []
-          ).map((token) => (Number.isNaN(Number(token)) ? token : Number(token))),
-        );
       const point = (radius: number, angle: number) =>
-        `${round(radius * Math.cos(angle - Math.PI / 2))},${round(radius * Math.sin(angle - Math.PI / 2))}`;
+        `${roundMilli(radius * Math.cos(angle - Math.PI / 2))},${roundMilli(radius * Math.sin(angle - Math.PI / 2))}`;
+      // oxlint-disable-next-line eslint/complexity, sonarjs/cognitive-complexity -- one ordered list of geometry and style checks that must all hold for a mask to be certified
       const proofs = marks.map((mark) => {
-        if (mark.tagName.toLowerCase() !== 'path' || mark.getAttribute('data-mpo-chart-mask') !== 'eroded-arc-v1') {
-          return;
+        if (mark.tagName.toLowerCase() !== 'path' || dataOf(mark).mpoChartMask !== 'eroded-arc-v1') {
+          return null;
         }
-        const values = (mark.getAttribute('data-mpo-chart-slice') ?? '').split(',').map(Number);
+        const values = (dataOf(mark).mpoChartSlice ?? '').split(',').map(Number);
         if (values.length !== 4 || !values.every(Number.isFinite)) {
-          return;
+          return null;
         }
         const [start, end, inner, outer] = values;
         const span = end - start;
-        if (start < 0 || end > Math.PI * 2 + 1e-9 || span <= 0 || span >= Math.PI * 2 || inner < 0 || outer <= inner) {
-          return;
+        const badSpan = start < 0 || end > Math.PI * 2 + 1e-9 || span <= 0 || span >= Math.PI * 2;
+        if (badSpan || inner < 0 || outer <= inner) {
+          return null;
         }
         const radius = (inner + outer) / 2;
         const projection = Math.min(outer, Math.max(inner, radius * Math.cos(span / 2)));
@@ -698,54 +707,56 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
           Math.max(0, radius ** 2 + projection ** 2 - 2 * radius * projection * Math.cos(span / 2)),
         );
         if (outer - radius <= 1.002 || radius - inner <= 1.002 || radialDistance <= 1.002) {
-          return;
+          return null;
         }
         const large = Number(span >= Math.PI);
-        const d = `M${point(outer, start)}A${round(outer)},${round(outer)},0,${large},1,${point(outer, end)}${
-          inner ? `L${point(inner, end)}A${round(inner)},${round(inner)},0,${large},0,${point(inner, start)}Z` : 'L0,0Z'
+        const d = `M${point(outer, start)}A${roundMilli(outer)},${roundMilli(outer)},0,${large},1,${point(outer, end)}${
+          inner
+            ? `L${point(inner, end)}A${roundMilli(inner)},${roundMilli(inner)},0,${large},0,${point(inner, start)}Z`
+            : 'L0,0Z'
         }`;
         if (mark.getAttribute('d') !== d) {
-          return;
+          return null;
         }
         const markStyle = getComputedStyle(mark);
         // CSS can replace presentation attributes, including the actual path.
         const paintedD = markStyle.getPropertyValue('d');
         if (paintedD && pathTokens(paintedD) !== pathTokens(d)) {
-          return;
+          return null;
         }
-        if (markStyle.stroke !== 'none') {
-          return;
+        if (markStyle.stroke !== NONE) {
+          return null;
         }
-        const reference = /^url\(["']?#([^"')]+)["']?\)$/u.exec(mark.getAttribute('mask') ?? '');
-        if (!reference) {
-          return;
+        const referenceId = /^url\(["']?#(?<id>[^"')]+)["']?\)$/u.exec(mark.getAttribute('mask') ?? '')?.groups?.id;
+        if (referenceId === undefined) {
+          return null;
         }
-        const matches = Array.from(document.querySelectorAll('[id]')).filter((node) => node.id === reference[1]);
-        const mask = matches[0];
+        const matches = [...document.querySelectorAll('[id]')].filter((node) => node.id === referenceId);
+        const [mask] = matches;
         if (matches.length !== 1 || mask.tagName.toLowerCase() !== 'mask' || !el.contains(mask)) {
-          return;
+          return null;
         }
         const definitions = mask.parentElement;
         if (definitions?.tagName.toLowerCase() !== 'defs' || definitions.parentElement !== mark.parentElement) {
-          return;
+          return null;
         }
-        const computedReference = /^url\(["']?([^"')]+)["']?\)$/u.exec(markStyle.maskImage);
-        if (!computedReference || !['match-source', 'luminance'].includes(markStyle.maskMode)) {
-          return;
+        const computedReference = /^url\(["']?(?<target>[^"')]+)["']?\)$/u.exec(markStyle.maskImage)?.groups?.target;
+        if (computedReference === undefined || !['match-source', 'luminance'].includes(markStyle.maskMode)) {
+          return null;
         }
         try {
-          if (new URL(computedReference[1], document.baseURI).href !== new URL(`#${reference[1]}`, document.URL).href) {
-            return;
+          if (new URL(computedReference, document.baseURI).href !== new URL(`#${referenceId}`, document.URL).href) {
+            return null;
           }
         } catch {
-          return;
+          return null;
         }
         if (
           mask.getAttribute('maskUnits') !== 'userSpaceOnUse' ||
           mask.getAttribute('maskContentUnits') !== 'userSpaceOnUse' ||
           getComputedStyle(mask).getPropertyValue('mask-type') !== 'luminance'
         ) {
-          return;
+          return null;
         }
         const bounds = {
           x: -outer - 2,
@@ -754,63 +765,58 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
           height: (outer + 2) * 2,
         };
         if (Object.entries(bounds).some(([name, value]) => Number(mask.getAttribute(name)) !== value)) {
-          return;
+          return null;
         }
         if (mask.children.length !== 1) {
-          return;
+          return null;
         }
-        const boundary = mask.children[0];
+        const [boundary] = mask.children;
         if (boundary.tagName.toLowerCase() !== 'path' || boundary.getAttribute('d') !== d) {
-          return;
+          return null;
         }
         for (const node of [definitions, mask, boundary]) {
           const style = getComputedStyle(node);
-          if (
-            style.transform !== 'none' ||
-            style.filter !== 'none' ||
-            style.maskImage !== 'none' ||
-            style.clipPath !== 'none' ||
-            style.opacity !== '1' ||
-            style.visibility !== 'visible' ||
-            style.display === 'none'
-          ) {
-            return;
+          const transformed = style.transform !== NONE || style.filter !== NONE || style.maskImage !== NONE;
+          const concealed = style.clipPath !== NONE || style.opacity !== '1' || style.visibility !== 'visible';
+          if (transformed || concealed || style.display === NONE) {
+            return null;
           }
-          if ([style.markerStart, style.markerMid, style.markerEnd].some((value) => value && value !== 'none')) {
-            return;
+          if ([style.markerStart, style.markerMid, style.markerEnd].some((value) => value !== '' && value !== NONE)) {
+            return null;
           }
         }
         if (unsupportedCompositing(boundary)) {
-          return;
+          return null;
         }
         const boundaryStyle = getComputedStyle(boundary);
-        if (
+        const paintMismatch =
           boundaryStyle.fill !== 'rgb(255, 255, 255)' ||
           boundaryStyle.stroke !== 'rgb(0, 0, 0)' ||
           boundaryStyle.fillOpacity !== '1' ||
-          boundaryStyle.strokeOpacity !== '1' ||
-          Number.parseFloat(boundaryStyle.strokeWidth) !== 2 ||
+          boundaryStyle.strokeOpacity !== '1';
+        const strokeMismatch =
+          toFloat(boundaryStyle.strokeWidth) !== 2 ||
           boundaryStyle.strokeLinejoin !== 'round' ||
           boundaryStyle.strokeLinecap !== 'round' ||
-          boundaryStyle.paintOrder !== 'normal' ||
-          boundaryStyle.vectorEffect !== 'none' ||
-          boundaryStyle.strokeDasharray !== 'none'
-        ) {
-          return;
+          boundaryStyle.paintOrder !== 'normal';
+        const effectMismatch = boundaryStyle.vectorEffect !== NONE || boundaryStyle.strokeDasharray !== NONE;
+        if (paintMismatch || strokeMismatch || effectMismatch) {
+          return null;
         }
         const boundaryD = boundaryStyle.getPropertyValue('d');
         if (boundaryD && pathTokens(boundaryD) !== pathTokens(d)) {
-          return;
+          return null;
         }
         for (let node: Element | null = mark; node; node = node.parentElement) {
           const style = getComputedStyle(node);
-          if (style.transform.startsWith('matrix3d') || (style.perspective && style.perspective !== 'none')) {
-            return;
+          if (style.transform.startsWith('matrix3d') || (style.perspective !== '' && style.perspective !== NONE)) {
+            return null;
           }
         }
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- SAFETY: only <path> marks with the eroded-arc attribute reach this point, and <path> is an SVGGraphicsElement
         const ctm = (mark as SVGGraphicsElement).getScreenCTM();
         if (!ctm) {
-          return;
+          return null;
         }
         const matrix = [ctm.a, ctm.b, ctm.c, ctm.d, ctm.e, ctm.f];
         // This two-hypot form avoids the squared discriminant's cancellation
@@ -819,7 +825,7 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
         const secondScale = Math.hypot(ctm.a - ctm.d, ctm.b + ctm.c);
         const smallest = Math.abs(firstScale - secondScale) / 2;
         if (!matrix.every(Number.isFinite) || !Number.isFinite(smallest) || smallest <= 0) {
-          return;
+          return null;
         }
         const measuredGap = 2 * smallest * window.devicePixelRatio;
         // Unit rotations can round one double below2. Only the bounded
@@ -836,65 +842,66 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
           gap,
         };
       });
-      const first = proofs[0];
-      if (
-        first &&
-        Math.abs(first.start) < 1e-9 &&
-        proofs.every(
-          (proof, index) =>
-            proof &&
-            proof.inner === first.inner &&
-            proof.outer === first.outer &&
-            proof.matrix.every((value, axis) => value === first.matrix[axis]) &&
-            Math.abs(proof.start - (index ? proofs[index - 1]!.end : 0)) < 1e-9,
-        ) &&
-        Math.abs(proofs[proofs.length - 1]!.end - Math.PI * 2) < 1e-9
-      ) {
-        for (const proof of proofs) {
-          certifiedMasks.add(proof!.mark);
+      const proven = proofs.filter((proof): proof is NonNullable<typeof proof> => proof !== null);
+      const [first] = proven;
+      const last = proven.at(-1);
+      const contiguous = proven.every((proof, index) => {
+        const previousEnd = index > 0 ? proven[index - 1].end : 0;
+        const sameRing = proof.inner === first.inner && proof.outer === first.outer;
+        const sameMatrix =
+          proof.matrix.length === first.matrix.length &&
+          proof.matrix.every((value, axis) => value === first.matrix[axis]);
+        return sameRing && sameMatrix && Math.abs(proof.start - previousEnd) < 1e-9;
+      });
+      const hasBounds = first !== undefined && last !== undefined && proven.length === proofs.length;
+      if (hasBounds && contiguous && Math.abs(first.start) < 1e-9 && Math.abs(last.end - Math.PI * 2) < 1e-9) {
+        for (const proof of proven) {
+          certifiedMasks.add(proof.mark);
         }
         sample.separation.method = 'eroded-arc';
         sample.separation.minimumGapPx = first.gap;
       }
     }
 
-    const paintSample = (shape: Element, paintKey: string, label: string): MatrixChartPaint => {
+    // oxlint-disable-next-line eslint/complexity, sonarjs/cognitive-complexity -- one ordered list of unmeasurable-paint early exits before the paint is measured
+    const paintSample = (drawable: Element, paintKey: string, label: string): MatrixChartPaint => {
       const item: MatrixChartPaint = { key: paintKey, label, background: backdrop.hex };
-      if (shape.closest('defs, clipPath, mask, pattern, marker, symbol')) {
+      if (drawable.closest('defs, clipPath, mask, pattern, marker, symbol')) {
         return { ...item, unmeasurable: 'no-paint' };
       }
-      if (!visible(shape)) {
+      if (!visible(drawable)) {
         return { ...item, unmeasurable: 'no-paint' };
       }
       if (!backdrop.resolved) {
-        return { ...item, unmeasurable: 'unresolved-backdrop' };
+        return { ...item, unmeasurable: UNRESOLVED_BACKDROP };
       }
-      for (let node: Element | null = shape; node; node = node.parentElement) {
+      for (let node: Element | null = drawable; node; node = node.parentElement) {
         const style = getComputedStyle(node);
-        if (
-          (style.filter && style.filter !== 'none') ||
-          (style.maskImage && style.maskImage !== 'none' && !(node === shape && certifiedMasks.has(shape)))
-        ) {
+        const filtered = style.filter !== '' && style.filter !== NONE;
+        const masked =
+          style.maskImage !== '' && style.maskImage !== NONE && !(node === drawable && certifiedMasks.has(drawable));
+        if (filtered || masked) {
           return { ...item, unmeasurable: 'masked-or-filtered' };
         }
         // SVG clip paths and CSS clipping can hide portions of a mark. This
         // bounded model does not certify the remaining painted shape.
-        if (style.clipPath && style.clipPath !== 'none') {
-          return { ...item, unmeasurable: 'unsupported-paint' };
+        if (style.clipPath !== '' && style.clipPath !== NONE) {
+          return { ...item, unmeasurable: UNSUPPORTED_PAINT };
         }
       }
-      if (unsupportedCompositing(shape)) {
+      if (unsupportedCompositing(drawable)) {
         return { ...item, unmeasurable: 'unsupported-compositing' };
       }
-      const style = getComputedStyle(shape);
-      if ([style.markerStart, style.markerMid, style.markerEnd].some((value) => value && value !== 'none')) {
-        return { ...item, unmeasurable: 'unsupported-paint' };
+      const style = getComputedStyle(drawable);
+      if ([style.markerStart, style.markerMid, style.markerEnd].some((value) => value !== '' && value !== NONE)) {
+        return { ...item, unmeasurable: UNSUPPORTED_PAINT };
       }
       let bounds: DOMRect;
       try {
-        bounds = (shape as SVGGraphicsElement).getBBox();
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- SAFETY: callers pass only SVG painting elements, which are SVGGraphicsElement; a non-graphics node would throw here and be reported unsupported
+        bounds = (drawable as SVGGraphicsElement).getBBox();
       } catch {
-        return { ...item, unmeasurable: 'unsupported-paint' };
+        return { ...item, unmeasurable: UNSUPPORTED_PAINT };
       }
       const background: [number, number, number] = [
         Number.parseInt(backdrop.hex.slice(1, 3), 16),
@@ -902,24 +909,24 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
         Number.parseInt(backdrop.hex.slice(5, 7), 16),
       ];
       const paints = new Set<string>();
+      const strokeWidth = toFloat(style.strokeWidth);
+      const noStroke = Number.isNaN(strokeWidth) || strokeWidth <= 0;
+      const noFill = drawable.tagName.toLowerCase() === 'line' || bounds.width === 0 || bounds.height === 0;
+      // oxlint-disable-next-line sonarjs/too-many-break-or-continue-in-loop -- guard-clause continues keep this paint walk flat
       for (const kind of ['fill', 'stroke'] as const) {
-        if (kind === 'fill' && (shape.tagName.toLowerCase() === 'line' || bounds.width === 0 || bounds.height === 0)) {
-          continue;
-        }
-        if (kind === 'stroke' && !(Number.parseFloat(style.strokeWidth) > 0)) {
+        if ((kind === 'fill' && noFill) || (kind === 'stroke' && noStroke)) {
           continue;
         }
         const raw = style[kind].trim().toLowerCase();
-        if (raw === 'none') {
+        if (raw === NONE) {
           continue;
         }
         const ink = parseCssColor(raw === 'currentcolor' ? style.color : raw);
         if (!ink) {
-          return { ...item, unmeasurable: 'unsupported-paint' };
+          return { ...item, unmeasurable: UNSUPPORTED_PAINT };
         }
-        const alphaRaw = kind === 'fill' ? style.fillOpacity : style.strokeOpacity;
-        const alpha = Number.parseFloat(alphaRaw) / (alphaRaw.endsWith('%') ? 100 : 1);
-        ink[3] *= (Number.isFinite(alpha) ? alpha : 1) * effectiveOpacity(shape);
+        const alpha = alphaValue(kind === 'fill' ? style.fillOpacity : style.strokeOpacity);
+        ink[3] *= (Number.isFinite(alpha) ? alpha : 1) * effectiveOpacity(drawable);
         if (ink[3] > 0) {
           paints.add(toHex(blend(ink, background)));
         }
@@ -927,37 +934,40 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
       if (paints.size !== 1) {
         return { ...item, unmeasurable: paints.size ? 'multicolor' : 'no-paint' };
       }
-      return { ...item, paint: Array.from(paints)[0] };
+      return { ...item, paint: [...paints][0] };
     };
 
     for (const [index, mark] of marks.entries()) {
       const tag = mark.tagName.toLowerCase();
+      const declaredLabel = dataOf(mark).mpoChartMark;
+      const markLabel = declaredLabel === undefined || declaredLabel === '' ? `mark ${index + 1}` : declaredLabel;
       const item = ['path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon'].includes(tag)
-        ? paintSample(mark, `${key}/mark:${index}`, mark.getAttribute('data-mpo-chart-mark') || `mark ${index + 1}`)
+        ? paintSample(mark, `${key}/mark:${index}`, markLabel)
         : {
             key: `${key}/mark:${index}`,
-            label: mark.getAttribute('data-mpo-chart-mark') ?? '',
+            label: dataOf(mark).mpoChartMark ?? '',
             background: backdrop.hex,
-            unmeasurable: 'unsupported-paint' as const,
+            unmeasurable: UNSUPPORTED_PAINT,
           };
       sample.marks.push(item);
     }
-    for (const [index, node] of Array.from(el.querySelectorAll('text, tspan')).entries()) {
+    for (const [index, node] of [...el.querySelectorAll('text, tspan')].entries()) {
       // A text parent with tspan children owns no direct ink. Measure each
       // actual text run once, including non-default SVG fill and alpha.
-      const text = Array.from(node.childNodes)
-        .filter((child) => child.nodeType === 3)
-        .map((child) => child.textContent ?? '')
+      const text = [...node.childNodes]
+        .flatMap((child) => (child.nodeType === 3 ? [child.textContent ?? ''] : []))
         .join('')
         .trim();
       if (text) {
         sample.labels.push(paintSample(node, `${key}/label:${index}`, text));
       }
     }
-    for (const [index, drawable] of Array.from(
-      el.querySelectorAll('path, rect, circle, ellipse, line, polyline, polygon, image, foreignObject, use'),
-    ).entries()) {
-      if (drawable.hasAttribute('data-mpo-chart-mark')) {
+    const drawables = el.querySelectorAll(
+      'path, rect, circle, ellipse, line, polyline, polygon, image, foreignObject, use',
+    );
+    // oxlint-disable-next-line sonarjs/too-many-break-or-continue-in-loop -- guard-clause continues keep this classification flat
+    for (const [index, drawable] of [...drawables].entries()) {
+      if (dataOf(drawable).mpoChartMark !== undefined) {
         continue;
       }
       const tag = drawable.tagName.toLowerCase();
@@ -966,49 +976,44 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
       if (item.unmeasurable === 'no-paint') {
         continue;
       }
-      const chrome = drawable.getAttribute('data-mpo-chart-chrome');
+      const chrome = dataOf(drawable).mpoChartChrome;
       const style = getComputedStyle(drawable);
       const rect = drawable.getBoundingClientRect();
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- SAFETY: the selector yields SVG drawing elements; the optional call tolerates the ones (image, foreignObject, use) that lack getScreenCTM in this DOM
       const ctm = (drawable as SVGGraphicsElement).getScreenCTM?.();
       const squareSum = ctm ? ctm.a ** 2 + ctm.b ** 2 + ctm.c ** 2 + ctm.d ** 2 : Number.NaN;
       const determinant = ctm ? ctm.a * ctm.d - ctm.b * ctm.c : Number.NaN;
       // Largest singular scale bounds stroke expansion under the complete
       // screen transform, including skew and nonuniform ancestor scaling.
       const largestScale = Math.sqrt((squareSum + Math.sqrt(Math.max(0, squareSum ** 2 - 4 * determinant ** 2))) / 2);
-      const screenStrokeWidth = Number.parseFloat(style.strokeWidth) * largestScale;
-      const thinAxisLine =
-        (chrome === 'axis' || chrome === 'grid') &&
-        tag === 'line' &&
-        (rect.width === 0 || rect.height === 0) &&
-        Number.isFinite(screenStrokeWidth) &&
-        screenStrokeWidth <= 1 &&
-        screenStrokeWidth > 0 &&
-        !item.unmeasurable;
+      const screenStrokeWidth = toFloat(style.strokeWidth) * largestScale;
+      const isChromeLine = (chrome === 'axis' || chrome === 'grid') && tag === 'line';
+      const flat = rect.width === 0 || rect.height === 0;
+      const thinStroke = Number.isFinite(screenStrokeWidth) && screenStrokeWidth <= 1 && screenStrokeWidth > 0;
+      const thinAxisLine = isChromeLine && flat && thinStroke && !item.unmeasurable;
       if (thinAxisLine) {
-        sample.chrome!.push({ ...item, label: `${chrome} line` });
+        chromeLines.push({ ...item, label: `${chrome} line` });
       } else {
-        sample.unaccountedPaint!.push({ ...item, unmeasurable: 'unsupported-paint' });
+        unaccountedPaints.push({ ...item, unmeasurable: UNSUPPORTED_PAINT });
       }
     }
     if (
       sample.kind === 'bar' &&
       marks.length > 0 &&
-      marks.every(
-        (mark, index) =>
-          // A bar path that declares its box (value-end rounding)
-          // paints inside that box just as a rect does.
-          (mark.tagName.toLowerCase() === 'rect' ||
-            (mark.tagName.toLowerCase() === 'path' && mark.hasAttribute('data-mpo-chart-bar'))) &&
-          getComputedStyle(mark).stroke === 'none' &&
-          !sample.marks[index].unmeasurable,
-      )
+      marks.every((mark, index) => {
+        const markTag = mark.tagName.toLowerCase();
+        // A bar path that declares its box (value-end rounding)
+        // paints inside that box just as a rect does.
+        const boxed = markTag === 'rect' || (markTag === 'path' && dataOf(mark).mpoChartBar !== undefined);
+        return boxed && getComputedStyle(mark).stroke === NONE && !sample.marks[index].unmeasurable;
+      })
     ) {
       // AABB distance is a conservative lower bound on actual fill distance.
       // All pairs, not only neighbors, must have the physical-pixel gap.
       let minimumGapPx = Infinity;
       const bounds = marks.map((mark) => mark.getBoundingClientRect());
-      for (let i = 0; i < bounds.length; i++) {
-        for (let j = i + 1; j < bounds.length; j++) {
+      for (let i = 0; i < bounds.length; i += 1) {
+        for (let j = i + 1; j < bounds.length; j += 1) {
           const a = bounds[i];
           const b = bounds[j];
           const dx = Math.max(0, a.left - b.right, b.left - a.right);
@@ -1038,17 +1043,18 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
    */
   const collectText = (el: Element, key: string, cs: CSSStyleDeclaration): MatrixRect | undefined => {
     const directText: Text[] = [];
-    for (const child of Array.from(el.childNodes)) {
-      if (child.nodeType === 3 && (child.textContent ?? '').trim().length > 0) {
-        directText.push(child as Text);
+    for (const child of el.childNodes) {
+      if (child instanceof Text && (child.textContent ?? '').trim().length > 0) {
+        directText.push(child);
       }
     }
-    if (directText.length === 0) {
+    const [firstText] = directText;
+    if (firstText === undefined) {
       return undefined;
     }
     const range = document.createRange();
-    range.setStartBefore(directText[0]);
-    range.setEndAfter(directText[directText.length - 1]);
+    range.setStartBefore(firstText);
+    range.setEndAfter(directText.at(-1) ?? firstText);
     const textRect = range.getBoundingClientRect();
     if (!(textRect.width > 0 && textRect.height > 0)) {
       return undefined;
@@ -1064,13 +1070,13 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
         );
         textSamples.push({
           key,
-          text: (directText[0].textContent ?? '').trim().slice(0, 60),
+          text: (firstText.textContent ?? '').trim().slice(0, 60),
           color: inkOpaque,
           background: backdrop.hex,
           backgroundResolved: backdrop.resolved,
           overImage: backdrop.overImage,
-          fontSizePx: Number.parseFloat(cs.fontSize) || 0,
-          fontWeightNum: Number.parseFloat(cs.fontWeight) || 400,
+          fontSizePx: toFloat(cs.fontSize) || 0,
+          fontWeightNum: toFloat(cs.fontWeight) || 400,
           rect: toRect(textRect),
         });
       }
@@ -1097,17 +1103,12 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
   const boxedChildren = (el: Element, path: string): Element[] => {
     const out: Element[] = [];
     const counts: Record<string, number> = {};
-    for (const child of Array.from(el.children)) {
+    for (const child of el.children) {
       const tag = child.tagName.toLowerCase();
-      if (SKIP_TAGS.has(tag)) {
-        continue;
-      }
       // SVG internals: the <svg> box is geometry enough; paths repaint per theme.
-      if (child.namespaceURI === 'http://www.w3.org/2000/svg' && tag !== 'svg') {
-        continue;
-      }
+      const svgInternal = child.namespaceURI === 'http://www.w3.org/2000/svg' && tag !== 'svg';
       const cs = getComputedStyle(child);
-      if (cs.display === 'none') {
+      if (SKIP_TAGS.has(tag) || svgInternal || cs.display === NONE) {
         continue;
       }
       if (cs.display === 'contents') {
@@ -1117,9 +1118,9 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
         for (const grandchild of boxedChildren(child, path)) {
           out.push(grandchild);
         }
-        continue;
+      } else {
+        out.push(child);
       }
-      out.push(child);
     }
     return out;
   };
@@ -1131,7 +1132,7 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
     const rect = el.getBoundingClientRect();
     const props: Record<string, string> = {};
     for (const prop of GEOMETRY_PROPS) {
-      props[prop] = cs[prop as keyof CSSStyleDeclaration] as string;
+      props[prop] = cs[prop];
     }
 
     const entry: MatrixElementGeometry = {
@@ -1148,10 +1149,10 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
     }
     if (tag === 'svg' && !el.parentElement?.closest('svg')) {
       capturedSvgRoots.add(el);
-      if (el.hasAttribute('data-mpo-chart')) {
-        collectChart(el, path);
-      } else {
+      if (dataOf(el).mpoChart === undefined) {
         collectIcon(el, path, cs);
+      } else {
+        collectChart(el, path);
       }
     }
 
@@ -1168,7 +1169,7 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
     }
   };
 
-  if (root) {
+  if (root != null) {
     const counts: Record<string, number> = {};
     for (const child of boxedChildren(root, '')) {
       const childTag = child.tagName.toLowerCase();
@@ -1176,7 +1177,7 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
       counts[childTag] = index + 1;
       visit(child, `${childTag}:${index}`);
     }
-    const svgRoots = Array.from(root.querySelectorAll('svg')).filter((svg) => !svg.parentElement?.closest('svg'));
+    const svgRoots = [...root.querySelectorAll('svg')].filter((svg) => !svg.parentElement?.closest('svg'));
     svgRootCount = svgRoots.length;
     // The geometry walk skips display:none subtrees. Those SVGs still need
     // a channel outcome: hidden icons are excluded, hidden charts unverified.
@@ -1185,10 +1186,10 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
         continue;
       }
       const key = `unpainted-svg:${index}`;
-      if (svg.hasAttribute('data-mpo-chart')) {
-        collectChart(svg, key);
-      } else {
+      if (dataOf(svg).mpoChart === undefined) {
         collectIcon(svg, key, getComputedStyle(svg));
+      } else {
+        collectChart(svg, key);
       }
     }
   }
@@ -1197,6 +1198,10 @@ export const captureMatrixSnapshot = (): MatrixSnapshot => {
 };
 
 // ── Node-side comparators (pure, vitest-covered) ─────────────────────────────
+
+const formatRect = (rect: MatrixRect) => `${rect.x},${rect.y} ${rect.w}x${rect.h}`;
+
+const describeRect = (rect: MatrixRect | undefined) => (rect ? formatRect(rect) : '(none)');
 
 /**
  * Geometry invariance diff for the THEME axis: every element must keep its
@@ -1220,8 +1225,6 @@ export const diffGeometry = (
     Math.abs(a.y - b.y) > epsilon ||
     Math.abs(a.w - b.w) > epsilon ||
     Math.abs(a.h - b.h) > epsilon;
-
-  const formatRect = (r: MatrixRect) => `${r.x},${r.y} ${r.w}x${r.h}`;
 
   for (const curr of after.geometry) {
     const prev = byKey.get(curr.key);
@@ -1249,8 +1252,8 @@ export const diffGeometry = (
       moves.push({
         key: curr.key,
         property: 'textRect',
-        before: prev.textRect ? formatRect(prev.textRect) : '(none)',
-        after: curr.textRect ? formatRect(curr.textRect) : '(none)',
+        before: describeRect(prev.textRect),
+        after: describeRect(curr.textRect),
       });
     }
     for (const prop of Object.keys(prev.props)) {
@@ -1265,7 +1268,12 @@ export const diffGeometry = (
     }
   }
 
-  const removedKeys = before.geometry.filter((g) => !seen.has(g.key)).map((g) => g.key);
+  const removedKeys: string[] = [];
+  for (const g of before.geometry) {
+    if (!seen.has(g.key)) {
+      removedKeys.push(g.key);
+    }
+  }
 
   return {
     identical: moves.length === 0 && addedKeys.length === 0 && removedKeys.length === 0,
@@ -1289,7 +1297,7 @@ export const evaluateTextContrast = (samples: MatrixTextSample[]): TextContrastR
   const violations: TextContrastViolation[] = [];
   for (const sample of samples) {
     if (!sample.backgroundResolved) {
-      unmeasurable++;
+      unmeasurable += 1;
       continue;
     }
     const large = sample.fontSizePx >= 24 || (sample.fontSizePx >= 18.66 && sample.fontWeightNum >= 700);
@@ -1302,7 +1310,7 @@ export const evaluateTextContrast = (samples: MatrixTextSample[]): TextContrastR
         floor: required,
         label: sample.key,
       });
-      measured++;
+      measured += 1;
       if (!report.pass) {
         violations.push({
           key: sample.key,
@@ -1314,10 +1322,62 @@ export const evaluateTextContrast = (samples: MatrixTextSample[]): TextContrastR
         });
       }
     } catch {
-      unmeasurable++;
+      unmeasurable += 1;
     }
   }
   return { measured, unmeasurable, violations };
+};
+
+const REASON_UNRESOLVED_BACKDROP = 'unresolved-backdrop' as const;
+const REASON_UNSUPPORTED_PAINT = 'unsupported-paint' as const;
+
+const ICON_EXCLUSION_COUNTERS = {
+  'disabled-control': 'excludedDisabled',
+  'decorative-standalone': 'excludedDecorative',
+  hidden: 'excludedHidden',
+} as const satisfies Record<IconExclusion, keyof IconContrastResult>;
+
+const iconUnverifiedReason = (sample: MatrixIconSample): IconUnmeasurableReason | undefined => {
+  if (sample.unmeasurable !== undefined) {
+    return sample.unmeasurable;
+  }
+  if (!sample.backgroundResolved) {
+    return REASON_UNRESOLVED_BACKDROP;
+  }
+  return sample.paint === undefined || sample.paint === '' ? 'no-paint' : undefined;
+};
+
+const measureIconSample = (sample: MatrixIconSample, result: IconContrastResult): void => {
+  const reason = iconUnverifiedReason(sample);
+  if (reason !== undefined || sample.paint === undefined) {
+    result.unverified.push({ key: sample.key, context: sample.context, reason: reason ?? 'no-paint' });
+    return;
+  }
+  try {
+    const contrast = measureContrast({
+      foreground: sample.paint,
+      background: sample.background,
+      floor: minContrastRatio,
+      label: sample.key,
+    });
+    result.measured += 1;
+    if (!contrast.pass) {
+      result.violations.push({
+        key: sample.key,
+        context: sample.context,
+        paint: contrast.foreground,
+        background: contrast.background,
+        ratio: contrast.ratio,
+        required: contrast.floor,
+      });
+    }
+  } catch {
+    result.unverified.push({
+      key: sample.key,
+      context: sample.context,
+      reason: REASON_UNSUPPORTED_PAINT,
+    });
+  }
 };
 
 /** A bounded single-ink SVG assertion. Unsupported compositions stay unverified. */
@@ -1333,50 +1393,11 @@ export const evaluateIconContrast = (samples: MatrixIconSample[]): IconContrastR
     excludedHidden: 0,
   };
   for (const sample of samples) {
-    if (sample.status === 'disabled-control') {
-      result.excludedDisabled++;
-      continue;
-    }
-    if (sample.status === 'decorative-standalone') {
-      result.excludedDecorative++;
-      continue;
-    }
-    if (sample.status === 'hidden') {
-      result.excludedHidden++;
-      continue;
-    }
-    result.candidates++;
-    const reason =
-      sample.unmeasurable ??
-      (sample.backgroundResolved ? (sample.paint ? undefined : 'no-paint') : 'unresolved-backdrop');
-    if (reason) {
-      result.unverified.push({ key: sample.key, context: sample.context, reason });
-      continue;
-    }
-    try {
-      const contrast = measureContrast({
-        foreground: sample.paint!,
-        background: sample.background,
-        floor: minContrastRatio,
-        label: sample.key,
-      });
-      result.measured++;
-      if (!contrast.pass) {
-        result.violations.push({
-          key: sample.key,
-          context: sample.context,
-          paint: contrast.foreground,
-          background: contrast.background,
-          ratio: contrast.ratio,
-          required: contrast.floor,
-        });
-      }
-    } catch {
-      result.unverified.push({
-        key: sample.key,
-        context: sample.context,
-        reason: 'unsupported-paint',
-      });
+    if (sample.status === 'conveying') {
+      result.candidates += 1;
+      measureIconSample(sample, result);
+    } else {
+      result[ICON_EXCLUSION_COUNTERS[sample.status]] += 1;
     }
   }
   result.ok = result.violations.length === 0 && result.unverified.length === 0;
@@ -1392,7 +1413,10 @@ export const iconContrastSignatures = (result: IconContrastResult): string[] => 
   ...result.unverified.map((item) => `${item.key} (${item.context}) icon UNVERIFIED: ${item.reason}`),
 ];
 
+const hasText = (value: string | undefined): value is string => value !== undefined && value !== '';
+
 /** Bounded chart proof. Declarations route samples; measured paint decides. */
+// oxlint-disable-next-line eslint/complexity, sonarjs/cognitive-complexity -- one ordered pass of per-sample proof rules sharing the result being built
 export const evaluateChartProof = (samples: MatrixChartSample[]): ChartProofResult => {
   const result: ChartProofResult = {
     ok: true,
@@ -1400,7 +1424,8 @@ export const evaluateChartProof = (samples: MatrixChartSample[]): ChartProofResu
     measured: 0,
     marksMeasured: 0,
     labelsMeasured: 0,
-    byKind: Object.create(null),
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- SAFETY: Object.create(null) is an empty prototype-free object, valid as an empty Record<string, number> counter map
+    byKind: Object.create(null) as Record<string, number>,
     violations: [],
     unverified: [],
   };
@@ -1412,19 +1437,19 @@ export const evaluateChartProof = (samples: MatrixChartSample[]): ChartProofResu
       unverified('unknown-kind');
       continue;
     }
-    if (!sample.label.trim()) {
+    if (sample.label.trim() === '') {
       result.violations.push({ key: sample.key, context: sample.context, rule: 'missing-label' });
     }
-    if (sample.unmeasurable) {
+    if (sample.unmeasurable !== undefined) {
       unverified(sample.unmeasurable);
     } else if (!sample.backgroundResolved) {
-      unverified('unresolved-backdrop');
+      unverified(REASON_UNRESOLVED_BACKDROP);
     }
     if (!sample.marks.length) {
       unverified('no-marks');
     }
     for (const item of sample.unaccountedPaint ?? []) {
-      unverified('unsupported-paint', item.key, `${sample.context}: ${item.label}`);
+      unverified(REASON_UNSUPPORTED_PAINT, item.key, `${sample.context}: ${item.label}`);
     }
     if (
       !sample.datumText.declared ||
@@ -1435,7 +1460,7 @@ export const evaluateChartProof = (samples: MatrixChartSample[]): ChartProofResu
       unverified(
         'incomplete-datum-text',
         sample.key,
-        sample.datumText.failure ? `${sample.context}: ${sample.datumText.failure}` : sample.context,
+        hasText(sample.datumText.failure) ? `${sample.context}: ${sample.datumText.failure}` : sample.context,
       );
     }
     const compare = (
@@ -1461,31 +1486,32 @@ export const evaluateChartProof = (samples: MatrixChartSample[]): ChartProofResu
         }
         return true;
       } catch {
-        unverified('unsupported-paint', key, context);
+        unverified(REASON_UNSUPPORTED_PAINT, key, context);
         return false;
       }
     };
     for (const mark of sample.marks) {
       const context = `${sample.context}: ${mark.label}`;
-      if (mark.unmeasurable || !mark.paint) {
+      if (mark.unmeasurable !== undefined || !hasText(mark.paint)) {
         unverified(mark.unmeasurable ?? 'no-paint', mark.key, context);
       } else if (compare(mark.paint, mark.background, mark.key, context, 'mark-backdrop', minContrastRatio)) {
-        result.marksMeasured++;
+        result.marksMeasured += 1;
       }
     }
     for (const label of sample.labels) {
       const context = `${sample.context}: ${label.label}`;
-      if (label.unmeasurable || !label.paint) {
+      if (label.unmeasurable !== undefined || !hasText(label.paint)) {
         unverified(label.unmeasurable ?? 'no-paint', label.key, context);
       } else if (compare(label.paint, label.background, label.key, context, 'axis-text', aaTextContrastRatio)) {
-        result.labelsMeasured++;
+        result.labelsMeasured += 1;
       }
     }
-    const separated =
-      ((sample.kind === 'bar' && sample.separation.method === 'rect-bounds') ||
-        ((sample.kind === 'pie' || sample.kind === 'donut') && sample.separation.method === 'eroded-arc')) &&
-      Number.isFinite(sample.separation.minimumGapPx) &&
-      sample.separation.minimumGapPx! >= 2;
+    const gapPx = sample.separation.minimumGapPx;
+    const separatedByBounds = sample.kind === 'bar' && sample.separation.method === 'rect-bounds';
+    const separatedByArcs =
+      (sample.kind === 'pie' || sample.kind === 'donut') && sample.separation.method === 'eroded-arc';
+    const gapMeasured = gapPx !== undefined && Number.isFinite(gapPx) && gapPx >= 2;
+    const separated = (separatedByBounds || separatedByArcs) && gapMeasured;
     if (sample.kind === 'bar' && !separated) {
       unverified('unverified-separation');
     }
@@ -1494,7 +1520,7 @@ export const evaluateChartProof = (samples: MatrixChartSample[]): ChartProofResu
         unverified('unverified-separation');
       }
       if (sample.marks.length > 1 && !separated) {
-        for (let i = 0; i < sample.marks.length; i++) {
+        for (let i = 0; i < sample.marks.length; i += 1) {
           const first = sample.marks[i];
           const second = sample.marks[(i + 1) % sample.marks.length];
           // A two-mark chart has one unordered pair; larger pies also need
@@ -1502,7 +1528,12 @@ export const evaluateChartProof = (samples: MatrixChartSample[]): ChartProofResu
           if (sample.marks.length === 2 && i === 1) {
             continue;
           }
-          if (first.paint && second.paint && !first.unmeasurable && !second.unmeasurable) {
+          if (
+            hasText(first.paint) &&
+            hasText(second.paint) &&
+            first.unmeasurable === undefined &&
+            second.unmeasurable === undefined
+          ) {
             compare(
               first.paint,
               second.paint,
@@ -1519,20 +1550,20 @@ export const evaluateChartProof = (samples: MatrixChartSample[]): ChartProofResu
       !sample.unmeasurable &&
       sample.backgroundResolved &&
       sample.marks.length > 0 &&
-      sample.marks.every((mark) => mark.paint && !mark.unmeasurable)
+      sample.marks.every((mark) => hasText(mark.paint) && mark.unmeasurable === undefined)
     ) {
-      result.measured++;
+      result.measured += 1;
     }
   }
   result.ok = result.violations.length === 0 && result.unverified.length === 0;
   return result;
 };
 
+const chartViolationDetail = (item: ChartProofViolation): string =>
+  item.ratio === undefined ? '' : ` ${item.paint} on ${item.background} = ${item.ratio}:1 (floor ${item.required})`;
+
 export const chartProofSignatures = (result: ChartProofResult): string[] => [
-  ...result.violations.map(
-    (item) =>
-      `${item.key} (${item.context}) chart ${item.rule}${item.ratio === undefined ? '' : ` ${item.paint} on ${item.background} = ${item.ratio}:1 (floor ${item.required})`}`,
-  ),
+  ...result.violations.map((item) => `${item.key} (${item.context}) chart ${item.rule}${chartViolationDetail(item)}`),
   ...result.unverified.map((item) => `${item.key} (${item.context}) chart UNVERIFIED: ${item.reason}`),
 ];
 
@@ -1576,7 +1607,8 @@ export const auditSignatures = (violations: { key?: string; label: string; viola
   const out: string[] = [];
   for (const element of violations) {
     for (const violation of element.violations) {
-      out.push(`${element.key ? `[${element.key}] ` : ''}${element.label} :: ${violation}`);
+      const keyPrefix = hasText(element.key) ? `[${element.key}] ` : '';
+      out.push(`${keyPrefix}${element.label} :: ${violation}`);
     }
   }
   return out;
@@ -1608,6 +1640,10 @@ const namedList = (entries: string[], limit = 6): string => {
   return entries.length > limit ? ` — new: ${shown}; … ${entries.length - limit} more` : ` — new: ${shown}`;
 };
 
+const textViolationSignature = (violation: TextContrastViolation) =>
+  `${violation.key} "${violation.text}" ${violation.color} on ${violation.background} = ` +
+  `${violation.ratio}:1 (floor ${violation.required})`;
+
 export interface NoBreakageResult {
   ok: boolean;
   failures: string[];
@@ -1635,11 +1671,11 @@ export const evaluateNoBreakage = (input: NoBreakageInput): NoBreakageResult => 
         `(default cell has ${input.baselineOffScaleViolations})${namedList(structuralAdded)}`,
     );
   }
-  const signature = (violation: TextContrastViolation) =>
-    `${violation.key} "${violation.text}" ${violation.color} on ${violation.background} = ` +
-    `${violation.ratio}:1 (floor ${violation.required})`;
   const contrastAdded = input.baselineContrast
-    ? newEntries(input.baselineContrast.violations.map(signature), input.contrast.violations.map(signature))
+    ? newEntries(
+        input.baselineContrast.violations.map(textViolationSignature),
+        input.contrast.violations.map(textViolationSignature),
+      )
     : [];
   if (contrastAdded.length || input.contrast.violations.length > input.baselineContrastViolations) {
     failures.push(

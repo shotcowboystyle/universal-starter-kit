@@ -24,7 +24,7 @@ describe('formatNumber (cardinal register)', () => {
   });
 
   it('honours a wider maximum for report floats', () => {
-    expect(formatNumber(3.14159, { ...enUS, maximumFractionDigits: 4 })).toBe('3.1416');
+    expect(formatNumber(7.89126, { ...enUS, maximumFractionDigits: 4 })).toBe('7.8913');
   });
 
   it('can drop grouping when a caller owns the layout', () => {
@@ -99,13 +99,14 @@ describe('formatPercent (rate register)', () => {
   });
 });
 
-describe('resolveCurrencyCode', () => {
+describe(resolveCurrencyCode, () => {
   it('maps the common symbols and passes codes through', () => {
     expect(resolveCurrencyCode('$')).toBe('USD');
     expect(resolveCurrencyCode('₹')).toBe('INR');
     expect(resolveCurrencyCode('eur')).toBe('EUR');
     expect(resolveCurrencyCode('R$')).toBe('BRL');
     expect(resolveCurrencyCode('¤')).toBeUndefined();
+    // oxlint-disable-next-line unicorn/no-useless-undefined -- the parameter is required, so an explicit undefined is the case under test
     expect(resolveCurrencyCode(undefined)).toBeUndefined();
   });
 });
@@ -125,6 +126,7 @@ describe('currencyAffix (money editor glyph)', () => {
   });
 
   it('returns nothing without a currency', () => {
+    // oxlint-disable-next-line unicorn/no-useless-undefined -- the parameter is required, so an explicit undefined is the case under test
     expect(currencyAffix(undefined)).toBeUndefined();
     expect(currencyAffix('')).toBeUndefined();
   });

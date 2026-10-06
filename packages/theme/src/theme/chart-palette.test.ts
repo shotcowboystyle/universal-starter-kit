@@ -1,3 +1,4 @@
+// oxlint-disable-next-line sonarjs/no-wildcard-import -- ramps are looked up dynamically by tint hue name, which needs the namespace
 import * as Colors from '@tamagui/colors';
 import { themes as stockThemes } from '@tamagui/themes';
 import { describe, expect, it } from 'vitest';
@@ -15,9 +16,9 @@ const purpleTintSolid = 'hsl(272, 46.8%, 50.3%)';
 const tomatoTintSolid = 'hsl(10, 78.0%, 54.0%)';
 const grayTintSolid = 'hsla(270, 6%, 56%, 1)';
 
-const hexToHsl = (color: string): { h: number; s: number; l: number } => {
+const hexToHsl = (color: string) => {
   const hex = normalizeToHex(color);
-  if (!hex) {
+  if (hex === null) {
     throw new Error(`unparseable color: ${color}`);
   }
   const r = Number.parseInt(hex.slice(1, 3), 16) / 255;
@@ -62,12 +63,14 @@ const adjacentDistinguishable = (a: string, b: string): boolean => {
   if (Math.abs(ha.s - hb.s) >= 0.5) {
     return true;
   }
-  const la = relativeLuminance(normalizeToHex(a) as string);
-  const lb = relativeLuminance(normalizeToHex(b) as string);
+  const la = relativeLuminance(normalizeToHex(a)!);
+  const lb = relativeLuminance(normalizeToHex(b)!);
   return contrastRatio(la, lb) >= 1.5;
 };
 
-describe('resolveChartPalette', () => {
+const colorRamps: Record<string, Record<string, string>> = Colors;
+
+describe(resolveChartPalette, () => {
   it('floors every categorical mark across the registered tint identities', () => {
     for (const scheme of ['light', 'dark'] as const) {
       const cardSurfaces = Object.entries(stockThemes)
@@ -87,15 +90,13 @@ describe('resolveChartPalette', () => {
           : [Colors.grayDark.gray2, Colors.mauveDark.mauve2]),
       ];
       for (const hue of tintHueNames) {
-        const ramp = (Colors as unknown as Record<string, Record<string, string>>)[
-          scheme === 'dark' ? `${hue}Dark` : hue
-        ];
+        const ramp = colorRamps[scheme === 'dark' ? `${hue}Dark` : hue];
         const palette = resolveChartPalette({
           scheme,
           identitySolid: ramp[`${hue}9`],
           identityCandidates: [ramp[`${hue}10`], ramp[`${hue}11`]],
         });
-        for (let i = 0; i < palette.categorical.length; i++) {
+        for (let i = 0; i < palette.categorical.length; i += 1) {
           expect(
             adjacentDistinguishable(palette.categorical[i], palette.categorical[(i + 1) % palette.categorical.length]),
             `${scheme}/${hue}: adjacent series ${i}`,
@@ -145,7 +146,7 @@ describe('resolveChartPalette', () => {
       identityCandidates: [Colors.grass.grass10, Colors.grass.grass11],
     });
     expect(grass.categorical[0]).toBe(Colors.grass.grass10);
-    expect([...grass.categorical].sort()).toStrictEqual(
+    expect(grass.categorical.toSorted()).toStrictEqual(
       [
         Colors.grass.grass10,
         Colors.blue.blue10,
@@ -155,7 +156,7 @@ describe('resolveChartPalette', () => {
         Colors.teal.teal10,
         Colors.violet.violet9,
         Colors.red.red9,
-      ].sort(),
+      ].toSorted(),
     );
   });
 
@@ -266,7 +267,7 @@ describe('resolveChartPalette', () => {
     for (const scheme of ['light', 'dark'] as const) {
       for (const identitySolid of identities) {
         const palette = resolveChartPalette({ scheme, identitySolid });
-        for (let i = 0; i < palette.categorical.length - 1; i++) {
+        for (let i = 0; i < palette.categorical.length - 1; i += 1) {
           const a = palette.categorical[i];
           const b = palette.categorical[i + 1];
           expect(
@@ -291,7 +292,7 @@ describe('chart identity under the held dark accent', () => {
   );
 
   it('keeps the accent channel on the neighbouring step when the held fill misses the mark floor', () => {
-    const identitySolid = darkAccentSolids[8];
+    const identitySolid = darkAccentSolids.at(8);
     const palette = resolveChartPalette({
       scheme: 'dark',
       identitySolid,

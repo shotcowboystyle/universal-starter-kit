@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { fallbackGray, stepToPx, cellSize } from './viz-constants';
 
-describe('fallbackGray', () => {
+describe(fallbackGray, () => {
   it('returns lighter gray for step 1', () => {
     const rgb = fallbackGray(1);
     expect(rgb).toBe('rgb(230,230,230)');
@@ -15,25 +15,25 @@ describe('fallbackGray', () => {
 
   it('returns mid-gray for step 6', () => {
     const rgb = fallbackGray(6);
-    const match = /rgb\((\d+),(\d+),(\d+)\)/u.exec(rgb);
+    const match = /rgb\((?<red>\d+),\d+,\d+\)/u.exec(rgb);
     expect(match).not.toBeNull();
-    const value = Number(match![1]);
+    const value = Number(match!.groups!.red);
     expect(value).toBeGreaterThan(100);
     expect(value).toBeLessThan(200);
   });
 
   it('produces monotonically decreasing gray values from step 1 to 12', () => {
     const values = Array.from({ length: 12 }, (_, i) => {
-      const match = /(\d+)/u.exec(fallbackGray(i + 1));
-      return Number(match![1]);
+      const match = /(?<value>\d+)/u.exec(fallbackGray(i + 1));
+      return Number(match!.groups!.value);
     });
-    for (let i = 1; i < values.length; i++) {
+    for (let i = 1; i < values.length; i += 1) {
       expect(values[i]).toBeLessThanOrEqual(values[i - 1]);
     }
   });
 });
 
-describe('stepToPx', () => {
+describe(stepToPx, () => {
   it('maps step 1 to half a cell', () => {
     expect(stepToPx(1)).toBe(cellSize / 2);
   });
@@ -52,7 +52,7 @@ describe('stepToPx', () => {
   });
 });
 
-describe('cellSize', () => {
+describe('cellSize constant', () => {
   it('is 32', () => {
     expect(cellSize).toBe(32);
   });

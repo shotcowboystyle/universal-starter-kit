@@ -26,13 +26,14 @@ import {
   sizeRecipeTypeVariants,
   textFieldInset,
 } from './size-recipes';
-import type { SizeRecipe } from './size-recipes';
+import type { SizeRecipe, SizeRecipeBoxVariant, SizeRecipeIconVariant, SizeRecipeTypeVariant } from './size-recipes';
 
 const knobsWith = (overrides: Partial<Knobs>): Knobs => ({ ...defaultKnobs, ...overrides });
 
 const RECIPE_KEYS = ['$1', '$1.5', '$2', '$2.5', '$3', '$3.5', '$4', '$true', '$5', '$6'] as const;
 
-const expectNoRadius = (value: object) => {
+// oxlint-disable-next-line sonarjs/max-union-size -- the four recipe fragment shapes are the closed set this check covers
+const expectNoRadius = (value: SizeRecipe | SizeRecipeBoxVariant | SizeRecipeTypeVariant | SizeRecipeIconVariant) => {
   expect(value).not.toHaveProperty('radius');
   expect(value).not.toHaveProperty('borderRadius');
 };
@@ -65,6 +66,7 @@ describe('size recipes', () => {
   });
 
   it('radius is not on the recipe or any variant object', () => {
+    expect(sizeRecipes.$4).not.toHaveProperty('radius');
     expectNoRadius(sizeRecipes.$4);
     expectNoRadius(sizeRecipeFromHeight(44));
     expectNoRadius(sizeRecipeForToken('$4'));
@@ -160,12 +162,12 @@ describe('size recipes', () => {
 describe('SizeRecipe shape', () => {
   it('has no radius field on the type-level contract', () => {
     const recipe: SizeRecipe = sizeRecipes.$4;
-    const keys = Object.keys(recipe).sort();
+    const keys = Object.keys(recipe).toSorted();
     expect(keys).toStrictEqual(['fontSize', 'gap', 'height', 'iconSize', 'paddingHorizontal']);
   });
 });
 
-describe('generateSizeRecipes', () => {
+describe(generateSizeRecipes, () => {
   afterEach(() => {
     setSizeRecipeInputs();
   });

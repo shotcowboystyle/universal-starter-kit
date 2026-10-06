@@ -21,7 +21,12 @@
  * (export/serialization).
  */
 
+import { isString } from './type-guards';
+
 export type NumberInput = number | string | null | undefined;
+
+/** Unparseable strings pass through unchanged (honest passthrough — never invents); anything else renders "". */
+const textOrEmpty = (value: NumberInput): string => (isString(value) ? value : '');
 
 export interface NumberFormatOptions {
   /** BCP-47 locale forwarded to Intl. Default: system locale. */
@@ -55,29 +60,29 @@ export interface CurrencyFormatOptions extends NumberFormatOptions {
 export type PercentFormatOptions = NumberFormatOptions;
 
 /** Frappe adapters hand over a symbol; Intl's currency style wants a code. */
-const CURRENCY_SYMBOL_TO_CODE: Record<string, string> = {
-  $: 'USD',
-  '€': 'EUR',
-  '£': 'GBP',
-  '¥': 'JPY',
-  '₹': 'INR',
-  '₩': 'KRW',
-  '₽': 'RUB',
-  R$: 'BRL',
-};
+const CURRENCY_SYMBOL_TO_CODE = new Map([
+  ['$', 'USD'],
+  ['€', 'EUR'],
+  ['£', 'GBP'],
+  ['¥', 'JPY'],
+  ['₹', 'INR'],
+  ['₩', 'KRW'],
+  ['₽', 'RUB'],
+  ['R$', 'BRL'],
+]);
 
 /**
  * ISO 4217 code for a currency symbol (or a code passed straight through).
  * `undefined` when the symbol has no known code — callers prefix it.
  */
 export const resolveCurrencyCode = (symbol: string | undefined): string | undefined => {
-  if (!symbol) {
+  if (symbol === undefined || symbol === '') {
     return undefined;
   }
   if (/^[A-Za-z]{3}$/u.test(symbol)) {
     return symbol.toUpperCase();
   }
-  return CURRENCY_SYMBOL_TO_CODE[symbol];
+  return CURRENCY_SYMBOL_TO_CODE.get(symbol);
 };
 
 export interface CurrencyAffix {
@@ -93,11 +98,11 @@ export interface CurrencyAffix {
  * code comes back as itself, leading.
  */
 export const currencyAffix = (currency: string | undefined, locale?: string): CurrencyAffix | undefined => {
-  if (!currency) {
+  if (currency === undefined || currency === '') {
     return undefined;
   }
   const code = resolveCurrencyCode(currency);
-  if (code) {
+  if (code !== undefined && code !== '') {
     try {
       const parts = new Intl.NumberFormat(locale, {
         style: 'currency',
@@ -127,9 +132,6 @@ const coerceNumberInput = (value: NumberInput): CoercedNumber | null => {
   if (value == null || value === '') {
     return null;
   }
-  if (typeof value === 'number') {
-    return Number.isFinite(value) ? { num: value } : null;
-  }
   const num = Number(value);
   return Number.isFinite(num) ? { num } : null;
 };
@@ -145,6 +147,11 @@ const resolveDigits = (
   const min = minimumFractionDigits ?? 0;
   return { minimumFractionDigits: min, maximumFractionDigits: Math.max(min, max) };
 };
+
+const defaultCurrencyDigits = (dropFraction: boolean) =>
+  dropFraction
+    ? { minimumFractionDigits: 0, maximumFractionDigits: 0 }
+    : { minimumFractionDigits: 2, maximumFractionDigits: 2 };
 
 const tryFormatWith = (num: number, options: Intl.NumberFormatOptions, locale?: string): string | null => {
   try {
@@ -165,7 +172,7 @@ const formatWith = (num: number, options: Intl.NumberFormatOptions, locale?: str
 export const formatNumber = (value: NumberInput, options: NumberFormatOptions = {}): string => {
   const coerced = coerceNumberInput(value);
   if (!coerced) {
-    return typeof value === 'string' ? value : '';
+    return textOrEmpty(value);
   }
   return formatWith(coerced.num, { ...resolveDigits(options), useGrouping: options.grouping ?? true }, options.locale);
 };
@@ -178,7 +185,7 @@ export const formatNumber = (value: NumberInput, options: NumberFormatOptions = 
 export const formatCurrency = (value: NumberInput, options: CurrencyFormatOptions = {}): string => {
   const coerced = coerceNumberInput(value);
   if (!coerced) {
-    return typeof value === 'string' ? value : '';
+    return textOrEmpty(value);
   }
   const { currency, symbol, fractionDigits = 'always', locale, grouping } = options;
   const hasExplicitDigits =
@@ -186,12 +193,10 @@ export const formatCurrency = (value: NumberInput, options: CurrencyFormatOption
   const wholeValue = Number.isInteger(coerced.num);
   const digits = hasExplicitDigits
     ? resolveDigits(options)
-    : fractionDigits === 'auto' && wholeValue
-      ? { minimumFractionDigits: 0, maximumFractionDigits: 0 }
-      : { minimumFractionDigits: 2, maximumFractionDigits: 2 };
+    : defaultCurrencyDigits(fractionDigits === 'auto' && wholeValue);
   const code = currency ?? resolveCurrencyCode(symbol);
   const useGrouping = grouping ?? true;
-  if (code) {
+  if (code !== undefined && code !== '') {
     // A malformed code from a Frappe field must not cost the whole money
     // register: fall back to the grouped register with the label prefixed
     // rather than letting Intl's throw leak a bare `String(num)`.
@@ -202,7 +207,7 @@ export const formatCurrency = (value: NumberInput, options: CurrencyFormatOption
   }
   const amount = formatWith(coerced.num, { ...digits, useGrouping }, locale);
   const label = symbol ?? currency;
-  return label ? `${label}${amount}` : amount;
+  return label !== undefined && label !== '' ? `${label}${amount}` : amount;
 };
 
 /**

@@ -9,24 +9,26 @@
  * behavior, not Tamagui's config processing.
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-vi.mock('tamagui', () => ({
-  // Identity-ish mock: createThemeConfig only forwards the object and reads
-  // nothing back from Tamagui's processing.
-  createTamagui: vi.fn((config: Record<string, unknown>) => config),
-}));
-
 import type { ThemeName } from '@tamagui/web';
 import { createTamagui } from 'tamagui';
+import type { CreateTamaguiProps } from 'tamagui';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { defaultKnobs } from './knobs';
 import type { Preset } from './preset.types';
 import { clearPresets, createThemeConfig, getPreset, getPresetNames } from './shared';
 
+// oxlint-disable-next-line vitest/prefer-import-in-mock -- pass-through stand-in for createTamagui cannot satisfy Tamagui's generic return type
+vi.mock('tamagui', () => ({
+  // Identity-ish mock: createThemeConfig only forwards the object and reads
+  // nothing back from Tamagui's processing.
+  createTamagui: vi.fn<(config: CreateTamaguiProps) => CreateTamaguiProps>((config) => config),
+}));
+
 const mockedCreateTamagui = vi.mocked(createTamagui);
 
-const makeThemes = (names: string[]): Record<string, object> => Object.fromEntries(names.map((name) => [name, {}]));
+const makeThemes = (names: string[]): Record<string, Record<string, string>> =>
+  Object.fromEntries(names.map((name) => [name, {}]));
 
 const makePreset = (): Preset => ({
   theme: 'light' as ThemeName,
@@ -35,12 +37,12 @@ const makePreset = (): Preset => ({
   tints: [],
 });
 
-beforeEach(() => {
-  clearPresets();
-  mockedCreateTamagui.mockClear();
-});
-
 describe('createThemeConfig — themeColors extraction', () => {
+  beforeEach(() => {
+    clearPresets();
+    mockedCreateTamagui.mockClear();
+  });
+
   it('extracts colors that exist in both light and dark variants, sorted', () => {
     const config = createThemeConfig({
       themes: makeThemes(['light_blue', 'dark_blue', 'light_red', 'dark_red', 'light', 'dark']),
@@ -100,19 +102,23 @@ describe('createThemeConfig — themeColors extraction', () => {
 });
 
 describe('createThemeConfig — settings and registration', () => {
+  beforeEach(() => {
+    clearPresets();
+    mockedCreateTamagui.mockClear();
+  });
+
   it('defaults the root theme class settings on and keeps user settings override', () => {
     createThemeConfig({ themes: {} } as never);
-    const forwarded = mockedCreateTamagui.mock.calls[0][0] as Record<string, any>;
-    expect(forwarded.settings.disableRootThemeClass).toBe(false);
-    expect(forwarded.settings.themeClassNameOnRoot).toBe(true);
+    const [[forwarded]] = mockedCreateTamagui.mock.calls;
+    expect(forwarded.settings).toMatchObject({ disableRootThemeClass: false, themeClassNameOnRoot: true });
 
     mockedCreateTamagui.mockClear();
     createThemeConfig({
       themes: {},
       settings: { themeClassNameOnRoot: false },
     } as never);
-    const overridden = mockedCreateTamagui.mock.calls[0][0] as Record<string, any>;
-    expect(overridden.settings.themeClassNameOnRoot).toBe(false);
+    const [[overridden]] = mockedCreateTamagui.mock.calls;
+    expect(overridden.settings).toMatchObject({ themeClassNameOnRoot: false });
   });
 
   it('registers provided presets in the shared registry', () => {

@@ -10,7 +10,7 @@ const themes = createThemesBuilder(defaultBaseTheme, defaultAccentTheme, default
 
 const hex = (raw: string) => {
   const value = normalizeToHex(raw);
-  if (!value) {
+  if (value == null || value === '') {
     throw new Error(`not an opaque colour: ${raw}`);
   }
   return value;
@@ -18,7 +18,7 @@ const hex = (raw: string) => {
 const ratio = (a: string, b: string) => contrastRatio(relativeLuminance(hex(a)), relativeLuminance(hex(b)));
 
 describe('the built accent pair holds Axiom 12', () => {
-  for (const scheme of ['light', 'dark'] as const) {
+  describe.each(['light', 'dark'] as const)('%s scheme', (scheme) => {
     const theme = themes[scheme];
 
     it(`${scheme} $accentBackground carries AA text with its better anchor and 3:1 on the page`, () => {
@@ -32,7 +32,7 @@ describe('the built accent pair holds Axiom 12', () => {
         expect(ratio(theme.accentColor, surface)).toBeGreaterThanOrEqual(4.5);
       }
     });
-  }
+  });
 
   it("light keeps the builder's pair; dark takes the nearest steps that hold", () => {
     expect(hex(themes.light.accentBackground)).toBe('#634fc4');

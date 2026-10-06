@@ -2,7 +2,7 @@ import { ToastProvider } from '@tamagui/toast';
 import { useContext, useMemo } from 'react';
 import type { PropsWithChildren } from 'react';
 import { TamaguiProvider } from 'tamagui';
-import type { CreateTamaguiProps, TamaguiProviderProps } from 'tamagui';
+import type { CreateTamaguiProps, TamaguiProviderProps, createTamagui } from 'tamagui';
 
 import { CornerSmoothingStyles } from './corner-smoothing';
 import { FontKnobStyles } from './FontKnobStyles';
@@ -19,7 +19,7 @@ export interface ThemeProviderProps<T extends CreateTamaguiProps = CreateTamagui
   Omit<TamaguiProviderProps, 'config' | 'defaultTheme'>
 > {
   config?: {
-    tamagui: ReturnType<typeof import('tamagui').createTamagui<T>>;
+    tamagui: ReturnType<typeof createTamagui<T>>;
   };
   systemTheme?: 'light' | 'dark';
 }
@@ -31,7 +31,6 @@ const KnobBridge = ({ children }: PropsWithChildren) => {
   const presetCtxValue = useMemo<PresetContextValue>(
     () => ({
       preset: { ...defaultPreset, knobs },
-      overrides: undefined,
     }),
     [knobs],
   );

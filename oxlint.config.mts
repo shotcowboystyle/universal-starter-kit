@@ -33,6 +33,8 @@ const vitestPreset = {
       ...override.rules,
       // Contract-style tests assert many facets of one render; splitting them adds setup noise.
       'vitest/max-expects': 'off',
+      // Vitest's `expect(value, message)` failure-message argument is used across the suites.
+      'vitest/valid-expect': ['error', { maxArgs: 2 }],
       // `toBe(true)` -> `toBeTruthy()` weakens the assertion.
       'vitest/prefer-to-be-falsy': 'off',
       'vitest/prefer-to-be-truthy': 'off',
@@ -100,6 +102,23 @@ export default defineConfig({
       // Expo Router filenames: _layout, +not-found, [taskId], (group).
       files: ['apps/mobile/app/**'],
       rules: { 'unicorn/filename-case': 'off' },
+    },
+    {
+      // TypeScript reports real redeclarations itself; the core rule misfires on the
+      // `const X = {...} as const` + `type X = ...` value/type pairing.
+      files: ['**/*.{ts,tsx,mts,cts}'],
+      rules: { 'no-redeclare': 'off' },
+    },
+    {
+      // `shape` here is the CSS `corner-shape` property these modules implement (the barrels re-export them).
+      files: ['packages/theme/src/theme/corner-smoothing*', 'packages/theme/src/index.ts', 'packages/theme/src/theme/index.ts'],
+      rules: { 'anti-slop/no-shape-in-symbol-names': 'off' },
+    },
+    {
+      // Package entry points (package.json `exports`) are barrels by design; they use explicit
+      // export lists, so sonarjs/no-wildcard-import still applies.
+      files: ['packages/theme/src/index.ts', 'packages/ui/src/index.ts', 'packages/*/src/index.{ts,tsx}'],
+      rules: { 'oxc/no-barrel-file': 'off' },
     },
     {
       // NestJS idioms: constructor-injected `private readonly` deps, decorator-only @Module

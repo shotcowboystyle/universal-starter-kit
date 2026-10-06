@@ -6,11 +6,12 @@ import { defaultIntents } from './intents';
 import { defaultKnobs } from './knobs';
 import type { Knobs } from './knobs';
 import { usePresetContext } from './preset-context';
+import type { PresetContextValue } from './preset-context';
 import type { IntentOverride } from './preset.types';
 import type { KnobPropsOverride, ResolvedKnobs } from './recipes';
 import { applyDensity, compactSpaceMap, resolveKnobs } from './resolve-knobs';
-import { clampSurfaceDensity, clampSurfaceSize, SurfaceContext } from './Surface';
-import type { SurfaceIntent } from './Surface';
+import { clampSurfaceDensity, clampSurfaceSize, SurfaceContext } from './surface-context';
+import type { SurfaceIntent } from './surface-context';
 import { useTouchSurface } from './use-touch-surface';
 
 export const IntentContext = createContext<string | null>(null);
@@ -21,26 +22,37 @@ const reducedMotionQuery = '(prefers-reduced-motion: reduce)';
 const serverReducedMotion = () => false;
 
 const readReducedMotion = (): boolean =>
-  typeof window !== 'undefined' && !!window.matchMedia?.(reducedMotionQuery).matches;
+  typeof window !== 'undefined' && window.matchMedia !== undefined && window.matchMedia(reducedMotionQuery).matches;
+
+const unsubscribeNothing = (): void => {
+  // Nothing was subscribed, so there is nothing to undo.
+};
+
+/** Pre-Safari 14 MediaQueryList exposes only the legacy listener pair. */
+interface LegacyMediaQueryList {
+  addListener?: (listener: () => void) => void;
+  removeListener?: (listener: () => void) => void;
+}
 
 const subscribeReducedMotion = (notify: () => void) => {
-  if (typeof window === 'undefined' || !window.matchMedia) {
-    return () => {};
+  if (typeof window === 'undefined' || window.matchMedia === undefined) {
+    return unsubscribeNothing;
   }
   const mq = window.matchMedia(reducedMotionQuery);
-  if (typeof mq.addEventListener === 'function') {
+  if (mq.addEventListener !== undefined) {
     mq.addEventListener('change', notify);
     return () => {
       mq.removeEventListener('change', notify);
     };
   }
-  if (typeof mq.addListener === 'function') {
-    mq.addListener(notify);
+  const legacy: LegacyMediaQueryList = mq;
+  if (legacy.addListener !== undefined) {
+    legacy.addListener(notify);
     return () => {
-      mq.removeListener?.(notify);
+      legacy.removeListener?.(notify);
     };
   }
-  return () => {};
+  return unsubscribeNothing;
 };
 
 /** Adopt the OS motion preference after matching the server's initial markup. */
@@ -92,15 +104,15 @@ export interface UseResolvedKnobsOptions {
   compact?: boolean;
 }
 
-const sizeTokenToKnobSize: Record<string, Knobs['size']> = {
-  $1: 'small',
-  $2: 'small',
-  $3: 'small',
-  $4: 'medium',
-  $5: 'large',
-  $6: 'large',
-  $true: 'medium',
-};
+const sizeTokenToKnobSize = new Map<string, Knobs['size']>([
+  ['$1', 'small'],
+  ['$2', 'small'],
+  ['$3', 'small'],
+  ['$4', 'medium'],
+  ['$5', 'large'],
+  ['$6', 'large'],
+  ['$true', 'medium'],
+]);
 
 export const solidButtonIntents = new Set(['error', 'warning', 'success']);
 
@@ -111,6 +123,41 @@ export const solidButtonIntents = new Set(['error', 'warning', 'success']);
  * dark). A control themed by one paints the wash from its host scope.
  */
 export const solidPaletteThemes = new Set(['accent']);
+
+const findIntentOverride = (presetCtx: PresetContextValue | null, intent: string): IntentOverride | undefined =>
+  Object.entries(presetCtx?.preset.intents ?? {}).find(([name]) => name === intent)?.[1] ?? defaultIntents[intent];
+
+const stringKnobOverrides = (intentOverrides: IntentOverride): Partial<Knobs> =>
+  // SAFETY: IntentOverride's non-component entries are Knobs keys; string-valued entries are knob values, object-valued ones are component overrides.
+  Object.fromEntries(
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- value kind (string knob vs component object) is the only discriminator IntentOverride carries
+    Object.entries(intentOverrides).filter(([, value]) => typeof value === 'string'),
+  ) as Partial<Knobs>;
+
+const applyIntentKnobs = (
+  baseKnobs: Knobs,
+  presetCtx: PresetContextValue | null,
+  intent: string | undefined,
+  component: string | undefined,
+): Knobs => {
+  if (intent === undefined || intent === '') {
+    return baseKnobs;
+  }
+  const intentOverrides = findIntentOverride(presetCtx, intent);
+  if (intentOverrides === undefined) {
+    return baseKnobs;
+  }
+  const merged: Knobs = { ...baseKnobs, ...stringKnobOverrides(intentOverrides) };
+  if (component === undefined || component === '') {
+    return merged;
+  }
+  const componentOverride = intentOverrides[component];
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- component entries are `Partial<Knobs> | string | undefined`; only the object form is a knob override
+  if (componentOverride !== undefined && typeof componentOverride === 'object') {
+    return { ...merged, ...componentOverride };
+  }
+  return merged;
+};
 
 /**
  * Resolve knobs → { knobProps }.
@@ -131,7 +178,7 @@ export const useResolvedKnobs = (options?: UseResolvedKnobsOptions): ResolvedKno
   const presetCtx = usePresetContext();
   const contextIntent = useIntentContext();
   const prefersReducedMotion = usePrefersReducedMotion();
-  const themeName = useThemeName() as string | undefined;
+  const themeName: string | undefined = useThemeName();
   const scheme = themeName?.startsWith('dark') ? 'dark' : 'light';
   const surfaceCtx = SurfaceContext.useStyledContext();
   const surfaceSize = surfaceCtx?.size ?? 'unset';
@@ -146,33 +193,11 @@ export const useResolvedKnobs = (options?: UseResolvedKnobsOptions): ResolvedKno
   return useMemo(() => {
     const baseKnobs: Knobs = presetCtx ? { ...presetCtx.preset.knobs, ...presetCtx.overrides } : { ...defaultKnobs };
 
-    let merged: Knobs = baseKnobs;
-    if (intent) {
-      const intentOverrides: IntentOverride | undefined =
-        presetCtx?.preset.intents[intent as keyof typeof presetCtx.preset.intents] ?? defaultIntents[intent];
+    let merged = applyIntentKnobs(baseKnobs, presetCtx, intent, component);
 
-      if (intentOverrides) {
-        const knobOverrides: Partial<Knobs> = {};
-        for (const [key, value] of Object.entries(intentOverrides)) {
-          if (typeof value === 'string') {
-            (knobOverrides as Record<string, unknown>)[key] = value;
-          }
-        }
-        merged = { ...merged, ...knobOverrides };
-
-        if (component) {
-          const componentOverride = intentOverrides[component];
-          if (componentOverride && typeof componentOverride === 'object') {
-            merged = { ...merged, ...componentOverride };
-          }
-        }
-      }
-    }
-
-    if (sizeOverride) {
-      const sizeStr = String(sizeOverride);
-      const knobSize = sizeTokenToKnobSize[sizeStr];
-      if (knobSize) {
+    if (sizeOverride !== undefined) {
+      const knobSize = sizeTokenToKnobSize.get(String(sizeOverride));
+      if (knobSize !== undefined) {
         merged = { ...merged, size: knobSize };
       }
     }
@@ -189,11 +214,10 @@ export const useResolvedKnobs = (options?: UseResolvedKnobsOptions): ResolvedKno
       sizeOverride: true,
       densityOverride: true,
     });
-    if (merged.density === 'compact') {
-      merged = { ...merged, space: compactSpaceMap[spaceBeforeDensity] };
-    } else {
-      merged = { ...merged, space: spaceBeforeDensity };
-    }
+    merged = {
+      ...merged,
+      space: merged.density === 'compact' ? compactSpaceMap[spaceBeforeDensity] : spaceBeforeDensity,
+    };
 
     if (prefersReducedMotion) {
       merged = { ...merged, animation: 'none' };
@@ -201,7 +225,7 @@ export const useResolvedKnobs = (options?: UseResolvedKnobsOptions): ResolvedKno
 
     const resolved = resolveKnobs(merged, override, scheme, { touch });
 
-    if (intent && component === 'Button' && solidButtonIntents.has(intent)) {
+    if (intent !== undefined && intent !== '' && component === 'Button' && solidButtonIntents.has(intent)) {
       const labelColor = merged.fillStyle === 'filled' ? '$color' : '$color11';
       return {
         ...resolved,

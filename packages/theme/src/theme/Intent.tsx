@@ -4,9 +4,11 @@ import { Theme } from 'tamagui';
 
 import { IntentContext } from './use-resolved-knobs';
 
+type IntentName = keyof { accent: true; error: true; warning: true; success: true };
+
 export interface IntentProps extends PropsWithChildren {
   /** Intent name. */
-  name: 'accent' | 'error' | 'warning' | 'success';
+  name: IntentName;
   /** Override the default Tamagui theme for this intent. */
   theme?: ThemeName;
 }

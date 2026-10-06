@@ -50,7 +50,7 @@ describe('hairline (Axiom 15 OPTICS)', () => {
 
   describe('fallback stylesheet mount', () => {
     beforeEach(() => {
-      document.getElementById('mp-hairline-styles')?.remove();
+      document.querySelector('#mp-hairline-styles')?.remove();
     });
 
     it('mounts the fallback stylesheet once (idempotent)', () => {

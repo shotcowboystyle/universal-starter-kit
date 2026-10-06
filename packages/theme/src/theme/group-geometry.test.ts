@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { getGroupPosition, stackEdgeRadius, stackRadiusProps } from './group-geometry';
 
-describe('getGroupPosition', () => {
+describe(getGroupPosition, () => {
   it('returns only for singleton or empty groups', () => {
     expect(getGroupPosition(0, 1)).toBe('only');
     expect(getGroupPosition(0, 0)).toBe('only');
@@ -82,7 +82,7 @@ describe('stackRadiusProps (horizontal)', () => {
   });
 });
 
-describe('stackEdgeRadius', () => {
+describe(stackEdgeRadius, () => {
   it('supports conditional edges (open accordion trigger: last item, bottom square)', () => {
     expect(stackEdgeRadius('$4', { start: false, end: false })).toStrictEqual({
       borderStartStartRadius: 0,

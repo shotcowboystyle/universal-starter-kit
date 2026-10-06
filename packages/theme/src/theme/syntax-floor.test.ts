@@ -10,7 +10,7 @@ const themes = createThemesBuilder(defaultBaseTheme, defaultAccentTheme, default
 
 const hex = (raw: string) => {
   const value = normalizeToHex(raw);
-  if (!value) {
+  if (value === null) {
     throw new Error(`not an opaque colour: ${raw}`);
   }
   return value;
@@ -21,15 +21,19 @@ const hues = ['purple', 'green', 'blue', 'orange', 'red'] as const;
 const token = (hue: (typeof hues)[number]) => `syntax${hue[0].toUpperCase()}${hue.slice(1)}`;
 
 describe('code syntax ink holds Axiom 12 on the code surface', () => {
-  for (const scheme of ['light', 'dark'] as const) {
+  const cases = (['light', 'dark'] as const).flatMap((scheme) =>
+    hues.map((hue) => ({
+      scheme,
+      hue,
+      name: `${scheme} $${token(hue)} reads at 4.5:1 on $color3 and on the $${hue}3 wash`,
+    })),
+  );
+
+  it.each(cases)('$name', ({ scheme, hue }) => {
     const theme = themes[scheme];
-    for (const hue of hues) {
-      it(`${scheme} $${token(hue)} reads at 4.5:1 on $color3 and on the $${hue}3 wash`, () => {
-        expect(ratio(theme[token(hue)], theme.color3)).toBeGreaterThanOrEqual(4.5);
-        expect(ratio(theme[token(hue)], theme[`${hue}3`])).toBeGreaterThanOrEqual(4.5);
-      });
-    }
-  }
+    expect(ratio(theme[token(hue)], theme.color3)).toBeGreaterThanOrEqual(4.5);
+    expect(ratio(theme[token(hue)], theme[`${hue}3`])).toBeGreaterThanOrEqual(4.5);
+  });
 
   it('dark keeps step 11; light walks green, blue and orange toward step 12', () => {
     for (const hue of hues) {

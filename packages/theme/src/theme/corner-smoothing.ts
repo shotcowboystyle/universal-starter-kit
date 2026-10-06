@@ -83,15 +83,17 @@ export const CORNER_SHAPE_SMOOTH_COMPUTED = 'superellipse(2)';
  */
 export const cornerSmoothingCss = `.${cornerSmoothClassName} { corner-shape: ${CORNER_SHAPE_SMOOTH}; }`;
 
+const globalCss = (): typeof CSS | undefined => (typeof CSS === 'undefined' ? undefined : CSS);
+
 /**
  * `CSS.supports("corner-shape","squircle")`. Pass `null` to probe a missing
  * engine. Omit the arg to use the global `CSS` (happy-dom's `supports()`
  * currently returns true — a lie; computed `corner-shape` stays empty).
  */
 export const cssSupportsCornerShape = (
-  supports?: { supports?(property: string, value: string): boolean } | null,
+  supports?: { supports?: (property: string, value: string) => boolean } | null,
 ): boolean => {
-  const impl = supports === null ? undefined : (supports ?? (typeof CSS === 'undefined' ? undefined : CSS));
+  const impl = supports === null ? undefined : (supports ?? globalCss());
   try {
     return Boolean(impl?.supports?.('corner-shape', CORNER_SHAPE_SMOOTH));
   } catch {
@@ -112,17 +114,17 @@ export const readComputedCornerShape = (
   return fromProp || fromIdl;
 };
 
-const normalizeCornerShape = (value: string): string => value.trim().toLowerCase().replaceAll(/\s+/gu, '');
+const normalizeCornerKeyword = (value: string): string => value.trim().toLowerCase().replaceAll(/\s+/gu, '');
 
 /** True for specified `squircle` and the measured Chrome computed form `superellipse(2)`. */
 export const isSmoothComputedCornerShape = (value: string): boolean => {
-  const n = normalizeCornerShape(value);
+  const n = normalizeCornerKeyword(value);
   return n === CORNER_SHAPE_SMOOTH || n === CORNER_SHAPE_SMOOTH_COMPUTED;
 };
 
 /** True for specified `round`, computed `superellipse(1)`, empty (unsupported), or `normal`. */
 export const isRoundComputedCornerShape = (value: string): boolean => {
-  const n = normalizeCornerShape(value);
+  const n = normalizeCornerKeyword(value);
   return n === '' || n === CORNER_SHAPE_ROUND || n === CORNER_SHAPE_ROUND_COMPUTED || n === 'normal';
 };
 
@@ -141,7 +143,7 @@ export const ensureCornerSmoothingStyles = (): void => {
   if (typeof document === 'undefined') {
     return;
   }
-  if (document.getElementById(CORNER_SMOOTHING_STYLE_TAG_ID)) {
+  if (document.querySelector(`#${CORNER_SMOOTHING_STYLE_TAG_ID}`)) {
     return;
   }
   const tag = document.createElement('style');
@@ -155,6 +157,7 @@ export const ensureCornerSmoothingStyles = (): void => {
  * the squircle stylesheet and mirrors the live `cornerSmoothing` stop onto
  * `<html>`. Renders nothing.
  */
+// oxlint-disable-next-line sonarjs/function-name -- exported component in a .ts file; renaming would change the public API
 export const CornerSmoothingStyles = (): null => {
   const presetCtx = usePresetContext();
   const knobs = presetCtx ? { ...presetCtx.preset.knobs, ...presetCtx.overrides } : defaultKnobs;

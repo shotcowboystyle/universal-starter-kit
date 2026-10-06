@@ -3,7 +3,10 @@ import type { ThemeName } from '@tamagui/web';
 import { defaultIntents } from './intents';
 import type { Preset } from './preset.types';
 
+const sansSerif = 'sans-serif';
+
 export const defaultPreset: Preset = {
+  // SAFETY: ThemeName is a string alias; '' selects the unnamed base theme.
   theme: '' as ThemeName,
   knobs: {
     fillStyle: 'filled',
@@ -15,8 +18,8 @@ export const defaultPreset: Preset = {
     size: 'medium',
     density: 'comfortable',
     textAccent: 'high',
-    headingFont: 'sans-serif',
-    bodyFont: 'sans-serif',
+    headingFont: sansSerif,
+    bodyFont: sansSerif,
     fontWeight: 'regular',
     pageTitleScale: 'moderate',
     animation: 'quick',
@@ -34,10 +37,12 @@ export const defaultPreset: Preset = {
     focusVisible: {},
   },
   intents: defaultIntents,
+  // SAFETY: every entry is a Radix hue theme name registered by createThemes.
   tints: ['orange', 'blue', 'purple', 'pink'] as ThemeName[],
 };
 
 export const boldPreset: Preset = {
+  // SAFETY: 'pink' is a Radix hue theme name registered by createThemes.
   theme: 'pink' as ThemeName,
   knobs: {
     fillStyle: 'filled',
@@ -49,8 +54,8 @@ export const boldPreset: Preset = {
     size: 'medium',
     density: 'comfortable',
     textAccent: 'high',
-    headingFont: 'sans-serif',
-    bodyFont: 'sans-serif',
+    headingFont: sansSerif,
+    bodyFont: sansSerif,
     fontWeight: 'bold',
     pageTitleScale: 'moderate',
     animation: 'bouncy',
@@ -68,6 +73,7 @@ export const boldPreset: Preset = {
     focusVisible: {},
   },
   intents: defaultIntents,
+  // SAFETY: every entry is a Radix hue theme name registered by createThemes.
   tints: ['pink', 'purple', 'pink', 'purple', 'pink', 'purple', 'pink'] as ThemeName[],
 };
 

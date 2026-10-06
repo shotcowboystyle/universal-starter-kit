@@ -1,7 +1,6 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 
 import { defaultKnobs } from './knobs';
-import type { Knobs } from './knobs';
 import type { Preset } from './preset.types';
 import { registerPreset, getPreset, getPresetNames, clearPresets, resolveThemeFromPreset } from './shared';
 
@@ -47,7 +46,7 @@ describe('preset registry', () => {
   });
 });
 
-describe('resolveThemeFromPreset', () => {
+describe(resolveThemeFromPreset, () => {
   beforeEach(() => {
     clearPresets();
   });

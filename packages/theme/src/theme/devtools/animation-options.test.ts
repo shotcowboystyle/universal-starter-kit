@@ -4,7 +4,7 @@ import { animationNames, animations } from '../animations/css';
 
 import { extractAnimationNames } from './animation-options';
 
-describe('extractAnimationNames', () => {
+describe(extractAnimationNames, () => {
   it("lists the registered animations of a createTamagui config, not the driver's API", () => {
     const names = extractAnimationNames({ animations });
     expect(names).toStrictEqual([...animationNames]);
@@ -39,7 +39,7 @@ describe('extractAnimationNames', () => {
   });
 
   it('falls back to the house names without a config or without named animations', () => {
-    expect(extractAnimationNames(undefined)).toStrictEqual([...animationNames]);
+    expect(extractAnimationNames()).toStrictEqual([...animationNames]);
     expect(extractAnimationNames({})).toStrictEqual([...animationNames]);
     expect(extractAnimationNames({ animations: { animations: {} } })).toStrictEqual([...animationNames]);
   });

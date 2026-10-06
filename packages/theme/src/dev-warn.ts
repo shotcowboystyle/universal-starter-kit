@@ -6,6 +6,8 @@
  * here so consumers share one tree-shaken entry point.
  */
 
+import { isNumber } from './type-guards';
+
 export type DevWarnCode =
   | 'placeholder-as-label'
   | 'two-primaries'
@@ -36,6 +38,7 @@ export interface DevWarnDetail {
   count?: number;
   suggest?: string;
   region?: string;
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- exported open detail bag: callers attach ad-hoc diagnostic fields
   [key: string]: unknown;
 }
 
@@ -79,6 +82,8 @@ const seen = new Set<string>();
 
 const isDev = (): boolean => process.env.NODE_ENV !== 'production';
 
+const present = (value: string | null | undefined): value is string => value != null && value !== '';
+
 /**
  * Emit a once-per-key console warning in non-production builds.
  */
@@ -91,6 +96,7 @@ export const devWarn = (code: DevWarnCode, detail: DevWarnDetail = {}): void => 
     detail.component ?? '',
     detail.id ?? '',
     detail.region ?? '',
+    // oxlint-disable-next-line typescript/no-base-to-string -- dev-only diagnostic: an object value printing as [object Object] is acceptable
     String(detail.value ?? ''),
     detail.word ?? '',
     detail.count ?? '',
@@ -100,25 +106,28 @@ export const devWarn = (code: DevWarnCode, detail: DevWarnDetail = {}): void => 
   }
   seen.add(key);
   const bits = [
-    detail.component ? `component=${detail.component}` : undefined,
-    detail.id ? `id=${detail.id}` : undefined,
-    detail.region ? `region=${detail.region}` : undefined,
+    present(detail.component) ? `component=${detail.component}` : undefined,
+    present(detail.id) ? `id=${detail.id}` : undefined,
+    present(detail.region) ? `region=${detail.region}` : undefined,
+    // oxlint-disable-next-line typescript/no-base-to-string -- dev-only diagnostic: an object value printing as [object Object] is acceptable
     detail.value === undefined ? undefined : `value=${String(detail.value)}`,
-    detail.word ? `word=${detail.word}` : undefined,
+    present(detail.word) ? `word=${detail.word}` : undefined,
     detail.count === undefined ? undefined : `count=${detail.count}`,
-    detail.suggest ? `suggest=${detail.suggest}` : undefined,
+    present(detail.suggest) ? `suggest=${detail.suggest}` : undefined,
   ].filter(Boolean);
   const suffix = bits.length ? ` (${bits.join(', ')})` : '';
   console.warn(`[theme] ${code}${suffix}`);
 };
 
-/** @internal test helper */
+/** Test helper. @internal */
+// oxlint-disable-next-line sonarjs/function-name, sonarjs/variable-name -- exported double-underscore test-helper name consumed by other packages' tests
 export const __resetDevWarnSeen = (): void => {
   seen.clear();
 };
 
 /** Alias kept for callers that imported the W12-era name. */
 export const themeDevWarn = devWarn;
+// oxlint-disable-next-line sonarjs/variable-name -- exported double-underscore test-helper name consumed by other packages' tests
 export const __resetThemeDevWarnSeen = __resetDevWarnSeen;
 
 /**
@@ -134,14 +143,14 @@ export const warnPlaceholderAsLabel = (args: {
   if (!isDev()) {
     return;
   }
-  const placeholder = typeof args.placeholder === 'string' ? args.placeholder.trim() : '';
+  const placeholder = (args.placeholder ?? '').trim();
   if (!placeholder) {
     return;
   }
   if (args.label != null && args.label !== false && args.label !== '') {
     return;
   }
-  const ariaLabel = typeof args.ariaLabel === 'string' ? args.ariaLabel.trim() : '';
+  const ariaLabel = (args.ariaLabel ?? '').trim();
   if (ariaLabel) {
     return;
   }
@@ -155,12 +164,12 @@ const BANNED_ERROR_WORDS = ['invalid', 'error', 'please', 'sorry', 'oops'] as co
 
 /** Banned words in error copy. */
 export const warnBannedErrorWords = (message: string | null | undefined, detail: DevWarnDetail = {}): void => {
-  if (!isDev() || !message) {
+  if (!isDev() || !present(message)) {
     return;
   }
   const lower = message.toLowerCase();
   for (const word of BANNED_ERROR_WORDS) {
-    if (new RegExp(`\\b${word}\\b`, 'i').test(lower)) {
+    if (new RegExp(`\\b${word}\\b`, 'iu').test(lower)) {
       devWarn('banned-error-word', { ...detail, word });
       return;
     }
@@ -178,7 +187,7 @@ export const warnBareDisabled = (args: {
   if (!isDev() || !args.disabled || args.skip) {
     return;
   }
-  if (typeof args.disabledReason === 'string' && args.disabledReason.trim()) {
+  if ((args.disabledReason ?? '').trim() !== '') {
     return;
   }
   devWarn('bare-disabled', { component: args.component, id: args.id });
@@ -200,12 +209,12 @@ export const warnSizeRecipeEscape = (args: {
   if (!isDev()) {
     return;
   }
-  const numericHeight = typeof args.height === 'number';
-  const numericPad = typeof args.paddingHorizontal === 'number';
+  const numericHeight = isNumber(args.height);
+  const numericPad = isNumber(args.paddingHorizontal);
   if (!numericHeight && !numericPad) {
     return;
   }
-  if (typeof args.sizeRecipeEscape === 'string' && args.sizeRecipeEscape.trim()) {
+  if ((args.sizeRecipeEscape ?? '').trim() !== '') {
     return;
   }
   devWarn('size-recipe-escape', { component: args.component, id: args.id });
@@ -276,8 +285,8 @@ export const warnPositiveTabIndex = (args: {
   if (!isDev()) {
     return;
   }
-  const n = typeof args.value === 'string' ? Number(args.value) : args.value;
-  if (typeof n !== 'number' || Number.isNaN(n) || n <= 0) {
+  const n = args.value == null ? undefined : Number(args.value);
+  if (n === undefined || Number.isNaN(n) || n <= 0) {
     return;
   }
   devWarn('positive-tabindex', {

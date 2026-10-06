@@ -33,13 +33,12 @@
  */
 
 import type { BorderRadius } from './knobs';
-import {
-  type RADIUS_RESOLUTION_COMPOSITION,
-  RADIUS_OVERRIDE_TABLE,
-  RADIUS_RESOLUTION_TABLE,
-  type RadiusOverrideEntry,
-  type RadiusResolutionCell,
-  type RadiusResolutionClass,
+import { RADIUS_OVERRIDE_TABLE, RADIUS_RESOLUTION_TABLE } from './radiusClassTable.generated';
+import type {
+  RADIUS_RESOLUTION_COMPOSITION,
+  RadiusOverrideEntry,
+  RadiusResolutionCell,
+  RadiusResolutionClass,
 } from './radiusClassTable.generated';
 
 /**
@@ -136,6 +135,9 @@ const resolveCell = (cell: RadiusResolutionCell, geometry: RadiusClassGeometry, 
       }
       return geometry.paddingPx;
     }
+    default: {
+      throw new Error(`resolveRadiusClass: ${where} has an unknown cell ${JSON.stringify(cell)}`);
+    }
   }
 };
 
@@ -156,13 +158,13 @@ export const resolveRadiusClass = (
   geometry: RadiusClassGeometry = {},
 ): number => {
   const row = RADIUS_RESOLUTION_TABLE[radiusClass];
-  if (!row) {
+  if (row === undefined) {
     throw new Error(
       `resolveRadiusClass: "${radiusClass}" is not a class in the DG-RAD doctrine table (docs/design-guidelines.md §13)`,
     );
   }
   const cell = row[stop];
-  if (!cell) {
+  if (cell === undefined) {
     throw new Error(`resolveRadiusClass: "${stop}" is not a radius stop the DG-RAD doctrine table knows`);
   }
   return resolveCell(cell, geometry, `${radiusClass} at ${stop}`);
@@ -237,9 +239,9 @@ export const resolveRadiusForPart = (options: ResolveRadiusForPartOptions): Reso
     return { px: options.heightPx / 2, source: 'immunity', radiusClass };
   }
   const override = options.part === undefined ? undefined : radiusOverrideFor(options.part);
-  if (override) {
+  if (override !== undefined) {
     const cell = override.cells[options.stop];
-    if (!cell) {
+    if (cell === undefined) {
       throw new Error(`resolveRadiusForPart: "${options.stop}" is not a radius stop the DG-RAD override table knows`);
     }
     return {

@@ -74,10 +74,13 @@ const NAMED_COLORS = new Set(
  * Numbers pass: a theme carries numeric values (z-index, opacity-ish steps)
  * that are not colours at all and are not this check's business.
  */
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- this function is the validator for untrusted theme values
 export const isResolvableThemeValue = (value: unknown): boolean => {
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- this validator exists to classify the raw value
   if (typeof value === 'number') {
     return Number.isFinite(value);
   }
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- this validator exists to classify the raw value
   if (typeof value !== 'string') {
     return false;
   }
@@ -105,19 +108,16 @@ export const isResolvableThemeValue = (value: unknown): boolean => {
  * value. The message has to carry all three: a `getTheme` runs once per theme
  * name, so "bad value" alone leaves the author grepping.
  */
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- getTheme output is untrusted and checked entry by entry here
 export const assertResolvableThemeValues = (entries: Record<string, unknown>, themeName: string): void => {
   for (const [key, value] of Object.entries(entries)) {
-    if (value == null) {
-      continue;
+    if (value != null && !isResolvableThemeValue(value)) {
+      throw new Error(
+        `getTheme returned an unresolvable value for "${key}" in theme "${themeName}": ` +
+          `${JSON.stringify(value)}. A theme value must be a $token, a hex colour, a CSS ` +
+          `colour function, a CSS-wide keyword or a named colour — anything else resolves to ` +
+          `nothing at paint and the element falls back to currentColor (10 B.3 item 3, MPO-23).`,
+      );
     }
-    if (isResolvableThemeValue(value)) {
-      continue;
-    }
-    throw new Error(
-      `getTheme returned an unresolvable value for "${key}" in theme "${themeName}": ` +
-        `${JSON.stringify(value)}. A theme value must be a $token, a hex colour, a CSS ` +
-        `colour function, a CSS-wide keyword or a named colour — anything else resolves to ` +
-        `nothing at paint and the element falls back to currentColor (10 B.3 item 3, MPO-23).`,
-    );
   }
 };

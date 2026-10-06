@@ -25,9 +25,9 @@ const ResolvedRed = ({ themeConfig }: { themeConfig: ThemeConfig }) => (
   </TamaguiProvider>
 );
 
-afterEach(cleanup);
+describe(activateThemeConfig, () => {
+  afterEach(cleanup);
 
-describe('activateThemeConfig', () => {
   it('makes the given config the one Tamagui resolves against, once', () => {
     expect(getConfig()).toBe(subset.tamagui);
     expect(activateThemeConfig(full)).toBe(true);

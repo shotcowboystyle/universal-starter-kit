@@ -1,28 +1,9 @@
-import type React from 'react';
-import { createElement } from 'react';
-import type { ReactNode } from 'react';
-import { renderToString } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
-
-// Mock Tamagui's <Theme> so we can inspect the chosen theme name
-vi.mock('tamagui', async (importOriginal) => ({
-  useDidFinishSSR: (await importOriginal<typeof import('tamagui')>()).useDidFinishSSR,
-  // These tests inspect intent names with a fixed light scheme.
-  useThemeName: () => 'light',
-  Theme: ({ name, children }: { name: string; children: ReactNode }) =>
-    createElement('div', { 'data-tamagui-theme': name }, children),
-  createStyledContext: (defaults: { size: string; density: string }) => ({
-    Provider: ({ children, size, density }: { children?: ReactNode; size?: string; density?: string }) =>
-      createElement('div', {
-        'data-surface-size': size ?? defaults.size,
-        'data-surface-density': density ?? defaults.density,
-        children,
-      }),
-    useStyledContext: () => defaults,
-  }),
-}));
-
 import type { ThemeName } from '@tamagui/web';
+import { createElement } from 'react';
+import type { ReactElement, ReactNode } from 'react';
+import { renderToString } from 'react-dom/server';
+import type { useDidFinishSSR } from 'tamagui';
+import { describe, expect, it, vi } from 'vitest';
 
 import { Intent } from './Intent';
 import { defaultKnobs } from './knobs';
@@ -31,6 +12,31 @@ import type { PresetContextValue } from './preset-context';
 import type { Preset as PresetType } from './preset.types';
 import type { ResolvedKnobs } from './recipes';
 import { useResolvedKnobs, useIntentContext } from './use-resolved-knobs';
+
+// Mock Tamagui's <Theme> so we can inspect the chosen theme name
+// oxlint-disable-next-line vitest/prefer-import-in-mock -- hand-written partial stand-in for Tamagui; it cannot satisfy the module's real types
+vi.mock('tamagui', async (importOriginal) => {
+  const original = await importOriginal<{ useDidFinishSSR: typeof useDidFinishSSR }>();
+  return {
+    useDidFinishSSR: original.useDidFinishSSR,
+    // These tests inspect intent names with a fixed light scheme.
+    useThemeName: () => 'light',
+    Theme: ({ name, children }: { name: string; children: ReactNode }) =>
+      createElement('div', { 'data-tamagui-theme': name }, children),
+    createStyledContext: (defaults: { size: string; density: string }) => ({
+      Provider: ({ children, size, density }: { children?: ReactNode; size?: string; density?: string }) =>
+        createElement(
+          'div',
+          {
+            'data-surface-size': size ?? defaults.size,
+            'data-surface-density': density ?? defaults.density,
+          },
+          children,
+        ),
+      useStyledContext: () => defaults,
+    }),
+  };
+});
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -48,44 +54,57 @@ const wrapWithPreset = (preset: PresetType, children: ReactNode): ReactNode => {
   return createElement(PresetContext.Provider, { value: ctx }, children);
 };
 
-const renderToHtml = (node: ReactNode): string => renderToString(node as React.ReactElement);
+const renderToHtml = (node: ReactNode): string => renderToString(node as ReactElement);
 
 /** Return an array of all `data-tamagui-theme` values in rendered HTML. */
 const collectThemes = (html: string): string[] =>
-  Array.from(html.matchAll(/data-tamagui-theme="([^"]+)"/gu), (m) => m[1]);
+  Array.from(html.matchAll(/data-tamagui-theme="(?<name>[^"]+)"/gu), (m) => m.groups?.name ?? '');
+
+/** A write-once-per-render slot a probe component fills so the test can read it afterwards. */
+const createSlot = function createSlot<T>() {
+  let stored: T | undefined;
+  return {
+    write: (next: T) => {
+      stored = next;
+    },
+    read: (): T | undefined => stored,
+  };
+};
 
 /** Create a probe component that captures resolved knobs from useResolvedKnobs. */
 const createRecipesCapture = (options?: Parameters<typeof useResolvedKnobs>[0]) => {
-  let captured: ResolvedKnobs | undefined;
+  const captured = createSlot<ResolvedKnobs>();
   const Probe = () => {
-    captured = useResolvedKnobs(options);
+    captured.write(useResolvedKnobs(options));
     return null;
   };
   return {
     Probe,
     get result(): ResolvedKnobs {
-      if (!captured) {
+      const value = captured.read();
+      if (value === undefined) {
         throw new Error('Probe was not rendered');
       }
-      return captured;
+      return value;
     },
   };
 };
 
 /** Create a probe that captures the intent context value. */
 const createIntentCapture = () => {
-  let captured: string | null | undefined;
+  const captured = createSlot<string | null>();
   const Probe = () => {
-    captured = useIntentContext();
+    captured.write(useIntentContext());
     return createElement('span', null, 'probe');
   };
   return {
     Probe,
     get result(): string | null {
-      if (captured === undefined) {
+      const value = captured.read();
+      if (value === undefined) {
         throw new Error('Probe was not rendered');
       }
-      return captured;
+      return value;
     },
   };
 };
@@ -94,7 +113,7 @@ const createIntentCapture = () => {
 // Intent context tests
 // ---------------------------------------------------------------------------
 
-describe('Intent', () => {
+describe(Intent, () => {
   it('wraps children in <Theme name={name}> by default', () => {
     const html = renderToHtml(
       wrapWithPreset(makePreset(), createElement(Intent, { name: 'error' }, createElement('span', null, 'hello'))),

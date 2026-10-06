@@ -22,7 +22,7 @@
  */
 
 /** Divider line width: half a CSS pixel = one device pixel on 2x displays. */
-export const hairlineWidth: number = 0.5;
+export const hairlineWidth = 0.5;
 
 /**
  * Spreadable divider treatments. Each entry pairs the 0.5px style with the
@@ -91,7 +91,7 @@ export const ensureHairlineFallback = (): void => {
   if (typeof document === 'undefined') {
     return;
   }
-  if (document.getElementById(STYLE_TAG_ID)) {
+  if (document.querySelector(`#${STYLE_TAG_ID}`)) {
     return;
   }
   const tag = document.createElement('style');

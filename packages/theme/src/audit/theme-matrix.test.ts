@@ -50,33 +50,33 @@ const snapshotFromRecipeInputs = (inputs: Partial<SizeRecipeInputs>): MatrixSnap
   };
 };
 
-describe('declared chart proof keeps uncertainty visible', () => {
-  const sample = (overrides: Partial<MatrixChartSample> = {}): MatrixChartSample => ({
-    key: 'chart:0',
-    kind: 'pie',
-    context: 'Revenue',
-    label: 'Revenue by region',
-    background: '#111111',
-    backgroundResolved: true,
-    marks: [
-      { key: 'slice:0', label: 'North', paint: '#bbbbbb', background: '#111111' },
-      { key: 'slice:1', label: 'South', paint: '#dddddd', background: '#111111' },
-    ],
-    labels: [],
-    separation: { declared: false },
-    datumText: { declared: true, expected: 2, observed: 2, complete: true },
-    ...overrides,
-  });
+const chartSample = (overrides: Partial<MatrixChartSample> = {}): MatrixChartSample => ({
+  key: 'chart:0',
+  kind: 'pie',
+  context: 'Revenue',
+  label: 'Revenue by region',
+  background: '#111111',
+  backgroundResolved: true,
+  marks: [
+    { key: 'slice:0', label: 'North', paint: '#bbbbbb', background: '#111111' },
+    { key: 'slice:1', label: 'South', paint: '#dddddd', background: '#111111' },
+  ],
+  labels: [],
+  separation: { declared: false },
+  datumText: { declared: true, expected: 2, observed: 2, complete: true },
+  ...overrides,
+});
 
+describe('declared chart proof keeps uncertainty visible', () => {
   it('names adjacent slice contrast and does not accept a boolean gap claim', () => {
-    const result = evaluateChartProof([sample({ separation: { declared: true } })]);
+    const result = evaluateChartProof([chartSample({ separation: { declared: true } })]);
     expect(result.ok).toBe(false);
     expect(result.violations.some((item) => item.rule === 'adjacent-pair')).toBe(true);
     expect(result.unverified.some((item) => item.reason === 'unverified-separation')).toBe(true);
   });
 
   it('requires two measured physical pixels between bars', () => {
-    const separated = sample({
+    const separated = chartSample({
       kind: 'bar',
       separation: { declared: true, method: 'rect-bounds', minimumGapPx: 2 },
     });
@@ -89,7 +89,7 @@ describe('declared chart proof keeps uncertainty visible', () => {
 
   it('does not round a below-floor paint pair green', () => {
     const result = evaluateChartProof([
-      sample({
+      chartSample({
         marks: [{ key: 'almost', label: 'Almost', paint: '#000000', background: '#595959' }],
       }),
     ]);
@@ -100,32 +100,25 @@ describe('declared chart proof keeps uncertainty visible', () => {
 
   it('never treats a rect certificate as proof of pie center separation', () => {
     expect(
-      evaluateChartProof([sample({ separation: { declared: true, method: 'rect-bounds', minimumGapPx: 8 } })]).ok,
+      evaluateChartProof([chartSample({ separation: { declared: true, method: 'rect-bounds', minimumGapPx: 8 } })]).ok,
     ).toBe(false);
   });
 
   it.each(['unknown-kind', 'no-marks', 'unsupported-paint'] as const)('keeps %s named and red', (reason) => {
-    const input =
-      reason === 'unknown-kind'
-        ? sample({ kind: 'radar' })
-        : reason === 'no-marks'
-          ? sample({ marks: [] })
-          : sample({
-              marks: [
-                {
-                  key: 'gradient',
-                  label: 'North',
-                  background: '#111111',
-                  unmeasurable: 'unsupported-paint',
-                },
-              ],
-            });
+    const inputs = {
+      'unknown-kind': chartSample({ kind: 'radar' }),
+      'no-marks': chartSample({ marks: [] }),
+      'unsupported-paint': chartSample({
+        marks: [{ key: 'gradient', label: 'North', background: '#111111', unmeasurable: 'unsupported-paint' }],
+      }),
+    };
+    const input = inputs[reason];
     expect(evaluateChartProof([input]).unverified.some((item) => item.reason === reason)).toBe(true);
   });
 
   it('requires a root label, readable axis text and a complete datum alternative', () => {
     const result = evaluateChartProof([
-      sample({
+      chartSample({
         label: '',
         labels: [{ key: 'tick', label: 'May', paint: '#333333', background: '#111111' }],
         datumText: { declared: true, expected: 13, observed: 12, complete: false },
@@ -137,6 +130,8 @@ describe('declared chart proof keeps uncertainty visible', () => {
     expect(result.unverified.some((item) => item.reason === 'incomplete-datum-text')).toBe(true);
   });
 });
+
+const inputsForTheme = (theme: string): Partial<SizeRecipeInputs> => (theme === 'blue' ? { baseHeight: 48 } : {});
 
 describe('theme-axis geometry invariance (tripwire)', () => {
   it('identical recipe inputs across theme colours keep the diff clean', () => {
@@ -151,8 +146,6 @@ describe('theme-axis geometry invariance (tripwire)', () => {
     // The banned coupling: a size recipe input derived from the active
     // theme colour. Geometry becomes a function of theme and the theme
     // axis is no longer paint-only.
-    const inputsForTheme = (theme: string): Partial<SizeRecipeInputs> => (theme === 'blue' ? { baseHeight: 48 } : {});
-
     const defaultCell = snapshotFromRecipeInputs(inputsForTheme(''));
     const blueCell = snapshotFromRecipeInputs(inputsForTheme('blue'));
 
@@ -321,34 +314,34 @@ describe('preset-axis no-breakage (two assertions, never one)', () => {
   });
 });
 
-describe('evaluateTextContrast (the assertion downstream repos call)', () => {
-  const sample = (overrides: Partial<MatrixTextSample>): MatrixTextSample => ({
-    key: 'p:0',
-    text: 'body text',
-    color: '#000000',
-    background: '#ffffff',
-    backgroundResolved: true,
-    overImage: false,
-    fontSizePx: 14,
-    fontWeightNum: 400,
-    rect: { x: 0, y: 0, w: 100, h: 20 },
-    ...overrides,
-  });
+const textSample = (overrides: Partial<MatrixTextSample>): MatrixTextSample => ({
+  key: 'p:0',
+  text: 'body text',
+  color: '#000000',
+  background: '#ffffff',
+  backgroundResolved: true,
+  overImage: false,
+  fontSizePx: 14,
+  fontWeightNum: 400,
+  rect: { x: 0, y: 0, w: 100, h: 20 },
+  ...overrides,
+});
 
+describe('evaluateTextContrast (the assertion downstream repos call)', () => {
   it('passes black-on-white body text', () => {
-    const result = evaluateTextContrast([sample({})]);
+    const result = evaluateTextContrast([textSample({})]);
     expect(result.measured).toBe(1);
     expect(result.violations).toHaveLength(0);
   });
 
   it('fails low-contrast body text against the 4.5:1 AA floor', () => {
-    const result = evaluateTextContrast([sample({ color: '#999999' })]);
+    const result = evaluateTextContrast([textSample({ color: '#999999' })]);
     expect(result.violations).toHaveLength(1);
     expect(result.violations[0].required).toBe(4.5);
   });
 
   it('keeps a just-below-AA text sample in the violations', () => {
-    const result = evaluateTextContrast([sample({ color: '#77767c' })]);
+    const result = evaluateTextContrast([textSample({ color: '#77767c' })]);
     expect(result.measured).toBe(1);
     expect(result.violations).toHaveLength(1);
     expect(result.violations[0].ratio).toBeGreaterThan(4.495);
@@ -357,16 +350,16 @@ describe('evaluateTextContrast (the assertion downstream repos call)', () => {
 
   it('holds large text (>=24px, or >=18.66px bold) to the 3:1 floor instead', () => {
     // #949494 on white is ~3.5:1 — fails body text, clears large text.
-    const failing = evaluateTextContrast([sample({ color: '#949494' })]);
+    const failing = evaluateTextContrast([textSample({ color: '#949494' })]);
     expect(failing.violations).toHaveLength(1);
-    const heading = evaluateTextContrast([sample({ color: '#949494', fontSizePx: 24 })]);
+    const heading = evaluateTextContrast([textSample({ color: '#949494', fontSizePx: 24 })]);
     expect(heading.violations).toHaveLength(0);
-    const boldLead = evaluateTextContrast([sample({ color: '#949494', fontSizePx: 19, fontWeightNum: 700 })]);
+    const boldLead = evaluateTextContrast([textSample({ color: '#949494', fontSizePx: 19, fontWeightNum: 700 })]);
     expect(boldLead.violations).toHaveLength(0);
   });
 
   it('counts unresolved backdrops instead of silently dropping them', () => {
-    const result = evaluateTextContrast([sample({ backgroundResolved: false })]);
+    const result = evaluateTextContrast([textSample({ backgroundResolved: false })]);
     expect(result.measured).toBe(0);
     expect(result.unmeasurable).toBe(1);
   });
@@ -375,35 +368,36 @@ describe('evaluateTextContrast (the assertion downstream repos call)', () => {
     // rgb(238,236,249) on white — the pair the SHC spec measured at 1.17:1
     // from accent.ts's then-lightPalette[0]. Re-introducing that wash as
     // body ink must fail the theme assertion, not a consumer-local spec.
-    const result = evaluateTextContrast([sample({ color: '#eeecf9', background: '#ffffff' })]);
+    const result = evaluateTextContrast([textSample({ color: '#eeecf9', background: '#ffffff' })]);
     expect(result.violations).toHaveLength(1);
     expect(result.violations[0].ratio).toBeLessThan(2);
     expect(result.violations[0].required).toBe(4.5);
   });
 
   it('counts unparseable colours as unmeasurable (measureContrast throws, never skips silently)', () => {
-    const result = evaluateTextContrast([sample({ color: 'potato' })]);
+    const result = evaluateTextContrast([textSample({ color: 'potato' })]);
     expect(result.measured).toBe(0);
     expect(result.unmeasurable).toBe(1);
     expect(result.violations).toHaveLength(0);
   });
 });
 
-describe('captureMatrixSnapshot keys survive the theme axis', () => {
-  /**
-   * The measured artefact this locks down. Tamagui's `<Theme>` emits a
-   * boxless `display: contents` passthrough when the requested theme is
-   * already the active one and a REAL theme host when it differs, so the
-   * wrapper count is a function of the colour global. Keying on it made
-   * every coloured cell of dogfood--settings report `+N/-M elements` with
-   * ZERO moves: 158 nodes at the default colour, 151 with `color:blue`, 142
-   * with `color:gray`, against 130 in every cell once the boxless wrappers
-   * are hoisted through.
-   */
-  const mount = (html: string): void => {
-    document.body.innerHTML = `<div id="mpo-matrix-root">${html}</div>`;
-  };
+/**
+ * The measured artefact this locks down. Tamagui's `<Theme>` emits a
+ * boxless `display: contents` passthrough when the requested theme is
+ * already the active one and a REAL theme host when it differs, so the
+ * wrapper count is a function of the colour global. Keying on it made
+ * every coloured cell of dogfood--settings report `+N/-M elements` with
+ * ZERO moves: 158 nodes at the default colour, 151 with `color:blue`, 142
+ * with `color:gray`, against 130 in every cell once the boxless wrappers
+ * are hoisted through.
+ */
+const mount = (html: string): void => {
+  document.body.replaceChildren();
+  document.body.insertAdjacentHTML('beforeend', `<div id="mpo-matrix-root">${html}</div>`);
+};
 
+describe('captureMatrixSnapshot keys survive the theme axis', () => {
   const card = '<div class="card"><span class="label">Name</span></div>';
 
   it('hoists through a display:contents wrapper so the key set is identical', () => {
@@ -437,30 +431,31 @@ describe('captureMatrixSnapshot keys survive the theme axis', () => {
   });
 
   it('reports an empty story root as not rendered', () => {
-    document.body.innerHTML = '<div id="mpo-matrix-root"></div>';
+    mount('');
     expect(captureMatrixSnapshot().storyRendered).toBe(false);
   });
 });
 
-describe('icon contrast keeps unsupported conveying paint unverified', () => {
-  const sample = (overrides: Partial<MatrixIconSample> = {}): MatrixIconSample => ({
-    key: 'button:0/svg:0',
-    context: 'Open',
-    status: 'conveying',
-    paint: '#ffffff',
-    background: '#111111',
-    backgroundResolved: true,
-    overImage: false,
-    shapeCount: 1,
-    distinctPaints: 1,
-    paintKinds: ['fill'],
-    rect: { x: 0, y: 0, w: 24, h: 24 },
-    ...overrides,
-  });
+const iconSample = (overrides: Partial<MatrixIconSample> = {}): MatrixIconSample => ({
+  key: 'button:0/svg:0',
+  context: 'Open',
+  status: 'conveying',
+  paint: '#ffffff',
+  background: '#111111',
+  backgroundResolved: true,
+  overImage: false,
+  // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- field of the exported MatrixIconSample snapshot
+  shapeCount: 1,
+  distinctPaints: 1,
+  paintKinds: ['fill'],
+  rect: { x: 0, y: 0, w: 24, h: 24 },
+  ...overrides,
+});
 
+describe('icon contrast keeps unsupported conveying paint unverified', () => {
   it('holds real glyph paint to exactly 3:1 regardless of text rules', () => {
-    expect(evaluateIconContrast([sample()]).ok).toBe(true);
-    const result = evaluateIconContrast([sample({ paint: '#222222' })]);
+    expect(evaluateIconContrast([iconSample()]).ok).toBe(true);
+    const result = evaluateIconContrast([iconSample({ paint: '#222222' })]);
     expect(result.ok).toBe(false);
     expect(result.measured).toBe(1);
     expect(result.violations[0].required).toBe(3);
@@ -468,7 +463,7 @@ describe('icon contrast keeps unsupported conveying paint unverified', () => {
   });
 
   it('keeps a just-below-3 icon sample in the violations', () => {
-    const result = evaluateIconContrast([sample({ paint: '#000000', background: '#595959' })]);
+    const result = evaluateIconContrast([iconSample({ paint: '#000000', background: '#595959' })]);
     expect(result.ok).toBe(false);
     expect(result.measured).toBe(1);
     expect(result.violations).toHaveLength(1);
@@ -485,7 +480,7 @@ describe('icon contrast keeps unsupported conveying paint unverified', () => {
     'multicolor',
     'no-paint',
   ])('does not pass a candidate with %s', (reason) => {
-    const result = evaluateIconContrast([sample({ unmeasurable: reason })]);
+    const result = evaluateIconContrast([iconSample({ unmeasurable: reason })]);
     expect(result.ok).toBe(false);
     expect(result.measured).toBe(0);
     expect(result.candidates).toBe(1);
@@ -494,11 +489,11 @@ describe('icon contrast keeps unsupported conveying paint unverified', () => {
 
   it('accounts for every candidate and exclusion, including invalid color', () => {
     const result = evaluateIconContrast([
-      sample(),
-      sample({ paint: 'not-a-color' }),
-      sample({ status: 'disabled-control' }),
-      sample({ status: 'decorative-standalone' }),
-      sample({ status: 'hidden' }),
+      iconSample(),
+      iconSample({ paint: 'not-a-color' }),
+      iconSample({ status: 'disabled-control' }),
+      iconSample({ status: 'decorative-standalone' }),
+      iconSample({ status: 'hidden' }),
     ]);
     expect(result.candidates).toBe(result.measured + result.unverified.length);
     expect(result.candidates + result.excludedDisabled + result.excludedDecorative + result.excludedHidden).toBe(5);
@@ -507,8 +502,8 @@ describe('icon contrast keeps unsupported conveying paint unverified', () => {
   });
 
   it('names a replacement icon failure even when total findings stay equal', () => {
-    const baselineIcons = evaluateIconContrast([sample({ context: 'Old', paint: '#222222' })]);
-    const icons = evaluateIconContrast([sample({ context: 'New', paint: '#222222' })]);
+    const baselineIcons = evaluateIconContrast([iconSample({ context: 'Old', paint: '#222222' })]);
+    const icons = evaluateIconContrast([iconSample({ context: 'New', paint: '#222222' })]);
     const result = evaluateNoBreakage({
       storyRendered: true,
       offScaleViolations: 0,
@@ -530,7 +525,8 @@ describe('icon contrast keeps unsupported conveying paint unverified', () => {
       icons: baselineIcons,
       baselineIcons,
     });
-    expect(sameDebt.ok).toBe(true); // Attribution only. Absolute icons.ok still fails.
+    // Attribution only. Absolute icons.ok still fails.
+    expect(sameDebt.ok).toBe(true);
     expect(baselineIcons.ok).toBe(false);
   });
 

@@ -12,37 +12,29 @@ interface ThemeToken {
  *
  * Never returns undefined.
  */
+const isPaintString = (value: unknown): value is string =>
+  typeof value === 'string' && value.length > 0 && value !== 'undefined';
+
 export const resolveGlyphPaint = (theme: Record<string, ThemeToken | undefined>, color?: string | null): string => {
-  const seen = new Set<string>();
-  const push = (value: unknown) => {
-    if (typeof value === 'string' && value.length > 0 && value !== 'undefined') {
-      seen.add(value);
-    }
-  };
+  // Priority order: the token the caller named, a literal CSS color, then theme ink.
+  const candidates: unknown[] = [];
 
-  if (typeof color === 'string' && color.length > 0) {
+  if (color != null && color.length > 0) {
     const key = color.startsWith('$') ? color.slice(1) : color;
-    push(theme[key]?.val);
-    if (color.startsWith('#') || color.startsWith('rgb') || color.startsWith('hsl')) {
-      push(color);
-    } else if (!theme[key] && !color.startsWith('$')) {
-      // Literal CSS colors may pass through; an unresolved theme token cannot paint.
-      push(color);
+    candidates.push(theme[key]?.val);
+    // Literal CSS colors may pass through; an unresolved theme token cannot paint.
+    const isLiteralColor = color.startsWith('#') || color.startsWith('rgb') || color.startsWith('hsl');
+    if (isLiteralColor || (!theme[key] && !color.startsWith('$'))) {
+      candidates.push(color);
     }
   }
 
-  push(theme.color?.val);
-  push(theme.color12?.val);
-  push(theme.color11?.val);
-
-  for (const value of seen) {
-    return value;
-  }
-  return 'currentColor';
+  candidates.push(theme.color?.val, theme.color12?.val, theme.color11?.val);
+  return candidates.find(isPaintString) ?? 'currentColor';
 };
 
 /** Live theme ink for Phosphor / SVG carets. Never undefined. */
 export const useGlyphColor = (color?: string): string => {
-  const theme = useTheme() as unknown as Record<string, ThemeToken | undefined>;
+  const theme: Record<string, ThemeToken | undefined> = useTheme();
   return resolveGlyphPaint(theme, color);
 };

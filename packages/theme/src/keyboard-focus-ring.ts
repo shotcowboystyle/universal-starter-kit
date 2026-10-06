@@ -1,3 +1,5 @@
+import { FOCUS_VISIBLE_RING_INSET } from './theme/focus-state';
+
 /**
  * Keyboard-modality tracker for manual focus-ring painting (web only).
  *
@@ -23,8 +25,20 @@ export const ensureKeyboardModalityTracking = () => {
     return;
   }
   hooked = true;
-  document.addEventListener('keydown', () => (lastInputWasKeyboard = true), true);
-  document.addEventListener('pointerdown', () => (lastInputWasKeyboard = false), true);
+  document.addEventListener(
+    'keydown',
+    () => {
+      lastInputWasKeyboard = true;
+    },
+    true,
+  );
+  document.addEventListener(
+    'pointerdown',
+    () => {
+      lastInputWasKeyboard = false;
+    },
+    true,
+  );
 };
 
 /**
@@ -37,8 +51,6 @@ export const wasKeyboardFocus = (): boolean => {
   ensureKeyboardModalityTracking();
   return lastInputWasKeyboard;
 };
-
-import { FOCUS_VISIBLE_RING_INSET } from './theme/focus-state';
 
 /**
  * Standard manual ring props — the INSET ring geometry
@@ -103,7 +115,7 @@ export const ensureCompositeFocusRing = (): void => {
   if (typeof document === 'undefined') {
     return;
   }
-  if (document.getElementById(COMPOSITE_RING_STYLE_ID)) {
+  if (document.querySelector(`#${COMPOSITE_RING_STYLE_ID}`)) {
     return;
   }
   const tag = document.createElement('style');

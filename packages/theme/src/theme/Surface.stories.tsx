@@ -21,11 +21,11 @@ export default {
 const Probe = ({ label }: { label: string }) => {
   const { knobProps } = useResolvedKnobs();
   const attrs = {
-    'data-size': String(knobProps.size),
-    'data-space': String(knobProps.space),
-    'data-size-token': String(knobProps.sizeToken),
-    'data-gap': String(knobProps.gap.gap),
-  } as Record<string, unknown>;
+    'data-size': knobProps.size,
+    'data-space': knobProps.space,
+    'data-size-token': knobProps.sizeToken,
+    'data-gap': knobProps.gap.gap,
+  };
   return (
     <YStack
       {...knobProps.surface}
@@ -37,7 +37,7 @@ const Probe = ({ label }: { label: string }) => {
       <SizableText
         fontSize={knobProps.sizeToken as never}
         testID={`surface-text-${label}`}>
-        {label}: token {String(knobProps.sizeToken)}, gap {String(knobProps.gap.gap)}
+        {label}: token {knobProps.sizeToken}, gap {knobProps.gap.gap}
       </SizableText>
     </YStack>
   );

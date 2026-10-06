@@ -208,6 +208,8 @@ const minWidthForRung = (rung: TileSizeRung, inputs: TileSizeInputs): number => 
 
 /** Derive the full ladder from resolved inputs. Tables are generated, never handwritten. */
 export const generateTileSizeLadder = (inputs: TileSizeInputs): TileSizeLadder => {
+  // SAFETY: the loop below assigns every rung in `tileSizeRungs` before the ladder is returned.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the empty literal is filled for every rung before return
   const ladder = {} as TileSizeLadder;
   for (const rung of tileSizeRungs) {
     const minWidth = minWidthForRung(rung, inputs);
@@ -291,6 +293,7 @@ export type MediaAspect = MediaAspectName | number;
 
 /** Resolve a name or number to a positive width/height ratio (default `square`). */
 export const resolveMediaAspect = (aspect?: MediaAspect | null): number => {
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- public API accepts a named aspect or an explicit number
   if (typeof aspect === 'number') {
     return Number.isFinite(aspect) && aspect > 0 ? aspect : mediaAspectRatios.square;
   }

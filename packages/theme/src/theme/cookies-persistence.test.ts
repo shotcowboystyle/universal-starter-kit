@@ -8,6 +8,7 @@
  * the document.
  */
 
+import { deleteCookie } from '@repo/platform';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import {
@@ -21,67 +22,69 @@ import type { Knobs } from './knobs';
 
 const clearThemeCookies = () => {
   for (const key of getCookieWatchList()) {
-    document.cookie = `${key}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+    deleteCookie(key);
   }
 };
 
-beforeEach(() => {
-  clearThemeCookies();
-});
-
-describe('getCookieWatchList', () => {
-  it('watches the preset cookie plus every override chunk slot', () => {
-    const list = getCookieWatchList();
-    expect(list).toContain(cookiePreset);
-    expect(list).toContain(`${cookieOverridesPrefix}.0`);
-    expect(list).toContain(`${cookieOverridesPrefix}.9`);
-    // preset + 10 chunk slots
-    expect(list).toHaveLength(11);
-  });
-});
-
-describe('persistPresetOverrides / loadPresetOverrides', () => {
-  it('round-trips small overrides through document cookies', () => {
-    persistPresetOverrides({ borderRadius: 'large', fillStyle: 'filled' } as Partial<Knobs>);
-    expect(loadPresetOverrides()).toStrictEqual({ borderRadius: 'large', fillStyle: 'filled' });
+describe('theme cookie persistence', () => {
+  beforeEach(() => {
+    clearThemeCookies();
   });
 
-  it('returns an empty object when nothing is persisted', () => {
-    expect(loadPresetOverrides()).toStrictEqual({});
+  describe(getCookieWatchList, () => {
+    it('watches the preset cookie plus every override chunk slot', () => {
+      const list = getCookieWatchList();
+      expect(list).toContain(cookiePreset);
+      expect(list).toContain(`${cookieOverridesPrefix}.0`);
+      expect(list).toContain(`${cookieOverridesPrefix}.9`);
+      // preset + 10 chunk slots
+      expect(list).toHaveLength(11);
+    });
   });
 
-  it('overwrites previous overrides instead of merging them', () => {
-    persistPresetOverrides({ borderRadius: 'large' } as Partial<Knobs>);
-    persistPresetOverrides({ elevation: 'small' } as Partial<Knobs>);
-    expect(loadPresetOverrides()).toStrictEqual({ elevation: 'small' });
-  });
+  describe('persistPresetOverrides / loadPresetOverrides', () => {
+    it('round-trips small overrides through document cookies', () => {
+      persistPresetOverrides({ borderRadius: 'large', fillStyle: 'filled' } as Partial<Knobs>);
+      expect(loadPresetOverrides()).toStrictEqual({ borderRadius: 'large', fillStyle: 'filled' });
+    });
 
-  it('chunks oversized overrides across multiple cookies and reassembles them', () => {
-    const bigValue = 'x'.repeat(8000);
-    persistPresetOverrides({ animation: bigValue } as unknown as Partial<Knobs>);
-    // The serialized JSON exceeds the 3.5 KB split threshold → several chunks.
-    expect(document.cookie).toContain(`${cookieOverridesPrefix}.0=`);
-    expect(document.cookie).toContain(`${cookieOverridesPrefix}.1=`);
-    expect(loadPresetOverrides()).toStrictEqual({ animation: bigValue });
-  });
+    it('returns an empty object when nothing is persisted', () => {
+      expect(loadPresetOverrides()).toStrictEqual({});
+    });
 
-  it('cleans up stale chunk cookies when the payload shrinks', () => {
-    const bigValue = 'y'.repeat(8000);
-    persistPresetOverrides({ animation: bigValue } as unknown as Partial<Knobs>);
-    persistPresetOverrides({ borderRadius: 'small' } as Partial<Knobs>);
-    expect(loadPresetOverrides()).toStrictEqual({ borderRadius: 'small' });
-    expect(document.cookie).not.toContain(`${cookieOverridesPrefix}.1=`);
-  });
+    it('overwrites previous overrides instead of merging them', () => {
+      persistPresetOverrides({ borderRadius: 'large' } as Partial<Knobs>);
+      persistPresetOverrides({ elevation: 'small' } as Partial<Knobs>);
+      expect(loadPresetOverrides()).toStrictEqual({ elevation: 'small' });
+    });
 
-  it('reads from a raw cookie map (SSR) without touching the document', () => {
-    const raw = {
-      [`${cookieOverridesPrefix}.0`]: JSON.stringify({ space: 'large' }),
-    };
-    expect(loadPresetOverrides(raw)).toStrictEqual({ space: 'large' });
-  });
+    it('chunks oversized overrides across multiple cookies and reassembles them', () => {
+      const bigValue = 'x'.repeat(8000);
+      persistPresetOverrides({ animation: bigValue } as unknown as Partial<Knobs>);
+      // The serialized JSON exceeds the 3.5 KB split threshold → several chunks.
+      expect(document.cookie).toContain(`${cookieOverridesPrefix}.0=`);
+      expect(document.cookie).toContain(`${cookieOverridesPrefix}.1=`);
+      expect(loadPresetOverrides()).toStrictEqual({ animation: bigValue });
+    });
 
-  it('treats corrupted cookie JSON as no overrides', () => {
-    const raw = { [`${cookieOverridesPrefix}.0`]: '{broken' };
-    expect(loadPresetOverrides(raw)).toStrictEqual({});
+    it('cleans up stale chunk cookies when the payload shrinks', () => {
+      const bigValue = 'y'.repeat(8000);
+      persistPresetOverrides({ animation: bigValue } as unknown as Partial<Knobs>);
+      persistPresetOverrides({ borderRadius: 'small' } as Partial<Knobs>);
+      expect(loadPresetOverrides()).toStrictEqual({ borderRadius: 'small' });
+      expect(document.cookie).not.toContain(`${cookieOverridesPrefix}.1=`);
+    });
+
+    it('reads from a raw cookie map (SSR) without touching the document', () => {
+      const raw = {
+        [`${cookieOverridesPrefix}.0`]: JSON.stringify({ space: 'large' }),
+      };
+      expect(loadPresetOverrides(raw)).toStrictEqual({ space: 'large' });
+    });
+
+    it('treats corrupted cookie JSON as no overrides', () => {
+      const raw = { [`${cookieOverridesPrefix}.0`]: '{broken' };
+      expect(loadPresetOverrides(raw)).toStrictEqual({});
+    });
   });
 });

@@ -6,7 +6,7 @@ const readScale = (): string[] | null => {
   }
   const style = getComputedStyle(document.documentElement);
   const out: string[] = [];
-  for (let i = 1; i <= 12; i++) {
+  for (let i = 1; i <= 12; i += 1) {
     let c = style.getPropertyValue(`--color${i}`).trim();
     if (!c) {
       c = style.getPropertyValue(`--color-${i}`).trim();
@@ -27,7 +27,9 @@ const readScale = (): string[] | null => {
 export const useColorScale = (): string[] | null => {
   const [scale, setScale] = useState<string[] | null>(() => readScale());
 
+  // oxlint-disable-next-line react-doctor/rendering-hydration-no-flicker -- re-read after hydration: the server snapshot is null, the client initial state reads the DOM
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- same re-read; sync with CSS variables that only exist after mount
     setScale(readScale());
   }, []);
 

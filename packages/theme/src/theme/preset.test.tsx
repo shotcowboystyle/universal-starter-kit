@@ -1,15 +1,8 @@
+import type { ThemeName } from '@tamagui/web';
 import { createElement } from 'react';
 import type { ReactNode } from 'react';
 import { renderToString } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-// Mock Tamagui dependencies to avoid needing a full Tamagui config
-vi.mock('tamagui', () => ({
-  Theme: ({ name, children }: { name: string; children: ReactNode }) =>
-    createElement('div', { 'data-tamagui-theme': name }, children),
-}));
-
-import type { ThemeName } from '@tamagui/web';
 
 import { defaultKnobs } from './knobs';
 import { Preset } from './Preset';
@@ -17,6 +10,13 @@ import { usePresetContext } from './preset-context';
 import type { PresetContextValue } from './preset-context';
 import type { Preset as PresetType } from './preset.types';
 import { clearPresets, registerPreset } from './shared';
+
+// Mock Tamagui dependencies to avoid needing a full Tamagui config
+vi.mock(import('tamagui'), () => ({
+  // SAFETY: a plain function component stands in for Tamagui's ForwardRef Theme; the module only needs it callable as a component.
+  Theme: (({ name, children }: { name: string; children: ReactNode }) =>
+    createElement('div', { 'data-tamagui-theme': name }, children)) as never,
+}));
 
 // ---------------------------------------------------------------------------
 // Test fixtures
@@ -39,15 +39,15 @@ const boldPreset: PresetType = {
 // ---------------------------------------------------------------------------
 
 const createPresetContextCapture = () => {
-  let captured: PresetContextValue | null = null;
+  const captured: (PresetContextValue | null)[] = [];
   const Capture = () => {
-    captured = usePresetContext();
+    captured.push(usePresetContext());
     return null;
   };
   return {
     Capture,
     get result() {
-      return captured;
+      return captured.at(-1) ?? null;
     },
   };
 };

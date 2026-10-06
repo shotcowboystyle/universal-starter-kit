@@ -85,26 +85,13 @@ export interface AuditReport {
 
 // ── Token scale definitions ───────────────────────────────────────────────────
 // These match @tamagui/themes v5 tokens + resolveKnobs.ts mapping tables.
+// runConstraintAudit carries its own copy of every scale because it must be self-contained.
 
-/** Radius token values: token key → px (from @tamagui/themes v5 radius tokens) */
-const RADIUS_TOKENS: Record<number, number> = {
-  0: 0,
-  1: 3,
-  2: 5,
-  3: 7,
-  4: 9,
-  5: 10,
-  6: 16,
-  7: 19,
-  8: 22,
-  9: 26,
-  10: 34,
-  11: 42,
-  12: 50,
-};
+/** Knob stop name → pixel value. */
+type KnobScale = Record<string, number>;
 
 /** Space token values: token key → px (from @tamagui/themes v5 space tokens) */
-const SPACE_TOKENS: Record<number, number> = {
+const SPACE_TOKENS = {
   0: 0,
   0.25: 0.5,
   0.5: 1,
@@ -121,226 +108,39 @@ const SPACE_TOKENS: Record<number, number> = {
   6: 32,
   7: 39,
   8: 46,
-};
+} satisfies Record<number, number>;
 
 /**
- * Inner border radius knob → pixel value
- * Source: borderRadiusMap in resolveKnobs.ts
- */
-const BORDER_RADIUS_KNOB: Record<string, number> = {
-  none: RADIUS_TOKENS[0], // 0px
-  small: RADIUS_TOKENS[2], // 5px
-  medium: RADIUS_TOKENS[4], // 9px
-  large: RADIUS_TOKENS[6], // 16px
-  full: RADIUS_TOKENS[12], // 50px
-};
-
-/**
- * Outer border radius knob → pixel value
- * Source: outerRadiusMap in resolveKnobs.ts
- */
-const OUTER_RADIUS_KNOB: Record<string, number> = {
-  none: RADIUS_TOKENS[0], // 0px
-  small: RADIUS_TOKENS[2], // 5px
-  medium: RADIUS_TOKENS[3], // 7px
-  large: RADIUS_TOKENS[4], // 9px
-  full: RADIUS_TOKENS[5], // 10px
-};
-
-/**
- * Border width knob → raw pixel value (not token-based)
- * Source: borderWidthMap in resolveKnobs.ts
- */
-const BORDER_WIDTH_KNOB: Record<string, number> = {
-  none: 0,
-  small: 0.5,
-  medium: 1,
-  large: 2,
-};
-
-/**
- * Gap (inner spacing) knob → pixel value
+ * Gap (inner spacing) knob → pixel value (7px, 18px, 24px)
  * Source: gapMap in resolveKnobs.ts ($2, $4, $5 space tokens)
  */
-export const GAP_KNOB: Record<string, number> = {
-  small: SPACE_TOKENS[2], // 7px
-  medium: SPACE_TOKENS[4], // 18px
-  large: SPACE_TOKENS[5], // 24px
-};
+export const GAP_KNOB = {
+  small: SPACE_TOKENS[2],
+  medium: SPACE_TOKENS[4],
+  large: SPACE_TOKENS[5],
+} satisfies KnobScale;
 
 /**
- * Gap large (gapLg) knob → pixel value
+ * Gap large (gapLg) knob → pixel value (13px, 24px, 32px)
  * Source: gapLgMap in resolveKnobs.ts ($3, $5, $6 space tokens)
  */
-export const GAP_LG_KNOB: Record<string, number> = {
-  small: SPACE_TOKENS[3], // 13px
-  medium: SPACE_TOKENS[5], // 24px
-  large: SPACE_TOKENS[6], // 32px
-};
+export const GAP_LG_KNOB = {
+  small: SPACE_TOKENS[3],
+  medium: SPACE_TOKENS[5],
+  large: SPACE_TOKENS[6],
+} satisfies KnobScale;
 
-/**
- * Panel padding knob → pixel value
- * Source: panelPaddingMap in resolveKnobs.ts ($3, $4, $6 space tokens)
- */
-const PANEL_PADDING_KNOB: Record<string, number> = {
-  small: SPACE_TOKENS[3], // 13px
-  medium: SPACE_TOKENS[4], // 18px
-  large: SPACE_TOKENS[6], // 32px
-};
+/** A hardcoded inline color that bypasses theme tokens. */
+interface InlineColorBypass {
+  property: string;
+  value: string;
+}
 
-/**
- * Font weight knob → value string
- * Source: fontWeightMap in resolveKnobs.ts
- */
-const FONT_WEIGHT_KNOB: Record<string, number> = {
-  regular: 400,
-  bold: 700,
-};
-
-// ── Valid value sets ──────────────────────────────────────────────────────────
-
-/** All valid border-radius px values (inner + outer scales combined) */
-const VALID_BORDER_RADIUS_PX = new Set([...Object.values(BORDER_RADIUS_KNOB), ...Object.values(OUTER_RADIUS_KNOB)]);
-
-/** All valid border-width values */
-const VALID_BORDER_WIDTH = new Set(Object.values(BORDER_WIDTH_KNOB));
-
-/** All valid gap px values (gap + gapLg scales combined, plus 0) */
-const VALID_GAP_PX = new Set([0, ...Object.values(GAP_KNOB), ...Object.values(GAP_LG_KNOB)]);
-
-/** All valid padding px values (panel padding + 0) */
-const VALID_PADDING_PX = new Set([0, ...Object.values(PANEL_PADDING_KNOB)]);
-
-/** All valid font-weight values */
-const VALID_FONT_WEIGHT = new Set(Object.values(FONT_WEIGHT_KNOB));
-
-/**
- * Valid primary font families (first font in the computed stack).
- * Source: packages/config/fonts.ts fontFamilies + Tamagui Inter stack.
- * Keys are lowercase for case-insensitive matching.
- */
-const FONT_FAMILY_KNOB: Record<string, string> = {
-  inter: 'sans-serif ($body/$heading)',
-  georgia: 'serif',
-  monospace: 'mono',
-  'roboto slab': 'slab',
-  rockwell: 'slab (fallback)',
-  nunito: 'rounded',
-  'varela round': 'rounded (fallback)',
-  'roboto condensed': 'condensed',
-  'arial narrow': 'condensed (fallback)',
-  'dancing script': 'cursive',
-  pacifico: 'cursive (fallback)',
-  caveat: 'handwriting',
-  'patrick hand': 'handwriting (fallback)',
-  silkscreen: 'pixel',
-  'press start 2p': 'pixel (fallback)',
-  unifrakturcook: 'blackletter',
-  fraktur: 'blackletter (fallback)',
-  futura: 'geometric',
-  poppins: 'geometric (fallback)',
-  'century gothic': 'geometric (fallback)',
-};
-
-/** System/generic fonts that are valid as part of fallback stacks */
-const SYSTEM_FONTS = new Set([
-  '-apple-system',
-  'system-ui',
-  'blinkmacsystemfont',
-  'segoe ui',
-  'roboto',
-  'helvetica',
-  'arial',
-  'sans-serif',
-  'serif',
-  'cursive',
-  'comic sans ms',
-  'courier new',
-  'times new roman',
-  'times',
-]);
-
-// ── Reverse-map helpers ───────────────────────────────────────────────────────
-
-const reverseMapRadius = (px: number): string => {
-  for (const [knob, val] of Object.entries(BORDER_RADIUS_KNOB)) {
-    if (val === px) {
-      return knob;
-    }
-  }
-  for (const [knob, val] of Object.entries(OUTER_RADIUS_KNOB)) {
-    if (val === px) {
-      return `${knob} (outer)`;
-    }
-  }
-  return 'off-scale';
-};
-
-const reverseMapBorderWidth = (px: number): string => {
-  for (const [knob, val] of Object.entries(BORDER_WIDTH_KNOB)) {
-    if (val === px) {
-      return knob;
-    }
-  }
-  return 'off-scale';
-};
-
-const reverseMapGap = (px: number): string => {
-  for (const [knob, val] of Object.entries(GAP_KNOB)) {
-    if (val === px) {
-      return knob;
-    }
-  }
-  for (const [knob, val] of Object.entries(GAP_LG_KNOB)) {
-    if (val === px) {
-      return `${knob} (lg)`;
-    }
-  }
-  if (px === 0) {
-    return 'none';
-  }
-  return 'off-scale';
-};
-
-const reverseMapPadding = (px: number): string => {
-  for (const [knob, val] of Object.entries(PANEL_PADDING_KNOB)) {
-    if (val === px) {
-      return knob;
-    }
-  }
-  if (px === 0) {
-    return 'none';
-  }
-  return 'off-scale';
-};
-
-const reverseMapFontWeight = (weight: number): string => {
-  for (const [knob, val] of Object.entries(FONT_WEIGHT_KNOB)) {
-    if (val === weight) {
-      return knob;
-    }
-  }
-  return 'off-scale';
-};
-
-const reverseMapFontFamily = (computed: string): { knob: string; offScale: boolean } => {
-  const first = computed
-    .split(',')[0]
-    .trim()
-    .replaceAll(/^['"]|['"]$/gu, '')
-    .toLowerCase();
-  if (!first) {
-    return { knob: 'empty', offScale: true };
-  }
-  const knob = FONT_FAMILY_KNOB[first];
-  if (knob) {
-    return { knob, offScale: false };
-  }
-  if (SYSTEM_FONTS.has(first)) {
-    return { knob: `system (${first})`, offScale: false };
-  }
-  return { knob: 'off-scale', offScale: true };
-};
+/** Primary font family audit verdict. */
+interface FontFamilyVerdict {
+  knob: string;
+  offScale: boolean;
+}
 
 // ── Core audit function ───────────────────────────────────────────────────────
 
@@ -354,93 +154,98 @@ const reverseMapFontFamily = (computed: string): { knob: string; offScale: boole
  *
  * Returns an AuditReport object describing all structural CSS violations.
  */
+// oxlint-disable-next-line eslint/complexity, sonarjs/cognitive-complexity -- one self-contained in-page audit pass; page.evaluate cannot call helpers outside the function
 export const runConstraintAudit = (rootSelector?: string): AuditReport => {
+  // parseFloat tolerates unit suffixes ('9px', '0.5'); Number() would turn those into NaN.
+  const toFloat = Number.parseFloat;
+  // Own-property lookup by an arbitrary knob name read from the DOM.
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serialises this function alone, so every helper must live inside it
+  const lookup = <T>(table: Record<string, T>, name: string): T | undefined =>
+    Object.hasOwn(table, name) ? table[name] : undefined;
+  // dataset exists on HTMLElement and SVGElement; no other node kind in a surface carries data attributes.
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serialises this function alone, so every helper must live inside it
+  const dataOf = (el: Element): DOMStringMap =>
+    el instanceof HTMLElement || el instanceof SVGElement ? el.dataset : {};
+
   // ── Inline token definitions (must be self-contained for page.evaluate) ──
 
-  const _RADIUS_TOKENS: Record<number, number> = {
-    0: 0,
-    2: 5,
-    3: 7,
-    4: 9,
-    5: 10,
-    6: 16,
-    12: 50,
-  };
-  const _SPACE_TOKENS: Record<number, number> = {
-    0: 0,
-    2: 7,
-    3: 13,
-    4: 18,
-    5: 24,
-    6: 32,
-  };
-  const _BORDER_RADIUS_KNOB: Record<string, number> = {
+  const _BORDER_RADIUS_KNOB = {
     none: 0,
     small: 5,
     medium: 9,
     large: 16,
     full: 50,
-  };
-  const _OUTER_RADIUS_KNOB: Record<string, number> = {
+  } satisfies KnobScale;
+  const _OUTER_RADIUS_KNOB = {
     none: 0,
     small: 5,
     medium: 7,
     large: 9,
     full: 10,
-  };
-  const _BORDER_WIDTH_KNOB: Record<string, number> = {
+  } satisfies KnobScale;
+  const _BORDER_WIDTH_KNOB = {
     none: 0,
     small: 0.5,
     medium: 1,
     large: 2,
-  };
-  const _GAP_KNOB: Record<string, number> = {
+  } satisfies KnobScale;
+  const _GAP_KNOB = {
     small: 7,
     medium: 18,
     large: 24,
-  };
-  const _GAP_LG_KNOB: Record<string, number> = {
+  } satisfies KnobScale;
+  const _GAP_LG_KNOB = {
     small: 13,
     medium: 24,
     large: 32,
-  };
-  const _PANEL_PADDING_KNOB: Record<string, number> = {
+  } satisfies KnobScale;
+  const _PANEL_PADDING_KNOB = {
     small: 13,
     medium: 18,
     large: 32,
-  };
-  const _FONT_WEIGHT_KNOB: Record<string, number> = {
-    light: 300, // Inter body default weight
+  } satisfies KnobScale;
+  const _FONT_WEIGHT_KNOB = {
+    // Inter body default weight
+    light: 300,
     regular: 400,
     bold: 700,
-  };
+  } satisfies KnobScale;
 
   const _VALID_RADIUS = new Set([
     ...Object.values(_BORDER_RADIUS_KNOB),
     ...Object.values(_OUTER_RADIUS_KNOB),
-    1000, // Tamagui pill radius (Switch, RadioGroup.Item)
-    100_000, // Tamagui circular button radius (Button circular variant)
+    // Tamagui pill radius (Switch, RadioGroup.Item)
+    1000,
+    // Tamagui circular button radius (Button circular variant)
+    100_000,
   ]);
   const _VALID_BORDER_WIDTH = new Set(Object.values(_BORDER_WIDTH_KNOB));
   const _VALID_GAP = new Set([
     0,
-    2, // $space.1 Tamagui space token
-    3.9, // Tamagui InputContainerFrame size-proportional gap
-    4, // $size.$0.5 sub-token used by Tamagui button internals
-    5, // $size.$1
-    9, // $size.$2
+    // $space.1 Tamagui space token
+    2,
+    // Tamagui InputContainerFrame size-proportional gap
+    3.9,
+    // $size.$0.5 sub-token used by Tamagui button internals
+    4,
+    // $size.$1
+    5,
+    // $size.$2
+    9,
     ...Object.values(_GAP_KNOB),
     ...Object.values(_GAP_LG_KNOB),
   ]);
   const _VALID_PADDING = new Set([
     0,
-    2, // $space.1 Tamagui space token
-    7, // $size.$1.5 sub-token (button padding at $size.$2)
+    // $space.1 Tamagui space token
+    2,
+    // $size.$1.5 sub-token (button padding at $size.$2)
+    7,
     ...Object.values(_PANEL_PADDING_KNOB),
   ]);
   const _VALID_FONT_WEIGHT = new Set(Object.values(_FONT_WEIGHT_KNOB));
 
-  const _FONT_FAMILY_KNOB: Record<string, string> = {
+  const _FONT_FAMILY_KNOB = {
     inter: 'sans-serif ($body/$heading)',
     georgia: 'serif',
     monospace: 'mono',
@@ -461,7 +266,7 @@ export const runConstraintAudit = (rootSelector?: string): AuditReport => {
     futura: 'geometric',
     poppins: 'geometric (fallback)',
     'century gothic': 'geometric (fallback)',
-  };
+  } satisfies Record<string, string>;
 
   const _SYSTEM_FONTS = new Set([
     '-apple-system',
@@ -529,7 +334,7 @@ export const runConstraintAudit = (rootSelector?: string): AuditReport => {
     if (px === 2) {
       return 'space-token(2px)';
     }
-    if (px === 3.9) {
+    if (Math.abs(px - 3.9) < 0.005) {
       return 'input-internal(3.9px)';
     }
     if (px === 4 || px === 5 || px === 9) {
@@ -566,7 +371,7 @@ export const runConstraintAudit = (rootSelector?: string): AuditReport => {
     return 'off-scale';
   };
 
-  const _reverseFontFamily = (computed: string): { knob: string; offScale: boolean } => {
+  const _reverseFontFamily = (computed: string): FontFamilyVerdict => {
     const first = computed
       .split(',')[0]
       .trim()
@@ -575,8 +380,8 @@ export const runConstraintAudit = (rootSelector?: string): AuditReport => {
     if (!first) {
       return { knob: 'empty', offScale: true };
     }
-    const knob = _FONT_FAMILY_KNOB[first];
-    if (knob) {
+    const knob = lookup(_FONT_FAMILY_KNOB, first);
+    if (knob !== undefined && knob !== '') {
       return { knob, offScale: false };
     }
     if (_SYSTEM_FONTS.has(first)) {
@@ -589,18 +394,16 @@ export const runConstraintAudit = (rootSelector?: string): AuditReport => {
    * Check inline style for hardcoded color values that bypass theme tokens.
    * Returns the offending property and value, or null if clean.
    */
-  const _checkInlineColors = (el: Element): { property: string; value: string } | null => {
-    const htmlEl = el as HTMLElement;
-    if (!htmlEl.style) {
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serialises this function alone, so every helper must live inside it
+  const _checkInlineColors = (el: Element): InlineColorBypass | null => {
+    if (!(el instanceof HTMLElement || el instanceof SVGElement)) {
       return null;
     }
     const colorProps = ['color', 'backgroundColor', 'borderColor'] as const;
     for (const prop of colorProps) {
-      const val = htmlEl.style[prop];
-      if (!val || val === 'inherit' || val === 'transparent' || val === 'currentColor') {
-        continue;
-      }
-      if (val.startsWith('var(')) {
+      const val = el.style[prop];
+      const neutral = val === '' || val === 'inherit' || val === 'transparent' || val === 'currentColor';
+      if (neutral || val.startsWith('var(')) {
         continue;
       }
       return { property: prop, value: val };
@@ -611,29 +414,27 @@ export const runConstraintAudit = (rootSelector?: string): AuditReport => {
   // ── Helper: parse a single px value from computed style ──────────────────
 
   const parsePx = (raw: string): number | null => {
-    if (!raw || raw === '' || raw === 'normal' || raw === 'auto') {
+    if (raw === '' || raw === 'normal' || raw === 'auto') {
       return null;
     }
     // Handle "9px 9px 9px 9px" form — take first value
-    const first = raw.split(' ')[0];
-    const n = Number.parseFloat(first);
-    if (isNaN(n)) {
+    const [first] = raw.split(' ');
+    // parseFloat tolerates the 'px' suffix; Number() would turn it into NaN.
+    const n = toFloat(first);
+    if (Number.isNaN(n)) {
       return null;
     }
-    return Math.round(n * 100) / 100; // round to 2 decimal places
+    // round to 2 decimal places
+    return Math.round(n * 100) / 100;
   };
 
   // ── Helper: check if border-radius is percentage-based ────────────────────
 
-  const isPercentageBorderRadius = (el: Element): boolean => {
-    // getComputedStyle resolves percentages to px, so check inline style
-    // or CSS text for percentages. This is a best-effort check.
-    const inline = (el as HTMLElement).style?.borderRadius ?? '';
-    if (inline.includes('%')) {
-      return true;
-    }
-    return false;
-  };
+  // getComputedStyle resolves percentages to px, so check inline style
+  // or CSS text for percentages. This is a best-effort check.
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serialises this function alone, so every helper must live inside it
+  const isPercentageBorderRadius = (el: Element): boolean =>
+    (el instanceof HTMLElement || el instanceof SVGElement) && el.style.borderRadius.includes('%');
 
   // ── Helper: build a human-readable element label ──────────────────────────
 
@@ -643,22 +444,25 @@ export const runConstraintAudit = (rootSelector?: string): AuditReport => {
     // render order writes may reach them: React useId ids renumber per mount,
     // and Tamagui atomic classes (always `_`-prefixed) spell resolved values.
     const generatedId = /^(?:_r_[0-9a-z]+_|:r[0-9a-z]+:|«r[0-9a-z]+»)$/u.test(el.id);
-    const id = el.id && !generatedId ? `#${el.id}` : '';
-    const classes = Array.from(el.classList)
+    const id = el.id !== '' && !generatedId ? `#${el.id}` : '';
+    const classes = [...el.classList]
       .filter((c) => c.length > 3 && !c.startsWith('_') && !/^[_a-z0-9]{1,8}-/u.test(c) && !/^\d/u.test(c))
       .slice(0, 3)
       .join('.');
-    const cls = classes ? `.${classes}` : '';
-    const role = el.getAttribute('role') ? `[role=${el.getAttribute('role')}]` : '';
-    const testId = el.getAttribute('data-testid') ? `[data-testid=${el.getAttribute('data-testid')}]` : '';
+    const cls = classes === '' ? '' : `.${classes}`;
+    const roleAttr = el.getAttribute('role');
+    const role = roleAttr === null || roleAttr === '' ? '' : `[role=${roleAttr}]`;
+    const testIdAttr = dataOf(el).testid;
+    const testId = testIdAttr === undefined || testIdAttr === '' ? '' : `[data-testid=${testIdAttr}]`;
     return `${tag}${id}${cls}${role}${testId}` || tag;
   };
 
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serialises this function alone, so every helper must live inside it
   const elementKey = (el: Element, scope: Element | Document): string => {
     const path: string[] = [];
     for (let node: Element | null = el; node; node = node.parentElement) {
       const siblings = node.parentElement
-        ? Array.from(node.parentElement.children).filter((sibling) => sibling.tagName === node.tagName)
+        ? [...node.parentElement.children].filter((sibling) => sibling.tagName === node.tagName)
         : [node];
       path.unshift(`${node.tagName.toLowerCase()}:nth-of-type(${siblings.indexOf(node) + 1})`);
       if (node === scope) {
@@ -679,7 +483,7 @@ export const runConstraintAudit = (rootSelector?: string): AuditReport => {
       if (
         style.display === 'none' ||
         (node !== el && style.contentVisibility === 'hidden') ||
-        Number.parseFloat(style.opacity) === 0
+        toFloat(style.opacity) === 0
       ) {
         return false;
       }
@@ -689,6 +493,7 @@ export const runConstraintAudit = (rootSelector?: string): AuditReport => {
 
   // ── Helper: audit a single numeric property ───────────────────────────────
 
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serialises this function alone, so every helper must live inside it
   const auditProp = (
     value: number | null,
     validSet: Set<number>,
@@ -709,6 +514,7 @@ export const runConstraintAudit = (rootSelector?: string): AuditReport => {
 
   // ── Read active preset and scheme from DOM ────────────────────────────────
 
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serialises this function alone, so every helper must live inside it
   const readPreset = (): string => {
     const root = document.documentElement;
     // Try data attributes set by ThemeProvider
@@ -722,6 +528,7 @@ export const runConstraintAudit = (rootSelector?: string): AuditReport => {
     );
   };
 
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- page.evaluate serialises this function alone, so every helper must live inside it
   const readScheme = (): string => {
     const root = document.documentElement;
     if (root.classList.contains('t_dark')) {
@@ -768,13 +575,13 @@ export const runConstraintAudit = (rootSelector?: string): AuditReport => {
 
   // Third-party devtools root containers — skip their entire subtree
   const DEVTOOLS_SELECTORS = ['#tanstack_devtools', '[data-testid=tanstack_devtools]'];
-  const devtoolsRoots = DEVTOOLS_SELECTORS.flatMap((s) => Array.from(document.querySelectorAll(s)));
+  const devtoolsRoots = DEVTOOLS_SELECTORS.flatMap((s) => [...document.querySelectorAll(s)]);
 
-  const scope = rootSelector ? document.querySelector(rootSelector) : document;
+  const scope = rootSelector === undefined || rootSelector === '' ? document : document.querySelector(rootSelector);
   if (!scope) {
     throw new Error(`Constraint audit scope not found: ${rootSelector}`);
   }
-  const allElements = [...(scope instanceof Element ? [scope] : []), ...Array.from(scope.querySelectorAll('*'))];
+  const allElements = [...(scope instanceof Element ? [scope] : []), ...scope.querySelectorAll('*')];
   const candidates = allElements.filter((el) => {
     const tag = el.tagName.toLowerCase();
     if (SKIP_TAGS.has(tag)) {
@@ -809,9 +616,7 @@ export const runConstraintAudit = (rootSelector?: string): AuditReport => {
       key: elementKey(el, scope),
       tag,
       id: el.id || '',
-      classes: Array.from(el.classList)
-        .filter((c) => c.length > 3 && !/^[_a-z][a-z0-9]{0,6}-/u.test(c))
-        .slice(0, 5),
+      classes: [...el.classList].filter((c) => c.length > 3 && !/^[_a-z][a-z0-9]{0,6}-/u.test(c)).slice(0, 5),
       violations: [],
     };
 
@@ -820,54 +625,55 @@ export const runConstraintAudit = (rootSelector?: string): AuditReport => {
     // Axiom 1: only a declared padded container owns the cap.
     // Provenance is declarative; every corner is still measured, and so is the
     // inset of the containers whose own padding IS the panelPadding knob.
-    const containerName = el.getAttribute('data-constraint-container');
+    const containerName = dataOf(el).constraintContainer;
     const ownsInset = containerName === 'Card' || containerName === 'PageSection';
     const stackedRow = containerName === 'StackedRow';
     // A container padded with a fixed token rather than the panelPadding knob
     // caps at the padding it actually has.
     const ownInset = containerName === 'OwnInset';
+    const fixedCapContainer = containerName === 'PageSection' || containerName === 'TextArea' || stackedRow || ownInset;
     const capContainer =
-      containerName === 'Card'
-        ? ['content', 'elevated'].includes(el.getAttribute('data-tier') ?? '')
-        : containerName === 'PageSection' || containerName === 'TextArea' || stackedRow || ownInset;
-    if (containerName !== null && containerName !== 'Card' && !capContainer) {
+      containerName === 'Card' ? ['content', 'elevated'].includes(dataOf(el).tier ?? '') : fixedCapContainer;
+    if (containerName !== undefined && containerName !== 'Card' && !capContainer) {
       entry.violations.push(`data-constraint-container: "${containerName}" is not a container the cap audit knows`);
     }
-    const binaryPart = el.getAttribute('data-radius-resolution') === 'BINARY';
+    const binaryPart = dataOf(el).radiusResolution === 'BINARY';
     const corners = [
       'borderTopLeftRadius',
       'borderTopRightRadius',
       'borderBottomRightRadius',
       'borderBottomLeftRadius',
     ] as const;
+    type Corner = (typeof corners)[number];
     // A row in a vertical stack caps its OUTER corners and squares
     // the inner ones, so the cap applies per corner by position.
-    const stackPosition = el.getAttribute('data-stack-position') ?? '';
-    const outerCorners: Record<string, readonly (typeof corners)[number][]> = {
-      only: corners,
-      first: ['borderTopLeftRadius', 'borderTopRightRadius'],
-      middle: [],
-      last: ['borderBottomRightRadius', 'borderBottomLeftRadius'],
+    const stackPosition = dataOf(el).stackPosition ?? '';
+    const outerCorners = {
+      only: new Set<Corner>(corners),
+      first: new Set<Corner>(['borderTopLeftRadius', 'borderTopRightRadius']),
+      middle: new Set<Corner>(),
+      last: new Set<Corner>(['borderBottomRightRadius', 'borderBottomLeftRadius']),
     };
-    const stackOuter = Object.hasOwn(outerCorners, stackPosition) ? outerCorners[stackPosition] : undefined;
+    const stackOuter = lookup(outerCorners, stackPosition);
     if (stackedRow && !stackOuter) {
       entry.violations.push(
         `data-stack-position: "${stackPosition}" is not a StackedRow position (only, first, middle, last)`,
       );
     }
     if (capContainer) {
-      const radiusKnob = el.getAttribute('data-radius-knob') ?? '';
-      const spaceKnob = el.getAttribute('data-space-knob') ?? '';
-      const radiusStop = Object.hasOwn(_BORDER_RADIUS_KNOB, radiusKnob) ? _BORDER_RADIUS_KNOB[radiusKnob] : undefined;
+      const radiusKnob = dataOf(el).radiusKnob ?? '';
+      const spaceKnob = dataOf(el).spaceKnob ?? '';
+      const radiusStop = lookup(_BORDER_RADIUS_KNOB, radiusKnob);
       const paddingSides = ['paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft'] as const;
       const measuredInsets = paddingSides.map((prop) => parsePx(style[prop]));
-      const inset = ownInset
-        ? measuredInsets.some((v) => v === null)
-          ? undefined
-          : Math.min(...(measuredInsets as number[]))
-        : Object.hasOwn(_PANEL_PADDING_KNOB, spaceKnob)
-          ? _PANEL_PADDING_KNOB[spaceKnob]
-          : undefined;
+      const insetValues = measuredInsets.filter((v): v is number => v !== null);
+      const allInsetsMeasured = insetValues.length === measuredInsets.length;
+      let inset: number | undefined;
+      if (ownInset) {
+        inset = allInsetsMeasured ? Math.min(...insetValues) : undefined;
+      } else {
+        inset = lookup(_PANEL_PADDING_KNOB, spaceKnob);
+      }
       if (ownsInset) {
         for (const [index, prop] of paddingSides.entries()) {
           const value = measuredInsets[index];
@@ -885,16 +691,18 @@ export const runConstraintAudit = (rootSelector?: string): AuditReport => {
           }
         }
       }
+      const capUnknown = (stackedRow && !stackOuter) || (ownsInset && !allInsetsMeasured);
+      const capInsets = ownsInset ? insetValues : [];
       const cap =
-        radiusStop === undefined ||
-        inset === undefined ||
-        (stackedRow && !stackOuter) ||
-        (ownsInset && measuredInsets.some((v) => v === null))
+        radiusStop === undefined || inset === undefined || capUnknown
           ? undefined
-          : Math.min(radiusStop, inset, ...(ownsInset ? (measuredInsets as number[]) : []));
+          : Math.min(radiusStop, inset, ...capInsets);
+      const cornerKnob = ownInset
+        ? `${containerName} min(radius:${radiusKnob}, own padding)`
+        : `${containerName} min(radius:${radiusKnob}, panelPadding:${spaceKnob})`;
       for (const prop of corners) {
         const raw = style[prop];
-        const inner = stackedRow && stackOuter !== undefined && !stackOuter.includes(prop);
+        const inner = stackedRow && stackOuter !== undefined && !stackOuter.has(prop);
         const expected = inner ? 0 : cap;
         // A corner may have two elliptical axes. Percentages are not px caps.
         const axes = raw.trim().split(/\s+/u);
@@ -904,11 +712,7 @@ export const runConstraintAudit = (rootSelector?: string): AuditReport => {
         const result = {
           value: parsePx(raw) ?? 0,
           unit: 'px',
-          knob: inner
-            ? `${containerName} ${stackPosition} inner corner 0`
-            : ownInset
-              ? `${containerName} min(radius:${radiusKnob}, own padding)`
-              : `${containerName} min(radius:${radiusKnob}, panelPadding:${spaceKnob})`,
+          knob: inner ? `${containerName} ${stackPosition} inner corner 0` : cornerKnob,
           offScale,
         };
         entry[prop] = result;
@@ -920,17 +724,16 @@ export const runConstraintAudit = (rootSelector?: string): AuditReport => {
           );
         }
       }
-      entry.borderRadius = {
-        ...entry.borderTopLeftRadius!,
-        offScale: corners.some((prop) => entry[prop]?.offScale),
-      };
+      const topLeft = entry.borderTopLeftRadius;
+      if (topLeft !== undefined) {
+        entry.borderRadius = { ...topLeft, offScale: corners.some((prop) => entry[prop]?.offScale) };
+      }
       hasAnyProp = true;
     } else if (binaryPart) {
       // Square, or a pill/circle of the part's own shorter edge,
       // at every stop and in every state. Layout size, not the transformed
       // box, so a translated thumb measures the same as a resting one.
-      const box = el as HTMLElement;
-      const half = Math.min(box.offsetWidth, box.offsetHeight) / 2;
+      const half = el instanceof HTMLElement ? Math.min(el.offsetWidth, el.offsetHeight) / 2 : Number.NaN;
       const measuredCorners = corners.map((prop) => style[prop].trim().split(/\s+/u));
       if (measuredCorners.some((axes) => axes.some((axis) => parsePx(axis) !== 0))) {
         for (const [index, prop] of corners.entries()) {
@@ -948,10 +751,10 @@ export const runConstraintAudit = (rootSelector?: string): AuditReport => {
             entry.violations.push(`${prop}: ${raw} is neither 0 nor BINARY h/2 (${half}px)`);
           }
         }
-        entry.borderRadius = {
-          ...entry.borderTopLeftRadius!,
-          offScale: corners.some((prop) => entry[prop]?.offScale),
-        };
+        const topLeft = entry.borderTopLeftRadius;
+        if (topLeft !== undefined) {
+          entry.borderRadius = { ...topLeft, offScale: corners.some((prop) => entry[prop]?.offScale) };
+        }
         hasAnyProp = true;
       }
     } else if (!isPercentageBorderRadius(el)) {
@@ -966,8 +769,8 @@ export const runConstraintAudit = (rootSelector?: string): AuditReport => {
     }
 
     // ── Border Width ────────────────────────────────────────────────────────
-    const bwRaw = style.borderTopWidth; // check top; knobs set all sides equally
-    const bw = parsePx(bwRaw);
+    // check top; knobs set all sides equally
+    const bw = parsePx(style.borderTopWidth);
     if (bw !== null && bw > 0) {
       entry.borderWidth = auditProp(bw, _VALID_BORDER_WIDTH, _reverseBorderWidth, 'borderWidth', entry.violations);
       if (entry.borderWidth) {
@@ -1009,7 +812,7 @@ export const runConstraintAudit = (rootSelector?: string): AuditReport => {
         if (val !== null && val > 0) {
           const result = auditProp(val, _VALID_PADDING, _reversePadding, prop, entry.violations);
           if (result) {
-            (entry as unknown as Record<string, unknown>)[prop] = result;
+            entry[prop] = result;
             hasAnyProp = true;
           }
         }
@@ -1018,29 +821,29 @@ export const runConstraintAudit = (rootSelector?: string): AuditReport => {
 
     // ── Font Weight ─────────────────────────────────────────────────────────
     const fw = parsePx(style.fontWeight);
-    const weightKnob = el.getAttribute('data-font-weight-knob');
-    if (fw !== null && (fw !== 400 || weightKnob !== null)) {
+    const weightKnob = dataOf(el).fontWeightKnob;
+    if (fw !== null && (fw !== 400 || weightKnob !== undefined)) {
       // defaults/fonts.ts takes heading.weight from @tamagui/config/v5:
       // $0–$5 = 600, $6–$8 = 700, $9+ = 800. FontKnobStyles preserves
       // font_heading while changing its family. These are typography defaults,
       // not alternatives to an explicitly declared regular/bold recipe.
       const configuredHeading = el.classList.contains('font_heading') && [600, 700, 800].includes(fw);
       const expected =
-        weightKnob !== null && ['regular', 'bold'].includes(weightKnob) ? _FONT_WEIGHT_KNOB[weightKnob] : undefined;
+        weightKnob !== undefined && ['regular', 'bold'].includes(weightKnob)
+          ? lookup(_FONT_WEIGHT_KNOB, weightKnob)
+          : undefined;
       const offScale =
-        weightKnob === null
+        weightKnob === undefined
           ? !_VALID_FONT_WEIGHT.has(fw) && !configuredHeading
           : expected === undefined || fw !== expected;
-      const knob =
-        weightKnob === null
-          ? configuredHeading
-            ? 'configured heading (@tamagui/config/v5)'
-            : _reverseFontWeight(fw)
-          : `fontWeight:${weightKnob}`;
+      let knob = `fontWeight:${weightKnob}`;
+      if (weightKnob === undefined) {
+        knob = configuredHeading ? 'configured heading (@tamagui/config/v5)' : _reverseFontWeight(fw);
+      }
       entry.fontWeight = { value: fw, unit: '', knob, offScale };
       if (offScale) {
         entry.violations.push(
-          `fontWeight: ${fw} does not match ${weightKnob === null ? 'a configured typography weight' : knob}`,
+          `fontWeight: ${fw} does not match ${weightKnob === undefined ? 'a configured typography weight' : knob}`,
         );
       }
       hasAnyProp = true;
@@ -1078,14 +881,11 @@ export const runConstraintAudit = (rootSelector?: string): AuditReport => {
       const elFontFamily = style.fontFamily;
       if (elFontFamily && (!parentStyle || elFontFamily !== parentStyle.fontFamily)) {
         const ffResult = _reverseFontFamily(elFontFamily);
+        entry.fontFamily = { value: elFontFamily, knob: ffResult.knob, offScale: ffResult.offScale };
         if (ffResult.offScale) {
-          entry.fontFamily = { value: elFontFamily, knob: ffResult.knob, offScale: true };
           entry.violations.push(`fontFamily: "${elFontFamily.split(',')[0].trim()}" is not a registered font token`);
-          hasAnyProp = true;
-        } else {
-          entry.fontFamily = { value: elFontFamily, knob: ffResult.knob, offScale: false };
-          hasAnyProp = true;
         }
+        hasAnyProp = true;
       }
     }
 
@@ -1118,10 +918,9 @@ export const runConstraintAudit = (rootSelector?: string): AuditReport => {
     byProperty: {
       borderRadius: violationElements.filter((e) => e.borderRadius?.offScale).length,
       borderWidth: violationElements.filter((e) => e.borderWidth?.offScale).length,
-      gap: violationElements.filter((e) => e.rowGap?.offScale || e.columnGap?.offScale).length,
-      padding: violationElements.filter(
-        (e) =>
-          e.paddingTop?.offScale || e.paddingRight?.offScale || e.paddingBottom?.offScale || e.paddingLeft?.offScale,
+      gap: violationElements.filter((e) => e.rowGap?.offScale === true || e.columnGap?.offScale === true).length,
+      padding: violationElements.filter((e) =>
+        [e.paddingTop, e.paddingRight, e.paddingBottom, e.paddingLeft].some((side) => side?.offScale === true),
       ).length,
       fontWeight: violationElements.filter((e) => e.fontWeight?.offScale).length,
       fontFamily: violationElements.filter((e) => e.fontFamily?.offScale).length,

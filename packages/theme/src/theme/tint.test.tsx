@@ -1,16 +1,8 @@
-import type React from 'react';
+import type { ThemeName } from '@tamagui/web';
 import { createElement } from 'react';
-import type { ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import { renderToString } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
-
-// Mock Tamagui's <Theme> so we can inspect the chosen theme name
-vi.mock('tamagui', () => ({
-  Theme: ({ name, children }: { name: string; children: ReactNode }) =>
-    createElement('div', { 'data-tamagui-theme': name }, children),
-}));
-
-import type { ThemeName } from '@tamagui/web';
 
 import { defaultKnobs } from './knobs';
 import { PresetContext } from './preset-context';
@@ -18,6 +10,13 @@ import type { PresetContextValue } from './preset-context';
 import type { Preset } from './preset.types';
 import { defaultPreset } from './presets';
 import { Tint, useTintDepth } from './Tint';
+
+// Mock Tamagui's <Theme> so we can inspect the chosen theme name
+vi.mock(import('tamagui'), () => ({
+  // SAFETY: a plain function component stands in for Tamagui's ForwardRef Theme; the module only needs it callable as a component.
+  Theme: (({ name, children }: { name: string; children: ReactNode }) =>
+    createElement('div', { 'data-tamagui-theme': name }, children)) as never,
+}));
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -38,15 +37,15 @@ const wrapWithPreset = (tints: ThemeName[], children: ReactNode): ReactNode => {
   return createElement(PresetContext.Provider, { value: ctx }, children);
 };
 
-const renderToHtml = (node: ReactNode): string => renderToString(node as React.ReactElement);
+const renderToHtml = (node: ReactNode): string => renderToString(node as ReactElement);
 
 /** Render a tree and return an array of all `data-tamagui-theme` values. */
 const collectThemes = (html: string): string[] =>
-  Array.from(html.matchAll(/data-tamagui-theme="([^"]+)"/gu), (m) => m[1]);
+  Array.from(html.matchAll(/data-tamagui-theme="(?<name>[^"]+)"/gu), (m) => m[1]);
 
 const nestTints = (count: number, innermost: ReactNode = createElement('span', null, 'inner')): ReactNode => {
   let node: ReactNode = innermost;
-  for (let i = 0; i < count; i++) {
+  for (let i = 0; i < count; i += 1) {
     node = createElement(Tint, null, node);
   }
   return node;
@@ -56,7 +55,7 @@ const nestTints = (count: number, innermost: ReactNode = createElement('span', n
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('Tint', () => {
+describe(Tint, () => {
   it('defaultPreset.tints is the four-name decorative family', () => {
     expect(defaultPreset.tints).toStrictEqual(FAMILY);
   });
@@ -135,25 +134,25 @@ describe('Tint', () => {
   });
 });
 
-describe('useTintDepth', () => {
+describe(useTintDepth, () => {
   it('returns 0 outside of any <Tint>', () => {
-    let depth = -1;
+    const depths: number[] = [];
     const Probe = () => {
-      depth = useTintDepth();
+      depths.push(useTintDepth());
       return null;
     };
     renderToString(createElement(Probe));
-    expect(depth).toBe(0);
+    expect(depths).toStrictEqual([0]);
   });
 
   it('returns current depth inside nested <Tint> components', () => {
-    let capturedDepth = -1;
+    const depths: number[] = [];
     const Probe = () => {
-      capturedDepth = useTintDepth();
+      depths.push(useTintDepth());
       return createElement('span', null, 'probe');
     };
     const tree = wrapWithPreset(FAMILY, createElement(Tint, null, createElement(Tint, null, createElement(Probe))));
     renderToHtml(tree);
-    expect(capturedDepth).toBe(2);
+    expect(depths).toStrictEqual([2]);
   });
 });

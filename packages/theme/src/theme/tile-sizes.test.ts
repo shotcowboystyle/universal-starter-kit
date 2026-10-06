@@ -13,11 +13,11 @@ import {
   tileSizeRungs,
 } from './tile-sizes';
 
-afterEach(() => {
-  setSizeRecipeInputs();
-});
-
 describe('tile-size ladder', () => {
+  afterEach(() => {
+    setSizeRecipeInputs();
+  });
+
   it('defaults to the measured consumer ladders, not invented numbers', () => {
     const ladder = generateTileSizeLadder(resolveTileSizeInputs());
     // sm..xl are Lookout's TILE_SIZES basis/max (identical to the SPA's
@@ -33,12 +33,11 @@ describe('tile-size ladder', () => {
 
   it('is a generated table: rungs are monotonic and max >= min on every rung', () => {
     const ladder = generateTileSizeLadder(resolveTileSizeInputs());
-    for (let i = 0; i < tileSizeRungs.length; i++) {
-      const stop = ladder[tileSizeRungs[i]];
-      expect(stop.maxWidth).toBeGreaterThanOrEqual(stop.minWidth);
-      if (i > 0) {
-        expect(stop.minWidth).toBeGreaterThan(ladder[tileSizeRungs[i - 1]].minWidth);
-      }
+    for (const rung of tileSizeRungs) {
+      expect(ladder[rung].maxWidth).toBeGreaterThanOrEqual(ladder[rung].minWidth);
+    }
+    for (let i = 1; i < tileSizeRungs.length; i += 1) {
+      expect(ladder[tileSizeRungs[i]].minWidth).toBeGreaterThan(ladder[tileSizeRungs[i - 1]].minWidth);
     }
   });
 

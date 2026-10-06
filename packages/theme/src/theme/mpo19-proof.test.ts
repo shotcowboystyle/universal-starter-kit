@@ -33,19 +33,33 @@ import { defaultKnobs } from './knobs';
 import { layoutBreakpoints, OVERLAY_BREAKPOINT } from './layout-tokens';
 import { resolveKnobs } from './resolve-knobs';
 
+type Scalar = number | string;
+type RawTable = Record<string, Scalar | { val?: Scalar }>;
+
 /** A font table's numbers/strings, Variables unwrapped and `$` stripped. */
-const table = (raw: unknown): Record<string, unknown> => {
-  const out: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries((raw ?? {}) as Record<string, unknown>)) {
-    const v = value && typeof value === 'object' && 'val' in value ? (value as { val?: unknown }).val : value;
-    if (v !== undefined) {
-      out[key.replace(/^\$/u, '')] = v;
-    }
-  }
-  return out;
-};
+const table = (raw: RawTable | undefined) =>
+  Object.fromEntries(
+    Object.entries(raw ?? {}).flatMap(([key, value]) => {
+      // oxlint-disable-next-line anti-slop/no-runtime-typeof -- font tables mix bare values and `{ val }` Variables
+      const v = typeof value === 'object' && value !== null ? value.val : value;
+      return v === undefined ? [] : [[key.replace(/^\$/u, ''), v] as const];
+    }),
+  );
 
 const knobProps = (over: Partial<typeof defaultKnobs> = {}) => resolveKnobs({ ...defaultKnobs, ...over }).knobProps;
+
+type KnobFragment = ReturnType<typeof knobProps>[keyof ReturnType<typeof knobProps>];
+
+/** The painted `backgroundColor` of a knob fragment, when the fragment is an object that carries one. */
+const backgroundColorOf = (fragment: KnobFragment): string | undefined => {
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- knobProps mixes object fragments with scalar knobs
+  if (typeof fragment !== 'object' || fragment === null || !('backgroundColor' in fragment)) {
+    return undefined;
+  }
+  const { backgroundColor } = fragment;
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- fragment values are untyped CSS-ish props
+  return typeof backgroundColor === 'string' ? backgroundColor : undefined;
+};
 
 describe('one Tamagui era, and it is load-bearing', () => {
   it('the era is pinned, and pinned to v5', () => {
@@ -58,9 +72,7 @@ describe('one Tamagui era, and it is load-bearing', () => {
     // why nothing broke and why nobody noticed for a year.
     const legacy = await import('@tamagui/themes');
     for (const group of ['size', 'space', 'radius', 'zIndex'] as const) {
-      expect(table(defaultConfig.tokens[group]), `tokens.${group}`).toStrictEqual(
-        table((legacy.tokens as Record<string, unknown>)[group]),
-      );
+      expect(table(defaultConfig.tokens[group]), `tokens.${group}`).toStrictEqual(table(legacy.tokens[group]));
     }
   });
 });
@@ -85,11 +97,11 @@ describe("the type scale IS the era's, not a copy of it", () => {
   });
 
   it('body leading is the taper, so the ratio falls as the size grows', () => {
-    const size = table(defaultBodyFont.size) as Record<string, number>;
-    const lineHeight = table(defaultBodyFont.lineHeight) as Record<string, number>;
+    const size = table(defaultBodyFont.size);
+    const lineHeight = table(defaultBodyFont.lineHeight);
     // `size + 10` was never a ratio: 1.91 at 11px and 1.22 at 46px. The taper
     // holds ~1.5 at text sizes and eases toward ~1.42 at display sizes.
-    const ratioAt = (key: string) => lineHeight[key] / size[key];
+    const ratioAt = (key: string) => Number(lineHeight[key]) / Number(size[key]);
     expect(ratioAt('4')).toBeGreaterThan(1.45);
     expect(ratioAt('4')).toBeLessThan(1.56);
     expect(ratioAt('10')).toBeLessThan(ratioAt('4'));
@@ -101,7 +113,7 @@ describe("the type scale IS the era's, not a copy of it", () => {
   });
 
   it('heading weight is the sparse 600/700/800 ramp, so bold still means something', () => {
-    const weight = table(defaultHeadingFont.weight) as Record<string, string>;
+    const weight = table(defaultHeadingFont.weight);
     expect(weight['1']).toBe('600');
     expect(weight['6']).toBe('700');
     expect(weight['9']).toBe('800');
@@ -111,7 +123,7 @@ describe("the type scale IS the era's, not a copy of it", () => {
   });
 
   it('every declared weight has a face, so nothing is synthesised', () => {
-    const face = defaultHeadingFont.face as Record<string, unknown> | undefined;
+    const { face } = defaultHeadingFont;
     for (const w of new Set(Object.values(table(defaultHeadingFont.weight)))) {
       expect(face?.[String(w)], `face[${w}]`).toBeDefined();
     }
@@ -187,9 +199,8 @@ describe('surfaces address semantic tokens, so sub-themes work', () => {
     // default template so the rendered colour did not change. What changed is
     // that `<Theme name="surface1">` can now move it.
     const painted = Object.values(knobProps())
-      .filter((v): v is Record<string, unknown> => !!v && typeof v === 'object')
-      .map((fragment) => fragment.backgroundColor)
-      .filter((v): v is string => typeof v === 'string');
+      .map(backgroundColorOf)
+      .filter((color): color is string => color !== undefined);
     expect(painted).not.toContain('$color1');
     expect(painted).not.toContain('$color2');
   });
@@ -250,7 +261,7 @@ describe("the breakpoint vocabulary covers Tamagui's", () => {
 
 describe('the nested radius is named for what it resolves to', () => {
   it('it is never LARGER than the frame it sits inside', () => {
-    const radiusPx: Record<string, number> = {
+    const radiusPx = {
       $0: 0,
       $2: 5,
       $3: 7,
@@ -258,7 +269,7 @@ describe('the nested radius is named for what it resolves to', () => {
       $5: 10,
       $6: 16,
       $12: 50,
-    };
+    } as const satisfies Record<string, number>;
     for (const knob of ['none', 'small', 'medium', 'large', 'full'] as const) {
       const props = knobProps({ borderRadius: knob });
       const outer = radiusPx[props.borderRadius.borderRadius];
@@ -269,6 +280,7 @@ describe('the nested radius is named for what it resolves to', () => {
 
   it('the old name is the SAME object, so the two cannot drift while both exist', () => {
     const props = knobProps();
+    // oxlint-disable-next-line typescript/no-deprecated -- this test pins the deprecated alias to the new name
     expect(props.borderRadiusOuter).toBe(props.borderRadiusNested);
   });
 });

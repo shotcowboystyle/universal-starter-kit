@@ -3,7 +3,7 @@ import { useContext, useEffect, useInsertionEffect, useMemo, useRef } from 'reac
 import type { PropsWithChildren } from 'react';
 import { useCookies } from 'react-cookie';
 import { TamaguiProvider, useDidFinishSSR } from 'tamagui';
-import type { CreateTamaguiProps, TamaguiProviderProps } from 'tamagui';
+import type { createTamagui, CreateTamaguiProps, TamaguiProviderProps } from 'tamagui';
 
 import { animationDurations } from './animations/css';
 import { getCookieWatchList, readOverridesCookie, readPresetCookie } from './cookies';
@@ -22,13 +22,14 @@ import { getPreset } from './shared';
  * Both paths derive their duration from the `--mp-transition` CSS variable,
  * which KnobBridge keeps in sync with the animation knob.
  */
+// oxlint-disable-next-line react-doctor/only-export-components -- plain helper exported beside the provider; it is imported by name elsewhere
 export const startThemeTransition = (apply: () => void): void => {
   if (typeof document === 'undefined') {
     apply();
     return;
   }
 
-  if (document.startViewTransition) {
+  if (document.startViewTransition !== undefined) {
     document.startViewTransition(apply);
     return;
   }
@@ -37,7 +38,8 @@ export const startThemeTransition = (apply: () => void): void => {
   root.classList.add('mp-transitioning');
   apply();
 
-  const transitionMs = Number.parseInt(getComputedStyle(root).getPropertyValue('--mp-transition'), 10) || 200;
+  // oxlint-disable-next-line unicorn/prefer-number-coercion -- the value is a CSS time such as `200ms`: parseFloat reads the leading number, Number() would give NaN
+  const transitionMs = Number.parseFloat(getComputedStyle(root).getPropertyValue('--mp-transition')) || 200;
   setTimeout(() => {
     root.classList.remove('mp-transitioning');
   }, transitionMs + 50);
@@ -51,7 +53,7 @@ export interface ThemeProviderProps<T extends CreateTamaguiProps = CreateTamagui
   Omit<TamaguiProviderProps, 'config' | 'defaultTheme'>
 > {
   config?: {
-    tamagui: ReturnType<typeof import('tamagui').createTamagui<T>>;
+    tamagui: ReturnType<typeof createTamagui<T>>;
   };
   systemTheme?: 'light' | 'dark';
 }
@@ -82,11 +84,13 @@ const KnobBridge = ({ children }: PropsWithChildren) => {
   const watchList = isCookieDisabled ? [] : getCookieWatchList();
   const [cookie] = useCookies<string, Record<string, string>>(watchList);
 
+  // SAFETY: react-cookie returns the watched cookies; values are strings or undefined when absent.
   const presetName = readPresetCookie(cookie as Record<string, string | undefined>);
+  // SAFETY: same cookie jar as above.
   const overrides = readOverridesCookie(cookie as Record<string, string | undefined>);
 
   const presetCtxValue = useMemo<PresetContextValue>(() => {
-    const base = (presetName ? getPreset(presetName) : undefined) ?? defaultPreset;
+    const base = (presetName === undefined ? undefined : getPreset(presetName)) ?? defaultPreset;
     return {
       preset: { ...base, knobs: { ...base.knobs, ...overrides } },
       overrides,
@@ -138,7 +142,7 @@ export const ThemeProvider = <T extends CreateTamaguiProps>({
   // blocking scheme script owns <html> until hydration finishes.
   const hydrated = useDidFinishSSR();
 
-  const prevThemeRef = useRef<string | undefined>(undefined);
+  const prevThemeRef = useRef<string | null>(null);
 
   // Set the initial theme class synchronously to avoid FOUC.
   useInsertionEffect(() => {
@@ -161,7 +165,7 @@ export const ThemeProvider = <T extends CreateTamaguiProps>({
     }
     const previous = prevThemeRef.current;
     prevThemeRef.current = activeTheme;
-    if (previous === undefined || previous === activeTheme) {
+    if (previous === null || previous === activeTheme) {
       return;
     }
 
@@ -171,6 +175,7 @@ export const ThemeProvider = <T extends CreateTamaguiProps>({
       classList.add(`t_${activeTheme}`);
       document.documentElement.style.colorScheme = activeTheme;
     });
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- keep deps at activeTheme: adding `hydrated` would start animating the first scheme change after hydration, which this effect has never done
   }, [activeTheme]);
 
   // Inject class-gated CSS fallback (dormant until .mp-transitioning is added)
@@ -180,7 +185,7 @@ export const ThemeProvider = <T extends CreateTamaguiProps>({
       return;
     }
     const id = '__mp-theme-transitions';
-    if (document.getElementById(id)) {
+    if (document.querySelector(`#${id}`)) {
       return;
     }
     const style = document.createElement('style');

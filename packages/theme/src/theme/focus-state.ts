@@ -18,10 +18,10 @@ export const FOCUS_RING_MIN_CONTRAST = 3;
  */
 const ringColorCarriesAlpha = (color: string): boolean => {
   const s = color.trim().toLowerCase();
-  const fn = /^(?:rgba|hsla)\([^)]*[,/]\s*([\d.]+%?)\s*\)$/u.exec(s);
+  const fn = /^(?:rgba|hsla)\([^)]*[,/]\s*(?<alpha>[\d.]+%?)\s*\)$/u.exec(s);
   if (fn) {
-    const raw = fn[1];
-    const a = raw.endsWith('%') ? Number.parseFloat(raw) / 100 : Number.parseFloat(raw);
+    const [, raw] = fn;
+    const a = raw.endsWith('%') ? Number(raw.slice(0, -1)) / 100 : Number(raw);
     return Number.isFinite(a) && a < 0.999;
   }
   if (/^#[0-9a-f]{8}$/u.test(s)) {
@@ -40,7 +40,7 @@ const ringColorCarriesAlpha = (color: string): boolean => {
 export const focusRingColorMeetsContrast = (ringColor: string, surfaceColor: string): boolean => {
   const ring = normalizeToHex(ringColor);
   const surface = normalizeToHex(surfaceColor);
-  if (!ring || !surface) {
+  if (ring === null || surface === null) {
     return false;
   }
   return contrastRatio(relativeLuminance(ring), relativeLuminance(surface)) >= FOCUS_RING_MIN_CONTRAST;
@@ -138,6 +138,7 @@ export const SANCTIONED_FOCUS_RING_OFFSETS = [
 
 /** True when `offset` is one of the three sanctioned offsets. */
 export const isSanctionedFocusRingOffset = (offset: number): boolean =>
+  // SAFETY: widening a readonly tuple of number literals to number[] only to call includes().
   (SANCTIONED_FOCUS_RING_OFFSETS as readonly number[]).includes(offset);
 
 /**
@@ -161,25 +162,31 @@ export const STATE_LAYER_PRESS = {
 export const ensureFocusVisibleRing = <T extends ControlStateProps>(
   override?: (T & ControlStateProps) | null,
 ): T & ControlStateProps => {
+  // SAFETY: override is a T & ControlStateProps laid over a ControlStateProps, so the merge still carries T.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- TS cannot see that a spread over generic T is still a T
   const merged = {
     ...FOCUS_VISIBLE_RING,
     ...override,
   } as T & ControlStateProps;
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- outlineWidth can be a token string or Variable at runtime; only a number is usable here
   const width = typeof merged.outlineWidth === 'number' ? merged.outlineWidth : FOCUS_RING_MIN_WIDTH;
   merged.outlineWidth = Math.max(width, FOCUS_RING_MIN_WIDTH);
   if (merged.outlineStyle !== 'solid') {
     merged.outlineStyle = 'solid';
   }
+  const colorIsMissing = merged.outlineColor == null || merged.outlineColor === '';
+  const colorIsInvisible = merged.outlineColor === 'transparent' || merged.outlineColor === 'none';
   if (
-    !merged.outlineColor ||
-    merged.outlineColor === 'transparent' ||
-    merged.outlineColor === 'none' ||
+    colorIsMissing ||
+    colorIsInvisible ||
     // Enforce COLOR, not just shape: an alpha-carrying ring can't guarantee
     // ≥3:1 (its contrast depends on the backdrop), so restore the solid token.
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- outlineColor can be a Variable at runtime; only strings carry parseable alpha
     (typeof merged.outlineColor === 'string' && ringColorCarriesAlpha(merged.outlineColor))
   ) {
     merged.outlineColor = FOCUS_VISIBLE_RING.outlineColor;
   }
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- outlineOffset can be a Variable or unset at runtime; anything but a number reverts to the baseline
   if (typeof merged.outlineOffset !== 'number') {
     merged.outlineOffset = FOCUS_VISIBLE_RING.outlineOffset;
   }

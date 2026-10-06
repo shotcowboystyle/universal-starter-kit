@@ -25,9 +25,9 @@ const Probe = ({ label }: { label: string }) => {
   const { knobProps } = useResolvedKnobs();
   const attrs = {
     'data-intent': intent ?? 'none',
-    'data-outlined': String(Boolean(knobProps.outlined)),
+    'data-outlined': String(knobProps.outlined),
     'data-fill-style': knobProps.outlined ? 'outlined' : 'filled',
-  } as Record<string, unknown>;
+  };
   return (
     <YStack
       {...knobProps.surface}
