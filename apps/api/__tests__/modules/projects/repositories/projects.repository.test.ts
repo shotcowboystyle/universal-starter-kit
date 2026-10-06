@@ -2,34 +2,42 @@ import { Types } from 'mongoose';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ProjectRepository } from '../../../../src/modules/projects/repositories/projects.repository';
+import type { Project } from '../../../../src/modules/projects/schemas/projects.schema';
 
-describe('ProjectRepository', () => {
+type AnyFn = (...args: any[]) => any;
+
+describe(ProjectRepository, () => {
   let repository: ProjectRepository;
   let mockModel: any;
 
   beforeEach(() => {
     // Correctly define MockModel as a function that mimics a constructor
-    const MockModel = vi.fn().mockImplementation(function MockProjectModel(data) {
-      return {
-        ...data,
-        save: vi.fn().mockResolvedValue(data),
-      };
-    }) as any;
-
-    MockModel.find = vi.fn().mockReturnThis();
-    MockModel.findById = vi.fn().mockReturnThis();
-    MockModel.populate = vi.fn().mockReturnThis();
-    MockModel.exec = vi.fn();
-    MockModel.findByIdAndUpdate = vi.fn().mockReturnThis();
-    MockModel.deleteOne = vi.fn();
-    MockModel.deleteMany = vi.fn().mockReturnThis();
-    MockModel.findOne = vi.fn().mockReturnThis();
-    MockModel.sort = vi.fn().mockReturnThis();
-    MockModel.select = vi.fn().mockReturnThis();
-    MockModel.lean = vi.fn();
-    MockModel.updateMany = vi.fn().mockReturnThis();
-    MockModel.updateOne = vi.fn();
-    MockModel.exists = vi.fn();
+    const MockModel = Object.assign(
+      vi
+        .fn<(data: Partial<Project>) => Partial<Project> & { save: AnyFn }>()
+        .mockImplementation(function MockProjectModel(data) {
+          return {
+            ...data,
+            save: vi.fn<AnyFn>().mockResolvedValue(data),
+          };
+        }),
+      {
+        find: vi.fn<AnyFn>().mockReturnThis(),
+        findById: vi.fn<AnyFn>().mockReturnThis(),
+        populate: vi.fn<AnyFn>().mockReturnThis(),
+        exec: vi.fn<AnyFn>(),
+        findByIdAndUpdate: vi.fn<AnyFn>().mockReturnThis(),
+        deleteOne: vi.fn<AnyFn>(),
+        deleteMany: vi.fn<AnyFn>().mockReturnThis(),
+        findOne: vi.fn<AnyFn>().mockReturnThis(),
+        sort: vi.fn<AnyFn>().mockReturnThis(),
+        select: vi.fn<AnyFn>().mockReturnThis(),
+        lean: vi.fn<AnyFn>(),
+        updateMany: vi.fn<AnyFn>().mockReturnThis(),
+        updateOne: vi.fn<AnyFn>(),
+        exists: vi.fn<AnyFn>(),
+      },
+    );
 
     mockModel = MockModel;
     repository = new ProjectRepository(mockModel);
@@ -135,7 +143,7 @@ describe('ProjectRepository', () => {
 
       const result = await repository.deleteByBoardId(boardId);
 
-      expect(mockModel.deleteMany).toHaveBeenCalled();
+      expect(mockModel.deleteMany).toHaveBeenCalledWith({ board: new Types.ObjectId(boardId) });
       expect(result).toStrictEqual({ deletedCount: 5 });
     });
 

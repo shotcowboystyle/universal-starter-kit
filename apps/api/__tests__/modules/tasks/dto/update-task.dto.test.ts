@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { UpdateTaskDto } from '../../../../src/modules/tasks/dto/update-task.dto';
 import { TaskStatus } from '../../../../src/modules/tasks/schemas/tasks.schema';
 
-describe('UpdateTaskDto', () => {
+describe(UpdateTaskDto, () => {
   it('should pass validation with valid data', async () => {
     const dto = new UpdateTaskDto();
     dto.title = 'Test Task';

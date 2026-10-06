@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { UpdateBoardDto } from '../../../../src/modules/boards/dto/update-boards.dto';
 
-describe('UpdateBoardDto', () => {
+describe(UpdateBoardDto, () => {
   it('should pass validation with valid data', async () => {
     const dto = new UpdateBoardDto();
     dto.title = 'Updated Board';

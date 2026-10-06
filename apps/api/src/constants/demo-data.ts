@@ -13,18 +13,20 @@ export const demoUsers = [
   },
 ];
 
+const PERSONAL_BOARD_DESCRIPTION = 'My personal tasks and projects';
+
 export const demoBoards = [
   {
     title: "Mark's Kanban",
-    description: 'My personal tasks and projects',
+    description: PERSONAL_BOARD_DESCRIPTION,
   },
   {
     title: "John's Kanban",
-    description: 'My personal tasks and projects',
+    description: PERSONAL_BOARD_DESCRIPTION,
   },
   {
     title: "Jane's Kanban",
-    description: 'My personal tasks and projects',
+    description: PERSONAL_BOARD_DESCRIPTION,
   },
   {
     title: 'Dev Team Board',

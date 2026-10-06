@@ -3,8 +3,8 @@ import { BadRequestException, Injectable, Logger, NotFoundException } from '@nes
 import type { EventEmitter2 } from 'eventemitter2';
 import { Types } from 'mongoose';
 
-import type { BoardDeletedEvent } from '../../common/events';
-import { ProjectDeletedEvent } from '../../common/events';
+import type { BoardDeletedEvent } from '../../common/events/board-deleted.event';
+import { ProjectDeletedEvent } from '../../common/events/project-deleted.event';
 import type { BoardService } from '../boards/boards.service';
 
 import type { CreateProjectDto } from './dto/create-project.dto';
@@ -23,8 +23,8 @@ export class ProjectsService implements OnModuleInit {
   ) {}
 
   onModuleInit(): void {
-    this.eventEmitter.on('board.deleted', async (event: BoardDeletedEvent) => {
-      await this.handleBoardDeleted(event);
+    this.eventEmitter.on('board.deleted', (event: BoardDeletedEvent) => {
+      void this.handleBoardDeleted(event);
     });
   }
 
@@ -51,11 +51,11 @@ export class ProjectsService implements OnModuleInit {
   }
 
   async update(id: string, updateProjectDto: UpdateProjectDto, userId: string): Promise<ProjectDocument> {
-    this.validateIds(id, userId);
+    ProjectsService.validateIds(id, userId);
 
     const project = await this.findProjectById(id);
     await this.checkUpdatePermissions(project, userId, updateProjectDto);
-    const updateData = this.prepareUpdateData(updateProjectDto);
+    const updateData = ProjectsService.prepareUpdateData(updateProjectDto);
 
     const updatedProject = await this.projectRepository.updateById(id, updateData);
     if (!updatedProject) {
@@ -65,11 +65,11 @@ export class ProjectsService implements OnModuleInit {
   }
 
   async remove(id: string, userId: string): Promise<{ message: string }> {
-    this.validateIds(id, userId);
+    ProjectsService.validateIds(id, userId);
 
     const project = await this.findProjectById(id);
 
-    if (project.owner.toString() !== userId.toString()) {
+    if (project.owner.toString() !== userId) {
       throw new BadRequestException('You do not have permission to delete this project');
     }
 
@@ -116,14 +116,11 @@ export class ProjectsService implements OnModuleInit {
       throw new BadRequestException(`Invalid owner ID: ${owner}`);
     }
 
-    let order = createProjectDto.orderInBoard;
-    if (order === undefined) {
-      order = await this.projectRepository.getLastOrderInBoard(boardId);
-    }
+    const order = createProjectDto.orderInBoard ?? (await this.projectRepository.getLastOrderInBoard(boardId));
 
     const projectData: Partial<Project> = {
       title,
-      description: description || null,
+      description: description === undefined || description === '' ? null : description,
       owner: new Types.ObjectId(owner),
       board: new Types.ObjectId(boardId),
       members: [new Types.ObjectId(owner)],
@@ -143,7 +140,7 @@ export class ProjectsService implements OnModuleInit {
 
   // --- Private helpers ---
 
-  private validateIds(id: string, userId: string): void {
+  private static validateIds(id: string, userId: string): void {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid project ID');
     }
@@ -165,8 +162,8 @@ export class ProjectsService implements OnModuleInit {
     userId: string,
     updateProjectDto: UpdateProjectDto,
   ): Promise<void> {
-    const isOwner = project.owner.toString() === userId.toString();
-    const isOrderOnly = this.isOrderOnlyUpdate(updateProjectDto);
+    const isOwner = project.owner.toString() === userId;
+    const isOrderOnly = ProjectsService.isOrderOnlyUpdate(updateProjectDto);
 
     if (!isOwner) {
       if (isOrderOnly) {
@@ -177,14 +174,11 @@ export class ProjectsService implements OnModuleInit {
     }
   }
 
-  private isOrderOnlyUpdate(updateProjectDto: UpdateProjectDto): boolean {
+  private static isOrderOnlyUpdate(updateProjectDto: UpdateProjectDto): boolean {
+    const { orderInBoard, title, description, status, dueDate, assigneeId } = updateProjectDto;
     return (
-      updateProjectDto.orderInBoard !== undefined &&
-      updateProjectDto.title === undefined &&
-      updateProjectDto.description === undefined &&
-      updateProjectDto.status === undefined &&
-      updateProjectDto.dueDate === undefined &&
-      updateProjectDto.assigneeId === undefined
+      orderInBoard !== undefined &&
+      [title, description, status, dueDate, assigneeId].every((value) => value === undefined)
     );
   }
 
@@ -196,7 +190,7 @@ export class ProjectsService implements OnModuleInit {
     }
   }
 
-  private prepareUpdateData(updateProjectDto: UpdateProjectDto): Partial<Project> {
+  private static prepareUpdateData(updateProjectDto: UpdateProjectDto): Partial<Project> {
     const updateData: Partial<Project> = {};
 
     if (updateProjectDto.title !== undefined) {
@@ -205,17 +199,18 @@ export class ProjectsService implements OnModuleInit {
     if (updateProjectDto.description !== undefined) {
       updateData.description = updateProjectDto.description;
     }
-    if (updateProjectDto.status) {
+    if (updateProjectDto.status != null) {
       updateData.status = updateProjectDto.status;
     }
-    if (updateProjectDto.dueDate) {
+    if (updateProjectDto.dueDate != null && updateProjectDto.dueDate !== '') {
       updateData.dueDate = new Date(updateProjectDto.dueDate);
     }
     if (updateProjectDto.orderInBoard !== undefined) {
       updateData.orderInBoard = updateProjectDto.orderInBoard;
     }
     if (updateProjectDto.assigneeId !== undefined) {
-      updateData.assignee = updateProjectDto.assigneeId ? new Types.ObjectId(updateProjectDto.assigneeId) : null;
+      const { assigneeId } = updateProjectDto;
+      updateData.assignee = assigneeId != null && assigneeId !== '' ? new Types.ObjectId(assigneeId) : null;
     }
 
     return updateData;

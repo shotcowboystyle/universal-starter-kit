@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { Task, TaskSchema, TaskStatus } from '../../../../src/modules/tasks/schemas/tasks.schema';
 
-describe('TaskSchema', () => {
+describe('Task schema', () => {
   it('should be defined', () => {
     expect(TaskSchema).toBeDefined();
   });

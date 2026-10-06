@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { ProjectStatus } from '../../../../src/modules/projects/dto/update-project.dto';
 import { Project, ProjectSchema } from '../../../../src/modules/projects/schemas/projects.schema';
 
-describe('ProjectSchema', () => {
+describe('Project schema', () => {
   it('should be defined', () => {
     expect(ProjectSchema).toBeDefined();
   });

@@ -1,16 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Mock } from 'vitest';
 
 import { AppController } from '../src/app.controller';
+import type { AppService } from '../src/app.service';
 
-describe('AppController', () => {
+const createAppService = () => ({
+  getHello: vi.fn<AppService['getHello']>(),
+});
+
+describe(AppController, () => {
   let appController: AppController;
-  let appService: { getHello: Mock };
+  let appService: ReturnType<typeof createAppService>;
 
   beforeEach(() => {
-    appService = {
-      getHello: vi.fn(),
-    };
+    appService = createAppService();
 
     // Manually instantiate AppController with the mock AppService
     appController = new AppController(appService as any);

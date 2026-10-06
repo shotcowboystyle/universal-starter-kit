@@ -1,29 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { BoardController } from '../../src/modules/boards/boards.controller';
+import type { BoardService } from '../../src/modules/boards/boards.service';
 
-describe('BoardController', () => {
+const createService = () => ({
+  create: vi.fn<BoardService['create']>(),
+  findAll: vi.fn<BoardService['findAll']>(),
+  findOne: vi.fn<BoardService['findOne']>(),
+  update: vi.fn<BoardService['update']>(),
+  remove: vi.fn<BoardService['remove']>(),
+  addMember: vi.fn<BoardService['addMember']>(),
+  removeMember: vi.fn<BoardService['removeMember']>(),
+});
+
+describe(BoardController, () => {
   let controller: BoardController;
-  let service: {
-    create: vi.Mock;
-    findAll: vi.Mock;
-    findOne: vi.Mock;
-    update: vi.Mock;
-    remove: vi.Mock;
-    addMember: vi.Mock;
-    removeMember: vi.Mock;
-  };
+  let service: ReturnType<typeof createService>;
 
   beforeEach(() => {
-    service = {
-      create: vi.fn(),
-      findAll: vi.fn(),
-      findOne: vi.fn(),
-      update: vi.fn(),
-      remove: vi.fn(),
-      addMember: vi.fn(),
-      removeMember: vi.fn(),
-    };
+    service = createService();
 
     // Manually instantiate BoardController with the mock BoardService
     controller = new BoardController(service as any);

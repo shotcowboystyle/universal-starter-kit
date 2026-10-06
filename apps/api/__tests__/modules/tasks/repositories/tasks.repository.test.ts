@@ -2,30 +2,37 @@ import { Types } from 'mongoose';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TaskRepository } from '../../../../src/modules/tasks/repositories/tasks.repository';
+import type { Task } from '../../../../src/modules/tasks/schemas/tasks.schema';
 
-describe('TaskRepository', () => {
+type AnyFn = (...args: any[]) => any;
+
+describe(TaskRepository, () => {
   let repository: TaskRepository;
   let mockModel: any;
 
   beforeEach(() => {
     // Correctly define MockModel as a function that mimics a constructor
-    const MockModel = vi.fn().mockImplementation(function MockTaskModel(data) {
-      return {
-        ...data,
-        save: vi.fn().mockResolvedValue(data),
-      };
-    }) as any;
-
-    // Attach static methods
-    MockModel.find = vi.fn().mockReturnThis();
-    MockModel.findById = vi.fn().mockReturnThis();
-    MockModel.findByIdAndUpdate = vi.fn().mockReturnThis();
-    MockModel.deleteOne = vi.fn().mockReturnThis();
-    MockModel.deleteMany = vi.fn().mockReturnThis();
-    MockModel.updateMany = vi.fn().mockReturnThis();
-    MockModel.populate = vi.fn().mockReturnThis();
-    MockModel.sort = vi.fn().mockReturnThis();
-    MockModel.exec = vi.fn();
+    const MockModel = Object.assign(
+      vi
+        .fn<(data: Partial<Task>) => Partial<Task> & { save: AnyFn }>()
+        .mockImplementation(function MockTaskModel(data) {
+          return {
+            ...data,
+            save: vi.fn<AnyFn>().mockResolvedValue(data),
+          };
+        }),
+      {
+        find: vi.fn<AnyFn>().mockReturnThis(),
+        findById: vi.fn<AnyFn>().mockReturnThis(),
+        findByIdAndUpdate: vi.fn<AnyFn>().mockReturnThis(),
+        deleteOne: vi.fn<AnyFn>().mockReturnThis(),
+        deleteMany: vi.fn<AnyFn>().mockReturnThis(),
+        updateMany: vi.fn<AnyFn>().mockReturnThis(),
+        populate: vi.fn<AnyFn>().mockReturnThis(),
+        sort: vi.fn<AnyFn>().mockReturnThis(),
+        exec: vi.fn<AnyFn>(),
+      },
+    );
 
     mockModel = MockModel;
     repository = new TaskRepository(mockModel);
@@ -128,7 +135,7 @@ describe('TaskRepository', () => {
 
       const result = await repository.deleteById(taskId);
 
-      expect(mockModel.deleteOne).toHaveBeenCalled();
+      expect(mockModel.deleteOne).toHaveBeenCalledWith({ _id: new Types.ObjectId(taskId) });
       expect(result).toStrictEqual({ deletedCount: 1 });
     });
   });
@@ -141,7 +148,7 @@ describe('TaskRepository', () => {
 
       const result = await repository.deleteByProjectId(projectId);
 
-      expect(mockModel.deleteMany).toHaveBeenCalled();
+      expect(mockModel.deleteMany).toHaveBeenCalledWith({ project: new Types.ObjectId(projectId) });
       expect(result).toStrictEqual({ deletedCount: 5 });
     });
 
@@ -240,12 +247,12 @@ describe('TaskRepository', () => {
       const mockTask = {
         _id: new Types.ObjectId(),
         title: 'Task 1',
-        save: vi.fn().mockResolvedValue({ _id: new Types.ObjectId(), title: 'Task 1' }),
+        save: vi.fn<AnyFn>().mockResolvedValue({ _id: new Types.ObjectId(), title: 'Task 1' }),
       };
 
       const result = await repository.save(mockTask as any);
 
-      expect(mockTask.save).toHaveBeenCalled();
+      expect(mockTask.save).toHaveBeenCalledWith();
       expect(result).toStrictEqual(expect.objectContaining({ title: 'Task 1' }));
     });
   });

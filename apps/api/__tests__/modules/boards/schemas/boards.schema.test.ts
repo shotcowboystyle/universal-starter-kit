@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { Board, BoardSchema } from '../../../../src/modules/boards/schemas/boards.schema';
 
-describe('BoardSchema', () => {
+describe('Board schema', () => {
   it('should be defined', () => {
     expect(BoardSchema).toBeDefined();
   });

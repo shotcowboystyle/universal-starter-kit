@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 import { Types } from 'mongoose';
 
+import type { UpdateBoardDto } from '../dto/update-boards.dto';
 import type { BoardDocument } from '../schemas/boards.schema';
 import { Board } from '../schemas/boards.schema';
 
@@ -12,7 +13,7 @@ export class BoardRepository {
 
   // RISK: this pipeline is used by getBoardPopulateStages() and affects every board list query.
   // Changes here impact all board listing pages. See also: getBoardProjection(), getBoardPopulateStages().
-  private getProjectPopulatePipeline() {
+  private static getProjectPopulatePipeline() {
     return [
       {
         $lookup: {
@@ -45,7 +46,7 @@ export class BoardRepository {
 
   // RISK: controls which fields are returned in every board list query.
   // Changes here affect all board listing pages.
-  private getBoardProjection() {
+  private static getBoardProjection() {
     return {
       $project: {
         _id: 1,
@@ -62,7 +63,7 @@ export class BoardRepository {
 
   // RISK: core stage builder for the board list aggregation pipeline.
   // Changes here affect all board listing pages. Called by findAll() and findOne().
-  private getBoardPopulateStages() {
+  private static getBoardPopulateStages() {
     return [
       {
         $lookup: {
@@ -87,10 +88,10 @@ export class BoardRepository {
           localField: 'projects',
           foreignField: '_id',
           as: 'projects',
-          pipeline: this.getProjectPopulatePipeline(),
+          pipeline: BoardRepository.getProjectPopulatePipeline(),
         },
       },
-      this.getBoardProjection(),
+      BoardRepository.getBoardProjection(),
     ];
   }
 
@@ -106,25 +107,28 @@ export class BoardRepository {
   }
 
   async findByOwner(userId: Types.ObjectId): Promise<Board[]> {
-    return await this.boardModel.aggregate([{ $match: { owner: userId } }, ...this.getBoardPopulateStages()]);
+    return await this.boardModel.aggregate<Board>([
+      { $match: { owner: userId } },
+      ...BoardRepository.getBoardPopulateStages(),
+    ]);
   }
 
   async findByMemberNotOwner(userId: Types.ObjectId): Promise<Board[]> {
-    return await this.boardModel.aggregate([
+    return await this.boardModel.aggregate<Board>([
       { $match: { members: userId, owner: { $ne: userId } } },
-      ...this.getBoardPopulateStages(),
+      ...BoardRepository.getBoardPopulateStages(),
     ]);
   }
 
   async findOneWithAccess(boardId: Types.ObjectId, userId: Types.ObjectId): Promise<Board | null> {
-    const [board] = await this.boardModel.aggregate([
+    const [board] = await this.boardModel.aggregate<Board>([
       {
         $match: {
           _id: boardId,
           $or: [{ owner: userId }, { members: userId }],
         },
       },
-      ...this.getBoardPopulateStages(),
+      ...BoardRepository.getBoardPopulateStages(),
       { $limit: 1 },
     ]);
     return board ?? null;
@@ -134,7 +138,7 @@ export class BoardRepository {
     return await this.boardModel.findById(id).exec();
   }
 
-  async updateById(id: string, updateData: Partial<Board>): Promise<BoardDocument | null> {
+  async updateById(id: string, updateData: UpdateBoardDto): Promise<BoardDocument | null> {
     return await this.boardModel.findByIdAndUpdate(id, { $set: updateData }, { new: true }).exec();
   }
 

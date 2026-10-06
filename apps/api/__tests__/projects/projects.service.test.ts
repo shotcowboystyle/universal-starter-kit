@@ -1,3 +1,4 @@
+import type { EventEmitter2 } from 'eventemitter2';
 import { Types } from 'mongoose';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -5,34 +6,42 @@ import type { BoardService } from '../../src/modules/boards/boards.service';
 import { ProjectsService } from '../../src/modules/projects/projects.service';
 import type { ProjectRepository } from '../../src/modules/projects/repositories/projects.repository';
 
-describe('ProjectsService', () => {
+type LooseAsync<T extends (...args: never[]) => Promise<any>> = (...args: Parameters<T>) => Promise<any>;
+
+const createProjectRepository = () => ({
+  findByBoardId: vi.fn<LooseAsync<ProjectRepository['findByBoardId']>>().mockResolvedValue([]),
+  findById: vi.fn<LooseAsync<ProjectRepository['findById']>>(),
+  findByIdPopulated: vi.fn<LooseAsync<ProjectRepository['findByIdPopulated']>>(),
+  create: vi.fn<LooseAsync<ProjectRepository['create']>>(),
+  updateById: vi.fn<LooseAsync<ProjectRepository['updateById']>>(),
+  deleteById: vi.fn<LooseAsync<ProjectRepository['deleteById']>>().mockResolvedValue({ deletedCount: 1 }),
+  deleteByBoardId: vi.fn<LooseAsync<ProjectRepository['deleteByBoardId']>>().mockResolvedValue({ deletedCount: 1 }),
+  getLastOrderInBoard: vi.fn<LooseAsync<ProjectRepository['getLastOrderInBoard']>>().mockResolvedValue(0),
+  decrementOrderAfter: vi.fn<LooseAsync<ProjectRepository['decrementOrderAfter']>>(),
+  addMember: vi.fn<LooseAsync<ProjectRepository['addMember']>>(),
+  isMember: vi.fn<LooseAsync<ProjectRepository['isMember']>>().mockResolvedValue(false),
+});
+
+const createBoardService = () => ({
+  findOne: vi.fn<LooseAsync<BoardService['findOne']>>(),
+});
+
+const createEventEmitter = () => ({
+  emit: vi.fn<EventEmitter2['emit']>(),
+});
+
+describe(ProjectsService, () => {
   let service: ProjectsService;
-  let projectRepository: Record<string, ReturnType<typeof vi.fn>>;
-  let boardService: Record<string, ReturnType<typeof vi.fn>>;
-  let eventEmitter: { emit: ReturnType<typeof vi.fn> };
+  let projectRepository: ReturnType<typeof createProjectRepository>;
+  let boardService: ReturnType<typeof createBoardService>;
+  let eventEmitter: ReturnType<typeof createEventEmitter>;
 
   beforeEach(() => {
-    projectRepository = {
-      findByBoardId: vi.fn().mockResolvedValue([]),
-      findById: vi.fn(),
-      findByIdPopulated: vi.fn(),
-      create: vi.fn(),
-      updateById: vi.fn(),
-      deleteById: vi.fn().mockResolvedValue({ deletedCount: 1 }),
-      deleteByBoardId: vi.fn().mockResolvedValue({ deletedCount: 1 }),
-      getLastOrderInBoard: vi.fn().mockResolvedValue(0),
-      decrementOrderAfter: vi.fn(),
-      addMember: vi.fn(),
-      isMember: vi.fn().mockResolvedValue(false),
-    };
+    projectRepository = createProjectRepository();
 
-    boardService = {
-      findOne: vi.fn(),
-    };
+    boardService = createBoardService();
 
-    eventEmitter = {
-      emit: vi.fn(),
-    };
+    eventEmitter = createEventEmitter();
 
     service = new ProjectsService(
       projectRepository as unknown as ProjectRepository,
@@ -59,7 +68,7 @@ describe('ProjectsService', () => {
       const result = await service.create(createProjectDto as any);
 
       expect(result).toBeDefined();
-      expect(projectRepository.create).toHaveBeenCalled();
+      expect(projectRepository.create).toHaveBeenCalledWith(expect.objectContaining({ title: 'Test Project' }));
     });
 
     it('should throw bad request for invalid board id', async () => {
@@ -110,7 +119,7 @@ describe('ProjectsService', () => {
       await service.update(projectId, updateProjectDto as any, userId);
 
       expect(projectRepository.findById).toHaveBeenCalledWith(projectId);
-      expect(projectRepository.updateById).toHaveBeenCalled();
+      expect(projectRepository.updateById).toHaveBeenCalledWith(projectId, { title: 'Test Project Updated' });
     });
 
     it('should throw bad request for invalid project id', async () => {
@@ -162,7 +171,7 @@ describe('ProjectsService', () => {
 
       expect(eventEmitter.emit).toHaveBeenCalledWith('project.deleted', expect.any(Object));
       expect(projectRepository.deleteById).toHaveBeenCalledWith(projectId);
-      expect(projectRepository.decrementOrderAfter).toHaveBeenCalled();
+      expect(projectRepository.decrementOrderAfter).toHaveBeenCalledWith(project.board, 0);
     });
 
     it('should throw bad request for invalid project id', async () => {

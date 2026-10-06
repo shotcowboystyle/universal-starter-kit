@@ -17,7 +17,7 @@ export class Project {
   title: string;
 
   @Prop({ type: String })
-  description?: string;
+  description?: string | null;
 
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   owner: Types.ObjectId;
@@ -42,7 +42,7 @@ export class Project {
   dueDate?: Date;
 
   @Prop({ type: Types.ObjectId, ref: 'User' })
-  assignee?: Types.ObjectId;
+  assignee?: Types.ObjectId | null;
 }
 
 export const ProjectSchema = SchemaFactory.createForClass(Project);

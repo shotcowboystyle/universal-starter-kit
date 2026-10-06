@@ -9,6 +9,10 @@ import type { CreateBoardDto } from './dto/create-boards.dto';
 import type { UpdateBoardDto } from './dto/update-boards.dto';
 import { Board } from './schemas/boards.schema';
 
+const UNAUTHORIZED_DESCRIPTION = 'Unauthorized.';
+const BOARD_NOT_FOUND_DESCRIPTION = 'Board not found.';
+const FORBIDDEN_DESCRIPTION = 'Forbidden.';
+
 @ApiTags('boards')
 @ApiBearerAuth()
 @Controller('boards')
@@ -29,7 +33,7 @@ export class BoardController {
   })
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
-    description: 'Unauthorized.',
+    description: UNAUTHORIZED_DESCRIPTION,
   })
   async create(@Body() createBoardDto: CreateBoardDto, @CurrentUser() user: { _id: string; email: string }) {
     createBoardDto.owner = user._id;
@@ -51,7 +55,7 @@ export class BoardController {
   })
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
-    description: 'Unauthorized.',
+    description: UNAUTHORIZED_DESCRIPTION,
   })
   async findAll(@CurrentUser() user: { _id: string }) {
     return await this.boardService.findAll(user._id);
@@ -67,13 +71,13 @@ export class BoardController {
   })
   @ApiResponse({
     status: HttpStatus.NOT_FOUND,
-    description: 'Board not found.',
+    description: BOARD_NOT_FOUND_DESCRIPTION,
   })
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
-    description: 'Unauthorized.',
+    description: UNAUTHORIZED_DESCRIPTION,
   })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'Forbidden.' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: FORBIDDEN_DESCRIPTION })
   async findOne(@Param('id') id: string, @CurrentUser() user: { _id: string }) {
     return await this.boardService.findOne(id, user._id);
   }
@@ -88,13 +92,13 @@ export class BoardController {
   })
   @ApiResponse({
     status: HttpStatus.NOT_FOUND,
-    description: 'Board not found.',
+    description: BOARD_NOT_FOUND_DESCRIPTION,
   })
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
-    description: 'Unauthorized.',
+    description: UNAUTHORIZED_DESCRIPTION,
   })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'Forbidden.' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: FORBIDDEN_DESCRIPTION })
   async update(@Param('id') id: string, @Body() updateBoardDto: UpdateBoardDto, @CurrentUser() user: { _id: string }) {
     return await this.boardService.update(id, updateBoardDto, user._id);
   }
@@ -108,13 +112,13 @@ export class BoardController {
   })
   @ApiResponse({
     status: HttpStatus.NOT_FOUND,
-    description: 'Board not found.',
+    description: BOARD_NOT_FOUND_DESCRIPTION,
   })
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
-    description: 'Unauthorized.',
+    description: UNAUTHORIZED_DESCRIPTION,
   })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'Forbidden.' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: FORBIDDEN_DESCRIPTION })
   async remove(@Param('id') id: string, @CurrentUser() user: { _id: string }) {
     return await this.boardService.remove(id, user._id);
   }
@@ -130,13 +134,13 @@ export class BoardController {
   })
   @ApiResponse({
     status: HttpStatus.NOT_FOUND,
-    description: 'Board not found.',
+    description: BOARD_NOT_FOUND_DESCRIPTION,
   })
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
-    description: 'Unauthorized.',
+    description: UNAUTHORIZED_DESCRIPTION,
   })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'Forbidden.' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: FORBIDDEN_DESCRIPTION })
   async addMember(@Param('id') id: string, @Param('memberId') memberId: string, @CurrentUser() user: { _id: string }) {
     return await this.boardService.addMember(id, user._id, memberId);
   }
@@ -155,13 +159,13 @@ export class BoardController {
   })
   @ApiResponse({
     status: HttpStatus.NOT_FOUND,
-    description: 'Board not found.',
+    description: BOARD_NOT_FOUND_DESCRIPTION,
   })
   @ApiResponse({
     status: HttpStatus.UNAUTHORIZED,
-    description: 'Unauthorized.',
+    description: UNAUTHORIZED_DESCRIPTION,
   })
-  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'Forbidden.' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: FORBIDDEN_DESCRIPTION })
   async removeMember(
     @Param('id') id: string,
     @Param('memberId') memberId: string,

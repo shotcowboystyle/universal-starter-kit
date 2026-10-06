@@ -13,6 +13,13 @@ interface JwtPayload {
   exp?: number;
 }
 
+const fromCookie = (req: Request): string | null => {
+  // SAFETY: cookie-parser populates req.cookies with a string-valued map; typings expose it as any.
+  const cookies = req.cookies as Record<string, string | undefined> | undefined;
+  const token = cookies?.jwt;
+  return token !== undefined && token !== '' ? token : null;
+};
+
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   private readonly logger = new Logger(JwtStrategy.name);
@@ -22,30 +29,23 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     configService: ConfigService,
   ) {
     super({
-      jwtFromRequest: ExtractJwt.fromExtractors([JwtStrategy.fromCookie, ExtractJwt.fromAuthHeaderAsBearerToken()]),
+      jwtFromRequest: ExtractJwt.fromExtractors([fromCookie, ExtractJwt.fromAuthHeaderAsBearerToken()]),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>('JWT_SECRET'),
+      secretOrKey: configService.get<string>('JWT_SECRET') ?? '',
     });
-  }
-
-  private static fromCookie(req: Request): string | null {
-    if (req.cookies?.jwt) {
-      return req.cookies.jwt;
-    }
-    return null;
   }
 
   async validate(payload: JwtPayload) {
     try {
       const user = await this.userService.findByEmail(payload.email);
 
-      if (!user) {
+      if (user == null) {
         this.logger.error(`User not found for ID: ${payload.sub}`);
         throw new UnauthorizedException('User not found');
       }
 
       return {
-        _id: user._id,
+        _id: user._id.toString(),
         email: user.email,
       };
     } catch (error: unknown) {

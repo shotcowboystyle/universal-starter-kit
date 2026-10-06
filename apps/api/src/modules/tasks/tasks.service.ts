@@ -3,15 +3,18 @@ import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundEx
 import type { EventEmitter2 } from 'eventemitter2';
 import { Types } from 'mongoose';
 
-import type { ProjectDeletedEvent } from '../../common/events';
+import type { ProjectDeletedEvent } from '../../common/events/project-deleted.event';
 import type { ProjectsService } from '../projects/projects.service';
 
 import type { CreateTaskDto } from './dto/create-task.dto';
 import type { TaskResponseDto } from './dto/task-response.dto';
 import type { UpdateTaskDto } from './dto/update-task.dto';
-import type { TaskRepository } from './repositories/tasks.repository';
-import type { TaskDocument } from './schemas/tasks.schema';
+import type { UserResponseDto } from './dto/user-response.dto';
+import type { TaskQuery, TaskRepository, TaskUpdate } from './repositories/tasks.repository';
+import type { Task, TaskDocument } from './schemas/tasks.schema';
 import { TaskStatus } from './schemas/tasks.schema';
+
+const USER_FIELDS = 'name email';
 
 interface PopulatedUserRef {
   _id: Types.ObjectId | string;
@@ -30,8 +33,8 @@ export class TasksService implements OnModuleInit {
   ) {}
 
   onModuleInit(): void {
-    this.eventEmitter.on('project.deleted', async (event: ProjectDeletedEvent) => {
-      await this.handleProjectDeleted(event);
+    this.eventEmitter.on('project.deleted', (event: ProjectDeletedEvent) => {
+      void this.handleProjectDeleted(event);
     });
   }
 
@@ -58,17 +61,21 @@ export class TasksService implements OnModuleInit {
 
     const orderInProject = createTaskDto.orderInProject ?? 0;
 
-    const taskData = {
-      ...createTaskDto,
+    const { title, description, dueDate, assignee } = createTaskDto;
+    const taskData: Partial<Task> = {
+      title,
+      description,
+      dueDate,
       project: projectId,
       board: new Types.ObjectId(createTaskDto.board),
       creator: creatorId,
       lastModifier: creatorId,
-      status: createTaskDto.status || TaskStatus.TODO,
+      status: createTaskDto.status ?? TaskStatus.TODO,
       orderInProject,
-      ...(createTaskDto.assignee && {
-        assignee: new Types.ObjectId(createTaskDto.assignee),
-      }),
+      ...(assignee !== undefined &&
+        assignee !== '' && {
+          assignee: new Types.ObjectId(assignee),
+        }),
     };
 
     const savedTask = await this.taskRepository.create(taskData);
@@ -76,12 +83,12 @@ export class TasksService implements OnModuleInit {
   }
 
   async findAll(projectId?: string, assigneeId?: string): Promise<TaskResponseDto[]> {
-    const query: Record<string, unknown> = {};
+    const query: TaskQuery = {};
 
-    if (projectId) {
+    if (projectId !== undefined && projectId !== '') {
       query.project = new Types.ObjectId(projectId);
     }
-    if (assigneeId) {
+    if (assigneeId !== undefined && assigneeId !== '') {
       query.assignee = new Types.ObjectId(assigneeId);
     }
 
@@ -100,23 +107,32 @@ export class TasksService implements OnModuleInit {
   async update(id: string, updateTaskDto: UpdateTaskDto, userId: string): Promise<TaskResponseDto> {
     await this.checkTaskPermission(id, userId);
 
-    const updateData: Record<string, unknown> = {
-      ...updateTaskDto,
+    const { title, description, status, dueDate, orderInProject, assigneeId } = updateTaskDto;
+    const updateData: TaskUpdate = {
       lastModifier: new Types.ObjectId(userId),
       updatedAt: new Date(),
     };
 
-    // Remove undefined values
-    for (const key of Object.keys(updateData)) {
-      if (updateData[key] === undefined) {
-        delete updateData[key];
-      }
+    // Only defined values are written
+    if (title !== undefined) {
+      updateData.title = title;
+    }
+    if (description !== undefined) {
+      updateData.description = description;
+    }
+    if (status !== undefined) {
+      updateData.status = status;
+    }
+    if (dueDate !== undefined) {
+      updateData.dueDate = dueDate;
+    }
+    if (orderInProject !== undefined) {
+      updateData.orderInProject = orderInProject;
     }
 
     // Handle assigneeId → assignee conversion
-    if ('assigneeId' in updateData) {
-      updateData.assignee = updateData.assigneeId ? new Types.ObjectId(updateData.assigneeId as string) : null;
-      delete updateData.assigneeId;
+    if (assigneeId !== undefined) {
+      updateData.assignee = assigneeId !== null && assigneeId !== '' ? new Types.ObjectId(assigneeId) : null;
     }
 
     const updatedTask = await this.taskRepository.updateById(id, updateData);
@@ -206,12 +222,11 @@ export class TasksService implements OnModuleInit {
       throw new NotFoundException(`Task with ID ${taskId} not found`);
     }
 
-    const userIdString = userId?.toString();
     const creatorIdString = task.creator?.toString();
     const assigneeIdString = task.assignee?.toString();
 
-    const isCreator = creatorIdString === userIdString;
-    const isAssignee = assigneeIdString === userIdString;
+    const isCreator = creatorIdString === userId;
+    const isAssignee = assigneeIdString === userId;
 
     if (requireCreator && !isCreator) {
       throw new ForbiddenException('Only the task creator can perform this action');
@@ -224,8 +239,8 @@ export class TasksService implements OnModuleInit {
     return task;
   }
 
-  private toUserResponse(user: PopulatedUserRef | null | undefined) {
-    if (!user) {
+  private toUserResponse(user?: PopulatedUserRef | null): UserResponseDto | null {
+    if (user == null) {
       return null;
     }
     return {
@@ -237,15 +252,17 @@ export class TasksService implements OnModuleInit {
 
   private async toTaskResponse(task: TaskDocument): Promise<TaskResponseDto> {
     let populatedTask = task;
-    if (typeof task.populate === 'function') {
+    if ('populate' in task) {
       populatedTask = await task.populate([
-        { path: 'creator', select: 'name email' },
-        { path: 'assignee', select: 'name email' },
-        { path: 'lastModifier', select: 'name email' },
+        { path: 'creator', select: USER_FIELDS },
+        { path: 'assignee', select: USER_FIELDS },
+        { path: 'lastModifier', select: USER_FIELDS },
       ]);
     }
 
-    const response: Partial<TaskResponseDto> & Pick<TaskResponseDto, '_id' | 'title' | 'status'> = {
+    const { description, dueDate } = populatedTask;
+
+    return {
       _id: populatedTask._id.toString(),
       title: populatedTask.title,
       status: populatedTask.status,
@@ -254,20 +271,11 @@ export class TasksService implements OnModuleInit {
       createdAt: populatedTask.createdAt,
       updatedAt: populatedTask.updatedAt,
       orderInProject: populatedTask.orderInProject ?? 0,
-      creator: this.toUserResponse(populatedTask.creator as PopulatedUserRef | null),
-      assignee: this.toUserResponse(populatedTask.assignee as PopulatedUserRef | null),
-      lastModifier: populatedTask.lastModifier
-        ? this.toUserResponse(populatedTask.lastModifier as PopulatedUserRef | null)
-        : this.toUserResponse(populatedTask.creator as PopulatedUserRef | null),
+      creator: this.toUserResponse(populatedTask.creator),
+      assignee: this.toUserResponse(populatedTask.assignee),
+      lastModifier: this.toUserResponse(populatedTask.lastModifier ?? populatedTask.creator),
+      ...(description != null && description !== '' && { description }),
+      ...(dueDate != null && { dueDate }),
     };
-
-    if (populatedTask.description) {
-      response.description = populatedTask.description;
-    }
-    if (populatedTask.dueDate) {
-      response.dueDate = populatedTask.dueDate;
-    }
-
-    return response as TaskResponseDto;
   }
 }

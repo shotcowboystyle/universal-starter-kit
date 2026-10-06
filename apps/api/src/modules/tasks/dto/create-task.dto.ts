@@ -3,7 +3,7 @@ import { IsDateString, IsEnum, IsMongoId, IsNumber, IsOptional, IsString } from 
 
 import { TaskStatus } from '../schemas/tasks.schema';
 
-export { TaskStatus };
+export { TaskStatus } from '../schemas/tasks.schema';
 
 export class CreateTaskDto {
   @ApiProperty({

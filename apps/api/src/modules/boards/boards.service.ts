@@ -2,7 +2,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import type { EventEmitter2 } from 'eventemitter2';
 import { Types } from 'mongoose';
 
-import { BoardDeletedEvent } from '../../common/events';
+import { BoardDeletedEvent } from '../../common/events/board-deleted.event';
 
 import type { CreateBoardDto } from './dto/create-boards.dto';
 import type { UpdateBoardDto } from './dto/update-boards.dto';
@@ -21,10 +21,14 @@ export class BoardService {
   async create(createBoardDto: CreateBoardDto): Promise<Board> {
     const ownerId = new Types.ObjectId(createBoardDto.owner);
 
+    const { title, description, projects } = createBoardDto;
+
     return await this.boardRepository.create({
-      ...createBoardDto,
+      title,
+      description,
+      ...(projects !== undefined && { projects: projects.map((id) => new Types.ObjectId(id)) }),
       owner: ownerId,
-      members: [...new Set([ownerId, ...(createBoardDto.members || []).map((id) => new Types.ObjectId(id))])],
+      members: [...new Set([ownerId, ...(createBoardDto.members ?? []).map((id) => new Types.ObjectId(id))])],
     });
   }
 
@@ -52,15 +56,14 @@ export class BoardService {
   }
 
   async update(id: string, updateBoardDto: UpdateBoardDto, userId: string): Promise<Board | null> {
-    const userIdString = userId.toString();
     const board = await this.boardRepository.findById(id);
 
     if (!board) {
       throw new NotFoundException(`Board with ID "${id}" not found`);
     }
 
-    const isOwner = board.owner.toString() === userIdString;
-    const isMember = board.members.some((memberId) => memberId.toString() === userIdString);
+    const isOwner = board.owner.toString() === userId;
+    const isMember = board.members.some((memberId) => memberId.toString() === userId);
 
     if (!isOwner && !isMember) {
       throw new NotFoundException(`Board with ID "${id}" not found or access denied`);
@@ -73,14 +76,13 @@ export class BoardService {
   // NOTE: caller must verify board ownership before invoking remove().
   // BoardService does NOT re-check permissions — it trusts the caller.
   async remove(id: string, userId: string): Promise<{ message: string }> {
-    const userIdString = userId.toString();
     const board = await this.boardRepository.findById(id);
 
     if (!board) {
       throw new NotFoundException(`Board with ID "${id}" not found`);
     }
 
-    if (board.owner.toString() !== userIdString) {
+    if (board.owner.toString() !== userId) {
       throw new NotFoundException(`Board with ID "${id}" not found`);
     }
 

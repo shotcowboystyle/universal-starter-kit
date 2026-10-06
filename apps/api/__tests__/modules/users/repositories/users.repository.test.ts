@@ -2,16 +2,20 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { UserRepository } from '../../../../src/modules/users/repositories/users.repository';
 
-describe('UserRepository', () => {
+type AnyFn = (...args: any[]) => any;
+
+const createMockModel = () => ({
+  findOne: vi.fn<AnyFn>().mockReturnThis(),
+  find: vi.fn<AnyFn>().mockReturnThis(),
+  exec: vi.fn<AnyFn>(),
+});
+
+describe(UserRepository, () => {
   let repository: UserRepository;
-  let mockModel: Record<string, ReturnType<typeof vi.fn>>;
+  let mockModel: ReturnType<typeof createMockModel>;
 
   beforeEach(() => {
-    mockModel = {
-      findOne: vi.fn().mockReturnThis(),
-      find: vi.fn().mockReturnThis(),
-      exec: vi.fn(),
-    };
+    mockModel = createMockModel();
 
     repository = new UserRepository(mockModel as any);
   });
@@ -50,7 +54,7 @@ describe('UserRepository', () => {
 
       const result = await repository.findAll();
 
-      expect(mockModel.find).toHaveBeenCalled();
+      expect(mockModel.find).toHaveBeenCalledWith();
       expect(result).toStrictEqual(mockUsers);
     });
 

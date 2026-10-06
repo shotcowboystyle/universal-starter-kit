@@ -50,14 +50,16 @@ const config: Configuration = {
     path: `${import.meta.dirname}/dist`,
     filename: 'main.js',
   },
-  plugins: [
-    !process.env.BUILD &&
-      new RunScriptWebpackPlugin({
-        name: 'main.js',
-        autoRestart: true,
-        args: ['start:dev'],
-      }),
-  ].filter(Boolean),
+  plugins:
+    process.env.BUILD === undefined || process.env.BUILD === ''
+      ? [
+          new RunScriptWebpackPlugin({
+            name: 'main.js',
+            autoRestart: true,
+            args: ['start:dev'],
+          }),
+        ]
+      : [],
   devServer: {
     devMiddleware: {
       writeToDisk: true,

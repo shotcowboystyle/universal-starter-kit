@@ -1,27 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TasksController } from '../../src/modules/tasks/tasks.controller';
+import type { TasksService } from '../../src/modules/tasks/tasks.service';
 
-describe('TasksController', () => {
+const createService = () => ({
+  create: vi.fn<TasksService['create']>(),
+  findAll: vi.fn<TasksService['findAll']>(),
+  findOne: vi.fn<TasksService['findOne']>(),
+  update: vi.fn<TasksService['update']>(),
+  remove: vi.fn<TasksService['remove']>(),
+  moveTask: vi.fn<TasksService['moveTask']>(),
+});
+
+describe(TasksController, () => {
   let controller: TasksController;
-  let service: {
-    create: vi.Mock;
-    findAll: vi.Mock;
-    findOne: vi.Mock;
-    update: vi.Mock;
-    remove: vi.Mock;
-    moveTask: vi.Mock;
-  };
+  let service: ReturnType<typeof createService>;
 
   beforeEach(() => {
-    service = {
-      create: vi.fn(),
-      findAll: vi.fn(),
-      findOne: vi.fn(),
-      update: vi.fn(),
-      remove: vi.fn(),
-      moveTask: vi.fn(),
-    };
+    service = createService();
 
     // Manually instantiate TasksController with the mock TasksService
     controller = new TasksController(service as any);
@@ -46,12 +42,12 @@ describe('TasksController', () => {
 
   describe('findAll', () => {
     it('should find all tasks', async () => {
-      const result = [];
+      const result: unknown[] = [];
 
       vi.spyOn(service, 'findAll').mockResolvedValue(result as any);
 
       await expect(controller.findAll()).resolves.toStrictEqual(result);
-      expect(service.findAll).toHaveBeenCalled();
+      expect(service.findAll).toHaveBeenCalledWith(undefined, undefined);
     });
   });
 
@@ -83,7 +79,7 @@ describe('TasksController', () => {
     it('should remove a task', async () => {
       const user = { _id: '1' };
 
-      vi.spyOn(service, 'remove').mockResolvedValue(undefined);
+      vi.spyOn(service, 'remove').mockResolvedValue();
 
       await controller.remove('1', user);
       expect(service.remove).toHaveBeenCalledWith('1', '1');

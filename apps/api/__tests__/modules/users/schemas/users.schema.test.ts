@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { User, UserSchema } from '../../../../src/modules/users/schemas/users.schema';
 
-describe('UserSchema', () => {
+describe('User schema', () => {
   it('should be defined', () => {
     expect(UserSchema).toBeDefined();
   });

@@ -9,7 +9,8 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Get()
-  @UseGuards(JwtAuthGuard) // <-- This protects the route
+  // This protects the route
+  @UseGuards(JwtAuthGuard)
   async findAll() {
     const users = await this.userService.findAll();
     return { users };

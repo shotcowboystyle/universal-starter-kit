@@ -9,16 +9,16 @@ import { User } from '../schemas/users.schema';
 export class UserRepository {
   constructor(@InjectModel(User.name) private readonly userModel: Model<UserDocument>) {}
 
-  async findByEmail(email: string): Promise<User | null> {
+  async findByEmail(email: string): Promise<UserDocument | null> {
     return await this.userModel.findOne({ email }).exec();
   }
 
-  async findAll(): Promise<User[]> {
+  async findAll(): Promise<UserDocument[]> {
     return await this.userModel.find().exec();
   }
 
-  async searchByName(name: string): Promise<User[]> {
-    const query = name ? { name: { $regex: name, $options: 'i' } } : {};
+  async searchByName(name: string): Promise<UserDocument[]> {
+    const query = name === '' ? {} : { name: { $regex: name, $options: 'i' } };
     return await this.userModel.find(query).exec();
   }
 }

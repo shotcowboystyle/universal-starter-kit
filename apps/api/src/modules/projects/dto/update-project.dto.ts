@@ -3,7 +3,7 @@ import { IsDateString, IsEnum, IsMongoId, IsOptional, IsString } from 'class-val
 import { ProjectStatus } from '../schemas/projects.schema';
 
 // Re-export for backward compatibility
-export { ProjectStatus };
+export { ProjectStatus } from '../schemas/projects.schema';
 
 export class UpdateProjectDto {
   @IsString()

@@ -28,7 +28,7 @@ export class Task {
     example: 'Implement JWT authentication with refresh tokens',
     required: false,
   })
-  description?: string;
+  description?: string | null;
 
   @Prop({ type: String, enum: TaskStatus, default: TaskStatus.TODO })
   @ApiProperty({
@@ -45,7 +45,7 @@ export class Task {
     example: '2025-12-31T23:59:59.999Z',
     required: false,
   })
-  dueDate?: Date;
+  dueDate?: Date | null;
 
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   @ApiProperty({
@@ -62,7 +62,7 @@ export class Task {
     required: false,
     example: '507f1f77bcf86cd799439012',
   })
-  assignee?: Types.ObjectId;
+  assignee?: Types.ObjectId | null;
 
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   @ApiProperty({

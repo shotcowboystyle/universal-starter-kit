@@ -85,6 +85,16 @@ export default defineConfig({
       rules: { 'unicorn/filename-case': 'off' },
     },
     {
+      // NestJS idioms: constructor-injected `private readonly` deps, decorator-only @Module
+      // classes, and handler/pipe methods that implement framework interfaces (can't be static).
+      files: ['apps/api/**'],
+      rules: {
+        'eslint/class-methods-use-this': 'off',
+        'typescript/no-extraneous-class': ['error', { allowWithDecorator: true }],
+        'typescript/parameter-properties': 'off',
+      },
+    },
+    {
       // Expo / React Native app: Next.js- and SSR-specific react-doctor rules don't apply.
       files: ['apps/mobile/**'],
       rules: {

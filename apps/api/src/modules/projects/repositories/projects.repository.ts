@@ -6,6 +6,8 @@ import { Types } from 'mongoose';
 import type { ProjectDocument } from '../schemas/projects.schema';
 import { Project } from '../schemas/projects.schema';
 
+const USER_FIELDS = 'name email';
+
 @Injectable()
 export class ProjectRepository {
   constructor(@InjectModel(Project.name) private readonly projectModel: Model<ProjectDocument>) {}
@@ -14,8 +16,8 @@ export class ProjectRepository {
     return await this.projectModel
       .find({ board: new Types.ObjectId(boardId) })
       .populate('board', 'title')
-      .populate('owner', 'name email')
-      .populate('members', 'name email')
+      .populate('owner', USER_FIELDS)
+      .populate('members', USER_FIELDS)
       .exec();
   }
 
@@ -26,9 +28,9 @@ export class ProjectRepository {
   async findByIdPopulated(id: string): Promise<ProjectDocument | null> {
     return await this.projectModel
       .findById(id)
-      .populate('owner', 'name email')
-      .populate('members', 'name email')
-      .populate('assignee', 'name email')
+      .populate('owner', USER_FIELDS)
+      .populate('members', USER_FIELDS)
+      .populate('assignee', USER_FIELDS)
       .exec();
   }
 
@@ -40,9 +42,9 @@ export class ProjectRepository {
   async updateById(id: string, updateData: Partial<Project>): Promise<ProjectDocument | null> {
     return await this.projectModel
       .findByIdAndUpdate(id, { $set: updateData }, { new: true, runValidators: true })
-      .populate('owner', 'name email')
-      .populate('members', 'name email')
-      .populate('assignee', 'name email')
+      .populate('owner', USER_FIELDS)
+      .populate('members', USER_FIELDS)
+      .populate('assignee', USER_FIELDS)
       .exec();
   }
 

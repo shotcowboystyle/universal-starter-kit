@@ -7,7 +7,9 @@ import { AppModule } from './app.module';
 import { API_PORT } from './constants/api';
 
 // eslint-disable-next-line eslint-plugin-next/no-assign-module-variable -- Required for NestJS webpack HMR
-declare const module: any;
+declare const module: {
+  hot?: { accept: () => void; dispose: (callback: () => void) => void };
+};
 
 const bootstrap = async () => {
   const app = await NestFactory.create(AppModule, {
@@ -15,14 +17,14 @@ const bootstrap = async () => {
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
   });
 
-  const port = process.env.PORT || API_PORT;
+  const port = process.env.PORT === undefined || process.env.PORT === '' ? API_PORT : process.env.PORT;
 
   // Parse cookies before CORS middleware
   app.use(cookieParser());
 
   // Define allowed origins
-  const allowedOrigins = [
-    // Production frontend URL from environment variables
+  const allowedOrigins: (string | RegExp)[] = [
+    // Production frontend URL from environment variables (undefined/empty values are filtered out below)
     process.env.NEXT_PUBLIC_WEB_URL,
     // Explicit production frontend URL as fallback
     'https://turborepo-starter-kit-web.vercel.app',
@@ -33,28 +35,27 @@ const bootstrap = async () => {
     // Mobile development (Expo)
     'http://localhost:8081',
     'http://localhost:19006',
-  ].filter(Boolean); // Filter out any undefined/null values from env vars
+  ].filter((o): o is string | RegExp => o !== undefined && o !== '');
 
   app.enableCors({
-    origin: (origin, callback) => {
+    origin: (origin: string | undefined, respond: (error: Error | null, allow?: boolean) => void) => {
       // Allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) {
-        return callback(null, true);
+      if (origin === undefined || origin === '') {
+        respond(null, true);
+        return;
       }
 
-      const isAllowed = allowedOrigins.some((o) => {
-        const matches = typeof o === 'string' ? o === origin : o.test(origin);
-        return matches;
-      });
+      const isAllowed = allowedOrigins.some((o) => (o instanceof RegExp ? o.test(origin) : o === origin));
 
       if (isAllowed) {
-        return callback(null, true);
+        respond(null, true);
+        return;
       }
 
-      const errorMsg = `CORS error: Origin ${origin} not allowed.`;
-      return callback(new Error(errorMsg));
+      respond(new Error(`CORS error: Origin ${origin} not allowed.`));
     },
-    credentials: true, // This is crucial for cookies
+    // This is crucial for cookies
+    credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders: [
       'Content-Type',
@@ -62,12 +63,14 @@ const bootstrap = async () => {
       'Authorization',
       'X-Requested-With',
       'X-XSRF-TOKEN',
-      'Cookie', // Explicitly allow Cookie header
+      // Explicitly allow Cookie header
+      'Cookie',
     ],
     exposedHeaders: [
       'Authorization',
       'XSRF-TOKEN',
-      'Set-Cookie', // Expose Set-Cookie header
+      // Expose Set-Cookie header
+      'Set-Cookie',
     ],
   });
 
@@ -94,7 +97,8 @@ const bootstrap = async () => {
         description: 'Enter JWT token',
         in: 'header',
       },
-      'JWT-auth', // This name should match the one used in @ApiBearerAuth() in controllers
+      // This name should match the one used in @ApiBearerAuth() in controllers
+      'JWT-auth',
     )
     .build();
 
@@ -108,19 +112,20 @@ const bootstrap = async () => {
   });
 
   // For Vercel deployment, we'll export the NestJS app's HTTP adapter
-  if (process.env.VERCEL) {
+  if (process.env.VERCEL !== undefined && process.env.VERCEL !== '') {
     await app.init();
-    return app.getHttpAdapter().getInstance();
+    const instance: unknown = app.getHttpAdapter().getInstance();
+    return instance;
   }
 
   // For local development
   await app.listen(port);
 
   // Enable hot module replacement for development
-  if (module.hot) {
+  if (module.hot !== undefined) {
     module.hot.accept();
     module.hot.dispose(() => {
-      app.close();
+      void app.close();
     });
   }
 

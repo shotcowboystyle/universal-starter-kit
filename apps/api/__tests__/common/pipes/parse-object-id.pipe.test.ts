@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { ParseObjectIdPipe } from '../../../src/common/pipes/parse-object-id.pipe';
 
-describe('ParseObjectIdPipe', () => {
+describe(ParseObjectIdPipe, () => {
   let pipe: ParseObjectIdPipe;
 
   beforeEach(() => {
@@ -20,6 +20,7 @@ describe('ParseObjectIdPipe', () => {
   });
 
   it('should throw a BadRequestException if the value is undefined', () => {
+    // oxlint-disable-next-line unicorn/no-useless-undefined -- the case under test is an explicit undefined input
     expect(() => pipe.transform(undefined)).toThrow(BadRequestException);
   });
 

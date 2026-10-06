@@ -1,22 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { UserRepository } from '../../src/modules/users/repositories/users.repository';
+import type { UserDocument } from '../../src/modules/users/schemas/users.schema';
 import { UserService } from '../../src/modules/users/users.service';
 
-describe('UserService', () => {
+const createUserRepository = () => ({
+  findByEmail: vi.fn<UserRepository['findByEmail']>(),
+  findAll: vi.fn<UserRepository['findAll']>(),
+  searchByName: vi.fn<UserRepository['searchByName']>(),
+});
+
+describe(UserService, () => {
   let service: UserService;
-  let userRepository: {
-    findByEmail: ReturnType<typeof vi.fn>;
-    findAll: ReturnType<typeof vi.fn>;
-    searchByName: ReturnType<typeof vi.fn>;
-  };
+  let userRepository: ReturnType<typeof createUserRepository>;
 
   beforeEach(() => {
-    userRepository = {
-      findByEmail: vi.fn(),
-      findAll: vi.fn(),
-      searchByName: vi.fn(),
-    };
+    userRepository = createUserRepository();
 
     service = new UserService(userRepository as unknown as UserRepository);
   });
@@ -27,7 +26,7 @@ describe('UserService', () => {
 
   describe('findByEmail', () => {
     it('should find a user by email', async () => {
-      const user = { email: 'test@test.com', name: 'Test' };
+      const user = { email: 'test@test.com', name: 'Test' } as UserDocument;
       userRepository.findByEmail.mockResolvedValue(user);
 
       const result = await service.findByEmail('test@test.com');
@@ -37,7 +36,7 @@ describe('UserService', () => {
     });
 
     it('should return null if no email is provided', async () => {
-      const user = await service.findByEmail(null);
+      const user = await service.findByEmail('');
       expect(user).toBeNull();
       expect(userRepository.findByEmail).not.toHaveBeenCalled();
     });
@@ -61,7 +60,7 @@ describe('UserService', () => {
       const result = await service.findAll();
 
       expect(result).toStrictEqual([]);
-      expect(userRepository.findAll).toHaveBeenCalled();
+      expect(userRepository.findAll).toHaveBeenCalledWith();
     });
 
     it('should propagate repository errors', async () => {
@@ -79,12 +78,12 @@ describe('UserService', () => {
       expect(userRepository.searchByName).toHaveBeenCalledWith('test');
     });
 
-    it('should search with null name', async () => {
+    it('should search with empty name', async () => {
       userRepository.searchByName.mockResolvedValue([]);
 
-      await service.searchByName(null);
+      await service.searchByName('');
 
-      expect(userRepository.searchByName).toHaveBeenCalledWith(null);
+      expect(userRepository.searchByName).toHaveBeenCalledWith('');
     });
 
     it('should propagate repository errors', async () => {

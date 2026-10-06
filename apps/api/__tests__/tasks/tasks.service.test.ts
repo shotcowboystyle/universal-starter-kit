@@ -1,4 +1,5 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import type { EventEmitter2 } from 'eventemitter2';
 import { Types } from 'mongoose';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -6,35 +7,45 @@ import type { ProjectsService } from '../../src/modules/projects/projects.servic
 import type { TaskRepository } from '../../src/modules/tasks/repositories/tasks.repository';
 import { TasksService } from '../../src/modules/tasks/tasks.service';
 
-describe('TasksService', () => {
+type LooseAsync<T extends (...args: never[]) => Promise<any>> = (...args: Parameters<T>) => Promise<any>;
+
+type AnyFn = (...args: any[]) => any;
+
+const createTaskRepository = () => ({
+  create: vi.fn<LooseAsync<TaskRepository['create']>>(),
+  findByQuery: vi.fn<LooseAsync<TaskRepository['findByQuery']>>().mockResolvedValue([]),
+  findById: vi.fn<LooseAsync<TaskRepository['findById']>>(),
+  findByIdPopulated: vi.fn<LooseAsync<TaskRepository['findByIdPopulated']>>(),
+  updateById: vi.fn<LooseAsync<TaskRepository['updateById']>>(),
+  deleteById: vi.fn<LooseAsync<TaskRepository['deleteById']>>().mockResolvedValue({ deletedCount: 1 }),
+  deleteByProjectId: vi.fn<LooseAsync<TaskRepository['deleteByProjectId']>>().mockResolvedValue({ deletedCount: 1 }),
+  decrementOrderAfter: vi.fn<LooseAsync<TaskRepository['decrementOrderAfter']>>(),
+  reorderOnMoveWithinProject: vi.fn<LooseAsync<TaskRepository['reorderOnMoveWithinProject']>>(),
+  incrementOrderFrom: vi.fn<LooseAsync<TaskRepository['incrementOrderFrom']>>(),
+  save: vi.fn<LooseAsync<TaskRepository['save']>>(),
+});
+
+const createProjectsService = () => ({
+  addMemberIfNotExists: vi.fn<LooseAsync<ProjectsService['addMemberIfNotExists']>>(),
+});
+
+const createEventEmitter = () => ({
+  on: vi.fn<EventEmitter2['on']>(),
+  emit: vi.fn<EventEmitter2['emit']>(),
+});
+
+describe(TasksService, () => {
   let service: TasksService;
-  let taskRepository: Record<string, ReturnType<typeof vi.fn>>;
-  let projectsService: Record<string, ReturnType<typeof vi.fn>>;
-  let eventEmitter: { on: ReturnType<typeof vi.fn>; emit: ReturnType<typeof vi.fn> };
+  let taskRepository: ReturnType<typeof createTaskRepository>;
+  let projectsService: ReturnType<typeof createProjectsService>;
+  let eventEmitter: ReturnType<typeof createEventEmitter>;
 
   beforeEach(() => {
-    taskRepository = {
-      create: vi.fn(),
-      findByQuery: vi.fn().mockResolvedValue([]),
-      findById: vi.fn(),
-      findByIdPopulated: vi.fn(),
-      updateById: vi.fn(),
-      deleteById: vi.fn().mockResolvedValue({ deletedCount: 1 }),
-      deleteByProjectId: vi.fn().mockResolvedValue({ deletedCount: 1 }),
-      decrementOrderAfter: vi.fn(),
-      reorderOnMoveWithinProject: vi.fn(),
-      incrementOrderFrom: vi.fn(),
-      save: vi.fn(),
-    };
+    taskRepository = createTaskRepository();
 
-    projectsService = {
-      addMemberIfNotExists: vi.fn(),
-    };
+    projectsService = createProjectsService();
 
-    eventEmitter = {
-      on: vi.fn(),
-      emit: vi.fn(),
-    };
+    eventEmitter = createEventEmitter();
 
     service = new TasksService(
       taskRepository as unknown as TaskRepository,
@@ -67,14 +78,16 @@ describe('TasksService', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         orderInProject: 0,
-        populate: vi.fn().mockReturnThis(),
+        populate: vi.fn<AnyFn>().mockReturnThis(),
       };
       taskRepository.create.mockResolvedValue(savedTask);
 
       const result = await service.create(createTaskDto as any, userId);
 
       expect(result).toBeDefined();
-      expect(taskRepository.create).toHaveBeenCalled();
+      expect(taskRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Test Task', creator: new Types.ObjectId(userId) }),
+      );
     });
 
     it('should create a task with an assignee', async () => {
@@ -97,7 +110,7 @@ describe('TasksService', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         orderInProject: 0,
-        populate: vi.fn().mockReturnThis(),
+        populate: vi.fn<AnyFn>().mockReturnThis(),
       };
       taskRepository.create.mockResolvedValue(savedTask);
 
@@ -127,7 +140,7 @@ describe('TasksService', () => {
       const savedTask = {
         _id: { toString: () => 't1' },
         title: 'Test Task',
-        populate: vi.fn().mockReturnThis(),
+        populate: vi.fn<AnyFn>().mockReturnThis(),
       };
       taskRepository.create.mockResolvedValue(savedTask);
       projectsService.addMemberIfNotExists.mockRejectedValue(new Error('Failed to add member'));
@@ -135,7 +148,7 @@ describe('TasksService', () => {
       // Should not throw
       await service.create(createTaskDto as any, userId);
 
-      expect(projectsService.addMemberIfNotExists).toHaveBeenCalled();
+      expect(projectsService.addMemberIfNotExists).toHaveBeenCalledWith(createTaskDto.project, userId);
     });
   });
 
@@ -185,7 +198,7 @@ describe('TasksService', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         orderInProject: 0,
-        populate: vi.fn().mockReturnThis(),
+        populate: vi.fn<AnyFn>().mockReturnThis(),
       };
       taskRepository.findByIdPopulated.mockResolvedValue(task);
 
@@ -224,7 +237,7 @@ describe('TasksService', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         orderInProject: 0,
-        populate: vi.fn().mockReturnThis(),
+        populate: vi.fn<AnyFn>().mockReturnThis(),
       };
 
       taskRepository.findById.mockResolvedValue(task);
@@ -233,7 +246,10 @@ describe('TasksService', () => {
       await service.update(taskId, updateTaskDto, userId);
 
       expect(taskRepository.findById).toHaveBeenCalledWith(taskId);
-      expect(taskRepository.updateById).toHaveBeenCalled();
+      expect(taskRepository.updateById).toHaveBeenCalledWith(
+        taskId,
+        expect.objectContaining({ title: 'Test Task Updated', orderInProject: 0 }),
+      );
     });
 
     it('should handle assigneeId in update', async () => {
@@ -247,7 +263,7 @@ describe('TasksService', () => {
       };
       const updatedTask = {
         _id: { toString: () => taskId },
-        populate: vi.fn().mockReturnThis(),
+        populate: vi.fn<AnyFn>().mockReturnThis(),
       };
 
       taskRepository.findById.mockResolvedValue(task);
@@ -313,7 +329,7 @@ describe('TasksService', () => {
 
       expect(taskRepository.findById).toHaveBeenCalledWith(taskId);
       expect(taskRepository.deleteById).toHaveBeenCalledWith(taskId);
-      expect(taskRepository.decrementOrderAfter).toHaveBeenCalled();
+      expect(taskRepository.decrementOrderAfter).toHaveBeenCalledWith(task.project, 0);
     });
 
     it('should throw not found exception when removing a non-existing task', async () => {
@@ -365,7 +381,7 @@ describe('TasksService', () => {
       };
       const updatedTask = {
         _id: { toString: () => taskId },
-        populate: vi.fn().mockReturnThis(),
+        populate: vi.fn<AnyFn>().mockReturnThis(),
       };
 
       taskRepository.findById.mockResolvedValue(task);
@@ -373,8 +389,13 @@ describe('TasksService', () => {
 
       await service.moveTask(taskId, projectId, 1, userId);
 
-      expect(taskRepository.save).toHaveBeenCalled();
-      expect(taskRepository.reorderOnMoveWithinProject).toHaveBeenCalled();
+      expect(taskRepository.save).toHaveBeenCalledWith(task);
+      expect(taskRepository.reorderOnMoveWithinProject).toHaveBeenCalledWith(
+        new Types.ObjectId(projectId),
+        taskId,
+        0,
+        1,
+      );
     });
 
     it('should move task to different project', async () => {
@@ -391,7 +412,7 @@ describe('TasksService', () => {
       };
       const updatedTask = {
         _id: { toString: () => taskId },
-        populate: vi.fn().mockReturnThis(),
+        populate: vi.fn<AnyFn>().mockReturnThis(),
       };
 
       taskRepository.findById.mockResolvedValue(task);
@@ -399,9 +420,9 @@ describe('TasksService', () => {
 
       await service.moveTask(taskId, newProjectId, 1, userId);
 
-      expect(taskRepository.save).toHaveBeenCalled();
-      expect(taskRepository.decrementOrderAfter).toHaveBeenCalled();
-      expect(taskRepository.incrementOrderFrom).toHaveBeenCalled();
+      expect(taskRepository.save).toHaveBeenCalledWith(task);
+      expect(taskRepository.decrementOrderAfter).toHaveBeenCalledWith(new Types.ObjectId(oldProjectId), 0);
+      expect(taskRepository.incrementOrderFrom).toHaveBeenCalledWith(new Types.ObjectId(newProjectId), 1, taskId);
     });
 
     it('should validate IDs', async () => {
@@ -428,7 +449,7 @@ describe('TasksService', () => {
     it('should handle population error', async () => {
       const task = {
         _id: { toString: () => '1' },
-        populate: vi.fn().mockRejectedValue(new Error('Populate error')),
+        populate: vi.fn<AnyFn>().mockRejectedValue(new Error('Populate error')),
       };
       await expect((service as any).toTaskResponse(task)).rejects.toThrow('Populate error');
     });
@@ -437,7 +458,7 @@ describe('TasksService', () => {
       const task = {
         _id: { toString: () => '1' },
         creator: { _id: '2' },
-        populate: vi.fn().mockReturnThis(),
+        populate: vi.fn<AnyFn>().mockReturnThis(),
       };
       const result = await (service as any).toTaskResponse(task);
       expect(result.lastModifier).toStrictEqual(result.creator);

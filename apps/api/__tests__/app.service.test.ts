@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { AppService } from '../src/app.service';
 
-describe('AppService', () => {
+describe(AppService, () => {
   let service: AppService;
 
   beforeEach(() => {

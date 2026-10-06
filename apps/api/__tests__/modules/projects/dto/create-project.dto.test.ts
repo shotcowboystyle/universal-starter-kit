@@ -1,8 +1,9 @@
 import { validate } from 'class-validator';
+import { describe, expect, it } from 'vitest';
 
 import { CreateProjectDto } from '../../../../src/modules/projects/dto/create-project.dto';
 
-describe('CreateProjectDto', () => {
+describe(CreateProjectDto, () => {
   it('should be valid with correct data', async () => {
     const dto = new CreateProjectDto();
     dto.title = 'Test Project';

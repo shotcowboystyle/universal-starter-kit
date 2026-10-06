@@ -1,16 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { UserController } from '../../src/modules/users/users.controller';
+import type { UserService } from '../../src/modules/users/users.service';
 
-describe('UserController', () => {
+const createService = () => ({
+  findAll: vi.fn<UserService['findAll']>(),
+  searchByName: vi.fn<UserService['searchByName']>(),
+});
+
+describe(UserController, () => {
   let controller: UserController;
-  let service: { findAll: vi.Mock; searchByName: vi.Mock };
+  let service: ReturnType<typeof createService>;
 
   beforeEach(() => {
-    service = {
-      findAll: vi.fn(),
-      searchByName: vi.fn(),
-    };
+    service = createService();
 
     // Manually instantiate UserController with the mock UserService
     controller = new UserController(service as any);
@@ -22,7 +25,7 @@ describe('UserController', () => {
 
   describe('findAll', () => {
     it('should return an array of users', async () => {
-      const result = [];
+      const result: unknown[] = [];
       service.findAll.mockResolvedValue(result as any);
       await expect(controller.findAll()).resolves.toStrictEqual({ users: result });
     });
@@ -30,7 +33,7 @@ describe('UserController', () => {
 
   describe('search', () => {
     it('should return an array of users', async () => {
-      const result = [];
+      const result: unknown[] = [];
       service.searchByName.mockResolvedValue(result as any);
       await expect(controller.search('test')).resolves.toStrictEqual({ users: result });
     });

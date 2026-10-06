@@ -2,26 +2,34 @@ import { Types } from 'mongoose';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { BoardRepository } from '../../../../src/modules/boards/repositories/boards.repository';
+import type { Board } from '../../../../src/modules/boards/schemas/boards.schema';
 
-describe('BoardRepository', () => {
+type AnyFn = (...args: any[]) => any;
+
+describe(BoardRepository, () => {
   let repository: BoardRepository;
   let mockModel: any;
 
   beforeEach(() => {
     // Correctly define MockModel as a function that mimics a constructor
-    const MockModel = vi.fn().mockImplementation(function MockBoardModel(data) {
-      return {
-        ...data,
-        save: vi.fn().mockResolvedValue(data),
-      };
-    }) as any;
-
-    MockModel.aggregate = vi.fn().mockResolvedValue([]);
-    MockModel.findById = vi.fn().mockReturnThis();
-    MockModel.findByIdAndUpdate = vi.fn().mockReturnThis();
-    MockModel.deleteOne = vi.fn().mockReturnThis();
-    MockModel.findOneAndUpdate = vi.fn().mockReturnThis();
-    MockModel.exec = vi.fn();
+    const MockModel = Object.assign(
+      vi
+        .fn<(data: Partial<Board>) => Partial<Board> & { save: AnyFn }>()
+        .mockImplementation(function MockBoardModel(data) {
+          return {
+            ...data,
+            save: vi.fn<AnyFn>().mockResolvedValue(data),
+          };
+        }),
+      {
+        aggregate: vi.fn<AnyFn>().mockResolvedValue([]),
+        findById: vi.fn<AnyFn>().mockReturnThis(),
+        findByIdAndUpdate: vi.fn<AnyFn>().mockReturnThis(),
+        deleteOne: vi.fn<AnyFn>().mockReturnThis(),
+        findOneAndUpdate: vi.fn<AnyFn>().mockReturnThis(),
+        exec: vi.fn<AnyFn>(),
+      },
+    );
 
     mockModel = MockModel;
     repository = new BoardRepository(mockModel);
@@ -133,7 +141,7 @@ describe('BoardRepository', () => {
     it('should delete a board by id', async () => {
       const boardId = new Types.ObjectId().toHexString();
 
-      mockModel.deleteOne.mockReturnValue({ exec: vi.fn().mockResolvedValue({ deletedCount: 1 }) });
+      mockModel.deleteOne.mockReturnValue({ exec: vi.fn<AnyFn>().mockResolvedValue({ deletedCount: 1 }) });
 
       const result = await repository.deleteById(boardId);
 
@@ -149,7 +157,7 @@ describe('BoardRepository', () => {
       const memberId = new Types.ObjectId();
       const mockBoard = { _id: boardId.toHexString(), members: [memberId.toHexString()] };
 
-      mockModel.findOneAndUpdate.mockReturnValue({ exec: vi.fn().mockResolvedValue(mockBoard) });
+      mockModel.findOneAndUpdate.mockReturnValue({ exec: vi.fn<AnyFn>().mockResolvedValue(mockBoard) });
 
       const result = await repository.addMember(boardId.toHexString(), ownerId.toHexString(), memberId.toHexString());
 
@@ -169,7 +177,7 @@ describe('BoardRepository', () => {
       const memberId = new Types.ObjectId();
       const mockBoard = { _id: boardId.toHexString(), members: [] };
 
-      mockModel.findOneAndUpdate.mockReturnValue({ exec: vi.fn().mockResolvedValue(mockBoard) });
+      mockModel.findOneAndUpdate.mockReturnValue({ exec: vi.fn<AnyFn>().mockResolvedValue(mockBoard) });
 
       const result = await repository.removeMember(
         boardId.toHexString(),

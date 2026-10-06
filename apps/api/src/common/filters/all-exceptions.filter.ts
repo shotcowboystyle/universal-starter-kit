@@ -6,6 +6,7 @@ import type { Response } from 'express';
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
 
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- ExceptionFilter receives arbitrary thrown values; narrowed with instanceof below
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
@@ -22,10 +23,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     response
       .status(status)
-      .json(
-        typeof message === 'string'
-          ? { statusCode: status, message }
-          : { statusCode: status, ...(typeof message === 'object' ? message : { message }) },
-      );
+      .json(message instanceof Object ? { statusCode: status, ...message } : { statusCode: status, message });
   }
 }

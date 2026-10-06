@@ -1,15 +1,17 @@
 import { UnauthorizedException } from '@nestjs/common';
+import type { ConfigService } from '@nestjs/config';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Mock } from 'vitest';
 
 import { JwtStrategy } from '../../../../src/modules/auth/strategies/jwt.strategy';
 import type { UserService } from '../../../../src/modules/users/users.service';
 
-describe('JwtStrategy', () => {
+const createUserService = () => ({
+  findByEmail: vi.fn<UserService['findByEmail']>(),
+});
+
+describe(JwtStrategy, () => {
   let jwtStrategy: JwtStrategy;
-  let mockUserService: {
-    findByEmail: Mock;
-  };
+  let mockUserService: ReturnType<typeof createUserService>;
 
   const mockUser = {
     _id: '60f6e1b3b3f3b3b3b3f3b3b3',
@@ -17,14 +19,14 @@ describe('JwtStrategy', () => {
   };
 
   beforeEach(() => {
-    mockUserService = { findByEmail: vi.fn() };
+    mockUserService = createUserService();
     const mockConfigService = {
-      get: vi.fn((key: string) => (key === 'JWT_SECRET' ? 'test-secret-key' : undefined)),
+      get: vi.fn<(key: string) => string | undefined>((key) => (key === 'JWT_SECRET' ? 'test-secret-key' : undefined)),
     };
 
     jwtStrategy = new JwtStrategy(
       mockUserService as unknown as UserService,
-      mockConfigService as unknown as import('@nestjs/config').ConfigService,
+      mockConfigService as unknown as ConfigService,
     );
   });
 

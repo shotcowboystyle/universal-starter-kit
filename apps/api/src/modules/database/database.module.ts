@@ -1,48 +1,24 @@
-import type { OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { Global, Inject, Injectable, Logger, Module } from '@nestjs/common';
+import { Global, Logger, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { MongooseModuleOptions } from '@nestjs/mongoose';
 import { getConnectionToken, MongooseModule } from '@nestjs/mongoose';
 import type mongoose from 'mongoose';
 
-@Injectable()
-export class DatabaseService implements OnModuleInit, OnModuleDestroy {
-  private readonly logger = new Logger(DatabaseService.name);
-
-  constructor(
-    @Inject('DATABASE_CONNECTION')
-    private readonly connection: mongoose.Connection,
-  ) {}
-
-  async onModuleInit() {
-    this.connection.on('error', (error: Error) => {
-      this.logger.error(`MongoDB connection error: ${error.message}`, error.stack);
-    });
-  }
-
-  async onModuleDestroy() {
-    try {
-      await this.connection.close();
-      this.logger.log('MongoDB connection closed gracefully');
-    } catch (error) {
-      this.logger.error('Error closing MongoDB connection', error);
-    }
-  }
-}
+import { DatabaseService } from './database.service';
 
 @Global()
 @Module({
   imports: [
     MongooseModule.forRootAsync({
-      useFactory: async (configService: ConfigService): Promise<MongooseModuleOptions> => {
+      useFactory: (configService: ConfigService): MongooseModuleOptions => {
         const logger = new Logger('MongoDB');
         const uri = configService.get<string>('DATABASE_URL');
 
-        if (!uri) {
+        if (uri === undefined || uri === '') {
           throw new Error('MongoDB connection string (DATABASE_URL) is not defined');
         }
 
-        const maskedUri = uri.replace(/:\/\/([^:]+):([^@]+)@/u, '://***:***@');
+        const maskedUri = uri.replace(/:\/\/(?<user>[^:]+):(?<password>[^@]+)@/u, '://***:***@');
         logger.log(`Connecting to: ${maskedUri}`);
 
         const isProduction = configService.get('NODE_ENV') === 'production';
@@ -59,11 +35,11 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
           retryAttempts: 3,
           ssl: isProduction,
           autoIndex: !isProduction,
-          connectionFactory: (connection) => {
+          connectionFactory: (connection: mongoose.Connection) => {
             connection.on('connected', () => {
               logger.log('MongoDB connected successfully');
             });
-            connection.on('error', (error) => {
+            connection.on('error', (error: Error) => {
               logger.error(`MongoDB connection error: ${error.message}`);
             });
             connection.on('disconnected', () => {

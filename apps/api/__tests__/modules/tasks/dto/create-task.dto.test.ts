@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { CreateTaskDto, TaskStatus } from '../../../../src/modules/tasks/dto/create-task.dto';
 
-describe('CreateTaskDto', () => {
+describe(CreateTaskDto, () => {
   it('should be valid with correct data', async () => {
     const dto = new CreateTaskDto();
     dto.title = 'Test Task';

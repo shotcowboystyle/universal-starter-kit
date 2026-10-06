@@ -10,6 +10,10 @@ import { TaskResponseDto } from './dto/task-response.dto';
 import type { UpdateTaskDto } from './dto/update-task.dto';
 import type { TasksService } from './tasks.service';
 
+const UNAUTHORIZED_DESCRIPTION = 'Unauthorized';
+const BAD_REQUEST_DESCRIPTION = 'Bad request';
+const TASK_NOT_FOUND_DESCRIPTION = 'Task not found';
+
 @ApiTags('tasks')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
@@ -24,8 +28,8 @@ export class TasksController {
     description: 'Task created successfully',
     type: TaskResponseDto,
   })
-  @ApiResponse({ status: 400, description: 'Bad request' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 400, description: BAD_REQUEST_DESCRIPTION })
+  @ApiResponse({ status: 401, description: UNAUTHORIZED_DESCRIPTION })
   async create(@Body() createTaskDto: CreateTaskDto, @CurrentUser() user: { _id: string }): Promise<TaskResponseDto> {
     return await this.tasksService.create(createTaskDto, user._id);
   }
@@ -39,7 +43,7 @@ export class TasksController {
     description: 'List of tasks',
     type: [TaskResponseDto],
   })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 401, description: UNAUTHORIZED_DESCRIPTION })
   async findAll(
     @Query('projectId') projectId?: string,
     @Query('assigneeId') assigneeId?: string,
@@ -54,8 +58,8 @@ export class TasksController {
     description: 'Task found',
     type: TaskResponseDto,
   })
-  @ApiResponse({ status: 404, description: 'Task not found' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: TASK_NOT_FOUND_DESCRIPTION })
+  @ApiResponse({ status: 401, description: UNAUTHORIZED_DESCRIPTION })
   async findOne(@Param('id', ParseObjectIdPipe) id: string): Promise<TaskResponseDto> {
     return await this.tasksService.findOne(id);
   }
@@ -67,9 +71,9 @@ export class TasksController {
     description: 'Task updated',
     type: TaskResponseDto,
   })
-  @ApiResponse({ status: 404, description: 'Task not found' })
-  @ApiResponse({ status: 400, description: 'Bad request' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: TASK_NOT_FOUND_DESCRIPTION })
+  @ApiResponse({ status: 400, description: BAD_REQUEST_DESCRIPTION })
+  @ApiResponse({ status: 401, description: UNAUTHORIZED_DESCRIPTION })
   async update(
     @Param('id', ParseObjectIdPipe) id: string,
     @Body() updateTaskDto: UpdateTaskDto,
@@ -81,8 +85,8 @@ export class TasksController {
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a task' })
   @ApiResponse({ status: 200, description: 'Task deleted successfully' })
-  @ApiResponse({ status: 404, description: 'Task not found' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: TASK_NOT_FOUND_DESCRIPTION })
+  @ApiResponse({ status: 401, description: UNAUTHORIZED_DESCRIPTION })
   @ApiResponse({
     status: 403,
     description: 'Forbidden - Only the task creator can delete the task',
@@ -98,9 +102,9 @@ export class TasksController {
     description: 'Task moved successfully',
     type: TaskResponseDto,
   })
-  @ApiResponse({ status: 404, description: 'Task not found' })
-  @ApiResponse({ status: 400, description: 'Bad request' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: TASK_NOT_FOUND_DESCRIPTION })
+  @ApiResponse({ status: 400, description: BAD_REQUEST_DESCRIPTION })
+  @ApiResponse({ status: 401, description: UNAUTHORIZED_DESCRIPTION })
   async moveTask(
     @Param('id', ParseObjectIdPipe) id: string,
     @Body() moveData: { projectId: string; orderInProject: number },

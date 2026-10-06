@@ -1,4 +1,4 @@
-import { resolve } from 'node:path';
+import path from 'node:path';
 
 import { config } from 'dotenv';
 import mongoose, { Types } from 'mongoose';
@@ -18,10 +18,10 @@ const isProduction = process.env.NODE_ENV === 'production';
 
 // Load .env file for local development
 if (!isProduction) {
-  const envPath = resolve(process.cwd(), '../../.env');
+  const envPath = path.resolve(process.cwd(), '../../.env');
   const envConfig = config({ path: envPath });
   if (envConfig.error) {
-    const fallbackPath = resolve(process.cwd(), '.env');
+    const fallbackPath = path.resolve(process.cwd(), '.env');
     if (fallbackPath === envPath) {
       console.warn('Warning: No .env file found at', envPath);
       console.warn('Falling back to process environment variables');
@@ -33,13 +33,15 @@ if (!isProduction) {
 
 // Validate required environment variables
 const requiredEnvVars = ['DATABASE_URL'];
-const missingEnvVars = requiredEnvVars.filter((envVar) => !process.env[envVar]);
+const missingEnvVars = requiredEnvVars.filter(
+  (envVar) => process.env[envVar] === undefined || process.env[envVar] === '',
+);
 
 if (missingEnvVars.length > 0) {
   console.error('\u001B[31mError: The following environment variables are required but missing:\u001B[0m');
-  missingEnvVars.forEach((envVar) => {
+  for (const envVar of missingEnvVars) {
     console.error(`- ${envVar}`);
-  });
+  }
   if (!isProduction) {
     console.error(
       '\nFor local development, please create a .env file in the project root with the required variables.',
@@ -53,25 +55,25 @@ const getDatabaseNameFromUrl = (url: string): string | null => {
   try {
     // MongoDB URL format: mongodb://[username:password@]host[:port]/[database][?options]
     // Extract database name from the URL
-    const match = /\/\/[^/]+\/([^?]+)/u.exec(url);
-    return match && match[1] ? match[1] : null;
+    return /\/\/[^/]+\/(?<name>[^?]+)/u.exec(url)?.groups?.name ?? null;
   } catch {
     return null;
   }
 };
 
-const databaseUrl = process.env.DATABASE_URL;
+// DATABASE_URL presence was validated above
+const databaseUrl = process.env.DATABASE_URL ?? '';
 const dbName = getDatabaseNameFromUrl(databaseUrl);
 const expectedDbName = 'next-project-manager';
 
 console.log('Environment:', {
-  NODE_ENV: process.env.NODE_ENV || 'development',
-  DATABASE_URL: databaseUrl ? `***${databaseUrl.split('@').pop()}` : 'Not set',
-  Database_Name: dbName || 'test (default)',
+  NODE_ENV: process.env.NODE_ENV === undefined || process.env.NODE_ENV === '' ? 'development' : process.env.NODE_ENV,
+  DATABASE_URL: databaseUrl === '' ? 'Not set' : `***${databaseUrl.split('@').pop()}`,
+  Database_Name: dbName ?? 'test (default)',
 });
 
 // Warn if database name is missing or incorrect
-if (!dbName || dbName === 'test') {
+if (dbName === null || dbName === 'test') {
   console.warn('\n\u001B[33m⚠️  WARNING: No database name specified in DATABASE_URL!\u001B[0m');
   console.warn('\u001B[33mMongoDB will use the default "test" database.\u001B[0m');
   console.warn('\u001B[33m\nExpected format:\u001B[0m');
@@ -95,7 +97,7 @@ const main = async () => {
   try {
     // Connect to MongoDB directly
     console.log('Connecting to database...');
-    await mongoose.connect(process.env.DATABASE_URL, {
+    await mongoose.connect(databaseUrl, {
       serverSelectionTimeoutMS: 10_000,
     });
     console.log('Database connected successfully.');
@@ -127,34 +129,43 @@ const main = async () => {
       updatedAt: new Date(),
     }));
     const users = await userModel.insertMany(usersToInsert);
-    if (!users || users.length === 0) {
+    if (users.length === 0) {
       throw new Error('No users were created. Cannot proceed without users.');
     }
     console.log(`Created ${users.length} users`);
 
     const boards = await boardModel.insertMany([
       {
-        ...demoBoards[0], // Mark's Kanban
-        owner: users[2]._id, // Mark S
+        // Mark's Kanban
+        ...demoBoards[0],
+        // Mark S
+        owner: users[2]._id,
         members: [users[2]._id],
         projects: [],
       },
       {
-        ...demoBoards[1], // John's Kanban
-        owner: users[0]._id, // John
+        // John's Kanban
+        ...demoBoards[1],
+        // John
+        owner: users[0]._id,
         members: [users[0]._id],
         projects: [],
       },
       {
-        ...demoBoards[2], // Jane's Kanban
-        owner: users[1]._id, // Jane
+        // Jane's Kanban
+        ...demoBoards[2],
+        // Jane
+        owner: users[1]._id,
         members: [users[1]._id],
         projects: [],
       },
       {
-        ...demoBoards[3], // Dev Team Board
-        owner: users[1]._id, // John
-        members: [users[0]._id, users[1]._id, users[2]._id], // All developers
+        // Dev Team Board
+        ...demoBoards[3],
+        // John
+        owner: users[1]._id,
+        // All developers
+        members: [users[0]._id, users[1]._id, users[2]._id],
         projects: [],
       },
     ]);
@@ -162,22 +173,31 @@ const main = async () => {
 
     const projects = await projectModel.insertMany([
       {
-        ...demoProjects[0], // Mark's Todo List
-        owner: users[2]._id, // Mark S
+        // Mark's task list
+        ...demoProjects[0],
+        // Mark S
+        owner: users[2]._id,
         members: [users[2]._id],
-        board: boards[0]._id, // Mark's Kanban
+        // Mark's Kanban
+        board: boards[0]._id,
       },
       {
-        ...demoProjects[1], // Demo Project 2
-        owner: users[0]._id, // John
+        // Demo Project 2
+        ...demoProjects[1],
+        // John
+        owner: users[0]._id,
         members: [users[0]._id, users[2]._id],
-        board: boards[3]._id, // Dev Team Board
+        // Dev Team Board
+        board: boards[3]._id,
       },
       {
-        ...demoProjects[2], // Demo Project 3
-        owner: users[1]._id, // Jane
+        // Demo Project 3
+        ...demoProjects[2],
+        // Jane
+        owner: users[1]._id,
         members: [users[1]._id, users[2]._id],
-        board: boards[3]._id, // Dev Team Board
+        // Dev Team Board
+        board: boards[3]._id,
       },
     ]);
     console.log(`Created ${projects.length} projects`);
@@ -197,49 +217,60 @@ const main = async () => {
         ...demoTasks[0],
         board: boards[0]._id,
         project: projects[0]._id,
-        assignee: users[2]._id, // Mark S
+        // Mark S
+        assignee: users[2]._id,
         creator: users[2]._id,
         lastModifier: users[2]._id,
-        dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // 2 days from now
+        // 2 days from now
+        dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
       },
       {
         ...demoTasks[1],
         board: boards[1]._id,
         project: projects[1]._id,
-        assignee: users[2]._id, // Mark
-        creator: users[1]._id, // Jane
+        // Mark
+        assignee: users[2]._id,
+        // Jane
+        creator: users[1]._id,
         lastModifier: users[1]._id,
-        dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5 days from now
+        // 5 days from now
+        dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
       },
       {
         ...demoTasks[2],
         board: boards[2]._id,
         project: projects[2]._id,
-        assignee: users[1]._id, // Jane
-        creator: users[0]._id, // John
-        lastModifier: users[1]._id, // Jane
-        dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // 3 days from now
+        // Jane
+        assignee: users[1]._id,
+        // John
+        creator: users[0]._id,
+        // Jane
+        lastModifier: users[1]._id,
+        // 3 days from now
+        dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
       },
     ]);
     console.log(`Created ${tasks.length} tasks`);
     console.log('\u001B[32mDatabase initialized successfully!\u001B[0m');
     console.log('\u001B[33mYou can now log in with the following test accounts:\u001B[0m');
-    users.forEach((user) => {
+    for (const user of users) {
       console.log({
         name: user.name,
         email: user.email,
       });
-    });
+    }
 
     await mongoose.connection.close();
     process.exit(0);
   } catch (error) {
     console.error('Error during database initialization:', error);
-    await mongoose.connection.close().catch((err) => {
-      console.error('Failed to close connection:', err);
-    });
+    try {
+      await mongoose.connection.close();
+    } catch (closeError: unknown) {
+      console.error('Failed to close connection:', closeError);
+    }
     process.exit(1);
   }
 };
 
-main();
+void main();

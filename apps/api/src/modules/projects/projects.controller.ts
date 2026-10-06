@@ -9,6 +9,9 @@ import { UpdateProjectDto } from './dto/update-project.dto';
 import type { ProjectsService } from './projects.service';
 import { Project } from './schemas/projects.schema';
 
+const BAD_REQUEST_DESCRIPTION = 'Bad request';
+const UNAUTHORIZED_DESCRIPTION = 'Unauthorized';
+
 @ApiTags('projects')
 @Controller('projects')
 @UseGuards(JwtAuthGuard)
@@ -24,10 +27,14 @@ export class ProjectsController {
     description: 'The project has been successfully created.',
     type: Project,
   })
-  @ApiResponse({ status: 400, description: 'Bad request' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 400, description: BAD_REQUEST_DESCRIPTION })
+  @ApiResponse({ status: 401, description: UNAUTHORIZED_DESCRIPTION })
   async create(@Body() createProjectDto: CreateProjectDto, @CurrentUser() user: { _id: string; email: string }) {
-    return await this.projectsService.create({ ...createProjectDto, owner: user._id });
+    return await this.projectsService.create({
+      // oxlint-disable-next-line typescript/no-misused-spread -- DTO is a plain data holder; the service reads own properties only
+      ...createProjectDto,
+      owner: user._id,
+    });
   }
 
   @Get()
@@ -35,7 +42,7 @@ export class ProjectsController {
   @ApiQuery({ name: 'boardId', required: true, type: String })
   @ApiResponse({ status: 200, description: 'List of projects', type: [Project] })
   @ApiResponse({ status: 400, description: 'Invalid board ID' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 401, description: UNAUTHORIZED_DESCRIPTION })
   async getProjectsByBoard(@Query('boardId') boardId: string) {
     return await this.projectsService.findByBoardId(boardId);
   }
@@ -48,8 +55,8 @@ export class ProjectsController {
     description: 'The project has been successfully updated.',
     type: Project,
   })
-  @ApiResponse({ status: 400, description: 'Bad request' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 400, description: BAD_REQUEST_DESCRIPTION })
+  @ApiResponse({ status: 401, description: UNAUTHORIZED_DESCRIPTION })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'Project not found' })
   async update(
@@ -63,8 +70,8 @@ export class ProjectsController {
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a project' })
   @ApiResponse({ status: 200, description: 'The project has been successfully deleted.' })
-  @ApiResponse({ status: 400, description: 'Bad request' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 400, description: BAD_REQUEST_DESCRIPTION })
+  @ApiResponse({ status: 401, description: UNAUTHORIZED_DESCRIPTION })
   @ApiResponse({ status: 403, description: 'Forbidden' })
   @ApiResponse({ status: 404, description: 'Project not found' })
   async remove(@Param('id') id: string, @CurrentUser() user: { _id: string }) {

@@ -1,30 +1,37 @@
+import type { EventEmitter2 } from 'eventemitter2';
 import { Types } from 'mongoose';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { BoardService } from '../../src/modules/boards/boards.service';
 import type { BoardRepository } from '../../src/modules/boards/repositories/boards.repository';
 
-describe('BoardService', () => {
+type LooseAsync<T extends (...args: never[]) => Promise<any>> = (...args: Parameters<T>) => Promise<any>;
+
+const createBoardRepository = () => ({
+  create: vi.fn<LooseAsync<BoardRepository['create']>>(),
+  findByOwner: vi.fn<LooseAsync<BoardRepository['findByOwner']>>().mockResolvedValue([]),
+  findByMemberNotOwner: vi.fn<LooseAsync<BoardRepository['findByMemberNotOwner']>>().mockResolvedValue([]),
+  findOneWithAccess: vi.fn<LooseAsync<BoardRepository['findOneWithAccess']>>(),
+  findById: vi.fn<LooseAsync<BoardRepository['findById']>>(),
+  updateById: vi.fn<LooseAsync<BoardRepository['updateById']>>(),
+  deleteById: vi.fn<LooseAsync<BoardRepository['deleteById']>>(),
+  addMember: vi.fn<LooseAsync<BoardRepository['addMember']>>(),
+  removeMember: vi.fn<LooseAsync<BoardRepository['removeMember']>>(),
+});
+
+const createEventEmitter = () => ({
+  emit: vi.fn<EventEmitter2['emit']>(),
+});
+
+describe(BoardService, () => {
   let service: BoardService;
-  let boardRepository: Record<string, ReturnType<typeof vi.fn>>;
-  let eventEmitter: { emit: ReturnType<typeof vi.fn> };
+  let boardRepository: ReturnType<typeof createBoardRepository>;
+  let eventEmitter: ReturnType<typeof createEventEmitter>;
 
   beforeEach(() => {
-    boardRepository = {
-      create: vi.fn(),
-      findByOwner: vi.fn().mockResolvedValue([]),
-      findByMemberNotOwner: vi.fn().mockResolvedValue([]),
-      findOneWithAccess: vi.fn(),
-      findById: vi.fn(),
-      updateById: vi.fn(),
-      deleteById: vi.fn(),
-      addMember: vi.fn(),
-      removeMember: vi.fn(),
-    };
+    boardRepository = createBoardRepository();
 
-    eventEmitter = {
-      emit: vi.fn(),
-    };
+    eventEmitter = createEventEmitter();
 
     service = new BoardService(boardRepository as unknown as BoardRepository, eventEmitter as any);
   });
@@ -46,7 +53,9 @@ describe('BoardService', () => {
       const result = await service.create(createBoardDto as any);
 
       expect(result).toStrictEqual(expectedBoard);
-      expect(boardRepository.create).toHaveBeenCalled();
+      expect(boardRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Test Board', owner: new Types.ObjectId('60f6e1b3b3f3b3b3b3f3b3b3') }),
+      );
     });
   });
 
@@ -56,8 +65,8 @@ describe('BoardService', () => {
 
       await service.findAll(userId);
 
-      expect(boardRepository.findByOwner).toHaveBeenCalled();
-      expect(boardRepository.findByMemberNotOwner).toHaveBeenCalled();
+      expect(boardRepository.findByOwner).toHaveBeenCalledWith(new Types.ObjectId(userId));
+      expect(boardRepository.findByMemberNotOwner).toHaveBeenCalledWith(new Types.ObjectId(userId));
     });
   });
 
@@ -69,7 +78,10 @@ describe('BoardService', () => {
 
       await service.findOne(boardId, userId);
 
-      expect(boardRepository.findOneWithAccess).toHaveBeenCalled();
+      expect(boardRepository.findOneWithAccess).toHaveBeenCalledWith(
+        new Types.ObjectId(boardId),
+        new Types.ObjectId(userId),
+      );
     });
   });
 
