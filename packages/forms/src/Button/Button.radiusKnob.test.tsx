@@ -27,12 +27,12 @@ import { Button } from './index';
 
 afterEach(cleanup);
 
-function frameRadiusClasses(): string[] {
+const frameRadiusClasses = (): string[] => {
   const frame = screen.getByRole('button');
   return String(frame.className || '')
     .split(' ')
     .filter((c) => c.startsWith('_btlr-'));
-}
+};
 
 describe('Button KNOB-TOTALITY — borderRadius knob', () => {
   it('default variant squares at borderRadius none and follows the scale', () => {

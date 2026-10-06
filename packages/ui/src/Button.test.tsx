@@ -32,12 +32,12 @@ import * as pkg from './index';
 
 afterEach(cleanup);
 
-function frameRadiusClasses(): string[] {
+const frameRadiusClasses = (): string[] => {
   const frame = screen.getByRole('button');
   return String(frame.className || '')
     .split(' ')
     .filter((c) => c.startsWith('_btlr-'));
-}
+};
 
 describe('components Button export identity', () => {
   it('the barrel serves the house shadow, not the raw tamagui primitive', () => {

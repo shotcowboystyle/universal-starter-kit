@@ -42,7 +42,7 @@ interface TemplateHeaderProps {
   header?: ReactNode;
 }
 
-function renderTemplateHeader({ title, subtitle, actions, nav, header }: TemplateHeaderProps) {
+const renderTemplateHeader = ({ title, subtitle, actions, nav, header }: TemplateHeaderProps) => {
   if (header !== undefined) {
     return header;
   }
@@ -57,7 +57,7 @@ function renderTemplateHeader({ title, subtitle, actions, nav, header }: Templat
       nav={nav}
     />
   );
-}
+};
 
 // ── ListPageLayout ─────────────────────────────────────────────────────────
 
@@ -76,7 +76,7 @@ export interface ListPageLayoutProps extends ScreenProps, TemplateHeaderProps {
  *   <FrappeListView doctype="Pokemon" flex={1} />
  * </ListPageLayout>
  */
-export function ListPageLayout({
+export const ListPageLayout = ({
   title,
   subtitle,
   actions,
@@ -85,7 +85,7 @@ export function ListPageLayout({
   toolbar,
   children,
   ...rest
-}: ListPageLayoutProps) {
+}: ListPageLayoutProps) => {
   return (
     <Screen
       data-canonical="list-page"
@@ -100,7 +100,7 @@ export function ListPageLayout({
       </YStack>
     </Screen>
   );
-}
+};
 
 // ── DetailPageLayout ───────────────────────────────────────────────────────
 
@@ -134,7 +134,7 @@ export interface DetailPageLayoutProps extends ScreenProps, TemplateHeaderProps 
  *   <FrappeForm doctype="Pokemon" name={id} />
  * </DetailPageLayout>
  */
-export function DetailPageLayout({
+export const DetailPageLayout = ({
   title,
   subtitle,
   actions,
@@ -146,7 +146,7 @@ export function DetailPageLayout({
   sizeClass: sizeClassProp,
   children,
   ...rest
-}: DetailPageLayoutProps) {
+}: DetailPageLayoutProps) => {
   const liveClass = useLayoutSizeClass();
   const sizeClass = sizeClassProp ?? liveClass;
   const multi = defaultMaxPanes(sizeClass) >= 2;
@@ -192,7 +192,7 @@ export function DetailPageLayout({
       {body}
     </Screen>
   );
-}
+};
 
 // ── SettingsPageLayout ─────────────────────────────────────────────────────
 
@@ -213,7 +213,7 @@ export interface SettingsPageLayoutProps extends ScreenProps, TemplateHeaderProp
  *   <PageSection title="Notifications">…fields…</PageSection>
  * </SettingsPageLayout>
  */
-export function SettingsPageLayout({
+export const SettingsPageLayout = ({
   title,
   subtitle,
   actions,
@@ -222,7 +222,7 @@ export function SettingsPageLayout({
   maxWidth = layoutBreakpoints.expanded,
   children,
   ...rest
-}: SettingsPageLayoutProps) {
+}: SettingsPageLayoutProps) => {
   return (
     <Screen
       data-canonical="settings-page"
@@ -232,4 +232,4 @@ export function SettingsPageLayout({
       {children}
     </Screen>
   );
-}
+};

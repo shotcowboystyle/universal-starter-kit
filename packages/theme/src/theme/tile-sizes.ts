@@ -133,7 +133,7 @@ export const defaultTileSizeInputs: TileSizeInputs = {
  * unset, so a later `resolveTileSizeInputs` still sees them as defaults
  * rather than explicit undefineds.
  */
-export function cloneTileSizeInputs<T extends Partial<TileSizeInputs>>(inputs: T): T {
+export const cloneTileSizeInputs = <T extends Partial<TileSizeInputs>>(inputs: T): T => {
   const clone = { ...inputs };
   if (inputs.rungSteps) {
     clone.rungSteps = { ...inputs.rungSteps };
@@ -148,14 +148,14 @@ export function cloneTileSizeInputs<T extends Partial<TileSizeInputs>>(inputs: T
     clone.rungMaxWidths = { ...inputs.rungMaxWidths };
   }
   return clone;
-}
+};
 
 /**
  * Fill defaults. `{ baseWidth: 280 }` (any scaling override without explicit
  * tables) drops the measured rungWidths/widthFactors/rungMaxWidths so every
  * rung regenerates from `stepRatio` — the `resolveSizeRecipeInputs` contract.
  */
-export function resolveTileSizeInputs(partial: Partial<TileSizeInputs> = {}): TileSizeInputs {
+export const resolveTileSizeInputs = (partial: Partial<TileSizeInputs> = {}): TileSizeInputs => {
   const scalingOverride = partial.baseWidth != null || partial.stepRatio != null || partial.rungSteps != null;
   const hasRungWidths = Object.hasOwn(partial, 'rungWidths');
   const hasWidthFactors = Object.hasOwn(partial, 'widthFactors');
@@ -187,15 +187,15 @@ export function resolveTileSizeInputs(partial: Partial<TileSizeInputs> = {}): Ti
   }
 
   return resolved;
-}
+};
 
 // ── Generation ────────────────────────────────────────────────
 
-function clampWidth(value: number): number {
+const clampWidth = (value: number): number => {
   return Math.max(1, Math.round(value));
-}
+};
 
-function minWidthForRung(rung: TileSizeRung, inputs: TileSizeInputs): number {
+const minWidthForRung = (rung: TileSizeRung, inputs: TileSizeInputs): number => {
   const explicitPx = inputs.rungWidths?.[rung];
   if (explicitPx != null) {
     return clampWidth(explicitPx);
@@ -206,10 +206,10 @@ function minWidthForRung(rung: TileSizeRung, inputs: TileSizeInputs): number {
   }
   const step = inputs.rungSteps[rung] ?? 0;
   return clampWidth(inputs.baseWidth * inputs.stepRatio ** step);
-}
+};
 
 /** Derive the full ladder from resolved inputs. Tables are generated, never handwritten. */
-export function generateTileSizeLadder(inputs: TileSizeInputs): TileSizeLadder {
+export const generateTileSizeLadder = (inputs: TileSizeInputs): TileSizeLadder => {
   const ladder = {} as TileSizeLadder;
   for (const rung of tileSizeRungs) {
     const minWidth = minWidthForRung(rung, inputs);
@@ -221,7 +221,7 @@ export function generateTileSizeLadder(inputs: TileSizeInputs): TileSizeLadder {
     ladder[rung] = { minWidth, maxWidth };
   }
   return ladder;
-}
+};
 
 // ── Consumption helpers ───────────────────────────────────────
 
@@ -237,14 +237,14 @@ export interface TileRungFlexProps {
  * tiles grow from `minWidth` and stop at `maxWidth`). Spread it on the tile
  * surface; gutters stay on the container's space-knob gap.
  */
-export function tileRungFlexProps(stop: TileSizeStop): TileRungFlexProps {
+export const tileRungFlexProps = (stop: TileSizeStop): TileRungFlexProps => {
   return {
     flexGrow: 1,
     flexBasis: stop.minWidth,
     minWidth: stop.minWidth,
     maxWidth: stop.maxWidth,
   };
-}
+};
 
 /**
  * Column count for a fixed-column tile grid (the ImageGrid / springboard
@@ -261,12 +261,12 @@ export function tileRungFlexProps(stop: TileSizeStop): TileRungFlexProps {
  * `xs` (104) with the 8px launcher gutter yields 6 columns at the 700px
  * wide-breakpoint and 4 in the phone band.
  */
-export function tileColumnsForWidth(width: number, stop: TileSizeStop, gutter = 0): number {
+export const tileColumnsForWidth = (width: number, stop: TileSizeStop, gutter = 0): number => {
   if (!Number.isFinite(width) || width <= 0) {
     return 1;
   }
   return Math.max(1, Math.floor((width + gutter) / (stop.minWidth + gutter)));
-}
+};
 
 // ── Media aspect (H2) ─────────────────────────────────────────
 
@@ -294,7 +294,7 @@ export type MediaAspectName = keyof typeof mediaAspectRatios;
 export type MediaAspect = MediaAspectName | number;
 
 /** Resolve a name or number to a positive width/height ratio (default `square`). */
-export function resolveMediaAspect(aspect?: MediaAspect | null): number {
+export const resolveMediaAspect = (aspect?: MediaAspect | null): number => {
   if (typeof aspect === 'number') {
     return Number.isFinite(aspect) && aspect > 0 ? aspect : mediaAspectRatios.square;
   }
@@ -302,4 +302,4 @@ export function resolveMediaAspect(aspect?: MediaAspect | null): number {
     return mediaAspectRatios[aspect];
   }
   return mediaAspectRatios.square;
-}
+};

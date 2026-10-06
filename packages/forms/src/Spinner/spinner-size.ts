@@ -16,7 +16,7 @@ export interface SpinnerProps {
  * knob flip restyles the glyph. Explicit small/large stay the
  * button-safe aliases ($1 / $3) used across the catalog.
  */
-export function spinnerSizeToken(size: SpinnerSize | undefined, sizeToken: string): SizeTokens {
+export const spinnerSizeToken = (size: SpinnerSize | undefined, sizeToken: string): SizeTokens => {
   if (size === 'small') {
     return '$1';
   }
@@ -24,8 +24,8 @@ export function spinnerSizeToken(size: SpinnerSize | undefined, sizeToken: strin
     return '$3';
   }
   return sizeToken as SizeTokens;
-}
+};
 
-export function spinnerSizePx(token: SizeTokens): number {
+export const spinnerSizePx = (token: SizeTokens): number => {
   return getVariableValue(getSize(token)) as number;
-}
+};

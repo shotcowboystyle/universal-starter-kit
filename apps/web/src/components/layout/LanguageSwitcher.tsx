@@ -6,7 +6,7 @@ import { useTransition } from 'react';
 
 import { usePathname, useRouter } from '@/i18n/navigation';
 
-export default function LanguageSwitcher() {
+const LanguageSwitcher = () => {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const pathname = usePathname();
@@ -50,4 +50,6 @@ export default function LanguageSwitcher() {
       </Button>
     </DropdownMenu>
   );
-}
+};
+
+export default LanguageSwitcher;

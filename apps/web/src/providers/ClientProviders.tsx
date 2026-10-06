@@ -10,7 +10,7 @@ import { useAuthStore } from '@/stores/auth-store';
 
 import { TamaguiRoot } from './TamaguiRoot';
 
-function makeQueryClient() {
+const makeQueryClient = () => {
   return new QueryClient({
     defaultOptions: {
       queries: {
@@ -20,26 +20,26 @@ function makeQueryClient() {
       },
     },
   });
-}
+};
 
 // SyncAuthStore ensures auth store is hydrated from persistence on mount
 // Without subscribing to any state, it just triggers hydration once
-function SyncAuthStore() {
+const SyncAuthStore = () => {
   // Trigger hydration by accessing getState, but don't subscribe to updates
   React.useEffect(() => {
     // Access getState to ensure persistence is hydrated
     useAuthStore.getState();
   }, []);
   return null;
-}
+};
 
-export function ClientProviders({
+export const ClientProviders = ({
   children,
   initialScheme,
 }: {
   children: React.ReactNode;
   initialScheme?: ColorScheme;
-}) {
+}) => {
   const [queryClient] = useState(makeQueryClient);
   return (
     <QueryClientProvider client={queryClient}>
@@ -57,4 +57,4 @@ export function ClientProviders({
       </ThemeProvider>
     </QueryClientProvider>
   );
-}
+};

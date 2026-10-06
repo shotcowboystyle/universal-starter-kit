@@ -49,7 +49,7 @@ export interface CarouselProps {
 
 const ARROW_RING_STYLE_ID = 'mp-carousel-arrow-ring';
 
-function ensureCarouselArrowRing() {
+const ensureCarouselArrowRing = () => {
   if (!isWeb || typeof document === 'undefined') {
     return;
   }
@@ -67,15 +67,15 @@ function ensureCarouselArrowRing() {
   outline-offset: 2px !important;
 }`;
   document.head.append(tag);
-}
+};
 
-function isTypingTarget(target: EventTarget | null): boolean {
+const isTypingTarget = (target: EventTarget | null): boolean => {
   if (!(target instanceof HTMLElement)) {
     return false;
   }
   const tag = target.tagName;
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || target.isContentEditable;
-}
+};
 
 // ── Styled components ─────────────────────────────────────────
 
@@ -143,7 +143,7 @@ const DotsWrapper = styled(View, {
 
 // ── Carousel Component ────────────────────────────────────────
 
-export function Carousel({
+export const Carousel = ({
   children,
   showArrows = true,
   showDots = true,
@@ -152,7 +152,7 @@ export function Carousel({
   gap: gapProp,
   onSlideChange,
   initialSlide = 0,
-}: CarouselProps) {
+}: CarouselProps) => {
   const { t } = useTranslation();
   const { knobProps, control, disabledState } = useResolvedKnobs({
     component: 'Carousel',
@@ -499,7 +499,7 @@ export function Carousel({
       )}
     </View>
   );
-}
+};
 
 // ── Sub-components for composition ────────────────────────────
 

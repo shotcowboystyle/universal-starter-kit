@@ -51,7 +51,7 @@ export interface PageHeadingScopeProps {
  * subtree. Nested scopes shadow the outer one (a nested full page shell owns
  * its own h1 budget).
  */
-export function PageHeadingScope({ children, name = 'Screen', insetToken = null }: PageHeadingScopeProps) {
+export const PageHeadingScope = ({ children, name = 'Screen', insetToken = null }: PageHeadingScopeProps) => {
   const h1CountRef = useRef(0);
   const value = useMemo<PageHeadingRegistry>(
     () => ({
@@ -74,22 +74,22 @@ export function PageHeadingScope({ children, name = 'Screen', insetToken = null 
     [name, insetToken],
   );
   return <PageHeadingScopeContext.Provider value={value}>{children}</PageHeadingScopeContext.Provider>;
-}
+};
 
 /**
  * Horizontal inset the nearest page shell applied, or null when the header
  * is not inside a padded `Screen` (isolated stories, `noPadding`).
  */
-export function usePageChromeInset(): string | null {
+export const usePageChromeInset = (): string | null => {
   return useContext(PageHeadingScopeContext)?.insetToken ?? null;
-}
+};
 
 /**
  * Register a mounted catalog heading with the nearest PageHeadingScope.
  * Only level-1 headings count toward the `multiple-h1` guardrail; other
  * levels and unscoped mounts are no-ops.
  */
-export function useRegisterPageHeading(args: {
+export const useRegisterPageHeading = (args: {
   level: number;
   /** Component name reported in the warn (e.g. "PageHeader"). */
   component?: string;
@@ -97,7 +97,7 @@ export function useRegisterPageHeading(args: {
   label?: string;
   /** Pass false when the heading is not actually rendered (skeleton, custom node). */
   enabled?: boolean;
-}): void {
+}): void => {
   const registry = useContext(PageHeadingScopeContext);
   const { level, component, label, enabled = true } = args;
   useEffect(() => {
@@ -106,4 +106,4 @@ export function useRegisterPageHeading(args: {
     }
     return registry.registerH1({ component, label });
   }, [enabled, level, registry, component, label]);
-}
+};

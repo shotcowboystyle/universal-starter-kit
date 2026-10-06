@@ -10,7 +10,7 @@ import { renderWithProviders } from '@repo/test-utils';
 import { Theme, useTheme } from 'tamagui';
 import { describe, expect, it } from 'vitest';
 
-function ThemeValue({ name }: { name: string }) {
+const ThemeValue = ({ name }: { name: string }) => {
   const theme = useTheme() as unknown as Record<string, { val?: unknown } | undefined>;
   return (
     <span
@@ -18,15 +18,15 @@ function ThemeValue({ name }: { name: string }) {
       data-val={String(theme[name]?.val ?? '')}
     />
   );
-}
+};
 
-function fillOf(container: HTMLElement, testId: string) {
+const fillOf = (container: HTMLElement, testId: string) => {
   return container.querySelector(`[data-testid="${testId}"]`)?.getAttribute('fill') ?? '';
-}
+};
 
-function valueOf(container: HTMLElement, name: string) {
+const valueOf = (container: HTMLElement, name: string) => {
   return container.querySelector(`[data-theme-value="${name}"]`)?.getAttribute('data-val') ?? '';
-}
+};
 
 describe('phosphor glyph token colour on web', () => {
   it("paints $color9 with the theme's resolved colour, not the token string", () => {

@@ -21,33 +21,36 @@ export const CHECKBOX_GLYPH_MAX_RADIUS_TOKEN = 2;
  * Per-component override for the checkbox glyph.
  * `pointy` / `$0` → 0; every other stop caps at `$2`. Never `$12`, never h/2.
  */
-export function clampCheckboxGlyphRadius(radiusToken: string | undefined, options?: { pointy?: boolean }): string | 0 {
+export const clampCheckboxGlyphRadius = (
+  radiusToken: string | undefined,
+  options?: { pointy?: boolean },
+): string | 0 => {
   if (options?.pointy) {
     return 0;
   }
   return clampRadiusForControl(radiusToken, CHECKBOX_GLYPH_MAX_RADIUS_TOKEN);
-}
+};
 
 /** Painted radius ≥ half the side reads as a circle (a radio, not a check). */
-export function isCircularCheckboxRadius(radiusPx: number, sidePx: number): boolean {
+export const isCircularCheckboxRadius = (radiusPx: number, sidePx: number): boolean => {
   if (sidePx <= 0) {
     return false;
   }
   return radiusPx >= sidePx / 2;
-}
+};
 
-export function getCheckboxGlyphSize(size: SizeTokens): number {
+export const getCheckboxGlyphSize = (size: SizeTokens): number => {
   return Math.round(getVariableValue(getSize(size)) * 0.45);
-}
+};
 
 /** Spectrum / Primer: the empty box's edge is the shape (≥2px). */
-export function getCheckboxBoxBorderWidth(knobBorderWidth: number | undefined): number {
+export const getCheckboxBoxBorderWidth = (knobBorderWidth: number | undefined): number => {
   return Math.max(Number(knobBorderWidth) || 1, 2);
-}
+};
 
-export function getCheckboxIconSize(glyphSize: number): number {
+export const getCheckboxIconSize = (glyphSize: number): number => {
   return Math.max(10, Math.round(glyphSize * 0.7));
-}
+};
 
 /**
  * The 44px role=checkbox is a hit target, never a painted control.
@@ -90,11 +93,11 @@ interface FocusRest {
   onHoverOut?: (...args: any[]) => void;
 }
 
-export function checkboxKbFocusHandlers(
+export const checkboxKbFocusHandlers = (
   setKbFocus: (next: boolean) => void,
   setHovered: (next: boolean) => void,
   rest?: FocusRest,
-) {
+) => {
   // Native: a focus handler on any styled layer over tamagui's
   // Checkbox makes that layer pass `onPress: undefined` down, and
   // createCheckbox spreads it over its own toggle, so a tap on the box does
@@ -122,9 +125,9 @@ export function checkboxKbFocusHandlers(
       rest?.onHoverOut?.(e);
     },
   };
-}
+};
 
-export function CheckboxGlyphBox({
+export const CheckboxGlyphBox = ({
   glyphSize,
   isMarked,
   kbFocus,
@@ -142,7 +145,7 @@ export function CheckboxGlyphBox({
   borderRadius: number | string;
   transition?: TransitionProp;
   children?: ReactNode;
-}) {
+}) => {
   if (isWeb) {
     ensureKeyboardModalityTracking();
   }
@@ -173,4 +176,4 @@ export function CheckboxGlyphBox({
       {children}
     </View>
   );
-}
+};

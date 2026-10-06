@@ -134,7 +134,7 @@ test('positive control: actual scroll delivery reports the transported offset', 
   });
 });
 
-function dimensions() {
+const dimensions = () => {
   vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(320);
   vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(240);
   vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
@@ -154,7 +154,7 @@ function dimensions() {
       toJSON: () => ({}),
     };
   });
-}
+};
 
 test.each([false, true])(
   'acknowledges index-prepared reveal only after physical delivery (delivered: %s)',

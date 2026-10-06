@@ -23,13 +23,13 @@ interface RNWStyleSheet {
  * `initialScheme` (read from the cookie on the server) is used until hydration
  * so late-hydrating Suspense boundaries render the same scheme as the server.
  */
-export function TamaguiRoot({
+export const TamaguiRoot = ({
   children,
   initialScheme = 'light',
 }: {
   children: ReactNode;
   initialScheme?: ColorScheme;
-}) {
+}) => {
   const { resolvedTheme } = useTheme();
   const hydrated = useHydrated();
   const resolved: ColorScheme = resolvedTheme === 'dark' ? 'dark' : 'light';
@@ -71,4 +71,4 @@ export function TamaguiRoot({
       </ThemeProvider>
     </CookiesProvider>
   );
-}
+};

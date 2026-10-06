@@ -31,7 +31,7 @@ const originalWidth = window.innerWidth;
 beforeEach(() => Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 }));
 afterEach(() => Object.defineProperty(window, 'innerWidth', { configurable: true, value: originalWidth }));
 
-function ClearHarness() {
+const ClearHarness = () => {
   const [value, setValue] = useState('alpha');
   return (
     <>
@@ -49,7 +49,7 @@ function ClearHarness() {
       <span>Selected:{value || 'none'}</span>
     </>
   );
-}
+};
 
 describe('sheet picker pointer activation', () => {
   for (const [name, Picker] of [

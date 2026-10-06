@@ -53,7 +53,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-function panel(open: boolean) {
+const panel = (open: boolean) => {
   return (
     <FloatingPanel
       open={open}
@@ -62,7 +62,7 @@ function panel(open: boolean) {
       <Text>row</Text>
     </FloatingPanel>
   );
-}
+};
 
 describe('FloatingPanel native presentation lifecycle', () => {
   it('keeps full-field triggers stretched and allows content-sized composite adornments', () => {

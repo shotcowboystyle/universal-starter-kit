@@ -12,11 +12,11 @@ const subset = createDefaultThemeConfig({
   subset: { components: ['Button'], tints: ['accent', 'error', 'success', 'warning'] },
 });
 
-function Name() {
+const Name = () => {
   return <span data-testid="red">{useThemeName()}</span>;
-}
+};
 
-function ResolvedRed({ themeConfig }: { themeConfig: ThemeConfig }) {
+const ResolvedRed = ({ themeConfig }: { themeConfig: ThemeConfig }) => {
   return (
     <TamaguiProvider
       config={themeConfig.tamagui}
@@ -27,7 +27,7 @@ function ResolvedRed({ themeConfig }: { themeConfig: ThemeConfig }) {
       </Theme>
     </TamaguiProvider>
   );
-}
+};
 
 afterEach(cleanup);
 

@@ -14,10 +14,10 @@ export const VideoFrame = styled(YStack, {
  * CONTAINER-CAP, no status pip. The capped card-surface fragment is the
  * wrong recipe — it carries the Axiom 1 cap and padding a tile does not have.
  */
-export function mediaTileFrameProps(knobProps: {
+export const mediaTileFrameProps = (knobProps: {
   surface: { backgroundColor?: unknown };
   borderRadius: { borderRadius?: unknown; className?: string };
-}): Record<string, unknown> {
+}): Record<string, unknown> => {
   return {
     backgroundColor: knobProps.surface.backgroundColor,
     borderRadius: knobProps.borderRadius.borderRadius,
@@ -25,9 +25,9 @@ export function mediaTileFrameProps(knobProps: {
     ...(knobProps.borderRadius.className ? { className: knobProps.borderRadius.className } : {}),
     'data-media-tile': 'video',
   };
-}
+};
 
-export function VideoCaption({ children }: { children: ReactNode }) {
+export const VideoCaption = ({ children }: { children: ReactNode }) => {
   const { knobProps } = useResolvedKnobs({ component: 'Video' });
   return (
     <Paragraph
@@ -44,4 +44,4 @@ export function VideoCaption({ children }: { children: ReactNode }) {
       ))}
     </Paragraph>
   );
-}
+};

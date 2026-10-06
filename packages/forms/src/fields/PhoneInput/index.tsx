@@ -57,7 +57,7 @@ const phoneInputCss = `/* LC-71: flag+dial are adornments of one control. Ring l
   box-shadow: none !important;
 }`;
 
-function ensurePhoneInputCss() {
+const ensurePhoneInputCss = () => {
   if (typeof document === 'undefined') {
     return;
   }
@@ -68,7 +68,7 @@ function ensurePhoneInputCss() {
   tag.id = PHONE_RING_STYLE_ID;
   tag.textContent = phoneInputCss;
   document.head.append(tag);
-}
+};
 
 export type PhoneInputProps<
   TParentData = Record<string, unknown>,
@@ -113,7 +113,7 @@ interface PhoneInputFieldRendererProps<TData> {
   renderPhoneRow: (hasError?: boolean) => ReactNode;
 }
 
-function PhoneInputFieldRenderer<TData>({
+const PhoneInputFieldRenderer = <TData,>({
   field,
   serialized,
   hydrate,
@@ -128,7 +128,7 @@ function PhoneInputFieldRenderer<TData>({
   required,
   disabled,
   renderPhoneRow,
-}: PhoneInputFieldRendererProps<TData>) {
+}: PhoneInputFieldRendererProps<TData>) => {
   const lastSyncedRef = useRef<string>('');
   const didInitRef = useRef(false);
 
@@ -173,15 +173,17 @@ function PhoneInputFieldRenderer<TData>({
       <InputParts size={size || knobProps.sizeToken}>{renderPhoneRow(!!resolvedError)}</InputParts>
     </FieldLayout>
   );
-}
+};
 
-export function PhoneInput<
+export const PhoneInput = <
   TParentData,
   TName extends DeepKeys<TParentData>,
   TFieldValidator extends Validator<DeepValue<TParentData, TName>> | undefined = undefined,
   TFormValidator extends Validator<TParentData> | undefined = undefined,
   TData extends DeepValue<TParentData, TName> = DeepValue<TParentData, TName>,
->(props: PhoneInputProps<TParentData, TName, TFieldValidator, TFormValidator, TData>) {
+>(
+  props: PhoneInputProps<TParentData, TName, TFieldValidator, TFormValidator, TData>,
+) => {
   const hydrationTouch = useTouchSurface();
   const {
     defaultValue,
@@ -511,4 +513,4 @@ export function PhoneInput<
       )}
     </Field>
   );
-}
+};

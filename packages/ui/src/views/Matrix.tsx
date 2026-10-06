@@ -144,20 +144,20 @@ export interface MatrixViewProps extends Omit<YStackProps, 'children'> {
  * the default identity stays on `$accentBackground`. Explicit
  * colors pass through untouched (Axiom 11).
  */
-function CellIntentWrap({ intent, children }: { intent?: MatrixIntent; children: ReactNode }) {
+const CellIntentWrap = ({ intent, children }: { intent?: MatrixIntent; children: ReactNode }) => {
   if (!intent || intent === 'accent') {
     return <>{children}</>;
   }
   return <Intent name={intent}>{children}</Intent>;
-}
+};
 
-function resolveFill(color: string | undefined, intent: MatrixIntent | undefined): string {
+const resolveFill = (color: string | undefined, intent: MatrixIntent | undefined): string => {
   return color ?? (intent && intent !== 'accent' ? '$color9' : '$accentBackground');
-}
+};
 
-function fillOpacity(intensity: number): number {
+const fillOpacity = (intensity: number): number => {
   return FILL_FLOOR + (1 - FILL_FLOOR) * intensity;
-}
+};
 
 // ── Cell ──────────────────────────────────────────────────────
 
@@ -175,7 +175,7 @@ interface MatrixCellBoxProps {
   onPress?: () => void;
 }
 
-function MatrixCellBox({
+const MatrixCellBox = ({
   row,
   bucket,
   summary,
@@ -187,7 +187,7 @@ function MatrixCellBox({
   height,
   lastColumn,
   onPress,
-}: MatrixCellBoxProps) {
+}: MatrixCellBoxProps) => {
   const { knobProps } = useResolvedKnobs();
   const readable = useReadableTextOn(fill);
   const [keyboardRing, setKeyboardRing] = useState(false);
@@ -268,11 +268,11 @@ function MatrixCellBox({
       </Text>
     </YStack>
   );
-}
+};
 
 // ── Legend ────────────────────────────────────────────────────
 
-function LegendSwatch({ intensity, fill, empty }: { intensity?: number; fill?: string; empty?: boolean }) {
+const LegendSwatch = ({ intensity, fill, empty }: { intensity?: number; fill?: string; empty?: boolean }) => {
   const { knobProps } = useResolvedKnobs();
   return (
     <YStack
@@ -307,13 +307,13 @@ function LegendSwatch({ intensity, fill, empty }: { intensity?: number; fill?: s
       )}
     </YStack>
   );
-}
+};
 
 // ── Loading skeleton (mirrors the real anatomy) ────────
 
 const SKELETON_ROWS = [96, 72, 112, 64, 88] as const;
 
-function MatrixSkeleton({
+const MatrixSkeleton = ({
   labelWidth,
   columnWidth,
   rowHeight,
@@ -321,7 +321,7 @@ function MatrixSkeleton({
   labelWidth: number;
   columnWidth: number;
   rowHeight: number;
-}) {
+}) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
   const edgePad = knobProps.panelPadding.padding;
@@ -390,7 +390,7 @@ function MatrixSkeleton({
       ))}
     </YStack>
   );
-}
+};
 
 // ── MatrixView ────────────────────────────────────────────────
 
@@ -425,7 +425,7 @@ function MatrixSkeleton({
  * />
  * ```
  */
-export function MatrixView({
+export const MatrixView = ({
   rows,
   cells,
   rule: initialRule = 'month',
@@ -447,7 +447,7 @@ export function MatrixView({
   showLegend = true,
   legendItems,
   ...stackProps
-}: MatrixViewProps) {
+}: MatrixViewProps) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
   const [rule, setRule] = useState<MatrixBucketRule>(initialRule);
@@ -791,4 +791,4 @@ export function MatrixView({
       </YStack>
     </AsyncBoundary>
   );
-}
+};

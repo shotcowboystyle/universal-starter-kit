@@ -50,7 +50,7 @@ const defaultPresets: DurationPreset[] = [
 /** Preset chips stay on the $2 row (28px). The field size knob does not reach them. */
 export const DURATION_PRESET_SIZE = '$2' as const;
 
-function DurationSegment({
+const DurationSegment = ({
   id,
   unit,
   ariaLabel,
@@ -80,7 +80,7 @@ function DurationSegment({
   required?: boolean;
   hasError?: boolean;
   sizeToken: string;
-}) {
+}) => {
   const [draft, setDraft] = useState<string | null>(null);
   const shown = draft ?? (wide ? String(value) : String(value).padStart(2, '0'));
   const locked = !!(disabled || readOnly);
@@ -192,9 +192,9 @@ function DurationSegment({
       </Text>
     </XStack>
   );
-}
+};
 
-function DurationControl({
+const DurationControl = ({
   seconds,
   onChange,
   disabled,
@@ -224,7 +224,7 @@ function DurationControl({
   required?: boolean;
   size?: SizeTokens;
   knobProps: KnobProps;
-}) {
+}) => {
   const parts = secondsToParts(seconds, hideDays);
   const sizeToken = String(size || knobProps.sizeToken);
   const recipe = sizeRecipeForToken(sizeToken);
@@ -345,9 +345,9 @@ function DurationControl({
       </InputParts.Box>
     </InputParts>
   );
-}
+};
 
-function DurationPresets({
+const DurationPresets = ({
   seconds,
   presets,
   onChange,
@@ -357,7 +357,7 @@ function DurationPresets({
   presets: DurationPreset[];
   onChange: (seconds: number) => void;
   knobProps: KnobProps;
-}) {
+}) => {
   if (presets.length === 0) {
     return null;
   }
@@ -385,7 +385,7 @@ function DurationPresets({
       })}
     </XStack>
   );
-}
+};
 
 export interface DurationProps {
   name?: string;
@@ -426,7 +426,7 @@ export interface DurationProps {
   compact?: boolean;
 }
 
-export function Duration({
+export const Duration = ({
   name,
   form: formProp,
   validators,
@@ -450,7 +450,7 @@ export function Duration({
   clockIcon,
   skeleton,
   compact,
-}: DurationProps) {
+}: DurationProps) => {
   const hydrationTouch = useTouchSurface();
   const { resolvedForm, knobProps, id } = useFormField({
     form: formProp,
@@ -584,4 +584,4 @@ export function Duration({
       }}
     </Field>
   );
-}
+};

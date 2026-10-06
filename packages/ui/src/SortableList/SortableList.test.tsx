@@ -18,7 +18,7 @@ const ITEMS = [
   { id: 'ret', label: 'Retro notes' },
 ];
 
-function Harness({
+const Harness = ({
   onChange = vi.fn(),
   readOnly,
   disabled,
@@ -30,7 +30,7 @@ function Harness({
   disabled?: boolean;
   compact?: boolean;
   canReorder?: (item: (typeof ITEMS)[number], index: number) => boolean;
-}) {
+}) => {
   const [items, setItems] = useState(ITEMS);
   return (
     <SortableList
@@ -47,11 +47,11 @@ function Harness({
       }}
     />
   );
-}
+};
 
-function liveRegion() {
+const liveRegion = () => {
   return document.querySelector('[data-sortable-live="true"]');
-}
+};
 
 describe('SortableList', () => {
   it('completes a keyboard-only reorder and announces each step', () => {

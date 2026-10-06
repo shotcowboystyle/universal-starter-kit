@@ -39,12 +39,12 @@ const items = Array.from({ length: 6 }, (_, index) => ({
   value: `tab-${index}`,
   label: `Tab ${index + 1}`,
 }));
-function indexFor(element: HTMLElement) {
+const indexFor = (element: HTMLElement) => {
   if (element.getAttribute('role') !== 'tab') {
     return -1;
   }
   return Number(/Tab (\d)/.exec(element.textContent)?.[1] ?? 0) - 1;
-}
+};
 beforeEach(() => {
   precedingGrowth = 0;
   observers.length = 0;
@@ -66,7 +66,7 @@ afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
-function measured() {
+const measured = () => {
   const tree = renderWithProviders(
     <Tabs
       items={items}
@@ -81,7 +81,7 @@ function measured() {
   act(() => observed.scroll.onScroll({ nativeEvent: { contentOffset: { x: 210 } } }));
   scroll.mockClear();
   return { ...tree, scroll };
-}
+};
 
 it("uses the primitive's real initial measurement and selection effect", () => {
   measured();

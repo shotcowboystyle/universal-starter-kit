@@ -117,7 +117,7 @@ const CHECK_MIN_DOT = 8;
 const WINDOW = 5;
 
 /** Resolve a size token (`$0.75`) or raw px to the number the press-target math needs. */
-function sizePx(value: number | string | undefined, fallback: number): number {
+const sizePx = (value: number | string | undefined, fallback: number): number => {
   if (typeof value === 'number') {
     return value;
   }
@@ -128,9 +128,9 @@ function sizePx(value: number | string | undefined, fallback: number): number {
     }
   }
   return fallback;
-}
+};
 
-function idleMarkWidth(variant: DotVariant, itemSize: number, activeSize: number): number {
+const idleMarkWidth = (variant: DotVariant, itemSize: number, activeSize: number): number => {
   if (variant === 'pills') {
     return Math.round(itemSize * 2.25);
   }
@@ -140,9 +140,9 @@ function idleMarkWidth(variant: DotVariant, itemSize: number, activeSize: number
     return Math.max(itemSize, Math.round(activeSize * 0.55));
   }
   return itemSize;
-}
+};
 
-function activeMarkWidth(variant: DotVariant, itemSize: number, geometryActive: number): number {
+const activeMarkWidth = (variant: DotVariant, itemSize: number, geometryActive: number): number => {
   // Unpinned carousel dots: a short capsule (~2×), not a 3× worm. Host pins
   // (Pagination 28×8 / 36×24) still win via `sizePx(activeDotSize, …)`.
   if (variant === 'dots') {
@@ -152,9 +152,9 @@ function activeMarkWidth(variant: DotVariant, itemSize: number, geometryActive: 
     return Math.round(itemSize * 3);
   }
   return geometryActive;
-}
+};
 
-function windowRange(active: number, total: number): [number, number] {
+const windowRange = (active: number, total: number): [number, number] => {
   if (total <= WINDOW) {
     return [0, Math.max(0, total - 1)];
   }
@@ -170,9 +170,9 @@ function windowRange(active: number, total: number): [number, number] {
     end = total - 1;
   }
   return [Math.max(0, start), end];
-}
+};
 
-function windowScale(index: number, active: number, start: number, end: number, total: number): number {
+const windowScale = (index: number, active: number, start: number, end: number, total: number): number => {
   if (total <= WINDOW) {
     return 1;
   }
@@ -187,16 +187,16 @@ function windowScale(index: number, active: number, start: number, end: number, 
     return 0.72;
   }
   return 0.48;
-}
+};
 
-function isRtl(node: HTMLElement | null): boolean {
+const isRtl = (node: HTMLElement | null): boolean => {
   if (typeof document === 'undefined') {
     return false;
   }
   const fromNode = node?.closest('[dir]')?.getAttribute('dir');
   const dir = fromNode || document.documentElement.dir;
   return dir === 'rtl';
-}
+};
 
 // ── Styled components ─────────────────────────────────────────
 
@@ -284,7 +284,7 @@ const Dot = styled(View, {
 
 // ── DotIndicator Component ────────────────────────────────────
 
-export function DotIndicator({
+export const DotIndicator = ({
   total,
   activeIndex,
   onChange,
@@ -298,7 +298,7 @@ export function DotIndicator({
   activeDotSize,
   transition,
   dotStateAttribute = 'data-dot-state',
-}: DotIndicatorProps) {
+}: DotIndicatorProps) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
   const onCompleted = useReadableTextOn(componentColors.indicator.completed);
@@ -485,7 +485,7 @@ export function DotIndicator({
       })}
     </DotsContainer>
   );
-}
+};
 
 export type DotsContainerProps = GetProps<typeof DotsContainer>;
 export type DotProps = GetProps<typeof Dot>;

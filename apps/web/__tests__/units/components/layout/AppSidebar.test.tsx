@@ -31,14 +31,14 @@ const board = (id: string, title: string) => ({
   updatedAt: '',
 });
 
-function mockBoards(overrides: Record<string, unknown> = {}) {
+const mockBoards = (overrides: Record<string, unknown> = {}) => {
   vi.mocked(useBoards).mockReturnValue({
     myBoards: [board('board-1', 'My Board 1'), board('board-2', 'My Board 2')],
     teamBoards: [board('board-3', 'Team Board 1')],
     loading: false,
     ...overrides,
   } as any);
-}
+};
 
 describe('AppSidebar', () => {
   beforeEach(() => {

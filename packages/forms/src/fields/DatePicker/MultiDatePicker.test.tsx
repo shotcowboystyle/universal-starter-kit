@@ -20,11 +20,11 @@ vi.mock('@tamagui/lucide-icons-2', () => ({
   X: () => null,
 }));
 
-async function loadMultiDatePicker() {
+const loadMultiDatePicker = async () => {
   return (await import('./MultiDatePicker')).MultiDatePicker;
-}
+};
 
-function getEnabledDayButtons(root: ParentNode): HTMLButtonElement[] {
+const getEnabledDayButtons = (root: ParentNode): HTMLButtonElement[] => {
   const allButtons = Array.from(root.querySelectorAll('button, [role="button"]')) as HTMLButtonElement[];
   return allButtons.filter((btn) => {
     const text = btn.textContent?.trim() ?? '';
@@ -33,7 +33,18 @@ function getEnabledDayButtons(root: ParentNode): HTMLButtonElement[] {
       btn.hasAttribute('disabled') || btn.getAttribute('aria-disabled') === 'true' || btn.hasAttribute('data-disabled');
     return isDay && !disabled;
   });
-}
+};
+
+const skeletonHeight = (el: HTMLElement): number => {
+  const attr = el.getAttribute('height');
+  if (attr && /^\d+(\.\d+)?$/.test(attr)) {
+    return Number(attr);
+  }
+  if (el.style.height.endsWith('px')) {
+    return Number.parseFloat(el.style.height);
+  }
+  return Number.parseFloat(getComputedStyle(el).height) || 0;
+};
 
 describe('MultiDatePicker', () => {
   it('handles disabled state', async () => {
@@ -194,14 +205,3 @@ describe('MultiDatePicker', () => {
     });
   });
 });
-
-function skeletonHeight(el: HTMLElement): number {
-  const attr = el.getAttribute('height');
-  if (attr && /^\d+(\.\d+)?$/.test(attr)) {
-    return Number(attr);
-  }
-  if (el.style.height.endsWith('px')) {
-    return Number.parseFloat(el.style.height);
-  }
-  return Number.parseFloat(getComputedStyle(el).height) || 0;
-}

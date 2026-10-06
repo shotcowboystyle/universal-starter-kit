@@ -21,7 +21,7 @@ interface Html5QrcodeScanner {
   getState?: () => number;
 }
 
-function mapCameraError(err: unknown): string {
+const mapCameraError = (err: unknown): string => {
   const message = err instanceof Error ? err.message : String(err);
   if (message.includes('Permission') || message.includes('NotAllowed')) {
     return t('Camera permission denied. Please allow camera access.');
@@ -33,7 +33,7 @@ function mapCameraError(err: unknown): string {
     return t('Camera is in use by another application.');
   }
   return t('Scanner error: {{message}}', { message });
-}
+};
 
 /**
  * Camera capability pre-flight. Runs BEFORE the
@@ -42,7 +42,7 @@ function mapCameraError(err: unknown): string {
  * A `prompt` permission state passes — the prompt happens inside the stable
  * scanner surface, never as a mount-fail-unmount flicker.
  */
-export async function preflightCamera(): Promise<CameraPreflightResult> {
+export const preflightCamera = async (): Promise<CameraPreflightResult> => {
   if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
     const insecure = typeof window !== 'undefined' && !window.isSecureContext;
     return {
@@ -71,7 +71,7 @@ export async function preflightCamera(): Promise<CameraPreflightResult> {
     };
   }
   return { ok: true };
-}
+};
 
 /**
  * Web barcode scanner — the browser `html5-qrcode` camera (getUserMedia +
@@ -82,7 +82,15 @@ export async function preflightCamera(): Promise<CameraPreflightResult> {
  * mid-flight, prompt declined), the error renders INSIDE the still-open
  * panel with Retry + Close — the panel never self-closes on error.
  */
-export function BarcodeScanner({ active, onScan, onError, onClose, knobProps, formats, compact }: BarcodeScannerProps) {
+export const BarcodeScanner = ({
+  active,
+  onScan,
+  onError,
+  onClose,
+  knobProps,
+  formats,
+  compact,
+}: BarcodeScannerProps) => {
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
   const containerId = useRef(`barcode-scanner-${Math.random().toString(36).slice(2, 9)}`);
   const [attempt, setAttempt] = useState(0);
@@ -237,4 +245,4 @@ export function BarcodeScanner({ active, onScan, onError, onClose, knobProps, fo
       )}
     </YStack>
   );
-}
+};

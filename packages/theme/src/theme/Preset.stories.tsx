@@ -17,7 +17,7 @@ export default {
   },
 };
 
-function Probe({ label }: { label: string }) {
+const Probe = ({ label }: { label: string }) => {
   const { knobProps } = useResolvedKnobs();
   const attrs = {
     'data-border-radius': String(knobProps.borderRadius.borderRadius),
@@ -45,7 +45,7 @@ function Probe({ label }: { label: string }) {
       </SizableText>
     </YStack>
   );
-}
+};
 
 /** Overrides on top of whatever the page's preset resolved. */
 export const main = {

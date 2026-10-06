@@ -35,9 +35,9 @@ export { useStore as useTanStackStore } from '@tanstack/react-store';
 
 type AnyStore = Store<any>;
 
-export function useStore<TState, TSelected = TState>(
+export const useStore = <TState, TSelected = TState>(
   store: Store<TState>,
   selector?: (state: TState) => TSelected,
-): TSelected {
+): TSelected => {
   return tanstackUseStore(store as AnyStore, selector ?? ((s) => s as unknown as TSelected));
-}
+};

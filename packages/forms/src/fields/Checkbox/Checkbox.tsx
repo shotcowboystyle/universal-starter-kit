@@ -75,7 +75,7 @@ export interface CheckboxProps {
  * Shared with the skeleton branches so loading geometry mirrors the
  * real anatomy.
  */
-export function getCheckboxInlineGap(space: string): string {
+export const getCheckboxInlineGap = (space: string): string => {
   const inlineGapMap: Record<string, string> = {
     none: '$1',
     small: '$1.5',
@@ -83,9 +83,9 @@ export function getCheckboxInlineGap(space: string): string {
     large: '$2.5',
   };
   return inlineGapMap[space] || '$2';
-}
+};
 
-export function Checkbox({
+export const Checkbox = ({
   name,
   form: formProp,
   validators,
@@ -108,7 +108,7 @@ export function Checkbox({
   pointy,
   skeleton,
   compact,
-}: CheckboxProps) {
+}: CheckboxProps) => {
   // Canonical `onChange` and the alias `onCheckedChange` both fire from a
   // single emit site (same reconciliation as Switch).
   const handleValueChange = (val: CheckedState) => {
@@ -489,4 +489,4 @@ export function Checkbox({
       }}
     </Field>
   );
-}
+};

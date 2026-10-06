@@ -15,18 +15,18 @@ import { useTouchSurface } from './use-touch-surface';
 
 export const IntentContext = createContext<string | null>(null);
 
-export function useIntentContext(): string | null {
+export const useIntentContext = (): string | null => {
   return useContext(IntentContext);
-}
+};
 
 const reducedMotionQuery = '(prefers-reduced-motion: reduce)';
 const serverReducedMotion = () => false;
 
-function readReducedMotion(): boolean {
+const readReducedMotion = (): boolean => {
   return typeof window !== 'undefined' && !!window.matchMedia?.(reducedMotionQuery).matches;
-}
+};
 
-function subscribeReducedMotion(notify: () => void) {
+const subscribeReducedMotion = (notify: () => void) => {
   if (typeof window === 'undefined' || !window.matchMedia) {
     return () => {};
   }
@@ -44,18 +44,18 @@ function subscribeReducedMotion(notify: () => void) {
     };
   }
   return () => {};
-}
+};
 
 /** Adopt the OS motion preference after matching the server's initial markup. */
-function usePrefersReducedMotion(): boolean {
+const usePrefersReducedMotion = (): boolean => {
   return useSyncExternalStore(subscribeReducedMotion, readReducedMotion, serverReducedMotion);
-}
+};
 
-function applySurfaceToKnobs(
+const applySurfaceToKnobs = (
   knobs: Knobs,
   surface: SurfaceIntent,
   opts: { sizeOverride: boolean; densityOverride: boolean },
-): Knobs {
+): Knobs => {
   let next = knobs;
   if (surface.size !== 'unset') {
     if (opts.sizeOverride) {
@@ -78,7 +78,7 @@ function applySurfaceToKnobs(
     }
   }
   return next;
-}
+};
 
 export interface UseResolvedKnobsOptions {
   intent?: string;
@@ -130,7 +130,7 @@ export const solidPaletteThemes = new Set(['accent']);
  *   8. OS reduced-motion forces animation="none"
  *   9. Call resolveKnobs(mergedKnobs, override, scheme) — override merges last
  */
-export function useResolvedKnobs(options?: UseResolvedKnobsOptions): ResolvedKnobs {
+export const useResolvedKnobs = (options?: UseResolvedKnobsOptions): ResolvedKnobs => {
   const touch = useTouchSurface();
   const presetCtx = usePresetContext();
   const contextIntent = useIntentContext();
@@ -230,4 +230,4 @@ export function useResolvedKnobs(options?: UseResolvedKnobsOptions): ResolvedKno
     scheme,
     touch,
   ]);
-}
+};

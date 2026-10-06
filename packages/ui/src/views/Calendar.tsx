@@ -105,14 +105,14 @@ const hairlineEnd = isWeb
  * are LOGICAL: `end` draws the inline-end rule, so interior-only separators
  * stay interior under RTL (no doubled rule against the panel frame).
  */
-function gridCellEdges(end: boolean, bottom: boolean) {
+const gridCellEdges = (end: boolean, bottom: boolean) => {
   const className = [end && 'mp-hairline-ie', bottom && 'mp-hairline-b'].filter(Boolean).join(' ') || undefined;
   return {
     ...(end ? hairlineEnd : null),
     borderBottomWidth: bottom ? hairlineWidth : 0,
     ...(isWeb && className ? { className } : null),
   };
-}
+};
 
 /**
  * Readable chip text for an event's fill.
@@ -131,7 +131,7 @@ function gridCellEdges(end: boolean, bottom: boolean) {
  * foreground on fills is luminance-COMPUTED, and the computation must match
  * the rendered pixels). Black keeps every sanctioned step-9 solid ≥ 4.5:1.
  */
-export function eventChipTextColor(bg?: string, onAccent?: string): string {
+export const eventChipTextColor = (bg?: string, onAccent?: string): string => {
   if (!bg) {
     return onAccent ?? '$accentColor';
   }
@@ -154,7 +154,7 @@ export function eventChipTextColor(bg?: string, onAccent?: string): string {
   const contrastWhite = 1.05 / (luminance + 0.05);
   const contrastBlack = (luminance + 0.05) / 0.05;
   return contrastWhite >= contrastBlack ? '#ffffff' : '#000000';
-}
+};
 
 /**
  * Props for the generic Calendar component.
@@ -210,7 +210,7 @@ export interface CalendarProps extends Omit<YStackProps, 'children'> {
 // Utility helpers
 // ---------------------------------------------------------------------------
 
-function getMonthDays(date: Date, firstDayOfWeek: 0 | 1): Date[] {
+const getMonthDays = (date: Date, firstDayOfWeek: 0 | 1): Date[] => {
   const year = date.getFullYear();
   const month = date.getMonth();
   const firstDay = new Date(year, month, 1);
@@ -230,9 +230,9 @@ function getMonthDays(date: Date, firstDayOfWeek: 0 | 1): Date[] {
     days.push(new Date(year, month, 1 - startOffset + i));
   }
   return days;
-}
+};
 
-function getWeekDays(date: Date, firstDayOfWeek: 0 | 1): Date[] {
+const getWeekDays = (date: Date, firstDayOfWeek: 0 | 1): Date[] => {
   const days: Date[] = [];
   const dayOfWeek = date.getDay();
   let startOffset = dayOfWeek - firstDayOfWeek;
@@ -249,29 +249,29 @@ function getWeekDays(date: Date, firstDayOfWeek: 0 | 1): Date[] {
     days.push(day);
   }
   return days;
-}
+};
 
 /** Day-grid key ("2026-03-10") — the local calendar day, never a UTC one. */
-function formatDateKey(date: Date): string {
+const formatDateKey = (date: Date): string => {
   return formatCalendarDate(date);
-}
+};
 
-function addMonths(date: Date, delta: number): Date {
+const addMonths = (date: Date, delta: number): Date => {
   const next = new Date(date);
   next.setDate(1);
   next.setMonth(next.getMonth() + delta);
   const lastDay = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
   next.setDate(Math.min(date.getDate(), lastDay));
   return next;
-}
+};
 
-function isSameDay(d1: Date, d2: Date): boolean {
+const isSameDay = (d1: Date, d2: Date): boolean => {
   return d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
-}
+};
 
-function isToday(date: Date): boolean {
+const isToday = (date: Date): boolean => {
   return isSameDay(date, new Date());
-}
+};
 
 const MS_PER_DAY = 86_400_000;
 
@@ -284,7 +284,7 @@ const MS_PER_DAY = 86_400_000;
  * duration.) Events without an `end` get a zero-duration range
  * (`end` equals `start`).
  */
-export function computeEventMoveRange(event: CalendarEvent, targetDay: Date): CalendarEventMoveRange {
+export const computeEventMoveRange = (event: CalendarEvent, targetDay: Date): CalendarEventMoveRange => {
   const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
   // Round: start-of-day deltas are not exact multiples of 24h across DST.
   const dayDelta = Math.round((startOfDay(targetDay).getTime() - startOfDay(event.start).getTime()) / MS_PER_DAY);
@@ -301,7 +301,7 @@ export function computeEventMoveRange(event: CalendarEvent, targetDay: Date): Ca
   const start = shiftDays(event.start);
   const end = event.end ? shiftDays(event.end) : new Date(start);
   return { start, end };
-}
+};
 
 /** Window-space rect for a day cell used by native drag hit-testing. */
 export interface CalendarDayLayout {
@@ -316,7 +316,11 @@ export interface CalendarDayLayout {
  * Find the day key whose layout contains `(pageX, pageY)`.
  * Used by native drag (no `document.elementFromPoint`).
  */
-export function findDayKeyAtPoint(pageX: number, pageY: number, layouts: readonly CalendarDayLayout[]): string | null {
+export const findDayKeyAtPoint = (
+  pageX: number,
+  pageY: number,
+  layouts: readonly CalendarDayLayout[],
+): string | null => {
   // Half-open intervals so shared edges between adjacent cells don't double-hit.
   for (const layout of layouts) {
     if (pageX >= layout.x && pageX < layout.x + layout.width && pageY >= layout.y && pageY < layout.y + layout.height) {
@@ -324,13 +328,13 @@ export function findDayKeyAtPoint(pageX: number, pageY: number, layouts: readonl
     }
   }
   return null;
-}
+};
 
 interface MeasurableDayNode {
   measureInWindow?: (cb: (x: number, y: number, width: number, height: number) => void) => void;
 }
 
-function measureDayLayouts(refs: Map<string, MeasurableDayNode>, cb: (layouts: CalendarDayLayout[]) => void) {
+const measureDayLayouts = (refs: Map<string, MeasurableDayNode>, cb: (layouts: CalendarDayLayout[]) => void) => {
   const entries = [...refs.entries()];
   if (entries.length === 0) {
     cb([]);
@@ -352,26 +356,26 @@ function measureDayLayouts(refs: Map<string, MeasurableDayNode>, cb: (layouts: C
       }
     });
   }
-}
+};
 
-function dayKeyToDate(key: string): Date {
+const dayKeyToDate = (key: string): Date => {
   const [ty, tm, td] = key.split('-').map(Number);
   return new Date(ty, tm - 1, td);
-}
+};
 
-function dateAtMinutes(day: Date, minutes: number): Date {
+const dateAtMinutes = (day: Date, minutes: number): Date => {
   return new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, minutes);
-}
+};
 
 /** Timed events render as positioned blocks; untimed live in day/all-day rows. */
-function isTimedEvent(event: CalendarEvent): boolean {
+const isTimedEvent = (event: CalendarEvent): boolean => {
   return (
     event.end !== undefined &&
     event.end.getTime() > event.start.getTime() &&
     isSameDay(event.start, event.end) &&
     event.allDay !== true
   );
-}
+};
 
 /** Pixels of pointer travel before a press becomes a drag (clicks stay clicks below this). */
 const DRAG_THRESHOLD_PX = 4;
@@ -404,7 +408,7 @@ type NestedLabel = KnobProps['label'];
  * box below the 44px floor, label type (never sizeToken-as-font), today =
  * fill, keyboard focus = ring on this disc only.
  */
-function DayNumberDisc({
+const DayNumberDisc = ({
   date,
   today,
   inMonth,
@@ -424,7 +428,7 @@ function DayNumberDisc({
   nestedHitSlop: { top: number; bottom: number; left: number; right: number };
   nestedBox: NestedControlBox;
   label: NestedLabel;
-}) {
+}) => {
   const { knobProps } = useResolvedKnobs();
   return (
     <YStack
@@ -451,16 +455,16 @@ function DayNumberDisc({
       </Text>
     </YStack>
   );
-}
+};
 
-function getHours(): number[] {
+const getHours = (): number[] => {
   return Array.from({ length: 24 }, (_, i) => i);
-}
+};
 
 /** Hour ticks speak the house time-of-day register without minutes ("2 PM"). */
-function formatHour(hour: number): string {
+const formatHour = (hour: number): string => {
   return formatTimeOfDay(new Date(2000, 0, 1, hour, 0, 0), { minutes: false });
-}
+};
 
 const weekdayNames = getWeekdayNames();
 const monthNames = getMonthNames();
@@ -495,7 +499,7 @@ interface WebPointerSessionOptions {
  * (touch) activation, Escape cancellation, and text-selection locking.
  * Returns a cleanup that cancels the session.
  */
-function startWebPointerSession(options: WebPointerSessionOptions): () => void {
+const startWebPointerSession = (options: WebPointerSessionOptions): (() => void) => {
   const threshold = options.thresholdPx ?? DRAG_THRESHOLD_PX;
   const isTouch = options.pointerType === 'touch';
   let active = false;
@@ -593,13 +597,13 @@ function startWebPointerSession(options: WebPointerSessionOptions): () => void {
   window.addEventListener('pointerup', onUp);
   window.addEventListener('keydown', onKey, true);
   return teardown;
-}
+};
 
 // ---------------------------------------------------------------------------
 // Now indicator (week/day time grid)
 // ---------------------------------------------------------------------------
 
-function NowIndicator({ hourHeight }: { hourHeight: number }) {
+const NowIndicator = ({ hourHeight }: { hourHeight: number }) => {
   const [now, setNow] = useState(() => new Date());
   // The dot anchors the line's inline START (the hour-gutter side): a
   // JS-positioned physical inset, mirrored via the direction source.
@@ -636,7 +640,7 @@ function NowIndicator({ hourHeight }: { hourHeight: number }) {
       />
     </XStack>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // FLIP-settle ghost (drop / cancel tween back)
@@ -650,7 +654,7 @@ interface SettleGhostState {
   to: { x: number; y: number };
 }
 
-function SettleGhost({
+const SettleGhost = ({
   settle,
   transition,
   borderRadius,
@@ -660,7 +664,7 @@ function SettleGhost({
   transition: string | undefined;
   borderRadius: Record<string, unknown>;
   onDone: () => void;
-}) {
+}) => {
   const onAccent = useReadableTextOn('$accentBackground');
   const [moved, setMoved] = useState(false);
   useEffect(() => {
@@ -709,7 +713,7 @@ function SettleGhost({
       </Text>
     </YStack>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // Directional slide surface (view/period switches)
@@ -759,7 +763,7 @@ const CalendarSlide = styled(YStack, {
  * />
  * ```
  */
-export function Calendar({
+export const Calendar = ({
   events,
   renderEvent,
   onDateSelect,
@@ -776,7 +780,7 @@ export function Calendar({
   firstDayOfWeek = 0,
   slotMinutes = 30,
   ...stackProps
-}: CalendarProps) {
+}: CalendarProps) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
   // Day cells sit on a denser surface — compact nestedControl + label,
@@ -2668,4 +2672,4 @@ export function Calendar({
       )}
     </YStack>
   );
-}
+};

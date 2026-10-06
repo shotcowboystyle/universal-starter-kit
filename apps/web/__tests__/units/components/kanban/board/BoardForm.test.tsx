@@ -9,7 +9,7 @@ vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
 }));
 
-function renderForm(props: Partial<React.ComponentProps<typeof BoardForm>> = {}) {
+const renderForm = (props: Partial<React.ComponentProps<typeof BoardForm>> = {}) => {
   const onSubmit = vi.fn().mockResolvedValue(undefined);
   renderWithProviders(
     <BoardForm
@@ -23,7 +23,7 @@ function renderForm(props: Partial<React.ComponentProps<typeof BoardForm>> = {})
     </BoardForm>,
   );
   return { onSubmit };
-}
+};
 
 describe('BoardForm', () => {
   beforeEach(() => {

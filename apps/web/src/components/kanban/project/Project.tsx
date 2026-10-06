@@ -31,27 +31,7 @@ interface BoardProjectProps {
   currentUserId: string;
 }
 
-// Memoize the component to prevent unnecessary re-renders
-export const BoardProject = memo(BoardProjectComponent, (prevProps, nextProps) => {
-  // Only re-render if these props change
-  // Efficient comparison: check task IDs array instead of JSON.stringify
-  const prevTaskIds = prevProps.tasks.map((t) => t._id);
-  const nextTaskIds = nextProps.tasks.map((t) => t._id);
-  const tasksMatch = prevTaskIds.length === nextTaskIds.length && prevTaskIds.every((id, i) => id === nextTaskIds[i]);
-
-  return (
-    prevProps.project._id === nextProps.project._id &&
-    prevProps.project.title === nextProps.project.title &&
-    prevProps.project.description === nextProps.project.description &&
-    tasksMatch &&
-    prevProps.isOverlay === nextProps.isOverlay
-  );
-});
-
-// Set display name for better dev tools
-BoardProject.displayName = 'BoardProject';
-
-function getUserDisplayName(user: string | UserInfo | null | undefined): string {
+const getUserDisplayName = (user: string | UserInfo | null | undefined): string => {
   if (!user) {
     return 'Unassigned';
   }
@@ -59,16 +39,16 @@ function getUserDisplayName(user: string | UserInfo | null | undefined): string 
     return user;
   }
   return user.name || user.email || 'Unknown User';
-}
+};
 
-function BoardProjectComponent({
+const BoardProjectComponent = ({
   project,
   tasks: initialTasks,
   isOverlay = false,
   isBoardOwner,
   isBoardMember,
   currentUserId,
-}: BoardProjectProps) {
+}: BoardProjectProps) => {
   const { filter, fetchTasksByProject } = useWorkspaceStore();
   const t = useTranslations('kanban.project');
   const [tasks, setTasks] = useState(initialTasks);
@@ -249,9 +229,29 @@ function BoardProjectComponent({
       </Card>
     </div>
   );
-}
+};
 
-export function BoardContainer({ children }: { children: React.ReactNode }) {
+// Memoize the component to prevent unnecessary re-renders
+export const BoardProject = memo(BoardProjectComponent, (prevProps, nextProps) => {
+  // Only re-render if these props change
+  // Efficient comparison: check task IDs array instead of JSON.stringify
+  const prevTaskIds = prevProps.tasks.map((t) => t._id);
+  const nextTaskIds = nextProps.tasks.map((t) => t._id);
+  const tasksMatch = prevTaskIds.length === nextTaskIds.length && prevTaskIds.every((id, i) => id === nextTaskIds[i]);
+
+  return (
+    prevProps.project._id === nextProps.project._id &&
+    prevProps.project.title === nextProps.project.title &&
+    prevProps.project.description === nextProps.project.description &&
+    tasksMatch &&
+    prevProps.isOverlay === nextProps.isOverlay
+  );
+});
+
+// Set display name for better dev tools
+BoardProject.displayName = 'BoardProject';
+
+export const BoardContainer = ({ children }: { children: React.ReactNode }) => {
   const media = useMedia();
   // `horizontal` is a render-time prop, so follow the media query only after
   // hydration; the server always renders the narrow (vertical) layout.
@@ -269,4 +269,4 @@ export function BoardContainer({ children }: { children: React.ReactNode }) {
       </YStack>
     </ScrollView>
   );
-}
+};

@@ -15,13 +15,13 @@ afterEach(() => {
   }
 });
 
-function specFile(markdown: string) {
+const specFile = (markdown: string) => {
   const root = mkdtempSync(join(tmpdir(), 'mpo-spec-registry-'));
   fixtures.push(root);
   const specPath = join(root, 'spec.md');
   writeFileSync(specPath, markdown);
   return specPath;
-}
+};
 
 const repoSpec = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'docs', 'theme-propagation-spec.md');
 

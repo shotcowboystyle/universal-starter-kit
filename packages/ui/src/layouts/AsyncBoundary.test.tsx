@@ -193,10 +193,10 @@ describe('AsyncBoundary', () => {
   });
 
   it('hides chrome and Badge counts on error', () => {
-    function CountProbe() {
+    const CountProbe = () => {
       const count = useAsyncCount(12);
       return <Text data-testid="count">{count == null ? 'hidden' : String(count)}</Text>;
-    }
+    };
     renderWithProviders(
       <AsyncBoundary
         error="boom"
@@ -238,14 +238,14 @@ describe('AsyncBoundary', () => {
 const houseConfig = createDefaultThemeConfig();
 const SCHEMES = ['light', 'dark'] as const;
 
-function weightClasses(el: Element): string[] {
+const weightClasses = (el: Element): string[] => {
   return String((el as HTMLElement).className || '')
     .split(' ')
     .filter((c) => c.startsWith('_fow-'))
     .sort();
-}
+};
 
-function SchemeWrap({ scheme, children }: { scheme: (typeof SCHEMES)[number]; children: ReactNode }) {
+const SchemeWrap = ({ scheme, children }: { scheme: (typeof SCHEMES)[number]; children: ReactNode }) => {
   return (
     <TamaguiProvider
       config={houseConfig.tamagui}
@@ -254,20 +254,20 @@ function SchemeWrap({ scheme, children }: { scheme: (typeof SCHEMES)[number]; ch
       <YStack backgroundColor="$background">{children}</YStack>
     </TamaguiProvider>
   );
-}
+};
 
-function renderInScheme(scheme: (typeof SCHEMES)[number], ui: ReactElement) {
+const renderInScheme = (scheme: (typeof SCHEMES)[number], ui: ReactElement) => {
   return renderWithProviders(<SchemeWrap scheme={scheme}>{ui}</SchemeWrap>);
-}
+};
 
-function expectRetryWeight400(pin: string[]) {
+const expectRetryWeight400 = (pin: string[]) => {
   const node = screen.getByText('Retry');
   expect(node.tagName).not.toBe('BUTTON');
   expect(weightClasses(node)).toStrictEqual(pin);
   expect(node.className).toMatch(/_fow-400\b/);
   expect(node.className).not.toMatch(/_fow-500\b/);
   expect(node.className).not.toMatch(/_fow-600\b/);
-}
+};
 
 describe('AsyncBoundary Retry label weight', () => {
   it.each(SCHEMES)('%s: first-load Retry TEXT NODE is weight 400, never 500/600', (scheme) => {

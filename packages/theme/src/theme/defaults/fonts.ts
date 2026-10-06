@@ -79,14 +79,14 @@ const TRACKING_B = 0.185;
 const TRACKING_C = -0.1745;
 
 /** Inter dynamic tracking for a rendered `sizePx`, in em. */
-export function interTrackingEm(sizePx: number): number {
+export const interTrackingEm = (sizePx: number): number => {
   return TRACKING_A + TRACKING_B * Math.exp(TRACKING_C * sizePx);
-}
+};
 
 /** Inter dynamic tracking for a rendered `sizePx`, in px (2-decimal). */
-export function interTrackingPx(sizePx: number): number {
+export const interTrackingPx = (sizePx: number): number => {
   return Math.round(interTrackingEm(sizePx) * sizePx * 100) / 100;
-}
+};
 
 /**
  * Legacy `size + 10` leading. Kept for `createDefaultFont` callers that pass
@@ -94,16 +94,16 @@ export function interTrackingPx(sizePx: number): number {
  */
 export const BODY_LINE_HEIGHT_OFFSET = 10;
 
-export function bodyLineHeightPx(sizePx: number): number {
+export const bodyLineHeightPx = (sizePx: number): number => {
   return sizePx + BODY_LINE_HEIGHT_OFFSET;
-}
+};
 
 /**
  * A tamagui font table with Variables unwrapped and `$` prefixes stripped.
  * Upstream hands these back either raw or wrapped depending on where in the
  * config pipeline they were read, and `createInterFont` wants them raw.
  */
-function plain<T>(raw: unknown): Record<string, T> {
+const plain = <T>(raw: unknown): Record<string, T> => {
   const out: Record<string, T> = {};
   for (const [key, value] of Object.entries((raw ?? {}) as Record<string, T | { val?: T }>)) {
     const unwrapped = value && typeof value === 'object' && 'val' in value ? (value as { val?: T }).val : (value as T);
@@ -112,20 +112,20 @@ function plain<T>(raw: unknown): Record<string, T> {
     }
   }
   return out;
-}
+};
 
 /** A tamagui font table's numbers, with Variables and `$` prefixes unwrapped. */
 const numbers = (raw: unknown) => plain<number>(raw);
 
 /** Inter dynamic tracking for every key of a size table. */
-function trackingFor(sizes: Record<string, number>): Record<string, number> {
+const trackingFor = (sizes: Record<string, number>): Record<string, number> => {
   return Object.fromEntries(Object.entries(sizes).map(([key, px]) => [key, interTrackingPx(px)]));
-}
+};
 
 /** Zero tracking for every key of a size table (non-Inter faces). */
-function neutralTracking(sizes: Record<string, number>): Record<string, number> {
+const neutralTracking = (sizes: Record<string, number>): Record<string, number> => {
   return Object.fromEntries(Object.keys(sizes).map((key) => [key, 0]));
-}
+};
 
 const v5Body = defaultConfig.fonts.body;
 const v5Heading = defaultConfig.fonts.heading;
@@ -172,7 +172,7 @@ export type FontFamilyCategory = FontCategory;
  * floor applied. Every text step comes back as `$body`'s own value; only the
  * display steps, where the era's taper eases below the floor, move up.
  */
-export function categoryLineHeights(category: FontCategory): Record<string, number> {
+export const categoryLineHeights = (category: FontCategory): Record<string, number> => {
   const minRatio = (fontCategoryMetrics[category] ?? fontCategoryMetrics['sans-serif']).body;
   return Object.fromEntries(
     Object.entries(bodySizes).map(([key, px]) => [
@@ -180,7 +180,7 @@ export function categoryLineHeights(category: FontCategory): Record<string, numb
       flooredLineHeight(px, bodyLineHeights[key] ?? bodyLineHeightPx(px), minRatio),
     ]),
   );
-}
+};
 
 /**
  * Category font on the `$body` ladder: same sizes (including `true`), same
@@ -188,7 +188,7 @@ export function categoryLineHeights(category: FontCategory): Record<string, numb
  * is what collapsed `$serif`/`$mono`/`$rounded` to the system face at
  * `line-height: normal`.
  */
-export function createCategoryFont(category: FontCategory, family: string): GenericFont {
+export const createCategoryFont = (category: FontCategory, family: string): GenericFont => {
   return createFont({
     family,
     size: bodySizes,
@@ -196,7 +196,7 @@ export function createCategoryFont(category: FontCategory, family: string): Gene
     weight: bodyWeights,
     letterSpacing: neutralTracking(bodySizes),
   }) as GenericFont;
-}
+};
 
 export const defaultHeadingFont = createInterFont(
   {

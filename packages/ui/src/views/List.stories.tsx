@@ -74,7 +74,7 @@ const documents: DocumentRow[] = [
   },
 ];
 
-function DocumentItem({ item }: { item: DocumentRow }) {
+const DocumentItem = ({ item }: { item: DocumentRow }) => {
   const statusColor =
     item.statusTone === 'success'
       ? componentColors.semantic.success
@@ -100,7 +100,7 @@ function DocumentItem({ item }: { item: DocumentRow }) {
       }
     />
   );
-}
+};
 
 const meta: Meta = {
   title: 'Components/List',

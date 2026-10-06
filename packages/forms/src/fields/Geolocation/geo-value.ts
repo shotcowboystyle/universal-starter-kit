@@ -25,11 +25,11 @@ interface GeoJsonPoint {
   coordinates: [number, number];
 }
 
-function isFiniteNumber(n: unknown): n is number {
+const isFiniteNumber = (n: unknown): n is number => {
   return typeof n === 'number' && Number.isFinite(n);
-}
+};
 
-function parseJson(value: string | undefined): unknown {
+const parseJson = (value: string | undefined): unknown => {
   if (!value || !value.trim()) {
     return null;
   }
@@ -38,7 +38,7 @@ function parseJson(value: string | undefined): unknown {
   } catch {
     return null;
   }
-}
+};
 
 /**
  * Pull the first Point geometry out of a stock Frappe FeatureCollection.
@@ -46,7 +46,7 @@ function parseJson(value: string | undefined): unknown {
  * single coordinate for our lat/lng field, so they are skipped rather than
  * approximated.
  */
-function firstPoint(parsed: unknown): GeoJsonPoint | null {
+const firstPoint = (parsed: unknown): GeoJsonPoint | null => {
   if (!parsed || typeof parsed !== 'object') {
     return null;
   }
@@ -75,13 +75,13 @@ function firstPoint(parsed: unknown): GeoJsonPoint | null {
     return { type: 'Point', coordinates: [lng, lat] };
   }
   return null;
-}
+};
 
 /**
  * Read a stored Geolocation value in EITHER shape. Returns null when the value
  * is empty, unparseable, or carries no usable point.
  */
-export function parseGeoValue(value: string | undefined): GeoValue | null {
+export const parseGeoValue = (value: string | undefined): GeoValue | null => {
   const parsed = parseJson(value);
   if (!parsed || typeof parsed !== 'object') {
     return null;
@@ -98,13 +98,13 @@ export function parseGeoValue(value: string | undefined): GeoValue | null {
     return { lat, lng };
   }
   return null;
-}
+};
 
 /**
  * Report which shape a stored value used, so an edit can be written back in the
  * same shape. Unreadable values report the repo-native shape.
  */
-export function detectGeoShape(value: string | undefined): GeoShape {
+export const detectGeoShape = (value: string | undefined): GeoShape => {
   const parsed = parseJson(value);
   if (!parsed || typeof parsed !== 'object') {
     return 'latlng';
@@ -113,7 +113,7 @@ export function detectGeoShape(value: string | undefined): GeoShape {
     return 'featurecollection';
   }
   return 'latlng';
-}
+};
 
 interface GeoJsonFeature {
   type: 'Feature';
@@ -121,7 +121,7 @@ interface GeoJsonFeature {
   geometry: { type?: unknown; coordinates?: unknown } | null;
 }
 
-function asFeatures(parsed: unknown): GeoJsonFeature[] {
+const asFeatures = (parsed: unknown): GeoJsonFeature[] => {
   if (!parsed || typeof parsed !== 'object') {
     return [];
   }
@@ -130,11 +130,11 @@ function asFeatures(parsed: unknown): GeoJsonFeature[] {
     return [];
   }
   return collection.features.filter((feature): feature is GeoJsonFeature => !!feature && typeof feature === 'object');
-}
+};
 
-function isPointFeature(feature: GeoJsonFeature): boolean {
+const isPointFeature = (feature: GeoJsonFeature): boolean => {
   return !!feature.geometry && (feature.geometry as { type?: unknown }).type === 'Point';
-}
+};
 
 /**
  * Serialise coordinates back to disk in the shape the document arrived in.
@@ -150,7 +150,7 @@ function isPointFeature(feature: GeoJsonFeature): boolean {
  * Point feature to move, one is appended with the empty `properties` a plain
  * `L.marker` serialises to.
  */
-export function formatGeoValue(coordinates: GeoValue, shape: GeoShape, previous?: string): string {
+export const formatGeoValue = (coordinates: GeoValue, shape: GeoShape, previous?: string): string => {
   if (shape !== 'featurecollection') {
     return JSON.stringify(coordinates);
   }
@@ -172,4 +172,4 @@ export function formatGeoValue(coordinates: GeoValue, shape: GeoShape, previous?
     features.push({ type: 'Feature', properties: {}, geometry: point });
   }
   return JSON.stringify({ type: 'FeatureCollection', features });
-}
+};

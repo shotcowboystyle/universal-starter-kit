@@ -18,7 +18,7 @@ import { resolveNativeBarcodeTypes, scannerViewportHeight } from './scanner-type
  * `denied but canAskAgain` state passes — the system prompt happens over the
  * stable scanner surface, never as a present-fail-dismiss flash.
  */
-export async function preflightCamera(): Promise<CameraPreflightResult> {
+export const preflightCamera = async (): Promise<CameraPreflightResult> => {
   try {
     const status = await Camera.getCameraPermissionsAsync();
     if (!status.granted && !status.canAskAgain) {
@@ -31,7 +31,7 @@ export async function preflightCamera(): Promise<CameraPreflightResult> {
     // Permission module unavailable — the surface reports the failure inline.
   }
   return { ok: true };
-}
+};
 
 /**
  * Native barcode scanner — `expo-camera`'s `CameraView` with built-in barcode
@@ -46,7 +46,15 @@ export async function preflightCamera(): Promise<CameraPreflightResult> {
  * Note: the iOS simulator has no camera, so live scanning can only be verified
  * on a physical device; in the simulator the camera surface renders empty.
  */
-export function BarcodeScanner({ active, onScan, onError, onClose, knobProps, formats, compact }: BarcodeScannerProps) {
+export const BarcodeScanner = ({
+  active,
+  onScan,
+  onError,
+  onClose,
+  knobProps,
+  formats,
+  compact,
+}: BarcodeScannerProps) => {
   const barcodeTypes = resolveNativeBarcodeTypes(formats);
   const viewportPx = scannerViewportHeight(compact);
   const [permission, requestPermission] = useCameraPermissions();
@@ -155,4 +163,4 @@ export function BarcodeScanner({ active, onScan, onError, onClose, knobProps, fo
       )}
     </YStack>
   );
-}
+};

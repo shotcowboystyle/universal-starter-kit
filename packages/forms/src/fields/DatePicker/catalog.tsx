@@ -84,7 +84,7 @@ interface DayGridProps {
   maxDate?: Date;
 }
 
-function DayGrid({ calendarData, selectedDate, onSelectDate, minDate, maxDate }: DayGridProps) {
+const DayGrid = ({ calendarData, selectedDate, onSelectDate, minDate, maxDate }: DayGridProps) => {
   return (
     <CalendarDays
       calendarData={calendarData}
@@ -97,7 +97,7 @@ function DayGrid({ calendarData, selectedDate, onSelectDate, minDate, maxDate }:
       }}
     />
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // CalendarBody — orchestrates day/month/year views
@@ -113,7 +113,7 @@ interface CalendarBodyProps {
   maxDate?: Date;
 }
 
-function CalendarBody({
+const CalendarBody = ({
   displayDate,
   selectedDate,
   onSelectDate,
@@ -121,7 +121,7 @@ function CalendarBody({
   onSetDisplayDate,
   minDate,
   maxDate,
-}: CalendarBodyProps) {
+}: CalendarBodyProps) => {
   const [viewMode, setViewMode] = useState<ViewMode>('day');
   const calendarData = useCalendarData(displayDate);
   const [yearPageStart, setYearPageStart] = useState(() => calendarData.year - (calendarData.year % yearPageSize));
@@ -163,19 +163,21 @@ function CalendarBody({
       </CalendarPanelFrame>
     </CalendarViewSwitcher>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // DatePicker — main exported component
 // ---------------------------------------------------------------------------
 
-export function DatePicker<
+export const DatePicker = <
   TParentData,
   TName extends DeepKeys<TParentData>,
   TFieldValidator extends Validator<DeepValue<TParentData, TName>> | undefined = undefined,
   TFormValidator extends Validator<TParentData> | undefined = undefined,
   TData extends DeepValue<TParentData, TName> = DeepValue<TParentData, TName>,
->(props: DatePickerProps<TParentData, TName, TFieldValidator, TFormValidator, TData>) {
+>(
+  props: DatePickerProps<TParentData, TName, TFieldValidator, TFormValidator, TData>,
+) => {
   const {
     defaultValue,
     value: controlledValue,
@@ -449,7 +451,7 @@ export function DatePicker<
       }}
     </Field>
   );
-}
+};
 
 // Re-export new picker variants
 export { MultiDatePicker } from './MultiDatePicker';

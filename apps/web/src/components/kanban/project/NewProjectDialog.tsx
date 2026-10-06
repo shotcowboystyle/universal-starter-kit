@@ -18,7 +18,7 @@ export interface NewProjectDialogProps {
 
 type ProjectFormData = z.infer<typeof projectSchema>;
 
-export default function NewProjectDialog({ onProjectAdd }: NewProjectDialogProps) {
+const NewProjectDialog = ({ onProjectAdd }: NewProjectDialogProps) => {
   const addProject = useWorkspaceStore((state) => state.addProject);
   const [isOpen, setIsOpen] = React.useState(false);
   const t = useTranslations('kanban.project');
@@ -91,4 +91,6 @@ export default function NewProjectDialog({ onProjectAdd }: NewProjectDialogProps
       </Dialog.Portal>
     </Dialog>
   );
-}
+};
+
+export default NewProjectDialog;

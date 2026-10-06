@@ -19,7 +19,7 @@ const fontFamilies = {
  * round interior steps, so source↔built comparisons must be colorimetric.
  * True when the two CSS colors are within `tolerance` per RGB channel.
  */
-function sameColor(a: string, b: string, tolerance = 3): boolean {
+const sameColor = (a: string, b: string, tolerance = 3): boolean => {
   const hexA = normalizeToHex(a);
   const hexB = normalizeToHex(b);
   if (!hexA || !hexB) {
@@ -33,7 +33,7 @@ function sameColor(a: string, b: string, tolerance = 3): boolean {
     }
   }
   return true;
-}
+};
 
 describe('buildFigmaTokens', () => {
   const result = buildFigmaTokens({ fontFamilies });

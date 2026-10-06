@@ -2,7 +2,7 @@
 
 // Renders outside the app providers (its own <html>), so it uses plain markup
 // with inline styles instead of the Tamagui catalog.
-export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+const GlobalError = ({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) => {
   return (
     <html lang="en">
       <body
@@ -34,4 +34,6 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
       </body>
     </html>
   );
-}
+};
+
+export default GlobalError;

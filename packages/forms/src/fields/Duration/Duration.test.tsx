@@ -16,11 +16,11 @@ import {
   secondsToParts,
 } from './index';
 
-function segmentValue(el: Element | null): string {
+const segmentValue = (el: Element | null): string => {
   return el?.getAttribute('value') ?? (el as HTMLInputElement | null)?.value ?? '';
-}
+};
 
-function segmentWidthPx(el: Element | null): number {
+const segmentWidthPx = (el: Element | null): number => {
   const input = el as HTMLElement | null;
   if (!input) {
     return 0;
@@ -34,7 +34,19 @@ function segmentWidthPx(el: Element | null): number {
     return Number.parseFloat(style);
   }
   return Number.parseFloat(getComputedStyle(input).width) || 0;
-}
+};
+
+const skeletonWidthOrHeight = (el: HTMLElement, axis: 'height' | 'width'): number => {
+  const attr = el.getAttribute(axis);
+  if (attr && /^\d+(\.\d+)?$/.test(attr)) {
+    return Number(attr);
+  }
+  const style = axis === 'height' ? el.style.height : el.style.width;
+  if (style.endsWith('px')) {
+    return Number.parseFloat(style);
+  }
+  return Number.parseFloat(getComputedStyle(el)[axis]) || 0;
+};
 
 describe('Duration', () => {
   describe('math', () => {
@@ -442,15 +454,3 @@ describe('Duration', () => {
     });
   });
 });
-
-function skeletonWidthOrHeight(el: HTMLElement, axis: 'height' | 'width'): number {
-  const attr = el.getAttribute(axis);
-  if (attr && /^\d+(\.\d+)?$/.test(attr)) {
-    return Number(attr);
-  }
-  const style = axis === 'height' ? el.style.height : el.style.width;
-  if (style.endsWith('px')) {
-    return Number.parseFloat(style);
-  }
-  return Number.parseFloat(getComputedStyle(el)[axis]) || 0;
-}

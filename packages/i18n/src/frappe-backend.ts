@@ -12,7 +12,7 @@ interface FrappeTranslationResponse {
   message: Record<string, string>;
 }
 
-async function fetchTranslations(language: string, options: FrappeBackendOptions): Promise<Record<string, string>> {
+const fetchTranslations = async (language: string, options: FrappeBackendOptions): Promise<Record<string, string>> => {
   const base = options.baseUrl ?? '';
   const fetchFn = options.fetch ?? globalThis.fetch;
   const url = `${base}/api/method/frappe.translate.get_dict?language=${encodeURIComponent(language)}`;
@@ -22,13 +22,13 @@ async function fetchTranslations(language: string, options: FrappeBackendOptions
   }
   const data: FrappeTranslationResponse = await res.json();
   return data.message ?? {};
-}
+};
 
 /**
  * i18next backend plugin that fetches translations from Frappe's API.
  * Guarded by VITE_FRAPPE_ENABLED so it tree-shakes out of non-Frappe builds.
  */
-function createFrappeBackend(): BackendModule<FrappeBackendOptions> | null {
+const createFrappeBackend = (): BackendModule<FrappeBackendOptions> | null => {
   if (process.env.VITE_FRAPPE_ENABLED !== 'true') {
     return null;
   }
@@ -50,6 +50,6 @@ function createFrappeBackend(): BackendModule<FrappeBackendOptions> | null {
         });
     },
   };
-}
+};
 
 export { createFrappeBackend };

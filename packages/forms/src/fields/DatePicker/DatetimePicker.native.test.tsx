@@ -144,7 +144,7 @@ describe('native DatetimePicker ownership', () => {
   it('adopts form values after mount without emitting changes or opening', async () => {
     const onChange = vi.fn();
     let update: ((date: Date) => void) | undefined;
-    function Example() {
+    const Example = () => {
       const form = useForm({ defaultValues: { when: null as Date | null } });
       update = (date) => {
         form.setFieldValue('when', date);
@@ -157,7 +157,7 @@ describe('native DatetimePicker ownership', () => {
           />
         </Form>
       );
-    }
+    };
     const result = renderWithProviders(<Example />);
     expect(result.container.querySelector('input')?.value).toBe('');
     await act(async () => update?.(picked));

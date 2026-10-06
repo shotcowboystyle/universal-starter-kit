@@ -38,7 +38,7 @@ let container: HTMLDivElement;
 let errors: unknown[];
 let observed: { height: unknown; transition: unknown }[];
 
-function Probe() {
+const Probe = () => {
   const { knobProps } = useResolvedKnobs();
   const { height } = knobProps.control;
   const { transition } = knobProps;
@@ -50,15 +50,15 @@ function Probe() {
       Control
     </button>
   );
-}
+};
 
-function Fixture() {
+const Fixture = () => {
   return (
     <TestProviders>
       <Probe />
     </TestProviders>
   );
-}
+};
 
 beforeEach(() => {
   host.web = true;
@@ -91,13 +91,13 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 
-async function hydrate() {
+const hydrate = async () => {
   await act(async () => {
     root = hydrateRoot(container, <Fixture />, {
       onRecoverableError: (error) => errors.push(error),
     });
   });
-}
+};
 
 describe('responsive knob hydration', () => {
   it('keeps server control markup before adopting the browser touch floor', async () => {

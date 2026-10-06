@@ -43,9 +43,9 @@ export type BarcodePreviewSymbology = 'qr' | 'code128';
  * draws, the scanner resolves back to the same format id). Absent or unknown
  * tokens keep the historical Code 128 strip.
  */
-export function barcodePreviewSymbology(format?: string): BarcodePreviewSymbology {
+export const barcodePreviewSymbology = (format?: string): BarcodePreviewSymbology => {
   return resolveNativeBarcodeType(format) === 'qr' ? 'qr' : 'code128';
-}
+};
 
 export interface BarcodePreviewProps {
   value?: string;
@@ -77,7 +77,7 @@ export interface BarcodePreviewProps {
 
 /** Mono value text — both the honest fallback for
  * unencodable values and the optional human-readable line under the symbol. */
-function MonoValue({ value }: { value: string }) {
+const MonoValue = ({ value }: { value: string }) => {
   return (
     <Text
       fontFamily="$mono"
@@ -88,71 +88,9 @@ function MonoValue({ value }: { value: string }) {
       {value}
     </Text>
   );
-}
+};
 
-export function BarcodePreview({
-  value,
-  height = 18,
-  moduleWidth = 1,
-  showText = false,
-  format,
-  textFallback = true,
-}: BarcodePreviewProps) {
-  if (!value) {
-    return null;
-  }
-  if (barcodePreviewSymbology(format) === 'qr') {
-    return (
-      <QrPreview
-        value={value}
-        height={height}
-        moduleWidth={moduleWidth}
-        showText={showText}
-        textFallback={textFallback}
-      />
-    );
-  }
-  const runs = encodeCode128B(value);
-  if (!runs) {
-    return textFallback ? <MonoValue value={value} /> : null;
-  }
-  const quietZone = moduleWidth * 10;
-  return (
-    <View
-      role="img"
-      aria-label={t('Barcode: {{value}}', { value })}
-      testID="barcode-preview"
-      flexDirection="column"
-      alignItems="center"
-      maxWidth="100%"
-      minWidth={0}
-      flexShrink={1}
-      overflow="hidden">
-      <XStack
-        height={height}
-        maxWidth="100%"
-        minWidth={0}
-        flexShrink={1}
-        overflow="hidden"
-        paddingHorizontal={quietZone}
-        backgroundColor="$background"
-        aria-hidden>
-        {runs.map((run, index) => (
-          <View
-            key={index}
-            width={run.modules * moduleWidth}
-            height="100%"
-            flexShrink={1}
-            backgroundColor={run.bar ? '$color' : 'transparent'}
-          />
-        ))}
-      </XStack>
-      {showText && <MonoValue value={value} />}
-    </View>
-  );
-}
-
-function QrPreview({
+const QrPreview = ({
   value,
   height,
   moduleWidth,
@@ -164,7 +102,7 @@ function QrPreview({
   moduleWidth: number;
   showText: boolean;
   textFallback: boolean;
-}) {
+}) => {
   const matrix = encodeQr(value);
   if (!matrix) {
     return textFallback ? <MonoValue value={value} /> : null;
@@ -228,4 +166,66 @@ function QrPreview({
       {showText && <MonoValue value={value} />}
     </View>
   );
-}
+};
+
+export const BarcodePreview = ({
+  value,
+  height = 18,
+  moduleWidth = 1,
+  showText = false,
+  format,
+  textFallback = true,
+}: BarcodePreviewProps) => {
+  if (!value) {
+    return null;
+  }
+  if (barcodePreviewSymbology(format) === 'qr') {
+    return (
+      <QrPreview
+        value={value}
+        height={height}
+        moduleWidth={moduleWidth}
+        showText={showText}
+        textFallback={textFallback}
+      />
+    );
+  }
+  const runs = encodeCode128B(value);
+  if (!runs) {
+    return textFallback ? <MonoValue value={value} /> : null;
+  }
+  const quietZone = moduleWidth * 10;
+  return (
+    <View
+      role="img"
+      aria-label={t('Barcode: {{value}}', { value })}
+      testID="barcode-preview"
+      flexDirection="column"
+      alignItems="center"
+      maxWidth="100%"
+      minWidth={0}
+      flexShrink={1}
+      overflow="hidden">
+      <XStack
+        height={height}
+        maxWidth="100%"
+        minWidth={0}
+        flexShrink={1}
+        overflow="hidden"
+        paddingHorizontal={quietZone}
+        backgroundColor="$background"
+        aria-hidden>
+        {runs.map((run, index) => (
+          <View
+            key={index}
+            width={run.modules * moduleWidth}
+            height="100%"
+            flexShrink={1}
+            backgroundColor={run.bar ? '$color' : 'transparent'}
+          />
+        ))}
+      </XStack>
+      {showText && <MonoValue value={value} />}
+    </View>
+  );
+};

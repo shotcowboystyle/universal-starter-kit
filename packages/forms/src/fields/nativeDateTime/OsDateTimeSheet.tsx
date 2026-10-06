@@ -32,16 +32,16 @@ export interface OsDateTimeSheetProps {
   onConfirm: (value: Date) => void;
 }
 
-function useNativePickerScheme(): 'light' | 'dark' {
+const useNativePickerScheme = (): 'light' | 'dark' => {
   const themeName = useThemeName();
   const osScheme = useColorScheme();
   if (themeName) {
     return String(themeName).startsWith('dark') ? 'dark' : 'light';
   }
   return osScheme === 'dark' ? 'dark' : 'light';
-}
+};
 
-export function OsDateTimeSheet({ open, value, mode, minDate, maxDate, onCancel, onConfirm }: OsDateTimeSheetProps) {
+export const OsDateTimeSheet = ({ open, value, mode, minDate, maxDate, onCancel, onConfirm }: OsDateTimeSheetProps) => {
   const { knobProps } = useResolvedKnobs();
   const themeVariant = useNativePickerScheme();
   const theme = useTheme();
@@ -66,7 +66,7 @@ export function OsDateTimeSheet({ open, value, mode, minDate, maxDate, onCancel,
     setWasOpen(false);
   }
 
-  function handleAndroidChange(event: DateTimePickerEvent, selected?: Date) {
+  const handleAndroidChange = (event: DateTimePickerEvent, selected?: Date) => {
     if (event.type === 'dismissed') {
       reset();
       onCancel();
@@ -93,9 +93,9 @@ export function OsDateTimeSheet({ open, value, mode, minDate, maxDate, onCancel,
         : selected;
     onConfirm(picked);
     reset();
-  }
+  };
 
-  function handleIOSChange(_event: DateTimePickerEvent, selected?: Date) {
+  const handleIOSChange = (_event: DateTimePickerEvent, selected?: Date) => {
     if (!selected) {
       return;
     }
@@ -113,12 +113,12 @@ export function OsDateTimeSheet({ open, value, mode, minDate, maxDate, onCancel,
       return;
     }
     setTemp(selected);
-  }
+  };
 
-  function confirm() {
+  const confirm = () => {
     onConfirm(temp);
     reset();
-  }
+  };
 
   if (!open) {
     return null;
@@ -205,7 +205,7 @@ export function OsDateTimeSheet({ open, value, mode, minDate, maxDate, onCancel,
       </Pressable>
     </Modal>
   );
-}
+};
 
 const styles = StyleSheet.create({
   modalOverlay: {

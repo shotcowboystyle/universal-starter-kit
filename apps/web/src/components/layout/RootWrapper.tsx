@@ -8,7 +8,7 @@ import AppSidebar from '@/components/layout/AppSidebar';
 import Header from '@/components/layout/Header';
 import { TOAST_DURATION } from '@/constants/ui';
 
-export default function RootWrapper({ children }: { children: React.ReactNode }) {
+const RootWrapper = ({ children }: { children: React.ReactNode }) => {
   const media = useMedia();
   // Desktop: sidebar docked, open by default. Mobile: off-canvas overlay, closed by default.
   const [desktopOpen, setDesktopOpen] = useState(true);
@@ -75,4 +75,6 @@ export default function RootWrapper({ children }: { children: React.ReactNode })
       />
     </>
   );
-}
+};
+
+export default RootWrapper;

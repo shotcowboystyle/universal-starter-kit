@@ -20,7 +20,7 @@ vi.mock('@repo/platform', async (original) => ({
   },
 }));
 const options = ['Alpha', 'Beta', 'Gamma', 'Delta'].map((label) => ({ label, value: label }));
-function Fixture() {
+const Fixture = () => {
   return (
     <TestProviders>
       <Input aria-label="Input" />
@@ -47,7 +47,7 @@ function Fixture() {
       />
     </TestProviders>
   );
-}
+};
 describe('touch recipe hydration', () => {
   it.each([true, false])('hydrates actual controls on repeated coarse mount %s', async (touch) => {
     modality.touch = touch;

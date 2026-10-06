@@ -9,24 +9,24 @@ export const panelPortalAttribute = 'data-fp-portal';
 
 const anchors = new WeakMap<Element, Element>();
 
-export function registerPanelPortal(portal: Element, anchor: Element): () => void {
+export const registerPanelPortal = (portal: Element, anchor: Element): (() => void) => {
   anchors.set(portal, anchor);
   return () => {
     if (anchors.get(portal) === anchor) {
       anchors.delete(portal);
     }
   };
-}
+};
 
 /** The element that opened the portaled panel `node` sits in, or null. */
-export function panelPortalAnchor(node: Node): Element | null {
+export const panelPortalAnchor = (node: Node): Element | null => {
   const element = node instanceof Element ? node : node.parentElement;
   const portal = element?.closest(`[${panelPortalAttribute}]`);
   return portal ? (anchors.get(portal) ?? null) : null;
-}
+};
 
 /** `root.contains(target)`, where a portaled panel counts as part of its anchor. */
-export function containsAcrossPanels(root: Node | null | undefined, target: unknown): boolean {
+export const containsAcrossPanels = (root: Node | null | undefined, target: unknown): boolean => {
   if (!root || typeof Node === 'undefined' || !(target instanceof Node)) {
     return false;
   }
@@ -39,4 +39,4 @@ export function containsAcrossPanels(root: Node | null | undefined, target: unkn
     node = panelPortalAnchor(node);
   }
   return false;
-}
+};

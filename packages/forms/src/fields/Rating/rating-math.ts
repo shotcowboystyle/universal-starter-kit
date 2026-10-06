@@ -3,7 +3,7 @@
  * Overflow, negatives, and non-finite values clamp; a non-positive
  * `maxStars` is zero stars (no crash).
  */
-export function filledCount(value: number, maxStars: number): number {
+export const filledCount = (value: number, maxStars: number): number => {
   if (!(maxStars > 0)) {
     return 0;
   }
@@ -15,4 +15,4 @@ export function filledCount(value: number, maxStars: number): number {
     return 0;
   }
   return Math.max(0, Math.min(maxStars, n));
-}
+};

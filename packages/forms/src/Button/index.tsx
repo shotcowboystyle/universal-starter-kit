@@ -61,17 +61,17 @@ export type ButtonSizeRecipe = SizeRecipe;
 
 export const buttonSizeRecipes: Record<string, ButtonSizeRecipe> = recipeFamilies.control.recipes;
 
-export function resolveButtonSizeRecipe(
+export const resolveButtonSizeRecipe = (
   size: SizeTokens | number | undefined,
   family: RecipeFamilyName = 'control',
-): ButtonSizeRecipe {
+): ButtonSizeRecipe => {
   // Arbitrary numeric height: derive pad/font/icon/gap in ratio (the
   // non-enumerable escape the recipe reserves for `sizeRecipeFromHeight`).
   if (typeof size === 'number') {
     return sizeRecipeFromHeight(size, recipeFamilies[family]?.ratios);
   }
   return sizeRecipeForToken(size == null ? '$true' : String(size), { family });
-}
+};
 
 /**
  * Density selects the recipe FAMILY, it does not subtract from the recipe:
@@ -80,15 +80,15 @@ export function resolveButtonSizeRecipe(
  * generated table at every token but `$4` — it inverted at `$2`, where
  * `max(8, 7 - 2)` painted a compact Button WIDER than a comfortable one.
  */
-export function buttonDensityFamily(family: RecipeFamilyName, densityTight: boolean): RecipeFamilyName {
+export const buttonDensityFamily = (family: RecipeFamilyName, densityTight: boolean): RecipeFamilyName => {
   return densityTight ? 'controlCompact' : family;
-}
+};
 
 /**
  * Tamagui size-token → px (circular variant still uses the token box).
  * Resolved from the live token scale — not a handwritten mirror of it.
  */
-function sizeTokenPx(size: SizeTokens | number | undefined): number {
+const sizeTokenPx = (size: SizeTokens | number | undefined): number => {
   if (typeof size === 'number') {
     return size;
   }
@@ -97,7 +97,7 @@ function sizeTokenPx(size: SizeTokens | number | undefined): number {
   }
   const resolved = getVariableValue(getSize(size));
   return typeof resolved === 'number' && Number.isFinite(resolved) ? resolved : MIN_PRESS_TARGET;
-}
+};
 
 /** Role within an ActionBar / action region. */
 export type ButtonActionRole = 'primary' | 'secondary' | 'chrome';
@@ -105,7 +105,7 @@ export type ButtonActionRole = 'primary' | 'secondary' | 'chrome';
 type IconLike = ReactNode | ComponentType<{ size?: number }>;
 
 /** Many call sites pass Phosphor `Icon` (component) instead of `<Icon />`. */
-function normalizeButtonIcon(icon: IconLike | undefined, iconSize: number): ReactNode {
+const normalizeButtonIcon = (icon: IconLike | undefined, iconSize: number): ReactNode => {
   if (icon == null || icon === false) {
     return null;
   }
@@ -119,7 +119,7 @@ function normalizeButtonIcon(icon: IconLike | undefined, iconSize: number): Reac
     return createElement(icon as unknown as ComponentType<{ size?: number }>, { size: iconSize });
   }
   return icon;
-}
+};
 
 const getButtonSized = (val: SizeTokens | number, { props }: VariantSpreadExtras<any>) => {
   if (!val || props.circular) {
@@ -152,10 +152,10 @@ const isBareTextChild = (child: unknown): child is string | number =>
  * label handed to the same Text wrapper the singleton path uses; element
  * children pass through untouched, order preserved (keys via Children.toArray).
  */
-function wrapBareTextChildren(
+const wrapBareTextChildren = (
   children: ReturnType<typeof Children.toArray>,
   renderLabel: (label: string, key: string) => ReactNode,
-): ReactNode[] {
+): ReactNode[] => {
   const out: ReactNode[] = [];
   let run: string | undefined;
   let runIndex = 0;
@@ -175,7 +175,7 @@ function wrapBareTextChildren(
   }
   flushRun();
   return out;
-}
+};
 
 const dummyStore = new Store({ isValid: true });
 
@@ -325,7 +325,7 @@ export interface ButtonProps extends Omit<TamaguiButtonProps, 'form' | 'icon' | 
   recipeFamily?: RecipeFamilyName;
 }
 
-export function Button({
+export const Button = ({
   children,
   action,
   form: formProp,
@@ -358,7 +358,7 @@ export function Button({
   height: heightProp,
   paddingHorizontal: paddingHorizontalProp,
   ...props
-}: ButtonProps) {
+}: ButtonProps) => {
   const { resolvedForm: formFromHook } = useFormField({ form: formProp });
   const resolvedForm = action ? formFromHook : undefined;
 
@@ -862,7 +862,7 @@ export function Button({
       {reasonText}
     </YStack>
   );
-}
+};
 
 Button.Icon = TamaguiButton.Icon;
 Button.Text = SizableText;

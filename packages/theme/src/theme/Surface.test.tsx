@@ -35,15 +35,15 @@ afterEach(() => {
   window.matchMedia = originalMatchMedia;
 });
 
-function Probe({ onRead }: { onRead: (intent: SurfaceIntent) => void }) {
+const Probe = ({ onRead }: { onRead: (intent: SurfaceIntent) => void }) => {
   onRead(SurfaceContext.useStyledContext());
   return null;
-}
+};
 
-function renderNested(
+const renderNested = (
   outer: { size?: 'small' | 'medium' | 'large'; density?: 'compact' | 'comfortable' },
   inner: { size?: 'small' | 'medium' | 'large'; density?: 'compact' | 'comfortable' },
-): SurfaceIntent {
+): SurfaceIntent => {
   let intent: SurfaceIntent | undefined;
   render(
     createElement(
@@ -56,7 +56,7 @@ function renderNested(
     throw new Error('Surface probe did not render');
   }
   return intent;
-}
+};
 
 describe('clampSurfaceSize', () => {
   it('unset parent is no ceiling', () => {

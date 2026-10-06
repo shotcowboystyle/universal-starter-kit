@@ -47,7 +47,7 @@ export type DatetimePickerProps<
     native?: boolean;
   };
 
-function formatDatetimeDisplay(date: Date | null, timeFormat: TimeFormat, showSeconds: boolean): string {
+const formatDatetimeDisplay = (date: Date | null, timeFormat: TimeFormat, showSeconds: boolean): string => {
   if (!date) {
     return '';
   }
@@ -56,15 +56,17 @@ function formatDatetimeDisplay(date: Date | null, timeFormat: TimeFormat, showSe
     hour12: timeFormat === '12h',
     seconds: showSeconds,
   });
-}
+};
 
-export function DatetimePicker<
+export const DatetimePicker = <
   TParentData,
   TName extends DeepKeys<TParentData>,
   TFieldValidator extends Validator<DeepValue<TParentData, TName>> | undefined = undefined,
   TFormValidator extends Validator<TParentData> | undefined = undefined,
   TData extends DeepValue<TParentData, TName> = DeepValue<TParentData, TName>,
->(props: DatetimePickerProps<TParentData, TName, TFieldValidator, TFormValidator, TData>) {
+>(
+  props: DatetimePickerProps<TParentData, TName, TFieldValidator, TFormValidator, TData>,
+) => {
   if (props.native === false) {
     return <CatalogDatetimePicker {...props} />;
   }
@@ -261,4 +263,4 @@ export function DatetimePicker<
       }}
     </Field>
   );
-}
+};

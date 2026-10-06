@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 
 import { useRouter } from '@/i18n/navigation';
 
-export default function NotFound() {
+const NotFound = () => {
   const t = useTranslations('error');
   const router = useRouter();
 
@@ -26,4 +26,6 @@ export default function NotFound() {
       </Button>
     </YStack>
   );
-}
+};
+
+export default NotFound;

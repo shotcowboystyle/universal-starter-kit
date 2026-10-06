@@ -40,7 +40,7 @@ export interface FormSectionProps {
  * Gallery **Fieldset** is this component (also
  * exported as {@link Fieldset}).
  */
-export function FormSection({
+export const FormSection = ({
   label,
   children,
   maxWidth = formReadableMaxWidth,
@@ -48,7 +48,7 @@ export function FormSection({
   testID,
   fieldset = true,
   compact,
-}: FormSectionProps) {
+}: FormSectionProps) => {
   const useFieldset = fieldset && isWeb;
   const { knobProps } = useResolvedKnobs(compact === undefined ? undefined : { compact });
   const resolvedGap = gap ?? knobProps.gap.gap;
@@ -103,15 +103,15 @@ export function FormSection({
       {children}
     </YStack>
   );
-}
+};
 
 /**
  * Gallery Fieldset — semantic fieldset/legend grouping.
  * Named export of {@link FormSection} (same API, form-section rhythm tokens).
  */
-export function Fieldset(props: FormSectionProps) {
+export const Fieldset = (props: FormSectionProps) => {
   return <FormSection {...props} />;
-}
+};
 export type FieldsetProps = FormSectionProps;
 
 export interface FormSectionStackProps {
@@ -125,7 +125,7 @@ export interface FormSectionStackProps {
 }
 
 /** Stacks FormSections with section > field spacing. */
-export function FormSectionStack({ children, gap }: FormSectionStackProps) {
+export const FormSectionStack = ({ children, gap }: FormSectionStackProps) => {
   const { knobProps } = useResolvedKnobs();
   const resolvedGap = gap ?? knobProps.gapLg.gap;
   return (
@@ -139,6 +139,6 @@ export function FormSectionStack({ children, gap }: FormSectionStackProps) {
       {children}
     </YStack>
   );
-}
+};
 
 export { formFieldGap, formReadableMaxWidth, formSectionGap } from './form-spacing';

@@ -49,16 +49,16 @@ interface StoryLike {
   render?: (args: Record<string, unknown>) => ReactElement;
 }
 
-function radiusAtom(cls: string): string | undefined {
+const radiusAtom = (cls: string): string | undefined => {
   const token = /^_btlr-t-radius-(\d+)$/.exec(cls);
   if (token) {
     return `$${token[1]}`;
   }
   return /^_btlr-(\d+px)$/.exec(cls)?.[1];
-}
+};
 
 /** Every radius token present in the subtree, deduped — the probe's reading. */
-function radiusTokens(container: HTMLElement): string[] {
+const radiusTokens = (container: HTMLElement): string[] => {
   const found = new Set<string>();
   for (const el of container.querySelectorAll<HTMLElement>('*')) {
     for (const cls of String(el.className || '').split(/\s+/)) {
@@ -69,9 +69,9 @@ function radiusTokens(container: HTMLElement): string[] {
     }
   }
   return [...found].sort();
-}
+};
 
-function mountAt(story: StoryLike, meta: { args?: unknown }, stop: BorderRadius) {
+const mountAt = (story: StoryLike, meta: { args?: unknown }, stop: BorderRadius) => {
   if (!story.render) {
     throw new Error('story has no render');
   }
@@ -80,7 +80,7 @@ function mountAt(story: StoryLike, meta: { args?: unknown }, stop: BorderRadius)
       {story.render({ ...((meta.args ?? {}) as Record<string, unknown>) })}
     </Preset>,
   );
-}
+};
 
 const family = [
   {
@@ -142,7 +142,7 @@ describe('form layout stories mount knob-consuming field chrome', () => {
  * carry the knob's token: a raw tamagui Input pins its own radius and no
  * ancestor moves.
  */
-function inputChromeTokens(container: HTMLElement): string[] {
+const inputChromeTokens = (container: HTMLElement): string[] => {
   return [...container.querySelectorAll<HTMLElement>('input')].map((input) => {
     for (let el = input.parentElement; el && el !== container; el = el.parentElement) {
       for (const cls of String(el.className || '').split(/\s+/)) {
@@ -154,7 +154,7 @@ function inputChromeTokens(container: HTMLElement): string[] {
     }
     return 'none found';
   });
-}
+};
 
 const beside = [
   {

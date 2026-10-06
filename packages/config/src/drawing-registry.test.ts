@@ -14,7 +14,7 @@ afterEach(() => {
   }
 });
 
-function specWith(members: { drawing?: string; chrome?: string }) {
+const specWith = (members: { drawing?: string; chrome?: string }) => {
   const root = mkdtempSync(join(tmpdir(), 'mpo-drawing-'));
   fixtures.push(root);
   const drawingMembers = members.drawing ? `Members: **${members.drawing}**` : 'Members: *(none)*';
@@ -31,7 +31,7 @@ function specWith(members: { drawing?: string; chrome?: string }) {
   const specPath = join(root, 'spec.md');
   writeFileSync(specPath, markdown);
   return specPath;
-}
+};
 
 describe('readDrawingRegistry', () => {
   it('parses DRAWING and CHROME-ALLOW members from the spec table', () => {

@@ -243,7 +243,7 @@ interface SchemeHook {
  * Inline styles that adapt to the devtools chrome theme (light/dark) so the
  * panel looks correct regardless of the devtools panel theme setting.
  */
-function createStyles(isDark: boolean) {
+const createStyles = (isDark: boolean) => {
   return {
     panel: {
       fontFamily: 'system-ui, -apple-system, sans-serif',
@@ -359,13 +359,13 @@ function createStyles(isDark: boolean) {
       whiteSpace: 'nowrap' as const,
     },
   };
-}
+};
 
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
 
-function PinCheckbox({ pinned, onToggle, isDark }: { pinned: boolean; onToggle: () => void; isDark: boolean }) {
+const PinCheckbox = ({ pinned, onToggle, isDark }: { pinned: boolean; onToggle: () => void; isDark: boolean }) => {
   return (
     <label
       title={pinned ? "Pinned — random won't change this" : 'Pin to protect from random'}
@@ -395,9 +395,9 @@ function PinCheckbox({ pinned, onToggle, isDark }: { pinned: boolean; onToggle: 
       />
     </label>
   );
-}
+};
 
-function Dropdown<V extends string | number | boolean>({
+const Dropdown = <V extends string | number | boolean>({
   label,
   options,
   value,
@@ -421,7 +421,7 @@ function Dropdown<V extends string | number | boolean>({
   onUnset?: () => void;
   isDark?: boolean;
   children?: ReactNode;
-}) {
+}) => {
   const optionStyle = isDark
     ? { backgroundColor: '#1f1f1f', color: '#e8e8e8' }
     : { backgroundColor: '#ffffff', color: '#1a1a1a' };
@@ -484,13 +484,21 @@ function Dropdown<V extends string | number | boolean>({
       {children}
     </div>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // Icon-based toggle group
 // ---------------------------------------------------------------------------
 
-function CollapseButton({ expanded, onToggle, isDark }: { expanded: boolean; onToggle: () => void; isDark: boolean }) {
+const CollapseButton = ({
+  expanded,
+  onToggle,
+  isDark,
+}: {
+  expanded: boolean;
+  onToggle: () => void;
+  isDark: boolean;
+}) => {
   return (
     <button
       type="button"
@@ -526,9 +534,9 @@ function CollapseButton({ expanded, onToggle, isDark }: { expanded: boolean; onT
       </svg>
     </button>
   );
-}
+};
 
-function IconGroup<V extends string | number | boolean>({
+const IconGroup = <V extends string | number | boolean>({
   label,
   options,
   value,
@@ -557,7 +565,7 @@ function IconGroup<V extends string | number | boolean>({
   onToggleExpand?: () => void;
   onUnset?: () => void;
   children?: ReactNode;
-}) {
+}) => {
   return (
     <div
       role="group"
@@ -628,9 +636,9 @@ function IconGroup<V extends string | number | boolean>({
       {expanded && children}
     </div>
   );
-}
+};
 
-function StateSubRow({
+const StateSubRow = ({
   stateName,
   options,
   value,
@@ -646,7 +654,7 @@ function StateSubRow({
   icon: (v: string, active: boolean, dark: boolean) => ReactNode;
   styles: ReturnType<typeof createStyles>;
   isDark: boolean;
-}) {
+}) => {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
       <span
@@ -693,100 +701,100 @@ function StateSubRow({
       </div>
     </div>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // Icon renderers — wrappers around shared knobIcons with local color logic
 // ---------------------------------------------------------------------------
 
 /** Resolve foreground color for an icon based on active state and theme. */
-function ic(active: boolean, dark: boolean): string {
+const ic = (active: boolean, dark: boolean): string => {
   return active ? (dark ? '#e8e8e8' : '#1a1a1a') : dark ? '#555' : '#bbb';
-}
+};
 
-function modeIcon(v: 'system' | 'light' | 'dark', active: boolean, dark: boolean): ReactNode {
+const modeIcon = (v: 'system' | 'light' | 'dark', active: boolean, dark: boolean): ReactNode => {
   return _modeIcon(v, ic(active, dark));
-}
+};
 
-function fillIcon(v: string, active: boolean, dark: boolean): ReactNode {
+const fillIcon = (v: string, active: boolean, dark: boolean): ReactNode => {
   return _fillIcon(v, ic(active, dark));
-}
+};
 
-function spaceIcon(v: string, active: boolean, dark: boolean): ReactNode {
+const spaceIcon = (v: string, active: boolean, dark: boolean): ReactNode => {
   return _spaceIcon(v, ic(active, dark));
-}
+};
 
-function sizeIcon(v: string, active: boolean, dark: boolean): ReactNode {
+const sizeIcon = (v: string, active: boolean, dark: boolean): ReactNode => {
   return _sizeIcon(v, ic(active, dark));
-}
+};
 
-function densityIcon(v: string, active: boolean, dark: boolean): ReactNode {
+const densityIcon = (v: string, active: boolean, dark: boolean): ReactNode => {
   return _densityIcon(v, ic(active, dark));
-}
+};
 
-function borderRadiusIcon(v: string, active: boolean, dark: boolean): ReactNode {
+const borderRadiusIcon = (v: string, active: boolean, dark: boolean): ReactNode => {
   return _borderRadiusIcon(v, ic(active, dark));
-}
+};
 
-function cornerSmoothingIcon(v: string, active: boolean, dark: boolean): ReactNode {
+const cornerSmoothingIcon = (v: string, active: boolean, dark: boolean): ReactNode => {
   return _cornerSmoothingIcon(v, ic(active, dark));
-}
+};
 
-function borderWidthIcon(v: string, active: boolean, dark: boolean): ReactNode {
+const borderWidthIcon = (v: string, active: boolean, dark: boolean): ReactNode => {
   return _borderWidthIcon(v, ic(active, dark));
-}
+};
 
-function elevationIconWrap(v: string, active: boolean, dark: boolean): ReactNode {
+const elevationIconWrap = (v: string, active: boolean, dark: boolean): ReactNode => {
   return _elevationIcon(v, ic(active, dark), dark);
-}
+};
 
-function textAccentIcon(v: string, active: boolean, dark: boolean): ReactNode {
+const textAccentIcon = (v: string, active: boolean, dark: boolean): ReactNode => {
   return _textAccentIcon(v, ic(active, dark));
-}
+};
 
-function headingFontIcon(v: string, active: boolean, dark: boolean): ReactNode {
+const headingFontIcon = (v: string, active: boolean, dark: boolean): ReactNode => {
   return _headingFontIcon(v, ic(active, dark));
-}
+};
 
-function bodyFontIcon(v: string, active: boolean, dark: boolean): ReactNode {
+const bodyFontIcon = (v: string, active: boolean, dark: boolean): ReactNode => {
   return _bodyFontIcon(v, ic(active, dark));
-}
+};
 
-function fontWeightIcon(v: string, active: boolean, dark: boolean): ReactNode {
+const fontWeightIcon = (v: string, active: boolean, dark: boolean): ReactNode => {
   return _fontWeightIcon(v, ic(active, dark));
-}
+};
 
-function fieldLabelPlacementIcon(v: string, active: boolean, dark: boolean): ReactNode {
+const fieldLabelPlacementIcon = (v: string, active: boolean, dark: boolean): ReactNode => {
   return _fieldLabelPlacementIcon(v, ic(active, dark));
-}
+};
 
-function requiredMarkingIcon(v: string, active: boolean, dark: boolean): ReactNode {
+const requiredMarkingIcon = (v: string, active: boolean, dark: boolean): ReactNode => {
   return _requiredMarkingIcon(v, ic(active, dark));
-}
+};
 
-function tableZebraIcon(v: string, active: boolean, dark: boolean): ReactNode {
+const tableZebraIcon = (v: string, active: boolean, dark: boolean): ReactNode => {
   return _tableZebraIcon(v, ic(active, dark));
-}
+};
 
-function bulkBarPlacementIcon(v: string, active: boolean, dark: boolean): ReactNode {
+const bulkBarPlacementIcon = (v: string, active: boolean, dark: boolean): ReactNode => {
   return _bulkBarPlacementIcon(v, ic(active, dark));
-}
+};
 
-function selectAllScopeIcon(v: string, active: boolean, dark: boolean): ReactNode {
+const selectAllScopeIcon = (v: string, active: boolean, dark: boolean): ReactNode => {
   return _selectAllScopeIcon(v, ic(active, dark));
-}
+};
 
-function timestampStyleIcon(v: string, active: boolean, dark: boolean): ReactNode {
+const timestampStyleIcon = (v: string, active: boolean, dark: boolean): ReactNode => {
   return _timestampStyleIcon(v, ic(active, dark));
-}
+};
 
-function disabledStyleIcon(v: string, active: boolean, dark: boolean): ReactNode {
+const disabledStyleIcon = (v: string, active: boolean, dark: boolean): ReactNode => {
   return _disabledStyleIcon(v, ic(active, dark));
-}
+};
 
-function formAutofocusIcon(v: string, active: boolean, dark: boolean): ReactNode {
+const formAutofocusIcon = (v: string, active: boolean, dark: boolean): ReactNode => {
   return _formAutofocusIcon(v, ic(active, dark));
-}
+};
 
 // ---------------------------------------------------------------------------
 // Main panel
@@ -841,12 +849,12 @@ export interface ThemeDevtoolsPanelProps {
  *                 `"accent"` for `$accent1`–`$accent12`.
  * Tries the exact sub-theme name first, then falls back to the base scheme.
  */
-function extractThemeTokenColors(
+const extractThemeTokenColors = (
   tamaguiConfig: unknown,
   scheme: 'light' | 'dark',
   colorTheme?: string,
   prefix: 'color' | 'accent' = 'color',
-): string[] | undefined {
+): string[] | undefined => {
   const config = tamaguiConfig as Record<string, unknown> | null;
   const themes = config?.themes as Record<string, Record<string, unknown>> | undefined;
   if (!themes) {
@@ -886,9 +894,9 @@ function extractThemeTokenColors(
     }
   }
   return undefined;
-}
+};
 
-export function ThemeDevtoolsPanel({
+export const ThemeDevtoolsPanel = ({
   useUserScheme,
   extraPresets,
   devtoolsTheme,
@@ -896,7 +904,7 @@ export function ThemeDevtoolsPanel({
   currentThemeColor,
   onThemeColorChange,
   tamaguiConfig,
-}: ThemeDevtoolsPanelProps) {
+}: ThemeDevtoolsPanelProps) => {
   const [knobs, setKnobs, , setPreset, activePresetName] = useTheme();
   const scheme = useUserScheme?.();
   const isDark = devtoolsTheme !== 'light';
@@ -2022,4 +2030,4 @@ export function ThemeDevtoolsPanel({
       />
     </div>
   );
-}
+};

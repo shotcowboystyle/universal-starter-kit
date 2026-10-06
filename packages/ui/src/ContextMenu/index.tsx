@@ -80,13 +80,13 @@ interface ContextMenuContextValue {
 
 const ContextMenuContext = createContext<ContextMenuContextValue | null>(null);
 
-function useContextMenuContext(part: string): ContextMenuContextValue {
+const useContextMenuContext = (part: string): ContextMenuContextValue => {
   const ctx = useContext(ContextMenuContext);
   if (!ctx) {
     throw new Error(`ContextMenu.${part} must be used inside <ContextMenu>`);
   }
   return ctx;
-}
+};
 
 const HOVER_FILL = '$color3';
 const SELECTED_FILL = '$color2';
@@ -137,122 +137,25 @@ const freeOverlay = {
   openOn: 'contextmenu' as const,
 };
 
-function ContextMenuRoot({
-  children,
-  items,
-  open: openProp,
-  defaultOpen = false,
-  onOpenChange,
-  maxHeight,
-  closeOnSelect,
-}: ContextMenuProps) {
-  const [open, setOpen] = useControllableState({
-    prop: openProp,
-    defaultProp: defaultOpen,
-    onChange: onOpenChange,
-  });
-  const pendingFocusRef = useRef<'first' | 'last'>('first');
-
-  const close = useCallback(() => {
-    setOpen(false);
-  }, [setOpen]);
-
-  const ctx = useMemo<ContextMenuContextValue>(
-    () => ({ open, setOpen, close, closeOnSelect, pendingFocusRef }),
-    [open, setOpen, close, closeOnSelect],
-  );
-
-  let trigger: ReactNode = children;
-  let body: ReactNode = null;
-  if (items) {
-    body = items.map((entry, index) =>
-      'separator' in entry && entry.separator ? (
-        <ContextMenuSeparator key={`separator-${index}`} />
-      ) : 'checked' in entry && entry.checked !== undefined ? (
-        <ContextMenuCheckboxItem
-          key={entry.key ?? index}
-          checked={entry.checked!}
-          onCheckedChange={entry.onCheckedChange}
-          onSelect={entry.onSelect}
-          closeOnSelect={entry.closeOnSelect}
-          disabled={entry.disabled}
-          disabledReason={entry.disabledReason}
-          shortcut={entry.shortcut}>
-          {entry.label}
-        </ContextMenuCheckboxItem>
-      ) : (
-        <ContextMenuItem
-          key={(entry as ContextMenuItemSpec).key ?? index}
-          icon={(entry as ContextMenuItemSpec).icon}
-          shortcut={(entry as ContextMenuItemSpec).shortcut}
-          disabled={(entry as ContextMenuItemSpec).disabled}
-          disabledReason={(entry as ContextMenuItemSpec).disabledReason}
-          destructive={(entry as ContextMenuItemSpec).destructive}
-          closeOnSelect={(entry as ContextMenuItemSpec).closeOnSelect}
-          onSelect={(entry as ContextMenuItemSpec).onSelect}>
-          {(entry as ContextMenuItemSpec).label}
-        </ContextMenuItem>
-      ),
-    );
-  } else if (Array.isArray(children) || isValidElement(children)) {
-    const list = Array.isArray(children) ? children : [children];
-    const triggerParts: ReactNode[] = [];
-    const contentParts: ReactNode[] = [];
-    for (const child of list) {
-      if (!isValidElement(child)) {
-        triggerParts.push(child);
-        continue;
-      }
-      const { type } = child as { type?: unknown };
-      if (type === ContextMenuTrigger) {
-        triggerParts.push((child.props as { children?: ReactNode }).children);
-      } else if (type === ContextMenuContent) {
-        contentParts.push((child.props as { children?: ReactNode }).children);
-      } else {
-        triggerParts.push(child);
-      }
-    }
-    if (triggerParts.length) {
-      trigger = triggerParts.length === 1 ? triggerParts[0] : triggerParts;
-    }
-    if (contentParts.length) {
-      body = contentParts;
-    }
-  }
-
+const ContextMenuSeparator = (props: ContextMenuSeparatorProps) => {
   return (
-    <ContextMenuContext.Provider value={ctx}>
-      <FloatingPanel
-        open={open}
-        onOpenChange={setOpen}
-        trigger={trigger}
-        contentPadding="none"
-        {...freeOverlay}>
-        <ContextMenuList maxHeight={maxHeight}>{body}</ContextMenuList>
-      </FloatingPanel>
-    </ContextMenuContext.Provider>
+    <SeparatorLine
+      role="separator"
+      {...hairline.height}
+      {...props}
+    />
   );
-}
+};
 
-export interface ContextMenuTriggerProps {
-  children: ReactNode;
-  asChild?: boolean;
-}
-
-function ContextMenuTrigger({ children }: ContextMenuTriggerProps) {
+const ContextMenuTrigger = ({ children }: ContextMenuTriggerProps) => {
   return <>{children}</>;
-}
+};
 
-export interface ContextMenuContentProps {
-  children?: ReactNode;
-  maxHeight?: number;
-}
-
-function ContextMenuContent({ children }: ContextMenuContentProps) {
+const ContextMenuContent = ({ children }: ContextMenuContentProps) => {
   return <>{children}</>;
-}
+};
 
-function ContextMenuList({ children, maxHeight }: { children?: ReactNode; maxHeight?: number }) {
+const ContextMenuList = ({ children, maxHeight }: { children?: ReactNode; maxHeight?: number }) => {
   const ctx = useContextMenuContext('Content');
   const innerRef = useRef<TamaguiElement | null>(null);
   const typeahead = useRef({ buffer: '', at: 0 });
@@ -375,6 +278,113 @@ function ContextMenuList({ children, maxHeight }: { children?: ReactNode; maxHei
       {children}
     </YStack>
   );
+};
+
+const ContextMenuRoot = ({
+  children,
+  items,
+  open: openProp,
+  defaultOpen = false,
+  onOpenChange,
+  maxHeight,
+  closeOnSelect,
+}: ContextMenuProps) => {
+  const [open, setOpen] = useControllableState({
+    prop: openProp,
+    defaultProp: defaultOpen,
+    onChange: onOpenChange,
+  });
+  const pendingFocusRef = useRef<'first' | 'last'>('first');
+
+  const close = useCallback(() => {
+    setOpen(false);
+  }, [setOpen]);
+
+  const ctx = useMemo<ContextMenuContextValue>(
+    () => ({ open, setOpen, close, closeOnSelect, pendingFocusRef }),
+    [open, setOpen, close, closeOnSelect],
+  );
+
+  let trigger: ReactNode = children;
+  let body: ReactNode = null;
+  if (items) {
+    body = items.map((entry, index) =>
+      'separator' in entry && entry.separator ? (
+        <ContextMenuSeparator key={`separator-${index}`} />
+      ) : 'checked' in entry && entry.checked !== undefined ? (
+        <ContextMenuCheckboxItem
+          key={entry.key ?? index}
+          checked={entry.checked!}
+          onCheckedChange={entry.onCheckedChange}
+          onSelect={entry.onSelect}
+          closeOnSelect={entry.closeOnSelect}
+          disabled={entry.disabled}
+          disabledReason={entry.disabledReason}
+          shortcut={entry.shortcut}>
+          {entry.label}
+        </ContextMenuCheckboxItem>
+      ) : (
+        <ContextMenuItem
+          key={(entry as ContextMenuItemSpec).key ?? index}
+          icon={(entry as ContextMenuItemSpec).icon}
+          shortcut={(entry as ContextMenuItemSpec).shortcut}
+          disabled={(entry as ContextMenuItemSpec).disabled}
+          disabledReason={(entry as ContextMenuItemSpec).disabledReason}
+          destructive={(entry as ContextMenuItemSpec).destructive}
+          closeOnSelect={(entry as ContextMenuItemSpec).closeOnSelect}
+          onSelect={(entry as ContextMenuItemSpec).onSelect}>
+          {(entry as ContextMenuItemSpec).label}
+        </ContextMenuItem>
+      ),
+    );
+  } else if (Array.isArray(children) || isValidElement(children)) {
+    const list = Array.isArray(children) ? children : [children];
+    const triggerParts: ReactNode[] = [];
+    const contentParts: ReactNode[] = [];
+    for (const child of list) {
+      if (!isValidElement(child)) {
+        triggerParts.push(child);
+        continue;
+      }
+      const { type } = child as { type?: unknown };
+      if (type === ContextMenuTrigger) {
+        triggerParts.push((child.props as { children?: ReactNode }).children);
+      } else if (type === ContextMenuContent) {
+        contentParts.push((child.props as { children?: ReactNode }).children);
+      } else {
+        triggerParts.push(child);
+      }
+    }
+    if (triggerParts.length) {
+      trigger = triggerParts.length === 1 ? triggerParts[0] : triggerParts;
+    }
+    if (contentParts.length) {
+      body = contentParts;
+    }
+  }
+
+  return (
+    <ContextMenuContext.Provider value={ctx}>
+      <FloatingPanel
+        open={open}
+        onOpenChange={setOpen}
+        trigger={trigger}
+        contentPadding="none"
+        {...freeOverlay}>
+        <ContextMenuList maxHeight={maxHeight}>{body}</ContextMenuList>
+      </FloatingPanel>
+    </ContextMenuContext.Provider>
+  );
+};
+
+export interface ContextMenuTriggerProps {
+  children: ReactNode;
+  asChild?: boolean;
+}
+
+export interface ContextMenuContentProps {
+  children?: ReactNode;
+  maxHeight?: number;
 }
 
 export interface ContextMenuItemProps extends Omit<GetProps<typeof ItemRow>, 'children' | 'onSelect'> {
@@ -613,21 +623,11 @@ const ContextMenuCheckboxItem = forwardRef<TamaguiElement, ContextMenuCheckboxIt
 
 export interface ContextMenuSeparatorProps extends GetProps<typeof SeparatorLine> {}
 
-function ContextMenuSeparator(props: ContextMenuSeparatorProps) {
-  return (
-    <SeparatorLine
-      role="separator"
-      {...hairline.height}
-      {...props}
-    />
-  );
-}
-
 export interface ContextMenuLabelProps extends GetProps<typeof Text> {
   children: ReactNode;
 }
 
-function ContextMenuLabel({ children, ...props }: ContextMenuLabelProps) {
+const ContextMenuLabel = ({ children, ...props }: ContextMenuLabelProps) => {
   const { knobProps } = useResolvedKnobs();
   return (
     <Text
@@ -642,7 +642,7 @@ function ContextMenuLabel({ children, ...props }: ContextMenuLabelProps) {
       {children}
     </Text>
   );
-}
+};
 
 export const ContextMenu = withStaticProperties(ContextMenuRoot, {
   Trigger: ContextMenuTrigger,

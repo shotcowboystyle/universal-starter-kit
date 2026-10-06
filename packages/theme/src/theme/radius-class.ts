@@ -72,9 +72,9 @@ export interface RadiusClassDeclaration {
  * @example
  * <Frame {...radiusClassProps("R-IDENTITY", "Avatar")} circular />
  */
-export function radiusClassProps(radiusClass: KnobImmuneRadiusClass, part: string): RadiusClassDeclaration {
+export const radiusClassProps = (radiusClass: KnobImmuneRadiusClass, part: string): RadiusClassDeclaration => {
   return { 'data-radius-class': radiusClass, 'data-radius-part': part };
-}
+};
 
 export interface RadiusResolutionDeclaration {
   'data-radius-resolution': 'BINARY';
@@ -90,9 +90,9 @@ export interface RadiusResolutionDeclaration {
  * @example
  * <StyledSwitch.Thumb {...radiusResolutionProps("BINARY")} borderRadius={thumbRadius} />
  */
-export function radiusResolutionProps(radiusClass: 'BINARY'): RadiusResolutionDeclaration {
+export const radiusResolutionProps = (radiusClass: 'BINARY'): RadiusResolutionDeclaration => {
   return { 'data-radius-resolution': radiusClass };
-}
+};
 
 // ── Radius resolution ─────────────────────────
 
@@ -106,7 +106,7 @@ export interface RadiusClassGeometry {
   paddingPx?: number;
 }
 
-function resolveCell(cell: RadiusResolutionCell, geometry: RadiusClassGeometry, where: string): number {
+const resolveCell = (cell: RadiusResolutionCell, geometry: RadiusClassGeometry, where: string): number => {
   switch (cell.kind) {
     case 'px': {
       return cell.px;
@@ -136,7 +136,7 @@ function resolveCell(cell: RadiusResolutionCell, geometry: RadiusClassGeometry, 
       return geometry.paddingPx;
     }
   }
-}
+};
 
 /**
  * Resolve one radius-resolution class at one knob stop to px.
@@ -149,11 +149,11 @@ function resolveCell(cell: RadiusResolutionCell, geometry: RadiusClassGeometry, 
  * an unknown stop, or an `h/2`/padding cell without its geometry. Silent
  * defaults are how tables widen.
  */
-export function resolveRadiusClass(
+export const resolveRadiusClass = (
   radiusClass: RadiusResolutionClass,
   stop: BorderRadius,
   geometry: RadiusClassGeometry = {},
-): number {
+): number => {
   const row = RADIUS_RESOLUTION_TABLE[radiusClass];
   if (!row) {
     throw new Error(
@@ -165,7 +165,7 @@ export function resolveRadiusClass(
     throw new Error(`resolveRadiusClass: "${stop}" is not a radius stop the DG-RAD doctrine table knows`);
   }
   return resolveCell(cell, geometry, `${radiusClass} at ${stop}`);
-}
+};
 
 /**
  * Look up a part's declared per-component override, if any.
@@ -173,10 +173,10 @@ export function resolveRadiusClass(
  * contract the R-IDENTITY membership registry uses. Sweeps use this to PASS a
  * declared override instead of reporting it as a violation.
  */
-export function radiusOverrideFor(part: string): RadiusOverrideEntry | undefined {
+export const radiusOverrideFor = (part: string): RadiusOverrideEntry | undefined => {
   const needle = part.trim().toLowerCase();
   return RADIUS_OVERRIDE_TABLE.find((entry) => entry.component.toLowerCase() === needle);
-}
+};
 
 export type ResolvedRadiusSource = (typeof RADIUS_RESOLUTION_COMPOSITION)[number];
 
@@ -221,7 +221,7 @@ export interface ResolvedPartRadius {
  * count pill, status dots, DotIndicator marks, presence pip stay round in the
  * square world).
  */
-export function resolveRadiusForPart(options: ResolveRadiusForPartOptions): ResolvedPartRadius {
+export const resolveRadiusForPart = (options: ResolveRadiusForPartOptions): ResolvedPartRadius => {
   const radiusClass: RadiusResolutionClass = options.radiusClass ?? 'DEFAULT';
   const geometry: RadiusClassGeometry = {
     heightPx: options.heightPx,
@@ -253,4 +253,4 @@ export function resolveRadiusForPart(options: ResolveRadiusForPartOptions): Reso
     source: 'class',
     radiusClass,
   };
-}
+};

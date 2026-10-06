@@ -16,16 +16,16 @@ import { Button } from './index';
 
 afterEach(cleanup);
 
-function frame(): HTMLElement {
+const frame = (): HTMLElement => {
   return screen.getByRole('button');
-}
+};
 
-function atoms(el: HTMLElement, prefix: string): string[] {
+const atoms = (el: HTMLElement, prefix: string): string[] => {
   return String(el.className || '')
     .split(/\s+/)
     .filter((c) => c.startsWith(prefix))
     .sort();
-}
+};
 
 describe('Button filled border is transparent', () => {
   it('filled paints no visible edge; outlined does; boxes match', () => {

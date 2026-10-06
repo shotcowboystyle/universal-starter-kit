@@ -11,9 +11,9 @@ export type CapabilityPreflightResult = { ok: true } | { ok: false; reason: stri
  * Returns `"unknown"` when the API is missing, the name is unsupported, or
  * the query throws — callers treat that as "prompt inside the stable surface".
  */
-export async function queryPermissionState(
+export const queryPermissionState = async (
   name: PermissionName | (string & {}),
-): Promise<'granted' | 'denied' | 'prompt' | 'unknown'> {
+): Promise<'granted' | 'denied' | 'prompt' | 'unknown'> => {
   try {
     const status = await navigator.permissions?.query?.({
       name: name as PermissionName,
@@ -26,4 +26,4 @@ export async function queryPermissionState(
     // Permissions API unsupported for this name (Safari quirks, etc.)
   }
   return 'unknown';
-}
+};

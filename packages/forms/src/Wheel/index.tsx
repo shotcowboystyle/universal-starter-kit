@@ -109,7 +109,7 @@ const transitionDurationsMs: Record<string, number> = {
 // an injected stylesheet — inline styles cannot express :focus-visible.
 // Inset (−2px): the viewport clips overflow to radius (clipping arm).
 const WHEEL_FOCUS_STYLE_ID = 'mp1-wheel-focus';
-function ensureWheelFocusStyles() {
+const ensureWheelFocusStyles = () => {
   if (!isWeb || typeof document === 'undefined') {
     return;
   }
@@ -121,7 +121,7 @@ function ensureWheelFocusStyles() {
   style.textContent =
     '.mp1-wheel-wrapper:focus-visible { outline: 2px solid var(--outlineColor, var(--c-outlineColor, CanvasText)); outline-offset: -2px; }';
   document.head.append(style);
-}
+};
 
 const wheelMaskStyle: CSSProperties | undefined = isWeb
   ? {
@@ -159,36 +159,36 @@ const SelectionIndicator = styled(View, {
 
 // ── Helper functions ──────────────────────────────────────────
 
-function normalizeItem<T>(item: T | WheelItem<T>): WheelItem<T> {
+const normalizeItem = <T,>(item: T | WheelItem<T>): WheelItem<T> => {
   if (typeof item === 'object' && item !== null && 'value' in item) {
     return item;
   }
   return { value: item, label: String(item) };
-}
+};
 
-function getItemLabel<T>(item: T | WheelItem<T>): string {
+const getItemLabel = <T,>(item: T | WheelItem<T>): string => {
   const normalized = normalizeItem(item);
   return normalized.label ?? String(normalized.value);
-}
+};
 
-function getItemValue<T>(item: T | WheelItem<T>): T {
+const getItemValue = <T,>(item: T | WheelItem<T>): T => {
   const normalized = normalizeItem(item);
   return normalized.value;
-}
+};
 
 /** Non-negative modulo (JavaScript % can be negative for negative lhs). */
-function modIndex(row: number, n: number): number {
+const modIndex = (row: number, n: number): number => {
   if (n <= 0) {
     return 0;
   }
   return ((row % n) + n) % n;
-}
+};
 
 /**
  * Scroll offset that shows the same item as `targetOffset` (same row mod n), chosen so its
  * value is closest to `referenceOffset` — shortest motion when animating from `referenceOffset`.
  */
-function equivalentOffsetNear(referenceOffset: number, targetOffset: number, n: number, itemHeight: number): number {
+const equivalentOffsetNear = (referenceOffset: number, targetOffset: number, n: number, itemHeight: number): number => {
   if (n <= 0 || itemHeight <= 0) {
     return targetOffset;
   }
@@ -198,10 +198,10 @@ function equivalentOffsetNear(referenceOffset: number, targetOffset: number, n: 
   const base = m * itemHeight;
   const k = Math.round((referenceOffset - base) / span);
   return base + k * span;
-}
+};
 
 /** Shortest steps on the item circle from current row to target data index. */
-function nearestRowForDataIndex(currentRow: number, targetDataIndex: number, n: number): number {
+const nearestRowForDataIndex = (currentRow: number, targetDataIndex: number, n: number): number => {
   const currentMod = modIndex(currentRow, n);
   let delta = targetDataIndex - currentMod;
   if (delta > n / 2) {
@@ -211,27 +211,27 @@ function nearestRowForDataIndex(currentRow: number, targetDataIndex: number, n: 
     delta += n;
   }
   return currentRow + delta;
-}
+};
 
 // Rubber-band effect for over-scrolling (iOS style)
-function rubberBand(offset: number, dimension: number): number {
+const rubberBand = (offset: number, dimension: number): number => {
   const c = rubberBandConstant;
   const x = Math.abs(offset);
   const result = (x * dimension * c) / (dimension + c * x);
   return offset < 0 ? -result : result;
-}
+};
 
 /**
  * Project a row onto the Cupertino cylinder. Angle 0 sits in the selection
  * band; off-center rows recede with rotateX + foreshortening (not opacity —
  * row text stays on the AA $color11 ramp).
  */
-function getItemTransform(
+const getItemTransform = (
   index: number,
   scrollOffset: number,
   itemHeight: number,
   containerHeight: number,
-): { translateY: number; rotateX: number; scale: number; opacity: number } {
+): { translateY: number; rotateX: number; scale: number; opacity: number } => {
   const radius = (containerHeight * diameterRatio) / 2;
   const angle = (index * itemHeight - scrollOffset) / squeeze / Math.max(radius, 1);
   const clamped = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, angle));
@@ -245,9 +245,9 @@ function getItemTransform(
     scale,
     opacity: 1,
   };
-}
+};
 
-function tokenPx(token: string | number, scale: 'radius' | 'space'): number {
+const tokenPx = (token: string | number, scale: 'radius' | 'space'): number => {
   if (typeof token === 'number') {
     return token;
   }
@@ -257,9 +257,13 @@ function tokenPx(token: string | number, scale: 'radius' | 'space'): number {
     return val;
   }
   return scale === 'radius' ? 9 : 8;
-}
+};
 
-function highlightBandStyle(edges: WheelHighlightEdges, radiusToken: string | number, pointy: boolean): CSSProperties {
+const highlightBandStyle = (
+  edges: WheelHighlightEdges,
+  radiusToken: string | number,
+  pointy: boolean,
+): CSSProperties => {
   const r = pointy ? 0 : tokenPx(radiusToken, 'radius');
   const inset = tokenPx('$2', 'space');
   const capStart = edges === 'all' || edges === 'start';
@@ -272,11 +276,11 @@ function highlightBandStyle(edges: WheelHighlightEdges, radiusToken: string | nu
     marginInlineStart: capStart ? inset : 0,
     marginInlineEnd: capEnd ? inset : 0,
   };
-}
+};
 
 // ── Wheel Component ───────────────────────────────────────────
 
-export function Wheel<T = string | number>({
+export const Wheel = <T = string | number,>({
   items,
   value,
   onChange,
@@ -291,7 +295,7 @@ export function Wheel<T = string | number>({
   flex,
   onItemCross,
   'aria-label': ariaLabel,
-}: WheelProps<T>) {
+}: WheelProps<T>) => {
   const { knobProps } = useResolvedKnobs();
   const sizeKnob = (knobProps.size as 'small' | 'medium' | 'large') ?? 'medium';
   const size = sizeProp ?? wheelFontBySize[sizeKnob] ?? '$8';
@@ -1048,7 +1052,7 @@ export function Wheel<T = string | number>({
       )}
     </WheelContainer>
   );
-}
+};
 
 // ── Sub-components for composition ────────────────────────────
 

@@ -20,10 +20,10 @@ const canUseDom = typeof window !== 'undefined' && typeof window.addEventListene
  * trigger's crisp border (OVERLAY_ANCHOR_GAP rule: overlay borders must
  * coincide with the surfaces they align to by construction).
  */
-function roundToDevicePixel(value: number): number {
+const roundToDevicePixel = (value: number): number => {
   const dpr = canUseDom ? window.devicePixelRatio || 1 : 1;
   return Math.round(value * dpr) / dpr;
-}
+};
 
 export const panelAnimationDuration = 180;
 export const panelGrowDuration = 200;
@@ -102,15 +102,15 @@ export interface UseFloatingPanelOptions {
 
 /** One place that resolves the deprecated boolean onto the three modes, so
  *  the hook and the component cannot disagree about what a consumer meant. */
-export function resolvePanelWidthMode(
+export const resolvePanelWidthMode = (
   widthMode: PanelWidthMode | undefined,
   fitContent: boolean | undefined,
-): PanelWidthMode {
+): PanelWidthMode => {
   if (widthMode) {
     return widthMode;
   }
   return fitContent ? 'fit-content' : 'at-least-trigger';
-}
+};
 
 // ── Return type ───────────────────────────────────────────────
 
@@ -151,7 +151,7 @@ export interface UseFloatingPanelReturn {
 // ── Hook ──────────────────────────────────────────────────────
 
 /** A box paints a corner if it draws a radius, a border or a background. */
-function paintsACorner(el: HTMLElement): boolean {
+const paintsACorner = (el: HTMLElement): boolean => {
   const cs = getComputedStyle(el);
   if (Number.parseFloat(cs.borderTopLeftRadius) > 0) {
     return true;
@@ -161,7 +161,7 @@ function paintsACorner(el: HTMLElement): boolean {
   }
   const bg = cs.backgroundColor;
   return !!bg && bg !== 'transparent' && bg !== 'rgba(0, 0, 0, 0)';
-}
+};
 
 /**
  * The element the panel ANCHORS to is not always the element that PAINTS.
@@ -178,7 +178,7 @@ function paintsACorner(el: HTMLElement): boolean {
  * top-left corner and actually paints one. Nothing painted → null, so the
  * caller falls back to the clamped token rather than to zero.
  */
-function paintedCornerBox(root: HTMLElement): HTMLElement | null {
+const paintedCornerBox = (root: HTMLElement): HTMLElement | null => {
   if (paintsACorner(root)) {
     return root;
   }
@@ -196,7 +196,7 @@ function paintedCornerBox(root: HTMLElement): HTMLElement | null {
     }
   }
   return null;
-}
+};
 
 /**
  * OVERLAY_ANCHOR_GAP rule — radius equality: a panel that aligns to (or
@@ -210,7 +210,7 @@ function paintedCornerBox(root: HTMLElement): HTMLElement | null {
  * Exported for `use-floating-panel.test.tsx`: the arc is measured, not
  * declared, so the only way to lock it is to feed it real boxes.
  */
-export function measureDrawnRadius(el: HTMLElement): number | null {
+export const measureDrawnRadius = (el: HTMLElement): number | null => {
   const box = paintedCornerBox(el);
   if (!box) {
     return null;
@@ -224,9 +224,9 @@ export function measureDrawnRadius(el: HTMLElement): number | null {
     return null;
   }
   return Math.min(raw, rect.height / 2, rect.width / 2);
-}
+};
 
-export function useFloatingPanel({
+export const useFloatingPanel = ({
   open,
   onOpenChange,
   disabled,
@@ -240,7 +240,7 @@ export function useFloatingPanel({
   fitContent,
   compact,
   freeOverlay = false,
-}: UseFloatingPanelOptions): UseFloatingPanelReturn {
+}: UseFloatingPanelOptions): UseFloatingPanelReturn => {
   const widthMode = resolvePanelWidthMode(widthModeProp, fitContent);
   const { knobProps } = useResolvedKnobs({ compact });
   const hasBorder = knobProps.borderRadius.borderWidth > 0;
@@ -566,4 +566,4 @@ export function useFloatingPanel({
     hasBorder,
     knobProps,
   };
-}
+};

@@ -15,7 +15,7 @@ const THEME_OPTIONS: ThemePreference[] = ['light', 'dark', 'system'];
 const LANGUAGE_CODES = ['en', 'de'] as const;
 const LANGUAGE_LABELS = ['English', 'Deutsch'];
 
-export default function SettingsScreen() {
+const SettingsScreen = () => {
   const { t } = useTranslation();
   const theme = useTheme();
   const colorScheme = useColorScheme();
@@ -177,4 +177,6 @@ export default function SettingsScreen() {
       </View>
     </ScrollView>
   );
-}
+};
+
+export default SettingsScreen;

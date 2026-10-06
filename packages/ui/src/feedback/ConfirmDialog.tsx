@@ -39,11 +39,11 @@ import { DialogContent, DialogOverlay } from '../surfaces';
 const TAB_STOPS =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"]), [contenteditable="true"]';
 
-function asHtml(node: unknown): HTMLElement | null {
+const asHtml = (node: unknown): HTMLElement | null => {
   return node instanceof HTMLElement ? node : null;
-}
+};
 
-function panelNode(ref: unknown): HTMLElement | null {
+const panelNode = (ref: unknown): HTMLElement | null => {
   const fromRef = asHtml(ref);
   if (fromRef) {
     return fromRef;
@@ -52,9 +52,9 @@ function panelNode(ref: unknown): HTMLElement | null {
     return null;
   }
   return document.querySelector<HTMLElement>('[data-mp-confirm-dialog]');
-}
+};
 
-function isTextEntry(el: HTMLElement): boolean {
+const isTextEntry = (el: HTMLElement): boolean => {
   const tag = el.tagName;
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
     return true;
@@ -67,9 +67,9 @@ function isTextEntry(el: HTMLElement): boolean {
     return true;
   }
   return Boolean(el.querySelector("input, textarea, [contenteditable='true']"));
-}
+};
 
-function firstTabStop(root: HTMLElement): HTMLElement | null {
+const firstTabStop = (root: HTMLElement): HTMLElement | null => {
   const nodes = root.querySelectorAll<HTMLElement>(TAB_STOPS);
   for (const el of nodes) {
     if (el === root) {
@@ -84,9 +84,9 @@ function firstTabStop(root: HTMLElement): HTMLElement | null {
     return el;
   }
   return null;
-}
+};
 
-function applyOpenFocus(panel: HTMLElement) {
+const applyOpenFocus = (panel: HTMLElement) => {
   const keyboard = wasKeyboardFocus();
   const first = firstTabStop(panel);
   const toControl = Boolean(first && (keyboard || isTextEntry(first)));
@@ -95,7 +95,7 @@ function applyOpenFocus(panel: HTMLElement) {
     preventScroll: true,
     focusVisible: keyboard && toControl,
   } as FocusOptions);
-}
+};
 
 export interface ConfirmDialogProps {
   open: boolean;
@@ -145,7 +145,7 @@ export interface ConfirmDialogProps {
   allowManyActions?: boolean;
 }
 
-export function ConfirmDialog({
+export const ConfirmDialog = ({
   open,
   onOpenChange,
   title,
@@ -161,7 +161,7 @@ export function ConfirmDialog({
   confirmDisabledReason,
   cancelDisabled = false,
   allowManyActions = false,
-}: ConfirmDialogProps) {
+}: ConfirmDialogProps) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
   const confirmLabel = confirmLabelProp ?? t('Confirm');
@@ -343,4 +343,4 @@ export function ConfirmDialog({
       </Dialog.Portal>
     </Dialog>
   );
-}
+};

@@ -18,12 +18,12 @@ import { Timeline } from './Timeline';
 
 afterEach(cleanup);
 
-function headingSequence(container: HTMLElement): { level: number; text: string }[] {
+const headingSequence = (container: HTMLElement): { level: number; text: string }[] => {
   return [...container.querySelectorAll('h1,h2,h3,h4,h5,h6')].map((el) => ({
     level: Number(el.tagName[1]),
     text: (el.textContent ?? '').trim(),
   }));
-}
+};
 
 describe('heading structure', () => {
   it('Screen + PageHeader renders the page title as the single h1', () => {
@@ -113,9 +113,9 @@ describe('multiple-h1 DEV warn (PageHeadingScope)', () => {
     vi.restoreAllMocks();
   });
 
-  function multipleH1Warnings(warn: ReturnType<typeof vi.spyOn>): string[] {
+  const multipleH1Warnings = (warn: ReturnType<typeof vi.spyOn>): string[] => {
     return warn.mock.calls.map((call) => String(call[0])).filter((m) => m.includes('multiple-h1'));
-  }
+  };
 
   it('warns when two h1 page headings mount under one Screen', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});

@@ -14,7 +14,15 @@ const HUE_LOCATIONS = [0, 0.17, 0.33, 0.5, 0.67, 0.83, 1] as const;
 
 const TRANSPARENT = 'rgba(0,0,0,0)';
 
-export function SaturationBackground({ hueColor, width, height }: { hueColor: string; width: number; height: number }) {
+export const SaturationBackground = ({
+  hueColor,
+  width,
+  height,
+}: {
+  hueColor: string;
+  width: number;
+  height: number;
+}) => {
   const box = { width, height };
   return (
     <RNView
@@ -34,15 +42,15 @@ export function SaturationBackground({ hueColor, width, height }: { hueColor: st
       />
     </RNView>
   );
-}
+};
 
-function axis(orientation: 'horizontal' | 'vertical' | undefined) {
+const axis = (orientation: 'horizontal' | 'vertical' | undefined) => {
   return orientation === 'vertical'
     ? { start: { x: 0.5, y: 0 }, end: { x: 0.5, y: 1 } }
     : { start: { x: 0, y: 0.5 }, end: { x: 1, y: 0.5 } };
-}
+};
 
-export function HueBackground({
+export const HueBackground = ({
   width,
   height,
   orientation = 'horizontal',
@@ -50,7 +58,7 @@ export function HueBackground({
   width: number;
   height: number;
   orientation?: 'horizontal' | 'vertical';
-}) {
+}) => {
   const { start, end } = axis(orientation);
   return (
     <LinearGradient
@@ -62,9 +70,9 @@ export function HueBackground({
       pointerEvents="none"
     />
   );
-}
+};
 
-export function AlphaBackground({
+export const AlphaBackground = ({
   hex,
   width,
   height,
@@ -74,7 +82,7 @@ export function AlphaBackground({
   width: number;
   height: number;
   orientation?: 'horizontal' | 'vertical';
-}) {
+}) => {
   const box = { width, height };
   const { start, end } = axis(orientation);
   return (
@@ -91,7 +99,7 @@ export function AlphaBackground({
       />
     </RNView>
   );
-}
+};
 
 const styles = StyleSheet.create({
   host: {

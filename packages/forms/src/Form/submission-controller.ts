@@ -6,19 +6,7 @@ interface SubmissionForm {
 type SubmissionOutcome = 'success' | 'invalid' | 'failed' | 'busy';
 type SubmissionSnapshot = Readonly<{ error: string | null; submitting: boolean }>;
 
-const controllers = new WeakMap<SubmissionForm, ReturnType<typeof createSubmissionController>>();
-
-/** Keep UI submission failures shared without changing the caller's FormApi. */
-export function getFormSubmission(form: SubmissionForm) {
-  let controller = controllers.get(form);
-  if (!controller) {
-    controller = createSubmissionController(form);
-    controllers.set(form, controller);
-  }
-  return controller;
-}
-
-function createSubmissionController(form: SubmissionForm) {
+const createSubmissionController = (form: SubmissionForm) => {
   let snapshot: SubmissionSnapshot = { error: null, submitting: false };
   const listeners = new Set<() => void>();
 
@@ -66,4 +54,16 @@ function createSubmissionController(form: SubmissionForm) {
         });
     },
   };
-}
+};
+
+const controllers = new WeakMap<SubmissionForm, ReturnType<typeof createSubmissionController>>();
+
+/** Keep UI submission failures shared without changing the caller's FormApi. */
+export const getFormSubmission = (form: SubmissionForm) => {
+  let controller = controllers.get(form);
+  if (!controller) {
+    controller = createSubmissionController(form);
+    controllers.set(form, controller);
+  }
+  return controller;
+};

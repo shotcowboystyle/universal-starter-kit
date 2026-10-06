@@ -16,13 +16,13 @@ import { clearPresets, registerPreset } from '../shared';
 
 import { ThemeDevtoolsPanel } from './ThemeDevtoolsPanel';
 
-function clearThemeCookies() {
+const clearThemeCookies = () => {
   for (const key of [cookiePreset, ...Array.from({ length: 10 }, (_, i) => `${cookieOverridesPrefix}.${i}`)]) {
     document.cookie = `${key}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
   }
-}
+};
 
-function Shell({ scheme }: { scheme: 'light' | 'dark' }) {
+const Shell = ({ scheme }: { scheme: 'light' | 'dark' }) => {
   return (
     <CookiesProvider>
       <ThemeDevtoolsPanel
@@ -31,13 +31,13 @@ function Shell({ scheme }: { scheme: 'light' | 'dark' }) {
       />
     </CookiesProvider>
   );
-}
+};
 
-function pressed(label: string, title: string) {
+const pressed = (label: string, title: string) => {
   return within(screen.getByRole('group', { name: label }))
     .getByTitle(title)
     .getAttribute('aria-pressed');
-}
+};
 
 beforeEach(clearThemeCookies);
 afterEach(() => {

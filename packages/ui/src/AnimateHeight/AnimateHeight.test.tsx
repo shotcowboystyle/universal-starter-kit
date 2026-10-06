@@ -27,7 +27,7 @@ class FiringResizeObserver {
   disconnect() {}
 }
 
-function Harness({ initialOpen }: { initialOpen: boolean }) {
+const Harness = ({ initialOpen }: { initialOpen: boolean }) => {
   const [open, setOpen] = useState(initialOpen);
   return (
     <>
@@ -46,11 +46,11 @@ function Harness({ initialOpen }: { initialOpen: boolean }) {
       </AnimateHeight>
     </>
   );
-}
+};
 
 const originalResizeObserver = window.ResizeObserver;
 
-function installFiringObserver(height: number) {
+const installFiringObserver = (height: number) => {
   FiringResizeObserver.instances = [];
   window.ResizeObserver = FiringResizeObserver as unknown as typeof ResizeObserver;
   vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
@@ -64,7 +64,7 @@ function installFiringObserver(height: number) {
     bottom: height,
     toJSON: () => ({}),
   } as DOMRect);
-}
+};
 
 describe('AnimateHeight', () => {
   beforeEach(() => {

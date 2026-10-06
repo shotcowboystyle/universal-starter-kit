@@ -24,7 +24,7 @@ let expoVideoCache: ExpoVideoModule | null | undefined;
  * Expo Go). Lazy + guarded keeps the barrel eval-safe; the surface degrades to
  * the poster frame when playback isn't available.
  */
-function loadExpoVideo(): ExpoVideoModule | null {
+const loadExpoVideo = (): ExpoVideoModule | null => {
   if (expoVideoCache !== undefined) {
     return expoVideoCache;
   }
@@ -35,7 +35,7 @@ function loadExpoVideo(): ExpoVideoModule | null {
     expoVideoCache = null;
   }
   return expoVideoCache;
-}
+};
 
 interface NativeSurfaceProps {
   src: string;
@@ -53,7 +53,7 @@ type ExpoSurfaceProps = NativeSurfaceProps & { expoVideo: ExpoVideoModule };
  * Isolated so `useVideoPlayer` always runs unconditionally when a src exists.
  * Remount via `key={src}` when the URL changes.
  */
-function ExpoVideoSurface({ expoVideo, src, muted, autoPlay, controls, loop, poster, title }: ExpoSurfaceProps) {
+const ExpoVideoSurface = ({ expoVideo, src, muted, autoPlay, controls, loop, poster, title }: ExpoSurfaceProps) => {
   const { knobProps } = useResolvedKnobs({ component: 'Video' });
   const { useVideoPlayer, VideoView } = expoVideo;
   const player = useVideoPlayer(src, (instance) => {
@@ -105,10 +105,10 @@ function ExpoVideoSurface({ expoVideo, src, muted, autoPlay, controls, loop, pos
       ) : null}
     </YStack>
   );
-}
+};
 
 /** Playback-less stand-in when the optional `expo-video` peer is unavailable. */
-function PosterOnlySurface({ poster, title }: NativeSurfaceProps) {
+const PosterOnlySurface = ({ poster, title }: NativeSurfaceProps) => {
   const { knobProps } = useResolvedKnobs({ component: 'Video' });
   return (
     <YStack
@@ -128,14 +128,14 @@ function PosterOnlySurface({ poster, title }: NativeSurfaceProps) {
       ) : null}
     </YStack>
   );
-}
+};
 
 /**
  * Native video surface — requires optional peer `expo-video` (SDK 55+).
  * System transport (AVKit / ExoPlayer) is the platform chrome; the frame
  * and caption follow house recipes. Web-only consumers never load this file.
  */
-export function Video({
+export const Video = ({
   src,
   children,
   muted = false,
@@ -146,7 +146,7 @@ export function Video({
   title,
   compact,
   ...props
-}: VideoProps) {
+}: VideoProps) => {
   const { knobProps } = useResolvedKnobs({ component: 'Video', compact });
   const expoVideo = loadExpoVideo();
 
@@ -187,4 +187,4 @@ export function Video({
       {children == null ? null : <VideoCaption>{children}</VideoCaption>}
     </VideoFrame>
   );
-}
+};

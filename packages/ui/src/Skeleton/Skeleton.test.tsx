@@ -14,11 +14,11 @@ import { Skeleton, SkeletonCircle, SkeletonGroup, SkeletonText } from './index';
 
 afterEach(cleanup);
 
-function radiusClasses(el: Element): string[] {
+const radiusClasses = (el: Element): string[] => {
   return String((el as HTMLElement).className || '')
     .split(' ')
     .filter((c) => c.startsWith('_btlr-'));
-}
+};
 
 describe('Skeleton named exports', () => {
   it('serves named exports only (no default) and keeps the namespace statics', () => {

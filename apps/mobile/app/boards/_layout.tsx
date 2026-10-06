@@ -1,6 +1,6 @@
 import { Stack } from 'expo-router/stack';
 
-export default function BoardsLayout() {
+const BoardsLayout = () => {
   return (
     <Stack
       screenOptions={{
@@ -11,4 +11,6 @@ export default function BoardsLayout() {
       }}
     />
   );
-}
+};
+
+export default BoardsLayout;

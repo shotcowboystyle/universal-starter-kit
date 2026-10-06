@@ -44,7 +44,7 @@ const nativeHandlerKeys = [
 
 const handlersOnLastFrame = () => nativeHandlerKeys.filter((key) => key in (frameProps.at(-1) ?? {}));
 
-function FormCheckbox({ onChange }: { onChange: (checked: unknown) => void }) {
+const FormCheckbox = ({ onChange }: { onChange: (checked: unknown) => void }) => {
   const form = useForm({ defaultValues: { terms: false } });
   return (
     <Form form={form}>
@@ -55,7 +55,7 @@ function FormCheckbox({ onChange }: { onChange: (checked: unknown) => void }) {
       />
     </Form>
   );
-}
+};
 
 beforeEach(() => {
   frameProps.length = 0;

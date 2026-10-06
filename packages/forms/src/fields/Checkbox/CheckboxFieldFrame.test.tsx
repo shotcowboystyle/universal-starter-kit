@@ -22,21 +22,21 @@ afterEach(cleanup);
 const TRANSPARENT = new Set(['transparent', 'rgba(0, 0, 0, 0)', 'rgba(0,0,0,0)']);
 
 /** Tamagui paints through atomic classes; read the inline channel first. */
-function cssOf(node: HTMLElement, prop: string): string {
+const cssOf = (node: HTMLElement, prop: string): string => {
   const inline = node.style.getPropertyValue(prop);
   if (inline) {
     return inline;
   }
   return getComputedStyle(node).getPropertyValue(prop) || '';
-}
+};
 
-function frame(container: HTMLElement): HTMLElement {
+const frame = (container: HTMLElement): HTMLElement => {
   const node = container.querySelector("[role='checkbox']");
   if (!node) {
     throw new Error('CheckboxFieldFrame did not render a role=checkbox node');
   }
   return node as HTMLElement;
-}
+};
 
 describe('CheckboxFieldFrame', () => {
   it('links the rendered field message, forwards its ref, and preserves an explicit description', () => {

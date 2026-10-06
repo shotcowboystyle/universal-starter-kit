@@ -14,10 +14,10 @@ export interface NativeTooltipPressHandlers {
   dispose: () => void;
 }
 
-export function createNativeTooltipPressHandlers(
+export const createNativeTooltipPressHandlers = (
   setOpen: (open: boolean) => void,
   delayMs: number = TOOLTIP_NATIVE_LONG_PRESS_MS,
-): NativeTooltipPressHandlers {
+): NativeTooltipPressHandlers => {
   let timer: ReturnType<typeof setTimeout> | null = null;
 
   const clearTimer = () => {
@@ -52,4 +52,4 @@ export function createNativeTooltipPressHandlers(
       clearTimer();
     },
   };
-}
+};

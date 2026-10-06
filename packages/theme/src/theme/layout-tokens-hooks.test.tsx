@@ -43,13 +43,13 @@ let createdQueries: FakeMq[];
 let originalMatchMedia: typeof window.matchMedia;
 let originalInnerWidth: number;
 
-function setViewportWidth(width: number) {
+const setViewportWidth = (width: number) => {
   Object.defineProperty(window, 'innerWidth', {
     value: width,
     writable: true,
     configurable: true,
   });
-}
+};
 
 beforeEach(() => {
   createdQueries = [];

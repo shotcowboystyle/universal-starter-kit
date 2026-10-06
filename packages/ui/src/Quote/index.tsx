@@ -50,12 +50,12 @@ const QuoteBlock = styled(YStack, {
 // Primer / GitHub / GOV.UK inset-text: a start-edge rail ~0.25em at body
 // size (4px). Thickness tracks the borderWidth knob (none → 0; large → 8)
 // so knob totality still reaches the quote's identity mark.
-function quoteRailWidth(borderWidth: number): number {
+const quoteRailWidth = (borderWidth: number): number => {
   if (borderWidth <= 0) {
     return 0;
   }
   return Math.max(4, borderWidth * 4);
-}
+};
 
 // ── Component ─────────────────────────────────────────────────
 
@@ -64,7 +64,7 @@ function quoteRailWidth(borderWidth: number): number {
  * (attribution lives outside the quotation per the spec). Chrome: flush
  * logical-start rail (XStack reverses in RTL) + SF-CARD frame.
  */
-export function Quote({ children, cite, compact, ...props }: QuoteProps) {
+export const Quote = ({ children, cite, compact, ...props }: QuoteProps) => {
   const { knobProps } = useResolvedKnobs(
     compact === undefined ? { component: 'Quote' } : { component: 'Quote', compact },
   );
@@ -123,4 +123,4 @@ export function Quote({ children, cite, compact, ...props }: QuoteProps) {
       </QuoteBody>
     </QuoteFrame>
   );
-}
+};

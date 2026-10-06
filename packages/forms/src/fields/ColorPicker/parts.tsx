@@ -22,7 +22,7 @@ import { AlphaBackground, HueBackground, SaturationBackground } from './gradient
 // Color conversion utilities
 // ---------------------------------------------------------------------------
 
-export function hsvToRgb(h: number, s: number, v: number) {
+export const hsvToRgb = (h: number, s: number, v: number) => {
   const h6 = (h / 360) * 6;
   const s1 = s / 100;
   const v1 = v / 100;
@@ -81,23 +81,23 @@ export function hsvToRgb(h: number, s: number, v: number) {
     g: Math.round(g * 255),
     b: Math.round(b * 255),
   };
-}
+};
 
-export function rgbToHex(r: number, g: number, b: number): string {
+export const rgbToHex = (r: number, g: number, b: number): string => {
   const toHex = (x: number) => {
     const hex = Math.max(0, Math.min(255, Math.round(x))).toString(16);
     return hex.length === 1 ? `0${hex}` : hex;
   };
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`.toUpperCase();
-}
+};
 
-export function hsvToHex(h: number, s: number, v: number): string {
+export const hsvToHex = (h: number, s: number, v: number): string => {
   const { r, g, b } = hsvToRgb(h, s, v);
   return rgbToHex(r, g, b);
-}
+};
 
 /** Parse #RGB, #RRGGBB, or #RRGGBBAA. Alpha is 0–100. */
-export function parseHex(hex: string): { r: number; g: number; b: number; alpha: number } | null {
+export const parseHex = (hex: string): { r: number; g: number; b: number; alpha: number } | null => {
   const raw = hex.startsWith('#') ? hex : `#${hex}`;
   const short = /^#([a-f\d])([a-f\d])([a-f\d])$/i.exec(raw);
   if (short) {
@@ -127,17 +127,17 @@ export function parseHex(hex: string): { r: number; g: number; b: number; alpha:
     };
   }
   return null;
-}
+};
 
-export function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+export const hexToRgb = (hex: string): { r: number; g: number; b: number } | null => {
   const parsed = parseHex(hex);
   if (!parsed) {
     return null;
   }
   return { r: parsed.r, g: parsed.g, b: parsed.b };
-}
+};
 
-export function rgbToHsv(r: number, g: number, b: number): { h: number; s: number; v: number } {
+export const rgbToHsv = (r: number, g: number, b: number): { h: number; s: number; v: number } => {
   const r1 = r / 255;
   const g1 = g / 255;
   const b1 = b / 255;
@@ -169,41 +169,41 @@ export function rgbToHsv(r: number, g: number, b: number): { h: number; s: numbe
   }
 
   return { h: Math.round(h), s: Math.round(s), v: Math.round(v) };
-}
+};
 
-export function hexToHsv(hex: string): { h: number; s: number; v: number } {
+export const hexToHsv = (hex: string): { h: number; s: number; v: number } => {
   const rgb = hexToRgb(hex);
   if (!rgb) {
     return { h: 0, s: 100, v: 100 };
   }
   return rgbToHsv(rgb.r, rgb.g, rgb.b);
-}
+};
 
-export function isValidHex(hex: string): boolean {
+export const isValidHex = (hex: string): boolean => {
   return /^#([a-f\d]{3}|[a-f\d]{6}|[a-f\d]{8})$/i.test(hex);
-}
+};
 
 /** RGB hex (#RRGGBB). 8-digit input drops the alpha byte (use parseHex for alpha). */
-export function normalizeHex(hex: string): string {
+export const normalizeHex = (hex: string): string => {
   const parsed = parseHex(hex);
   if (!parsed) {
     const normalized = hex.startsWith('#') ? hex : `#${hex}`;
     return normalized.toUpperCase();
   }
   return rgbToHex(parsed.r, parsed.g, parsed.b);
-}
+};
 
-export function hexAlphaByte(alpha: number): string {
+export const hexAlphaByte = (alpha: number): string => {
   const clamped = Math.max(0, Math.min(100, Math.round(alpha)));
   return Math.round((clamped / 100) * 255)
     .toString(16)
     .padStart(2, '0')
     .toUpperCase();
-}
+};
 
-export function hexChannelAlpha(hex: string): number {
+export const hexChannelAlpha = (hex: string): number => {
   return parseHex(hex)?.alpha ?? 100;
-}
+};
 
 // ---------------------------------------------------------------------------
 // Styled sub-components
@@ -218,12 +218,12 @@ interface Measurable {
   measureInWindow?: (cb: (x: number, y: number, width: number, height: number) => void) => void;
 }
 
-function readPointerGeometry(
+const readPointerGeometry = (
   node: Measurable | null,
   clientX: number,
   clientY: number,
   apply: (x: number, y: number, width: number, height: number) => void,
-) {
+) => {
   if (!node) {
     return;
   }
@@ -235,13 +235,13 @@ function readPointerGeometry(
   node.measureInWindow?.((left, top, width, height) => {
     apply(clientX - left, clientY - top, width, height);
   });
-}
+};
 
 // ---------------------------------------------------------------------------
 // useDrag — shared pointer-drag state for sliders and panels
 // ---------------------------------------------------------------------------
 
-function useDrag(onUpdate: (clientX: number, clientY: number) => void) {
+const useDrag = (onUpdate: (clientX: number, clientY: number) => void) => {
   const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
@@ -293,23 +293,23 @@ function useDrag(onUpdate: (clientX: number, clientY: number) => void) {
     onPointerDown,
     ...(isWeb ? {} : { onPointerMove, onPointerUp }),
   };
-}
+};
 
 export type ColorRailOrientation = 'horizontal' | 'vertical';
 
 const HANDLE_SIZE = 16;
 const RAIL_THICKNESS = 16;
 
-export function binaryRadius(pointy: boolean | undefined, size: number): number {
+export const binaryRadius = (pointy: boolean | undefined, size: number): number => {
   return pointy ? 0 : size / 2;
-}
+};
 
 /**
  * Spectrum ColorHandle: current-color fill, white inner ring + dark outer ring
  * so the cursor stays visible on any hue. Functional contrast (same class as
  * HSV gradients) — not elevation. R-BINARY: square at radius none.
  */
-function ColorHandle({
+const ColorHandle = ({
   color,
   size,
   x,
@@ -321,7 +321,7 @@ function ColorHandle({
   x: number;
   y: number;
   pointy: boolean;
-}) {
+}) => {
   const outer = binaryRadius(pointy, size);
   const inner = binaryRadius(pointy, Math.max(0, size - 2));
   return (
@@ -346,7 +346,7 @@ function ColorHandle({
       />
     </View>
   );
-}
+};
 
 const sliderFocusReset = {
   outlineWidth: 0,
@@ -354,7 +354,7 @@ const sliderFocusReset = {
   focusVisibleStyle: ensureFocusVisibleRing(),
 } as const;
 
-function ColorRail({
+const ColorRail = ({
   orientation = 'vertical',
   length,
   ratio,
@@ -378,7 +378,7 @@ function ColorRail({
   handleColor: string;
   testID: string;
   children: ReactNode;
-}) {
+}) => {
   const { knobProps } = useResolvedKnobs({ compact: true });
   const railRef = useRef<Measurable | null>(null);
   const vertical = orientation === 'vertical';
@@ -487,7 +487,7 @@ function ColorRail({
       />
     </View>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // SaturationPanel — Spectrum ColorArea (sat × value)
@@ -501,7 +501,7 @@ interface SaturationPanelProps {
   size?: number;
 }
 
-export function SaturationPanel({ hue, saturation, value, onChangeSV, size = 192 }: SaturationPanelProps) {
+export const SaturationPanel = ({ hue, saturation, value, onChangeSV, size = 192 }: SaturationPanelProps) => {
   const { knobProps } = useResolvedKnobs({ compact: true });
   const panelRef = useRef<Measurable | null>(null);
   const handleSize = HANDLE_SIZE;
@@ -615,7 +615,7 @@ export function SaturationPanel({ hue, saturation, value, onChangeSV, size = 192
       />
     </View>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // HueStrip — Spectrum ColorSlider (hue). Polaris uses vertical beside the area.
@@ -629,7 +629,7 @@ interface HueStripProps {
   orientation?: ColorRailOrientation;
 }
 
-export function HueStrip({ hue, onChangeHue, width = 192, height, orientation = 'horizontal' }: HueStripProps) {
+export const HueStrip = ({ hue, onChangeHue, width = 192, height, orientation = 'horizontal' }: HueStripProps) => {
   const vertical = orientation === 'vertical';
   const length = vertical ? (height ?? width) : width;
   const wrapped = ((hue % 360) + 360) % 360;
@@ -654,7 +654,7 @@ export function HueStrip({ hue, onChangeHue, width = 192, height, orientation = 
       />
     </ColorRail>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // AlphaStrip — Spectrum ColorSlider (alpha)
@@ -671,7 +671,7 @@ interface AlphaStripProps {
   orientation?: ColorRailOrientation;
 }
 
-export function AlphaStrip({
+export const AlphaStrip = ({
   hue,
   saturation,
   value,
@@ -680,7 +680,7 @@ export function AlphaStrip({
   width = 192,
   height,
   orientation = 'horizontal',
-}: AlphaStripProps) {
+}: AlphaStripProps) => {
   const vertical = orientation === 'vertical';
   const length = vertical ? (height ?? width) : width;
   const hex = useMemo(() => hsvToHex(hue, saturation, value), [hue, saturation, value]);
@@ -705,7 +705,7 @@ export function AlphaStrip({
       />
     </ColorRail>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // PresetSwatches — grid of clickable preset colors
@@ -737,7 +737,7 @@ export const CHIP_PX: Record<string, number> = {
   large: 22,
 };
 
-function SwatchItem({
+const SwatchItem = ({
   entry,
   isSelected,
   size,
@@ -753,7 +753,7 @@ function SwatchItem({
   tabIndex: number;
   onSelect: (color: string | null) => void;
   onFocusIndex: () => void;
-}) {
+}) => {
   const [kbFocus, setKbFocus] = useState(false);
   const mark = useReadableTextOn(entry.value ?? formControlColors.background);
   const radius = binaryRadius(pointy, size);
@@ -816,9 +816,9 @@ function SwatchItem({
       ) : null}
     </View>
   );
-}
+};
 
-export function PresetSwatches({ presetColors, selectedColor, onSelect, width }: PresetSwatchesProps) {
+export const PresetSwatches = ({ presetColors, selectedColor, onSelect, width }: PresetSwatchesProps) => {
   const { knobProps } = useResolvedKnobs({ compact: true });
   const [focusIndex, setFocusIndex] = useState(0);
   const entries = useMemo(() => {
@@ -913,7 +913,7 @@ export function PresetSwatches({ presetColors, selectedColor, onSelect, width }:
       })}
     </XStack>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // ColorPickerInputTrigger — compound input with swatch + clear icon
@@ -1027,14 +1027,14 @@ interface ColorPickerPopoverShellProps {
   triggerA11y?: { label?: string; value?: string; hint?: string };
 }
 
-export function ColorPickerPopoverShell({
+export const ColorPickerPopoverShell = ({
   open,
   onOpenChange,
   trigger,
   children,
   disabled,
   triggerA11y,
-}: ColorPickerPopoverShellProps) {
+}: ColorPickerPopoverShellProps) => {
   return (
     <FloatingPanel
       open={open}
@@ -1048,4 +1048,4 @@ export function ColorPickerPopoverShell({
       {children}
     </FloatingPanel>
   );
-}
+};

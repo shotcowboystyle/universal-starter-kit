@@ -59,34 +59,36 @@ export const TOOLTIP_DEFAULT_DELAY_MS = 300;
 let tooltipSkipUntil = 0;
 const tooltipSkipListeners = new Set<() => void>();
 
-export function noteTooltipClosed(now = Date.now()): void {
+export const noteTooltipClosed = (now = Date.now()): void => {
   tooltipSkipUntil = now + TOOLTIP_SKIP_DELAY_MS;
   for (const listener of tooltipSkipListeners) {
     listener();
   }
-}
+};
 
-export function resolveTooltipDelay(delay: number, now = Date.now()): number {
+export const resolveTooltipDelay = (delay: number, now = Date.now()): number => {
   return now < tooltipSkipUntil ? 0 : delay;
-}
+};
 
-export function resolveTooltipSizeRecipe(size: string): TooltipSizeRecipe {
+export const resolveTooltipSizeRecipe = (size: string): TooltipSizeRecipe => {
   return tooltipSizeRecipes[size as keyof typeof tooltipSizeRecipes] ?? tooltipSizeRecipes.medium;
-}
+};
 
-export function resolveTooltipPadRecipe(space: string): {
+export const resolveTooltipPadRecipe = (
+  space: string,
+): {
   paddingHorizontal: string;
   paddingVertical: string;
-} {
+} => {
   return tooltipPadRecipes[space as keyof typeof tooltipPadRecipes] ?? tooltipPadRecipes.medium;
-}
+};
 
 /** @internal tests */
-export function __resetTooltipSkipForTests(): void {
+export const __resetTooltipSkipForTests = (): void => {
   tooltipSkipUntil = 0;
-}
+};
 
-export function useTooltipSkipDelay(delay: number): number {
+export const useTooltipSkipDelay = (delay: number): number => {
   const [, bump] = React.useState(0);
   React.useEffect(() => {
     const listener = () => {
@@ -98,7 +100,7 @@ export function useTooltipSkipDelay(delay: number): number {
     };
   }, []);
   return resolveTooltipDelay(delay);
-}
+};
 
 export const TooltipContent = styled(TamaguiTooltip.Content, {
   name: 'TooltipContent',
@@ -133,7 +135,7 @@ export const TooltipText = styled(Text, {
  * case — an array like `{label}{cond ? suffix : ""}` renders web-only and
  * crashes native otherwise.
  */
-export function wrapTooltipContent(content: ReactNode, bodyProps: Record<string, unknown>): ReactNode {
+export const wrapTooltipContent = (content: ReactNode, bodyProps: Record<string, unknown>): ReactNode => {
   return wrapBareTextChildren(content, (label, key) => (
     <TooltipText
       key={key}
@@ -141,9 +143,12 @@ export function wrapTooltipContent(content: ReactNode, bodyProps: Record<string,
       {label}
     </TooltipText>
   ));
-}
+};
 
-export function resolveThemeColor(token: { get?: () => string; val?: string } | undefined, fallback: string): string {
+export const resolveThemeColor = (
+  token: { get?: () => string; val?: string } | undefined,
+  fallback: string,
+): string => {
   const raw = token?.val ?? token?.get?.() ?? fallback;
   if (typeof raw === 'string' && raw.startsWith('var(') && typeof document !== 'undefined') {
     const name = raw.slice(4, -1).trim();
@@ -153,8 +158,8 @@ export function resolveThemeColor(token: { get?: () => string; val?: string } | 
     }
   }
   return typeof raw === 'string' ? raw : fallback;
-}
+};
 
-export function preventTooltipFocus(event: { preventDefault?: () => void }) {
+export const preventTooltipFocus = (event: { preventDefault?: () => void }) => {
   event.preventDefault?.();
-}
+};

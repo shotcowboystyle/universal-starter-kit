@@ -19,7 +19,7 @@ interface MapClickEvent {
  * Placeholder when no native map can render (module absent — e.g. Expo Go or
  * a consumer that skipped the optional peer — or an unsupported platform).
  */
-function MapFallback({
+const MapFallback = ({
   lat,
   lng,
   minHeight,
@@ -29,7 +29,7 @@ function MapFallback({
   lng: number;
   minHeight?: number;
   hasValue?: boolean;
-}) {
+}) => {
   return (
     <YStack
       testID="geolocation-map-fallback"
@@ -51,7 +51,7 @@ function MapFallback({
       </Text>
     </YStack>
   );
-}
+};
 
 /**
  * Native map surface — a real map through the optional `expo-maps` peer
@@ -65,7 +65,7 @@ function MapFallback({
  * Output surface of the search-first field. Search and the
  * coordinate disclosure live in the parent.
  */
-export function GeolocationMap({
+export const GeolocationMap = ({
   lat,
   lng,
   delta = 0.02,
@@ -74,7 +74,7 @@ export function GeolocationMap({
   disabled,
   readOnly,
   hasValue = true,
-}: GeolocationMapSurfaceProps) {
+}: GeolocationMapSurfaceProps) => {
   const maps = loadExpoMaps();
   const appleRef = useRef<AppleMapsNS.MapView | null>(null);
   const googleRef = useRef<GoogleMapsNS.MapView | null>(null);
@@ -159,4 +159,4 @@ export function GeolocationMap({
       />
     </YStack>
   );
-}
+};

@@ -17,9 +17,9 @@ import { warnBannedErrorWords, warnPlaceholderAsLabel } from './shared/dev-warn'
 import type { AnyFormApi, SimpleFieldApi } from './types';
 
 const FieldDescribedByContext = createContext<string | undefined>(undefined);
-export function useFieldDescribedBy() {
+export const useFieldDescribedBy = () => {
   return useContext(FieldDescribedByContext);
-}
+};
 
 /**
  * Accessible-name STRINGS for the current field. The id-based wiring above
@@ -36,13 +36,13 @@ export interface FieldA11y {
 }
 
 const FieldA11yContext = createContext<FieldA11y | undefined>(undefined);
-export function useFieldA11y() {
+export const useFieldA11y = () => {
   return useContext(FieldA11yContext);
-}
+};
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 
-function getHelperTextSize(size?: SizeTokens): FontSizeTokens {
+const getHelperTextSize = (size?: SizeTokens): FontSizeTokens => {
   if (!size) {
     return '$1';
   }
@@ -66,7 +66,7 @@ function getHelperTextSize(size?: SizeTokens): FontSizeTokens {
     $17: '$16',
   };
   return sizeMap[size.toString()] || '$1';
-}
+};
 
 // ── FieldLayout ──────────────────────────────────────────────────────────────
 
@@ -148,7 +148,7 @@ export interface FieldLayoutProps {
   children: ReactNode;
 }
 
-export function FieldLayout({
+export const FieldLayout = ({
   id,
   label,
   labelProps,
@@ -169,7 +169,7 @@ export function FieldLayout({
   maxWidth,
   width,
   children,
-}: FieldLayoutProps) {
+}: FieldLayoutProps) => {
   const { knobProps: resolvedKnobs, disabledState } = useResolvedKnobs();
   const knobProps = knobPropsProp ?? resolvedKnobs;
   const markingCtx = useRequiredMarking();
@@ -325,7 +325,7 @@ export function FieldLayout({
       </FieldA11yContext.Provider>
     </FieldDescribedByContext.Provider>
   );
-}
+};
 
 export type FormFieldProps<
   _TParentData = Record<string, unknown>,

@@ -38,7 +38,7 @@ import { defaultPreset } from './presets';
  * installed but a Playwright cache present would otherwise take the held-out
  * branch below and prove nothing, silently.
  */
-function findHeadlessShells(): string[] {
+const findHeadlessShells = (): string[] => {
   const home = process.env.HOME ?? '';
   const roots = [`${home}/Library/Caches/ms-playwright`, `${home}/.cache/ms-playwright`];
   const found: { revision: number; bin: string }[] = [];
@@ -60,9 +60,9 @@ function findHeadlessShells(): string[] {
     }
   }
   return found.sort((a, b) => b.revision - a.revision).map((f) => f.bin);
-}
+};
 
-function findChrome(): string | undefined {
+const findChrome = (): string | undefined => {
   const candidates = [
     process.env.CHROME_BIN,
     ...findHeadlessShells(),
@@ -72,7 +72,7 @@ function findChrome(): string | undefined {
     '/usr/bin/chromium',
   ].filter((p): p is string => Boolean(p));
   return candidates.find((p) => existsSync(p));
-}
+};
 
 describe('cornerSmoothing (Axiom 15 OPTICS)', () => {
   it('scopes the squircle declaration to the fragment class', () => {

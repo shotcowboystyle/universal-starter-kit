@@ -29,24 +29,24 @@ export const DRAWING_PRAGMA = /^\s*(?:\/\/|\/\*)\s*mpo-drawing\b/m;
 /**
  * @param {string} [cwd]
  */
-export function defaultSpecPath(cwd = process.cwd()) {
+export const defaultSpecPath = (cwd = process.cwd()) => {
   return join(cwd, 'docs/theme-propagation-spec.md');
-}
+};
 
 /** `Members: **Avatar**, **Radio disc**.` → ["Avatar", "Radio disc"]. */
-function parseMembers(text) {
+const parseMembers = (text) => {
   const match = text.match(/Members:\s*(.*)$/i);
   if (!match) {
     return [];
   }
   return [...match[1].matchAll(/\*\*([^*]+)\*\*/g)].map((m) => m[1].trim()).filter(Boolean);
-}
+};
 
 /**
  * @param {string} markdown
  * @param {string} specPath
  */
-function parseDrawingTable(markdown, specPath) {
+const parseDrawingTable = (markdown, specPath) => {
   const lines = markdown.split('\n');
   const heading = lines.findIndex((line) => /^##\s+Drawing files\s*$/.test(line));
   if (heading === -1) {
@@ -87,7 +87,7 @@ function parseDrawingTable(markdown, specPath) {
     throw new Error(`${specPath}: "${DRAWING_HEADING}" has no class rows`);
   }
   return rows;
-}
+};
 
 /**
  * @param {string} [specPath]
@@ -98,7 +98,7 @@ function parseDrawingTable(markdown, specPath) {
  *   chromeAllow: string[],
  * }}
  */
-export function readDrawingRegistry(specPath = defaultSpecPath()) {
+export const readDrawingRegistry = (specPath = defaultSpecPath()) => {
   if (!existsSync(specPath)) {
     return { specPath, present: false, files: [], chromeAllow: [] };
   }
@@ -125,7 +125,7 @@ export function readDrawingRegistry(specPath = defaultSpecPath()) {
     files: classes[DRAWING_CLASS].members,
     chromeAllow: classes[CHROME_ALLOW_CLASS].members,
   };
-}
+};
 
 /**
  * True when `filename` is one of the registered drawing files.
@@ -134,7 +134,7 @@ export function readDrawingRegistry(specPath = defaultSpecPath()) {
  * @param {string | undefined} filename
  * @param {string[]} files
  */
-export function isDrawingFile(filename, files) {
+export const isDrawingFile = (filename, files) => {
   if (!filename || !files.length) {
     return false;
   }
@@ -143,7 +143,7 @@ export function isDrawingFile(filename, files) {
     const needle = entry.replaceAll('\\', '/').replace(/^\.\//, '');
     return normalized === needle || normalized.endsWith(`/${needle}`);
   });
-}
+};
 
 const invokedDirectly = typeof process.argv[1] === 'string' && import.meta.url === pathToFileURL(process.argv[1]).href;
 

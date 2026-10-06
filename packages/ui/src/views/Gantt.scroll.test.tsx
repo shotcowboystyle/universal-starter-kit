@@ -55,9 +55,9 @@ const range = computeGanttRange([{ start: tasks[0].start!, end: tasks[0].end! }]
 const chartWidth = rangeDays(range) * 24;
 const anchorX = dateToX(today, range.start, 24);
 
-async function flushLayout() {
+const flushLayout = async () => {
   await act(async () => await new Promise((resolve) => setTimeout(resolve, 0)));
-}
+};
 
 beforeEach(() => {
   viewportWidth = 178;

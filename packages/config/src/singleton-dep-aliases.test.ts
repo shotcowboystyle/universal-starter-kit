@@ -164,6 +164,43 @@ describe('createViteConfig context singletons', () => {
   });
 });
 
+const withoutComments = (source: string): string => {
+  return source.replaceAll(/\/\*[\s\S]*?\*\//g, '').replaceAll(/(^|[^:\\])\/\/.*$/gm, '$1');
+};
+
+const referencesHook = (dir: string): boolean => {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name === 'node_modules') {
+      continue;
+    }
+    const full = path.join(dir, entry.name);
+    if (fs.statSync(full).isDirectory()) {
+      if (referencesHook(full)) {
+        return true;
+      }
+      continue;
+    }
+    if (!/\.(?:js|cjs|mjs|ts|tsx)$/.test(entry.name)) {
+      continue;
+    }
+    if (withoutComments(fs.readFileSync(full, 'utf-8')).includes('useSyncExternalStore')) {
+      return true;
+    }
+  }
+  return false;
+};
+
+/**
+ * Whether an installed package references `useSyncExternalStore` in the code
+ * it ships. The cheap half of the membership rule, re-run against the tree so
+ * the next tanstack upgrade is checked rather than assumed. Comments do not
+ * count: @tanstack/db 0.8 names the hook in doc comments and calls it nowhere.
+ */
+const subscribesExternalStore = (pkgName: string): boolean => {
+  const dir = path.join(workspaceRoot, 'node_modules', ...pkgName.split('/'));
+  return fs.existsSync(dir) && referencesHook(dir);
+};
+
 describe('CONTEXT_SINGLETONS membership, measured rather than recited', () => {
   const aliases = singletonDepAliases(workspaceRoot);
 
@@ -204,7 +241,7 @@ describe('CONTEXT_SINGLETONS membership, measured rather than recited', () => {
   });
 });
 
-function workspacePackageDirs(): string[] {
+const workspacePackageDirs = (): string[] => {
   const dirs = [path.join(workspaceRoot, 'features')];
   for (const group of ['apps', 'packages', 'public']) {
     const groupDir = path.join(workspaceRoot, group);
@@ -215,48 +252,11 @@ function workspacePackageDirs(): string[] {
     }
   }
   return dirs.filter((dir) => fs.existsSync(path.join(dir, 'package.json')));
-}
+};
 
-function declares(dir: string, pkgName: string): boolean {
+const declares = (dir: string, pkgName: string): boolean => {
   const manifest = JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf-8'));
   return ['dependencies', 'devDependencies', 'peerDependencies'].some(
     (field) => manifest[field]?.[pkgName] !== undefined,
   );
-}
-
-/**
- * Whether an installed package references `useSyncExternalStore` in the code
- * it ships. The cheap half of the membership rule, re-run against the tree so
- * the next tanstack upgrade is checked rather than assumed. Comments do not
- * count: @tanstack/db 0.8 names the hook in doc comments and calls it nowhere.
- */
-function subscribesExternalStore(pkgName: string): boolean {
-  const dir = path.join(workspaceRoot, 'node_modules', ...pkgName.split('/'));
-  return fs.existsSync(dir) && referencesHook(dir);
-}
-
-function referencesHook(dir: string): boolean {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (entry.name === 'node_modules') {
-      continue;
-    }
-    const full = path.join(dir, entry.name);
-    if (fs.statSync(full).isDirectory()) {
-      if (referencesHook(full)) {
-        return true;
-      }
-      continue;
-    }
-    if (!/\.(?:js|cjs|mjs|ts|tsx)$/.test(entry.name)) {
-      continue;
-    }
-    if (withoutComments(fs.readFileSync(full, 'utf-8')).includes('useSyncExternalStore')) {
-      return true;
-    }
-  }
-  return false;
-}
-
-function withoutComments(source: string): string {
-  return source.replaceAll(/\/\*[\s\S]*?\*\//g, '').replaceAll(/(^|[^:\\])\/\/.*$/gm, '$1');
-}
+};

@@ -63,7 +63,7 @@ const LABEL_RAMP = { fontSize: 14, lineHeight: 25 } as const;
 type Weight = TextProps['fontWeight'];
 
 /** The body fragment without its weight, and the weight a voice writes last. */
-function useBodyVoice(fontWeight: Weight) {
+const useBodyVoice = (fontWeight: Weight) => {
   const { knobProps } = useResolvedKnobs();
   const { fontWeight: knobWeight, ...body } = knobProps.body;
   return {
@@ -71,9 +71,9 @@ function useBodyVoice(fontWeight: Weight) {
     color: knobProps.textAccentColor,
     weight: fontWeight ?? (knobWeight as Weight),
   };
-}
+};
 
-export function Text({ fontWeight, ...props }: TextProps) {
+export const Text = ({ fontWeight, ...props }: TextProps) => {
   const { body, color, weight } = useBodyVoice(fontWeight);
   return (
     <RawText
@@ -84,9 +84,9 @@ export function Text({ fontWeight, ...props }: TextProps) {
       fontWeight={weight}
     />
   );
-}
+};
 
-export function SizableText({ fontWeight, ...props }: SizableTextProps) {
+export const SizableText = ({ fontWeight, ...props }: SizableTextProps) => {
   const { body, color, weight } = useBodyVoice(fontWeight);
   return (
     <RawSizableText
@@ -96,9 +96,9 @@ export function SizableText({ fontWeight, ...props }: SizableTextProps) {
       fontWeight={weight}
     />
   );
-}
+};
 
-export function Paragraph({ fontWeight, ...props }: ParagraphProps) {
+export const Paragraph = ({ fontWeight, ...props }: ParagraphProps) => {
   const { body, color, weight } = useBodyVoice(fontWeight);
   return (
     <RawParagraph
@@ -109,9 +109,9 @@ export function Paragraph({ fontWeight, ...props }: ParagraphProps) {
       fontWeight={weight}
     />
   );
-}
+};
 
-export function Anchor({ fontWeight, ...props }: AnchorProps) {
+export const Anchor = ({ fontWeight, ...props }: AnchorProps) => {
   const { body, weight } = useBodyVoice(fontWeight);
   const linkInk = useAccentOnSurface();
   return (
@@ -122,4 +122,4 @@ export function Anchor({ fontWeight, ...props }: AnchorProps) {
       fontWeight={weight}
     />
   );
-}
+};

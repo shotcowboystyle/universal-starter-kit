@@ -365,12 +365,12 @@ describe('ViewSwitcher', () => {
     expect(idle.className).not.toContain(`_bg-hsla${tintDigits}`);
   });
 
-  function atoms(el: Element, prefixes: string[]): string[] {
+  const atoms = (el: Element, prefixes: string[]): string[] => {
     return String((el as HTMLElement).className || '')
       .split(' ')
       .filter((c) => prefixes.some((p) => c.startsWith(p)))
       .sort();
-  }
+  };
 
   it('measures the segment label on the text node — never 500 or 600 (§6.1)', () => {
     const views: ViewOption[] = [

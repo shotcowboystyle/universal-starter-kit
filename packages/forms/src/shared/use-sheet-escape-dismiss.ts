@@ -11,7 +11,7 @@ import { isWeb } from 'tamagui';
  * comboboxes) that own Escape call stopPropagation()/preventDefault() and
  * keep the sheet open.
  */
-export function useSheetEscapeDismiss(enabled: boolean, onDismiss: () => void) {
+export const useSheetEscapeDismiss = (enabled: boolean, onDismiss: () => void) => {
   const onDismissRef = useRef(onDismiss);
   onDismissRef.current = onDismiss;
   useEffect(() => {
@@ -29,4 +29,4 @@ export function useSheetEscapeDismiss(enabled: boolean, onDismiss: () => void) {
       window.removeEventListener('keydown', onKeyDown);
     };
   }, [enabled]);
-}
+};

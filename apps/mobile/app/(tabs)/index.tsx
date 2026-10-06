@@ -12,7 +12,7 @@ type FilterType = 'all' | 'my' | 'team';
 
 const FILTERS: FilterType[] = ['all', 'my', 'team'];
 
-export default function BoardsScreen() {
+const BoardsScreen = () => {
   const { t } = useTranslation();
   const theme = useTheme();
   const { data, isLoading, refetch, isRefetching } = useBoards();
@@ -218,4 +218,6 @@ export default function BoardsScreen() {
       ) : null}
     </ScrollView>
   );
-}
+};
+
+export default BoardsScreen;

@@ -5,11 +5,11 @@ import { useAssets } from '../../hooks/useAssets';
 
 import type { ImageThumbnailSize } from './types';
 
-export function isThumbnailSize(size: unknown): size is ImageThumbnailSize {
+export const isThumbnailSize = (size: unknown): size is ImageThumbnailSize => {
   return size === 'extraSmall' || size === 'small' || size === 'medium' || size === 'large';
-}
+};
 
-export function thumbnailPx(size: ImageThumbnailSize | number, nestedPx: number, compact: boolean): number {
+export const thumbnailPx = (size: ImageThumbnailSize | number, nestedPx: number, compact: boolean): number => {
   if (typeof size === 'number') {
     return Math.max(0, size);
   }
@@ -32,9 +32,9 @@ export function thumbnailPx(size: ImageThumbnailSize | number, nestedPx: number,
     return 60;
   }
   return 80;
-}
+};
 
-export function isSvgUri(uri: string | undefined, svgFlag?: boolean): boolean {
+export const isSvgUri = (uri: string | undefined, svgFlag?: boolean): boolean => {
   if (svgFlag) {
     return true;
   }
@@ -42,9 +42,9 @@ export function isSvgUri(uri: string | undefined, svgFlag?: boolean): boolean {
     return false;
   }
   return /\.svg([?#]|$)/.test(uri) || uri.startsWith('data:image/svg+xml');
-}
+};
 
-export function useResolvedImageSource(sourceProp: unknown, src: unknown) {
+export const useResolvedImageSource = (sourceProp: unknown, src: unknown) => {
   const source = sourceProp || src;
   const [asset] = useAssets(typeof source === 'number' ? [source] : []);
 
@@ -72,11 +72,11 @@ export function useResolvedImageSource(sourceProp: unknown, src: unknown) {
   }, [source, imageUriSource]);
 
   return { source, imageUriSource, resolvedSrc };
-}
+};
 
-export function objectFitToResizeMode(
+export const objectFitToResizeMode = (
   objectFit: string | undefined,
-): 'cover' | 'contain' | 'stretch' | 'center' | undefined {
+): 'cover' | 'contain' | 'stretch' | 'center' | undefined => {
   switch (objectFit) {
     case 'cover': {
       return 'cover';
@@ -95,9 +95,9 @@ export function objectFitToResizeMode(
       return undefined;
     }
   }
-}
+};
 
-export function svgPreserveAspectRatio(objectFit: string | undefined): string | undefined {
+export const svgPreserveAspectRatio = (objectFit: string | undefined): string | undefined => {
   switch (objectFit) {
     case 'contain':
     case 'scale-down': {
@@ -114,4 +114,4 @@ export function svgPreserveAspectRatio(objectFit: string | undefined): string | 
       return undefined;
     }
   }
-}
+};

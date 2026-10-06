@@ -53,7 +53,7 @@ const controlGroupRingCss = `/* LC-71: ring lives on the outer ControlGroup; des
   box-shadow: none !important;
 }`;
 
-function ensureControlGroupRing() {
+const ensureControlGroupRing = () => {
   if (typeof document === 'undefined') {
     return;
   }
@@ -64,16 +64,16 @@ function ensureControlGroupRing() {
   tag.id = CONTROL_GROUP_RING_ID;
   tag.textContent = controlGroupRingCss;
   document.head.append(tag);
-}
+};
 
-function isControlGroupAddon(child: ReactElement): boolean {
+const isControlGroupAddon = (child: ReactElement): boolean => {
   const type = child.type as { isControlGroupAddon?: boolean };
   return type === ControlGroupAddon || type.isControlGroupAddon === true;
-}
+};
 
-function groupItems(children: ReactNode): ReactElement[] {
+const groupItems = (children: ReactNode): ReactElement[] => {
   return Children.toArray(children).filter(isValidElement);
-}
+};
 
 // ---------------------------------------------------------------------------
 // ControlGroup.Addon — Bootstrap input-group-text / Polaris connected slot
@@ -83,7 +83,7 @@ export type ControlGroupAddonProps = GetProps<typeof View> & {
   children?: ReactNode;
 };
 
-function ControlGroupAddonImpl({ children, ...props }: ControlGroupAddonProps) {
+const ControlGroupAddonImpl = ({ children, ...props }: ControlGroupAddonProps) => {
   const { knobProps } = useResolvedKnobs();
   const text =
     typeof children === 'string' || typeof children === 'number' ? (
@@ -113,7 +113,7 @@ function ControlGroupAddonImpl({ children, ...props }: ControlGroupAddonProps) {
       {text}
     </View>
   );
-}
+};
 
 export const ControlGroupAddon = Object.assign(ControlGroupAddonImpl, {
   isControlGroupAddon: true as const,
@@ -129,7 +129,7 @@ export interface ControlGroupProps extends GetProps<typeof ControlGroupFrame> {
   orientation?: 'horizontal' | 'vertical';
 }
 
-function ControlGroupImpl({ children, orientation = 'horizontal', ...props }: ControlGroupProps) {
+const ControlGroupImpl = ({ children, orientation = 'horizontal', ...props }: ControlGroupProps) => {
   const [focused, setFocused] = useState(false);
   const { knobProps, control, elevation } = useResolvedKnobs();
   const inTableCell = useIsInTableCell();
@@ -288,7 +288,7 @@ function ControlGroupImpl({ children, orientation = 'horizontal', ...props }: Co
       </FocusContext.Provider>
     </ControlGroupCtx.Provider>
   );
-}
+};
 
 export const ControlGroup = Object.assign(ControlGroupImpl, {
   Addon: ControlGroupAddon,

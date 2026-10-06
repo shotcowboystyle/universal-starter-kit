@@ -60,7 +60,7 @@ const MIN_OPACITY_DELTA = 0.3;
 
 type Scheme = (typeof SCHEMES)[number];
 
-function houseRender(ui: ReactElement, scheme: Scheme, disabledStyle: string) {
+const houseRender = (ui: ReactElement, scheme: Scheme, disabledStyle: string) => {
   return render(
     <TamaguiProvider
       config={houseConfig.tamagui}
@@ -71,9 +71,9 @@ function houseRender(ui: ReactElement, scheme: Scheme, disabledStyle: string) {
       </Preset>
     </TamaguiProvider>,
   );
-}
+};
 
-function injectedRuleValue(className: string, property: string): string {
+const injectedRuleValue = (className: string, property: string): string => {
   for (const sheet of Array.from(document.styleSheets)) {
     for (const rule of Array.from(sheet.cssRules)) {
       if (!(rule instanceof CSSStyleRule)) {
@@ -89,10 +89,10 @@ function injectedRuleValue(className: string, property: string): string {
     }
   }
   throw new Error(`no injected ${property} rule for .${className}`);
-}
+};
 
 /** The innermost Tamagui theme scope painting `el`, e.g. `accent_Button`. */
-function scopeOf(el: Element): string | null {
+const scopeOf = (el: Element): string | null => {
   for (let node = el.parentElement; node; node = node.parentElement) {
     const names = Array.from(node.classList)
       .filter((c) => c.startsWith('t_') && c !== 't_sub_theme')
@@ -103,9 +103,9 @@ function scopeOf(el: Element): string | null {
     }
   }
   return null;
-}
+};
 
-function resolveInScope(value: string, scheme: Scheme, scope: string | null): string {
+const resolveInScope = (value: string, scheme: Scheme, scope: string | null): string => {
   const token = /^var\(--([\w-]+)\)$/.exec(value)?.[1];
   if (!token) {
     return value;
@@ -125,10 +125,10 @@ function resolveInScope(value: string, scheme: Scheme, scope: string | null): st
     }
   }
   throw new Error(`--${token} resolves in none of ${chain.join(', ')}`);
-}
+};
 
 /** What `el` paints for one atomic property: `_bg-` → background-color. */
-function painted(el: Element, prefix: string, property: string, scheme: Scheme): string {
+const painted = (el: Element, prefix: string, property: string, scheme: Scheme): string => {
   const cls = Array.from(el.classList).find(
     (c) => c.startsWith(prefix) && !/^_[a-z]+-0(hover|active|focus|press)/.test(c),
   );
@@ -136,14 +136,14 @@ function painted(el: Element, prefix: string, property: string, scheme: Scheme):
     throw new Error(`${el.tagName} carries no ${prefix} class`);
   }
   return resolveInScope(injectedRuleValue(cls, property), scheme, scopeOf(el));
-}
+};
 
-function opacityOf(el: Element): number {
+const opacityOf = (el: Element): number => {
   const cls = Array.from(el.classList).find((c) => c.startsWith('_o-'));
   return cls ? Number(injectedRuleValue(cls, 'opacity')) : 1;
-}
+};
 
-function toLab(color: string): [number, number, number] {
+const toLab = (color: string): [number, number, number] => {
   const hex = normalizeToHex(color);
   if (!hex) {
     throw new Error(`not an opaque color: ${color}`);
@@ -158,14 +158,14 @@ function toLab(color: string): [number, number, number] {
   const y = f(0.2126 * r + 0.7152 * g + 0.0722 * b);
   const z = f((0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883);
   return [116 * y - 16, 500 * (x - y), 200 * (y - z)];
-}
+};
 
-function deltaE(a: string, b: string): number {
+const deltaE = (a: string, b: string): number => {
   const [p, q] = [toLab(a), toLab(b)];
   return Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
-}
+};
 
-function measure(scheme: Scheme, disabledStyle: string, props: Partial<ButtonProps>) {
+const measure = (scheme: Scheme, disabledStyle: string, props: Partial<ButtonProps>) => {
   houseRender(
     <>
       <Button {...props}>Enabled</Button>
@@ -193,7 +193,7 @@ function measure(scheme: Scheme, disabledStyle: string, props: Partial<ButtonPro
     opacityDelta: opacityOf(enabled) - opacityOf(disabled),
     labelContrast: measureContrast({ foreground: labelInk, background: disabledFill }).ratio,
   };
-}
+};
 
 describe('a disabled intent Button differs from its enabled twin', () => {
   for (const scheme of SCHEMES) {

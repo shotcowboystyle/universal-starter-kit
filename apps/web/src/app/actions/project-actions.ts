@@ -4,22 +4,22 @@ import { cookies } from 'next/headers';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-async function getAuthHeaders(): Promise<HeadersInit> {
+const getAuthHeaders = async (): Promise<HeadersInit> => {
   const cookieStore = await cookies();
   const token = cookieStore.get('jwt')?.value;
   return {
     'Content-Type': 'application/json',
     ...(token && { Authorization: `Bearer ${token}` }),
   };
-}
+};
 
-export async function createProject(data: {
+export const createProject = async (data: {
   title: string;
   description?: string;
   boardId: string;
   owner: string;
   orderInBoard?: number;
-}) {
+}) => {
   const headers = await getAuthHeaders();
   const response = await fetch(`${API_URL}/projects`, {
     method: 'POST',
@@ -30,9 +30,9 @@ export async function createProject(data: {
     throw new Error('Failed to create project');
   }
   return await response.json();
-}
+};
 
-export async function updateProject(id: string, data: Record<string, unknown>) {
+export const updateProject = async (id: string, data: Record<string, unknown>) => {
   const headers = await getAuthHeaders();
   const response = await fetch(`${API_URL}/projects/${id}`, {
     method: 'PATCH',
@@ -43,9 +43,9 @@ export async function updateProject(id: string, data: Record<string, unknown>) {
     throw new Error('Failed to update project');
   }
   return await response.json();
-}
+};
 
-export async function deleteProject(id: string) {
+export const deleteProject = async (id: string) => {
   const headers = await getAuthHeaders();
   const response = await fetch(`${API_URL}/projects/${id}`, {
     method: 'DELETE',
@@ -54,9 +54,9 @@ export async function deleteProject(id: string) {
   if (!response.ok) {
     throw new Error('Failed to delete project');
   }
-}
+};
 
-export async function getProjects(boardId: string) {
+export const getProjects = async (boardId: string) => {
   const headers = await getAuthHeaders();
   const response = await fetch(`${API_URL}/projects?boardId=${boardId}`, {
     headers,
@@ -65,4 +65,4 @@ export async function getProjects(boardId: string) {
     throw new Error('Failed to fetch projects');
   }
   return await response.json();
-}
+};

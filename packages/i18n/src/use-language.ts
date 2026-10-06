@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { getPersistedLanguage, persistLanguage } from './locale-persistence';
 
-export function useLanguage(): [string, (locale: string) => void] {
+export const useLanguage = (): [string, (locale: string) => void] => {
   const [language, setLanguage] = useState(
     () =>
       // Restore persisted language preference before falling back to i18next default
@@ -28,4 +28,4 @@ export function useLanguage(): [string, (locale: string) => void] {
   }, []);
 
   return [language, changeLanguage];
-}
+};

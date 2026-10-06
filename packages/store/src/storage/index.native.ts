@@ -56,7 +56,7 @@ const defaultLoaders: NativeStorageLoaders = {
   loadAsyncStorage: () => require('@react-native-async-storage/async-storage'),
 };
 
-export function resolveNativeStorage(loaders: NativeStorageLoaders = defaultLoaders): NativeStorageResolution {
+export const resolveNativeStorage = (loaders: NativeStorageLoaders = defaultLoaders): NativeStorageResolution => {
   const errors: NativeStorageResolution['errors'] = {};
 
   try {
@@ -119,20 +119,20 @@ export function resolveNativeStorage(loaders: NativeStorageLoaders = defaultLoad
       },
     },
   };
-}
+};
 
-function describeError(err: unknown): string {
+const describeError = (err: unknown): string => {
   return err instanceof Error ? err.message : String(err);
-}
+};
 
 /**
  * One dev-mode line naming the winning backend — a console.warn when
  * persistence degraded, so a broken storage twin is loud instead of silent.
  */
-export function logNativeStorageResolution(
+export const logNativeStorageResolution = (
   resolution: NativeStorageResolution,
   logger: Pick<Console, 'info' | 'warn'> = console,
-): void {
+): void => {
   if (resolution.backend === 'mmkv') {
     logger.info('[@repo/store] native storage backend: mmkv');
     return;
@@ -146,7 +146,7 @@ export function logNativeStorageResolution(
       resolution.backend === 'memory' ? ' — persisted state will NOT survive app restarts' : ''
     } (${causes.join('; ')})`,
   );
-}
+};
 
 const resolution = resolveNativeStorage();
 // NODE_ENV !== "test" keeps vitest imports of this module quiet; specs cover

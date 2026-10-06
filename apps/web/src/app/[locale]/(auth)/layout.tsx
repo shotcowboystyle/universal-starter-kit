@@ -8,7 +8,7 @@ interface AuthLayoutProps {
   children: React.ReactNode;
 }
 
-export default function AuthLayout({ children }: Readonly<AuthLayoutProps>) {
+const AuthLayout = ({ children }: Readonly<AuthLayoutProps>) => {
   return (
     <>
       {children}
@@ -23,4 +23,6 @@ export default function AuthLayout({ children }: Readonly<AuthLayoutProps>) {
       />
     </>
   );
-}
+};
+
+export default AuthLayout;

@@ -10,7 +10,7 @@
 import { Children, isValidElement } from 'react';
 import type { ReactNode } from 'react';
 
-export function elementLooksLikeAction(node: ReactNode): boolean {
+export const elementLooksLikeAction = (node: ReactNode): boolean => {
   if (!isValidElement(node)) {
     return false;
   }
@@ -31,13 +31,13 @@ export function elementLooksLikeAction(node: ReactNode): boolean {
     return true;
   }
   return false;
-}
+};
 
 /**
  * Counts action-like elements recursively. Matched actions are not descended
  * into — their children are label content, not further actions.
  */
-export function countActionsInTree(nodes: ReactNode): number {
+export const countActionsInTree = (nodes: ReactNode): number => {
   let count = 0;
   Children.forEach(nodes, (child) => {
     if (elementLooksLikeAction(child)) {
@@ -52,4 +52,4 @@ export function countActionsInTree(nodes: ReactNode): number {
     }
   });
   return count;
-}
+};

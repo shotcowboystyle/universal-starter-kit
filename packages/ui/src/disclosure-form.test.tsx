@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { Accordion } from './Accordion';
 import { Collapsible } from './tamagui';
 
-function Disclosure({ kind, type }: { kind: 'accordion' | 'collapsible'; type?: 'button' | 'submit' }) {
+const Disclosure = ({ kind, type }: { kind: 'accordion' | 'collapsible'; type?: 'button' | 'submit' }) => {
   const props = type ? { type } : {};
   return kind === 'accordion' ? (
     <Accordion
@@ -23,7 +23,7 @@ function Disclosure({ kind, type }: { kind: 'accordion' | 'collapsible'; type?: 
       <Collapsible.Content>Contents</Collapsible.Content>
     </Collapsible>
   );
-}
+};
 
 describe('disclosure triggers inside forms', () => {
   for (const kind of ['accordion', 'collapsible'] as const) {

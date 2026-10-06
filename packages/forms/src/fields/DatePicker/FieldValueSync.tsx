@@ -14,13 +14,13 @@ import { coerceToDate } from './utils';
  * live in the render prop itself — same extraction as Stepper/PhoneInput
  * renderers).
  */
-export function DatePickerFieldValueSync({
+export const DatePickerFieldValueSync = ({
   value,
   onSync,
 }: {
   value: unknown;
   onSync: Dispatch<SetStateAction<Date | null>>;
-}) {
+}) => {
   useEffect(() => {
     const next = coerceToDate(value);
     // Keep the previous Date identity when the instant is unchanged so the
@@ -30,7 +30,7 @@ export function DatePickerFieldValueSync({
     );
   }, [value, onSync]);
   return null;
-}
+};
 
 /**
  * Shape-agnostic variant for pickers whose display state is not a single
@@ -42,9 +42,9 @@ export function DatePickerFieldValueSync({
  * onChange from this path (a programmatic value application is not
  * a user edit).
  */
-export function FieldValueSync({ value, onSync }: { value: unknown; onSync: (value: unknown) => void }) {
+export const FieldValueSync = ({ value, onSync }: { value: unknown; onSync: (value: unknown) => void }) => {
   useEffect(() => {
     onSync(value);
   }, [value, onSync]);
   return null;
-}
+};

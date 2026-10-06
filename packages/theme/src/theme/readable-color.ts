@@ -34,11 +34,11 @@ import {
  * Switch thumb, Toast and Calendar chip.
  */
 
-function resolveTokenValue(theme: Record<string, { val?: unknown } | undefined>, token: string): string | undefined {
+const resolveTokenValue = (theme: Record<string, { val?: unknown } | undefined>, token: string): string | undefined => {
   const key = token.startsWith('$') ? token.slice(1) : token;
   const val = theme[key]?.val;
   return typeof val === 'string' ? val : undefined;
-}
+};
 
 /**
  * Readable text/glyph color to sit ON `fill` (a token like "$accentBackground"
@@ -49,7 +49,7 @@ function resolveTokenValue(theme: Record<string, { val?: unknown } | undefined>,
  * the fill, the pole that does (`holdInkFloor`). Returns `undefined` when any
  * color fails to resolve/parse — callers keep their own default in that case.
  */
-export function useReadableTextOn(fill_: string | undefined): string | undefined {
+export const useReadableTextOn = (fill_: string | undefined): string | undefined => {
   const theme = useTamaguiTheme() as unknown as Record<string, { val?: unknown } | undefined>;
   const fill = fill_?.startsWith('$') ? resolveTokenValue(theme, fill_) : fill_;
   const paper = resolveTokenValue(theme, 'color1');
@@ -63,14 +63,14 @@ export function useReadableTextOn(fill_: string | undefined): string | undefined
     }
     return holdInkFloor(fill, pickReadableForeground(fill, paper, ink));
   }, [fill, paper, ink]);
-}
+};
 
 /**
  * Pure resolver behind {@link useLegibleInkOn}: `preferred` when it clears AA
  * on `fill`, otherwise the readable anchor (paper or ink) held to the floor
  * by `holdInkFloor`. Any unparseable input returns `preferred`.
  */
-export function resolveLegibleInkOn({
+export const resolveLegibleInkOn = ({
   fill,
   preferred,
   paper,
@@ -80,7 +80,7 @@ export function resolveLegibleInkOn({
   preferred?: string;
   paper?: string;
   ink?: string;
-}): string | undefined {
+}): string | undefined => {
   const fillHex = fill ? normalizeToHex(fill) : null;
   const preferredHex = preferred ? normalizeToHex(preferred) : null;
   if (!fill || !fillHex || !preferred || !preferredHex) {
@@ -93,7 +93,7 @@ export function resolveLegibleInkOn({
   const anchor =
     paper && ink && normalizeToHex(paper) && normalizeToHex(ink) ? pickReadableForeground(fill, paper, ink) : preferred;
   return holdInkFloor(fill, anchor);
-}
+};
 
 /**
  * Keep a component's own ink (`preferred`, e.g. a chip's `$blue12` or a
@@ -102,7 +102,7 @@ export function resolveLegibleInkOn({
  * untouched when it passes, so a scheme where the pair already reads keeps
  * its exact paint; a replacement comes back as a concrete color.
  */
-export function useLegibleInkOn(fill_: string | undefined, preferred: string): string {
+export const useLegibleInkOn = (fill_: string | undefined, preferred: string): string => {
   const theme = useTamaguiTheme() as unknown as Record<string, { val?: unknown } | undefined>;
   const fill = fill_?.startsWith('$') ? resolveTokenValue(theme, fill_) : fill_;
   const preferredValue = preferred.startsWith('$') ? resolveTokenValue(theme, preferred) : preferred;
@@ -112,7 +112,7 @@ export function useLegibleInkOn(fill_: string | undefined, preferred: string): s
     const resolved = resolveLegibleInkOn({ fill, preferred: preferredValue, paper, ink });
     return !resolved || resolved === preferredValue ? preferred : resolved;
   }, [fill, preferred, preferredValue, paper, ink]);
-}
+};
 
 /**
  * Accent-hued text/link color readable on the page surfaces (color1/color2).
@@ -121,7 +121,7 @@ export function useLegibleInkOn(fill_: string | undefined, preferred: string): s
  * ink (`$color12`) when no accent step qualifies or the ramp is absent (e.g.
  * tint sub-themes, where neutral text is the house default anyway).
  */
-export function useAccentOnSurface(): string {
+export const useAccentOnSurface = (): string => {
   const theme = useTamaguiTheme() as unknown as Record<string, { val?: unknown } | undefined>;
   const c1 = resolveTokenValue(theme, 'color1');
   const c2 = resolveTokenValue(theme, 'color2');
@@ -157,7 +157,7 @@ export function useAccentOnSurface(): string {
     }
     return best ?? ink;
   }, [c1, c2, ink, steps.join('|')]);
-}
+};
 
 /**
  * Accent SURFACE tier of the accent ramp, mirrored by scheme — the fill for a
@@ -193,7 +193,11 @@ export interface ResolveAccentTintedSurfaceInput {
 }
 
 /** Pure resolver behind {@link useAccentTintedSurface} — see its docs. */
-export function resolveAccentTintedSurface({ steps, paper, ink }: ResolveAccentTintedSurfaceInput): string | undefined {
+export const resolveAccentTintedSurface = ({
+  steps,
+  paper,
+  ink,
+}: ResolveAccentTintedSurfaceInput): string | undefined => {
   const paperHex = paper ? normalizeToHex(paper) : null;
   const inkHex = ink ? normalizeToHex(ink) : null;
   if (!paperHex || !inkHex) {
@@ -205,9 +209,9 @@ export function resolveAccentTintedSurface({ steps, paper, ink }: ResolveAccentT
     return undefined;
   }
   return step;
-}
+};
 
-export function useAccentTintedSurface(): string | undefined {
+export const useAccentTintedSurface = (): string | undefined => {
   const theme = useTamaguiTheme() as unknown as Record<string, { val?: unknown } | undefined>;
   const paper = resolveTokenValue(theme, 'color1');
   const ink = resolveTokenValue(theme, 'color12');
@@ -217,7 +221,7 @@ export function useAccentTintedSurface(): string | undefined {
   }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   return useMemo(() => resolveAccentTintedSurface({ steps, paper, ink }), [paper, ink, steps.join('|')]);
-}
+};
 
 /**
  * A named solid in the accent ramp. `token` is what a caller paints
@@ -242,14 +246,14 @@ export interface ResolveAaSolidFillInput {
   floor?: number;
 }
 
-function bestAnchorContrast(fill: string, paperLum: number, inkLum: number): number {
+const bestAnchorContrast = (fill: string, paperLum: number, inkLum: number): number => {
   const hex = normalizeToHex(fill);
   if (!hex) {
     return 0;
   }
   const fillLum = relativeLuminance(hex);
   return Math.max(contrastRatio(fillLum, paperLum), contrastRatio(fillLum, inkLum));
-}
+};
 
 /**
  * Pick an accent solid that can carry AA text (paper or ink ≥ 4.5).
@@ -263,13 +267,13 @@ function bestAnchorContrast(fill: string, paperLum: number, inkLum: number): num
  * Returns the preferred token when it already clears the floor, otherwise
  * the solid token whose resolved luminance is closest to the preferred fill.
  */
-export function resolveAaSolidFill({
+export const resolveAaSolidFill = ({
   preferred,
   solids,
   paper,
   ink,
   floor = aaTextContrastRatio,
-}: ResolveAaSolidFillInput): string {
+}: ResolveAaSolidFillInput): string => {
   const paperHex = paper ? normalizeToHex(paper) : null;
   const inkHex = ink ? normalizeToHex(ink) : null;
   if (!paperHex || !inkHex) {
@@ -301,13 +305,13 @@ export function resolveAaSolidFill({
     }
   }
   return bestToken ?? preferred.token;
-}
+};
 
 /**
  * Token to paint as a selected/current solid so on-fill text clears AA.
  * See {@link resolveAaSolidFill}.
  */
-export function useAaSolidFill(preferredToken: string): string {
+export const useAaSolidFill = (preferredToken: string): string => {
   const theme = useTamaguiTheme() as unknown as Record<string, { val?: unknown } | undefined>;
   const paper = resolveTokenValue(theme, 'color1');
   const ink = resolveTokenValue(theme, 'color12');
@@ -328,4 +332,4 @@ export function useAaSolidFill(preferredToken: string): string {
       }),
     [preferredToken, preferredValue, paper, ink, solidsKey],
   );
-}
+};

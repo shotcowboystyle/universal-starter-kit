@@ -5,19 +5,19 @@ export type ThemePreference = 'light' | 'dark' | 'system';
 
 const THEME_KEY = 'theme-preference';
 
-export async function loadThemePreference(): Promise<ThemePreference> {
+export const loadThemePreference = async (): Promise<ThemePreference> => {
   const stored = await AsyncStorage.getItem(THEME_KEY);
   if (stored === 'light' || stored === 'dark' || stored === 'system') {
     return stored;
   }
   return 'dark';
-}
+};
 
-export async function saveThemePreference(pref: ThemePreference): Promise<void> {
+export const saveThemePreference = async (pref: ThemePreference): Promise<void> => {
   await AsyncStorage.setItem(THEME_KEY, pref);
-}
+};
 
-export function applyThemePreference(pref: ThemePreference): void {
+export const applyThemePreference = (pref: ThemePreference): void => {
   const colorScheme: 'light' | 'dark' | null = pref === 'system' ? null : pref;
   Appearance.setColorScheme(colorScheme as Parameters<typeof Appearance.setColorScheme>[0]);
-}
+};

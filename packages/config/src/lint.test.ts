@@ -14,14 +14,14 @@ afterEach(() => {
   }
 });
 
-function makeTree() {
+const makeTree = () => {
   const root = mkdtempSync(join(tmpdir(), 'mpo-lint-'));
   fixtures.push(root);
   mkdirSync(join(root, 'apps', 'demo'), { recursive: true });
   mkdirSync(join(root, 'features', 'demo'), { recursive: true });
   writeFileSync(join(root, 'apps', 'demo', 'App.tsx'), 'export const App = () => null;\n');
   return root;
-}
+};
 
 describe('resolveRoots', () => {
   it('defaults apps/features/public roots under root', () => {
@@ -54,7 +54,7 @@ describe('runConventionChecks', () => {
 });
 
 describe('workspace paths shadow', () => {
-  function run(root: string) {
+  const run = (root: string) => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     const log = vi.spyOn(console, 'log').mockImplementation(() => {});
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -64,7 +64,7 @@ describe('workspace paths shadow', () => {
     log.mockRestore();
     warn.mockRestore();
     return { code, messages };
-  }
+  };
 
   it('fails an app tsconfig that declares paths while extending tsconfig.base', () => {
     const root = makeTree();
@@ -121,12 +121,12 @@ describe('workspace paths shadow', () => {
 });
 
 describe('story file shape', () => {
-  function storyTree() {
+  const storyTree = () => {
     const root = makeTree();
     mkdirSync(join(root, 'packages', 'ui', 'src'), { recursive: true });
     return root;
-  }
-  function run(root: string) {
+  };
+  const run = (root: string) => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     const log = vi.spyOn(console, 'log').mockImplementation(() => {});
     const code = runConventionChecks({ roots: { root } });
@@ -134,7 +134,7 @@ describe('story file shape', () => {
     error.mockRestore();
     log.mockRestore();
     return { code, lines };
-  }
+  };
 
   it('fails a story that exports a named `meta` beside `export default`', () => {
     const root = storyTree();
@@ -186,7 +186,7 @@ describe('story file shape', () => {
 });
 
 describe('undeclared drawing file', () => {
-  function drawingSpec(root: string, drawingMember: string) {
+  const drawingSpec = (root: string, drawingMember: string) => {
     mkdirSync(join(root, 'docs'), { recursive: true });
     writeFileSync(
       join(root, 'docs', 'theme-propagation-spec.md'),
@@ -202,9 +202,9 @@ describe('undeclared drawing file', () => {
         '',
       ].join('\n'),
     );
-  }
+  };
 
-  function run(root: string) {
+  const run = (root: string) => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     const log = vi.spyOn(console, 'log').mockImplementation(() => {});
     const code = runConventionChecks({ roots: { root } });
@@ -212,7 +212,7 @@ describe('undeclared drawing file', () => {
     error.mockRestore();
     log.mockRestore();
     return { code, lines };
-  }
+  };
 
   it('fails a // mpo-drawing file that is not a DRAWING member', () => {
     const root = makeTree();
@@ -239,7 +239,7 @@ describe('undeclared drawing file', () => {
 });
 
 describe('metro subpath fallback', () => {
-  function pkgTree(pkg: Record<string, unknown>) {
+  const pkgTree = (pkg: Record<string, unknown>) => {
     const root = makeTree();
     mkdirSync(join(root, 'public', 'pkg', 'src'), { recursive: true });
     writeFileSync(join(root, 'public', 'pkg', 'src', 'thing.ts'), 'export const thing = 1;\n');
@@ -248,8 +248,8 @@ describe('metro subpath fallback', () => {
       JSON.stringify({ name: '@multiplatform.one/pkg', ...pkg }, null, 2),
     );
     return root;
-  }
-  function run(root: string) {
+  };
+  const run = (root: string) => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     const log = vi.spyOn(console, 'log').mockImplementation(() => {});
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -259,7 +259,7 @@ describe('metro subpath fallback', () => {
     log.mockRestore();
     warn.mockRestore();
     return { code, lines };
-  }
+  };
   const sourceConsumed = {
     source: 'src/index.ts',
     main: 'src/index.ts',
@@ -312,7 +312,7 @@ describe('react-native-web export guard', () => {
    * ships its own `dist/index.js` — that is also the proof the check reads the
    * list rather than carrying a hardcoded guess.
    */
-  function rnwTree(exportNames: string[] = ['Platform', 'Pressable', 'View']) {
+  const rnwTree = (exportNames: string[] = ['Platform', 'Pressable', 'View']) => {
     const root = makeTree();
     const dist = join(root, 'node_modules', 'react-native-web', 'dist');
     mkdirSync(dist, { recursive: true });
@@ -322,9 +322,9 @@ describe('react-native-web export guard', () => {
     );
     mkdirSync(join(root, 'public', 'forms', 'src', 'fields', 'Select'), { recursive: true });
     return root;
-  }
+  };
 
-  function run(root: string) {
+  const run = (root: string) => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     const log = vi.spyOn(console, 'log').mockImplementation(() => {});
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -334,7 +334,7 @@ describe('react-native-web export guard', () => {
     log.mockRestore();
     warn.mockRestore();
     return { code, messages };
-  }
+  };
 
   const selectFile = join('public', 'forms', 'src', 'fields', 'Select', 'index.tsx');
 
@@ -385,7 +385,7 @@ export const parts = { useCallback, CaretDownIcon, Platform };
 });
 
 describe('no import.meta in public/*/src', () => {
-  function run(root: string) {
+  const run = (root: string) => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     const log = vi.spyOn(console, 'log').mockImplementation(() => {});
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -395,13 +395,13 @@ describe('no import.meta in public/*/src', () => {
     log.mockRestore();
     warn.mockRestore();
     return { code, messages };
-  }
+  };
 
-  function publicSrc(root: string, pkg: string, name: string, body: string) {
+  const publicSrc = (root: string, pkg: string, name: string, body: string) => {
     mkdirSync(join(root, 'public', pkg, 'src'), { recursive: true });
     writeFileSync(join(root, 'public', pkg, 'src', name), body);
     return join('public', pkg, 'src', name);
-  }
+  };
 
   it('ignores the token inside comments and strings, which is how the fix documents itself', () => {
     const root = makeTree();
@@ -450,7 +450,7 @@ export const here = path.dirname(fileURLToPath(import.meta.url));
 });
 
 describe('a scaffolded project, where the template app is renamed and public/ is pruned', () => {
-  function run(root: string) {
+  const run = (root: string) => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     const log = vi.spyOn(console, 'log').mockImplementation(() => {});
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -461,15 +461,15 @@ describe('a scaffolded project, where the template app is renamed and public/ is
     log.mockRestore();
     warn.mockRestore();
     return { code, errors, warnings };
-  }
+  };
 
-  function animationRegistry(root: string) {
+  const animationRegistry = (root: string) => {
     mkdirSync(join(root, 'public', 'theme', 'src', 'theme', 'animations'), { recursive: true });
     writeFileSync(
       join(root, 'public', 'theme', 'src', 'theme', 'animations', 'css.ts'),
       'export const animationConfig = {\n  medium: "ease-in 300ms",\n} as const;\n',
     );
-  }
+  };
 
   it('passes the vscode webview fonts.css in a product app that is not called one', () => {
     const root = makeTree();
@@ -497,7 +497,7 @@ describe('a scaffolded project, where the template app is renamed and public/ is
 });
 
 describe('size-recipe escape registry', () => {
-  function run(root: string) {
+  const run = (root: string) => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     const log = vi.spyOn(console, 'log').mockImplementation(() => {});
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -507,9 +507,9 @@ describe('size-recipe escape registry', () => {
     log.mockRestore();
     warn.mockRestore();
     return { code, messages };
-  }
+  };
 
-  function escapeTree(rows: [string, string][]) {
+  const escapeTree = (rows: [string, string][]) => {
     const root = makeTree();
     mkdirSync(join(root, 'docs'), { recursive: true });
     writeFileSync(
@@ -529,7 +529,7 @@ describe('size-recipe escape registry', () => {
     );
     mkdirSync(join(root, 'public', 'forms', 'src', 'Toolbar'), { recursive: true });
     return root;
-  }
+  };
 
   const toolbar = 'public/forms/src/Toolbar/index.tsx';
 
@@ -607,7 +607,7 @@ export const f = <XStack
 });
 
 describe('colour-literal escape registry', () => {
-  function run(root: string) {
+  const run = (root: string) => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     const log = vi.spyOn(console, 'log').mockImplementation(() => {});
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -617,9 +617,9 @@ describe('colour-literal escape registry', () => {
     log.mockRestore();
     warn.mockRestore();
     return { code, messages };
-  }
+  };
 
-  function escapeTree(rows: [string, string][]) {
+  const escapeTree = (rows: [string, string][]) => {
     const root = makeTree();
     mkdirSync(join(root, 'docs'), { recursive: true });
     writeFileSync(
@@ -639,7 +639,7 @@ describe('colour-literal escape registry', () => {
     );
     mkdirSync(join(root, 'apps', 'demo', 'gnome'), { recursive: true });
     return root;
-  }
+  };
 
   const paint = 'apps/demo/gnome/gtk-paint.ts';
   const reason = 'GTK widget paint outside TamaguiProvider';
@@ -691,7 +691,7 @@ describe('colour-literal escape registry', () => {
 });
 
 describe('enter/exit driver', () => {
-  function run(root: string) {
+  const run = (root: string) => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     const log = vi.spyOn(console, 'log').mockImplementation(() => {});
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -701,7 +701,7 @@ describe('enter/exit driver', () => {
     log.mockRestore();
     warn.mockRestore();
     return { code, errors };
-  }
+  };
 
   it('fails an enterStyle with no transition on the same element', () => {
     const root = makeTree();
@@ -727,7 +727,7 @@ describe('enter/exit driver', () => {
 });
 
 describe('foreign control specimen in stories', () => {
-  function run(root: string) {
+  const run = (root: string) => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     const log = vi.spyOn(console, 'log').mockImplementation(() => {});
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -737,14 +737,14 @@ describe('foreign control specimen in stories', () => {
     log.mockRestore();
     warn.mockRestore();
     return { code, messages };
-  }
+  };
 
-  function story(root: string, rel: string, body: string) {
+  const story = (root: string, rel: string, body: string) => {
     const full = join(root, rel);
     mkdirSync(join(full, '..'), { recursive: true });
     writeFileSync(full, body);
     return rel;
-  }
+  };
 
   const csfTail = `
 const meta = { title: "Forms/Demo" };

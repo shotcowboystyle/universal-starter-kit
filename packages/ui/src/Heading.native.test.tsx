@@ -44,15 +44,15 @@ afterEach(cleanup);
 
 const TITLE = 'Workspace Settings';
 
-function classesByPrefix(el: Element, prefixes: string[]): string[] {
+const classesByPrefix = (el: Element, prefixes: string[]): string[] => {
   return String((el as HTMLElement).className || '')
     .split(' ')
     .filter((c) => prefixes.some((p) => c.startsWith(p)))
     .sort();
-}
+};
 
 /** Render, guard the text node's tag, read its prefixed classes, clean up. */
-function renderHeadingClasses(node: React.ReactElement, prefixes: string[], expectedTag?: string): string[] {
+const renderHeadingClasses = (node: React.ReactElement, prefixes: string[], expectedTag?: string): string[] => {
   renderWithProviders(node);
   const textNode = screen.getByText(TITLE);
   if (expectedTag) {
@@ -62,7 +62,7 @@ function renderHeadingClasses(node: React.ReactElement, prefixes: string[], expe
   const classes = classesByPrefix(textNode, prefixes);
   cleanup();
   return classes;
-}
+};
 
 describe('house Heading — NATIVE environment (isWeb false)', () => {
   it('really is running with the native platform flags', async () => {

@@ -22,13 +22,13 @@ export interface DebugLayoutProps<DebugViewProps> {
   enabled?: boolean;
 }
 
-export function DebugLayout<DebugViewProps>({
+export const DebugLayout = <DebugViewProps,>({
   children,
   debugView,
   debugViewProps,
   size,
   enabled,
-}: DebugLayoutProps<DebugViewProps>) {
+}: DebugLayoutProps<DebugViewProps>) => {
   const { knobProps } = useResolvedKnobs({ component: 'DebugLayout' });
   const DebugView = debugView;
   const show = enabled ?? config.get('DEBUG') === '1';
@@ -82,14 +82,14 @@ export function DebugLayout<DebugViewProps>({
       </YStack>
     </YStack>
   );
-}
+};
 
-export function createWithDebugLayout<DebugViewProps>(
+export const createWithDebugLayout = <DebugViewProps,>(
   extraLayouts?: WithLayout[],
   debugLayoutProps: CreateWithDebugLayout<DebugViewProps> = {},
-) {
+) => {
   return createWithLayout<DebugLayoutProps<DebugViewProps>>(DebugLayout, extraLayouts, debugLayoutProps);
-}
+};
 
 export const withDebugLayout = createWithDebugLayout();
 

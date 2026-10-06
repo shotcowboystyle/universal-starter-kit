@@ -61,13 +61,13 @@ export type DestructiveActionProps = Omit<
     disabledReason?: string;
   };
 
-function buildConfirmContext(props: {
+const buildConfirmContext = (props: {
   verb: string;
   noun?: string;
   severity: DestructiveSeverity;
   consequence?: string;
   confirmationText?: string;
-}): DestructiveConfirmContext {
+}): DestructiveConfirmContext => {
   const actionLabel = formatActionLabel({ verb: props.verb, noun: props.noun });
   const confirmLabel = formatActionLabel({ verb: props.verb });
   const expectedText =
@@ -82,9 +82,9 @@ function buildConfirmContext(props: {
     expectedText,
     confirmationText: props.confirmationText,
   };
-}
+};
 
-export function DestructiveAction({
+export const DestructiveAction = ({
   verb,
   noun,
   severity: severityProp,
@@ -100,7 +100,7 @@ export function DestructiveAction({
   disabledReason,
   loading,
   ...buttonProps
-}: DestructiveActionProps) {
+}: DestructiveActionProps) => {
   const { t } = useTranslation();
   const severity = resolveDestructiveSeverity({
     severity: severityProp,
@@ -276,6 +276,6 @@ export function DestructiveAction({
       ) : null}
     </>
   );
-}
+};
 
 export type { DestructiveSeverity };

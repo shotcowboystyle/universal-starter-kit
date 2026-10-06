@@ -29,7 +29,7 @@ interface AxisFrameProps {
  * from the widest y tick LABEL (computeCartesianPlot), not a magic number, so
  * the axis never clips its own text.
  */
-function AxisFrame({
+const AxisFrame = ({
   size,
   categories,
   domain,
@@ -38,7 +38,7 @@ function AxisFrame({
   showYLine = false,
   showYTicks = false,
   yTicks = 4,
-}: AxisFrameProps) {
+}: AxisFrameProps) => {
   const { labelFontSize } = useChartTheme();
   const marginScale = createLinearScale({ domain, range: [0, 1] });
   const tickValues = getLinearTicks(marginScale, yTicks);
@@ -76,7 +76,7 @@ function AxisFrame({
       />
     </>
   );
-}
+};
 
 const meta: Meta<typeof XAxis> = {
   title: 'Components/Axis',

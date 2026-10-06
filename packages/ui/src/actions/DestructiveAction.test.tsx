@@ -15,15 +15,15 @@ import { __resetActionDevWarnSeen } from './dev-warn';
 import { resolveDestructiveSeverity, severityRequiresConfirm, severityUsesDangerTone } from './severity';
 
 /** Dialog portals into document.body — query there, not the RTL container. */
-function root(): HTMLElement {
+const root = (): HTMLElement => {
   return document.body;
-}
+};
 
-function alertdialog(): Element | null {
+const alertdialog = (): Element | null => {
   return root().querySelector('[role="alertdialog"]');
-}
+};
 
-function dialogButtonByLabel(label: string): Element {
+const dialogButtonByLabel = (label: string): Element => {
   const scope = alertdialog() ?? root();
   const buttons = Array.from(scope.querySelectorAll('[role="button"]'));
   const exact = buttons.find((b) => b.textContent?.trim() === label);
@@ -35,7 +35,7 @@ function dialogButtonByLabel(label: string): Element {
     throw new Error(`No dialog button with label "${label}"`);
   }
   return match;
-}
+};
 
 describe('resolveDestructiveSeverity', () => {
   it('defaults to medium when no hints', () => {

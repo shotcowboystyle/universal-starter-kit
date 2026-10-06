@@ -10,7 +10,7 @@ export default {
 };
 
 /** A real `<tfoot>` under a body: totals row in the footer row group. */
-function FootDemo(props: Partial<TableFootProps>) {
+const FootDemo = (props: Partial<TableFootProps>) => {
   return (
     <Table>
       <Table.Head>
@@ -41,7 +41,7 @@ function FootDemo(props: Partial<TableFootProps>) {
       </Table.Foot>
     </Table>
   );
-}
+};
 
 export const main = {
   name: 'Main',

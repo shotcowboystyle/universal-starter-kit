@@ -121,21 +121,21 @@ export interface TimeRangeScrubberProps {
 
 type DragRole = 'grip' | 'brush-start' | 'brush-end';
 
-function useRadiusStop(): BorderRadius {
+const useRadiusStop = (): BorderRadius => {
   const ctx = usePresetContext();
   return ctx?.preset.knobs.borderRadius ?? defaultKnobs.borderRadius;
-}
+};
 
-function formatClock(date: Date): string {
+const formatClock = (date: Date): string => {
   return date.toLocaleTimeString(undefined, {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
     hour12: false,
   });
-}
+};
 
-function formatRangeReadout(range: DateRange | null): string {
+const formatRangeReadout = (range: DateRange | null): string => {
   if (!range?.start || !range.end) {
     return '';
   }
@@ -150,9 +150,9 @@ function formatRangeReadout(range: DateRange | null): string {
     : formatAbsoluteDateTime(range.end, { year: 'always', seconds: true, hour12: false });
   const span = formatDurationMs(range.end.getTime() - range.start.getTime());
   return `${startText} – ${endText} · ${span}`;
-}
+};
 
-function TimeRangeChip({
+const TimeRangeChip = ({
   label,
   selected,
   disabled,
@@ -166,7 +166,7 @@ function TimeRangeChip({
   onPress: () => void;
   part?: string;
   tabIndex?: number;
-}) {
+}) => {
   return (
     <View
       height={CHIP_HEIGHT}
@@ -194,9 +194,9 @@ function TimeRangeChip({
       </Text>
     </View>
   );
-}
+};
 
-function TimeRangeScrubberControl({
+const TimeRangeScrubberControl = ({
   id,
   labelText,
   ariaLabel,
@@ -246,7 +246,7 @@ function TimeRangeScrubberControl({
   quickRanges: readonly QuickRange[];
   maxVisibleQuickRanges: number;
   now: Date;
-}) {
+}) => {
   if (isWeb) {
     ensureKeyboardModalityTracking();
   }
@@ -936,9 +936,9 @@ function TimeRangeScrubberControl({
       )}
     </YStack>
   );
-}
+};
 
-export function TimeRangeScrubber({
+export const TimeRangeScrubber = ({
   name,
   form: formProp,
   validators,
@@ -972,7 +972,7 @@ export function TimeRangeScrubber({
   maxVisibleQuickRanges = Number.POSITIVE_INFINITY,
   now: nowProp,
   'aria-label': ariaLabel,
-}: TimeRangeScrubberProps) {
+}: TimeRangeScrubberProps) => {
   const { resolvedForm, knobProps, id } = useFormField({
     form: formProp,
     id: idProp,
@@ -1152,4 +1152,4 @@ export function TimeRangeScrubber({
       }}
     </Field>
   );
-}
+};

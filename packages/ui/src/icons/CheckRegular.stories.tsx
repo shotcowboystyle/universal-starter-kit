@@ -27,9 +27,9 @@ export default meta;
 
 type Story = StoryObj<typeof CheckRegular>;
 
-function parseSize(size: unknown): number | string {
+const parseSize = (size: unknown): number | string => {
   return /^\d+$/.test(String(size)) ? Number(size) : (size as string);
-}
+};
 
 export const Default: Story = {
   name: 'Main',

@@ -6,7 +6,7 @@ import { isWeb } from 'tamagui';
  * Focus the first invalid control inside a container (`aria-invalid="true"`).
  * Used after failed submit / ErrorSummary jump links.
  */
-export function focusFirstInvalid(container: HTMLElement | null | undefined): HTMLElement | null {
+export const focusFirstInvalid = (container: HTMLElement | null | undefined): HTMLElement | null => {
   if (!isWeb || !container || typeof container.querySelector !== 'function') {
     return null;
   }
@@ -19,15 +19,22 @@ export function focusFirstInvalid(container: HTMLElement | null | undefined): HT
   el.focus();
   el.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
   return el;
-}
+};
+
+const cssEscape = (value: string): string => {
+  if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
+    return CSS.escape(value);
+  }
+  return value.replaceAll(/[^a-zA-Z0-9_-]/g, '\\$&');
+};
 
 /**
  * Resolve and focus a field by DOM id, then name attribute, then first invalid.
  */
-export function focusFieldTarget(
+export const focusFieldTarget = (
   container: HTMLElement | null | undefined,
   target: { id?: string; name?: string },
-): HTMLElement | null {
+): HTMLElement | null => {
   if (!isWeb || !container) {
     return null;
   }
@@ -69,14 +76,7 @@ export function focusFieldTarget(
   }
 
   return focusFirstInvalid(container);
-}
-
-function cssEscape(value: string): string {
-  if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
-    return CSS.escape(value);
-  }
-  return value.replaceAll(/[^a-zA-Z0-9_-]/g, '\\$&');
-}
+};
 
 export interface FocusManagementOptions {
   /**
@@ -145,7 +145,7 @@ export interface FocusManagementReturn {
 /**
  * Hook for advanced focus management within a container
  */
-export function useFocusManagement(options: FocusManagementOptions = {}): FocusManagementReturn {
+export const useFocusManagement = (options: FocusManagementOptions = {}): FocusManagementReturn => {
   const { trapFocus = false, restoreFocus = true, initialFocus = 'none', autoFocusDelay = 0, onFocusChange } = options;
 
   const containerRef = useRef<HTMLElement>(null);
@@ -376,12 +376,12 @@ export function useFocusManagement(options: FocusManagementOptions = {}): FocusM
     getFocusableElements,
     setFocusTrap,
   };
-}
+};
 
 /**
  * Hook for managing focus within OTP input groups
  */
-export function useOTPFocusManagement(length: number, _onComplete?: (code: string) => void) {
+export const useOTPFocusManagement = (length: number, _onComplete?: (code: string) => void) => {
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const inputRefs = useRef<(HTMLInputElement | null)[]>(Array(length).fill(null));
 
@@ -438,16 +438,16 @@ export function useOTPFocusManagement(length: number, _onComplete?: (code: strin
     handleKeyPress,
     setInputRef,
   };
-}
+};
 
 /**
  * Hook for managing focus in searchable dropdowns
  */
-export function useSearchableDropdownFocus<TItem = unknown>(
+export const useSearchableDropdownFocus = <TItem = unknown>(
   isOpen: boolean,
   items: TItem[],
   onSelect?: (item: TItem) => void,
-) {
+) => {
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
 
   useEffect(() => {
@@ -495,4 +495,4 @@ export function useSearchableDropdownFocus<TItem = unknown>(
     setHighlightedIndex,
     handleKeyDown,
   };
-}
+};

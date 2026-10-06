@@ -9,8 +9,10 @@ import type { TransitionProp } from 'tamagui';
  * knob flips to any other stop. On web the key therefore stays, and
  * an undefined value paints no CSS transition. The native twin differs.
  */
-export function transitionProps(transition: TransitionProp | undefined): {
+export const transitionProps = (
+  transition: TransitionProp | undefined,
+): {
   transition?: TransitionProp;
-} {
+} => {
   return { transition };
-}
+};

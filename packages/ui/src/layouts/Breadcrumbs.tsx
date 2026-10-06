@@ -56,7 +56,7 @@ type CrumbSlot =
   | { kind: 'item'; item: BreadcrumbItem; index: number; isCurrent: boolean }
   | { kind: 'overflow'; hidden: { item: BreadcrumbItem; index: number }[] };
 
-function collapseSlots(items: BreadcrumbItem[], maxVisible: number | undefined, expanded: boolean): CrumbSlot[] {
+const collapseSlots = (items: BreadcrumbItem[], maxVisible: number | undefined, expanded: boolean): CrumbSlot[] => {
   const asItems = (): CrumbSlot[] =>
     items.map((item, index) => ({
       kind: 'item' as const,
@@ -95,13 +95,13 @@ function collapseSlots(items: BreadcrumbItem[], maxVisible: number | undefined, 
     });
   }
   return slots;
-}
+};
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function Breadcrumbs({ items, onNavigate, label, maxVisible }: BreadcrumbsProps) {
+export const Breadcrumbs = ({ items, onNavigate, label, maxVisible }: BreadcrumbsProps) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs({ component: 'Breadcrumbs' });
   // UX-P04 / Axiom 12: crumb links are accent-hued text on the PAGE, so they
@@ -289,4 +289,4 @@ export function Breadcrumbs({ items, onNavigate, label, maxVisible }: Breadcrumb
       {trail}
     </XStack>
   );
-}
+};

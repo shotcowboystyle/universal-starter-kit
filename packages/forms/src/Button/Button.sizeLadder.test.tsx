@@ -32,7 +32,7 @@ const KNOB_STOPS = {
   full: 50,
 } as const;
 
-function lastPx(el: Element, re: RegExp): number | null {
+const lastPx = (el: Element, re: RegExp): number | null => {
   let found: number | null = null;
   for (const c of String((el as HTMLElement).className || '').split(/\s+/)) {
     const m = c.match(re);
@@ -41,7 +41,7 @@ function lastPx(el: Element, re: RegExp): number | null {
     }
   }
   return found;
-}
+};
 
 const RADIUS_TOKEN_PX: Record<string, number> = {
   '0': 0,
@@ -53,7 +53,7 @@ const RADIUS_TOKEN_PX: Record<string, number> = {
   '12': 50,
 };
 
-function radiusPx(el: HTMLElement): number | null {
+const radiusPx = (el: HTMLElement): number | null => {
   let found: number | null = null;
   for (const c of String(el.className || '').split(/\s+/)) {
     const px = /^_btlr-(\d+)px$/.exec(c);
@@ -66,17 +66,17 @@ function radiusPx(el: HTMLElement): number | null {
     }
   }
   return found;
-}
+};
 
-function padXPx(el: HTMLElement): number | null {
+const padXPx = (el: HTMLElement): number | null => {
   return lastPx(el, /^_px-(\d+)px$/) ?? lastPx(el, /^_p[lr]-(\d+)px$/);
-}
+};
 
-function gapPx(el: HTMLElement): number | null {
+const gapPx = (el: HTMLElement): number | null => {
   return lastPx(el, /^_gap-(\d+)px$/);
-}
+};
 
-function labelPx(el: HTMLElement): number | null {
+const labelPx = (el: HTMLElement): number | null => {
   for (const node of Array.from(el.querySelectorAll('*'))) {
     const n = lastPx(node, /^_fos-(\d+)px$/) ?? lastPx(node, /^_fs-(\d+)px$/);
     if (n != null) {
@@ -84,9 +84,9 @@ function labelPx(el: HTMLElement): number | null {
     }
   }
   return lastPx(el, /^_fos-(\d+)px$/) ?? lastPx(el, /^_fs-(\d+)px$/);
-}
+};
 
-function renderSize(size: keyof typeof MEASURED) {
+const renderSize = (size: keyof typeof MEASURED) => {
   renderWithProviders(
     <Button
       size={size}
@@ -95,7 +95,7 @@ function renderSize(size: keyof typeof MEASURED) {
     </Button>,
   );
   return screen.getByRole('button');
-}
+};
 
 describe('painted Button size ladder', () => {
   it('padX, label and radius at $2/$3/$4/$6 match the reference table', () => {

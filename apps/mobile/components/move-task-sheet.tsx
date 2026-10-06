@@ -16,7 +16,7 @@ interface MoveTaskSheetProps {
   onClose: () => void;
 }
 
-export function MoveTaskSheet({ visible, taskId, currentProjectId, boardId, onClose }: MoveTaskSheetProps) {
+export const MoveTaskSheet = ({ visible, taskId, currentProjectId, boardId, onClose }: MoveTaskSheetProps) => {
   const { t } = useTranslation();
   const theme = useTheme();
   const { data: projects = [], isLoading } = useProjects(boardId);
@@ -172,4 +172,4 @@ export function MoveTaskSheet({ visible, taskId, currentProjectId, boardId, onCl
       </Pressable>
     </Modal>
   );
-}
+};

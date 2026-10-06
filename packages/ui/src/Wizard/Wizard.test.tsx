@@ -20,7 +20,7 @@ interface HarnessProps {
   labels?: 'visible' | 'hidden' | 'auto';
 }
 
-function ClearStep() {
+const ClearStep = () => {
   const { setFieldValue } = useWizard();
   return (
     <>
@@ -43,9 +43,9 @@ function ClearStep() {
       </Wizard.Clearable>
     </>
   );
-}
+};
 
-function WizardInner({ onStore, onComplete, labels }: HarnessProps) {
+const WizardInner = ({ onStore, onComplete, labels }: HarnessProps) => {
   const form = useFormContext<Record<string, string>>();
   useEffect(() => {
     onStore?.(form as unknown as WizardFormLike);
@@ -74,9 +74,9 @@ function WizardInner({ onStore, onComplete, labels }: HarnessProps) {
       </Wizard.Panel>
     </Wizard>
   );
-}
+};
 
-function renderWizard(props: HarnessProps = {}) {
+const renderWizard = (props: HarnessProps = {}) => {
   const store: { form?: WizardFormLike } = {};
   const view = renderWithProviders(
     <Form
@@ -94,12 +94,12 @@ function renderWizard(props: HarnessProps = {}) {
     </Form>,
   );
   return { ...view, store };
-}
+};
 
-function panelDisplay(el: Element) {
+const panelDisplay = (el: Element) => {
   const html = el as HTMLElement;
   return html.style.display || getComputedStyle(html).display;
-}
+};
 
 describe('Wizard mounted panels and validation', () => {
   it('wizard probe: fill step 1, advance, return — DOM and store match', async () => {

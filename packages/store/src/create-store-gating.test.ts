@@ -10,7 +10,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createStore } from './create-store';
 import type { PersistStore, Storage } from './persist';
 
-function createMockStorage(): Storage & { data: Map<string, string> } {
+const createMockStorage = (): Storage & { data: Map<string, string> } => {
   const data = new Map<string, string>();
   return {
     data,
@@ -22,7 +22,7 @@ function createMockStorage(): Storage & { data: Map<string, string> } {
       data.delete(key);
     }),
   };
-}
+};
 
 describe('createStore persistence gating', () => {
   it('returns a plain store without persist methods by default', () => {

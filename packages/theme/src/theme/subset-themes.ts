@@ -38,7 +38,7 @@ const SCHEMES = new Set(['light', 'dark']);
  * every other non-scheme segment of its name is in `tints`. Names are
  * `[light|dark_]<tint>*[_Component]`, so `light` and `dark` always survive.
  */
-export function subsetThemes<T>(themes: Record<string, T>, subset: ThemeSubset): Record<string, T> {
+export const subsetThemes = <T>(themes: Record<string, T>, subset: ThemeSubset): Record<string, T> => {
   const components = new Set(subset.components);
   const tints = new Set(subset.tints);
   const kept: Record<string, T> = {};
@@ -57,4 +57,4 @@ export function subsetThemes<T>(themes: Record<string, T>, subset: ThemeSubset):
     kept[name] = theme;
   }
   return kept;
-}
+};

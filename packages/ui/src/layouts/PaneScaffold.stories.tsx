@@ -8,7 +8,7 @@ import { Text as HouseText } from '../Text';
 
 import { FeedLayout, ListDetailLayout, PaneScaffold, ReadingWidth, SupportingPaneLayout } from './PaneScaffold';
 
-function SplitFrame({ children, height = 360 }: { children: ReactNode; height?: number }) {
+const SplitFrame = ({ children, height = 360 }: { children: ReactNode; height?: number }) => {
   const { knobProps } = useResolvedKnobs();
   return (
     <YStack
@@ -18,9 +18,9 @@ function SplitFrame({ children, height = 360 }: { children: ReactNode; height?: 
       {children}
     </YStack>
   );
-}
+};
 
-function PaneFill({ label, hint, muted }: { label: string; hint?: string; muted?: boolean }) {
+const PaneFill = ({ label, hint, muted }: { label: string; hint?: string; muted?: boolean }) => {
   return (
     <YStack
       flex={1}
@@ -33,11 +33,11 @@ function PaneFill({ label, hint, muted }: { label: string; hint?: string; muted?
       {hint ? <HouseText fontSize="$2">{hint}</HouseText> : null}
     </YStack>
   );
-}
+};
 
 const LIST_ITEMS = ['Inbox', 'Drafts', 'Sent', 'Archive'];
 
-function DemoList({ active = 0 }: { active?: number }) {
+const DemoList = ({ active = 0 }: { active?: number }) => {
   const onAccent = useReadableTextOn('$accentBackground');
   return (
     <YStack
@@ -64,9 +64,9 @@ function DemoList({ active = 0 }: { active?: number }) {
       })}
     </YStack>
   );
-}
+};
 
-function FeedCards() {
+const FeedCards = () => {
   const { knobProps } = useResolvedKnobs();
   return (
     <FeedLayout>
@@ -83,7 +83,7 @@ function FeedCards() {
       ))}
     </FeedLayout>
   );
-}
+};
 
 const meta: Meta<typeof PaneScaffold> = {
   title: 'Components/PaneScaffold',

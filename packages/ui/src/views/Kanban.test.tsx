@@ -43,7 +43,7 @@ const columns: KanbanColumn<{ id: string; title: string }>[] = [
   },
 ];
 
-function radiusClassOn(el: Element | null): string | undefined {
+const radiusClassOn = (el: Element | null): string | undefined => {
   let node = el as HTMLElement | null;
   for (let i = 0; i < 16 && node; i++) {
     const found = String(node.className || '')
@@ -55,7 +55,7 @@ function radiusClassOn(el: Element | null): string | undefined {
     node = node.parentElement;
   }
   return undefined;
-}
+};
 
 describe('Kanban exports', () => {
   it('exposes only named exports', () => {

@@ -11,15 +11,15 @@ describe('ThemeProvider knob injectors', () => {
     const src = readFileSync(join(here, 'theme.tsx'), 'utf-8');
     expect(src).toMatch(/import \{ FontKnobStyles \} from ['"]\.\/FontKnobStyles['"]/);
     expect(src).toContain('<FontKnobStyles');
-    expect(src).toContain('function KnobBridge');
-    const bridge = src.slice(src.indexOf('function KnobBridge'));
+    expect(src).toContain('const KnobBridge =');
+    const bridge = src.slice(src.indexOf('const KnobBridge ='));
     expect(bridge).toContain('<FontKnobStyles');
   });
 
   it('mounts CornerSmoothingStyles inside KnobBridge so the squircle sheet is not tree-shaken', () => {
     const src = readFileSync(join(here, 'theme.tsx'), 'utf-8');
     expect(src).toMatch(/import \{ CornerSmoothingStyles \} from ['"]\.\/corner-smoothing['"]/);
-    const bridge = src.slice(src.indexOf('function KnobBridge'));
+    const bridge = src.slice(src.indexOf('const KnobBridge ='));
     expect(bridge).toContain('<CornerSmoothingStyles');
     const native = readFileSync(join(here, 'theme.native.tsx'), 'utf-8');
     expect(native).toContain('<CornerSmoothingStyles');

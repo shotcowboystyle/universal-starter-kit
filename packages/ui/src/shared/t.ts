@@ -2,14 +2,14 @@
  * Apply `{{var}}` interpolation when react-i18next returns an untranslated key
  * (no i18n instance in unit tests / headless DS).
  */
-export function withInterp(translated: string, options: Record<string, string | number | undefined | null>): string {
+export const withInterp = (translated: string, options: Record<string, string | number | undefined | null>): string => {
   if (!translated.includes('{{')) {
     return translated;
   }
   return translated.replaceAll(/\{\{(\w+)\}\}/g, (_, key: string) =>
     options[key] == null ? `{{${key}}}` : String(options[key]),
   );
-}
+};
 
 /**
  * First-strong bidi isolation — FSI…PDI (`\u2068…\u2069`), the string form of
@@ -22,9 +22,9 @@ export function withInterp(translated: string, options: Record<string, string | 
  * count/range labels at the interpolation site (per-number isolation is not
  * enough: a strong-LTR word like "of" still reorders).
  */
-export function bidiIsolate(text: string): string {
+export const bidiIsolate = (text: string): string => {
   if (!text) {
     return text;
   }
   return `\u2068${text}\u2069`;
-}
+};

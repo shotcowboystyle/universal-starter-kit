@@ -9,7 +9,7 @@ export default {
   parameters: { status: { type: 'beta' } },
 };
 
-function HeadDemo(props: Partial<TableHeadProps>) {
+const HeadDemo = (props: Partial<TableHeadProps>) => {
   return (
     <Table>
       <Table.Head {...props}>
@@ -33,7 +33,7 @@ function HeadDemo(props: Partial<TableHeadProps>) {
       </Table.Body>
     </Table>
   );
-}
+};
 
 export const main = {
   name: 'Main',

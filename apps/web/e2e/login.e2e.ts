@@ -12,7 +12,7 @@ const enMessages = JSON.parse(readFileSync(join(process.cwd(), 'messages', 'en.j
  * Wait for API server to be ready
  * This helps diagnose timing issues in CI environments
  */
-async function waitForAPI(url: string, timeout = 30_000): Promise<void> {
+const waitForAPI = async (url: string, timeout = 30_000): Promise<void> => {
   const startTime = Date.now();
   let lastError: Error | null = null;
 
@@ -34,7 +34,7 @@ async function waitForAPI(url: string, timeout = 30_000): Promise<void> {
   }
 
   throw new Error(`API server not ready after ${timeout}ms. Last error: ${lastError?.message || 'Unknown'}`);
-}
+};
 
 test.describe.serial('SignInPage', () => {
   // Diagnostic: Wait for API to be ready before all tests

@@ -54,11 +54,11 @@ const DEFAULT_HEADING_LEADING_MIN = 1.25;
 const DEFAULT_BODY_LEADING_MIN = 1.5;
 
 /** Zero-specificity default line-height rule for one font scope. */
-function defaultLeadingRule(scope: 'heading' | 'body', category: FontCategory): string {
+const defaultLeadingRule = (scope: 'heading' | 'body', category: FontCategory): string => {
   const metrics = fontCategoryMetrics[category] ?? fontCategoryMetrics['sans-serif'];
   const ratio = Math.max(metrics[scope], scope === 'heading' ? DEFAULT_HEADING_LEADING_MIN : DEFAULT_BODY_LEADING_MIN);
   return `:where(:root .font_${scope}) { line-height: ${ratio}; }`;
-}
+};
 
 /** Numeric font tables for a purpose font, keyed WITHOUT the `$` prefix. */
 export interface FontScopeTables {
@@ -73,7 +73,7 @@ export interface FontScopeTables {
  * (the caller then uses `fontCategoryStacks` so the knob still writes
  * `--f-family` — live SHC console had the style tag and skipped the family).
  */
-export function getConfiguredFontFamily(category: FontCategory): string | undefined {
+export const getConfiguredFontFamily = (category: FontCategory): string | undefined => {
   let config: ReturnType<typeof getConfig> | undefined;
   try {
     config = getConfig();
@@ -92,7 +92,7 @@ export function getConfiguredFontFamily(category: FontCategory): string | undefi
     return family.val;
   }
   return undefined;
-}
+};
 
 /**
  * Read the numeric size/lineHeight/letterSpacing tables of the `$heading` /
@@ -101,7 +101,7 @@ export function getConfiguredFontFamily(category: FontCategory): string | undefi
  * Returns undefined outside a configured Tamagui runtime (unit tests, SSR
  * before setup) — callers then emit family-only overrides.
  */
-export function getConfiguredFontTables(scope: 'heading' | 'body'): FontScopeTables | undefined {
+export const getConfiguredFontTables = (scope: 'heading' | 'body'): FontScopeTables | undefined => {
   let config: ReturnType<typeof getConfig> | undefined;
   try {
     config = getConfig();
@@ -134,15 +134,15 @@ export function getConfiguredFontTables(scope: 'heading' | 'body'): FontScopeTab
     return undefined;
   }
   return { size, lineHeight, letterSpacing: unwrap(font.letterSpacing) };
-}
+};
 
 /** Build the full override rule for one font scope (heading or body). */
-function buildScopeRule(
+const buildScopeRule = (
   scope: 'heading' | 'body',
   category: FontCategory,
   family: string,
   tables: FontScopeTables | undefined,
-): string {
+): string => {
   const metrics = fontCategoryMetrics[category];
   const decls = [`--f-family: ${family} !important`];
   if (tables && metrics) {
@@ -170,7 +170,7 @@ function buildScopeRule(
     }
   }
   return `:root .font_${scope} { ${decls.join('; ')}; }`;
-}
+};
 
 /**
  * Build the CSS override for the current headingFont/bodyFont knob values.
@@ -179,12 +179,12 @@ function buildScopeRule(
  * and per-size overrides are added for non-default categories. Exported for
  * unit testing.
  */
-export function buildFontKnobCss(
+export const buildFontKnobCss = (
   headingFont: FontCategory,
   bodyFont: FontCategory,
   resolveFamily: (category: FontCategory) => string | undefined = getConfiguredFontFamily,
   resolveTables: (scope: 'heading' | 'body') => FontScopeTables | undefined = getConfiguredFontTables,
-): string {
+): string => {
   const rules: string[] = [defaultLeadingRule('heading', headingFont), defaultLeadingRule('body', bodyFont)];
   if (headingFont !== 'sans-serif') {
     const family = resolveFamily(headingFont) ?? fontCategoryStacks[headingFont];
@@ -199,14 +199,14 @@ export function buildFontKnobCss(
     }
   }
   return rules.join('\n');
-}
+};
 
 /**
  * Mount ONCE near the root (inside the Preset/PresetContext provider). Reads
  * the active headingFont/bodyFont knobs and syncs a `<style>` override so all
  * `$heading`/`$body` text follows the knobs. Renders nothing.
  */
-export function FontKnobStyles() {
+export const FontKnobStyles = () => {
   const presetCtx = usePresetContext();
   const knobs = presetCtx ? { ...presetCtx.preset.knobs, ...presetCtx.overrides } : defaultKnobs;
   const headingFont = knobs.headingFont ?? defaultKnobs.headingFont;
@@ -242,4 +242,4 @@ export function FontKnobStyles() {
   );
 
   return null;
-}
+};

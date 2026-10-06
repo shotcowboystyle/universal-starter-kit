@@ -44,9 +44,9 @@ const lineHeightBySize: Record<string, number> = {
   $6: 22,
 };
 
-function clampHeightForSize(sizeToken: string): number {
+const clampHeightForSize = (sizeToken: string): number => {
   return VISIBLE_LINES * (lineHeightBySize[sizeToken] ?? 18);
-}
+};
 
 export interface CodeBlockProps {
   /** The code to highlight */
@@ -65,7 +65,7 @@ export interface CodeBlockProps {
   size?: string;
 }
 
-export function CodeBlock({
+export const CodeBlock = ({
   children = '',
   language = 'tsx',
   theme,
@@ -73,7 +73,7 @@ export function CodeBlock({
   highlightLines = [],
   disableCopy,
   size,
-}: CodeBlockProps) {
+}: CodeBlockProps) => {
   const { region, copy } = useCopyFeedback();
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
@@ -229,4 +229,4 @@ export function CodeBlock({
       />
     </YStack>
   );
-}
+};

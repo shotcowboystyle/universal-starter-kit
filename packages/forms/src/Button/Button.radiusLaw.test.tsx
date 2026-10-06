@@ -96,9 +96,9 @@ const COMBOS: Combo[] = [
   },
 ];
 
-function lawRadius(stop: Stop, token: Token): number {
+const lawRadius = (stop: Stop, token: Token): number => {
   return stop === 'medium' ? RECIPE_RADIUS[token] : STOP_PX[stop];
-}
+};
 
 const RADIUS_TOKEN_PX: Record<string, number> = {
   '0': 0,
@@ -110,7 +110,7 @@ const RADIUS_TOKEN_PX: Record<string, number> = {
   '12': 50,
 };
 
-function radiusPx(el: HTMLElement): number | null {
+const radiusPx = (el: HTMLElement): number | null => {
   let found: number | null = null;
   for (const c of String(el.className || '').split(/\s+/)) {
     const px = /^_btlr-(\d+)px$/.exec(c);
@@ -123,9 +123,9 @@ function radiusPx(el: HTMLElement): number | null {
     }
   }
   return found;
-}
+};
 
-function paint(combo: Combo, scheme: (typeof SCHEMES)[number], token: Token): number | null {
+const paint = (combo: Combo, scheme: (typeof SCHEMES)[number], token: Token): number | null => {
   renderWithProviders(
     <Theme name={scheme}>
       <Preset overrides={combo}>
@@ -140,7 +140,7 @@ function paint(combo: Combo, scheme: (typeof SCHEMES)[number], token: Token): nu
   const px = radiusPx(screen.getByRole('button'));
   cleanup();
   return px;
-}
+};
 
 describe('Button frame radius: seeded fuzz against the Button radius law', () => {
   for (const [i, combo] of COMBOS.entries()) {

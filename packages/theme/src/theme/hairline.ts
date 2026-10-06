@@ -87,7 +87,7 @@ export const hairlineFallbackCss = `@media (max-resolution: 1.49dppx), (-webkit-
 }`;
 
 /** Idempotently mount the low-DPI fallback stylesheet (no-op off-DOM). */
-export function ensureHairlineFallback(): void {
+export const ensureHairlineFallback = (): void => {
   if (typeof document === 'undefined') {
     return;
   }
@@ -98,7 +98,7 @@ export function ensureHairlineFallback(): void {
   tag.id = STYLE_TAG_ID;
   tag.textContent = hairlineFallbackCss;
   document.head.append(tag);
-}
+};
 
 // The fallback is static CSS (no knob/theme dependency), so mount it as soon
 // as the module loads in a DOM environment.

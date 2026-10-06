@@ -25,10 +25,10 @@ import { describe, expect, it } from 'vitest';
 const baseTsconfig = path.resolve(__dirname, '../tsconfig/base.json');
 
 /** JSONC: whole-line `//` comments only, plus trailing commas. */
-function readJsonc(file: string): any {
+const readJsonc = (file: string): any => {
   const src = fs.readFileSync(file, 'utf-8');
   return JSON.parse(src.replaceAll(/^[ \t]*\/\/.*$/gm, '').replaceAll(/,(\s*[}\]])/g, '$1'));
-}
+};
 
 describe('base tsconfig types', () => {
   it('keeps chai in the explicit types array', () => {

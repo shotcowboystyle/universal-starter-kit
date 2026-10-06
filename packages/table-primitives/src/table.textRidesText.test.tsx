@@ -16,7 +16,7 @@ import { describe, expect, it } from 'vitest';
 
 import { Table } from './index';
 
-function renderTable(headerChildren: React.ReactNode, cellChildren: React.ReactNode) {
+const renderTable = (headerChildren: React.ReactNode, cellChildren: React.ReactNode) => {
   return renderWithProviders(
     <Table>
       <Table.Head>
@@ -31,7 +31,7 @@ function renderTable(headerChildren: React.ReactNode, cellChildren: React.ReactN
       </Table.Body>
     </Table>,
   );
-}
+};
 
 describe('Table primitives wrap bare text children', () => {
   it('renders array-of-strings cell children as one concatenated wrapped run', () => {

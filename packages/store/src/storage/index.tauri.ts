@@ -4,12 +4,12 @@ import type { Storage } from '../persist';
 
 let storePromise: Promise<Store> | null = null;
 
-async function getStore(): Promise<Store> {
+const getStore = async (): Promise<Store> => {
   if (!storePromise) {
     storePromise = Store.load('store.json');
   }
   return storePromise;
-}
+};
 
 export const storage: Storage = {
   getItem: async (name: string) => {

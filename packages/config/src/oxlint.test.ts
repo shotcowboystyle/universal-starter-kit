@@ -75,15 +75,15 @@ describe('mpo-conventions/no-raw-typography', () => {
   }
 
   /** Minimal ESTree ImportDeclaration — the only node shape the rule visits. */
-  function importDeclaration(source: string, names: string[]) {
+  const importDeclaration = (source: string, names: string[]) => {
     return {
       type: 'ImportDeclaration',
       source: { value: source },
       specifiers: names.map((name) => ({ type: 'ImportSpecifier', imported: { name } })),
     };
-  }
+  };
 
-  function reportedNames(source: string, names: string[]): string[] {
+  const reportedNames = (source: string, names: string[]): string[] => {
     const reports: Report[] = [];
     const context = {
       filename: 'apps/one/app/index.tsx',
@@ -92,7 +92,7 @@ describe('mpo-conventions/no-raw-typography', () => {
     const visitors = (rule as unknown as Creatable).create(context);
     visitors.ImportDeclaration(importDeclaration(source, names));
     return reports.map((report) => report.data?.name ?? '');
-  }
+  };
 
   const hatches = [
     'TamaguiText',
@@ -139,7 +139,7 @@ interface Creatable {
   create: (context: unknown) => HouseVisitors;
 }
 
-function houseImport(source: string, names: string[]) {
+const houseImport = (source: string, names: string[]) => {
   return {
     type: 'ImportDeclaration',
     source: { value: source },
@@ -149,9 +149,9 @@ function houseImport(source: string, names: string[]) {
       local: { name },
     })),
   };
-}
+};
 
-function jsxOpen(name: string, attrs: { prop: string; value: unknown }[]) {
+const jsxOpen = (name: string, attrs: { prop: string; value: unknown }[]) => {
   return {
     type: 'JSXOpeningElement',
     name: { type: 'JSXIdentifier', name },
@@ -161,15 +161,15 @@ function jsxOpen(name: string, attrs: { prop: string; value: unknown }[]) {
       value: attr.value,
     })),
   };
-}
+};
 
-function token(value: string) {
+const token = (value: string) => {
   return { type: 'Literal', value };
-}
+};
 
-function numeric(value: number) {
+const numeric = (value: number) => {
   return { type: 'JSXExpressionContainer', expression: { type: 'Literal', value } };
-}
+};
 
 function escaped(value: number) {
   return {
@@ -182,12 +182,12 @@ function escaped(value: number) {
   };
 }
 
-function driveHouseRule(
+const driveHouseRule = (
   ruleName: 'no-chrome-props' | 'no-raw-geometry',
   filename: string,
   nodes: unknown[],
   options?: { drawings?: string[]; chromeAllow?: string[] },
-): Report[] {
+): Report[] => {
   const reports: Report[] = [];
   const rule = plugin.rules?.[ruleName] as unknown as Creatable;
   const visitors = rule.create({
@@ -205,7 +205,7 @@ function driveHouseRule(
     }
   }
   return reports;
-}
+};
 
 describe('mpo-conventions/no-chrome-props', () => {
   const filename = 'features/lookout/src/WallScreen.tsx';
@@ -344,7 +344,7 @@ describe('no-hex-literals comments and palette', () => {
 });
 
 describe('no-hex-literals hex-escape comment', () => {
-  function reportsFor(filename: string, text: string) {
+  const reportsFor = (filename: string, text: string) => {
     const reports: Report[] = [];
     const rule = plugin.rules?.['no-hex-literals'] as {
       create: (c: unknown) => { Literal?: (n: unknown) => void };
@@ -356,7 +356,7 @@ describe('no-hex-literals hex-escape comment', () => {
     });
     visitors.Literal?.({ type: 'Literal', value: '#ffffff' });
     return reports.map((r) => r.data?.value);
-  }
+  };
 
   it('errors on a hex in apps/ when the file carries no hex-escape comment', () => {
     expect(reportsFor('apps/one/gnome/main.tsx', 'export const bg = "#ffffff";\n')).toStrictEqual(['#ffffff']);
@@ -408,19 +408,19 @@ describe('mpo-conventions/no-child-margin', () => {
   }
   type Visitors = Record<string, ((node: Node) => void) | undefined>;
 
-  function element(name: string, attrs: { prop: string; value: unknown }[], children: Node[] = []) {
+  const element = (name: string, attrs: { prop: string; value: unknown }[], children: Node[] = []) => {
     return {
       type: 'JSXElement',
       openingElement: jsxOpen(name, attrs),
       children,
     };
-  }
+  };
 
-  function fragment(children: Node[]) {
+  const fragment = (children: Node[]) => {
     return { type: 'JSXFragment', children };
-  }
+  };
 
-  function walk(visitors: Visitors, node: Node) {
+  const walk = (visitors: Visitors, node: Node) => {
     visitors[node.type]?.(node);
     if (node.type === 'JSXElement') {
       walk(visitors, node.openingElement as Node);
@@ -434,9 +434,9 @@ describe('mpo-conventions/no-child-margin', () => {
       }
     }
     visitors[`${node.type}:exit`]?.(node);
-  }
+  };
 
-  function lint(tree: Node, options?: { slotMargins?: string[] }) {
+  const lint = (tree: Node, options?: { slotMargins?: string[] }) => {
     const reports: Report[] = [];
     const rule = plugin.rules?.['no-child-margin'] as unknown as {
       create: (context: unknown) => Visitors;
@@ -450,7 +450,7 @@ describe('mpo-conventions/no-child-margin', () => {
       tree,
     );
     return reports.map((r) => `${r.data?.name}.${r.data?.prop}`);
-  }
+  };
 
   it('covers every long margin prop and every Tamagui shorthand for one', () => {
     expect(MARGIN_PROPS).toStrictEqual(

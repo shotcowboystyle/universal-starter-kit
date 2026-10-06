@@ -18,14 +18,14 @@ let hooked = false;
  * that uses `wasKeyboardFocus`, so the tracker is live before the first
  * keystroke reaches the widget. Idempotent; no-op on native/SSR.
  */
-export function ensureKeyboardModalityTracking() {
+export const ensureKeyboardModalityTracking = () => {
   if (hooked || typeof document === 'undefined') {
     return;
   }
   hooked = true;
   document.addEventListener('keydown', () => (lastInputWasKeyboard = true), true);
   document.addEventListener('pointerdown', () => (lastInputWasKeyboard = false), true);
-}
+};
 
 /**
  * True when the most recent user input was a key press. Call from onFocus to
@@ -33,10 +33,10 @@ export function ensureKeyboardModalityTracking() {
  * Installs the global listeners on first use; safe to call on native (always
  * false) and during SSR.
  */
-export function wasKeyboardFocus(): boolean {
+export const wasKeyboardFocus = (): boolean => {
   ensureKeyboardModalityTracking();
   return lastInputWasKeyboard;
-}
+};
 
 import { FOCUS_VISIBLE_RING_INSET } from './theme/focus-state';
 
@@ -99,7 +99,7 @@ export const compositeFocusRingCss = `/* LC-71: ring on the composite outer box;
 const COMPOSITE_RING_STYLE_ID = 'mp-composite-focus-ring';
 
 /** Idempotently mount the composite-boundary focus-ring stylesheet. */
-export function ensureCompositeFocusRing(): void {
+export const ensureCompositeFocusRing = (): void => {
   if (typeof document === 'undefined') {
     return;
   }
@@ -110,4 +110,4 @@ export function ensureCompositeFocusRing(): void {
   tag.id = COMPOSITE_RING_STYLE_ID;
   tag.textContent = compositeFocusRingCss;
   document.head.append(tag);
-}
+};

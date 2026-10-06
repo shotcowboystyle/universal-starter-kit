@@ -15,7 +15,7 @@ import {
 import { useCreateBoard, useUpdateBoard, useBoard } from '@/hooks/use-boards';
 import { useAuthStore } from '@/stores/auth';
 
-export default function BoardFormScreen() {
+const BoardFormScreen = () => {
   const { t } = useTranslation();
   const theme = useTheme();
   const router = useRouter();
@@ -173,4 +173,6 @@ export default function BoardFormScreen() {
       )}
     </KeyboardAvoidingView>
   );
-}
+};
+
+export default BoardFormScreen;

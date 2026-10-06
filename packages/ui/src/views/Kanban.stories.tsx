@@ -39,7 +39,7 @@ const columns: KanbanColumn<Task>[] = [
   },
 ];
 
-function TaskCard({ item }: { item: Task }) {
+const TaskCard = ({ item }: { item: Task }) => {
   return (
     <YStack gap="$1">
       <Text fontSize="$3">{item.title}</Text>
@@ -51,9 +51,9 @@ function TaskCard({ item }: { item: Task }) {
       </Text>
     </YStack>
   );
-}
+};
 
-function columnAdd(column: KanbanColumn<Task>) {
+const columnAdd = (column: KanbanColumn<Task>) => {
   return (
     <Button
       size="$2"
@@ -64,7 +64,7 @@ function columnAdd(column: KanbanColumn<Task>) {
       onPress={action('add-card')}
     />
   );
-}
+};
 
 const meta: Meta = {
   title: 'Components/Kanban',

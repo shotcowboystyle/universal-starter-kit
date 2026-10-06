@@ -73,7 +73,7 @@ const SWITCH_KB_RING_CSS_ID = 'mp-switch-kb-ring-css';
 const SWITCH_KB_RING_CLASS = 'mp-switch-kb-ring';
 
 /** Tamagui compiles focusStyle outlineWidth:0 to `:focus { outline-width:0 !important }`. */
-function ensureSwitchKbRingCss() {
+const ensureSwitchKbRingCss = () => {
   if (typeof document === 'undefined') {
     return;
   }
@@ -87,7 +87,7 @@ function ensureSwitchKbRingCss() {
   if (tag.textContent !== css) {
     tag.textContent = css;
   }
-}
+};
 
 /** Hover/press/focus knobs must not smuggle a second outline channel. */
 const stripOutlineFromState = (props?: Record<string, any>) => {
@@ -127,17 +127,17 @@ const resolveRadiusValue = (radius: unknown) => {
   return Number.isFinite(parsed) ? parsed : undefined;
 };
 
-function radiusStopFromToken(token: string): BorderRadius | undefined {
+const radiusStopFromToken = (token: string): BorderRadius | undefined => {
   for (const stop of Object.keys(borderRadiusMap) as BorderRadius[]) {
     if (borderRadiusMap[stop] === token) {
       return stop;
     }
   }
   return undefined;
-}
+};
 
 /** `pointy` forces the none stop; otherwise invert the resolved radius token. */
-function resolveSwitchRadiusStop(pointy: boolean | undefined, radiusToken: string): BorderRadius {
+const resolveSwitchRadiusStop = (pointy: boolean | undefined, radiusToken: string): BorderRadius => {
   if (pointy === true) {
     return 'none';
   }
@@ -146,7 +146,7 @@ function resolveSwitchRadiusStop(pointy: boolean | undefined, radiusToken: strin
     throw new Error(`Switch: "${radiusToken}" is not a borderRadiusMap token; cannot resolve BINARY`);
   }
   return stop;
-}
+};
 
 /**
  * Rewrite a state bag's radius to the BINARY row (0 or h/2).
@@ -158,16 +158,16 @@ function resolveSwitchRadiusStop(pointy: boolean | undefined, radiusToken: strin
  * empty-bag convention the JSX below needs: `hoverStyle={undefined}` rather
  * than `hoverStyle={{}}`.
  */
-function withBinaryStateRadius(
+const withBinaryStateRadius = (
   stateProps: Record<string, any> | undefined,
   heightPx: number,
-): Record<string, any> | undefined {
+): Record<string, any> | undefined => {
   if (!stateProps) {
     return undefined;
   }
   const next = clampRadiusInStateProps(stateProps, { radiusClass: 'BINARY', heightPx });
   return next && Object.keys(next).length > 0 ? next : undefined;
-}
+};
 
 const SwitchThumbStyled = styled(View, {
   name: 'SwitchThumb',
@@ -345,7 +345,7 @@ interface SwitchDragSession {
  * concrete resolved value so no sub-theme can flip it; returns undefined
  * (keep the styled default) when any color fails to parse.
  */
-function useLuminanceThumbColor(displayChecked: boolean): string | undefined {
+const useLuminanceThumbColor = (displayChecked: boolean): string | undefined => {
   const theme = useTheme();
   const trackToken = (displayChecked ? formSwitchColors.track.on : formSwitchColors.track.off).slice(1);
   const trackRaw = String((theme as any)[trackToken]?.val ?? '');
@@ -361,7 +361,7 @@ function useLuminanceThumbColor(displayChecked: boolean): string | undefined {
   return contrastRatio(relativeLuminance(paper), trackLum) >= contrastRatio(relativeLuminance(ink), trackLum)
     ? paperRaw
     : inkRaw;
-}
+};
 
 interface SwitchControlProps {
   checked: boolean;
@@ -415,7 +415,7 @@ interface SwitchControlProps {
   radiusResolution?: RadiusResolutionDeclaration;
 }
 
-function SwitchControl({
+const SwitchControl = ({
   checked,
   onCheckedChange,
   onBlur,
@@ -446,7 +446,7 @@ function SwitchControl({
   ariaLabelledBy,
   cellTrack,
   radiusResolution,
-}: SwitchControlProps) {
+}: SwitchControlProps) => {
   if (isWeb) {
     ensureKeyboardModalityTracking();
     ensureSwitchKbRingCss();
@@ -723,7 +723,7 @@ function SwitchControl({
       />
     </StyledSwitch>
   );
-}
+};
 
 // ─── Form-aware Switch ────────────────────────────────────────────────────────
 
@@ -776,7 +776,7 @@ export interface SwitchProps {
   minTargetHeight?: number;
 }
 
-export function Switch({
+export const Switch = ({
   name,
   form: formProp,
   validators,
@@ -803,7 +803,7 @@ export function Switch({
   skeleton,
   compact,
   minTargetHeight,
-}: SwitchProps) {
+}: SwitchProps) => {
   const hydrationTouch = useTouchSurface();
   // Canonical `onChange` and the alias `onCheckedChange` both fire; standalone
   // (formless) callers get real toggling from either name.
@@ -1187,4 +1187,4 @@ export function Switch({
       }}
     </Field>
   );
-}
+};

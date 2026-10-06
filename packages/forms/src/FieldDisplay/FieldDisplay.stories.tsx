@@ -43,7 +43,7 @@ const meta: Meta<typeof FieldDisplay> = {
 export default meta;
 type Story = StoryObj<typeof FieldDisplay>;
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+const Row = ({ label, children }: { label: string; children: React.ReactNode }) => {
   return (
     <XStack
       gap="$3"
@@ -62,7 +62,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
       </XStack>
     </XStack>
   );
-}
+};
 
 export const Basic: Story = {
   render: (args) => <FieldDisplay {...args} />,

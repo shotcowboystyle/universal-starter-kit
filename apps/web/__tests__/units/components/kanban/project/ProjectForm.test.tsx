@@ -9,7 +9,7 @@ vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
 }));
 
-function renderForm(props: Partial<React.ComponentProps<typeof ProjectForm>> = {}) {
+const renderForm = (props: Partial<React.ComponentProps<typeof ProjectForm>> = {}) => {
   const onSubmit = vi.fn().mockResolvedValue(undefined);
   renderWithProviders(
     <ProjectForm
@@ -23,7 +23,7 @@ function renderForm(props: Partial<React.ComponentProps<typeof ProjectForm>> = {
     </ProjectForm>,
   );
   return { onSubmit };
-}
+};
 
 describe('ProjectForm', () => {
   beforeEach(() => {

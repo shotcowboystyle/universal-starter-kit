@@ -18,7 +18,7 @@ const fill = {
   bottom: 0,
 };
 
-export function SaturationBackground({ hueColor }: { hueColor: string; width?: number; height?: number }) {
+export const SaturationBackground = ({ hueColor }: { hueColor: string; width?: number; height?: number }) => {
   return (
     <View
       {...fill}
@@ -37,15 +37,15 @@ export function SaturationBackground({ hueColor }: { hueColor: string; width?: n
       />
     </View>
   );
-}
+};
 
-export function HueBackground({
+export const HueBackground = ({
   orientation = 'horizontal',
 }: {
   width?: number;
   height?: number;
   orientation?: 'horizontal' | 'vertical';
-}) {
+}) => {
   const dir = orientation === 'vertical' ? 'to bottom' : 'to right';
   return (
     <View
@@ -55,9 +55,9 @@ export function HueBackground({
       }}
     />
   );
-}
+};
 
-export function AlphaBackground({
+export const AlphaBackground = ({
   hex,
   orientation = 'horizontal',
 }: {
@@ -65,7 +65,7 @@ export function AlphaBackground({
   width?: number;
   height?: number;
   orientation?: 'horizontal' | 'vertical';
-}) {
+}) => {
   const dir = orientation === 'vertical' ? 'to bottom' : 'to right';
   return (
     <>
@@ -86,4 +86,4 @@ export function AlphaBackground({
       />
     </>
   );
-}
+};

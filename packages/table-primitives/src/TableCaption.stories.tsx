@@ -10,7 +10,7 @@ export default {
 };
 
 /** A real `<caption>` as the table's accessible name, above the head. */
-function CaptionDemo(props: Partial<TableCaptionProps>) {
+const CaptionDemo = (props: Partial<TableCaptionProps>) => {
   return (
     <Table>
       <Table.Caption {...props}>Monthly sales, Q3</Table.Caption>
@@ -35,7 +35,7 @@ function CaptionDemo(props: Partial<TableCaptionProps>) {
       </Table.Body>
     </Table>
   );
-}
+};
 
 export const main = {
   name: 'Main',

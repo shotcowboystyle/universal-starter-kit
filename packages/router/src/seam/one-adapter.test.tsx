@@ -12,7 +12,7 @@ import { usePathname } from './one-adapter';
  * nav snapshot is not ready). Unguarded `.pathname` throws and the app never
  * boots.
  */
-function RootLayoutReadingPathname({ children }: { children?: ReactNode }) {
+const RootLayoutReadingPathname = ({ children }: { children?: ReactNode }) => {
   const pathname = usePathname();
   return (
     <div>
@@ -20,7 +20,7 @@ function RootLayoutReadingPathname({ children }: { children?: ReactNode }) {
       {children}
     </div>
   );
-}
+};
 
 describe('usePathname (native seam, first render)', () => {
   beforeEach(() => {

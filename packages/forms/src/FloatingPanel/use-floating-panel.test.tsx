@@ -22,7 +22,15 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { measureDrawnRadius, panelAnchorOffset, resolvePanelWidthMode, useFloatingPanel } from './use-floating-panel';
 import type { PanelWidthMode } from './use-floating-panel';
 
-function Harness({ open, fitContent, widthMode }: { open: boolean; fitContent?: boolean; widthMode?: PanelWidthMode }) {
+const Harness = ({
+  open,
+  fitContent,
+  widthMode,
+}: {
+  open: boolean;
+  fitContent?: boolean;
+  widthMode?: PanelWidthMode;
+}) => {
   const panel = useFloatingPanel({
     open,
     onOpenChange: () => {},
@@ -45,9 +53,9 @@ function Harness({ open, fitContent, widthMode }: { open: boolean; fitContent?: 
       )}
     </>
   );
-}
+};
 
-function mockRect(el: HTMLElement, rect: { x: number; y: number; width: number; height: number }) {
+const mockRect = (el: HTMLElement, rect: { x: number; y: number; width: number; height: number }) => {
   el.getBoundingClientRect = () =>
     ({
       ...rect,
@@ -57,14 +65,14 @@ function mockRect(el: HTMLElement, rect: { x: number; y: number; width: number; 
       bottom: rect.y + rect.height,
       toJSON: () => ({}),
     }) as DOMRect;
-}
+};
 
 /** Open the panel against a trigger of a known geometry and hand back the
  *  floating element once floating-ui has positioned it. */
-async function openAgainstTrigger(
+const openAgainstTrigger = async (
   props: { fitContent?: boolean; widthMode?: PanelWidthMode },
   triggerRect: { x: number; y: number; width: number; height: number },
-) {
+) => {
   const result = renderWithProviders(
     <Harness
       open={false}
@@ -82,7 +90,7 @@ async function openAgainstTrigger(
     expect(result.getByTestId('anchor-floating')).toBeTruthy();
   });
   return result;
-}
+};
 
 const trigger = { x: 16, y: 16, width: 240, height: 44 };
 
@@ -198,22 +206,22 @@ describe('FloatingPanel width modes', () => {
  * `borderTopLeftRadius: "0px"` explicitly: without it these cases pass against
  * the broken implementation and lock nothing.
  */
-function boxed(
+const boxed = (
   el: HTMLElement,
   rect: { x: number; y: number; width: number; height: number },
   style: Partial<CSSStyleDeclaration>,
-) {
+) => {
   mockRect(el, rect);
   Object.assign(el.style, style);
   return el;
-}
+};
 
 /** jsdom resolves computed style only for ATTACHED nodes, and the fix reads
  *  computed style — so the fixture has to live in the document. */
-function mounted(el: HTMLElement) {
+const mounted = (el: HTMLElement) => {
   document.body.append(el);
   return el;
-}
+};
 
 describe('FloatingPanel drawn radius', () => {
   afterEach(() => {
@@ -371,7 +379,7 @@ describe('FloatingPanel drawn radius', () => {
  * class value on the panel's own padding is the ceiling, and the trigger's
  * drawn arc (above) only ever lowers it.
  */
-function RadiusHarness({ open, compact }: { open: boolean; compact?: boolean }) {
+const RadiusHarness = ({ open, compact }: { open: boolean; compact?: boolean }) => {
   const panel = useFloatingPanel({ open, onOpenChange: () => {}, useAutoUpdate: false, compact });
   return (
     <div
@@ -380,9 +388,9 @@ function RadiusHarness({ open, compact }: { open: boolean; compact?: boolean }) 
       ref={panel.setReferenceRef}
     />
   );
-}
+};
 
-function panelRadius(overrides: Partial<Knobs>, compact?: boolean) {
+const panelRadius = (overrides: Partial<Knobs>, compact?: boolean) => {
   const result = renderWithProviders(
     <Preset overrides={overrides}>
       <RadiusHarness
@@ -394,7 +402,7 @@ function panelRadius(overrides: Partial<Knobs>, compact?: boolean) {
   const radius = result.getByTestId('radius-trigger').getAttribute('data-radius');
   result.unmount();
   return radius;
-}
+};
 
 describe('FloatingPanel radius is CONTAINER-CAP on its padding', () => {
   it('takes the token while it fits the padding', () => {

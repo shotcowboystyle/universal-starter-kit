@@ -53,7 +53,7 @@ export type ProgressIntent = 'accent' | 'error' | 'warning' | 'success';
  * Tamagui Progress size is 0.25 × the size token (a thin track, not a 44px
  * input). Skeleton height must use the same formula so the skeleton anatomy matches.
  */
-function trackHeightPx(size: SizeTokens): number {
+const trackHeightPx = (size: SizeTokens): number => {
   try {
     const raw = getVariableValue(getSize(size));
     const n = typeof raw === 'number' ? raw : Number(raw);
@@ -64,21 +64,21 @@ function trackHeightPx(size: SizeTokens): number {
   } catch {
     return 11;
   }
-}
+};
 
-function resolveMax(max: number | undefined): number {
+const resolveMax = (max: number | undefined): number => {
   return typeof max === 'number' && Number.isFinite(max) && max > 0 ? max : 100;
-}
+};
 
-function clampProgress(value: unknown, max: number): number {
+const clampProgress = (value: unknown, max: number): number => {
   const n = typeof value === 'number' ? value : Number(value);
   if (!Number.isFinite(n)) {
     return 0;
   }
   return Math.min(max, Math.max(0, n));
-}
+};
 
-function indicatorMotion(transition: KnobProps['transition']) {
+const indicatorMotion = (transition: KnobProps['transition']) => {
   // `transition` only — the tamagui 1.x `animation` prop is silently dropped
   // on 2.x (convention lint). Named motion rides the knob; `none` is an
   // explicit stop so Tamagui's Indicator default cannot keep tweening.
@@ -86,7 +86,7 @@ function indicatorMotion(transition: KnobProps['transition']) {
     return { transition: 'none' as const };
   }
   return { transition };
-}
+};
 
 /**
  * Semantic hue fill: `$color9`, the hue's tint-independent solid step (the
@@ -98,7 +98,7 @@ function indicatorMotion(transition: KnobProps['transition']) {
  * pale wash — not the hue solid. useTheme() subscribes, so scheme changes
  * stay live.
  */
-function HueFillIndicator({ transition }: { transition: KnobProps['transition'] }) {
+const HueFillIndicator = ({ transition }: { transition: KnobProps['transition'] }) => {
   const theme = useTheme();
   const fill = theme.color9?.val;
   return (
@@ -107,7 +107,7 @@ function HueFillIndicator({ transition }: { transition: KnobProps['transition'] 
       {...indicatorMotion(transition)}
     />
   );
-}
+};
 
 export interface ProgressProps {
   name?: string;
@@ -169,7 +169,7 @@ interface ProgressTrackProps {
   blurHandler?: (...args: any[]) => void;
 }
 
-function ProgressTrack({
+const ProgressTrack = ({
   id,
   label,
   progressValue,
@@ -185,7 +185,7 @@ function ProgressTrack({
   progressProps,
   showValue,
   blurHandler,
-}: ProgressTrackProps) {
+}: ProgressTrackProps) => {
   const describedBy = useFieldDescribedBy();
   const trackSize = size ?? sizeToken;
   const percent = Math.round((progressValue / max) * 100);
@@ -268,9 +268,9 @@ function ProgressTrack({
       ) : null}
     </XStack>
   );
-}
+};
 
-export function Progress({
+export const Progress = ({
   name,
   form: formProp,
   validators,
@@ -292,7 +292,7 @@ export function Progress({
   skeleton,
   compact,
   showValue: showValueProp,
-}: ProgressProps) {
+}: ProgressProps) => {
   const { resolvedForm, knobProps, elevation, id } = useFormField({
     form: formProp,
     id: idProp,
@@ -412,4 +412,4 @@ export function Progress({
       }}
     </Field>
   );
-}
+};

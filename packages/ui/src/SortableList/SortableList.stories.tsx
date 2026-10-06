@@ -34,14 +34,14 @@ export default meta;
 
 type Story = StoryObj<typeof SortableList>;
 
-function Demo(props: {
+const Demo = (props: {
   readOnly?: boolean;
   locked?: string;
   disabled?: boolean;
   compact?: boolean;
   empty?: boolean;
   disabledStyle?: 'keepLabel' | 'dimWhole';
-}) {
+}) => {
   const [items, setItems] = useState(props.empty ? [] : SEED);
   return (
     <SortableList
@@ -58,7 +58,7 @@ function Demo(props: {
       aria-label="Sprint rituals"
     />
   );
-}
+};
 
 export const Default: Story = {
   name: 'Main',

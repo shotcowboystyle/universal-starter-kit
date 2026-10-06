@@ -74,7 +74,7 @@ const NAMED_COLORS = new Set(
  * Numbers pass: a theme carries numeric values (z-index, opacity-ish steps)
  * that are not colours at all and are not this check's business.
  */
-export function isResolvableThemeValue(value: unknown): boolean {
+export const isResolvableThemeValue = (value: unknown): boolean => {
   if (typeof value === 'number') {
     return Number.isFinite(value);
   }
@@ -98,14 +98,14 @@ export function isResolvableThemeValue(value: unknown): boolean {
     return true;
   }
   return NAMED_COLORS.has(text.toLowerCase());
-}
+};
 
 /**
  * Throw on the first unresolvable entry, naming the theme, the key and the
  * value. The message has to carry all three: a `getTheme` runs once per theme
  * name, so "bad value" alone leaves the author grepping.
  */
-export function assertResolvableThemeValues(entries: Record<string, unknown>, themeName: string): void {
+export const assertResolvableThemeValues = (entries: Record<string, unknown>, themeName: string): void => {
   for (const [key, value] of Object.entries(entries)) {
     if (value == null) {
       continue;
@@ -120,4 +120,4 @@ export function assertResolvableThemeValues(entries: Record<string, unknown>, th
         `nothing at paint and the element falls back to currentColor (10 B.3 item 3, MPO-23).`,
     );
   }
-}
+};

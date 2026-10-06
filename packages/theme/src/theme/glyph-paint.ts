@@ -12,7 +12,7 @@ interface ThemeToken {
  *
  * Never returns undefined.
  */
-export function resolveGlyphPaint(theme: Record<string, ThemeToken | undefined>, color?: string | null): string {
+export const resolveGlyphPaint = (theme: Record<string, ThemeToken | undefined>, color?: string | null): string => {
   const seen = new Set<string>();
   const push = (value: unknown) => {
     if (typeof value === 'string' && value.length > 0 && value !== 'undefined') {
@@ -39,10 +39,10 @@ export function resolveGlyphPaint(theme: Record<string, ThemeToken | undefined>,
     return value;
   }
   return 'currentColor';
-}
+};
 
 /** Live theme ink for Phosphor / SVG carets. Never undefined. */
-export function useGlyphColor(color?: string): string {
+export const useGlyphColor = (color?: string): string => {
   const theme = useTheme() as unknown as Record<string, ThemeToken | undefined>;
   return resolveGlyphPaint(theme, color);
-}
+};

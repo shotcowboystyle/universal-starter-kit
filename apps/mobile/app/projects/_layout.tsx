@@ -1,6 +1,6 @@
 import { Stack } from 'expo-router';
 
-export default function ProjectsLayout() {
+const ProjectsLayout = () => {
   return (
     <Stack
       screenOptions={{
@@ -14,4 +14,6 @@ export default function ProjectsLayout() {
       />
     </Stack>
   );
-}
+};
+
+export default ProjectsLayout;

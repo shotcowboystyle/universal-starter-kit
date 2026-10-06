@@ -17,14 +17,14 @@ export interface DevOriginSource {
 const loopbackOrigin = /^([a-z][a-z0-9+.-]*:\/\/)(localhost|127\.0\.0\.1)(?=[:/?#]|$)/i;
 
 /** The host part of a `host:port`, `scheme://host:port/path` or `[v6]:port` value. */
-export function devHostFromHostUri(hostUri: string | undefined): string | undefined {
+export const devHostFromHostUri = (hostUri: string | undefined): string | undefined => {
   if (!hostUri) {
     return undefined;
   }
   const authority = hostUri.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '').split(/[/?#]/, 1)[0];
   const host = authority.startsWith('[') ? authority.slice(0, authority.indexOf(']') + 1) : authority.split(':', 1)[0];
   return host || undefined;
-}
+};
 
 /**
  * Point a loopback-configured origin at the dev machine on native.
@@ -37,7 +37,7 @@ export function devHostFromHostUri(hostUri: string | undefined): string | undefi
  * String-based on purpose: React Native's URL polyfill has no `hostname`
  * setter, so a new-URL-and-assign rewrite silently no-ops on device.
  */
-export function resolveDevOrigin(url: string, source: DevOriginSource = devOriginSource()): string {
+export const resolveDevOrigin = (url: string, source: DevOriginSource = devOriginSource()): string => {
   if (source.isWeb) {
     return url;
   }
@@ -46,4 +46,4 @@ export function resolveDevOrigin(url: string, source: DevOriginSource = devOrigi
     return url;
   }
   return url.replace(loopbackOrigin, `$1${host}`);
-}
+};

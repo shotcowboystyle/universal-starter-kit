@@ -69,10 +69,10 @@ export const DROP_BAND_AFTER = 0.75;
 // ── Structure lookups ─────────────────────────────────────────
 
 /** Node + its location, or null when the id is absent. */
-export function locateNode(
+export const locateNode = (
   nodes: readonly DndTreeNode[],
   id: string,
-): { node: DndTreeNode; parentId: string | null; index: number } | null {
+): { node: DndTreeNode; parentId: string | null; index: number } | null => {
   const walk = (
     items: readonly DndTreeNode[],
     parentId: string | null,
@@ -89,19 +89,19 @@ export function locateNode(
     return null;
   };
   return walk(nodes, null);
-}
+};
 
 /** Children array of a parent (null = the roots). Missing parent → empty. */
-export function childrenOf(nodes: readonly DndTreeNode[], parentId: string | null): readonly DndTreeNode[] {
+export const childrenOf = (nodes: readonly DndTreeNode[], parentId: string | null): readonly DndTreeNode[] => {
   if (parentId === null) {
     return nodes;
   }
   const located = locateNode(nodes, parentId);
   return located?.node.children ?? [];
-}
+};
 
 /** Ids of a node and every descendant (the unit that moves together). */
-export function subtreeIds(nodes: readonly DndTreeNode[], id: string): Set<string> {
+export const subtreeIds = (nodes: readonly DndTreeNode[], id: string): Set<string> => {
   const into = new Set<string>();
   const located = locateNode(nodes, id);
   if (!located) {
@@ -115,10 +115,10 @@ export function subtreeIds(nodes: readonly DndTreeNode[], id: string): Set<strin
   };
   walk(located.node);
   return into;
-}
+};
 
 /** Visible rows for a given expansion state, with DnD structure attached. */
-export function flattenDndRows(nodes: readonly DndTreeNode[], expandedIds: ReadonlySet<string>): TreeDndRow[] {
+export const flattenDndRows = (nodes: readonly DndTreeNode[], expandedIds: ReadonlySet<string>): TreeDndRow[] => {
   const result: TreeDndRow[] = [];
   const walk = (items: readonly DndTreeNode[], parentId: string | null, depth: number) => {
     for (let i = 0; i < items.length; i++) {
@@ -133,31 +133,31 @@ export function flattenDndRows(nodes: readonly DndTreeNode[], expandedIds: Reado
   };
   walk(nodes, null, 0);
   return result;
-}
+};
 
 /** Child count of a parent in wd coordinates for an active session. */
-export function wdChildCount(
+export const wdChildCount = (
   nodes: readonly DndTreeNode[],
   session: Pick<TreeDragSession, 'nodeId' | 'sourceParentId'>,
   parentId: string | null,
-): number {
+): number => {
   const count = childrenOf(nodes, parentId).length;
   return session.sourceParentId === parentId ? Math.max(count - 1, 0) : count;
-}
+};
 
 /** Convert an original child index to wd coordinates for an active session. */
-export function toWdIndex(
+export const toWdIndex = (
   session: Pick<TreeDragSession, 'sourceParentId' | 'sourceIndex'>,
   parentId: string | null,
   childIndex: number,
-): number {
+): number => {
   return parentId === session.sourceParentId && childIndex > session.sourceIndex ? childIndex - 1 : childIndex;
-}
+};
 
 // ── Keyboard drag state machine (WAI-ARIA drag pattern) ───────
 
 /** Begin a keyboard drag session. Returns null when the node does not exist. */
-export function treeKeyboardLift(nodes: readonly DndTreeNode[], nodeId: string): TreeDragSession | null {
+export const treeKeyboardLift = (nodes: readonly DndTreeNode[], nodeId: string): TreeDragSession | null => {
   const located = locateNode(nodes, nodeId);
   if (!located) {
     return null;
@@ -170,7 +170,7 @@ export function treeKeyboardLift(nodes: readonly DndTreeNode[], nodeId: string):
     // is the identity drop.
     target: { parentId: located.parentId, index: located.index },
   };
-}
+};
 
 /**
  * Move the drop target one step. Returns the same session object when the
@@ -180,11 +180,11 @@ export function treeKeyboardLift(nodes: readonly DndTreeNode[], nodeId: string):
  * right nests into the previous sibling (append as its last child), left
  * un-nests (insert after the current parent in the grandparent).
  */
-export function treeKeyboardMove(
+export const treeKeyboardMove = (
   session: TreeDragSession,
   nodes: readonly DndTreeNode[],
   direction: TreeMoveDirection,
-): TreeDragSession {
+): TreeDragSession => {
   const { target } = session;
   if (direction === 'up') {
     if (target.index <= 0) {
@@ -229,7 +229,7 @@ export function treeKeyboardMove(
       index: toWdIndex(session, parentLoc.parentId, parentLoc.index) + 1,
     },
   };
-}
+};
 
 export interface TreeDropResult {
   /** False when the node lands exactly where it started. */
@@ -239,16 +239,16 @@ export interface TreeDropResult {
 }
 
 /** Resolve a drop for the current target (keyboard and pointer share this). */
-export function resolveTreeDrop(
+export const resolveTreeDrop = (
   session: Pick<TreeDragSession, 'sourceParentId' | 'sourceIndex' | 'target'>,
-): TreeDropResult {
+): TreeDropResult => {
   const { sourceParentId, sourceIndex, target } = session;
   return {
     commit: target.parentId !== sourceParentId || target.index !== sourceIndex,
     from: { parentId: sourceParentId, index: sourceIndex },
     to: target,
   };
-}
+};
 
 // ── Pointer hit-testing ───────────────────────────────────────
 
@@ -281,6 +281,27 @@ export interface TreeDropHitOptions {
 }
 
 /**
+ * wd child count derived from the visible rows only — collapsed children are
+ * not visible, so nest-into a collapsed/leaf row appends at index equal to
+ * its wd child count in the *data*; callers with the data should prefer
+ * `wdChildCount`. This row-based variant exists so the hit-test needs no tree
+ * walk; both agree for expanded parents and for leaves (0).
+ */
+const wdChildCountFromRows = (
+  rows: readonly TreeDndRow[],
+  session: Pick<TreeDragSession, 'nodeId' | 'sourceParentId'>,
+  parentId: string,
+): number => {
+  let count = 0;
+  for (const r of rows) {
+    if (r.parentId === parentId && r.id !== session.nodeId) {
+      count++;
+    }
+  }
+  return count;
+};
+
+/**
  * Drop target + indicator for a pointer at `localY`, or null when the pointer
  * sits over the dragged subtree (callers keep their previous target).
  *
@@ -289,13 +310,13 @@ export interface TreeDropHitOptions {
  * first-child position), middle band nests into the row (append as last
  * child) — the parent-highlight case.
  */
-export function treeDropTargetForY({
+export const treeDropTargetForY = ({
   localY,
   rows,
   getHeight,
   session,
   draggedSubtree,
-}: TreeDropHitOptions): TreeDropHit | null {
+}: TreeDropHitOptions): TreeDropHit | null => {
   let top = 0;
   let row: TreeDndRow | null = null;
   let rowTop = 0;
@@ -355,39 +376,18 @@ export function treeDropTargetForY({
     target: { parentId: row.id, index: wdChildCountFromRows(rows, session, row.id) },
     indicator: { kind: 'into', parentId: row.id },
   };
-}
-
-/**
- * wd child count derived from the visible rows only — collapsed children are
- * not visible, so nest-into a collapsed/leaf row appends at index equal to
- * its wd child count in the *data*; callers with the data should prefer
- * `wdChildCount`. This row-based variant exists so the hit-test needs no tree
- * walk; both agree for expanded parents and for leaves (0).
- */
-function wdChildCountFromRows(
-  rows: readonly TreeDndRow[],
-  session: Pick<TreeDragSession, 'nodeId' | 'sourceParentId'>,
-  parentId: string,
-): number {
-  let count = 0;
-  for (const r of rows) {
-    if (r.parentId === parentId && r.id !== session.nodeId) {
-      count++;
-    }
-  }
-  return count;
-}
+};
 
 /**
  * Indicator for a keyboard target. Falls back to the nest-into highlight when
  * the destination parent has no visible children (collapsed or empty), where
  * no between-rows line exists.
  */
-export function indicatorForTarget(
+export const indicatorForTarget = (
   rows: readonly TreeDndRow[],
   session: Pick<TreeDragSession, 'nodeId' | 'sourceParentId' | 'sourceIndex'>,
   target: TreeDropTarget,
-): TreeDropIndicator {
+): TreeDropIndicator => {
   const visibleSiblings: { row: TreeDndRow; flatIndex: number }[] = [];
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
@@ -414,7 +414,7 @@ export function indicatorForTarget(
     flatIndex++;
   }
   return { kind: 'line', flatIndex, depth: last.row.depth };
-}
+};
 
 // ── Move application (immutable) ──────────────────────────────
 
@@ -424,7 +424,11 @@ export function indicatorForTarget(
  * in wd coordinates, matching `onNodeMove` payloads, so consumers can apply
  * the callback directly: `setNodes((n) => applyTreeMove(n, nodeId, target))`.
  */
-export function applyTreeMove<N extends DndTreeNode>(nodes: readonly N[], nodeId: string, target: TreeDropTarget): N[] {
+export const applyTreeMove = <N extends DndTreeNode>(
+  nodes: readonly N[],
+  nodeId: string,
+  target: TreeDropTarget,
+): N[] => {
   if (
     target.parentId !== null &&
     (subtreeIds(nodes, nodeId).has(target.parentId) || !locateNode(nodes, target.parentId))
@@ -472,7 +476,7 @@ export function applyTreeMove<N extends DndTreeNode>(nodes: readonly N[], nodeId
   };
 
   return insertWalk(removed, null);
-}
+};
 
 // ── Screen-reader announcements ───────────────────────────────
 
@@ -492,12 +496,12 @@ export type TreeDragAnnouncement =
  * 1-based and `count` is the sibling list's size after the pending drop,
  * matching the kanban grammar's "position 2 of 3" phrasing.
  */
-export function describeTreeDragState(
+export const describeTreeDragState = (
   type: 'lift' | 'move' | 'drop',
   session: TreeDragSession,
   nodes: readonly DndTreeNode[],
   nodeLabel: string,
-): TreeDragAnnouncement {
+): TreeDragAnnouncement => {
   const parent =
     session.target.parentId === null
       ? null
@@ -509,16 +513,16 @@ export function describeTreeDragState(
     position: session.target.index + 1,
     count: wdChildCount(nodes, session, session.target.parentId) + 1,
   };
-}
+};
 
-export function describeTreeCancel(
+export const describeTreeCancel = (
   session: Pick<TreeDragSession, 'sourceParentId'>,
   nodes: readonly DndTreeNode[],
   nodeLabel: string,
-): TreeDragAnnouncement {
+): TreeDragAnnouncement => {
   const parent =
     session.sourceParentId === null
       ? null
       : (locateNode(nodes, session.sourceParentId)?.node.label ?? session.sourceParentId);
   return { type: 'cancel', node: nodeLabel, parent };
-}
+};

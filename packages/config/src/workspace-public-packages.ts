@@ -9,7 +9,7 @@ import path from 'node:path';
  * `compilerOptions.paths` from the repo `tsconfig.base.json` chain, including
  * `tamagui-workspace-paths.generated.json` (see `scripts/generate-tamagui-workspace-paths.mjs`).
  */
-export function discoverPublicPackageRoots(workspaceRoot: string): Map<string, string> {
+export const discoverPublicPackageRoots = (workspaceRoot: string): Map<string, string> => {
   const byName = new Map<string, string>();
   const publicDir = path.join(workspaceRoot, 'packages');
   if (!fs.existsSync(publicDir)) {
@@ -34,7 +34,7 @@ export function discoverPublicPackageRoots(workspaceRoot: string): Map<string, s
     }
   }
   return byName;
-}
+};
 
 /**
  * Main entry file for Vite/Storybook-style “compile from source” aliases.
@@ -44,7 +44,7 @@ export function discoverPublicPackageRoots(workspaceRoot: string): Map<string, s
  * package like @package/fonts resolves to its native index.ts and its
  * web-only side effects (fontsource @font-face CSS imports) never load.
  */
-export function resolvePackageMainSource(pkgDir: string): string | undefined {
+export const resolvePackageMainSource = (pkgDir: string): string | undefined => {
   const candidates = [
     path.join(pkgDir, 'src', 'index.storybook.ts'),
     path.join(pkgDir, 'src', 'index.storybook.tsx'),
@@ -60,7 +60,7 @@ export function resolvePackageMainSource(pkgDir: string): string | undefined {
     path.join(pkgDir, 'index.tsx'),
   ];
   return candidates.find((c) => fs.existsSync(c));
-}
+};
 
 type ExportTarget = string | null | ExportTarget[] | { [condition: string]: ExportTarget };
 
@@ -68,7 +68,7 @@ const webConditionOrder = ['import', 'default', 'require'];
 const skippedConditions = new Set(['types', 'react-native']);
 const tsSourcePattern = /\.(c|m)?tsx?$/;
 
-function collectExportTargets(target: ExportTarget, out: string[]): void {
+const collectExportTargets = (target: ExportTarget, out: string[]): void => {
   if (typeof target === 'string') {
     out.push(target);
     return;
@@ -93,7 +93,7 @@ function collectExportTargets(target: ExportTarget, out: string[]): void {
   for (const key of ordered) {
     collectExportTargets(target[key], out);
   }
-}
+};
 
 /**
  * The file a web build should compile for one `exports` entry: its `source`
@@ -101,24 +101,24 @@ function collectExportTargets(target: ExportTarget, out: string[]): void {
  * the first existing file (css, a prebuilt .mjs), so the package-name alias
  * never swallows a subpath it cannot see.
  */
-export function resolveExportSource(pkgDir: string, target: ExportTarget): string | undefined {
+export const resolveExportSource = (pkgDir: string, target: ExportTarget): string | undefined => {
   const candidates: string[] = [];
   collectExportTargets(target, candidates);
   const existing = candidates
     .map((c) => path.resolve(pkgDir, c))
     .filter((c) => !c.endsWith('.d.ts') && fs.existsSync(c) && fs.statSync(c).isFile());
   return existing.find((c) => tsSourcePattern.test(c)) ?? existing[0];
-}
+};
 
 /**
  * Vite `resolve.alias` entries for one package's `exports` subpaths:
  * `<name>/<subpath>` → its source file, and a `./dir/*` pattern → the directory.
  */
-export function packageSubpathSourceAliases(
+export const packageSubpathSourceAliases = (
   pkgName: string,
   pkgDir: string,
   exportsField: unknown,
-): Record<string, string> {
+): Record<string, string> => {
   const aliases: Record<string, string> = {};
   if (!exportsField || typeof exportsField !== 'object' || Array.isArray(exportsField)) {
     return aliases;
@@ -153,7 +153,7 @@ export function packageSubpathSourceAliases(
     }
   }
   return aliases;
-}
+};
 
 /**
  * Vite `resolve.alias` entries: each public package name → its TypeScript
@@ -165,7 +165,7 @@ export function packageSubpathSourceAliases(
  * rewrites `@scope/pkg/sub` to `src/index.ts/sub`. Subpath entries are therefore emitted before every bare name,
  * longest first.
  */
-export function publicPackageViteSourceAliases(workspaceRoot: string): Record<string, string> {
+export const publicPackageViteSourceAliases = (workspaceRoot: string): Record<string, string> => {
   const subpaths: Record<string, string> = {};
   const mains: Record<string, string> = {};
   for (const [name, dir] of discoverPublicPackageRoots(workspaceRoot)) {
@@ -190,4 +190,4 @@ export function publicPackageViteSourceAliases(workspaceRoot: string): Record<st
     ...Object.fromEntries(ordered.map((k) => [k, subpaths[k]])),
     ...mains,
   };
-}
+};

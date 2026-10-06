@@ -16,7 +16,7 @@ import {
 import { useCreateProject, useUpdateProject, useProjects } from '@/hooks/use-projects';
 import { useAuthStore } from '@/stores/auth';
 
-export default function ProjectFormScreen() {
+const ProjectFormScreen = () => {
   const { boardId, projectId } = useLocalSearchParams<{ boardId: string; projectId?: string }>();
   const { t } = useTranslation();
   const theme = useTheme();
@@ -202,4 +202,6 @@ export default function ProjectFormScreen() {
       </ScrollView>
     </KeyboardAvoidingView>
   );
-}
+};
+
+export default ProjectFormScreen;

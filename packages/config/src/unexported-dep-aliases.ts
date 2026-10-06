@@ -27,6 +27,22 @@ import path from 'node:path';
  */
 const UNEXPORTED_SUBTREES: readonly string[] = ['@react-navigation/core/lib/module'];
 
+const splitPackageSubpath = (specifier: string): [pkgName: string, subpath: string] => {
+  const segments = specifier.split('/');
+  const nameLength = specifier.startsWith('@') ? 2 : 1;
+  return [segments.slice(0, nameLength).join('/'), segments.slice(nameLength).join('/')];
+};
+
+const resolvePackageDir = (pkgName: string, root: string, requireFrom: NodeRequire): string | undefined => {
+  try {
+    return path.dirname(requireFrom.resolve(`${pkgName}/package.json`));
+  } catch {
+    // Packages that don't export "./package.json" can't be resolved that way.
+    const hoisted = path.join(root, 'node_modules', ...pkgName.split('/'));
+    return fs.existsSync(path.join(hoisted, 'package.json')) ? hoisted : undefined;
+  }
+};
+
 /**
  * Vite `resolve.alias` entries that let known-undeclared package internals
  * resolve by filesystem path.
@@ -41,7 +57,7 @@ const UNEXPORTED_SUBTREES: readonly string[] = ['@react-navigation/core/lib/modu
  *
  * @param root Directory whose `node_modules` the packages resolve from.
  */
-export function unexportedDepAliases(root: string = process.cwd()): Record<string, string> {
+export const unexportedDepAliases = (root: string = process.cwd()): Record<string, string> => {
   const aliases: Record<string, string> = {};
   const requireFrom = createRequire(path.join(root, 'package.json'));
 
@@ -58,20 +74,4 @@ export function unexportedDepAliases(root: string = process.cwd()): Record<strin
   }
 
   return aliases;
-}
-
-function splitPackageSubpath(specifier: string): [pkgName: string, subpath: string] {
-  const segments = specifier.split('/');
-  const nameLength = specifier.startsWith('@') ? 2 : 1;
-  return [segments.slice(0, nameLength).join('/'), segments.slice(nameLength).join('/')];
-}
-
-function resolvePackageDir(pkgName: string, root: string, requireFrom: NodeRequire): string | undefined {
-  try {
-    return path.dirname(requireFrom.resolve(`${pkgName}/package.json`));
-  } catch {
-    // Packages that don't export "./package.json" can't be resolved that way.
-    const hoisted = path.join(root, 'node_modules', ...pkgName.split('/'));
-    return fs.existsSync(path.join(hoisted, 'package.json')) ? hoisted : undefined;
-  }
-}
+};

@@ -20,7 +20,7 @@ export default {
 
 const intents: IntentProps['name'][] = ['accent', 'error', 'warning', 'success'];
 
-function Probe({ label }: { label: string }) {
+const Probe = ({ label }: { label: string }) => {
   const intent = useIntentContext();
   const { knobProps } = useResolvedKnobs();
   const attrs = {
@@ -50,7 +50,7 @@ function Probe({ label }: { label: string }) {
       </SizableText>
     </YStack>
   );
-}
+};
 
 /** The four intents beside an un-wrapped baseline. */
 export const main = {

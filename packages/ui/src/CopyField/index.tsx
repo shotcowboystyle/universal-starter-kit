@@ -18,7 +18,7 @@ import { NotifyRegion } from '../feedback/NotifyHost';
 
 export type CopyFieldProps = Omit<InputProps, 'copy' | 'onCopyResult' | 'secureTextEntry'>;
 
-export function CopyField(props: CopyFieldProps) {
+export const CopyField = (props: CopyFieldProps) => {
   const { region, report } = useCopyFeedback();
   return (
     <YStack width="100%">
@@ -35,4 +35,4 @@ export function CopyField(props: CopyFieldProps) {
       />
     </YStack>
   );
-}
+};

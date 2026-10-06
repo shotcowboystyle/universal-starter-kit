@@ -30,7 +30,7 @@ interface TaskActionsProps {
   onUpdate?: () => void;
 }
 
-export function TaskActions({
+export const TaskActions = ({
   id,
   title,
   description,
@@ -40,7 +40,7 @@ export function TaskActions({
   projectId,
   boardId,
   onUpdate,
-}: TaskActionsProps) {
+}: TaskActionsProps) => {
   // State for dialogs and component state
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -395,4 +395,4 @@ export function TaskActions({
       />
     </>
   );
-}
+};

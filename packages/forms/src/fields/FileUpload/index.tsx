@@ -136,10 +136,10 @@ const UploadAreaFrame = styled(YStack, {
  * the state that should carry a ring, and leaves pointer focus alone (the
  * caller only spreads this while `kbZoneFocus` is true).
  */
-function withZoneFocusRing() {
+const withZoneFocusRing = () => {
   const ring = ensureFocusVisibleRing({ outlineOffset: 0 });
   return { ...ring, focusStyle: ring, focusVisibleStyle: ring };
-}
+};
 
 const DropOverlayFrame = styled(YStack, {
   position: 'absolute',
@@ -180,13 +180,15 @@ const UploadTileGridFrame = styled(XStack, {
   flexWrap: 'wrap',
 });
 
-export function FileUpload<
+export const FileUpload = <
   TParentData,
   TName extends DeepKeys<TParentData>,
   TFieldValidator extends Validator<DeepValue<TParentData, TName>> | undefined = undefined,
   TFormValidator extends Validator<TParentData> | undefined = undefined,
   TData extends DeepValue<TParentData, TName> = DeepValue<TParentData, TName>,
->(props: FileUploadProps<TParentData, TName, TFieldValidator, TFormValidator, TData>) {
+>(
+  props: FileUploadProps<TParentData, TName, TFieldValidator, TFormValidator, TData>,
+) => {
   const hydrationTouch = useTouchSurface();
   const {
     defaultValue,
@@ -1212,7 +1214,7 @@ export function FileUpload<
       }}
     </Field>
   );
-}
+};
 
 /**
  * The value shape a native pick binds. `{ uri, name, type, size }` is what

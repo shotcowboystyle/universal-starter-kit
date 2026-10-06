@@ -13,7 +13,7 @@ import type { NotifyEvent } from './index';
 
 /** Demo region frame rides the knobs (story honesty): a pinned $3
  * radius held a 7px arc at borderRadius:none. */
-function DemoRegion({ children }: { children: ReactNode }) {
+const DemoRegion = ({ children }: { children: ReactNode }) => {
   const { knobProps } = useResolvedKnobs();
   return (
     <YStack
@@ -25,9 +25,9 @@ function DemoRegion({ children }: { children: ReactNode }) {
       {children}
     </YStack>
   );
-}
+};
 
-function StoryReset() {
+const StoryReset = () => {
   useEffect(() => {
     resetToasts();
     resetFeedback();
@@ -37,7 +37,7 @@ function StoryReset() {
     };
   }, []);
   return null;
-}
+};
 
 const meta: Meta = {
   title: 'Components/Notify',

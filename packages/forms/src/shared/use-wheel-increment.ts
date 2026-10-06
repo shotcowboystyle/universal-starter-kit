@@ -26,7 +26,7 @@ export interface UseWheelIncrementReturn {
  * Uses native event listener with { passive: false } to allow preventDefault(),
  * which is required because browsers treat wheel events as passive by default.
  */
-export function useWheelIncrement(options: UseWheelIncrementOptions): UseWheelIncrementReturn {
+export const useWheelIncrement = (options: UseWheelIncrementOptions): UseWheelIncrementReturn => {
   const { onIncrement, onDecrement, disabled, readOnly, threshold = 1 } = options;
   const ref = useRef<HTMLDivElement | null>(null);
 
@@ -81,4 +81,4 @@ export function useWheelIncrement(options: UseWheelIncrementOptions): UseWheelIn
   }, [handleWheel]);
 
   return { wheelProps: { ref } };
-}
+};

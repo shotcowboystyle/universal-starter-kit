@@ -195,7 +195,7 @@ const activateOnEnterSpace = (onPress?: () => void) =>
  * so web writes those only and data-accent-stripe / data-density /
  * data-layout still reach the live-region node.
  */
-function hostData(attrs: Record<string, string>): Record<string, unknown> {
+const hostData = (attrs: Record<string, string>): Record<string, unknown> => {
   if (process.env.TAMAGUI_TARGET !== 'native') {
     return attrs;
   }
@@ -205,9 +205,9 @@ function hostData(attrs: Record<string, string>): Record<string, unknown> {
     dataSet[camel] = value;
   }
   return { dataSet };
-}
+};
 
-function AlertAction({
+const AlertAction = ({
   label,
   onPress,
   nestedPx,
@@ -227,7 +227,7 @@ function AlertAction({
   labelType: KnobProps['label'];
   pointy: boolean;
   radiusOuter: KnobProps['borderRadiusNested'];
-}) {
+}) => {
   const outset = Math.max(0, Math.ceil((MIN_PRESS_TARGET - nestedPx) / 2));
   const hOutset = besideAdjacent ? Math.min(outset, DISMISS_ADJACENT_OUTSET) : outset;
   return (
@@ -256,11 +256,11 @@ function AlertAction({
       </AlertActionPill>
     </AlertActionTarget>
   );
-}
+};
 
 // ── Alert Component ───────────────────────────────────────────
 
-function AlertInner({
+const AlertInner = ({
   intent = 'info',
   title,
   children,
@@ -277,7 +277,7 @@ function AlertInner({
   defaultVisible = true,
   compact,
   ...props
-}: AlertProps) {
+}: AlertProps) => {
   const { t } = useTranslation();
   const titleId = useId();
   // Do not default `compact` to false — that forced comfortable and made
@@ -501,7 +501,7 @@ function AlertInner({
       ) : null}
     </AlertFrame>
   );
-}
+};
 
 /**
  * Inline Alert / Banner for form validation summaries and page-level
@@ -509,13 +509,13 @@ function AlertInner({
  * Button placed inside renders SOLID on the same hue as intent Buttons
  * everywhere else (one emphasis system).
  */
-export function Alert(props: AlertProps) {
+export const Alert = (props: AlertProps) => {
   const themeName = intentThemeMap[props.intent ?? 'info'];
   return (
     <Intent name={themeName}>
       <AlertInner {...props} />
     </Intent>
   );
-}
+};
 
 export type AlertFrameProps = GetProps<typeof AlertFrame>;

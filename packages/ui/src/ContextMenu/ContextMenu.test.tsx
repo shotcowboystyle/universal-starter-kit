@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ContextMenu } from './index';
 
-function renderOpen(onSelect = vi.fn()) {
+const renderOpen = (onSelect = vi.fn()) => {
   return renderWithProviders(
     <ContextMenu
       defaultOpen
@@ -19,7 +19,7 @@ function renderOpen(onSelect = vi.fn()) {
       <Button>Target</Button>
     </ContextMenu>,
   );
-}
+};
 
 describe('ContextMenu', () => {
   it('opens on contextmenu and not on a primary click', async () => {
@@ -150,7 +150,7 @@ describe('ContextMenu', () => {
  * placement math reads is given here. The client rect is the opening frame's,
  * scaled 0.96 as the real one is; only the layout width is the menu's width.
  */
-function stubPanelBox(width: number, height: number) {
+const stubPanelBox = (width: number, height: number) => {
   const isPanel = (el: Element) => el.hasAttribute('data-fp-panel');
   const rect = Element.prototype.getBoundingClientRect;
   vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
@@ -164,11 +164,11 @@ function stubPanelBox(width: number, height: number) {
   vi.spyOn(Element.prototype, 'scrollHeight', 'get').mockImplementation(function (this: Element) {
     return isPanel(this) ? height : (scrollHeight?.get?.call(this) ?? 0);
   });
-}
+};
 
 const panelBox = () => document.querySelector<HTMLElement>('[data-fp-panel]');
 
-async function rightClickAt(x: number, y: number) {
+const rightClickAt = async (x: number, y: number) => {
   const result = renderWithProviders(
     <ContextMenu items={[{ label: 'Copy' }, { label: 'Rename' }, { label: 'Delete' }]}>
       <Button>Target</Button>
@@ -179,7 +179,7 @@ async function rightClickAt(x: number, y: number) {
     expect(panelBox()?.style.top).toMatch(/px$/);
   });
   return panelBox() as HTMLElement;
-}
+};
 
 describe('ContextMenu opens at the pointer (layoutTokens.ts free overlay)', () => {
   afterEach(() => {

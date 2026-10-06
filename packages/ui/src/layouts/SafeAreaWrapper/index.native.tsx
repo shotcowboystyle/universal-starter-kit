@@ -28,12 +28,12 @@ export interface SafeAreaWrapperProps extends YStackProps {
  * Wraps content with device safe-area insets (notch, home indicator).
  * No owned surface — only platform spacing. Consumer `{...stackProps}` last.
  */
-export function SafeAreaWrapper({
+export const SafeAreaWrapper = ({
   children,
   edges = ['top', 'bottom', 'left', 'right'],
   mode = 'padding',
   ...stackProps
-}: PropsWithChildren<SafeAreaWrapperProps>) {
+}: PropsWithChildren<SafeAreaWrapperProps>) => {
   const insets = useSafeAreaInsets();
   const insetStyles = applySafeAreaInsets(insets, edges, mode);
 
@@ -47,4 +47,4 @@ export function SafeAreaWrapper({
       {children}
     </YStack>
   );
-}
+};

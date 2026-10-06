@@ -32,7 +32,7 @@ export interface FieldGroupProps {
  * `compact` wraps descendants in a compact density Preset so nested
  * fields inherit the same gaps without a per-field prop.
  */
-export function FieldGroup({ legend, children, columns = 1, gap, compact }: FieldGroupProps) {
+export const FieldGroup = ({ legend, children, columns = 1, gap, compact }: FieldGroupProps) => {
   const { knobProps } = useResolvedKnobs(compact === undefined ? undefined : { compact });
   const resolvedGap = gap ?? knobProps.gap.gap;
   const useFieldset = isWeb;
@@ -95,4 +95,4 @@ export function FieldGroup({ legend, children, columns = 1, gap, compact }: Fiel
   );
 
   return compact ? <Preset overrides={{ density: 'compact' }}>{group}</Preset> : group;
-}
+};

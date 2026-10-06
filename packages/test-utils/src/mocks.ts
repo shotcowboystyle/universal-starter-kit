@@ -57,7 +57,7 @@ export interface MockFrappeApp {
  * Each module method is a vi.fn() that can be configured with
  * the helper functions below.
  */
-export function createMockFrappeApp(): MockFrappeApp {
+export const createMockFrappeApp = (): MockFrappeApp => {
   return {
     db: {
       getDocList: vi.fn().mockResolvedValue([]),
@@ -85,67 +85,72 @@ export function createMockFrappeApp(): MockFrappeApp {
       getFileURL: vi.fn().mockReturnValue('/files/test.pdf'),
     },
   };
-}
+};
 
 /**
  * Mock `db.getDocList` to return specific data for a doctype.
  */
-export function mockDocList(mockApp: MockFrappeApp, doctype: string, data: Record<string, any>[]) {
+export const mockDocList = (mockApp: MockFrappeApp, doctype: string, data: Record<string, any>[]) => {
   mockApp.db.getDocList.mockImplementation(async (dt: string) => {
     if (dt === doctype) {
       return data;
     }
     return [];
   });
-}
+};
 
 /**
  * Mock `db.getDoc` to return specific data for a doctype + name.
  */
-export function mockGetDoc(mockApp: MockFrappeApp, doctype: string, name: string, data: Record<string, any>) {
+export const mockGetDoc = (mockApp: MockFrappeApp, doctype: string, name: string, data: Record<string, any>) => {
   mockApp.db.getDoc.mockImplementation(async (dt: string, n: string) => {
     if (dt === doctype && n === name) {
       return data;
     }
     return null;
   });
-}
+};
 
 /**
  * Mock `db.createDoc` to return the created document data.
  */
-export function mockCreateDoc(mockApp: MockFrappeApp, doctype: string, returnData: Record<string, any>) {
+export const mockCreateDoc = (mockApp: MockFrappeApp, doctype: string, returnData: Record<string, any>) => {
   mockApp.db.createDoc.mockImplementation(async (dt: string, doc: Record<string, any>) => {
     if (dt === doctype) {
       return { ...doc, ...returnData };
     }
     return {};
   });
-}
+};
 
 /**
  * Mock `db.updateDoc` to return the updated document data.
  */
-export function mockUpdateDoc(mockApp: MockFrappeApp, doctype: string, name: string, returnData: Record<string, any>) {
+export const mockUpdateDoc = (
+  mockApp: MockFrappeApp,
+  doctype: string,
+  name: string,
+  returnData: Record<string, any>,
+) => {
   mockApp.db.updateDoc.mockImplementation(async (dt: string, n: string, doc: Record<string, any>) => {
     if (dt === doctype && n === name) {
       return { name: n, ...doc, ...returnData };
     }
     return {};
   });
-}
+};
 
 /**
  * Mock `db.deleteDoc` to succeed for a specific doctype + name.
  */
-export function mockDeleteDoc(mockApp: MockFrappeApp, doctype: string, name: string) {
+export const mockDeleteDoc = (mockApp: MockFrappeApp, doctype: string, name: string) => {
   mockApp.db.deleteDoc.mockImplementation(async (dt: string, n: string) => {
     if (dt === doctype && n === name) {
       return { message: 'ok' };
     }
     throw new Error(`Document ${dt}/${n} not found`);
   });
-}
+};
 
 // ─── Keycloak Auth Mocks ─────────────────────────────────────────────────────
 
@@ -201,7 +206,7 @@ export interface MockKeycloakContext {
  * });
  * ```
  */
-export function createMockKeycloakContext(options: MockKeycloakOptions = {}): MockKeycloakContext {
+export const createMockKeycloakContext = (options: MockKeycloakOptions = {}): MockKeycloakContext => {
   const {
     authenticated = false,
     roles = [],
@@ -236,4 +241,4 @@ export function createMockKeycloakContext(options: MockKeycloakOptions = {}): Mo
     hasRealmRole: (role: string) => roles.includes(role),
     hasResourceRole: (_role: string, _resource?: string) => false,
   };
-}
+};

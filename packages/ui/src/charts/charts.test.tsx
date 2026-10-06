@@ -24,24 +24,24 @@ const data: ChartDatum[] = [
   { label: 'Jun', value: 900 },
 ];
 
-function PaletteProbe({ into }: { into: { current?: ChartPalette } }) {
+const PaletteProbe = ({ into }: { into: { current?: ChartPalette } }) => {
   into.current = useChartPalette();
   return null;
-}
+};
 
-function markRects(): Element[] {
+const markRects = (): Element[] => {
   // Bar marks are value-end-rounded paths with a resolved fill.
   return Array.from(document.querySelectorAll('svg [data-mpo-chart-bar]'));
-}
+};
 
-function barBox(bar: Element) {
+const barBox = (bar: Element) => {
   const [x, y, width, height, radius] = String(bar.getAttribute('data-mpo-chart-bar')).split(',').map(Number);
   return { x, y, width, height, radius };
-}
+};
 
-function targetRects(): Element[] {
+const targetRects = (): Element[] => {
   return Array.from(document.querySelectorAll('svg rect[fill="transparent"]'));
-}
+};
 
 // In happy-dom onLayout never fires, so every chart passes an explicit width.
 const WIDTH = 400;

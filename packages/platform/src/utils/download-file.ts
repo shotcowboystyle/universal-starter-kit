@@ -1,4 +1,4 @@
-export function downloadFile(url: string, filename: string): void {
+export const downloadFile = (url: string, filename: string): void => {
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;
@@ -8,9 +8,9 @@ export function downloadFile(url: string, filename: string): void {
   } finally {
     a.remove();
   }
-}
+};
 
-export function downloadBlob(blob: Blob, filename: string): void {
+export const downloadBlob = (blob: Blob, filename: string): void => {
   const url = URL.createObjectURL(blob);
   try {
     downloadFile(url, filename);
@@ -20,4 +20,4 @@ export function downloadBlob(blob: Blob, filename: string): void {
       URL.revokeObjectURL(url);
     }, 60_000);
   }
-}
+};

@@ -107,21 +107,21 @@ const BadgeText = styled(Text, {
 
 // ── Helpers ───────────────────────────────────────────────────
 
-function normalizeCount(count: number | undefined): number | undefined {
+const normalizeCount = (count: number | undefined): number | undefined => {
   if (count === undefined || !Number.isFinite(count)) {
     return undefined;
   }
   return Math.max(0, Math.floor(count));
-}
+};
 
-function normalizeMax(max: number): number {
+const normalizeMax = (max: number): number => {
   if (!Number.isFinite(max) || max < 0) {
     return 99;
   }
   return Math.floor(max);
-}
+};
 
-function indicatorPlacement(position: BadgePosition, isRTL: boolean, overlap: number, offset: [number, number]) {
+const indicatorPlacement = (position: BadgePosition, isRTL: boolean, overlap: number, offset: [number, number]) => {
   const atEnd = position.includes('right');
   const atTop = position.includes('top');
   const [ox, oy] = offset;
@@ -134,11 +134,11 @@ function indicatorPlacement(position: BadgePosition, isRTL: boolean, overlap: nu
     [inlineProp]: 0,
     transform: [{ translateX: dirX * (overlap + ox) }, { translateY: dirY * (overlap + oy) }],
   };
-}
+};
 
 // ── Badge Component ───────────────────────────────────────────
 
-export function Badge({
+export const Badge = ({
   children,
   count,
   max = 99,
@@ -150,7 +150,7 @@ export function Badge({
   visible = true,
   compact,
   accessibilityLabel,
-}: BadgeProps) {
+}: BadgeProps) => {
   const { t } = useTranslation();
   const isRTL = useDirection() === 'rtl';
   const { knobProps } = useResolvedKnobs({ component: 'Badge', compact });
@@ -222,7 +222,7 @@ export function Badge({
       {indicator}
     </BadgeWrapper>
   );
-}
+};
 
 export type BadgeWrapperProps = GetProps<typeof BadgeWrapper>;
 export type BadgeIndicatorProps = GetProps<typeof BadgeIndicator>;

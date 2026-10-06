@@ -26,7 +26,7 @@ afterEach(cleanup);
 
 const SCHEMES = ['light', 'dark'] as const;
 
-function inkWeight(el: HTMLElement): string {
+const inkWeight = (el: HTMLElement): string => {
   const inline = el.style.fontWeight;
   if (inline) {
     return String(inline);
@@ -38,9 +38,9 @@ function inkWeight(el: HTMLElement): string {
     }
   }
   return '';
-}
+};
 
-function labelNode(fontWeight: 'regular' | 'bold', scheme: (typeof SCHEMES)[number], label: string): HTMLElement {
+const labelNode = (fontWeight: 'regular' | 'bold', scheme: (typeof SCHEMES)[number], label: string): HTMLElement => {
   renderWithProviders(
     <Theme name={scheme}>
       <Preset overrides={{ fontWeight }}>
@@ -51,7 +51,7 @@ function labelNode(fontWeight: 'regular' | 'bold', scheme: (typeof SCHEMES)[numb
   const node = screen.getByText(label) as HTMLElement;
   expect(node.tagName).not.toBe('BUTTON');
   return node;
-}
+};
 
 describe('Button fontWeight knob', () => {
   it.each(SCHEMES)('%s: bold takes the label to 700', (scheme) => {

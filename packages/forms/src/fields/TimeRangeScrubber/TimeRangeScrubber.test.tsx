@@ -43,7 +43,7 @@ const WINDOW = {
   end: new Date('2026-08-28T14:30:00.000Z'),
 };
 
-function mockRailRect(container: HTMLElement) {
+const mockRailRect = (container: HTMLElement) => {
   const rail = container.querySelector("[data-testid='trs-rail']") as HTMLElement | null;
   if (!rail) {
     return;
@@ -61,9 +61,9 @@ function mockRailRect(container: HTMLElement) {
       return {};
     },
   });
-}
+};
 
-function stubReducedMotion(matches: boolean) {
+const stubReducedMotion = (matches: boolean) => {
   const original = window.matchMedia;
   window.matchMedia = ((query: string) => ({
     matches: query.includes('prefers-reduced-motion') ? matches : false,
@@ -78,7 +78,7 @@ function stubReducedMotion(matches: boolean) {
   return () => {
     window.matchMedia = original;
   };
-}
+};
 
 describe('TimeRangeScrubber geometry', () => {
   it('resolves BINARY via resolveRadiusClass: 0 at none, h/2 at every other stop', () => {

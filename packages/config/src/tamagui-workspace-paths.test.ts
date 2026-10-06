@@ -32,7 +32,7 @@ afterEach(() => {
  * A minimal repo: `scripts/` holding the generator, `public/config/tsconfig/`,
  * and one public package with a declared TypeScript source entry.
  */
-function fakeRepo(generatorSource: string | null): { root: string; configDir: string } {
+const fakeRepo = (generatorSource: string | null): { root: string; configDir: string } => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mpo-97-'));
   roots.push(root);
   const configDir = path.join(root, 'public/config');
@@ -48,7 +48,7 @@ function fakeRepo(generatorSource: string | null): { root: string; configDir: st
     fs.writeFileSync(path.join(root, 'scripts/generate-tamagui-workspace-paths.mjs'), generatorSource);
   }
   return { root, configDir };
-}
+};
 
 describe('ensureTamaguiWorkspacePaths', () => {
   it('does nothing outside the monorepo, where no generator exists', () => {

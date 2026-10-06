@@ -118,7 +118,7 @@ const colorMap: Record<ChipColor, ChipSwatch> = {
   },
 };
 
-export function chipTone(variant: ChipVariant | undefined): ChipTone {
+export const chipTone = (variant: ChipVariant | undefined): ChipTone => {
   switch (variant) {
     case 'filled':
     case 'solid': {
@@ -132,7 +132,7 @@ export function chipTone(variant: ChipVariant | undefined): ChipTone {
       return 'ghost';
     }
   }
-}
+};
 
 // ── Styled components ─────────────────────────────────────────
 
@@ -148,14 +148,14 @@ export function chipTone(variant: ChipVariant | undefined): ChipTone {
 const CHIP_RECIPE_FAMILY = 'controlCompact' as const;
 const CHIP_SIZE_TOKENS = ['$2', '$3', '$4', '$5'] as const;
 
-function chipFrameGeometry(token: string) {
+const chipFrameGeometry = (token: string) => {
   const recipe = sizeRecipeForToken(token, { family: CHIP_RECIPE_FAMILY });
   return {
     paddingHorizontal: recipe.paddingHorizontal,
     paddingVertical: Math.round(recipe.paddingHorizontal * 0.25),
     gap: recipe.gap,
   };
-}
+};
 
 const chipFrameVariants = Object.fromEntries(CHIP_SIZE_TOKENS.map((token) => [token, chipFrameGeometry(token)]));
 
@@ -237,9 +237,9 @@ const IconSlot = styled(View, {
 });
 
 /** Icon size that pairs with each chip size — the generated recipe's icon channel. */
-export function chipIconSize(size: ChipSize): number {
+export const chipIconSize = (size: ChipSize): number => {
   return sizeRecipeForToken(size, { family: CHIP_RECIPE_FAMILY }).iconSize;
-}
+};
 
 /**
  * Label size that pairs with each chip size — the generated recipe's font
@@ -249,9 +249,9 @@ export function chipIconSize(size: ChipSize): number {
  * a bare text input in the same row as its chips, and typing into it has to
  * land on the same optical line as the chip labels beside it.
  */
-export function chipTextSize(size: ChipSize): number {
+export const chipTextSize = (size: ChipSize): number => {
   return sizeRecipeForToken(size, { family: CHIP_RECIPE_FAMILY }).fontSize;
-}
+};
 
 // This box is the grown transparent press target (pressTargetStyle +
 // compensating negative outsets + hitSlop at the call site). It stays
@@ -296,12 +296,12 @@ const DismissRing = styled(View, {
 // the padding box, so the frame's own border width is added back.
 const CHIP_ROW_GAP = '$2';
 
-function chipBodySlop(borderWidth: number): number {
+const chipBodySlop = (borderWidth: number): number => {
   const gap = getTokenValue(CHIP_ROW_GAP as Parameters<typeof getTokenValue>[0], 'space');
   return typeof gap === 'number' ? Math.floor(gap / 2) + Math.ceil(borderWidth) : 0;
-}
+};
 
-function normalizeIcon(icon: ReactNode, size: number): ReactNode {
+const normalizeIcon = (icon: ReactNode, size: number): ReactNode => {
   if (icon == null || icon === false) {
     return null;
   }
@@ -313,11 +313,11 @@ function normalizeIcon(icon: ReactNode, size: number): ReactNode {
     return createElement(icon as ComponentType<{ size?: number }>, { size });
   }
   return icon;
-}
+};
 
 // ── Chip Component ────────────────────────────────────────────
 
-export function Chip({
+export const Chip = ({
   children,
   size,
   variant = 'ghost',
@@ -328,7 +328,7 @@ export function Chip({
   onDismiss,
   disabled,
   maxWidth,
-}: ChipProps) {
+}: ChipProps) => {
   const { t } = useTranslation();
   const { knobProps, control, disabledState } = useResolvedKnobs({ component: 'Chip' });
   const colors = colorMap[color] ?? colorMap.gray;
@@ -513,6 +513,6 @@ export function Chip({
       ) : null}
     </ChipFrame>
   );
-}
+};
 
 export type ChipFrameProps = GetProps<typeof ChipFrame>;

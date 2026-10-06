@@ -64,7 +64,7 @@ interface CoercedDate {
   dateOnly: boolean;
 }
 
-function coerceDateInput(value: DateInput): CoercedDate | null {
+const coerceDateInput = (value: DateInput): CoercedDate | null => {
   if (value == null || value === '') {
     return null;
   }
@@ -78,7 +78,7 @@ function coerceDateInput(value: DateInput): CoercedDate | null {
   }
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : { date, dateOnly: false };
-}
+};
 
 /**
  * Parse a date value onto the LOCAL calendar day it names — the canonical
@@ -97,7 +97,7 @@ function coerceDateInput(value: DateInput): CoercedDate | null {
  * Returns null for empty and unparseable input, and for out-of-range parts
  * ("2026-13-45") rather than silently rolling them into the next month.
  */
-export function parseCalendarDate(value: DateInput): Date | null {
+export const parseCalendarDate = (value: DateInput): Date | null => {
   if (value == null || value === '') {
     return null;
   }
@@ -123,7 +123,7 @@ export function parseCalendarDate(value: DateInput): Date | null {
   }
   const parsed = new Date(trimmed.replace(' ', 'T'));
   return Number.isNaN(parsed.getTime()) ? null : parsed;
-}
+};
 
 /** Timezone-naive wire shapes: Frappe's `Date`, `Datetime` and `Time`. */
 export type CalendarDateShape = 'date' | 'datetime' | 'time';
@@ -146,7 +146,7 @@ const pad2 = (n: number) => String(n).padStart(2, '0');
  * Accepts anything `parseCalendarDate` does, so a value already on the wire
  * round-trips unchanged; empty and unparseable input serialize to "".
  */
-export function formatCalendarDate(value: DateInput, shape: CalendarDateShape = 'date'): string {
+export const formatCalendarDate = (value: DateInput, shape: CalendarDateShape = 'date'): string => {
   const date = parseCalendarDate(value);
   if (!date) {
     return '';
@@ -157,7 +157,7 @@ export function formatCalendarDate(value: DateInput, shape: CalendarDateShape = 
   }
   const datePart = `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
   return shape === 'datetime' ? `${datePart} ${timePart}` : datePart;
-}
+};
 
 /**
  * Compact absolute date — the house register for every absolute date.
@@ -165,7 +165,7 @@ export function formatCalendarDate(value: DateInput, shape: CalendarDateShape = 
  * `withTime` "Aug 9, 3:30 PM". Empty input renders "" and an unparseable
  * string passes through unchanged (honest passthrough — never invents).
  */
-export function formatAbsoluteDate(value: DateInput, options: AbsoluteDateFormatOptions = {}): string {
+export const formatAbsoluteDate = (value: DateInput, options: AbsoluteDateFormatOptions = {}): string => {
   const coerced = coerceDateInput(value);
   if (!coerced) {
     return typeof value === 'string' ? value : '';
@@ -199,7 +199,7 @@ export function formatAbsoluteDate(value: DateInput, options: AbsoluteDateFormat
   } catch {
     return typeof value === 'string' ? value : date.toISOString();
   }
-}
+};
 
 /**
  * Compact absolute date-time ("Aug 9, 3:30 PM"; year added when not
@@ -208,18 +208,18 @@ export function formatAbsoluteDate(value: DateInput, options: AbsoluteDateFormat
  * BOTH platform halves, which is why it takes `hour12` / `seconds`: the two
  * halves used to compose their own and drifted by a comma.
  */
-export function formatAbsoluteDateTime(
+export const formatAbsoluteDateTime = (
   value: DateInput,
   options: Omit<AbsoluteDateFormatOptions, 'withTime'> = {},
-): string {
+): string => {
   return formatAbsoluteDate(value, { ...options, withTime: true });
-}
+};
 
 /**
  * Relative timestamp ("just now", "5m ago", "2h ago", "10 days ago") — the
  * feed/social register, selected by `timestampStyle: "relative"`.
  */
-export function formatRelativeTimestamp(value: DateInput, now: number = Date.now()): string {
+export const formatRelativeTimestamp = (value: DateInput, now: number = Date.now()): string => {
   if (value == null || value === '') {
     return '';
   }
@@ -249,7 +249,7 @@ export function formatRelativeTimestamp(value: DateInput, now: number = Date.now
   }
   const yr = Math.floor(day / 365);
   return `${Math.max(1, yr)}y ago`;
-}
+};
 
 /** Clock-time shape ("HH:MM" / "HH:MM:SS") — how Frappe `Time` values arrive. */
 export const CLOCK_TIME = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/;
@@ -269,7 +269,7 @@ export interface TimeOfDayFormatOptions {
  * "last updated" chrome. Accepts a clock-time string as well as a date,
  * and never emits seconds.
  */
-export function formatTimeOfDay(value: DateInput, options: TimeOfDayFormatOptions = {}): string {
+export const formatTimeOfDay = (value: DateInput, options: TimeOfDayFormatOptions = {}): string => {
   const { locale, minutes = true, hour12 } = options;
   let date: Date | null = null;
   if (typeof value === 'string') {
@@ -300,7 +300,7 @@ export function formatTimeOfDay(value: DateInput, options: TimeOfDayFormatOption
   } catch {
     return typeof value === 'string' ? value : '';
   }
-}
+};
 
 export interface DayLongFormatOptions {
   locale?: string;
@@ -315,7 +315,7 @@ export interface DayLongFormatOptions {
  * accessible names that read a date aloud, where the compact absolute
  * register is too terse to speak.
  */
-export function formatDayLong(value: DateInput, options: DayLongFormatOptions = {}): string {
+export const formatDayLong = (value: DateInput, options: DayLongFormatOptions = {}): string => {
   const coerced = coerceDateInput(value);
   if (!coerced) {
     return typeof value === 'string' ? value : '';
@@ -336,7 +336,7 @@ export function formatDayLong(value: DateInput, options: DayLongFormatOptions = 
   } catch {
     return typeof value === 'string' ? value : '';
   }
-}
+};
 
 export interface MonthYearFormatOptions {
   locale?: string;
@@ -345,7 +345,7 @@ export interface MonthYearFormatOptions {
 }
 
 /** Month-year register ("Mar 2026") — period headers and month axis ticks. */
-export function formatMonthYear(value: DateInput, options: MonthYearFormatOptions = {}): string {
+export const formatMonthYear = (value: DateInput, options: MonthYearFormatOptions = {}): string => {
   const coerced = coerceDateInput(value);
   if (!coerced) {
     return typeof value === 'string' ? value : '';
@@ -360,10 +360,10 @@ export function formatMonthYear(value: DateInput, options: MonthYearFormatOption
   } catch {
     return typeof value === 'string' ? value : '';
   }
-}
+};
 
 /** Day-of-month register ("10") — the densest date axis tick. */
-export function formatDayOfMonth(value: DateInput, options: { locale?: string } = {}): string {
+export const formatDayOfMonth = (value: DateInput, options: { locale?: string } = {}): string => {
   const coerced = coerceDateInput(value);
   if (!coerced) {
     return typeof value === 'string' ? value : '';
@@ -377,7 +377,7 @@ export function formatDayOfMonth(value: DateInput, options: { locale?: string } 
   } catch {
     return String(coerced.date.getDate());
   }
-}
+};
 
 export interface WeekdayNamesOptions {
   locale?: string;
@@ -388,16 +388,16 @@ export interface WeekdayNamesOptions {
 }
 
 /** Weekday names for calendar chrome, in week order from `firstDay`. */
-export function getWeekdayNames(options: WeekdayNamesOptions = {}): string[] {
+export const getWeekdayNames = (options: WeekdayNamesOptions = {}): string[] => {
   const { locale, style = 'short', firstDay = 0 } = options;
   const formatter = new Intl.DateTimeFormat(locale, { weekday: style, timeZone: 'UTC' });
   // 2004-01-04 is a Sunday, so day-of-week and offset line up.
   return Array.from({ length: 7 }, (_, i) => formatter.format(new Date(Date.UTC(2004, 0, 4 + ((firstDay + i) % 7)))));
-}
+};
 
 /** Month names for calendar chrome and picker headers, January first. */
-export function getMonthNames(options: { locale?: string; style?: 'long' | 'short' } = {}): string[] {
+export const getMonthNames = (options: { locale?: string; style?: 'long' | 'short' } = {}): string[] => {
   const { locale, style = 'long' } = options;
   const formatter = new Intl.DateTimeFormat(locale, { month: style, timeZone: 'UTC' });
   return Array.from({ length: 12 }, (_, i) => formatter.format(new Date(Date.UTC(2000, i, 1))));
-}
+};

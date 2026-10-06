@@ -169,11 +169,11 @@ const panelChromeFocus = {
   focusVisibleStyle: { outlineWidth: 0 },
 } as const;
 
-function useKeyboardFocusIntoPanel(
+const useKeyboardFocusIntoPanel = (
   open: boolean,
   frameRef: { current: HTMLElement | null },
   keyboardOpenRef?: { current: boolean },
-) {
+) => {
   useEffect(() => {
     if (!open || !isWeb) {
       return;
@@ -207,7 +207,7 @@ function useKeyboardFocusIntoPanel(
       clearTimeout(timeout);
     };
   }, [open, frameRef, keyboardOpenRef]);
-}
+};
 
 /**
  * Viewport origin of the box a `position: fixed` panel is laid out against.
@@ -218,7 +218,7 @@ function useKeyboardFocusIntoPanel(
  * transformed dialog still lays out against that dialog. A `display: contents`
  * node has no box, so its computed `contain` (Tamagui's theme span) is ignored.
  */
-function fixedContainingBlockOrigin(element: HTMLElement): { top: number; left: number } {
+const fixedContainingBlockOrigin = (element: HTMLElement): { top: number; left: number } => {
   for (let node = element.parentElement; node; node = node.parentElement) {
     const cs = getComputedStyle(node);
     if (cs.display === 'contents') {
@@ -242,19 +242,19 @@ function fixedContainingBlockOrigin(element: HTMLElement): { top: number; left: 
     }
   }
   return { top: 0, left: 0 };
-}
+};
 
-function isRtl(): boolean {
+const isRtl = (): boolean => {
   return isWeb && typeof document !== 'undefined' && document.documentElement.getAttribute('dir') === 'rtl';
-}
+};
 
-function panelTransformOrigin(placement: string): string {
+const panelTransformOrigin = (placement: string): string => {
   const rtl = isRtl();
   const atStart = !placement.endsWith('end');
   const originX = atStart === !rtl ? 'left' : 'right';
   const originY = placement.startsWith('top') ? 'bottom' : 'top';
   return `${originY} ${originX}`;
-}
+};
 
 // ── FloatingPanel ─────────────────────────────────────────────
 
@@ -268,7 +268,7 @@ const overlayFloatBreakpoint = OVERLAY_BREAKPOINT;
  * re-render on resize). Name kept for API compatibility; "gtSm" reads as
  * "wide enough to float" (≥ OVERLAY_BREAKPOINT), not the dead v4 media key.
  */
-function subscribeViewport(listener: () => void) {
+const subscribeViewport = (listener: () => void) => {
   if (!isWeb || typeof window === 'undefined') {
     return () => {};
   }
@@ -276,34 +276,17 @@ function subscribeViewport(listener: () => void) {
   return () => {
     window.removeEventListener('resize', listener);
   };
-}
+};
 
-function viewportSnapshot() {
+const viewportSnapshot = () => {
   return isWeb && typeof window !== 'undefined' && window.innerWidth > overlayFloatBreakpoint;
-}
+};
 
 const serverViewportSnapshot = () => false;
 
-export function useViewportGtSm() {
+export const useViewportGtSm = () => {
   return useSyncExternalStore(subscribeViewport, viewportSnapshot, serverViewportSnapshot);
-}
-
-export function FloatingPanel(props: FloatingPanelProps) {
-  // Install modality tracking during render so the Enter that opens
-  // the panel is already classified as keyboard-origin when focus moves in.
-  if (isWeb) {
-    ensureKeyboardModalityTracking();
-  }
-  const viewportGtSm = useViewportGtSm();
-  // SSR and the hydration render use the same sheet structure. The viewport
-  // snapshot switches to floating after hydration when the browser is wide.
-  const shouldUseSheet = props.sheet ?? (!isWeb || !viewportGtSm);
-
-  if (shouldUseSheet) {
-    return <FloatingPanelSheet {...props} />;
-  }
-  return <FloatingPanelWeb {...props} />;
-}
+};
 
 // ── Sheet (mobile / native / forced) ──────────────────────────
 
@@ -312,7 +295,7 @@ export function FloatingPanel(props: FloatingPanelProps) {
  * below the viewport, so state inside survives a reopen. Parked, the frame
  * must leave the accessibility tree and the Tab order.
  */
-function useParkedFrameInert(open: boolean, frameRef: RefObject<HTMLElement | null>) {
+const useParkedFrameInert = (open: boolean, frameRef: RefObject<HTMLElement | null>) => {
   useEffect(() => {
     if (!isWeb) {
       return;
@@ -329,9 +312,9 @@ function useParkedFrameInert(open: boolean, frameRef: RefObject<HTMLElement | nu
       frame.setAttribute('aria-hidden', 'true');
     }
   }, [open, frameRef]);
-}
+};
 
-function FloatingPanelSheet({
+const FloatingPanelSheet = ({
   open,
   onOpenChange,
   skipReturnFocusRef,
@@ -346,7 +329,7 @@ function FloatingPanelSheet({
   header,
   scrollViewProps,
   openOn = 'press',
-}: FloatingPanelProps) {
+}: FloatingPanelProps) => {
   const { knobProps } = useResolvedKnobs();
   // Honor animation=none (undefined) — do not hardcode "medium".
   const transition = transitionProp ?? knobProps.transition;
@@ -473,11 +456,11 @@ function FloatingPanelSheet({
       </Sheet>
     </>
   );
-}
+};
 
 // ── Web floating panel (desktop) ──────────────────────────────
 
-function FloatingPanelWeb({
+const FloatingPanelWeb = ({
   open,
   onOpenChange,
   skipReturnFocusRef,
@@ -490,7 +473,7 @@ function FloatingPanelWeb({
   compact,
   contentPadding = 'default',
   openOn = 'press',
-}: FloatingPanelProps) {
+}: FloatingPanelProps) => {
   const isFill = sizing === 'fill';
   const isContextMenu = openOn === 'contextmenu';
   const overlayStyleRef = useRef<{ top: number; left?: number; maxHeight: number } | null>(null);
@@ -996,4 +979,21 @@ function FloatingPanelWeb({
       )}
     </>
   );
-}
+};
+
+export const FloatingPanel = (props: FloatingPanelProps) => {
+  // Install modality tracking during render so the Enter that opens
+  // the panel is already classified as keyboard-origin when focus moves in.
+  if (isWeb) {
+    ensureKeyboardModalityTracking();
+  }
+  const viewportGtSm = useViewportGtSm();
+  // SSR and the hydration render use the same sheet structure. The viewport
+  // snapshot switches to floating after hydration when the browser is wide.
+  const shouldUseSheet = props.sheet ?? (!isWeb || !viewportGtSm);
+
+  if (shouldUseSheet) {
+    return <FloatingPanelSheet {...props} />;
+  }
+  return <FloatingPanelWeb {...props} />;
+};

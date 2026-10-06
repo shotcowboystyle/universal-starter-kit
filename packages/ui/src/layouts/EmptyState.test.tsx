@@ -11,12 +11,12 @@ afterEach(cleanup);
 
 const RADIUS_STOPS = ['none', 'small', 'medium', 'large', 'full'] as const;
 
-function radiusAtoms(el: Element): string[] {
+const radiusAtoms = (el: Element): string[] => {
   return String(el.className || '')
     .split(' ')
     .filter((c) => /^_(btlr|btrr|bbrr|bblr)-/.test(c))
     .sort();
-}
+};
 
 describe('EmptyState', () => {
   it('does not pin compact, so the density knob restyles the frame', () => {

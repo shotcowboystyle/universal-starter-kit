@@ -17,16 +17,16 @@
 
 // ── Luminance / contrast utilities ────────────────────────────
 
-function parseChannel(hex: string, offset: number): number {
+const parseChannel = (hex: string, offset: number): number => {
   return Number.parseInt(hex.slice(offset, offset + 2), 16) / 255;
-}
+};
 
-function linearize(c: number): number {
+const linearize = (c: number): number => {
   return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-}
+};
 
 /** Parse a CSS color string to a 6-digit hex (handles hex, rgb, hsl, named "white"/"black"). */
-export function normalizeToHex(raw: string): string | null {
+export const normalizeToHex = (raw: string): string | null => {
   const s = raw.trim().toLowerCase();
   if (s === 'white' || s === '#fff' || s === '#ffffff') {
     return '#ffffff';
@@ -61,22 +61,22 @@ export function normalizeToHex(raw: string): string | null {
     return `#${f(0)}${f(8)}${f(4)}`;
   }
   return null;
-}
+};
 
 /** WCAG 2.x relative luminance from a 6-digit hex string. */
-export function relativeLuminance(hex: string): number {
+export const relativeLuminance = (hex: string): number => {
   return (
     0.2126 * linearize(parseChannel(hex, 1)) +
     0.7152 * linearize(parseChannel(hex, 3)) +
     0.0722 * linearize(parseChannel(hex, 5))
   );
-}
+};
 
 /** WCAG contrast ratio (always >= 1). */
-export function contrastRatio(l1: number, l2: number): number {
+export const contrastRatio = (l1: number, l2: number): number => {
   const [lighter, darker] = l1 > l2 ? [l1, l2] : [l2, l1];
   return (lighter + 0.05) / (darker + 0.05);
-}
+};
 
 export const minContrastRatio = 3;
 
@@ -123,7 +123,7 @@ export interface ContrastReport {
  * never a skip. Compare the actual ratio: rounding before classification
  * can turn a below-floor pair into a passing one.
  */
-export function measureContrast(pair: ContrastPair): ContrastReport {
+export const measureContrast = (pair: ContrastPair): ContrastReport => {
   const floor = pair.floor ?? aaTextContrastRatio;
   const label = pair.label ?? `${pair.foreground} on ${pair.background}`;
   const foreground = normalizeToHex(pair.foreground);
@@ -136,7 +136,7 @@ export function measureContrast(pair: ContrastPair): ContrastReport {
   }
   const ratio = contrastRatio(relativeLuminance(foreground), relativeLuminance(background));
   return { label, foreground, background, ratio, floor, pass: ratio >= floor };
-}
+};
 
 /**
  * The contrast floor assertion. Measures every pair and throws ONE error
@@ -144,7 +144,7 @@ export function measureContrast(pair: ContrastPair): ContrastReport {
  * the first miss. Returns the reports when all pass, so callers can attach
  * the measured numbers as proof.
  */
-export function assertContrast(pairs: ContrastPair | ContrastPair[]): ContrastReport[] {
+export const assertContrast = (pairs: ContrastPair | ContrastPair[]): ContrastReport[] => {
   const reports = (Array.isArray(pairs) ? pairs : [pairs]).map(measureContrast);
   const misses = reports.filter((report) => !report.pass);
   if (misses.length > 0) {
@@ -156,7 +156,7 @@ export function assertContrast(pairs: ContrastPair | ContrastPair[]): ContrastRe
     throw new Error(`contrast floor missed (${misses.length} of ${reports.length} pairs):\n${lines.join('\n')}`);
   }
   return reports;
-}
+};
 
 /** Addresses a {@link ContrastPair} inside built themes by name and keys. */
 export interface ThemeContrastPair {
@@ -179,10 +179,10 @@ export interface ThemeContrastPair {
  * name + key so a failure names the thing a designer would change; a missing
  * theme or key throws rather than skips.
  */
-export function resolveThemeContrast(
+export const resolveThemeContrast = (
   themes: Record<string, Record<string, string> | undefined>,
   pair: ThemeContrastPair,
-): ContrastPair {
+): ContrastPair => {
   const theme = themes[pair.theme];
   if (!theme) {
     throw new Error(`no such theme: ${pair.theme}`);
@@ -201,7 +201,7 @@ export function resolveThemeContrast(
     floor: pair.floor,
     label: `${pair.theme}: ${pair.foreground} on ${pair.background}`,
   };
-}
+};
 
 /**
  * Axiom 15 OPTICS — pick whichever candidate foreground carries more WCAG
@@ -211,7 +211,7 @@ export function resolveThemeContrast(
  * raw color strings so callers keep their own tokens/hsla; returns
  * `candidateA` unchanged when any color fails to parse (safe default).
  */
-export function pickReadableForeground(fill: string, candidateA: string, candidateB: string): string {
+export const pickReadableForeground = (fill: string, candidateA: string, candidateB: string): string => {
   const fillHex = normalizeToHex(fill);
   const aHex = normalizeToHex(candidateA);
   const bHex = normalizeToHex(candidateB);
@@ -222,7 +222,7 @@ export function pickReadableForeground(fill: string, candidateA: string, candida
   return contrastRatio(relativeLuminance(aHex), fillLum) >= contrastRatio(relativeLuminance(bHex), fillLum)
     ? candidateA
     : candidateB;
-}
+};
 
 /**
  * Axiom 12 backstop for ink on a fill: `ink` when it clears `floor` on
@@ -232,7 +232,7 @@ export function pickReadableForeground(fill: string, candidateA: string, candida
  * anchor clears AA while a pole does. Returns `ink` unchanged when a color
  * fails to parse.
  */
-export function holdInkFloor(fill: string, ink: string, floor = aaTextContrastRatio): string {
+export const holdInkFloor = (fill: string, ink: string, floor = aaTextContrastRatio): string => {
   const fillHex = normalizeToHex(fill);
   const inkHex = normalizeToHex(ink);
   if (!fillHex || !inkHex) {
@@ -250,7 +250,7 @@ export function holdInkFloor(fill: string, ink: string, floor = aaTextContrastRa
     return ink;
   }
   return onWhite >= onBlack ? '#ffffff' : '#000000';
-}
+};
 
 /**
  * Given a 12-color scale (hex strings), a background step, and a starting
@@ -258,7 +258,7 @@ export function holdInkFloor(fill: string, ink: string, floor = aaTextContrastRa
  * ratio meets minContrastRatio. Falls back to the opposite direction,
  * then to the step with the highest contrast if nothing passes.
  */
-export function findReadableStep(scale: string[], bgStep: number, startStep: number, preferredDir: 1 | -1): number {
+export const findReadableStep = (scale: string[], bgStep: number, startStep: number, preferredDir: 1 | -1): number => {
   const bgLum = relativeLuminance(scale[bgStep - 1]);
 
   if (contrastRatio(bgLum, relativeLuminance(scale[startStep - 1])) >= minContrastRatio) {
@@ -280,7 +280,7 @@ export function findReadableStep(scale: string[], bgStep: number, startStep: num
   const l1 = relativeLuminance(scale[0]);
   const l12 = relativeLuminance(scale[11]);
   return contrastRatio(bgLum, l1) >= contrastRatio(bgLum, l12) ? 1 : 12;
-}
+};
 
 // ── Component color ramps ─────────────────────────────────────
 
@@ -313,9 +313,9 @@ export const inputColors: ComponentColorConfig = {
   border: { base: 7, hover: 6, active: 8 },
 };
 
-export function $color(step: ColorStep) {
+export const $color = (step: ColorStep) => {
   return `$color${step}` as const;
-}
+};
 
 // ── Semantic groups ───────────────────────────────────────────
 
@@ -336,7 +336,7 @@ export const semanticGroups: SemanticGroup[] = [
 ];
 
 /** Normalise a raw color scale into 6-digit hex strings. Returns null when parsing fails. */
-export function normalizeColorScale(raw: string[]): string[] | null {
+export const normalizeColorScale = (raw: string[]): string[] | null => {
   if (raw.length !== 12) {
     return null;
   }
@@ -349,4 +349,4 @@ export function normalizeColorScale(raw: string[]): string[] | null {
     out.push(hex);
   }
   return out;
-}
+};

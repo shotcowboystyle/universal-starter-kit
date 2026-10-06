@@ -29,7 +29,7 @@ const defaults = {
   } as const,
 };
 
-export function createDefaultFont<A extends GenericFont>(font: Partial<A> & { family: A['family'] }): A {
+export const createDefaultFont = <A extends GenericFont>(font: Partial<A> & { family: A['family'] }): A => {
   const size = font.size || defaults.size;
   const lineHeight =
     size === defaults.size
@@ -47,4 +47,4 @@ export function createDefaultFont<A extends GenericFont>(font: Partial<A> & { fa
     ...font,
     size,
   } as unknown as A);
-}
+};

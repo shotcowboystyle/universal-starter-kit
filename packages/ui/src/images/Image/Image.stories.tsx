@@ -8,7 +8,7 @@ import { Image } from './index';
  * Self-contained plate (no network): a horizon + sun on a categorical solid.
  * Embedded SVG pixels, not UI chrome — same honesty rule as ImageGrid.
  */
-function plateSrc(color: string, seed: number, w = 400, h = 400): string {
+const plateSrc = (color: string, seed: number, w = 400, h = 400): string => {
   const sunX = Math.round(w * 0.62) + (seed % 5) * 12;
   const sunY = Math.round(h * 0.18) + (seed % 4) * 10;
   const sunR = 28 + (seed % 3) * 6;
@@ -20,7 +20,7 @@ function plateSrc(color: string, seed: number, w = 400, h = 400): string {
       <rect y="${horizon}" width="${w}" height="${h - horizon}" fill="black" fill-opacity="0.2"/>
     </svg>`,
   )}`;
-}
+};
 
 const palette = resolveChartPalette({ scheme: 'light' }).categorical;
 const LANDSCAPE_IMG = plateSrc(palette[0] ?? '#3b6ea8', 0, 800, 400);

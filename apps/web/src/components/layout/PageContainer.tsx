@@ -3,13 +3,7 @@
 import { ScrollView, YStack } from '@repo/ui';
 import React from 'react';
 
-export default function PageContainer({
-  children,
-  scrollable = true,
-}: {
-  children: React.ReactNode;
-  scrollable?: boolean;
-}) {
+const PageContainer = ({ children, scrollable = true }: { children: React.ReactNode; scrollable?: boolean }) => {
   const content = (
     <YStack
       testID="content-area"
@@ -33,4 +27,6 @@ export default function PageContainer({
       )}
     </YStack>
   );
-}
+};
+
+export default PageContainer;

@@ -9,17 +9,17 @@ import {
   serializeRuntimePublicConfig,
 } from './runtime-config';
 
-function stubAllowlist(keys: string[]) {
+const stubAllowlist = (keys: string[]) => {
   vi.stubEnv(publicConfigKeysEnvKey, JSON.stringify(keys));
-}
+};
 
-function stubBaked(config: Record<string, string>) {
+const stubBaked = (config: Record<string, string>) => {
   vi.stubEnv(bakedConfigEnvKey, JSON.stringify(config));
-}
+};
 
-function clearRuntimePayload() {
+const clearRuntimePayload = () => {
   delete (globalThis as unknown as Record<string, unknown>)[runtimePublicConfigKey];
-}
+};
 
 afterEach(() => {
   vi.unstubAllEnvs();

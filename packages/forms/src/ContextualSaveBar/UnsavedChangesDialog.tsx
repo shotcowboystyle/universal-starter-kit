@@ -21,7 +21,7 @@ export interface UnsavedChangesDialogProps {
  * WebKit's show() also marks the panel :focus-visible, which a plain focus()
  * would carry onto the button after a pointer open; the ring is keyboard-only.
  */
-function focusKeepEditing(event: Event) {
+const focusKeepEditing = (event: Event) => {
   const root = event.currentTarget as HTMLElement | null;
   const keep = root?.querySelector<HTMLElement>('[data-mp-savebar-keep]');
   if (!keep) {
@@ -29,14 +29,14 @@ function focusKeepEditing(event: Event) {
   }
   event.preventDefault();
   keep.focus({ preventScroll: true, focusVisible: wasKeyboardFocus() } as FocusOptions);
-}
+};
 
 /**
  * Route-leave / Discard confirm. Lives in forms so ContextualSaveBar
  * does not import `@repo/ui` (ConfirmDialog → forms Button
  * would cycle).
  */
-export function UnsavedChangesDialog({ open, fieldCount, onKeepEditing, onDiscard }: UnsavedChangesDialogProps) {
+export const UnsavedChangesDialog = ({ open, fieldCount, onKeepEditing, onDiscard }: UnsavedChangesDialogProps) => {
   const { knobProps } = useResolvedKnobs();
   ensureKeyboardModalityTracking();
   useReturnFocusOnClose(open);
@@ -138,4 +138,4 @@ export function UnsavedChangesDialog({ open, fieldCount, onKeepEditing, onDiscar
       </Dialog.Portal>
     </Dialog>
   );
-}
+};

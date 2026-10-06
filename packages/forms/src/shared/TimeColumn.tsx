@@ -9,40 +9,40 @@ import { t } from './t';
 
 export type TimeFormat = '12h' | '24h';
 
-export function generateRange(min: number, max: number, step = 1): number[] {
+export const generateRange = (min: number, max: number, step = 1): number[] => {
   const result: number[] = [];
   const size = Math.max(1, step);
   for (let i = min; i <= max; i += size) {
     result.push(i);
   }
   return result;
-}
+};
 
-function pad2(n: number): string {
+const pad2 = (n: number): string => {
   return String(n).padStart(2, '0');
-}
+};
 
-function to12Hour(h24: number): { h: number; period: 'AM' | 'PM' } {
+const to12Hour = (h24: number): { h: number; period: 'AM' | 'PM' } => {
   return {
     h: h24 % 12 === 0 ? 12 : h24 % 12,
     period: h24 >= 12 ? 'PM' : 'AM',
   };
-}
+};
 
-function to24Hour(displayH: number, period: 'AM' | 'PM'): number {
+const to24Hour = (displayH: number, period: 'AM' | 'PM'): number => {
   const wrapped = ((displayH - 1) % 12) + 1;
   if (period === 'AM') {
     return wrapped === 12 ? 0 : wrapped;
   }
   return wrapped === 12 ? 12 : wrapped + 12;
-}
+};
 
 const hours24 = generateRange(0, 23);
 const hours12 = generateRange(1, 12);
 const secondsAll = generateRange(0, 59);
 const periods = ['AM', 'PM'] as const;
 
-function columnEdge(index: number, count: number): WheelHighlightEdges {
+const columnEdge = (index: number, count: number): WheelHighlightEdges => {
   if (count <= 1) {
     return 'all';
   }
@@ -53,7 +53,7 @@ function columnEdge(index: number, count: number): WheelHighlightEdges {
     return 'end';
   }
   return 'none';
-}
+};
 
 export interface TimeWheelsProps {
   hour24: number;
@@ -69,7 +69,15 @@ export interface TimeWheelsProps {
  * iOS UIPickerView-style hour / minute / (second) / AM-PM columns.
  * Hours and minutes loop; AM/PM does not.
  */
-export function TimeWheels({ hour24, minute, second, timeFormat, minuteStep, showSeconds, onChange }: TimeWheelsProps) {
+export const TimeWheels = ({
+  hour24,
+  minute,
+  second,
+  timeFormat,
+  minuteStep,
+  showSeconds,
+  onChange,
+}: TimeWheelsProps) => {
   const { knobProps } = useResolvedKnobs({ compact: true });
   const itemHeight = knobProps.nestedControl.px;
   const minutes = useMemo(() => generateRange(0, 59, minuteStep), [minuteStep]);
@@ -159,4 +167,4 @@ export function TimeWheels({ hour24, minute, second, timeFormat, minuteStep, sho
       ) : null}
     </View>
   );
-}
+};

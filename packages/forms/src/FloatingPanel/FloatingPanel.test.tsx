@@ -37,7 +37,7 @@ const pointerPress = (el: Element) => {
   fireEvent.click(el, { detail: 1 });
 };
 
-function Harness({
+const Harness = ({
   trigger,
   disabled,
   sheet,
@@ -53,7 +53,7 @@ function Harness({
   extra?: ReactNode;
   openOn?: 'press' | 'contextmenu';
   sizing?: 'grow' | 'fill';
-}) {
+}) => {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -78,7 +78,7 @@ function Harness({
       </FloatingPanel>
     </>
   );
-}
+};
 
 const isOpen = (result: { container: HTMLElement }) =>
   !!Array.from(result.container.querySelectorAll('*')).some(
@@ -531,7 +531,7 @@ describe('FloatingPanel nesting', () => {
 });
 
 describe('FloatingPanel sheet — closed frame leaves the accessibility tree', () => {
-  function SheetWithOutsideClose() {
+  const SheetWithOutsideClose = () => {
     const [open, setOpen] = useState(false);
     return (
       <>
@@ -562,7 +562,7 @@ describe('FloatingPanel sheet — closed frame leaves the accessibility tree', (
         </FloatingPanel>
       </>
     );
-  }
+  };
 
   const frameOf = (el: Element) => el.closest("[tabindex='-1']") as HTMLElement;
 

@@ -255,7 +255,7 @@ export interface TextContrastResult {
  * Self-contained by construction — pass directly to
  * `page.evaluate(captureMatrixSnapshot)`.
  */
-export function captureMatrixSnapshot(): MatrixSnapshot {
+export const captureMatrixSnapshot = (): MatrixSnapshot => {
   const SKIP_TAGS = new Set(['script', 'style', 'link', 'meta', 'head', 'title', 'noscript', 'br', 'wbr', 'template']);
 
   const round = (n: number) => Math.round(n * 4) / 4;
@@ -268,7 +268,7 @@ export function captureMatrixSnapshot(): MatrixSnapshot {
   });
 
   // rgb()/rgba() → [r,g,b,a]; anything else → null (gradients, keywords).
-  function parseCssColor(raw: string): [number, number, number, number] | null {
+  const parseCssColor = (raw: string): [number, number, number, number] | null => {
     const s = raw.trim().toLowerCase();
     if (s === 'transparent') {
       return [0, 0, 0, 0];
@@ -282,21 +282,21 @@ export function captureMatrixSnapshot(): MatrixSnapshot {
       a = m[4].endsWith('%') ? Number.parseFloat(m[4]) / 100 : Number.parseFloat(m[4]);
     }
     return [Number.parseFloat(m[1]), Number.parseFloat(m[2]), Number.parseFloat(m[3]), a];
-  }
+  };
 
-  function toHex(rgb: [number, number, number]): string {
+  const toHex = (rgb: [number, number, number]): string => {
     const h = (v: number) =>
       Math.max(0, Math.min(255, Math.round(v)))
         .toString(16)
         .padStart(2, '0');
     return `#${h(rgb[0])}${h(rgb[1])}${h(rgb[2])}`;
-  }
+  };
 
   // Composite `top` (with alpha) over opaque `bottom`.
-  function blend(top: [number, number, number, number], bottom: [number, number, number]): [number, number, number] {
+  const blend = (top: [number, number, number, number], bottom: [number, number, number]): [number, number, number] => {
     const a = top[3];
     return [top[0] * a + bottom[0] * (1 - a), top[1] * a + bottom[1] * (1 - a), top[2] * a + bottom[2] * (1 - a)];
-  }
+  };
 
   /**
    * Effective backdrop behind an element: walk ancestors collecting
@@ -304,11 +304,13 @@ export function captureMatrixSnapshot(): MatrixSnapshot {
    * Reports whether the chain actually resolved and whether a
    * background-image sits in it.
    */
-  function effectiveBackground(el: Element): {
+  const effectiveBackground = (
+    el: Element,
+  ): {
     hex: string;
     resolved: boolean;
     overImage: boolean;
-  } {
+  } => {
     const layers: [number, number, number, number][] = [];
     let overImage = false;
     let node: Element | null = el;
@@ -340,10 +342,10 @@ export function captureMatrixSnapshot(): MatrixSnapshot {
       acc = blend(layers[i], acc);
     }
     return { hex: toHex(acc), resolved: !overImage, overImage };
-  }
+  };
 
   // Multiplied opacity from the element up to the root.
-  function effectiveOpacity(el: Element): number {
+  const effectiveOpacity = (el: Element): number => {
     let o = 1;
     let node: Element | null = el;
     while (node) {
@@ -354,7 +356,7 @@ export function captureMatrixSnapshot(): MatrixSnapshot {
       node = node.parentElement;
     }
     return o;
-  }
+  };
 
   const GEOMETRY_PROPS = [
     'borderTopLeftRadius',
@@ -396,7 +398,7 @@ export function captureMatrixSnapshot(): MatrixSnapshot {
   let svgRootCount = 0;
   const capturedSvgRoots = new Set<Element>();
 
-  function accessibleName(el: Element): string {
+  const accessibleName = (el: Element): string => {
     const labelledBy = el.getAttribute('aria-labelledby');
     if (labelledBy) {
       const name = labelledBy
@@ -417,9 +419,9 @@ export function captureMatrixSnapshot(): MatrixSnapshot {
     return (el.getAttribute('aria-label') || labelText || el.getAttribute('title') || el.textContent || '')
       .trim()
       .slice(0, 100);
-  }
+  };
 
-  function controlName(el: Element): string {
+  const controlName = (el: Element): string => {
     // Compound fields put their glyph beside the named input. aria-hidden on
     // that glyph avoids a duplicate AT stop; it does not make its paint optional.
     if (el.matches('[data-mp-input-box]')) {
@@ -429,9 +431,9 @@ export function captureMatrixSnapshot(): MatrixSnapshot {
       }
     }
     return accessibleName(el);
-  }
+  };
 
-  function unsupportedCompositing(el: Element): boolean {
+  const unsupportedCompositing = (el: Element): boolean => {
     let backgroundInGroup = false;
     for (let node: Element | null = el; node; node = node.parentElement) {
       const cs = getComputedStyle(node);
@@ -449,9 +451,9 @@ export function captureMatrixSnapshot(): MatrixSnapshot {
       }
     }
     return false;
-  }
+  };
 
-  function collectIcon(el: Element, key: string, cs: CSSStyleDeclaration): void {
+  const collectIcon = (el: Element, key: string, cs: CSSStyleDeclaration): void => {
     if (el.tagName.toLowerCase() !== 'svg' || el.parentElement?.closest('svg')) {
       return;
     }
@@ -598,9 +600,9 @@ export function captureMatrixSnapshot(): MatrixSnapshot {
       sample.paint = Array.from(paints)[0];
       sample.paintKinds = Array.from(kinds);
     }
-  }
+  };
 
-  function collectChart(el: Element, key: string): void {
+  const collectChart = (el: Element, key: string): void => {
     const backdrop = effectiveBackground(el);
     const rawCount = el.getAttribute('data-mpo-chart-datum-count');
     const expected = rawCount !== null && /^\d+$/.test(rawCount) ? Number(rawCount) : -1;
@@ -856,7 +858,7 @@ export function captureMatrixSnapshot(): MatrixSnapshot {
       }
     }
 
-    function paintSample(shape: Element, paintKey: string, label: string): MatrixChartPaint {
+    const paintSample = (shape: Element, paintKey: string, label: string): MatrixChartPaint => {
       const item: MatrixChartPaint = { key: paintKey, label, background: backdrop.hex };
       if (shape.closest('defs, clipPath, mask, pattern, marker, symbol')) {
         return { ...item, unmeasurable: 'no-paint' };
@@ -926,7 +928,7 @@ export function captureMatrixSnapshot(): MatrixSnapshot {
         return { ...item, unmeasurable: paints.size ? 'multicolor' : 'no-paint' };
       }
       return { ...item, paint: Array.from(paints)[0] };
-    }
+    };
 
     for (const [index, mark] of marks.entries()) {
       const tag = mark.tagName.toLowerCase();
@@ -1023,7 +1025,7 @@ export function captureMatrixSnapshot(): MatrixSnapshot {
     if (sample.kind === 'area') {
       sample.unmeasurable ??= 'unsupported-overlap';
     }
-  }
+  };
 
   /**
    * The element's own painted text, if any: the Range-measured rect of its
@@ -1034,7 +1036,7 @@ export function captureMatrixSnapshot(): MatrixSnapshot {
    * happens to hold text still contributes its sample — dropping a text
    * measurement would read as a pass.
    */
-  function collectText(el: Element, key: string, cs: CSSStyleDeclaration): MatrixRect | undefined {
+  const collectText = (el: Element, key: string, cs: CSSStyleDeclaration): MatrixRect | undefined => {
     const directText: Text[] = [];
     for (const child of Array.from(el.childNodes)) {
       if (child.nodeType === 3 && (child.textContent ?? '').trim().length > 0) {
@@ -1074,7 +1076,7 @@ export function captureMatrixSnapshot(): MatrixSnapshot {
       }
     }
     return toRect(textRect);
-  }
+  };
 
   /**
    * The children that actually generate a BOX, hoisting straight through
@@ -1092,7 +1094,7 @@ export function captureMatrixSnapshot(): MatrixSnapshot {
    * bold. Nothing an invariance gate can assert is lost, because an element
    * with no box has no geometry to move.
    */
-  function boxedChildren(el: Element, path: string): Element[] {
+  const boxedChildren = (el: Element, path: string): Element[] => {
     const out: Element[] = [];
     const counts: Record<string, number> = {};
     for (const child of Array.from(el.children)) {
@@ -1120,9 +1122,9 @@ export function captureMatrixSnapshot(): MatrixSnapshot {
       out.push(child);
     }
     return out;
-  }
+  };
 
-  function visit(el: Element, path: string): void {
+  const visit = (el: Element, path: string): void => {
     const tag = el.tagName.toLowerCase();
     const cs = getComputedStyle(el);
 
@@ -1164,7 +1166,7 @@ export function captureMatrixSnapshot(): MatrixSnapshot {
       counts[childTag] = index + 1;
       visit(child, `${path}/${childTag}:${index}`);
     }
-  }
+  };
 
   if (root) {
     const counts: Record<string, number> = {};
@@ -1192,7 +1194,7 @@ export function captureMatrixSnapshot(): MatrixSnapshot {
   }
 
   return { storyRendered, geometry, textSamples, iconSamples, chartSamples, svgRootCount };
-}
+};
 
 // ── Node-side comparators (pure, vitest-covered) ─────────────────────────────
 
@@ -1202,11 +1204,11 @@ export function captureMatrixSnapshot(): MatrixSnapshot {
  * `epsilonPx` absorbs sub-pixel raster jitter in rect measurements only —
  * computed properties compare exactly.
  */
-export function diffGeometry(
+export const diffGeometry = (
   before: MatrixSnapshot,
   after: MatrixSnapshot,
   options: { epsilonPx?: number } = {},
-): GeometryDiff {
+): GeometryDiff => {
   const epsilon = options.epsilonPx ?? 0;
   const byKey = new Map(before.geometry.map((g) => [g.key, g]));
   const seen = new Set<string>();
@@ -1271,7 +1273,7 @@ export function diffGeometry(
     addedKeys,
     moves,
   };
-}
+};
 
 /**
  * The contrast assertion for the matrix (and for downstream repos — call
@@ -1281,7 +1283,7 @@ export function diffGeometry(
  * resolved (gradient/image/never-opaque chain) are counted, never
  * silently dropped.
  */
-export function evaluateTextContrast(samples: MatrixTextSample[]): TextContrastResult {
+export const evaluateTextContrast = (samples: MatrixTextSample[]): TextContrastResult => {
   let measured = 0;
   let unmeasurable = 0;
   const violations: TextContrastViolation[] = [];
@@ -1316,10 +1318,10 @@ export function evaluateTextContrast(samples: MatrixTextSample[]): TextContrastR
     }
   }
   return { measured, unmeasurable, violations };
-}
+};
 
 /** A bounded single-ink SVG assertion. Unsupported compositions stay unverified. */
-export function evaluateIconContrast(samples: MatrixIconSample[]): IconContrastResult {
+export const evaluateIconContrast = (samples: MatrixIconSample[]): IconContrastResult => {
   const result: IconContrastResult = {
     ok: true,
     candidates: 0,
@@ -1379,10 +1381,10 @@ export function evaluateIconContrast(samples: MatrixIconSample[]): IconContrastR
   }
   result.ok = result.violations.length === 0 && result.unverified.length === 0;
   return result;
-}
+};
 
 /** Stable named findings for both absolute cell failures and preset attribution. */
-export function iconContrastSignatures(result: IconContrastResult): string[] {
+export const iconContrastSignatures = (result: IconContrastResult): string[] => {
   return [
     ...result.violations.map(
       (item) =>
@@ -1390,10 +1392,10 @@ export function iconContrastSignatures(result: IconContrastResult): string[] {
     ),
     ...result.unverified.map((item) => `${item.key} (${item.context}) icon UNVERIFIED: ${item.reason}`),
   ];
-}
+};
 
 /** Bounded chart proof. Declarations route samples; measured paint decides. */
-export function evaluateChartProof(samples: MatrixChartSample[]): ChartProofResult {
+export const evaluateChartProof = (samples: MatrixChartSample[]): ChartProofResult => {
   const result: ChartProofResult = {
     ok: true,
     candidates: samples.length,
@@ -1526,9 +1528,9 @@ export function evaluateChartProof(samples: MatrixChartSample[]): ChartProofResu
   }
   result.ok = result.violations.length === 0 && result.unverified.length === 0;
   return result;
-}
+};
 
-export function chartProofSignatures(result: ChartProofResult): string[] {
+export const chartProofSignatures = (result: ChartProofResult): string[] => {
   return [
     ...result.violations.map(
       (item) =>
@@ -1536,7 +1538,7 @@ export function chartProofSignatures(result: ChartProofResult): string[] {
     ),
     ...result.unverified.map((item) => `${item.key} (${item.context}) chart UNVERIFIED: ${item.reason}`),
   ];
-}
+};
 
 /** One matrix cell's no-breakage inputs (preset axis). */
 export interface NoBreakageInput {
@@ -1574,7 +1576,7 @@ export interface NoBreakageInput {
  * `"<element label> :: <violation>"`, so two cells can be compared by what
  * broke rather than by how many things broke.
  */
-export function auditSignatures(violations: { key?: string; label: string; violations: string[] }[]): string[] {
+export const auditSignatures = (violations: { key?: string; label: string; violations: string[] }[]): string[] => {
   const out: string[] = [];
   for (const element of violations) {
     for (const violation of element.violations) {
@@ -1582,10 +1584,10 @@ export function auditSignatures(violations: { key?: string; label: string; viola
     }
   }
   return out;
-}
+};
 
 /** Multiset difference: entries in `after` beyond what `before` already had. */
-function newEntries(before: string[], after: string[]): string[] {
+const newEntries = (before: string[], after: string[]): string[] => {
   const remaining = new Map<string, number>();
   for (const entry of before) {
     remaining.set(entry, (remaining.get(entry) ?? 0) + 1);
@@ -1600,7 +1602,7 @@ function newEntries(before: string[], after: string[]): string[] {
     }
   }
   return added;
-}
+};
 
 const namedList = (entries: string[], limit = 6): string => {
   if (entries.length === 0) {
@@ -1622,7 +1624,7 @@ export interface NoBreakageResult {
  * the knob scales beyond the default cell's standing debt, or text ink
  * lost contrast the default cell still had.
  */
-export function evaluateNoBreakage(input: NoBreakageInput): NoBreakageResult {
+export const evaluateNoBreakage = (input: NoBreakageInput): NoBreakageResult => {
   const failures: string[] = [];
   if (!input.storyRendered) {
     failures.push('story did not render (empty story root)');
@@ -1671,4 +1673,4 @@ export function evaluateNoBreakage(input: NoBreakageInput): NoBreakageResult {
     }
   }
   return { ok: failures.length === 0, failures };
-}
+};

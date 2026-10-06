@@ -10,10 +10,10 @@ import { Form, useEffectiveValidateOn } from './index';
 describe('Form validateOn remapping', () => {
   it('stays on submit before the first attempt', () => {
     let effective: string | undefined;
-    function Probe() {
+    const Probe = () => {
       effective = useEffectiveValidateOn();
       return null;
-    }
+    };
     renderWithProviders(
       <Form
         validateOn="submit"
@@ -26,10 +26,10 @@ describe('Form validateOn remapping', () => {
 
   it('upgrades to blur-then-change after a failed submit', async () => {
     let effective = 'submit';
-    function Probe() {
+    const Probe = () => {
       effective = useEffectiveValidateOn();
       return null;
-    }
+    };
     const result = renderWithProviders(
       <Form
         formOptions={{ defaultValues: { name: '' } }}
@@ -67,10 +67,10 @@ describe('Form validateOn remapping', () => {
 
   it('honors explicit validateOn=blur without waiting for submit', () => {
     let effective: string | undefined;
-    function Probe() {
+    const Probe = () => {
       effective = useEffectiveValidateOn();
       return null;
-    }
+    };
     renderWithProviders(
       <Form
         validateOn="blur"

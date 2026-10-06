@@ -18,7 +18,7 @@ afterEach(() => {
   catalog.current = {};
 });
 
-function OpenDialog({ children }: { children: ReactNode }) {
+const OpenDialog = ({ children }: { children: ReactNode }) => {
   return (
     <Dialog open>
       <Dialog.Portal>
@@ -29,9 +29,9 @@ function OpenDialog({ children }: { children: ReactNode }) {
       </Dialog.Portal>
     </Dialog>
   );
-}
+};
 
-function OpenAlertDialog({ children }: { children: ReactNode }) {
+const OpenAlertDialog = ({ children }: { children: ReactNode }) => {
   return (
     <AlertDialog open>
       <AlertDialog.Portal>
@@ -42,7 +42,7 @@ function OpenAlertDialog({ children }: { children: ReactNode }) {
       </AlertDialog.Portal>
     </AlertDialog>
   );
-}
+};
 
 const noDialogClose = () => {
   expect(screen.queryAllByRole('button', { name: 'Dialog Close' })).toHaveLength(0);

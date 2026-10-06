@@ -13,20 +13,20 @@ const GeocoderContext = createContext<Geocoder | null>(null);
  * opts a field out. Create the geocoder once (module scope or `useMemo`), not
  * per render.
  */
-export function GeocoderProvider({ geocoder, children }: { geocoder: Geocoder | null; children?: ReactNode }) {
+export const GeocoderProvider = ({ geocoder, children }: { geocoder: Geocoder | null; children?: ReactNode }) => {
   return <GeocoderContext.Provider value={geocoder}>{children}</GeocoderContext.Provider>;
-}
+};
 
-export function useGeocoder(): Geocoder | null {
+export const useGeocoder = (): Geocoder | null => {
   return useContext(GeocoderContext);
-}
+};
 
 /**
  * The provider's address for a pair, or null while it resolves, when no
  * provider is mounted, when nothing is near, or when the lookup fails. A
  * read-only face shows the pair until this answers.
  */
-export function useReverseGeocodedLabel(pair: { lat: number; lng: number } | null): string | null {
+export const useReverseGeocodedLabel = (pair: { lat: number; lng: number } | null): string | null => {
   const geocoder = useGeocoder();
   const lat = pair?.lat;
   const lng = pair?.lng;
@@ -54,4 +54,4 @@ export function useReverseGeocodedLabel(pair: { lat: number; lng: number } | nul
     };
   }, [geocoder, key, lat, lng]);
   return resolved && resolved.key === key ? resolved.label : null;
-}
+};

@@ -18,7 +18,7 @@ interface ErrorBoundaryState {
   hasError: boolean;
 }
 
-function ErrorFallback({ onRetry }: { onRetry: () => void }) {
+const ErrorFallback = ({ onRetry }: { onRetry: () => void }) => {
   const { t } = useTranslation();
   // Retry is an inline action label — weight 400 on the TEXT NODE.
   const retryLabel = t('Try again?');
@@ -34,7 +34,7 @@ function ErrorFallback({ onRetry }: { onRetry: () => void }) {
       }
     />
   );
-}
+};
 
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   static getDerivedStateFromError(_err: Error): ErrorBoundaryState {

@@ -77,7 +77,7 @@ const SeparatorFrame = styled(View, {
 
 export interface SeparatorProps extends GetProps<typeof SeparatorFrame> {}
 
-export function Separator({ vertical, ...props }: SeparatorProps) {
+export const Separator = ({ vertical, ...props }: SeparatorProps) => {
   return (
     <SeparatorFrame
       role="separator"
@@ -88,4 +88,4 @@ export function Separator({ vertical, ...props }: SeparatorProps) {
       {...props}
     />
   );
-}
+};

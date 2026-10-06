@@ -13,9 +13,9 @@ afterEach(cleanup);
 const originalInnerWidth = window.innerWidth;
 
 /** Drive the real size-class path from a viewport width (setup reads it at render). */
-function setViewportWidth(width: number) {
+const setViewportWidth = (width: number) => {
   Object.defineProperty(window, 'innerWidth', { configurable: true, value: width });
-}
+};
 
 afterEach(() => {
   setViewportWidth(originalInnerWidth);
@@ -26,7 +26,7 @@ afterEach(() => {
  * two scaffolds. `sizeClass` is set on the OUTER one only, so this also
  * covers whether the class reaches the inner scaffold.
  */
-function ThreeRegionPage(props: { sizeClass?: 'compact' | 'medium' | 'expanded' | 'large' | 'xl' }) {
+const ThreeRegionPage = (props: { sizeClass?: 'compact' | 'medium' | 'expanded' | 'large' | 'xl' }) => {
   return (
     <PaneScaffold
       sizeClass={props.sizeClass}
@@ -37,7 +37,7 @@ function ThreeRegionPage(props: { sizeClass?: 'compact' | 'medium' | 'expanded' 
       />
     />
   );
-}
+};
 
 describe('layouts index exports (W11)', () => {
   it('exports PaneScaffold canonical layouts + ReadingWidth', () => {
@@ -281,7 +281,7 @@ describe('ReadingWidth', () => {
 // under primary with the sash, clamps and fraction contract the side-by-side
 // split already has, turned on its side.
 describe('PaneScaffold orientation', () => {
-  function renderSplit(props: Partial<PaneScaffoldProps> = {}) {
+  const renderSplit = (props: Partial<PaneScaffoldProps> = {}) => {
     renderWithProviders(
       <PaneScaffold
         sizeClass="expanded"
@@ -291,9 +291,9 @@ describe('PaneScaffold orientation', () => {
       />,
     );
     return screen.getByTestId('pane-sash');
-  }
+  };
 
-  function boundRow(width: number, height: number) {
+  const boundRow = (width: number, height: number) => {
     const row = screen.getByTestId('pane-primary').parentElement as HTMLElement;
     row.getBoundingClientRect = () =>
       ({
@@ -307,7 +307,7 @@ describe('PaneScaffold orientation', () => {
         height,
         toJSON: () => ({}),
       }) as DOMRect;
-  }
+  };
 
   it('docks secondary under primary behind a horizontal sash', () => {
     const sash = renderSplit({ orientation: 'vertical' });

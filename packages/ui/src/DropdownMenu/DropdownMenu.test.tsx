@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DropdownMenu } from './index';
 
-function renderMenu(onSelect = vi.fn(), onDelete = vi.fn()) {
+const renderMenu = (onSelect = vi.fn(), onDelete = vi.fn()) => {
   const result = renderWithProviders(
     <DropdownMenu defaultOpen>
       <DropdownMenu.Trigger asChild>
@@ -30,7 +30,7 @@ function renderMenu(onSelect = vi.fn(), onDelete = vi.fn()) {
     </DropdownMenu>,
   );
   return result;
-}
+};
 
 describe('DropdownMenu', () => {
   it('renders menu items when open', async () => {
@@ -393,7 +393,7 @@ describe('DropdownMenu keyboard ring', () => {
 });
 
 describe('DropdownMenu FloatingPanel cover contract', () => {
-  function renderOpen() {
+  const renderOpen = () => {
     return renderWithProviders(
       <DropdownMenu
         defaultOpen
@@ -406,7 +406,7 @@ describe('DropdownMenu FloatingPanel cover contract', () => {
         <Button>Actions</Button>
       </DropdownMenu>,
     );
-  }
+  };
 
   it('uses FloatingPanel, not a second overlay stack', async () => {
     renderOpen();
@@ -587,7 +587,7 @@ describe('DropdownMenu.Content onCloseAutoFocus', () => {
     // themselves after executeCommand. That is a controlled close, not
     // ctx.close() and not FloatingPanel dismissing on its own.
     const onCloseAutoFocus = vi.fn();
-    function Harness() {
+    const Harness = () => {
       const [open, setOpen] = useState(true);
       return (
         <DropdownMenu
@@ -607,7 +607,7 @@ describe('DropdownMenu.Content onCloseAutoFocus', () => {
           </DropdownMenu.Content>
         </DropdownMenu>
       );
-    }
+    };
     renderWithProviders(<Harness />);
     await waitFor(() => {
       expect(document.querySelector('[role="menu"]')).toBeTruthy();

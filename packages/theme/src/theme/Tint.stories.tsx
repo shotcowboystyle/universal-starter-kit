@@ -21,7 +21,7 @@ export default {
 };
 
 /** Keeps the surrounding knobs, pins the tint family to defaultPreset's four names. */
-function WithDefaultTints({ children }: { children: ReactNode }) {
+const WithDefaultTints = ({ children }: { children: ReactNode }) => {
   const parent = usePresetContext();
   const value = useMemo(
     () => ({
@@ -31,9 +31,9 @@ function WithDefaultTints({ children }: { children: ReactNode }) {
     [parent],
   );
   return <PresetContext.Provider value={value}>{children}</PresetContext.Provider>;
-}
+};
 
-function Swatch({ label }: { label?: string }) {
+const Swatch = ({ label }: { label?: string }) => {
   const depth = useTintDepth();
   return (
     <YStack
@@ -49,7 +49,7 @@ function Swatch({ label }: { label?: string }) {
       </SizableText>
     </YStack>
   );
-}
+};
 
 /** Five nested Tints: orange, blue, purple, pink, then orange again (modulo). */
 export const main = {

@@ -8,14 +8,16 @@ interface AppLayoutProps {
   params: Promise<{ locale: string }>;
 }
 
-export default async function AppLayout({ children }: Readonly<AppLayoutProps>) {
+const WorkspaceLoadingSkeleton = () => {
+  return <WorkspaceSpinner />;
+};
+
+const AppLayout = async ({ children }: Readonly<AppLayoutProps>) => {
   return (
     <Suspense fallback=<WorkspaceLoadingSkeleton />>
       <RootWrapper>{children}</RootWrapper>
     </Suspense>
   );
-}
+};
 
-function WorkspaceLoadingSkeleton() {
-  return <WorkspaceSpinner />;
-}
+export default AppLayout;

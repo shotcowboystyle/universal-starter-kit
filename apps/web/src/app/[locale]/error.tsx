@@ -3,7 +3,7 @@
 import { Button, H2, Paragraph, YStack } from '@repo/ui';
 import { useTranslations } from 'next-intl';
 
-export default function LocaleError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+const LocaleError = ({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) => {
   const t = useTranslations('error');
 
   return (
@@ -28,4 +28,6 @@ export default function LocaleError({ error, reset }: { error: Error & { digest?
       </Button>
     </YStack>
   );
-}
+};
+
+export default LocaleError;

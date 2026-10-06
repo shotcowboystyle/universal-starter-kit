@@ -17,11 +17,11 @@ vi.mock('next/navigation', () => ({
   useParams: () => mockUseParams(),
 }));
 
-async function pick(label: string) {
+const pick = async (label: string) => {
   fireEvent.click(screen.getByRole('button'));
   const item = await screen.findByRole('menuitem', { name: label });
   fireEvent.click(item);
-}
+};
 
 describe('LanguageSwitcher', () => {
   beforeEach(() => {

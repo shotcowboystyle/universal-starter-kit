@@ -13,15 +13,15 @@ import { ControlGroup } from './index';
 
 afterEach(cleanup);
 
-function group(container: HTMLElement) {
+const group = (container: HTMLElement) => {
   return container.querySelector('[data-mp-control-group]') as HTMLElement | null;
-}
+};
 
-function radiusClasses(el: HTMLElement | null): string[] {
+const radiusClasses = (el: HTMLElement | null): string[] => {
   return String(el?.className || '')
     .split(' ')
     .filter((c) => c.startsWith('_btlr-'));
-}
+};
 
 describe('ControlGroup', () => {
   it('keeps inner seams square while the outer frame rides the radius knob (R-OUTER)', () => {

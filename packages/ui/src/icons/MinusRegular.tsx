@@ -3,7 +3,7 @@ import { memo } from 'react';
 
 import { themed } from './themed';
 
-function Icon({
+const Icon = ({
   color = 'currentColor',
   size = 24,
   ...otherProps
@@ -11,7 +11,7 @@ function Icon({
   color?: string;
   size?: number | string;
   [key: string]: unknown;
-}) {
+}) => {
   return (
     <Svg
       viewBox="0 0 256 256"
@@ -36,7 +36,7 @@ function Icon({
       />
     </Svg>
   );
-}
+};
 Icon.displayName = 'MinusRegular';
 const MinusRegular = memo(themed(Icon));
 export { MinusRegular };

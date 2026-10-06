@@ -23,11 +23,11 @@ interface Props {
   params: Promise<{ locale: string }>;
 }
 
-export function generateStaticParams() {
+export const generateStaticParams = () => {
   return routing.locales.map((locale) => ({ locale }));
-}
+};
 
-export async function generateMetadata({ params }: Omit<Props, 'children'>): Promise<Metadata> {
+export const generateMetadata = async ({ params }: Omit<Props, 'children'>): Promise<Metadata> => {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'metadata' });
 
@@ -35,9 +35,9 @@ export async function generateMetadata({ params }: Omit<Props, 'children'>): Pro
     title: t('title'),
     description: t('description'),
   };
-}
+};
 
-export default async function LocaleLayout({ children, params }: Readonly<Props>) {
+const LocaleLayout = async ({ children, params }: Readonly<Props>) => {
   const { locale } = await params;
   // Enable static rendering
   setRequestLocale(locale);
@@ -75,4 +75,6 @@ export default async function LocaleLayout({ children, params }: Readonly<Props>
       </body>
     </html>
   );
-}
+};
+
+export default LocaleLayout;

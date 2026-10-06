@@ -15,21 +15,21 @@ import { Table } from './index';
 
 afterEach(cleanup);
 
-function classes(el: Element, prefix: string): string[] {
+const classes = (el: Element, prefix: string): string[] => {
   return String(el.className || '')
     .split(' ')
     .filter((c) => c.startsWith(prefix))
     .sort();
-}
+};
 
-function explicit(prefix: string, props: Record<string, string>): string[] {
+const explicit = (prefix: string, props: Record<string, string>): string[] => {
   renderWithProviders(<RawText {...props}>probe</RawText>);
   const got = classes(screen.getByText('probe'), prefix);
   cleanup();
   return got;
-}
+};
 
-function renderTable(overrides: Record<string, string>) {
+const renderTable = (overrides: Record<string, string>) => {
   return renderWithProviders(
     <Preset overrides={overrides as never}>
       <Table>
@@ -46,7 +46,7 @@ function renderTable(overrides: Record<string, string>) {
       </Table>
     </Preset>,
   );
-}
+};
 
 describe('Table.Cell body values follow the text knobs', () => {
   it.each([

@@ -5,11 +5,11 @@ export interface PanelPortalProps {
   children: ReactNode;
 }
 
-export function panelPortalHost(): null {
+export const panelPortalHost = (): null => {
   return null;
-}
+};
 
 /** Native panels are sheets and modals, never clipped by a scroll view. */
-export function PanelPortal({ children }: PanelPortalProps) {
+export const PanelPortal = ({ children }: PanelPortalProps) => {
   return <>{children}</>;
-}
+};

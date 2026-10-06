@@ -71,11 +71,11 @@ type SortDir = 'asc' | 'desc';
 type SortState = { field: string; dir: SortDir } | null;
 type FocusItem = { type: 'group'; key: string } | { type: 'row'; row: Record<string, unknown>; index: number };
 
-function isNumericFieldType(fieldtype: string): boolean {
+const isNumericFieldType = (fieldtype: string): boolean => {
   return numericFieldTypes.has(fieldtype);
-}
+};
 
-function formatCellValue(value: unknown, fieldtype: string): string {
+const formatCellValue = (value: unknown, fieldtype: string): string => {
   if (value === null || value === undefined) {
     return '\u2014';
   }
@@ -115,9 +115,9 @@ function formatCellValue(value: unknown, fieldtype: string): string {
       return String(value);
     }
   }
-}
+};
 
-function compareValues(a: unknown, b: unknown, fieldtype: string): number {
+const compareValues = (a: unknown, b: unknown, fieldtype: string): number => {
   if (a == null && b == null) {
     return 0;
   }
@@ -134,9 +134,9 @@ function compareValues(a: unknown, b: unknown, fieldtype: string): number {
     return String(a).localeCompare(String(b));
   }
   return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' });
-}
+};
 
-function SimpleBarChart({ data, height = 200 }: { data: { label: string; value: number }[]; height?: number }) {
+const SimpleBarChart = ({ data, height = 200 }: { data: { label: string; value: number }[]; height?: number }) => {
   const { knobProps } = useResolvedKnobs();
   if (data.length === 0) {
     return null;
@@ -154,7 +154,7 @@ function SimpleBarChart({ data, height = 200 }: { data: { label: string; value: 
       />
     </YStack>
   );
-}
+};
 
 /**
  * Generic report builder — Frappe Report View / Query Report chrome:
@@ -162,7 +162,7 @@ function SimpleBarChart({ data, height = 200 }: { data: { label: string; value: 
  * optional grouped chart, export. Rows are a stacked group
  * (CONTAINER-CLIP); selected = fill, keyboard focus = one inset ring.
  */
-export function ReportBuilder({
+export const ReportBuilder = ({
   columns,
   data,
   groupBy: groupByProp,
@@ -178,7 +178,7 @@ export function ReportBuilder({
   height,
   minHeight,
   ...stackProps
-}: ReportBuilderProps) {
+}: ReportBuilderProps) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
   const nestedPx = knobProps.nestedControl.px;
@@ -991,4 +991,4 @@ export function ReportBuilder({
       </YStack>
     </YStack>
   );
-}
+};

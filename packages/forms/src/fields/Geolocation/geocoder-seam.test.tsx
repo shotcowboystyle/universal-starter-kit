@@ -24,16 +24,16 @@ import { Geolocation } from './index';
 const HELSINKI = JSON.stringify({ lat: 60.16952, lng: 24.93545 });
 const SYDNEY = JSON.stringify({ lat: -33.8688, lng: 151.2093 });
 
-function searchInput(container: HTMLElement) {
+const searchInput = (container: HTMLElement) => {
   return (container.querySelector("[data-testid='geolocation-search']") ??
     container.querySelector("[aria-label='Search for a location']")) as HTMLInputElement | null;
-}
+};
 
-function typeSearch(container: HTMLElement, text: string) {
+const typeSearch = (container: HTMLElement, text: string) => {
   const input = searchInput(container);
   expect(input).not.toBeNull();
   fireEvent.change(input as HTMLInputElement, { target: { value: text } });
-}
+};
 
 /**
  * Consumer provider #1 — offline gazetteer. No network, no key, no adapter.
@@ -58,7 +58,7 @@ const offlineGeocoder = {
  * provider must take, and the reason the seam is the load-bearing half
  * under BOTH candidates.
  */
-function createProxyGeocoder(options: { endpoint: string; fetch: typeof globalThis.fetch }): Geocoder {
+const createProxyGeocoder = (options: { endpoint: string; fetch: typeof globalThis.fetch }): Geocoder => {
   const call = async (path: string, params: Record<string, string>): Promise<unknown> => {
     const url = new URL(path, options.endpoint);
     for (const [key, value] of Object.entries(params)) {
@@ -75,7 +75,7 @@ function createProxyGeocoder(options: { endpoint: string; fetch: typeof globalTh
     reverseGeocode: async ({ lat, lng }) =>
       (await call('reverse', { lat: String(lat), lng: String(lng) })) as GeocodeResult | null,
   };
-}
+};
 
 describe('candidate A — a consumer-authored geocoder satisfies the seam', () => {
   it('type-level: a hand-written object satisfies Geocoder with no package adapter', () => {

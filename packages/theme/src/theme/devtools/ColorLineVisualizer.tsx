@@ -13,9 +13,17 @@ import type { Knobs } from '../knobs';
 
 import { contrastTextFor, cellSize } from './viz-constants';
 
+const fallbackGradient = (): string[] => {
+  return Array.from({ length: 12 }, (_, i) => {
+    const t = i / 11;
+    const v = Math.round(240 - t * 200);
+    return `rgb(${v},${v},${v})`;
+  });
+};
+
 // ── Helpers ──────────────────────────────────────────────────
 
-function readColorsFromElement(el: Element): string[] | null {
+const readColorsFromElement = (el: Element): string[] | null => {
   const style = getComputedStyle(el);
   const result: string[] = [];
   let found = false;
@@ -32,9 +40,9 @@ function readColorsFromElement(el: Element): string[] | null {
     }
   }
   return found ? result : null;
-}
+};
 
-function useDomThemeColors(): string[] {
+const useDomThemeColors = (): string[] => {
   const [colors, setColors] = useState<string[]>(() => fallbackGradient());
 
   useEffect(() => {
@@ -79,19 +87,11 @@ function useDomThemeColors(): string[] {
   }, []);
 
   return colors;
-}
-
-function fallbackGradient(): string[] {
-  return Array.from({ length: 12 }, (_, i) => {
-    const t = i / 11;
-    const v = Math.round(240 - t * 200);
-    return `rgb(${v},${v},${v})`;
-  });
-}
+};
 
 // ── Sub-components ──────────────────────────────────────────
 
-function NumberLineRow({ colorFor, compact }: { colorFor: (step: number) => string; compact?: boolean }) {
+const NumberLineRow = ({ colorFor, compact }: { colorFor: (step: number) => string; compact?: boolean }) => {
   const h = compact ? Math.round(cellSize / 2) : cellSize;
   return (
     <div style={{ display: 'flex', gap: 0 }}>
@@ -120,10 +120,10 @@ function NumberLineRow({ colorFor, compact }: { colorFor: (step: number) => stri
       })}
     </div>
   );
-}
+};
 
 /** All semantic group brackets rendered on a single row above the color bar. */
-function SemanticBrackets() {
+const SemanticBrackets = () => {
   const totalWidth = 12 * cellSize;
   return (
     <div style={{ position: 'relative', height: 24, width: totalWidth, marginBottom: 2 }}>
@@ -166,11 +166,11 @@ function SemanticBrackets() {
       })}
     </div>
   );
-}
+};
 
 // ── Styles ──────────────────────────────────────────────────
 
-function createVizStyles(isDark: boolean) {
+const createVizStyles = (isDark: boolean) => {
   const border = isDark ? '#333' : '#ddd';
   const mutedText = isDark ? '#888' : '#999';
   const foreground = isDark ? '#e8e8e8' : '#1a1a1a';
@@ -198,7 +198,7 @@ function createVizStyles(isDark: boolean) {
       color: mutedText,
     },
   };
-}
+};
 
 // ── Main component ──────────────────────────────────────────
 
@@ -211,14 +211,14 @@ export interface ColorLineVisualizerProps {
   oppositeAccentColors?: string[];
 }
 
-export function ColorLineVisualizer({
+export const ColorLineVisualizer = ({
   knobs: _knobs,
   isDark,
   themeColors: propColors,
   oppositeThemeColors: propOppositeColors,
   accentColors: propAccentColors,
   oppositeAccentColors: propOppositeAccentColors,
-}: ColorLineVisualizerProps) {
+}: ColorLineVisualizerProps) => {
   const domColors = useDomThemeColors();
   const themeColors = propColors && propColors.length === 12 ? propColors : domColors;
   const styles = useMemo(() => createVizStyles(isDark), [isDark]);
@@ -266,4 +266,4 @@ export function ColorLineVisualizer({
       )}
     </div>
   );
-}
+};

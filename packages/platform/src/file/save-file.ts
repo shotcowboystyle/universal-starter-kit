@@ -3,7 +3,7 @@ import { downloadBlob } from '../utils/download-file';
 import { FileSaveError, prepareFileSave } from './types';
 import type { FileSaveOptions, FileSaveResult } from './types';
 
-export async function saveFile(options: FileSaveOptions): Promise<FileSaveResult> {
+export const saveFile = async (options: FileSaveOptions): Promise<FileSaveResult> => {
   const input = prepareFileSave(options);
   if (
     typeof document === 'undefined' ||
@@ -24,4 +24,4 @@ export async function saveFile(options: FileSaveOptions): Promise<FileSaveResult
     });
   }
   return { status: 'download-requested' };
-}
+};

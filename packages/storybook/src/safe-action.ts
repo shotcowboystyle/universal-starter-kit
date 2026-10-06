@@ -17,7 +17,7 @@ import { action as addonAction } from 'storybook/actions';
 
 const MAX_DEPTH = 5;
 
-function summarize(value: unknown): string | undefined {
+const summarize = (value: unknown): string | undefined => {
   if (typeof value === 'function') {
     return `[Function ${(value as { name?: string }).name || 'anonymous'}]`;
   }
@@ -37,9 +37,9 @@ function summarize(value: unknown): string | undefined {
     }
   }
   return undefined;
-}
+};
 
-function sanitize(value: unknown, depth: number, seen: WeakSet<object>): unknown {
+const sanitize = (value: unknown, depth: number, seen: WeakSet<object>): unknown => {
   const summary = summarize(value);
   if (summary !== undefined) {
     return summary;
@@ -76,9 +76,9 @@ function sanitize(value: unknown, depth: number, seen: WeakSet<object>): unknown
     // appear in sibling branches (DAG).
     seen.delete(obj);
   }
-}
+};
 
-export function action(name: string, options?: Parameters<typeof addonAction>[1]): ReturnType<typeof addonAction> {
+export const action = (name: string, options?: Parameters<typeof addonAction>[1]): ReturnType<typeof addonAction> => {
   const fire = addonAction(name, options);
   return (...args: unknown[]) => fire(...args.map((arg) => sanitize(arg, MAX_DEPTH, new WeakSet())));
-}
+};

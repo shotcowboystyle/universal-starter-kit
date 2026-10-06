@@ -6,7 +6,7 @@ import type { Board } from '@/types/db-interface';
 const BOARDS_ENDPOINT = `${API_URL}/boards`;
 
 // Helper function to handle fetch requests
-async function fetchWithAuth<T>(url: string, options: RequestInit = {}): Promise<T> {
+const fetchWithAuth = async <T>(url: string, options: RequestInit = {}): Promise<T> => {
   try {
     // Get token from localStorage for Authorization header
     const token = localStorage.getItem('auth_token');
@@ -84,7 +84,7 @@ async function fetchWithAuth<T>(url: string, options: RequestInit = {}): Promise
     console.error('Fetch error:', error);
     throw error;
   }
-}
+};
 
 /**
  * API client for board-related operations

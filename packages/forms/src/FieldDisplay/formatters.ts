@@ -11,7 +11,7 @@ import { formatAbsoluteDate, formatCurrency, formatNumber } from '@repo/theme';
 
 export const EMPTY = '—';
 
-export function asText(v: any): string {
+export const asText = (v: any): string => {
   if (v == null || v === '') {
     return EMPTY;
   }
@@ -31,7 +31,7 @@ export function asText(v: any): string {
   } catch {
     return String(v);
   }
-}
+};
 
 export interface NumericFormatOptions {
   precision?: number;
@@ -45,13 +45,13 @@ export interface NumericFormatOptions {
  * and a group aggregate. `precision` pins the fraction digits a Frappe field
  * declares; the register owns everything else.
  */
-export function formatNumericText(num: number, options: NumericFormatOptions = {}): string {
+export const formatNumericText = (num: number, options: NumericFormatOptions = {}): string => {
   const { precision, currency } = options;
   if (currency) {
     return formatCurrency(num, { precision, symbol: currency });
   }
   return formatNumber(num, { precision });
-}
+};
 
 // Re-exported for existing consumers; the canonical shape lives in theme.
 export { ISO_DATE_ONLY } from '@repo/theme';
@@ -68,8 +68,8 @@ export interface DateFormatOptions {
  * ISO or verbose locale output. `dateFormat` is accepted for compatibility
  * but the register channel owns the shape.
  */
-export function formatDateText(value: any, options: DateFormatOptions = {}): string {
+export const formatDateText = (value: any, options: DateFormatOptions = {}): string => {
   const { withTime } = options;
   const formatted = formatAbsoluteDate(value, { withTime });
   return formatted === '' ? asText(value) : formatted;
-}
+};

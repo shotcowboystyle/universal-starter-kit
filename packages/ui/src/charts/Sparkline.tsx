@@ -35,7 +35,7 @@ export interface SparklineProps extends Omit<YStackProps, 'children' | 'width' |
  * one identity-colored line with an optional soft area. The generated
  * accessible summary carries the data shape a glance conveys visually.
  */
-export function Sparkline({
+export const Sparkline = ({
   data,
   height = 36,
   width,
@@ -47,7 +47,7 @@ export function Sparkline({
   label,
   valueFormatter,
   ...stackProps
-}: SparklineProps) {
+}: SparklineProps) => {
   const { t } = useTranslation();
   const { palette } = useChartTheme();
   const stroke = color ?? palette.single;
@@ -120,4 +120,4 @@ export function Sparkline({
       }}
     </ChartSurface>
   );
-}
+};

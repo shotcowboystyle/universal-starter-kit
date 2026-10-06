@@ -43,37 +43,37 @@ vi.mock('@repo/theme', async (importOriginal) => {
   return { ...actual, wasKeyboardFocus: () => keyboardModality };
 });
 
-function pressKey() {
+const pressKey = () => {
   keyboardModality = true;
-}
-function pressPointer() {
+};
+const pressPointer = () => {
   keyboardModality = false;
-}
+};
 
 afterEach(() => {
   keyboardModality = false;
 });
 
-function glyph(container: HTMLElement): HTMLElement {
+const glyph = (container: HTMLElement): HTMLElement => {
   const node = container.querySelector("[data-checkbox-box='true']");
   if (!node) {
     throw new Error('CheckboxGlyphBox did not render');
   }
   return node as HTMLElement;
-}
+};
 
 /** Tamagui paints through atomic classes, so read both channels. */
-function cssOf(node: HTMLElement, prop: string): string {
+const cssOf = (node: HTMLElement, prop: string): string => {
   const inline = node.style.getPropertyValue(prop);
   if (inline) {
     return inline;
   }
   return getComputedStyle(node).getPropertyValue(prop) || '';
-}
+};
 
-function classesOf(node: HTMLElement): string {
+const classesOf = (node: HTMLElement): string => {
   return Array.from(node.classList).join(' ');
-}
+};
 
 describe('CheckboxBox — the target is 44px and the glyph is smaller', () => {
   it('pins the WCAG 2.5.5 pressable floor at 44px', () => {

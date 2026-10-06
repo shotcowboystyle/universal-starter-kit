@@ -1,7 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 import { getVariable, useTheme } from 'tamagui';
 
-export function SvgUri({
+const decodeDataUri = (uri: string): string => {
+  const commaIndex = uri.indexOf(',');
+  if (commaIndex === -1) {
+    return '';
+  }
+  const meta = uri.slice(0, commaIndex);
+  const data = uri.slice(commaIndex + 1);
+  if (meta.includes('base64')) {
+    return atob(data);
+  }
+  return decodeURIComponent(data);
+};
+
+export const SvgUri = ({
   uri,
   width,
   height,
@@ -10,7 +23,7 @@ export function SvgUri({
   onLoad,
   fallback,
   accessibilityLabel,
-}: SvgUriProps) {
+}: SvgUriProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState(false);
   const [, setLoaded] = useState(false);
@@ -102,20 +115,7 @@ export function SvgUri({
       }}
     />
   );
-}
-
-function decodeDataUri(uri: string): string {
-  const commaIndex = uri.indexOf(',');
-  if (commaIndex === -1) {
-    return '';
-  }
-  const meta = uri.slice(0, commaIndex);
-  const data = uri.slice(commaIndex + 1);
-  if (meta.includes('base64')) {
-    return atob(data);
-  }
-  return decodeURIComponent(data);
-}
+};
 
 export interface SvgUriProps {
   uri: string | null;

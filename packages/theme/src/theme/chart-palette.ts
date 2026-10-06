@@ -68,13 +68,13 @@ const categoricalHueCycle = [
   { family: 'red', light: Colors.red.red9, dark: Colors.redDark.red9 },
 ] as const;
 
-function configuredTintCardSurfaces(scheme: 'light' | 'dark'): string[] {
+const configuredTintCardSurfaces = (scheme: 'light' | 'dark'): string[] => {
   const themes = stockThemes as unknown as Record<string, { background?: string }>;
   return [...tintHueNames].flatMap((hue) => {
     const color = themes[`${scheme}_${hue}_Card`]?.background;
     return color ? [color] : [];
   });
-}
+};
 
 // Use the shipped tinted Card backgrounds, which are deeper than their page
 // colors. Missing theme names are not invented surfaces. The rendered audit
@@ -84,7 +84,7 @@ const chartReferenceSurfaces = {
   dark: [Colors.grayDark.gray2, Colors.mauveDark.mauve2, ...configuredTintCardSurfaces('dark')],
 } as const;
 
-function readableIdentity(color: string | undefined, scheme: 'light' | 'dark'): color is string {
+const readableIdentity = (color: string | undefined, scheme: 'light' | 'dark'): color is string => {
   const hex = color ? normalizeToHex(color) : null;
   if (!hex) {
     return false;
@@ -94,7 +94,7 @@ function readableIdentity(color: string | undefined, scheme: 'light' | 'dark'): 
     const backdrop = normalizeToHex(surface);
     return !!backdrop && contrastRatio(luminance, relativeLuminance(backdrop)) >= minContrastRatio;
   });
-}
+};
 
 /**
  * Semantic series solids. Light success deepens to green10 for the mark floor.
@@ -127,7 +127,7 @@ interface Hsl {
   l: number;
 }
 
-function colorToHsl(color: string): Hsl | null {
+const colorToHsl = (color: string): Hsl | null => {
   const hex = normalizeToHex(color);
   if (!hex) {
     return null;
@@ -152,15 +152,15 @@ function colorToHsl(color: string): Hsl | null {
     h = ((r - g) / d + 4) * 60;
   }
   return { h, s, l };
-}
+};
 
-function hueDistance(a: number, b: number): number {
+const hueDistance = (a: number, b: number): number => {
   const d = Math.abs(a - b) % 360;
   return d > 180 ? 360 - d : d;
-}
+};
 
 /** Keep every solid after dedupe, moving only an invalid adjacent sequence. */
-function orderCategoricalCycle(identity: string, cycle: string[]): string[] {
+const orderCategoricalCycle = (identity: string, cycle: string[]): string[] => {
   const colors = [identity, ...cycle];
   const hsl = colors.map((color) => colorToHsl(color) as Hsl);
   const luminance = colors.map((color) => relativeLuminance(normalizeToHex(color) as string));
@@ -204,14 +204,14 @@ function orderCategoricalCycle(identity: string, cycle: string[]): string[] {
   // Preserve the supplied series if no permutation can satisfy the rule.
   // The actual chart audit must still report that unsatisfied distinction.
   return ordered ? ordered.map((index) => colors[index]) : cycle;
-}
+};
 
 /**
  * Pure palette resolution — see {@link ChartPalette} for the contract.
  * Exported separately from the hook so tests and non-React callers can
  * resolve palettes for any scheme/identity combination.
  */
-export function resolveChartPalette(input: ResolveChartPaletteInput): ChartPalette {
+export const resolveChartPalette = (input: ResolveChartPaletteInput): ChartPalette => {
   const { scheme } = input;
   const fallbackIdentity = scheme === 'dark' ? Colors.violetDark.violet10 : Colors.violet.violet9;
   const single =
@@ -238,7 +238,7 @@ export function resolveChartPalette(input: ResolveChartPaletteInput): ChartPalet
     categorical: [single, ...orderCategoricalCycle(single, deduped)],
     semantic: semanticSeries[scheme],
   };
-}
+};
 
 /**
  * The accent solids ordered nearest-first in luminance to `identity`, so a
@@ -247,10 +247,10 @@ export function resolveChartPalette(input: ResolveChartPaletteInput): ChartPalet
  * to the text floor, which in dark lands it one step deeper than
  * the marks need; the chart keeps the accent channel on the step beside it.
  */
-export function accentIdentityCandidates(
+export const accentIdentityCandidates = (
   identity: string | undefined,
   solids: readonly (string | undefined)[],
-): string[] {
+): string[] => {
   const identityHex = identity ? normalizeToHex(identity) : null;
   if (!identityHex) {
     return [];
@@ -263,7 +263,7 @@ export function accentIdentityCandidates(
     })
     .sort((a, b) => a.distance - b.distance)
     .map(({ solid }) => solid);
-}
+};
 
 /**
  * Canonical chart palette for the active Tamagui theme.
@@ -274,7 +274,7 @@ export function accentIdentityCandidates(
  * series colors from this hook; explicit `color`/`colors` props on chart
  * data are user values and pass through untouched.
  */
-export function useChartPalette(): ChartPalette {
+export const useChartPalette = (): ChartPalette => {
   const themeName = useThemeName() as string | undefined;
   const theme = useTamaguiTheme() as unknown as Record<string, { val?: string } | undefined>;
   const scheme: 'light' | 'dark' = themeName?.startsWith('dark') ? 'dark' : 'light';
@@ -301,4 +301,4 @@ export function useChartPalette(): ChartPalette {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [scheme, identitySolid, isTint, accentKey, color10, color11],
   );
-}
+};

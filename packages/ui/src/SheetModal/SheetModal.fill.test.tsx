@@ -35,11 +35,11 @@ afterEach(cleanup);
 const flexOne = ['_fg-1', '_fs-1', '_fb-0px'];
 const minZero = '_mih-0px';
 
-function classes(element: HTMLElement) {
+const classes = (element: HTMLElement) => {
   return element.className.split(/\s+/);
-}
+};
 
-function renderNative(props: Partial<SheetModalProps> = {}) {
+const renderNative = (props: Partial<SheetModalProps> = {}) => {
   return renderWithProviders(
     <NativeSheetModal
       open
@@ -49,7 +49,7 @@ function renderNative(props: Partial<SheetModalProps> = {}) {
       <Text>row</Text>
     </NativeSheetModal>,
   );
-}
+};
 
 describe('native fill allocates the sheet body', () => {
   it('turns the existing cap into a definite frame height only when filling', () => {
@@ -114,7 +114,7 @@ describe('native fill allocates the sheet body', () => {
  * fill only has to open the body chain inside it. tamagui renders the sheet
  * through a portal AND inline, so every query here is plural on purpose.
  */
-function renderWeb(props: Partial<SheetModalProps> = {}) {
+const renderWeb = (props: Partial<SheetModalProps> = {}) => {
   return renderWithProviders(
     <WebSheetModal
       open
@@ -124,7 +124,7 @@ function renderWeb(props: Partial<SheetModalProps> = {}) {
       <Text>row</Text>
     </WebSheetModal>,
   );
-}
+};
 
 describe('web fill opens the body inside the snapped frame', () => {
   it('mounts a growing body slot only when filling', () => {

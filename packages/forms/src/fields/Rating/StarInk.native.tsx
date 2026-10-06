@@ -16,13 +16,13 @@ import type { StarInkProps } from './types';
  * resolves to `{}` and falls back to a DEFAULT SPRING, which is
  * motion wearing the name of silence.
  */
-export function inkMotionProps(transition: TransitionProp | undefined) {
+export const inkMotionProps = (transition: TransitionProp | undefined) => {
   // `TransitionProp` is the whole union (token, per-property map, tuple), but
   // the per-property SLOT only accepts the token form. The knob always
   // resolves to a token name — `resolveKnobs` sets `transition` straight from
   // the `animation` knob — so this narrows rather than widens.
   return transition ? { transition: { opacity: transition as TransitionKeys } } : {};
-}
+};
 
 /**
  * Native ink layer (star fill).
@@ -49,7 +49,7 @@ export function inkMotionProps(transition: TransitionProp | undefined) {
  * the usual cross-fade dip, and the price of not being able to interpolate
  * the paint itself.
  */
-export function StarInk({ StarIcon, size, filled, filledColor, emptyColor, transition }: StarInkProps) {
+export const StarInk = ({ StarIcon, size, filled, filledColor, emptyColor, transition }: StarInkProps) => {
   const motion = inkMotionProps(transition);
   return (
     <View
@@ -80,4 +80,4 @@ export function StarInk({ StarIcon, size, filled, filledColor, emptyColor, trans
       </View>
     </View>
   );
-}
+};

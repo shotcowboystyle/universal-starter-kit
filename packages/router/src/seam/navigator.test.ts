@@ -9,20 +9,20 @@ const ROUTES = [
   { pattern: '/pokemon/[id]', tag: 'pokemon-detail', title: 'Pokemon detail' },
 ];
 
-function attachDomHost(): DomStackAdapter {
+const attachDomHost = (): DomStackAdapter => {
   const adapter = new DomStackAdapter('home', () => {
     stackNavigator.syncFromHost();
   });
   stackNavigator.attach(adapter);
   return adapter;
-}
+};
 
-async function flush(): Promise<void> {
+const flush = async (): Promise<void> => {
   // Loader navigations resolve over microtasks; two ticks cover
   // loader → navSeq check → host action.
   await Promise.resolve();
   await Promise.resolve();
-}
+};
 
 describe('hrefToString', () => {
   it('substitutes [param] tokens and appends leftovers as query', () => {

@@ -33,7 +33,7 @@ export interface PlayerChromeProps {
   onSeekingChange: (seeking: boolean) => void;
 }
 
-export function formatPlayerTime(seconds: number): string {
+export const formatPlayerTime = (seconds: number): string => {
   if (!Number.isFinite(seconds) || seconds < 0) {
     return '0:00';
   }
@@ -43,16 +43,16 @@ export function formatPlayerTime(seconds: number): string {
   const s = total % 60;
   const pad = (n: number) => String(n).padStart(2, '0');
   return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
-}
+};
 
-function activateOnKey(e: { key?: string; preventDefault?: () => void }, action: () => void) {
+const activateOnKey = (e: { key?: string; preventDefault?: () => void }, action: () => void) => {
   if (e.key === 'Enter' || e.key === ' ') {
     e.preventDefault?.();
     action();
   }
-}
+};
 
-function ChromeButton({
+const ChromeButton = ({
   label,
   onPress,
   size,
@@ -64,7 +64,7 @@ function ChromeButton({
   size: number;
   radius: number;
   children: ReactNode;
-}) {
+}) => {
   const { control, knobProps } = useResolvedKnobs({ component: 'Video' });
   return (
     <View
@@ -99,9 +99,9 @@ function ChromeButton({
       {children}
     </View>
   );
-}
+};
 
-function SeekBar({
+const SeekBar = ({
   currentTime,
   duration,
   onSeek,
@@ -113,7 +113,7 @@ function SeekBar({
   onSeek: (time: number) => void;
   onSeekingChange: (seeking: boolean) => void;
   radius: number;
-}) {
+}) => {
   const { t } = useTranslation();
   const { control, knobProps } = useResolvedKnobs({ component: 'Video' });
   const [hot, setHot] = useState(false);
@@ -237,7 +237,7 @@ function SeekBar({
       </YStack>
     </YStack>
   );
-}
+};
 
 /**
  * Overlay transport — YouTube / Media Chrome / AVKit layout: large paused
@@ -245,7 +245,7 @@ function SeekBar({
  * auto-hide while playing. Tokens only; dark theme so glyphs read over
  * any frame. Keyboard rings ride each control.
  */
-export function PlayerChrome({
+export const PlayerChrome = ({
   playing,
   currentTime,
   duration,
@@ -259,7 +259,7 @@ export function PlayerChrome({
   onHoverChange,
   onFocusChange,
   onSeekingChange,
-}: PlayerChromeProps) {
+}: PlayerChromeProps) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs({ component: 'Video' });
   ensureKeyboardModalityTracking();
@@ -450,4 +450,4 @@ export function PlayerChrome({
       </YStack>
     </Theme>
   );
-}
+};

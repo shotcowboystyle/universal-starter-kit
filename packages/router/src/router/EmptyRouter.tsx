@@ -58,9 +58,9 @@ export const Link: LinkComponent = ({ href, replace, children, ...props }) => {
 
 Link.resolveHref = (href: Href) => href.toString();
 
-export function useUrlState<T extends Record<string, any>>(
+export const useUrlState = <T extends Record<string, any>>(
   defaultValues: T,
-): [T, (newState: Partial<T> | ((prev: T) => Partial<T>)) => void] {
+): [T, (newState: Partial<T> | ((prev: T) => Partial<T>)) => void] => {
   const setState = () => {};
   return [defaultValues, setState];
-}
+};

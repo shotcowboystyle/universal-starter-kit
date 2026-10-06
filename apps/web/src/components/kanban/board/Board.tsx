@@ -16,7 +16,7 @@ import { TaskFilter } from '../task/TaskFilter';
 import { BoardProvider, useBoardContext } from './BoardContext';
 import { useBoardDnd } from './use-board-dnd';
 
-function BoardContent() {
+const BoardContent = () => {
   const rawProjects = useWorkspaceStore((state) => state.projects);
   const isLoadingProjects = useWorkspaceStore((state) => state.isLoadingProjects);
   const filter = useWorkspaceStore((state) => state.filter);
@@ -134,12 +134,12 @@ function BoardContent() {
       </DndContext>
     </YStack>
   );
-}
+};
 
-export function Board() {
+export const Board = () => {
   return (
     <BoardProvider>
       <BoardContent />
     </BoardProvider>
   );
-}
+};

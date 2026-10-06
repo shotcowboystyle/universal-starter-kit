@@ -32,13 +32,13 @@ export interface KeyboardAvoidingWrapperProps extends YStackProps {
  * software keyboard; `behavior` / offset / enabled are accepted for API
  * parity and ignored. Consumer `{...stackProps}` last.
  */
-export function KeyboardAvoidingWrapper({
+export const KeyboardAvoidingWrapper = ({
   children,
   behavior: _behavior,
   keyboardVerticalOffset: _offset,
   enabled = true,
   ...stackProps
-}: PropsWithChildren<KeyboardAvoidingWrapperProps>) {
+}: PropsWithChildren<KeyboardAvoidingWrapperProps>) => {
   return (
     <YStack
       data-testid="keyboard-avoiding-wrapper"
@@ -49,4 +49,4 @@ export function KeyboardAvoidingWrapper({
       {children}
     </YStack>
   );
-}
+};

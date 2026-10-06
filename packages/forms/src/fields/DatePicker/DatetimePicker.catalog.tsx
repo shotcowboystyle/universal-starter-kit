@@ -74,13 +74,13 @@ export type DatetimePickerProps<
 // Time utilities
 // ---------------------------------------------------------------------------
 
-function parseTimeFromDate(date: Date): { h: number; m: number; s: number } {
+const parseTimeFromDate = (date: Date): { h: number; m: number; s: number } => {
   return {
     h: date.getHours(),
     m: date.getMinutes(),
     s: date.getSeconds(),
   };
-}
+};
 
 /**
  * Timestamp register: one register formats the whole value, date part
@@ -89,7 +89,7 @@ function parseTimeFromDate(date: Date): { h: number; m: number; s: number } {
  * Intl puts between the two ("Mar 5, 2026 2:30 PM" vs "Mar 5, 2026, 2:30 PM");
  * the picker's `timeFormat` / `showSeconds` contract now rides the register.
  */
-function formatDatetimeDisplay(date: Date | null, timeFormat: TimeFormat, showSeconds: boolean): string {
+const formatDatetimeDisplay = (date: Date | null, timeFormat: TimeFormat, showSeconds: boolean): string => {
   if (!date) {
     return '';
   }
@@ -98,7 +98,7 @@ function formatDatetimeDisplay(date: Date | null, timeFormat: TimeFormat, showSe
     hour12: timeFormat === '12h',
     seconds: showSeconds,
   });
-}
+};
 
 // ---------------------------------------------------------------------------
 // DayGrid — animated day cells
@@ -112,7 +112,7 @@ interface DayGridProps {
   maxDate?: Date;
 }
 
-function DayGrid({ calendarData, selectedDate, onSelectDate, minDate, maxDate }: DayGridProps) {
+const DayGrid = ({ calendarData, selectedDate, onSelectDate, minDate, maxDate }: DayGridProps) => {
   return (
     <CalendarDays
       calendarData={calendarData}
@@ -125,7 +125,7 @@ function DayGrid({ calendarData, selectedDate, onSelectDate, minDate, maxDate }:
       }}
     />
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // TimeSection — time selection within the picker
@@ -139,7 +139,7 @@ interface TimeSectionProps {
   showSeconds: boolean;
 }
 
-function TimeSection({ selectedDate, onTimeChange, timeFormat, minuteStep, showSeconds }: TimeSectionProps) {
+const TimeSection = ({ selectedDate, onTimeChange, timeFormat, minuteStep, showSeconds }: TimeSectionProps) => {
   const { h, m, s } = parseTimeFromDate(selectedDate);
 
   const handleChange = useCallback(
@@ -162,7 +162,7 @@ function TimeSection({ selectedDate, onTimeChange, timeFormat, minuteStep, showS
       onChange={handleChange}
     />
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // DatetimePickerBody — combined date and time selection
@@ -183,7 +183,7 @@ interface DatetimePickerBodyProps {
   showSeconds: boolean;
 }
 
-function DatetimePickerBody({
+const DatetimePickerBody = ({
   displayDate,
   selectedDatetime,
   onSelectDatetime,
@@ -194,7 +194,7 @@ function DatetimePickerBody({
   timeFormat,
   minuteStep,
   showSeconds,
-}: DatetimePickerBodyProps) {
+}: DatetimePickerBodyProps) => {
   const { knobProps } = useCalendarKnobs();
   const { px } = knobProps.nestedControl;
   const [viewMode, setViewMode] = useState<'day' | 'month' | 'year'>('day');
@@ -317,19 +317,21 @@ function DatetimePickerBody({
       )}
     </View>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // DatetimePicker — main exported component
 // ---------------------------------------------------------------------------
 
-export function DatetimePicker<
+export const DatetimePicker = <
   TParentData,
   TName extends DeepKeys<TParentData>,
   TFieldValidator extends Validator<DeepValue<TParentData, TName>> | undefined = undefined,
   TFormValidator extends Validator<TParentData> | undefined = undefined,
   TData extends DeepValue<TParentData, TName> = DeepValue<TParentData, TName>,
->(props: DatetimePickerProps<TParentData, TName, TFieldValidator, TFormValidator, TData>) {
+>(
+  props: DatetimePickerProps<TParentData, TName, TFieldValidator, TFormValidator, TData>,
+) => {
   const {
     defaultValue,
     value: controlledValue,
@@ -592,4 +594,4 @@ export function DatetimePicker<
       }}
     </Field>
   );
-}
+};

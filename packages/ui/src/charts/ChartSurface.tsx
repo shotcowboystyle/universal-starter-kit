@@ -42,14 +42,14 @@ export interface ChartSurfaceProps extends Omit<YStackProps, 'children' | 'width
  * or OS reduced motion (styles never render
  * without a driver).
  */
-export function ChartSurface({
+export const ChartSurface = ({
   label,
   proof,
   height = 200,
   width: widthProp,
   children,
   ...stackProps
-}: ChartSurfaceProps) {
+}: ChartSurfaceProps) => {
   const dataViewProps = useChartDataViewProps();
   const { transition, animationEnabled } = useChartTheme();
   const [measuredWidth, setMeasuredWidth] = useState(0);
@@ -79,4 +79,4 @@ export function ChartSurface({
       ) : null}
     </YStack>
   );
-}
+};

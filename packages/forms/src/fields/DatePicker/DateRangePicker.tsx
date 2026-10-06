@@ -74,7 +74,7 @@ export type DateRangePickerProps<
 
 type RangeStatus = 'none' | 'range-start' | 'range-end' | 'in-range' | 'selected-single';
 
-function getRangeStatus(day: Date, start: Date | null, end: Date | null): RangeStatus {
+const getRangeStatus = (day: Date, start: Date | null, end: Date | null): RangeStatus => {
   if (!start) {
     return 'none';
   }
@@ -91,7 +91,7 @@ function getRangeStatus(day: Date, start: Date | null, end: Date | null): RangeS
     return 'in-range';
   }
   return 'none';
-}
+};
 
 // ---------------------------------------------------------------------------
 // RangeDayGrid — day cells with range highlighting
@@ -106,7 +106,7 @@ interface RangeDayGridProps {
   maxDate?: Date;
 }
 
-function RangeDayGrid({ calendarData, rangeStart, rangeEnd, onSelectDate, minDate, maxDate }: RangeDayGridProps) {
+const RangeDayGrid = ({ calendarData, rangeStart, rangeEnd, onSelectDate, minDate, maxDate }: RangeDayGridProps) => {
   const { knobProps } = useResolvedKnobs();
   return (
     <CalendarDays
@@ -149,7 +149,7 @@ function RangeDayGrid({ calendarData, rangeStart, rangeEnd, onSelectDate, minDat
       }}
     />
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // SingleCalendar — one month panel for range picker
@@ -168,7 +168,7 @@ interface SingleCalendarProps {
   showNext?: boolean;
 }
 
-function SingleCalendar({
+const SingleCalendar = ({
   displayDate,
   rangeStart,
   rangeEnd,
@@ -179,7 +179,7 @@ function SingleCalendar({
   maxDate,
   showPrev = true,
   showNext = true,
-}: SingleCalendarProps) {
+}: SingleCalendarProps) => {
   const [viewMode, setViewMode] = useState<ViewMode>('day');
   const calendarData = useCalendarData(displayDate);
   const [yearPageStart, setYearPageStart] = useState(() => calendarData.year - (calendarData.year % yearPageSize));
@@ -224,7 +224,7 @@ function SingleCalendar({
       </CalendarPanelFrame>
     </CalendarViewSwitcher>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // DualCalendarBody — two panels side-by-side on wide screens
@@ -241,7 +241,7 @@ interface DualCalendarBodyProps {
   maxDate?: Date;
 }
 
-function DualCalendarBody({
+const DualCalendarBody = ({
   rangeStart,
   rangeEnd,
   onSelectDate,
@@ -250,7 +250,7 @@ function DualCalendarBody({
   navigateMonth,
   minDate,
   maxDate,
-}: DualCalendarBodyProps) {
+}: DualCalendarBodyProps) => {
   const { knobProps } = useResolvedKnobs();
   // v5 `sm` = minWidth 640 (`gtSm` died with the v5 media map):
   // dual-calendar layout exactly when the panel floats (OVERLAY_BREAKPOINT).
@@ -326,13 +326,13 @@ function DualCalendarBody({
       />
     </View>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // formatRange — display value for date range
 // ---------------------------------------------------------------------------
 
-function formatRange(start: Date | null, end: Date | null): string {
+const formatRange = (start: Date | null, end: Date | null): string => {
   if (!start) {
     return '';
   }
@@ -343,19 +343,21 @@ function formatRange(start: Date | null, end: Date | null): string {
     return `${formatDate(start)} – end date`;
   }
   return `${formatDate(start)} – ${formatDate(end)}`;
-}
+};
 
 // ---------------------------------------------------------------------------
 // DateRangePicker — main component
 // ---------------------------------------------------------------------------
 
-export function DateRangePicker<
+export const DateRangePicker = <
   TParentData,
   TName extends DeepKeys<TParentData>,
   TFieldValidator extends Validator<DeepValue<TParentData, TName>> | undefined = undefined,
   TFormValidator extends Validator<TParentData> | undefined = undefined,
   TData extends DeepValue<TParentData, TName> = DeepValue<TParentData, TName>,
->(props: DateRangePickerProps<TParentData, TName, TFieldValidator, TFormValidator, TData>) {
+>(
+  props: DateRangePickerProps<TParentData, TName, TFieldValidator, TFormValidator, TData>,
+) => {
   const hydrationTouch = useTouchSurface();
   const {
     defaultValue,
@@ -655,4 +657,4 @@ export function DateRangePicker<
       }}
     </Field>
   );
-}
+};

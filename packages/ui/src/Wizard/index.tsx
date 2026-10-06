@@ -103,15 +103,15 @@ interface WizardContextValue {
 
 const WizardContext = createContext<WizardContextValue | null>(null);
 
-export function useWizard(): WizardContextValue {
+export const useWizard = (): WizardContextValue => {
   const ctx = useContext(WizardContext);
   if (!ctx) {
     throw new Error('useWizard must be used within Wizard');
   }
   return ctx;
-}
+};
 
-function formatReviewValue(value: unknown): string {
+const formatReviewValue = (value: unknown): string => {
   if (value == null || value === '') {
     return '—';
   }
@@ -119,9 +119,9 @@ function formatReviewValue(value: unknown): string {
     return String(value);
   }
   return JSON.stringify(value);
-}
+};
 
-function stepCaption(t: (key: string) => string, index: number, steps: WizardStep[]): string {
+const stepCaption = (t: (key: string) => string, index: number, steps: WizardStep[]): string => {
   return bidiIsolate(
     withInterp(t('Step {{current}} of {{total}} — {{label}}'), {
       current: index + 1,
@@ -129,9 +129,9 @@ function stepCaption(t: (key: string) => string, index: number, steps: WizardSte
       label: steps[index]?.label ?? '',
     }),
   );
-}
+};
 
-function WizardRule() {
+const WizardRule = () => {
   return (
     <View
       data-wizard-separator=""
@@ -143,7 +143,7 @@ function WizardRule() {
       flexShrink={0}
     />
   );
-}
+};
 
 const WizardShell = forwardRef<TamaguiElement, GetProps<typeof YStack> & { compact?: boolean }>(function WizardShell(
   { compact, children, ...props },
@@ -166,7 +166,7 @@ const WizardShell = forwardRef<TamaguiElement, GetProps<typeof YStack> & { compa
   );
 });
 
-function WizardSkeleton() {
+const WizardSkeleton = () => {
   const { knobProps } = useResolvedKnobs();
   return (
     <YStack
@@ -210,10 +210,10 @@ function WizardSkeleton() {
       </YStack>
     </YStack>
   );
-}
+};
 
 /** Real element (not a fragment) so Children.toArray keeps one child per step. */
-export function WizardPanel({ children }: { children: ReactNode }) {
+export const WizardPanel = ({ children }: { children: ReactNode }) => {
   return (
     <YStack
       data-wizard-panel-body=""
@@ -221,15 +221,15 @@ export function WizardPanel({ children }: { children: ReactNode }) {
       {children}
     </YStack>
   );
-}
+};
 
-export function WizardClearable({ names, children }: { names: readonly string[]; children: ReactNode }) {
+export const WizardClearable = ({ names, children }: { names: readonly string[]; children: ReactNode }) => {
   const { repaintGeneration } = useWizard();
   const key = names.map((name) => `${name}:${repaintGeneration[name] ?? 0}`).join('|');
   return <YStack key={key}>{children}</YStack>;
-}
+};
 
-export function WizardReview({ groups }: { groups?: WizardReviewGroup[] }) {
+export const WizardReview = ({ groups }: { groups?: WizardReviewGroup[] }) => {
   const { steps, getFieldValue, goTo, editLabel, reviewGroups } = useWizard();
   const { knobProps } = useResolvedKnobs();
   const resolved =
@@ -310,9 +310,9 @@ export function WizardReview({ groups }: { groups?: WizardReviewGroup[] }) {
       ))}
     </YStack>
   );
-}
+};
 
-function WizardRoot({
+const WizardRoot = ({
   steps,
   children,
   current: controlledCurrent,
@@ -336,7 +336,7 @@ function WizardRoot({
   editLabel,
   reviewGroups,
   ...props
-}: WizardProps) {
+}: WizardProps) => {
   const { t } = useTranslation();
   const media = useMedia();
   const { knobProps } = useResolvedKnobs(compact === undefined ? undefined : { compact });
@@ -697,7 +697,7 @@ function WizardRoot({
       </WizardShell>
     </WizardContext.Provider>
   );
-}
+};
 
 export const Wizard = Object.assign(WizardRoot, {
   Panel: WizardPanel,

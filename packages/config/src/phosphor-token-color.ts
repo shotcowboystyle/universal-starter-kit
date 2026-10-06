@@ -17,7 +17,7 @@ const virtualIdFilter = new RegExp(`^${virtualPrefix}`);
  * bundled into the optimized phosphor chunk, where a workspace import would
  * freeze a stale second copy of the theme package.
  */
-function tokenColorIconBaseSource(originalIconBase: string): string {
+const tokenColorIconBaseSource = (originalIconBase: string): string => {
   return `import { createElement, forwardRef } from "react";
 import { useTheme } from "@tamagui/core";
 import IconBase from ${JSON.stringify(originalIconBase)};
@@ -46,13 +46,13 @@ TokenColorIconBase.displayName = "IconBase";
 
 export default TokenColorIconBase;
 `;
-}
+};
 
-function toPosix(file: string): string {
+const toPosix = (file: string): string => {
   return file.replaceAll('\\', '/');
-}
+};
 
-function resolvePhosphorIconBase(id: string, importer: string | undefined): string | null {
+const resolvePhosphorIconBase = (id: string, importer: string | undefined): string | null => {
   if (!importer || importer.startsWith('\0')) {
     return null;
   }
@@ -67,13 +67,13 @@ function resolvePhosphorIconBase(id: string, importer: string | undefined): stri
   return target.endsWith('/@phosphor-icons/react/dist/lib/IconBase.es.js')
     ? virtualPrefix + target.replace(/\.js$/, '')
     : null;
-}
+};
 
-function loadTokenColorIconBase(id: string): string | null {
+const loadTokenColorIconBase = (id: string): string | null => {
   return id.startsWith(virtualPrefix) ? tokenColorIconBaseSource(`${id.slice(virtualPrefix.length)}.js`) : null;
-}
+};
 
-function rolldownTokenColorPlugin() {
+const rolldownTokenColorPlugin = () => {
   return {
     name: 'mpo-phosphor-token-color:deps',
     resolveId: {
@@ -85,7 +85,7 @@ function rolldownTokenColorPlugin() {
       handler: loadTokenColorIconBase,
     },
   };
-}
+};
 
 /**
  * Resolves Tamagui tokens handed to `@phosphor-icons/react` glyphs on web,
@@ -101,7 +101,7 @@ function rolldownTokenColorPlugin() {
  * and inside the dev dep optimizer, which bundles phosphor with rolldown and
  * never consults Vite plugins for a dependency's relative imports.
  */
-export function phosphorTokenColorPlugin(): Plugin {
+export const phosphorTokenColorPlugin = (): Plugin => {
   return {
     name: 'mpo-phosphor-token-color',
     enforce: 'pre',
@@ -117,4 +117,4 @@ export function phosphorTokenColorPlugin(): Plugin {
       handler: loadTokenColorIconBase,
     },
   };
-}
+};

@@ -37,11 +37,11 @@ afterEach(cleanup);
 const DISK = { min: 0, max: 8, low: 6.4, high: 7.6, optimum: 0 } as const;
 const BATTERY = { min: 0, max: 100, low: 10, high: 20, optimum: 100 } as const;
 
-function renderMeter(
+const renderMeter = (
   ui: ReactElement,
   scheme: 'light' | 'dark' = 'light',
   knobs?: Partial<Pick<Knobs, 'borderRadius' | 'fillStyle' | 'borderWidth'>>,
-) {
+) => {
   return renderWithProviders(
     <Theme name={scheme}>
       <Preset
@@ -51,13 +51,13 @@ function renderMeter(
       </Preset>
     </Theme>,
   );
-}
+};
 
-function rail(container: HTMLElement): HTMLElement {
+const rail = (container: HTMLElement): HTMLElement => {
   const el = container.querySelector("[role='meter']");
   expect(el).toBeTruthy();
   return el as HTMLElement;
-}
+};
 
 describe('threshold intents map to theme intents, never raw brand', () => {
   it('stays ok (neutral) when no thresholds are declared — never guessed', () => {

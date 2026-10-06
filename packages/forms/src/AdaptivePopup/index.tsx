@@ -71,11 +71,11 @@ export type AdaptivePopupRenderedFace = 'dialog' | 'drawer' | 'sheet';
  * `face="drawer"` → edge panel unless `size="fullscreen"` (dialog-family).
  * A panel the user keeps open is SupportingPaneLayout, not this overlay.
  */
-export function pickAdaptivePopupFace(options: {
+export const pickAdaptivePopupFace = (options: {
   face?: AdaptivePopupProps['face'];
   size?: AdaptivePopupProps['size'];
   viewportWidth: number;
-}): AdaptivePopupRenderedFace {
+}): AdaptivePopupRenderedFace => {
   if (options.viewportWidth <= OVERLAY_BREAKPOINT) {
     return 'sheet';
   }
@@ -86,11 +86,11 @@ export function pickAdaptivePopupFace(options: {
     return 'drawer';
   }
   return 'dialog';
-}
+};
 
-function readRtl(): boolean {
+const readRtl = (): boolean => {
   return isWeb && typeof document !== 'undefined' && document.documentElement.getAttribute('dir') === 'rtl';
-}
+};
 
 /**
  * The overlay frame is not a control. Auto-focus on open (Radix /
@@ -110,7 +110,7 @@ const overlayFrameFocus = {
  * too big for dialog chrome, and it would put the ring on that well instead
  * of the glyph the user reads as the control.
  */
-function PopupCloseButton({ onPress }: { onPress: () => void }) {
+const PopupCloseButton = ({ onPress }: { onPress: () => void }) => {
   const { knobProps } = useResolvedKnobs({ compact: true });
   const { px, hitSlop, ...box } = knobProps.nestedControl;
   const glyph = Math.max(12, Math.round(px * 0.5));
@@ -149,9 +149,9 @@ function PopupCloseButton({ onPress }: { onPress: () => void }) {
       />
     </View>
   );
-}
+};
 
-function focusFirstField(event: Event) {
+const focusFirstField = (event: Event) => {
   const root = event.currentTarget as HTMLElement | null;
   const field = root?.querySelector<HTMLElement>("input, textarea, select, [contenteditable='true']");
   if (!field) {
@@ -159,9 +159,9 @@ function focusFirstField(event: Event) {
   }
   event.preventDefault();
   field.focus({ preventScroll: true });
-}
+};
 
-export function AdaptivePopup({
+export const AdaptivePopup = ({
   open,
   onOpenChange,
   trigger,
@@ -173,7 +173,7 @@ export function AdaptivePopup({
   showCloseButton = true,
   footer,
   disabled,
-}: AdaptivePopupProps) {
+}: AdaptivePopupProps) => {
   const { knobProps } = useResolvedKnobs();
   const { knobProps: nestedKnobs } = useResolvedKnobs({ compact: true });
   const media = useMedia();
@@ -486,4 +486,4 @@ export function AdaptivePopup({
       </Dialog.Portal>
     </Dialog>
   );
-}
+};

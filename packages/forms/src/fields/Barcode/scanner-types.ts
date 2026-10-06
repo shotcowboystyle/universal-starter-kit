@@ -107,12 +107,12 @@ const HTML5_FORMAT_ALIASES: Record<string, string> = {
   upc_e: 'UPC_E',
 };
 
-function normalizeFormatToken(value: string): string {
+const normalizeFormatToken = (value: string): string => {
   return value
     .trim()
     .toLowerCase()
     .replaceAll(/[\s-]+/g, '_');
-}
+};
 
 /**
  * Resolve ONE consumer format token to its expo-camera barcode type, or
@@ -120,19 +120,19 @@ function normalizeFormatToken(value: string): string {
  * falls back to the full set — BarcodePreview uses it to decide which
  * symbology to DRAW, and an unknown token must not accidentally read as one.
  */
-export function resolveNativeBarcodeType(format?: string): NativeBarcodeType | undefined {
+export const resolveNativeBarcodeType = (format?: string): NativeBarcodeType | undefined => {
   if (!format) {
     return undefined;
   }
   return NATIVE_FORMAT_ALIASES[normalizeFormatToken(format)];
-}
+};
 
 /**
  * Map consumer `formats` strings onto expo-camera barcode types.
  * Unknown tokens are dropped; an empty result falls back to the full set so
  * a typo cannot silently disable scanning.
  */
-export function resolveNativeBarcodeTypes(formats?: string[]): NativeBarcodeType[] {
+export const resolveNativeBarcodeTypes = (formats?: string[]): NativeBarcodeType[] => {
   if (!formats?.length) {
     return [...NATIVE_BARCODE_TYPES];
   }
@@ -147,17 +147,17 @@ export function resolveNativeBarcodeTypes(formats?: string[]): NativeBarcodeType
     resolved.push(mapped);
   }
   return resolved.length ? resolved : [...NATIVE_BARCODE_TYPES];
-}
+};
 
 /**
  * Map consumer `formats` strings onto html5-qrcode enum numeric ids.
  * Returns `undefined` when the filter is empty/unresolved so the library
  * keeps its default (all formats).
  */
-export function resolveHtml5FormatIds(
+export const resolveHtml5FormatIds = (
   formats: string[] | undefined,
   enumObj: Record<string, number | string>,
-): number[] | undefined {
+): number[] | undefined => {
   if (!formats?.length) {
     return undefined;
   }
@@ -176,9 +176,9 @@ export function resolveHtml5FormatIds(
     ids.push(val);
   }
   return ids.length ? ids : undefined;
-}
+};
 
 /** Contained scanner viewport height. Compact steps down. */
-export function scannerViewportHeight(compact?: boolean): number {
+export const scannerViewportHeight = (compact?: boolean): number => {
   return compact ? 180 : 240;
-}
+};

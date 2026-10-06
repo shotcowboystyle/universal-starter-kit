@@ -915,13 +915,13 @@ describe('Slider', () => {
       const RAIL_HEIGHT = 6;
       const THUMB_HEIGHT = getSliderThumbRenderSize('$1.5');
 
-      function part(container: HTMLElement, name: 'rail' | 'fill' | 'thumb'): HTMLElement {
+      const part = (container: HTMLElement, name: 'rail' | 'fill' | 'thumb'): HTMLElement => {
         const el = container.querySelector(`[data-slider-part="${name}"]`);
         expect(el, `missing data-slider-part=${name}`).toBeTruthy();
         return el as HTMLElement;
-      }
+      };
 
-      function paintedRadiusPx(el: Element): number {
+      const paintedRadiusPx = (el: Element): number => {
         const inline = (el as HTMLElement).style.borderRadius;
         if (inline) {
           return Number.parseFloat(inline) || 0;
@@ -947,7 +947,7 @@ describe('Slider', () => {
           return 0;
         }
         return Number.NaN;
-      }
+      };
 
       it('rail, fill and thumb each measure 0 at none and height/2 at every other stop', () => {
         for (const stop of RADIUS_STOPS) {

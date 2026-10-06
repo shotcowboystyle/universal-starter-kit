@@ -14,16 +14,16 @@ const cases: [string, ReactElement][] = [
   ['HighlightedCode', <HighlightedCode tokens={tokens} />],
 ];
 
-function hostProps(el: Element): Record<string, unknown> {
+const hostProps = (el: Element): Record<string, unknown> => {
   const key = Object.keys(el).find((k) => k.startsWith('__reactProps$'));
   return key ? ((el as unknown as Record<string, Record<string, unknown>>)[key] ?? {}) : {};
-}
+};
 
-function formatConsoleCall(args: unknown[]): string {
+const formatConsoleCall = (args: unknown[]): string => {
   const [format = '', ...substitutions] = args.map(String);
   let next = 0;
   return format.replaceAll('%s', () => substitutions[next++] ?? '');
-}
+};
 
 afterEach(() => {
   vi.unstubAllEnvs();

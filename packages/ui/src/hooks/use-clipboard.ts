@@ -20,7 +20,7 @@ export interface UseClipboardOptions {
  * true when the write actually resolved successfully; a rejected/denied write
  * sets `hasCopyFailed` instead.
  */
-export function useClipboard(text = '', options?: UseClipboardOptions) {
+export const useClipboard = (text = '', options?: UseClipboardOptions) => {
   const timeout = options?.timeout ?? 1500;
   const [hasCopied, setHasCopied] = useState(false);
   const [hasCopyFailed, setHasCopyFailed] = useState(false);
@@ -47,4 +47,4 @@ export function useClipboard(text = '', options?: UseClipboardOptions) {
   }, [timeout, hasCopied, hasCopyFailed]);
 
   return { value: text, onCopy, hasCopied, hasCopyFailed };
-}
+};

@@ -19,7 +19,7 @@ i18n.use(initReactI18next).init({
   lng: defaultLocale,
 });
 
-function AppProvider({
+const AppProvider = ({
   themeConfig: activeThemeConfig = themeConfig,
   systemTheme,
   children,
@@ -27,7 +27,7 @@ function AppProvider({
   themeConfig?: ThemeConfig;
   systemTheme?: 'light' | 'dark';
   children?: ReactNode;
-}) {
+}) => {
   return (
     <ThemeProvider
       config={{ tamagui: activeThemeConfig.tamagui }}
@@ -35,7 +35,7 @@ function AppProvider({
       {children}
     </ThemeProvider>
   );
-}
+};
 
 export default createPreview({
   themeConfig,

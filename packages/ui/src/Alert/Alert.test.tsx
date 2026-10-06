@@ -6,18 +6,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Alert } from './index';
 
-function atoms(el: Element, prefixes: string[]): string[] {
+const atoms = (el: Element, prefixes: string[]): string[] => {
   return String((el as HTMLElement).className || '')
     .split(' ')
     .filter((c) => prefixes.some((p) => c.startsWith(p)))
     .sort();
-}
+};
 
-function renderFrame(node: ReactElement) {
+const renderFrame = (node: ReactElement) => {
   const result = renderWithProviders(node);
   const frame = result.container.querySelector('[role="status"], [role="alert"]') as HTMLElement;
   return { ...result, frame };
-}
+};
 
 describe('Alert', () => {
   it('renders title and description with role=status for info', () => {

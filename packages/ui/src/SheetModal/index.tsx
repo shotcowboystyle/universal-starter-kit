@@ -57,7 +57,7 @@ const frameRingReset = {
   focusVisibleStyle: { outlineWidth: 0, outlineStyle: 'none' as const },
 };
 
-function useSheetFrameFocus(open: boolean, frameRef: RefObject<HTMLElement | null>) {
+const useSheetFrameFocus = (open: boolean, frameRef: RefObject<HTMLElement | null>) => {
   const prevRef = useRef<HTMLElement | null>(null);
   const wasOpenRef = useRef(false);
   if (isWeb && typeof document !== 'undefined') {
@@ -143,9 +143,9 @@ function useSheetFrameFocus(open: boolean, frameRef: RefObject<HTMLElement | nul
       setTimeout(restore, 320);
     };
   }, [open, frameRef]);
-}
+};
 
-function useSheetEscapeDismiss(open: boolean, onDismiss: () => void) {
+const useSheetEscapeDismiss = (open: boolean, onDismiss: () => void) => {
   const onDismissRef = useRef(onDismiss);
   onDismissRef.current = onDismiss;
   useEffect(() => {
@@ -163,9 +163,9 @@ function useSheetEscapeDismiss(open: boolean, onDismiss: () => void) {
       window.removeEventListener('keydown', onKeyDown);
     };
   }, [open]);
-}
+};
 
-export function SheetModal({
+export const SheetModal = ({
   open,
   onOpenChange,
   children,
@@ -173,7 +173,7 @@ export function SheetModal({
   snapPoint = 60,
   scrollable,
   fill = false,
-}: SheetModalProps) {
+}: SheetModalProps) => {
   const { knobProps } = useResolvedKnobs();
   const { transition } = knobProps;
   const titleId = useId();
@@ -257,4 +257,4 @@ export function SheetModal({
       </SheetFrame>
     </Sheet>
   );
-}
+};

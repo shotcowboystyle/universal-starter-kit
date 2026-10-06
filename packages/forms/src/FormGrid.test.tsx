@@ -13,7 +13,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function stubContainerWidth(width: number) {
+const stubContainerWidth = (width: number) => {
   vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
     width,
     height: 100,
@@ -51,7 +51,7 @@ function stubContainerWidth(width: number) {
       disconnect() {}
     },
   );
-}
+};
 
 describe('formSpacing tokens', () => {
   it('encodes section gap larger than field gap', () => {

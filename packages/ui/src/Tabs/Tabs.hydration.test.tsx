@@ -42,7 +42,7 @@ const items = [
   { value: 'settings', label: 'Settings', content: <>settings panel</> },
 ];
 
-function Fixture() {
+const Fixture = () => {
   return (
     <TestProviders>
       <Tabs
@@ -51,14 +51,14 @@ function Fixture() {
       />
     </TestProviders>
   );
-}
+};
 
 /** Every `_h-` height atom painted inside each tab, in document order. */
-function tabHeights(root: ParentNode): string[][] {
+const tabHeights = (root: ParentNode): string[][] => {
   return [...root.querySelectorAll('[role="tab"]')].map((tab) =>
     [tab, ...tab.querySelectorAll('*')].flatMap((node) => [...node.classList].filter((name) => /^_h-\d/.test(name))),
   );
-}
+};
 
 let container: HTMLDivElement;
 let root: Root | undefined;
@@ -83,13 +83,13 @@ afterEach(async () => {
   vi.restoreAllMocks();
 });
 
-async function hydrate() {
+const hydrate = async () => {
   await act(async () => {
     root = hydrateRoot(container, <Fixture />, {
       onRecoverableError: (error) => errors.push(error),
     });
   });
-}
+};
 
 const hydrationErrors = () => errors.filter((error) => /hydration|hydrated|didn't match/i.test(String(error)));
 

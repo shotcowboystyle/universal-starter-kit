@@ -4,7 +4,7 @@ import { YStack } from 'tamagui';
 import { Input } from './fields/Input';
 import { Fieldset, FormSectionStack } from './FormSection';
 
-function Field({ id, label, ...rest }: { id: string; label: string; secureTextEntry?: boolean }) {
+const Field = ({ id, label, ...rest }: { id: string; label: string; secureTextEntry?: boolean }) => {
   return (
     <Input
       id={id}
@@ -13,7 +13,7 @@ function Field({ id, label, ...rest }: { id: string; label: string; secureTextEn
       {...rest}
     />
   );
-}
+};
 
 const meta: Meta<typeof Fieldset> = {
   title: 'Forms/Fieldset',

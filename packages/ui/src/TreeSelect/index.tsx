@@ -75,7 +75,7 @@ export interface TreeSelectProps extends Omit<GetProps<typeof YStack>, 'children
   'aria-label'?: string;
 }
 
-function defaultNodeIcon(hasChildren: boolean, isExpanded: boolean, iconSize: number) {
+const defaultNodeIcon = (hasChildren: boolean, isExpanded: boolean, iconSize: number) => {
   if (hasChildren) {
     return isExpanded ? (
       <FolderOpenIcon
@@ -95,9 +95,9 @@ function defaultNodeIcon(hasChildren: boolean, isExpanded: boolean, iconSize: nu
       weight="duotone"
     />
   );
-}
+};
 
-function TreeSelectRows({
+const TreeSelectRows = ({
   rows,
   selectedId,
   activeIndex,
@@ -113,7 +113,7 @@ function TreeSelectRows({
   treeId: string;
   onCommit: (node: TreeNode) => void;
   onToggle: (node: TreeNode) => void;
-}) {
+}) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
   const nestedPx = knobProps.nestedControl.px;
@@ -290,9 +290,9 @@ function TreeSelectRows({
       })}
     </YStack>
   );
-}
+};
 
-function SearchRow({
+const SearchRow = ({
   value,
   placeholder,
   inputRef,
@@ -310,7 +310,7 @@ function SearchRow({
   treeId: string;
   activeDescendant?: string;
   sizeToken: string;
-}) {
+}) => {
   return (
     <InputParts size={sizeToken as never}>
       <InputParts.Box
@@ -343,9 +343,9 @@ function SearchRow({
       </InputParts.Box>
     </InputParts>
   );
-}
+};
 
-function EmptyFilterRow({ message }: { message: string }) {
+const EmptyFilterRow = ({ message }: { message: string }) => {
   const { knobProps } = useResolvedKnobs();
   return (
     <XStack
@@ -361,9 +361,9 @@ function EmptyFilterRow({ message }: { message: string }) {
       </Text>
     </XStack>
   );
-}
+};
 
-function Trigger({
+const Trigger = ({
   display,
   placeholder,
   open,
@@ -385,7 +385,7 @@ function Trigger({
   onToggle: () => void;
   triggerRef: (node: HTMLElement | null) => void;
   sizeToken: string;
-}) {
+}) => {
   const handleKey = (e: { key?: string; preventDefault?: () => void }) => {
     if (disabled) {
       return;
@@ -451,14 +451,14 @@ function Trigger({
       </InputParts.Box>
     </InputParts>
   );
-}
+};
 
-function useTreeSelectState(props: {
+const useTreeSelectState = (props: {
   nodes: TreeNode[];
   value?: string;
   open: boolean;
   defaultExpandedIds?: string[];
-}) {
+}) => {
   const { nodes, value, open, defaultExpandedIds } = props;
   const [filter, setFilter] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
@@ -523,9 +523,9 @@ function useTreeSelectState(props: {
     toggle,
     displayNodes,
   };
-}
+};
 
-function TreeSelectPanelBody({
+const TreeSelectPanelBody = ({
   rows,
   selectedId,
   activeIndex,
@@ -545,7 +545,7 @@ function TreeSelectPanelBody({
   loading?: boolean;
   onCommit: (node: TreeNode) => void;
   onToggle: (node: TreeNode) => void;
-}) {
+}) => {
   if (loading && rows.length === 0) {
     return (
       <YStack
@@ -578,9 +578,9 @@ function TreeSelectPanelBody({
       onToggle={onToggle}
     />
   );
-}
+};
 
-function handleTreeKeys(args: {
+const handleTreeKeys = (args: {
   key: string;
   preventDefault: () => void;
   rows: FlatTreeRow[];
@@ -590,7 +590,7 @@ function handleTreeKeys(args: {
   toggle: (node: TreeNode) => void;
   onCommit: (node: TreeNode) => void;
   onClose: () => void;
-}) {
+}) => {
   const { key, preventDefault, rows, activeIndex, setActiveIndex, setKeyboardRing, toggle, onCommit, onClose } = args;
   const current = rows[activeIndex];
   if (key === 'ArrowDown') {
@@ -644,9 +644,9 @@ function handleTreeKeys(args: {
     preventDefault();
     onClose();
   }
-}
+};
 
-function FloatingTreeSelect({
+const FloatingTreeSelect = ({
   nodes,
   value,
   display,
@@ -680,7 +680,7 @@ function FloatingTreeSelect({
   sizeToken: string;
   loading?: boolean;
   accessibilityLabel?: string;
-}) {
+}) => {
   const treeId = useId();
   const searchRef = useRef<HTMLInputElement | null>(null);
   const state = useTreeSelectState({ nodes, value, open, defaultExpandedIds });
@@ -848,9 +848,9 @@ function FloatingTreeSelect({
       )}
     </>
   );
-}
+};
 
-function SheetTreeSelect({
+const SheetTreeSelect = ({
   nodes,
   value,
   display,
@@ -884,7 +884,7 @@ function SheetTreeSelect({
   sizeToken: string;
   loading?: boolean;
   accessibilityLabel?: string;
-}) {
+}) => {
   const treeId = useId();
   const searchRef = useRef<HTMLInputElement | null>(null);
   const state = useTreeSelectState({ nodes, value, open, defaultExpandedIds });
@@ -973,9 +973,9 @@ function SheetTreeSelect({
       </YStack>
     </FloatingPanel>
   );
-}
+};
 
-export function TreeSelect({
+export const TreeSelect = ({
   nodes,
   value,
   onChange,
@@ -999,7 +999,7 @@ export function TreeSelect({
   accessibilityLabel,
   'aria-label': ariaLabel,
   ...stackProps
-}: TreeSelectProps) {
+}: TreeSelectProps) => {
   if (isWeb) {
     ensureKeyboardModalityTracking();
   }
@@ -1101,4 +1101,4 @@ export function TreeSelect({
       </FieldLayout>
     </YStack>
   );
-}
+};

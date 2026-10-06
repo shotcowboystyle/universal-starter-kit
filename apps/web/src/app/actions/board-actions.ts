@@ -4,16 +4,16 @@ import { cookies } from 'next/headers';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-async function getAuthHeaders(): Promise<HeadersInit> {
+const getAuthHeaders = async (): Promise<HeadersInit> => {
   const cookieStore = await cookies();
   const token = cookieStore.get('jwt')?.value;
   return {
     'Content-Type': 'application/json',
     ...(token && { Authorization: `Bearer ${token}` }),
   };
-}
+};
 
-export async function createBoard(data: { title: string; description?: string; owner: string }) {
+export const createBoard = async (data: { title: string; description?: string; owner: string }) => {
   const headers = await getAuthHeaders();
   const response = await fetch(`${API_URL}/boards`, {
     method: 'POST',
@@ -24,9 +24,9 @@ export async function createBoard(data: { title: string; description?: string; o
     throw new Error('Failed to create board');
   }
   return await response.json();
-}
+};
 
-export async function updateBoard(id: string, data: Record<string, unknown>) {
+export const updateBoard = async (id: string, data: Record<string, unknown>) => {
   const headers = await getAuthHeaders();
   const response = await fetch(`${API_URL}/boards/${id}`, {
     method: 'PATCH',
@@ -37,9 +37,9 @@ export async function updateBoard(id: string, data: Record<string, unknown>) {
     throw new Error('Failed to update board');
   }
   return await response.json();
-}
+};
 
-export async function deleteBoard(id: string) {
+export const deleteBoard = async (id: string) => {
   const headers = await getAuthHeaders();
   const response = await fetch(`${API_URL}/boards/${id}`, {
     method: 'DELETE',
@@ -48,4 +48,4 @@ export async function deleteBoard(id: string) {
   if (!response.ok) {
     throw new Error('Failed to delete board');
   }
-}
+};

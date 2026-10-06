@@ -37,7 +37,7 @@ export type GroupPosition = 'only' | 'first' | 'middle' | 'last';
 export type GroupOrientation = 'horizontal' | 'vertical';
 
 /** Resolve a row index to its group position (count <= 1 is "only"). */
-export function getGroupPosition(index: number, count: number): GroupPosition {
+export const getGroupPosition = (index: number, count: number): GroupPosition => {
   if (count <= 1) {
     return 'only';
   }
@@ -48,7 +48,7 @@ export function getGroupPosition(index: number, count: number): GroupPosition {
     return 'last';
   }
   return 'middle';
-}
+};
 
 // A type alias (not interface) so the fragment stays assignable to
 // Record<string, unknown>-typed style bags.
@@ -68,11 +68,11 @@ export type StackRadiusFragment = {
  * bottom edge abuts its own content, so its bottom corners go square even on
  * the last item.
  */
-export function stackEdgeRadius(
+export const stackEdgeRadius = (
   radius: string | number | undefined,
   edges: { start?: boolean; end?: boolean },
   orientation: GroupOrientation = 'vertical',
-): StackRadiusFragment {
+): StackRadiusFragment => {
   const r = radius ?? 0;
   const start = edges.start ? r : 0;
   const end = edges.end ? r : 0;
@@ -90,18 +90,18 @@ export function stackEdgeRadius(
     borderEndStartRadius: end,
     borderEndEndRadius: end,
   };
-}
+};
 
 /**
  * The complete corner fragment for a row at `position` in a stacked group.
  * Spread it onto the row surface (the element that paints hover/press/
  * selection) — never cherry-pick single corners out of it.
  */
-export function stackRadiusProps(
+export const stackRadiusProps = (
   position: GroupPosition,
   radius: string | number | undefined,
   orientation: GroupOrientation = 'vertical',
-): StackRadiusFragment {
+): StackRadiusFragment => {
   return stackEdgeRadius(
     radius,
     {
@@ -110,7 +110,7 @@ export function stackRadiusProps(
     },
     orientation,
   );
-}
+};
 
 /**
  * Group containers provide each item's position so nested compound parts
@@ -121,6 +121,6 @@ export function stackRadiusProps(
 export const GroupPositionContext = createContext<GroupPosition | undefined>(undefined);
 
 /** The current row's position within its stacked group, if any. */
-export function useGroupPosition(): GroupPosition | undefined {
+export const useGroupPosition = (): GroupPosition | undefined => {
   return useContext(GroupPositionContext);
-}
+};

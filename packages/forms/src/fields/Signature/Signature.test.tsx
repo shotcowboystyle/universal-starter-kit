@@ -9,10 +9,10 @@ import { Signature, signatureValueToSvg } from './index';
 
 const clearIcon = <span data-testid="clear-icon" />;
 
-function encodeSignature(strokes: number[][][]): string {
+const encodeSignature = (strokes: number[][][]): string => {
   const json = JSON.stringify({ v: 2, s: strokes });
   return `data:application/json;base64,${btoa(json)}`;
-}
+};
 
 const inkedValue = encodeSignature([
   [
@@ -22,7 +22,7 @@ const inkedValue = encodeSignature([
   ],
 ]);
 
-function getPad(container: HTMLElement): HTMLElement {
+const getPad = (container: HTMLElement): HTMLElement => {
   const label = container.querySelector('label[for]') as HTMLLabelElement | null;
   const id = label?.htmlFor;
   const pad = id ? (container.querySelector(`#${CSS.escape(id)}`) as HTMLElement | null) : null;
@@ -30,7 +30,7 @@ function getPad(container: HTMLElement): HTMLElement {
     throw new Error('signature pad not found');
   }
   return pad;
-}
+};
 
 beforeAll(() => {
   HTMLCanvasElement.prototype.getContext = vi.fn(() => ({

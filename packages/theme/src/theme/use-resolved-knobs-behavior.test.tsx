@@ -35,17 +35,17 @@ const renderHook: typeof renderHookBase = (hook, options) => {
 
 let originalMatchMedia: typeof window.matchMedia;
 
-function stubMatchMedia(impl: (query: string) => Partial<MediaQueryList> & Record<string, unknown>) {
+const stubMatchMedia = (impl: (query: string) => Partial<MediaQueryList> & Record<string, unknown>) => {
   window.matchMedia = vi.fn((query: string) => impl(query) as MediaQueryList) as typeof window.matchMedia;
-}
+};
 
-function modernMq(matches: boolean) {
+const modernMq = (matches: boolean) => {
   return {
     matches,
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
   };
-}
+};
 
 beforeEach(() => {
   originalMatchMedia = window.matchMedia;
@@ -56,12 +56,12 @@ afterEach(() => {
   window.matchMedia = originalMatchMedia;
 });
 
-function presetWrapper(preset: PresetType) {
+const presetWrapper = (preset: PresetType) => {
   const ctx: PresetContextValue = { preset };
   return ({ children }: { children: ReactNode }) => createElement(PresetContext.Provider, { value: ctx }, children);
-}
+};
 
-function makePreset(overrides: Partial<PresetType> = {}): PresetType {
+const makePreset = (overrides: Partial<PresetType> = {}): PresetType => {
   return {
     theme: 'light' as ThemeName,
     knobs: { ...defaultKnobs },
@@ -69,7 +69,7 @@ function makePreset(overrides: Partial<PresetType> = {}): PresetType {
     tints: [],
     ...overrides,
   };
-}
+};
 
 describe('size token mapping', () => {
   it.each([

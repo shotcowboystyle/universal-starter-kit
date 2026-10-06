@@ -5,9 +5,9 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { Input } from './index';
 
-function copyOf(container: HTMLElement) {
+const copyOf = (container: HTMLElement) => {
   return container.querySelector("[aria-label='Copy to clipboard']");
-}
+};
 
 describe('Input copy (CopyField slot)', () => {
   it('copy is a real tab stop and rings its own glyph, not the 44px box', () => {

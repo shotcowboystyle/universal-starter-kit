@@ -130,7 +130,7 @@ export const NestedScreens: Story = {
 
 const PROJECTS = ['Alpha', 'Beta', 'Gamma', 'Delta'] as const;
 
-function SheetOverKeyboardHarness(args: Story['args']) {
+const SheetOverKeyboardHarness = (args: Story['args']) => {
   const [open, setOpen] = useState(false);
   const [picks, setPicks] = useState<string[]>([]);
   const readout = `Picks: ${picks.length}${picks.length ? `, last ${picks[picks.length - 1]}` : ''}`;
@@ -175,7 +175,7 @@ function SheetOverKeyboardHarness(args: Story['args']) {
       </SheetModal>
     </Screen>
   );
-}
+};
 
 export const SheetOverKeyboard: Story = {
   name: 'Sheet over the keyboard',

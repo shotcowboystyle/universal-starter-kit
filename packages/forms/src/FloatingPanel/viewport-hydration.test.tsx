@@ -12,7 +12,7 @@ import { Select } from '../fields/Select';
 import { FloatingPanel, useViewportGtSm } from './index';
 
 const options = ['Alpha', 'Beta', 'Gamma', 'Delta'].map((label) => ({ label, value: label }));
-function Fixture({ kind }: { kind: string }) {
+const Fixture = ({ kind }: { kind: string }) => {
   const [open, setOpen] = useState(false);
   const wide = useViewportGtSm();
   const [value, setValue] = useState('Alpha');
@@ -48,7 +48,7 @@ function Fixture({ kind }: { kind: string }) {
       )}
     </TestProviders>
   );
-}
+};
 
 describe('viewport hydration', () => {
   it.each(

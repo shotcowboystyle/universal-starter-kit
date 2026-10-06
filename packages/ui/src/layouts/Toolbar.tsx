@@ -45,7 +45,7 @@ export interface ToolbarProps {
 
 type ActionCluster = { kind: 'independent'; actions: ToolbarAction[] } | { kind: 'fused'; actions: ToolbarAction[] };
 
-function clusterActions(actions: ToolbarAction[]): ActionCluster[] {
+const clusterActions = (actions: ToolbarAction[]): ActionCluster[] => {
   const clusters: ActionCluster[] = [];
   for (const action of actions) {
     const prev = clusters[clusters.length - 1];
@@ -62,9 +62,9 @@ function clusterActions(actions: ToolbarAction[]): ActionCluster[] {
     }
   }
   return clusters;
-}
+};
 
-function partitionByDestructive(actions: ToolbarAction[]) {
+const partitionByDestructive = (actions: ToolbarAction[]) => {
   const neutral: ToolbarAction[] = [];
   const destructive: ToolbarAction[] = [];
   for (const action of actions) {
@@ -75,29 +75,14 @@ function partitionByDestructive(actions: ToolbarAction[]) {
     }
   }
   return { neutral, destructive };
-}
+};
 
-export function Toolbar(props: ToolbarProps) {
-  // Toolbar chrome is small + compact (Primer ActionBar / Spectrum quiet /
-  // Linear). Previously this rode `compact: true` (which then stepped size AND
-  // space); with the axes split, the Surface host declares the same intent
-  // lawfully: a subtree ceiling, so hosted actions clamp to
-  // small+compact while ambient pages keep their own size.
-  return (
-    <Surface
-      size="small"
-      density="compact">
-      <ToolbarInner {...props} />
-    </Surface>
-  );
-}
-
-function ToolbarInner({
+const ToolbarInner = ({
   primaryActions = [],
   secondaryActions = [],
   position = 'top',
   loadingLabel: loadingLabelProp,
-}: ToolbarProps) {
+}: ToolbarProps) => {
   const { t } = useTranslation();
   const loadingLabel = loadingLabelProp ?? t('Loading...');
   // Must run inside <Surface> so size/density clamp to this ceiling.
@@ -254,4 +239,19 @@ function ToolbarInner({
       )}
     </XStack>
   );
-}
+};
+
+export const Toolbar = (props: ToolbarProps) => {
+  // Toolbar chrome is small + compact (Primer ActionBar / Spectrum quiet /
+  // Linear). Previously this rode `compact: true` (which then stepped size AND
+  // space); with the axes split, the Surface host declares the same intent
+  // lawfully: a subtree ceiling, so hosted actions clamp to
+  // small+compact while ambient pages keep their own size.
+  return (
+    <Surface
+      size="small"
+      density="compact">
+      <ToolbarInner {...props} />
+    </Surface>
+  );
+};

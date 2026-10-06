@@ -23,19 +23,19 @@ const globalWithNativePlugins = globalThis as unknown as {
   __vxrnAddNativePlugins?: NativePlugin[];
 };
 
-function findPlugin(config: ReturnType<typeof createViteConfig>, name: string): Plugin | undefined {
+const findPlugin = (config: ReturnType<typeof createViteConfig>, name: string): Plugin | undefined => {
   return (config.plugins as Plugin[]).flat().find((p) => p && p.name === name);
-}
+};
 
-function runConfigResolved(
+const runConfigResolved = (
   plugin: Plugin,
   ssrExternal: string[] | boolean | undefined,
   command: 'build' | 'serve' = 'serve',
-) {
+) => {
   const fakeConfig = { command, ssr: { external: ssrExternal } } as any;
   (plugin.configResolved as any)(fakeConfig);
   return fakeConfig.ssr.external;
-}
+};
 
 beforeEach(() => {
   // Native fix registration is global and deduped — reset between tests.

@@ -35,7 +35,12 @@ const range = (start: number, end: number) => Array.from({ length: Math.max(end 
  * pages, the current page and its siblings, and collapse the gaps into
  * ellipses — e.g. total=20, page=5 → [1, …, 4, 5, 6, …, 20].
  */
-export function getPaginationItems(total: number, page: number, siblingCount = 1, boundaryCount = 1): PaginationItem[] {
+export const getPaginationItems = (
+  total: number,
+  page: number,
+  siblingCount = 1,
+  boundaryCount = 1,
+): PaginationItem[] => {
   if (total <= 0) {
     return [];
   }
@@ -65,7 +70,7 @@ export function getPaginationItems(total: number, page: number, siblingCount = 1
   }
   items.push(...endPages);
   return items;
-}
+};
 
 /**
  * The size the pager pins its strip at, as steps on the size-token scale.
@@ -131,7 +136,7 @@ export interface PaginationProps extends Omit<XStackProps, 'children' | 'onChang
   showFirstLast?: boolean;
 }
 
-export function Pagination({
+export const Pagination = ({
   total,
   activeIndex,
   onChange,
@@ -151,7 +156,7 @@ export function Pagination({
   boundaryCount = 1,
   showFirstLast = false,
   ...stackProps
-}: PaginationProps) {
+}: PaginationProps) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
   // Undefined at animation "none" / PRM — a `|| "quick"` fallback
@@ -440,4 +445,4 @@ export function Pagination({
       )}
     </XStack>
   );
-}
+};

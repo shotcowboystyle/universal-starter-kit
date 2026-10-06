@@ -9,7 +9,7 @@ import { useAuthStore } from '@/stores/auth-store';
 
 // This page acts as a client-side entry point to redirect users
 // based on their authentication status.
-export default function RootPage() {
+const RootPage = () => {
   const { user, isLoading } = useAuthStore();
   const router = useRouter();
 
@@ -41,4 +41,6 @@ export default function RootPage() {
       <Paragraph>Loading...</Paragraph>
     </YStack>
   );
-}
+};
+
+export default RootPage;

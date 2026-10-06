@@ -7,7 +7,7 @@ type FormDefaults = Record<string, unknown>;
  * flip. Updating that field's default so `isDirty` stays false means the
  * page-level bar never rises, and a later Discard cannot revert the flip.
  */
-export function commitImmediateField(form: AnyFormApi, name: string, value: unknown): void {
+export const commitImmediateField = (form: AnyFormApi, name: string, value: unknown): void => {
   const options = form.options as { defaultValues?: FormDefaults };
   const nextDefaults: FormDefaults = { ...options.defaultValues, [name]: value };
   const { update } = form as { update?: (opts: { defaultValues: FormDefaults }) => void };
@@ -26,4 +26,4 @@ export function commitImmediateField(form: AnyFormApi, name: string, value: unkn
       isDefaultValue: true,
     }));
   }
-}
+};

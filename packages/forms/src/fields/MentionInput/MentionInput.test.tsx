@@ -8,13 +8,13 @@ import { Form } from '../../Form';
 import { MentionInput, parseMentionValue } from './index';
 
 /** Web panels portal out to the page, so panel text is read from the page. */
-function findInPage(text: string): Element | undefined {
+const findInPage = (text: string): Element | undefined => {
   try {
     return within(document.body).queryByText(text, { exact: false }) ?? undefined;
   } catch {
     return Array.from(document.body.querySelectorAll('*')).find((el) => el.textContent?.includes(text));
   }
-}
+};
 
 const userMentions = {
   trigger: '@',
@@ -33,14 +33,14 @@ const userMentions = {
   ],
 };
 
-function typeTrigger(textArea: HTMLTextAreaElement, value: string) {
+const typeTrigger = (textArea: HTMLTextAreaElement, value: string) => {
   fireEvent.change(textArea, {
     target: { value, selectionStart: value.length, selectionEnd: value.length },
   });
   Object.defineProperty(textArea, 'selectionStart', { value: value.length, configurable: true });
   Object.defineProperty(textArea, 'selectionEnd', { value: value.length, configurable: true });
   fireEvent.select(textArea);
-}
+};
 
 describe('parseMentionValue', () => {
   it('normalizes strings, objects, and empty input into MentionValue', () => {

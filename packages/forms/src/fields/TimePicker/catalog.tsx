@@ -57,7 +57,7 @@ export interface TimePickerProps {
   native?: boolean;
 }
 
-export function TimePicker({
+export const TimePicker = ({
   name,
   form: formProp,
   validators,
@@ -81,7 +81,7 @@ export function TimePicker({
   clockIcon,
   skeleton,
   compact,
-}: TimePickerProps) {
+}: TimePickerProps) => {
   const { resolvedForm, knobProps, id } = useFormField({
     form: formProp,
     id: idProp,
@@ -279,4 +279,4 @@ export function TimePicker({
       }}
     </Field>
   );
-}
+};

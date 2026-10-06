@@ -22,7 +22,7 @@ export interface CartesianPlotInput {
  * rectangle. Label widths are approximated cross-platform (no DOM measure);
  * the approximation over-reserves slightly so labels never clip.
  */
-export function computeCartesianPlot(size: ChartSize, input: CartesianPlotInput): PlotArea {
+export const computeCartesianPlot = (size: ChartSize, input: CartesianPlotInput): PlotArea => {
   const { showXAxis, showYAxis, yTickLabels, fontSize } = input;
   const top = Math.ceil(fontSize / 2) + 2;
   const right = 4;
@@ -37,7 +37,7 @@ export function computeCartesianPlot(size: ChartSize, input: CartesianPlotInput)
     width: Math.max(0, size.width - left - right),
     height: Math.max(0, size.height - top - bottom),
   };
-}
+};
 
 export interface SeriesFillsInput {
   /** Explicit single-series color (a prop-level data color). */
@@ -57,7 +57,7 @@ export interface SeriesFillsInput {
  * `palette.categorical` is a third list on purpose (distinguishability,
  * not nest order). Never fold it into `preset.tints`.
  */
-export function resolveSeriesFills(data: ChartDatum[], palette: ChartPalette, input?: SeriesFillsInput): string[] {
+export const resolveSeriesFills = (data: ChartDatum[], palette: ChartPalette, input?: SeriesFillsInput): string[] => {
   return data.map((datum, index) => {
     if (datum.color) {
       return datum.color;
@@ -70,7 +70,7 @@ export function resolveSeriesFills(data: ChartDatum[], palette: ChartPalette, in
     }
     return input?.color ?? palette.single;
   });
-}
+};
 
 /** Widest x label a slot may spend before thinning kicks in (px). */
 const MAX_X_LABEL_SLOT = 72;
@@ -81,7 +81,7 @@ const X_LABEL_SLOT_GAP = 8;
  * without overlap (at phone widths): every label gets a slot sized by
  * the widest label (capped), and the stride skips the rest.
  */
-export function thinCategories(labels: string[], plotWidth: number, fontSize: number): string[] {
+export const thinCategories = (labels: string[], plotWidth: number, fontSize: number): string[] => {
   if (labels.length <= 1 || plotWidth <= 0) {
     return labels;
   }
@@ -93,4 +93,4 @@ export function thinCategories(labels: string[], plotWidth: number, fontSize: nu
   }
   const stride = Math.ceil(labels.length / capacity);
   return labels.filter((_, index) => index % stride === 0);
-}
+};

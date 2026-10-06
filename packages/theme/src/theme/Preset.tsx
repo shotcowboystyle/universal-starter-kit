@@ -21,7 +21,7 @@ export interface PresetProps extends PropsWithChildren {
   cascade?: boolean;
 }
 
-export function Preset({ children, preset: presetName, theme, overrides, cascade = true }: PresetProps) {
+export const Preset = ({ children, preset: presetName, theme, overrides, cascade = true }: PresetProps) => {
   const parentCtx = useContext(PresetContext);
 
   const ctxValue = useMemo((): PresetContextValue => {
@@ -88,4 +88,4 @@ export function Preset({ children, preset: presetName, theme, overrides, cascade
   }
 
   return element;
-}
+};

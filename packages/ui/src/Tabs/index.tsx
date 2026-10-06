@@ -144,28 +144,28 @@ interface TabLayout {
  * (rtl-audit U1). Normalize so a rest-state strip still fades the inline-end
  * edge instead of both-or-neither.
  */
-export function tabsOverflowFades(
+export const tabsOverflowFades = (
   offset: number,
   viewport: number,
   content: number,
   direction: TabsDirection,
   threshold = 4,
-): { left: boolean; right: boolean } {
+): { left: boolean; right: boolean } => {
   const range = Math.max(content - viewport, 0);
   const minScrollLeft = direction === 'rtl' ? -range : 0;
   const fromLeft = offset - minScrollLeft;
   const fromRight = minScrollLeft + range - offset;
   return { left: fromLeft > threshold, right: fromRight > threshold };
-}
+};
 
-export function tabsScrollIntoViewX(
+export const tabsScrollIntoViewX = (
   layout: TabLayout,
   offset: number,
   viewport: number,
   content: number,
   direction: TabsDirection,
   pad = 32,
-): number | undefined {
+): number | undefined => {
   if (
     ![layout.x, layout.width, layout.height, offset, viewport, content].every(Number.isFinite) ||
     layout.width <= 0 ||
@@ -188,7 +188,7 @@ export function tabsScrollIntoViewX(
     targetFromLeft = Math.min(range, layout.x + layout.width - viewport + pad);
   }
   return targetFromLeft === undefined ? undefined : targetFromLeft + minScrollLeft;
-}
+};
 
 // Tabbing into the strip focuses the tablist container first; tamagui's
 // roving-focus group then redirects focus to the current tab from inside a
@@ -201,7 +201,7 @@ export function tabsScrollIntoViewX(
  * round (the outer-corner rule adapted to a baseline). Bottoms stay square against the rule.
  * Contained uses the full horizontal stack fragment (or CONTAINER-CLIP).
  */
-function underlineStackRadius(position: GroupPosition, radius: string | number | undefined) {
+const underlineStackRadius = (position: GroupPosition, radius: string | number | undefined) => {
   const start = position === 'first' || position === 'only';
   const end = position === 'last' || position === 'only';
   const full = stackEdgeRadius(radius, { start, end }, 'horizontal');
@@ -210,7 +210,7 @@ function underlineStackRadius(position: GroupPosition, radius: string | number |
     borderEndStartRadius: 0,
     borderEndEndRadius: 0,
   };
-}
+};
 
 /**
  * The fill chain, in one place so the three boxes cannot drift apart.
@@ -303,7 +303,7 @@ const TabLabel = styled(Text, {
 
 // ── Tabs Component ────────────────────────────────────────────
 
-function TabsRoot({
+const TabsRoot = ({
   items,
   value,
   defaultValue,
@@ -322,7 +322,7 @@ function TabsRoot({
   loop = true,
   disabled = false,
   ariaLabel,
-}: TabsProps) {
+}: TabsProps) => {
   const { t } = useTranslation();
   const direction = useDirection();
   const intent =
@@ -812,7 +812,7 @@ function TabsRoot({
       </YStack>
     </TamaguiTabs>
   );
-}
+};
 
 TabsRoot.displayName = 'Tabs';
 

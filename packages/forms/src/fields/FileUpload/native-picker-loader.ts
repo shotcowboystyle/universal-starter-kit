@@ -22,7 +22,7 @@ let cachedImagePicker: ImagePickerModule | null | undefined;
  * reported by Metro's guarded require as a FATAL LogBox in dev even when the
  * caller catches it (the expo-maps lesson in `expo-maps-loader.ts`).
  */
-function hasNativeModule(name: string): boolean {
+const hasNativeModule = (name: string): boolean => {
   try {
     const core = require('expo-modules-core') as {
       requireOptionalNativeModule?: (moduleName: string) => unknown;
@@ -35,7 +35,7 @@ function hasNativeModule(name: string): boolean {
     // expo-modules-core absent (non-Expo host) — let the guarded require decide.
     return true;
   }
-}
+};
 
 /**
  * Loads the optional `expo-document-picker` peer at runtime. The `require`
@@ -44,7 +44,7 @@ function hasNativeModule(name: string): boolean {
  * succeeds without the package installed and the call returns null. Only the
  * native picker twin imports this file — web bundles never reach it.
  */
-export function loadDocumentPicker(): DocumentPickerModule | null {
+export const loadDocumentPicker = (): DocumentPickerModule | null => {
   if (cachedDocumentPicker !== undefined) {
     return cachedDocumentPicker;
   }
@@ -56,10 +56,10 @@ export function loadDocumentPicker(): DocumentPickerModule | null {
     cachedDocumentPicker = null;
   }
   return cachedDocumentPicker;
-}
+};
 
 /** Same optional-peer contract as `loadDocumentPicker`, for `expo-image-picker`. */
-export function loadImagePicker(): ImagePickerModule | null {
+export const loadImagePicker = (): ImagePickerModule | null => {
   if (cachedImagePicker !== undefined) {
     return cachedImagePicker;
   }
@@ -71,10 +71,10 @@ export function loadImagePicker(): ImagePickerModule | null {
     cachedImagePicker = null;
   }
   return cachedImagePicker;
-}
+};
 
 /** Test seam: drops the memoized modules so a spec can swap them per case. */
-export function resetNativePickerCache(): void {
+export const resetNativePickerCache = (): void => {
   cachedDocumentPicker = undefined;
   cachedImagePicker = undefined;
-}
+};

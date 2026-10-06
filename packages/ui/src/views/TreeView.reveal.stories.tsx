@@ -33,7 +33,7 @@ const meta: Meta<typeof TreeView> = {
 export default meta;
 type Story = StoryObj<typeof TreeView>;
 
-function RevealFixture(args: TreeViewProps) {
+const RevealFixture = (args: TreeViewProps) => {
   const [nodes, setNodes] = useState(folders);
   const [expandedIds, setExpandedIds] = useState<string[]>(['other']);
   const [selectedId, setSelectedId] = useState<string>();
@@ -170,14 +170,14 @@ function RevealFixture(args: TreeViewProps) {
       </YStack>
     </YStack>
   );
-}
+};
 
 export const ControlledReveal: Story = {
   name: 'Controlled reveal with 500 variable-height items',
   render: (args) => <RevealFixture {...args} />,
 };
 
-function RetainedScrollFixture(args: TreeViewProps) {
+const RetainedScrollFixture = (args: TreeViewProps) => {
   const [mounted, setMounted] = useState(true);
   const [generation, setGeneration] = useState(0);
   const [nodes, setNodes] = useState(folders);
@@ -304,7 +304,7 @@ function RetainedScrollFixture(args: TreeViewProps) {
       </YStack>
     </YStack>
   );
-}
+};
 
 export const RetainedScroll: Story = {
   name: 'Retained scroll across unmount and delayed layout',

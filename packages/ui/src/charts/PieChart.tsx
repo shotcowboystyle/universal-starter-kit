@@ -50,7 +50,7 @@ const DEFAULT_DONUT_RATIO = 0.55;
  * it never paints past the frame. Inside a legend row the label truncates
  * first (ellipsis); the value is data and never truncates (Axiom 11).
  */
-export function PieChart({
+export const PieChart = ({
   data,
   height = 200,
   donut = false,
@@ -64,7 +64,7 @@ export function PieChart({
   onDatumHoverIn,
   onDatumHoverOut,
   ...stackProps
-}: PieChartProps) {
+}: PieChartProps) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
   const { palette } = useChartTheme();
@@ -193,4 +193,4 @@ export function PieChart({
       {chart}
     </ChartDataFrame>
   );
-}
+};

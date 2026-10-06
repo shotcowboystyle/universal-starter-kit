@@ -8,7 +8,7 @@ const STROKE = 2.5;
 const CIRCUMFERENCE = 2 * Math.PI * R;
 const ARC = CIRCUMFERENCE * 0.75;
 
-export function useSpinnerStroke(color?: string): string {
+export const useSpinnerStroke = (color?: string): string => {
   const theme = useTheme();
   if (color && !color.startsWith('$')) {
     return color;
@@ -19,10 +19,10 @@ export function useSpinnerStroke(color?: string): string {
     return color ?? 'currentColor';
   }
   return String(getVariable((token as { get?: (p: string) => unknown }).get?.('web') ?? token));
-}
+};
 
 /** Linear/Polaris arc: round-cap 270° head on a faint track. Scales with the box. */
-export function SpinnerGlyph({ color, size }: { color: string; size: number }) {
+export const SpinnerGlyph = ({ color, size }: { color: string; size: number }) => {
   return (
     <Svg
       width={size}
@@ -51,4 +51,4 @@ export function SpinnerGlyph({ color, size }: { color: string; size: number }) {
       />
     </Svg>
   );
-}
+};

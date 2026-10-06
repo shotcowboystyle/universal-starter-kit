@@ -28,10 +28,10 @@ export type AnimationName = keyof typeof animationConfig;
 export const animationNames = Object.keys(animationConfig) as AnimationName[];
 export const animations = createAnimations(animationConfig);
 
-function parseDurationMs(timing: string): number {
+const parseDurationMs = (timing: string): number => {
   const match = /(\d+)\s*ms/.exec(timing);
   return match ? Number.parseInt(match[1], 10) : 200;
-}
+};
 
 export const animationDurations: Record<AnimationName, number> = Object.fromEntries(
   Object.entries(animationConfig).map(([k, v]) => [k, parseDurationMs(v)]),

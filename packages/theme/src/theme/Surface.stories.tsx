@@ -18,7 +18,7 @@ export default {
 };
 
 /** Spreads the resolved recipe on a stack so the wrapper's effect is measurable. */
-function Probe({ label }: { label: string }) {
+const Probe = ({ label }: { label: string }) => {
   const { knobProps } = useResolvedKnobs();
   const attrs = {
     'data-size': String(knobProps.size),
@@ -41,7 +41,7 @@ function Probe({ label }: { label: string }) {
       </SizableText>
     </YStack>
   );
-}
+};
 
 export const main = {
   name: 'Main',

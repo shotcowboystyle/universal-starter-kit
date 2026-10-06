@@ -75,11 +75,11 @@ export interface DescriptionListProps {
   testID?: string;
 }
 
-function purposeMaxCh(): number {
+const purposeMaxCh = (): number => {
   return LABEL_COLUMN_MAX_CH;
-}
+};
 
-function labelColumnGridTrack(width: string): string {
+const labelColumnGridTrack = (width: string): string => {
   const prefix = 'min(max-content,';
   if (width.startsWith(prefix) && width.endsWith(')')) {
     const inner = width.slice(prefix.length, -1).trim();
@@ -88,9 +88,9 @@ function labelColumnGridTrack(width: string): string {
     }
   }
   return width;
-}
+};
 
-function listItemRhythm(density: string) {
+const listItemRhythm = (density: string) => {
   const compact = density === 'compact';
   return {
     compact,
@@ -99,9 +99,12 @@ function listItemRhythm(density: string) {
     stackGap: compact ? 4 : '$2',
     minHeight: compact ? 39 : 45,
   } as const;
-}
+};
 
-function resolvePlacement(prop: DescriptionListPlacement | undefined, knobPlacement: string): DescriptionListPlacement {
+const resolvePlacement = (
+  prop: DescriptionListPlacement | undefined,
+  knobPlacement: string,
+): DescriptionListPlacement => {
   if (prop === 'side' || prop === 'top') {
     return prop;
   }
@@ -109,13 +112,13 @@ function resolvePlacement(prop: DescriptionListPlacement | undefined, knobPlacem
     return knobPlacement;
   }
   return 'side';
-}
+};
 
-function rowHasAction(row: DescriptionListItem): boolean {
+const rowHasAction = (row: DescriptionListItem): boolean => {
   return typeof row.onChange === 'function';
-}
+};
 
-function itemsFromChildren(children: ReactNode | undefined): DescriptionListItem[] {
+const itemsFromChildren = (children: ReactNode | undefined): DescriptionListItem[] => {
   if (children == null) {
     return [];
   }
@@ -132,10 +135,10 @@ function itemsFromChildren(children: ReactNode | undefined): DescriptionListItem
     }
     return [props];
   });
-}
+};
 
 /** House Separator recipe — 1px filled `$borderColor`. */
-function ListRule({ quiet }: { quiet?: boolean }) {
+const ListRule = ({ quiet }: { quiet?: boolean }) => {
   return (
     <View
       role="separator"
@@ -150,9 +153,9 @@ function ListRule({ quiet }: { quiet?: boolean }) {
       {...(isWeb ? { style: { gridColumn: '1 / -1' } as CSSProperties } : undefined)}
     />
   );
-}
+};
 
-function TermText({ children }: { children: ReactNode }) {
+const TermText = ({ children }: { children: ReactNode }) => {
   const { knobProps } = useResolvedKnobs();
   return (
     <Text
@@ -168,9 +171,9 @@ function TermText({ children }: { children: ReactNode }) {
       {children}
     </Text>
   );
-}
+};
 
-function ChangeAction({ onChange, label }: { onChange: () => void; label?: string }) {
+const ChangeAction = ({ onChange, label }: { onChange: () => void; label?: string }) => {
   return (
     <View
       data-mpo-description-list-action=""
@@ -184,9 +187,9 @@ function ChangeAction({ onChange, label }: { onChange: () => void; label?: strin
       </Button>
     </View>
   );
-}
+};
 
-function ValueSlot({ row }: { row: DescriptionListItem }) {
+const ValueSlot = ({ row }: { row: DescriptionListItem }) => {
   return (
     <View
       data-mpo-description-list-value=""
@@ -207,9 +210,9 @@ function ValueSlot({ row }: { row: DescriptionListItem }) {
       )}
     </View>
   );
-}
+};
 
-function DescriptionListRowView({
+const DescriptionListRowView = ({
   row,
   stacked,
   hasActionColumn,
@@ -223,7 +226,7 @@ function DescriptionListRowView({
   rhythm: ReturnType<typeof listItemRhythm>;
   showRule: boolean;
   quiet?: boolean;
-}) {
+}) => {
   const action = rowHasAction(row) ? (
     <ChangeAction
       onChange={row.onChange!}
@@ -323,9 +326,9 @@ function DescriptionListRowView({
       </YStack>
     </>
   );
-}
+};
 
-function DescriptionListWeb({
+const DescriptionListWeb = ({
   rows,
   stacked,
   hasAction,
@@ -347,7 +350,7 @@ function DescriptionListWeb({
   size: string;
   placement: DescriptionListPlacement;
   framed: boolean;
-}) {
+}) => {
   // Write tracks after commit: React's style setter (and invalid `min()`
   // track syntax) otherwise leave a one-column computed grid.
   const columns = stacked
@@ -400,17 +403,19 @@ function DescriptionListWeb({
       ))}
     </div>
   );
-}
+};
 
 interface HostLayoutEvent {
   nativeEvent: { layout: { width: number } };
 }
 
-function useContainerWide(enabled: boolean): {
+const useContainerWide = (
+  enabled: boolean,
+): {
   ref: Ref<unknown>;
   wide: boolean;
   onLayout: ((event: HostLayoutEvent) => void) | undefined;
-} {
+} => {
   const ref = useRef<HTMLDivElement>(null);
   // Web assumes wide until measured (desktop stories). Native assumes stacked
   // until onLayout — phones sit under the 480 collapse.
@@ -460,9 +465,9 @@ function useContainerWide(enabled: boolean): {
       : undefined;
 
   return { ref, wide, onLayout };
-}
+};
 
-export function DescriptionList({
+export const DescriptionList = ({
   items,
   children,
   placement: placementProp,
@@ -472,7 +477,7 @@ export function DescriptionList({
   maxWidth = formReadableMaxWidth,
   labelColumnWidth = LABEL_COLUMN_WIDTH,
   testID,
-}: DescriptionListProps) {
+}: DescriptionListProps) => {
   const { knobProps } = useResolvedKnobs(compact === undefined ? undefined : { compact });
   const placement = resolvePlacement(placementProp, knobProps.fieldLabelPlacement);
   const rhythm = listItemRhythm(knobProps.density);
@@ -559,11 +564,11 @@ export function DescriptionList({
       {list}
     </YStack>
   );
-}
+};
 
-export function DescriptionListRow(_props: DescriptionListRowProps): ReactElement | null {
+export const DescriptionListRow = (_props: DescriptionListRowProps): ReactElement | null => {
   return null;
-}
+};
 
 DescriptionList.Row = DescriptionListRow;
 

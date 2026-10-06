@@ -147,7 +147,7 @@ describe('Checkbox', () => {
   // stuck-hidden indicators.
   describe('check indicator glyph', () => {
     /** Presence + computed visibility of the indicator glyph, not just mount. */
-    function expectVisibleGlyph(checkbox: Element) {
+    const expectVisibleGlyph = (checkbox: Element) => {
       const svg = checkbox.querySelector('svg');
       expect(svg, 'indicator svg must render inside role=checkbox').toBeTruthy();
       // phosphor icons draw with <path>; an empty svg means a broken icon import
@@ -162,7 +162,7 @@ describe('Checkbox', () => {
         }
         node = node.parentElement;
       }
-    }
+    };
 
     it('renders a visible check glyph when checked', () => {
       const result = renderWithProviders(
@@ -220,9 +220,9 @@ describe('Checkbox', () => {
   });
 
   describe('ring anatomy', () => {
-    function isTransparent(bg: string) {
+    const isTransparent = (bg: string) => {
       return bg === 'transparent' || bg === 'rgba(0, 0, 0, 0)' || bg === 'rgba(0,0,0,0)';
-    }
+    };
 
     it('idle box is empty (transparent fill); checked is fill, not a thicker border', () => {
       const { container } = render(
@@ -565,12 +565,12 @@ describe('CheckboxGroup', () => {
   });
 });
 
-function glyphRadiusClasses(container: HTMLElement): string[] {
+const glyphRadiusClasses = (container: HTMLElement): string[] => {
   const box = container.querySelector('[data-checkbox-box="true"]');
   return String(box?.className || '')
     .split(' ')
     .filter((c) => c.startsWith('_btlr-'));
-}
+};
 
 const RADIUS_STOPS = ['none', 'small', 'medium', 'large', 'full'] as const;
 

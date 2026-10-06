@@ -11,13 +11,13 @@ import { Form } from '../../Form';
 import { TextArea } from './index';
 
 /** Tamagui atomic top-left radius class on the ring box. */
-function boxRadiusClasses(container: HTMLElement): string[] {
+const boxRadiusClasses = (container: HTMLElement): string[] => {
   const textarea = container.querySelector('textarea');
   const box = textarea?.closest('.mp-composite-ring');
   return String(box?.className || '')
     .split(' ')
     .filter((c) => c.startsWith('_btlr-'));
-}
+};
 
 describe('TextArea', () => {
   describe('without form context', () => {
@@ -566,7 +566,7 @@ describe('TextArea', () => {
   });
 
   describe('RM-TXT-6 fontWeight and T-VALUE textAccent', () => {
-    function inkWeight(el: Element | null): string {
+    const inkWeight = (el: Element | null): string => {
       if (!el) {
         return '';
       }
@@ -582,17 +582,17 @@ describe('TextArea', () => {
         }
       }
       return String(fromStyle || '');
-    }
+    };
 
-    function isBold(weight: string): boolean {
+    const isBold = (weight: string): boolean => {
       const n = Number.parseInt(weight, 10);
       if (!Number.isNaN(n)) {
         return n >= 700;
       }
       return weight === 'bold';
-    }
+    };
 
-    function colorToken(el: Element | null): string {
+    const colorToken = (el: Element | null): string => {
       if (!el) {
         return '';
       }
@@ -606,7 +606,7 @@ describe('TextArea', () => {
       }
       const fromStyle = html.style.color || getComputedStyle(html).color || '';
       return fromStyle;
-    }
+    };
 
     it('bold: multiline value rides 700 with its helper (RM-TXT-6)', () => {
       const result = renderWithProviders(

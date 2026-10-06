@@ -9,7 +9,7 @@ import { useWorkspaceStore } from '@/stores/workspace-store';
 
 type StatusKey = 'TOTAL' | 'TODO' | 'IN_PROGRESS' | 'DONE';
 
-export function TaskFilter() {
+export const TaskFilter = () => {
   const { filter, setFilter, projects } = useWorkspaceStore();
   const t = useTranslations('kanban.task');
 
@@ -99,4 +99,4 @@ export function TaskFilter() {
       ) : null}
     </XStack>
   );
-}
+};

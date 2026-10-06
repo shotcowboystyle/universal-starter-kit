@@ -6,7 +6,7 @@ import { XStack, YStack } from 'tamagui';
 import { AlertDialog } from './Dialog';
 import { AlertDialogContent, AlertDialogOverlay } from './surfaces';
 
-function AlertDialogHarness({ startOpen = true }: { startOpen?: boolean }) {
+const AlertDialogHarness = ({ startOpen = true }: { startOpen?: boolean }) => {
   const [open, setOpen] = useState(startOpen);
   return (
     <YStack
@@ -41,7 +41,7 @@ function AlertDialogHarness({ startOpen = true }: { startOpen?: boolean }) {
       </AlertDialog>
     </YStack>
   );
-}
+};
 
 const meta: Meta<typeof AlertDialogContent> = {
   title: 'Components/AlertDialogContent',

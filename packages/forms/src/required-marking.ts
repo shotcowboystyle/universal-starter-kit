@@ -18,7 +18,7 @@ export type RequiredMarkStrategy = RequiredMarkMode | 'auto';
  * `minority` starts as asterisk (mark-required helper) until a form
  * supplies schema-driven auto via {@link computeRequiredMarkMode}.
  */
-export function mapHouseRequiredMarking(house: string | undefined | null): RequiredMarkMode {
+export const mapHouseRequiredMarking = (house: string | undefined | null): RequiredMarkMode => {
   if (house === 'optional') {
     return 'optional';
   }
@@ -26,7 +26,7 @@ export function mapHouseRequiredMarking(house: string | undefined | null): Requi
     return 'asterisk';
   }
   return 'asterisk';
-}
+};
 
 export interface RequiredMarkingContextValue {
   mode: RequiredMarkMode;
@@ -34,9 +34,9 @@ export interface RequiredMarkingContextValue {
 
 export const RequiredMarkingContext = createContext<RequiredMarkingContextValue | null>(null);
 
-export function useRequiredMarking(): RequiredMarkingContextValue | null {
+export const useRequiredMarking = (): RequiredMarkingContextValue | null => {
   return useContext(RequiredMarkingContext);
-}
+};
 
 /**
  * Resolve the marking mode from field `required` flags.
@@ -46,10 +46,10 @@ export function useRequiredMarking(): RequiredMarkingContextValue | null {
  *   `"none"` (nothing to contrast).
  * - Explicit strategies pass through unchanged.
  */
-export function computeRequiredMarkMode(
+export const computeRequiredMarkMode = (
   requiredFlags: readonly boolean[],
   strategy: RequiredMarkStrategy = 'auto',
-): RequiredMarkMode {
+): RequiredMarkMode => {
   if (strategy !== 'auto') {
     return strategy;
   }
@@ -69,13 +69,13 @@ export function computeRequiredMarkMode(
     return 'none';
   }
   return requiredCount <= optionalCount ? 'required' : 'optional';
-}
+};
 
 /**
  * Suffix appended to a field label for the given mode.
  * Empty string when the field should not be marked.
  */
-export function formatRequiredMarkSuffix(required: boolean | undefined, mode: RequiredMarkMode): string {
+export const formatRequiredMarkSuffix = (required: boolean | undefined, mode: RequiredMarkMode): string => {
   switch (mode) {
     case 'asterisk': {
       return required ? ' *' : '';
@@ -93,4 +93,4 @@ export function formatRequiredMarkSuffix(required: boolean | undefined, mode: Re
       return '';
     }
   }
-}
+};

@@ -27,7 +27,7 @@ export default meta;
 
 type Story = StoryObj<typeof ConfirmDialog>;
 
-function ConfirmHarness({
+const ConfirmHarness = ({
   destructive = false,
   warning = false,
   startOpen = true,
@@ -45,7 +45,7 @@ function ConfirmHarness({
   body?: string;
   confirmDisabled?: boolean;
   confirmDisabledReason?: string;
-}) {
+}) => {
   const [open, setOpen] = useState(startOpen);
   return (
     <YStack
@@ -76,7 +76,7 @@ function ConfirmHarness({
       />
     </YStack>
   );
-}
+};
 
 export const Default: Story = {
   name: 'Main',
@@ -118,7 +118,7 @@ export const Gated: Story = {
   ),
 };
 
-function NotifyBlockingDemo() {
+const NotifyBlockingDemo = () => {
   useEffect(() => {
     resetToasts();
     resetFeedback();
@@ -188,7 +188,7 @@ function NotifyBlockingDemo() {
       </YStack>
     </NotifyHost>
   );
-}
+};
 
 /** Integration: notify(blocking) presents ConfirmDialog through NotifyHost. */
 export const NotifyBlocking: Story = {

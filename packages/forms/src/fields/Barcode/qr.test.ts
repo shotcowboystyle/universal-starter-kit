@@ -4,7 +4,7 @@ import type { QrErrorCorrectionLevel, QrMatrix } from './qr';
 import { QR_QUIET_ZONE_MODULES, encodeQr, qrRowRuns } from './qr';
 
 /** Rebuild row strings ("1" = dark) from a matrix for vector comparison. */
-function toRowStrings(matrix: QrMatrix): string[] {
+const toRowStrings = (matrix: QrMatrix): string[] => {
   const rows: string[] = [];
   for (let r = 0; r < matrix.size; r++) {
     let row = '';
@@ -14,15 +14,15 @@ function toRowStrings(matrix: QrMatrix): string[] {
     rows.push(row);
   }
   return rows;
-}
+};
 
-function darkCount(matrix: QrMatrix): number {
+const darkCount = (matrix: QrMatrix): number => {
   let count = 0;
   for (const module of matrix.modules) {
     count += module;
   }
   return count;
-}
+};
 
 /**
  * Reference vectors generated with the battle-tested `qrcode` npm package
@@ -185,14 +185,14 @@ describe('encodeQr — structural invariants', () => {
   const isDark = (matrix: QrMatrix, row: number, col: number) => matrix.modules[row * matrix.size + col] === 1;
 
   /** The 7×7 finder ring: dark border, light ring, dark 3×3 core. */
-  function expectFinderAt(matrix: QrMatrix, top: number, left: number) {
+  const expectFinderAt = (matrix: QrMatrix, top: number, left: number) => {
     for (let r = 0; r < 7; r++) {
       for (let c = 0; c < 7; c++) {
         const expected = r === 0 || r === 6 || c === 0 || c === 6 || (r >= 2 && r <= 4 && c >= 2 && c <= 4);
         expect(isDark(matrix, top + r, left + c)).toBe(expected);
       }
     }
-  }
+  };
 
   const samples = ['A', 'SKU-001234', '0123456789'.repeat(8), 'x'.repeat(213)];
 

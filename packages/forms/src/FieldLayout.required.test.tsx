@@ -5,10 +5,10 @@ import { describe, expect, it } from 'vitest';
 import { FieldLayout } from './FieldLayout';
 import { RequiredMarkingContext } from './required-marking';
 
-function labelText(container: HTMLElement): string {
+const labelText = (container: HTMLElement): string => {
   const label = container.querySelector('label');
   return label?.textContent ?? '';
-}
+};
 
 describe('FieldLayout required marking', () => {
   it('defaults to asterisk for required standalone fields', () => {

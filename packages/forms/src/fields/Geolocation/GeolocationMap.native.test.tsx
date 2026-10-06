@@ -23,27 +23,27 @@ let googleProps: AnyProps | null = null;
 const setCameraPosition = vi.fn();
 
 /** Reset captured props inside a function so TS flow analysis can't narrow the lets to `null`. */
-function resetCapturedProps() {
+const resetCapturedProps = () => {
   appleProps = null;
   googleProps = null;
-}
+};
 
-function createMapsMock() {
-  function AppleView(props: AnyProps) {
+const createMapsMock = () => {
+  const AppleView = (props: AnyProps) => {
     appleProps = props;
     useImperativeHandle(props.ref, () => ({ setCameraPosition }));
     return React.createElement('div', { 'data-testid': 'apple-maps-view' });
-  }
-  function GoogleView(props: AnyProps) {
+  };
+  const GoogleView = (props: AnyProps) => {
     googleProps = props;
     useImperativeHandle(props.ref, () => ({ setCameraPosition }));
     return React.createElement('div', { 'data-testid': 'google-maps-view' });
-  }
+  };
   return {
     AppleMaps: { View: AppleView },
     GoogleMaps: { View: GoogleView },
   } as unknown as NonNullable<ReturnType<typeof loadExpoMaps>>;
-}
+};
 
 describe('GeolocationMap (native)', () => {
   beforeEach(() => {

@@ -32,7 +32,7 @@ interface DatumTargetCallbacks extends ChartDatumEvents {
   datumLabel?: (datum: ChartDatum, index: number) => string;
 }
 
-function targetPropsFor(callbacks: DatumTargetCallbacks, datum: ChartDatum, index: number) {
+const targetPropsFor = (callbacks: DatumTargetCallbacks, datum: ChartDatum, index: number) => {
   const { onDatumPress, onDatumHoverIn, onDatumHoverOut, datumLabel } = callbacks;
   return datumTargetProps({
     label: datumLabel?.(datum, index),
@@ -52,13 +52,13 @@ function targetPropsFor(callbacks: DatumTargetCallbacks, datum: ChartDatum, inde
         }
       : undefined,
   });
-}
+};
 
-function hasTargets(callbacks: DatumTargetCallbacks): boolean {
+const hasTargets = (callbacks: DatumTargetCallbacks): boolean => {
   return Boolean(
     callbacks.onDatumPress || callbacks.onDatumHoverIn || callbacks.onDatumHoverOut || callbacks.datumLabel,
   );
-}
+};
 
 // ── Bar ───────────────────────────────────────────────────────
 
@@ -77,7 +77,7 @@ export interface BarSeriesProps extends DatumTargetCallbacks {
  * anatomy; the baseline corners stay square (R-SCALE-DATA).
  * Hit target = the full column, floored at 44px width.
  */
-export function BarSeries({ data, xScale, yScale, plot, fills, ...callbacks }: BarSeriesProps) {
+export const BarSeries = ({ data, xScale, yScale, plot, fills, ...callbacks }: BarSeriesProps) => {
   const { barCornerRadius } = useChartTheme();
   const bandwidth = xScale.bandwidth();
   const baseline = yScale(Math.max(0, yScale.domain()[0]));
@@ -125,7 +125,7 @@ export function BarSeries({ data, xScale, yScale, plot, fills, ...callbacks }: B
       })}
     </G>
   );
-}
+};
 
 // ── Line ──────────────────────────────────────────────────────
 
@@ -146,18 +146,18 @@ export interface LineSeriesProps extends DatumTargetCallbacks {
   bounds?: ChartSize;
 }
 
-function clampTargetCenter(value: number, radius: number, extent?: number): number {
+const clampTargetCenter = (value: number, radius: number, extent?: number): number => {
   if (extent === undefined || extent < radius * 2) {
     return value;
   }
   return Math.min(Math.max(value, radius), extent - radius);
-}
+};
 
 /**
  * Stroked data line with optional per-datum dots. Hit targets are invisible
  * 44px-diameter circles centered on each datum.
  */
-export function LineSeries({
+export const LineSeries = ({
   data,
   points,
   color,
@@ -167,7 +167,7 @@ export function LineSeries({
   pointRadius = 3,
   bounds,
   ...callbacks
-}: LineSeriesProps) {
+}: LineSeriesProps) => {
   const interactive = hasTargets(callbacks);
   const targetRadius = MIN_PRESS_TARGET / 2;
   return (
@@ -205,7 +205,7 @@ export function LineSeries({
         : null}
     </G>
   );
-}
+};
 
 // ── Area ──────────────────────────────────────────────────────
 
@@ -224,7 +224,7 @@ export interface AreaSeriesProps {
  * Filled area under a series. Non-interactive by design — pair it with a
  * LineSeries on top, which owns points and hit targets.
  */
-export function AreaSeries({ points, baseline, color, opacity = 0.18, curve }: AreaSeriesProps) {
+export const AreaSeries = ({ points, baseline, color, opacity = 0.18, curve }: AreaSeriesProps) => {
   return (
     <Path
       {...chartMarkProps('series area')}
@@ -233,7 +233,7 @@ export function AreaSeries({ points, baseline, color, opacity = 0.18, curve }: A
       opacity={opacity}
     />
   );
-}
+};
 
 // ── Pie / Donut ───────────────────────────────────────────────
 
@@ -257,7 +257,7 @@ export interface PieSeriesProps extends DatumTargetCallbacks {
  * without lying about the data, so thin-slice precision is a documented
  * touch limitation (legend rows remain the accessible alternative).
  */
-export function PieSeries({
+export const PieSeries = ({
   data,
   cx,
   cy,
@@ -266,7 +266,7 @@ export function PieSeries({
   padAngle,
   fills,
   ...callbacks
-}: PieSeriesProps) {
+}: PieSeriesProps) => {
   const instanceId = useId().replaceAll(/[^a-zA-Z0-9_-]/g, '_');
   const slices = pieSlices(data, { padAngle });
   const maskGaps = padAngle === undefined && canMaskPieSlices(slices, innerRadius, outerRadius);
@@ -328,4 +328,4 @@ export function PieSeries({
       })}
     </G>
   );
-}
+};

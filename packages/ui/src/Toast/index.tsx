@@ -106,10 +106,10 @@ export interface UseToastResult {
  * Imperative toast hook. Works anywhere — no provider needed beyond a
  * mounted <ToastViewport />.
  */
-export function useToast(): UseToastResult {
+export const useToast = (): UseToastResult => {
   const toasts = useSyncExternalStore(subscribeToasts, getToasts, getToasts);
   return useMemo(() => ({ show: showToast, dismiss: dismissToast, dismissAll: dismissAllToasts, toasts }), [toasts]);
-}
+};
 
 // ── Press-floor + nested scale ────────────────────────────────
 //
@@ -137,15 +137,15 @@ const DESC_FONT_SIZE = {
   $5: '$4',
 } as const;
 
-function iconPxForSize(size: string): number {
+const iconPxForSize = (size: string): number => {
   return size === 'small' ? 16 : size === 'large' ? 20 : 18;
-}
+};
 
-function closePxForSize(size: string): number {
+const closePxForSize = (size: string): number => {
   return size === 'small' ? 12 : size === 'large' ? 16 : 14;
-}
+};
 
-function toastClosePressProps(besideAction: boolean, closeVisual: number) {
+const toastClosePressProps = (besideAction: boolean, closeVisual: number) => {
   const outset = Math.max(0, Math.ceil((MIN_PRESS_TARGET - closeVisual) / 2));
   return {
     ...pressTargetStyle(),
@@ -154,16 +154,16 @@ function toastClosePressProps(besideAction: boolean, closeVisual: number) {
     marginHorizontal: -(besideAction ? CLOSE_ADJACENT_OUTSET : outset),
     hitSlop: besideAction ? undefined : pressTargetHitSlop(closeVisual),
   };
-}
+};
 
-function toastActionPressProps(visualH: number) {
+const toastActionPressProps = (visualH: number) => {
   const outset = Math.max(0, Math.ceil((MIN_PRESS_TARGET - visualH) / 2));
   return {
     ...pressTargetStyle(),
     marginVertical: -outset,
     hitSlop: pressTargetHitSlop(visualH),
   };
-}
+};
 
 // Overlay elevation is one step above the control token.
 // elevatedSurface.elevation is a Tamagui VARIANT — dropped on a
@@ -175,7 +175,7 @@ function toastActionPressProps(visualH: number) {
 const OVERLAY_ELEVATION_WEB: Record<string, string> = { $1: '$2', $2: '$3', $4: '$5' };
 const OVERLAY_ELEVATION_NATIVE: Record<number, number> = { 20: 28, 28: 36, 44: 52 };
 
-function overlayElevationOf(knobProps: KnobProps): string | number | undefined {
+const overlayElevationOf = (knobProps: KnobProps): string | number | undefined => {
   const extra = knobProps as KnobProps & { overlayElevation?: string | number };
   if ('overlayElevation' in extra) {
     return extra.overlayElevation;
@@ -188,7 +188,7 @@ function overlayElevationOf(knobProps: KnobProps): string | number | undefined {
     return OVERLAY_ELEVATION_WEB[control] ?? control;
   }
   return OVERLAY_ELEVATION_NATIVE[control] ?? control;
-}
+};
 
 /** 3px logical intent edge — must live in the style attribute after Tamagui writes. */
 const TOAST_INTENT_EDGE_PX = 3;
@@ -196,7 +196,7 @@ const TOAST_FRAME_STYLE_ID = 'mp-toast-intent-edge';
 const toastIntentEdgeCss =
   '.mp-toast{border-inline-start-width:3px!important;border-inline-start-style:solid!important;}';
 
-function ensureToastIntentEdge() {
+const ensureToastIntentEdge = () => {
   if (typeof document === 'undefined') {
     return;
   }
@@ -207,12 +207,12 @@ function ensureToastIntentEdge() {
   tag.id = TOAST_FRAME_STYLE_ID;
   tag.textContent = toastIntentEdgeCss;
   document.head.append(tag);
-}
+};
 
-function paintToastFrame(
+const paintToastFrame = (
   node: HTMLElement | null,
   attrs: { size: string; density: string; nestedPx: number; edgeColor?: string },
-) {
+) => {
   if (!node) {
     return;
   }
@@ -230,7 +230,7 @@ function paintToastFrame(
   if (attrs.edgeColor) {
     node.style.borderInlineStartColor = attrs.edgeColor;
   }
-}
+};
 
 /**
  * Spoken confirm. Tamagui's ToastAnnounce portal is web-only
@@ -238,7 +238,7 @@ function paintToastFrame(
  * never heard CopyField's "Copied to clipboard." Put the title on the
  * frame and announce it the same way field errors do.
  */
-function spokenToastText(title: ReactNode, description?: ReactNode): string | undefined {
+const spokenToastText = (title: ReactNode, description?: ReactNode): string | undefined => {
   const chunks: string[] = [];
   if (typeof title === 'string' && title.trim()) {
     chunks.push(title.trim());
@@ -247,18 +247,18 @@ function spokenToastText(title: ReactNode, description?: ReactNode): string | un
     chunks.push(description.trim());
   }
   return chunks.length ? chunks.join('. ') : undefined;
-}
+};
 
-function useAnnounceToast(text: string | undefined) {
+const useAnnounceToast = (text: string | undefined) => {
   useEffect(() => {
     if (isWeb || !text) {
       return;
     }
     AccessibilityInfo.announceForAccessibility(text);
   }, [text]);
-}
+};
 
-export function nativeToastA11y(text: string | undefined, hasControls: boolean, web = isWeb) {
+export const nativeToastA11y = (text: string | undefined, hasControls: boolean, web = isWeb) => {
   if (web) {
     return {};
   }
@@ -271,12 +271,12 @@ export function nativeToastA11y(text: string | undefined, hasControls: boolean, 
     accessible: true as const,
     accessibilityLabel: text,
   };
-}
+};
 
 /** Native View controls need accessible as well as their button role and label. */
-export function nativeToastControlA11y(web = isWeb) {
+export const nativeToastControlA11y = (web = isWeb) => {
   return web ? {} : { accessible: true as const };
-}
+};
 
 // Grown transparent press target. Stays UNPAINTED — the keyboard ring lives on the
 // inner pill via `.mp-chip-dismiss:focus-visible .mp-chip-dismiss-ring`.
@@ -349,12 +349,12 @@ const ToastCloseRing = styled(View, {
  * on the BASE theme: its $color9/$color11 already ride the active tint, and
  * the "accent" sub-theme is the SOLID ramp — wrong for an overlay surface.
  */
-function IntentWrap({ intent, children }: { intent: ToastIntent; children: ReactNode }) {
+const IntentWrap = ({ intent, children }: { intent: ToastIntent; children: ReactNode }) => {
   if (intent === 'accent') {
     return <>{children}</>;
   }
   return <Intent name={intent}>{children}</Intent>;
-}
+};
 
 // ── Shared inner anatomy ──────────────────────────────────────
 
@@ -363,7 +363,7 @@ function IntentWrap({ intent, children }: { intent: ToastIntent; children: React
  * viewport items. Must be called INSIDE the <Intent> wrapper so the theme
  * tokens resolve on the intent hue.
  */
-function useToastVisuals(intent: ToastIntent, compact?: boolean) {
+const useToastVisuals = (intent: ToastIntent, compact?: boolean) => {
   const { knobProps } = useResolvedKnobs({ intent, component: 'Toast', compact });
   if (typeof document !== 'undefined') {
     ensureCompositeFocusRing();
@@ -439,7 +439,7 @@ function useToastVisuals(intent: ToastIntent, compact?: boolean) {
       alignItems: 'flex-start' as const,
     },
   };
-}
+};
 
 interface ToastBodyProps {
   title: ReactNode;
@@ -452,7 +452,7 @@ interface ToastBodyProps {
   bodyFontProps: { fontFamily: string; fontWeight: string };
 }
 
-function ToastBody({
+const ToastBody = ({
   title,
   description,
   intent,
@@ -461,7 +461,7 @@ function ToastBody({
   descFontSize,
   labelFontProps,
   bodyFontProps,
-}: ToastBodyProps) {
+}: ToastBodyProps) => {
   const Icon = intentIcons[intent];
   if (typeof title === 'string') {
     warnBannedErrorWords(title, { component: 'Toast' });
@@ -508,7 +508,7 @@ function ToastBody({
       </YStack>
     </>
   );
-}
+};
 
 interface ToastActionLabelProps {
   label: string;
@@ -516,7 +516,7 @@ interface ToastActionLabelProps {
   labelFontProps: KnobProps['label'];
 }
 
-function ToastActionLabel({ label, color, labelFontProps }: ToastActionLabelProps) {
+const ToastActionLabel = ({ label, color, labelFontProps }: ToastActionLabelProps) => {
   // Action label is weight 400. Never 500, never 600.
   // Measure the TEXT NODE — a wrapping frame's weight is not the label's.
   const inkStyle = isWeb && typeof color === 'string' && !color.startsWith('$') ? { color } : undefined;
@@ -529,7 +529,7 @@ function ToastActionLabel({ label, color, labelFontProps }: ToastActionLabelProp
       {label}
     </SizableText>
   );
-}
+};
 
 // ── Toast (standalone / controlled) ──────────────────────────
 
@@ -558,7 +558,7 @@ interface ToastInnerProps extends ToastProps {
   intent: ToastIntent;
 }
 
-function ToastInner({
+const ToastInner = ({
   title,
   description,
   intent,
@@ -567,7 +567,7 @@ function ToastInner({
   dismissible,
   compact,
   ...props
-}: ToastInnerProps) {
+}: ToastInnerProps) => {
   const { t } = useTranslation();
   const {
     knobProps,
@@ -671,14 +671,14 @@ function ToastInner({
       )}
     </XStack>
   );
-}
+};
 
 /**
  * Presentational toast surface. Controlled: the parent owns visibility and
  * receives `onDismiss`. For the imperative/uncontrolled flow use
  * `useToast().show(...)` with a mounted <ToastViewport />.
  */
-export function Toast({ intent = 'accent', ...props }: ToastProps) {
+export const Toast = ({ intent = 'accent', ...props }: ToastProps) => {
   return (
     <IntentWrap intent={intent}>
       <ToastInner
@@ -687,7 +687,7 @@ export function Toast({ intent = 'accent', ...props }: ToastProps) {
       />
     </IntentWrap>
   );
-}
+};
 
 // ── Viewport item (imperative flow) ──────────────────────────
 
@@ -697,7 +697,7 @@ interface ToastItemProps {
   compact?: boolean;
 }
 
-function ToastItemInner({ entry, isTop, compact }: ToastItemProps) {
+const ToastItemInner = ({ entry, isTop, compact }: ToastItemProps) => {
   const { t } = useTranslation();
   const {
     knobProps,
@@ -806,15 +806,15 @@ function ToastItemInner({ entry, isTop, compact }: ToastItemProps) {
       )}
     </TamaguiToast>
   );
-}
+};
 
-function ToastItem(props: ToastItemProps) {
+const ToastItem = (props: ToastItemProps) => {
   return (
     <IntentWrap intent={props.entry.intent}>
       <ToastItemInner {...props} />
     </IntentWrap>
   );
-}
+};
 
 // ── ToastViewport ────────────────────────────────────────────
 
@@ -848,7 +848,7 @@ const placementStyles: Record<
   'bottom-right': { bottom: 16, right: 16 },
 };
 
-function placementSwipeDirection(placement: ToastPlacement): SwipeDirection {
+const placementSwipeDirection = (placement: ToastPlacement): SwipeDirection => {
   if (placement.endsWith('left')) {
     return 'left';
   }
@@ -856,7 +856,7 @@ function placementSwipeDirection(placement: ToastPlacement): SwipeDirection {
     return 'right';
   }
   return placement.startsWith('top') ? 'up' : 'down';
-}
+};
 
 /**
  * Toast host: mounts the @tamagui/toast provider + viewport and renders the
@@ -866,13 +866,13 @@ function placementSwipeDirection(placement: ToastPlacement): SwipeDirection {
  * Pause-on-hover, focus management and the F8 hotkey come from the
  * underlying viewport.
  */
-export function ToastViewport({
+export const ToastViewport = ({
   placement = isWeb ? 'bottom-right' : 'top',
   duration = TOAST_DEFAULT_MS,
   label: labelProp,
   hotkey,
   compact,
-}: ToastViewportProps) {
+}: ToastViewportProps) => {
   const { t } = useTranslation();
   const label = labelProp ?? t('Notification');
   const toasts = useSyncExternalStore(subscribeToasts, getToasts, getToasts);
@@ -936,4 +936,4 @@ export function ToastViewport({
       {content}
     </View>
   );
-}
+};

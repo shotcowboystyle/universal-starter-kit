@@ -5,9 +5,9 @@ import { describe, expect, it } from 'vitest';
 
 import { useHydrated } from '@/hooks/use-hydrated';
 
-function Probe() {
+const Probe = () => {
   return <span>{useHydrated() ? 'client' : 'server'}</span>;
-}
+};
 
 describe('useHydrated', () => {
   it('is false while rendering on the server', () => {

@@ -7,7 +7,7 @@ import { useTheme } from 'next-themes';
 
 import { useHydrated } from '@/hooks/use-hydrated';
 
-export default function ThemeToggle() {
+const ThemeToggle = () => {
   const { setTheme, resolvedTheme } = useTheme();
   const hydrated = useHydrated();
   const t = useTranslations('theme');
@@ -43,4 +43,6 @@ export default function ThemeToggle() {
       />
     </DropdownMenu>
   );
-}
+};
+
+export default ThemeToggle;

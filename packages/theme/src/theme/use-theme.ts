@@ -45,13 +45,13 @@ export type ThemeScheme = 'system' | 'dark' | 'light';
  * preset registry, and its base knobs are merged with `mp.ov.*` overrides.
  * This produces the same resolved knobs on the server as on the client.
  */
-export function useTheme(): [
+export const useTheme = (): [
   Knobs,
   (knobs?: Partial<Knobs>) => void,
   boolean,
   (presetName: string) => void,
   string | undefined,
-] {
+] => {
   const isCookieDisabled = typeof process !== 'undefined' && process.env?.COOKIE_POLICY?.toLowerCase() === 'disabled';
   const watchList = isCookieDisabled ? [] : getCookieWatchList();
   const [cookie, setCookie, removeCookie] = useCookies<string, Record<string, string>>(watchList);
@@ -223,4 +223,4 @@ export function useTheme(): [
   }, [isClient, isCookieDisabled, writeCookies, localKnobs, activePreset]);
 
   return [localKnobs, setKnobs, initializedFromCookie, setPresetFn, activePreset];
-}
+};

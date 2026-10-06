@@ -8,7 +8,7 @@ import { YStack } from 'tamagui';
 
 import { EmptyState } from './EmptyState';
 
-function PageCanvas({ children }: { children: ReactNode }) {
+const PageCanvas = ({ children }: { children: ReactNode }) => {
   return (
     <YStack
       minHeight={520}
@@ -17,7 +17,7 @@ function PageCanvas({ children }: { children: ReactNode }) {
       {children}
     </YStack>
   );
-}
+};
 
 const meta: Meta<typeof EmptyState> = {
   title: 'Components/EmptyState',

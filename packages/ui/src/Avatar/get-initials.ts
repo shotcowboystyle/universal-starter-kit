@@ -2,7 +2,7 @@
  * Derive up to two initials from a display name or email local-part.
  * "Ada Lovelace" → "AL", "john.doe@x" → "JD", "Ada" → "AD".
  */
-export function getInitials(name: string): string {
+export const getInitials = (name: string): string => {
   const trimmed = (name ?? '').trim();
   if (!trimmed) {
     return '?';
@@ -14,7 +14,7 @@ export function getInitials(name: string): string {
     return (a + b).toUpperCase();
   }
   return trimmed.substring(0, 2).toUpperCase();
-}
+};
 
 /**
  * Polaris-style deterministic initials fill. Tokens only — the same seed
@@ -31,18 +31,18 @@ export const FALLBACK_TONES = [
 
 export type FallbackTone = (typeof FALLBACK_TONES)[number];
 
-export function fallbackToneIndex(seed: string): number {
+export const fallbackToneIndex = (seed: string): number => {
   let hash = 0;
   for (let i = 0; i < seed.length; i++) {
     hash = (Math.imul(hash, 31) + seed.charCodeAt(i)) | 0;
   }
   return Math.abs(hash) % FALLBACK_TONES.length;
-}
+};
 
-export function fallbackTone(seed: string | undefined): FallbackTone | undefined {
+export const fallbackTone = (seed: string | undefined): FallbackTone | undefined => {
   const trimmed = (seed ?? '').trim();
   if (!trimmed) {
     return undefined;
   }
   return FALLBACK_TONES[fallbackToneIndex(trimmed)];
-}
+};

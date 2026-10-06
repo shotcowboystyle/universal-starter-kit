@@ -15,9 +15,9 @@ vi.mock('@/i18n/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
 }));
 
-function mockItems(items: { title: string; link: string }[]) {
+const mockItems = (items: { title: string; link: string }[]) => {
   vi.mocked(useBreadcrumbs).mockReturnValue({ items, rootLink: '/boards' });
-}
+};
 
 describe('Breadcrumbs', () => {
   beforeEach(() => {

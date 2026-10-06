@@ -46,7 +46,7 @@ export interface CalendarProps {
 
 type RangeStatus = 'none' | 'range-start' | 'range-end' | 'in-range' | 'selected-single';
 
-function getRangeStatus(day: Date, dates: Date[]): RangeStatus {
+const getRangeStatus = (day: Date, dates: Date[]): RangeStatus => {
   if (dates.length === 0) {
     return 'none';
   }
@@ -68,7 +68,7 @@ function getRangeStatus(day: Date, dates: Date[]): RangeStatus {
     return 'in-range';
   }
   return 'none';
-}
+};
 
 // ---------------------------------------------------------------------------
 // CalendarDayGrid — unified day grid supporting all modes
@@ -84,7 +84,7 @@ interface CalendarDayGridProps {
   selectionCapped?: boolean;
 }
 
-function CalendarDayGrid({
+const CalendarDayGrid = ({
   calendarData,
   selectedDates,
   onDayPress,
@@ -92,7 +92,7 @@ function CalendarDayGrid({
   minDate,
   maxDate,
   selectionCapped,
-}: CalendarDayGridProps) {
+}: CalendarDayGridProps) => {
   const { knobProps } = useCalendarKnobs();
   return (
     <CalendarDays
@@ -142,7 +142,7 @@ function CalendarDayGrid({
       }
     />
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // CalendarPanel — one month panel with header + grid
@@ -162,7 +162,7 @@ interface CalendarPanelProps {
   showNext?: boolean;
 }
 
-function CalendarPanel({
+const CalendarPanel = ({
   displayDate,
   selectedDates,
   onDayPress,
@@ -174,7 +174,7 @@ function CalendarPanel({
   selectionCapped,
   showPrev = true,
   showNext = true,
-}: CalendarPanelProps) {
+}: CalendarPanelProps) => {
   const [viewMode, setViewMode] = useState<ViewMode>('day');
   const calendarData = useCalendarData(displayDate);
   const [yearPageStart, setYearPageStart] = useState(() => calendarData.year - (calendarData.year % yearPageSize));
@@ -220,13 +220,13 @@ function CalendarPanel({
       </CalendarPanelFrame>
     </CalendarViewSwitcher>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // Calendar — inline calendar with optional mode tabs
 // ---------------------------------------------------------------------------
 
-export function Calendar({
+export const Calendar = ({
   mode: modeProp,
   showTabs = true,
   selectedDates: controlledDates,
@@ -234,7 +234,7 @@ export function Calendar({
   minDate,
   maxDate,
   limit = 10,
-}: CalendarProps) {
+}: CalendarProps) => {
   const { knobProps } = useCalendarKnobs();
   const { px } = knobProps.nestedControl;
   const [internalMode, setInternalMode] = useState<CalendarMode>(modeProp ?? 'range');
@@ -424,4 +424,4 @@ export function Calendar({
       </View>
     </YStack>
   );
-}
+};

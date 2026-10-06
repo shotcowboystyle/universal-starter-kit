@@ -38,7 +38,7 @@ export interface SnapshotInput {
   darkColors: string[];
 }
 
-export function buildSnapshot(input: SnapshotInput): string {
+export const buildSnapshot = (input: SnapshotInput): string => {
   const { knobValues, activePreset, activeProfile, schemeSetting, schemeValue, currentColor, lightColors, darkColors } =
     input;
   const lines: string[] = [];
@@ -111,4 +111,4 @@ export function buildSnapshot(input: SnapshotInput): string {
   }
 
   return lines.join('\n');
-}
+};

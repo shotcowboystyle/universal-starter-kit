@@ -44,7 +44,7 @@ export interface ErrorSummaryProps {
 }
 
 /** Flatten structured / string errors into display copy. */
-export function formatFieldError(error: FieldErrorMessage): string {
+export const formatFieldError = (error: FieldErrorMessage): string => {
   if (typeof error === 'string') {
     return error;
   }
@@ -54,10 +54,10 @@ export function formatFieldError(error: FieldErrorMessage): string {
     return `${problem} ${action}`;
   }
   return problem || action || '';
-}
+};
 
 /** Normalize unknown validator return values into FieldErrorMessage. */
-export function normalizeFieldError(raw: unknown): FieldErrorMessage | undefined {
+export const normalizeFieldError = (raw: unknown): FieldErrorMessage | undefined => {
   if (raw == null || raw === false || raw === '') {
     return undefined;
   }
@@ -72,26 +72,26 @@ export function normalizeFieldError(raw: unknown): FieldErrorMessage | undefined
     return raw as StructuredFieldError;
   }
   return String(raw);
-}
+};
 
 /**
  * DEV-only banned-word guard (blueprint `banned-error-word`).
  * Tree-shaken when `NODE_ENV === "production"`.
  */
-export function warnBannedErrorWords(message: string, fieldName?: string): void {
+export const warnBannedErrorWords = (message: string, fieldName?: string): void => {
   warnBannedErrorWordsShared(message, {
     component: 'ErrorSummary',
     fieldName,
     id: fieldName,
   });
-}
+};
 
 type FieldMetaLike = { errors?: unknown[] } | undefined;
 
 /** Collect field errors from TanStack `state.fieldMeta` for ErrorSummary. */
-export function collectFormFieldErrors(
+export const collectFormFieldErrors = (
   fieldMeta: Partial<Record<string, FieldMetaLike>> | null | undefined,
-): ErrorSummaryItem[] {
+): ErrorSummaryItem[] => {
   if (!fieldMeta) {
     return [];
   }
@@ -109,19 +109,19 @@ export function collectFormFieldErrors(
     items.push({ name, id: name, error });
   }
   return items;
-}
+};
 
 /**
  * Form-level error summary. Lists field errors with focusable
  * links, `role="alert"`, and moves keyboard focus onto itself when it appears.
  */
-export function ErrorSummary({
+export const ErrorSummary = ({
   errors,
   title = t('There is a problem'),
   disableAutoFocus = false,
   formElement,
   onFocusField,
-}: ErrorSummaryProps) {
+}: ErrorSummaryProps) => {
   const { knobProps } = useResolvedKnobs({ component: 'ErrorSummary' });
   const headingId = useId();
   const containerRef = useRef<HTMLElement | null>(null);
@@ -246,4 +246,4 @@ export function ErrorSummary({
       </YStack>
     </YStack>
   );
-}
+};

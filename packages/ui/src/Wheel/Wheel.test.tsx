@@ -53,26 +53,26 @@ describe('Wheel contrast contract', () => {
 describe('Wheel snaps ride the animation knob', () => {
   const items = [10, 20, 30, 40, 50];
 
-  function rowTransform(index: number): string {
+  const rowTransform = (index: number): string => {
     const row = screen
       .getByTestId('wheel')
       .querySelector(`[data-testid="wheel-item"][data-index="${index}"]`) as HTMLElement | null;
     return row?.style.transform ?? '(virtualized out)';
-  }
+  };
 
-  function wheelSnapshot(): string {
+  const wheelSnapshot = (): string => {
     return items.map((_, index) => rowTransform(index)).join(' | ');
-  }
+  };
 
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  function useFrameClock() {
+  const useFrameClock = () => {
     vi.useFakeTimers({
       toFake: ['setTimeout', 'clearTimeout', 'requestAnimationFrame', 'cancelAnimationFrame', 'performance'],
     });
-  }
+  };
 
   it('jumps instantly on keyboard snap at animation none — settled within one frame', () => {
     useFrameClock();
@@ -138,14 +138,14 @@ describe('Wheel snaps ride the animation knob', () => {
     expect(wrapper.getAttribute('aria-valuenow')).toBe('1');
   });
 
-  function flick(wrapper: HTMLElement) {
+  const flick = (wrapper: HTMLElement) => {
     fireEvent.pointerDown(wrapper, { clientY: 300, pointerId: 1 });
     act(() => {
       vi.advanceTimersByTime(16);
     });
     fireEvent.pointerMove(wrapper, { clientY: 80, pointerId: 1 });
     fireEvent.pointerUp(wrapper, { clientY: 80, pointerId: 1 });
-  }
+  };
 
   it('skips momentum coast at animation none — flick snaps in the same turn', () => {
     useFrameClock();

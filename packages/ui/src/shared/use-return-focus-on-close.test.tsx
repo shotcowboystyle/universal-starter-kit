@@ -11,7 +11,7 @@ afterEach(() => {
 });
 
 describe('useReturnFocusOnClose', () => {
-  function setup() {
+  const setup = () => {
     vi.useFakeTimers();
     const trigger = document.createElement('button');
     document.body.append(trigger);
@@ -25,7 +25,7 @@ describe('useReturnFocusOnClose', () => {
       },
     );
     return { ...hook, trigger };
-  }
+  };
 
   it('restores dropped focus after the close animation', async () => {
     const h = setup();

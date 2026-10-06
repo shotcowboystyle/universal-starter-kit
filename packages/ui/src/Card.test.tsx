@@ -13,14 +13,14 @@ import { Card, CardFooter, CardHeader } from './Card';
 
 const cardConfig = createTamagui(defaultConfig);
 
-function readSibling(name: string) {
+const readSibling = (name: string) => {
   return readFileSync(join(import.meta.dirname, name), 'utf-8');
-}
+};
 
-function DensityProbe() {
+const DensityProbe = () => {
   const { knobProps } = useResolvedKnobs();
   return <span data-child-density={knobProps.density} />;
-}
+};
 
 describe('Card named exports', () => {
   it('barrel re-exports the themed surface, not the tamagui primitive', () => {
@@ -37,7 +37,7 @@ describe('Card — NestedScale only, no Tint', () => {
     const src = readSibling('Card.tsx');
     expect(src).not.toMatch(/from ["'][^"']*Tint["']/);
     expect(src).not.toMatch(/<[Tt]int[\s/>]/);
-    expect(src).toMatch(/function NestedScale/);
+    expect(src).toMatch(/const NestedScale = /);
   });
 });
 
@@ -230,8 +230,8 @@ describe('Card header / footer', () => {
     expect(readSibling('CardHeader.tsx')).toMatch(/TamaguiCard\.Header[\s\S]*padding=\{0\}/);
     expect(readSibling('CardFooter.tsx')).toMatch(/TamaguiCard\.Footer[\s\S]*padding=\{0\}/);
     const src = readSibling('Card.tsx');
-    expect(src).not.toMatch(/function CardHeader\b/);
-    expect(src).not.toMatch(/function CardFooter\b/);
+    expect(src).not.toMatch(/const CardHeader\b/);
+    expect(src).not.toMatch(/const CardFooter\b/);
 
     const { container } = renderWithProviders(
       <Card>

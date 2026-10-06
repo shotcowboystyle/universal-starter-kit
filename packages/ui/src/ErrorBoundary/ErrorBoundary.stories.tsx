@@ -23,11 +23,11 @@ const meta: Meta<typeof ErrorBoundary> = {
 export default meta;
 type Story = StoryObj<typeof ErrorBoundary>;
 
-function ThrowError(): ReactNode {
+const ThrowError = (): ReactNode => {
   throw new Error('This is a test error!');
-}
+};
 
-function BuggyCounter() {
+const BuggyCounter = () => {
   const [count, setCount] = useState(0);
 
   if (count === 5) {
@@ -50,7 +50,7 @@ function BuggyCounter() {
       </Text>
     </YStack>
   );
-}
+};
 
 export const Basic: Story = {
   name: 'Main',

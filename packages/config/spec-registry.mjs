@@ -35,10 +35,10 @@ export const SIZE_RECIPE_ESCAPE_HEADING = '## Size-recipe escapes';
 export const HEX_ESCAPE_HEADING = '## Colour-literal escapes';
 
 /** `` `a — b` `` → `a — b`. */
-function unwrapCode(cell) {
+const unwrapCode = (cell) => {
   const match = cell.match(/^`(.*)`$/);
   return match ? match[1] : cell;
-}
+};
 
 /**
  * Body rows of the first markdown table under `heading`, header and separator
@@ -47,7 +47,7 @@ function unwrapCode(cell) {
  * @param {string} heading e.g. "## Slot margins"
  * @returns {string[][] | null}
  */
-export function readSpecTable(markdown, heading) {
+export const readSpecTable = (markdown, heading) => {
   const lines = markdown.split('\n');
   const start = lines.findIndex((line) => line.trim() === heading);
   if (start === -1) {
@@ -83,27 +83,27 @@ export function readSpecTable(markdown, heading) {
     rows.push(cells);
   }
   return rows;
-}
+};
 
 /** `Members: **Card.Footer**, **Card.Header**.` → ["Card.Footer", "Card.Header"]. */
-function parseMembers(text) {
+const parseMembers = (text) => {
   const match = text.match(/Members:\s*(.*)$/i);
   if (!match) {
     return [];
   }
   return [...match[1].matchAll(/\*\*([^*]+)\*\*/g)].map((m) => m[1].trim()).filter(Boolean);
-}
+};
 
 /**
  * @param {string} specPath
  * @param {string} heading
  */
-function readTable(specPath, heading) {
+const readTable = (specPath, heading) => {
   if (!existsSync(specPath)) {
     return null;
   }
   return readSpecTable(readFileSync(specPath, 'utf-8'), heading);
-}
+};
 
 /**
  * Element names that may carry a margin because the spec declares them an
@@ -112,7 +112,7 @@ function readTable(specPath, heading) {
  * @param {string} [specPath]
  * @returns {{ specPath: string, present: boolean, members: string[] }}
  */
-export function readSlotMarginRegistry(specPath = defaultSpecPath()) {
+export const readSlotMarginRegistry = (specPath = defaultSpecPath()) => {
   const rows = readTable(specPath, SLOT_MARGIN_HEADING);
   if (!rows) {
     return { specPath, present: false, members: [] };
@@ -122,7 +122,7 @@ export function readSlotMarginRegistry(specPath = defaultSpecPath()) {
     throw new Error(`${specPath}: "${SLOT_MARGIN_HEADING}" has no ${SLOT_MARGIN_CLASS} row`);
   }
   return { specPath, present: true, members: parseMembers(row[1] ?? '') };
-}
+};
 
 /**
  * `| File | Reason |` rows under `heading`: one `{ file, reason }` per row,
@@ -132,7 +132,7 @@ export function readSlotMarginRegistry(specPath = defaultSpecPath()) {
  * @param {string} heading
  * @returns {{ specPath: string, present: boolean, escapes: { file: string, reason: string }[] }}
  */
-function readFileReasonRegistry(specPath, heading) {
+const readFileReasonRegistry = (specPath, heading) => {
   const rows = readTable(specPath, heading);
   if (!rows) {
     return { specPath, present: false, escapes: [] };
@@ -151,7 +151,7 @@ function readFileReasonRegistry(specPath, heading) {
     escapes.push({ file, reason });
   }
   return { specPath, present: true, escapes };
-}
+};
 
 /**
  * Declared size-recipe escape sites: one `{ file, reason }` per row. `file` is
@@ -161,9 +161,9 @@ function readFileReasonRegistry(specPath, heading) {
  * @param {string} [specPath]
  * @returns {{ specPath: string, present: boolean, escapes: { file: string, reason: string }[] }}
  */
-export function readSizeRecipeEscapeRegistry(specPath = defaultSpecPath()) {
+export const readSizeRecipeEscapeRegistry = (specPath = defaultSpecPath()) => {
   return readFileReasonRegistry(specPath, SIZE_RECIPE_ESCAPE_HEADING);
-}
+};
 
 /**
  * Files exempt from `mpo-conventions/no-hex-literals`: one `{ file, reason }`
@@ -175,9 +175,9 @@ export function readSizeRecipeEscapeRegistry(specPath = defaultSpecPath()) {
  * @param {string} [specPath]
  * @returns {{ specPath: string, present: boolean, escapes: { file: string, reason: string }[] }}
  */
-export function readHexEscapeRegistry(specPath = defaultSpecPath()) {
+export const readHexEscapeRegistry = (specPath = defaultSpecPath()) => {
   return readFileReasonRegistry(specPath, HEX_ESCAPE_HEADING);
-}
+};
 
 const invokedDirectly = typeof process.argv[1] === 'string' && import.meta.url === pathToFileURL(process.argv[1]).href;
 

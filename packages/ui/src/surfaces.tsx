@@ -32,12 +32,12 @@ export type { CardFooterProps, CardHeaderProps, CardProps, SurfaceTier } from '.
 // Never wrap `density: "comfortable"` inside a compact ancestor — that
 // would step nested controls UP.
 
-function NestedScale({ density, children }: { density: string; children: ReactNode }) {
+const NestedScale = ({ density, children }: { density: string; children: ReactNode }) => {
   if (density === 'compact') {
     return children;
   }
   return <Preset overrides={{ density: 'compact' }}>{children}</Preset>;
-}
+};
 
 // ── Overlay frame focus ──────────────────────────────────────────────────
 // Radix Dialog.Content / Primer Dialog are tabIndex=-1 and auto-focused on
@@ -65,7 +65,7 @@ const overlayFrameFocusStyle = {
 // so there FocusScope never calls the handler; useDialogShowFocus does
 // when show() left focus on something that is not a tab stop.
 
-function isTabbableWithin(node: HTMLElement, container: HTMLElement): boolean {
+const isTabbableWithin = (node: HTMLElement, container: HTMLElement): boolean => {
   if (node.tabIndex < 0 || node.hidden || node.tagName === 'A') {
     return false;
   }
@@ -84,9 +84,9 @@ function isTabbableWithin(node: HTMLElement, container: HTMLElement): boolean {
     }
   }
   return true;
-}
+};
 
-function focusFirstTabbableOnOpen(event: Event): void {
+const focusFirstTabbableOnOpen = (event: Event): void => {
   const container = event.currentTarget;
   if (typeof HTMLElement === 'undefined' || !(container instanceof HTMLElement)) {
     return;
@@ -102,19 +102,19 @@ function focusFirstTabbableOnOpen(event: Event): void {
   if (first instanceof HTMLInputElement) {
     first.select();
   }
-}
+};
 
 type OpenAutoFocus = (event: Event) => void;
 
 /** The caller's handler runs first; its `preventDefault()` skips the house open focus. */
-function withHouseOpenFocus(onOpenAutoFocus?: OpenAutoFocus): OpenAutoFocus {
+const withHouseOpenFocus = (onOpenAutoFocus?: OpenAutoFocus): OpenAutoFocus => {
   return (event) => {
     onOpenAutoFocus?.(event);
     if (!event.defaultPrevented) {
       focusFirstTabbableOnOpen(event);
     }
   };
-}
+};
 
 const DIALOG_SHOW_FOCUS_EVENT = 'mp.dialogShowFocus';
 
@@ -128,7 +128,7 @@ const DIALOG_SHOW_FOCUS_EVENT = 'mp.dialogShowFocus';
  * so a ref passed to `Dialog.Content` never attaches on web. Passive effects
  * run after the portal's layout-effect `show()`. Mirror of the forms hook.
  */
-function useDialogShowFocus(onOpenAutoFocus: OpenAutoFocus): void {
+const useDialogShowFocus = (onOpenAutoFocus: OpenAutoFocus): void => {
   const { open, contentId } = useDialogContext();
   useEffect(() => {
     if (!open || !contentId || !isWeb || typeof document === 'undefined') {
@@ -145,7 +145,7 @@ function useDialogShowFocus(onOpenAutoFocus: OpenAutoFocus): void {
     content.addEventListener(DIALOG_SHOW_FOCUS_EVENT, onOpenAutoFocus, { once: true });
     content.dispatchEvent(new CustomEvent(DIALOG_SHOW_FOCUS_EVENT, { cancelable: true }));
   }, [open, contentId]);
-}
+};
 
 /**
  * The house open focus for a raw `Dialog.Content`, which `DialogContent` and
@@ -153,10 +153,10 @@ function useDialogShowFocus(onOpenAutoFocus: OpenAutoFocus): void {
  * `<dialog>.show()` left focus off a tab stop, the caller's `onOpenAutoFocus`
  * runs, then the first tabbable takes focus.
  */
-export function DialogShowFocus({ onOpenAutoFocus }: { onOpenAutoFocus?: OpenAutoFocus }): null {
+export const DialogShowFocus = ({ onOpenAutoFocus }: { onOpenAutoFocus?: OpenAutoFocus }): null => {
   useDialogShowFocus(withHouseOpenFocus(onOpenAutoFocus));
   return null;
-}
+};
 
 // Card frame lives in ./Card (NestedScale only; no Tint); the parts
 // live in ./CardHeader and ./CardFooter and are re-exported through ./Card.
@@ -177,13 +177,13 @@ export const DialogRegionContext = createContext<DialogRegionContextValue>({
   inDialogRegion: false,
 });
 
-export function useDialogRegionContext(): DialogRegionContextValue {
+export const useDialogRegionContext = (): DialogRegionContextValue => {
   return useContext(DialogRegionContext);
-}
+};
 
-export function useIsInDialogRegion(): boolean {
+export const useIsInDialogRegion = (): boolean => {
   return useDialogRegionContext().inDialogRegion;
-}
+};
 
 const IN_DIALOG_REGION: DialogRegionContextValue = { inDialogRegion: true };
 

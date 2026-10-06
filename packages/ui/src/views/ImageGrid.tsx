@@ -110,7 +110,7 @@ const tileTrack = { flexGrow: 1, flexShrink: 1, flexBasis: 0, minWidth: 0 } as c
  * parent's `gap` (never a negative margin): a −half-gutter outset widened the
  * page past the viewport at 390 (FB-390-grid-overflow-x).
  */
-function ImageGridSkeleton({
+const ImageGridSkeleton = ({
   columns,
   gutter,
   aspect,
@@ -121,7 +121,7 @@ function ImageGridSkeleton({
   /** Resolved width/height ratio — the twin must be the media's shape. */
   aspect: number;
   loadingLabel: string;
-}) {
+}) => {
   return (
     <YStack
       gap={gutter}
@@ -149,7 +149,7 @@ function ImageGridSkeleton({
       ))}
     </YStack>
   );
-}
+};
 
 /**
  * One Photos/Polar tile: the rounded media frame is the perceived control.
@@ -159,7 +159,7 @@ function ImageGridSkeleton({
  * No status pip on the media; radius UNCLAMPED (not CONTAINER-CAP).
  * This module does not wrap Tint — nested hue is opt-in at the caller.
  */
-function ImageGridTile({
+const ImageGridTile = ({
   id,
   isFocused,
   showRing,
@@ -179,7 +179,7 @@ function ImageGridTile({
   radiusFragment: { borderRadius?: string | number; className?: string };
   onPress?: () => void;
   children: React.ReactNode;
-}) {
+}) => {
   const radius = radiusFragment.borderRadius;
   const [hovered, setHovered] = useState(false);
   return (
@@ -232,7 +232,7 @@ function ImageGridTile({
       </View>
     </View>
   );
-}
+};
 
 /**
  * Generic image grid component with keyboard navigation.
@@ -255,7 +255,7 @@ function ImageGridTile({
  * />
  * ```
  */
-export function ImageGrid<T>({
+export const ImageGrid = <T,>({
   items,
   renderItem,
   onItemClick,
@@ -273,7 +273,7 @@ export function ImageGrid<T>({
   emptyMessage: emptyMessageProp,
   hotkeys: hotkeyOverrides,
   ...stackProps
-}: ImageGridProps<T>) {
+}: ImageGridProps<T>) => {
   const { t } = useTranslation();
   const emptyMessage = emptyMessageProp ?? t('No items found');
   const { knobProps } = useResolvedKnobs({ component: 'ImageGrid' });
@@ -574,4 +574,4 @@ export function ImageGrid<T>({
       {gridBody}
     </AsyncBoundary>
   );
-}
+};

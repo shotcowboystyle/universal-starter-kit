@@ -126,7 +126,7 @@ const PAGE_STYLE: CSSProperties = {
 
 /** Dev-only: a host that measures 0px tall paints nothing, however healthy
  *  its DOM looks. Say so instead of shipping a blank surface. */
-function useZeroHeightWarning(ref: { current: HTMLDivElement | null }): void {
+const useZeroHeightWarning = (ref: { current: HTMLDivElement | null }): void => {
   useEffect(() => {
     if (process.env.NODE_ENV === 'production') {
       return;
@@ -157,9 +157,9 @@ function useZeroHeightWarning(ref: { current: HTMLDivElement | null }): void {
       cancelAnimationFrame(raf);
     };
   }, [ref]);
-}
+};
 
-export function DomNavigationHost({ routes, initialHref, style }: DomNavigationHostProps): ReactNode {
+export const DomNavigationHost = ({ routes, initialHref, style }: DomNavigationHostProps): ReactNode => {
   const hostRef = useRef<HTMLDivElement>(null);
   const adapterRef = useRef<DomStackAdapter | null>(null);
   if (adapterRef.current === null) {
@@ -225,4 +225,4 @@ export function DomNavigationHost({ routes, initialHref, style }: DomNavigationH
       })}
     </div>
   );
-}
+};

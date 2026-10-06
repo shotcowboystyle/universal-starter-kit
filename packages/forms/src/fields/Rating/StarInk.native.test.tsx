@@ -29,7 +29,7 @@ const SpyStarIcon: StarIconType = (props) => {
   );
 };
 
-function renderInk(overrides: Partial<Parameters<typeof StarInk>[0]> = {}) {
+const renderInk = (overrides: Partial<Parameters<typeof StarInk>[0]> = {}) => {
   captured.length = 0;
   return renderWithProviders(
     <StarInk
@@ -42,16 +42,16 @@ function renderInk(overrides: Partial<Parameters<typeof StarInk>[0]> = {}) {
       {...overrides}
     />,
   );
-}
+};
 
 const layer = (container: HTMLElement, which: 'empty' | 'filled') =>
   container.querySelector(`[data-rating-ink='${which}']`) as HTMLElement | null;
 
 /** Tamagui emits opacity as the atomic class `_o-<value>`, not inline style. */
-function opacityOf(container: HTMLElement, which: 'empty' | 'filled'): number | null {
+const opacityOf = (container: HTMLElement, which: 'empty' | 'filled'): number | null => {
   const match = layer(container, which)?.className.match(/(?:^|\s)_o-([\d.]+)(?:\s|$)/);
   return match ? Number(match[1]) : null;
-}
+};
 
 describe('StarInk (native) motion props', () => {
   // Axiom 4: the token IS the knob's. A hardcoded duration, or a token not

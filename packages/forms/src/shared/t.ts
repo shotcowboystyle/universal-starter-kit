@@ -2,21 +2,21 @@ import i18n from 'i18next';
 
 type TOptions = Record<string, unknown>;
 
-function interpolate(template: string, options?: TOptions): string {
+const interpolate = (template: string, options?: TOptions): string => {
   if (!options) {
     return template;
   }
   return template.replaceAll(/\{\{(\w+)\}\}/g, (_, key: string) =>
     options[key] == null ? `{{${key}}}` : String(options[key]),
   );
-}
+};
 
 /**
  * Safe catalog lookup for non-component paths (preflight, error mappers).
  * When i18n is not initialized (unit tests / headless DS), returns the English
  * key with light `{{var}}` interpolation so callers never get `undefined`.
  */
-export function t(key: string, options?: TOptions): string {
+export const t = (key: string, options?: TOptions): string => {
   if (i18n?.isInitialized) {
     const translated: unknown = i18n.t(key, options as never);
     if (typeof translated === 'string' && translated.length > 0) {
@@ -24,7 +24,7 @@ export function t(key: string, options?: TOptions): string {
     }
   }
   return interpolate(key, options);
-}
+};
 
 /**
  * First-strong bidi isolation — FSI…PDI (`\u2068…\u2069`), the string form of
@@ -41,9 +41,9 @@ export function t(key: string, options?: TOptions): string {
  * marks, never aria-labels (invisible to reorder; breaks exact-match label
  * queries).
  */
-export function bidiIsolate(text: string): string {
+export const bidiIsolate = (text: string): string => {
   if (!text) {
     return text;
   }
   return `\u2068${text}\u2069`;
-}
+};

@@ -15,18 +15,18 @@ export const publicConfigKeysEnvKey = 'VITE_MP_PUBLIC_CONFIG_KEYS';
  * edit then restarts the dev server, re-optimizes deps and 504s each open tab.
  * A read keeps it off that list.
  */
-export function readPublicConfigKeys(file: string): string[] {
+export const readPublicConfigKeys = (file: string): string[] => {
   const parsed: unknown = JSON.parse(fs.readFileSync(file, 'utf-8'));
   const keys = parsed && typeof parsed === 'object' ? (parsed as { public?: unknown }).public : [];
   if (!Array.isArray(keys)) {
     return [];
   }
   return keys.filter((key): key is string => typeof key === 'string' && key.length > 0);
-}
+};
 
-export function mergePublicConfigKeys(...lists: string[][]): string[] {
+export const mergePublicConfigKeys = (...lists: string[][]): string[] => {
   return [...new Set(lists.flat())];
-}
+};
 
 /**
  * Put the bake on process.env: the values resolved from the environment under
@@ -34,10 +34,10 @@ export function mergePublicConfigKeys(...lists: string[][]): string[] {
  * never a value, is what lets the SSR node process resolve them from its own
  * environment at request time (@repo/platform runtimeConfig.ts).
  */
-export function bakePublicConfig(keys: string[]): void {
+export const bakePublicConfig = (keys: string[]): void => {
   process.env[bakedConfigEnvKey] = JSON.stringify(resolveConfig(keys));
   process.env[publicConfigKeysEnvKey] = JSON.stringify(keys);
-}
+};
 
 export interface PublicConfigPluginOptions {
   /** Absolute path of the config.json whose `public` array names the keys. */
@@ -57,14 +57,14 @@ const nodeModulesPath = /[\\/]node_modules[\\/]/;
  * `process.env.<KEY>` reads change: a string, an assignment target or a
  * `globalThis.process.env.<KEY>` is left as written.
  */
-function bakedDefine(): Record<string, string> {
+const bakedDefine = (): Record<string, string> => {
   return Object.fromEntries(
     [bakedConfigEnvKey, publicConfigKeysEnvKey].map((key) => [
       `process.env.${key}`,
       JSON.stringify(process.env[key] ?? ''),
     ]),
   );
-}
+};
 
 /**
  * The browser caches node_modules files and optimized deps as immutable under
@@ -72,7 +72,7 @@ function bakedDefine(): Record<string, string> {
  * outlive every reload and restart. Those keep reading the defines vite
  * injects through /@vite/env instead.
  */
-function browserCached(environment: Environment | undefined, id: string): boolean {
+const browserCached = (environment: Environment | undefined, id: string): boolean => {
   if (!environment || environment.config.consumer === 'server') {
     return false;
   }
@@ -80,7 +80,7 @@ function browserCached(environment: Environment | undefined, id: string): boolea
     return true;
   }
   return 'depsOptimizer' in environment && !!environment.depsOptimizer?.isOptimizedDepFile(id);
-}
+};
 
 /**
  * Dev-server half of `publicConfigFile`. vite:define freezes its replacement
@@ -90,25 +90,25 @@ function browserCached(environment: Environment | undefined, id: string): boolea
  * invalidates those modules and reloads every environment. The server never
  * restarts, so the dep optimizer never runs again.
  */
-export function publicConfigPlugin(options: PublicConfigPluginOptions): Plugin {
+export const publicConfigPlugin = (options: PublicConfigPluginOptions): Plugin => {
   const file = path.resolve(options.file);
   const envFile = path.resolve(options.projectRoot, '.env');
   const inlineKeys = options.keys ?? [];
   const bakedModules = new Map<string, Set<string>>();
 
-  function readKeys(): string[] {
+  const readKeys = (): string[] => {
     return mergePublicConfigKeys(inlineKeys, readPublicConfigKeys(file));
-  }
+  };
 
-  function bake(next: string[]) {
+  const bake = (next: string[]) => {
     dotenv.config({ path: envFile, quiet: true });
     bakePublicConfig(next);
-  }
+  };
 
   let keys = readKeys();
   bake(keys);
 
-  function refresh(server: ViteDevServer) {
+  const refresh = (server: ViteDevServer) => {
     const label = path.relative(process.cwd(), file);
     let next: string[];
     try {
@@ -142,7 +142,7 @@ export function publicConfigPlugin(options: PublicConfigPluginOptions): Plugin {
     server.config.logger.info(`${label} changed, reloading with public keys ${keys.join(', ')}`, {
       timestamp: true,
     });
-  }
+  };
 
   return {
     name: 'multiplatform-public-config',
@@ -185,4 +185,4 @@ export function publicConfigPlugin(options: PublicConfigPluginOptions): Plugin {
       server.watcher.on('add', onChange);
     },
   };
-}
+};

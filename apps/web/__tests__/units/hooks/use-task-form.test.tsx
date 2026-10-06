@@ -46,14 +46,14 @@ const baseValues: TaskFormValues = {
   assigneeId: '',
 };
 
-function wrapper({ children }: { children: ReactNode }) {
+const wrapper = ({ children }: { children: ReactNode }) => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
-}
+};
 
-function renderTaskFormHook(props: Parameters<typeof useTaskForm>[0]) {
+const renderTaskFormHook = (props: Parameters<typeof useTaskForm>[0]) => {
   return renderHook(() => useTaskForm(props), { wrapper });
-}
+};
 
 describe('useTaskForm', () => {
   beforeEach(async () => {

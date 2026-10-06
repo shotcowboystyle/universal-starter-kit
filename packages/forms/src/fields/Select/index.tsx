@@ -195,10 +195,12 @@ interface GroupHeaderItem {
 
 type GroupedItem = GroupedOption | GroupHeaderItem;
 
-function groupOptions(options: SelectOption[]): {
+const groupOptions = (
+  options: SelectOption[],
+): {
   items: GroupedItem[];
   flatOptions: SelectOption[];
-} {
+} => {
   const hasGroups = options.some((o) => o.group);
   if (!hasGroups) {
     return {
@@ -245,10 +247,10 @@ function groupOptions(options: SelectOption[]): {
   }
 
   return { items, flatOptions };
-}
+};
 
 /** Trigger rings on keyboard-origin only; list rows inherit that modality. */
-function useSelectKeyboardRing() {
+const useSelectKeyboardRing = () => {
   const [kbTrigger, setKbTrigger] = useState(false);
   const [kbNav, setKbNav] = useState(false);
   if (isWeb) {
@@ -274,17 +276,17 @@ function useSelectKeyboardRing() {
     onTriggerBlur,
     onTriggerPointerDown,
   };
-}
+};
 
-function selectTriggerRingProps(kbTrigger: boolean, open: boolean) {
+const selectTriggerRingProps = (kbTrigger: boolean, open: boolean) => {
   if (kbTrigger && !open) {
     return { ...keyboardFocusRingProps, 'data-kb-ring': 'true' as const };
   }
   // Focus modality owns the outline; the control recipe owns trigger shape.
   return { ...selectOutlineRest, 'data-kb-ring': undefined };
-}
+};
 
-function selectItemRingProps(isActive: boolean, kbNav: boolean) {
+const selectItemRingProps = (isActive: boolean, kbNav: boolean) => {
   if (isActive && kbNav) {
     return {
       ...keyboardFocusRingProps,
@@ -298,7 +300,7 @@ function selectItemRingProps(isActive: boolean, kbNav: boolean) {
     };
   }
   return { ...selectRowOutlineRest, 'data-kb-ring': undefined };
-}
+};
 
 /**
  * Resolve the selected-mark token to a real paint.
@@ -315,20 +317,20 @@ function selectItemRingProps(isActive: boolean, kbNav: boolean) {
  * declared once in colorRamps, and degrading to `$color` ink rather than black
  * when a narrow sub-theme has no accent step.
  */
-function useSelectedMarkColor(): string {
+const useSelectedMarkColor = (): string => {
   const theme = useTheme();
   const entry = (theme as unknown as Record<string, { val?: string } | undefined>)[formSelectedColors.mark.slice(1)];
   return entry?.val ?? theme.color?.val ?? 'currentColor';
-}
+};
 
 /** Paints the Input.Box ring via FocusContext — keyboard-origin only. */
-function SyncKeyboardFocusToBox({ active }: { active: boolean }) {
+const SyncKeyboardFocusToBox = ({ active }: { active: boolean }) => {
   const { setFocused } = FocusContext.useStyledContext();
   useEffect(() => {
     setFocused(active);
   }, [active, setFocused]);
   return null;
-}
+};
 
 interface SelectItemHandlers {
   getItemProps: any;
@@ -511,7 +513,7 @@ interface FloatingSelectCoreProps {
   dismissible?: boolean;
   native?: boolean;
 }
-function FloatingSelectCore({
+const FloatingSelectCore = ({
   options,
   value,
   onValueChange,
@@ -526,7 +528,7 @@ function FloatingSelectCore({
   multiple,
   selectedOrder,
   dismissible,
-}: FloatingSelectCoreProps) {
+}: FloatingSelectCoreProps) => {
   const hydrationTouch = useTouchSurface();
   const inTableCell = useIsInTableCell();
   const describedBy = useFieldDescribedBy();
@@ -1270,11 +1272,11 @@ function FloatingSelectCore({
       )}
     </>
   );
-}
+};
 
 // ── Native Select (Sheet-based for iOS/Android) ──────────────
 
-function NativeSelectCore({
+const NativeSelectCore = ({
   options,
   value,
   onValueChange,
@@ -1290,7 +1292,7 @@ function NativeSelectCore({
   selectedOrder,
   dismissible,
   native,
-}: FloatingSelectCoreProps) {
+}: FloatingSelectCoreProps) => {
   const hydrationTouch = useTouchSurface();
   const describedBy = useFieldDescribedBy();
   const fieldA11y = useFieldA11y();
@@ -1745,11 +1747,11 @@ function NativeSelectCore({
       {listContent}
     </FloatingPanel>
   );
-}
+};
 
 // ── Select (public API) ──────────────────────────────────────
 
-export function Select({
+export const Select = ({
   name,
   form: formProp,
   validators,
@@ -1778,7 +1780,7 @@ export function Select({
   native,
   'aria-label': ariaLabel,
   ...rest
-}: SelectProps) {
+}: SelectProps) => {
   // Canonical `onChange` and the alias `onValueChange` both fire from the
   // single emit site in renderSelectContent (same reconciliation as Switch).
   const emitValueChange = (val: string | string[]) => {
@@ -1961,4 +1963,4 @@ export function Select({
       }}
     </Field>
   );
-}
+};

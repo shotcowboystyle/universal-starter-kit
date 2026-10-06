@@ -32,13 +32,13 @@ export interface KeyboardAvoidingWrapperProps extends YStackProps {
  *
  * No owned surface — only platform keyboard offset. Consumer `{...stackProps}` last.
  */
-export function KeyboardAvoidingWrapper({
+export const KeyboardAvoidingWrapper = ({
   children,
   behavior,
   keyboardVerticalOffset = 0,
   enabled = true,
   ...stackProps
-}: PropsWithChildren<KeyboardAvoidingWrapperProps>) {
+}: PropsWithChildren<KeyboardAvoidingWrapperProps>) => {
   const effectiveBehavior = resolveKeyboardAvoidingBehavior(Platform.OS, behavior);
 
   return (
@@ -57,7 +57,7 @@ export function KeyboardAvoidingWrapper({
       </YStack>
     </KeyboardAvoidingView>
   );
-}
+};
 
 const styles = StyleSheet.create({
   container: {

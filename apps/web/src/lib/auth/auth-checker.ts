@@ -2,7 +2,7 @@
 
 import { cookies } from 'next/headers';
 
-export async function isAuthenticated() {
+export const isAuthenticated = async () => {
   try {
     const cookieStore = await cookies();
     const allCookies = cookieStore.getAll();
@@ -12,4 +12,4 @@ export async function isAuthenticated() {
     console.error('Error checking authentication:', error);
     return { isAuthenticated: false };
   }
-}
+};

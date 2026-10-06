@@ -61,7 +61,7 @@ export interface SiblingOffsetOptions {
  * for the insertion gap. Values are always -size, 0, or +size, so siblings
  * move with pure transforms and spring back cleanly on cancel.
  */
-export function siblingOffset({ index, sourceIndex, gapIndex, size }: SiblingOffsetOptions): number {
+export const siblingOffset = ({ index, sourceIndex, gapIndex, size }: SiblingOffsetOptions): number => {
   if (sourceIndex != null) {
     if (index === sourceIndex) {
       return 0;
@@ -72,7 +72,7 @@ export function siblingOffset({ index, sourceIndex, gapIndex, size }: SiblingOff
     return closeOrigin + openGap;
   }
   return gapIndex != null && index >= gapIndex ? size : 0;
-}
+};
 
 export interface GapPositionOptions {
   /** Insertion index in wd coordinates. */
@@ -90,7 +90,14 @@ export interface GapPositionOptions {
 }
 
 /** Top offset (px) of the insertion gap inside the column's content. */
-export function gapPosition({ gapIndex, sourceIndex, count, size, totalSize, getStart }: GapPositionOptions): number {
+export const gapPosition = ({
+  gapIndex,
+  sourceIndex,
+  count,
+  size,
+  totalSize,
+  getStart,
+}: GapPositionOptions): number => {
   if (sourceIndex == null) {
     return gapIndex < count ? getStart(gapIndex) : totalSize;
   }
@@ -101,7 +108,7 @@ export function gapPosition({ gapIndex, sourceIndex, count, size, totalSize, get
     return getStart(gapIndex + 1) - size;
   }
   return totalSize - size;
-}
+};
 
 // ── Insertion index from a pointer position ───────────────────
 
@@ -132,7 +139,7 @@ export interface InsertionIndexOptions {
  * midpoint rule (Trello/dnd-kit consensus): the gap lands after every card
  * whose without-dragged midpoint sits above the pointer.
  */
-export function insertionIndexForY({ localY, items, sourceIndex, count, size }: InsertionIndexOptions): number {
+export const insertionIndexForY = ({ localY, items, sourceIndex, count, size }: InsertionIndexOptions): number => {
   const wdCount = count - (sourceIndex == null ? 0 : 1);
   const rendered = items.filter((it) => it.index !== sourceIndex);
   if (rendered.length === 0 || wdCount <= 0) {
@@ -149,19 +156,19 @@ export function insertionIndexForY({ localY, items, sourceIndex, count, size }: 
   }
   const index = base + passed;
   return index < 0 ? 0 : index > wdCount ? wdCount : index;
-}
+};
 
 /**
  * Closed-form insertion index for uniform card sizes (native path — FlashList
  * does not expose per-item measurements). Equivalent to the midpoint rule.
  */
-export function uniformInsertionIndex(localY: number, size: number, wdCount: number): number {
+export const uniformInsertionIndex = (localY: number, size: number, wdCount: number): number => {
   if (size <= 0 || wdCount <= 0) {
     return 0;
   }
   const index = Math.floor(localY / size + 0.5);
   return index < 0 ? 0 : index > wdCount ? wdCount : index;
-}
+};
 
 // ── Auto-scroll ───────────────────────────────────────────────
 
@@ -183,7 +190,7 @@ export interface AutoScrollOptions {
  * linearly with proximity to the edge and saturates at `maxSpeed` when the
  * pointer reaches or passes it.
  */
-export function autoScrollVelocity({ pos, start, end, edge, maxSpeed }: AutoScrollOptions): number {
+export const autoScrollVelocity = ({ pos, start, end, edge, maxSpeed }: AutoScrollOptions): number => {
   const span = end - start;
   if (span <= 0) {
     return 0;
@@ -202,29 +209,29 @@ export function autoScrollVelocity({ pos, start, end, edge, maxSpeed }: AutoScro
     return maxSpeed * (1 - clamp01(dEnd / effEdge));
   }
   return 0;
-}
+};
 
 // ── Keyboard drag state machine (WAI-ARIA drag pattern) ───────
 
 /** Max insertion index for a column (wd coordinates). */
-export function maxInsertionIndex(
+export const maxInsertionIndex = (
   board: KanbanBoardColumnSnapshot[],
   drag: Pick<KanbanKeyboardDrag, 'sourceColumnId'>,
   columnId: string,
-): number {
+): number => {
   const column = board.find((c) => c.id === columnId);
   if (!column) {
     return 0;
   }
   return column.id === drag.sourceColumnId ? Math.max(column.count - 1, 0) : column.count;
-}
+};
 
 /** Begin a keyboard drag session. Returns null when the card does not exist. */
-export function keyboardLift(
+export const keyboardLift = (
   board: KanbanBoardColumnSnapshot[],
   columnId: string,
   index: number,
-): KanbanKeyboardDrag | null {
+): KanbanKeyboardDrag | null => {
   const column = board.find((c) => c.id === columnId);
   if (!column || index < 0 || index >= column.count) {
     return null;
@@ -234,17 +241,17 @@ export function keyboardLift(
     sourceIndex: index,
     target: { columnId, index },
   };
-}
+};
 
 /**
  * Move the drop target one step. Returns the same session object when the
  * move hits a boundary so callers can detect no-ops by identity.
  */
-export function keyboardMove(
+export const keyboardMove = (
   drag: KanbanKeyboardDrag,
   board: KanbanBoardColumnSnapshot[],
   direction: KanbanMoveDirection,
-): KanbanKeyboardDrag {
+): KanbanKeyboardDrag => {
   const { target } = drag;
   if (direction === 'up') {
     if (target.index <= 0) {
@@ -276,7 +283,7 @@ export function keyboardMove(
       index: target.index > max ? max : target.index,
     },
   };
-}
+};
 
 export interface KanbanDropResult {
   /** False when the card lands exactly where it started. */
@@ -286,16 +293,16 @@ export interface KanbanDropResult {
 }
 
 /** Resolve a drop for the current target (keyboard and pointer share this). */
-export function resolveDrop(
+export const resolveDrop = (
   drag: Pick<KanbanKeyboardDrag, 'sourceColumnId' | 'sourceIndex' | 'target'>,
-): KanbanDropResult {
+): KanbanDropResult => {
   const { sourceColumnId, sourceIndex, target } = drag;
   return {
     commit: target.columnId !== sourceColumnId || target.index !== sourceIndex,
     from: { columnId: sourceColumnId, index: sourceIndex },
     to: target,
   };
-}
+};
 
 // ── Screen-reader announcements ───────────────────────────────
 
@@ -310,12 +317,12 @@ export type KanbanAnnouncement =
  * 1-based and `count` is the column's size after the pending drop, matching
  * the "position 2 of 3" phrasing of the WAI-ARIA drag pattern.
  */
-export function describeDragState(
+export const describeDragState = (
   type: 'lift' | 'move' | 'drop',
   drag: Pick<KanbanKeyboardDrag, 'sourceColumnId' | 'sourceIndex' | 'target'>,
   board: KanbanBoardColumnSnapshot[],
   card: string,
-): KanbanAnnouncement {
+): KanbanAnnouncement => {
   const column = board.find((c) => c.id === drag.target.columnId);
   const max = maxInsertionIndex(board, drag, drag.target.columnId);
   return {
@@ -325,16 +332,16 @@ export function describeDragState(
     position: drag.target.index + 1,
     count: max + 1,
   };
-}
+};
 
-export function describeCancel(
+export const describeCancel = (
   drag: Pick<KanbanKeyboardDrag, 'sourceColumnId'>,
   board: KanbanBoardColumnSnapshot[],
   card: string,
-): KanbanAnnouncement {
+): KanbanAnnouncement => {
   const column = board.find((c) => c.id === drag.sourceColumnId);
   return { type: 'cancel', card, column: column?.title ?? drag.sourceColumnId };
-}
+};
 
 // ── Flat-list adapters (SortableList / DataTable / ChildTable) ──────────
 //
@@ -352,16 +359,16 @@ export const AUTO_SCROLL_MAX_SPEED = 16;
 /** Overlay scale while lifted (gesture state, not the elevation knob). */
 export const LIFT_SCALE = 1.03;
 
-export function listBoardSnapshot(count: number, title = ''): KanbanBoardColumnSnapshot[] {
+export const listBoardSnapshot = (count: number, title = ''): KanbanBoardColumnSnapshot[] => {
   return [{ id: LIST_COLUMN_ID, title, count }];
-}
+};
 
 /**
  * Apply a resolveDrop coordinate pair to an array. `from` is the original
  * index; `to` is the without-dragged insertion index (same as
  * `KanbanDropTarget.index`).
  */
-export function applyReorder<T>(items: readonly T[], from: number, to: number): T[] {
+export const applyReorder = <T>(items: readonly T[], from: number, to: number): T[] => {
   if (from === to || from < 0 || to < 0 || from >= items.length || to > items.length) {
     return items.slice();
   }
@@ -369,29 +376,32 @@ export function applyReorder<T>(items: readonly T[], from: number, to: number): 
   const [item] = next.splice(from, 1);
   next.splice(to, 0, item);
   return next;
-}
+};
 
 /** Frappe child-table `idx`: 1-based, rewritten after a committed reorder. */
-export function renumberIdx<T extends { idx?: number }>(items: readonly T[]): T[] {
+export const renumberIdx = <T extends { idx?: number }>(items: readonly T[]): T[] => {
   return items.map((item, i) => ({ ...item, idx: i + 1 }));
-}
+};
 
-export function commitReorder<T>(
+export const commitReorder = <T>(
   items: readonly T[],
   drag: Pick<KanbanKeyboardDrag, 'sourceColumnId' | 'sourceIndex' | 'target'>,
-): T[] {
+): T[] => {
   const result = resolveDrop(drag);
   if (!result.commit) {
     return items.slice();
   }
   return applyReorder(items, result.from.index, result.to.index);
-}
+};
 
 /**
  * Board-03 aria-live copy. Payload fields come from describeDragState /
  * describeCancel (1-based position, count, row label).
  */
-export function formatListAnnouncement(announcement: KanbanAnnouncement, opts?: { sourcePosition?: number }): string {
+export const formatListAnnouncement = (
+  announcement: KanbanAnnouncement,
+  opts?: { sourcePosition?: number },
+): string => {
   const quoted = `\u201C${announcement.card}\u201D`;
   if (announcement.type === 'cancel') {
     const position = opts?.sourcePosition ?? 1;
@@ -405,4 +415,4 @@ export function formatListAnnouncement(announcement: KanbanAnnouncement, opts?: 
     return `Moved ${quoted}, position ${position} of ${count}.`;
   }
   return `Dropped ${quoted}, position ${position} of ${count}.`;
-}
+};

@@ -14,14 +14,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useSheetEscapeDismiss } from './use-sheet-escape-dismiss';
 import { useWheelIncrement } from './use-wheel-increment';
 
-function pressEscape(defaultPrevented = false) {
+const pressEscape = (defaultPrevented = false) => {
   const event = new KeyboardEvent('keydown', { key: 'Escape', cancelable: true });
   if (defaultPrevented) {
     event.preventDefault();
   }
   window.dispatchEvent(event);
   return event;
-}
+};
 
 describe('useSheetEscapeDismiss', () => {
   it('dismisses on Escape while enabled', () => {
@@ -96,7 +96,7 @@ interface WheelHarnessProps {
   threshold?: number;
 }
 
-function WheelHarness(props: WheelHarnessProps) {
+const WheelHarness = (props: WheelHarnessProps) => {
   const { wheelProps } = useWheelIncrement(props);
   return (
     <div
@@ -104,13 +104,13 @@ function WheelHarness(props: WheelHarnessProps) {
       ref={wheelProps.ref}
     />
   );
-}
+};
 
-function dispatchWheel(target: Element, deltaY: number) {
+const dispatchWheel = (target: Element, deltaY: number) => {
   const event = new WheelEvent('wheel', { deltaY, cancelable: true, bubbles: true });
   target.dispatchEvent(event);
   return event;
-}
+};
 
 describe('useWheelIncrement', () => {
   beforeEach(() => {

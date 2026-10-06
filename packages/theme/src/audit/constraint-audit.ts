@@ -262,7 +262,7 @@ const SYSTEM_FONTS = new Set([
 
 // ── Reverse-map helpers ───────────────────────────────────────────────────────
 
-function reverseMapRadius(px: number): string {
+const reverseMapRadius = (px: number): string => {
   for (const [knob, val] of Object.entries(BORDER_RADIUS_KNOB)) {
     if (val === px) {
       return knob;
@@ -274,18 +274,18 @@ function reverseMapRadius(px: number): string {
     }
   }
   return 'off-scale';
-}
+};
 
-function reverseMapBorderWidth(px: number): string {
+const reverseMapBorderWidth = (px: number): string => {
   for (const [knob, val] of Object.entries(BORDER_WIDTH_KNOB)) {
     if (val === px) {
       return knob;
     }
   }
   return 'off-scale';
-}
+};
 
-function reverseMapGap(px: number): string {
+const reverseMapGap = (px: number): string => {
   for (const [knob, val] of Object.entries(GAP_KNOB)) {
     if (val === px) {
       return knob;
@@ -300,9 +300,9 @@ function reverseMapGap(px: number): string {
     return 'none';
   }
   return 'off-scale';
-}
+};
 
-function reverseMapPadding(px: number): string {
+const reverseMapPadding = (px: number): string => {
   for (const [knob, val] of Object.entries(PANEL_PADDING_KNOB)) {
     if (val === px) {
       return knob;
@@ -312,18 +312,18 @@ function reverseMapPadding(px: number): string {
     return 'none';
   }
   return 'off-scale';
-}
+};
 
-function reverseMapFontWeight(weight: number): string {
+const reverseMapFontWeight = (weight: number): string => {
   for (const [knob, val] of Object.entries(FONT_WEIGHT_KNOB)) {
     if (val === weight) {
       return knob;
     }
   }
   return 'off-scale';
-}
+};
 
-function reverseMapFontFamily(computed: string): { knob: string; offScale: boolean } {
+const reverseMapFontFamily = (computed: string): { knob: string; offScale: boolean } => {
   const first = computed
     .split(',')[0]
     .trim()
@@ -340,7 +340,7 @@ function reverseMapFontFamily(computed: string): { knob: string; offScale: boole
     return { knob: `system (${first})`, offScale: false };
   }
   return { knob: 'off-scale', offScale: true };
-}
+};
 
 // ── Core audit function ───────────────────────────────────────────────────────
 
@@ -354,7 +354,7 @@ function reverseMapFontFamily(computed: string): { knob: string; offScale: boole
  *
  * Returns an AuditReport object describing all structural CSS violations.
  */
-export function runConstraintAudit(rootSelector?: string): AuditReport {
+export const runConstraintAudit = (rootSelector?: string): AuditReport => {
   // ── Inline token definitions (must be self-contained for page.evaluate) ──
 
   const _RADIUS_TOKENS: Record<number, number> = {
@@ -482,7 +482,7 @@ export function runConstraintAudit(rootSelector?: string): AuditReport {
 
   // ── Reverse-map helpers (inline) ──────────────────────────────────────────
 
-  function _reverseRadius(px: number): string {
+  const _reverseRadius = (px: number): string => {
     if (px === 1000) {
       return 'pill';
     }
@@ -500,18 +500,18 @@ export function runConstraintAudit(rootSelector?: string): AuditReport {
       }
     }
     return 'off-scale';
-  }
+  };
 
-  function _reverseBorderWidth(px: number): string {
+  const _reverseBorderWidth = (px: number): string => {
     for (const [k, v] of Object.entries(_BORDER_WIDTH_KNOB)) {
       if (v === px) {
         return k;
       }
     }
     return 'off-scale';
-  }
+  };
 
-  function _reverseGap(px: number): string {
+  const _reverseGap = (px: number): string => {
     if (px === 0) {
       return 'none';
     }
@@ -536,9 +536,9 @@ export function runConstraintAudit(rootSelector?: string): AuditReport {
       return `size-token(${px}px)`;
     }
     return 'off-scale';
-  }
+  };
 
-  function _reversePadding(px: number): string {
+  const _reversePadding = (px: number): string => {
     if (px === 0) {
       return 'none';
     }
@@ -555,18 +555,18 @@ export function runConstraintAudit(rootSelector?: string): AuditReport {
       return 'size-token(7px)';
     }
     return 'off-scale';
-  }
+  };
 
-  function _reverseFontWeight(w: number): string {
+  const _reverseFontWeight = (w: number): string => {
     for (const [k, v] of Object.entries(_FONT_WEIGHT_KNOB)) {
       if (v === w) {
         return k;
       }
     }
     return 'off-scale';
-  }
+  };
 
-  function _reverseFontFamily(computed: string): { knob: string; offScale: boolean } {
+  const _reverseFontFamily = (computed: string): { knob: string; offScale: boolean } => {
     const first = computed
       .split(',')[0]
       .trim()
@@ -583,13 +583,13 @@ export function runConstraintAudit(rootSelector?: string): AuditReport {
       return { knob: `system (${first})`, offScale: false };
     }
     return { knob: 'off-scale', offScale: true };
-  }
+  };
 
   /**
    * Check inline style for hardcoded color values that bypass theme tokens.
    * Returns the offending property and value, or null if clean.
    */
-  function _checkInlineColors(el: Element): { property: string; value: string } | null {
+  const _checkInlineColors = (el: Element): { property: string; value: string } | null => {
     const htmlEl = el as HTMLElement;
     if (!htmlEl.style) {
       return null;
@@ -606,11 +606,11 @@ export function runConstraintAudit(rootSelector?: string): AuditReport {
       return { property: prop, value: val };
     }
     return null;
-  }
+  };
 
   // ── Helper: parse a single px value from computed style ──────────────────
 
-  function parsePx(raw: string): number | null {
+  const parsePx = (raw: string): number | null => {
     if (!raw || raw === '' || raw === 'normal' || raw === 'auto') {
       return null;
     }
@@ -621,11 +621,11 @@ export function runConstraintAudit(rootSelector?: string): AuditReport {
       return null;
     }
     return Math.round(n * 100) / 100; // round to 2 decimal places
-  }
+  };
 
   // ── Helper: check if border-radius is percentage-based ────────────────────
 
-  function isPercentageBorderRadius(el: Element): boolean {
+  const isPercentageBorderRadius = (el: Element): boolean => {
     // getComputedStyle resolves percentages to px, so check inline style
     // or CSS text for percentages. This is a best-effort check.
     const inline = (el as HTMLElement).style?.borderRadius ?? '';
@@ -633,11 +633,11 @@ export function runConstraintAudit(rootSelector?: string): AuditReport {
       return true;
     }
     return false;
-  }
+  };
 
   // ── Helper: build a human-readable element label ──────────────────────────
 
-  function elementLabel(el: Element): string {
+  const elementLabel = (el: Element): string => {
     const tag = el.tagName.toLowerCase();
     // Labels are part of the no-breakage signature, so nothing a knob or a
     // render order writes may reach them: React useId ids renumber per mount,
@@ -652,9 +652,9 @@ export function runConstraintAudit(rootSelector?: string): AuditReport {
     const role = el.getAttribute('role') ? `[role=${el.getAttribute('role')}]` : '';
     const testId = el.getAttribute('data-testid') ? `[data-testid=${el.getAttribute('data-testid')}]` : '';
     return `${tag}${id}${cls}${role}${testId}` || tag;
-  }
+  };
 
-  function elementKey(el: Element, scope: Element | Document): string {
+  const elementKey = (el: Element, scope: Element | Document): string => {
     const path: string[] = [];
     for (let node: Element | null = el; node; node = node.parentElement) {
       const siblings = node.parentElement
@@ -666,9 +666,9 @@ export function runConstraintAudit(rootSelector?: string): AuditReport {
       }
     }
     return path.join(' > ');
-  }
+  };
 
-  function isPainted(el: Element): boolean {
+  const isPainted = (el: Element): boolean => {
     const ownStyle = getComputedStyle(el);
     // Visibility can be restored by a child, unlike display or opacity.
     if (ownStyle.visibility === 'hidden' || ownStyle.visibility === 'collapse') {
@@ -685,17 +685,17 @@ export function runConstraintAudit(rootSelector?: string): AuditReport {
       }
     }
     return true;
-  }
+  };
 
   // ── Helper: audit a single numeric property ───────────────────────────────
 
-  function auditProp(
+  const auditProp = (
     value: number | null,
     validSet: Set<number>,
     reverseFn: (v: number) => string,
     propName: string,
     violations: string[],
-  ): PropertyAudit | undefined {
+  ): PropertyAudit | undefined => {
     if (value === null || value === 0) {
       return undefined;
     }
@@ -705,11 +705,11 @@ export function runConstraintAudit(rootSelector?: string): AuditReport {
       violations.push(`${propName}: ${value}px is off-scale (no matching token)`);
     }
     return { value, unit: 'px', knob, offScale };
-  }
+  };
 
   // ── Read active preset and scheme from DOM ────────────────────────────────
 
-  function readPreset(): string {
+  const readPreset = (): string => {
     const root = document.documentElement;
     // Try data attributes set by ThemeProvider
     return (
@@ -720,9 +720,9 @@ export function runConstraintAudit(rootSelector?: string): AuditReport {
         ?.split('=')[1] ??
       'unknown'
     );
-  }
+  };
 
-  function readScheme(): string {
+  const readScheme = (): string => {
     const root = document.documentElement;
     if (root.classList.contains('t_dark')) {
       return 'dark';
@@ -731,7 +731,7 @@ export function runConstraintAudit(rootSelector?: string): AuditReport {
       return 'light';
     }
     return root.style.colorScheme || 'unknown';
-  }
+  };
 
   // ── Element selection ─────────────────────────────────────────────────────
 
@@ -1138,4 +1138,4 @@ export function runConstraintAudit(rootSelector?: string): AuditReport {
     violations: violationElements,
     elements: auditedElements,
   };
-}
+};

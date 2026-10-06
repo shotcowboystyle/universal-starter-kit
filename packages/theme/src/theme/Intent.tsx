@@ -21,11 +21,11 @@ export interface IntentProps extends PropsWithChildren {
  * If both wrapper and component prop are present, component prop wins.
  * Nesting intents replaces (does not merge) — innermost wins.
  */
-export function Intent({ name, theme, children }: IntentProps) {
+export const Intent = ({ name, theme, children }: IntentProps) => {
   const themeName = theme ?? name;
   return (
     <IntentContext.Provider value={name}>
       <Theme name={themeName}>{children}</Theme>
     </IntentContext.Provider>
   );
-}
+};

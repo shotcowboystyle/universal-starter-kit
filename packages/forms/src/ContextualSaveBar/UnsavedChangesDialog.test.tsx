@@ -16,28 +16,28 @@ import { UnsavedChangesDialog } from './UnsavedChangesDialog';
 
 afterEach(cleanup);
 
-function dialog(): HTMLElement | null {
+const dialog = (): HTMLElement | null => {
   return document.body.querySelector('[role="alertdialog"]');
-}
+};
 
-function button(marker: string): HTMLElement {
+const button = (marker: string): HTMLElement => {
   const node = document.body.querySelector(`[${marker}]`);
   if (!node) {
     throw new Error(`No button carrying ${marker}`);
   }
   return node as HTMLElement;
-}
+};
 
-function noop() {}
+const noop = () => {};
 
 /** Tamagui paints through atomic classes; read the inline channel first. */
-function cssOf(node: HTMLElement, prop: string): string {
+const cssOf = (node: HTMLElement, prop: string): string => {
   const inline = node.style.getPropertyValue(prop);
   if (inline) {
     return inline;
   }
   return getComputedStyle(node).getPropertyValue(prop) || '';
-}
+};
 
 describe('UnsavedChangesDialog', () => {
   it('renders nothing while closed', () => {
@@ -233,7 +233,7 @@ describe('UnsavedChangesDialog', () => {
 // Keep editing is the alertdialog's least destructive action, the one tamagui's
 // AlertDialog.Cancel takes on open, so every browser opens there.
 describe('UnsavedChangesDialog open focus', () => {
-  function LeavePage() {
+  const LeavePage = () => {
     const [open, setOpen] = useState(false);
     return (
       <>
@@ -256,7 +256,7 @@ describe('UnsavedChangesDialog open focus', () => {
         />
       </>
     );
-  }
+  };
 
   it('opens on Keep editing', async () => {
     renderWithProviders(<LeavePage />);

@@ -21,7 +21,7 @@ import { useSyncExternalStore } from 'react';
 
 export type Direction = 'ltr' | 'rtl';
 
-function normalizeDir(value: string | null | undefined): Direction | undefined {
+const normalizeDir = (value: string | null | undefined): Direction | undefined => {
   if (value === 'rtl') {
     return 'rtl';
   }
@@ -30,9 +30,9 @@ function normalizeDir(value: string | null | undefined): Direction | undefined {
   }
   // "" / "auto" / unknown → not an explicit direction; keep resolving.
   return undefined;
-}
+};
 
-function readDocumentDirection(): Direction {
+const readDocumentDirection = (): Direction => {
   if (typeof document === 'undefined') {
     return 'ltr';
   }
@@ -41,9 +41,9 @@ function readDocumentDirection(): Direction {
     normalizeDir(document.documentElement?.getAttribute('dir')) ??
     'ltr'
   );
-}
+};
 
-function subscribe(onChange: () => void): () => void {
+const subscribe = (onChange: () => void): (() => void) => {
   if (typeof document === 'undefined' || typeof MutationObserver === 'undefined') {
     return () => {};
   }
@@ -58,7 +58,7 @@ function subscribe(onChange: () => void): () => void {
   return () => {
     observer.disconnect();
   };
-}
+};
 
 const getServerSnapshot = (): Direction => 'ltr';
 
@@ -70,6 +70,6 @@ const getServerSnapshot = (): Direction => 'ltr';
  * direction-of-travel. Do NOT mirror direction-neutral glyphs (search,
  * close, checkmarks).
  */
-export function useDirection(): Direction {
+export const useDirection = (): Direction => {
   return useSyncExternalStore(subscribe, readDocumentDirection, getServerSnapshot);
-}
+};

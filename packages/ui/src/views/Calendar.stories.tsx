@@ -60,7 +60,7 @@ export const Default = {
   ),
 };
 
-function EventDragDemo() {
+const EventDragDemo = () => {
   const [dragEvents, setDragEvents] = useState<CalendarEvent[]>(events);
   const [lastMove, setLastMove] = useState<string | null>(null);
   return (
@@ -87,7 +87,7 @@ function EventDragDemo() {
       />
     </YStack>
   );
-}
+};
 
 export const EventDrag = {
   name: 'Event Drag',
@@ -143,7 +143,7 @@ const timeGridSeed: CalendarEvent[] = [
   },
 ];
 
-function TimeGridDemo() {
+const TimeGridDemo = () => {
   const [gridEvents, setGridEvents] = useState<CalendarEvent[]>(timeGridSeed);
   const [lastAction, setLastAction] = useState<string | null>(null);
 
@@ -191,7 +191,7 @@ function TimeGridDemo() {
       />
     </YStack>
   );
-}
+};
 
 export const TimeGrid = {
   name: 'Time Grid',
@@ -244,7 +244,7 @@ export const Overflow = {
 // Keyboard: arrows move day/slot focus, Enter selects/creates
 // ---------------------------------------------------------------------------
 
-function KeyboardDemo() {
+const KeyboardDemo = () => {
   const [lastSelect, setLastSelect] = useState<string | null>(null);
   return (
     <YStack gap="$2">
@@ -266,7 +266,7 @@ function KeyboardDemo() {
       />
     </YStack>
   );
-}
+};
 
 export const Keyboard = {
   name: 'Keyboard',

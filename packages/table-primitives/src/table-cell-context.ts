@@ -24,11 +24,11 @@ const defaultValue: TableCellContextValue = {
 
 export const TableCellContext = createContext<TableCellContextValue>(defaultValue);
 
-export function useTableCellContext(): TableCellContextValue {
+export const useTableCellContext = (): TableCellContextValue => {
   return useContext(TableCellContext);
-}
+};
 
-export function useIsInTableCell(): boolean {
+export const useIsInTableCell = (): boolean => {
   const { inTableCell } = useTableCellContext();
   return inTableCell;
-}
+};

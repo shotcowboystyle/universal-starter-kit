@@ -328,7 +328,7 @@ const fakeGeocoder: Geocoder = {
     places.find((place) => Math.abs(place.lat - lat) < 0.01 && Math.abs(place.lng - lng) < 0.01) ?? null,
 };
 
-function FakeProviderExample(props: GeolocationProps) {
+const FakeProviderExample = (props: GeolocationProps) => {
   const [value, setValue] = useState(props.value ?? '');
   return (
     <Geolocation
@@ -337,7 +337,7 @@ function FakeProviderExample(props: GeolocationProps) {
       onChange={setValue}
     />
   );
-}
+};
 
 export const SearchWithFakeProvider: Story = {
   args: {
@@ -381,7 +381,7 @@ export const CellWithFakeProvider: Story = {
   ),
 };
 
-function DeferredControlledExample() {
+const DeferredControlledExample = () => {
   const [value, setValue] = useState(JSON.stringify({ lat: places[0].lat, lng: places[0].lng }));
   const [proposal, setProposal] = useState<string | null>(null);
   const [readOnly, setReadOnly] = useState(false);
@@ -411,13 +411,13 @@ function DeferredControlledExample() {
       )}
     </YStack>
   );
-}
+};
 
 export const DeferredControlledSelection: Story = {
   render: () => <DeferredControlledExample />,
 };
 
-function PendingReverseExample() {
+const PendingReverseExample = () => {
   const [value, setValue] = useState(JSON.stringify({ lat: places[0].lat, lng: places[0].lng }));
   const [readOnly, setReadOnly] = useState(true);
   const [resolvePending, setResolvePending] = useState<(() => void) | null>(null);
@@ -463,7 +463,7 @@ function PendingReverseExample() {
       ) : null}
     </YStack>
   );
-}
+};
 
 export const PendingControlledReverse: Story = {
   render: () => <PendingReverseExample />,
@@ -471,7 +471,7 @@ export const PendingControlledReverse: Story = {
 
 const photon = createPhotonGeocoder();
 
-function LiveField(props: GeolocationProps) {
+const LiveField = (props: GeolocationProps) => {
   const [value, setValue] = useState(props.value ?? '');
   return (
     <Geolocation
@@ -483,7 +483,7 @@ function LiveField(props: GeolocationProps) {
       }}
     />
   );
-}
+};
 
 /**
  * Keyless live search through Photon (photon.komoot.io). Type a place name;

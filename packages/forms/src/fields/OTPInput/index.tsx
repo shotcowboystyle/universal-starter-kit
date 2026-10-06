@@ -100,7 +100,7 @@ const navigationKeys = ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Home'
  * Prefers an exact-length run so a date like 20260814 does not steal a 6-digit
  * prefix from "code 123456" at the end of the same message.
  */
-export function extractOtpCode(text: string, inputType: string, length: number): string {
+export const extractOtpCode = (text: string, inputType: string, length: number): string => {
   if (!text || length <= 0) {
     return '';
   }
@@ -116,18 +116,18 @@ export function extractOtpCode(text: string, inputType: string, length: number):
     }
   }
   return stripped.slice(0, length);
-}
+};
 
 /** Apple / Stripe 6-digit codes group 3+3; even lengths ≥4 split at the midpoint. */
-function otpGroupSizes(length: number, separator?: string): number[] | null {
+const otpGroupSizes = (length: number, separator?: string): number[] | null => {
   if (separator || length < 4 || length % 2 !== 0) {
     return null;
   }
   const half = length / 2;
   return [half, half];
-}
+};
 
-function digitFontSize(cellSize: string | number | undefined): string {
+const digitFontSize = (cellSize: string | number | undefined): string => {
   const key = String(cellSize ?? '$true');
   if (key === '$2' || key === '28') {
     return '$5';
@@ -136,7 +136,7 @@ function digitFontSize(cellSize: string | number | undefined): string {
     return '$7';
   }
   return '$6';
-}
+};
 
 /**
  * The height the cell PAINTS, which is what CIRCULAR-AT-FULL halves.
@@ -149,7 +149,7 @@ function digitFontSize(cellSize: string | number | undefined): string {
  * exactly the defect to avoid, so the radius rides the painted token instead.
  * Same source as the avatar square face (`avatarTokenPx`, components/Avatar).
  */
-export function otpCellHeightPx(cellSize: string | number | undefined, touch?: boolean): number {
+export const otpCellHeightPx = (cellSize: string | number | undefined, touch?: boolean): number => {
   if (typeof cellSize === 'number' && Number.isFinite(cellSize) && cellSize > 0) {
     return cellSize;
   }
@@ -159,7 +159,7 @@ export function otpCellHeightPx(cellSize: string | number | undefined, touch?: b
     return painted;
   }
   return getFieldHeight(token, 1, touch);
-}
+};
 
 /**
  * Digit cells own their focus ring: the ring must be CSS-driven
@@ -420,7 +420,7 @@ interface OTPCellsRowProps {
   onClear: () => void;
 }
 
-function OTPCellsRow({
+const OTPCellsRow = ({
   digits,
   length,
   type,
@@ -441,7 +441,7 @@ function OTPCellsRow({
   onPaste,
   onFocusIndex,
   onClear,
-}: OTPCellsRowProps) {
+}: OTPCellsRowProps) => {
   const { knobProps } = useResolvedKnobs();
 
   // Handlers route through a `latest` ref so the per-cell callbacks handed to
@@ -577,7 +577,7 @@ function OTPCellsRow({
       {clearButton}
     </XStack>
   );
-}
+};
 
 /** Minimal field interface for OTPFieldRenderer */
 interface OTPFieldApi {
@@ -615,7 +615,7 @@ interface OTPFieldRendererProps {
   id?: string;
 }
 
-function OTPFieldRenderer({
+const OTPFieldRenderer = ({
   field,
   digits,
   setDigits,
@@ -638,7 +638,7 @@ function OTPFieldRenderer({
   onChange,
   fieldBlurHandler,
   id,
-}: OTPFieldRendererProps) {
+}: OTPFieldRendererProps) => {
   const lastFieldValueRef = useRef<string | null>(null);
   const fieldHandleChangeRef = useRef(field.handleChange);
   fieldHandleChangeRef.current = field.handleChange;
@@ -726,15 +726,17 @@ function OTPFieldRenderer({
       </InputParts>
     </FieldLayout>
   );
-}
+};
 
-export function OTPInput<
+export const OTPInput = <
   TParentData extends Record<string, unknown> = Record<string, unknown>,
   TName extends DeepKeys<TParentData> = DeepKeys<TParentData>,
   TFieldValidator extends Validator<DeepValue<TParentData, TName>> | undefined = undefined,
   TFormValidator extends Validator<TParentData> | undefined = undefined,
   TData extends DeepValue<TParentData, TName> = DeepValue<TParentData, TName>,
->(props: OTPInputProps<TParentData, TName, TFieldValidator, TFormValidator, TData>) {
+>(
+  props: OTPInputProps<TParentData, TName, TFieldValidator, TFormValidator, TData>,
+) => {
   const {
     defaultValue,
     form,
@@ -1067,4 +1069,4 @@ export function OTPInput<
       )}
     </Field>
   );
-}
+};

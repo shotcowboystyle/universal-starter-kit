@@ -7,13 +7,13 @@ import { Form } from '../../Form';
 import { Combobox } from './index';
 
 /** Web panels portal out to the page, so panel text is read from the page. */
-function findInPage(text: string): Element | undefined {
+const findInPage = (text: string): Element | undefined => {
   try {
     return within(document.body).queryByText(text, { exact: false }) ?? undefined;
   } catch {
     return Array.from(document.body.querySelectorAll('*')).find((el) => el.textContent?.includes(text));
   }
-}
+};
 
 const options = [
   { value: 'apple', label: 'Apple' },
@@ -305,7 +305,7 @@ describe('Combobox', () => {
 
     const toTag = (next: string) => ({ value: next.toLowerCase(), label: next });
 
-    async function openAndType(text: string) {
+    const openAndType = async (text: string) => {
       const trigger = document.body.querySelector<HTMLElement>('[role="combobox"]');
       expect(trigger).toBeTruthy();
       await act(async () => fireEvent.keyDown(trigger!, { key: 'Enter' }));
@@ -313,17 +313,17 @@ describe('Combobox', () => {
       expect(search).toBeTruthy();
       await act(async () => fireEvent.change(search!, { target: { value: text } }));
       return search!;
-    }
+    };
 
-    function triggerText() {
+    const triggerText = () => {
       return document.body.querySelector('[data-testid="combobox-trigger"]')?.textContent;
-    }
+    };
 
-    function createRow(text: string) {
+    const createRow = (text: string) => {
       return [...document.body.querySelectorAll('[role="option"]')].find(
         (el) => el.textContent?.trim() === `Create "${text}"`,
       );
-    }
+    };
 
     for (const [surface, width] of [
       ['panel', 1200],
@@ -551,11 +551,11 @@ describe('Combobox', () => {
       { value: 'banana', label: 'Banana', group: 'Fruit' },
     ];
 
-    function activeOption(container: HTMLElement) {
+    const activeOption = (container: HTMLElement) => {
       const search = container.querySelector('input');
       const id = search?.getAttribute('aria-activedescendant');
       return id ? container.querySelector(`#${CSS.escape(id)}`) : null;
-    }
+    };
 
     it('renders group headers when multiple is set', async () => {
       const result = renderWithProviders(
@@ -636,7 +636,7 @@ describe('Combobox', () => {
     // REPEAT header and the rows stayed unclustered — two different lists from
     // one set of props. Both cores now go through groupComboboxOptions.
     it('the sheet renders the same headers and row order as the desktop panel', async () => {
-      function shot(root: HTMLElement) {
+      const shot = (root: HTMLElement) => {
         return {
           headers: [...root.querySelectorAll('[data-combobox-group-header]')].map((el) => el.textContent),
           rows: [...root.querySelectorAll('[role="option"]')].map((el) => ({
@@ -644,7 +644,7 @@ describe('Combobox', () => {
             index: el.getAttribute('data-combobox-index'),
           })),
         };
-      }
+      };
 
       window.innerWidth = 1200;
       const desktop = renderWithProviders(

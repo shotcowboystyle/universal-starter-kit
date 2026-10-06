@@ -19,7 +19,7 @@ afterEach(cleanup);
 
 const categories = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
-function Frame({ showGrid = true }: { showGrid?: boolean }) {
+const Frame = ({ showGrid = true }: { showGrid?: boolean }) => {
   return (
     <ChartSurface
       label="Axis frame"
@@ -57,7 +57,7 @@ function Frame({ showGrid = true }: { showGrid?: boolean }) {
       }}
     </ChartSurface>
   );
-}
+};
 
 describe('Axis stories', () => {
   it('declares the Components/Axis title against the component', () => {

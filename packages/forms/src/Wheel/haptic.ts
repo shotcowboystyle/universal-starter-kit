@@ -4,7 +4,7 @@ import { isWeb } from 'tamagui';
  * iOS UIPickerView uses UISelectionFeedbackGenerator, not impact. Optional
  * so web / tests / apps without expo-haptics stay silent.
  */
-export function fireSelectionHaptic(): void {
+export const fireSelectionHaptic = (): void => {
   if (isWeb) {
     return;
   }
@@ -14,4 +14,4 @@ export function fireSelectionHaptic(): void {
   } catch {
     // optional peer
   }
-}
+};

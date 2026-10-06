@@ -39,7 +39,7 @@ afterAll(async () => {
  * config, so the assertion exercises vite's own extension probing rather than
  * re-implementing it.
  */
-async function resolveThroughVite(specifier: string, importer: string) {
+const resolveThroughVite = async (specifier: string, importer: string) => {
   const config = createVitestConfig({ tamaguiConfig: false, dedupeReact: false });
   const server = await createServer({
     configFile: false,
@@ -53,7 +53,7 @@ async function resolveThroughVite(specifier: string, importer: string) {
   const container = environment ? environment.pluginContainer : (server as any).pluginContainer;
   const resolved = await container.resolveId(specifier, importer);
   return resolved?.id ?? null;
-}
+};
 
 describe('resolve.extensions', () => {
   it('does not list any .test.* extension', () => {
@@ -74,9 +74,9 @@ describe('dedupeReact aliases', () => {
   const componentsReact = path.join(componentsDir, 'node_modules/react');
   const componentsReactDom = path.join(componentsDir, 'node_modules/react-dom');
 
-  function aliasMap() {
+  const aliasMap = () => {
     return createVitestConfig({ tamaguiConfig: false }).resolve?.alias as Record<string, string>;
-  }
+  };
 
   it('binds react-dom/client and jsx-runtime to the same physical copies as the packages', () => {
     const aliases = aliasMap();

@@ -12,7 +12,7 @@ import { KeyboardAvoidingView, Platform, Modal, FlatList, Alert, Pressable, Text
 import { useCreateTask } from '@/hooks/use-tasks';
 import { useUsers } from '@/hooks/use-users';
 
-export default function NewTaskScreen() {
+const NewTaskScreen = () => {
   const { projectId, boardId } = useLocalSearchParams<{ projectId: string; boardId: string }>();
   const { t } = useTranslation();
   const theme = useTheme();
@@ -375,4 +375,6 @@ export default function NewTaskScreen() {
       </Modal>
     </KeyboardAvoidingView>
   );
-}
+};
+
+export default NewTaskScreen;

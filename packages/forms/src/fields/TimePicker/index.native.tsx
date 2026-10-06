@@ -45,18 +45,18 @@ export interface TimePickerProps {
 export type { TimeFormat } from './parts';
 export { formatTimeDisplay, isValidTimeString, parseTimeString, toTimeString } from './parts';
 
-function timeToDate(value: string): Date {
+const timeToDate = (value: string): Date => {
   const { h, m, s } = parseTimeString(value);
   const d = new Date();
   d.setHours(h, m, s, 0);
   return d;
-}
+};
 
-function dateToTime(date: Date, showSeconds: boolean): string {
+const dateToTime = (date: Date, showSeconds: boolean): string => {
   return toTimeString(date.getHours(), date.getMinutes(), showSeconds ? date.getSeconds() : undefined);
-}
+};
 
-export function TimePicker(props: TimePickerProps) {
+export const TimePicker = (props: TimePickerProps) => {
   if (props.native === false) {
     return <CatalogTimePicker {...props} />;
   }
@@ -220,4 +220,4 @@ export function TimePicker(props: TimePickerProps) {
       }}
     </Field>
   );
-}
+};

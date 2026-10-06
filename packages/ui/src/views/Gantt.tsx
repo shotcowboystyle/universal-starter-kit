@@ -254,18 +254,18 @@ export interface GanttViewProps extends Omit<YStackProps, 'children'> {
  * one-bar-per-row path is exactly what it was before `spans` existed.
  */
 /** The span as a closed duration, or null when either bound is open. */
-function boundedSpan(ref: GanttSpanRef): GanttSpan | null {
+const boundedSpan = (ref: GanttSpanRef): GanttSpan | null => {
   const { span } = ref;
   return isBoundedSpan(span) ? { start: span.start, end: span.end } : null;
-}
+};
 
-function resolveSpans(task: GanttTask): GanttSpanRef[] {
+const resolveSpans = (task: GanttTask): GanttSpanRef[] => {
   const list = task.spans;
   if (!list || list.length === 0) {
     return [{ span: task, index: 0, key: task.id }];
   }
   return list.map((span, index) => ({ span, index, key: span.id ?? `${task.id}#${index}` }));
-}
+};
 
 // ── Interaction constants (gesture recognition, not animation timing) ──
 
@@ -290,20 +290,23 @@ const hairlineEnd = isWeb
     }
   : { borderEndWidth: hairlineWidth };
 
-function isWeekend(date: Date): boolean {
+const isWeekend = (date: Date): boolean => {
   const day = date.getDay();
   return day === 0 || day === 6;
-}
+};
 
-function clampProgress(value: unknown): number | null {
+const clampProgress = (value: unknown): number | null => {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
     return null;
   }
   return Math.min(100, Math.max(0, value));
-}
+};
 
 /** Month bands for the dual-level axis (Frappe Gantt upper header). */
-function monthBands(range: GanttRange, pxPerDay: number): { x: number; width: number; label: string; key: string }[] {
+const monthBands = (
+  range: GanttRange,
+  pxPerDay: number,
+): { x: number; width: number; label: string; key: string }[] => {
   const total = rangeDays(range);
   const bands: { x: number; width: number; label: string; key: string }[] = [];
   let i = 0;
@@ -320,9 +323,9 @@ function monthBands(range: GanttRange, pxPerDay: number): { x: number; width: nu
     i = endIdx;
   }
   return bands;
-}
+};
 
-function weekendColumns(range: GanttRange, pxPerDay: number): { x: number; width: number; key: string }[] {
+const weekendColumns = (range: GanttRange, pxPerDay: number): { x: number; width: number; key: string }[] => {
   const total = rangeDays(range);
   const cols: { x: number; width: number; key: string }[] = [];
   for (let i = 0; i < total; i++) {
@@ -337,7 +340,7 @@ function weekendColumns(range: GanttRange, pxPerDay: number): { x: number; width
     });
   }
   return cols;
-}
+};
 
 // ── Loading skeleton (mirrors the real anatomy) ────────
 
@@ -350,7 +353,7 @@ const SKELETON_BARS = [
   { x: 240, width: 110 },
 ] as const;
 
-function GanttSkeleton({ labelWidth, rowHeight }: { labelWidth: number; rowHeight: number }) {
+const GanttSkeleton = ({ labelWidth, rowHeight }: { labelWidth: number; rowHeight: number }) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
   const edgePad = knobProps.panelPadding.padding;
@@ -404,7 +407,7 @@ function GanttSkeleton({ labelWidth, rowHeight }: { labelWidth: number; rowHeigh
       ))}
     </YStack>
   );
-}
+};
 
 // ── Bar fill resolution ───────────────────────────────────────
 
@@ -414,15 +417,15 @@ function GanttSkeleton({ labelWidth, rowHeight }: { labelWidth: number; rowHeigh
  * theme's `$accentBackground`. Explicit `color` values pass through
  * untouched — they are values, not chrome (Axiom 11).
  */
-function BarIntentWrap({ intent, children }: { intent?: GanttTask['intent']; children: ReactNode }) {
+const BarIntentWrap = ({ intent, children }: { intent?: GanttTask['intent']; children: ReactNode }) => {
   if (!intent || intent === 'accent') {
     return <>{children}</>;
   }
   return <Intent name={intent}>{children}</Intent>;
-}
+};
 
 /** Title ink on a filled bar — paper or ink, whichever clears AA on the fill. */
-function GanttBarLabel({ title, fill }: { title: string; fill: string }) {
+const GanttBarLabel = ({ title, fill }: { title: string; fill: string }) => {
   const { knobProps } = useResolvedKnobs();
   const ink = useReadableTextOn(fill);
   return (
@@ -437,10 +440,10 @@ function GanttBarLabel({ title, fill }: { title: string; fill: string }) {
       {`${title}\u200B`}
     </Text>
   );
-}
+};
 
 /** Open-end mark: the bar label's ink, so it reads on every fill. */
-function GanttOpenEdgeMark({
+const GanttOpenEdgeMark = ({
   fill,
   glyph,
   side,
@@ -450,7 +453,7 @@ function GanttOpenEdgeMark({
   glyph: string;
   side: { left: number } | { right: number };
   edge: 'start' | 'end';
-}) {
+}) => {
   const { knobProps } = useResolvedKnobs();
   const ink = useReadableTextOn(fill);
   return (
@@ -466,10 +469,10 @@ function GanttOpenEdgeMark({
       {glyph}
     </Text>
   );
-}
+};
 
 /** Row-identity label: selected fill gets readable on-accent ink. */
-function GanttTaskName({ title, selected, body }: { title: string; selected: boolean; body: object }) {
+const GanttTaskName = ({ title, selected, body }: { title: string; selected: boolean; body: object }) => {
   const ink = useReadableTextOn(selected ? '$accentBackground' : undefined);
   return (
     <Text
@@ -479,7 +482,7 @@ function GanttTaskName({ title, selected, body }: { title: string; selected: boo
       {title}
     </Text>
   );
-}
+};
 
 // ── GanttView ─────────────────────────────────────────────────
 
@@ -542,7 +545,7 @@ function GanttTaskName({ title, selected, body }: { title: string; selected: boo
  * />
  * ```
  */
-export function GanttView({
+export const GanttView = ({
   tasks,
   zoom: initialZoom = 'week',
   onZoomChange,
@@ -566,7 +569,7 @@ export function GanttView({
   enableMarkerDrag,
   markerLabel,
   ...stackProps
-}: GanttViewProps) {
+}: GanttViewProps) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
   const [zoom, setZoom] = useState<GanttZoom>(initialZoom);
@@ -2094,4 +2097,4 @@ export function GanttView({
       </YStack>
     </AsyncBoundary>
   );
-}
+};

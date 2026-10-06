@@ -7,6 +7,6 @@ import { createContext, useContext } from 'react';
  */
 export const CheckboxGroupFlatContext = createContext(false);
 
-export function useCheckboxGroupSkipsElevation(): boolean {
+export const useCheckboxGroupSkipsElevation = (): boolean => {
   return useContext(CheckboxGroupFlatContext);
-}
+};

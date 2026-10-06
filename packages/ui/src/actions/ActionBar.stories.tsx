@@ -14,7 +14,7 @@ import type { ActionBarProps } from './ActionBar';
  * the package's own vitest run cannot load, and the colocated spec mounts
  * these stories for real.
  */
-function useLastPressed() {
+const useLastPressed = () => {
   const [last, setLast] = useState<string | null>(null);
   return {
     last,
@@ -29,7 +29,7 @@ function useLastPressed() {
       </Paragraph>
     ),
   };
-}
+};
 
 const meta: Meta<typeof ActionBar> = {
   title: 'Components/ActionBar',
@@ -52,7 +52,7 @@ export default meta;
 
 type Story = StoryObj<typeof ActionBar>;
 
-function Basic(args: Partial<ActionBarProps>) {
+const Basic = (args: Partial<ActionBarProps>) => {
   const { press, readout } = useLastPressed();
   return (
     <Card maxWidth={480}>
@@ -78,9 +78,9 @@ function Basic(args: Partial<ActionBarProps>) {
       </YStack>
     </Card>
   );
-}
+};
 
-function FullRow() {
+const FullRow = () => {
   const { press, readout } = useLastPressed();
   return (
     <Card maxWidth={520}>
@@ -117,7 +117,7 @@ function FullRow() {
       </YStack>
     </Card>
   );
-}
+};
 
 export const Default: Story = {
   name: 'Main',

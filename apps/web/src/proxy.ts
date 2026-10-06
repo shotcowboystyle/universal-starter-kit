@@ -10,7 +10,7 @@ const isLocale = (value: string | undefined): value is Locale =>
 
 const intlMiddleware = createMiddleware(routing);
 
-export default async function proxy(request: NextRequest) {
+const proxy = async (request: NextRequest) => {
   const { pathname } = request.nextUrl;
 
   // Skip auth check for public routes
@@ -33,7 +33,9 @@ export default async function proxy(request: NextRequest) {
   }
 
   return intlMiddleware(request);
-}
+};
+
+export default proxy;
 
 export const config = {
   // Match only internationalized pathnames

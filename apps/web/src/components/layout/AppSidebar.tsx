@@ -10,7 +10,7 @@ import { useBoards } from '@/hooks/use-boards';
 import { usePathname, useRouter } from '@/i18n/navigation';
 import type { Board } from '@/types/db-interface';
 
-export default function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
+const AppSidebar = ({ onNavigate }: { onNavigate?: () => void }) => {
   const t = useTranslations('sidebar');
   const pathname = usePathname();
   const router = useRouter();
@@ -88,4 +88,6 @@ export default function AppSidebar({ onNavigate }: { onNavigate?: () => void }) 
       />
     </YStack>
   );
-}
+};
+
+export default AppSidebar;

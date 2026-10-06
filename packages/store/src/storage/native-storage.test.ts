@@ -12,7 +12,7 @@ import type { Storage } from '../persist';
 
 import { logNativeStorageResolution, resolveNativeStorage } from './index.native';
 
-function createMMKVv4Module() {
+const createMMKVv4Module = () => {
   const data = new Map<string, string>();
   const instance = {
     getString: (key: string) => data.get(key),
@@ -23,9 +23,9 @@ function createMMKVv4Module() {
   };
   const createMMKV = vi.fn(() => instance);
   return { module: { createMMKV }, createMMKV, data };
-}
+};
 
-function createAsyncStorageModule() {
+const createAsyncStorageModule = () => {
   const data = new Map<string, string>();
   return {
     module: {
@@ -41,24 +41,26 @@ function createAsyncStorageModule() {
     },
     data,
   };
-}
+};
 
 const throwing = (name: string) => () => {
   throw new Error(`${name} unavailable`);
 };
 
-async function roundTrip(storage: Storage): Promise<{
+const roundTrip = async (
+  storage: Storage,
+): Promise<{
   afterSet: string | null;
   afterRemove: string | null;
   missing: string | null;
-}> {
+}> => {
   await storage.setItem('k', 'v');
   const afterSet = await storage.getItem('k');
   await storage.removeItem('k');
   const afterRemove = await storage.getItem('k');
   const missing = await storage.getItem('never-written');
   return { afterSet, afterRemove, missing };
-}
+};
 
 describe('resolveNativeStorage', () => {
   it('picks MMKV via the v4 createMMKV() factory and round-trips values', async () => {

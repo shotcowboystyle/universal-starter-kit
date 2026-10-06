@@ -120,192 +120,19 @@ export interface PaneScaffoldProps extends Omit<XStackProps, 'children'> {
  */
 const PaneSizeClassContext = createContext<LayoutSizeClass | null>(null);
 
-/**
- * Adaptive one-/two-pane shell. Geometry only — surface colors stay stable
- * across breakpoints (Material M-L5).
- */
-export function PaneScaffold({
-  primary,
-  secondary,
-  orientation = 'horizontal',
-  activePane: activePaneProp,
-  narrowLayout: narrowLayoutProp,
-  maxPanes: maxPanesProp,
-  paneFlex = [1, 1],
-  paneGap,
-  resizable: resizableProp,
-  minPaneFraction = DEFAULT_MIN_FRACTION,
-  maxPaneFraction = DEFAULT_MAX_FRACTION,
-  primaryFraction: primaryFractionProp,
-  onPrimaryFractionChange,
-  sizeClass: sizeClassProp,
-  ...rest
-}: PaneScaffoldProps) {
-  const liveClass = useLayoutSizeClass();
-  const inheritedClass = useContext(PaneSizeClassContext);
-  const sizeClass = sizeClassProp ?? inheritedClass ?? liveClass;
-  // Explicit `maxPanes` is the eject hatch (force 1 or 2 regardless of class).
-  const budget = maxPanesProp ?? defaultMaxPanes(sizeClass);
-  const hasSecondary = secondary !== null && secondary !== undefined;
-  const split = budget >= 2 && hasSecondary;
-  const gapped = paneGap !== undefined;
-  const gap = gapped ? paneGap : undefined;
-  const resizable = (resizableProp ?? !gapped) && split && !gapped;
-  // `activePane` only decides anything when a pane is dropped, so passing it
-  // IS the swap opt-in. Everything else stacks: a scaffold that hides its
-  // secondary by default leaves that content unreachable on a phone.
-  const narrowLayout = narrowLayoutProp ?? (activePaneProp === undefined ? 'stack' : 'swap');
-  const stacked = !split && hasSecondary && narrowLayout === 'stack';
-  const vertical = orientation === 'vertical';
-  const [primaryFlex, secondaryFlex] = paneFlex;
-
-  // flexBasis auto, not the flex:1 shorthand's 0%: react-native-web resets
-  // min-height to 0, so a 0% basis contributes zero intrinsic height inside
-  // auto-height scroll flows (Screen scroll pages) and the scaffold collapses,
-  // painting pane content over whatever follows. Bounded parents still fill
-  // (grow 1) exactly as before.
-  let content: ReactNode;
-  if (stacked) {
-    content = (
-      <YStack
-        flexGrow={1}
-        flexShrink={1}
-        flexBasis="auto"
-        minWidth={0}
-        width="100%"
-        gap={gap ?? 0}
-        data-testid="pane-scaffold"
-        data-panes="2"
-        data-pane-layout="stack"
-        data-orientation={orientation}
-        data-size-class={sizeClass}
-        data-sash="false"
-        {...rest}>
-        <YStack
-          flexGrow={1}
-          flexShrink={1}
-          flexBasis="auto"
-          minWidth={0}
-          minHeight={0}
-          width="100%"
-          {...(gapped ? undefined : paneHairlineBottom)}
-          data-testid="pane-primary">
-          {primary}
-        </YStack>
-        <YStack
-          flexGrow={1}
-          flexShrink={1}
-          flexBasis="auto"
-          minWidth={0}
-          minHeight={0}
-          width="100%"
-          data-testid="pane-secondary">
-          {secondary}
-        </YStack>
-      </YStack>
-    );
-  } else if (split) {
-    content = (
-      <XStack
-        flexDirection={vertical ? 'column' : 'row'}
-        flexGrow={1}
-        flexShrink={1}
-        flexBasis="auto"
-        minWidth={0}
-        minHeight={0}
-        width="100%"
-        alignItems="stretch"
-        gap={gap ?? 0}
-        position="relative"
-        data-testid="pane-scaffold"
-        data-panes="2"
-        data-pane-layout="split"
-        data-orientation={orientation}
-        data-size-class={sizeClass}
-        data-sash={resizable ? 'true' : 'false'}
-        {...rest}>
-        {resizable ? (
-          <ResizablePanes
-            vertical={vertical}
-            primary={primary}
-            secondary={secondary}
-            primaryFlex={primaryFlex}
-            secondaryFlex={secondaryFlex}
-            minFraction={minPaneFraction}
-            maxFraction={maxPaneFraction}
-            fraction={primaryFractionProp}
-            onFractionChange={onPrimaryFractionChange}
-          />
-        ) : (
-          <>
-            <YStack
-              flex={primaryFlex}
-              minWidth={0}
-              minHeight={0}
-              {...(gapped ? undefined : vertical ? paneHairlineBottom : paneHairlineEnd)}
-              data-testid="pane-primary">
-              {primary}
-            </YStack>
-            <YStack
-              flex={secondaryFlex}
-              minWidth={0}
-              minHeight={0}
-              data-testid="pane-secondary">
-              {secondary}
-            </YStack>
-          </>
-        )}
-      </XStack>
-    );
-  } else {
-    const activePane = activePaneProp ?? 'primary';
-    const shown = activePane === 'secondary' && hasSecondary ? secondary : primary;
-    content = (
-      <YStack
-        flexGrow={1}
-        flexShrink={1}
-        flexBasis="auto"
-        minWidth={0}
-        width="100%"
-        data-testid="pane-scaffold"
-        data-panes="1"
-        data-pane-layout="single"
-        data-orientation={orientation}
-        data-size-class={sizeClass}
-        {...rest}>
-        {shown}
-      </YStack>
-    );
-  }
-
-  return <PaneSizeClassContext.Provider value={sizeClass}>{content}</PaneSizeClassContext.Provider>;
-}
-
-const paneHairlineEnd = isWeb
-  ? {
-      borderInlineEndWidth: hairlineWidth,
-      borderInlineEndStyle: 'solid' as const,
-      borderColor: '$borderColor',
-      className: 'mp-hairline-ie',
-    }
-  : { borderEndWidth: hairlineWidth, borderColor: '$borderColor' };
-
-/** Stacked seam: the horizontal twin of `paneHairlineEnd`. */
-const paneHairlineBottom = { ...hairline.bottom, borderColor: '$borderColor' };
-
-function clampFraction(value: number, min: number, max: number): number {
+const clampFraction = (value: number, min: number, max: number): number => {
   return Math.min(max, Math.max(min, value));
-}
+};
 
-function axisSize(vertical: boolean, rect: { width?: number; height?: number } | null | undefined): number {
+const axisSize = (vertical: boolean, rect: { width?: number; height?: number } | null | undefined): number => {
   return (vertical ? rect?.height : rect?.width) ?? 0;
-}
+};
 
-function pointerPos(vertical: boolean, e: any): number {
+const pointerPos = (vertical: boolean, e: any): number => {
   return vertical ? (e.clientY ?? e.nativeEvent?.pageY ?? 0) : (e.clientX ?? e.nativeEvent?.pageX ?? 0);
-}
+};
 
-function ResizablePanes({
+const ResizablePanes = ({
   vertical,
   primary,
   secondary,
@@ -325,7 +152,7 @@ function ResizablePanes({
   maxFraction: number;
   fraction?: number;
   onFractionChange?: (fraction: number) => void;
-}) {
+}) => {
   const sashId = useId();
   const rtl = useDirection() === 'rtl';
   // RTL mirrors the inline axis only; a vertical seam has no mirror.
@@ -594,7 +421,180 @@ function ResizablePanes({
       </YStack>
     </XStack>
   );
-}
+};
+
+/**
+ * Adaptive one-/two-pane shell. Geometry only — surface colors stay stable
+ * across breakpoints (Material M-L5).
+ */
+export const PaneScaffold = ({
+  primary,
+  secondary,
+  orientation = 'horizontal',
+  activePane: activePaneProp,
+  narrowLayout: narrowLayoutProp,
+  maxPanes: maxPanesProp,
+  paneFlex = [1, 1],
+  paneGap,
+  resizable: resizableProp,
+  minPaneFraction = DEFAULT_MIN_FRACTION,
+  maxPaneFraction = DEFAULT_MAX_FRACTION,
+  primaryFraction: primaryFractionProp,
+  onPrimaryFractionChange,
+  sizeClass: sizeClassProp,
+  ...rest
+}: PaneScaffoldProps) => {
+  const liveClass = useLayoutSizeClass();
+  const inheritedClass = useContext(PaneSizeClassContext);
+  const sizeClass = sizeClassProp ?? inheritedClass ?? liveClass;
+  // Explicit `maxPanes` is the eject hatch (force 1 or 2 regardless of class).
+  const budget = maxPanesProp ?? defaultMaxPanes(sizeClass);
+  const hasSecondary = secondary !== null && secondary !== undefined;
+  const split = budget >= 2 && hasSecondary;
+  const gapped = paneGap !== undefined;
+  const gap = gapped ? paneGap : undefined;
+  const resizable = (resizableProp ?? !gapped) && split && !gapped;
+  // `activePane` only decides anything when a pane is dropped, so passing it
+  // IS the swap opt-in. Everything else stacks: a scaffold that hides its
+  // secondary by default leaves that content unreachable on a phone.
+  const narrowLayout = narrowLayoutProp ?? (activePaneProp === undefined ? 'stack' : 'swap');
+  const stacked = !split && hasSecondary && narrowLayout === 'stack';
+  const vertical = orientation === 'vertical';
+  const [primaryFlex, secondaryFlex] = paneFlex;
+
+  // flexBasis auto, not the flex:1 shorthand's 0%: react-native-web resets
+  // min-height to 0, so a 0% basis contributes zero intrinsic height inside
+  // auto-height scroll flows (Screen scroll pages) and the scaffold collapses,
+  // painting pane content over whatever follows. Bounded parents still fill
+  // (grow 1) exactly as before.
+  let content: ReactNode;
+  if (stacked) {
+    content = (
+      <YStack
+        flexGrow={1}
+        flexShrink={1}
+        flexBasis="auto"
+        minWidth={0}
+        width="100%"
+        gap={gap ?? 0}
+        data-testid="pane-scaffold"
+        data-panes="2"
+        data-pane-layout="stack"
+        data-orientation={orientation}
+        data-size-class={sizeClass}
+        data-sash="false"
+        {...rest}>
+        <YStack
+          flexGrow={1}
+          flexShrink={1}
+          flexBasis="auto"
+          minWidth={0}
+          minHeight={0}
+          width="100%"
+          {...(gapped ? undefined : paneHairlineBottom)}
+          data-testid="pane-primary">
+          {primary}
+        </YStack>
+        <YStack
+          flexGrow={1}
+          flexShrink={1}
+          flexBasis="auto"
+          minWidth={0}
+          minHeight={0}
+          width="100%"
+          data-testid="pane-secondary">
+          {secondary}
+        </YStack>
+      </YStack>
+    );
+  } else if (split) {
+    content = (
+      <XStack
+        flexDirection={vertical ? 'column' : 'row'}
+        flexGrow={1}
+        flexShrink={1}
+        flexBasis="auto"
+        minWidth={0}
+        minHeight={0}
+        width="100%"
+        alignItems="stretch"
+        gap={gap ?? 0}
+        position="relative"
+        data-testid="pane-scaffold"
+        data-panes="2"
+        data-pane-layout="split"
+        data-orientation={orientation}
+        data-size-class={sizeClass}
+        data-sash={resizable ? 'true' : 'false'}
+        {...rest}>
+        {resizable ? (
+          <ResizablePanes
+            vertical={vertical}
+            primary={primary}
+            secondary={secondary}
+            primaryFlex={primaryFlex}
+            secondaryFlex={secondaryFlex}
+            minFraction={minPaneFraction}
+            maxFraction={maxPaneFraction}
+            fraction={primaryFractionProp}
+            onFractionChange={onPrimaryFractionChange}
+          />
+        ) : (
+          <>
+            <YStack
+              flex={primaryFlex}
+              minWidth={0}
+              minHeight={0}
+              {...(gapped ? undefined : vertical ? paneHairlineBottom : paneHairlineEnd)}
+              data-testid="pane-primary">
+              {primary}
+            </YStack>
+            <YStack
+              flex={secondaryFlex}
+              minWidth={0}
+              minHeight={0}
+              data-testid="pane-secondary">
+              {secondary}
+            </YStack>
+          </>
+        )}
+      </XStack>
+    );
+  } else {
+    const activePane = activePaneProp ?? 'primary';
+    const shown = activePane === 'secondary' && hasSecondary ? secondary : primary;
+    content = (
+      <YStack
+        flexGrow={1}
+        flexShrink={1}
+        flexBasis="auto"
+        minWidth={0}
+        width="100%"
+        data-testid="pane-scaffold"
+        data-panes="1"
+        data-pane-layout="single"
+        data-orientation={orientation}
+        data-size-class={sizeClass}
+        {...rest}>
+        {shown}
+      </YStack>
+    );
+  }
+
+  return <PaneSizeClassContext.Provider value={sizeClass}>{content}</PaneSizeClassContext.Provider>;
+};
+
+const paneHairlineEnd = isWeb
+  ? {
+      borderInlineEndWidth: hairlineWidth,
+      borderInlineEndStyle: 'solid' as const,
+      borderColor: '$borderColor',
+      className: 'mp-hairline-ie',
+    }
+  : { borderEndWidth: hairlineWidth, borderColor: '$borderColor' };
+
+/** Stacked seam: the horizontal twin of `paneHairlineEnd`. */
+const paneHairlineBottom = { ...hairline.bottom, borderColor: '$borderColor' };
 
 // ── List-detail ───────────────────────────────────────────────────────────
 
@@ -614,14 +614,14 @@ export interface ListDetailLayoutProps extends Omit<PaneScaffoldProps, 'primary'
  * are two steps of one navigation, so `selected` decides which is on screen.
  * Pass `narrowLayout="stack"` to show both instead.
  */
-export function ListDetailLayout({
+export const ListDetailLayout = ({
   list,
   detail,
   selected = false,
   activePane,
   narrowLayout,
   ...rest
-}: ListDetailLayoutProps) {
+}: ListDetailLayoutProps) => {
   return (
     <PaneScaffold
       primary={list}
@@ -633,7 +633,7 @@ export function ListDetailLayout({
       {...rest}
     />
   );
-}
+};
 
 // ── Supporting pane ───────────────────────────────────────────────────────
 
@@ -651,7 +651,7 @@ export interface SupportingPaneLayoutProps extends Omit<PaneScaffoldProps, 'prim
  * Below the two-pane budget the supporting content stacks under the primary.
  * It is never dropped: it has no screen of its own to be reached from.
  */
-export function SupportingPaneLayout({ children, supporting, ...rest }: SupportingPaneLayoutProps) {
+export const SupportingPaneLayout = ({ children, supporting, ...rest }: SupportingPaneLayoutProps) => {
   return (
     <PaneScaffold
       primary={children}
@@ -661,7 +661,7 @@ export function SupportingPaneLayout({ children, supporting, ...rest }: Supporti
       {...rest}
     />
   );
-}
+};
 
 // ── Feed ──────────────────────────────────────────────────────────────────
 
@@ -676,7 +676,7 @@ export interface FeedLayoutProps extends YStackProps {
  * `betweenGroups` gap between cards. Web uses auto-fill tracks (Polaris
  * card grid); native wraps at `minItemWidth`.
  */
-export function FeedLayout({ children, minItemWidth = 280, ...rest }: FeedLayoutProps) {
+export const FeedLayout = ({ children, minItemWidth = 280, ...rest }: FeedLayoutProps) => {
   const gaps = useSemanticGaps();
   const multi = useMultiPane();
 
@@ -712,7 +712,7 @@ export function FeedLayout({ children, minItemWidth = 280, ...rest }: FeedLayout
       ))}
     </YStack>
   );
-}
+};
 
 // ── Reading width ─────────────────────────────────────────────
 
@@ -726,7 +726,7 @@ export interface ReadingWidthProps extends YStackProps {
  * Constrains prose / long-form content to a readable measure (~65–75ch).
  * Full-bleed is the eject (`measure="none"`), not the default.
  */
-export function ReadingWidth({ measure = READING_WIDTH_CH, children, ...rest }: ReadingWidthProps) {
+export const ReadingWidth = ({ measure = READING_WIDTH_CH, children, ...rest }: ReadingWidthProps) => {
   return (
     <YStack
       alignSelf="flex-start"
@@ -736,4 +736,4 @@ export function ReadingWidth({ measure = READING_WIDTH_CH, children, ...rest }: 
       {children}
     </YStack>
   );
-}
+};

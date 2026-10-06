@@ -18,26 +18,26 @@ afterEach(cleanup);
 const R = 9;
 const CIRCUMFERENCE = 2 * Math.PI * R;
 
-function svg(container: HTMLElement): SVGElement {
+const svg = (container: HTMLElement): SVGElement => {
   const node = container.querySelector('svg');
   if (!node) {
     throw new Error('SpinnerGlyph rendered no svg');
   }
   return node as unknown as SVGElement;
-}
+};
 
-function circles(container: HTMLElement): SVGElement[] {
+const circles = (container: HTMLElement): SVGElement[] => {
   return Array.from(container.querySelectorAll('circle')) as unknown as SVGElement[];
-}
+};
 
-function Probe({ color }: { color?: string }) {
+const stroke = (container: HTMLElement): string | null => {
+  return container.querySelector('[data-stroke]')?.getAttribute('data-stroke') ?? null;
+};
+
+const Probe = ({ color }: { color?: string }) => {
   const stroke = useSpinnerStroke(color);
   return <span data-stroke={stroke} />;
-}
-
-function stroke(container: HTMLElement): string | null {
-  return container.querySelector('[data-stroke]')?.getAttribute('data-stroke') ?? null;
-}
+};
 
 describe('SpinnerGlyph — the arc', () => {
   it('draws a track and a head, never one circle', () => {

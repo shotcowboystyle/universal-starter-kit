@@ -27,10 +27,10 @@ export const DOCUMENT_TITLE_SEPARATOR = ' – ';
  * Pure composition: reverse the trail (leaf first) and join. Exported for
  * unit tests and non-hook callers.
  */
-export function composeDocumentTitle(
+export const composeDocumentTitle = (
   trail: DocumentTitleTrail | undefined,
   separator: string = DOCUMENT_TITLE_SEPARATOR,
-): string {
+): string => {
   if (!trail) {
     return '';
   }
@@ -39,7 +39,7 @@ export function composeDocumentTitle(
     .map((label) => label.trim())
     .filter(Boolean);
   return labels.reverse().join(separator);
-}
+};
 
 export interface UseDocumentTitleOptions {
   /** Separator between parts. Default `" – "`. */
@@ -57,7 +57,10 @@ export interface UseDocumentTitleOptions {
  * // breadcrumbs = [{ label: "Desk" }, { label: "Pokemon" }, { label: "Pikachu" }]
  * useDocumentTitle(breadcrumbs); // document.title === "Pikachu – Pokemon – Desk"
  */
-export function useDocumentTitle(trail: DocumentTitleTrail | undefined, options: UseDocumentTitleOptions = {}): string {
+export const useDocumentTitle = (
+  trail: DocumentTitleTrail | undefined,
+  options: UseDocumentTitleOptions = {},
+): string => {
   const { separator = DOCUMENT_TITLE_SEPARATOR, enabled = true } = options;
   const title = useMemo(() => composeDocumentTitle(trail, separator), [trail, separator]);
 
@@ -74,4 +77,4 @@ export function useDocumentTitle(trail: DocumentTitleTrail | undefined, options:
   }, [title, enabled]);
 
   return title;
-}
+};

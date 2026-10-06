@@ -5,11 +5,26 @@ export interface DetectLanguageOptions {
   defaultLanguage: string;
 }
 
+/** Parse Accept-Language header into language codes sorted by quality (descending). */
+const parseAcceptLanguage = (header: string): string[] => {
+  return header
+    .split(',')
+    .map((part) => {
+      const [lang, ...params] = part.trim().split(';');
+      const qParam = params.find((p) => p.trim().startsWith('q='));
+      const q = qParam ? Number.parseFloat(qParam.trim().slice(2)) : 1;
+      return { lang: lang.trim(), q };
+    })
+    .filter(({ lang }) => lang && lang !== '*')
+    .sort((a, b) => b.q - a.q)
+    .map(({ lang }) => lang);
+};
+
 /**
  * Detect the user's preferred language from a Request.
  * Priority: preferred_language cookie → Accept-Language header → default.
  */
-export function detectLanguage(request: Request, options: DetectLanguageOptions): string {
+export const detectLanguage = (request: Request, options: DetectLanguageOptions): string => {
   const { supportedLanguages, defaultLanguage } = options;
 
   // 1. Check preferred_language cookie
@@ -36,19 +51,4 @@ export function detectLanguage(request: Request, options: DetectLanguageOptions)
   }
 
   return defaultLanguage;
-}
-
-/** Parse Accept-Language header into language codes sorted by quality (descending). */
-function parseAcceptLanguage(header: string): string[] {
-  return header
-    .split(',')
-    .map((part) => {
-      const [lang, ...params] = part.trim().split(';');
-      const qParam = params.find((p) => p.trim().startsWith('q='));
-      const q = qParam ? Number.parseFloat(qParam.trim().slice(2)) : 1;
-      return { lang: lang.trim(), q };
-    })
-    .filter(({ lang }) => lang && lang !== '*')
-    .sort((a, b) => b.q - a.q)
-    .map(({ lang }) => lang);
-}
+};

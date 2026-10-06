@@ -24,16 +24,16 @@ const saveBarRoutes: readonly Route[] = ['save', 'ctrl-s', 'cmd-s'];
 
 let formState = () => ({ isDirty: false, submissionAttempts: 0 });
 
-function StateProbe() {
+const StateProbe = () => {
   const form = useFormContext();
   formState = () => ({
     isDirty: form.state.isDirty,
     submissionAttempts: form.state.submissionAttempts,
   });
   return null;
-}
+};
 
-function PathForm({
+const PathForm = ({
   route,
   onSubmit,
   onSaved,
@@ -45,7 +45,7 @@ function PathForm({
   onSaved?: (values: Record<string, unknown>) => void;
   defaultName?: string;
   required?: boolean;
-}) {
+}) => {
   return (
     <Form
       formOptions={{ defaultValues: { name: defaultName } }}
@@ -61,13 +61,13 @@ function PathForm({
       <Button action="submit">Submit action</Button>
     </Form>
   );
-}
+};
 
 type View = ReturnType<typeof renderWithProviders>;
 
 const nameInput = (view: View) => view.getByLabelText(/^Name/) as HTMLInputElement;
 
-async function activate(route: Route, view: View) {
+const activate = async (route: Route, view: View) => {
   switch (route) {
     case 'html': {
       await act(async () => fireEvent.click(view.getByRole('button', { name: 'Submit HTML' })));
@@ -95,7 +95,7 @@ async function activate(route: Route, view: View) {
       return;
     }
   }
-}
+};
 
 describe('every submission path shares one outcome', () => {
   it.each(routes)('%s: a retry clears the failure while it runs, and a failed retry shows its own', async (route) => {
@@ -200,13 +200,13 @@ describe('every submission path shares one outcome', () => {
 });
 
 describe('the SubmissionPaths story counts onSubmit calls', () => {
-  function mountStory() {
+  const mountStory = () => {
     const story = saveBarStories.SubmissionPaths as { render?: () => ReactElement };
     if (!story.render) {
       throw new Error('SubmissionPaths has no render');
     }
     return renderWithProviders(story.render());
-  }
+  };
 
   const calls = (view: View) => view.getByTestId('submit-calls').textContent;
 

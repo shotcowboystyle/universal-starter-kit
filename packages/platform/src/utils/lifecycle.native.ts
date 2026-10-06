@@ -1,7 +1,7 @@
 import { AppState } from 'react-native';
 import type { AppStateStatus } from 'react-native';
 
-export function onAppFocus(callback: () => void): () => void {
+export const onAppFocus = (callback: () => void): (() => void) => {
   const sub = AppState.addEventListener('change', (state: AppStateStatus) => {
     if (state === 'active') {
       callback();
@@ -10,9 +10,9 @@ export function onAppFocus(callback: () => void): () => void {
   return () => {
     sub.remove();
   };
-}
+};
 
-export function onAppBlur(callback: () => void): () => void {
+export const onAppBlur = (callback: () => void): (() => void) => {
   const sub = AppState.addEventListener('change', (state: AppStateStatus) => {
     if (state === 'background' || state === 'inactive') {
       callback();
@@ -21,22 +21,22 @@ export function onAppBlur(callback: () => void): () => void {
   return () => {
     sub.remove();
   };
-}
+};
 
-export function onOnline(callback: () => void): () => void {
+export const onOnline = (callback: () => void): (() => void) => {
   // NetInfo not available without expo-network — no-op for now
   return () => {};
-}
+};
 
-export function onOffline(callback: () => void): () => void {
+export const onOffline = (callback: () => void): (() => void) => {
   return () => {};
-}
+};
 
-export function onVisibilityChange(callback: (visible: boolean) => void): () => void {
+export const onVisibilityChange = (callback: (visible: boolean) => void): (() => void) => {
   const sub = AppState.addEventListener('change', (state: AppStateStatus) => {
     callback(state === 'active');
   });
   return () => {
     sub.remove();
   };
-}
+};

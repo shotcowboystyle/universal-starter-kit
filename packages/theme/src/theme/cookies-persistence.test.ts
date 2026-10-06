@@ -19,11 +19,11 @@ import {
 } from './cookies';
 import type { Knobs } from './knobs';
 
-function clearThemeCookies() {
+const clearThemeCookies = () => {
   for (const key of getCookieWatchList()) {
     document.cookie = `${key}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
   }
-}
+};
 
 beforeEach(() => {
   clearThemeCookies();

@@ -123,7 +123,7 @@ const colorMap: Record<
   },
 };
 
-function resolveVariant(variant: ChipVariantProp | undefined): ChipVariant {
+const resolveVariant = (variant: ChipVariantProp | undefined): ChipVariant => {
   if (variant === 'filled') {
     return 'solid';
   }
@@ -134,7 +134,7 @@ function resolveVariant(variant: ChipVariantProp | undefined): ChipVariant {
     return 'subtle';
   }
   return variant ?? 'subtle';
-}
+};
 
 // ── Styled components ─────────────────────────────────────────
 
@@ -149,18 +149,18 @@ function resolveVariant(variant: ChipVariantProp | undefined): ChipVariant {
 const CHIP_RECIPE_FAMILY = 'controlCompact' as const;
 const CHIP_SIZE_TOKENS = ['$2', '$3', '$4', '$5'] as const;
 
-function chipPadY(paddingHorizontal: number): number {
+const chipPadY = (paddingHorizontal: number): number => {
   return Math.round(paddingHorizontal * 0.25);
-}
+};
 
-function chipFrameGeometry(token: string) {
+const chipFrameGeometry = (token: string) => {
   const recipe = sizeRecipeForToken(token, { family: CHIP_RECIPE_FAMILY });
   return {
     paddingHorizontal: recipe.paddingHorizontal,
     paddingVertical: chipPadY(recipe.paddingHorizontal),
     gap: recipe.gap,
   };
-}
+};
 
 const chipFrameVariants = Object.fromEntries(CHIP_SIZE_TOKENS.map((token) => [token, chipFrameGeometry(token)]));
 
@@ -251,9 +251,9 @@ const ChipBody = styled(View, {
 });
 
 /** Icon size that pairs with each chip size — the generated recipe's icon channel. */
-export function chipIconSize(size: ChipSize): number {
+export const chipIconSize = (size: ChipSize): number => {
   return sizeRecipeForToken(size, { family: CHIP_RECIPE_FAMILY }).iconSize;
-}
+};
 
 /**
  * Fine-pointer floor for the dismiss target. The 44px coarse
@@ -268,9 +268,9 @@ export const CHIP_DISMISS_MIN_TARGET_FINE = 24;
  * floor up to ≥24 effective (applied as an absolute, unpainted overlay).
  * Exported for the Chip spec, which pins the hit-area decision.
  */
-export function chipDismissFloorOutset(side: number): number {
+export const chipDismissFloorOutset = (side: number): number => {
   return Math.max(0, (CHIP_DISMISS_MIN_TARGET_FINE - side) / 2);
-}
+};
 
 /**
  * The dismiss ✕ occupies the pill's END CAP: `alignSelf: stretch` spans the
@@ -365,7 +365,7 @@ const chipFocusRingCss = `/* LC-71: Chip body → pill ring; dismiss → glyph (
   box-shadow: none !important;
 }`;
 
-function ensureChipFocusRing(): void {
+const ensureChipFocusRing = (): void => {
   if (typeof document === 'undefined') {
     return;
   }
@@ -377,11 +377,11 @@ function ensureChipFocusRing(): void {
   tag.id = CHIP_RING_STYLE_ID;
   tag.textContent = chipFocusRingCss;
   document.head.append(tag);
-}
+};
 
 // ── Chip Component ────────────────────────────────────────────
 
-export function Chip({
+export const Chip = ({
   children,
   size,
   variant: variantProp = 'subtle',
@@ -393,7 +393,7 @@ export function Chip({
   icon,
   groupPosition,
   groupOrientation = 'horizontal',
-}: ChipProps) {
+}: ChipProps) => {
   const { knobProps, disabledState } = useResolvedKnobs();
   const variant = resolveVariant(variantProp);
   const colors = colorMap[color];
@@ -621,6 +621,6 @@ export function Chip({
       )}
     </ChipFrame>
   );
-}
+};
 
 export type ChipFrameProps = GetProps<typeof ChipFrame>;

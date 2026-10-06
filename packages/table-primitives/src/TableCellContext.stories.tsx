@@ -15,7 +15,7 @@ export default {
   },
 };
 
-function Probe({ label }: { label: string }) {
+const Probe = ({ label }: { label: string }) => {
   const inCell = useIsInTableCell();
   const ctx = useTableCellContext();
   return (
@@ -28,7 +28,7 @@ function Probe({ label }: { label: string }) {
       {label}: inCell={String(inCell)} isHeader={String(Boolean(ctx.isHeader))}
     </SizableText>
   );
-}
+};
 
 export const main = {
   name: 'Main',

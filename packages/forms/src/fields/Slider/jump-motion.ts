@@ -78,43 +78,43 @@ export interface SliderThumbMotionProps {
  * Mirrors tamagui `convertValueToPercentage` (same operation order so the
  * computed base translateX is bit-identical to the internal positional style).
  */
-export function convertSliderValueToPercent(value: number, min: number, max: number): number {
+export const convertSliderValueToPercent = (value: number, min: number, max: number): number => {
   const maxSteps = max - min;
   if (maxSteps === 0) {
     return 0;
   }
   const percentPerStep = 100 / maxSteps;
   return percentPerStep * (value - min);
-}
+};
 
 /** Mirrors tamagui's updateValues step-snap + clamp for a raw pointer value. */
-export function snapSliderValue(raw: number, min: number, max: number, step: number): number {
+export const snapSliderValue = (raw: number, min: number, max: number, step: number): number => {
   const decimalCount = (String(step).split('.')[1] || '').length;
   const rounder = 10 ** decimalCount;
   const stepped = Math.round((raw - min) / step) * step + min;
   const rounded = Math.round(stepped * rounder) / rounder;
   return Math.min(max, Math.max(min, rounded));
-}
+};
 
 /** Mirrors tamagui `getClosestValueIndex`. */
-export function getClosestThumbIndex(values: number[], next: number): number {
+export const getClosestThumbIndex = (values: number[], next: number): number => {
   if (values.length === 1) {
     return 0;
   }
   const distances = values.map((value) => Math.abs(value - next));
   const closestDistance = Math.min(...distances);
   return distances.indexOf(closestDistance);
-}
+};
 
 /** Mirrors tamagui `getNextSortedValues`. */
-export function getNextSortedValues(values: number[], next: number, atIndex: number): number[] {
+export const getNextSortedValues = (values: number[], next: number, atIndex: number): number[] => {
   const nextValues = [...values];
   nextValues[atIndex] = next;
   return nextValues.sort((a, b) => a - b);
-}
+};
 
 /** Mirrors tamagui `hasMinStepsBetweenValues` (rejected clicks never move). */
-export function hasMinStepsBetween(values: number[], minStepsBetweenValues: number): boolean {
+export const hasMinStepsBetween = (values: number[], minStepsBetweenValues: number): boolean => {
   if (minStepsBetweenValues <= 0) {
     return true;
   }
@@ -124,7 +124,7 @@ export function hasMinStepsBetween(values: number[], minStepsBetweenValues: numb
     }
   }
   return true;
-}
+};
 
 /**
  * The RENDERED thumb diameter used by jump FLIP math (and the visual thumb
@@ -135,9 +135,9 @@ export function hasMinStepsBetween(values: number[], minStepsBetweenValues: numb
  * (`$4` is 32, not 44). Radius is not on the recipe; circular vs square
  * does not change diameter.
  */
-export function getSliderThumbRenderSize(sizeToken: string, _circular?: boolean, touch = isTouchSurface()): number {
+export const getSliderThumbRenderSize = (sizeToken: string, _circular?: boolean, touch = isTouchSurface()): number => {
   return sizeRecipeForToken(sizeToken, { touch }).height;
-}
+};
 
 /**
  * Replica of the thumb's internal horizontal translateX (LTR):
@@ -148,11 +148,11 @@ export function getSliderThumbRenderSize(sizeToken: string, _circular?: boolean,
  * `thumbSize` MUST be the rendered size ({@link getSliderThumbRenderSize}) —
  * tamagui recomputes this offset from its measured layout size.
  */
-export function getThumbBaseX(percent: number, thumbSize: number): number {
+export const getThumbBaseX = (percent: number, thumbSize: number): number => {
   const quarterWidth = thumbSize / 4;
   const offset = (quarterWidth / 50) * percent;
   return quarterWidth - offset - thumbSize / 2;
-}
+};
 
 export interface JumpDeltaContext {
   min: number;
@@ -166,15 +166,15 @@ export interface JumpDeltaContext {
  * visualX(p) = trackWidth·p/100 + baseX(p) ⇒
  * Δ = (pOld − pNew)/100 · (trackWidth − thumbSize/2).
  */
-export function getJumpDelta(
+export const getJumpDelta = (
   oldValue: number,
   newValue: number,
   { min, max, trackWidth, thumbSize }: JumpDeltaContext,
-): number {
+): number => {
   const oldPercent = convertSliderValueToPercent(oldValue, min, max);
   const newPercent = convertSliderValueToPercent(newValue, min, max);
   return ((oldPercent - newPercent) / 100) * (trackWidth - thumbSize / 2);
-}
+};
 
 // ── Spring settle analytics ──────────────────────────────────────────────────
 //
@@ -203,7 +203,7 @@ interface SpringPhysics {
   zeta: number;
 }
 
-function getSpringPhysics(config: SpringConfigLike): SpringPhysics {
+const getSpringPhysics = (config: SpringConfigLike): SpringPhysics => {
   // RN Animated.spring defaults for the stiffness/damping/mass parametrization.
   const stiffness = config.stiffness ?? 100;
   const damping = config.damping ?? 10;
@@ -212,14 +212,14 @@ function getSpringPhysics(config: SpringConfigLike): SpringPhysics {
     omega: Math.sqrt(stiffness / mass),
     zeta: damping / (2 * Math.sqrt(stiffness * mass)),
   };
-}
+};
 
 /**
  * Monotone-decreasing bound on |x(t)|/|Δ| for a spring released from rest.
  * Underdamped: e^(−ζωt)/√(1−ζ²); critically/overdamped: the exact (monotone)
  * response itself.
  */
-function springEnvelopeRatio({ omega, zeta }: SpringPhysics, tSec: number): number {
+const springEnvelopeRatio = ({ omega, zeta }: SpringPhysics, tSec: number): number => {
   if (zeta < 1) {
     return Math.exp(-zeta * omega * tSec) / Math.sqrt(1 - zeta * zeta);
   }
@@ -230,7 +230,11 @@ function springEnvelopeRatio({ omega, zeta }: SpringPhysics, tSec: number): numb
   const r1 = omega * (zeta - root);
   const r2 = omega * (zeta + root);
   return (r2 * Math.exp(-r1 * tSec) - r1 * Math.exp(-r2 * tSec)) / (r2 - r1);
-}
+};
+
+const clampSettleMs = (ms: number): number => {
+  return Math.min(MAX_SETTLE_MS, Math.max(MIN_SETTLE_MS, Math.ceil(ms)));
+};
 
 /**
  * Ms until a jump of `deltaPx` animated with `config` has a residual envelope
@@ -238,11 +242,11 @@ function springEnvelopeRatio({ omega, zeta }: SpringPhysics, tSec: number): numb
  * override with no visible pop. Unknown configs fall back to
  * {@link NATIVE_JUMP_SETTLE_MS}.
  */
-export function getJumpSettleMs(
+export const getJumpSettleMs = (
   config: unknown,
   deltaPx: number,
   thresholdPx: number = JUMP_RELEASE_THRESHOLD_PX,
-): number {
+): number => {
   if (!config || typeof config !== 'object') {
     return NATIVE_JUMP_SETTLE_MS;
   }
@@ -273,11 +277,7 @@ export function getJumpSettleMs(
     }
   }
   return clampSettleMs(hi * 1000);
-}
-
-function clampSettleMs(ms: number): number {
-  return Math.min(MAX_SETTLE_MS, Math.max(MIN_SETTLE_MS, Math.ceil(ms)));
-}
+};
 
 /**
  * Signed px offset from the base `elapsedMs` into a jump of `deltaPx` —
@@ -286,7 +286,7 @@ function clampSettleMs(ms: number): number {
  * in-flight residual into the new delta instead of teleporting the thumb to
  * where the old glide WOULD have ended).
  */
-export function getSpringResidualPx(config: unknown, deltaPx: number, elapsedMs: number): number {
+export const getSpringResidualPx = (config: unknown, deltaPx: number, elapsedMs: number): number => {
   if (elapsedMs <= 0) {
     return deltaPx;
   }
@@ -316,9 +316,9 @@ export function getSpringResidualPx(config: unknown, deltaPx: number, elapsedMs:
   const r1 = omega * (zeta - root);
   const r2 = omega * (zeta + root);
   return (deltaPx * (r2 * Math.exp(-r1 * t) - r1 * Math.exp(-r2 * t))) / (r2 - r1);
-}
+};
 
-function valuesEqual(a: number[], b: number[]): boolean {
+const valuesEqual = (a: number[], b: number[]): boolean => {
   if (a === b) {
     return true;
   }
@@ -326,7 +326,7 @@ function valuesEqual(a: number[], b: number[]): boolean {
     return false;
   }
   return a.every((value, index) => value === b[index]);
-}
+};
 
 export interface SliderJumpMotionOptions {
   /** False on web / vertical / rtl — every callback becomes a no-op. */
@@ -371,7 +371,7 @@ export interface SliderJumpMotion {
  * the session immediately so drags stay 1:1. The session is scoped to
  * `movedIndex` only: other thumbs never carry an override.
  */
-export function useSliderJumpMotion({
+export const useSliderJumpMotion = ({
   enabled,
   min,
   max,
@@ -382,7 +382,7 @@ export function useSliderJumpMotion({
   getTrackWidth,
   thumbSize,
   resolveAnimationConfig,
-}: SliderJumpMotionOptions): SliderJumpMotion {
+}: SliderJumpMotionOptions): SliderJumpMotion => {
   const [flip, setFlip] = useState<SliderJumpFlip | null>(null);
   const internalValuesRef = useRef<number[]>(initialValues);
   const clearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -534,4 +534,4 @@ export function useSliderJumpMotion({
     onDragStart,
     getThumbMotionProps,
   };
-}
+};

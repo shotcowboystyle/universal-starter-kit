@@ -200,7 +200,12 @@ export const SkeletonState: Story = {
   args: { label: 'Upload File', skeleton: true },
 };
 
-function TransferStory({ fail }: { fail?: boolean }) {
+const fireInputFiles = (input: HTMLInputElement, files: FileList) => {
+  Object.defineProperty(input, 'files', { configurable: true, value: files });
+  input.dispatchEvent(new Event('change', { bubbles: true }));
+};
+
+const TransferStory = ({ fail }: { fail?: boolean }) => {
   const hostRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const input = hostRef.current?.querySelector("input[type='file']") as HTMLInputElement | null;
@@ -228,12 +233,7 @@ function TransferStory({ fail }: { fail?: boolean }) {
       />
     </div>
   );
-}
-
-function fireInputFiles(input: HTMLInputElement, files: FileList) {
-  Object.defineProperty(input, 'files', { configurable: true, value: files });
-  input.dispatchEvent(new Event('change', { bubbles: true }));
-}
+};
 
 /** In-flight row: name, size, progress, cancel. media-01 / media-04 uploading. */
 export const Uploading: Story = {

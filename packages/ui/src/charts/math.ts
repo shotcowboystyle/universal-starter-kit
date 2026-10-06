@@ -38,14 +38,14 @@ export interface BandScaleInput {
 }
 
 /** Categorical x scale for bar charts: label → band start px. */
-export function createBandScale(input: BandScaleInput): ScaleBand<string> {
+export const createBandScale = (input: BandScaleInput): ScaleBand<string> => {
   const paddingInner = input.paddingInner ?? 0.3;
   return scaleBand()
     .domain(input.domain)
     .range(input.range)
     .paddingInner(paddingInner)
     .paddingOuter(input.paddingOuter ?? paddingInner / 2);
-}
+};
 
 export interface PointScaleInput {
   domain: string[];
@@ -55,12 +55,12 @@ export interface PointScaleInput {
 }
 
 /** Categorical x scale for line/area charts: label → point px. */
-export function createPointScale(input: PointScaleInput): ScalePoint<string> {
+export const createPointScale = (input: PointScaleInput): ScalePoint<string> => {
   return scalePoint()
     .domain(input.domain)
     .range(input.range)
     .padding(input.padding ?? 0);
-}
+};
 
 export interface LinearScaleInput {
   domain: [number, number];
@@ -72,7 +72,7 @@ export interface LinearScaleInput {
 }
 
 /** Continuous value scale: value → px. */
-export function createLinearScale(input: LinearScaleInput): ScaleLinear<number, number> {
+export const createLinearScale = (input: LinearScaleInput): ScaleLinear<number, number> => {
   const scale = scaleLinear().domain(input.domain).range(input.range);
   if (input.nice !== false) {
     scale.nice();
@@ -81,7 +81,7 @@ export function createLinearScale(input: LinearScaleInput): ScaleLinear<number, 
     scale.clamp(true);
   }
   return scale;
-}
+};
 
 export interface TimeScaleInput {
   domain: [Date, Date];
@@ -90,13 +90,13 @@ export interface TimeScaleInput {
 }
 
 /** Time x scale: Date → px. */
-export function createTimeScale(input: TimeScaleInput): ScaleTime<number, number> {
+export const createTimeScale = (input: TimeScaleInput): ScaleTime<number, number> => {
   const scale = scaleTime().domain(input.domain).range(input.range);
   if (input.nice !== false) {
     scale.nice();
   }
   return scale;
-}
+};
 
 export interface ValueDomainOptions {
   /**
@@ -109,7 +109,7 @@ export interface ValueDomainOptions {
 }
 
 /** Compute a [min, max] value domain from raw values. */
-export function valueDomain(values: number[], options?: ValueDomainOptions): [number, number] {
+export const valueDomain = (values: number[], options?: ValueDomainOptions): [number, number] => {
   const zeroBased = options?.zeroBased ?? true;
   const paddingRatio = options?.paddingRatio ?? 0;
   if (values.length === 0) {
@@ -135,17 +135,17 @@ export function valueDomain(values: number[], options?: ValueDomainOptions): [nu
   }
   const pad = (max - min) * paddingRatio;
   return [min, max + pad];
-}
+};
 
 /** Nice tick values for a continuous scale. */
-export function getLinearTicks(scale: ScaleLinear<number, number>, count = 4): number[] {
+export const getLinearTicks = (scale: ScaleLinear<number, number>, count = 4): number[] => {
   return scale.ticks(count);
-}
+};
 
 /** Nice tick dates for a time scale. */
-export function getTimeTicks(scale: ScaleTime<number, number>, count = 4): Date[] {
+export const getTimeTicks = (scale: ScaleTime<number, number>, count = 4): Date[] => {
   return scale.ticks(count);
-}
+};
 
 /**
  * Chart AXIS tick register — the one DECLARED exemption to the house number
@@ -157,18 +157,18 @@ export function getTimeTicks(scale: ScaleTime<number, number>, count = 4): Date[
  * makes it a decision instead of an accident — anything outside this
  * function belongs on the shared channel.
  */
-export function formatAxisTick(value: number): string {
+export const formatAxisTick = (value: number): string => {
   return value.toLocaleString();
-}
+};
 
 /**
  * Chart data VALUE labels — NOT exempt. A value printed next to a mark is
  * the same number class as the same figure in a table cell or a KPI tile,
  * so it rides the shared register (`formatNumber`).
  */
-export function formatChartValue(value: number): string {
+export const formatChartValue = (value: number): string => {
   return formatNumber(value);
-}
+};
 
 // ── Shape generators ──────────────────────────────────────────
 
@@ -197,7 +197,7 @@ export interface BarPathInput {
  * is clamped to half the width and to the height, so a short bar never
  * rounds past its own box.
  */
-export function barPath(input: BarPathInput): string {
+export const barPath = (input: BarPathInput): string => {
   const { x, y, width: w, height: h, valueEnd } = input;
   const r = Math.max(0, Math.min(input.radius, w / 2, h));
   const right = x + w;
@@ -215,20 +215,20 @@ export function barPath(input: BarPathInput): string {
     `M${x},${y}H${right}V${bottom - r}A${r},${r} 0 0 1 ${right - r},${bottom}` +
     `H${x + r}A${r},${r} 0 0 1 ${x},${bottom - r}Z`
   );
-}
+};
 
 export interface LinePathOptions {
   curve?: ChartCurve;
 }
 
 /** SVG path for a polyline through pixel-space points. */
-export function linePath(points: PixelPoint[], options?: LinePathOptions): string {
+export const linePath = (points: PixelPoint[], options?: LinePathOptions): string => {
   const generator = d3line<PixelPoint>()
     .x((p) => p.x)
     .y((p) => p.y)
     .curve(curveFactories[options?.curve ?? 'linear']);
   return generator(points) ?? '';
-}
+};
 
 export interface AreaPathOptions {
   curve?: ChartCurve;
@@ -237,14 +237,14 @@ export interface AreaPathOptions {
 }
 
 /** SVG path for the filled area under pixel-space points. */
-export function areaPath(points: PixelPoint[], options: AreaPathOptions): string {
+export const areaPath = (points: PixelPoint[], options: AreaPathOptions): string => {
   const generator = d3area<PixelPoint>()
     .x((p) => p.x)
     .y0(options.baseline)
     .y1((p) => p.y)
     .curve(curveFactories[options?.curve ?? 'linear']);
   return generator(points) ?? '';
-}
+};
 
 export interface PieSliceOptions {
   /** Radians between slices (default 0). */
@@ -266,7 +266,7 @@ export interface PieSlice<T> {
 }
 
 /** Angular layout for pie/donut slices. Preserves input order (Axiom 11). */
-export function pieSlices<T extends { value: number }>(data: T[], options?: PieSliceOptions): PieSlice<T>[] {
+export const pieSlices = <T extends { value: number }>(data: T[], options?: PieSliceOptions): PieSlice<T>[] => {
   const generator = d3pie<T>()
     .value((d) => d.value)
     .sort(null)
@@ -281,7 +281,7 @@ export function pieSlices<T extends { value: number }>(data: T[], options?: PieS
     endAngle: slice.endAngle,
     padAngle: slice.padAngle,
   }));
-}
+};
 
 /**
  * Sufficient interior witness for a two-unit boundary erosion. The bisector
@@ -290,11 +290,11 @@ export function pieSlices<T extends { value: number }>(data: T[], options?: PieS
  * endpoint for wedges larger than pi. A small margin covers SVG's three-digit
  * path rounding. One thin positive slice keeps the whole chart unmasked.
  */
-export function canMaskPieSlices(
+export const canMaskPieSlices = (
   slices: readonly { value: number; startAngle: number; endAngle: number }[],
   innerRadius: number,
   outerRadius: number,
-): boolean {
+): boolean => {
   const positive = slices.filter((slice) => slice.value > 0);
   if (
     positive.length < 2 ||
@@ -320,7 +320,7 @@ export function canMaskPieSlices(
     const radialDistance = Math.sqrt(Math.max(0, radius ** 2 + projection ** 2 - 2 * radius * projection * cosine));
     return radialDistance > clearance;
   });
-}
+};
 
 export interface ArcPathInput {
   startAngle: number;
@@ -333,7 +333,7 @@ export interface ArcPathInput {
 }
 
 /** SVG path for one pie/donut slice, centered on (0,0). */
-export function arcPath(input: ArcPathInput): string {
+export const arcPath = (input: ArcPathInput): string => {
   const generator = d3arc()
     .innerRadius(input.innerRadius ?? 0)
     .outerRadius(input.outerRadius)
@@ -347,10 +347,10 @@ export function arcPath(input: ArcPathInput): string {
       outerRadius: input.outerRadius,
     }) ?? ''
   );
-}
+};
 
 /** Centroid of a slice (label/tooltip anchor), centered on (0,0). */
-export function arcCentroid(input: ArcPathInput): PixelPoint {
+export const arcCentroid = (input: ArcPathInput): PixelPoint => {
   const generator = d3arc()
     .innerRadius(input.innerRadius ?? 0)
     .outerRadius(input.outerRadius);
@@ -362,7 +362,7 @@ export function arcCentroid(input: ArcPathInput): PixelPoint {
     outerRadius: input.outerRadius,
   });
   return { x, y };
-}
+};
 
 // ── Label fitting (no overflow/clipping) ──────────────
 
@@ -370,15 +370,15 @@ export function arcCentroid(input: ArcPathInput): PixelPoint {
 const APPROX_CHAR_WIDTH_RATIO = 0.6;
 
 /** Approximate rendered width of a label — cross-platform, no DOM measure. */
-export function approximateTextWidth(text: string, fontSize: number): number {
+export const approximateTextWidth = (text: string, fontSize: number): number => {
   return text.length * fontSize * APPROX_CHAR_WIDTH_RATIO;
-}
+};
 
 /** Truncate a label with an ellipsis so it fits `maxWidth` px. */
-export function truncateLabel(text: string, fontSize: number, maxWidth: number): string {
+export const truncateLabel = (text: string, fontSize: number, maxWidth: number): string => {
   if (approximateTextWidth(text, fontSize) <= maxWidth) {
     return text;
   }
   const budget = Math.max(1, Math.floor(maxWidth / (fontSize * APPROX_CHAR_WIDTH_RATIO)) - 1);
   return `${text.slice(0, budget)}\u2026`;
-}
+};

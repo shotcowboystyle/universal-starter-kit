@@ -32,16 +32,16 @@ import { StarInk } from './StarInk';
 export { filledCount } from './rating-math';
 
 /** Visual glyph follows the size token (Material small/medium/large). Floor 16. */
-function starGlyphSize(sizeToken: SizeTokens | string | undefined): number {
+const starGlyphSize = (sizeToken: SizeTokens | string | undefined): number => {
   const token = (sizeToken ?? '$4') as SizeTokens;
   const control = Number(getVariableValue(getSize(token)));
   if (!Number.isFinite(control) || control <= 0) {
     return 24;
   }
   return Math.max(16, Math.round(control * 0.55));
-}
+};
 
-function starPath(size: number, innerRatio = 0.382): string {
+const starPath = (size: number, innerRatio = 0.382): string => {
   const cx = size / 2;
   const cy = size / 2;
   const outerR = size / 2 - 1;
@@ -56,9 +56,9 @@ function starPath(size: number, innerRatio = 0.382): string {
     );
   }
   return `M${parts.join('L')}Z`;
-}
+};
 
-function PointyStar({ size, weight, color }: { size: number; weight: 'fill' | 'regular'; color: string }) {
+const PointyStar = ({ size, weight, color }: { size: number; weight: 'fill' | 'regular'; color: string }) => {
   const d = starPath(size);
   return (
     <Svg
@@ -78,7 +78,7 @@ function PointyStar({ size, weight, color }: { size: number; weight: 'fill' | 'r
       />
     </Svg>
   );
-}
+};
 
 // CSS timing strings for web transitions (mirrors theme animation config)
 const cssTimings: Record<string, string> = {
@@ -93,7 +93,7 @@ const cssTimings: Record<string, string> = {
 };
 
 /** Discrete fill jumps tween; omit when animation knob is none or scrubbing. */
-function getTransitionStyle(transition: TransitionProp | undefined, live: boolean) {
+const getTransitionStyle = (transition: TransitionProp | undefined, live: boolean) => {
   if (!isWeb || live || !transition) {
     return undefined;
   }
@@ -101,7 +101,7 @@ function getTransitionStyle(transition: TransitionProp | undefined, live: boolea
   return {
     transition: [`transform ${timing}`, `opacity ${timing}`, `color ${timing}`].join(', '),
   };
-}
+};
 
 // Star ink: the visible change is the SVG `fill`/`stroke` of the glyph
 // CHILD, and `transition` does not inherit — a declaration on the wrapper can
@@ -115,7 +115,7 @@ function getTransitionStyle(transition: TransitionProp | undefined, live: boolea
 // layer stack it owns — see `StarInk.native.tsx`.
 const INK_STYLE_ID = 'mp1-rating-ink';
 const inkClassName = (token: string) => `mp1-rating-ink-${token}`;
-function ensureRatingInkStyles() {
+const ensureRatingInkStyles = () => {
   if (!isWeb || typeof document === 'undefined') {
     return;
   }
@@ -132,7 +132,7 @@ function ensureRatingInkStyles() {
     .map(([token, timing]) => `.${inkClassName(token)} svg * { transition: fill ${timing}, stroke ${timing}; }`)
     .join('\n');
   document.head.append(style);
-}
+};
 
 const StarWrapper = styled(View, {
   alignItems: 'center',
@@ -150,7 +150,7 @@ const StarWrapper = styled(View, {
   } as const,
 });
 
-function StarRow({
+const StarRow = ({
   id,
   filledStars,
   maxStars,
@@ -182,7 +182,7 @@ function StarRow({
   starSize: number;
   pointy: boolean;
   inTableCell?: boolean;
-}) {
+}) => {
   const { disabledState } = useResolvedKnobs();
   const describedBy = useFieldDescribedBy();
   const fieldA11y = useFieldA11y();
@@ -428,7 +428,7 @@ function StarRow({
       ) : null}
     </XStack>
   );
-}
+};
 
 export interface RatingProps {
   name?: string;
@@ -463,7 +463,7 @@ export interface RatingProps {
   compact?: boolean;
 }
 
-export function Rating({
+export const Rating = ({
   name,
   form: formProp,
   validators,
@@ -485,7 +485,7 @@ export function Rating({
   pointy,
   skeleton,
   compact,
-}: RatingProps) {
+}: RatingProps) => {
   const { resolvedForm, knobProps, id } = useFormField({ form: formProp, id: idProp, compact });
   const inTableCell = useIsInTableCell();
   const resolvedPointy = pointy ?? knobProps.pointy;
@@ -635,4 +635,4 @@ export function Rating({
       }}
     </Field>
   );
-}
+};

@@ -53,14 +53,14 @@ const intentInkFloor = {
  * not a ramp this rule understands, so it passes through untouched rather than
  * writing to a position that means something different.
  */
-function withIntentInkFloor(palette: string[], ink: string): string[] {
+const withIntentInkFloor = (palette: string[], ink: string): string[] => {
   if (palette.length !== 12) {
     return palette;
   }
   const stepped = [...palette];
   stepped[10] = ink;
   return stepped;
-}
+};
 
 const grayTheme = {
   dark_gray: tamaguiThemes.dark,
@@ -125,9 +125,9 @@ export interface CreateThemesBuilderOptions {
  * "undefined" — t_Button's `--backgroundPress`/`--borderColorHover` blanked
  * pressed fills and drew phantom currentColor borders.
  */
-function sanitizeGetTheme(
+const sanitizeGetTheme = (
   getTheme: NonNullable<CreateThemesBuilderOptions['getTheme']>,
-): NonNullable<CreateThemesBuilderOptions['getTheme']> {
+): NonNullable<CreateThemesBuilderOptions['getTheme']> => {
   return (props: GetThemeProps) => {
     const out: Record<string, string | number> = {};
     for (const [key, value] of Object.entries(getTheme(props))) {
@@ -137,7 +137,7 @@ function sanitizeGetTheme(
     }
     return out;
   };
-}
+};
 
 // Radix hue names whose sub-themes act as decorative TINTS (Tint.tsx cycling,
 // the storybook `color` global). Under a tint,
@@ -193,7 +193,7 @@ const tintNeutralTextKeys = [
  * and solid steps (1-10) keep the hue. Only keys the tint theme already
  * defines are replaced; returns new objects, never mutates inputs.
  */
-function neutralizeTintText(themes: Record<string, Record<string, string>>): Record<string, Record<string, string>> {
+const neutralizeTintText = (themes: Record<string, Record<string, string>>): Record<string, Record<string, string>> => {
   const out: Record<string, Record<string, string>> = { ...themes };
   for (const [name, theme] of Object.entries(themes)) {
     const parts = name.split('_');
@@ -220,7 +220,7 @@ function neutralizeTintText(themes: Record<string, Record<string, string>>): Rec
     out[name] = patched;
   }
   return out;
-}
+};
 
 const semanticIntentNames = new Set(['error', 'warning', 'success']);
 const entryControlNames = new Set(['Input', 'TextArea']);
@@ -231,9 +231,9 @@ const entryControlNames = new Set(['Input', 'TextArea']);
  * only entered text (an Input or TextArea value, and the placeholder that
  * stands in for it) goes back to the neutral ink.
  */
-function neutralizeSemanticEntryText(
+const neutralizeSemanticEntryText = (
   themes: Record<string, Record<string, string>>,
-): Record<string, Record<string, string>> {
+): Record<string, Record<string, string>> => {
   const out: Record<string, Record<string, string>> = { ...themes };
   for (const [name, theme] of Object.entries(themes)) {
     const [scheme, intent, component, ...rest] = name.split('_');
@@ -266,18 +266,22 @@ function neutralizeSemanticEntryText(
     out[name] = patched;
   }
   return out;
-}
+};
 
-function luminanceOf(color: string | undefined): number | null {
+const luminanceOf = (color: string | undefined): number | null => {
   const hex = color ? normalizeToHex(color) : null;
   return hex ? relativeLuminance(hex) : null;
-}
+};
 
 /**
  * The accent step nearest in luminance to `preferred` that passes `holds`,
  * or `preferred` itself when it already passes or nothing does.
  */
-function nearestHoldingStep(preferred: string, steps: (string | undefined)[], holds: (lum: number) => boolean): string {
+const nearestHoldingStep = (
+  preferred: string,
+  steps: (string | undefined)[],
+  holds: (lum: number) => boolean,
+): string => {
   const preferredLum = luminanceOf(preferred);
   if (preferredLum === null || holds(preferredLum)) {
     return preferred;
@@ -296,7 +300,7 @@ function nearestHoldingStep(preferred: string, steps: (string | undefined)[], ho
     }
   }
   return best;
-}
+};
 
 /**
  * Axiom 12 LEGIBLE FLOOR on the scheme's accent pair. The
@@ -317,7 +321,7 @@ function nearestHoldingStep(preferred: string, steps: (string | undefined)[], ho
  * children) takes the corrected pair; one that set its own (the inverse
  * component themes) keeps it.
  */
-function holdAccentFloor(themes: Record<string, Record<string, string>>): Record<string, Record<string, string>> {
+const holdAccentFloor = (themes: Record<string, Record<string, string>>): Record<string, Record<string, string>> => {
   const out: Record<string, Record<string, string>> = { ...themes };
   for (const scheme of ['light', 'dark'] as const) {
     const base = themes[scheme];
@@ -361,12 +365,12 @@ function holdAccentFloor(themes: Record<string, Record<string, string>>): Record
     }
   }
   return out;
-}
+};
 
 /** The hues the code syntax palette paints. */
 const syntaxInkHues = ['purple', 'green', 'blue', 'orange', 'red'] as const;
 
-function mixHex(from: string, to: string, share: number): string {
+const mixHex = (from: string, to: string, share: number): string => {
   const channel = (offset: number) =>
     Math.round(
       Number.parseInt(from.slice(offset, offset + 2), 16) * (1 - share) +
@@ -375,7 +379,7 @@ function mixHex(from: string, to: string, share: number): string {
       .toString(16)
       .padStart(2, '0');
   return `#${channel(1)}${channel(3)}${channel(5)}`;
-}
+};
 
 /**
  * Axiom 12 LEGIBLE FLOOR on code syntax ink. Radix aims a hue's
@@ -387,7 +391,7 @@ function mixHex(from: string, to: string, share: number): string {
  * diff lines paint. Dark keeps step 11; a theme where no step holds gets no
  * token and inherits its parent's.
  */
-function holdSyntaxFloor(themes: Record<string, Record<string, string>>): Record<string, Record<string, string>> {
+const holdSyntaxFloor = (themes: Record<string, Record<string, string>>): Record<string, Record<string, string>> => {
   const out: Record<string, Record<string, string>> = { ...themes };
   for (const [name, theme] of Object.entries(themes)) {
     const surface = luminanceOf(theme.color3);
@@ -416,7 +420,7 @@ function holdSyntaxFloor(themes: Record<string, Record<string, string>>): Record
     }
   }
   return out;
-}
+};
 
 const defaultLightShadows: Shadows = {
   shadow1: 'rgba(0,0,0,0.12)',
@@ -436,11 +440,11 @@ const defaultDarkShadows: Shadows = {
   shadow6: 'rgba(0,0,0,0.7)',
 };
 
-export function createThemesBuilder(
+export const createThemesBuilder = (
   baseTheme: BaseThemeBuilderDefinition,
   accentTheme: ThemeBuilderDefinition,
   options?: CreateThemesBuilderOptions,
-) {
+) => {
   const getTheme = options?.getTheme ? sanitizeGetTheme(options.getTheme) : undefined;
   const base = {
     palette: {
@@ -646,4 +650,4 @@ export function createThemesBuilder(
       } as Record<`dark_${K}` | `light_${K}`, typeof createdTheme.dark_accent>;
     },
   };
-}
+};

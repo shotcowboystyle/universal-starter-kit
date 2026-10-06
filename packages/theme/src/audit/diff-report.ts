@@ -63,11 +63,11 @@ const AUDITED_PROPS = [
   'inlineColor',
 ] as const;
 
-function propKey(el: ElementAudit, prop: string): PropertyAudit | TextPropertyAudit | undefined {
+const propKey = (el: ElementAudit, prop: string): PropertyAudit | TextPropertyAudit | undefined => {
   return (el as unknown as Record<string, unknown>)[prop] as PropertyAudit | TextPropertyAudit | undefined;
-}
+};
 
-function formatProp(p: PropertyAudit | TextPropertyAudit | undefined): string {
+const formatProp = (p: PropertyAudit | TextPropertyAudit | undefined): string => {
   if (!p) {
     return '(none)';
   }
@@ -76,11 +76,11 @@ function formatProp(p: PropertyAudit | TextPropertyAudit | undefined): string {
     return `${p.value}${p.unit} → ${p.knob}${flag}`;
   }
   return `"${p.value}" → ${p.knob}${flag}`;
-}
+};
 
 // ── Core diff function ────────────────────────────────────────────────────────
 
-export function diffAuditReports(baseline: AuditReport, current: AuditReport): AuditDiff {
+export const diffAuditReports = (baseline: AuditReport, current: AuditReport): AuditDiff => {
   // Index baseline elements by label for fast lookup
   const baselineByLabel = new Map<string, ElementAudit>();
   for (const el of baseline.elements) {
@@ -276,11 +276,11 @@ export function diffAuditReports(baseline: AuditReport, current: AuditReport): A
     elementDiffs,
     report: lines.join('\n'),
   };
-}
+};
 
 // ── Format a single AuditReport as a readable report ─────────────────────────
 
-export function formatAuditReport(report: AuditReport): string {
+export const formatAuditReport = (report: AuditReport): string => {
   const lines: string[] = [];
   const w = (s: string) => lines.push(s);
 
@@ -348,4 +348,4 @@ export function formatAuditReport(report: AuditReport): string {
   }
 
   return lines.join('\n');
-}
+};

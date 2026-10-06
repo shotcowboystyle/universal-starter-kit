@@ -23,16 +23,16 @@ const getDocumentAsync = vi.fn();
 const launchImageLibraryAsync = vi.fn();
 const requestMediaLibraryPermissionsAsync = vi.fn();
 
-function withDocumentPicker() {
+const withDocumentPicker = () => {
   loadDocumentPickerMock.mockReturnValue({ getDocumentAsync } as never);
-}
+};
 
-function withImagePicker() {
+const withImagePicker = () => {
   loadImagePickerMock.mockReturnValue({
     launchImageLibraryAsync,
     requestMediaLibraryPermissionsAsync,
   } as never);
-}
+};
 
 beforeEach(() => {
   loadDocumentPickerMock.mockReset().mockReturnValue(null);

@@ -12,7 +12,7 @@ interface ApiUser {
   updatedAt: string;
 }
 
-function transformUserData(user: ApiUser): User {
+const transformUserData = (user: ApiUser): User => {
   return {
     _id: user._id,
     name: user.name,
@@ -20,7 +20,7 @@ function transformUserData(user: ApiUser): User {
     createdAt: new Date(user.createdAt),
     updatedAt: new Date(user.updatedAt),
   };
-}
+};
 
 export const userApi = {
   searchUsers: async (username = '') => {

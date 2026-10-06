@@ -11,7 +11,7 @@ export type { VideoProps } from './types';
 
 const HIDE_MS = 2500;
 
-function asVideoElement(node: unknown): HTMLVideoElement | null {
+const asVideoElement = (node: unknown): HTMLVideoElement | null => {
   if (!node || typeof HTMLVideoElement === 'undefined') {
     return null;
   }
@@ -26,17 +26,17 @@ function asVideoElement(node: unknown): HTMLVideoElement | null {
   }
   const { host } = node as { host?: unknown };
   return host ? asVideoElement(host) : null;
-}
+};
 
-function isStageFullscreen(stage: HTMLElement | null): boolean {
+const isStageFullscreen = (stage: HTMLElement | null): boolean => {
   if (!stage || typeof document === 'undefined') {
     return false;
   }
   const doc = document as Document & { webkitFullscreenElement?: Element | null };
   return document.fullscreenElement === stage || doc.webkitFullscreenElement === stage;
-}
+};
 
-async function toggleStageFullscreen(stage: HTMLElement | null) {
+const toggleStageFullscreen = async (stage: HTMLElement | null) => {
   if (!stage || typeof document === 'undefined') {
     return;
   }
@@ -60,7 +60,7 @@ async function toggleStageFullscreen(stage: HTMLElement | null) {
   } else {
     el.webkitRequestFullscreen?.();
   }
-}
+};
 
 /**
  * General-purpose video surface for desk / docs (gallery Video).
@@ -68,7 +68,7 @@ async function toggleStageFullscreen(stage: HTMLElement | null) {
  * Chrome / AVKit transport). Native playback lives in `index.native.tsx`
  * behind an optional `expo-video` peer so web-only consumers stay light.
  */
-export function Video({
+export const Video = ({
   src,
   children,
   muted: mutedProp = false,
@@ -79,7 +79,7 @@ export function Video({
   title,
   compact,
   ...props
-}: VideoProps) {
+}: VideoProps) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs({ component: 'Video', compact });
   const stageRef = useRef<unknown>(null);
@@ -357,4 +357,4 @@ export function Video({
       {children == null ? null : <VideoCaption>{children}</VideoCaption>}
     </VideoFrame>
   );
-}
+};

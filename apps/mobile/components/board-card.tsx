@@ -13,7 +13,7 @@ interface BoardCardProps {
   showOwner?: boolean;
 }
 
-export function BoardCard({ board, showOwner }: BoardCardProps) {
+export const BoardCard = ({ board, showOwner }: BoardCardProps) => {
   const { t } = useTranslation();
   const theme = useTheme();
   const [pressed, setPressed] = useState(false);
@@ -117,4 +117,4 @@ export function BoardCard({ board, showOwner }: BoardCardProps) {
       </Pressable>
     </Link>
   );
-}
+};

@@ -36,7 +36,7 @@ interface ObserverRecord {
 }
 const observerRecords: ObserverRecord[] = [];
 
-function makeEntry(target: Element): ResizeObserverEntry {
+const makeEntry = (target: Element): ResizeObserverEntry => {
   return {
     target,
     contentRect: { width: layoutWidth, height: 240 } as DOMRectReadOnly,
@@ -44,7 +44,7 @@ function makeEntry(target: Element): ResizeObserverEntry {
     contentBoxSize: [],
     devicePixelContentBoxSize: [],
   } as unknown as ResizeObserverEntry;
-}
+};
 
 vi.stubGlobal(
   'ResizeObserver',
@@ -91,31 +91,31 @@ Object.defineProperty(HTMLElement.prototype, 'scroll', {
 });
 
 /** Flush UIManager.measure's setTimeout(0) so onLayout commits. */
-async function flushMeasure() {
+const flushMeasure = async () => {
   await act(async () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
   });
-}
+};
 
-function fireResize(width: number) {
+const fireResize = (width: number) => {
   layoutWidth = width;
   for (const record of observerRecords) {
     for (const target of record.targets) {
       record.cb([makeEntry(target)], undefined as unknown as ResizeObserver);
     }
   }
-}
+};
 
-function slides(container: HTMLElement) {
+const slides = (container: HTMLElement) => {
   return container.querySelectorAll('[data-carousel-slide]');
-}
+};
 
 /**
  * Tamagui materializes dynamic numeric widths as atomic CSS classes, not
  * inline style — resolve whether any class on the node carries the width, in
  * inline style, <style> text, CSSOM rules, or adopted sheets.
  */
-function elementCarriesWidth(node: HTMLElement, widthPx: number): boolean {
+const elementCarriesWidth = (node: HTMLElement, widthPx: number): boolean => {
   const needle = `${widthPx}px`;
   const inline = node.getAttribute('style') ?? '';
   if (inline.includes(needle)) {
@@ -141,11 +141,11 @@ function elementCarriesWidth(node: HTMLElement, widthPx: number): boolean {
   return Array.from(node.classList).some((className) =>
     ruleTexts.some((text) => text.includes(`.${className}`) && text.includes(needle)),
   );
-}
+};
 
-function dots(container: HTMLElement) {
+const dots = (container: HTMLElement) => {
   return container.querySelectorAll("[role='button'][aria-label^='Go to item']");
-}
+};
 
 beforeEach(() => {
   layoutWidth = 400;
@@ -355,13 +355,13 @@ describe('Carousel snaps ride the animation knob', () => {
 // scroll viewport. Painted arrow size follows sizeToken; the hit target is
 // floored at MIN_PRESS_TARGET (44). Embla/Polaris/Apple: halo on the control.
 
-function arrow(container: HTMLElement, side: 'prev' | 'next') {
+const arrow = (container: HTMLElement, side: 'prev' | 'next') => {
   return container.querySelector(`[data-carousel-arrow='${side}']`) as HTMLElement | null;
-}
+};
 
-function arrowVisual(container: HTMLElement, side: 'prev' | 'next') {
+const arrowVisual = (container: HTMLElement, side: 'prev' | 'next') => {
   return container.querySelector(`[data-carousel-arrow-visual='${side}']`) as HTMLElement | null;
-}
+};
 
 describe('Carousel ring anatomy, size recipes, 44px floor', () => {
   it('keeps the viewport out of the tab order with no outline', async () => {

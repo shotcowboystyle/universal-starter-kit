@@ -14,10 +14,10 @@ import type { ToastIntent, ToastShowOptions } from './index';
 const intents: ToastIntent[] = ['accent', 'success', 'warning', 'error'];
 
 /** Clear the module-level toast store between stories. */
-function StoryReset() {
+const StoryReset = () => {
   useEffect(() => resetToasts, []);
   return null;
-}
+};
 
 const meta: Meta<ToastShowOptions> = {
   title: 'Components/Toast',

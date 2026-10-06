@@ -14,9 +14,13 @@ const presetRegistry = new Map<string, Preset>();
 /** Unknown-preset names already warned about, so a render loop doesn't spam. */
 const warnedUnknownPresets = new Set<string>();
 
-export function registerPreset(name: string, preset: Preset): void {
+export const registerPreset = (name: string, preset: Preset): void => {
   presetRegistry.set(name, preset);
-}
+};
+
+export const getPresetNames = (): string[] => {
+  return Array.from(presetRegistry.keys());
+};
 
 /**
  * Look up a registered preset by name.
@@ -27,7 +31,7 @@ export function registerPreset(name: string, preset: Preset): void {
  * (empty string and the implicit "default" are legitimate no-ops and stay
  * quiet) so a typo'd or unregistered preset is loud instead of invisible.
  */
-export function getPreset(name: string): Preset | undefined {
+export const getPreset = (name: string): Preset | undefined => {
   const preset = presetRegistry.get(name);
   if (
     process.env.NODE_ENV !== 'production' &&
@@ -46,16 +50,12 @@ export function getPreset(name: string): Preset | undefined {
     );
   }
   return preset;
-}
+};
 
-export function getPresetNames(): string[] {
-  return Array.from(presetRegistry.keys());
-}
-
-export function clearPresets(): void {
+export const clearPresets = (): void => {
   presetRegistry.clear();
   warnedUnknownPresets.clear();
-}
+};
 
 // ── Preset resolution ─────────────────────────────────────────────────────
 
@@ -66,7 +66,7 @@ export function clearPresets(): void {
  * If the preset name is not found, falls back to a default preset shape
  * using `defaultKnobs`.
  */
-export function resolveThemeFromPreset(presetName: string, overrides: Partial<Knobs>): Preset {
+export const resolveThemeFromPreset = (presetName: string, overrides: Partial<Knobs>): Preset => {
   const preset = getPreset(presetName);
   const base: Preset = preset ?? {
     theme: '' as ThemeName,
@@ -78,7 +78,7 @@ export function resolveThemeFromPreset(presetName: string, overrides: Partial<Kn
     ...base,
     knobs: { ...base.knobs, ...overrides },
   };
-}
+};
 
 // ── Theme config ──────────────────────────────────────────────────────────
 
@@ -111,7 +111,7 @@ const excludedThemeNames = new Set(['active', 'alt1', 'alt2', 'warning', 'succes
  * A color "foo" is present when both `light_foo` and `dark_foo` exist as keys,
  * the name is all-lowercase, and it isn't a semantic/state sub-theme.
  */
-function extractThemeColors(themes: Record<string, unknown>): string[] {
+const extractThemeColors = (themes: Record<string, unknown>): string[] => {
   const keys = Object.keys(themes);
   const colorSet = new Set<string>();
   for (const key of keys) {
@@ -124,9 +124,9 @@ function extractThemeColors(themes: Record<string, unknown>): string[] {
     }
   }
   return [...colorSet].sort();
-}
+};
 
-export function createThemeConfig<T extends CreateTamaguiProps>(
+export const createThemeConfig = <T extends CreateTamaguiProps>(
   tamagui: T,
   options?: {
     presets?: Record<string, Preset>;
@@ -134,7 +134,7 @@ export function createThemeConfig<T extends CreateTamaguiProps>(
     recipeInputs?: RecipeInputs;
     recipeFamilies?: RecipeFamilies;
   },
-): ThemeConfig<T> {
+): ThemeConfig<T> => {
   // Extract color names from the raw themes BEFORE createTamagui processes them.
   const themeColors = tamagui.themes ? extractThemeColors(tamagui.themes as Record<string, unknown>) : [];
 
@@ -161,4 +161,4 @@ export function createThemeConfig<T extends CreateTamaguiProps>(
     recipeInputs: options?.recipeInputs,
     recipeFamilies: options?.recipeFamilies,
   };
-}
+};

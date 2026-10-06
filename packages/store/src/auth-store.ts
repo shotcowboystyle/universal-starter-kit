@@ -24,7 +24,7 @@ export interface AuthState {
  *                  AsyncStorage wrapper for React Native).
  *                  When omitted, Zustand uses localStorage by default.
  */
-export function createAuthStore(storage?: StorageAdapter) {
+export const createAuthStore = (storage?: StorageAdapter) => {
   return create<AuthState>()(
     persist(
       (set) => ({
@@ -53,4 +53,4 @@ export function createAuthStore(storage?: StorageAdapter) {
       },
     ),
   );
-}
+};

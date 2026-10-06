@@ -17,7 +17,7 @@ interface BoardFormProps {
 const validateTitle = ({ value }: { value: string }) =>
   boardSchema.shape.title.safeParse(value).error?.issues[0]?.message;
 
-export function BoardForm({ defaultValues, onSubmit, children }: BoardFormProps) {
+export const BoardForm = ({ defaultValues, onSubmit, children }: BoardFormProps) => {
   const t = useTranslations('kanban.actions');
 
   return (
@@ -42,4 +42,4 @@ export function BoardForm({ defaultValues, onSubmit, children }: BoardFormProps)
       {children}
     </Form>
   );
-}
+};

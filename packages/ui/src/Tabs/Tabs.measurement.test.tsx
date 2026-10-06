@@ -44,7 +44,7 @@ afterEach(() => {
   document.documentElement.removeAttribute('dir');
 });
 
-function fixture(mode: 'value' | 'defaultValue' = 'value') {
+const fixture = (mode: 'value' | 'defaultValue' = 'value') => {
   const rendered = renderWithProviders(
     <Tabs
       items={items}
@@ -61,7 +61,7 @@ function fixture(mode: 'value' | 'defaultValue' = 'value') {
   const manualScroll = async (x: number) =>
     act(() => observed.scroll.onScroll({ nativeEvent: { contentOffset: { x } } }));
   return { ...rendered, scroll, viewport, content, active, manualScroll };
-}
+};
 
 describe.each(['value', 'defaultValue'] as const)('Tabs public measurement ordering (%s)', (mode) => {
   it('reveals initial last tab when metrics arrive before its layout (control)', () => {

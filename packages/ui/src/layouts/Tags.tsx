@@ -111,7 +111,7 @@ type ListOption =
  * are a CONTAINER-CLIP listbox: flat rows, overlay clips corners,
  * keyboard-active row is fill + inset ring (never a border on every sibling).
  */
-export function Tags({
+export const Tags = ({
   tags,
   suggestions = [],
   label,
@@ -130,7 +130,7 @@ export function Tags({
   labels = {},
   placeholder: placeholderProp,
   ...stackProps
-}: TagsProps) {
+}: TagsProps) => {
   const { t } = useTranslation();
   const placeholder = placeholderProp ?? t('Add tag...');
   const { knobProps, disabledState } = useResolvedKnobs();
@@ -695,4 +695,4 @@ export function Tags({
       </YStack>
     </YStack>
   );
-}
+};

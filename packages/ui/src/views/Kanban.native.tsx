@@ -163,6 +163,244 @@ interface NativeDragSession<T> {
   settling?: boolean;
 }
 
+const KanbanColumnView = <T,>({
+  kanbanId,
+  column,
+  columnIndex,
+  renderCard,
+  columnWidth,
+  minColumnHeight,
+  estimateSize,
+  overscan,
+  emptyColumnMessage,
+  onLoadMore,
+  getItemKey,
+  hasMore,
+  isLoading,
+  onCardSelect,
+  renderColumnActions,
+  getCardDragProps,
+  handle,
+  drag,
+  scrollEnabled,
+}: KanbanColumnViewProps<T>) => {
+  const { t } = useTranslation();
+  const { knobProps } = useResolvedKnobs();
+  const itemCount = useAsyncCount(column.items.length);
+
+  const isSource = drag?.sourceColumnId === column.id;
+  const gapIndex = drag && !drag.settling && drag.target.columnId === column.id ? drag.target.index : null;
+  const isDropTarget = gapIndex != null;
+
+  // Handle infinite scroll
+  const handleEndReached = useCallback(() => {
+    if (onLoadMore && hasMore && !isLoading) {
+      onLoadMore();
+    }
+  }, [onLoadMore, hasMore, isLoading]);
+
+  const gapY =
+    gapIndex != null && drag
+      ? gapPosition({
+          gapIndex,
+          sourceIndex: isSource ? drag.sourceIndex : null,
+          count: column.items.length,
+          size: drag.size,
+          totalSize: column.items.length * drag.size,
+          getStart: (index) => index * drag.size,
+        })
+      : null;
+
+  return (
+    <YStack
+      width={columnWidth}
+      minHeight={minColumnHeight}
+      flexShrink={0}
+      overflow="hidden"
+      transition={knobProps.transition}
+      {...knobProps.borderRadius}
+      {...knobProps.containerRadius}
+      {...knobProps.panelPadding}
+      backgroundColor={isDropTarget ? componentColors.interactive.background : 'transparent'}
+      data-kanban-column={column.id}>
+      <ListItem
+        title={column.title}
+        icon={
+          column.color ? (
+            <YStack
+              {...radiusClassProps('R-PILL', 'Kanban column dot')}
+              width={8}
+              height={8}
+              borderRadius={4}
+              backgroundColor={column.color as any}
+              data-kanban-column-dot
+            />
+          ) : undefined
+        }
+        iconAfter={
+          itemCount !== undefined || renderColumnActions ? (
+            <XStack
+              alignItems="center"
+              {...knobProps.gap}>
+              {itemCount !== undefined && (
+                <Text
+                  color={knobProps.textAccentColor}
+                  {...knobProps.label}
+                  {...knobProps.textWeight}
+                  data-async-count>
+                  {itemCount}
+                </Text>
+              )}
+              {renderColumnActions?.(column)}
+            </XStack>
+          ) : undefined
+        }
+        size={knobProps.sizeToken}
+        borderBottomWidth={hairlineWidth}
+        borderBottomColor="$borderColor"
+      />
+
+      {/* Cards container — always rendered so empty columns stay drop targets. */}
+      <View
+        style={{ flex: 1, minHeight: minColumnHeight - 60 }}
+        position="relative"
+        ref={(node: any) => {
+          handle.node = node;
+        }}>
+        {column.items.length === 0 ? (
+          !isDropTarget && (
+            <EmptyState
+              compact
+              title={emptyColumnMessage}
+              opacity={0.5}
+              flex={1}
+            />
+          )
+        ) : (
+          <FlashList
+            keyboardShouldPersistTaps="handled"
+            ref={(list: any) => {
+              handle.list = list;
+            }}
+            data={column.items}
+            extraData={drag}
+            drawDistance={estimateSize * overscan}
+            onEndReached={handleEndReached}
+            onEndReachedThreshold={0.5}
+            scrollEnabled={scrollEnabled}
+            onScroll={(e: any) => {
+              handle.scrollOffset = e.nativeEvent?.contentOffset?.y ?? 0;
+            }}
+            scrollEventThrottle={64}
+            keyExtractor={(item, index) =>
+              getItemKey ? String(getItemKey(item, index)) : `${kanbanId}-col-${columnIndex}-card-${index}`
+            }
+            renderItem={({ item, index }) => {
+              const isDragged = isSource && drag != null && index === drag.sourceIndex;
+              let offset = 0;
+              let ghost = false;
+              let hidden = false;
+              if (drag && !drag.settling) {
+                if (isDragged) {
+                  if (gapIndex != null && gapY != null) {
+                    offset = gapY - index * drag.size;
+                    ghost = true;
+                  } else {
+                    hidden = true;
+                  }
+                } else {
+                  offset = siblingOffset({
+                    index,
+                    sourceIndex: isSource && drag ? drag.sourceIndex : null,
+                    gapIndex,
+                    size: drag.size,
+                  });
+                }
+              } else if (drag?.settling && isDragged) {
+                // The ghost overlay is this card's visual while it settles.
+                hidden = true;
+              }
+              const dragProps = getCardDragProps?.(item, column.id, index) ?? {};
+              return (
+                <View
+                  padding="$1"
+                  y={offset}
+                  transition={drag && !drag.settling ? knobProps.transition : undefined}
+                  opacity={hidden ? 0 : ghost ? 0.4 : 1}
+                  {...dragProps}>
+                  <Card
+                    id={`${kanbanId}-col-${columnIndex}-card-${index}`}
+                    elevation={knobProps.elevation}
+                    minHeight={MIN_PRESS_TARGET}
+                    {...(ghost
+                      ? {
+                          borderWidth: hairlineWidth,
+                          borderColor: componentColors.interactive.border,
+                          borderStyle: 'dashed' as any,
+                        }
+                      : undefined)}
+                    hoverStyle={{ backgroundColor: componentColors.interactive.background }}
+                    pressStyle={{ scale: 0.98 }}
+                    overflow="hidden"
+                    data-kanban-card={String(getItemKey ? getItemKey(item, index) : `${column.id}-${index}`)}
+                    onPress={
+                      getCardDragProps
+                        ? undefined // responders own the tap; handled on release
+                        : () => onCardSelect?.(item, column.id)
+                    }>
+                    {renderCard(item)}
+                  </Card>
+                </View>
+              );
+            }}
+            ListFooterComponent={
+              isLoading ? (
+                <YStack
+                  {...knobProps.panelPadding}
+                  alignItems="center">
+                  <Spinner size="small" />
+                </YStack>
+              ) : null
+            }
+          />
+        )}
+
+        {/* Insertion slot outline for cross-column targets and empty columns. */}
+        {drag && !drag.settling && gapIndex != null && !isSource && (
+          <View
+            position="absolute"
+            top={0}
+            left={0}
+            right={0}
+            y={(gapY ?? 0) - handle.scrollOffset}
+            height={drag.size}
+            padding="$1"
+            pointerEvents="none"
+            transition={knobProps.transition}>
+            <View
+              flex={1}
+              {...knobProps.borderRadius}
+              borderStyle="dashed"
+              borderColor={componentColors.interactive.border}
+              backgroundColor={componentColors.interactive.background}
+              opacity={0.8}
+              alignItems="center"
+              justifyContent="center">
+              {column.items.length === 0 && (
+                <Text
+                  color={knobProps.textAccentColor}
+                  {...knobProps.label}>
+                  {t('Drop here')}
+                </Text>
+              )}
+            </View>
+          </View>
+        )}
+      </View>
+    </YStack>
+  );
+};
+
 /**
  * Generic Kanban board component with column-level virtualization.
  * Native implementation using FlashList plus responder-system drag-and-drop.
@@ -177,7 +415,7 @@ interface NativeDragSession<T> {
  *
  * @typeParam T - The card item type
  */
-export function Kanban<T>({
+export const Kanban = <T,>({
   columns,
   renderCard,
   onCardMove,
@@ -199,7 +437,7 @@ export function Kanban<T>({
   getItemLabel,
   hotkeys: _hotkeyOverrides,
   ...stackProps
-}: KanbanProps<T>) {
+}: KanbanProps<T>) => {
   const { t } = useTranslation();
   const emptyColumnMessage = emptyColumnMessageProp ?? t('No items');
   const { knobProps } = useResolvedKnobs();
@@ -763,7 +1001,7 @@ export function Kanban<T>({
       </View>
     </AsyncBoundary>
   );
-}
+};
 
 interface KanbanColumnViewProps<T> {
   kanbanId: string;
@@ -785,242 +1023,4 @@ interface KanbanColumnViewProps<T> {
   handle: NativeColumnHandle;
   drag: NativeDragSession<T> | null;
   scrollEnabled: boolean;
-}
-
-function KanbanColumnView<T>({
-  kanbanId,
-  column,
-  columnIndex,
-  renderCard,
-  columnWidth,
-  minColumnHeight,
-  estimateSize,
-  overscan,
-  emptyColumnMessage,
-  onLoadMore,
-  getItemKey,
-  hasMore,
-  isLoading,
-  onCardSelect,
-  renderColumnActions,
-  getCardDragProps,
-  handle,
-  drag,
-  scrollEnabled,
-}: KanbanColumnViewProps<T>) {
-  const { t } = useTranslation();
-  const { knobProps } = useResolvedKnobs();
-  const itemCount = useAsyncCount(column.items.length);
-
-  const isSource = drag?.sourceColumnId === column.id;
-  const gapIndex = drag && !drag.settling && drag.target.columnId === column.id ? drag.target.index : null;
-  const isDropTarget = gapIndex != null;
-
-  // Handle infinite scroll
-  const handleEndReached = useCallback(() => {
-    if (onLoadMore && hasMore && !isLoading) {
-      onLoadMore();
-    }
-  }, [onLoadMore, hasMore, isLoading]);
-
-  const gapY =
-    gapIndex != null && drag
-      ? gapPosition({
-          gapIndex,
-          sourceIndex: isSource ? drag.sourceIndex : null,
-          count: column.items.length,
-          size: drag.size,
-          totalSize: column.items.length * drag.size,
-          getStart: (index) => index * drag.size,
-        })
-      : null;
-
-  return (
-    <YStack
-      width={columnWidth}
-      minHeight={minColumnHeight}
-      flexShrink={0}
-      overflow="hidden"
-      transition={knobProps.transition}
-      {...knobProps.borderRadius}
-      {...knobProps.containerRadius}
-      {...knobProps.panelPadding}
-      backgroundColor={isDropTarget ? componentColors.interactive.background : 'transparent'}
-      data-kanban-column={column.id}>
-      <ListItem
-        title={column.title}
-        icon={
-          column.color ? (
-            <YStack
-              {...radiusClassProps('R-PILL', 'Kanban column dot')}
-              width={8}
-              height={8}
-              borderRadius={4}
-              backgroundColor={column.color as any}
-              data-kanban-column-dot
-            />
-          ) : undefined
-        }
-        iconAfter={
-          itemCount !== undefined || renderColumnActions ? (
-            <XStack
-              alignItems="center"
-              {...knobProps.gap}>
-              {itemCount !== undefined && (
-                <Text
-                  color={knobProps.textAccentColor}
-                  {...knobProps.label}
-                  {...knobProps.textWeight}
-                  data-async-count>
-                  {itemCount}
-                </Text>
-              )}
-              {renderColumnActions?.(column)}
-            </XStack>
-          ) : undefined
-        }
-        size={knobProps.sizeToken}
-        borderBottomWidth={hairlineWidth}
-        borderBottomColor="$borderColor"
-      />
-
-      {/* Cards container — always rendered so empty columns stay drop targets. */}
-      <View
-        style={{ flex: 1, minHeight: minColumnHeight - 60 }}
-        position="relative"
-        ref={(node: any) => {
-          handle.node = node;
-        }}>
-        {column.items.length === 0 ? (
-          !isDropTarget && (
-            <EmptyState
-              compact
-              title={emptyColumnMessage}
-              opacity={0.5}
-              flex={1}
-            />
-          )
-        ) : (
-          <FlashList
-            keyboardShouldPersistTaps="handled"
-            ref={(list: any) => {
-              handle.list = list;
-            }}
-            data={column.items}
-            extraData={drag}
-            drawDistance={estimateSize * overscan}
-            onEndReached={handleEndReached}
-            onEndReachedThreshold={0.5}
-            scrollEnabled={scrollEnabled}
-            onScroll={(e: any) => {
-              handle.scrollOffset = e.nativeEvent?.contentOffset?.y ?? 0;
-            }}
-            scrollEventThrottle={64}
-            keyExtractor={(item, index) =>
-              getItemKey ? String(getItemKey(item, index)) : `${kanbanId}-col-${columnIndex}-card-${index}`
-            }
-            renderItem={({ item, index }) => {
-              const isDragged = isSource && drag != null && index === drag.sourceIndex;
-              let offset = 0;
-              let ghost = false;
-              let hidden = false;
-              if (drag && !drag.settling) {
-                if (isDragged) {
-                  if (gapIndex != null && gapY != null) {
-                    offset = gapY - index * drag.size;
-                    ghost = true;
-                  } else {
-                    hidden = true;
-                  }
-                } else {
-                  offset = siblingOffset({
-                    index,
-                    sourceIndex: isSource && drag ? drag.sourceIndex : null,
-                    gapIndex,
-                    size: drag.size,
-                  });
-                }
-              } else if (drag?.settling && isDragged) {
-                // The ghost overlay is this card's visual while it settles.
-                hidden = true;
-              }
-              const dragProps = getCardDragProps?.(item, column.id, index) ?? {};
-              return (
-                <View
-                  padding="$1"
-                  y={offset}
-                  transition={drag && !drag.settling ? knobProps.transition : undefined}
-                  opacity={hidden ? 0 : ghost ? 0.4 : 1}
-                  {...dragProps}>
-                  <Card
-                    id={`${kanbanId}-col-${columnIndex}-card-${index}`}
-                    elevation={knobProps.elevation}
-                    minHeight={MIN_PRESS_TARGET}
-                    {...(ghost
-                      ? {
-                          borderWidth: hairlineWidth,
-                          borderColor: componentColors.interactive.border,
-                          borderStyle: 'dashed' as any,
-                        }
-                      : undefined)}
-                    hoverStyle={{ backgroundColor: componentColors.interactive.background }}
-                    pressStyle={{ scale: 0.98 }}
-                    overflow="hidden"
-                    data-kanban-card={String(getItemKey ? getItemKey(item, index) : `${column.id}-${index}`)}
-                    onPress={
-                      getCardDragProps
-                        ? undefined // responders own the tap; handled on release
-                        : () => onCardSelect?.(item, column.id)
-                    }>
-                    {renderCard(item)}
-                  </Card>
-                </View>
-              );
-            }}
-            ListFooterComponent={
-              isLoading ? (
-                <YStack
-                  {...knobProps.panelPadding}
-                  alignItems="center">
-                  <Spinner size="small" />
-                </YStack>
-              ) : null
-            }
-          />
-        )}
-
-        {/* Insertion slot outline for cross-column targets and empty columns. */}
-        {drag && !drag.settling && gapIndex != null && !isSource && (
-          <View
-            position="absolute"
-            top={0}
-            left={0}
-            right={0}
-            y={(gapY ?? 0) - handle.scrollOffset}
-            height={drag.size}
-            padding="$1"
-            pointerEvents="none"
-            transition={knobProps.transition}>
-            <View
-              flex={1}
-              {...knobProps.borderRadius}
-              borderStyle="dashed"
-              borderColor={componentColors.interactive.border}
-              backgroundColor={componentColors.interactive.background}
-              opacity={0.8}
-              alignItems="center"
-              justifyContent="center">
-              {column.items.length === 0 && (
-                <Text
-                  color={knobProps.textAccentColor}
-                  {...knobProps.label}>
-                  {t('Drop here')}
-                </Text>
-              )}
-            </View>
-          </View>
-        )}
-      </View>
-    </YStack>
-  );
 }

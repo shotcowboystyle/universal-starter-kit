@@ -34,24 +34,24 @@ afterEach(cleanup);
 type Accent = 'low' | 'medium' | 'high';
 type Scheme = 'light' | 'dark';
 
-function inScheme(scheme: Scheme, node: ReactElement): ReactElement {
+const inScheme = (scheme: Scheme, node: ReactElement): ReactElement => {
   return scheme === 'dark' ? <Theme name="dark">{node}</Theme> : node;
-}
+};
 
 /** The TEXT NODE's colour atom, by identity — hashed names never asserted. */
-function inkAtoms(el: Element): string[] {
+const inkAtoms = (el: Element): string[] => {
   return String((el as HTMLElement).className || '')
     .split(' ')
     .filter((c) => c.startsWith('_col-'))
     .sort();
-}
+};
 
-function inkOf(scheme: Scheme, accent: Accent, label: string, node: ReactElement): string[] {
+const inkOf = (scheme: Scheme, accent: Accent, label: string, node: ReactElement): string[] => {
   renderWithProviders(inScheme(scheme, <Preset overrides={{ textAccent: accent }}>{node}</Preset>));
   const atoms = inkAtoms(screen.getByText(label));
   cleanup();
   return atoms;
-}
+};
 
 const schemes: Scheme[] = ['light', 'dark'];
 
@@ -115,7 +115,7 @@ describe('Quote — textAccent reaches the attribution', () => {
 
   // The attribution renders as `<cite>— {name}</cite>`, two text runs in one
   // node, so getByText cannot reach it. Read the cite element itself.
-  function citeInk(scheme: Scheme, accent: Accent): string[] {
+  const citeInk = (scheme: Scheme, accent: Accent): string[] => {
     const { container } = renderWithProviders(
       inScheme(scheme, <Preset overrides={{ textAccent: accent }}>{quote}</Preset>),
     );
@@ -124,7 +124,7 @@ describe('Quote — textAccent reaches the attribution', () => {
     const atoms = inkAtoms(cite as Element);
     cleanup();
     return atoms;
-  }
+  };
 
   for (const scheme of schemes) {
     it(`${scheme}: the attribution moves between low and high`, () => {
@@ -152,14 +152,14 @@ describe('Meter — textAccent reaches the ok-zone value readout', () => {
     />
   );
 
-  function valueInk(scheme: Scheme, accent: Accent): string | null {
+  const valueInk = (scheme: Scheme, accent: Accent): string | null => {
     const { container } = renderWithProviders(
       inScheme(scheme, <Preset overrides={{ textAccent: accent }}>{meter}</Preset>),
     );
     const token = container.querySelector('[data-meter-value]')?.getAttribute('data-meter-value-color');
     cleanup();
     return token ?? null;
-  }
+  };
 
   for (const scheme of schemes) {
     it(`${scheme}: the ok value readout rides the resolver, not a static $color11`, () => {
@@ -197,7 +197,7 @@ describe('Meter — textAccent reaches the ok-zone value readout', () => {
  * low == medium alone also passes a surface pinned to a static step, so the
  * dim stops are checked against a probe painting the resolver's own colour.
  */
-function restInk(el: Element): string | undefined {
+const restInk = (el: Element): string | undefined => {
   for (const cls of Array.from(el.classList)) {
     if (!cls.startsWith('_col-')) {
       continue;
@@ -209,9 +209,9 @@ function restInk(el: Element): string | undefined {
     return value;
   }
   return undefined;
-}
+};
 
-function ResolverInk() {
+const ResolverInk = () => {
   const { knobProps } = useResolvedKnobs();
   return (
     <SizableText
@@ -220,14 +220,14 @@ function ResolverInk() {
       resolver ink
     </SizableText>
   );
-}
+};
 
-function againstResolver(
+const againstResolver = (
   scheme: Scheme,
   accent: Accent,
   node: ReactElement,
   pick: (container: HTMLElement) => Element | null,
-) {
+) => {
   const { container } = renderWithProviders(
     inScheme(
       scheme,
@@ -246,7 +246,7 @@ function againstResolver(
   };
   cleanup();
   return result;
-}
+};
 
 describe("the dim stops paint the resolver's AA floor, not a pinned step", () => {
   const surfaces: [string, ReactElement, (container: HTMLElement) => Element | null][] = [

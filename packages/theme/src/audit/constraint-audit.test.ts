@@ -14,7 +14,7 @@ afterEach(() => {
 // Deliberately loses module scope, like Playwright page.evaluate.
 const audit = new Function(`return (${runConstraintAudit.toString()})()`) as typeof runConstraintAudit;
 
-function specimen(style: string, attrs: Record<string, string> = {}) {
+const specimen = (style: string, attrs: Record<string, string> = {}) => {
   const el = document.createElement('div');
   el.id = 'specimen';
   el.style.cssText = style;
@@ -23,20 +23,20 @@ function specimen(style: string, attrs: Record<string, string> = {}) {
   }
   document.body.append(el);
   return el;
-}
+};
 
-function measured() {
+const measured = () => {
   return audit().elements.find((el) => el.id === 'specimen');
-}
+};
 
-function card(radius: string, space: string, tier = 'content') {
+const card = (radius: string, space: string, tier = 'content') => {
   return {
     'data-constraint-container': 'Card',
     'data-tier': tier,
     'data-radius-knob': radius,
     'data-space-knob': space,
   };
-}
+};
 
 describe('Card container cap, independently measured against canonical stops', () => {
   for (const tier of ['content', 'elevated']) {
@@ -146,11 +146,11 @@ describe('font weight provenance', () => {
   });
 });
 
-function laidOut(el: HTMLElement, width: number, height: number) {
+const laidOut = (el: HTMLElement, width: number, height: number) => {
   Object.defineProperty(el, 'offsetWidth', { configurable: true, value: width });
   Object.defineProperty(el, 'offsetHeight', { configurable: true, value: height });
   return el;
-}
+};
 
 describe('BINARY parts measure 0 or their own h/2', () => {
   const binary = { 'data-radius-resolution': 'BINARY' };

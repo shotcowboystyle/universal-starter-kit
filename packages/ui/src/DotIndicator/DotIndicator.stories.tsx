@@ -30,7 +30,7 @@ export default meta;
 
 type Story = StoryObj<typeof DotIndicator>;
 
-function ControlledDotIndicator(props: Omit<React.ComponentProps<typeof DotIndicator>, 'activeIndex'>) {
+const ControlledDotIndicator = (props: Omit<React.ComponentProps<typeof DotIndicator>, 'activeIndex'>) => {
   const [activeIndex, setActiveIndex] = useState(0);
   return (
     <DotIndicator
@@ -42,9 +42,9 @@ function ControlledDotIndicator(props: Omit<React.ComponentProps<typeof DotIndic
       }}
     />
   );
-}
+};
 
-function WindowedDotIndicator() {
+const WindowedDotIndicator = () => {
   const [activeIndex, setActiveIndex] = useState(4);
   return (
     <DotIndicator
@@ -56,7 +56,7 @@ function WindowedDotIndicator() {
       }}
     />
   );
-}
+};
 
 export const Default: Story = {
   name: 'Main',

@@ -18,22 +18,22 @@ afterEach(() => {
 });
 
 /** Dialog portals into document.body — query there, not the RTL container. */
-function root(): HTMLElement {
+const root = (): HTMLElement => {
   return document.body;
-}
+};
 
-function buttonByLabel(label: string): Element {
+const buttonByLabel = (label: string): Element => {
   const buttons = Array.from(root().querySelectorAll('[role="button"]'));
   const match = buttons.find((b) => b.textContent?.includes(label));
   if (!match) {
     throw new Error(`No button with label "${label}"`);
   }
   return match;
-}
+};
 
-function alertdialog(): Element | null {
+const alertdialog = (): Element | null => {
   return root().querySelector('[role="alertdialog"]');
-}
+};
 
 describe('ConfirmDialog', () => {
   it("inks a disabled destructive label on the error hue's $color12 text step", () => {
@@ -115,7 +115,7 @@ describe('ConfirmDialog', () => {
   it('Escape cancels', async () => {
     const onCancel = vi.fn();
     const onConfirm = vi.fn();
-    function Harness() {
+    const Harness = () => {
       const [open, setOpen] = useState(true);
       return (
         <ConfirmDialog
@@ -127,7 +127,7 @@ describe('ConfirmDialog', () => {
           onConfirm={onConfirm}
         />
       );
-    }
+    };
     renderWithProviders(<Harness />);
     expect(alertdialog()).toBeTruthy();
 
@@ -436,16 +436,16 @@ describe('notify() blocking → ConfirmDialog', () => {
   });
 });
 
-function atoms(el: Element, prefixes: string[]): string[] {
+const atoms = (el: Element, prefixes: string[]): string[] => {
   return String((el as HTMLElement).className || '')
     .split(' ')
     .filter((c) => prefixes.some((p) => c.startsWith(p)))
     .sort();
-}
+};
 
-function weightAtoms(el: Element): string[] {
+const weightAtoms = (el: Element): string[] => {
   return atoms(el, ['_fow-']);
-}
+};
 
 describe('ConfirmDialog action labels — weight 400 on the TEXT NODE', () => {
   afterEach(cleanup);

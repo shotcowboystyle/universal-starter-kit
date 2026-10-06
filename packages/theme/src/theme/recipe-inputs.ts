@@ -305,7 +305,7 @@ export const TOUCH_HEIGHT_FLOOR = DEFAULT_SIZE_RECIPE_INPUTS.touchFloor;
 
 const MD_TOUCH_MIN = 48;
 
-function cloneTokenTable(table?: SizeRecipeTokenTable): SizeRecipeTokenTable | undefined {
+const cloneTokenTable = (table?: SizeRecipeTokenTable): SizeRecipeTokenTable | undefined => {
   if (!table) {
     return undefined;
   }
@@ -317,15 +317,15 @@ function cloneTokenTable(table?: SizeRecipeTokenTable): SizeRecipeTokenTable | u
     }
   }
   return next;
-}
+};
 
-function clonePadX(
+const clonePadX = (
   table?: Partial<Record<SizeRecipeToken, number>>,
-): Partial<Record<SizeRecipeToken, number>> | undefined {
+): Partial<Record<SizeRecipeToken, number>> | undefined => {
   return table ? { ...table } : undefined;
-}
+};
 
-export function cloneSizeRecipeInputs(inputs: SizeRecipeInputs): SizeRecipeInputs {
+export const cloneSizeRecipeInputs = (inputs: SizeRecipeInputs): SizeRecipeInputs => {
   return {
     ...inputs,
     tokenSteps: { ...inputs.tokenSteps },
@@ -338,13 +338,13 @@ export function cloneSizeRecipeInputs(inputs: SizeRecipeInputs): SizeRecipeInput
     compactRatios: { ...inputs.compactRatios },
     tile: inputs.tile ? cloneTileSizeInputs(inputs.tile) : undefined,
   };
-}
+};
 
 /**
  * Fill defaults. `{ baseHeight: 36 }` drops handwritten tokenHeights /
  * sizeFactors / token tables so every token regenerates from stepRatio.
  */
-export function resolveSizeRecipeInputs(partial: Partial<SizeRecipeInputs> = {}): SizeRecipeInputs {
+export const resolveSizeRecipeInputs = (partial: Partial<SizeRecipeInputs> = {}): SizeRecipeInputs => {
   const scalingOverride = partial.baseHeight != null || partial.stepRatio != null || partial.tokenSteps != null;
   const hasTokenHeights = Object.hasOwn(partial, 'tokenHeights');
   const hasSizeFactors = Object.hasOwn(partial, 'sizeFactors');
@@ -397,15 +397,15 @@ export function resolveSizeRecipeInputs(partial: Partial<SizeRecipeInputs> = {})
   }
 
   return resolved;
-}
+};
 
 export const mergeRecipeInputs = resolveSizeRecipeInputs;
 
-function clampHeight(value: number): number {
+const clampHeight = (value: number): number => {
   return Math.max(1, Math.round(value));
-}
+};
 
-function heightForToken(token: string, inputs: SizeRecipeInputs): number {
+const heightForToken = (token: string, inputs: SizeRecipeInputs): number => {
   const explicitPx = inputs.tokenHeights?.[token];
   if (explicitPx != null) {
     return clampHeight(explicitPx);
@@ -416,12 +416,12 @@ function heightForToken(token: string, inputs: SizeRecipeInputs): number {
   }
   const step = inputs.tokenSteps[token] ?? 0;
   return clampHeight(inputs.baseHeight * inputs.stepRatio ** step);
-}
+};
 
-export function sizeRecipeFromHeight(
+export const sizeRecipeFromHeight = (
   height: number,
   ratios: SizeRecipeRatios = DEFAULT_SIZE_RECIPE_INPUTS.ratios,
-): SizeRecipe {
+): SizeRecipe => {
   const gap = Math.round(height * ratios.gap);
   return {
     height,
@@ -430,9 +430,9 @@ export function sizeRecipeFromHeight(
     iconSize: Math.round(height * ratios.icon),
     gap,
   };
-}
+};
 
-export function recipeFromTokenChannels(height: number, channels: SizeRecipeTokenChannels): SizeRecipe {
+export const recipeFromTokenChannels = (height: number, channels: SizeRecipeTokenChannels): SizeRecipe => {
   return {
     height,
     paddingHorizontal: channels.paddingHorizontal,
@@ -440,12 +440,12 @@ export function recipeFromTokenChannels(height: number, channels: SizeRecipeToke
     iconSize: channels.iconSize,
     gap: channels.radius,
   };
-}
+};
 
 /** Explicit recipe transformation; ordinary control shape changes use resolveControlRadius. */
-export function applyRadiusStop<T extends { gap: number }>(recipe: T, stop: SizeRecipeRadiusStop): T {
+export const applyRadiusStop = <T extends { gap: number }>(recipe: T, stop: SizeRecipeRadiusStop): T => {
   return { ...recipe, gap: SIZE_RECIPE_RADIUS_STOPS[stop] };
-}
+};
 
 /** Knob fragment token → stop name. Default medium is `$4`. */
 export const SIZE_RECIPE_RADIUS_TOKEN_TO_STOP = {
@@ -463,22 +463,22 @@ export const SIZE_RECIPE_RADIUS_TOKEN_TO_STOP = {
  * Other borderRadius stops override the corners only. Internal spacing
  * continues to group the icon and label at the recipe's size.
  */
-export function resolveControlRadius(
+export const resolveControlRadius = (
   recipe: SizeRecipe,
   stop: SizeRecipeRadiusStop = 'medium',
-): { radius: number; gap: number } {
+): { radius: number; gap: number } => {
   if (stop === 'medium') {
     return { radius: recipe.gap, gap: recipe.gap };
   }
   const px = SIZE_RECIPE_RADIUS_STOPS[stop];
   return { radius: px, gap: recipe.gap };
-}
+};
 
-function generateTouchHeights(
+const generateTouchHeights = (
   heights: Record<string, number>,
   inputs: SizeRecipeInputs,
   tokens: readonly string[],
-): Record<string, number> {
+): Record<string, number> => {
   const { touchFloor, tokenSteps } = inputs;
   const mdDesktop = heights.$4 ?? inputs.baseHeight;
   const floored: Record<string, number> = {};
@@ -506,20 +506,23 @@ function generateTouchHeights(
     }
   }
   return heightsTouch;
-}
+};
 
-function channelsForToken(token: string, table: SizeRecipeTokenTable | undefined): SizeRecipeTokenChannels | undefined {
+const channelsForToken = (
+  token: string,
+  table: SizeRecipeTokenTable | undefined,
+): SizeRecipeTokenChannels | undefined => {
   if (!table) {
     return undefined;
   }
   return table[token as SizeRecipeToken] ?? (token === '$true' ? table.$4 : undefined);
-}
+};
 
-export function generateSizeRecipeTables(
+export const generateSizeRecipeTables = (
   inputs: SizeRecipeInputs,
   ratios: SizeRecipeRatios = inputs.ratios,
   table: SizeRecipeTokenTable | undefined = inputs.tokenTable,
-): SizeRecipeTables {
+): SizeRecipeTables => {
   const tokens = SIZE_RECIPE_TOKENS;
   const heights: Record<string, number> = {};
   for (const token of tokens) {
@@ -570,9 +573,9 @@ export function generateSizeRecipeTables(
     heightVariants,
     radii,
   };
-}
+};
 
-export function createRecipeFamilies(inputs: SizeRecipeInputs | Partial<SizeRecipeInputs> = {}): RecipeFamilies {
+export const createRecipeFamilies = (inputs: SizeRecipeInputs | Partial<SizeRecipeInputs> = {}): RecipeFamilies => {
   const resolved = cloneSizeRecipeInputs(resolveSizeRecipeInputs(inputs));
   const control = generateSizeRecipeTables(resolved, resolved.ratios, resolved.tokenTable);
   const controlCompact = generateSizeRecipeTables(resolved, resolved.compactRatios, resolved.compactTokenTable);
@@ -580,9 +583,9 @@ export function createRecipeFamilies(inputs: SizeRecipeInputs | Partial<SizeReci
     control: { ...control, name: 'control' },
     controlCompact: { ...controlCompact, name: 'controlCompact' },
   };
-}
+};
 
-export function generateSizeRecipes(partial: Partial<SizeRecipeInputs> = {}): GeneratedSizeRecipes {
+export const generateSizeRecipes = (partial: Partial<SizeRecipeInputs> = {}): GeneratedSizeRecipes => {
   const inputs = cloneSizeRecipeInputs(resolveSizeRecipeInputs(partial));
   const families = createRecipeFamilies(inputs);
   const { control } = families;
@@ -599,4 +602,4 @@ export function generateSizeRecipes(partial: Partial<SizeRecipeInputs> = {}): Ge
     families,
     tiles: generateTileSizeLadder(resolveTileSizeInputs(inputs.tile ?? {})),
   };
-}
+};

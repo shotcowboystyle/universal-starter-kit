@@ -626,7 +626,7 @@ describe('Calendar event drag', () => {
       (document as any).elementFromPoint = originalElementFromPoint;
     });
 
-    function renderDraggableCalendar(onEventMove = vi.fn(), onEventClick = vi.fn()) {
+    const renderDraggableCalendar = (onEventMove = vi.fn(), onEventClick = vi.fn()) => {
       const { container } = renderWithProviders(
         <Calendar
           events={dragEvents}
@@ -644,7 +644,7 @@ describe('Calendar event drag', () => {
       // happy-dom has no layout engine, so stub hit-testing to the target cell.
       (document as any).elementFromPoint = vi.fn(() => targetCell);
       return { chip: chip as Element, targetCell: targetCell as Element };
-    }
+    };
 
     it('moves an event to another day via pointer drag', () => {
       const onEventMove = vi.fn();
@@ -881,12 +881,12 @@ describe('ReportBuilder', () => {
     expect(screen.queryByText('No results found')).toBeNull();
   });
 
-  function atoms(el: Element, prefixes: string[]): string[] {
+  const atoms = (el: Element, prefixes: string[]): string[] => {
     return String((el as HTMLElement).className || '')
       .split(' ')
       .filter((c) => prefixes.some((p) => c.startsWith(p)))
       .sort();
-  }
+  };
 
   it('header and totals labels ride the fontWeight knob — never 500 or 600', () => {
     renderWithProviders(
@@ -921,18 +921,18 @@ describe('ChartCard palette', () => {
     { label: 'D', value: 1 },
   ];
 
-  function PaletteProbe({ into }: { into: { current?: ChartPalette } }) {
+  const PaletteProbe = ({ into }: { into: { current?: ChartPalette } }) => {
     into.current = useChartPalette();
     return null;
-  }
+  };
 
-  function pieSliceFills(): (string | null)[] {
+  const pieSliceFills = (): (string | null)[] => {
     return Array.from(document.querySelectorAll('svg [data-mpo-chart-mark]')).map((p) => p.getAttribute('fill'));
-  }
+  };
 
-  function barFills(): (string | null)[] {
+  const barFills = (): (string | null)[] => {
     return Array.from(document.querySelectorAll('svg [data-mpo-chart-bar]')).map((bar) => bar.getAttribute('fill'));
-  }
+  };
 
   it('pie slices take the categorical palette from useChartPalette()', () => {
     const captured: { current?: ChartPalette } = {};

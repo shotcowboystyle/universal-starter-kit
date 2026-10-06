@@ -43,7 +43,7 @@ const meta: Meta<typeof Button> = {
 export default meta;
 type Story = StoryObj<typeof Button>;
 
-function ContrastExample({ children = 'Save', ...props }: ButtonProps) {
+const ContrastExample = ({ children = 'Save', ...props }: ButtonProps) => {
   const [presses, setPresses] = useState(0);
   return (
     <YStack data-lc-clicks={presses}>
@@ -56,7 +56,7 @@ function ContrastExample({ children = 'Save', ...props }: ButtonProps) {
       </Button>
     </YStack>
   );
-}
+};
 
 export const DestructiveEnabled: Story = {
   render: () => <ContrastExample error>Delete</ContrastExample>,
@@ -415,7 +415,7 @@ export const Comparison: Story = {
  * PAGE scope the way Button does: inside the intent sub-theme the
  * token derives a ring for the inverted surface, which is the 1.00:1 trap.
  */
-function InsetRow() {
+const InsetRow = () => {
   const pageOutlineColor = useTheme().outlineColor?.val as string | undefined;
   const inset = ensureFocusVisibleRing({
     outlineOffset: FOCUS_RING_CLIPPED_OFFSET,
@@ -442,7 +442,7 @@ function InsetRow() {
       </Button>
     </XStack>
   );
-}
+};
 
 export const StateFocus: Story = {
   name: 'State: focus',

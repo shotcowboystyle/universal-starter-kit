@@ -86,16 +86,16 @@ import type {
   SizeRecipeToken,
 } from './recipe-inputs';
 
-function replaceRecord(target: Record<string, unknown>, source: Record<string, unknown>): void {
+const replaceRecord = (target: Record<string, unknown>, source: Record<string, unknown>): void => {
   for (const key of Object.keys(target)) {
     if (!Object.hasOwn(source, key)) {
       delete target[key];
     }
   }
   Object.assign(target, source);
-}
+};
 
-function adoptFamily(target: SizeRecipeFamily, source: SizeRecipeFamily): void {
+const adoptFamily = (target: SizeRecipeFamily, source: SizeRecipeFamily): void => {
   Object.assign(target.ratios, source.ratios);
   target.inputs = { ...source.inputs, ratios: target.ratios };
   replaceRecord(target.heights, source.heights);
@@ -107,7 +107,7 @@ function adoptFamily(target: SizeRecipeFamily, source: SizeRecipeFamily): void {
   replaceRecord(target.iconVariants, source.iconVariants);
   replaceRecord(target.heightVariants, source.heightVariants);
   replaceRecord(target.radii, source.radii);
-}
+};
 
 const initial = generateSizeRecipes(defaultRecipeInputs);
 let current: GeneratedSizeRecipes = initial;
@@ -138,11 +138,11 @@ export const SIZE_RECIPE_FAMILY_NAMES = ['control', 'controlCompact'] as const;
  */
 export const tileSizeLadder = initial.tiles;
 
-export function getTileSizeLadder(): typeof tileSizeLadder {
+export const getTileSizeLadder = (): typeof tileSizeLadder => {
   return tileSizeLadder;
-}
+};
 
-function adoptGenerated(next: GeneratedSizeRecipes): GeneratedSizeRecipes {
+const adoptGenerated = (next: GeneratedSizeRecipes): GeneratedSizeRecipes => {
   adoptFamily(recipeFamilies.control, next.families.control);
   adoptFamily(recipeFamilies.controlCompact, next.families.controlCompact);
   replaceRecord(tileSizeLadder as unknown as Record<string, unknown>, next.tiles as unknown as Record<string, unknown>);
@@ -160,44 +160,44 @@ function adoptGenerated(next: GeneratedSizeRecipes): GeneratedSizeRecipes {
     families: recipeFamilies,
   };
   return current;
-}
+};
 
 /** Merge `partial` over defaultRecipeInputs (not the previous override) and rewrite live tables. */
-export function setSizeRecipeInputs(partial: Partial<RecipeInputs> = {}): GeneratedSizeRecipes {
+export const setSizeRecipeInputs = (partial: Partial<RecipeInputs> = {}): GeneratedSizeRecipes => {
   return adoptGenerated(generateSizeRecipes(partial));
-}
+};
 
-export function getSizeRecipeInputs(): RecipeInputs {
+export const getSizeRecipeInputs = (): RecipeInputs => {
   return cloneSizeRecipeInputs(current.inputs);
-}
+};
 
-export function getGeneratedSizeRecipes(): GeneratedSizeRecipes {
+export const getGeneratedSizeRecipes = (): GeneratedSizeRecipes => {
   return current;
-}
+};
 
-export function getSizeRecipeFamily(name: RecipeFamilyName = 'control'): SizeRecipeFamily {
+export const getSizeRecipeFamily = (name: RecipeFamilyName = 'control'): SizeRecipeFamily => {
   return recipeFamilies[name] ?? recipeFamilies.control;
-}
+};
 
-export function sizeRecipeFromHeight(
+export const sizeRecipeFromHeight = (
   height: number,
   ratios: RecipeInputs['ratios'] = current.inputs.ratios,
-): SizeRecipe {
+): SizeRecipe => {
   return recipeFromHeight(height, ratios);
-}
+};
 
-function resolveFamily(family?: RecipeFamilyName | SizeRecipeFamily): SizeRecipeFamily {
+const resolveFamily = (family?: RecipeFamilyName | SizeRecipeFamily): SizeRecipeFamily => {
   if (family && typeof family === 'object') {
     return family;
   }
   return recipeFamilies[family ?? 'control'] ?? recipeFamilies.control;
-}
+};
 
-export function applyTouchFloor(
+export const applyTouchFloor = (
   recipe: SizeRecipe,
   touch: boolean,
   family?: RecipeFamilyName | SizeRecipeFamily,
-): SizeRecipe {
+): SizeRecipe => {
   if (!touch) {
     return recipe;
   }
@@ -207,19 +207,19 @@ export function applyTouchFloor(
     return tables.recipesTouch[token];
   }
   return recipeFromHeight(Math.max(recipe.height, tables.inputs.touchFloor), tables.ratios);
-}
+};
 
-export function sizeRecipeForToken(
+export const sizeRecipeForToken = (
   token: string,
   options?: { touch?: boolean; family?: RecipeFamilyName | SizeRecipeFamily },
-): SizeRecipe {
+): SizeRecipe => {
   const tables = resolveFamily(options?.family);
   const table = options?.touch ? tables.recipesTouch : tables.recipes;
   if (Object.hasOwn(table, token)) {
     return table[token as SizeRecipeToken];
   }
   return table.$4;
-}
+};
 
 /**
  * Identity helper for the SIZE-RECIPE ESCAPE lint
@@ -234,9 +234,9 @@ export function sizeRecipeForToken(
  * `docs/theme-propagation-spec.md` `## Size-recipe escapes`; an undeclared
  * escape fails `lint-conventions`.
  */
-export function sizeRecipeEscape<T>(value: T, _reason?: string): T {
+export const sizeRecipeEscape = <T>(value: T, _reason?: string): T => {
   return value;
-}
+};
 
 /**
  * TEXT-INSET — optical vertical inset of a text field, never larger
@@ -247,6 +247,6 @@ export function sizeRecipeEscape<T>(value: T, _reason?: string): T {
  *
  * `$4` (44 / 18 / 14) → 15. Button ladders keep recipe.paddingHorizontal (18).
  */
-export function textFieldInset(recipe: Pick<SizeRecipe, 'height' | 'paddingHorizontal' | 'fontSize'>): number {
+export const textFieldInset = (recipe: Pick<SizeRecipe, 'height' | 'paddingHorizontal' | 'fontSize'>): number => {
   return Math.min(recipe.paddingHorizontal, Math.floor((recipe.height - recipe.fontSize) / 2));
-}
+};

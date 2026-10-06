@@ -19,7 +19,7 @@ interface NewBoardDialogProps {
 
 type BoardFormData = z.infer<typeof boardSchema>;
 
-export default function NewBoardDialog({ children }: NewBoardDialogProps) {
+const NewBoardDialog = ({ children }: NewBoardDialogProps) => {
   const [open, setOpen] = useState(false);
   const { addBoard } = useWorkspaceStore();
   const { refresh } = useBoards();
@@ -81,4 +81,6 @@ export default function NewBoardDialog({ children }: NewBoardDialogProps) {
       </Dialog.Portal>
     </Dialog>
   );
-}
+};
+
+export default NewBoardDialog;

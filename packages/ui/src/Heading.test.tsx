@@ -29,24 +29,24 @@ afterEach(cleanup);
 
 const TITLE = 'Workspace Settings';
 
-function classesByPrefix(el: Element, prefixes: string[]): string[] {
+const classesByPrefix = (el: Element, prefixes: string[]): string[] => {
   return String((el as HTMLElement).className || '')
     .split(' ')
     .filter((c) => prefixes.some((p) => c.startsWith(p)))
     .sort();
-}
+};
 
 /** Tamagui font-scope class on the TEXT NODE (`font_heading` / `font_mono` / …). */
-function fontScopeClass(el: Element): string {
+const fontScopeClass = (el: Element): string => {
   return (
     String((el as HTMLElement).className || '')
       .split(' ')
       .find((c) => c.startsWith('font_')) ?? ''
   );
-}
+};
 
 /** Render, guard the text node's tag, read its prefixed classes, clean up. */
-function renderHeadingClasses(node: React.ReactElement, prefixes: string[], expectedTag?: string): string[] {
+const renderHeadingClasses = (node: React.ReactElement, prefixes: string[], expectedTag?: string): string[] => {
   renderWithProviders(node);
   const textNode = screen.getByText(TITLE);
   if (expectedTag) {
@@ -56,7 +56,7 @@ function renderHeadingClasses(node: React.ReactElement, prefixes: string[], expe
   const classes = classesByPrefix(textNode, prefixes);
   cleanup();
   return classes;
-}
+};
 
 describe('house Heading — fontWeight reaches the heading text node', () => {
   it('changes weight on a fontWeight flip, pinned to 400/700', () => {

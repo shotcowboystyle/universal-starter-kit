@@ -17,7 +17,7 @@ export interface LinkCellFieldProps {
 }
 
 /** Field-level: wrap display value in Link when linkResolver returns href. */
-export function LinkCell({ value, linkResolver, children }: LinkCellFieldProps): ReactNode {
+export const LinkCell = ({ value, linkResolver, children }: LinkCellFieldProps): ReactNode => {
   let href: Href | null = null;
   try {
     href = linkResolver(value);
@@ -28,4 +28,4 @@ export function LinkCell({ value, linkResolver, children }: LinkCellFieldProps):
     return <Link href={href}>{children}</Link>;
   }
   return children;
-}
+};

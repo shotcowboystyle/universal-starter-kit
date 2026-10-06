@@ -35,7 +35,7 @@ import { Skeleton } from '../../Skeleton';
 import type { AnyFormApi } from '../../types';
 
 // Cross-platform base64 encoding/decoding
-function encodeBase64(str: string): string {
+const encodeBase64 = (str: string): string => {
   if (typeof btoa === 'function') {
     return btoa(unescape(encodeURIComponent(str)));
   }
@@ -57,9 +57,9 @@ function encodeBase64(str: string): string {
     result += i + 2 < bytes.length ? chars[b3 & 63] : '=';
   }
   return result;
-}
+};
 
-function decodeBase64(base64: string): string {
+const decodeBase64 = (base64: string): string => {
   if (typeof atob === 'function') {
     return decodeURIComponent(escape(atob(base64)));
   }
@@ -84,7 +84,7 @@ function decodeBase64(base64: string): string {
     }
   }
   return new TextDecoder().decode(new Uint8Array(bytes));
-}
+};
 
 type Point = [number, number, number];
 type Stroke = Point[];
@@ -108,43 +108,43 @@ const strokeOptionsBase = {
 };
 
 // Normalize stroke to 0-1 range for resolution-independent storage
-function normalizeStroke(stroke: Stroke, width: number, height: number): Stroke {
+const normalizeStroke = (stroke: Stroke, width: number, height: number): Stroke => {
   if (width <= 0 || height <= 0) {
     return stroke;
   }
   return stroke.map(([x, y, p]) => [x / width, y / height, p] as Point);
-}
+};
 
 // Denormalize stroke from 0-1 to canvas dimensions
-function denormalizeStroke(stroke: Stroke, width: number, height: number): Stroke {
+const denormalizeStroke = (stroke: Stroke, width: number, height: number): Stroke => {
   if (width <= 0 || height <= 0) {
     return stroke;
   }
   return stroke.map(([x, y, p]) => [x * width, y * height, p] as Point);
-}
+};
 
 // Stroke size scaled to canvas - maintains consistent visual thickness across screen sizes
-function getScaledStrokeSize(width: number, height: number): number {
+const getScaledStrokeSize = (width: number, height: number): number => {
   const scale = Math.sqrt((width * height) / (referenceWidth * referenceHeight));
   return Math.max(4, Math.round(baseStrokeSize * scale));
-}
+};
 
 // Calculate distance between two points
-function pointDistance(p1: Point, p2: Point): number {
+const pointDistance = (p1: Point, p2: Point): number => {
   return Math.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2);
-}
+};
 
 // Check if stroke has real stylus pressure (vs mouse/touch default 0.5)
-function hasRealPressure(points: Stroke): boolean {
+const hasRealPressure = (points: Stroke): boolean => {
   return points.some((p) => p[2] !== undefined && p[2] !== 0.5 && p[2] > 0 && p[2] < 1);
-}
+};
 
 // Fixed thresholds (px) - consistent mapping regardless of stroke
 const slowDistance = 4; // Points closer than this = slow = thick
 const fastDistance = 25; // Points farther than this = fast = thin
 
 // Infer pressure from point spacing: close = slow = thick, far = fast = thin
-function pressureFromSpacing(points: Stroke): Stroke {
+const pressureFromSpacing = (points: Stroke): Stroke => {
   if (points.length < 2) {
     return points;
   }
@@ -170,18 +170,18 @@ function pressureFromSpacing(points: Stroke): Stroke {
     const pressure = 0.7 - t * 0.35; // 0.35 (fast) to 0.7 (slow) - subtler variation
     return [p[0], p[1], Math.max(0.3, Math.min(0.8, pressure))] as Point;
   });
-}
+};
 
 // Get stroke options with size scaled to canvas dimensions
-function getStrokeOptions(_points: Stroke, strokeSize: number) {
+const getStrokeOptions = (_points: Stroke, strokeSize: number) => {
   return {
     ...strokeOptionsBase,
     size: strokeSize,
     simulatePressure: false,
   };
-}
+};
 
-function getSvgPathFromStroke(stroke: number[][]): string {
+const getSvgPathFromStroke = (stroke: number[][]): string => {
   if (!stroke.length) {
     return '';
   }
@@ -197,10 +197,10 @@ function getSvgPathFromStroke(stroke: number[][]): string {
 
   d.push('Z');
   return d.join(' ');
-}
+};
 
 /** Parse signature value (base64 JSON) into normalized strokes. Returns [] if invalid. */
-function parseSignatureValue(value: string): Stroke[] {
+const parseSignatureValue = (value: string): Stroke[] => {
   if (!value || !value.startsWith('data:application/json;base64,')) {
     return [];
   }
@@ -222,7 +222,7 @@ function parseSignatureValue(value: string): Stroke[] {
     // ignore
   }
   return [];
-}
+};
 
 /**
  * Convert a signature value (from Signature's value/onChange) to an SVG string.
@@ -232,7 +232,7 @@ function parseSignatureValue(value: string): Stroke[] {
  * @param penColor - Stroke color (default currentColor so the host scheme tints ink)
  * @returns SVG string or empty string if no strokes
  */
-export function signatureValueToSvg(value: string, width = 500, height = 200, penColor = 'currentColor'): string {
+export const signatureValueToSvg = (value: string, width = 500, height = 200, penColor = 'currentColor'): string => {
   const strokes = parseSignatureValue(value);
   if (strokes.length === 0) {
     return '';
@@ -253,7 +253,7 @@ export function signatureValueToSvg(value: string, width = 500, height = 200, pe
     .join('\n');
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">${pathElements}</svg>`;
-}
+};
 
 // Rows of field height for the signature pad (3x single-line input height)
 const signatureHeightRows = 3;
@@ -293,7 +293,7 @@ interface SignatureCanvasProps {
   hasError?: boolean;
 }
 
-function isPrimaryDrawPointer(event: GestureResponderEvent | PointerEvent<SVGSVGElement>): boolean {
+const isPrimaryDrawPointer = (event: GestureResponderEvent | PointerEvent<SVGSVGElement>): boolean => {
   if (!isWeb) {
     return true;
   }
@@ -305,9 +305,9 @@ function isPrimaryDrawPointer(event: GestureResponderEvent | PointerEvent<SVGSVG
     return false;
   }
   return true;
-}
+};
 
-function SignatureCanvasImpl({
+const SignatureCanvasImpl = ({
   id,
   hasLabel,
   value,
@@ -325,7 +325,7 @@ function SignatureCanvasImpl({
   clearIcon,
   required,
   hasError,
-}: SignatureCanvasProps) {
+}: SignatureCanvasProps) => {
   const hydrationTouch = useTouchSurface();
   const [strokes, setStrokes] = useState<Stroke[]>([]);
   const [currentStroke, setCurrentStroke] = useState<Stroke | null>(null);
@@ -651,7 +651,7 @@ function SignatureCanvasImpl({
       )}
     </SignaturePadFrame>
   );
-}
+};
 
 export interface SignatureProps {
   name?: string;
@@ -687,7 +687,7 @@ export interface SignatureProps {
   compact?: boolean;
 }
 
-export function Signature({
+export const Signature = ({
   name,
   form: formProp,
   validators,
@@ -711,7 +711,7 @@ export function Signature({
   clearIcon = defaultClearIcon,
   skeleton,
   compact,
-}: SignatureProps) {
+}: SignatureProps) => {
   const hydrationTouch = useTouchSurface();
   const { resolvedForm, knobProps, disabledState, id } = useFormField({
     form: formProp,
@@ -825,4 +825,4 @@ export function Signature({
       }}
     </Field>
   );
-}
+};

@@ -2,7 +2,7 @@
 
 import { Skeleton, XStack, YStack } from '@repo/ui';
 
-export default function WorkspaceLoading() {
+const WorkspaceLoading = () => {
   return (
     <YStack
       flex={1}
@@ -40,4 +40,6 @@ export default function WorkspaceLoading() {
       </XStack>
     </YStack>
   );
-}
+};
+
+export default WorkspaceLoading;

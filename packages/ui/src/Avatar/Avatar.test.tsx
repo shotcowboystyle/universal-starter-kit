@@ -183,7 +183,7 @@ describe('Avatar identity-shape declaration', () => {
 // happy-dom cannot cascade Tamagui's class CSS, so the resolved radius is
 // read off the atomic `_btlr-*` class the face emits — same technique as
 // Button.test.tsx. CIRCULAR-AT-FULL writes a px number, not a `$12` token.
-function squareFaceRadiusPx(container: HTMLElement): number | undefined {
+const squareFaceRadiusPx = (container: HTMLElement): number | undefined => {
   const el = container.querySelector('[data-avatar-px]');
   const token = String(el?.className || '')
     .split(' ')
@@ -197,7 +197,7 @@ function squareFaceRadiusPx(container: HTMLElement): number | undefined {
   }
   const bare = /^_btlr-(\d+(?:\.\d+)?)$/.exec(token);
   return bare ? Number(bare[1]) : undefined;
-}
+};
 
 describe('Avatar square face radius (CIRCULAR-AT-FULL)', () => {
   const STOPS = {

@@ -56,9 +56,9 @@ export interface NotifyRoute {
   dismissible: boolean;
 }
 
-function toastDuration(action?: NotifyAction): number | undefined {
+const toastDuration = (action?: NotifyAction): number | undefined => {
   return action ? TOAST_ACTION_MIN_MS : undefined;
-}
+};
 
 /**
  * Decide the feedback surface for a semantic event.
@@ -78,7 +78,7 @@ function toastDuration(action?: NotifyAction): number | undefined {
  *
  * Errors never route to an auto-dismissing toast.
  */
-export function routeNotify(event: NotifyEvent): NotifyRoute {
+export const routeNotify = (event: NotifyEvent): NotifyRoute => {
   const { severity, scope, blocking = false, action, title, body } = event;
   const toastIntent: NotifyToastIntent = severity === 'info' ? 'accent' : severity;
   const base = {
@@ -119,4 +119,4 @@ export function routeNotify(event: NotifyEvent): NotifyRoute {
     };
   }
   return { ...base, surface: 'alert', duration: 0 };
-}
+};

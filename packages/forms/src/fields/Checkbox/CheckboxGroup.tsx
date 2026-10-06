@@ -72,7 +72,7 @@ export interface CheckboxGroupProps {
   card?: boolean;
 }
 
-export function CheckboxGroup({
+export const CheckboxGroup = ({
   name,
   form: formProp,
   validators,
@@ -97,7 +97,7 @@ export function CheckboxGroup({
   skeleton,
   compact,
   card,
-}: CheckboxGroupProps) {
+}: CheckboxGroupProps) => {
   // Canonical `onChange` and the alias `onValueChange` both fire from the
   // single emit site below (same reconciliation as Switch).
   const handleValueChange = (newValues: string[]) => {
@@ -355,4 +355,4 @@ export function CheckboxGroup({
       </Field>
     </CheckboxGroupFlatContext.Provider>
   );
-}
+};

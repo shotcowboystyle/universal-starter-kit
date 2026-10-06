@@ -1,8 +1,8 @@
 import { animationNames } from '../animations/index';
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+const isRecord = (value: unknown): value is Record<string, unknown> => {
   return typeof value === 'object' && value !== null;
-}
+};
 
 /**
  * The animation names a Tamagui config registers, for the panel's Animation
@@ -11,7 +11,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * level down, on `driver.animations`. The driver's own members (`usePresence`,
  * `useAnimations`, `inputStyle`, ...) are API, not animations.
  */
-export function extractAnimationNames(tamaguiConfig: unknown): string[] {
+export const extractAnimationNames = (tamaguiConfig: unknown): string[] => {
   const driver = isRecord(tamaguiConfig) ? tamaguiConfig.animations : undefined;
   const named = isRecord(driver) ? driver.animations : undefined;
   if (isRecord(named)) {
@@ -21,4 +21,4 @@ export function extractAnimationNames(tamaguiConfig: unknown): string[] {
     }
   }
   return [...animationNames];
-}
+};

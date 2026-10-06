@@ -5,7 +5,7 @@ const logger = console;
 
 type StaticImageData = any;
 
-export function useAssets(modules: any | any[]): (StaticImageData | undefined)[] {
+export const useAssets = (modules: any | any[]): (StaticImageData | undefined)[] => {
   const modulesArr = (Array.isArray(modules) ? modules : [modules]).map((module: any) => {
     if (typeof module.default !== 'undefined') {
       return module.default;
@@ -24,4 +24,4 @@ export function useAssets(modules: any | any[]): (StaticImageData | undefined)[]
     src: asset.uri,
     width: asset.width!,
   }));
-}
+};

@@ -18,10 +18,10 @@ export interface PersistStore<TState> extends Store<TState> {
   clearPersistedState(): Promise<void>;
 }
 
-export function createPersistStore<TState>(
+export const createPersistStore = <TState>(
   initialState: TState,
   persistOptions: PersistOptions<TState>,
-): PersistStore<TState> {
+): PersistStore<TState> => {
   const { key, storage, serialize = JSON.stringify, deserialize = JSON.parse } = persistOptions;
 
   let hydrated = false;
@@ -57,4 +57,4 @@ export function createPersistStore<TState>(
   persistStore.clearPersistedState = clearPersistedState;
 
   return persistStore;
-}
+};

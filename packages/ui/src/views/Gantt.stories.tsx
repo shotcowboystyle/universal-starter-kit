@@ -97,7 +97,7 @@ export const MonthZoom = {
   },
 };
 
-function BarDragDemo() {
+const BarDragDemo = () => {
   const [dragTasks, setDragTasks] = useState<GanttTask[]>(tasks);
   const [lastMove, setLastMove] = useState<string | null>(null);
   return (
@@ -123,7 +123,7 @@ function BarDragDemo() {
       />
     </YStack>
   );
-}
+};
 
 export const BarDrag = {
   name: 'Bar Drag',
@@ -138,7 +138,7 @@ export const BarDrag = {
   },
 };
 
-function RTLDemo() {
+const RTLDemo = () => {
   const [rtlTasks, setRtlTasks] = useState<GanttTask[]>(tasks);
   // Scope the direction flip to this story's mount (the canvas iframe
   // document), restoring whatever was set before.
@@ -165,7 +165,7 @@ function RTLDemo() {
       height={420}
     />
   );
-}
+};
 
 export const RTL = {
   name: 'RTL',
@@ -214,7 +214,7 @@ export const StickyHeader = {
  * The track shape: open-ended spans, an era row carrying three of them, and a
  * marker the story owns and the axis handle scrubs.
  */
-function TrackViewDemo() {
+const TrackViewDemo = () => {
   const [asOf, setAsOf] = useState<Date>(day(0));
   const [tracks, setTracks] = useState<GanttTask[]>([
     {
@@ -265,7 +265,7 @@ function TrackViewDemo() {
       />
     </YStack>
   );
-}
+};
 
 export const TrackView = {
   name: 'Track View',

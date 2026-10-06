@@ -161,7 +161,7 @@ describe('Input', () => {
     });
 
     it.each(['onChange', 'onChangeText'] as const)('round-trips controlled edits through %s', (callback) => {
-      function ControlledInput() {
+      const ControlledInput = () => {
         const [value, setValue] = useState('corp');
         return (
           <Input
@@ -176,7 +176,7 @@ describe('Input', () => {
               : { onChangeText: setValue })}
           />
         );
-      }
+      };
       const result = renderWithProviders(<ControlledInput />);
       const input = result.container.querySelector('input') as HTMLInputElement;
       fireEvent.change(input, { target: { value: 'draft' } });
@@ -568,11 +568,11 @@ describe('Input', () => {
    * assertions read `_btlr-*` atoms (same as Button).
    */
   describe('design-law — DEFAULT radius, ring offset 0, label 400', () => {
-    function radiusClasses(el: HTMLElement | null): string[] {
+    const radiusClasses = (el: HTMLElement | null): string[] => {
       return String(el?.className || '')
         .split(' ')
         .filter((c) => c.startsWith('_btlr-'));
-    }
+    };
 
     it('declares radius DEFAULT class on the control box', () => {
       const result = renderWithProviders(

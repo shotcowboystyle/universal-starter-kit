@@ -22,7 +22,7 @@ import {
 import { useTask, useUpdateTask, useDeleteTask } from '@/hooks/use-tasks';
 import { useUsers } from '@/hooks/use-users';
 
-export default function TaskDetailScreen() {
+const TaskDetailScreen = () => {
   const { taskId } = useLocalSearchParams<{ taskId: string }>();
   const { t } = useTranslation();
   const theme = useTheme();
@@ -454,4 +454,6 @@ export default function TaskDetailScreen() {
       </Modal>
     </KeyboardAvoidingView>
   );
-}
+};
+
+export default TaskDetailScreen;

@@ -77,14 +77,14 @@ interface MultiDayGridProps {
   selectionCapped?: boolean;
 }
 
-function MultiDayGrid({
+const MultiDayGrid = ({
   calendarData,
   selectedDates,
   onToggleDate,
   minDate,
   maxDate,
   selectionCapped,
-}: MultiDayGridProps) {
+}: MultiDayGridProps) => {
   return (
     <CalendarDays
       calendarData={calendarData}
@@ -98,7 +98,7 @@ function MultiDayGrid({
       }}
     />
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // SingleCalendar — one month panel with header + day grid
@@ -117,7 +117,7 @@ interface SingleCalendarProps {
   showNext?: boolean;
 }
 
-function SingleCalendar({
+const SingleCalendar = ({
   displayDate,
   selectedDates,
   onToggleDate,
@@ -128,7 +128,7 @@ function SingleCalendar({
   selectionCapped,
   showPrev = true,
   showNext = true,
-}: SingleCalendarProps) {
+}: SingleCalendarProps) => {
   const [viewMode, setViewMode] = useState<ViewMode>('day');
   const calendarData = useCalendarData(displayDate);
   const [yearPageStart, setYearPageStart] = useState(() => calendarData.year - (calendarData.year % yearPageSize));
@@ -173,7 +173,7 @@ function SingleCalendar({
       </CalendarPanelFrame>
     </CalendarViewSwitcher>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // DualCalendarBody — side-by-side or single calendar depending on screen
@@ -190,7 +190,7 @@ interface DualCalendarBodyProps {
   selectionCapped?: boolean;
 }
 
-function DualCalendarBody({
+const DualCalendarBody = ({
   selectedDates,
   onToggleDate,
   displayDate,
@@ -199,7 +199,7 @@ function DualCalendarBody({
   minDate,
   maxDate,
   selectionCapped,
-}: DualCalendarBodyProps) {
+}: DualCalendarBodyProps) => {
   const { knobProps } = useResolvedKnobs();
   // v5 `sm` = minWidth 640 (`gtSm` died with the v5 media map):
   // dual-calendar layout exactly when the panel floats (OVERLAY_BREAKPOINT).
@@ -275,13 +275,13 @@ function DualCalendarBody({
       />
     </View>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // formatMultiDates — display value for multiple selected dates
 // ---------------------------------------------------------------------------
 
-function formatMultiDates(dates: Date[]): string {
+const formatMultiDates = (dates: Date[]): string => {
   if (dates.length === 0) {
     return '';
   }
@@ -292,7 +292,7 @@ function formatMultiDates(dates: Date[]): string {
     return formatAbsoluteDate(dates[0], { year: 'always' });
   }
   return dates.map((d) => formatAbsoluteDate(d)).join(', ');
-}
+};
 
 // ---------------------------------------------------------------------------
 // MultiDatePicker — main component
@@ -302,13 +302,15 @@ function formatMultiDates(dates: Date[]): string {
 // default isEmpty only catches null/"" and would let `[]` pass validation.
 const isEmptyDates = (value: unknown) => value == null || value === '' || (Array.isArray(value) && value.length === 0);
 
-export function MultiDatePicker<
+export const MultiDatePicker = <
   TParentData,
   TName extends DeepKeys<TParentData>,
   TFieldValidator extends Validator<DeepValue<TParentData, TName>> | undefined = undefined,
   TFormValidator extends Validator<TParentData> | undefined = undefined,
   TData extends DeepValue<TParentData, TName> = DeepValue<TParentData, TName>,
->(props: MultiDatePickerProps<TParentData, TName, TFieldValidator, TFormValidator, TData>) {
+>(
+  props: MultiDatePickerProps<TParentData, TName, TFieldValidator, TFormValidator, TData>,
+) => {
   const hydrationTouch = useTouchSurface();
   const {
     defaultValue,
@@ -580,4 +582,4 @@ export function MultiDatePicker<
       }}
     </Field>
   );
-}
+};

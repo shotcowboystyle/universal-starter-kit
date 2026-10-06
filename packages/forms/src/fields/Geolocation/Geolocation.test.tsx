@@ -22,33 +22,33 @@ const mannerheim: GeocodeResult = {
   description: 'Kamppi, Helsinki, Finland',
 };
 
-function mockGeocode(results: GeocodeResult[] = [mannerheim]) {
+const mockGeocode = (results: GeocodeResult[] = [mannerheim]) => {
   return vi.fn().mockResolvedValue(results);
-}
+};
 
-function mockReverse(result: GeocodeResult | null = mannerheim) {
+const mockReverse = (result: GeocodeResult | null = mannerheim) => {
   return vi.fn().mockResolvedValue(result);
-}
+};
 
-function searchInput(container: HTMLElement | Document = document) {
+const searchInput = (container: HTMLElement | Document = document) => {
   return (container.querySelector("[data-testid='geolocation-search']") ??
     container.querySelector("[aria-label='Search for a location']")) as HTMLInputElement | null;
-}
+};
 
 const mapControlSelector =
   "button, input, textarea, select, [role='button'], [role='combobox'], [role='option'], [tabindex]";
 
-function mapControls(container: HTMLElement): Element[] {
+const mapControls = (container: HTMLElement): Element[] => {
   const map = container.querySelector("[data-testid='geolocation-map']");
   expect(map).not.toBeNull();
   return [...(map as HTMLElement).querySelectorAll(mapControlSelector)];
-}
+};
 
-function typeSearch(container: HTMLElement, text: string) {
+const typeSearch = (container: HTMLElement, text: string) => {
   const input = searchInput(container);
   expect(input).not.toBeNull();
   fireEvent.change(input as HTMLInputElement, { target: { value: text } });
-}
+};
 
 /**
  * Recorded stock-Frappe Geolocation value: what
@@ -72,7 +72,7 @@ const stockFrappePoint = JSON.stringify({
  * and the desk field renders empty. A FeatureCollection with a Point is what
  * survives a round trip through both clients.
  */
-function frappeGeoJsonReads(value: string): { lat: number; lng: number } | null {
+const frappeGeoJsonReads = (value: string): { lat: number; lng: number } | null => {
   let parsed: unknown;
   try {
     parsed = JSON.parse(value);
@@ -104,7 +104,7 @@ function frappeGeoJsonReads(value: string): { lat: number; lng: number } | null 
     return { lat, lng };
   }
   return null;
-}
+};
 
 describe('Geolocation', () => {
   describe('without form context', () => {

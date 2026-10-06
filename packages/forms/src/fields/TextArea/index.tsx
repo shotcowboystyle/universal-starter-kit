@@ -59,7 +59,7 @@ export interface TextAreaProps {
   compact?: boolean;
 }
 
-export function TextArea({
+export const TextArea = ({
   name,
   form: formProp,
   validators,
@@ -90,7 +90,7 @@ export function TextArea({
   renderOverlay,
   skeleton,
   compact,
-}: TextAreaProps) {
+}: TextAreaProps) => {
   const hydrationTouch = useTouchSurface();
   const { resolvedForm, knobProps, id } = useFormField({ form: formProp, id: idProp, compact });
   const resolvedValidators = useResolvedValidators(required, validators, label, name);
@@ -388,4 +388,4 @@ export function TextArea({
       }}
     </Field>
   );
-}
+};

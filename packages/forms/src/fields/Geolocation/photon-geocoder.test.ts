@@ -58,12 +58,12 @@ const kamppiReverse = {
   ],
 };
 
-function jsonResponse(body: unknown, status = 200): Response {
+const jsonResponse = (body: unknown, status = 200): Response => {
   return new Response(JSON.stringify(body), {
     status,
     headers: { 'Content-Type': 'application/json' },
   });
-}
+};
 
 describe('createPhotonGeocoder', () => {
   it('searches the public instance and maps features to place rows', async () => {

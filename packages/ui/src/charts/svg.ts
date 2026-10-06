@@ -60,7 +60,7 @@ export interface ChartProofDeclaration {
   datumValues?: [string, string][];
 }
 
-export function chartRootA11yProps(label: string, proof?: ChartProofDeclaration): Record<string, unknown> {
+export const chartRootA11yProps = (label: string, proof?: ChartProofDeclaration): Record<string, unknown> => {
   if (isWeb) {
     return {
       role: 'img',
@@ -77,40 +77,40 @@ export function chartRootA11yProps(label: string, proof?: ChartProofDeclaration)
     };
   }
   return { accessible: true, accessibilityRole: 'image', accessibilityLabel: label };
-}
+};
 
 /** Audit declarations carry no paint and are never sent to native SVG. */
-export function chartMarkProps(label: string): Record<string, unknown> {
+export const chartMarkProps = (label: string): Record<string, unknown> => {
   return isWeb ? { 'data-mpo-chart-mark': label } : {};
-}
+};
 
 /** A bar mark's box and value-end radius, for audits that cannot read a path. */
-export function chartBarProps(box: {
+export const chartBarProps = (box: {
   x: number;
   y: number;
   width: number;
   height: number;
   radius: number;
-}): Record<string, unknown> {
+}): Record<string, unknown> => {
   return isWeb ? { 'data-mpo-chart-bar': [box.x, box.y, box.width, box.height, box.radius].join(',') } : {};
-}
+};
 
-export function chartChromeProps(kind: 'axis' | 'grid'): Record<string, unknown> {
+export const chartChromeProps = (kind: 'axis' | 'grid'): Record<string, unknown> => {
   return isWeb ? { 'data-mpo-chart-chrome': kind } : {};
-}
+};
 
-export function chartDatumTextProps(index: number): Record<string, unknown> {
+export const chartDatumTextProps = (index: number): Record<string, unknown> => {
   return isWeb ? { 'data-mpo-chart-datum-text': String(index) } : {};
-}
+};
 
-export function chartWebProps(props: Record<string, unknown>): Record<string, unknown> {
+export const chartWebProps = (props: Record<string, unknown>): Record<string, unknown> => {
   return isWeb ? props : {};
-}
+};
 
 /** SVG's web presentation attribute and RNSVG's explicit native prop. */
-export function luminanceMaskProps(): Record<string, unknown> {
+export const luminanceMaskProps = (): Record<string, unknown> => {
   return isWeb ? { 'mask-type': 'luminance' } : { maskType: 'luminance' };
-}
+};
 
 export interface DatumTargetInput {
   /** Per-datum accessible name (describeDatum output). */
@@ -125,7 +125,7 @@ export interface DatumTargetInput {
  * Web: click + mouse hover on the DOM node. Native: RNSVG press responder
  * (pressIn/pressOut stand in for hover — tooltip-on-touch semantics).
  */
-export function datumTargetProps(input: DatumTargetInput): Record<string, unknown> {
+export const datumTargetProps = (input: DatumTargetInput): Record<string, unknown> => {
   const interactive = Boolean(input.onPress || input.onHoverIn || input.onHoverOut);
   if (isWeb) {
     return {
@@ -142,4 +142,4 @@ export function datumTargetProps(input: DatumTargetInput): Record<string, unknow
     ...(input.onHoverIn ? { onPressIn: input.onHoverIn } : {}),
     ...(input.onHoverOut ? { onPressOut: input.onHoverOut } : {}),
   };
-}
+};

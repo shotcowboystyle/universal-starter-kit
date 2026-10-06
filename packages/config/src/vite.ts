@@ -166,6 +166,571 @@ export interface CreateViteConfigOptions {
   };
 }
 
+const findProjectRoot = (): string => {
+  try {
+    const { execSync } = require('node:child_process');
+    return execSync('git rev-parse --show-toplevel', { encoding: 'utf-8' }).trim();
+  } catch {
+    return process.cwd();
+  }
+};
+
+/**
+ * package.json `exports` cannot branch on whether `dist/` exists. For workspace
+ * packages, prefer `dist/esm/index.{mjs,js}` when built; otherwise fall back to
+ * `src/index.ts` so local dev works without a build while published tarballs
+ * still resolve through `exports` to `dist`.
+ */
+const preferBuiltWorkspaceEntryPlugin = (): Plugin => {
+  const roots = discoverPublicPackageRoots(findProjectRoot());
+
+  return {
+    name: 'multiplatform-prefer-built-workspace-main',
+    enforce: 'pre',
+    resolveId(id) {
+      const root = roots.get(id);
+      if (!root) {
+        return null;
+      }
+      const distCandidates = [path.join(root, 'dist/esm/index.mjs'), path.join(root, 'dist/esm/index.js')];
+      for (const file of distCandidates) {
+        if (fs.existsSync(file)) {
+          return file;
+        }
+      }
+      const srcTs = path.join(root, 'src/index.ts');
+      if (fs.existsSync(srcTs)) {
+        return srcTs;
+      }
+      const srcTsx = path.join(root, 'src/index.tsx');
+      if (fs.existsSync(srcTsx)) {
+        return srcTsx;
+      }
+
+      // Vendored packages (e.g. keycloak-js) have no src/ — resolve via
+      // package.json exports/main so the dep scanner doesn't fail.
+      const pkgJsonPath = path.join(root, 'package.json');
+      if (fs.existsSync(pkgJsonPath)) {
+        try {
+          const pkg = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf-8'));
+          const entry = pkg.exports?.['.']?.import || pkg.exports?.['.']?.default || pkg.main || pkg.module;
+          if (entry) {
+            const resolved = path.resolve(root, entry);
+            if (fs.existsSync(resolved)) {
+              return resolved;
+            }
+          }
+        } catch {
+          /* ignore */
+        }
+      }
+      return null;
+    },
+  };
+};
+
+/**
+ * Aliases react-native to react-native-web in the SSR environment.
+ *
+ * @react-navigation/native statically imports react-native, which causes
+ * Rolldown's dep optimizer to load react-native/index.js — a file that contains
+ * Flow-only syntax (`import typeof`, `as Type`) that Rolldown cannot parse.
+ * Aliasing to react-native-web redirects those imports to the web-safe shim,
+ * so the real react-native package is never touched during SSR bundling.
+ */
+const ssrReactNativeAliasPlugin = (): Plugin => {
+  return {
+    name: 'multiplatform-ssr-react-native-alias',
+    enforce: 'post',
+    configResolved(config) {
+      const ssrEnv = (config as any).environments?.ssr;
+      if (!ssrEnv?.resolve) {
+        return;
+      }
+      const alias: { find: string | RegExp; replacement: string }[] = ssrEnv.resolve.alias ?? [];
+      if (!alias.some((a: any) => a.find === 'react-native')) {
+        alias.push({ find: 'react-native', replacement: 'react-native-web' });
+      }
+      ssrEnv.resolve.alias = alias;
+    },
+  };
+};
+
+/**
+ * Adds packages that have broken or missing ESM default exports to the client
+ * environments pre-bundle. Rolldown resolves them via their "import" condition
+ * and generates a proper ESM chunk with synthetic interop default export.
+ *
+ * use-latest-callback: type=commonjs, exports.import → esm.mjs, but vxrn's
+ * client conditions (["vxrn-web"]) skip "import" and land on "default" →
+ * lib/src/index.js (CJS, named-only). Pre-bundling forces the import condition.
+ */
+const clientBrokenEsmPlugin = (): Plugin => {
+  return {
+    name: 'multiplatform-client-broken-esm',
+    configResolved(config) {
+      const clientEnv = (config as any).environments?.client;
+      if (!clientEnv?.optimizeDeps) {
+        return;
+      }
+      const extras = [
+        'use-latest-callback',
+        // CJS packages in vxrn's dedupe list that are not auto-added to the
+        // client environment optimizer, causing "doesn't provide an export
+        // named 'default'" errors when served raw by Vite.
+        'escape-string-regexp',
+        // Pure CJS with no "import" condition — subpath must be pre-bundled
+        // explicitly so named exports (useSyncExternalStoreWithSelector) exist.
+        // Root entry is SSR-external (Node handles it); client needs pre-bundle.
+        'use-sync-external-store/with-selector',
+        // @react-navigation/core ships a nested node_modules/react-is (CJS).
+        // resolve.dedupe forces the root copy to be used; pre-bundling it here
+        // adds ESM interop so named exports like isValidElementType are available.
+        'react-is',
+        // CJS-only packages imported by @react-navigation/* TypeScript source.
+        // When the client loads @react-navigation/* via the "source" condition
+        // (TypeScript), these transitive CJS deps get served raw and lack ESM
+        // named exports. Pre-bundling generates the ESM interop wrappers.
+        'fast-deep-equal',
+        'color',
+        // query-string v7 is CJS-only; imported by @react-navigation/core for URL parsing.
+        'query-string',
+        // react's JSX runtimes are CJS with no "import" condition, so a deep
+        // import of a @repo/* src .tsx served raw fails with
+        // "does not provide an export named 'jsx'".
+        'react/jsx-runtime',
+        'react/jsx-dev-runtime',
+        // Vite never discovers a dep imported from a file inside
+        // node_modules; it serves it raw. A consumer's deep import of a
+        // @repo/* src file sits in node_modules, so its bare
+        // "tamagui" import went raw and dragged react-native-web in raw, whose
+        // CJS deps (@react-native/normalize-colors, inline-style-prefixer/lib)
+        // have no ESM default. The barrel path never meets it.
+        'tamagui',
+      ];
+      const include: string[] = clientEnv.optimizeDeps.include ?? [];
+      for (const dep of extras) {
+        if (!include.includes(dep)) {
+          include.push(dep);
+        }
+      }
+      clientEnv.optimizeDeps.include = include;
+    },
+  };
+};
+
+const registerNativeEngineIoBrowserTransports = (): void => {
+  const g = globalThis as unknown as { __vxrnAddNativePlugins?: unknown[] };
+  const name = 'vxrn-engineio-browser-transports';
+  g.__vxrnAddNativePlugins = g.__vxrnAddNativePlugins ?? [];
+  if (g.__vxrnAddNativePlugins.some((p) => (p as { name?: string })?.name === name)) {
+    return;
+  }
+  g.__vxrnAddNativePlugins.push({
+    name,
+    async resolveId(
+      this: { resolve: (id: string, importer: string, opts: { skipSelf: boolean }) => unknown },
+      id: string,
+      importer?: string,
+    ) {
+      if (importer && /engine\.io-client[\\/]build[\\/]/.test(importer) && id.endsWith('.node.js')) {
+        return this.resolve(`${id.slice(0, -'.node.js'.length)}.js`, importer, { skipSelf: true });
+      }
+      return null;
+    },
+  });
+};
+
+/**
+ * Adds engine.io-client's `browser`-field transport redirect to vxrn's NATIVE
+ * rolldown pipeline via its `globalThis.__vxrnAddNativePlugins` hook.
+ *
+ * socket.io-client -> engine.io-client/index.js statically imports its Node
+ * transports (`./globals.node.js`, `./transports/{websocket,polling-xhr}.node.js`),
+ * which pull `ws` + `xmlhttprequest-ssl` + Node globals. Those `.node` files also
+ * contain raw ESM `import` syntax that Hermes can't even COMPILE, so the native
+ * bundle dies at boot. engine.io's own `package.json` `browser` field already
+ * redirects each `*.node.js` to a browser sibling that uses the global
+ * `WebSocket` / `XMLHttpRequest` React Native provides — but vxrn's native
+ * resolver omits the `browser` aliasField (and its rolldown binding doesn't even
+ * support `aliasFields`). vxrn's native dev engine ignores the Vite config's
+ * `resolve.alias`/`resolveId` too — BUT it DOES read `globalThis.__vxrnAddNativePlugins`
+ * inside `getNativePlugins`, so a `resolveId` registered there runs on native.
+ * This re-asserts the browser redirect with no node_modules patch. Web is
+ * unaffected (engine.io is SSR-externalized and the web client already maps `browser`).
+ */
+/**
+ * Collapse duplicate PHYSICAL copies of the same package@version to one path
+ * in the NATIVE graph, so React (and every other stateful singleton) exists
+ * exactly once in the Hermes bundle.
+ *
+ * The workspace's node_modules is a MIXED install. `.npmrc` says
+ * `node-linker=hoisted`, so the root `node_modules/<pkg>` entries are real
+ * directories; but an earlier isolated install left a `node_modules/.pnpm`
+ * virtual store plus per-package symlink farms behind — e.g. each package's
+ * own `node_modules/react` still points at
+ * `../../../node_modules/.pnpm/react@19.2.5/node_modules/react`.
+ * Both trees are fully populated with byte-identical copies, and which one an
+ * importer reaches depends only on where that importer sits on disk:
+ *
+ *   apps/<app>/app     -> node_modules/.pnpm/react@19.2.5/node_modules/react
+ *   packages/forms/src -> node_modules/react            (no local symlink)
+ *
+ * Rolldown resolves symlinks, so the two land as two DIFFERENT absolute paths
+ * and it bundles both. React 19's `useContext` is
+ * `ReactSharedInternals.H.useContext(Context)` — `H` is the dispatcher the
+ * renderer installs during render, and it is only ever set on the copy the
+ * renderer imported. A component from the other copy therefore reads `H` as
+ * null and the app dies with "Cannot read property 'useContext' of null".
+ * That is the whole bug; the same split had also duplicated react-native (427
+ * modules each), @tamagui/web, @react-navigation/core, one, scheduler and 58
+ * more packages.
+ *
+ * The rule: an id that resolves inside the virtual store is rewritten to the
+ * hoisted root copy when the root copy exists, carries the SAME version, and
+ * actually has the file. Version equality is the safety guard — genuine
+ * multi-version installs (two @babel/runtime, two viem) keep both copies.
+ *
+ * On a correctly installed tree this is a no-op by construction: `hoisted`
+ * leaves no `.pnpm` store to match, and `isolated` makes the root entry a
+ * symlink INTO the store, which realpaths back to the same directory (checked
+ * explicitly). It only fires on the mixed tree, and it is cheap because only
+ * BARE specifiers are inspected — once a package's entry is canonical, its own
+ * relative imports resolve inside the canonical copy for free.
+ */
+const registerNativeSinglePackageInstances = (): void => {
+  const g = globalThis as unknown as { __vxrnAddNativePlugins?: unknown[] };
+  const name = 'vxrn-single-package-instances';
+  g.__vxrnAddNativePlugins = g.__vxrnAddNativePlugins ?? [];
+  if (g.__vxrnAddNativePlugins.some((p) => (p as { name?: string })?.name === name)) {
+    return;
+  }
+
+  const rootModules = path.join(findProjectRoot(), 'node_modules');
+  // <...>/node_modules/.pnpm/<pkg>@<ver>_<peerhash>/node_modules/<name>[/<rest>]
+  const storePath =
+    /[\\/]node_modules[\\/]\.pnpm[\\/][^\\/]+[\\/]node_modules[\\/]((?:@[^\\/]+[\\/])?[^\\/]+)(?:[\\/](.*))?$/;
+
+  const versionOf = (dir: string): string | null => {
+    try {
+      const raw = fs.readFileSync(path.join(dir, 'package.json'), 'utf-8');
+      return (JSON.parse(raw) as { version?: string }).version ?? null;
+    } catch {
+      return null;
+    }
+  };
+
+  // package name -> hoisted root dir that is a safe stand-in, or null
+  const hoisted = new Map<string, string | null>();
+  const hoistedTwin = (pkg: string, storeDir: string): string | null => {
+    if (!hoisted.has(pkg)) {
+      const rootDir = path.join(rootModules, pkg);
+      let twin: string | null = null;
+      if (fs.existsSync(rootDir)) {
+        const rootVersion = versionOf(rootDir);
+        const storeVersion = versionOf(storeDir);
+        // Same package, same version => identical library code, and the two
+        // dirs are genuinely distinct (not one symlinked onto the other).
+        if (rootVersion && rootVersion === storeVersion) {
+          try {
+            if (fs.realpathSync(rootDir) !== fs.realpathSync(storeDir)) {
+              twin = rootDir;
+            }
+          } catch {
+            twin = null;
+          }
+        }
+      }
+      hoisted.set(pkg, twin);
+    }
+    return hoisted.get(pkg) ?? null;
+  };
+
+  const seen = new Map<string, string | null>();
+
+  g.__vxrnAddNativePlugins.push({
+    name,
+    async resolveId(
+      this: {
+        resolve: (
+          id: string,
+          importer: string | undefined,
+          opts: { skipSelf: boolean },
+        ) => Promise<{ id: string; external?: boolean | string } | null>;
+      },
+      id: string,
+      importer?: string,
+    ): Promise<string | null> {
+      // Bare specifiers only: a package entry. Relative/absolute ids inside an
+      // already-canonical package resolve within that copy on their own.
+      if (!id || id.startsWith('.') || id.startsWith('/') || id.startsWith('\0')) {
+        return null;
+      }
+      const key = `${id} ${importer ?? ''}`;
+      const cached = seen.get(key);
+      if (cached !== undefined) {
+        return cached;
+      }
+
+      let out: string | null = null;
+      try {
+        const resolved = await this.resolve(id, importer, { skipSelf: true });
+        const match = resolved?.external ? null : resolved?.id?.match(storePath);
+        if (resolved && match) {
+          const pkg = match[1].split(path.sep).join('/');
+          const rest = match[2] ?? '';
+          const storeDir = resolved.id.slice(0, resolved.id.length - (rest ? rest.length + 1 : 0));
+          const twin = hoistedTwin(pkg, storeDir);
+          if (twin) {
+            const candidate = rest ? path.join(twin, rest) : twin;
+            if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+              out = candidate;
+            }
+          }
+        }
+      } catch {
+        out = null;
+      }
+      seen.set(key, out);
+      return out;
+    },
+  });
+};
+
+/**
+ * Routes workspace (`@repo/*`) packages to their `dist/esm/index.native.js`
+ * build on NATIVE, via vxrn's `globalThis.__vxrnAddNativePlugins` hook.
+ *
+ * Why this is needed: `preferBuiltWorkspaceEntryPlugin` (a Vite plugin, web/SSR only)
+ * hard-resolves every workspace bare specifier to `<root>/dist/esm/index.mjs` — the WEB
+ * build — bypassing the package.json `exports` `react-native` condition. That web
+ * resolution propagates into vxrn's native graph (the native engine receives no Vite
+ * userPlugins, so it cannot be made native-aware there), pinning the entire workspace
+ * chain to web on native and dragging web-only deps (@tiptap, prosemirror, html5-qrcode,
+ * @mixmark-io/domino, …) into Hermes. Each affected package ships a `dist/esm/index.native.js`
+ * (built by tamagui-build, intra-package imports already rewritten to their `.native`
+ * siblings). This resolveId matches both forms — the bare specifier and the already-resolved
+ * `…/dist/esm/index.mjs` path — and redirects to the native sibling when it exists, so the
+ * react-native build wins on native. Web/SSR are unaffected (this plugin runs ONLY on native).
+ */
+const registerNativeWorkspaceEntries = (): void => {
+  const g = globalThis as unknown as { __vxrnAddNativePlugins?: unknown[] };
+  const name = 'vxrn-workspace-native-entries';
+  g.__vxrnAddNativePlugins = g.__vxrnAddNativePlugins ?? [];
+  if (g.__vxrnAddNativePlugins.some((p) => (p as { name?: string })?.name === name)) {
+    return;
+  }
+  let roots: Map<string, string>;
+  try {
+    roots = discoverPublicPackageRoots(findProjectRoot());
+  } catch {
+    roots = new Map();
+  }
+  g.__vxrnAddNativePlugins.push({
+    name,
+    resolveId(id: string): string | null {
+      // (a) bare workspace specifier (e.g. "@repo/ui")
+      const root = roots.get(id);
+      if (root) {
+        // Prefer the built native entry when present (tamagui-build already
+        // rewrote intra-package imports to their `.native` siblings).
+        const nativeEntry = path.join(root, 'dist/esm/index.native.js');
+        if (fs.existsSync(nativeEntry)) {
+          return nativeEntry;
+        }
+        // Unbuilt workspace package: compile from source instead of letting
+        // rolldown leave the bare specifier external — Hermes has no module
+        // mode, so a surviving top-level `import` is unparseable. Mirrors
+        // preferBuiltWorkspaceEntryPlugin (web) and apps/storybook-expo's
+        // Metro resolveWorkspaceNativeMain. vxrn's native resolver already
+        // does platform-extension resolution (.native.tsx/.ios.tsx/…).
+        const srcTs = path.join(root, 'src/index.ts');
+        if (fs.existsSync(srcTs)) {
+          return srcTs;
+        }
+        const srcTsx = path.join(root, 'src/index.tsx');
+        if (fs.existsSync(srcTsx)) {
+          return srcTsx;
+        }
+        return null;
+      }
+      // (b) already-resolved web entry "<...>/dist/esm/index.mjs" -> ".native.js" sibling
+      if (id.endsWith('/dist/esm/index.mjs')) {
+        const nativeEntry = `${id.slice(0, -'.mjs'.length)}.native.js`;
+        if (fs.existsSync(nativeEntry)) {
+          return nativeEntry;
+        }
+      }
+      return null;
+    },
+  });
+};
+
+/**
+ * Resolve `@phosphor-icons/react` to `phosphor-react-native` in the NATIVE
+ * graph only. The web package renders DOM `<svg>`/`<path>` and crashes Hermes
+ * the moment any icon mounts; the RN package draws the same icon set through
+ * react-native-svg and (as of v3) exports identical `*Icon`-suffixed names,
+ * so app/library source needs no platform splits. Skipped (with a warning)
+ * when phosphor-react-native isn't installed in the consuming project.
+ */
+const registerNativePhosphorIcons = (): void => {
+  const g = globalThis as unknown as { __vxrnAddNativePlugins?: unknown[] };
+  const name = 'vxrn-phosphor-native-icons';
+  g.__vxrnAddNativePlugins = g.__vxrnAddNativePlugins ?? [];
+  if (g.__vxrnAddNativePlugins.some((p) => (p as { name?: string })?.name === name)) {
+    return;
+  }
+  let nativeEntry: string | null = null;
+  try {
+    // The package's exports map doesn't expose "./package.json", so resolve
+    // the entry itself (require condition -> lib/commonjs/index.js) and swap
+    // to the ESM build; the icons import react-native-svg.
+    const cjsEntry = require.resolve('phosphor-react-native', {
+      paths: [findProjectRoot(), process.cwd()],
+    });
+    const esmEntry = cjsEntry.replace(
+      `${path.sep}lib${path.sep}commonjs${path.sep}`,
+      `${path.sep}lib${path.sep}module${path.sep}`,
+    );
+    nativeEntry = fs.existsSync(esmEntry) ? esmEntry : cjsEntry;
+  } catch {
+    nativeEntry = null;
+  }
+  g.__vxrnAddNativePlugins.push({
+    name,
+    resolveId(id: string): string | null {
+      if (id !== '@phosphor-icons/react') {
+        return null;
+      }
+      if (!nativeEntry) {
+        console.warn(
+          '[config] @phosphor-icons/react imported in the native graph but ' +
+            'phosphor-react-native is not installed — icons will crash Hermes. ' +
+            'Add phosphor-react-native to your app dependencies.',
+        );
+        return null;
+      }
+      return nativeEntry;
+    },
+  });
+};
+
+/**
+ * Restore Object.prototype methods shadowed by hoisted globals on NATIVE.
+ *
+ * vxrn's rolldown native mode emits the whole dev bundle as ONE classic
+ * script and forces Hermes V1. Hermes V1 implements spec-compliant global
+ * var hoisting, so a flattened module's top-level `var hasOwnProperty`
+ * (e.g. acorn via an mdx pipeline) creates
+ * `globalThis.hasOwnProperty = undefined` at parse time, shadowing
+ * Object.prototype.hasOwnProperty for the entire runtime. React Native core
+ * calls `global.hasOwnProperty()` during boot (FuseboxSessionObserver) and
+ * dies with "undefined is not a function". Prepend a snippet that copies any
+ * Object.prototype method back over an undefined shadowing own-property
+ * before any module code runs — the shadowed vars are reassigned by their
+ * own modules on init, so this only bridges the parse-to-init window.
+ * Registered through globalThis.__vxrnAddNativePlugins (vxrn's native engine
+ * ignores vite resolve/config). Web/SSR bundles are ESM (module-scoped vars)
+ * and unaffected.
+ */
+const registerNativeProtoShadowFix = (): void => {
+  const g = globalThis as unknown as { __vxrnAddNativePlugins?: unknown[] };
+  const name = 'vxrn-proto-shadow-fix';
+  g.__vxrnAddNativePlugins = g.__vxrnAddNativePlugins ?? [];
+  if (g.__vxrnAddNativePlugins.some((p) => (p as { name?: string })?.name === name)) {
+    return;
+  }
+  const snippet =
+    `(function(){var p=Object.prototype,h=p.hasOwnProperty,ns=Object.getOwnPropertyNames(p);` +
+    `for(var i=0;i<ns.length;i++){var k=ns[i];` +
+    `if(typeof p[k]==="function"&&globalThis[k]===void 0&&h.call(globalThis,k)){` +
+    `try{globalThis[k]=p[k]}catch(e){}}}})();`;
+  g.__vxrnAddNativePlugins.push({
+    name,
+    renderChunk(code: string) {
+      return { code: `${snippet}\n${code}`, map: null };
+    },
+  });
+};
+
+/**
+ * Redirect the OPTIONAL `@multiplatform.one/web3` native import to a no-op
+ * shim on NATIVE when the package is not installed (see the nativeFixes
+ * option docs). Rolldown leaves the unresolvable specifier as a bare dynamic
+ * `import()` in the classic-script native bundle — Hermes rejects that at
+ * lazy-compile time ("SyntaxError: Invalid expression encountered"), killing
+ * the root _layout route. Web/SSR resolve the same specifier through vite's
+ * normal pipeline and are unaffected.
+ */
+const registerNativeWeb3Stub = (): void => {
+  const g = globalThis as unknown as { __vxrnAddNativePlugins?: unknown[] };
+  const name = 'vxrn-web3-stub';
+  g.__vxrnAddNativePlugins = g.__vxrnAddNativePlugins ?? [];
+  if (g.__vxrnAddNativePlugins.some((p) => (p as { name?: string })?.name === name)) {
+    return;
+  }
+  try {
+    // web3 installed — its real native entry resolves; no stub needed.
+    require.resolve('@multiplatform.one/web3', { paths: [findProjectRoot(), process.cwd()] });
+    return;
+  } catch {
+    // not installed — stub below
+  }
+  // The shim ships as plain JS (vxrn does not transform node_modules TS).
+  // Resolve it relative to this module: `src/shims/` when running from
+  // source, `../src/shims/` from the built `lib/` bundle (src ships in the
+  // published tarball).
+  const here = path.dirname(new URL(import.meta.url).pathname);
+  const shim = [
+    path.resolve(here, 'shims/web3-stub.native.js'),
+    path.resolve(here, '../src/shims/web3-stub.native.js'),
+  ].find((candidate) => fs.existsSync(candidate));
+  if (!shim) {
+    return;
+  }
+  g.__vxrnAddNativePlugins.push({
+    name,
+    resolveId(id: string) {
+      if (id === '@multiplatform.one/web3/native' || id === '@multiplatform.one/web3') {
+        return shim;
+      }
+      return null;
+    },
+  });
+};
+
+const requiresReact = (id: string): boolean => {
+  return id === 'use-sync-external-store' || id.startsWith('use-sync-external-store/');
+};
+
+/**
+ * Force-append CJS-only ids to `ssr.external`. The one() plugin REPLACES
+ * ssr.external with its own list during the config hook, dropping anything
+ * set statically by createViteConfig — configResolved runs after all config
+ * hooks are merged, so appends here survive.
+ */
+const ssrCjsExternalFixPlugin = (extras: string[]): Plugin => {
+  return {
+    name: 'multiplatform-ssr-cjs-external-fix',
+    configResolved(config) {
+      const external = config.ssr.external ?? [];
+      if (!Array.isArray(external)) {
+        return;
+      } // true = everything external already
+      for (const e of extras) {
+        if (config.command === 'build' && requiresReact(e)) {
+          continue;
+        }
+        if (!external.includes(e)) {
+          external.push(e);
+        }
+      }
+      (config.ssr as { external?: string[] | boolean }).external = external;
+    },
+  };
+};
+
 /**
  * Creates a shared Vite configuration for workspace apps.
  *
@@ -187,7 +752,7 @@ export interface CreateViteConfigOptions {
  * });
  * ```
  */
-export function createViteConfig(options: CreateViteConfigOptions = {}): UserConfig {
+export const createViteConfig = (options: CreateViteConfigOptions = {}): UserConfig => {
   // See tamaguiWorkspacePaths.ts; the tsconfig chain must resolve
   // before vite (and tamagui's esbuild) read compilerOptions.paths.
   ensureTamaguiWorkspacePaths();
@@ -509,348 +1074,11 @@ export function createViteConfig(options: CreateViteConfigOptions = {}): UserCon
     envPrefix: ['VITE_', 'TAURI_ENV_'],
     plugins: vitePlugins,
   } satisfies UserConfig;
-}
+};
 
 export { discoverPublicPackageRoots, publicPackageViteSourceAliases } from './workspace-public-packages.ts';
 export { publicConfigPlugin, readPublicConfigKeys, type PublicConfigPluginOptions } from './public-config.ts';
 export { phosphorTokenColorPlugin } from './phosphor-token-color.ts';
-
-/**
- * Aliases react-native to react-native-web in the SSR environment.
- *
- * @react-navigation/native statically imports react-native, which causes
- * Rolldown's dep optimizer to load react-native/index.js — a file that contains
- * Flow-only syntax (`import typeof`, `as Type`) that Rolldown cannot parse.
- * Aliasing to react-native-web redirects those imports to the web-safe shim,
- * so the real react-native package is never touched during SSR bundling.
- */
-function ssrReactNativeAliasPlugin(): Plugin {
-  return {
-    name: 'multiplatform-ssr-react-native-alias',
-    enforce: 'post',
-    configResolved(config) {
-      const ssrEnv = (config as any).environments?.ssr;
-      if (!ssrEnv?.resolve) {
-        return;
-      }
-      const alias: { find: string | RegExp; replacement: string }[] = ssrEnv.resolve.alias ?? [];
-      if (!alias.some((a: any) => a.find === 'react-native')) {
-        alias.push({ find: 'react-native', replacement: 'react-native-web' });
-      }
-      ssrEnv.resolve.alias = alias;
-    },
-  };
-}
-
-/**
- * Adds packages that have broken or missing ESM default exports to the client
- * environments pre-bundle. Rolldown resolves them via their "import" condition
- * and generates a proper ESM chunk with synthetic interop default export.
- *
- * use-latest-callback: type=commonjs, exports.import → esm.mjs, but vxrn's
- * client conditions (["vxrn-web"]) skip "import" and land on "default" →
- * lib/src/index.js (CJS, named-only). Pre-bundling forces the import condition.
- */
-function clientBrokenEsmPlugin(): Plugin {
-  return {
-    name: 'multiplatform-client-broken-esm',
-    configResolved(config) {
-      const clientEnv = (config as any).environments?.client;
-      if (!clientEnv?.optimizeDeps) {
-        return;
-      }
-      const extras = [
-        'use-latest-callback',
-        // CJS packages in vxrn's dedupe list that are not auto-added to the
-        // client environment optimizer, causing "doesn't provide an export
-        // named 'default'" errors when served raw by Vite.
-        'escape-string-regexp',
-        // Pure CJS with no "import" condition — subpath must be pre-bundled
-        // explicitly so named exports (useSyncExternalStoreWithSelector) exist.
-        // Root entry is SSR-external (Node handles it); client needs pre-bundle.
-        'use-sync-external-store/with-selector',
-        // @react-navigation/core ships a nested node_modules/react-is (CJS).
-        // resolve.dedupe forces the root copy to be used; pre-bundling it here
-        // adds ESM interop so named exports like isValidElementType are available.
-        'react-is',
-        // CJS-only packages imported by @react-navigation/* TypeScript source.
-        // When the client loads @react-navigation/* via the "source" condition
-        // (TypeScript), these transitive CJS deps get served raw and lack ESM
-        // named exports. Pre-bundling generates the ESM interop wrappers.
-        'fast-deep-equal',
-        'color',
-        // query-string v7 is CJS-only; imported by @react-navigation/core for URL parsing.
-        'query-string',
-        // react's JSX runtimes are CJS with no "import" condition, so a deep
-        // import of a @repo/* src .tsx served raw fails with
-        // "does not provide an export named 'jsx'".
-        'react/jsx-runtime',
-        'react/jsx-dev-runtime',
-        // Vite never discovers a dep imported from a file inside
-        // node_modules; it serves it raw. A consumer's deep import of a
-        // @repo/* src file sits in node_modules, so its bare
-        // "tamagui" import went raw and dragged react-native-web in raw, whose
-        // CJS deps (@react-native/normalize-colors, inline-style-prefixer/lib)
-        // have no ESM default. The barrel path never meets it.
-        'tamagui',
-      ];
-      const include: string[] = clientEnv.optimizeDeps.include ?? [];
-      for (const dep of extras) {
-        if (!include.includes(dep)) {
-          include.push(dep);
-        }
-      }
-      clientEnv.optimizeDeps.include = include;
-    },
-  };
-}
-
-/**
- * Adds engine.io-client's `browser`-field transport redirect to vxrn's NATIVE
- * rolldown pipeline via its `globalThis.__vxrnAddNativePlugins` hook.
- *
- * socket.io-client -> engine.io-client/index.js statically imports its Node
- * transports (`./globals.node.js`, `./transports/{websocket,polling-xhr}.node.js`),
- * which pull `ws` + `xmlhttprequest-ssl` + Node globals. Those `.node` files also
- * contain raw ESM `import` syntax that Hermes can't even COMPILE, so the native
- * bundle dies at boot. engine.io's own `package.json` `browser` field already
- * redirects each `*.node.js` to a browser sibling that uses the global
- * `WebSocket` / `XMLHttpRequest` React Native provides — but vxrn's native
- * resolver omits the `browser` aliasField (and its rolldown binding doesn't even
- * support `aliasFields`). vxrn's native dev engine ignores the Vite config's
- * `resolve.alias`/`resolveId` too — BUT it DOES read `globalThis.__vxrnAddNativePlugins`
- * inside `getNativePlugins`, so a `resolveId` registered there runs on native.
- * This re-asserts the browser redirect with no node_modules patch. Web is
- * unaffected (engine.io is SSR-externalized and the web client already maps `browser`).
- */
-/**
- * Collapse duplicate PHYSICAL copies of the same package@version to one path
- * in the NATIVE graph, so React (and every other stateful singleton) exists
- * exactly once in the Hermes bundle.
- *
- * The workspace's node_modules is a MIXED install. `.npmrc` says
- * `node-linker=hoisted`, so the root `node_modules/<pkg>` entries are real
- * directories; but an earlier isolated install left a `node_modules/.pnpm`
- * virtual store plus per-package symlink farms behind — e.g. each package's
- * own `node_modules/react` still points at
- * `../../../node_modules/.pnpm/react@19.2.5/node_modules/react`.
- * Both trees are fully populated with byte-identical copies, and which one an
- * importer reaches depends only on where that importer sits on disk:
- *
- *   apps/<app>/app     -> node_modules/.pnpm/react@19.2.5/node_modules/react
- *   packages/forms/src -> node_modules/react            (no local symlink)
- *
- * Rolldown resolves symlinks, so the two land as two DIFFERENT absolute paths
- * and it bundles both. React 19's `useContext` is
- * `ReactSharedInternals.H.useContext(Context)` — `H` is the dispatcher the
- * renderer installs during render, and it is only ever set on the copy the
- * renderer imported. A component from the other copy therefore reads `H` as
- * null and the app dies with "Cannot read property 'useContext' of null".
- * That is the whole bug; the same split had also duplicated react-native (427
- * modules each), @tamagui/web, @react-navigation/core, one, scheduler and 58
- * more packages.
- *
- * The rule: an id that resolves inside the virtual store is rewritten to the
- * hoisted root copy when the root copy exists, carries the SAME version, and
- * actually has the file. Version equality is the safety guard — genuine
- * multi-version installs (two @babel/runtime, two viem) keep both copies.
- *
- * On a correctly installed tree this is a no-op by construction: `hoisted`
- * leaves no `.pnpm` store to match, and `isolated` makes the root entry a
- * symlink INTO the store, which realpaths back to the same directory (checked
- * explicitly). It only fires on the mixed tree, and it is cheap because only
- * BARE specifiers are inspected — once a package's entry is canonical, its own
- * relative imports resolve inside the canonical copy for free.
- */
-function registerNativeSinglePackageInstances(): void {
-  const g = globalThis as unknown as { __vxrnAddNativePlugins?: unknown[] };
-  const name = 'vxrn-single-package-instances';
-  g.__vxrnAddNativePlugins = g.__vxrnAddNativePlugins ?? [];
-  if (g.__vxrnAddNativePlugins.some((p) => (p as { name?: string })?.name === name)) {
-    return;
-  }
-
-  const rootModules = path.join(findProjectRoot(), 'node_modules');
-  // <...>/node_modules/.pnpm/<pkg>@<ver>_<peerhash>/node_modules/<name>[/<rest>]
-  const storePath =
-    /[\\/]node_modules[\\/]\.pnpm[\\/][^\\/]+[\\/]node_modules[\\/]((?:@[^\\/]+[\\/])?[^\\/]+)(?:[\\/](.*))?$/;
-
-  function versionOf(dir: string): string | null {
-    try {
-      const raw = fs.readFileSync(path.join(dir, 'package.json'), 'utf-8');
-      return (JSON.parse(raw) as { version?: string }).version ?? null;
-    } catch {
-      return null;
-    }
-  }
-
-  // package name -> hoisted root dir that is a safe stand-in, or null
-  const hoisted = new Map<string, string | null>();
-  function hoistedTwin(pkg: string, storeDir: string): string | null {
-    if (!hoisted.has(pkg)) {
-      const rootDir = path.join(rootModules, pkg);
-      let twin: string | null = null;
-      if (fs.existsSync(rootDir)) {
-        const rootVersion = versionOf(rootDir);
-        const storeVersion = versionOf(storeDir);
-        // Same package, same version => identical library code, and the two
-        // dirs are genuinely distinct (not one symlinked onto the other).
-        if (rootVersion && rootVersion === storeVersion) {
-          try {
-            if (fs.realpathSync(rootDir) !== fs.realpathSync(storeDir)) {
-              twin = rootDir;
-            }
-          } catch {
-            twin = null;
-          }
-        }
-      }
-      hoisted.set(pkg, twin);
-    }
-    return hoisted.get(pkg) ?? null;
-  }
-
-  const seen = new Map<string, string | null>();
-
-  g.__vxrnAddNativePlugins.push({
-    name,
-    async resolveId(
-      this: {
-        resolve: (
-          id: string,
-          importer: string | undefined,
-          opts: { skipSelf: boolean },
-        ) => Promise<{ id: string; external?: boolean | string } | null>;
-      },
-      id: string,
-      importer?: string,
-    ): Promise<string | null> {
-      // Bare specifiers only: a package entry. Relative/absolute ids inside an
-      // already-canonical package resolve within that copy on their own.
-      if (!id || id.startsWith('.') || id.startsWith('/') || id.startsWith('\0')) {
-        return null;
-      }
-      const key = `${id} ${importer ?? ''}`;
-      const cached = seen.get(key);
-      if (cached !== undefined) {
-        return cached;
-      }
-
-      let out: string | null = null;
-      try {
-        const resolved = await this.resolve(id, importer, { skipSelf: true });
-        const match = resolved?.external ? null : resolved?.id?.match(storePath);
-        if (resolved && match) {
-          const pkg = match[1].split(path.sep).join('/');
-          const rest = match[2] ?? '';
-          const storeDir = resolved.id.slice(0, resolved.id.length - (rest ? rest.length + 1 : 0));
-          const twin = hoistedTwin(pkg, storeDir);
-          if (twin) {
-            const candidate = rest ? path.join(twin, rest) : twin;
-            if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
-              out = candidate;
-            }
-          }
-        }
-      } catch {
-        out = null;
-      }
-      seen.set(key, out);
-      return out;
-    },
-  });
-}
-
-function registerNativeEngineIoBrowserTransports(): void {
-  const g = globalThis as unknown as { __vxrnAddNativePlugins?: unknown[] };
-  const name = 'vxrn-engineio-browser-transports';
-  g.__vxrnAddNativePlugins = g.__vxrnAddNativePlugins ?? [];
-  if (g.__vxrnAddNativePlugins.some((p) => (p as { name?: string })?.name === name)) {
-    return;
-  }
-  g.__vxrnAddNativePlugins.push({
-    name,
-    async resolveId(
-      this: { resolve: (id: string, importer: string, opts: { skipSelf: boolean }) => unknown },
-      id: string,
-      importer?: string,
-    ) {
-      if (importer && /engine\.io-client[\\/]build[\\/]/.test(importer) && id.endsWith('.node.js')) {
-        return this.resolve(`${id.slice(0, -'.node.js'.length)}.js`, importer, { skipSelf: true });
-      }
-      return null;
-    },
-  });
-}
-
-/**
- * Routes workspace (`@repo/*`) packages to their `dist/esm/index.native.js`
- * build on NATIVE, via vxrn's `globalThis.__vxrnAddNativePlugins` hook.
- *
- * Why this is needed: `preferBuiltWorkspaceEntryPlugin` (a Vite plugin, web/SSR only)
- * hard-resolves every workspace bare specifier to `<root>/dist/esm/index.mjs` — the WEB
- * build — bypassing the package.json `exports` `react-native` condition. That web
- * resolution propagates into vxrn's native graph (the native engine receives no Vite
- * userPlugins, so it cannot be made native-aware there), pinning the entire workspace
- * chain to web on native and dragging web-only deps (@tiptap, prosemirror, html5-qrcode,
- * @mixmark-io/domino, …) into Hermes. Each affected package ships a `dist/esm/index.native.js`
- * (built by tamagui-build, intra-package imports already rewritten to their `.native`
- * siblings). This resolveId matches both forms — the bare specifier and the already-resolved
- * `…/dist/esm/index.mjs` path — and redirects to the native sibling when it exists, so the
- * react-native build wins on native. Web/SSR are unaffected (this plugin runs ONLY on native).
- */
-function registerNativeWorkspaceEntries(): void {
-  const g = globalThis as unknown as { __vxrnAddNativePlugins?: unknown[] };
-  const name = 'vxrn-workspace-native-entries';
-  g.__vxrnAddNativePlugins = g.__vxrnAddNativePlugins ?? [];
-  if (g.__vxrnAddNativePlugins.some((p) => (p as { name?: string })?.name === name)) {
-    return;
-  }
-  let roots: Map<string, string>;
-  try {
-    roots = discoverPublicPackageRoots(findProjectRoot());
-  } catch {
-    roots = new Map();
-  }
-  g.__vxrnAddNativePlugins.push({
-    name,
-    resolveId(id: string): string | null {
-      // (a) bare workspace specifier (e.g. "@repo/ui")
-      const root = roots.get(id);
-      if (root) {
-        // Prefer the built native entry when present (tamagui-build already
-        // rewrote intra-package imports to their `.native` siblings).
-        const nativeEntry = path.join(root, 'dist/esm/index.native.js');
-        if (fs.existsSync(nativeEntry)) {
-          return nativeEntry;
-        }
-        // Unbuilt workspace package: compile from source instead of letting
-        // rolldown leave the bare specifier external — Hermes has no module
-        // mode, so a surviving top-level `import` is unparseable. Mirrors
-        // preferBuiltWorkspaceEntryPlugin (web) and apps/storybook-expo's
-        // Metro resolveWorkspaceNativeMain. vxrn's native resolver already
-        // does platform-extension resolution (.native.tsx/.ios.tsx/…).
-        const srcTs = path.join(root, 'src/index.ts');
-        if (fs.existsSync(srcTs)) {
-          return srcTs;
-        }
-        const srcTsx = path.join(root, 'src/index.tsx');
-        if (fs.existsSync(srcTsx)) {
-          return srcTsx;
-        }
-        return null;
-      }
-      // (b) already-resolved web entry "<...>/dist/esm/index.mjs" -> ".native.js" sibling
-      if (id.endsWith('/dist/esm/index.mjs')) {
-        const nativeEntry = `${id.slice(0, -'.mjs'.length)}.native.js`;
-        if (fs.existsSync(nativeEntry)) {
-          return nativeEntry;
-        }
-      }
-      return null;
-    },
-  });
-}
 
 /**
  * CJS-only ids (no usable ESM build) that escape Vite's SSR dep optimizer and
@@ -879,231 +1107,3 @@ const DEFAULT_SSR_CJS_EXTERNAL = [
   'hoist-non-react-statics',
   'qrcode',
 ];
-
-/**
- * Force-append CJS-only ids to `ssr.external`. The one() plugin REPLACES
- * ssr.external with its own list during the config hook, dropping anything
- * set statically by createViteConfig — configResolved runs after all config
- * hooks are merged, so appends here survive.
- */
-function ssrCjsExternalFixPlugin(extras: string[]): Plugin {
-  return {
-    name: 'multiplatform-ssr-cjs-external-fix',
-    configResolved(config) {
-      const external = config.ssr.external ?? [];
-      if (!Array.isArray(external)) {
-        return;
-      } // true = everything external already
-      for (const e of extras) {
-        if (config.command === 'build' && requiresReact(e)) {
-          continue;
-        }
-        if (!external.includes(e)) {
-          external.push(e);
-        }
-      }
-      (config.ssr as { external?: string[] | boolean }).external = external;
-    },
-  };
-}
-
-function requiresReact(id: string): boolean {
-  return id === 'use-sync-external-store' || id.startsWith('use-sync-external-store/');
-}
-
-/**
- * Restore Object.prototype methods shadowed by hoisted globals on NATIVE.
- *
- * vxrn's rolldown native mode emits the whole dev bundle as ONE classic
- * script and forces Hermes V1. Hermes V1 implements spec-compliant global
- * var hoisting, so a flattened module's top-level `var hasOwnProperty`
- * (e.g. acorn via an mdx pipeline) creates
- * `globalThis.hasOwnProperty = undefined` at parse time, shadowing
- * Object.prototype.hasOwnProperty for the entire runtime. React Native core
- * calls `global.hasOwnProperty()` during boot (FuseboxSessionObserver) and
- * dies with "undefined is not a function". Prepend a snippet that copies any
- * Object.prototype method back over an undefined shadowing own-property
- * before any module code runs — the shadowed vars are reassigned by their
- * own modules on init, so this only bridges the parse-to-init window.
- * Registered through globalThis.__vxrnAddNativePlugins (vxrn's native engine
- * ignores vite resolve/config). Web/SSR bundles are ESM (module-scoped vars)
- * and unaffected.
- */
-function registerNativeProtoShadowFix(): void {
-  const g = globalThis as unknown as { __vxrnAddNativePlugins?: unknown[] };
-  const name = 'vxrn-proto-shadow-fix';
-  g.__vxrnAddNativePlugins = g.__vxrnAddNativePlugins ?? [];
-  if (g.__vxrnAddNativePlugins.some((p) => (p as { name?: string })?.name === name)) {
-    return;
-  }
-  const snippet =
-    `(function(){var p=Object.prototype,h=p.hasOwnProperty,ns=Object.getOwnPropertyNames(p);` +
-    `for(var i=0;i<ns.length;i++){var k=ns[i];` +
-    `if(typeof p[k]==="function"&&globalThis[k]===void 0&&h.call(globalThis,k)){` +
-    `try{globalThis[k]=p[k]}catch(e){}}}})();`;
-  g.__vxrnAddNativePlugins.push({
-    name,
-    renderChunk(code: string) {
-      return { code: `${snippet}\n${code}`, map: null };
-    },
-  });
-}
-
-/**
- * Redirect the OPTIONAL `@multiplatform.one/web3` native import to a no-op
- * shim on NATIVE when the package is not installed (see the nativeFixes
- * option docs). Rolldown leaves the unresolvable specifier as a bare dynamic
- * `import()` in the classic-script native bundle — Hermes rejects that at
- * lazy-compile time ("SyntaxError: Invalid expression encountered"), killing
- * the root _layout route. Web/SSR resolve the same specifier through vite's
- * normal pipeline and are unaffected.
- */
-function registerNativeWeb3Stub(): void {
-  const g = globalThis as unknown as { __vxrnAddNativePlugins?: unknown[] };
-  const name = 'vxrn-web3-stub';
-  g.__vxrnAddNativePlugins = g.__vxrnAddNativePlugins ?? [];
-  if (g.__vxrnAddNativePlugins.some((p) => (p as { name?: string })?.name === name)) {
-    return;
-  }
-  try {
-    // web3 installed — its real native entry resolves; no stub needed.
-    require.resolve('@multiplatform.one/web3', { paths: [findProjectRoot(), process.cwd()] });
-    return;
-  } catch {
-    // not installed — stub below
-  }
-  // The shim ships as plain JS (vxrn does not transform node_modules TS).
-  // Resolve it relative to this module: `src/shims/` when running from
-  // source, `../src/shims/` from the built `lib/` bundle (src ships in the
-  // published tarball).
-  const here = path.dirname(new URL(import.meta.url).pathname);
-  const shim = [
-    path.resolve(here, 'shims/web3-stub.native.js'),
-    path.resolve(here, '../src/shims/web3-stub.native.js'),
-  ].find((candidate) => fs.existsSync(candidate));
-  if (!shim) {
-    return;
-  }
-  g.__vxrnAddNativePlugins.push({
-    name,
-    resolveId(id: string) {
-      if (id === '@multiplatform.one/web3/native' || id === '@multiplatform.one/web3') {
-        return shim;
-      }
-      return null;
-    },
-  });
-}
-
-function findProjectRoot(): string {
-  try {
-    const { execSync } = require('node:child_process');
-    return execSync('git rev-parse --show-toplevel', { encoding: 'utf-8' }).trim();
-  } catch {
-    return process.cwd();
-  }
-}
-
-/**
- * Resolve `@phosphor-icons/react` to `phosphor-react-native` in the NATIVE
- * graph only. The web package renders DOM `<svg>`/`<path>` and crashes Hermes
- * the moment any icon mounts; the RN package draws the same icon set through
- * react-native-svg and (as of v3) exports identical `*Icon`-suffixed names,
- * so app/library source needs no platform splits. Skipped (with a warning)
- * when phosphor-react-native isn't installed in the consuming project.
- */
-function registerNativePhosphorIcons(): void {
-  const g = globalThis as unknown as { __vxrnAddNativePlugins?: unknown[] };
-  const name = 'vxrn-phosphor-native-icons';
-  g.__vxrnAddNativePlugins = g.__vxrnAddNativePlugins ?? [];
-  if (g.__vxrnAddNativePlugins.some((p) => (p as { name?: string })?.name === name)) {
-    return;
-  }
-  let nativeEntry: string | null = null;
-  try {
-    // The package's exports map doesn't expose "./package.json", so resolve
-    // the entry itself (require condition -> lib/commonjs/index.js) and swap
-    // to the ESM build; the icons import react-native-svg.
-    const cjsEntry = require.resolve('phosphor-react-native', {
-      paths: [findProjectRoot(), process.cwd()],
-    });
-    const esmEntry = cjsEntry.replace(
-      `${path.sep}lib${path.sep}commonjs${path.sep}`,
-      `${path.sep}lib${path.sep}module${path.sep}`,
-    );
-    nativeEntry = fs.existsSync(esmEntry) ? esmEntry : cjsEntry;
-  } catch {
-    nativeEntry = null;
-  }
-  g.__vxrnAddNativePlugins.push({
-    name,
-    resolveId(id: string): string | null {
-      if (id !== '@phosphor-icons/react') {
-        return null;
-      }
-      if (!nativeEntry) {
-        console.warn(
-          '[config] @phosphor-icons/react imported in the native graph but ' +
-            'phosphor-react-native is not installed — icons will crash Hermes. ' +
-            'Add phosphor-react-native to your app dependencies.',
-        );
-        return null;
-      }
-      return nativeEntry;
-    },
-  });
-}
-
-/**
- * package.json `exports` cannot branch on whether `dist/` exists. For workspace
- * packages, prefer `dist/esm/index.{mjs,js}` when built; otherwise fall back to
- * `src/index.ts` so local dev works without a build while published tarballs
- * still resolve through `exports` to `dist`.
- */
-function preferBuiltWorkspaceEntryPlugin(): Plugin {
-  const roots = discoverPublicPackageRoots(findProjectRoot());
-
-  return {
-    name: 'multiplatform-prefer-built-workspace-main',
-    enforce: 'pre',
-    resolveId(id) {
-      const root = roots.get(id);
-      if (!root) {
-        return null;
-      }
-      const distCandidates = [path.join(root, 'dist/esm/index.mjs'), path.join(root, 'dist/esm/index.js')];
-      for (const file of distCandidates) {
-        if (fs.existsSync(file)) {
-          return file;
-        }
-      }
-      const srcTs = path.join(root, 'src/index.ts');
-      if (fs.existsSync(srcTs)) {
-        return srcTs;
-      }
-      const srcTsx = path.join(root, 'src/index.tsx');
-      if (fs.existsSync(srcTsx)) {
-        return srcTsx;
-      }
-
-      // Vendored packages (e.g. keycloak-js) have no src/ — resolve via
-      // package.json exports/main so the dep scanner doesn't fail.
-      const pkgJsonPath = path.join(root, 'package.json');
-      if (fs.existsSync(pkgJsonPath)) {
-        try {
-          const pkg = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf-8'));
-          const entry = pkg.exports?.['.']?.import || pkg.exports?.['.']?.default || pkg.main || pkg.module;
-          if (entry) {
-            const resolved = path.resolve(root, entry);
-            if (fs.existsSync(resolved)) {
-              return resolved;
-            }
-          }
-        } catch {
-          /* ignore */
-        }
-      }
-      return null;
-    },
-  };
-}

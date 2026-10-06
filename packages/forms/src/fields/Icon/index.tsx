@@ -64,7 +64,7 @@ export type IconProps<
 const adornmentRing = ensureFocusVisibleRing({ outlineOffset: -2 });
 const NESTED_GLYPH_WELL = 32;
 
-function EmptyGlyphWell() {
+const EmptyGlyphWell = () => {
   return (
     <View
       testID="icon-empty-well"
@@ -76,9 +76,9 @@ function EmptyGlyphWell() {
       borderRadius={3}
     />
   );
-}
+};
 
-function IconControl({
+const IconControl = ({
   value,
   placeholder,
   disabled,
@@ -106,7 +106,7 @@ function IconControl({
   catalog: readonly DrawnIconName[];
   onValueChange: (value: string) => void;
   onBlurControl?: () => void;
-}) {
+}) => {
   const inTableCell = useIsInTableCell();
   const { knobProps } = useResolvedKnobs();
   const [open, setOpen] = useState(false);
@@ -423,15 +423,17 @@ function IconControl({
       </YStack>
     </FloatingPanel>
   );
-}
+};
 
-export function Icon<
+export const Icon = <
   TParentData,
   TName extends DeepKeys<TParentData>,
   TFieldValidator extends Validator<DeepValue<TParentData, TName>> | undefined = undefined,
   TFormValidator extends Validator<TParentData> | undefined = undefined,
   TData extends DeepValue<TParentData, TName> = DeepValue<TParentData, TName>,
->(props: IconProps<TParentData, TName, TFieldValidator, TFormValidator, TData>) {
+>(
+  props: IconProps<TParentData, TName, TFieldValidator, TFormValidator, TData>,
+) => {
   const {
     defaultValue,
     form,
@@ -582,4 +584,4 @@ export function Icon<
       }}
     </Field>
   );
-}
+};

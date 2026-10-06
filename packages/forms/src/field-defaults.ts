@@ -49,15 +49,18 @@ const AUTOCOMPLETE_TO_PURPOSE: Record<string, FieldPurpose> = {
 
 const PURPOSE_KEYS = new Set<string>(Object.keys(FIELD_WIDTH_BY_PURPOSE));
 
-export function isFieldPurpose(value: string | undefined | null): value is FieldPurpose {
+export const isFieldPurpose = (value: string | undefined | null): value is FieldPurpose => {
   return typeof value === 'string' && PURPOSE_KEYS.has(value);
-}
+};
 
 /**
  * Resolve a purpose key from an explicit `purpose` prop or an HTML
  * `autoComplete` / `autocomplete` token.
  */
-export function resolveFieldPurpose(purpose?: string | null, autoComplete?: string | null): FieldPurpose | undefined {
+export const resolveFieldPurpose = (
+  purpose?: string | null,
+  autoComplete?: string | null,
+): FieldPurpose | undefined => {
   if (isFieldPurpose(purpose ?? undefined)) {
     return purpose as FieldPurpose;
   }
@@ -72,16 +75,16 @@ export function resolveFieldPurpose(purpose?: string | null, autoComplete?: stri
     return normalized;
   }
   return AUTOCOMPLETE_TO_PURPOSE[normalized];
-}
+};
 
 /** Character width (or `"full"`) for a purpose / autocomplete pair. */
-export function resolveFieldWidth(purpose?: string | null, autoComplete?: string | null): FieldWidth | undefined {
+export const resolveFieldWidth = (purpose?: string | null, autoComplete?: string | null): FieldWidth | undefined => {
   const resolved = resolveFieldPurpose(purpose, autoComplete);
   if (!resolved) {
     return undefined;
   }
   return FIELD_WIDTH_BY_PURPOSE[resolved];
-}
+};
 
 export interface FieldWidthStyle {
   maxWidth?: string;
@@ -119,20 +122,20 @@ const INPUT_PROPS_BY_PURPOSE: Record<FieldPurpose, FieldInputProps> = {
  * An explicit `autoComplete` always passes through verbatim (eject); the
  * purpose only fills the token when the consumer did not provide one.
  */
-export function resolveFieldInputProps(purpose?: string | null, autoComplete?: string | null): FieldInputProps {
+export const resolveFieldInputProps = (purpose?: string | null, autoComplete?: string | null): FieldInputProps => {
   const resolved = resolveFieldPurpose(purpose, autoComplete);
   const base = resolved ? INPUT_PROPS_BY_PURPOSE[resolved] : {};
   if (autoComplete) {
     return { ...base, autoComplete };
   }
   return { ...base };
-}
+};
 
 /**
  * Style props for FieldLayout / Input Box. Numeric widths become `Nch`
  * maxWidth; `"full"` stretches to 100%.
  */
-export function fieldWidthStyle(purpose?: string | null, autoComplete?: string | null): FieldWidthStyle | undefined {
+export const fieldWidthStyle = (purpose?: string | null, autoComplete?: string | null): FieldWidthStyle | undefined => {
   const width = resolveFieldWidth(purpose, autoComplete);
   if (width === undefined) {
     return undefined;
@@ -141,4 +144,4 @@ export function fieldWidthStyle(purpose?: string | null, autoComplete?: string |
     return { width: '100%', maxWidth: '100%' };
   }
   return { maxWidth: `${width}ch` };
-}
+};

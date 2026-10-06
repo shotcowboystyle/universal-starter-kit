@@ -87,9 +87,9 @@ export interface CreateDefaultThemeConfigOptions {
  * etc.) also runs inside narrow component sub-themes where those steps don't
  * exist, and its undefineds must not erase the defaults.
  */
-function composeGetTheme(
+const composeGetTheme = (
   custom: CreateThemesBuilderOptions['getTheme'],
-): NonNullable<CreateThemesBuilderOptions['getTheme']> {
+): NonNullable<CreateThemesBuilderOptions['getTheme']> => {
   const base = defaultBuilderOptions.getTheme as NonNullable<CreateThemesBuilderOptions['getTheme']>;
   if (!custom) {
     return base;
@@ -108,7 +108,7 @@ function composeGetTheme(
     }
     return merged;
   };
-}
+};
 
 /**
  * Builds a complete Tamagui theme config with batteries included: calling it
@@ -122,7 +122,7 @@ function composeGetTheme(
  * COMPOSES with the default (consumer keys win; framework derivations like
  * the solid `$outlineColor` focus ring survive partial overrides).
  */
-export function createDefaultThemeConfig(options: CreateDefaultThemeConfigOptions = {}): ThemeConfig {
+export const createDefaultThemeConfig = (options: CreateDefaultThemeConfigOptions = {}): ThemeConfig => {
   setSizeRecipeInputs(options.recipeInputs ?? {});
   const base = options.base ?? defaultBaseTheme;
   const accent = options.accent ?? defaultAccentTheme;
@@ -184,4 +184,4 @@ export function createDefaultThemeConfig(options: CreateDefaultThemeConfigOption
       recipeFamilies: getGeneratedSizeRecipes().families,
     },
   );
-}
+};

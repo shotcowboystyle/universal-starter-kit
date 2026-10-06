@@ -422,13 +422,13 @@ export const CompleteDataView = {
   ),
 };
 
-function MetricDataHarness({
+const MetricDataHarness = ({
   longTitle = false,
   consumerPress = false,
 }: {
   longTitle?: boolean;
   consumerPress?: boolean;
-}) {
+}) => {
   const [navigationCount, setNavigationCount] = useState(0);
   const [consumerCount, setConsumerCount] = useState(0);
   return (
@@ -459,7 +459,7 @@ function MetricDataHarness({
       {consumerPress ? <Text>{`Consumer navigation count: ${consumerCount}`}</Text> : null}
     </YStack>
   );
-}
+};
 export const MetricDataActions = { render: () => <MetricDataHarness /> };
 
 export const GapPatternBackdrop = {

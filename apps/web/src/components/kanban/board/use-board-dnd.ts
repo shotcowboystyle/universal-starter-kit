@@ -18,11 +18,11 @@ import type DraggableData from '@/types/drag-and-drop';
 
 import { useDndAnnouncements } from './use-dnd-announcements';
 
-function hasDraggableData<T extends Active | Over>(
+const hasDraggableData = <T extends Active | Over>(
   entry: T | null | undefined,
 ): entry is T & {
   data: DataRef<DraggableData>;
-} {
+} => {
   if (!entry) {
     return false;
   }
@@ -31,14 +31,14 @@ function hasDraggableData<T extends Active | Over>(
     return true;
   }
   return false;
-}
+};
 
-export function useBoardDnd(
+export const useBoardDnd = (
   projects: Project[],
   projectsId: string[],
   setProjects: (projects: Project[]) => void,
   rawProjects: Project[],
-) {
+) => {
   const [activeProject, setActiveProject] = useState<Project | null>(null);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const originalProjects = useRef<Project[] | null>(null);
@@ -46,7 +46,7 @@ export function useBoardDnd(
   const sensors = useSensors(useSensor(MouseSensor), useSensor(TouchSensor));
   const announcements = useDndAnnouncements(projects, projectsId);
 
-  function onDragStart(event: DragStartEvent) {
+  const onDragStart = (event: DragStartEvent) => {
     if (!hasDraggableData(event.active)) {
       return;
     }
@@ -60,9 +60,9 @@ export function useBoardDnd(
     if (data?.type === 'Task') {
       setActiveTask(data?.task);
     }
-  }
+  };
 
-  function onDragOver(event: DragOverEvent) {
+  const onDragOver = (event: DragOverEvent) => {
     const { active, over } = event;
 
     if (!over) {
@@ -128,9 +128,9 @@ export function useBoardDnd(
     }
 
     setProjects(updatedProjects);
-  }
+  };
 
-  async function onDragEnd(event: DragEndEvent) {
+  const onDragEnd = async (event: DragEndEvent) => {
     setActiveProject(null);
     setActiveTask(null);
 
@@ -260,16 +260,16 @@ export function useBoardDnd(
         originalProjects.current = null;
       }
     }
-  }
+  };
 
-  function onDragCancel() {
+  const onDragCancel = () => {
     if (originalProjects.current) {
       setProjects(originalProjects.current);
     }
     setActiveProject(null);
     setActiveTask(null);
     originalProjects.current = null;
-  }
+  };
 
   return {
     sensors,
@@ -281,4 +281,4 @@ export function useBoardDnd(
     onDragEnd,
     onDragCancel,
   };
-}
+};

@@ -105,7 +105,7 @@ export interface CreatePlaywrightConfigOptions {
 
 const chromiumSandboxArgs = ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'];
 
-function browserToProject(browser: PlaywrightBrowser): NonNullable<PlaywrightTestConfig['projects']>[number] {
+const browserToProject = (browser: PlaywrightBrowser): NonNullable<PlaywrightTestConfig['projects']>[number] => {
   switch (browser) {
     case 'chromium': {
       return {
@@ -147,7 +147,7 @@ function browserToProject(browser: PlaywrightBrowser): NonNullable<PlaywrightTes
       };
     }
   }
-}
+};
 
 /**
  * Creates a shared Playwright configuration for workspace apps.
@@ -180,7 +180,7 @@ function browserToProject(browser: PlaywrightBrowser): NonNullable<PlaywrightTes
  * });
  * ```
  */
-export function createPlaywrightConfig(options: CreatePlaywrightConfigOptions = {}): PlaywrightTestConfig {
+export const createPlaywrightConfig = (options: CreatePlaywrightConfigOptions = {}): PlaywrightTestConfig => {
   const isCI = !!process.env.CI;
   const {
     testDir = './tests/e2e',
@@ -226,4 +226,4 @@ export function createPlaywrightConfig(options: CreatePlaywrightConfigOptions = 
     ...(globalSetup ? { globalSetup } : {}),
     ...(testIgnore ? { testIgnore } : {}),
   });
-}
+};

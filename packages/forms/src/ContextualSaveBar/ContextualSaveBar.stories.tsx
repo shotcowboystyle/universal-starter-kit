@@ -129,7 +129,7 @@ export const NarrowRefusal: Story = {
   ),
 };
 
-function SubmissionPathsFixture() {
+const SubmissionPathsFixture = () => {
   const [calls, setCalls] = useState(0);
   return (
     <YStack
@@ -154,7 +154,7 @@ function SubmissionPathsFixture() {
       </Form>
     </YStack>
   );
-}
+};
 
 export const SubmissionPaths: Story = {
   name: 'Submission paths',

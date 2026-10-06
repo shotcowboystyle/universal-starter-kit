@@ -30,9 +30,9 @@ export type DrawnIconName = (typeof DRAWN_ICON_NAMES)[number];
 
 const DRAWN_ICON_NAME_SET = new Set<string>(DRAWN_ICON_NAMES);
 
-export function isDrawnIconName(value: string): value is DrawnIconName {
+export const isDrawnIconName = (value: string): value is DrawnIconName => {
   return DRAWN_ICON_NAME_SET.has(value);
-}
+};
 
 type Shape =
   | { kind: 'polyline'; points: string }
@@ -174,15 +174,15 @@ const GEOM: Record<DrawnIconName, IconGeom> = {
   },
 };
 
-export function resolveIconCatalog(options?: readonly string[]): DrawnIconName[] {
+export const resolveIconCatalog = (options?: readonly string[]): DrawnIconName[] => {
   if (!options?.length) {
     return [...DRAWN_ICON_NAMES];
   }
   const allowed = new Set(options);
   return DRAWN_ICON_NAMES.filter((name) => allowed.has(name));
-}
+};
 
-export function parseIconOptions(options?: string): DrawnIconName[] | undefined {
+export const parseIconOptions = (options?: string): DrawnIconName[] | undefined => {
   if (!options || typeof options !== 'string') {
     return undefined;
   }
@@ -191,15 +191,15 @@ export function parseIconOptions(options?: string): DrawnIconName[] | undefined 
     .map((line) => line.trim())
     .filter(isDrawnIconName);
   return names.length ? names : undefined;
-}
+};
 
-export function filterDrawnIcons(catalog: readonly DrawnIconName[], query: string): DrawnIconName[] {
+export const filterDrawnIcons = (catalog: readonly DrawnIconName[], query: string): DrawnIconName[] => {
   const needle = query.trim().toLowerCase();
   if (!needle) {
     return [...catalog];
   }
   return catalog.filter((name) => name.toLowerCase().includes(needle));
-}
+};
 
 /**
  * The glyph paint is resolved here, never left as `currentColor`.
@@ -216,7 +216,7 @@ export function filterDrawnIcons(catalog: readonly DrawnIconName[], query: strin
  */
 const drawnIconInkToken = 'color11';
 
-function useDrawnInk(color?: string): string {
+const useDrawnInk = (color?: string): string => {
   const theme = useTheme() as unknown as Record<string, { val?: unknown } | undefined>;
   const raw = !color || color === 'currentColor' ? `$${drawnIconInkToken}` : color;
   const val = raw.startsWith('$') ? theme[raw.slice(1)]?.val : raw;
@@ -232,9 +232,9 @@ function useDrawnInk(color?: string): string {
   // react-native-svg takes it as nil and Core Graphics paints with whatever
   // stroke was last in the context. A mid neutral is visible on both schemes.
   return '#808080';
-}
+};
 
-export function DrawnIcon({ name, size = 16, color }: { name: DrawnIconName; size?: number; color?: string }) {
+export const DrawnIcon = ({ name, size = 16, color }: { name: DrawnIconName; size?: number; color?: string }) => {
   const ink = useDrawnInk(color);
   const geom = GEOM[name];
   const stroke = geom.fillStroke ? ink : 'none';
@@ -323,4 +323,4 @@ export function DrawnIcon({ name, size = 16, color }: { name: DrawnIconName; siz
       })}
     </Svg>
   );
-}
+};

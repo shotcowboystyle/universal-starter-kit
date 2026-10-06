@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { CalendarViewSwitcher, useCalendarData, useDateNavigation } from './parts';
 import type { ViewMode } from './parts';
 
-function MonthCursor({ initial, view }: { initial: Date; view: ViewMode }) {
+const MonthCursor = ({ initial, view }: { initial: Date; view: ViewMode }) => {
   const [date, setDate] = useState(initial);
   const [viewMode, setViewMode] = useState(view);
   const [yearPageStart, setYearPageStart] = useState(2020);
@@ -26,7 +26,7 @@ function MonthCursor({ initial, view }: { initial: Date; view: ViewMode }) {
       </CalendarViewSwitcher>
     </>
   );
-}
+};
 
 describe('calendar display-month navigation', () => {
   it.each([

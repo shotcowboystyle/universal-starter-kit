@@ -46,11 +46,11 @@ export interface ImageFrameProps {
   [key: string]: unknown;
 }
 
-function glyphSize(px: number): number {
+const glyphSize = (px: number): number => {
   return Math.max(14, Math.min(28, Math.round(px * 0.42)));
-}
+};
 
-function DefaultFallback({ px }: { px: number }) {
+const DefaultFallback = ({ px }: { px: number }) => {
   const { knobProps } = useResolvedKnobs();
   return (
     <View
@@ -67,9 +67,9 @@ function DefaultFallback({ px }: { px: number }) {
       />
     </View>
   );
-}
+};
 
-export function ImageFrame({
+export const ImageFrame = ({
   children,
   alt,
   fill = false,
@@ -93,7 +93,7 @@ export function ImageFrame({
   placeholderSrc,
   fallback,
   ...props
-}: ImageFrameProps) {
+}: ImageFrameProps) => {
   const { knobProps, control, disabledState } = useResolvedKnobs({
     component: 'Image',
     compact,
@@ -248,9 +248,9 @@ export function ImageFrame({
   }
 
   return painted;
-}
+};
 
-export function mediaFillProps(opts: {
+export const mediaFillProps = (opts: {
   fill: boolean;
   thumbnail: boolean;
   width?: unknown;
@@ -258,7 +258,7 @@ export function mediaFillProps(opts: {
   aspectRatio?: unknown;
   objectFit?: string;
   objectPosition?: string;
-}): Record<string, unknown> {
+}): Record<string, unknown> => {
   const constrained =
     opts.fill ||
     opts.thumbnail ||
@@ -274,4 +274,4 @@ export function mediaFillProps(opts: {
     ...(opts.objectPosition ? { objectPosition: opts.objectPosition } : null),
     display: 'block',
   };
-}
+};

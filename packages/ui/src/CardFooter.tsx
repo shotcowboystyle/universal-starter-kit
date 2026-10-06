@@ -22,7 +22,7 @@ export type CardFooterProps = ViewProps & { children?: ReactNode };
  * host is a React invalid-prop warning (`dataSet` → `dataset`). jsdom and
  * Storybook keep kebab `data-*`, so web writes those only.
  */
-function hostData(attrs: Record<string, string>): Record<string, unknown> {
+const hostData = (attrs: Record<string, string>): Record<string, unknown> => {
   if (process.env.TAMAGUI_TARGET !== 'native') {
     return attrs;
   }
@@ -32,9 +32,9 @@ function hostData(attrs: Record<string, string>): Record<string, unknown> {
     dataSet[camel] = value;
   }
   return { dataSet };
-}
+};
 
-export function CardFooter({ children, ...props }: CardFooterProps) {
+export const CardFooter = ({ children, ...props }: CardFooterProps) => {
   const { knobProps } = useResolvedKnobs({ component: 'Card' });
   return (
     <TamaguiCard.Footer
@@ -53,4 +53,4 @@ export function CardFooter({ children, ...props }: CardFooterProps) {
       ))}
     </TamaguiCard.Footer>
   );
-}
+};

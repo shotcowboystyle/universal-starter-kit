@@ -68,12 +68,12 @@ export type MonthPickerProps<
 // formatMonthDisplay — format month/year for display
 // ---------------------------------------------------------------------------
 
-function formatMonthDisplay(value: MonthPickerValue | null): string {
+const formatMonthDisplay = (value: MonthPickerValue | null): string => {
   if (!value) {
     return '';
   }
   return `${months[value.month]} ${value.year}`;
-}
+};
 
 // ---------------------------------------------------------------------------
 // MonthPickerBody — month and year selection
@@ -90,14 +90,14 @@ interface MonthPickerBodyProps {
   maxYear?: number;
 }
 
-function MonthPickerBody({
+const MonthPickerBody = ({
   displayDate,
   selectedValue,
   onSelectMonth,
   onSetDisplayDate,
   minYear,
   maxYear,
-}: MonthPickerBodyProps) {
+}: MonthPickerBodyProps) => {
   const { knobProps } = useCalendarKnobs();
   const glyphColor = useGlyphColor();
   const { px } = knobProps.nestedControl;
@@ -232,19 +232,21 @@ function MonthPickerBody({
       </View>
     </CalendarPanelFrame>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // MonthPicker — main exported component
 // ---------------------------------------------------------------------------
 
-export function MonthPicker<
+export const MonthPicker = <
   TParentData,
   TName extends DeepKeys<TParentData>,
   TFieldValidator extends Validator<DeepValue<TParentData, TName>> | undefined = undefined,
   TFormValidator extends Validator<TParentData> | undefined = undefined,
   TData extends DeepValue<TParentData, TName> = DeepValue<TParentData, TName>,
->(props: MonthPickerProps<TParentData, TName, TFieldValidator, TFormValidator, TData>) {
+>(
+  props: MonthPickerProps<TParentData, TName, TFieldValidator, TFormValidator, TData>,
+) => {
   const {
     defaultValue,
     form,
@@ -492,4 +494,4 @@ export function MonthPicker<
       }}
     </Field>
   );
-}
+};

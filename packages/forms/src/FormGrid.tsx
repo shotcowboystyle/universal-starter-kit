@@ -29,53 +29,11 @@ export interface FormGridProps {
   children: ReactNode;
 }
 
-function resolveWideColumns(columns: FormGridColumns, maxColumns: FormGridColumns): FormGridColumns {
+const resolveWideColumns = (columns: FormGridColumns, maxColumns: FormGridColumns): FormGridColumns => {
   return Math.min(columns, maxColumns) as FormGridColumns;
-}
+};
 
-/**
- * Lays out form fields in a grid with correct tab order (left-to-right across rows).
- *
- * List children in visual row order: [row1col1, row1col2, row2col1, row2col2, ...]
- *
- * Defaults to a single column. When `columns={2}`, expands to two columns only when
- * the container is at least {@link FORM_GRID_COLLAPSE_WIDTH} wide (container measure
- * on web; viewport media on native).
- */
-export function FormGrid({ columns = 1, maxColumns = 2, gap, compact, children }: FormGridProps) {
-  const { knobProps } = useResolvedKnobs(compact === undefined ? undefined : { compact });
-  const gapFragment = gap === undefined ? knobProps.gap : { gap };
-  const resolvedGap = gapFragment.gap;
-  const wideColumns = resolveWideColumns(columns, maxColumns);
-
-  if (isWeb) {
-    return (
-      <FormGridWeb
-        columns={wideColumns}
-        maxColumns={maxColumns}
-        gap={resolvedGap}
-        gapFragment={gapFragment}
-        density={knobProps.density}
-        size={knobProps.size}>
-        {children}
-      </FormGridWeb>
-    );
-  }
-
-  return (
-    <FormGridNative
-      columns={wideColumns}
-      maxColumns={maxColumns}
-      gap={resolvedGap}
-      gapFragment={gapFragment}
-      density={knobProps.density}
-      size={knobProps.size}>
-      {children}
-    </FormGridNative>
-  );
-}
-
-function FormGridWeb({
+const FormGridWeb = ({
   columns,
   maxColumns,
   gap,
@@ -91,7 +49,7 @@ function FormGridWeb({
   density: string;
   size: string;
   children: ReactNode;
-}) {
+}) => {
   const ref = useRef<HTMLDivElement>(null);
   const [containerWide, setContainerWide] = useState(true);
 
@@ -154,9 +112,9 @@ function FormGridWeb({
       {children}
     </YStack>
   );
-}
+};
 
-function FormGridNative({
+const FormGridNative = ({
   columns,
   maxColumns,
   gap,
@@ -172,7 +130,7 @@ function FormGridNative({
   density: string;
   size: string;
   children: ReactNode;
-}) {
+}) => {
   const media = useMedia();
   // React Native defines a `window` global without DOM event methods or
   // innerWidth, so bare `typeof window` checks are not enough — the resize
@@ -239,4 +197,46 @@ function FormGridNative({
       ))}
     </YStack>
   );
-}
+};
+
+/**
+ * Lays out form fields in a grid with correct tab order (left-to-right across rows).
+ *
+ * List children in visual row order: [row1col1, row1col2, row2col1, row2col2, ...]
+ *
+ * Defaults to a single column. When `columns={2}`, expands to two columns only when
+ * the container is at least {@link FORM_GRID_COLLAPSE_WIDTH} wide (container measure
+ * on web; viewport media on native).
+ */
+export const FormGrid = ({ columns = 1, maxColumns = 2, gap, compact, children }: FormGridProps) => {
+  const { knobProps } = useResolvedKnobs(compact === undefined ? undefined : { compact });
+  const gapFragment = gap === undefined ? knobProps.gap : { gap };
+  const resolvedGap = gapFragment.gap;
+  const wideColumns = resolveWideColumns(columns, maxColumns);
+
+  if (isWeb) {
+    return (
+      <FormGridWeb
+        columns={wideColumns}
+        maxColumns={maxColumns}
+        gap={resolvedGap}
+        gapFragment={gapFragment}
+        density={knobProps.density}
+        size={knobProps.size}>
+        {children}
+      </FormGridWeb>
+    );
+  }
+
+  return (
+    <FormGridNative
+      columns={wideColumns}
+      maxColumns={maxColumns}
+      gap={resolvedGap}
+      gapFragment={gapFragment}
+      density={knobProps.density}
+      size={knobProps.size}>
+      {children}
+    </FormGridNative>
+  );
+};

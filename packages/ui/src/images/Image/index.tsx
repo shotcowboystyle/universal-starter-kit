@@ -8,7 +8,7 @@ import type { ImageProps } from './types';
 
 export type { ImageProps } from './types';
 
-export function Image({
+export const Image = ({
   alt = '',
   blurRadius: _blurRadius,
   capInsets: _capInsets,
@@ -52,7 +52,7 @@ export function Image({
   aspectRatio,
   borderRadius,
   ...props
-}: ImageProps) {
+}: ImageProps) => {
   const { source, resolvedSrc } = useResolvedImageSource(sourceProp, src);
   const hasSource = Boolean(resolvedSrc) || typeof source === 'number';
   const thumbnail = size != null && (isThumbnailSize(size) || typeof size === 'number');
@@ -138,4 +138,4 @@ export function Image({
       ) : null}
     </ImageFrame>
   );
-}
+};

@@ -1,7 +1,7 @@
 import { View } from '@tamagui/core';
 import { ActivityIndicator } from 'react-native';
 
-export default function Loading() {
+const Loading = () => {
   return (
     <View
       flex={1}
@@ -11,4 +11,6 @@ export default function Loading() {
       <ActivityIndicator size="large" />
     </View>
   );
-}
+};
+
+export default Loading;

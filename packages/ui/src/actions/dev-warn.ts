@@ -16,11 +16,11 @@ export { warnCancelDisabled, warnDialogTooManyActions } from '@repo/theme';
 
 export type ActionDevWarnDetail = DevWarnDetail;
 
-export function actionDevWarn(code: ActionDevWarnCode, detail: ActionDevWarnDetail = {}): void {
+export const actionDevWarn = (code: ActionDevWarnCode, detail: ActionDevWarnDetail = {}): void => {
   devWarn(code, detail);
-}
+};
 
 /** @internal test helper */
-export function __resetActionDevWarnSeen(): void {
+export const __resetActionDevWarnSeen = (): void => {
   __resetDevWarnSeen();
-}
+};

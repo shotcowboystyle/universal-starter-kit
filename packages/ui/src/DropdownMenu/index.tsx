@@ -148,13 +148,13 @@ interface DropdownMenuContextValue {
 
 const DropdownMenuContext = createContext<DropdownMenuContextValue | null>(null);
 
-function useDropdownMenuContext(part: string): DropdownMenuContextValue {
+const useDropdownMenuContext = (part: string): DropdownMenuContextValue => {
   const ctx = useContext(DropdownMenuContext);
   if (!ctx) {
     throw new Error(`DropdownMenu.${part} must be used inside <DropdownMenu>`);
   }
   return ctx;
-}
+};
 
 // ── Styled parts ──────────────────────────────────────────────
 
@@ -215,7 +215,7 @@ const coverContract = {
   fitContent: false,
 };
 
-function decorateTrigger(trigger: ReactNode, open: boolean, onArrow: (prefer: 'first' | 'last') => void): ReactNode {
+const decorateTrigger = (trigger: ReactNode, open: boolean, onArrow: (prefer: 'first' | 'last') => void): ReactNode => {
   if (!isValidElement(trigger)) {
     return trigger;
   }
@@ -236,9 +236,19 @@ function decorateTrigger(trigger: ReactNode, open: boolean, onArrow: (prefer: 'f
       }
     },
   });
-}
+};
 
-function renderEntries(items: DropdownMenuEntry[]) {
+const DropdownMenuSeparator = (props: DropdownMenuSeparatorProps) => {
+  return (
+    <SeparatorLine
+      role="separator"
+      {...hairline.height}
+      {...props}
+    />
+  );
+};
+
+const renderEntries = (items: DropdownMenuEntry[]) => {
   return items.map((entry, index) =>
     'separator' in entry && entry.separator ? (
       <DropdownMenuSeparator key={`separator-${index}`} />
@@ -268,205 +278,17 @@ function renderEntries(items: DropdownMenuEntry[]) {
       </DropdownMenuItem>
     ),
   );
-}
+};
 
-// ── Root ──────────────────────────────────────────────────────
-
-function DropdownMenuRoot({
-  children,
-  items,
-  open: openProp,
-  defaultOpen = false,
-  onOpenChange,
-  placement = 'bottom-start',
-  maxHeight,
-  closeOnSelect,
-}: DropdownMenuProps) {
-  const [open, setOpen] = useControllableState({
-    prop: openProp,
-    defaultProp: defaultOpen,
-    onChange: onOpenChange,
-  });
-  const pendingFocusRef = useRef<'first' | 'last'>('first');
-
-  // Content's onCloseAutoFocus, read off the Content child below during the
-  // same render. A ref because the child scan happens after these callbacks
-  // are defined, and both close paths have to reach the same handler.
-  const closeAutoFocusRef = useRef<DropdownMenuContentProps['onCloseAutoFocus']>(undefined);
-  // Notify on the actual state transition, including parent-controlled closes.
-  // A rejected controlled close request must not move focus out of an open menu.
-  const wasOpenRef = useRef(false);
-  const skipReturnFocusRef = useRef(false);
-
-  const fireCloseAutoFocus = useCallback(() => {
-    const handler = closeAutoFocusRef.current;
-    if (!handler) {
-      return;
-    }
-    handler({
-      preventDefault: () => {
-        skipReturnFocusRef.current = true;
-      },
-      get defaultPrevented() {
-        return skipReturnFocusRef.current;
-      },
-    });
-  }, []);
-
-  const close = useCallback(() => {
-    setOpen(false);
-  }, [setOpen]);
-
-  useLayoutEffect(() => {
-    if (wasOpenRef.current && !open) {
-      fireCloseAutoFocus();
-    }
-    wasOpenRef.current = !!open;
-    if (open) {
-      skipReturnFocusRef.current = false;
-    }
-  }, [open, fireCloseAutoFocus]);
-
-  const ctx = useMemo<DropdownMenuContextValue>(
-    () => ({ open, setOpen, close, closeOnSelect, pendingFocusRef }),
-    [open, setOpen, close, closeOnSelect],
-  );
-
-  const onArrow = useCallback(
-    (prefer: 'first' | 'last') => {
-      pendingFocusRef.current = prefer;
-      if (!open) {
-        setOpen(true);
-      }
-    },
-    [open, setOpen],
-  );
-
-  let trigger: ReactNode = children;
-  let body: ReactNode = null;
-  let contentMaxHeight = maxHeight;
-  let contentMaxWidth: number | undefined;
-  let contentAriaLabel: string | undefined;
-  closeAutoFocusRef.current = undefined;
-  if (items) {
-    body = renderEntries(items);
-  } else if (Array.isArray(children) || isValidElement(children)) {
-    const list = Array.isArray(children) ? children : [children];
-    const triggerParts: ReactNode[] = [];
-    const contentParts: ReactNode[] = [];
-    for (const child of list) {
-      if (!isValidElement(child)) {
-        triggerParts.push(child);
-        continue;
-      }
-      const { type } = child as { type?: unknown };
-      if (type === DropdownMenuTrigger) {
-        triggerParts.push((child.props as { children?: ReactNode }).children);
-      } else if (type === DropdownMenuContent) {
-        const contentProps = child.props as DropdownMenuContentProps;
-        contentParts.push(contentProps.children);
-        if (contentProps.maxHeight != null) {
-          contentMaxHeight = contentProps.maxHeight;
-        }
-        if (contentProps.maxWidth != null) {
-          contentMaxWidth = contentProps.maxWidth;
-        }
-        if (contentProps.onCloseAutoFocus) {
-          closeAutoFocusRef.current = contentProps.onCloseAutoFocus;
-        }
-        if (contentProps['aria-label'] != null) {
-          contentAriaLabel = contentProps['aria-label'];
-        }
-      } else {
-        triggerParts.push(child);
-      }
-    }
-    if (triggerParts.length) {
-      trigger = triggerParts.length === 1 ? triggerParts[0] : triggerParts;
-    }
-    if (contentParts.length) {
-      body = contentParts;
-    }
-  }
-
-  return (
-    <DropdownMenuContext.Provider value={ctx}>
-      <FloatingPanel
-        open={open}
-        onOpenChange={setOpen}
-        skipReturnFocusRef={skipReturnFocusRef}
-        trigger={decorateTrigger(trigger, open, onArrow)}
-        contentPadding="none"
-        {...coverContract}
-        {...(placement ? { placement } : {})}>
-        <DropdownMenuList
-          maxHeight={contentMaxHeight}
-          maxWidth={contentMaxWidth}
-          aria-label={contentAriaLabel}>
-          {body}
-        </DropdownMenuList>
-      </FloatingPanel>
-    </DropdownMenuContext.Provider>
-  );
-}
-
-// ── Trigger ───────────────────────────────────────────────────
-
-export interface DropdownMenuTriggerProps {
-  children?: ReactNode;
-  asChild?: boolean;
-}
-
-function DropdownMenuTrigger({ children }: DropdownMenuTriggerProps) {
+const DropdownMenuTrigger = ({ children }: DropdownMenuTriggerProps) => {
   return <>{children}</>;
-}
+};
 
-// ── Content ───────────────────────────────────────────────────
-
-export interface DropdownMenuContentProps {
-  children?: ReactNode;
-  /** Max height before the item list scrolls. */
-  maxHeight?: number;
-  /**
-   * Max menu width. Callers such as DataTableViewOptions pass a popover
-   * cap; FloatingPanel still owns at-least-trigger, this only clips overflow.
-   */
-  maxWidth?: number;
-  /**
-   * Minimum menu width. FloatingPanel's at-least-trigger cover contract
-   * owns this now — kept so existing callers type-check.
-   */
-  minWidth?: number;
-  /**
-   * Fired as the menu closes, before focus would return to the trigger.
-   * Call `preventDefault()` to keep the trigger from taking focus back —
-   * the rich-text toolbars do exactly that and hand focus to the editor
-   * instead, so the user can keep typing after picking a heading or a list.
-   */
-  onCloseAutoFocus?: (event: DropdownMenuCloseAutoFocusEvent) => void;
-  /**
-   * Accessible name for the menu. Lands on the `role="menu"` element, which
-   * is the node a screen reader announces — a facet menu whose trigger is an
-   * icon has no other name. DataTableFacetMenu passes its column label.
-   */
-  'aria-label'?: string;
-}
-
-/**
- * The minimal preventable event `onCloseAutoFocus` receives. Deliberately not
- * a DOM event: the close can originate from a native sheet or a keyboard
- * dismissal where there is no DOM event to forward.
- */
-export interface DropdownMenuCloseAutoFocusEvent {
-  preventDefault: () => void;
-  readonly defaultPrevented: boolean;
-}
-
-function DropdownMenuContent({ children }: DropdownMenuContentProps) {
+const DropdownMenuContent = ({ children }: DropdownMenuContentProps) => {
   return <>{children}</>;
-}
+};
 
-function DropdownMenuList({
+const DropdownMenuList = ({
   children,
   maxHeight,
   maxWidth,
@@ -476,7 +298,7 @@ function DropdownMenuList({
   maxHeight?: number;
   maxWidth?: number;
   'aria-label'?: string;
-}) {
+}) => {
   const ctx = useDropdownMenuContext('Content');
   const innerRef = useRef<TamaguiElement | null>(null);
   const typeahead = useRef({ buffer: '', at: 0 });
@@ -603,6 +425,194 @@ function DropdownMenuList({
       {children}
     </YStack>
   );
+};
+
+// ── Root ──────────────────────────────────────────────────────
+
+const DropdownMenuRoot = ({
+  children,
+  items,
+  open: openProp,
+  defaultOpen = false,
+  onOpenChange,
+  placement = 'bottom-start',
+  maxHeight,
+  closeOnSelect,
+}: DropdownMenuProps) => {
+  const [open, setOpen] = useControllableState({
+    prop: openProp,
+    defaultProp: defaultOpen,
+    onChange: onOpenChange,
+  });
+  const pendingFocusRef = useRef<'first' | 'last'>('first');
+
+  // Content's onCloseAutoFocus, read off the Content child below during the
+  // same render. A ref because the child scan happens after these callbacks
+  // are defined, and both close paths have to reach the same handler.
+  const closeAutoFocusRef = useRef<DropdownMenuContentProps['onCloseAutoFocus']>(undefined);
+  // Notify on the actual state transition, including parent-controlled closes.
+  // A rejected controlled close request must not move focus out of an open menu.
+  const wasOpenRef = useRef(false);
+  const skipReturnFocusRef = useRef(false);
+
+  const fireCloseAutoFocus = useCallback(() => {
+    const handler = closeAutoFocusRef.current;
+    if (!handler) {
+      return;
+    }
+    handler({
+      preventDefault: () => {
+        skipReturnFocusRef.current = true;
+      },
+      get defaultPrevented() {
+        return skipReturnFocusRef.current;
+      },
+    });
+  }, []);
+
+  const close = useCallback(() => {
+    setOpen(false);
+  }, [setOpen]);
+
+  useLayoutEffect(() => {
+    if (wasOpenRef.current && !open) {
+      fireCloseAutoFocus();
+    }
+    wasOpenRef.current = !!open;
+    if (open) {
+      skipReturnFocusRef.current = false;
+    }
+  }, [open, fireCloseAutoFocus]);
+
+  const ctx = useMemo<DropdownMenuContextValue>(
+    () => ({ open, setOpen, close, closeOnSelect, pendingFocusRef }),
+    [open, setOpen, close, closeOnSelect],
+  );
+
+  const onArrow = useCallback(
+    (prefer: 'first' | 'last') => {
+      pendingFocusRef.current = prefer;
+      if (!open) {
+        setOpen(true);
+      }
+    },
+    [open, setOpen],
+  );
+
+  let trigger: ReactNode = children;
+  let body: ReactNode = null;
+  let contentMaxHeight = maxHeight;
+  let contentMaxWidth: number | undefined;
+  let contentAriaLabel: string | undefined;
+  closeAutoFocusRef.current = undefined;
+  if (items) {
+    body = renderEntries(items);
+  } else if (Array.isArray(children) || isValidElement(children)) {
+    const list = Array.isArray(children) ? children : [children];
+    const triggerParts: ReactNode[] = [];
+    const contentParts: ReactNode[] = [];
+    for (const child of list) {
+      if (!isValidElement(child)) {
+        triggerParts.push(child);
+        continue;
+      }
+      const { type } = child as { type?: unknown };
+      if (type === DropdownMenuTrigger) {
+        triggerParts.push((child.props as { children?: ReactNode }).children);
+      } else if (type === DropdownMenuContent) {
+        const contentProps = child.props as DropdownMenuContentProps;
+        contentParts.push(contentProps.children);
+        if (contentProps.maxHeight != null) {
+          contentMaxHeight = contentProps.maxHeight;
+        }
+        if (contentProps.maxWidth != null) {
+          contentMaxWidth = contentProps.maxWidth;
+        }
+        if (contentProps.onCloseAutoFocus) {
+          closeAutoFocusRef.current = contentProps.onCloseAutoFocus;
+        }
+        if (contentProps['aria-label'] != null) {
+          contentAriaLabel = contentProps['aria-label'];
+        }
+      } else {
+        triggerParts.push(child);
+      }
+    }
+    if (triggerParts.length) {
+      trigger = triggerParts.length === 1 ? triggerParts[0] : triggerParts;
+    }
+    if (contentParts.length) {
+      body = contentParts;
+    }
+  }
+
+  return (
+    <DropdownMenuContext.Provider value={ctx}>
+      <FloatingPanel
+        open={open}
+        onOpenChange={setOpen}
+        skipReturnFocusRef={skipReturnFocusRef}
+        trigger={decorateTrigger(trigger, open, onArrow)}
+        contentPadding="none"
+        {...coverContract}
+        {...(placement ? { placement } : {})}>
+        <DropdownMenuList
+          maxHeight={contentMaxHeight}
+          maxWidth={contentMaxWidth}
+          aria-label={contentAriaLabel}>
+          {body}
+        </DropdownMenuList>
+      </FloatingPanel>
+    </DropdownMenuContext.Provider>
+  );
+};
+
+// ── Trigger ───────────────────────────────────────────────────
+
+export interface DropdownMenuTriggerProps {
+  children?: ReactNode;
+  asChild?: boolean;
+}
+
+// ── Content ───────────────────────────────────────────────────
+
+export interface DropdownMenuContentProps {
+  children?: ReactNode;
+  /** Max height before the item list scrolls. */
+  maxHeight?: number;
+  /**
+   * Max menu width. Callers such as DataTableViewOptions pass a popover
+   * cap; FloatingPanel still owns at-least-trigger, this only clips overflow.
+   */
+  maxWidth?: number;
+  /**
+   * Minimum menu width. FloatingPanel's at-least-trigger cover contract
+   * owns this now — kept so existing callers type-check.
+   */
+  minWidth?: number;
+  /**
+   * Fired as the menu closes, before focus would return to the trigger.
+   * Call `preventDefault()` to keep the trigger from taking focus back —
+   * the rich-text toolbars do exactly that and hand focus to the editor
+   * instead, so the user can keep typing after picking a heading or a list.
+   */
+  onCloseAutoFocus?: (event: DropdownMenuCloseAutoFocusEvent) => void;
+  /**
+   * Accessible name for the menu. Lands on the `role="menu"` element, which
+   * is the node a screen reader announces — a facet menu whose trigger is an
+   * icon has no other name. DataTableFacetMenu passes its column label.
+   */
+  'aria-label'?: string;
+}
+
+/**
+ * The minimal preventable event `onCloseAutoFocus` receives. Deliberately not
+ * a DOM event: the close can originate from a native sheet or a keyboard
+ * dismissal where there is no DOM event to forward.
+ */
+export interface DropdownMenuCloseAutoFocusEvent {
+  preventDefault: () => void;
+  readonly defaultPrevented: boolean;
 }
 
 // ── Item ──────────────────────────────────────────────────────
@@ -862,21 +872,11 @@ const DropdownMenuCheckboxItem = forwardRef<TamaguiElement, DropdownMenuCheckbox
 
 export interface DropdownMenuSeparatorProps extends GetProps<typeof SeparatorLine> {}
 
-function DropdownMenuSeparator(props: DropdownMenuSeparatorProps) {
-  return (
-    <SeparatorLine
-      role="separator"
-      {...hairline.height}
-      {...props}
-    />
-  );
-}
-
 export interface DropdownMenuLabelProps extends GetProps<typeof Text> {
   children: ReactNode;
 }
 
-function DropdownMenuLabel({ children, ...props }: DropdownMenuLabelProps) {
+const DropdownMenuLabel = ({ children, ...props }: DropdownMenuLabelProps) => {
   const { knobProps } = useResolvedKnobs();
   return (
     <Text
@@ -891,7 +891,7 @@ function DropdownMenuLabel({ children, ...props }: DropdownMenuLabelProps) {
       {children}
     </Text>
   );
-}
+};
 
 // ── Export ────────────────────────────────────────────────────
 

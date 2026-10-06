@@ -11,19 +11,19 @@ import { PageHeader } from './Page';
 
 afterEach(cleanup);
 
-function titleFontClasses(): string[] {
+const titleFontClasses = (): string[] => {
   const title = screen.getByText('Workspace Settings');
   return String(title.className || '')
     .split(' ')
     .filter((c) => c.startsWith('_fos-') || c.startsWith('_lh-'));
-}
+};
 
-function renderTitle(node: React.ReactElement): string[] {
+const renderTitle = (node: React.ReactElement): string[] => {
   renderWithProviders(node);
   const classes = titleFontClasses();
   cleanup();
   return classes;
-}
+};
 
 describe('PageHeader page-title scale', () => {
   it('defaults to the moderate step, not the display H1', () => {

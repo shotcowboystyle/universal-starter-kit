@@ -54,7 +54,7 @@ import {
  */
 const TRACK_HEIGHT = 6;
 
-function radiusStopFromToken(token: number | string): BorderRadius {
+const radiusStopFromToken = (token: number | string): BorderRadius => {
   if (token === 0 || token === '$0') {
     return 'none';
   }
@@ -64,7 +64,7 @@ function radiusStopFromToken(token: number | string): BorderRadius {
     }
   }
   throw new Error(`Slider: "${String(token)}" is not a radius token in borderRadiusMap`);
-}
+};
 
 // Track styling helper - returns props to pass to TamaguiSlider.Track
 const getTrackProps = (outlined: boolean | undefined, borderRadius: number) => ({
@@ -110,14 +110,14 @@ const SliderThumbFrame = styled(TamaguiSlider.Thumb, {
       }),
 });
 
-function formatSliderOutput(values: number[], step: number): string {
+const formatSliderOutput = (values: number[], step: number): string => {
   const decimals = (String(step).split('.')[1] || '').length;
   const fmt = (n: number) => (decimals ? n.toFixed(decimals) : String(n));
   if (values.length <= 1) {
     return fmt(values[0] ?? 0);
   }
   return `${fmt(values[0] ?? 0)}–${fmt(values[values.length - 1] ?? 0)}`;
-}
+};
 
 const JUMP_KEYS = new Set(['Home', 'End', 'PageUp', 'PageDown', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']);
 
@@ -127,7 +127,7 @@ const JUMP_MOTION_MS = 180;
 /** VoiceOver adjustable actions (native): swipe up/down steps the value. */
 const A11Y_ADJUSTABLE_ACTIONS = [{ name: 'increment' }, { name: 'decrement' }] as const;
 
-function valuesEqual(a: number[] | undefined, b: number[] | undefined) {
+const valuesEqual = (a: number[] | undefined, b: number[] | undefined) => {
   if (a === b) {
     return true;
   }
@@ -135,7 +135,7 @@ function valuesEqual(a: number[] | undefined, b: number[] | undefined) {
     return false;
   }
   return a.every((v, i) => v === b[i]);
-}
+};
 
 export interface SliderProps {
   name?: string;
@@ -208,7 +208,7 @@ interface SliderControlProps {
  * (track click, keyboard, controlled value change). Drag and first paint stay
  * transition-off so the handle never lags the pointer or wiggles on mount.
  */
-function SliderControl({
+const SliderControl = ({
   id,
   sliderValue,
   controlled,
@@ -231,7 +231,7 @@ function SliderControl({
   sliderProps,
   onChangeValues,
   onBlur,
-}: SliderControlProps) {
+}: SliderControlProps) => {
   const describedBy = useFieldDescribedBy();
   const { disabledState } = useResolvedKnobs();
   if (isWeb) {
@@ -694,9 +694,9 @@ function SliderControl({
       </Paragraph>
     </XStack>
   );
-}
+};
 
-export function Slider({
+export const Slider = ({
   name,
   form: formProp,
   validators,
@@ -721,7 +721,7 @@ export function Slider({
   skeleton,
   compact,
   'aria-label': ariaLabel,
-}: SliderProps) {
+}: SliderProps) => {
   // Canonical `onChange` and the alias `onValueChange` both fire from the
   // single emit site below (same reconciliation as Switch).
   const handleValueChange = (values: number[]) => {
@@ -853,4 +853,4 @@ export function Slider({
       }}
     </Field>
   );
-}
+};

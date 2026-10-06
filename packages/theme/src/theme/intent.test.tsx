@@ -36,36 +36,36 @@ import { useResolvedKnobs, useIntentContext } from './use-resolved-knobs';
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makePreset(intents: PresetType['intents'] = {}): PresetType {
+const makePreset = (intents: PresetType['intents'] = {}): PresetType => {
   return {
     theme: 'light' as ThemeName,
     knobs: defaultKnobs,
     intents,
     tints: [],
   };
-}
+};
 
-function wrapWithPreset(preset: PresetType, children: ReactNode): ReactNode {
+const wrapWithPreset = (preset: PresetType, children: ReactNode): ReactNode => {
   const ctx: PresetContextValue = { preset };
   return createElement(PresetContext.Provider, { value: ctx }, children);
-}
+};
 
-function renderToHtml(node: ReactNode): string {
+const renderToHtml = (node: ReactNode): string => {
   return renderToString(node as React.ReactElement);
-}
+};
 
 /** Return an array of all `data-tamagui-theme` values in rendered HTML. */
-function collectThemes(html: string): string[] {
+const collectThemes = (html: string): string[] => {
   return Array.from(html.matchAll(/data-tamagui-theme="([^"]+)"/g), (m) => m[1]);
-}
+};
 
 /** Create a probe component that captures resolved knobs from useResolvedKnobs. */
-function createRecipesCapture(options?: Parameters<typeof useResolvedKnobs>[0]) {
+const createRecipesCapture = (options?: Parameters<typeof useResolvedKnobs>[0]) => {
   let captured: ResolvedKnobs | undefined;
-  function Probe() {
+  const Probe = () => {
     captured = useResolvedKnobs(options);
     return null;
-  }
+  };
   return {
     Probe,
     get result(): ResolvedKnobs {
@@ -75,15 +75,15 @@ function createRecipesCapture(options?: Parameters<typeof useResolvedKnobs>[0]) 
       return captured;
     },
   };
-}
+};
 
 /** Create a probe that captures the intent context value. */
-function createIntentCapture() {
+const createIntentCapture = () => {
   let captured: string | null | undefined;
-  function Probe() {
+  const Probe = () => {
     captured = useIntentContext();
     return createElement('span', null, 'probe');
-  }
+  };
   return {
     Probe,
     get result(): string | null {
@@ -93,7 +93,7 @@ function createIntentCapture() {
       return captured;
     },
   };
-}
+};
 
 // ---------------------------------------------------------------------------
 // Intent context tests

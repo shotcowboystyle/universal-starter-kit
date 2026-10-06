@@ -24,9 +24,9 @@ export const FormContext = createContext<
   FormApi<any, any, any, any, any, any, any, any, any, any, any, any> | undefined
 >(undefined);
 
-export function useFormContext<TParentData, _TFormValidator = any>() {
+export const useFormContext = <TParentData, _TFormValidator = any>() => {
   return useContext(FormContext) as FormApi<TParentData, any, any, any, any, any, any, any, any, any, any, any>;
-}
+};
 
 export interface FormValidateContextValue {
   validateOn: FormValidateOn;
@@ -41,9 +41,9 @@ const defaultValidateContext: FormValidateContextValue = {
 
 export const FormValidateContext = createContext<FormValidateContextValue>(defaultValidateContext);
 
-export function useFormValidate(): FormValidateContextValue {
+export const useFormValidate = (): FormValidateContextValue => {
   return useContext(FormValidateContext);
-}
+};
 
 export type FormSaveMode = 'embedded' | 'declarative';
 
@@ -57,9 +57,9 @@ const defaultSaveMode: FormSaveModeContextValue = { mode: 'embedded' };
 /** Declarative forms stage text/checkbox/radio; switches auto-commit. */
 export const FormSaveModeContext = createContext<FormSaveModeContextValue>(defaultSaveMode);
 
-export function useFormSaveMode(): FormSaveModeContextValue {
+export const useFormSaveMode = (): FormSaveModeContextValue => {
   return useContext(FormSaveModeContext);
-}
+};
 
 export interface FormProps<TFormData, _TFormValidator = any> extends Omit<TamaguiFormProps, 'onSubmit'> {
   children: ReactNode;
@@ -100,7 +100,7 @@ export interface FormProps<TFormData, _TFormValidator = any> extends Omit<Tamagu
   saveBar?: boolean | ContextualSaveBarProps;
 }
 
-function AutoErrorSummary({
+const AutoErrorSummary = ({
   form,
   title,
   formElement,
@@ -108,7 +108,7 @@ function AutoErrorSummary({
   form: FormApi<any, any, any, any, any, any, any, any, any, any, any, any>;
   title?: string;
   formElement: HTMLElement | null;
-}) {
+}) => {
   const { Subscribe } = form as unknown as {
     Subscribe: (props: { selector: (state: any) => any; children: (value: any) => ReactNode }) => ReactNode;
   };
@@ -143,9 +143,9 @@ function AutoErrorSummary({
       }}
     </Subscribe>
   );
-}
+};
 
-function FormValidateProvider({
+const FormValidateProvider = ({
   form,
   validateOn,
   children,
@@ -153,7 +153,7 @@ function FormValidateProvider({
   form: FormApi<any, any, any, any, any, any, any, any, any, any, any, any>;
   validateOn: FormValidateOn;
   children: ReactNode;
-}) {
+}) => {
   const { Subscribe } = form as unknown as {
     Subscribe: (props: { selector: (state: any) => any; children: (value: any) => ReactNode }) => ReactNode;
   };
@@ -171,9 +171,9 @@ function FormValidateProvider({
       )}
     </Subscribe>
   );
-}
+};
 
-export function Form<TFormData extends Record<string, any>, TFormValidator = any>({
+export const Form = <TFormData extends Record<string, any>, TFormValidator = any>({
   children,
   form: providedForm,
   formOptions,
@@ -187,7 +187,7 @@ export function Form<TFormData extends Record<string, any>, TFormValidator = any
   compact,
   saveBar,
   ...tamaguiFormProps
-}: FormProps<TFormData, TFormValidator>) {
+}: FormProps<TFormData, TFormValidator>) => {
   const { knobProps } = useResolvedKnobs(compact === undefined ? undefined : { compact });
   const requiredMarkMode = mapHouseRequiredMarking(knobProps.requiredMarking);
   const formAutofocusOn = knobProps.formAutofocus === 'on';
@@ -337,7 +337,7 @@ export function Form<TFormData extends Record<string, any>, TFormValidator = any
   );
 
   return compact ? <Preset overrides={{ density: 'compact' }}>{formNode}</Preset> : formNode;
-}
+};
 
 export interface FormActionsProps {
   children: ReactNode;
@@ -349,7 +349,7 @@ export interface FormActionsProps {
  * GOV.UK / Polaris action row: left-aligned, wraps, gapped via the space
  * recipe — never stretched to the form column and never sized from `sizeToken`.
  */
-export function FormActions({ children, gap }: FormActionsProps) {
+export const FormActions = ({ children, gap }: FormActionsProps) => {
   const { knobProps } = useResolvedKnobs();
   const resolvedGap = gap ?? knobProps.gap.gap;
   return (
@@ -365,10 +365,10 @@ export function FormActions({ children, gap }: FormActionsProps) {
       {children}
     </XStack>
   );
-}
+};
 
 /** @internal test helper — effective timing for current FormValidate context. */
-export function useEffectiveValidateOn() {
+export const useEffectiveValidateOn = () => {
   const { validateOn, hasSubmitted } = useFormValidate();
   return resolveEffectiveValidateOn(validateOn, hasSubmitted);
-}
+};

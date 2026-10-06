@@ -44,7 +44,7 @@ export default meta;
 
 type Story = StoryObj<typeof Wizard>;
 
-function DeriveToggle() {
+const DeriveToggle = () => {
   const { setFieldValue } = useWizard();
   const [derived, setDerived] = useState(false);
   return (
@@ -60,15 +60,15 @@ function DeriveToggle() {
       }}
     />
   );
-}
+};
 
-function ReadyWizard({
+const ReadyWizard = ({
   labels = 'visible',
   defaultCurrent = 1,
 }: {
   labels?: 'visible' | 'hidden';
   defaultCurrent?: number;
-}) {
+}) => {
   const form = useFormContext<Record<string, string>>();
   return (
     <Wizard
@@ -116,9 +116,9 @@ function ReadyWizard({
       </Wizard.Panel>
     </Wizard>
   );
-}
+};
 
-function ReadyForm(props: { labels?: 'visible' | 'hidden'; defaultCurrent?: number }) {
+const ReadyForm = (props: { labels?: 'visible' | 'hidden'; defaultCurrent?: number }) => {
   return (
     <Form
       formOptions={{
@@ -133,7 +133,7 @@ function ReadyForm(props: { labels?: 'visible' | 'hidden'; defaultCurrent?: numb
       <ReadyWizard {...props} />
     </Form>
   );
-}
+};
 
 export const Main: Story = {
   name: 'Ready',

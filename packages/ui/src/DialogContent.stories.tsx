@@ -9,7 +9,7 @@ import { Paragraph, XStack, YStack } from 'tamagui';
 import { Dialog } from './Dialog';
 import { DialogContent, DialogOverlay } from './surfaces';
 
-function DialogHarness({ long = false, startOpen = true }: { long?: boolean; startOpen?: boolean }) {
+const DialogHarness = ({ long = false, startOpen = true }: { long?: boolean; startOpen?: boolean }) => {
   const [open, setOpen] = useState(startOpen);
   return (
     <YStack
@@ -52,7 +52,7 @@ function DialogHarness({ long = false, startOpen = true }: { long?: boolean; sta
       </Dialog>
     </YStack>
   );
-}
+};
 
 const meta: Meta<typeof DialogContent> = {
   title: 'Components/DialogContent',

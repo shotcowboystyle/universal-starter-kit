@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { Badge } from './index';
 import * as BadgeModule from './index';
 
-function atoms(el: Element | null, prefixes: string[]): string[] {
+const atoms = (el: Element | null, prefixes: string[]): string[] => {
   if (!el) {
     return [];
   }
@@ -15,13 +15,13 @@ function atoms(el: Element | null, prefixes: string[]): string[] {
     .split(' ')
     .filter((c) => prefixes.some((p) => c.startsWith(p)))
     .sort();
-}
+};
 
-function countText(container: HTMLElement): HTMLElement {
+const countText = (container: HTMLElement): HTMLElement => {
   const pill = container.querySelector('[data-badge="count"]');
   const node = pill?.querySelector('span, div') ?? pill?.firstElementChild;
   return (node ?? pill) as HTMLElement;
-}
+};
 
 describe('Badge', () => {
   it('hides when count is 0 and shows with showZero', () => {

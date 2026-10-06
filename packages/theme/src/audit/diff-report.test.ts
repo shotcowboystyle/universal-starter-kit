@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { AuditReport, ElementAudit, AuditSummary } from './constraint-audit';
 import { diffAuditReports, formatAuditReport } from './diff-report';
 
-function makeReport(overrides: Partial<AuditReport> = {}): AuditReport {
+const makeReport = (overrides: Partial<AuditReport> = {}): AuditReport => {
   const defaultSummary: AuditSummary = {
     totalElements: 10,
     auditedElements: 2,
@@ -28,9 +28,9 @@ function makeReport(overrides: Partial<AuditReport> = {}): AuditReport {
     elements: [],
     ...overrides,
   };
-}
+};
 
-function makeElement(label: string, overrides: Partial<ElementAudit> = {}): ElementAudit {
+const makeElement = (label: string, overrides: Partial<ElementAudit> = {}): ElementAudit => {
   return {
     label,
     tag: 'div',
@@ -39,7 +39,7 @@ function makeElement(label: string, overrides: Partial<ElementAudit> = {}): Elem
     violations: [],
     ...overrides,
   };
-}
+};
 
 describe('diffAuditReports', () => {
   it('reports no changes for identical reports', () => {

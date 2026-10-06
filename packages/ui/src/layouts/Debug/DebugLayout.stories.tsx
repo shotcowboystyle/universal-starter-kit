@@ -5,9 +5,9 @@ import { Paragraph, YStack } from 'tamagui';
 
 import { DebugLayout, createWithDebugLayout } from './index';
 
-function DebugRows() {
+const DebugRows = () => {
   return <Paragraph>scheme / knobs / env</Paragraph>;
-}
+};
 
 const meta: Meta<typeof DebugLayout> = {
   title: 'Components/DebugLayout',

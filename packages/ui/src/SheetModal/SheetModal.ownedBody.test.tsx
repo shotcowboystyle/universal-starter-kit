@@ -11,7 +11,7 @@ const hosts = vi.hoisted(() => ({
 vi.mock('@repo/ui', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@repo/ui')>();
   const React = await import('react');
-  function observed(Component: any) {
+  const observed = (Component: any) => {
     return React.forwardRef((props: Record<string, any>, ref) => {
       if (props.testID) {
         hosts.props.set(props.testID, props);
@@ -33,7 +33,7 @@ vi.mock('@repo/ui', async (importOriginal) => {
         />
       );
     });
-  }
+  };
   return {
     ...actual,
     YStack: observed(actual.YStack),
@@ -54,20 +54,20 @@ afterEach(() => {
   hosts.props.clear();
   hosts.measurements = [];
 });
-function sheetProps() {
+const sheetProps = () => {
   return hosts.props.get('public-sheet-modal')!;
-}
-function renderStory(name: 'OwnedMeasuredViewport' | 'OwnedScrollView') {
+};
+const renderStory = (name: 'OwnedMeasuredViewport' | 'OwnedScrollView') => {
   const story = (stories as Record<string, any>)[name];
   expect(story, `${name} is a registered story`).toBeDefined();
   return renderWithProviders(<>{story.render(story.args ?? {}, {})}</>);
-}
-function layout(id: string, height: number) {
+};
+const layout = (id: string, height: number) => {
   act(() => hosts.props.get(id)!.onLayout({ nativeEvent: { layout: { x: 0, y: 44, width: 300, height } } }));
-}
-function readings(view: ReturnType<typeof renderStory>) {
+};
+const readings = (view: ReturnType<typeof renderStory>) => {
   return JSON.parse(view.getByTestId('owned-sheet-readings').textContent);
-}
+};
 
 it('keeps the measured subject unmeasured until a delivered layout and distinguishes zero', () => {
   const view = renderStory('OwnedMeasuredViewport');

@@ -49,16 +49,16 @@ const SortableSessionContext = createContext<{ sourceId: string | null }>({
 });
 
 /** Lets a remount-prone cell (ChildTable handle) read lift state without recreating column defs. */
-export function SortableSessionProvider({ sourceId, children }: { sourceId: string | null; children: ReactNode }) {
+export const SortableSessionProvider = ({ sourceId, children }: { sourceId: string | null; children: ReactNode }) => {
   return createElement(SortableSessionContext.Provider, { value: { sourceId } }, children);
-}
+};
 
-export function useSortableDragging(itemId: string, dragging?: boolean) {
+export const useSortableDragging = (itemId: string, dragging?: boolean) => {
   const { sourceId } = useContext(SortableSessionContext);
   return dragging ?? sourceId === itemId;
-}
+};
 
-export function useSortableRows<T>({
+export const useSortableRows = <T>({
   items,
   getId,
   getLabel,
@@ -67,7 +67,7 @@ export function useSortableRows<T>({
   enabled,
   containerRef,
   rowSelector = DEFAULT_ROW_SELECTOR,
-}: UseSortableRowsOptions<T>) {
+}: UseSortableRowsOptions<T>) => {
   const [session, setSession] = useState<SortableSession | null>(null);
   const [announcement, setAnnouncement] = useState('');
   const [focusedIndex, setFocusedIndex] = useState(0);
@@ -472,4 +472,4 @@ export function useSortableRows<T>({
       'data-sortable-live': 'true',
     },
   };
-}
+};

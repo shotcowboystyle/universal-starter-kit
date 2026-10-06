@@ -18,12 +18,12 @@ export function greet(user: User, retries = 3): string {
   return label;
 }`;
 
-async function inkOf(code: string, language: string, content: string, theme?: string) {
+const inkOf = async (code: string, language: string, content: string, theme?: string) => {
   const lines = await highlightCode(code, language, theme);
   const token = lines.flat().find((candidate) => candidate.content.trim() === content);
   expect(token, `no token ${JSON.stringify(content)}`).toBeTruthy();
   return token!.color;
-}
+};
 
 describe('the default highlighter theme paints the held syntax tokens', () => {
   it('every token of a TypeScript sample takes a house ink', { timeout: 30_000 }, async () => {

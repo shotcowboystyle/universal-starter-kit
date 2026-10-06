@@ -3,7 +3,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { createPersistStore } from './persist';
 import type { Storage } from './persist';
 
-function createMockStorage(): Storage & { data: Map<string, string> } {
+const createMockStorage = (): Storage & { data: Map<string, string> } => {
   const data = new Map<string, string>();
   return {
     data,
@@ -15,7 +15,7 @@ function createMockStorage(): Storage & { data: Map<string, string> } {
       data.delete(key);
     }),
   };
-}
+};
 
 describe('createPersistStore', () => {
   let storage: ReturnType<typeof createMockStorage>;

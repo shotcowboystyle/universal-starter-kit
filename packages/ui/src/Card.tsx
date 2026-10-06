@@ -31,12 +31,12 @@ export interface CardProps extends TamaguiCardProps {
 export type { CardFooterProps } from './CardFooter';
 export type { CardHeaderProps } from './CardHeader';
 
-function NestedScale({ density, children }: { density: string; children: ReactNode }) {
+const NestedScale = ({ density, children }: { density: string; children: ReactNode }) => {
   if (density === 'compact') {
     return children;
   }
   return <Preset overrides={{ density: 'compact' }}>{children}</Preset>;
-}
+};
 
 /**
  * Tamagui styled hosts drop JSX `data-*` on native (Toast gallery hole), so
@@ -46,7 +46,7 @@ function NestedScale({ density, children }: { density: string; children: ReactNo
  * consumer. jsdom and Storybook both keep kebab `data-*`, so web writes
  * those only.
  */
-function hostData(attrs: Record<string, string>): Record<string, unknown> {
+const hostData = (attrs: Record<string, string>): Record<string, unknown> => {
   if (process.env.TAMAGUI_TARGET !== 'native') {
     return attrs;
   }
@@ -56,9 +56,9 @@ function hostData(attrs: Record<string, string>): Record<string, unknown> {
     dataSet[camel] = value;
   }
   return { dataSet };
-}
+};
 
-function CardRoot({ children, tier = 'content', ...props }: CardProps) {
+const CardRoot = ({ children, tier = 'content', ...props }: CardProps) => {
   const { knobProps } = useResolvedKnobs({ component: 'Card' });
   // Axiom 1 child-clip cap: the padded container's radius may not exceed its
   // own inset. cardSurface carries the cap already; the elevated tier layers
@@ -100,7 +100,7 @@ function CardRoot({ children, tier = 'content', ...props }: CardProps) {
       <NestedScale density={knobProps.density}>{children}</NestedScale>
     </TamaguiCard>
   );
-}
+};
 
 // Header and Footer are NOT defined here. They live in ./CardHeader and
 // ./CardFooter, where a bare title/caption string is wrapped so T-HEADING /

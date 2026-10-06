@@ -47,13 +47,13 @@ export interface ContextualSaveBarProps {
 
 type FieldMetaMap = Record<string, { isDirty?: boolean; errors?: unknown[] } | undefined>;
 
-function dirtyCount(fieldMeta: FieldMetaMap): number {
+const dirtyCount = (fieldMeta: FieldMetaMap): number => {
   return Object.values(fieldMeta).filter((meta) => meta?.isDirty).length;
-}
+};
 
-function fieldErrorCount(fieldMeta: FieldMetaMap): number {
+const fieldErrorCount = (fieldMeta: FieldMetaMap): number => {
   return collectFormFieldErrors(fieldMeta).length;
-}
+};
 
 interface SaveBarStoreState {
   isDirty?: boolean;
@@ -63,7 +63,7 @@ interface SaveBarStoreState {
   values?: Record<string, unknown>;
 }
 
-function useSaveBarSnapshot() {
+const useSaveBarSnapshot = () => {
   const form = useFormContext();
   return useStore(form.store as unknown as Store<SaveBarStoreState>, (state: SaveBarStoreState) => ({
     isDirty: Boolean(state.isDirty),
@@ -72,16 +72,16 @@ function useSaveBarSnapshot() {
     submissionAttempts: state.submissionAttempts ?? 0,
     values: state.values ?? {},
   }));
-}
+};
 
-function statusCopy(args: {
+const statusCopy = (args: {
   isSubmitting: boolean;
   saveError: string | null;
   errorCount: number;
   submissionAttempts: number;
   dirty: number;
   override?: string;
-}): { text: string; failed: boolean; qualifier?: string } {
+}): { text: string; failed: boolean; qualifier?: string } => {
   if (args.isSubmitting) {
     return { text: t('Saving…'), failed: false };
   }
@@ -109,9 +109,9 @@ function statusCopy(args: {
   const qualifier =
     args.dirty > 0 ? (args.dirty === 1 ? t('· 1 field') : t('· {{count}} fields', { count: args.dirty })) : undefined;
   return { text: t('Unsaved changes'), failed: false, qualifier };
-}
+};
 
-function barRadius(knobProps: KnobProps) {
+const barRadius = (knobProps: KnobProps) => {
   const top = knobProps.containerRadius.borderRadius;
   return {
     borderTopLeftRadius: top,
@@ -119,23 +119,23 @@ function barRadius(knobProps: KnobProps) {
     borderBottomLeftRadius: 0,
     borderBottomRightRadius: 0,
   };
-}
+};
 
-function containerRadiusRest(knobProps: KnobProps) {
+const containerRadiusRest = (knobProps: KnobProps) => {
   const fragment = knobProps.containerRadius as KnobProps['containerRadius'] & {
     className?: string;
   };
   const { className, borderRadius: _topPair, ...rest } = fragment;
   return { className, rest };
-}
+};
 
-export function ContextualSaveBar({
+export const ContextualSaveBar = ({
   forceVisible = false,
   discardDisabled = false,
   useBlocker,
   onSaved,
   message,
-}: ContextualSaveBarProps) {
+}: ContextualSaveBarProps) => {
   const form = useFormContext();
   const { knobProps, elevation } = useResolvedKnobs();
   const snap = useSaveBarSnapshot();
@@ -355,4 +355,4 @@ export function ContextualSaveBar({
       />
     </>
   );
-}
+};

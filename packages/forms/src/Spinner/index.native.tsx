@@ -14,7 +14,7 @@ export type { SpinnerProps, SpinnerSize } from './spinner-size';
 const SPIN_MS = 700;
 
 /** Native Spinner. Size follows the shared size-token scale; spin gates on transition. */
-export function Spinner({ size, color, ...props }: SpinnerProps) {
+export const Spinner = ({ size, color, ...props }: SpinnerProps) => {
   const { knobProps } = useResolvedKnobs();
   const token = spinnerSizeToken(size, knobProps.sizeToken);
   const px = spinnerSizePx(token);
@@ -81,4 +81,4 @@ export function Spinner({ size, color, ...props }: SpinnerProps) {
       </Animated.View>
     </View>
   );
-}
+};

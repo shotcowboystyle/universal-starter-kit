@@ -7,7 +7,7 @@ interface Props {
   params: Promise<{ locale: string }>;
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export const generateMetadata = async ({ params }: Props): Promise<Metadata> => {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'kanban' });
 
@@ -15,8 +15,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: t('title'),
     description: t('description'),
   };
-}
+};
 
-export default function BoardPage() {
+const BoardPage = () => {
   return <BoardOverview />;
-}
+};
+
+export default BoardPage;

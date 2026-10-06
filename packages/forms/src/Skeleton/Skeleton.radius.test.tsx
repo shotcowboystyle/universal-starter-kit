@@ -7,7 +7,7 @@ import { Skeleton } from './index';
 
 afterEach(cleanup);
 
-function textBoneRadius(borderRadius: 'none' | 'small' | 'large' | 'full') {
+const textBoneRadius = (borderRadius: 'none' | 'small' | 'large' | 'full') => {
   const { container } = renderWithProviders(
     <Preset overrides={{ borderRadius }}>
       <Skeleton
@@ -22,7 +22,7 @@ function textBoneRadius(borderRadius: 'none' | 'small' | 'large' | 'full') {
     .filter((c) => c.startsWith('_btlr-'));
   cleanup();
   return atoms;
-}
+};
 
 describe('Skeleton text bones ride DEFAULT', () => {
   it('takes the token at every stop, square at none', () => {

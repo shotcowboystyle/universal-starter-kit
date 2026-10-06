@@ -21,7 +21,7 @@ interface ProjectFormProps {
 const validateTitle = ({ value }: { value: string }) =>
   projectSchema.shape.title.safeParse(value).error?.issues[0]?.message;
 
-export function ProjectForm({ children, onSubmit, defaultValues }: ProjectFormProps) {
+export const ProjectForm = ({ children, onSubmit, defaultValues }: ProjectFormProps) => {
   const t = useTranslations('kanban.project');
 
   return (
@@ -48,4 +48,4 @@ export function ProjectForm({ children, onSubmit, defaultValues }: ProjectFormPr
       {children}
     </Form>
   );
-}
+};

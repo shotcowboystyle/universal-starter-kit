@@ -197,7 +197,7 @@ export interface TimelineProps extends Omit<YStackProps, 'children'> {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function getEntryIcon(entry: TimelineEntry, size: number): React.ReactNode {
+const getEntryIcon = (entry: TimelineEntry, size: number): React.ReactNode => {
   switch (entry.type) {
     case 'comment': {
       return <ChatCircleIcon size={size} />;
@@ -218,14 +218,14 @@ function getEntryIcon(entry: TimelineEntry, size: number): React.ReactNode {
       return <ClockIcon size={size} />;
     }
   }
-}
+};
 
 /**
  * Derive a human display name. Non-emails pass through untouched; emails get
  * their local part split on separators and title-cased ("john.doe@x" -> "John Doe").
  * A raw email is never returned as a display name.
  */
-export function prettifyAuthorName(raw: string): string {
+export const prettifyAuthorName = (raw: string): string => {
   const name = (raw ?? '').trim();
   if (!name) {
     return 'Unknown';
@@ -239,21 +239,21 @@ export function prettifyAuthorName(raw: string): string {
     return local || 'Unknown';
   }
   return words.map((w) => w[0].toUpperCase() + w.slice(1)).join(' ');
-}
+};
 
 /** Display name for an entry: explicit authorName, else prettified author. */
-export function getEntryDisplayName(entry: Pick<TimelineEntry, 'author' | 'authorName'>): string {
+export const getEntryDisplayName = (entry: Pick<TimelineEntry, 'author' | 'authorName'>): string => {
   return entry.authorName?.trim() || prettifyAuthorName(entry.author);
-}
+};
 
 /**
  * Compact absolute timestamp ("Aug 9, 3:30 PM"; adds year when not current).
  * Canonical formatter lives in theme: one register for
  * Timeline, table date cells, and picker display values.
  */
-function defaultFormatTimestamp(timestamp: string): string {
+const defaultFormatTimestamp = (timestamp: string): string => {
   return formatAbsoluteDateTime(timestamp);
-}
+};
 
 // Relative register re-exported so existing consumers keep their import path.
 export { formatRelativeTimestamp } from '@repo/theme';
@@ -264,7 +264,7 @@ export { formatRelativeTimestamp } from '@repo/theme';
  * flattens under the thread root) sort oldest-first so threads read downward.
  * Orphaned parentIds (parent missing from the list) fall back to top-level.
  */
-export function threadEntries(entries: TimelineEntry[]): TimelineThread[] {
+export const threadEntries = (entries: TimelineEntry[]): TimelineThread[] => {
   const byId = new Map(entries.map((e) => [e.id, e]));
 
   const rootOf = (entry: TimelineEntry): TimelineEntry => {
@@ -315,18 +315,18 @@ export function threadEntries(entries: TimelineEntry[]): TimelineThread[] {
     thread.replies.sort((a, b) => time(a) - time(b));
   }
   return threads;
-}
+};
 
 /** Flat feed walk: roots, then one-level replies, then an open reply composer. */
 type TimelineFeedItem =
   | { key: string; kind: 'entry'; entry: TimelineEntry; rootId: string; isReply: boolean }
   | { key: string; kind: 'reply-composer'; parent: TimelineEntry; rootId: string };
 
-function flattenFeedItems(
+const flattenFeedItems = (
   threads: TimelineThread[],
   entries: TimelineEntry[],
   replyTarget: { rootId: string; parentId: string } | null,
-): TimelineFeedItem[] {
+): TimelineFeedItem[] => {
   const items: TimelineFeedItem[] = [];
   for (const thread of threads) {
     items.push({
@@ -355,14 +355,14 @@ function flattenFeedItems(
     }
   }
   return items;
-}
+};
 
 /**
  * GitHub/Primer + Frappe Desk spine: a flat 1px scheme-aware connector through
  * the avatar/badge column. First/last items clip the line to the node center
  * so the rail does not run off the stacked group (Primer `clipSidebar`).
  */
-function TimelineSpine({
+const TimelineSpine = ({
   show,
   clipStart,
   clipEnd,
@@ -374,7 +374,7 @@ function TimelineSpine({
   clipEnd: boolean;
   columnPx: number;
   insetStart: number;
-}) {
+}) => {
   if (!show) {
     return null;
   }
@@ -391,12 +391,12 @@ function TimelineSpine({
       {...(isWeb ? { insetInlineStart: nodeCenter } : { start: nodeCenter })}
     />
   );
-}
+};
 
-function getEntryActionLabel(
+const getEntryActionLabel = (
   entry: TimelineEntry,
   labels: { madeChanges: string; addedAttachment: string; assigned: string },
-): string | undefined {
+): string | undefined => {
   if (entry.type === 'version') {
     return labels.madeChanges;
   }
@@ -407,14 +407,14 @@ function getEntryActionLabel(
     return labels.assigned;
   }
   return undefined;
-}
+};
 
 /**
  * Skeleton twin of the comment rows: avatar block +
  * name/time line + body line mirror the live entry anatomy. The avatar
  * follows the radius knob like the live Avatar (no hardcoded circle).
  */
-function TimelineSkeleton({
+const TimelineSkeleton = ({
   compact = false,
   avatarPx,
   loadingLabel,
@@ -422,7 +422,7 @@ function TimelineSkeleton({
   compact?: boolean;
   avatarPx: number;
   loadingLabel: string;
-}) {
+}) => {
   return (
     <YStack
       gap={compact ? '$3' : '$4'}
@@ -457,7 +457,7 @@ function TimelineSkeleton({
       ))}
     </YStack>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // Component
@@ -473,7 +473,7 @@ function TimelineSkeleton({
  * composer sits at the top of the feed (Desk communications).
  * Fully data-agnostic -- accepts entries via props and emits callbacks.
  */
-export function Timeline({
+export const Timeline = ({
   entries,
   label,
   headingLevel = 2,
@@ -497,7 +497,7 @@ export function Timeline({
   placeholder: placeholderProp,
   replyPlaceholder: replyPlaceholderProp,
   ...stackProps
-}: TimelineProps) {
+}: TimelineProps) => {
   const { t } = useTranslation();
   const { knobProps, control } = useResolvedKnobs();
   const LabelTag = TIMELINE_HEADING_TAGS[headingLevel];
@@ -1159,4 +1159,4 @@ export function Timeline({
       </AsyncBoundary>
     </YStack>
   );
-}
+};

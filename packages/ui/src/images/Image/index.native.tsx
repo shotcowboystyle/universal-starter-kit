@@ -18,9 +18,9 @@ import type { ImageProps } from './types';
 
 export type { ImageProps } from './types';
 
-function getDimensionFromStyle(
+const getDimensionFromStyle = (
   styleDimension: string | number | UnionableNumber | UnionableString | Variable | undefined,
-): number | undefined {
+): number | undefined => {
   if (typeof styleDimension === 'number') {
     return Math.max(0, styleDimension);
   }
@@ -36,9 +36,9 @@ function getDimensionFromStyle(
       return Math.max(0, Number.parseInt(val, 10));
     }
   }
-}
+};
 
-export function Image({
+export const Image = ({
   alt = '',
   blurRadius,
   capInsets,
@@ -82,7 +82,7 @@ export function Image({
   aspectRatio: aspectRatioProp,
   borderRadius,
   ...props
-}: ImageProps) {
+}: ImageProps) => {
   const { source, imageUriSource, resolvedSrc } = useResolvedImageSource(sourceProp, src);
   const hasSource = Boolean(imageUriSource) || Boolean(resolvedSrc) || typeof source === 'number';
   const thumbnail = size != null && (isThumbnailSize(size) || typeof size === 'number');
@@ -235,4 +235,4 @@ export function Image({
       ) : null}
     </ImageFrame>
   );
-}
+};

@@ -41,16 +41,16 @@ export interface EnsureTamaguiWorkspacePathsResult {
 export const tamaguiWorkspacePathsFile = 'tsconfig/tamagui-workspace-paths.generated.json';
 const generatorFile = '../../scripts/generate-tamagui-workspace-paths.mjs';
 
-function thisPackageDir(): string {
+const thisPackageDir = (): string => {
   // `src/` (vitest source condition) and `lib/` (tsdown output) both sit one
   // level below the package root, same trick vitest.ts uses for
   // pinReactRequire.cjs.
   return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-}
+};
 
-export function ensureTamaguiWorkspacePaths(
+export const ensureTamaguiWorkspacePaths = (
   options: EnsureTamaguiWorkspacePathsOptions = {},
-): EnsureTamaguiWorkspacePathsResult {
+): EnsureTamaguiWorkspacePathsResult => {
   // oxlint-disable-next-line no-console -- the default sink for the one-line regenerate notice
   const { configPackageDir = thisPackageDir(), log = console.warn } = options;
   const generatedPath = path.resolve(configPackageDir, tamaguiWorkspacePathsFile);
@@ -78,4 +78,4 @@ export function ensureTamaguiWorkspacePaths(
     `[@repo/config] ${tamaguiWorkspacePathsFile} was missing (the root prepare script did not run; a global ignore-scripts skips it). Regenerated it. Run \`pnpm generate:tamagui-paths\` after install to skip this step.`,
   );
   return { generatedPath, generatorPath, status: 'generated' };
-}
+};

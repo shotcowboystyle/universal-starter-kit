@@ -20,15 +20,15 @@ const houseConfig = createDefaultThemeConfig();
 // Tamagui keeps a token's first 11 characters in its atomic class and hashes the rest.
 const inkClass = (token: string) => new RegExp(`_col-${token.slice(0, 11)}`);
 
-function Probe({ code, language, theme }: { code: string; language: string; theme?: string }) {
+const Probe = ({ code, language, theme }: { code: string; language: string; theme?: string }) => {
   const tokens = useShikiTokens(code, language, theme);
   return <HighlightedCode tokens={tokens}>{code}</HighlightedCode>;
-}
+};
 
-function tokenSpan(container: HTMLElement, text: string) {
+const tokenSpan = (container: HTMLElement, text: string) => {
   const matches = Array.from(container.querySelectorAll('span')).filter((span) => span.textContent === text);
   return matches.find((span) => !matches.some((other) => other !== span && span.contains(other)));
-}
+};
 
 describe('shiki ink is a theme token in both schemes', () => {
   for (const scheme of ['light', 'dark'] as const) {

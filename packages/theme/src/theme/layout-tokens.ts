@@ -108,7 +108,7 @@ export const LAYOUT_SIZE_CLASS_ORDER: readonly LayoutSizeClass[] = [
 ] as const;
 
 /** Resolve a viewport width to the canonical layout size class. */
-export function getLayoutSizeClass(width: number): LayoutSizeClass {
+export const getLayoutSizeClass = (width: number): LayoutSizeClass => {
   if (width >= layoutBreakpoints.xl) {
     return 'xl';
   }
@@ -122,26 +122,26 @@ export function getLayoutSizeClass(width: number): LayoutSizeClass {
     return 'medium';
   }
   return 'compact';
-}
+};
 
 /** Default horizontal pane budget by size class (Material PaneScaffoldDirective). */
-export function defaultMaxPanes(sizeClass: LayoutSizeClass): 1 | 2 {
+export const defaultMaxPanes = (sizeClass: LayoutSizeClass): 1 | 2 => {
   return sizeClass === 'compact' || sizeClass === 'medium' ? 1 : 2;
-}
+};
 
-export function layoutSizeClassAtLeast(current: LayoutSizeClass, minimum: LayoutSizeClass): boolean {
+export const layoutSizeClassAtLeast = (current: LayoutSizeClass, minimum: LayoutSizeClass): boolean => {
   return LAYOUT_SIZE_CLASS_ORDER.indexOf(current) >= LAYOUT_SIZE_CLASS_ORDER.indexOf(minimum);
-}
+};
 
 /** Web viewport width with an SSR fallback (`medium`). Web-only callers. */
-function readViewportWidth(): number {
+const readViewportWidth = (): number => {
   if (typeof window === 'undefined') {
     return layoutBreakpoints.medium;
   }
   return window.innerWidth;
-}
+};
 
-function subscribeViewportSizeClass(onChange: () => void): () => void {
+const subscribeViewportSizeClass = (onChange: () => void): (() => void) => {
   if (!isWeb || typeof window === 'undefined') {
     return () => {};
   }
@@ -159,15 +159,15 @@ function subscribeViewportSizeClass(onChange: () => void): () => void {
       mq.removeEventListener('change', onChange);
     }
   };
-}
+};
 
-function viewportSizeClass(): LayoutSizeClass {
+const viewportSizeClass = (): LayoutSizeClass => {
   return getLayoutSizeClass(readViewportWidth());
-}
+};
 
-function serverViewportSizeClass(): LayoutSizeClass {
+const serverViewportSizeClass = (): LayoutSizeClass => {
   return getLayoutSizeClass(layoutBreakpoints.medium);
-}
+};
 
 /**
  * Live layout size class from viewport width — cross-platform:
@@ -180,18 +180,18 @@ function serverViewportSizeClass(): LayoutSizeClass {
  * - Native: react-native window dimensions (rotation / split-screen), so
  *   phones report `compact` from the first render.
  */
-export function useLayoutSizeClass(): LayoutSizeClass {
+export const useLayoutSizeClass = (): LayoutSizeClass => {
   const nativeWidth = useWindowDimensions().width;
   const webSizeClass = useSyncExternalStore(subscribeViewportSizeClass, viewportSizeClass, serverViewportSizeClass);
   return isWeb ? webSizeClass : getLayoutSizeClass(nativeWidth);
-}
+};
 
 /** True when the viewport may show two side-by-side panes. */
-export function useMultiPane(maxPanes?: 1 | 2): boolean {
+export const useMultiPane = (maxPanes?: 1 | 2): boolean => {
   const sizeClass = useLayoutSizeClass();
   const budget = maxPanes ?? defaultMaxPanes(sizeClass);
   return budget >= 2 && defaultMaxPanes(sizeClass) >= 2;
-}
+};
 
 // ── Reading width ─────────────────────────────────────────────
 
@@ -206,15 +206,15 @@ export interface ReadingWidthStyle {
 }
 
 /** Style props for prose / long-form columns. Pass `null`/`"none"` to eject. */
-export function readingWidthStyle(
+export const readingWidthStyle = (
   measure: number | 'none' | null = READING_WIDTH_CH,
-): ReadingWidthStyle | Record<string, never> {
+): ReadingWidthStyle | Record<string, never> => {
   if (measure === 'none' || measure === null) {
     return {};
   }
   const ch = Math.min(READING_WIDTH_MAX_CH, Math.max(READING_WIDTH_MIN_CH, measure));
   return { maxWidth: `${ch}ch`, width: '100%' };
-}
+};
 
 // ── Min press target ──────────────────────────────────────────
 
@@ -222,18 +222,18 @@ export function readingWidthStyle(
 export const MIN_PRESS_TARGET = 44;
 
 /** Touch surfaces — native touchable or web touchable. */
-export function isTouchSurface(): boolean {
+export const isTouchSurface = (): boolean => {
   return isTouchable || isWebTouchable;
-}
+};
 
 export interface PressTargetStyle {
   minWidth: number;
   minHeight: number;
 }
 
-export function pressTargetStyle(size: number = MIN_PRESS_TARGET): PressTargetStyle {
+export const pressTargetStyle = (size: number = MIN_PRESS_TARGET): PressTargetStyle => {
   return { minWidth: size, minHeight: size };
-}
+};
 
 export interface HitSlopInsets {
   top: number;
@@ -243,10 +243,10 @@ export interface HitSlopInsets {
 }
 
 /** Expand hit area when the visual control is smaller than the floor. */
-export function pressTargetHitSlop(visualSize: number, min: number = MIN_PRESS_TARGET): HitSlopInsets {
+export const pressTargetHitSlop = (visualSize: number, min: number = MIN_PRESS_TARGET): HitSlopInsets => {
   const pad = Math.max(0, Math.ceil((min - visualSize) / 2));
   return { top: pad, bottom: pad, left: pad, right: pad };
-}
+};
 
 // ── Overlay anchoring (house rule) ────────────────────────────────────────
 
@@ -294,13 +294,13 @@ export const OVERLAY_ATTACH_GAP = 0;
  * Semantic spacing roles map onto the space-knob recipes:
  * `within-group` → `knobProps.gap`, `between-groups` → `knobProps.gapLg`.
  */
-export function useSemanticGaps(): {
+export const useSemanticGaps = (): {
   withinGroup: { gap: string };
   betweenGroups: { gap: string };
-} {
+} => {
   const { knobProps } = useResolvedKnobs();
   return {
     withinGroup: knobProps.gap,
     betweenGroups: knobProps.gapLg,
   };
-}
+};

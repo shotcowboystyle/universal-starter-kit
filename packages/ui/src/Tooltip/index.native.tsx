@@ -50,7 +50,7 @@ export type { NativeTooltipPressHandlers } from './native-press';
 
 type PressHandler = ((event: unknown) => void) | undefined;
 
-export function Tooltip({
+export const Tooltip = ({
   children,
   content,
   placement = 'top',
@@ -58,7 +58,7 @@ export function Tooltip({
   disabled = false,
   open: openProp,
   onOpenChange: onOpenChangeProp,
-}: TooltipProps) {
+}: TooltipProps) => {
   const { knobProps } = useResolvedKnobs({ component: 'Tooltip' });
   const theme = useTheme();
   const surfaceFill = resolveThemeColor(theme.color1, '$color1');
@@ -192,7 +192,7 @@ export function Tooltip({
       </TamaguiTooltip>
     </>
   );
-}
+};
 
 Tooltip.Content = TooltipContent;
 Tooltip.Arrow = TooltipArrow;

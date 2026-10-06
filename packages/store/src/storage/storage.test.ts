@@ -17,7 +17,7 @@ import { storage } from './index';
 
 const key = 'mp-storage-spec-key';
 
-function createLocalStorageStub() {
+const createLocalStorageStub = () => {
   const data = new Map<string, string>();
   return {
     getItem: (name: string) => data.get(name) ?? null,
@@ -35,7 +35,7 @@ function createLocalStorageStub() {
       return data.size;
     },
   };
-}
+};
 
 let previousLocalStorage: unknown;
 

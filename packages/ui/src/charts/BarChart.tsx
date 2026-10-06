@@ -50,7 +50,7 @@ export interface BarChartProps extends ChartDatumEvents, Omit<YStackProps, 'chil
  * Categorical bar chart: d3 band/linear scales, zero-based value axis,
  * knob-driven chrome, palette-driven marks, 44px column hit targets.
  */
-export function BarChart({
+export const BarChart = ({
   data,
   height = 200,
   width,
@@ -69,7 +69,7 @@ export function BarChart({
   onDatumHoverIn,
   onDatumHoverOut,
   ...stackProps
-}: BarChartProps) {
+}: BarChartProps) => {
   const { t } = useTranslation();
   const { palette, labelFontSize } = useChartTheme();
   const fills = resolveSeriesFills(data, palette, { color, colors, categorical });
@@ -162,4 +162,4 @@ export function BarChart({
       </ChartSurface>
     </ChartDataFrame>
   );
-}
+};

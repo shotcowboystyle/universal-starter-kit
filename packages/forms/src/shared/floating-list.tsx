@@ -8,7 +8,7 @@ import { FocusContext, getInputFrameTransitionProps } from '../InputParts';
 
 const dropdownMaxRadiusTokenNum = 8;
 
-export function clampDropdownRadius(fieldRadius: string): string | 0 {
+export const clampDropdownRadius = (fieldRadius: string): string | 0 => {
   if (fieldRadius === '$0') {
     return 0;
   }
@@ -17,21 +17,21 @@ export function clampDropdownRadius(fieldRadius: string): string | 0 {
     return num > dropdownMaxRadiusTokenNum ? `$${dropdownMaxRadiusTokenNum}` : fieldRadius;
   }
   return fieldRadius;
-}
+};
 
-export function SyncFocusToOpen({ open }: { open: boolean }) {
+export const SyncFocusToOpen = ({ open }: { open: boolean }) => {
   const { setFocused } = FocusContext.useStyledContext();
   useEffect(() => {
     setFocused(open);
   }, [open, setFocused]);
   return null;
-}
+};
 
 export const scrollArrowThreshold = 8;
 
 // ── Scroll Arrow (sticky inside scrollable panels) ────────────
 
-export function ScrollArrow({
+export const ScrollArrow = ({
   direction,
   scrollRef,
   visible,
@@ -41,7 +41,7 @@ export function ScrollArrow({
   scrollRef: RefObject<HTMLElement | null>;
   visible: boolean;
   arrowScrollDirRef: RefObject<'up' | 'down' | null>;
-}) {
+}) => {
   const isUp = direction === 'up';
   const animationFrameRef = useRef(0);
   const lastTimeRef = useRef(0);
@@ -205,4 +205,4 @@ export function ScrollArrow({
       </View>
     </View>
   );
-}
+};

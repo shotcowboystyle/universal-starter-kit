@@ -9,12 +9,12 @@ import { t } from '../../shared/t';
 import { OSM_TILE_SIZE, latLngFromMapClick, tilesForView, zoomFromDelta } from './map-math';
 import type { GeolocationMapSurfaceProps } from './map-types';
 
-function tileSrc(zoom: number, x: number, y: number) {
+const tileSrc = (zoom: number, x: number, y: number) => {
   if (typeof process !== 'undefined' && process.env.VITEST) {
     return '';
   }
   return `https://tile.openstreetmap.org/${zoom}/${x}/${y}.png`;
-}
+};
 
 /**
  * Web map surface — OSM tiles we own the projection of, so click-to-pick
@@ -26,7 +26,7 @@ function tileSrc(zoom: number, x: number, y: number) {
  * geocoding, and the coordinate disclosure live in the parent — nothing
  * here is an input pasted over the tiles.
  */
-export function GeolocationMap({
+export const GeolocationMap = ({
   lat,
   lng,
   delta = 0.02,
@@ -36,7 +36,7 @@ export function GeolocationMap({
   disabled,
   readOnly,
   hasValue = true,
-}: GeolocationMapSurfaceProps) {
+}: GeolocationMapSurfaceProps) => {
   const zoom = zoomFromDelta(delta);
   const [box, setBox] = useState({ width: 0, height: 0 });
   const interactive = !disabled && !readOnly && typeof onChange === 'function';
@@ -164,4 +164,4 @@ export function GeolocationMap({
       </Text>
     </YStack>
   );
-}
+};

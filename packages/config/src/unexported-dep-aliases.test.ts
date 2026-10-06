@@ -13,7 +13,7 @@ import { unexportedDepAliases } from './unexported-dep-aliases';
  * a dev machine is usually already patched, so asserting against it would prove
  * nothing about the state this alias exists for.
  */
-function writePristineFixture(root: string, { withPackage = true } = {}) {
+const writePristineFixture = (root: string, { withPackage = true } = {}) => {
   fs.mkdirSync(root, { recursive: true });
   fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ name: 'fixture-root' }));
   if (!withPackage) {
@@ -37,7 +37,7 @@ function writePristineFixture(root: string, { withPackage = true } = {}) {
     'export const SingleNavigatorContext = {};\n',
   );
   fs.writeFileSync(path.join(pkgDir, 'lib', 'module', 'index.js'), 'export const x = 1;\n');
-}
+};
 
 describe('unexportedDepAliases', () => {
   // realpath: macOS /var is a symlink to /private/var, and require.resolve

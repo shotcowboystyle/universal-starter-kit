@@ -12,7 +12,7 @@ interface SortableTaskListProps {
   onTaskPress?: (taskId: string) => void;
 }
 
-export function SortableTaskList({ tasks, projectId, boardId, onTaskPress: _onTaskPress }: SortableTaskListProps) {
+export const SortableTaskList = ({ tasks, projectId, boardId, onTaskPress: _onTaskPress }: SortableTaskListProps) => {
   const [data, setData] = useState<Task[]>(tasks);
   const [moveSheetVisible, setMoveSheetVisible] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -54,4 +54,4 @@ export function SortableTaskList({ tasks, projectId, boardId, onTaskPress: _onTa
       )}
     </>
   );
-}
+};

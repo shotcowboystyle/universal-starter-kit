@@ -20,7 +20,7 @@ interface TaskFormProps {
 const validateTitle = ({ value }: { value: string }) =>
   TaskFormSchema.shape.title.safeParse(value).error?.issues[0]?.message;
 
-export function TaskForm({ defaultValues, onSubmit, onCancel, submitLabel = 'Submit' }: TaskFormProps) {
+export const TaskForm = ({ defaultValues, onSubmit, onCancel, submitLabel = 'Submit' }: TaskFormProps) => {
   const { form, isSubmitting, users, setSearchQuery, isSearching, assigneeLabel } = useTaskForm({
     defaultValues,
     onSubmit,
@@ -96,4 +96,4 @@ export function TaskForm({ defaultValues, onSubmit, onCancel, submitLabel = 'Sub
       </XStack>
     </Form>
   );
-}
+};

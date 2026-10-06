@@ -11,7 +11,7 @@ export interface StoreOptions {
   storage?: Storage;
 }
 
-export function createStore<T>(initialState: T, options?: StoreOptions): Store<T> | PersistStore<T> {
+export const createStore = <T>(initialState: T, options?: StoreOptions): Store<T> | PersistStore<T> => {
   if (options?.persist) {
     return createPersistStore<T>(initialState, {
       key: options.name,
@@ -19,4 +19,4 @@ export function createStore<T>(initialState: T, options?: StoreOptions): Store<T
     });
   }
   return new Store<T>(initialState);
-}
+};

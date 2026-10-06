@@ -6,7 +6,7 @@ const noopStorage: Storage = {
   removeItem: () => {},
 };
 
-function getStorage(): Storage {
+const getStorage = (): Storage => {
   if (
     typeof globalThis !== 'undefined' &&
     'localStorage' in globalThis &&
@@ -23,6 +23,6 @@ function getStorage(): Storage {
     };
   }
   return noopStorage;
-}
+};
 
 export const storage: Storage = getStorage();

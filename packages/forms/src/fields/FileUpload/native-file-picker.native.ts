@@ -2,11 +2,11 @@ import type { NativePickedFile, NativePickOutcome, NativePickRequest } from './f
 import { loadDocumentPicker, loadImagePicker } from './native-picker-loader';
 
 /** Strips a display name out of a `file://`/`content://` URI. */
-function nameFromUri(uri: string, fallback: string): string {
+const nameFromUri = (uri: string, fallback: string): string => {
   const withoutQuery = uri.split('?')[0] ?? uri;
   const last = withoutQuery.split('/').pop();
   return last && last.length > 0 ? decodeURIComponent(last) : fallback;
-}
+};
 
 const extensionMimes: Record<string, string> = {
   gif: 'image/gif',
@@ -24,10 +24,10 @@ const extensionMimes: Record<string, string> = {
  * the field's `accept` check matches on `file.type`. Deriving it from the
  * extension keeps an `accept="image/*"` field from rejecting its own pick.
  */
-function mimeFromName(name: string): string {
+const mimeFromName = (name: string): string => {
   const ext = name.split('.').pop()?.toLowerCase();
   return (ext && extensionMimes[ext]) || '';
-}
+};
 
 /**
  * `accept` is a web media-query string ("image/*,.pdf"). The document picker
@@ -35,7 +35,7 @@ function mimeFromName(name: string): string {
  * afterwards by the field's own `validateFile` — better a slightly wide picker
  * than one that silently shows nothing.
  */
-export function acceptToMimeTypes(accept?: string): string[] | undefined {
+export const acceptToMimeTypes = (accept?: string): string[] | undefined => {
   if (!accept) {
     return undefined;
   }
@@ -44,10 +44,10 @@ export function acceptToMimeTypes(accept?: string): string[] | undefined {
     .map((entry) => entry.trim())
     .filter((entry) => entry.length > 0 && !entry.startsWith('.'));
   return mimes.length > 0 ? mimes : undefined;
-}
+};
 
 /** True when every `accept` entry is an image type, so the photo library is the better surface. */
-export function isImageOnlyAccept(accept?: string): boolean {
+export const isImageOnlyAccept = (accept?: string): boolean => {
   if (!accept) {
     return false;
   }
@@ -68,13 +68,13 @@ export function isImageOnlyAccept(accept?: string): boolean {
         entry === '.heic',
     )
   );
-}
+};
 
-export function isNativeFilePickerAvailable(): boolean {
+export const isNativeFilePickerAvailable = (): boolean => {
   return loadDocumentPicker() !== null || loadImagePicker() !== null;
-}
+};
 
-async function pickFromPhotoLibrary(request: NativePickRequest): Promise<NativePickOutcome | null> {
+const pickFromPhotoLibrary = async (request: NativePickRequest): Promise<NativePickOutcome | null> => {
   const picker = loadImagePicker();
   if (!picker) {
     return null;
@@ -104,9 +104,9 @@ async function pickFromPhotoLibrary(request: NativePickRequest): Promise<NativeP
     };
   });
   return { files };
-}
+};
 
-async function pickFromDocuments(request: NativePickRequest): Promise<NativePickOutcome | null> {
+const pickFromDocuments = async (request: NativePickRequest): Promise<NativePickOutcome | null> => {
   const picker = loadDocumentPicker();
   if (!picker) {
     return null;
@@ -130,7 +130,7 @@ async function pickFromDocuments(request: NativePickRequest): Promise<NativePick
     };
   });
   return { files };
-}
+};
 
 /**
  * Opens the system picker and returns the chosen files.
@@ -141,7 +141,7 @@ async function pickFromDocuments(request: NativePickRequest): Promise<NativePick
  * build; the other one is tried before reporting `unavailable`, so a consumer
  * that installed only `expo-document-picker` still gets a working field.
  */
-export async function pickFilesNatively(request: NativePickRequest): Promise<NativePickOutcome> {
+export const pickFilesNatively = async (request: NativePickRequest): Promise<NativePickOutcome> => {
   const mode = request.mode ?? 'auto';
   const preferImages = mode === 'image' || (mode === 'auto' && isImageOnlyAccept(request.accept));
   const order = preferImages ? [pickFromPhotoLibrary, pickFromDocuments] : [pickFromDocuments, pickFromPhotoLibrary];
@@ -154,6 +154,6 @@ export async function pickFilesNatively(request: NativePickRequest): Promise<Nat
     }
   }
   return { files: [], unavailable: true };
-}
+};
 
 export type { NativePickedFile, NativePickerMode, NativePickOutcome, NativePickRequest } from './file-picker-types';

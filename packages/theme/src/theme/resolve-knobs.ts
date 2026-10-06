@@ -48,7 +48,7 @@ export const compactSpaceMap: Record<Knobs['space'], Knobs['space']> = {
  * - `compactOverride` wins over the density knob when provided:
  *   `true` forces compact space stepping; `false` forces comfortable (no step).
  */
-export function applyDensity(knobs: Knobs, compactOverride?: boolean): Knobs {
+export const applyDensity = (knobs: Knobs, compactOverride?: boolean): Knobs => {
   const useCompact = compactOverride === undefined ? knobs.density === 'compact' : compactOverride;
   if (!useCompact) {
     return knobs.density === 'comfortable' ? knobs : { ...knobs, density: 'comfortable' };
@@ -58,7 +58,7 @@ export function applyDensity(knobs: Knobs, compactOverride?: boolean): Knobs {
     density: 'compact',
     space: compactSpaceMap[knobs.space],
   };
-}
+};
 
 // ── Knob-to-token mapping tables ──────────────────────────────
 
@@ -146,9 +146,9 @@ const pageTitleSizeMap: Record<PageTitleScale, FontSizeTokens> = {
  * marketing hero) resolves through the same table as the knob — never a
  * second hardcoded step.
  */
-export function resolvePageTitleScale(scale: PageTitleScale): { size: FontSizeTokens } {
+export const resolvePageTitleScale = (scale: PageTitleScale): { size: FontSizeTokens } => {
   return { size: pageTitleSizeMap[scale] };
-}
+};
 
 // ── Container radius cap (Axiom 1 CLIP) ──────────────────────
 // A padded container's effective radius must not exceed its own padding:
@@ -179,20 +179,20 @@ const panelPaddingPxMap: Record<Knobs['space'], number> = {
  * pixel clips first → cap at padding"). Returns the radius token untouched
  * while it fits, or the padding px number once the token would exceed it.
  */
-export function capContainerRadius(borderRadius: Knobs['borderRadius'], space: Knobs['space']): string | number {
+export const capContainerRadius = (borderRadius: Knobs['borderRadius'], space: Knobs['space']): string | number => {
   const radiusPx = radiusPxMap[borderRadius];
   const paddingPx = panelPaddingPxMap[space];
   return radiusPx > paddingPx ? paddingPx : borderRadiusMap[borderRadius];
-}
+};
 
 /**
  * The borderRadius knob stop a `borderRadiusMap` token came from, so a part
  * can resolve its DG-RAD class at that stop. Undefined for any value the
  * knob did not produce.
  */
-export function radiusStopFromToken(token: unknown): Knobs['borderRadius'] | undefined {
+export const radiusStopFromToken = (token: unknown): Knobs['borderRadius'] | undefined => {
   return (Object.keys(borderRadiusMap) as Knobs['borderRadius'][]).find((stop) => borderRadiusMap[stop] === token);
-}
+};
 
 /**
  * Containers the constraint audit measures against the cap.
@@ -221,11 +221,11 @@ export interface ContainerCapDeclaration {
  * @example
  * <YStack {...knobProps.containerRadius} {...containerCapProps("PageSection", knobProps.borderRadius.borderRadius, knobProps.space)} />
  */
-export function containerCapProps(
+export const containerCapProps = (
   container: CappedContainer,
   radiusToken: unknown,
   space: string,
-): ContainerCapDeclaration | undefined {
+): ContainerCapDeclaration | undefined => {
   const radiusKnob = radiusStopFromToken(radiusToken);
   if (!radiusKnob || !Object.hasOwn(panelPaddingPxMap, space)) {
     return undefined;
@@ -235,7 +235,7 @@ export function containerCapProps(
     'data-radius-knob': radiusKnob,
     'data-space-knob': space as Knobs['space'],
   };
-}
+};
 
 const gapMap = {
   small: '$2',
@@ -410,14 +410,14 @@ const shadowOpacityDark: Record<ElevationKey, number> = {
   $5: 0.12,
 };
 
-function elevationTokenKey(token: string | number | undefined): ElevationKey | undefined {
+const elevationTokenKey = (token: string | number | undefined): ElevationKey | undefined => {
   if (token == null) {
     return undefined;
   }
   return elevationKeyAlias[String(token)];
-}
+};
 
-function elevationPaint(token: string | number | undefined, scheme: ColorScheme): ElevationPaintProps {
+const elevationPaint = (token: string | number | undefined, scheme: ColorScheme): ElevationPaintProps => {
   const key = elevationTokenKey(token);
   if (!key) {
     return {};
@@ -434,9 +434,9 @@ function elevationPaint(token: string | number | undefined, scheme: ColorScheme)
     paint.style = { boxShadow: dark ? webShadowDark[key] : webShadowLight[key] };
   }
   return paint;
-}
+};
 
-function elevationChromeFor(token: string | number | undefined, scheme: ColorScheme): ElevationChromeProps {
+const elevationChromeFor = (token: string | number | undefined, scheme: ColorScheme): ElevationChromeProps => {
   const key = elevationTokenKey(token);
   if (!key) {
     return {};
@@ -445,7 +445,7 @@ function elevationChromeFor(token: string | number | undefined, scheme: ColorSch
     ...elevationPaint(token, scheme),
     elevation: elevationShadowMetrics[key].android,
   };
-}
+};
 
 // Legibility floor: body/label text must never land below ~4.5:1 against its
 // surface. $color11 is the lowest ramp step that clears AA on color1/2
@@ -490,7 +490,7 @@ const disabledSelectedSurface = {
   ...disabledCursor,
 };
 
-function resolveDisabled(disabledStyle: Knobs['disabledStyle']): DisabledRecipe {
+const resolveDisabled = (disabledStyle: Knobs['disabledStyle']): DisabledRecipe => {
   if (disabledStyle === 'dimWhole') {
     return {
       surfaceKnobProps: { ...disabledCursor },
@@ -513,18 +513,18 @@ function resolveDisabled(disabledStyle: Knobs['disabledStyle']): DisabledRecipe 
     assemblyKnobProps: {},
     style: disabledStyle,
   };
-}
+};
 
 // ── State style resolver ──────────────────────────────────────
 
-function resolveStateKnobs(
+const resolveStateKnobs = (
   state: StateKnobs,
   scheme: ColorScheme,
 ): {
   control: ControlStateProps;
   text: TextStateProps;
   elevation: ElevationStateProps;
-} {
+} => {
   const control: ControlStateProps = {};
   const text: TextStateProps = {};
   const elevation: ElevationStateProps = {};
@@ -562,16 +562,16 @@ function resolveStateKnobs(
   }
 
   return { control, text, elevation };
-}
+};
 
 // ── Resolver ──────────────────────────────────────────────────
 
-export function resolveKnobs(
+export const resolveKnobs = (
   knobs: Knobs,
   override?: KnobPropsOverride,
   scheme: ColorScheme = 'light',
   environment?: { touch?: boolean },
-): ResolvedKnobs {
+): ResolvedKnobs => {
   const radiusToken = borderRadiusMap[knobs.borderRadius];
   const nestedRadiusToken = nestedRadiusMap[knobs.borderRadius];
   const sizeToken = sizeTokenMap[knobs.size];
@@ -777,4 +777,4 @@ export function resolveKnobs(
     elevation,
     disabledState: resolveDisabled(knobs.disabledStyle),
   };
-}
+};

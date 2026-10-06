@@ -21,24 +21,24 @@ let entries: FeedbackEntry[] = [];
 let counter = 0;
 const listeners = new Set<() => void>();
 
-function emit() {
+const emit = () => {
   for (const listener of listeners) {
     listener();
   }
-}
+};
 
-export function getFeedback(): FeedbackEntry[] {
+export const getFeedback = (): FeedbackEntry[] => {
   return entries;
-}
+};
 
-export function subscribeFeedback(listener: () => void): () => void {
+export const subscribeFeedback = (listener: () => void): (() => void) => {
   listeners.add(listener);
   return () => {
     listeners.delete(listener);
   };
-}
+};
 
-export function pushFeedback(entry: Omit<FeedbackEntry, 'id'> & { id?: string }): string {
+export const pushFeedback = (entry: Omit<FeedbackEntry, 'id'> & { id?: string }): string => {
   const id = entry.id ?? `mp-feedback-${++counter}`;
   const next: FeedbackEntry = {
     ...entry,
@@ -53,34 +53,34 @@ export function pushFeedback(entry: Omit<FeedbackEntry, 'id'> & { id?: string })
   }
   emit();
   return id;
-}
+};
 
-export function dismissFeedback(id: string): void {
+export const dismissFeedback = (id: string): void => {
   const before = entries.length;
   entries = entries.filter((e) => e.id !== id);
   if (entries.length !== before) {
     emit();
   }
-}
+};
 
-export function dismissFeedbackBySurface(surface: FeedbackEntry['surface']): void {
+export const dismissFeedbackBySurface = (surface: FeedbackEntry['surface']): void => {
   const before = entries.length;
   entries = entries.filter((e) => e.surface !== surface);
   if (entries.length !== before) {
     emit();
   }
-}
+};
 
-export function dismissFeedbackByRegion(region: string): void {
+export const dismissFeedbackByRegion = (region: string): void => {
   const before = entries.length;
   entries = entries.filter((entry) => entry.region !== region);
   if (entries.length !== before) {
     emit();
   }
-}
+};
 
 /** Hard-reset (tests / story decorators). */
-export function resetFeedback(): void {
+export const resetFeedback = (): void => {
   entries = [];
   emit();
-}
+};

@@ -49,22 +49,22 @@ export interface AsyncBoundaryContextValue {
 const AsyncBoundaryContext = createContext<AsyncBoundaryContextValue | null>(null);
 
 /** Read async status from the nearest AsyncBoundary (null outside). */
-export function useAsyncBoundary(): AsyncBoundaryContextValue | null {
+export const useAsyncBoundary = (): AsyncBoundaryContextValue | null => {
   return useContext(AsyncBoundaryContext);
-}
+};
 
 /**
  * Count / badge value that degrades on failure.
  * Returns `undefined` when the nearest boundary is in `error` (or when
  * `value` is already undefined) so Badge/count chrome hides instead of lying.
  */
-export function useAsyncCount(value: number | undefined): number | undefined {
+export const useAsyncCount = (value: number | undefined): number | undefined => {
   const ctx = useAsyncBoundary();
   if (ctx?.hideBadges) {
     return undefined;
   }
   return value;
-}
+};
 
 export interface AsyncBoundaryProps extends Omit<YStackProps, 'children'> {
   /**
@@ -117,7 +117,7 @@ export interface AsyncBoundaryProps extends Omit<YStackProps, 'children'> {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function isReactNodeSlot(value: unknown): value is ReactNode {
+const isReactNodeSlot = (value: unknown): value is ReactNode => {
   if (value == null || typeof value === 'boolean') {
     return false;
   }
@@ -128,27 +128,27 @@ function isReactNodeSlot(value: unknown): value is ReactNode {
     return false;
   }
   return true;
-}
+};
 
-function isActiveError(error: AsyncBoundaryProps['error']): boolean {
+const isActiveError = (error: AsyncBoundaryProps['error']): boolean => {
   if (error == null || error === false) {
     return false;
   }
   return true;
-}
+};
 
-function isActiveFlag(value: boolean | ReactNode | undefined): boolean {
+const isActiveFlag = (value: boolean | ReactNode | undefined): boolean => {
   if (value == null || value === false) {
     return false;
   }
   return true;
-}
+};
 
-export function resolveAsyncStatus(opts: {
+export const resolveAsyncStatus = (opts: {
   loading?: boolean | ReactNode;
   empty?: boolean | ReactNode;
   error?: boolean | string | Error | ReactNode | null;
-}): AsyncStatus {
+}): AsyncStatus => {
   if (isActiveError(opts.error)) {
     return 'error';
   }
@@ -159,13 +159,13 @@ export function resolveAsyncStatus(opts: {
     return 'empty';
   }
   return 'data';
-}
+};
 
-function errorCopy(
+const errorCopy = (
   error: AsyncBoundaryProps['error'],
   errorTitle: string,
   errorDescription?: string,
-): { title: string; description?: string } {
+): { title: string; description?: string } => {
   if (typeof error === 'string') {
     return { title: errorTitle, description: errorDescription ?? error };
   }
@@ -173,11 +173,11 @@ function errorCopy(
     return { title: errorTitle, description: errorDescription ?? error.message };
   }
   return { title: errorTitle, description: errorDescription };
-}
+};
 
 const seenDevWarns = new Set<string>();
 
-function asyncDevWarn(code: string, detail = ''): void {
+const asyncDevWarn = (code: string, detail = ''): void => {
   if (process.env.NODE_ENV === 'production') {
     return;
   }
@@ -187,18 +187,18 @@ function asyncDevWarn(code: string, detail = ''): void {
   }
   seenDevWarns.add(key);
   console.warn(`[AsyncBoundary] ${code}${detail ? ` (${detail})` : ''}`);
-}
+};
 
 /** @internal test helper */
-export function __resetAsyncDevWarnSeen(): void {
+export const __resetAsyncDevWarnSeen = (): void => {
   seenDevWarns.clear();
-}
+};
 
 // ---------------------------------------------------------------------------
 // Layout skeletons
 // ---------------------------------------------------------------------------
 
-export function AsyncSkeleton({ layout = 'generic', ...rest }: { layout?: AsyncBoundaryLayout } & YStackProps) {
+export const AsyncSkeleton = ({ layout = 'generic', ...rest }: { layout?: AsyncBoundaryLayout } & YStackProps) => {
   const { t } = useTranslation();
   switch (layout) {
     case 'list': {
@@ -389,13 +389,13 @@ export function AsyncSkeleton({ layout = 'generic', ...rest }: { layout?: AsyncB
       );
     }
   }
-}
+};
 
 // ---------------------------------------------------------------------------
 // Pending bar (refetch over settled content)
 // ---------------------------------------------------------------------------
 
-function AsyncPendingBar() {
+const AsyncPendingBar = () => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs({ compact: true });
   return (
@@ -417,9 +417,9 @@ function AsyncPendingBar() {
       </Text>
     </XStack>
   );
-}
+};
 
-function defaultEmptyBody({
+const defaultEmptyBody = ({
   empty,
   compact,
   emptyTitle,
@@ -429,7 +429,7 @@ function defaultEmptyBody({
   compact: boolean;
   emptyTitle: string;
   emptyDescription?: string;
-}): ReactNode {
+}): ReactNode => {
   if (empty !== true && isReactNodeSlot(empty)) {
     return empty;
   }
@@ -442,9 +442,9 @@ function defaultEmptyBody({
       description={emptyDescription}
     />
   );
-}
+};
 
-function defaultErrorBody({
+const defaultErrorBody = ({
   error,
   compact,
   errorTitle,
@@ -458,7 +458,7 @@ function defaultErrorBody({
   errorDescription?: string;
   onRetry?: () => void;
   retryLabel: string;
-}): ReactNode {
+}): ReactNode => {
   if (isReactNodeSlot(error)) {
     return error;
   }
@@ -482,7 +482,7 @@ function defaultErrorBody({
       }
     />
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // Component
@@ -507,7 +507,7 @@ function defaultErrorBody({
  * </AsyncBoundary>
  * ```
  */
-export function AsyncBoundary({
+export const AsyncBoundary = ({
   loading,
   empty,
   error,
@@ -523,7 +523,7 @@ export function AsyncBoundary({
   chrome,
   keepPrevious = true,
   ...stackProps
-}: AsyncBoundaryProps) {
+}: AsyncBoundaryProps) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs({ compact });
   const status = resolveAsyncStatus({ loading, empty, error });
@@ -645,4 +645,4 @@ export function AsyncBoundary({
       </YStack>
     </AsyncBoundaryContext.Provider>
   );
-}
+};

@@ -8,7 +8,7 @@ import { Form } from '../../Form';
 
 import { DatetimePicker } from './DatetimePicker';
 
-function getEnabledDayButtons(root: ParentNode): HTMLButtonElement[] {
+const getEnabledDayButtons = (root: ParentNode): HTMLButtonElement[] => {
   const allButtons = Array.from(root.querySelectorAll('button, [role="button"]')) as HTMLButtonElement[];
   return allButtons.filter((btn) => {
     const text = btn.textContent?.trim() ?? '';
@@ -17,7 +17,7 @@ function getEnabledDayButtons(root: ParentNode): HTMLButtonElement[] {
       btn.hasAttribute('disabled') || btn.getAttribute('aria-disabled') === 'true' || btn.hasAttribute('data-disabled');
     return isDay && !disabled;
   });
-}
+};
 
 describe('DatetimePicker', () => {
   describe('without form context', () => {

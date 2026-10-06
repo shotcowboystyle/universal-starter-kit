@@ -40,10 +40,10 @@ afterEach(() => {
   });
 });
 
-function Trigger(props: Parameters<ReturnType<typeof useToast>['show']>[0]) {
+const Trigger = (props: Parameters<ReturnType<typeof useToast>['show']>[0]) => {
   const toast = useToast();
   return <Button onPress={() => toast.show(props)}>fire</Button>;
-}
+};
 
 describe('native toast accessibility', () => {
   it('groups text-only content while leaving action and dismiss controls reachable', () => {
@@ -545,32 +545,32 @@ describe('Toast banned-error-word DEV warn', () => {
   });
 });
 
-function classesByPrefix(el: Element, prefixes: string[]): string[] {
+const classesByPrefix = (el: Element, prefixes: string[]): string[] => {
   return String((el as HTMLElement).className || '')
     .split(' ')
     .filter((c) => prefixes.some((p) => c.startsWith(p)))
     .sort();
-}
+};
 
-function shadowClasses(el: Element): string[] {
+const shadowClasses = (el: Element): string[] => {
   return classesByPrefix(el, ['_bxsh-']);
-}
+};
 
 const ACTION = 'Undo';
 
-function renderActionWeight(node: ReactElement): string[] {
+const renderActionWeight = (node: ReactElement): string[] => {
   renderWithProviders(node);
   const textNode = screen.getByText(ACTION);
   const classes = classesByPrefix(textNode, ['_fow-']);
   cleanup();
   return classes;
-}
+};
 
-function tokenVal(theme: ReturnType<typeof useTheme>, key: string): string {
+const tokenVal = (theme: ReturnType<typeof useTheme>, key: string): string => {
   const t = theme as unknown as Record<string, { val?: unknown; get?: () => unknown }>;
   const raw = t[key]?.val ?? t[key]?.get?.();
   return typeof raw === 'string' ? raw : '';
-}
+};
 
 const TOAST_INTENTS = ['accent', 'success', 'warning', 'error'] as const;
 const CONTRAST_SCHEMES = ['light', 'dark'] as const;
@@ -584,7 +584,7 @@ const houseThemes = createThemesBuilder(defaultBaseTheme, defaultAccentTheme, de
  * there; under stock the wrap falls back to the base ramp and the arm
  * certifies a pair the product never paints.
  */
-function ContrastScheme({ scheme, children }: { scheme: (typeof CONTRAST_SCHEMES)[number]; children: ReactNode }) {
+const ContrastScheme = ({ scheme, children }: { scheme: (typeof CONTRAST_SCHEMES)[number]; children: ReactNode }) => {
   return (
     <TamaguiProvider
       config={houseConfig.tamagui}
@@ -593,14 +593,14 @@ function ContrastScheme({ scheme, children }: { scheme: (typeof CONTRAST_SCHEMES
       <YStack backgroundColor="$background">{children}</YStack>
     </TamaguiProvider>
   );
-}
+};
 
 /**
  * Accent toasts stay on the BASE theme and take their ink from
  * `useAccentOnSurface()` -- a picked value, not a token the label can name in
  * a class. Stamp it from inside the theme the Toast mounts in.
  */
-function AccentInkProbe() {
+const AccentInkProbe = () => {
   const onSurface = useAccentOnSurface();
   const theme = useTheme();
   const ink = onSurface.startsWith('$') ? tokenVal(theme, onSurface.slice(1)) || onSurface : onSurface;
@@ -610,14 +610,14 @@ function AccentInkProbe() {
       data-fg={ink}
     />
   );
-}
+};
 
 /**
  * The RESTING atom for a prefix. Tamagui spells state atoms `_o-0hover-1` /
  * `_bg-0active-color5`, so a bare prefix read picks up hover paint and
  * certifies a surface nobody rests on.
  */
-function restAtom(node: Element, prefix: string): string | undefined {
+const restAtom = (node: Element, prefix: string): string | undefined => {
   for (const cls of Array.from(node.classList)) {
     if (!cls.startsWith(prefix)) {
       continue;
@@ -629,24 +629,24 @@ function restAtom(node: Element, prefix: string): string | undefined {
     return value;
   }
   return undefined;
-}
+};
 
 /** `_o-0--9` is Tamagui's atom for 0.9; no resting atom means no rest dim. */
-function restOpacity(node: Element): number {
+const restOpacity = (node: Element): number => {
   const atom = restAtom(node, '_o-');
   if (atom === undefined) {
     return 1;
   }
   const value = Number(atom.replaceAll('--', '.'));
   return Number.isFinite(value) ? value : 1;
-}
+};
 
 /**
  * The ink as PAINTED. An opacity on the press target multiplies the label
  * toward the fill under it, so the token pair is not what a reader sees:
  * A warning action measured 4.66:1 as tokens and 3.88:1 as pixels.
  */
-function paintedInk(ink: string, ground: string, alpha: number): string {
+const paintedInk = (ink: string, ground: string, alpha: number): string => {
   const f = normalizeToHex(ink);
   const b = normalizeToHex(ground);
   if (!f || !b) {
@@ -663,7 +663,7 @@ function paintedInk(ink: string, ground: string, alpha: number): string {
       .toString(16)
       .padStart(2, '0');
   return `#${channel(1)}${channel(3)}${channel(5)}`;
-}
+};
 
 describe('Toast overlay shadow (standalone === viewport)', () => {
   it('paints the SAME overlay shadow on both paths, not the $1 control token', () => {
@@ -845,7 +845,7 @@ describe('Toast density moves padX and gap on the host', () => {
   const padX = ['_px-', '_pl-', '_pr-'];
   const gap = ['_gap-'];
 
-  function hostAtoms(node: ReactElement) {
+  const hostAtoms = (node: ReactElement) => {
     renderWithProviders(node);
     const host = screen.getByTestId('toast');
     const measured = {
@@ -855,7 +855,7 @@ describe('Toast density moves padX and gap on the host', () => {
     };
     cleanup();
     return measured;
-  }
+  };
 
   it('the density knob changes padX and gap between the two stops', () => {
     const comfortable = hostAtoms(

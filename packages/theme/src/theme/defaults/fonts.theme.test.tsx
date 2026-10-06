@@ -47,7 +47,7 @@ const LABEL_LEADING_PX = 23;
 afterEach(cleanup);
 
 /** Parent of the text node whose data is `label` — never a wrapping frame. */
-function textNodeHost(root: HTMLElement, label: string): HTMLElement {
+const textNodeHost = (root: HTMLElement, label: string): HTMLElement => {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   let node: Node | null = walker.nextNode();
   while (node) {
@@ -57,9 +57,9 @@ function textNodeHost(root: HTMLElement, label: string): HTMLElement {
     node = walker.nextNode();
   }
   throw new Error(`no text node "${label}"`);
-}
+};
 
-function measureLabel(bodyFont: (typeof BODY_STOPS)[number]['stop'], scheme: 'light' | 'dark') {
+const measureLabel = (bodyFont: (typeof BODY_STOPS)[number]['stop'], scheme: 'light' | 'dark') => {
   const label = `Save-${bodyFont}`;
   const knobs = resolveKnobs({ ...defaultKnobs, bodyFont });
   const { container } = render(
@@ -92,7 +92,7 @@ function measureLabel(bodyFont: (typeof BODY_STOPS)[number]['stop'], scheme: 'li
     lineHeightPx: px(cs.lineHeight),
     letterSpacing: cs.letterSpacing.trim(),
   };
-}
+};
 
 describe('bodyFont text-node family, size and leading', () => {
   for (const scheme of ['light', 'dark'] as const) {

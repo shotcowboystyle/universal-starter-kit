@@ -109,7 +109,7 @@ const Connector = styled(View, {
 
 // ── Helpers ───────────────────────────────────────────────────
 
-function stepState(index: number, current: number, forcedCompleted?: boolean): StepState {
+const stepState = (index: number, current: number, forcedCompleted?: boolean): StepState => {
   if (forcedCompleted || index < current) {
     return 'completed';
   }
@@ -117,9 +117,9 @@ function stepState(index: number, current: number, forcedCompleted?: boolean): S
     return 'current';
   }
   return 'upcoming';
-}
+};
 
-function splitNestedControl(nested: {
+const splitNestedControl = (nested: {
   px: number;
   hitSlop: { top: number; bottom: number; left: number; right: number };
   width: number;
@@ -128,10 +128,10 @@ function splitNestedControl(nested: {
   maxWidth: number;
   minHeight: number;
   maxHeight: number;
-}) {
+}) => {
   const { px, hitSlop, ...box } = nested;
   return { px, hitSlop, box };
-}
+};
 
 // ── Component ─────────────────────────────────────────────────
 
@@ -144,7 +144,7 @@ function splitNestedControl(nested: {
  * helper text, error/optional, linear-by-default. Polaris has no wizard
  * stepper — display-only when `onStepChange` is omitted.
  */
-export function ProgressSteps({
+export const ProgressSteps = ({
   steps,
   current,
   onStepChange,
@@ -154,7 +154,7 @@ export function ProgressSteps({
   compact,
   labels = 'visible',
   ...props
-}: ProgressStepsProps) {
+}: ProgressStepsProps) => {
   const { t } = useTranslation();
   const { knobProps, control, disabledState } = useResolvedKnobs(
     compact === undefined ? { component: 'ProgressSteps' } : { component: 'ProgressSteps', compact },
@@ -434,4 +434,4 @@ export function ProgressSteps({
       </XStack>
     </StepsRoot>
   );
-}
+};

@@ -14,11 +14,11 @@ import { lookupProjectRoot, lookupTamaguiModules, lookupTranspileModules, resolv
 
 let fixtureRoot: string;
 
-function writePkg(dir: string, pkg: Record<string, unknown>): string {
+const writePkg = (dir: string, pkg: Record<string, unknown>): string => {
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify(pkg));
   return dir;
-}
+};
 
 beforeAll(() => {
   fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mpo-dev-spec-'));

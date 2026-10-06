@@ -22,7 +22,7 @@ import { getPreset } from './shared';
  * Both paths derive their duration from the `--mp-transition` CSS variable,
  * which KnobBridge keeps in sync with the animation knob.
  */
-export function startThemeTransition(apply: () => void): void {
+export const startThemeTransition = (apply: () => void): void => {
   if (typeof document === 'undefined') {
     apply();
     return;
@@ -41,7 +41,7 @@ export function startThemeTransition(apply: () => void): void {
   setTimeout(() => {
     root.classList.remove('mp-transitioning');
   }, transitionMs + 50);
-}
+};
 
 // ---------------------------------------------------------------------------
 // ThemeProviderProps (simplified — knob-based theming)
@@ -56,16 +56,79 @@ export interface ThemeProviderProps<T extends CreateTamaguiProps = CreateTamagui
   systemTheme?: 'light' | 'dark';
 }
 
+/**
+ * Internal bridge that reads the preset name + knob overrides from cookies
+ * (reactive via CookiesProvider) and provides a PresetContext so that
+ * useResolvedKnobs() picks up the live values.
+ *
+ * Resolution order (same on SSR and client):
+ *   1. Read `mp.preset` cookie → look up the preset from the registry
+ *   2. Read `mp.ov.*` cookies → partial knob overrides
+ *   3. Merge: preset base knobs + overrides → final knobs
+ *   4. Provide the full preset (knobs, tints, intents) via PresetContext
+ *
+ * If an ancestor PresetContext already exists (e.g. from a Storybook decorator),
+ * the bridge is a pass-through to avoid overriding it.
+ *
+ * FontKnobStyles and CornerSmoothingStyles mount here (not only in
+ * Storybook CreatePreview) so heading/body fonts and the corner-shape
+ * stylesheet restyle every shipped app that uses ThemeProvider. Hairline
+ * still self-mounts on module load.
+ */
+const KnobBridge = ({ children }: PropsWithChildren) => {
+  const existingCtx = useContext(PresetContext);
+
+  const isCookieDisabled = typeof process !== 'undefined' && process.env?.COOKIE_POLICY?.toLowerCase() === 'disabled';
+  const watchList = isCookieDisabled ? [] : getCookieWatchList();
+  const [cookie] = useCookies<string, Record<string, string>>(watchList);
+
+  const presetName = readPresetCookie(cookie as Record<string, string | undefined>);
+  const overrides = readOverridesCookie(cookie as Record<string, string | undefined>);
+
+  const presetCtxValue = useMemo<PresetContextValue>(() => {
+    const base = (presetName ? getPreset(presetName) : undefined) ?? defaultPreset;
+    return {
+      preset: { ...base, knobs: { ...base.knobs, ...overrides } },
+      overrides,
+    };
+  }, [presetName, overrides]);
+
+  const animationValue = presetCtxValue.preset.knobs.animation;
+  useEffect(() => {
+    if (typeof document === 'undefined') {
+      return;
+    }
+    const durationMs = animationValue === 'none' ? 0 : (animationDurations[animationValue] ?? 200);
+    document.documentElement.style.setProperty('--mp-transition', `${durationMs}ms`);
+  }, [animationValue]);
+
+  // Inside the provider (or the Storybook ancestor context) so the
+  // heading/body CSS vars follow the same cookie path as useResolvedKnobs.
+  const tree = (
+    <>
+      <FontKnobStyles />
+      <CornerSmoothingStyles />
+      {children}
+    </>
+  );
+
+  if (existingCtx) {
+    return tree;
+  }
+
+  return <PresetContext.Provider value={presetCtxValue}>{tree}</PresetContext.Provider>;
+};
+
 // ---------------------------------------------------------------------------
 // ThemeProvider (simplified — TamaguiProvider + scheme + ToastProvider)
 // ---------------------------------------------------------------------------
 
-export function ThemeProvider<T extends CreateTamaguiProps>({
+export const ThemeProvider = <T extends CreateTamaguiProps>({
   children,
   config,
   systemTheme = 'light',
   ...tamaguiProps
-}: ThemeProviderProps<T>) {
+}: ThemeProviderProps<T>) => {
   // The caller is responsible for resolving the active scheme:
   //   - App: useUserScheme() from @vxrn/color-scheme (reacts to OS changes)
   //   - Storybook: decorator resolves "system"/"light"/"dark" with OS listener
@@ -160,67 +223,4 @@ export function ThemeProvider<T extends CreateTamaguiProps>({
       </ToastProvider>
     </TamaguiProvider>
   );
-}
-
-/**
- * Internal bridge that reads the preset name + knob overrides from cookies
- * (reactive via CookiesProvider) and provides a PresetContext so that
- * useResolvedKnobs() picks up the live values.
- *
- * Resolution order (same on SSR and client):
- *   1. Read `mp.preset` cookie → look up the preset from the registry
- *   2. Read `mp.ov.*` cookies → partial knob overrides
- *   3. Merge: preset base knobs + overrides → final knobs
- *   4. Provide the full preset (knobs, tints, intents) via PresetContext
- *
- * If an ancestor PresetContext already exists (e.g. from a Storybook decorator),
- * the bridge is a pass-through to avoid overriding it.
- *
- * FontKnobStyles and CornerSmoothingStyles mount here (not only in
- * Storybook CreatePreview) so heading/body fonts and the corner-shape
- * stylesheet restyle every shipped app that uses ThemeProvider. Hairline
- * still self-mounts on module load.
- */
-function KnobBridge({ children }: PropsWithChildren) {
-  const existingCtx = useContext(PresetContext);
-
-  const isCookieDisabled = typeof process !== 'undefined' && process.env?.COOKIE_POLICY?.toLowerCase() === 'disabled';
-  const watchList = isCookieDisabled ? [] : getCookieWatchList();
-  const [cookie] = useCookies<string, Record<string, string>>(watchList);
-
-  const presetName = readPresetCookie(cookie as Record<string, string | undefined>);
-  const overrides = readOverridesCookie(cookie as Record<string, string | undefined>);
-
-  const presetCtxValue = useMemo<PresetContextValue>(() => {
-    const base = (presetName ? getPreset(presetName) : undefined) ?? defaultPreset;
-    return {
-      preset: { ...base, knobs: { ...base.knobs, ...overrides } },
-      overrides,
-    };
-  }, [presetName, overrides]);
-
-  const animationValue = presetCtxValue.preset.knobs.animation;
-  useEffect(() => {
-    if (typeof document === 'undefined') {
-      return;
-    }
-    const durationMs = animationValue === 'none' ? 0 : (animationDurations[animationValue] ?? 200);
-    document.documentElement.style.setProperty('--mp-transition', `${durationMs}ms`);
-  }, [animationValue]);
-
-  // Inside the provider (or the Storybook ancestor context) so the
-  // heading/body CSS vars follow the same cookie path as useResolvedKnobs.
-  const tree = (
-    <>
-      <FontKnobStyles />
-      <CornerSmoothingStyles />
-      {children}
-    </>
-  );
-
-  if (existingCtx) {
-    return tree;
-  }
-
-  return <PresetContext.Provider value={presetCtxValue}>{tree}</PresetContext.Provider>;
-}
+};

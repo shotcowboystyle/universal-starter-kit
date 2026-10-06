@@ -8,9 +8,9 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { getPersistedLanguage, parseCookieValue, persistLanguage } from './locale-persistence';
 
-function clearPreferredLanguageCookie() {
+const clearPreferredLanguageCookie = () => {
   document.cookie = 'preferred_language=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-}
+};
 
 describe('persistLanguage / getPersistedLanguage', () => {
   beforeEach(() => {

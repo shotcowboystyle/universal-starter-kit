@@ -94,9 +94,9 @@ export type { FloatingPanelProps } from './index';
 export { floatingPanelActionProps, isNestedPanelAction } from './nested-action';
 
 /** Native never has a >sm web viewport; AdaptivePopup uses this to pick Sheet mode. */
-export function useViewportGtSm() {
+export const useViewportGtSm = () => {
   return false;
-}
+};
 
 const sheetMaxHeightRatio = 0.85;
 // Home-indicator / gesture-bar clearance.
@@ -115,7 +115,85 @@ const dismissThreshold = 56;
 // Slide-in, and the delay before a backdrop tap can dismiss.
 const enterDuration = 280;
 
-export function FloatingPanel({
+/**
+ * The menu at the long-press point: measured once per open at its natural
+ * size, then placed by the same rule as the web pointer menu. Later layouts
+ * are its own capped height and must not re-decide the side it opened on.
+ */
+const PointPanel = ({
+  point,
+  bounds,
+  framePadding,
+  frameGap,
+  onBackdropPress,
+  onEscape,
+  children,
+}: {
+  point: PanelPoint;
+  bounds: PanelBounds;
+  framePadding: string;
+  frameGap: string | undefined;
+  onBackdropPress: () => void;
+  onEscape: () => void;
+  children: ReactNode;
+}) => {
+  const { knobProps } = useResolvedKnobs();
+  const [size, setSize] = useState<{ width: number; height: number } | null>(null);
+  const placement = size
+    ? placeAtPoint({
+        point,
+        width: size.width,
+        height: size.height,
+        bounds,
+        rtl: I18nManager.isRTL,
+      })
+    : null;
+  return (
+    <RNView style={StyleSheet.absoluteFill}>
+      <Pressable
+        style={StyleSheet.absoluteFill}
+        onPress={onBackdropPress}
+        accessibilityRole="button"
+        accessibilityLabel={t('Close')}
+      />
+      <RNView
+        testID="floating-panel-point"
+        onLayout={(e) => {
+          if (size) {
+            return;
+          }
+          const { width, height } = e.nativeEvent.layout;
+          if (width > 0 && height > 0) {
+            setSize({ width, height });
+          }
+        }}
+        style={{
+          position: 'absolute',
+          left: placement?.left ?? bounds.left,
+          top: placement?.top ?? bounds.top,
+          maxWidth: bounds.right - bounds.left,
+          maxHeight: placement?.maxHeight ?? bounds.bottom - bounds.top,
+          opacity: placement ? 1 : 0,
+        }}>
+        <YStack
+          {...knobProps.elevatedSurface}
+          padding={framePadding}
+          gap={frameGap}
+          flexShrink={1}
+          minHeight={0}
+          onAccessibilityEscape={onEscape}>
+          <RNScrollView
+            style={{ flexGrow: 0, flexShrink: 1 }}
+            keyboardShouldPersistTaps="handled">
+            {children}
+          </RNScrollView>
+        </YStack>
+      </RNView>
+    </RNView>
+  );
+};
+
+export const FloatingPanel = ({
   open,
   onOpenChange,
   onNativeShow,
@@ -131,7 +209,7 @@ export function FloatingPanel({
   triggerA11y,
   sheetFill,
   openOn = 'press',
-}: FloatingPanelProps) {
+}: FloatingPanelProps) => {
   const { knobProps } = useResolvedKnobs();
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   // The sheet must end ABOVE the keyboard, not run under it.
@@ -637,82 +715,4 @@ export function FloatingPanel({
       </Modal>
     </>
   );
-}
-
-/**
- * The menu at the long-press point: measured once per open at its natural
- * size, then placed by the same rule as the web pointer menu. Later layouts
- * are its own capped height and must not re-decide the side it opened on.
- */
-function PointPanel({
-  point,
-  bounds,
-  framePadding,
-  frameGap,
-  onBackdropPress,
-  onEscape,
-  children,
-}: {
-  point: PanelPoint;
-  bounds: PanelBounds;
-  framePadding: string;
-  frameGap: string | undefined;
-  onBackdropPress: () => void;
-  onEscape: () => void;
-  children: ReactNode;
-}) {
-  const { knobProps } = useResolvedKnobs();
-  const [size, setSize] = useState<{ width: number; height: number } | null>(null);
-  const placement = size
-    ? placeAtPoint({
-        point,
-        width: size.width,
-        height: size.height,
-        bounds,
-        rtl: I18nManager.isRTL,
-      })
-    : null;
-  return (
-    <RNView style={StyleSheet.absoluteFill}>
-      <Pressable
-        style={StyleSheet.absoluteFill}
-        onPress={onBackdropPress}
-        accessibilityRole="button"
-        accessibilityLabel={t('Close')}
-      />
-      <RNView
-        testID="floating-panel-point"
-        onLayout={(e) => {
-          if (size) {
-            return;
-          }
-          const { width, height } = e.nativeEvent.layout;
-          if (width > 0 && height > 0) {
-            setSize({ width, height });
-          }
-        }}
-        style={{
-          position: 'absolute',
-          left: placement?.left ?? bounds.left,
-          top: placement?.top ?? bounds.top,
-          maxWidth: bounds.right - bounds.left,
-          maxHeight: placement?.maxHeight ?? bounds.bottom - bounds.top,
-          opacity: placement ? 1 : 0,
-        }}>
-        <YStack
-          {...knobProps.elevatedSurface}
-          padding={framePadding}
-          gap={frameGap}
-          flexShrink={1}
-          minHeight={0}
-          onAccessibilityEscape={onEscape}>
-          <RNScrollView
-            style={{ flexGrow: 0, flexShrink: 1 }}
-            keyboardShouldPersistTaps="handled">
-            {children}
-          </RNScrollView>
-        </YStack>
-      </RNView>
-    </RNView>
-  );
-}
+};

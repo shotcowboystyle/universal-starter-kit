@@ -17,7 +17,7 @@ import { ActionBar } from '../actions/ActionBar';
 
 import { SheetModal } from './index';
 
-function Harness({
+const Harness = ({
   scrollable = false,
   snapPoint,
   startOpen = false,
@@ -25,7 +25,7 @@ function Harness({
   scrollable?: boolean;
   snapPoint?: number;
   startOpen?: boolean;
-}) {
+}) => {
   const [open, setOpen] = useState(startOpen);
   return (
     <YStack
@@ -78,7 +78,7 @@ function Harness({
       </SheetModal>
     </YStack>
   );
-}
+};
 
 const meta: Meta<typeof SheetModal> = {
   title: 'Components/SheetModal',
@@ -154,7 +154,7 @@ interface FixtureReadings {
   tailPresses: number;
 }
 
-function emptyReadings(): FixtureReadings {
+const emptyReadings = (): FixtureReadings => {
   return {
     frameLayout: 'unmeasured',
     toolbarLayout: 'unmeasured',
@@ -170,15 +170,15 @@ function emptyReadings(): FixtureReadings {
     sample: 0,
     tailPresses: 0,
   };
-}
+};
 
-function bounds(x: number, y: number, width: number, height: number): Reading<Bounds> {
+const bounds = (x: number, y: number, width: number, height: number): Reading<Bounds> => {
   return [x, y, width, height].every(Number.isFinite) && width >= 0 && height >= 0
     ? { x, y, width, height }
     : 'invalid';
-}
+};
 
-function OwnedBodyFixture({ measured }: { measured: boolean }) {
+const OwnedBodyFixture = ({ measured }: { measured: boolean }) => {
   const window = useWindowDimensions();
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<FixtureMode>('subject');
@@ -194,7 +194,7 @@ function OwnedBodyFixture({ measured }: { measured: boolean }) {
   const presentation = generation.current;
   const kind = measured ? 'measured' : 'scroll';
 
-  function present(nextMode: FixtureMode, nextFill = false) {
+  const present = (nextMode: FixtureMode, nextFill = false) => {
     generation.current += 1;
     sample.current = 0;
     active.current = true;
@@ -202,14 +202,14 @@ function OwnedBodyFixture({ measured }: { measured: boolean }) {
     setFill(nextFill);
     setReadings(emptyReadings());
     setOpen(true);
-  }
+  };
 
-  function close() {
+  const close = () => {
     active.current = false;
     setOpen(false);
-  }
+  };
 
-  function record(patch: Partial<FixtureReadings>) {
+  const record = (patch: Partial<FixtureReadings>) => {
     if (!active.current || generation.current !== presentation) {
       return;
     }
@@ -217,15 +217,15 @@ function OwnedBodyFixture({ measured }: { measured: boolean }) {
       const next = { ...previous, ...patch };
       return JSON.stringify(next) === JSON.stringify(previous) ? previous : next;
     });
-  }
+  };
 
-  function onLayout(key: 'frameLayout' | 'toolbarLayout' | 'viewportLayout' | 'scrollLayout') {
+  const onLayout = (key: 'frameLayout' | 'toolbarLayout' | 'viewportLayout' | 'scrollLayout') => {
     return ({ nativeEvent: { layout } }: LayoutChangeEvent) => {
       record({ [key]: bounds(layout.x, layout.y, layout.width, layout.height) });
     };
-  }
+  };
 
-  function measureBounds() {
+  const measureBounds = () => {
     const currentSample = ++sample.current;
     record({
       sample: currentSample,
@@ -251,7 +251,7 @@ function OwnedBodyFixture({ measured }: { measured: boolean }) {
         }
       });
     }
-  }
+  };
 
   const viewport = readings.viewportLayout;
   const showRows = !measured || (typeof viewport === 'object' && viewport.height > 0);
@@ -422,7 +422,7 @@ function OwnedBodyFixture({ measured }: { measured: boolean }) {
       </PublicSheetModal>
     </FixtureStack>
   );
-}
+};
 
 export const OwnedMeasuredViewport: Story = {
   name: 'Owned measured viewport',

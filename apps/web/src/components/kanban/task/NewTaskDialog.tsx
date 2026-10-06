@@ -15,7 +15,7 @@ export interface NewTaskDialogProps {
   projectId: string;
 }
 
-export default function NewTaskDialog({ projectId }: NewTaskDialogProps) {
+const NewTaskDialog = ({ projectId }: NewTaskDialogProps) => {
   const addTask = useWorkspaceStore((state) => state.addTask);
   const [addTaskOpen, setAddTaskOpen] = React.useState(false);
   const t = useTranslations('kanban.task');
@@ -80,4 +80,6 @@ export default function NewTaskDialog({ projectId }: NewTaskDialogProps) {
       </Dialog.Portal>
     </Dialog>
   );
-}
+};
+
+export default NewTaskDialog;

@@ -14,7 +14,7 @@ const MOTION_STYLE_ID = 'mp1-spinner-motion';
 // from A-STATE durations (quick=100ms would strobe).
 const SPIN_PERIOD = '0.7s';
 
-function ensureMotionStyles() {
+const ensureMotionStyles = () => {
   if (!isWeb || typeof document === 'undefined') {
     return;
   }
@@ -30,10 +30,10 @@ function ensureMotionStyles() {
     '@media (prefers-reduced-motion: reduce) { .mp1-spinner, .mp1-spinner * { animation: none !important; } }',
   ].join('\n');
   document.head.append(style);
-}
+};
 
 /** Form-styled Spinner. Size follows the shared size-token scale; spin gates on transition. */
-export function Spinner({ size, color, ...props }: SpinnerProps) {
+export const Spinner = ({ size, color, ...props }: SpinnerProps) => {
   const { knobProps } = useResolvedKnobs();
   const token = spinnerSizeToken(size, knobProps.sizeToken);
   const px = spinnerSizePx(token);
@@ -61,4 +61,4 @@ export function Spinner({ size, color, ...props }: SpinnerProps) {
       />
     </View>
   );
-}
+};

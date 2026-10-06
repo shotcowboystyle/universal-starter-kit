@@ -15,15 +15,15 @@ import { FieldDisplay } from './index';
 
 afterEach(cleanup);
 
-function frame(container: HTMLElement) {
+const frame = (container: HTMLElement) => {
   return container.querySelector("[data-component='FieldDisplay']") as HTMLElement | null;
-}
+};
 
-function radiusClasses(el: HTMLElement | null): string[] {
+const radiusClasses = (el: HTMLElement | null): string[] => {
   return String(el?.className || '')
     .split(' ')
     .filter((c) => c.startsWith('_btlr-'));
-}
+};
 
 describe('FieldDisplay', () => {
   it('keeps zero and false as values, empty as the empty mark', () => {

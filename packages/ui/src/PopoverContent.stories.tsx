@@ -7,13 +7,13 @@ import { Paragraph, Popover, SizableText, YStack } from 'tamagui';
 
 import { PopoverContent } from './surfaces';
 
-function PopoverHarness({
+const PopoverHarness = ({
   placement = 'bottom' as const,
   startOpen = true,
 }: {
   placement?: 'bottom' | 'top' | 'right' | 'left';
   startOpen?: boolean;
-}) {
+}) => {
   // PopoverContent's contract leaves the inset to the caller (flush menus
   // pass none); the demo caller pad rides the space knob.
   const { knobProps } = useResolvedKnobs();
@@ -44,7 +44,7 @@ function PopoverHarness({
       </Popover>
     </YStack>
   );
-}
+};
 
 const meta: Meta<typeof PopoverContent> = {
   title: 'Components/PopoverContent',

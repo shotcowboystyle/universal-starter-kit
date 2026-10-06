@@ -40,22 +40,22 @@ import type { PageHeadingLevel } from './PageHeadingScope';
 const PAGE_HEADING_TAGS = { 1: H1, 2: H2, 3: H3, 4: H4, 5: H5, 6: H6 } as const;
 
 /** `$4` → `$-4` so PageHeader can cancel Screen's panel padding. */
-function negateSpaceToken(token: string): `$-${string}` {
+const negateSpaceToken = (token: string): `$-${string}` => {
   return `$-${token.startsWith('$') ? token.slice(1) : token}`;
-}
+};
 
-function knobsFor(component: string, compact: boolean | undefined) {
+const knobsFor = (component: string, compact: boolean | undefined) => {
   // An omitted override must leave density under the preset's control.
   return compact === undefined ? { component } : { component, compact };
-}
+};
 
 /** Nested surfaces step density only; hue remains inherited. */
-function NestedScale({ density, children }: { density: string; children: ReactNode }) {
+const NestedScale = ({ density, children }: { density: string; children: ReactNode }) => {
   if (density === 'compact') {
     return children;
   }
   return <Preset overrides={{ density: 'compact' }}>{children}</Preset>;
-}
+};
 
 // ---------------------------------------------------------------------------
 // Screen — page outer shell (scroll, max-width, padding, theme background)
@@ -82,32 +82,7 @@ export interface ScreenProps extends YStackProps {
   compact?: boolean;
 }
 
-/**
- * Outer page shell. Pairs with PageHeader/Section/EmptyState for thin
- * compose-only screens.
- *
- * SF-TRANSPARENT + SP-PAD/SP-GAP: panelPadding and gapLg restyle with the
- * density/space knobs. Only an explicit compact prop overrides density.
- *
- * @example
- * <Screen>
- *   <PageHeader title="Items" subtitle="A list of items" />
- *   <FrappeImageView doctype="Item" />
- * </Screen>
- */
-export function Screen({ compact, ...props }: ScreenProps) {
-  const density = compact === undefined ? undefined : compact ? 'compact' : 'comfortable';
-  return (
-    <Surface density={density}>
-      <ScreenInner
-        compact={compact}
-        {...props}
-      />
-    </Surface>
-  );
-}
-
-function ScreenInner({
+const ScreenInner = ({
   children,
   scroll = true,
   maxWidth = CONTENT_MAX_WIDTH,
@@ -116,7 +91,7 @@ function ScreenInner({
   scrollViewProps,
   compact,
   ...rest
-}: ScreenProps) {
+}: ScreenProps) => {
   const { knobProps } = useResolvedKnobs(knobsFor('Screen', compact));
 
   const inner = (
@@ -156,7 +131,32 @@ function ScreenInner({
       {inner}
     </ScrollView>
   );
-}
+};
+
+/**
+ * Outer page shell. Pairs with PageHeader/Section/EmptyState for thin
+ * compose-only screens.
+ *
+ * SF-TRANSPARENT + SP-PAD/SP-GAP: panelPadding and gapLg restyle with the
+ * density/space knobs. Only an explicit compact prop overrides density.
+ *
+ * @example
+ * <Screen>
+ *   <PageHeader title="Items" subtitle="A list of items" />
+ *   <FrappeImageView doctype="Item" />
+ * </Screen>
+ */
+export const Screen = ({ compact, ...props }: ScreenProps) => {
+  const density = compact === undefined ? undefined : compact ? 'compact' : 'comfortable';
+  return (
+    <Surface density={density}>
+      <ScreenInner
+        compact={compact}
+        {...props}
+      />
+    </Surface>
+  );
+};
 
 // ---------------------------------------------------------------------------
 // PageHeader — title + subtitle + optional actions
@@ -207,7 +207,7 @@ export interface PageHeaderProps extends YStackProps {
  * to the Screen column. `nav` (tabs) is pulled onto that edge so the active
  * indicator shares the one rule instead of stacking a second line.
  */
-export function PageHeader({
+export const PageHeader = ({
   title,
   subtitle,
   heading,
@@ -219,7 +219,7 @@ export function PageHeader({
   compact,
   children,
   ...rest
-}: PageHeaderProps) {
+}: PageHeaderProps) => {
   const { knobProps } = useResolvedKnobs(knobsFor('PageHeader', compact));
   const insetToken = usePageChromeInset();
   // Count the built-in title toward the Screen's h1 budget.
@@ -337,7 +337,7 @@ export function PageHeader({
       ) : null}
     </YStack>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // PageSection — labeled content block (with optional divider/surface)
@@ -371,7 +371,7 @@ export interface PageSectionProps extends YStackProps {
  * Labeled content section. Cheap way to break a long page into clearly
  * separated regions without reaching for custom layout JSX.
  */
-export function PageSection({
+export const PageSection = ({
   title,
   description,
   heading,
@@ -381,7 +381,7 @@ export function PageSection({
   compact,
   children,
   ...rest
-}: PageSectionProps) {
+}: PageSectionProps) => {
   const { knobProps } = useResolvedKnobs(knobsFor('PageSection', compact));
   // See PageHeader: native-only heading family from the headingFont knob.
   const headingFamily = isWeb ? null : { fontFamily: knobProps.heading.fontFamily };
@@ -453,7 +453,7 @@ export function PageSection({
       )}
     </YStack>
   );
-}
+};
 
 // EmptyState lives in ./EmptyState — re-exported so Screen/PageHeader
 // consumers that import the page shell keep a stable path.
@@ -481,7 +481,7 @@ export interface ScreenToolbarProps extends XStackProps {
  * re-applies panelPadding so the row shares the page line without
  * double-padding.
  */
-export function ScreenToolbar({ leading, trailing, children, ...rest }: ScreenToolbarProps) {
+export const ScreenToolbar = ({ leading, trailing, children, ...rest }: ScreenToolbarProps) => {
   const { knobProps } = useResolvedKnobs({ component: 'ScreenToolbar' });
   const insetToken = usePageChromeInset();
   const bleed = insetToken ? { marginHorizontal: negateSpaceToken(insetToken) as '$4' } : null;
@@ -517,4 +517,4 @@ export function ScreenToolbar({ leading, trailing, children, ...rest }: ScreenTo
       </XStack>
     </XStack>
   );
-}
+};

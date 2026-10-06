@@ -26,7 +26,7 @@ export interface ChartDataViewProps {
 }
 
 /** One complete, reachable data view. The ordinary chart keeps its short name. */
-export function ChartDataView({ data, title, valueFormatter, children }: ChartDataViewProps) {
+export const ChartDataView = ({ data, title, valueFormatter, children }: ChartDataViewProps) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
   const { knobProps: datumKnobs } = useResolvedKnobs({ compact: true });
@@ -124,16 +124,16 @@ export function ChartDataView({ data, title, valueFormatter, children }: ChartDa
       </Dialog>
     </ChartDataContext.Provider>
   );
-}
+};
 
 /** Shared chart implementations join a composed header instead of adding a second action. */
-export function ChartDataFrame({
+export const ChartDataFrame = ({
   data,
   title,
   valueFormatter,
   width,
   children,
-}: Omit<ChartDataViewProps, 'children'> & { children: ReactNode; width?: number }) {
+}: Omit<ChartDataViewProps, 'children'> & { children: ReactNode; width?: number }) => {
   const inherited = useContext(ChartDataContext);
   const { knobProps } = useResolvedKnobs();
   if (inherited) {
@@ -156,9 +156,9 @@ export function ChartDataFrame({
       )}
     </ChartDataView>
   );
-}
+};
 
-export function useChartDataViewProps(): Record<string, unknown> {
+export const useChartDataViewProps = (): Record<string, unknown> => {
   const context = useContext(ChartDataContext);
   if (!context) {
     return {};
@@ -167,4 +167,4 @@ export function useChartDataViewProps(): Record<string, unknown> {
     'data-mpo-chart-data-view': context.id,
     'aria-describedby': context.triggerId,
   });
-}
+};

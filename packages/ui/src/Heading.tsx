@@ -54,7 +54,7 @@ type Weight = HeadingProps['fontWeight'];
  * That ramp is why a sized heading swapped to `headingFont: serif` fell from
  * Inter's 600 to the category font's 400.
  */
-function useHeadingVoice(fontWeight: Weight) {
+const useHeadingVoice = (fontWeight: Weight) => {
   const { knobProps } = useResolvedKnobs();
   const { fontWeight: knobWeight, ...heading } = knobProps.heading;
   return {
@@ -62,9 +62,9 @@ function useHeadingVoice(fontWeight: Weight) {
     pageTitle: knobProps.pageTitle,
     weight: fontWeight ?? (knobWeight as Weight),
   };
-}
+};
 
-export function Heading({ fontWeight, ...props }: HeadingProps) {
+export const Heading = ({ fontWeight, ...props }: HeadingProps) => {
   const { heading, weight } = useHeadingVoice(fontWeight);
   return (
     <RawHeading
@@ -73,9 +73,9 @@ export function Heading({ fontWeight, ...props }: HeadingProps) {
       fontWeight={weight}
     />
   );
-}
+};
 
-export function H1({ fontWeight, ...props }: HeadingProps) {
+export const H1 = ({ fontWeight, ...props }: HeadingProps) => {
   const { heading, pageTitle, weight } = useHeadingVoice(fontWeight);
   return (
     <RawH1
@@ -85,9 +85,9 @@ export function H1({ fontWeight, ...props }: HeadingProps) {
       fontWeight={weight}
     />
   );
-}
+};
 
-export function H2({ fontWeight, ...props }: HeadingProps) {
+export const H2 = ({ fontWeight, ...props }: HeadingProps) => {
   const { heading, weight } = useHeadingVoice(fontWeight);
   return (
     <RawH2
@@ -96,9 +96,9 @@ export function H2({ fontWeight, ...props }: HeadingProps) {
       fontWeight={weight}
     />
   );
-}
+};
 
-export function H3({ fontWeight, ...props }: HeadingProps) {
+export const H3 = ({ fontWeight, ...props }: HeadingProps) => {
   return (
     <RawH3
       fontFamily={SUBORDINATE_FAMILY}
@@ -106,9 +106,9 @@ export function H3({ fontWeight, ...props }: HeadingProps) {
       fontWeight={fontWeight ?? SUBORDINATE_WEIGHT}
     />
   );
-}
+};
 
-export function H4({ fontWeight, ...props }: HeadingProps) {
+export const H4 = ({ fontWeight, ...props }: HeadingProps) => {
   return (
     <RawH4
       fontFamily={SUBORDINATE_FAMILY}
@@ -116,9 +116,9 @@ export function H4({ fontWeight, ...props }: HeadingProps) {
       fontWeight={fontWeight ?? SUBORDINATE_WEIGHT}
     />
   );
-}
+};
 
-export function H5({ fontWeight, ...props }: HeadingProps) {
+export const H5 = ({ fontWeight, ...props }: HeadingProps) => {
   return (
     <RawH5
       fontFamily={SUBORDINATE_FAMILY}
@@ -126,9 +126,9 @@ export function H5({ fontWeight, ...props }: HeadingProps) {
       fontWeight={fontWeight ?? SUBORDINATE_WEIGHT}
     />
   );
-}
+};
 
-export function H6({ fontWeight, ...props }: HeadingProps) {
+export const H6 = ({ fontWeight, ...props }: HeadingProps) => {
   return (
     <RawH6
       fontFamily={SUBORDINATE_FAMILY}
@@ -136,4 +136,4 @@ export function H6({ fontWeight, ...props }: HeadingProps) {
       fontWeight={fontWeight ?? SUBORDINATE_WEIGHT}
     />
   );
-}
+};

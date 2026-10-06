@@ -37,7 +37,7 @@ const ScopedPanel = lazy(async (): Promise<{ default: ComponentType<object> }> =
  * preset and style knobs, restyling the page live. The panel stays mounted after the first open so closing the
  * sheet does not blank it mid-slide.
  */
-export function ThemePlayground({ testID }: ThemePlaygroundProps) {
+export const ThemePlayground = ({ testID }: ThemePlaygroundProps) => {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [opened, setOpened] = useState(false);
@@ -91,4 +91,4 @@ export function ThemePlayground({ testID }: ThemePlaygroundProps) {
       </SheetModal>
     </>
   );
-}
+};

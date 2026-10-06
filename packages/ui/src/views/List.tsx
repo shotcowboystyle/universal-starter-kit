@@ -60,9 +60,9 @@ const ListItemStateContext = createContext<ListItemState>({
 });
 
 /** Read the current row's selection/focus. Defaults to idle outside a List. */
-export function useListItemState(): ListItemState {
+export const useListItemState = (): ListItemState => {
   return useContext(ListItemStateContext);
-}
+};
 
 /**
  * Subject-led document row (Desk list / Linear / Finder): leading glyph,
@@ -78,7 +78,7 @@ export interface ListRowProps {
   meta?: ReactNode;
 }
 
-function RowText({ children, ...props }: { children: ReactNode } & React.ComponentProps<typeof Text>) {
+const RowText = ({ children, ...props }: { children: ReactNode } & React.ComponentProps<typeof Text>) => {
   if (children == null || children === false) {
     return null;
   }
@@ -86,10 +86,10 @@ function RowText({ children, ...props }: { children: ReactNode } & React.Compone
     return <Text {...props}>{children}</Text>;
   }
   return <>{children}</>;
-}
+};
 
 /** Trailing Finder/Desk column. Inherits selected fill ink. */
-export function ListRowMeta({ children, width, color }: { children: ReactNode; width?: number; color?: string }) {
+export const ListRowMeta = ({ children, width, color }: { children: ReactNode; width?: number; color?: string }) => {
   const { knobProps } = useResolvedKnobs();
   const { selected, onAccent } = useListItemState();
   const resolved = selected && onAccent ? onAccent : (color ?? knobProps.textAccentColor);
@@ -104,9 +104,9 @@ export function ListRowMeta({ children, width, color }: { children: ReactNode; w
       {children}
     </Text>
   );
-}
+};
 
-export function ListRow({ icon, title, subtitle, meta }: ListRowProps) {
+export const ListRow = ({ icon, title, subtitle, meta }: ListRowProps) => {
   const { knobProps } = useResolvedKnobs();
   const { selected, onAccent } = useListItemState();
   // data-chrome family: textAccent = honour (F11). Same channel as house Text —
@@ -171,7 +171,7 @@ export function ListRow({ icon, title, subtitle, meta }: ListRowProps) {
       ) : null}
     </XStack>
   );
-}
+};
 
 /**
  * Props for the generic List component.
@@ -242,7 +242,7 @@ export interface ListProps<T> extends Omit<YStackProps, 'children'> {
  * />
  * ```
  */
-export function List<T>({
+export const List = <T,>({
   items,
   renderItem,
   onItemClick,
@@ -261,7 +261,7 @@ export function List<T>({
   'aria-label': ariaLabel,
   hotkeys: hotkeyOverrides,
   ...stackProps
-}: ListProps<T>) {
+}: ListProps<T>) => {
   const { t } = useTranslation();
   const emptyMessage = emptyMessageProp ?? t('No items found');
   const { knobProps } = useResolvedKnobs();
@@ -548,4 +548,4 @@ export function List<T>({
       {listBody}
     </AsyncBoundary>
   );
-}
+};

@@ -229,7 +229,7 @@ interface TreeSettle<T> {
   hideId?: string;
 }
 
-function collectBranchIds<T>(items: TreeNode<T>[], into = new Set<string>()): Set<string> {
+const collectBranchIds = <T,>(items: TreeNode<T>[], into = new Set<string>()): Set<string> => {
   for (const node of items) {
     if ((node.children?.length ?? 0) > 0) {
       into.add(node.id);
@@ -237,10 +237,10 @@ function collectBranchIds<T>(items: TreeNode<T>[], into = new Set<string>()): Se
     }
   }
   return into;
-}
+};
 
 /** Ancestor ids of `id` (root → parent), or null when the node is absent. */
-function findNodePath<T>(items: TreeNode<T>[], id: string, trail: string[] = []): string[] | null {
+const findNodePath = <T,>(items: TreeNode<T>[], id: string, trail: string[] = []): string[] | null => {
   for (const node of items) {
     if (node.id === id) {
       return trail;
@@ -253,12 +253,12 @@ function findNodePath<T>(items: TreeNode<T>[], id: string, trail: string[] = [])
     }
   }
   return null;
-}
+};
 
 /** Typeahead window matching menu rows (DropdownMenu) and Finder/VS Code jump-to. */
 const TYPEAHEAD_MS = 600;
 
-function defaultNodeIcon(hasChildren: boolean, isExpanded: boolean, iconSize: number): ReactNode {
+const defaultNodeIcon = (hasChildren: boolean, isExpanded: boolean, iconSize: number): ReactNode => {
   if (hasChildren) {
     return isExpanded ? (
       <FolderOpenIcon
@@ -278,7 +278,7 @@ function defaultNodeIcon(hasChildren: boolean, isExpanded: boolean, iconSize: nu
       weight="duotone"
     />
   );
-}
+};
 
 /**
  * Generic virtualized tree view.
@@ -300,7 +300,7 @@ function defaultNodeIcon(hasChildren: boolean, isExpanded: boolean, iconSize: nu
  *
  * @typeParam T - Additional data type stored on the nodes
  */
-export function TreeView<T = unknown>({
+export const TreeView = <T = unknown,>({
   nodes,
   renderNode,
   onNodeToggle,
@@ -324,7 +324,7 @@ export function TreeView<T = unknown>({
   ariaLabel,
   hotkeys: hotkeyOverrides,
   ...stackProps
-}: TreeViewProps<T>) {
+}: TreeViewProps<T>) => {
   const { t } = useTranslation();
   const emptyMessage = emptyMessageProp ?? t('No items found');
   const compressed = display === 'compressed';
@@ -1957,4 +1957,4 @@ export function TreeView<T = unknown>({
       </View>
     </YStack>
   );
-}
+};

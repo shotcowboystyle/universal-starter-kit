@@ -3,7 +3,7 @@ import type { ErrorBoundaryProps } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Pressable } from 'react-native';
 
-export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+export const ErrorBoundary = ({ error, retry }: ErrorBoundaryProps) => {
   const { t } = useTranslation();
   const theme = useTheme();
 
@@ -42,6 +42,6 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
       </Pressable>
     </View>
   );
-}
+};
 
 export default ErrorBoundary;

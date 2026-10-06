@@ -223,7 +223,7 @@ describe('TimePicker', () => {
   });
 
   describe('design-law', () => {
-    async function openPanel(jsx: ReactElement) {
+    const openPanel = async (jsx: ReactElement) => {
       const result = renderWithProviders(jsx);
       const trigger = result.container.querySelector("input,button,[role='button']");
       expect(trigger).toBeTruthy();
@@ -237,7 +237,7 @@ describe('TimePicker', () => {
         expect(document.querySelector('[data-testid="time-picker-panel"]')).toBeTruthy();
       });
       return result;
-    }
+    };
 
     it('unselected period and pip labels stay on the 400/700 weight pair', async () => {
       await openPanel(

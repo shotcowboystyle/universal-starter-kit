@@ -107,7 +107,7 @@ let PACKAGES_DIR = join(ROOT, 'packages');
 /**
  * @param {ConventionRoots} [roots]
  */
-export function resolveRoots(roots = {}) {
+export const resolveRoots = (roots = {}) => {
   const root = roots.root ?? process.cwd();
   return {
     root,
@@ -116,12 +116,12 @@ export function resolveRoots(roots = {}) {
     public: roots.public ?? join(root, 'packages'),
     packages: roots.packages ?? join(root, 'packages'),
   };
-}
+};
 
 /**
  * @param {ConventionRoots} [roots]
  */
-function applyRoots(roots) {
+const applyRoots = (roots) => {
   const resolved = resolveRoots(roots);
   ROOT = resolved.root;
   APPS_DIR = resolved.apps;
@@ -130,7 +130,7 @@ function applyRoots(roots) {
   PACKAGES_DIR = resolved.packages;
   sourceFileCache = undefined;
   requireFromRoot = createRequire(join(ROOT, 'package.json'));
-}
+};
 
 /** Shared platform / docs / chain shells — not product apps from
  *  mpo init --app. Extension targets (vscode, webext) are no longer shells:
@@ -191,7 +191,7 @@ const GENERATED_CSS_NAMES = new Set(['tamagui.css', 'tamagui.content.css']);
  * @param {string} dir
  * @param {(filePath: string) => void} onFile
  */
-function walkFiles(dir, onFile) {
+const walkFiles = (dir, onFile) => {
   if (!existsSync(dir)) {
     return;
   }
@@ -215,9 +215,9 @@ function walkFiles(dir, onFile) {
       onFile(full);
     }
   }
-}
+};
 
-function isCssIgnored(absPath) {
+const isCssIgnored = (absPath) => {
   const rel = relative(APPS_DIR, absPath);
   if (CSS_IGNORE_PREFIXES.some((prefix) => rel === prefix || rel.startsWith(`${prefix}/`))) {
     return true;
@@ -227,9 +227,9 @@ function isCssIgnored(absPath) {
     return true;
   }
   return GENERATED_CSS_NAMES.has(parts.at(-1) ?? '');
-}
+};
 
-function listAppNames() {
+const listAppNames = () => {
   if (!existsSync(APPS_DIR)) {
     return [];
   }
@@ -237,9 +237,9 @@ function listAppNames() {
     .filter((d) => d.isDirectory() && !d.name.startsWith('.') && d.name !== 'node_modules')
     .map((d) => d.name)
     .sort();
-}
+};
 
-function checkCssInApps() {
+const checkCssInApps = () => {
   /** @type {string[]} */
   const violations = [];
   if (!existsSync(APPS_DIR)) {
@@ -256,7 +256,7 @@ function checkCssInApps() {
     violations.push(relative(ROOT, filePath));
   });
   return violations;
-}
+};
 
 // ── Silent no-op token registries ─────────────────────────────────────────
 
@@ -269,13 +269,13 @@ let requireFromRoot = createRequire(join(process.cwd(), 'package.json'));
  * fresh clone with a partial install must still get the structural checks.
  * @param {string} name
  */
-function tryRequire(name) {
+const tryRequire = (name) => {
   try {
     return requireFromRoot(name);
   } catch {
     return undefined;
   }
-}
+};
 
 /**
  * A registry source under packages/<pkg>/, or, when the tree has no
@@ -283,7 +283,7 @@ function tryRequire(name) {
  * installed @repo/<pkg>, which publishes its src/.
  * @param {string} relPath
  */
-function readPublicSource(relPath) {
+const readPublicSource = (relPath) => {
   const [pkg, ...rest] = relPath.split('/');
   let full = join(PUBLIC_DIR, relPath);
   if (!existsSync(join(PUBLIC_DIR, pkg))) {
@@ -294,7 +294,7 @@ function readPublicSource(relPath) {
     }
   }
   return existsSync(full) ? readFileSync(full, 'utf-8') : '';
-}
+};
 
 /**
  * Body of an object/interface literal that starts at `marker`, from its first
@@ -304,7 +304,7 @@ function readPublicSource(relPath) {
  * @param {string} marker
  * @param {string} end
  */
-function sliceBlock(src, marker, end) {
+const sliceBlock = (src, marker, end) => {
   const start = src.indexOf(marker);
   if (start === -1) {
     return '';
@@ -315,7 +315,7 @@ function sliceBlock(src, marker, end) {
   }
   const close = src.indexOf(end, open);
   return close === -1 ? '' : src.slice(open, close);
-}
+};
 
 /**
  * Top-level keys declared in an object/interface literal body. Numeric keys
@@ -323,7 +323,7 @@ function sliceBlock(src, marker, end) {
  * @param {string} body
  * @param {number} indent
  */
-function keysOfBlock(body, indent) {
+const keysOfBlock = (body, indent) => {
   /** @type {string[]} */
   const keys = [];
   const re = new RegExp(`^ {${indent}}([A-Za-z0-9][A-Za-z0-9]*)\\s*:`, 'gm');
@@ -331,11 +331,11 @@ function keysOfBlock(body, indent) {
     keys.push(m[1]);
   }
   return keys;
-}
+};
 
 /** Source files every token check scans, read once and shared. */
 let sourceFileCache;
-function sourceFiles() {
+const sourceFiles = () => {
   if (sourceFileCache) {
     return sourceFileCache;
   }
@@ -359,14 +359,14 @@ function sourceFiles() {
   }
   sourceFileCache = files;
   return files;
-}
+};
 
 /**
  * 1-based line of a match offset.
  * @param {string} src
  * @param {number} index
  */
-function lineAt(src, index) {
+const lineAt = (src, index) => {
   let line = 1;
   for (let i = 0; i < index; i++) {
     if (src.charCodeAt(i) === 10) {
@@ -374,14 +374,14 @@ function lineAt(src, index) {
     }
   }
   return line;
-}
+};
 
 /**
  * Run one prop-literal regex over every scanned file.
  * @param {RegExp} re
  * @param {(match: RegExpMatchArray) => string | undefined} check returns the violation text, or undefined when valid
  */
-function scanLiterals(re, check) {
+const scanLiterals = (re, check) => {
   /** @type {string[]} */
   const violations = [];
   for (const { rel, src } of sourceFiles()) {
@@ -393,7 +393,7 @@ function scanLiterals(re, check) {
     }
   }
   return violations;
-}
+};
 
 /**
  * The animation vocabulary is a CLOSED set (css.ts / reactNative.ts register
@@ -405,7 +405,7 @@ function scanLiterals(re, check) {
  * registry from source so this check can never drift from the tokens.
  * @returns {Set<string>}
  */
-function readAnimationTokens() {
+const readAnimationTokens = () => {
   /** @type {Set<string>} */
   const tokens = new Set();
   const src = readPublicSource('theme/src/theme/animations/css.ts');
@@ -417,10 +417,10 @@ function readAnimationTokens() {
     tokens.add(key);
   }
   return tokens;
-}
+};
 
 /** Flag `transition="literal"` / `transition={"literal"}` using an unregistered token. */
-function checkTransitionTokens() {
+const checkTransitionTokens = () => {
   const valid = readAnimationTokens();
   if (!valid.size) {
     return { violations: [], valid: [], ok: false };
@@ -433,7 +433,7 @@ function checkTransitionTokens() {
     return valid.has(token) ? undefined : `transition="${token}"`;
   });
   return { violations, valid: [...valid].filter((t) => t !== 'none').sort(), ok: true };
-}
+};
 
 /**
  * Every registered Tamagui theme name, plus each sub-theme SEGMENT a `theme`
@@ -444,7 +444,7 @@ function checkTransitionTokens() {
  * createThemes.ts. Palettes are irrelevant here — only the NAMES are.
  * @returns {Set<string>}
  */
-function readThemeNames() {
+const readThemeNames = () => {
   /** @type {Set<string>} */
   const names = new Set();
   const builder = tryRequire('@tamagui/theme-builder');
@@ -484,7 +484,7 @@ function readThemeNames() {
     names.add(segment);
   }
   return names;
-}
+};
 
 /**
  * Every key resolvable as `$value` on a color-bearing prop, composed exactly
@@ -494,7 +494,7 @@ function readThemeNames() {
  * slots, and the project's semantic aliases from `getBaseTheme`.
  * @returns {Set<string>}
  */
-function readThemeKeys() {
+const readThemeKeys = () => {
   /** @type {Set<string>} */
   const keys = new Set();
   const builder = tryRequire('@tamagui/theme-builder');
@@ -539,7 +539,7 @@ function readThemeKeys() {
     keys.add(k);
   }
   return keys;
-}
+};
 
 /**
  * Font-size steps the house fonts register. The hand-mirrored
@@ -549,7 +549,7 @@ function readThemeKeys() {
  * parse survives as a fallback for consumer trees that still carry the
  * transcribed table.
  */
-function readFontSizeSteps() {
+const readFontSizeSteps = () => {
   /** @type {Set<string>} */
   const steps = new Set();
   const cfg = tryRequire('@tamagui/config/v5');
@@ -571,7 +571,7 @@ function readFontSizeSteps() {
     steps.add(k);
   }
   return steps;
-}
+};
 
 /**
  * Flag a `$token` style literal that resolves to NOTHING.
@@ -589,7 +589,7 @@ function readFontSizeSteps() {
  * against the active font's own size scale and, on a miss, passes the RAW
  * "$n" string through as a CSS length — equally silent, equally dead.
  */
-function checkStyleTokens() {
+const checkStyleTokens = () => {
   const helpers = tryRequire('@tamagui/helpers');
   const themesPkg = tryRequire('@tamagui/themes');
   const shorthandsPkg = tryRequire('@tamagui/shorthands');
@@ -642,10 +642,10 @@ function checkStyleTokens() {
     return byProp.get(m[1])?.has(token) ? undefined : `${m[1]}="$${token}"`;
   });
   return { violations, ok: true };
-}
+};
 
 /** Flag `theme="literal"` naming a theme that was never built. */
-function checkThemeNames() {
+const checkThemeNames = () => {
   const valid = readThemeNames();
   if (!valid.size) {
     return { violations: [], ok: false };
@@ -656,10 +656,10 @@ function checkThemeNames() {
     return valid.has(name) ? undefined : `theme="${name}"`;
   });
   return { violations, ok: true };
-}
+};
 
 /** Intent names registered in `defaultIntents`. */
-function readIntentNames() {
+const readIntentNames = () => {
   /** @type {Set<string>} */
   const names = new Set();
   const src = readPublicSource('theme/src/theme/intents.ts');
@@ -672,7 +672,7 @@ function readIntentNames() {
     names.add(m[1]);
   }
   return names;
-}
+};
 
 /**
  * Flag `useResolvedKnobs({ intent: "literal" })` naming an unregistered intent.
@@ -681,7 +681,7 @@ function readIntentNames() {
  * misses `defaultIntents[intent]` — no overrides merge, so the component keeps
  * its base knobs and renders exactly as if no intent had been passed.
  */
-function checkIntentTokens() {
+const checkIntentTokens = () => {
   const valid = readIntentNames();
   if (!valid.size) {
     return { violations: [], valid: [], ok: false };
@@ -715,7 +715,7 @@ function checkIntentTokens() {
     }
   }
   return { violations, valid: [...valid].sort(), ok: true };
-}
+};
 
 /**
  * Two more silent-animation-death shapes, both found dead in the live sweep
@@ -730,7 +730,7 @@ function checkIntentTokens() {
  *    element is dead code — the styles are declared and never interpolated
  *    (raw tamagui Popover/Dialog Content bypassing the house wrappers).
  */
-function checkAnimationProps() {
+const checkAnimationProps = () => {
   /** @type {string[]} */
   const legacyProp = [];
   /** @type {string[]} */
@@ -773,9 +773,9 @@ function checkAnimationProps() {
     walkFiles(dir, scan);
   }
   return { legacyProp, driverless };
-}
+};
 
-function checkFeaturesTwins() {
+const checkFeaturesTwins = () => {
   /** @type {string[]} */
   const violations = [];
   for (const name of listAppNames()) {
@@ -788,7 +788,7 @@ function checkFeaturesTwins() {
     }
   }
   return violations;
-}
+};
 
 /**
  * SIZE-RECIPE ESCAPE — numeric JSX literals that paint control chrome
@@ -802,7 +802,7 @@ function checkFeaturesTwins() {
  * match. Escape: `sizeRecipeEscape` or `size-recipe-escape:` on the previous
  * line or in the same statement (the prop, including a multiline `{…}`).
  */
-function checkSizeRecipeEscape() {
+const checkSizeRecipeEscape = () => {
   const formsSrc = join(PUBLIC_DIR, 'forms', 'src');
   const pilotPrefixes = [
     'packages/forms/src/Button/',
@@ -852,7 +852,7 @@ function checkSizeRecipeEscape() {
     }
   });
   return violations;
-}
+};
 
 const ESCAPE_REASON = String.raw`(?:"([^"\n]*)"|'([^'\n]*)'|\x60([^\x60$\n]*)\x60)`;
 /** `sizeRecipeEscape="…"`, `sizeRecipeEscape={"…"}`, `sizeRecipeEscape: "…"`. */
@@ -863,10 +863,10 @@ const ESCAPE_COMMENT_RE = /(?<!`)(?:\/\/|\/\*)\s*size-recipe-escape:\s*(.*?)\s*(
 const ESCAPE_REASON_RE = new RegExp(ESCAPE_REASON, 'g');
 
 /** @param {string} line */
-function isCommentLine(line) {
+const isCommentLine = (line) => {
   const trimmed = line.trim();
   return trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*');
-}
+};
 
 /**
  * Every size-recipe escape the code writes, with the reason it gives. A call
@@ -876,7 +876,7 @@ function isCommentLine(line) {
  * @param {string} src
  * @returns {{ line: number, form: string, reason: string | undefined }[]}
  */
-export function findSizeRecipeEscapes(src) {
+export const findSizeRecipeEscapes = (src) => {
   /** @type {{ line: number, form: string, reason: string | undefined }[]} */
   const sites = [];
   const lines = src.split('\n');
@@ -935,7 +935,7 @@ export function findSizeRecipeEscapes(src) {
     }
   });
   return sites.sort((a, b) => a.line - b.line);
-}
+};
 
 /**
  * `sizeRecipeEscape` is the weakest escape and it had no
@@ -948,7 +948,7 @@ export function findSizeRecipeEscapes(src) {
  *
  * Missing spec or missing section → skip, the same as the drawing registry.
  */
-function checkUndeclaredSizeRecipeEscapes() {
+const checkUndeclaredSizeRecipeEscapes = () => {
   let registry;
   try {
     registry = readSizeRecipeEscapeRegistry(join(ROOT, 'docs/theme-propagation-spec.md'));
@@ -1000,7 +1000,7 @@ function checkUndeclaredSizeRecipeEscapes() {
     violations.push(`${file} — declared escape "${reason}" has no site in the code (stale row)`);
   }
   return violations;
-}
+};
 
 /**
  * `no-hex-literals` covers apps/, packages/ and features/, and a
@@ -1013,7 +1013,7 @@ function checkUndeclaredSizeRecipeEscapes() {
  *
  * Missing spec or missing section → skip, the same as the drawing registry.
  */
-function checkUndeclaredHexEscapes() {
+const checkUndeclaredHexEscapes = () => {
   let registry;
   try {
     registry = readHexEscapeRegistry(join(ROOT, 'docs/theme-propagation-spec.md'));
@@ -1062,7 +1062,7 @@ function checkUndeclaredHexEscapes() {
     violations.push(`${file} — declared escape "${reason}" has no comment in the code (stale row)`);
   }
   return violations;
-}
+};
 
 // ── Story file shape ──────────────────────────────────────────────────────
 
@@ -1073,7 +1073,7 @@ const STORY_FILE_RE = /\.(stories|story)\.(js|jsx|mjs|ts|tsx)$/;
  * @param {string} src
  * @returns {Set<string>}
  */
-function braceExportNames(src) {
+const braceExportNames = (src) => {
   const names = new Set();
   for (const m of src.matchAll(/^export\s*\{([^}]*)\}/gm)) {
     for (const item of m[1].split(',')) {
@@ -1085,7 +1085,7 @@ function braceExportNames(src) {
     }
   }
   return names;
-}
+};
 
 /**
  * Storybook's CSF indexer accepts a story file in exactly two shapes: classic
@@ -1098,7 +1098,7 @@ function braceExportNames(src) {
  * Nothing else catches it: package builds exclude `.stories.` files, so the
  * pipeline stays green. Three files did exactly this on main.
  */
-function checkStoryFileShape() {
+const checkStoryFileShape = () => {
   /** @type {string[]} */
   const violations = [];
   const scan = (filePath) => {
@@ -1129,14 +1129,14 @@ function checkStoryFileShape() {
     walkFiles(dir, scan);
   }
   return violations;
-}
+};
 
 /**
  * A `// mpo-drawing` pragma is not itself an exemption. The file
  * must also be a DRAWING member in the spec table. Missing spec → skip
  * (shc can run the oxlint rules before it copies the table).
  */
-function checkUndeclaredDrawings() {
+const checkUndeclaredDrawings = () => {
   const specPath = join(ROOT, 'docs/theme-propagation-spec.md');
   let registry;
   try {
@@ -1170,7 +1170,7 @@ function checkUndeclaredDrawings() {
     walkFiles(dir, scan);
   }
   return { violations, ok: true };
-}
+};
 
 /**
  * WORKSPACE PATHS SHADOW — `compilerOptions.paths` REPLACES the
@@ -1186,7 +1186,7 @@ function checkUndeclaredDrawings() {
  * extend the base): `// workspace-paths-escape:` with a reason on the line
  * above `"paths"`.
  */
-function checkTsconfigWorkspacePaths() {
+const checkTsconfigWorkspacePaths = () => {
   /** @type {string[]} */
   const violations = [];
   /** @type {string[]} */
@@ -1242,7 +1242,7 @@ function checkTsconfigWorkspacePaths() {
     );
   }
   return violations;
-}
+};
 
 /**
  * Metro: the condition names Metro matches, per platform, when
@@ -1266,7 +1266,7 @@ const METRO_FALLBACK_EXTS = ['ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs'];
  * @param {Set<string>} conditions
  * @returns {string | null}
  */
-function metroExportTarget(target, conditions) {
+const metroExportTarget = (target, conditions) => {
   if (typeof target === 'string') {
     return target;
   }
@@ -1292,13 +1292,13 @@ function metroExportTarget(target, conditions) {
     }
   }
   return null;
-}
+};
 
 /**
  * @param {unknown} target
  * @returns {boolean} true when any condition in the entry is `source`
  */
-function declaresSourceCondition(target) {
+const declaresSourceCondition = (target) => {
   if (!target || typeof target !== 'object') {
     return false;
   }
@@ -1306,13 +1306,13 @@ function declaresSourceCondition(target) {
     return target.some(declaresSourceCondition);
   }
   return Object.entries(target).some(([key, value]) => key === 'source' || declaresSourceCondition(value));
-}
+};
 
 /**
  * @param {string} pkgRoot
  * @param {string} subpath an exports key such as `./seam`
  */
-function hasMetroFallback(pkgRoot, subpath) {
+const hasMetroFallback = (pkgRoot, subpath) => {
   const base = join(pkgRoot, subpath.replace(/^\.\//, ''));
   if (METRO_FALLBACK_EXTS.some((ext) => existsSync(`${base}.${ext}`))) {
     return true;
@@ -1321,7 +1321,7 @@ function hasMetroFallback(pkgRoot, subpath) {
     return true;
   }
   return METRO_FALLBACK_EXTS.some((ext) => existsSync(join(base, `index.${ext}`)));
-}
+};
 
 /**
  * Metro subpath fallback.
@@ -1339,7 +1339,7 @@ function hasMetroFallback(pkgRoot, subpath) {
  * `source` condition, or `main` points into src/. A genuinely built package
  * (keycloak-js: no `source`, `main` in dist, `prepare` builds it) is skipped.
  */
-function checkMetroSubpathFallbacks() {
+const checkMetroSubpathFallbacks = () => {
   /** @type {string[]} */
   const violations = [];
   for (const dir of [PUBLIC_DIR, PACKAGES_DIR]) {
@@ -1393,7 +1393,7 @@ function checkMetroSubpathFallbacks() {
     }
   }
   return violations;
-}
+};
 
 /**
  * react-native-web's export list, read from the copy installed under ROOT.
@@ -1407,7 +1407,7 @@ function checkMetroSubpathFallbacks() {
  * @returns {Set<string> | undefined} undefined when RNW is not installed, which
  * disables the check rather than failing a partial install.
  */
-function readReactNativeWebExports() {
+const readReactNativeWebExports = () => {
   const entry = join(ROOT, 'node_modules', 'react-native-web', 'dist', 'index.js');
   if (!existsSync(entry)) {
     return undefined;
@@ -1426,7 +1426,7 @@ function readReactNativeWebExports() {
     }
   }
   return names.size ? names : undefined;
-}
+};
 
 /** Platform-suffixed files the web resolver never reaches. */
 const NATIVE_ONLY_FILE_RE = /\.(native|ios|android)\.(tsx|ts|jsx|js)$/;
@@ -1441,10 +1441,10 @@ const NATIVE_ONLY_FILE_RE = /\.(native|ios|android)\.(tsx|ts|jsx|js)$/;
 const REACT_NATIVE_IMPORT_RE = /import\s+([^;'"]*?)from\s*["']react-native["']/g;
 
 /** @param {string} absPath @param {string} dir */
-function isUnder(absPath, dir) {
+const isUnder = (absPath, dir) => {
   const rel = relative(dir, absPath);
   return rel !== '' && !rel.startsWith('..');
-}
+};
 
 /**
  * react-native named import with no react-native-web counterpart.
@@ -1467,7 +1467,7 @@ function isUnder(absPath, dir) {
  * Type-only specifiers are erased before any bundler sees them, so
  * `import type { GestureResponderEvent }` is fine and stays fine.
  */
-function checkReactNativeWebExports() {
+const checkReactNativeWebExports = () => {
   const exported = readReactNativeWebExports();
   if (!exported) {
     return { ok: false, violations: /** @type {string[]} */ ([]) };
@@ -1509,7 +1509,7 @@ function checkReactNativeWebExports() {
     }
   }
   return { ok: true, violations };
-}
+};
 
 /**
  * Offsets in `src` that are live CODE — not inside a comment, a string or a
@@ -1520,7 +1520,7 @@ function checkReactNativeWebExports() {
  * @param {string} src
  * @returns {Uint8Array} 1 at every code offset
  */
-function codeOffsets(src) {
+const codeOffsets = (src) => {
   const mask = new Uint8Array(src.length);
   let i = 0;
   while (i < src.length) {
@@ -1560,7 +1560,7 @@ function codeOffsets(src) {
     i++;
   }
   return mask;
-}
+};
 
 const IMPORT_META_RE = /\bimport\s*\.\s*meta\b/g;
 const IMPORT_META_SCANNED_RE = /\.(tsx|ts|jsx|js|mjs|cjs|mts|cts)$/;
@@ -1597,7 +1597,7 @@ const NODE_BUILTIN_IMPORT_RE =
  * whatever it did with import.meta. Specs are exempt for the same reason —
  * vitest runs them in Node and provides `import.meta.env` itself.
  */
-function checkImportMetaInPublicSource() {
+const checkImportMetaInPublicSource = () => {
   /** @type {string[]} */
   const violations = [];
   if (!existsSync(PUBLIC_DIR)) {
@@ -1634,7 +1634,7 @@ function checkImportMetaInPublicSource() {
     });
   }
   return violations;
-}
+};
 
 // ── React Flow selectors outside the token bridge ─────────────────────────
 
@@ -1665,7 +1665,7 @@ const REACT_FLOW_SCANNED_RE = /\.(tsx|ts|jsx|js|mjs|cjs|css)$/;
  * explanation must not be the thing that fails the build.
  * @param {string} src
  */
-function nonCommentOffsets(src) {
+const nonCommentOffsets = (src) => {
   const mask = new Uint8Array(src.length).fill(1);
   let i = 0;
   while (i < src.length) {
@@ -1689,13 +1689,13 @@ function nonCommentOffsets(src) {
     i++;
   }
   return mask;
-}
+};
 
 /**
  * A `.react-flow__` selector under packages/<pkg>/src, outside the one
  * file that owns the mapping.
  */
-function checkGraphVarsCoverage() {
+const checkGraphVarsCoverage = () => {
   /** @type {string[]} */
   const violations = [];
   if (!existsSync(PUBLIC_DIR)) {
@@ -1734,7 +1734,7 @@ function checkGraphVarsCoverage() {
     });
   }
   return violations;
-}
+};
 
 // ── Story honesty: foreign control specimens ──────────────────────────────
 
@@ -1787,7 +1787,7 @@ const TAMAGUI_IMPORT_RE = /import\s+([^;'"]*?)from\s*["']tamagui["']/g;
  * is not a regex job, and the knob probes stay the live arm for a labeled
  * file. `import type` is erased and never counts.
  */
-function checkStoryForeignControls() {
+const checkStoryForeignControls = () => {
   /** @type {string[]} */
   const violations = [];
   const scan = (filePath) => {
@@ -1843,7 +1843,7 @@ function checkStoryForeignControls() {
     walkFiles(dir, scan);
   }
   return violations;
-}
+};
 
 /**
  * Run structural convention checks over a consumer tree.
@@ -1851,7 +1851,7 @@ function checkStoryForeignControls() {
  * @param {RunConventionChecksOptions} [options]
  * @returns {number} 0 when clean, 1 when any check failed
  */
-export function runConventionChecks(options = {}) {
+export const runConventionChecks = (options = {}) => {
   applyRoots(options.roots);
   const css = checkCssInApps();
   const twins = checkFeaturesTwins();
@@ -2099,7 +2099,7 @@ export function runConventionChecks(options = {}) {
 
   console.log('lint-conventions: ok');
   return 0;
-}
+};
 
 const invokedDirectly = typeof process.argv[1] === 'string' && import.meta.url === pathToFileURL(process.argv[1]).href;
 

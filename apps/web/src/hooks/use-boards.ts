@@ -6,15 +6,15 @@ import { useBoards as useApiBoards } from '@/lib/api/boards/queries';
 import { useWorkspaceStore } from '@/stores/workspace-store';
 import type { Board } from '@/types/db-interface';
 
-function normalizeBoard(board: Board): Board {
+const normalizeBoard = (board: Board): Board => {
   return {
     ...board,
     members: Array.isArray(board.members) ? board.members : [],
     projects: Array.isArray(board.projects) ? board.projects : [],
   };
-}
+};
 
-export function useBoards() {
+export const useBoards = () => {
   const { userId } = useWorkspaceStore();
   const { data, isLoading, error, refetch } = useApiBoards();
 
@@ -55,4 +55,4 @@ export function useBoards() {
     error,
     refresh: refetch,
   };
-}
+};

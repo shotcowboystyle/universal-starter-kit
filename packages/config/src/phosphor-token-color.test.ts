@@ -18,16 +18,16 @@ const iconBase = `${dist}/lib/IconBase.es.js`;
 
 type Handler = (id: string, importer?: string) => string | null;
 
-function hook(plugin: { resolveId?: unknown; load?: unknown }, name: 'resolveId' | 'load') {
+const hook = (plugin: { resolveId?: unknown; load?: unknown }, name: 'resolveId' | 'load') => {
   const value = plugin[name] as { handler: Handler } | Handler;
   return typeof value === 'function' ? value : value.handler;
-}
+};
 
-function hasPlugin(plugins: unknown): boolean {
+const hasPlugin = (plugins: unknown): boolean => {
   return (plugins as unknown[])
     .flat(Infinity)
     .some((p) => (p as { name?: string } | null)?.name === 'mpo-phosphor-token-color');
-}
+};
 
 describe('phosphorTokenColorPlugin', () => {
   const plugin = phosphorTokenColorPlugin();

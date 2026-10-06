@@ -40,10 +40,10 @@ const allSuggestions: TagItem[] = [
   { id: 'sug-4', label: 'bug' },
 ];
 
-function TagsPlayground({
+const TagsPlayground = ({
   initialTags = sampleTags,
   ...props
-}: Partial<ComponentProps<typeof Tags>> & { initialTags?: TagItem[] }) {
+}: Partial<ComponentProps<typeof Tags>> & { initialTags?: TagItem[] }) => {
   const [tags, setTags] = useState<TagItem[]>(initialTags);
   return (
     <Tags
@@ -59,7 +59,7 @@ function TagsPlayground({
       {...props}
     />
   );
-}
+};
 
 export const Default = () => <TagsPlayground />;
 Default.storyName = 'Main';

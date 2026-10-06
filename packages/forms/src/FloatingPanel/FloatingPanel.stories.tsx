@@ -195,7 +195,7 @@ const scrollClipOptions = ['Apple', 'Banana', 'Cherry', 'Date', 'Elderberry', 'F
   (label) => ({ label, value: label.toLowerCase() }),
 );
 
-function ScrollClipPair({ where }: { where: string }) {
+const ScrollClipPair = ({ where }: { where: string }) => {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState<string | undefined>(undefined);
   return (
@@ -233,7 +233,7 @@ function ScrollClipPair({ where }: { where: string }) {
       </FloatingPanel>
     </YStack>
   );
-}
+};
 
 /**
  * react-native-web's ScrollView sets `transform: translateZ(0)`,

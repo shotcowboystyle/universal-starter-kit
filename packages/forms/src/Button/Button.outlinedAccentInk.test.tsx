@@ -54,7 +54,7 @@ const CASES: { name: string; props: Partial<ButtonProps>; knob: boolean }[] = [
   { name: 'accent outlined', props: { accent: true, outlined: true }, knob: false },
 ];
 
-function houseRender(ui: ReactElement, scheme: Scheme, knob: boolean) {
+const houseRender = (ui: ReactElement, scheme: Scheme, knob: boolean) => {
   const body = <YStack backgroundColor="$background">{ui}</YStack>;
   return render(
     <TamaguiProvider
@@ -64,9 +64,9 @@ function houseRender(ui: ReactElement, scheme: Scheme, knob: boolean) {
       {knob ? <Preset overrides={{ fillStyle: 'outlined' }}>{body}</Preset> : body}
     </TamaguiProvider>,
   );
-}
+};
 
-function injectedRuleValue(className: string, property: string): string {
+const injectedRuleValue = (className: string, property: string): string => {
   for (const sheet of Array.from(document.styleSheets)) {
     for (const rule of Array.from(sheet.cssRules)) {
       if (!(rule instanceof CSSStyleRule)) {
@@ -82,10 +82,10 @@ function injectedRuleValue(className: string, property: string): string {
     }
   }
   throw new Error(`no injected ${property} rule for .${className}`);
-}
+};
 
 /** The innermost Tamagui theme scope painting `el`, e.g. `accent_Button`. */
-function scopeOf(el: Element): string | null {
+const scopeOf = (el: Element): string | null => {
   for (let node: Element | null = el; node; node = node.parentElement) {
     const names = Array.from(node.classList)
       .filter((c) => c.startsWith('t_') && c !== 't_sub_theme')
@@ -96,9 +96,9 @@ function scopeOf(el: Element): string | null {
     }
   }
   return null;
-}
+};
 
-function resolveInScope(value: string, scheme: Scheme, scope: string | null): string {
+const resolveInScope = (value: string, scheme: Scheme, scope: string | null): string => {
   const token = /^var\(--([\w-]+)\)$/.exec(value)?.[1];
   if (!token) {
     return value;
@@ -118,9 +118,9 @@ function resolveInScope(value: string, scheme: Scheme, scope: string | null): st
     }
   }
   throw new Error(`--${token} resolves in none of ${chain.join(', ')}`);
-}
+};
 
-function paintedColor(el: Element, scheme: Scheme): string {
+const paintedColor = (el: Element, scheme: Scheme): string => {
   const cls = Array.from(el.classList).find(
     (c) => c.startsWith('_col-') && !/^_col-0(hover|active|focus|press)/.test(c),
   );
@@ -128,7 +128,7 @@ function paintedColor(el: Element, scheme: Scheme): string {
     throw new Error(`${el.tagName} carries no _col- class`);
   }
   return resolveInScope(injectedRuleValue(cls, 'color'), scheme, scopeOf(el));
-}
+};
 
 describe("an outlined accent Button's label reads on its host", () => {
   for (const scheme of SCHEMES) {

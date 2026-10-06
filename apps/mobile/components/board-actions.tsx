@@ -10,7 +10,7 @@ interface BoardActionsProps {
   boardTitle: string;
 }
 
-export function BoardActions({ boardId, boardTitle }: BoardActionsProps) {
+export const BoardActions = ({ boardId, boardTitle }: BoardActionsProps) => {
   const { t } = useTranslation();
   const router = useRouter();
   const deleteMutation = useDeleteBoard();
@@ -62,4 +62,4 @@ export function BoardActions({ boardId, boardTitle }: BoardActionsProps) {
       />
     </Pressable>
   );
-}
+};

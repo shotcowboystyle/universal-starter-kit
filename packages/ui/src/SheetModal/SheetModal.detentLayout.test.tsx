@@ -55,11 +55,11 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function px(value: string) {
+const px = (value: string) => {
   return Number.parseFloat(value);
-}
+};
 
-function open(props: Partial<SheetModalProps> = {}) {
+const open = (props: Partial<SheetModalProps> = {}) => {
   const view = renderWithProviders(
     <SheetModal
       open
@@ -72,29 +72,29 @@ function open(props: Partial<SheetModalProps> = {}) {
   const frame = view.getByTestId('sheet-modal-frame');
   const full = px(frame.style.maxHeight);
   return { view, frame, full };
-}
+};
 
 /** react-native-web keeps the onLayout handler on the node; call it the way a device layout would. */
-function layout(element: HTMLElement, height: number) {
+const layout = (element: HTMLElement, height: number) => {
   const handler = (element as unknown as Record<string, (event: unknown) => void>).__reactLayoutHandler;
   act(() => {
     handler({ nativeEvent: { layout: { x: 0, y: 0, width: 390, height } } });
   });
-}
+};
 
-function drag(dy: number) {
+const drag = (dy: number) => {
   act(() => {
     pan.onPanResponderGrant?.({} as never, {} as never);
     pan.onPanResponderMove?.({} as never, { dy } as never);
     pan.onPanResponderRelease?.({} as never, { dy, vy: 0 } as never);
   });
-}
+};
 
-function settle() {
+const settle = () => {
   const last = springs[springs.length - 1];
   act(() => last.done?.({ finished: true }));
   return last;
-}
+};
 
 describe('a native sheet at rest on a lower detent', () => {
   it('is laid out at the detent height, not slid down at full height', () => {

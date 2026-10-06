@@ -38,7 +38,7 @@ export interface EmptyStateProps extends YStackProps {
  * Prefer `<AsyncBoundary>` for async data views so empty chrome can never
  * render on a failed load.
  */
-export function EmptyState({
+export const EmptyState = ({
   title,
   description,
   icon,
@@ -47,7 +47,7 @@ export function EmptyState({
   intent = 'neutral',
   children,
   ...rest
-}: EmptyStateProps) {
+}: EmptyStateProps) => {
   // Compact is a density override (space only), not a size step.
   // Omit it so the density knob can restyle pad/gap (Alert gallery hole).
   const { knobProps } = useResolvedKnobs(
@@ -172,4 +172,4 @@ export function EmptyState({
       {children}
     </YStack>
   );
-}
+};

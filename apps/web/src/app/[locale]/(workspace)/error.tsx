@@ -3,7 +3,7 @@
 import { Button, H3, Paragraph, YStack } from '@repo/ui';
 import { useTranslations } from 'next-intl';
 
-export default function WorkspaceError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+const WorkspaceError = ({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) => {
   const t = useTranslations('error');
 
   return (
@@ -25,4 +25,6 @@ export default function WorkspaceError({ error, reset }: { error: Error & { dige
       </Button>
     </YStack>
   );
-}
+};
+
+export default WorkspaceError;

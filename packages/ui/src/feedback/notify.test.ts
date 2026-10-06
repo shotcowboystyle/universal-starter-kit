@@ -14,9 +14,9 @@ afterEach(() => {
 
 const action = { label: 'Retry', onPress: vi.fn() };
 
-function event(partial: Partial<NotifyEvent> & Pick<NotifyEvent, 'severity' | 'scope'>): NotifyEvent {
+const event = (partial: Partial<NotifyEvent> & Pick<NotifyEvent, 'severity' | 'scope'>): NotifyEvent => {
   return { body: 'Something happened.', ...partial };
-}
+};
 
 describe('routeNotify (routing table)', () => {
   it('success → toast (any scope)', () => {

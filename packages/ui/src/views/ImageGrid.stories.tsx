@@ -34,7 +34,7 @@ const TITLES = [
  * Self-contained plate (no network): a horizon + sun on a categorical solid.
  * Embedded SVG pixels, not UI chrome — same honesty rule as ImageView sprites.
  */
-function plateSrc(color: string, seed: number): string {
+const plateSrc = (color: string, seed: number): string => {
   const sunX = 248 + (seed % 5) * 22;
   const sunY = 58 + (seed % 4) * 16;
   const sunR = 34 + (seed % 3) * 8;
@@ -46,7 +46,7 @@ function plateSrc(color: string, seed: number): string {
       <rect y="${horizon}" width="400" height="${400 - horizon}" fill="black" fill-opacity="0.2"/>
     </svg>`,
   )}`;
-}
+};
 
 const palette = resolveChartPalette({ scheme: 'light' }).categorical;
 
@@ -73,7 +73,7 @@ const meta: Meta = {
 
 export default meta;
 
-function PhotoPlate({ item }: { item: ImageItem }) {
+const PhotoPlate = ({ item }: { item: ImageItem }) => {
   // Catalog Image. No tile-owned radius (story honesty):
   // ImageGrid's card frame clips items at the knob radius — a pinned $3
   // held a 7px arc at borderRadius:none.
@@ -87,7 +87,7 @@ function PhotoPlate({ item }: { item: ImageItem }) {
       borderRadius={0}
     />
   );
-}
+};
 
 export const Default = {
   name: 'Main',

@@ -9,14 +9,14 @@ export interface ActionLabelParts {
   noun?: string;
 }
 
-function sentenceCaseWord(word: string): string {
+const sentenceCaseWord = (word: string): string => {
   if (!word) {
     return word;
   }
   return word.charAt(0).toLowerCase() + word.slice(1);
-}
+};
 
-function normalizePart(raw: string): string {
+const normalizePart = (raw: string): string => {
   const trimmed = raw.trim().replaceAll(/\s+/g, ' ');
   if (!trimmed) {
     return '';
@@ -32,7 +32,7 @@ function normalizePart(raw: string): string {
   // / already mixed. We only force the first character of the whole label uppercase.
   const joined = words.map((w, i) => (i === 0 ? w : sentenceCaseWord(w))).join(' ');
   return joined.charAt(0).toUpperCase() + joined.slice(1);
-}
+};
 
 /**
  * Build a chrome action label from structured `{ verb, noun? }`.
@@ -41,7 +41,7 @@ function normalizePart(raw: string): string {
  * @example formatActionLabel({ verb: "delete", noun: "pipeline" }) // "Delete pipeline"
  * @example formatActionLabel({ verb: "Archive", noun: "the invoice" }) // "Archive invoice"
  */
-export function formatActionLabel({ verb, noun }: ActionLabelParts): string {
+export const formatActionLabel = ({ verb, noun }: ActionLabelParts): string => {
   const v = normalizePart(verb);
   if (!v) {
     return '';
@@ -56,4 +56,4 @@ export function formatActionLabel({ verb, noun }: ActionLabelParts): string {
   // Noun stays sentence-case continuation (first char lower unless proper-looking).
   const nounTail = n.charAt(0).toLowerCase() + n.slice(1);
   return `${v} ${nounTail}`;
-}
+};

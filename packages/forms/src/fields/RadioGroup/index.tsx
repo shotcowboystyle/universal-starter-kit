@@ -230,7 +230,7 @@ interface RadioOptionItemProps {
  * Unselected = empty disc (Polaris/Spectrum boundary ring). Selected = accent
  * fill with an inverse inner pip (Primer). Keyboard ring on this glyph only.
  */
-function RadioOptionItem({
+const RadioOptionItem = ({
   option,
   itemId,
   nativeLabel,
@@ -244,7 +244,7 @@ function RadioOptionItem({
   groupDisabled,
   readOnly,
   elevationWrapperProps,
-}: RadioOptionItemProps) {
+}: RadioOptionItemProps) => {
   const [kbFocus, setKbFocus] = useState(false);
   ensureKeyboardModalityTracking();
   const detachKb = useRef<(() => void) | null>(null);
@@ -363,9 +363,9 @@ function RadioOptionItem({
       )}
     </RadioItemFrame>
   );
-}
+};
 
-export function RadioGroup({
+export const RadioGroup = ({
   name,
   form: formProp,
   validators,
@@ -394,7 +394,7 @@ export function RadioGroup({
   accessibilityHint,
   'aria-label': ariaLabel,
   'aria-labelledby': ariaLabelledBy,
-}: RadioGroupProps) {
+}: RadioGroupProps) => {
   // Canonical `onChange` and the alias `onValueChange` both fire from the
   // single emit site below (same reconciliation as Switch).
   const handleValueChange = (val: string) => {
@@ -776,7 +776,7 @@ export function RadioGroup({
       }}
     </Field>
   );
-}
+};
 
 RadioGroup.Item = TamaguiRadioGroup.Item;
 RadioGroup.Indicator = TamaguiRadioGroup.Indicator;

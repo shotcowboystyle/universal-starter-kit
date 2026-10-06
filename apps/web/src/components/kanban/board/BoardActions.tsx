@@ -21,7 +21,7 @@ interface BoardActionsProps {
   children?: React.ReactElement;
 }
 
-export function BoardActions({ board, onDelete, children }: BoardActionsProps) {
+export const BoardActions = ({ board, onDelete, children }: BoardActionsProps) => {
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
   const [editEnable, setEditEnable] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -197,4 +197,4 @@ export function BoardActions({ board, onDelete, children }: BoardActionsProps) {
       />
     </>
   );
-}
+};

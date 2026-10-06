@@ -11,7 +11,7 @@ import { useWorkspaceStore } from '@/stores/workspace-store';
 import type { Session, UserInfo } from '@/types/db-interface';
 
 // Helper function to create session from user data
-function createSession(user: UserInfo): Session {
+const createSession = (user: UserInfo): Session => {
   return {
     user: {
       _id: user._id,
@@ -20,7 +20,7 @@ function createSession(user: UserInfo): Session {
     },
     accessToken: 'http-only-cookie',
   };
-}
+};
 
 // Helper function to update stores with user data
 
@@ -37,7 +37,7 @@ export const AUTH_KEYS = {
   session: () => [...AUTH_KEYS.all, 'session'] as const,
 };
 
-export function useAuth() {
+export const useAuth = () => {
   const setUserInfo = useWorkspaceStore((state) => state.setUserInfo);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -192,9 +192,9 @@ export function useAuth() {
     // Raw mutations for more control
     loginMutation,
   };
-}
+};
 
-export function useAuthForm() {
+export const useAuthForm = () => {
   const { login, isLoading, error } = useAuth();
   const [, setError] = useState<string | null>(null);
   const [isNavigating, setIsNavigating] = useState(false);
@@ -232,4 +232,4 @@ export function useAuthForm() {
     error,
     isNavigating,
   };
-}
+};

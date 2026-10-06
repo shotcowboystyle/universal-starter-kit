@@ -68,9 +68,9 @@ export const FIGMA_CORNER_SMOOTHING: Record<string, number> = {
 };
 
 /** Tamagui token key (`1.5`, `true`) → Figma-safe variable name segment. */
-export function figmaTokenName(prefix: string, key: string): string {
+export const figmaTokenName = (prefix: string, key: string): string => {
   return `${prefix}-${String(key).replaceAll('.', '-')}`;
-}
+};
 
 // ── Output shape ──────────────────────────────────────────────
 
@@ -175,7 +175,7 @@ export interface BuildFigmaTokensOptions {
 
 type BuiltThemes = Record<string, Record<string, string | number>>;
 
-function unwrapTokenGroup(group: object | undefined): Record<string, number> {
+const unwrapTokenGroup = (group: object | undefined): Record<string, number> => {
   const out: Record<string, number> = {};
   if (!group) {
     return out;
@@ -188,9 +188,9 @@ function unwrapTokenGroup(group: object | undefined): Record<string, number> {
     }
   }
   return out;
-}
+};
 
-function ramp(themes: BuiltThemes, themeName: string, scheme: 'light' | 'dark'): string[] {
+const ramp = (themes: BuiltThemes, themeName: string, scheme: 'light' | 'dark'): string[] => {
   const key = themeName === 'base' ? scheme : `${scheme}_${themeName}`;
   const theme = themes[key];
   if (!theme) {
@@ -205,9 +205,9 @@ function ramp(themes: BuiltThemes, themeName: string, scheme: 'light' | 'dark'):
     steps.push(value);
   }
   return steps;
-}
+};
 
-function shadowsOf(themes: BuiltThemes, scheme: 'light' | 'dark'): Record<string, string> {
+const shadowsOf = (themes: BuiltThemes, scheme: 'light' | 'dark'): Record<string, string> => {
   const theme = themes[scheme];
   const out: Record<string, string> = {};
   for (let i = 1; i <= 6; i++) {
@@ -218,7 +218,7 @@ function shadowsOf(themes: BuiltThemes, scheme: 'light' | 'dark'): Record<string
     out[`shadow${i}`] = value;
   }
   return out;
-}
+};
 
 const RAMP_STEP_RE = /^color([1-9]|1[0-2])$/;
 const SHADOW_RE = /^shadow[1-6]$/;
@@ -231,16 +231,16 @@ const HUE_STEP_RE = new RegExp(`^(${[...tintHueNames].join('|')})A?\\d+$`);
  * Reverse-match a semantic value against the ramp of its own theme: returns
  * `colorN` when the value is exactly step N, else null.
  */
-function stepAliasFor(theme: Record<string, string | number>, value: string): string | null {
+const stepAliasFor = (theme: Record<string, string | number>, value: string): string | null => {
   for (let i = 1; i <= 12; i++) {
     if (theme[`color${i}`] === value) {
       return `color${i}`;
     }
   }
   return null;
-}
+};
 
-function deriveSemantic(themes: BuiltThemes): Record<string, FigmaSemanticEntry> {
+const deriveSemantic = (themes: BuiltThemes): Record<string, FigmaSemanticEntry> => {
   const { light } = themes;
   const { dark } = themes;
   if (!light || !dark) {
@@ -260,14 +260,14 @@ function deriveSemantic(themes: BuiltThemes): Record<string, FigmaSemanticEntry>
     out[key] = { alias, light: lightValue, dark: darkValue };
   }
   return out;
-}
+};
 
 /**
  * `textAccent` knob → semantic text tier aliases (`text-low/medium/high`),
  * derived by running the resolver and matching its `$token` output against
  * the built base themes.
  */
-function textTierEntries(themes: BuiltThemes): Record<string, FigmaSemanticEntry> {
+const textTierEntries = (themes: BuiltThemes): Record<string, FigmaSemanticEntry> => {
   const { light } = themes;
   const { dark } = themes;
   const out: Record<string, FigmaSemanticEntry> = {};
@@ -285,9 +285,9 @@ function textTierEntries(themes: BuiltThemes): Record<string, FigmaSemanticEntry
     out[`text-${tier}`] = { alias, light: lightValue, dark: darkValue };
   }
   return out;
-}
+};
 
-function buildSizing(borderWidthModes: Record<string, number>): Record<string, number> {
+const buildSizing = (borderWidthModes: Record<string, number>): Record<string, number> => {
   const sizing: Record<string, number> = {};
   const groups: [string, Record<string, number>][] = [
     ['size', unwrapTokenGroup(tokens.size)],
@@ -309,7 +309,7 @@ function buildSizing(borderWidthModes: Record<string, number>): Record<string, n
     sizing[`borderWidth-${mode}`] = px;
   }
   return sizing;
-}
+};
 
 const RADIUS_KNOB_MODES: Knobs['borderRadius'][] = ['none', 'small', 'medium', 'large', 'full'];
 const BORDER_WIDTH_KNOB_MODES: Knobs['borderWidth'][] = ['none', 'small', 'medium', 'large'];
@@ -318,7 +318,7 @@ const FONT_WEIGHT_KNOB_MODES: Knobs['fontWeight'][] = ['regular', 'bold'];
 const SPACE_KNOB_MODES: Knobs['space'][] = ['small', 'medium', 'large'];
 const SIZE_KNOB_MODES: Knobs['size'][] = ['small', 'medium', 'large'];
 
-function radiusPx(token: string): number {
+const radiusPx = (token: string): number => {
   const radius = unwrapTokenGroup(tokens.radius);
   const key = token.replace(/^\$/, '');
   const px = radius[key];
@@ -326,18 +326,18 @@ function radiusPx(token: string): number {
     throw new TypeError(`figmaTokens: unknown radius token ${token}`);
   }
   return px;
-}
+};
 
-function tokenToFigma(token: string, prefix: string): string {
+const tokenToFigma = (token: string, prefix: string): string => {
   return figmaTokenName(prefix, token.replace(/^\$/, ''));
-}
+};
 
 /**
  * Normalize the elevation knob output to `{ sizeToken, px }` regardless of
  * platform branch: resolveKnobs emits Tamagui size-token strings on web and
  * the equivalent raw numbers on native (see elevationMap in resolveKnobs.ts).
  */
-function normalizeElevation(value: string | number | undefined): FigmaElevationMode {
+const normalizeElevation = (value: string | number | undefined): FigmaElevationMode => {
   if (value === undefined) {
     return { sizeToken: null, px: null };
   }
@@ -352,9 +352,9 @@ function normalizeElevation(value: string | number | undefined): FigmaElevationM
   }
   const entry = Object.entries(size).find(([key, px]) => px === value && key !== 'true');
   return { sizeToken: entry ? `$${entry[0]}` : null, px: value };
-}
+};
 
-function buildKnobs(): FigmaKnobsExport {
+const buildKnobs = (): FigmaKnobsExport => {
   const borderRadius: Record<string, FigmaRadiusMode> = {};
   for (const mode of RADIUS_KNOB_MODES) {
     const { knobProps } = resolveKnobs({ ...defaultKnobs, borderRadius: mode });
@@ -430,7 +430,7 @@ function buildKnobs(): FigmaKnobsExport {
       },
     },
   };
-}
+};
 
 interface FontLike {
   family?: unknown;
@@ -440,7 +440,7 @@ interface FontLike {
   weight?: Record<string, unknown>;
 }
 
-function numberTable(table: Record<string, unknown> | undefined, label: string) {
+const numberTable = (table: Record<string, unknown> | undefined, label: string) => {
   const out: Record<string, number> = {};
   if (!table) {
     throw new Error(`figmaTokens: font is missing ${label} table`);
@@ -455,9 +455,9 @@ function numberTable(table: Record<string, unknown> | undefined, label: string) 
     throw new Error(`figmaTokens: ${label} table is empty`);
   }
   return out;
-}
+};
 
-function exportFont(font: FontLike, label: string): FigmaFontExport {
+const exportFont = (font: FontLike, label: string): FigmaFontExport => {
   const weight: Record<string, string> = {};
   for (const [key, value] of Object.entries(font.weight ?? {})) {
     weight[key] = String(value);
@@ -469,16 +469,16 @@ function exportFont(font: FontLike, label: string): FigmaFontExport {
     letterSpacing: numberTable(font.letterSpacing, `${label}.letterSpacing`),
     weight,
   };
-}
+};
 
-function firstFamily(stack: string): string {
+const firstFamily = (stack: string): string => {
   const first = stack.split(',')[0] ?? stack;
   return first.trim().replaceAll(/^['"]|['"]$/g, '');
-}
+};
 
 // ── Entry point ───────────────────────────────────────────────
 
-export function buildFigmaTokens(options: BuildFigmaTokensOptions = {}): FigmaTokensExport {
+export const buildFigmaTokens = (options: BuildFigmaTokensOptions = {}): FigmaTokensExport => {
   const themes = createThemesBuilder(
     defaultBaseTheme,
     defaultAccentTheme,
@@ -524,4 +524,4 @@ export function buildFigmaTokens(options: BuildFigmaTokensOptions = {}): FigmaTo
       categories,
     },
   };
-}
+};

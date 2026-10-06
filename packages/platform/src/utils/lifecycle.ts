@@ -3,7 +3,7 @@ const hasWindow = typeof window !== 'undefined';
 const hasDocument = typeof document !== 'undefined';
 
 /** Returns a cleanup function */
-export function onAppFocus(callback: () => void): () => void {
+export const onAppFocus = (callback: () => void): (() => void) => {
   if (!hasWindow) {
     return noop;
   }
@@ -11,10 +11,10 @@ export function onAppFocus(callback: () => void): () => void {
   return () => {
     window.removeEventListener('focus', callback);
   };
-}
+};
 
 /** Returns a cleanup function */
-export function onAppBlur(callback: () => void): () => void {
+export const onAppBlur = (callback: () => void): (() => void) => {
   if (!hasWindow) {
     return noop;
   }
@@ -22,10 +22,10 @@ export function onAppBlur(callback: () => void): () => void {
   return () => {
     window.removeEventListener('blur', callback);
   };
-}
+};
 
 /** Returns a cleanup function */
-export function onOnline(callback: () => void): () => void {
+export const onOnline = (callback: () => void): (() => void) => {
   if (!hasWindow) {
     return noop;
   }
@@ -33,10 +33,10 @@ export function onOnline(callback: () => void): () => void {
   return () => {
     window.removeEventListener('online', callback);
   };
-}
+};
 
 /** Returns a cleanup function */
-export function onOffline(callback: () => void): () => void {
+export const onOffline = (callback: () => void): (() => void) => {
   if (!hasWindow) {
     return noop;
   }
@@ -44,10 +44,10 @@ export function onOffline(callback: () => void): () => void {
   return () => {
     window.removeEventListener('offline', callback);
   };
-}
+};
 
 /** Returns a cleanup function. Calls back with true when visible, false when hidden. */
-export function onVisibilityChange(callback: (visible: boolean) => void): () => void {
+export const onVisibilityChange = (callback: (visible: boolean) => void): (() => void) => {
   if (!hasDocument) {
     return noop;
   }
@@ -58,4 +58,4 @@ export function onVisibilityChange(callback: (visible: boolean) => void): () => 
   return () => {
     document.removeEventListener('visibilitychange', handler);
   };
-}
+};

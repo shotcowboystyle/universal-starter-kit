@@ -99,7 +99,7 @@ export default meta;
 
 type Story = StoryObj<typeof TreeView>;
 
-function SelectableTree(args: TreeViewProps) {
+const SelectableTree = (args: TreeViewProps) => {
   const [selectedId, setSelectedId] = useState<string | undefined>(args.selectedId ?? 'button');
   return (
     <YStack height={args.height ? Number(args.height) + 20 : 420}>
@@ -113,7 +113,7 @@ function SelectableTree(args: TreeViewProps) {
       />
     </YStack>
   );
-}
+};
 
 export const Default: Story = {
   name: 'Main',

@@ -88,58 +88,58 @@ export const cornerSmoothingCss = `.${cornerSmoothClassName} { corner-shape: ${C
  * engine. Omit the arg to use the global `CSS` (happy-dom's `supports()`
  * currently returns true — a lie; computed `corner-shape` stays empty).
  */
-export function cssSupportsCornerShape(
+export const cssSupportsCornerShape = (
   supports?: { supports?(property: string, value: string): boolean } | null,
-): boolean {
+): boolean => {
   const impl = supports === null ? undefined : (supports ?? (typeof CSS === 'undefined' ? undefined : CSS));
   try {
     return Boolean(impl?.supports?.('corner-shape', CORNER_SHAPE_SMOOTH));
   } catch {
     return false;
   }
-}
+};
 
 /**
  * Read the painted `corner-shape`. Prefer the CSS property channel over the
  * camelCase IDL — some Chromium builds expose `css.cornerShape` as the
  * initial `round` even when `getPropertyValue("corner-shape")` has moved.
  */
-export function readComputedCornerShape(
+export const readComputedCornerShape = (
   style: Pick<CSSStyleDeclaration, 'getPropertyValue'> & { cornerShape?: string },
-): string {
+): string => {
   const fromProp = (style.getPropertyValue?.('corner-shape') ?? '').trim();
   const fromIdl = (style.cornerShape ?? '').trim();
   return fromProp || fromIdl;
-}
+};
 
-function normalizeCornerShape(value: string): string {
+const normalizeCornerShape = (value: string): string => {
   return value.trim().toLowerCase().replaceAll(/\s+/g, '');
-}
+};
 
 /** True for specified `squircle` and the measured Chrome computed form `superellipse(2)`. */
-export function isSmoothComputedCornerShape(value: string): boolean {
+export const isSmoothComputedCornerShape = (value: string): boolean => {
   const n = normalizeCornerShape(value);
   return n === CORNER_SHAPE_SMOOTH || n === CORNER_SHAPE_SMOOTH_COMPUTED;
-}
+};
 
 /** True for specified `round`, computed `superellipse(1)`, empty (unsupported), or `normal`. */
-export function isRoundComputedCornerShape(value: string): boolean {
+export const isRoundComputedCornerShape = (value: string): boolean => {
   const n = normalizeCornerShape(value);
   return n === '' || n === CORNER_SHAPE_ROUND || n === CORNER_SHAPE_ROUND_COMPUTED || n === 'normal';
-}
+};
 
 /** Publish the live stop on `<html>` so a probe can see the channel ran. */
-export function applyRootCornerSmoothing(stop: CornerSmoothing = 'round'): void {
+export const applyRootCornerSmoothing = (stop: CornerSmoothing = 'round'): void => {
   if (typeof document === 'undefined') {
     return;
   }
   const root = document.documentElement;
   root.setAttribute(CORNER_SMOOTHING_ROOT_ATTR, stop);
   root.style.setProperty(CORNER_SHAPE_CSS_VAR, stop === 'smooth' ? CORNER_SHAPE_SMOOTH : CORNER_SHAPE_ROUND);
-}
+};
 
 /** Idempotently mount the corner-smoothing stylesheet (no-op off-DOM). */
-export function ensureCornerSmoothingStyles(): void {
+export const ensureCornerSmoothingStyles = (): void => {
   if (typeof document === 'undefined') {
     return;
   }
@@ -150,14 +150,14 @@ export function ensureCornerSmoothingStyles(): void {
   tag.id = CORNER_SMOOTHING_STYLE_TAG_ID;
   tag.textContent = cornerSmoothingCss;
   document.head.append(tag);
-}
+};
 
 /**
  * Mount ONCE near the root (inside KnobBridge / PresetContext). Re-asserts
  * the squircle stylesheet and mirrors the live `cornerSmoothing` stop onto
  * `<html>`. Renders nothing.
  */
-export function CornerSmoothingStyles(): null {
+export const CornerSmoothingStyles = (): null => {
   const presetCtx = usePresetContext();
   const knobs = presetCtx ? { ...presetCtx.preset.knobs, ...presetCtx.overrides } : defaultKnobs;
   const stop = knobs.cornerSmoothing ?? defaultKnobs.cornerSmoothing ?? 'round';
@@ -179,7 +179,7 @@ export function CornerSmoothingStyles(): null {
   );
 
   return null;
-}
+};
 
 // Static CSS (no knob/theme dependency) — mount as soon as the module loads
 // in a DOM environment so the class resolves before any smooth render.

@@ -35,7 +35,7 @@ const mockProjects = [
   },
 ];
 
-async function mockStore(state: { filter?: { status: string | null; search: string }; projects?: unknown }) {
+const mockStore = async (state: { filter?: { status: string | null; search: string }; projects?: unknown }) => {
   const { useWorkspaceStore } = await import('@/stores/workspace-store');
   vi.mocked(useWorkspaceStore).mockReturnValue({
     filter: { status: null, search: '' },
@@ -43,7 +43,7 @@ async function mockStore(state: { filter?: { status: string | null; search: stri
     projects: mockProjects,
     ...state,
   } as any);
-}
+};
 
 const chip = (name: RegExp) => screen.getByRole('button', { name });
 

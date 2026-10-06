@@ -69,7 +69,7 @@ const settleTable: Record<string, number> = {
  * settle + buffer. Exported for siblings that sequence work after a height
  * tween (e.g. CodeBlock's reveal releases its maxHeight clamp on settle).
  */
-export function settleMs(transition: TransitionProp | undefined): number {
+export const settleMs = (transition: TransitionProp | undefined): number => {
   if (!transition) {
     return 0;
   }
@@ -77,7 +77,7 @@ export function settleMs(transition: TransitionProp | undefined): number {
   // Non-string TransitionProp shapes (arrays/objects) fall back like an
   // unknown token name.
   return (ms ?? 600) + 80;
-}
+};
 
 const WebAnimateHeight = forwardRef<TamaguiElement, AnimateHeightProps>(function AnimateHeight(
   { open, children, transition: transitionProp, ...props },

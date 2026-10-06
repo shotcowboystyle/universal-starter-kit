@@ -98,13 +98,13 @@ export interface FieldDisplayProps {
 const DescriptionListSlotContext = createContext(false);
 
 /** True when FieldDisplay is mounted as a DescriptionList value. */
-export function useIsInDescriptionList(): boolean {
+export const useIsInDescriptionList = (): boolean => {
   return useContext(DescriptionListSlotContext);
-}
+};
 
-export function DescriptionListSlotProvider({ children }: { children: ReactNode }) {
+export const DescriptionListSlotProvider = ({ children }: { children: ReactNode }) => {
   return <DescriptionListSlotContext.Provider value={true}>{children}</DescriptionListSlotContext.Provider>;
-}
+};
 
 interface DisplaySlot {
   chromeless: boolean;
@@ -119,9 +119,9 @@ const DisplaySlotContext = createContext<DisplaySlot>({
   inDescriptionList: false,
 });
 
-function useDisplaySlot(): DisplaySlot {
+const useDisplaySlot = (): DisplaySlot => {
   return useContext(DisplaySlotContext);
-}
+};
 
 const CHIP_COLORS = new Set<ChipColor>(['gray', 'red', 'green', 'blue', 'yellow', 'orange', 'purple']);
 
@@ -133,7 +133,7 @@ const INTENT_CHIP: Record<string, ChipColor> = {
   info: 'blue',
 };
 
-function chipSizeFor(size: string): ChipSize {
+const chipSizeFor = (size: string): ChipSize => {
   if (size === 'small') {
     return '$2';
   }
@@ -141,13 +141,13 @@ function chipSizeFor(size: string): ChipSize {
     return '$4';
   }
   return '$3';
-}
+};
 
-function resolveChipColor(
+const resolveChipColor = (
   value: any,
   fieldProps?: Record<string, any>,
   opt?: { color?: string; intent?: string },
-): ChipColor {
+): ChipColor => {
   const raw = opt?.color ?? opt?.intent ?? fieldProps?.colors?.[value] ?? fieldProps?.intents?.[value];
   if (typeof raw === 'string') {
     if (CHIP_COLORS.has(raw as ChipColor)) {
@@ -158,9 +158,9 @@ function resolveChipColor(
     }
   }
   return 'gray';
-}
+};
 
-function isSafeHttpUrl(value: unknown): value is string {
+const isSafeHttpUrl = (value: unknown): value is string => {
   if (typeof value !== 'string') {
     return false;
   }
@@ -170,9 +170,9 @@ function isSafeHttpUrl(value: unknown): value is string {
   } catch {
     return false;
   }
-}
+};
 
-function useDisplayChrome() {
+const useDisplayChrome = () => {
   const { knobProps } = useResolvedKnobs();
   const inTableCell = useIsInTableCell();
   const slot = useDisplaySlot();
@@ -186,9 +186,9 @@ function useDisplayChrome() {
     truncate: slot.truncate,
     glyphSize,
   };
-}
+};
 
-function DisplayFrame({ field, children }: { field: FieldDisplayType; children: ReactNode }) {
+const DisplayFrame = ({ field, children }: { field: FieldDisplayType; children: ReactNode }) => {
   const { knobProps, chromeless } = useDisplayChrome();
   if (chromeless) {
     return (
@@ -221,9 +221,9 @@ function DisplayFrame({ field, children }: { field: FieldDisplayType; children: 
       {children}
     </XStack>
   );
-}
+};
 
-function ValueText({
+const ValueText = ({
   children,
   mono = false,
   align = 'left',
@@ -239,7 +239,7 @@ function ValueText({
   wrap?: boolean;
   empty?: boolean;
   title?: string;
-}) {
+}) => {
   const { knobProps } = useResolvedKnobs();
   return (
     <Text
@@ -259,9 +259,9 @@ function ValueText({
       {children}
     </Text>
   );
-}
+};
 
-function TextCell({
+const TextCell = ({
   children,
   mono = false,
   align,
@@ -273,7 +273,7 @@ function TextCell({
   align?: FieldDisplayAlign;
   lines?: number;
   wrap?: boolean;
-}) {
+}) => {
   const { inDescriptionList, truncate, align: slotAlign } = useDisplayChrome();
   const empty = children === EMPTY;
   const resolvedAlign = align ?? slotAlign ?? 'left';
@@ -290,9 +290,9 @@ function TextCell({
       {children}
     </ValueText>
   );
-}
+};
 
-function InputDisplay({
+const InputDisplay = ({
   value,
   href,
   multiline,
@@ -302,7 +302,7 @@ function InputDisplay({
   href?: string;
   multiline?: boolean;
   mono?: boolean;
-}) {
+}) => {
   const { knobProps, inTableCell, truncate } = useDisplayChrome();
   const text = asText(value);
   const link = href || (isSafeHttpUrl(value) ? value : undefined);
@@ -333,9 +333,9 @@ function InputDisplay({
       {text}
     </TextCell>
   );
-}
+};
 
-function NumericDisplay({ value, fieldProps }: { value: any; fieldProps?: Record<string, any> }) {
+const NumericDisplay = ({ value, fieldProps }: { value: any; fieldProps?: Record<string, any> }) => {
   const { align } = useDisplayChrome();
   const numericAlign = align ?? 'right';
   if (value == null || value === '') {
@@ -356,9 +356,9 @@ function NumericDisplay({ value, fieldProps }: { value: any; fieldProps?: Record
       {formatted}
     </TextCell>
   );
-}
+};
 
-function DateDisplay({
+const DateDisplay = ({
   value,
   fieldProps,
   withTime,
@@ -366,14 +366,14 @@ function DateDisplay({
   value: any;
   fieldProps?: Record<string, any>;
   withTime?: boolean;
-}) {
+}) => {
   if (value == null || value === '') {
     return <TextCell>{EMPTY}</TextCell>;
   }
   return <TextCell>{formatDateText(value, { withTime, dateFormat: fieldProps?.dateFormat })}</TextCell>;
-}
+};
 
-function DateRangeDisplay({ value, linkedValue }: { value: any; linkedValue?: any }) {
+const DateRangeDisplay = ({ value, linkedValue }: { value: any; linkedValue?: any }) => {
   const start = value;
   const end = linkedValue ?? (Array.isArray(value) ? value[1] : value?.end);
   const startFmt = start && !(start instanceof Date && Number.isNaN(start.getTime())) ? formatDateText(start) : null;
@@ -382,9 +382,9 @@ function DateRangeDisplay({ value, linkedValue }: { value: any; linkedValue?: an
     return <TextCell>{EMPTY}</TextCell>;
   }
   return <TextCell>{t('{{start}} – {{end}}', { start: startFmt ?? '?', end: endFmt ?? '?' })}</TextCell>;
-}
+};
 
-function ChoiceDisplay({ value, fieldProps }: { value: any; fieldProps?: Record<string, any> }) {
+const ChoiceDisplay = ({ value, fieldProps }: { value: any; fieldProps?: Record<string, any> }) => {
   const { knobProps } = useDisplayChrome();
   if (value == null || value === '') {
     return <TextCell>{EMPTY}</TextCell>;
@@ -411,9 +411,9 @@ function ChoiceDisplay({ value, fieldProps }: { value: any; fieldProps?: Record<
       })}
     </XStack>
   );
-}
+};
 
-function BooleanDisplay({ value }: { value: any }) {
+const BooleanDisplay = ({ value }: { value: any }) => {
   const { knobProps, glyphSize, align } = useDisplayChrome();
   const onMark = useReadableTextOn(formSelectedColors.mark);
   if (value == null) {
@@ -447,9 +447,9 @@ function BooleanDisplay({ value }: { value: any }) {
       ) : null}
     </View>
   );
-}
+};
 
-function ColorDisplay({ value }: { value: any }) {
+const ColorDisplay = ({ value }: { value: any }) => {
   const { knobProps, glyphSize } = useDisplayChrome();
   const hex = typeof value === 'string' && value ? value : null;
   if (!hex) {
@@ -471,9 +471,9 @@ function ColorDisplay({ value }: { value: any }) {
       <ValueText mono>{hex.toUpperCase()}</ValueText>
     </XStack>
   );
-}
+};
 
-function DurationDisplay({ value }: { value: any }) {
+const DurationDisplay = ({ value }: { value: any }) => {
   if (value == null || value === '') {
     return <TextCell>{EMPTY}</TextCell>;
   }
@@ -495,9 +495,9 @@ function DurationDisplay({ value }: { value: any }) {
     parts.push(t('{{seconds}}s', { seconds: s }));
   }
   return <TextCell mono>{parts.length ? parts.join(' ') : t('0s')}</TextCell>;
-}
+};
 
-function FileUploadDisplay({ value }: { value: any }) {
+const FileUploadDisplay = ({ value }: { value: any }) => {
   const { knobProps, glyphSize } = useDisplayChrome();
   const files = Array.isArray(value) ? value : value ? [value] : [];
   if (!files.length) {
@@ -518,9 +518,9 @@ function FileUploadDisplay({ value }: { value: any }) {
       <TextCell>{label}</TextCell>
     </XStack>
   );
-}
+};
 
-function Thumb({ src, alt, knobProps }: { src: string; alt: string; knobProps: KnobProps }) {
+const Thumb = ({ src, alt, knobProps }: { src: string; alt: string; knobProps: KnobProps }) => {
   const [broken, setBroken] = useState(false);
   const { px } = knobProps.nestedControl;
   if (broken) {
@@ -556,9 +556,9 @@ function Thumb({ src, alt, knobProps }: { src: string; alt: string; knobProps: K
       />
     </View>
   );
-}
+};
 
-function ImageDisplay({ value }: { value: any }) {
+const ImageDisplay = ({ value }: { value: any }) => {
   const { knobProps } = useDisplayChrome();
   const src = typeof value === 'string' && value ? value : null;
   if (!src) {
@@ -571,9 +571,9 @@ function ImageDisplay({ value }: { value: any }) {
       knobProps={knobProps}
     />
   );
-}
+};
 
-function BarcodeDisplay({ value, fieldProps }: { value: any; fieldProps?: Record<string, any> }) {
+const BarcodeDisplay = ({ value, fieldProps }: { value: any; fieldProps?: Record<string, any> }) => {
   const { knobProps, glyphSize } = useDisplayChrome();
   const text = String(value ?? '');
   if (!text) {
@@ -605,9 +605,9 @@ function BarcodeDisplay({ value, fieldProps }: { value: any; fieldProps?: Record
       />
     </XStack>
   );
-}
+};
 
-function SignatureDisplay({ value }: { value: any }) {
+const SignatureDisplay = ({ value }: { value: any }) => {
   const { knobProps } = useDisplayChrome();
   const src = typeof value === 'string' && value.startsWith('data:image') ? value : null;
   if (src) {
@@ -621,9 +621,9 @@ function SignatureDisplay({ value }: { value: any }) {
   }
   const hasInk = (typeof value === 'string' && value.length > 0) || (Array.isArray(value) && value.length > 0);
   return <TextCell>{hasInk ? t('signed') : EMPTY}</TextCell>;
-}
+};
 
-function geoPair(value: unknown): { lat: number; lng: number } | null {
+const geoPair = (value: unknown): { lat: number; lng: number } | null => {
   if (typeof value === 'string') {
     return parseGeoValue(value);
   }
@@ -634,9 +634,9 @@ function geoPair(value: unknown): { lat: number; lng: number } | null {
   const lat = record.lat ?? record.latitude;
   const lng = record.lng ?? record.lon ?? record.longitude;
   return typeof lat === 'number' && typeof lng === 'number' ? { lat, lng } : null;
-}
+};
 
-function GeolocationDisplay({ value }: { value: any }) {
+const GeolocationDisplay = ({ value }: { value: any }) => {
   const pair = geoPair(value);
   const address = useReverseGeocodedLabel(pair);
   if (value == null || value === '') {
@@ -653,9 +653,9 @@ function GeolocationDisplay({ value }: { value: any }) {
       {pair.lat.toFixed(4)}, {pair.lng.toFixed(4)}
     </TextCell>
   );
-}
+};
 
-function RichTextDisplay({ value }: { value: any }) {
+const RichTextDisplay = ({ value }: { value: any }) => {
   if (value == null || value === '') {
     return <TextCell>{EMPTY}</TextCell>;
   }
@@ -670,9 +670,9 @@ function RichTextDisplay({ value }: { value: any }) {
     return <TextCell>{EMPTY}</TextCell>;
   }
   return <TextCell>{text}</TextCell>;
-}
+};
 
-function MeterDisplay({ value, fieldProps }: { value: any; fieldProps?: Record<string, any> }) {
+const MeterDisplay = ({ value, fieldProps }: { value: any; fieldProps?: Record<string, any> }) => {
   const { knobProps, glyphSize } = useDisplayChrome();
   if (value == null || value === '') {
     return <TextCell>{EMPTY}</TextCell>;
@@ -708,9 +708,9 @@ function MeterDisplay({ value, fieldProps }: { value: any; fieldProps?: Record<s
       <TextCell mono>{formatNumericText(num, { precision: fieldProps?.precision })}</TextCell>
     </XStack>
   );
-}
+};
 
-function RatingDisplay({ value, fieldProps }: { value: any; fieldProps?: Record<string, any> }) {
+const RatingDisplay = ({ value, fieldProps }: { value: any; fieldProps?: Record<string, any> }) => {
   const { knobProps, glyphSize } = useDisplayChrome();
   const theme = useTheme();
   if (value == null || value === '') {
@@ -739,9 +739,9 @@ function RatingDisplay({ value, fieldProps }: { value: any; fieldProps?: Record<
       ))}
     </XStack>
   );
-}
+};
 
-export function FieldDisplay({
+export const FieldDisplay = ({
   field = 'input',
   value,
   fieldProps,
@@ -749,7 +749,7 @@ export function FieldDisplay({
   chromeless = false,
   align,
   truncate = false,
-}: FieldDisplayProps) {
+}: FieldDisplayProps) => {
   const inTableCell = useIsInTableCell();
   const inDescriptionList = useIsInDescriptionList();
   const slot = useMemo<DisplaySlot>(
@@ -942,4 +942,4 @@ export function FieldDisplay({
       <DisplayFrame field={field}>{body}</DisplayFrame>
     </DisplaySlotContext.Provider>
   );
-}
+};

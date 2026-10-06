@@ -32,11 +32,11 @@ import { Separator } from './index';
 
 afterEach(cleanup);
 
-function getSeparator(container: HTMLElement): HTMLElement {
+const getSeparator = (container: HTMLElement): HTMLElement => {
   const el = container.querySelector('[role="separator"]');
   expect(el, "a Separator must render role='separator'").toBeTruthy();
   return el as HTMLElement;
-}
+};
 
 const escapeForRegExp = (value: string) => value.replaceAll(/[.*+?^${}()|[\]\\-]/g, '\\$&');
 
@@ -44,7 +44,7 @@ const escapeForRegExp = (value: string) => value.replaceAll(/[.*+?^${}()|[\]\\-]
  * Every value Tamagui declared for `property` through one of THIS element's
  * atomic classes. Empty means the element does not carry that property at all.
  */
-function declared(el: HTMLElement, property: string): string[] {
+const declared = (el: HTMLElement, property: string): string[] => {
   const atoms = el.className.split(/\s+/).filter(Boolean);
   const values: string[] = [];
   for (const sheet of Array.from(document.styleSheets)) {
@@ -71,16 +71,16 @@ function declared(el: HTMLElement, property: string): string[] {
     }
   }
   return values;
-}
+};
 
 /** Resolve a theme colour Variable to its raw value string. */
-function themeColorVal(scheme: 'light' | 'dark', key: string): string {
+const themeColorVal = (scheme: 'light' | 'dark', key: string): string => {
   const themes = getConfig().themes as Record<string, Record<string, { val?: unknown }>>;
   const variable = themes[scheme]?.[key];
   return String(variable?.val ?? '');
-}
+};
 
-function isVisibleColor(value: string): boolean {
+const isVisibleColor = (value: string): boolean => {
   if (!value) {
     return false;
   }
@@ -89,7 +89,7 @@ function isVisibleColor(value: string): boolean {
   }
   // rgba/hsla with a 0 alpha channel paints nothing.
   return !/(?:rgba|hsla)\([^)]*,\s*0(?:\.0+)?\s*\)/.test(value);
-}
+};
 
 describe('Separator — painted colour (the regression this component exists for)', () => {
   it('paints its 1px box with the $borderColor token, not a transparent box', () => {

@@ -1,6 +1,6 @@
 import type { FontLoader, FontLoaderConfig } from './types';
 
-export function createFontLoader(config: FontLoaderConfig): FontLoader {
+export const createFontLoader = (config: FontLoaderConfig): FontLoader => {
   const fontMap: Record<string, number> = {};
   if (config.inter) {
     fontMap.Inter = require('@tamagui/font-inter/otf/Inter-Medium.otf');
@@ -12,4 +12,4 @@ export function createFontLoader(config: FontLoaderConfig): FontLoader {
     }
   }
   return { importFonts: () => fontMap };
-}
+};

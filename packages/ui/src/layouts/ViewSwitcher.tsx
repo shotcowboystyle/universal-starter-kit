@@ -43,7 +43,7 @@ export interface ViewSwitcherProps {
  * one R-OUTER frame, selected = fill (never a border on every segment),
  * keyboard ring on the focused item only. Activation stays MANUAL.
  */
-export function ViewSwitcher({ views, currentView, onViewChange, testID = 'view-switcher' }: ViewSwitcherProps) {
+export const ViewSwitcher = ({ views, currentView, onViewChange, testID = 'view-switcher' }: ViewSwitcherProps) => {
   const { knobProps } = useResolvedKnobs();
   // Chromium drops keyboard modality on tamagui's group focus redirect, so
   // :focus-visible can miss the first item — paint the ring manually on
@@ -255,4 +255,4 @@ export function ViewSwitcher({ views, currentView, onViewChange, testID = 'view-
       })}
     </ToggleGroup>
   );
-}
+};

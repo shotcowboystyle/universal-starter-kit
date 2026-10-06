@@ -11,7 +11,7 @@ const views: ViewOption[] = [
   { type: 'kanban', label: 'Kanban' },
 ];
 
-function ListIcon({ size = 16 }: { size?: number }) {
+const ListIcon = ({ size = 16 }: { size?: number }) => {
   return (
     <Text
       fontSize={size}
@@ -20,9 +20,9 @@ function ListIcon({ size = 16 }: { size?: number }) {
       ≡
     </Text>
   );
-}
+};
 
-function GridIcon({ size = 16 }: { size?: number }) {
+const GridIcon = ({ size = 16 }: { size?: number }) => {
   return (
     <Text
       fontSize={size}
@@ -31,9 +31,9 @@ function GridIcon({ size = 16 }: { size?: number }) {
       ▦
     </Text>
   );
-}
+};
 
-function KanbanIcon({ size = 16 }: { size?: number }) {
+const KanbanIcon = ({ size = 16 }: { size?: number }) => {
   return (
     <Text
       fontSize={size}
@@ -42,7 +42,7 @@ function KanbanIcon({ size = 16 }: { size?: number }) {
       ▯
     </Text>
   );
-}
+};
 
 const viewsWithIcons: ViewOption[] = [
   { type: 'list', label: 'List', icon: ListIcon },
@@ -56,7 +56,7 @@ const viewsIconsOnly: ViewOption[] = [
   { type: 'kanban', label: 'Kanban', icon: KanbanIcon, iconOnly: true },
 ];
 
-function ViewSwitcherExample({ options = views }: { options?: ViewOption[] }) {
+const ViewSwitcherExample = ({ options = views }: { options?: ViewOption[] }) => {
   const [current, setCurrent] = useState(options[0]?.type ?? 'list');
   return (
     <YStack
@@ -71,7 +71,7 @@ function ViewSwitcherExample({ options = views }: { options?: ViewOption[] }) {
       <Text>Current view: {current}</Text>
     </YStack>
   );
-}
+};
 
 const meta: Meta<typeof ViewSwitcher> = {
   title: 'Components/ViewSwitcher',

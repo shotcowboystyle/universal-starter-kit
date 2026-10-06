@@ -45,7 +45,7 @@ export interface Code128Run {
  * bar/space runs of the complete symbol, or null when the value is empty or
  * contains characters set B cannot represent.
  */
-export function encodeCode128B(value: string): Code128Run[] | null {
+export const encodeCode128B = (value: string): Code128Run[] | null => {
   if (!value) {
     return null;
   }
@@ -75,9 +75,9 @@ export function encodeCode128B(value: string): Code128Run[] | null {
     }
   }
   return runs;
-}
+};
 
 /** Total module count of an encoded symbol (for width math in previews). */
-export function countModules(runs: Code128Run[]): number {
+export const countModules = (runs: Code128Run[]): number => {
   return runs.reduce((sum, run) => sum + run.modules, 0);
-}
+};

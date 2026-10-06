@@ -78,7 +78,7 @@ export type ColorPickerProps<
 // Default preset colors
 // ---------------------------------------------------------------------------
 
-function useThemePresetColors(): string[] {
+const useThemePresetColors = (): string[] => {
   const palette = useChartPalette();
   const theme = useTheme();
   return useMemo(() => {
@@ -113,11 +113,11 @@ function useThemePresetColors(): string[] {
     }
     return out;
   }, [palette, theme.color12, theme.color8, theme.color1]);
-}
+};
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
-function rgbToHsl(
+const rgbToHsl = (
   r: number,
   g: number,
   b: number,
@@ -125,7 +125,7 @@ function rgbToHsl(
   h: number;
   s: number;
   l: number;
-} {
+} => {
   const r1 = r / 255;
   const g1 = g / 255;
   const b1 = b / 255;
@@ -159,9 +159,9 @@ function rgbToHsl(
     s: Math.round(s * 100),
     l: Math.round(l * 100),
   };
-}
+};
 
-function hslToRgb(h: number, s: number, l: number): { r: number; g: number; b: number } {
+const hslToRgb = (h: number, s: number, l: number): { r: number; g: number; b: number } => {
   const h1 = ((h % 360) + 360) % 360;
   const s1 = clamp(s, 0, 100) / 100;
   const l1 = clamp(l, 0, 100) / 100;
@@ -204,7 +204,7 @@ function hslToRgb(h: number, s: number, l: number): { r: number; g: number; b: n
     g: Math.round((gp + m) * 255),
     b: Math.round((bp + m) * 255),
   };
-}
+};
 
 interface ParsedColor {
   hex: string;
@@ -212,7 +212,7 @@ interface ParsedColor {
   isValid: boolean;
 }
 
-function parseColorValue(value: string | undefined, format: 'hex' | 'rgb' | 'hsl'): ParsedColor {
+const parseColorValue = (value: string | undefined, format: 'hex' | 'rgb' | 'hsl'): ParsedColor => {
   if (!value) {
     return { hex: '', alpha: 100, isValid: true };
   }
@@ -254,13 +254,18 @@ function parseColorValue(value: string | undefined, format: 'hex' | 'rgb' | 'hsl
   const alpha = hsla[4] == null ? 100 : clamp(Math.round(Number.parseFloat(hsla[4]) * 100), 0, 100);
   const { r, g, b } = hslToRgb(h, s, l);
   return { hex: rgbToHex(r, g, b), alpha, isValid: true };
-}
+};
 
-function formatAlpha(alpha: number): string {
+const formatAlpha = (alpha: number): string => {
   return (alpha / 100).toFixed(2).replace(/\.?0+$/, '');
-}
+};
 
-function serializeColorValue(hex: string, format: 'hex' | 'rgb' | 'hsl', alpha: number, includeAlpha: boolean): string {
+const serializeColorValue = (
+  hex: string,
+  format: 'hex' | 'rgb' | 'hsl',
+  alpha: number,
+  includeAlpha: boolean,
+): string => {
   if (!hex) {
     return '';
   }
@@ -289,7 +294,7 @@ function serializeColorValue(hex: string, format: 'hex' | 'rgb' | 'hsl', alpha: 
     return `hsla(${hsl.h}, ${hsl.s}%, ${hsl.l}%, ${formatAlpha(alpha)})`;
   }
   return `hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%)`;
-}
+};
 
 // ---------------------------------------------------------------------------
 // ColorBody — orchestrates the picker panel inside the popover
@@ -316,11 +321,11 @@ const panelSizeMap: Record<string, number> = {
   large: 224,
 };
 
-function unrecognizedColorError(format: 'hex' | 'rgb' | 'hsl'): string {
+const unrecognizedColorError = (format: 'hex' | 'rgb' | 'hsl'): string => {
   return t('Color must be a recognized {{format}} value', { format: format.toUpperCase() });
-}
+};
 
-function ColorBody({
+const ColorBody = ({
   hue,
   saturation,
   value,
@@ -333,7 +338,7 @@ function ColorBody({
   onChangeAlpha,
   onHexInput,
   onSelectPreset,
-}: ColorBodyProps) {
+}: ColorBodyProps) => {
   const { knobProps } = useResolvedKnobs({ compact: true });
   const panelSize = panelSizeMap[knobProps.size] ?? 192;
   const previewSize = SWATCH_PX[knobProps.size] ?? 24;
@@ -470,7 +475,7 @@ function ColorBody({
       </XStack>
     </YStack>
   );
-}
+};
 
 interface ColorPickerControlProps {
   value: string;
@@ -492,7 +497,7 @@ interface ColorPickerControlProps {
   onBlurControl?: () => void;
 }
 
-function ColorPickerControl({
+const ColorPickerControl = ({
   value,
   format,
   showAlpha,
@@ -509,7 +514,7 @@ function ColorPickerControl({
   helperText,
   onValueChange,
   onBlurControl,
-}: ColorPickerControlProps) {
+}: ColorPickerControlProps) => {
   const { knobProps } = useResolvedKnobs();
   const [open, setOpen] = useState(false);
   const parsedInitial = parseColorValue(value, format);
@@ -715,19 +720,21 @@ function ColorPickerControl({
       {colorContent}
     </ColorPickerPopoverShell>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // ColorPicker — main exported component
 // ---------------------------------------------------------------------------
 
-export function ColorPicker<
+export const ColorPicker = <
   TParentData,
   TName extends DeepKeys<TParentData>,
   TFieldValidator extends Validator<DeepValue<TParentData, TName>> | undefined = undefined,
   TFormValidator extends Validator<TParentData> | undefined = undefined,
   TData extends DeepValue<TParentData, TName> = DeepValue<TParentData, TName>,
->(props: ColorPickerProps<TParentData, TName, TFieldValidator, TFormValidator, TData>) {
+>(
+  props: ColorPickerProps<TParentData, TName, TFieldValidator, TFormValidator, TData>,
+) => {
   const {
     defaultValue,
     form,
@@ -920,4 +927,4 @@ export function ColorPicker<
       }}
     </Field>
   );
-}
+};

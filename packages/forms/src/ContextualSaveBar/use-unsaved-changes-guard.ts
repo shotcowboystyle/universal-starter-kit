@@ -15,10 +15,10 @@ const idleBlocker: NavigationBlocker = {
 };
 
 /** Native `beforeunload` plus an optional TanStack / host `useBlocker`. */
-export function useUnsavedChangesGuard(
+export const useUnsavedChangesGuard = (
   isDirty: boolean,
   useBlocker: UseNavigationBlocker | undefined,
-): NavigationBlocker {
+): NavigationBlocker => {
   const blocker = useBlocker?.(isDirty) ?? idleBlocker;
 
   useEffect(() => {
@@ -39,4 +39,4 @@ export function useUnsavedChangesGuard(
   }, [isDirty]);
 
   return blocker;
-}
+};

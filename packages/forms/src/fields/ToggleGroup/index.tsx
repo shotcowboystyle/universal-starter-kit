@@ -64,12 +64,14 @@ const SEGMENT_MOTION_MS: Record<string, number> = {
 };
 
 /** State recipes may carry border/outline; segments accept FILL only. */
-function segmentFillState(props: { backgroundColor?: unknown } | undefined): { backgroundColor: unknown } | undefined {
+const segmentFillState = (
+  props: { backgroundColor?: unknown } | undefined,
+): { backgroundColor: unknown } | undefined => {
   const backgroundColor = props?.backgroundColor;
   return backgroundColor == null ? undefined : { backgroundColor };
-}
+};
 
-function ToggleItemWithElevation({
+const ToggleItemWithElevation = ({
   elevationWrapperProps,
   groupedRadius,
   ...props
@@ -77,7 +79,7 @@ function ToggleItemWithElevation({
   elevationWrapperProps: Record<string, any>;
   value: string;
   groupedRadius: Record<string, unknown>;
-} & Record<string, any>) {
+} & Record<string, any>) => {
   if (elevationWrapperProps.elevation) {
     // The segment carries flexBasis 0 to share the run. A column wrapper would
     // read that as its HEIGHT and resolve the whole frame to the two 1px
@@ -103,7 +105,7 @@ function ToggleItemWithElevation({
       {...groupedRadius}
     />
   );
-}
+};
 
 export interface ToggleGroupOption {
   label: string;
@@ -186,7 +188,7 @@ export interface ToggleGroupProps {
   accessibilityHint?: string;
 }
 
-export function ToggleGroup({
+export const ToggleGroup = ({
   name,
   form: formProp,
   validators,
@@ -215,7 +217,7 @@ export function ToggleGroup({
   accessibilityHint,
   'aria-label': ariaLabel,
   'aria-labelledby': ariaLabelledBy,
-}: ToggleGroupProps) {
+}: ToggleGroupProps) => {
   // Canonical `onChange` and the alias `onValueChange` both fire from the
   // single emit site below (same reconciliation as Switch).
   const handleValueChange = (val: string | string[]) => {
@@ -676,6 +678,6 @@ export function ToggleGroup({
       }}
     </Field>
   );
-}
+};
 
 ToggleGroup.Item = TamaguiToggleGroup.Item;

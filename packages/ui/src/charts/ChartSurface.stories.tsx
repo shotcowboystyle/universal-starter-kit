@@ -22,7 +22,7 @@ const bars = [
  * scales resolve against the measured viewport, so strokes stay 1px and hit
  * targets stay honest at any container width.
  */
-function Marks({ size }: { size: ChartSize }) {
+const Marks = ({ size }: { size: ChartSize }) => {
   const { palette, gridColor } = useChartTheme();
   const x = createBandScale({
     domain: bars.map((bar) => bar.label),
@@ -51,9 +51,9 @@ function Marks({ size }: { size: ChartSize }) {
       ))}
     </>
   );
-}
+};
 
-function Dots({ size }: { size: ChartSize }) {
+const Dots = ({ size }: { size: ChartSize }) => {
   const { palette } = useChartTheme();
   return (
     <>
@@ -68,7 +68,7 @@ function Dots({ size }: { size: ChartSize }) {
       ))}
     </>
   );
-}
+};
 
 const meta: Meta<typeof ChartSurface> = {
   title: 'Components/ChartSurface',

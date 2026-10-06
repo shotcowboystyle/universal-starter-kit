@@ -31,11 +31,11 @@ export class FileSaveError extends Error {
   }
 }
 
-function hasControlCharacters(value: string) {
+const hasControlCharacters = (value: string) => {
   return Array.from(value).some((character) => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127);
-}
+};
 
-export function prepareFileSave(options: FileSaveOptions) {
+export const prepareFileSave = (options: FileSaveOptions) => {
   if (
     !options ||
     !(options.bytes instanceof Uint8Array) ||
@@ -60,4 +60,4 @@ export function prepareFileSave(options: FileSaveOptions) {
     mimeType: options.mimeType,
     nativeMimeType,
   };
-}
+};

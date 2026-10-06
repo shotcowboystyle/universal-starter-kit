@@ -130,9 +130,9 @@ describe('clampRadiusInStateProps', () => {
     const TRACK_H = 28;
     const INTERMEDIATE = ['$2', '$4', '$6', '$8', '$12', 9, '9px'] as const;
 
-    function expectBinaryRadius(value: unknown, heightPx: number) {
+    const expectBinaryRadius = (value: unknown, heightPx: number) => {
       expect(value === 0 || value === heightPx / 2).toBe(true);
-    }
+    };
 
     it.each(STATES)("snaps a %s bag's token clamp to 0 or h/2 (thumb)", (state) => {
       for (const token of INTERMEDIATE) {
@@ -222,9 +222,9 @@ describe('clampRadiusInStateProps', () => {
 });
 
 describe('getFieldError', () => {
-  function makeField(errors: string[]) {
+  const makeField = (errors: string[]) => {
     return { state: { meta: { errors } } } as any;
-  }
+  };
 
   it('returns propError when provided', () => {
     expect(getFieldError(makeField(['field error']), 'prop error')).toBe('prop error');

@@ -3,11 +3,11 @@ interface RevealTreeNode {
   children?: readonly RevealTreeNode[];
 }
 
-export function treeRevealExpansion(
+export const treeRevealExpansion = (
   nodes: readonly RevealTreeNode[],
   expandedIds: ReadonlySet<string>,
   targetId: string,
-): ReadonlySet<string> | undefined {
+): ReadonlySet<string> | undefined => {
   const ancestors: string[] = [];
   const find = (items: readonly RevealTreeNode[]): boolean => {
     for (const node of items) {
@@ -31,13 +31,13 @@ export function treeRevealExpansion(
     return expandedIds;
   }
   return new Set([...expandedIds, ...ancestors]);
-}
+};
 
-export function treeRevealOffset(
+export const treeRevealOffset = (
   layout: { y: number; height: number },
   offset: number,
   viewportHeight: number,
-): number | undefined {
+): number | undefined => {
   if (
     ![layout.y, layout.height, offset, viewportHeight].every(Number.isFinite) ||
     viewportHeight <= 0 ||
@@ -52,4 +52,4 @@ export function treeRevealOffset(
     return Math.max(0, layout.y + layout.height - viewportHeight);
   }
   return offset;
-}
+};

@@ -20,7 +20,11 @@ import NewBoardDialog from './board/NewBoardDialog';
 
 type FilterType = 'all' | 'my' | 'team';
 
-export function BoardOverview() {
+const stopCardPress = (e: React.SyntheticEvent) => {
+  e.stopPropagation();
+};
+
+export const BoardOverview = () => {
   const { myBoards, teamBoards, loading: boardsLoading, refresh } = useBoards();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<FilterType>('all');
@@ -346,8 +350,4 @@ export function BoardOverview() {
       </ScrollView>
     </YStack>
   );
-}
-
-function stopCardPress(e: React.SyntheticEvent) {
-  e.stopPropagation();
-}
+};

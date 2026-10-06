@@ -88,17 +88,17 @@ const ComboboxRow = styled(View, {
   } as const,
 });
 
-function comboboxOptionId(baseId: string | undefined, index: number) {
+const comboboxOptionId = (baseId: string | undefined, index: number) => {
   return `${baseId ?? 'combobox'}-opt-${index}`;
-}
+};
 
-function comboboxListboxId(baseId: string | undefined) {
+const comboboxListboxId = (baseId: string | undefined) => {
   return `${baseId ?? 'combobox'}-listbox`;
-}
+};
 
-function listItemRingProps(keyboardRing: boolean) {
+const listItemRingProps = (keyboardRing: boolean) => {
   return keyboardRing ? keyboardFocusRingProps : { outlineWidth: 0 as const };
-}
+};
 
 /**
  * Resolve the selected-mark token to a real paint.
@@ -115,11 +115,11 @@ function listItemRingProps(keyboardRing: boolean) {
  * stays declared once in colorRamps, and degrading to `$color` ink rather than
  * black when a narrow sub-theme has no accent step.
  */
-function useSelectedMarkColor(): string {
+const useSelectedMarkColor = (): string => {
   const theme = useTheme();
   const entry = (theme as unknown as Record<string, { val?: string } | undefined>)[formSelectedColors.mark.slice(1)];
   return entry?.val ?? theme.color?.val ?? 'currentColor';
-}
+};
 
 const GroupHeader = styled(Text, {
   name: 'ComboboxGroupHeader',
@@ -245,10 +245,12 @@ interface ComboboxGroupHeaderItem {
 
 type GroupedComboboxItem = GroupedComboboxOption | ComboboxGroupHeaderItem;
 
-function groupComboboxOptions(options: ComboboxOption[]): {
+const groupComboboxOptions = (
+  options: ComboboxOption[],
+): {
   items: GroupedComboboxItem[];
   flatOptions: ComboboxOption[];
-} {
+} => {
   const hasGroups = options.some((o) => o.group);
   if (!hasGroups) {
     return {
@@ -295,7 +297,7 @@ function groupComboboxOptions(options: ComboboxOption[]): {
   }
 
   return { items, flatOptions };
-}
+};
 
 // ── Memoized option row ──────────────────────────────────────
 
@@ -468,7 +470,7 @@ interface FloatingComboboxCoreProps {
   onOpenChange?: (open: boolean) => void;
 }
 
-function FloatingComboboxCore({
+const FloatingComboboxCore = ({
   options,
   value,
   onValueChange,
@@ -502,7 +504,7 @@ function FloatingComboboxCore({
   searchValue,
   open: openProp,
   onOpenChange,
-}: FloatingComboboxCoreProps) {
+}: FloatingComboboxCoreProps) => {
   const hydrationTouch = useTouchSurface();
   if (isWeb) {
     ensureKeyboardModalityTracking();
@@ -1804,7 +1806,7 @@ function FloatingComboboxCore({
       )}
     </>
   );
-}
+};
 
 // ── Native Combobox (Sheet-based for iOS/Android) ─────────────
 
@@ -1860,7 +1862,7 @@ const comboboxSearchHeader = (
   </XStack>
 );
 
-function NativeComboboxCore({
+const NativeComboboxCore = ({
   options,
   value,
   onValueChange,
@@ -1892,7 +1894,7 @@ function NativeComboboxCore({
   searchValue,
   open: openProp,
   onOpenChange,
-}: FloatingComboboxCoreProps) {
+}: FloatingComboboxCoreProps) => {
   const hydrationTouch = useTouchSurface();
   if (isWeb) {
     ensureKeyboardModalityTracking();
@@ -2677,11 +2679,11 @@ function NativeComboboxCore({
       {listContent}
     </FloatingPanel>
   );
-}
+};
 
 // ── Combobox (public API) ─────────────────────────────────────
 
-export function Combobox({
+export const Combobox = ({
   options,
   value: valueProp,
   defaultValue,
@@ -2728,7 +2730,7 @@ export function Combobox({
   onOpenChange,
   'aria-label': ariaLabel,
   ...rest
-}: ComboboxProps) {
+}: ComboboxProps) => {
   const { t } = useTranslation();
   const placeholder = placeholderProp ?? t('Select...');
   const hasLabel = Boolean(label);
@@ -2943,4 +2945,4 @@ export function Combobox({
       }}
     </Field>
   );
-}
+};

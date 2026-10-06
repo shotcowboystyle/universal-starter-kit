@@ -20,7 +20,7 @@ import { BarcodeScanner, preflightCamera } from './BarcodeScanner';
 
 const adornmentRing = ensureFocusVisibleRing({ outlineOffset: -2 });
 
-function BarcodeInput({
+const BarcodeInput = ({
   value,
   onValueChange,
   disabled,
@@ -52,7 +52,7 @@ function BarcodeInput({
   hasError?: boolean;
   id?: string;
   hasLabel?: boolean;
-}) {
+}) => {
   const [isScanning, setIsScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const preflightingRef = useRef(false);
@@ -198,7 +198,7 @@ function BarcodeInput({
       )}
     </>
   );
-}
+};
 
 export interface BarcodeProps {
   name?: string;
@@ -245,7 +245,7 @@ const defaultBarcodeIcon = <BarcodeIcon size={18} />;
 const defaultScanIcon = <CameraIcon size={18} />;
 const defaultStopIcon = <XIcon size={18} />;
 
-export function Barcode({
+export const Barcode = ({
   name,
   form: formProp,
   validators,
@@ -269,7 +269,7 @@ export function Barcode({
   stopIcon = defaultStopIcon,
   skeleton,
   compact,
-}: BarcodeProps) {
+}: BarcodeProps) => {
   const { resolvedForm, knobProps, id } = useFormField({
     form: formProp,
     id: idProp,
@@ -390,4 +390,4 @@ export function Barcode({
       }}
     </Field>
   );
-}
+};

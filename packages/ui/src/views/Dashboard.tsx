@@ -24,7 +24,7 @@ import { Card } from '../surfaces';
 const SECTION_HEADING_TAGS = { 2: H2, 3: H3, 4: H4, 5: H5, 6: H6 } as const;
 export type CardHeadingLevel = 2 | 3 | 4 | 5 | 6;
 
-function splitNestedControl(nested: {
+const splitNestedControl = (nested: {
   px: number;
   hitSlop: { top: number; bottom: number; left: number; right: number };
   width: number;
@@ -33,12 +33,12 @@ function splitNestedControl(nested: {
   maxWidth: number;
   minHeight: number;
   maxHeight: number;
-}) {
+}) => {
   const { px, hitSlop, ...box } = nested;
   return { px, hitSlop, box };
-}
+};
 
-function trendFill(color: string): string {
+const trendFill = (color: string): string => {
   if (color === componentColors.semantic.success) {
     return '$green4';
   }
@@ -46,9 +46,9 @@ function trendFill(color: string): string {
     return '$red4';
   }
   return '$color4';
-}
+};
 
-function trendInk(color: string): string {
+const trendInk = (color: string): string => {
   // Step 11 clears the page, but falls below AA on the status pill's step 4 wash.
   if (color === componentColors.semantic.success) {
     return '$green12';
@@ -57,7 +57,7 @@ function trendInk(color: string): string {
     return '$red12';
   }
   return color;
-}
+};
 
 // ============================================================================
 // Types
@@ -225,7 +225,7 @@ export interface DashboardProps extends Omit<YStackProps, 'children'> {
 // Shared card chrome
 // ============================================================================
 
-function useWidgetChrome(onPress?: YStackProps['onPress']) {
+const useWidgetChrome = (onPress?: YStackProps['onPress']) => {
   const resolved = useResolvedKnobs();
   const { knobProps, control } = resolved;
   const nested = splitNestedControl(knobProps.nestedControl);
@@ -240,9 +240,9 @@ function useWidgetChrome(onPress?: YStackProps['onPress']) {
       }
     : undefined;
   return { knobProps, control, nested, interactive };
-}
+};
 
-function NestedIconWell({
+const NestedIconWell = ({
   color,
   box,
   px,
@@ -254,7 +254,7 @@ function NestedIconWell({
   px: number;
   radius: object;
   children: ReactNode;
-}) {
+}) => {
   return (
     <YStack
       {...box}
@@ -267,9 +267,9 @@ function NestedIconWell({
       {children}
     </YStack>
   );
-}
+};
 
-function TrendPill({
+const TrendPill = ({
   symbol,
   value,
   color,
@@ -283,7 +283,7 @@ function TrendPill({
   px: number;
   radius: object;
   label: object;
-}) {
+}) => {
   return (
     <XStack
       height={px}
@@ -309,7 +309,7 @@ function TrendPill({
       )}
     </XStack>
   );
-}
+};
 
 // ============================================================================
 // KPI Card Component
@@ -330,11 +330,11 @@ export interface KPICardProps extends Omit<YStackProps, 'children'> {
  * secondary text, so the caller hands over `knobProps.textAccentColor` —
  * a static tier here could not see the `textAccent` knob.
  */
-export function resolveTrendColor(
+export const resolveTrendColor = (
   trend: TrendDirection | undefined,
   goodDirection: KPICardConfig['goodDirection'],
   neutral: string,
-): string {
+): string => {
   if (!trend || trend === 'neutral') {
     return neutral;
   }
@@ -342,14 +342,14 @@ export function resolveTrendColor(
     return neutral;
   }
   return trend === goodDirection ? componentColors.semantic.success : componentColors.semantic.error;
-}
+};
 
 /**
  * KPI card — Frappe number card + Grafana Stat + Polaris metric.
  * Nested icon well and trend pill use `nestedControl`; the value
  * never takes `sizeToken` as fontSize (that token is a control height).
  */
-export function KPICard({ config, ...stackProps }: KPICardProps) {
+export const KPICard = ({ config, ...stackProps }: KPICardProps) => {
   const { t } = useTranslation();
   const { onPress: consumerOnPress, ...cardProps } = stackProps;
   const onPress = Object.hasOwn(stackProps, 'onPress') ? consumerOnPress : config.onClick;
@@ -536,7 +536,7 @@ export function KPICard({ config, ...stackProps }: KPICardProps) {
       )}
     </ChartDataView>
   );
-}
+};
 // ============================================================================
 // Chart Card Component
 // ============================================================================
@@ -568,7 +568,7 @@ export interface ChartCardProps extends Omit<YStackProps, 'children'> {
  * categorical palette. Explicit `config.colors` / per-point `color`
  * values are data and pass through untouched (Axiom 11).
  */
-export function ChartCard({ config, colors, headingLevel = 2, ...stackProps }: ChartCardProps) {
+export const ChartCard = ({ config, colors, headingLevel = 2, ...stackProps }: ChartCardProps) => {
   const { knobProps } = useResolvedKnobs();
   const HeadingTag = SECTION_HEADING_TAGS[headingLevel];
   const dataColors = config.colors ?? colors;
@@ -637,7 +637,7 @@ export function ChartCard({ config, colors, headingLevel = 2, ...stackProps }: C
       {({ action }) => renderCard(action)}
     </ChartDataView>
   );
-}
+};
 
 // ============================================================================
 // Progress / Shortcut / List widgets
@@ -647,7 +647,7 @@ export interface ProgressCardProps extends Omit<YStackProps, 'children'> {
   config: ProgressConfig;
 }
 
-export function ProgressCard({ config, ...stackProps }: ProgressCardProps) {
+export const ProgressCard = ({ config, ...stackProps }: ProgressCardProps) => {
   const { knobProps } = useWidgetChrome();
   const max = config.max && config.max > 0 ? config.max : 100;
   const pct = Math.max(0, Math.min(100, (config.value / max) * 100));
@@ -670,13 +670,13 @@ export function ProgressCard({ config, ...stackProps }: ProgressCardProps) {
       />
     </Card>
   );
-}
+};
 
 export interface ShortcutCardProps extends Omit<YStackProps, 'children'> {
   config: ShortcutConfig;
 }
 
-export function ShortcutCard({ config, ...stackProps }: ShortcutCardProps) {
+export const ShortcutCard = ({ config, ...stackProps }: ShortcutCardProps) => {
   const { knobProps, nested, interactive } = useWidgetChrome(config.onClick);
   const { px, box, hitSlop } = nested;
 
@@ -729,14 +729,14 @@ export function ShortcutCard({ config, ...stackProps }: ShortcutCardProps) {
       </XStack>
     </Card>
   );
-}
+};
 
 export interface ListCardProps extends Omit<YStackProps, 'children'> {
   config: ListConfig;
   headingLevel?: CardHeadingLevel;
 }
 
-export function ListCard({ config, headingLevel = 2, ...stackProps }: ListCardProps) {
+export const ListCard = ({ config, headingLevel = 2, ...stackProps }: ListCardProps) => {
   const { knobProps, nested, control } = useWidgetChrome();
   const { px, hitSlop } = nested;
   const HeadingTag = SECTION_HEADING_TAGS[headingLevel];
@@ -790,9 +790,9 @@ export function ListCard({ config, headingLevel = 2, ...stackProps }: ListCardPr
       </Card>
     </YStack>
   );
-}
+};
 
-function DefaultWidget({ widget }: { widget: DashboardWidget }) {
+const DefaultWidget = ({ widget }: { widget: DashboardWidget }) => {
   switch (widget.type) {
     case 'kpi': {
       return widget.kpiConfig ? <KPICard config={widget.kpiConfig} /> : null;
@@ -816,7 +816,7 @@ function DefaultWidget({ widget }: { widget: DashboardWidget }) {
       return null;
     }
   }
-}
+};
 
 // ============================================================================
 // Main Dashboard Component
@@ -839,7 +839,7 @@ function DefaultWidget({ widget }: { widget: DashboardWidget }) {
  * />
  * ```
  */
-export function Dashboard({
+export const Dashboard = ({
   widgets,
   renderWidget,
   title,
@@ -852,7 +852,7 @@ export function Dashboard({
   onRetry,
   emptyMessage: emptyMessageProp,
   ...stackProps
-}: DashboardProps) {
+}: DashboardProps) => {
   const { t } = useTranslation();
   const emptyMessage = emptyMessageProp ?? t('No widgets to display');
   const { knobProps } = useResolvedKnobs();
@@ -930,7 +930,7 @@ export function Dashboard({
       </YStack>
     </ScrollView>
   );
-}
+};
 
 // ============================================================================
 // Utility Functions
@@ -939,7 +939,7 @@ export function Dashboard({
 /**
  * Calculate trend direction based on current and previous values.
  */
-export function calculateTrend(current: number, previous: number): TrendDirection {
+export const calculateTrend = (current: number, previous: number): TrendDirection => {
   if (current > previous) {
     return 'up';
   }
@@ -947,29 +947,29 @@ export function calculateTrend(current: number, previous: number): TrendDirectio
     return 'down';
   }
   return 'neutral';
-}
+};
 
 /**
  * Calculate percentage change between two values.
  */
-export function calculatePercentageChange(current: number, previous: number): string {
+export const calculatePercentageChange = (current: number, previous: number): string => {
   if (previous === 0) {
     return current > 0 ? '+100%' : '0%';
   }
   const change = ((current - previous) / previous) * 100;
   const sign = change >= 0 ? '+' : '';
   return `${sign}${change.toFixed(1)}%`;
-}
+};
 
 /**
  * Aggregate data for charts.
  */
-export function aggregateData<T>(
+export const aggregateData = <T,>(
   data: T[],
   groupByField: keyof T,
   valueField: keyof T,
   operation: 'count' | 'sum' | 'avg' = 'count',
-): ChartDataPoint[] {
+): ChartDataPoint[] => {
   const groups: Record<string, number[]> = {};
 
   for (const item of data) {
@@ -1007,4 +1007,4 @@ export function aggregateData<T>(
     }
     return { label, value };
   });
-}
+};

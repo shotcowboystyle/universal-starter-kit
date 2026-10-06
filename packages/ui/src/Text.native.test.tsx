@@ -21,30 +21,30 @@ afterEach(cleanup);
 
 const LABEL = 'Measure the text node';
 
-function classesByPrefix(el: Element, prefixes: string[]): string[] {
+const classesByPrefix = (el: Element, prefixes: string[]): string[] => {
   return String((el as HTMLElement).className || '')
     .split(' ')
     .filter((c) => prefixes.some((p) => c.startsWith(p)))
     .sort();
-}
+};
 
 /** Tamagui font-scope class on the TEXT NODE (`font_body` / `font_mono` / …). */
-function fontScopeClass(el: Element): string {
+const fontScopeClass = (el: Element): string => {
   return (
     String((el as HTMLElement).className || '')
       .split(' ')
       .find((c) => c.startsWith('font_')) ?? ''
   );
-}
+};
 
 /** Render, read the TEXT NODE's prefixed classes, clean up. */
-function renderTextClasses(node: React.ReactElement, prefixes: string[]): string[] {
+const renderTextClasses = (node: React.ReactElement, prefixes: string[]): string[] => {
   renderWithProviders(node);
   const textNode = screen.getByText(LABEL);
   const classes = classesByPrefix(textNode, prefixes);
   cleanup();
   return classes;
-}
+};
 
 describe('house Text — NATIVE environment (isWeb false)', () => {
   it('really is running with the native platform flags', async () => {

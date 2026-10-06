@@ -12,13 +12,13 @@ import { Select } from './index';
 import type { SelectOption } from './index';
 
 /** Web panels portal out to the page, so panel text is read from the page. */
-function findInPage(text: string): Element | undefined {
+const findInPage = (text: string): Element | undefined => {
   try {
     return within(document.body).queryByText(text, { exact: false }) ?? undefined;
   } catch {
     return Array.from(document.body.querySelectorAll('*')).find((el) => el.textContent?.includes(text));
   }
-}
+};
 
 const mockOptions: SelectOption[] = [
   { value: 'option1', label: 'Option 1' },

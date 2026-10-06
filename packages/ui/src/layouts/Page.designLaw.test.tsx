@@ -9,16 +9,16 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { PageHeader, PageSection, Screen } from './Page';
 import { ListPageLayout } from './PageTemplates';
 
-function readSibling(name: string) {
+const readSibling = (name: string) => {
   return readFileSync(join(import.meta.dirname, name), 'utf-8');
-}
+};
 
-function atoms(el: Element, prefixes: string[]): string[] {
+const atoms = (el: Element, prefixes: string[]): string[] => {
   return String((el as HTMLElement).className || '')
     .split(' ')
     .filter((c) => prefixes.some((p) => c.startsWith(p)))
     .sort();
-}
+};
 
 afterEach(cleanup);
 
@@ -26,12 +26,12 @@ describe('page layouts named exports', () => {
   it('page.tsx and PageTemplates export named functions only', () => {
     const page = readSibling('page.tsx');
     const templates = readSibling('PageTemplates.tsx');
-    expect(page).toMatch(/export function Screen/);
-    expect(page).toMatch(/export function PageHeader/);
-    expect(page).toMatch(/export function PageSection/);
-    expect(templates).toMatch(/export function ListPageLayout/);
-    expect(templates).toMatch(/export function DetailPageLayout/);
-    expect(templates).toMatch(/export function SettingsPageLayout/);
+    expect(page).toMatch(/export const Screen = /);
+    expect(page).toMatch(/export const PageHeader = /);
+    expect(page).toMatch(/export const PageSection = /);
+    expect(templates).toMatch(/export const ListPageLayout = /);
+    expect(templates).toMatch(/export const DetailPageLayout = /);
+    expect(templates).toMatch(/export const SettingsPageLayout = /);
     expect(page).not.toMatch(/export default/);
     expect(templates).not.toMatch(/export default/);
   });
@@ -42,7 +42,7 @@ describe('no Tint wrap', () => {
     const src = readSibling('page.tsx');
     expect(src).not.toMatch(/from ["'][^"']*Tint["']/);
     expect(src).not.toMatch(/<[Tt]int[\s/>]/);
-    expect(src).toMatch(/function NestedScale/);
+    expect(src).toMatch(/const NestedScale = /);
     expect(src).not.toMatch(/<Surface density="comfortable">/);
   });
 });

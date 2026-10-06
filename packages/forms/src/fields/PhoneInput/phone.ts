@@ -98,31 +98,31 @@ export interface ParsedPhone {
   national: string;
 }
 
-export function digitsOnly(input: string): string {
+export const digitsOnly = (input: string): string => {
   return input.replaceAll(/\D/g, '');
-}
+};
 
-export function countryCodeToFlag(countryCode: string): string {
+export const countryCodeToFlag = (countryCode: string): string => {
   const codePoints = countryCode
     .toUpperCase()
     .split('')
     .map((char) => 127_397 + char.charCodeAt(0));
   return String.fromCodePoint(...codePoints);
-}
+};
 
-export function flagSizeForToken(sizeToken: string | undefined): number {
+export const flagSizeForToken = (sizeToken: string | undefined): number => {
   return sizeRecipeForToken(sizeToken ?? '$4').iconSize;
-}
+};
 
-export function caretSizeForToken(sizeToken: string | undefined): number {
+export const caretSizeForToken = (sizeToken: string | undefined): number => {
   return Math.round(sizeRecipeForToken(sizeToken ?? '$4').iconSize * 0.75);
-}
+};
 
-export function dialOf(region: string): string {
+export const dialOf = (region: string): string => {
   return String(dialCodes[region] ?? 1);
-}
+};
 
-function regionName(code: string): string {
+const regionName = (code: string): string => {
   try {
     const name = new Intl.DisplayNames(['en'], { type: 'region' }).of(code);
     if (name && name !== code) {
@@ -132,9 +132,9 @@ function regionName(code: string): string {
     // Hermes: no Intl.DisplayNames.
   }
   return regionNames[code] ?? code;
-}
+};
 
-export function detectRegion(raw: string, hint = 'US'): string {
+export const detectRegion = (raw: string, hint = 'US'): string => {
   const fallback = hint in dialCodes ? hint : 'US';
   const trimmed = raw.trim();
   if (!trimmed.startsWith('+')) {
@@ -165,9 +165,9 @@ export function detectRegion(raw: string, hint = 'US'): string {
     return preferred;
   }
   return tied[0]?.region ?? fallback;
-}
+};
 
-export function nationalDigitsFromRaw(raw: string, region: string): string {
+export const nationalDigitsFromRaw = (raw: string, region: string): string => {
   let d = digitsOnly(raw);
   const cc = dialOf(region);
   const max = Math.max(4, 15 - cc.length);
@@ -175,9 +175,9 @@ export function nationalDigitsFromRaw(raw: string, region: string): string {
     d = d.slice(cc.length);
   }
   return d.slice(0, max);
-}
+};
 
-export function toE164(region: string, national: string): string {
+export const toE164 = (region: string, national: string): string => {
   const cc = dialOf(region);
   let d = digitsOnly(national);
   if (d.startsWith('0')) {
@@ -187,9 +187,9 @@ export function toE164(region: string, national: string): string {
     return '';
   }
   return `+${cc}${d}`;
-}
+};
 
-function formatNanp(d: string): string {
+const formatNanp = (d: string): string => {
   const core = d.slice(0, 10);
   const extra = d.slice(10);
   let out = core;
@@ -199,22 +199,9 @@ function formatNanp(d: string): string {
     out = `(${core.slice(0, 3)}) ${core.slice(3)}`;
   }
   return extra ? `${out} ${extra}` : out;
-}
+};
 
-function formatGb(d: string): string {
-  if (d.startsWith('07') && d.length > 5) {
-    return formatGrouped(d, [5, 3, 3]);
-  }
-  if (d.length <= 4) {
-    return d;
-  }
-  if (d.length <= 7) {
-    return `${d.slice(0, 4)} ${d.slice(4)}`;
-  }
-  return `${d.slice(0, 4)} ${d.slice(4, 7)} ${d.slice(7, 11)}`;
-}
-
-function formatGrouped(d: string, groups: number[]): string {
+const formatGrouped = (d: string, groups: number[]): string => {
   const parts: string[] = [];
   let i = 0;
   for (const g of groups) {
@@ -228,9 +215,22 @@ function formatGrouped(d: string, groups: number[]): string {
     parts.push(d.slice(i));
   }
   return parts.join(' ');
-}
+};
 
-export function formatNational(region: string, national: string): string {
+const formatGb = (d: string): string => {
+  if (d.startsWith('07') && d.length > 5) {
+    return formatGrouped(d, [5, 3, 3]);
+  }
+  if (d.length <= 4) {
+    return d;
+  }
+  if (d.length <= 7) {
+    return `${d.slice(0, 4)} ${d.slice(4)}`;
+  }
+  return `${d.slice(0, 4)} ${d.slice(4, 7)} ${d.slice(7, 11)}`;
+};
+
+export const formatNational = (region: string, national: string): string => {
   const d = digitsOnly(national);
   if (!d) {
     return '';
@@ -246,9 +246,9 @@ export function formatNational(region: string, national: string): string {
     return formatGrouped(d, groups);
   }
   return formatGrouped(d, [3, 3, 3, 3]);
-}
+};
 
-export function parsePhone(raw: string | undefined, defaultRegion = 'US'): ParsedPhone {
+export const parsePhone = (raw: string | undefined, defaultRegion = 'US'): ParsedPhone => {
   const fallback = defaultRegion in dialCodes ? defaultRegion : 'US';
   if (!raw || !String(raw).trim()) {
     return { region: fallback, national: '' };
@@ -256,14 +256,14 @@ export function parsePhone(raw: string | undefined, defaultRegion = 'US'): Parse
   const text = String(raw);
   const region = detectRegion(text, fallback);
   return { region, national: nationalDigitsFromRaw(text, region) };
-}
+};
 
-export function examplePlaceholder(region: string): string {
+export const examplePlaceholder = (region: string): string => {
   const digits = EXAMPLES[region] ?? EXAMPLES.US;
   return formatNational(region, digits);
-}
+};
 
-export function caretIndexForDigitCount(formatted: string, digitCount: number): number {
+export const caretIndexForDigitCount = (formatted: string, digitCount: number): number => {
   if (digitCount <= 0) {
     return 0;
   }
@@ -277,11 +277,11 @@ export function caretIndexForDigitCount(formatted: string, digitCount: number): 
     }
   }
   return formatted.length;
-}
+};
 
 let countryOptionsCache: PhoneCountryOption[] | undefined;
 
-export function getCountryOptions(): PhoneCountryOption[] {
+export const getCountryOptions = (): PhoneCountryOption[] => {
   if (countryOptionsCache) {
     return countryOptionsCache;
   }
@@ -300,4 +300,4 @@ export function getCountryOptions(): PhoneCountryOption[] {
     .sort((a, b) => regionName(a).localeCompare(regionName(b)));
   countryOptionsCache = [...PREFERRED_REGIONS.filter((code) => code in dialCodes), ...rest].map(make);
   return countryOptionsCache;
-}
+};

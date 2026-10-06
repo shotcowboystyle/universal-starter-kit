@@ -14,13 +14,13 @@ export type ThemeScheme = 'system' | 'dark' | 'light';
 // useTheme hook — knob-aware (native variant uses local state only, no cookies)
 // ---------------------------------------------------------------------------
 
-export function useTheme(): [
+export const useTheme = (): [
   Knobs,
   (knobs?: Partial<Knobs>) => void,
   boolean,
   (presetName: string) => void,
   string | undefined,
-] {
+] => {
   const [localKnobs, setLocalKnobs] = useState<Knobs>(() => ({ ...defaultKnobs }));
   const [activePreset, setActivePreset] = useState<string | undefined>(undefined);
 
@@ -50,4 +50,4 @@ export function useTheme(): [
   }, []);
 
   return [localKnobs, setKnobs, false, setPresetFn, activePreset];
-}
+};

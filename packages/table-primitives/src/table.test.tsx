@@ -320,7 +320,7 @@ describe('Table Primitives', () => {
     expect(low.querySelector('td [data-text-accent]')).toBeNull();
   });
 
-  function bodyTable(overrides: Record<string, string>, props: Record<string, unknown> = {}) {
+  const bodyTable = (overrides: Record<string, string>, props: Record<string, unknown> = {}) => {
     return renderWithProviders(
       <Preset overrides={overrides as any}>
         <Table {...props}>
@@ -340,7 +340,7 @@ describe('Table Primitives', () => {
         </Table>
       </Preset>,
     ).container;
-  }
+  };
 
   // Token values render as atomic classes (`_h-t-size-3`), which jsdom's
   // computed style cannot resolve, so the knob is read off the class list.
@@ -388,7 +388,7 @@ describe('Table Primitives', () => {
   });
 
   describe('tableZebra (K4: Table, DataTable, SimpleTable and ChildTable honour it)', () => {
-    function zebraTable(tableZebra: 'on' | 'off', body: React.ReactNode, props: Record<string, unknown> = {}) {
+    const zebraTable = (tableZebra: 'on' | 'off', body: React.ReactNode, props: Record<string, unknown> = {}) => {
       return renderWithProviders(
         <Preset overrides={{ tableZebra }}>
           <Table {...props}>
@@ -406,7 +406,7 @@ describe('Table Primitives', () => {
           </Table>
         </Preset>,
       ).container;
-    }
+    };
 
     const names = ['Ada', 'Grace', 'Edsger', 'Barbara'];
     const plainRows = names.map((name) => (
@@ -551,7 +551,7 @@ describe('Table Primitives', () => {
 
     describe('the stripe steps one up the ramp from the surface it sits on', () => {
       type Elevation = 'none' | 'small' | 'medium' | 'large';
-      function cardFills(scheme: 'light' | 'dark', elevation?: Elevation) {
+      const cardFills = (scheme: 'light' | 'dark', elevation?: Elevation) => {
         const ui = (
           <Preset overrides={{ tableZebra: 'on', ...(elevation ? { elevation } : {}) }}>
             <Table layout="cards">
@@ -566,7 +566,7 @@ describe('Table Primitives', () => {
         );
         const { container } = renderWithProviders(scheme === 'dark' ? <Theme name="dark">{ui}</Theme> : ui);
         return Array.from(container.querySelectorAll('[data-testid="table-card"]')).map((card) => atomic(card, 'bg'));
-      }
+      };
 
       it("in dark an odd card's background differs from an even card's", () => {
         const [even, odd] = cardFills('dark');

@@ -15,7 +15,7 @@ interface BoardContextValue {
 
 const BoardContext = createContext<BoardContextValue | null>(null);
 
-export function BoardProvider({ children }: { children: React.ReactNode }) {
+export const BoardProvider = ({ children }: { children: React.ReactNode }) => {
   const currentBoardId = useWorkspaceStore((state) => state.currentBoardId);
   const { user: currentUser, isAuthenticated } = useAuth();
   const { myBoards, teamBoards } = useBoards();
@@ -50,12 +50,12 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
   );
 
   return <BoardContext value={value}>{children}</BoardContext>;
-}
+};
 
-export function useBoardContext() {
+export const useBoardContext = () => {
   const context = useContext(BoardContext);
   if (!context) {
     throw new Error('useBoardContext must be used within a BoardProvider');
   }
   return context;
-}
+};

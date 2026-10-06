@@ -23,7 +23,7 @@ const LABEL = 'Sign in to see your clusters';
 
 afterEach(cleanup);
 
-function textNodeHost(root: HTMLElement): HTMLElement {
+const textNodeHost = (root: HTMLElement): HTMLElement => {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
     if (node.textContent?.trim() === LABEL && node.parentElement) {
@@ -31,9 +31,9 @@ function textNodeHost(root: HTMLElement): HTMLElement {
     }
   }
   throw new Error(`no text node "${LABEL}"`);
-}
+};
 
-function measure(node: ReactElement, scheme: 'light' | 'dark') {
+const measure = (node: ReactElement, scheme: 'light' | 'dark') => {
   const { container } = render(
     <TamaguiProvider
       config={themeConfig.tamagui}
@@ -52,7 +52,7 @@ function measure(node: ReactElement, scheme: 'light' | 'dark') {
     throw new Error('no computed font-family on the text node');
   }
   return { weight, family };
-}
+};
 
 const schemes = ['light', 'dark'] as const;
 const headingSizes = ['$1', '$4', '$6', '$9'] as const;

@@ -26,7 +26,7 @@ interface Labelled {
   accessibilityLabel?: unknown;
 }
 
-function hasText(node: ReactNode): boolean {
+const hasText = (node: ReactNode): boolean => {
   if (typeof node === 'string') {
     return node.trim().length > 0;
   }
@@ -40,13 +40,13 @@ function hasText(node: ReactNode): boolean {
     return hasText(node.props.children);
   }
   return false;
-}
+};
 
-function isLabelled(props: Labelled): boolean {
+const isLabelled = (props: Labelled): boolean => {
   return props['aria-label'] != null || props['aria-labelledby'] != null || props.accessibilityLabel != null;
-}
+};
 
-function needsCloseName(props: Labelled & { asChild?: unknown; children?: ReactNode }): boolean {
+const needsCloseName = (props: Labelled & { asChild?: unknown; children?: ReactNode }): boolean => {
   if (isLabelled(props)) {
     return false;
   }
@@ -55,12 +55,12 @@ function needsCloseName(props: Labelled & { asChild?: unknown; children?: ReactN
     return !isLabelled(children.props) && !hasText(children.props.children);
   }
   return !hasText(children);
-}
+};
 
-function namedByContent<C extends ComponentType<any>>(Part: C, displayName: string) {
+const namedByContent = <C extends ComponentType<any>>(Part: C, displayName: string) => {
   const Raw = Part as ComponentType<any>;
 
-  function LocalizedClose(props: GetProps<C>) {
+  const LocalizedClose = (props: GetProps<C>) => {
     const { t } = useTranslation();
     return (
       <Raw
@@ -68,9 +68,9 @@ function namedByContent<C extends ComponentType<any>>(Part: C, displayName: stri
         {...props}
       />
     );
-  }
+  };
 
-  function Close(props: GetProps<C>) {
+  const Close = (props: GetProps<C>) => {
     if (needsCloseName(props)) {
       return <LocalizedClose {...props} />;
     }
@@ -80,10 +80,10 @@ function namedByContent<C extends ComponentType<any>>(Part: C, displayName: stri
         {...props}
       />
     );
-  }
+  };
   Close.displayName = displayName;
   return Close;
-}
+};
 
 export const Dialog: typeof TamaguiDialog = withStaticProperties(TamaguiDialog, {
   Close: namedByContent(TamaguiDialog.Close, 'DialogClose'),

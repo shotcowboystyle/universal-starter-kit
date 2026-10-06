@@ -60,7 +60,7 @@ export const yearPageSize = 12;
 // useDateAnimation — smooth directional transitions
 // ---------------------------------------------------------------------------
 
-export function useDateAnimation(current: string | number) {
+export const useDateAnimation = (current: string | number) => {
   const prev = useRef<string | number | null>(null);
 
   const direction = useMemo(() => {
@@ -83,7 +83,7 @@ export function useDateAnimation(current: string | number) {
   );
 
   return { animation, animationKey: current };
-}
+};
 
 // ---------------------------------------------------------------------------
 // useCalendarData — compute calendar grid for a given month
@@ -93,7 +93,7 @@ export function useDateAnimation(current: string | number) {
 // a locale pinned to en-US at the call site.
 const monthNames = getMonthNames();
 
-export function useCalendarData(displayDate: Date): CalendarData {
+export const useCalendarData = (displayDate: Date): CalendarData => {
   return useMemo(() => {
     const year = displayDate.getFullYear();
     const month = displayDate.getMonth();
@@ -120,13 +120,13 @@ export function useCalendarData(displayDate: Date): CalendarData {
       today: new Date(),
     };
   }, [displayDate]);
-}
+};
 
 // ---------------------------------------------------------------------------
 // useDateNavigation — shared month/display date management
 // ---------------------------------------------------------------------------
 
-export function useDateNavigation(initialDate?: Date) {
+export const useDateNavigation = (initialDate?: Date) => {
   const [displayDate, setDisplayDate] = useState<Date>(initialDate ?? new Date());
 
   const navigateMonth = useCallback((direction: 'prev' | 'next') => {
@@ -139,30 +139,30 @@ export function useDateNavigation(initialDate?: Date) {
   }, []);
 
   return { displayDate, setDisplayDate, navigateMonth };
-}
+};
 
 // ---------------------------------------------------------------------------
 // toWeeks — split days array into 7-day rows
 // ---------------------------------------------------------------------------
 
-export function toWeeks(days: Date[]): Date[][] {
+export const toWeeks = (days: Date[]): Date[][] => {
   const result: Date[][] = [];
   for (let i = 0; i < days.length; i += 7) {
     result.push(days.slice(i, i + 7));
   }
   return result;
-}
+};
 
 // ---------------------------------------------------------------------------
 // isSameDay — date comparison utility
 // ---------------------------------------------------------------------------
 
-export function isSameDay(a: Date | null | undefined, b: Date | null | undefined): boolean {
+export const isSameDay = (a: Date | null | undefined, b: Date | null | undefined): boolean => {
   if (!a || !b) {
     return false;
   }
   return a.toDateString() === b.toDateString();
-}
+};
 
 // ---------------------------------------------------------------------------
 // dayCellRadius — binary-pointy day cells
@@ -173,19 +173,21 @@ export function isSameDay(a: Date | null | undefined, b: Date | null | undefined
  * square (binary-pointy, same contract as Switch/Radio). Inline style so a
  * consumer `circular` variant cannot expand past the nested-control box.
  */
-export function dayCellRadius(knobProps: { pointy?: boolean }): {
+export const dayCellRadius = (knobProps: {
+  pointy?: boolean;
+}): {
   style: { borderRadius: number };
-} {
+} => {
   return { style: { borderRadius: knobProps.pointy ? 0 : 9999 } };
-}
+};
 
 /** Calendar chrome sits one density step below the page. */
-export function useCalendarKnobs() {
+export const useCalendarKnobs = () => {
   return useResolvedKnobs({ compact: true });
-}
+};
 
 /** Overlay/dialog calendar frame: compact padding + a 7-cell content width. */
-export function CalendarPanelFrame({ children }: { children: ReactNode }) {
+export const CalendarPanelFrame = ({ children }: { children: ReactNode }) => {
   const { knobProps } = useCalendarKnobs();
   const { px } = knobProps.nestedControl;
   return (
@@ -200,9 +202,9 @@ export function CalendarPanelFrame({ children }: { children: ReactNode }) {
       {children}
     </View>
   );
-}
+};
 
-function splitNestedControl(nested: {
+const splitNestedControl = (nested: {
   px: number;
   hitSlop: { top: number; bottom: number; left: number; right: number };
   width: number;
@@ -211,21 +213,21 @@ function splitNestedControl(nested: {
   maxWidth: number;
   minHeight: number;
   maxHeight: number;
-}) {
+}) => {
   const { px, hitSlop, ...box } = nested;
   return { px, hitSlop, box };
-}
+};
 
-function calendarKeyHandler(onPress: () => void) {
+const calendarKeyHandler = (onPress: () => void) => {
   return (e: { key?: string; preventDefault?: () => void }) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault?.();
       onPress();
     }
   };
-}
+};
 
-export function CalendarChromeButton({
+export const CalendarChromeButton = ({
   onPress,
   label,
   children,
@@ -233,7 +235,7 @@ export function CalendarChromeButton({
   onPress: () => void;
   label: string;
   children: ReactNode;
-}) {
+}) => {
   const { knobProps } = useCalendarKnobs();
   const { hitSlop, box } = splitNestedControl(knobProps.nestedControl);
   return (
@@ -255,9 +257,9 @@ export function CalendarChromeButton({
       {children}
     </View>
   );
-}
+};
 
-export function CalendarTextButton({ onPress, children }: { onPress: () => void; children: ReactNode }) {
+export const CalendarTextButton = ({ onPress, children }: { onPress: () => void; children: ReactNode }) => {
   return (
     <View
       role="button"
@@ -274,9 +276,9 @@ export function CalendarTextButton({ onPress, children }: { onPress: () => void;
       {children}
     </View>
   );
-}
+};
 
-export function CalendarDaySlot({ children }: { children?: ReactNode }) {
+export const CalendarDaySlot = ({ children }: { children?: ReactNode }) => {
   const { knobProps } = useCalendarKnobs();
   const { px } = knobProps.nestedControl;
   return (
@@ -289,9 +291,9 @@ export function CalendarDaySlot({ children }: { children?: ReactNode }) {
       {children}
     </View>
   );
-}
+};
 
-export function CalendarWeekRow({ children }: { children: ReactNode }) {
+export const CalendarWeekRow = ({ children }: { children: ReactNode }) => {
   const { knobProps } = useCalendarKnobs();
   const { px } = knobProps.nestedControl;
   return (
@@ -301,9 +303,9 @@ export function CalendarWeekRow({ children }: { children: ReactNode }) {
       {children}
     </View>
   );
-}
+};
 
-export function CalendarDayCell({
+export const CalendarDayCell = ({
   day,
   selected,
   today,
@@ -325,7 +327,7 @@ export function CalendarDayCell({
   onPress: () => void;
   onKeyDown?: (e: { key?: string; preventDefault?: () => void }) => void;
   selectedBackground?: string;
-}) {
+}) => {
   const { knobProps } = useCalendarKnobs();
   const accentText = useAccentOnSurface();
   const { px, hitSlop, box } = splitNestedControl(knobProps.nestedControl);
@@ -398,9 +400,36 @@ export function CalendarDayCell({
       </Text>
     </View>
   );
-}
+};
 
-export function CalendarDays({
+// ---------------------------------------------------------------------------
+// WeekView — weekday header row
+// ---------------------------------------------------------------------------
+
+export const WeekView = () => {
+  const { knobProps } = useCalendarKnobs();
+  const { px } = knobProps.nestedControl;
+  return (
+    <View
+      flexDirection="row"
+      width={px * 7}
+      alignSelf="center">
+      {weekdays.map((day) => (
+        <Text
+          key={day}
+          width={px}
+          textAlign="center"
+          color={formCommonColors.muted}
+          {...knobProps.label}
+          {...knobProps.textWeight}>
+          {t(day)}
+        </Text>
+      ))}
+    </View>
+  );
+};
+
+export const CalendarDays = ({
   calendarData,
   minDate,
   maxDate,
@@ -423,7 +452,7 @@ export function CalendarDays({
   onToday?: () => void;
   /** Multiple-mode is at `limit`; unselected cells look unavailable. */
   selectionCapped?: boolean;
-}) {
+}) => {
   const { knobProps } = useCalendarKnobs();
   const { animation, animationKey } = useDateAnimation(`${calendarData.year}-${calendarData.month}`);
   const weeks = toWeeks(calendarData.days);
@@ -555,34 +584,7 @@ export function CalendarDays({
       </View>
     </AnimatePresence>
   );
-}
-
-// ---------------------------------------------------------------------------
-// WeekView — weekday header row
-// ---------------------------------------------------------------------------
-
-export function WeekView() {
-  const { knobProps } = useCalendarKnobs();
-  const { px } = knobProps.nestedControl;
-  return (
-    <View
-      flexDirection="row"
-      width={px * 7}
-      alignSelf="center">
-      {weekdays.map((day) => (
-        <Text
-          key={day}
-          width={px}
-          textAlign="center"
-          color={formCommonColors.muted}
-          {...knobProps.label}
-          {...knobProps.textWeight}>
-          {t(day)}
-        </Text>
-      ))}
-    </View>
-  );
-}
+};
 
 // ---------------------------------------------------------------------------
 // CalendarHeader — clickable year + month with nav arrows
@@ -599,7 +601,7 @@ interface CalendarHeaderProps {
   showNext?: boolean;
 }
 
-export function CalendarHeader({
+export const CalendarHeader = ({
   year,
   monthName,
   onPrevMonth,
@@ -608,7 +610,7 @@ export function CalendarHeader({
   onMonthPress,
   showPrev = true,
   showNext = true,
-}: CalendarHeaderProps) {
+}: CalendarHeaderProps) => {
   const { knobProps } = useCalendarKnobs();
   const glyphColor = useGlyphColor();
   const { px } = knobProps.nestedControl;
@@ -675,7 +677,7 @@ export function CalendarHeader({
       )}
     </View>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // MonthGrid — 4x3 month selector
@@ -687,7 +689,7 @@ interface MonthGridProps {
   onSelectMonth: (month: number) => void;
 }
 
-export function MonthGrid({ currentYear, selectedMonth, onSelectMonth }: MonthGridProps) {
+export const MonthGrid = ({ currentYear, selectedMonth, onSelectMonth }: MonthGridProps) => {
   const { knobProps } = useCalendarKnobs();
   const { animation, animationKey } = useDateAnimation(currentYear);
   const { px, hitSlop, box } = splitNestedControl(knobProps.nestedControl);
@@ -749,7 +751,7 @@ export function MonthGrid({ currentYear, selectedMonth, onSelectMonth }: MonthGr
       </View>
     </AnimatePresence>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // YearGrid — paginated year selector with range slider
@@ -763,7 +765,7 @@ interface YearGridProps {
   onNextPage: () => void;
 }
 
-export function YearGrid({ yearPageStart, selectedYear, onSelectYear, onPrevPage, onNextPage }: YearGridProps) {
+export const YearGrid = ({ yearPageStart, selectedYear, onSelectYear, onPrevPage, onNextPage }: YearGridProps) => {
   const { knobProps } = useCalendarKnobs();
   const glyphColor = useGlyphColor();
   const { px, hitSlop, box } = splitNestedControl(knobProps.nestedControl);
@@ -866,7 +868,7 @@ export function YearGrid({ yearPageStart, selectedYear, onSelectYear, onPrevPage
       </AnimatePresence>
     </View>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // DatePickerInputTrigger — compound input with calendar/clear icon
@@ -890,7 +892,7 @@ interface DatePickerInputTriggerProps {
   'aria-invalid'?: boolean;
 }
 
-export function DatePickerClearButton({
+export const DatePickerClearButton = ({
   onReset,
   disabled,
   label,
@@ -898,7 +900,7 @@ export function DatePickerClearButton({
   onReset: () => void;
   disabled?: boolean;
   label?: string;
-}) {
+}) => {
   return (
     <InputParts.Button
       {...floatingPanelActionProps}
@@ -914,9 +916,9 @@ export function DatePickerClearButton({
       </InputParts.Icon>
     </InputParts.Button>
   );
-}
+};
 
-export function DatePickerInputTrigger({
+export const DatePickerInputTrigger = ({
   value,
   onButtonPress,
   onReset,
@@ -931,7 +933,7 @@ export function DatePickerInputTrigger({
   'aria-describedby': ariaDescribedBy,
   'aria-required': ariaRequired,
   'aria-invalid': ariaInvalid,
-}: DatePickerInputTriggerProps) {
+}: DatePickerInputTriggerProps) => {
   const handleTriggerKey = (e: PanelActionEvent & { key?: string; code?: string; preventDefault?: () => void }) => {
     if (disabled || isNestedPanelAction(e)) {
       return;
@@ -1017,7 +1019,7 @@ export function DatePickerInputTrigger({
       </InputParts.Box>
     </View>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // DatePickerPopoverShell — FloatingPanel (sheet below OVERLAY_BREAKPOINT)
@@ -1038,7 +1040,7 @@ interface DatePickerPopoverShellProps {
   onClear?: () => void;
 }
 
-export function DatePickerPopoverShell({
+export const DatePickerPopoverShell = ({
   open,
   onOpenChange,
   trigger,
@@ -1048,7 +1050,7 @@ export function DatePickerPopoverShell({
   triggerA11y,
   clearValue,
   onClear,
-}: DatePickerPopoverShellProps) {
+}: DatePickerPopoverShellProps) => {
   const nativeClear =
     !isWeb && clearValue && onClear ? (
       <DatePickerClearButton
@@ -1071,7 +1073,7 @@ export function DatePickerPopoverShell({
       {children}
     </FloatingPanel>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // CalendarViewSwitcher — orchestrates day/month/year view modes
@@ -1088,7 +1090,7 @@ interface CalendarViewSwitcherProps {
   children: ReactNode;
 }
 
-export function CalendarViewSwitcher({
+export const CalendarViewSwitcher = ({
   calendarData,
   displayDate,
   onSetDisplayDate,
@@ -1097,7 +1099,7 @@ export function CalendarViewSwitcher({
   yearPageStart,
   setYearPageStart,
   children,
-}: CalendarViewSwitcherProps) {
+}: CalendarViewSwitcherProps) => {
   const { knobProps } = useCalendarKnobs();
   const handleSelectMonth = useCallback(
     (month: number) => {
@@ -1158,7 +1160,7 @@ export function CalendarViewSwitcher({
   }
 
   return <>{children}</>;
-}
+};
 
 // ---------------------------------------------------------------------------
 // formatDateDisplay — shared date formatting
@@ -1169,9 +1171,9 @@ export function CalendarViewSwitcher({
  * "Jan 15, 2024" — same voice as table date cells and Timeline, with the
  * year always shown because an editing surface is a precision context.
  */
-export function formatDateDisplay(date: Date | null): string {
+export const formatDateDisplay = (date: Date | null): string => {
   if (!date) {
     return '';
   }
   return formatAbsoluteDate(date, { year: 'always' });
-}
+};

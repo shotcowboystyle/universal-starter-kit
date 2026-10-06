@@ -17,7 +17,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function stubContainerWidth(width: number) {
+const stubContainerWidth = (width: number) => {
   vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
     width,
     height: 100,
@@ -55,15 +55,15 @@ function stubContainerWidth(width: number) {
       disconnect() {}
     },
   );
-}
+};
 
-function list(root: HTMLElement) {
+const list = (root: HTMLElement) => {
   return root.querySelector('[data-mpo-description-list]') as HTMLElement | null;
-}
+};
 
-function host(root: HTMLElement) {
+const host = (root: HTMLElement) => {
   return root.querySelector('[data-mpo-description-list-host]') as HTMLElement | null;
-}
+};
 
 describe('DescriptionList', () => {
   it('composes FieldDisplay for each typed row — never a parallel formatter', () => {

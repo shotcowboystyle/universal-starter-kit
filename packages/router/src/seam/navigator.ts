@@ -51,11 +51,11 @@
 import { createContext, useContext, useSyncExternalStore } from 'react';
 
 /** Navigation trace for development; silent in production builds. */
-function devLog(message: string): void {
+const devLog = (message: string): void => {
   if (process.env.NODE_ENV !== 'production') {
     console.log(message);
   }
-}
+};
 
 export type NavParams = Record<string, string | string[] | undefined>;
 
@@ -113,7 +113,7 @@ export interface NavStackAdapter {
   };
 }
 
-function compileRoute(def: RouteDef): CompiledRoute {
+const compileRoute = (def: RouteDef): CompiledRoute => {
   const segments = def.pattern
     .split('/')
     .filter(Boolean)
@@ -122,12 +122,12 @@ function compileRoute(def: RouteDef): CompiledRoute {
       return m ? { param: m[2] } : { literal: seg };
     });
   return { ...def, segments };
-}
+};
 
 /** Minimal query parser — deliberately not URLSearchParams so this module
  *  has zero polyfill-order dependency (GJS entries load it before
  *  polyfills). Repeated keys become arrays. */
-function parseQuery(query: string | undefined): NavParams {
+const parseQuery = (query: string | undefined): NavParams => {
   const params: NavParams = {};
   if (!query) {
     return params;
@@ -149,9 +149,9 @@ function parseQuery(query: string | undefined): NavParams {
     }
   }
   return params;
-}
+};
 
-export function hrefToString(href: Href): string {
+export const hrefToString = (href: Href): string => {
   if (typeof href === 'string') {
     return href;
   }
@@ -167,7 +167,7 @@ export function hrefToString(href: Href): string {
     }
   }
   return leftover.length ? `${path}?${leftover.join('&')}` : path;
-}
+};
 
 const EMPTY_PARAMS: NavParams = Object.freeze({});
 
@@ -503,11 +503,11 @@ export const stackNavigator = new StackNavigator();
  *  stack. */
 export const RouteTagContext = createContext<string | null>(null);
 
-export function useNavState(): NavSnapshot {
+export const useNavState = (): NavSnapshot => {
   return useSyncExternalStore(stackNavigator.subscribe, stackNavigator.getSnapshot);
-}
+};
 
-export function useRouteParams(): NavParams {
+export const useRouteParams = (): NavParams => {
   const tag = useContext(RouteTagContext);
   return useSyncExternalStore(stackNavigator.subscribe, () => stackNavigator.paramsSnapshot(tag));
-}
+};

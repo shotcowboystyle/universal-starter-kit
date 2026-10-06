@@ -55,7 +55,7 @@ const StatusBadge = ({ status }: { status: TaskStatus }) => {
   );
 };
 
-export function TaskCard({ task, onMoveToProject }: TaskCardProps) {
+export const TaskCard = ({ task, onMoveToProject }: TaskCardProps) => {
   const { t } = useTranslation();
   const theme = useTheme();
   const updateTaskMutation = useUpdateTask();
@@ -202,4 +202,4 @@ export function TaskCard({ task, onMoveToProject }: TaskCardProps) {
       </Animated.View>
     </GestureDetector>
   );
-}
+};

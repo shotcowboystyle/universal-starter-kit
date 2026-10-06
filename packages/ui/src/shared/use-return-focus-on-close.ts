@@ -21,12 +21,12 @@ import { isWeb } from 'tamagui';
 
 const canUseDom = () => isWeb && typeof document !== 'undefined';
 
-function focusIsDropped(): boolean {
+const focusIsDropped = (): boolean => {
   const ae = document.activeElement;
   return !ae || ae === document.body || ae === document.documentElement;
-}
+};
 
-export function useReturnFocusOnClose(open: boolean) {
+export const useReturnFocusOnClose = (open: boolean) => {
   const prevRef = useRef<HTMLElement | null>(null);
   const wasOpenRef = useRef(false);
   if (canUseDom()) {
@@ -64,4 +64,4 @@ export function useReturnFocusOnClose(open: boolean) {
       setTimeout(restore, 320);
     };
   }, [open]);
-}
+};

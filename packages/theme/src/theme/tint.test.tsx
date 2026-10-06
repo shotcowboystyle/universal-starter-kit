@@ -26,36 +26,36 @@ import { Tint, useTintDepth } from './Tint';
 /** Decorative nest family — the same four names as `defaultPreset.tints`. */
 const FAMILY: ThemeName[] = ['orange', 'blue', 'purple', 'pink'];
 
-function makePreset(tints: ThemeName[]): Preset {
+const makePreset = (tints: ThemeName[]): Preset => {
   return {
     theme: 'light' as ThemeName,
     knobs: defaultKnobs,
     intents: {},
     tints,
   };
-}
+};
 
-function wrapWithPreset(tints: ThemeName[], children: ReactNode): ReactNode {
+const wrapWithPreset = (tints: ThemeName[], children: ReactNode): ReactNode => {
   const ctx: PresetContextValue = { preset: makePreset(tints) };
   return createElement(PresetContext.Provider, { value: ctx }, children);
-}
+};
 
-function renderToHtml(node: ReactNode): string {
+const renderToHtml = (node: ReactNode): string => {
   return renderToString(node as React.ReactElement);
-}
+};
 
 /** Render a tree and return an array of all `data-tamagui-theme` values. */
-function collectThemes(html: string): string[] {
+const collectThemes = (html: string): string[] => {
   return Array.from(html.matchAll(/data-tamagui-theme="([^"]+)"/g), (m) => m[1]);
-}
+};
 
-function nestTints(count: number, innermost: ReactNode = createElement('span', null, 'inner')): ReactNode {
+const nestTints = (count: number, innermost: ReactNode = createElement('span', null, 'inner')): ReactNode => {
   let node: ReactNode = innermost;
   for (let i = 0; i < count; i++) {
     node = createElement(Tint, null, node);
   }
   return node;
-}
+};
 
 // ---------------------------------------------------------------------------
 // Tests

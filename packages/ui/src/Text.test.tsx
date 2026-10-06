@@ -31,30 +31,30 @@ afterEach(cleanup);
 
 const LABEL = 'Measure the text node';
 
-function classesByPrefix(el: Element, prefixes: string[]): string[] {
+const classesByPrefix = (el: Element, prefixes: string[]): string[] => {
   return String((el as HTMLElement).className || '')
     .split(' ')
     .filter((c) => prefixes.some((p) => c.startsWith(p)))
     .sort();
-}
+};
 
 /** Tamagui font-scope class on the TEXT NODE (`font_body` / `font_mono` / …). */
-function fontScopeClass(el: Element): string {
+const fontScopeClass = (el: Element): string => {
   return (
     String((el as HTMLElement).className || '')
       .split(' ')
       .find((c) => c.startsWith('font_')) ?? ''
   );
-}
+};
 
 /** Render, read the TEXT NODE's prefixed classes, clean up. */
-function renderTextClasses(node: React.ReactElement, prefixes: string[]): string[] {
+const renderTextClasses = (node: React.ReactElement, prefixes: string[]): string[] => {
   renderWithProviders(node);
   const textNode = screen.getByText(LABEL);
   const classes = classesByPrefix(textNode, prefixes);
   cleanup();
   return classes;
-}
+};
 
 describe('house Text — textAccent reaches the text node', () => {
   it('changes colour on a textAccent flip', () => {
@@ -186,10 +186,10 @@ describe('house Text — fontWeight and bodyFont reach the text node', () => {
 });
 
 describe("house Anchor — link chrome is house Text's, in the accent", () => {
-  function AccentProbe({ onInk }: { onInk: (ink: string) => void }) {
+  const AccentProbe = ({ onInk }: { onInk: (ink: string) => void }) => {
     onInk(useAccentOnSurface());
     return null;
-  }
+  };
 
   it("paints the AA-safe accent ink, not tamagui's link colour", () => {
     let ink = '';

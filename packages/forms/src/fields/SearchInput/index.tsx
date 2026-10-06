@@ -102,7 +102,7 @@ input.mp-search-input:focus-visible {
   box-shadow: none !important;
 }`;
 
-function ensureSearchInputChrome() {
+const ensureSearchInputChrome = () => {
   if (typeof document === 'undefined') {
     return;
   }
@@ -114,13 +114,13 @@ function ensureSearchInputChrome() {
   tag.id = SEARCH_STYLE_ID;
   tag.textContent = searchInputCss;
   document.head.append(tag);
-}
+};
 
-function focusArea(ref: RefObject<TamaguiElement | null>) {
+const focusArea = (ref: RefObject<TamaguiElement | null>) => {
   (ref.current as { focus?: () => void } | null)?.focus?.();
-}
+};
 
-export function SearchInput({
+export const SearchInput = ({
   name,
   form: formProp,
   validators,
@@ -152,7 +152,7 @@ export function SearchInput({
   'aria-label': ariaLabel,
   iconSize,
   inputProps,
-}: SearchInputProps) {
+}: SearchInputProps) => {
   const hydrationTouch = useTouchSurface();
   const { resolvedForm, knobProps, control, id } = useFormField({
     form: formProp,
@@ -481,4 +481,4 @@ export function SearchInput({
       }}
     </Field>
   );
-}
+};

@@ -44,7 +44,7 @@ export interface SidebarProps {
   'aria-label'?: string;
 }
 
-export function Sidebar({ sections, width = 250, 'aria-label': ariaLabel = 'Sidebar' }: SidebarProps) {
+export const Sidebar = ({ sections, width = 250, 'aria-label': ariaLabel = 'Sidebar' }: SidebarProps) => {
   const { knobProps } = useResolvedKnobs();
   const headingId = useId();
   // UX-P02 / Axiom 15: the active row paints `$accentBackground`, so its label
@@ -249,4 +249,4 @@ export function Sidebar({ sections, width = 250, 'aria-label': ariaLabel = 'Side
       </ScrollView>
     </YStack>
   );
-}
+};

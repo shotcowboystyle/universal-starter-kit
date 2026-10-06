@@ -53,7 +53,7 @@ export const bakedConfigEnvKey = 'VITE_MP_CONFIG';
  * is ever seen. Where nothing defined the keys and `process` does not exist,
  * the reads throw and the catch returns `{}`.
  */
-function bakedEnv(): Record<string, string | undefined> {
+const bakedEnv = (): Record<string, string | undefined> => {
   try {
     return {
       VITE_MP_CONFIG: process.env.VITE_MP_CONFIG,
@@ -62,9 +62,9 @@ function bakedEnv(): Record<string, string | undefined> {
   } catch {
     return {};
   }
-}
+};
 
-function processEnv(): Record<string, string | undefined> {
+const processEnv = (): Record<string, string | undefined> => {
   try {
     // `process` is undefined in the browser; a bare `process?.env` would
     // still throw ReferenceError on an undeclared identifier.
@@ -75,13 +75,13 @@ function processEnv(): Record<string, string | undefined> {
   } catch {
     return {};
   }
-}
+};
 
-function readBuildEnv(key: string): string | undefined {
+const readBuildEnv = (key: string): string | undefined => {
   return bakedEnv()[key] ?? processEnv()[key];
-}
+};
 
-function parseJson(raw: string | undefined): unknown {
+const parseJson = (raw: string | undefined): unknown => {
   if (!raw) {
     return undefined;
   }
@@ -90,16 +90,16 @@ function parseJson(raw: string | undefined): unknown {
   } catch {
     return undefined;
   }
-}
+};
 
-function stringifyValues(source: Record<string, unknown>): Record<string, string> {
+const stringifyValues = (source: Record<string, unknown>): Record<string, string> => {
   return Object.entries(source).reduce<Record<string, string>>((acc, [key, value]) => {
     if (typeof value !== 'undefined' && value !== null) {
       acc[key] = String(value);
     }
     return acc;
   }, {});
-}
+};
 
 /**
  * The PUBLIC key allowlist baked at build time. Empty when the app was not
@@ -107,22 +107,22 @@ function stringifyValues(source: Record<string, unknown>): Record<string, string
  * case nothing is publishable and the payload stays empty, which is the safe
  * direction to fail.
  */
-export function publicConfigKeys(): string[] {
+export const publicConfigKeys = (): string[] => {
   const parsed = parseJson(readBuildEnv(publicConfigKeysEnvKey));
   if (!Array.isArray(parsed)) {
     return [];
   }
   return parsed.filter((key): key is string => typeof key === 'string' && key.length > 0);
-}
+};
 
 /** Public config values baked into the bundle at BUILD time. */
-export function bakedPublicConfig(): Record<string, string> {
+export const bakedPublicConfig = (): Record<string, string> => {
   const parsed = parseJson(readBuildEnv(bakedConfigEnvKey));
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
     return {};
   }
   return stringifyValues(parsed as Record<string, unknown>);
-}
+};
 
 /**
  * Resolve the public config the SSR document should publish.
@@ -131,7 +131,7 @@ export function bakedPublicConfig(): Record<string, string> {
  * `env` can not reach the returned object. Runtime env wins over the
  * build-time bake, so a redeployed container overrides a stale baked value.
  */
-export function resolvePublicConfig(env: Record<string, string | undefined> = processEnv()): Record<string, string> {
+export const resolvePublicConfig = (env: Record<string, string | undefined> = processEnv()): Record<string, string> => {
   const baked = bakedPublicConfig();
   return publicConfigKeys().reduce<Record<string, string>>((acc, key) => {
     const value = env[key] ?? baked[key];
@@ -140,26 +140,26 @@ export function resolvePublicConfig(env: Record<string, string | undefined> = pr
     }
     return acc;
   }, {});
-}
+};
 
 /** The config the served document published, when there is one. */
-export function readRuntimePublicConfig(): Record<string, string> | undefined {
+export const readRuntimePublicConfig = (): Record<string, string> | undefined => {
   const raw = (globalThis as unknown as Record<string, unknown>)[runtimePublicConfigKey];
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
     return undefined;
   }
   return stringifyValues(raw as Record<string, unknown>);
-}
+};
 
-function safeJsonStringify(value: unknown): string {
+const safeJsonStringify = (value: unknown): string => {
   return JSON.stringify(value ?? {})
     .replaceAll('<', '\\u003c')
     .replaceAll('>', '\\u003e')
     .replaceAll('\u2028', '\\u2028')
     .replaceAll('\u2029', '\\u2029');
-}
+};
 
 /** The inline script the SSR document carries so the client can read the config. */
-export function serializeRuntimePublicConfig(config: Record<string, string> = resolvePublicConfig()): string {
+export const serializeRuntimePublicConfig = (config: Record<string, string> = resolvePublicConfig()): string => {
   return `globalThis[${JSON.stringify(runtimePublicConfigKey)}]=${safeJsonStringify(config)};`;
-}
+};

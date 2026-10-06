@@ -24,9 +24,9 @@ import { Button } from './index';
 
 afterEach(cleanup);
 
-function frame(): HTMLElement {
+const frame = (): HTMLElement => {
   return screen.getByRole('button');
-}
+};
 
 describe('Button outlined channel', () => {
   it('the outlined boolean is the channel, and it paints $borderColor', () => {

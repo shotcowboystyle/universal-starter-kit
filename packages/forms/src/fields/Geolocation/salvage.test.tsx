@@ -37,17 +37,17 @@ const original = JSON.stringify({
   ],
 });
 
-function input(container: HTMLElement) {
+const input = (container: HTMLElement) => {
   return container.querySelector("[aria-label='Search for a location']") as HTMLInputElement;
-}
-function deferred<T>() {
+};
+const deferred = <T,>() => {
   let resolve!: (value: T) => void;
   const promise = new Promise<T>((done) => {
     resolve = done;
   });
   return { promise, resolve };
-}
-function Controlled(props: GeolocationProps) {
+};
+const Controlled = (props: GeolocationProps) => {
   const [value, setValue] = useState(props.value ?? '');
   return (
     <Geolocation
@@ -64,7 +64,7 @@ function Controlled(props: GeolocationProps) {
       )}
     />
   );
-}
+};
 
 describe('Geolocation salvage regressions', () => {
   afterEach(() => vi.unstubAllGlobals());

@@ -798,7 +798,7 @@ describe('OTPInput', () => {
     const RADIUS_STOPS = ['none', 'small', 'medium', 'large', 'full'] as const satisfies readonly BorderRadius[];
     const TOKEN_SCALE = { none: 0, small: 5, medium: 9, large: 16 } as const;
 
-    function paintedRadiusPx(el: Element): number {
+    const paintedRadiusPx = (el: Element): number => {
       const inline = (el as HTMLElement).style.borderRadius;
       if (inline) {
         return Number.parseFloat(inline) || 0;
@@ -837,7 +837,7 @@ describe('OTPInput', () => {
         }
       }
       return Number.NaN;
-    }
+    };
 
     it('cell measures height/2 at full and 0 at none, riding the token scale between', () => {
       // the cell's own painted edge — `height={cellSize}` is the `$size` token,

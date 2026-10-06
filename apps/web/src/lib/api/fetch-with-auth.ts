@@ -1,29 +1,4 @@
-/**
- * Helper function to handle fetch requests with authentication
- * This is a shared utility used by all API clients
- */
-export async function fetchWithAuth<T>(
-  url: string,
-  options: RequestInit = {},
-  handleEmptyResponse = false,
-): Promise<T> {
-  const token = localStorage.getItem('auth_token');
-  const headers = getHeaders(options.headers, token);
-
-  const response = await fetch(url, {
-    ...options,
-    credentials: 'include', // Still include for cookie fallback
-    headers,
-  });
-
-  if (!response.ok) {
-    await handleErrorResponse(response);
-  }
-
-  return await handleSuccessResponse<T>(response, handleEmptyResponse);
-}
-
-function getHeaders(optionHeaders: RequestInit['headers'], token: string | null): Record<string, string> {
+const getHeaders = (optionHeaders: RequestInit['headers'], token: string | null): Record<string, string> => {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
@@ -51,9 +26,9 @@ function getHeaders(optionHeaders: RequestInit['headers'], token: string | null)
   }
 
   return headers;
-}
+};
 
-async function handleErrorResponse(response: Response): Promise<never> {
+const handleErrorResponse = async (response: Response): Promise<never> => {
   let errorMessage: string;
   try {
     const errorData = await response.json();
@@ -67,13 +42,36 @@ async function handleErrorResponse(response: Response): Promise<never> {
   }
 
   throw new Error(errorMessage);
-}
+};
 
-async function handleSuccessResponse<T>(response: Response, handleEmptyResponse: boolean): Promise<T> {
+const handleSuccessResponse = async <T>(response: Response, handleEmptyResponse: boolean): Promise<T> => {
   if (handleEmptyResponse) {
     if (response.status === 204 || response.headers.get('content-length') === '0') {
       return null as unknown as T;
     }
   }
   return await response.json();
-}
+}; /**
+ * Helper function to handle fetch requests with authentication
+ * This is a shared utility used by all API clients
+ */
+export const fetchWithAuth = async <T>(
+  url: string,
+  options: RequestInit = {},
+  handleEmptyResponse = false,
+): Promise<T> => {
+  const token = localStorage.getItem('auth_token');
+  const headers = getHeaders(options.headers, token);
+
+  const response = await fetch(url, {
+    ...options,
+    credentials: 'include', // Still include for cookie fallback
+    headers,
+  });
+
+  if (!response.ok) {
+    await handleErrorResponse(response);
+  }
+
+  return await handleSuccessResponse<T>(response, handleEmptyResponse);
+};

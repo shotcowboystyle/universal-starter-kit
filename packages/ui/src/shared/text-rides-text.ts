@@ -16,10 +16,10 @@ import { Children } from 'react';
 export const isBareTextChild = (child: unknown): child is string | number =>
   typeof child === 'string' || typeof child === 'number';
 
-function coalesceBareTextRuns(
+const coalesceBareTextRuns = (
   children: ReturnType<typeof Children.toArray>,
   renderLabel: (label: string, key: string) => ReactNode,
-): ReactNode[] {
+): ReactNode[] => {
   const out: ReactNode[] = [];
   let run: string | undefined;
   let runIndex = 0;
@@ -39,17 +39,17 @@ function coalesceBareTextRuns(
   }
   flushRun();
   return out;
-}
+};
 
 /**
  * Wrap ALL bare string/number children of a View-rendering slot: singleton
  * strings/numbers and runs inside arrays go through `renderLabel` (the slot's
  * Text wrapper); pure-element children return unchanged.
  */
-export function wrapBareTextChildren(
+export const wrapBareTextChildren = (
   children: ReactNode,
   renderLabel: (label: string, key?: string) => ReactNode,
-): ReactNode {
+): ReactNode => {
   if (isBareTextChild(children)) {
     return renderLabel(String(children));
   }
@@ -60,4 +60,4 @@ export function wrapBareTextChildren(
     }
   }
   return children;
-}
+};

@@ -12,11 +12,11 @@ import type { AnyFormApi, SimpleFieldApi } from '../types';
  * Resolve a size token to its recipe height, optionally multiplied by a row count.
  * e.g. getFieldHeight("$4") → 32, getFieldHeight("$4", 3) → 96
  */
-export function getFieldHeight(sizeToken: SizeTokens, rows = 1, touch = isTouchSurface()): number {
+export const getFieldHeight = (sizeToken: SizeTokens, rows = 1, touch = isTouchSurface()): number => {
   return sizeRecipeForToken(String(sizeToken), { touch }).height * rows;
-}
+};
 
-function clampRadius(radiusToken: string | undefined, maxTokenNum: number, fallback: string): string | 0 {
+const clampRadius = (radiusToken: string | undefined, maxTokenNum: number, fallback: string): string | 0 => {
   if (!radiusToken) {
     return fallback;
   }
@@ -28,15 +28,15 @@ function clampRadius(radiusToken: string | undefined, maxTokenNum: number, fallb
     return num > maxTokenNum ? `$${maxTokenNum}` : radiusToken;
   }
   return radiusToken;
-}
+};
 
 /**
  * Clamp border radius token so controls (buttons, inputs, checkbox) don't become
  * fully circular/pill-shaped when knob is "full". Returns token string e.g. "$4".
  */
-export function clampRadiusForControl(radiusToken: string | undefined, maxTokenNum = 6): string | 0 {
+export const clampRadiusForControl = (radiusToken: string | undefined, maxTokenNum = 6): string | 0 => {
   return clampRadius(radiusToken, maxTokenNum, '$4');
-}
+};
 
 /**
  * Clamp border radius for large multi-line components (TextArea, RichTextEditor,
@@ -45,15 +45,15 @@ export function clampRadiusForControl(radiusToken: string | undefined, maxTokenN
  *
  * Max default is $4 which provides subtle rounding without being excessive.
  */
-export function clampRadiusForLargeComponent(radiusToken: string | undefined, maxTokenNum = 4): string | 0 {
+export const clampRadiusForLargeComponent = (radiusToken: string | undefined, maxTokenNum = 4): string | 0 => {
   return clampRadius(radiusToken, maxTokenNum, '$3');
-}
+};
 
 type OtpRadiusStop = keyof typeof borderRadiusMap;
 
 const OTP_RADIUS_STOPS = Object.keys(borderRadiusMap) as OtpRadiusStop[];
 
-function otpRadiusStop(radiusToken: string | undefined): OtpRadiusStop {
+const otpRadiusStop = (radiusToken: string | undefined): OtpRadiusStop => {
   if (radiusToken == null) {
     return 'medium';
   }
@@ -63,7 +63,7 @@ function otpRadiusStop(radiusToken: string | undefined): OtpRadiusStop {
     }
   }
   throw new Error(`getOTPCellRadius: "${radiusToken}" is not a borderRadiusMap token; cannot resolve CIRCULAR-AT-FULL`);
-}
+};
 
 /**
  * OTP cells are CIRCULAR-AT-FULL: ride the token scale,
@@ -71,9 +71,9 @@ function otpRadiusStop(radiusToken: string | undefined): OtpRadiusStop {
  * clamp. Equal-w/h parts; single-line controls are the pill case of the same
  * family (leftover). Thin alias over resolveRadiusClass.
  */
-export function getOTPCellRadius(radiusToken: string | undefined, heightPx: number): number {
+export const getOTPCellRadius = (radiusToken: string | undefined, heightPx: number): number => {
   return resolveRadiusClass('CIRCULAR-AT-FULL', otpRadiusStop(radiusToken), { heightPx });
-}
+};
 
 /**
  * Build elevation props for a wrapper View around HOC-based components.
@@ -83,10 +83,10 @@ export function getOTPCellRadius(radiusToken: string | undefined, heightPx: numb
  * resolveKnobs — scheme-aware tint lives on `inputBackground` /
  * `elevatedSurface`, not here.
  */
-export function getElevationWrapperProps(
+export const getElevationWrapperProps = (
   knobProps: KnobProps,
   elevationRecipe: KnobRecipe<ElevationStateProps>,
-): Record<string, any> {
+): Record<string, any> => {
   const { elevation } = knobProps;
   if (
     !elevation &&
@@ -113,34 +113,42 @@ export function getElevationWrapperProps(
     props.animation = knobProps.transition;
   }
   return props;
-}
+};
 
-export function useFormField(props: { form?: AnyFormApi; id?: string; compact?: boolean; size?: SizeTokens }): {
+export const useFormField = (props: {
+  form?: AnyFormApi;
+  id?: string;
+  compact?: boolean;
+  size?: SizeTokens;
+}): {
   resolvedForm: AnyFormApi | undefined;
   id: string;
-} & ResolvedKnobs {
+} & ResolvedKnobs => {
   const formContext = useFormContext();
   const resolvedForm = (props.form || formContext || undefined) as AnyFormApi | undefined;
   const resolved = useResolvedKnobs({ compact: props.compact, size: props.size });
   const generatedId = useId();
   const id = props.id || generatedId;
   return { resolvedForm, ...resolved, id };
-}
+};
 
-export function getFieldError(field: SimpleFieldApi<any>, propError?: string | boolean): string | boolean | undefined {
+export const getFieldError = (
+  field: SimpleFieldApi<any>,
+  propError?: string | boolean,
+): string | boolean | undefined => {
   const fieldError = field.state.meta.errors.length ? String(field.state.meta.errors[0]) : undefined;
   return propError ?? fieldError;
-}
+};
 
 const defaultIsEmpty = (v: unknown) => v == null || v === '';
 
-export function useResolvedValidators(
+export const useResolvedValidators = (
   required: boolean | undefined,
   validators: Record<string, unknown> | undefined,
   label?: ReactNode,
   name?: string,
   isEmpty: (value: unknown) => boolean = defaultIsEmpty,
-): Record<string, unknown> | undefined {
+): Record<string, unknown> | undefined => {
   const { validateOn, hasSubmitted } = useFormValidate();
   const effective = resolveEffectiveValidateOn(validateOn, hasSubmitted);
 
@@ -161,18 +169,18 @@ export function useResolvedValidators(
     }
     return remapValidatorsForTiming(resolved, effective);
   }, [required, validators, label, name, isEmpty, effective]);
-}
+};
 
-export function mergeFieldHandler(
+export const mergeFieldHandler = (
   field: SimpleFieldApi<any>,
   name: 'handleBlur' | 'handleChange',
   handler?: (...args: any[]) => void,
-): (...args: any[]) => void {
+): ((...args: any[]) => void) => {
   return (...args: any[]) => {
     (field[name] as (...args: any[]) => void)(...args);
     handler?.(...args);
   };
-}
+};
 
 /**
  * State props type for control knob recipes.
@@ -183,13 +191,13 @@ type ControlStateProps = Record<string, any> | undefined;
  * Strip borderRadius from state props. Use for controls that must maintain
  * a fixed shape (e.g., Radio buttons are always circular).
  */
-export function stripRadiusFromStateProps(props: ControlStateProps): ControlStateProps {
+export const stripRadiusFromStateProps = (props: ControlStateProps): ControlStateProps => {
   if (!props || !('borderRadius' in props)) {
     return props;
   }
   const { borderRadius: _, ...rest } = props;
   return Object.keys(rest).length > 0 ? rest : undefined;
-}
+};
 
 /**
  * Radius resolution class. Same vocabulary as theme `RadiusResolutionClass`
@@ -230,7 +238,7 @@ const RADIUS_TOKEN_TO_STOP = Object.fromEntries(
  * for BINARY is h/2: the safe direction, because the class has no
  * intermediate value to fall back to.
  */
-function radiusValueToStop(value: unknown): BorderRadius {
+const radiusValueToStop = (value: unknown): BorderRadius => {
   if (value == null || value === 0) {
     return 'none';
   }
@@ -239,7 +247,7 @@ function radiusValueToStop(value: unknown): BorderRadius {
     return 'none';
   }
   return RADIUS_TOKEN_TO_STOP[key] ?? 'full';
-}
+};
 
 /**
  * BINARY class contract: none is square, every other stop is h/2,
@@ -255,19 +263,19 @@ function radiusValueToStop(value: unknown): BorderRadius {
  * BINARY without its height would resolve at `none` and throw at every other
  * stop. Refusing up front beats working in one state and throwing in the next.
  */
-function resolveBinaryStateRadius(value: unknown, heightPx: number | undefined): number {
+const resolveBinaryStateRadius = (value: unknown, heightPx: number | undefined): number => {
   if (heightPx === undefined || heightPx <= 0) {
     throw new Error(
       "clampRadiusInStateProps: BINARY resolves to 0 or h/2 and needs heightPx — the part's own painted height (shorter edge)",
     );
   }
   return resolveRadiusClass('BINARY', radiusValueToStop(value), { heightPx });
-}
+};
 
-function clampOneStateRadius(
+const clampOneStateRadius = (
   borderRadius: unknown,
   options: { maxTokenNum: number; radiusClass?: StatePropsRadiusClass; heightPx?: number },
-): unknown {
+): unknown => {
   if (options.radiusClass === 'BINARY') {
     return resolveBinaryStateRadius(borderRadius, options.heightPx);
   }
@@ -275,13 +283,13 @@ function clampOneStateRadius(
     typeof borderRadius === 'string' || borderRadius === undefined ? borderRadius : String(borderRadius),
     options.maxTokenNum,
   );
-}
+};
 
-function isClampOptions(
+const isClampOptions = (
   value: number | ClampRadiusInStatePropsOptions | undefined,
-): value is ClampRadiusInStatePropsOptions {
+): value is ClampRadiusInStatePropsOptions => {
   return typeof value === 'object' && value !== null;
-}
+};
 
 /**
  * Clamp borderRadius in a per-state override bag.
@@ -291,10 +299,10 @@ function isClampOptions(
  * token. A hover/press/focus/focusVisible radius cannot turn a thumb or
  * track into a partly-rounded shape.
  */
-export function clampRadiusInStateProps(
+export const clampRadiusInStateProps = (
   props: ControlStateProps,
   maxTokenNumOrOptions: number | ClampRadiusInStatePropsOptions = 6,
-): ControlStateProps {
+): ControlStateProps => {
   if (!props) {
     return props;
   }
@@ -325,4 +333,4 @@ export function clampRadiusInStateProps(
     };
   }
   return next;
-}
+};

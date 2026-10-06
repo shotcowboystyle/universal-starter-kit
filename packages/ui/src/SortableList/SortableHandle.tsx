@@ -30,7 +30,7 @@ export interface SortableHandleProps {
  * live on the row — this control is tabIndex 0 so tables have a target
  * that is not an in-cell editor.
  */
-export function SortableHandle({ label, itemId, dragging, compact, onPointerDown, onKeyDown }: SortableHandleProps) {
+export const SortableHandle = ({ label, itemId, dragging, compact, onPointerDown, onKeyDown }: SortableHandleProps) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs({ compact });
   const well = knobProps.nestedControl.px;
@@ -76,9 +76,9 @@ export function SortableHandle({ label, itemId, dragging, compact, onPointerDown
       />
     </View>
   );
-}
+};
 
-export function SortableHandleWell({ itemId, compact }: { itemId: string; compact?: boolean }) {
+export const SortableHandleWell = ({ itemId, compact }: { itemId: string; compact?: boolean }) => {
   const { knobProps } = useResolvedKnobs({ compact });
   const well = knobProps.nestedControl.px;
   return (
@@ -90,4 +90,4 @@ export function SortableHandleWell({ itemId, compact }: { itemId: string; compac
       {...({ 'data-sortable-well': itemId } as Record<string, unknown>)}
     />
   );
-}
+};

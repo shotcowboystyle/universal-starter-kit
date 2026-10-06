@@ -22,30 +22,32 @@ export const CORNER_SHAPE_SMOOTH_COMPUTED = 'superellipse(2)';
 export const cornerSmoothingCss = '';
 
 /** Native has no CSS.supports corner-shape — measured no-op, not assumed. */
-export function cssSupportsCornerShape(_supports?: { supports?(property: string, value: string): boolean }): boolean {
+export const cssSupportsCornerShape = (_supports?: {
+  supports?(property: string, value: string): boolean;
+}): boolean => {
   return false;
-}
+};
 
-export function readComputedCornerShape(
+export const readComputedCornerShape = (
   _style?: Pick<CSSStyleDeclaration, 'getPropertyValue'> & { cornerShape?: string },
-): string {
+): string => {
   return '';
-}
+};
 
-export function isSmoothComputedCornerShape(_value: string): boolean {
+export const isSmoothComputedCornerShape = (_value: string): boolean => {
   return false;
-}
+};
 
-export function isRoundComputedCornerShape(_value: string): boolean {
+export const isRoundComputedCornerShape = (_value: string): boolean => {
   return true;
-}
+};
 
-export function applyRootCornerSmoothing(_stop?: CornerSmoothing): void {}
+export const applyRootCornerSmoothing = (_stop?: CornerSmoothing): void => {};
 
 /** Web-only stylesheet mount — no-op on native. */
-export function ensureCornerSmoothingStyles(): void {}
+export const ensureCornerSmoothingStyles = (): void => {};
 
 /** Native no-op. Web mounts the squircle stylesheet from ThemeProvider. */
-export function CornerSmoothingStyles(): null {
+export const CornerSmoothingStyles = (): null => {
   return null;
-}
+};

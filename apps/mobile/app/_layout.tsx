@@ -16,7 +16,7 @@ import { applyThemePreference, loadThemePreference } from '@/lib/theme';
 
 export { ErrorBoundary } from 'expo-router';
 
-function RootLayoutNav() {
+const RootLayoutNav = () => {
   const segments = useSegments();
   const router = useRouter();
   const { session, isLoading } = useAuth();
@@ -86,9 +86,9 @@ function RootLayoutNav() {
       <StatusBar style="light" />
     </ThemeProvider>
   );
-}
+};
 
-export default function RootLayout() {
+const RootLayout = () => {
   const colorScheme = useColorScheme();
 
   return (
@@ -102,4 +102,6 @@ export default function RootLayout() {
       </TamaguiProvider>
     </GestureHandlerRootView>
   );
-}
+};
+
+export default RootLayout;

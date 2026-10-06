@@ -26,7 +26,7 @@ export interface UseDragScrollReturn {
  * Hook to enable drag-to-scroll behavior on a scrollable container.
  * Allows users to click and drag to scroll the content.
  */
-export function useDragScroll(options: UseDragScrollOptions = {}): UseDragScrollReturn {
+export const useDragScroll = (options: UseDragScrollOptions = {}): UseDragScrollReturn => {
   const { direction = 'vertical', sensitivity = 1, onDragStart, onDragEnd } = options;
 
   const scrollRef = useRef<HTMLElement | null>(null);
@@ -114,4 +114,4 @@ export function useDragScroll(options: UseDragScrollOptions = {}): UseDragScroll
       },
     },
   };
-}
+};

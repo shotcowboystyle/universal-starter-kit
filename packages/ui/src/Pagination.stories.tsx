@@ -43,7 +43,7 @@ type Story = StoryObj<typeof Pagination>;
 // Rest on a middle step: at index 0 the prev arrow is a bare-disabled Button
 // at rest, which trips the `[theme]` guardrail and demos
 // nothing — both arrows live shows the full control.
-function ControlledPagination(props: Omit<PaginationProps, 'activeIndex' | 'onChange'>) {
+const ControlledPagination = (props: Omit<PaginationProps, 'activeIndex' | 'onChange'>) => {
   const [activeIndex, setActiveIndex] = useState(1);
   return (
     <Pagination
@@ -55,7 +55,7 @@ function ControlledPagination(props: Omit<PaginationProps, 'activeIndex' | 'onCh
       }}
     />
   );
-}
+};
 
 export const Default: Story = {
   name: 'Main',
@@ -146,7 +146,7 @@ export const Disabled: Story = {
 
 // ── Numbered (table & data idiom) ──────────────────────────────
 
-function ControlledNumbered(props: Omit<PaginationProps, 'page' | 'onPageChange' | 'variant'>) {
+const ControlledNumbered = (props: Omit<PaginationProps, 'page' | 'onPageChange' | 'variant'>) => {
   // Middle page: page 1 rests with prev/first bare-disabled.
   const [page, setPage] = useState(2);
   return (
@@ -160,7 +160,7 @@ function ControlledNumbered(props: Omit<PaginationProps, 'page' | 'onPageChange'
       }}
     />
   );
-}
+};
 
 export const NumberedFewPages: Story = {
   render: () => <ControlledNumbered total={5} />,

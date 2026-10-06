@@ -7,7 +7,7 @@ import { isWeb, Paragraph, SizableText, YStack } from 'tamagui';
 import { SheetModal } from './SheetModal';
 import { SheetFrame } from './surfaces';
 
-function SheetHarness({ long = false, startOpen = true }: { long?: boolean; startOpen?: boolean }) {
+const SheetHarness = ({ long = false, startOpen = true }: { long?: boolean; startOpen?: boolean }) => {
   const [open, setOpen] = useState(startOpen);
   // Tamagui Sheet has no key handling of its own (Dialog dismisses via
   // Dismissable; Sheet does not), so Escape must be wired here for the
@@ -55,7 +55,7 @@ function SheetHarness({ long = false, startOpen = true }: { long?: boolean; star
       </SheetModal>
     </YStack>
   );
-}
+};
 
 const meta: Meta<typeof SheetFrame> = {
   title: 'Components/SheetFrame',

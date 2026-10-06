@@ -7,7 +7,7 @@ import React from 'react';
 
 import UserAuthForm from './UserAuthForm';
 
-export default function SignInViewPage() {
+const SignInViewPage = () => {
   const t = useTranslations('login');
   return (
     <XStack
@@ -69,4 +69,6 @@ export default function SignInViewPage() {
       </YStack>
     </XStack>
   );
-}
+};
+
+export default SignInViewPage;

@@ -13,7 +13,7 @@ import { useProjects } from '@/hooks/use-projects';
 
 const STATUS_FILTERS: (TaskStatus | null)[] = [null, TaskStatus.TODO, TaskStatus.IN_PROGRESS, TaskStatus.DONE];
 
-export default function BoardDetailScreen() {
+const BoardDetailScreen = () => {
   const { boardId } = useLocalSearchParams<{ boardId: string }>();
   const router = useRouter();
   const theme = useTheme();
@@ -206,4 +206,6 @@ export default function BoardDetailScreen() {
       )}
     </View>
   );
-}
+};
+
+export default BoardDetailScreen;

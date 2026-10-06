@@ -67,7 +67,7 @@ const tamaguiConfig = (() => {
   }
 })();
 
-function createDefaultQueryClient(): QueryClient {
+const createDefaultQueryClient = (): QueryClient => {
   return new QueryClient({
     defaultOptions: {
       queries: {
@@ -79,9 +79,9 @@ function createDefaultQueryClient(): QueryClient {
       },
     },
   });
-}
+};
 
-function enhanceRenderResult(result: RenderResult): EnhancedRenderResult {
+const enhanceRenderResult = (result: RenderResult): EnhancedRenderResult => {
   const { container } = result;
   return {
     ...result,
@@ -237,7 +237,7 @@ function enhanceRenderResult(result: RenderResult): EnhancedRenderResult {
         (el) => (el.className?.includes('error') || el.className?.includes('Error')) && el.textContent,
       ),
   };
-}
+};
 
 // ─── Provider Components ─────────────────────────────────────────────────────
 
@@ -246,7 +246,7 @@ function enhanceRenderResult(result: RenderResult): EnhancedRenderResult {
  * Wraps children in TamaguiProvider + YStack.
  * Useful when you need to pass a wrapper directly to `render()`.
  */
-export function TestProviders({ children }: { children: ReactNode }) {
+export const TestProviders = ({ children }: { children: ReactNode }) => {
   return (
     <TamaguiProvider
       config={tamaguiConfig}
@@ -259,7 +259,7 @@ export function TestProviders({ children }: { children: ReactNode }) {
       </YStack>
     </TamaguiProvider>
   );
-}
+};
 
 // ─── Render Functions ────────────────────────────────────────────────────────
 
@@ -272,7 +272,10 @@ export function TestProviders({ children }: { children: ReactNode }) {
  * Returns an enhanced render result with extra DOM query helpers for
  * React Native Web / Tamagui components (getInput, getButton, getSubmitButton, etc.).
  */
-export function renderWithProviders(ui: ReactElement, options: RenderWithProvidersOptions = {}): EnhancedRenderResult {
+export const renderWithProviders = (
+  ui: ReactElement,
+  options: RenderWithProvidersOptions = {},
+): EnhancedRenderResult => {
   const {
     tamagui = true,
     queryClient = true,
@@ -282,7 +285,7 @@ export function renderWithProviders(ui: ReactElement, options: RenderWithProvide
     ...renderOptions
   } = options;
 
-  function Wrapper({ children }: { children: ReactNode }) {
+  const Wrapper = ({ children }: { children: ReactNode }) => {
     let content = children;
 
     // QueryClient provider (innermost standard provider)
@@ -308,7 +311,7 @@ export function renderWithProviders(ui: ReactElement, options: RenderWithProvide
     }
 
     return <>{content}</>;
-  }
+  };
 
   const result = render(ui, {
     wrapper: Wrapper,
@@ -316,12 +319,12 @@ export function renderWithProviders(ui: ReactElement, options: RenderWithProvide
   });
 
   return enhanceRenderResult(result);
-}
+};
 
 // ─── DOM Helpers ─────────────────────────────────────────────────────────────
 
 /** Find text within a container element */
-export function findTextInContainer(container: HTMLElement, text: string): HTMLElement | null {
+export const findTextInContainer = (container: HTMLElement, text: string): HTMLElement | null => {
   const elements = container.querySelectorAll('*');
   for (let i = 0; i < elements.length; i++) {
     const element = elements[i];
@@ -330,10 +333,10 @@ export function findTextInContainer(container: HTMLElement, text: string): HTMLE
     }
   }
   return null;
-}
+};
 
 /** Wait for an element to appear within a timeout */
-export async function waitForElement(getFn: () => HTMLElement | null, timeout = 3000): Promise<HTMLElement> {
+export const waitForElement = async (getFn: () => HTMLElement | null, timeout = 3000): Promise<HTMLElement> => {
   const startTime = Date.now();
   while (Date.now() - startTime < timeout) {
     const element = getFn();
@@ -343,7 +346,7 @@ export async function waitForElement(getFn: () => HTMLElement | null, timeout = 
     await new Promise((resolve) => setTimeout(resolve, 50));
   }
   throw new Error('Element not found within timeout');
-}
+};
 
 /**
  * Give jsdom, which has no `<dialog>.show()`, the one Chromium and WebKit
@@ -352,7 +355,7 @@ export async function waitForElement(getFn: () => HTMLElement | null, timeout = 
  * instead, so a dialog whose first focusable is a frame opens on different
  * elements per browser. Returns the restore; call it in `afterEach`.
  */
-export function modelFirstFocusableShow(): () => void {
+export const modelFirstFocusableShow = (): (() => void) => {
   const proto = HTMLDialogElement.prototype as { show?: (this: HTMLDialogElement) => void };
   const original = Object.getOwnPropertyDescriptor(proto, 'show');
   proto.show = function show(this: HTMLDialogElement) {
@@ -371,7 +374,7 @@ export function modelFirstFocusableShow(): () => void {
       delete proto.show;
     }
   };
-}
+};
 
 // ─── Fixture Factories ───────────────────────────────────────────────────────
 
@@ -391,14 +394,14 @@ export function modelFirstFocusableShow(): () => void {
  * // Returns: { name: "Task-xxxx", subject: "Test task", status: "Open" }
  * ```
  */
-export function createFixture<T extends Record<string, unknown>>(doctype: string, overrides?: Partial<T>): T {
+export const createFixture = <T extends Record<string, unknown>>(doctype: string, overrides?: Partial<T>): T => {
   const suffix = Math.random().toString(36).substring(2, 6);
   const base = { name: `${doctype}-${suffix}` } as unknown as T;
   if (overrides) {
     return { ...base, ...overrides };
   }
   return base;
-}
+};
 
 // ─── Re-exports ──────────────────────────────────────────────────────────────
 

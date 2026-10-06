@@ -23,7 +23,7 @@ const entries: TimelineEntry[] = [
   },
 ];
 
-function entryRowRadiusClass(): string | undefined {
+const entryRowRadiusClass = (): string | undefined => {
   const author = screen.getByText('Alice');
   let el: HTMLElement | null = author.parentElement;
   for (let i = 0; i < 12 && el; i++) {
@@ -36,7 +36,7 @@ function entryRowRadiusClass(): string | undefined {
     el = el.parentElement;
   }
   return undefined;
-}
+};
 
 describe('Timeline avatar identity shape', () => {
   // Entry and composer avatars both keep their identity circle at

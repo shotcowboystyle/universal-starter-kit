@@ -4,7 +4,7 @@ import { cacheLife } from 'next/cache';
 
 import { APP_NAME } from '@/constants/ui';
 
-function interpolateAppName(obj: Record<string, unknown>): Record<string, unknown> {
+const interpolateAppName = (obj: Record<string, unknown>): Record<string, unknown> => {
   const result: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(obj)) {
     if (typeof value === 'string') {
@@ -16,12 +16,12 @@ function interpolateAppName(obj: Record<string, unknown>): Record<string, unknow
     }
   }
   return result;
-}
+};
 
-export async function getCachedMessages(locale: Locale) {
+export const getCachedMessages = async (locale: Locale) => {
   'use cache';
   cacheLife('days');
 
   const localeMessages = messages[locale] ?? messages.en;
   return interpolateAppName(localeMessages as unknown as Record<string, unknown>);
-}
+};

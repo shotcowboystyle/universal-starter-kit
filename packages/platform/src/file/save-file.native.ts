@@ -7,7 +7,7 @@ import type { FileSaveOptions, FileSaveResult } from './types';
 
 let busy = false;
 
-export async function saveFile(options: FileSaveOptions): Promise<FileSaveResult> {
+export const saveFile = async (options: FileSaveOptions): Promise<FileSaveResult> => {
   const input = prepareFileSave(options);
   if (!platform.isIos && !platform.isAndroid) {
     throw new FileSaveError('unavailable', 'Directory file saving is unavailable on this platform.');
@@ -78,4 +78,4 @@ export async function saveFile(options: FileSaveOptions): Promise<FileSaveResult
   } finally {
     busy = false;
   }
-}
+};

@@ -36,7 +36,7 @@ export interface I18nConfigOptions {
  *   frappeBackend: createFrappeBackend(),
  * }));
  */
-export function createI18nConfig(options: I18nConfigOptions): InitOptions {
+export const createI18nConfig = (options: I18nConfigOptions): InitOptions => {
   const config: InitOptions = {
     // JSON compatibility for React Native
     compatibilityJSON: 'v4',
@@ -74,4 +74,4 @@ export function createI18nConfig(options: I18nConfigOptions): InitOptions {
   }
 
   return config;
-}
+};

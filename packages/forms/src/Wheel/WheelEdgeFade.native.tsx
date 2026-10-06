@@ -2,7 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, View as RNView } from 'react-native';
 import { useTheme } from 'tamagui';
 
-function toTransparent(color: string): string {
+const toTransparent = (color: string): string => {
   const fnMatch = /^(rgb|hsl)a?\(([^)]+)\)$/i.exec(color);
   if (fnMatch) {
     const parts = fnMatch[2].split(',').map((part) => part.trim());
@@ -24,13 +24,13 @@ function toTransparent(color: string): string {
     return `rgba(${r}, ${g}, ${b}, 0)`;
   }
   return 'transparent';
-}
+};
 
 /**
  * Cylinder fade toward the edges. Overlay (not row opacity) so inactive
  * numerals stay on the $color11 ramp (Wheel contrast contract).
  */
-export function WheelEdgeFade({ height }: { height: number }) {
+export const WheelEdgeFade = ({ height }: { height: number }) => {
   const theme = useTheme();
   const background = theme.background?.val ?? '#ffffff';
   const transparent = toTransparent(background);
@@ -61,7 +61,7 @@ export function WheelEdgeFade({ height }: { height: number }) {
       </RNView>
     </>
   );
-}
+};
 
 const styles = StyleSheet.create({
   band: {

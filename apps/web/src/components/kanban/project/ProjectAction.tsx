@@ -22,7 +22,7 @@ interface ProjectActionsProps {
 
 type ProjectFormData = z.infer<typeof projectSchema>;
 
-export function ProjectActions({ id, title, description, ownerId }: ProjectActionsProps) {
+export const ProjectActions = ({ id, title, description, ownerId }: ProjectActionsProps) => {
   // Check if current user is the project owner
   const { userId } = useWorkspaceStore();
   const isOwner = userId === ownerId;
@@ -36,7 +36,7 @@ export function ProjectActions({ id, title, description, ownerId }: ProjectActio
   const t = useTranslations('kanban.project');
   const tKanban = useTranslations('kanban');
 
-  async function onSubmit(values: ProjectFormData) {
+  const onSubmit = async (values: ProjectFormData) => {
     if (!userId) {
       toast.error(t('userNotAuthenticated'));
       return;
@@ -63,16 +63,16 @@ export function ProjectActions({ id, title, description, ownerId }: ProjectActio
     } catch (error) {
       toast.error(t('updateFailed', { error: (error as Error).message }));
     }
-  }
+  };
 
-  async function onConfirmDelete() {
+  const onConfirmDelete = async () => {
     try {
       await removeProject(id, async (projectId) => await deleteProjectMutation.mutateAsync(projectId));
       toast.success(t('deleteSuccess', { title }));
     } catch (error) {
       toast.error(t('deleteFailed', { error: (error as Error).message }));
     }
-  }
+  };
 
   return (
     <>
@@ -155,4 +155,4 @@ export function ProjectActions({ id, title, description, ownerId }: ProjectActio
       />
     </>
   );
-}
+};

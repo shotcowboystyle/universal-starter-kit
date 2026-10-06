@@ -45,7 +45,7 @@ const stops = [
   ['large', '$5'],
 ] as const satisfies readonly (readonly [Size, string])[];
 
-function atom(el: HTMLElement, prop: string) {
+const atom = (el: HTMLElement, prop: string) => {
   for (const cls of String(el.className || '').split(/\s+/)) {
     if (!cls.startsWith(`_${prop}-`)) {
       continue;
@@ -56,9 +56,9 @@ function atom(el: HTMLElement, prop: string) {
     }
   }
   return undefined;
-}
+};
 
-function px(value: string | undefined): number | undefined {
+const px = (value: string | undefined): number | undefined => {
   if (value === undefined) {
     return undefined;
   }
@@ -69,9 +69,9 @@ function px(value: string | undefined): number | undefined {
   const [, scale, step] = /^t-(size|radius)-(\d+)$/.exec(value) ?? [];
   const tokens = getTokens() as unknown as Record<string, Record<string, { val: unknown }>>;
   return Number.parseFloat(String(tokens[scale ?? '']?.[`$${step}`]?.val));
-}
+};
 
-function box(el: HTMLElement | null, name: string): Box {
+const box = (el: HTMLElement | null, name: string): Box => {
   if (!el) {
     throw new Error(`${name} frame not rendered`);
   }
@@ -80,9 +80,9 @@ function box(el: HTMLElement | null, name: string): Box {
     throw new Error(`${name} paints no height`);
   }
   return { height, radius: px(atom(el, 'btlr')) ?? 0 };
-}
+};
 
-function measure(ui: ReactElement): Row {
+const measure = (ui: ReactElement): Row => {
   const { container } = renderWithProviders(ui);
   const frame = (selector: string) => container.querySelector<HTMLElement>(selector);
   return {
@@ -91,10 +91,10 @@ function measure(ui: ReactElement): Row {
     'Select trigger': box(frame('[data-testid="select-trigger"]'), 'Select trigger'),
     ListItem: box(frame('[data-testid="l1-list-item"]'), 'ListItem'),
   };
-}
+};
 
 /** The mpo size channel: the size knob, which every house control reads. */
-function atKnob(knob: Size, token: string) {
+const atKnob = (knob: Size, token: string) => {
   return measure(
     <Preset overrides={{ size: knob }}>
       <XStack gap="$2">
@@ -112,10 +112,10 @@ function atKnob(knob: Size, token: string) {
       </XStack>
     </Preset>,
   );
-}
+};
 
 /** The same token handed to each component directly. */
-function atSizeProp(token: '$3' | '$4' | '$5') {
+const atSizeProp = (token: '$3' | '$4' | '$5') => {
   return measure(
     <XStack gap="$2">
       <Button size={token}>Save</Button>
@@ -135,20 +135,20 @@ function atSizeProp(token: '$3' | '$4' | '$5') {
       />
     </XStack>,
   );
-}
+};
 
-function heights(row: Row) {
+const heights = (row: Row) => {
   return Object.fromEntries(Object.entries(row).map(([name, b]) => [name, b.height]));
-}
+};
 
-function radii(row: Row, names: (keyof Row)[]) {
+const radii = (row: Row, names: (keyof Row)[]) => {
   return Object.fromEntries(names.map((name) => [name, row[name].radius]));
-}
+};
 
-function agreed(values: Record<string, number>) {
+const agreed = (values: Record<string, number>) => {
   const first = Object.values(values)[0];
   return Object.fromEntries(Object.keys(values).map((name) => [name, first]));
-}
+};
 
 const controls: (keyof Row)[] = ['Button', 'Input', 'Select trigger'];
 

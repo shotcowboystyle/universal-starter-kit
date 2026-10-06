@@ -33,7 +33,7 @@ const STATUS_COLOR: Record<TaskStatus, ChipColor> = {
   DONE: 'green',
 };
 
-function getLastField(task: Task): string {
+const getLastField = (task: Task): string => {
   const visibleFields = [];
   if (task.creator) {
     visibleFields.push('creator');
@@ -52,9 +52,9 @@ function getLastField(task: Task): string {
   }
 
   return visibleFields.at(-1) ?? '';
-}
+};
 
-function InfoRow({ divider, children }: { divider: boolean; children: ReactNode }) {
+const InfoRow = ({ divider, children }: { divider: boolean; children: ReactNode }) => {
   return (
     <XStack
       alignItems="flex-start"
@@ -66,9 +66,9 @@ function InfoRow({ divider, children }: { divider: boolean; children: ReactNode 
       {children}
     </XStack>
   );
-}
+};
 
-export function TaskCard({ task, isOverlay = false, onUpdate, isDragEnabled = false }: TaskCardProps) {
+export const TaskCard = ({ task, isOverlay = false, onUpdate, isDragEnabled = false }: TaskCardProps) => {
   const t = useTranslations('kanban.task');
 
   const { setNodeRef, attributes, listeners, transform, transition, isDragging } = useSortable({
@@ -231,6 +231,6 @@ export function TaskCard({ task, isOverlay = false, onUpdate, isDragEnabled = fa
       </Card>
     </div>
   );
-}
+};
 
 export default TaskCard;

@@ -11,9 +11,9 @@ import { Spinner } from './index';
 
 afterEach(cleanup);
 
-function status(container: HTMLElement): HTMLElement {
+const status = (container: HTMLElement): HTMLElement => {
   return container.querySelector("[role='status']") as HTMLElement;
-}
+};
 
 describe('Spinner', () => {
   it('announces as a polite status region and is not a progressbar', () => {

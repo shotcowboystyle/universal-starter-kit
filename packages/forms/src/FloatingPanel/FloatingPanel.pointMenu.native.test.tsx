@@ -29,7 +29,7 @@ afterEach(() => {
   screen.height = 768;
 });
 
-function ContextPanel() {
+const ContextPanel = () => {
   const [open, setOpen] = useState(false);
   return (
     <FloatingPanel
@@ -41,26 +41,26 @@ function ContextPanel() {
       <Text>Copy</Text>
     </FloatingPanel>
   );
-}
+};
 
 /** A finger held on the target past the 500ms long-press delay. */
-function longPress(target: Element, pageX: number, pageY: number) {
+const longPress = (target: Element, pageX: number, pageY: number) => {
   const down = new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 });
   Object.defineProperties(down, { pageX: { value: pageX }, pageY: { value: pageY } });
   act(() => {
     target.dispatchEvent(down);
     vi.advanceTimersByTime(600);
   });
-}
+};
 
 /** RN-web parks onLayout on the node for a ResizeObserver happy-dom never fires. */
-function layout(node: Element, width: number, height: number) {
+const layout = (node: Element, width: number, height: number) => {
   const onLayout = (node as unknown as { __reactLayoutHandler?: (event: unknown) => void }).__reactLayoutHandler;
   expect(onLayout).toBeTypeOf('function');
   act(() => {
     onLayout?.({ nativeEvent: { layout: { x: 0, y: 0, width, height } } });
   });
-}
+};
 
 const pointPanel = () => document.querySelector<HTMLElement>('[data-testid="floating-panel-point"]');
 const sheet = () => document.querySelector('[data-testid="floating-panel-sheet"]');

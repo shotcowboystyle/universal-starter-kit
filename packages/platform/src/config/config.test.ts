@@ -3,13 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Config } from './config';
 import { bakedConfigEnvKey, runtimePublicConfigKey } from './runtime-config';
 
-function setRuntimePayload(payload: Record<string, string>) {
+const setRuntimePayload = (payload: Record<string, string>) => {
   (globalThis as unknown as Record<string, unknown>)[runtimePublicConfigKey] = payload;
-}
+};
 
-function clearRuntimePayload() {
+const clearRuntimePayload = () => {
   delete (globalThis as unknown as Record<string, unknown>)[runtimePublicConfigKey];
-}
+};
 
 describe('Config', () => {
   beforeEach(() => {

@@ -1,7 +1,7 @@
 import axios from 'axios';
 import pg from 'pg';
 
-export async function waitForFrappe(interval: number) {
+export const waitForFrappe = async (interval: number) => {
   try {
     const res = await axios.get(`${process.env.BASE_URL || 'http://frappe.localhost'}/api/method/ping`);
     if ((res?.status || 500) < 300) {
@@ -10,9 +10,9 @@ export async function waitForFrappe(interval: number) {
   } catch {}
   await new Promise((resolve) => setTimeout(resolve, interval));
   return await waitForFrappe(interval);
-}
+};
 
-export async function waitForPostgres(interval: number) {
+export const waitForPostgres = async (interval: number) => {
   const client = new pg.Client({
     database: process.env.POSTGRES_DATABASE || 'postgres',
     host: process.env.POSTGRES_HOSTNAME || 'localhost',
@@ -32,9 +32,9 @@ export async function waitForPostgres(interval: number) {
   } finally {
     await client.end();
   }
-}
+};
 
-export async function waitForMariaDB(interval: number) {
+export const waitForMariaDB = async (interval: number) => {
   const mysql = require('mysql2/promise');
   const connection = await mysql.createConnection({
     host: process.env.MARIADB_HOSTNAME || 'localhost',
@@ -54,9 +54,9 @@ export async function waitForMariaDB(interval: number) {
   } finally {
     await connection.end();
   }
-}
+};
 
-export async function waitForKeycloak(interval: number) {
+export const waitForKeycloak = async (interval: number) => {
   const baseUrl = process.env.BASE_URL || 'http://localhost:8000';
   try {
     const res = await axios.get(`${baseUrl}/auth/realms/master/.well-known/openid-configuration`);
@@ -66,9 +66,9 @@ export async function waitForKeycloak(interval: number) {
   } catch {}
   await new Promise((resolve) => setTimeout(resolve, interval));
   return await waitForKeycloak(interval);
-}
+};
 
-export function formatServiceList(services: readonly string[]): string {
+export const formatServiceList = (services: readonly string[]): string => {
   if (services.length === 1) {
     return services[0];
   }
@@ -76,7 +76,7 @@ export function formatServiceList(services: readonly string[]): string {
     return `${services[0]} and ${services[1]}`;
   }
   return `${services.slice(0, -1).join(', ')} and ${services[services.length - 1]}`;
-}
+};
 
 export const waitServices = ['frappe', 'postgres', 'mariadb', 'keycloak'] as const;
 

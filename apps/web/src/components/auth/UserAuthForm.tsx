@@ -11,7 +11,7 @@ import { useAuthForm } from '@/hooks/use-auth';
 
 const emailSchema = z.email({ message: 'Invalid email address' });
 
-export default function UserAuthForm() {
+const UserAuthForm = () => {
   const { handleSubmit, isLoading, error, isNavigating } = useAuthForm();
   const t = useTranslations('login');
   const busy = isLoading || isNavigating;
@@ -57,4 +57,6 @@ export default function UserAuthForm() {
       </Button>
     </Form>
   );
-}
+};
+
+export default UserAuthForm;

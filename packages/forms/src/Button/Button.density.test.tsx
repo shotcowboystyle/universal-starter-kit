@@ -23,7 +23,7 @@ afterEach(cleanup);
 const sizes = ['$2', '$3', '$4'] as const;
 
 /** Last `_pl-Npx` / `_pr-Npx` class wins (paddingHorizontal expands to both). */
-function paddingPxFromClass(el: HTMLElement): number | null {
+const paddingPxFromClass = (el: HTMLElement): number | null => {
   let found: number | null = null;
   for (const c of String(el.className || '').split(/\s+/)) {
     const m = /^_p[lr]-(\d+)px$/.exec(c);
@@ -32,9 +32,9 @@ function paddingPxFromClass(el: HTMLElement): number | null {
     }
   }
   return found;
-}
+};
 
-function gapPxFromClass(el: HTMLElement): number | null {
+const gapPxFromClass = (el: HTMLElement): number | null => {
   for (const c of String(el.className || '').split(/\s+/)) {
     const m = /^_gap-(\d+)px$/.exec(c);
     if (m) {
@@ -42,9 +42,9 @@ function gapPxFromClass(el: HTMLElement): number | null {
     }
   }
   return null;
-}
+};
 
-function renderProp(size: (typeof sizes)[number]) {
+const renderProp = (size: (typeof sizes)[number]) => {
   renderWithProviders(
     <Button
       compact
@@ -54,9 +54,9 @@ function renderProp(size: (typeof sizes)[number]) {
     </Button>,
   );
   return screen.getByRole('button');
-}
+};
 
-function renderKnob(size: (typeof sizes)[number]) {
+const renderKnob = (size: (typeof sizes)[number]) => {
   renderWithProviders(
     <Preset overrides={{ density: 'compact' }}>
       <Button
@@ -67,9 +67,9 @@ function renderKnob(size: (typeof sizes)[number]) {
     </Preset>,
   );
   return screen.getByRole('button');
-}
+};
 
-function renderComfortable(size: (typeof sizes)[number]) {
+const renderComfortable = (size: (typeof sizes)[number]) => {
   renderWithProviders(
     <Button
       size={size}
@@ -78,7 +78,7 @@ function renderComfortable(size: (typeof sizes)[number]) {
     </Button>,
   );
   return screen.getByRole('button');
-}
+};
 
 describe('Button density knob = compact PROP', () => {
   it('compact PROP and density:compact knob land the SAME padX', () => {

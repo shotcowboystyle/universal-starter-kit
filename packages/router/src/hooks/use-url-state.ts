@@ -22,7 +22,7 @@ interface OptionalRouter {
   params?: SearchParams;
 }
 
-function useOptionalRouter(): OptionalRouter {
+const useOptionalRouter = (): OptionalRouter => {
   if (!hasRouter) {
     return {};
   }
@@ -31,16 +31,16 @@ function useOptionalRouter(): OptionalRouter {
   } catch {
     return {};
   }
-}
+};
 
 /**
  * Cross-platform hook for managing URL search parameters
  * Works with both React Router (web) and React Navigation (native)
  */
-export function useSearchParams(): [
+export const useSearchParams = (): [
   SearchParams,
   (params: SearchParams | ((prev: SearchParams) => SearchParams), options?: SetSearchParamsOptions) => void,
-] {
+] => {
   const [localParams, setLocalParams] = useState<SearchParams>({});
   const { router, params } = useOptionalRouter();
   const currentParams = params ?? localParams;
@@ -103,20 +103,20 @@ export function useSearchParams(): [
   );
 
   return [searchParams, setSearchParams];
-}
+};
 
 /**
  * Hook for syncing form state with URL parameters
  * Provides automatic serialization/deserialization and debouncing
  */
-export function useUrlState<T extends Record<string, any>>(
+export const useUrlState = <T extends Record<string, any>>(
   defaultValues: T,
   options: {
     debounceMs?: number;
     serialize?: (value: T) => SearchParams;
     deserialize?: (params: SearchParams) => T;
   } = {},
-): [T, (newState: Partial<T> | ((prev: T) => Partial<T>)) => void] {
+): [T, (newState: Partial<T> | ((prev: T) => Partial<T>)) => void] => {
   const {
     debounceMs = 500,
     serialize = (value) => {
@@ -188,12 +188,12 @@ export function useUrlState<T extends Record<string, any>>(
   );
 
   return [currentState, setState];
-}
+};
 
 /**
  * Hook for creating shareable URLs with current state
  */
-export function useShareableUrl(): string {
+export const useShareableUrl = (): string => {
   const params = useOptionalRouter().params ?? emptyParams;
 
   const shareableUrl = useMemo(() => {
@@ -220,17 +220,17 @@ export function useShareableUrl(): string {
   }, [params]);
 
   return shareableUrl;
-}
+};
 
 /**
  * Hook for parsing URL parameters with type safety
  */
-export function useTypedSearchParams<T extends Record<string, any>>(schema: {
+export const useTypedSearchParams = <T extends Record<string, any>>(schema: {
   [K in keyof T]: {
     default: T[K];
     parse?: (value: string | string[] | undefined) => T[K];
   };
-}): T {
+}): T => {
   const params = useOptionalRouter().params ?? emptyParams;
 
   const typedParams = useMemo(() => {
@@ -252,4 +252,4 @@ export function useTypedSearchParams<T extends Record<string, any>>(schema: {
   }, [params, schema]);
 
   return typedParams;
-}
+};

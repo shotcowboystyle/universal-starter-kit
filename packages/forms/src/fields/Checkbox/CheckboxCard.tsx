@@ -65,23 +65,25 @@ const helperSizeMap: Record<string, FontSizeTokens> = {
 };
 
 /** T-HELPER tier for the description, one step under the field size. */
-export function getCardDescriptionSize(size?: SizeTokens): FontSizeTokens {
+export const getCardDescriptionSize = (size?: SizeTokens): FontSizeTokens => {
   if (!size) {
     return '$2';
   }
   return helperSizeMap[String(size)] ?? '$2';
-}
+};
 
 /**
  * Compact card metrics from the space knob (~$3/$3.5 vertical) — deliberately
  * tighter than `panelPadding`, which is panel-scale and reads as dead space
  * around a single row of text.
  */
-export function getCheckboxCardLayout(space: string): {
+export const getCheckboxCardLayout = (
+  space: string,
+): {
   paddingVertical: string;
   paddingHorizontal: string;
   gap: string;
-} {
+} => {
   const map: Record<string, { paddingVertical: string; paddingHorizontal: string; gap: string }> = {
     none: { paddingVertical: '$2.5', paddingHorizontal: '$3', gap: '$2.5' },
     small: { paddingVertical: '$3', paddingHorizontal: '$3.5', gap: '$3' },
@@ -89,4 +91,4 @@ export function getCheckboxCardLayout(space: string): {
     large: { paddingVertical: '$3.5', paddingHorizontal: '$4', gap: '$3.5' },
   };
   return map[space] ?? map.medium;
-}
+};

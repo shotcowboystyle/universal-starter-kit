@@ -14,7 +14,7 @@ export default {
   },
 };
 
-function Probe() {
+const Probe = () => {
   const [themeClass, setThemeClass] = useState('pending');
   const [fontStyles, setFontStyles] = useState('pending');
   useEffect(() => {
@@ -37,7 +37,7 @@ function Probe() {
       <SizableText>FontKnobStyles: {fontStyles}</SizableText>
     </YStack>
   );
-}
+};
 
 export const main = {
   name: 'Main',

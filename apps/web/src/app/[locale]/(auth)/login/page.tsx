@@ -7,7 +7,7 @@ interface Props {
   params: Promise<{ locale: string }>;
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export const generateMetadata = async ({ params }: Props): Promise<Metadata> => {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: 'login' });
 
@@ -15,12 +15,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: t('title'),
     description: t('description'),
   };
-}
+};
 
 // This page is statically generated at build time
 // MIGRATED from: export const dynamic = 'force-static'
 // -> Add "use cache" to opt into caching (dynamic is now the default)
-export default async function LoginPage() {
+const LoginPage = async () => {
   'use cache';
   return <SignInView />;
-}
+};
+
+export default LoginPage;

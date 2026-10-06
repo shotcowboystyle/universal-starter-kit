@@ -45,7 +45,7 @@ const LIFT_SHADOW = {
   shadowRadius: 20,
 } as const;
 
-export function SortableList<T>({
+export const SortableList = <T,>({
   items,
   getId,
   getLabel,
@@ -59,7 +59,7 @@ export function SortableList<T>({
   emptyMessage: emptyMessageProp,
   'aria-label': ariaLabel,
   ...stackProps
-}: SortableListProps<T>) {
+}: SortableListProps<T>) => {
   const { t } = useTranslation();
   const emptyMessage = emptyMessageProp ?? t('No rows yet');
   const { knobProps } = useResolvedKnobs({ compact });
@@ -241,4 +241,4 @@ export function SortableList<T>({
       ) : null}
     </YStack>
   );
-}
+};

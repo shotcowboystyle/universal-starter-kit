@@ -45,7 +45,7 @@ export interface LineChartProps extends ChartDatumEvents, Omit<YStackProps, 'chi
  * Single-series line chart over category points: d3 point/linear scales,
  * knob-driven chrome, palette identity stroke, 44px point hit targets.
  */
-export function LineChart({
+export const LineChart = ({
   data,
   height = 200,
   width,
@@ -67,7 +67,7 @@ export function LineChart({
   onDatumHoverIn,
   onDatumHoverOut,
   ...stackProps
-}: LineChartProps) {
+}: LineChartProps) => {
   const { t } = useTranslation();
   const { palette, labelFontSize } = useChartTheme();
   // One line = one series: explicit `color` is a data value and passes
@@ -179,16 +179,16 @@ export function LineChart({
       </ChartSurface>
     </ChartDataFrame>
   );
-}
+};
 
 export type AreaChartProps = Omit<LineChartProps, 'showArea'>;
 
 /** Area chart — the LineChart family with the area fill on by default. */
-export function AreaChart(props: AreaChartProps) {
+export const AreaChart = (props: AreaChartProps) => {
   return (
     <LineChart
       showArea
       {...props}
     />
   );
-}
+};

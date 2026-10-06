@@ -10,7 +10,7 @@ import { defaultBodyFont, defaultFonts, defaultHeadingFont, fontFamilyStacks, in
 type NumTable = Record<string, number>;
 
 /** Unwrap a font table whose values may be tamagui Variables. */
-function table(font: unknown, key: 'size' | 'lineHeight' | 'letterSpacing'): NumTable {
+const table = (font: unknown, key: 'size' | 'lineHeight' | 'letterSpacing'): NumTable => {
   const raw = (font as Record<string, Record<string, number | { val: number }>>)[key] ?? {};
   const out: NumTable = {};
   for (const [k, v] of Object.entries(raw)) {
@@ -20,10 +20,10 @@ function table(font: unknown, key: 'size' | 'lineHeight' | 'letterSpacing'): Num
     }
   }
   return out;
-}
+};
 
 /** Unwrap a font table whose values are strings (weight). */
-function strTable(font: unknown, key: 'weight'): Record<string, string> {
+const strTable = (font: unknown, key: 'weight'): Record<string, string> => {
   const raw = (font as Record<string, Record<string, string | { val: string }>>)[key] ?? {};
   const out: Record<string, string> = {};
   for (const [k, v] of Object.entries(raw)) {
@@ -33,7 +33,7 @@ function strTable(font: unknown, key: 'weight'): Record<string, string> {
     }
   }
   return out;
-}
+};
 
 describe('default heading/body fonts — tracking-by-size (Axiom 15 OPTICS)', () => {
   for (const [name, font] of [
@@ -112,6 +112,17 @@ describe('default heading/body fonts — tracking-by-size (Axiom 15 OPTICS)', ()
     `);
   });
 });
+
+const fontFamily = (font: unknown): string => {
+  const { family } = font as { family?: string | { val?: string } };
+  if (typeof family === 'string') {
+    return family;
+  }
+  if (family && typeof family.val === 'string') {
+    return family.val;
+  }
+  return '';
+};
 
 describe('bodyFont category fonts — one ladder, distinct families', () => {
   const bodyStops = ['body', 'serif', 'mono', 'rounded'] as const;
@@ -233,14 +244,3 @@ describe('createDefaultFont — the era body ramp', () => {
     expect(weight['4']).toBe('400');
   });
 });
-
-function fontFamily(font: unknown): string {
-  const { family } = font as { family?: string | { val?: string } };
-  if (typeof family === 'string') {
-    return family;
-  }
-  if (family && typeof family.val === 'string') {
-    return family.val;
-  }
-  return '';
-}

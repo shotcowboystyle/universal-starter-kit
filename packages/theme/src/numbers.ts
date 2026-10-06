@@ -70,7 +70,7 @@ const CURRENCY_SYMBOL_TO_CODE: Record<string, string> = {
  * ISO 4217 code for a currency symbol (or a code passed straight through).
  * `undefined` when the symbol has no known code — callers prefix it.
  */
-export function resolveCurrencyCode(symbol: string | undefined): string | undefined {
+export const resolveCurrencyCode = (symbol: string | undefined): string | undefined => {
   if (!symbol) {
     return undefined;
   }
@@ -78,7 +78,7 @@ export function resolveCurrencyCode(symbol: string | undefined): string | undefi
     return symbol.toUpperCase();
   }
   return CURRENCY_SYMBOL_TO_CODE[symbol];
-}
+};
 
 export interface CurrencyAffix {
   glyph: string;
@@ -92,7 +92,7 @@ export interface CurrencyAffix {
  * placement, so an editor and `formatCurrency` agree. A symbol with no known
  * code comes back as itself, leading.
  */
-export function currencyAffix(currency: string | undefined, locale?: string): CurrencyAffix | undefined {
+export const currencyAffix = (currency: string | undefined, locale?: string): CurrencyAffix | undefined => {
   if (!currency) {
     return undefined;
   }
@@ -117,13 +117,13 @@ export function currencyAffix(currency: string | undefined, locale?: string): Cu
     }
   }
   return { glyph: currency, position: 'leading' };
-}
+};
 
 interface CoercedNumber {
   num: number;
 }
 
-function coerceNumberInput(value: NumberInput): CoercedNumber | null {
+const coerceNumberInput = (value: NumberInput): CoercedNumber | null => {
   if (value == null || value === '') {
     return null;
   }
@@ -132,11 +132,11 @@ function coerceNumberInput(value: NumberInput): CoercedNumber | null {
   }
   const num = Number(value);
   return Number.isFinite(num) ? { num } : null;
-}
+};
 
-function resolveDigits(
+const resolveDigits = (
   options: NumberFormatOptions,
-): Pick<Intl.NumberFormatOptions, 'minimumFractionDigits' | 'maximumFractionDigits'> {
+): Pick<Intl.NumberFormatOptions, 'minimumFractionDigits' | 'maximumFractionDigits'> => {
   const { precision, minimumFractionDigits, maximumFractionDigits } = options;
   if (precision != null) {
     return { minimumFractionDigits: precision, maximumFractionDigits: precision };
@@ -144,39 +144,39 @@ function resolveDigits(
   const max = maximumFractionDigits ?? 2;
   const min = minimumFractionDigits ?? 0;
   return { minimumFractionDigits: min, maximumFractionDigits: Math.max(min, max) };
-}
+};
 
-function tryFormatWith(num: number, options: Intl.NumberFormatOptions, locale?: string): string | null {
+const tryFormatWith = (num: number, options: Intl.NumberFormatOptions, locale?: string): string | null => {
   try {
     return new Intl.NumberFormat(locale, options).format(num);
   } catch {
     return null;
   }
-}
+};
 
-function formatWith(num: number, options: Intl.NumberFormatOptions, locale?: string): string {
+const formatWith = (num: number, options: Intl.NumberFormatOptions, locale?: string): string => {
   return tryFormatWith(num, options, locale) ?? String(num);
-}
+};
 
 /**
  * Cardinal / aggregate register — grouped digits, at most two fraction
  * digits ("15,400", "5,133.33"). Empty input renders "" and an unparseable
  * string passes through unchanged (honest passthrough — never invents).
  */
-export function formatNumber(value: NumberInput, options: NumberFormatOptions = {}): string {
+export const formatNumber = (value: NumberInput, options: NumberFormatOptions = {}): string => {
   const coerced = coerceNumberInput(value);
   if (!coerced) {
     return typeof value === 'string' ? value : '';
   }
   return formatWith(coerced.num, { ...resolveDigits(options), useGrouping: options.grouping ?? true }, options.locale);
-}
+};
 
 /**
  * Money register — grouped digits with two fraction digits, rendered with
  * the currency's own symbol placement when the code is known ("$15,400.00",
  * "₹15,400.00") and symbol-prefixed otherwise.
  */
-export function formatCurrency(value: NumberInput, options: CurrencyFormatOptions = {}): string {
+export const formatCurrency = (value: NumberInput, options: CurrencyFormatOptions = {}): string => {
   const coerced = coerceNumberInput(value);
   if (!coerced) {
     return typeof value === 'string' ? value : '';
@@ -204,17 +204,17 @@ export function formatCurrency(value: NumberInput, options: CurrencyFormatOption
   const amount = formatWith(coerced.num, { ...digits, useGrouping }, locale);
   const label = symbol ?? currency;
   return label ? `${label}${amount}` : amount;
-}
+};
 
 /**
  * Rate register — the value already carries percent units (94.2 → "94.2%"),
  * never a 0..1 ratio; ratios are converted by the caller that owns the unit.
  */
-export function formatPercent(value: NumberInput, options: PercentFormatOptions = {}): string {
+export const formatPercent = (value: NumberInput, options: PercentFormatOptions = {}): string => {
   const formatted = formatNumber(value, options);
   if (formatted === '') {
     return '';
   }
   const coerced = coerceNumberInput(value);
   return coerced ? `${formatted}%` : formatted;
-}
+};

@@ -39,7 +39,7 @@ const maxChunks = 10;
  * Returns an array of chunks — if the value is small enough, the array
  * contains a single element.
  */
-export function splitCookieValue(value: string): string[] {
+export const splitCookieValue = (value: string): string[] => {
   if (value.length <= cookieSplitThreshold) {
     return [value];
   }
@@ -48,23 +48,23 @@ export function splitCookieValue(value: string): string[] {
     chunks.push(value.slice(i, i + cookieSplitThreshold));
   }
   return chunks;
-}
+};
 
 /**
  * Reconstruct a cookie value from its split chunks.
  */
-export function joinSplitCookieValues(chunks: string[]): string {
+export const joinSplitCookieValues = (chunks: string[]): string => {
   return chunks.join('');
-}
+};
 
 // ---------------------------------------------------------------------------
 // Internal: chunk key helpers
 // ---------------------------------------------------------------------------
 
 /** Build the cookie key for a given chunk index: `mp.ov.0`, `mp.ov.1`, … */
-function chunkKey(index: number): string {
+const chunkKey = (index: number): string => {
   return `${cookieOverridesPrefix}.${index}`;
-}
+};
 
 // ---------------------------------------------------------------------------
 // Cookie read helpers (work with raw cookie objects from react-cookie)
@@ -77,7 +77,7 @@ function chunkKey(index: number): string {
  * everything else, so a corrupt or foreign cookie can never spread garbage
  * (arrays, numbers, deep objects) into `{ ...preset.knobs, ...overrides }`.
  */
-function sanitizeOverrides(parsed: unknown): Partial<Knobs> {
+const sanitizeOverrides = (parsed: unknown): Partial<Knobs> => {
   if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
     return {};
   }
@@ -96,7 +96,7 @@ function sanitizeOverrides(parsed: unknown): Partial<Knobs> {
     }
   }
   return overrides as Partial<Knobs>;
-}
+};
 
 /**
  * Read the overrides cookie value, handling chunked cookies.
@@ -114,7 +114,7 @@ function sanitizeOverrides(parsed: unknown): Partial<Knobs> {
  * Anything else (numbers, arrays, mixed chunk types, malformed JSON) reads
  * as no overrides, and every parsed payload is shape-validated before use.
  */
-export function readOverridesCookie(cookies: Record<string, unknown>): Partial<Knobs> {
+export const readOverridesCookie = (cookies: Record<string, unknown>): Partial<Knobs> => {
   // Reconstruct from chunked cookies: mp.ov.0, mp.ov.1, …
   const chunks: unknown[] = [];
   for (let i = 0; i < maxChunks; i++) {
@@ -142,17 +142,17 @@ export function readOverridesCookie(cookies: Record<string, unknown>): Partial<K
   } catch {
     return {};
   }
-}
+};
 
 /**
  * Read the preset name from the cookie. universal-cookie auto-JSON-parses
  * jar values, so a numeric-looking name would arrive as a number — preset
  * names are strings by contract, anything else reads as no preset.
  */
-export function readPresetCookie(cookies: Record<string, unknown>): string | undefined {
+export const readPresetCookie = (cookies: Record<string, unknown>): string | undefined => {
   const value = cookies[cookiePreset];
   return typeof value === 'string' && value.length > 0 ? value : undefined;
-}
+};
 
 // ---------------------------------------------------------------------------
 // Cookie write helpers
@@ -162,19 +162,21 @@ export function readPresetCookie(cookies: Record<string, unknown>): string | und
  * Write the preset name cookie.
  * Returns the cookie key and value for the caller to pass to setCookie.
  */
-export function writePresetCookie(presetName: string): { key: string; value: string } {
+export const writePresetCookie = (presetName: string): { key: string; value: string } => {
   return { key: cookiePreset, value: presetName };
-}
+};
 
 /**
  * Write overrides cookie, splitting if necessary.
  * Returns an array of { key, value } pairs for the caller to pass to setCookie.
  * Also returns keys to remove (old split cookies that are no longer needed).
  */
-export function writeOverridesCookie(overrides: Partial<Knobs>): {
+export const writeOverridesCookie = (
+  overrides: Partial<Knobs>,
+): {
   toSet: { key: string; value: string }[];
   toRemove: string[];
-} {
+} => {
   const json = JSON.stringify(overrides);
   const chunks = splitCookieValue(json);
 
@@ -190,7 +192,7 @@ export function writeOverridesCookie(overrides: Partial<Knobs>): {
   }
 
   return { toSet, toRemove };
-}
+};
 
 // ---------------------------------------------------------------------------
 // Overrides diff
@@ -200,7 +202,7 @@ export function writeOverridesCookie(overrides: Partial<Knobs>): {
  * Compute the diff between a base knobs object and the current knobs to
  * produce minimal overrides. Only includes keys where the value differs.
  */
-export function computeOverrides(base: Knobs, current: Knobs): Partial<Knobs> {
+export const computeOverrides = (base: Knobs, current: Knobs): Partial<Knobs> => {
   const overrides: Partial<Knobs> = {};
   for (const key of Object.keys(base) as (keyof Knobs)[]) {
     if (current[key] !== base[key]) {
@@ -208,7 +210,7 @@ export function computeOverrides(base: Knobs, current: Knobs): Partial<Knobs> {
     }
   }
   return overrides;
-}
+};
 
 // ---------------------------------------------------------------------------
 // Convenience persistence functions
@@ -217,19 +219,19 @@ export function computeOverrides(base: Knobs, current: Knobs): Partial<Knobs> {
 /**
  * Build the list of cookie keys to watch for react-cookie.
  */
-export function getCookieWatchList(): string[] {
+export const getCookieWatchList = (): string[] => {
   const keys = [cookiePreset];
   for (let i = 0; i < maxChunks; i++) {
     keys.push(chunkKey(i));
   }
   return keys;
-}
+};
 
 /**
  * Persist knob overrides to document cookies directly (no react-cookie).
  * Useful outside of React component trees.
  */
-export function persistPresetOverrides(overrides: Partial<Knobs>): void {
+export const persistPresetOverrides = (overrides: Partial<Knobs>): void => {
   const { toSet, toRemove } = writeOverridesCookie(overrides);
   for (const { key, value } of toSet) {
     setCookie(key, value, { days: 365, sameSite: 'Strict' });
@@ -237,22 +239,12 @@ export function persistPresetOverrides(overrides: Partial<Knobs>): void {
   for (const key of toRemove) {
     deleteCookie(key);
   }
-}
-
-/**
- * Load knob overrides from document cookies directly (no react-cookie).
- * Useful outside of React component trees and during SSR when given raw
- * cookie headers.
- */
-export function loadPresetOverrides(rawCookies?: Record<string, string | undefined>): Partial<Knobs> {
-  const cookies = rawCookies ?? parseBrowserCookies();
-  return readOverridesCookie(cookies);
-}
+};
 
 /**
  * Read the cookies relevant to the theme system into a key/value map.
  */
-function parseBrowserCookies(): Record<string, string | undefined> {
+const parseBrowserCookies = (): Record<string, string | undefined> => {
   const map: Record<string, string | undefined> = {};
   for (const key of getCookieWatchList()) {
     const value = getCookie(key);
@@ -261,4 +253,14 @@ function parseBrowserCookies(): Record<string, string | undefined> {
     }
   }
   return map;
-}
+};
+
+/**
+ * Load knob overrides from document cookies directly (no react-cookie).
+ * Useful outside of React component trees and during SSR when given raw
+ * cookie headers.
+ */
+export const loadPresetOverrides = (rawCookies?: Record<string, string | undefined>): Partial<Knobs> => {
+  const cookies = rawCookies ?? parseBrowserCookies();
+  return readOverridesCookie(cookies);
+};

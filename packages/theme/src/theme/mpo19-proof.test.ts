@@ -34,7 +34,7 @@ import { layoutBreakpoints, OVERLAY_BREAKPOINT } from './layout-tokens';
 import { resolveKnobs } from './resolve-knobs';
 
 /** A font table's numbers/strings, Variables unwrapped and `$` stripped. */
-function table(raw: unknown): Record<string, unknown> {
+const table = (raw: unknown): Record<string, unknown> => {
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries((raw ?? {}) as Record<string, unknown>)) {
     const v = value && typeof value === 'object' && 'val' in value ? (value as { val?: unknown }).val : value;
@@ -43,7 +43,7 @@ function table(raw: unknown): Record<string, unknown> {
     }
   }
   return out;
-}
+};
 
 const knobProps = (over: Partial<typeof defaultKnobs> = {}) => resolveKnobs({ ...defaultKnobs, ...over }).knobProps;
 

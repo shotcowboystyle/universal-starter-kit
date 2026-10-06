@@ -8,7 +8,7 @@ const AUTH_KEYS = {
   session: ['auth', 'session'] as const,
 };
 
-export function useAuth() {
+export const useAuth = () => {
   const queryClient = useQueryClient();
   const { setSession, setUser, clear } = useAuthStore();
 
@@ -46,4 +46,4 @@ export function useAuth() {
     loginMutation,
     logout,
   };
-}
+};

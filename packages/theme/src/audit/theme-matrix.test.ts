@@ -27,7 +27,7 @@ import type {
  * generated recipes pin, so any theme-dependence of the inputs shows up
  * here the same way it would on screen.
  */
-function snapshotFromRecipeInputs(inputs: Partial<SizeRecipeInputs>): MatrixSnapshot {
+const snapshotFromRecipeInputs = (inputs: Partial<SizeRecipeInputs>): MatrixSnapshot => {
   const generated = generateSizeRecipes(inputs);
   const geometry = Object.entries(generated.recipes).map(([token, recipe]) => ({
     key: `button:${token}`,
@@ -48,7 +48,7 @@ function snapshotFromRecipeInputs(inputs: Partial<SizeRecipeInputs>): MatrixSnap
     chartSamples: [],
     svgRootCount: 0,
   };
-}
+};
 
 describe('declared chart proof keeps uncertainty visible', () => {
   const sample = (overrides: Partial<MatrixChartSample> = {}): MatrixChartSample => ({
@@ -400,9 +400,9 @@ describe('captureMatrixSnapshot keys survive the theme axis', () => {
    * with `color:gray`, against 130 in every cell once the boxless wrappers
    * are hoisted through.
    */
-  function mount(html: string): void {
+  const mount = (html: string): void => {
     document.body.innerHTML = `<div id="mpo-matrix-root">${html}</div>`;
-  }
+  };
 
   const card = '<div class="card"><span class="label">Name</span></div>';
 

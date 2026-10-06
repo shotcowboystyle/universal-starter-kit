@@ -88,12 +88,12 @@ describe('HighlightedCode', () => {
     // The line wrapper span carries the token content plus the trailing
     // newline. Theme wrappers (display: contents) share the same text, so
     // take the DEEPEST matching span — the styled line element itself.
-    function lineWrapper(text: string): HTMLElement {
+    const lineWrapper = (text: string): HTMLElement => {
       const matches = Array.from(container.querySelectorAll('span')).filter((el) => el.textContent === `${text}\n`);
       const deepest = matches.filter((el) => !matches.some((other) => other !== el && el.contains(other)));
       expect(deepest).toHaveLength(1);
       return deepest[0] as HTMLElement;
-    }
+    };
 
     // Same token shape, only line 2 highlighted → wrappers must differ in styling.
     expect(lineWrapper('line one').className).not.toBe(lineWrapper('line two').className);

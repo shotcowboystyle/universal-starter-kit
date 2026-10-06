@@ -12,12 +12,12 @@ const ROUTES = [
   { pattern: '/pokemon/[id]', tag: 'pokemon-detail', title: 'Detail' },
 ];
 
-function DetailProbe() {
+const DetailProbe = () => {
   const params = useParams();
   return <span data-testid="detail-params">{String(params.id ?? '')}</span>;
-}
+};
 
-function renderHost(initialHref?: string) {
+const renderHost = (initialHref?: string) => {
   stackNavigator.detach();
   stackNavigator.configure(ROUTES);
   return render(
@@ -30,13 +30,13 @@ function renderHost(initialHref?: string) {
       ]}
     />,
   );
-}
+};
 
-function pageByTag(container: HTMLElement, tag: string): HTMLElement {
+const pageByTag = (container: HTMLElement, tag: string): HTMLElement => {
   const page = container.querySelector(`[data-seam-page="${tag}"]`);
   expect(page).not.toBeNull();
   return page as HTMLElement;
-}
+};
 
 describe('DomNavigationHost', () => {
   beforeEach(() => {
@@ -141,7 +141,7 @@ describe('DomNavigationHost', () => {
   // silently drops the restored filters.
   it("seeds a restored route's params before the first content render", () => {
     const firstRenderParams: Record<string, unknown>[] = [];
-    function SeedProbe() {
+    const SeedProbe = () => {
       const params = useParams();
       const first = useRef(true);
       if (first.current) {
@@ -149,7 +149,7 @@ describe('DomNavigationHost', () => {
         firstRenderParams.push({ ...params });
       }
       return <span data-testid="seed-params">{String(params.q ?? '')}</span>;
-    }
+    };
     stackNavigator.detach();
     stackNavigator.configure(ROUTES);
     render(
@@ -171,12 +171,12 @@ describe('DomNavigationHost', () => {
   // first). It must queue and apply, not vanish based on timing.
   it('applies a deep link dispatched from a screen effect before the host attached', () => {
     const log = vi.spyOn(console, 'log').mockImplementation(() => {});
-    function RedirectingHome() {
+    const RedirectingHome = () => {
       useEffect(() => {
         stackNavigator.push('/pokemon/pikachu');
       }, []);
       return <div data-testid="home-screen" />;
-    }
+    };
     stackNavigator.detach();
     stackNavigator.configure(ROUTES);
     const { container } = render(

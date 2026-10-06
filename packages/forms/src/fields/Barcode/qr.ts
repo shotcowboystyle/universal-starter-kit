@@ -226,15 +226,15 @@ const GF_LOG = new Uint8Array(256);
   }
 }
 
-function gfMultiply(a: number, b: number): number {
+const gfMultiply = (a: number, b: number): number => {
   if (a === 0 || b === 0) {
     return 0;
   }
   return GF_EXP[GF_LOG[a] + GF_LOG[b]];
-}
+};
 
 /** Generator polynomial ∏(x − α^i), i = 0…degree−1, highest-degree first. */
-function rsGeneratorPoly(degree: number): Uint8Array {
+const rsGeneratorPoly = (degree: number): Uint8Array => {
   let poly = new Uint8Array([1]);
   for (let i = 0; i < degree; i++) {
     const next = new Uint8Array(poly.length + 1);
@@ -245,10 +245,10 @@ function rsGeneratorPoly(degree: number): Uint8Array {
     poly = next;
   }
   return poly;
-}
+};
 
 /** Reed-Solomon EC codewords: remainder of data·x^degree mod the generator. */
-function rsEncode(data: Uint8Array, degree: number): Uint8Array {
+const rsEncode = (data: Uint8Array, degree: number): Uint8Array => {
   const generator = rsGeneratorPoly(degree);
   const remainder = new Uint8Array(degree);
   for (const byte of data) {
@@ -262,42 +262,42 @@ function rsEncode(data: Uint8Array, degree: number): Uint8Array {
     }
   }
   return remainder;
-}
+};
 
 // ─── BCH codes for format / version information ───
 
-function bitLength(value: number): number {
+const bitLength = (value: number): number => {
   let length = 0;
   for (let v = value; v > 0; v >>>= 1) {
     length++;
   }
   return length;
-}
+};
 
-function bchRemainder(value: number, generator: number): number {
+const bchRemainder = (value: number, generator: number): number => {
   const generatorLength = bitLength(generator);
   let remainder = value;
   while (bitLength(remainder) >= generatorLength) {
     remainder ^= generator << (bitLength(remainder) - generatorLength);
   }
   return remainder;
-}
+};
 
 /** 15-bit format information: 2 EC bits + 3 mask bits, BCH(15,5), XOR 0x5412. */
-function formatInformation(ecLevel: QrErrorCorrectionLevel, mask: number): number {
+const formatInformation = (ecLevel: QrErrorCorrectionLevel, mask: number): number => {
   const data = (EC_INDICATOR[ecLevel] << 3) | mask;
   return ((data << 10) | bchRemainder(data << 10, 0x5_37)) ^ 0x54_12;
-}
+};
 
 /** 18-bit version information (versions ≥ 7): 6 version bits, BCH(18,6). */
-function versionInformation(version: number): number {
+const versionInformation = (version: number): number => {
   return (version << 12) | bchRemainder(version << 12, 0x1f_25);
-}
+};
 
 // ─── Byte-mode bit stream ───
 
 /** UTF-8 code units for a string — hand-rolled so the encoder stays pure. */
-function utf8Bytes(value: string): number[] {
+const utf8Bytes = (value: string): number[] => {
   const bytes: number[] = [];
   for (const char of value) {
     const cp = char.codePointAt(0) as number;
@@ -312,20 +312,20 @@ function utf8Bytes(value: string): number[] {
     }
   }
   return bytes;
-}
+};
 
-function dataCodewordCount(version: number, ecLevel: QrErrorCorrectionLevel): number {
+const dataCodewordCount = (version: number, ecLevel: QrErrorCorrectionLevel): number => {
   const [, groups] = EC_BLOCKS[ecLevel][version - 1];
   return groups.reduce((sum, [blocks, perBlock]) => sum + blocks * perBlock, 0);
-}
+};
 
 /** Byte-mode character count field width (ISO 18004 table 3). */
-function charCountBits(version: number): number {
+const charCountBits = (version: number): number => {
   return version <= 9 ? 8 : 16;
-}
+};
 
 /** Smallest version 1–10 whose byte-mode capacity fits, or null. */
-function pickVersion(byteCount: number, ecLevel: QrErrorCorrectionLevel): number | null {
+const pickVersion = (byteCount: number, ecLevel: QrErrorCorrectionLevel): number | null => {
   for (let version = 1; version <= MAX_VERSION; version++) {
     const capacityBits = dataCodewordCount(version, ecLevel) * 8;
     const neededBits = 4 + charCountBits(version) + byteCount * 8;
@@ -334,10 +334,10 @@ function pickVersion(byteCount: number, ecLevel: QrErrorCorrectionLevel): number
     }
   }
   return null;
-}
+};
 
 /** Mode indicator + count + data, terminator, bit padding, pad codewords. */
-function buildDataCodewords(bytes: number[], version: number, ecLevel: QrErrorCorrectionLevel): Uint8Array {
+const buildDataCodewords = (bytes: number[], version: number, ecLevel: QrErrorCorrectionLevel): Uint8Array => {
   const bits: number[] = [];
   const pushBits = (value: number, length: number) => {
     for (let i = length - 1; i >= 0; i--) {
@@ -367,10 +367,10 @@ function buildDataCodewords(bytes: number[], version: number, ecLevel: QrErrorCo
     codewords[i] = padBytes[(i - bits.length / 8) % 2];
   }
   return codewords;
-}
+};
 
 /** Split into RS blocks, encode, and interleave (ISO 18004 §8.6). */
-function interleaveCodewords(data: Uint8Array, version: number, ecLevel: QrErrorCorrectionLevel): Uint8Array {
+const interleaveCodewords = (data: Uint8Array, version: number, ecLevel: QrErrorCorrectionLevel): Uint8Array => {
   const [ecPerBlock, groups] = EC_BLOCKS[ecLevel][version - 1];
   const dataBlocks: Uint8Array[] = [];
   const ecBlocks: Uint8Array[] = [];
@@ -399,7 +399,7 @@ function interleaveCodewords(data: Uint8Array, version: number, ecLevel: QrError
     }
   }
   return result;
-}
+};
 
 // ─── Matrix construction ───
 
@@ -411,14 +411,14 @@ interface MatrixState {
   reserved: Uint8Array;
 }
 
-function setModule(state: MatrixState, row: number, col: number, dark: number): void {
+const setModule = (state: MatrixState, row: number, col: number, dark: number): void => {
   const index = row * state.size + col;
   state.modules[index] = dark;
   state.reserved[index] = 1;
-}
+};
 
 /** Finder patterns, separators, timing, alignment, dark module, reservations. */
-function placeFunctionPatterns(state: MatrixState, version: number): void {
+const placeFunctionPatterns = (state: MatrixState, version: number): void => {
   const { size } = state;
   // Finder patterns with their light separators (8×8 corner incl. separator).
   const corners: readonly (readonly [number, number])[] = [
@@ -492,10 +492,10 @@ function placeFunctionPatterns(state: MatrixState, version: number): void {
       setModule(state, col, row, dark);
     }
   }
-}
+};
 
 /** Zigzag data placement, two columns at a time, skipping the timing column. */
-function placeData(state: MatrixState, codewords: Uint8Array): void {
+const placeData = (state: MatrixState, codewords: Uint8Array): void => {
   const { size } = state;
   const totalBits = codewords.length * 8;
   let bitIndex = 0;
@@ -518,10 +518,10 @@ function placeData(state: MatrixState, codewords: Uint8Array): void {
     }
     upward = !upward;
   }
-}
+};
 
 /** Mask conditions 0–7 (ISO 18004 table 23): true = flip the module. */
-function maskBit(mask: number, row: number, col: number): boolean {
+const maskBit = (mask: number, row: number, col: number): boolean => {
   switch (mask) {
     case 0: {
       return (row + col) % 2 === 0;
@@ -548,15 +548,15 @@ function maskBit(mask: number, row: number, col: number): boolean {
       return (((row + col) % 2) + ((row * col) % 3)) % 2 === 0;
     }
   }
-}
+};
 
 /** Place both copies of the 15-bit format information for a chosen mask. */
-function placeFormatInformation(
+const placeFormatInformation = (
   modules: Uint8Array,
   size: number,
   ecLevel: QrErrorCorrectionLevel,
   mask: number,
-): void {
+): void => {
   const info = formatInformation(ecLevel, mask);
   const bit = (i: number) => (info >> i) & 1;
   // Copy 1 around the top-left finder.
@@ -576,10 +576,10 @@ function placeFormatInformation(
   for (let i = 0; i < 8; i++) {
     modules[8 * size + (size - 1 - i)] = bit(i);
   }
-}
+};
 
 /** ISO 18004 §8.8.2 penalty score of a fully placed symbol. */
-function penaltyScore(modules: Uint8Array, size: number): number {
+const penaltyScore = (modules: Uint8Array, size: number): number => {
   let score = 0;
   // N1: runs of 5+ same-color modules in rows and columns.
   for (let axis = 0; axis < 2; axis++) {
@@ -651,14 +651,14 @@ function penaltyScore(modules: Uint8Array, size: number): number {
   const percent = (darkCount * 100) / (size * size);
   score += Math.floor(Math.abs(percent - 50) / 5) * 10;
   return score;
-}
+};
 
 /**
  * Encode a string as a byte-mode QR symbol. Returns the module matrix, or
  * null when the value is empty or exceeds version 10 capacity at the chosen
  * error-correction level (callers fall back to honest text).
  */
-export function encodeQr(value: string, options?: QrEncodeOptions): QrMatrix | null {
+export const encodeQr = (value: string, options?: QrEncodeOptions): QrMatrix | null => {
   const ecLevel = options?.ecLevel ?? 'M';
   if (!value) {
     return null;
@@ -702,13 +702,13 @@ export function encodeQr(value: string, options?: QrEncodeOptions): QrMatrix | n
   }
   const chosen = best as { mask: number; modules: Uint8Array; score: number };
   return { size, version, ecLevel, mask: chosen.mask, modules: chosen.modules };
-}
+};
 
 /**
  * Compress each matrix row into dark/light runs — the QR twin of code128's
  * run list, so BarcodePreview draws one View per run instead of per module.
  */
-export function qrRowRuns(matrix: QrMatrix): QrRun[][] {
+export const qrRowRuns = (matrix: QrMatrix): QrRun[][] => {
   const rows: QrRun[][] = [];
   for (let row = 0; row < matrix.size; row++) {
     const runs: QrRun[] = [];
@@ -724,4 +724,4 @@ export function qrRowRuns(matrix: QrMatrix): QrRun[][] {
     rows.push(runs);
   }
   return rows;
-}
+};

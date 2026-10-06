@@ -4,9 +4,9 @@ import { describe, expect, it } from 'vitest';
 import { CheckRegular } from './CheckRegular';
 import { MinusRegular } from './MinusRegular';
 
-function strokeOf(container: HTMLElement, selector: string) {
+const strokeOf = (container: HTMLElement, selector: string) => {
   return container.querySelector(selector)?.getAttribute('stroke') ?? '';
-}
+};
 
 describe('MinusRegular', () => {
   it('should render correctly', () => {

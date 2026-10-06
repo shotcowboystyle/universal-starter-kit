@@ -59,13 +59,13 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-async function settle() {
+const settle = async () => {
   await act(async () => {
     await new Promise((resolve) => setTimeout(resolve, 20));
   });
-}
+};
 
-function measuredTree(initial: Partial<TreeViewProps> = {}, synchronousScroll = true, strict = false) {
+const measuredTree = (initial: Partial<TreeViewProps> = {}, synchronousScroll = true, strict = false) => {
   const props = { nodes, expandByDefault: true, height: 240, ...initial };
   const view = (next: Partial<TreeViewProps> = {}) =>
     strict ? (
@@ -174,7 +174,7 @@ function measuredTree(initial: Partial<TreeViewProps> = {}, synchronousScroll = 
     contentSize,
     emitScroll,
   };
-}
+};
 
 describe('TreeView measured reveal scheduling (modeled geometry)', () => {
   it('scrolls the real mounted target and consumes the request only after measurement', async () => {

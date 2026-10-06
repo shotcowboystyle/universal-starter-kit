@@ -10,10 +10,10 @@ import { MonthPicker } from './MonthPicker';
 
 const MONTH_ABBREVIATIONS = /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)$/;
 
-function getMonthButtons(root: ParentNode): HTMLButtonElement[] {
+const getMonthButtons = (root: ParentNode): HTMLButtonElement[] => {
   const allButtons = Array.from(root.querySelectorAll('button, [role="button"]')) as HTMLButtonElement[];
   return allButtons.filter((btn) => MONTH_ABBREVIATIONS.test(btn.textContent?.trim() ?? ''));
-}
+};
 
 describe('MonthPicker', () => {
   describe('without form context', () => {

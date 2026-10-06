@@ -29,7 +29,7 @@ export interface DescribeChartInput {
  * One-sentence data summary for a whole chart:
  * "Bar chart, Revenue: 5 data points. Highest May (1,200); lowest Jan (400)."
  */
-export function describeChart(input: DescribeChartInput): string {
+export const describeChart = (input: DescribeChartInput): string => {
   const { typeLabel, title, data } = input;
   const formatValue = input.formatValue ?? formatChartValue;
   const head = title ? `${typeLabel}, ${title}` : typeLabel;
@@ -60,7 +60,7 @@ export function describeChart(input: DescribeChartInput): string {
     parts.push(`total ${formatValue(total)}`);
   }
   return `${parts[0]}. ${parts.slice(1).join('; ')}`;
-}
+};
 
 export interface DescribeDatumInput {
   datum: ChartDatum;
@@ -73,7 +73,7 @@ export interface DescribeDatumInput {
  * Per-datum accessible name for interactive targets:
  * "May: 1,200" or "May: 1,200 (31%)".
  */
-export function describeDatum(input: DescribeDatumInput): string {
+export const describeDatum = (input: DescribeDatumInput): string => {
   const formatValue = input.formatValue ?? formatChartValue;
   const base = `${input.datum.label}: ${formatValue(input.datum.value)}`;
   if (input.total && input.total > 0) {
@@ -81,9 +81,9 @@ export function describeDatum(input: DescribeDatumInput): string {
     return `${base} (${share}%)`;
   }
   return base;
-}
+};
 
 /** Exact datum text for the independently opened data view, separate from the image name. */
-export function chartDatumText(data: ChartDatum[], formatValue = formatChartValue): [string, string][] {
+export const chartDatumText = (data: ChartDatum[], formatValue = formatChartValue): [string, string][] => {
   return data.map((datum) => [datum.label.trim(), formatValue(datum.value).trim()]);
-}
+};

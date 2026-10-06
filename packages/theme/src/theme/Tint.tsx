@@ -20,7 +20,7 @@ export interface TintProps extends PropsWithChildren {
  *
  * Applies a tint sub-theme based on nesting depth.
  */
-export function Tint({ children, alt = 0, disable, ...props }: TintProps) {
+export const Tint = ({ children, alt = 0, disable, ...props }: TintProps) => {
   const parentDepth = useContext(TintDepthContext);
   const depth = parentDepth + 1 + alt;
   const tints = usePresetTints();
@@ -39,11 +39,11 @@ export function Tint({ children, alt = 0, disable, ...props }: TintProps) {
       )}
     </TintDepthContext.Provider>
   );
-}
+};
 
 /**
  * Read the current tint depth from context.
  */
-export function useTintDepth(): number {
+export const useTintDepth = (): number => {
   return useContext(TintDepthContext);
-}
+};

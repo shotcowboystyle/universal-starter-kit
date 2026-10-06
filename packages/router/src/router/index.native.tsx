@@ -9,10 +9,10 @@ export { Link, useParams, useRouter };
  * container mounts. A root layout that calls this on first paint throws
  * `Cannot read property 'pathname' of undefined`.
  */
-export function usePathname(): string {
+export const usePathname = (): string => {
   try {
     return useOnePathname() ?? '/';
   } catch {
     return '/';
   }
-}
+};

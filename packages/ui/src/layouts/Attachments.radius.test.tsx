@@ -18,14 +18,14 @@ const items: AttachmentItem[] = [
   { id: 'b', fileName: 'topology.txt', fileUrl: '/b.txt', fileSize: 812_000 },
 ];
 
-function rowAtoms(overrides: Partial<Knobs>) {
+const rowAtoms = (overrides: Partial<Knobs>) => {
   renderWithProviders(
     <Preset overrides={overrides}>
       <Attachments items={items} />
     </Preset>,
   );
   return screen.getAllByRole('listitem').map((row) => (row.getAttribute('class') ?? '').split(/\s+/));
-}
+};
 
 describe('Attachments rows are a CONTAINER-CAP stack', () => {
   it('caps the outer corners at the row padding at full', () => {

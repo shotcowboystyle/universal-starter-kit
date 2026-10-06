@@ -28,16 +28,16 @@ import {
 } from './size-recipes';
 import type { SizeRecipe } from './size-recipes';
 
-function knobsWith(overrides: Partial<Knobs>): Knobs {
+const knobsWith = (overrides: Partial<Knobs>): Knobs => {
   return { ...defaultKnobs, ...overrides };
-}
+};
 
 const RECIPE_KEYS = ['$1', '$1.5', '$2', '$2.5', '$3', '$3.5', '$4', '$true', '$5', '$6'] as const;
 
-function expectNoRadius(value: object) {
+const expectNoRadius = (value: object) => {
   expect(value).not.toHaveProperty('radius');
   expect(value).not.toHaveProperty('borderRadius');
-}
+};
 
 describe('size recipes', () => {
   it('medium / $4 matches the measured tamagui.dev 44/18/14/16/9 reference', () => {

@@ -12,11 +12,11 @@ export type TimeFormat = '12h' | '24h';
 
 const timeStringRegex = /^([01]?\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
 
-export function isValidTimeString(value: string): boolean {
+export const isValidTimeString = (value: string): boolean => {
   return timeStringRegex.test(value.trim());
-}
+};
 
-export function parseTimeString(value: string): { h: number; m: number; s: number } {
+export const parseTimeString = (value: string): { h: number; m: number; s: number } => {
   if (!value) {
     return { h: 0, m: 0, s: 0 };
   }
@@ -26,14 +26,21 @@ export function parseTimeString(value: string): { h: number; m: number; s: numbe
     m: Math.max(0, Math.min(59, Number.parseInt(parts[1] || '0', 10) || 0)),
     s: Math.max(0, Math.min(59, Number.parseInt(parts[2] || '0', 10) || 0)),
   };
-}
+};
 
-export function toTimeString(h: number, m: number, s?: number): string {
+export const toTimeString = (h: number, m: number, s?: number): string => {
   const base = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
   return s === undefined ? base : `${base}:${String(s).padStart(2, '0')}`;
-}
+};
 
-export function formatTimeDisplay(value: string, format: TimeFormat, showSeconds: boolean): string {
+export const to12Hour = (h24: number): { h: number; period: 'AM' | 'PM' } => {
+  return {
+    h: h24 % 12 === 0 ? 12 : h24 % 12,
+    period: h24 >= 12 ? 'PM' : 'AM',
+  };
+};
+
+export const formatTimeDisplay = (value: string, format: TimeFormat, showSeconds: boolean): string => {
   if (!value) {
     return '';
   }
@@ -44,24 +51,17 @@ export function formatTimeDisplay(value: string, format: TimeFormat, showSeconds
   }
   const { h: displayH, period } = to12Hour(h);
   return `${displayH}:${String(m).padStart(2, '0')}${secSuffix} ${period}`;
-}
+};
 
-export function to24Hour(displayH: number, period: 'AM' | 'PM'): number {
+export const to24Hour = (displayH: number, period: 'AM' | 'PM'): number => {
   const wrapped = ((displayH - 1) % 12) + 1;
   if (period === 'AM') {
     return wrapped === 12 ? 0 : wrapped;
   }
   return wrapped === 12 ? 12 : wrapped + 12;
-}
+};
 
-export function to12Hour(h24: number): { h: number; period: 'AM' | 'PM' } {
-  return {
-    h: h24 % 12 === 0 ? 12 : h24 % 12,
-    period: h24 >= 12 ? 'PM' : 'AM',
-  };
-}
-
-export function TimePanel({
+export const TimePanel = ({
   value,
   onChange,
   timeFormat,
@@ -73,7 +73,7 @@ export function TimePanel({
   timeFormat: TimeFormat;
   minuteStep: number;
   showSeconds: boolean;
-}) {
+}) => {
   const { knobProps } = useResolvedKnobs({ compact: true });
   const { h, m, s } = parseTimeString(value);
 
@@ -95,9 +95,9 @@ export function TimePanel({
       />
     </View>
   );
-}
+};
 
-export function TimePickerClearButton({ onClear, disabled }: { onClear: () => void; disabled?: boolean }) {
+export const TimePickerClearButton = ({ onClear, disabled }: { onClear: () => void; disabled?: boolean }) => {
   return (
     <InputParts.Button
       data-testid="time-picker-clear"
@@ -112,7 +112,7 @@ export function TimePickerClearButton({ onClear, disabled }: { onClear: () => vo
       </InputParts.Icon>
     </InputParts.Button>
   );
-}
+};
 
 interface TimePickerInputTriggerProps {
   value: string;
@@ -129,7 +129,7 @@ interface TimePickerInputTriggerProps {
   'aria-readonly'?: boolean;
 }
 
-export function TimePickerInputTrigger({
+export const TimePickerInputTrigger = ({
   value,
   placeholder,
   disabled,
@@ -142,7 +142,7 @@ export function TimePickerInputTrigger({
   'aria-required': ariaRequired,
   'aria-invalid': ariaInvalid,
   'aria-readonly': ariaReadonly,
-}: TimePickerInputTriggerProps) {
+}: TimePickerInputTriggerProps) => {
   return (
     <View
       flexDirection="row"
@@ -204,4 +204,4 @@ export function TimePickerInputTrigger({
       </InputParts.Box>
     </View>
   );
-}
+};

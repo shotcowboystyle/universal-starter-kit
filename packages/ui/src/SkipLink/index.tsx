@@ -82,7 +82,7 @@ const skipLinkCss = `.mp-skip-link {
   outline: none;
 }`;
 
-function ensureSkipLinkStyles() {
+const ensureSkipLinkStyles = () => {
   if (typeof document === 'undefined') {
     return;
   }
@@ -93,9 +93,9 @@ function ensureSkipLinkStyles() {
   tag.id = SKIP_LINK_STYLE_ID;
   tag.textContent = skipLinkCss;
   document.head.append(tag);
-}
+};
 
-function resolveRadiusPx(token: string | number | undefined): number | undefined {
+const resolveRadiusPx = (token: string | number | undefined): number | undefined => {
   if (typeof token === 'number' && Number.isFinite(token)) {
     return token;
   }
@@ -108,9 +108,9 @@ function resolveRadiusPx(token: string | number | undefined): number | undefined
   } catch {
     return undefined;
   }
-}
+};
 
-function focusSkipTarget(target: HTMLElement) {
+const focusSkipTarget = (target: HTMLElement) => {
   const hadTabIndex = target.hasAttribute('tabindex');
   if (!hadTabIndex) {
     target.setAttribute('tabindex', '-1');
@@ -125,7 +125,7 @@ function focusSkipTarget(target: HTMLElement) {
   };
   target.addEventListener('blur', cleanup);
   target.focus();
-}
+};
 
 // ── SkipLink Component ────────────────────────────────────────
 
@@ -136,7 +136,7 @@ function focusSkipTarget(target: HTMLElement) {
  * target — GOV.UK's VoiceOver pattern: temporary `tabindex="-1"`, stripped
  * on blur, no ring on the landmark. Renders nothing on native.
  */
-export function SkipLink({ targetId, targetRef, children = 'Skip to content', onSkip }: SkipLinkProps) {
+export const SkipLink = ({ targetId, targetRef, children = 'Skip to content', onSkip }: SkipLinkProps) => {
   const { knobProps } = useResolvedKnobs({ component: 'SkipLink' });
   if (!isWeb) {
     return null;
@@ -193,6 +193,6 @@ export function SkipLink({ targetId, targetRef, children = 'Skip to content', on
       </SkipLinkSurface>
     </a>
   );
-}
+};
 
 export type SkipLinkSurfaceProps = GetProps<typeof SkipLinkSurface>;

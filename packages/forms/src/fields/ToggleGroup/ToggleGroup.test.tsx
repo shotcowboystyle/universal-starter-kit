@@ -32,7 +32,7 @@ const houseConfig = createTamagui({
   themes: houseThemes as any,
 });
 
-function renderWithHouseThemes(ui: ReactElement) {
+const renderWithHouseThemes = (ui: ReactElement) => {
   return render(
     <TamaguiProvider
       config={houseConfig}
@@ -41,15 +41,15 @@ function renderWithHouseThemes(ui: ReactElement) {
       {ui}
     </TamaguiProvider>,
   );
-}
+};
 
 /**
  * First three numeric groups (h, s, l) of an hsla() string — the digit prefix
  * Tamagui embeds in the atomic class it generates for a concrete color value.
  */
-function hslDigits(hsla: string): string {
+const hslDigits = (hsla: string): string => {
   return (hsla.match(/\d+/g) ?? []).slice(0, 3).join('');
-}
+};
 
 const options = [
   { label: 'Left', value: 'left' },
@@ -359,11 +359,11 @@ describe('ToggleGroup', () => {
   });
 
   describe('per-segment elevation wrapper', () => {
-    function elevationWrapperFor(segment: HTMLElement): HTMLElement {
+    const elevationWrapperFor = (segment: HTMLElement): HTMLElement => {
       const wrapper = segment.parentElement as HTMLElement;
       expect(wrapper?.getAttribute('style') ?? '').toMatch(/box-shadow/);
       return wrapper;
-    }
+    };
 
     // The wrapper only exists to carry a shadow, and the default stop paints
     // none on a control, so these render at elevation medium.

@@ -12,24 +12,24 @@ import type { ReactNode } from 'react';
  * Storybook: `ic(active)` → purple accent for active, gray for inactive
  */
 
-export function fillIcon(value: string, color: string): ReactNode {
+export const fillIcon = (value: string, color: string): ReactNode => {
   if (value === 'filled') {
     return <div style={{ width: 14, height: 14, background: color, borderRadius: 2 }} />;
   }
   return <div style={{ width: 14, height: 14, border: `1.5px solid ${color}`, borderRadius: 2 }} />;
-}
+};
 
-export function spaceIcon(value: string, color: string): ReactNode {
+export const spaceIcon = (value: string, color: string): ReactNode => {
   const size = ({ small: 8, medium: 12, large: 16 } as Record<string, number>)[value] ?? 12;
   return <div style={{ width: size, height: size, background: color, borderRadius: 2 }} />;
-}
+};
 
-export function sizeIcon(value: string, color: string): ReactNode {
+export const sizeIcon = (value: string, color: string): ReactNode => {
   const height = ({ small: 8, medium: 11, large: 14 } as Record<string, number>)[value] ?? 11;
   return <div style={{ width: 4, height, background: color, borderRadius: 1 }} />;
-}
+};
 
-export function densityIcon(value: string, color: string): ReactNode {
+export const densityIcon = (value: string, color: string): ReactNode => {
   // Comfortable = taller stack; compact = compressed stack.
   const gap = value === 'compact' ? 1 : 2;
   const barH = value === 'compact' ? 3 : 4;
@@ -40,14 +40,14 @@ export function densityIcon(value: string, color: string): ReactNode {
       <div style={{ height: barH, background: color, borderRadius: 1 }} />
     </div>
   );
-}
+};
 
-export function borderRadiusIcon(value: string, color: string): ReactNode {
+export const borderRadiusIcon = (value: string, color: string): ReactNode => {
   const radius = ({ none: 0, small: 2, medium: 4, large: 7, full: 10 } as Record<string, number>)[value] ?? 0;
   return <div style={{ width: 14, height: 14, border: `1.5px solid ${color}`, borderRadius: radius }} />;
-}
+};
 
-export function cornerSmoothingIcon(value: string, color: string): ReactNode {
+export const cornerSmoothingIcon = (value: string, color: string): ReactNode => {
   // Same nominal corner size, different curvature: circular-arc rounded
   // rect for `round`, continuous-curvature superellipse for `smooth`.
   const smooth = value === 'smooth';
@@ -79,17 +79,17 @@ export function cornerSmoothingIcon(value: string, color: string): ReactNode {
       )}
     </svg>
   );
-}
+};
 
-export function borderWidthIcon(value: string, color: string): ReactNode {
+export const borderWidthIcon = (value: string, color: string): ReactNode => {
   if (value === 'none') {
     return <div style={{ width: 14, height: 14, background: color, borderRadius: 2, opacity: 0.35 }} />;
   }
   const width = ({ small: 1, medium: 1.5, large: 2 } as Record<string, number>)[value] ?? 1;
   return <div style={{ width: 14, height: 14, border: `${width}px solid ${color}`, borderRadius: 2 }} />;
-}
+};
 
-export function elevationIcon(value: string, color: string, _isDark: boolean): ReactNode {
+export const elevationIcon = (value: string, color: string, _isDark: boolean): ReactNode => {
   const shadowColor = 'rgba(128,128,128,0.55)';
   const offset = ({ none: 0, small: 1, medium: 2, large: 3 } as Record<string, number>)[value] ?? 0;
   const shadowSize = ({ none: 0, small: 10, medium: 11, large: 12 } as Record<string, number>)[value] ?? 0;
@@ -140,9 +140,9 @@ export function elevationIcon(value: string, color: string, _isDark: boolean): R
       />
     </div>
   );
-}
+};
 
-export function textAccentIcon(value: string, color: string): ReactNode {
+export const textAccentIcon = (value: string, color: string): ReactNode => {
   const weight = value === 'low' ? 300 : value === 'medium' ? 500 : 700;
   const opacity = value === 'low' ? 0.35 : value === 'medium' ? 0.7 : 1;
   return (
@@ -158,7 +158,7 @@ export function textAccentIcon(value: string, color: string): ReactNode {
       Aa
     </span>
   );
-}
+};
 
 const fontCategoryStyles: Record<string, { family: string; label: string; letterSpacing?: string; style?: string }> = {
   'sans-serif': {
@@ -177,7 +177,7 @@ const fontCategoryStyles: Record<string, { family: string; label: string; letter
   geometric: { family: "'Century Gothic', 'Futura', sans-serif", label: 'Aa' },
 };
 
-export function headingFontIcon(value: string, color: string): ReactNode {
+export const headingFontIcon = (value: string, color: string): ReactNode => {
   const s = fontCategoryStyles[value] ?? { family: 'inherit', label: 'Aa' };
   return (
     <span
@@ -193,9 +193,9 @@ export function headingFontIcon(value: string, color: string): ReactNode {
       {s.label}
     </span>
   );
-}
+};
 
-export function bodyFontIcon(value: string, color: string): ReactNode {
+export const bodyFontIcon = (value: string, color: string): ReactNode => {
   const s = fontCategoryStyles[value] ?? { family: 'inherit', label: 'Aa' };
   return (
     <span
@@ -211,9 +211,9 @@ export function bodyFontIcon(value: string, color: string): ReactNode {
       {s.label}
     </span>
   );
-}
+};
 
-export function fontWeightIcon(value: string, color: string): ReactNode {
+export const fontWeightIcon = (value: string, color: string): ReactNode => {
   const weight = ({ light: 300, regular: 400, bold: 700 } as Record<string, number>)[value] ?? 400;
   return (
     <span
@@ -227,9 +227,9 @@ export function fontWeightIcon(value: string, color: string): ReactNode {
       W
     </span>
   );
-}
+};
 
-export function modeIcon(value: 'system' | 'light' | 'dark', color: string): ReactNode {
+export const modeIcon = (value: 'system' | 'light' | 'dark', color: string): ReactNode => {
   const base = { width: 14, height: 14, borderRadius: '50%' } as const;
   if (value === 'system') {
     return (
@@ -246,10 +246,10 @@ export function modeIcon(value: 'system' | 'light' | 'dark', color: string): Rea
     return <div style={{ ...base, border: `1.5px solid ${color}` }} />;
   }
   return <div style={{ ...base, background: color }} />;
-}
+};
 
 /** Compact text glyph used by house-decision knobs in the panel. */
-function glyph(label: string, color: string, size = 9): ReactNode {
+const glyph = (label: string, color: string, size = 9): ReactNode => {
   return (
     <span
       style={{
@@ -263,9 +263,9 @@ function glyph(label: string, color: string, size = 9): ReactNode {
       {label}
     </span>
   );
-}
+};
 
-export function fieldLabelPlacementIcon(value: string, color: string): ReactNode {
+export const fieldLabelPlacementIcon = (value: string, color: string): ReactNode => {
   if (value === 'side') {
     return glyph('⊟', color, 12);
   }
@@ -273,9 +273,9 @@ export function fieldLabelPlacementIcon(value: string, color: string): ReactNode
     return glyph('⬚', color, 12);
   }
   return glyph('⊞', color, 12); // top
-}
+};
 
-export function requiredMarkingIcon(value: string, color: string): ReactNode {
+export const requiredMarkingIcon = (value: string, color: string): ReactNode => {
   if (value === 'asterisk') {
     return glyph('*', color, 14);
   }
@@ -283,9 +283,9 @@ export function requiredMarkingIcon(value: string, color: string): ReactNode {
     return glyph('opt', color, 8);
   }
   return glyph('min', color, 8); // minority
-}
+};
 
-export function tableZebraIcon(value: string, color: string): ReactNode {
+export const tableZebraIcon = (value: string, color: string): ReactNode => {
   const on = value === 'on';
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 1, width: 14 }}>
@@ -294,9 +294,9 @@ export function tableZebraIcon(value: string, color: string): ReactNode {
       <div style={{ height: 3, background: color, borderRadius: 1, opacity: on ? 1 : 0.35 }} />
     </div>
   );
-}
+};
 
-export function bulkBarPlacementIcon(value: string, color: string): ReactNode {
+export const bulkBarPlacementIcon = (value: string, color: string): ReactNode => {
   const top = value !== 'bottom';
   return (
     <div
@@ -313,9 +313,9 @@ export function bulkBarPlacementIcon(value: string, color: string): ReactNode {
       <div style={{ height: 3, background: color, borderRadius: 1 }} />
     </div>
   );
-}
+};
 
-export function selectAllScopeIcon(value: string, color: string): ReactNode {
+export const selectAllScopeIcon = (value: string, color: string): ReactNode => {
   const filtered = value === 'filtered';
   // Three rows; page scope highlights only the top rows (current page),
   // filtered scope highlights all rows (all matching).
@@ -326,13 +326,13 @@ export function selectAllScopeIcon(value: string, color: string): ReactNode {
       <div style={{ height: 3, background: color, borderRadius: 1, opacity: filtered ? 1 : 0.3 }} />
     </div>
   );
-}
+};
 
-export function timestampStyleIcon(value: string, color: string): ReactNode {
+export const timestampStyleIcon = (value: string, color: string): ReactNode => {
   return glyph(value === 'relative' ? '~t' : '12:00', color, value === 'relative' ? 10 : 7);
-}
+};
 
-export function disabledStyleIcon(value: string, color: string): ReactNode {
+export const disabledStyleIcon = (value: string, color: string): ReactNode => {
   if (value === 'dimWhole') {
     return <div style={{ width: 14, height: 14, background: color, borderRadius: 2, opacity: 0.35 }} />;
   }
@@ -343,9 +343,9 @@ export function disabledStyleIcon(value: string, color: string): ReactNode {
       <div style={{ height: 7, background: color, borderRadius: 1, opacity: 0.3 }} />
     </div>
   );
-}
+};
 
-export function formAutofocusIcon(value: string, color: string): ReactNode {
+export const formAutofocusIcon = (value: string, color: string): ReactNode => {
   return (
     <div
       style={{
@@ -358,4 +358,4 @@ export function formAutofocusIcon(value: string, color: string): ReactNode {
       }}
     />
   );
-}
+};

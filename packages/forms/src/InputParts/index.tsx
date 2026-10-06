@@ -53,7 +53,7 @@ import { useIsInTableCell } from '../shared/table-cell-context';
  * control itself. Spread BEFORE consumer props so an explicit
  * accessibilityLabel / aria-label ejects.
  */
-function useNativeFieldA11yProps() {
+const useNativeFieldA11yProps = () => {
   const fieldA11y = useFieldA11y();
   if (isWeb || !fieldA11y) {
     return undefined;
@@ -62,7 +62,7 @@ function useNativeFieldA11yProps() {
     ...(fieldA11y.label ? { accessibilityLabel: fieldA11y.label } : undefined),
     ...(fieldA11y.description ? { accessibilityHint: fieldA11y.description } : undefined),
   };
-}
+};
 
 // ---------------------------------------------------------------------------
 // Context
@@ -83,18 +83,18 @@ export const InputContext = createStyledContext<{
 }>(defaultContextValues);
 
 /** Square end-cap of recipe.height — generated, never handwritten. */
-function endCapVariantsFromHeights(heightVariants: Record<string, { height: number }>) {
+const endCapVariantsFromHeights = (heightVariants: Record<string, { height: number }>) => {
   return Object.fromEntries(
     Object.entries(heightVariants).map(([token, { height }]) => [
       token,
       { height, width: height, paddingHorizontal: 0 as const },
     ]),
   );
-}
+};
 
 const sizeRecipeEndCapVariants = endCapVariantsFromHeights(recipeFamilies.control.heightVariants);
 
-function sizeRecipeBoxFallback(val: unknown, extras: { props: { touch?: boolean } }) {
+const sizeRecipeBoxFallback = (val: unknown, extras: { props: { touch?: boolean } }) => {
   const recipe = sizeRecipeForToken(String(val ?? '$true'), {
     touch: extras.props.touch ?? (!isWeb && isTouchSurface()),
   });
@@ -103,29 +103,29 @@ function sizeRecipeBoxFallback(val: unknown, extras: { props: { touch?: boolean 
     paddingHorizontal: recipe.paddingHorizontal,
     gap: recipe.gap,
   };
-}
+};
 
-function sizeRecipeTypeFallback(val: unknown, extras: { props: { touch?: boolean } }) {
+const sizeRecipeTypeFallback = (val: unknown, extras: { props: { touch?: boolean } }) => {
   return {
     fontSize: sizeRecipeForToken(String(val ?? '$true'), {
       touch: extras.props.touch ?? (!isWeb && isTouchSurface()),
     }).fontSize,
   };
-}
+};
 
-function sizeRecipeIconFallback(val: unknown, extras: { props: { touch?: boolean } }) {
+const sizeRecipeIconFallback = (val: unknown, extras: { props: { touch?: boolean } }) => {
   const { iconSize } = sizeRecipeForToken(String(val ?? '$true'), {
     touch: extras.props.touch ?? (!isWeb && isTouchSurface()),
   });
   return { width: iconSize, height: iconSize };
-}
+};
 
-function sizeRecipeEndCapFallback(val: unknown, extras: { props: { touch?: boolean } }) {
+const sizeRecipeEndCapFallback = (val: unknown, extras: { props: { touch?: boolean } }) => {
   const { height } = sizeRecipeForToken(String(val ?? '$true'), {
     touch: extras.props.touch ?? (!isWeb && isTouchSurface()),
   });
   return { height, width: height, paddingHorizontal: 0 };
-}
+};
 
 // ---------------------------------------------------------------------------
 // Focus forwarding
@@ -176,7 +176,7 @@ const inputFrameCssTimings: Record<string, string> = {
   gentle: 'ease-in-out 450ms',
 };
 
-export function getInputFrameTransitionProps(transition: string | undefined) {
+export const getInputFrameTransitionProps = (transition: string | undefined) => {
   if (!transition) {
     return undefined;
   }
@@ -197,7 +197,7 @@ export function getInputFrameTransitionProps(transition: string | undefined) {
       ].join(', '),
     },
   };
-}
+};
 
 /** Resting outline: transparent + 0 width so blur never lands on theme `$outlineColor`. */
 const inputOutlineRest = {
@@ -231,18 +231,18 @@ const AREA_NO_OUTLINE = {
 
 type BoxOverflow = 'hidden' | 'visible';
 
-export function boxRingMode(overflow: BoxOverflow, paintsRing: boolean): 'inset' | 'outset' | undefined {
+export const boxRingMode = (overflow: BoxOverflow, paintsRing: boolean): 'inset' | 'outset' | undefined => {
   if (!paintsRing) {
     return undefined;
   }
   return overflow === 'hidden' ? 'inset' : 'outset';
-}
+};
 
-export function boxRingOffset(mode: 'inset' | 'outset' | undefined): number {
+export const boxRingOffset = (mode: 'inset' | 'outset' | undefined): number => {
   // Both branches are sanctioned offsets: the clipping inset when the
   // Box clips its adornments, the shape halo when it does not.
   return mode === 'outset' ? FOCUS_RING_HALO_OFFSET : FOCUS_RING_CLIPPED_OFFSET;
-}
+};
 
 export const inputPartsRingCss = `/* LC-71: ring on Box (adornments inside); Area never outlines.
    Inset iff the Box clips (overflow:hidden). Do not :has(:focus-visible) on
@@ -278,7 +278,7 @@ input[data-mp-input-area] {
 
 const INPUT_PARTS_RING_STYLE_ID = 'mp-input-parts-ring-anatomy';
 
-export function ensureInputPartsFocusRing(): void {
+export const ensureInputPartsFocusRing = (): void => {
   if (typeof document === 'undefined') {
     return;
   }
@@ -289,13 +289,13 @@ export function ensureInputPartsFocusRing(): void {
   tag.id = INPUT_PARTS_RING_STYLE_ID;
   tag.textContent = inputPartsRingCss;
   document.head.append(tag);
-}
+};
 
-function webBoxRingAttrs(
+const webBoxRingAttrs = (
   overflow: BoxOverflow,
   paintsRing: boolean,
   extraClass?: string,
-): Record<string, unknown> | undefined {
+): Record<string, unknown> | undefined => {
   if (!isWeb) {
     return undefined;
   }
@@ -306,9 +306,9 @@ function webBoxRingAttrs(
     'data-mp-input-box': 'true',
     ...(mode ? { 'data-mp-ring': mode } : undefined),
   };
-}
+};
 
-function webAreaAttrs(extraClass?: string): Record<string, unknown> | undefined {
+const webAreaAttrs = (extraClass?: string): Record<string, unknown> | undefined => {
   if (!isWeb) {
     return undefined;
   }
@@ -317,7 +317,7 @@ function webAreaAttrs(extraClass?: string): Record<string, unknown> | undefined 
     className,
     'data-mp-input-area': 'true',
   };
-}
+};
 
 export const defaultInputGroupStyles = {
   size: '$true',
@@ -398,7 +398,11 @@ const InputGroupFrame = styled(XGroup, {
  * XGroup chrome (buttons that must stay tappable — clear, chip dismiss —
  * should sit outside InputParts.Box, e.g. FloatingPanel triggerEnd).
  */
-function wrapNativePressable(onPress: ((e?: any) => void) | undefined, disabled: boolean | undefined, node: ReactNode) {
+const wrapNativePressable = (
+  onPress: ((e?: any) => void) | undefined,
+  disabled: boolean | undefined,
+  node: ReactNode,
+) => {
   if (isWeb || !onPress) {
     return node;
   }
@@ -416,7 +420,7 @@ function wrapNativePressable(onPress: ((e?: any) => void) | undefined, disabled:
       </View>
     </RNPressable>
   );
-}
+};
 
 const InputGroupImpl = InputGroupFrame.styleable<{
   /**
@@ -739,19 +743,19 @@ export type MappedKeyboardType = (typeof INPUT_MODE_TO_KEYBOARD)[keyof typeof IN
  */
 export type InputModeValue = ComponentProps<typeof TInput>['inputMode'];
 
-export function mapKeyboardTypeToInputMode(keyboardType?: string): MappedInputMode | undefined {
+export const mapKeyboardTypeToInputMode = (keyboardType?: string): MappedInputMode | undefined => {
   if (!keyboardType) {
     return undefined;
   }
   return KEYBOARD_TO_INPUT_MODE[keyboardType as keyof typeof KEYBOARD_TO_INPUT_MODE];
-}
+};
 
-export function mapInputModeToKeyboardType(inputMode?: string): MappedKeyboardType | undefined {
+export const mapInputModeToKeyboardType = (inputMode?: string): MappedKeyboardType | undefined => {
   if (!inputMode) {
     return undefined;
   }
   return INPUT_MODE_TO_KEYBOARD[inputMode as keyof typeof INPUT_MODE_TO_KEYBOARD];
-}
+};
 
 export const inputSizeVariant: SizeVariantSpreadFunction<any> = (val = '$true', extras) => {
   const recipe = sizeRecipeForToken(String(val || '$true'), {
@@ -1357,7 +1361,13 @@ export const InputInfo = InputInfoFrame.styleable((props, ref) => {
  * The validation error replaces the helper in place — never a
  * second line — so surfacing an error shifts no layout. Matches FieldLayout.
  */
-export function InputFieldMeta({ helperText, displayError }: { helperText?: string; displayError?: string | boolean }) {
+export const InputFieldMeta = ({
+  helperText,
+  displayError,
+}: {
+  helperText?: string;
+  displayError?: string | boolean;
+}) => {
   const errorMessage =
     displayError && typeof displayError === 'string' && displayError.length > 0 ? displayError : undefined;
   if (errorMessage) {
@@ -1374,7 +1384,7 @@ export function InputFieldMeta({ helperText, displayError }: { helperText?: stri
     return null;
   }
   return <InputInfo>{helperText}</InputInfo>;
-}
+};
 
 // ---------------------------------------------------------------------------
 // Input.XGroup
@@ -1402,7 +1412,7 @@ import { ThemedTextArea } from '../themed-primitives';
 
 type TamaguiTextAreaProps = ComponentProps<typeof ThemedTextArea>;
 
-export function FocusWiredTextArea(props: TamaguiTextAreaProps & { innerRef?: Ref<any> }) {
+export const FocusWiredTextArea = (props: TamaguiTextAreaProps & { innerRef?: Ref<any> }) => {
   const { setFocused } = FocusContext.useStyledContext();
   const {
     innerRef,
@@ -1458,7 +1468,7 @@ export function FocusWiredTextArea(props: TamaguiTextAreaProps & { innerRef?: Re
       />
     </View>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // Compound component

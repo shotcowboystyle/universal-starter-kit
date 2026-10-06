@@ -44,14 +44,14 @@ interface PhotonFeature {
 
 const photonPublicUrl = 'https://photon.komoot.io';
 
-function streetLine(props: PhotonProperties): string | undefined {
+const streetLine = (props: PhotonProperties): string | undefined => {
   if (!props.street) {
     return undefined;
   }
   return props.housenumber ? `${props.street} ${props.housenumber}` : props.street;
-}
+};
 
-export function photonFeatureToResult(feature: PhotonFeature): GeocodeResult | null {
+export const photonFeatureToResult = (feature: PhotonFeature): GeocodeResult | null => {
   const coordinates = feature.geometry?.coordinates;
   if (!Array.isArray(coordinates)) {
     return null;
@@ -85,9 +85,9 @@ export function photonFeatureToResult(feature: PhotonFeature): GeocodeResult | n
     parts.push(part);
   }
   return parts.length > 0 ? { lat, lng, label, description: parts.join(', ') } : { lat, lng, label };
-}
+};
 
-function toResults(body: unknown): GeocodeResult[] {
+const toResults = (body: unknown): GeocodeResult[] => {
   const features = (body as { features?: unknown } | null)?.features;
   if (!Array.isArray(features)) {
     throw new TypeError('Photon returned no feature collection');
@@ -107,16 +107,16 @@ function toResults(body: unknown): GeocodeResult[] {
     results.push(result);
   }
   return results;
-}
+};
 
-function query(params: Record<string, string | number | undefined>): string {
+const query = (params: Record<string, string | number | undefined>): string => {
   return Object.entries(params)
     .filter((entry): entry is [string, string | number] => entry[1] !== undefined)
     .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
     .join('&');
-}
+};
 
-export function createPhotonGeocoder(options: PhotonGeocoderOptions = {}): Geocoder {
+export const createPhotonGeocoder = (options: PhotonGeocoderOptions = {}): Geocoder => {
   const baseUrl = (options.baseUrl ?? photonPublicUrl).replace(/\/+$/, '');
   const { lang } = options;
   const limit = options.limit ?? 5;
@@ -177,4 +177,4 @@ export function createPhotonGeocoder(options: PhotonGeocoderOptions = {}): Geoco
       return results[0] ?? null;
     },
   };
-}
+};

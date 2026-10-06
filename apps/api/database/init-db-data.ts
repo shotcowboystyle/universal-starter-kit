@@ -49,7 +49,7 @@ if (missingEnvVars.length > 0) {
 }
 
 // Extract and validate database name from DATABASE_URL
-function getDatabaseNameFromUrl(url: string): string | null {
+const getDatabaseNameFromUrl = (url: string): string | null => {
   try {
     // MongoDB URL format: mongodb://[username:password@]host[:port]/[database][?options]
     // Extract database name from the URL
@@ -58,7 +58,7 @@ function getDatabaseNameFromUrl(url: string): string | null {
   } catch {
     return null;
   }
-}
+};
 
 const databaseUrl = process.env.DATABASE_URL;
 const dbName = getDatabaseNameFromUrl(databaseUrl);
@@ -82,7 +82,7 @@ if (!dbName || dbName === 'test') {
   console.warn('\x1B[33mProceeding with the specified database name...\x1B[0m\n');
 }
 
-async function main() {
+const main = async () => {
   // Non-interactive check for CI/Vercel or --force flag
   const isForced = process.argv.includes('--force');
   const isCI = process.env.CI === 'true' || process.env.VERCEL === 'true';
@@ -240,6 +240,6 @@ async function main() {
     });
     process.exit(1);
   }
-}
+};
 
 main();

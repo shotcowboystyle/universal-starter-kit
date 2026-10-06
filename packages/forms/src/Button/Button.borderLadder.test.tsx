@@ -24,14 +24,14 @@ afterEach(cleanup);
 
 const STOPS = ['none', 'small', 'medium', 'large'] as const;
 
-function widthAtoms(): string[] {
+const widthAtoms = (): string[] => {
   return String(screen.getByRole('button').className || '')
     .split(/\s+/)
     .filter((c) => c.startsWith('_btw-'))
     .sort();
-}
+};
 
-function renderAt(stop: (typeof STOPS)[number], outlined: boolean): string[] {
+const renderAt = (stop: (typeof STOPS)[number], outlined: boolean): string[] => {
   renderWithProviders(
     <Preset overrides={{ fillStyle: outlined ? 'outlined' : 'filled', borderWidth: stop }}>
       <Button>Restart</Button>
@@ -40,7 +40,7 @@ function renderAt(stop: (typeof STOPS)[number], outlined: boolean): string[] {
   const atoms = widthAtoms();
   cleanup();
   return atoms;
-}
+};
 
 describe('Button borderWidth ladder', () => {
   it('outlined walks the ladder: hairline at none and small, 1 at medium, 2 at large', () => {

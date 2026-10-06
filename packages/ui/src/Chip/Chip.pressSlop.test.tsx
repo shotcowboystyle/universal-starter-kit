@@ -17,7 +17,7 @@ afterEach(cleanup);
 
 type Stop = 'none' | 'small' | 'medium' | 'large';
 
-function frameAt(borderWidth: Stop, props: { onPress?: () => void; disabled?: boolean } = { onPress: () => {} }) {
+const frameAt = (borderWidth: Stop, props: { onPress?: () => void; disabled?: boolean } = { onPress: () => {} }) => {
   const result = renderWithProviders(
     <Preset overrides={{ borderWidth }}>
       <Chip
@@ -28,7 +28,7 @@ function frameAt(borderWidth: Stop, props: { onPress?: () => void; disabled?: bo
     </Preset>,
   );
   return result.container.querySelector('[data-chip]') as HTMLElement;
-}
+};
 
 describe('Chip pressable body slop', () => {
   it('reaches half the chip-row gap past the painted box, vertically only', () => {

@@ -2,7 +2,7 @@
 
 import { Spinner, YStack } from '@repo/ui';
 
-export default function WorkspaceSpinner() {
+const WorkspaceSpinner = () => {
   return (
     <YStack
       height="100vh"
@@ -11,4 +11,6 @@ export default function WorkspaceSpinner() {
       <Spinner size="large" />
     </YStack>
   );
-}
+};
+
+export default WorkspaceSpinner;

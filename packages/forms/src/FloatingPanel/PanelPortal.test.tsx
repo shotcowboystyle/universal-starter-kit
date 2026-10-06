@@ -31,7 +31,7 @@ const pointerPress = (el: Element) => {
   fireEvent.click(el, { detail: 1 });
 };
 
-function PanelHarness() {
+const PanelHarness = () => {
   const [open, setOpen] = useState(false);
   return (
     <FloatingPanel
@@ -41,7 +41,7 @@ function PanelHarness() {
       <Text>panel body</Text>
     </FloatingPanel>
   );
-}
+};
 
 let innerWidth = 0;
 beforeEach(() => {

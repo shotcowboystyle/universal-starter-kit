@@ -110,7 +110,7 @@ describe('Tooltip content rides the border, elevation and animation knobs', () =
     { borderWidth: 'large', elevation: 'large', animation: 'slow' },
   ] as const;
 
-  async function measure(stop: (typeof stops)[number]) {
+  const measure = async (stop: (typeof stops)[number]) => {
     const result = renderWithProviders(
       <Preset overrides={stop}>
         <Tooltip
@@ -133,7 +133,7 @@ describe('Tooltip content rides the border, elevation and animation knobs', () =
     };
     result.unmount();
     return measured;
-  }
+  };
 
   it('follows each stop on the mounted bubble, and none carries no border, shadow or motion', async () => {
     const none = await measure(stops[0]);

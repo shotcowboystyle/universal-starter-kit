@@ -18,11 +18,11 @@ describe('shared form submission outcome', () => {
       const submit = vi.fn().mockRejectedValueOnce(new Error(refusal)).mockResolvedValue(undefined);
       const saved = vi.fn();
       let isDirty = () => false;
-      function DirtyProbe() {
+      const DirtyProbe = () => {
         const form = useFormContext();
         isDirty = () => form.state.isDirty;
         return null;
-      }
+      };
       const view = renderWithProviders(
         <Form
           formOptions={{ defaultValues: { name: 'Original' } }}
@@ -109,7 +109,7 @@ describe('shared form submission outcome', () => {
   it('routes explicit form targets and standalone actions to the matching form only', async () => {
     const firstSubmit = vi.fn();
     const secondSubmit = vi.fn().mockRejectedValue(new Error(refusal));
-    function Harness() {
+    const Harness = () => {
       const first = useForm({
         defaultValues: { name: 'First' } as Record<string, unknown>,
         onSubmit: firstSubmit,
@@ -146,7 +146,7 @@ describe('shared form submission outcome', () => {
           </Button>
         </>
       );
-    }
+    };
     const view = renderWithProviders(<Harness />);
     await act(async () => fireEvent.click(view.getByRole('button', { name: 'Target second' })));
     await waitFor(() => {

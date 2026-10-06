@@ -16,7 +16,7 @@
 import { useEffect, useState } from 'react';
 import { Dimensions, Keyboard, Platform } from 'react-native';
 
-export function useKeyboardInset(): number {
+export const useKeyboardInset = (): number => {
   const [inset, setInset] = useState(0);
 
   useEffect(() => {
@@ -44,4 +44,4 @@ export function useKeyboardInset(): number {
   }, []);
 
   return inset;
-}
+};

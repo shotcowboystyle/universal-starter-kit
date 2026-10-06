@@ -20,7 +20,7 @@ afterEach(cleanup);
 
 const atomPx = (value: string) => Number(value.replace('--', '.'));
 
-function paintedHeight(el: HTMLElement): number {
+const paintedHeight = (el: HTMLElement): number => {
   const rect = el.getBoundingClientRect().height;
   if (rect > 0) {
     return rect;
@@ -39,13 +39,13 @@ function paintedHeight(el: HTMLElement): number {
   }
   const cs = Number.parseFloat(getComputedStyle(el).height);
   return cs > 0 ? cs : 0;
-}
+};
 
 /**
  * Rest atom is `_btlr-22px`; hover/press/focus are `_btlr-0hover-22px` / `_btlr-0active-22px` / `_btlr-0focus-22px`.
  * An odd-height part rounds to a half pixel, which tamagui writes with `--` for the dot (`_btlr-14--5px`).
  */
-function paintedRadius(el: HTMLElement, state?: 'hover' | 'active' | 'focus'): number {
+const paintedRadius = (el: HTMLElement, state?: 'hover' | 'active' | 'focus'): number => {
   const className = String(el.className || '');
   const re = state ? new RegExp(`_btlr-0${state}-(\\d+(?:--\\d+)?)px`) : /(?:^|\s)_btlr-(\d+(?:--\d+)?)px(?:\s|$)/;
   const m = re.exec(className);
@@ -60,19 +60,19 @@ function paintedRadius(el: HTMLElement, state?: 'hover' | 'active' | 'focus'): n
   }
   const cs = Number.parseFloat(getComputedStyle(el).borderRadius);
   return Number.isFinite(cs) ? cs : Number.NaN;
-}
+};
 
-function expectBinary(el: HTMLElement, stop: BorderRadius, state?: 'hover' | 'active' | 'focus') {
+const expectBinary = (el: HTMLElement, stop: BorderRadius, state?: 'hover' | 'active' | 'focus') => {
   const height = paintedHeight(el);
   expect(height, `expected a painted height on ${el.className}`).toBeGreaterThan(0);
   expect(paintedRadius(el, state)).toBe(stop === 'none' ? 0 : height / 2);
-}
+};
 
-function mountSwitch(
+const mountSwitch = (
   stop: BorderRadius,
   scheme: (typeof SCHEMES)[number],
   extra?: Partial<Record<(typeof STATE_BAGS)[number], { borderRadius: BorderRadius }>>,
-) {
+) => {
   return renderWithProviders(
     <Preset
       overrides={{
@@ -89,15 +89,15 @@ function mountSwitch(
       />
     </Preset>,
   );
-}
+};
 
-function parts(result: ReturnType<typeof renderWithProviders>) {
+const parts = (result: ReturnType<typeof renderWithProviders>) => {
   const track = result.getSwitch();
   expect(track).toBeTruthy();
   const thumb = track!.querySelector('.is_SwitchThumb') as HTMLElement | null;
   expect(thumb).toBeTruthy();
   return { track: track as HTMLElement, thumb: thumb as HTMLElement };
-}
+};
 
 describe('Switch BINARY radius (thumb and track are one member)', () => {
   for (const scheme of SCHEMES) {

@@ -47,14 +47,14 @@ const ALIGN_JUSTIFY: Record<ActionBarAlign, GetProps<typeof XStack>['justifyCont
   between: 'space-between',
 };
 
-function asArray(node: ReactNode | ReactNode[] | undefined): ReactNode[] {
+const asArray = (node: ReactNode | ReactNode[] | undefined): ReactNode[] => {
   if (node == null || node === false) {
     return [];
   }
   return Array.isArray(node) ? node : [node];
-}
+};
 
-function elementLooksPrimary(node: ReactNode): boolean {
+const elementLooksPrimary = (node: ReactNode): boolean => {
   if (!isValidElement(node)) {
     return false;
   }
@@ -69,9 +69,9 @@ function elementLooksPrimary(node: ReactNode): boolean {
     return true;
   }
   return false;
-}
+};
 
-function countPrimariesInTree(nodes: ReactNode): number {
+const countPrimariesInTree = (nodes: ReactNode): number => {
   let count = 0;
   Children.forEach(nodes, (child) => {
     if (elementLooksPrimary(child)) {
@@ -85,17 +85,17 @@ function countPrimariesInTree(nodes: ReactNode): number {
     }
   });
   return count;
-}
+};
 
-function nodeRendersDisabled(node: ReactNode): boolean {
+const nodeRendersDisabled = (node: ReactNode): boolean => {
   if (!isValidElement(node)) {
     return false;
   }
   const props = node.props as Record<string, unknown>;
   return props.disabled === true || props['aria-disabled'] === true || props['aria-disabled'] === 'true';
-}
+};
 
-export function ActionBar({
+export const ActionBar = ({
   primary,
   secondary,
   cancel,
@@ -105,7 +105,7 @@ export function ActionBar({
   id: idProp,
   gap = '$2',
   ...stackProps
-}: ActionBarProps) {
+}: ActionBarProps) => {
   const reactId = useId();
   const regionId = idProp ?? reactId;
   const rootRef = useRef<HTMLElement | null>(null);
@@ -213,4 +213,4 @@ export function ActionBar({
       {children}
     </XStack>
   );
-}
+};

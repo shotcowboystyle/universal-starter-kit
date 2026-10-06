@@ -13,26 +13,26 @@ import { Form } from '../Form';
 import { clientKnownIdentity, ContextualSaveBar } from './index';
 import type { NavigationBlocker } from './index';
 
-function savebar(root: ParentNode = document.body): HTMLElement | null {
+const savebar = (root: ParentNode = document.body): HTMLElement | null => {
   return root.querySelector('[data-mp-contextual-savebar]');
-}
+};
 
-function barButton(label: string, root: ParentNode = document.body): HTMLElement {
+const barButton = (label: string, root: ParentNode = document.body): HTMLElement => {
   const buttons = Array.from(root.querySelectorAll('[role="button"], button'));
   const match = buttons.find((b) => b.textContent?.includes(label));
   if (!match) {
     throw new Error(`No button labelled "${label}"`);
   }
   return match as HTMLElement;
-}
+};
 
-function alertdialog(): HTMLElement | null {
+const alertdialog = (): HTMLElement | null => {
   return document.body.querySelector('[role="alertdialog"]');
-}
+};
 
-function typeIn(input: Element, value: string) {
+const typeIn = (input: Element, value: string) => {
   fireEvent.change(input, { target: { value } });
-}
+};
 
 describe('ContextualSaveBar', () => {
   it('does not render when the form is clean', () => {
@@ -319,7 +319,7 @@ describe('ContextualSaveBar', () => {
   });
 
   it('fires the route-leave guard and Keep editing dismisses it', async () => {
-    function Harness() {
+    const Harness = () => {
       const [leaveArmed, setLeaveArmed] = useState(false);
       const useBlocker = (shouldBlock: boolean): NavigationBlocker => {
         if (leaveArmed && shouldBlock) {
@@ -355,7 +355,7 @@ describe('ContextualSaveBar', () => {
           </Form>
         </>
       );
-    }
+    };
 
     const result = renderWithProviders(<Harness />);
     await act(async () => {

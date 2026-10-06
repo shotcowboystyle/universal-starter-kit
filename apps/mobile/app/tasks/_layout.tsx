@@ -1,6 +1,6 @@
 import { Stack } from 'expo-router';
 
-export default function TasksLayout() {
+const TasksLayout = () => {
   return (
     <Stack
       screenOptions={{
@@ -15,4 +15,6 @@ export default function TasksLayout() {
       />
     </Stack>
   );
-}
+};
+
+export default TasksLayout;

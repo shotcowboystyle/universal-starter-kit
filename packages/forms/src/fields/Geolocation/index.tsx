@@ -59,9 +59,9 @@ interface ResolvedAddress {
   label: string;
 }
 
-function coordinateKey({ lat, lng }: { lat: number; lng: number }): string {
+const coordinateKey = ({ lat, lng }: { lat: number; lng: number }): string => {
   return `${lat},${lng}`;
-}
+};
 
 const SEARCH_DEBOUNCE_MS = 300;
 const COORD_LINE_HEIGHT = 28;
@@ -74,7 +74,7 @@ const RESULTS_PANEL_SHADOW = '0px 8px 28px rgba(0,0,0,0.12), 0px 2px 6px rgba(0,
  * permission state passes — the prompt happens inside the stable locate
  * surface, never as a locating-flash-then-fail flicker.
  */
-export async function preflightGeolocation(): Promise<CapabilityPreflightResult> {
+export const preflightGeolocation = async (): Promise<CapabilityPreflightResult> => {
   if (typeof navigator === 'undefined' || !navigator.geolocation) {
     const insecure = typeof window !== 'undefined' && !window.isSecureContext;
     return {
@@ -92,9 +92,9 @@ export async function preflightGeolocation(): Promise<CapabilityPreflightResult>
     };
   }
   return { ok: true };
-}
+};
 
-function mapGeolocationError(err: GeolocationPositionError | { message?: string; code?: number }): string {
+const mapGeolocationError = (err: GeolocationPositionError | { message?: string; code?: number }): string => {
   const code = 'code' in err ? err.code : undefined;
   if (code === 1) {
     return t('Location permission denied. Please allow location access.');
@@ -106,13 +106,13 @@ function mapGeolocationError(err: GeolocationPositionError | { message?: string;
     return t('Location request timed out. Try again.');
   }
   return err.message || t('Failed to get location');
-}
+};
 
 /**
  * Parse a coordinate draft. Returns undefined while the user is mid-keystroke
  * (empty, lone minus, trailing decimal) so we don't clobber the bound value.
  */
-function tryParseCoord(text: string, clamp: (n: number) => number): number | undefined {
+const tryParseCoord = (text: string, clamp: (n: number) => number): number | undefined => {
   const trimmed = text.trim();
   if (trimmed === '' || trimmed === '-' || trimmed === '.' || trimmed === '-.') {
     return undefined;
@@ -125,14 +125,14 @@ function tryParseCoord(text: string, clamp: (n: number) => number): number | und
     return undefined;
   }
   return clamp(n);
-}
+};
 
 /**
  * Draft Lat/Lng editor hosted inside FloatingPanel.
  * Valid parses commit live — no Apply/Done. Outside/Escape closes the panel;
  * parent flushes any remaining draft via `flushRef` on dismiss.
  */
-function CoordinatesPanel({
+const CoordinatesPanel = ({
   lat,
   lng,
   onCommit,
@@ -148,7 +148,7 @@ function CoordinatesPanel({
   knobProps: KnobProps;
   required?: boolean;
   hasError?: boolean;
-}) {
+}) => {
   const [latText, setLatText] = useState(String(lat));
   const [lngText, setLngText] = useState(String(lng));
   const latTextRef = useRef(latText);
@@ -259,9 +259,9 @@ function CoordinatesPanel({
       </YStack>
     </YStack>
   );
-}
+};
 
-function ExpandedMapView({
+const ExpandedMapView = ({
   lat,
   lng,
   onChange,
@@ -275,7 +275,7 @@ function ExpandedMapView({
   disabled: boolean;
   readOnly?: boolean;
   hasValue: boolean;
-}) {
+}) => {
   const { knobProps } = useResolvedKnobs();
 
   return (
@@ -297,7 +297,7 @@ function ExpandedMapView({
       />
     </YStack>
   );
-}
+};
 
 export interface GeolocationMapProps {
   lat: number;
@@ -310,7 +310,7 @@ export interface GeolocationMapProps {
 /** The map frame and the coordinate line take a 2px ring at offset 0 (media-13). */
 const overlayFocusRing = ensureFocusVisibleRing({ outlineOffset: 0 });
 
-function ResultRow({
+const ResultRow = ({
   testID,
   label,
   description,
@@ -322,7 +322,7 @@ function ResultRow({
   description?: string;
   onPress: () => void;
   disabled?: boolean;
-}) {
+}) => {
   return (
     <YStack
       testID={testID}
@@ -377,9 +377,9 @@ function ResultRow({
       ) : null}
     </YStack>
   );
-}
+};
 
-function StatusRow({ children, testID }: { children: ReactNode; testID?: string }) {
+const StatusRow = ({ children, testID }: { children: ReactNode; testID?: string }) => {
   return (
     <XStack
       testID={testID}
@@ -395,9 +395,9 @@ function StatusRow({ children, testID }: { children: ReactNode; testID?: string 
       </Text>
     </XStack>
   );
-}
+};
 
-function SearchResultsList({
+const SearchResultsList = ({
   listId,
   status,
   query,
@@ -417,7 +417,7 @@ function SearchResultsList({
   onPick: (result: GeocodeResult) => void;
   onPickPair: (lat: number, lng: number) => void;
   locateDisabled?: boolean;
-}) {
+}) => {
   const showLocate = status === 'idle' || status === 'results' || pair != null;
   return (
     <YStack
@@ -469,9 +469,9 @@ function SearchResultsList({
         : null}
     </YStack>
   );
-}
+};
 
-function GeoMapSurface({
+const GeoMapSurface = ({
   id,
   coordinates,
   onCommitCoordinates,
@@ -509,7 +509,7 @@ function GeoMapSurface({
   required?: boolean;
   hasError?: boolean;
   mapHeight: number;
-}) {
+}) => {
   const [expanded, setExpanded] = useState(false);
   const [coordsOpen, setCoordsOpen] = useState(false);
   const coordsFlushRef = useRef<(() => void) | null>(null);
@@ -784,7 +784,7 @@ function GeoMapSurface({
       )}
     </YStack>
   );
-}
+};
 
 export interface GeolocationProps {
   name?: string;
@@ -834,7 +834,7 @@ export interface GeolocationProps {
   geocoder?: Geocoder | null;
 }
 
-function CellFace({
+const CellFace = ({
   address,
   coordinates,
   onOpen,
@@ -842,7 +842,7 @@ function CellFace({
   address: string | null;
   onOpen?: () => void;
   coordinates: { lat: number; lng: number } | null;
-}) {
+}) => {
   const glyphColor = useGlyphColor();
   const text = address
     ? address
@@ -885,9 +885,25 @@ function CellFace({
       </Text>
     </XStack>
   );
-}
+};
 
-export function Geolocation({
+const GeolocationValueSync = ({
+  value,
+  runReverse,
+}: {
+  value: string;
+  runReverse: (lat?: number, lng?: number) => void;
+}) => {
+  const coords = parseGeoValue(value);
+  const key = coords ? coordinateKey(coords) : '';
+  useEffect(() => {
+    const next = parseGeoValue(value);
+    runReverse(next?.lat, next?.lng);
+  }, [key, value, runReverse]);
+  return null;
+};
+
+export const Geolocation = ({
   name,
   form: formProp,
   validators,
@@ -912,7 +928,7 @@ export function Geolocation({
   geocode: geocodeProp,
   reverseGeocode: reverseGeocodeProp,
   geocoder,
-}: GeolocationProps) {
+}: GeolocationProps) => {
   const hydrationTouch = useTouchSurface();
   const { resolvedForm, knobProps, id } = useFormField({ form: formProp, id: idProp, compact });
   const resolvedValidators = useResolvedValidators(required, validators, label, name);
@@ -1663,20 +1679,4 @@ export function Geolocation({
       }}
     </Field>
   );
-}
-
-function GeolocationValueSync({
-  value,
-  runReverse,
-}: {
-  value: string;
-  runReverse: (lat?: number, lng?: number) => void;
-}) {
-  const coords = parseGeoValue(value);
-  const key = coords ? coordinateKey(coords) : '';
-  useEffect(() => {
-    const next = parseGeoValue(value);
-    runReverse(next?.lat, next?.lng);
-  }, [key, value, runReverse]);
-  return null;
-}
+};

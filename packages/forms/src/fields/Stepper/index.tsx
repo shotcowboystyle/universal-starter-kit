@@ -44,13 +44,13 @@ const noButtonRing = {
   outlineColor: 'transparent',
 };
 
-function preventFocusSteal(e: { preventDefault?: () => void }) {
+const preventFocusSteal = (e: { preventDefault?: () => void }) => {
   // Spectrum / React Aria: spin buttons are not a tab stop and must not
   // steal focus from the field. The ring stays on Input.Box (+/− inside).
   e.preventDefault?.();
-}
+};
 
-function useRepeatAction(action: () => void, repeatingRef: MutableRefObject<boolean>) {
+const useRepeatAction = (action: () => void, repeatingRef: MutableRefObject<boolean>) => {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const actionRef = useRef(action);
@@ -83,7 +83,7 @@ function useRepeatAction(action: () => void, repeatingRef: MutableRefObject<bool
   useEffect(() => stop, [stop]);
 
   return { onPressIn: start, onPressOut: stop, stop };
-}
+};
 
 export type StepperProps<
   TParentData = any,
@@ -131,7 +131,7 @@ export type StepperProps<
     compact?: boolean;
   };
 
-function StepperSpinButton({
+const StepperSpinButton = ({
   kind,
   disabled,
   atBound,
@@ -155,7 +155,7 @@ function StepperSpinButton({
   onActivate: () => void;
   onBoundPress: () => void;
   children: ReactNode;
-}) {
+}) => {
   const label = kind === 'increment' ? t('Increase') : t('Decrease');
   const [pressed, setPressed] = useState(false);
   const button = (
@@ -255,15 +255,80 @@ function StepperSpinButton({
       {button}
     </Pressable>
   );
-}
+};
 
-export function Stepper<
+const StepperFieldRenderer = <TData,>({
+  field,
+  fieldProps,
+  id,
+  inputValue,
+  setInputValue,
+  formatValue,
+  parseValue,
+  clampValue,
+  knobProps,
+  controlSize,
+  renderNumberRow,
+}: any) => {
+  const isFieldUpdateRef = useRef(false);
+
+  useEffect(() => {
+    const fieldValue = field.state.value as number | null;
+    if (fieldValue !== undefined && fieldValue !== null) {
+      const formatted = formatValue(fieldValue);
+      if (formatted !== inputValue) {
+        isFieldUpdateRef.current = true;
+        setInputValue(formatted);
+      }
+    } else if (fieldValue === null && inputValue !== '') {
+      isFieldUpdateRef.current = true;
+      setInputValue('');
+    }
+  }, [field.state.value, formatValue, setInputValue]);
+
+  useEffect(() => {
+    if (isFieldUpdateRef.current) {
+      isFieldUpdateRef.current = false;
+      return;
+    }
+    const parsedValue = parseValue(inputValue);
+    const clampedValue = clampValue(parsedValue);
+    if (clampedValue !== field.state.value) {
+      field.handleChange(clampedValue as TData);
+    }
+  }, [inputValue, parseValue, clampValue, field.handleChange, field.state.value]);
+
+  const error = getFieldError(field, fieldProps.error);
+
+  return (
+    <FieldLayout
+      id={id}
+      label={fieldProps.label}
+      labelProps={fieldProps.labelProps}
+      error={error}
+      helperText={fieldProps.helperText}
+      required={fieldProps.required}
+      size={fieldProps.size}
+      knobProps={knobProps}
+      onBlur={mergeFieldHandler(field, 'handleBlur', fieldProps.onBlur)}
+      // See standalone branch — FieldLayout carries dimWhole.
+      disabled={fieldProps.disabled}>
+      <InputParts size={fieldProps.size || controlSize || knobProps.sizeToken}>
+        {renderNumberRow(undefined, () => field.handleChange(parseValue(inputValue) as TData), !!error)}
+      </InputParts>
+    </FieldLayout>
+  );
+};
+
+export const Stepper = <
   TParentData,
   TName extends DeepKeys<TParentData>,
   TFieldValidator extends Validator<DeepValue<TParentData, TName>> | undefined = undefined,
   TFormValidator = any,
   TData extends DeepValue<TParentData, TName> = DeepValue<TParentData, TName>,
->(props: StepperProps<TParentData, TName, TFieldValidator, TFormValidator, TData>) {
+>(
+  props: StepperProps<TParentData, TName, TFieldValidator, TFormValidator, TData>,
+) => {
   const hydrationTouch = useTouchSurface();
   const {
     defaultValue,
@@ -879,67 +944,4 @@ export function Stepper<
       )}
     </Field>
   );
-}
-
-function StepperFieldRenderer<TData>({
-  field,
-  fieldProps,
-  id,
-  inputValue,
-  setInputValue,
-  formatValue,
-  parseValue,
-  clampValue,
-  knobProps,
-  controlSize,
-  renderNumberRow,
-}: any) {
-  const isFieldUpdateRef = useRef(false);
-
-  useEffect(() => {
-    const fieldValue = field.state.value as number | null;
-    if (fieldValue !== undefined && fieldValue !== null) {
-      const formatted = formatValue(fieldValue);
-      if (formatted !== inputValue) {
-        isFieldUpdateRef.current = true;
-        setInputValue(formatted);
-      }
-    } else if (fieldValue === null && inputValue !== '') {
-      isFieldUpdateRef.current = true;
-      setInputValue('');
-    }
-  }, [field.state.value, formatValue, setInputValue]);
-
-  useEffect(() => {
-    if (isFieldUpdateRef.current) {
-      isFieldUpdateRef.current = false;
-      return;
-    }
-    const parsedValue = parseValue(inputValue);
-    const clampedValue = clampValue(parsedValue);
-    if (clampedValue !== field.state.value) {
-      field.handleChange(clampedValue as TData);
-    }
-  }, [inputValue, parseValue, clampValue, field.handleChange, field.state.value]);
-
-  const error = getFieldError(field, fieldProps.error);
-
-  return (
-    <FieldLayout
-      id={id}
-      label={fieldProps.label}
-      labelProps={fieldProps.labelProps}
-      error={error}
-      helperText={fieldProps.helperText}
-      required={fieldProps.required}
-      size={fieldProps.size}
-      knobProps={knobProps}
-      onBlur={mergeFieldHandler(field, 'handleBlur', fieldProps.onBlur)}
-      // See standalone branch — FieldLayout carries dimWhole.
-      disabled={fieldProps.disabled}>
-      <InputParts size={fieldProps.size || controlSize || knobProps.sizeToken}>
-        {renderNumberRow(undefined, () => field.handleChange(parseValue(inputValue) as TData), !!error)}
-      </InputParts>
-    </FieldLayout>
-  );
-}
+};

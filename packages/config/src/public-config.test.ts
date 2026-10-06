@@ -34,9 +34,9 @@ afterEach(() => {
   delete process.env.MPO_SPEC_BAR;
 });
 
-function writeConfig(publicKeys: unknown, extra: Record<string, unknown> = {}) {
+const writeConfig = (publicKeys: unknown, extra: Record<string, unknown> = {}) => {
   fs.writeFileSync(file, JSON.stringify({ private: ['SECRET'], public: publicKeys, ...extra }));
-}
+};
 
 interface FakeEnvironment {
   modules: Map<string, { id: string }>;
@@ -47,7 +47,7 @@ interface FakeEnvironment {
   hot: { send: ReturnType<typeof vi.fn> };
 }
 
-function fakeServer() {
+const fakeServer = () => {
   const watcher = Object.assign(new EventEmitter(), { add: vi.fn() });
   const environment = (): FakeEnvironment => {
     const modules = new Map<string, { id: string }>();
@@ -61,7 +61,7 @@ function fakeServer() {
   const logger = { info: vi.fn(), warn: vi.fn() };
   const server = { watcher, environments, config: { logger } };
   return { server: server as unknown as ViteDevServer, watcher, environments, logger };
-}
+};
 
 interface TransformEnvironment {
   name: string;
@@ -69,7 +69,7 @@ interface TransformEnvironment {
   depsOptimizer?: { isOptimizedDepFile: (id: string) => boolean };
 }
 
-async function transform(plugin: Plugin, environment: string | TransformEnvironment, code: string, id: string) {
+const transform = async (plugin: Plugin, environment: string | TransformEnvironment, code: string, id: string) => {
   const hook = plugin.transform as (
     this: { environment: TransformEnvironment },
     code: string,
@@ -83,11 +83,11 @@ async function transform(plugin: Plugin, environment: string | TransformEnvironm
         }
       : environment;
   return await hook.call({ environment: context }, code, id);
-}
+};
 
-function configureServer(plugin: Plugin, server: ViteDevServer) {
+const configureServer = (plugin: Plugin, server: ViteDevServer) => {
   (plugin.configureServer as (server: ViteDevServer) => void)(server);
-}
+};
 
 describe('readPublicConfigKeys', () => {
   it('returns the public key names', () => {

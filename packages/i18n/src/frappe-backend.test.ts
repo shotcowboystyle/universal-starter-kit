@@ -21,16 +21,16 @@ afterEach(() => {
   }
 });
 
-function enabledBackend() {
+const enabledBackend = () => {
   process.env.VITE_FRAPPE_ENABLED = 'true';
   const backend = createFrappeBackend();
   expect(backend).not.toBeNull();
   return backend!;
-}
+};
 
-function initBackend(backend: ReturnType<typeof createFrappeBackend>, options: FrappeBackendOptions) {
+const initBackend = (backend: ReturnType<typeof createFrappeBackend>, options: FrappeBackendOptions) => {
   backend!.init({} as Services, options, {} as InitOptions);
-}
+};
 
 describe('createFrappeBackend gating', () => {
   it("returns null when VITE_FRAPPE_ENABLED is not 'true' (tree-shake guard)", () => {

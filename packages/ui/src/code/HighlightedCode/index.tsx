@@ -36,13 +36,13 @@ export interface HighlightedCodeProps {
   fontSize?: any;
 }
 
-export function HighlightedCode({
+export const HighlightedCode = ({
   tokens,
   children,
   highlightLines = [],
   showLineNumbers = false,
   fontSize,
-}: HighlightedCodeProps) {
+}: HighlightedCodeProps) => {
   const { knobProps } = useResolvedKnobs();
   // Code content scales with the size knob (via sizeToken);
   // an explicit fontSize prop from the caller ejects.
@@ -108,4 +108,4 @@ export function HighlightedCode({
       })}
     </>
   );
-}
+};

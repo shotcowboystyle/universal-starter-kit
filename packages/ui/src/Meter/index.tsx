@@ -103,7 +103,7 @@ export interface MeterProps extends Omit<GetProps<typeof MeterRoot>, 'children'>
   disabled?: boolean;
 }
 
-function tickLeftPercent(cut: number, min: number, max: number): number | null {
+const tickLeftPercent = (cut: number, min: number, max: number): number | null => {
   if (max === min) {
     return null;
   }
@@ -111,14 +111,14 @@ function tickLeftPercent(cut: number, min: number, max: number): number | null {
     return null;
   }
   return ((cut - min) / (max - min)) * 100;
-}
+};
 
-function defaultValueText(opts: {
+const defaultValueText = (opts: {
   value?: number | null;
   visible: string;
   unit?: string;
   format?: MeterFormat;
-}): string {
+}): string => {
   if (opts.value == null || !Number.isFinite(opts.value)) {
     return UNKNOWN_VALUE;
   }
@@ -129,13 +129,13 @@ function defaultValueText(opts: {
     return `${opts.visible} used`;
   }
   return opts.visible;
-}
+};
 
 /**
  * Bounded-quantity display. Inert — no tab stop, no focus ring. The input
  * twin is Slider.
  */
-export function Meter({
+export const Meter = ({
   value,
   min,
   max,
@@ -152,7 +152,7 @@ export function Meter({
   loading = false,
   disabled = false,
   ...props
-}: MeterProps) {
+}: MeterProps) => {
   const { knobProps } = useResolvedKnobs({ component: 'Meter' });
   const preset = usePresetContext();
   const stop = preset?.preset.knobs.borderRadius ?? defaultKnobs.borderRadius;
@@ -342,4 +342,4 @@ export function Meter({
       {segmentedMeter}
     </MeterRoot>
   );
-}
+};

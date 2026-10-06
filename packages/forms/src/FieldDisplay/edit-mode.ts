@@ -59,9 +59,9 @@ export const FIELD_EDIT_MODE: Record<FieldDisplayType, EditMode> = {
   custom: 'inline',
 };
 
-export function getEditMode(field: FieldDisplayType | undefined): EditMode {
+export const getEditMode = (field: FieldDisplayType | undefined): EditMode => {
   if (!field) {
     return 'inline';
   }
   return FIELD_EDIT_MODE[field] ?? 'inline';
-}
+};

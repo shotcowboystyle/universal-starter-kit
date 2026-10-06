@@ -34,13 +34,13 @@ interface StoryLike {
 }
 
 /** Resolve a story the way Storybook does: story args over meta args. */
-function mount(story: StoryLike) {
+const mount = (story: StoryLike) => {
   const args = { ...(meta.args as Record<string, unknown>) };
   if (!story.render) {
     throw new Error('story has no render');
   }
   return renderWithProviders(story.render(args));
-}
+};
 
 const stories = {
   Basic,

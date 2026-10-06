@@ -38,19 +38,19 @@ const boldPreset: PresetType = {
 // Test helpers
 // ---------------------------------------------------------------------------
 
-function createPresetContextCapture() {
+const createPresetContextCapture = () => {
   let captured: PresetContextValue | null = null;
-  function Capture() {
+  const Capture = () => {
     captured = usePresetContext();
     return null;
-  }
+  };
   return {
     Capture,
     get result() {
       return captured;
     },
   };
-}
+};
 
 // ---------------------------------------------------------------------------
 // Tests

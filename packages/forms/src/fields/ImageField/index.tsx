@@ -108,7 +108,7 @@ interface ImageControlProps {
   blurHandler?: (...args: any[]) => void;
 }
 
-function isImageFile(file: File, accept: string): boolean {
+const isImageFile = (file: File, accept: string): boolean => {
   if (file.type.startsWith('image/')) {
     return true;
   }
@@ -129,9 +129,9 @@ function isImageFile(file: File, accept: string): boolean {
     }
     return file.type === type || RegExp(type.replace('*', '.*')).exec(file.type);
   });
-}
+};
 
-function ImageControl({
+const ImageControl = ({
   id,
   label,
   currentValue,
@@ -153,7 +153,7 @@ function ImageControl({
   onValueChange,
   onInvalid,
   blurHandler,
-}: ImageControlProps) {
+}: ImageControlProps) => {
   const describedBy = useFieldDescribedBy();
   const fieldA11y = useFieldA11y();
   const inTableCell = useIsInTableCell();
@@ -462,9 +462,9 @@ function ImageControl({
       )}
     </YStack>
   );
-}
+};
 
-export function ImageField({
+export const ImageField = ({
   name,
   form: formProp,
   validators,
@@ -491,7 +491,7 @@ export function ImageField({
   objectFit = 'cover',
   skeleton,
   compact,
-}: ImageFieldProps) {
+}: ImageFieldProps) => {
   const { resolvedForm, knobProps, disabledState, id } = useFormField({
     form: formProp,
     id: idProp,
@@ -594,4 +594,4 @@ export function ImageField({
       }}
     </Field>
   );
-}
+};

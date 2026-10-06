@@ -11,7 +11,7 @@ afterEach(() => {
 
 for (const mode of ['floating', 'sheet'] as const) {
   describe(`${mode} close focus`, () => {
-    function setup() {
+    const setup = () => {
       vi.useFakeTimers();
       const trigger = document.createElement('button');
       const frame = document.createElement('div');
@@ -33,7 +33,7 @@ for (const mode of ['floating', 'sheet'] as const) {
         { initialProps: { open: true } },
       );
       return { ...hook, trigger, item, outside, skipReturnFocusRef };
-    }
+    };
 
     it('restores dropped focus after the close animation', async () => {
       const h = setup();

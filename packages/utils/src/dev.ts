@@ -14,8 +14,23 @@ export interface LookupTranspileModulesOptions {
 export interface LookupTamaguiModulesOptions {
   log?: boolean;
 }
+export const lookupProjectRoot = () => {
+  if (_projectRoot) {
+    return _projectRoot;
+  }
+  try {
+    const { stdout } = spawnSync('git', ['rev-parse', '--show-toplevel'], {
+      encoding: 'utf-8',
+    });
+    _projectRoot = stdout.trim();
+    return _projectRoot;
+  } catch {
+    _projectRoot = process.cwd();
+    return _projectRoot;
+  }
+};
 
-export function lookupTranspileModules(packageDirs?: string[], { log = true }: LookupTranspileModulesOptions = {}) {
+export const lookupTranspileModules = (packageDirs?: string[], { log = true }: LookupTranspileModulesOptions = {}) => {
   const projectRoot = lookupProjectRoot();
   const transpileModules = [
     ...new Set(
@@ -46,9 +61,9 @@ export function lookupTranspileModules(packageDirs?: string[], { log = true }: L
     logger.debug('transpileModules:', transpileModules.join(', '));
   }
   return transpileModules;
-}
+};
 
-export function lookupTamaguiModules(packageDirs?: string[], { log = true }: LookupTamaguiModulesOptions = {}) {
+export const lookupTamaguiModules = (packageDirs?: string[], { log = true }: LookupTamaguiModulesOptions = {}) => {
   const projectRoot = lookupProjectRoot();
   const tamaguiModules = [
     ...new Set([
@@ -80,33 +95,18 @@ export function lookupTamaguiModules(packageDirs?: string[], { log = true }: Loo
     logger.debug('tamaguiModules:', tamaguiModules.join(', '));
   }
   return tamaguiModules;
-}
+};
 
-export function resolveConfig(keys: string[] = []): Record<string, string | undefined> {
+export const resolveConfig = (keys: string[] = []): Record<string, string | undefined> => {
   return keys.reduce<Record<string, string | undefined>>((acc: Record<string, string | undefined>, key: string) => {
     if (process.env[key]) {
       acc[key] = process.env[key];
     }
     return acc;
   }, {});
-}
+};
 
 let _projectRoot: string | undefined;
-export function lookupProjectRoot() {
-  if (_projectRoot) {
-    return _projectRoot;
-  }
-  try {
-    const { stdout } = spawnSync('git', ['rev-parse', '--show-toplevel'], {
-      encoding: 'utf-8',
-    });
-    _projectRoot = stdout.trim();
-    return _projectRoot;
-  } catch {
-    _projectRoot = process.cwd();
-    return _projectRoot;
-  }
-}
 
 /**
  * Map every public/* workspace package (and its subpath exports) to its TS
@@ -116,7 +116,7 @@ export function lookupProjectRoot() {
  * Shared by the web-extension and vscode-webview target configs (the
  * pattern originated in apps/webext).
  */
-export function workspaceSourceAliases(workspaceRoot?: string): Record<string, string> {
+export const workspaceSourceAliases = (workspaceRoot?: string): Record<string, string> => {
   const root = workspaceRoot ?? lookupProjectRoot();
   const aliases: Record<string, string> = {};
   const publicDir = path.join(root, 'packages');
@@ -124,7 +124,7 @@ export function workspaceSourceAliases(workspaceRoot?: string): Record<string, s
     return aliases;
   }
 
-  function resolveSource(pkgDir: string, subpath: string): string | undefined {
+  const resolveSource = (pkgDir: string, subpath: string): string | undefined => {
     const candidates = [
       path.join(pkgDir, 'src', `${subpath}.ts`),
       path.join(pkgDir, 'src', `${subpath}.tsx`),
@@ -132,7 +132,7 @@ export function workspaceSourceAliases(workspaceRoot?: string): Record<string, s
       path.join(pkgDir, 'src', subpath, 'index.tsx'),
     ];
     return candidates.find((candidate) => fs.existsSync(candidate));
-  }
+  };
 
   for (const ent of fs.readdirSync(publicDir, { withFileTypes: true })) {
     if (!ent.isDirectory()) {
@@ -176,7 +176,7 @@ export function workspaceSourceAliases(workspaceRoot?: string): Record<string, s
     sorted[key] = aliases[key]!;
   }
   return sorted;
-}
+};
 
 /**
  * Locate the installed `one` package directory without assuming the npm/yarn
@@ -187,7 +187,7 @@ export function workspaceSourceAliases(workspaceRoot?: string): Record<string, s
  * (covers pnpm's `.pnpm/node_modules` fallback), then scan upward for a
  * physical `node_modules/one`.
  */
-function resolveOnePackageDir(root: string): string | undefined {
+const resolveOnePackageDir = (root: string): string | undefined => {
   for (const base of [path.join(process.cwd(), 'package.json'), path.join(root, 'package.json')]) {
     try {
       return path.dirname(createRequire(base).resolve('one/package.json'));
@@ -208,7 +208,7 @@ function resolveOnePackageDir(root: string): string | undefined {
     }
     dir = parent;
   }
-}
+};
 
 /**
  * one's client code imports ./vite/one-server-only.mjs, which pulls
@@ -226,7 +226,7 @@ function resolveOnePackageDir(root: string): string | undefined {
  * site lives in one/dist); a consumer module whose id merely contains the
  * substring resolves normally.
  */
-export function oneServerOnlyBrowserStub(workspaceRoot?: string): Plugin {
+export const oneServerOnlyBrowserStub = (workspaceRoot?: string): Plugin => {
   const root = workspaceRoot ?? lookupProjectRoot();
   const oneDir = resolveOnePackageDir(root);
   if (!oneDir) {
@@ -258,7 +258,7 @@ export function oneServerOnlyBrowserStub(workspaceRoot?: string): Plugin {
       return stub;
     },
   };
-}
+};
 
 /**
  * expo-modules-core ships `src/ts-declarations/` files that contain only
@@ -267,7 +267,7 @@ export function oneServerOnlyBrowserStub(workspaceRoot?: string): Plugin {
  * prevents OXC from eliding them), then reports MISSING_EXPORT. Stub these
  * type-only files with empty modules.
  */
-export function stubExpoTypeDeclarations(): Plugin {
+export const stubExpoTypeDeclarations = (): Plugin => {
   return {
     name: 'stub-expo-type-declarations',
     load(id: string) {
@@ -276,6 +276,6 @@ export function stubExpoTypeDeclarations(): Plugin {
       }
     },
   };
-}
+};
 
 export * from './wait.ts';

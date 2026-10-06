@@ -14,15 +14,15 @@ export const PresetContext = createContext<PresetContextValue | null>(null);
 /**
  * Read the nearest Preset context. Returns null if no <Preset> ancestor exists.
  */
-export function usePresetContext(): PresetContextValue | null {
+export const usePresetContext = (): PresetContextValue | null => {
   return useContext(PresetContext);
-}
+};
 
 /**
  * Read the tints array from the nearest Preset context.
  * Returns an empty array if no <Preset> ancestor exists.
  */
-export function usePresetTints(): ThemeName[] {
+export const usePresetTints = (): ThemeName[] => {
   const ctx = useContext(PresetContext);
   return ctx?.preset.tints ?? [];
-}
+};

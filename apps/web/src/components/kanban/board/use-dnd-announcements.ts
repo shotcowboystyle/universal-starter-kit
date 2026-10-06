@@ -4,11 +4,11 @@ import { useRef } from 'react';
 import type { Project, Task } from '@/types/db-interface';
 import type DraggableData from '@/types/drag-and-drop';
 
-function hasDraggableData<T extends Active | Over>(
+const hasDraggableData = <T extends Active | Over>(
   entry: T | null | undefined,
 ): entry is T & {
   data: DataRef<DraggableData>;
-} {
+} => {
   if (!entry) {
     return false;
   }
@@ -17,9 +17,9 @@ function hasDraggableData<T extends Active | Over>(
     return true;
   }
   return false;
-}
+};
 
-function getDraggingTaskData(taskId: string, projectId: string, projects: Project[]) {
+const getDraggingTaskData = (taskId: string, projectId: string, projects: Project[]) => {
   const project = projects.find((project: Project) => project._id.toString() === projectId);
   if (!project) {
     return {
@@ -35,9 +35,9 @@ function getDraggingTaskData(taskId: string, projectId: string, projects: Projec
     taskPosition,
     project,
   };
-}
+};
 
-export function useDndAnnouncements(projects: Project[], projectsId: string[]): Announcements {
+export const useDndAnnouncements = (projects: Project[], projectsId: string[]): Announcements => {
   const pickedUpTaskProject = useRef<string | null>(null);
 
   return {
@@ -121,4 +121,4 @@ export function useDndAnnouncements(projects: Project[], projectsId: string[]): 
       return `Dragging ${active.data.current?.type} cancelled.`;
     },
   };
-}
+};

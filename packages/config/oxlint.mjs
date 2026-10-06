@@ -60,7 +60,7 @@ const HEX_ESCAPE_COMMENT = /(?<!`)(?:\/\/|\/\*)\s*hex-escape:\s*(.*?)\s*(?:\*\/.
  * @param {string} src
  * @returns {{ line: number, reason: string }[]}
  */
-export function findHexEscapes(src) {
+export const findHexEscapes = (src) => {
   if (!src.includes('hex-escape:')) {
     return [];
   }
@@ -76,16 +76,16 @@ export function findHexEscapes(src) {
     }
   });
   return sites;
-}
+};
 
 /**
  * @param {unknown} context
  * @returns {string}
  */
-function sourceText(context) {
+const sourceText = (context) => {
   const ctx = /** @type {{ sourceCode?: { text?: string }, getSourceCode?: () => { text?: string } }} */ (context);
   return ctx?.sourceCode?.text ?? ctx?.getSourceCode?.()?.text ?? '';
-}
+};
 
 const RAW_TYPOGRAPHY_HATCH = /^Tamagui(?:Text|SizableText|Paragraph|Heading|H[1-6]|Anchor)$/;
 const HOUSE_PACKAGE = /^@repo\//;
@@ -218,7 +218,7 @@ const SLOT_MARGIN_OPTIONS_SCHEMA = [
  * @param {unknown} context
  * @returns {Set<string>}
  */
-function resolveSlotMargins(context) {
+const resolveSlotMargins = (context) => {
   const opt = context?.options?.[0] ?? {};
   if (Array.isArray(opt.slotMargins)) {
     return new Set(opt.slotMargins);
@@ -228,7 +228,22 @@ function resolveSlotMargins(context) {
   } catch {
     return new Set();
   }
-}
+};
+
+/**
+ * @param {unknown} value
+ * @returns {unknown}
+ */
+const unwrapJsxValue = (value) => {
+  if (!value || typeof value !== 'object') {
+    return value;
+  }
+  const node = /** @type {{ type?: string, expression?: unknown }} */ (value);
+  if (node.type === 'JSXExpressionContainer') {
+    return unwrapJsxValue(node.expression);
+  }
+  return value;
+};
 
 /**
  * `0` is `00` L8 E1, legal anywhere: a zero-reset is the absence of an outer
@@ -236,7 +251,7 @@ function resolveSlotMargins(context) {
  * `minWidth={0}` is what lets a flex child shrink below its content).
  * @param {unknown} value
  */
-function isZeroReset(value) {
+const isZeroReset = (value) => {
   const node = unwrapJsxValue(value);
   if (!node || typeof node !== 'object') {
     return false;
@@ -254,13 +269,13 @@ function isZeroReset(value) {
     return isZeroReset(expr.argument);
   }
   return false;
-}
+};
 
 /**
  * @param {unknown} context
  * @returns {{ drawings: string[], chromeAllow: Set<string> }}
  */
-function resolveAllowlists(context) {
+const resolveAllowlists = (context) => {
   const opt = context?.options?.[0] ?? {};
   if (Array.isArray(opt.drawings) || Array.isArray(opt.chromeAllow)) {
     return {
@@ -274,24 +289,24 @@ function resolveAllowlists(context) {
   } catch {
     return { drawings: [], chromeAllow: new Set() };
   }
-}
+};
 
 /** @param {string | undefined} source */
-function isHousePackage(source) {
+const isHousePackage = (source) => {
   return typeof source === 'string' && source.startsWith('@repo/');
-}
+};
 
 /** @param {{ type?: string, imported?: { name?: string, value?: string }, local?: { name?: string } }} specifier */
-function specifierLocalName(specifier) {
+const specifierLocalName = (specifier) => {
   return specifier.local?.name ?? specifier.imported?.name ?? specifier.imported?.value;
-}
+};
 
 /**
  * Walk a JSX name node into "Card" or "Menu.Content".
  * @param {unknown} name
  * @returns {string}
  */
-function jsxName(name) {
+const jsxName = (name) => {
   if (!name || typeof name !== 'object') {
     return '';
   }
@@ -305,10 +320,10 @@ function jsxName(name) {
     return object && property ? `${object}.${property}` : object || property;
   }
   return '';
-}
+};
 
 /** @param {unknown} attr */
-function jsxAttrName(attr) {
+const jsxAttrName = (attr) => {
   if (!attr || typeof attr !== 'object') {
     return '';
   }
@@ -317,25 +332,10 @@ function jsxAttrName(attr) {
     return '';
   }
   return node.name?.name ?? '';
-}
-
-/**
- * @param {unknown} value
- * @returns {unknown}
- */
-function unwrapJsxValue(value) {
-  if (!value || typeof value !== 'object') {
-    return value;
-  }
-  const node = /** @type {{ type?: string, expression?: unknown }} */ (value);
-  if (node.type === 'JSXExpressionContainer') {
-    return unwrapJsxValue(node.expression);
-  }
-  return value;
-}
+};
 
 /** @param {unknown} value */
-function isNumericLiteral(value) {
+const isNumericLiteral = (value) => {
   const node = unwrapJsxValue(value);
   if (!node || typeof node !== 'object') {
     return false;
@@ -348,10 +348,10 @@ function isNumericLiteral(value) {
     return true;
   }
   return false;
-}
+};
 
 /** @param {unknown} value */
-function isSizeRecipeEscape(value) {
+const isSizeRecipeEscape = (value) => {
   const node = unwrapJsxValue(value);
   if (!node || typeof node !== 'object') {
     return false;
@@ -372,14 +372,14 @@ function isSizeRecipeEscape(value) {
     return true;
   }
   return false;
-}
+};
 
 /**
  * @param {unknown} importNode
  * @param {Set<string>} locals
  * @param {Set<string>} namespaces
  */
-function collectHouseLocals(importNode, locals, namespaces) {
+const collectHouseLocals = (importNode, locals, namespaces) => {
   const node = /** @type {{ source?: { value?: string }, specifiers?: unknown[] }} */ (importNode);
   if (!isHousePackage(node.source?.value)) {
     return;
@@ -395,14 +395,14 @@ function collectHouseLocals(importNode, locals, namespaces) {
       locals.add(local);
     }
   }
-}
+};
 
 /**
  * @param {string} name
  * @param {Set<string>} locals
  * @param {Set<string>} namespaces
  */
-function isHouseElement(name, locals, namespaces) {
+const isHouseElement = (name, locals, namespaces) => {
   if (!name) {
     return false;
   }
@@ -414,25 +414,25 @@ function isHouseElement(name, locals, namespaces) {
     return false;
   }
   return namespaces.has(name.slice(0, dot));
-}
+};
 
 /**
  * Bare component name for CHROME-ALLOW matching (`Menu.Item` → `Item` and `Menu.Item`).
  * @param {string} name
  */
-function elementAllowKeys(name) {
+const elementAllowKeys = (name) => {
   const keys = [name];
   const dot = name.lastIndexOf('.');
   if (dot !== -1) {
     keys.push(name.slice(dot + 1));
   }
   return keys;
-}
+};
 
 /**
  * @param {unknown} context
  */
-function houseJsxVisitors(context, onHouseElement) {
+const houseJsxVisitors = (context, onHouseElement) => {
   const filename = context.filename ?? context.getFilename?.() ?? '';
   const { drawings, chromeAllow } = resolveAllowlists(context);
   const locals = new Set();
@@ -454,31 +454,31 @@ function houseJsxVisitors(context, onHouseElement) {
       },
     },
   };
-}
+};
 
 /**
  * @param {string | undefined} filename
  * @returns {boolean}
  */
-export function isPaletteModule(filename) {
+export const isPaletteModule = (filename) => {
   if (!filename) {
     return false;
   }
   const normalized = filename.replaceAll('\\', '/');
   return PALETTE_FILE.test(normalized);
-}
+};
 
 /**
  * @param {unknown} value
  * @returns {string | undefined} the matched literal, if any
  */
-export function matchColorLiteral(value) {
+export const matchColorLiteral = (value) => {
   if (typeof value !== 'string') {
     return undefined;
   }
   const match = COLOR_LITERAL.exec(value);
   return match?.[0];
-}
+};
 
 /** @type {import("eslint").ESLint.Plugin} */
 export const plugin = {
@@ -506,7 +506,7 @@ export const plugin = {
           return {};
         }
 
-        function reportIfColor(node, value) {
+        const reportIfColor = (node, value) => {
           const matched = matchColorLiteral(value);
           if (!matched) {
             return;
@@ -516,7 +516,7 @@ export const plugin = {
             messageId: 'hex',
             data: { value: matched },
           });
-        }
+        };
 
         return {
           Literal(node) {

@@ -82,15 +82,15 @@ export interface MatrixCellSummary {
 }
 
 /** Local `YYYY-MM-DD` key for a date (wall-clock, never UTC). */
-export function localDateKey(date: Date): string {
+export const localDateKey = (date: Date): string => {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
-}
+};
 
 /** Local start of the bucket containing `date` under `rule`. */
-export function bucketStart(date: Date, rule: MatrixBucketRule, firstDayOfWeek: 0 | 1 = 0): Date {
+export const bucketStart = (date: Date, rule: MatrixBucketRule, firstDayOfWeek: 0 | 1 = 0): Date => {
   if (rule === 'day') {
     return startOfDay(date);
   }
@@ -98,10 +98,10 @@ export function bucketStart(date: Date, rule: MatrixBucketRule, firstDayOfWeek: 
     return startOfWeek(date, firstDayOfWeek);
   }
   return startOfMonth(date);
-}
+};
 
 /** Start of the bucket after the one starting at `start`. */
-export function nextBucketStart(start: Date, rule: MatrixBucketRule): Date {
+export const nextBucketStart = (start: Date, rule: MatrixBucketRule): Date => {
   if (rule === 'day') {
     return addDays(start, 1);
   }
@@ -109,19 +109,23 @@ export function nextBucketStart(start: Date, rule: MatrixBucketRule): Date {
     return addDays(start, 7);
   }
   return new Date(start.getFullYear(), start.getMonth() + 1, 1);
-}
+};
 
 /**
  * Snap a window to bucket boundaries: the start rounds DOWN to its bucket,
  * the exclusive end rounds UP to the boundary after the last included day.
  * A degenerate or inverted window still yields one bucket.
  */
-export function alignMatrixRange(range: MatrixRange, rule: MatrixBucketRule, firstDayOfWeek: 0 | 1 = 0): MatrixRange {
+export const alignMatrixRange = (
+  range: MatrixRange,
+  rule: MatrixBucketRule,
+  firstDayOfWeek: 0 | 1 = 0,
+): MatrixRange => {
   const start = bucketStart(range.start, rule, firstDayOfWeek);
   const lastIncluded = addDays(startOfDay(range.end), -1);
   const lastDay = lastIncluded.getTime() < start.getTime() ? start : lastIncluded;
   return { start, end: nextBucketStart(bucketStart(lastDay, rule, firstDayOfWeek), rule) };
-}
+};
 
 /**
  * Bucket-aligned window covering every date, with no padding: a matrix wants
@@ -129,12 +133,12 @@ export function alignMatrixRange(range: MatrixRange, rule: MatrixBucketRule, fir
  * an empty column somebody chose. With no dates the window is the single
  * bucket containing `today`.
  */
-export function computeMatrixRange(
+export const computeMatrixRange = (
   dates: readonly Date[],
   rule: MatrixBucketRule,
   firstDayOfWeek: 0 | 1 = 0,
   today: Date = new Date(),
-): MatrixRange {
+): MatrixRange => {
   let min: Date | null = null;
   let max: Date | null = null;
   for (const date of dates) {
@@ -148,10 +152,10 @@ export function computeMatrixRange(
   const lo = min ?? today;
   const hi = max ?? today;
   return alignMatrixRange({ start: lo, end: addDays(startOfDay(hi), 1) }, rule, firstDayOfWeek);
-}
+};
 
 /** Spoken name for a bucket: the full date register, never the tick abbreviation. */
-export function bucketName(start: Date, end: Date, rule: MatrixBucketRule): string {
+export const bucketName = (start: Date, end: Date, rule: MatrixBucketRule): string => {
   if (rule === 'day') {
     return formatAbsoluteDate(start);
   }
@@ -160,7 +164,7 @@ export function bucketName(start: Date, end: Date, rule: MatrixBucketRule): stri
     return `${formatAbsoluteDate(start, { year: 'never' })} – ${formatAbsoluteDate(lastDay)}`;
   }
   return formatMonthYear(start);
-}
+};
 
 /**
  * The bucket axis for a window under a rule.
@@ -169,7 +173,11 @@ export function bucketName(start: Date, end: Date, rule: MatrixBucketRule): stri
  * scale, so a matrix column starts exactly where the Gantt axis would label
  * it. The window is aligned first, which is what makes the first tick major.
  */
-export function generateBuckets(range: MatrixRange, rule: MatrixBucketRule, firstDayOfWeek: 0 | 1 = 0): MatrixBucket[] {
+export const generateBuckets = (
+  range: MatrixRange,
+  rule: MatrixBucketRule,
+  firstDayOfWeek: 0 | 1 = 0,
+): MatrixBucket[] => {
   const aligned = alignMatrixRange(range, rule, firstDayOfWeek);
   const majors = generateTicks(aligned, rule, 1, firstDayOfWeek).filter((tick) => tick.major);
   return majors.map((tick, index) => {
@@ -178,19 +186,19 @@ export function generateBuckets(range: MatrixRange, rule: MatrixBucketRule, firs
     const name = bucketName(start, end, rule);
     return { key: localDateKey(start), start, end, label: tick.label ?? name, name };
   });
-}
+};
 
 /** Map key for one (row, bucket) intersection. */
-export function matrixCellKey(rowId: string, bucketKey: string): string {
+export const matrixCellKey = (rowId: string, bucketKey: string): string => {
   return `${rowId}\u0000${bucketKey}`;
-}
+};
 
 /** Fold every point into its (row, bucket) intersection under `rule`. */
-export function summarizeMatrixCells(
+export const summarizeMatrixCells = (
   cells: readonly MatrixCell[],
   rule: MatrixBucketRule,
   firstDayOfWeek: 0 | 1 = 0,
-): Map<string, MatrixCellSummary> {
+): Map<string, MatrixCellSummary> => {
   const summaries = new Map<string, MatrixCellSummary>();
   for (const cell of cells) {
     const bucketKey = localDateKey(bucketStart(cell.date, rule, firstDayOfWeek));
@@ -229,10 +237,10 @@ export function summarizeMatrixCells(
     }
   }
   return summaries;
-}
+};
 
 /** Largest positive summed value across the grid (0 when none). */
-export function matrixMaxValue(summaries: Iterable<MatrixCellSummary>): number {
+export const matrixMaxValue = (summaries: Iterable<MatrixCellSummary>): number => {
   let max = 0;
   for (const summary of summaries) {
     if (summary.value !== undefined && summary.value > max) {
@@ -240,18 +248,18 @@ export function matrixMaxValue(summaries: Iterable<MatrixCellSummary>): number {
     }
   }
   return max;
-}
+};
 
-function clamp01(value: number): number {
+const clamp01 = (value: number): number => {
   return Math.min(1, Math.max(0, value));
-}
+};
 
 /**
  * Paint strength 0–1 for a cell. An explicit intensity wins; presence with
  * no value is full strength; a zero (or a grid with no positive value) is
  * the floor; otherwise the value scaled against the grid's max.
  */
-export function matrixCellIntensity(summary: MatrixCellSummary, maxValue: number): number {
+export const matrixCellIntensity = (summary: MatrixCellSummary, maxValue: number): number => {
   if (summary.intensity !== undefined) {
     return clamp01(summary.intensity);
   }
@@ -262,4 +270,4 @@ export function matrixCellIntensity(summary: MatrixCellSummary, maxValue: number
     return 0;
   }
   return clamp01(summary.value / maxValue);
-}
+};

@@ -38,7 +38,7 @@ export interface ResolveSheetDetentsOptions {
  * full height is already under the floor keeps its own height, otherwise it
  * would have no detents at all.
  */
-export function resolveSheetDetents({ travel, scrollable, snapPoint }: ResolveSheetDetentsOptions): number[] {
+export const resolveSheetDetents = ({ travel, scrollable, snapPoint }: ResolveSheetDetentsOptions): number[] => {
   const points = [travel];
   if (scrollable) {
     points.push(Math.round(travel * mediumDetent));
@@ -48,4 +48,4 @@ export function resolveSheetDetents({ travel, scrollable, snapPoint }: ResolveSh
   }
   const floor = Math.min(minSheetHeight, travel);
   return Array.from(new Set(points.filter((h) => h >= floor))).sort((a, b) => b - a);
-}
+};

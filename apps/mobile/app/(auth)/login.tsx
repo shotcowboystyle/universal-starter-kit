@@ -6,7 +6,7 @@ import { KeyboardAvoidingView, Platform, Alert, Pressable, TextInput, ActivityIn
 import { DEFAULT_EMAIL } from '@/constants/app';
 import { useAuth } from '@/hooks/use-auth';
 
-export default function LoginScreen() {
+const LoginScreen = () => {
   const { t } = useTranslation();
   const theme = useTheme();
   const { login, loginMutation } = useAuth();
@@ -98,4 +98,6 @@ export default function LoginScreen() {
       </View>
     </KeyboardAvoidingView>
   );
-}
+};
+
+export default LoginScreen;

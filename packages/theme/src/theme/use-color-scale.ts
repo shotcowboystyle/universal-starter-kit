@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-function readScale(): string[] | null {
+const readScale = (): string[] | null => {
   if (typeof document === 'undefined') {
     return null;
   }
@@ -17,14 +17,14 @@ function readScale(): string[] | null {
     out.push(c);
   }
   return out;
-}
+};
 
 /**
  * Returns the current theme's 12 color values read from CSS custom
  * properties (--color1 … --color12). Returns null on the server or
  * when the variables aren't available.
  */
-export function useColorScale(): string[] | null {
+export const useColorScale = (): string[] | null => {
   const [scale, setScale] = useState<string[] | null>(() => readScale());
 
   useEffect(() => {
@@ -32,4 +32,4 @@ export function useColorScale(): string[] | null {
   }, []);
 
   return scale;
-}
+};

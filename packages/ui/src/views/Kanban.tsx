@@ -219,6 +219,523 @@ interface OverlayApi {
   setPointer: (x: number, y: number) => void;
 }
 
+const KanbanColumnView = <T,>({
+  kanbanId,
+  column,
+  columnIndex,
+  focusedColumnIndex,
+  focusedCardIndex,
+  renderCard,
+  columnWidth,
+  minColumnHeight,
+  estimateSize,
+  overscan,
+  emptyColumnMessage,
+  onCardSelect,
+  onCardPointerDown,
+  suppressClickRef,
+  registerColumn,
+  drag,
+  settlingKey,
+  renderColumnActions,
+  onLoadMore,
+  getItemKey,
+  hasMore,
+  isLoading,
+  onCardFocus,
+}: KanbanColumnViewProps<T>) => {
+  const { t } = useTranslation();
+  const { knobProps } = useResolvedKnobs();
+  const parentRef = useRef<HTMLDivElement>(null);
+  // Hide column counts when a parent AsyncBoundary is in error.
+  const itemCount = useAsyncCount(column.items.length);
+
+  const virtualizer = useVirtualizer({
+    count: column.items.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => estimateSize,
+    overscan,
+    ...(getItemKey && {
+      getItemKey: (index: number) => getItemKey(column.items[index], index),
+    }),
+  });
+
+  const isActiveColumn = columnIndex === focusedColumnIndex;
+  const isSource = drag?.sourceColumnId === column.id;
+  const gapIndex = drag?.target.columnId === column.id ? drag.target.index : null;
+  const isDropTarget = gapIndex != null;
+
+  // FLIP readiness gate: first paint (and the virtualizer's initial
+  // measurement corrections) must not wiggle into place (Axiom 4 mount rule).
+  const [flipReady, setFlipReady] = useState(false);
+  useEffect(() => {
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        setFlipReady(true);
+      });
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
+  }, []);
+
+  // Register geometry accessors for hit-testing / auto-scroll / settle math.
+  useEffect(() => {
+    registerColumn(column.id, {
+      scrollEl: parentRef.current,
+      getVirtualState: () => ({
+        items: virtualizer.getVirtualItems().map((v) => ({ index: v.index, start: v.start, size: v.size })),
+        totalSize: virtualizer.getTotalSize(),
+        count: column.items.length,
+      }),
+      scrollToIndex: (index: number) => {
+        if (column.items.length > 0) {
+          virtualizer.scrollToIndex(Math.min(index, column.items.length - 1), { align: 'auto' });
+        }
+      },
+    });
+    return () => {
+      registerColumn(column.id, null);
+    };
+  }, [registerColumn, column.id, column.items.length, virtualizer]);
+
+  // Scroll to focused card within active column
+  useEffect(() => {
+    if (isActiveColumn && focusedCardIndex >= 0 && focusedCardIndex < column.items.length) {
+      virtualizer.scrollToIndex(focusedCardIndex, { align: 'auto' });
+    }
+  }, [isActiveColumn, focusedCardIndex, column.items.length, virtualizer]);
+
+  // Detect scroll near bottom for infinite scroll
+  const handleScroll = useCallback(() => {
+    const el = parentRef.current;
+    if (!el || !onLoadMore || !hasMore || isLoading) {
+      return;
+    }
+
+    const { scrollTop, scrollHeight, clientHeight } = el;
+    if (scrollHeight - scrollTop - clientHeight < estimateSize * 2) {
+      onLoadMore();
+    }
+  }, [onLoadMore, hasMore, isLoading, estimateSize]);
+
+  useEffect(() => {
+    const el = parentRef.current;
+    if (!el) {
+      return;
+    }
+    el.addEventListener('scroll', handleScroll);
+    return () => {
+      el.removeEventListener('scroll', handleScroll);
+    };
+  }, [handleScroll]);
+
+  // Enter animations only for keys never seen on this board instance —
+  // virtualization remounts on scroll must not replay them (Axiom 4).
+  const seenKeysRef = useRef(new Set<string | number>());
+
+  // Exit layer: cards removed from the data get a paired fade-out at their
+  // last known slot (enter/exit pairing). Scroll-driven unmounts are
+  // not data removals and are skipped.
+  const lastRenderedRef = useRef(new Map<string | number, { item: T; y: number; size: number }>());
+  const prevKeysRef = useRef<Set<string | number> | null>(null);
+  const [leaving, setLeaving] = useState<{ key: string | number; item: T; y: number; size: number }[]>([]);
+
+  const currentKeys = useMemo(() => {
+    const keys = new Set<string | number>();
+    column.items.forEach((item, index) => keys.add(getItemKey ? getItemKey(item, index) : index));
+    return keys;
+  }, [column.items, getItemKey]);
+
+  useEffect(() => {
+    const prev = prevKeysRef.current;
+    prevKeysRef.current = currentKeys;
+    if (!prev || !getItemKey) {
+      return;
+    }
+    const gone: { key: string | number; item: T; y: number; size: number }[] = [];
+    for (const key of prev) {
+      if (currentKeys.has(key) || key === settlingKey) {
+        continue;
+      }
+      const snapshot = lastRenderedRef.current.get(key);
+      if (snapshot) {
+        gone.push({ key, ...snapshot });
+      }
+    }
+    if (gone.length > 0) {
+      setLeaving((existing) => {
+        const seen = new Set(existing.map((l) => l.key));
+        return [...existing, ...gone.filter((g) => !seen.has(g.key))];
+      });
+    }
+  }, [currentKeys, getItemKey, settlingKey]);
+
+  useEffect(() => {
+    if (leaving.length === 0) {
+      return;
+    }
+    const raf = requestAnimationFrame(() => {
+      setLeaving([]);
+    });
+    return () => {
+      cancelAnimationFrame(raf);
+    };
+  }, [leaving]);
+
+  const virtualItems = virtualizer.getVirtualItems();
+  const totalSize = virtualizer.getTotalSize();
+  const gapOpensColumn = isDropTarget && !isSource;
+  const contentHeight = totalSize + (gapOpensColumn ? (drag?.size ?? 0) : 0);
+
+  const getStart = useCallback(
+    (index: number): number => {
+      const found = virtualItems.find((v) => v.index === index);
+      return found ? found.start : index * estimateSize;
+    },
+    [virtualItems, estimateSize],
+  );
+
+  const gapY =
+    gapIndex != null && drag
+      ? gapPosition({
+          gapIndex,
+          sourceIndex: isSource ? drag.sourceIndex : null,
+          count: column.items.length,
+          size: drag.size,
+          totalSize,
+          getStart,
+        })
+      : null;
+
+  const isEmpty = column.items.length === 0;
+  // Wrapper transitions: FLIP displacement + data-change jumps tween; raw
+  // scrolling measurement corrections and first paint stay instant. During an
+  // active drag the transition stays on so displacement tweens even while
+  // auto-scroll runs.
+  const wrapperTransition =
+    drag == null ? (flipReady && !virtualizer.isScrolling ? knobProps.transition : undefined) : knobProps.transition;
+
+  return (
+    <YStack
+      width={columnWidth}
+      minHeight={minColumnHeight}
+      flexShrink={0}
+      overflow="hidden"
+      transition={knobProps.transition}
+      {...knobProps.borderRadius}
+      {...knobProps.containerRadius}
+      {...knobProps.panelPadding}
+      backgroundColor={isDropTarget || isActiveColumn ? componentColors.interactive.background : 'transparent'}
+      data-kanban-column={column.id}>
+      <ListItem
+        title={column.title}
+        icon={
+          column.color ? (
+            <YStack
+              {...radiusClassProps('R-PILL', 'Kanban column dot')}
+              width={8}
+              height={8}
+              borderRadius={4}
+              backgroundColor={column.color as any}
+              data-kanban-column-dot
+            />
+          ) : undefined
+        }
+        iconAfter={
+          itemCount !== undefined || renderColumnActions ? (
+            <XStack
+              alignItems="center"
+              {...knobProps.gap}>
+              {itemCount !== undefined && (
+                <Text
+                  color={knobProps.textAccentColor}
+                  {...knobProps.label}
+                  {...knobProps.textWeight}
+                  data-async-count>
+                  {itemCount}
+                </Text>
+              )}
+              {renderColumnActions?.(column)}
+            </XStack>
+          ) : undefined
+        }
+        size={knobProps.sizeToken}
+        borderBottomWidth={hairlineWidth}
+        borderBottomColor="$borderColor"
+      />
+
+      {/* Cards container — always rendered so empty columns stay drop targets. */}
+      <View
+        ref={parentRef as any}
+        data-kanban-column-scroll={column.id}
+        style={{
+          flex: 1,
+          overflow: 'auto',
+          minHeight: minColumnHeight - 60,
+        }}
+        pointerEvents={drag ? ('none' as any) : undefined}>
+        {isEmpty ? (
+          !isDropTarget && (
+            <EmptyState
+              compact
+              title={emptyColumnMessage}
+              opacity={0.5}
+              flex={1}
+            />
+          )
+        ) : (
+          <View
+            style={{
+              height: contentHeight,
+              width: '100%',
+              position: 'relative',
+            }}>
+            {virtualItems.map((virtualItem) => {
+              const item = column.items[virtualItem.index];
+              const itemKey = getItemKey ? getItemKey(item, virtualItem.index) : virtualItem.index;
+              const isFocused = isActiveColumn && focusedCardIndex === virtualItem.index;
+              const isDragged = isSource && drag != null && virtualItem.index === drag.sourceIndex;
+
+              let y = virtualItem.start;
+              let ghost = false;
+              let hidden = false;
+              if (drag) {
+                if (isDragged) {
+                  if (gapIndex != null && gapY != null) {
+                    // In-column silhouette: the origin card *is* the moving gap.
+                    y = gapY;
+                    ghost = true;
+                  } else {
+                    // Target moved to another column — the origin gap closes.
+                    hidden = true;
+                  }
+                } else {
+                  y +=
+                    siblingOffset({
+                      index: virtualItem.index,
+                      sourceIndex: isSource && drag ? drag.sourceIndex : null,
+                      gapIndex,
+                      size: drag.size,
+                    }) || 0;
+                }
+              }
+              if (getItemKey && settlingKey != null && itemKey === settlingKey) {
+                // The overlay is this card's visual while it settles into place.
+                hidden = true;
+              }
+
+              if (getItemKey) {
+                lastRenderedRef.current.set(itemKey, {
+                  item,
+                  y: virtualItem.start,
+                  size: virtualItem.size,
+                });
+              }
+              const isNew = flipReady && getItemKey != null && !seenKeysRef.current.has(itemKey);
+              seenKeysRef.current.add(itemKey);
+
+              return (
+                <View
+                  key={virtualItem.key}
+                  ref={virtualizer.measureElement as any}
+                  {...{ 'data-index': virtualItem.index }}
+                  position="absolute"
+                  top={0}
+                  left={0}
+                  width="100%"
+                  y={y}
+                  padding={CARD_INSET_PX}
+                  transition={wrapperTransition}
+                  opacity={hidden ? 0 : ghost ? 0.4 : 1}
+                  pointerEvents={hidden ? ('none' as any) : undefined}>
+                  <Card
+                    id={`${kanbanId}-col-${columnIndex}-card-${virtualItem.index}`}
+                    elevation={knobProps.elevation}
+                    minHeight={MIN_PRESS_TARGET}
+                    transition={knobProps.transition}
+                    {...(isNew && {
+                      enterStyle: { opacity: 0, scale: 0.97 },
+                    })}
+                    {...(ghost
+                      ? {
+                          borderWidth: hairlineWidth,
+                          borderColor: componentColors.interactive.border,
+                          borderStyle: 'dashed' as any,
+                        }
+                      : undefined)}
+                    {...(isFocused ? { backgroundColor: '$accentBackground' } : undefined)}
+                    {...(isFocused && wasKeyboardFocus() ? keyboardFocusRingProps : { outlineWidth: 0 })}
+                    hoverStyle={{ backgroundColor: componentColors.interactive.background }}
+                    pressStyle={{ scale: 0.98 }}
+                    overflow="hidden"
+                    data-kanban-card={String(itemKey)}
+                    {...(isFocused && { 'data-kanban-focused': 'true' })}
+                    {...(onCardPointerDown && { 'data-kanban-draggable': 'true' })}
+                    onPress={() => {
+                      onCardFocus?.(columnIndex, virtualItem.index);
+                      if (suppressClickRef.current) {
+                        return;
+                      }
+                      onCardSelect?.(item, column.id);
+                    }}
+                    cursor={onCardPointerDown ? 'grab' : 'pointer'}
+                    {...(onCardPointerDown && {
+                      onPointerDown: (e: any) => {
+                        onCardPointerDown(item, column.id, virtualItem.index, e);
+                      },
+                    })}>
+                    {renderCard(item)}
+                  </Card>
+                </View>
+              );
+            })}
+
+            {/* Exit layer: paired fade-out for removed cards. */}
+            <AnimatePresence>
+              {leaving.map((l) => (
+                <View
+                  key={`leaving-${String(l.key)}`}
+                  position="absolute"
+                  top={0}
+                  left={0}
+                  width="100%"
+                  y={l.y}
+                  padding={CARD_INSET_PX}
+                  pointerEvents="none"
+                  transition={knobProps.transition}
+                  exitStyle={{ opacity: 0, scale: 0.97 }}>
+                  <Card overflow="hidden">{renderCard(l.item)}</Card>
+                </View>
+              ))}
+            </AnimatePresence>
+          </View>
+        )}
+
+        {/* Insertion slot outline for cross-column targets and empty columns. */}
+        <AnimatePresence>
+          {drag && gapIndex != null && !isSource && (
+            <View
+              key="kanban-slot"
+              data-kanban-slot={column.id}
+              position="absolute"
+              top={0}
+              left={0}
+              width="100%"
+              y={gapY ?? 0}
+              height={drag.size}
+              padding={CARD_INSET_PX}
+              pointerEvents="none"
+              transition={knobProps.transition}
+              enterStyle={{ opacity: 0 }}
+              exitStyle={{ opacity: 0 }}>
+              <View
+                flex={1}
+                {...knobProps.borderRadius}
+                borderStyle="dashed"
+                borderColor={componentColors.interactive.border}
+                backgroundColor={componentColors.interactive.background}
+                opacity={0.8}
+                alignItems="center"
+                justifyContent="center">
+                {isEmpty && (
+                  <Text
+                    color={knobProps.textAccentColor}
+                    {...knobProps.label}>
+                    {t('Drop here')}
+                  </Text>
+                )}
+              </View>
+            </View>
+          )}
+        </AnimatePresence>
+      </View>
+
+      {isLoading && (
+        <YStack
+          {...knobProps.panelPadding}
+          alignItems="center">
+          <Spinner size="small" />
+        </YStack>
+      )}
+    </YStack>
+  );
+};
+
+/**
+ * Board-level clone of the dragged card. Pointer mode tracks 1:1 with no
+ * tween (A-GESTURE); keyboard steps and the drop/cancel settle tween with the
+ * animation knob (Axiom 4: leaps tween, carried values track).
+ */
+const KanbanDragOverlay = ({
+  phase,
+  width,
+  height,
+  initialPos,
+  keyboardPos,
+  settleTo,
+  transition,
+  registerApi,
+  children,
+}: KanbanDragOverlayProps) => {
+  const [pointerPos, setPointerPos] = useState<{ x: number; y: number } | null>(initialPos ?? null);
+
+  useEffect(() => {
+    registerApi({
+      setPointer: (x: number, y: number) => {
+        setPointerPos({ x, y });
+      },
+    });
+  }, [registerApi]);
+
+  const pos =
+    phase === 'settling' && settleTo
+      ? settleTo
+      : phase === 'keyboard' && keyboardPos
+        ? keyboardPos
+        : (pointerPos ?? initialPos ?? keyboardPos ?? settleTo ?? null);
+  if (!pos) {
+    return null;
+  }
+
+  const lifted = phase !== 'settling';
+
+  return (
+    <View
+      data-kanban-overlay
+      data-kanban-overlay-phase={phase}
+      position="absolute"
+      top={0}
+      left={0}
+      x={pos.x}
+      y={pos.y}
+      width={width}
+      height={height}
+      pointerEvents="none"
+      zIndex={1000}
+      // 1:1 while the pointer carries the card; tween only for the discrete
+      // keyboard steps and the settle leap.
+      transition={phase === 'pointer' ? 'none' : transition}>
+      <View
+        transition={transition}
+        enterStyle={{ scale: 1, rotate: '0deg' }}
+        scale={lifted ? 1.03 : 1}
+        rotate={lifted ? '2.5deg' : '0deg'}
+        {...(lifted ? LIFT_SHADOW : undefined)}
+        overflow="hidden"
+        height="100%">
+        <Card
+          height="100%"
+          overflow="hidden">
+          {children}
+        </Card>
+      </View>
+    </View>
+  );
+};
+
 /**
  * Generic Kanban board component with column-level virtualization,
  * keyboard navigation, and Trello-class drag-and-drop motion.
@@ -251,7 +768,7 @@ interface OverlayApi {
  * />
  * ```
  */
-export function Kanban<T>({
+export const Kanban = <T,>({
   columns,
   renderCard,
   onCardMove,
@@ -273,7 +790,7 @@ export function Kanban<T>({
   emptyColumnMessage: emptyColumnMessageProp,
   hotkeys: hotkeyOverrides,
   ...stackProps
-}: KanbanProps<T>) {
+}: KanbanProps<T>) => {
   const { t } = useTranslation();
   const emptyColumnMessage = emptyColumnMessageProp ?? t('No items');
   const { knobProps } = useResolvedKnobs();
@@ -1062,7 +1579,7 @@ export function Kanban<T>({
       </View>
     </AsyncBoundary>
   );
-}
+};
 
 // ── Drag overlay ──────────────────────────────────────────────
 
@@ -1076,78 +1593,6 @@ interface KanbanDragOverlayProps {
   transition: any;
   registerApi: (api: OverlayApi) => void;
   children: React.ReactNode;
-}
-
-/**
- * Board-level clone of the dragged card. Pointer mode tracks 1:1 with no
- * tween (A-GESTURE); keyboard steps and the drop/cancel settle tween with the
- * animation knob (Axiom 4: leaps tween, carried values track).
- */
-function KanbanDragOverlay({
-  phase,
-  width,
-  height,
-  initialPos,
-  keyboardPos,
-  settleTo,
-  transition,
-  registerApi,
-  children,
-}: KanbanDragOverlayProps) {
-  const [pointerPos, setPointerPos] = useState<{ x: number; y: number } | null>(initialPos ?? null);
-
-  useEffect(() => {
-    registerApi({
-      setPointer: (x: number, y: number) => {
-        setPointerPos({ x, y });
-      },
-    });
-  }, [registerApi]);
-
-  const pos =
-    phase === 'settling' && settleTo
-      ? settleTo
-      : phase === 'keyboard' && keyboardPos
-        ? keyboardPos
-        : (pointerPos ?? initialPos ?? keyboardPos ?? settleTo ?? null);
-  if (!pos) {
-    return null;
-  }
-
-  const lifted = phase !== 'settling';
-
-  return (
-    <View
-      data-kanban-overlay
-      data-kanban-overlay-phase={phase}
-      position="absolute"
-      top={0}
-      left={0}
-      x={pos.x}
-      y={pos.y}
-      width={width}
-      height={height}
-      pointerEvents="none"
-      zIndex={1000}
-      // 1:1 while the pointer carries the card; tween only for the discrete
-      // keyboard steps and the settle leap.
-      transition={phase === 'pointer' ? 'none' : transition}>
-      <View
-        transition={transition}
-        enterStyle={{ scale: 1, rotate: '0deg' }}
-        scale={lifted ? 1.03 : 1}
-        rotate={lifted ? '2.5deg' : '0deg'}
-        {...(lifted ? LIFT_SHADOW : undefined)}
-        overflow="hidden"
-        height="100%">
-        <Card
-          height="100%"
-          overflow="hidden">
-          {children}
-        </Card>
-      </View>
-    </View>
-  );
 }
 
 // ── Column ────────────────────────────────────────────────────
@@ -1176,449 +1621,4 @@ interface KanbanColumnViewProps<T> {
   hasMore?: boolean;
   isLoading?: boolean;
   onCardFocus?: (columnIndex: number, cardIndex: number) => void;
-}
-
-function KanbanColumnView<T>({
-  kanbanId,
-  column,
-  columnIndex,
-  focusedColumnIndex,
-  focusedCardIndex,
-  renderCard,
-  columnWidth,
-  minColumnHeight,
-  estimateSize,
-  overscan,
-  emptyColumnMessage,
-  onCardSelect,
-  onCardPointerDown,
-  suppressClickRef,
-  registerColumn,
-  drag,
-  settlingKey,
-  renderColumnActions,
-  onLoadMore,
-  getItemKey,
-  hasMore,
-  isLoading,
-  onCardFocus,
-}: KanbanColumnViewProps<T>) {
-  const { t } = useTranslation();
-  const { knobProps } = useResolvedKnobs();
-  const parentRef = useRef<HTMLDivElement>(null);
-  // Hide column counts when a parent AsyncBoundary is in error.
-  const itemCount = useAsyncCount(column.items.length);
-
-  const virtualizer = useVirtualizer({
-    count: column.items.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => estimateSize,
-    overscan,
-    ...(getItemKey && {
-      getItemKey: (index: number) => getItemKey(column.items[index], index),
-    }),
-  });
-
-  const isActiveColumn = columnIndex === focusedColumnIndex;
-  const isSource = drag?.sourceColumnId === column.id;
-  const gapIndex = drag?.target.columnId === column.id ? drag.target.index : null;
-  const isDropTarget = gapIndex != null;
-
-  // FLIP readiness gate: first paint (and the virtualizer's initial
-  // measurement corrections) must not wiggle into place (Axiom 4 mount rule).
-  const [flipReady, setFlipReady] = useState(false);
-  useEffect(() => {
-    let raf2 = 0;
-    const raf1 = requestAnimationFrame(() => {
-      raf2 = requestAnimationFrame(() => {
-        setFlipReady(true);
-      });
-    });
-    return () => {
-      cancelAnimationFrame(raf1);
-      cancelAnimationFrame(raf2);
-    };
-  }, []);
-
-  // Register geometry accessors for hit-testing / auto-scroll / settle math.
-  useEffect(() => {
-    registerColumn(column.id, {
-      scrollEl: parentRef.current,
-      getVirtualState: () => ({
-        items: virtualizer.getVirtualItems().map((v) => ({ index: v.index, start: v.start, size: v.size })),
-        totalSize: virtualizer.getTotalSize(),
-        count: column.items.length,
-      }),
-      scrollToIndex: (index: number) => {
-        if (column.items.length > 0) {
-          virtualizer.scrollToIndex(Math.min(index, column.items.length - 1), { align: 'auto' });
-        }
-      },
-    });
-    return () => {
-      registerColumn(column.id, null);
-    };
-  }, [registerColumn, column.id, column.items.length, virtualizer]);
-
-  // Scroll to focused card within active column
-  useEffect(() => {
-    if (isActiveColumn && focusedCardIndex >= 0 && focusedCardIndex < column.items.length) {
-      virtualizer.scrollToIndex(focusedCardIndex, { align: 'auto' });
-    }
-  }, [isActiveColumn, focusedCardIndex, column.items.length, virtualizer]);
-
-  // Detect scroll near bottom for infinite scroll
-  const handleScroll = useCallback(() => {
-    const el = parentRef.current;
-    if (!el || !onLoadMore || !hasMore || isLoading) {
-      return;
-    }
-
-    const { scrollTop, scrollHeight, clientHeight } = el;
-    if (scrollHeight - scrollTop - clientHeight < estimateSize * 2) {
-      onLoadMore();
-    }
-  }, [onLoadMore, hasMore, isLoading, estimateSize]);
-
-  useEffect(() => {
-    const el = parentRef.current;
-    if (!el) {
-      return;
-    }
-    el.addEventListener('scroll', handleScroll);
-    return () => {
-      el.removeEventListener('scroll', handleScroll);
-    };
-  }, [handleScroll]);
-
-  // Enter animations only for keys never seen on this board instance —
-  // virtualization remounts on scroll must not replay them (Axiom 4).
-  const seenKeysRef = useRef(new Set<string | number>());
-
-  // Exit layer: cards removed from the data get a paired fade-out at their
-  // last known slot (enter/exit pairing). Scroll-driven unmounts are
-  // not data removals and are skipped.
-  const lastRenderedRef = useRef(new Map<string | number, { item: T; y: number; size: number }>());
-  const prevKeysRef = useRef<Set<string | number> | null>(null);
-  const [leaving, setLeaving] = useState<{ key: string | number; item: T; y: number; size: number }[]>([]);
-
-  const currentKeys = useMemo(() => {
-    const keys = new Set<string | number>();
-    column.items.forEach((item, index) => keys.add(getItemKey ? getItemKey(item, index) : index));
-    return keys;
-  }, [column.items, getItemKey]);
-
-  useEffect(() => {
-    const prev = prevKeysRef.current;
-    prevKeysRef.current = currentKeys;
-    if (!prev || !getItemKey) {
-      return;
-    }
-    const gone: { key: string | number; item: T; y: number; size: number }[] = [];
-    for (const key of prev) {
-      if (currentKeys.has(key) || key === settlingKey) {
-        continue;
-      }
-      const snapshot = lastRenderedRef.current.get(key);
-      if (snapshot) {
-        gone.push({ key, ...snapshot });
-      }
-    }
-    if (gone.length > 0) {
-      setLeaving((existing) => {
-        const seen = new Set(existing.map((l) => l.key));
-        return [...existing, ...gone.filter((g) => !seen.has(g.key))];
-      });
-    }
-  }, [currentKeys, getItemKey, settlingKey]);
-
-  useEffect(() => {
-    if (leaving.length === 0) {
-      return;
-    }
-    const raf = requestAnimationFrame(() => {
-      setLeaving([]);
-    });
-    return () => {
-      cancelAnimationFrame(raf);
-    };
-  }, [leaving]);
-
-  const virtualItems = virtualizer.getVirtualItems();
-  const totalSize = virtualizer.getTotalSize();
-  const gapOpensColumn = isDropTarget && !isSource;
-  const contentHeight = totalSize + (gapOpensColumn ? (drag?.size ?? 0) : 0);
-
-  const getStart = useCallback(
-    (index: number): number => {
-      const found = virtualItems.find((v) => v.index === index);
-      return found ? found.start : index * estimateSize;
-    },
-    [virtualItems, estimateSize],
-  );
-
-  const gapY =
-    gapIndex != null && drag
-      ? gapPosition({
-          gapIndex,
-          sourceIndex: isSource ? drag.sourceIndex : null,
-          count: column.items.length,
-          size: drag.size,
-          totalSize,
-          getStart,
-        })
-      : null;
-
-  const isEmpty = column.items.length === 0;
-  // Wrapper transitions: FLIP displacement + data-change jumps tween; raw
-  // scrolling measurement corrections and first paint stay instant. During an
-  // active drag the transition stays on so displacement tweens even while
-  // auto-scroll runs.
-  const wrapperTransition =
-    drag == null ? (flipReady && !virtualizer.isScrolling ? knobProps.transition : undefined) : knobProps.transition;
-
-  return (
-    <YStack
-      width={columnWidth}
-      minHeight={minColumnHeight}
-      flexShrink={0}
-      overflow="hidden"
-      transition={knobProps.transition}
-      {...knobProps.borderRadius}
-      {...knobProps.containerRadius}
-      {...knobProps.panelPadding}
-      backgroundColor={isDropTarget || isActiveColumn ? componentColors.interactive.background : 'transparent'}
-      data-kanban-column={column.id}>
-      <ListItem
-        title={column.title}
-        icon={
-          column.color ? (
-            <YStack
-              {...radiusClassProps('R-PILL', 'Kanban column dot')}
-              width={8}
-              height={8}
-              borderRadius={4}
-              backgroundColor={column.color as any}
-              data-kanban-column-dot
-            />
-          ) : undefined
-        }
-        iconAfter={
-          itemCount !== undefined || renderColumnActions ? (
-            <XStack
-              alignItems="center"
-              {...knobProps.gap}>
-              {itemCount !== undefined && (
-                <Text
-                  color={knobProps.textAccentColor}
-                  {...knobProps.label}
-                  {...knobProps.textWeight}
-                  data-async-count>
-                  {itemCount}
-                </Text>
-              )}
-              {renderColumnActions?.(column)}
-            </XStack>
-          ) : undefined
-        }
-        size={knobProps.sizeToken}
-        borderBottomWidth={hairlineWidth}
-        borderBottomColor="$borderColor"
-      />
-
-      {/* Cards container — always rendered so empty columns stay drop targets. */}
-      <View
-        ref={parentRef as any}
-        data-kanban-column-scroll={column.id}
-        style={{
-          flex: 1,
-          overflow: 'auto',
-          minHeight: minColumnHeight - 60,
-        }}
-        pointerEvents={drag ? ('none' as any) : undefined}>
-        {isEmpty ? (
-          !isDropTarget && (
-            <EmptyState
-              compact
-              title={emptyColumnMessage}
-              opacity={0.5}
-              flex={1}
-            />
-          )
-        ) : (
-          <View
-            style={{
-              height: contentHeight,
-              width: '100%',
-              position: 'relative',
-            }}>
-            {virtualItems.map((virtualItem) => {
-              const item = column.items[virtualItem.index];
-              const itemKey = getItemKey ? getItemKey(item, virtualItem.index) : virtualItem.index;
-              const isFocused = isActiveColumn && focusedCardIndex === virtualItem.index;
-              const isDragged = isSource && drag != null && virtualItem.index === drag.sourceIndex;
-
-              let y = virtualItem.start;
-              let ghost = false;
-              let hidden = false;
-              if (drag) {
-                if (isDragged) {
-                  if (gapIndex != null && gapY != null) {
-                    // In-column silhouette: the origin card *is* the moving gap.
-                    y = gapY;
-                    ghost = true;
-                  } else {
-                    // Target moved to another column — the origin gap closes.
-                    hidden = true;
-                  }
-                } else {
-                  y +=
-                    siblingOffset({
-                      index: virtualItem.index,
-                      sourceIndex: isSource && drag ? drag.sourceIndex : null,
-                      gapIndex,
-                      size: drag.size,
-                    }) || 0;
-                }
-              }
-              if (getItemKey && settlingKey != null && itemKey === settlingKey) {
-                // The overlay is this card's visual while it settles into place.
-                hidden = true;
-              }
-
-              if (getItemKey) {
-                lastRenderedRef.current.set(itemKey, {
-                  item,
-                  y: virtualItem.start,
-                  size: virtualItem.size,
-                });
-              }
-              const isNew = flipReady && getItemKey != null && !seenKeysRef.current.has(itemKey);
-              seenKeysRef.current.add(itemKey);
-
-              return (
-                <View
-                  key={virtualItem.key}
-                  ref={virtualizer.measureElement as any}
-                  {...{ 'data-index': virtualItem.index }}
-                  position="absolute"
-                  top={0}
-                  left={0}
-                  width="100%"
-                  y={y}
-                  padding={CARD_INSET_PX}
-                  transition={wrapperTransition}
-                  opacity={hidden ? 0 : ghost ? 0.4 : 1}
-                  pointerEvents={hidden ? ('none' as any) : undefined}>
-                  <Card
-                    id={`${kanbanId}-col-${columnIndex}-card-${virtualItem.index}`}
-                    elevation={knobProps.elevation}
-                    minHeight={MIN_PRESS_TARGET}
-                    transition={knobProps.transition}
-                    {...(isNew && {
-                      enterStyle: { opacity: 0, scale: 0.97 },
-                    })}
-                    {...(ghost
-                      ? {
-                          borderWidth: hairlineWidth,
-                          borderColor: componentColors.interactive.border,
-                          borderStyle: 'dashed' as any,
-                        }
-                      : undefined)}
-                    {...(isFocused ? { backgroundColor: '$accentBackground' } : undefined)}
-                    {...(isFocused && wasKeyboardFocus() ? keyboardFocusRingProps : { outlineWidth: 0 })}
-                    hoverStyle={{ backgroundColor: componentColors.interactive.background }}
-                    pressStyle={{ scale: 0.98 }}
-                    overflow="hidden"
-                    data-kanban-card={String(itemKey)}
-                    {...(isFocused && { 'data-kanban-focused': 'true' })}
-                    {...(onCardPointerDown && { 'data-kanban-draggable': 'true' })}
-                    onPress={() => {
-                      onCardFocus?.(columnIndex, virtualItem.index);
-                      if (suppressClickRef.current) {
-                        return;
-                      }
-                      onCardSelect?.(item, column.id);
-                    }}
-                    cursor={onCardPointerDown ? 'grab' : 'pointer'}
-                    {...(onCardPointerDown && {
-                      onPointerDown: (e: any) => {
-                        onCardPointerDown(item, column.id, virtualItem.index, e);
-                      },
-                    })}>
-                    {renderCard(item)}
-                  </Card>
-                </View>
-              );
-            })}
-
-            {/* Exit layer: paired fade-out for removed cards. */}
-            <AnimatePresence>
-              {leaving.map((l) => (
-                <View
-                  key={`leaving-${String(l.key)}`}
-                  position="absolute"
-                  top={0}
-                  left={0}
-                  width="100%"
-                  y={l.y}
-                  padding={CARD_INSET_PX}
-                  pointerEvents="none"
-                  transition={knobProps.transition}
-                  exitStyle={{ opacity: 0, scale: 0.97 }}>
-                  <Card overflow="hidden">{renderCard(l.item)}</Card>
-                </View>
-              ))}
-            </AnimatePresence>
-          </View>
-        )}
-
-        {/* Insertion slot outline for cross-column targets and empty columns. */}
-        <AnimatePresence>
-          {drag && gapIndex != null && !isSource && (
-            <View
-              key="kanban-slot"
-              data-kanban-slot={column.id}
-              position="absolute"
-              top={0}
-              left={0}
-              width="100%"
-              y={gapY ?? 0}
-              height={drag.size}
-              padding={CARD_INSET_PX}
-              pointerEvents="none"
-              transition={knobProps.transition}
-              enterStyle={{ opacity: 0 }}
-              exitStyle={{ opacity: 0 }}>
-              <View
-                flex={1}
-                {...knobProps.borderRadius}
-                borderStyle="dashed"
-                borderColor={componentColors.interactive.border}
-                backgroundColor={componentColors.interactive.background}
-                opacity={0.8}
-                alignItems="center"
-                justifyContent="center">
-                {isEmpty && (
-                  <Text
-                    color={knobProps.textAccentColor}
-                    {...knobProps.label}>
-                    {t('Drop here')}
-                  </Text>
-                )}
-              </View>
-            </View>
-          )}
-        </AnimatePresence>
-      </View>
-
-      {isLoading && (
-        <YStack
-          {...knobProps.panelPadding}
-          alignItems="center">
-          <Spinner size="small" />
-        </YStack>
-      )}
-    </YStack>
-  );
 }

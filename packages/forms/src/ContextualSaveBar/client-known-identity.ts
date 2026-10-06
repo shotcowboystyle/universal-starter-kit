@@ -3,7 +3,7 @@
  * the client already owns. A missing / blank / literal `"undefined"` value
  * is an honest refuse, never interpolated into a route.
  */
-export function clientKnownIdentity(id: unknown): string {
+export const clientKnownIdentity = (id: unknown): string => {
   if (typeof id !== 'string') {
     throw new TypeError('LC-64: post-mutation navigation requires a client-known identity');
   }
@@ -12,4 +12,4 @@ export function clientKnownIdentity(id: unknown): string {
     throw new Error('LC-64: post-mutation navigation requires a client-known identity');
   }
   return trimmed;
-}
+};

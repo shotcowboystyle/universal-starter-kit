@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { getBroadName, getPreciseName } from './platform-base';
 import type { Platform } from './platform-base';
 
-function makePlatform(overrides: Partial<Platform> = {}): Platform {
+const makePlatform = (overrides: Partial<Platform> = {}): Platform => {
   return {
     isAndroid: false,
     isBrowser: false,
@@ -31,7 +31,7 @@ function makePlatform(overrides: Partial<Platform> = {}): Platform {
     broadName: 'unknown',
     ...overrides,
   };
-}
+};
 
 describe('getPreciseName', () => {
   it('returns "unknown" when no flags are true', () => {

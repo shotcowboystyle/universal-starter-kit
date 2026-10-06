@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 
 import { useAuth } from '@/hooks/use-auth';
 
-export function UserNav() {
+export const UserNav = () => {
   const { user, isAuthenticated, isLoading, logout } = useAuth();
   const t = useTranslations('user');
 
@@ -61,4 +61,4 @@ export function UserNav() {
       </DropdownMenu.Content>
     </DropdownMenu>
   );
-}
+};

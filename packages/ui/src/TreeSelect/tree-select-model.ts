@@ -14,7 +14,7 @@ export interface FlatTreeRow<T = unknown> {
   index: number;
 }
 
-export function descendantCount<T>(node: TreeNode<T>): number {
+export const descendantCount = <T>(node: TreeNode<T>): number => {
   let n = 0;
   const walk = (items?: TreeNode<T>[]) => {
     if (!items) {
@@ -27,9 +27,9 @@ export function descendantCount<T>(node: TreeNode<T>): number {
   };
   walk(node.children);
   return n;
-}
+};
 
-export function flattenVisible<T>(nodes: TreeNode<T>[], expandedIds: Set<string>): FlatTreeRow<T>[] {
+export const flattenVisible = <T>(nodes: TreeNode<T>[], expandedIds: Set<string>): FlatTreeRow<T>[] => {
   const result: FlatTreeRow<T>[] = [];
   const walk = (items: TreeNode<T>[], depth: number) => {
     for (const node of items) {
@@ -50,10 +50,13 @@ export function flattenVisible<T>(nodes: TreeNode<T>[], expandedIds: Set<string>
   };
   walk(nodes, 0);
   return result;
-}
+};
 
 /** Keep matching nodes and their ancestors. Matching parents keep full children. */
-export function filterForest<T>(nodes: TreeNode<T>[], query: string): { nodes: TreeNode<T>[]; expandIds: Set<string> } {
+export const filterForest = <T>(
+  nodes: TreeNode<T>[],
+  query: string,
+): { nodes: TreeNode<T>[]; expandIds: Set<string> } => {
   const q = query.trim().toLowerCase();
   if (!q) {
     return { nodes, expandIds: new Set() };
@@ -79,9 +82,9 @@ export function filterForest<T>(nodes: TreeNode<T>[], query: string): { nodes: T
   };
 
   return { nodes: walk(nodes), expandIds };
-}
+};
 
-export function findNode<T>(nodes: TreeNode<T>[], id: string): TreeNode<T> | undefined {
+export const findNode = <T>(nodes: TreeNode<T>[], id: string): TreeNode<T> | undefined => {
   for (const node of nodes) {
     if (node.id === id) {
       return node;
@@ -94,10 +97,10 @@ export function findNode<T>(nodes: TreeNode<T>[], id: string): TreeNode<T> | und
     }
   }
   return undefined;
-}
+};
 
 /** Ancestor ids of `id` (root → parent), or null when the node is absent. */
-export function findNodePath<T>(items: TreeNode<T>[], id: string, trail: string[] = []): string[] | null {
+export const findNodePath = <T>(items: TreeNode<T>[], id: string, trail: string[] = []): string[] | null => {
   for (const node of items) {
     if (node.id === id) {
       return trail;
@@ -110,4 +113,4 @@ export function findNodePath<T>(items: TreeNode<T>[], id: string, trail: string[
     }
   }
   return null;
-}
+};

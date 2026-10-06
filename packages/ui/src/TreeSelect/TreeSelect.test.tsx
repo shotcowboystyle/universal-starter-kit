@@ -31,7 +31,7 @@ const accounts: TreeNode[] = [
   { id: 'liabilities', label: 'Liabilities' },
 ];
 
-function mockRect(el: HTMLElement, rect: { x: number; y: number; width: number; height: number }) {
+const mockRect = (el: HTMLElement, rect: { x: number; y: number; width: number; height: number }) => {
   const next = {
     ...rect,
     top: rect.y,
@@ -51,9 +51,9 @@ function mockRect(el: HTMLElement, rect: { x: number; y: number; width: number; 
   return () => {
     HTMLElement.prototype.getBoundingClientRect = proto;
   };
-}
+};
 
-function tabStops(root: ParentNode) {
+const tabStops = (root: ParentNode) => {
   return [
     ...root.querySelectorAll<HTMLElement>(
       'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
@@ -65,16 +65,16 @@ function tabStops(root: ParentNode) {
     const style = el.getAttribute('style') ?? '';
     return !style.includes('display: none');
   });
-}
+};
 
-function setViewport(width: number) {
+const setViewport = (width: number) => {
   Object.defineProperty(window, 'innerWidth', {
     configurable: true,
     writable: true,
     value: width,
   });
   window.dispatchEvent(new Event('resize'));
-}
+};
 
 describe('TreeSelect cover + width', () => {
   it('panel attaches at zero over the trigger and honours at-least-trigger', async () => {

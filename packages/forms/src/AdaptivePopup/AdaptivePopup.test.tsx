@@ -25,7 +25,7 @@ import { AdaptivePopup, pickAdaptivePopupFace } from './index';
  * passed against that bug.
  */
 
-function Harness({ trigger, disabled }: { trigger: ReactNode; disabled?: boolean }) {
+const Harness = ({ trigger, disabled }: { trigger: ReactNode; disabled?: boolean }) => {
   const [open, setOpen] = useState(false);
   return (
     <AdaptivePopup
@@ -38,7 +38,7 @@ function Harness({ trigger, disabled }: { trigger: ReactNode; disabled?: boolean
       <Text>popup body</Text>
     </AdaptivePopup>
   );
-}
+};
 
 /** A real press: the half that opens a panel is mousedown, so fire all three. */
 const press = (el: Element) => {
@@ -134,6 +134,10 @@ describe('AdaptivePopup trigger', () => {
   });
 });
 
+const surface = () => {
+  return document.querySelector("[data-testid='adaptive-popup-surface']");
+};
+
 describe('AdaptivePopup focus ring', () => {
   it('close names itself and dismisses', async () => {
     const result = renderWithProviders(<Harness trigger={<Button>Open Popup</Button>} />);
@@ -176,7 +180,7 @@ describe('AdaptivePopup focus ring', () => {
   });
 
   it('close sits after the body so fields are the first tab stop', async () => {
-    function FieldHarness() {
+    const FieldHarness = () => {
       const [open, setOpen] = useState(false);
       return (
         <AdaptivePopup
@@ -187,7 +191,7 @@ describe('AdaptivePopup focus ring', () => {
           <input aria-label="Name" />
         </AdaptivePopup>
       );
-    }
+    };
     const result = renderWithProviders(<FieldHarness />);
     press(result.container.querySelector("[role='button']") as Element);
     await waitFor(() => {
@@ -221,7 +225,7 @@ describe('AdaptivePopup focus ring', () => {
   });
 
   it('omitted title still exposes a dialog name for assistive tech', async () => {
-    function Untitled() {
+    const Untitled = () => {
       const [open, setOpen] = useState(false);
       return (
         <AdaptivePopup
@@ -231,7 +235,7 @@ describe('AdaptivePopup focus ring', () => {
           <Text>body</Text>
         </AdaptivePopup>
       );
-    }
+    };
     const result = renderWithProviders(<Untitled />);
     press(result.container.querySelector("[role='button']") as Element);
     await waitFor(() => {
@@ -243,20 +247,20 @@ describe('AdaptivePopup focus ring', () => {
 
 const originalInnerWidth = window.innerWidth;
 
-function setViewportWidth(width: number) {
+const setViewportWidth = (width: number) => {
   Object.defineProperty(window, 'innerWidth', {
     configurable: true,
     writable: true,
     value: width,
   });
   window.dispatchEvent(new Event('resize'));
-}
+};
 
 afterEach(() => {
   setViewportWidth(originalInnerWidth);
 });
 
-function OpenPopup({
+const OpenPopup = ({
   face,
   size,
   footer,
@@ -264,7 +268,7 @@ function OpenPopup({
   face?: 'dialog' | 'drawer';
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'fullscreen';
   footer?: ReactNode;
-}) {
+}) => {
   const [open, setOpen] = useState(true);
   return (
     <AdaptivePopup
@@ -278,18 +282,14 @@ function OpenPopup({
       <input aria-label="Name" />
     </AdaptivePopup>
   );
-}
+};
 
-function surface() {
-  return document.querySelector("[data-testid='adaptive-popup-surface']");
-}
-
-function shadowClasses(el: Element): string[] {
+const shadowClasses = (el: Element): string[] => {
   return String(el.className || '')
     .split(/\s+/)
     .filter((c) => c.startsWith('_bxsh-'))
     .sort();
-}
+};
 
 describe('pickAdaptivePopupFace (C22 / OVERLAY_BREAKPOINT)', () => {
   it('at the overlay breakpoint and below, any face is sheet', () => {
@@ -378,7 +378,7 @@ describe('AdaptivePopup drawer contract (overlay ground)', () => {
   });
 
   it('traps focus in the drawer and restores it to the opener on close', async () => {
-    function RestoreHarness() {
+    const RestoreHarness = () => {
       const [open, setOpen] = useState(false);
       return (
         <AdaptivePopup
@@ -390,7 +390,7 @@ describe('AdaptivePopup drawer contract (overlay ground)', () => {
           <input aria-label="Name" />
         </AdaptivePopup>
       );
-    }
+    };
     const result = renderWithProviders(<RestoreHarness />);
     const trigger = result.container.querySelector("[role='button']") as HTMLElement;
     trigger.focus();
@@ -490,7 +490,7 @@ describe('AdaptivePopup open focus behind <dialog>.show()', () => {
     restoreShow();
   });
 
-  function FieldPopup({ face }: { face: 'dialog' | 'drawer' }) {
+  const FieldPopup = ({ face }: { face: 'dialog' | 'drawer' }) => {
     const [open, setOpen] = useState(false);
     return (
       <AdaptivePopup
@@ -502,7 +502,7 @@ describe('AdaptivePopup open focus behind <dialog>.show()', () => {
         <Input inputProps={{ 'aria-label': 'Name' }} />
       </AdaptivePopup>
     );
-  }
+  };
 
   it.each(['dialog', 'drawer'] as const)('%s: moves focus off the surface onto the first field', async (face) => {
     const result = renderWithProviders(<FieldPopup face={face} />);

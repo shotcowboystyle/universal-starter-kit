@@ -24,7 +24,7 @@ const meta: Meta<typeof FormGrid> = {
 export default meta;
 type Story = StoryObj<typeof FormGrid>;
 
-function GridField({ id, label }: { id: string; label: string }) {
+const GridField = ({ id, label }: { id: string; label: string }) => {
   return (
     <Input
       id={id}
@@ -32,7 +32,7 @@ function GridField({ id, label }: { id: string; label: string }) {
       placeholder={label}
     />
   );
-}
+};
 
 export const Basic: Story = {
   name: 'Basic (single column default)',

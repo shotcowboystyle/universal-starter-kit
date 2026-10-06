@@ -20,7 +20,7 @@ afterEach(cleanup);
 
 const STOPS = ['none', 'small', 'medium', 'large'] as const;
 
-function renderAt(stop: (typeof STOPS)[number], outlined = false): string[] {
+const renderAt = (stop: (typeof STOPS)[number], outlined = false): string[] => {
   const result = renderWithProviders(
     <Preset overrides={{ fillStyle: outlined ? 'outlined' : 'filled', borderWidth: stop }}>
       <Chip
@@ -37,7 +37,7 @@ function renderAt(stop: (typeof STOPS)[number], outlined = false): string[] {
     .sort();
   cleanup();
   return atoms;
-}
+};
 
 describe('Chip borderWidth ladder', () => {
   it("the frame honours the resolver's edge: 0 / 0.5 / 1 / 2", () => {

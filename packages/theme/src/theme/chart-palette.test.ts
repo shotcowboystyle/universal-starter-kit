@@ -15,7 +15,7 @@ const purpleTintSolid = 'hsl(272, 46.8%, 50.3%)';
 const tomatoTintSolid = 'hsl(10, 78.0%, 54.0%)';
 const grayTintSolid = 'hsla(270, 6%, 56%, 1)';
 
-function hexToHsl(color: string): { h: number; s: number; l: number } {
+const hexToHsl = (color: string): { h: number; s: number; l: number } => {
   const hex = normalizeToHex(color);
   if (!hex) {
     throw new Error(`unparseable color: ${color}`);
@@ -40,12 +40,12 @@ function hexToHsl(color: string): { h: number; s: number; l: number } {
     h = ((r - g) / d + 4) * 60;
   }
   return { h, s, l };
-}
+};
 
-function hueDistance(a: number, b: number): number {
+const hueDistance = (a: number, b: number): number => {
   const d = Math.abs(a - b) % 360;
   return d > 180 ? 360 - d : d;
-}
+};
 
 /**
  * Distinguishability bar for ADJACENT categorical marks. A pair is tellable
@@ -53,7 +53,7 @@ function hueDistance(a: number, b: number): number {
  * saturated colors), saturation (neutral vs vivid, delta ≥0.5), or luminance
  * (contrast ≥1.5:1).
  */
-function adjacentDistinguishable(a: string, b: string): boolean {
+const adjacentDistinguishable = (a: string, b: string): boolean => {
   const ha = hexToHsl(a);
   const hb = hexToHsl(b);
   if (ha.s >= 0.15 && hb.s >= 0.15 && hueDistance(ha.h, hb.h) >= 30) {
@@ -65,7 +65,7 @@ function adjacentDistinguishable(a: string, b: string): boolean {
   const la = relativeLuminance(normalizeToHex(a) as string);
   const lb = relativeLuminance(normalizeToHex(b) as string);
   return contrastRatio(la, lb) >= 1.5;
-}
+};
 
 describe('resolveChartPalette', () => {
   it('floors every categorical mark across the registered tint identities', () => {

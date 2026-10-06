@@ -63,7 +63,7 @@ const stopAtModal = (event: GestureResponderEvent) => {
   event.stopPropagation();
 };
 
-export function SheetModal({
+export const SheetModal = ({
   open,
   onOpenChange,
   children,
@@ -71,7 +71,7 @@ export function SheetModal({
   snapPoint,
   scrollable,
   fill = false,
-}: SheetModalProps) {
+}: SheetModalProps) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
   const { height: windowHeight } = useWindowDimensions();
@@ -511,4 +511,4 @@ export function SheetModal({
       </RNView>
     </Modal>
   );
-}
+};

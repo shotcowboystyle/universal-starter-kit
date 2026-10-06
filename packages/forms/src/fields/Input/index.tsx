@@ -26,7 +26,7 @@ type InputAreaProps = ComponentProps<typeof InputParts.Area>;
 /** F1 / reference §10: standalone Input rings at offset 0, not the inset −2. */
 const INPUT_FIELD_RING_STYLE_ID = 'mp-input-field-ring-offset';
 
-export function ensureInputFieldRingOffset(): void {
+export const ensureInputFieldRingOffset = (): void => {
   if (typeof document === 'undefined') {
     return;
   }
@@ -42,7 +42,7 @@ export function ensureInputFieldRingOffset(): void {
   outline-offset: 0px !important;
 }`;
   document.head.append(tag);
-}
+};
 
 export interface InputProps {
   name?: string;
@@ -119,7 +119,7 @@ export interface InputProps {
 
 const COPY_LABEL = 'Copy to clipboard';
 
-export function Input({
+export const Input = ({
   name,
   form: formProp,
   validators,
@@ -158,7 +158,7 @@ export function Input({
   chromeless,
   copy,
   onCopyResult,
-}: InputProps) {
+}: InputProps) => {
   const hydrationTouch = useTouchSurface();
   const { resolvedForm, knobProps, control, id } = useFormField({
     form: formProp,
@@ -463,7 +463,7 @@ export function Input({
       }}
     </Field>
   );
-}
+};
 
 Input.Icon = InputParts.Icon;
 Input.Box = InputParts.Box;

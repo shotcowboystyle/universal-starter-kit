@@ -1,12 +1,12 @@
-export function getCookie(name: string): string | null {
+export const getCookie = (name: string): string | null => {
   if (typeof document === 'undefined') {
     return null;
   }
   const match = new RegExp(`(?:^|; )${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}=([^;]*)`).exec(document.cookie);
   return match ? decodeURIComponent(match[1]) : null;
-}
+};
 
-export function setCookie(
+export const setCookie = (
   name: string,
   value: string,
   options: {
@@ -15,7 +15,7 @@ export function setCookie(
     sameSite?: 'Strict' | 'Lax' | 'None';
     secure?: boolean;
   } = {},
-): void {
+): void => {
   if (typeof document === 'undefined') {
     return;
   }
@@ -29,11 +29,11 @@ export function setCookie(
     cookie += '; Secure';
   }
   document.cookie = cookie;
-}
+};
 
-export function deleteCookie(name: string, path = '/'): void {
+export const deleteCookie = (name: string, path = '/'): void => {
   if (typeof document === 'undefined') {
     return;
   }
   document.cookie = `${encodeURIComponent(name)}=; path=${path}; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
-}
+};

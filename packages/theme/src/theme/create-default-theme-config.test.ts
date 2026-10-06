@@ -36,7 +36,7 @@ import { setSizeRecipeInputs } from './size-recipes';
 // Mirrors the shc app theme config: a consumer getTheme written against the
 // FULL base ramp (theme.colorN) with no outlineColor of its own. Inside
 // component sub-themes (t_Button, ...) every one of these reads undefined.
-function consumerGetTheme({ theme }: GetThemeProps): Record<string, string> {
+const consumerGetTheme = ({ theme }: GetThemeProps): Record<string, string> => {
   return {
     backgroundPress: theme.color5,
     backgroundFocus: theme.color6,
@@ -49,18 +49,18 @@ function consumerGetTheme({ theme }: GetThemeProps): Record<string, string> {
     textMuted: theme.color10,
     textSubtle: theme.color6,
   };
-}
+};
 
 // With createTamagui mocked pass-through, config.tamagui IS the raw config
 // object, so .themes is the raw built themes record.
 type RawThemes = Record<string, Record<string, string>>;
 
-function buildThemes(): RawThemes {
+const buildThemes = (): RawThemes => {
   const config = createDefaultThemeConfig({
     builderOptions: { getTheme: consumerGetTheme },
   }) as unknown as { tamagui: { themes: RawThemes } };
   return config.tamagui.themes;
-}
+};
 
 describe('createDefaultThemeConfig — builderOptions.getTheme composition', () => {
   afterEach(() => {
@@ -197,14 +197,14 @@ type TokenValue = { val?: unknown } | string | number;
 type RawTokens = Record<string, Record<string, TokenValue>>;
 
 /** Flatten one token group to `{ key(without $): primitive value }`. */
-function tokenGroupValues(tokens: RawTokens, group: string): Record<string, unknown> {
+const tokenGroupValues = (tokens: RawTokens, group: string): Record<string, unknown> => {
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(tokens[group] ?? {})) {
     const name = key.startsWith('$') ? key.slice(1) : key;
     out[name] = value && typeof value === 'object' && 'val' in value ? (value as { val: unknown }).val : value;
   }
   return out;
-}
+};
 
 describe('createDefaultThemeConfig — Tamagui era pin', () => {
   const config = createDefaultThemeConfig() as unknown as {

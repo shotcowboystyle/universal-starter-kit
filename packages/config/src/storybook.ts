@@ -33,6 +33,180 @@ export interface CreateStorybookViteConfigOptions {
   define?: UserConfig['define'];
 }
 
+const findWorkspaceRoot = (): string => {
+  let dir = process.cwd();
+  while (dir !== path.dirname(dir)) {
+    if (fs.existsSync(path.join(dir, 'pnpm-workspace.yaml'))) {
+      return dir;
+    }
+    const pkgJsonPath = path.join(dir, 'package.json');
+    if (fs.existsSync(pkgJsonPath)) {
+      try {
+        const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf-8'));
+        if (pkgJson.workspaces) {
+          return dir;
+        }
+      } catch {
+        // ignore parse errors
+      }
+    }
+    dir = path.dirname(dir);
+  }
+  return process.cwd();
+};
+
+const resolveSubpathSource = (pkgDir: string, subpath: string): string | undefined => {
+  const candidates = [
+    path.join(pkgDir, 'src', `${subpath}.storybook.ts`),
+    path.join(pkgDir, 'src', `${subpath}.storybook.tsx`),
+    path.join(pkgDir, 'src', `${subpath}.ts`),
+    path.join(pkgDir, 'src', `${subpath}.tsx`),
+    path.join(pkgDir, 'src', subpath, 'index.storybook.ts'),
+    path.join(pkgDir, 'src', subpath, 'index.storybook.tsx'),
+    path.join(pkgDir, 'src', subpath, 'index.ts'),
+    path.join(pkgDir, 'src', subpath, 'index.tsx'),
+    path.join(pkgDir, `${subpath}.storybook.ts`),
+    path.join(pkgDir, `${subpath}.storybook.tsx`),
+    path.join(pkgDir, `${subpath}.ts`),
+    path.join(pkgDir, `${subpath}.tsx`),
+    path.join(pkgDir, subpath, 'index.storybook.ts'),
+    path.join(pkgDir, subpath, 'index.storybook.tsx'),
+    path.join(pkgDir, subpath, 'index.ts'),
+    path.join(pkgDir, subpath, 'index.tsx'),
+    path.join(pkgDir, subpath, 'index.js'),
+  ];
+
+  for (const c of candidates) {
+    if (fs.existsSync(c)) {
+      return c;
+    }
+  }
+
+  const dirPath = path.join(pkgDir, subpath);
+  if (fs.existsSync(dirPath) && fs.statSync(dirPath).isDirectory()) {
+    return dirPath;
+  }
+
+  return undefined;
+};
+
+const mergePackageResolveAliases = (
+  pkgDir: string,
+  pkgName: string,
+  pkgJson: { exports?: Record<string, unknown> },
+  aliases: Record<string, string>,
+) => {
+  const mainEntry = resolvePackageMainSource(pkgDir);
+  if (mainEntry) {
+    aliases[pkgName] = mainEntry;
+  }
+
+  if (pkgJson.exports && typeof pkgJson.exports === 'object') {
+    for (const exportKey of Object.keys(pkgJson.exports)) {
+      if (exportKey === '.' || exportKey === './package.json') {
+        continue;
+      }
+
+      const subpath = exportKey.replace(/^\.\//, '');
+      const ext = path.extname(subpath);
+
+      if (ext) {
+        const parentDir = path.dirname(subpath);
+        if (parentDir && parentDir !== '.') {
+          const fullParentDir = path.join(pkgDir, parentDir);
+          if (fs.existsSync(fullParentDir) && fs.statSync(fullParentDir).isDirectory()) {
+            aliases[`${pkgName}/${parentDir}`] = fullParentDir;
+          }
+        }
+      } else {
+        const resolved = resolveSubpathSource(pkgDir, subpath);
+        if (resolved) {
+          aliases[`${pkgName}/${subpath}`] = resolved;
+        }
+      }
+    }
+  }
+};
+
+/**
+ * Scans packages/ for workspace packages (the @repo scope)
+ * and returns resolve aliases.
+ */
+const discoverPackageAliases = (packagesDir: string): Record<string, string> => {
+  const aliases: Record<string, string> = {};
+
+  if (!fs.existsSync(packagesDir)) {
+    return aliases;
+  }
+
+  const entries = fs.readdirSync(packagesDir, { withFileTypes: true });
+
+  for (const entry of entries) {
+    if (!entry.isDirectory()) {
+      continue;
+    }
+
+    const pkgDir = path.join(packagesDir, entry.name);
+    const pkgJsonPath = path.join(pkgDir, 'package.json');
+
+    if (!fs.existsSync(pkgJsonPath)) {
+      continue;
+    }
+
+    let pkgJson: { name?: string; exports?: Record<string, unknown> };
+    try {
+      pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf-8'));
+    } catch {
+      continue;
+    }
+
+    const pkgName = pkgJson.name;
+    if (!pkgName) {
+      continue;
+    }
+    if (!pkgName.startsWith('@repo/')) {
+      continue;
+    }
+
+    mergePackageResolveAliases(pkgDir, pkgName, pkgJson, aliases);
+  }
+
+  return aliases;
+};
+
+/** All workspace packages under packages/ (any npm scope), including export subpaths. */
+const discoverPublicPackageViteAliases = (workspaceRoot: string): Record<string, string> => {
+  const aliases: Record<string, string> = {};
+  for (const [pkgName, pkgDir] of discoverPublicPackageRoots(workspaceRoot)) {
+    const pkgJsonPath = path.join(pkgDir, 'package.json');
+    let pkgJson: { name?: string; exports?: Record<string, unknown> };
+    try {
+      pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf-8'));
+    } catch {
+      continue;
+    }
+    mergePackageResolveAliases(pkgDir, pkgName, pkgJson, aliases);
+  }
+  return aliases;
+};
+
+/** Virtual module plugin that stubs `node:async_hooks` for browser environments. */
+const nodeAsyncHooksStub = (): Plugin => {
+  return {
+    name: 'storybook:node-async-hooks-stub',
+    resolveId(id) {
+      if (id === 'node:async_hooks') {
+        return '\0node:async_hooks';
+      }
+    },
+    load(id) {
+      if (id === '\0node:async_hooks') {
+        return 'export class AsyncLocalStorage {}';
+      }
+    },
+  };
+};
+
 /**
  * Creates a Vite configuration for Storybook in this monorepo.
  *
@@ -50,7 +224,7 @@ export interface CreateStorybookViteConfigOptions {
  * export default createStorybookViteConfig();
  * ```
  */
-export function createStorybookViteConfig(options: CreateStorybookViteConfigOptions = {}): UserConfig {
+export const createStorybookViteConfig = (options: CreateStorybookViteConfigOptions = {}): UserConfig => {
   // See tamaguiWorkspacePaths.ts.
   ensureTamaguiWorkspacePaths();
   const workspaceRoot = options.workspaceRoot || findWorkspaceRoot();
@@ -235,178 +409,4 @@ export function createStorybookViteConfig(options: CreateStorybookViteConfigOpti
     },
     plugins: [nodeAsyncHooksStub(), phosphorTokenColorPlugin(), ...(options.plugins || [])],
   };
-}
-
-/**
- * Scans packages/ for workspace packages (the @repo scope)
- * and returns resolve aliases.
- */
-function discoverPackageAliases(packagesDir: string): Record<string, string> {
-  const aliases: Record<string, string> = {};
-
-  if (!fs.existsSync(packagesDir)) {
-    return aliases;
-  }
-
-  const entries = fs.readdirSync(packagesDir, { withFileTypes: true });
-
-  for (const entry of entries) {
-    if (!entry.isDirectory()) {
-      continue;
-    }
-
-    const pkgDir = path.join(packagesDir, entry.name);
-    const pkgJsonPath = path.join(pkgDir, 'package.json');
-
-    if (!fs.existsSync(pkgJsonPath)) {
-      continue;
-    }
-
-    let pkgJson: { name?: string; exports?: Record<string, unknown> };
-    try {
-      pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf-8'));
-    } catch {
-      continue;
-    }
-
-    const pkgName = pkgJson.name;
-    if (!pkgName) {
-      continue;
-    }
-    if (!pkgName.startsWith('@repo/')) {
-      continue;
-    }
-
-    mergePackageResolveAliases(pkgDir, pkgName, pkgJson, aliases);
-  }
-
-  return aliases;
-}
-
-/** All workspace packages under packages/ (any npm scope), including export subpaths. */
-function discoverPublicPackageViteAliases(workspaceRoot: string): Record<string, string> {
-  const aliases: Record<string, string> = {};
-  for (const [pkgName, pkgDir] of discoverPublicPackageRoots(workspaceRoot)) {
-    const pkgJsonPath = path.join(pkgDir, 'package.json');
-    let pkgJson: { name?: string; exports?: Record<string, unknown> };
-    try {
-      pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf-8'));
-    } catch {
-      continue;
-    }
-    mergePackageResolveAliases(pkgDir, pkgName, pkgJson, aliases);
-  }
-  return aliases;
-}
-
-function mergePackageResolveAliases(
-  pkgDir: string,
-  pkgName: string,
-  pkgJson: { exports?: Record<string, unknown> },
-  aliases: Record<string, string>,
-) {
-  const mainEntry = resolvePackageMainSource(pkgDir);
-  if (mainEntry) {
-    aliases[pkgName] = mainEntry;
-  }
-
-  if (pkgJson.exports && typeof pkgJson.exports === 'object') {
-    for (const exportKey of Object.keys(pkgJson.exports)) {
-      if (exportKey === '.' || exportKey === './package.json') {
-        continue;
-      }
-
-      const subpath = exportKey.replace(/^\.\//, '');
-      const ext = path.extname(subpath);
-
-      if (ext) {
-        const parentDir = path.dirname(subpath);
-        if (parentDir && parentDir !== '.') {
-          const fullParentDir = path.join(pkgDir, parentDir);
-          if (fs.existsSync(fullParentDir) && fs.statSync(fullParentDir).isDirectory()) {
-            aliases[`${pkgName}/${parentDir}`] = fullParentDir;
-          }
-        }
-      } else {
-        const resolved = resolveSubpathSource(pkgDir, subpath);
-        if (resolved) {
-          aliases[`${pkgName}/${subpath}`] = resolved;
-        }
-      }
-    }
-  }
-}
-
-function resolveSubpathSource(pkgDir: string, subpath: string): string | undefined {
-  const candidates = [
-    path.join(pkgDir, 'src', `${subpath}.storybook.ts`),
-    path.join(pkgDir, 'src', `${subpath}.storybook.tsx`),
-    path.join(pkgDir, 'src', `${subpath}.ts`),
-    path.join(pkgDir, 'src', `${subpath}.tsx`),
-    path.join(pkgDir, 'src', subpath, 'index.storybook.ts'),
-    path.join(pkgDir, 'src', subpath, 'index.storybook.tsx'),
-    path.join(pkgDir, 'src', subpath, 'index.ts'),
-    path.join(pkgDir, 'src', subpath, 'index.tsx'),
-    path.join(pkgDir, `${subpath}.storybook.ts`),
-    path.join(pkgDir, `${subpath}.storybook.tsx`),
-    path.join(pkgDir, `${subpath}.ts`),
-    path.join(pkgDir, `${subpath}.tsx`),
-    path.join(pkgDir, subpath, 'index.storybook.ts'),
-    path.join(pkgDir, subpath, 'index.storybook.tsx'),
-    path.join(pkgDir, subpath, 'index.ts'),
-    path.join(pkgDir, subpath, 'index.tsx'),
-    path.join(pkgDir, subpath, 'index.js'),
-  ];
-
-  for (const c of candidates) {
-    if (fs.existsSync(c)) {
-      return c;
-    }
-  }
-
-  const dirPath = path.join(pkgDir, subpath);
-  if (fs.existsSync(dirPath) && fs.statSync(dirPath).isDirectory()) {
-    return dirPath;
-  }
-
-  return undefined;
-}
-
-/** Virtual module plugin that stubs `node:async_hooks` for browser environments. */
-function nodeAsyncHooksStub(): Plugin {
-  return {
-    name: 'storybook:node-async-hooks-stub',
-    resolveId(id) {
-      if (id === 'node:async_hooks') {
-        return '\0node:async_hooks';
-      }
-    },
-    load(id) {
-      if (id === '\0node:async_hooks') {
-        return 'export class AsyncLocalStorage {}';
-      }
-    },
-  };
-}
-
-function findWorkspaceRoot(): string {
-  let dir = process.cwd();
-  while (dir !== path.dirname(dir)) {
-    if (fs.existsSync(path.join(dir, 'pnpm-workspace.yaml'))) {
-      return dir;
-    }
-    const pkgJsonPath = path.join(dir, 'package.json');
-    if (fs.existsSync(pkgJsonPath)) {
-      try {
-        const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf-8'));
-        if (pkgJson.workspaces) {
-          return dir;
-        }
-      } catch {
-        // ignore parse errors
-      }
-    }
-    dir = path.dirname(dir);
-  }
-  return process.cwd();
-}
+};

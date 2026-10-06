@@ -6,7 +6,7 @@ import { Paragraph, YStack } from 'tamagui';
 import { PageSection } from './Page';
 import { DetailPageLayout, ListPageLayout, SettingsPageLayout } from './PageTemplates';
 
-function ContentBox({ label, minHeight = 160, grow = true }: { label: string; minHeight?: number; grow?: boolean }) {
+const ContentBox = ({ label, minHeight = 160, grow = true }: { label: string; minHeight?: number; grow?: boolean }) => {
   return (
     <YStack
       flex={grow ? 1 : undefined}
@@ -20,7 +20,7 @@ function ContentBox({ label, minHeight = 160, grow = true }: { label: string; mi
       <Paragraph fontWeight="400">{label}</Paragraph>
     </YStack>
   );
-}
+};
 
 const meta: Meta<typeof ListPageLayout> = {
   title: 'Components/PageTemplates',

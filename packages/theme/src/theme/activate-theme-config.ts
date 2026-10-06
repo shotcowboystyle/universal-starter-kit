@@ -13,11 +13,11 @@ import type { ThemeConfig } from './shared';
  * keeps resolving to the old config's theme. Returns false when `themeConfig`
  * is already the active one.
  */
-export function activateThemeConfig(themeConfig: ThemeConfig): boolean {
+export const activateThemeConfig = (themeConfig: ThemeConfig): boolean => {
   if (getConfig() === themeConfig.tamagui) {
     return false;
   }
   setConfig(themeConfig.tamagui);
   forceUpdateThemes();
   return true;
-}
+};

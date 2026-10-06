@@ -20,15 +20,15 @@ afterEach(cleanup);
 
 const tags = [{ id: 'tag-1', label: 'urgent' }];
 
-function classesByPrefix(el: Element, prefixes: string[]): string[] {
+const classesByPrefix = (el: Element, prefixes: string[]): string[] => {
   return String(el.className || '')
     .split(' ')
     .filter((c) => prefixes.some((p) => c.startsWith(p)))
     .sort();
-}
+};
 
 /** Walk up from the chip label to the ChipFrame (first ancestor with padding classes). */
-function chipFrameOf(label: HTMLElement): HTMLElement {
+const chipFrameOf = (label: HTMLElement): HTMLElement => {
   let el: HTMLElement | null = label.parentElement;
   for (let i = 0; i < 8 && el; i++) {
     if (classesByPrefix(el, ['_pt-', '_pl-']).length > 0) {
@@ -37,9 +37,9 @@ function chipFrameOf(label: HTMLElement): HTMLElement {
     el = el.parentElement;
   }
   throw new Error('chip frame not found');
-}
+};
 
-function renderTags() {
+const renderTags = () => {
   return renderWithProviders(
     <Tags
       tags={tags}
@@ -47,16 +47,16 @@ function renderTags() {
       onRemove={vi.fn()}
     />,
   );
-}
+};
 
 /** The chip-scale visual pill nested inside the wrapper trigger. */
-function triggerPillOf(trigger: HTMLElement): HTMLElement {
+const triggerPillOf = (trigger: HTMLElement): HTMLElement => {
   const pill = chipFrameOf(screen.getByText('Add Tag'));
   if (!trigger.contains(pill)) {
     throw new Error('trigger pill not inside trigger');
   }
   return pill;
-}
+};
 
 describe('Tags Add Tag trigger (chip-scale)', () => {
   it('trigger pill padding classes match the chip pill exactly', () => {

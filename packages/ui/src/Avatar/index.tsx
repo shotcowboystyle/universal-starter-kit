@@ -112,10 +112,10 @@ const pipShapeProps = radiusClassProps('R-PILL', 'Avatar status');
 const AVATAR_MIN_PX = 16;
 const AVATAR_KNOB_TOKEN: Record<string, string> = { small: '$2', medium: '$3', large: '$4' };
 
-function avatarTokenPx(token: string): number | undefined {
+const avatarTokenPx = (token: string): number | undefined => {
   const resolved = getVariableValue(getSize(token as SizeTokens));
   return typeof resolved === 'number' && Number.isFinite(resolved) ? Math.max(AVATAR_MIN_PX, resolved) : undefined;
-}
+};
 
 const STATUS_COLOR: Record<AvatarStatus, string> = {
   online: '$green10',
@@ -126,19 +126,19 @@ const STATUS_COLOR: Record<AvatarStatus, string> = {
 
 const CUTOUT_BORDER = 2;
 
-function sizeToPx(size: AvatarSize): number | undefined {
+const sizeToPx = (size: AvatarSize): number | undefined => {
   if (typeof size === 'number') {
     return size;
   }
   return avatarTokenPx(String(size));
-}
+};
 
 /**
  * Invert the canonical stop→token map so the square face can ask the
  * resolver for a stop, not a raw `$12`. Silent fallback would widen the
  * table; an unknown token is a wiring bug.
  */
-function radiusStopFromToken(token: string | number | undefined): BorderRadius {
+const radiusStopFromToken = (token: string | number | undefined): BorderRadius => {
   if (token === 0 || token === '0') {
     return 'none';
   }
@@ -150,19 +150,19 @@ function radiusStopFromToken(token: string | number | undefined): BorderRadius {
   throw new Error(
     `Avatar square face: "${String(token)}" is not a borderRadiusMap token; CIRCULAR-AT-FULL needs a known stop`,
   );
-}
+};
 
 /** Square face rides CIRCULAR-AT-FULL — full is h/2, not the $12 token. */
-function squareFaceRadiusPx(token: string | number | undefined, heightPx: number): number {
+const squareFaceRadiusPx = (token: string | number | undefined, heightPx: number): number => {
   return resolveRadiusClass('CIRCULAR-AT-FULL', radiusStopFromToken(token), { heightPx });
-}
+};
 
-function resolveVisualPx(
+const resolveVisualPx = (
   sizeProp: AvatarSize | undefined,
   nested: boolean,
   sizeKnob: string,
   nestedPx: number,
-): number {
+): number => {
   const mediumPx = avatarTokenPx(AVATAR_KNOB_TOKEN.medium) ?? 36;
   if (sizeProp != null) {
     return sizeToPx(sizeProp) ?? mediumPx;
@@ -172,9 +172,9 @@ function resolveVisualPx(
   }
   const knobToken = AVATAR_KNOB_TOKEN[sizeKnob];
   return (knobToken ? avatarTokenPx(knobToken) : undefined) ?? mediumPx;
-}
+};
 
-function opticalFont(px: number): SizeTokens {
+const opticalFont = (px: number): SizeTokens => {
   if (px <= 20) {
     return '$1';
   }
@@ -182,12 +182,12 @@ function opticalFont(px: number): SizeTokens {
     return '$2';
   }
   return '$3';
-}
+};
 
 // The RN/Tamagui `onPress` type is `((event: GestureResponderEvent) => void)
 // | null | undefined`; the ring helper only ever calls it with zero args, so a
 // bottom-arg function type accepts any handler (and null) without a value cast.
-function activateOnEnterSpace(onPress?: ((...args: never[]) => void) | null) {
+const activateOnEnterSpace = (onPress?: ((...args: never[]) => void) | null) => {
   if (!onPress) {
     return undefined;
   }
@@ -199,11 +199,11 @@ function activateOnEnterSpace(onPress?: ((...args: never[]) => void) | null) {
       }
     },
   };
-}
+};
 
 // ── Avatar ────────────────────────────────────────────────────
 
-function AvatarRoot({
+const AvatarRoot = ({
   src,
   name,
   alt,
@@ -223,7 +223,7 @@ function AvatarRoot({
   focusVisibleStyle,
   hitSlop: hitSlopProp,
   ...props
-}: AvatarProps) {
+}: AvatarProps) => {
   const group = useContext(GroupCtx);
   const circular = group ? group.circular : (circularProp ?? true);
   const nested = nestedProp || Boolean(group?.nested);
@@ -361,14 +361,14 @@ function AvatarRoot({
       />
     </View>
   );
-}
+};
 
 const AvatarGroupItem = styled(View, {
   name: 'AvatarGroupItem',
   flexShrink: 0,
 });
 
-function AvatarGroup({
+const AvatarGroup = ({
   children,
   max = 4,
   size,
@@ -376,7 +376,7 @@ function AvatarGroup({
   nested = false,
   compact,
   overlap = true,
-}: AvatarGroupProps) {
+}: AvatarGroupProps) => {
   const { knobProps } = useResolvedKnobs({ compact });
   const visualPx = resolveVisualPx(size, nested, knobProps.size, knobProps.nestedControl.px);
   const overlapPx = overlap ? Math.round(visualPx * 0.32) : 0;
@@ -432,7 +432,7 @@ function AvatarGroup({
       ) : null}
     </XStack>
   );
-}
+};
 
 export const Avatar = withStaticProperties(AvatarRoot, {
   Image: TamaguiAvatar.Image,

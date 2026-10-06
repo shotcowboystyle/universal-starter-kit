@@ -55,11 +55,11 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function px(value: string) {
+const px = (value: string) => {
   return Number.parseFloat(value);
-}
+};
 
-function open(props: Partial<FloatingPanelProps> = {}) {
+const open = (props: Partial<FloatingPanelProps> = {}) => {
   const view = renderWithProviders(
     <FloatingPanel
       open
@@ -73,29 +73,29 @@ function open(props: Partial<FloatingPanelProps> = {}) {
   const sheet = view.getByTestId('floating-panel-sheet');
   const full = px(sheet.style.maxHeight);
   return { view, sheet, full, lower: Math.round(full * 0.55) };
-}
+};
 
 /** react-native-web keeps the onLayout handler on the node; call it the way a device layout would. */
-function layout(element: HTMLElement, height: number) {
+const layout = (element: HTMLElement, height: number) => {
   const handler = (element as unknown as Record<string, (event: unknown) => void>).__reactLayoutHandler;
   act(() => {
     handler({ nativeEvent: { layout: { x: 0, y: 0, width: 390, height } } });
   });
-}
+};
 
-function drag(dy: number) {
+const drag = (dy: number) => {
   act(() => {
     pan.onPanResponderGrant?.({} as never, {} as never);
     pan.onPanResponderMove?.({} as never, { dy } as never);
     pan.onPanResponderRelease?.({} as never, { dy, vy: 0 } as never);
   });
-}
+};
 
-function settle() {
+const settle = () => {
   const last = springs[springs.length - 1];
   act(() => last.done?.({ finished: true }));
   return last;
-}
+};
 
 describe('a native FloatingPanel sheet at rest on a lower detent', () => {
   it('is laid out at the detent height, so the end of its list is on screen', () => {

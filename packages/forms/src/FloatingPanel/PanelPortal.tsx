@@ -38,14 +38,14 @@ const focusGuardStyle: CSSProperties = {
  * outside-press test treating the panel as its own content; every scroll
  * view between the trigger and that layer is escaped either way.
  */
-export function panelPortalHost(anchor: Element | null): HTMLElement | null {
+export const panelPortalHost = (anchor: Element | null): HTMLElement | null => {
   if (typeof document === 'undefined') {
     return null;
   }
   return anchor?.closest<HTMLElement>(layerRootSelector) ?? document.body;
-}
+};
 
-function isTabbable(element: HTMLElement): boolean {
+const isTabbable = (element: HTMLElement): boolean => {
   if (element.hasAttribute(focusGuardAttribute) || element.tabIndex < 0) {
     return false;
   }
@@ -53,17 +53,17 @@ function isTabbable(element: HTMLElement): boolean {
     return false;
   }
   return element.getClientRects().length > 0;
-}
+};
 
-function tabbablesIn(root: Element | null): HTMLElement[] {
+const tabbablesIn = (root: Element | null): HTMLElement[] => {
   if (!root) {
     return [];
   }
   return Array.from(root.querySelectorAll<HTMLElement>(tabbableSelector)).filter(isTabbable);
-}
+};
 
 /** Tab order resumes beside the trigger, not at the end of the portal host. */
-function focusBesideAnchor(anchor: HTMLElement | null, side: 'before' | 'after') {
+const focusBesideAnchor = (anchor: HTMLElement | null, side: 'before' | 'after') => {
   if (!anchor) {
     return;
   }
@@ -85,7 +85,7 @@ function focusBesideAnchor(anchor: HTMLElement | null, side: 'before' | 'after')
     return !portal || portal.contains(anchor);
   });
   (side === 'before' ? page[page.length - 1] : page[0])?.focus();
-}
+};
 
 /**
  * Web: renders a floating panel outside every scroll view between its trigger
@@ -96,7 +96,7 @@ function focusBesideAnchor(anchor: HTMLElement | null, side: 'before' | 'after')
  * context and follow on their own). Hidden focus guards keep the panel in Tab
  * order right after the trigger, where it sat before it moved.
  */
-export function PanelPortal({ anchor, children }: PanelPortalProps) {
+export const PanelPortal = ({ anchor, children }: PanelPortalProps) => {
   const themeName = useThemeName();
   const portalRef = useRef<HTMLSpanElement | null>(null);
   const host = panelPortalHost(anchor);
@@ -164,4 +164,4 @@ export function PanelPortal({ anchor, children }: PanelPortalProps) {
       {portal}
     </>
   );
-}
+};

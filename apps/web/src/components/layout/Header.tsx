@@ -10,7 +10,7 @@ import LanguageSwitcher from './LanguageSwitcher';
 import ThemeToggle from './ThemeToggle';
 import { UserNav } from './UserNav';
 
-export default function Header({ onToggleSidebar }: { onToggleSidebar?: () => void }) {
+const Header = ({ onToggleSidebar }: { onToggleSidebar?: () => void }) => {
   const t = useTranslations('sidebar');
   return (
     <XStack
@@ -51,4 +51,6 @@ export default function Header({ onToggleSidebar }: { onToggleSidebar?: () => vo
       </XStack>
     </XStack>
   );
-}
+};
+
+export default Header;

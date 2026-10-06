@@ -17,13 +17,13 @@ import { Input as InputParts } from './InputParts';
  * field — it brings its own FieldLayout. `InputParts.Box` is the house chrome
  * underneath that field, and it is the part that consumes the knobs.
  */
-function Control(props: {
+const Control = (props: {
   id?: string;
   placeholder?: string;
   value?: string;
   onChangeText?: (text: string) => void;
   secureTextEntry?: boolean;
-}) {
+}) => {
   return (
     <InputParts>
       <InputParts.Box>
@@ -31,7 +31,7 @@ function Control(props: {
       </InputParts.Box>
     </InputParts>
   );
-}
+};
 
 const meta: Meta<typeof FieldLayout> = {
   title: 'Forms/FieldLayout',

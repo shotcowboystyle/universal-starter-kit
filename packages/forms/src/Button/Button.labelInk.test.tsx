@@ -46,7 +46,7 @@ const SCHEMES = ['light', 'dark'] as const;
  */
 const WHITE_PAGE_SURFACES = ['background', 'color1'] as const;
 
-function houseRender(ui: React.ReactElement, theme: 'light' | 'dark' = 'light') {
+const houseRender = (ui: React.ReactElement, theme: 'light' | 'dark' = 'light') => {
   return render(
     <TamaguiProvider
       config={houseConfig.tamagui}
@@ -55,19 +55,19 @@ function houseRender(ui: React.ReactElement, theme: 'light' | 'dark' = 'light') 
       <YStack backgroundColor="$background">{ui}</YStack>
     </TamaguiProvider>,
   );
-}
+};
 
-function labelNode(text: string): HTMLElement {
+const labelNode = (text: string): HTMLElement => {
   return screen.getByText(text);
-}
+};
 
 /**
  * Use the canonical unrounded measurement so a below-floor pair cannot
  * pass through display rounding.
  */
-function pageRatio(ink: string, ground: string, label: string): number {
+const pageRatio = (ink: string, ground: string, label: string): number => {
   return measureContrast({ foreground: ink, background: ground, label }).ratio;
-}
+};
 
 describe('Button outlined intent label ink', () => {
   it.each(SCHEMES)('%s: outlined intent labels emit $color11 on the TEXT NODE, never the on-fill $color', (scheme) => {

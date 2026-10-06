@@ -8,7 +8,7 @@ import { Input } from './index';
 
 afterEach(cleanup);
 
-function measure(size: 'small' | 'medium', space: 'small' | 'large', gap?: number) {
+const measure = (size: 'small' | 'medium', space: 'small' | 'large', gap?: number) => {
   const ref = createRef<HTMLElement>();
   const { getByTestId } = renderWithProviders(
     <Preset overrides={{ size, space }}>
@@ -31,7 +31,7 @@ function measure(size: 'small' | 'medium', space: 'small' | 'large', gap?: numbe
   expect(value).toBeTruthy();
   cleanup();
   return value;
-}
+};
 
 test('lets space change the multi-slot layout gap at a fixed control size', () => {
   expect(measure('medium', 'small')).not.toBe(measure('medium', 'large'));

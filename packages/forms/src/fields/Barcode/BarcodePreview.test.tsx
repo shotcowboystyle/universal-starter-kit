@@ -8,13 +8,13 @@ import { QR_QUIET_ZONE_MODULES, encodeQr } from './qr';
 import { resolveHtml5FormatIds, resolveNativeBarcodeTypes } from './scanner-types';
 
 /** Rebuild the module string ("1" = bar) from the encoder's runs. */
-function toModuleString(value: string): string | null {
+const toModuleString = (value: string): string | null => {
   const runs = encodeCode128B(value);
   if (!runs) {
     return null;
   }
   return runs.map((run) => (run.bar ? '1' : '0').repeat(run.modules)).join('');
-}
+};
 
 describe('encodeCode128B', () => {
   it('encodes "A" as start B + data + checksum + stop (exact modules)', () => {
@@ -107,7 +107,7 @@ describe('BarcodePreview — qr format', () => {
   const formHeight = 36;
 
   /** Nearest Tamagui theme scope above an element (`t_light` / `t_dark`). */
-  function themeScope(el: Element | null): string | undefined {
+  const themeScope = (el: Element | null): string | undefined => {
     for (let node = el?.parentElement; node; node = node.parentElement) {
       const scope = /\bt_(light|dark)\b/.exec(String(node.className));
       if (scope) {
@@ -115,7 +115,7 @@ describe('BarcodePreview — qr format', () => {
       }
     }
     return undefined;
-  }
+  };
 
   it('the QR face pins dark-on-light in both schemes; the Code 128 strip follows the scheme', () => {
     for (const scheme of ['light', 'dark'] as const) {

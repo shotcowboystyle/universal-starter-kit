@@ -27,16 +27,16 @@ export interface NotifyHostProps {
   children?: ReactNode;
 }
 
-function useFeedbackEntries(): FeedbackEntry[] {
+const useFeedbackEntries = (): FeedbackEntry[] => {
   return useSyncExternalStore(subscribeFeedback, getFeedback, getFeedback);
-}
+};
 
 /**
  * Alert's convenience `actionLabel` hardcodes 600. The `action`
  * slot plus a text node pinned at 400 is the Notify path (same trap as
  * AsyncBoundary Retry).
  */
-function NotifyActionLabel({ label, onPress }: { label: string; onPress: () => void }) {
+const NotifyActionLabel = ({ label, onPress }: { label: string; onPress: () => void }) => {
   const { knobProps } = useResolvedKnobs();
   return (
     <SizableText
@@ -52,18 +52,18 @@ function NotifyActionLabel({ label, onPress }: { label: string; onPress: () => v
       {label}
     </SizableText>
   );
-}
+};
 
-function notifyAction(entry: FeedbackEntry) {
+const notifyAction = (entry: FeedbackEntry) => {
   return entry.action ? (
     <NotifyActionLabel
       label={entry.action.label}
       onPress={entry.action.onPress}
     />
   ) : undefined;
-}
+};
 
-function BannerStack({ entries }: { entries: FeedbackEntry[] }) {
+const BannerStack = ({ entries }: { entries: FeedbackEntry[] }) => {
   // The banner region's stack gap and page inset
   // ride the space knob through the complete fragments.
   const { knobProps } = useResolvedKnobs();
@@ -92,13 +92,13 @@ function BannerStack({ entries }: { entries: FeedbackEntry[] }) {
       ))}
     </YStack>
   );
-}
+};
 
 /**
  * Blocking notify() surface → ConfirmDialog.
  * error → destructive confirm; warning → warning confirm; Escape/Cancel dismisses.
  */
-function FeedbackDialog({ entry }: { entry: FeedbackEntry | undefined }) {
+const FeedbackDialog = ({ entry }: { entry: FeedbackEntry | undefined }) => {
   const { t } = useTranslation();
   const open = entry != null;
   return (
@@ -128,13 +128,13 @@ function FeedbackDialog({ entry }: { entry: FeedbackEntry | undefined }) {
       }}
     />
   );
-}
+};
 
 /**
  * Inline region for section/field-scoped alerts from `notify()`.
  * Place next to the relevant form section or field.
  */
-export function NotifyRegion({
+export const NotifyRegion = ({
   scope,
   region,
   compact,
@@ -143,7 +143,7 @@ export function NotifyRegion({
   /** Match one target; omitted regions display only untargeted feedback. */
   region?: string;
   compact?: boolean;
-}) {
+}) => {
   const all = useFeedbackEntries();
   // Inline alert stacking rides the space knob.
   const { knobProps } = useResolvedKnobs();
@@ -178,12 +178,12 @@ export function NotifyRegion({
       ))}
     </YStack>
   );
-}
+};
 
 /**
  * App/story root host: page banners, blocking dialog, and (optionally) toast viewport.
  */
-export function NotifyHost({ toastViewport = true, children }: NotifyHostProps) {
+export const NotifyHost = ({ toastViewport = true, children }: NotifyHostProps) => {
   const all = useFeedbackEntries();
   const banners = useMemo(() => all.filter((e) => e.surface === 'banner'), [all]);
   const dialog = useMemo(() => all.find((e) => e.surface === 'dialog'), [all]);
@@ -197,4 +197,4 @@ export function NotifyHost({ toastViewport = true, children }: NotifyHostProps) 
       {viewportProps == null ? null : <ToastViewport {...viewportProps} />}
     </>
   );
-}
+};

@@ -16,7 +16,7 @@ interface ProjectColumnProps {
   statusFilter?: TaskStatus | null;
 }
 
-export function ProjectColumn({ project, boardId, statusFilter }: ProjectColumnProps) {
+export const ProjectColumn = ({ project, boardId, statusFilter }: ProjectColumnProps) => {
   const { t } = useTranslation();
   const theme = useTheme();
   const { data: allTasks = [] } = useTasks(project._id);
@@ -160,4 +160,4 @@ export function ProjectColumn({ project, boardId, statusFilter }: ProjectColumnP
       </View>
     </View>
   );
-}
+};

@@ -16,7 +16,7 @@ export const FOCUS_RING_MIN_CONTRAST = 3;
  * `rgba(ink, 0.2)`, dropped to 1.36:1). The guard reverts these to the solid
  * `$outlineColor` token.
  */
-function ringColorCarriesAlpha(color: string): boolean {
+const ringColorCarriesAlpha = (color: string): boolean => {
   const s = color.trim().toLowerCase();
   const fn = /^(?:rgba|hsla)\([^)]*[,/]\s*([\d.]+%?)\s*\)$/.exec(s);
   if (fn) {
@@ -28,7 +28,7 @@ function ringColorCarriesAlpha(color: string): boolean {
     return Number.parseInt(s.slice(7, 9), 16) / 255 < 0.999;
   }
   return false;
-}
+};
 
 /**
  * VERIFY helper: does a *resolved* ring color clear
@@ -37,14 +37,14 @@ function ringColorCarriesAlpha(color: string): boolean {
  * alpha-blended color that can't be reduced to a single hue) so callers treat
  * unresolved rings as failing.
  */
-export function focusRingColorMeetsContrast(ringColor: string, surfaceColor: string): boolean {
+export const focusRingColorMeetsContrast = (ringColor: string, surfaceColor: string): boolean => {
   const ring = normalizeToHex(ringColor);
   const surface = normalizeToHex(surfaceColor);
   if (!ring || !surface) {
     return false;
   }
   return contrastRatio(relativeLuminance(ring), relativeLuminance(surface)) >= FOCUS_RING_MIN_CONTRAST;
-}
+};
 
 /**
  * ONE ring geometry: 2px solid `$outlineColor` at
@@ -137,9 +137,9 @@ export const SANCTIONED_FOCUS_RING_OFFSETS = [
 ] as const;
 
 /** True when `offset` is one of the three sanctioned offsets. */
-export function isSanctionedFocusRingOffset(offset: number): boolean {
+export const isSanctionedFocusRingOffset = (offset: number): boolean => {
   return (SANCTIONED_FOCUS_RING_OFFSETS as readonly number[]).includes(offset);
-}
+};
 
 /**
  * Material-style state layers as theme tokens.
@@ -159,9 +159,9 @@ export const STATE_LAYER_PRESS = {
  * Transparent / none / sub-2px outlines are restored to the baseline token.
  * Extra style keys (e.g. `borderColor`) are preserved for consumer merges.
  */
-export function ensureFocusVisibleRing<T extends ControlStateProps>(
+export const ensureFocusVisibleRing = <T extends ControlStateProps>(
   override?: (T & ControlStateProps) | null,
-): T & ControlStateProps {
+): T & ControlStateProps => {
   const merged = {
     ...FOCUS_VISIBLE_RING,
     ...override,
@@ -185,12 +185,12 @@ export function ensureFocusVisibleRing<T extends ControlStateProps>(
     merged.outlineOffset = FOCUS_VISIBLE_RING.outlineOffset;
   }
   return merged;
-}
+};
 
 /** Apply default hover/press state-layer fill when knobs left background unset. */
-export function withDefaultStateLayer(control: ControlStateProps, layer: ControlStateProps): ControlStateProps {
+export const withDefaultStateLayer = (control: ControlStateProps, layer: ControlStateProps): ControlStateProps => {
   if (control.backgroundColor !== undefined) {
     return control;
   }
   return { ...layer, ...control };
-}
+};

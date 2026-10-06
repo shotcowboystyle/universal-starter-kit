@@ -18,7 +18,7 @@ let cached: ExpoMapsModule | null | undefined;
  * screen. requireOptionalNativeModule returns null instead of throwing, so
  * the factory never runs where the native module is absent.
  */
-export function loadExpoMaps(): ExpoMapsModule | null {
+export const loadExpoMaps = (): ExpoMapsModule | null => {
   if (cached !== undefined) {
     return cached;
   }
@@ -54,4 +54,4 @@ export function loadExpoMaps(): ExpoMapsModule | null {
     cached = null;
   }
   return cached;
-}
+};

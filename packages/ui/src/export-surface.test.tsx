@@ -39,14 +39,14 @@ const rawToast = toast as Record<string, unknown>;
 const rawLinearGradient = tamaguiLinearGradient as Record<string, unknown>;
 
 /** Value-identity with the same-name raw export = raw re-export. */
-function isRawReexport(name: string): boolean {
+const isRawReexport = (name: string): boolean => {
   const value = barrel[name];
   return (
     (rawTamagui[name] !== undefined && value === rawTamagui[name]) ||
     (rawToast[name] !== undefined && value === rawToast[name]) ||
     (rawLinearGradient[name] !== undefined && value === rawLinearGradient[name])
   );
-}
+};
 
 describe('export surface partition', () => {
   const exportNames = Object.keys(barrel);

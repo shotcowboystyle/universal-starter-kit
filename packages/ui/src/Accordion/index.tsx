@@ -177,16 +177,16 @@ const AccordionTriggerFillCtx = createContext<string | undefined>(undefined);
  * accent tint measured 4.05:1). Bare string titles already get this
  * from the trigger.
  */
-export function useAccordionTriggerInk(preferred: string): string {
+export const useAccordionTriggerInk = (preferred: string): string => {
   return useLegibleInkOn(useContext(AccordionTriggerFillCtx), preferred);
-}
+};
 
-function useAccordionKnobs() {
+const useAccordionKnobs = () => {
   const { compact, size } = useContext(AccordionCtx);
   return useResolvedKnobs({ component: 'Accordion', compact, size });
-}
+};
 
-function tokenPx(token: string | number | undefined, fallback: number, scale: 'size' | 'fontSize'): number {
+const tokenPx = (token: string | number | undefined, fallback: number, scale: 'size' | 'fontSize'): number => {
   if (typeof token === 'number' && Number.isFinite(token)) {
     return token;
   }
@@ -201,7 +201,7 @@ function tokenPx(token: string | number | undefined, fallback: number, scale: 's
   } catch {
     return fallback;
   }
-}
+};
 
 // ── Elevation ─────────────────────────────────────────────────
 // The card item frame is a plain (Collapsible) View — tamagui's `elevation`
@@ -237,7 +237,7 @@ const cardElevationShadow: Record<string, Record<string, any>> = {
 
 const elevationKeyAlias: Record<string, string> = { '20': '$1', '28': '$2', '44': '$4' };
 
-function getCardElevationProps(token: string | number | undefined): Record<string, any> {
+const getCardElevationProps = (token: string | number | undefined): Record<string, any> => {
   if (token == null) {
     return {};
   }
@@ -248,13 +248,13 @@ function getCardElevationProps(token: string | number | undefined): Record<strin
     return webShadow;
   }
   return shadow;
-}
+};
 
 // ── Chevron ───────────────────────────────────────────────────
 
 const ThemedCaretDown = themed(CaretDownIcon as any);
 
-function Chevron({
+const Chevron = ({
   open,
   size,
   color,
@@ -264,7 +264,7 @@ function Chevron({
   size: number;
   color: string | undefined;
   transition: ReturnType<typeof useResolvedKnobs>['knobProps']['transition'];
-}) {
+}) => {
   return (
     <View
       alignItems="center"
@@ -280,7 +280,7 @@ function Chevron({
       />
     </View>
   );
-}
+};
 
 // ── Stacked-group children ────────────────────────────────────
 
@@ -291,7 +291,7 @@ function Chevron({
  * rounded) and a DEV warn fires, because that silent fallback is exactly
  * the geometry defect the stacked-group rule bans.
  */
-function flattenStackChildren(children: ReactNode): ReturnType<typeof Children.toArray> {
+const flattenStackChildren = (children: ReactNode): ReturnType<typeof Children.toArray> => {
   const out: ReturnType<typeof Children.toArray> = [];
   for (const child of Children.toArray(children)) {
     if (isValidElement(child) && child.type === Fragment) {
@@ -301,7 +301,7 @@ function flattenStackChildren(children: ReactNode): ReturnType<typeof Children.t
     }
   }
   return out;
-}
+};
 
 // ── Root ──────────────────────────────────────────────────────
 

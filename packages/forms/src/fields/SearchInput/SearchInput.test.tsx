@@ -34,7 +34,7 @@ describe('SearchInput', () => {
 
   it('uses readable glyph ink for search and clear rather than the boundary ramp', () => {
     let expectedInk = '';
-    function Sample() {
+    const Sample = () => {
       const theme = useTheme();
       expectedInk = String(theme.color11?.val);
       return (
@@ -43,7 +43,7 @@ describe('SearchInput', () => {
           defaultValue="corp"
         />
       );
-    }
+    };
     const { container } = renderWithProviders(<Sample />);
     const glyphs = container.querySelectorAll('svg');
     expect(glyphs).toHaveLength(2);

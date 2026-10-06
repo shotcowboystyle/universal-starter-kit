@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { Tabs } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
-export default function TabLayout() {
+const TabLayout = () => {
   const { t } = useTranslation();
 
   return (
@@ -50,4 +50,6 @@ export default function TabLayout() {
       />
     </Tabs>
   );
-}
+};
+
+export default TabLayout;

@@ -9,11 +9,11 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { CardHeader } from './CardHeader';
 import { Card } from './surfaces';
 
-function readSibling(name: string) {
+const readSibling = (name: string) => {
   return readFileSync(join(import.meta.dirname, name), 'utf-8');
-}
+};
 
-function atoms(el: Element | null, prefixes: string[]): string[] {
+const atoms = (el: Element | null, prefixes: string[]): string[] => {
   if (!el) {
     return [];
   }
@@ -21,11 +21,11 @@ function atoms(el: Element | null, prefixes: string[]): string[] {
     .split(' ')
     .filter((c) => prefixes.some((p) => c.startsWith(p)))
     .sort();
-}
+};
 
-function titleText(container: HTMLElement, label: string): HTMLElement {
+const titleText = (container: HTMLElement, label: string): HTMLElement => {
   return container.querySelector('[data-heading-font]') ?? screen.getByText(label);
-}
+};
 
 describe('CardHeader named exports', () => {
   it('is the Card.Header static and has no default export', async () => {
@@ -41,7 +41,7 @@ describe('CardHeader — no Tint wrap', () => {
     const src = readSibling('CardHeader.tsx');
     expect(src).not.toMatch(/from ["'][^"']*Tint["']/);
     expect(src).not.toMatch(/<[Tt]int[\s/>]/);
-    expect(src).not.toMatch(/function NestedScale/);
+    expect(src).not.toMatch(/const NestedScale = /);
     expect(src).toMatch(/padding=\{0\}/);
   });
 });

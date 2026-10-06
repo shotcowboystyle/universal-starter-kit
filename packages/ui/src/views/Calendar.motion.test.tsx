@@ -146,11 +146,11 @@ describe('Calendar overflow honesty (Axiom 6)', () => {
 });
 
 describe('Calendar keyboard flow (Axiom 12)', () => {
-  function getGrid(container: HTMLElement): Element {
+  const getGrid = (container: HTMLElement): Element => {
     const grid = container.querySelector('[data-calendar-body="month"]');
     expect(grid).toBeTruthy();
     return grid as Element;
-  }
+  };
 
   it('arrows move day focus and Enter selects the focused day', () => {
     const onDateSelect = vi.fn();

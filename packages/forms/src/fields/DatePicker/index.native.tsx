@@ -64,13 +64,15 @@ export type { MonthPickerProps, MonthPickerValue } from './MonthPicker';
 export { DatetimePicker } from './DatetimePicker';
 export type { DatetimePickerProps } from './DatetimePicker';
 
-export function DatePicker<
+export const DatePicker = <
   TParentData,
   TName extends DeepKeys<TParentData>,
   TFieldValidator extends Validator<DeepValue<TParentData, TName>> | undefined = undefined,
   TFormValidator extends Validator<TParentData> | undefined = undefined,
   TData extends DeepValue<TParentData, TName> = DeepValue<TParentData, TName>,
->(props: DatePickerProps<TParentData, TName, TFieldValidator, TFormValidator, TData>) {
+>(
+  props: DatePickerProps<TParentData, TName, TFieldValidator, TFormValidator, TData>,
+) => {
   if (props.native === false) {
     return <CatalogDatePicker {...props} />;
   }
@@ -260,4 +262,4 @@ export function DatePicker<
       }}
     </Field>
   );
-}
+};

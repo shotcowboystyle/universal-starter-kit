@@ -21,12 +21,12 @@ interface StoryLike {
   render?: (args: Record<string, unknown>) => ReactElement;
 }
 
-function mount(story: StoryLike) {
+const mount = (story: StoryLike) => {
   if (!story.render) {
     throw new Error('story has no render');
   }
   return renderWithProviders(story.render({ ...(meta.args as Record<string, unknown>) }));
-}
+};
 
 const stories = {
   Anatomy,

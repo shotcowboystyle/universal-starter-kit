@@ -81,7 +81,7 @@ export const platformBase = {
   broadName: 'unknown',
 } as const;
 
-export function getPreciseName(platform: Omit<Platform, 'preciseName'>) {
+export const getPreciseName = (platform: Omit<Platform, 'preciseName'>) => {
   const flags = platform as unknown as Record<string, boolean>;
   for (const name of platformOrder) {
     if (flags[`is${name}`]) {
@@ -89,9 +89,9 @@ export function getPreciseName(platform: Omit<Platform, 'preciseName'>) {
     }
   }
   return 'unknown';
-}
+};
 
-export function getBroadName(platform: Omit<Platform, 'broadName'>) {
+export const getBroadName = (platform: Omit<Platform, 'broadName'>) => {
   const flags = platform as unknown as Record<string, boolean>;
   for (const name of platformOrder.slice().reverse()) {
     if (flags[`is${name}`]) {
@@ -99,7 +99,7 @@ export function getBroadName(platform: Omit<Platform, 'broadName'>) {
     }
   }
   return 'unknown';
-}
+};
 
 export interface Platform {
   isAndroid: boolean;

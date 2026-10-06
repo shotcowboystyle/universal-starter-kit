@@ -31,7 +31,7 @@ const i18n = {
   defaultLanguage: 'en',
 };
 
-function AppProvider({
+const AppProvider = ({
   themeConfig,
   systemTheme,
   children,
@@ -39,7 +39,7 @@ function AppProvider({
   themeConfig?: ThemeConfig;
   systemTheme?: 'light' | 'dark';
   children?: ReactNode;
-}) {
+}) => {
   return (
     <TamaguiProvider
       config={themeConfig?.tamagui}
@@ -48,13 +48,13 @@ function AppProvider({
       {children}
     </TamaguiProvider>
   );
-}
+};
 
-function ResolvedName({ theme }: { theme: string }) {
+const ResolvedName = ({ theme }: { theme: string }) => {
   return <span data-testid={theme}>{useThemeName()}</span>;
-}
+};
 
-function Story() {
+const Story = () => {
   return (
     <>
       {(['red', 'error'] as const).map((theme) => (
@@ -66,9 +66,9 @@ function Story() {
       ))}
     </>
   );
-}
+};
 
-function renderStory(preview: Preview, globals: Record<string, unknown>) {
+const renderStory = (preview: Preview, globals: Record<string, unknown>) => {
   const [frameworkDecorator] = preview.decorators ?? [];
   const context = (next: Record<string, unknown>) => ({
     globals: { ...preview.initialGlobals, scheme: 'light', ...next },
@@ -82,7 +82,7 @@ function renderStory(preview: Preview, globals: Record<string, unknown>) {
       });
     },
   };
-}
+};
 
 const resolved = (theme: string) => screen.getByTestId(theme).textContent;
 
@@ -152,11 +152,11 @@ describe('createPreview with one config', () => {
 describe('createPreview tableZebra global', () => {
   const preview = createPreview({ themeConfig: full, i18n, AppProvider });
 
-  function Zebra() {
+  const Zebra = () => {
     return <span data-testid="zebra">{useResolvedKnobs().knobProps.tableZebra}</span>;
-  }
+  };
 
-  function renderZebra(globals: Record<string, unknown>) {
+  const renderZebra = (globals: Record<string, unknown>) => {
     const [frameworkDecorator] = preview.decorators ?? [];
     render(
       frameworkDecorator(Zebra, {
@@ -165,7 +165,7 @@ describe('createPreview tableZebra global', () => {
       }),
     );
     return screen.getByTestId('zebra').textContent;
-  }
+  };
 
   it('registers tableZebra so a URL global or the toolbar can set it', () => {
     expect(preview.globalTypes?.tableZebra?.options).toStrictEqual(['on', 'off']);
@@ -182,11 +182,11 @@ describe('createPreview tableZebra global', () => {
 describe('createPreview scheme global reaches useUserScheme', () => {
   const preview = createPreview({ themeConfig: full, i18n, AppProvider, setUserScheme });
 
-  function UserScheme() {
+  const UserScheme = () => {
     return <span data-testid="user-scheme">{useUserScheme().value}</span>;
-  }
+  };
 
-  function renderUserScheme(globals: Record<string, unknown>) {
+  const renderUserScheme = (globals: Record<string, unknown>) => {
     const [frameworkDecorator] = preview.decorators ?? [];
     const context = (next: Record<string, unknown>) => ({
       globals: { ...preview.initialGlobals, ...next },
@@ -201,7 +201,7 @@ describe('createPreview scheme global reaches useUserScheme', () => {
         });
       },
     };
-  }
+  };
 
   const prefersDark = (dark: boolean) => {
     const { happyDOM } = window as unknown as {

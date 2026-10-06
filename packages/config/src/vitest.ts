@@ -20,7 +20,7 @@ const pinReactRequireSetup = path.resolve(path.dirname(fileURLToPath(import.meta
  * process (config eval + workers that re-load this factory) makes that
  * require land on the same physical copy as the aliases.
  */
-function pinNodeReactRequire(reactDir: string, reactDomDir: string, schedulerDir: string): void {
+const pinNodeReactRequire = (reactDir: string, reactDomDir: string, schedulerDir: string): void => {
   const ctor = Module as typeof Module & {
     _resolveFilename: (request: string, parent: unknown, isMain: boolean, options?: unknown) => string;
     _mpoOneReact?: boolean;
@@ -52,7 +52,7 @@ function pinNodeReactRequire(reactDir: string, reactDomDir: string, schedulerDir
     }
     return orig.call(this, request, parent, isMain, options);
   };
-}
+};
 
 export interface CreateVitestConfigOptions {
   /**
@@ -156,7 +156,7 @@ export interface CreateVitestConfigOptions {
  * });
  * ```
  */
-export function createVitestConfig(options: CreateVitestConfigOptions = {}): UserConfig {
+export const createVitestConfig = (options: CreateVitestConfigOptions = {}): UserConfig => {
   // The tsconfig chain below extends a generated file that a skipped
   // root `prepare` never wrote; regenerate it before vite loads any tsconfig.
   ensureTamaguiWorkspacePaths();
@@ -381,4 +381,4 @@ export function createVitestConfig(options: CreateVitestConfigOptions = {}): Use
       'Buffer.isBuffer': "((obj) => obj?.constructor?.name === 'Buffer')",
     },
   } as UserConfig;
-}
+};

@@ -127,7 +127,7 @@ describe('DialogContent overlay elevation', () => {
 // paints `0 6px 12px` from its own source in both states, so that comparison
 // passes with the defect present. Assert against the CONTROL stop.
 
-function atomsWithPrefix(el: Element | null, prefix: string): string[] {
+const atomsWithPrefix = (el: Element | null, prefix: string): string[] => {
   if (!el) {
     return [];
   }
@@ -135,7 +135,7 @@ function atomsWithPrefix(el: Element | null, prefix: string): string[] {
     .split(/\s+/)
     .filter((c) => c.startsWith(prefix))
     .sort();
-}
+};
 
 /** The `$4` control paint at elevation large — `webShadowLight.$4`, "0 10px 20px …". */
 const controlStopShadowAtom = /^_bxsh-0px10px20px/;
@@ -287,7 +287,7 @@ describe('overlay containers take the Axiom 1 child-clip cap', () => {
 // focus. A click into the name field during that wait had focus moved on to
 // the Save button, so every keystroke after it missed the field.
 describe('PopoverContent open focus', () => {
-  function SaveAsPopover() {
+  const SaveAsPopover = () => {
     return (
       <Popover>
         <Popover.Trigger asChild>
@@ -299,7 +299,7 @@ describe('PopoverContent open focus', () => {
         </PopoverContent>
       </Popover>
     );
-  }
+  };
 
   it('keeps focus on a field focused right after open', async () => {
     renderWithProviders(<SaveAsPopover />);
@@ -325,7 +325,7 @@ describe('PopoverContent open focus', () => {
 // <dialog>.show() focuses inside first; jsdom has no show(), so the deferred
 // pass ran and moved focus off a field focused right after open.
 describe('DialogContent open focus', () => {
-  function RenameDialog({ onOpenAutoFocus }: { onOpenAutoFocus?: (event: Event) => void }) {
+  const RenameDialog = ({ onOpenAutoFocus }: { onOpenAutoFocus?: (event: Event) => void }) => {
     return (
       <Dialog modal>
         <Dialog.Trigger asChild>
@@ -340,7 +340,7 @@ describe('DialogContent open focus', () => {
         </Dialog.Portal>
       </Dialog>
     );
-  }
+  };
 
   const settle = async () => new Promise((resolve) => setTimeout(resolve, 300));
 
@@ -387,7 +387,7 @@ describe('DialogContent open focus', () => {
 // prevents the FocusScope open pass and focuses its Cancel action in the same
 // step, so there is no deferred focus to race.
 describe('AlertDialogContent open focus', () => {
-  function RenameAlertDialog() {
+  const RenameAlertDialog = () => {
     return (
       <AlertDialog>
         <AlertDialog.Trigger asChild>
@@ -404,7 +404,7 @@ describe('AlertDialogContent open focus', () => {
         </AlertDialog.Portal>
       </AlertDialog>
     );
-  }
+  };
 
   it('focuses its Cancel action on open', async () => {
     renderWithProviders(<RenameAlertDialog />);
@@ -441,13 +441,13 @@ describe('DialogContent open focus behind <dialog>.show()', () => {
     restoreShow();
   });
 
-  function NameDialog({
+  const NameDialog = ({
     helpFirst,
     onOpenAutoFocus,
   }: {
     helpFirst?: boolean;
     onOpenAutoFocus?: (event: Event) => void;
-  }) {
+  }) => {
     return (
       <Dialog modal>
         <Dialog.Trigger asChild>
@@ -462,7 +462,7 @@ describe('DialogContent open focus behind <dialog>.show()', () => {
         </Dialog.Portal>
       </Dialog>
     );
-  }
+  };
 
   it("moves focus off the house Input's group frame onto its field", async () => {
     renderWithProviders(<NameDialog />);

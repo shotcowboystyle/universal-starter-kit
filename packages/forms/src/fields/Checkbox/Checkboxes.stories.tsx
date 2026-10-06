@@ -15,7 +15,7 @@ const meta: Meta = {
 export default meta;
 type Story = StoryObj;
 
-function CompoundExample({ card = true }: { card?: boolean }) {
+const CompoundExample = ({ card = true }: { card?: boolean }) => {
   const [values, setValues] = useState<Record<string, boolean>>({
     analytics: true,
     updates: false,
@@ -77,7 +77,7 @@ function CompoundExample({ card = true }: { card?: boolean }) {
       </Paragraph>
     </YStack>
   );
-}
+};
 
 export const CardMode: Story = {
   render: () => <CompoundExample card />,

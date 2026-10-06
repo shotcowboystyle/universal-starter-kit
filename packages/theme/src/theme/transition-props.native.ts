@@ -8,8 +8,10 @@ import type { TransitionProp } from 'tamagui';
  * animation `none` would put motion on every part that is meant to be still.
  * Native keeps omitting it until the driver has an instant token to pass.
  */
-export function transitionProps(transition: TransitionProp | undefined): {
+export const transitionProps = (
+  transition: TransitionProp | undefined,
+): {
   transition?: TransitionProp;
-} {
+} => {
   return transition ? { transition } : {};
-}
+};

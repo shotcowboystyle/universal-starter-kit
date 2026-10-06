@@ -11,7 +11,7 @@ import { useWorkspaceStore } from '@/stores/workspace-store';
 
 const MemoizedBoard = memo(Board);
 
-export default function BoardPage() {
+const BoardPage = () => {
   const params = useParams();
   const t = useTranslations('kanban');
   const boardId = params?.boardId as string;
@@ -37,4 +37,6 @@ export default function BoardPage() {
       </YStack>
     </PageContainer>
   );
-}
+};
+
+export default BoardPage;

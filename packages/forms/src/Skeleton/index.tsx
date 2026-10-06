@@ -53,23 +53,23 @@ const SkeletonFrame = styled(View, {
 const SKELETON_SIZE_TOKENS = ['$3', '$4', '$5'] as const;
 const skeletonCircleTokenUp: Record<string, string> = { $3: '$4', $4: '$5', $5: '$6' };
 
-function skeletonTextHeight(sizeToken: string): number | undefined {
+const skeletonTextHeight = (sizeToken: string): number | undefined => {
   if (!(SKELETON_SIZE_TOKENS as readonly string[]).includes(sizeToken)) {
     return undefined;
   }
   return sizeRecipeForToken(sizeToken).fontSize + 2;
-}
+};
 
-function skeletonCircleSize(sizeToken: string): number {
+const skeletonCircleSize = (sizeToken: string): number => {
   return sizeRecipeForToken(skeletonCircleTokenUp[sizeToken] ?? '$5').height;
-}
+};
 // SP-GAP: text-line gap follows the space knob; medium keeps $2.
 const skeletonGapMap: Record<string, string> = { small: '$1', medium: '$2', large: '$3' };
 
 // Self-contained pulse keyframes: the app root layout injects the same rule,
 // but Skeleton must not depend on a particular host (Storybook, tests, docs).
 const PULSE_STYLE_ID = '__mp-skeleton-pulse';
-function ensurePulseKeyframes() {
+const ensurePulseKeyframes = () => {
   if (!isWeb || typeof document === 'undefined') {
     return;
   }
@@ -80,11 +80,11 @@ function ensurePulseKeyframes() {
   style.id = PULSE_STYLE_ID;
   style.textContent = '@keyframes skeleton-pulse{0%{opacity:1}50%{opacity:0.4}100%{opacity:1}}';
   document.head.append(style);
-}
+};
 
 // ── Skeleton Component ────────────────────────────────────────
 
-export function Skeleton({ variant = 'text', width, height, animate = true, style, ...props }: SkeletonProps) {
+export const Skeleton = ({ variant = 'text', width, height, animate = true, style, ...props }: SkeletonProps) => {
   const { knobProps } = useResolvedKnobs();
   // Pulse only when animating is on AND the animation knob is not "none"
   // (knobProps.transition resolves to undefined at animation:none).
@@ -120,11 +120,11 @@ export function Skeleton({ variant = 'text', width, height, animate = true, styl
       {...(mergedStyle ? { style: mergedStyle } : undefined)}
     />
   );
-}
+};
 
 // ── Skeleton.Text - for text placeholder ──────────────────────
 
-export function SkeletonText({
+export const SkeletonText = ({
   lines = 1,
   gap: gapProp,
   lastLineWidth = '70%',
@@ -133,7 +133,7 @@ export function SkeletonText({
   lines?: number;
   gap?: string | number;
   lastLineWidth?: string | number;
-}) {
+}) => {
   const { knobProps } = useResolvedKnobs();
   const gap = gapProp ?? skeletonGapMap[knobProps.space] ?? '$2';
   if (lines === 1) {
@@ -158,11 +158,11 @@ export function SkeletonText({
       ))}
     </View>
   );
-}
+};
 
 // ── Skeleton.Circle - for avatar placeholder ──────────────────
 
-export function SkeletonCircle({ size: sizeProp, ...props }: SkeletonProps & { size?: number }) {
+export const SkeletonCircle = ({ size: sizeProp, ...props }: SkeletonProps & { size?: number }) => {
   const { knobProps } = useResolvedKnobs();
   const size = sizeProp ?? skeletonCircleSize(knobProps.sizeToken);
   return (
@@ -173,7 +173,7 @@ export function SkeletonCircle({ size: sizeProp, ...props }: SkeletonProps & { s
       {...props}
     />
   );
-}
+};
 
 // ── Attach sub-components ─────────────────────────────────────
 

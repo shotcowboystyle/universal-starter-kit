@@ -27,12 +27,12 @@ export interface SafeAreaWrapperProps extends YStackProps {
  * inset calculation; web has no safe-area insets, so `edges` / `mode` are
  * accepted for API parity and ignored. Consumer `{...stackProps}` last.
  */
-export function SafeAreaWrapper({
+export const SafeAreaWrapper = ({
   children,
   edges: _edges,
   mode: _mode,
   ...stackProps
-}: PropsWithChildren<SafeAreaWrapperProps>) {
+}: PropsWithChildren<SafeAreaWrapperProps>) => {
   return (
     <YStack
       data-testid="safe-area-wrapper"
@@ -42,4 +42,4 @@ export function SafeAreaWrapper({
       {children}
     </YStack>
   );
-}
+};

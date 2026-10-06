@@ -19,12 +19,12 @@ const AnnounceCtx = createContext(true);
 const SKELETON_SIZE_TOKENS = ['$3', '$4', '$5'] as const;
 const skeletonCircleTokenUp: Record<string, string> = { $3: '$4', $4: '$5', $5: '$6' };
 
-function skeletonCircleSize(sizeToken: string): number {
+const skeletonCircleSize = (sizeToken: string): number => {
   return sizeRecipeForToken(skeletonCircleTokenUp[sizeToken] ?? '$5').height;
-}
+};
 
 const SHIMMER_STYLE_ID = '__mp-skeleton-shimmer';
-function ensureShimmerStyles() {
+const ensureShimmerStyles = () => {
   if (!isWeb || typeof document === 'undefined') {
     return;
   }
@@ -41,7 +41,7 @@ function ensureShimmerStyles() {
     '@media (forced-colors:active){.mp-skeleton-bone{outline:1px solid transparent;outline-offset:-1px}}',
   ].join('');
   document.head.append(style);
-}
+};
 
 const SkeletonFrame = styled(View, {
   name: 'Skeleton',
@@ -78,13 +78,13 @@ export interface SkeletonProps extends Omit<GetProps<typeof SkeletonFrame>, 'var
   label?: string;
 }
 
-function resolveTextHeight(sizeToken: string, textSize: SkeletonTextSize) {
+const resolveTextHeight = (sizeToken: string, textSize: SkeletonTextSize) => {
   const known = (SKELETON_SIZE_TOKENS as readonly string[]).includes(sizeToken) ? sizeToken : '$4';
   const body = sizeRecipeForToken(known).fontSize - 2;
   return textSize === 'display' ? body * 2 : body;
-}
+};
 
-export function Skeleton({
+export const Skeleton = ({
   variant = 'text',
   width,
   height,
@@ -93,7 +93,7 @@ export function Skeleton({
   label,
   className,
   ...props
-}: SkeletonProps) {
+}: SkeletonProps) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs({ component: 'Skeleton' });
   const shouldAnnounce = useContext(AnnounceCtx);
@@ -151,9 +151,9 @@ export function Skeleton({
       accessibilityElementsHidden={decorative}
     />
   );
-}
+};
 
-export function SkeletonText({
+export const SkeletonText = ({
   lines = 1,
   gap: gapProp,
   lastLineWidth = '70%',
@@ -170,7 +170,7 @@ export function SkeletonText({
   gap?: string | number;
   lastLineWidth?: string | number;
   size?: SkeletonTextSize;
-}) {
+}) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs({ component: 'Skeleton' });
   const shouldAnnounce = useContext(AnnounceCtx);
@@ -209,9 +209,9 @@ export function SkeletonText({
       </View>
     </AnnounceCtx.Provider>
   );
-}
+};
 
-export function SkeletonCircle({ size: sizeProp, label, ...props }: SkeletonProps & { size?: number }) {
+export const SkeletonCircle = ({ size: sizeProp, label, ...props }: SkeletonProps & { size?: number }) => {
   const { knobProps } = useResolvedKnobs({ component: 'Skeleton' });
   const diameter = Math.max(0, sizeProp ?? skeletonCircleSize(knobProps.sizeToken));
   return (
@@ -226,13 +226,13 @@ export function SkeletonCircle({ size: sizeProp, label, ...props }: SkeletonProp
       data-diameter={String(diameter)}
     />
   );
-}
+};
 
-export function SkeletonGroup({
+export const SkeletonGroup = ({
   children,
   label,
   ...props
-}: GetProps<typeof View> & { children?: ReactNode; label?: string }) {
+}: GetProps<typeof View> & { children?: ReactNode; label?: string }) => {
   const { t } = useTranslation();
   return (
     <AnnounceCtx.Provider value={false}>
@@ -247,7 +247,7 @@ export function SkeletonGroup({
       </View>
     </AnnounceCtx.Provider>
   );
-}
+};
 
 Skeleton.Text = SkeletonText;
 Skeleton.Circle = SkeletonCircle;

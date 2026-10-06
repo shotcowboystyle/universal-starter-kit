@@ -25,7 +25,7 @@ export interface MotionTreeNode {
  * order. Mirrors the component's flatten walk so motion diffs and rendering
  * can never disagree about what is visible.
  */
-export function flattenVisibleIds(nodes: readonly MotionTreeNode[], expandedIds: ReadonlySet<string>): string[] {
+export const flattenVisibleIds = (nodes: readonly MotionTreeNode[], expandedIds: ReadonlySet<string>): string[] => {
   const result: string[] = [];
   const walk = (items: readonly MotionTreeNode[]) => {
     for (const node of items) {
@@ -37,7 +37,7 @@ export function flattenVisibleIds(nodes: readonly MotionTreeNode[], expandedIds:
   };
   walk(nodes);
   return result;
-}
+};
 
 /** One toggle's worth of motion: who fades in, and who slides from where. */
 export interface TreeRowMotionDiff {
@@ -61,11 +61,11 @@ export interface TreeRowMotionDiff {
  * by the surviving rows sliding up over the vacated space, which keeps the
  * whole animation transform-only (no height/layout tweens).
  */
-export function diffVisibleRows(
+export const diffVisibleRows = (
   prevIds: readonly string[],
   nextIds: readonly string[],
   getHeight: (id: string) => number,
-): TreeRowMotionDiff {
+): TreeRowMotionDiff => {
   const entering = new Set<string>();
   const deltas = new Map<string, number>();
 
@@ -91,9 +91,9 @@ export function diffVisibleRows(
   }
 
   return { entering, deltas };
-}
+};
 
 /** True when a diff carries no motion (toggle produced an identical list). */
-export function isEmptyDiff(diff: TreeRowMotionDiff): boolean {
+export const isEmptyDiff = (diff: TreeRowMotionDiff): boolean => {
   return diff.entering.size === 0 && diff.deltas.size === 0;
-}
+};

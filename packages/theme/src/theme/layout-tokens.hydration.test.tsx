@@ -24,7 +24,7 @@ vi.mock(import('tamagui'), async (importOriginal) => ({
 
 import { useLayoutSizeClass } from './layout-tokens';
 
-function NavFixture() {
+const NavFixture = () => {
   const sizeClass = useLayoutSizeClass();
   return (
     <nav data-size-class={sizeClass}>
@@ -38,13 +38,13 @@ function NavFixture() {
       )}
     </nav>
   );
-}
+};
 
 let root: Root | undefined;
 let container: HTMLDivElement | undefined;
 let errors: unknown[] = [];
 
-function serverRender(): string {
+const serverRender = (): string => {
   const browserWindow = window;
   vi.stubGlobal('window', undefined);
   try {
@@ -52,9 +52,9 @@ function serverRender(): string {
   } finally {
     vi.stubGlobal('window', browserWindow);
   }
-}
+};
 
-async function hydrateAt(width: number) {
+const hydrateAt = async (width: number) => {
   Object.defineProperty(window, 'innerWidth', { configurable: true, value: width, writable: true });
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   const html = serverRender();
@@ -70,7 +70,7 @@ async function hydrateAt(width: number) {
     });
   });
   return { html, serverNav };
-}
+};
 
 const hydrationErrors = () => errors.filter((error) => /hydration|hydrated|didn't match/i.test(String(error)));
 

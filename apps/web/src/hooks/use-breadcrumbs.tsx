@@ -14,7 +14,7 @@ interface BreadcrumbItem {
   isRoot?: boolean;
 }
 
-export function useBreadcrumbs() {
+export const useBreadcrumbs = () => {
   const params = useParams();
   const t = useTranslations('sidebar');
   const boardId = params.boardId as string;
@@ -51,4 +51,4 @@ export function useBreadcrumbs() {
     items,
     rootLink: ROUTES.BOARDS.OVERVIEW_PAGE,
   };
-}
+};

@@ -18,7 +18,7 @@ const meta: Meta<typeof FieldGroup> = {
 export default meta;
 type Story = StoryObj<typeof FieldGroup>;
 
-function Field({ id, label }: { id: string; label: string }) {
+const Field = ({ id, label }: { id: string; label: string }) => {
   return (
     <Input
       id={id}
@@ -26,7 +26,7 @@ function Field({ id, label }: { id: string; label: string }) {
       placeholder={label}
     />
   );
-}
+};
 
 export const Basic: Story = {
   render: (args) => (

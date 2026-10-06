@@ -33,11 +33,11 @@ export interface LoaderProps<Params = Record<string, string | string[] | undefin
   request?: Request;
 }
 
-export function useLoader<T>(_loader: (...args: never[]) => unknown): T | undefined {
+export const useLoader = <T,>(_loader: (...args: never[]) => unknown): T | undefined => {
   const tag = useContext(RouteTagContext);
   const fromRoute = useSyncExternalStore(stackNavigator.subscribe, () => stackNavigator.loaderSnapshot(tag));
   return fromRoute as T | undefined;
-}
+};
 
 // One's router object is referentially stable — consumers keep it in
 // useCallback/useEffect dep arrays, so this shim's must be too. The surface
@@ -72,9 +72,9 @@ const ROUTER = {
   },
 };
 
-export function useRouter(): typeof ROUTER {
+export const useRouter = (): typeof ROUTER => {
   return ROUTER;
-}
+};
 
 export interface LinkProps extends Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href' | 'onClick'> {
   href?: Href;
@@ -85,7 +85,7 @@ export interface LinkProps extends Omit<AnchorHTMLAttributes<HTMLAnchorElement>,
 /** Navigation Link: an anchor that pushes `href` through the seam.
  *  Degrades to rendering children in place when no route manifest is
  *  configured (single-screen entries — no route stack exists there). */
-export function Link({ href, replace, children, style, ...rest }: LinkProps): ReactNode {
+export const Link = ({ href, replace, children, style, ...rest }: LinkProps): ReactNode => {
   if (!href || !stackNavigator.isConfigured) {
     return children ?? null;
   }
@@ -111,53 +111,55 @@ export function Link({ href, replace, children, style, ...rest }: LinkProps): Re
       {children}
     </a>
   );
-}
+};
 
 /** One's <Slot /> renders the active child route inside a layout. The seam
  *  has no nested-layout mounting — every route is its own host page — so
  *  layouts that render <Slot /> contribute chrome only; the child screen is
  *  mounted by the navigation host instead. Renders nothing by design. */
-export function Slot(_props: Record<string, unknown>): null {
+export const Slot = (_props: Record<string, unknown>): null => {
   return null;
-}
+};
 
-export function useParams(): NavParams {
+export const useParams = (): NavParams => {
   return useRouteParams();
-}
+};
 
-export function useLocalSearchParams(): NavParams {
+export const useLocalSearchParams = (): NavParams => {
   return useRouteParams();
-}
+};
 
-export function usePathname(): string {
+export const usePathname = (): string => {
   // First paint of a root layout can run before the host has mounted
   // (CreateRootLayout.native wraps RootLayout around Slot before One's
   // routeInfo exists; the seam's snapshot is likewise unset until a
   // stack host attaches). Unguarded `.pathname` throws and the app never
   // boots.
   return useNavState()?.pathname ?? '/';
-}
+};
 
 /** One's history-nav guard. The seam's hosts have no browser history to
  *  block (in-app navigation confirms dirty transitions itself), so this is
  *  a no-op that always reports "unblocked". Shape matches one/react-router's
  *  useBlocker return. */
-export function useBlocker(_shouldBlock?: unknown): {
+export const useBlocker = (
+  _shouldBlock?: unknown,
+): {
   state: 'unblocked' | 'blocked' | 'proceeding';
   proceed: () => void;
   reset: () => void;
-} {
+} => {
   return { state: 'unblocked', proceed: () => {}, reset: () => {} };
-}
+};
 
 /** Inert stand-in for One's route-transition progress bar (SSR-era chrome
  *  with no meaning on a stack host). */
-export function LoadProgressBar(_props: Record<string, unknown>): null {
+export const LoadProgressBar = (_props: Record<string, unknown>): null => {
   return null;
-}
+};
 
 /** One's useMatches returns the matched route chain; the seam mounts one
  *  page at a time, so consumers get an empty chain. */
-export function useMatches(): unknown[] {
+export const useMatches = (): unknown[] => {
   return [];
-}
+};

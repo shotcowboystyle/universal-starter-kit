@@ -12,7 +12,7 @@ import { ScrollArrow } from './floating-list';
 
 afterEach(cleanup);
 
-function renderArrow(overrides?: { size?: 'small' | 'medium' | 'large'; animation?: 'none' }) {
+const renderArrow = (overrides?: { size?: 'small' | 'medium' | 'large'; animation?: 'none' }) => {
   const scrollRef = createRef<HTMLElement | null>();
   const arrowScrollDirRef = createRef<'up' | 'down' | null>();
   const preset = overrides
@@ -30,7 +30,7 @@ function renderArrow(overrides?: { size?: 'small' | 'medium' | 'large'; animatio
     />
   );
   return renderWithProviders(preset ? <Preset overrides={preset}>{node}</Preset> : node);
-}
+};
 
 describe('ScrollArrow design-law', () => {
   it('icon well follows controlIcon, not a fixed 20px', () => {

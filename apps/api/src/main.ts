@@ -9,7 +9,7 @@ import { API_PORT } from './constants/api';
 // eslint-disable-next-line eslint-plugin-next/no-assign-module-variable -- Required for NestJS webpack HMR
 declare const module: any;
 
-async function bootstrap() {
+const bootstrap = async () => {
   const app = await NestFactory.create(AppModule, {
     bodyParser: true,
     logger: ['error', 'warn', 'log', 'debug', 'verbose'],
@@ -125,7 +125,7 @@ async function bootstrap() {
   }
 
   return app;
-}
+};
 
 // Export the serverless function for Vercel
 const server = bootstrap();

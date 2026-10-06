@@ -163,6 +163,43 @@ const HOUSE_SHADOWS = [
   'Tooltip',
 ];
 
+const walkStoryFiles = (dir: string): string[] => {
+  const out: string[] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      out.push(...walkStoryFiles(path));
+    } else if (/\.stories\.tsx?$/.test(entry.name)) {
+      out.push(path);
+    }
+  }
+  return out;
+};
+
+const namedValueImportsFromHouseTamagui = (src: string): string[] => {
+  const names: string[] = [];
+  const re = /import\s+(type\s+)?\{([^}]+)\}\s+from\s+["']\.\/tamagui["']/g;
+  for (const match of src.matchAll(re)) {
+    const wholeClauseIsType = Boolean(match[1]);
+    for (const raw of match[2].split(',')) {
+      const part = raw.trim();
+      if (!part) {
+        continue;
+      }
+      if (wholeClauseIsType || /^type\s/.test(part)) {
+        continue;
+      }
+      names.push(
+        part
+          .replace(/^type\s+/, '')
+          .split(/\s+as\s+/)[0]
+          .trim(),
+      );
+    }
+  }
+  return names;
+};
+
 describe('curated tamagui surface', () => {
   it('does not export bare interactive primitives that have house forms equivalents', () => {
     for (const name of EXCLUDED_BARE_NAMES) {
@@ -233,43 +270,6 @@ describe('curated tamagui surface', () => {
     expect(missing, `stories import names ./tamagui.ts does not export: ${missing.join(', ')}`).toStrictEqual([]);
   });
 });
-
-function walkStoryFiles(dir: string): string[] {
-  const out: string[] = [];
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const path = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      out.push(...walkStoryFiles(path));
-    } else if (/\.stories\.tsx?$/.test(entry.name)) {
-      out.push(path);
-    }
-  }
-  return out;
-}
-
-function namedValueImportsFromHouseTamagui(src: string): string[] {
-  const names: string[] = [];
-  const re = /import\s+(type\s+)?\{([^}]+)\}\s+from\s+["']\.\/tamagui["']/g;
-  for (const match of src.matchAll(re)) {
-    const wholeClauseIsType = Boolean(match[1]);
-    for (const raw of match[2].split(',')) {
-      const part = raw.trim();
-      if (!part) {
-        continue;
-      }
-      if (wholeClauseIsType || /^type\s/.test(part)) {
-        continue;
-      }
-      names.push(
-        part
-          .replace(/^type\s+/, '')
-          .split(/\s+as\s+/)[0]
-          .trim(),
-      );
-    }
-  }
-  return names;
-}
 
 // ---------------------------------------------------------------------------
 // Type-level locks (checked by `tsc --noEmit`, not vitest): excluded Props

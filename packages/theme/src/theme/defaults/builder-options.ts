@@ -18,7 +18,7 @@ import type { CreateThemesBuilderOptions, GetThemeProps } from '../create-themes
  * page steps wins, else the highest-contrast candidate. The ring sits offset
  * outside the control on the page, so page contrast is the governing pair.
  */
-function pickFocusRingColorFromSteps(step: (n: number) => string | undefined): string {
+const pickFocusRingColorFromSteps = (step: (n: number) => string | undefined): string => {
   const fallback = step(11) ?? step(12) ?? step(9) ?? 'transparent';
   const bg1 = normalizeToHex(step(1) ?? '');
   const bg2 = normalizeToHex(step(2) ?? '');
@@ -49,13 +49,13 @@ function pickFocusRingColorFromSteps(step: (n: number) => string | undefined): s
     }
   }
   return best;
-}
+};
 
-function pickFocusRingColor(theme: Record<string, string>): string {
+const pickFocusRingColor = (theme: Record<string, string>): string => {
   return pickFocusRingColorFromSteps((n) => theme[`color${n}`]);
-}
+};
 
-function getBaseTheme(theme: Record<string, string>) {
+const getBaseTheme = (theme: Record<string, string>) => {
   return {
     // Solid, scheme-aware focus ring (≥3:1 vs page surfaces).
     // Additive — Tamagui's own ring is `rgba(ink, 0.2)`, which measured
@@ -96,7 +96,7 @@ function getBaseTheme(theme: Record<string, string>) {
     surfaceMuted: theme.color10,
     surfacePressStrong: theme.color6,
   };
-}
+};
 
 // Semantic intents whose Buttons render SOLID (one emphasis system with
 // accent — SB-E-01). The accent theme is solid by palette shape already.
@@ -107,7 +107,7 @@ const solidIntentParents = new Set(['error', 'warning', 'success']);
  * the given foreground. Steps away from the foreground's lightness 1.5% at a
  * time; bails (returns the original) on unparseable colors.
  */
-function clampBgForReadableText(bgRaw: string, fgRaw: string): string {
+const clampBgForReadableText = (bgRaw: string, fgRaw: string): string => {
   const fgHex = normalizeToHex(fgRaw);
   let bgHex = normalizeToHex(bgRaw);
   if (!fgHex || !bgHex) {
@@ -134,7 +134,7 @@ function clampBgForReadableText(bgRaw: string, fgRaw: string): string {
     bgHex = next;
   }
   return `hsl(${h}, ${s}%, ${l}%)`;
-}
+};
 
 export const defaultBuilderOptions: CreateThemesBuilderOptions = {
   getTheme: ({ name, theme, palette }: GetThemeProps): Record<string, string> => {

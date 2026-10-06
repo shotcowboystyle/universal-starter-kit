@@ -40,33 +40,33 @@ const overlaySmallPaint = '0 3px 6px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.10
 /** `webShadowLight.$4` — the control stop at elevation large. */
 const controlLargePaint = '0 10px 20px rgba(0,0,0,0.15), 0 3px 6px rgba(0,0,0,0.10)';
 
-function frame(id: string): HTMLElement {
+const frame = (id: string): HTMLElement => {
   const el = document.querySelector(`[data-testid="${id}"]`);
   if (!el) {
     throw new Error(`no frame rendered for ${id}`);
   }
   return el as HTMLElement;
-}
+};
 
 /** The value a browser paints: the inline style wins over every base atom. */
-function paintedShadow(id: string): string {
+const paintedShadow = (id: string): string => {
   return frame(id).style.boxShadow;
-}
+};
 
-function shadowAtoms(id: string): string[] {
+const shadowAtoms = (id: string): string[] => {
   return String(frame(id).className || '')
     .split(/\s+/)
     .filter((c) => c.startsWith('_bxsh-'))
     .sort();
-}
+};
 
-function bgAtoms(id: string): string[] {
+const bgAtoms = (id: string): string[] => {
   return String(frame(id).className || '')
     .split(/\s+/)
     .filter((c) => c.startsWith('_bg-'));
-}
+};
 
-function renderDialogsBesideAButton(elevation?: 'small' | 'medium' | 'large') {
+const renderDialogsBesideAButton = (elevation?: 'small' | 'medium' | 'large') => {
   renderWithProviders(
     <Preset overrides={elevation ? { elevation } : undefined}>
       <Button testID="control">Save</Button>
@@ -84,7 +84,7 @@ function renderDialogsBesideAButton(elevation?: 'small' | 'medium' | 'large') {
       </AlertDialog>
     </Preset>,
   );
-}
+};
 
 describe('overlay elevation is a different distance off the surface', () => {
   it('DialogContent paints the overlay ladder, reaching the reference dialog shadow at large', () => {

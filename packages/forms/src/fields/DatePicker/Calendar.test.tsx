@@ -14,7 +14,7 @@ vi.mock('@phosphor-icons/react', () => ({
   XIcon: () => null,
 }));
 
-function getEnabledDayButtons(root: ParentNode): HTMLButtonElement[] {
+const getEnabledDayButtons = (root: ParentNode): HTMLButtonElement[] => {
   const allButtons = Array.from(root.querySelectorAll('button, [role="button"]')) as HTMLButtonElement[];
   return allButtons.filter((btn) => {
     const text = btn.textContent?.trim() ?? '';
@@ -23,15 +23,15 @@ function getEnabledDayButtons(root: ParentNode): HTMLButtonElement[] {
       btn.hasAttribute('disabled') || btn.getAttribute('aria-disabled') === 'true' || btn.hasAttribute('data-disabled');
     return isDay && !disabled;
   });
-}
+};
 
-function getDayButtons(root: ParentNode): HTMLButtonElement[] {
+const getDayButtons = (root: ParentNode): HTMLButtonElement[] => {
   const allButtons = Array.from(root.querySelectorAll('button, [role="button"]')) as HTMLButtonElement[];
   return allButtons.filter((btn) => /^\d{1,2}$/.test(btn.textContent?.trim() ?? ''));
-}
+};
 
 /** Tamagui emits opacity as `_o-<value>` (see StarInk.native.spec). */
-function opacityOf(el: HTMLElement): number {
+const opacityOf = (el: HTMLElement): number => {
   const fromClass = /(?:^|\s)_o-([\d.]+)(?:\s|$)/.exec(el.className);
   if (fromClass) {
     return Number(fromClass[1]);
@@ -41,13 +41,13 @@ function opacityOf(el: HTMLElement): number {
   }
   const computed = getComputedStyle(el).opacity;
   return computed === '' ? 1 : Number(computed);
-}
+};
 
-function dayCell(root: ParentNode, year: number, monthIndex: number, date: number) {
+const dayCell = (root: ParentNode, year: number, monthIndex: number, date: number) => {
   return root.querySelector(`[data-calendar-day="${year}-${monthIndex}-${date}"]`) as HTMLElement | null;
-}
+};
 
-function JuneGrid({
+const JuneGrid = ({
   minDate,
   maxDate,
   selectionCapped,
@@ -59,7 +59,7 @@ function JuneGrid({
   selectionCapped?: boolean;
   selected?: Date[];
   onSelect?: (day: Date) => void;
-}) {
+}) => {
   const calendarData = useCalendarData(new Date(2024, 5, 15));
   return (
     <CalendarDays
@@ -71,7 +71,7 @@ function JuneGrid({
       onSelect={onSelect ?? (() => {})}
     />
   );
-}
+};
 
 describe('Calendar', () => {
   it('renders tabs and switches modes', async () => {

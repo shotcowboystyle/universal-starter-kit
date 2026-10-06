@@ -10,12 +10,12 @@ import * as ViewExports from './index';
 
 afterEach(cleanup);
 
-function atoms(el: Element, prefixes: string[]): string[] {
+const atoms = (el: Element, prefixes: string[]): string[] => {
   return String((el as HTMLElement).className || '')
     .split(' ')
     .filter((c) => prefixes.some((p) => c.startsWith(p)))
     .sort();
-}
+};
 
 const documents = [
   { id: '1', title: 'Q3 Vendor Contract' },
@@ -56,10 +56,10 @@ describe('ListRow title — weight 400 on the TEXT NODE (§6.1)', () => {
 describe('ListRow icon — size recipe, not a private pixel table', () => {
   it('passes the controlIcon size into the leading glyph', () => {
     let received: number | undefined;
-    function ProbeIcon({ size }: { size?: number }) {
+    const ProbeIcon = ({ size }: { size?: number }) => {
       received = size;
       return <span data-testid="probe-icon" />;
-    }
+    };
     renderWithProviders(
       <ListRow
         icon=<ProbeIcon />
@@ -92,14 +92,14 @@ describe('List keyboard selection chrome', () => {
 });
 
 describe('ListRow ink — textAccent reaches the TEXT NODE (F11 / data-chrome honour)', () => {
-  function titleColor(title: string, accent: 'high' | 'low' | 'medium'): string[] {
+  const titleColor = (title: string, accent: 'high' | 'low' | 'medium'): string[] => {
     const { getByText } = renderWithProviders(
       <Preset overrides={{ textAccent: accent }}>
         <ListRow title={title} />
       </Preset>,
     );
     return atoms(getByText(title), ['_col-']);
-  }
+  };
 
   it('changes title colour on a textAccent flip', () => {
     const high = titleColor('ink-high', 'high');
@@ -116,14 +116,14 @@ describe('ListRow ink — textAccent reaches the TEXT NODE (F11 / data-chrome ho
   });
 
   it('moves ListRowMeta default ink with textAccent', () => {
-    function metaColor(label: string, accent: 'high' | 'low'): string[] {
+    const metaColor = (label: string, accent: 'high' | 'low'): string[] => {
       const { getByText } = renderWithProviders(
         <Preset overrides={{ textAccent: accent }}>
           <ListRowMeta>{label}</ListRowMeta>
         </Preset>,
       );
       return atoms(getByText(label), ['_col-']);
-    }
+    };
     const high = metaColor('meta-high', 'high');
     const low = metaColor('meta-low', 'low');
     expect(high).not.toHaveLength(0);

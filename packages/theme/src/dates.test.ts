@@ -172,7 +172,7 @@ describe('axis-tick registers', () => {
 // parse that leans on the host zone fails somewhere in this list.
 const ZONES = ['UTC', 'America/Los_Angeles', 'America/New_York', 'Pacific/Kiritimati'] as const;
 
-function inZone<T>(timeZone: string, read: () => T): T {
+const inZone = <T>(timeZone: string, read: () => T): T => {
   const previous = process.env.TZ;
   process.env.TZ = timeZone;
   try {
@@ -184,13 +184,13 @@ function inZone<T>(timeZone: string, read: () => T): T {
       process.env.TZ = previous;
     }
   }
-}
+};
 
 /**
  * Local wall-clock reading of a parse, taken INSIDE the zone — a Date is an
  * instant, so its day and hour only mean something against an ambient zone.
  */
-function readLocal(timeZone: string, value: DateInput) {
+const readLocal = (timeZone: string, value: DateInput) => {
   return inZone(timeZone, () => {
     const date = parseCalendarDate(value);
     if (!date) {
@@ -202,7 +202,7 @@ function readLocal(timeZone: string, value: DateInput) {
       clock: `${pad(date.getHours())}:${pad(date.getMinutes())}`,
     };
   });
-}
+};
 
 describe('parseCalendarDate (day-grid parse)', () => {
   it('reads a date-only string as the same calendar day in every timezone', () => {

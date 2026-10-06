@@ -9,7 +9,7 @@ import { pickerNativeModules } from './native-picker-loader';
 const nodeRequire = createRequire(import.meta.url);
 
 /** Every native module name a package's build asks expo-modules-core for. */
-function registeredNativeModules(pkg: string): string[] {
+const registeredNativeModules = (pkg: string): string[] => {
   const build = join(dirname(nodeRequire.resolve(`${pkg}/package.json`)), 'build');
   const names = new Set<string>();
   for (const file of readdirSync(build)) {
@@ -22,7 +22,7 @@ function registeredNativeModules(pkg: string): string[] {
     }
   }
   return [...names];
-}
+};
 
 // The probe runs before the require, so a name the package never
 // registers makes the picker look absent and an image-only field opens the

@@ -44,7 +44,7 @@ const FOCUSABLE =
 
 const canUseDom = () => isWeb && typeof document !== 'undefined';
 
-function focusIsDropped(insideEl?: HTMLElement | null): boolean {
+const focusIsDropped = (insideEl?: HTMLElement | null): boolean => {
   const ae = document.activeElement;
   if (!ae || ae === document.body || ae === document.documentElement) {
     return true;
@@ -55,10 +55,10 @@ function focusIsDropped(insideEl?: HTMLElement | null): boolean {
     return true;
   }
   return false;
-}
+};
 
 /** Render-phase capture of the element focused just before `open` flipped true. */
-function useCaptureOnOpen(open: boolean) {
+const useCaptureOnOpen = (open: boolean) => {
   const prevRef = useRef<HTMLElement | null>(null);
   const wasOpenRef = useRef(false);
   const generationRef = useRef(0);
@@ -72,14 +72,14 @@ function useCaptureOnOpen(open: boolean) {
     wasOpenRef.current = open;
   }
   return { prevRef, generationRef };
-}
+};
 
-function restoreLater(
+const restoreLater = (
   prevRef: RefObject<HTMLElement | null>,
   generationRef: RefObject<number>,
   insideRef?: RefObject<HTMLElement | null>,
   skipReturnFocusRef?: RefObject<boolean>,
-) {
+) => {
   const generation = generationRef.current;
   const restore = () => {
     // Fires from the unmount path, so the document can be gone by now (a test
@@ -106,10 +106,10 @@ function restoreLater(
   // after the typical exit window. All calls are idempotent.
   requestAnimationFrame(() => requestAnimationFrame(restore));
   setTimeout(restore, 320);
-}
+};
 
 /** Restore focus to the element focused at open time, on close (web only). */
-export function useReturnFocusOnClose(open: boolean, skipReturnFocusRef?: RefObject<boolean>) {
+export const useReturnFocusOnClose = (open: boolean, skipReturnFocusRef?: RefObject<boolean>) => {
   const { prevRef, generationRef } = useCaptureOnOpen(open);
   useEffect(() => {
     if (!canUseDom() || !open) {
@@ -119,7 +119,7 @@ export function useReturnFocusOnClose(open: boolean, skipReturnFocusRef?: RefObj
       restoreLater(prevRef, generationRef, undefined, skipReturnFocusRef);
     };
   }, [open, prevRef, generationRef, skipReturnFocusRef]);
-}
+};
 
 /**
  * Sheet-mode modal focus: on open, move focus into the frame (frame itself is
@@ -127,11 +127,11 @@ export function useReturnFocusOnClose(open: boolean, skipReturnFocusRef?: RefObj
  * on close, return focus (focus left inside the parked frame counts as
  * dropped).
  */
-export function useSheetModalFocus(
+export const useSheetModalFocus = (
   open: boolean,
   frameRef: RefObject<HTMLElement | null>,
   skipReturnFocusRef?: RefObject<boolean>,
-) {
+) => {
   const { prevRef, generationRef } = useCaptureOnOpen(open);
   useEffect(() => {
     if (!canUseDom() || !open) {
@@ -193,7 +193,7 @@ export function useSheetModalFocus(
       restoreLater(prevRef, generationRef, frameRef, skipReturnFocusRef);
     };
   }, [open, frameRef, prevRef, generationRef, skipReturnFocusRef]);
-}
+};
 
 const DIALOG_SHOW_FOCUS_EVENT = 'mp.dialogShowFocus';
 
@@ -208,7 +208,7 @@ const DIALOG_SHOW_FOCUS_EVENT = 'mp.dialogShowFocus';
  * `Dialog.Content` never attaches on web. Passive effects run after the
  * portal's layout-effect `show()`, which is why this is not a layout effect.
  */
-export function useDialogShowFocus(onOpenAutoFocus: (event: Event) => void) {
+export const useDialogShowFocus = (onOpenAutoFocus: (event: Event) => void) => {
   const { open, contentId } = useDialogContext();
   useEffect(() => {
     if (!open || !contentId || !canUseDom()) {
@@ -225,10 +225,10 @@ export function useDialogShowFocus(onOpenAutoFocus: (event: Event) => void) {
     content.addEventListener(DIALOG_SHOW_FOCUS_EVENT, onOpenAutoFocus, { once: true });
     content.dispatchEvent(new CustomEvent(DIALOG_SHOW_FOCUS_EVENT, { cancelable: true }));
   }, [open, contentId]);
-}
+};
 
 /** `useDialogShowFocus` for a caller that renders the Dialog itself. */
-export function DialogShowFocus({ onOpenAutoFocus }: { onOpenAutoFocus: (event: Event) => void }): null {
+export const DialogShowFocus = ({ onOpenAutoFocus }: { onOpenAutoFocus: (event: Event) => void }): null => {
   useDialogShowFocus(onOpenAutoFocus);
   return null;
-}
+};

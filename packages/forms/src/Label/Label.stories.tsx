@@ -10,7 +10,7 @@ import { Label } from './index';
  * is the one above it. The `Input` field brings its own label, so it cannot
  * stand here.
  */
-function Control({ disabled, ...area }: { id: string; placeholder?: string; disabled?: boolean }) {
+const Control = ({ disabled, ...area }: { id: string; placeholder?: string; disabled?: boolean }) => {
   return (
     <InputParts>
       <InputParts.Box disabled={disabled}>
@@ -21,7 +21,7 @@ function Control({ disabled, ...area }: { id: string; placeholder?: string; disa
       </InputParts.Box>
     </InputParts>
   );
-}
+};
 
 const meta: Meta<typeof Label> = {
   title: 'Forms/Label',

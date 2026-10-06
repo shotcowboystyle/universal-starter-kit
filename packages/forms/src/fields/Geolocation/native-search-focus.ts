@@ -1,5 +1,5 @@
 /** Modal return focus must not reopen a dismissed native search. */
-export function createNativeSearchFocus() {
+export const createNativeSearchFocus = () => {
   let dismissed = false;
   return {
     dismiss() {
@@ -18,4 +18,4 @@ export function createNativeSearchFocus() {
       return !sheetHeader && !dismissed;
     },
   };
-}
+};

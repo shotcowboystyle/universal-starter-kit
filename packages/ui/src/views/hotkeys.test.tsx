@@ -45,7 +45,7 @@ const items = [
   { id: '4', name: 'Item 4' },
 ];
 
-function renderList(props: Partial<React.ComponentProps<typeof List<(typeof items)[0]>>> = {}) {
+const renderList = (props: Partial<React.ComponentProps<typeof List<(typeof items)[0]>>> = {}) => {
   return renderWithProviders(
     <List
       items={items}
@@ -55,7 +55,7 @@ function renderList(props: Partial<React.ComponentProps<typeof List<(typeof item
       {...props}
     />,
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // Test 1: List supports ArrowDown/Up to navigate items

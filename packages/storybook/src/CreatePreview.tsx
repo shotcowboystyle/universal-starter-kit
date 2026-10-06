@@ -147,7 +147,7 @@ const stateKnobFields = [
 // Helpers
 // ---------------------------------------------------------------------------
 
-function parseValue(value: unknown): unknown {
+const parseValue = (value: unknown): unknown => {
   if (typeof value !== 'string') {
     return value;
   }
@@ -156,11 +156,11 @@ function parseValue(value: unknown): unknown {
   } catch {
     return value;
   }
-}
+};
 
 const toTitleCase = (str: string) => str.replaceAll(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase());
 
-function createControl(key: string): InputType {
+const createControl = (key: string): InputType => {
   const name = toTitleCase(key);
   const values = knobOptions[key] ?? [];
   // SB 10 expects options as a flat array of primitive values.
@@ -176,7 +176,7 @@ function createControl(key: string): InputType {
     control: { type: 'select', labels },
     ...(fallback !== undefined && { defaultValue: fallback }),
   };
-}
+};
 
 // ---------------------------------------------------------------------------
 // Canvas background — keeps the preview iframe body in sync with $background
@@ -187,7 +187,7 @@ function createControl(key: string): InputType {
  * and the preview iframe `document.body` background so the entire canvas
  * matches the active color scheme (light/dark/system).
  */
-function CanvasBackground({ children }: { children: ReactNode }) {
+const CanvasBackground = ({ children }: { children: ReactNode }) => {
   const tamaguiTheme = useTamaguiTheme();
   const bg = tamaguiTheme.background?.val as string | undefined;
 
@@ -211,7 +211,7 @@ function CanvasBackground({ children }: { children: ReactNode }) {
       {children}
     </YStack>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // ThemeColorEmitter — publishes resolved CSS color values via the Storybook
@@ -220,7 +220,7 @@ function CanvasBackground({ children }: { children: ReactNode }) {
 // ---------------------------------------------------------------------------
 
 let _channelEmit: ((event: string, data: unknown) => void) | null = null;
-function getChannelEmit(): ((event: string, data: unknown) => void) | null {
+const getChannelEmit = (): ((event: string, data: unknown) => void) | null => {
   if (_channelEmit) {
     return _channelEmit;
   }
@@ -232,9 +232,9 @@ function getChannelEmit(): ((event: string, data: unknown) => void) | null {
   } catch {
     return null;
   }
-}
+};
 
-function AnimationNamesEmitter() {
+const AnimationNamesEmitter = () => {
   const emittedRef = useRef(false);
   useEffect(() => {
     if (emittedRef.current) {
@@ -244,20 +244,20 @@ function AnimationNamesEmitter() {
     getChannelEmit()?.(animationNamesChannelEvent, animationNames as string[]);
   }, []);
   return null;
-}
+};
 
 /**
  * Emits SyncModule.__debug() snapshots to the manager-side Frappe addon panel.
  * Lazily resolves the frappe package — no-op if not installed or no SyncModule exists.
  */
-function FrappeDebugEmitter() {
+const FrappeDebugEmitter = () => {
   const prevRef = useRef<string>('');
   const syncRef = useRef<any>(null);
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
-    async function resolve() {
+    const resolve = async () => {
       try {
         const { __getActiveSyncModule } = await import('@multiplatform.one/frappe');
         const sync = __getActiveSyncModule();
@@ -273,7 +273,7 @@ function FrappeDebugEmitter() {
       } catch {
         // frappe not available
       }
-    }
+    };
 
     const cleanupPromise = resolve();
     // Retry a few times since SyncModule is created lazily
@@ -316,9 +316,9 @@ function FrappeDebugEmitter() {
   }, [tick]);
 
   return null;
-}
+};
 
-function ThemeColorEmitter() {
+const ThemeColorEmitter = () => {
   const tamaguiTheme = useTamaguiTheme();
   const prevRef = useRef<string>('');
 
@@ -338,9 +338,9 @@ function ThemeColorEmitter() {
   }, [tamaguiTheme]);
 
   return null;
-}
+};
 
-function BaseThemeColorEmitter() {
+const BaseThemeColorEmitter = () => {
   const tamaguiTheme = useTamaguiTheme();
   const prevRef = useRef<string>('');
 
@@ -360,9 +360,9 @@ function BaseThemeColorEmitter() {
   }, [tamaguiTheme]);
 
   return null;
-}
+};
 
-function OppositeThemeColorEmitter() {
+const OppositeThemeColorEmitter = () => {
   const tamaguiTheme = useTamaguiTheme();
   const prevRef = useRef<string>('');
 
@@ -382,9 +382,9 @@ function OppositeThemeColorEmitter() {
   }, [tamaguiTheme]);
 
   return null;
-}
+};
 
-function ColorChannelEmitter({ event, prefix = 'color' }: { event: string; prefix?: 'color' | 'accent' }) {
+const ColorChannelEmitter = ({ event, prefix = 'color' }: { event: string; prefix?: 'color' | 'accent' }) => {
   const tamaguiTheme = useTamaguiTheme();
   const prevRef = useRef<string>('');
 
@@ -412,7 +412,7 @@ function ColorChannelEmitter({ event, prefix = 'color' }: { event: string; prefi
   }, [tamaguiTheme, event, prefix]);
 
   return null;
-}
+};
 
 // ---------------------------------------------------------------------------
 // Factory
@@ -433,7 +433,7 @@ const tamaguiPropLeakPatterns = [
   'borderBottomLeftRadius',
 ] as const;
 
-function suppressTamaguiDomWarnings() {
+const suppressTamaguiDomWarnings = () => {
   if (typeof window === 'undefined') {
     return;
   }
@@ -445,10 +445,10 @@ function suppressTamaguiDomWarnings() {
     }
     origError(...args);
   };
-}
+};
 suppressTamaguiDomWarnings();
 
-export function createPreview(options: CreatePreviewOptions): Preview {
+export const createPreview = (options: CreatePreviewOptions): Preview => {
   const {
     themeConfig,
     i18n,
@@ -481,7 +481,7 @@ export function createPreview(options: CreatePreviewOptions): Preview {
   // Switching runs in a layout effect, not during render: dropping Tamagui's
   // theme-name cache re-renders every mounted theme consumer. The keyed
   // AppProvider then remounts the story under the new config before paint.
-  function useActiveThemeConfigName(requested: string): string {
+  const useActiveThemeConfigName = (requested: string): string => {
     const [active, setActive] = useState(activeThemeConfigName);
     useLayoutEffect(() => {
       if (requested !== activeThemeConfigName) {
@@ -491,7 +491,7 @@ export function createPreview(options: CreatePreviewOptions): Preview {
       setActive(requested);
     }, [requested]);
     return active;
-  }
+  };
 
   // -- globalTypes -----------------------------------------------------------
 
@@ -672,13 +672,13 @@ export function createPreview(options: CreatePreviewOptions): Preview {
   // to be a parent in the React tree. Since the decorator *renders* the provider,
   // we split into an outer shell (provides CookiesProvider) and an inner component
   // (calls useTheme safely inside that provider).
-  function FrameworkDecoratorInner({
+  const FrameworkDecoratorInner = ({
     Story,
     context,
   }: {
     Story: NonNullable<Parameters<NonNullable<Preview['decorators']>[number]>[0]>;
     context: Parameters<NonNullable<Preview['decorators']>[number]>[1];
-  }) {
+  }) => {
     const [knobs, setKnobs] = useTheme();
 
     // Resolve the effective color scheme from the toolbar global.
@@ -869,7 +869,7 @@ export function createPreview(options: CreatePreviewOptions): Preview {
         </AppProvider>
       </PresetContext.Provider>
     );
-  }
+  };
 
   const frameworkDecorator: NonNullable<Preview['decorators']>[number] = (Story, context) => (
     <CookiesProvider>
@@ -888,4 +888,4 @@ export function createPreview(options: CreatePreviewOptions): Preview {
     parameters: { ...defaultParameters, ...extraParameters },
     decorators: [frameworkDecorator, ...extraDecorators],
   };
-}
+};

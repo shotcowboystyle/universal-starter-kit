@@ -77,14 +77,14 @@ export interface GuardrailSpecimenParameter {
 
 const seen = new Set<string>();
 
-function isDev(): boolean {
+const isDev = (): boolean => {
   return process.env.NODE_ENV !== 'production';
-}
+};
 
 /**
  * Emit a once-per-key console warning in non-production builds.
  */
-export function devWarn(code: DevWarnCode, detail: DevWarnDetail = {}): void {
+export const devWarn = (code: DevWarnCode, detail: DevWarnDetail = {}): void => {
   if (!isDev()) {
     return;
   }
@@ -112,12 +112,12 @@ export function devWarn(code: DevWarnCode, detail: DevWarnDetail = {}): void {
   ].filter(Boolean);
   const suffix = bits.length ? ` (${bits.join(', ')})` : '';
   console.warn(`[theme] ${code}${suffix}`);
-}
+};
 
 /** @internal test helper */
-export function __resetDevWarnSeen(): void {
+export const __resetDevWarnSeen = (): void => {
   seen.clear();
-}
+};
 
 /** Alias kept for callers that imported the W12-era name. */
 export const themeDevWarn = devWarn;
@@ -126,13 +126,13 @@ export const __resetThemeDevWarnSeen = __resetDevWarnSeen;
 /**
  * Placeholder must not be the only label.
  */
-export function warnPlaceholderAsLabel(args: {
+export const warnPlaceholderAsLabel = (args: {
   placeholder?: string | null;
   label?: unknown;
   ariaLabel?: string | null;
   id?: string;
   component?: string;
-}): void {
+}): void => {
   if (!isDev()) {
     return;
   }
@@ -151,12 +151,12 @@ export function warnPlaceholderAsLabel(args: {
     component: args.component ?? 'FieldLayout',
     id: args.id,
   });
-}
+};
 
 const BANNED_ERROR_WORDS = ['invalid', 'error', 'please', 'sorry', 'oops'] as const;
 
 /** Banned words in error copy. */
-export function warnBannedErrorWords(message: string | null | undefined, detail: DevWarnDetail = {}): void {
+export const warnBannedErrorWords = (message: string | null | undefined, detail: DevWarnDetail = {}): void => {
   if (!isDev() || !message) {
     return;
   }
@@ -167,16 +167,16 @@ export function warnBannedErrorWords(message: string | null | undefined, detail:
       return;
     }
   }
-}
+};
 
 /** Bare `disabled` without reason / explain. */
-export function warnBareDisabled(args: {
+export const warnBareDisabled = (args: {
   disabled?: boolean;
   disabledReason?: string | null;
   skip?: boolean;
   component?: string;
   id?: string;
-}): void {
+}): void => {
   if (!isDev() || !args.disabled || args.skip) {
     return;
   }
@@ -184,7 +184,7 @@ export function warnBareDisabled(args: {
     return;
   }
   devWarn('bare-disabled', { component: args.component, id: args.id });
-}
+};
 
 /**
  * Numeric `height` / `paddingHorizontal` on a size-recipe control
@@ -192,13 +192,13 @@ export function warnBareDisabled(args: {
  * once per component+id like `warnBareDisabled`; does not invent a general
  * style escape.
  */
-export function warnSizeRecipeEscape(args: {
+export const warnSizeRecipeEscape = (args: {
   height?: unknown;
   paddingHorizontal?: unknown;
   sizeRecipeEscape?: string | null;
   component?: string;
   id?: string;
-}): void {
+}): void => {
   if (!isDev()) {
     return;
   }
@@ -211,18 +211,18 @@ export function warnSizeRecipeEscape(args: {
     return;
   }
   devWarn('size-recipe-escape', { component: args.component, id: args.id });
-}
+};
 
 /**
  * The cancel/dismiss action never renders disabled (while confirm
  * may be). Enforcing callers strip the prop and report the attempt here.
  */
-export function warnCancelDisabled(args: { disabled?: boolean; component?: string; id?: string }): void {
+export const warnCancelDisabled = (args: { disabled?: boolean; component?: string; id?: string }): void => {
   if (!isDev() || !args.disabled) {
     return;
   }
   devWarn('cancel-disabled', { component: args.component, id: args.id });
-}
+};
 
 /** Dialog action rows cap at this many actions by default. */
 export const DIALOG_MAX_ACTIONS = 2;
@@ -232,12 +232,12 @@ export const DIALOG_MAX_ACTIONS = 2;
  * block); `allowManyActions` is the explicit eject acknowledging the extra
  * actions.
  */
-export function warnDialogTooManyActions(args: {
+export const warnDialogTooManyActions = (args: {
   count: number;
   allowManyActions?: boolean;
   component?: string;
   id?: string;
-}): void {
+}): void => {
   if (!isDev() || args.allowManyActions || args.count <= DIALOG_MAX_ACTIONS) {
     return;
   }
@@ -246,17 +246,17 @@ export function warnDialogTooManyActions(args: {
     id: args.id,
     count: args.count,
   });
-}
+};
 
 /**
  * DG-CTRL — Select with too few options; suggest RadioGroup / ToggleGroup.
  */
-export function warnSelectTooFewOptions(args: {
+export const warnSelectTooFewOptions = (args: {
   count: number;
   multiple?: boolean;
   component?: string;
   id?: string;
-}): void {
+}): void => {
   if (!isDev() || args.multiple || args.count > 5) {
     return;
   }
@@ -267,10 +267,14 @@ export function warnSelectTooFewOptions(args: {
     count: args.count,
     suggest,
   });
-}
+};
 
 /** Never `tabIndex` > 0. */
-export function warnPositiveTabIndex(args: { value?: number | string | null; component?: string; id?: string }): void {
+export const warnPositiveTabIndex = (args: {
+  value?: number | string | null;
+  component?: string;
+  id?: string;
+}): void => {
   if (!isDev()) {
     return;
   }
@@ -283,10 +287,10 @@ export function warnPositiveTabIndex(args: { value?: number | string | null; com
     id: args.id,
     value: n,
   });
-}
+};
 
 /** No hover tooltip on disabled controls. */
-export function warnTooltipOnDisabled(args: { childDisabled?: boolean; component?: string; id?: string }): void {
+export const warnTooltipOnDisabled = (args: { childDisabled?: boolean; component?: string; id?: string }): void => {
   if (!isDev() || !args.childDisabled) {
     return;
   }
@@ -294,7 +298,7 @@ export function warnTooltipOnDisabled(args: { childDisabled?: boolean; component
     component: args.component ?? 'Tooltip',
     id: args.id,
   });
-}
+};
 
 type OutlineLike =
   | {
@@ -311,7 +315,7 @@ type OutlineLike =
  * Call on `focusVisibleStyle` / `focusStyle` only — not resting
  * `outlineWidth: 0` + transparent (border-flicker rest).
  */
-export function warnOutlineNone(style: OutlineLike, detail: DevWarnDetail = {}): void {
+export const warnOutlineNone = (style: OutlineLike, detail: DevWarnDetail = {}): void => {
   if (!isDev() || !style) {
     return;
   }
@@ -320,4 +324,4 @@ export function warnOutlineNone(style: OutlineLike, detail: DevWarnDetail = {}):
     return;
   }
   devWarn('outline-none', detail);
-}
+};

@@ -10,31 +10,31 @@ export type FormValidateOn = 'submit' | 'blur' | 'change';
 /** Resolved listener set after applying the post-submit upgrade. */
 export type EffectiveValidateOn = 'submit' | 'blur' | 'change' | 'blur-then-change';
 
-export function resolveEffectiveValidateOn(validateOn: FormValidateOn, hasSubmitted: boolean): EffectiveValidateOn {
+export const resolveEffectiveValidateOn = (validateOn: FormValidateOn, hasSubmitted: boolean): EffectiveValidateOn => {
   if (validateOn === 'submit' && hasSubmitted) {
     return 'blur-then-change';
   }
   return validateOn;
-}
+};
 
-function composeValidator(
+const composeValidator = (
   existing: ((args: { value: unknown }) => unknown) | undefined,
   fallback: (args: { value: unknown }) => unknown,
-): (args: { value: unknown }) => unknown {
+): ((args: { value: unknown }) => unknown) => {
   if (!existing) {
     return fallback;
   }
   return (args) => existing(args) ?? fallback(args);
-}
+};
 
 /**
  * Remap `onSubmit` validators onto blur/change listeners per timing policy.
  * Existing onBlur/onChange validators are preserved and composed (run first).
  */
-export function remapValidatorsForTiming(
+export const remapValidatorsForTiming = (
   validators: Record<string, unknown> | undefined,
   effective: EffectiveValidateOn,
-): Record<string, unknown> | undefined {
+): Record<string, unknown> | undefined => {
   if (!validators || effective === 'submit') {
     return validators;
   }
@@ -58,4 +58,4 @@ export function remapValidatorsForTiming(
     );
   }
   return next;
-}
+};

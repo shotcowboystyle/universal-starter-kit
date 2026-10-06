@@ -1078,12 +1078,12 @@ describe('GanttView', () => {
   });
 
   describe('design-law', () => {
-    function atoms(el: Element, prefixes: string[]): string[] {
+    const atoms = (el: Element, prefixes: string[]): string[] => {
       return String((el as HTMLElement).className || '')
         .split(' ')
         .filter((c) => prefixes.some((p) => c.startsWith(p)))
         .sort();
-    }
+    };
 
     it('task and axis labels ride the fontWeight knob — never 500 or 600', () => {
       const { container } = renderWithProviders(<GanttView tasks={tasks} />);

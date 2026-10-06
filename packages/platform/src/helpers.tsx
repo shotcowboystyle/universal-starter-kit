@@ -4,7 +4,7 @@ const isPerformanceNow = typeof performance !== 'undefined' && performance.now;
 const date = isPerformanceNow ? performance : Date;
 let _previousUnique: number;
 
-export function fastUnique() {
+export const fastUnique = () => {
   let unique = date.now();
   while (unique === _previousUnique) {
     unique = date.now();
@@ -14,9 +14,9 @@ export function fastUnique() {
     return Date.now() + unique.toString();
   }
   return unique.toString();
-}
+};
 
-export function isText(children: unknown) {
+export const isText = (children: unknown) => {
   if (Array.isArray(children)) {
     return (
       children.length > 1 &&
@@ -30,13 +30,21 @@ export function isText(children: unknown) {
     );
   }
   return typeof children === 'string';
-}
+};
 
-export function createWithLayout<LayoutProps>(
+const flattenLayouts = <Props,>(layout: ComponentType<Props>, [...layouts]: WithLayout[]): ComponentType<Props> => {
+  const currentLayout = layouts.pop();
+  if (!currentLayout) {
+    return layout;
+  }
+  return flattenLayouts(currentLayout(layout), layouts);
+};
+
+export const createWithLayout = <LayoutProps,>(
   Layout: ComponentType<LayoutProps>,
   extraLayouts: WithLayout[] = [],
   layoutProps?: Omit<LayoutProps, 'children'>,
-): WithLayout {
+): WithLayout => {
   return ((Component: ComponentType<unknown>) =>
     flattenLayouts(
       (props: unknown) => (
@@ -46,15 +54,7 @@ export function createWithLayout<LayoutProps>(
       ),
       extraLayouts,
     )) as WithLayout;
-}
-
-function flattenLayouts<Props>(layout: ComponentType<Props>, [...layouts]: WithLayout[]): ComponentType<Props> {
-  const currentLayout = layouts.pop();
-  if (!currentLayout) {
-    return layout;
-  }
-  return flattenLayouts(currentLayout(layout), layouts);
-}
+};
 
 export type WithLayout = <Props>(Component: ComponentType<Props>) => ComponentType<Props>;
 

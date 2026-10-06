@@ -56,7 +56,7 @@ const labelFontSizeBySizeToken: Record<string, number> = {
   $5: 13,
 };
 
-function resolveFontFamily(fontToken: unknown): string | undefined {
+const resolveFontFamily = (fontToken: unknown): string | undefined => {
   if (typeof fontToken !== 'string') {
     return undefined;
   }
@@ -68,9 +68,9 @@ function resolveFontFamily(fontToken: unknown): string | undefined {
   } catch {
     return undefined;
   }
-}
+};
 
-export function useChartTheme(): ChartTheme {
+export const useChartTheme = (): ChartTheme => {
   const { knobProps } = useResolvedKnobs();
   const palette = useChartPalette();
   const themeName = useThemeName() as string | undefined;
@@ -106,4 +106,4 @@ export function useChartTheme(): ChartTheme {
         Math.max(0, Math.min(barRadiusBase, bandWidth / 2, barHeight)),
     };
   }, [scheme, palette, axisColor, gridColor, labelColor, bodyFontToken, sizeToken, radiusToken, transition]);
-}
+};

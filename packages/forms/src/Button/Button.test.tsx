@@ -25,15 +25,15 @@ import { Button } from './index';
 
 afterEach(cleanup);
 
-function frameRadiusClasses(el: HTMLElement): string[] {
+const frameRadiusClasses = (el: HTMLElement): string[] => {
   return String(el.className || '')
     .split(' ')
     .filter((c) => c.startsWith('_btlr-'))
     .sort();
-}
+};
 
 /** Last `_px-Npx` class wins in source order (runtime fragment after `size=`). */
-function paddingPxFromClass(el: HTMLElement): number | null {
+const paddingPxFromClass = (el: HTMLElement): number | null => {
   let found: number | null = null;
   for (const c of String(el.className || '').split(/\s+/)) {
     const m = /^_px-(\d+)px$/.exec(c);
@@ -42,7 +42,7 @@ function paddingPxFromClass(el: HTMLElement): number | null {
     }
   }
   return found;
-}
+};
 
 describe('Button SIZE-RECIPE', () => {
   it('desktop/jsdom medium height is the measured 44 from the recipe, not the token class', () => {

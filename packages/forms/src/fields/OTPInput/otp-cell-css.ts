@@ -56,7 +56,7 @@ const otpCellCss = `/* LC-71 OTP carve-out: each cell Box is the perceived contr
 }`;
 
 /** Mount OTP cell caret / tabular-num styles. Refreshes if the CSS changed (HMR). */
-export function ensureOtpCellCss(): void {
+export const ensureOtpCellCss = (): void => {
   if (!isWeb || typeof document === 'undefined') {
     return;
   }
@@ -69,4 +69,4 @@ export function ensureOtpCellCss(): void {
   if (tag.textContent !== otpCellCss) {
     tag.textContent = otpCellCss;
   }
-}
+};

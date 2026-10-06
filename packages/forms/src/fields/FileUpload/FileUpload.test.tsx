@@ -23,7 +23,7 @@ const houseConfig = createTamagui({
   themes: houseThemes as any,
 });
 
-function renderWithHouseThemes(ui: ReactElement, scheme: 'light' | 'dark' = 'light') {
+const renderWithHouseThemes = (ui: ReactElement, scheme: 'light' | 'dark' = 'light') => {
   return render(
     <TamaguiProvider
       config={houseConfig}
@@ -32,15 +32,15 @@ function renderWithHouseThemes(ui: ReactElement, scheme: 'light' | 'dark' = 'lig
       {ui}
     </TamaguiProvider>,
   );
-}
+};
 
-function getZone(container: Element): HTMLElement {
+const getZone = (container: Element): HTMLElement => {
   const zone = container.querySelector('[data-file-upload="dropzone"]') as HTMLElement | null;
   expect(zone).toBeTruthy();
   return zone as HTMLElement;
-}
+};
 
-function borderWidthAtomPx(el: HTMLElement, prefix: string): number {
+const borderWidthAtomPx = (el: HTMLElement, prefix: string): number => {
   const atom = el.className.split(/\s+/).find((cls) => cls.startsWith(prefix));
   // No atom means the side declares no width and falls through to the UA
   // initial, which is exactly the defect — report it as such, not as 0.
@@ -48,9 +48,9 @@ function borderWidthAtomPx(el: HTMLElement, prefix: string): number {
     return Number.NaN;
   }
   return Number.parseFloat(atom.slice(prefix.length));
-}
+};
 
-async function pickFile(container: Element, file: File) {
+const pickFile = async (container: Element, file: File) => {
   const input = container.querySelector("input[type='file']") as HTMLInputElement | null;
   expect(input).toBeTruthy();
   await act(async () => {
@@ -58,7 +58,7 @@ async function pickFile(container: Element, file: File) {
       fireEvent.change(input, { target: { files: [file] } });
     }
   });
-}
+};
 
 describe('FileUpload', () => {
   it('should render placeholder and upload button text', () => {

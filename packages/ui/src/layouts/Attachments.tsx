@@ -139,7 +139,7 @@ export interface AttachmentsProps extends Omit<YStackProps, 'children'> {
 
 type FileKind = 'image' | 'pdf' | 'doc' | 'sheet' | 'archive' | 'file';
 
-function formatFileSize(bytes: number): string {
+const formatFileSize = (bytes: number): string => {
   if (bytes === 0) {
     return '0 B';
   }
@@ -147,9 +147,9 @@ function formatFileSize(bytes: number): string {
   const sizes = ['B', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return `${Number.parseFloat((bytes / k ** i).toFixed(1))} ${sizes[i]}`;
-}
+};
 
-function isImageFile(attachment: AttachmentItem): boolean {
+const isImageFile = (attachment: AttachmentItem): boolean => {
   if (attachment.isImage !== undefined) {
     return attachment.isImage;
   }
@@ -163,9 +163,9 @@ function isImageFile(attachment: AttachmentItem): boolean {
   const url = attachment.fileUrl || attachment.fileName || '';
   const ext = url.substring(url.lastIndexOf('.')).toLowerCase();
   return imageExtensions.includes(ext);
-}
+};
 
-function getFileExtension(attachment: AttachmentItem): string {
+const getFileExtension = (attachment: AttachmentItem): string => {
   const name = attachment.fileName || '';
   const dot = name.lastIndexOf('.');
   if (dot > 0 && dot < name.length - 1) {
@@ -173,9 +173,9 @@ function getFileExtension(attachment: AttachmentItem): string {
   }
   const mime = attachment.fileType?.split('/')[1];
   return mime ? mime.toUpperCase() : '';
-}
+};
 
-function getFileKind(attachment: AttachmentItem): FileKind {
+const getFileKind = (attachment: AttachmentItem): FileKind => {
   if (isImageFile(attachment)) {
     return 'image';
   }
@@ -194,7 +194,7 @@ function getFileKind(attachment: AttachmentItem): FileKind {
     return 'archive';
   }
   return 'file';
-}
+};
 
 /** Notion-style type scan: the well hue IS the file class, not a decoration. */
 const FILE_KIND_TONE: Record<FileKind, { bg: string; fg: string }> = {
@@ -206,7 +206,7 @@ const FILE_KIND_TONE: Record<FileKind, { bg: string; fg: string }> = {
   file: { bg: '$color3', fg: '$color11' },
 };
 
-function getFileIcon(attachment: AttachmentItem, size: number): React.ReactNode {
+const getFileIcon = (attachment: AttachmentItem, size: number): React.ReactNode => {
   const kind = getFileKind(attachment);
   if (kind === 'image') {
     return <ImageIcon size={size} />;
@@ -215,7 +215,7 @@ function getFileIcon(attachment: AttachmentItem, size: number): React.ReactNode 
     return <FileTextIcon size={size} />;
   }
   return <FileIcon size={size} />;
-}
+};
 
 interface AttachmentThumbnailProps {
   attachment: AttachmentItem;
@@ -228,7 +228,7 @@ interface AttachmentThumbnailProps {
  * fails to load (auth-gated, relative, or broken URLs would otherwise render
  * an empty square).
  */
-function AttachmentThumbnail({ attachment, size, fallback }: AttachmentThumbnailProps) {
+const AttachmentThumbnail = ({ attachment, size, fallback }: AttachmentThumbnailProps) => {
   const [errored, setErrored] = useState(false);
   if (errored) {
     return <>{fallback}</>;
@@ -248,14 +248,14 @@ function AttachmentThumbnail({ attachment, size, fallback }: AttachmentThumbnail
       }}
     />
   );
-}
+};
 
 /**
  * Skeleton twin of the attachment rows: the media square
  * and the name + size text column mirror the live row anatomy so the layout
  * doesn't jump when data lands. Hairlines sit BETWEEN placeholders only.
  */
-function AttachmentsSkeleton({
+const AttachmentsSkeleton = ({
   thumbSize,
   loadingLabel,
   rowPad,
@@ -263,7 +263,7 @@ function AttachmentsSkeleton({
   thumbSize: number;
   loadingLabel: string;
   rowPad: string | number | undefined;
-}) {
+}) => {
   return (
     <YStack
       width="100%"
@@ -301,7 +301,7 @@ function AttachmentsSkeleton({
       ))}
     </YStack>
   );
-}
+};
 
 interface AttachmentRowProps {
   attachment: AttachmentItem;
@@ -329,7 +329,7 @@ interface AttachmentRowProps {
  * interiors square. Hover/press/focus inherit that geometry. Desk = filename
  * as the subject + inline actions; Notion = type well / image thumb + size.
  */
-function AttachmentRow({
+const AttachmentRow = ({
   attachment,
   index,
   count,
@@ -348,7 +348,7 @@ function AttachmentRow({
   onDownload,
   onRemove,
   renderAttachment,
-}: AttachmentRowProps) {
+}: AttachmentRowProps) => {
   const { knobProps, control } = useResolvedKnobs({ compact });
   const [kbFocus, setKbFocus] = useState(false);
   const isImage = isImageFile(attachment);
@@ -530,7 +530,7 @@ function AttachmentRow({
   }
 
   return defaultContent;
-}
+};
 
 // ---------------------------------------------------------------------------
 // Component
@@ -542,7 +542,7 @@ function AttachmentRow({
  * hover/press/focus inherit that geometry. Fully data-agnostic — accepts
  * items via props and emits callbacks.
  */
-export function Attachments({
+export const Attachments = ({
   items,
   label,
   disabled = false,
@@ -565,7 +565,7 @@ export function Attachments({
   compact = false,
   labels = {},
   ...stackProps
-}: AttachmentsProps) {
+}: AttachmentsProps) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs({ compact });
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -873,4 +873,4 @@ export function Attachments({
       </Dialog>
     </YStack>
   );
-}
+};

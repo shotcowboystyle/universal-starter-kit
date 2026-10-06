@@ -33,7 +33,7 @@ const visuallyHidden = {
   ...(isWeb ? { whiteSpace: 'nowrap' as const, borderWidth: 0 } : { opacity: 0 }),
 };
 
-export function Label({
+export const Label = ({
   size,
   required,
   requiredMarking: requiredMarkingProp,
@@ -44,7 +44,7 @@ export function Label({
   htmlFor,
   children,
   ...props
-}: LabelProps) {
+}: LabelProps) => {
   const { knobProps, disabledState } = useResolvedKnobs();
   const markingCtx = useRequiredMarking();
   const markMode: RequiredMarkMode =
@@ -104,4 +104,4 @@ export function Label({
     );
   }
   return node;
-}
+};

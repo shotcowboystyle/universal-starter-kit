@@ -1,5 +1,5 @@
 import type { DevOriginSource } from './dev-origin';
 
-export function devOriginSource(): DevOriginSource {
+export const devOriginSource = (): DevOriginSource => {
   return { isWeb: true };
-}
+};

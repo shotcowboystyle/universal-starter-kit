@@ -48,12 +48,12 @@ export interface ChoiceA11yProps {
  * Making the frame `accessible` instead would collapse the options into one
  * element and lose which one is chosen, which is the only thing worth saying.
  */
-export function composeA11yName(groupName: string | undefined, ownName: string): string {
+export const composeA11yName = (groupName: string | undefined, ownName: string): string => {
   const group = groupName?.trim();
   return group ? `${group}, ${ownName}` : ownName;
-}
+};
 
-export function choiceItemA11y({
+export const choiceItemA11y = ({
   name,
   selected,
   disabled,
@@ -65,7 +65,7 @@ export function choiceItemA11y({
   selected: boolean;
   disabled: boolean;
   hint?: string;
-}): ChoiceA11yProps {
+}): ChoiceA11yProps => {
   return {
     accessible: true,
     role: nativeChoiceRole,
@@ -77,4 +77,4 @@ export function choiceItemA11y({
     accessibilityState: { disabled, selected, checked: selected },
     ...(hint ? { accessibilityHint: hint } : undefined),
   };
-}
+};

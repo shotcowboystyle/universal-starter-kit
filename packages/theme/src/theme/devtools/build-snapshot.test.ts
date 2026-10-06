@@ -3,14 +3,14 @@ import { describe, expect, it } from 'vitest';
 import { buildSnapshot } from './build-snapshot';
 import type { SnapshotInput } from './build-snapshot';
 
-function makeInput(overrides: Partial<SnapshotInput> = {}): SnapshotInput {
+const makeInput = (overrides: Partial<SnapshotInput> = {}): SnapshotInput => {
   return {
     knobValues: {},
     lightColors: [],
     darkColors: [],
     ...overrides,
   };
-}
+};
 
 describe('buildSnapshot', () => {
   it('generates a markdown string with a title', () => {

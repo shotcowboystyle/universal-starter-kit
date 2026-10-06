@@ -39,13 +39,13 @@ type DisplayMode = 'table' | 'flex';
 // table composition a row minimum has to be written as `height`, which CSS
 // tables treat as a floor the content can still grow past. Flex keeps
 // min-height, because a flex `height` would clip taller content.
-function rowMinimum(
+const rowMinimum = (
   displayMode: DisplayMode | undefined,
   value: unknown,
-): { minHeight: any } | { minHeight: any; height: any } {
+): { minHeight: any } | { minHeight: any; height: any } => {
   const mode = displayMode ?? (isWeb ? 'table' : 'flex');
   return mode === 'table' ? { minHeight: value, height: value } : { minHeight: value };
-}
+};
 
 const TableContext = createStyledContext<{
   cellWidth: SizeTokens | number;
@@ -228,15 +228,15 @@ const HeaderCell = styled(ThemeableStack, {
 
 export type TableZebraStripe = 'off' | 'even' | 'odd';
 
-export function tableZebraStripe(tableZebra: unknown, index: number): TableZebraStripe {
+export const tableZebraStripe = (tableZebra: unknown, index: number): TableZebraStripe => {
   if (tableZebra !== 'on') {
     return 'off';
   }
   return index % 2 === 1 ? 'odd' : 'even';
-}
+};
 
 // `$background` is the ramp's first step.
-function rampStep(fill: unknown): number | undefined {
+const rampStep = (fill: unknown): number | undefined => {
   if (fill === '$background') {
     return 1;
   }
@@ -245,17 +245,17 @@ function rampStep(fill: unknown): number | undefined {
   }
   const step = /^\$color(\d+)$/.exec(fill);
   return step ? Number(step[1]) : undefined;
-}
+};
 
 // A card's own fill climbs the ramp with dark elevation, so a fixed
 // $color2 stripe vanishes on a small-elevation dark card.
-export function tableZebraFill(hostFill: unknown): `$color${number}` {
+export const tableZebraFill = (hostFill: unknown): `$color${number}` => {
   return `$color${Math.min((rampStep(hostFill) ?? 1) + 1, 12)}`;
-}
+};
 
 // One step at the foot of the dark ramp is about 4/255 a channel, too faint to
 // read as a press, so the step floors at the old fixed $color4.
-export function tablePressFill(restFill: unknown): `$color${number}` {
+export const tablePressFill = (restFill: unknown): `$color${number}` => {
   const step = rampStep(restFill);
   if (step === undefined) {
     return '$color4';
@@ -264,11 +264,11 @@ export function tablePressFill(restFill: unknown): `$color${number}` {
     return '$color11';
   }
   return `$color${Math.max(step + 1, 4)}`;
-}
+};
 
 const BodyRowIndexContext = createContext<number | undefined>(undefined);
 
-function indexBodyRows(children: React.ReactNode, counter: { next: number }): React.ReactNode {
+const indexBodyRows = (children: React.ReactNode, counter: { next: number }): React.ReactNode => {
   return Children.map(children, (child) => {
     if (!isValidElement(child)) {
       return child;
@@ -278,7 +278,7 @@ function indexBodyRows(children: React.ReactNode, counter: { next: number }): Re
     }
     return <BodyRowIndexContext.Provider value={counter.next++}>{child}</BodyRowIndexContext.Provider>;
   });
-}
+};
 
 const TableBody = styled(ThemeableStack, {
   name: 'TableBody',
@@ -405,7 +405,7 @@ export interface ThemedRowProps extends React.ComponentProps<typeof Row> {
   success?: boolean;
 }
 
-function resolveIntent(props: ThemedRowProps): IntentName | undefined {
+const resolveIntent = (props: ThemedRowProps): IntentName | undefined => {
   if (props.accent) {
     return 'accent';
   }
@@ -419,24 +419,26 @@ function resolveIntent(props: ThemedRowProps): IntentName | undefined {
     return 'success';
   }
   return undefined;
-}
+};
 
 /**
  * Row density: the `space` knob scales cell padding (row density)
  * without adding an outer row inset.
  * `medium` matches the pre-knob defaults so default rendering is unchanged.
  */
-export function getTableCellPadding(space: string): {
+export const getTableCellPadding = (
+  space: string,
+): {
   paddingHorizontal: string;
   paddingVertical: string;
-} {
+} => {
   const map: Record<string, { paddingHorizontal: string; paddingVertical: string }> = {
     small: { paddingHorizontal: '$1.5', paddingVertical: '$2' },
     medium: { paddingHorizontal: '$2', paddingVertical: '$3' },
     large: { paddingHorizontal: '$3', paddingVertical: '$4' },
   };
   return map[space] ?? map.medium;
-}
+};
 
 /**
  * Responsive layout mode for the Table primitive.
@@ -454,14 +456,157 @@ interface CardRowModel {
 }
 
 /** Flatten fragments/arrays into a single element list. */
-function flattenChildren(children: React.ReactNode): React.ReactNode[] {
+const flattenChildren = (children: React.ReactNode): React.ReactNode[] => {
   return Children.toArray(children).flatMap((child) => {
     if (isValidElement(child) && child.type === Fragment) {
       return flattenChildren((child.props as { children?: React.ReactNode }).children);
     }
     return [child];
   });
-}
+};
+
+const ThemedTableHead = (props: React.ComponentProps<typeof TableHead>) => {
+  // Head/body rule is a divider, not a control border — hairline on
+  // high-DPI (Axiom 15). Explicit consumer props still override.
+  return (
+    <TableHead
+      {...hairline.bottom}
+      {...props}
+    />
+  );
+};
+
+const ThemedRow = ({ accent, error, warning, success, ...props }: ThemedRowProps) => {
+  const { knobProps } = useResolvedKnobs();
+  const context = TableContext.useStyledContext();
+  const motion = transitionProps(knobProps.transition);
+  const intent = resolveIntent({ accent, error, warning, success } as ThemedRowProps);
+  const bodyIndex = useContext(BodyRowIndexContext);
+  const stripe = bodyIndex === undefined ? undefined : tableZebraStripe(knobProps.tableZebra, bodyIndex);
+  // Rows abut, so a slop outset would intersect the neighbour and the
+  // painted row is the only press target a pressable row can have.
+  const pressFloor =
+    props.onPress == null ? null : rowMinimum(props.displayMode ?? context.displayMode, MIN_PRESS_TARGET);
+
+  // Intent rows must not use the plain <Theme> wrapper: on web it renders a
+  // display:contents <span> between <tbody> and <tr>, which is invalid HTML
+  // once the primitives emit real table elements (SSR parsers foster-parent
+  // the span out of the table and hydration breaks). Instead the theme's
+  // CSS class goes on the <tr> itself (scoping the theme CSS variables for
+  // the row and its cells) while <Theme forceClassName={false}> still
+  // provides the theme context for JS-resolved values and native styling
+  // without emitting any wrapper element.
+  const row = (
+    <Row
+      {...motion}
+      {...pressFloor}
+      {...({ 'data-animation': knobProps.transition ? 'on' : 'none' } as Record<string, unknown>)}
+      {...(stripe ? ({ 'data-table-zebra': stripe } as Record<string, unknown>) : {})}
+      {...(intent
+        ? {
+            backgroundColor: '$color3' as const,
+            // `color: $color` mirrors the inline color the Theme span used
+            // to set, so unstyled text in cells inherits the intent color.
+            color: '$color' as const,
+            ...(isWeb ? { className: `t_${intent}` } : {}),
+          }
+        : {})}
+      {...props}
+      {...(stripe === 'odd' && !intent && props.backgroundColor == null
+        ? { backgroundColor: tableZebraFill(knobProps.surface.backgroundColor) }
+        : {})}
+    />
+  );
+
+  if (intent) {
+    return (
+      <Theme
+        name={intent}
+        forceClassName={false}>
+        {row}
+      </Theme>
+    );
+  }
+  return row;
+};
+
+const TableCellSurfaceBody = ({ isHeader, children }: { isHeader: boolean; children: React.ReactNode }) => {
+  // Inside the cell Surface so size/density clamp; compact tightens gaps,
+  // not control height (density no longer couples to size).
+  const { knobProps } = useResolvedKnobs();
+  const { fontWeight: bodyWeight, ...body } = knobProps.body;
+  // Array string children wrap too (coalesced runs),
+  // not just the singleton case. A body cell's value takes bodyFont and
+  // fontWeight like any body text; the weight is the last prop so
+  // no size or family variant paints the font ramp's weight over it.
+  return wrapBareTextChildren(children, (label, key) => (
+    <SizableText
+      key={key}
+      {...(isHeader ? {} : body)}
+      fontSize={knobProps.sizeToken as FontSizeTokens}
+      // data-chrome: honour textAccent on labels. Body cells stay T-VALUE
+      // (inherit), matching SimpleTable's header vs value split.
+      {...(isHeader
+        ? {
+            color: knobProps.textAccentColor,
+            ...({ 'data-text-accent': String(knobProps.textAccentColor) } as Record<string, unknown>),
+          }
+        : {})}
+      fontWeight={isHeader ? '600' : (bodyWeight as '400')}>
+      {label}
+    </SizableText>
+  ));
+};
+
+const TableCellSurface = ({ isHeader, children }: { isHeader: boolean; children: React.ReactNode }) => {
+  return (
+    <TableCellContext.Provider value={{ inTableCell: true, isHeader }}>
+      <Surface
+        size="small"
+        density="compact">
+        <TableCellSurfaceBody isHeader={isHeader}>{children}</TableCellSurfaceBody>
+      </Surface>
+    </TableCellContext.Provider>
+  );
+};
+
+const ThemedHeaderCell = ({ children, style, ...props }: React.ComponentProps<typeof HeaderCell>) => {
+  const { knobProps } = useResolvedKnobs();
+  const motion = transitionProps(knobProps.transition);
+  return (
+    <HeaderCell
+      {...getTableCellPadding(knobProps.space)}
+      {...motion}
+      {...({ 'data-animation': knobProps.transition ? 'on' : 'none' } as Record<string, unknown>)}
+      {...props}
+      // Compose (not replace) the inline style so consumer styles (sticky
+      // pinned headers) keep the real-<th> UA neutralizers (bold/centered).
+      style={[{ verticalAlign: 'middle', fontWeight: 'normal', textAlign: 'start' }, style as any]}>
+      <TableCellSurface isHeader>{children}</TableCellSurface>
+    </HeaderCell>
+  );
+};
+
+const ThemedTableBody = ({ children, ...props }: React.ComponentProps<typeof TableBody>) => {
+  return <TableBody {...props}>{indexBodyRows(children, { next: 0 })}</TableBody>;
+};
+
+const ThemedCell = ({ children, style, ...props }: React.ComponentProps<typeof Cell>) => {
+  const { knobProps } = useResolvedKnobs();
+  const motion = transitionProps(knobProps.transition);
+  return (
+    <Cell
+      {...getTableCellPadding(knobProps.space)}
+      {...motion}
+      {...({ 'data-animation': knobProps.transition ? 'on' : 'none' } as Record<string, unknown>)}
+      {...props}
+      // Compose (not replace) the inline style so a consumer style (e.g.
+      // sticky pinned cells) keeps the verticalAlign baseline.
+      style={[{ verticalAlign: 'middle' }, style as any]}>
+      <TableCellSurface isHeader={false}>{children}</TableCellSurface>
+    </Cell>
+  );
+};
 
 /**
  * Statically extract header labels, body rows, and the caption from the
@@ -469,11 +614,13 @@ function flattenChildren(children: React.ReactNode): React.ReactNode[] {
  * cells wrapped in custom components are not discovered — those cards render
  * value-only rows (documented limitation of the card layout).
  */
-function extractCardModel(children: React.ReactNode): {
+const extractCardModel = (
+  children: React.ReactNode,
+): {
   headerLabels: React.ReactNode[];
   rows: CardRowModel[];
   caption: React.ReactNode;
-} {
+} => {
   const headerLabels: React.ReactNode[] = [];
   const rows: CardRowModel[] = [];
   let caption: React.ReactNode = null;
@@ -522,10 +669,10 @@ function extractCardModel(children: React.ReactNode): {
   }
 
   return { headerLabels, rows, caption };
-}
+};
 
 /** Card list rendering for the Table primitive (layout="cards" / narrow auto). */
-function TableCardsList({ children, ...props }: { children?: React.ReactNode; [key: string]: any }) {
+const TableCardsList = ({ children, ...props }: { children?: React.ReactNode; [key: string]: any }) => {
   const { knobProps } = useResolvedKnobs();
   const { headerLabels, rows, caption } = extractCardModel(children);
   // Table-context props have no meaning on the card list — drop them.
@@ -613,7 +760,7 @@ function TableCardsList({ children, ...props }: { children?: React.ReactNode; [k
       })}
     </ThemeableStack>
   );
-}
+};
 
 export interface ThemedTableProps extends React.ComponentProps<typeof TableComp> {
   /** Responsive layout — see {@link TableLayout}. Default `table`. */
@@ -621,7 +768,7 @@ export interface ThemedTableProps extends React.ComponentProps<typeof TableComp>
 }
 
 // Themed wrappers that inject resolved knob recipes
-function ThemedTableComp({ layout = 'table', ...props }: ThemedTableProps) {
+const ThemedTableComp = ({ layout = 'table', ...props }: ThemedTableProps) => {
   const { knobProps } = useResolvedKnobs();
   const { sm } = useMedia();
   // resolveKnobs already floors outlined+none to the hairline (0.5).
@@ -657,150 +804,7 @@ function ThemedTableComp({ layout = 'table', ...props }: ThemedTableProps) {
       />
     </BodyRowIndexContext.Provider>
   );
-}
-
-function ThemedTableBody({ children, ...props }: React.ComponentProps<typeof TableBody>) {
-  return <TableBody {...props}>{indexBodyRows(children, { next: 0 })}</TableBody>;
-}
-
-function ThemedTableHead(props: React.ComponentProps<typeof TableHead>) {
-  // Head/body rule is a divider, not a control border — hairline on
-  // high-DPI (Axiom 15). Explicit consumer props still override.
-  return (
-    <TableHead
-      {...hairline.bottom}
-      {...props}
-    />
-  );
-}
-
-function ThemedRow({ accent, error, warning, success, ...props }: ThemedRowProps) {
-  const { knobProps } = useResolvedKnobs();
-  const context = TableContext.useStyledContext();
-  const motion = transitionProps(knobProps.transition);
-  const intent = resolveIntent({ accent, error, warning, success } as ThemedRowProps);
-  const bodyIndex = useContext(BodyRowIndexContext);
-  const stripe = bodyIndex === undefined ? undefined : tableZebraStripe(knobProps.tableZebra, bodyIndex);
-  // Rows abut, so a slop outset would intersect the neighbour and the
-  // painted row is the only press target a pressable row can have.
-  const pressFloor =
-    props.onPress == null ? null : rowMinimum(props.displayMode ?? context.displayMode, MIN_PRESS_TARGET);
-
-  // Intent rows must not use the plain <Theme> wrapper: on web it renders a
-  // display:contents <span> between <tbody> and <tr>, which is invalid HTML
-  // once the primitives emit real table elements (SSR parsers foster-parent
-  // the span out of the table and hydration breaks). Instead the theme's
-  // CSS class goes on the <tr> itself (scoping the theme CSS variables for
-  // the row and its cells) while <Theme forceClassName={false}> still
-  // provides the theme context for JS-resolved values and native styling
-  // without emitting any wrapper element.
-  const row = (
-    <Row
-      {...motion}
-      {...pressFloor}
-      {...({ 'data-animation': knobProps.transition ? 'on' : 'none' } as Record<string, unknown>)}
-      {...(stripe ? ({ 'data-table-zebra': stripe } as Record<string, unknown>) : {})}
-      {...(intent
-        ? {
-            backgroundColor: '$color3' as const,
-            // `color: $color` mirrors the inline color the Theme span used
-            // to set, so unstyled text in cells inherits the intent color.
-            color: '$color' as const,
-            ...(isWeb ? { className: `t_${intent}` } : {}),
-          }
-        : {})}
-      {...props}
-      {...(stripe === 'odd' && !intent && props.backgroundColor == null
-        ? { backgroundColor: tableZebraFill(knobProps.surface.backgroundColor) }
-        : {})}
-    />
-  );
-
-  if (intent) {
-    return (
-      <Theme
-        name={intent}
-        forceClassName={false}>
-        {row}
-      </Theme>
-    );
-  }
-  return row;
-}
-
-function TableCellSurface({ isHeader, children }: { isHeader: boolean; children: React.ReactNode }) {
-  return (
-    <TableCellContext.Provider value={{ inTableCell: true, isHeader }}>
-      <Surface
-        size="small"
-        density="compact">
-        <TableCellSurfaceBody isHeader={isHeader}>{children}</TableCellSurfaceBody>
-      </Surface>
-    </TableCellContext.Provider>
-  );
-}
-
-function TableCellSurfaceBody({ isHeader, children }: { isHeader: boolean; children: React.ReactNode }) {
-  // Inside the cell Surface so size/density clamp; compact tightens gaps,
-  // not control height (density no longer couples to size).
-  const { knobProps } = useResolvedKnobs();
-  const { fontWeight: bodyWeight, ...body } = knobProps.body;
-  // Array string children wrap too (coalesced runs),
-  // not just the singleton case. A body cell's value takes bodyFont and
-  // fontWeight like any body text; the weight is the last prop so
-  // no size or family variant paints the font ramp's weight over it.
-  return wrapBareTextChildren(children, (label, key) => (
-    <SizableText
-      key={key}
-      {...(isHeader ? {} : body)}
-      fontSize={knobProps.sizeToken as FontSizeTokens}
-      // data-chrome: honour textAccent on labels. Body cells stay T-VALUE
-      // (inherit), matching SimpleTable's header vs value split.
-      {...(isHeader
-        ? {
-            color: knobProps.textAccentColor,
-            ...({ 'data-text-accent': String(knobProps.textAccentColor) } as Record<string, unknown>),
-          }
-        : {})}
-      fontWeight={isHeader ? '600' : (bodyWeight as '400')}>
-      {label}
-    </SizableText>
-  ));
-}
-
-function ThemedCell({ children, style, ...props }: React.ComponentProps<typeof Cell>) {
-  const { knobProps } = useResolvedKnobs();
-  const motion = transitionProps(knobProps.transition);
-  return (
-    <Cell
-      {...getTableCellPadding(knobProps.space)}
-      {...motion}
-      {...({ 'data-animation': knobProps.transition ? 'on' : 'none' } as Record<string, unknown>)}
-      {...props}
-      // Compose (not replace) the inline style so a consumer style (e.g.
-      // sticky pinned cells) keeps the verticalAlign baseline.
-      style={[{ verticalAlign: 'middle' }, style as any]}>
-      <TableCellSurface isHeader={false}>{children}</TableCellSurface>
-    </Cell>
-  );
-}
-
-function ThemedHeaderCell({ children, style, ...props }: React.ComponentProps<typeof HeaderCell>) {
-  const { knobProps } = useResolvedKnobs();
-  const motion = transitionProps(knobProps.transition);
-  return (
-    <HeaderCell
-      {...getTableCellPadding(knobProps.space)}
-      {...motion}
-      {...({ 'data-animation': knobProps.transition ? 'on' : 'none' } as Record<string, unknown>)}
-      {...props}
-      // Compose (not replace) the inline style so consumer styles (sticky
-      // pinned headers) keep the real-<th> UA neutralizers (bold/centered).
-      style={[{ verticalAlign: 'middle', fontWeight: 'normal', textAlign: 'start' }, style as any]}>
-      <TableCellSurface isHeader>{children}</TableCellSurface>
-    </HeaderCell>
-  );
-}
+};
 
 export const Table = withStaticProperties(ThemedTableComp, {
   Head: ThemedTableHead,

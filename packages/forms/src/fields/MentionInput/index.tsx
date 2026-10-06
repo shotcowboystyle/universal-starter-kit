@@ -57,7 +57,7 @@ export interface MentionValue {
 }
 
 /** Normalize string / object / empty seeds into the field value. */
-export function parseMentionValue(raw: unknown): MentionValue {
+export const parseMentionValue = (raw: unknown): MentionValue => {
   if (typeof raw === 'string') {
     return { text: raw, mentions: [] };
   }
@@ -69,13 +69,13 @@ export function parseMentionValue(raw: unknown): MentionValue {
     };
   }
   return { text: '', mentions: [] };
-}
+};
 
-function mentionValuesEqual(a: MentionValue, b: MentionValue): boolean {
+const mentionValuesEqual = (a: MentionValue, b: MentionValue): boolean => {
   return a.text === b.text && JSON.stringify(a.mentions) === JSON.stringify(b.mentions);
-}
+};
 
-function MentionFieldSync({
+const MentionFieldSync = ({
   fieldValue,
   current,
   disabled,
@@ -87,7 +87,7 @@ function MentionFieldSync({
   disabled: boolean;
   onAdopt: (next: MentionValue) => void;
   children: ReactNode;
-}) {
+}) => {
   useEffect(() => {
     if (disabled || fieldValue === undefined) {
       return;
@@ -99,7 +99,7 @@ function MentionFieldSync({
     onAdopt(next);
   }, [fieldValue, disabled]);
   return children;
-}
+};
 
 export type MentionInputProps<
   TParentData = any,
@@ -180,7 +180,7 @@ const SLUG_ID = /^[A-Za-z][\w.-]*$/;
 type MentionTextProps = GetProps<typeof Text>;
 
 /** GitHub/Slack: bold the query hit inside the suggestion label. */
-function MentionMatchText({ text, query, ...rest }: MentionTextProps & { text: string; query: string }) {
+const MentionMatchText = ({ text, query, ...rest }: MentionTextProps & { text: string; query: string }) => {
   const needle = query.trim();
   if (!needle) {
     return <Text {...rest}>{text}</Text>;
@@ -200,9 +200,9 @@ function MentionMatchText({ text, query, ...rest }: MentionTextProps & { text: s
       {text.slice(idx + needle.length)}
     </Text>
   );
-}
+};
 
-function mentionSecondary(item: MentionItem, trigger: string): string | undefined {
+const mentionSecondary = (item: MentionItem, trigger: string): string | undefined => {
   if (item.description) {
     return item.description;
   }
@@ -210,26 +210,28 @@ function mentionSecondary(item: MentionItem, trigger: string): string | undefine
     return `${trigger}${item.id}`;
   }
   return undefined;
-}
+};
 
-function mentionForDelete(
+const mentionForDelete = (
   mentions: MentionData[],
   cursor: number,
   key: 'Backspace' | 'Delete',
-): MentionData | undefined {
+): MentionData | undefined => {
   if (key === 'Backspace') {
     return mentions.find((m) => cursor > m.position && cursor <= m.position + m.length);
   }
   return mentions.find((m) => cursor >= m.position && cursor < m.position + m.length);
-}
+};
 
-export function MentionInput<
+export const MentionInput = <
   TParentData,
   TName extends DeepKeys<TParentData>,
   TFieldValidator extends Validator<DeepValue<TParentData, TName>> | undefined = undefined,
   TFormValidator extends Validator<TParentData> | undefined = undefined,
   TData extends DeepValue<TParentData, TName> = DeepValue<TParentData, TName>,
->(props: MentionInputProps<TParentData, TName, TFieldValidator, TFormValidator, TData>) {
+>(
+  props: MentionInputProps<TParentData, TName, TFieldValidator, TFormValidator, TData>,
+) => {
   const hydrationTouch = useTouchSurface();
   const {
     defaultValue,
@@ -1048,4 +1050,4 @@ export function MentionInput<
       {floatingDropdown}
     </>
   );
-}
+};

@@ -29,7 +29,7 @@ export interface XAxisProps {
  * (nothing overflows the surface). All chrome colors/typography come
  * from `useChartTheme`.
  */
-export function XAxis({
+export const XAxis = ({
   plot,
   scale,
   tickValues,
@@ -37,7 +37,7 @@ export function XAxis({
   showLine = true,
   showTicks = true,
   showLabels = true,
-}: XAxisProps) {
+}: XAxisProps) => {
   const { axisColor, labelColor, labelFontFamily, labelFontSize } = useChartTheme();
   const values = tickValues ?? scale.domain();
   const y = plot.y + plot.height;
@@ -93,7 +93,7 @@ export function XAxis({
       })}
     </G>
   );
-}
+};
 
 export interface YAxisProps {
   plot: PlotArea;
@@ -114,7 +114,7 @@ export interface YAxisProps {
  * margin, plus optional horizontal grid lines across the plot. Grid uses the
  * divider role; labels use the muted text role (AA floor).
  */
-export function YAxis({
+export const YAxis = ({
   plot,
   scale,
   ticks = 4,
@@ -123,7 +123,7 @@ export function YAxis({
   showTicks = false,
   showLabels = true,
   showGrid = true,
-}: YAxisProps) {
+}: YAxisProps) => {
   const { axisColor, gridColor, labelColor, labelFontFamily, labelFontSize } = useChartTheme();
   const tickNumbers = getLinearTicks(scale, ticks);
   // Axis ticks ride the charts package's own density register — the declared
@@ -185,4 +185,4 @@ export function YAxis({
       })}
     </G>
   );
-}
+};

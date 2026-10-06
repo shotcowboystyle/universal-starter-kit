@@ -46,7 +46,7 @@ const CHANNELS: { name: string; themeName: string; props: Partial<ButtonProps> }
   { name: 'theme="accent"', themeName: 'accent', props: { theme: 'accent' } },
 ];
 
-function houseRender(ui: React.ReactElement, scheme: 'light' | 'dark') {
+const houseRender = (ui: React.ReactElement, scheme: 'light' | 'dark') => {
   return render(
     <TamaguiProvider
       config={houseConfig.tamagui}
@@ -55,9 +55,9 @@ function houseRender(ui: React.ReactElement, scheme: 'light' | 'dark') {
       <YStack backgroundColor="$background">{ui}</YStack>
     </TamaguiProvider>,
   );
-}
+};
 
-function scopeThemeKey(node: HTMLElement, scheme: string): string {
+const scopeThemeKey = (node: HTMLElement, scheme: string): string => {
   const names: string[] = [];
   for (let el: HTMLElement | null = node; el; el = el.parentElement) {
     if (!el.classList.contains('is_Theme')) {
@@ -74,16 +74,16 @@ function scopeThemeKey(node: HTMLElement, scheme: string): string {
     }
   }
   return [scheme, ...names].join('_');
-}
+};
 
-function resolvedInk(node: HTMLElement, scheme: string): { key: string; token: string; ink: string } {
+const resolvedInk = (node: HTMLElement, scheme: string): { key: string; token: string; ink: string } => {
   const token = /(?:^|\s)_col-(\w+)(?:\s|$)/.exec(node.className)?.[1];
   expect(token, `reason carries a colour token class: ${node.className}`).toBeTruthy();
   const key = scopeThemeKey(node, scheme);
   const ink = houseThemes[key]?.[token!];
   expect(ink, `${key}.${token} resolves in the house themes`).toBeTruthy();
   return { key, token: token!, ink };
-}
+};
 
 describe('Button disabledReason ink (T-HELPER)', () => {
   for (const scheme of SCHEMES) {

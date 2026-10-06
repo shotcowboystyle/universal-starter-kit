@@ -13,7 +13,7 @@
 // forgivingly, never reject on separator style).
 const DATE_ONLY = /^(\d{4})[-/. ](\d{1,2})[-/. ](\d{1,2})$/;
 
-export function coerceToDate(input: unknown): Date | null {
+export const coerceToDate = (input: unknown): Date | null => {
   if (input == null || input === '') {
     return null;
   }
@@ -46,4 +46,4 @@ export function coerceToDate(input: unknown): Date | null {
     return Number.isNaN(d.getTime()) ? null : d;
   }
   return null;
-}
+};
