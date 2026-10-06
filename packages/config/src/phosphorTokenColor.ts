@@ -61,11 +61,14 @@ function resolvePhosphorIconBase(id: string, importer: string | undefined): stri
     return null;
   }
   const target = toPosix(id.startsWith('.') ? path.resolve(path.dirname(importer), id) : id);
-  return phosphorLibFile.test(target) ? virtualPrefix + target : null;
+  // The virtual id drops the `.js` so extension-filtered loaders that run
+  // first in the dep optimizer (vite-plugin-rnw's flow stripper,
+  // /\.(flow|jsx?)$/) don't claim it and readFile a `\0` path.
+  return phosphorLibFile.test(target) ? virtualPrefix + target.replace(/\.js$/, '') : null;
 }
 
 function loadTokenColorIconBase(id: string): string | null {
-  return id.startsWith(virtualPrefix) ? tokenColorIconBaseSource(id.slice(virtualPrefix.length)) : null;
+  return id.startsWith(virtualPrefix) ? tokenColorIconBaseSource(`${id.slice(virtualPrefix.length)}.js`) : null;
 }
 
 function rolldownTokenColorPlugin() {

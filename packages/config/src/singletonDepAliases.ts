@@ -86,6 +86,14 @@ import path from 'node:path';
  * before it splits an app.
  */
 const CONTEXT_SINGLETONS: readonly string[] = [
+  // React itself, the dispatcher every hook reads. apps/mobile pins the exact
+  // react its react-native renderer ships (19.2.0) while the catalog resolves
+  // newer, so the hoisted install nests 19.2.x copies under
+  // @tamagui/*/node_modules/react. The dev optimizer bundled those into the
+  // tamagui chunk and every story threw "Invalid hook call" /
+  // "Cannot read properties of null (reading 'useContext')".
+  'react',
+  'react-dom',
   'react-cookie',
   '@tamagui/core',
   '@tamagui/web',

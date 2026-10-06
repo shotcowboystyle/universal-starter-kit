@@ -24,6 +24,16 @@ describe('singletonDepAliases', () => {
     expect(fs.existsSync(path.join(aliases['react-cookie'], 'package.json'))).toBe(true);
   });
 
+  it('pins react and react-dom to the root copy, past nested @tamagui/*/node_modules/react', () => {
+    // apps/mobile's exact react pin makes the hoisted install nest other react
+    // versions under tamagui packages; without the pin the dev optimizer bundled
+    // them into the tamagui chunk and every story hit a null hook dispatcher.
+    const aliases = singletonDepAliases(workspaceRoot);
+    for (const pkgName of ['react', 'react-dom']) {
+      expect(aliases[pkgName]).toBe(path.join(workspaceRoot, 'node_modules', pkgName));
+    }
+  });
+
   it('pins the tamagui theme record to one package directory', () => {
     // @tamagui/web owns the theme context. Two realpaths for it means two
     // contexts: packages/frappe's story files import "tamagui" from a package
