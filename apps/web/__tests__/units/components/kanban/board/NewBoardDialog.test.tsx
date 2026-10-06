@@ -1,250 +1,120 @@
-import { render, screen } from "@testing-library/react";
-/// <reference types="react" />
-import React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderWithProviders } from '@repo/test-utils';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { toast } from 'sonner';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import NewBoardDialog from "@/components/kanban/board/NewBoardDialog";
+import NewBoardDialog from '@/components/kanban/board/NewBoardDialog';
+import { useBoards } from '@/hooks/useBoards';
+import { useRouter } from '@/i18n/navigation';
+import { useWorkspaceStore } from '@/stores/workspace-store';
 
-globalThis.React = React;
-
-vi.mock("@/hooks/useBoards", () => ({
-  useBoards: vi.fn()
+vi.mock('@/hooks/useBoards', () => ({
+  useBoards: vi.fn(),
 }));
 
-vi.mock("@/stores/workspace-store", () => ({
-  useWorkspaceStore: vi.fn()
+vi.mock('@/stores/workspace-store', () => ({
+  useWorkspaceStore: vi.fn(),
 }));
 
-vi.mock("@/i18n/navigation", () => ({
-  useRouter: vi.fn()
+vi.mock('@/i18n/navigation', () => ({
+  useRouter: vi.fn(),
 }));
 
-vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string) => key
+vi.mock('next-intl', () => ({
+  useTranslations: () => (key: string) => key,
 }));
 
-vi.mock("sonner", () => ({
+vi.mock('sonner', () => ({
   toast: {
     success: vi.fn(),
-    error: vi.fn()
-  }
+    error: vi.fn(),
+  },
 }));
 
-vi.mock("@/components/kanban/board/BoardForm", () => ({
-  BoardForm: ({ children, onSubmit, onCancel }: any) => (
-    <form
-      data-testid="board-form"
-      onSubmit={(e) => {
-        e.preventDefault();
-        onSubmit?.({ title: "Test Board", description: "Test Description" });
-      }}
-    >
-      {children}
-      <button type="button" onClick={onCancel} data-testid="cancel-btn">
-        Cancel
-      </button>
-      <button type="submit" data-testid="submit-btn">
-        Submit
-      </button>
-    </form>
-  )
-}));
+describe('NewBoardDialog', () => {
+  const addBoard = vi.fn();
+  const refresh = vi.fn();
+  const push = vi.fn();
 
-vi.mock("@repo/ui/components/dialog", () => ({
-  Dialog: ({ children }: any) => <div data-testid="dialog">{children}</div>,
-  DialogTrigger: ({ children }: any) => <div data-testid="dialog-trigger">{children}</div>,
-  DialogContent: ({ children }: any) => <div data-testid="dialog-content">{children}</div>,
-  DialogHeader: ({ children }: any) => <div data-testid="dialog-header">{children}</div>,
-  DialogTitle: ({ children }: any) => <h2 data-testid="dialog-title">{children}</h2>,
-  DialogDescription: ({ children }: any) => <p data-testid="dialog-description">{children}</p>,
-  DialogFooter: ({ children }: any) => <div data-testid="dialog-footer">{children}</div>
-}));
-
-describe("NewBoardDialog", () => {
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks();
-
-    const { useBoards } = await import("@/hooks/useBoards");
-    const { useWorkspaceStore } = await import("@/stores/workspace-store");
-    const { useRouter } = await import("@/i18n/navigation");
-
-    vi.mocked(useBoards).mockReturnValue({
-      myBoards: [],
-      teamBoards: [],
-      loading: false,
-      createBoard: vi.fn(),
-      currentBoard: null,
-      refresh: vi.fn()
-    } as any);
-
-    vi.mocked(useWorkspaceStore).mockReturnValue({
-      addBoard: vi.fn().mockResolvedValue("board-1")
-    } as any);
-
-    vi.mocked(useRouter).mockReturnValue({
-      push: vi.fn(),
-      replace: vi.fn(),
-      refresh: vi.fn()
-    } as any);
+    addBoard.mockResolvedValue('board-1');
+    vi.mocked(useBoards).mockReturnValue({ refresh } as any);
+    vi.mocked(useWorkspaceStore).mockReturnValue({ addBoard } as any);
+    vi.mocked(useRouter).mockReturnValue({ push, replace: vi.fn(), refresh: vi.fn() } as any);
   });
 
-  it("should render dialog", () => {
-    render(
+  const renderDialog = () =>
+    renderWithProviders(
       <NewBoardDialog>
-        <button>New Board</button>
-      </NewBoardDialog>
+        <button type="button">New Board</button>
+      </NewBoardDialog>,
     );
-    expect(screen.getByTestId("dialog")).toBeInTheDocument();
+
+  const openDialog = async () => {
+    fireEvent.click(screen.getByText('New Board'));
+    return screen.findByTestId('new-board-dialog-title');
+  };
+
+  it('renders only the trigger while closed', () => {
+    renderDialog();
+    expect(screen.getByText('New Board')).toBeInTheDocument();
+    expect(screen.queryByText('newBoardTitle')).not.toBeInTheDocument();
   });
 
-  it("should render dialog trigger with children", () => {
-    render(
-      <NewBoardDialog>
-        <button>New Board</button>
-      </NewBoardDialog>
-    );
-    expect(screen.getByText("New Board")).toBeInTheDocument();
+  it('opens the dialog with title, description and the board form', async () => {
+    renderDialog();
+    expect(await openDialog()).toHaveTextContent('newBoardTitle');
+    expect(screen.getByText('newBoardDescription')).toBeInTheDocument();
+    expect(screen.getByTestId('board-title-input')).toBeInTheDocument();
+    expect(screen.getByTestId('cancel-button')).toHaveTextContent('cancel');
+    expect(screen.getByTestId('create-button')).toHaveTextContent('create');
   });
 
-  it("should render dialog title", () => {
-    render(
-      <NewBoardDialog>
-        <button>New Board</button>
-      </NewBoardDialog>
-    );
-    expect(screen.getByText("newBoardTitle")).toBeInTheDocument();
+  it('creates the board, refreshes and navigates to it', async () => {
+    renderDialog();
+    await openDialog();
+    fireEvent.change(screen.getByTestId('board-title-input'), { target: { value: 'Roadmap' } });
+    fireEvent.click(screen.getByTestId('create-button'));
+
+    await waitFor(() => {
+      expect(push).toHaveBeenCalledWith('/boards/board-1');
+    });
+    expect(addBoard).toHaveBeenCalledWith('Roadmap', '');
+    expect(toast.success).toHaveBeenCalledWith('boardCreatedSuccess');
+    expect(refresh).toHaveBeenCalled();
   });
 
-  it("should render dialog description", () => {
-    render(
-      <NewBoardDialog>
-        <button>New Board</button>
-      </NewBoardDialog>
-    );
-    expect(screen.getByText("newBoardDescription")).toBeInTheDocument();
+  it('does not create a board without a title', async () => {
+    renderDialog();
+    await openDialog();
+    fireEvent.click(screen.getByTestId('create-button'));
+
+    expect(await screen.findByText('Title is required')).toBeInTheDocument();
+    expect(addBoard).not.toHaveBeenCalled();
   });
 
-  it("should render board form", () => {
-    render(
-      <NewBoardDialog>
-        <button>New Board</button>
-      </NewBoardDialog>
-    );
-    expect(screen.getByTestId("board-form")).toBeInTheDocument();
+  it('shows an error toast when creation fails', async () => {
+    addBoard.mockRejectedValue(new Error('boom'));
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    renderDialog();
+    await openDialog();
+    fireEvent.change(screen.getByTestId('board-title-input'), { target: { value: 'Roadmap' } });
+    fireEvent.click(screen.getByTestId('create-button'));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('boardCreateFailed');
+    });
+    expect(push).not.toHaveBeenCalled();
   });
 
-  it("should render cancel button", () => {
-    render(
-      <NewBoardDialog>
-        <button>New Board</button>
-      </NewBoardDialog>
-    );
-    expect(screen.getByText("cancel")).toBeInTheDocument();
-  });
+  it('closes the dialog on cancel', async () => {
+    renderDialog();
+    await openDialog();
+    fireEvent.click(screen.getByTestId('cancel-button'));
 
-  it("should render create button", () => {
-    render(
-      <NewBoardDialog>
-        <button>New Board</button>
-      </NewBoardDialog>
-    );
-    expect(screen.getByText("create")).toBeInTheDocument();
-  });
-
-  it("should render dialog structure", () => {
-    const { container } = render(
-      <NewBoardDialog>
-        <button>New Board</button>
-      </NewBoardDialog>
-    );
-    expect(container.firstChild).toBeTruthy();
-  });
-
-  it("should handle form submission", async () => {
-    const mockAddBoard = vi.fn().mockResolvedValue("board-1");
-    const mockPush = vi.fn();
-
-    const { useWorkspaceStore } = await import("@/stores/workspace-store");
-    const { useRouter } = await import("@/i18n/navigation");
-
-    vi.mocked(useWorkspaceStore).mockReturnValue({
-      addBoard: mockAddBoard
-    } as any);
-
-    vi.mocked(useRouter).mockReturnValue({
-      push: mockPush,
-      replace: vi.fn(),
-      refresh: vi.fn()
-    } as any);
-
-    const { container } = render(
-      <NewBoardDialog>
-        <button>New Board</button>
-      </NewBoardDialog>
-    );
-
-    const form = container.querySelector("form");
-    if (form) {
-      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
-    }
-
-    expect(container.querySelector("form")).toBeInTheDocument();
-  });
-
-  it("should handle cancel button click", () => {
-    const { container } = render(
-      <NewBoardDialog>
-        <button>New Board</button>
-      </NewBoardDialog>
-    );
-
-    const cancelBtn = container.querySelector('[data-testid="cancel-btn"]');
-    if (cancelBtn) {
-      cancelBtn.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    }
-
-    expect(container.querySelector("form")).toBeInTheDocument();
-  });
-
-  it("should handle successful board creation with navigation", async () => {
-    const mockAddBoard = vi.fn().mockResolvedValue("new-board-id");
-    const mockRefresh = vi.fn();
-    const mockPush = vi.fn();
-
-    const { useWorkspaceStore } = await import("@/stores/workspace-store");
-    const { useBoards } = await import("@/hooks/useBoards");
-    const { useRouter } = await import("@/i18n/navigation");
-
-    vi.mocked(useWorkspaceStore).mockReturnValue({
-      addBoard: mockAddBoard
-    } as any);
-
-    vi.mocked(useBoards).mockReturnValue({
-      myBoards: [],
-      teamBoards: [],
-      loading: false,
-      createBoard: vi.fn(),
-      currentBoard: null,
-      refresh: mockRefresh
-    } as any);
-
-    vi.mocked(useRouter).mockReturnValue({
-      push: mockPush,
-      replace: vi.fn(),
-      refresh: vi.fn()
-    } as any);
-
-    const { container } = render(
-      <NewBoardDialog>
-        <button>New Board</button>
-      </NewBoardDialog>
-    );
-
-    const form = container.querySelector("form");
-    if (form) {
-      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
-    }
-
-    expect(container.querySelector("form")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByTestId('new-board-dialog-title')).not.toBeInTheDocument();
+    });
   });
 });

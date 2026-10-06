@@ -19,7 +19,8 @@
     "overview": "Board Overview",
     "myBoards": "My Boards",
     "teamBoards": "Team Boards",
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "toggle": "Toggle sidebar"
   },
   "kanban": {
     "title": "Kanban Overview",
@@ -92,7 +93,9 @@
       "description": "Description",
       "noDescription": "No description",
       "owner": "Owner",
-      "members": "Members"
+      "members": "Members",
+      "userNotAuthenticated": "You need to be signed in to do this",
+      "deleteFailed": "Failed to delete project"
     },
     "task": {
       "addNewTask": "＋ Add New Task",
@@ -143,7 +146,8 @@
       "moveToTitle": "Move to Project",
       "moveToDescription": "Select a project to move this task to",
       "noProjectsAvailable": "No other projects available"
-    }
+    },
+    "noPermission": "You don't have permission to do this"
   },
   "common": {
     "back": "Back",

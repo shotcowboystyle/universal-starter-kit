@@ -1,238 +1,124 @@
-import { render, screen } from "@testing-library/react";
-/// <reference types="react" />
-import React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderWithProviders } from '@repo/test-utils';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { toast } from 'sonner';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import NewProjectDialog from "@/components/kanban/project/NewProjectDialog";
+import NewProjectDialog from '@/components/kanban/project/NewProjectDialog';
+import { useCreateProject } from '@/lib/api/projects/queries';
+import { useWorkspaceStore } from '@/stores/workspace-store';
 
-globalThis.React = React;
-
-vi.mock("@/lib/api/projects/queries", () => ({
-  useCreateProject: vi.fn()
+vi.mock('@/lib/api/projects/queries', () => ({
+  useCreateProject: vi.fn(),
 }));
 
-vi.mock("@/stores/workspace-store", () => ({
-  useWorkspaceStore: vi.fn()
+vi.mock('@/stores/workspace-store', () => ({
+  useWorkspaceStore: vi.fn(),
 }));
 
-vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string) => key
+vi.mock('next-intl', () => ({
+  useTranslations: () => (key: string) => key,
 }));
 
-vi.mock("sonner", () => ({
+vi.mock('sonner', () => ({
   toast: {
     success: vi.fn(),
-    error: vi.fn()
-  }
+    error: vi.fn(),
+  },
 }));
 
-vi.mock("@/components/kanban/project/ProjectForm", () => ({
-  ProjectForm: ({ children, onSubmit, onCancel }: any) => (
-    <form
-      data-testid="project-form"
-      onSubmit={(e) => {
-        e.preventDefault();
-        onSubmit?.({ title: "Test Project", description: "Test Description" });
-      }}
-    >
-      {children}
-      <button type="button" onClick={onCancel} data-testid="cancel-btn">
-        Cancel
-      </button>
-      <button type="submit" data-testid="submit-btn">
-        Submit
-      </button>
-    </form>
-  )
-}));
+describe('NewProjectDialog', () => {
+  const addProject = vi.fn();
+  const mutateAsync = vi.fn();
 
-vi.mock("@repo/ui/components/dialog", () => ({
-  Dialog: ({ children }: any) => <div data-testid="dialog">{children}</div>,
-  DialogTrigger: ({ children }: any) => <div data-testid="dialog-trigger">{children}</div>,
-  DialogContent: ({ children }: any) => <div data-testid="dialog-content">{children}</div>,
-  DialogHeader: ({ children }: any) => <div data-testid="dialog-header">{children}</div>,
-  DialogTitle: ({ children }: any) => <h2 data-testid="dialog-title">{children}</h2>,
-  DialogDescription: ({ children }: any) => <p data-testid="dialog-description">{children}</p>,
-  DialogFooter: ({ children }: any) => <div data-testid="dialog-footer">{children}</div>
-}));
-
-describe("NewProjectDialog", () => {
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks();
-
-    const { useCreateProject } = await import("@/lib/api/projects/queries");
-    const { useWorkspaceStore } = await import("@/stores/workspace-store");
-
-    vi.mocked(useCreateProject).mockReturnValue({
-      mutateAsync: vi.fn().mockResolvedValue({ _id: "project-1" }),
-      mutate: vi.fn(),
-      isPending: false
-    } as any);
-
+    addProject.mockResolvedValue('project-1');
+    mutateAsync.mockResolvedValue({ _id: 'project-1' });
+    vi.mocked(useCreateProject).mockReturnValue({ mutateAsync } as any);
     vi.mocked(useWorkspaceStore).mockImplementation((selector?: any) => {
-      const state = {
-        addProject: vi.fn().mockResolvedValue("project-1")
-      };
+      const state = { addProject };
       return selector ? selector(state) : state;
     });
   });
 
-  it("should render dialog", () => {
-    render(<NewProjectDialog />);
-    expect(screen.getByTestId("dialog")).toBeInTheDocument();
+  const openDialog = async () => {
+    fireEvent.click(screen.getByTestId('new-project-trigger'));
+    return screen.findByText('addNewProjectTitle');
+  };
+
+  const submitTitle = (title: string) => {
+    fireEvent.change(screen.getByTestId('project-title-input'), { target: { value: title } });
+    fireEvent.click(screen.getByTestId('submit-project-button'));
+  };
+
+  it('renders the trigger and keeps the dialog closed', () => {
+    renderWithProviders(<NewProjectDialog />);
+    expect(screen.getByTestId('new-project-trigger')).toHaveTextContent('addNewProject');
+    expect(screen.queryByText('addNewProjectTitle')).not.toBeInTheDocument();
   });
 
-  it("should render trigger button", () => {
-    render(<NewProjectDialog />);
-    expect(screen.getByText("addNewProject")).toBeInTheDocument();
+  it('opens the dialog with the project form', async () => {
+    renderWithProviders(<NewProjectDialog />);
+    expect(await openDialog()).toBeInTheDocument();
+    expect(screen.getByText('addNewProjectDescription')).toBeInTheDocument();
+    expect(screen.getByTestId('project-title-input')).toBeInTheDocument();
+    expect(screen.getByText('cancel')).toBeInTheDocument();
+    expect(screen.getByTestId('submit-project-button')).toHaveTextContent('addProject');
   });
 
-  it("should render dialog title", () => {
-    render(<NewProjectDialog />);
-    expect(screen.getByText("addNewProjectTitle")).toBeInTheDocument();
-  });
+  it('creates the project via the store + mutation and notifies the callback', async () => {
+    const onProjectAdd = vi.fn();
+    renderWithProviders(<NewProjectDialog onProjectAdd={onProjectAdd} />);
+    await openDialog();
+    submitTitle('Backlog');
 
-  it("should render dialog description", () => {
-    render(<NewProjectDialog />);
-    expect(screen.getByText("addNewProjectDescription")).toBeInTheDocument();
-  });
-
-  it("should render project form", () => {
-    render(<NewProjectDialog />);
-    expect(screen.getByTestId("project-form")).toBeInTheDocument();
-  });
-
-  it("should render cancel button", () => {
-    render(<NewProjectDialog />);
-    expect(screen.getByText("cancel")).toBeInTheDocument();
-  });
-
-  it("should render submit button", () => {
-    render(<NewProjectDialog />);
-    expect(screen.getByText("addProject")).toBeInTheDocument();
-  });
-
-  it("should call onProjectAdd callback when provided", () => {
-    const mockOnProjectAdd = vi.fn();
-    render(<NewProjectDialog onProjectAdd={mockOnProjectAdd} />);
-    expect(screen.getByTestId("dialog")).toBeInTheDocument();
-  });
-
-  it("should render without onProjectAdd callback", () => {
-    render(<NewProjectDialog />);
-    expect(screen.getByTestId("dialog")).toBeInTheDocument();
-  });
-
-  it("should handle form submission", async () => {
-    const mockAddProject = vi.fn().mockResolvedValue("project-1");
-    const mockOnProjectAdd = vi.fn();
-
-    const { useWorkspaceStore } = await import("@/stores/workspace-store");
-
-    vi.mocked(useWorkspaceStore).mockImplementation((selector?: any) => {
-      const state = { addProject: mockAddProject };
-      return selector ? selector(state) : state;
+    await waitFor(() => {
+      expect(onProjectAdd).toHaveBeenCalledWith('Backlog', '');
     });
+    expect(addProject).toHaveBeenCalledWith('Backlog', '', expect.any(Function));
+    expect(toast.success).toHaveBeenCalledWith('createSuccess');
 
-    const { container } = render(<NewProjectDialog onProjectAdd={mockOnProjectAdd} />);
+    // The store callback delegates to the create mutation
+    const persist = addProject.mock.calls[0][2];
+    await persist({ title: 'Backlog' });
+    expect(mutateAsync).toHaveBeenCalledWith({ title: 'Backlog' });
 
-    const form = container.querySelector("form");
-    if (form) {
-      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
-    }
-
-    expect(container.querySelector("form")).toBeInTheDocument();
-  });
-
-  it("should handle cancel button click", () => {
-    const { container } = render(<NewProjectDialog />);
-
-    const cancelBtn = container.querySelector('[data-testid="cancel-btn"]');
-    if (cancelBtn) {
-      cancelBtn.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    }
-
-    expect(container.querySelector("form")).toBeInTheDocument();
-  });
-
-  it("should handle form submission without callback", async () => {
-    const mockAddProject = vi.fn().mockResolvedValue("project-1");
-
-    const { useWorkspaceStore } = await import("@/stores/workspace-store");
-
-    vi.mocked(useWorkspaceStore).mockImplementation((selector?: any) => {
-      const state = { addProject: mockAddProject };
-      return selector ? selector(state) : state;
+    await waitFor(() => {
+      expect(screen.queryByText('addNewProjectTitle')).not.toBeInTheDocument();
     });
-
-    const { container } = render(<NewProjectDialog />);
-
-    const form = container.querySelector("form");
-    if (form) {
-      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
-    }
-
-    expect(container.querySelector("form")).toBeInTheDocument();
   });
 
-  it("should handle successful project creation and call callback", async () => {
-    const mockAddProject = vi.fn().mockResolvedValue("new-project-id");
-    const mockOnProjectAdd = vi.fn();
+  it('shows an error toast when the store returns no project id', async () => {
+    addProject.mockResolvedValue(null);
+    const onProjectAdd = vi.fn();
+    renderWithProviders(<NewProjectDialog onProjectAdd={onProjectAdd} />);
+    await openDialog();
+    submitTitle('Backlog');
 
-    const { useWorkspaceStore } = await import("@/stores/workspace-store");
-
-    vi.mocked(useWorkspaceStore).mockImplementation((selector?: any) => {
-      const state = { addProject: mockAddProject };
-      return selector ? selector(state) : state;
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('createFailed');
     });
-
-    const { container } = render(<NewProjectDialog onProjectAdd={mockOnProjectAdd} />);
-
-    const form = container.querySelector("form");
-    if (form) {
-      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
-    }
-
-    expect(container.querySelector("form")).toBeInTheDocument();
+    expect(onProjectAdd).not.toHaveBeenCalled();
   });
 
-  it("should handle when addProject returns falsy value", async () => {
-    const mockAddProject = vi.fn().mockResolvedValue(null);
+  it('shows an error toast when creation throws', async () => {
+    addProject.mockRejectedValue(new Error('boom'));
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    renderWithProviders(<NewProjectDialog />);
+    await openDialog();
+    submitTitle('Backlog');
 
-    const { useWorkspaceStore } = await import("@/stores/workspace-store");
-
-    vi.mocked(useWorkspaceStore).mockImplementation((selector?: any) => {
-      const state = { addProject: mockAddProject };
-      return selector ? selector(state) : state;
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('createFailed');
     });
-
-    const { container } = render(<NewProjectDialog />);
-
-    const form = container.querySelector("form");
-    if (form) {
-      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
-    }
-
-    expect(container.querySelector("form")).toBeInTheDocument();
   });
 
-  it("should handle when addProject returns empty string", async () => {
-    const mockAddProject = vi.fn().mockResolvedValue("");
+  it('does not submit without a title', async () => {
+    renderWithProviders(<NewProjectDialog />);
+    await openDialog();
+    fireEvent.click(screen.getByTestId('submit-project-button'));
 
-    const { useWorkspaceStore } = await import("@/stores/workspace-store");
-
-    vi.mocked(useWorkspaceStore).mockImplementation((selector?: any) => {
-      const state = { addProject: mockAddProject };
-      return selector ? selector(state) : state;
-    });
-
-    const { container } = render(<NewProjectDialog />);
-
-    const form = container.querySelector("form");
-    if (form) {
-      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
-    }
-
-    expect(container.querySelector("form")).toBeInTheDocument();
+    expect(await screen.findByText('Title is required')).toBeInTheDocument();
+    expect(addProject).not.toHaveBeenCalled();
   });
 });

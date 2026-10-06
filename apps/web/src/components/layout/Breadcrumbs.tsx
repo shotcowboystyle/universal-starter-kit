@@ -1,56 +1,21 @@
-"use client";
+'use client';
 
-import {
-  Breadcrumb,
-  BreadcrumbEllipsis,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbSeparator
-} from "@repo/ui/components/breadcrumb";
-import React from "react";
+import { Breadcrumbs as BreadcrumbTrail } from '@repo/ui';
 
-import { useBreadcrumbs } from "@/hooks/useBreadcrumbs";
+import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
+import { useRouter } from '@/i18n/navigation';
 
 export function Breadcrumbs() {
-  const { items, rootLink } = useBreadcrumbs();
+  const { items } = useBreadcrumbs();
+  const router = useRouter();
 
   return (
-    <Breadcrumb>
-      <BreadcrumbList>
-        {items.length === 1 ? (
-          <BreadcrumbItem>
-            <BreadcrumbLink href={items[0].link}>{items[0].title}</BreadcrumbLink>
-          </BreadcrumbItem>
-        ) : (
-          <>
-            {/* Mobile view */}
-            <BreadcrumbItem className="md:hidden">
-              <BreadcrumbLink href={rootLink}>
-                <BreadcrumbEllipsis />
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator className="md:hidden" />
-            <BreadcrumbItem className="md:hidden">
-              <BreadcrumbLink href={items[items.length - 1].link}>
-                {items[items.length - 1].title}
-              </BreadcrumbLink>
-            </BreadcrumbItem>
-
-            {/* Desktop view */}
-            {items.map((item, index) => (
-              <React.Fragment key={item.link}>
-                <BreadcrumbItem className="hidden md:inline-flex">
-                  <BreadcrumbLink href={item.link}>{item.title}</BreadcrumbLink>
-                </BreadcrumbItem>
-                {index < items.length - 1 && (
-                  <BreadcrumbSeparator className="hidden md:inline-flex" />
-                )}
-              </React.Fragment>
-            ))}
-          </>
-        )}
-      </BreadcrumbList>
-    </Breadcrumb>
+    <BreadcrumbTrail
+      items={items.map((item) => ({ label: item.title, href: item.link }))}
+      onNavigate={(href) => {
+        router.push(href);
+      }}
+      maxVisible={3}
+    />
   );
 }

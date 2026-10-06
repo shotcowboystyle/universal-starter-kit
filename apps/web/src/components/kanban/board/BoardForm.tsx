@@ -1,26 +1,12 @@
-"use client";
+'use client';
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage
-} from "@repo/ui/components/form";
-import { Input } from "@repo/ui/components/input";
-import { Textarea } from "@repo/ui/components/textarea";
-import { useTranslations } from "next-intl";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
+import { Form, Input, TextArea } from '@repo/forms';
+import { useTranslations } from 'next-intl';
+import { z } from 'zod';
 
-const BoardFormSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  description: z.string().optional()
-});
+import { boardSchema } from '@/types/boardForm';
 
-type BoardFormValues = z.infer<typeof BoardFormSchema>;
+type BoardFormValues = z.infer<typeof boardSchema>;
 
 interface BoardFormProps {
   defaultValues?: Partial<BoardFormValues>;
@@ -28,68 +14,32 @@ interface BoardFormProps {
   children?: React.ReactNode;
 }
 
+const validateTitle = ({ value }: { value: string }) =>
+  boardSchema.shape.title.safeParse(value).error?.issues[0]?.message;
+
 export function BoardForm({ defaultValues, onSubmit, children }: BoardFormProps) {
-  const t = useTranslations("kanban.actions");
-  const form = useForm<BoardFormValues>({
-    resolver: zodResolver(BoardFormSchema),
-    defaultValues: {
-      title: "",
-      description: "",
-      ...defaultValues
-    }
-  });
+  const t = useTranslations('kanban.actions');
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
-        <FormField
-          control={form.control}
-          name="title"
-          render={({ field }) => (
-            <FormItem className="space-y-1.5">
-              <FormLabel className="text-sm font-medium">{t("boardTitleLabel")}</FormLabel>
-              <FormControl>
-                <Input
-                  placeholder={t("boardTitlePlaceholder")}
-                  className="h-9"
-                  {...field}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                  }}
-                  onMouseDown={(e) => {
-                    e.stopPropagation();
-                  }}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem className="space-y-1.5">
-              <FormLabel className="text-sm font-medium">{t("descriptionLabel")}</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder={t("descriptionPlaceholder")}
-                  className="min-h-16 resize-none"
-                  {...field}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                  }}
-                  onMouseDown={(e) => {
-                    e.stopPropagation();
-                  }}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        {children}
-      </form>
+    <Form
+      formOptions={{ defaultValues: { title: '', description: '', ...defaultValues } }}
+      onSubmit={onSubmit}
+      showErrorSummary={false}>
+      <Input
+        name="title"
+        label={t('boardTitleLabel')}
+        placeholder={t('boardTitlePlaceholder')}
+        inputProps={{ testID: 'board-title-input' }}
+        validators={{ onSubmit: validateTitle }}
+      />
+      <TextArea
+        name="description"
+        label={t('descriptionLabel')}
+        placeholder={t('descriptionPlaceholder')}
+        minRows={2}
+        textAreaProps={{ testID: 'board-description-input' }}
+      />
+      {children}
     </Form>
   );
 }

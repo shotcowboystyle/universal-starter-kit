@@ -1,104 +1,70 @@
-"use client";
+'use client';
 
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem
-} from "@repo/ui/components/sidebar";
-import { HomeIcon } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { Sidebar, type SidebarItem, Text, XStack, YStack } from '@repo/ui';
+import { HomeIcon } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
-import { Icons } from "@/components/layout/Icons";
-import { useBoards } from "@/hooks/useBoards";
-import { Link, usePathname } from "@/i18n/navigation";
+import { Icons } from '@/components/layout/Icons';
+import { useBoards } from '@/hooks/useBoards';
+import { usePathname, useRouter } from '@/i18n/navigation';
+import type { Board } from '@/types/dbInterface';
 
-export default function AppSidebar() {
-  const t = useTranslations("sidebar");
+export default function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
+  const t = useTranslations('sidebar');
   const pathname = usePathname();
+  const router = useRouter();
   const { myBoards, teamBoards, loading } = useBoards();
 
+  const go = (href: string) => {
+    router.push(href);
+    onNavigate?.();
+  };
+
+  const boardItems = (boards: Board[] | undefined): SidebarItem[] =>
+    loading
+      ? [{ label: t('loading'), value: 'loading' }]
+      : (boards ?? []).map((board) => ({
+          label: board.title,
+          value: board._id,
+          active: pathname.endsWith(`/boards/${board._id}`),
+          onPress: () => go(`/boards/${board._id}`),
+        }));
+
   return (
-    <Sidebar collapsible="offcanvas">
-      <SidebarHeader>
-        <div className="flex gap-2 py-2 text-sidebar-accent-foreground">
-          <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-            <Icons.projectLogo />
-          </div>
-          <div className="grid flex-1 text-left text-sm leading-tight">
-            <span className="truncate font-semibold">{t("title")}</span>
-          </div>
-        </div>
-      </SidebarHeader>
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname.endsWith("/boards")}>
-                <Link href="/boards" className="flex items-center gap-2 px-2 py-2">
-                  <HomeIcon className="h-4 w-4" />
-                  <span>{t("overview")}</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <div className="flex items-center justify-between px-2">
-            <SidebarGroupLabel>{t("myBoards")}</SidebarGroupLabel>
-          </div>
-          <SidebarMenu>
-            {loading ? (
-              <div className="px-4 py-2 text-sm text-muted-foreground">{t("loading")}</div>
-            ) : (
-              myBoards?.map((board) => (
-                <SidebarMenuItem key={board._id}>
-                  <SidebarMenuButton asChild isActive={pathname.endsWith(`/boards/${board._id}`)}>
-                    <Link
-                      href={`/boards/${board._id}`}
-                      className="flex items-center gap-2 px-2 py-2"
-                    >
-                      <span className="h-4 w-4" />
-                      <span className="truncate">{board.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))
-            )}
-          </SidebarMenu>
-        </SidebarGroup>
-
-        {/* Team Boards Section */}
-        <SidebarGroup>
-          <div className="flex items-center justify-between px-2">
-            <SidebarGroupLabel>{t("teamBoards")}</SidebarGroupLabel>
-          </div>
-          <SidebarMenu>
-            {loading ? (
-              <div className="px-4 py-2 text-sm text-muted-foreground">{t("loading")}</div>
-            ) : (
-              teamBoards?.map((board) => (
-                <SidebarMenuItem key={board._id}>
-                  <SidebarMenuButton asChild isActive={pathname.endsWith(`/boards/${board._id}`)}>
-                    <Link
-                      href={`/boards/${board._id}`}
-                      className="flex items-center gap-2 px-2 py-2"
-                    >
-                      <span className="h-4 w-4" />
-                      <span className="truncate">{board.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))
-            )}
-          </SidebarMenu>
-        </SidebarGroup>
-      </SidebarContent>
-    </Sidebar>
+    <YStack width={250} height="100%">
+      <XStack alignItems="center" gap="$2" padding="$3">
+        <YStack
+          width={32}
+          height={32}
+          alignItems="center"
+          justifyContent="center"
+          borderRadius="$3"
+          borderWidth={1}
+          borderColor="$borderColor">
+          <Icons.projectLogo size={16} aria-hidden />
+        </YStack>
+        <Text fontWeight="600" numberOfLines={1} flex={1}>
+          {t('title')}
+        </Text>
+      </XStack>
+      <Sidebar
+        aria-label={t('title')}
+        sections={[
+          {
+            items: [
+              {
+                label: t('overview'),
+                value: 'overview',
+                icon: <HomeIcon size={16} aria-hidden />,
+                active: pathname.endsWith('/boards'),
+                onPress: () => go('/boards'),
+              },
+            ],
+          },
+          { title: t('myBoards'), items: boardItems(myBoards) },
+          { title: t('teamBoards'), items: boardItems(teamBoards) },
+        ]}
+      />
+    </YStack>
   );
 }

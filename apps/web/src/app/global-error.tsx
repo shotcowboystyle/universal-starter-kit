@@ -1,25 +1,36 @@
-"use client";
+'use client';
 
-export default function GlobalError({
-  error,
-  reset
-}: {
-  error: Error & { digest?: string };
-  reset: () => void;
-}) {
+// Renders outside the app providers (its own <html>), so it uses plain markup
+// with inline styles instead of the Tamagui catalog.
+export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
     <html lang="en">
-      <body>
-        <div className="flex min-h-screen flex-col items-center justify-center gap-4">
-          <h2 className="text-2xl font-bold">Something went wrong</h2>
-          <p className="text-muted-foreground">{error.message}</p>
-          <button
-            onClick={reset}
-            className="rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90"
-          >
-            Try again
-          </button>
-        </div>
+      <body
+        style={{
+          margin: 0,
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 16,
+          fontFamily: 'system-ui, sans-serif',
+        }}>
+        <h2 style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>Something went wrong</h2>
+        <p style={{ color: '#6b7280', margin: 0 }}>{error.message}</p>
+        <button
+          type="button"
+          onClick={reset}
+          style={{
+            borderRadius: 6,
+            border: 0,
+            padding: '8px 16px',
+            background: '#111827',
+            color: '#fff',
+            cursor: 'pointer',
+          }}>
+          Try again
+        </button>
       </body>
     </html>
   );

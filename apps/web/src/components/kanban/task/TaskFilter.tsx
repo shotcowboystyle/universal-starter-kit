@@ -1,30 +1,24 @@
-"use client";
+'use client';
 
-import { Badge } from "@repo/ui/components/badge";
-import { Button } from "@repo/ui/components/button";
-import { Input } from "@repo/ui/components/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from "@repo/ui/components/select";
-import { useTranslations } from "next-intl";
-import React from "react";
+import { Input } from '@repo/forms';
+import { Button, Chip, XStack, YStack } from '@repo/ui';
+import { useTranslations } from 'next-intl';
+import React from 'react';
 
-import { useWorkspaceStore } from "@/stores/workspace-store";
+import { useWorkspaceStore } from '@/stores/workspace-store';
+
+type StatusKey = 'TOTAL' | 'TODO' | 'IN_PROGRESS' | 'DONE';
 
 export function TaskFilter() {
   const { filter, setFilter, projects } = useWorkspaceStore();
-  const t = useTranslations("kanban.task");
+  const t = useTranslations('kanban.task');
 
   const statusCounts = React.useMemo(() => {
-    const counts = {
+    const counts: Record<StatusKey, number> = {
       TOTAL: 0,
       TODO: 0,
       IN_PROGRESS: 0,
-      DONE: 0
+      DONE: 0,
     };
 
     if (!Array.isArray(projects)) {
@@ -38,8 +32,8 @@ export function TaskFilter() {
           return;
         }
         counts.TOTAL++;
-        if (task.status && counts.hasOwnProperty(task.status)) {
-          counts[task.status as keyof typeof counts]++;
+        if (task.status && Object.hasOwn(counts, task.status)) {
+          counts[task.status as StatusKey]++;
         }
       });
     });
@@ -47,74 +41,46 @@ export function TaskFilter() {
     return counts;
   }, [projects]);
 
-  const handleFilterChange = React.useCallback(
-    (value: string) => {
-      setFilter({ status: value === "TOTAL" ? null : value });
-    },
-    [setFilter]
-  );
-
-  const handleSearchChange = React.useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      setFilter({ search: event.target.value });
-    },
-    [setFilter]
-  );
+  const statusOptions: { value: StatusKey; label: string }[] = [
+    { value: 'TOTAL', label: t('total') },
+    { value: 'TODO', label: t('statusTodo') },
+    { value: 'IN_PROGRESS', label: t('statusInProgress') },
+    { value: 'DONE', label: t('statusDone') },
+  ];
+  const activeStatus = filter.status || 'TOTAL';
 
   return (
-    <div className="mb-4 flex w-full items-center gap-2 md:w-auto">
-      <Input
-        type="text"
-        placeholder={t("searchPlaceholder")}
-        value={filter.search}
-        onChange={handleSearchChange}
-        className="w-full bg-background md:w-[300px]"
-        data-testid="search-input"
-      />
-      <Select value={filter.status || "TOTAL"} onValueChange={handleFilterChange}>
-        <SelectTrigger className="w-[140px]" data-testid="status-select">
-          <SelectValue placeholder={t("filterByStatus")} />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="TOTAL" data-testid="total-item">
-            {t("total")}
-            <Badge variant="outline" className="ml-2">
-              {statusCounts.TOTAL}
-            </Badge>
-          </SelectItem>
-          <SelectItem value="TODO" data-testid="todo-item">
-            {t("statusTodo")}
-            <Badge variant="outline" className="ml-2">
-              {statusCounts.TODO}
-            </Badge>
-          </SelectItem>
-          <SelectItem value="IN_PROGRESS" data-testid="in-progress-item">
-            {t("statusInProgress")}
-            <Badge variant="outline" className="ml-2">
-              {statusCounts.IN_PROGRESS}
-            </Badge>
-          </SelectItem>
-          <SelectItem value="DONE" data-testid="done-item">
-            {t("statusDone")}
-            <Badge variant="outline" className="ml-2">
-              {statusCounts.DONE}
-            </Badge>
-          </SelectItem>
-        </SelectContent>
-      </Select>
+    <XStack width="100%" alignItems="center" gap="$2" flexWrap="wrap" $md={{ justifyContent: 'flex-end' }}>
+      <YStack width="100%" $md={{ width: 300 }}>
+        <Input
+          placeholder={t('searchPlaceholder')}
+          value={filter.search}
+          onChangeText={(search) => setFilter({ search })}
+          aria-label={t('searchPlaceholder')}
+          inputProps={{ testID: 'search-input' }}
+        />
+      </YStack>
+      <XStack gap="$2" flexWrap="wrap" testID="status-filter">
+        {statusOptions.map(({ value, label }) => (
+          <Chip
+            key={value}
+            variant="outline"
+            selected={activeStatus === value}
+            onPress={() => setFilter({ status: value === 'TOTAL' ? null : value })}>
+            {`${label} ${statusCounts[value]}`}
+          </Chip>
+        ))}
+      </XStack>
 
-      {(filter.status || filter.search) && (
+      {filter.status || filter.search ? (
         <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => {
-            setFilter({ status: null, search: "" });
-          }}
-          data-testid="clear-filter-button"
-        >
-          {t("clearFilter")}
+          chromeless
+          size="$3"
+          onPress={() => setFilter({ status: null, search: '' })}
+          testID="clear-filter-button">
+          {t('clearFilter')}
         </Button>
-      )}
-    </div>
+      ) : null}
+    </XStack>
   );
 }

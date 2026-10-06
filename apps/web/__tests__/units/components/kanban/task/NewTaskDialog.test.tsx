@@ -1,55 +1,51 @@
-import { render, screen } from "@testing-library/react";
-/// <reference types="react" />
-import React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderWithProviders as render } from '@repo/test-utils';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import NewTaskDialog from "@/components/kanban/task/NewTaskDialog";
-
-globalThis.React = React;
+import NewTaskDialog from '@/components/kanban/task/NewTaskDialog';
 
 // Create hoisted mock for useWorkspaceStore
 const { mockUseWorkspaceStore, mockGetState } = vi.hoisted(() => {
   const mockGetState = vi.fn();
   const mockUseWorkspaceStore = Object.assign(vi.fn(), {
-    getState: mockGetState
+    getState: mockGetState,
   });
   return { mockUseWorkspaceStore, mockGetState };
 });
 
-vi.mock("@/lib/api/tasks/queries", () => ({
-  useCreateTask: vi.fn()
+vi.mock('@/lib/api/tasks/queries', () => ({
+  useCreateTask: vi.fn(),
 }));
 
-vi.mock("@/stores/workspace-store", () => ({
-  useWorkspaceStore: mockUseWorkspaceStore
+vi.mock('@/stores/workspace-store', () => ({
+  useWorkspaceStore: mockUseWorkspaceStore,
 }));
 
-vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string) => key
+vi.mock('next-intl', () => ({
+  useTranslations: () => (key: string) => key,
 }));
 
-vi.mock("sonner", () => ({
+vi.mock('sonner', () => ({
   toast: {
     success: vi.fn(),
-    error: vi.fn()
-  }
+    error: vi.fn(),
+  },
 }));
 
-vi.mock("@/components/kanban/task/TaskForm", () => ({
+vi.mock('@/components/kanban/task/TaskForm', () => ({
   TaskForm: ({ children, onSubmit, onCancel }: any) => (
     <form
       data-testid="task-form"
       onSubmit={(e) => {
         e.preventDefault();
         onSubmit?.({
-          title: "Test Task",
-          description: "Test Description",
-          status: "todo",
-          dueDate: new Date("2024-12-31"),
-          assignee: { _id: "user-1", name: "Test User", email: "test@example.com" }
+          title: 'Test Task',
+          description: 'Test Description',
+          status: 'todo',
+          dueDate: new Date('2024-12-31'),
+          assignee: { _id: 'user-1', name: 'Test User', email: 'test@example.com' },
         });
-      }}
-    >
+      }}>
       {children}
       <button type="button" onClick={onCancel} data-testid="cancel-btn">
         Cancel
@@ -58,138 +54,87 @@ vi.mock("@/components/kanban/task/TaskForm", () => ({
         Submit
       </button>
     </form>
-  )
+  ),
 }));
 
-vi.mock("@repo/ui/components/dialog", () => ({
-  Dialog: ({ children }: any) => <div data-testid="dialog">{children}</div>,
-  DialogTrigger: ({ children }: any) => <div data-testid="dialog-trigger">{children}</div>,
-  DialogContent: ({ children }: any) => <div data-testid="dialog-content">{children}</div>,
-  DialogHeader: ({ children }: any) => <div data-testid="dialog-header">{children}</div>,
-  DialogTitle: ({ children }: any) => <h2 data-testid="dialog-title">{children}</h2>,
-  DialogDescription: ({ children }: any) => <p data-testid="dialog-description">{children}</p>
-}));
-
-vi.mock("@repo/ui/components/button", () => ({
-  Button: ({ children, ...props }: any) => <button {...props}>{children}</button>
-}));
-
-describe("NewTaskDialog", () => {
-  const mockProjectId = "project-1";
+describe('NewTaskDialog', () => {
+  const mockProjectId = 'project-1';
 
   beforeEach(async () => {
     vi.clearAllMocks();
 
-    const { useCreateTask } = await import("@/lib/api/tasks/queries");
+    const { useCreateTask } = await import('@/lib/api/tasks/queries');
 
     vi.mocked(useCreateTask).mockReturnValue({
-      mutateAsync: vi.fn().mockResolvedValue({ _id: "task-1" }),
+      mutateAsync: vi.fn().mockResolvedValue({ _id: 'task-1' }),
       mutate: vi.fn(),
-      isPending: false
+      isPending: false,
     } as any);
 
     const store = {
-      addTask: vi.fn().mockResolvedValue("task-1"),
+      addTask: vi.fn().mockResolvedValue('task-1'),
       projects: [
         {
-          _id: "project-1",
-          title: "Test Project",
+          _id: 'project-1',
+          title: 'Test Project',
           tasks: [
-            { _id: "task-1", orderInProject: 0 },
-            { _id: "task-2", orderInProject: 1 }
-          ]
-        }
-      ]
+            { _id: 'task-1', orderInProject: 0 },
+            { _id: 'task-2', orderInProject: 1 },
+          ],
+        },
+      ],
     };
 
     // Setup the mock implementation
-    mockUseWorkspaceStore.mockImplementation((selector?: any) =>
-      selector ? selector(store) : store
-    );
+    mockUseWorkspaceStore.mockImplementation((selector?: any) => (selector ? selector(store) : store));
     mockGetState.mockReturnValue(store);
   });
 
-  it("should render dialog", () => {
+  const openDialog = async () => {
     render(<NewTaskDialog projectId={mockProjectId} />);
-    expect(screen.getByTestId("dialog")).toBeInTheDocument();
-  });
+    fireEvent.click(screen.getByTestId('new-task-trigger'));
+    await screen.findByTestId('new-task-dialog');
+  };
 
-  it("should render trigger button", () => {
+  it('renders only the trigger while closed', () => {
     render(<NewTaskDialog projectId={mockProjectId} />);
-    expect(screen.getByText("addNewTask")).toBeInTheDocument();
+    expect(screen.getByTestId('new-task-trigger')).toHaveTextContent('addNewTask');
+    expect(screen.queryByTestId('new-task-dialog')).not.toBeInTheDocument();
   });
 
-  it("should render trigger button with correct testid", () => {
-    render(<NewTaskDialog projectId={mockProjectId} />);
-    expect(screen.getByTestId("new-task-trigger")).toBeInTheDocument();
+  it('opens the dialog with title, description and form', async () => {
+    await openDialog();
+    expect(screen.getByText('addNewTaskTitle')).toBeInTheDocument();
+    expect(screen.getByText('addNewTaskDescription')).toBeInTheDocument();
+    expect(screen.getByTestId('task-form')).toBeInTheDocument();
   });
 
-  it("should render dialog title", () => {
-    render(<NewTaskDialog projectId={mockProjectId} />);
-    expect(screen.getByText("addNewTaskTitle")).toBeInTheDocument();
+  it('creates the task with the next order and closes the dialog', async () => {
+    const { toast } = await import('sonner');
+    await openDialog();
+    const store = mockGetState();
+
+    fireEvent.click(screen.getByTestId('submit-btn'));
+
+    await waitFor(() => {
+      expect(store.addTask).toHaveBeenCalledWith(
+        mockProjectId,
+        'Test Task',
+        'todo',
+        expect.any(Function),
+        'Test Description',
+        expect.any(Date),
+        'user-1',
+        2,
+      );
+    });
+    expect(toast.success).toHaveBeenCalledWith('createSuccess');
+    await waitFor(() => expect(screen.queryByTestId('new-task-dialog')).not.toBeInTheDocument());
   });
 
-  it("should render dialog description", () => {
-    render(<NewTaskDialog projectId={mockProjectId} />);
-    expect(screen.getByText("addNewTaskDescription")).toBeInTheDocument();
-  });
-
-  it("should render task form", () => {
-    render(<NewTaskDialog projectId={mockProjectId} />);
-    expect(screen.getByTestId("task-form")).toBeInTheDocument();
-  });
-
-  it("should render with valid projectId", () => {
-    render(<NewTaskDialog projectId="project-123" />);
-    expect(screen.getByTestId("dialog")).toBeInTheDocument();
-  });
-
-  it("should render dialog structure", () => {
-    const { container } = render(<NewTaskDialog projectId={mockProjectId} />);
-    expect(container.firstChild).toBeTruthy();
-  });
-
-  it("should handle dialog content", () => {
-    render(<NewTaskDialog projectId={mockProjectId} />);
-    expect(screen.getByTestId("dialog-content")).toBeInTheDocument();
-    expect(screen.getByTestId("dialog-header")).toBeInTheDocument();
-  });
-
-  it("should render dialog with all required elements", () => {
-    render(<NewTaskDialog projectId={mockProjectId} />);
-    expect(screen.getByTestId("dialog-trigger")).toBeInTheDocument();
-    expect(screen.getByTestId("dialog-content")).toBeInTheDocument();
-    expect(screen.getByTestId("dialog-title")).toBeInTheDocument();
-    expect(screen.getByTestId("dialog-description")).toBeInTheDocument();
-    expect(screen.getByTestId("task-form")).toBeInTheDocument();
-  });
-
-  it("should handle form submission", async () => {
-    const { container } = render(<NewTaskDialog projectId={mockProjectId} />);
-
-    const form = container.querySelector("form");
-    if (form) {
-      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
-    }
-
-    expect(container.querySelector("form")).toBeInTheDocument();
-  });
-
-  it("should handle cancel button click", () => {
-    const { container } = render(<NewTaskDialog projectId={mockProjectId} />);
-
-    const cancelBtn = container.querySelector('[data-testid="cancel-btn"]');
-    if (cancelBtn) {
-      cancelBtn.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    }
-
-    expect(container.querySelector("form")).toBeInTheDocument();
-  });
-
-  it("should have proper dialog structure for task creation", () => {
-    render(<NewTaskDialog projectId={mockProjectId} />);
-    expect(screen.getByTestId("new-task-trigger")).toBeInTheDocument();
-    expect(screen.getByTestId("dialog")).toBeInTheDocument();
-    expect(screen.getByTestId("task-form")).toBeInTheDocument();
+  it('closes the dialog on cancel', async () => {
+    await openDialog();
+    fireEvent.click(screen.getByTestId('cancel-btn'));
+    await waitFor(() => expect(screen.queryByTestId('new-task-dialog')).not.toBeInTheDocument());
   });
 });

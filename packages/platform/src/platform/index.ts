@@ -5,7 +5,6 @@ import { type Platform, getBroadName, getPreciseName, platformBase } from './pla
 
 declare global {
   interface Window {
-    __NEXT_DATA__?: unknown;
     ipc?: unknown;
   }
 }
@@ -33,7 +32,9 @@ export const platform: Platform = {
   isIframe,
   isWebExtension,
   isBrowser: !!(platformBase.isWeb && platformBase.isWindowDefined && !isWebExtension),
-  isNext: platformBase.isWeb && (!platformBase.isWindowDefined || typeof window.__NEXT_DATA__ === 'object'),
+  isNext:
+    platformBase.isWeb &&
+    (!platformBase.isWindowDefined || typeof (window as { __NEXT_DATA__?: unknown }).__NEXT_DATA__ === 'object'),
   isFirefox: platformBase.isWindowDefined && !!(window?.navigator?.userAgent?.toLowerCase().indexOf('firefox') > -1),
 };
 platform.preciseName = getPreciseName(platform);

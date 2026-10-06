@@ -1,20 +1,20 @@
-"use client";
+'use client';
 
-import { DndContext, DragOverlay } from "@dnd-kit/core";
-import { SortableContext } from "@dnd-kit/sortable";
-import { Skeleton } from "@repo/ui/components/skeleton";
-import { Fragment, useMemo } from "react";
+import { DndContext, DragOverlay } from '@dnd-kit/core';
+import { SortableContext } from '@dnd-kit/sortable';
+import { Skeleton, XStack, YStack } from '@repo/ui';
+import { Fragment, useMemo } from 'react';
 
-import { useWorkspaceStore } from "@/stores/workspace-store";
-import { Project, Task } from "@/types/dbInterface";
+import { useWorkspaceStore } from '@/stores/workspace-store';
+import { Project, Task } from '@/types/dbInterface';
 
-import NewProjectDialog from "../project/NewProjectDialog";
-import { BoardContainer, BoardProject } from "../project/Project";
-import { TaskCard } from "../task/TaskCard";
-import { TaskFilter } from "../task/TaskFilter";
+import NewProjectDialog from '../project/NewProjectDialog';
+import { BoardContainer, BoardProject } from '../project/Project';
+import { TaskCard } from '../task/TaskCard';
+import { TaskFilter } from '../task/TaskFilter';
 
-import { BoardProvider, useBoardContext } from "./BoardContext";
-import { useBoardDnd } from "./useBoardDnd";
+import { BoardProvider, useBoardContext } from './BoardContext';
+import { useBoardDnd } from './useBoardDnd';
 
 function BoardContent() {
   const rawProjects = useWorkspaceStore((state) => state.projects);
@@ -33,16 +33,8 @@ function BoardContent() {
 
   const projectsId = useMemo(() => projects.map((project: Project) => project._id), [projects]);
 
-  const {
-    sensors,
-    activeProject,
-    activeTask,
-    announcements,
-    onDragStart,
-    onDragOver,
-    onDragEnd,
-    onDragCancel
-  } = useBoardDnd(projects, projectsId, setProjects, rawProjects);
+  const { sensors, activeProject, activeTask, announcements, onDragStart, onDragOver, onDragEnd, onDragCancel } =
+    useBoardDnd(projects, projectsId, setProjects, rawProjects);
 
   const filterTasks = (tasks: Task[] = []) => {
     if (!Array.isArray(tasks)) {
@@ -66,29 +58,33 @@ function BoardContent() {
   };
 
   return (
-    <div data-testid="board">
+    <YStack testID="board">
       <DndContext
         id="dnd-context"
         sensors={sensors}
         accessibility={{
-          announcements
+          announcements,
         }}
         onDragStart={onDragStart}
         onDragOver={onDragOver}
         onDragEnd={onDragEnd}
-        onDragCancel={onDragCancel}
-      >
-        <div className="mb-4 flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center">
-          <div className="w-full sm:w-[200px]">
+        onDragCancel={onDragCancel}>
+        <YStack
+          marginBottom="$4"
+          gap="$2"
+          alignItems="flex-start"
+          justifyContent="space-between"
+          $sm={{ flexDirection: 'row', alignItems: 'center' }}>
+          <YStack width="100%" $sm={{ width: 200 }}>
             <NewProjectDialog />
-          </div>
-          <div className="w-full sm:flex sm:justify-end">
+          </YStack>
+          <XStack width="100%" $sm={{ flex: 1, width: 'auto', minWidth: 0, justifyContent: 'flex-end' }}>
             <TaskFilter />
-          </div>
-        </div>
+          </XStack>
+        </YStack>
         <BoardContainer>
           {isLoadingProjects ? (
-            <Skeleton className="flex h-[75vh] max-h-[75vh] w-full shrink-0 snap-center flex-col bg-secondary md:w-[380px]" />
+            <Skeleton variant="rounded" width="100%" height="75vh" $md={{ width: 380 }} testID="projects-skeleton" />
           ) : (
             <SortableContext items={projectsId}>
               {projects?.map((project: Project) => (
@@ -119,7 +115,7 @@ function BoardContent() {
           {activeTask && <TaskCard task={activeTask} isOverlay />}
         </DragOverlay>
       </DndContext>
-    </div>
+    </YStack>
   );
 }
 

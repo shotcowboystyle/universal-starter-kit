@@ -1,38 +1,22 @@
-import { createRequire } from 'module';
 import path from 'path';
 
-import type { ViteUserConfig } from 'vitest/config';
-import { defineConfig } from 'vitest/config';
+import { createVitestConfig } from '@repo/config/vitest';
+import { mergeConfig } from 'vitest/config';
 
-import rootConfigRaw from '../../.config/vitest.config';
+// Shared preset: react-native → react-native-web, one React copy across the
+// workspace, and Tamagui-friendly dependency inlining.
+const base = createVitestConfig({
+  tamaguiConfig: false,
+  environment: 'jsdom',
+  setupFiles: ['@repo/test-utils/setup', './vitest.setup.ts'],
+  include: ['__tests__/**/*.test.{ts,tsx}'],
+  exclude: ['__tests__/e2e/**', '**/node_modules/**'],
+  // Bundle these so they share the single React copy the preset pins.
+  inlineDeps: ['zustand', '@testing-library/react', '@testing-library/dom'],
+});
 
-// Cast to ViteUserConfig to avoid type mismatch from duplicate vitest installations
-const rootConfig = rootConfigRaw;
-
-// Use require.resolve to dynamically locate React wherever pnpm stores it.
-// path.resolve(__dirname, './node_modules/react') breaks in CI where pnpm
-// may not create a local symlink. require.resolve follows Node's resolution
-// algorithm and works in all pnpm hoisting modes.
-const require = createRequire(import.meta.url);
-const reactPath = path.dirname(require.resolve('react/package.json'));
-const reactDomPath = path.dirname(require.resolve('react-dom/package.json'));
-
-export default defineConfig({
-  ...rootConfig,
+const config = mergeConfig(base, {
   test: {
-    ...rootConfig.test,
-    include: ['__tests__/**/*.test.{ts,tsx}'],
-    exclude: ['__tests__/e2e/**'],
-    setupFiles: ['./vitest.setup.ts'],
-    environment: 'jsdom',
-    // test.alias takes precedence over resolve.alias for test files.
-    // Pinning react here ensures hooks in Zustand / @repo/store
-    // always reference the same React dispatcher.
-    alias: {
-      ...rootConfig.test?.alias,
-      react: reactPath,
-      'react-dom': reactDomPath,
-    },
     coverage: {
       reporter: ['text', 'json', 'html', 'lcov'],
       include: ['src/**/*.{ts,tsx}'],
@@ -45,8 +29,6 @@ export default defineConfig({
         'src/**/loading.tsx',
         'src/**/not-found.tsx',
         '__tests__/**/',
-        'src/components/ui/**/',
-        'src/hooks/use-mobile.ts',
         'src/types/**/',
         'src/components/kanban/board/**',
         'src/components/kanban/task/TaskAction.tsx',
@@ -60,23 +42,15 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      ...rootConfig.resolve?.alias,
       '@': path.resolve(__dirname, './src'),
-      '@repo/ui/components': path.resolve(__dirname, '../../packages/ui/src/components/ui'),
-      '@repo/ui/lib': path.resolve(__dirname, '../../packages/ui/src/lib'),
-      '@repo/ui': path.resolve(__dirname, '../../packages/ui/src'),
-      // Pin React and all sub-path imports to the same resolved copy
-      react: reactPath,
-      'react-dom': reactDomPath,
-      'react/jsx-runtime': path.resolve(reactPath, 'jsx-runtime'),
-      'react/jsx-dev-runtime': path.resolve(reactPath, 'jsx-dev-runtime'),
-      'react-dom/client': path.resolve(reactDomPath, 'client'),
     },
   },
-  // Force packages to be bundled (not externalized) so React aliases are applied.
-  // This prevents packages from using their own node_modules/react copy
-  // which causes "Invalid hook call" errors in tests.
-  ssr: {
-    noExternal: [/zustand/, /@tanstack\/react-query/, /@tanstack\/query-core/, /@testing-library/],
-  },
 });
+
+// `.next.*` first so @repo/router resolves its Next.js variant, as in next.config.ts.
+config.resolve = {
+  ...config.resolve,
+  extensions: ['.next.tsx', '.next.ts', ...(config.resolve?.extensions ?? [])],
+};
+
+export default config;

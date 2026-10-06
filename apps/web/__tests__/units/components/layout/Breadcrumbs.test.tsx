@@ -1,123 +1,54 @@
-import { render, screen } from "@testing-library/react";
-/// <reference types="react" />
-import React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderWithProviders } from '@repo/test-utils';
+import { fireEvent, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { Breadcrumbs } from "@/components/layout/Breadcrumbs";
+import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
+import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
 
-// Ensure React is globally available
-globalThis.React = React;
+const mockPush = vi.fn();
 
-// Mock dependencies
-vi.mock("@/hooks/useBreadcrumbs", () => ({
-  useBreadcrumbs: vi.fn()
+vi.mock('@/hooks/useBreadcrumbs', () => ({
+  useBreadcrumbs: vi.fn(),
 }));
 
-// Mock Breadcrumb components
-vi.mock("@repo/ui/components/breadcrumb", () => ({
-  Breadcrumb: ({ children }: any) => (
-    <nav aria-label="breadcrumb" data-testid="breadcrumb">
-      {children}
-    </nav>
-  ),
-  BreadcrumbList: ({ children }: any) => <ol data-testid="breadcrumb-list">{children}</ol>,
-  BreadcrumbItem: ({ children }: any) => <li data-testid="breadcrumb-item">{children}</li>,
-  BreadcrumbLink: ({ children, href }: any) => (
-    <div data-href={href} data-testid="breadcrumb-link">
-      {children}
-    </div>
-  ),
-  BreadcrumbSeparator: ({ children }: any) => (
-    <span data-testid="breadcrumb-separator">{children || "/"}</span>
-  ),
-  BreadcrumbEllipsis: () => <span data-testid="breadcrumb-ellipsis">...</span>
+vi.mock('@/i18n/navigation', () => ({
+  useRouter: () => ({ push: mockPush }),
 }));
 
-describe("Breadcrumbs", () => {
-  beforeEach(async () => {
+function mockItems(items: { title: string; link: string }[]) {
+  vi.mocked(useBreadcrumbs).mockReturnValue({ items, rootLink: '/boards' });
+}
+
+describe('Breadcrumbs', () => {
+  beforeEach(() => {
     vi.clearAllMocks();
-
-    const { useBreadcrumbs } = await import("@/hooks/useBreadcrumbs");
-    vi.mocked(useBreadcrumbs).mockReturnValue({
-      items: [
-        { title: "Home", link: "/" },
-        { title: "Boards", link: "/boards" },
-        { title: "Board 1", link: "/boards/1" }
-      ],
-      rootLink: "/boards"
-    });
+    mockItems([
+      { title: 'Boards', link: '/boards' },
+      { title: 'Board 1', link: '/boards/1' },
+    ]);
   });
 
-  it("should render breadcrumbs", () => {
-    const { container } = render(<Breadcrumbs />);
-    expect(container.firstChild).toBeTruthy();
+  it('renders a breadcrumb landmark with every item', () => {
+    renderWithProviders(<Breadcrumbs />);
+    expect(screen.getByTestId('breadcrumbs')).toBeInTheDocument();
+    expect(screen.getByText('Boards')).toBeInTheDocument();
+    expect(screen.getByText('Board 1')).toBeInTheDocument();
   });
 
-  it("should render all breadcrumb items", () => {
-    const { container } = render(<Breadcrumbs />);
-    const links = container.querySelectorAll("[data-href]");
-    // Should have 3 breadcrumb links
-    expect(links.length).toBeGreaterThanOrEqual(3);
+  it('marks the last item as the current page', () => {
+    renderWithProviders(<Breadcrumbs />);
+    expect(screen.getByText('Board 1')).toHaveAttribute('aria-current', 'page');
   });
 
-  it("should render single breadcrumb item", async () => {
-    const { useBreadcrumbs } = await import("@/hooks/useBreadcrumbs");
-    vi.mocked(useBreadcrumbs).mockReturnValue({
-      items: [{ title: "Home", link: "/" }],
-      rootLink: "/boards"
-    });
-
-    render(<Breadcrumbs />);
-    expect(screen.getByText("Home")).toBeInTheDocument();
+  it('navigates through the locale-aware router', () => {
+    renderWithProviders(<Breadcrumbs />);
+    fireEvent.click(screen.getByText('Boards'));
+    expect(mockPush).toHaveBeenCalledWith('/boards');
   });
 
-  it("should handle minimal breadcrumbs with one item", async () => {
-    const { useBreadcrumbs } = await import("@/hooks/useBreadcrumbs");
-    vi.mocked(useBreadcrumbs).mockReturnValue({
-      items: [{ title: "Home", link: "/" }],
-      rootLink: "/boards"
-    });
-
-    const { container } = render(<Breadcrumbs />);
-    expect(container.querySelector("nav")).toBeTruthy();
-  });
-
-  it("should render multiple breadcrumb items", async () => {
-    const { useBreadcrumbs } = await import("@/hooks/useBreadcrumbs");
-    vi.mocked(useBreadcrumbs).mockReturnValue({
-      items: [
-        { title: "Level 1", link: "/level1" },
-        { title: "Level 2", link: "/level1/level2" },
-        { title: "Level 3", link: "/level1/level2/level3" },
-        { title: "Level 4", link: "/level1/level2/level3/level4" }
-      ],
-      rootLink: "/boards"
-    });
-
-    const { container } = render(<Breadcrumbs />);
-    const links = container.querySelectorAll("[data-href]");
-    expect(links.length).toBeGreaterThanOrEqual(4);
-  });
-
-  it("should handle special characters in breadcrumb titles", async () => {
-    const { useBreadcrumbs } = await import("@/hooks/useBreadcrumbs");
-    vi.mocked(useBreadcrumbs).mockReturnValue({
-      items: [{ title: "Board & Project", link: "/board-1" }],
-      rootLink: "/boards"
-    });
-
-    render(<Breadcrumbs />);
-    expect(screen.getByText("Board & Project")).toBeInTheDocument();
-  });
-
-  it("should render component structure", () => {
-    const { container } = render(<Breadcrumbs />);
-    expect(container.querySelector("nav")).toBeTruthy();
-  });
-
-  it("should handle component lifecycle", () => {
-    const { unmount } = render(<Breadcrumbs />);
-    expect(screen.getByText("Home")).toBeInTheDocument();
-    unmount();
+  it('renders a single item', () => {
+    mockItems([{ title: 'Board & Project', link: '/boards' }]);
+    renderWithProviders(<Breadcrumbs />);
+    expect(screen.getByText('Board & Project')).toBeInTheDocument();
   });
 });

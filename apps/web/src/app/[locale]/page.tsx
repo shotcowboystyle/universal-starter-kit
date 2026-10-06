@@ -1,10 +1,11 @@
-"use client";
+'use client';
 
-import { useEffect } from "react";
+import { Paragraph, YStack } from '@repo/ui';
+import { useEffect } from 'react';
 
-import { ROUTES } from "@/constants/routes";
-import { useRouter } from "@/i18n/navigation";
-import { useAuthStore } from "@/stores/auth-store";
+import { ROUTES } from '@/constants/routes';
+import { useRouter } from '@/i18n/navigation';
+import { useAuthStore } from '@/stores/auth-store';
 
 // This page acts as a client-side entry point to redirect users
 // based on their authentication status.
@@ -25,15 +26,15 @@ export default function RootPage() {
       // If user is not logged in, redirect to the login page
       // Note: We are hardcoding '/login' as it's a frontend route
       // and not part of the API routes constant.
-      router.replace("/login");
+      router.replace('/login');
     }
   }, [user, isLoading, router]);
 
   // Render a loading state while we determine the redirect.
   // This can be replaced with a more sophisticated loading spinner component.
   return (
-    <div className="flex h-screen w-full items-center justify-center">
-      <p>Loading...</p>
-    </div>
+    <YStack height="100vh" width="100%" alignItems="center" justifyContent="center">
+      <Paragraph>Loading...</Paragraph>
+    </YStack>
   );
 }

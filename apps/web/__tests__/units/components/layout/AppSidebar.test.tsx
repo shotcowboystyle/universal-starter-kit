@@ -1,197 +1,96 @@
-import { render, screen } from "@testing-library/react";
-/// <reference types="react" />
-import React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderWithProviders } from '@repo/test-utils';
+import { fireEvent, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import AppSidebar from "@/components/layout/AppSidebar";
+import AppSidebar from '@/components/layout/AppSidebar';
+import { useBoards } from '@/hooks/useBoards';
+import { usePathname } from '@/i18n/navigation';
 
-// Ensure React is globally available
-globalThis.React = React;
+const mockPush = vi.fn();
 
-// Mock dependencies
-vi.mock("@/hooks/useBoards", () => ({
-  useBoards: vi.fn()
+vi.mock('@/hooks/useBoards', () => ({
+  useBoards: vi.fn(),
 }));
 
-vi.mock("@/i18n/navigation", () => ({
-  Link: ({ children, href }: any) => <div data-href={href}>{children}</div>,
-  usePathname: vi.fn(() => "/boards")
+vi.mock('@/i18n/navigation', () => ({
+  useRouter: () => ({ push: mockPush }),
+  usePathname: vi.fn(() => '/boards'),
 }));
 
-vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string) => key
+vi.mock('next-intl', () => ({
+  useTranslations: () => (key: string) => key,
 }));
 
-vi.mock("@/components/layout/Icons", () => ({
-  Icons: {
-    projectLogo: () => <div data-testid="project-logo">Logo</div>
-  }
-}));
+const board = (id: string, title: string) => ({
+  _id: id,
+  title,
+  owner: 'user-1',
+  members: [],
+  projects: [],
+  createdAt: '',
+  updatedAt: '',
+});
 
-// Mock Sidebar components
-vi.mock("@repo/ui/components/sidebar", () => ({
-  Sidebar: ({ children }: any) => <div data-testid="sidebar">{children}</div>,
-  SidebarHeader: ({ children }: any) => <div data-testid="sidebar-header">{children}</div>,
-  SidebarContent: ({ children }: any) => <div data-testid="sidebar-content">{children}</div>,
-  SidebarGroup: ({ children }: any) => <div data-testid="sidebar-group">{children}</div>,
-  SidebarGroupLabel: ({ children }: any) => <div data-testid="sidebar-group-label">{children}</div>,
-  SidebarMenu: ({ children }: any) => <ul data-testid="sidebar-menu">{children}</ul>,
-  SidebarMenuItem: ({ children }: any) => <li data-testid="sidebar-menu-item">{children}</li>,
-  SidebarMenuButton: ({ children, _asChild }: any) => (
-    <div data-testid="sidebar-menu-button">{children}</div>
-  )
-}));
+function mockBoards(overrides: Record<string, unknown> = {}) {
+  vi.mocked(useBoards).mockReturnValue({
+    myBoards: [board('board-1', 'My Board 1'), board('board-2', 'My Board 2')],
+    teamBoards: [board('board-3', 'Team Board 1')],
+    loading: false,
+    ...overrides,
+  } as any);
+}
 
-describe("AppSidebar", () => {
-  const mockMyBoards = [
-    {
-      _id: "board-1",
-      title: "My Board 1",
-      owner: "user-1",
-      members: [],
-      projects: [],
-      createdAt: "",
-      updatedAt: ""
-    },
-    {
-      _id: "board-2",
-      title: "My Board 2",
-      owner: "user-1",
-      members: [],
-      projects: [],
-      createdAt: "",
-      updatedAt: ""
-    }
-  ];
-
-  const mockTeamBoards = [
-    {
-      _id: "board-3",
-      title: "Team Board 1",
-      owner: "user-2",
-      members: [],
-      projects: [],
-      createdAt: "",
-      updatedAt: ""
-    }
-  ];
-
-  beforeEach(async () => {
+describe('AppSidebar', () => {
+  beforeEach(() => {
     vi.clearAllMocks();
-
-    const { useBoards } = await import("@/hooks/useBoards");
-    vi.mocked(useBoards).mockReturnValue({
-      myBoards: mockMyBoards,
-      teamBoards: mockTeamBoards,
-      loading: false,
-      createBoard: vi.fn().mockResolvedValue(undefined),
-      currentBoard: null
-    } as any);
+    vi.mocked(usePathname).mockReturnValue('/boards');
+    mockBoards();
   });
 
-  it("should render sidebar", () => {
-    const { container } = render(<AppSidebar />);
-    expect(container.firstChild).toBeTruthy();
+  it('renders title, overview, section labels and boards', () => {
+    renderWithProviders(<AppSidebar />);
+    expect(screen.getByRole('navigation', { name: 'title' })).toBeInTheDocument();
+    expect(screen.getByText('overview')).toBeInTheDocument();
+    expect(screen.getByText('myBoards')).toBeInTheDocument();
+    expect(screen.getByText('teamBoards')).toBeInTheDocument();
+    expect(screen.getByText('My Board 1')).toBeInTheDocument();
+    expect(screen.getByText('My Board 2')).toBeInTheDocument();
+    expect(screen.getByText('Team Board 1')).toBeInTheDocument();
   });
 
-  it("should render project logo", () => {
-    render(<AppSidebar />);
-    expect(screen.getByTestId("project-logo")).toBeInTheDocument();
+  it('shows loading rows while boards load', () => {
+    mockBoards({ myBoards: [], teamBoards: [], loading: true });
+    renderWithProviders(<AppSidebar />);
+    expect(screen.getAllByText('loading')).toHaveLength(2);
   });
 
-  it("should render overview link", () => {
-    render(<AppSidebar />);
-    expect(screen.getByText("overview")).toBeInTheDocument();
+  it('renders section labels with no boards', () => {
+    mockBoards({ myBoards: [], teamBoards: [] });
+    renderWithProviders(<AppSidebar />);
+    expect(screen.getByText('myBoards')).toBeInTheDocument();
+    expect(screen.getByText('teamBoards')).toBeInTheDocument();
+    expect(screen.queryByText('My Board 1')).not.toBeInTheDocument();
   });
 
-  it("should render my boards section", () => {
-    render(<AppSidebar />);
-    expect(screen.getByText("myBoards")).toBeInTheDocument();
+  it('navigates to a board and calls onNavigate', () => {
+    const onNavigate = vi.fn();
+    renderWithProviders(<AppSidebar onNavigate={onNavigate} />);
+    fireEvent.click(screen.getByText('Team Board 1'));
+    expect(mockPush).toHaveBeenCalledWith('/boards/board-3');
+    expect(onNavigate).toHaveBeenCalledTimes(1);
   });
 
-  it("should render team boards section", () => {
-    render(<AppSidebar />);
-    expect(screen.getByText("teamBoards")).toBeInTheDocument();
+  it('navigates to the overview', () => {
+    renderWithProviders(<AppSidebar />);
+    fireEvent.click(screen.getByText('overview'));
+    expect(mockPush).toHaveBeenCalledWith('/boards');
   });
 
-  it("should render all my boards", () => {
-    render(<AppSidebar />);
-    expect(screen.getByText("My Board 1")).toBeInTheDocument();
-    expect(screen.getByText("My Board 2")).toBeInTheDocument();
-  });
-
-  it("should render all team boards", () => {
-    render(<AppSidebar />);
-    expect(screen.getByText("Team Board 1")).toBeInTheDocument();
-  });
-
-  it("should show loading state for my boards", async () => {
-    const { useBoards } = await import("@/hooks/useBoards");
-    vi.mocked(useBoards).mockReturnValue({
-      myBoards: [],
-      teamBoards: [],
-      loading: true,
-      createBoard: vi.fn(),
-      currentBoard: null
-    } as any);
-
-    render(<AppSidebar />);
-    const loadingTexts = screen.getAllByText("loading");
-    expect(loadingTexts.length).toBeGreaterThan(0);
-  });
-
-  it("should handle empty my boards", async () => {
-    const { useBoards } = await import("@/hooks/useBoards");
-    vi.mocked(useBoards).mockReturnValue({
-      myBoards: [],
-      teamBoards: mockTeamBoards,
-      loading: false,
-      createBoard: vi.fn(),
-      currentBoard: null
-    } as any);
-
-    render(<AppSidebar />);
-    expect(screen.getByText("myBoards")).toBeInTheDocument();
-  });
-
-  it("should handle empty team boards", async () => {
-    const { useBoards } = await import("@/hooks/useBoards");
-    vi.mocked(useBoards).mockReturnValue({
-      myBoards: mockMyBoards,
-      teamBoards: [],
-      loading: false,
-      createBoard: vi.fn(),
-      currentBoard: null
-    } as any);
-
-    render(<AppSidebar />);
-    expect(screen.getByText("teamBoards")).toBeInTheDocument();
-  });
-
-  it("should handle both empty boards", async () => {
-    const { useBoards } = await import("@/hooks/useBoards");
-    vi.mocked(useBoards).mockReturnValue({
-      myBoards: [],
-      teamBoards: [],
-      loading: false,
-      createBoard: vi.fn(),
-      currentBoard: null
-    } as any);
-
-    render(<AppSidebar />);
-    expect(screen.getByText("myBoards")).toBeInTheDocument();
-    expect(screen.getByText("teamBoards")).toBeInTheDocument();
-  });
-
-  it("should render links with correct href", () => {
-    const { container } = render(<AppSidebar />);
-    const links = container.querySelectorAll("[data-href]");
-    expect(links.length).toBeGreaterThan(0);
-  });
-
-  it("should handle component lifecycle", () => {
-    const { unmount } = render(<AppSidebar />);
-    expect(screen.getByText("myBoards")).toBeInTheDocument();
-    unmount();
+  it('marks the board matching the pathname as active', () => {
+    vi.mocked(usePathname).mockReturnValue('/en/boards/board-2');
+    renderWithProviders(<AppSidebar />);
+    const active = document.querySelectorAll('[aria-current="page"]');
+    expect(active).toHaveLength(1);
+    expect(active[0]).toHaveTextContent('My Board 2');
   });
 });

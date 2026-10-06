@@ -1,6 +1,7 @@
-import { Suspense } from "react";
+import { Suspense } from 'react';
 
-import RootWrapper from "@/components/layout/RootWrapper";
+import RootWrapper from '@/components/layout/RootWrapper';
+import WorkspaceSpinner from '@/components/layout/WorkspaceSpinner';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -16,11 +17,5 @@ export default async function AppLayout({ children }: Readonly<AppLayoutProps>) 
 }
 
 function WorkspaceLoadingSkeleton() {
-  return (
-    <div className="flex h-screen items-center justify-center">
-      <div className="flex flex-col items-center gap-4">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    </div>
-  );
+  return <WorkspaceSpinner />;
 }

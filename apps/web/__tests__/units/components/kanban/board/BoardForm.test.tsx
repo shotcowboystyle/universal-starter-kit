@@ -1,77 +1,61 @@
-import { render, screen } from "@testing-library/react";
-/// <reference types="react" />
-import React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Button } from '@repo/forms';
+import { renderWithProviders } from '@repo/test-utils';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { BoardForm } from "@/components/kanban/board/BoardForm";
+import { BoardForm } from '@/components/kanban/board/BoardForm';
 
-globalThis.React = React;
-
-vi.mock("next-intl", () => ({
-  useTranslations: () => (key: string) => key
+vi.mock('next-intl', () => ({
+  useTranslations: () => (key: string) => key,
 }));
 
-vi.mock("@repo/ui/components/form", () => ({
-  Form: ({ children }: any) => <div data-testid="form">{children}</div>,
-  FormField: ({ render }: any) => {
-    const field = { value: "", onChange: vi.fn(), onBlur: vi.fn(), name: "test" };
-    return render({ field });
-  },
-  FormItem: ({ children }: any) => <div data-testid="form-item">{children}</div>,
-  FormLabel: ({ children }: any) => <label>{children}</label>,
-  FormControl: ({ children }: any) => <div data-testid="form-control">{children}</div>,
-  FormMessage: () => <span data-testid="form-message" />
-}));
+function renderForm(props: Partial<React.ComponentProps<typeof BoardForm>> = {}) {
+  const onSubmit = vi.fn().mockResolvedValue(undefined);
+  renderWithProviders(
+    <BoardForm onSubmit={onSubmit} {...props}>
+      <Button action="submit" testID="submit">
+        Submit
+      </Button>
+    </BoardForm>,
+  );
+  return { onSubmit };
+}
 
-describe("BoardForm", () => {
-  const mockOnSubmit = vi.fn().mockResolvedValue(undefined);
-
+describe('BoardForm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("should render board form", () => {
-    render(<BoardForm onSubmit={mockOnSubmit} />);
-    expect(screen.getByTestId("form")).toBeInTheDocument();
+  it('renders labelled title and description fields', () => {
+    renderForm();
+    expect(screen.getByText(/boardTitleLabel/)).toBeInTheDocument();
+    expect(screen.getByText(/descriptionLabel/)).toBeInTheDocument();
+    expect(screen.getByTestId('board-title-input')).toHaveAttribute('placeholder', 'boardTitlePlaceholder');
+    expect(screen.getByTestId('board-description-input')).toHaveAttribute('placeholder', 'descriptionPlaceholder');
   });
 
-  it("should render title input", () => {
-    render(<BoardForm onSubmit={mockOnSubmit} />);
-    expect(screen.getByText("boardTitleLabel")).toBeInTheDocument();
+  it('prefills default values in edit mode', () => {
+    renderForm({ defaultValues: { title: 'Test Board', description: 'Test Description' } });
+    expect(screen.getByTestId('board-title-input')).toHaveValue('Test Board');
+    expect(screen.getByTestId('board-description-input')).toHaveValue('Test Description');
   });
 
-  it("should render description textarea", () => {
-    render(<BoardForm onSubmit={mockOnSubmit} />);
-    expect(screen.getByText("descriptionLabel")).toBeInTheDocument();
+  it('submits the entered values', async () => {
+    const { onSubmit } = renderForm();
+    fireEvent.change(screen.getByTestId('board-title-input'), { target: { value: 'Roadmap' } });
+    fireEvent.change(screen.getByTestId('board-description-input'), { target: { value: 'Q3 plan' } });
+    fireEvent.click(screen.getByTestId('submit'));
+
+    await waitFor(() => {
+      expect(onSubmit).toHaveBeenCalledWith({ title: 'Roadmap', description: 'Q3 plan' });
+    });
   });
 
-  it("should render with default values", () => {
-    render(
-      <BoardForm
-        defaultValues={{ title: "Test Board", description: "Test Description" }}
-        onSubmit={mockOnSubmit}
-      />
-    );
-    expect(screen.getByTestId("form")).toBeInTheDocument();
-  });
+  it('blocks submit and shows the zod error when the title is empty', async () => {
+    const { onSubmit } = renderForm();
+    fireEvent.click(screen.getByTestId('submit'));
 
-  it("should render with children", () => {
-    render(
-      <BoardForm onSubmit={mockOnSubmit}>
-        <button data-testid="custom-button">Submit</button>
-      </BoardForm>
-    );
-    expect(screen.getByTestId("custom-button")).toBeInTheDocument();
-  });
-
-  it("should render without children", () => {
-    render(<BoardForm onSubmit={mockOnSubmit} />);
-    expect(screen.getByTestId("form")).toBeInTheDocument();
-  });
-
-  it("should handle form submission", () => {
-    const { container } = render(<BoardForm onSubmit={mockOnSubmit} />);
-    const form = container.querySelector("form");
-    expect(form).toBeInTheDocument();
+    expect(await screen.findByText('Title is required')).toBeInTheDocument();
+    expect(onSubmit).not.toHaveBeenCalled();
   });
 });
