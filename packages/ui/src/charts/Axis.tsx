@@ -3,7 +3,7 @@ import type { ScaleBand, ScaleLinear, ScalePoint } from 'd3-scale';
 import { formatAxisTick, getLinearTicks, truncateLabel } from './math';
 import { G, Line, SvgText, chartChromeProps } from './svg';
 import type { PlotArea } from './types';
-import { useChartTheme } from './useChartTheme';
+import { useChartTheme } from './use-chart-theme';
 
 export const AXIS_TICK_LENGTH = 4;
 export const AXIS_LABEL_GAP = 3;

@@ -11,7 +11,11 @@ describe('Wheel contrast contract', () => {
   it('keeps the selected row on the body weight and rounding on the selection band', () => {
     renderWithProviders(
       <Preset overrides={{ borderRadius: 'full' }}>
-        <Wheel items={[1, 2, 3, 4, 5]} value={3} visibleItems={5} />
+        <Wheel
+          items={[1, 2, 3, 4, 5]}
+          value={3}
+          visibleItems={5}
+        />
       </Preset>,
     );
     const wheel = screen.getByTestId('wheel');
@@ -26,7 +30,14 @@ describe('Wheel contrast contract', () => {
   });
 
   it('keeps inactive item text on the AA $color11 ramp (not opacity-dimmed)', () => {
-    renderWithProviders(<Wheel items={[1, 2, 3, 4, 5]} value={3} onChange={() => {}} visibleItems={5} />);
+    renderWithProviders(
+      <Wheel
+        items={[1, 2, 3, 4, 5]}
+        value={3}
+        onChange={() => {}}
+        visibleItems={5}
+      />,
+    );
     const selected = screen.getByTestId('wheel').querySelector('[data-selected="true"]');
     expect(selected).toBeTruthy();
     // Selected / inactive use token classes — opacity on the row must stay 1 so
@@ -38,7 +49,14 @@ describe('Wheel contrast contract', () => {
   });
 
   it('marks disabled wheels for a11y probes without crushing contrast via container opacity', () => {
-    renderWithProviders(<Wheel items={[1, 2, 3, 4, 5]} value={3} disabled visibleItems={5} />);
+    renderWithProviders(
+      <Wheel
+        items={[1, 2, 3, 4, 5]}
+        value={3}
+        disabled
+        visibleItems={5}
+      />,
+    );
     const wheel = screen.getByTestId('wheel');
     expect(wheel.getAttribute('data-disabled')).toBe('true');
     expect(wheel.getAttribute('aria-disabled')).toBe('true');
@@ -82,7 +100,11 @@ describe('Wheel snaps ride the animation knob', () => {
     const onChange = vi.fn();
     renderWithProviders(
       <Preset overrides={{ animation: 'none' }}>
-        <Wheel items={items} onChange={onChange} visibleItems={5} />
+        <Wheel
+          items={items}
+          onChange={onChange}
+          visibleItems={5}
+        />
       </Preset>,
     );
     const wrapper = screen.getByTestId('wheel-wrapper');
@@ -90,7 +112,7 @@ describe('Wheel snaps ride the animation knob', () => {
     fireEvent.keyDown(wrapper, { key: 'ArrowDown' });
 
     // Snap completed synchronously: selection committed, no tween scheduled.
-    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledOnce();
     expect(onChange).toHaveBeenCalledWith(20);
     expect(wrapper.getAttribute('aria-valuenow')).toBe('1');
 
@@ -100,7 +122,7 @@ describe('Wheel snaps ride the animation knob', () => {
       vi.advanceTimersByTime(500);
     });
     expect(wheelSnapshot()).toBe(settled);
-    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledOnce();
   });
 
   it('tweens the same snap with motion on (positive control)', () => {
@@ -108,7 +130,11 @@ describe('Wheel snaps ride the animation knob', () => {
     const onChange = vi.fn();
     renderWithProviders(
       // Default knobs: animation "quick" — knobProps.transition is defined.
-      <Wheel items={items} onChange={onChange} visibleItems={5} />,
+      <Wheel
+        items={items}
+        onChange={onChange}
+        visibleItems={5}
+      />,
     );
     const wrapper = screen.getByTestId('wheel-wrapper');
 
@@ -128,7 +154,7 @@ describe('Wheel snaps ride the animation knob', () => {
     act(() => {
       vi.advanceTimersByTime(500);
     });
-    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledOnce();
     expect(onChange).toHaveBeenCalledWith(20);
     expect(wrapper.getAttribute('aria-valuenow')).toBe('1');
   });
@@ -147,7 +173,11 @@ describe('Wheel snaps ride the animation knob', () => {
     const onChange = vi.fn();
     renderWithProviders(
       <Preset overrides={{ animation: 'none' }}>
-        <Wheel items={items} onChange={onChange} visibleItems={5} />
+        <Wheel
+          items={items}
+          onChange={onChange}
+          visibleItems={5}
+        />
       </Preset>,
     );
     const wrapper = screen.getByTestId('wheel-wrapper');
@@ -167,7 +197,13 @@ describe('Wheel snaps ride the animation knob', () => {
   it('coasts after a flick with motion on (positive control)', () => {
     useFrameClock();
     const onChange = vi.fn();
-    renderWithProviders(<Wheel items={items} onChange={onChange} visibleItems={5} />);
+    renderWithProviders(
+      <Wheel
+        items={items}
+        onChange={onChange}
+        visibleItems={5}
+      />,
+    );
     const wrapper = screen.getByTestId('wheel-wrapper');
     flick(wrapper);
 
@@ -187,7 +223,14 @@ describe('Wheel snaps ride the animation knob', () => {
 
 describe('Wheel iOS picker contract', () => {
   it('paints the selection band as a fill with no hairline borders', () => {
-    renderWithProviders(<Wheel items={[1, 2, 3, 4, 5]} value={3} onChange={() => {}} visibleItems={5} />);
+    renderWithProviders(
+      <Wheel
+        items={[1, 2, 3, 4, 5]}
+        value={3}
+        onChange={() => {}}
+        visibleItems={5}
+      />,
+    );
     const band = screen.getByTestId('wheel-selection');
     const style = getComputedStyle(band);
     expect(style.borderTopWidth === '0px' || style.borderTopWidth === '').toBe(true);
@@ -196,18 +239,31 @@ describe('Wheel iOS picker contract', () => {
 
   it('seats the selected row in the highlight band', () => {
     renderWithProviders(
-      <Wheel items={[1, 2, 3, 4, 5, 6, 7]} value={4} onChange={() => {}} visibleItems={5} itemHeight={36} />,
+      <Wheel
+        items={[1, 2, 3, 4, 5, 6, 7]}
+        value={4}
+        onChange={() => {}}
+        visibleItems={5}
+        itemHeight={36}
+      />,
     );
     const selected = screen
       .getByTestId('wheel')
       .querySelector('[data-testid="wheel-item"][data-selected="true"]') as HTMLElement;
     expect(selected).toBeTruthy();
-    const translateY = Number(/translateY\(([-\d.]+)px\)/.exec(selected.style.transform)?.[1] ?? NaN);
+    const translateY = Number(/translateY\(([-\d.]+)px\)/.exec(selected.style.transform)?.[1] ?? Number.NaN);
     expect(translateY).toBeCloseTo(2 * 36, 1);
   });
 
   it('keeps duplicate values as distinct rows', () => {
-    renderWithProviders(<Wheel items={[1, 1, 2]} value={2} onChange={() => {}} visibleItems={5} />);
+    renderWithProviders(
+      <Wheel
+        items={[1, 1, 2]}
+        value={2}
+        onChange={() => {}}
+        visibleItems={5}
+      />,
+    );
     const rows = screen.getByTestId('wheel').querySelectorAll('[data-testid="wheel-item"]');
     expect(rows.length).toBeGreaterThanOrEqual(3);
   });
@@ -217,7 +273,14 @@ describe('Wheel iOS picker contract', () => {
       toFake: ['setTimeout', 'clearTimeout', 'requestAnimationFrame', 'cancelAnimationFrame', 'performance'],
     });
     const onChange = vi.fn();
-    renderWithProviders(<Wheel items={[10, 20, 30, 40, 50]} value={10} onChange={onChange} visibleItems={5} />);
+    renderWithProviders(
+      <Wheel
+        items={[10, 20, 30, 40, 50]}
+        value={10}
+        onChange={onChange}
+        visibleItems={5}
+      />,
+    );
     const wrapper = screen.getByTestId('wheel-wrapper');
     const row = wrapper.querySelector('[data-testid="wheel-item"][data-index="1"]') as HTMLElement | null;
     expect(row).toBeTruthy();
@@ -239,7 +302,15 @@ describe('Wheel iOS picker contract', () => {
     });
     const onChange = vi.fn();
     const minutes = Array.from({ length: 60 }, (_, i) => i);
-    renderWithProviders(<Wheel items={minutes} value={59} onChange={onChange} loop visibleItems={5} />);
+    renderWithProviders(
+      <Wheel
+        items={minutes}
+        value={59}
+        onChange={onChange}
+        loop
+        visibleItems={5}
+      />,
+    );
     const wrapper = screen.getByTestId('wheel-wrapper');
     fireEvent.keyDown(wrapper, { key: 'ArrowDown' });
     act(() => {
@@ -254,7 +325,14 @@ describe('Wheel iOS picker contract', () => {
       toFake: ['setTimeout', 'clearTimeout', 'requestAnimationFrame', 'cancelAnimationFrame', 'performance'],
     });
     const onItemCross = vi.fn();
-    renderWithProviders(<Wheel items={[10, 20, 30]} value={10} onChange={() => {}} onItemCross={onItemCross} />);
+    renderWithProviders(
+      <Wheel
+        items={[10, 20, 30]}
+        value={10}
+        onChange={() => {}}
+        onItemCross={onItemCross}
+      />,
+    );
     const wrapper = screen.getByTestId('wheel-wrapper');
     fireEvent.keyDown(wrapper, { key: 'ArrowDown' });
     act(() => {

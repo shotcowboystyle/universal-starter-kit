@@ -22,7 +22,9 @@ type Story = StoryObj<typeof Tooltip>;
 export const Default: Story = {
   name: 'Main',
   render: () => (
-    <YStack padding="$8" alignItems="center">
+    <YStack
+      padding="$8"
+      alignItems="center">
       <Tooltip content="This is a tooltip">
         <Button>{triggerLabel}</Button>
       </Tooltip>
@@ -32,19 +34,30 @@ export const Default: Story = {
 
 export const Placements: Story = {
   render: () => (
-    <YStack padding="$8" gap="$4" alignItems="center">
-      <Tooltip content="Top tooltip" placement="top">
+    <YStack
+      padding="$8"
+      gap="$4"
+      alignItems="center">
+      <Tooltip
+        content="Top tooltip"
+        placement="top">
         <Button>Top</Button>
       </Tooltip>
       <XStack gap="$4">
-        <Tooltip content="Left tooltip" placement="left">
+        <Tooltip
+          content="Left tooltip"
+          placement="left">
           <Button>Left</Button>
         </Tooltip>
-        <Tooltip content="Right tooltip" placement="right">
+        <Tooltip
+          content="Right tooltip"
+          placement="right">
           <Button>Right</Button>
         </Tooltip>
       </XStack>
-      <Tooltip content="Bottom tooltip" placement="bottom">
+      <Tooltip
+        content="Bottom tooltip"
+        placement="bottom">
         <Button>Bottom</Button>
       </Tooltip>
     </YStack>
@@ -53,7 +66,9 @@ export const Placements: Story = {
 
 export const LongContent: Story = {
   render: () => (
-    <YStack padding="$8" alignItems="center">
+    <YStack
+      padding="$8"
+      alignItems="center">
       <Tooltip content="Saving applies your new settings right away. You can change them later from Preferences.">
         <Button>Save</Button>
       </Tooltip>
@@ -63,9 +78,13 @@ export const LongContent: Story = {
 
 export const IconOnly: Story = {
   render: () => (
-    <YStack padding="$8" alignItems="center">
+    <YStack
+      padding="$8"
+      alignItems="center">
       <Tooltip content="Print">
-        <Button circular aria-label="Print">
+        <Button
+          circular
+          aria-label="Print">
           <PrinterIcon />
         </Button>
       </Tooltip>
@@ -75,8 +94,12 @@ export const IconOnly: Story = {
 
 export const Disabled: Story = {
   render: () => (
-    <YStack padding="$8" alignItems="center">
-      <Tooltip content="You should not see this" disabled>
+    <YStack
+      padding="$8"
+      alignItems="center">
+      <Tooltip
+        content="You should not see this"
+        disabled>
         <Button>Disabled tooltip</Button>
       </Tooltip>
     </YStack>

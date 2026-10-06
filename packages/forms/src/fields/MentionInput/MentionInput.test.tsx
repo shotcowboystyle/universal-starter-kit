@@ -99,15 +99,19 @@ describe('MentionInput', () => {
       fireEvent.change(textArea, { target: { value: 'hello' } });
     }
 
-    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledOnce();
     expect(onChange).toHaveBeenCalledWith({ text: 'hello', mentions: [] });
-    expect(onTextChange).toHaveBeenCalledTimes(1);
+    expect(onTextChange).toHaveBeenCalledOnce();
     expect(onTextChange).toHaveBeenCalledWith('hello');
   });
 
   it('renders defaultValue text on first paint', () => {
     const result = renderWithProviders(
-      <MentionInput label="Comment" mentions={[userMentions]} defaultValue="hello there" />,
+      <MentionInput
+        label="Comment"
+        mentions={[userMentions]}
+        defaultValue="hello there"
+      />,
     );
     expect(result.baseElement.querySelector('textarea')?.value).toBe('hello there');
   });
@@ -115,14 +119,24 @@ describe('MentionInput', () => {
   it('does not emit onChange on mount (seed is not a user edit)', () => {
     const onChange = vi.fn();
     renderWithProviders(
-      <MentionInput label="Comment" mentions={[userMentions]} defaultValue="hello" onChange={onChange} />,
+      <MentionInput
+        label="Comment"
+        mentions={[userMentions]}
+        defaultValue="hello"
+        onChange={onChange}
+      />,
     );
     expect(onChange).not.toHaveBeenCalled();
   });
 
   it('skeleton keeps the FieldLayout label and omits the textarea', () => {
     const result = renderWithProviders(
-      <MentionInput label="Comment" name="comment" mentions={[userMentions]} skeleton />,
+      <MentionInput
+        label="Comment"
+        name="comment"
+        mentions={[userMentions]}
+        skeleton
+      />,
     );
     expect(findInPage('Comment')).toBeDefined();
     expect(result.baseElement.querySelector('textarea')).toBeNull();
@@ -132,7 +146,12 @@ describe('MentionInput', () => {
     const onChange = vi.fn();
     const onTextChange = vi.fn();
     const result = renderWithProviders(
-      <MentionInput label="Comment" mentions={[userMentions]} value="" onChange={onChange} />,
+      <MentionInput
+        label="Comment"
+        mentions={[userMentions]}
+        value=""
+        onChange={onChange}
+      />,
     );
     expect(result.baseElement.querySelector('textarea')?.value).toBe('');
 
@@ -160,7 +179,12 @@ describe('MentionInput', () => {
       formApi = form as unknown as typeof formApi;
       return (
         <Form form={form}>
-          <MentionInput label="Comment" name="comment" mentions={[userMentions]} onChange={onChange} />
+          <MentionInput
+            label="Comment"
+            name="comment"
+            mentions={[userMentions]}
+            onChange={onChange}
+          />
         </Form>
       );
     };
@@ -176,7 +200,13 @@ describe('MentionInput', () => {
   });
 
   it('opens a flush listbox with media-slot rows when typing @', () => {
-    const result = renderWithProviders(<MentionInput label="Comment" name="comment" mentions={[userMentions]} />);
+    const result = renderWithProviders(
+      <MentionInput
+        label="Comment"
+        name="comment"
+        mentions={[userMentions]}
+      />,
+    );
 
     const textArea = result.baseElement.querySelector('textarea');
     expect(textArea).toBeTruthy();
@@ -199,7 +229,7 @@ describe('MentionInput', () => {
     expect(style.paddingLeft).toBe('0px');
 
     const options = listbox.querySelectorAll('[role="option"]');
-    expect(options.length).toBe(2);
+    expect(options).toHaveLength(2);
     // Both rows reserve a media slot when any item has an avatar (Bob has none).
     expect(findInPage('Alice')).toBeDefined();
     expect(findInPage('Bob')).toBeDefined();
@@ -208,7 +238,7 @@ describe('MentionInput', () => {
     expect(findInPage('B')).toBeDefined(); // Bob initials fallback
     // Overlay rows paint nestedControl (32px at medium), not a raw 28.
     const slots = listbox.querySelectorAll('[data-media-slot]');
-    expect(slots.length).toBe(2);
+    expect(slots).toHaveLength(2);
     expect(slots[0]?.getAttribute('data-media-slot')).toBe('32');
   });
 
@@ -220,7 +250,12 @@ describe('MentionInput', () => {
     ['readOnly', { readOnly: true }],
   ])('opens no suggestion listbox when %s', (_name, props) => {
     const result = renderWithProviders(
-      <MentionInput label="Comment" name="comment" mentions={[userMentions]} {...props} />,
+      <MentionInput
+        label="Comment"
+        name="comment"
+        mentions={[userMentions]}
+        {...props}
+      />,
     );
 
     const textArea = result.baseElement.querySelector('textarea');
@@ -268,7 +303,13 @@ describe('MentionInput', () => {
   });
 
   it('keeps the listbox open with an empty state when the query matches nothing', () => {
-    const result = renderWithProviders(<MentionInput label="Comment" name="comment" mentions={[userMentions]} />);
+    const result = renderWithProviders(
+      <MentionInput
+        label="Comment"
+        name="comment"
+        mentions={[userMentions]}
+      />,
+    );
 
     const textArea = result.baseElement.querySelector('textarea');
     expect(textArea).toBeTruthy();
@@ -287,7 +328,12 @@ describe('MentionInput', () => {
   it('inserts the active suggestion on Tab (GitHub/Slack)', () => {
     const onChange = vi.fn();
     const result = renderWithProviders(
-      <MentionInput label="Comment" name="comment" mentions={[userMentions]} onChange={onChange} />,
+      <MentionInput
+        label="Comment"
+        name="comment"
+        mentions={[userMentions]}
+        onChange={onChange}
+      />,
     );
 
     const textArea = result.baseElement.querySelector('textarea');
@@ -314,7 +360,13 @@ describe('MentionInput', () => {
   });
 
   it('paints the keyboard ring on the active option after typing, not after hover', () => {
-    const result = renderWithProviders(<MentionInput label="Comment" name="comment" mentions={[userMentions]} />);
+    const result = renderWithProviders(
+      <MentionInput
+        label="Comment"
+        name="comment"
+        mentions={[userMentions]}
+      />,
+    );
 
     const textArea = result.baseElement.querySelector('textarea');
     expect(textArea).toBeTruthy();
@@ -325,7 +377,7 @@ describe('MentionInput', () => {
     typeTrigger(textArea, '@');
 
     const options = result.baseElement.ownerDocument.querySelectorAll('[role="option"]');
-    expect(options.length).toBe(2);
+    expect(options).toHaveLength(2);
     expect(options[0]?.getAttribute('data-keyboard-ring')).toBe('true');
     expect(options[1]?.getAttribute('data-keyboard-ring')).toBeNull();
 
@@ -337,7 +389,12 @@ describe('MentionInput', () => {
   it('deletes the whole mention token on Backspace at its end (Slack)', () => {
     const onChange = vi.fn();
     const result = renderWithProviders(
-      <MentionInput label="Comment" name="comment" mentions={[userMentions]} onChange={onChange} />,
+      <MentionInput
+        label="Comment"
+        name="comment"
+        mentions={[userMentions]}
+        onChange={onChange}
+      />,
     );
 
     const textArea = result.baseElement.querySelector('textarea');

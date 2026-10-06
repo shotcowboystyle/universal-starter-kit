@@ -108,7 +108,7 @@ const ALLOWLIST_VALUE_NAMES = [
   'withStaticProperties',
 ] as const;
 
-const ESCAPE_HATCHES: ReadonlyArray<[prefixed: string, raw: string]> = [
+const ESCAPE_HATCHES: readonly [prefixed: string, raw: string][] = [
   ['TamaguiAnchor', 'Anchor'],
   ['TamaguiButton', 'Button'],
   ['TamaguiCheckbox', 'Checkbox'],
@@ -224,7 +224,7 @@ describe('curated tamagui surface', () => {
     const exported = new Set(Object.keys(houseTamagui));
     const missing: string[] = [];
     for (const file of walkStoryFiles(import.meta.dirname)) {
-      for (const name of namedValueImportsFromHouseTamagui(readFileSync(file, 'utf8'))) {
+      for (const name of namedValueImportsFromHouseTamagui(readFileSync(file, 'utf-8'))) {
         if (!exported.has(name)) {
           missing.push(`${file.slice(import.meta.dirname.length + 1)}:${name}`);
         }

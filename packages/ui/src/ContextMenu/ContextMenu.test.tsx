@@ -78,7 +78,7 @@ describe('ContextMenu', () => {
       el.textContent?.includes('Copy'),
     ) as HTMLElement;
     fireEvent.click(copy);
-    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onSelect).toHaveBeenCalledOnce();
     await waitFor(() => {
       expect(document.querySelector('[role="menu"]')).toBeFalsy();
     });
@@ -87,7 +87,9 @@ describe('ContextMenu', () => {
   it('keeps a checkable item open (COMPOSE)', async () => {
     const onCheckedChange = vi.fn();
     renderWithProviders(
-      <ContextMenu defaultOpen items={[{ label: 'Pinned', checked: false, onCheckedChange }]}>
+      <ContextMenu
+        defaultOpen
+        items={[{ label: 'Pinned', checked: false, onCheckedChange }]}>
         <Button>Target</Button>
       </ContextMenu>,
     );
@@ -112,7 +114,9 @@ describe('ContextMenu', () => {
     const width = window.innerWidth;
     Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 500 });
     renderWithProviders(
-      <ContextMenu defaultOpen items={[{ label: 'Copy' }]}>
+      <ContextMenu
+        defaultOpen
+        items={[{ label: 'Copy' }]}>
         <Button>Target</Button>
       </ContextMenu>,
     );
@@ -194,8 +198,8 @@ describe('ContextMenu opens at the pointer (layoutTokens.ts free overlay)', () =
     const x = window.innerWidth - 20;
     const y = window.innerHeight - 20;
     const panel = await rightClickAt(x, y);
-    expect(parseFloat(panel.style.left) + 180).toBe(x);
-    expect(parseFloat(panel.style.top) + parseFloat(panel.style.maxHeight)).toBe(y - OVERLAY_ANCHOR_GAP);
+    expect(Number.parseFloat(panel.style.left) + 180).toBe(x);
+    expect(Number.parseFloat(panel.style.top) + Number.parseFloat(panel.style.maxHeight)).toBe(y - OVERLAY_ANCHOR_GAP);
     expect(panel.style.transformOrigin).toBe('bottom right');
   });
 
@@ -205,7 +209,7 @@ describe('ContextMenu opens at the pointer (layoutTokens.ts free overlay)', () =
     vi.spyOn(document.documentElement, 'clientWidth', 'get').mockReturnValue(clientWidth);
     const x = window.innerWidth - 195;
     const panel = await rightClickAt(x, 200);
-    expect(parseFloat(panel.style.left) + 180).toBe(x);
+    expect(Number.parseFloat(panel.style.left) + 180).toBe(x);
   });
 
   it('clamps to the viewport padding when neither side fits', async () => {

@@ -3,11 +3,11 @@ import path from 'node:path';
 
 import type { Plugin, UserConfig } from 'vite';
 
-import { phosphorTokenColorPlugin } from './phosphorTokenColor.ts';
-import { withSingletonDepAliases } from './singletonDepAliases.ts';
-import { ensureTamaguiWorkspacePaths } from './tamaguiWorkspacePaths.ts';
-import { unexportedDepAliases } from './unexportedDepAliases.ts';
-import { discoverPublicPackageRoots, resolvePackageMainSource } from './workspacePublicPackages.ts';
+import { phosphorTokenColorPlugin } from './phosphor-token-color.ts';
+import { withSingletonDepAliases } from './singleton-dep-aliases.ts';
+import { ensureTamaguiWorkspacePaths } from './tamagui-workspace-paths.ts';
+import { unexportedDepAliases } from './unexported-dep-aliases.ts';
+import { discoverPublicPackageRoots, resolvePackageMainSource } from './workspace-public-packages.ts';
 
 export interface CreateStorybookViteConfigOptions {
   /**

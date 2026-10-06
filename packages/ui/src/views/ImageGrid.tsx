@@ -2,9 +2,6 @@ import { Spinner } from '@repo/forms';
 import {
   getLayoutSizeClass,
   keyboardFocusRingProps,
-  type LayoutSizeClass,
-  type MediaAspect,
-  type TileSizeRung,
   ensureKeyboardModalityTracking,
   resolveMediaAspect,
   tileColumnsForWidth,
@@ -12,15 +9,17 @@ import {
   useResolvedKnobs,
   wasKeyboardFocus,
 } from '@repo/theme';
+import type { LayoutSizeClass, MediaAspect, TileSizeRung } from '@repo/theme';
 import { useHotkey } from '@tanstack/react-hotkeys';
 import type { RegisterableHotkey } from '@tanstack/react-hotkeys';
 import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
 // useWindowDimensions from tamagui, NOT react-native: importing react-native
 // here pulls react-native-web's CJS inline-style-prefixer into the SSR module
 // graph, which the SSR runner evaluates as ESM ("exports is not defined").
-import { View, XStack, YStack, getTokenValue, useWindowDimensions, type YStackProps } from 'tamagui';
+import { View, XStack, YStack, getTokenValue, useWindowDimensions } from 'tamagui';
+import type { YStackProps } from 'tamagui';
 
-import { useDirection } from '../hooks/useDirection';
+import { useDirection } from '../hooks/use-direction';
 import { AsyncBoundary, resolveAsyncStatus } from '../layouts/AsyncBoundary';
 import { useTranslation } from '../shared/i18n';
 import { Skeleton } from '../Skeleton';
@@ -132,10 +131,18 @@ function ImageGridSkeleton({
       aria-label={loadingLabel}
       maxWidth="100%">
       {Array.from({ length: 2 }, (_, row) => (
-        <XStack key={`skel-row-${row}`} gap={gutter}>
+        <XStack
+          key={`skel-row-${row}`}
+          gap={gutter}>
           {Array.from({ length: columns }, (_, col) => (
-            <View key={`skel-${row}-${col}`} {...tileTrack}>
-              <Skeleton variant="rounded" width="100%" aspectRatio={aspect} />
+            <View
+              key={`skel-${row}-${col}`}
+              {...tileTrack}>
+              <Skeleton
+                variant="rounded"
+                width="100%"
+                aspectRatio={aspect}
+              />
             </View>
           ))}
         </XStack>
@@ -176,7 +183,9 @@ function ImageGridTile({
   const radius = radiusFragment.borderRadius;
   const [hovered, setHovered] = useState(false);
   return (
-    <View {...tileTrack} role="presentation">
+    <View
+      {...tileTrack}
+      role="presentation">
       <View
         id={id}
         // "gridcell" is a valid ARIA role but outside RN's `Role` union;
@@ -205,7 +214,9 @@ function ImageGridTile({
         onPress={onPress}>
         {/* Clip media to the radius; keep overflow off the ring node so
             the ring outline is not severed (same split as Input.Box). */}
-        <View borderRadius={radius} overflow="hidden">
+        <View
+          borderRadius={radius}
+          overflow="hidden">
           {children}
         </View>
         {hovered && !showRing ? (
@@ -463,8 +474,9 @@ export function ImageGrid<T>({
         focusStyle={{ outlineWidth: 0 }}
         focusVisibleStyle={{ outlineWidth: 0 }}
         onFocus={handleContainerFocus}
-        {...(height !== undefined
-          ? {
+        {...(height === undefined
+          ? null
+          : {
               style: { height, overflowY: 'auto' } as React.CSSProperties,
               onScroll:
                 onLoadMore && hasMore && !isLoading
@@ -475,14 +487,18 @@ export function ImageGrid<T>({
                       }
                     }
                   : undefined,
-            }
-          : null)}>
-        <YStack gap={gutter} maxWidth="100%">
+            })}>
+        <YStack
+          gap={gutter}
+          maxWidth="100%">
           {Array.from({ length: rowCount }, (_, row) => {
             const start = row * columns;
             const rowItems = items.slice(start, start + columns);
             return (
-              <XStack key={`${gridId}-row-${row}`} role="row" gap={gutter}>
+              <XStack
+                key={`${gridId}-row-${row}`}
+                role="row"
+                gap={gutter}>
                 {rowItems.map((item, col) => {
                   const index = start + col;
                   const isFocused = effectiveFocused === index;
@@ -509,18 +525,27 @@ export function ImageGrid<T>({
                   );
                 })}
                 {Array.from({ length: columns - rowItems.length }, (_, pad) => (
-                  <View key={`${gridId}-pad-${row}-${pad}`} {...tileTrack} aria-hidden />
+                  <View
+                    key={`${gridId}-pad-${row}-${pad}`}
+                    {...tileTrack}
+                    aria-hidden
+                  />
                 ))}
               </XStack>
             );
           })}
         </YStack>
         {isLoading && items.length > 0 && (
-          <YStack padding="$2" alignItems="center">
+          <YStack
+            padding="$2"
+            alignItems="center">
             <Spinner size="small" />
           </YStack>
         )}
-        <View ref={sentinelRef as any} height={1} />
+        <View
+          ref={sentinelRef as any}
+          height={1}
+        />
       </View>
     );
 

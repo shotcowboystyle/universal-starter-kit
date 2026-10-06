@@ -4,7 +4,7 @@ import { act, fireEvent } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { Form } from '../../Form';
-import { TableCellContext } from '../../shared/tableCellContext';
+import { TableCellContext } from '../../shared/table-cell-context';
 import { getFieldHeight } from '../../shared/utils';
 
 import {
@@ -45,7 +45,7 @@ describe('Duration', () => {
     });
 
     it('folds days into hours when hideDays', () => {
-      const parts = secondsToParts(100000, true);
+      const parts = secondsToParts(100_000, true);
       expect(parts.days).toBe(0);
       expect(parts.hours).toBe(27);
       expect(parts.minutes).toBe(46);
@@ -53,7 +53,7 @@ describe('Duration', () => {
     });
 
     it('parses Frappe-style duration text', () => {
-      expect(parseDurationText('1d 2h 3m 4s')).toBe(93784);
+      expect(parseDurationText('1d 2h 3m 4s')).toBe(93_784);
       expect(parseDurationText('01h 30m')).toBe(5400);
       expect(parseDurationText('1:30')).toBe(5400);
       expect(parseDurationText('-100')).toBe(0);
@@ -62,25 +62,49 @@ describe('Duration', () => {
 
   describe('without form context', () => {
     it('renders with label and placeholder', () => {
-      const result = renderWithProviders(<Duration label="Duration" name="dur" placeholder="Select duration" />);
+      const result = renderWithProviders(
+        <Duration
+          label="Duration"
+          name="dur"
+          placeholder="Select duration"
+        />,
+      );
       expect(result.findTextElement('Duration')).toBeDefined();
       const hours = result.container.querySelector('input[aria-label="Hours"]');
       expect(hours?.getAttribute('placeholder')).toBe('Select duration');
     });
 
     it('renders required label with asterisk', () => {
-      const result = renderWithProviders(<Duration label="Required" name="req" required />);
+      const result = renderWithProviders(
+        <Duration
+          label="Required"
+          name="req"
+          required
+        />,
+      );
       const label = result.container.querySelector('label');
       expect(label?.textContent).toContain('*');
     });
 
     it('renders with helper text', () => {
-      const result = renderWithProviders(<Duration label="Time" name="t" helperText="In seconds" />);
+      const result = renderWithProviders(
+        <Duration
+          label="Time"
+          name="t"
+          helperText="In seconds"
+        />,
+      );
       expect(result.findTextElement('In seconds')).toBeDefined();
     });
 
     it('renders skeleton at the control recipe height', () => {
-      const result = renderWithProviders(<Duration label="Loading" name="l" skeleton />);
+      const result = renderWithProviders(
+        <Duration
+          label="Loading"
+          name="l"
+          skeleton
+        />,
+      );
       expect(result.container.querySelector('input')).toBeNull();
       const skeleton = result.container.querySelector('[data-duration-skeleton]') as HTMLElement;
       expect(skeleton).toBeTruthy();
@@ -90,50 +114,100 @@ describe('Duration', () => {
     });
 
     it('renders disabled state', () => {
-      const result = renderWithProviders(<Duration label="Disabled" name="d" disabled />);
+      const result = renderWithProviders(
+        <Duration
+          label="Disabled"
+          name="d"
+          disabled
+        />,
+      );
       const input = result.container.querySelector('input');
       expect(input?.getAttribute('aria-disabled')).toBe('true');
       expect(input?.getAttribute('tabindex')).toBe('-1');
     });
 
     it('renders readOnly with formatted value and hides presets', () => {
-      const result = renderWithProviders(<Duration label="ReadOnly" name="r" readOnly value={3661} />);
+      const result = renderWithProviders(
+        <Duration
+          label="ReadOnly"
+          name="r"
+          readOnly
+          value={3661}
+        />,
+      );
       const input = result.container.querySelector('input');
       expect(input?.getAttribute('aria-readonly')).toBe('true');
       expect(result.container.querySelector('[data-duration-presets]')).toBeNull();
     });
 
     it('supplies a default clock affordance', () => {
-      const result = renderWithProviders(<Duration label="Clock" name="c" value={3600} />);
+      const result = renderWithProviders(
+        <Duration
+          label="Clock"
+          name="c"
+          value={3600}
+        />,
+      );
       expect(result.container.querySelector('svg')).toBeTruthy();
     });
 
     it('hides the clock when clockIcon is null', () => {
-      const result = renderWithProviders(<Duration label="No clock" name="c" value={3600} clockIcon={null} />);
+      const result = renderWithProviders(
+        <Duration
+          label="No clock"
+          name="c"
+          value={3600}
+          clockIcon={null}
+        />,
+      );
       expect(result.container.querySelector('svg')).toBeNull();
     });
 
     it('normalises a negative value in the hours segment', () => {
-      const result = renderWithProviders(<Duration label="Neg" name="n" value={-100} />);
+      const result = renderWithProviders(
+        <Duration
+          label="Neg"
+          name="n"
+          value={-100}
+        />,
+      );
       const hours = result.container.querySelector('input[aria-label="Hours"]');
       expect(segmentValue(hours)).toBe('0');
     });
 
     it('shows hours above 23 when hideDays', () => {
-      const result = renderWithProviders(<Duration label="Long" name="l" value={100000} />);
+      const result = renderWithProviders(
+        <Duration
+          label="Long"
+          name="l"
+          value={100_000}
+        />,
+      );
       const hours = result.container.querySelector('input[aria-label="Hours"]');
       expect(segmentValue(hours)).toBe('27');
     });
 
     it('shows a days segment when hideDays is false', () => {
-      const result = renderWithProviders(<Duration label="Days" name="d" value={100000} hideDays={false} />);
+      const result = renderWithProviders(
+        <Duration
+          label="Days"
+          name="d"
+          value={100_000}
+          hideDays={false}
+        />,
+      );
       expect(result.container.querySelector('input[aria-label="Days"]')).toBeTruthy();
     });
   });
 
   describe('design law', () => {
     it('packs the clock and segments at the start of a stretched box', () => {
-      const result = renderWithProviders(<Duration label="Wide" value={3600} />);
+      const result = renderWithProviders(
+        <Duration
+          label="Wide"
+          value={3600}
+        />,
+      );
       const box = result.container.querySelector('[data-duration-box]') as HTMLElement;
       const row = result.container.querySelector('[data-duration-row]') as HTMLElement;
       expect(box).toBeTruthy();
@@ -143,7 +217,13 @@ describe('Duration', () => {
     });
 
     it('keeps segment inputs inside the box at size $3', () => {
-      const result = renderWithProviders(<Duration label="S" size="$3" value={3600} />);
+      const result = renderWithProviders(
+        <Duration
+          label="S"
+          size="$3"
+          value={3600}
+        />,
+      );
       const box = result.container.querySelector('[data-duration-box]') as HTMLElement;
       const hours = result.container.querySelector('input[aria-label="Hours"]') as HTMLElement;
       expect(box).toBeTruthy();
@@ -174,13 +254,20 @@ describe('Duration', () => {
     it('pins six default preset chips at the $2 / 28px family', () => {
       expect(DURATION_PRESET_SIZE).toBe('$2');
       expect(sizeRecipeForToken(DURATION_PRESET_SIZE).height).toBe(28);
-      const result = renderWithProviders(<Duration label="P" value={0} />);
+      const result = renderWithProviders(
+        <Duration
+          label="P"
+          value={0}
+        />,
+      );
       const chips = result.container.querySelectorAll('[data-duration-preset]');
       expect(chips).toHaveLength(6);
       for (const chip of chips) {
         const el = chip as HTMLElement;
         const height =
-          parseFloat(getComputedStyle(el).height) || Number(el.getAttribute('height')) || parseFloat(el.style.height);
+          Number.parseFloat(getComputedStyle(el).height) ||
+          Number(el.getAttribute('height')) ||
+          Number.parseFloat(el.style.height);
         if (Number.isFinite(height) && height > 0) {
           expect(height).toBe(sizeRecipeForToken(DURATION_PRESET_SIZE).height);
         }
@@ -188,8 +275,20 @@ describe('Duration', () => {
     });
 
     it('sizes segments from the size recipe', () => {
-      const small = renderWithProviders(<Duration label="S" size="$2" value={0} />);
-      const large = renderWithProviders(<Duration label="L" size="$6" value={0} />);
+      const small = renderWithProviders(
+        <Duration
+          label="S"
+          size="$2"
+          value={0}
+        />,
+      );
+      const large = renderWithProviders(
+        <Duration
+          label="L"
+          size="$6"
+          value={0}
+        />,
+      );
       const sMin = small.container.querySelector('input[aria-label="Min"]');
       const lMin = large.container.querySelector('input[aria-label="Min"]');
       expect(segmentWidthPx(sMin)).toBe(durationSegmentWidth('$2', 2));
@@ -200,8 +299,20 @@ describe('Duration', () => {
     });
 
     it('clock glyph follows the icon recipe, not a hardcoded 16', () => {
-      const small = renderWithProviders(<Duration label="S" size="$2" value={3600} />);
-      const large = renderWithProviders(<Duration label="L" size="$6" value={3600} />);
+      const small = renderWithProviders(
+        <Duration
+          label="S"
+          size="$2"
+          value={3600}
+        />,
+      );
+      const large = renderWithProviders(
+        <Duration
+          label="L"
+          size="$6"
+          value={3600}
+        />,
+      );
       const sSvg = small.container.querySelector('svg');
       const lSvg = large.container.querySelector('svg');
       const sSize = Number(sSvg?.getAttribute('width') ?? sSvg?.getAttribute('height'));
@@ -212,7 +323,12 @@ describe('Duration', () => {
     });
 
     it('rings the outer box, never the inner segments', () => {
-      const result = renderWithProviders(<Duration label="Ring" value={3600} />);
+      const result = renderWithProviders(
+        <Duration
+          label="Ring"
+          value={3600}
+        />,
+      );
       const box = result.container.querySelector("[data-ring-target='box']") as HTMLElement;
       const hours = result.container.querySelector('input[aria-label="Hours"]') as HTMLInputElement;
       expect(box).toBeTruthy();
@@ -223,7 +339,13 @@ describe('Duration', () => {
 
     it('fires onChange with seconds from a preset', () => {
       const onChange = vi.fn();
-      const result = renderWithProviders(<Duration label="P" value={0} onChange={onChange} />);
+      const result = renderWithProviders(
+        <Duration
+          label="P"
+          value={0}
+          onChange={onChange}
+        />,
+      );
       const chip = result.container.querySelector(
         "[data-duration-preset], [data-duration-presets] button, [data-duration-presets] [role='button']",
       );
@@ -235,7 +357,13 @@ describe('Duration', () => {
 
     it('arrow-up on hours commits via onChange', () => {
       const onChange = vi.fn();
-      const result = renderWithProviders(<Duration label="A" value={3600} onChange={onChange} />);
+      const result = renderWithProviders(
+        <Duration
+          label="A"
+          value={3600}
+          onChange={onChange}
+        />,
+      );
       const hours = result.container.querySelector('input[aria-label="Hours"]') as HTMLInputElement;
       fireEvent.keyDown(hours, { key: 'ArrowUp' });
       expect(onChange).toHaveBeenCalledWith(7200);
@@ -243,7 +371,13 @@ describe('Duration', () => {
 
     it('normalises overflow minutes on blur', () => {
       const onChange = vi.fn();
-      const result = renderWithProviders(<Duration label="O" value={0} onChange={onChange} />);
+      const result = renderWithProviders(
+        <Duration
+          label="O"
+          value={0}
+          onChange={onChange}
+        />,
+      );
       const minutes = result.container.querySelector('input[aria-label="Min"]') as HTMLInputElement;
       act(() => {
         fireEvent.change(minutes, { target: { value: '90' } });
@@ -254,7 +388,13 @@ describe('Duration', () => {
 
     it('pastes Frappe-style text into the whole value', () => {
       const onChange = vi.fn();
-      const result = renderWithProviders(<Duration label="Paste" value={0} onChange={onChange} />);
+      const result = renderWithProviders(
+        <Duration
+          label="Paste"
+          value={0}
+          onChange={onChange}
+        />,
+      );
       const hours = result.container.querySelector('input[aria-label="Hours"]') as HTMLInputElement;
       fireEvent.paste(hours, {
         clipboardData: { getData: () => '1h 30m' },
@@ -265,14 +405,23 @@ describe('Duration', () => {
     it('hides presets in a table cell', () => {
       const result = renderWithProviders(
         <TableCellContext.Provider value={{ inTableCell: true, isHeader: false, editable: true }}>
-          <Duration label="Cell" value={3600} />
+          <Duration
+            label="Cell"
+            value={3600}
+          />
         </TableCellContext.Provider>,
       );
       expect(result.container.querySelector('[data-duration-presets]')).toBeNull();
     });
 
     it('hides presets when the list is empty', () => {
-      const result = renderWithProviders(<Duration label="None" value={0} presets={[]} />);
+      const result = renderWithProviders(
+        <Duration
+          label="None"
+          value={0}
+          presets={[]}
+        />,
+      );
       expect(result.container.querySelector('[data-duration-presets]')).toBeNull();
     });
   });
@@ -280,8 +429,13 @@ describe('Duration', () => {
   describe('with form context', () => {
     it('renders inside form', () => {
       const result = renderWithProviders(
-        <Form formOptions={{ defaultValues: { dur: 0 } }} submitText="Submit">
-          <Duration name="dur" label="Duration" />
+        <Form
+          formOptions={{ defaultValues: { dur: 0 } }}
+          submitText="Submit">
+          <Duration
+            name="dur"
+            label="Duration"
+          />
         </Form>,
       );
       expect(result.findTextElement('Duration')).toBeDefined();

@@ -17,18 +17,18 @@ afterEach(cleanup);
 describe('ThemePlayground', () => {
   it('offers a labelled palette toggle, closed until pressed', async () => {
     renderWithProviders(<ThemePlayground testID="playground" />);
-    const toggle = await screen.findByTestId('playground', {}, { timeout: 10000 });
+    const toggle = await screen.findByTestId('playground', {}, { timeout: 10_000 });
     expect(toggle.getAttribute('aria-label')).toBe('Theme');
     expect(toggle.getAttribute('aria-expanded')).toBe('false');
   });
 
   it('opens the playground sheet from the toggle', async () => {
     renderWithProviders(<ThemePlayground testID="playground" />);
-    fireEvent.click(await screen.findByTestId('playground', {}, { timeout: 10000 }));
+    fireEvent.click(await screen.findByTestId('playground', {}, { timeout: 10_000 }));
     await waitFor(() => {
       expect(screen.getByTestId('playground').getAttribute('aria-expanded')).toBe('true');
     });
-    expect(await screen.findByText('Theme playground', {}, { timeout: 10000 })).toBeTruthy();
+    await expect(screen.findByText('Theme playground', {}, { timeout: 10000 })).resolves.toBeTruthy();
   });
 
   it('renders nothing on native', () => {

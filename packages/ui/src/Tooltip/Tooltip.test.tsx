@@ -53,13 +53,13 @@ describe('Tooltip skip delay (Radix / Spectrum cooldown)', () => {
   });
 
   it('uses the warmup delay until a tooltip has just closed', () => {
-    expect(resolveTooltipDelay(TOOLTIP_DEFAULT_DELAY_MS, 1_000)).toBe(TOOLTIP_DEFAULT_DELAY_MS);
+    expect(resolveTooltipDelay(TOOLTIP_DEFAULT_DELAY_MS, 1000)).toBe(TOOLTIP_DEFAULT_DELAY_MS);
   });
 
   it('skips the delay inside the cooldown window', () => {
-    noteTooltipClosed(1_000);
-    expect(resolveTooltipDelay(TOOLTIP_DEFAULT_DELAY_MS, 1_000 + 10)).toBe(0);
-    expect(resolveTooltipDelay(TOOLTIP_DEFAULT_DELAY_MS, 1_000 + TOOLTIP_SKIP_DELAY_MS + 1)).toBe(
+    noteTooltipClosed(1000);
+    expect(resolveTooltipDelay(TOOLTIP_DEFAULT_DELAY_MS, 1000 + 10)).toBe(0);
+    expect(resolveTooltipDelay(TOOLTIP_DEFAULT_DELAY_MS, 1000 + TOOLTIP_SKIP_DELAY_MS + 1)).toBe(
       TOOLTIP_DEFAULT_DELAY_MS,
     );
   });
@@ -78,7 +78,9 @@ describe('Tooltip interaction', () => {
 
   it('does not wrap the trigger when disabled', () => {
     const { container } = renderWithProviders(
-      <Tooltip content="Nope" disabled>
+      <Tooltip
+        content="Nope"
+        disabled>
         <Button>Idle</Button>
       </Tooltip>,
     );
@@ -89,7 +91,10 @@ describe('Tooltip interaction', () => {
   it('Escape closes a controlled open tooltip without moving focus into it', () => {
     const onOpenChange = vi.fn();
     renderWithProviders(
-      <Tooltip content="Hint" open onOpenChange={onOpenChange}>
+      <Tooltip
+        content="Hint"
+        open
+        onOpenChange={onOpenChange}>
         <Button>Edit</Button>
       </Tooltip>,
     );
@@ -108,7 +113,9 @@ describe('Tooltip content rides the border, elevation and animation knobs', () =
   async function measure(stop: (typeof stops)[number]) {
     const result = renderWithProviders(
       <Preset overrides={stop}>
-        <Tooltip content="Hint" open>
+        <Tooltip
+          content="Hint"
+          open>
           <Button>Edit</Button>
         </Tooltip>
       </Preset>,
@@ -179,7 +186,7 @@ describe('Tooltip native long-press open path', () => {
     press.pressIn();
     press.pressOut();
     vi.advanceTimersByTime(TOOLTIP_NATIVE_LONG_PRESS_MS);
-    expect(setOpen).toHaveBeenCalledTimes(1);
+    expect(setOpen).toHaveBeenCalledOnce();
     expect(setOpen).toHaveBeenCalledWith(false);
     press.dispose();
   });

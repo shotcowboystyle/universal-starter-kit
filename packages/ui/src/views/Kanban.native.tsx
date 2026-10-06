@@ -1,11 +1,14 @@
 import { Spinner } from '@repo/forms';
 import { animationConfig, hairlineWidth, MIN_PRESS_TARGET, radiusClassProps, useResolvedKnobs } from '@repo/theme';
-import { FlashList, type FlashListRef } from '@shopify/flash-list';
-import React, { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
+import { FlashList } from '@shopify/flash-list';
+import type { FlashListRef } from '@shopify/flash-list';
+import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { AccessibilityInfo, Animated } from 'react-native';
-import { ListItem, Text, View, XStack, YStack, type YStackProps } from 'tamagui';
+import { ListItem, Text, View, XStack, YStack } from 'tamagui';
+import type { YStackProps } from 'tamagui';
 
-import { componentColors } from '../componentColors';
+import { componentColors } from '../component-colors';
 import { AsyncBoundary, useAsyncCount } from '../layouts/AsyncBoundary';
 import { EmptyState } from '../layouts/Page';
 import { ScrollView } from '../ScrollView';
@@ -20,9 +23,8 @@ import {
   resolveDrop,
   siblingOffset,
   uniformInsertionIndex,
-  type KanbanBoardColumnSnapshot,
-  type KanbanDropTarget,
-} from './kanbanDnd';
+} from './kanban-dnd';
+import type { KanbanBoardColumnSnapshot, KanbanDropTarget } from './kanban-dnd';
 
 /**
  * A column definition for the Kanban board.
@@ -301,7 +303,7 @@ export function Kanban<T>({
   const hitTest = useCallback(
     (pageX: number, pageY: number, session: NativeDragSession<T>): KanbanDropTarget => {
       for (const [columnId, handle] of columnHandles.current) {
-        const layout = handle.layout;
+        const { layout } = handle;
         if (!layout) {
           continue;
         }
@@ -750,7 +752,9 @@ export function Kanban<T>({
               ],
             }}>
             <View padding="$1">
-              <Card overflow="hidden" {...LIFT_SHADOW}>
+              <Card
+                overflow="hidden"
+                {...LIFT_SHADOW}>
                 {renderCard(drag.item)}
               </Card>
             </View>
@@ -859,9 +863,15 @@ function KanbanColumnView<T>({
         }
         iconAfter={
           itemCount !== undefined || renderColumnActions ? (
-            <XStack alignItems="center" {...knobProps.gap}>
+            <XStack
+              alignItems="center"
+              {...knobProps.gap}>
               {itemCount !== undefined && (
-                <Text color={knobProps.textAccentColor} {...knobProps.label} {...knobProps.textWeight} data-async-count>
+                <Text
+                  color={knobProps.textAccentColor}
+                  {...knobProps.label}
+                  {...knobProps.textWeight}
+                  data-async-count>
                   {itemCount}
                 </Text>
               )}
@@ -882,7 +892,14 @@ function KanbanColumnView<T>({
           handle.node = node;
         }}>
         {column.items.length === 0 ? (
-          !isDropTarget && <EmptyState compact title={emptyColumnMessage} opacity={0.5} flex={1} />
+          !isDropTarget && (
+            <EmptyState
+              compact
+              title={emptyColumnMessage}
+              opacity={0.5}
+              flex={1}
+            />
+          )
         ) : (
           <FlashList
             keyboardShouldPersistTaps="handled"
@@ -962,7 +979,9 @@ function KanbanColumnView<T>({
             }}
             ListFooterComponent={
               isLoading ? (
-                <YStack {...knobProps.panelPadding} alignItems="center">
+                <YStack
+                  {...knobProps.panelPadding}
+                  alignItems="center">
                   <Spinner size="small" />
                 </YStack>
               ) : null
@@ -992,7 +1011,9 @@ function KanbanColumnView<T>({
               alignItems="center"
               justifyContent="center">
               {column.items.length === 0 && (
-                <Text color={knobProps.textAccentColor} {...knobProps.label}>
+                <Text
+                  color={knobProps.textAccentColor}
+                  {...knobProps.label}>
                   {t('Drop here')}
                 </Text>
               )}

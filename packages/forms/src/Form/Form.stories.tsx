@@ -21,14 +21,16 @@ import { FieldGroup } from '../FieldGroup';
 import { Barcode } from '../fields/Barcode';
 import { Checkbox, CheckboxGroup } from '../fields/Checkbox';
 import { ColorPicker } from '../fields/ColorPicker';
-import { Combobox, type ComboboxOption } from '../fields/Combobox';
-import { authorOptions, shortAuthorOptions } from '../fields/Combobox/authorOptions';
+import { Combobox } from '../fields/Combobox';
+import type { ComboboxOption } from '../fields/Combobox';
+import { authorOptions, shortAuthorOptions } from '../fields/Combobox/author-options';
 import { DatePicker, DateRangePicker, DatetimePicker, MonthPicker, MultiDatePicker } from '../fields/DatePicker';
 import { Duration } from '../fields/Duration';
 import { FileUpload } from '../fields/FileUpload';
 import { Geolocation } from '../fields/Geolocation';
 import { Input } from '../fields/Input';
-import { MentionInput, type MentionConfig } from '../fields/MentionInput';
+import { MentionInput } from '../fields/MentionInput';
+import type { MentionConfig } from '../fields/MentionInput';
 import { OTPInput } from '../fields/OTPInput';
 import { PhoneInput } from '../fields/PhoneInput';
 import { Progress } from '../fields/Progress';
@@ -42,9 +44,9 @@ import { Switch } from '../fields/Switch';
 import { TextArea } from '../fields/TextArea';
 import { TimePicker } from '../fields/TimePicker';
 import { ToggleGroup } from '../fields/ToggleGroup';
+import { formReadableMaxWidth } from '../form-spacing';
 import { FormGrid } from '../FormGrid';
 import { FormSection, FormSectionStack } from '../FormSection';
-import { formReadableMaxWidth } from '../formSpacing';
 import type { AnyFormApi } from '../types';
 
 import { Form, FormActions } from './index';
@@ -90,8 +92,16 @@ export const Basic = () => (
       },
     }}
     onSubmit={(values) => action('onSubmit')(values)}>
-    <Input label="Username" name="username" required />
-    <Input label="Email" name="email" required />
+    <Input
+      label="Username"
+      name="username"
+      required
+    />
+    <Input
+      label="Email"
+      name="email"
+      required
+    />
     <FormActions>
       <Button action="submit">Submit</Button>
     </FormActions>
@@ -111,8 +121,16 @@ export const WithSaveBar = () => (
       },
     }}
     onSubmit={(values) => action('onSubmit')(values)}>
-    <Input label="Username" name="username" required />
-    <Input label="Email" name="email" required />
+    <Input
+      label="Username"
+      name="username"
+      required
+    />
+    <Input
+      label="Email"
+      name="email"
+      required
+    />
   </Form>
 );
 WithSaveBar.storyName = 'Save bar';
@@ -141,7 +159,7 @@ export const WithValidation = () => (
         onChangeListenTo: ['password'],
         onChange: ({ value, fieldApi }) => {
           const password = fieldApi.form.getFieldValue('password');
-          return value !== password ? 'Passwords must match' : undefined;
+          return value === password ? undefined : 'Passwords must match';
         },
       }}
       required
@@ -180,12 +198,12 @@ export const WithErrorSummary = () => (
       required
       validators={{
         onSubmit: ({ value }) =>
-          !String(value || '').trim()
-            ? formatFieldError({
+          String(value || '').trim()
+            ? undefined
+            : formatFieldError({
                 problem: 'Full name is empty.',
                 action: 'Enter your first and last name.',
-              })
-            : undefined,
+              }),
       }}
     />
     <Input
@@ -239,7 +257,9 @@ export const DynamicFields = () => {
   });
 
   return (
-    <Form form={form} onSubmit={() => form.handleSubmit()}>
+    <Form
+      form={form}
+      onSubmit={async () => form.handleSubmit()}>
       <Select
         label="Account Type"
         name="accountType"
@@ -266,9 +286,18 @@ export const DynamicFields = () => {
             {([accountType]) => (
               <>
                 {accountType === 'business' ? (
-                  <Input label="Company Name" name="companyName" required helperText="Enter your company name" />
+                  <Input
+                    label="Company Name"
+                    name="companyName"
+                    required
+                    helperText="Enter your company name"
+                  />
                 ) : (
-                  <Input label="Personal Info" name="personalInfo" helperText="Tell us about yourself" />
+                  <Input
+                    label="Personal Info"
+                    name="personalInfo"
+                    helperText="Tell us about yourself"
+                  />
                 )}
               </>
             )}
@@ -293,9 +322,20 @@ export const ReadOnlyAndDisabledSubmit = () => (
       },
     }}
     onSubmit={(values) => action('onSubmit')(values)}>
-    <Input label="Editable" name="editable" />
-    <Input label="Read Only" name="readOnlyField" readOnly />
-    <Input label="Disabled" name="disabledField" disabled />
+    <Input
+      label="Editable"
+      name="editable"
+    />
+    <Input
+      label="Read Only"
+      name="readOnlyField"
+      readOnly
+    />
+    <Input
+      label="Disabled"
+      name="disabledField"
+      disabled
+    />
     <FormActions>
       <Button action="submit">Submit</Button>
     </FormActions>
@@ -691,7 +731,13 @@ export const AllFields = () => {
             helperText="We'll never share your email"
             required
           />
-          <Select label="Country" name="country" placeholder="Select a country" options={countryOptions} required />
+          <Select
+            label="Country"
+            name="country"
+            placeholder="Select a country"
+            options={countryOptions}
+            required
+          />
           <Select
             label="Priority"
             name="priority"
@@ -718,40 +764,89 @@ export const AllFields = () => {
             loading={userSearchLoading}
             helperText="onSearch callback (simulated API)"
           />
-          <DatePicker label="Birth Date" name={'birthDate' as any} helperText="Select your date of birth" />
-          <DatetimePicker label="Appointment" name={'appointmentDatetime' as any} helperText="Select date and time" />
+          <DatePicker
+            label="Birth Date"
+            name={'birthDate' as any}
+            helperText="Select your date of birth"
+          />
+          <DatetimePicker
+            label="Appointment"
+            name={'appointmentDatetime' as any}
+            helperText="Select date and time"
+          />
           <TimePicker
             label="Start Time"
             name="startTime"
             helperText="When does your day begin?"
             clockIcon=<ClockIcon size={16} />
           />
-          <MonthPicker label="Fiscal Month" name={'fiscalMonth' as any} helperText="Select month and year" />
-          <ColorPicker label="Brand Color" name="brandColor" helperText="Pick your favorite color" />
+          <MonthPicker
+            label="Fiscal Month"
+            name={'fiscalMonth' as any}
+            helperText="Select month and year"
+          />
+          <ColorPicker
+            label="Brand Color"
+            name="brandColor"
+            helperText="Pick your favorite color"
+          />
           <DateRangePicker
             label="Project Dates"
             name={'projectDateRange' as any}
             helperText="Select start and end dates"
           />
-          <PhoneInput label="Phone Number" name="phone" helperText="Your contact number" />
+          <PhoneInput
+            label="Phone Number"
+            name="phone"
+            helperText="Your contact number"
+          />
           <MultiDatePicker
             label="Vacation Days"
             name={'vacationDates' as any}
             helperText="Select multiple dates"
             limit={10}
           />
-          <Stepper label="Age" name="age" min={0} max={150} helperText="Your current age" />
-          <OTPInput label="Verification Code" name="otp" length={6} helperText="Enter the 6-digit code" />
+          <Stepper
+            label="Age"
+            name="age"
+            min={0}
+            max={150}
+            helperText="Your current age"
+          />
+          <OTPInput
+            label="Verification Code"
+            name="otp"
+            length={6}
+            helperText="Enter the 6-digit code"
+          />
           <Duration
             label="Task Duration"
             name="taskDuration"
             helperText="How long will this take?"
             clockIcon=<ClockIcon size={16} />
           />
-          <Checkbox label="Accept Terms & Conditions" name="acceptTerms" />
-          <Slider label="Volume" name="volume" min={0} max={100} helperText="Adjust the volume" />
-          <Switch label="Enable Notifications" name="notifications" helperText="Receive push notifications" />
-          <Rating label="Quality Rating" name="rating" helperText="Rate from 1 to 5 stars" starIcon={StarIcon} />
+          <Checkbox
+            label="Accept Terms & Conditions"
+            name="acceptTerms"
+          />
+          <Slider
+            label="Volume"
+            name="volume"
+            min={0}
+            max={100}
+            helperText="Adjust the volume"
+          />
+          <Switch
+            label="Enable Notifications"
+            name="notifications"
+            helperText="Receive push notifications"
+          />
+          <Rating
+            label="Quality Rating"
+            name="rating"
+            helperText="Rate from 1 to 5 stars"
+            starIcon={StarIcon}
+          />
           <Geolocation
             label="Location"
             name="location"
@@ -933,16 +1028,38 @@ export const Layout = () => (
     onSubmit={(values) => action('onSubmit')(values)}>
     <FormSectionStack>
       <FormSection label="Contact">
-        <FieldGroup legend="Name" columns={2}>
-          <Input label="First name" name="firstName" required />
-          <Input label="Last name" name="lastName" required />
+        <FieldGroup
+          legend="Name"
+          columns={2}>
+          <Input
+            label="First name"
+            name="firstName"
+            required
+          />
+          <Input
+            label="Last name"
+            name="lastName"
+            required
+          />
         </FieldGroup>
-        <Input label="Email" name="email" required />
+        <Input
+          label="Email"
+          name="email"
+          required
+        />
       </FormSection>
       <FormSection label="Address">
-        <FieldGroup legend="Location" columns={2}>
-          <Input label="City" name="city" />
-          <Input label="Postcode" name="postcode" />
+        <FieldGroup
+          legend="Location"
+          columns={2}>
+          <Input
+            label="City"
+            name="city"
+          />
+          <Input
+            label="Postcode"
+            name="postcode"
+          />
         </FieldGroup>
       </FormSection>
     </FormSectionStack>
@@ -991,7 +1108,9 @@ export const AllFieldsShortLists = () => {
 
   return (
     <Form form={form}>
-      <YStack gap="$4" maxWidth={500}>
+      <YStack
+        gap="$4"
+        maxWidth={500}>
         <H3>Text Inputs</H3>
         <Input
           label="Full Name"
@@ -1013,12 +1132,24 @@ export const AllFieldsShortLists = () => {
           textAreaProps={{ placeholder: 'Tell us about yourself...' }}
           helperText="A short description"
         />
-        <Stepper label="Age" name="age" min={0} max={150} helperText="Your current age" />
+        <Stepper
+          label="Age"
+          name="age"
+          min={0}
+          max={150}
+          helperText="Your current age"
+        />
 
         <Separator />
         <H3>Selection (short lists)</H3>
 
-        <Select label="Country" name="country" placeholder="Select a country" options={shortCountryOptions} required />
+        <Select
+          label="Country"
+          name="country"
+          placeholder="Select a country"
+          options={shortCountryOptions}
+          required
+        />
 
         <Combobox
           label="Author"
@@ -1065,14 +1196,36 @@ export const AllFieldsShortLists = () => {
 
         <Separator />
         <H3>Toggles</H3>
-        <Checkbox label="Accept Terms & Conditions" name="acceptTerms" />
-        <Switch label="Enable Notifications" name="notifications" helperText="Receive push notifications" />
+        <Checkbox
+          label="Accept Terms & Conditions"
+          name="acceptTerms"
+        />
+        <Switch
+          label="Enable Notifications"
+          name="notifications"
+          helperText="Receive push notifications"
+        />
 
         <Separator />
         <H3>Range, Rating & Date/Time</H3>
-        <Slider label="Volume" name="volume" min={0} max={100} helperText="Adjust the volume" />
-        <Rating label="Quality Rating" name="rating" helperText="Rate from 1 to 5 stars" starIcon={StarIcon} />
-        <DatePicker label="Birth Date" name={'birthDate' as any} helperText="Select your date of birth" />
+        <Slider
+          label="Volume"
+          name="volume"
+          min={0}
+          max={100}
+          helperText="Adjust the volume"
+        />
+        <Rating
+          label="Quality Rating"
+          name="rating"
+          helperText="Rate from 1 to 5 stars"
+          starIcon={StarIcon}
+        />
+        <DatePicker
+          label="Birth Date"
+          name={'birthDate' as any}
+          helperText="Select your date of birth"
+        />
         <TimePicker
           label="Start Time"
           name="startTime"
@@ -1090,9 +1243,22 @@ export const AllFieldsShortLists = () => {
 
         <Separator />
         <H3>Specialized Inputs</H3>
-        <PhoneInput label="Phone Number" name="phone" helperText="Your contact number" />
-        <OTPInput label="Verification Code" name="otp" length={6} helperText="Enter the 6-digit code" />
-        <ColorPicker label="Brand Color" name="brandColor" helperText="Pick your favorite color" />
+        <PhoneInput
+          label="Phone Number"
+          name="phone"
+          helperText="Your contact number"
+        />
+        <OTPInput
+          label="Verification Code"
+          name="otp"
+          length={6}
+          helperText="Enter the 6-digit code"
+        />
+        <ColorPicker
+          label="Brand Color"
+          name="brandColor"
+          helperText="Pick your favorite color"
+        />
         <MentionInput
           label="Comment"
           name="comment"
@@ -1110,7 +1276,12 @@ export const AllFieldsShortLists = () => {
             showPreview: true,
           } as any)}
         />
-        <Signature label="Signature" name="signature" helperText="Sign in the box" clearIcon=<EraserIcon size={16} /> />
+        <Signature
+          label="Signature"
+          name="signature"
+          helperText="Sign in the box"
+          clearIcon=<EraserIcon size={16} />
+        />
         <Barcode
           label="Product Barcode"
           name="barcode"

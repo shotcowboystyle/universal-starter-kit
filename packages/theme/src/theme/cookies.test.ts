@@ -12,7 +12,8 @@ import {
   cookiePreset,
   cookieOverridesPrefix,
 } from './cookies';
-import { defaultKnobs, type Knobs } from './knobs';
+import { defaultKnobs } from './knobs';
+import type { Knobs } from './knobs';
 
 describe('splitCookieValue', () => {
   it('returns a single chunk for small values', () => {
@@ -23,10 +24,10 @@ describe('splitCookieValue', () => {
   it('splits values exceeding 3500 chars into chunks', () => {
     const large = 'x'.repeat(7500);
     const chunks = splitCookieValue(large);
-    expect(chunks.length).toBe(3);
-    expect(chunks[0].length).toBe(3500);
-    expect(chunks[1].length).toBe(3500);
-    expect(chunks[2].length).toBe(500);
+    expect(chunks).toHaveLength(3);
+    expect(chunks[0]).toHaveLength(3500);
+    expect(chunks[1]).toHaveLength(3500);
+    expect(chunks[2]).toHaveLength(500);
   });
 
   it('handles value at exact threshold boundary', () => {
@@ -37,9 +38,9 @@ describe('splitCookieValue', () => {
   it('handles value one over threshold', () => {
     const over = 'b'.repeat(3501);
     const chunks = splitCookieValue(over);
-    expect(chunks.length).toBe(2);
-    expect(chunks[0].length).toBe(3500);
-    expect(chunks[1].length).toBe(1);
+    expect(chunks).toHaveLength(2);
+    expect(chunks[0]).toHaveLength(3500);
+    expect(chunks[1]).toHaveLength(1);
   });
 });
 

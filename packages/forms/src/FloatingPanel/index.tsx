@@ -11,27 +11,22 @@ import type { ReactNode, RefObject, UIEvent } from 'react';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { isWeb, Sheet, View, YStack } from 'tamagui';
 
-import { ScrollArrow } from '../shared/floatingList';
-import { useReturnFocusOnClose, useSheetModalFocus } from '../shared/focusManagement';
-import { useSheetEscapeDismiss } from '../shared/useSheetEscapeDismiss';
-import { zIndex } from '../shared/zIndex';
+import { ScrollArrow } from '../shared/floating-list';
+import { useReturnFocusOnClose, useSheetModalFocus } from '../shared/focus-management';
+import { useSheetEscapeDismiss } from '../shared/use-sheet-escape-dismiss';
+import { zIndex } from '../shared/z-index';
 
-import { isNestedPanelAction, type PanelActionEvent } from './nestedAction';
+import { isNestedPanelAction } from './nested-action';
+import type { PanelActionEvent } from './nested-action';
 import { PanelPortal } from './PanelPortal';
-import {
-  contextMenuPoint,
-  pointOpensUp,
-  pointPanelLeft,
-  referenceCornerPoint,
-  type ContextMenuEventLike,
-  type PanelPoint,
-} from './pointAnchor';
-import { useFloatingPanel, panelTransition, panelViewportPadding } from './useFloatingPanel';
-import type { PanelWidthMode } from './useFloatingPanel';
+import { contextMenuPoint, pointOpensUp, pointPanelLeft, referenceCornerPoint } from './point-anchor';
+import type { ContextMenuEventLike, PanelPoint } from './point-anchor';
+import { useFloatingPanel, panelTransition, panelViewportPadding } from './use-floating-panel';
+import type { PanelWidthMode } from './use-floating-panel';
 
 type PointerOpenEvent = PanelActionEvent & { button?: number; target?: unknown };
 
-export { floatingPanelActionProps, isNestedPanelAction } from './nestedAction';
+export { floatingPanelActionProps, isNestedPanelAction } from './nested-action';
 
 // Re-export hook for Select / Combobox / external consumers
 export {
@@ -42,8 +37,8 @@ export {
   panelViewportPadding,
   panelAnchorOffset,
   resolvePanelWidthMode,
-} from './useFloatingPanel';
-export type { PanelWidthMode, UseFloatingPanelOptions, UseFloatingPanelReturn } from './useFloatingPanel';
+} from './use-floating-panel';
+export type { PanelWidthMode, UseFloatingPanelOptions, UseFloatingPanelReturn } from './use-floating-panel';
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -420,7 +415,10 @@ function FloatingPanelSheet({
 
   return (
     <>
-      <View flexDirection="row" alignItems="center" width={triggerSizing === 'content' ? 'auto' : '100%'}>
+      <View
+        flexDirection="row"
+        alignItems="center"
+        width={triggerSizing === 'content' ? 'auto' : '100%'}>
         <View
           flex={triggerSizing === 'content' ? undefined : 1}
           minWidth={0}
@@ -463,7 +461,9 @@ function FloatingPanelSheet({
           gap={frameGap}>
           {header}
           {scrollable ? (
-            <Sheet.ScrollView flex={header ? 1 : undefined} {...scrollViewProps}>
+            <Sheet.ScrollView
+              flex={header ? 1 : undefined}
+              {...scrollViewProps}>
               {children}
             </Sheet.ScrollView>
           ) : (
@@ -565,8 +565,8 @@ function FloatingPanelWeb({
     const triggerBounds = point ? { top: point.y, bottom: point.y } : trig.getBoundingClientRect();
     const viewportHeight = window.innerHeight;
     const cs = getComputedStyle(dropdownElement);
-    const borderTopWidth = parseFloat(cs.borderTopWidth) || 0;
-    const borderBottomWidth = parseFloat(cs.borderBottomWidth) || 0;
+    const borderTopWidth = Number.parseFloat(cs.borderTopWidth) || 0;
+    const borderBottomWidth = Number.parseFloat(cs.borderBottomWidth) || 0;
     const totalBorderWidth = borderTopWidth + borderBottomWidth;
     const scrollContentHeight = dropdownElement.scrollHeight;
     const totalContentHeight = scrollContentHeight + totalBorderWidth;
@@ -981,8 +981,8 @@ function FloatingPanelWeb({
             />
             <View
               ref={contentRef as any}
-              {...(contentPadding !== 'none' ? panel.knobProps.panelPadding : undefined)}
-              {...(contentPadding !== 'none' ? panel.knobProps.gapLg : undefined)}>
+              {...(contentPadding === 'none' ? undefined : panel.knobProps.panelPadding)}
+              {...(contentPadding === 'none' ? undefined : panel.knobProps.gapLg)}>
               {children}
             </View>
             <ScrollArrow

@@ -161,7 +161,10 @@ describe('house Text — fontWeight and bodyFont reach the text node', () => {
     // never leak into the assertion.
     const byDefault = renderTextClasses(<Text>{LABEL}</Text>, ['_fos-', '_lh-', '_fow-']);
     const explicit = renderTextClasses(
-      <Text fontSize={14} lineHeight={25} fontWeight="400">
+      <Text
+        fontSize={14}
+        lineHeight={25}
+        fontWeight="400">
         {LABEL}
       </Text>,
       ['_fos-', '_lh-', '_fow-'],

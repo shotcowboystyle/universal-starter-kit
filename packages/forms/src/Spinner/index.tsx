@@ -3,10 +3,11 @@ import { View, isWeb } from 'tamagui';
 
 import { t } from '../shared/t';
 
+import { spinnerSizePx, spinnerSizeToken } from './spinner-size';
+import type { SpinnerProps } from './spinner-size';
 import { SpinnerGlyph, useSpinnerStroke } from './SpinnerGlyph';
-import { spinnerSizePx, spinnerSizeToken, type SpinnerProps } from './spinnerSize';
 
-export type { SpinnerProps, SpinnerSize } from './spinnerSize';
+export type { SpinnerProps, SpinnerSize } from './spinner-size';
 
 const MOTION_STYLE_ID = 'mp1-spinner-motion';
 // A-CONTINUOUS period. Gated on `knobProps.transition`; not sourced
@@ -28,7 +29,7 @@ function ensureMotionStyles() {
     '.mp1-spinner-static, .mp1-spinner-static * { animation: none !important; }',
     '@media (prefers-reduced-motion: reduce) { .mp1-spinner, .mp1-spinner * { animation: none !important; } }',
   ].join('\n');
-  document.head.appendChild(style);
+  document.head.append(style);
 }
 
 /** Form-styled Spinner. Size follows the shared size-token scale; spin gates on transition. */
@@ -54,7 +55,10 @@ export function Spinner({ size, color, ...props }: SpinnerProps) {
       data-animation={animationsOff ? 'none' : 'spin'}
       {...(isWeb ? { className } : undefined)}
       {...rest}>
-      <SpinnerGlyph color={stroke} size={px} />
+      <SpinnerGlyph
+        color={stroke}
+        size={px}
+      />
     </View>
   );
 }

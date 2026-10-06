@@ -23,7 +23,8 @@
  * Raw tamagui Button stays reachable as `TamaguiButton` (./tamagui.ts escape
  * hatch, same precedent as TamaguiCheckbox/TamaguiToast).
  */
-import { Button as FormsButton, type ButtonProps as FormsButtonProps } from '@repo/forms';
+import { Button as FormsButton } from '@repo/forms';
+import type { ButtonProps as FormsButtonProps } from '@repo/forms';
 
 /**
  * House Button API — the forms Button contract, plus the raw-tamagui `variant`
@@ -40,7 +41,12 @@ export function Button({ variant, outlined, ...props }: ButtonProps) {
   // Raw-tamagui prop-compat: `variant="outlined"` is tamagui Button API that
   // pre-shadow consumers pass; the house channel is the `outlined` boolean.
   // An explicit `outlined` wins; with neither, the knob decides downstream.
-  return <FormsButton outlined={outlined ?? (variant === 'outlined' || undefined)} {...props} />;
+  return (
+    <FormsButton
+      outlined={outlined ?? (variant === 'outlined' || undefined)}
+      {...props}
+    />
+  );
 }
 
 Button.Text = FormsButton.Text;

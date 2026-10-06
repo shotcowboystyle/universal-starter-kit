@@ -1,8 +1,8 @@
-import { locales, defaultLocale } from "@repo/i18n";
-import { hasLocale } from "next-intl";
-import { getRequestConfig } from "next-intl/server";
+import { locales, defaultLocale } from '@repo/i18n';
+import { hasLocale } from 'next-intl';
+import { getRequestConfig } from 'next-intl/server';
 
-import { getCachedMessages } from "@/lib/get-cached-messages";
+import { getCachedMessages } from '@/lib/get-cached-messages';
 
 export default getRequestConfig(async ({ requestLocale }) => {
   const requested = await requestLocale;
@@ -10,6 +10,6 @@ export default getRequestConfig(async ({ requestLocale }) => {
 
   return {
     locale,
-    messages: await getCachedMessages(locale)
+    messages: await getCachedMessages(locale),
   };
 });

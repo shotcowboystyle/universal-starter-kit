@@ -1,17 +1,16 @@
 import { ClockIcon } from '@phosphor-icons/react';
-import { useTouchSurface } from '@repo/theme';
-import { sizeRecipeForToken, type KnobProps } from '@repo/theme';
+import { useTouchSurface, sizeRecipeForToken, type KnobProps } from '@repo/theme';
 import type { ReactNode } from 'react';
 import { useCallback, useState } from 'react';
 import type { LabelProps, SizeTokens } from 'tamagui';
 import { Text, XStack, YStack, isWeb } from 'tamagui';
 
 import { Button } from '../../Button';
-import { Field, FieldLayout } from '../../fieldLayout';
+import { Field, FieldLayout } from '../../FieldLayout';
 import { Input as InputParts } from '../../InputParts';
-import { formCommonColors } from '../../shared/colorRamps';
+import { formCommonColors } from '../../shared/color-ramps';
 import { t } from '../../shared/t';
-import { useIsInTableCell } from '../../shared/tableCellContext';
+import { useIsInTableCell } from '../../shared/table-cell-context';
 import {
   getFieldError,
   getFieldHeight,
@@ -28,8 +27,8 @@ import {
   parseDurationText,
   partsToSeconds,
   secondsToParts,
-  type DurationParts,
-} from './durationMath';
+} from './duration-math';
+import type { DurationParts } from './duration-math';
 
 export type { DurationParts };
 export { durationSegmentWidth, normalizeSeconds, parseDurationText, partsToSeconds, secondsToParts };
@@ -44,8 +43,8 @@ const defaultPresets: DurationPreset[] = [
   { label: '30m', seconds: 1800 },
   { label: '1h', seconds: 3600 },
   { label: '2h', seconds: 7200 },
-  { label: '4h', seconds: 14400 },
-  { label: '8h', seconds: 28800 },
+  { label: '4h', seconds: 14_400 },
+  { label: '8h', seconds: 28_800 },
 ];
 
 /** Preset chips stay on the $2 row (28px). The field size knob does not reach them. */
@@ -184,7 +183,11 @@ function DurationSegment({
             } as Record<string, unknown>)
           : {})}
       />
-      <Text {...knobProps.body} {...knobProps.controlType} color={formCommonColors.muted} textTransform="lowercase">
+      <Text
+        {...knobProps.body}
+        {...knobProps.controlType}
+        color={formCommonColors.muted}
+        textTransform="lowercase">
         {unit}
       </Text>
     </XStack>
@@ -265,8 +268,8 @@ function DurationControl({
             flexShrink={1}
             gap={recipe.gap}
             data-duration-row="">
-            {resolvedClock != null ? <InputParts.Icon adornment="leading">{resolvedClock}</InputParts.Icon> : null}
-            {!hideDays ? (
+            {resolvedClock == null ? null : <InputParts.Icon adornment="leading">{resolvedClock}</InputParts.Icon>}
+            {hideDays ? null : (
               <DurationSegment
                 id={id}
                 unit={t('d')}
@@ -284,7 +287,7 @@ function DurationControl({
                 hasError={hasError}
                 sizeToken={sizeToken}
               />
-            ) : null}
+            )}
             <DurationSegment
               id={hideDays ? id : `${id}-hours`}
               unit={t('h')}
@@ -359,7 +362,10 @@ function DurationPresets({
     return null;
   }
   return (
-    <XStack {...knobProps.gap} flexWrap="wrap" data-duration-presets="">
+    <XStack
+      {...knobProps.gap}
+      flexWrap="wrap"
+      data-duration-presets="">
       {presets.map((preset) => {
         const selected = seconds === preset.seconds;
         return (
@@ -473,9 +479,18 @@ export function Duration({
 
   if (skeleton) {
     return (
-      <FieldLayout id={id} label={label} size={size} knobProps={knobProps}>
+      <FieldLayout
+        id={id}
+        label={label}
+        size={size}
+        knobProps={knobProps}>
         <InputParts size={resolvedSize}>
-          <Skeleton variant="rounded" width="100%" height={visualHeight} data-duration-skeleton="" />
+          <Skeleton
+            variant="rounded"
+            width="100%"
+            height={visualHeight}
+            data-duration-skeleton=""
+          />
         </InputParts>
       </FieldLayout>
     );
@@ -500,7 +515,12 @@ export function Duration({
         knobProps={knobProps}
       />
       {readOnly || disabled || inTableCell ? null : (
-        <DurationPresets seconds={current} presets={presets} onChange={onValueChange} knobProps={knobProps} />
+        <DurationPresets
+          seconds={current}
+          presets={presets}
+          onChange={onValueChange}
+          knobProps={knobProps}
+        />
       )}
     </YStack>
   );
@@ -530,7 +550,11 @@ export function Duration({
   }
 
   return (
-    <Field form={resolvedForm} name={name} defaultValue={defaultValue} validators={resolvedValidators}>
+    <Field
+      form={resolvedForm}
+      name={name}
+      defaultValue={defaultValue}
+      validators={resolvedValidators}>
       {(field) => {
         const resolvedError = getFieldError(field, error);
         const fieldValue = normalizeSeconds(field.state.value ?? 0);
@@ -549,7 +573,9 @@ export function Duration({
             {fieldBody(
               fieldValue,
               (s) => {
-                handleChange(s, (v) => field.handleChange(v));
+                handleChange(s, (v) => {
+                  field.handleChange(v);
+                });
               },
               !!resolvedError,
             )}

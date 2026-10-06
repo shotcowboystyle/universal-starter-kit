@@ -1,13 +1,15 @@
 import { ToastProvider } from '@tamagui/toast';
 import { useContext, useMemo } from 'react';
 import type { PropsWithChildren } from 'react';
-import { type CreateTamaguiProps, TamaguiProvider, type TamaguiProviderProps } from 'tamagui';
+import { TamaguiProvider } from 'tamagui';
+import type { CreateTamaguiProps, TamaguiProviderProps } from 'tamagui';
 
-import { CornerSmoothingStyles } from './cornerSmoothing';
+import { CornerSmoothingStyles } from './corner-smoothing';
 import { FontKnobStyles } from './FontKnobStyles';
-import { PresetContext, type PresetContextValue } from './PresetContext';
+import { PresetContext } from './preset-context';
+import type { PresetContextValue } from './preset-context';
 import { defaultPreset } from './presets';
-import { useTheme } from './useTheme';
+import { useTheme } from './use-theme';
 
 // ---------------------------------------------------------------------------
 // ThemeProviderProps (simplified — knob-based theming)
@@ -35,7 +37,11 @@ export function ThemeProvider<T extends CreateTamaguiProps>({
   const activeTheme = systemTheme;
 
   return (
-    <TamaguiProvider {...tamaguiProps} config={config?.tamagui} defaultTheme={activeTheme} disableInjectCSS={false}>
+    <TamaguiProvider
+      {...tamaguiProps}
+      config={config?.tamagui}
+      defaultTheme={activeTheme}
+      disableInjectCSS={false}>
       <ToastProvider>
         <KnobBridge>{children}</KnobBridge>
       </ToastProvider>

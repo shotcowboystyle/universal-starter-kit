@@ -28,7 +28,9 @@ export default function BoardPage() {
 
   return (
     <PageContainer>
-      <YStack render="main" gap="$4">
+      <YStack
+        render="main"
+        gap="$4">
         <Suspense fallback={<Paragraph>{t('loadingBoard')}</Paragraph>}>
           <MemoizedBoard />
         </Suspense>

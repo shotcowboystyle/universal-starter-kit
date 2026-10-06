@@ -111,12 +111,26 @@ describe('TreeSelect cover + width', () => {
 describe('TreeSelect one tab stop', () => {
   it('closed field is one tab stop; open tree is search + activedescendant', async () => {
     setViewport(1200);
-    const result = renderWithProviders(<TreeSelect label="Account" nodes={accounts} value="hdfc" />);
+    const result = renderWithProviders(
+      <TreeSelect
+        label="Account"
+        nodes={accounts}
+        value="hdfc"
+      />,
+    );
     const closedStops = tabStops(result.baseElement);
-    expect(closedStops.length).toBe(1);
+    expect(closedStops).toHaveLength(1);
     expect(closedStops[0]?.getAttribute('data-testid')).toBe('tree-select-trigger');
 
-    result.rerender(<TreeSelect label="Account" nodes={accounts} value="hdfc" open defaultExpandedIds={['assets']} />);
+    result.rerender(
+      <TreeSelect
+        label="Account"
+        nodes={accounts}
+        value="hdfc"
+        open
+        defaultExpandedIds={['assets']}
+      />,
+    );
     await waitFor(() => {
       expect(result.baseElement.querySelector('[data-testid="tree-select-search"]')).toBeTruthy();
     });
@@ -148,7 +162,13 @@ describe('TreeSelect commit vs expand', () => {
     const onChange = vi.fn();
     const onOpenChange = vi.fn();
     const result = renderWithProviders(
-      <TreeSelect label="Account" nodes={accounts} open onChange={onChange} onOpenChange={onOpenChange} />,
+      <TreeSelect
+        label="Account"
+        nodes={accounts}
+        open
+        onChange={onChange}
+        onOpenChange={onOpenChange}
+      />,
     );
     await waitFor(() => {
       expect(result.baseElement.querySelector('[data-treeselect-caret]')).toBeTruthy();
@@ -173,7 +193,12 @@ describe('TreeSelect sheet at <=640', () => {
   it('renders the sheet; rows match the desktop tree', async () => {
     setViewport(1200);
     const desktop = renderWithProviders(
-      <TreeSelect label="Account" nodes={accounts} open defaultExpandedIds={['assets', 'current', 'bank']} />,
+      <TreeSelect
+        label="Account"
+        nodes={accounts}
+        open
+        defaultExpandedIds={['assets', 'current', 'bank']}
+      />,
     );
     await waitFor(() => {
       expect(desktop.baseElement.querySelector('[data-treeselect-row]')).toBeTruthy();
@@ -189,7 +214,12 @@ describe('TreeSelect sheet at <=640', () => {
     desktop.unmount();
     setViewport(640);
     const mobile = renderWithProviders(
-      <TreeSelect label="Account" nodes={accounts} open defaultExpandedIds={['assets', 'current', 'bank']} />,
+      <TreeSelect
+        label="Account"
+        nodes={accounts}
+        open
+        defaultExpandedIds={['assets', 'current', 'bank']}
+      />,
     );
     await waitFor(() => {
       expect(mobile.baseElement.querySelector('[data-treeselect-row]')).toBeTruthy();
@@ -210,7 +240,12 @@ describe('TreeSelect empty filter', () => {
   it('shows a 44 row, not an EmptyState well', async () => {
     setViewport(1200);
     const result = renderWithProviders(
-      <TreeSelect label="Account" nodes={accounts} open emptyMessage="No matching accounts" />,
+      <TreeSelect
+        label="Account"
+        nodes={accounts}
+        open
+        emptyMessage="No matching accounts"
+      />,
     );
     await waitFor(() => {
       expect(result.baseElement.querySelector('[data-testid="tree-select-search"]')).toBeTruthy();

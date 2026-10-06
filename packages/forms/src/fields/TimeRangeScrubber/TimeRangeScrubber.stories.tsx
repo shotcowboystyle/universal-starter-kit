@@ -67,7 +67,9 @@ export const Main: Story = {
         },
       });
       return (
-        <Form form={form} maxWidth={720}>
+        <Form
+          form={form}
+          maxWidth={720}>
           <YStack gap="$4">
             <TimeRangeScrubber
               label="Session review window"
@@ -95,7 +97,9 @@ export const Dark: Story = {
   name: 'Dark',
   render: () => (
     <Preset theme="dark">
-      <YStack backgroundColor="$background" padding="$4">
+      <YStack
+        backgroundColor="$background"
+        padding="$4">
         <TimeRangeScrubber
           label="Session review window"
           now={NOW}
@@ -135,7 +139,9 @@ export const OverflowMenu: Story = {
   render: () => {
     const [value, setValue] = useState<DateRange | null>(null);
     return (
-      <YStack gap="$3" maxWidth={420}>
+      <YStack
+        gap="$3"
+        maxWidth={420}>
         <TimeRangeScrubber
           label="Narrow chip row"
           now={NOW}
@@ -144,7 +150,9 @@ export const OverflowMenu: Story = {
           onChange={setValue}
           maxVisibleQuickRanges={2}
         />
-        <Text fontFamily="$mono" fontSize={12}>
+        <Text
+          fontFamily="$mono"
+          fontSize={12}>
           {value?.start?.toISOString() ?? '—'} → {value?.end?.toISOString() ?? '—'}
         </Text>
       </YStack>

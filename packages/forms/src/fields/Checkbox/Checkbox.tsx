@@ -11,9 +11,9 @@ import type {
 } from 'tamagui';
 import { Checkbox as TamaguiCheckbox, Label, View, XStack, getVariable, isWeb, useTheme } from 'tamagui';
 
-import { Field, FieldLayout } from '../../fieldLayout';
-import { formCommonColors, formSelectedColors } from '../../shared/colorRamps';
-import { useIsInTableCell } from '../../shared/tableCellContext';
+import { Field, FieldLayout } from '../../FieldLayout';
+import { formCommonColors, formSelectedColors } from '../../shared/color-ramps';
+import { useIsInTableCell } from '../../shared/table-cell-context';
 import {
   getElevationWrapperProps,
   getFieldError,
@@ -24,6 +24,7 @@ import {
 import { Skeleton } from '../../Skeleton';
 import type { AnyFormApi } from '../../types';
 
+import { useCheckboxGroupSkipsElevation } from './checkbox-group-context';
 import {
   CHECKBOX_TARGET_PX,
   CheckboxGlyphBox,
@@ -35,7 +36,6 @@ import {
   getCheckboxIconSize,
 } from './CheckboxBox';
 import { CheckboxFieldFrame } from './CheckboxFieldFrame';
-import { useCheckboxGroupSkipsElevation } from './checkboxGroupContext';
 
 export interface CheckboxProps {
   name?: string;
@@ -233,7 +233,10 @@ export function Checkbox({
   // keep elevation suppressed as before).
   const renderControlContent = (currentChecked: CheckedState | undefined) =>
     elevationWrapperProps.elevation && !inTableCell ? (
-      <View borderRadius={resolvedRadius.borderRadius ?? 0} pointerEvents="none" {...elevationWrapperProps}>
+      <View
+        borderRadius={resolvedRadius.borderRadius ?? 0}
+        pointerEvents="none"
+        {...elevationWrapperProps}>
         {glyphBox(currentChecked)}
       </View>
     ) : (
@@ -259,12 +262,33 @@ export function Checkbox({
     // radius the real box uses, the same box↔label gap — and the 44px
     // pressable target box around the 20px glyph (same as RadioGroup).
     return (
-      <FieldLayout id={id} size={size} knobProps={knobProps} compactSpacing>
-        <XStack gap={inlineGap} alignItems="center">
-          <View width={targetSize} height={targetSize} alignItems="center" justifyContent="center">
-            <Skeleton variant="rounded" width={glyphSize} height={glyphSize} borderRadius={cappedRadius} />
+      <FieldLayout
+        id={id}
+        size={size}
+        knobProps={knobProps}
+        compactSpacing>
+        <XStack
+          gap={inlineGap}
+          alignItems="center">
+          <View
+            width={targetSize}
+            height={targetSize}
+            alignItems="center"
+            justifyContent="center">
+            <Skeleton
+              variant="rounded"
+              width={glyphSize}
+              height={glyphSize}
+              borderRadius={cappedRadius}
+            />
           </View>
-          {label && <Skeleton variant="text" width={96} height={14} />}
+          {label && (
+            <Skeleton
+              variant="text"
+              width={96}
+              height={14}
+            />
+          )}
         </XStack>
       </FieldLayout>
     );
@@ -294,9 +318,9 @@ export function Checkbox({
         id={id}
         {...(isControlled
           ? { checked }
-          : defaultValue !== undefined
-            ? { defaultChecked: defaultValue as CheckedState }
-            : undefined)}
+          : defaultValue === undefined
+            ? undefined
+            : { defaultChecked: defaultValue as CheckedState })}
         {...(readOnly ? { pointerEvents: 'none' as const } : undefined)}
         {...(readOnly ? { 'aria-readonly': true } : undefined)}
         aria-required={required || undefined}
@@ -366,10 +390,14 @@ export function Checkbox({
   }
 
   return (
-    <Field form={resolvedForm} name={name} defaultValue={defaultValue} validators={resolvedValidators}>
+    <Field
+      form={resolvedForm}
+      name={name}
+      defaultValue={defaultValue}
+      validators={resolvedValidators}>
       {(field) => {
         const resolvedError = getFieldError(field, error);
-        const resolvedChecked = checked !== undefined ? checked : (field.state.value as CheckedState);
+        const resolvedChecked = checked === undefined ? (field.state.value as CheckedState) : checked;
         const resolvedLabelColor = resolvedError ? formCommonColors.error : knobProps.textAccentColor;
         const resolvedLabelHoverStyle = {
           color: resolvedLabelColor,

@@ -48,7 +48,11 @@ function ConfirmHarness({
 }) {
   const [open, setOpen] = useState(startOpen);
   return (
-    <YStack minHeight={360} gap="$3" padding="$4" alignItems="flex-start">
+    <YStack
+      minHeight={360}
+      gap="$3"
+      padding="$4"
+      alignItems="flex-start">
       <Button
         size="$3"
         onPress={() => {
@@ -126,15 +130,24 @@ function NotifyBlockingDemo() {
 
   return (
     <NotifyHost>
-      <YStack gap="$4" padding="$4" maxWidth={640}>
-        <SizableText fontWeight="700" fontSize="$5">
+      <YStack
+        gap="$4"
+        padding="$4"
+        maxWidth={640}>
+        <SizableText
+          fontWeight="700"
+          fontSize="$5">
           notify() → ConfirmDialog
         </SizableText>
-        <Paragraph size="$3" color="$color11">
+        <Paragraph
+          size="$3"
+          color="$color11">
           Blocking error opens a destructive ConfirmDialog; blocking warning opens a caution ConfirmDialog. Escape or
           Cancel dismisses.
         </Paragraph>
-        <XStack gap="$2" flexWrap="wrap">
+        <XStack
+          gap="$2"
+          flexWrap="wrap">
           <Button
             size="$3"
             error

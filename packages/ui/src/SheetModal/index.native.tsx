@@ -23,18 +23,19 @@ import {
   StyleSheet,
   View as RNView,
   useWindowDimensions,
-  type GestureResponderEvent,
 } from 'react-native';
+import type { GestureResponderEvent } from 'react-native';
 import { SafeAreaInsetsContext, initialWindowMetrics } from 'react-native-safe-area-context';
 import { View, YStack } from 'tamagui';
 
 import { useTranslation } from '../shared/i18n';
-import { useKeyboardInset } from '../shared/useKeyboardInset';
+import { useKeyboardInset } from '../shared/use-keyboard-inset';
 import { DialogRegionContext } from '../surfaces';
 
 import { minSheetHeight, resolveSheetDetents } from './detents';
 
 import type { SheetModalProps } from './index';
+
 export type { SheetModalProps } from './index';
 
 const sheetMaxHeightRatio = 0.85;
@@ -349,7 +350,7 @@ export function SheetModal({
       enter();
     } else {
       setBackdropArmed(false);
-      const parked = travelRef.current || 10000;
+      const parked = travelRef.current || 10_000;
       translateY.setValue(parked);
       restRef.current = parked;
     }
@@ -367,7 +368,13 @@ export function SheetModal({
   }, [open, enter, frameCap, translateY]);
 
   return (
-    <Modal visible={open} transparent animationType="fade" statusBarTranslucent onRequestClose={close} onShow={enter}>
+    <Modal
+      visible={open}
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={close}
+      onShow={enter}>
       <RNView
         style={{ flex: 1, justifyContent: 'flex-end', paddingBottom: keyboardInset }}
         onTouchStart={stopAtModal}
@@ -379,7 +386,10 @@ export function SheetModal({
           onPress={handleBackdropPress}
           accessibilityRole="button"
           accessibilityLabel={t('Close')}>
-          <View flex={1} backgroundColor="$shadow6" />
+          <View
+            flex={1}
+            backgroundColor="$shadow6"
+          />
         </Pressable>
         <Animated.View
           onLayout={(e) => {
@@ -464,9 +474,14 @@ export function SheetModal({
                 {fill ? (
                   <>
                     {header ? <RNView style={nonShrinking}>{header}</RNView> : null}
-                    <RNView testID="sheet-modal-body" style={fillSlot}>
+                    <RNView
+                      testID="sheet-modal-body"
+                      style={fillSlot}>
                       {scrollable ? (
-                        <RNScrollView testID="sheet-modal-scroll" style={fillSlot} keyboardShouldPersistTaps="handled">
+                        <RNScrollView
+                          testID="sheet-modal-scroll"
+                          style={fillSlot}
+                          keyboardShouldPersistTaps="handled">
                           {children}
                         </RNScrollView>
                       ) : (

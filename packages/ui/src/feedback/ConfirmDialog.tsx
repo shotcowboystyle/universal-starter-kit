@@ -25,13 +25,15 @@ import {
   warnDialogTooManyActions,
   wasKeyboardFocus,
 } from '@repo/theme';
-import { useCallback, useEffect, useRef, type ReactNode } from 'react';
-import { Dialog, Paragraph, XStack, YStack, isWeb, type TamaguiElement } from 'tamagui';
+import { useCallback, useEffect, useRef } from 'react';
+import type { ReactNode } from 'react';
+import { Dialog, Paragraph, XStack, YStack, isWeb } from 'tamagui';
+import type { TamaguiElement } from 'tamagui';
 
-import { countActionsInTree } from '../shared/actionScan';
+import { countActionsInTree } from '../shared/action-scan';
 import { useTranslation } from '../shared/i18n';
-import { useKeyboardInset } from '../shared/useKeyboardInset';
-import { useReturnFocusOnClose } from '../shared/useReturnFocusOnClose';
+import { useKeyboardInset } from '../shared/use-keyboard-inset';
+import { useReturnFocusOnClose } from '../shared/use-return-focus-on-close';
 import { DialogContent, DialogOverlay } from '../surfaces';
 
 const TAB_STOPS =
@@ -245,7 +247,10 @@ export function ConfirmDialog({
   }, [open]);
 
   return (
-    <Dialog modal open={open} onOpenChange={handleOpenChange}>
+    <Dialog
+      modal
+      open={open}
+      onOpenChange={handleOpenChange}>
       <Dialog.Portal paddingBottom={keyboardInset || undefined}>
         <DialogOverlay key="overlay" />
         <DialogContent
@@ -275,21 +280,31 @@ export function ConfirmDialog({
             e.preventDefault();
           }}
           onOpenAutoFocus={handleOpenAutoFocus}>
-          <Dialog.Title {...knobProps.label} {...knobProps.heading} color="$color12">
+          <Dialog.Title
+            {...knobProps.label}
+            {...knobProps.heading}
+            color="$color12">
             {title}
           </Dialog.Title>
-          {description != null ? (
+          {description == null ? null : (
             <Dialog.Description asChild>
               {typeof description === 'string' || typeof description === 'number' ? (
-                <Paragraph {...knobProps.body} {...knobProps.label} color="$color12">
+                <Paragraph
+                  {...knobProps.body}
+                  {...knobProps.label}
+                  color="$color12">
                   {description}
                 </Paragraph>
               ) : (
                 <YStack {...knobProps.gap}>{description}</YStack>
               )}
             </Dialog.Description>
-          ) : null}
-          <XStack {...knobProps.gap} justifyContent="flex-end" alignItems="flex-start" flexWrap="wrap">
+          )}
+          <XStack
+            {...knobProps.gap}
+            justifyContent="flex-end"
+            alignItems="flex-start"
+            flexWrap="wrap">
             <Button
               chromeless
               compact

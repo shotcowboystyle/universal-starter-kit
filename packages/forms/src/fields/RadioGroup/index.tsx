@@ -4,17 +4,17 @@ import {
   radiusClassProps,
   useReadableTextOn,
   wasKeyboardFocus,
-  type ControlStateProps,
-  type DisabledChromeProps,
-  type KnobProps,
-  type KnobRecipe,
   transitionProps,
 } from '@repo/theme';
+import type { ControlStateProps, DisabledChromeProps, KnobProps, KnobRecipe } from '@repo/theme';
 import { getSize } from '@tamagui/get-token';
 import type { ReactNode } from 'react';
 import { useCallback, useRef, useState } from 'react';
-import type { FontSizeTokens, LabelProps, SizeTokens, TamaguiElement } from 'tamagui';
 import {
+  type FontSizeTokens,
+  type LabelProps,
+  type SizeTokens,
+  type TamaguiElement,
   Label,
   type RadioGroupProps as TamaguiRadioGroupProps,
   RadioGroup as TamaguiRadioGroup,
@@ -26,9 +26,9 @@ import {
   styled,
 } from 'tamagui';
 
-import { Field, FieldLayout } from '../../fieldLayout';
-import { formControlColors, formSelectedColors } from '../../shared/colorRamps';
-import { choiceItemA11y, composeA11yName } from '../../shared/nativeA11y';
+import { Field, FieldLayout } from '../../FieldLayout';
+import { formControlColors, formSelectedColors } from '../../shared/color-ramps';
+import { choiceItemA11y, composeA11yName } from '../../shared/native-a-11y';
 import {
   getElevationWrapperProps,
   getFieldError,
@@ -319,17 +319,17 @@ function RadioOptionItem({
       // tamagui does not map them onto React Native's accessibility props, so
       // options came back as bare StaticText with no role and no checked
       // state. The RN prop names are the ones iOS actually reads.
-      {...(!isWeb
-        ? choiceItemA11y({
+      {...(isWeb
+        ? option.accessibilityLabel
+          ? { 'aria-label': option.accessibilityLabel }
+          : {}
+        : choiceItemA11y({
             kind: 'radio',
             name: nativeLabel,
             selected,
             disabled: Boolean(groupDisabled || option.disabled),
             hint: nativeHint,
-          })
-        : option.accessibilityLabel
-          ? { 'aria-label': option.accessibilityLabel }
-          : {})}
+          }))}
       {...(hoverProps && {
         hoverStyle: {
           ...hoverProps,
@@ -352,7 +352,10 @@ function RadioOptionItem({
       focusVisibleStyle={{ backgroundColor: 'transparent', outlineWidth: 0 }}
       ref={isWeb ? frameRef : undefined}>
       {elevationWrapperProps.elevation ? (
-        <View {...elevationWrapperProps} borderRadius={radioDiscRadius} pointerEvents="none">
+        <View
+          {...elevationWrapperProps}
+          borderRadius={radioDiscRadius}
+          pointerEvents="none">
           {glyph}
         </View>
       ) : (
@@ -465,15 +468,35 @@ export function RadioGroup({
     const Container = orientation === 'horizontal' ? XStack : YStack;
     const labelWidths = [88, 64, 76];
     return (
-      <FieldLayout id={id} label={label} size={size} knobProps={knobProps}>
+      <FieldLayout
+        id={id}
+        label={label}
+        size={size}
+        knobProps={knobProps}>
         <Container gap="$2">
           {Array.from({ length: optionCount }, (_, i) => (
-            <XStack key={i} gap="$2" alignItems="center">
+            <XStack
+              key={i}
+              gap="$2"
+              alignItems="center">
               {/* Mirror the 44px pressable target box around the 20px glyph */}
-              <View width={radioTargetSize} height={radioTargetSize} alignItems="center" justifyContent="center">
-                <Skeleton variant="circular" width={20} height={20} borderRadius={radioDiscRadius} />
+              <View
+                width={radioTargetSize}
+                height={radioTargetSize}
+                alignItems="center"
+                justifyContent="center">
+                <Skeleton
+                  variant="circular"
+                  width={20}
+                  height={20}
+                  borderRadius={radioDiscRadius}
+                />
               </View>
-              <Skeleton variant="text" width={labelWidths[i % labelWidths.length]} height={14} />
+              <Skeleton
+                variant="text"
+                width={labelWidths[i % labelWidths.length]}
+                height={14}
+              />
             </XStack>
           ))}
         </Container>
@@ -516,7 +539,7 @@ export function RadioGroup({
     // Exactly one radio stays tabbable: the checked enabled one, else the
     // first enabled one (WAI-ARIA radio-group pattern).
     const checkedEnabled = options.findIndex((o) => o.value === currentValue && !(disabled || o.disabled));
-    const tabStopIndex = checkedEnabled >= 0 ? checkedEnabled : options.findIndex((o) => !(disabled || o.disabled));
+    const tabStopIndex = checkedEnabled !== -1 ? checkedEnabled : options.findIndex((o) => !(disabled || o.disabled));
 
     if (card) {
       const layout = getCheckboxCardLayout(knobProps.space);
@@ -568,7 +591,9 @@ export function RadioGroup({
                     {option.label}
                   </CheckboxCardLabel>
                   {option.description ? (
-                    <CheckboxCardDescription id={descriptionId} size={descriptionSize}>
+                    <CheckboxCardDescription
+                      id={descriptionId}
+                      size={descriptionSize}>
                       {option.description}
                     </CheckboxCardDescription>
                   ) : null}
@@ -585,19 +610,22 @@ export function RadioGroup({
         {options.map((option, index) => {
           const itemId = `${id}-${index}-${option.value}`;
           return (
-            <XStack key={`${index}-${option.value}`} gap="$2" alignItems="center">
+            <XStack
+              key={`${index}-${option.value}`}
+              gap="$2"
+              alignItems="center">
               {renderRadioItem(option, itemId, undefined, currentValue === option.value, index === tabStopIndex)}
               <Label
                 htmlFor={itemId}
                 // On native the radio itself now carries this text as
                 // its accessible name, so leaving the Label in the tree reads
                 // every option twice. Web keeps the label/control association.
-                {...(!isWeb
-                  ? {
+                {...(isWeb
+                  ? undefined
+                  : {
                       accessibilityElementsHidden: true,
                       importantForAccessibility: 'no-hide-descendants' as const,
-                    }
-                  : undefined)}
+                    })}
                 size={(size || knobProps.sizeToken) as FontSizeTokens}
                 {...knobProps.body}
                 color={knobProps.textAccentColor}
@@ -649,7 +677,7 @@ export function RadioGroup({
       if (!options || disabled || readOnly) {
         return;
       }
-      const key = e.key;
+      const { key } = e;
       if (key !== 'ArrowDown' && key !== 'ArrowUp' && key !== 'ArrowLeft' && key !== 'ArrowRight') {
         return;
       }
@@ -694,7 +722,7 @@ export function RadioGroup({
   };
 
   if (!resolvedForm || !name) {
-    const currentValue = value !== undefined ? value : internalValue;
+    const currentValue = value === undefined ? internalValue : value;
     return (
       <FieldLayout
         id={id}
@@ -714,11 +742,15 @@ export function RadioGroup({
   }
 
   return (
-    <Field form={resolvedForm} name={name} defaultValue={defaultValue} validators={resolvedValidators}>
+    <Field
+      form={resolvedForm}
+      name={name}
+      defaultValue={defaultValue}
+      validators={resolvedValidators}>
       {(field) => {
         const resolvedError = getFieldError(field, error);
         const fieldValue = field.state.value as string | undefined;
-        const currentValue = value !== undefined ? value : fieldValue;
+        const currentValue = value === undefined ? fieldValue : value;
         return (
           <FieldLayout
             id={id}

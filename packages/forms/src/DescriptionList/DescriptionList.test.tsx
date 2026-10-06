@@ -130,7 +130,10 @@ describe('DescriptionList', () => {
     let result!: ReturnType<typeof renderWithProviders>;
     act(() => {
       result = renderWithProviders(
-        <DescriptionList placement="side" items={[{ term: 'Hostname', field: 'input', value: 'compose01' }]} />,
+        <DescriptionList
+          placement="side"
+          items={[{ term: 'Hostname', field: 'input', value: 'compose01' }]}
+        />,
       );
     });
     const root = list(result.container);
@@ -163,7 +166,7 @@ describe('DescriptionList', () => {
     expect(action?.textContent).toContain('Change');
     expect(Number(action?.getAttribute('tabindex') ?? '0')).toBeGreaterThanOrEqual(0);
     action?.click();
-    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledOnce();
   });
 
   it('FieldDisplay slots are chromeless and start-align numbers', () => {
@@ -189,7 +192,10 @@ describe('DescriptionList', () => {
 
   it('top placement is stacked without a container measure', () => {
     const result = renderWithProviders(
-      <DescriptionList placement="top" items={[{ term: 'Owner', field: 'input', value: 'Clay' }]} />,
+      <DescriptionList
+        placement="top"
+        items={[{ term: 'Owner', field: 'input', value: 'Clay' }]}
+      />,
     );
     expect(list(result.container)?.getAttribute('data-stacked')).toBe('true');
   });
@@ -200,7 +206,11 @@ describe('DescriptionList', () => {
 
   it('framed variant paints a surface (earned inset)', () => {
     const result = renderWithProviders(
-      <DescriptionList framed placement="top" items={[{ term: 'Host', field: 'input', value: 'a' }]} />,
+      <DescriptionList
+        framed
+        placement="top"
+        items={[{ term: 'Host', field: 'input', value: 'a' }]}
+      />,
     );
     expect(list(result.container)?.getAttribute('data-framed')).toBe('true');
     expect(host(result.container)).not.toBeNull();
@@ -218,7 +228,7 @@ describe('DescriptionList', () => {
       />,
     );
     expect(list(result.container)?.getAttribute('data-quiet')).toBe('true');
-    expect(result.container.querySelectorAll('[data-mpo-description-list-rule]').length).toBe(1);
+    expect(result.container.querySelectorAll('[data-mpo-description-list-rule]')).toHaveLength(1);
   });
 
   it('rides fieldLabelPlacement=top from the preset when placement is omitted', () => {
@@ -233,7 +243,11 @@ describe('DescriptionList', () => {
 
   it('compact density marks the list', () => {
     const result = renderWithProviders(
-      <DescriptionList compact placement="top" items={[{ term: 'A', field: 'input', value: '1' }]} />,
+      <DescriptionList
+        compact
+        placement="top"
+        items={[{ term: 'A', field: 'input', value: '1' }]}
+      />,
     );
     expect(list(result.container)?.getAttribute('data-compact')).toBe('true');
   });
@@ -243,7 +257,10 @@ describe('DescriptionList', () => {
     let result!: ReturnType<typeof renderWithProviders>;
     act(() => {
       result = renderWithProviders(
-        <DescriptionList placement="side" items={[{ term: 'Hostname', field: 'input', value: 'compose01' }]} />,
+        <DescriptionList
+          placement="side"
+          items={[{ term: 'Hostname', field: 'input', value: 'compose01' }]}
+        />,
       );
     });
     const root = list(result.container);

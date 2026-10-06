@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Config } from './config';
-import { bakedConfigEnvKey, runtimePublicConfigKey } from './runtimeConfig';
+import { bakedConfigEnvKey, runtimePublicConfigKey } from './runtime-config';
 
 function setRuntimePayload(payload: Record<string, string>) {
   (globalThis as unknown as Record<string, unknown>)[runtimePublicConfigKey] = payload;

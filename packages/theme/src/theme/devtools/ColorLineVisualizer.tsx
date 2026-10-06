@@ -5,12 +5,13 @@
  * UI Background, Border, Primary, Text) all on a single row above the bar.
  */
 
-import React, { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import type { CSSProperties } from 'react';
 
-import { semanticGroups } from '../colorRules';
+import { semanticGroups } from '../color-rules';
 import type { Knobs } from '../knobs';
 
-import { contrastTextFor, cellSize } from './vizConstants';
+import { contrastTextFor, cellSize } from './viz-constants';
 
 // ── Helpers ──────────────────────────────────────────────────
 
@@ -104,7 +105,7 @@ function NumberLineRow({ colorFor, compact }: { colorFor: (step: number) => stri
               width: cellSize,
               height: h,
               flexShrink: 0,
-              background: background,
+              background,
               color: contrastTextFor(background),
               display: 'flex',
               alignItems: 'center',
@@ -238,7 +239,12 @@ export function ColorLineVisualizer({
       <div style={styles.title as CSSProperties}>Theme</div>
       <SemanticBrackets />
       <NumberLineRow colorFor={colorFor} />
-      {oppositeColors && <NumberLineRow colorFor={toColorFn(oppositeColors)} compact />}
+      {oppositeColors && (
+        <NumberLineRow
+          colorFor={toColorFn(oppositeColors)}
+          compact
+        />
+      )}
       {accentColors && (
         <>
           <div
@@ -250,7 +256,12 @@ export function ColorLineVisualizer({
             accent
           </div>
           <NumberLineRow colorFor={toColorFn(accentColors)} />
-          {oppositeAccentColors && <NumberLineRow colorFor={toColorFn(oppositeAccentColors)} compact />}
+          {oppositeAccentColors && (
+            <NumberLineRow
+              colorFor={toColorFn(oppositeAccentColors)}
+              compact
+            />
+          )}
         </>
       )}
     </div>

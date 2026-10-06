@@ -72,10 +72,16 @@ export const Qr: Story = {
 export const Empty: Story = {
   render: () => (
     <YStack gap="$2">
-      <Text fontSize="$2" color="$color10">
+      <Text
+        fontSize="$2"
+        color="$color10">
         empty value — preview is null
       </Text>
-      <BarcodePreview value="" format="qr" height={72} />
+      <BarcodePreview
+        value=""
+        format="qr"
+        height={72}
+      />
     </YStack>
   ),
 };
@@ -88,18 +94,40 @@ export const Empty: Story = {
  */
 export const ThemedPolarity: Story = {
   render: () => (
-    <XStack gap="$6" flexWrap="wrap" padding="$4" alignItems="flex-end">
-      <YStack gap="$2" alignItems="center">
-        <Text fontSize="$2" color="$color10">
+    <XStack
+      gap="$6"
+      flexWrap="wrap"
+      padding="$4"
+      alignItems="flex-end">
+      <YStack
+        gap="$2"
+        alignItems="center">
+        <Text
+          fontSize="$2"
+          color="$color10">
           QR (pinned dark-on-light)
         </Text>
-        <BarcodePreview value="SHC-42" format="qr" height={120} showText />
+        <BarcodePreview
+          value="SHC-42"
+          format="qr"
+          height={120}
+          showText
+        />
       </YStack>
-      <YStack gap="$2" alignItems="center">
-        <Text fontSize="$2" color="$color10">
+      <YStack
+        gap="$2"
+        alignItems="center">
+        <Text
+          fontSize="$2"
+          color="$color10">
           Code 128 (themed)
         </Text>
-        <BarcodePreview value="SKU-001234" format="code128" height={36} showText />
+        <BarcodePreview
+          value="SKU-001234"
+          format="code128"
+          height={36}
+          showText
+        />
       </YStack>
     </XStack>
   ),

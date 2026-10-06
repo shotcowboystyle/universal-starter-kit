@@ -13,5 +13,11 @@ import type { StarInkProps } from './types';
  * stack instead; see `StarInk.native.tsx`.
  */
 export function StarInk({ StarIcon, size, filled, filledColor, emptyColor }: StarInkProps) {
-  return <StarIcon size={size} weight={filled ? 'fill' : 'regular'} color={filled ? filledColor : emptyColor} />;
+  return (
+    <StarIcon
+      size={size}
+      weight={filled ? 'fill' : 'regular'}
+      color={filled ? filledColor : emptyColor}
+    />
+  );
 }

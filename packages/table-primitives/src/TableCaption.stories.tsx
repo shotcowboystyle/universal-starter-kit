@@ -1,4 +1,5 @@
-import { Table, type TableCaptionProps } from '@repo/table-primitives';
+import { Table } from '@repo/table-primitives';
+import type { TableCaptionProps } from '@repo/table-primitives';
 
 const TableCaption = Table.Caption;
 

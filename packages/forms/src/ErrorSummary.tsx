@@ -1,11 +1,12 @@
 import { WarningCircleIcon } from '@phosphor-icons/react';
 import { FOCUS_RING_HALO_OFFSET, useResolvedKnobs } from '@repo/theme';
-import { type ReactNode, useEffect, useId, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
+import type { ReactNode } from 'react';
 import { Anchor, H4, Paragraph, YStack, isWeb } from 'tamagui';
 
-import { focusFieldTarget } from './hooks/useFocusManagement';
-import { formCommonColors } from './shared/colorRamps';
-import { warnBannedErrorWords as warnBannedErrorWordsShared } from './shared/devWarn';
+import { focusFieldTarget } from './hooks/use-focus-management';
+import { formCommonColors } from './shared/color-ramps';
+import { warnBannedErrorWords as warnBannedErrorWordsShared } from './shared/dev-warn';
 import { t } from './shared/t';
 
 /** Structured field error. */
@@ -154,7 +155,7 @@ export function ErrorSummary({
     const root =
       formElement ??
       (containerRef.current?.closest?.('form') as HTMLElement | null) ??
-      (typeof document !== 'undefined' ? document.body : null);
+      (typeof document === 'undefined' ? null : document.body);
     focusFieldTarget(root, { id: item.id ?? item.name, name: item.name });
     onFocusField?.(item);
   };
@@ -183,19 +184,39 @@ export function ErrorSummary({
         outlineOffset: FOCUS_RING_HALO_OFFSET,
       }}
       data-testid="error-summary">
-      <YStack flexDirection="row" alignItems="center" gap="$2">
-        <WarningCircleIcon size={20} aria-hidden />
-        <H4 id={headingId} size="$4" color="$color12" fontWeight="700" margin={0}>
+      <YStack
+        flexDirection="row"
+        alignItems="center"
+        gap="$2">
+        <WarningCircleIcon
+          size={20}
+          aria-hidden
+        />
+        <H4
+          id={headingId}
+          size="$4"
+          color="$color12"
+          fontWeight="700"
+          margin={0}>
           {title}
         </H4>
       </YStack>
-      <YStack {...({ tag: 'ul' } as any)} gap="$1" paddingInlineStart="$1" margin={0}>
+      <YStack
+        {...({ tag: 'ul' } as any)}
+        gap="$1"
+        paddingInlineStart="$1"
+        margin={0}>
         {errors.map((item) => {
           const message = item.label ?? formatFieldError(item.error);
           const targetId = item.id ?? item.name;
           return (
-            <YStack key={item.name} {...({ tag: 'li' } as any)}>
-              <Paragraph size="$3" color="$color12" {...(knobProps.body as Record<string, unknown>)}>
+            <YStack
+              key={item.name}
+              {...({ tag: 'li' } as any)}>
+              <Paragraph
+                size="$3"
+                color="$color12"
+                {...(knobProps.body as Record<string, unknown>)}>
                 {isWeb ? (
                   <Anchor
                     href={`#${targetId}`}

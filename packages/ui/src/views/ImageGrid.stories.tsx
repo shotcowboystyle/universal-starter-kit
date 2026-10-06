@@ -77,7 +77,16 @@ function PhotoPlate({ item }: { item: ImageItem }) {
   // Catalog Image. No tile-owned radius (story honesty):
   // ImageGrid's card frame clips items at the knob radius — a pinned $3
   // held a 7px arc at borderRadius:none.
-  return <Image src={item.src} alt={item.alt} width="100%" aspectRatio={1} objectFit="cover" borderRadius={0} />;
+  return (
+    <Image
+      src={item.src}
+      alt={item.alt}
+      width="100%"
+      aspectRatio={1}
+      objectFit="cover"
+      borderRadius={0}
+    />
+  );
 }
 
 export const Default = {
@@ -107,11 +116,19 @@ export const WithCaptions = {
       renderItem={(item) => (
         <YStack>
           <PhotoPlate item={item} />
-          <YStack padding="$2" gap="$1">
-            <Text fontSize="$3" color="$color12" numberOfLines={1}>
+          <YStack
+            padding="$2"
+            gap="$1">
+            <Text
+              fontSize="$3"
+              color="$color12"
+              numberOfLines={1}>
               {item.title}
             </Text>
-            <Text fontSize="$2" color="$color11" numberOfLines={1}>
+            <Text
+              fontSize="$2"
+              color="$color11"
+              numberOfLines={1}>
               {item.filename}
             </Text>
           </YStack>
@@ -127,7 +144,14 @@ export const WithCaptions = {
  * aspect-correct blocks in the live cell geometry, not a raw spinner.
  */
 export const Loading = {
-  render: () => <ImageGrid<ImageItem> items={[]} columns={3} renderItem={() => null} isLoading />,
+  render: () => (
+    <ImageGrid<ImageItem>
+      items={[]}
+      columns={3}
+      renderItem={() => null}
+      isLoading
+    />
+  ),
 };
 
 /** No images, no failure — neutral empty state (Axiom 6: empty ≠ error). */

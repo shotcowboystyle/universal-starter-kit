@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { Form } from '../../Form';
 
 import { preflightCamera } from './BarcodeScanner';
-import { resolveHtml5FormatIds, resolveNativeBarcodeTypes } from './scannerTypes';
+import { resolveHtml5FormatIds, resolveNativeBarcodeTypes } from './scanner-types';
 
 import { Barcode } from './index';
 
@@ -17,7 +17,13 @@ describe('Barcode', () => {
   describe('without form context', () => {
     it('renders with label', () => {
       const result = renderWithProviders(
-        <Barcode label="Barcode" name="code" barcodeIcon={barcodeIcon} scanIcon={scanIcon} stopIcon={stopIcon} />,
+        <Barcode
+          label="Barcode"
+          name="code"
+          barcodeIcon={barcodeIcon}
+          scanIcon={scanIcon}
+          stopIcon={stopIcon}
+        />,
       );
       expect(result.findTextElement('Barcode')).toBeDefined();
     });
@@ -53,7 +59,14 @@ describe('Barcode', () => {
 
     it('renders skeleton placeholder', () => {
       const result = renderWithProviders(
-        <Barcode label="Loading" name="l" barcodeIcon={barcodeIcon} scanIcon={scanIcon} stopIcon={stopIcon} skeleton />,
+        <Barcode
+          label="Loading"
+          name="l"
+          barcodeIcon={barcodeIcon}
+          scanIcon={scanIcon}
+          stopIcon={stopIcon}
+          skeleton
+        />,
       );
       expect(result.container.querySelector('input')).toBeNull();
     });
@@ -74,7 +87,12 @@ describe('Barcode', () => {
     });
 
     it('bare use renders complete affordances via package icon defaults (UX-010)', () => {
-      const result = renderWithProviders(<Barcode label="No icons" name="ni" />);
+      const result = renderWithProviders(
+        <Barcode
+          label="No icons"
+          name="ni"
+        />,
+      );
       // Scan button carries the default camera glyph (icon button, named).
       const button = result.container.querySelector("[aria-label='Scan barcode']");
       expect(button).not.toBeNull();
@@ -87,7 +105,13 @@ describe('Barcode', () => {
 
     it('explicit null icons fall back to a labeled text scan button (no bare box)', () => {
       const result = renderWithProviders(
-        <Barcode label="No icons" name="ni" barcodeIcon={null} scanIcon={null} stopIcon={null} />,
+        <Barcode
+          label="No icons"
+          name="ni"
+          barcodeIcon={null}
+          scanIcon={null}
+          stopIcon={null}
+        />,
       );
       const button = result.container.querySelector("[aria-label='Scan barcode']");
       expect(button).not.toBeNull();
@@ -108,12 +132,18 @@ describe('Barcode', () => {
           value="12345"
         />,
       );
-      expect(result.container.querySelectorAll("[data-testid='scan-icon']").length).toBe(0);
+      expect(result.container.querySelectorAll("[data-testid='scan-icon']")).toHaveLength(0);
     });
 
     it('scan control lives inside the composite box', () => {
       const result = renderWithProviders(
-        <Barcode label="Barcode" name="code" barcodeIcon={barcodeIcon} scanIcon={scanIcon} stopIcon={stopIcon} />,
+        <Barcode
+          label="Barcode"
+          name="code"
+          barcodeIcon={barcodeIcon}
+          scanIcon={scanIcon}
+          stopIcon={stopIcon}
+        />,
       );
       const box = result.container.querySelector('[data-testid="barcode-field"]');
       const scan = result.container.querySelector("[aria-label='Scan barcode']");
@@ -150,7 +180,13 @@ describe('Barcode', () => {
 
     it('draws a Code 128 preview for an encodable value', () => {
       const result = renderWithProviders(
-        <Barcode label="Code" value="SKU-001234" barcodeIcon={barcodeIcon} scanIcon={scanIcon} stopIcon={stopIcon} />,
+        <Barcode
+          label="Code"
+          value="SKU-001234"
+          barcodeIcon={barcodeIcon}
+          scanIcon={scanIcon}
+          stopIcon={stopIcon}
+        />,
       );
       expect(result.container.querySelector('[data-testid="barcode-preview"]')).not.toBeNull();
       expect(result.container.querySelector('[data-testid="barcode-preview-qr"]')).toBeNull();
@@ -211,7 +247,13 @@ describe('Barcode', () => {
 
     it('scan press without camera shows inline error and never mounts the scanner', async () => {
       const result = renderWithProviders(
-        <Barcode label="Scan" name="s" barcodeIcon={barcodeIcon} scanIcon={scanIcon} stopIcon={stopIcon} />,
+        <Barcode
+          label="Scan"
+          name="s"
+          barcodeIcon={barcodeIcon}
+          scanIcon={scanIcon}
+          stopIcon={stopIcon}
+        />,
       );
       const button = result.container.querySelector("[aria-label='Scan barcode']");
       expect(button).not.toBeNull();
@@ -245,8 +287,16 @@ describe('Barcode', () => {
   describe('with form context', () => {
     it('renders inside form', () => {
       const result = renderWithProviders(
-        <Form formOptions={{ defaultValues: { code: '' } }} submitText="Submit">
-          <Barcode name="code" label="Barcode" barcodeIcon={barcodeIcon} scanIcon={scanIcon} stopIcon={stopIcon} />
+        <Form
+          formOptions={{ defaultValues: { code: '' } }}
+          submitText="Submit">
+          <Barcode
+            name="code"
+            label="Barcode"
+            barcodeIcon={barcodeIcon}
+            scanIcon={scanIcon}
+            stopIcon={stopIcon}
+          />
         </Form>,
       );
       expect(result.findTextElement('Barcode')).toBeDefined();

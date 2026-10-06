@@ -27,10 +27,10 @@ export const {
 
 export * from './platform/index';
 export * from './helpers';
-export * from './types';
+export type * from './types';
 export * from './config/index';
 export * from './utils/cookie';
-export * from './utils/downloadFile';
+export * from './utils/download-file';
 export * from './utils/clipboard';
-export * from './utils/openUrl';
+export * from './utils/open-url';
 export * from './utils/lifecycle';

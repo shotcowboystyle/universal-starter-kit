@@ -1,7 +1,7 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger } from '@nestjs/common';
 
-import { UserRepository } from "./repositories/users.repository";
-import { User } from "./schemas/users.schema";
+import type { UserRepository } from './repositories/users.repository';
+import type { User } from './schemas/users.schema';
 
 @Injectable()
 export class UserService {
@@ -13,14 +13,14 @@ export class UserService {
     if (!email) {
       return null;
     }
-    return this.userRepository.findByEmail(email);
+    return await this.userRepository.findByEmail(email);
   }
 
   async findAll(): Promise<User[]> {
-    return this.userRepository.findAll();
+    return await this.userRepository.findAll();
   }
 
   async searchByName(name: string): Promise<User[]> {
-    return this.userRepository.searchByName(name);
+    return await this.userRepository.searchByName(name);
   }
 }

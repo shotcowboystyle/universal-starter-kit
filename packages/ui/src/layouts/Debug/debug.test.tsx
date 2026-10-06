@@ -33,7 +33,9 @@ vi.mock('tamagui', async () => {
     ...(actual as any),
     Select: {
       Item: ({ children, value, index }: any) => (
-        <Paragraph data-testid={`select-item-${value}`} data-index={index}>
+        <Paragraph
+          data-testid={`select-item-${value}`}
+          data-index={index}>
           {children}
         </Paragraph>
       ),

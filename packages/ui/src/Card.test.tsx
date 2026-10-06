@@ -2,7 +2,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { renderWithProviders } from '@repo/test-utils';
-import { Preset, useResolvedKnobs, type Knobs } from '@repo/theme';
+import { Preset, useResolvedKnobs } from '@repo/theme';
+import type { Knobs } from '@repo/theme';
 import { defaultConfig } from '@tamagui/config/v5';
 import { cleanup, render } from '@testing-library/react';
 import { Card as TamaguiCard, createTamagui, TamaguiProvider } from 'tamagui';
@@ -13,7 +14,7 @@ import { Card, CardFooter, CardHeader } from './Card';
 const cardConfig = createTamagui(defaultConfig);
 
 function readSibling(name: string) {
-  return readFileSync(join(import.meta.dirname, name), 'utf8');
+  return readFileSync(join(import.meta.dirname, name), 'utf-8');
 }
 
 function DensityProbe() {
@@ -54,7 +55,9 @@ describe('Card host data attributes', () => {
       for (const [space, inset] of Object.entries({ small: 13, medium: 18, large: 32 })) {
         it(`renders ${tier}/${borderRadius}/${space} with the documented cap`, () => {
           const { container } = render(
-            <TamaguiProvider config={cardConfig} defaultTheme="light">
+            <TamaguiProvider
+              config={cardConfig}
+              defaultTheme="light">
               <Preset
                 overrides={{
                   borderRadius: borderRadius as Knobs['borderRadius'],
@@ -95,7 +98,9 @@ describe('Card host data attributes', () => {
     for (const [space, inset] of Object.entries({ small: 24, medium: 32, large: 39 })) {
       it(`renders feature/${borderRadius}/${space} at ${stop}px over ${inset}px, uncapped`, () => {
         const { container } = render(
-          <TamaguiProvider config={cardConfig} defaultTheme="light">
+          <TamaguiProvider
+            config={cardConfig}
+            defaultTheme="light">
             <Preset
               overrides={{
                 borderRadius: borderRadius as Knobs['borderRadius'],
@@ -124,7 +129,9 @@ describe('Card host data attributes', () => {
 
   it('renders the feature tier at the Bento 34px radius over a 32px inset under default knobs', () => {
     const { container } = render(
-      <TamaguiProvider config={cardConfig} defaultTheme="light">
+      <TamaguiProvider
+        config={cardConfig}
+        defaultTheme="light">
         <Card tier="feature">Measured Card</Card>
       </TamaguiProvider>,
     );
@@ -188,7 +195,7 @@ describe('Card NestedScale', () => {
       </Card>,
     );
     const frames = container.querySelectorAll('[data-tier]');
-    expect(frames.length).toBe(2);
+    expect(frames).toHaveLength(2);
     expect(frames[0].getAttribute('data-density')).toBe('comfortable');
     expect(frames[0].getAttribute('data-nested-scale')).toBe('root');
     expect(frames[1].getAttribute('data-density')).toBe('compact');

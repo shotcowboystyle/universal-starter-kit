@@ -1,9 +1,9 @@
 export * from './theme/index';
 export * from './dates';
 export * from './numbers';
-export * from './devWarn';
-export * from './keyboardFocusRing';
-export * from './menuRow';
+export * from './dev-warn';
+export * from './keyboard-focus-ring';
+export * from './menu-row';
 export * from './font';
 export * from './fonts/index';
 

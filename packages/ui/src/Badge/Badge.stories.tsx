@@ -5,7 +5,8 @@ import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import type { ReactNode } from 'react';
 import { XStack, YStack, Text } from 'tamagui';
 
-import { Badge, type BadgeColor, type BadgePosition } from './index';
+import { Badge } from './index';
+import type { BadgeColor, BadgePosition } from './index';
 
 const meta: Meta<typeof Badge> = {
   title: 'Components/Badge',
@@ -38,7 +39,9 @@ export default meta;
 type Story = StoryObj<typeof Badge>;
 
 const IconButton = ({ children }: { children: ReactNode }) => (
-  <Button circular aria-label="Notifications">
+  <Button
+    circular
+    aria-label="Notifications">
     {children}
   </Button>
 );
@@ -107,12 +110,16 @@ export const WithCount: Story = {
 export const MaxCount: Story = {
   render: () => (
     <XStack gap="$4">
-      <Badge count={100} max={99}>
+      <Badge
+        count={100}
+        max={99}>
         <IconButton>
           <BellIcon size={24} />
         </IconButton>
       </Badge>
-      <Badge count={1000} max={999}>
+      <Badge
+        count={1000}
+        max={999}>
         <IconButton>
           <EnvelopeIcon size={24} />
         </IconButton>
@@ -124,12 +131,28 @@ export const MaxCount: Story = {
 export const Standalone: Story = {
   name: 'Standalone (CounterLabel)',
   render: () => (
-    <XStack gap="$3" alignItems="center">
+    <XStack
+      gap="$3"
+      alignItems="center">
       <Badge count={3} />
-      <Badge count={12} color="blue" />
-      <Badge count={150} max={99} color="orange" />
-      <Badge dot color="green" />
-      <Badge count={0} showZero color="gray" />
+      <Badge
+        count={12}
+        color="blue"
+      />
+      <Badge
+        count={150}
+        max={99}
+        color="orange"
+      />
+      <Badge
+        dot
+        color="green"
+      />
+      <Badge
+        count={0}
+        showZero
+        color="gray"
+      />
     </XStack>
   ),
 };
@@ -142,12 +165,16 @@ export const DotVariant: Story = {
           <BellIcon size={24} />
         </IconButton>
       </Badge>
-      <Badge dot color="blue">
+      <Badge
+        dot
+        color="blue">
         <IconButton>
           <EnvelopeIcon size={24} />
         </IconButton>
       </Badge>
-      <Badge dot color="green">
+      <Badge
+        dot
+        color="green">
         <IconButton>
           <UserIcon size={24} />
         </IconButton>
@@ -165,7 +192,10 @@ export const Colors: Story = {
           <Text fontWeight="700">Count badges</Text>
           <XStack gap="$4">
             {colors.map((color) => (
-              <Badge key={color} count={5} color={color}>
+              <Badge
+                key={color}
+                count={5}
+                color={color}>
                 <IconButton>
                   <BellIcon size={24} />
                 </IconButton>
@@ -177,7 +207,10 @@ export const Colors: Story = {
           <Text fontWeight="700">Dot badges</Text>
           <XStack gap="$4">
             {colors.map((color) => (
-              <Badge key={color} dot color={color}>
+              <Badge
+                key={color}
+                dot
+                color={color}>
                 <IconButton>
                   <BellIcon size={24} />
                 </IconButton>
@@ -196,13 +229,20 @@ export const Positions: Story = {
     return (
       <XStack gap="$6">
         {positions.map((position) => (
-          <YStack key={position} alignItems="center" gap="$2">
-            <Badge count={5} position={position}>
+          <YStack
+            key={position}
+            alignItems="center"
+            gap="$2">
+            <Badge
+              count={5}
+              position={position}>
               <IconButton>
                 <BellIcon size={24} />
               </IconButton>
             </Badge>
-            <Text fontSize="$1" color="$color10">
+            <Text
+              fontSize="$1"
+              color="$color10">
               {position}
             </Text>
           </YStack>
@@ -215,33 +255,51 @@ export const Positions: Story = {
 export const WithOffset: Story = {
   render: () => (
     <XStack gap="$6">
-      <YStack alignItems="center" gap="$2">
-        <Badge count={5} offset={[0, 0]}>
+      <YStack
+        alignItems="center"
+        gap="$2">
+        <Badge
+          count={5}
+          offset={[0, 0]}>
           <IconButton>
             <BellIcon size={24} />
           </IconButton>
         </Badge>
-        <Text fontSize="$1" color="$color10">
+        <Text
+          fontSize="$1"
+          color="$color10">
           No offset
         </Text>
       </YStack>
-      <YStack alignItems="center" gap="$2">
-        <Badge count={5} offset={[4, 4]}>
+      <YStack
+        alignItems="center"
+        gap="$2">
+        <Badge
+          count={5}
+          offset={[4, 4]}>
           <IconButton>
             <BellIcon size={24} />
           </IconButton>
         </Badge>
-        <Text fontSize="$1" color="$color10">
+        <Text
+          fontSize="$1"
+          color="$color10">
           Offset [4, 4]
         </Text>
       </YStack>
-      <YStack alignItems="center" gap="$2">
-        <Badge count={5} offset={[-4, -4]}>
+      <YStack
+        alignItems="center"
+        gap="$2">
+        <Badge
+          count={5}
+          offset={[-4, -4]}>
           <IconButton>
             <BellIcon size={24} />
           </IconButton>
         </Badge>
-        <Text fontSize="$1" color="$color10">
+        <Text
+          fontSize="$1"
+          color="$color10">
           Offset [-4, -4]
         </Text>
       </YStack>
@@ -252,23 +310,33 @@ export const WithOffset: Story = {
 export const ShowZero: Story = {
   render: () => (
     <XStack gap="$4">
-      <YStack alignItems="center" gap="$2">
+      <YStack
+        alignItems="center"
+        gap="$2">
         <Badge count={0}>
           <IconButton>
             <BellIcon size={24} />
           </IconButton>
         </Badge>
-        <Text fontSize="$1" color="$color10">
+        <Text
+          fontSize="$1"
+          color="$color10">
           count=0 (hidden)
         </Text>
       </YStack>
-      <YStack alignItems="center" gap="$2">
-        <Badge count={0} showZero>
+      <YStack
+        alignItems="center"
+        gap="$2">
+        <Badge
+          count={0}
+          showZero>
           <IconButton>
             <BellIcon size={24} />
           </IconButton>
         </Badge>
-        <Text fontSize="$1" color="$color10">
+        <Text
+          fontSize="$1"
+          color="$color10">
           count=0, showZero
         </Text>
       </YStack>
@@ -279,23 +347,35 @@ export const ShowZero: Story = {
 export const Visibility: Story = {
   render: () => (
     <XStack gap="$4">
-      <YStack alignItems="center" gap="$2">
-        <Badge count={5} visible>
+      <YStack
+        alignItems="center"
+        gap="$2">
+        <Badge
+          count={5}
+          visible>
           <IconButton>
             <BellIcon size={24} />
           </IconButton>
         </Badge>
-        <Text fontSize="$1" color="$color10">
+        <Text
+          fontSize="$1"
+          color="$color10">
           visible=true
         </Text>
       </YStack>
-      <YStack alignItems="center" gap="$2">
-        <Badge count={5} visible={false}>
+      <YStack
+        alignItems="center"
+        gap="$2">
+        <Badge
+          count={5}
+          visible={false}>
           <IconButton>
             <BellIcon size={24} />
           </IconButton>
         </Badge>
-        <Text fontSize="$1" color="$color10">
+        <Text
+          fontSize="$1"
+          color="$color10">
           visible=false
         </Text>
       </YStack>
@@ -309,7 +389,9 @@ export const OnButtons: Story = {
       <Badge count={3}>
         <Button>Messages</Button>
       </Badge>
-      <Badge dot color="green">
+      <Badge
+        dot
+        color="green">
         <Button>Status</Button>
       </Badge>
     </XStack>
@@ -318,7 +400,9 @@ export const OnButtons: Story = {
 
 export const AllStates: Story = {
   render: () => (
-    <YStack gap="$6" padding="$3">
+    <YStack
+      gap="$6"
+      padding="$3">
       <YStack gap="$2">
         <Text fontWeight="700">Counts</Text>
         <XStack gap="$4">
@@ -348,17 +432,23 @@ export const AllStates: Story = {
       <YStack gap="$2">
         <Text fontWeight="700">Dots</Text>
         <XStack gap="$4">
-          <Badge dot color="red">
+          <Badge
+            dot
+            color="red">
             <IconButton>
               <BellIcon size={24} />
             </IconButton>
           </Badge>
-          <Badge dot color="blue">
+          <Badge
+            dot
+            color="blue">
             <IconButton>
               <BellIcon size={24} />
             </IconButton>
           </Badge>
-          <Badge dot color="green">
+          <Badge
+            dot
+            color="green">
             <IconButton>
               <BellIcon size={24} />
             </IconButton>
@@ -369,22 +459,30 @@ export const AllStates: Story = {
       <YStack gap="$2">
         <Text fontWeight="700">Positions</Text>
         <XStack gap="$4">
-          <Badge count={1} position="top-right">
+          <Badge
+            count={1}
+            position="top-right">
             <IconButton>
               <BellIcon size={24} />
             </IconButton>
           </Badge>
-          <Badge count={1} position="top-left">
+          <Badge
+            count={1}
+            position="top-left">
             <IconButton>
               <BellIcon size={24} />
             </IconButton>
           </Badge>
-          <Badge count={1} position="bottom-right">
+          <Badge
+            count={1}
+            position="bottom-right">
             <IconButton>
               <BellIcon size={24} />
             </IconButton>
           </Badge>
-          <Badge count={1} position="bottom-left">
+          <Badge
+            count={1}
+            position="bottom-left">
             <IconButton>
               <BellIcon size={24} />
             </IconButton>

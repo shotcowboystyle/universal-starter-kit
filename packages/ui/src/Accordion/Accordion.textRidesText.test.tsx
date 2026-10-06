@@ -40,7 +40,7 @@ describe('Accordion TEXT-RIDES-TEXT', () => {
     renderWithProviders(
       <Accordion>
         <Accordion.Item value="a">
-          <Accordion.Trigger description={['Sub', count !== 0 ? ` (${count})` : '']}>Title</Accordion.Trigger>
+          <Accordion.Trigger description={['Sub', count === 0 ? '' : ` (${count})`]}>Title</Accordion.Trigger>
           <Accordion.Content>Body</Accordion.Content>
         </Accordion.Item>
       </Accordion>,

@@ -14,7 +14,8 @@ import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { useState } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 
-import { DropdownMenu, type DropdownMenuEntry } from './index';
+import { DropdownMenu } from './index';
+import type { DropdownMenuEntry } from './index';
 
 const meta: Meta<typeof DropdownMenu> = {
   title: 'Components/DropdownMenu',
@@ -76,8 +77,13 @@ export const Default: Story = {
   name: 'Main',
   args: { defaultOpen: true, placement: 'bottom-start' },
   render: (args) => (
-    <YStack minHeight={340} paddingTop="$4" alignItems="center">
-      <DropdownMenu {...args} items={basicItems}>
+    <YStack
+      minHeight={340}
+      paddingTop="$4"
+      alignItems="center">
+      <DropdownMenu
+        {...args}
+        items={basicItems}>
         <Button>Actions</Button>
       </DropdownMenu>
     </YStack>
@@ -87,16 +93,23 @@ export const Default: Story = {
 export const IconsAndShortcuts: Story = {
   args: { defaultOpen: true },
   render: (args) => (
-    <YStack minHeight={380} paddingTop="$4" alignItems="center">
+    <YStack
+      minHeight={380}
+      paddingTop="$4"
+      alignItems="center">
       <DropdownMenu {...args}>
         <DropdownMenu.Trigger asChild>
           <Button icon=<DotsThreeVerticalIcon size={16} />>More</Button>
         </DropdownMenu.Trigger>
         <DropdownMenu.Content>
-          <DropdownMenu.Item icon=<PencilSimpleIcon size={16} /> shortcut="⌘E">
+          <DropdownMenu.Item
+            icon=<PencilSimpleIcon size={16} />
+            shortcut="⌘E">
             Edit
           </DropdownMenu.Item>
-          <DropdownMenu.Item icon=<CopyIcon size={16} /> shortcut="⌘C">
+          <DropdownMenu.Item
+            icon=<CopyIcon size={16} />
+            shortcut="⌘C">
             Copy link
           </DropdownMenu.Item>
           <DropdownMenu.Item icon=<ShareNetworkIcon size={16} />>Share</DropdownMenu.Item>
@@ -108,7 +121,10 @@ export const IconsAndShortcuts: Story = {
             Download
           </DropdownMenu.Item>
           <DropdownMenu.Separator />
-          <DropdownMenu.Item icon=<TrashIcon size={16} /> shortcut="⌫" destructive>
+          <DropdownMenu.Item
+            icon=<TrashIcon size={16} />
+            shortcut="⌫"
+            destructive>
             Delete
           </DropdownMenu.Item>
         </DropdownMenu.Content>
@@ -124,21 +140,30 @@ export const Checkable: Story = {
     const [showRulers, setShowRulers] = useState(false);
     const [snap, setSnap] = useState(true);
     return (
-      <YStack minHeight={340} paddingTop="$4" alignItems="center">
+      <YStack
+        minHeight={340}
+        paddingTop="$4"
+        alignItems="center">
         <DropdownMenu {...args}>
           <DropdownMenu.Trigger asChild>
             <Button>View options</Button>
           </DropdownMenu.Trigger>
           <DropdownMenu.Content>
             <DropdownMenu.Label>Canvas</DropdownMenu.Label>
-            <DropdownMenu.CheckboxItem checked={showGrid} onCheckedChange={setShowGrid}>
+            <DropdownMenu.CheckboxItem
+              checked={showGrid}
+              onCheckedChange={setShowGrid}>
               Show grid
             </DropdownMenu.CheckboxItem>
-            <DropdownMenu.CheckboxItem checked={showRulers} onCheckedChange={setShowRulers}>
+            <DropdownMenu.CheckboxItem
+              checked={showRulers}
+              onCheckedChange={setShowRulers}>
               Show rulers
             </DropdownMenu.CheckboxItem>
             <DropdownMenu.Separator />
-            <DropdownMenu.CheckboxItem checked={snap} onCheckedChange={setSnap}>
+            <DropdownMenu.CheckboxItem
+              checked={snap}
+              onCheckedChange={setSnap}>
               Snap to grid
             </DropdownMenu.CheckboxItem>
           </DropdownMenu.Content>
@@ -151,7 +176,10 @@ export const Checkable: Story = {
 export const Destructive: Story = {
   args: { defaultOpen: true },
   render: (args) => (
-    <YStack minHeight={300} paddingTop="$4" alignItems="center">
+    <YStack
+      minHeight={300}
+      paddingTop="$4"
+      alignItems="center">
       <DropdownMenu
         {...args}
         items={[
@@ -174,7 +202,10 @@ export const Destructive: Story = {
 export const LongListScroll: Story = {
   args: { defaultOpen: true, maxHeight: 240 },
   render: (args) => (
-    <YStack minHeight={380} paddingTop="$4" alignItems="center">
+    <YStack
+      minHeight={380}
+      paddingTop="$4"
+      alignItems="center">
       <DropdownMenu
         {...args}
         items={Array.from({ length: 24 }, (_, i) => ({
@@ -204,7 +235,11 @@ export const RadioStyleNavigation: Story = {
     const views = ['List', 'Report', 'Kanban', 'Calendar'];
     const [view, setView] = useState('List');
     return (
-      <YStack minHeight={340} paddingTop="$4" alignItems="center" gap="$3">
+      <YStack
+        minHeight={340}
+        paddingTop="$4"
+        alignItems="center"
+        gap="$3">
         <DropdownMenu
           closeOnSelect
           items={views.map((candidate) => ({
@@ -217,7 +252,10 @@ export const RadioStyleNavigation: Story = {
           }))}>
           <Button iconAfter=<CaretDownIcon size={14} />>{view}</Button>
         </DropdownMenu>
-        <Text color="$color11" fontSize="$2" data-testid="current-view">
+        <Text
+          color="$color11"
+          fontSize="$2"
+          data-testid="current-view">
           Current view: {view}
         </Text>
       </YStack>
@@ -230,8 +268,14 @@ export const Controlled: Story = {
     const [open, setOpen] = useState(false);
     const [last, setLast] = useState<string | null>(null);
     return (
-      <YStack minHeight={340} paddingTop="$4" alignItems="center" gap="$3">
-        <XStack gap="$3" alignItems="center">
+      <YStack
+        minHeight={340}
+        paddingTop="$4"
+        alignItems="center"
+        gap="$3">
+        <XStack
+          gap="$3"
+          alignItems="center">
           <DropdownMenu
             open={open}
             onOpenChange={setOpen}
@@ -258,7 +302,9 @@ export const Controlled: Story = {
             Toggle from outside
           </Button>
         </XStack>
-        <Text color="$color11" fontSize="$2">
+        <Text
+          color="$color11"
+          fontSize="$2">
           {last ? `Last action: ${last}` : 'No action selected yet'}
         </Text>
       </YStack>

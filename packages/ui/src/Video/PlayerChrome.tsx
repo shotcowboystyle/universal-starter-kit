@@ -7,11 +7,12 @@ import {
   SpeakerSlashIcon,
 } from '@phosphor-icons/react';
 import { MIN_PRESS_TARGET, ensureKeyboardModalityTracking, useResolvedKnobs, transitionProps } from '@repo/theme';
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SizableText, Theme, View, XStack, YStack, getTokens } from 'tamagui';
 
-import { componentColors } from '../componentColors';
+import { componentColors } from '../component-colors';
 
 /** Overlay within the media stage (same tier as forms `zIndex.localTop`). */
 const CHROME_Z_INDEX = 10;
@@ -203,7 +204,11 @@ function SeekBar({
           }
         },
       } as Record<string, unknown>)}>
-      <YStack position="relative" width="100%" height={hot ? 6 : 4} justifyContent="center">
+      <YStack
+        position="relative"
+        width="100%"
+        height={hot ? 6 : 4}
+        justifyContent="center">
         <YStack
           height="100%"
           width="100%"
@@ -211,7 +216,11 @@ function SeekBar({
           borderRadius={radius}
           overflow="hidden"
           {...transitionProps(knobProps.transition)}>
-          <YStack height="100%" width={`${ratio * 100}%`} backgroundColor={componentColors.indicator.selected} />
+          <YStack
+            height="100%"
+            width={`${ratio * 100}%`}
+            backgroundColor={componentColors.indicator.selected}
+          />
         </YStack>
         <YStack
           position="absolute"
@@ -308,10 +317,18 @@ export function PlayerChrome({
           },
         } as Record<string, unknown>)}
         {...transitionProps(knobProps.transition)}>
-        <YStack flex={1} alignItems="center" justifyContent="center" pointerEvents="none">
+        <YStack
+          flex={1}
+          alignItems="center"
+          justifyContent="center"
+          pointerEvents="none">
           {playing ? null : (
             <View pointerEvents="auto">
-              <ChromeButton label={t('Play')} onPress={onTogglePlay} size={centerPx} radius={radius}>
+              <ChromeButton
+                label={t('Play')}
+                onPress={onTogglePlay}
+                size={centerPx}
+                radius={radius}>
                 <YStack
                   width={centerPx}
                   height={centerPx}
@@ -320,14 +337,20 @@ export function PlayerChrome({
                   backgroundColor="$color3"
                   borderRadius={radius}
                   {...({ color: '$color12' } as Record<string, unknown>)}>
-                  <PlayIcon size={centerGlyph} color="currentColor" weight="fill" />
+                  <PlayIcon
+                    size={centerGlyph}
+                    color="currentColor"
+                    weight="fill"
+                  />
                 </YStack>
               </ChromeButton>
             </View>
           )}
         </YStack>
 
-        <YStack pointerEvents="auto" position="relative">
+        <YStack
+          pointerEvents="auto"
+          position="relative">
           <YStack
             position="absolute"
             top={0}
@@ -338,12 +361,28 @@ export function PlayerChrome({
             opacity={0.72}
             pointerEvents="none"
           />
-          <XStack {...knobProps.panelPadding} {...knobProps.gap} alignItems="center" position="relative">
-            <ChromeButton label={playing ? t('Pause') : t('Play')} onPress={onTogglePlay} size={target} radius={radius}>
+          <XStack
+            {...knobProps.panelPadding}
+            {...knobProps.gap}
+            alignItems="center"
+            position="relative">
+            <ChromeButton
+              label={playing ? t('Pause') : t('Play')}
+              onPress={onTogglePlay}
+              size={target}
+              radius={radius}>
               {playing ? (
-                <PauseIcon size={glyph} color="currentColor" weight="fill" />
+                <PauseIcon
+                  size={glyph}
+                  color="currentColor"
+                  weight="fill"
+                />
               ) : (
-                <PlayIcon size={glyph} color="currentColor" weight="fill" />
+                <PlayIcon
+                  size={glyph}
+                  color="currentColor"
+                  weight="fill"
+                />
               )}
             </ChromeButton>
             <SizableText
@@ -368,11 +407,23 @@ export function PlayerChrome({
               {...({ style: { fontVariantNumeric: 'tabular-nums' } } as Record<string, unknown>)}>
               {formatPlayerTime(duration)}
             </SizableText>
-            <ChromeButton label={muted ? t('Unmute') : t('Mute')} onPress={onToggleMuted} size={target} radius={radius}>
+            <ChromeButton
+              label={muted ? t('Unmute') : t('Mute')}
+              onPress={onToggleMuted}
+              size={target}
+              radius={radius}>
               {muted ? (
-                <SpeakerSlashIcon size={glyph} color="currentColor" weight="bold" />
+                <SpeakerSlashIcon
+                  size={glyph}
+                  color="currentColor"
+                  weight="bold"
+                />
               ) : (
-                <SpeakerHighIcon size={glyph} color="currentColor" weight="bold" />
+                <SpeakerHighIcon
+                  size={glyph}
+                  color="currentColor"
+                  weight="bold"
+                />
               )}
             </ChromeButton>
             <ChromeButton
@@ -381,9 +432,17 @@ export function PlayerChrome({
               size={target}
               radius={radius}>
               {fullscreen ? (
-                <CornersInIcon size={glyph} color="currentColor" weight="bold" />
+                <CornersInIcon
+                  size={glyph}
+                  color="currentColor"
+                  weight="bold"
+                />
               ) : (
-                <CornersOutIcon size={glyph} color="currentColor" weight="bold" />
+                <CornersOutIcon
+                  size={glyph}
+                  color="currentColor"
+                  weight="bold"
+                />
               )}
             </ChromeButton>
           </XStack>

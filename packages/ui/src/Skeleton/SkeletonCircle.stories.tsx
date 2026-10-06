@@ -37,9 +37,15 @@ export const Default: Story = {
 
 export const Sizes: Story = {
   render: (args) => (
-    <XStack gap="$4" alignItems="center">
+    <XStack
+      gap="$4"
+      alignItems="center">
       {[0, 16, 24, 40, 64, 96, 200].map((size) => (
-        <SkeletonCircle key={size} {...args} size={size} />
+        <SkeletonCircle
+          key={size}
+          {...args}
+          size={size}
+        />
       ))}
     </XStack>
   ),
@@ -48,7 +54,11 @@ export const Sizes: Story = {
 export const ConstrainedParent: Story = {
   args: { size: 120 },
   render: (args) => (
-    <YStack width={80} borderWidth={1} borderColor="$color6" borderStyle="dashed">
+    <YStack
+      width={80}
+      borderWidth={1}
+      borderColor="$color6"
+      borderStyle="dashed">
       <SkeletonCircle {...args} />
     </YStack>
   ),

@@ -42,7 +42,7 @@ export * from './views/index';
 // package; consumers import all four names.
 export { Wizard } from './Wizard';
 export type { WizardFormLike, WizardProps, WizardStatus, WizardStep } from './Wizard';
-export { unwrapText } from './utils/unwrapText';
+export { unwrapText } from './utils/unwrap-text';
 export { Pagination, getPaginationItems } from './Pagination';
 export type { PaginationProps, PaginationItem } from './Pagination';
 export { Accordion, useAccordionTriggerInk } from './Accordion';
@@ -164,7 +164,7 @@ export { Image } from './images/Image';
 // tokens by hand instead of importing the layer that defines them.
 // A semantic layer whose own header says "use these instead of hardcoding $color3, $color10" has
 // to be importable by a stable name.
-export { componentColors, sectionHeading } from './componentColors';
+export { componentColors, sectionHeading } from './component-colors';
 
 // ---------------------------------------------------------------------------
 // Tamagui shorthand type augmentation
@@ -177,6 +177,7 @@ export { componentColors, sectionHeading } from './componentColors';
 // that break styled() component types across workspace boundaries.
 // ---------------------------------------------------------------------------
 import type { shorthands as _shorthands } from '@tamagui/shorthands';
+
 declare module '@tamagui/web' {
   interface TamaguiCustomConfig {
     shorthands: typeof _shorthands;

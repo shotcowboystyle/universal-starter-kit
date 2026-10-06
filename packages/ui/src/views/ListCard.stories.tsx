@@ -38,7 +38,9 @@ export const Main: Story = {
     },
   },
   render: (args) => (
-    <YStack width={320} padding="$4">
+    <YStack
+      width={320}
+      padding="$4">
       <ListCard {...args} />
     </YStack>
   ),

@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DomNavigationHost } from './DomNavigationHost';
 import { stackNavigator } from './navigator';
-import { useParams } from './oneAdapter';
+import { useParams } from './one-adapter';
 
 const ROUTES = [
   { pattern: '/', tag: 'home', title: 'Home' },
@@ -140,7 +140,7 @@ describe('DomNavigationHost', () => {
   // useLocalSearchParams) reads an empty object and the URL round-trip
   // silently drops the restored filters.
   it("seeds a restored route's params before the first content render", () => {
-    const firstRenderParams: Array<Record<string, unknown>> = [];
+    const firstRenderParams: Record<string, unknown>[] = [];
     function SeedProbe() {
       const params = useParams();
       const first = useRef(true);

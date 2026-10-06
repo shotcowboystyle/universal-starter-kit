@@ -10,7 +10,10 @@ afterEach(cleanup);
 function textBoneRadius(borderRadius: 'none' | 'small' | 'large' | 'full') {
   const { container } = renderWithProviders(
     <Preset overrides={{ borderRadius }}>
-      <Skeleton variant="text" width={120} />
+      <Skeleton
+        variant="text"
+        width={120}
+      />
     </Preset>,
   );
   const bone = container.querySelector('.is_Skeleton') as HTMLElement;

@@ -7,9 +7,10 @@ import { PointerIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 
-import { useHydrated } from '@/hooks/useHydrated';
+import { useHydrated } from '@/hooks/use-hydrated';
 import { useWorkspaceStore } from '@/stores/workspace-store';
-import { Project, UserInfo, type Task } from '@/types/dbInterface';
+import type { Project, UserInfo } from '@/types/db-interface';
+import { type Task } from '@/types/db-interface';
 
 import NewTaskDialog from '../task/NewTaskDialog';
 import { TaskCard } from '../task/TaskCard';
@@ -164,7 +165,11 @@ function BoardProjectComponent({
           padding="$3"
           borderBottomWidth={2}
           borderColor="$borderColor">
-          <XStack alignItems="center" gap="$2" flex={1} minWidth={0}>
+          <XStack
+            alignItems="center"
+            gap="$2"
+            flex={1}
+            minWidth={0}>
             <Button
               chromeless
               size="$3"
@@ -175,7 +180,9 @@ function BoardProjectComponent({
               {...dragAttributes}
               {...listeners}
             />
-            <H3 size="$6" numberOfLines={1}>
+            <H3
+              size="$6"
+              numberOfLines={1}>
               {project.title}
             </H3>
           </XStack>
@@ -188,30 +195,52 @@ function BoardProjectComponent({
         </CardHeader>
 
         <ScrollView flex={1}>
-          <YStack gap="$2" padding="$2">
-            <YStack gap="$1" alignItems="flex-start">
-              <Chip variant="outline" size="$2" maxWidth="100%">
+          <YStack
+            gap="$2"
+            padding="$2">
+            <YStack
+              gap="$1"
+              alignItems="flex-start">
+              <Chip
+                variant="outline"
+                size="$2"
+                maxWidth="100%">
                 {`${t('description')}: ${project.description || t('noDescription')}`}
               </Chip>
-              <Chip variant="outline" size="$2" maxWidth="100%">
+              <Chip
+                variant="outline"
+                size="$2"
+                maxWidth="100%">
                 {`${t('owner')}: ${getUserDisplayName(project.owner)}`}
               </Chip>
               {members ? (
-                <Chip variant="outline" size="$2" maxWidth="100%">
+                <Chip
+                  variant="outline"
+                  size="$2"
+                  maxWidth="100%">
                   {`${t('members')}: ${members}`}
                 </Chip>
               ) : null}
             </YStack>
             <NewTaskDialog projectId={project._id} />
             <SortableContext items={tasksIds}>
-              <YStack gap="$2" paddingBottom="$2">
+              <YStack
+                gap="$2"
+                paddingBottom="$2">
                 {filteredTasks
                   .filter((task) => !task._deleted) // Ensure we don't render deleted tasks
                   .map((task) => {
                     const isTaskCreator = task.creator?._id === currentUserId;
                     const isTaskAssignee = task.assignee?._id === currentUserId;
                     const canDrag = isBoardOwner || isTaskCreator || isTaskAssignee;
-                    return <TaskCard key={task._id} task={task} onUpdate={handleTaskUpdate} isDragEnabled={canDrag} />;
+                    return (
+                      <TaskCard
+                        key={task._id}
+                        task={task}
+                        onUpdate={handleTaskUpdate}
+                        isDragEnabled={canDrag}
+                      />
+                    );
                   })}
               </YStack>
             </SortableContext>
@@ -228,8 +257,14 @@ export function BoardContainer({ children }: { children: React.ReactNode }) {
   // hydration; the server always renders the narrow (vertical) layout.
   const hydrated = useHydrated();
   return (
-    <ScrollView horizontal={hydrated && media.md} width="100%" testID="board-container">
-      <YStack gap="$4" $md={{ flexDirection: 'row' }} paddingBottom="$2">
+    <ScrollView
+      horizontal={hydrated && media.md}
+      width="100%"
+      testID="board-container">
+      <YStack
+        gap="$4"
+        $md={{ flexDirection: 'row' }}
+        paddingBottom="$2">
         {children}
       </YStack>
     </ScrollView>

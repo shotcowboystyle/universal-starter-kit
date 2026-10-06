@@ -190,7 +190,7 @@ describe('TimeRangeScrubber', () => {
     expect(result.container.querySelector("[data-part='brush-end']")).toBeTruthy();
     expect(result.container.querySelector("[data-part='brush-band']")).toBeTruthy();
     expect(result.container.querySelector("[data-part='playhead']")).toBeTruthy();
-    expect(result.container.querySelectorAll("[data-part='frame-tick']").length).toBe(2);
+    expect(result.container.querySelectorAll("[data-part='frame-tick']")).toHaveLength(2);
     expect(result.container.querySelector("[data-part='key-tick']")).toBeTruthy();
     expect(result.container.querySelector("[data-part='activity']")).toBeTruthy();
   });
@@ -225,7 +225,11 @@ describe('TimeRangeScrubber', () => {
   it('paints the grip 0 at borderRadius:none and h/2 at medium', () => {
     const none = renderWithProviders(
       <Preset overrides={{ borderRadius: 'none' }}>
-        <TimeRangeScrubber label="None" now={NOW} window={WINDOW} />
+        <TimeRangeScrubber
+          label="None"
+          now={NOW}
+          window={WINDOW}
+        />
       </Preset>,
     );
     const noneGrip = none.container.querySelector("[data-part='grip']");
@@ -235,7 +239,11 @@ describe('TimeRangeScrubber', () => {
 
     const medium = renderWithProviders(
       <Preset overrides={{ borderRadius: 'medium' }}>
-        <TimeRangeScrubber label="Medium" now={NOW} window={WINDOW} />
+        <TimeRangeScrubber
+          label="Medium"
+          now={NOW}
+          window={WINDOW}
+        />
       </Preset>,
     );
     const mediumGrip = medium.container.querySelector("[data-part='grip']");
@@ -247,7 +255,12 @@ describe('TimeRangeScrubber', () => {
   it('a quick-range chip writes absolute DateRange, never a relative string', async () => {
     const onChange = vi.fn();
     const result = renderWithProviders(
-      <TimeRangeScrubber label="Range" now={NOW} window={WINDOW} onChange={onChange} />,
+      <TimeRangeScrubber
+        label="Range"
+        now={NOW}
+        window={WINDOW}
+        onChange={onChange}
+      />,
     );
     const chip = Array.from(result.container.querySelectorAll("[data-part='quick-range']")).find((node) =>
       node.textContent?.includes('15 m'),
@@ -256,7 +269,7 @@ describe('TimeRangeScrubber', () => {
     await act(async () => {
       fireEvent.click(chip!);
     });
-    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledOnce();
     const emitted = onChange.mock.calls[0][0] as DateRange;
     expect(dateRangeKeys(emitted)).toEqual(['end', 'start']);
     expect(emitted.start).toBeInstanceOf(Date);
@@ -342,7 +355,12 @@ describe('TimeRangeScrubber', () => {
 
   it('discrete jumps arm the quick tween; reduced motion drops it to none', async () => {
     const result = renderWithProviders(
-      <TimeRangeScrubber label="Jump" now={NOW} window={WINDOW} scrubTime={new Date('2026-08-28T14:15:00.000Z')} />,
+      <TimeRangeScrubber
+        label="Jump"
+        now={NOW}
+        window={WINDOW}
+        scrubTime={new Date('2026-08-28T14:15:00.000Z')}
+      />,
     );
     const grip = result.container.querySelector("[data-part='grip']") as HTMLElement;
     await act(async () => {
@@ -457,8 +475,15 @@ describe('TimeRangeScrubber', () => {
       });
       return (
         <Form form={form}>
-          <TimeRangeScrubber label="Window" name="window" now={NOW} window={WINDOW} />
-          <Button action="submit" testID="submit-button">
+          <TimeRangeScrubber
+            label="Window"
+            name="window"
+            now={NOW}
+            window={WINDOW}
+          />
+          <Button
+            action="submit"
+            testID="submit-button">
             Save
           </Button>
         </Form>
@@ -490,9 +515,23 @@ describe('TimeRangeScrubber', () => {
       end: new Date('2026-08-28T14:20:00.000Z'),
     };
     const result = renderWithProviders(
-      <TimeRangeScrubber label="Seed" now={NOW} window={WINDOW} value={first} onChange={onChange} />,
+      <TimeRangeScrubber
+        label="Seed"
+        now={NOW}
+        window={WINDOW}
+        value={first}
+        onChange={onChange}
+      />,
     );
-    result.rerender(<TimeRangeScrubber label="Seed" now={NOW} window={WINDOW} value={late} onChange={onChange} />);
+    result.rerender(
+      <TimeRangeScrubber
+        label="Seed"
+        now={NOW}
+        window={WINDOW}
+        value={late}
+        onChange={onChange}
+      />,
+    );
     await waitFor(() => {
       const readout = result.container.querySelector("[data-part='readout']");
       expect(readout?.getAttribute('data-start')).toBe(late.start?.toISOString());

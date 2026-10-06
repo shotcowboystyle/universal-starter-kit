@@ -6,7 +6,7 @@ import { Paragraph, YStack } from 'tamagui';
 
 import { Button } from './Button';
 import { ErrorSummary, collectFormFieldErrors } from './ErrorSummary';
-import { FieldLayout } from './fieldLayout';
+import { FieldLayout } from './FieldLayout';
 import { Form } from './Form';
 import { FormSection } from './FormSection';
 import { Input as InputParts } from './InputParts';
@@ -42,7 +42,10 @@ type Story = StoryObj<typeof ErrorSummary>;
 export const Basic: Story = {
   render: (args) => (
     <YStack maxWidth={520}>
-      <ErrorSummary {...args} onFocusField={action('onFocusField')} />
+      <ErrorSummary
+        {...args}
+        onFocusField={action('onFocusField')}
+      />
     </YStack>
   ),
 };
@@ -109,7 +112,9 @@ export const SingleError: Story = {
 /** An empty list renders nothing at all — no empty banner, no reserved space. */
 export const EmptyRendersNothing: Story = {
   render: () => (
-    <YStack maxWidth={520} gap="$3">
+    <YStack
+      maxWidth={520}
+      gap="$3">
       <Paragraph size="$3">Nothing should paint between these two lines.</Paragraph>
       <ErrorSummary errors={[]} />
       <Paragraph size="$3">Second line.</Paragraph>
@@ -144,10 +149,18 @@ export const FocusesTheFieldOnPress: Story = {
       };
       return (
         <Form form={form}>
-          <YStack maxWidth={520} gap="$4">
-            <ErrorSummary errors={errors} disableAutoFocus onFocusField={action('onFocusField')} />
+          <YStack
+            maxWidth={520}
+            gap="$4">
+            <ErrorSummary
+              errors={errors}
+              disableAutoFocus
+              onFocusField={action('onFocusField')}
+            />
             <FormSection label="Sign in">
-              <FieldLayout id="email" label="Email">
+              <FieldLayout
+                id="email"
+                label="Email">
                 <InputParts>
                   <InputParts.Box>
                     <InputParts.Area
@@ -160,7 +173,9 @@ export const FocusesTheFieldOnPress: Story = {
                   </InputParts.Box>
                 </InputParts>
               </FieldLayout>
-              <FieldLayout id="password" label="Password">
+              <FieldLayout
+                id="password"
+                label="Password">
                 <InputParts>
                   <InputParts.Box>
                     <InputParts.Area
@@ -192,7 +207,9 @@ export const AutoFocusOnAppear: Story = {
     const Example = () => {
       const [shown, setShown] = useState(false);
       return (
-        <YStack maxWidth={520} gap="$4">
+        <YStack
+          maxWidth={520}
+          gap="$4">
           <Button
             onPress={() => {
               setShown((prev) => !prev);

@@ -1,17 +1,18 @@
 import { useResolvedKnobs } from '@repo/theme';
-import { Text, XStack, YStack, type YStackProps } from 'tamagui';
+import { Text, XStack, YStack } from 'tamagui';
+import type { YStackProps } from 'tamagui';
 
 import { useTranslation } from '../shared/i18n';
 
 import { chartDatumText, describeChart, describeDatum } from './accessibility';
 import { ChartDataFrame } from './ChartDataView';
 import { ChartSurface } from './ChartSurface';
-import { resolveSeriesFills } from './composeChart';
+import { resolveSeriesFills } from './compose-chart';
 import { formatChartValue, pieSlices, canMaskPieSlices } from './math';
 import { PieSeries } from './series';
 import { chartDatumTextProps, chartWebProps } from './svg';
 import type { ChartDatum, ChartDatumEvents } from './types';
-import { useChartTheme } from './useChartTheme';
+import { useChartTheme } from './use-chart-theme';
 
 export interface PieChartProps extends ChartDatumEvents, Omit<YStackProps, 'children' | 'width' | 'height'> {
   data: ChartDatum[];
@@ -94,7 +95,9 @@ export function PieChart({
       {...knobProps.gap}
       {...chartWebProps({ 'data-mpo-chart-owner': 'true' })}
       {...stackProps}>
-      <YStack width={height} height={height}>
+      <YStack
+        width={height}
+        height={height}>
         <ChartSurface
           label={ariaLabel}
           proof={{
@@ -133,7 +136,12 @@ export function PieChart({
       </YStack>
 
       {showLegend ? (
-        <YStack flex={1} minWidth={140} justifyContent="center" gap="$2" {...{ 'data-pie-legend': 'true' }}>
+        <YStack
+          flex={1}
+          minWidth={140}
+          justifyContent="center"
+          gap="$2"
+          {...{ 'data-pie-legend': 'true' }}>
           {data.map((datum, index) => (
             <XStack
               key={`${datum.label}-${index}`}
@@ -178,7 +186,10 @@ export function PieChart({
   return showLegend ? (
     chart
   ) : (
-    <ChartDataFrame data={data} title={title} valueFormatter={valueFormatter}>
+    <ChartDataFrame
+      data={data}
+      title={title}
+      valueFormatter={valueFormatter}>
       {chart}
     </ChartDataFrame>
   );

@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import type { ReactNode } from 'react';
 import { Paragraph, Text, YStack } from 'tamagui';
 
-import { componentColors } from '../componentColors';
+import { componentColors } from '../component-colors';
 import { Text as HouseText } from '../Text';
 
 import { FeedLayout, ListDetailLayout, PaneScaffold, ReadingWidth, SupportingPaneLayout } from './PaneScaffold';
@@ -11,7 +11,10 @@ import { FeedLayout, ListDetailLayout, PaneScaffold, ReadingWidth, SupportingPan
 function SplitFrame({ children, height = 360 }: { children: ReactNode; height?: number }) {
   const { knobProps } = useResolvedKnobs();
   return (
-    <YStack height={height} overflow="hidden" {...knobProps.borderRadius}>
+    <YStack
+      height={height}
+      overflow="hidden"
+      {...knobProps.borderRadius}>
       {children}
     </YStack>
   );
@@ -37,7 +40,10 @@ const LIST_ITEMS = ['Inbox', 'Drafts', 'Sent', 'Archive'];
 function DemoList({ active = 0 }: { active?: number }) {
   const onAccent = useReadableTextOn('$accentBackground');
   return (
-    <YStack flex={1} height="100%" backgroundColor={componentColors.surface.background}>
+    <YStack
+      flex={1}
+      height="100%"
+      backgroundColor={componentColors.surface.background}>
       {LIST_ITEMS.map((label, i) => {
         const position = getGroupPosition(i, LIST_ITEMS.length);
         const corners = stackRadiusProps(position, 0);
@@ -114,12 +120,20 @@ type Story = StoryObj<typeof PaneScaffold>;
 export const TwoPane: Story = {
   name: 'Main',
   render: (args) => (
-    <YStack height={400} padding="$4">
+    <YStack
+      height={400}
+      padding="$4">
       <SplitFrame>
         <PaneScaffold
           {...args}
-          primary=<PaneFill label="Primary" hint="Drag the seam · arrows resize" />
-          secondary=<PaneFill label="Secondary" muted />
+          primary=<PaneFill
+            label="Primary"
+            hint="Drag the seam · arrows resize"
+          />
+          secondary=<PaneFill
+            label="Secondary"
+            muted
+          />
         />
       </SplitFrame>
     </YStack>
@@ -137,9 +151,18 @@ export const CompactStacked: Story = {
     },
   },
   render: (args) => (
-    <YStack height={400} padding="$4">
+    <YStack
+      height={400}
+      padding="$4">
       <SplitFrame>
-        <PaneScaffold {...args} primary=<PaneFill label="Primary" /> secondary=<PaneFill label="Secondary" muted /> />
+        <PaneScaffold
+          {...args}
+          primary=<PaneFill label="Primary" />
+          secondary=<PaneFill
+            label="Secondary"
+            muted
+          />
+        />
       </SplitFrame>
     </YStack>
   ),
@@ -157,16 +180,27 @@ export const NestedThreeRegion: Story = {
     },
   },
   render: (args) => (
-    <YStack height={520} padding="$4">
+    <YStack
+      height={520}
+      padding="$4">
       <SplitFrame height={480}>
         <PaneScaffold
           {...args}
           paneFlex={[1, 3]}
-          primary=<PaneFill label="Rail" muted />
+          primary=<PaneFill
+            label="Rail"
+            muted
+          />
           secondary=<PaneScaffold
             paneFlex={[2, 1]}
-            primary=<PaneFill label="Centre" hint="Main canvas" />
-            secondary=<PaneFill label="Inspector" muted />
+            primary=<PaneFill
+              label="Centre"
+              hint="Main canvas"
+            />
+            secondary=<PaneFill
+              label="Inspector"
+              muted
+            />
           />
         />
       </SplitFrame>
@@ -186,17 +220,29 @@ export const DockedEditor: Story = {
     },
   },
   render: (args) => (
-    <YStack height={520} padding="$4">
+    <YStack
+      height={520}
+      padding="$4">
       <SplitFrame height={480}>
         <PaneScaffold
           {...args}
           paneFlex={[3, 1]}
           primary=<PaneScaffold
             paneFlex={[2, 1]}
-            primary=<PaneFill label="Page body" hint="Drag the seam below · ↑/↓ resize" />
-            secondary=<PaneFill label="Inspector" muted />
+            primary=<PaneFill
+              label="Page body"
+              hint="Drag the seam below · ↑/↓ resize"
+            />
+            secondary=<PaneFill
+              label="Inspector"
+              muted
+            />
           />
-          secondary=<PaneFill label="Editor" hint="Docked under the page" muted />
+          secondary=<PaneFill
+            label="Editor"
+            hint="Docked under the page"
+            muted
+          />
         />
       </SplitFrame>
     </YStack>
@@ -207,12 +253,17 @@ export const CompactActiveSecondary: Story = {
   name: 'Compact (swap)',
   args: { sizeClass: 'compact', activePane: 'secondary' },
   render: (args) => (
-    <YStack height={400} padding="$4">
+    <YStack
+      height={400}
+      padding="$4">
       <SplitFrame>
         <PaneScaffold
           {...args}
           primary=<PaneFill label="List (hidden)" />
-          secondary=<PaneFill label="Detail (shown)" muted />
+          secondary=<PaneFill
+            label="Detail (shown)"
+            muted
+          />
         />
       </SplitFrame>
     </YStack>
@@ -221,12 +272,17 @@ export const CompactActiveSecondary: Story = {
 
 export const ListDetail: StoryObj<typeof ListDetailLayout> = {
   render: () => (
-    <YStack height={400} padding="$4">
+    <YStack
+      height={400}
+      padding="$4">
       <SplitFrame>
         <ListDetailLayout
           sizeClass="expanded"
           list=<DemoList />
-          detail=<PaneFill label="Inbox" hint="List is the narrower pane. Detail stays meaningful on its own." />
+          detail=<PaneFill
+            label="Inbox"
+            hint="List is the narrower pane. Detail stays meaningful on its own."
+          />
         />
       </SplitFrame>
     </YStack>
@@ -235,12 +291,21 @@ export const ListDetail: StoryObj<typeof ListDetailLayout> = {
 
 export const SupportingPane: StoryObj<typeof SupportingPaneLayout> = {
   render: () => (
-    <YStack height={400} padding="$4">
+    <YStack
+      height={400}
+      padding="$4">
       <SplitFrame>
         <SupportingPaneLayout
           sizeClass="large"
-          supporting=<PaneFill label="Supporting (⅓)" muted hint="Properties · filters · meta" />>
-          <PaneFill label="Primary (⅔)" hint="Main canvas" />
+          supporting=<PaneFill
+            label="Supporting (⅓)"
+            muted
+            hint="Properties · filters · meta"
+          />>
+          <PaneFill
+            label="Primary (⅔)"
+            hint="Main canvas"
+          />
         </SupportingPaneLayout>
       </SplitFrame>
     </YStack>
@@ -257,7 +322,9 @@ export const Feed: StoryObj<typeof FeedLayout> = {
 
 export const ProseReadingWidth: StoryObj<typeof ReadingWidth> = {
   render: () => (
-    <YStack padding="$4" gap="$3">
+    <YStack
+      padding="$4"
+      gap="$3">
       <ReadingWidth>
         <Paragraph>
           ReadingWidth caps prose at ~70ch (DG-LAY-05). This paragraph should wrap near sixty-five to seventy-five

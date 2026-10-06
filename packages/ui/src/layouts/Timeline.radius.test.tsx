@@ -8,7 +8,8 @@ import { cleanup, screen } from '@testing-library/react';
 import * as React from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { Timeline, type TimelineEntry } from './Timeline';
+import { Timeline } from './Timeline';
+import type { TimelineEntry } from './Timeline';
 
 afterEach(cleanup);
 
@@ -44,7 +45,10 @@ describe('Timeline avatar identity shape', () => {
   it('declares every knob-immune avatar circle at borderRadius:none', () => {
     const { container } = renderWithProviders(
       <Preset overrides={{ borderRadius: 'none' }}>
-        <Timeline entries={entries} onCommentSubmit={() => {}} />
+        <Timeline
+          entries={entries}
+          onCommentSubmit={() => {}}
+        />
       </Preset>,
     );
     // the composer avatar proves the composer branch rendered
@@ -84,7 +88,10 @@ describe('Timeline comment card is CONTAINER-CAP on its own padding', () => {
   const cardRadius = (borderRadius: 'none' | 'medium' | 'large' | 'full', compact = false) => {
     renderWithProviders(
       <Preset overrides={{ borderRadius }}>
-        <Timeline entries={entries} compact={compact} />
+        <Timeline
+          entries={entries}
+          compact={compact}
+        />
       </Preset>,
     );
     const found = entryRowRadiusClass();

@@ -4,7 +4,8 @@ import { Paragraph, YStack } from 'tamagui';
 import { FormGrid } from '../FormGrid';
 import { FormSection, FormSectionStack } from '../FormSection';
 
-import { DescriptionList, type DescriptionListItem } from './index';
+import { DescriptionList } from './index';
+import type { DescriptionListItem } from './index';
 
 const meta: Meta<typeof DescriptionList> = {
   title: 'Forms/DescriptionList',
@@ -69,28 +70,52 @@ const HOST: DescriptionListItem[] = [
 ];
 
 export const Default: Story = {
-  render: (args) => <DescriptionList {...args} items={HOST} />,
+  render: (args) => (
+    <DescriptionList
+      {...args}
+      items={HOST}
+    />
+  ),
 };
 
 export const Anatomy: Story = {
   name: 'Anatomy — term · value · Change',
-  render: (args) => <DescriptionList {...args} items={HOST} />,
+  render: (args) => (
+    <DescriptionList
+      {...args}
+      items={HOST}
+    />
+  ),
 };
 
 export const SideDefault: Story = {
   name: 'Side (record register)',
-  render: () => <DescriptionList placement="side" items={HOST.map(({ onChange: _onChange, ...row }) => row)} />,
+  render: () => (
+    <DescriptionList
+      placement="side"
+      items={HOST.map(({ onChange: _onChange, ...row }) => row)}
+    />
+  ),
 };
 
 export const TopPlacement: Story = {
   name: 'Top — fieldLabelPlacement=top',
-  render: () => <DescriptionList placement="top" items={HOST} />,
+  render: () => (
+    <DescriptionList
+      placement="top"
+      items={HOST}
+    />
+  ),
 };
 
 export const CollapseNarrow: Story = {
   name: 'Container under 480 auto-stacks',
   render: () => (
-    <YStack width={280} borderWidth={1} borderColor="$borderColor" padding="$3">
+    <YStack
+      width={280}
+      borderWidth={1}
+      borderColor="$borderColor"
+      padding="$3">
       <DescriptionList
         placement="side"
         maxWidth="fluid"
@@ -125,7 +150,11 @@ export const RecordPage: Story = {
     <FormGrid columns={2}>
       <FormSectionStack>
         <FormSection label="Host">
-          <DescriptionList maxWidth="fluid" placement="side" items={HOST.slice(0, 6)} />
+          <DescriptionList
+            maxWidth="fluid"
+            placement="side"
+            items={HOST.slice(0, 6)}
+          />
         </FormSection>
       </FormSectionStack>
       <FormSectionStack>
@@ -188,11 +217,21 @@ export const RecordPage: Story = {
 
 export const FramedAndQuiet: Story = {
   render: () => (
-    <YStack gap="$5" maxWidth={560}>
+    <YStack
+      gap="$5"
+      maxWidth={560}>
       <Paragraph size="$2">Framed — Card paints, so it earns the inset</Paragraph>
-      <DescriptionList framed placement="side" items={HOST.slice(0, 4).map(({ onChange: _onChange, ...row }) => row)} />
+      <DescriptionList
+        framed
+        placement="side"
+        items={HOST.slice(0, 4).map(({ onChange: _onChange, ...row }) => row)}
+      />
       <Paragraph size="$2">Quiet separators — 1px at opacity .5</Paragraph>
-      <DescriptionList quiet placement="side" items={HOST.slice(0, 4).map(({ onChange: _onChange, ...row }) => row)} />
+      <DescriptionList
+        quiet
+        placement="side"
+        items={HOST.slice(0, 4).map(({ onChange: _onChange, ...row }) => row)}
+      />
     </YStack>
   ),
 };
@@ -235,5 +274,11 @@ export const Slots: Story = {
 };
 
 export const Compact: Story = {
-  render: () => <DescriptionList compact placement="side" items={HOST.slice(0, 3)} />,
+  render: () => (
+    <DescriptionList
+      compact
+      placement="side"
+      items={HOST.slice(0, 3)}
+    />
+  ),
 };

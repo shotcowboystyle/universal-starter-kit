@@ -3,7 +3,8 @@ import type { TreeViewProps as PublicTreeViewProps } from '@repo/ui';
 import { act, cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, expectTypeOf, it, vi } from 'vitest';
 
-import { TreeView, type TreeNode, type TreeViewProps } from './TreeView';
+import { TreeView } from './TreeView';
+import type { TreeNode, TreeViewProps } from './TreeView';
 
 const nodes: TreeNode[] = [
   {
@@ -52,17 +53,32 @@ describe('TreeView public expansion contract', () => {
     expect(change).toHaveBeenCalledExactlyOnceWith(['folders']);
     expect(toggle).toHaveBeenCalledExactlyOnceWith(nodes[0]);
     expect(screen.queryByText('Archive')).toBeNull();
-    rerender(<TreeView {...props} expandedIds={['folders']} />);
+    rerender(
+      <TreeView
+        {...props}
+        expandedIds={['folders']}
+      />,
+    );
     expect(screen.getByText('Archive')).toBeInTheDocument();
-    expect(change).toHaveBeenCalledTimes(1);
-    rerender(<TreeView {...props} expandedIds={[]} />);
+    expect(change).toHaveBeenCalledOnce();
+    rerender(
+      <TreeView
+        {...props}
+        expandedIds={[]}
+      />,
+    );
     expect(screen.queryByText('Archive')).toBeNull();
-    expect(change).toHaveBeenCalledTimes(1);
+    expect(change).toHaveBeenCalledOnce();
   });
 
   it('keeps uncontrolled toggles and their new notification working', () => {
     const change = vi.fn();
-    renderWithProviders(<TreeView nodes={nodes} onExpandedIdsChange={change} />);
+    renderWithProviders(
+      <TreeView
+        nodes={nodes}
+        onExpandedIdsChange={change}
+      />,
+    );
     fireEvent.click(screen.getByText('Folders'));
     expect(screen.getByText('Archive')).toBeInTheDocument();
     expect(change).toHaveBeenNthCalledWith(1, ['folders']);
@@ -75,9 +91,20 @@ describe('TreeView public expansion contract', () => {
     const change = vi.fn();
     const select = vi.fn();
     const { rerender } = renderWithProviders(
-      <TreeView nodes={nodes} onExpandedIdsChange={change} onNodeSelect={select} />,
+      <TreeView
+        nodes={nodes}
+        onExpandedIdsChange={change}
+        onNodeSelect={select}
+      />,
     );
-    rerender(<TreeView nodes={nodes} selectedId="item" onExpandedIdsChange={change} onNodeSelect={select} />);
+    rerender(
+      <TreeView
+        nodes={nodes}
+        selectedId="item"
+        onExpandedIdsChange={change}
+        onNodeSelect={select}
+      />,
+    );
     await act(async () => {});
     expect(screen.queryByText('Item')).toBeNull();
     expect(change).not.toHaveBeenCalled();
@@ -104,10 +131,20 @@ describe('TreeView reveal expansion', () => {
       expect(change).toHaveBeenCalledExactlyOnceWith(['other', 'folders', 'archive']);
     });
     expect(screen.queryByText('Item')).toBeNull();
-    rerender(<TreeView {...props} expandedIds={['other']} />);
+    rerender(
+      <TreeView
+        {...props}
+        expandedIds={['other']}
+      />,
+    );
     await act(async () => {});
-    expect(change).toHaveBeenCalledTimes(1);
-    rerender(<TreeView {...props} expandedIds={['other', 'folders', 'archive']} />);
+    expect(change).toHaveBeenCalledOnce();
+    rerender(
+      <TreeView
+        {...props}
+        expandedIds={['other', 'folders', 'archive']}
+      />,
+    );
     expect(screen.getByText('Item').closest('[role="treeitem"]')).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByText('Other item')).toBeInTheDocument();
     expect(select).not.toHaveBeenCalled();
@@ -121,10 +158,20 @@ describe('TreeView reveal expansion', () => {
       revealRequest: { id: 'item', requestId: 2 },
       onExpandedIdsChange: change,
     };
-    const { rerender } = renderWithProviders(<TreeView {...props} nodes={[]} />);
+    const { rerender } = renderWithProviders(
+      <TreeView
+        {...props}
+        nodes={[]}
+      />,
+    );
     await act(async () => {});
     expect(change).not.toHaveBeenCalled();
-    rerender(<TreeView {...props} nodes={nodes} />);
+    rerender(
+      <TreeView
+        {...props}
+        nodes={nodes}
+      />,
+    );
     await waitFor(() => {
       expect(screen.getByText('Item')).toBeInTheDocument();
     });
@@ -134,11 +181,25 @@ describe('TreeView reveal expansion', () => {
   it('replaces a missing request before its old data arrives', async () => {
     const change = vi.fn();
     const { rerender } = renderWithProviders(
-      <TreeView nodes={[]} revealRequest={{ id: 'item', requestId: 1 }} onExpandedIdsChange={change} />,
+      <TreeView
+        nodes={[]}
+        revealRequest={{ id: 'item', requestId: 1 }}
+        onExpandedIdsChange={change}
+      />,
     );
-    rerender(<TreeView nodes={[]} revealRequest={{ id: 'other-item', requestId: 2 }} onExpandedIdsChange={change} />);
     rerender(
-      <TreeView nodes={nodes} revealRequest={{ id: 'other-item', requestId: 2 }} onExpandedIdsChange={change} />,
+      <TreeView
+        nodes={[]}
+        revealRequest={{ id: 'other-item', requestId: 2 }}
+        onExpandedIdsChange={change}
+      />,
+    );
+    rerender(
+      <TreeView
+        nodes={nodes}
+        revealRequest={{ id: 'other-item', requestId: 2 }}
+        onExpandedIdsChange={change}
+      />,
     );
     await waitFor(() => {
       expect(screen.getByText('Other item')).toBeInTheDocument();

@@ -8,13 +8,18 @@ import * as React from 'react';
 import { TamaguiProvider, createTamagui } from 'tamagui';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { Breadcrumbs, type BreadcrumbItem } from './Breadcrumbs';
+import { Breadcrumbs } from './Breadcrumbs';
+import type { BreadcrumbItem } from './Breadcrumbs';
 import * as Debug from './Debug';
 import * as EmptyStateModule from './EmptyState';
-import { Sidebar, type SidebarSection } from './Sidebar';
-import { Tags, type TagItem } from './Tags';
-import { Toolbar, type ToolbarAction } from './Toolbar';
-import { ViewSwitcher, type ViewOption } from './ViewSwitcher';
+import { Sidebar } from './Sidebar';
+import type { SidebarSection } from './Sidebar';
+import { Tags } from './Tags';
+import type { TagItem } from './Tags';
+import { Toolbar } from './Toolbar';
+import type { ToolbarAction } from './Toolbar';
+import { ViewSwitcher } from './ViewSwitcher';
+import type { ViewOption } from './ViewSwitcher';
 
 import * as Layouts from './index';
 
@@ -164,7 +169,12 @@ describe('Toolbar', () => {
     const primaryActions: ToolbarAction[] = [{ label: 'Save', onPress: onSave, variant: 'primary' }];
     const secondaryActions: ToolbarAction[] = [{ label: 'Delete', onPress: onDelete, variant: 'destructive' }];
 
-    renderWithProviders(<Toolbar primaryActions={primaryActions} secondaryActions={secondaryActions} />);
+    renderWithProviders(
+      <Toolbar
+        primaryActions={primaryActions}
+        secondaryActions={secondaryActions}
+      />,
+    );
 
     const saveButton = screen.getByText('Save');
     const deleteButton = screen.getByText('Delete');
@@ -173,10 +183,10 @@ describe('Toolbar', () => {
     expect(deleteButton).toBeInTheDocument();
 
     fireEvent.click(saveButton);
-    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave).toHaveBeenCalledOnce();
 
     fireEvent.click(deleteButton);
-    expect(onDelete).toHaveBeenCalledTimes(1);
+    expect(onDelete).toHaveBeenCalledOnce();
   });
 
   it('renders independent clusters with gap markers and separates destructive', () => {
@@ -193,8 +203,8 @@ describe('Toolbar', () => {
       />,
     );
 
-    expect(container.querySelectorAll('[data-toolbar-cluster="independent"]').length).toBe(3);
-    expect(container.querySelectorAll('[data-toolbar-cluster="fused"]').length).toBe(0);
+    expect(container.querySelectorAll('[data-toolbar-cluster="independent"]')).toHaveLength(3);
+    expect(container.querySelectorAll('[data-toolbar-cluster="fused"]')).toHaveLength(0);
     expect(container.querySelector('[data-toolbar-separator="destructive"]')).toBeTruthy();
     expect(container.querySelector('[data-toolbar-region="destructive"]')).toBeTruthy();
     expect(screen.getByText('Save')).toBeInTheDocument();
@@ -245,8 +255,8 @@ describe('Toolbar', () => {
       />,
     );
 
-    expect(container.querySelectorAll('[data-toolbar-cluster="fused"]').length).toBe(1);
-    expect(container.querySelectorAll('[data-toolbar-cluster="independent"]').length).toBe(1);
+    expect(container.querySelectorAll('[data-toolbar-cluster="fused"]')).toHaveLength(1);
+    expect(container.querySelectorAll('[data-toolbar-cluster="independent"]')).toHaveLength(1);
     expect(screen.getByText('Day')).toBeInTheDocument();
     expect(screen.getByText('Week')).toBeInTheDocument();
     expect(screen.getByText('Refresh')).toBeInTheDocument();
@@ -307,7 +317,13 @@ describe('ViewSwitcher', () => {
       { type: 'kanban', label: 'Kanban' },
     ];
 
-    renderWithProviders(<ViewSwitcher views={views} currentView="list" onViewChange={onViewChange} />);
+    renderWithProviders(
+      <ViewSwitcher
+        views={views}
+        currentView="list"
+        onViewChange={onViewChange}
+      />,
+    );
 
     // All view labels should be visible as ToggleGroup items
     expect(screen.getByText('List')).toBeInTheDocument();
@@ -330,8 +346,15 @@ describe('ViewSwitcher', () => {
       { type: 'table', label: 'Table' },
     ];
     const { container } = render(
-      <TamaguiProvider config={houseConfig} defaultTheme="light" disableInjectCSS>
-        <ViewSwitcher views={views} currentView="list" onViewChange={() => {}} />
+      <TamaguiProvider
+        config={houseConfig}
+        defaultTheme="light"
+        disableInjectCSS>
+        <ViewSwitcher
+          views={views}
+          currentView="list"
+          onViewChange={() => {}}
+        />
       </TamaguiProvider>,
     );
     const selected = container.querySelector('[data-state="on"]') as HTMLElement;
@@ -354,7 +377,13 @@ describe('ViewSwitcher', () => {
       { type: 'list', label: 'List' },
       { type: 'table', label: 'Table' },
     ];
-    renderWithProviders(<ViewSwitcher views={views} currentView="list" onViewChange={() => {}} />);
+    renderWithProviders(
+      <ViewSwitcher
+        views={views}
+        currentView="list"
+        onViewChange={() => {}}
+      />,
+    );
     const textNode = screen.getByText('List');
     const weight = atoms(textNode, ['_fow-']);
     expect(weight.length).toBeGreaterThan(0);
@@ -367,7 +396,11 @@ describe('ViewSwitcher', () => {
       { type: 'table', label: 'Table' },
     ];
     const { container } = renderWithProviders(
-      <ViewSwitcher views={views} currentView="list" onViewChange={() => {}} />,
+      <ViewSwitcher
+        views={views}
+        currentView="list"
+        onViewChange={() => {}}
+      />,
     );
     const root = container.querySelector('[data-testid="view-switcher"]') as HTMLElement;
     expect(root).toBeTruthy();
@@ -388,7 +421,12 @@ describe('Breadcrumbs', () => {
       { label: 'Widget' },
     ];
 
-    renderWithProviders(<Breadcrumbs items={items} onNavigate={onNavigate} />);
+    renderWithProviders(
+      <Breadcrumbs
+        items={items}
+        onNavigate={onNavigate}
+      />,
+    );
 
     expect(screen.getByText('Home')).toBeInTheDocument();
     expect(screen.getByText('Products')).toBeInTheDocument();
@@ -416,7 +454,13 @@ describe('Tags', () => {
       { id: 'tag-3', label: 'review' },
     ];
 
-    renderWithProviders(<Tags tags={tags} onAdd={onAdd} onRemove={onRemove} />);
+    renderWithProviders(
+      <Tags
+        tags={tags}
+        onAdd={onAdd}
+        onRemove={onRemove}
+      />,
+    );
 
     expect(screen.getByText('urgent')).toBeInTheDocument();
     expect(screen.getByText('important')).toBeInTheDocument();
@@ -455,7 +499,12 @@ describe('Attachments', () => {
 
   it('shows the row-shaped skeleton twin while loading with no items', () => {
     const { Attachments } = Layouts;
-    renderWithProviders(<Attachments items={[]} isLoading />);
+    renderWithProviders(
+      <Attachments
+        items={[]}
+        isLoading
+      />,
+    );
 
     expect(document.querySelector('[data-async-skeleton="attachments"]')).toBeTruthy();
     expect(screen.queryByText('No attachments')).toBeNull();
@@ -464,7 +513,13 @@ describe('Attachments', () => {
   it('error wins over empty and the retry action fires (Axiom 6)', () => {
     const { Attachments } = Layouts;
     const onRetry = vi.fn();
-    renderWithProviders(<Attachments items={[]} error="File list failed to load" onRetry={onRetry} />);
+    renderWithProviders(
+      <Attachments
+        items={[]}
+        error="File list failed to load"
+        onRetry={onRetry}
+      />,
+    );
 
     // Failed load must never masquerade as "no attachments"
     expect(screen.queryByText('No attachments')).toBeNull();
@@ -472,13 +527,19 @@ describe('Attachments', () => {
     expect(screen.getByText('File list failed to load')).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('Retry'));
-    expect(onRetry).toHaveBeenCalledTimes(1);
+    expect(onRetry).toHaveBeenCalledOnce();
   });
 
   it('hides the count badge and upload affordance on error', () => {
     const { Attachments } = Layouts;
     renderWithProviders(
-      <Attachments items={[]} label="Files" maxAttachments={10} onAdd={() => {}} error="File list failed to load" />,
+      <Attachments
+        items={[]}
+        label="Files"
+        maxAttachments={10}
+        onAdd={() => {}}
+        error="File list failed to load"
+      />,
     );
 
     expect(screen.queryByText(/\(0\/10\)/)).toBeNull();
@@ -487,7 +548,12 @@ describe('Attachments', () => {
 
   it('Upload label TEXT NODE is weight 400', () => {
     const { Attachments } = Layouts;
-    renderWithProviders(<Attachments items={[]} onAdd={() => {}} />);
+    renderWithProviders(
+      <Attachments
+        items={[]}
+        onAdd={() => {}}
+      />,
+    );
     const node = screen.getByText('Upload');
     expect(node.tagName).not.toBe('BUTTON');
     expect(node.className).toMatch(/_fow-400\b/);
@@ -527,7 +593,12 @@ describe('Timeline', () => {
 
   it('shows the comment-row skeleton twin while loading with no entries', () => {
     const { Timeline } = Layouts;
-    renderWithProviders(<Timeline entries={[]} isLoading />);
+    renderWithProviders(
+      <Timeline
+        entries={[]}
+        isLoading
+      />,
+    );
 
     expect(document.querySelector('[data-async-skeleton="timeline"]')).toBeTruthy();
     expect(screen.queryByText('No activity yet')).toBeNull();
@@ -536,7 +607,13 @@ describe('Timeline', () => {
   it('error wins over empty and the retry action fires (Axiom 6)', () => {
     const { Timeline } = Layouts;
     const onRetry = vi.fn();
-    renderWithProviders(<Timeline entries={[]} error="Activity feed failed to load" onRetry={onRetry} />);
+    renderWithProviders(
+      <Timeline
+        entries={[]}
+        error="Activity feed failed to load"
+        onRetry={onRetry}
+      />,
+    );
 
     // Failed load must never masquerade as "no activity"
     expect(screen.queryByText('No activity yet')).toBeNull();
@@ -544,7 +621,7 @@ describe('Timeline', () => {
     expect(screen.getByText('Activity feed failed to load')).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('Retry'));
-    expect(onRetry).toHaveBeenCalledTimes(1);
+    expect(onRetry).toHaveBeenCalledOnce();
   });
 
   it('hides the composer and entry count on error', () => {
@@ -559,7 +636,12 @@ describe('Timeline', () => {
       },
     ];
     renderWithProviders(
-      <Timeline entries={entries} label="Activity" error="Activity feed failed to load" onCommentSubmit={() => {}} />,
+      <Timeline
+        entries={entries}
+        label="Activity"
+        error="Activity feed failed to load"
+        onCommentSubmit={() => {}}
+      />,
     );
 
     // Composer would invite comments into a feed that failed to load
@@ -587,7 +669,12 @@ describe('Timeline', () => {
         timestamp: '2026-01-15T11:00:00Z',
       },
     ];
-    renderWithProviders(<Timeline entries={entries} label="Activity" />);
+    renderWithProviders(
+      <Timeline
+        entries={entries}
+        label="Activity"
+      />,
+    );
 
     // The whole formatted run rides FSI…PDI — under RTL "2 entries" must not
     // reorder to "entries 2" (the measured pre-fix failure).

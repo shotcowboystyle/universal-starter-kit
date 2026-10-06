@@ -1,31 +1,22 @@
 import { CaretDownIcon, CaretUpIcon, MinusIcon, PlusIcon } from '@phosphor-icons/react';
-import { useTouchSurface } from '@repo/theme';
-import { currencyAffix, sizeRecipeForToken, useGlyphColor } from '@repo/theme';
+import { useTouchSurface, currencyAffix, sizeRecipeForToken, useGlyphColor } from '@repo/theme';
 import type { DeepKeys, DeepValue } from '@tanstack/form-core';
-import {
-  type ComponentProps,
-  type MutableRefObject,
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { ComponentProps, MutableRefObject, ReactNode } from 'react';
 import { Pressable } from 'react-native';
-import { isWeb, Text, useProps, View } from 'tamagui';
-import { Input as TamaguiInput } from 'tamagui';
+import { isWeb, Text, useProps, View, Input as TamaguiInput } from 'tamagui';
 
-import { resolveStepperPlacement } from './resolveStepperPlacement';
+import { resolveStepperPlacement } from './resolve-stepper-placement';
 
-export { resolveStepperPlacement, type StepperButtonPosition } from './resolveStepperPlacement';
+export { resolveStepperPlacement, type StepperButtonPosition } from './resolve-stepper-placement';
 
 type InputProps = ComponentProps<typeof TamaguiInput>;
-import { Field, FieldLayout } from '../../fieldLayout';
-import type { FormFieldProps } from '../../fieldLayout';
+import { Field, FieldLayout } from '../../FieldLayout';
+import type { FormFieldProps } from '../../FieldLayout';
 import { Input as InputParts } from '../../InputParts';
-import { formButtonColors, formInputColors } from '../../shared/colorRamps';
+import { formButtonColors, formInputColors } from '../../shared/color-ramps';
 import { t } from '../../shared/t';
-import { useWheelIncrement } from '../../shared/useWheelIncrement';
+import { useWheelIncrement } from '../../shared/use-wheel-increment';
 import { getFieldError, mergeFieldHandler, useFormField, useResolvedValidators } from '../../shared/utils';
 import { Skeleton } from '../../Skeleton';
 import type { FieldComponentProps, Validator } from '../../types';
@@ -517,36 +508,43 @@ export function Stepper<
       }
       const unit = event.shiftKey ? step * LARGE_STEP_FACTOR : step;
       switch (event.key) {
-        case 'ArrowUp':
+        case 'ArrowUp': {
           event.preventDefault();
           applyDelta(unit);
           break;
-        case 'ArrowDown':
+        }
+        case 'ArrowDown': {
           event.preventDefault();
           applyDelta(-unit);
           break;
-        case 'PageUp':
+        }
+        case 'PageUp': {
           event.preventDefault();
           applyDelta(step * LARGE_STEP_FACTOR);
           break;
-        case 'PageDown':
+        }
+        case 'PageDown': {
           event.preventDefault();
           applyDelta(-step * LARGE_STEP_FACTOR);
           break;
-        case 'Home':
+        }
+        case 'Home': {
           if (boundsLo !== undefined) {
             event.preventDefault();
             commitNumber(boundsLo, true);
           }
           break;
-        case 'End':
+        }
+        case 'End': {
           if (boundsHi !== undefined) {
             event.preventDefault();
             commitNumber(boundsHi, true);
           }
           break;
-        default:
+        }
+        default: {
           break;
+        }
       }
     },
     [disabled, readOnly, step, applyDelta, boundsLo, boundsHi, commitNumber],
@@ -563,7 +561,7 @@ export function Stepper<
       }
 
       // Only allow valid number characters
-      const cleanText = text.replace(/[^0-9.-]/g, '');
+      const cleanText = text.replaceAll(/[^0-9.-]/g, '');
 
       // Prevent multiple decimal points
       if (precision === 0 && cleanText.includes('.')) {
@@ -610,9 +608,19 @@ export function Stepper<
           showBoundCaption('min');
         }}>
         {stacked ? (
-          <CaretDownIcon size={iconPx} weight="bold" color={glyphColor} aria-hidden />
+          <CaretDownIcon
+            size={iconPx}
+            weight="bold"
+            color={glyphColor}
+            aria-hidden
+          />
         ) : (
-          <MinusIcon size={iconPx} weight="bold" color={glyphColor} aria-hidden />
+          <MinusIcon
+            size={iconPx}
+            weight="bold"
+            color={glyphColor}
+            aria-hidden
+          />
         )}
       </StepperSpinButton>
     );
@@ -631,9 +639,19 @@ export function Stepper<
           showBoundCaption('max');
         }}>
         {stacked ? (
-          <CaretUpIcon size={iconPx} weight="bold" color={glyphColor} aria-hidden />
+          <CaretUpIcon
+            size={iconPx}
+            weight="bold"
+            color={glyphColor}
+            aria-hidden
+          />
         ) : (
-          <PlusIcon size={iconPx} weight="bold" color={glyphColor} aria-hidden />
+          <PlusIcon
+            size={iconPx}
+            weight="bold"
+            color={glyphColor}
+            aria-hidden
+          />
         )}
       </StepperSpinButton>
     );
@@ -770,7 +788,9 @@ export function Stepper<
     // Wrap with wheel handler on web
     if (isWeb && !disabled && !readOnly) {
       return (
-        <div {...wheelProps} style={{ minWidth: 0, width: '100%' }}>
+        <div
+          {...wheelProps}
+          style={{ minWidth: 0, width: '100%' }}>
           {box}
         </div>
       );
@@ -782,8 +802,17 @@ export function Stepper<
   if (skeleton) {
     return (
       <InputParts size={controlSize}>
-        {label && <Skeleton variant="text" width="30%" />}
-        <Skeleton variant="rounded" width="100%" height={controlSize} />
+        {label && (
+          <Skeleton
+            variant="text"
+            width="30%"
+          />
+        )}
+        <Skeleton
+          variant="rounded"
+          width="100%"
+          height={controlSize}
+        />
       </InputParts>
     );
   }

@@ -8,8 +8,8 @@ import {
   FloatingFocusManager,
 } from '@floating-ui/react';
 import { CaretDownIcon, CheckIcon } from '@phosphor-icons/react';
-import { useTouchSurface } from '@repo/theme';
 import {
+  useTouchSurface,
   ensureKeyboardModalityTracking,
   keyboardFocusRingProps,
   menuRowFrame,
@@ -31,8 +31,9 @@ import { Platform, Pressable as RNPressable } from 'react-native';
 import type { LabelProps, SizeTokens } from 'tamagui';
 import { Paragraph, Text, View, YStack, isWeb, styled, useTheme } from 'tamagui';
 
-import { Chip, type ChipProps } from '../../Chip';
-import { Field, FieldLayout, useFieldA11y, useFieldDescribedBy } from '../../fieldLayout';
+import { Chip } from '../../Chip';
+import type { ChipProps } from '../../Chip';
+import { Field, FieldLayout, useFieldA11y, useFieldDescribedBy } from '../../FieldLayout';
 import {
   FloatingPanel,
   useFloatingPanel,
@@ -42,13 +43,13 @@ import {
 } from '../../FloatingPanel';
 import { PanelPortal } from '../../FloatingPanel/PanelPortal';
 import { Input as InputParts, FocusContext } from '../../InputParts';
-import { formCommonColors, formInputColors, formSelectedColors } from '../../shared/colorRamps';
-import { warnSelectTooFewOptions } from '../../shared/devWarn';
-import { ScrollArrow } from '../../shared/floatingList';
-import { pickerTriggerContract } from '../../shared/pickerTriggerContract';
+import { formCommonColors, formInputColors, formSelectedColors } from '../../shared/color-ramps';
+import { warnSelectTooFewOptions } from '../../shared/dev-warn';
+import { ScrollArrow } from '../../shared/floating-list';
+import { pickerTriggerContract } from '../../shared/picker-trigger-contract';
 import { t } from '../../shared/t';
-import { useIsInTableCell } from '../../shared/tableCellContext';
-import { useDragScroll } from '../../shared/useDragScroll';
+import { useIsInTableCell } from '../../shared/table-cell-context';
+import { useDragScroll } from '../../shared/use-drag-scroll';
 import {
   getFieldError,
   getFieldHeight,
@@ -56,11 +57,12 @@ import {
   useFormField,
   useResolvedValidators,
 } from '../../shared/utils';
-import { zIndex } from '../../shared/zIndex';
+import { zIndex } from '../../shared/z-index';
 import { Skeleton } from '../../Skeleton';
 import type { AnyFormApi } from '../../types';
-import { shouldUseIosNativeSelect } from '../nativeSelect';
-import { orderOptionsBySelected, type SelectedOrder } from '../selectedOrder';
+import { shouldUseIosNativeSelect } from '../native-select';
+import { orderOptionsBySelected } from '../selected-order';
+import type { SelectedOrder } from '../selected-order';
 
 /** Undefined on web (RNW ships no ActionSheetIOS); real on iOS. */
 const actionSheetIOS = (ReactNative as { ActionSheetIOS?: typeof ReactNative.ActionSheetIOS }).ActionSheetIOS;
@@ -340,7 +342,7 @@ interface SelectItemHandlers {
   allowMouseUpRef: RefObject<boolean>;
   selectTimeoutRef: RefObject<ReturnType<typeof setTimeout> | null>;
   isTypingRef: { current: { isTyping: boolean } };
-  listItemsRef: RefObject<Array<HTMLElement | null>>;
+  listItemsRef: RefObject<(HTMLElement | null)[]>;
   multiple?: boolean;
   kbNav: boolean;
   setKbNav: (next: boolean) => void;
@@ -435,7 +437,7 @@ const SelectItem = memo(function SelectItem({
           }
           ctx.selectTimeoutRef.current = setTimeout(() => {
             ctx.allowSelectRef.current = true;
-          });
+          }, 0);
         },
       })}
       {...selectItemRingProps(Boolean(isActive), ctx.kbNav)}
@@ -479,7 +481,12 @@ const SelectItem = memo(function SelectItem({
         flex={1}>
         {option.label}
       </Text>
-      {isSelected && <CheckIcon size={14} color={ctx.markColor} />}
+      {isSelected && (
+        <CheckIcon
+          size={14}
+          color={ctx.markColor}
+        />
+      )}
     </SelectRow>
   );
 });
@@ -572,8 +579,8 @@ function FloatingSelectCore({
   const textColor = knobProps.textAccentColor;
   const markColor = useSelectedMarkColor();
 
-  const listItemsRef = useRef<Array<HTMLElement | null>>([]);
-  const listContentRef = useRef<Array<string | null>>(options.map((option) => option.label));
+  const listItemsRef = useRef<(HTMLElement | null)[]>([]);
+  const listContentRef = useRef<(string | null)[]>(options.map((option) => option.label));
   const allowSelectRef = useRef(false);
   const allowMouseUpRef = useRef(true);
   const selectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -635,7 +642,7 @@ function FloatingSelectCore({
       selectTimeoutRef.current = setTimeout(() => {
         allowSelectRef.current = true;
         allowMouseUpRef.current = true;
-      });
+      }, 0);
     },
   });
 
@@ -677,8 +684,8 @@ function FloatingSelectCore({
     const triggerBounds = trigger.getBoundingClientRect();
     const viewportHeight = window.innerHeight;
     const computedStyle = getComputedStyle(dropdownElement);
-    const borderTopWidth = parseFloat(computedStyle.borderTopWidth) || 0;
-    const borderBottomWidth = parseFloat(computedStyle.borderBottomWidth) || 0;
+    const borderTopWidth = Number.parseFloat(computedStyle.borderTopWidth) || 0;
+    const borderBottomWidth = Number.parseFloat(computedStyle.borderBottomWidth) || 0;
     const totalBorderWidth = borderTopWidth + borderBottomWidth;
     const scrollContentHeight = dropdownElement.scrollHeight;
     const totalContentHeight = scrollContentHeight + totalBorderWidth;
@@ -930,7 +937,7 @@ function FloatingSelectCore({
     (option: SelectOption) => {
       const displayOptions = sortedOptionsRef.current;
       const index = displayOptions.findIndex((o) => o.value === option.value);
-      if (index >= 0) {
+      if (index !== -1) {
         handleSelect(index);
       }
     },
@@ -1119,14 +1126,22 @@ function FloatingSelectCore({
             </Text>
           )}
         </View>
-        <View flexShrink={0} alignSelf="center">
-          <CaretDownIcon size={16} color={glyphColor} />
+        <View
+          flexShrink={0}
+          alignSelf="center">
+          <CaretDownIcon
+            size={16}
+            color={glyphColor}
+          />
         </View>
       </InputParts.Box>
 
       {panel.mounted && (
         <PanelPortal anchor={panel.triggerRef.current}>
-          <FloatingFocusManager context={panel.context} modal={false} initialFocus={-1}>
+          <FloatingFocusManager
+            context={panel.context}
+            modal={false}
+            initialFocus={-1}>
             <YStack
               outlineWidth={0}
               pointerEvents={panel.visible ? 'auto' : 'none'}
@@ -1199,7 +1214,9 @@ function FloatingSelectCore({
                 arrowScrollDirRef={panel.arrowScrollDirRef}
               />
               {groupLabel && (
-                <GroupHeader color={textColor} paddingHorizontal={knobProps.panelPadding.padding}>
+                <GroupHeader
+                  color={textColor}
+                  paddingHorizontal={knobProps.panelPadding.padding}>
                   {groupLabel}
                 </GroupHeader>
               )}
@@ -1338,7 +1355,7 @@ function NativeSelectCore({
   const selectedIndex = displayOptions.findIndex((o) => o.value === value);
   useEffect(() => {
     if (open) {
-      setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0);
+      setActiveIndex(selectedIndex !== -1 ? selectedIndex : 0);
       requestAnimationFrame(() => listRef.current?.focus());
     }
   }, [open, selectedIndex]);
@@ -1469,16 +1486,16 @@ function NativeSelectCore({
             }
             {...(isWeb ? selectItemRingProps(active, kbNav) : undefined)}
             hoverStyle={
-              activeIndex != null
+              activeIndex == null
                 ? {
+                    backgroundColor: selected ? formInputColors.background.base : formInputColors.background.focus,
+                  }
+                : {
                     backgroundColor: active
                       ? formInputColors.background.focus
                       : selected
                         ? formInputColors.background.base
                         : 'transparent',
-                  }
-                : {
-                    backgroundColor: selected ? formInputColors.background.base : formInputColors.background.focus,
                   }
             }
             backgroundColor={
@@ -1495,7 +1512,12 @@ function NativeSelectCore({
               flex={1}>
               {option.label}
             </Text>
-            {selected && <CheckIcon size={14} color={markColor} />}
+            {selected && (
+              <CheckIcon
+                size={14}
+                color={markColor}
+              />
+            )}
           </View>
         );
         if (isWeb) {
@@ -1566,7 +1588,12 @@ function NativeSelectCore({
               })}
           data-testid="select-trigger"
           id={id}>
-          <View flex={1} minWidth={0} paddingVertical="$2" justifyContent="flex-start" alignItems="flex-start">
+          <View
+            flex={1}
+            minWidth={0}
+            paddingVertical="$2"
+            justifyContent="flex-start"
+            alignItems="flex-start">
             <Text
               {...knobProps.controlType}
               fontFamily={knobProps.body.fontFamily}
@@ -1576,7 +1603,9 @@ function NativeSelectCore({
               {triggerValueText}
             </Text>
           </View>
-          <View flexShrink={0} alignSelf="center">
+          <View
+            flexShrink={0}
+            alignSelf="center">
             <CaretDownIcon size={16} />
           </View>
         </InputParts.Box>
@@ -1629,7 +1658,7 @@ function NativeSelectCore({
                 // trigger still has a name (axe button-name). Labelled: the
                 // sibling Label wires `aria-labelledby` onto this id itself —
                 // naming it here too doubles the spoken name.
-                'aria-label': ariaLabel ?? (!hasLabel ? placeholder : undefined),
+                'aria-label': ariaLabel ?? (hasLabel ? undefined : placeholder),
                 'aria-describedby': describedBy,
                 tabIndex: disabled ? -1 : 0,
               }
@@ -1699,8 +1728,13 @@ function NativeSelectCore({
               </Text>
             )}
           </View>
-          <View flexShrink={0} alignSelf="center">
-            <CaretDownIcon size={16} color={glyphColor} />
+          <View
+            flexShrink={0}
+            alignSelf="center">
+            <CaretDownIcon
+              size={16}
+              color={glyphColor}
+            />
           </View>
         </InputParts.Box>
       }
@@ -1774,7 +1808,7 @@ export function Select({
   const viewportGtSm = useViewportGtSm();
   // Sheet on native and below `$sm` (viewport < 640, OVERLAY_BREAKPOINT).
   // Floating from `$sm` up.
-  const effectiveGtSm = typeof window !== 'undefined' ? viewportGtSm : false;
+  const effectiveGtSm = typeof window === 'undefined' ? false : viewportGtSm;
   const shouldUseSheet = !isWeb || !effectiveGtSm;
 
   // Render skeleton placeholder
@@ -1789,7 +1823,11 @@ export function Select({
             height={sizeRecipeForToken(String(sizeProp || knobProps.sizeToken)).fontSize}
           />
         )}
-        <Skeleton variant="rounded" width="100%" height={knobProps.sizeToken} />
+        <Skeleton
+          variant="rounded"
+          width="100%"
+          height={knobProps.sizeToken}
+        />
       </InputParts>
     );
   }
@@ -1889,7 +1927,11 @@ export function Select({
   }
 
   return (
-    <Field form={resolvedForm} name={name} defaultValue={defaultValue} validators={resolvedValidators}>
+    <Field
+      form={resolvedForm}
+      name={name}
+      defaultValue={defaultValue}
+      validators={resolvedValidators}>
       {(field) => {
         const resolvedError = getFieldError(field, error);
         return (

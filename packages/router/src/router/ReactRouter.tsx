@@ -74,7 +74,10 @@ export const useParams = () => {
 };
 
 export const Link: LinkComponent = ({ href, replace, children, ...props }) => (
-  <ReactRouterLink to={href as string} replace={replace} {...props}>
+  <ReactRouterLink
+    to={href as string}
+    replace={replace}
+    {...props}>
     {children}
   </ReactRouterLink>
 );

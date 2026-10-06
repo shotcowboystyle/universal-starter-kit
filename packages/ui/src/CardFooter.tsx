@@ -1,8 +1,9 @@
 import { useResolvedKnobs } from '@repo/theme';
 import type { ReactNode } from 'react';
-import { Card as TamaguiCard, SizableText, type ViewProps } from 'tamagui';
+import { Card as TamaguiCard, SizableText } from 'tamagui';
+import type { ViewProps } from 'tamagui';
 
-import { wrapBareTextChildren } from './shared/textRidesText';
+import { wrapBareTextChildren } from './shared/text-rides-text';
 
 /**
  * Card.Footer action/caption row.
@@ -27,7 +28,7 @@ function hostData(attrs: Record<string, string>): Record<string, unknown> {
   }
   const dataSet: Record<string, string> = {};
   for (const [key, value] of Object.entries(attrs)) {
-    const camel = key.replace(/^data-/, '').replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
+    const camel = key.replace(/^data-/, '').replaceAll(/-([a-z])/g, (_, c: string) => c.toUpperCase());
     dataSet[camel] = value;
   }
   return { dataSet };

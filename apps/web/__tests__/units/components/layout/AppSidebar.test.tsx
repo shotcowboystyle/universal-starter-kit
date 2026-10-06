@@ -3,12 +3,12 @@ import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import AppSidebar from '@/components/layout/AppSidebar';
-import { useBoards } from '@/hooks/useBoards';
+import { useBoards } from '@/hooks/use-boards';
 import { usePathname } from '@/i18n/navigation';
 
 const mockPush = vi.fn();
 
-vi.mock('@/hooks/useBoards', () => ({
+vi.mock('@/hooks/use-boards', () => ({
   useBoards: vi.fn(),
 }));
 
@@ -77,7 +77,7 @@ describe('AppSidebar', () => {
     renderWithProviders(<AppSidebar onNavigate={onNavigate} />);
     fireEvent.click(screen.getByText('Team Board 1'));
     expect(mockPush).toHaveBeenCalledWith('/boards/board-3');
-    expect(onNavigate).toHaveBeenCalledTimes(1);
+    expect(onNavigate).toHaveBeenCalledOnce();
   });
 
   it('navigates to the overview', () => {

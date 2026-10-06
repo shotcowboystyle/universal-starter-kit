@@ -1,18 +1,12 @@
 import { Preset, Surface, useResolvedKnobs } from '@repo/theme';
 import type { ReactNode } from 'react';
 import { createContext, forwardRef, useContext, useEffect } from 'react';
-import {
-  AlertDialog,
-  Dialog,
-  isWeb,
-  Popover,
-  Sheet,
-  useDialogContext,
-  View,
-  type DialogContentProps as TamaguiDialogContentProps,
-  type DialogOverlayProps as TamaguiDialogOverlayProps,
-  type TamaguiElement,
-  type ViewProps,
+import { AlertDialog, Dialog, isWeb, Popover, Sheet, useDialogContext, View } from 'tamagui';
+import type {
+  DialogContentProps as TamaguiDialogContentProps,
+  DialogOverlayProps as TamaguiDialogOverlayProps,
+  TamaguiElement,
+  ViewProps,
 } from 'tamagui';
 export { Card, CardFooter, CardHeader } from './Card';
 export type { CardFooterProps, CardHeaderProps, CardProps, SurfaceTier } from './Card';
@@ -201,7 +195,9 @@ export const DialogContent = forwardRef<TamaguiElement, TamaguiDialogContentProp
   function DialogContent({ children, ...props }, ref) {
     return (
       <Surface size="md">
-        <DialogContentInner ref={ref} {...props}>
+        <DialogContentInner
+          ref={ref}
+          {...props}>
           {children}
         </DialogContentInner>
       </Surface>
@@ -282,7 +278,9 @@ export const AlertDialogContent = forwardRef<TamaguiElement, TamaguiDialogConten
   function AlertDialogContent({ children, ...props }, ref) {
     return (
       <Surface size="md">
-        <AlertDialogContentInner ref={ref} {...props}>
+        <AlertDialogContentInner
+          ref={ref}
+          {...props}>
           {children}
         </AlertDialogContentInner>
       </Surface>

@@ -16,4 +16,4 @@ export {
 
 export { ActionBar, type ActionBarAlign, type ActionBarProps } from './ActionBar';
 
-export { actionDevWarn, __resetActionDevWarnSeen, type ActionDevWarnCode, type ActionDevWarnDetail } from './devWarn';
+export { actionDevWarn, __resetActionDevWarnSeen, type ActionDevWarnCode, type ActionDevWarnDetail } from './dev-warn';

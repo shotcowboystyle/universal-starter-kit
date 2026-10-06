@@ -45,15 +45,21 @@ afterEach(() => {
 });
 
 function fixture(mode: 'value' | 'defaultValue' = 'value') {
-  const rendered = renderWithProviders(<Tabs items={items} {...{ [mode]: 'tab-5' }} />);
+  const rendered = renderWithProviders(
+    <Tabs
+      items={items}
+      {...{ [mode]: 'tab-5' }}
+    />,
+  );
   expect(screen.getByRole('tab', { name: 'Tab 6' })).toHaveAttribute('aria-selected', 'true');
   const host = rendered.container.querySelector('[data-tabs-scroll="true"]') as any;
   expect(typeof host.scrollTo).toBe('function');
   const scroll = vi.spyOn(host, 'scrollTo').mockImplementation(() => {});
-  const viewport = (width: number) => act(() => observed.scroll.onLayout({ nativeEvent: { layout: { width } } }));
-  const content = (width: number) => act(() => observed.scroll.onContentSizeChange(width, 40));
-  const active = (layout = last) => act(() => observed.interactions.get('tab-5')('select', layout));
-  const manualScroll = (x: number) => act(() => observed.scroll.onScroll({ nativeEvent: { contentOffset: { x } } }));
+  const viewport = async (width: number) => act(() => observed.scroll.onLayout({ nativeEvent: { layout: { width } } }));
+  const content = async (width: number) => act(() => observed.scroll.onContentSizeChange(width, 40));
+  const active = async (layout = last) => act(() => observed.interactions.get('tab-5')('select', layout));
+  const manualScroll = async (x: number) =>
+    act(() => observed.scroll.onScroll({ nativeEvent: { contentOffset: { x } } }));
   return { ...rendered, scroll, viewport, content, active, manualScroll };
 }
 
@@ -97,7 +103,7 @@ describe.each(['value', 'defaultValue'] as const)('Tabs public measurement order
   });
 });
 
-it.each(['value', 'defaultValue'] as const)('reveals after late viewport measurement (%s)', (mode) => {
+test.each(['value', 'defaultValue'] as const)('reveals after late viewport measurement (%s)', (mode) => {
   const tree = fixture(mode);
   tree.content(600);
   tree.active();
@@ -106,7 +112,7 @@ it.each(['value', 'defaultValue'] as const)('reveals after late viewport measure
   expect(tree.scroll).toHaveBeenCalledExactlyOnceWith({ x: 210, animated: true });
 });
 
-it('retries after a hidden viewport becomes usable and ignores identical measurements', () => {
+test('retries after a hidden viewport becomes usable and ignores identical measurements', () => {
   const tree = fixture();
   tree.viewport(0);
   tree.content(600);
@@ -124,7 +130,7 @@ it('retries after a hidden viewport becomes usable and ignores identical measure
   expect(tree.scroll).not.toHaveBeenCalled();
 });
 
-it('rechecks changed content width without fighting subsequent manual scroll', () => {
+test('rechecks changed content width without fighting subsequent manual scroll', () => {
   const tree = fixture();
   tree.viewport(390);
   tree.content(390);
@@ -147,11 +153,16 @@ it('rechecks changed content width without fighting subsequent manual scroll', (
   expect(tree.scroll).toHaveBeenCalledExactlyOnceWith({ x: 242, animated: true });
 });
 
-it("waits for the latest selected tab's layout when dimensions were pending", () => {
+test("waits for the latest selected tab's layout when dimensions were pending", () => {
   const tree = fixture();
   tree.viewport(390);
   tree.active();
-  tree.rerender(<Tabs items={items} value="tab-0" />);
+  tree.rerender(
+    <Tabs
+      items={items}
+      value="tab-0"
+    />,
+  );
   tree.content(600);
   expect(tree.scroll).not.toHaveBeenCalled();
   act(() => observed.interactions.get('tab-0')('select', { ...last, x: 0 }));
@@ -159,7 +170,7 @@ it("waits for the latest selected tab's layout when dimensions were pending", ()
   expect(screen.getByRole('tab', { name: 'Tab 1' })).toHaveAttribute('aria-selected', 'true');
 });
 
-it('uses the negative RTL offset range after delayed dimensions', () => {
+test('uses the negative RTL offset range after delayed dimensions', () => {
   document.documentElement.setAttribute('dir', 'rtl');
   const tree = fixture();
   tree.viewport(390);
@@ -172,7 +183,7 @@ it('uses the negative RTL offset range after delayed dimensions', () => {
   expect(tree.scroll).not.toHaveBeenCalled();
 });
 
-it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY])('does not scroll with unusable width %s', (width) => {
+test.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY])('does not scroll with unusable width %s', (width) => {
   expect(tabsScrollIntoViewX(last, 0, width, 600, 'ltr')).toBeUndefined();
   expect(tabsScrollIntoViewX({ ...last, width }, 0, 390, 600, 'ltr')).toBeUndefined();
 });

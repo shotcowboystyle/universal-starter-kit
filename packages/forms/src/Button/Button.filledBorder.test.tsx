@@ -63,7 +63,9 @@ describe('Button filled border is transparent', () => {
     cleanup();
 
     renderWithProviders(
-      <Button outlined error>
+      <Button
+        outlined
+        error>
         Destroy
       </Button>,
     );

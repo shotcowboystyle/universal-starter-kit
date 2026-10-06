@@ -2,7 +2,7 @@ import type { ThemeName } from '@tamagui/web';
 import type { PropsWithChildren } from 'react';
 import { Theme } from 'tamagui';
 
-import { IntentContext } from './useResolvedKnobs';
+import { IntentContext } from './use-resolved-knobs';
 
 export interface IntentProps extends PropsWithChildren {
   /** Intent name. */

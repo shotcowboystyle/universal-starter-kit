@@ -33,7 +33,9 @@ export const Default: Story = {
 
 export const InProse: Story = {
   render: (args) => (
-    <YStack gap="$4" maxWidth={520}>
+    <YStack
+      gap="$4"
+      maxWidth={520}>
       <Paragraph>
         Run <CodeInline>{args.children}</CodeInline> in your terminal, then edit <CodeInline>package.json</CodeInline>{' '}
         to add the script.
@@ -53,7 +55,12 @@ export const InProse: Story = {
 
 export const EdgeTokens: Story = {
   render: () => (
-    <YStack gap="$3" maxWidth={420} borderWidth={1} borderColor="$color6" borderStyle="dashed">
+    <YStack
+      gap="$3"
+      maxWidth={420}
+      borderWidth={1}
+      borderColor="$color6"
+      borderStyle="dashed">
       <Paragraph>
         Spaces: <CodeInline>{'  padded  '}</CodeInline> end.
       </Paragraph>

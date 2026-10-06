@@ -1,12 +1,13 @@
 import { renderWithProviders } from '@repo/test-utils';
-import { defaultPreset, Preset, resolveChartPalette, useChartPalette, type ChartPalette } from '@repo/theme';
+import { defaultPreset, Preset, resolveChartPalette, useChartPalette } from '@repo/theme';
+import type { ChartPalette } from '@repo/theme';
 import { cleanup, fireEvent, screen } from '@testing-library/react';
 import * as React from 'react';
 import { Theme } from 'tamagui';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { BarChart } from './BarChart';
-import { resolveSeriesFills } from './composeChart';
+import { resolveSeriesFills } from './compose-chart';
 import { AreaChart, LineChart } from './LineChart';
 import { PieChart } from './PieChart';
 import { Sparkline } from './Sparkline';
@@ -45,23 +46,40 @@ function targetRects(): Element[] {
 // In happy-dom onLayout never fires, so every chart passes an explicit width.
 const WIDTH = 400;
 
-it('routes stock Sparkline as a declared area or line with its complete data count', () => {
-  const { rerender } = renderWithProviders(<Sparkline data={[1, 2, 3]} width={WIDTH} />);
+test('routes stock Sparkline as a declared area or line with its complete data count', () => {
+  const { rerender } = renderWithProviders(
+    <Sparkline
+      data={[1, 2, 3]}
+      width={WIDTH}
+    />,
+  );
   expect(document.querySelector('svg')?.getAttribute('data-mpo-chart')).toBe('area');
   expect(document.querySelector('svg')?.getAttribute('data-mpo-chart-datum-count')).toBe('3');
   expect(document.querySelector('svg')?.getAttribute('data-mpo-chart-datum-text')).toBe('false');
-  rerender(<Sparkline data={[1, 2, 3]} width={WIDTH} showArea={false} />);
+  rerender(
+    <Sparkline
+      data={[1, 2, 3]}
+      width={WIDTH}
+      showArea={false}
+    />,
+  );
   expect(document.querySelector('svg')?.getAttribute('data-mpo-chart')).toBe('line');
 });
 
 describe('BarChart', () => {
   it('declares chart kind and marks without claiming a complete datum alternative', () => {
-    renderWithProviders(<BarChart data={data} width={WIDTH} onDatumPress={vi.fn()} />);
+    renderWithProviders(
+      <BarChart
+        data={data}
+        width={WIDTH}
+        onDatumPress={vi.fn()}
+      />,
+    );
     const root = document.querySelector('svg')!;
     expect(root.getAttribute('data-mpo-chart')).toBe('bar');
     expect(root.getAttribute('data-mpo-chart-datum-count')).toBe(String(data.length));
     expect(root.getAttribute('data-mpo-chart-datum-text')).toBe('false');
-    expect(root.querySelectorAll('[data-mpo-chart-mark]').length).toBe(data.length);
+    expect(root.querySelectorAll('[data-mpo-chart-mark]')).toHaveLength(data.length);
     expect(targetRects().every((target) => !target.hasAttribute('data-mpo-chart-mark'))).toBe(true);
   });
 
@@ -70,11 +88,14 @@ describe('BarChart', () => {
     renderWithProviders(
       <>
         <PaletteProbe into={palette} />
-        <BarChart data={data} width={WIDTH} />
+        <BarChart
+          data={data}
+          width={WIDTH}
+        />
       </>,
     );
     const bars = markRects();
-    expect(bars.length).toBe(data.length);
+    expect(bars).toHaveLength(data.length);
     for (const bar of bars) {
       expect(bar.getAttribute('fill')).toBe(palette.current?.single);
     }
@@ -85,7 +106,11 @@ describe('BarChart', () => {
     renderWithProviders(
       <>
         <PaletteProbe into={palette} />
-        <BarChart data={data} width={WIDTH} categorical />
+        <BarChart
+          data={data}
+          width={WIDTH}
+          categorical
+        />
       </>,
     );
     const fills = markRects().map((bar) => bar.getAttribute('fill'));
@@ -100,7 +125,10 @@ describe('BarChart', () => {
         <PaletteProbe into={base} />
         <Theme name={'red' as never}>
           <PaletteProbe into={tinted} />
-          <BarChart data={data} width={WIDTH} />
+          <BarChart
+            data={data}
+            width={WIDTH}
+          />
         </Theme>
       </>,
     );
@@ -126,7 +154,13 @@ describe('BarChart', () => {
   });
 
   it('exposes role=img with a generated data summary (Axiom 12)', () => {
-    renderWithProviders(<BarChart data={data} width={WIDTH} title="Revenue" />);
+    renderWithProviders(
+      <BarChart
+        data={data}
+        width={WIDTH}
+        title="Revenue"
+      />,
+    );
     const img = screen.getByRole('img');
     const label = img.getAttribute('aria-label') ?? '';
     expect(label).toContain('Bar chart, Revenue');
@@ -136,9 +170,15 @@ describe('BarChart', () => {
 
   it('renders 44px-floor hit targets with per-datum names when interactive', () => {
     const onDatumPress = vi.fn();
-    renderWithProviders(<BarChart data={data} width={WIDTH} onDatumPress={onDatumPress} />);
+    renderWithProviders(
+      <BarChart
+        data={data}
+        width={WIDTH}
+        onDatumPress={onDatumPress}
+      />,
+    );
     const targets = targetRects();
-    expect(targets.length).toBe(data.length);
+    expect(targets).toHaveLength(data.length);
     for (const target of targets) {
       expect(Number(target.getAttribute('width'))).toBeGreaterThanOrEqual(44);
     }
@@ -148,7 +188,12 @@ describe('BarChart', () => {
   });
 
   it('renders y grid lines and axis labels from d3 ticks', () => {
-    renderWithProviders(<BarChart data={data} width={WIDTH} />);
+    renderWithProviders(
+      <BarChart
+        data={data}
+        width={WIDTH}
+      />,
+    );
     expect(document.querySelectorAll('svg line').length).toBeGreaterThan(0);
     const texts = Array.from(document.querySelectorAll('svg text')).map((t) => t.textContent);
     expect(texts).toContain('Jan');
@@ -156,21 +201,34 @@ describe('BarChart', () => {
   });
 
   it('renders nothing but the accessible summary for empty data', () => {
-    renderWithProviders(<BarChart data={[]} width={WIDTH} />);
-    expect(markRects().length).toBe(0);
+    renderWithProviders(
+      <BarChart
+        data={[]}
+        width={WIDTH}
+      />,
+    );
+    expect(markRects()).toHaveLength(0);
     const img = screen.getByRole('img');
     expect(img.getAttribute('aria-label')).toContain('no data');
   });
 
   it('pins the value axis to an explicit domain without nicing', () => {
     const { unmount: unmountShort } = renderWithProviders(
-      <BarChart data={[{ label: 'atk', value: 90 }]} width={WIDTH} domain={[0, 180]} />,
+      <BarChart
+        data={[{ label: 'atk', value: 90 }]}
+        width={WIDTH}
+        domain={[0, 180]}
+      />,
     );
     const shortHeight = barBox(markRects()[0]).height;
     unmountShort();
 
     const { unmount: unmountFull } = renderWithProviders(
-      <BarChart data={[{ label: 'atk', value: 180 }]} width={WIDTH} domain={[0, 180]} />,
+      <BarChart
+        data={[{ label: 'atk', value: 180 }]}
+        width={WIDTH}
+        domain={[0, 180]}
+      />,
     );
     const fullHeight = barBox(markRects()[0]).height;
     expect(fullHeight).toBeGreaterThan(0);
@@ -178,7 +236,13 @@ describe('BarChart', () => {
     unmountFull();
 
     // 255 on a 0–255 scale must not nice out to 260 (ticks would show 260).
-    renderWithProviders(<BarChart data={[{ label: 'hp', value: 255 }]} width={WIDTH} domain={[0, 255]} />);
+    renderWithProviders(
+      <BarChart
+        data={[{ label: 'hp', value: 255 }]}
+        width={WIDTH}
+        domain={[0, 255]}
+      />,
+    );
     const ticks = Array.from(document.querySelectorAll('svg text')).map((node) => node.textContent);
     expect(ticks).not.toContain('260');
   });
@@ -186,30 +250,50 @@ describe('BarChart', () => {
 
 describe('LineChart / AreaChart', () => {
   it('distinguishes area composition from a plain line', () => {
-    const { rerender } = renderWithProviders(<LineChart data={data} width={WIDTH} />);
+    const { rerender } = renderWithProviders(
+      <LineChart
+        data={data}
+        width={WIDTH}
+      />,
+    );
     expect(document.querySelector('svg')?.getAttribute('data-mpo-chart')).toBe('line');
-    rerender(<AreaChart data={data} width={WIDTH} />);
+    rerender(
+      <AreaChart
+        data={data}
+        width={WIDTH}
+      />,
+    );
     expect(document.querySelector('svg')?.getAttribute('data-mpo-chart')).toBe('area');
   });
+
   it('strokes the line and dots with the palette identity', () => {
     const palette: { current?: ChartPalette } = {};
     renderWithProviders(
       <>
         <PaletteProbe into={palette} />
-        <LineChart data={data} width={WIDTH} />
+        <LineChart
+          data={data}
+          width={WIDTH}
+        />
       </>,
     );
     const path = document.querySelector('svg path[fill="none"]');
     expect(path?.getAttribute('stroke')).toBe(palette.current?.single);
     const dots = document.querySelectorAll("svg circle:not([fill='transparent'])");
-    expect(dots.length).toBe(data.length);
+    expect(dots).toHaveLength(data.length);
   });
 
   it('renders 44px point targets when interactive', () => {
     const onDatumPress = vi.fn();
-    renderWithProviders(<LineChart data={data} width={WIDTH} onDatumPress={onDatumPress} />);
+    renderWithProviders(
+      <LineChart
+        data={data}
+        width={WIDTH}
+        onDatumPress={onDatumPress}
+      />,
+    );
     const targets = Array.from(document.querySelectorAll('svg circle[fill="transparent"]'));
-    expect(targets.length).toBe(data.length);
+    expect(targets).toHaveLength(data.length);
     for (const target of targets) {
       expect(Number(target.getAttribute('r'))).toBeGreaterThanOrEqual(22);
     }
@@ -222,7 +306,10 @@ describe('LineChart / AreaChart', () => {
     renderWithProviders(
       <>
         <PaletteProbe into={palette} />
-        <AreaChart data={data} width={WIDTH} />
+        <AreaChart
+          data={data}
+          width={WIDTH}
+        />
       </>,
     );
     const area = Array.from(document.querySelectorAll('svg [data-mpo-chart-mark]')).find(
@@ -239,14 +326,19 @@ describe('PieChart', () => {
       label: `Region ${index}`,
       value: index + 1,
     }));
-    renderWithProviders(<PieChart data={many} donut />);
+    renderWithProviders(
+      <PieChart
+        data={many}
+        donut
+      />,
+    );
     const root = document.querySelector('svg')!;
     expect(root.getAttribute('data-mpo-chart')).toBe('donut');
     expect(root.getAttribute('data-mpo-chart-datum-count')).toBe('13');
     expect(root.getAttribute('data-mpo-chart-separated')).toBe('true');
-    expect(document.querySelectorAll('[data-mpo-chart-datum-label]').length).toBe(13);
-    expect(document.querySelectorAll('[data-mpo-chart-datum-value]').length).toBe(13);
-    expect(root.querySelectorAll('[data-mpo-chart-mark]').length).toBe(13);
+    expect(document.querySelectorAll('[data-mpo-chart-datum-label]')).toHaveLength(13);
+    expect(document.querySelectorAll('[data-mpo-chart-datum-value]')).toHaveLength(13);
+    expect(root.querySelectorAll('[data-mpo-chart-mark]')).toHaveLength(13);
   });
 
   const pieData: ChartDatum[] = [
@@ -259,7 +351,10 @@ describe('PieChart', () => {
     renderWithProviders(
       <>
         <PieChart data={pieData} />
-        <PieChart data={pieData} donut />
+        <PieChart
+          data={pieData}
+          donut
+        />
       </>,
     );
     const masks = Array.from(document.querySelectorAll('mask'));
@@ -294,7 +389,10 @@ describe('PieChart', () => {
     renderWithProviders(
       <>
         <PaletteProbe into={palette} />
-        <PieChart data={pieData} showLegend={false} />
+        <PieChart
+          data={pieData}
+          showLegend={false}
+        />
       </>,
     );
     const fills = Array.from(document.querySelectorAll('svg [data-mpo-chart-mark]')).map((p) => p.getAttribute('fill'));
@@ -309,7 +407,13 @@ describe('PieChart', () => {
 
   it('per-slice press targets carry share-aware names', () => {
     const onDatumPress = vi.fn();
-    renderWithProviders(<PieChart data={pieData} showLegend={false} onDatumPress={onDatumPress} />);
+    renderWithProviders(
+      <PieChart
+        data={pieData}
+        showLegend={false}
+        onDatumPress={onDatumPress}
+      />,
+    );
     const slices = Array.from(document.querySelectorAll('svg [data-mpo-chart-mark]'));
     expect(slices[0].getAttribute('aria-label')).toBe('A: 4 (44%)');
     fireEvent.click(slices[1]);
@@ -317,8 +421,14 @@ describe('PieChart', () => {
   });
 
   it('donut hole is genuine geometry — no background cover circle', () => {
-    renderWithProviders(<PieChart data={pieData} donut showLegend={false} />);
-    expect(document.querySelectorAll('svg circle').length).toBe(0);
+    renderWithProviders(
+      <PieChart
+        data={pieData}
+        donut
+        showLegend={false}
+      />,
+    );
+    expect(document.querySelectorAll('svg circle')).toHaveLength(0);
   });
 
   describe('legend containment', () => {
@@ -340,11 +450,11 @@ describe('PieChart', () => {
 
     it('legend rows truncate the label, never the value (Axiom 11)', () => {
       const { container } = renderWithProviders(
-        <PieChart data={[{ label: 'A very long category label that truncates', value: 1234567 }]} />,
+        <PieChart data={[{ label: 'A very long category label that truncates', value: 1_234_567 }]} />,
       );
       const legend = container.querySelector('[data-pie-legend="true"]') as HTMLElement;
       const label = screen.getByText('A very long category label that truncates');
-      const value = screen.getByText((1234567).toLocaleString());
+      const value = screen.getByText((1_234_567).toLocaleString());
       expect(legend.contains(label)).toBe(true);
       expect(legend.contains(value)).toBe(true);
       // Label yields: single-line ellipsis + shrinkable flex basis.
@@ -355,7 +465,12 @@ describe('PieChart', () => {
     });
 
     it('no legend frame renders when showLegend is false', () => {
-      const { container } = renderWithProviders(<PieChart data={pieData} showLegend={false} />);
+      const { container } = renderWithProviders(
+        <PieChart
+          data={pieData}
+          showLegend={false}
+        />,
+      );
       expect(container.querySelector('[data-pie-legend="true"]')).toBeNull();
     });
   });
@@ -367,7 +482,10 @@ describe('Sparkline', () => {
     renderWithProviders(
       <>
         <PaletteProbe into={palette} />
-        <Sparkline data={[1, 3, 2, 5]} width={120} />
+        <Sparkline
+          data={[1, 3, 2, 5]}
+          width={120}
+        />
       </>,
     );
     const line = document.querySelector('svg path[fill="none"]');
@@ -380,10 +498,13 @@ describe('animation knob (A-CONTINUOUS)', () => {
   it('renders identically at animation=none — no driver, no enter styles', () => {
     renderWithProviders(
       <Preset overrides={{ animation: 'none' }}>
-        <BarChart data={data} width={WIDTH} />
+        <BarChart
+          data={data}
+          width={WIDTH}
+        />
       </Preset>,
     );
-    expect(markRects().length).toBe(data.length);
+    expect(markRects()).toHaveLength(data.length);
   });
 });
 
@@ -412,7 +533,11 @@ describe('categorical cycle is a third list', () => {
     renderWithProviders(
       <Theme name={'orange' as never}>
         <PaletteProbe into={palette} />
-        <BarChart data={data} width={WIDTH} categorical />
+        <BarChart
+          data={data}
+          width={WIDTH}
+          categorical
+        />
       </Theme>,
     );
     const fills = markRects().map((bar) => bar.getAttribute('fill'));
@@ -461,7 +586,10 @@ describe('BarChart corners: DEFAULT class on the value end only', () => {
   const radii = (borderRadius: 'none' | 'small' | 'medium' | 'large' | 'full') => {
     renderWithProviders(
       <Preset overrides={{ borderRadius }}>
-        <BarChart data={data} width={WIDTH} />
+        <BarChart
+          data={data}
+          width={WIDTH}
+        />
       </Preset>,
     );
     const boxes = markRects().map(barBox);
@@ -487,7 +615,10 @@ describe('BarChart corners: DEFAULT class on the value end only', () => {
   it('draws the baseline corners square', () => {
     renderWithProviders(
       <Preset overrides={{ borderRadius: 'large' }}>
-        <BarChart data={data} width={WIDTH} />
+        <BarChart
+          data={data}
+          width={WIDTH}
+        />
       </Preset>,
     );
     for (const bar of markRects()) {

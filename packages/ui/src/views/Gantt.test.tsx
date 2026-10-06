@@ -2,7 +2,8 @@ import { renderWithProviders } from '@repo/test-utils';
 import { cleanup, fireEvent, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { GanttView, type GanttTask } from './Gantt';
+import { GanttView } from './Gantt';
+import type { GanttTask } from './Gantt';
 import {
   addDays,
   barGeometry,
@@ -27,8 +28,8 @@ import {
   shiftSpanByDays,
   spanInclusiveDays,
   todayLineX,
-  type GanttRange,
-} from './ganttMath';
+} from './gantt-math';
+import type { GanttRange } from './gantt-math';
 
 afterEach(cleanup);
 
@@ -350,7 +351,12 @@ describe('GanttView', () => {
   });
 
   it('marks the axis with the active zoom level', () => {
-    const { container } = renderWithProviders(<GanttView tasks={tasks} zoom="month" />);
+    const { container } = renderWithProviders(
+      <GanttView
+        tasks={tasks}
+        zoom="month"
+      />,
+    );
     expect(container.querySelector('[data-gantt-axis="month"]')).toBeTruthy();
     expect(container.querySelector('[data-gantt-view="month"]')).toBeTruthy();
   });
@@ -366,26 +372,41 @@ describe('GanttView', () => {
 
   it('fires onItemPress when a bar is clicked', () => {
     const onItemPress = vi.fn();
-    const { container } = renderWithProviders(<GanttView tasks={tasks} onItemPress={onItemPress} />);
+    const { container } = renderWithProviders(
+      <GanttView
+        tasks={tasks}
+        onItemPress={onItemPress}
+      />,
+    );
     fireEvent.click(container.querySelector('[data-gantt-bar="t1"]') as Element);
-    expect(onItemPress).toHaveBeenCalledTimes(1);
+    expect(onItemPress).toHaveBeenCalledOnce();
     expect(onItemPress.mock.calls[0][0].id).toBe('t1');
   });
 
   it('fires onItemPress from the keyboard (Enter on a focused bar)', () => {
     const onItemPress = vi.fn();
-    const { container } = renderWithProviders(<GanttView tasks={tasks} onItemPress={onItemPress} />);
+    const { container } = renderWithProviders(
+      <GanttView
+        tasks={tasks}
+        onItemPress={onItemPress}
+      />,
+    );
     fireEvent.keyDown(container.querySelector('[data-gantt-bar="t2"]') as Element, {
       key: 'Enter',
     });
-    expect(onItemPress).toHaveBeenCalledTimes(1);
+    expect(onItemPress).toHaveBeenCalledOnce();
     expect(onItemPress.mock.calls[0][0].id).toBe('t2');
   });
 
   describe('bar drag (web pointer)', () => {
     it('fires onItemMove with a whole-day-shifted range on drop', () => {
       const onItemMove = vi.fn();
-      const { container } = renderWithProviders(<GanttView tasks={tasks} onItemMove={onItemMove} />);
+      const { container } = renderWithProviders(
+        <GanttView
+          tasks={tasks}
+          onItemMove={onItemMove}
+        />,
+      );
       const bar = container.querySelector('[data-gantt-bar="t1"]') as Element;
 
       // Default medium size at week zoom = 24 px/day → +48px = +2 days.
@@ -393,7 +414,7 @@ describe('GanttView', () => {
       fireEvent.pointerMove(window, { clientX: 148, clientY: 100 });
       fireEvent.pointerUp(window, { clientX: 148, clientY: 100 });
 
-      expect(onItemMove).toHaveBeenCalledTimes(1);
+      expect(onItemMove).toHaveBeenCalledOnce();
       const [movedTask, span] = onItemMove.mock.calls[0];
       expect(movedTask.id).toBe('t1');
       expect(span.start).toEqual(mar(12));
@@ -402,7 +423,12 @@ describe('GanttView', () => {
 
     it('does not fire onItemMove when movement stays under the drag threshold', () => {
       const onItemMove = vi.fn();
-      const { container } = renderWithProviders(<GanttView tasks={tasks} onItemMove={onItemMove} />);
+      const { container } = renderWithProviders(
+        <GanttView
+          tasks={tasks}
+          onItemMove={onItemMove}
+        />,
+      );
       const bar = container.querySelector('[data-gantt-bar="t1"]') as Element;
 
       fireEvent.pointerDown(bar, { button: 0, clientX: 100, clientY: 100 });
@@ -414,7 +440,12 @@ describe('GanttView', () => {
 
     it('does not fire onItemMove for a snapped zero-day drop', () => {
       const onItemMove = vi.fn();
-      const { container } = renderWithProviders(<GanttView tasks={tasks} onItemMove={onItemMove} />);
+      const { container } = renderWithProviders(
+        <GanttView
+          tasks={tasks}
+          onItemMove={onItemMove}
+        />,
+      );
       const bar = container.querySelector('[data-gantt-bar="t1"]') as Element;
 
       // 8px travel activates the drag but rounds to 0 days at 24 px/day.
@@ -429,7 +460,11 @@ describe('GanttView', () => {
       const onItemMove = vi.fn();
       const onItemPress = vi.fn();
       const { container } = renderWithProviders(
-        <GanttView tasks={tasks} onItemMove={onItemMove} onItemPress={onItemPress} />,
+        <GanttView
+          tasks={tasks}
+          onItemMove={onItemMove}
+          onItemPress={onItemPress}
+        />,
       );
       const bar = container.querySelector('[data-gantt-bar="t1"]') as Element;
 
@@ -437,13 +472,18 @@ describe('GanttView', () => {
       fireEvent.pointerUp(window, { clientX: 100, clientY: 100 });
       fireEvent.click(bar);
 
-      expect(onItemPress).toHaveBeenCalledTimes(1);
+      expect(onItemPress).toHaveBeenCalledOnce();
       expect(onItemMove).not.toHaveBeenCalled();
     });
 
     it('cancels an in-flight drag with Escape', () => {
       const onItemMove = vi.fn();
-      const { container } = renderWithProviders(<GanttView tasks={tasks} onItemMove={onItemMove} />);
+      const { container } = renderWithProviders(
+        <GanttView
+          tasks={tasks}
+          onItemMove={onItemMove}
+        />,
+      );
       const bar = container.querySelector('[data-gantt-bar="t1"]') as Element;
 
       fireEvent.pointerDown(bar, { button: 0, clientX: 100, clientY: 100 });
@@ -458,11 +498,16 @@ describe('GanttView', () => {
   describe('keyboard rescheduling', () => {
     it('ArrowRight moves the focused bar 1 day later and announces the range', () => {
       const onItemMove = vi.fn();
-      const { container } = renderWithProviders(<GanttView tasks={tasks} onItemMove={onItemMove} />);
+      const { container } = renderWithProviders(
+        <GanttView
+          tasks={tasks}
+          onItemMove={onItemMove}
+        />,
+      );
       fireEvent.keyDown(container.querySelector('[data-gantt-bar="t1"]') as Element, {
         key: 'ArrowRight',
       });
-      expect(onItemMove).toHaveBeenCalledTimes(1);
+      expect(onItemMove).toHaveBeenCalledOnce();
       const [task, span] = onItemMove.mock.calls[0];
       expect(task.id).toBe('t1');
       expect(span.start).toEqual(mar(11));
@@ -476,7 +521,12 @@ describe('GanttView', () => {
 
     it('ArrowLeft moves 1 day earlier; Shift+Arrow moves 7 days', () => {
       const onItemMove = vi.fn();
-      const { container } = renderWithProviders(<GanttView tasks={tasks} onItemMove={onItemMove} />);
+      const { container } = renderWithProviders(
+        <GanttView
+          tasks={tasks}
+          onItemMove={onItemMove}
+        />,
+      );
       const bar = container.querySelector('[data-gantt-bar="t1"]') as Element;
 
       fireEvent.keyDown(bar, { key: 'ArrowLeft' });
@@ -495,7 +545,11 @@ describe('GanttView', () => {
     it('ignores arrows when rescheduling is disabled', () => {
       const onItemMove = vi.fn();
       const { container } = renderWithProviders(
-        <GanttView tasks={tasks} onItemMove={onItemMove} enableItemDrag={false} />,
+        <GanttView
+          tasks={tasks}
+          onItemMove={onItemMove}
+          enableItemDrag={false}
+        />,
       );
       fireEvent.keyDown(container.querySelector('[data-gantt-bar="t1"]') as Element, {
         key: 'ArrowRight',
@@ -507,7 +561,12 @@ describe('GanttView', () => {
   describe('bar resize (web pointer)', () => {
     it('dragging the end handle extends the end only, snapped to whole days', () => {
       const onItemMove = vi.fn();
-      const { container } = renderWithProviders(<GanttView tasks={tasks} onItemMove={onItemMove} />);
+      const { container } = renderWithProviders(
+        <GanttView
+          tasks={tasks}
+          onItemMove={onItemMove}
+        />,
+      );
       const handle = container.querySelector('[data-gantt-bar="t1"] [data-gantt-resize-handle="end"]') as Element;
       expect(handle).toBeTruthy();
 
@@ -516,7 +575,7 @@ describe('GanttView', () => {
       fireEvent.pointerMove(window, { clientX: 148, clientY: 100 });
       fireEvent.pointerUp(window, { clientX: 148, clientY: 100 });
 
-      expect(onItemMove).toHaveBeenCalledTimes(1);
+      expect(onItemMove).toHaveBeenCalledOnce();
       const [task, span] = onItemMove.mock.calls[0];
       expect(task.id).toBe('t1');
       expect(span.start).toEqual(mar(10));
@@ -525,7 +584,12 @@ describe('GanttView', () => {
 
     it('dragging the start handle moves the start only', () => {
       const onItemMove = vi.fn();
-      const { container } = renderWithProviders(<GanttView tasks={tasks} onItemMove={onItemMove} />);
+      const { container } = renderWithProviders(
+        <GanttView
+          tasks={tasks}
+          onItemMove={onItemMove}
+        />,
+      );
       const handle = container.querySelector('[data-gantt-bar="t1"] [data-gantt-resize-handle="start"]') as Element;
 
       fireEvent.pointerDown(handle, { button: 0, clientX: 100, clientY: 100 });
@@ -539,7 +603,12 @@ describe('GanttView', () => {
 
     it('clamps a start resize so one inclusive day survives', () => {
       const onItemMove = vi.fn();
-      const { container } = renderWithProviders(<GanttView tasks={tasks} onItemMove={onItemMove} />);
+      const { container } = renderWithProviders(
+        <GanttView
+          tasks={tasks}
+          onItemMove={onItemMove}
+        />,
+      );
       const handle = container.querySelector('[data-gantt-bar="t1"] [data-gantt-resize-handle="start"]') as Element;
 
       // +240px would be +10 days, but t1 spans 3 inclusive days → clamp +2.
@@ -554,7 +623,12 @@ describe('GanttView', () => {
 
     it('does not fire for a zero-day snapped resize', () => {
       const onItemMove = vi.fn();
-      const { container } = renderWithProviders(<GanttView tasks={tasks} onItemMove={onItemMove} />);
+      const { container } = renderWithProviders(
+        <GanttView
+          tasks={tasks}
+          onItemMove={onItemMove}
+        />,
+      );
       const handle = container.querySelector('[data-gantt-bar="t1"] [data-gantt-resize-handle="end"]') as Element;
 
       // 8px activates the session but rounds to 0 days at 24 px/day.
@@ -567,7 +641,12 @@ describe('GanttView', () => {
 
     it('cancels an in-flight resize with Escape', () => {
       const onItemMove = vi.fn();
-      const { container } = renderWithProviders(<GanttView tasks={tasks} onItemMove={onItemMove} />);
+      const { container } = renderWithProviders(
+        <GanttView
+          tasks={tasks}
+          onItemMove={onItemMove}
+        />,
+      );
       const handle = container.querySelector('[data-gantt-bar="t1"] [data-gantt-resize-handle="end"]') as Element;
 
       fireEvent.pointerDown(handle, { button: 0, clientX: 100, clientY: 100 });
@@ -589,7 +668,12 @@ describe('GanttView', () => {
 
     it('ArrowRight moves the bar EARLIER under RTL', () => {
       const onItemMove = vi.fn();
-      const { container } = renderWithProviders(<GanttView tasks={tasks} onItemMove={onItemMove} />);
+      const { container } = renderWithProviders(
+        <GanttView
+          tasks={tasks}
+          onItemMove={onItemMove}
+        />,
+      );
       fireEvent.keyDown(container.querySelector('[data-gantt-bar="t1"]') as Element, {
         key: 'ArrowRight',
       });
@@ -600,7 +684,12 @@ describe('GanttView', () => {
 
     it('a rightward pointer drag moves the bar EARLIER under RTL', () => {
       const onItemMove = vi.fn();
-      const { container } = renderWithProviders(<GanttView tasks={tasks} onItemMove={onItemMove} />);
+      const { container } = renderWithProviders(
+        <GanttView
+          tasks={tasks}
+          onItemMove={onItemMove}
+        />,
+      );
       const bar = container.querySelector('[data-gantt-bar="t1"]') as Element;
 
       fireEvent.pointerDown(bar, { button: 0, clientX: 100, clientY: 100 });
@@ -615,7 +704,11 @@ describe('GanttView', () => {
     it('mirrors the marker scrub: a rightward drag moves it EARLIER', () => {
       const onMarkerDateChange = vi.fn();
       const { container } = renderWithProviders(
-        <GanttView tasks={tasks} markerDate={mar(15)} onMarkerDateChange={onMarkerDateChange} />,
+        <GanttView
+          tasks={tasks}
+          markerDate={mar(15)}
+          onMarkerDateChange={onMarkerDateChange}
+        />,
       );
       const handle = container.querySelector('[data-gantt-marker-handle="true"]') as Element;
 
@@ -639,7 +732,12 @@ describe('GanttView', () => {
 
     it('the physical-left handle is the END edge under RTL and inverts its delta', () => {
       const onItemMove = vi.fn();
-      const { container } = renderWithProviders(<GanttView tasks={tasks} onItemMove={onItemMove} />);
+      const { container } = renderWithProviders(
+        <GanttView
+          tasks={tasks}
+          onItemMove={onItemMove}
+        />,
+      );
       const bar = container.querySelector('[data-gantt-bar="t1"]') as HTMLElement;
       const handles = bar.querySelectorAll('[data-gantt-resize-handle]');
       // Render order: physical-left first — mapped to the logical end edge.
@@ -677,23 +775,39 @@ describe('GanttView', () => {
     });
 
     it('shows the gantt skeleton while loading with no tasks', () => {
-      renderWithProviders(<GanttView tasks={[]} isLoading />);
+      renderWithProviders(
+        <GanttView
+          tasks={[]}
+          isLoading
+        />,
+      );
       expect(document.querySelector('[data-gantt-skeleton="true"]')).toBeTruthy();
       expect(document.querySelector('[data-async-state="empty"]')).toBeNull();
     });
 
     it('forbids empty chrome when error is set and retries', () => {
       const onRetry = vi.fn();
-      renderWithProviders(<GanttView tasks={[]} error="Tasks failed to load" onRetry={onRetry} />);
+      renderWithProviders(
+        <GanttView
+          tasks={[]}
+          error="Tasks failed to load"
+          onRetry={onRetry}
+        />,
+      );
       expect(document.querySelector('[data-async-state="error"]')).toBeTruthy();
       expect(screen.queryByText('No tasks')).toBeNull();
       expect(screen.getByText('Tasks failed to load')).toBeInTheDocument();
       fireEvent.click(screen.getByText('Retry'));
-      expect(onRetry).toHaveBeenCalledTimes(1);
+      expect(onRetry).toHaveBeenCalledOnce();
     });
 
     it('keeps showing stale bars while refreshing with data present', () => {
-      const { container } = renderWithProviders(<GanttView tasks={tasks} isLoading />);
+      const { container } = renderWithProviders(
+        <GanttView
+          tasks={tasks}
+          isLoading
+        />,
+      );
       expect(container.querySelectorAll('[data-gantt-bar]')).toHaveLength(3);
       expect(document.querySelector('[data-gantt-skeleton="true"]')).toBeNull();
     });
@@ -733,7 +847,12 @@ describe('GanttView', () => {
 
     it('refuses to reschedule a span with only one bound', () => {
       const onItemMove = vi.fn();
-      const { container } = renderWithProviders(<GanttView tasks={openTasks} onItemMove={onItemMove} />);
+      const { container } = renderWithProviders(
+        <GanttView
+          tasks={openTasks}
+          onItemMove={onItemMove}
+        />,
+      );
       const bar = container.querySelector('[data-gantt-bar="from"]') as Element;
 
       fireEvent.pointerDown(bar, { button: 0, clientX: 100, clientY: 100 });
@@ -788,14 +907,19 @@ describe('GanttView', () => {
 
     it('moves only the span that was grabbed, and names it', () => {
       const onItemMove = vi.fn();
-      const { container } = renderWithProviders(<GanttView tasks={[era]} onItemMove={onItemMove} />);
+      const { container } = renderWithProviders(
+        <GanttView
+          tasks={[era]}
+          onItemMove={onItemMove}
+        />,
+      );
       const bar = container.querySelector('[data-gantt-bar="2027"]') as Element;
 
       fireEvent.pointerDown(bar, { button: 0, clientX: 100, clientY: 100 });
       fireEvent.pointerMove(window, { clientX: 148, clientY: 100 });
       fireEvent.pointerUp(window, { clientX: 148, clientY: 100 });
 
-      expect(onItemMove).toHaveBeenCalledTimes(1);
+      expect(onItemMove).toHaveBeenCalledOnce();
       const [task, range, ref] = onItemMove.mock.calls[0];
       expect(task.id).toBe('era');
       expect(range.start).toEqual(mar(10));
@@ -807,7 +931,12 @@ describe('GanttView', () => {
 
     it('reports a one-bar row as its own span, keyed by the task id', () => {
       const onItemMove = vi.fn();
-      const { container } = renderWithProviders(<GanttView tasks={tasks} onItemMove={onItemMove} />);
+      const { container } = renderWithProviders(
+        <GanttView
+          tasks={tasks}
+          onItemMove={onItemMove}
+        />,
+      );
       const bar = container.querySelector('[data-gantt-bar="t1"]') as Element;
 
       fireEvent.pointerDown(bar, { button: 0, clientX: 100, clientY: 100 });
@@ -825,7 +954,13 @@ describe('GanttView', () => {
     const handleOf = (container: Element) => container.querySelector('[data-gantt-marker-handle="true"]') as Element;
 
     it('paints the marker at markerDate, with the today line switched off', () => {
-      const { container } = renderWithProviders(<GanttView tasks={tasks} markerDate={mar(15)} showToday={false} />);
+      const { container } = renderWithProviders(
+        <GanttView
+          tasks={tasks}
+          markerDate={mar(15)}
+          showToday={false}
+        />,
+      );
       expect(container.querySelector('[data-gantt-marker="true"]')).toBeTruthy();
       expect(container.querySelector('[data-gantt-today="true"]')).toBeNull();
       expect(handleOf(container)).toBeTruthy();
@@ -840,7 +975,11 @@ describe('GanttView', () => {
     it('scrubs by dragging the axis handle, snapped to whole days', () => {
       const onMarkerDateChange = vi.fn();
       const { container } = renderWithProviders(
-        <GanttView tasks={tasks} markerDate={mar(15)} onMarkerDateChange={onMarkerDateChange} />,
+        <GanttView
+          tasks={tasks}
+          markerDate={mar(15)}
+          onMarkerDateChange={onMarkerDateChange}
+        />,
       );
       const handle = handleOf(container);
 
@@ -856,7 +995,11 @@ describe('GanttView', () => {
     it('emits once per day crossed, from the date the scrub started', () => {
       const onMarkerDateChange = vi.fn();
       const { container } = renderWithProviders(
-        <GanttView tasks={tasks} markerDate={mar(15)} onMarkerDateChange={onMarkerDateChange} />,
+        <GanttView
+          tasks={tasks}
+          markerDate={mar(15)}
+          onMarkerDateChange={onMarkerDateChange}
+        />,
       );
       const handle = handleOf(container);
 
@@ -875,7 +1018,11 @@ describe('GanttView', () => {
     it('puts the marker back where the scrub started on Escape', () => {
       const onMarkerDateChange = vi.fn();
       const { container } = renderWithProviders(
-        <GanttView tasks={tasks} markerDate={mar(15)} onMarkerDateChange={onMarkerDateChange} />,
+        <GanttView
+          tasks={tasks}
+          markerDate={mar(15)}
+          onMarkerDateChange={onMarkerDateChange}
+        />,
       );
       const handle = handleOf(container);
 
@@ -890,7 +1037,11 @@ describe('GanttView', () => {
     it('steps the focused handle with the arrow keys (Shift = 7 days)', () => {
       const onMarkerDateChange = vi.fn();
       const { container } = renderWithProviders(
-        <GanttView tasks={tasks} markerDate={mar(15)} onMarkerDateChange={onMarkerDateChange} />,
+        <GanttView
+          tasks={tasks}
+          markerDate={mar(15)}
+          onMarkerDateChange={onMarkerDateChange}
+        />,
       );
       const handle = handleOf(container);
 
@@ -901,7 +1052,12 @@ describe('GanttView', () => {
     });
 
     it('is read-only, and says so, with no change handler', () => {
-      const { container } = renderWithProviders(<GanttView tasks={tasks} markerDate={mar(15)} />);
+      const { container } = renderWithProviders(
+        <GanttView
+          tasks={tasks}
+          markerDate={mar(15)}
+        />,
+      );
       const handle = handleOf(container);
       expect(handle.getAttribute('role')).toBe('slider');
       expect(handle.getAttribute('aria-valuetext')).toMatch(/15/);

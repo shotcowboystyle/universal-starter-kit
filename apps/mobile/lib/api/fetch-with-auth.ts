@@ -1,37 +1,34 @@
-import { router } from "expo-router";
+import { router } from 'expo-router';
 
-import { authService } from "@/lib/auth/auth-service";
+import { authService } from '@/lib/auth/auth-service';
 
 export async function fetchWithAuth<T>(
   url: string,
   options: RequestInit = {},
-  handleEmptyResponse = false
+  handleEmptyResponse = false,
 ): Promise<T> {
   const token = await authService.getToken();
   const headers = getHeaders(options.headers, token);
 
   const response = await fetch(url, {
     ...options,
-    headers
+    headers,
   });
 
   if (!response.ok) {
     if (response.status === 401) {
       await authService.logout();
-      router.replace("/(auth)/login");
+      router.replace('/(auth)/login');
     }
     await handleErrorResponse(response);
   }
 
-  return handleSuccessResponse<T>(response, handleEmptyResponse);
+  return await handleSuccessResponse<T>(response, handleEmptyResponse);
 }
 
-function getHeaders(
-  optionHeaders: RequestInit["headers"],
-  token: string | null
-): Record<string, string> {
+function getHeaders(optionHeaders: RequestInit['headers'], token: string | null): Record<string, string> {
   const headers: Record<string, string> = {
-    "Content-Type": "application/json"
+    'Content-Type': 'application/json',
   };
 
   if (optionHeaders) {
@@ -45,7 +42,7 @@ function getHeaders(
       });
     } else {
       Object.entries(optionHeaders).forEach(([key, value]) => {
-        if (typeof value === "string") {
+        if (typeof value === 'string') {
           headers[key] = value;
         }
       });
@@ -74,14 +71,11 @@ async function handleErrorResponse(response: Response): Promise<never> {
   throw new Error(errorMessage);
 }
 
-async function handleSuccessResponse<T>(
-  response: Response,
-  handleEmptyResponse: boolean
-): Promise<T> {
+async function handleSuccessResponse<T>(response: Response, handleEmptyResponse: boolean): Promise<T> {
   if (handleEmptyResponse) {
-    if (response.status === 204 || response.headers.get("content-length") === "0") {
+    if (response.status === 204 || response.headers.get('content-length') === '0') {
       return null as unknown as T;
     }
   }
-  return response.json();
+  return await response.json();
 }

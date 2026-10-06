@@ -3,7 +3,8 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TaskForm } from '@/components/kanban/task/TaskForm';
-import { TaskStatus, User } from '@/types/dbInterface';
+import type { User } from '@/types/db-interface';
+import { TaskStatus } from '@/types/db-interface';
 
 vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
@@ -13,7 +14,7 @@ vi.mock('sonner', () => ({
   toast: { error: vi.fn(), success: vi.fn() },
 }));
 
-vi.mock('@/lib/api/userApi', () => ({
+vi.mock('@/lib/api/user-api', () => ({
   userApi: {
     searchUsers: vi.fn(),
     getUserById: vi.fn(),
@@ -47,7 +48,7 @@ describe('TaskForm', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     mockOnSubmit.mockResolvedValue(undefined);
-    const { userApi } = await import('@/lib/api/userApi');
+    const { userApi } = await import('@/lib/api/user-api');
     vi.mocked(userApi.searchUsers).mockResolvedValue(mockUsers);
   });
 
@@ -74,10 +75,16 @@ describe('TaskForm', () => {
   });
 
   it('renders a custom submit label and calls onCancel', () => {
-    render(<TaskForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} submitLabel="Create Task" />);
+    render(
+      <TaskForm
+        onSubmit={mockOnSubmit}
+        onCancel={mockOnCancel}
+        submitLabel="Create Task"
+      />,
+    );
     expect(screen.getByTestId('submit-task-button')).toHaveTextContent('Create Task');
     fireEvent.click(screen.getByTestId('cancel-task-button'));
-    expect(mockOnCancel).toHaveBeenCalledTimes(1);
+    expect(mockOnCancel).toHaveBeenCalledOnce();
   });
 
   it('shows the zod title error and does not submit an empty title', async () => {
@@ -95,19 +102,24 @@ describe('TaskForm', () => {
     fireEvent.click(screen.getByRole('radio', { name: 'statusDone' }));
     submit();
 
-    await waitFor(() =>
+    await waitFor(() => {
       expect(mockOnSubmit).toHaveBeenCalledWith({
         title: 'New Task',
         description: 'Details',
         status: TaskStatus.DONE,
         dueDate: undefined,
         assignee: undefined,
-      }),
-    );
+      });
+    });
   });
 
   it('prefills edit-mode values and shows the current assignee', () => {
-    render(<TaskForm defaultValues={defaultValues} onSubmit={mockOnSubmit} />);
+    render(
+      <TaskForm
+        defaultValues={defaultValues}
+        onSubmit={mockOnSubmit}
+      />,
+    );
     expect(screen.getByTestId('task-title-input')).toHaveValue('Test Task');
     expect(screen.getByTestId('task-description-input')).toHaveValue('Test Description');
     expect(screen.getByRole('radio', { name: 'statusInProgress' })).toHaveAttribute('aria-checked', 'true');
@@ -115,34 +127,48 @@ describe('TaskForm', () => {
   });
 
   it('submits edit-mode values with assignee and due date preserved', async () => {
-    render(<TaskForm defaultValues={defaultValues} onSubmit={mockOnSubmit} />);
+    render(
+      <TaskForm
+        defaultValues={defaultValues}
+        onSubmit={mockOnSubmit}
+      />,
+    );
     submit();
 
-    await waitFor(() =>
+    await waitFor(() => {
       expect(mockOnSubmit).toHaveBeenCalledWith({
         title: 'Test Task',
         description: 'Test Description',
         status: TaskStatus.IN_PROGRESS,
         dueDate,
         assignee: { _id: 'user-1', name: 'John Doe' },
-      }),
-    );
+      });
+    });
   });
 
   it('shows a busy submit button while onSubmit is pending', async () => {
     mockOnSubmit.mockReturnValue(new Promise(() => {}));
-    render(<TaskForm defaultValues={defaultValues} onSubmit={mockOnSubmit} />);
+    render(
+      <TaskForm
+        defaultValues={defaultValues}
+        onSubmit={mockOnSubmit}
+      />,
+    );
     submit();
     const button = screen.getByTestId('submit-task-button');
-    await waitFor(() => expect(within(button).getByRole('status')).toBeInTheDocument());
+    await waitFor(() => {
+      expect(within(button).getByRole('status')).toBeInTheDocument();
+    });
     submit();
-    expect(mockOnSubmit).toHaveBeenCalledTimes(1);
+    expect(mockOnSubmit).toHaveBeenCalledOnce();
   });
 
   it('loads assignee options from the user search', async () => {
-    const { userApi } = await import('@/lib/api/userApi');
+    const { userApi } = await import('@/lib/api/user-api');
     render(<TaskForm onSubmit={mockOnSubmit} />);
-    await waitFor(() => expect(userApi.searchUsers).toHaveBeenCalledWith(''));
+    await waitFor(() => {
+      expect(userApi.searchUsers).toHaveBeenCalledWith('');
+    });
     expect(screen.getByTestId('combobox-trigger')).toHaveTextContent('selectUser');
   });
 });

@@ -83,7 +83,11 @@ describe('components Button — borderRadius knob reaches the frame', () => {
   it('circular stays the consumer shape eject: round even at none, no inline override', () => {
     renderWithProviders(
       <Preset overrides={{ borderRadius: 'none' }}>
-        <Button circular icon={<span>x</span>} aria-label="favorite" />
+        <Button
+          circular
+          icon={<span>x</span>}
+          aria-label="favorite"
+        />
       </Preset>,
     );
     const frame = screen.getByRole('button');
@@ -132,7 +136,7 @@ describe('components Button — elevation and size knobs reach the frame', () =>
         .className.split(' ')
         .find((c) => /^_h-\d+px$/.test(c));
       expect(atom).toBeDefined();
-      return Number(atom!.replace(/^_h-|px$/g, ''));
+      return Number(atom!.replaceAll(/^_h-|px$/g, ''));
     };
 
     const heights: number[] = [];
@@ -163,7 +167,9 @@ describe('components Button — raw-tamagui prop-compat', () => {
 
   it('an explicit outlined={false} beats variant (explicit house prop wins)', () => {
     renderWithProviders(
-      <Button variant="outlined" outlined={false}>
+      <Button
+        variant="outlined"
+        outlined={false}>
         Compat
       </Button>,
     );
@@ -178,12 +184,14 @@ describe('components Button — raw-tamagui prop-compat', () => {
     const onPress = vi.fn();
     renderWithProviders(<Button onPress={onPress}>Go</Button>);
     fireEvent.click(screen.getByRole('button'));
-    expect(onPress).toHaveBeenCalledTimes(1);
+    expect(onPress).toHaveBeenCalledOnce();
   });
 
   it('testID and aria pass through to the frame', () => {
     renderWithProviders(
-      <Button testID="shadow-btn" aria-label="shadow">
+      <Button
+        testID="shadow-btn"
+        aria-label="shadow">
         Go
       </Button>,
     );

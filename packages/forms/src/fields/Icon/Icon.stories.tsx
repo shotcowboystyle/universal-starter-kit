@@ -27,7 +27,9 @@ export const Main: Story = {
     const Example = () => {
       const [value, setValue] = useState('mail');
       return (
-        <YStack gap="$4" width={320}>
+        <YStack
+          gap="$4"
+          width={320}>
           <Icon
             label="Workspace icon"
             value={value}
@@ -46,15 +48,23 @@ export const Main: Story = {
 export const Empty: Story = {
   render: () => (
     <YStack width={320}>
-      <Icon label="Workspace icon" placeholder="Choose an icon" />
+      <Icon
+        label="Workspace icon"
+        placeholder="Choose an icon"
+      />
     </YStack>
   ),
 };
 
 export const Wide: Story = {
   render: () => (
-    <YStack width={600} maxWidth="100%">
-      <Icon label="Workspace icon" value="mail" />
+    <YStack
+      width={600}
+      maxWidth="100%">
+      <Icon
+        label="Workspace icon"
+        value="mail"
+      />
     </YStack>
   ),
 };
@@ -62,7 +72,11 @@ export const Wide: Story = {
 export const ReadOnly: Story = {
   render: () => (
     <YStack width={320}>
-      <Icon label="Workspace icon" value="upload" readOnly />
+      <Icon
+        label="Workspace icon"
+        value="upload"
+        readOnly
+      />
     </YStack>
   ),
 };

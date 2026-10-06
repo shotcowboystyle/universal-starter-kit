@@ -3,8 +3,8 @@ import type { ReactNode } from 'react';
 import type { GetProps } from 'tamagui';
 import { SizableText, View, XStack, YStack, styled } from 'tamagui';
 
-import { componentColors } from '../componentColors';
-import { wrapBareTextChildren } from '../shared/textRidesText';
+import { componentColors } from '../component-colors';
+import { wrapBareTextChildren } from '../shared/text-rides-text';
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -81,20 +81,32 @@ export function Quote({ children, cite, compact, ...props }: QuoteProps) {
       {...knobProps.containerRadius}
       marginVertical={knobProps.gap.gap}
       {...props}>
-      {railWidth > 0 ? <QuoteRail width={railWidth} minWidth={railWidth} aria-hidden /> : null}
-      <QuoteBody {...knobProps.panelPadding} {...knobProps.gap}>
+      {railWidth > 0 ? (
+        <QuoteRail
+          width={railWidth}
+          minWidth={railWidth}
+          aria-hidden
+        />
+      ) : null}
+      <QuoteBody
+        {...knobProps.panelPadding}
+        {...knobProps.gap}>
         <QuoteBlock render="blockquote">
           {/* Text rides text: wrap ALL bare string/number children
               (coalesced runs), not just the singleton case. Quote body
               scales with the size knob; compact tightens layout gaps only
               (it does not step sizeToken down). */}
           {wrapBareTextChildren(children, (label, key) => (
-            <SizableText key={key} {...knobProps.body} color={componentColors.text.primary} fontStyle="italic">
+            <SizableText
+              key={key}
+              {...knobProps.body}
+              color={componentColors.text.primary}
+              fontStyle="italic">
               {label}
             </SizableText>
           ))}
         </QuoteBlock>
-        {cite != null ? (
+        {cite == null ? null : (
           <View render="figcaption">
             {wrapBareTextChildren(cite, (label, key) => (
               <SizableText
@@ -107,7 +119,7 @@ export function Quote({ children, cite, compact, ...props }: QuoteProps) {
               </SizableText>
             ))}
           </View>
-        ) : null}
+        )}
       </QuoteBody>
     </QuoteFrame>
   );

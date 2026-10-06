@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { createDefaultFont } from '../../font';
-import { flooredLineHeight, fontCategoryMetrics } from '../fontCategoryMetrics';
-import { fontCategoryStacks } from '../fontCategoryStacks';
+import { flooredLineHeight, fontCategoryMetrics } from '../font-category-metrics';
+import { fontCategoryStacks } from '../font-category-stacks';
 import type { FontCategory } from '../knobs';
 
 import { defaultBodyFont, defaultFonts, defaultHeadingFont, fontFamilyStacks, interTrackingPx } from './fonts';
@@ -115,7 +115,7 @@ describe('default heading/body fonts — tracking-by-size (Axiom 15 OPTICS)', ()
 
 describe('bodyFont category fonts — one ladder, distinct families', () => {
   const bodyStops = ['body', 'serif', 'mono', 'rounded'] as const;
-  const firstFamily = (stack: string) => stack.split(',')[0]?.replace(/['"]/g, '').trim();
+  const firstFamily = (stack: string) => stack.split(',')[0]?.replaceAll(/['"]/g, '').trim();
   const categories = Object.keys(defaultFonts).filter(
     (name) => name !== 'heading' && name !== 'body',
   ) as FontCategory[];
@@ -123,7 +123,7 @@ describe('bodyFont category fonts — one ladder, distinct families', () => {
   const bodyLineHeight = table(defaultBodyFont, 'lineHeight');
 
   it('registers every category token the bodyFont knob maps to', () => {
-    expect(categories.length).toBe(10);
+    expect(categories).toHaveLength(10);
     for (const key of categories) {
       expect(defaultFonts[key], key).toBeTruthy();
       expect(fontFamily(defaultFonts[key])).toBe(fontCategoryStacks[key]);
@@ -233,7 +233,7 @@ describe('createDefaultFont — the era body ramp', () => {
 });
 
 function fontFamily(font: unknown): string {
-  const family = (font as { family?: string | { val?: string } }).family;
+  const { family } = font as { family?: string | { val?: string } };
   if (typeof family === 'string') {
     return family;
   }

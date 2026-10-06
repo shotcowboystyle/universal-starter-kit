@@ -37,5 +37,5 @@ export {
   useParams,
   usePathname,
   useRouter,
-} from './oneAdapter';
-export type { LinkProps, LoaderProps } from './oneAdapter';
+} from './one-adapter';
+export type { LinkProps, LoaderProps } from './one-adapter';

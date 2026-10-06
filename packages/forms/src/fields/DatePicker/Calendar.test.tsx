@@ -32,7 +32,7 @@ function getDayButtons(root: ParentNode): HTMLButtonElement[] {
 
 /** Tamagui emits opacity as `_o-<value>` (see StarInk.native.spec). */
 function opacityOf(el: HTMLElement): number {
-  const fromClass = el.className.match(/(?:^|\s)_o-([\d.]+)(?:\s|$)/);
+  const fromClass = /(?:^|\s)_o-([\d.]+)(?:\s|$)/.exec(el.className);
   if (fromClass) {
     return Number(fromClass[1]);
   }
@@ -77,7 +77,11 @@ describe('Calendar', () => {
   it('renders tabs and switches modes', async () => {
     const onDatesChange = vi.fn();
     const result = renderWithProviders(
-      <Calendar showTabs onDatesChange={onDatesChange} selectedDates={[new Date(2024, 0, 1)]} />,
+      <Calendar
+        showTabs
+        onDatesChange={onDatesChange}
+        selectedDates={[new Date(2024, 0, 1)]}
+      />,
     );
 
     const singleTab = result.findTextElement('Single');
@@ -103,7 +107,12 @@ describe('Calendar', () => {
 
   it('emits single-date selection in single mode', async () => {
     const onDatesChange = vi.fn();
-    const result = renderWithProviders(<Calendar mode="single" onDatesChange={onDatesChange} />);
+    const result = renderWithProviders(
+      <Calendar
+        mode="single"
+        onDatesChange={onDatesChange}
+      />,
+    );
 
     await waitFor(() => {
       expect(getEnabledDayButtons(result.container).length).toBeGreaterThan(0);
@@ -115,7 +124,7 @@ describe('Calendar', () => {
     });
 
     await waitFor(() => {
-      const calls = onDatesChange.mock.calls;
+      const { calls } = onDatesChange.mock;
       expect(calls.length).toBeGreaterThan(0);
       expect(calls[calls.length - 1][0]).toHaveLength(1);
     });
@@ -123,7 +132,13 @@ describe('Calendar', () => {
 
   it('respects selection limit in multiple mode', async () => {
     const onDatesChange = vi.fn();
-    const result = renderWithProviders(<Calendar mode="multiple" limit={1} onDatesChange={onDatesChange} />);
+    const result = renderWithProviders(
+      <Calendar
+        mode="multiple"
+        limit={1}
+        onDatesChange={onDatesChange}
+      />,
+    );
 
     await waitFor(() => {
       expect(getEnabledDayButtons(result.container).length).toBeGreaterThan(1);
@@ -136,7 +151,7 @@ describe('Calendar', () => {
     });
 
     await waitFor(() => {
-      const calls = onDatesChange.mock.calls;
+      const { calls } = onDatesChange.mock;
       expect(calls.length).toBeGreaterThan(0);
       expect(calls[calls.length - 1][0]).toHaveLength(1);
     });
@@ -145,7 +160,11 @@ describe('Calendar', () => {
   it('day cells paint nestedControl size, not the page press floor', () => {
     // Compact steps space only. Default medium is nestedControlPxMap.medium = 32.
     const result = renderWithProviders(
-      <Calendar showTabs={false} mode="single" selectedDates={[new Date(2024, 0, 15)]} />,
+      <Calendar
+        showTabs={false}
+        mode="single"
+        selectedDates={[new Date(2024, 0, 15)]}
+      />,
     );
     const days = getEnabledDayButtons(result.container);
     expect(days.length).toBeGreaterThan(0);
@@ -162,7 +181,12 @@ describe('Calendar', () => {
     const LEAK = /does not recognize the `.+` prop on a DOM element|non-boolean attribute|Invalid DOM property/i;
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     try {
-      const result = renderWithProviders(<Calendar mode="single" onDatesChange={vi.fn()} />);
+      const result = renderWithProviders(
+        <Calendar
+          mode="single"
+          onDatesChange={vi.fn()}
+        />,
+      );
       await waitFor(() => {
         expect(getEnabledDayButtons(result.container).length).toBeGreaterThan(0);
       });
@@ -191,7 +215,11 @@ describe('Calendar day-cell unavailable treatment', () => {
       const onSelect = vi.fn();
       const result = renderWithProviders(
         <Theme name={scheme}>
-          <JuneGrid minDate={minDate} maxDate={maxDate} onSelect={onSelect} />
+          <JuneGrid
+            minDate={minDate}
+            maxDate={maxDate}
+            onSelect={onSelect}
+          />
         </Theme>,
       );
 
@@ -216,7 +244,12 @@ describe('Calendar day-cell unavailable treatment', () => {
   });
 
   it('adjacent-month dimming and out-of-range dimming are distinguishable', () => {
-    const result = renderWithProviders(<JuneGrid minDate={minDate} maxDate={maxDate} />);
+    const result = renderWithProviders(
+      <JuneGrid
+        minDate={minDate}
+        maxDate={maxDate}
+      />,
+    );
 
     const currentOutOfRange = dayCell(result.container, 2024, 5, 3);
     const adjacentInRange = dayCell(result.container, 2024, 6, 2);
@@ -238,7 +271,12 @@ describe('Calendar day-cell unavailable treatment', () => {
   it('at the multiple-mode limit, unselected cells change appearance', async () => {
     const onDatesChange = vi.fn();
     const result = renderWithProviders(
-      <Calendar mode="multiple" limit={1} showTabs={false} onDatesChange={onDatesChange} />,
+      <Calendar
+        mode="multiple"
+        limit={1}
+        showTabs={false}
+        onDatesChange={onDatesChange}
+      />,
     );
     await waitFor(() => {
       expect(getEnabledDayButtons(result.container).length).toBeGreaterThan(1);
@@ -270,7 +308,12 @@ describe('Calendar day-cell unavailable treatment', () => {
 
   it('draws no N-of-N footer on the calendar grid', () => {
     const result = renderWithProviders(
-      <JuneGrid minDate={minDate} maxDate={maxDate} selectionCapped selected={[new Date(2024, 5, 15)]} />,
+      <JuneGrid
+        minDate={minDate}
+        maxDate={maxDate}
+        selectionCapped
+        selected={[new Date(2024, 5, 15)]}
+      />,
     );
     expect(result.container.textContent).not.toMatch(/\b\d+\s+of\s+\d+\b/);
   });

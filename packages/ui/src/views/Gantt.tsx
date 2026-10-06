@@ -13,12 +13,14 @@ import {
   useResolvedKnobs,
   wasKeyboardFocus,
 } from '@repo/theme';
-import React, { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { ScrollView as RNScrollView } from 'react-native';
-import { Text, XStack, YStack, isWeb, type YStackProps } from 'tamagui';
+import { Text, XStack, YStack, isWeb } from 'tamagui';
+import type { YStackProps } from 'tamagui';
 
-import { componentColors, sectionHeading } from '../componentColors';
-import { useDirection } from '../hooks/useDirection';
+import { componentColors, sectionHeading } from '../component-colors';
+import { useDirection } from '../hooks/use-direction';
 import { AsyncBoundary } from '../layouts/AsyncBoundary';
 import { ViewSwitcher } from '../layouts/ViewSwitcher';
 import { ScrollView } from '../ScrollView';
@@ -50,12 +52,8 @@ import {
   spanInclusiveDays,
   startOfDay,
   todayLineX,
-  type GanttOpenSpan,
-  type GanttRange,
-  type GanttResizeEdge,
-  type GanttSpan,
-  type GanttZoom,
-} from './ganttMath';
+} from './gantt-math';
+import type { GanttOpenSpan, GanttRange, GanttResizeEdge, GanttSpan, GanttZoom } from './gantt-math';
 
 // The chart canvas needs real scroll events to drive the pinned axis follower,
 // but Tamagui's styled ScrollView does not deliver onScroll on native — use the
@@ -257,7 +255,7 @@ export interface GanttViewProps extends Omit<YStackProps, 'children'> {
  */
 /** The span as a closed duration, or null when either bound is open. */
 function boundedSpan(ref: GanttSpanRef): GanttSpan | null {
-  const span = ref.span;
+  const { span } = ref;
   return isBoundedSpan(span) ? { start: span.start, end: span.end } : null;
 }
 
@@ -357,12 +355,28 @@ function GanttSkeleton({ labelWidth, rowHeight }: { labelWidth: number; rowHeigh
   const { knobProps } = useResolvedKnobs();
   const edgePad = knobProps.panelPadding.padding;
   return (
-    <YStack width="100%" aria-busy aria-label={t('Loading')} {...{ 'data-gantt-skeleton': 'true' }}>
-      <XStack height={rowHeight} alignItems="center" {...hairline.bottom} borderColor="$borderColor">
-        <XStack width={labelWidth} paddingHorizontal={edgePad}>
-          <Skeleton width={64} height={12} />
+    <YStack
+      width="100%"
+      aria-busy
+      aria-label={t('Loading')}
+      {...{ 'data-gantt-skeleton': 'true' }}>
+      <XStack
+        height={rowHeight}
+        alignItems="center"
+        {...hairline.bottom}
+        borderColor="$borderColor">
+        <XStack
+          width={labelWidth}
+          paddingHorizontal={edgePad}>
+          <Skeleton
+            width={64}
+            height={12}
+          />
         </XStack>
-        <Skeleton width={220} height={12} />
+        <Skeleton
+          width={220}
+          height={12}
+        />
       </XStack>
       {SKELETON_BARS.map((bar, i) => (
         <XStack
@@ -371,11 +385,20 @@ function GanttSkeleton({ labelWidth, rowHeight }: { labelWidth: number; rowHeigh
           alignItems="center"
           {...(i < SKELETON_BARS.length - 1 ? hairline.bottom : null)}
           borderColor={componentColors.divider}>
-          <XStack width={labelWidth} paddingHorizontal={edgePad}>
-            <Skeleton width={i % 2 === 0 ? 96 : 72} height={12} />
+          <XStack
+            width={labelWidth}
+            paddingHorizontal={edgePad}>
+            <Skeleton
+              width={i % 2 === 0 ? 96 : 72}
+              height={12}
+            />
           </XStack>
           <YStack paddingLeft={bar.x}>
-            <Skeleton variant="rounded" width={bar.width} height={Math.max(10, rowHeight - 20)} />
+            <Skeleton
+              variant="rounded"
+              width={bar.width}
+              height={Math.max(10, rowHeight - 20)}
+            />
           </YStack>
         </XStack>
       ))}
@@ -411,7 +434,7 @@ function GanttBarLabel({ title, fill }: { title: string; fill: string }) {
       pointerEvents="none"
       zIndex={1}
       aria-hidden>
-      {`${title}\u200b`}
+      {`${title}\u200B`}
     </Text>
   );
 }
@@ -449,7 +472,10 @@ function GanttOpenEdgeMark({
 function GanttTaskName({ title, selected, body }: { title: string; selected: boolean; body: object }) {
   const ink = useReadableTextOn(selected ? '$accentBackground' : undefined);
   return (
-    <Text {...body} numberOfLines={1} color={selected && ink ? ink : '$color'}>
+    <Text
+      {...body}
+      numberOfLines={1}
+      color={selected && ink ? ink : '$color'}>
       {title}
     </Text>
   );
@@ -588,14 +614,14 @@ export function GanttView({
           : sz === '$5'
             ? 10
             : 8;
-  const space = knobProps.space;
+  const { space } = knobProps;
   const barInset = space === 'small' ? 4 : space === 'large' ? 9 : 6;
   const barHeight = Math.max(10, rowHeight - barInset * 2);
   // An eternal span is a RAIL, not a bar: half the height, no caps. The
   // shape is the message — a full-width capped bar would put two chosen-
   // looking edges on the chart's own padding.
   const railHeight = Math.max(4, Math.round(barHeight / 2));
-  const transition = knobProps.transition;
+  const { transition } = knobProps;
   // Layout props (left) only tween on web — the RN driver cannot animate
   // layout, so native keeps committed jumps instant (Axiom 4 note).
   const webLayoutTransition = isWeb ? transition : undefined;
@@ -1332,7 +1358,7 @@ export function GanttView({
   };
 
   const renderBar = (task: GanttTask, ref: GanttSpanRef) => {
-    const span = ref.span;
+    const { span } = ref;
     const barKey = ref.key;
     const bounded = boundedSpan(ref);
     const geom = openBarGeometry(span, range, pxPerDay);
@@ -1389,7 +1415,9 @@ export function GanttView({
     const height = geom.eternal ? railHeight : barHeight;
 
     return (
-      <BarIntentWrap key={barKey} intent={barColor ? undefined : barIntent}>
+      <BarIntentWrap
+        key={barKey}
+        intent={barColor ? undefined : barIntent}>
         {/* Snapped drop preview (the raw bar tracks the pointer 1:1). */}
         {sessionLive && dayDelta !== 0 && previewGeom && (
           <YStack
@@ -1500,13 +1528,30 @@ export function GanttView({
               {...{ 'data-gantt-progress': String(progress) }}
             />
           )}
-          {showLabel && <GanttBarLabel title={barTitle} fill={fill} />}
+          {showLabel && (
+            <GanttBarLabel
+              title={barTitle}
+              fill={fill}
+            />
+          )}
 
           {/* "This end is not an end" — a mark, never a cap. */}
           {geom.openStart && (
-            <GanttOpenEdgeMark fill={fill} glyph={rtl ? '»' : '«'} side={openStartSide} edge="start" />
+            <GanttOpenEdgeMark
+              fill={fill}
+              glyph={rtl ? '»' : '«'}
+              side={openStartSide}
+              edge="start"
+            />
           )}
-          {geom.openEnd && <GanttOpenEdgeMark fill={fill} glyph={rtl ? '«' : '»'} side={openEndSide} edge="end" />}
+          {geom.openEnd && (
+            <GanttOpenEdgeMark
+              fill={fill}
+              glyph={rtl ? '«' : '»'}
+              side={openEndSide}
+              edge="end"
+            />
+          )}
 
           {/* Live date label while dragging (honest preview of the commit). */}
           {previewSpan && (
@@ -1522,7 +1567,10 @@ export function GanttView({
               pointerEvents="none"
               zIndex={4}
               {...{ 'data-gantt-drag-label': 'true' }}>
-              <Text {...knobProps.label} color="$color" numberOfLines={1}>
+              <Text
+                {...knobProps.label}
+                color="$color"
+                numberOfLines={1}>
                 {formatSpanLabel(previewSpan)}
               </Text>
             </XStack>
@@ -1593,7 +1641,16 @@ export function GanttView({
 
   return (
     <AsyncBoundary
-      loading={showSkeleton ? <GanttSkeleton labelWidth={labelWidth} rowHeight={rowHeight} /> : false}
+      loading={
+        showSkeleton ? (
+          <GanttSkeleton
+            labelWidth={labelWidth}
+            rowHeight={rowHeight}
+          />
+        ) : (
+          false
+        )
+      }
       empty={!error && !isLoading && tasks.length === 0}
       error={error}
       onRetry={onRetry}
@@ -1634,7 +1691,10 @@ export function GanttView({
             )}
 
             {/* Range title is the panel's section heading — shared scale. */}
-            <Text {...knobProps.heading} {...sectionHeading} numberOfLines={1}>
+            <Text
+              {...knobProps.heading}
+              {...sectionHeading}
+              numberOfLines={1}>
               {rangeLabel}
             </Text>
 
@@ -1659,7 +1719,10 @@ export function GanttView({
             put while rows scroll vertically. The strip is a scroll-follower
             of the canvas scroller (works web + native), so the tick grid and
             bars can never drift apart horizontally. */}
-        <XStack {...hairline.bottom} borderColor="$borderColor" {...{ 'data-gantt-axis-row': 'true' }}>
+        <XStack
+          {...hairline.bottom}
+          borderColor="$borderColor"
+          {...{ 'data-gantt-axis-row': 'true' }}>
           <XStack
             width={labelWidth}
             flexShrink={0}
@@ -1669,7 +1732,10 @@ export function GanttView({
             {...hairlineEnd}
             borderColor="$borderColor"
             {...{ backgroundColor: componentColors.surface.background }}>
-            <Text {...knobProps.label} color={knobProps.textAccentColor} numberOfLines={1}>
+            <Text
+              {...knobProps.label}
+              color={knobProps.textAccentColor}
+              numberOfLines={1}>
               {t('Task')}
             </Text>
           </XStack>
@@ -1815,10 +1881,16 @@ export function GanttView({
         {/* Body: labels + chart share one vertical scroller so rows stay
             aligned; the chart owns its horizontal scroller so bars never
             paint past the frame. */}
-        <ScrollView flex={1} scrollEnabled={!scrollLocked}>
+        <ScrollView
+          flex={1}
+          scrollEnabled={!scrollLocked}>
           <XStack {...{ 'data-gantt-scroll-body': 'true' }}>
             {/* Task label column */}
-            <YStack width={labelWidth} flexShrink={0} {...hairlineEnd} borderColor="$borderColor">
+            <YStack
+              width={labelWidth}
+              flexShrink={0}
+              {...hairlineEnd}
+              borderColor="$borderColor">
               {tasks.map((task, index) => {
                 const refs = resolveSpans(task);
                 // A row is "selected" when any of ITS spans holds focus — for
@@ -1865,7 +1937,11 @@ export function GanttView({
                           }
                     }
                     {...{ 'data-gantt-row-label': task.id }}>
-                    <GanttTaskName title={task.title} selected={selected} body={knobProps.body} />
+                    <GanttTaskName
+                      title={task.title}
+                      selected={selected}
+                      body={knobProps.body}
+                    />
                   </XStack>
                 );
               })}
@@ -1885,9 +1961,14 @@ export function GanttView({
               scrollEventThrottle={16}
               onLayout={handleCanvasLayout}
               style={(isWeb ? scrollerDirection : [{ flex: 1 }, scrollerDirection]) as any}>
-              <YStack width={chartWidth} position="relative" {...{ 'data-gantt-chart': 'true' }}>
+              <YStack
+                width={chartWidth}
+                position="relative"
+                {...{ 'data-gantt-chart': 'true' }}>
                 {/* Rows + grid + today line */}
-                <YStack position="relative" {...{ 'data-gantt-body': 'true' }}>
+                <YStack
+                  position="relative"
+                  {...{ 'data-gantt-body': 'true' }}>
                   {weekends.map((col) => (
                     <YStack
                       key={`body-we-${col.key}`}

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { LabelProps, SizeTokens } from 'tamagui';
 import { isWeb } from 'tamagui';
 
-import { Field, FieldLayout } from '../../fieldLayout';
+import { Field, FieldLayout } from '../../FieldLayout';
 import { FloatingPanel } from '../../FloatingPanel';
 import { Input as InputParts } from '../../InputParts';
 import { t } from '../../shared/t';
@@ -17,8 +17,8 @@ import {
   TimePickerInputTrigger,
   formatTimeDisplay,
   isValidTimeString,
-  type TimeFormat,
 } from './parts';
+import type { TimeFormat } from './parts';
 
 export type { TimeFormat } from './parts';
 export { formatTimeDisplay, isValidTimeString, parseTimeString, toTimeString } from './parts';
@@ -159,8 +159,16 @@ export function TimePicker({
 
   if (skeleton) {
     return (
-      <FieldLayout id={id} label={label} size={size} knobProps={knobProps}>
-        <Skeleton variant="rounded" width="100%" height={knobProps.sizeToken} />
+      <FieldLayout
+        id={id}
+        label={label}
+        size={size}
+        knobProps={knobProps}>
+        <Skeleton
+          variant="rounded"
+          width="100%"
+          height={knobProps.sizeToken}
+        />
       </FieldLayout>
     );
   }
@@ -232,7 +240,11 @@ export function TimePicker({
   }
 
   return (
-    <Field form={resolvedForm} name={name} defaultValue={defaultValue} validators={resolvedValidators}>
+    <Field
+      form={resolvedForm}
+      name={name}
+      defaultValue={defaultValue}
+      validators={resolvedValidators}>
       {(field) => {
         const resolvedError = getFieldError(field, error);
         const fieldValue = field.state.value ?? '';

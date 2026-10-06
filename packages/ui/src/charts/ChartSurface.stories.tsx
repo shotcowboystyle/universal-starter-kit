@@ -7,7 +7,7 @@ import { ChartSurface } from './ChartSurface';
 import { createBandScale, createLinearScale } from './math';
 import { Circle, Line, Rect } from './svg';
 import type { ChartSize } from './types';
-import { useChartTheme } from './useChartTheme';
+import { useChartTheme } from './use-chart-theme';
 
 const bars = [
   { label: 'Mon', value: 3 },
@@ -31,7 +31,14 @@ function Marks({ size }: { size: ChartSize }) {
   const y = createLinearScale({ domain: [0, 10], range: [size.height - 8, 8] });
   return (
     <>
-      <Line x1={8} y1={size.height - 8} x2={size.width - 8} y2={size.height - 8} stroke={gridColor} strokeWidth={1} />
+      <Line
+        x1={8}
+        y1={size.height - 8}
+        x2={size.width - 8}
+        y2={size.height - 8}
+        stroke={gridColor}
+        strokeWidth={1}
+      />
       {bars.map((bar) => (
         <Rect
           key={bar.label}
@@ -110,10 +117,14 @@ export const Responsive: Story = {
   render: () => (
     <YStack gap="$4">
       {[520, 320, 200].map((width) => (
-        <Card key={width} width={width}>
+        <Card
+          key={width}
+          width={width}>
           <YStack gap="$2">
             <Paragraph size="$2">{`${width}px container`}</Paragraph>
-            <ChartSurface label={`Sessions per weekday at ${width}px`} height={140}>
+            <ChartSurface
+              label={`Sessions per weekday at ${width}px`}
+              height={140}>
               {(size) => <Marks size={size} />}
             </ChartSurface>
           </YStack>
@@ -135,7 +146,10 @@ export const FixedWidth: Story = {
   },
   render: () => (
     <Card alignSelf="flex-start">
-      <ChartSurface label="Five categorical dots" width={360} height={120}>
+      <ChartSurface
+        label="Five categorical dots"
+        width={360}
+        height={120}>
         {(size) => <Dots size={size} />}
       </ChartSurface>
     </Card>

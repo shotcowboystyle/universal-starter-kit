@@ -1,7 +1,5 @@
 import { config } from '@repo/platform';
 import {
-  type Knobs,
-  type ThemeConfig,
   BodyFont,
   BorderRadius,
   BorderWidth,
@@ -26,8 +24,10 @@ import {
   defaultPreset,
   defaultKnobs,
 } from '@repo/theme';
+import type { Knobs, ThemeConfig } from '@repo/theme';
 import type { ThemeName } from '@tamagui/web';
-import { type ComponentType, type ReactNode, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import { CookiesProvider } from 'react-cookie';
 import type { InputType } from 'storybook/internal/csf';
 import { Theme, YStack, useTheme as useTamaguiTheme } from 'tamagui';
@@ -51,7 +51,7 @@ export interface Preview {
   globalTypes?: Record<string, InputType>;
   initialGlobals?: Record<string, unknown>;
   parameters?: Record<string, unknown>;
-  decorators?: Array<(Story: any, context: any) => any>;
+  decorators?: ((Story: any, context: any) => any)[];
 }
 
 // ---------------------------------------------------------------------------
@@ -158,7 +158,7 @@ function parseValue(value: unknown): unknown {
   }
 }
 
-const toTitleCase = (str: string) => str.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase());
+const toTitleCase = (str: string) => str.replaceAll(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase());
 
 function createControl(key: string): InputType {
   const name = toTitleCase(key);
@@ -742,7 +742,7 @@ export function createPreview(options: CreatePreviewOptions): Preview {
     const knobUpdate = useMemo(() => {
       const result: Partial<Knobs> = {};
       const stateKeys = new Set(['hover', 'press', 'focus', 'focusVisible']);
-      for (const key of Object.keys(knobs) as Array<keyof Knobs>) {
+      for (const key of Object.keys(knobs) as (keyof Knobs)[]) {
         if (stateKeys.has(key)) {
           continue;
         }
@@ -839,7 +839,10 @@ export function createPreview(options: CreatePreviewOptions): Preview {
               theme; a named colour is the Tamagui subtheme. */}
           <Theme name={colorGlobal || resolvedScheme}>
             <ThemeColorEmitter />
-            <ColorChannelEmitter event={accentColorsChannelEvent} prefix="accent" />
+            <ColorChannelEmitter
+              event={accentColorsChannelEvent}
+              prefix="accent"
+            />
             {storyContent}
           </Theme>
           {/* Opposite scheme emitters */}
@@ -848,12 +851,18 @@ export function createPreview(options: CreatePreviewOptions): Preview {
             {colorGlobal ? (
               <Theme name={colorGlobal}>
                 <ColorChannelEmitter event={baseOppositeChannelEvent} />
-                <ColorChannelEmitter event={accentOppositeChannelEvent} prefix="accent" />
+                <ColorChannelEmitter
+                  event={accentOppositeChannelEvent}
+                  prefix="accent"
+                />
               </Theme>
             ) : (
               <>
                 <ColorChannelEmitter event={baseOppositeChannelEvent} />
-                <ColorChannelEmitter event={accentOppositeChannelEvent} prefix="accent" />
+                <ColorChannelEmitter
+                  event={accentOppositeChannelEvent}
+                  prefix="accent"
+                />
               </>
             )}
           </Theme>
@@ -864,7 +873,10 @@ export function createPreview(options: CreatePreviewOptions): Preview {
 
   const frameworkDecorator: NonNullable<Preview['decorators']>[number] = (Story, context) => (
     <CookiesProvider>
-      <FrameworkDecoratorInner Story={Story} context={context} />
+      <FrameworkDecoratorInner
+        Story={Story}
+        context={context}
+      />
     </CookiesProvider>
   );
 

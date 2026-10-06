@@ -4,7 +4,8 @@ import { fileURLToPath } from 'node:url';
 
 import { Input } from '@repo/forms';
 import { modelFirstFocusableShow, renderWithProviders } from '@repo/test-utils';
-import { Preset, type Knobs } from '@repo/theme';
+import { Preset } from '@repo/theme';
+import type { Knobs } from '@repo/theme';
 import { defaultConfig } from '@tamagui/config/v5';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { AlertDialog, Card as TamaguiCard, createTamagui, Dialog, Popover, Sheet, TamaguiProvider } from 'tamagui';
@@ -71,7 +72,7 @@ describe('surfaces package exports', () => {
 
 describe('SheetFrame overlay chrome', () => {
   it('binds elevatedSurface, $background, and transition — not surface-without-elevation', () => {
-    const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'surfaces.tsx'), 'utf8');
+    const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'surfaces.tsx'), 'utf-8');
     const start = src.indexOf('// ── SheetFrame');
     const end = src.indexOf('// ── SheetModal');
     const sheet = src.slice(start, end);
@@ -86,7 +87,7 @@ describe('SheetFrame overlay chrome', () => {
 
 describe('DialogContent overlay elevation', () => {
   it('binds the overlay ladder through elevatedSurface with elevate=false, and hardcodes no shadow', () => {
-    const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'surfaces.tsx'), 'utf8');
+    const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'surfaces.tsx'), 'utf-8');
     const start = src.indexOf('// ── DialogContent');
     const end = src.indexOf('// ── DialogOverlay');
     const dialog = src.slice(start, end);
@@ -147,7 +148,9 @@ describe('surfaces address $background at the FRAME', () => {
       <Preset>
         <Card testID="mpo-card">card</Card>
         <Panel testID="mpo-panel">panel</Panel>
-        <Dialog modal open>
+        <Dialog
+          modal
+          open>
           <Dialog.Portal>
             <DialogContent testID="mpo-dialog">dialog</DialogContent>
           </Dialog.Portal>
@@ -170,7 +173,9 @@ describe('DialogContent paints the OVERLAY elevation stop, not the control one',
     renderWithProviders(
       <Preset overrides={{ elevation: 'large' }}>
         <Button testID="mpo-button-control">Save</Button>
-        <Dialog modal open>
+        <Dialog
+          modal
+          open>
           <Dialog.Portal>
             <DialogContent testID="mpo-dialog-overlay">body</DialogContent>
           </Dialog.Portal>
@@ -216,7 +221,7 @@ describe('overlay containers take the Axiom 1 child-clip cap', () => {
   afterEach(cleanup);
 
   it('PopoverContent spreads containerRadius after elevatedSurface, as its four siblings do', () => {
-    const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'surfaces.tsx'), 'utf8');
+    const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'surfaces.tsx'), 'utf-8');
     const popover = src.slice(src.indexOf('// ── PopoverContent'), src.indexOf('// ── SheetFrame'));
     const elevated = popover.indexOf('knobProps.elevatedSurface');
     const capped = popover.indexOf('knobProps.containerRadius');
@@ -230,19 +235,25 @@ describe('overlay containers take the Axiom 1 child-clip cap', () => {
       const capped = Math.min(stop, inset);
       it(`caps every overlay frame at ${capped}px for borderRadius=${borderRadius}/space=${space}`, () => {
         render(
-          <TamaguiProvider config={overlayCapConfig} defaultTheme="light">
+          <TamaguiProvider
+            config={overlayCapConfig}
+            defaultTheme="light">
             <Preset
               overrides={{
                 borderRadius: borderRadius as Knobs['borderRadius'],
                 space: space as Knobs['space'],
                 density: 'comfortable',
               }}>
-              <Dialog modal open>
+              <Dialog
+                modal
+                open>
                 <Dialog.Portal>
                   <DialogContent testID="cap-dialog">dialog</DialogContent>
                 </Dialog.Portal>
               </Dialog>
-              <AlertDialog modal open>
+              <AlertDialog
+                modal
+                open>
                 <AlertDialog.Portal>
                   <AlertDialogContent testID="cap-alertdialog">alert</AlertDialogContent>
                 </AlertDialog.Portal>
@@ -331,7 +342,7 @@ describe('DialogContent open focus', () => {
     );
   }
 
-  const settle = () => new Promise((resolve) => setTimeout(resolve, 300));
+  const settle = async () => new Promise((resolve) => setTimeout(resolve, 300));
 
   it.each(['Name', 'Notes'])('keeps focus on the %s field focused right after open', async (label) => {
     renderWithProviders(<RenameDialog />);

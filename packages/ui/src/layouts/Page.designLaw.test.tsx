@@ -10,7 +10,7 @@ import { PageHeader, PageSection, Screen } from './Page';
 import { ListPageLayout } from './PageTemplates';
 
 function readSibling(name: string) {
-  return readFileSync(join(import.meta.dirname, name), 'utf8');
+  return readFileSync(join(import.meta.dirname, name), 'utf-8');
 }
 
 function atoms(el: Element, prefixes: string[]): string[] {
@@ -115,7 +115,9 @@ describe('density unpinned', () => {
   it('ListPageLayout rides the density knob through Screen', () => {
     renderWithProviders(
       <Preset overrides={{ density: 'compact' }}>
-        <ListPageLayout title="Pokemon" data-testid="list-shell">
+        <ListPageLayout
+          title="Pokemon"
+          data-testid="list-shell">
           <span>rows</span>
         </ListPageLayout>
       </Preset>,
@@ -125,7 +127,12 @@ describe('density unpinned', () => {
   });
 
   it('explicit compact publishes compact density', () => {
-    const { container } = renderWithProviders(<PageSection compact title="Profile" />);
+    const { container } = renderWithProviders(
+      <PageSection
+        compact
+        title="Profile"
+      />,
+    );
     const frame = container.querySelector('[data-testid="page-section"]') as HTMLElement;
     expect(frame.getAttribute('data-density')).toBe('compact');
   });
@@ -133,7 +140,9 @@ describe('density unpinned', () => {
   it("Screen's explicit density override reaches nested page primitives", () => {
     renderWithProviders(
       <Preset overrides={{ density: 'comfortable' }}>
-        <Screen compact scroll={false}>
+        <Screen
+          compact
+          scroll={false}>
           <PageHeader title="Compact screen" />
           <PageSection title="Inherited section" />
         </Screen>
@@ -146,8 +155,14 @@ describe('density unpinned', () => {
   it('a painted section steps its interior density without shrinking its heading', () => {
     renderWithProviders(
       <Preset overrides={{ density: 'comfortable' }}>
-        <PageSection surface title="Outer" data-testid="outer-section">
-          <PageSection title="Inner" data-testid="inner-section" />
+        <PageSection
+          surface
+          title="Outer"
+          data-testid="outer-section">
+          <PageSection
+            title="Inner"
+            data-testid="inner-section"
+          />
         </PageSection>
       </Preset>,
     );
@@ -160,7 +175,10 @@ describe('PageSection surface declares its container cap', () => {
   it('the painted surface carries the knob stops its radius resolved from', () => {
     renderWithProviders(
       <Preset overrides={{ borderRadius: 'full', space: 'small' }}>
-        <PageSection surface title="Details" data-testid="details">
+        <PageSection
+          surface
+          title="Details"
+          data-testid="details">
           <></>
         </PageSection>
       </Preset>,

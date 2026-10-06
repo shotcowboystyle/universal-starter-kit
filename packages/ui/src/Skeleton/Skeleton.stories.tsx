@@ -3,7 +3,8 @@ import { XStack, YStack, Text, View } from 'tamagui';
 
 import { Card } from '../surfaces';
 
-import { Skeleton, type SkeletonVariant } from './index';
+import { Skeleton } from './index';
+import type { SkeletonVariant } from './index';
 
 const meta: Meta<typeof Skeleton> = {
   title: 'Components/Skeleton',
@@ -39,8 +40,14 @@ export const Variants: Story = {
     return (
       <YStack gap="$4">
         {variants.map((variant) => (
-          <XStack key={variant} gap="$4" alignItems="center">
-            <Text width={100} fontSize="$2" color="$color10">
+          <XStack
+            key={variant}
+            gap="$4"
+            alignItems="center">
+            <Text
+              width={100}
+              fontSize="$2"
+              color="$color10">
               {variant}
             </Text>
             <Skeleton
@@ -57,7 +64,9 @@ export const Variants: Story = {
 
 export const TextLines: Story = {
   render: () => (
-    <YStack gap="$6" maxWidth={400}>
+    <YStack
+      gap="$6"
+      maxWidth={400}>
       <YStack gap="$2">
         <Text fontWeight="600">Single line</Text>
         <Skeleton.Text />
@@ -72,7 +81,11 @@ export const TextLines: Story = {
       </YStack>
       <YStack gap="$2">
         <Text fontWeight="600">Display (title)</Text>
-        <Skeleton.Text size="display" lines={1} lastLineWidth={180} />
+        <Skeleton.Text
+          size="display"
+          lines={1}
+          lastLineWidth={180}
+        />
       </YStack>
     </YStack>
   ),
@@ -80,7 +93,9 @@ export const TextLines: Story = {
 
 export const Circles: Story = {
   render: () => (
-    <XStack gap="$4" alignItems="center">
+    <XStack
+      gap="$4"
+      alignItems="center">
       <Skeleton.Circle size={32} />
       <Skeleton.Circle size={40} />
       <Skeleton.Circle size={48} />
@@ -108,9 +123,18 @@ export const CustomSizes: Story = {
       </YStack>
       <YStack gap="$2">
         <Text fontWeight="600">Custom height</Text>
-        <Skeleton width="100%" height={24} />
-        <Skeleton width="100%" height={48} />
-        <Skeleton width="100%" height={96} />
+        <Skeleton
+          width="100%"
+          height={24}
+        />
+        <Skeleton
+          width="100%"
+          height={48}
+        />
+        <Skeleton
+          width="100%"
+          height={96}
+        />
       </YStack>
     </YStack>
   ),
@@ -121,11 +145,17 @@ export const NoAnimation: Story = {
     <YStack gap="$4">
       <YStack gap="$2">
         <Text fontWeight="600">Animated (default)</Text>
-        <Skeleton width={200} animate />
+        <Skeleton
+          width={200}
+          animate
+        />
       </YStack>
       <YStack gap="$2">
         <Text fontWeight="600">Static (no animation)</Text>
-        <Skeleton width={200} animate={false} />
+        <Skeleton
+          width={200}
+          animate={false}
+        />
       </YStack>
     </YStack>
   ),
@@ -134,18 +164,36 @@ export const NoAnimation: Story = {
 export const CardSkeleton: Story = {
   render: () => (
     <Skeleton.Group>
-      <Card tier="elevated" width={320}>
-        <XStack gap="$3" alignItems="flex-start">
+      <Card
+        tier="elevated"
+        width={320}>
+        <XStack
+          gap="$3"
+          alignItems="flex-start">
           <Skeleton.Circle size={48} />
-          <YStack flex={1} gap="$2">
-            <Skeleton.Text size="display" lines={1} lastLineWidth="60%" />
+          <YStack
+            flex={1}
+            gap="$2">
+            <Skeleton.Text
+              size="display"
+              lines={1}
+              lastLineWidth="60%"
+            />
             <Skeleton width="40%" />
           </YStack>
         </XStack>
         <Skeleton.Text lines={3} />
         <XStack gap="$2">
-          <Skeleton variant="rounded" width={80} height="$4" />
-          <Skeleton variant="rounded" width={80} height="$4" />
+          <Skeleton
+            variant="rounded"
+            width={80}
+            height="$4"
+          />
+          <Skeleton
+            variant="rounded"
+            width={80}
+            height="$4"
+          />
         </XStack>
       </Card>
     </Skeleton.Group>
@@ -155,11 +203,18 @@ export const CardSkeleton: Story = {
 export const ListSkeleton: Story = {
   render: () => (
     <Skeleton.Group>
-      <YStack gap="$3" width={400}>
+      <YStack
+        gap="$3"
+        width={400}>
         {Array.from({ length: 4 }).map((_, i) => (
-          <XStack key={i} gap="$3" alignItems="center">
+          <XStack
+            key={i}
+            gap="$3"
+            alignItems="center">
             <Skeleton.Circle size={40} />
-            <YStack flex={1} gap="$1">
+            <YStack
+              flex={1}
+              gap="$1">
               <Skeleton width="70%" />
               <Skeleton width="40%" />
             </YStack>
@@ -173,15 +228,24 @@ export const ListSkeleton: Story = {
 export const TableSkeleton: Story = {
   render: () => (
     <Skeleton.Group>
-      <YStack gap="$2" width={500}>
-        <XStack gap="$3" paddingBottom="$2" borderBottomWidth={1} borderColor="$color5">
+      <YStack
+        gap="$2"
+        width={500}>
+        <XStack
+          gap="$3"
+          paddingBottom="$2"
+          borderBottomWidth={1}
+          borderColor="$color5">
           <Skeleton width={120} />
           <Skeleton width={100} />
           <Skeleton width={80} />
           <Skeleton width={60} />
         </XStack>
         {Array.from({ length: 5 }).map((_, i) => (
-          <XStack key={i} gap="$3" paddingVertical="$2">
+          <XStack
+            key={i}
+            gap="$3"
+            paddingVertical="$2">
             <Skeleton width={120} />
             <Skeleton width={100} />
             <Skeleton width={80} />
@@ -196,20 +260,38 @@ export const TableSkeleton: Story = {
 export const FormSkeleton: Story = {
   render: () => (
     <Skeleton.Group>
-      <YStack gap="$4" width={320}>
+      <YStack
+        gap="$4"
+        width={320}>
         <YStack gap="$2">
           <Skeleton width={60} />
-          <Skeleton variant="rounded" width="100%" height="$4" />
+          <Skeleton
+            variant="rounded"
+            width="100%"
+            height="$4"
+          />
         </YStack>
         <YStack gap="$2">
           <Skeleton width={80} />
-          <Skeleton variant="rounded" width="100%" height="$4" />
+          <Skeleton
+            variant="rounded"
+            width="100%"
+            height="$4"
+          />
         </YStack>
         <YStack gap="$2">
           <Skeleton width={100} />
-          <Skeleton variant="rounded" width="100%" height="$8" />
+          <Skeleton
+            variant="rounded"
+            width="100%"
+            height="$8"
+          />
         </YStack>
-        <Skeleton variant="rounded" width={100} height="$4" />
+        <Skeleton
+          variant="rounded"
+          width={100}
+          height="$4"
+        />
       </YStack>
     </Skeleton.Group>
   ),
@@ -221,16 +303,37 @@ export const AllStates: Story = {
       <YStack gap="$6">
         <YStack gap="$2">
           <Text fontWeight="600">Display</Text>
-          <Skeleton.Text size="display" lines={1} lastLineWidth={220} />
+          <Skeleton.Text
+            size="display"
+            lines={1}
+            lastLineWidth={220}
+          />
         </YStack>
 
         <YStack gap="$2">
           <Text fontWeight="600">Variants</Text>
-          <XStack gap="$4" alignItems="center">
-            <Skeleton variant="text" width={100} />
-            <Skeleton variant="circular" width={40} height={40} />
-            <Skeleton variant="rectangular" width={100} height={40} />
-            <Skeleton variant="rounded" width={100} height={40} />
+          <XStack
+            gap="$4"
+            alignItems="center">
+            <Skeleton
+              variant="text"
+              width={100}
+            />
+            <Skeleton
+              variant="circular"
+              width={40}
+              height={40}
+            />
+            <Skeleton
+              variant="rectangular"
+              width={100}
+              height={40}
+            />
+            <Skeleton
+              variant="rounded"
+              width={100}
+              height={40}
+            />
           </XStack>
         </YStack>
 
@@ -252,11 +355,21 @@ export const AllStates: Story = {
 
         <YStack gap="$2">
           <Text fontWeight="600">Card example</Text>
-          <Card tier="elevated" width={280}>
-            <XStack gap="$3" alignItems="center">
+          <Card
+            tier="elevated"
+            width={280}>
+            <XStack
+              gap="$3"
+              alignItems="center">
               <Skeleton.Circle size={40} />
-              <YStack flex={1} gap="$1">
-                <Skeleton.Text size="display" lines={1} lastLineWidth="80%" />
+              <YStack
+                flex={1}
+                gap="$1">
+                <Skeleton.Text
+                  size="display"
+                  lines={1}
+                  lastLineWidth="80%"
+                />
                 <Skeleton width="50%" />
               </YStack>
             </XStack>

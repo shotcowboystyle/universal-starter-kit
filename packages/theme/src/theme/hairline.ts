@@ -97,7 +97,7 @@ export function ensureHairlineFallback(): void {
   const tag = document.createElement('style');
   tag.id = STYLE_TAG_ID;
   tag.textContent = hairlineFallbackCss;
-  document.head.appendChild(tag);
+  document.head.append(tag);
 }
 
 // The fallback is static CSS (no knob/theme dependency), so mount it as soon

@@ -1,7 +1,6 @@
 import { CheckCircleIcon, InfoIcon, WarningIcon, XCircleIcon, XIcon } from '@phosphor-icons/react';
 import {
   Intent,
-  type KnobProps,
   MIN_PRESS_TARGET,
   ensureCompositeFocusRing,
   pressTargetHitSlop,
@@ -9,7 +8,9 @@ import {
   useResolvedKnobs,
   warnBannedErrorWords,
 } from '@repo/theme';
-import { useId, useState, type ReactNode } from 'react';
+import type { KnobProps } from '@repo/theme';
+import { useId, useState } from 'react';
+import type { ReactNode } from 'react';
 import type { GetProps } from 'tamagui';
 import { SizableText, View, XStack, YStack, isWeb, styled, useTheme } from 'tamagui';
 
@@ -200,7 +201,7 @@ function hostData(attrs: Record<string, string>): Record<string, unknown> {
   }
   const dataSet: Record<string, string> = {};
   for (const [key, value] of Object.entries(attrs)) {
-    const camel = key.replace(/^data-/, '').replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
+    const camel = key.replace(/^data-/, '').replaceAll(/-([a-z])/g, (_, c: string) => c.toUpperCase());
     dataSet[camel] = value;
   }
   return { dataSet };
@@ -244,7 +245,12 @@ function AlertAction({
         minHeight={nestedPx}
         {...radiusOuter}
         borderRadius={pointy ? 0 : radiusOuter.borderRadius}>
-        <SizableText {...body} {...labelType} fontWeight="400" color="$color12" userSelect="none">
+        <SizableText
+          {...body}
+          {...labelType}
+          fontWeight="400"
+          color="$color12"
+          userSelect="none">
           {label}
         </SizableText>
       </AlertActionPill>
@@ -293,7 +299,7 @@ function AlertInner({
   const iconColor = theme.color11?.get() as string | undefined;
   const stripeColor = theme.color9?.get() as string | undefined;
   const [uncontrolledVisible, setUncontrolledVisible] = useState(defaultVisible);
-  const shown = visible !== undefined ? visible : uncontrolledVisible;
+  const shown = visible === undefined ? uncontrolledVisible : visible;
   if (!shown) {
     return null;
   }
@@ -332,7 +338,16 @@ function AlertInner({
 
   const IconComponent = intentIconMap[intent];
   const iconSize = compactDensity ? 16 : 20;
-  const iconNode = icon === null ? null : (icon ?? <IconComponent size={iconSize} weight="fill" color={iconColor} />);
+  const iconNode =
+    icon === null
+      ? null
+      : (icon ?? (
+          <IconComponent
+            size={iconSize}
+            weight="fill"
+            color={iconColor}
+          />
+        ));
 
   const hasPrimary = action != null || Boolean(actionLabel);
   const hasSecondary = secondaryAction != null || Boolean(secondaryActionLabel);
@@ -353,15 +368,31 @@ function AlertInner({
   };
 
   const primaryAction =
-    action ?? (actionLabel ? <AlertAction label={actionLabel} onPress={onAction} {...actionShared} /> : null);
+    action ??
+    (actionLabel ? (
+      <AlertAction
+        label={actionLabel}
+        onPress={onAction}
+        {...actionShared}
+      />
+    ) : null);
   const secondaryNode =
     secondaryAction ??
     (secondaryActionLabel ? (
-      <AlertAction label={secondaryActionLabel} onPress={onSecondaryAction} {...actionShared} />
+      <AlertAction
+        label={secondaryActionLabel}
+        onPress={onSecondaryAction}
+        {...actionShared}
+      />
     ) : null);
 
   const actionRow = hasActions ? (
-    <XStack flexShrink={0} flexWrap="wrap" alignItems="center" {...knobProps.gap} data-alert-actions="">
+    <XStack
+      flexShrink={0}
+      flexWrap="wrap"
+      alignItems="center"
+      {...knobProps.gap}
+      data-alert-actions="">
       {primaryAction}
       {secondaryNode}
     </XStack>
@@ -384,7 +415,7 @@ function AlertInner({
       // Interruptive intents announce assertively; the rest politely.
       role={assertive ? 'alert' : 'status'}
       aria-live={assertive ? 'assertive' : 'polite'}
-      aria-labelledby={title != null ? titleId : undefined}
+      aria-labelledby={title == null ? undefined : titleId}
       // Polaris form-summary: parent may focus the banner on submit without
       // adding a tab stop (the frame is not a control).
       tabIndex={-1}
@@ -404,18 +435,33 @@ function AlertInner({
         'data-accent-stripe': '3',
       })}>
       {iconNode ? (
-        <View flexShrink={0} aria-hidden paddingTop={1}>
+        <View
+          flexShrink={0}
+          aria-hidden
+          paddingTop={1}>
           {iconNode}
         </View>
       ) : null}
-      <YStack flexGrow={1} flexShrink={1} gap="$1" justifyContent="center" minWidth={0}>
+      <YStack
+        flexGrow={1}
+        flexShrink={1}
+        gap="$1"
+        justifyContent="center"
+        minWidth={0}>
         {title ? (
-          <SizableText id={titleId} {...knobProps.body} {...knobProps.label} fontWeight="600" color="$color12">
+          <SizableText
+            id={titleId}
+            {...knobProps.body}
+            {...knobProps.label}
+            fontWeight="600"
+            color="$color12">
             {title}
           </SizableText>
         ) : null}
         {children != null &&
-          (textualChildren !== null ? (
+          (textualChildren === null ? (
+            children
+          ) : (
             <SizableText
               {...knobProps.body}
               {...knobProps.label}
@@ -426,12 +472,10 @@ function AlertInner({
               fontWeight="400">
               {textualChildren}
             </SizableText>
-          ) : (
-            children
           ))}
         {stackedActions ? actionRow : null}
       </YStack>
-      {!stackedActions ? actionRow : null}
+      {stackedActions ? null : actionRow}
       {dismissible ? (
         <DismissButton
           aria-label={t('Dismiss')}
@@ -448,7 +492,10 @@ function AlertInner({
             className="mp-chip-dismiss-ring"
             padding={compactDensity ? '$0.5' : '$1'}
             borderRadius={knobProps.pointy ? 0 : '$2'}>
-            <XIcon size={dismissIcon} color={iconColor} />
+            <XIcon
+              size={dismissIcon}
+              color={iconColor}
+            />
           </DismissRing>
         </DismissButton>
       ) : null}

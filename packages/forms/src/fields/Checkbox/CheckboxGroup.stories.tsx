@@ -43,7 +43,10 @@ type Story = StoryObj<typeof CheckboxGroup>;
 export const Basic: Story = {
   render: (args) => (
     <YStack maxWidth={400}>
-      <CheckboxGroup {...args} onValueChange={action('onValueChange')} />
+      <CheckboxGroup
+        {...args}
+        onValueChange={action('onValueChange')}
+      />
     </YStack>
   ),
 };
@@ -86,7 +89,9 @@ export const CardMode: Story = {
 
 export const States: Story = {
   render: () => (
-    <YStack gap="$6" maxWidth={400}>
+    <YStack
+      gap="$6"
+      maxWidth={400}>
       <CheckboxGroup
         label="Group disabled"
         disabled
@@ -129,7 +134,9 @@ export const States: Story = {
 
 export const SkeletonState: Story = {
   render: () => (
-    <YStack gap="$6" maxWidth={400}>
+    <YStack
+      gap="$6"
+      maxWidth={400}>
       <CheckboxGroup
         label="Loading vertical"
         skeleton
@@ -139,18 +146,30 @@ export const SkeletonState: Story = {
           { value: 'c', label: 'Gamma' },
         ]}
       />
-      <CheckboxGroup label="Loading horizontal (default count)" skeleton orientation="horizontal" />
+      <CheckboxGroup
+        label="Loading horizontal (default count)"
+        skeleton
+        orientation="horizontal"
+      />
     </YStack>
   ),
 };
 
 export const OptionEdgeCases: Story = {
   render: () => (
-    <YStack gap="$6" maxWidth={400}>
+    <YStack
+      gap="$6"
+      maxWidth={400}>
       <Paragraph size="$2">empty options</Paragraph>
-      <CheckboxGroup label="Empty" options={[]} />
+      <CheckboxGroup
+        label="Empty"
+        options={[]}
+      />
       <Paragraph size="$2">single option</Paragraph>
-      <CheckboxGroup label="Single" options={[{ value: 'only', label: 'Only option' }]} />
+      <CheckboxGroup
+        label="Single"
+        options={[{ value: 'only', label: 'Only option' }]}
+      />
       <Paragraph size="$2">duplicate values</Paragraph>
       <CheckboxGroup
         label="Duplicates"
@@ -205,7 +224,11 @@ export const OptionEdgeCases: Story = {
 
 export const HorizontalWrap: Story = {
   render: () => (
-    <YStack maxWidth={320} borderWidth={1} borderColor="$borderColor" padding="$2">
+    <YStack
+      maxWidth={320}
+      borderWidth={1}
+      borderColor="$borderColor"
+      padding="$2">
       <CheckboxGroup
         label="Horizontal in narrow container"
         orientation="horizontal"
@@ -229,7 +252,10 @@ export const ElevationLarge: Story = {
   render: (args) => (
     <Preset overrides={{ elevation: 'large' }}>
       <YStack maxWidth={400}>
-        <CheckboxGroup {...args} onValueChange={action('onValueChange')} />
+        <CheckboxGroup
+          {...args}
+          onValueChange={action('onValueChange')}
+        />
       </YStack>
     </Preset>
   ),
@@ -246,7 +272,9 @@ export const RequiredForm: Story = {
       });
       return (
         <Form form={form}>
-          <YStack gap="$4" maxWidth={400}>
+          <YStack
+            gap="$4"
+            maxWidth={400}>
             <CheckboxGroup
               label="Permissions"
               name="permissions"

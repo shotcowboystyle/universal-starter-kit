@@ -21,12 +21,13 @@ import {
   wasKeyboardFocus,
 } from '@repo/theme';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { Dialog, Image, Label, Separator, Text, XStack, YStack, isWeb, type YStackProps } from 'tamagui';
+import { Dialog, Image, Label, Separator, Text, XStack, YStack, isWeb } from 'tamagui';
+import type { YStackProps } from 'tamagui';
 
 import { Button } from '../Button';
-import { componentColors, sectionHeading } from '../componentColors';
+import { componentColors, sectionHeading } from '../component-colors';
 import { useTranslation } from '../shared/i18n';
-import { useReturnFocusOnClose } from '../shared/useReturnFocusOnClose';
+import { useReturnFocusOnClose } from '../shared/use-return-focus-on-close';
 import { Skeleton } from '../Skeleton';
 import { DialogContent, DialogOverlay } from '../surfaces';
 
@@ -264,15 +265,36 @@ function AttachmentsSkeleton({
   rowPad: string | number | undefined;
 }) {
   return (
-    <YStack width="100%" data-async-skeleton="attachments" aria-busy aria-label={loadingLabel}>
+    <YStack
+      width="100%"
+      data-async-skeleton="attachments"
+      aria-busy
+      aria-label={loadingLabel}>
       {Array.from({ length: 3 }).map((_, i) => (
         <YStack key={i}>
           {i > 0 ? <Separator {...hairline.line} /> : null}
-          <XStack gap="$3" alignItems="center" paddingVertical="$2" paddingHorizontal={rowPad} minHeight={44}>
-            <Skeleton variant="rounded" width={thumbSize} height={thumbSize} />
-            <YStack flex={1} gap="$1">
-              <Skeleton width="55%" height={14} />
-              <Skeleton width="25%" height={12} />
+          <XStack
+            gap="$3"
+            alignItems="center"
+            paddingVertical="$2"
+            paddingHorizontal={rowPad}
+            minHeight={44}>
+            <Skeleton
+              variant="rounded"
+              width={thumbSize}
+              height={thumbSize}
+            />
+            <YStack
+              flex={1}
+              gap="$1">
+              <Skeleton
+                width="55%"
+                height={14}
+              />
+              <Skeleton
+                width="25%"
+                height={12}
+              />
             </YStack>
           </XStack>
         </YStack>
@@ -361,7 +383,11 @@ function AttachmentRow({
       // but the RN-flavored View prop type omits it (house Record cast).
       {...({ color: tone.fg } as Record<string, unknown>)}>
       {isImage ? (
-        <AttachmentThumbnail attachment={attachment} size={thumbSize} fallback={getFileIcon(attachment, iconSize)} />
+        <AttachmentThumbnail
+          attachment={attachment}
+          size={thumbSize}
+          fallback={getFileIcon(attachment, iconSize)}
+        />
       ) : (
         getFileIcon(attachment, iconSize)
       )}
@@ -369,7 +395,9 @@ function AttachmentRow({
   );
 
   const actionButtons = (
-    <XStack gap="$1" alignItems="center">
+    <XStack
+      gap="$1"
+      alignItems="center">
       {enablePreview && isImage && (
         <Button
           size="$2"
@@ -452,22 +480,39 @@ function AttachmentRow({
         onBlur={() => {
           setKbFocus(false);
         }}>
-        <XStack flex={1} alignItems="center" minWidth={0} gap="$3">
+        <XStack
+          flex={1}
+          alignItems="center"
+          minWidth={0}
+          gap="$3">
           {mediaSlot}
-          <YStack flex={1} minWidth={0}>
-            <Text {...knobProps.body} fontSize={compact ? '$3' : '$4'} numberOfLines={1}>
+          <YStack
+            flex={1}
+            minWidth={0}>
+            <Text
+              {...knobProps.body}
+              fontSize={compact ? '$3' : '$4'}
+              numberOfLines={1}>
               {attachment.fileName}
             </Text>
-            <XStack gap="$2" alignItems="center">
-              <Text fontSize="$2" color={knobProps.textAccentColor}>
+            <XStack
+              gap="$2"
+              alignItems="center">
+              <Text
+                fontSize="$2"
+                color={knobProps.textAccentColor}>
                 {attachment.formattedSize || formatFileSize(attachment.fileSize)}
               </Text>
               {ext ? (
                 <>
-                  <Text fontSize="$2" color={componentColors.text.subtle}>
+                  <Text
+                    fontSize="$2"
+                    color={componentColors.text.subtle}>
                     ·
                   </Text>
-                  <Text fontSize="$2" color={componentColors.text.subtle}>
+                  <Text
+                    fontSize="$2"
+                    color={componentColors.text.subtle}>
                     {ext}
                   </Text>
                 </>
@@ -644,7 +689,9 @@ export function Attachments({
       onPress={canAdd ? handleUploadClick : undefined}
       {...dropHandlers}>
       <PaperclipIcon size={compact ? 20 : 28} />
-      <Text color={knobProps.textAccentColor} fontSize={compact ? '$2' : '$3'}>
+      <Text
+        color={knobProps.textAccentColor}
+        fontSize={compact ? '$2' : '$3'}>
         {noAttachmentsLabel}
       </Text>
     </YStack>
@@ -656,15 +703,21 @@ export function Attachments({
   const rowPad = knobProps.panelPadding.padding;
 
   return (
-    <YStack {...knobProps.gap} {...stackProps}>
+    <YStack
+      {...knobProps.gap}
+      {...stackProps}>
       {(label || canAdd) && (
-        <XStack alignItems="center" justifyContent={label ? 'space-between' : 'flex-end'}>
+        <XStack
+          alignItems="center"
+          justifyContent={label ? 'space-between' : 'flex-end'}>
           {label && (
             <Label {...(compact ? { fontSize: '$3', fontWeight: '400' } : sectionHeading)}>
               {label}
               {/* Count hides on error so the badge can't lie */}
               {maxAttachments > 0 && !hasError && (
-                <Text color={knobProps.textAccentColor} fontSize="$2">
+                <Text
+                  color={knobProps.textAccentColor}
+                  fontSize="$2">
                   {' '}
                   ({items.length}/{maxAttachments})
                 </Text>
@@ -672,7 +725,10 @@ export function Attachments({
             </Label>
           )}
           {canAdd && (
-            <Button size={compact ? '$2' : '$3'} icon={PlusIcon} onPress={handleUploadClick}>
+            <Button
+              size={compact ? '$2' : '$3'}
+              icon={PlusIcon}
+              onPress={handleUploadClick}>
               <Text fontWeight="400">{uploadLabel}</Text>
             </Button>
           )}
@@ -699,7 +755,10 @@ export function Attachments({
           borderRadius={knobProps.borderRadius.borderRadius}
           alignItems="center"
           gap="$2">
-          <Text color={componentColors.semantic.error} fontSize="$2" flex={1}>
+          <Text
+            color={componentColors.semantic.error}
+            fontSize="$2"
+            flex={1}>
             {uploadError}
           </Text>
           <Button
@@ -721,7 +780,11 @@ export function Attachments({
         errorTitle={loadFailedLabel}
         loading={
           showSkeleton ? (
-            <AttachmentsSkeleton thumbSize={thumbSize} loadingLabel={t('Loading')} rowPad={rowPad} />
+            <AttachmentsSkeleton
+              thumbSize={thumbSize}
+              loadingLabel={t('Loading')}
+              rowPad={rowPad}
+            />
           ) : (
             false
           )
@@ -757,10 +820,14 @@ export function Attachments({
         </YStack>
       </AsyncBoundary>
 
-      <Dialog open={!!previewFile} onOpenChange={(open) => !open && setPreviewFile(null)}>
+      <Dialog
+        open={!!previewFile}
+        onOpenChange={(open) => !open && setPreviewFile(null)}>
         <Dialog.Portal>
           <DialogOverlay opacity={0.5} />
-          <DialogContent maxWidth={800} maxHeight="80vh">
+          <DialogContent
+            maxWidth={800}
+            maxHeight="80vh">
             <Dialog.Title>{previewFile?.fileName}</Dialog.Title>
             {previewFile && isImageFile(previewFile) ? (
               <Image
@@ -771,9 +838,14 @@ export function Attachments({
                 objectFit="contain"
               />
             ) : previewFile ? (
-              <YStack alignItems="center" {...knobProps.gap} paddingVertical="$4">
+              <YStack
+                alignItems="center"
+                {...knobProps.gap}
+                paddingVertical="$4">
                 {getFileIcon(previewFile, 40)}
-                <Text color={knobProps.textAccentColor} textAlign="center">
+                <Text
+                  color={knobProps.textAccentColor}
+                  textAlign="center">
                   {previewUnavailableLabel}
                 </Text>
               </YStack>

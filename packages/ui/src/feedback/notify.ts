@@ -9,7 +9,8 @@
 
 import { showToast } from '../Toast/store';
 
-import { routeNotify, type NotifyEvent, type NotifyRoute } from './route';
+import { routeNotify } from './route';
+import type { NotifyEvent, NotifyRoute } from './route';
 import { pushFeedback } from './store';
 
 export type { NotifyEvent, NotifyRoute };

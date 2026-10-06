@@ -3,8 +3,8 @@ import { useEffect } from 'react';
 import { Dialog, Paragraph, XStack } from 'tamagui';
 
 import { Button } from '../Button';
-import { formCommonColors } from '../shared/colorRamps';
-import { DialogShowFocus, useReturnFocusOnClose } from '../shared/focusManagement';
+import { formCommonColors } from '../shared/color-ramps';
+import { DialogShowFocus, useReturnFocusOnClose } from '../shared/focus-management';
 import { t } from '../shared/t';
 
 export interface UnsavedChangesDialogProps {
@@ -59,7 +59,10 @@ export function UnsavedChangesDialog({ open, fieldCount, onKeepEditing, onDiscar
         });
 
   return (
-    <Dialog modal open={open} onOpenChange={handleOpenChange}>
+    <Dialog
+      modal
+      open={open}
+      onOpenChange={handleOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay
           key="overlay"
@@ -94,15 +97,24 @@ export function UnsavedChangesDialog({ open, fieldCount, onKeepEditing, onDiscar
             e.preventDefault();
           }}
           onOpenAutoFocus={focusKeepEditing}>
-          <Dialog.Title {...knobProps.body} fontSize="$4">
+          <Dialog.Title
+            {...knobProps.body}
+            fontSize="$4">
             {t('Discard unsaved changes?')}
           </Dialog.Title>
           <Dialog.Description asChild>
-            <Paragraph {...knobProps.body} size="$3" color={formCommonColors.muted}>
+            <Paragraph
+              {...knobProps.body}
+              size="$3"
+              color={formCommonColors.muted}>
               {body}
             </Paragraph>
           </Dialog.Description>
-          <XStack {...knobProps.gap} justifyContent="flex-end" alignItems="center" flexWrap="wrap">
+          <XStack
+            {...knobProps.gap}
+            justifyContent="flex-end"
+            alignItems="center"
+            flexWrap="wrap">
             <Button
               outlined
               data-mp-savebar-keep=""

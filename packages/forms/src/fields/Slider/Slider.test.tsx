@@ -1,5 +1,6 @@
 import { renderWithProviders } from '@repo/test-utils';
-import { Preset, resolveRadiusClass, type BorderRadius } from '@repo/theme';
+import { Preset, resolveRadiusClass } from '@repo/theme';
+import type { BorderRadius } from '@repo/theme';
 import * as Theme from '@repo/theme';
 import { useForm } from '@tanstack/react-form';
 import { act, fireEvent, renderHook, waitFor } from '@testing-library/react';
@@ -24,7 +25,7 @@ import {
   hasMinStepsBetween,
   snapSliderValue,
   useSliderJumpMotion,
-} from './jumpMotion';
+} from './jump-motion';
 
 import { Slider } from './index';
 
@@ -34,7 +35,13 @@ const QUICK_SPRING = { type: 'spring', damping: 20, mass: 1.2, stiffness: 250 } 
 describe('Slider', () => {
   describe('basic rendering', () => {
     it('should render slider control', () => {
-      const result = renderWithProviders(<Slider label="Basic Slider" name="basic" value={[50]} />);
+      const result = renderWithProviders(
+        <Slider
+          label="Basic Slider"
+          name="basic"
+          value={[50]}
+        />,
+      );
       const slider = result.container.querySelector('[role="slider"]');
       expect(slider).toBeDefined();
     });
@@ -43,7 +50,13 @@ describe('Slider', () => {
   describe('slider values and constraints', () => {
     it('should set min/max attributes', () => {
       const result = renderWithProviders(
-        <Slider label="Constrained Slider" name="constrained" value={[20]} min={10} max={90} />,
+        <Slider
+          label="Constrained Slider"
+          name="constrained"
+          value={[20]}
+          min={10}
+          max={90}
+        />,
       );
       const slider = result.container.querySelector('[role="slider"]');
       expect(slider?.getAttribute('aria-valuemin')).toBe('10');
@@ -55,7 +68,12 @@ describe('Slider', () => {
     it('should call onValueChange callback', async () => {
       const onValueChange = vi.fn();
       const result = renderWithProviders(
-        <Slider label="Change Slider" name="change" value={[30]} onValueChange={onValueChange} />,
+        <Slider
+          label="Change Slider"
+          name="change"
+          value={[30]}
+          onValueChange={onValueChange}
+        />,
       );
       const slider = result.container.querySelector('[role="slider"]');
       if (slider) {
@@ -87,14 +105,21 @@ describe('Slider', () => {
       }
       expect(onChange).toHaveBeenCalled();
       expect(onValueChange).toHaveBeenCalled();
-      expect(onChange.mock.calls.length).toBe(onValueChange.mock.calls.length);
+      expect(onChange.mock.calls).toHaveLength(onValueChange.mock.calls.length);
       expect(onChange.mock.lastCall).toEqual(onValueChange.mock.lastCall);
     });
   });
 
   describe('styling and theming', () => {
     it('should render required label with asterisk', () => {
-      const result = renderWithProviders(<Slider label="Required Slider" name="required" value={[50]} required />);
+      const result = renderWithProviders(
+        <Slider
+          label="Required Slider"
+          name="required"
+          value={[50]}
+          required
+        />,
+      );
 
       const label = result.container.querySelector('label');
       expect(label).toBeDefined();
@@ -107,29 +132,35 @@ describe('Slider', () => {
     describe('without form context', () => {
       it('should render helper text without form context', () => {
         const result = renderWithProviders(
-          <Slider label="Standalone Slider" name="standalone" value={[40]} helperText="Move me" />,
+          <Slider
+            label="Standalone Slider"
+            name="standalone"
+            value={[40]}
+            helperText="Move me"
+          />,
         );
         expect(result.findTextElement('Move me')).toBeDefined();
       });
     });
 
     describe('with form context', () => {
-      const FormExample = ({ defaultValue = [50], name = 'slider', onSubmit = async (_value: any) => {} }) => {
-        return (
-          <Form
-            formOptions={{
-              defaultValues: {
-                [name]: defaultValue,
-              },
-            }}
-            onSubmit={async (value) => {
-              await onSubmit(value);
-            }}>
-            <Slider label="Form Slider" name={name} />
-            <Button action="submit">Submit</Button>
-          </Form>
-        );
-      };
+      const FormExample = ({ defaultValue = [50], name = 'slider', onSubmit = async (_value: any) => {} }) => (
+        <Form
+          formOptions={{
+            defaultValues: {
+              [name]: defaultValue,
+            },
+          }}
+          onSubmit={async (value) => {
+            await onSubmit(value);
+          }}>
+          <Slider
+            label="Form Slider"
+            name={name}
+          />
+          <Button action="submit">Submit</Button>
+        </Form>
+      );
 
       it('should render with form context and handle form submission', async () => {
         const onSubmit = vi.fn();
@@ -155,7 +186,10 @@ describe('Slider', () => {
         const onSubmit = vi.fn();
         const result = renderWithProviders(
           <YStack>
-            <FormExample defaultValue={[25]} onSubmit={onSubmit} />
+            <FormExample
+              defaultValue={[25]}
+              onSubmit={onSubmit}
+            />
           </YStack>,
         );
 
@@ -187,7 +221,10 @@ describe('Slider', () => {
 
           return (
             <Form form={form}>
-              <Slider label="Volume Control" name="volume" />
+              <Slider
+                label="Volume Control"
+                name="volume"
+              />
               <Button action="submit">Save</Button>
             </Form>
           );
@@ -222,12 +259,24 @@ describe('Slider', () => {
       const onChange = vi.fn();
       const onValueChange = vi.fn();
       const result = renderWithProviders(
-        <Slider label="Progress" value={[25]} onChange={onChange} onValueChange={onValueChange} />,
+        <Slider
+          label="Progress"
+          value={[25]}
+          onChange={onChange}
+          onValueChange={onValueChange}
+        />,
       );
       expect(getThumb(result.container)?.getAttribute('aria-valuenow')).toBe('25');
 
       // Late seed: the upstream doc value arrives after first paint.
-      result.rerender(<Slider label="Progress" value={[75]} onChange={onChange} onValueChange={onValueChange} />);
+      result.rerender(
+        <Slider
+          label="Progress"
+          value={[75]}
+          onChange={onChange}
+          onValueChange={onValueChange}
+        />,
+      );
       await waitFor(() => {
         expect(getThumb(result.container)?.getAttribute('aria-valuenow')).toBe('75');
       });
@@ -243,7 +292,11 @@ describe('Slider', () => {
         formApi = form as unknown as typeof formApi;
         return (
           <Form form={form}>
-            <Slider label="Volume" name="volume" onChange={onChange} />
+            <Slider
+              label="Volume"
+              name="volume"
+              onChange={onChange}
+            />
           </Form>
         );
       };
@@ -261,7 +314,13 @@ describe('Slider', () => {
 
     it('uncontrolled standalone (defaultValue only) still moves on keyboard input', async () => {
       const onChange = vi.fn();
-      const result = renderWithProviders(<Slider label="Free" defaultValue={[40]} onChange={onChange} />);
+      const result = renderWithProviders(
+        <Slider
+          label="Free"
+          defaultValue={[40]}
+          onChange={onChange}
+        />,
+      );
       const thumb = getThumb(result.container);
       expect(thumb?.getAttribute('aria-valuenow')).toBe('40');
       await act(async () => {
@@ -279,7 +338,12 @@ describe('Slider', () => {
   describe('field integration', () => {
     it('should render error text when provided', () => {
       const result = renderWithProviders(
-        <Slider label="Errored Slider" name="errored" value={[10]} error="Invalid value" />,
+        <Slider
+          label="Errored Slider"
+          name="errored"
+          value={[10]}
+          error="Invalid value"
+        />,
       );
       expect(result.container.textContent).toContain('Invalid value');
     });
@@ -287,7 +351,13 @@ describe('Slider', () => {
 
   describe('slider orientation', () => {
     it('should render horizontal slider by default', () => {
-      const result = renderWithProviders(<Slider label="Orientation" name="orientation" value={[30]} />);
+      const result = renderWithProviders(
+        <Slider
+          label="Orientation"
+          name="orientation"
+          value={[30]}
+        />,
+      );
       const slider = result.container.querySelector('[role="slider"]');
       expect(slider?.getAttribute('aria-orientation')).toBe('horizontal');
     });
@@ -295,7 +365,13 @@ describe('Slider', () => {
 
   describe('accessibility', () => {
     it('should expose slider role and value', () => {
-      const result = renderWithProviders(<Slider label="A11y Slider" name="a11y" value={[65]} />);
+      const result = renderWithProviders(
+        <Slider
+          label="A11y Slider"
+          name="a11y"
+          value={[65]}
+        />,
+      );
       const slider = result.container.querySelector('[role="slider"]');
       expect(slider).toBeDefined();
       expect(slider?.getAttribute('aria-valuenow')).toBeDefined();
@@ -304,12 +380,24 @@ describe('Slider', () => {
 
   describe('value output', () => {
     it('renders the current value beside the track', () => {
-      const result = renderWithProviders(<Slider label="Volume" value={[64]} />);
+      const result = renderWithProviders(
+        <Slider
+          label="Volume"
+          value={[64]}
+        />,
+      );
       expect(result.container.textContent).toContain('64');
     });
 
     it('renders a range as min–max', () => {
-      const result = renderWithProviders(<Slider label="Price" value={[25, 75]} min={0} max={100} />);
+      const result = renderWithProviders(
+        <Slider
+          label="Price"
+          value={[25, 75]}
+          min={0}
+          max={100}
+        />,
+      );
       expect(result.container.textContent).toContain('25–75');
     });
   });
@@ -320,7 +408,12 @@ describe('Slider', () => {
     it('paints the ring on keyboard focus and drops it on pointer-drag', async () => {
       const spy = vi.spyOn(Theme, 'wasKeyboardFocus').mockReturnValue(true);
       try {
-        const result = renderWithProviders(<Slider label="Ring" defaultValue={[40]} />);
+        const result = renderWithProviders(
+          <Slider
+            label="Ring"
+            defaultValue={[40]}
+          />,
+        );
         const thumb = getThumb(result.container);
         expect(thumb).toBeTruthy();
         expect(thumb?.getAttribute('data-kb-focus')).toBeNull();
@@ -340,7 +433,12 @@ describe('Slider', () => {
     });
 
     it('does not paint the ring on pointer-origin focus', async () => {
-      const result = renderWithProviders(<Slider label="Click" defaultValue={[40]} />);
+      const result = renderWithProviders(
+        <Slider
+          label="Click"
+          defaultValue={[40]}
+        />,
+      );
       const thumb = getThumb(result.container);
       expect(thumb).toBeTruthy();
       await act(async () => {
@@ -354,7 +452,13 @@ describe('Slider', () => {
 
   describe('edge cases', () => {
     it('should render with boundary value', () => {
-      const result = renderWithProviders(<Slider label="Boundary" name="boundary" value={[0]} />);
+      const result = renderWithProviders(
+        <Slider
+          label="Boundary"
+          name="boundary"
+          value={[0]}
+        />,
+      );
       const slider = result.container.querySelector('[role="slider"]');
       expect(slider?.getAttribute('aria-valuenow')).toBe('0');
     });
@@ -362,7 +466,14 @@ describe('Slider', () => {
 
   describe('disabled state', () => {
     it('should render disabled slider', () => {
-      const result = renderWithProviders(<Slider label="Disabled Slider" name="disabled" value={[30]} disabled />);
+      const result = renderWithProviders(
+        <Slider
+          label="Disabled Slider"
+          name="disabled"
+          value={[30]}
+          disabled
+        />,
+      );
       const slider = result.container.querySelector('[role="slider"]');
       expect(slider).toBeDefined();
       const disabledMarker =
@@ -376,7 +487,12 @@ describe('Slider', () => {
   describe('form validation', () => {
     it('should handle validation errors', () => {
       const result = renderWithProviders(
-        <Slider label="Required Slider" name="required" value={[0]} error="Slider value is required" />,
+        <Slider
+          label="Required Slider"
+          name="required"
+          value={[0]}
+          error="Slider value is required"
+        />,
       );
 
       // Check for error text in the container
@@ -389,9 +505,21 @@ describe('Slider', () => {
     it('should render multiple slider instances', () => {
       const result = renderWithProviders(
         <YStack>
-          <Slider label="S1" name="s1" value={[10]} />
-          <Slider label="S2" name="s2" value={[20]} />
-          <Slider label="S3" name="s3" value={[30]} />
+          <Slider
+            label="S1"
+            name="s1"
+            value={[10]}
+          />
+          <Slider
+            label="S2"
+            name="s2"
+            value={[20]}
+          />
+          <Slider
+            label="S3"
+            name="s3"
+            value={[30]}
+          />
         </YStack>,
       );
       const sliders = result.container.querySelectorAll('[role="slider"]');
@@ -403,7 +531,11 @@ describe('Slider', () => {
     it('should render inside constrained width', () => {
       const result = renderWithProviders(
         <div style={{ width: 200 }}>
-          <Slider label="Responsive Slider" name="responsive" value={[50]} />
+          <Slider
+            label="Responsive Slider"
+            name="responsive"
+            value={[50]}
+          />
         </div>,
       );
       const slider = result.container.querySelector('[role="slider"]');
@@ -757,9 +889,15 @@ describe('Slider', () => {
 
     describe('native a11y (web guard)', () => {
       it('web thumbs carry no native accessibility props and keep per-thumb aria labels', () => {
-        const result = renderWithProviders(<Slider label="Guard" name="guard" value={[25, 75]} />);
+        const result = renderWithProviders(
+          <Slider
+            label="Guard"
+            name="guard"
+            value={[25, 75]}
+          />,
+        );
         const thumbs = Array.from(result.container.querySelectorAll('[role="slider"]'));
-        expect(thumbs.length).toBe(2);
+        expect(thumbs).toHaveLength(2);
         for (const thumb of thumbs) {
           // native-only props must never leak into the web DOM (byte-identical)
           expect(thumb.hasAttribute('accessibilitylabel')).toBe(false);
@@ -801,7 +939,7 @@ describe('Slider', () => {
         if (!atom) {
           return Number.NaN;
         }
-        const px = atom.match(/(\d+(?:\.\d+)?)px$/);
+        const px = /(\d+(?:\.\d+)?)px$/.exec(atom);
         if (px) {
           return Number.parseFloat(px[1]);
         }
@@ -815,7 +953,10 @@ describe('Slider', () => {
         for (const stop of RADIUS_STOPS) {
           const result = renderWithProviders(
             <Preset overrides={{ borderRadius: stop }}>
-              <Slider label="Radius Slider" value={[40]} />
+              <Slider
+                label="Radius Slider"
+                value={[40]}
+              />
             </Preset>,
           );
           const rail = part(result.container, 'rail');
@@ -839,7 +980,13 @@ describe('Slider', () => {
         ) as HTMLElement;
 
       it('mounts without an armed transition or transform residue', () => {
-        const result = renderWithProviders(<Slider label="Mount" name="mount" value={[50]} />);
+        const result = renderWithProviders(
+          <Slider
+            label="Mount"
+            name="mount"
+            value={[50]}
+          />,
+        );
         const thumb = result.container.querySelector('[role="slider"]') as HTMLElement;
         expect(thumb.style.transition).toBe('');
         expect(Array.from(thumb.classList)).toContain('_transition-none');
@@ -853,7 +1000,14 @@ describe('Slider', () => {
           const [values, setValues] = useState([60]);
           return (
             // min > 0 so the degenerate unmeasured-layout pointer value stays truthy
-            <Slider label="Jump" name="jump" value={values} onChange={setValues} min={10} max={110} />
+            <Slider
+              label="Jump"
+              name="jump"
+              value={values}
+              onChange={setValues}
+              min={10}
+              max={110}
+            />
           );
         };
         const result = renderWithProviders(<JumpExample />);
@@ -879,7 +1033,13 @@ describe('Slider', () => {
       });
 
       it('thumb drag start keeps the transition off', async () => {
-        const result = renderWithProviders(<Slider label="Drag" name="drag" value={[40]} />);
+        const result = renderWithProviders(
+          <Slider
+            label="Drag"
+            name="drag"
+            value={[40]}
+          />,
+        );
         const thumb = result.container.querySelector('[role="slider"]') as HTMLElement;
         await act(async () => {
           fireEvent.mouseDown(thumb);

@@ -1,7 +1,8 @@
 import { SizableText, XStack, YStack } from 'tamagui';
 
-import { Intent, type IntentProps } from './Intent';
-import { useIntentContext, useResolvedKnobs } from './useResolvedKnobs';
+import { Intent } from './Intent';
+import type { IntentProps } from './Intent';
+import { useIntentContext, useResolvedKnobs } from './use-resolved-knobs';
 
 export default {
   title: 'Theme/Intent',
@@ -37,10 +38,14 @@ function Probe({ label }: { label: string }) {
       minWidth={140}
       testID={`intent-probe-${label}`}
       {...attrs}>
-      <SizableText color="$color" testID={`intent-text-${label}`}>
+      <SizableText
+        color="$color"
+        testID={`intent-text-${label}`}>
         {label}
       </SizableText>
-      <SizableText color="$color11" fontSize="$2">
+      <SizableText
+        color="$color11"
+        fontSize="$2">
         context: {intent ?? 'none'}
       </SizableText>
     </YStack>
@@ -51,10 +56,15 @@ function Probe({ label }: { label: string }) {
 export const main = {
   name: 'Main',
   render: () => (
-    <XStack gap="$4" flexWrap="wrap" alignItems="flex-start">
+    <XStack
+      gap="$4"
+      flexWrap="wrap"
+      alignItems="flex-start">
       <Probe label="none" />
       {intents.map((name) => (
-        <Intent key={name} name={name}>
+        <Intent
+          key={name}
+          name={name}>
           <Probe label={name} />
         </Intent>
       ))}
@@ -67,7 +77,10 @@ export const nested = {
   name: 'Nested',
   render: () => (
     <Intent name="error">
-      <XStack gap="$4" flexWrap="wrap" alignItems="flex-start">
+      <XStack
+        gap="$4"
+        flexWrap="wrap"
+        alignItems="flex-start">
         <Probe label="outer-error" />
         <Intent name="success">
           <Probe label="inner-success" />
@@ -81,7 +94,9 @@ export const nested = {
 export const explicitTheme = {
   name: 'Explicit theme',
   render: () => (
-    <Intent name="accent" theme="blue">
+    <Intent
+      name="accent"
+      theme="blue">
       <Probe label="accent-as-blue" />
     </Intent>
   ),

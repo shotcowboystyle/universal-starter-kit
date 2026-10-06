@@ -4,12 +4,12 @@ import { Button, Dialog, DialogContent, DialogOverlay, XStack } from '@repo/ui';
 import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { z } from 'zod';
+import type { z } from 'zod';
 
-import { useBoards } from '@/hooks/useBoards';
+import { useBoards } from '@/hooks/use-boards';
 import { useRouter } from '@/i18n/navigation';
 import { useWorkspaceStore } from '@/stores/workspace-store';
-import { boardSchema } from '@/types/boardForm';
+import type { boardSchema } from '@/types/board-form';
 
 import { BoardForm } from './BoardForm';
 
@@ -40,23 +40,39 @@ export default function NewBoardDialog({ children }: NewBoardDialogProps) {
   };
 
   return (
-    <Dialog modal open={open} onOpenChange={setOpen}>
+    <Dialog
+      modal
+      open={open}
+      onOpenChange={setOpen}>
       <Dialog.Trigger asChild>{children}</Dialog.Trigger>
       <Dialog.Portal>
         <DialogOverlay key="overlay" />
-        <DialogContent key="content" maxWidth={480} width="90%" testID="new-board-dialog">
-          <Dialog.Title size="$7" testID="new-board-dialog-title">
+        <DialogContent
+          key="content"
+          maxWidth={480}
+          width="90%"
+          testID="new-board-dialog">
+          <Dialog.Title
+            size="$7"
+            testID="new-board-dialog-title">
             {t('newBoardTitle')}
           </Dialog.Title>
           <Dialog.Description>{t('newBoardDescription')}</Dialog.Description>
           <BoardForm onSubmit={handleSubmit}>
-            <XStack justifyContent="flex-end" gap="$2">
+            <XStack
+              justifyContent="flex-end"
+              gap="$2">
               <Dialog.Close asChild>
-                <Button chromeless testID="cancel-button">
+                <Button
+                  chromeless
+                  testID="cancel-button">
                   {t('cancel')}
                 </Button>
               </Dialog.Close>
-              <Button accent action="submit" testID="create-button">
+              <Button
+                accent
+                action="submit"
+                testID="create-button">
                 {t('create')}
               </Button>
             </XStack>

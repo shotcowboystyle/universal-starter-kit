@@ -41,10 +41,10 @@ export {
   thinCategories,
   type CartesianPlotInput,
   type SeriesFillsInput,
-} from './composeChart';
+} from './compose-chart';
 
 // Theming (chrome from knobs + ramps; series from useChartPalette)
-export { useChartTheme, type ChartTheme } from './useChartTheme';
+export { useChartTheme, type ChartTheme } from './use-chart-theme';
 
 // Primitives
 export { ChartSurface, type ChartSurfaceProps } from './ChartSurface';

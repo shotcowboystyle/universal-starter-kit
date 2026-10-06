@@ -1,16 +1,15 @@
 import { ClipboardIcon, WarningCircleIcon } from '@phosphor-icons/react';
 import { writeToClipboard } from '@repo/platform';
-import { useTouchSurface } from '@repo/theme';
-import { MIN_PRESS_TARGET, pressTargetHitSlop } from '@repo/theme';
+import { useTouchSurface, MIN_PRESS_TARGET, pressTargetHitSlop } from '@repo/theme';
 import type { ComponentProps, ReactElement, ReactNode } from 'react';
 import { useCallback, useRef } from 'react';
 import type { InputKeyboardType, InputTextContentType, LabelProps, SizeTokens, TamaguiElement } from 'tamagui';
 import { isWeb, Text } from 'tamagui';
 
-import { resolveFieldInputProps } from '../../fieldDefaults';
-import { Field, FieldLayout } from '../../fieldLayout';
+import { resolveFieldInputProps } from '../../field-defaults';
+import { Field, FieldLayout } from '../../FieldLayout';
 import { Input as InputParts, useForwardFocus } from '../../InputParts';
-import { formCommonColors } from '../../shared/colorRamps';
+import { formCommonColors } from '../../shared/color-ramps';
 import {
   getFieldError,
   getFieldHeight,
@@ -42,7 +41,7 @@ export function ensureInputFieldRingOffset(): void {
 [data-mp-input-field][data-mp-ring="inset"]:focus-visible {
   outline-offset: 0px !important;
 }`;
-  document.head.appendChild(tag);
+  document.head.append(tag);
 }
 
 export interface InputProps {
@@ -258,9 +257,15 @@ export function Input({
   // only the control chrome is the skeleton.
   if (skeleton) {
     return (
-      <FieldLayout {...layoutBind} error={error}>
+      <FieldLayout
+        {...layoutBind}
+        error={error}>
         <InputParts size={resolvedSize}>
-          <Skeleton variant="rounded" width="100%" height={visualHeight} />
+          <Skeleton
+            variant="rounded"
+            width="100%"
+            height={visualHeight}
+          />
         </InputParts>
       </FieldLayout>
     );
@@ -268,7 +273,9 @@ export function Input({
 
   if (children) {
     return (
-      <InputParts size={resolvedSize} {...(error ? { theme: 'error' } : undefined)}>
+      <InputParts
+        size={resolvedSize}
+        {...(error ? { theme: 'error' } : undefined)}>
         {children}
       </InputParts>
     );
@@ -299,13 +306,17 @@ export function Input({
         {...(showCopy ? { paddingInlineEnd: 0 } : undefined)}
         {...chromelessProps}>
         {leftIcon && (
-          <InputParts.Icon adornment="leading" {...focusTrigger}>
+          <InputParts.Icon
+            adornment="leading"
+            {...focusTrigger}>
             {leftIcon}
           </InputParts.Icon>
         )}
         {readOnly ? (
           linkResolver ? (
-            <LinkCell value={inputValue} linkResolver={linkResolver}>
+            <LinkCell
+              value={inputValue}
+              linkResolver={linkResolver}>
               <Text
                 id={id}
                 aria-readonly="true"
@@ -333,22 +344,22 @@ export function Input({
         ) : (
           <InputParts.Area
             ref={inputRef}
-            {...(purposeInputProps.inputMode !== undefined ? { inputMode: purposeInputProps.inputMode } : undefined)}
-            {...(purposeInputProps.keyboardType !== undefined
-              ? { keyboardType: purposeInputProps.keyboardType }
-              : undefined)}
-            {...(purposeInputProps.autoComplete !== undefined
-              ? { autoComplete: purposeInputProps.autoComplete }
-              : undefined)}
+            {...(purposeInputProps.inputMode === undefined ? undefined : { inputMode: purposeInputProps.inputMode })}
+            {...(purposeInputProps.keyboardType === undefined
+              ? undefined
+              : { keyboardType: purposeInputProps.keyboardType })}
+            {...(purposeInputProps.autoComplete === undefined
+              ? undefined
+              : { autoComplete: purposeInputProps.autoComplete })}
             {...inputProps}
             {...identifierProps}
-            {...(multiline !== undefined ? { multiline } : undefined)}
-            {...(maxLength !== undefined ? { maxLength } : undefined)}
-            {...(keyboardType !== undefined ? { keyboardType } : undefined)}
-            {...(textContentType !== undefined ? { textContentType } : undefined)}
-            {...(autoComplete !== undefined ? { autoComplete } : undefined)}
-            {...(secureTextEntry !== undefined ? { secureTextEntry } : undefined)}
-            {...(placeholder !== undefined ? { placeholder } : undefined)}
+            {...(multiline === undefined ? undefined : { multiline })}
+            {...(maxLength === undefined ? undefined : { maxLength })}
+            {...(keyboardType === undefined ? undefined : { keyboardType })}
+            {...(textContentType === undefined ? undefined : { textContentType })}
+            {...(autoComplete === undefined ? undefined : { autoComplete })}
+            {...(secureTextEntry === undefined ? undefined : { secureTextEntry })}
+            {...(placeholder === undefined ? undefined : { placeholder })}
             disabled={disabled}
             id={id}
             {...(handleChange || value !== undefined ? { value: inputValue ?? '' } : { defaultValue: inputValue })}
@@ -393,13 +404,17 @@ export function Input({
             </InputParts.Icon>
           </InputParts.Button>
         ) : rightIcon ? (
-          <InputParts.Icon adornment="trailing" {...(rightIconInteractive ? undefined : focusTrigger)}>
+          <InputParts.Icon
+            adornment="trailing"
+            {...(rightIconInteractive ? undefined : focusTrigger)}>
             {rightIcon}
           </InputParts.Icon>
         ) : hasError ? (
           // M3 / Polaris / Spectrum: in-field error glyph (color is not the
           // only channel). Omitted when the consumer owns the trailing slot.
-          <InputParts.Icon adornment="trailing" color={formCommonColors.error}>
+          <InputParts.Icon
+            adornment="trailing"
+            color={formCommonColors.error}>
             <WarningCircleIcon aria-hidden />
           </InputParts.Icon>
         ) : null}
@@ -409,7 +424,10 @@ export function Input({
 
   if (!resolvedForm || !name) {
     return (
-      <FieldLayout {...layoutBind} error={error} onBlur={onBlur}>
+      <FieldLayout
+        {...layoutBind}
+        error={error}
+        onBlur={onBlur}>
         <InputParts size={resolvedSize}>
           {renderInputBox(value ?? defaultValue, undefined, undefined, !!error)}
         </InputParts>
@@ -418,11 +436,18 @@ export function Input({
   }
 
   return (
-    <Field form={resolvedForm} name={name} defaultValue={defaultValue} validators={resolvedValidators}>
+    <Field
+      form={resolvedForm}
+      name={name}
+      defaultValue={defaultValue}
+      validators={resolvedValidators}>
       {(field) => {
         const resolvedError = getFieldError(field, error);
         return (
-          <FieldLayout {...layoutBind} error={resolvedError} onBlur={mergeFieldHandler(field, 'handleBlur', onBlur)}>
+          <FieldLayout
+            {...layoutBind}
+            error={resolvedError}
+            onBlur={mergeFieldHandler(field, 'handleBlur', onBlur)}>
             <InputParts size={resolvedSize}>
               {renderInputBox(
                 field.state.value,

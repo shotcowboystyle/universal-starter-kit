@@ -81,8 +81,15 @@ export const WidthWithAspectRatio: Story = {
 
 export const FullWidthResponsive: Story = {
   render: () => (
-    <View width="100%" maxWidth={600}>
-      <Image src={LANDSCAPE_IMG} alt="Full width responsive" width="100%" aspectRatio={2} />
+    <View
+      width="100%"
+      maxWidth={600}>
+      <Image
+        src={LANDSCAPE_IMG}
+        alt="Full width responsive"
+        width="100%"
+        aspectRatio={2}
+      />
     </View>
   ),
 };
@@ -144,19 +151,49 @@ export const WithBorderRadius: Story = {
 
 export const Thumbnails: Story = {
   render: () => (
-    <XStack gap="$3" alignItems="flex-end" padding="$4">
-      <Image src={SQUARE_IMG} alt="Extra small nested" size="extraSmall" compact />
-      <Image src={SQUARE_IMG} alt="Small" size="small" />
-      <Image src={SQUARE_IMG} alt="Medium" size="medium" />
-      <Image src={SQUARE_IMG} alt="Large" size="large" />
+    <XStack
+      gap="$3"
+      alignItems="flex-end"
+      padding="$4">
+      <Image
+        src={SQUARE_IMG}
+        alt="Extra small nested"
+        size="extraSmall"
+        compact
+      />
+      <Image
+        src={SQUARE_IMG}
+        alt="Small"
+        size="small"
+      />
+      <Image
+        src={SQUARE_IMG}
+        alt="Medium"
+        size="medium"
+      />
+      <Image
+        src={SQUARE_IMG}
+        alt="Large"
+        size="large"
+      />
     </XStack>
   ),
 };
 
 export const FillParent: Story = {
   render: () => (
-    <View width={280} height={160} position="relative" overflow="hidden" borderRadius="$4">
-      <Image src={LANDSCAPE_IMG} alt="Fill parent" fill sizes="280px" />
+    <View
+      width={280}
+      height={160}
+      position="relative"
+      overflow="hidden"
+      borderRadius="$4">
+      <Image
+        src={LANDSCAPE_IMG}
+        alt="Fill parent"
+        fill
+        sizes="280px"
+      />
     </View>
   ),
 };
@@ -171,9 +208,27 @@ export const MissingFallback: Story = {
 export const StackedGroup: Story = {
   render: () => (
     <XStack>
-      <Image src={SQUARE_IMG} alt="First" size="medium" groupPosition="first" groupOrientation="horizontal" />
-      <Image src={SQUARE_IMG} alt="Middle" size="medium" groupPosition="middle" groupOrientation="horizontal" />
-      <Image src={SQUARE_IMG} alt="Last" size="medium" groupPosition="last" groupOrientation="horizontal" />
+      <Image
+        src={SQUARE_IMG}
+        alt="First"
+        size="medium"
+        groupPosition="first"
+        groupOrientation="horizontal"
+      />
+      <Image
+        src={SQUARE_IMG}
+        alt="Middle"
+        size="medium"
+        groupPosition="middle"
+        groupOrientation="horizontal"
+      />
+      <Image
+        src={SQUARE_IMG}
+        alt="Last"
+        size="medium"
+        groupPosition="last"
+        groupOrientation="horizontal"
+      />
     </XStack>
   ),
 };
@@ -189,13 +244,45 @@ export const Pressable: Story = {
 
 export const Gallery: Story = {
   render: () => (
-    <YStack gap="$4" padding="$4" maxWidth={800}>
-      <Image src={LANDSCAPE_IMG} alt="Both dimensions" width={400} height={200} testID="gallery-both" />
-      <XStack gap="$3" alignItems="flex-end">
-        <Image src={SQUARE_IMG} alt="Extra small" size="extraSmall" compact testID="gallery-xs" />
-        <Image src={SQUARE_IMG} alt="Small" size="small" testID="gallery-sm" />
-        <Image src={SQUARE_IMG} alt="Medium" size="medium" testID="gallery-md" />
-        <Image src={SQUARE_IMG} alt="Large" size="large" testID="gallery-lg" />
+    <YStack
+      gap="$4"
+      padding="$4"
+      maxWidth={800}>
+      <Image
+        src={LANDSCAPE_IMG}
+        alt="Both dimensions"
+        width={400}
+        height={200}
+        testID="gallery-both"
+      />
+      <XStack
+        gap="$3"
+        alignItems="flex-end">
+        <Image
+          src={SQUARE_IMG}
+          alt="Extra small"
+          size="extraSmall"
+          compact
+          testID="gallery-xs"
+        />
+        <Image
+          src={SQUARE_IMG}
+          alt="Small"
+          size="small"
+          testID="gallery-sm"
+        />
+        <Image
+          src={SQUARE_IMG}
+          alt="Medium"
+          size="medium"
+          testID="gallery-md"
+        />
+        <Image
+          src={SQUARE_IMG}
+          alt="Large"
+          size="large"
+          testID="gallery-lg"
+        />
       </XStack>
       <XStack>
         <Image
@@ -206,8 +293,20 @@ export const Gallery: Story = {
           groupOrientation="horizontal"
           testID="gallery-stack-first"
         />
-        <Image src={SQUARE_IMG} alt="Stack middle" size="medium" groupPosition="middle" groupOrientation="horizontal" />
-        <Image src={SQUARE_IMG} alt="Stack last" size="medium" groupPosition="last" groupOrientation="horizontal" />
+        <Image
+          src={SQUARE_IMG}
+          alt="Stack middle"
+          size="medium"
+          groupPosition="middle"
+          groupOrientation="horizontal"
+        />
+        <Image
+          src={SQUARE_IMG}
+          alt="Stack last"
+          size="medium"
+          groupPosition="last"
+          groupOrientation="horizontal"
+        />
       </XStack>
       <XStack gap="$3">
         <Image
@@ -219,11 +318,33 @@ export const Gallery: Story = {
           framed
           testID="gallery-cover"
         />
-        <Image alt="Unavailable" size="medium" testID="gallery-fallback" />
-        <Image src={SQUARE_IMG} alt="Open photo" size="medium" onPress={() => {}} testID="gallery-press" />
+        <Image
+          alt="Unavailable"
+          size="medium"
+          testID="gallery-fallback"
+        />
+        <Image
+          src={SQUARE_IMG}
+          alt="Open photo"
+          size="medium"
+          onPress={() => {}}
+          testID="gallery-press"
+        />
       </XStack>
-      <Image src={SVG_IMG} alt="SVG" width={100} height={100} testID="gallery-svg" />
-      <Image src={GIF_IMG} alt="GIF" width={150} height={150} testID="gallery-gif" />
+      <Image
+        src={SVG_IMG}
+        alt="SVG"
+        width={100}
+        height={100}
+        testID="gallery-svg"
+      />
+      <Image
+        src={GIF_IMG}
+        alt="GIF"
+        width={150}
+        height={150}
+        testID="gallery-gif"
+      />
     </YStack>
   ),
 };

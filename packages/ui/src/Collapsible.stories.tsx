@@ -26,7 +26,9 @@ type Story = StoryObj<typeof Collapsible>;
 export const Default: Story = {
   name: 'Main',
   render: () => (
-    <YStack maxWidth={420} gap="$3">
+    <YStack
+      maxWidth={420}
+      gap="$3">
       <Collapsible defaultOpen>
         <Collapsible.Trigger asChild>
           <Button chromeless>Toggle section</Button>

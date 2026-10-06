@@ -1,7 +1,7 @@
 import type { ColorTokens, FontSizeTokens, TransitionProp } from 'tamagui';
 
 import type { Knobs } from './knobs';
-import type { HitSlopInsets } from './layoutTokens';
+import type { HitSlopInsets } from './layout-tokens';
 
 // ── State knob prop types (by concern) ───────────────────────────────────
 
@@ -123,7 +123,7 @@ export interface KnobRecipe<T> {
 /**
  * Corner smoothing carrier (Axiom 15 OPTICS): radius-bearing fragments gain
  * `className: "mp-corner-smooth"` when `cornerSmoothing: "smooth"` (web
- * only) — the mounted stylesheet in `cornerSmoothing.ts` resolves it to
+ * only) — the mounted stylesheet in `corner-smoothing.ts` resolves it to
  * `corner-shape: squircle` (computed `superellipse(2)` on Chromium 152).
  * Engines without the property drop the declaration; native is absent.
  */

@@ -43,7 +43,7 @@ describe('NewProjectDialog', () => {
 
   const openDialog = async () => {
     fireEvent.click(screen.getByTestId('new-project-trigger'));
-    return screen.findByText('addNewProjectTitle');
+    return await screen.findByText('addNewProjectTitle');
   };
 
   const submitTitle = (title: string) => {
@@ -59,7 +59,7 @@ describe('NewProjectDialog', () => {
 
   it('opens the dialog with the project form', async () => {
     renderWithProviders(<NewProjectDialog />);
-    expect(await openDialog()).toBeInTheDocument();
+    await expect(openDialog()).resolves.toBeInTheDocument();
     expect(screen.getByText('addNewProjectDescription')).toBeInTheDocument();
     expect(screen.getByTestId('project-title-input')).toBeInTheDocument();
     expect(screen.getByText('cancel')).toBeInTheDocument();
@@ -118,7 +118,7 @@ describe('NewProjectDialog', () => {
     await openDialog();
     fireEvent.click(screen.getByTestId('submit-project-button'));
 
-    expect(await screen.findByText('Title is required')).toBeInTheDocument();
+    await expect(screen.findByText('Title is required')).resolves.toBeInTheDocument();
     expect(addProject).not.toHaveBeenCalled();
   });
 });

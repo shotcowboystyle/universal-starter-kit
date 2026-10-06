@@ -15,13 +15,25 @@ export const useRouter = (): Router => {
   const pathname = useNextPathname();
   const searchParams = useSearchParams();
   return {
-    back: () => router.back(),
+    back: () => {
+      router.back();
+    },
     canGoBack: () => typeof window !== 'undefined' && window.history.length > 1,
-    push: (href: Href) => router.push(String(href)),
-    navigate: (href: Href) => router.push(String(href)),
-    replace: (href: Href) => router.replace(String(href)),
-    dismiss: () => router.back(),
-    dismissAll: () => router.push('/'),
+    push: (href: Href) => {
+      router.push(String(href));
+    },
+    navigate: (href: Href) => {
+      router.push(String(href));
+    },
+    replace: (href: Href) => {
+      router.replace(String(href));
+    },
+    dismiss: () => {
+      router.back();
+    },
+    dismissAll: () => {
+      router.push('/');
+    },
     canDismiss: () => false,
     setParams: <T extends string = ''>(params?: T extends '' ? InputRouteParamsBlank : InputRouteParams<T>) => {
       const next = new URLSearchParams(searchParams.toString());
@@ -59,7 +71,10 @@ export const useParams = () => {
 };
 
 export const Link: LinkComponent = ({ href, replace, children, ...props }) => (
-  <NextLink href={String(href)} replace={replace} {...props}>
+  <NextLink
+    href={String(href)}
+    replace={replace}
+    {...props}>
     {children}
   </NextLink>
 );

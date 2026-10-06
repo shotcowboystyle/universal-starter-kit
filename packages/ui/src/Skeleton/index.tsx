@@ -1,5 +1,6 @@
 import { radiusClassProps, sizeRecipeForToken, useResolvedKnobs } from '@repo/theme';
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, useContext } from 'react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { GetProps } from 'tamagui';
 import { View, styled, isWeb } from 'tamagui';
@@ -39,7 +40,7 @@ function ensureShimmerStyles() {
     '@media (prefers-reduced-motion:reduce){.mp-skeleton-pulse{animation:none!important;mask-image:none}}',
     '@media (forced-colors:active){.mp-skeleton-bone{outline:1px solid transparent;outline-offset:-1px}}',
   ].join('');
-  document.head.appendChild(style);
+  document.head.append(style);
 }
 
 const SkeletonFrame = styled(View, {
@@ -134,13 +135,13 @@ export function Skeleton({
       data-skeleton=""
       data-skeleton-variant={variant}
       data-animate={pulsing ? 'true' : 'false'}
-      data-width={width != null ? String(width) : undefined}
+      data-width={width == null ? undefined : String(width)}
       data-height={
-        height != null
-          ? String(height)
-          : variant === 'text'
+        height == null
+          ? variant === 'text'
             ? String(resolveTextHeight(knobProps.sizeToken, 'body'))
             : undefined
+          : String(height)
       }
       aria-hidden={decorative ? true : undefined}
       role={decorative ? undefined : 'status'}

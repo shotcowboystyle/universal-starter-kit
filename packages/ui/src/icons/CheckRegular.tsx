@@ -13,8 +13,16 @@ function Icon({
   [key: string]: unknown;
 }) {
   return (
-    <Svg viewBox="0 0 256 256" {...otherProps} height={size} width={size}>
-      <Rect width="256" height="256" fill="none" />
+    <Svg
+      viewBox="0 0 256 256"
+      {...otherProps}
+      height={size}
+      width={size}>
+      <Rect
+        width="256"
+        height="256"
+        fill="none"
+      />
       <Polyline
         points="216 72 104 184 48 128"
         fill="none"

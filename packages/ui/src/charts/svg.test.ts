@@ -11,7 +11,7 @@ import {
   luminanceMaskProps,
 } from './svg';
 
-it('keeps browser audit attributes off native SVG props', () => {
+test('keeps browser audit attributes off native SVG props', () => {
   expect(
     chartRootA11yProps('Revenue', {
       kind: 'bar',

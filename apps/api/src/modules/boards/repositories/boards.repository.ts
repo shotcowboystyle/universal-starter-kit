@@ -1,8 +1,10 @@
-import { Injectable } from "@nestjs/common";
-import { InjectModel } from "@nestjs/mongoose";
-import { Model, Types } from "mongoose";
+import { Injectable } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import type { Model } from 'mongoose';
+import { Types } from 'mongoose';
 
-import { Board, BoardDocument } from "../schemas/boards.schema";
+import type { BoardDocument } from '../schemas/boards.schema';
+import { Board } from '../schemas/boards.schema';
 
 @Injectable()
 export class BoardRepository {
@@ -14,20 +16,20 @@ export class BoardRepository {
     return [
       {
         $lookup: {
-          from: "users",
-          localField: "owner",
-          foreignField: "_id",
-          as: "owner"
-        }
+          from: 'users',
+          localField: 'owner',
+          foreignField: '_id',
+          as: 'owner',
+        },
       },
-      { $unwind: "$owner" },
+      { $unwind: '$owner' },
       {
         $lookup: {
-          from: "users",
-          localField: "members",
-          foreignField: "_id",
-          as: "members"
-        }
+          from: 'users',
+          localField: 'members',
+          foreignField: '_id',
+          as: 'members',
+        },
       },
       {
         $project: {
@@ -35,9 +37,9 @@ export class BoardRepository {
           title: 1,
           description: 1,
           owner: { _id: 1, name: 1, email: 1 },
-          members: { _id: 1, name: 1, email: 1 }
-        }
-      }
+          members: { _id: 1, name: 1, email: 1 },
+        },
+      },
     ];
   }
 
@@ -53,8 +55,8 @@ export class BoardRepository {
         members: { _id: 1, name: 1, email: 1 },
         projects: 1,
         createdAt: 1,
-        updatedAt: 1
-      }
+        updatedAt: 1,
+      },
     };
   }
 
@@ -64,31 +66,31 @@ export class BoardRepository {
     return [
       {
         $lookup: {
-          from: "users",
-          localField: "owner",
-          foreignField: "_id",
-          as: "owner"
-        }
+          from: 'users',
+          localField: 'owner',
+          foreignField: '_id',
+          as: 'owner',
+        },
       },
-      { $unwind: "$owner" },
+      { $unwind: '$owner' },
       {
         $lookup: {
-          from: "users",
-          localField: "members",
-          foreignField: "_id",
-          as: "members"
-        }
+          from: 'users',
+          localField: 'members',
+          foreignField: '_id',
+          as: 'members',
+        },
       },
       {
         $lookup: {
-          from: "projects",
-          localField: "projects",
-          foreignField: "_id",
-          as: "projects",
-          pipeline: this.getProjectPopulatePipeline()
-        }
+          from: 'projects',
+          localField: 'projects',
+          foreignField: '_id',
+          as: 'projects',
+          pipeline: this.getProjectPopulatePipeline(),
+        },
       },
-      this.getBoardProjection()
+      this.getBoardProjection(),
     ];
   }
 
@@ -100,20 +102,17 @@ export class BoardRepository {
     projects?: Types.ObjectId[];
   }): Promise<Board> {
     const board = new this.boardModel(data);
-    return board.save();
+    return await board.save();
   }
 
   async findByOwner(userId: Types.ObjectId): Promise<Board[]> {
-    return this.boardModel.aggregate([
-      { $match: { owner: userId } },
-      ...this.getBoardPopulateStages()
-    ]);
+    return await this.boardModel.aggregate([{ $match: { owner: userId } }, ...this.getBoardPopulateStages()]);
   }
 
   async findByMemberNotOwner(userId: Types.ObjectId): Promise<Board[]> {
-    return this.boardModel.aggregate([
+    return await this.boardModel.aggregate([
       { $match: { members: userId, owner: { $ne: userId } } },
-      ...this.getBoardPopulateStages()
+      ...this.getBoardPopulateStages(),
     ]);
   }
 
@@ -122,21 +121,21 @@ export class BoardRepository {
       {
         $match: {
           _id: boardId,
-          $or: [{ owner: userId }, { members: userId }]
-        }
+          $or: [{ owner: userId }, { members: userId }],
+        },
       },
       ...this.getBoardPopulateStages(),
-      { $limit: 1 }
+      { $limit: 1 },
     ]);
     return board ?? null;
   }
 
   async findById(id: string): Promise<BoardDocument | null> {
-    return this.boardModel.findById(id).exec();
+    return await this.boardModel.findById(id).exec();
   }
 
   async updateById(id: string, updateData: Partial<Board>): Promise<BoardDocument | null> {
-    return this.boardModel.findByIdAndUpdate(id, { $set: updateData }, { new: true }).exec();
+    return await this.boardModel.findByIdAndUpdate(id, { $set: updateData }, { new: true }).exec();
   }
 
   async deleteById(id: string): Promise<{ deletedCount: number }> {
@@ -145,21 +144,21 @@ export class BoardRepository {
   }
 
   async addMember(boardId: string, ownerId: string, memberId: string): Promise<Board | null> {
-    return this.boardModel
+    return await this.boardModel
       .findOneAndUpdate(
         { _id: new Types.ObjectId(boardId), owner: new Types.ObjectId(ownerId) },
         { $addToSet: { members: new Types.ObjectId(memberId) } },
-        { new: true }
+        { new: true },
       )
       .exec();
   }
 
   async removeMember(boardId: string, ownerId: string, memberId: string): Promise<Board | null> {
-    return this.boardModel
+    return await this.boardModel
       .findOneAndUpdate(
         { _id: new Types.ObjectId(boardId), owner: new Types.ObjectId(ownerId) },
         { $pull: { members: new Types.ObjectId(memberId) } },
-        { new: true }
+        { new: true },
       )
       .exec();
   }

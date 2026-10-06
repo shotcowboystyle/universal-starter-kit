@@ -3,11 +3,13 @@ import { TestProviders } from '@repo/test-utils';
  * Surface context — nested size/density step-down.
  */
 import { render, renderHook } from '@testing-library/react';
-import { createElement, type ReactNode } from 'react';
+import { createElement } from 'react';
+import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { Surface, SurfaceContext, clampSurfaceDensity, clampSurfaceSize, type SurfaceIntent } from './Surface';
-import { useResolvedKnobs } from './useResolvedKnobs';
+import { Surface, SurfaceContext, clampSurfaceDensity, clampSurfaceSize } from './Surface';
+import type { SurfaceIntent } from './Surface';
+import { useResolvedKnobs } from './use-resolved-knobs';
 
 // These structural context tests hold the color scheme constant.
 vi.mock(import('tamagui'), async (importOriginal) => ({

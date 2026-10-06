@@ -2,8 +2,9 @@ import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { useState } from 'react';
 import { YStack } from 'tamagui';
 
-import { TreeView, type TreeNode, type TreeViewProps } from './TreeView';
-import { applyTreeMove } from './treeViewDnd';
+import { applyTreeMove } from './tree-view-dnd';
+import { TreeView } from './TreeView';
+import type { TreeNode, TreeViewProps } from './TreeView';
 
 const nodes: TreeNode[] = [
   {

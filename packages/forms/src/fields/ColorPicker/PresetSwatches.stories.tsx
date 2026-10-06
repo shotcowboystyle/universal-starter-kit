@@ -35,7 +35,10 @@ export const Main: Story = {
     const Example = () => {
       const [selected, setSelected] = useState<string | null>(BRAND[3]);
       return (
-        <YStack gap="$3" padding="$4" width={280}>
+        <YStack
+          gap="$3"
+          padding="$4"
+          width={280}>
           <PresetSwatches
             presetColors={BRAND}
             selectedColor={selected}
@@ -44,7 +47,9 @@ export const Main: Story = {
               action('onSelect')(next);
             }}
           />
-          <Text fontSize="$2" color="$color10">
+          <Text
+            fontSize="$2"
+            color="$color10">
             {selected ?? 'none'}
           </Text>
         </YStack>
@@ -56,8 +61,14 @@ export const Main: Story = {
 
 export const Selected: Story = {
   render: () => (
-    <YStack padding="$4" width={280}>
-      <PresetSwatches presetColors={BRAND} selectedColor="#3B82F6" onSelect={action('onSelect')} />
+    <YStack
+      padding="$4"
+      width={280}>
+      <PresetSwatches
+        presetColors={BRAND}
+        selectedColor="#3B82F6"
+        onSelect={action('onSelect')}
+      />
     </YStack>
   ),
 };
@@ -68,7 +79,10 @@ export const NoColor: Story = {
     const Example = () => {
       const [selected, setSelected] = useState<string | null>(null);
       return (
-        <YStack gap="$3" padding="$4" width={280}>
+        <YStack
+          gap="$3"
+          padding="$4"
+          width={280}>
           <PresetSwatches
             presetColors={[{ name: 'None', value: null }, ...BRAND]}
             selectedColor={selected}
@@ -85,10 +99,16 @@ export const NoColor: Story = {
 export const Empty: Story = {
   render: () => (
     <YStack padding="$4">
-      <Text fontSize="$2" color="$color10">
+      <Text
+        fontSize="$2"
+        color="$color10">
         empty presetColors — row is null
       </Text>
-      <PresetSwatches presetColors={[]} selectedColor={null} onSelect={action('onSelect')} />
+      <PresetSwatches
+        presetColors={[]}
+        selectedColor={null}
+        onSelect={action('onSelect')}
+      />
     </YStack>
   ),
 };

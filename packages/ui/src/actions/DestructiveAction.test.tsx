@@ -9,8 +9,9 @@ import { renderWithProviders } from '@repo/test-utils';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { DestructiveAction, type DestructiveConfirmContext } from './DestructiveAction';
-import { __resetActionDevWarnSeen } from './devWarn';
+import { DestructiveAction } from './DestructiveAction';
+import type { DestructiveConfirmContext } from './DestructiveAction';
+import { __resetActionDevWarnSeen } from './dev-warn';
 import { resolveDestructiveSeverity, severityRequiresConfirm, severityUsesDangerTone } from './severity';
 
 /** Dialog portals into document.body — query there, not the RTL container. */
@@ -73,14 +74,25 @@ describe('DestructiveAction', () => {
 
   it('renders verb+noun label and danger tone by default (medium)', () => {
     renderWithProviders(
-      <DestructiveAction verb="Delete" noun="pipeline" confirm={async () => false} onAction={() => {}} />,
+      <DestructiveAction
+        verb="Delete"
+        noun="pipeline"
+        confirm={async () => false}
+        onAction={() => {}}
+      />,
     );
     expect(screen.getByText('Delete pipeline')).toBeInTheDocument();
   });
 
   it('default path opens ConfirmDialog; cancel does not call onAction', async () => {
     const onAction = vi.fn();
-    renderWithProviders(<DestructiveAction verb="Delete" noun="pipeline" onAction={onAction} />);
+    renderWithProviders(
+      <DestructiveAction
+        verb="Delete"
+        noun="pipeline"
+        onAction={onAction}
+      />,
+    );
     fireEvent.click(screen.getByText('Delete pipeline'));
     await waitFor(() => {
       expect(alertdialog()).toBeTruthy();
@@ -99,7 +111,12 @@ describe('DestructiveAction', () => {
   it('default ConfirmDialog confirm runs onAction', async () => {
     const onAction = vi.fn();
     renderWithProviders(
-      <DestructiveAction verb="Delete" noun="pipeline" consequence="This cannot be undone." onAction={onAction} />,
+      <DestructiveAction
+        verb="Delete"
+        noun="pipeline"
+        consequence="This cannot be undone."
+        onAction={onAction}
+      />,
     );
     fireEvent.click(screen.getByText('Delete pipeline'));
     await waitFor(() => {
@@ -108,7 +125,7 @@ describe('DestructiveAction', () => {
     expect(root().textContent).toContain('This cannot be undone.');
     fireEvent.click(dialogButtonByLabel('Delete'));
     await waitFor(() => {
-      expect(onAction).toHaveBeenCalledTimes(1);
+      expect(onAction).toHaveBeenCalledOnce();
     });
     await waitFor(() => {
       expect(alertdialog()).toBeNull();
@@ -118,22 +135,35 @@ describe('DestructiveAction', () => {
   it('calls onAction only after confirm returns true', async () => {
     const onAction = vi.fn();
     const confirm = vi.fn(async (_ctx: DestructiveConfirmContext) => true);
-    renderWithProviders(<DestructiveAction verb="Delete" noun="row" confirm={confirm} onAction={onAction} />);
+    renderWithProviders(
+      <DestructiveAction
+        verb="Delete"
+        noun="row"
+        confirm={confirm}
+        onAction={onAction}
+      />,
+    );
     fireEvent.click(screen.getByText('Delete row'));
     await waitFor(() => {
-      expect(confirm).toHaveBeenCalledTimes(1);
+      expect(confirm).toHaveBeenCalledOnce();
     });
     expect(confirm.mock.calls[0][0].confirmLabel).toBe('Delete');
     expect(confirm.mock.calls[0][0].actionLabel).toBe('Delete row');
     await waitFor(() => {
-      expect(onAction).toHaveBeenCalledTimes(1);
+      expect(onAction).toHaveBeenCalledOnce();
     });
     expect(alertdialog()).toBeNull();
   });
 
   it('does not call onAction when confirm returns false', async () => {
     const onAction = vi.fn();
-    renderWithProviders(<DestructiveAction verb="Delete" confirm={async () => false} onAction={onAction} />);
+    renderWithProviders(
+      <DestructiveAction
+        verb="Delete"
+        confirm={async () => false}
+        onAction={onAction}
+      />,
+    );
     fireEvent.click(screen.getByText('Delete'));
     await waitFor(() => {
       expect(onAction).not.toHaveBeenCalled();
@@ -143,10 +173,17 @@ describe('DestructiveAction', () => {
   it('low severity skips confirm and danger tone', async () => {
     const onAction = vi.fn();
     const confirm = vi.fn(async () => true);
-    renderWithProviders(<DestructiveAction severity="low" verb="Remove" confirm={confirm} onAction={onAction} />);
+    renderWithProviders(
+      <DestructiveAction
+        severity="low"
+        verb="Remove"
+        confirm={confirm}
+        onAction={onAction}
+      />,
+    );
     fireEvent.click(screen.getByText('Remove'));
     await waitFor(() => {
-      expect(onAction).toHaveBeenCalledTimes(1);
+      expect(onAction).toHaveBeenCalledOnce();
     });
     expect(confirm).not.toHaveBeenCalled();
     expect(alertdialog()).toBeNull();
@@ -205,7 +242,7 @@ describe('DestructiveAction', () => {
     });
     fireEvent.click(dialogButtonByLabel('Delete'));
     await waitFor(() => {
-      expect(onAction).toHaveBeenCalledTimes(1);
+      expect(onAction).toHaveBeenCalledOnce();
     });
   });
 
@@ -260,7 +297,7 @@ describe('DestructiveAction', () => {
     });
     fireEvent.click(dialogButtonByLabel('Delete'));
     await waitFor(() => {
-      expect(onAction).toHaveBeenCalledTimes(1);
+      expect(onAction).toHaveBeenCalledOnce();
     });
   });
 
@@ -290,7 +327,7 @@ describe('DestructiveAction', () => {
   });
 
   it('typed-confirm TSX has no HTML span/input hosts', () => {
-    const src = readFileSync(resolve(process.cwd(), 'src/actions/DestructiveAction.tsx'), 'utf8');
+    const src = readFileSync(resolve(process.cwd(), 'src/actions/DestructiveAction.tsx'), 'utf-8');
     expect(src).not.toMatch(/<span[\s>]/);
     expect(src).not.toMatch(/<input[\s>]/);
   });

@@ -3,11 +3,13 @@
  */
 
 import { renderWithProviders } from '@repo/test-utils';
-import { Preset, type Knobs } from '@repo/theme';
+import { Preset } from '@repo/theme';
+import type { Knobs } from '@repo/theme';
 import { cleanup, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { Attachments, type AttachmentItem } from './Attachments';
+import { Attachments } from './Attachments';
+import type { AttachmentItem } from './Attachments';
 
 afterEach(cleanup);
 

@@ -7,11 +7,11 @@ import { ChartSurface } from './ChartSurface';
 import { createLinearScale, createPointScale, valueDomain } from './math';
 import { AreaSeries, LineSeries } from './series';
 import type { ChartCurve, ChartDatum } from './types';
-import { useChartTheme } from './useChartTheme';
+import { useChartTheme } from './use-chart-theme';
 
 export interface SparklineProps extends Omit<YStackProps, 'children' | 'width' | 'height'> {
   /** Series values — bare numbers or full data points. */
-  data: Array<number | ChartDatum>;
+  data: (number | ChartDatum)[];
   /** Drawing height in px (default 36 — inline metric scale). */
   height?: number;
   /** Fixed width; omit to track the parent responsively. */
@@ -100,7 +100,12 @@ export function Sparkline({
         return (
           <>
             {showArea ? (
-              <AreaSeries points={points} baseline={size.height - inset} color={stroke} curve={curve} />
+              <AreaSeries
+                points={points}
+                baseline={size.height - inset}
+                color={stroke}
+                curve={curve}
+              />
             ) : null}
             <LineSeries
               data={normalized}

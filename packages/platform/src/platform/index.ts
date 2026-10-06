@@ -1,7 +1,8 @@
 /// <reference types="@types/chrome" />
 /// <reference types="@types/firefox-webext-browser" />
 
-import { type Platform, getBroadName, getPreciseName, platformBase } from './platformBase';
+import { getBroadName, getPreciseName, platformBase } from './platform-base';
+import type { Platform } from './platform-base';
 
 declare global {
   interface Window {
@@ -35,10 +36,10 @@ export const platform: Platform = {
   isNext:
     platformBase.isWeb &&
     (!platformBase.isWindowDefined || typeof (window as { __NEXT_DATA__?: unknown }).__NEXT_DATA__ === 'object'),
-  isFirefox: platformBase.isWindowDefined && !!(window?.navigator?.userAgent?.toLowerCase().indexOf('firefox') > -1),
+  isFirefox: platformBase.isWindowDefined && !!window?.navigator?.userAgent?.toLowerCase().includes('firefox'),
 };
 platform.preciseName = getPreciseName(platform);
 platform.broadName = getBroadName(platform);
 
 export type { Platform };
-export type { PlatformName } from './platformBase';
+export type { PlatformName } from './platform-base';

@@ -1,8 +1,8 @@
 import { Text } from 'tamagui';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { isTinted, listeners, setTinted, toggleTinted } from './setTinted';
-import { unwrapText } from './unwrapText';
+import { isTinted, listeners, setTinted, toggleTinted } from './set-tinted';
+import { unwrapText } from './unwrap-text';
 
 describe('setTinted', () => {
   beforeEach(() => {

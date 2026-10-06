@@ -144,7 +144,7 @@ export function workspaceSourceAliases(workspaceRoot?: string): Record<string, s
       continue;
     }
     try {
-      const pkg = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf8')) as {
+      const pkg = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf-8')) as {
         name?: string;
         exports?: Record<string, unknown>;
       };

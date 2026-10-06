@@ -84,7 +84,9 @@ export function Toolbar(props: ToolbarProps) {
   // lawfully: a subtree ceiling, so hosted actions clamp to
   // small+compact while ambient pages keep their own size.
   return (
-    <Surface size="small" density="compact">
+    <Surface
+      size="small"
+      density="compact">
       <ToolbarInner {...props} />
     </Surface>
   );
@@ -135,7 +137,7 @@ function ToolbarInner({
       // `variant` matched no styled-frame key and silently dissolved.
       outlined={action.variant === 'outlined'}
       {...pressFloor}
-      {...(!isWeb ? { hitSlop: actionHitSlop } : undefined)}>
+      {...(isWeb ? undefined : { hitSlop: actionHitSlop })}>
       {/* §6.1: action labels measure 400 on the TEXT NODE. */}
       <Text fontWeight="400">{action.label}</Text>
     </Button>
@@ -217,7 +219,12 @@ function ToolbarInner({
         minWidth={0}
         {...(isWeb ? { overflow: 'scroll' as const } : undefined)}
         contentContainerStyle={{ alignItems: 'center' }}>
-        <XStack {...knobProps.gapLg} alignItems="center" flexWrap="nowrap" flexShrink={0} data-toolbar-slot="start">
+        <XStack
+          {...knobProps.gapLg}
+          alignItems="center"
+          flexWrap="nowrap"
+          flexShrink={0}
+          data-toolbar-slot="start">
           {renderClusters(primaryActions, 'primary')}
         </XStack>
       </ScrollView>

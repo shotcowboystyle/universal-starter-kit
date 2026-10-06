@@ -79,7 +79,12 @@ function ExpoVideoSurface({ expoVideo, src, muted, autoPlay, controls, loop, pos
   }, [player, autoPlay]);
 
   return (
-    <YStack width="100%" aspectRatio={16 / 9} overflow="hidden" {...mediaTileFrameProps(knobProps)} position="relative">
+    <YStack
+      width="100%"
+      aspectRatio={16 / 9}
+      overflow="hidden"
+      {...mediaTileFrameProps(knobProps)}
+      position="relative">
       <VideoView
         player={player}
         style={StyleSheet.absoluteFillObject}
@@ -156,17 +161,30 @@ export function Video({
   };
 
   return (
-    <VideoFrame marginHorizontal={0} marginVertical={knobProps.gapLg.gap} {...knobProps.gap} {...props}>
+    <VideoFrame
+      marginHorizontal={0}
+      marginVertical={knobProps.gapLg.gap}
+      {...knobProps.gap}
+      {...props}>
       {src ? (
         expoVideo ? (
-          <ExpoVideoSurface key={src} expoVideo={expoVideo} {...surfaceProps} />
+          <ExpoVideoSurface
+            key={src}
+            expoVideo={expoVideo}
+            {...surfaceProps}
+          />
         ) : (
           <PosterOnlySurface {...surfaceProps} />
         )
       ) : (
-        <YStack width="100%" aspectRatio={16 / 9} overflow="hidden" {...mediaTileFrameProps(knobProps)} />
+        <YStack
+          width="100%"
+          aspectRatio={16 / 9}
+          overflow="hidden"
+          {...mediaTileFrameProps(knobProps)}
+        />
       )}
-      {children != null ? <VideoCaption>{children}</VideoCaption> : null}
+      {children == null ? null : <VideoCaption>{children}</VideoCaption>}
     </VideoFrame>
   );
 }

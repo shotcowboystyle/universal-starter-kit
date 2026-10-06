@@ -229,7 +229,7 @@ const WebAnimateHeight = forwardRef<TamaguiElement, AnimateHeightProps>(function
     <View
       ref={ref}
       overflow="hidden"
-      {...(displayHeight != null ? { height: displayHeight } : {})}
+      {...(displayHeight == null ? {} : { height: displayHeight })}
       {...(atRestClosed ? { display: 'none' as const } : {})}
       {...transitionProps(transition)}
       {...props}>
@@ -238,7 +238,7 @@ const WebAnimateHeight = forwardRef<TamaguiElement, AnimateHeightProps>(function
           ref={innerRef}
           // keep natural height inside the clipped, height-driven outer
           flexShrink={0}
-          {...(!isWeb ? { onLayout: onInnerLayout } : {})}>
+          {...(isWeb ? {} : { onLayout: onInnerLayout })}>
           {children}
         </View>
       ) : null}
@@ -252,12 +252,26 @@ const NativeAnimateHeight = forwardRef<TamaguiElement, AnimateHeightProps>(funct
   ref,
 ) {
   return (
-    <View ref={ref} overflow="hidden" {...(open === false ? { display: 'none' as const } : {})} {...props}>
-      {open !== false ? <View flexShrink={0}>{children}</View> : null}
+    <View
+      ref={ref}
+      overflow="hidden"
+      {...(open === false ? { display: 'none' as const } : {})}
+      {...props}>
+      {open === false ? null : <View flexShrink={0}>{children}</View>}
     </View>
   );
 });
 
 export const AnimateHeight = forwardRef<TamaguiElement, AnimateHeightProps>(function AnimateHeight(props, ref) {
-  return isWeb ? <WebAnimateHeight {...props} ref={ref} /> : <NativeAnimateHeight {...props} ref={ref} />;
+  return isWeb ? (
+    <WebAnimateHeight
+      {...props}
+      ref={ref}
+    />
+  ) : (
+    <NativeAnimateHeight
+      {...props}
+      ref={ref}
+    />
+  );
 });

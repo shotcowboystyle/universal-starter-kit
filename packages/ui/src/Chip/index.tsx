@@ -14,7 +14,8 @@ import {
   useReadableTextOn,
   useResolvedKnobs,
 } from '@repo/theme';
-import { cloneElement, createElement, isValidElement, type ComponentType, type ReactNode } from 'react';
+import { cloneElement, createElement, isValidElement } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ColorTokens, GetProps } from 'tamagui';
 import { Text, View, getTokenValue, styled } from 'tamagui';
@@ -120,13 +121,16 @@ const colorMap: Record<ChipColor, ChipSwatch> = {
 export function chipTone(variant: ChipVariant | undefined): ChipTone {
   switch (variant) {
     case 'filled':
-    case 'solid':
+    case 'solid': {
       return 'filled';
+    }
     case 'outlined':
-    case 'outline':
+    case 'outline': {
       return 'outlined';
-    default:
+    }
+    default: {
       return 'ghost';
+    }
   }
 }
 
@@ -383,11 +387,11 @@ export function Chip({
     : undefined;
 
   const leading =
-    icon != null
-      ? normalizeIcon(icon, iconSize)
-      : isSelected
+    icon == null
+      ? isSelected
         ? createElement(CheckIcon, { size: iconSize, weight: 'bold' })
-        : null;
+        : null
+      : normalizeIcon(icon, iconSize);
 
   const activate = () => {
     if (!interactive) {
@@ -432,7 +436,7 @@ export function Chip({
         ? {
             role: 'button',
             tabIndex: 0,
-            ...(selected != null ? { 'aria-pressed': isSelected } : undefined),
+            ...(selected == null ? undefined : { 'aria-pressed': isSelected }),
             ...pressSlopOutsetProps(chipBodySlop(knobProps.borderRadius.borderWidth), 'vertical'),
           }
         : undefined)}
@@ -447,7 +451,7 @@ export function Chip({
         interactive
           ? {
               ...control.hoverKnobProps,
-              ...(hoverBackground != null ? { backgroundColor: hoverBackground } : undefined),
+              ...(hoverBackground == null ? undefined : { backgroundColor: hoverBackground }),
             }
           : undefined
       }
@@ -455,7 +459,7 @@ export function Chip({
         interactive
           ? {
               ...control.pressKnobProps,
-              ...(hoverBackground != null ? { backgroundColor: hoverBackground } : undefined),
+              ...(hoverBackground == null ? undefined : { backgroundColor: hoverBackground }),
             }
           : undefined
       }
@@ -500,7 +504,9 @@ export function Chip({
               }
             }) as unknown as () => void
           }>
-          <DismissRing className="mp-chip-dismiss-ring" borderRadius={dismissRadius}>
+          <DismissRing
+            className="mp-chip-dismiss-ring"
+            borderRadius={dismissRadius}>
             <XIcon size={iconSize} />
           </DismissRing>
         </DismissButton>

@@ -8,12 +8,12 @@ import { useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
-import { useBoards } from '@/hooks/useBoards';
+import { useBoards } from '@/hooks/use-boards';
 import { usePathname, useRouter } from '@/i18n/navigation';
-import { AuthService } from '@/lib/auth/authService';
+import { AuthService } from '@/lib/auth/auth-service';
 import { useAuthStore } from '@/stores/auth-store';
 import { useWorkspaceStore } from '@/stores/workspace-store';
-import type { Board } from '@/types/dbInterface';
+import type { Board } from '@/types/db-interface';
 
 import { BoardActions } from './board/BoardActions';
 import NewBoardDialog from './board/NewBoardDialog';
@@ -164,7 +164,11 @@ export function BoardOverview() {
   // Also check !mounted to ensure consistent SSR/client hydration
   if (!mounted || isProcessingLogin || boardsLoading) {
     return (
-      <YStack flex={1} alignItems="center" justifyContent="center" gap="$4">
+      <YStack
+        flex={1}
+        alignItems="center"
+        justifyContent="center"
+        gap="$4">
         <Spinner size="large" />
         <Paragraph>{t('loading')}</Paragraph>
       </YStack>
@@ -173,7 +177,10 @@ export function BoardOverview() {
 
   const renderBoardDetails = (board: Board, showOwner: boolean) => (
     <YStack gap="$1">
-      <Paragraph size="$3" color="$color10" marginBottom="$1">
+      <Paragraph
+        size="$3"
+        color="$color10"
+        marginBottom="$1">
         {board.description || t('noDescription')}
       </Paragraph>
       {showOwner ? (
@@ -195,19 +202,32 @@ export function BoardOverview() {
     boards: Board[] | undefined,
     owned: boolean,
   ) => (
-    <YStack render="section" gap="$2">
-      <H2 size="$8" paddingHorizontal="$4" testID={`${titleKey}Title`}>
+    <YStack
+      render="section"
+      gap="$2">
+      <H2
+        size="$8"
+        paddingHorizontal="$4"
+        testID={`${titleKey}Title`}>
         {t(titleKey)}
       </H2>
-      <Paragraph size="$3" color="$color10" paddingHorizontal="$4">
+      <Paragraph
+        size="$3"
+        color="$color10"
+        paddingHorizontal="$4">
         {t(descriptionKey)}
       </Paragraph>
       {boards?.length === 0 ? (
-        <Paragraph color="$color10" paddingHorizontal="$4">
+        <Paragraph
+          color="$color10"
+          paddingHorizontal="$4">
           {t(emptyKey)}
         </Paragraph>
       ) : (
-        <XStack flexWrap="wrap" gap="$4" padding="$4">
+        <XStack
+          flexWrap="wrap"
+          gap="$4"
+          padding="$4">
           {boards?.map((board) => (
             <Card
               key={board._id}
@@ -221,7 +241,10 @@ export function BoardOverview() {
               onPress={() => {
                 handleBoardClick(board._id);
               }}>
-              <CardHeader flexDirection="row" alignItems="center" justifyContent="space-between">
+              <CardHeader
+                flexDirection="row"
+                alignItems="center"
+                justifyContent="space-between">
                 <H3 size="$6">{board.title}</H3>
                 {owned ? (
                   // Plain DOM wrapper: React events from the menu/dialog portals
@@ -266,15 +289,25 @@ export function BoardOverview() {
         alignItems="flex-start"
         justifyContent="space-between"
         $sm={{ flexDirection: 'row', alignItems: 'center' }}>
-        <YStack width="100%" $sm={{ width: 200 }}>
+        <YStack
+          width="100%"
+          $sm={{ width: 200 }}>
           <NewBoardDialog>
-            <Button accent width="100%" testID="new-board-trigger">
+            <Button
+              accent
+              width="100%"
+              testID="new-board-trigger">
               {t('newBoard')}
             </Button>
           </NewBoardDialog>
         </YStack>
-        <XStack width="100%" gap="$2" $sm={{ width: 'auto' }}>
-          <YStack flex={1} $sm={{ width: 200, flex: 0 }}>
+        <XStack
+          width="100%"
+          gap="$2"
+          $sm={{ width: 'auto' }}>
+          <YStack
+            flex={1}
+            $sm={{ width: 200, flex: 0 }}>
             <SearchInput
               placeholder={t('searchBoards')}
               aria-label={t('searchBoards')}
@@ -283,7 +316,9 @@ export function BoardOverview() {
               inputProps={{ testID: 'board-search-input' }}
             />
           </YStack>
-          <YStack width={160} testID="select-filter-trigger">
+          <YStack
+            width={160}
+            testID="select-filter-trigger">
             <Select
               aria-label={t('filterBoards')}
               placeholder={t('filterBoards')}

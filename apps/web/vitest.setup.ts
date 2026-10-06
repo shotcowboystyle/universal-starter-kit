@@ -1,8 +1,8 @@
 // 1. Load Environment Variables
 // Load the app-local .env.test instead of the root (which doesn't exist).
 // The existence check prevents the ENOENT console noise in CI.
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 
 import dotenv from 'dotenv';
 

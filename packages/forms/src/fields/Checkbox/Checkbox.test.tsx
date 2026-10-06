@@ -28,36 +28,71 @@ const houseConfig = createTamagui({
 describe('Checkbox', () => {
   describe('without form context', () => {
     it('renders with label', () => {
-      const result = renderWithProviders(<Checkbox label="Accept terms" name="terms" />);
+      const result = renderWithProviders(
+        <Checkbox
+          label="Accept terms"
+          name="terms"
+        />,
+      );
       expect(result.findTextElement('Accept terms')).toBeDefined();
     });
 
     it('renders required label with asterisk', () => {
-      const result = renderWithProviders(<Checkbox label="Required" name="req" required />);
+      const result = renderWithProviders(
+        <Checkbox
+          label="Required"
+          name="req"
+          required
+        />,
+      );
       const label = result.container.querySelector('label');
       expect(label?.textContent).toContain('*');
     });
 
     it('renders disabled state', () => {
-      const result = renderWithProviders(<Checkbox label="Disabled" name="d" disabled />);
+      const result = renderWithProviders(
+        <Checkbox
+          label="Disabled"
+          name="d"
+          disabled
+        />,
+      );
       const checkbox = result.getCheckbox();
       expect(checkbox?.getAttribute('aria-disabled')).toBe('true');
     });
 
     it('renders checked state', () => {
-      const result = renderWithProviders(<Checkbox label="Checked" name="c" checked />);
+      const result = renderWithProviders(
+        <Checkbox
+          label="Checked"
+          name="c"
+          checked
+        />,
+      );
       const checkbox = result.getCheckbox();
       expect(checkbox?.getAttribute('aria-checked')).toBe('true');
     });
 
     it('renders skeleton placeholder', () => {
-      const result = renderWithProviders(<Checkbox label="Loading" name="l" skeleton />);
+      const result = renderWithProviders(
+        <Checkbox
+          label="Loading"
+          name="l"
+          skeleton
+        />,
+      );
       expect(result.container.querySelector("[role='checkbox']")).toBeNull();
     });
 
     it('calls onCheckedChange when clicked', () => {
       const onCheckedChange = vi.fn();
-      const result = renderWithProviders(<Checkbox name="cb" defaultValue={false} onCheckedChange={onCheckedChange} />);
+      const result = renderWithProviders(
+        <Checkbox
+          name="cb"
+          defaultValue={false}
+          onCheckedChange={onCheckedChange}
+        />,
+      );
       const checkbox = result.getCheckbox();
       if (checkbox) {
         fireEvent.click(checkbox);
@@ -71,7 +106,12 @@ describe('Checkbox', () => {
       // jsdom still delivers the click on [data-checkbox-box] via bubbling.
       const onChange = vi.fn();
       const result = renderWithProviders(
-        <Checkbox name="cb" label="Accept" defaultValue={false} onChange={onChange} />,
+        <Checkbox
+          name="cb"
+          label="Accept"
+          defaultValue={false}
+          onChange={onChange}
+        />,
       );
       const box = result.container.querySelector('[data-checkbox-box="true"]');
       expect(box).toBeTruthy();
@@ -83,15 +123,20 @@ describe('Checkbox', () => {
       const onChange = vi.fn();
       const onCheckedChange = vi.fn();
       const result = renderWithProviders(
-        <Checkbox name="cb" defaultValue={false} onChange={onChange} onCheckedChange={onCheckedChange} />,
+        <Checkbox
+          name="cb"
+          defaultValue={false}
+          onChange={onChange}
+          onCheckedChange={onCheckedChange}
+        />,
       );
       const checkbox = result.getCheckbox();
       if (checkbox) {
         fireEvent.click(checkbox);
       }
-      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange).toHaveBeenCalledOnce();
       expect(onChange).toHaveBeenCalledWith(true);
-      expect(onCheckedChange).toHaveBeenCalledTimes(1);
+      expect(onCheckedChange).toHaveBeenCalledOnce();
       expect(onCheckedChange).toHaveBeenCalledWith(true);
     });
   });
@@ -120,20 +165,38 @@ describe('Checkbox', () => {
     }
 
     it('renders a visible check glyph when checked', () => {
-      const result = renderWithProviders(<Checkbox label="Checked" name="c" checked />);
+      const result = renderWithProviders(
+        <Checkbox
+          label="Checked"
+          name="c"
+          checked
+        />,
+      );
       const checkbox = result.getCheckbox();
       expect(checkbox).toBeTruthy();
       expectVisibleGlyph(checkbox!);
     });
 
     it('renders no glyph when unchecked', () => {
-      const result = renderWithProviders(<Checkbox label="Unchecked" name="u" checked={false} />);
+      const result = renderWithProviders(
+        <Checkbox
+          label="Unchecked"
+          name="u"
+          checked={false}
+        />,
+      );
       const checkbox = result.getCheckbox();
       expect(checkbox?.querySelector('svg')).toBeNull();
     });
 
     it('glyph appears after toggling via click', () => {
-      const result = renderWithProviders(<Checkbox label="Toggle" name="t" defaultValue={false} />);
+      const result = renderWithProviders(
+        <Checkbox
+          label="Toggle"
+          name="t"
+          defaultValue={false}
+        />,
+      );
       const checkbox = result.getCheckbox();
       expect(checkbox?.querySelector('svg')).toBeNull();
       if (checkbox) {
@@ -143,7 +206,13 @@ describe('Checkbox', () => {
     });
 
     it('renders a visible glyph when indeterminate', () => {
-      const result = renderWithProviders(<Checkbox label="Mixed" name="m" checked="indeterminate" />);
+      const result = renderWithProviders(
+        <Checkbox
+          label="Mixed"
+          name="m"
+          checked="indeterminate"
+        />,
+      );
       const checkbox = result.getCheckbox();
       expect(checkbox?.getAttribute('aria-checked')).toBe('mixed');
       expectVisibleGlyph(checkbox!);
@@ -157,9 +226,18 @@ describe('Checkbox', () => {
 
     it('idle box is empty (transparent fill); checked is fill, not a thicker border', () => {
       const { container } = render(
-        <TamaguiProvider config={houseConfig} defaultTheme="light" disableInjectCSS>
-          <Checkbox label="Checked" checked />
-          <Checkbox label="Unchecked" checked={false} />
+        <TamaguiProvider
+          config={houseConfig}
+          defaultTheme="light"
+          disableInjectCSS>
+          <Checkbox
+            label="Checked"
+            checked
+          />
+          <Checkbox
+            label="Unchecked"
+            checked={false}
+          />
         </TamaguiProvider>,
       );
       const checkboxes = Array.from(container.querySelectorAll('[role="checkbox"]'));
@@ -170,17 +248,22 @@ describe('Checkbox', () => {
       expect(marked).toBeTruthy();
       expect(idle).toBeTruthy();
       expect(isTransparent(getComputedStyle(idle).backgroundColor)).toBe(true);
-      const markedBw = parseFloat(getComputedStyle(marked).borderTopWidth) || 0;
-      const idleBw = parseFloat(getComputedStyle(idle).borderTopWidth) || 0;
+      const markedBw = Number.parseFloat(getComputedStyle(marked).borderTopWidth) || 0;
+      const idleBw = Number.parseFloat(getComputedStyle(idle).borderTopWidth) || 0;
       expect(idleBw).toBeGreaterThanOrEqual(2);
       expect(markedBw).toBe(idleBw);
-      expect(parseFloat(getComputedStyle(marked).outlineWidth) || 0).toBe(0);
+      expect(Number.parseFloat(getComputedStyle(marked).outlineWidth) || 0).toBe(0);
     });
 
     it('keyboard focus rings the box, never the 44px target', async () => {
       const spy = vi.spyOn(Theme, 'wasKeyboardFocus').mockReturnValue(true);
       try {
-        const result = renderWithProviders(<Checkbox label="Focus me" name="f" />);
+        const result = renderWithProviders(
+          <Checkbox
+            label="Focus me"
+            name="f"
+          />,
+        );
         const checkbox = result.getCheckbox()!;
         await act(async () => {
           fireEvent.focusIn(checkbox);
@@ -188,7 +271,7 @@ describe('Checkbox', () => {
         const box = checkbox.querySelector('[data-checkbox-box="true"]');
         expect(box?.getAttribute('data-focus-ring')).toBe('true');
         expect(checkbox.getAttribute('data-focus-ring')).toBeNull();
-        expect(parseFloat(getComputedStyle(checkbox).outlineWidth) || 0).toBe(0);
+        expect(Number.parseFloat(getComputedStyle(checkbox).outlineWidth) || 0).toBe(0);
       } finally {
         spy.mockRestore();
       }
@@ -198,8 +281,13 @@ describe('Checkbox', () => {
   describe('with form context', () => {
     it('renders inside form', () => {
       const result = renderWithProviders(
-        <Form formOptions={{ defaultValues: { agree: false } }} submitText="Submit">
-          <Checkbox name="agree" label="I agree" />
+        <Form
+          formOptions={{ defaultValues: { agree: false } }}
+          submitText="Submit">
+          <Checkbox
+            name="agree"
+            label="I agree"
+          />
         </Form>,
       );
       expect(result.findTextElement('I agree')).toBeDefined();
@@ -215,7 +303,13 @@ describe('CheckboxGroup', () => {
   ];
 
   it('renders all options', () => {
-    const result = renderWithProviders(<CheckboxGroup label="Pick options" name="opts" options={options} />);
+    const result = renderWithProviders(
+      <CheckboxGroup
+        label="Pick options"
+        name="opts"
+        options={options}
+      />,
+    );
     expect(result.findTextElement('Option A')).toBeDefined();
     expect(result.findTextElement('Option B')).toBeDefined();
     expect(result.findTextElement('Option C')).toBeDefined();
@@ -238,28 +332,48 @@ describe('CheckboxGroup', () => {
     if (checkbox) {
       fireEvent.click(checkbox);
     }
-    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledOnce();
     expect(onChange).toHaveBeenCalledWith(['a']);
-    expect(onValueChange).toHaveBeenCalledTimes(1);
+    expect(onValueChange).toHaveBeenCalledOnce();
     expect(onValueChange).toHaveBeenCalledWith(['a']);
   });
 
   it('renders required label with asterisk', () => {
-    const result = renderWithProviders(<CheckboxGroup label="Required" name="req" options={options} required />);
+    const result = renderWithProviders(
+      <CheckboxGroup
+        label="Required"
+        name="req"
+        options={options}
+        required
+      />,
+    );
     const label = result.container.querySelector('label');
     expect(label?.textContent).toContain('*');
   });
 
   it('renders skeleton placeholder', () => {
-    const result = renderWithProviders(<CheckboxGroup label="Loading" name="l" options={options} skeleton />);
+    const result = renderWithProviders(
+      <CheckboxGroup
+        label="Loading"
+        name="l"
+        options={options}
+        skeleton
+      />,
+    );
     const checkboxes = result.container.querySelectorAll("[role='checkbox']");
-    expect(checkboxes.length).toBe(0);
+    expect(checkboxes).toHaveLength(0);
   });
 
   it('renders with form context', () => {
     const result = renderWithProviders(
-      <Form formOptions={{ defaultValues: { opts: [] } }} submitText="Submit">
-        <CheckboxGroup name="opts" label="Options" options={options} />
+      <Form
+        formOptions={{ defaultValues: { opts: [] } }}
+        submitText="Submit">
+        <CheckboxGroup
+          name="opts"
+          label="Options"
+          options={options}
+        />
       </Form>,
     );
     expect(result.findTextElement('Option A')).toBeDefined();
@@ -272,19 +386,39 @@ describe('CheckboxGroup', () => {
     ];
 
     it('renders option descriptions in card mode', () => {
-      const result = renderWithProviders(<CheckboxGroup label="Pick" name="opts" card options={cardOptions} />);
+      const result = renderWithProviders(
+        <CheckboxGroup
+          label="Pick"
+          name="opts"
+          card
+          options={cardOptions}
+        />,
+      );
       expect(result.findTextElement('Card A')).toBeDefined();
       expect(result.findTextElement('Description for A')).toBeDefined();
     });
 
     it('does not render descriptions in plain mode', () => {
-      const result = renderWithProviders(<CheckboxGroup label="Pick" name="opts" options={cardOptions} />);
+      const result = renderWithProviders(
+        <CheckboxGroup
+          label="Pick"
+          name="opts"
+          options={cardOptions}
+        />,
+      );
       expect(result.findTextElement('Card A')).toBeDefined();
       expect(result.findTextElement('Description for A')).toBeUndefined();
     });
 
     it('labels the checkbox via aria-labelledby and aria-describedby', () => {
-      const result = renderWithProviders(<CheckboxGroup label="Pick" name="opts" card options={cardOptions} />);
+      const result = renderWithProviders(
+        <CheckboxGroup
+          label="Pick"
+          name="opts"
+          card
+          options={cardOptions}
+        />,
+      );
       const checkbox = result.container.querySelector("[role='checkbox']");
       const labelId = checkbox?.getAttribute('aria-labelledby');
       const descId = checkbox?.getAttribute('aria-describedby');
@@ -297,7 +431,13 @@ describe('CheckboxGroup', () => {
     it('checkbox click in card mode emits onChange exactly once', () => {
       const onChange = vi.fn();
       const result = renderWithProviders(
-        <CheckboxGroup label="Pick" name="opts" card options={cardOptions} onChange={onChange} />,
+        <CheckboxGroup
+          label="Pick"
+          name="opts"
+          card
+          options={cardOptions}
+          onChange={onChange}
+        />,
       );
       const checkbox = result.container.querySelector("[role='checkbox']");
       if (checkbox) {
@@ -313,7 +453,14 @@ describe('CheckboxGroup', () => {
         { label: 'One', value: 'same', description: 'd1' },
         { label: 'Two', value: 'same', description: 'd2' },
       ];
-      const result = renderWithProviders(<CheckboxGroup label="Pick" name="opts" card options={dupes} />);
+      const result = renderWithProviders(
+        <CheckboxGroup
+          label="Pick"
+          name="opts"
+          card
+          options={dupes}
+        />,
+      );
       const boxes = [...result.container.querySelectorAll("[role='checkbox']")];
       const ids = boxes.map((b) => b.id);
       expect(new Set(ids).size).toBe(2);
@@ -324,10 +471,17 @@ describe('CheckboxGroup', () => {
     const result = renderWithProviders(
       <Preset overrides={{ elevation: 'large' }}>
         <div data-testid="group">
-          <CheckboxGroup label="Group" options={options} defaultValue={['a']} />
+          <CheckboxGroup
+            label="Group"
+            options={options}
+            defaultValue={['a']}
+          />
         </div>
         <div data-testid="solo">
-          <Checkbox label="Solo" checked />
+          <Checkbox
+            label="Solo"
+            checked
+          />
         </div>
       </Preset>,
     );
@@ -348,7 +502,9 @@ describe('CheckboxGroup', () => {
       try {
         const onValuesChange = vi.fn();
         const result = renderWithProviders(
-          <Checkboxes values={{ a: true }} onValuesChange={onValuesChange}>
+          <Checkboxes
+            values={{ a: true }}
+            onValuesChange={onValuesChange}>
             <Checkboxes.FocusGroup>
               <Checkboxes.Group>
                 <Checkboxes.Group.Item>
@@ -367,7 +523,7 @@ describe('CheckboxGroup', () => {
         await act(async () => {
           fireEvent.focusIn(item);
         });
-        expect(parseFloat(getComputedStyle(item).outlineWidth) || 0).toBe(0);
+        expect(Number.parseFloat(getComputedStyle(item).outlineWidth) || 0).toBe(0);
         const box = result.container.querySelector('[data-checkbox-box="true"]');
         expect(box?.getAttribute('data-focus-ring')).toBe('true');
       } finally {
@@ -379,13 +535,22 @@ describe('CheckboxGroup', () => {
   describe('selected mark', () => {
     it('fills the checked box with the accent mark; the unchecked box stays neutral chrome', () => {
       const { container } = render(
-        <TamaguiProvider config={houseConfig} defaultTheme="light" disableInjectCSS>
-          <Checkbox label="Checked" checked />
-          <Checkbox label="Unchecked" checked={false} />
+        <TamaguiProvider
+          config={houseConfig}
+          defaultTheme="light"
+          disableInjectCSS>
+          <Checkbox
+            label="Checked"
+            checked
+          />
+          <Checkbox
+            label="Unchecked"
+            checked={false}
+          />
         </TamaguiProvider>,
       );
       const boxes = Array.from(container.querySelectorAll('[role="checkbox"]'));
-      expect(boxes.length).toBe(2);
+      expect(boxes).toHaveLength(2);
       const checked = boxes.find((b) => b.getAttribute('aria-checked') === 'true');
       const unchecked = boxes.find((b) => b.getAttribute('aria-checked') === 'false');
       expect(checked).toBeTruthy();
@@ -395,7 +560,7 @@ describe('CheckboxGroup', () => {
           (el as HTMLElement).className?.toString().includes('_bg-accentBackg'),
         );
       expect(marked(checked!).length).toBeGreaterThan(0);
-      expect(marked(unchecked!).length).toBe(0);
+      expect(marked(unchecked!)).toHaveLength(0);
     });
   });
 });
@@ -435,7 +600,10 @@ describe('Checkbox never circular at any radius stop', () => {
     for (const stop of RADIUS_STOPS) {
       const result = renderWithProviders(
         <Preset overrides={{ borderRadius: stop }}>
-          <Checkbox label="Terms" name="t" />
+          <Checkbox
+            label="Terms"
+            name="t"
+          />
         </Preset>,
       );
       const classes = glyphRadiusClasses(result.container);
@@ -458,7 +626,9 @@ describe('Checkbox never circular at any radius stop', () => {
   it('compound Checkboxes glyph stays capped at full', () => {
     const result = renderWithProviders(
       <Preset overrides={{ borderRadius: 'full' }}>
-        <Checkboxes values={{ a: true }} onValuesChange={() => {}}>
+        <Checkboxes
+          values={{ a: true }}
+          onValuesChange={() => {}}>
           <Checkboxes.Checkbox aria-label="A">
             <Checkboxes.Checkbox.Indicator />
           </Checkboxes.Checkbox>
@@ -473,7 +643,10 @@ describe('Checkbox never circular at any radius stop', () => {
   it('role=checkbox hit target is not a disc (Tamagui size variant override)', () => {
     const result = renderWithProviders(
       <Preset overrides={{ borderRadius: 'full' }}>
-        <Checkbox label="Terms" name="t" />
+        <Checkbox
+          label="Terms"
+          name="t"
+        />
       </Preset>,
     );
     const root = result.getCheckbox();

@@ -6,7 +6,7 @@ import { Text } from 'tamagui';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { FloatingPanel } from './index.native';
-import { panelViewportPadding } from './useFloatingPanel';
+import { panelViewportPadding } from './use-floating-panel';
 
 const screen = vi.hoisted(() => ({ width: 1024, height: 768 }));
 vi.mock('react-native-web', async (importOriginal) => {
@@ -94,8 +94,8 @@ describe('FloatingPanel native ContextMenu at the long-press point', () => {
     longPress(result.getByRole('button', { name: 'Row' }), 300, 250);
     const panel = pointPanel() as HTMLElement;
     layout(panel, 180, 600);
-    const top = parseFloat(panel.style.top);
-    const maxHeight = parseFloat(panel.style.maxHeight);
+    const top = Number.parseFloat(panel.style.top);
+    const maxHeight = Number.parseFloat(panel.style.maxHeight);
     expect(top).toBeGreaterThanOrEqual(panelViewportPadding);
     expect(top + maxHeight).toBe(250 - OVERLAY_ANCHOR_GAP);
   });

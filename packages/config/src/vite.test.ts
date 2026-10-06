@@ -153,16 +153,19 @@ describe('public config bake', () => {
 
 describe('One HMR ports', () => {
   afterEach(() => vi.unstubAllEnvs());
+
   it('lets Vite use the actual listener when no proxy port is configured', () => {
     vi.stubEnv('ONE_PORT', '');
     const config = createViteConfig({ one: true, server: { port: 3456 } });
     expect(config.server?.hmr).toEqual({ path: '/__vxrnhmr' });
   });
+
   it('retains an explicitly configured proxy bypass port', () => {
     vi.stubEnv('ONE_PORT', '3000');
     const config = createViteConfig({ one: true });
     expect(config.server?.hmr).toEqual({ path: '/__vxrnhmr', clientPort: 3000 });
   });
+
   it('preserves an explicit consumer HMR override', () => {
     vi.stubEnv('ONE_PORT', '3000');
     const hmr = { path: '/custom-hmr', clientPort: 9000 };
@@ -178,7 +181,7 @@ describe('clientBrokenEsm', () => {
     expect(plugin).toBeDefined();
     const fakeConfig = { environments: { client: { optimizeDeps: { include: ['react'] } } } };
     (plugin!.configResolved as any)(fakeConfig);
-    const include = fakeConfig.environments.client.optimizeDeps.include;
+    const { include } = fakeConfig.environments.client.optimizeDeps;
     expect(include).toContain('react/jsx-runtime');
     expect(include).toContain('react/jsx-dev-runtime');
     expect(include.filter((d) => d === 'react')).toHaveLength(1);

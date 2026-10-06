@@ -12,7 +12,7 @@ import { Form } from '../../Form';
 
 import { SearchInput } from './index';
 
-const SEARCH_INPUT_SRC = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'index.tsx'), 'utf8');
+const SEARCH_INPUT_SRC = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'index.tsx'), 'utf-8');
 
 describe('SearchInput', () => {
   beforeEach(() => {
@@ -37,7 +37,12 @@ describe('SearchInput', () => {
     function Sample() {
       const theme = useTheme();
       expectedInk = String(theme.color11?.val);
-      return <SearchInput placeholder="Search things" defaultValue="corp" />;
+      return (
+        <SearchInput
+          placeholder="Search things"
+          defaultValue="corp"
+        />
+      );
     }
     const { container } = renderWithProviders(<Sample />);
     const glyphs = container.querySelectorAll('svg');
@@ -61,7 +66,13 @@ describe('SearchInput', () => {
   it('fires onChange per keystroke and onSearch after debounce', () => {
     const onChange = vi.fn();
     const onSearch = vi.fn();
-    const result = renderWithProviders(<SearchInput onChange={onChange} onSearch={onSearch} debounceMs={300} />);
+    const result = renderWithProviders(
+      <SearchInput
+        onChange={onChange}
+        onSearch={onSearch}
+        debounceMs={300}
+      />,
+    );
     const input = result.container.querySelector('input');
     if (!input) {
       throw new Error('input not found');
@@ -73,12 +84,17 @@ describe('SearchInput', () => {
     expect(onSearch).not.toHaveBeenCalled();
     vi.advanceTimersByTime(1);
     expect(onSearch).toHaveBeenCalledWith('abc');
-    expect(onSearch).toHaveBeenCalledTimes(1);
+    expect(onSearch).toHaveBeenCalledOnce();
   });
 
   it('collapses rapid keystrokes into one onSearch', () => {
     const onSearch = vi.fn();
-    const result = renderWithProviders(<SearchInput onSearch={onSearch} debounceMs={300} />);
+    const result = renderWithProviders(
+      <SearchInput
+        onSearch={onSearch}
+        debounceMs={300}
+      />,
+    );
     const input = result.container.querySelector('input');
     if (!input) {
       throw new Error('input not found');
@@ -89,13 +105,18 @@ describe('SearchInput', () => {
     vi.advanceTimersByTime(100);
     fireEvent.change(input, { target: { value: 'abc' } });
     vi.advanceTimersByTime(300);
-    expect(onSearch).toHaveBeenCalledTimes(1);
+    expect(onSearch).toHaveBeenCalledOnce();
     expect(onSearch).toHaveBeenCalledWith('abc');
   });
 
   it('debounceMs=0 fires onSearch synchronously', () => {
     const onSearch = vi.fn();
-    const result = renderWithProviders(<SearchInput onSearch={onSearch} debounceMs={0} />);
+    const result = renderWithProviders(
+      <SearchInput
+        onSearch={onSearch}
+        debounceMs={0}
+      />,
+    );
     const input = result.container.querySelector('input');
     if (!input) {
       throw new Error('input not found');
@@ -107,7 +128,12 @@ describe('SearchInput', () => {
   it('shows clear button only when there is text; clearing empties and fires immediately', () => {
     const onChange = vi.fn();
     const onSearch = vi.fn();
-    const result = renderWithProviders(<SearchInput onChange={onChange} onSearch={onSearch} />);
+    const result = renderWithProviders(
+      <SearchInput
+        onChange={onChange}
+        onSearch={onSearch}
+      />,
+    );
     const input = result.container.querySelector('input');
     if (!input) {
       throw new Error('input not found');
@@ -147,7 +173,7 @@ describe('SearchInput', () => {
       throw new Error('clear button not rendered');
     }
     fireEvent.click(clear);
-    expect(onClear).toHaveBeenCalledTimes(1);
+    expect(onClear).toHaveBeenCalledOnce();
     fireEvent.change(input, { target: { value: 'again' } });
     fireEvent.keyDown(input, { key: 'Escape' });
     expect(onClear).toHaveBeenCalledTimes(2);
@@ -155,7 +181,12 @@ describe('SearchInput', () => {
 
   it('clear button is keyboard-reachable (tabIndex + Enter)', async () => {
     const onSearch = vi.fn();
-    const result = renderWithProviders(<SearchInput defaultValue="abc" onSearch={onSearch} />);
+    const result = renderWithProviders(
+      <SearchInput
+        defaultValue="abc"
+        onSearch={onSearch}
+      />,
+    );
     const clear = result.container.querySelector("[aria-label='Clear search']");
     if (!clear) {
       throw new Error('clear button not rendered');
@@ -209,7 +240,12 @@ describe('SearchInput', () => {
 
   it('Escape clears, Enter flushes the pending search', () => {
     const onSearch = vi.fn();
-    const result = renderWithProviders(<SearchInput onSearch={onSearch} debounceMs={300} />);
+    const result = renderWithProviders(
+      <SearchInput
+        onSearch={onSearch}
+        debounceMs={300}
+      />,
+    );
     const input = result.container.querySelector('input');
     if (!input) {
       throw new Error('input not found');
@@ -223,7 +259,12 @@ describe('SearchInput', () => {
   });
 
   it('controlled mode reflects the value prop', () => {
-    const result = renderWithProviders(<SearchInput value="hello" onChange={() => {}} />);
+    const result = renderWithProviders(
+      <SearchInput
+        value="hello"
+        onChange={() => {}}
+      />,
+    );
     const input = result.container.querySelector('input');
     expect(input!.value).toBe('hello');
   });
@@ -243,12 +284,22 @@ describe('SearchInput', () => {
   });
 
   it('clearable=false hides the clear button', () => {
-    const result = renderWithProviders(<SearchInput defaultValue="abc" clearable={false} />);
+    const result = renderWithProviders(
+      <SearchInput
+        defaultValue="abc"
+        clearable={false}
+      />,
+    );
     expect(result.container.querySelector("[aria-label='Clear search']")).toBeNull();
   });
 
   it('disabled hides the clear button and blocks input', () => {
-    const result = renderWithProviders(<SearchInput defaultValue="abc" disabled />);
+    const result = renderWithProviders(
+      <SearchInput
+        defaultValue="abc"
+        disabled
+      />,
+    );
     expect(result.container.querySelector("[aria-label='Clear search']")).toBeNull();
     const input = result.container.querySelector('input');
     expect(input?.getAttribute('aria-disabled')).toBe('true');
@@ -278,8 +329,14 @@ describe('SearchInput', () => {
       if (token === '$true') {
         continue;
       }
-      const height = sizeRecipeForToken(token).height;
-      const result = renderWithProviders(<SearchInput defaultValue="abc" size={token} aria-label={`q-${token}`} />);
+      const { height } = sizeRecipeForToken(token);
+      const result = renderWithProviders(
+        <SearchInput
+          defaultValue="abc"
+          size={token}
+          aria-label={`q-${token}`}
+        />,
+      );
       const box = result.container.querySelector("[data-ring-target='box']") as HTMLElement;
       const clear = result.container.querySelector("[aria-label='Clear search']") as HTMLElement;
       if (!box || !clear) {
@@ -302,20 +359,36 @@ describe('SearchInput', () => {
     expect(sizedBox.getAttribute('data-density')).toBe('comfortable');
     expect(sizedBox.getAttribute('data-size')).toBe('$5');
 
-    const both = renderWithProviders(<SearchInput compact size="$5" />);
+    const both = renderWithProviders(
+      <SearchInput
+        compact
+        size="$5"
+      />,
+    );
     const bothBox = both.container.querySelector("[data-ring-target='box']") as HTMLElement;
     expect(bothBox.getAttribute('data-density')).toBe('compact');
     expect(bothBox.getAttribute('data-size')).toBe('$5');
   });
 
   it('renders skeleton without a searchbox', () => {
-    const result = renderWithProviders(<SearchInput label="Find" skeleton />);
+    const result = renderWithProviders(
+      <SearchInput
+        label="Find"
+        skeleton
+      />,
+    );
     expect(result.container.querySelector('input')).toBeNull();
     expect(result.findTextElement('Find')).toBeDefined();
   });
 
   it('error replaces helper in the field slot', () => {
-    const result = renderWithProviders(<SearchInput label="Find" helperText="Type a name" error="Too short" />);
+    const result = renderWithProviders(
+      <SearchInput
+        label="Find"
+        helperText="Type a name"
+        error="Too short"
+      />,
+    );
     expect(result.findTextElement('Type a name')).toBeUndefined();
     expect(result.findTextElement('Too short')).toBeDefined();
   });
@@ -323,8 +396,16 @@ describe('SearchInput', () => {
   it('form-integrated name keeps onChange(value)', () => {
     const onChange = vi.fn();
     const result = renderWithProviders(
-      <Form formOptions={{ defaultValues: { q: '' } }} onSubmit={() => {}} submitText="Go">
-        <SearchInput name="q" label="Find" onChange={onChange} debounceMs={0} />
+      <Form
+        formOptions={{ defaultValues: { q: '' } }}
+        onSubmit={() => {}}
+        submitText="Go">
+        <SearchInput
+          name="q"
+          label="Find"
+          onChange={onChange}
+          debounceMs={0}
+        />
       </Form>,
     );
     expect(result.findTextElement('Find')).toBeDefined();

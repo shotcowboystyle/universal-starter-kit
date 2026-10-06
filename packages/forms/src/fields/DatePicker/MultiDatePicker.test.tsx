@@ -39,7 +39,12 @@ describe('MultiDatePicker', () => {
   it('handles disabled state', async () => {
     const MultiDatePicker = await loadMultiDatePicker();
     const result = renderWithProviders(
-      <MultiDatePicker label="Dates" name="dates" placeholder="Pick dates" disabled />,
+      <MultiDatePicker
+        label="Dates"
+        name="dates"
+        placeholder="Pick dates"
+        disabled
+      />,
     );
 
     const input = result.container.querySelector('input');
@@ -62,7 +67,12 @@ describe('MultiDatePicker', () => {
   // the control had no accessible name at all.
   it('the trigger carries the field id the sibling label resolves to', async () => {
     const MultiDatePicker = await loadMultiDatePicker();
-    const result = renderWithProviders(<MultiDatePicker label="Dates" name="dates" />);
+    const result = renderWithProviders(
+      <MultiDatePicker
+        label="Dates"
+        name="dates"
+      />,
+    );
     const trigger = result.container.querySelector('[data-testid="date-picker-trigger"]') as HTMLElement;
     const label = result.container.querySelector('label') as HTMLLabelElement;
     expect(trigger?.id).toBeTruthy();
@@ -72,7 +82,13 @@ describe('MultiDatePicker', () => {
 
   it('selects dates and clears selection', async () => {
     const MultiDatePicker = await loadMultiDatePicker();
-    const result = renderWithProviders(<MultiDatePicker label="Dates" name="dates" placeholder="Pick dates" />);
+    const result = renderWithProviders(
+      <MultiDatePicker
+        label="Dates"
+        name="dates"
+        placeholder="Pick dates"
+      />,
+    );
 
     const trigger = result.container.querySelector("input,button,[role='button']");
     expect(trigger).toBeTruthy();
@@ -124,7 +140,11 @@ describe('MultiDatePicker', () => {
         formApi = form as unknown as typeof formApi;
         return (
           <Form form={form}>
-            <MultiDatePicker label="Dates" name="dates" onChange={onChange} />
+            <MultiDatePicker
+              label="Dates"
+              name="dates"
+              onChange={onChange}
+            />
           </Form>
         );
       };
@@ -145,7 +165,13 @@ describe('MultiDatePicker', () => {
   describe('design law', () => {
     it('renders a skeleton at the control recipe height', async () => {
       const MultiDatePicker = await loadMultiDatePicker();
-      const result = renderWithProviders(<MultiDatePicker label="Loading" name="l" skeleton />);
+      const result = renderWithProviders(
+        <MultiDatePicker
+          label="Loading"
+          name="l"
+          skeleton
+        />,
+      );
       expect(result.container.querySelector('input')).toBeNull();
       const skeleton = result.container.querySelector('[data-multidate-skeleton]') as HTMLElement;
       expect(skeleton).toBeTruthy();
@@ -154,7 +180,12 @@ describe('MultiDatePicker', () => {
 
     it('rings the outer trigger box, never the inner field', async () => {
       const MultiDatePicker = await loadMultiDatePicker();
-      const result = renderWithProviders(<MultiDatePicker label="Dates" name="dates" />);
+      const result = renderWithProviders(
+        <MultiDatePicker
+          label="Dates"
+          name="dates"
+        />,
+      );
       const input = result.container.querySelector('input');
       expect(input?.className).toMatch(/mp-input-area/);
       const box = result.container.querySelector('.mp-composite-ring');

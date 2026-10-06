@@ -7,7 +7,7 @@ describe('onAppFocus', () => {
     const cb = vi.fn();
     const cleanup = onAppFocus(cb);
     window.dispatchEvent(new Event('focus'));
-    expect(cb).toHaveBeenCalledTimes(1);
+    expect(cb).toHaveBeenCalledOnce();
     cleanup();
   });
 
@@ -25,7 +25,7 @@ describe('onAppBlur', () => {
     const cb = vi.fn();
     const cleanup = onAppBlur(cb);
     window.dispatchEvent(new Event('blur'));
-    expect(cb).toHaveBeenCalledTimes(1);
+    expect(cb).toHaveBeenCalledOnce();
     cleanup();
   });
 
@@ -43,7 +43,7 @@ describe('onOnline', () => {
     const cb = vi.fn();
     const cleanup = onOnline(cb);
     window.dispatchEvent(new Event('online'));
-    expect(cb).toHaveBeenCalledTimes(1);
+    expect(cb).toHaveBeenCalledOnce();
     cleanup();
   });
 });
@@ -53,7 +53,7 @@ describe('onOffline', () => {
     const cb = vi.fn();
     const cleanup = onOffline(cb);
     window.dispatchEvent(new Event('offline'));
-    expect(cb).toHaveBeenCalledTimes(1);
+    expect(cb).toHaveBeenCalledOnce();
     cleanup();
   });
 });
@@ -63,7 +63,7 @@ describe('onVisibilityChange', () => {
     const cb = vi.fn();
     const cleanup = onVisibilityChange(cb);
     document.dispatchEvent(new Event('visibilitychange'));
-    expect(cb).toHaveBeenCalledTimes(1);
+    expect(cb).toHaveBeenCalledOnce();
     expect(typeof cb.mock.calls[0][0]).toBe('boolean');
     cleanup();
   });

@@ -1,4 +1,5 @@
-import { Table, type TableFootProps } from '@repo/table-primitives';
+import { Table } from '@repo/table-primitives';
+import type { TableFootProps } from '@repo/table-primitives';
 
 const TableFoot = Table.Foot;
 

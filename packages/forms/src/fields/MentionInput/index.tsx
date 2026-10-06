@@ -1,17 +1,18 @@
 import { useDismiss, useInteractions } from '@floating-ui/react';
-import { useTouchSurface } from '@repo/theme';
-import { ensureFocusVisibleRing, keyboardFocusRingProps, menuRowFrame } from '@repo/theme';
+import { useTouchSurface, ensureFocusVisibleRing, keyboardFocusRingProps, menuRowFrame } from '@repo/theme';
 import type { DeepKeys, DeepValue } from '@tanstack/form-core';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { useProps, type GetProps, type SizeTokens } from 'tamagui';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
+import { useProps } from 'tamagui';
+import type { GetProps, SizeTokens } from 'tamagui';
 import { Avatar, Text, XStack, YStack, isWeb, styled } from 'tamagui';
 
-import { Field, FieldLayout } from '../../fieldLayout';
-import type { FormFieldProps } from '../../fieldLayout';
+import { Field, FieldLayout } from '../../FieldLayout';
+import type { FormFieldProps } from '../../FieldLayout';
 import { useFloatingPanel, panelTransition } from '../../FloatingPanel';
 import { PanelPortal } from '../../FloatingPanel/PanelPortal';
-import { formCommonColors, formInputColors } from '../../shared/colorRamps';
-import { ScrollArrow } from '../../shared/floatingList';
+import { formCommonColors, formInputColors } from '../../shared/color-ramps';
+import { ScrollArrow } from '../../shared/floating-list';
 import { t } from '../../shared/t';
 import {
   getFieldError,
@@ -20,10 +21,9 @@ import {
   useFormField,
   useResolvedValidators,
 } from '../../shared/utils';
-import { zIndex } from '../../shared/zIndex';
+import { zIndex } from '../../shared/z-index';
 import { Skeleton } from '../../Skeleton';
-import type { Validator } from '../../types';
-import type { FieldComponentProps } from '../../types';
+import type { Validator, FieldComponentProps } from '../../types';
 import { TextArea } from '../TextArea';
 
 export interface MentionItem {
@@ -141,7 +141,7 @@ export type MentionInputProps<
   };
 
 const blurCloseDelayMs = 150;
-const zeroWidthSpace = '\u200b';
+const zeroWidthSpace = '\u200B';
 
 // One fontSize step below the field size token \u2014 the T-HELPER register for the
 // secondary (role/description) line, matching the shared suggestion-row recipe.
@@ -186,13 +186,15 @@ function MentionMatchText({ text, query, ...rest }: MentionTextProps & { text: s
     return <Text {...rest}>{text}</Text>;
   }
   const idx = text.toLowerCase().indexOf(needle.toLowerCase());
-  if (idx < 0) {
+  if (idx === -1) {
     return <Text {...rest}>{text}</Text>;
   }
   return (
     <Text {...rest}>
       {text.slice(0, idx)}
-      <Text {...rest} fontWeight="700">
+      <Text
+        {...rest}
+        fontWeight="700">
         {text.slice(idx, idx + needle.length)}
       </Text>
       {text.slice(idx + needle.length)}
@@ -268,7 +270,7 @@ export function MentionInput<
   const minRows = Math.max(1, Math.round(minHeight / 20));
   const maxRows = Math.max(minRows, Math.round(maxHeight / 20));
 
-  const initialValue = parseMentionValue(valueProp !== undefined ? valueProp : defaultValue);
+  const initialValue = parseMentionValue(valueProp === undefined ? defaultValue : valueProp);
   const [text, setText] = useState(initialValue.text);
   const [mentionList, setMentionList] = useState<MentionData[]>(initialValue.mentions);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -394,13 +396,14 @@ export function MentionInput<
   });
   const { getFloatingProps } = useInteractions([dismiss]);
 
-  useEffect(() => {
-    return () => {
+  useEffect(
+    () => () => {
       if (blurTimeoutRef.current) {
         clearTimeout(blurTimeoutRef.current);
       }
-    };
-  }, []);
+    },
+    [],
+  );
 
   const updateTriggerState = useCallback(
     (currentText: string, position: number) => {
@@ -461,7 +464,7 @@ export function MentionInput<
       // caret straight off the DOM textarea (already updated by input time)
       const webElement = getWebTextAreaElement();
       const domCaret = webElement && typeof webElement.selectionStart === 'number' ? webElement.selectionStart : null;
-      const editPosition = domCaret !== null ? Math.max(0, domCaret - Math.max(0, lengthDiff)) : prevCursorRef.current;
+      const editPosition = domCaret === null ? prevCursorRef.current : Math.max(0, domCaret - Math.max(0, lengthDiff));
 
       let nextMentions = displayed.mentions;
       if (lengthDiff !== 0) {
@@ -484,7 +487,7 @@ export function MentionInput<
 
       emit({ text: newText, mentions: nextMentions });
       const estimatedCursor =
-        domCaret !== null ? domCaret : Math.max(0, Math.min(editPosition + Math.max(0, lengthDiff), newText.length));
+        domCaret === null ? Math.max(0, Math.min(editPosition + Math.max(0, lengthDiff), newText.length)) : domCaret;
       prevCursorRef.current = estimatedCursor;
       setCursorPosition(estimatedCursor);
       updateTriggerState(newText, estimatedCursor);
@@ -635,27 +638,31 @@ export function MentionInput<
       }
 
       switch (key) {
-        case 'ArrowDown':
+        case 'ArrowDown': {
           event.preventDefault?.();
           setKeyboardHighlight(true);
           setSelectedIndex((prev) => (prev < suggestions.length - 1 ? prev + 1 : 0));
           break;
-        case 'ArrowUp':
+        }
+        case 'ArrowUp': {
           event.preventDefault?.();
           setKeyboardHighlight(true);
           setSelectedIndex((prev) => (prev > 0 ? prev - 1 : suggestions.length - 1));
           break;
+        }
         case 'Enter':
-        case 'Tab':
+        case 'Tab': {
           event.preventDefault?.();
           if (suggestions[selectedIndex]) {
             insertMention(suggestions[selectedIndex]);
           }
           break;
-        case 'Escape':
+        }
+        case 'Escape': {
           event.preventDefault?.();
           setShowSuggestions(false);
           break;
+        }
       }
     },
     [
@@ -671,7 +678,7 @@ export function MentionInput<
     ],
   );
 
-  const itemRefs = useRef<Array<HTMLElement | null>>([]);
+  const itemRefs = useRef<(HTMLElement | null)[]>([]);
 
   // Keep the keyboard-active row in view by measuring the real row, same as
   // Select's controlled-scrolling adjustment (no estimated item height).
@@ -756,8 +763,8 @@ export function MentionInput<
 
     const marker = document.createElement('span');
     marker.textContent = displayed.text[cursorPosition] || zeroWidthSpace;
-    mirror.appendChild(marker);
-    document.body.appendChild(mirror);
+    mirror.append(marker);
+    document.body.append(mirror);
 
     try {
       const markerRect = marker.getBoundingClientRect();
@@ -884,7 +891,9 @@ export function MentionInput<
                       justifyContent="center"
                       flexShrink={0}
                       data-media-slot={mediaSlot}>
-                      <Avatar size={mediaSlot} circular>
+                      <Avatar
+                        size={mediaSlot}
+                        circular>
                         {item.avatar ? <Avatar.Image src={item.avatar} /> : null}
                         <Avatar.Fallback
                           backgroundColor={formInputColors.background.focus}
@@ -895,8 +904,14 @@ export function MentionInput<
                       </Avatar>
                     </YStack>
                   )}
-                  <YStack flex={1} minWidth={0}>
-                    <MentionMatchText text={item.display} query={searchQuery} {...knobProps.label} />
+                  <YStack
+                    flex={1}
+                    minWidth={0}>
+                    <MentionMatchText
+                      text={item.display}
+                      query={searchQuery}
+                      {...knobProps.label}
+                    />
                     {secondary ? (
                       <MentionMatchText
                         text={secondary}
@@ -911,7 +926,11 @@ export function MentionInput<
               );
             })
           : triggerActive && (
-              <YStack paddingHorizontal="$3" paddingVertical="$2" role="status" aria-live="polite">
+              <YStack
+                paddingHorizontal="$3"
+                paddingVertical="$2"
+                role="status"
+                aria-live="polite">
                 <Text
                   fontSize={helperFontSizeMap[knobProps.sizeToken] ?? '$2'}
                   color={formCommonColors.muted}
@@ -985,7 +1004,11 @@ export function MentionInput<
         size={size}
         knobProps={knobProps}
         disabled={disabled}>
-        <Skeleton variant="rounded" width="100%" height={minHeight} />
+        <Skeleton
+          variant="rounded"
+          width="100%"
+          height={minHeight}
+        />
       </FieldLayout>
     );
   }

@@ -5,7 +5,8 @@
  */
 
 import { renderWithProviders } from '@repo/test-utils';
-import { Preset, type BorderRadius } from '@repo/theme';
+import { Preset } from '@repo/theme';
+import type { BorderRadius } from '@repo/theme';
 import { cleanup } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -31,12 +32,12 @@ function paintedHeight(el: HTMLElement): number {
     }
   }
   if (el.style.height) {
-    const n = parseFloat(el.style.height);
+    const n = Number.parseFloat(el.style.height);
     if (n > 0) {
       return n;
     }
   }
-  const cs = parseFloat(getComputedStyle(el).height);
+  const cs = Number.parseFloat(getComputedStyle(el).height);
   return cs > 0 ? cs : 0;
 }
 
@@ -52,12 +53,12 @@ function paintedRadius(el: HTMLElement, state?: 'hover' | 'active' | 'focus'): n
     return atomPx(m[1]);
   }
   if (!state && el.style.borderRadius) {
-    const n = parseFloat(el.style.borderRadius);
+    const n = Number.parseFloat(el.style.borderRadius);
     if (Number.isFinite(n)) {
       return n;
     }
   }
-  const cs = parseFloat(getComputedStyle(el).borderRadius);
+  const cs = Number.parseFloat(getComputedStyle(el).borderRadius);
   return Number.isFinite(cs) ? cs : Number.NaN;
 }
 
@@ -81,7 +82,11 @@ function mountSwitch(
         ...(extra?.press && { press: extra.press }),
         ...(extra?.focus && { focus: extra.focus }),
       }}>
-      <Switch name={`sw-${scheme}-${stop}`} defaultValue={false} aria-label="Notifications" />
+      <Switch
+        name={`sw-${scheme}-${stop}`}
+        defaultValue={false}
+        aria-label="Notifications"
+      />
     </Preset>,
   );
 }

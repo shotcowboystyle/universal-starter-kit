@@ -4,11 +4,11 @@ import { StyleSheet } from 'react-native';
 import { Text, View, XStack, YStack } from 'tamagui';
 
 import { Button } from '../../Button';
-import { formCommonColors, formInputColors } from '../../shared/colorRamps';
+import { formCommonColors, formInputColors } from '../../shared/color-ramps';
 import { t } from '../../shared/t';
 
-import type { BarcodeScannerProps, CameraPreflightResult } from './scannerTypes';
-import { resolveNativeBarcodeTypes, scannerViewportHeight } from './scannerTypes';
+import type { BarcodeScannerProps, CameraPreflightResult } from './scanner-types';
+import { resolveNativeBarcodeTypes, scannerViewportHeight } from './scanner-types';
 
 /**
  * Camera capability pre-flight, native mirror.
@@ -90,8 +90,16 @@ export function BarcodeScanner({ active, onScan, onError, onClose, knobProps, fo
       borderColor={formInputColors.border.base}
       overflow="hidden">
       {denied ? (
-        <YStack padding="$4" gap="$3" alignItems="center" minHeight={120} justifyContent="center">
-          <Text {...knobProps.body} color={formCommonColors.error} textAlign="center">
+        <YStack
+          padding="$4"
+          gap="$3"
+          alignItems="center"
+          minHeight={120}
+          justifyContent="center">
+          <Text
+            {...knobProps.body}
+            color={formCommonColors.error}
+            textAlign="center">
             {t('Camera permission denied. Please allow camera access.')}
           </Text>
           <XStack gap="$2">
@@ -108,17 +116,20 @@ export function BarcodeScanner({ active, onScan, onError, onClose, knobProps, fo
               aria-label={t('Retry camera')}>
               {t('Retry')}
             </Button>
-            <Button size={knobProps.sizeToken} onPress={onClose} aria-label={t('Close scanner')}>
+            <Button
+              size={knobProps.sizeToken}
+              onPress={onClose}
+              aria-label={t('Close scanner')}>
               {t('Close')}
             </Button>
           </XStack>
         </YStack>
-      ) : !permission?.granted ? (
-        <Text {...knobProps.body} padding="$3" textAlign="center" opacity={0.7}>
-          {t('Requesting camera…')}
-        </Text>
-      ) : (
-        <View width="100%" height={viewportPx} maxHeight={320} overflow="hidden">
+      ) : permission?.granted ? (
+        <View
+          width="100%"
+          height={viewportPx}
+          maxHeight={320}
+          overflow="hidden">
           <CameraView
             style={StyleSheet.absoluteFill}
             facing="back"
@@ -133,6 +144,14 @@ export function BarcodeScanner({ active, onScan, onError, onClose, knobProps, fo
             }}
           />
         </View>
+      ) : (
+        <Text
+          {...knobProps.body}
+          padding="$3"
+          textAlign="center"
+          opacity={0.7}>
+          {t('Requesting camera…')}
+        </Text>
       )}
     </YStack>
   );

@@ -7,7 +7,7 @@
 // extension pages (no address bar, no One server runtime). This module is
 // the replacement seam those targets share: a tiny route manifest + an
 // external nav store that MIRRORS a host navigation stack. A one-shim
-// (`./oneAdapter` on DOM, `gnome/shims/one.ts` on GTK) backs
+// (`./one-adapter` on DOM, `gnome/shims/one.ts` on GTK) backs
 // useRouter/Link/useParams/useLocalSearchParams/usePathname with this
 // store, so REAL feature screens navigate unmodified.
 //
@@ -118,7 +118,7 @@ function compileRoute(def: RouteDef): CompiledRoute {
     .split('/')
     .filter(Boolean)
     .map((seg) => {
-      const m = seg.match(/^\[(\.{3})?(.+)\]$/);
+      const m = /^\[(\.{3})?(.+)\]$/.exec(seg);
       return m ? { param: m[2] } : { literal: seg };
     });
   return { ...def, segments };
@@ -174,12 +174,12 @@ const EMPTY_PARAMS: NavParams = Object.freeze({});
 export class StackNavigator {
   private routes: CompiledRoute[] = [];
   private host: NavStackAdapter | null = null;
-  private listeners = new Set<() => void>();
+  private readonly listeners = new Set<() => void>();
   /** Stack mirror rebuilt from the host on every pushed/popped/replaced
    *  signal. */
   private stackTags: string[] = [];
-  private paramsByTag = new Map<string, NavParams>();
-  private pathnameByTag = new Map<string, string>();
+  private readonly paramsByTag = new Map<string, NavParams>();
+  private readonly pathnameByTag = new Map<string, string>();
   /** Tags whose page content has been navigated to at least once. The host
    *  gates each page's React content on this (lazy mounting) — a tag enters
    *  the set right before its first host push and never leaves (backgrounded
@@ -192,7 +192,7 @@ export class StackNavigator {
   private navSeq = 0;
   /** Navigations that arrived while no host was attached — flushed FIFO on
    *  attach() so deep links survive mount ordering and remount cycles. */
-  private pendingNavigations: Array<{ href: Href; mode: 'push' | 'replace' }> = [];
+  private pendingNavigations: { href: Href; mode: 'push' | 'replace' }[] = [];
   private generation = 0;
   private snapshot: NavSnapshot = {
     pathname: '/',

@@ -3,7 +3,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TaskActions } from '@/components/kanban/task/TaskAction';
-import { TaskStatus } from '@/types/dbInterface';
+import { TaskStatus } from '@/types/db-interface';
 
 // Mock dependencies
 vi.mock('@/stores/workspace-store', () => ({
@@ -30,10 +30,14 @@ vi.mock('@/lib/api/tasks/queries', () => ({
 vi.mock('@/components/kanban/task/TaskForm', () => ({
   TaskForm: ({ onSubmit, onCancel }: any) => (
     <div data-testid="task-form">
-      <button data-testid="form-submit" onClick={() => onSubmit({ title: 'Updated Task' })}>
+      <button
+        data-testid="form-submit"
+        onClick={() => onSubmit({ title: 'Updated Task' })}>
         Submit
       </button>
-      <button data-testid="form-cancel" onClick={onCancel}>
+      <button
+        data-testid="form-cancel"
+        onClick={onCancel}>
         Cancel
       </button>
     </div>
@@ -161,41 +165,81 @@ describe('TaskActions', () => {
   });
 
   it('should render with dueDate', () => {
-    render(<TaskActions {...mockProps} dueDate={new Date('2025-12-31')} />);
+    render(
+      <TaskActions
+        {...mockProps}
+        dueDate={new Date('2025-12-31')}
+      />,
+    );
     expect(screen.getByTestId('task-actions-trigger')).toBeInTheDocument();
   });
 
   it('should render without dueDate', () => {
-    render(<TaskActions {...mockProps} dueDate={undefined} />);
+    render(
+      <TaskActions
+        {...mockProps}
+        dueDate={undefined}
+      />,
+    );
     expect(screen.getByTestId('task-actions-trigger')).toBeInTheDocument();
   });
 
   it('should render without assignee', () => {
-    render(<TaskActions {...mockProps} assigneeId={undefined} />);
+    render(
+      <TaskActions
+        {...mockProps}
+        assigneeId={undefined}
+      />,
+    );
     expect(screen.getByTestId('task-actions-trigger')).toBeInTheDocument();
   });
 
   it('should render with description', () => {
-    render(<TaskActions {...mockProps} description="Test description" />);
+    render(
+      <TaskActions
+        {...mockProps}
+        description="Test description"
+      />,
+    );
     expect(screen.getByTestId('task-actions-trigger')).toBeInTheDocument();
   });
 
   it('should render without description', () => {
-    render(<TaskActions {...mockProps} description={undefined} />);
+    render(
+      <TaskActions
+        {...mockProps}
+        description={undefined}
+      />,
+    );
     expect(screen.getByTestId('task-actions-trigger')).toBeInTheDocument();
   });
 
   it('should handle different task statuses', () => {
-    render(<TaskActions {...mockProps} status={TaskStatus.IN_PROGRESS} />);
+    render(
+      <TaskActions
+        {...mockProps}
+        status={TaskStatus.IN_PROGRESS}
+      />,
+    );
     expect(screen.getByTestId('task-actions-trigger')).toBeInTheDocument();
 
-    render(<TaskActions {...mockProps} status={TaskStatus.DONE} />);
+    render(
+      <TaskActions
+        {...mockProps}
+        status={TaskStatus.DONE}
+      />,
+    );
     expect(screen.getAllByTestId('task-actions-trigger').length).toBeGreaterThan(0);
   });
 
   it('should handle onUpdate callback when provided', () => {
     const mockOnUpdate = vi.fn();
-    render(<TaskActions {...mockProps} onUpdate={mockOnUpdate} />);
+    render(
+      <TaskActions
+        {...mockProps}
+        onUpdate={mockOnUpdate}
+      />,
+    );
     expect(screen.getByTestId('task-actions-trigger')).toBeInTheDocument();
   });
 
@@ -205,7 +249,7 @@ describe('TaskActions', () => {
   };
 
   // The alertdialog sits in a portal that testing-library's role query treats as inaccessible.
-  const findConfirmDialog = () =>
+  const findConfirmDialog = async () =>
     waitFor(() => {
       const el = document.querySelector<HTMLElement>('[role="alertdialog"]');
       expect(el).not.toBeNull();
@@ -248,12 +292,12 @@ describe('TaskActions', () => {
     fireEvent.click(within(dialog).getByTestId('form-submit'));
 
     const { mutateAsync } = vi.mocked(useUpdateTask).mock.results[0].value;
-    await waitFor(() =>
+    await waitFor(() => {
       expect(mutateAsync).toHaveBeenCalledWith(
         expect.objectContaining({ id: 'task-1', title: 'Updated Task', assigneeId: null }),
         expect.any(Object),
-      ),
-    );
+      );
+    });
   });
 
   it('confirms deletion through the destructive confirm dialog', async () => {
@@ -267,7 +311,9 @@ describe('TaskActions', () => {
     fireEvent.click(dialog.getByText('delete'));
 
     const { mutateAsync } = vi.mocked(useDeleteTask).mock.results[0].value;
-    await waitFor(() => expect(mutateAsync).toHaveBeenCalledWith('task-1', expect.any(Object)));
+    await waitFor(() => {
+      expect(mutateAsync).toHaveBeenCalledWith('task-1', expect.any(Object));
+    });
   });
 
   it('does not delete when the confirm dialog is cancelled', async () => {
@@ -279,7 +325,9 @@ describe('TaskActions', () => {
     const dialog = within(await findConfirmDialog());
     fireEvent.click(dialog.getByText('cancel'));
 
-    await waitFor(() => expect(document.querySelector('[role="alertdialog"]')).toBeNull());
+    await waitFor(() => {
+      expect(document.querySelector('[role="alertdialog"]')).toBeNull();
+    });
     const { mutateAsync } = vi.mocked(useDeleteTask).mock.results[0].value;
     expect(mutateAsync).not.toHaveBeenCalled();
   });

@@ -78,31 +78,40 @@ export function objectFitToResizeMode(
   objectFit: string | undefined,
 ): 'cover' | 'contain' | 'stretch' | 'center' | undefined {
   switch (objectFit) {
-    case 'cover':
+    case 'cover': {
       return 'cover';
+    }
     case 'contain':
-    case 'scale-down':
+    case 'scale-down': {
       return 'contain';
-    case 'fill':
+    }
+    case 'fill': {
       return 'stretch';
-    case 'none':
+    }
+    case 'none': {
       return 'center';
-    default:
+    }
+    default: {
       return undefined;
+    }
   }
 }
 
 export function svgPreserveAspectRatio(objectFit: string | undefined): string | undefined {
   switch (objectFit) {
     case 'contain':
-    case 'scale-down':
+    case 'scale-down': {
       return 'xMidYMid meet';
-    case 'cover':
+    }
+    case 'cover': {
       return 'xMidYMid slice';
+    }
     case 'fill':
-    case 'none':
+    case 'none': {
       return 'none';
-    default:
+    }
+    default: {
       return undefined;
+    }
   }
 }

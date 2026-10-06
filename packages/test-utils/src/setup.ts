@@ -72,7 +72,7 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
   }
 
   // Element.matches polyfill
-  const matchesImpl = function (this: any, selector: string) {
+  const matchesImpl = function matchesImpl(this: any, selector: string) {
     if (!this || typeof this !== 'object') {
       return false;
     }
@@ -113,7 +113,7 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
   }
 
   // hasAttribute / getAttribute / setAttribute polyfills for all Node types
-  const hasAttributeImpl = function (this: any, name: string): boolean {
+  const hasAttributeImpl = function hasAttributeImpl(this: any, name: string): boolean {
     if (!this || this.nodeType !== 1) {
       return false;
     }
@@ -130,7 +130,7 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     return false;
   };
 
-  const getAttributeImpl = function (this: any, name: string): string | null {
+  const getAttributeImpl = function getAttributeImpl(this: any, name: string): string | null {
     if (!this || this.nodeType !== 1) {
       return null;
     }
@@ -162,8 +162,8 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
       typeof Comment !== 'undefined' && Comment,
       typeof Document !== 'undefined' && Document,
       typeof DocumentFragment !== 'undefined' && DocumentFragment,
-    ] as Array<false | (new (...args: any[]) => any)>
-  ).filter(Boolean) as Array<new (...args: any[]) => any>;
+    ] as (false | (new (...args: any[]) => any))[]
+  ).filter(Boolean) as (new (...args: any[]) => any)[];
 
   for (const NodeType of nodeTypes) {
     if ((NodeType as any)?.prototype) {
@@ -185,7 +185,7 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
       }
       if (!(NodeType as any).prototype.setAttribute) {
         Object.defineProperty((NodeType as any).prototype, 'setAttribute', {
-          value: function (name: string, value: string) {
+          value(name: string, value: string) {
             if (this.nodeType === 1 && Element.prototype.setAttribute) {
               Element.prototype.setAttribute.call(this, name, value);
             }
@@ -201,7 +201,7 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
   // Polyfill HTMLFormElement.prototype.requestSubmit for jsdom
   if (typeof HTMLFormElement !== 'undefined') {
     Object.defineProperty(HTMLFormElement.prototype, 'requestSubmit', {
-      value: function (submitter?: HTMLElement) {
+      value(submitter?: HTMLElement) {
         if (submitter) {
           if ((submitter as HTMLButtonElement).type !== 'submit') {
             throw new TypeError('The specified element is not a submit button');
@@ -222,9 +222,9 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
 
 // Now safe to import modules that depend on polyfills
 // Must precede any tamagui import: isWebTouchable is read once at module load.
-import './noTouchPolyfill';
+import './no-touch-polyfill';
 import '@testing-library/jest-dom';
-import './matchMediaPolyfill';
+import './match-media-polyfill';
 
 import { config } from '@tamagui/config';
 import { cleanup } from '@testing-library/react';
@@ -298,7 +298,7 @@ if (typeof window !== 'undefined' && !window.indexedDB) {
 // Stub fetch to prevent real network calls
 vi.stubGlobal(
   'fetch',
-  vi.fn(() =>
+  vi.fn(async () =>
     Promise.resolve(
       new Response(JSON.stringify({ data: [] }), {
         status: 200,
@@ -309,9 +309,8 @@ vi.stubGlobal(
 );
 
 // requestAnimationFrame / cancelAnimationFrame polyfill
-global.requestAnimationFrame = ((callback: FrameRequestCallback): number => {
-  return setTimeout(callback, 0) as unknown as number;
-}) as typeof window.requestAnimationFrame;
+global.requestAnimationFrame = ((callback: FrameRequestCallback): number =>
+  setTimeout(callback, 0) as unknown as number) as typeof window.requestAnimationFrame;
 
 global.cancelAnimationFrame = (id: number): void => {
   clearTimeout(id);
@@ -331,7 +330,7 @@ class MockIntersectionObserver implements IntersectionObserver {
   readonly rootMargin: string = '0px';
   // TS7's dom lib added scrollMargin to the interface.
   readonly scrollMargin: string = '0px';
-  readonly thresholds: ReadonlyArray<number> = [0];
+  readonly thresholds: readonly number[] = [0];
   observe(): void {}
   unobserve(): void {}
   disconnect(): void {}
@@ -369,7 +368,7 @@ if (typeof self !== 'undefined') {
 // DataTransfer mock
 if (typeof DataTransfer === 'undefined') {
   (global as any).DataTransfer = class DataTransfer {
-    private data: Map<string, string>;
+    private readonly data: Map<string, string>;
     constructor() {
       this.data = new Map();
     }
@@ -558,7 +557,7 @@ vi.mock('@react-navigation/native', () => ({
 if (typeof document !== 'undefined') {
   const style = document.createElement('style');
   style.textContent = 'html { pointer-events: auto !important; }';
-  document.head.appendChild(style);
+  document.head.append(style);
 }
 
 const ignoredTestWarnings = [

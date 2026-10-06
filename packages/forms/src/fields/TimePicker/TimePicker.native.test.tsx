@@ -12,7 +12,9 @@ vi.mock('tamagui', async (importOriginal) => ({
 vi.mock('../nativeDateTime/OsDateTimeSheet', () => ({
   OsDateTimeSheet: ({ open, onConfirm }: { open: boolean; onConfirm: (date: Date) => void }) =>
     open ? (
-      <div role="dialog" aria-label="OS time">
+      <div
+        role="dialog"
+        aria-label="OS time">
         <button
           onClick={() => {
             onConfirm(new Date(2026, 2, 5, 14, 30));

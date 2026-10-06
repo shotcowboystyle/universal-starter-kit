@@ -56,11 +56,11 @@ const RADIUS_TOKEN_PX: Record<string, number> = {
 function radiusPx(el: HTMLElement): number | null {
   let found: number | null = null;
   for (const c of String(el.className || '').split(/\s+/)) {
-    const px = c.match(/^_btlr-(\d+)px$/);
+    const px = /^_btlr-(\d+)px$/.exec(c);
     if (px) {
       found = Number(px[1]);
     }
-    const tok = c.match(/^_btlr-t-radius-(\d+)$/);
+    const tok = /^_btlr-t-radius-(\d+)$/.exec(c);
     if (tok) {
       found = RADIUS_TOKEN_PX[tok[1]] ?? found;
     }
@@ -88,7 +88,9 @@ function labelPx(el: HTMLElement): number | null {
 
 function renderSize(size: keyof typeof MEASURED) {
   renderWithProviders(
-    <Button size={size} icon={<span>i</span>}>
+    <Button
+      size={size}
+      icon={<span>i</span>}>
       Restart
     </Button>,
   );
@@ -120,7 +122,9 @@ describe('painted Button size ladder', () => {
     for (const [stop, px] of Object.entries(KNOB_STOPS) as [keyof typeof KNOB_STOPS, number][]) {
       renderWithProviders(
         <Preset overrides={{ borderRadius: stop }}>
-          <Button size="$4" icon={<span>i</span>}>
+          <Button
+            size="$4"
+            icon={<span>i</span>}>
             Restart
           </Button>
         </Preset>,

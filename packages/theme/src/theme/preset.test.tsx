@@ -1,4 +1,5 @@
-import { type ReactNode, createElement } from 'react';
+import { createElement } from 'react';
+import type { ReactNode } from 'react';
 import { renderToString } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -12,8 +13,9 @@ import type { ThemeName } from '@tamagui/web';
 
 import { defaultKnobs } from './knobs';
 import { Preset } from './Preset';
+import { usePresetContext } from './preset-context';
+import type { PresetContextValue } from './preset-context';
 import type { Preset as PresetType } from './preset.types';
-import { type PresetContextValue, usePresetContext } from './PresetContext';
 import { clearPresets, registerPreset } from './shared';
 
 // ---------------------------------------------------------------------------

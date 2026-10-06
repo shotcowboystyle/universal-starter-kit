@@ -1,12 +1,12 @@
-import type { Board } from "@repo/store";
-import type { StateCreator } from "zustand";
+import type { Board } from '@repo/store';
+import type { StateCreator } from 'zustand';
 
-import { boardApi } from "@/lib/api/boardApi";
+import { boardApi } from '@/lib/api/board-api';
 
-import type { BoardSliceState, UserSliceState } from "./types";
+import type { BoardSliceState, UserSliceState } from './types';
 
 export const createBoardSlice: StateCreator<
-  BoardSliceState & Pick<UserSliceState, "userId">,
+  BoardSliceState & Pick<UserSliceState, 'userId'>,
   [],
   [],
   BoardSliceState
@@ -23,26 +23,26 @@ export const createBoardSlice: StateCreator<
     try {
       const { userId } = get();
       if (!userId) {
-        throw new Error("User not authenticated");
+        throw new Error('User not authenticated');
       }
 
       const newBoard = await boardApi.createBoard({
         title,
         description,
-        owner: userId
+        owner: userId,
       });
 
       if (newBoard) {
         set((state) => ({
-          myBoards: [...state.myBoards, newBoard]
+          myBoards: [...state.myBoards, newBoard],
         }));
 
         return newBoard._id;
       }
 
-      throw new Error("Failed to create board");
+      throw new Error('Failed to create board');
     } catch (error) {
-      console.error("Error in addBoard:", error);
+      console.error('Error in addBoard:', error);
       throw error;
     }
   },
@@ -53,12 +53,10 @@ export const createBoardSlice: StateCreator<
 
       set((state) => ({
         myBoards: state.myBoards.map((board) => (board._id === id ? { ...board, ...data } : board)),
-        teamBoards: state.teamBoards.map((board) =>
-          board._id === id ? { ...board, ...data } : board
-        )
+        teamBoards: state.teamBoards.map((board) => (board._id === id ? { ...board, ...data } : board)),
       }));
     } catch (error) {
-      console.error("Error updating board:", error);
+      console.error('Error updating board:', error);
       throw error;
     }
   },
@@ -70,11 +68,11 @@ export const createBoardSlice: StateCreator<
       set((state) => ({
         myBoards: state.myBoards.filter((board) => board._id === id),
         teamBoards: state.teamBoards.filter((board) => board._id !== id),
-        currentBoardId: state.currentBoardId === id ? null : state.currentBoardId
+        currentBoardId: state.currentBoardId === id ? null : state.currentBoardId,
       }));
     } catch (error) {
-      console.error("Error removing board:", error);
+      console.error('Error removing board:', error);
       throw error;
     }
-  }
+  },
 });

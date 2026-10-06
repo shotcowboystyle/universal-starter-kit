@@ -4,7 +4,8 @@ import { act, cleanup, fireEvent, screen, waitFor } from '@testing-library/react
 import { StrictMode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { TreeView, type TreeNode, type TreeViewProps } from './TreeView';
+import { TreeView } from './TreeView';
+import type { TreeNode, TreeViewProps } from './TreeView';
 
 const observed = vi.hoisted(() => ({
   list: null as FlashListRef<unknown> | null,
@@ -69,10 +70,16 @@ function measuredTree(initial: Partial<TreeViewProps> = {}, synchronousScroll = 
   const view = (next: Partial<TreeViewProps> = {}) =>
     strict ? (
       <StrictMode>
-        <TreeView {...props} {...next} />
+        <TreeView
+          {...props}
+          {...next}
+        />
       </StrictMode>
     ) : (
-      <TreeView {...props} {...next} />
+      <TreeView
+        {...props}
+        {...next}
+      />
     );
   const rendered = renderWithProviders(view());
   const geometry = {
@@ -104,7 +111,7 @@ function measuredTree(initial: Partial<TreeViewProps> = {}, synchronousScroll = 
   const oldScroll = vi.fn(async () => {});
   let attached: FlashListRef<unknown> | null = null;
   const attach = () => {
-    const list = observed.list;
+    const { list } = observed;
     if (!list || list === attached) {
       return;
     }
@@ -194,7 +201,7 @@ describe('TreeView measured reveal scheduling (modeled geometry)', () => {
     tree.commitLayout();
     await settle();
     expect(tree.scroll).toHaveBeenCalledTimes(2);
-    expect(complete).toHaveBeenCalledTimes(1);
+    expect(complete).toHaveBeenCalledOnce();
     expect(tree.oldScroll).not.toHaveBeenCalled();
   });
 
@@ -203,7 +210,7 @@ describe('TreeView measured reveal scheduling (modeled geometry)', () => {
     const tree = measuredTree({ onRevealComplete: complete });
     tree.rerender({ revealRequest: { id: 'item', requestId: 1 } });
     await waitFor(() => {
-      expect(tree.scroll).toHaveBeenCalledTimes(1);
+      expect(tree.scroll).toHaveBeenCalledOnce();
     });
     await waitFor(() => {
       expect(complete).toHaveBeenCalledExactlyOnceWith({ id: 'item', requestId: 1 });
@@ -212,8 +219,8 @@ describe('TreeView measured reveal scheduling (modeled geometry)', () => {
     tree.rerender({ revealRequest: { id: 'item', requestId: 1 } });
     tree.commitLayout();
     await settle();
-    expect(tree.scroll).toHaveBeenCalledTimes(1);
-    expect(complete).toHaveBeenCalledTimes(1);
+    expect(tree.scroll).toHaveBeenCalledOnce();
+    expect(complete).toHaveBeenCalledOnce();
     tree.rerender({ revealRequest: { id: 'item', requestId: 2 } });
     await waitFor(() => {
       expect(tree.scroll).toHaveBeenCalledTimes(2);
@@ -242,7 +249,7 @@ describe('TreeView measured reveal scheduling (modeled geometry)', () => {
     tree.geometry.hostVisible = true;
     tree.commitLayout();
     await waitFor(() => {
-      expect(tree.scroll).toHaveBeenCalledTimes(1);
+      expect(tree.scroll).toHaveBeenCalledOnce();
     });
     await waitFor(() => {
       expect(complete).toHaveBeenCalledExactlyOnceWith({ id: 'item', requestId: 1 });
@@ -263,7 +270,7 @@ describe('TreeView measured reveal scheduling (modeled geometry)', () => {
     await settle();
     tree.commitLayout();
     await settle();
-    expect(tree.scroll).toHaveBeenCalledTimes(1);
+    expect(tree.scroll).toHaveBeenCalledOnce();
     expect(tree.oldScroll).not.toHaveBeenCalled();
     expect(complete).toHaveBeenCalledExactlyOnceWith({ id: 'other-item', requestId: 11 });
   });
@@ -282,7 +289,7 @@ describe('TreeView measured reveal scheduling (modeled geometry)', () => {
     expect(complete).not.toHaveBeenCalled();
     tree.rerender({ revealRequest: { id: 'item', requestId: 2 } });
     await waitFor(() => {
-      expect(tree.scroll).toHaveBeenCalledTimes(1);
+      expect(tree.scroll).toHaveBeenCalledOnce();
     });
     await waitFor(() => {
       expect(complete).toHaveBeenCalledExactlyOnceWith({ id: 'item', requestId: 2 });
@@ -331,7 +338,7 @@ describe('TreeView measured reveal scheduling (modeled geometry)', () => {
     const revealRequest = { id: 'item', requestId: 1 };
     tree.rerender({ revealRequest });
     await waitFor(() => {
-      expect(tree.scroll).toHaveBeenCalledTimes(1);
+      expect(tree.scroll).toHaveBeenCalledOnce();
     });
     await settle();
     expect(complete).not.toHaveBeenCalled();
@@ -362,7 +369,7 @@ describe('TreeView measured reveal scheduling (modeled geometry)', () => {
     const revealRequest = { id: 'item', requestId: 1 };
     tree.rerender({ revealRequest });
     await waitFor(() => {
-      expect(tree.scroll).toHaveBeenCalledTimes(1);
+      expect(tree.scroll).toHaveBeenCalledOnce();
     });
     const complete = vi.fn(() => {
       tree.commitLayout();
@@ -379,7 +386,7 @@ describe('TreeView measured reveal scheduling (modeled geometry)', () => {
     await settle();
     expect(oldComplete).not.toHaveBeenCalled();
     expect(laterComplete).not.toHaveBeenCalled();
-    expect(complete).toHaveBeenCalledTimes(1);
+    expect(complete).toHaveBeenCalledOnce();
   });
 });
 
@@ -425,7 +432,7 @@ describe('TreeView retained scroll (actual list, modeled geometry)', () => {
     expect(remember).not.toHaveBeenCalled();
     tree.commitLayout();
     await settle();
-    expect(tree.scroll).toHaveBeenCalledTimes(1);
+    expect(tree.scroll).toHaveBeenCalledOnce();
     tree.emitScroll(640.5);
     await settle();
     expect(remember).toHaveBeenCalledExactlyOnceWith(640.5);
@@ -435,7 +442,7 @@ describe('TreeView retained scroll (actual list, modeled geometry)', () => {
     tree.contentSize();
     await settle();
     expect(saved).toBe(812.25);
-    expect(tree.scroll).toHaveBeenCalledTimes(1);
+    expect(tree.scroll).toHaveBeenCalledOnce();
   });
 
   it('waits through empty data, load, zero viewport and hidden host without overwriting memory', async () => {
@@ -525,7 +532,7 @@ describe('TreeView retained scroll (actual list, modeled geometry)', () => {
     tree.geometry.height = 320;
     tree.commitLayout();
     await settle();
-    expect(tree.scroll).toHaveBeenCalledTimes(1);
+    expect(tree.scroll).toHaveBeenCalledOnce();
     tree.unmount();
     const absent = measuredTree();
     absent.rerender({ initialScrollOffset: 900 });
@@ -560,7 +567,7 @@ describe('TreeView retained scroll (actual list, modeled geometry)', () => {
     tree.rerender({ revealRequest: undefined });
     tree.commitLayout();
     await settle();
-    expect(tree.scroll).toHaveBeenCalledTimes(1);
+    expect(tree.scroll).toHaveBeenCalledOnce();
   });
 
   it('cancels queued restoration when a new reveal arrives', async () => {
@@ -618,7 +625,7 @@ describe('TreeView retained scroll (actual list, modeled geometry)', () => {
     expect(tree.scroll).toHaveBeenCalledTimes(2);
     tree.emitScroll(Number.NaN);
     tree.emitScroll(-25);
-    tree.emitScroll(10000);
+    tree.emitScroll(10_000);
     expect(change.mock.calls).toEqual([[260], [0], [760]]);
   });
 
@@ -638,7 +645,7 @@ describe('TreeView retained scroll (actual list, modeled geometry)', () => {
     });
     tree.load();
     await waitFor(() => {
-      expect(tree.scroll).toHaveBeenCalledTimes(1);
+      expect(tree.scroll).toHaveBeenCalledOnce();
     });
     await settle();
     expect(screen.queryByRole('tree')).toBeNull();
@@ -651,7 +658,7 @@ describe('TreeView retained scroll arbitration', () => {
     const tree = measuredTree({ initialScrollOffset: 640.5, onScrollOffsetChange: change }, false);
     tree.load();
     await waitFor(() => {
-      expect(tree.scroll).toHaveBeenCalledTimes(1);
+      expect(tree.scroll).toHaveBeenCalledOnce();
     });
     expect(change).not.toHaveBeenCalled();
     tree.geometry.offset = 640.5;
@@ -668,7 +675,7 @@ describe('TreeView retained scroll arbitration', () => {
     tree.geometry.contentHeight = 2000;
     tree.contentSize();
     await settle();
-    expect(tree.scroll).toHaveBeenCalledTimes(1);
+    expect(tree.scroll).toHaveBeenCalledOnce();
   });
 
   it.each(['wheel', 'pointer', 'drag'])(
@@ -678,7 +685,7 @@ describe('TreeView retained scroll arbitration', () => {
       const tree = measuredTree({ initialScrollOffset: 9999, onScrollOffsetChange: change }, false);
       tree.load();
       await waitFor(() => {
-        expect(tree.scroll).toHaveBeenCalledTimes(1);
+        expect(tree.scroll).toHaveBeenCalledOnce();
       });
       if (kind === 'wheel') {
         fireEvent.wheel(screen.getByRole('tree'), { deltaY: 20 });
@@ -692,7 +699,7 @@ describe('TreeView retained scroll arbitration', () => {
       tree.contentSize();
       await settle();
       expect(change).toHaveBeenCalledExactlyOnceWith(300.5);
-      expect(tree.scroll).toHaveBeenCalledTimes(1);
+      expect(tree.scroll).toHaveBeenCalledOnce();
     },
   );
 
@@ -709,7 +716,7 @@ describe('TreeView retained scroll arbitration', () => {
     tree.load();
     tree.commitLayout();
     await settle();
-    expect(tree.scroll).toHaveBeenCalledTimes(1);
+    expect(tree.scroll).toHaveBeenCalledOnce();
     expect(change).toHaveBeenLastCalledWith(0);
   });
 
@@ -728,8 +735,8 @@ describe('TreeView retained scroll arbitration', () => {
       detached?.onScroll?.({ nativeEvent: { contentOffset: { y: 900 } } } as never);
     });
     await settle();
-    expect(tree.scroll).toHaveBeenCalledTimes(1);
-    expect(change).toHaveBeenCalledTimes(1);
+    expect(tree.scroll).toHaveBeenCalledOnce();
+    expect(change).toHaveBeenCalledOnce();
   });
 
   it('reports actual keyboard and drag-list movements without publishing index requests', async () => {
@@ -748,12 +755,12 @@ describe('TreeView retained scroll arbitration', () => {
   });
 });
 
-it('retries an unacknowledged target only when real bounds change', async () => {
+test('retries an unacknowledged target only when real bounds change', async () => {
   const change = vi.fn();
   const tree = measuredTree({ initialScrollOffset: 640.5, onScrollOffsetChange: change }, false);
   tree.load();
   await waitFor(() => {
-    expect(tree.scroll).toHaveBeenCalledTimes(1);
+    expect(tree.scroll).toHaveBeenCalledOnce();
   });
   tree.geometry.width = 400;
   tree.commitLayout();
@@ -773,27 +780,27 @@ it('retries an unacknowledged target only when real bounds change', async () => 
   expect(tree.scroll).toHaveBeenCalledTimes(2);
 });
 
-it('keeps observing a frozen pending seed when the initial prop is removed', async () => {
+test('keeps observing a frozen pending seed when the initial prop is removed', async () => {
   const tree = measuredTree({ initialScrollOffset: 640.5 }, false);
   tree.rerender({ initialScrollOffset: undefined });
   expect(observed.props?.onScroll).toBeTypeOf('function');
   tree.load();
   await waitFor(() => {
-    expect(tree.scroll).toHaveBeenCalledTimes(1);
+    expect(tree.scroll).toHaveBeenCalledOnce();
   });
   tree.emitScroll(640.5);
   tree.geometry.width = 400;
   tree.commitLayout();
   await settle();
-  expect(tree.scroll).toHaveBeenCalledTimes(1);
+  expect(tree.scroll).toHaveBeenCalledOnce();
 });
 
-it('retries a pending seed for a newly attached list after temporary empty data', async () => {
+test('retries a pending seed for a newly attached list after temporary empty data', async () => {
   const change = vi.fn();
   const tree = measuredTree({ initialScrollOffset: 640.5, onScrollOffsetChange: change }, false);
   tree.load();
   await waitFor(() => {
-    expect(tree.scroll).toHaveBeenCalledTimes(1);
+    expect(tree.scroll).toHaveBeenCalledOnce();
   });
   tree.rerender({ nodes: [] });
   tree.rerender({ nodes });
@@ -828,7 +835,7 @@ describe('TreeView retained scroll lifecycle', () => {
     expect(frame).not.toHaveBeenCalled();
     await settle();
     expect(change).not.toHaveBeenCalled();
-    expect(tree.scroll).toHaveBeenCalledTimes(1);
+    expect(tree.scroll).toHaveBeenCalledOnce();
     tree.emitScroll(640.5);
     expect(change).toHaveBeenCalledExactlyOnceWith(640.5);
   });
@@ -885,7 +892,7 @@ describe('TreeView retained scroll lifecycle', () => {
   });
 });
 
-it('positive control: a committed replacement tree reveals using the new index', async () => {
+test('positive control: a committed replacement tree reveals using the new index', async () => {
   const tree = measuredTree({ onScrollOffsetChange: vi.fn() });
   tree.load();
   await settle();
@@ -898,7 +905,7 @@ it('positive control: a committed replacement tree reveals using the new index',
   });
 });
 
-it('retains a seed across a stale load with provisional content, then restores after the current load', async () => {
+test('retains a seed across a stale load with provisional content, then restores after the current load', async () => {
   const change = vi.fn();
   const tree = measuredTree({ initialScrollOffset: 640.5, onScrollOffsetChange: change });
   const detached = observed.props;
@@ -915,7 +922,7 @@ it('retains a seed across a stale load with provisional content, then restores a
   expect(tree.scroll).toHaveBeenCalledExactlyOnceWith({ offset: 640.5, animated: false });
 });
 
-it('positive control: a replacement list waits for its own load with provisional content', async () => {
+test('positive control: a replacement list waits for its own load with provisional content', async () => {
   const change = vi.fn();
   const tree = measuredTree({ initialScrollOffset: 640.5, onScrollOffsetChange: change });
   tree.rerender({ nodes: [] });

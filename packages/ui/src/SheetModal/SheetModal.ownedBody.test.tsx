@@ -6,7 +6,7 @@ import * as stories from './SheetModal.stories';
 
 const hosts = vi.hoisted(() => ({
   props: new Map<string, Record<string, any>>(),
-  measurements: [] as Array<{ id: string; callback: (...bounds: number[]) => void }>,
+  measurements: [] as { id: string; callback: (...bounds: number[]) => void }[],
 }));
 vi.mock('@repo/ui', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@repo/ui')>();
@@ -24,7 +24,14 @@ vi.mock('@repo/ui', async (importOriginal) => {
         };
         return { ...host, getNativeScrollRef: () => host };
       });
-      return <Component {...props} onLayout={undefined} onContentSizeChange={undefined} onScroll={undefined} />;
+      return (
+        <Component
+          {...props}
+          onLayout={undefined}
+          onContentSizeChange={undefined}
+          onScroll={undefined}
+        />
+      );
     });
   }
   return {
@@ -61,6 +68,7 @@ function layout(id: string, height: number) {
 function readings(view: ReturnType<typeof renderStory>) {
   return JSON.parse(view.getByTestId('owned-sheet-readings').textContent);
 }
+
 it('keeps the measured subject unmeasured until a delivered layout and distinguishes zero', () => {
   const view = renderStory('OwnedMeasuredViewport');
   fireEvent.click(view.getByText('Open flex subject'));
@@ -74,6 +82,7 @@ it('keeps the measured subject unmeasured until a delivered layout and distingui
   expect(readings(view).viewportLayout.height).toBe(187.5);
   expect(view.getByText('Record 60')).toBeDefined();
 });
+
 it('provides a named fixed control without treating its declared height as a measurement', () => {
   const view = renderStory('OwnedMeasuredViewport');
   fireEvent.click(view.getByText('Open 240pt control'));
@@ -84,6 +93,7 @@ it('provides a named fixed control without treating its declared height as a mea
   expect(view.getByText('Record 60')).toBeDefined();
   expect(hosts.props.get('owned-sheet-scroll')).toBeDefined();
 });
+
 it('mounts the owned scroller without a measurement gate and records delivered content and offset', () => {
   const view = renderStory('OwnedScrollView');
   fireEvent.click(view.getByText('Open flex subject'));
@@ -100,6 +110,7 @@ it('mounts the owned scroller without a measurement gate and records delivered c
   fireEvent.click(view.getByText('Activate Record 60'));
   expect(readings(view).tailPresses).toBe(1);
 });
+
 it('records public window-bound callbacks and rejects callbacks from a closed presentation', () => {
   const view = renderStory('OwnedScrollView');
   fireEvent.click(view.getByText('Open flex subject'));
@@ -121,6 +132,7 @@ it('records public window-bound callbacks and rejects callbacks from a closed pr
   expect(readings(view).viewportWindow).toBe('unmeasured');
   expect(readings(view).frameWindow).toBe('unmeasured');
 });
+
 it('reports invalid readings rather than converting them to zero', () => {
   const view = renderStory('OwnedScrollView');
   fireEvent.click(view.getByText('Open flex subject'));
@@ -129,7 +141,7 @@ it('reports invalid readings rather than converting them to zero', () => {
   expect(readings(view).sheetFrameWindow).toBe('unavailable: SheetModal has no public frame ref');
 });
 
-it('keeps an absent measured scroller unavailable and ignores superseded samples', () => {
+test('keeps an absent measured scroller unavailable and ignores superseded samples', () => {
   const view = renderStory('OwnedMeasuredViewport');
   fireEvent.click(view.getByText('Open flex subject'));
   fireEvent.click(view.getByText('Measure bounds'));
@@ -151,7 +163,7 @@ it('keeps an absent measured scroller unavailable and ignores superseded samples
   expect(readings(view).frameWindow).toEqual({ x: 18, y: 780, width: 354, height: 0 });
 });
 
-it('retains the closed presentation readings and resets actual tail presses on reopening', () => {
+test('retains the closed presentation readings and resets actual tail presses on reopening', () => {
   const view = renderStory('OwnedScrollView');
   fireEvent.click(view.getByText('Open 240pt control'));
   layout('owned-sheet-viewport', 192);
@@ -170,7 +182,7 @@ it('retains the closed presentation readings and resets actual tail presses on r
   expect(view.getAllByText('Generic detail 4 for this record.')).toHaveLength(15);
 });
 
-it('hands the chosen fill value to the real public sheet rather than inferring it', () => {
+test('hands the chosen fill value to the real public sheet rather than inferring it', () => {
   const view = renderStory('OwnedMeasuredViewport');
   fireEvent.click(view.getByText('Open flex subject'));
   expect(sheetProps().fill).toBe(false);
@@ -187,7 +199,7 @@ it('hands the chosen fill value to the real public sheet rather than inferring i
   expect(sheetProps().fill).toBe(false);
 });
 
-it('measures the owned toolbar so the parent can subtract it from the body', () => {
+test('measures the owned toolbar so the parent can subtract it from the body', () => {
   const view = renderStory('OwnedScrollView');
   fireEvent.click(view.getByText('Open flex subject (fill)'));
   expect(readings(view).toolbarLayout).toBe('unmeasured');

@@ -14,7 +14,8 @@
 import { zIndex } from '@repo/forms';
 import { OVERLAY_ANCHOR_GAP, useResolvedKnobs, warnTooltipOnDisabled } from '@repo/theme';
 import React from 'react';
-import { Tooltip as TamaguiTooltip, TooltipGroup as TamaguiTooltipGroup, useTheme, type GetProps } from 'tamagui';
+import { Tooltip as TamaguiTooltip, TooltipGroup as TamaguiTooltipGroup, useTheme } from 'tamagui';
+import type { GetProps } from 'tamagui';
 
 import {
   TooltipArrow,
@@ -28,10 +29,10 @@ import {
   useTooltipSkipDelay,
   wrapTooltipContent,
   TOOLTIP_DEFAULT_DELAY_MS,
-  type TooltipProps,
-} from './tooltipShared';
+} from './tooltip-shared';
+import type { TooltipProps } from './tooltip-shared';
 
-export type { TooltipProps, TooltipSizeRecipe } from './tooltipShared';
+export type { TooltipProps, TooltipSizeRecipe } from './tooltip-shared';
 export {
   tooltipSizeRecipes,
   tooltipPadRecipes,
@@ -47,9 +48,9 @@ export {
   TooltipContent,
   TooltipArrow,
   TooltipText,
-} from './tooltipShared';
-export { TOOLTIP_NATIVE_LONG_PRESS_MS, createNativeTooltipPressHandlers } from './nativePress';
-export type { NativeTooltipPressHandlers } from './nativePress';
+} from './tooltip-shared';
+export { TOOLTIP_NATIVE_LONG_PRESS_MS, createNativeTooltipPressHandlers } from './native-press';
+export type { NativeTooltipPressHandlers } from './native-press';
 
 export function Tooltip({
   children,

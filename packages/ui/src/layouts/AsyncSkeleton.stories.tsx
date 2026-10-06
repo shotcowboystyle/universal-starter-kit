@@ -7,7 +7,8 @@
 import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { YStack } from 'tamagui';
 
-import { AsyncSkeleton, type AsyncBoundaryLayout } from './AsyncBoundary';
+import { AsyncSkeleton } from './AsyncBoundary';
+import type { AsyncBoundaryLayout } from './AsyncBoundary';
 
 const LAYOUTS: AsyncBoundaryLayout[] = ['list', 'table', 'kanban', 'dashboard', 'generic'];
 
@@ -45,9 +46,13 @@ export const Generic: Story = { args: { layout: 'generic' } };
 
 export const AllLayouts: Story = {
   render: () => (
-    <YStack gap="$6" padding="$4">
+    <YStack
+      gap="$6"
+      padding="$4">
       {LAYOUTS.map((layout) => (
-        <YStack key={layout} gap="$2">
+        <YStack
+          key={layout}
+          gap="$2">
           <AsyncSkeleton layout={layout} />
         </YStack>
       ))}

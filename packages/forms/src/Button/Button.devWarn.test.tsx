@@ -5,7 +5,7 @@
 import { renderWithProviders } from '@repo/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { __resetDevWarnSeen } from '../shared/devWarn';
+import { __resetDevWarnSeen } from '../shared/dev-warn';
 
 import { Button } from './index';
 
@@ -29,7 +29,9 @@ describe('Button DEV guardrails', () => {
 
   it('does not warn bare-disabled when disabledReason is set', () => {
     renderWithProviders(
-      <Button disabled disabledReason="Needs approval">
+      <Button
+        disabled
+        disabledReason="Needs approval">
         Save
       </Button>,
     );
@@ -43,7 +45,9 @@ describe('Button DEV guardrails', () => {
 
   it('warns positive-tabindex when tabIndex > 0', () => {
     renderWithProviders(
-      <Button tabIndex={2} disabledReason="n/a">
+      <Button
+        tabIndex={2}
+        disabledReason="n/a">
         Jump
       </Button>,
     );

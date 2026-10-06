@@ -16,7 +16,7 @@ import type { GetProps, ScrollView as TamaguiScrollView } from 'tamagui';
 import { View, XStack, getTokens, isWeb, styled } from 'tamagui';
 
 import { DotIndicator } from '../DotIndicator';
-import { useDirection } from '../hooks/useDirection';
+import { useDirection } from '../hooks/use-direction';
 import { ScrollView } from '../ScrollView';
 import { useTranslation } from '../shared/i18n';
 import { withInterp } from '../shared/t';
@@ -66,7 +66,7 @@ function ensureCarouselArrowRing() {
   outline: 2px solid var(--outlineColor, var(--c-outlineColor, CanvasText)) !important;
   outline-offset: 2px !important;
 }`;
-  document.head.appendChild(tag);
+  document.head.append(tag);
 }
 
 function isTypingTarget(target: EventTarget | null): boolean {
@@ -355,7 +355,7 @@ export function Carousel({
       height={arrowTargetSize}
       hitSlop={arrowHitSlop}
       transition={knobProps.transition}
-      {...(!enabled ? disabledState.chromeKnobProps : undefined)}
+      {...(enabled ? undefined : disabledState.chromeKnobProps)}
       onPress={enabled ? onPress : undefined}
       role="button"
       aria-label={label}
@@ -442,7 +442,7 @@ export function Carousel({
               {
                 scrollSnapType: 'x mandatory',
                 // Defeat inherited `scroll-behavior: smooth` when the knob is off.
-                ...(!animateSnaps ? { scrollBehavior: 'auto' } : {}),
+                ...(animateSnaps ? {} : { scrollBehavior: 'auto' }),
               } as any
             }
             onScroll={handleScroll}
@@ -458,7 +458,7 @@ export function Carousel({
             focusStyle={{ outlineWidth: 0, outlineStyle: 'none' as any }}
             focusVisibleStyle={{ outlineWidth: 0, outlineStyle: 'none' as any }}
             {...({ dataSet: { carouselTrack: 'true' } } as Record<string, unknown>)}>
-            <XStack {...(gapProp != null ? { gap: gapProp } : knobProps.gap)}>
+            <XStack {...(gapProp == null ? knobProps.gap : { gap: gapProp })}>
               {Children.map(children, (child, index) => (
                 <CarouselSlide
                   key={index}

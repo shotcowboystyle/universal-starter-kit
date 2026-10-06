@@ -1,6 +1,7 @@
 import { renderWithProviders } from '@repo/test-utils';
 import { fireEvent, waitFor } from '@testing-library/react';
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
+import type { ReactNode } from 'react';
 import { Text } from 'tamagui';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -94,7 +95,10 @@ describe('FloatingPanel nested actions', () => {
       <Harness
         onOpenChange={onOpenChange}
         trigger={
-          <button type="button" data-floating-panel-action="true" onClick={action}>
+          <button
+            type="button"
+            data-floating-panel-action="true"
+            onClick={action}>
             Clear selection
           </button>
         }
@@ -163,7 +167,12 @@ const labelInside = (result: { container: HTMLElement }, text: string) =>
 
 describe('FloatingPanel trigger — sheet mode', () => {
   it('a pressable trigger (Button) opens the panel', async () => {
-    const result = renderWithProviders(<Harness sheet trigger={<Button>Open Panel</Button>} />);
+    const result = renderWithProviders(
+      <Harness
+        sheet
+        trigger={<Button>Open Panel</Button>}
+      />,
+    );
     const button = result.container.querySelector("[role='button']");
     expect(button).not.toBeNull();
     pointerPress(button as Element);
@@ -173,7 +182,12 @@ describe('FloatingPanel trigger — sheet mode', () => {
   });
 
   it('pressing the label inside a Button trigger opens the panel', async () => {
-    const result = renderWithProviders(<Harness sheet trigger={<Button>Open Panel</Button>} />);
+    const result = renderWithProviders(
+      <Harness
+        sheet
+        trigger={<Button>Open Panel</Button>}
+      />,
+    );
     const label = labelInside(result, 'Open Panel');
     expect(label).toBeDefined();
     expect(label?.closest("[role='button']")).not.toBeNull();
@@ -186,7 +200,12 @@ describe('FloatingPanel trigger — sheet mode', () => {
   // Axiom 12 LEGIBLE FLOOR: Button synthesizes a click on Enter/Space so
   // keyboard activation rides the same path as a pointer press.
   it.each(['Enter', ' '])('keyboard %s on a Button trigger opens the panel', async (key) => {
-    const result = renderWithProviders(<Harness sheet trigger={<Button>Open Panel</Button>} />);
+    const result = renderWithProviders(
+      <Harness
+        sheet
+        trigger={<Button>Open Panel</Button>}
+      />,
+    );
     fireEvent.keyDown(result.container.querySelector("[role='button']") as Element, { key });
     await waitFor(() => {
       expect(isOpen(result)).toBe(true);
@@ -197,7 +216,12 @@ describe('FloatingPanel trigger — sheet mode', () => {
   // break: both openers see this press, so a toggle-shaped second call would
   // shut the sheet again.
   it('a non-pressable trigger opens the panel and stays open', async () => {
-    const result = renderWithProviders(<Harness sheet trigger={<Text>Open Panel</Text>} />);
+    const result = renderWithProviders(
+      <Harness
+        sheet
+        trigger={<Text>Open Panel</Text>}
+      />,
+    );
     const label = Array.from(result.container.querySelectorAll('*')).find(
       (el) => el.textContent === 'Open Panel' && el.children.length === 0,
     );
@@ -210,14 +234,26 @@ describe('FloatingPanel trigger — sheet mode', () => {
   });
 
   it('disabled: a pressable trigger opens nothing', async () => {
-    const result = renderWithProviders(<Harness sheet disabled trigger={<Button>Open Panel</Button>} />);
+    const result = renderWithProviders(
+      <Harness
+        sheet
+        disabled
+        trigger={<Button>Open Panel</Button>}
+      />,
+    );
     pointerPress(result.container.querySelector("[role='button']") as Element);
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(isOpen(result)).toBe(false);
   });
 
   it('disabled: keyboard activation opens nothing', async () => {
-    const result = renderWithProviders(<Harness sheet disabled trigger={<Button>Open Panel</Button>} />);
+    const result = renderWithProviders(
+      <Harness
+        sheet
+        disabled
+        trigger={<Button>Open Panel</Button>}
+      />,
+    );
     fireEvent.keyDown(result.container.querySelector("[role='button']") as Element, {
       key: 'Enter',
     });
@@ -263,7 +299,12 @@ describe('FloatingPanel trigger — floating mode', () => {
   // carry 0.
   it('a pointer-shaped click (detail >= 1) does not drive the capture opener', async () => {
     const onOpenChange = vi.fn();
-    const result = renderWithProviders(<Harness trigger={<Button>Open Panel</Button>} onOpenChange={onOpenChange} />);
+    const result = renderWithProviders(
+      <Harness
+        trigger={<Button>Open Panel</Button>}
+        onOpenChange={onOpenChange}
+      />,
+    );
     fireEvent.click(result.container.querySelector("[role='button']") as Element, { detail: 1 });
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(onOpenChange).not.toHaveBeenCalled();
@@ -271,7 +312,12 @@ describe('FloatingPanel trigger — floating mode', () => {
 
   it('a synthesized click (detail 0) does drive the capture opener', async () => {
     const onOpenChange = vi.fn();
-    const result = renderWithProviders(<Harness trigger={<Button>Open Panel</Button>} onOpenChange={onOpenChange} />);
+    const result = renderWithProviders(
+      <Harness
+        trigger={<Button>Open Panel</Button>}
+        onOpenChange={onOpenChange}
+      />,
+    );
     fireEvent.click(result.container.querySelector("[role='button']") as Element, { detail: 0 });
     await waitFor(() => {
       expect(onOpenChange).toHaveBeenCalledWith(true);
@@ -279,7 +325,12 @@ describe('FloatingPanel trigger — floating mode', () => {
   });
 
   it('disabled: keyboard activation opens nothing', async () => {
-    const result = renderWithProviders(<Harness disabled trigger={<Button>Open Panel</Button>} />);
+    const result = renderWithProviders(
+      <Harness
+        disabled
+        trigger={<Button>Open Panel</Button>}
+      />,
+    );
     fireEvent.keyDown(result.container.querySelector("[role='button']") as Element, {
       key: 'Enter',
     });
@@ -292,7 +343,9 @@ describe('FloatingPanel trigger — floating mode', () => {
       <Harness
         trigger={<Button>Open Panel</Button>}
         extra={
-          <Button data-testid="panel-close" onPress={() => undefined}>
+          <Button
+            data-testid="panel-close"
+            onPress={() => undefined}>
             Close
           </Button>
         }
@@ -385,7 +438,12 @@ describe('FloatingPanel trigger — floating mode', () => {
       }
     }
     vi.stubGlobal('ResizeObserver', TrackingResizeObserver);
-    const result = renderWithProviders(<Harness sizing="fill" trigger={<Button>Open Panel</Button>} />);
+    const result = renderWithProviders(
+      <Harness
+        sizing="fill"
+        trigger={<Button>Open Panel</Button>}
+      />,
+    );
     try {
       const trigger = result.container.querySelector("[role='button']") as HTMLElement;
       pointerPress(trigger);
@@ -426,7 +484,9 @@ describe('FloatingPanel nesting', () => {
 
   it('escapes a transformed, scrolled ancestor instead of positioning against it', async () => {
     const result = renderWithProviders(
-      <div data-testid="scroller" style={{ transform: 'translateZ(0)', overflowY: 'auto', height: 100 }}>
+      <div
+        data-testid="scroller"
+        style={{ transform: 'translateZ(0)', overflowY: 'auto', height: 100 }}>
         <Harness trigger={<Button>Open Panel</Button>} />
       </div>,
     );
@@ -447,7 +507,10 @@ describe('FloatingPanel nesting', () => {
 
   it('offsets its top by a transformed dialog it stays inside', async () => {
     const result = renderWithProviders(
-      <div role="dialog" data-testid="dialog" style={{ transform: 'translateZ(0)', overflowY: 'auto', height: 100 }}>
+      <div
+        role="dialog"
+        data-testid="dialog"
+        style={{ transform: 'translateZ(0)', overflowY: 'auto', height: 100 }}>
         <Harness trigger={<Button>Open Panel</Button>} />
       </div>,
     );
@@ -486,9 +549,16 @@ describe('FloatingPanel sheet — closed frame leaves the accessibility tree', (
           }}>
           Shut sheet
         </button>
-        <FloatingPanel open={open} onOpenChange={setOpen} sheet trigger={<Text>anchor</Text>}>
+        <FloatingPanel
+          open={open}
+          onOpenChange={setOpen}
+          sheet
+          trigger={<Text>anchor</Text>}>
           <Button>Apply</Button>
-          <input aria-label="Draft" defaultValue="" />
+          <input
+            aria-label="Draft"
+            defaultValue=""
+          />
         </FloatingPanel>
       </>
     );

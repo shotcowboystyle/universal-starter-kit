@@ -117,7 +117,7 @@ describe('List keyboard navigation: Enter to select', () => {
     // Focus first item, then select with Enter
     fireEvent.keyDown(container, { key: 'ArrowDown' });
     fireEvent.keyDown(container, { key: 'Enter' });
-    expect(onItemClick).toHaveBeenCalledTimes(1);
+    expect(onItemClick).toHaveBeenCalledOnce();
     expect(onItemClick).toHaveBeenCalledWith(items[0]);
 
     // Move to second item and select
@@ -139,7 +139,12 @@ describe('List keyboard navigation: Home/End/PageUp/PageDown', () => {
     }));
 
     renderWithProviders(
-      <List items={manyItems} renderItem={(item) => <span>{item.name}</span>} height={300} estimateSize={30} />,
+      <List
+        items={manyItems}
+        renderItem={(item) => <span>{item.name}</span>}
+        height={300}
+        estimateSize={30}
+      />,
     );
 
     const container = screen.getByRole('list');

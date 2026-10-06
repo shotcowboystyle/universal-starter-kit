@@ -25,7 +25,9 @@ describe('Chip', () => {
   it('disabled chip removes the dismiss affordance', () => {
     const onDismiss = vi.fn();
     const result = renderWithProviders(
-      <Chip disabled onDismiss={onDismiss}>
+      <Chip
+        disabled
+        onDismiss={onDismiss}>
         Locked
       </Chip>,
     );
@@ -39,7 +41,7 @@ describe('Chip', () => {
     expect(target).not.toBeNull();
     const inner = (target.firstElementChild ?? target) as HTMLElement;
     fireEvent.click(inner);
-    expect(onDismiss).toHaveBeenCalledTimes(1);
+    expect(onDismiss).toHaveBeenCalledOnce();
   });
 
   it('dismiss fires onDismiss on Enter', () => {
@@ -47,7 +49,7 @@ describe('Chip', () => {
     const result = renderWithProviders(<Chip onDismiss={onDismiss}>Tag</Chip>);
     const target = result.container.querySelector("[aria-label='Remove']") as HTMLElement;
     fireEvent.keyDown(target, { key: 'Enter' });
-    expect(onDismiss).toHaveBeenCalledTimes(1);
+    expect(onDismiss).toHaveBeenCalledOnce();
   });
 
   it('filled and ghost paint different surfaces (solid is no longer a synonym of subtle)', () => {
@@ -72,7 +74,9 @@ describe('Chip', () => {
   it('selected interactive chip is a pressed toggle and marks the fill', () => {
     const onPress = vi.fn();
     const result = renderWithProviders(
-      <Chip selected onPress={onPress}>
+      <Chip
+        selected
+        onPress={onPress}>
         Fire
       </Chip>,
     );
@@ -81,7 +85,7 @@ describe('Chip', () => {
     expect(frame.getAttribute('data-selected')).toBe('true');
     expect(frame.getAttribute('role')).toBe('button');
     fireEvent.click(frame);
-    expect(onPress).toHaveBeenCalledTimes(1);
+    expect(onPress).toHaveBeenCalledOnce();
   });
 
   it('Enter activates an interactive chip', () => {
@@ -89,7 +93,7 @@ describe('Chip', () => {
     const result = renderWithProviders(<Chip onPress={onPress}>Assist</Chip>);
     const frame = result.container.querySelector('[data-chip]') as HTMLElement;
     fireEvent.keyDown(frame, { key: 'Enter' });
-    expect(onPress).toHaveBeenCalledTimes(1);
+    expect(onPress).toHaveBeenCalledOnce();
     fireEvent.keyDown(frame, { key: ' ' });
     expect(onPress).toHaveBeenCalledTimes(2);
   });
@@ -98,13 +102,15 @@ describe('Chip', () => {
     const onPress = vi.fn();
     const onDismiss = vi.fn();
     const result = renderWithProviders(
-      <Chip onPress={onPress} onDismiss={onDismiss}>
+      <Chip
+        onPress={onPress}
+        onDismiss={onDismiss}>
         Both
       </Chip>,
     );
     const dismiss = result.container.querySelector("[aria-label='Remove']") as HTMLElement;
     fireEvent.click(dismiss);
-    expect(onDismiss).toHaveBeenCalledTimes(1);
+    expect(onDismiss).toHaveBeenCalledOnce();
     expect(onPress).not.toHaveBeenCalled();
   });
 
@@ -156,7 +162,9 @@ describe('Chip', () => {
         <Chip>Ghost-label</Chip>
         <Chip variant="filled">Filled-label</Chip>
         <Chip variant="outlined">Outlined-label</Chip>
-        <Chip selected onPress={() => {}}>
+        <Chip
+          selected
+          onPress={() => {}}>
           Selected-label
         </Chip>
       </>,

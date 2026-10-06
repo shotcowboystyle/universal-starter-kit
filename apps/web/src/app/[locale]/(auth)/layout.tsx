@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { Toaster } from "sonner";
+import { Toaster } from 'sonner';
 
-import { TOAST_DURATION } from "@/constants/ui";
+import { TOAST_DURATION } from '@/constants/ui';
 
 interface AuthLayoutProps {
   children: React.ReactNode;
@@ -16,7 +16,7 @@ export default function AuthLayout({ children }: Readonly<AuthLayoutProps>) {
         position="bottom-right"
         expand={false}
         toastOptions={{
-          duration: TOAST_DURATION
+          duration: TOAST_DURATION,
         }}
         visibleToasts={1}
         closeButton

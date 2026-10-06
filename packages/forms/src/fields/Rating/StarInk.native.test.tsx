@@ -15,12 +15,18 @@ import type { StarIconType } from './types';
  * driver animates, driven by the knob token, with silence at `none`.
  */
 
-const captured: Array<{ size: number; weight: string; color: string; keys: string[] }> = [];
+const captured: { size: number; weight: string; color: string; keys: string[] }[] = [];
 
 /** Records EVERY prop the contract hands the glyph, so an added one shows up. */
 const SpyStarIcon: StarIconType = (props) => {
   captured.push({ ...props, keys: Object.keys(props).sort() });
-  return <span data-testid="glyph" data-weight={props.weight} data-color={props.color} />;
+  return (
+    <span
+      data-testid="glyph"
+      data-weight={props.weight}
+      data-color={props.color}
+    />
+  );
 };
 
 function renderInk(overrides: Partial<Parameters<typeof StarInk>[0]> = {}) {

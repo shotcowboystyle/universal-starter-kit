@@ -24,8 +24,20 @@ export function useSpinnerStroke(color?: string): string {
 /** Linear/Polaris arc: round-cap 270° head on a faint track. Scales with the box. */
 export function SpinnerGlyph({ color, size }: { color: string; size: number }) {
   return (
-    <Svg width={size} height={size} viewBox={`0 0 ${VB} ${VB}`} pointerEvents="none">
-      <Circle cx={CX} cy={CX} r={R} fill="none" stroke={color} strokeWidth={STROKE} opacity={0.2} />
+    <Svg
+      width={size}
+      height={size}
+      viewBox={`0 0 ${VB} ${VB}`}
+      pointerEvents="none">
+      <Circle
+        cx={CX}
+        cy={CX}
+        r={R}
+        fill="none"
+        stroke={color}
+        strokeWidth={STROKE}
+        opacity={0.2}
+      />
       <Circle
         cx={CX}
         cy={CX}

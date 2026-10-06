@@ -3,13 +3,13 @@ import { StyleSheet, View as RNView } from 'react-native';
 import { useTheme } from 'tamagui';
 
 function toTransparent(color: string): string {
-  const fnMatch = color.match(/^(rgb|hsl)a?\(([^)]+)\)$/i);
+  const fnMatch = /^(rgb|hsl)a?\(([^)]+)\)$/i.exec(color);
   if (fnMatch) {
     const parts = fnMatch[2].split(',').map((part) => part.trim());
     const [a, b, c] = parts;
     return `${fnMatch[1].toLowerCase()}a(${a}, ${b}, ${c}, 0)`;
   }
-  const hexMatch = color.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+  const hexMatch = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(color);
   if (hexMatch) {
     let hex = hexMatch[1];
     if (hex.length === 3) {
@@ -39,7 +39,9 @@ export function WheelEdgeFade({ height }: { height: number }) {
   }
   return (
     <>
-      <RNView pointerEvents="none" style={[styles.band, { top: 0, height }]}>
+      <RNView
+        pointerEvents="none"
+        style={[styles.band, { top: 0, height }]}>
         <LinearGradient
           colors={[background, transparent]}
           start={{ x: 0.5, y: 0 }}
@@ -47,7 +49,9 @@ export function WheelEdgeFade({ height }: { height: number }) {
           style={StyleSheet.absoluteFill}
         />
       </RNView>
-      <RNView pointerEvents="none" style={[styles.band, { bottom: 0, height }]}>
+      <RNView
+        pointerEvents="none"
+        style={[styles.band, { bottom: 0, height }]}>
         <LinearGradient
           colors={[transparent, background]}
           start={{ x: 0.5, y: 0 }}

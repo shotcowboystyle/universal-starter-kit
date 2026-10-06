@@ -20,7 +20,9 @@ type Stop = 'none' | 'small' | 'medium' | 'large';
 function frameAt(borderWidth: Stop, props: { onPress?: () => void; disabled?: boolean } = { onPress: () => {} }) {
   const result = renderWithProviders(
     <Preset overrides={{ borderWidth }}>
-      <Chip variant="outlined" {...props}>
+      <Chip
+        variant="outlined"
+        {...props}>
         Fire
       </Chip>
     </Preset>,

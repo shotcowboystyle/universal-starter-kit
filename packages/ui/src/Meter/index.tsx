@@ -25,9 +25,8 @@ import {
   meterTrackHeightPx,
   resolveMeterRailRadius,
   resolveMeterZone,
-  type MeterFormat,
-  type MeterLayout,
 } from './meter';
+import type { MeterFormat, MeterLayout } from './meter';
 
 export {
   METER_RADIUS_CLASS,
@@ -158,14 +157,14 @@ export function Meter({
   const preset = usePresetContext();
   const stop = preset?.preset.knobs.borderRadius ?? defaultKnobs.borderRadius;
   const size = (preset?.preset.knobs.size ?? defaultKnobs.size) as 'small' | 'medium' | 'large';
-  const outlined = knobProps.outlined;
+  const { outlined } = knobProps;
   const trackH = meterTrackHeightPx(size);
   const railRadius = resolveMeterRailRadius(stop);
   // Spread the fragment (AGENTS.md). Hardcoded 1px ignored the borderWidth knob.
   const outlineChrome = outlined ? { ...knobProps.inputSurface, borderColor: '$color6' as const } : { borderWidth: 0 };
   const paintedBorder = outlined ? knobProps.inputSurface.borderWidth : 0;
   const known = value != null && Number.isFinite(value);
-  const zone = known ? resolveMeterZone({ value: value, min, max, low, high, optimum }) : 'ok';
+  const zone = known ? resolveMeterZone({ value, min, max, low, high, optimum }) : 'ok';
   const paint = METER_ZONE_PAINT[zone];
   const valueInk = 'value' in paint ? paint.value : knobProps.textAccentColor;
   const ratio = meterFillRatio(value, min, max);
@@ -203,13 +202,27 @@ export function Meter({
           if (left == null) {
             return null;
           }
-          return <Tick key={`${cut}-${i}`} left={`${left}%`} backgroundColor={METER_TICK} data-meter-tick="" />;
+          return (
+            <Tick
+              key={`${cut}-${i}`}
+              left={`${left}%`}
+              backgroundColor={METER_TICK}
+              data-meter-tick=""
+            />
+          );
         });
 
   const railEl = loading ? (
-    <Skeleton variant="rounded" height={trackH} width="100%" />
+    <Skeleton
+      variant="rounded"
+      height={trackH}
+      width="100%"
+    />
   ) : discrete > 0 ? (
-    <XStack gap={3} data-meter-segments={discrete} opacity={disabled ? 0.5 : 1}>
+    <XStack
+      gap={3}
+      data-meter-segments={discrete}
+      opacity={disabled ? 0.5 : 1}>
       {Array.from({ length: discrete }, (_, i) => (
         <Segment
           key={i}
@@ -276,7 +289,9 @@ export function Meter({
 
   if (layout === 'bare') {
     return (
-      <MeterRoot width="100%" {...props}>
+      <MeterRoot
+        width="100%"
+        {...props}>
         {segmentedMeter}
       </MeterRoot>
     );
@@ -284,9 +299,15 @@ export function Meter({
 
   if (layout === 'inline') {
     return (
-      <MeterRoot width="100%" {...props}>
-        <XStack alignItems="center" {...knobProps.gap}>
-          <View flex={1} minWidth={0}>
+      <MeterRoot
+        width="100%"
+        {...props}>
+        <XStack
+          alignItems="center"
+          {...knobProps.gap}>
+          <View
+            flex={1}
+            minWidth={0}>
             {segmentedMeter}
           </View>
           {valueNode}
@@ -296,11 +317,20 @@ export function Meter({
   }
 
   return (
-    <MeterRoot width="100%" {...knobProps.gap} {...props}>
+    <MeterRoot
+      width="100%"
+      {...knobProps.gap}
+      {...props}>
       {label || valueNode ? (
-        <XStack justifyContent="space-between" alignItems="baseline" {...knobProps.gap}>
+        <XStack
+          justifyContent="space-between"
+          alignItems="baseline"
+          {...knobProps.gap}>
           {label ? (
-            <Text {...knobProps.body} flex={1} numberOfLines={1}>
+            <Text
+              {...knobProps.body}
+              flex={1}
+              numberOfLines={1}>
               {label}
             </Text>
           ) : (

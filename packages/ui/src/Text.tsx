@@ -4,7 +4,7 @@
  *
  * Before this module the barrel re-exported the RAW tamagui typography
  * primitives under bare names, registered as "typography substrate" rows in
- * ./knobImmuneExports.ts. That registry claim was a lie in three parts:
+ * ./knob-immune-exports.ts. That registry claim was a lie in three parts:
  * FontKnobStyles rescues family/leading/tracking on WEB ONLY (CSS variables),
  * fontWeight and textAccent reach the primitives on NO platform, and on
  * native nothing reaches them at all. The rule "never render app text through
@@ -49,14 +49,11 @@
 import { useAccentOnSurface, useResolvedKnobs } from '@repo/theme';
 import {
   Anchor as RawAnchor,
-  type AnchorProps,
   Paragraph as RawParagraph,
-  type ParagraphProps,
   SizableText as RawSizableText,
-  type SizableTextProps,
   Text as RawText,
-  type TextProps,
 } from 'tamagui';
+import type { AnchorProps, ParagraphProps, SizableTextProps, TextProps } from 'tamagui';
 
 export type { AnchorProps, ParagraphProps, SizableTextProps, TextProps };
 
@@ -78,21 +75,51 @@ function useBodyVoice(fontWeight: Weight) {
 
 export function Text({ fontWeight, ...props }: TextProps) {
   const { body, color, weight } = useBodyVoice(fontWeight);
-  return <RawText {...LABEL_RAMP} {...body} color={color} {...props} fontWeight={weight} />;
+  return (
+    <RawText
+      {...LABEL_RAMP}
+      {...body}
+      color={color}
+      {...props}
+      fontWeight={weight}
+    />
+  );
 }
 
 export function SizableText({ fontWeight, ...props }: SizableTextProps) {
   const { body, color, weight } = useBodyVoice(fontWeight);
-  return <RawSizableText {...body} color={color} {...props} fontWeight={weight} />;
+  return (
+    <RawSizableText
+      {...body}
+      color={color}
+      {...props}
+      fontWeight={weight}
+    />
+  );
 }
 
 export function Paragraph({ fontWeight, ...props }: ParagraphProps) {
   const { body, color, weight } = useBodyVoice(fontWeight);
-  return <RawParagraph {...LABEL_RAMP} {...body} color={color} {...props} fontWeight={weight} />;
+  return (
+    <RawParagraph
+      {...LABEL_RAMP}
+      {...body}
+      color={color}
+      {...props}
+      fontWeight={weight}
+    />
+  );
 }
 
 export function Anchor({ fontWeight, ...props }: AnchorProps) {
   const { body, weight } = useBodyVoice(fontWeight);
   const linkInk = useAccentOnSurface();
-  return <RawAnchor {...body} color={linkInk} {...props} fontWeight={weight} />;
+  return (
+    <RawAnchor
+      {...body}
+      color={linkInk}
+      {...props}
+      fontWeight={weight}
+    />
+  );
 }

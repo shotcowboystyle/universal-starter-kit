@@ -266,38 +266,74 @@ describe('CheckboxBox — keyboard-modality focus handlers', () => {
 describe('CheckboxGlyphBox — the painted box', () => {
   it('marks itself so the boards and the other specs can find it', () => {
     const { container } = renderWithProviders(
-      <CheckboxGlyphBox glyphSize={20} isMarked={false} kbFocus={false} borderWidth={2} borderRadius={5} />,
+      <CheckboxGlyphBox
+        glyphSize={20}
+        isMarked={false}
+        kbFocus={false}
+        borderWidth={2}
+        borderRadius={5}
+      />,
     );
     expect(glyph(container)).toBeTruthy();
   });
 
   it('never takes the press, so the 44px frame keeps the responder', () => {
     const { container } = renderWithProviders(
-      <CheckboxGlyphBox glyphSize={20} isMarked={false} kbFocus={false} borderWidth={2} borderRadius={5} />,
+      <CheckboxGlyphBox
+        glyphSize={20}
+        isMarked={false}
+        kbFocus={false}
+        borderWidth={2}
+        borderRadius={5}
+      />,
     );
     expect(cssOf(glyph(container), 'pointer-events')).toBe('none');
   });
 
   it('publishes the focus-ring flag only while kbFocus is true', () => {
     const off = renderWithProviders(
-      <CheckboxGlyphBox glyphSize={20} isMarked={false} kbFocus={false} borderWidth={2} borderRadius={5} />,
+      <CheckboxGlyphBox
+        glyphSize={20}
+        isMarked={false}
+        kbFocus={false}
+        borderWidth={2}
+        borderRadius={5}
+      />,
     );
     expect(glyph(off.container).getAttribute('data-focus-ring')).toBeNull();
     cleanup();
     const on = renderWithProviders(
-      <CheckboxGlyphBox glyphSize={20} isMarked={false} kbFocus borderWidth={2} borderRadius={5} />,
+      <CheckboxGlyphBox
+        glyphSize={20}
+        isMarked={false}
+        kbFocus
+        borderWidth={2}
+        borderRadius={5}
+      />,
     );
     expect(glyph(on.container).getAttribute('data-focus-ring')).toBe('true');
   });
 
   it('is an empty box when idle and drops that transparency when marked', () => {
     const unmarked = renderWithProviders(
-      <CheckboxGlyphBox glyphSize={20} isMarked={false} kbFocus={false} borderWidth={2} borderRadius={5} />,
+      <CheckboxGlyphBox
+        glyphSize={20}
+        isMarked={false}
+        kbFocus={false}
+        borderWidth={2}
+        borderRadius={5}
+      />,
     );
     expect(classesOf(glyph(unmarked.container))).toContain('_bg-transparent');
     cleanup();
     const marked = renderWithProviders(
-      <CheckboxGlyphBox glyphSize={20} isMarked kbFocus={false} borderWidth={2} borderRadius={5} />,
+      <CheckboxGlyphBox
+        glyphSize={20}
+        isMarked
+        kbFocus={false}
+        borderWidth={2}
+        borderRadius={5}
+      />,
     );
     // Checked paints the MARK channel (formSelectedColors.mark), so the
     // transparent fill is gone. The mark token is an accent value the test
@@ -308,7 +344,13 @@ describe('CheckboxGlyphBox — the painted box', () => {
 
   it('takes the checked border off the boundary ramp entirely, so it is a fill and not a second outline', () => {
     const { container } = renderWithProviders(
-      <CheckboxGlyphBox glyphSize={20} isMarked kbFocus={false} borderWidth={2} borderRadius={5} />,
+      <CheckboxGlyphBox
+        glyphSize={20}
+        isMarked
+        kbFocus={false}
+        borderWidth={2}
+        borderRadius={5}
+      />,
     );
     const painted = classesOf(glyph(container));
     expect(painted).not.toContain('_btc-color10');
@@ -319,19 +361,38 @@ describe('CheckboxGlyphBox — the painted box', () => {
     // formControlColors.boundary = $color10 (the edge that carries the
     // shape, >=3:1), thumb.press = $color11.
     const idle = renderWithProviders(
-      <CheckboxGlyphBox glyphSize={20} isMarked={false} kbFocus={false} borderWidth={2} borderRadius={5} />,
+      <CheckboxGlyphBox
+        glyphSize={20}
+        isMarked={false}
+        kbFocus={false}
+        borderWidth={2}
+        borderRadius={5}
+      />,
     );
     expect(classesOf(glyph(idle.container))).toContain('_btc-color10');
     cleanup();
     const hovered = renderWithProviders(
-      <CheckboxGlyphBox glyphSize={20} isMarked={false} kbFocus={false} hovered borderWidth={2} borderRadius={5} />,
+      <CheckboxGlyphBox
+        glyphSize={20}
+        isMarked={false}
+        kbFocus={false}
+        hovered
+        borderWidth={2}
+        borderRadius={5}
+      />,
     );
     expect(classesOf(glyph(hovered.container))).toContain('_btc-color11');
   });
 
   it('takes its geometry from the props rather than a hardcoded box', () => {
     const { container } = renderWithProviders(
-      <CheckboxGlyphBox glyphSize={26} isMarked={false} kbFocus={false} borderWidth={3} borderRadius={7} />,
+      <CheckboxGlyphBox
+        glyphSize={26}
+        isMarked={false}
+        kbFocus={false}
+        borderWidth={3}
+        borderRadius={7}
+      />,
     );
     const node = glyph(container);
     expect(cssOf(node, 'width')).toBe('26px');
@@ -342,7 +403,12 @@ describe('CheckboxGlyphBox — the painted box', () => {
 
   it('renders the check mark it is handed', () => {
     const { container } = renderWithProviders(
-      <CheckboxGlyphBox glyphSize={20} isMarked kbFocus={false} borderWidth={2} borderRadius={5}>
+      <CheckboxGlyphBox
+        glyphSize={20}
+        isMarked
+        kbFocus={false}
+        borderWidth={2}
+        borderRadius={5}>
         <span data-mark>x</span>
       </CheckboxGlyphBox>,
     );

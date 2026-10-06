@@ -74,9 +74,16 @@ export const Main: Story = {
       });
 
       return (
-        <Form form={form} className="max-w-md">
+        <Form
+          form={form}
+          className="max-w-md">
           <YStack gap="$4">
-            <PhoneInput label="Primary Phone" name="primaryPhone" helperText="Your main contact number" required />
+            <PhoneInput
+              label="Primary Phone"
+              name="primaryPhone"
+              helperText="Your main contact number"
+              required
+            />
 
             <PhoneInput
               label="Secondary Phone"
@@ -131,10 +138,24 @@ export const WithError: Story = {
 
 export const Sizes: Story = {
   render: () => (
-    <YStack gap="$4" maxWidth={400}>
-      <PhoneInput label="Small" size="$2" defaultCountry="US" />
-      <PhoneInput label="Medium (default)" size="$3" defaultCountry="US" />
-      <PhoneInput label="Large" size="$4" defaultCountry="US" />
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <PhoneInput
+        label="Small"
+        size="$2"
+        defaultCountry="US"
+      />
+      <PhoneInput
+        label="Medium (default)"
+        size="$3"
+        defaultCountry="US"
+      />
+      <PhoneInput
+        label="Large"
+        size="$4"
+        defaultCountry="US"
+      />
     </YStack>
   ),
 };
@@ -144,8 +165,15 @@ export const Interactive: Story = {
     const InteractiveExample = () => {
       const [value, setValue] = useState('');
       return (
-        <YStack gap="$4" maxWidth={400}>
-          <PhoneInput label="Phone Number" defaultCountry="US" value={value} onChange={setValue} />
+        <YStack
+          gap="$4"
+          maxWidth={400}>
+          <PhoneInput
+            label="Phone Number"
+            defaultCountry="US"
+            value={value}
+            onChange={setValue}
+          />
           <Text>Current value: {value || 'Empty'}</Text>
         </YStack>
       );
@@ -156,19 +184,46 @@ export const Interactive: Story = {
 
 export const DifferentCountries: Story = {
   render: () => (
-    <YStack gap="$4" padding="$4">
-      <PhoneInput label="US Phone Number" name="usPhone" defaultCountry="US" helperText="United States format" />
+    <YStack
+      gap="$4"
+      padding="$4">
+      <PhoneInput
+        label="US Phone Number"
+        name="usPhone"
+        defaultCountry="US"
+        helperText="United States format"
+      />
 
-      <PhoneInput label="UK Phone Number" name="ukPhone" defaultCountry="GB" helperText="United Kingdom format" />
+      <PhoneInput
+        label="UK Phone Number"
+        name="ukPhone"
+        defaultCountry="GB"
+        helperText="United Kingdom format"
+      />
 
-      <PhoneInput label="Canada Phone Number" name="caPhone" defaultCountry="CA" helperText="Canada format" />
+      <PhoneInput
+        label="Canada Phone Number"
+        name="caPhone"
+        defaultCountry="CA"
+        helperText="Canada format"
+      />
 
-      <PhoneInput label="Germany Phone Number" name="dePhone" defaultCountry="DE" helperText="Germany format" />
+      <PhoneInput
+        label="Germany Phone Number"
+        name="dePhone"
+        defaultCountry="DE"
+        helperText="Germany format"
+      />
     </YStack>
   ),
 };
 
 /** Loading placeholder — the skeleton mirrors the field's anatomy. */
 export const SkeletonState: Story = {
-  render: () => <PhoneInput label="Phone Number" skeleton />,
+  render: () => (
+    <PhoneInput
+      label="Phone Number"
+      skeleton
+    />
+  ),
 };

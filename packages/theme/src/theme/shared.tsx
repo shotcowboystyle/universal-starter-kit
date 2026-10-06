@@ -1,10 +1,11 @@
 import type { ThemeName } from '@tamagui/web';
-import { type CreateTamaguiProps, createTamagui } from 'tamagui';
+import { createTamagui } from 'tamagui';
+import type { CreateTamaguiProps } from 'tamagui';
 
 import type { Knobs } from './knobs';
 import { defaultKnobs } from './knobs';
 import type { Preset } from './preset.types';
-import type { RecipeFamilies, RecipeInputs } from './recipeInputs';
+import type { RecipeFamilies, RecipeInputs } from './recipe-inputs';
 
 // ── Preset registry ───────────────────────────────────────────────────────
 
@@ -114,7 +115,7 @@ function extractThemeColors(themes: Record<string, unknown>): string[] {
   const keys = Object.keys(themes);
   const colorSet = new Set<string>();
   for (const key of keys) {
-    const match = key.match(/^light_([a-z]+)$/);
+    const match = /^light_([a-z]+)$/.exec(key);
     if (match) {
       const color = match[1];
       if (keys.includes(`dark_${color}`) && !excludedThemeNames.has(color)) {

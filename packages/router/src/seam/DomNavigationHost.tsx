@@ -28,14 +28,8 @@
 import type { CSSProperties, ReactNode } from 'react';
 import { Suspense, useEffect, useRef } from 'react';
 
-import {
-  RouteTagContext,
-  stackNavigator,
-  useNavState,
-  type Href,
-  type NavStackAdapter,
-  type RouteDef,
-} from './navigator';
+import { RouteTagContext, stackNavigator, useNavState } from './navigator';
+import type { Href, NavStackAdapter, RouteDef } from './navigator';
 
 /** In-memory implementation of the host-stack protocol (the seam's
  *  NavStackAdapter mirrors Adw.NavigationView's method surface — see

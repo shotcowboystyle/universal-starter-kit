@@ -1,8 +1,8 @@
-import type { User } from "@repo/store";
+import type { User } from '@repo/store';
 
-import { API_ROUTES } from "@/constants/routes";
+import { API_ROUTES } from '@/constants/routes';
 
-import { fetchWithAuth } from "./fetch-with-auth";
+import { fetchWithAuth } from './fetch-with-auth';
 
 interface ApiUser {
   _id: string;
@@ -18,14 +18,14 @@ function transformUserData(user: ApiUser): User {
     name: user.name,
     email: user.email,
     createdAt: new Date(user.createdAt),
-    updatedAt: new Date(user.updatedAt)
+    updatedAt: new Date(user.updatedAt),
   };
 }
 
 export const userApi = {
-  searchUsers: async (username = "") => {
+  searchUsers: async (username = '') => {
     const response = await fetchWithAuth<{ users: ApiUser[] }>(
-      `${API_ROUTES.USERS}/search?username=${encodeURIComponent(username)}`
+      `${API_ROUTES.USERS}/search?username=${encodeURIComponent(username)}`,
     );
     return (response.users || []).map(transformUserData);
   },
@@ -36,5 +36,5 @@ export const userApi = {
     } catch {
       return null;
     }
-  }
+  },
 };

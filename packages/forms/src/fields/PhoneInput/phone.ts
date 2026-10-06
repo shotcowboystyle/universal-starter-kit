@@ -1,7 +1,7 @@
 import { sizeRecipeForToken } from '@repo/theme';
 
-import { dialCodes, regionCodes } from './dialCodes';
-import { regionNames } from './regionNames';
+import { dialCodes, regionCodes } from './dial-codes';
+import { regionNames } from './region-names';
 
 /** Countries pinned to the top of the picker (intl-tel preferredCountries). */
 export const PREFERRED_REGIONS = ['US', 'GB', 'CA', 'AU', 'IN', 'DE', 'FR', 'BR', 'MX', 'JP'] as const;
@@ -99,14 +99,14 @@ export interface ParsedPhone {
 }
 
 export function digitsOnly(input: string): string {
-  return input.replace(/\D/g, '');
+  return input.replaceAll(/\D/g, '');
 }
 
 export function countryCodeToFlag(countryCode: string): string {
   const codePoints = countryCode
     .toUpperCase()
     .split('')
-    .map((char) => 127397 + char.charCodeAt(0));
+    .map((char) => 127_397 + char.charCodeAt(0));
   return String.fromCodePoint(...codePoints);
 }
 

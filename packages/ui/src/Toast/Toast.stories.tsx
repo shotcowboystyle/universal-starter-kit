@@ -8,7 +8,8 @@ import { SheetModal } from '../SheetModal';
 
 import { resetToasts } from './store';
 
-import { Toast, ToastViewport, showToast, useToast, type ToastIntent, type ToastShowOptions } from './index';
+import { Toast, ToastViewport, showToast, useToast } from './index';
+import type { ToastIntent, ToastShowOptions } from './index';
 
 const intents: ToastIntent[] = ['accent', 'success', 'warning', 'error'];
 
@@ -56,7 +57,9 @@ export const Default: Story = {
   render: (args) => {
     const toast = useToast();
     return (
-      <YStack gap="$4" alignItems="flex-start">
+      <YStack
+        gap="$4"
+        alignItems="flex-start">
         <StoryReset />
         <Button
           accent
@@ -82,11 +85,17 @@ export const Intents: Story = {
       error: { title: 'Save failed', description: 'The server rejected the request.' },
     };
     return (
-      <YStack gap="$4" alignItems="flex-start">
+      <YStack
+        gap="$4"
+        alignItems="flex-start">
         <StoryReset />
-        <XStack gap="$2" flexWrap="wrap">
+        <XStack
+          gap="$2"
+          flexWrap="wrap">
           {intents.map((intent) => (
-            <Button key={intent} onPress={() => toast.show({ intent, ...copy[intent] })}>
+            <Button
+              key={intent}
+              onPress={() => toast.show({ intent, ...copy[intent] })}>
               {intent}
             </Button>
           ))}
@@ -101,7 +110,9 @@ export const WithAction: Story = {
   render: () => {
     const toast = useToast();
     return (
-      <YStack gap="$4" alignItems="flex-start">
+      <YStack
+        gap="$4"
+        alignItems="flex-start">
         <StoryReset />
         <Button
           onPress={() =>
@@ -129,7 +140,9 @@ export const Stacking: Story = {
     const toast = useToast();
     const counter = useRef(0);
     return (
-      <YStack gap="$4" alignItems="flex-start">
+      <YStack
+        gap="$4"
+        alignItems="flex-start">
         <StoryReset />
         <XStack gap="$2">
           <Button
@@ -165,9 +178,13 @@ export const ErrorExpiry: Story = {
   render: () => {
     const toast = useToast();
     return (
-      <YStack gap="$4" alignItems="flex-start">
+      <YStack
+        gap="$4"
+        alignItems="flex-start">
         <StoryReset />
-        <XStack gap="$2" flexWrap="wrap">
+        <XStack
+          gap="$2"
+          flexWrap="wrap">
           <Button
             error
             onPress={() =>
@@ -211,9 +228,13 @@ export const StickyErrorOverSheet: Story = {
     const [sheetOpen, setSheetOpen] = useState(false);
     const [presses, setPresses] = useState(0);
     return (
-      <YStack gap="$4" alignItems="flex-start">
+      <YStack
+        gap="$4"
+        alignItems="flex-start">
         <StoryReset />
-        <XStack gap="$2" flexWrap="wrap">
+        <XStack
+          gap="$2"
+          flexWrap="wrap">
           <Button
             error
             onPress={() => {
@@ -240,8 +261,14 @@ export const StickyErrorOverSheet: Story = {
             Open sheet
           </Button>
         </XStack>
-        <SheetModal open={sheetOpen} onOpenChange={setSheetOpen} snapPoint={70}>
-          <YStack gap="$3" padding="$4" alignItems="flex-start">
+        <SheetModal
+          open={sheetOpen}
+          onOpenChange={setSheetOpen}
+          snapPoint={70}>
+          <YStack
+            gap="$3"
+            padding="$4"
+            alignItems="flex-start">
             <Text fontWeight="600">Modal sheet above the toasts</Text>
             <Button
               onPress={() => {
@@ -301,7 +328,9 @@ export const ViewportPopulated: Story = {
 /** Static presentational surfaces (no viewport machinery) for visual QA. */
 export const AllIntentsStatic: Story = {
   render: () => (
-    <YStack gap="$3" maxWidth={400}>
+    <YStack
+      gap="$3"
+      maxWidth={400}>
       <Text fontWeight="600">Standalone controlled toasts</Text>
       <Toast
         title="Heads up"
@@ -329,7 +358,10 @@ export const AllIntentsStatic: Story = {
         action={{ label: 'Retry', onPress: () => action('retry')() }}
         onDismiss={() => action('dismiss')('error')}
       />
-      <Toast title="Title only, not dismissible" intent="accent" />
+      <Toast
+        title="Title only, not dismissible"
+        intent="accent"
+      />
       <Toast
         compact
         title="Draft discarded"

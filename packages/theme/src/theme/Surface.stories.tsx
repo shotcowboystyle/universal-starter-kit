@@ -1,7 +1,7 @@
 import { SizableText, XStack, YStack } from 'tamagui';
 
 import { Surface } from './Surface';
-import { useResolvedKnobs } from './useResolvedKnobs';
+import { useResolvedKnobs } from './use-resolved-knobs';
 
 export default {
   title: 'Theme/Surface',
@@ -34,7 +34,9 @@ function Probe({ label }: { label: string }) {
       padding={knobProps.gap.gap}
       testID={`surface-probe-${label}`}
       {...attrs}>
-      <SizableText fontSize={knobProps.sizeToken as never} testID={`surface-text-${label}`}>
+      <SizableText
+        fontSize={knobProps.sizeToken as never}
+        testID={`surface-text-${label}`}>
         {label}: token {String(knobProps.sizeToken)}, gap {String(knobProps.gap.gap)}
       </SizableText>
     </YStack>
@@ -44,7 +46,10 @@ function Probe({ label }: { label: string }) {
 export const main = {
   name: 'Main',
   render: () => (
-    <XStack gap="$4" flexWrap="wrap" alignItems="flex-start">
+    <XStack
+      gap="$4"
+      flexWrap="wrap"
+      alignItems="flex-start">
       <Probe label="outside" />
       <Surface size="small">
         <Probe label="small" />
@@ -60,7 +65,10 @@ export const main = {
 export const nestedClamp = {
   name: 'Nested clamp',
   render: () => (
-    <XStack gap="$4" flexWrap="wrap" alignItems="flex-start">
+    <XStack
+      gap="$4"
+      flexWrap="wrap"
+      alignItems="flex-start">
       <Surface size="small">
         <Surface size="large">
           <Probe label="large-in-small" />
@@ -79,7 +87,10 @@ export const nestedClamp = {
 export const density = {
   name: 'Density',
   render: () => (
-    <XStack gap="$4" flexWrap="wrap" alignItems="flex-start">
+    <XStack
+      gap="$4"
+      flexWrap="wrap"
+      alignItems="flex-start">
       <Surface density="comfortable">
         <Probe label="comfortable" />
       </Surface>

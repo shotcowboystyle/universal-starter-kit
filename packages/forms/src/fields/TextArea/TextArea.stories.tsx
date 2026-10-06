@@ -55,9 +55,16 @@ export const Main: Story = {
       });
 
       return (
-        <Form form={form} className="max-w-md">
+        <Form
+          form={form}
+          className="max-w-md">
           <YStack gap="$4">
-            <TextArea label="Title" name="title" textAreaProps={{ placeholder: 'Enter a title' }} required />
+            <TextArea
+              label="Title"
+              name="title"
+              textAreaProps={{ placeholder: 'Enter a title' }}
+              required
+            />
 
             <TextArea
               label="Description"
@@ -138,10 +145,24 @@ export const ReadOnly: Story = {
 
 export const Sizes: Story = {
   render: () => (
-    <YStack gap="$4" maxWidth={400}>
-      <TextArea label="Small" size="$2" textAreaProps={{ placeholder: 'Small textarea' }} />
-      <TextArea label="Medium (default)" size="$3" textAreaProps={{ placeholder: 'Medium textarea' }} />
-      <TextArea label="Large" size="$4" textAreaProps={{ placeholder: 'Large textarea' }} />
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <TextArea
+        label="Small"
+        size="$2"
+        textAreaProps={{ placeholder: 'Small textarea' }}
+      />
+      <TextArea
+        label="Medium (default)"
+        size="$3"
+        textAreaProps={{ placeholder: 'Medium textarea' }}
+      />
+      <TextArea
+        label="Large"
+        size="$4"
+        textAreaProps={{ placeholder: 'Large textarea' }}
+      />
     </YStack>
   ),
 };
@@ -159,11 +180,18 @@ export const AutoResize: Story = {
     const AutoResizeExample = () => {
       const [val, setVal] = useState('');
       return (
-        <YStack gap="$4" padding="$4" maxWidth={500}>
-          <Paragraph size="$3" fontWeight="bold">
+        <YStack
+          gap="$4"
+          padding="$4"
+          maxWidth={500}>
+          <Paragraph
+            size="$3"
+            fontWeight="bold">
             Auto-resize TextArea
           </Paragraph>
-          <Paragraph size="$2" color="$placeholderColor">
+          <Paragraph
+            size="$2"
+            color="$placeholderColor">
             This textarea grows as you type, up to the maxRows limit (6 rows). Try pasting or typing multiple lines.
           </Paragraph>
           <TextArea
@@ -217,9 +245,16 @@ export const Comparison: Story = {
       const [customVal, setCustomVal] = useState('');
       const [tamaguiVal, setTamaguiVal] = useState('');
       return (
-        <XStack gap="$6" alignItems="flex-start" padding="$4">
-          <YStack gap="$3" width={300}>
-            <Paragraph size="$2" color="$placeholderColor">
+        <XStack
+          gap="$6"
+          alignItems="flex-start"
+          padding="$4">
+          <YStack
+            gap="$3"
+            width={300}>
+            <Paragraph
+              size="$2"
+              color="$placeholderColor">
               Custom TextArea
             </Paragraph>
             <TextArea
@@ -232,8 +267,12 @@ export const Comparison: Story = {
             />
           </YStack>
 
-          <YStack gap="$3" width={300}>
-            <Paragraph size="$2" color="$placeholderColor">
+          <YStack
+            gap="$3"
+            width={300}>
+            <Paragraph
+              size="$2"
+              color="$placeholderColor">
               Tamagui TextArea
             </Paragraph>
             <TamaguiTextArea

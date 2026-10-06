@@ -40,8 +40,8 @@
  *     Declare the field and assign it in the constructor.
  */
 
-import { isDrawingFile, readDrawingRegistry } from './drawingRegistry.mjs';
-import { readSlotMarginRegistry } from './specRegistry.mjs';
+import { isDrawingFile, readDrawingRegistry } from './drawing-registry.mjs';
+import { readSlotMarginRegistry } from './spec-registry.mjs';
 
 /** Hex + functional CSS colour literals. AST-visited only (not a text scan). */
 export const COLOR_LITERAL = /#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b|(?:rgba?|hsla?)\([^)]*\)/i;
@@ -61,13 +61,19 @@ const HEX_ESCAPE_COMMENT = /(?<!`)(?:\/\/|\/\*)\s*hex-escape:\s*(.*?)\s*(?:\*\/.
  * @returns {{ line: number, reason: string }[]}
  */
 export function findHexEscapes(src) {
-  if (!src.includes('hex-escape:')) {return [];}
+  if (!src.includes('hex-escape:')) {
+    return [];
+  }
   /** @type {{ line: number, reason: string }[]} */
   const sites = [];
   src.split('\n').forEach((text, index) => {
-    if (text.trim().startsWith('*')) {return;}
-    const match = text.match(HEX_ESCAPE_COMMENT);
-    if (match) {sites.push({ line: index + 1, reason: match[1].trim() });}
+    if (text.trim().startsWith('*')) {
+      return;
+    }
+    const match = HEX_ESCAPE_COMMENT.exec(text);
+    if (match) {
+      sites.push({ line: index + 1, reason: match[1].trim() });
+    }
   });
   return sites;
 }
@@ -214,7 +220,9 @@ const SLOT_MARGIN_OPTIONS_SCHEMA = [
  */
 function resolveSlotMargins(context) {
   const opt = context?.options?.[0] ?? {};
-  if (Array.isArray(opt.slotMargins)) {return new Set(opt.slotMargins);}
+  if (Array.isArray(opt.slotMargins)) {
+    return new Set(opt.slotMargins);
+  }
   try {
     return new Set(readSlotMarginRegistry().members);
   } catch {
@@ -230,13 +238,21 @@ function resolveSlotMargins(context) {
  */
 function isZeroReset(value) {
   const node = unwrapJsxValue(value);
-  if (!node || typeof node !== 'object') {return false;}
+  if (!node || typeof node !== 'object') {
+    return false;
+  }
   const expr = /** @type {{ type?: string, value?: unknown, operator?: string, argument?: unknown }} */ (node);
   if (expr.type === 'Literal') {
-    if (typeof expr.value === 'number') {return expr.value === 0;}
-    if (typeof expr.value === 'string') {return ZERO_VALUE.test(expr.value.trim());}
+    if (typeof expr.value === 'number') {
+      return expr.value === 0;
+    }
+    if (typeof expr.value === 'string') {
+      return ZERO_VALUE.test(expr.value.trim());
+    }
   }
-  if (expr.type === 'UnaryExpression' && expr.operator === '-') {return isZeroReset(expr.argument);}
+  if (expr.type === 'UnaryExpression' && expr.operator === '-') {
+    return isZeroReset(expr.argument);
+  }
   return false;
 }
 
@@ -262,7 +278,7 @@ function resolveAllowlists(context) {
 
 /** @param {string | undefined} source */
 function isHousePackage(source) {
-  return typeof source === 'string' && HOUSE_PACKAGE.test(source);
+  return typeof source === 'string' && source.startsWith('@repo/');
 }
 
 /** @param {{ type?: string, imported?: { name?: string, value?: string }, local?: { name?: string } }} specifier */
@@ -276,9 +292,13 @@ function specifierLocalName(specifier) {
  * @returns {string}
  */
 function jsxName(name) {
-  if (!name || typeof name !== 'object') {return '';}
+  if (!name || typeof name !== 'object') {
+    return '';
+  }
   const node = /** @type {{ type?: string, name?: string, object?: unknown, property?: { name?: string } }} */ (name);
-  if (node.type === 'JSXIdentifier') {return node.name ?? '';}
+  if (node.type === 'JSXIdentifier') {
+    return node.name ?? '';
+  }
   if (node.type === 'JSXMemberExpression') {
     const object = jsxName(node.object);
     const property = node.property?.name ?? '';
@@ -289,9 +309,13 @@ function jsxName(name) {
 
 /** @param {unknown} attr */
 function jsxAttrName(attr) {
-  if (!attr || typeof attr !== 'object') {return '';}
+  if (!attr || typeof attr !== 'object') {
+    return '';
+  }
   const node = /** @type {{ type?: string, name?: { type?: string, name?: string } }} */ (attr);
-  if (node.type !== 'JSXAttribute') {return '';}
+  if (node.type !== 'JSXAttribute') {
+    return '';
+  }
   return node.name?.name ?? '';
 }
 
@@ -300,18 +324,26 @@ function jsxAttrName(attr) {
  * @returns {unknown}
  */
 function unwrapJsxValue(value) {
-  if (!value || typeof value !== 'object') {return value;}
+  if (!value || typeof value !== 'object') {
+    return value;
+  }
   const node = /** @type {{ type?: string, expression?: unknown }} */ (value);
-  if (node.type === 'JSXExpressionContainer') {return unwrapJsxValue(node.expression);}
+  if (node.type === 'JSXExpressionContainer') {
+    return unwrapJsxValue(node.expression);
+  }
   return value;
 }
 
 /** @param {unknown} value */
 function isNumericLiteral(value) {
   const node = unwrapJsxValue(value);
-  if (!node || typeof node !== 'object') {return false;}
+  if (!node || typeof node !== 'object') {
+    return false;
+  }
   const expr = /** @type {{ type?: string, value?: unknown, operator?: string, argument?: unknown }} */ (node);
-  if (expr.type === 'Literal' && typeof expr.value === 'number') {return true;}
+  if (expr.type === 'Literal' && typeof expr.value === 'number') {
+    return true;
+  }
   if (expr.type === 'UnaryExpression' && expr.operator === '-' && isNumericLiteral(expr.argument)) {
     return true;
   }
@@ -321,13 +353,21 @@ function isNumericLiteral(value) {
 /** @param {unknown} value */
 function isSizeRecipeEscape(value) {
   const node = unwrapJsxValue(value);
-  if (!node || typeof node !== 'object') {return false;}
+  if (!node || typeof node !== 'object') {
+    return false;
+  }
   const expr =
     /** @type {{ type?: string, callee?: { type?: string, name?: string, property?: { name?: string } } }} */ (node);
-  if (expr.type !== 'CallExpression') {return false;}
-  const callee = expr.callee;
-  if (!callee) {return false;}
-  if (callee.type === 'Identifier' && callee.name === 'sizeRecipeEscape') {return true;}
+  if (expr.type !== 'CallExpression') {
+    return false;
+  }
+  const { callee } = expr;
+  if (!callee) {
+    return false;
+  }
+  if (callee.type === 'Identifier' && callee.name === 'sizeRecipeEscape') {
+    return true;
+  }
   if (callee.type === 'MemberExpression' && callee.property?.name === 'sizeRecipeEscape') {
     return true;
   }
@@ -341,7 +381,9 @@ function isSizeRecipeEscape(value) {
  */
 function collectHouseLocals(importNode, locals, namespaces) {
   const node = /** @type {{ source?: { value?: string }, specifiers?: unknown[] }} */ (importNode);
-  if (!isHousePackage(node.source?.value)) {return;}
+  if (!isHousePackage(node.source?.value)) {
+    return;
+  }
   for (const specifier of node.specifiers ?? []) {
     const spec = /** @type {{ type?: string, local?: { name?: string } }} */ (specifier);
     if (spec.type === 'ImportNamespaceSpecifier' && spec.local?.name) {
@@ -349,7 +391,9 @@ function collectHouseLocals(importNode, locals, namespaces) {
       continue;
     }
     const local = specifierLocalName(spec);
-    if (typeof local === 'string' && local) {locals.add(local);}
+    if (typeof local === 'string' && local) {
+      locals.add(local);
+    }
   }
 }
 
@@ -359,10 +403,16 @@ function collectHouseLocals(importNode, locals, namespaces) {
  * @param {Set<string>} namespaces
  */
 function isHouseElement(name, locals, namespaces) {
-  if (!name) {return false;}
-  if (locals.has(name)) {return true;}
+  if (!name) {
+    return false;
+  }
+  if (locals.has(name)) {
+    return true;
+  }
   const dot = name.indexOf('.');
-  if (dot === -1) {return false;}
+  if (dot === -1) {
+    return false;
+  }
   return namespaces.has(name.slice(0, dot));
 }
 
@@ -373,7 +423,9 @@ function isHouseElement(name, locals, namespaces) {
 function elementAllowKeys(name) {
   const keys = [name];
   const dot = name.lastIndexOf('.');
-  if (dot !== -1) {keys.push(name.slice(dot + 1));}
+  if (dot !== -1) {
+    keys.push(name.slice(dot + 1));
+  }
   return keys;
 }
 
@@ -395,7 +447,9 @@ function houseJsxVisitors(context, onHouseElement) {
       },
       JSXOpeningElement(node) {
         const name = jsxName(node.name);
-        if (!isHouseElement(name, locals, namespaces)) {return;}
+        if (!isHouseElement(name, locals, namespaces)) {
+          return;
+        }
         onHouseElement({ node, name, filename, drawings, chromeAllow });
       },
     },
@@ -407,7 +461,9 @@ function houseJsxVisitors(context, onHouseElement) {
  * @returns {boolean}
  */
 export function isPaletteModule(filename) {
-  if (!filename) {return false;}
+  if (!filename) {
+    return false;
+  }
   const normalized = filename.replaceAll('\\', '/');
   return PALETTE_FILE.test(normalized);
 }
@@ -417,8 +473,10 @@ export function isPaletteModule(filename) {
  * @returns {string | undefined} the matched literal, if any
  */
 export function matchColorLiteral(value) {
-  if (typeof value !== 'string') {return undefined;}
-  const match = value.match(COLOR_LITERAL);
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+  const match = COLOR_LITERAL.exec(value);
   return match?.[0];
 }
 
@@ -450,7 +508,9 @@ export const plugin = {
 
         function reportIfColor(node, value) {
           const matched = matchColorLiteral(value);
-          if (!matched) {return;}
+          if (!matched) {
+            return;
+          }
           context.report({
             node,
             messageId: 'hex',
@@ -486,9 +546,13 @@ export const plugin = {
       create(context) {
         return {
           ImportDeclaration(node) {
-            if (node.source?.value !== '@repo/ui') {return;}
+            if (node.source?.value !== '@repo/ui') {
+              return;
+            }
             for (const specifier of node.specifiers ?? []) {
-              if (specifier.type !== 'ImportSpecifier') {continue;}
+              if (specifier.type !== 'ImportSpecifier') {
+                continue;
+              }
               const imported = specifier.imported?.name ?? specifier.imported?.value;
               if (typeof imported === 'string' && RAW_TYPOGRAPHY_HATCH.test(imported)) {
                 context.report({
@@ -517,10 +581,14 @@ export const plugin = {
       },
       create(context) {
         const { visitors } = houseJsxVisitors(context, ({ node, name, chromeAllow }) => {
-          if (elementAllowKeys(name).some((key) => chromeAllow.has(key))) {return;}
+          if (elementAllowKeys(name).some((key) => chromeAllow.has(key))) {
+            return;
+          }
           for (const attr of node.attributes ?? []) {
             const prop = jsxAttrName(attr);
-            if (!CHROME_PROP_SET.has(prop)) {continue;}
+            if (!CHROME_PROP_SET.has(prop)) {
+              continue;
+            }
             context.report({
               node: attr,
               messageId: 'chrome',
@@ -546,13 +614,23 @@ export const plugin = {
       },
       create(context) {
         const { visitors } = houseJsxVisitors(context, ({ node, name, filename, drawings }) => {
-          if (isDrawingFile(filename, drawings)) {return;}
+          if (isDrawingFile(filename, drawings)) {
+            return;
+          }
           for (const attr of node.attributes ?? []) {
             const prop = jsxAttrName(attr);
-            if (!GEOMETRY_PROP_SET.has(prop)) {continue;}
-            if (isSizeRecipeEscape(attr.value)) {continue;}
-            if (!isNumericLiteral(attr.value)) {continue;}
-            if (isZeroReset(attr.value)) {continue;}
+            if (!GEOMETRY_PROP_SET.has(prop)) {
+              continue;
+            }
+            if (isSizeRecipeEscape(attr.value)) {
+              continue;
+            }
+            if (!isNumericLiteral(attr.value)) {
+              continue;
+            }
+            if (isZeroReset(attr.value)) {
+              continue;
+            }
             context.report({
               node: attr,
               messageId: 'geometry',
@@ -591,13 +669,21 @@ export const plugin = {
           JSXFragment: enter,
           'JSXFragment:exit': exit,
           JSXOpeningElement(node) {
-            if (depth < 2) {return;}
+            if (depth < 2) {
+              return;
+            }
             const name = jsxName(node.name);
-            if (elementAllowKeys(name).some((key) => slotMargins.has(key))) {return;}
+            if (elementAllowKeys(name).some((key) => slotMargins.has(key))) {
+              return;
+            }
             for (const attr of node.attributes ?? []) {
               const prop = jsxAttrName(attr);
-              if (!MARGIN_PROP_SET.has(prop)) {continue;}
-              if (isZeroReset(attr.value)) {continue;}
+              if (!MARGIN_PROP_SET.has(prop)) {
+                continue;
+              }
+              if (isZeroReset(attr.value)) {
+                continue;
+              }
               context.report({
                 node: attr,
                 messageId: 'childMargin',

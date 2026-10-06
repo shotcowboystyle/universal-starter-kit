@@ -10,23 +10,18 @@
  */
 
 import { ImageSquareIcon, XIcon } from '@phosphor-icons/react';
-import {
-  ensureFocusVisibleRing,
-  ensureKeyboardModalityTracking,
-  wasKeyboardFocus,
-  type DisabledSurfaceProps,
-  type KnobProps,
-} from '@repo/theme';
+import { ensureFocusVisibleRing, ensureKeyboardModalityTracking, wasKeyboardFocus } from '@repo/theme';
+import type { DisabledSurfaceProps, KnobProps } from '@repo/theme';
 import type { DragEvent, ReactNode } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { LabelProps, SizeTokens } from 'tamagui';
 import { Image, Text, View, YStack, isWeb, styled } from 'tamagui';
 
 import { Button } from '../../Button';
-import { Field, FieldLayout, useFieldA11y, useFieldDescribedBy } from '../../fieldLayout';
-import { formCommonColors, formInputColors } from '../../shared/colorRamps';
+import { Field, FieldLayout, useFieldA11y, useFieldDescribedBy } from '../../FieldLayout';
+import { formCommonColors, formInputColors } from '../../shared/color-ramps';
 import { t } from '../../shared/t';
-import { useIsInTableCell } from '../../shared/tableCellContext';
+import { useIsInTableCell } from '../../shared/table-cell-context';
 import { getFieldError, mergeFieldHandler, useFormField, useResolvedValidators } from '../../shared/utils';
 import { Skeleton } from '../../Skeleton';
 import type { AnyFormApi } from '../../types';
@@ -132,7 +127,7 @@ function isImageFile(file: File, accept: string): boolean {
     if (type.endsWith('/*')) {
       return file.type.startsWith(type.slice(0, -1));
     }
-    return file.type === type || file.type.match(type.replace('*', '.*'));
+    return file.type === type || RegExp(type.replace('*', '.*')).exec(file.type);
   });
 }
 
@@ -335,7 +330,9 @@ function ImageControl({
   const emptyName = typeof label === 'string' && label ? t('{{label}}: add image', { label }) : t('Add image');
 
   return (
-    <YStack alignItems="flex-start" {...knobProps.gap}>
+    <YStack
+      alignItems="flex-start"
+      {...knobProps.gap}>
       <ImageFrame
         id={id}
         data-media-tile=""
@@ -359,14 +356,14 @@ function ImageControl({
         aria-readonly={readOnly || undefined}
         aria-disabled={disabled || undefined}
         aria-describedby={describedBy}
-        {...(!isWeb
-          ? {
+        {...(isWeb
+          ? {}
+          : {
               accessibilityRole: canInteract ? 'button' : undefined,
               accessibilityLabel: fieldA11y?.label ?? (typeof label === 'string' ? label : emptyName),
               accessibilityHint: fieldA11y?.description,
               accessibilityState: { disabled: !!disabled },
-            }
-          : {})}
+            })}
         {...(kbFrameFocus ? ensureFocusVisibleRing({ outlineOffset: -2 }) : undefined)}
         {...(canInteract
           ? ({
@@ -402,14 +399,28 @@ function ImageControl({
             }}
           />
         ) : (
-          <View alignItems="center" justifyContent="center" gap="$1" padding="$1">
-            <ImageSquareIcon size={iconSize} color="var(--color11)" />
+          <View
+            alignItems="center"
+            justifyContent="center"
+            gap="$1"
+            padding="$1">
+            <ImageSquareIcon
+              size={iconSize}
+              color="var(--color11)"
+            />
             {showCaption ? (
-              <Text {...knobProps.body} color={formCommonColors.muted} textAlign="center" numberOfLines={2}>
+              <Text
+                {...knobProps.body}
+                color={formCommonColors.muted}
+                textAlign="center"
+                numberOfLines={2}>
                 {hasValue && broken ? t('Image failed to load') : caption}
               </Text>
             ) : hasValue && broken ? (
-              <Text color={formCommonColors.muted} textAlign="center" fontSize="$1">
+              <Text
+                color={formCommonColors.muted}
+                textAlign="center"
+                fontSize="$1">
                 {t('Image failed to load')}
               </Text>
             ) : null}
@@ -424,7 +435,7 @@ function ImageControl({
             tabIndex={-1}
             aria-hidden={true}
             onChange={(e) => {
-              const files = e.target.files;
+              const { files } = e.target;
               e.target.value = '';
               if (!files || files.length === 0) {
                 return;
@@ -491,8 +502,16 @@ export function ImageField({
 
   if (skeleton) {
     return (
-      <FieldLayout id={id} label={label} size={size} knobProps={knobProps}>
-        <Skeleton variant="rounded" width={imageWidth} height={imageHeight} />
+      <FieldLayout
+        id={id}
+        label={label}
+        size={size}
+        knobProps={knobProps}>
+        <Skeleton
+          variant="rounded"
+          width={imageWidth}
+          height={imageHeight}
+        />
       </FieldLayout>
     );
   }
@@ -530,13 +549,21 @@ export function ImageField({
         size={size}
         knobProps={knobProps}
         disabled={disabled}>
-        <ImageControl {...controlProps} currentValue={value ?? defaultValue} errorProp={standaloneError} />
+        <ImageControl
+          {...controlProps}
+          currentValue={value ?? defaultValue}
+          errorProp={standaloneError}
+        />
       </FieldLayout>
     );
   }
 
   return (
-    <Field form={resolvedForm} name={name} defaultValue={defaultValue as any} validators={resolvedValidators}>
+    <Field
+      form={resolvedForm}
+      name={name}
+      defaultValue={defaultValue as any}
+      validators={resolvedValidators}>
       {(field) => {
         const resolvedError = getFieldError(field, error) ?? validationError;
         const fieldValue = field.state.value as string | File | null;
@@ -555,7 +582,7 @@ export function ImageField({
             disabled={disabled}>
             <ImageControl
               {...controlProps}
-              currentValue={value !== undefined ? value : fieldValue}
+              currentValue={value === undefined ? fieldValue : value}
               errorProp={resolvedError}
               onChange={(val) => {
                 field.handleChange(val as any);

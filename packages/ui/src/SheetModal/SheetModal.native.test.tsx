@@ -19,7 +19,7 @@ vi.mock('react-native-web', async (importOriginal) => ({
 const onOpenChange = vi.fn();
 let dismissCompletion: (result: { finished: boolean }) => void;
 let release: () => void;
-let completions: Array<(result: { finished: boolean }) => void>;
+let completions: ((result: { finished: boolean }) => void)[];
 beforeEach(() => {
   vi.useFakeTimers();
   completions = [];
@@ -55,7 +55,9 @@ afterEach(() => {
 
 function panel(open: boolean) {
   return (
-    <SheetModal open={open} onOpenChange={onOpenChange}>
+    <SheetModal
+      open={open}
+      onOpenChange={onOpenChange}>
       <Text>row</Text>
     </SheetModal>
   );
@@ -64,11 +66,12 @@ function panel(open: boolean) {
 describe('SheetModal native presentation lifecycle', () => {
   it('enters without onShow and ignores onShow for the same presentation', () => {
     renderWithProviders(panel(true));
-    expect(Animated.timing).toHaveBeenCalledTimes(1);
+    expect(Animated.timing).toHaveBeenCalledOnce();
     expect(modal.onShow).toBeTypeOf('function');
     act(() => modal.onShow?.());
-    expect(Animated.timing).toHaveBeenCalledTimes(1);
+    expect(Animated.timing).toHaveBeenCalledOnce();
   });
+
   it('ignores onShow after the presentation closes', () => {
     const { rerender } = renderWithProviders(panel(true));
     const lateShow = modal.onShow;
@@ -78,6 +81,7 @@ describe('SheetModal native presentation lifecycle', () => {
     expect(Animated.timing).toHaveBeenCalledTimes(count);
     expect(vi.getTimerCount()).toBe(0);
   });
+
   it('ignores a completed entrance from an earlier presentation', () => {
     const { rerender } = renderWithProviders(panel(true));
     const oldCompletion = completions[0];
@@ -93,6 +97,7 @@ describe('SheetModal native presentation lifecycle', () => {
     });
     expect(writes).toHaveBeenCalledWith(0);
   });
+
   it('ignores callbacks after unmount and clears its timer', () => {
     const { unmount } = renderWithProviders(panel(true));
     const lateShow = modal.onShow;
@@ -110,6 +115,7 @@ describe('SheetModal native presentation lifecycle', () => {
     expect(Animated.timing).toHaveBeenCalledTimes(count);
     expect(vi.getTimerCount()).toBe(0);
   });
+
   it('does not let an earlier dismiss close a reopened presentation', () => {
     const { rerender } = renderWithProviders(panel(true));
     act(() => {
@@ -123,6 +129,7 @@ describe('SheetModal native presentation lifecycle', () => {
     });
     expect(onOpenChange).not.toHaveBeenCalled();
   });
+
   it('closes only after a successful current dismiss', () => {
     renderWithProviders(panel(true));
     act(() => {
@@ -140,6 +147,7 @@ describe('SheetModal native presentation lifecycle', () => {
     });
     expect(onOpenChange).toHaveBeenCalledExactlyOnceWith(false);
   });
+
   it('owns only the current StrictMode effect presentation', () => {
     renderWithProviders(panel(true), { reactStrictMode: true });
     expect(completions.length).toBeGreaterThanOrEqual(2);
@@ -153,6 +161,7 @@ describe('SheetModal native presentation lifecycle', () => {
     });
     expect(writes).toHaveBeenCalledWith(0);
   });
+
   it('keeps the measured JS-driver workaround', () => {
     renderWithProviders(panel(true));
     expect(Animated.timing).toHaveBeenCalledWith(

@@ -127,7 +127,7 @@ export function valueDomain(values: number[], options?: ValueDomainOptions): [nu
     if (max <= 0) {
       min = max - 1;
     } else {
-      max = max + (max === min ? Math.abs(max) * paddingRatio || 1 : 0);
+      max += max === min ? Math.abs(max) * paddingRatio || 1 : 0;
     }
     if (min === max) {
       max = min + 1;
@@ -291,7 +291,7 @@ export function pieSlices<T extends { value: number }>(data: T[], options?: PieS
  * path rounding. One thin positive slice keeps the whole chart unmasked.
  */
 export function canMaskPieSlices(
-  slices: ReadonlyArray<{ value: number; startAngle: number; endAngle: number }>,
+  slices: readonly { value: number; startAngle: number; endAngle: number }[],
   innerRadius: number,
   outerRadius: number,
 ): boolean {

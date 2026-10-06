@@ -9,7 +9,8 @@ import { cleanup, fireEvent, screen } from '@testing-library/react';
 import * as React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { Calendar, type CalendarEvent } from './Calendar';
+import { Calendar } from './Calendar';
+import type { CalendarEvent } from './Calendar';
 
 afterEach(cleanup);
 
@@ -39,10 +40,15 @@ const timedEvents: CalendarEvent[] = [
 describe('Calendar time grid', () => {
   it('renders 7 time columns, hour lines, and positioned event blocks in week view', () => {
     const { container } = renderWithProviders(
-      <Calendar events={timedEvents} viewType="week" initialDate={march10} height={600} />,
+      <Calendar
+        events={timedEvents}
+        viewType="week"
+        initialDate={march10}
+        height={600}
+      />,
     );
     const cols = container.querySelectorAll('[data-calendar-timecol]');
-    expect(cols.length).toBe(7);
+    expect(cols).toHaveLength(7);
     expect(screen.getByText('Team Standup')).toBeInTheDocument();
     expect(screen.getByText('Design Sync')).toBeInTheDocument();
     // Untimed events live in the all-day strip, not the grid.
@@ -51,7 +57,14 @@ describe('Calendar time grid', () => {
   });
 
   it('gives event blocks full accessible names (title + day + time range)', () => {
-    renderWithProviders(<Calendar events={timedEvents} viewType="week" initialDate={march10} height={600} />);
+    renderWithProviders(
+      <Calendar
+        events={timedEvents}
+        viewType="week"
+        initialDate={march10}
+        height={600}
+      />,
+    );
     const block = screen.getByLabelText(/Team Standup, Tuesday, March 10/);
     expect(block).toBeTruthy();
     expect(block.getAttribute('aria-label')).toMatch(/9:00/);
@@ -60,21 +73,37 @@ describe('Calendar time grid', () => {
 
   it('renders resize handles only when onEventResize is provided', () => {
     const { container, unmount } = renderWithProviders(
-      <Calendar events={timedEvents} viewType="week" initialDate={march10} onEventResize={vi.fn()} height={600} />,
+      <Calendar
+        events={timedEvents}
+        viewType="week"
+        initialDate={march10}
+        onEventResize={vi.fn()}
+        height={600}
+      />,
     );
     expect(container.querySelectorAll('[data-calendar-resize]').length).toBeGreaterThan(0);
     unmount();
     const { container: without } = renderWithProviders(
-      <Calendar events={timedEvents} viewType="week" initialDate={march10} height={600} />,
+      <Calendar
+        events={timedEvents}
+        viewType="week"
+        initialDate={march10}
+        height={600}
+      />,
     );
-    expect(without.querySelectorAll('[data-calendar-resize]').length).toBe(0);
+    expect(without.querySelectorAll('[data-calendar-resize]')).toHaveLength(0);
   });
 
   it('renders a single time column in day view', () => {
     const { container } = renderWithProviders(
-      <Calendar events={timedEvents} viewType="day" initialDate={march10} height={600} />,
+      <Calendar
+        events={timedEvents}
+        viewType="day"
+        initialDate={march10}
+        height={600}
+      />,
     );
-    expect(container.querySelectorAll('[data-calendar-timecol]').length).toBe(1);
+    expect(container.querySelectorAll('[data-calendar-timecol]')).toHaveLength(1);
   });
 });
 
@@ -88,7 +117,12 @@ describe('Calendar overflow honesty (Axiom 6)', () => {
 
   it('shows three events and an honest "+N more" count', () => {
     const { container } = renderWithProviders(
-      <Calendar events={overflowEvents} viewType="month" initialDate={march10} height={600} />,
+      <Calendar
+        events={overflowEvents}
+        viewType="month"
+        initialDate={march10}
+        height={600}
+      />,
     );
     expect(screen.getByText('Meeting 1')).toBeInTheDocument();
     expect(screen.getByText('Meeting 3')).toBeInTheDocument();
@@ -100,7 +134,12 @@ describe('Calendar overflow honesty (Axiom 6)', () => {
 
   it('does not render an overflow affordance when everything fits', () => {
     const { container } = renderWithProviders(
-      <Calendar events={overflowEvents.slice(0, 3)} viewType="month" initialDate={march10} height={600} />,
+      <Calendar
+        events={overflowEvents.slice(0, 3)}
+        viewType="month"
+        initialDate={march10}
+        height={600}
+      />,
     );
     expect(container.querySelector('[data-calendar-overflow]')).toBeNull();
   });
@@ -116,7 +155,13 @@ describe('Calendar keyboard flow (Axiom 12)', () => {
   it('arrows move day focus and Enter selects the focused day', () => {
     const onDateSelect = vi.fn();
     const { container } = renderWithProviders(
-      <Calendar events={[]} viewType="month" initialDate={march10} onDateSelect={onDateSelect} height={600} />,
+      <Calendar
+        events={[]}
+        viewType="month"
+        initialDate={march10}
+        onDateSelect={onDateSelect}
+        height={600}
+      />,
     );
     const grid = getGrid(container);
     // First arrow anchors focus on the current date.
@@ -124,13 +169,18 @@ describe('Calendar keyboard flow (Axiom 12)', () => {
     fireEvent.keyDown(grid, { key: 'ArrowRight' });
     fireEvent.keyDown(grid, { key: 'ArrowDown' });
     fireEvent.keyDown(grid, { key: 'Enter' });
-    expect(onDateSelect).toHaveBeenCalledTimes(1);
+    expect(onDateSelect).toHaveBeenCalledOnce();
     expect(onDateSelect.mock.calls[0][0]).toEqual(new Date(2026, 2, 18));
   });
 
   it('marks the focused cell via aria-activedescendant and aria-selected', () => {
     const { container } = renderWithProviders(
-      <Calendar events={[]} viewType="month" initialDate={march10} height={600} />,
+      <Calendar
+        events={[]}
+        viewType="month"
+        initialDate={march10}
+        height={600}
+      />,
     );
     const grid = getGrid(container);
     fireEvent.keyDown(grid, { key: 'ArrowRight' });
@@ -144,7 +194,12 @@ describe('Calendar keyboard flow (Axiom 12)', () => {
 
   it('navigates the period when focus crosses the visible month', () => {
     const { container } = renderWithProviders(
-      <Calendar events={[]} viewType="month" initialDate={new Date(2026, 2, 31)} height={600} />,
+      <Calendar
+        events={[]}
+        viewType="month"
+        initialDate={new Date(2026, 2, 31)}
+        height={600}
+      />,
     );
     const grid = getGrid(container);
     fireEvent.keyDown(grid, { key: 'ArrowRight' }); // anchor focus on Mar 31
@@ -155,7 +210,12 @@ describe('Calendar keyboard flow (Axiom 12)', () => {
 
   it('announces period changes in the aria-live region', () => {
     const { container } = renderWithProviders(
-      <Calendar events={[]} viewType="month" initialDate={march10} height={600} />,
+      <Calendar
+        events={[]}
+        viewType="month"
+        initialDate={march10}
+        height={600}
+      />,
     );
     const live = container.querySelector('[data-calendar-live]');
     expect(live?.getAttribute('aria-live')).toBe('polite');
@@ -168,13 +228,19 @@ describe('Calendar keyboard flow (Axiom 12)', () => {
   it('moves slot focus vertically in week view', () => {
     const onDateSelect = vi.fn();
     const { container } = renderWithProviders(
-      <Calendar events={[]} viewType="week" initialDate={march10} onDateSelect={onDateSelect} height={600} />,
+      <Calendar
+        events={[]}
+        viewType="week"
+        initialDate={march10}
+        onDateSelect={onDateSelect}
+        height={600}
+      />,
     );
     const grid = container.querySelector('[data-calendar-body="week"]') as Element;
     fireEvent.keyDown(grid, { key: 'ArrowRight' }); // anchor focus (9:00 default)
     fireEvent.keyDown(grid, { key: 'ArrowDown' }); // 9:30
     fireEvent.keyDown(grid, { key: 'Enter' });
-    expect(onDateSelect).toHaveBeenCalledTimes(1);
+    expect(onDateSelect).toHaveBeenCalledOnce();
     expect(onDateSelect.mock.calls[0][0]).toEqual(new Date(2026, 2, 10, 9, 30));
   });
 });

@@ -9,7 +9,7 @@ export async function waitForFrappe(interval: number) {
     }
   } catch {}
   await new Promise((resolve) => setTimeout(resolve, interval));
-  return waitForFrappe(interval);
+  return await waitForFrappe(interval);
 }
 
 export async function waitForPostgres(interval: number) {
@@ -65,7 +65,7 @@ export async function waitForKeycloak(interval: number) {
     }
   } catch {}
   await new Promise((resolve) => setTimeout(resolve, interval));
-  return waitForKeycloak(interval);
+  return await waitForKeycloak(interval);
 }
 
 export function formatServiceList(services: readonly string[]): string {

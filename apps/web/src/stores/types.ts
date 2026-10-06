@@ -1,4 +1,4 @@
-import type { Board, Project, Task, TaskStatus, CreateTaskInput } from "@repo/store";
+import type { Board, Project, Task, TaskStatus, CreateTaskInput } from '@repo/store';
 
 export interface UserSliceState {
   userId: string | null;
@@ -8,7 +8,7 @@ export interface UserSliceState {
 
 export interface FilterSliceState {
   filter: { status: string | null; search: string };
-  setFilter: (filter: Partial<FilterSliceState["filter"]>) => void;
+  setFilter: (filter: Partial<FilterSliceState['filter']>) => void;
 }
 
 export interface ResetSliceState {
@@ -40,13 +40,13 @@ export interface ProjectSliceState {
       boardId: string;
       owner: string;
       orderInBoard?: number;
-    }) => Promise<Project>
+    }) => Promise<Project>,
   ) => Promise<string>;
   updateProject: (
     id: string,
     newTitle: string,
     newDescription: string | undefined,
-    updateFn: (id: string, data: { title: string; description?: string }) => Promise<Project>
+    updateFn: (id: string, data: { title: string; description?: string }) => Promise<Project>,
   ) => Promise<void>;
   removeProject: (id: string, deleteFn: (id: string) => Promise<void>) => Promise<void>;
 }
@@ -60,7 +60,7 @@ export interface TaskSliceState {
     description?: string,
     dueDate?: Date,
     assigneeId?: string,
-    orderInProject?: number
+    orderInProject?: number,
   ) => Promise<void>;
   updateTask: (
     taskId: string,
@@ -70,13 +70,13 @@ export interface TaskSliceState {
     dueDate?: Date,
     assigneeId?: string,
     newProjectId?: string,
-    orderInProject?: number
+    orderInProject?: number,
   ) => Promise<void>;
   removeTask: (taskId: string) => Promise<void>;
   dragTaskOnProject: (
     taskId: string,
     newProjectId: string,
-    getTask: (taskId: string) => Promise<Task | undefined>
+    getTask: (taskId: string) => Promise<Task | undefined>,
   ) => Promise<void>;
 }
 

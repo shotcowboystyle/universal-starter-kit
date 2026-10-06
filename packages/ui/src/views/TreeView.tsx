@@ -18,27 +18,21 @@ import {
   useResolvedKnobs,
   wasKeyboardFocus,
 } from '@repo/theme';
-import { FlashList, type FlashListRef } from '@shopify/flash-list';
+import { FlashList } from '@shopify/flash-list';
+import type { FlashListRef } from '@shopify/flash-list';
 import { useHotkey } from '@tanstack/react-hotkeys';
 import type { RegisterableHotkey } from '@tanstack/react-hotkeys';
-import React, {
-  useCallback,
-  useEffect,
-  useId,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react';
-import { Text, View, XStack, YStack, isWeb, styled, type YStackProps } from 'tamagui';
+import React, { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
+import { Text, View, XStack, YStack, isWeb, styled } from 'tamagui';
+import type { YStackProps } from 'tamagui';
 
-import { componentColors } from '../componentColors';
-import { useDirection } from '../hooks/useDirection';
+import { componentColors } from '../component-colors';
+import { useDirection } from '../hooks/use-direction';
 import { EmptyState } from '../layouts/Page';
 import { useTranslation } from '../shared/i18n';
 
-import { autoScrollVelocity } from './kanbanDnd';
+import { autoScrollVelocity } from './kanban-dnd';
 import {
   applyTreeMove,
   describeTreeCancel,
@@ -50,14 +44,11 @@ import {
   treeDropTargetForY,
   treeKeyboardLift,
   treeKeyboardMove,
-  type TreeDragAnnouncement,
-  type TreeDragSession,
-  type TreeDropIndicator,
-  type TreeDropTarget,
-} from './treeViewDnd';
-import { TREE_LIFT_SHADOW, treeDefaultHeight, treeEdgeRowPad, treeIndentStep } from './treeViewLayout';
-import { diffVisibleRows, flattenVisibleIds, isEmptyDiff } from './treeViewMotion';
-import { treeRevealExpansion, treeRevealOffset } from './treeViewReveal';
+} from './tree-view-dnd';
+import type { TreeDragAnnouncement, TreeDragSession, TreeDropIndicator, TreeDropTarget } from './tree-view-dnd';
+import { TREE_LIFT_SHADOW, treeDefaultHeight, treeEdgeRowPad, treeIndentStep } from './tree-view-layout';
+import { diffVisibleRows, flattenVisibleIds, isEmptyDiff } from './tree-view-motion';
+import { treeRevealExpansion, treeRevealOffset } from './tree-view-reveal';
 
 const DragHandleTarget = styled(View, { name: 'DragHandleTarget' });
 
@@ -238,7 +229,7 @@ interface TreeSettle<T> {
   hideId?: string;
 }
 
-function collectBranchIds<T>(items: TreeNode<T>[], into: Set<string> = new Set()): Set<string> {
+function collectBranchIds<T>(items: TreeNode<T>[], into = new Set<string>()): Set<string> {
   for (const node of items) {
     if ((node.children?.length ?? 0) > 0) {
       into.add(node.id);
@@ -270,12 +261,23 @@ const TYPEAHEAD_MS = 600;
 function defaultNodeIcon(hasChildren: boolean, isExpanded: boolean, iconSize: number): ReactNode {
   if (hasChildren) {
     return isExpanded ? (
-      <FolderOpenIcon size={iconSize} weight="duotone" />
+      <FolderOpenIcon
+        size={iconSize}
+        weight="duotone"
+      />
     ) : (
-      <FolderIcon size={iconSize} weight="duotone" />
+      <FolderIcon
+        size={iconSize}
+        weight="duotone"
+      />
     );
   }
-  return <FileIcon size={iconSize} weight="duotone" />;
+  return (
+    <FileIcon
+      size={iconSize}
+      weight="duotone"
+    />
+  );
 }
 
 /**
@@ -333,7 +335,7 @@ export function TreeView<T = unknown>({
   // must sit on the accent fill with a luminance-computed foreground (the
   // scheme `$color` ink measured 2.59:1 on the accent).
   const onAccentLabel = useReadableTextOn('$accentBackground');
-  const transition = knobProps.transition;
+  const { transition } = knobProps;
   const nestedPx = knobProps.nestedControl.px;
   const rowGap = knobProps.control.gap;
   const iconSize = knobProps.controlIcon.width;
@@ -660,7 +662,7 @@ export function TreeView<T = unknown>({
           return;
         }
         const target = Math.min(initial.offset, bounds.maxOffset);
-        const attempted = initial.attempted;
+        const { attempted } = initial;
         if (
           !attempted ||
           attempted.target !== target ||
@@ -696,7 +698,7 @@ export function TreeView<T = unknown>({
       }
       const list = flashListRef.current;
       const index = flatNodes.findIndex((item) => item.node.id === intent.id);
-      if (!list || index < 0) {
+      if (!list || index === -1) {
         return;
       }
       if (isWeb) {
@@ -954,7 +956,7 @@ export function TreeView<T = unknown>({
         const parentRow =
           resolved.to.parentId === null ? null : (dndRows.find((r) => r.id === resolved.to.parentId) ?? null);
         let top = 0;
-        if (destFlat >= 0) {
+        if (destFlat !== -1) {
           for (let i = 0; i < destFlat; i++) {
             top += getRowHeight(expectedIds[i]);
           }
@@ -968,7 +970,7 @@ export function TreeView<T = unknown>({
         const originFlat = flatNodes.findIndex((f) => f.node.id === ui.session.nodeId);
         dest = {
           x: ui.homeX,
-          y: (originFlat >= 0 ? topOfFlatIndex(originFlat) : 0) - scrollOffsetRef.current,
+          y: (originFlat !== -1 ? topOfFlatIndex(originFlat) : 0) - scrollOffsetRef.current,
         };
       }
 
@@ -1415,7 +1417,7 @@ export function TreeView<T = unknown>({
           toggleNode(flat.node);
         } else if (flat.parentId) {
           const parentIndex = flatNodes.findIndex((f) => f.node.id === flat.parentId);
-          if (parentIndex >= 0) {
+          if (parentIndex !== -1) {
             focusRow(parentIndex);
           }
         }
@@ -1529,7 +1531,13 @@ export function TreeView<T = unknown>({
   );
 
   if (nodes.length === 0) {
-    return <EmptyState compact title={emptyMessage} {...stackProps} />;
+    return (
+      <EmptyState
+        compact
+        title={emptyMessage}
+        {...stackProps}
+      />
+    );
   }
 
   const effectiveFocused = focusedIndex >= flatNodes.length ? -1 : focusedIndex;
@@ -1551,7 +1559,10 @@ export function TreeView<T = unknown>({
   // the radius-only fragment — a border-bearing one would be unlicensed chrome
   // on a chromeless part.
   return (
-    <YStack {...knobProps.containerRadius} overflow="hidden" {...stackProps}>
+    <YStack
+      {...knobProps.containerRadius}
+      overflow="hidden"
+      {...stackProps}>
       <View
         ref={containerRef as any}
         role="tree"
@@ -1787,18 +1798,28 @@ export function TreeView<T = unknown>({
                       // an icon swap, so the state change is continuous.
                       rotate={isExpanded ? expandedCaretRotation : '0deg'}
                       transition={transition as any}>
-                      <CollapsedCaretIcon size={caretSize} weight="bold" />
+                      <CollapsedCaretIcon
+                        size={caretSize}
+                        weight="bold"
+                      />
                     </View>
                   ) : (
                     <View {...knobProps.controlIcon} />
                   )
                 ) : null}
 
-                <View {...knobProps.controlIcon} alignItems="center" justifyContent="center" flexShrink={0}>
+                <View
+                  {...knobProps.controlIcon}
+                  alignItems="center"
+                  justifyContent="center"
+                  flexShrink={0}>
                   {leadingIcon}
                 </View>
 
-                <View flex={1} minWidth={0} justifyContent="center">
+                <View
+                  flex={1}
+                  minWidth={0}
+                  justifyContent="center">
                   {labelContent}
                 </View>
 
@@ -1825,7 +1846,11 @@ export function TreeView<T = unknown>({
                         handleDragHandlePointerDown(item, e);
                       },
                     }}>
-                    <DotsSixVerticalIcon size={caretSize} weight="bold" color={knobProps.textAccentColor} />
+                    <DotsSixVerticalIcon
+                      size={caretSize}
+                      weight="bold"
+                      color={knobProps.textAccentColor}
+                    />
                   </DragHandleTarget>
                 ) : null}
               </XStack>
@@ -1849,8 +1874,16 @@ export function TreeView<T = unknown>({
             pointerEvents="none"
             zIndex={999}
             transition={dragUi.mode === 'keyboard' ? (transition as any) : ('none' as any)}>
-            <View width={dragUi.indicator.depth * indentStep} flexShrink={0} />
-            <View flex={1} height={2} borderRadius={1} backgroundColor="$accentBackground" />
+            <View
+              width={dragUi.indicator.depth * indentStep}
+              flexShrink={0}
+            />
+            <View
+              flex={1}
+              height={2}
+              borderRadius={1}
+              backgroundColor="$accentBackground"
+            />
           </XStack>
         )}
 
@@ -1887,10 +1920,19 @@ export function TreeView<T = unknown>({
               enterStyle={{ scale: 1 }}
               scale={dragUi ? 1.03 : 1}
               {...(dragUi ? LIFT_SHADOW : undefined)}>
-              <View {...knobProps.controlIcon} alignItems="center" justifyContent="center" flexShrink={0}>
+              <View
+                {...knobProps.controlIcon}
+                alignItems="center"
+                justifyContent="center"
+                flexShrink={0}>
                 {overlayNode.icon ?? defaultNodeIcon(overlayHasChildren, false, nodeIconSize)}
               </View>
-              <Text {...knobProps.body} {...knobProps.label} color="$color" numberOfLines={1} flexShrink={1}>
+              <Text
+                {...knobProps.body}
+                {...knobProps.label}
+                color="$color"
+                numberOfLines={1}
+                flexShrink={1}>
                 {overlayNode.label}
               </Text>
             </XStack>

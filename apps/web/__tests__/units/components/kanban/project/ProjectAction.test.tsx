@@ -37,7 +37,7 @@ vi.mock('@/lib/api/projects/queries', () => ({
 
 // Tamagui renders the confirm dialog in a <dialog> element that jsdom treats as
 // hidden for role queries, so locate it directly.
-const findConfirmDialog = () =>
+const findConfirmDialog = async () =>
   waitFor(() => {
     const el = document.querySelector<HTMLElement>('[role="alertdialog"]');
     expect(el).toBeTruthy();
@@ -175,7 +175,12 @@ describe('ProjectActions', () => {
 
   it('refuses to update when the user is not authenticated', async () => {
     mockStore(null);
-    renderWithProviders(<ProjectActions {...props} ownerId={null as any} />);
+    renderWithProviders(
+      <ProjectActions
+        {...props}
+        ownerId={null as any}
+      />,
+    );
     await openMenu();
     fireEvent.click(screen.getByTestId('edit-project-button'));
     await screen.findByTestId('project-title-input');

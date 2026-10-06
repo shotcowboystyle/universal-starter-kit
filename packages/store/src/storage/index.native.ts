@@ -66,7 +66,7 @@ export function resolveNativeStorage(loaders: NativeStorageLoaders = defaultLoad
     if (typeof mmkvModule?.createMMKV !== 'function') {
       // v3 shipped an `MMKV` class; v4 only ships the factory. Anything
       // without createMMKV() is not a usable react-native-mmkv module.
-      throw new Error('no createMMKV() export (react-native-mmkv v4 API expected)');
+      throw new TypeError('no createMMKV() export (react-native-mmkv v4 API expected)');
     }
     const mmkv = mmkvModule.createMMKV();
     return {
@@ -96,9 +96,9 @@ export function resolveNativeStorage(loaders: NativeStorageLoaders = defaultLoad
       backend: 'async-storage',
       errors,
       storage: {
-        getItem: (name: string) => asyncStorage.getItem(name),
-        setItem: (name: string, value: string) => asyncStorage.setItem(name, value),
-        removeItem: (name: string) => asyncStorage.removeItem(name),
+        getItem: async (name: string) => asyncStorage.getItem(name),
+        setItem: async (name: string, value: string) => asyncStorage.setItem(name, value),
+        removeItem: async (name: string) => asyncStorage.removeItem(name),
       },
     };
   } catch (err) {
@@ -142,9 +142,9 @@ export function logNativeStorageResolution(
     causes.push(`async-storage unavailable: ${describeError(resolution.errors.asyncStorage)}`);
   }
   logger.warn(
-    `[@repo/store] native storage fell back to ${resolution.backend}` +
-      (resolution.backend === 'memory' ? ' — persisted state will NOT survive app restarts' : '') +
-      ` (${causes.join('; ')})`,
+    `[@repo/store] native storage fell back to ${resolution.backend}${
+      resolution.backend === 'memory' ? ' — persisted state will NOT survive app restarts' : ''
+    } (${causes.join('; ')})`,
   );
 }
 

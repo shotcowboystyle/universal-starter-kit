@@ -3,7 +3,7 @@ import { action } from '@repo/storybook';
 import type { Meta } from '@storybook/react-native-web-vite';
 import type { ReactNode } from 'react';
 
-import { componentColors } from '../componentColors';
+import { componentColors } from '../component-colors';
 
 import { List, ListRow, ListRowMeta } from './List';
 
@@ -91,7 +91,9 @@ function DocumentItem({ item }: { item: DocumentRow }) {
           <ListRowMeta width={80}>{item.modified}</ListRowMeta>
           <ListRowMeta width={56}>{item.size}</ListRowMeta>
           <ListRowMeta width={40}>{item.kind}</ListRowMeta>
-          <ListRowMeta width={48} color={statusColor}>
+          <ListRowMeta
+            width={48}
+            color={statusColor}>
             {item.status}
           </ListRowMeta>
         </>
@@ -125,7 +127,12 @@ export const Default = {
 
 export const Loading = {
   render: () => (
-    <List<DocumentRow> items={[]} renderItem={(item) => <DocumentItem item={item} />} isLoading height={280} />
+    <List<DocumentRow>
+      items={[]}
+      renderItem={(item) => <DocumentItem item={item} />}
+      isLoading
+      height={280}
+    />
   ),
 };
 

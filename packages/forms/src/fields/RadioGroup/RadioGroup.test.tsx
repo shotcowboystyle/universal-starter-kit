@@ -63,7 +63,12 @@ describe('RadioGroup Components', () => {
 
       it('should render required label with asterisk', () => {
         const result = renderWithProviders(
-          <RadioGroup label="Required Radio Group" name="option" required options={mockOptions} />,
+          <RadioGroup
+            label="Required Radio Group"
+            name="option"
+            required
+            options={mockOptions}
+          />,
         );
 
         // Check that the label contains the text and asterisk
@@ -92,9 +97,9 @@ describe('RadioGroup Components', () => {
             fireEvent.click(radio);
           }
         });
-        expect(onChange).toHaveBeenCalledTimes(1);
+        expect(onChange).toHaveBeenCalledOnce();
         expect(onChange).toHaveBeenCalledWith('option1');
-        expect(onValueChange).toHaveBeenCalledTimes(1);
+        expect(onValueChange).toHaveBeenCalledOnce();
         expect(onValueChange).toHaveBeenCalledWith('option1');
       });
 
@@ -103,7 +108,12 @@ describe('RadioGroup Components', () => {
         // (same inner-View steal as CheckboxGlyphBox).
         const onChange = vi.fn();
         const result = renderWithProviders(
-          <RadioGroup label="Choose Option" name="option" options={mockOptions} onChange={onChange} />,
+          <RadioGroup
+            label="Choose Option"
+            name="option"
+            options={mockOptions}
+            onChange={onChange}
+          />,
         );
         const glyph = result.container.querySelector('[data-radio-kb-focus]');
         expect(glyph).toBeTruthy();
@@ -131,7 +141,11 @@ describe('RadioGroup Components', () => {
 
         return (
           <Form form={form}>
-            <RadioGroup label="Choose Option" name={name} options={mockOptions} />
+            <RadioGroup
+              label="Choose Option"
+              name={name}
+              options={mockOptions}
+            />
             <Button action="submit">Submit</Button>
           </Form>
         );
@@ -244,7 +258,13 @@ describe('RadioGroup Components', () => {
       // View around [role=radiogroup]; the field must strip it from the tab
       // order so only the radios themselves are tab stops.
       it('keeps the role-less outer wrapper out of the tab order', async () => {
-        const result = renderWithProviders(<RadioGroup label="Choose Option" name="option" options={mockOptions} />);
+        const result = renderWithProviders(
+          <RadioGroup
+            label="Choose Option"
+            name="option"
+            options={mockOptions}
+          />,
+        );
         const group = result.container.querySelector("[role='radiogroup']");
         expect(group).toBeTruthy();
         const wrapper = group?.parentElement;
@@ -260,22 +280,39 @@ describe('RadioGroup Components', () => {
         // WAI-ARIA radio group: the group is ONE tab stop — the checked radio
         // (or the first when none is checked) carries tabindex=0, the rest
         // are -1 and reached with arrow keys (keyboard-nav audit).
-        const result = renderWithProviders(<RadioGroup label="Choose Option" name="option" options={mockOptions} />);
+        const result = renderWithProviders(
+          <RadioGroup
+            label="Choose Option"
+            name="option"
+            options={mockOptions}
+          />,
+        );
         const radios = [...result.container.querySelectorAll("[role='radio']")];
-        expect(radios.length).toBe(mockOptions.length);
+        expect(radios).toHaveLength(mockOptions.length);
         expect(radios.map((radio) => radio.getAttribute('tabindex'))).toEqual(['0', '-1', '-1']);
       });
 
       it('moves the tab stop to the checked radio', async () => {
         const result = renderWithProviders(
-          <RadioGroup label="Choose Option" name="option" value={mockOptions[1].value} options={mockOptions} />,
+          <RadioGroup
+            label="Choose Option"
+            name="option"
+            value={mockOptions[1].value}
+            options={mockOptions}
+          />,
         );
         const radios = [...result.container.querySelectorAll("[role='radio']")];
         expect(radios.map((radio) => radio.getAttribute('tabindex'))).toEqual(['-1', '0', '-1']);
       });
 
       it('re-strips the wrapper tabindex when the roving group re-applies it', async () => {
-        const result = renderWithProviders(<RadioGroup label="Choose Option" name="option" options={mockOptions} />);
+        const result = renderWithProviders(
+          <RadioGroup
+            label="Choose Option"
+            name="option"
+            options={mockOptions}
+          />,
+        );
         const wrapper = result.container.querySelector("[role='radiogroup']")?.parentElement;
         await waitFor(() => {
           expect(wrapper?.getAttribute('tabindex')).toBe('-1');
@@ -338,7 +375,12 @@ describe('RadioGroup Components', () => {
           formApi = form as unknown as typeof formApi;
           return (
             <Form form={form}>
-              <RadioGroup label="Status" name="option" options={mockOptions} onChange={onChange} />
+              <RadioGroup
+                label="Status"
+                name="option"
+                options={mockOptions}
+                onChange={onChange}
+              />
             </Form>
           );
         };
@@ -356,9 +398,21 @@ describe('RadioGroup Components', () => {
       it('still emits exactly once for a real click after a late seed', async () => {
         const onChange = vi.fn();
         const result = renderWithProviders(
-          <RadioGroup label="Status" value="" options={mockOptions} onChange={onChange} />,
+          <RadioGroup
+            label="Status"
+            value=""
+            options={mockOptions}
+            onChange={onChange}
+          />,
         );
-        result.rerender(<RadioGroup label="Status" value="option1" options={mockOptions} onChange={onChange} />);
+        result.rerender(
+          <RadioGroup
+            label="Status"
+            value="option1"
+            options={mockOptions}
+            onChange={onChange}
+          />,
+        );
         const radio = getRadioByValue(result.container, 'option2');
         expect(radio).toBeTruthy();
         await act(async () => {
@@ -366,7 +420,7 @@ describe('RadioGroup Components', () => {
             fireEvent.click(radio);
           }
         });
-        expect(onChange).toHaveBeenCalledTimes(1);
+        expect(onChange).toHaveBeenCalledOnce();
         expect(onChange).toHaveBeenCalledWith('option2');
       });
     });
@@ -378,19 +432,39 @@ describe('RadioGroup Components', () => {
       ];
 
       it('renders option descriptions in card mode', () => {
-        const result = renderWithProviders(<RadioGroup label="Pick" name="opts" card options={cardOptions} />);
+        const result = renderWithProviders(
+          <RadioGroup
+            label="Pick"
+            name="opts"
+            card
+            options={cardOptions}
+          />,
+        );
         expect(result.findTextElement('Card A')).toBeDefined();
         expect(result.findTextElement('Description for A')).toBeDefined();
       });
 
       it('does not render descriptions in plain mode', () => {
-        const result = renderWithProviders(<RadioGroup label="Pick" name="opts" options={cardOptions} />);
+        const result = renderWithProviders(
+          <RadioGroup
+            label="Pick"
+            name="opts"
+            options={cardOptions}
+          />,
+        );
         expect(result.findTextElement('Card A')).toBeDefined();
         expect(result.findTextElement('Description for A')).toBeUndefined();
       });
 
       it('labels the radio via aria-labelledby and aria-describedby', () => {
-        const result = renderWithProviders(<RadioGroup label="Pick" name="opts" card options={cardOptions} />);
+        const result = renderWithProviders(
+          <RadioGroup
+            label="Pick"
+            name="opts"
+            card
+            options={cardOptions}
+          />,
+        );
         const radio = result.container.querySelector("[role='radio']");
         const labelId = radio?.getAttribute('aria-labelledby');
         const descId = radio?.getAttribute('aria-describedby');
@@ -403,7 +477,13 @@ describe('RadioGroup Components', () => {
       it('radio click in card mode emits onChange with the selected value', () => {
         const onChange = vi.fn();
         const result = renderWithProviders(
-          <RadioGroup label="Pick" name="opts" card options={cardOptions} onChange={onChange} />,
+          <RadioGroup
+            label="Pick"
+            name="opts"
+            card
+            options={cardOptions}
+            onChange={onChange}
+          />,
         );
         const radio = result.container.querySelector("[role='radio']");
         if (radio) {
@@ -419,7 +499,14 @@ describe('RadioGroup Components', () => {
           { label: 'One', value: 'same', description: 'd1' },
           { label: 'Two', value: 'same', description: 'd2' },
         ];
-        const result = renderWithProviders(<RadioGroup label="Pick" name="opts" card options={dupes} />);
+        const result = renderWithProviders(
+          <RadioGroup
+            label="Pick"
+            name="opts"
+            card
+            options={dupes}
+          />,
+        );
         const radios = [...result.container.querySelectorAll("[role='radio']")];
         const ids = radios.map((r) => r.id);
         expect(new Set(ids).size).toBe(2);
@@ -429,8 +516,15 @@ describe('RadioGroup Components', () => {
     describe('selected mark', () => {
       it('fills the checked radio with the accent mark; unchecked stays empty', () => {
         const { container } = render(
-          <TamaguiProvider config={houseConfig} defaultTheme="light" disableInjectCSS>
-            <RadioGroup label="Choose" value="option2" options={mockOptions} />
+          <TamaguiProvider
+            config={houseConfig}
+            defaultTheme="light"
+            disableInjectCSS>
+            <RadioGroup
+              label="Choose"
+              value="option2"
+              options={mockOptions}
+            />
           </TamaguiProvider>,
         );
         const checked = container.querySelector('[role="radio"][aria-checked="true"]');
@@ -446,21 +540,26 @@ describe('RadioGroup Components', () => {
         const uncheckedMarked = Array.from(unchecked!.querySelectorAll('*')).filter((el) =>
           (el as HTMLElement).className?.toString().includes('_bg-accentBackg'),
         );
-        expect(uncheckedMarked.length).toBe(0);
+        expect(uncheckedMarked).toHaveLength(0);
       });
     });
 
     describe('ring anatomy', () => {
       const classOf = (el: Element) => (el as HTMLElement).className?.toString() ?? '';
       const treeHasRing = (el: Element) =>
-        [el, ...el.querySelectorAll('*')].some((node) => /outlineWidth-2px/.test(classOf(node)));
+        [el, ...el.querySelectorAll('*')].some((node) => classOf(node).includes('outlineWidth-2px'));
 
       it('does not paint a ring on every radio at rest', () => {
         const result = renderWithProviders(
-          <RadioGroup label="Choose Option" name="option" value="option1" options={mockOptions} />,
+          <RadioGroup
+            label="Choose Option"
+            name="option"
+            value="option1"
+            options={mockOptions}
+          />,
         );
         const radios = [...result.container.querySelectorAll('[role="radio"]')];
-        expect(radios.length).toBe(mockOptions.length);
+        expect(radios).toHaveLength(mockOptions.length);
         for (const radio of radios) {
           expect(treeHasRing(radio)).toBe(false);
         }
@@ -468,7 +567,12 @@ describe('RadioGroup Components', () => {
 
       it('does not put a focus-visible ring on the 44px hit target', () => {
         const result = renderWithProviders(
-          <RadioGroup label="Choose Option" name="option" value="option1" options={mockOptions} />,
+          <RadioGroup
+            label="Choose Option"
+            name="option"
+            value="option1"
+            options={mockOptions}
+          />,
         );
         const radios = [...result.container.querySelectorAll('[role="radio"]')];
         for (const radio of radios) {
@@ -483,14 +587,27 @@ describe('RadioGroup Components', () => {
       const classOf = (el: Element) => (el as HTMLElement).className?.toString() ?? '';
 
       it('declares R-IDENTITY / radio disc on the glyph', () => {
-        const result = renderWithProviders(<RadioGroup label="Choose" name="option" options={mockOptions} />);
+        const result = renderWithProviders(
+          <RadioGroup
+            label="Choose"
+            name="option"
+            options={mockOptions}
+          />,
+        );
         const el = disc(result.container);
         expect(el?.getAttribute('data-radius-class')).toBe('R-IDENTITY');
         expect(el?.getAttribute('data-radius-part')).toBe('radio disc');
       });
 
       it('stays round when pointy is set', () => {
-        const result = renderWithProviders(<RadioGroup label="Choose" name="option" pointy options={mockOptions} />);
+        const result = renderWithProviders(
+          <RadioGroup
+            label="Choose"
+            name="option"
+            pointy
+            options={mockOptions}
+          />,
+        );
         const el = disc(result.container);
         expect(el).toBeTruthy();
         expect(classOf(el!)).toMatch(/1000/);
@@ -500,7 +617,11 @@ describe('RadioGroup Components', () => {
       it('stays round at borderRadius none', () => {
         const result = renderWithProviders(
           <Preset overrides={{ borderRadius: 'none' }}>
-            <RadioGroup label="Choose" name="option" options={mockOptions} />
+            <RadioGroup
+              label="Choose"
+              name="option"
+              options={mockOptions}
+            />
           </Preset>,
         );
         const el = disc(result.container);

@@ -1,13 +1,14 @@
-import { useTouchSurface } from '@repo/theme';
-import { formatAbsoluteDate, transitionProps, useResolvedKnobs } from '@repo/theme';
+import { useTouchSurface, formatAbsoluteDate, transitionProps, useResolvedKnobs } from '@repo/theme';
 import type { DeepKeys, DeepValue } from '@tanstack/form-core';
-import { type ComponentProps, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { type Popover, type SizeTokens, Separator, View, useMedia, useProps } from 'tamagui';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ComponentProps } from 'react';
+import { Separator, View, useMedia, useProps } from 'tamagui';
+import type { Popover, SizeTokens } from 'tamagui';
 
-import { Field, FieldLayout } from '../../fieldLayout';
-import type { FormFieldProps } from '../../fieldLayout';
+import { Field, FieldLayout } from '../../FieldLayout';
+import type { FormFieldProps } from '../../FieldLayout';
 import { Input as InputParts } from '../../InputParts';
-import { formInputColors } from '../../shared/colorRamps';
+import { formInputColors } from '../../shared/color-ramps';
 import { t } from '../../shared/t';
 import {
   getFieldError,
@@ -19,7 +20,7 @@ import {
 import { Skeleton } from '../../Skeleton';
 import type { FieldComponentProps, Validator } from '../../types';
 
-import { FieldValueSync } from './fieldValueSync';
+import { FieldValueSync } from './FieldValueSync';
 import {
   CalendarDays,
   CalendarHeader,
@@ -297,7 +298,9 @@ function DualCalendarBody({
   }
 
   return (
-    <View flexDirection="row" {...knobProps.gap}>
+    <View
+      flexDirection="row"
+      {...knobProps.gap}>
       <SingleCalendar
         displayDate={prevMonthDate}
         rangeStart={rangeStart}
@@ -572,9 +575,18 @@ export function DateRangePicker<
   // Render skeleton placeholder (after all hooks)
   if (skeleton) {
     return (
-      <FieldLayout id={id} label={label} size={size} knobProps={knobProps}>
+      <FieldLayout
+        id={id}
+        label={label}
+        size={size}
+        knobProps={knobProps}>
         <InputParts size={resolvedSize}>
-          <Skeleton variant="rounded" width="100%" height={visualHeight} data-daterange-skeleton="" />
+          <Skeleton
+            variant="rounded"
+            width="100%"
+            height={visualHeight}
+            data-daterange-skeleton=""
+          />
         </InputParts>
       </FieldLayout>
     );
@@ -615,7 +627,10 @@ export function DateRangePicker<
             {/* Form branch displays from `rangeStart`/`rangeEnd` — keep them
                 synced to the live field value (late seeds / programmatic
                 updates). */}
-            <FieldValueSync value={field.state.value} onSync={adoptExternalValue} />
+            <FieldValueSync
+              value={field.state.value}
+              onSync={adoptExternalValue}
+            />
             <FieldLayout
               id={id}
               label={label}

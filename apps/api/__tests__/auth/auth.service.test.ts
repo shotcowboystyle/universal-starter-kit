@@ -1,10 +1,11 @@
-import { Types } from "mongoose";
-import { beforeEach, describe, expect, it, Mock, vi } from "vitest";
+import { Types } from 'mongoose';
+import type { Mock } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { AuthService } from "../../src/modules/auth/auth.service";
-import { User } from "../../src/modules/users/schemas/users.schema";
+import { AuthService } from '../../src/modules/auth/auth.service';
+import type { User } from '../../src/modules/users/schemas/users.schema';
 
-describe("AuthService", () => {
+describe('AuthService', () => {
   let service: AuthService;
   let userService: { findByEmail: Mock };
   let jwtService: { sign: Mock };
@@ -12,16 +13,16 @@ describe("AuthService", () => {
 
   beforeEach(() => {
     userService = {
-      findByEmail: vi.fn()
+      findByEmail: vi.fn(),
     };
     jwtService = {
-      sign: vi.fn()
+      sign: vi.fn(),
     };
     logger = {
       log: vi.fn(),
       error: vi.fn(),
       warn: vi.fn(),
-      debug: vi.fn()
+      debug: vi.fn(),
     };
 
     // Manually instantiate AuthService with the mocks
@@ -29,53 +30,53 @@ describe("AuthService", () => {
     (service as any).logger = logger; // Manually inject logger
   });
 
-  it("should be defined", () => {
+  it('should be defined', () => {
     expect(service).toBeDefined();
   });
 
-  describe("validateUser", () => {
-    it("should return user if found", async () => {
-      const user = { email: "test@test.com" } as User;
+  describe('validateUser', () => {
+    it('should return user if found', async () => {
+      const user = { email: 'test@test.com' } as User;
       userService.findByEmail.mockResolvedValue(user);
 
-      expect(await service.validateUser("test@test.com")).toEqual(user);
+      await expect(service.validateUser('test@test.com')).resolves.toEqual(user);
     });
 
-    it("should return null if user not found", async () => {
+    it('should return null if user not found', async () => {
       userService.findByEmail.mockResolvedValue(null);
 
-      expect(await service.validateUser("test@test.com")).toBeNull();
+      await expect(service.validateUser('test@test.com')).resolves.toBeNull();
     });
 
-    it("should return null if email is empty", async () => {
-      expect(await service.validateUser("")).toBeNull();
+    it('should return null if email is empty', async () => {
+      await expect(service.validateUser('')).resolves.toBeNull();
     });
 
-    it("should throw error if validation fails", async () => {
-      userService.findByEmail.mockRejectedValue(new Error("Database error"));
+    it('should throw error if validation fails', async () => {
+      userService.findByEmail.mockRejectedValue(new Error('Database error'));
 
       let thrownError: Error | null = null;
       try {
-        await service.validateUser("test@test.com");
+        await service.validateUser('test@test.com');
       } catch (error) {
         thrownError = error as Error;
       }
       expect(thrownError).not.toBeNull();
-      expect(thrownError?.message).toBe("Authentication failed. Please try again.");
+      expect(thrownError?.message).toBe('Authentication failed. Please try again.');
       expect(logger.error).toHaveBeenCalled();
     });
   });
 
-  describe("login", () => {
-    it("should return access_token and user", async () => {
+  describe('login', () => {
+    it('should return access_token and user', async () => {
       const user = {
-        _id: new Types.ObjectId("507f1f77bcf86cd799439011"),
-        email: "test@test.com",
-        name: "Test User",
+        _id: new Types.ObjectId('507f1f77bcf86cd799439011'),
+        email: 'test@test.com',
+        name: 'Test User',
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       } as User;
-      const token = "token";
+      const token = 'token';
       jwtService.sign.mockReturnValue(token);
 
       const result = await service.login(user);
@@ -84,16 +85,16 @@ describe("AuthService", () => {
       expect(result.user).toEqual(user);
     });
 
-    it("should throw error if JWT sign fails", async () => {
+    it('should throw error if JWT sign fails', async () => {
       const user = {
-        _id: new Types.ObjectId("507f1f77bcf86cd799439011"),
-        email: "test@test.com",
-        name: "Test User",
+        _id: new Types.ObjectId('507f1f77bcf86cd799439011'),
+        email: 'test@test.com',
+        name: 'Test User',
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       } as User;
       jwtService.sign.mockImplementation(() => {
-        throw new Error("JWT error");
+        throw new Error('JWT error');
       });
 
       let thrownError: Error | null = null;
@@ -103,7 +104,7 @@ describe("AuthService", () => {
         thrownError = error as Error;
       }
       expect(thrownError).not.toBeNull();
-      expect(thrownError?.message).toBe("JWT error");
+      expect(thrownError?.message).toBe('JWT error');
     });
   });
 });

@@ -77,7 +77,9 @@ export function Surface({
   const nextSize = clampSurfaceSize(size ? normalizeSurfaceSize(size) : 'unset', parent.size);
   const nextDensity = clampSurfaceDensity(density ?? 'unset', parent.density);
   return (
-    <SurfaceContext.Provider size={nextSize} density={nextDensity}>
+    <SurfaceContext.Provider
+      size={nextSize}
+      density={nextDensity}>
       {children}
     </SurfaceContext.Provider>
   );

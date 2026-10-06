@@ -1,7 +1,8 @@
 import { action } from '@repo/storybook';
 import type { Meta } from '@storybook/react-native-web-vite';
 
-import { ReportBuilder, type ReportColumn } from './ReportBuilder';
+import { ReportBuilder } from './ReportBuilder';
+import type { ReportColumn } from './ReportBuilder';
 
 const columns: ReportColumn[] = [
   { fieldname: 'name', label: 'Name', fieldtype: 'Data', enabled: true },
@@ -66,12 +67,25 @@ export const Grouped = {
  * explicit height (same pattern as the ImageGrid state stories).
  */
 export const Empty = {
-  render: () => <ReportBuilder columns={columns} data={[]} height={420} />,
+  render: () => (
+    <ReportBuilder
+      columns={columns}
+      data={[]}
+      height={420}
+    />
+  ),
 };
 
 /** Rows still loading — table-shaped skeleton twin inside the report card. */
 export const Loading = {
-  render: () => <ReportBuilder columns={columns} data={[]} height={420} isLoading />,
+  render: () => (
+    <ReportBuilder
+      columns={columns}
+      data={[]}
+      height={420}
+      isLoading
+    />
+  ),
 };
 
 /**
@@ -80,7 +94,14 @@ export const Loading = {
  * empty ≠ no-results). The caller signals narrowing via `hasActiveFilters`.
  */
 export const NoResults = {
-  render: () => <ReportBuilder columns={columns} data={[]} height={420} hasActiveFilters />,
+  render: () => (
+    <ReportBuilder
+      columns={columns}
+      data={[]}
+      height={420}
+      hasActiveFilters
+    />
+  ),
 };
 
 /**

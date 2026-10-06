@@ -35,7 +35,7 @@ describe('Quote text rides text', () => {
     renderWithProviders(
       <Quote>
         Invent the future.
-        {suffix !== 0 ? ` (${suffix})` : ''}
+        {suffix === 0 ? '' : ` (${suffix})`}
       </Quote>,
     );
     const body = screen.getByText('Invent the future.');

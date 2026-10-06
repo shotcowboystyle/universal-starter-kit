@@ -57,7 +57,7 @@ export interface ChartProofDeclaration {
   separated: boolean;
   datumText: boolean;
   datumCount: number;
-  datumValues?: Array<[string, string]>;
+  datumValues?: [string, string][];
 }
 
 export function chartRootA11yProps(label: string, proof?: ChartProofDeclaration): Record<string, unknown> {

@@ -55,10 +55,14 @@ const claimsResponder = [
   'onLongPress',
 ];
 
-it('keeps every native sheet stack out of the touch responder', () => {
+test('keeps every native sheet stack out of the touch responder', () => {
   for (const fill of [false, true]) {
     renderWithProviders(
-      <SheetModal open onOpenChange={() => {}} fill={fill} scrollable>
+      <SheetModal
+        open
+        onOpenChange={() => {}}
+        fill={fill}
+        scrollable>
         <Text>row</Text>
       </SheetModal>,
     );
@@ -74,7 +78,7 @@ it('keeps every native sheet stack out of the touch responder', () => {
   }
 });
 
-it('keeps touches inside the sheet from bubbling to React ancestors outside the modal', () => {
+test('keeps touches inside the sheet from bubbling to React ancestors outside the modal', () => {
   const outside = { start: vi.fn(), move: vi.fn(), end: vi.fn(), cancel: vi.fn() };
   const inside = vi.fn();
   for (const fill of [false, true]) {
@@ -84,7 +88,11 @@ it('keeps touches inside the sheet from bubbling to React ancestors outside the 
         onTouchMove={outside.move}
         onTouchEnd={outside.end}
         onTouchCancel={outside.cancel}>
-        <SheetModal open onOpenChange={() => {}} fill={fill} scrollable>
+        <SheetModal
+          open
+          onOpenChange={() => {}}
+          fill={fill}
+          scrollable>
           <View onTouchStart={inside}>
             <Text>row</Text>
           </View>

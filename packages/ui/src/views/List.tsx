@@ -13,13 +13,16 @@ import {
   wasKeyboardFocus,
   transitionProps,
 } from '@repo/theme';
-import { FlashList, type FlashListRef } from '@shopify/flash-list';
+import { FlashList } from '@shopify/flash-list';
+import type { FlashListRef } from '@shopify/flash-list';
 import { useHotkey } from '@tanstack/react-hotkeys';
 import type { RegisterableHotkey } from '@tanstack/react-hotkeys';
-import React, { createContext, useCallback, useContext, useId, useRef, useState, type ReactNode } from 'react';
-import { Text, View, XStack, YStack, type YStackProps } from 'tamagui';
+import React, { createContext, useCallback, useContext, useId, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
+import { Text, View, XStack, YStack } from 'tamagui';
+import type { YStackProps } from 'tamagui';
 
-import { componentColors } from '../componentColors';
+import { componentColors } from '../component-colors';
 import { AsyncBoundary } from '../layouts/AsyncBoundary';
 import { useTranslation } from '../shared/i18n';
 
@@ -91,7 +94,13 @@ export function ListRowMeta({ children, width, color }: { children: ReactNode; w
   const { selected, onAccent } = useListItemState();
   const resolved = selected && onAccent ? onAccent : (color ?? knobProps.textAccentColor);
   return (
-    <Text {...knobProps.label} color={resolved} numberOfLines={1} minWidth={width} textAlign="right" userSelect="none">
+    <Text
+      {...knobProps.label}
+      color={resolved}
+      numberOfLines={1}
+      minWidth={width}
+      textAlign="right"
+      userSelect="none">
       {children}
     </Text>
   );
@@ -112,7 +121,12 @@ export function ListRow({ icon, title, subtitle, meta }: ListRowProps) {
     : icon;
 
   return (
-    <XStack alignItems="center" {...knobProps.gap} flex={1} minWidth={0} width="100%">
+    <XStack
+      alignItems="center"
+      {...knobProps.gap}
+      flex={1}
+      minWidth={0}
+      width="100%">
       {leading ? (
         <View
           {...knobProps.controlIcon}
@@ -123,12 +137,25 @@ export function ListRow({ icon, title, subtitle, meta }: ListRowProps) {
           {leading}
         </View>
       ) : null}
-      <YStack flex={1} minWidth={0} {...({ 'data-list-slot': 'title' } as Record<string, unknown>)}>
-        <RowText {...knobProps.body} {...knobProps.textWeight} color={ink} numberOfLines={1} userSelect="none">
+      <YStack
+        flex={1}
+        minWidth={0}
+        {...({ 'data-list-slot': 'title' } as Record<string, unknown>)}>
+        <RowText
+          {...knobProps.body}
+          {...knobProps.textWeight}
+          color={ink}
+          numberOfLines={1}
+          userSelect="none">
           {title}
         </RowText>
         {subtitle != null && subtitle !== false ? (
-          <RowText {...knobProps.label} color={ink} opacity={selected ? 0.85 : 1} numberOfLines={1} userSelect="none">
+          <RowText
+            {...knobProps.label}
+            color={ink}
+            opacity={selected ? 0.85 : 1}
+            numberOfLines={1}
+            userSelect="none">
             {subtitle}
           </RowText>
         ) : null}
@@ -330,7 +357,7 @@ export function List<T>({
   useHotkey(
     hotkeyOverrides?.next ?? 'ArrowDown',
     () => {
-      const current = selectedRef.current;
+      const { current } = selectedRef;
       moveSelection(current < 0 ? 0 : current + 1);
     },
     hotkeyOpts,
@@ -339,7 +366,7 @@ export function List<T>({
   useHotkey(
     hotkeyOverrides?.prev ?? 'ArrowUp',
     () => {
-      const current = selectedRef.current;
+      const { current } = selectedRef;
       moveSelection(current < 0 ? items.length - 1 : current - 1);
     },
     hotkeyOpts,
@@ -348,7 +375,7 @@ export function List<T>({
   useHotkey(
     hotkeyOverrides?.select ?? 'Enter',
     () => {
-      const current = selectedRef.current;
+      const { current } = selectedRef;
       if (current >= 0 && current < items.length) {
         onItemClick?.(items[current]);
       }
@@ -497,7 +524,9 @@ export function List<T>({
           }}
           ListFooterComponent={
             isLoading && items.length > 0 ? (
-              <YStack {...knobProps.panelPadding} alignItems="center">
+              <YStack
+                {...knobProps.panelPadding}
+                alignItems="center">
                 <Spinner size="small" />
               </YStack>
             ) : null

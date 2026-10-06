@@ -55,7 +55,11 @@ export const Main: Story = {
       return (
         <Form form={form}>
           <YStack gap="$4">
-            <Progress label="Profile completion" name="completion" helperText="Read from form state" />
+            <Progress
+              label="Profile completion"
+              name="completion"
+              helperText="Read from form state"
+            />
             <Button action="submit">Submit</Button>
           </YStack>
         </Form>
@@ -106,11 +110,33 @@ export const WithError: Story = {
 
 export const Sizes: Story = {
   render: () => (
-    <YStack gap="$4" maxWidth={400}>
-      <Progress label="Small" size="$2" value={40} max={100} />
-      <Progress label="Medium (default)" size="$3" value={60} max={100} />
-      <Progress label="Large" size="$4" value={80} max={100} />
-      <Progress label="Compact density" compact value={55} max={100} />
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <Progress
+        label="Small"
+        size="$2"
+        value={40}
+        max={100}
+      />
+      <Progress
+        label="Medium (default)"
+        size="$3"
+        value={60}
+        max={100}
+      />
+      <Progress
+        label="Large"
+        size="$4"
+        value={80}
+        max={100}
+      />
+      <Progress
+        label="Compact density"
+        compact
+        value={55}
+        max={100}
+      />
     </YStack>
   ),
 };
@@ -122,12 +148,38 @@ export const Sizes: Story = {
  */
 export const Intents: Story = {
   render: () => (
-    <YStack gap="$4" maxWidth={400}>
-      <Progress label="Default (form ramp)" value={65} max={100} />
-      <Progress label="Accent" intent="accent" value={65} max={100} />
-      <Progress label="Error" intent="error" value={65} max={100} />
-      <Progress label="Warning" intent="warning" value={65} max={100} />
-      <Progress label="Success" intent="success" value={65} max={100} />
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <Progress
+        label="Default (form ramp)"
+        value={65}
+        max={100}
+      />
+      <Progress
+        label="Accent"
+        intent="accent"
+        value={65}
+        max={100}
+      />
+      <Progress
+        label="Error"
+        intent="error"
+        value={65}
+        max={100}
+      />
+      <Progress
+        label="Warning"
+        intent="warning"
+        value={65}
+        max={100}
+      />
+      <Progress
+        label="Success"
+        intent="success"
+        value={65}
+        max={100}
+      />
     </YStack>
   ),
 };
@@ -139,7 +191,12 @@ export const Interactive: Story = {
 
       return (
         <YStack gap="$4">
-          <Progress label="Task progress" value={value} max={100} helperText="Use the buttons to update" />
+          <Progress
+            label="Task progress"
+            value={value}
+            max={100}
+            helperText="Use the buttons to update"
+          />
           <XStack gap="$2">
             <Button
               onPress={() => {
@@ -187,19 +244,35 @@ export const Comparison: Story = {
     },
   },
   render: () => (
-    <XStack gap="$6" alignItems="flex-start" padding="$4">
-      <YStack gap="$3" width={300}>
-        <Paragraph size="$2" color="$placeholderColor">
+    <XStack
+      gap="$6"
+      alignItems="flex-start"
+      padding="$4">
+      <YStack
+        gap="$3"
+        width={300}>
+        <Paragraph
+          size="$2"
+          color="$placeholderColor">
           Custom Progress
         </Paragraph>
-        <Progress value={67} max={100} />
+        <Progress
+          value={67}
+          max={100}
+        />
       </YStack>
 
-      <YStack gap="$3" width={300}>
-        <Paragraph size="$2" color="$placeholderColor">
+      <YStack
+        gap="$3"
+        width={300}>
+        <Paragraph
+          size="$2"
+          color="$placeholderColor">
           Tamagui Progress
         </Paragraph>
-        <TamaguiProgress value={67} max={100}>
+        <TamaguiProgress
+          value={67}
+          max={100}>
           <TamaguiProgress.Indicator />
         </TamaguiProgress>
       </YStack>

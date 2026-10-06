@@ -217,8 +217,8 @@ const GF_LOG = new Uint8Array(256);
     GF_EXP[i] = x;
     GF_LOG[x] = i;
     x <<= 1;
-    if (x & 0x100) {
-      x ^= 0x11d;
+    if (x & 0x1_00) {
+      x ^= 0x1_1d;
     }
   }
   for (let i = 255; i < 512; i++) {
@@ -286,12 +286,12 @@ function bchRemainder(value: number, generator: number): number {
 /** 15-bit format information: 2 EC bits + 3 mask bits, BCH(15,5), XOR 0x5412. */
 function formatInformation(ecLevel: QrErrorCorrectionLevel, mask: number): number {
   const data = (EC_INDICATOR[ecLevel] << 3) | mask;
-  return ((data << 10) | bchRemainder(data << 10, 0x537)) ^ 0x5412;
+  return ((data << 10) | bchRemainder(data << 10, 0x5_37)) ^ 0x54_12;
 }
 
 /** 18-bit version information (versions ≥ 7): 6 version bits, BCH(18,6). */
 function versionInformation(version: number): number {
-  return (version << 12) | bchRemainder(version << 12, 0x1f25);
+  return (version << 12) | bchRemainder(version << 12, 0x1f_25);
 }
 
 // ─── Byte-mode bit stream ───
@@ -303,9 +303,9 @@ function utf8Bytes(value: string): number[] {
     const cp = char.codePointAt(0) as number;
     if (cp < 0x80) {
       bytes.push(cp);
-    } else if (cp < 0x800) {
+    } else if (cp < 0x8_00) {
       bytes.push(0xc0 | (cp >> 6), 0x80 | (cp & 0x3f));
-    } else if (cp < 0x10000) {
+    } else if (cp < 0x1_00_00) {
       bytes.push(0xe0 | (cp >> 12), 0x80 | ((cp >> 6) & 0x3f), 0x80 | (cp & 0x3f));
     } else {
       bytes.push(0xf0 | (cp >> 18), 0x80 | ((cp >> 12) & 0x3f), 0x80 | ((cp >> 6) & 0x3f), 0x80 | (cp & 0x3f));
@@ -523,22 +523,30 @@ function placeData(state: MatrixState, codewords: Uint8Array): void {
 /** Mask conditions 0–7 (ISO 18004 table 23): true = flip the module. */
 function maskBit(mask: number, row: number, col: number): boolean {
   switch (mask) {
-    case 0:
+    case 0: {
       return (row + col) % 2 === 0;
-    case 1:
+    }
+    case 1: {
       return row % 2 === 0;
-    case 2:
+    }
+    case 2: {
       return col % 3 === 0;
-    case 3:
+    }
+    case 3: {
       return (row + col) % 3 === 0;
-    case 4:
+    }
+    case 4: {
       return (Math.floor(row / 2) + Math.floor(col / 3)) % 2 === 0;
-    case 5:
+    }
+    case 5: {
       return ((row * col) % 2) + ((row * col) % 3) === 0;
-    case 6:
+    }
+    case 6: {
       return (((row * col) % 2) + ((row * col) % 3)) % 2 === 0;
-    default:
+    }
+    default: {
       return (((row + col) % 2) + ((row * col) % 3)) % 2 === 0;
+    }
   }
 }
 

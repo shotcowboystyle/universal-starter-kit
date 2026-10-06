@@ -1,7 +1,9 @@
-import { useState, type ComponentProps } from 'react';
+import { useState } from 'react';
+import type { ComponentProps } from 'react';
 import { YStack, Text } from 'tamagui';
 
-import { Tags, type TagItem } from './Tags';
+import { Tags } from './Tags';
+import type { TagItem } from './Tags';
 
 export default {
   title: 'Components/Tags',
@@ -48,7 +50,7 @@ function TagsPlayground({
       tags={tags}
       suggestions={allSuggestions}
       onAdd={(name) => {
-        const id = `tag-${name.toLowerCase().replace(/\s+/g, '-')}-${tags.length}`;
+        const id = `tag-${name.toLowerCase().replaceAll(/\s+/g, '-')}-${tags.length}`;
         setTags((prev) => [...prev, { id, label: name }]);
       }}
       onRemove={(tag) => {
@@ -69,7 +71,13 @@ Default.parameters = {
   },
 };
 
-export const ReadOnly = () => <Tags tags={sampleTags} enableAdd={false} enableRemove={false} />;
+export const ReadOnly = () => (
+  <Tags
+    tags={sampleTags}
+    enableAdd={false}
+    enableRemove={false}
+  />
+);
 ReadOnly.parameters = {
   docs: {
     description: {
@@ -87,7 +95,12 @@ CompactMode.parameters = {
   },
 };
 
-export const Empty = () => <TagsPlayground initialTags={[]} placeholder="Add your first tag..." />;
+export const Empty = () => (
+  <TagsPlayground
+    initialTags={[]}
+    placeholder="Add your first tag..."
+  />
+);
 Empty.parameters = {
   docs: {
     description: {
@@ -97,7 +110,10 @@ Empty.parameters = {
 };
 
 export const AllStates = () => (
-  <YStack gap="$6" width="100%" maxWidth={480}>
+  <YStack
+    gap="$6"
+    width="100%"
+    maxWidth={480}>
     <YStack gap="$2">
       <Text fontWeight="600">With Tags</Text>
       <TagsPlayground />
@@ -105,17 +121,27 @@ export const AllStates = () => (
 
     <YStack gap="$2">
       <Text fontWeight="600">Empty</Text>
-      <TagsPlayground initialTags={[]} placeholder="Add tag..." />
+      <TagsPlayground
+        initialTags={[]}
+        placeholder="Add tag..."
+      />
     </YStack>
 
     <YStack gap="$2">
       <Text fontWeight="600">Read Only</Text>
-      <Tags tags={sampleTags.slice(0, 2)} enableAdd={false} enableRemove={false} />
+      <Tags
+        tags={sampleTags.slice(0, 2)}
+        enableAdd={false}
+        enableRemove={false}
+      />
     </YStack>
 
     <YStack gap="$2">
       <Text fontWeight="600">Disabled</Text>
-      <Tags tags={sampleTags.slice(0, 1)} disabled />
+      <Tags
+        tags={sampleTags.slice(0, 1)}
+        disabled
+      />
     </YStack>
 
     <YStack gap="$2">

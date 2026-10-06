@@ -39,7 +39,9 @@ export const Main: Story = {
     },
   },
   render: (args) => (
-    <YStack width={280} padding="$4">
+    <YStack
+      width={280}
+      padding="$4">
       <ShortcutCard {...args} />
     </YStack>
   ),
@@ -47,7 +49,9 @@ export const Main: Story = {
 
 export const NoCount: Story = {
   render: () => (
-    <YStack width={280} padding="$4">
+    <YStack
+      width={280}
+      padding="$4">
       <ShortcutCard
         config={{
           id: 'new-order',

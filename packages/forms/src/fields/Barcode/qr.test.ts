@@ -248,7 +248,7 @@ describe('encodeQr — structural invariants', () => {
       }
       expect(copy2).toEqual(bits);
       // Unmask (XOR 0x5412) and check the declared mask and EC level survive.
-      const raw = bits.reduce((acc, bit, index) => acc | (bit << index), 0) ^ 0x5412;
+      const raw = bits.reduce((acc, bit, index) => acc | (bit << index), 0) ^ 0x54_12;
       expect((raw >> 10) & 0b111).toBe(matrix.mask);
       const ecIndicator = { L: 1, M: 0, Q: 3, H: 2 }[matrix.ecLevel];
       expect((raw >> 13) & 0b11).toBe(ecIndicator);
@@ -276,7 +276,7 @@ describe('encodeQr — structural invariants', () => {
       for (let v = remainder >> 13; v > 0; v >>= 1) {
         shift++;
       }
-      remainder ^= 0x1f25 << shift;
+      remainder ^= 0x1f_25 << shift;
     }
     expect(remainder).toBe(0);
   });

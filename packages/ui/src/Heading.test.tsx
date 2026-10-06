@@ -129,7 +129,9 @@ describe('house H3 — subordinate headings are mono 400 on the TEXT NODE', () =
   it('pins family and weight to mono 400, ignoring heading knobs', () => {
     const byDefault = renderHeadingClasses(<H3>{TITLE}</H3>, ['_fow-'], 'H3');
     const explicit = renderHeadingClasses(
-      <H3 fontFamily="$mono" fontWeight="400">
+      <H3
+        fontFamily="$mono"
+        fontWeight="400">
         {TITLE}
       </H3>,
       ['_fow-'],
@@ -153,14 +155,18 @@ describe('house H3 — subordinate headings are mono 400 on the TEXT NODE', () =
 
   it('consumer eject still wins over the house pin (STD-EJECT-LAST)', () => {
     const ejected = renderHeadingClasses(
-      <H3 fontFamily="$heading" fontWeight="700">
+      <H3
+        fontFamily="$heading"
+        fontWeight="700">
         {TITLE}
       </H3>,
       ['_ff-', '_fow-'],
       'H3',
     );
     const explicit = renderHeadingClasses(
-      <H3 fontFamily="$heading" fontWeight="700">
+      <H3
+        fontFamily="$heading"
+        fontWeight="700">
         {TITLE}
       </H3>,
       ['_ff-', '_fow-'],

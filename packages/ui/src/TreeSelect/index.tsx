@@ -30,14 +30,16 @@ import {
   useResolvedKnobs,
 } from '@repo/theme';
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Text, View, XStack, YStack, isWeb, type GetProps } from 'tamagui';
+import { Text, View, XStack, YStack, isWeb } from 'tamagui';
+import type { GetProps } from 'tamagui';
 
-import { useDirection } from '../hooks/useDirection';
+import { useDirection } from '../hooks/use-direction';
 import { useTranslation } from '../shared/i18n';
 import { Skeleton } from '../Skeleton';
 import type { TreeNode } from '../views/TreeView';
 
-import { filterForest, findNode, findNodePath, flattenVisible, type FlatTreeRow } from './treeSelectModel';
+import { filterForest, findNode, findNodePath, flattenVisible } from './tree-select-model';
+import type { FlatTreeRow } from './tree-select-model';
 
 export type { TreeNode as TreeSelectNode } from '../views/TreeView';
 
@@ -76,12 +78,23 @@ export interface TreeSelectProps extends Omit<GetProps<typeof YStack>, 'children
 function defaultNodeIcon(hasChildren: boolean, isExpanded: boolean, iconSize: number) {
   if (hasChildren) {
     return isExpanded ? (
-      <FolderOpenIcon size={iconSize} weight="duotone" />
+      <FolderOpenIcon
+        size={iconSize}
+        weight="duotone"
+      />
     ) : (
-      <FolderIcon size={iconSize} weight="duotone" />
+      <FolderIcon
+        size={iconSize}
+        weight="duotone"
+      />
     );
   }
-  return <FileIcon size={iconSize} weight="duotone" />;
+  return (
+    <FileIcon
+      size={iconSize}
+      weight="duotone"
+    />
+  );
 }
 
 function TreeSelectRows({
@@ -144,8 +157,9 @@ function TreeSelectRows({
             // `role` is overridden too: RN prefers it over accessibilityRole,
             // and `treeitem` leaves the element out of the iOS tree the same
             // way `radio` does (measured, iOS 26.2).
-            {...(!isWeb
-              ? {
+            {...(isWeb
+              ? undefined
+              : {
                   accessible: true,
                   role: 'button' as const,
                   accessibilityRole: 'button' as const,
@@ -154,8 +168,7 @@ function TreeSelectRows({
                     selected: isSelected,
                     ...(hasChildren ? { expanded: isExpanded } : undefined),
                   },
-                }
-              : undefined)}
+                })}
             data-treeselect-row={node.id}
             data-treeselect-index={String(index)}
             data-depth={String(depth)}
@@ -170,7 +183,7 @@ function TreeSelectRows({
             hoverStyle={keyboardRing ? undefined : { backgroundColor: '$color3' }}
             {...(isActive && keyboardRing ? keyboardFocusRingProps : undefined)}
             onPress={(e) => {
-              const target = (e as unknown as { target?: HTMLElement }).target;
+              const { target } = e as unknown as { target?: HTMLElement };
               if (target?.closest?.('[data-treeselect-caret]')) {
                 return;
               }
@@ -205,15 +218,15 @@ function TreeSelectRows({
                     : t('Expand {{label}}', { label: node.label })
                 }
                 // The aria-label above never reaches native.
-                {...(!isWeb
-                  ? {
+                {...(isWeb
+                  ? undefined
+                  : {
                       accessible: true,
                       accessibilityRole: 'button' as const,
                       accessibilityLabel: isExpanded
                         ? t('Collapse {{label}}', { label: node.label })
                         : t('Expand {{label}}', { label: node.label }),
-                    }
-                  : undefined)}
+                    })}
                 width={expandIconSize}
                 height={expandIconSize}
                 alignItems="center"
@@ -223,10 +236,16 @@ function TreeSelectRows({
                   e.stopPropagation?.();
                   onToggle(node);
                 }}>
-                <CollapsedCaretIcon size={caretSize} weight="bold" />
+                <CollapsedCaretIcon
+                  size={caretSize}
+                  weight="bold"
+                />
               </View>
             ) : (
-              <View width={expandIconSize} height={expandIconSize} />
+              <View
+                width={expandIconSize}
+                height={expandIconSize}
+              />
             )}
             <View
               width={nodeIconSize + 2}
@@ -247,13 +266,23 @@ function TreeSelectRows({
               {node.label}
             </Text>
             {hasChildren && childCount > 0 ? (
-              <Text fontFamily="$mono" fontSize={11} lineHeight={21} color="$color8">
+              <Text
+                fontFamily="$mono"
+                fontSize={11}
+                lineHeight={21}
+                color="$color8">
                 {childCount}
               </Text>
             ) : null}
             {isSelected ? (
-              <View flexShrink={0} width={14} height={14}>
-                <CheckIcon size={14} weight="bold" />
+              <View
+                flexShrink={0}
+                width={14}
+                height={14}>
+                <CheckIcon
+                  size={14}
+                  weight="bold"
+                />
               </View>
             ) : null}
           </XStack>
@@ -319,8 +348,15 @@ function SearchRow({
 function EmptyFilterRow({ message }: { message: string }) {
   const { knobProps } = useResolvedKnobs();
   return (
-    <XStack data-testid="tree-select-empty" alignItems="center" height={44} minHeight={44} paddingHorizontal="$3">
-      <Text {...knobProps.body} color={formCommonColors.text}>
+    <XStack
+      data-testid="tree-select-empty"
+      alignItems="center"
+      height={44}
+      minHeight={44}
+      paddingHorizontal="$3">
+      <Text
+        {...knobProps.body}
+        color={formCommonColors.text}>
         {message}
       </Text>
     </XStack>
@@ -374,15 +410,15 @@ function Trigger({
         // this trigger above is a web attribute, and tamagui does not map any
         // of them onto React Native, so on iOS the control reached the
         // accessibility tree with no role, no name and no expanded state.
-        {...(!isWeb
-          ? {
+        {...(isWeb
+          ? undefined
+          : {
               accessible: true,
               role: 'button' as const,
               accessibilityRole: 'button' as const,
               accessibilityLabel: accessibilityLabel ?? display ?? placeholder,
               accessibilityState: { disabled, expanded: open },
-            }
-          : undefined)}
+            })}
         tabIndex={disabled || open ? -1 : 0}
         disabled={disabled}
         cursor={disabled ? 'not-allowed' : 'pointer'}
@@ -512,9 +548,19 @@ function TreeSelectPanelBody({
 }) {
   if (loading && rows.length === 0) {
     return (
-      <YStack padding="$2" gap="$2">
-        <Skeleton variant="rounded" width="100%" height={32} />
-        <Skeleton variant="rounded" width="100%" height={32} />
+      <YStack
+        padding="$2"
+        gap="$2">
+        <Skeleton
+          variant="rounded"
+          width="100%"
+          height={32}
+        />
+        <Skeleton
+          variant="rounded"
+          width="100%"
+          height={32}
+        />
       </YStack>
     );
   }
@@ -662,7 +708,7 @@ function FloatingTreeSelect({
       return;
     }
     const triggerBounds = trigger.getBoundingClientRect();
-    const top = triggerBounds.top;
+    const { top } = triggerBounds;
     dropdown.style.top = `${top}px`;
     dropdown.style.left = `${triggerBounds.left}px`;
     dropdown.style.minWidth = `${triggerBounds.width}px`;
@@ -740,7 +786,10 @@ function FloatingTreeSelect({
       />
       {panel.mounted && (
         <PanelPortal anchor={panel.triggerRef.current}>
-          <FloatingFocusManager context={panel.context} modal={false} initialFocus={-1}>
+          <FloatingFocusManager
+            context={panel.context}
+            modal={false}
+            initialFocus={-1}>
             <YStack
               {...getFloatingProps({
                 ref: panel.refs.setFloating,
@@ -777,7 +826,10 @@ function FloatingTreeSelect({
                 activeDescendant={activeDescendant}
                 sizeToken={sizeToken}
               />
-              <YStack overflow="scroll" maxHeight={320} id={treeId}>
+              <YStack
+                overflow="scroll"
+                maxHeight={320}
+                id={treeId}>
                 <TreeSelectPanelBody
                   rows={state.rows}
                   selectedId={value}
@@ -960,23 +1012,38 @@ export function TreeSelect({
   const open = openProp ?? uncontrolledOpen;
   const setOpen = onOpenChange ?? setUncontrolledOpen;
   const viewportGtSm = useViewportGtSm();
-  const effectiveGtSm = typeof window !== 'undefined' ? viewportGtSm : false;
+  const effectiveGtSm = typeof window === 'undefined' ? false : viewportGtSm;
   const shouldUseSheet = !isWeb || !effectiveGtSm;
   const selected = value ? findNode(nodes, value) : undefined;
   const display = selected?.label ?? (value ? (valueLabel ?? value) : undefined);
 
   if (skeleton) {
     return (
-      <YStack data-testid="tree-select" {...stackProps}>
-        {label ? <Skeleton variant="text" width="30%" height={14} /> : null}
-        <Skeleton variant="rounded" width="100%" height={44} />
+      <YStack
+        data-testid="tree-select"
+        {...stackProps}>
+        {label ? (
+          <Skeleton
+            variant="text"
+            width="30%"
+            height={14}
+          />
+        ) : null}
+        <Skeleton
+          variant="rounded"
+          width="100%"
+          height={44}
+        />
       </YStack>
     );
   }
 
   if (readOnly) {
     return (
-      <YStack data-testid="tree-select" width="100%" {...stackProps}>
+      <YStack
+        data-testid="tree-select"
+        width="100%"
+        {...stackProps}>
         <FieldLayout
           id={id}
           label={label}
@@ -985,7 +1052,10 @@ export function TreeSelect({
           required={required}
           knobProps={knobProps as never}
           disabled={disabled}>
-          <Text paddingVertical="$2" paddingHorizontal="$3" {...knobProps.body}>
+          <Text
+            paddingVertical="$2"
+            paddingHorizontal="$3"
+            {...knobProps.body}>
             {display ?? '—'}
           </Text>
         </FieldLayout>
@@ -1015,7 +1085,10 @@ export function TreeSelect({
   const core = shouldUseSheet ? <SheetTreeSelect {...shared} /> : <FloatingTreeSelect {...shared} />;
 
   return (
-    <YStack data-testid="tree-select" width="100%" {...stackProps}>
+    <YStack
+      data-testid="tree-select"
+      width="100%"
+      {...stackProps}>
       <FieldLayout
         id={id}
         label={label}

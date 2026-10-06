@@ -4,8 +4,8 @@ import { useTranslation } from 'react-i18next';
 import type { ColorTokens, FontSizeTokens, GetProps } from 'tamagui';
 import { Text, View, isWeb, styled } from 'tamagui';
 
-import { componentColors } from '../componentColors';
-import { useDirection } from '../hooks/useDirection';
+import { componentColors } from '../component-colors';
+import { useDirection } from '../hooks/use-direction';
 import { useAsyncBoundary } from '../layouts/AsyncBoundary';
 import { bidiIsolate } from '../shared/t';
 

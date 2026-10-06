@@ -1,13 +1,15 @@
 import { formatCurrency, formatNumber, formatPercent, useResolvedKnobs } from '@repo/theme';
-import React, { useCallback, useMemo, useState, type ReactNode } from 'react';
-import { Text, XStack, YStack, isWeb, type YStackProps, H2, H3, H4, H5, H6 } from 'tamagui';
+import React, { useCallback, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
+import { Text, XStack, YStack, isWeb, H2, H3, H4, H5, H6 } from 'tamagui';
+import type { YStackProps } from 'tamagui';
 
 import { BarChart } from '../charts/BarChart';
 import { ChartDataView } from '../charts/ChartDataView';
 import { LineChart } from '../charts/LineChart';
 import { PieChart } from '../charts/PieChart';
 import { Sparkline } from '../charts/Sparkline';
-import { componentColors, sectionHeading } from '../componentColors';
+import { componentColors, sectionHeading } from '../component-colors';
 import { AsyncBoundary } from '../layouts/AsyncBoundary';
 import { Meter } from '../Meter';
 import { ScrollView } from '../ScrollView';
@@ -293,11 +295,15 @@ function TrendPill({
       backgroundColor={trendFill(color)}
       {...radius}
       data-nested-px={px}>
-      <Text {...label} color={trendInk(color)}>
+      <Text
+        {...label}
+        color={trendInk(color)}>
         {symbol}
       </Text>
       {value != null && value !== '' && (
-        <Text {...label} color={trendInk(color)}>
+        <Text
+          {...label}
+          color={trendInk(color)}>
           {value}
         </Text>
       )}
@@ -400,29 +406,51 @@ export function KPICard({ config, ...stackProps }: KPICardProps) {
               }
             : undefined
         }>
-        <Text {...knobProps.label} color={knobProps.textAccentColor} flex={1}>
+        <Text
+          {...knobProps.label}
+          color={knobProps.textAccentColor}
+          flex={1}>
           {config.title}
         </Text>
         {config.icon ? (
-          <NestedIconWell color={config.color} box={box} px={px} radius={knobProps.borderRadius}>
+          <NestedIconWell
+            color={config.color}
+            box={box}
+            px={px}
+            radius={knobProps.borderRadius}>
             {config.icon}
           </NestedIconWell>
         ) : null}
         {hasDataView ? (
-          <YStack width={dataActionSize.width} height={dataActionSize.height} pointerEvents="none" />
+          <YStack
+            width={dataActionSize.width}
+            height={dataActionSize.height}
+            pointerEvents="none"
+          />
         ) : null}
       </XStack>
 
-      <Text fontSize="$8" color="$color" {...knobProps.heading}>
+      <Text
+        fontSize="$8"
+        color="$color"
+        {...knobProps.heading}>
         {formattedValue}
       </Text>
 
       {config.sparkline && config.sparkline.length > 0 ? (
-        <Sparkline data={config.sparkline} height={px} title={config.title} valueFormatter={formatMetric} />
+        <Sparkline
+          data={config.sparkline}
+          height={px}
+          title={config.title}
+          valueFormatter={formatMetric}
+        />
       ) : null}
 
       {(config.trend || config.trendValue) && (
-        <XStack gap="$2" alignItems="center" flexWrap="wrap">
+        <XStack
+          gap="$2"
+          alignItems="center"
+          flexWrap="wrap">
           <TrendPill
             symbol={trendSymbol}
             value={config.trendValue}
@@ -432,7 +460,9 @@ export function KPICard({ config, ...stackProps }: KPICardProps) {
             label={knobProps.label}
           />
           {config.previousValue !== undefined && (
-            <Text {...knobProps.label} color={knobProps.textAccentColor}>
+            <Text
+              {...knobProps.label}
+              color={knobProps.textAccentColor}>
               {t('vs {{previousValue}}', { previousValue: formatMetric(config.previousValue) })}
             </Text>
           )}
@@ -442,15 +472,27 @@ export function KPICard({ config, ...stackProps }: KPICardProps) {
   );
   if (!hasDataView) {
     return (
-      <Card width="100%" elevation={knobProps.elevation} {...knobProps.surface} {...interactive} {...stackProps}>
+      <Card
+        width="100%"
+        elevation={knobProps.elevation}
+        {...knobProps.surface}
+        {...interactive}
+        {...stackProps}>
         {content}
       </Card>
     );
   }
   return (
-    <ChartDataView data={config.sparkline!} title={config.title} valueFormatter={formatMetric}>
+    <ChartDataView
+      data={config.sparkline!}
+      title={config.title}
+      valueFormatter={formatMetric}>
       {({ action }) => (
-        <Card width="100%" elevation={knobProps.elevation} {...knobProps.surface} {...cardProps}>
+        <Card
+          width="100%"
+          elevation={knobProps.elevation}
+          {...knobProps.surface}
+          {...cardProps}>
           <YStack position="relative">
             <YStack
               {...knobProps.gap}
@@ -533,14 +575,27 @@ export function ChartCard({ config, colors, headingLevel = 2, ...stackProps }: C
   const showXAxis = config.showLabels !== false;
 
   const renderCard = (action?: ReactNode) => (
-    <YStack {...knobProps.gap} width="100%" {...stackProps}>
-      <XStack alignItems="center" justifyContent="space-between" {...knobProps.gap}>
-        <HeadingTag flex={1} minWidth={0} margin={0} {...knobProps.heading} {...sectionHeading}>
+    <YStack
+      {...knobProps.gap}
+      width="100%"
+      {...stackProps}>
+      <XStack
+        alignItems="center"
+        justifyContent="space-between"
+        {...knobProps.gap}>
+        <HeadingTag
+          flex={1}
+          minWidth={0}
+          margin={0}
+          {...knobProps.heading}
+          {...sectionHeading}>
           {config.title}
         </HeadingTag>
         {action}
       </XStack>
-      <Card elevation={knobProps.elevation} {...knobProps.surface}>
+      <Card
+        elevation={knobProps.elevation}
+        {...knobProps.surface}>
         {config.type === 'pie' ? (
           <PieChart
             data={config.data}
@@ -576,7 +631,9 @@ export function ChartCard({ config, colors, headingLevel = 2, ...stackProps }: C
   return config.type === 'pie' && config.showLegend !== false ? (
     renderCard()
   ) : (
-    <ChartDataView data={config.data} title={config.title}>
+    <ChartDataView
+      data={config.data}
+      title={config.title}>
       {({ action }) => renderCard(action)}
     </ChartDataView>
   );
@@ -597,7 +654,11 @@ export function ProgressCard({ config, ...stackProps }: ProgressCardProps) {
   const label = config.format === 'number' ? formatNumber(config.value) : formatPercent(Math.round(pct));
 
   return (
-    <Card width="100%" elevation={knobProps.elevation} {...knobProps.surface} {...stackProps}>
+    <Card
+      width="100%"
+      elevation={knobProps.elevation}
+      {...knobProps.surface}
+      {...stackProps}>
       <Meter
         label={config.title}
         value={config.value}
@@ -627,13 +688,23 @@ export function ShortcutCard({ config, ...stackProps }: ShortcutCardProps) {
       {...interactive}
       hitSlop={config.onClick ? hitSlop : undefined}
       {...stackProps}>
-      <XStack alignItems="center" {...knobProps.gap}>
+      <XStack
+        alignItems="center"
+        {...knobProps.gap}>
         {config.icon ? (
-          <NestedIconWell color={config.color} box={box} px={px} radius={knobProps.borderRadius}>
+          <NestedIconWell
+            color={config.color}
+            box={box}
+            px={px}
+            radius={knobProps.borderRadius}>
             {config.icon}
           </NestedIconWell>
         ) : null}
-        <Text {...knobProps.body} fontWeight="600" flex={1} numberOfLines={1}>
+        <Text
+          {...knobProps.body}
+          fontWeight="600"
+          flex={1}
+          numberOfLines={1}>
           {config.title}
         </Text>
         {config.count != null && config.count !== '' ? (
@@ -648,7 +719,9 @@ export function ShortcutCard({ config, ...stackProps }: ShortcutCardProps) {
             backgroundColor="$color4"
             {...knobProps.borderRadius}
             data-nested-px={px}>
-            <Text {...knobProps.label} color={knobProps.textAccentColor}>
+            <Text
+              {...knobProps.label}
+              color={knobProps.textAccentColor}>
               {config.count}
             </Text>
           </XStack>
@@ -669,11 +742,19 @@ export function ListCard({ config, headingLevel = 2, ...stackProps }: ListCardPr
   const HeadingTag = SECTION_HEADING_TAGS[headingLevel];
 
   return (
-    <YStack {...knobProps.gap} width="100%" {...stackProps}>
-      <HeadingTag margin={0} {...knobProps.heading} {...sectionHeading}>
+    <YStack
+      {...knobProps.gap}
+      width="100%"
+      {...stackProps}>
+      <HeadingTag
+        margin={0}
+        {...knobProps.heading}
+        {...sectionHeading}>
         {config.title}
       </HeadingTag>
-      <Card elevation={knobProps.elevation} {...knobProps.surface}>
+      <Card
+        elevation={knobProps.elevation}
+        {...knobProps.surface}>
         {config.items.map((item) => (
           <XStack
             key={item.id}
@@ -691,11 +772,16 @@ export function ListCard({ config, headingLevel = 2, ...stackProps }: ListCardPr
             focusVisibleStyle={item.onClick ? control.focusVisibleKnobProps : undefined}
             onPress={item.onClick}
             role={item.onClick ? 'button' : undefined}>
-            <Text {...knobProps.label} flex={1} numberOfLines={1}>
+            <Text
+              {...knobProps.label}
+              flex={1}
+              numberOfLines={1}>
               {item.label}
             </Text>
             {item.meta ? (
-              <Text {...knobProps.label} color={knobProps.textAccentColor}>
+              <Text
+                {...knobProps.label}
+                color={knobProps.textAccentColor}>
                 {item.meta}
               </Text>
             ) : null}
@@ -708,20 +794,27 @@ export function ListCard({ config, headingLevel = 2, ...stackProps }: ListCardPr
 
 function DefaultWidget({ widget }: { widget: DashboardWidget }) {
   switch (widget.type) {
-    case 'kpi':
+    case 'kpi': {
       return widget.kpiConfig ? <KPICard config={widget.kpiConfig} /> : null;
-    case 'chart':
+    }
+    case 'chart': {
       return widget.chartConfig ? <ChartCard config={widget.chartConfig} /> : null;
-    case 'progress':
+    }
+    case 'progress': {
       return widget.progressConfig ? <ProgressCard config={widget.progressConfig} /> : null;
-    case 'shortcut':
+    }
+    case 'shortcut': {
       return widget.shortcutConfig ? <ShortcutCard config={widget.shortcutConfig} /> : null;
-    case 'list':
+    }
+    case 'list': {
       return widget.listConfig ? <ListCard config={widget.listConfig} /> : null;
-    case 'custom':
+    }
+    case 'custom': {
       return widget.content ?? null;
-    default:
+    }
+    default: {
       return null;
+    }
   }
 }
 
@@ -769,12 +862,17 @@ export function Dashboard({
     title || description ? (
       <YStack {...knobProps.gap}>
         {title && (
-          <H3 margin={0} {...knobProps.heading}>
+          <H3
+            margin={0}
+            {...knobProps.heading}>
             {title}
           </H3>
         )}
         {description && (
-          <Text {...knobProps.body} {...knobProps.label} color={knobProps.textAccentColor}>
+          <Text
+            {...knobProps.body}
+            {...knobProps.label}
+            color={knobProps.textAccentColor}>
             {description}
           </Text>
         )}
@@ -783,7 +881,10 @@ export function Dashboard({
 
   return (
     <ScrollView>
-      <YStack {...(paddingProp != null ? { padding: paddingProp } : knobProps.panelPadding)} gap={gap} {...stackProps}>
+      <YStack
+        {...(paddingProp == null ? knobProps.panelPadding : { padding: paddingProp })}
+        gap={gap}
+        {...stackProps}>
         {header}
         <AsyncBoundary
           loading={!error && isLoading && widgets.length === 0}
@@ -888,17 +989,21 @@ export function aggregateData<T>(
   return Object.entries(groups).map(([label, values]) => {
     let value: number;
     switch (operation) {
-      case 'count':
+      case 'count': {
         value = values.length;
         break;
-      case 'sum':
+      }
+      case 'sum': {
         value = values.reduce((a, b) => a + b, 0);
         break;
-      case 'avg':
+      }
+      case 'avg': {
         value = values.reduce((a, b) => a + b, 0) / values.length;
         break;
-      default:
+      }
+      default: {
         value = values.length;
+      }
     }
     return { label, value };
   });

@@ -7,7 +7,8 @@
  */
 import { TestProviders } from '@repo/test-utils';
 import { act } from 'react';
-import { hydrateRoot, type Root } from 'react-dom/client';
+import { hydrateRoot } from 'react-dom/client';
+import type { Root } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { Paragraph } from 'tamagui';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -23,7 +24,10 @@ vi.mock('@repo/theme', async (importOriginal) => ({
 function Fixture() {
   return (
     <TestProviders>
-      <PaneScaffold primary={<Paragraph>List</Paragraph>} secondary={<Paragraph>Detail</Paragraph>} />
+      <PaneScaffold
+        primary={<Paragraph>List</Paragraph>}
+        secondary={<Paragraph>Detail</Paragraph>}
+      />
     </TestProviders>
   );
 }

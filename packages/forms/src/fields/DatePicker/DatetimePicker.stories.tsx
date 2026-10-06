@@ -46,7 +46,12 @@ export default meta;
 type Story = StoryObj<typeof DatetimePicker>;
 
 export const Baseline: Story = {
-  render: (args) => <DatetimePicker {...args} helperText={args.helperText ?? 'Choose a date and time'} />,
+  render: (args) => (
+    <DatetimePicker
+      {...args}
+      helperText={args.helperText ?? 'Choose a date and time'}
+    />
+  ),
 };
 
 export const StateContract: Story = {
@@ -55,8 +60,13 @@ export const StateContract: Story = {
     const [edits, setEdits] = useState(0);
     const saved = new Date(2026, 0, 15, 9, 30);
     return (
-      <YStack gap="$4" maxWidth={400}>
-        <DatetimePicker label="Saved date and time" defaultValue={saved} />
+      <YStack
+        gap="$4"
+        maxWidth={400}>
+        <DatetimePicker
+          label="Saved date and time"
+          defaultValue={saved}
+        />
         <DatetimePicker
           label="Programmatic date and time"
           value={value}
@@ -71,8 +81,16 @@ export const StateContract: Story = {
           Load date and time
         </Button>
         <Text>{`User edits: ${edits}`}</Text>
-        <DatetimePicker label="Read-only date and time" value={saved} readOnly />
-        <DatetimePicker label="Disabled date and time" value={saved} disabled />
+        <DatetimePicker
+          label="Read-only date and time"
+          value={saved}
+          readOnly
+        />
+        <DatetimePicker
+          label="Disabled date and time"
+          value={saved}
+          disabled
+        />
       </YStack>
     );
   },
@@ -123,7 +141,9 @@ export const ControlledRejection: Story = {
       const [pinned] = useState(() => new Date(2026, 5, 15, 10, 30, 0));
       const [attempts, setAttempts] = useState(0);
       return (
-        <YStack gap="$4" maxWidth={480}>
+        <YStack
+          gap="$4"
+          maxWidth={480}>
           <DatetimePicker
             label="Pinned Value"
             value={pinned}
@@ -153,8 +173,15 @@ export const FormBound: Story = {
       const FormSubscribe = (form as any).Subscribe;
       return (
         <Form form={form}>
-          <YStack gap="$4" maxWidth={480}>
-            <DatetimePicker label="Appointment" name={'when' as any} required helperText="Pick appointment time" />
+          <YStack
+            gap="$4"
+            maxWidth={480}>
+            <DatetimePicker
+              label="Appointment"
+              name={'when' as any}
+              required
+              helperText="Pick appointment time"
+            />
             <FormSubscribe selector={(s: any) => [s.values.when]}>
               {([when]: any[]) => (
                 <Text>{`form-value:${when instanceof Date ? when.toISOString() : JSON.stringify(when)}`}</Text>

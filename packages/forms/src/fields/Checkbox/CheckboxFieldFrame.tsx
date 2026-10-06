@@ -1,6 +1,6 @@
 import { Checkbox as TamaguiCheckbox, styled } from 'tamagui';
 
-import { useFieldDescribedBy } from '../../fieldLayout';
+import { useFieldDescribedBy } from '../../FieldLayout';
 
 /** Hit-target frame. The painted box is CheckboxGlyphBox. */
 const CheckboxFieldFrameBase = styled(TamaguiCheckbox, {
@@ -25,5 +25,9 @@ const CheckboxFieldFrameBase = styled(TamaguiCheckbox, {
 });
 
 export const CheckboxFieldFrame = CheckboxFieldFrameBase.styleable((props, ref) => (
-  <CheckboxFieldFrameBase aria-describedby={useFieldDescribedBy()} {...props} ref={ref} />
+  <CheckboxFieldFrameBase
+    aria-describedby={useFieldDescribedBy()}
+    {...props}
+    ref={ref}
+  />
 ));

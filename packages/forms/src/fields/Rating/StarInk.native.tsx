@@ -52,12 +52,31 @@ export function inkMotionProps(transition: TransitionProp | undefined) {
 export function StarInk({ StarIcon, size, filled, filledColor, emptyColor, transition }: StarInkProps) {
   const motion = inkMotionProps(transition);
   return (
-    <View width={size} height={size}>
-      <View data-rating-ink="empty" opacity={filled ? 0 : 1} {...motion}>
-        <StarIcon size={size} weight="regular" color={emptyColor} />
+    <View
+      width={size}
+      height={size}>
+      <View
+        data-rating-ink="empty"
+        opacity={filled ? 0 : 1}
+        {...motion}>
+        <StarIcon
+          size={size}
+          weight="regular"
+          color={emptyColor}
+        />
       </View>
-      <View data-rating-ink="filled" position="absolute" top={0} left={0} opacity={filled ? 1 : 0} {...motion}>
-        <StarIcon size={size} weight="fill" color={filledColor} />
+      <View
+        data-rating-ink="filled"
+        position="absolute"
+        top={0}
+        left={0}
+        opacity={filled ? 1 : 0}
+        {...motion}>
+        <StarIcon
+          size={size}
+          weight="fill"
+          color={filledColor}
+        />
       </View>
     </View>
   );

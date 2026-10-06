@@ -34,7 +34,9 @@ export const Default: Story = {
 
 export const TitleLadder: Story = {
   render: () => (
-    <YStack gap="$3" maxWidth={640}>
+    <YStack
+      gap="$3"
+      maxWidth={640}>
       <H1>H1 page title — rides the pageTitleScale dial</H1>
       <H2>H2 display heading — headingFont / fontWeight</H2>
       <H3>H3 subordinate — mono 400</H3>
@@ -46,7 +48,9 @@ export const TitleLadder: Story = {
 export const PageTitleScaleFlip: Story = {
   name: 'pageTitleScale flip (moderate vs display)',
   render: () => (
-    <YStack gap="$4" maxWidth={760}>
+    <YStack
+      gap="$4"
+      maxWidth={760}>
       <Preset overrides={{ pageTitleScale: 'moderate' }}>
         <H1>moderate — the product default (32px class)</H1>
       </Preset>
@@ -60,7 +64,9 @@ export const PageTitleScaleFlip: Story = {
 export const FontWeightFlip: Story = {
   name: 'fontWeight flip (regular vs bold)',
   render: () => (
-    <YStack gap="$3" maxWidth={640}>
+    <YStack
+      gap="$3"
+      maxWidth={640}>
       <Preset overrides={{ fontWeight: 'regular' }}>
         <Heading>regular — 400</Heading>
       </Preset>
@@ -74,10 +80,14 @@ export const FontWeightFlip: Story = {
 export const SizedHeadings: Story = {
   name: 'Sized headings',
   render: () => (
-    <YStack gap="$3" maxWidth={640}>
+    <YStack
+      gap="$3"
+      maxWidth={640}>
       <H2 size="$6">H2 at $6: weight follows fontWeight in every headingFont</H2>
       <Heading size="$4">Heading at $4</Heading>
-      <H2 size="$6" fontWeight="700">
+      <H2
+        size="$6"
+        fontWeight="700">
         H2 at $6 with an explicit 700
       </H2>
     </YStack>

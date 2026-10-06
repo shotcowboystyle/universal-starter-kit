@@ -3,7 +3,8 @@ import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { useRef, useState } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 
-import { TreeView, type TreeNode, type TreeViewProps } from './TreeView';
+import { TreeView } from './TreeView';
+import type { TreeNode, TreeViewProps } from './TreeView';
 
 const folders: TreeNode[] = [
   {
@@ -50,8 +51,13 @@ function RevealFixture(args: TreeViewProps) {
     setRevealRequest({ id, requestId: ++sequence.current });
   };
   return (
-    <YStack gap="$3" width="100%" maxWidth={700}>
-      <XStack gap="$2" flexWrap="wrap">
+    <YStack
+      gap="$3"
+      width="100%"
+      maxWidth={700}>
+      <XStack
+        gap="$2"
+        flexWrap="wrap">
         <Button
           onPress={() => {
             reveal('item-499');
@@ -83,7 +89,9 @@ function RevealFixture(args: TreeViewProps) {
           Collapse archive
         </Button>
       </XStack>
-      <XStack gap="$2" flexWrap="wrap">
+      <XStack
+        gap="$2"
+        flexWrap="wrap">
         <Button
           onPress={() => {
             setNodes([]);
@@ -150,7 +158,9 @@ function RevealFixture(args: TreeViewProps) {
           renderNode={(node) => {
             const index = Number(node.id.replace('item-', ''));
             return (
-              <YStack minHeight={Number.isFinite(index) && index % 2 ? 80 : 32} justifyContent="center">
+              <YStack
+                minHeight={Number.isFinite(index) && index % 2 ? 80 : 32}
+                justifyContent="center">
                 <Text>{node.label}</Text>
                 {Number.isFinite(index) && index % 2 === 1 && <Text fontSize="$2">Additional detail</Text>}
               </YStack>
@@ -183,12 +193,17 @@ function RetainedScrollFixture(args: TreeViewProps) {
     setRevealRequest({ id: 'item-499', requestId: ++sequence.current });
   };
   return (
-    <YStack gap="$3" width="100%" maxWidth={700}>
+    <YStack
+      gap="$3"
+      width="100%"
+      maxWidth={700}>
       <Text>
         Scroll manually, unmount, then mount. The observed offset and expansion survive outside the tree. Remount with
         delayed data or a hidden host to check deferred restoration.
       </Text>
-      <XStack gap="$2" flexWrap="wrap">
+      <XStack
+        gap="$2"
+        flexWrap="wrap">
         <Button
           onPress={() => {
             setMounted((value) => !value);
@@ -224,7 +239,9 @@ function RetainedScrollFixture(args: TreeViewProps) {
           {hidden ? 'Show tree' : 'Hide tree'}
         </Button>
       </XStack>
-      <XStack gap="$2" flexWrap="wrap">
+      <XStack
+        gap="$2"
+        flexWrap="wrap">
         <Button onPress={revealLast}>Reveal last item</Button>
         <Button
           onPress={() => {
@@ -274,7 +291,9 @@ function RetainedScrollFixture(args: TreeViewProps) {
             renderNode={(node) => {
               const index = Number(node.id.replace('item-', ''));
               return (
-                <YStack minHeight={Number.isFinite(index) && index % 2 ? 80 : 32} justifyContent="center">
+                <YStack
+                  minHeight={Number.isFinite(index) && index % 2 ? 80 : 32}
+                  justifyContent="center">
                   <Text>{node.label}</Text>
                   {Number.isFinite(index) && index % 2 === 1 && <Text fontSize="$2">Additional detail</Text>}
                 </YStack>

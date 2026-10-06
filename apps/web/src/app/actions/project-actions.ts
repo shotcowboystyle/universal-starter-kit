@@ -1,15 +1,15 @@
-"use server";
+'use server';
 
-import { cookies } from "next/headers";
+import { cookies } from 'next/headers';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 async function getAuthHeaders(): Promise<HeadersInit> {
   const cookieStore = await cookies();
-  const token = cookieStore.get("jwt")?.value;
+  const token = cookieStore.get('jwt')?.value;
   return {
-    "Content-Type": "application/json",
-    ...(token && { Authorization: `Bearer ${token}` })
+    'Content-Type': 'application/json',
+    ...(token && { Authorization: `Bearer ${token}` }),
   };
 }
 
@@ -22,47 +22,47 @@ export async function createProject(data: {
 }) {
   const headers = await getAuthHeaders();
   const response = await fetch(`${API_URL}/projects`, {
-    method: "POST",
+    method: 'POST',
     headers,
-    body: JSON.stringify(data)
+    body: JSON.stringify(data),
   });
   if (!response.ok) {
-    throw new Error("Failed to create project");
+    throw new Error('Failed to create project');
   }
-  return response.json();
+  return await response.json();
 }
 
 export async function updateProject(id: string, data: Record<string, unknown>) {
   const headers = await getAuthHeaders();
   const response = await fetch(`${API_URL}/projects/${id}`, {
-    method: "PATCH",
+    method: 'PATCH',
     headers,
-    body: JSON.stringify(data)
+    body: JSON.stringify(data),
   });
   if (!response.ok) {
-    throw new Error("Failed to update project");
+    throw new Error('Failed to update project');
   }
-  return response.json();
+  return await response.json();
 }
 
 export async function deleteProject(id: string) {
   const headers = await getAuthHeaders();
   const response = await fetch(`${API_URL}/projects/${id}`, {
-    method: "DELETE",
-    headers
+    method: 'DELETE',
+    headers,
   });
   if (!response.ok) {
-    throw new Error("Failed to delete project");
+    throw new Error('Failed to delete project');
   }
 }
 
 export async function getProjects(boardId: string) {
   const headers = await getAuthHeaders();
   const response = await fetch(`${API_URL}/projects?boardId=${boardId}`, {
-    headers
+    headers,
   });
   if (!response.ok) {
-    throw new Error("Failed to fetch projects");
+    throw new Error('Failed to fetch projects');
   }
-  return response.json();
+  return await response.json();
 }

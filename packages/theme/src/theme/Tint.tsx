@@ -1,7 +1,8 @@
-import { type PropsWithChildren, createContext, useContext } from 'react';
+import { createContext, useContext } from 'react';
+import type { PropsWithChildren } from 'react';
 import { Theme } from 'tamagui';
 
-import { usePresetTints } from './PresetContext';
+import { usePresetTints } from './preset-context';
 
 const TintDepthContext = createContext(0);
 
@@ -30,7 +31,9 @@ export function Tint({ children, alt = 0, disable, ...props }: TintProps) {
       {disable || !tint ? (
         children
       ) : (
-        <Theme name={tint} {...props}>
+        <Theme
+          name={tint}
+          {...props}>
           {children}
         </Theme>
       )}

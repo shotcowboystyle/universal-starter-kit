@@ -29,7 +29,9 @@ vi.mock('expo-video', () => ({
 describe('Video', () => {
   it('renders a figure with video and caption on web', () => {
     const { container } = renderWithProviders(
-      <Video src="https://example.com/clip.mp4" title="Demo">
+      <Video
+        src="https://example.com/clip.mp4"
+        title="Demo">
         Caption text
       </Video>,
     );
@@ -40,7 +42,11 @@ describe('Video', () => {
 
   it('paints house overlay chrome instead of native controls', () => {
     const { container, getByLabelText } = renderWithProviders(
-      <Video src="https://example.com/clip.mp4" title="Demo" controls />,
+      <Video
+        src="https://example.com/clip.mp4"
+        title="Demo"
+        controls
+      />,
     );
     const el = container.querySelector('video');
     expect(el?.hasAttribute('controls')).toBe(false);
@@ -53,7 +59,10 @@ describe('Video', () => {
 
   it('omits overlay chrome when controls are off', () => {
     const { container, queryByTestId } = renderWithProviders(
-      <Video src="https://example.com/clip.mp4" controls={false} />,
+      <Video
+        src="https://example.com/clip.mp4"
+        controls={false}
+      />,
     );
     expect(queryByTestId('video-chrome')).toBeNull();
     expect(container.querySelector('video')?.hasAttribute('controls')).toBe(false);
@@ -86,15 +95,21 @@ describe('Video', () => {
 
   it('does not paint a status pip; tile radius stays UNCLAMPED', () => {
     const src = [
-      readFileSync(join(here, 'index.tsx'), 'utf8'),
-      readFileSync(join(here, 'index.native.tsx'), 'utf8'),
-      readFileSync(join(here, 'VideoFrame.tsx'), 'utf8'),
+      readFileSync(join(here, 'index.tsx'), 'utf-8'),
+      readFileSync(join(here, 'index.native.tsx'), 'utf-8'),
+      readFileSync(join(here, 'VideoFrame.tsx'), 'utf-8'),
     ].join('\n');
     expect(src).not.toMatch(/knobProps\.cardSurface|knobProps\.containerRadius|capContainerRadius\(/);
     expect(src).not.toMatch(/data-status-pip|StatusPip|statusPip/);
     expect(src).toContain('mediaTileFrameProps');
 
-    const { container } = renderWithProviders(<Video src="https://example.com/clip.mp4" title="Demo" controls />);
+    const { container } = renderWithProviders(
+      <Video
+        src="https://example.com/clip.mp4"
+        title="Demo"
+        controls
+      />,
+    );
     expect(container.querySelector('[data-status-pip]')).toBeNull();
     expect(container.querySelector("[data-media-tile='video']")).toBeTruthy();
     expect(container.querySelector("[data-testid='video-chrome']")).toBeTruthy();
@@ -127,7 +142,9 @@ describe('Video native module (smoke)', () => {
   it('degrades to the poster surface when the expo-video peer cannot load', async () => {
     const { Video: NativeVideo } = await import('./index.native');
     const { container, queryByTestId } = renderWithProviders(
-      <NativeVideo src="https://example.com/native.mp4" title="Native demo">
+      <NativeVideo
+        src="https://example.com/native.mp4"
+        title="Native demo">
         Native caption
       </NativeVideo>,
     );

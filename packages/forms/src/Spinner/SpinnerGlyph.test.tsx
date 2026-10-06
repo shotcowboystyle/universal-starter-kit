@@ -41,12 +41,22 @@ function stroke(container: HTMLElement): string | null {
 
 describe('SpinnerGlyph — the arc', () => {
   it('draws a track and a head, never one circle', () => {
-    const { container } = renderWithProviders(<SpinnerGlyph color="#123456" size={24} />);
+    const { container } = renderWithProviders(
+      <SpinnerGlyph
+        color="#123456"
+        size={24}
+      />,
+    );
     expect(circles(container)).toHaveLength(2);
   });
 
   it('keeps the viewBox fixed and scales through width/height, so it stays crisp', () => {
-    const { container } = renderWithProviders(<SpinnerGlyph color="#123456" size={48} />);
+    const { container } = renderWithProviders(
+      <SpinnerGlyph
+        color="#123456"
+        size={48}
+      />,
+    );
     const node = svg(container);
     expect(node.getAttribute('viewBox')).toBe('0 0 24 24');
     expect(node.getAttribute('width')).toBe('48');
@@ -54,15 +64,30 @@ describe('SpinnerGlyph — the arc', () => {
   });
 
   it('takes the box size it is handed rather than a fixed one', () => {
-    const small = renderWithProviders(<SpinnerGlyph color="#123456" size={16} />);
+    const small = renderWithProviders(
+      <SpinnerGlyph
+        color="#123456"
+        size={16}
+      />,
+    );
     expect(svg(small.container).getAttribute('width')).toBe('16');
     cleanup();
-    const large = renderWithProviders(<SpinnerGlyph color="#123456" size={64} />);
+    const large = renderWithProviders(
+      <SpinnerGlyph
+        color="#123456"
+        size={64}
+      />,
+    );
     expect(svg(large.container).getAttribute('width')).toBe('64');
   });
 
   it('makes the track faint and the head solid, both in the requested colour', () => {
-    const { container } = renderWithProviders(<SpinnerGlyph color="#abcdef" size={24} />);
+    const { container } = renderWithProviders(
+      <SpinnerGlyph
+        color="#abcdef"
+        size={24}
+      />,
+    );
     const [track, head] = circles(container);
     expect(track.getAttribute('stroke')).toBe('#abcdef');
     expect(head.getAttribute('stroke')).toBe('#abcdef');
@@ -71,9 +96,14 @@ describe('SpinnerGlyph — the arc', () => {
   });
 
   it('paints 270 degrees of arc and leaves the remaining quarter open', () => {
-    const { container } = renderWithProviders(<SpinnerGlyph color="#123456" size={24} />);
+    const { container } = renderWithProviders(
+      <SpinnerGlyph
+        color="#123456"
+        size={24}
+      />,
+    );
     const [, head] = circles(container);
-    const [drawn, gap] = String(head.getAttribute('stroke-dasharray') ?? head.getAttribute('strokeDasharray'))
+    const [drawn, gap] = String(head.getAttribute('stroke-dasharray') ?? head.getAttribute('strokedasharray'))
       .split(' ')
       .map(Number);
     expect(drawn).toBeCloseTo(CIRCUMFERENCE * 0.75, 5);
@@ -82,20 +112,35 @@ describe('SpinnerGlyph — the arc', () => {
   });
 
   it("starts the head at twelve o'clock, not at three", () => {
-    const { container } = renderWithProviders(<SpinnerGlyph color="#123456" size={24} />);
+    const { container } = renderWithProviders(
+      <SpinnerGlyph
+        color="#123456"
+        size={24}
+      />,
+    );
     const [, head] = circles(container);
     expect(head.getAttribute('transform')).toBe('rotate(-90 12 12)');
   });
 
   it("rounds the head's cap, which is what makes it read as Linear/Polaris rather than a pie slice", () => {
-    const { container } = renderWithProviders(<SpinnerGlyph color="#123456" size={24} />);
+    const { container } = renderWithProviders(
+      <SpinnerGlyph
+        color="#123456"
+        size={24}
+      />,
+    );
     const [track, head] = circles(container);
-    expect(head.getAttribute('stroke-linecap') ?? head.getAttribute('strokeLinecap')).toBe('round');
-    expect(track.getAttribute('stroke-linecap') ?? track.getAttribute('strokeLinecap')).toBeNull();
+    expect(head.getAttribute('stroke-linecap') ?? head.getAttribute('strokelinecap')).toBe('round');
+    expect(track.getAttribute('stroke-linecap') ?? track.getAttribute('strokelinecap')).toBeNull();
   });
 
   it('fills neither circle, so the spinner is a ring and not a disc', () => {
-    const { container } = renderWithProviders(<SpinnerGlyph color="#123456" size={24} />);
+    const { container } = renderWithProviders(
+      <SpinnerGlyph
+        color="#123456"
+        size={24}
+      />,
+    );
     for (const circle of circles(container)) {
       expect(circle.getAttribute('fill')).toBe('none');
     }

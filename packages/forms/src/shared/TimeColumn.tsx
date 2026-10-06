@@ -2,7 +2,8 @@ import { useResolvedKnobs } from '@repo/theme';
 import { useCallback, useMemo } from 'react';
 import { View } from 'tamagui';
 
-import { Wheel, type WheelHighlightEdges } from '../Wheel';
+import { Wheel } from '../Wheel';
+import type { WheelHighlightEdges } from '../Wheel';
 
 import { t } from './t';
 

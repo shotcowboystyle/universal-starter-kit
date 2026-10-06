@@ -38,11 +38,8 @@ import {
   useMemo,
   useRef,
   useState,
-  type KeyboardEvent as ReactKeyboardEvent,
-  type ReactElement,
-  type ReactNode,
-  type RefObject,
 } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent, ReactElement, ReactNode, RefObject } from 'react';
 import type { GetProps, TamaguiElement } from 'tamagui';
 import {
   Text,
@@ -56,7 +53,7 @@ import {
   withStaticProperties,
 } from 'tamagui';
 
-import { componentColors } from '../componentColors';
+import { componentColors } from '../component-colors';
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -362,7 +359,7 @@ function DropdownMenuRoot({
         triggerParts.push(child);
         continue;
       }
-      const type = (child as { type?: unknown }).type;
+      const { type } = child as { type?: unknown };
       if (type === DropdownMenuTrigger) {
         triggerParts.push((child.props as { children?: ReactNode }).children);
       } else if (type === DropdownMenuContent) {
@@ -402,7 +399,10 @@ function DropdownMenuRoot({
         contentPadding="none"
         {...coverContract}
         {...(placement ? { placement } : {})}>
-        <DropdownMenuList maxHeight={contentMaxHeight} maxWidth={contentMaxWidth} aria-label={contentAriaLabel}>
+        <DropdownMenuList
+          maxHeight={contentMaxHeight}
+          maxWidth={contentMaxWidth}
+          aria-label={contentAriaLabel}>
           {body}
         </DropdownMenuList>
       </FloatingPanel>
@@ -523,37 +523,44 @@ function DropdownMenuList({
       }
       const index = items.indexOf(document.activeElement as HTMLElement);
       switch (event.key) {
-        case 'ArrowDown':
+        case 'ArrowDown': {
           event.preventDefault();
           focusItem(items[(index + 1) % items.length]);
           break;
-        case 'ArrowUp':
+        }
+        case 'ArrowUp': {
           event.preventDefault();
           focusItem(items[(index - 1 + items.length) % items.length]);
           break;
-        case 'Home':
+        }
+        case 'Home': {
           event.preventDefault();
           focusItem(items[0]);
           break;
-        case 'End':
+        }
+        case 'End': {
           event.preventDefault();
           focusItem(items[items.length - 1]);
           break;
+        }
         case 'Enter':
-        case ' ':
+        case ' ': {
           if (index >= 0) {
             event.preventDefault();
             items[index].click();
           }
           break;
-        case 'Escape':
+        }
+        case 'Escape': {
           event.preventDefault();
           event.stopPropagation();
           ctx.close();
           break;
-        case 'Tab':
+        }
+        case 'Tab': {
           ctx.close();
           break;
+        }
         default: {
           if (event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.altKey) {
             const now = Date.now();
@@ -561,7 +568,7 @@ function DropdownMenuList({
             state.buffer = now - state.at > 600 ? event.key : state.buffer + event.key;
             state.at = now;
             const query = state.buffer.toLowerCase();
-            const start = index >= 0 ? index : 0;
+            const start = index !== -1 ? index : 0;
             const ordered = [...items.slice(start + 1), ...items.slice(0, start + 1)];
             const match = ordered.find((el) => (el.textContent ?? '').trim().toLowerCase().startsWith(query));
             if (match) {
@@ -753,11 +760,23 @@ const DropdownMenuItemBody = forwardRef<TamaguiElement, ItemBodyProps>(function 
         </View>
       ) : null}
       {explainedDisable ? (
-        <YStack flexGrow={1} flexShrink={1} gap="$0.5">
-          <Text {...knobProps.body} color={textColor} fontSize="$3" fontWeight="400" numberOfLines={1}>
+        <YStack
+          flexGrow={1}
+          flexShrink={1}
+          gap="$0.5">
+          <Text
+            {...knobProps.body}
+            color={textColor}
+            fontSize="$3"
+            fontWeight="400"
+            numberOfLines={1}>
             {children}
           </Text>
-          <Text {...knobProps.body} color={knobProps.textAccentColor} fontSize="$1" data-mp-disabled-reason="true">
+          <Text
+            {...knobProps.body}
+            color={knobProps.textAccentColor}
+            fontSize="$1"
+            data-mp-disabled-reason="true">
             {disabledReason}
           </Text>
         </YStack>
@@ -790,7 +809,12 @@ const DropdownMenuItemBody = forwardRef<TamaguiElement, ItemBodyProps>(function 
 });
 
 const DropdownMenuItem = forwardRef<TamaguiElement, DropdownMenuItemProps>(function DropdownMenuItem(props, ref) {
-  return <DropdownMenuItemBody ref={ref} {...props} />;
+  return (
+    <DropdownMenuItemBody
+      ref={ref}
+      {...props}
+    />
+  );
 });
 
 // ── CheckboxItem ──────────────────────────────────────────────
@@ -822,7 +846,10 @@ const DropdownMenuCheckboxItem = forwardRef<TamaguiElement, DropdownMenuCheckbox
             justifyContent="center"
             opacity={checked ? 1 : 0}
             data-mp-check="trailing">
-            <CheckIcon size={14} weight="bold" />
+            <CheckIcon
+              size={14}
+              weight="bold"
+            />
           </View>
         }
         {...props}
@@ -836,7 +863,13 @@ const DropdownMenuCheckboxItem = forwardRef<TamaguiElement, DropdownMenuCheckbox
 export interface DropdownMenuSeparatorProps extends GetProps<typeof SeparatorLine> {}
 
 function DropdownMenuSeparator(props: DropdownMenuSeparatorProps) {
-  return <SeparatorLine role="separator" {...hairline.height} {...props} />;
+  return (
+    <SeparatorLine
+      role="separator"
+      {...hairline.height}
+      {...props}
+    />
+  );
 }
 
 export interface DropdownMenuLabelProps extends GetProps<typeof Text> {

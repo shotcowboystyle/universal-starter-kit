@@ -13,7 +13,9 @@ const config = createTamagui({
 });
 function renderWithProviders(node: ReactElement) {
   return render(
-    <TamaguiProvider config={config} defaultTheme="light">
+    <TamaguiProvider
+      config={config}
+      defaultTheme="light">
       {node}
     </TamaguiProvider>,
   );
@@ -63,7 +65,11 @@ describe('PageHeader rendered Tamagui title recipes', () => {
 
   it('preserves the consumer heading eject and wrapper props', () => {
     renderWithProviders(
-      <PageHeader heading={<h3 style={{ fontWeight: 600 }}>Custom</h3>} data-testid="eject" padding={7} />,
+      <PageHeader
+        heading={<h3 style={{ fontWeight: 600 }}>Custom</h3>}
+        data-testid="eject"
+        padding={7}
+      />,
     );
     expect(getComputedStyle(screen.getByRole('heading')).fontWeight).toBe('600');
     expect(getComputedStyle(screen.getByTestId('eject')).paddingTop).toBe('7px');

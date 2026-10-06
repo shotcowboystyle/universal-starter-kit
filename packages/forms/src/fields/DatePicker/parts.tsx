@@ -7,13 +7,14 @@ import {
   useGlyphColor,
   useResolvedKnobs,
 } from '@repo/theme';
-import { type ReactNode, type RefObject, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode, RefObject } from 'react';
 import { AnimatePresence, Text, View, isWeb } from 'tamagui';
 
 import { FloatingPanel, floatingPanelActionProps, isNestedPanelAction } from '../../FloatingPanel';
-import type { PanelActionEvent } from '../../FloatingPanel/nestedAction';
+import type { PanelActionEvent } from '../../FloatingPanel/nested-action';
 import { Input as InputParts } from '../../InputParts';
-import { formCommonColors } from '../../shared/colorRamps';
+import { formCommonColors } from '../../shared/color-ramps';
 import { t } from '../../shared/t';
 
 // ---------------------------------------------------------------------------
@@ -247,7 +248,7 @@ export function CalendarChromeButton({
       outlineWidth={0}
       focusStyle={{ outlineWidth: 0 }}
       focusVisibleStyle={ensureFocusVisibleRing()}
-      {...(!isWeb ? { hitSlop } : {})}
+      {...(isWeb ? {} : { hitSlop })}
       {...(isWeb
         ? { tabIndex: 0, onKeyDown: calendarKeyHandler(onPress) as unknown as () => void }
         : { accessible: true })}>
@@ -279,7 +280,12 @@ export function CalendarDaySlot({ children }: { children?: ReactNode }) {
   const { knobProps } = useCalendarKnobs();
   const { px } = knobProps.nestedControl;
   return (
-    <View width={px} height={px} justifyContent="center" alignItems="center" position="relative">
+    <View
+      width={px}
+      height={px}
+      justifyContent="center"
+      alignItems="center"
+      position="relative">
       {children}
     </View>
   );
@@ -289,7 +295,9 @@ export function CalendarWeekRow({ children }: { children: ReactNode }) {
   const { knobProps } = useCalendarKnobs();
   const { px } = knobProps.nestedControl;
   return (
-    <View flexDirection="row" width={px * 7}>
+    <View
+      flexDirection="row"
+      width={px * 7}>
       {children}
     </View>
   );
@@ -323,7 +331,12 @@ export function CalendarDayCell({
   const { px, hitSlop, box } = splitNestedControl(knobProps.nestedControl);
 
   if (!visible) {
-    return <View width={px} height={px} />;
+    return (
+      <View
+        width={px}
+        height={px}
+      />
+    );
   }
 
   const showTodayMark = !!today && !selected;
@@ -364,7 +377,7 @@ export function CalendarDayCell({
       focusVisibleStyle={ensureFocusVisibleRing({ outlineOffset: -2 })}
       data-nested-px={px}
       data-calendar-day={`${day.getFullYear()}-${day.getMonth()}-${day.getDate()}`}
-      {...(!isWeb ? { hitSlop } : {})}
+      {...(isWeb ? {} : { hitSlop })}
       {...(isWeb
         ? {
             tabIndex: resolvedTabIndex,
@@ -468,7 +481,12 @@ export function CalendarDays({
         {weeks.map((week) => {
           const hasCurrentMonthDay = week.some((d) => d.getMonth() === calendarData.month);
           if (skipEmptyWeeks && !hasCurrentMonthDay) {
-            return <View key={week[0].toISOString()} height="$3" />;
+            return (
+              <View
+                key={week[0].toISOString()}
+                height="$3"
+              />
+            );
           }
           return (
             <CalendarWeekRow key={week[0].toISOString()}>
@@ -547,7 +565,10 @@ export function WeekView() {
   const { knobProps } = useCalendarKnobs();
   const { px } = knobProps.nestedControl;
   return (
-    <View flexDirection="row" width={px * 7} alignSelf="center">
+    <View
+      flexDirection="row"
+      width={px * 7}
+      alignSelf="center">
       {weekdays.map((day) => (
         <Text
           key={day}
@@ -592,34 +613,65 @@ export function CalendarHeader({
   const glyphColor = useGlyphColor();
   const { px } = knobProps.nestedControl;
   return (
-    <View flexDirection="row" width={px * 7} alignSelf="center" alignItems="center" justifyContent="space-between">
+    <View
+      flexDirection="row"
+      width={px * 7}
+      alignSelf="center"
+      alignItems="center"
+      justifyContent="space-between">
       {showPrev && onPrevMonth ? (
-        <CalendarChromeButton onPress={onPrevMonth} label={t('Previous month')}>
-          <CaretLeftIcon size={knobProps.controlIcon.width} color={glyphColor} />
+        <CalendarChromeButton
+          onPress={onPrevMonth}
+          label={t('Previous month')}>
+          <CaretLeftIcon
+            size={knobProps.controlIcon.width}
+            color={glyphColor}
+          />
         </CalendarChromeButton>
       ) : (
-        <View width={px} height={px} />
+        <View
+          width={px}
+          height={px}
+        />
       )}
 
-      <View flexDirection="row" alignItems="center" {...knobProps.gap}>
+      <View
+        flexDirection="row"
+        alignItems="center"
+        {...knobProps.gap}>
         <CalendarTextButton onPress={onMonthPress}>
-          <Text color="$color" {...knobProps.label} {...knobProps.textWeight} fontWeight="600">
+          <Text
+            color="$color"
+            {...knobProps.label}
+            {...knobProps.textWeight}
+            fontWeight="600">
             {monthName}
           </Text>
         </CalendarTextButton>
         <CalendarTextButton onPress={onYearPress}>
-          <Text color={formCommonColors.muted} {...knobProps.label} {...knobProps.textWeight}>
+          <Text
+            color={formCommonColors.muted}
+            {...knobProps.label}
+            {...knobProps.textWeight}>
             {year}
           </Text>
         </CalendarTextButton>
       </View>
 
       {showNext && onNextMonth ? (
-        <CalendarChromeButton onPress={onNextMonth} label={t('Next month')}>
-          <CaretRightIcon size={knobProps.controlIcon.width} color={glyphColor} />
+        <CalendarChromeButton
+          onPress={onNextMonth}
+          label={t('Next month')}>
+          <CaretRightIcon
+            size={knobProps.controlIcon.width}
+            color={glyphColor}
+          />
         </CalendarChromeButton>
       ) : (
-        <View width={px} height={px} />
+        <View
+          width={px}
+          height={px}
+        />
       )}
     </View>
   );
@@ -676,7 +728,7 @@ export function MonthGrid({ currentYear, selectedMonth, onSelectMonth }: MonthGr
               focusStyle={{ outlineWidth: 0 }}
               focusVisibleStyle={ensureFocusVisibleRing({ outlineOffset: -2 })}
               data-nested-px={px}
-              {...(!isWeb ? { hitSlop } : {})}
+              {...(isWeb ? {} : { hitSlop })}
               {...(isWeb
                 ? {
                     tabIndex: 0,
@@ -727,21 +779,45 @@ export function YearGrid({ yearPageStart, selectedYear, onSelectYear, onPrevPage
   const { animation, animationKey } = useDateAnimation(yearPageStart);
 
   return (
-    <View width={px * 7} alignSelf="center" {...knobProps.gap}>
-      <View flexDirection="row" width={px * 7} alignItems="center" justifyContent="space-between">
-        <CalendarChromeButton onPress={onPrevPage} label={t('Previous years')}>
-          <CaretLeftIcon size={knobProps.controlIcon.width} color={glyphColor} />
+    <View
+      width={px * 7}
+      alignSelf="center"
+      {...knobProps.gap}>
+      <View
+        flexDirection="row"
+        width={px * 7}
+        alignItems="center"
+        justifyContent="space-between">
+        <CalendarChromeButton
+          onPress={onPrevPage}
+          label={t('Previous years')}>
+          <CaretLeftIcon
+            size={knobProps.controlIcon.width}
+            color={glyphColor}
+          />
         </CalendarChromeButton>
-        <Text {...knobProps.label} {...knobProps.textWeight}>
+        <Text
+          {...knobProps.label}
+          {...knobProps.textWeight}>
           {years[0]} – {years[years.length - 1]}
         </Text>
-        <CalendarChromeButton onPress={onNextPage} label={t('Next years')}>
-          <CaretRightIcon size={knobProps.controlIcon.width} color={glyphColor} />
+        <CalendarChromeButton
+          onPress={onNextPage}
+          label={t('Next years')}>
+          <CaretRightIcon
+            size={knobProps.controlIcon.width}
+            color={glyphColor}
+          />
         </CalendarChromeButton>
       </View>
 
       <AnimatePresence key={animationKey}>
-        <View {...animation} transition={knobProps.transition} flexDirection="row" flexWrap="wrap" width={px * 7}>
+        <View
+          {...animation}
+          transition={knobProps.transition}
+          flexDirection="row"
+          flexWrap="wrap"
+          width={px * 7}>
           {years.map((year) => {
             const isSelected = year === selectedYear;
             return (
@@ -768,7 +844,7 @@ export function YearGrid({ yearPageStart, selectedYear, onSelectYear, onPrevPage
                 focusStyle={{ outlineWidth: 0 }}
                 focusVisibleStyle={ensureFocusVisibleRing({ outlineOffset: -2 })}
                 data-nested-px={px}
-                {...(!isWeb ? { hitSlop } : {})}
+                {...(isWeb ? {} : { hitSlop })}
                 {...(isWeb
                   ? {
                       tabIndex: 0,
@@ -860,7 +936,7 @@ export function DatePickerInputTrigger({
     if (disabled || isNestedPanelAction(e)) {
       return;
     }
-    const key = e.key;
+    const { key } = e;
     if (key === 'Enter' || key === ' ' || key === 'ArrowDown' || e.code === 'Space') {
       e.preventDefault?.();
       onButtonPress();
@@ -912,7 +988,9 @@ export function DatePickerInputTrigger({
             }
           : undefined)}>
         <InputParts.Section data-testid="date-picker-glyph">
-          <InputParts.Icon adornment="leading" color={formCommonColors.muted}>
+          <InputParts.Icon
+            adornment="leading"
+            color={formCommonColors.muted}>
             <Glyph />
           </InputParts.Icon>
         </InputParts.Section>
@@ -930,7 +1008,10 @@ export function DatePickerInputTrigger({
         </InputParts.Section>
         {value && isWeb ? (
           <InputParts.Section>
-            <DatePickerClearButton onReset={onReset} disabled={disabled} />
+            <DatePickerClearButton
+              onReset={onReset}
+              disabled={disabled}
+            />
           </InputParts.Section>
         ) : null}
       </InputParts.Box>
@@ -969,7 +1050,12 @@ export function DatePickerPopoverShell({
   onClear,
 }: DatePickerPopoverShellProps) {
   const nativeClear =
-    !isWeb && clearValue && onClear ? <DatePickerClearButton onReset={onClear} disabled={disabled} /> : undefined;
+    !isWeb && clearValue && onClear ? (
+      <DatePickerClearButton
+        onReset={onClear}
+        disabled={disabled}
+      />
+    ) : undefined;
   return (
     <FloatingPanel
       open={open}
@@ -1038,7 +1124,10 @@ export function CalendarViewSwitcher({
   if (viewMode === 'month') {
     return (
       <CalendarPanelFrame>
-        <Text alignSelf="center" {...knobProps.label} {...knobProps.textWeight}>
+        <Text
+          alignSelf="center"
+          {...knobProps.label}
+          {...knobProps.textWeight}>
           Select a month
         </Text>
         <MonthGrid

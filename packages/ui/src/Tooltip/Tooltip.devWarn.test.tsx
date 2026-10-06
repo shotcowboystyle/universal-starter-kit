@@ -25,7 +25,9 @@ describe('Tooltip DEV guardrails', () => {
   it('warns tooltip-on-disabled when child is disabled', () => {
     renderWithProviders(
       <Tooltip content="Why?">
-        <Button disabled disabledReason="Locked">
+        <Button
+          disabled
+          disabledReason="Locked">
           Edit
         </Button>
       </Tooltip>,

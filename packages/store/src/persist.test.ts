@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
-import { createPersistStore, type Storage } from './persist';
+import { createPersistStore } from './persist';
+import type { Storage } from './persist';
 
 function createMockStorage(): Storage & { data: Map<string, string> } {
   const data = new Map<string, string>();
@@ -46,7 +47,7 @@ describe('createPersistStore', () => {
   });
 
   it('does not persist before hydration completes', () => {
-    storage.getItem = vi.fn(() => new Promise<string | null>(() => {}));
+    storage.getItem = vi.fn(async () => new Promise<string | null>(() => {}));
     const store = createPersistStore({ count: 0 }, { key: 'test', storage });
     store.setState(() => ({ count: 99 }));
     expect(storage.setItem).not.toHaveBeenCalled();

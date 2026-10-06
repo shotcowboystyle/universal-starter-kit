@@ -18,11 +18,12 @@ import {
   warnOutlineNone,
   warnPositiveTabIndex,
   warnSizeRecipeEscape,
-  type RecipeFamilyName,
 } from '@repo/theme';
+import type { RecipeFamilyName } from '@repo/theme';
 import { getFontSized } from '@tamagui/get-font-sized';
 import type { SizeVariantSpreadFunction } from '@tamagui/web';
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import type { ComponentProps, Ref, RefObject } from 'react';
 import { Pressable as RNPressable } from 'react-native';
 import type { ColorTokens, FontSizeTokens, InputKeyboardType, InputTextContentType, TamaguiElement } from 'tamagui';
@@ -41,10 +42,10 @@ import {
   useTheme,
 } from 'tamagui';
 
-import { useFieldA11y, useFieldDescribedBy } from '../fieldLayout';
-import { formButtonColors, formCommonColors, formInputColors } from '../shared/colorRamps';
-import { useControlGrouped } from '../shared/groupContext';
-import { useIsInTableCell } from '../shared/tableCellContext';
+import { useFieldA11y, useFieldDescribedBy } from '../FieldLayout';
+import { formButtonColors, formCommonColors, formInputColors } from '../shared/color-ramps';
+import { useControlGrouped } from '../shared/group-context';
+import { useIsInTableCell } from '../shared/table-cell-context';
 
 /**
  * Native-only accessible name/hint from the field context. Web keeps its
@@ -287,7 +288,7 @@ export function ensureInputPartsFocusRing(): void {
   const tag = document.createElement('style');
   tag.id = INPUT_PARTS_RING_STYLE_ID;
   tag.textContent = inputPartsRingCss;
-  document.head.appendChild(tag);
+  document.head.append(tag);
 }
 
 function webBoxRingAttrs(
@@ -407,7 +408,10 @@ function wrapNativePressable(onPress: ((e?: any) => void) | undefined, disabled:
       disabled={!!disabled}
       accessibilityRole="button"
       style={disabled ? { opacity: 0.5 } : undefined}>
-      <View pointerEvents="none" collapsable={false} width="100%">
+      <View
+        pointerEvents="none"
+        collapsable={false}
+        width="100%">
         {node}
       </View>
     </RNPressable>
@@ -537,7 +541,9 @@ const InputGroupImpl = InputGroupFrame.styleable<{
   // Chromeless rendering inside table cells
   if (inTableCell) {
     return (
-      <FocusContext.Provider focused={focused} setFocused={setFocused}>
+      <FocusContext.Provider
+        focused={focused}
+        setFocused={setFocused}>
         {wrapNativePressable(
           onPress,
           disabled,
@@ -617,7 +623,9 @@ const InputGroupImpl = InputGroupFrame.styleable<{
     : undefined;
 
   return (
-    <FocusContext.Provider focused={focused} setFocused={setFocused}>
+    <FocusContext.Provider
+      focused={focused}
+      setFocused={setFocused}>
       {wrapNativePressable(
         onPress,
         disabled,
@@ -872,9 +880,9 @@ const InputAreaImpl = InputFrame.styleable<{
             maxWidth: maxWidthProp ?? widthProp,
           }
         : undefined)}
-      {...(heightProp != null
-        ? { height: heightProp, minHeight: minHeightProp ?? 0, maxHeight: maxHeightProp }
-        : undefined)}
+      {...(heightProp == null
+        ? undefined
+        : { height: heightProp, minHeight: minHeightProp ?? 0, maxHeight: maxHeightProp })}
       {...(inTableCell ? { minWidth: 0 } : undefined)}>
       <InputFrame
         touch={hydrationTouch}
@@ -907,11 +915,11 @@ const InputAreaImpl = InputFrame.styleable<{
                   : undefined
         }
         {...props}
-        {...(flexProp != null ? { flex: flexProp } : undefined)}
-        {...(widthProp != null ? { width: widthProp, minWidth: minWidthProp, maxWidth: maxWidthProp } : undefined)}
-        {...(heightProp != null
-          ? { height: heightProp, minHeight: minHeightProp, maxHeight: maxHeightProp }
-          : undefined)}
+        {...(flexProp == null ? undefined : { flex: flexProp })}
+        {...(widthProp == null ? undefined : { width: widthProp, minWidth: minWidthProp, maxWidth: maxWidthProp })}
+        {...(heightProp == null
+          ? undefined
+          : { height: heightProp, minHeight: minHeightProp, maxHeight: maxHeightProp })}
         {...webAreaAttrs(classNameProp)}
         {...(isWeb && typeof heightProp === 'number'
           ? {
@@ -1124,7 +1132,10 @@ const InputButtonImpl = InputButton.styleable<{ glyphRing?: boolean }>((buttonPr
         tabIndex={tabIndexProp ?? (disabled ? -1 : 0)}
         className={isWeb ? ['mp-chip-dismiss', className].filter(Boolean).join(' ') : (className ?? undefined)}
         data-end-cap={square}>
-        <View className={isWeb ? 'mp-chip-dismiss-ring' : undefined} alignItems="center" justifyContent="center">
+        <View
+          className={isWeb ? 'mp-chip-dismiss-ring' : undefined}
+          alignItems="center"
+          justifyContent="center">
           {textChild ?? children}
         </View>
       </InputGlyphButton>
@@ -1197,7 +1208,7 @@ const InputIcon = InputIconFrame.styleable<{
   const color = getVariable(resolveGlyphPaint(theme as never, rawColor ? String(rawColor) : 'borderColor'));
   const iconSize = knobProps.controlIcon.width * resolvedScaleIcon;
 
-  const getThemedIcon = useGetThemedIcon({ size: iconSize, color: color });
+  const getThemedIcon = useGetThemedIcon({ size: iconSize, color });
   return (
     <InputIconFrame
       touch={hydrationTouch}
@@ -1283,7 +1294,14 @@ const InputLabelFrame = styled(Label, {
 
 export const InputLabel = InputLabelFrame.styleable((props, ref) => {
   const { knobProps } = useResolvedKnobs();
-  return <InputLabelFrame ref={ref} {...knobProps.body} color={knobProps.textAccentColor} {...props} />;
+  return (
+    <InputLabelFrame
+      ref={ref}
+      {...knobProps.body}
+      color={knobProps.textAccentColor}
+      {...props}
+    />
+  );
 });
 
 // ---------------------------------------------------------------------------
@@ -1325,7 +1343,13 @@ const InputInfoFrame = styled(Text, {
 
 export const InputInfo = InputInfoFrame.styleable((props, ref) => {
   const { knobProps } = useResolvedKnobs();
-  return <InputInfoFrame ref={ref} {...knobProps.body} {...props} />;
+  return (
+    <InputInfoFrame
+      ref={ref}
+      {...knobProps.body}
+      {...props}
+    />
+  );
 });
 
 /**
@@ -1338,7 +1362,10 @@ export function InputFieldMeta({ helperText, displayError }: { helperText?: stri
     displayError && typeof displayError === 'string' && displayError.length > 0 ? displayError : undefined;
   if (errorMessage) {
     return (
-      <InputInfo color={formCommonColors.error} role="alert" aria-live="polite">
+      <InputInfo
+        color={formCommonColors.error}
+        role="alert"
+        aria-live="polite">
         {errorMessage}
       </InputInfo>
     );
@@ -1371,7 +1398,7 @@ const InputXGroup = styled(XGroup, {
 // FocusWiredTextArea – reusable ThemedTextArea that syncs focus to FocusContext
 // ---------------------------------------------------------------------------
 
-import { ThemedTextArea } from '../themedPrimitives';
+import { ThemedTextArea } from '../themed-primitives';
 
 type TamaguiTextAreaProps = ComponentProps<typeof ThemedTextArea>;
 
@@ -1409,7 +1436,9 @@ export function FocusWiredTextArea(props: TamaguiTextAreaProps & { innerRef?: Re
     focusVisibleStyle: { ...focusVisibleStyle, ...AREA_NO_OUTLINE },
   };
   return (
-    <View flex={1} minWidth={0}>
+    <View
+      flex={1}
+      minWidth={0}>
       <ThemedTextArea
         aria-describedby={describedBy}
         aria-multiline="true"

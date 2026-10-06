@@ -6,14 +6,19 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { Button } from '../../Button';
 import { Form } from '../../Form';
-import { TableCellContext } from '../../shared/tableCellContext';
+import { TableCellContext } from '../../shared/table-cell-context';
 
 import { PhoneInput } from './index';
 
 describe('PhoneInput', () => {
   describe('basic rendering', () => {
     it('should render input field', () => {
-      const result = renderWithProviders(<PhoneInput label="Phone" name="phone" />);
+      const result = renderWithProviders(
+        <PhoneInput
+          label="Phone"
+          name="phone"
+        />,
+      );
 
       const input = result.container.querySelector('input');
       expect(input).toBeDefined();
@@ -22,7 +27,12 @@ describe('PhoneInput', () => {
 
   describe('phone number formatting', () => {
     it('should prevent invalid characters', async () => {
-      const result = renderWithProviders(<PhoneInput label="Valid Phone" name="valid" />);
+      const result = renderWithProviders(
+        <PhoneInput
+          label="Valid Phone"
+          name="valid"
+        />,
+      );
 
       const input = result.container.querySelector('input');
       if (input) {
@@ -37,7 +47,12 @@ describe('PhoneInput', () => {
     });
 
     it('forgiving paste normalization: international paste formats NANP', async () => {
-      const result = renderWithProviders(<PhoneInput label="Pasted Phone" name="pasted" />);
+      const result = renderWithProviders(
+        <PhoneInput
+          label="Pasted Phone"
+          name="pasted"
+        />,
+      );
       const input = result.container.querySelector('input') as HTMLInputElement;
       await act(async () => {
         fireEvent.change(input, { target: { value: '+1 512.400.9021' } });
@@ -52,7 +67,13 @@ describe('PhoneInput', () => {
 
     it('formats national digits as you type', async () => {
       const onChange = vi.fn();
-      const result = renderWithProviders(<PhoneInput label="Typed Phone" defaultCountry="US" onChange={onChange} />);
+      const result = renderWithProviders(
+        <PhoneInput
+          label="Typed Phone"
+          defaultCountry="US"
+          onChange={onChange}
+        />,
+      );
       const input = result.container.querySelector('input') as HTMLInputElement;
       await act(async () => {
         fireEvent.change(input, { target: { value: '5125551234' } });
@@ -64,7 +85,12 @@ describe('PhoneInput', () => {
 
   describe('country selection', () => {
     it('should render default country dial code next to the flag', () => {
-      const result = renderWithProviders(<PhoneInput label="Country" name="country" />);
+      const result = renderWithProviders(
+        <PhoneInput
+          label="Country"
+          name="country"
+        />,
+      );
       expect(result.container.textContent).toContain('+1');
       const input = result.container.querySelector('input') as HTMLInputElement;
       expect(input.value).toBe('');
@@ -72,7 +98,13 @@ describe('PhoneInput', () => {
 
     it('keeps the national number when the country changes (SB-M-214)', async () => {
       const onChange = vi.fn();
-      const result = renderWithProviders(<PhoneInput label="Rebase" defaultCountry="US" onChange={onChange} />);
+      const result = renderWithProviders(
+        <PhoneInput
+          label="Rebase"
+          defaultCountry="US"
+          onChange={onChange}
+        />,
+      );
       const input = result.container.querySelector('input') as HTMLInputElement;
       await act(async () => {
         fireEvent.change(input, { target: { value: '5125551234' } });
@@ -104,7 +136,13 @@ describe('PhoneInput', () => {
       window.innerWidth = 390;
       try {
         const onChange = vi.fn();
-        const result = renderWithProviders(<PhoneInput label="Narrow" defaultCountry="US" onChange={onChange} />);
+        const result = renderWithProviders(
+          <PhoneInput
+            label="Narrow"
+            defaultCountry="US"
+            onChange={onChange}
+          />,
+        );
         const number = result.container.querySelector('input') as HTMLInputElement;
         await act(async () => {
           fireEvent.change(number, { target: { value: '5125551234' } });
@@ -139,7 +177,10 @@ describe('PhoneInput', () => {
           onSubmit={async (value) => {
             await onSubmit(value);
           }}>
-          <PhoneInput label="Phone Value" name="phone" />
+          <PhoneInput
+            label="Phone Value"
+            name="phone"
+          />
           <Button action="submit">Submit</Button>
         </Form>,
       );
@@ -158,7 +199,13 @@ describe('PhoneInput', () => {
 
   describe('styling and theming', () => {
     it('should render required label with asterisk', () => {
-      const result = renderWithProviders(<PhoneInput label="Required Phone" name="required" required />);
+      const result = renderWithProviders(
+        <PhoneInput
+          label="Required Phone"
+          name="required"
+          required
+        />,
+      );
 
       const label = result.container.querySelector('label');
       expect(label?.textContent).toContain('Required Phone');
@@ -170,29 +217,34 @@ describe('PhoneInput', () => {
     describe('without form context', () => {
       it('should render helper text', () => {
         const result = renderWithProviders(
-          <PhoneInput label="Phone Input" name="phoneInput" helperText="Include country code" />,
+          <PhoneInput
+            label="Phone Input"
+            name="phoneInput"
+            helperText="Include country code"
+          />,
         );
         expect(result.findTextElement('Include country code')).toBeDefined();
       });
     });
 
     describe('with form context', () => {
-      const FormExample = ({ defaultValue = '', name = 'phone', onSubmit = async (_value: any) => {} }) => {
-        return (
-          <Form
-            formOptions={{
-              defaultValues: {
-                [name]: defaultValue,
-              },
-            }}
-            onSubmit={async (value) => {
-              await onSubmit(value);
-            }}>
-            <PhoneInput label="Phone Number" name={name} />
-            <Button action="submit">Submit</Button>
-          </Form>
-        );
-      };
+      const FormExample = ({ defaultValue = '', name = 'phone', onSubmit = async (_value: any) => {} }) => (
+        <Form
+          formOptions={{
+            defaultValues: {
+              [name]: defaultValue,
+            },
+          }}
+          onSubmit={async (value) => {
+            await onSubmit(value);
+          }}>
+          <PhoneInput
+            label="Phone Number"
+            name={name}
+          />
+          <Button action="submit">Submit</Button>
+        </Form>
+      );
 
       it('should render with form context and handle form submission', async () => {
         const onSubmit = vi.fn();
@@ -219,7 +271,10 @@ describe('PhoneInput', () => {
         const onSubmit = vi.fn();
         const result = renderWithProviders(
           <YStack>
-            <FormExample defaultValue="+1234567890" onSubmit={onSubmit} />
+            <FormExample
+              defaultValue="+1234567890"
+              onSubmit={onSubmit}
+            />
           </YStack>,
         );
 
@@ -252,7 +307,10 @@ describe('PhoneInput', () => {
 
           return (
             <Form form={form}>
-              <PhoneInput label="Contact Phone" name="contactPhone" />
+              <PhoneInput
+                label="Contact Phone"
+                name="contactPhone"
+              />
               <Button action="submit">Save</Button>
             </Form>
           );
@@ -296,7 +354,11 @@ describe('PhoneInput', () => {
   describe('validation', () => {
     it('should render explicit error message', () => {
       const result = renderWithProviders(
-        <PhoneInput label="Validation Phone" name="validation" error="Invalid phone number" />,
+        <PhoneInput
+          label="Validation Phone"
+          name="validation"
+          error="Invalid phone number"
+        />,
       );
       expect(result.findTextElement('Invalid phone number')).toBeDefined();
     });
@@ -304,7 +366,12 @@ describe('PhoneInput', () => {
 
   describe('accessibility', () => {
     it('should expose an interactive input element', () => {
-      const result = renderWithProviders(<PhoneInput label="Accessible Phone" name="a11yPhone" />);
+      const result = renderWithProviders(
+        <PhoneInput
+          label="Accessible Phone"
+          name="a11yPhone"
+        />,
+      );
       const input = result.container.querySelector('input');
       expect(input).toBeDefined();
       expect(input?.getAttribute('aria-disabled')).not.toBe('true');
@@ -325,7 +392,12 @@ describe('PhoneInput', () => {
 
   describe('edge cases', () => {
     it('should handle empty value', () => {
-      const result = renderWithProviders(<PhoneInput label="Empty Phone" name="empty" />);
+      const result = renderWithProviders(
+        <PhoneInput
+          label="Empty Phone"
+          name="empty"
+        />,
+      );
 
       const input = result.container.querySelector('input');
       // PhoneInput initializes with the default country dial code (+1 for US)
@@ -334,7 +406,12 @@ describe('PhoneInput', () => {
     });
 
     it('should handle different input types', () => {
-      const result = renderWithProviders(<PhoneInput label="Tel Input" name="tel" />);
+      const result = renderWithProviders(
+        <PhoneInput
+          label="Tel Input"
+          name="tel"
+        />,
+      );
 
       const input = result.container.querySelector('input');
       // Phone input type should be tel or text depending on implementation
@@ -344,7 +421,13 @@ describe('PhoneInput', () => {
 
   describe('disabled state', () => {
     it('should handle disabled state', () => {
-      const result = renderWithProviders(<PhoneInput label="Disabled Phone" name="disabled" disabled />);
+      const result = renderWithProviders(
+        <PhoneInput
+          label="Disabled Phone"
+          name="disabled"
+          disabled
+        />,
+      );
 
       const input = result.container.querySelector('input');
       // Tamagui/React Native Web may use either disabled attribute or aria-disabled
@@ -354,7 +437,13 @@ describe('PhoneInput', () => {
 
     it('should prevent input changes when disabled', async () => {
       const onChange = vi.fn();
-      const result = renderWithProviders(<PhoneInput label="Disabled Changes" name="disabledChanges" disabled />);
+      const result = renderWithProviders(
+        <PhoneInput
+          label="Disabled Changes"
+          name="disabledChanges"
+          disabled
+        />,
+      );
 
       const input = result.container.querySelector('input');
       if (input) {
@@ -369,7 +458,11 @@ describe('PhoneInput', () => {
   describe('form validation', () => {
     it('should show helper text when no error is set', () => {
       const result = renderWithProviders(
-        <PhoneInput label="Form Valid Phone" name="validPhone" helperText="Use international format" />,
+        <PhoneInput
+          label="Form Valid Phone"
+          name="validPhone"
+          helperText="Use international format"
+        />,
       );
       expect(result.findTextElement('Use international format')).toBeDefined();
     });
@@ -377,7 +470,12 @@ describe('PhoneInput', () => {
 
   describe('performance', () => {
     it('should handle rapid input changes', async () => {
-      const result = renderWithProviders(<PhoneInput label="Performance Phone" name="performance" />);
+      const result = renderWithProviders(
+        <PhoneInput
+          label="Performance Phone"
+          name="performance"
+        />,
+      );
 
       const input = result.container.querySelector('input');
       if (input) {
@@ -404,7 +502,10 @@ describe('PhoneInput', () => {
     it('should render in narrow container', () => {
       const result = renderWithProviders(
         <div style={{ width: 240 }}>
-          <PhoneInput label="Responsive Phone" name="responsivePhone" />
+          <PhoneInput
+            label="Responsive Phone"
+            name="responsivePhone"
+          />
         </div>,
       );
       const input = result.container.querySelector('input');
@@ -434,19 +535,52 @@ describe('PhoneInput', () => {
     });
 
     it('compact and size still mount without throwing', () => {
-      expect(() => renderWithProviders(<PhoneInput label="Phone" compact />)).not.toThrow();
-      expect(() => renderWithProviders(<PhoneInput label="Phone" size="$5" />)).not.toThrow();
-      expect(() => renderWithProviders(<PhoneInput label="Phone" compact size="$5" />)).not.toThrow();
+      expect(() =>
+        renderWithProviders(
+          <PhoneInput
+            label="Phone"
+            compact
+          />,
+        ),
+      ).not.toThrow();
+      expect(() =>
+        renderWithProviders(
+          <PhoneInput
+            label="Phone"
+            size="$5"
+          />,
+        ),
+      ).not.toThrow();
+      expect(() =>
+        renderWithProviders(
+          <PhoneInput
+            label="Phone"
+            compact
+            size="$5"
+          />,
+        ),
+      ).not.toThrow();
     });
 
     it('skeleton keeps flag+number bones and hides the field', () => {
-      const result = renderWithProviders(<PhoneInput label="Phone" skeleton size="$4" />);
+      const result = renderWithProviders(
+        <PhoneInput
+          label="Phone"
+          skeleton
+          size="$4"
+        />,
+      );
       expect(result.container.querySelector('input')).toBeNull();
       expect(result.container.querySelector("[data-testid='phone-input']")).toBeNull();
     });
 
     it('does not open the country picker when disabled (SB-M-213)', async () => {
-      const result = renderWithProviders(<PhoneInput label="Phone" disabled />);
+      const result = renderWithProviders(
+        <PhoneInput
+          label="Phone"
+          disabled
+        />,
+      );
       const trigger = result.container.querySelector('[data-testid="combobox-trigger"]') as HTMLElement;
       expect(trigger).toBeTruthy();
       await act(async () => {
@@ -456,7 +590,12 @@ describe('PhoneInput', () => {
     });
 
     it('does not open the country picker when read-only (SB-M-215)', async () => {
-      const result = renderWithProviders(<PhoneInput label="Phone" readOnly />);
+      const result = renderWithProviders(
+        <PhoneInput
+          label="Phone"
+          readOnly
+        />,
+      );
       const country = result.container.querySelector("[data-testid='phone-country']") as HTMLElement;
       expect(country).toBeTruthy();
       await act(async () => {
@@ -473,7 +612,10 @@ describe('PhoneInput in a table cell', () => {
   const renderPhone = (inTableCell: boolean) =>
     renderWithProviders(
       <TableCellContext.Provider value={{ inTableCell, isHeader: false, editable: true }}>
-        <PhoneInput defaultCountry="US" aria-label="Phone" />
+        <PhoneInput
+          defaultCountry="US"
+          aria-label="Phone"
+        />
       </TableCellContext.Provider>,
     );
 

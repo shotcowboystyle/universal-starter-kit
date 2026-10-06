@@ -4,12 +4,12 @@ import { Button, Dialog, DialogContent, DialogOverlay } from '@repo/ui';
 import { useTranslations } from 'next-intl';
 import React from 'react';
 import { toast } from 'sonner';
-import { z } from 'zod';
+import type { z } from 'zod';
 
 import { TaskForm } from '@/components/kanban/task/TaskForm';
 import { useCreateTask } from '@/lib/api/tasks/queries';
 import { useWorkspaceStore } from '@/stores/workspace-store';
-import { TaskFormSchema } from '@/types/taskForm';
+import type { TaskFormSchema } from '@/types/task-form';
 
 export interface NewTaskDialogProps {
   projectId: string;
@@ -46,15 +46,27 @@ export default function NewTaskDialog({ projectId }: NewTaskDialogProps) {
   };
 
   return (
-    <Dialog modal open={addTaskOpen} onOpenChange={setAddTaskOpen}>
+    <Dialog
+      modal
+      open={addTaskOpen}
+      onOpenChange={setAddTaskOpen}>
       <Dialog.Trigger asChild>
-        <Button accent size="$4" width="100%" marginVertical="$4" testID="new-task-trigger">
+        <Button
+          accent
+          size="$4"
+          width="100%"
+          marginVertical="$4"
+          testID="new-task-trigger">
           {t('addNewTask')}
         </Button>
       </Dialog.Trigger>
       <Dialog.Portal>
         <DialogOverlay key="overlay" />
-        <DialogContent key="content" width="90%" maxWidth={448} testID="new-task-dialog">
+        <DialogContent
+          key="content"
+          width="90%"
+          maxWidth={448}
+          testID="new-task-dialog">
           <Dialog.Title size="$7">{t('addNewTaskTitle')}</Dialog.Title>
           <Dialog.Description>{t('addNewTaskDescription')}</Dialog.Description>
           <TaskForm

@@ -42,7 +42,9 @@ describe('applySafeAreaInsets', () => {
 describe('SafeAreaWrapper web', () => {
   it('is a passthrough that still renders children', () => {
     const { container } = renderWithProviders(
-      <SafeAreaWrapper edges={['top']} mode="margin">
+      <SafeAreaWrapper
+        edges={['top']}
+        mode="margin">
         <span>Page body</span>
       </SafeAreaWrapper>,
     );

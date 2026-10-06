@@ -14,8 +14,10 @@
 import { WarningCircleIcon } from '@phosphor-icons/react';
 import { Button, Spinner } from '@repo/forms';
 import { useResolvedKnobs } from '@repo/theme';
-import { createContext, useContext, useEffect, useRef, type ReactNode } from 'react';
-import { XStack, YStack, type YStackProps } from 'tamagui';
+import { createContext, useContext, useEffect, useRef } from 'react';
+import type { ReactNode } from 'react';
+import { XStack, YStack } from 'tamagui';
+import type { YStackProps } from 'tamagui';
 
 import { Alert } from '../Alert';
 import { useTranslation } from '../shared/i18n';
@@ -199,42 +201,105 @@ export function __resetAsyncDevWarnSeen(): void {
 export function AsyncSkeleton({ layout = 'generic', ...rest }: { layout?: AsyncBoundaryLayout } & YStackProps) {
   const { t } = useTranslation();
   switch (layout) {
-    case 'list':
+    case 'list': {
       return (
-        <YStack gap="$3" width="100%" data-async-skeleton="list" aria-busy aria-label={t('Loading')} {...rest}>
+        <YStack
+          gap="$3"
+          width="100%"
+          data-async-skeleton="list"
+          aria-busy
+          aria-label={t('Loading')}
+          {...rest}>
           {Array.from({ length: 5 }).map((_, i) => (
-            <XStack key={i} gap="$3" alignItems="center" paddingVertical="$2">
+            <XStack
+              key={i}
+              gap="$3"
+              alignItems="center"
+              paddingVertical="$2">
               <Skeleton.Circle size={40} />
-              <YStack flex={1} gap="$1">
-                <Skeleton width="70%" height={14} />
-                <Skeleton width="40%" height={12} />
+              <YStack
+                flex={1}
+                gap="$1">
+                <Skeleton
+                  width="70%"
+                  height={14}
+                />
+                <Skeleton
+                  width="40%"
+                  height={12}
+                />
               </YStack>
             </XStack>
           ))}
         </YStack>
       );
-    case 'table':
+    }
+    case 'table': {
       return (
-        <YStack gap="$2" width="100%" data-async-skeleton="table" aria-busy aria-label={t('Loading')} {...rest}>
-          <XStack gap="$3" paddingBottom="$2" borderBottomWidth={1} borderColor="$color5">
-            <Skeleton width={120} height={14} />
-            <Skeleton width={100} height={14} />
-            <Skeleton width={80} height={14} />
-            <Skeleton width={60} height={14} />
+        <YStack
+          gap="$2"
+          width="100%"
+          data-async-skeleton="table"
+          aria-busy
+          aria-label={t('Loading')}
+          {...rest}>
+          <XStack
+            gap="$3"
+            paddingBottom="$2"
+            borderBottomWidth={1}
+            borderColor="$color5">
+            <Skeleton
+              width={120}
+              height={14}
+            />
+            <Skeleton
+              width={100}
+              height={14}
+            />
+            <Skeleton
+              width={80}
+              height={14}
+            />
+            <Skeleton
+              width={60}
+              height={14}
+            />
           </XStack>
           {Array.from({ length: 5 }).map((_, i) => (
-            <XStack key={i} gap="$3" paddingVertical="$2">
-              <Skeleton width={120} height={14} />
-              <Skeleton width={100} height={14} />
-              <Skeleton width={80} height={14} />
-              <Skeleton width={60} height={14} />
+            <XStack
+              key={i}
+              gap="$3"
+              paddingVertical="$2">
+              <Skeleton
+                width={120}
+                height={14}
+              />
+              <Skeleton
+                width={100}
+                height={14}
+              />
+              <Skeleton
+                width={80}
+                height={14}
+              />
+              <Skeleton
+                width={60}
+                height={14}
+              />
             </XStack>
           ))}
         </YStack>
       );
-    case 'kanban':
+    }
+    case 'kanban': {
       return (
-        <XStack gap="$3" width="100%" data-async-skeleton="kanban" aria-busy aria-label={t('Loading')} {...rest}>
+        <XStack
+          gap="$3"
+          width="100%"
+          data-async-skeleton="kanban"
+          aria-busy
+          aria-label={t('Loading')}
+          {...rest}>
           {Array.from({ length: 3 }).map((_, col) => (
             <YStack
               key={col}
@@ -244,21 +309,40 @@ export function AsyncSkeleton({ layout = 'generic', ...rest }: { layout?: AsyncB
               borderWidth={1}
               borderColor="$borderColor"
               borderRadius="$4">
-              <XStack justifyContent="space-between" alignItems="center">
-                <Skeleton width={100} height={14} />
+              <XStack
+                justifyContent="space-between"
+                alignItems="center">
+                <Skeleton
+                  width={100}
+                  height={14}
+                />
                 {/* No count badge skeleton — avoid promising a count */}
               </XStack>
               {Array.from({ length: 3 }).map((_, row) => (
-                <Skeleton key={row} variant="rounded" width="100%" height={64} />
+                <Skeleton
+                  key={row}
+                  variant="rounded"
+                  width="100%"
+                  height={64}
+                />
               ))}
             </YStack>
           ))}
         </XStack>
       );
-    case 'dashboard':
+    }
+    case 'dashboard': {
       return (
-        <YStack gap="$4" width="100%" data-async-skeleton="dashboard" aria-busy aria-label={t('Loading')} {...rest}>
-          <XStack gap="$3" flexWrap="wrap">
+        <YStack
+          gap="$4"
+          width="100%"
+          data-async-skeleton="dashboard"
+          aria-busy
+          aria-label={t('Loading')}
+          {...rest}>
+          <XStack
+            gap="$3"
+            flexWrap="wrap">
             {Array.from({ length: 4 }).map((_, i) => (
               <YStack
                 key={i}
@@ -268,21 +352,42 @@ export function AsyncSkeleton({ layout = 'generic', ...rest }: { layout?: AsyncB
                 borderWidth={1}
                 borderColor="$borderColor"
                 borderRadius="$4">
-                <Skeleton width="50%" height={12} />
-                <Skeleton width="70%" height={28} />
-                <Skeleton width="40%" height={12} />
+                <Skeleton
+                  width="50%"
+                  height={12}
+                />
+                <Skeleton
+                  width="70%"
+                  height={28}
+                />
+                <Skeleton
+                  width="40%"
+                  height={12}
+                />
               </YStack>
             ))}
           </XStack>
-          <Skeleton variant="rounded" width="100%" height={200} />
+          <Skeleton
+            variant="rounded"
+            width="100%"
+            height={200}
+          />
         </YStack>
       );
-    default:
+    }
+    default: {
       return (
-        <YStack gap="$3" width="100%" data-async-skeleton="generic" aria-busy aria-label={t('Loading')} {...rest}>
+        <YStack
+          gap="$3"
+          width="100%"
+          data-async-skeleton="generic"
+          aria-busy
+          aria-label={t('Loading')}
+          {...rest}>
           <Skeleton.Text lines={4} />
         </YStack>
       );
+    }
   }
 }
 
@@ -301,8 +406,13 @@ function AsyncPendingBar() {
       aria-label={t('Updating...')}
       alignItems="center"
       {...knobProps.gap}>
-      <Spinner size="small" aria-hidden />
-      <Text {...knobProps.label} color={knobProps.textAccentColor}>
+      <Spinner
+        size="small"
+        aria-hidden
+      />
+      <Text
+        {...knobProps.label}
+        color={knobProps.textAccentColor}>
         {t('Updating...')}
       </Text>
     </XStack>
@@ -363,7 +473,9 @@ function defaultErrorBody({
       icon=<WarningCircleIcon size={compact ? 24 : 32} />
       action={
         onRetry ? (
-          <Button size={compact ? '$3' : '$4'} onPress={onRetry}>
+          <Button
+            size={compact ? '$3' : '$4'}
+            onPress={onRetry}>
             <Text fontWeight="400">{retryLabel}</Text>
           </Button>
         ) : undefined
@@ -450,7 +562,9 @@ export function AsyncBoundary({
       showChrome = true;
       const copy = errorCopy(error, errorTitle, errorDescription);
       body = (
-        <YStack width="100%" {...knobProps.gap}>
+        <YStack
+          width="100%"
+          {...knobProps.gap}>
           <Alert
             compact={compact}
             intent="error"
@@ -491,7 +605,9 @@ export function AsyncBoundary({
       showChrome = true;
       const kept = settled.kind === 'data' ? (content ?? settled.body) : settled.body;
       body = (
-        <YStack width="100%" {...knobProps.gap}>
+        <YStack
+          width="100%"
+          {...knobProps.gap}>
           <AsyncPendingBar />
           {kept}
         </YStack>

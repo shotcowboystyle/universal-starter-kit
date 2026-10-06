@@ -80,7 +80,10 @@ describe('house Dialog.Close is named by what it shows', () => {
     renderWithProviders(
       <OpenDialog>
         <Dialog.Close asChild>
-          <Button circular icon={X} />
+          <Button
+            circular
+            icon={X}
+          />
         </Dialog.Close>
         <Dialog.Close>
           <X />
@@ -95,7 +98,11 @@ describe('house Dialog.Close is named by what it shows', () => {
     renderWithProviders(
       <OpenDialog>
         <Dialog.Close asChild>
-          <Button circular icon={X} aria-label="Close dialog" />
+          <Button
+            circular
+            icon={X}
+            aria-label="Close dialog"
+          />
         </Dialog.Close>
         <Dialog.Close aria-label="Dismiss">
           <X />

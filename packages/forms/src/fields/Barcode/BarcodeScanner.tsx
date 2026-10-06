@@ -2,12 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { Text, View, XStack, YStack, isWeb } from 'tamagui';
 
 import { Button } from '../../Button';
-import { queryPermissionState } from '../../shared/capabilityPreflight';
-import { formCommonColors, formInputColors } from '../../shared/colorRamps';
+import { queryPermissionState } from '../../shared/capability-preflight';
+import { formCommonColors, formInputColors } from '../../shared/color-ramps';
 import { t } from '../../shared/t';
 
-import type { BarcodeScannerProps, CameraPreflightResult } from './scannerTypes';
-import { resolveHtml5FormatIds, scannerViewportHeight } from './scannerTypes';
+import type { BarcodeScannerProps, CameraPreflightResult } from './scanner-types';
+import { resolveHtml5FormatIds, scannerViewportHeight } from './scanner-types';
 
 interface Html5QrcodeScanner {
   start: (
@@ -174,8 +174,16 @@ export function BarcodeScanner({ active, onScan, onError, onClose, knobProps, fo
       borderColor={formInputColors.border.base}
       overflow="hidden">
       {status === 'error' ? (
-        <YStack padding="$4" gap="$3" alignItems="center" minHeight={120} justifyContent="center">
-          <Text {...knobProps.body} color={formCommonColors.error} textAlign="center">
+        <YStack
+          padding="$4"
+          gap="$3"
+          alignItems="center"
+          minHeight={120}
+          justifyContent="center">
+          <Text
+            {...knobProps.body}
+            color={formCommonColors.error}
+            textAlign="center">
             {errorMessage}
           </Text>
           <XStack gap="$2">
@@ -187,7 +195,10 @@ export function BarcodeScanner({ active, onScan, onError, onClose, knobProps, fo
               aria-label={t('Retry camera')}>
               {t('Retry')}
             </Button>
-            <Button size={knobProps.sizeToken} onPress={onClose} aria-label={t('Close scanner')}>
+            <Button
+              size={knobProps.sizeToken}
+              onPress={onClose}
+              aria-label={t('Close scanner')}>
               {t('Close')}
             </Button>
           </XStack>
@@ -195,7 +206,11 @@ export function BarcodeScanner({ active, onScan, onError, onClose, knobProps, fo
       ) : (
         <>
           {status === 'starting' && (
-            <Text {...knobProps.body} padding="$3" textAlign="center" opacity={0.7}>
+            <Text
+              {...knobProps.body}
+              padding="$3"
+              textAlign="center"
+              opacity={0.7}>
               {t('Requesting camera…')}
             </Text>
           )}

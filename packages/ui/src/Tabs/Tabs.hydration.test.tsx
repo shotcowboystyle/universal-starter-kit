@@ -7,7 +7,8 @@
  */
 import { TestProviders } from '@repo/test-utils';
 import { act } from 'react';
-import { hydrateRoot, type Root } from 'react-dom/client';
+import { hydrateRoot } from 'react-dom/client';
+import type { Root } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -44,7 +45,10 @@ const items = [
 function Fixture() {
   return (
     <TestProviders>
-      <Tabs items={items} defaultValue="address" />
+      <Tabs
+        items={items}
+        defaultValue="address"
+      />
     </TestProviders>
   );
 }

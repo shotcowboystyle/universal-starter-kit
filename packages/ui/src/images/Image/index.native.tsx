@@ -1,10 +1,12 @@
 import type { UnionableNumber, UnionableString, Variable } from '@tamagui/core';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Image as TamaguiImage, type ViewProps, useStyle } from 'tamagui';
+import { Image as TamaguiImage, useStyle } from 'tamagui';
+import type { ViewProps } from 'tamagui';
 
 import { SvgUri } from '../SvgUri';
 
-import { ImageFrame, mediaFillProps, type ImageStatus } from './ImageFrame';
+import { ImageFrame, mediaFillProps } from './ImageFrame';
+import type { ImageStatus } from './ImageFrame';
 import {
   isSvgUri,
   isThumbnailSize,

@@ -33,7 +33,8 @@ import type { ReactElement } from 'react';
 import { TamaguiProvider, YStack } from 'tamagui';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { Button, type ButtonProps } from './index';
+import { Button } from './index';
+import type { ButtonProps } from './index';
 
 afterEach(cleanup);
 
@@ -56,7 +57,10 @@ const CASES: { name: string; props: Partial<ButtonProps>; knob: boolean }[] = [
 function houseRender(ui: ReactElement, scheme: Scheme, knob: boolean) {
   const body = <YStack backgroundColor="$background">{ui}</YStack>;
   return render(
-    <TamaguiProvider config={houseConfig.tamagui} defaultTheme={scheme} disableInjectCSS>
+    <TamaguiProvider
+      config={houseConfig.tamagui}
+      defaultTheme={scheme}
+      disableInjectCSS>
       {knob ? <Preset overrides={{ fillStyle: 'outlined' }}>{body}</Preset> : body}
     </TamaguiProvider>,
   );
@@ -95,7 +99,7 @@ function scopeOf(el: Element): string | null {
 }
 
 function resolveInScope(value: string, scheme: Scheme, scope: string | null): string {
-  const token = value.match(/^var\(--([\w-]+)\)$/)?.[1];
+  const token = /^var\(--([\w-]+)\)$/.exec(value)?.[1];
   if (!token) {
     return value;
   }
@@ -140,7 +144,7 @@ describe("an outlined accent Button's label reads on its host", () => {
           const ink = paintedColor(el, scheme);
           for (const surface of HOST_SURFACES) {
             const ground = houseThemes[scheme][surface];
-            const ratio = measureContrast({ foreground: ink, background: ground }).ratio;
+            const { ratio } = measureContrast({ foreground: ink, background: ground });
             expect(
               ratio,
               `${part} ${ink} on ${scheme}.${surface} ${ground}: ${ratio.toFixed(2)}:1`,

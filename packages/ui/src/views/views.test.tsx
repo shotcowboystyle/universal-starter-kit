@@ -3,23 +3,18 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { renderWithProviders } from '@repo/test-utils';
-import { useChartPalette, type ChartPalette } from '@repo/theme';
+import { useChartPalette } from '@repo/theme';
+import type { ChartPalette } from '@repo/theme';
 import { cleanup, fireEvent, screen } from '@testing-library/react';
 import * as React from 'react';
 import { Theme } from 'tamagui';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { componentColors } from '../componentColors';
+import { componentColors } from '../component-colors';
 
-import {
-  Calendar,
-  computeEventMoveRange,
-  eventChipTextColor,
-  findDayKeyAtPoint,
-  type CalendarDayLayout,
-  type CalendarEvent,
-} from './Calendar';
-import * as GanttMathExports from './ganttMath';
+import { Calendar, computeEventMoveRange, eventChipTextColor, findDayKeyAtPoint } from './Calendar';
+import type { CalendarDayLayout, CalendarEvent } from './Calendar';
+import * as GanttMathExports from './gantt-math';
 
 import * as ViewExports from './index';
 
@@ -32,7 +27,10 @@ vi.mock('../charts/ChartSurface', async (importOriginal) => {
   return {
     ...actual,
     ChartSurface: (props: React.ComponentProps<typeof actual.ChartSurface>) => (
-      <actual.ChartSurface {...props} width={props.width ?? 400} />
+      <actual.ChartSurface
+        {...props}
+        width={props.width ?? 400}
+      />
     ),
   };
 });
@@ -58,10 +56,12 @@ vi.mock('@tanstack/react-virtual', () => ({
 }));
 
 import { ImageGrid } from './ImageGrid';
-import { Kanban, type KanbanColumn } from './Kanban';
+import { Kanban } from './Kanban';
+import type { KanbanColumn } from './Kanban';
 // Import view components AFTER the mock is set up
 import { List } from './List';
-import { TreeView, type TreeNode } from './TreeView';
+import { TreeView } from './TreeView';
+import type { TreeNode } from './TreeView';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -93,20 +93,38 @@ describe('List', () => {
   });
 
   it('renders empty message when items array is empty', () => {
-    renderWithProviders(<List items={[]} renderItem={() => <span />} emptyMessage="No Pokemon found" />);
+    renderWithProviders(
+      <List
+        items={[]}
+        renderItem={() => <span />}
+        emptyMessage="No Pokemon found"
+      />,
+    );
 
     expect(screen.getByText('No Pokemon found')).toBeInTheDocument();
   });
 
   it('shows list skeleton while loading with no items', () => {
-    renderWithProviders(<List items={[]} renderItem={() => <span />} isLoading emptyMessage="No Pokemon found" />);
+    renderWithProviders(
+      <List
+        items={[]}
+        renderItem={() => <span />}
+        isLoading
+        emptyMessage="No Pokemon found"
+      />,
+    );
     expect(document.querySelector('[data-async-skeleton="list"]')).toBeTruthy();
     expect(screen.queryByText('No Pokemon found')).toBeNull();
   });
 
   it('forbids empty chrome when error is set', () => {
     renderWithProviders(
-      <List items={[]} renderItem={() => <span />} emptyMessage="No Pokemon found" error="Failed to fetch" />,
+      <List
+        items={[]}
+        renderItem={() => <span />}
+        emptyMessage="No Pokemon found"
+        error="Failed to fetch"
+      />,
     );
     expect(screen.queryByText('No Pokemon found')).toBeNull();
     expect(screen.getByText('Failed to fetch')).toBeInTheDocument();
@@ -120,11 +138,16 @@ describe('List', () => {
     ];
 
     const { container } = renderWithProviders(
-      <List items={items} renderItem={(item) => <span>{item.name}</span>} height={300} estimateSize={50} />,
+      <List
+        items={items}
+        renderItem={(item) => <span>{item.name}</span>}
+        height={300}
+        estimateSize={50}
+      />,
     );
 
     const listItems = container.querySelectorAll('[role="listitem"]');
-    expect(listItems.length).toBe(2);
+    expect(listItems).toHaveLength(2);
   });
 });
 
@@ -180,7 +203,11 @@ describe('Kanban', () => {
     ];
 
     renderWithProviders(
-      <Kanban columns={columns} renderCard={(item) => <span>{item.title}</span>} estimateSize={80} />,
+      <Kanban
+        columns={columns}
+        renderCard={(item) => <span>{item.title}</span>}
+        estimateSize={80}
+      />,
     );
 
     // Column headers
@@ -213,7 +240,11 @@ describe('Kanban', () => {
 
   it('shows kanban skeleton while loading empty board', () => {
     renderWithProviders(
-      <Kanban columns={[{ id: 'todo', title: 'To Do', items: [] }]} renderCard={() => <span />} isLoading />,
+      <Kanban
+        columns={[{ id: 'todo', title: 'To Do', items: [] }]}
+        renderCard={() => <span />}
+        isLoading
+      />,
     );
     expect(document.querySelector('[data-async-skeleton="kanban"]')).toBeTruthy();
   });
@@ -260,7 +291,14 @@ describe('TreeView', () => {
   });
 
   it('expandByDefault shows all nested descendants', () => {
-    renderWithProviders(<TreeView nodes={nodes} expandByDefault ariaLabel="Test tree" height={400} />);
+    renderWithProviders(
+      <TreeView
+        nodes={nodes}
+        expandByDefault
+        ariaLabel="Test tree"
+        height={400}
+      />,
+    );
 
     expect(screen.getByText('Root Node')).toBeInTheDocument();
     expect(screen.getByText('Child 1')).toBeInTheDocument();
@@ -284,7 +322,14 @@ describe('TreeView', () => {
   });
 
   it('exposes expandable branches via aria-expanded rows', () => {
-    renderWithProviders(<TreeView nodes={nodes} showExpansionArrows ariaLabel="Arrow tree" height={400} />);
+    renderWithProviders(
+      <TreeView
+        nodes={nodes}
+        showExpansionArrows
+        ariaLabel="Arrow tree"
+        height={400}
+      />,
+    );
 
     // The whole branch row is the toggle target (EUI/VS Code semantics);
     // the caret is a rotating indicator, not a separate sub-44px control.
@@ -293,7 +338,14 @@ describe('TreeView', () => {
   });
 
   it('toggles a branch on row press and again with Space', () => {
-    renderWithProviders(<TreeView nodes={nodes} showExpansionArrows ariaLabel="Space tree" height={400} />);
+    renderWithProviders(
+      <TreeView
+        nodes={nodes}
+        showExpansionArrows
+        ariaLabel="Space tree"
+        height={400}
+      />,
+    );
 
     expect(screen.queryByText('Child 1')).not.toBeInTheDocument();
 
@@ -312,7 +364,13 @@ describe('TreeView', () => {
 
   it('uses compressed estimateSize defaults without crashing', () => {
     renderWithProviders(
-      <TreeView nodes={nodes} display="compressed" expandByDefault ariaLabel="Compressed tree" height={280} />,
+      <TreeView
+        nodes={nodes}
+        display="compressed"
+        expandByDefault
+        ariaLabel="Compressed tree"
+        height={280}
+      />,
     );
 
     expect(screen.getByRole('tree')).toHaveAttribute('aria-label', 'Compressed tree');
@@ -351,7 +409,14 @@ describe('ImageGrid', () => {
   });
 
   it('shows the grid-shaped skeleton twin while loading with no items', () => {
-    renderWithProviders(<ImageGrid items={[]} renderItem={() => <div />} isLoading columns={3} />);
+    renderWithProviders(
+      <ImageGrid
+        items={[]}
+        renderItem={() => <div />}
+        isLoading
+        columns={3}
+      />,
+    );
 
     const twin = document.querySelector('[data-async-skeleton="image-grid"]');
     expect(twin).toBeTruthy();
@@ -382,17 +447,23 @@ describe('ImageGrid', () => {
     expect(screen.getByText('Image list failed to load')).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('Retry'));
-    expect(onRetry).toHaveBeenCalledTimes(1);
+    expect(onRetry).toHaveBeenCalledOnce();
   });
 
   it('renders empty message when items array is empty', () => {
-    renderWithProviders(<ImageGrid items={[]} renderItem={() => <div />} emptyMessage="No images" />);
+    renderWithProviders(
+      <ImageGrid
+        items={[]}
+        renderItem={() => <div />}
+        emptyMessage="No images"
+      />,
+    );
 
     expect(screen.getByText('No images')).toBeInTheDocument();
   });
 
   it('does not paint a status pip on the media; tile radius stays UNCLAMPED', () => {
-    const src = readFileSync(join(here, 'ImageGrid.tsx'), 'utf8');
+    const src = readFileSync(join(here, 'ImageGrid.tsx'), 'utf-8');
     expect(src).not.toMatch(/capContainerRadius\(|knobProps\.containerRadius|knobProps\.cardSurface/);
     expect(src).toContain('knobProps.borderRadius');
     expect(src).not.toMatch(/data-status-pip|StatusPip|statusPip/);
@@ -402,10 +473,15 @@ describe('ImageGrid', () => {
       { id: '2', title: 'Photo B' },
     ];
     renderWithProviders(
-      <ImageGrid items={items} columns={2} renderItem={(item) => <div>{item.title}</div>} height={400} />,
+      <ImageGrid
+        items={items}
+        columns={2}
+        renderItem={(item) => <div>{item.title}</div>}
+        height={400}
+      />,
     );
     const cells = document.querySelectorAll('[role="gridcell"]');
-    expect(cells.length).toBe(2);
+    expect(cells).toHaveLength(2);
     for (const cell of cells) {
       expect(cell.querySelector('[data-status-pip]')).toBeNull();
       expect(cell.getAttribute('data-media-tile')).toBe('image-grid');
@@ -434,7 +510,14 @@ describe('Calendar', () => {
       },
     ];
 
-    renderWithProviders(<Calendar events={events} viewType="month" initialDate={today} height={600} />);
+    renderWithProviders(
+      <Calendar
+        events={events}
+        viewType="month"
+        initialDate={today}
+        height={600}
+      />,
+    );
 
     // Events should be rendered in the month view
     expect(screen.getByText('Team Meeting')).toBeInTheDocument();
@@ -572,7 +655,7 @@ describe('Calendar event drag', () => {
       fireEvent.pointerMove(window, { clientX: 160, clientY: 160 });
       fireEvent.pointerUp(window, { clientX: 160, clientY: 160 });
 
-      expect(onEventMove).toHaveBeenCalledTimes(1);
+      expect(onEventMove).toHaveBeenCalledOnce();
       const [movedEvent, range] = onEventMove.mock.calls[0];
       expect(movedEvent.id).toBe('evt-1');
       expect(range.start).toEqual(new Date(2026, 2, 20, 9, 0));
@@ -600,7 +683,7 @@ describe('Calendar event drag', () => {
       fireEvent.pointerUp(window, { clientX: 100, clientY: 100 });
       fireEvent.click(screen.getByText('Standup'));
 
-      expect(onEventClick).toHaveBeenCalledTimes(1);
+      expect(onEventClick).toHaveBeenCalledOnce();
       expect(onEventClick.mock.calls[0][0].id).toBe('evt-1');
       expect(onEventMove).not.toHaveBeenCalled();
     });
@@ -658,7 +741,7 @@ describe('Dashboard', () => {
             kpiConfig: {
               id: 'revenue',
               title: 'Revenue',
-              value: 125000,
+              value: 125_000,
               format: 'currency',
               trend: 'up',
               trendValue: '+12%',
@@ -682,8 +765,8 @@ describe('Dashboard', () => {
 // ---------------------------------------------------------------------------
 describe('KPICard trend sentiment', () => {
   const { resolveTrendColor } = ViewExports;
-  const success = componentColors.semantic.success;
-  const error = componentColors.semantic.error;
+  const { success } = componentColors.semantic;
+  const { error } = componentColors.semantic;
   // The neutral ink is the resolver's, handed in by the caller.
   const neutral = '$color11';
 
@@ -720,7 +803,7 @@ describe('KPICard trend sentiment', () => {
         config={{
           id: 'overdue',
           title: 'Overdue Balance',
-          value: 25470,
+          value: 25_470,
           trend: 'down',
           trendValue: '-8%',
           goodDirection: 'down',
@@ -742,7 +825,13 @@ describe('ReportBuilder', () => {
   ];
 
   it('shows the table skeleton twin while loading with no rows', () => {
-    renderWithProviders(<ViewExports.ReportBuilder columns={reportColumns} data={[]} isLoading />);
+    renderWithProviders(
+      <ViewExports.ReportBuilder
+        columns={reportColumns}
+        data={[]}
+        isLoading
+      />,
+    );
 
     expect(document.querySelector('[data-async-skeleton="table"]')).toBeTruthy();
     expect(screen.queryByText('No data to display')).toBeNull();
@@ -767,18 +856,27 @@ describe('ReportBuilder', () => {
     expect(screen.queryByText(/2 \/ 2 columns/)).toBeNull();
 
     fireEvent.click(screen.getByText('Retry'));
-    expect(onRetry).toHaveBeenCalledTimes(1);
+    expect(onRetry).toHaveBeenCalledOnce();
   });
 
   it('distinguishes no-results (active filters) from true empty (Axiom 6)', () => {
     const { unmount } = renderWithProviders(
-      <ViewExports.ReportBuilder columns={reportColumns} data={[]} hasActiveFilters />,
+      <ViewExports.ReportBuilder
+        columns={reportColumns}
+        data={[]}
+        hasActiveFilters
+      />,
     );
     expect(screen.getByText('No results found')).toBeInTheDocument();
     expect(screen.queryByText('No data to display')).toBeNull();
     unmount();
 
-    renderWithProviders(<ViewExports.ReportBuilder columns={reportColumns} data={[]} />);
+    renderWithProviders(
+      <ViewExports.ReportBuilder
+        columns={reportColumns}
+        data={[]}
+      />,
+    );
     expect(screen.getByText('No data to display')).toBeInTheDocument();
     expect(screen.queryByText('No results found')).toBeNull();
   });
@@ -792,7 +890,10 @@ describe('ReportBuilder', () => {
 
   it('header and totals labels ride the fontWeight knob — never 500 or 600', () => {
     renderWithProviders(
-      <ViewExports.ReportBuilder columns={reportColumns} data={[{ name: 'Alpha', status: 'Open' }]} />,
+      <ViewExports.ReportBuilder
+        columns={reportColumns}
+        data={[{ name: 'Alpha', status: 'Open' }]}
+      />,
     );
     const header = screen.getByText('Name');
     const totals = screen.getByText('Totals');
@@ -825,11 +926,11 @@ describe('ChartCard palette', () => {
     return null;
   }
 
-  function pieSliceFills(): Array<string | null> {
+  function pieSliceFills(): (string | null)[] {
     return Array.from(document.querySelectorAll('svg [data-mpo-chart-mark]')).map((p) => p.getAttribute('fill'));
   }
 
-  function barFills(): Array<string | null> {
+  function barFills(): (string | null)[] {
     return Array.from(document.querySelectorAll('svg [data-mpo-chart-bar]')).map((bar) => bar.getAttribute('fill'));
   }
 
@@ -855,7 +956,7 @@ describe('ChartCard palette', () => {
       </>,
     );
     const fills = barFills();
-    expect(fills.length).toBe(pieData.length);
+    expect(fills).toHaveLength(pieData.length);
     for (const fill of fills) {
       expect(fill).toBe(captured.current?.single);
     }
@@ -878,7 +979,7 @@ describe('ChartCard palette', () => {
     // Tint identity is the re-ramped $color9, not the base accent.
     expect(captured.current?.single).not.toBe(base.current?.single);
     const fills = barFills();
-    expect(fills.length).toBe(pieData.length);
+    expect(fills).toHaveLength(pieData.length);
     for (const fill of fills) {
       expect(fill).toBe(captured.current?.single);
     }
@@ -916,7 +1017,7 @@ describe('ChartCard palette', () => {
       />,
     );
     const fills = barFills();
-    expect(fills.length).toBe(pieData.length);
+    expect(fills).toHaveLength(pieData.length);
     for (const fill of fills) {
       expect(fill).toBe('#0a0b0c');
     }

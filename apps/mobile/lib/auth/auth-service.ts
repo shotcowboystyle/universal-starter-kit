@@ -1,13 +1,13 @@
-import type { Session, UserInfo } from "@repo/store";
-import * as SecureStore from "expo-secure-store";
+import type { Session, UserInfo } from '@repo/store';
+import * as SecureStore from 'expo-secure-store';
 
-import { API_ROUTES } from "@/constants/routes";
+import { API_ROUTES } from '@/constants/routes';
 
-const TOKEN_KEY = "auth_token";
+const TOKEN_KEY = 'auth_token';
 
 export const authService = {
   async getToken(): Promise<string | null> {
-    return SecureStore.getItemAsync(TOKEN_KEY);
+    return await SecureStore.getItemAsync(TOKEN_KEY);
   },
 
   async setToken(token: string): Promise<void> {
@@ -20,17 +20,17 @@ export const authService = {
 
   async login(email: string): Promise<{ access_token: string; user?: UserInfo }> {
     const response = await fetch(API_ROUTES.AUTH.LOGIN, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json"
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
       },
-      body: JSON.stringify({ email })
+      body: JSON.stringify({ email }),
     });
 
     if (!response.ok) {
-      const errorText = await response.text().catch(() => "Login failed");
-      throw new Error(errorText || "Login failed");
+      const errorText = await response.text().catch(() => 'Login failed');
+      throw new Error(errorText || 'Login failed');
     }
 
     const data = await response.json();
@@ -41,7 +41,7 @@ export const authService = {
 
     return {
       access_token: data.access_token,
-      user: data.user
+      user: data.user,
     };
   },
 
@@ -49,8 +49,8 @@ export const authService = {
     const token = await this.getToken();
 
     const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      Accept: "application/json"
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
     };
 
     if (token) {
@@ -58,8 +58,8 @@ export const authService = {
     }
 
     const response = await fetch(API_ROUTES.AUTH.PROFILE, {
-      method: "GET",
-      headers
+      method: 'GET',
+      headers,
     });
 
     if (!response.ok) {
@@ -72,13 +72,13 @@ export const authService = {
     const user = await response.json();
 
     if (!user || !user.email) {
-      throw new Error("Invalid user data received from server");
+      throw new Error('Invalid user data received from server');
     }
 
     return {
       _id: user._id,
       email: user.email,
-      name: user.name || user.email.split("@")[0] || "User"
+      name: user.name || user.email.split('@')[0] || 'User',
     };
   },
 
@@ -98,5 +98,5 @@ export const authService = {
 
   async logout(): Promise<void> {
     await this.removeToken();
-  }
+  },
 };

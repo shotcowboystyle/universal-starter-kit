@@ -42,7 +42,7 @@ describe('Button TEXT-RIDES-TEXT', () => {
     renderWithProviders(
       <Button>
         Add
-        {priceDelta !== 0 ? ` +$${priceDelta}` : ''}
+        {priceDelta === 0 ? '' : ` +$${priceDelta}`}
       </Button>,
     );
     const label = screen.getByText('Add');

@@ -69,7 +69,10 @@ describe('native toast accessibility', () => {
   it('records the library grouping default and keeps native control props off the DOM', () => {
     renderWithProviders(
       <>
-        <Trigger title="Saved" dismissible />
+        <Trigger
+          title="Saved"
+          dismissible
+        />
         <ToastViewport />
       </>,
     );
@@ -81,14 +84,26 @@ describe('native toast accessibility', () => {
 
 describe('Toast (standalone)', () => {
   it('renders title, description and role=status', () => {
-    renderWithProviders(<Toast title="Saved" description="Record updated." intent="success" onDismiss={() => {}} />);
+    renderWithProviders(
+      <Toast
+        title="Saved"
+        description="Record updated."
+        intent="success"
+        onDismiss={() => {}}
+      />,
+    );
     expect(screen.getByText('Saved')).toBeInTheDocument();
     expect(screen.getByText('Record updated.')).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
   });
 
   it('names CopyField confirm for assistive tech', () => {
-    renderWithProviders(<Toast title="Copied to clipboard." intent="success" />);
+    renderWithProviders(
+      <Toast
+        title="Copied to clipboard."
+        intent="success"
+      />,
+    );
     const status = screen.getByRole('status');
     expect(status).toHaveAttribute('aria-live', 'polite');
     expect(status).toHaveAttribute('aria-label', 'Copied to clipboard.');
@@ -98,16 +113,27 @@ describe('Toast (standalone)', () => {
 
   it('fires onDismiss from the close button', () => {
     const onDismiss = vi.fn();
-    renderWithProviders(<Toast title="Saved" onDismiss={onDismiss} />);
+    renderWithProviders(
+      <Toast
+        title="Saved"
+        onDismiss={onDismiss}
+      />,
+    );
     fireEvent.click(screen.getByLabelText('Dismiss notification'));
-    expect(onDismiss).toHaveBeenCalledTimes(1);
+    expect(onDismiss).toHaveBeenCalledOnce();
   });
 
   it('fires the action button', () => {
     const onPress = vi.fn();
-    renderWithProviders(<Toast title="Archived" action={{ label: 'Undo', onPress }} onDismiss={() => {}} />);
+    renderWithProviders(
+      <Toast
+        title="Archived"
+        action={{ label: 'Undo', onPress }}
+        onDismiss={() => {}}
+      />,
+    );
     fireEvent.click(screen.getByText('Undo'));
-    expect(onPress).toHaveBeenCalledTimes(1);
+    expect(onPress).toHaveBeenCalledOnce();
   });
 
   it('hides the close button when not dismissible', () => {
@@ -116,7 +142,13 @@ describe('Toast (standalone)', () => {
   });
 
   it('paints the keyboard ring on the glyph/pill, not the 44px hit box', () => {
-    renderWithProviders(<Toast title="Archived" action={{ label: 'Undo', onPress: () => {} }} onDismiss={() => {}} />);
+    renderWithProviders(
+      <Toast
+        title="Archived"
+        action={{ label: 'Undo', onPress: () => {} }}
+        onDismiss={() => {}}
+      />,
+    );
     const close = screen.getByLabelText('Dismiss notification');
     expect(close.className).toMatch(/mp-chip-dismiss/);
     expect(close.querySelector('.mp-chip-dismiss-ring')).not.toBeNull();
@@ -126,7 +158,12 @@ describe('Toast (standalone)', () => {
   });
 
   it('keeps nested painted chrome below 44px and the press floor at 44', () => {
-    renderWithProviders(<Toast title="Saved" onDismiss={() => {}} />);
+    renderWithProviders(
+      <Toast
+        title="Saved"
+        onDismiss={() => {}}
+      />,
+    );
     const toast = screen.getByTestId('toast');
     const nestedPx = Number(toast.getAttribute('data-nested-px'));
     expect(nestedPx).toBeGreaterThan(0);
@@ -137,12 +174,24 @@ describe('Toast (standalone)', () => {
   });
 
   it('compact flips density; size stays an independent axis', () => {
-    const { rerender } = renderWithProviders(<Toast title="Saved" compact={false} onDismiss={() => {}} />);
+    const { rerender } = renderWithProviders(
+      <Toast
+        title="Saved"
+        compact={false}
+        onDismiss={() => {}}
+      />,
+    );
     const comfortable = screen.getByTestId('toast');
     expect(comfortable.getAttribute('data-density')).toBe('comfortable');
     expect(comfortable.getAttribute('data-size')).toBe('medium');
     const comfortablePx = Number(comfortable.getAttribute('data-nested-px'));
-    rerender(<Toast title="Saved" compact onDismiss={() => {}} />);
+    rerender(
+      <Toast
+        title="Saved"
+        compact
+        onDismiss={() => {}}
+      />,
+    );
     const compactToast = screen.getByTestId('toast');
     expect(compactToast.getAttribute('data-density')).toBe('compact');
     expect(compactToast.getAttribute('data-size')).toBe('medium');
@@ -219,7 +268,10 @@ describe('useToast + ToastViewport (imperative)', () => {
   it('shows a toast in the viewport and stacks multiple', () => {
     renderWithProviders(
       <>
-        <Trigger title="First toast" intent="accent" />
+        <Trigger
+          title="First toast"
+          intent="accent"
+        />
         <ToastViewport />
       </>,
     );
@@ -238,7 +290,7 @@ describe('useToast + ToastViewport (imperative)', () => {
     act(() => {
       showToast({ title: 'Copied to clipboard.', intent: 'success' });
     });
-    expect(await screen.findByText('Copied to clipboard.')).toBeInTheDocument();
+    await expect(screen.findByText('Copied to clipboard.')).resolves.toBeInTheDocument();
     await vi.waitFor(() => {
       const live = document.querySelector("[aria-live]:not([aria-live='off'])");
       expect(live?.textContent ?? '').toMatch(/Copied to clipboard/);
@@ -342,7 +394,7 @@ describe('useToast + ToastViewport (imperative)', () => {
         });
       });
       fireEvent.click(screen.getByText('Undo'));
-      expect(onPress).toHaveBeenCalledTimes(1);
+      expect(onPress).toHaveBeenCalledOnce();
       act(() => {
         vi.advanceTimersByTime(TOAST_EXIT_MS + 50);
       });
@@ -471,12 +523,24 @@ describe('Toast banned-error-word DEV warn', () => {
   });
 
   it('warns when title uses banned wording', () => {
-    renderWithProviders(<Toast title="Oops, please try again" intent="error" onDismiss={() => {}} />);
+    renderWithProviders(
+      <Toast
+        title="Oops, please try again"
+        intent="error"
+        onDismiss={() => {}}
+      />,
+    );
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('banned-error-word'));
   });
 
   it('is silent for clean copy', () => {
-    renderWithProviders(<Toast title="Saved" description="Record updated." onDismiss={() => {}} />);
+    renderWithProviders(
+      <Toast
+        title="Saved"
+        description="Record updated."
+        onDismiss={() => {}}
+      />,
+    );
     expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining('banned-error-word'));
   });
 });
@@ -522,7 +586,10 @@ const houseThemes = createThemesBuilder(defaultBaseTheme, defaultAccentTheme, de
  */
 function ContrastScheme({ scheme, children }: { scheme: (typeof CONTRAST_SCHEMES)[number]; children: ReactNode }) {
   return (
-    <TamaguiProvider config={houseConfig.tamagui} defaultTheme={scheme} disableInjectCSS>
+    <TamaguiProvider
+      config={houseConfig.tamagui}
+      defaultTheme={scheme}
+      disableInjectCSS>
       <YStack backgroundColor="$background">{children}</YStack>
     </TamaguiProvider>
   );
@@ -537,7 +604,12 @@ function AccentInkProbe() {
   const onSurface = useAccentOnSurface();
   const theme = useTheme();
   const ink = onSurface.startsWith('$') ? tokenVal(theme, onSurface.slice(1)) || onSurface : onSurface;
-  return <span data-testid="accent-ink" data-fg={ink} />;
+  return (
+    <span
+      data-testid="accent-ink"
+      data-fg={ink}
+    />
+  );
 }
 
 /**
@@ -596,7 +668,9 @@ function paintedInk(ink: string, ground: string, alpha: number): string {
 describe('Toast overlay shadow (standalone === viewport)', () => {
   it('paints the SAME overlay shadow on both paths, not the $1 control token', () => {
     renderWithProviders(
-      <YStack elevation={'$1' as never} data-testid="control-elev">
+      <YStack
+        elevation={'$1' as never}
+        data-testid="control-elev">
         control
       </YStack>,
     );
@@ -604,7 +678,9 @@ describe('Toast overlay shadow (standalone === viewport)', () => {
     cleanup();
 
     renderWithProviders(
-      <YStack elevation={'$2' as never} data-testid="overlay-elev">
+      <YStack
+        elevation={'$2' as never}
+        data-testid="overlay-elev">
         overlay
       </YStack>,
     );
@@ -613,7 +689,12 @@ describe('Toast overlay shadow (standalone === viewport)', () => {
     expect(overlayShadow).not.toEqual(controlShadow);
     cleanup();
 
-    renderWithProviders(<Toast title="Saved" onDismiss={() => {}} />);
+    renderWithProviders(
+      <Toast
+        title="Saved"
+        onDismiss={() => {}}
+      />,
+    );
     const standaloneShadow = shadowClasses(screen.getByTestId('toast'));
     expect(standaloneShadow).toEqual(overlayShadow);
     cleanup();
@@ -630,7 +711,10 @@ describe('Toast overlay shadow (standalone === viewport)', () => {
   it('elevation none is flat on both paths; large is a different overlay token', () => {
     renderWithProviders(
       <Preset overrides={{ elevation: 'none' }}>
-        <Toast title="Flat" onDismiss={() => {}} />
+        <Toast
+          title="Flat"
+          onDismiss={() => {}}
+        />
       </Preset>,
     );
     expect(shadowClasses(screen.getByTestId('toast'))).toEqual([]);
@@ -638,21 +722,35 @@ describe('Toast overlay shadow (standalone === viewport)', () => {
 
     renderWithProviders(
       <Preset overrides={{ elevation: 'large' }}>
-        <Toast title="High" onDismiss={() => {}} />
+        <Toast
+          title="High"
+          onDismiss={() => {}}
+        />
       </Preset>,
     );
     const large = shadowClasses(screen.getByTestId('toast'));
     expect(large).not.toHaveLength(0);
     cleanup();
 
-    renderWithProviders(<Toast title="Default" onDismiss={() => {}} />);
+    renderWithProviders(
+      <Toast
+        title="Default"
+        onDismiss={() => {}}
+      />,
+    );
     expect(shadowClasses(screen.getByTestId('toast'))).not.toEqual(large);
   });
 });
 
 describe('Toast 3px logical intent edge', () => {
   it('survives Tamagui style clobber in the style attribute and mirrors under RTL', () => {
-    renderWithProviders(<Toast title="Saved" intent="success" onDismiss={() => {}} />);
+    renderWithProviders(
+      <Toast
+        title="Saved"
+        intent="success"
+        onDismiss={() => {}}
+      />,
+    );
     const toast = screen.getByTestId('toast') as HTMLElement;
     expect(toast.style.borderInlineStartWidth).toBe('3px');
     expect(toast.style.borderInlineStartStyle).toBe('solid');
@@ -661,7 +759,11 @@ describe('Toast 3px logical intent edge', () => {
 
     renderWithProviders(
       <div dir="rtl">
-        <Toast title="Saved" intent="error" onDismiss={() => {}} />
+        <Toast
+          title="Saved"
+          intent="error"
+          onDismiss={() => {}}
+        />
       </div>,
     );
     const rtl = screen.getByTestId('toast') as HTMLElement;
@@ -672,7 +774,12 @@ describe('Toast 3px logical intent edge', () => {
 
 describe('Toast data attributes reach the DOM', () => {
   it('data-testid/data-size/data-density/data-nested-px land on standalone and viewport', () => {
-    renderWithProviders(<Toast title="Saved" onDismiss={() => {}} />);
+    renderWithProviders(
+      <Toast
+        title="Saved"
+        onDismiss={() => {}}
+      />,
+    );
     const standalone = screen.getByTestId('toast');
     expect(standalone.getAttribute('data-testid')).toBe('toast');
     expect(standalone.getAttribute('data-size')).toBe('medium');
@@ -694,7 +801,10 @@ describe('Toast data attributes reach the DOM', () => {
   it('size and density knob strips measurably move', () => {
     renderWithProviders(
       <Preset overrides={{ size: 'large' }}>
-        <Toast title="Big" onDismiss={() => {}} />
+        <Toast
+          title="Big"
+          onDismiss={() => {}}
+        />
       </Preset>,
     );
     const large = screen.getByTestId('toast');
@@ -704,7 +814,10 @@ describe('Toast data attributes reach the DOM', () => {
 
     renderWithProviders(
       <Preset overrides={{ size: 'small' }}>
-        <Toast title="Small" onDismiss={() => {}} />
+        <Toast
+          title="Small"
+          onDismiss={() => {}}
+        />
       </Preset>,
     );
     const small = screen.getByTestId('toast');
@@ -714,7 +827,10 @@ describe('Toast data attributes reach the DOM', () => {
 
     renderWithProviders(
       <Preset overrides={{ density: 'compact' }}>
-        <Toast title="Tight" onDismiss={() => {}} />
+        <Toast
+          title="Tight"
+          onDismiss={() => {}}
+        />
       </Preset>,
     );
     const compact = screen.getByTestId('toast');
@@ -744,12 +860,18 @@ describe('Toast density moves padX and gap on the host', () => {
   it('the density knob changes padX and gap between the two stops', () => {
     const comfortable = hostAtoms(
       <Preset overrides={{ density: 'comfortable' }}>
-        <Toast title="Saved" onDismiss={() => {}} />
+        <Toast
+          title="Saved"
+          onDismiss={() => {}}
+        />
       </Preset>,
     );
     const compact = hostAtoms(
       <Preset overrides={{ density: 'compact' }}>
-        <Toast title="Saved" onDismiss={() => {}} />
+        <Toast
+          title="Saved"
+          onDismiss={() => {}}
+        />
       </Preset>,
     );
     expect(comfortable.density).toBe('comfortable');
@@ -763,10 +885,19 @@ describe('Toast density moves padX and gap on the host', () => {
   it('the compact prop lands the same padX and gap as the density knob', () => {
     const knob = hostAtoms(
       <Preset overrides={{ density: 'compact' }}>
-        <Toast title="Saved" onDismiss={() => {}} />
+        <Toast
+          title="Saved"
+          onDismiss={() => {}}
+        />
       </Preset>,
     );
-    const prop = hostAtoms(<Toast compact title="Saved" onDismiss={() => {}} />);
+    const prop = hostAtoms(
+      <Toast
+        compact
+        title="Saved"
+        onDismiss={() => {}}
+      />,
+    );
     expect(prop.density).toBe('compact');
     expect(prop.padX).toEqual(knob.padX);
     expect(prop.gap).toEqual(knob.gap);
@@ -776,7 +907,11 @@ describe('Toast density moves padX and gap on the host', () => {
 describe('Toast action label weight and contrast (TEXT NODE)', () => {
   it('Undo is weight 400 on the TEXT NODE, never 600', () => {
     const action = renderActionWeight(
-      <Toast title="Archived" action={{ label: ACTION, onPress: () => {} }} onDismiss={() => {}} />,
+      <Toast
+        title="Archived"
+        action={{ label: ACTION, onPress: () => {} }}
+        onDismiss={() => {}}
+      />,
     );
     const explicit400 = renderActionWeight(<SizableText fontWeight="400">{ACTION}</SizableText>);
     const explicit600 = renderActionWeight(<SizableText fontWeight="600">{ACTION}</SizableText>);
@@ -784,7 +919,13 @@ describe('Toast action label weight and contrast (TEXT NODE)', () => {
     expect(action).toEqual(explicit400);
     expect(action).not.toEqual(explicit600);
 
-    renderWithProviders(<Toast title="Archived" action={{ label: ACTION, onPress: () => {} }} onDismiss={() => {}} />);
+    renderWithProviders(
+      <Toast
+        title="Archived"
+        action={{ label: ACTION, onPress: () => {} }}
+        onDismiss={() => {}}
+      />,
+    );
     const textNode = screen.getByText(ACTION);
     expect(textNode).not.toBe(screen.getByTestId('toast'));
     expect(screen.getByTestId('toast').contains(textNode)).toBe(true);
@@ -795,7 +936,12 @@ describe('Toast action label weight and contrast (TEXT NODE)', () => {
       renderWithProviders(
         <ContrastScheme scheme={scheme}>
           <AccentInkProbe />
-          <Toast title="Archived" intent={intent} action={{ label: ACTION, onPress: () => {} }} onDismiss={() => {}} />
+          <Toast
+            title="Archived"
+            intent={intent}
+            action={{ label: ACTION, onPress: () => {} }}
+            onDismiss={() => {}}
+          />
         </ContrastScheme>,
       );
       // Non-accent intents ride their hue sub-theme; accent stays on base.

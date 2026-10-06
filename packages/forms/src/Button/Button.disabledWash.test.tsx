@@ -32,7 +32,8 @@ import type { ReactElement } from 'react';
 import { TamaguiProvider, YStack } from 'tamagui';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { Button, type ButtonProps } from './index';
+import { Button } from './index';
+import type { ButtonProps } from './index';
 
 afterEach(cleanup);
 
@@ -61,7 +62,10 @@ type Scheme = (typeof SCHEMES)[number];
 
 function houseRender(ui: ReactElement, scheme: Scheme, disabledStyle: string) {
   return render(
-    <TamaguiProvider config={houseConfig.tamagui} defaultTheme={scheme} disableInjectCSS>
+    <TamaguiProvider
+      config={houseConfig.tamagui}
+      defaultTheme={scheme}
+      disableInjectCSS>
       <Preset overrides={{ disabledStyle: disabledStyle as 'keepLabel' | 'dimWhole' }}>
         <YStack backgroundColor="$background">{ui}</YStack>
       </Preset>
@@ -102,7 +106,7 @@ function scopeOf(el: Element): string | null {
 }
 
 function resolveInScope(value: string, scheme: Scheme, scope: string | null): string {
-  const token = value.match(/^var\(--([\w-]+)\)$/)?.[1];
+  const token = /^var\(--([\w-]+)\)$/.exec(value)?.[1];
   if (!token) {
     return value;
   }
@@ -149,7 +153,7 @@ function toLab(color: string): [number, number, number] {
     return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
   };
   const [r, g, b] = [lin(1), lin(3), lin(5)];
-  const f = (t: number) => (t > 216 / 24389 ? Math.cbrt(t) : ((24389 / 27) * t + 16) / 116);
+  const f = (t: number) => (t > 216 / 24_389 ? Math.cbrt(t) : ((24_389 / 27) * t + 16) / 116);
   const x = f((0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047);
   const y = f(0.2126 * r + 0.7152 * g + 0.0722 * b);
   const z = f((0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883);
@@ -165,7 +169,9 @@ function measure(scheme: Scheme, disabledStyle: string, props: Partial<ButtonPro
   houseRender(
     <>
       <Button {...props}>Enabled</Button>
-      <Button {...props} disabled>
+      <Button
+        {...props}
+        disabled>
         Disabled
       </Button>
     </>,

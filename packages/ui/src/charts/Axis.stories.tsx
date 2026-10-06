@@ -5,10 +5,10 @@ import { Card } from '../surfaces';
 
 import { XAxis, YAxis } from './Axis';
 import { ChartSurface } from './ChartSurface';
-import { computeCartesianPlot } from './composeChart';
+import { computeCartesianPlot } from './compose-chart';
 import { createBandScale, createLinearScale, formatAxisTick, getLinearTicks } from './math';
 import type { ChartSize } from './types';
-import { useChartTheme } from './useChartTheme';
+import { useChartTheme } from './use-chart-theme';
 
 const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 const longLabels = ['Engineering', 'Customer Success', 'Finance and Legal', 'People Operations', 'Infrastructure'];
@@ -69,7 +69,11 @@ function AxisFrame({
         showLine={showYLine}
         showTicks={showYTicks}
       />
-      <XAxis plot={plot} scale={xScale} showLabels={showXLabels} />
+      <XAxis
+        plot={plot}
+        scale={xScale}
+        showLabels={showXLabels}
+      />
     </>
   );
 }
@@ -96,8 +100,16 @@ export const Default: Story = {
   render: () => (
     <YStack maxWidth={560}>
       <Card>
-        <ChartSurface label="Empty axis frame, weekdays across a 0 to 100 value axis." height={220}>
-          {(size) => <AxisFrame size={size} categories={weekdays} domain={[0, 100]} />}
+        <ChartSurface
+          label="Empty axis frame, weekdays across a 0 to 100 value axis."
+          height={220}>
+          {(size) => (
+            <AxisFrame
+              size={size}
+              categories={weekdays}
+              domain={[0, 100]}
+            />
+          )}
         </ChartSurface>
       </Card>
     </YStack>
@@ -117,9 +129,18 @@ export const AxisLineAndTicks: Story = {
   render: () => (
     <YStack maxWidth={560}>
       <Card>
-        <ChartSurface label="Ticked axis frame with no grid." height={220}>
+        <ChartSurface
+          label="Ticked axis frame with no grid."
+          height={220}>
           {(size) => (
-            <AxisFrame size={size} categories={weekdays} domain={[0, 100]} showYGrid={false} showYLine showYTicks />
+            <AxisFrame
+              size={size}
+              categories={weekdays}
+              domain={[0, 100]}
+              showYGrid={false}
+              showYLine
+              showYTicks
+            />
           )}
         </ChartSurface>
       </Card>
@@ -140,11 +161,21 @@ export const LabelTruncation: Story = {
   render: () => (
     <YStack gap="$4">
       {[520, 280].map((width) => (
-        <Card key={width} width={width}>
+        <Card
+          key={width}
+          width={width}>
           <YStack gap="$2">
             <Paragraph size="$2">{`${width}px container`}</Paragraph>
-            <ChartSurface label={`Department axis at ${width}px`} height={180}>
-              {(size) => <AxisFrame size={size} categories={longLabels} domain={[0, 40]} />}
+            <ChartSurface
+              label={`Department axis at ${width}px`}
+              height={180}>
+              {(size) => (
+                <AxisFrame
+                  size={size}
+                  categories={longLabels}
+                  domain={[0, 40]}
+                />
+              )}
             </ChartSurface>
           </YStack>
         </Card>
@@ -166,8 +197,17 @@ export const WideValueRange: Story = {
   render: () => (
     <YStack maxWidth={560}>
       <Card>
-        <ChartSurface label="Weekday axis against a 0 to 1.25 million value axis." height={220}>
-          {(size) => <AxisFrame size={size} categories={weekdays} domain={[0, 1250000]} yTicks={5} />}
+        <ChartSurface
+          label="Weekday axis against a 0 to 1.25 million value axis."
+          height={220}>
+          {(size) => (
+            <AxisFrame
+              size={size}
+              categories={weekdays}
+              domain={[0, 1_250_000]}
+              yTicks={5}
+            />
+          )}
         </ChartSurface>
       </Card>
     </YStack>

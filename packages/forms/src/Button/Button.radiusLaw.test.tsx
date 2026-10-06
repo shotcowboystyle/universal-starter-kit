@@ -9,7 +9,8 @@
  */
 
 import { renderWithProviders } from '@repo/test-utils';
-import { type Knobs, Preset } from '@repo/theme';
+import { Preset } from '@repo/theme';
+import type { Knobs } from '@repo/theme';
 import { cleanup, screen } from '@testing-library/react';
 import { Theme } from 'tamagui';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -112,11 +113,11 @@ const RADIUS_TOKEN_PX: Record<string, number> = {
 function radiusPx(el: HTMLElement): number | null {
   let found: number | null = null;
   for (const c of String(el.className || '').split(/\s+/)) {
-    const px = c.match(/^_btlr-(\d+)px$/);
+    const px = /^_btlr-(\d+)px$/.exec(c);
     if (px) {
       found = Number(px[1]);
     }
-    const tok = c.match(/^_btlr-t-radius-(\d+)$/);
+    const tok = /^_btlr-t-radius-(\d+)$/.exec(c);
     if (tok) {
       found = RADIUS_TOKEN_PX[tok[1]] ?? found;
     }
@@ -128,7 +129,9 @@ function paint(combo: Combo, scheme: (typeof SCHEMES)[number], token: Token): nu
   renderWithProviders(
     <Theme name={scheme}>
       <Preset overrides={combo}>
-        <Button size={token} icon={<span>i</span>}>
+        <Button
+          size={token}
+          icon={<span>i</span>}>
           Restart
         </Button>
       </Preset>

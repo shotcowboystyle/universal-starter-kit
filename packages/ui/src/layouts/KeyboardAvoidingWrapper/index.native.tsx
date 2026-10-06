@@ -1,8 +1,10 @@
 import type { PropsWithChildren } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
-import { YStack, type YStackProps } from 'tamagui';
+import { YStack } from 'tamagui';
+import type { YStackProps } from 'tamagui';
 
-import { resolveKeyboardAvoidingBehavior, type KeyboardAvoidingBehavior } from './behavior';
+import { resolveKeyboardAvoidingBehavior } from './behavior';
+import type { KeyboardAvoidingBehavior } from './behavior';
 
 export type { KeyboardAvoidingBehavior } from './behavior';
 

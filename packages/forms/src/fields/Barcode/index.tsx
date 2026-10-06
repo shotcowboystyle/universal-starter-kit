@@ -1,15 +1,16 @@
 import { BarcodeIcon, CameraIcon, XIcon } from '@phosphor-icons/react';
-import { ensureFocusVisibleRing, type KnobProps } from '@repo/theme';
+import { ensureFocusVisibleRing } from '@repo/theme';
+import type { KnobProps } from '@repo/theme';
 import type { ReactNode } from 'react';
 import { useRef, useState } from 'react';
 import type { LabelProps, SizeTokens } from 'tamagui';
 import { Text } from 'tamagui';
 
-import { Field, FieldLayout } from '../../fieldLayout';
+import { Field, FieldLayout } from '../../FieldLayout';
 import { Input as InputParts } from '../../InputParts';
-import { formButtonColors, formCommonColors } from '../../shared/colorRamps';
+import { formButtonColors, formCommonColors } from '../../shared/color-ramps';
 import { t } from '../../shared/t';
-import { useIsInTableCell } from '../../shared/tableCellContext';
+import { useIsInTableCell } from '../../shared/table-cell-context';
 import { getFieldError, mergeFieldHandler, useFormField, useResolvedValidators } from '../../shared/utils';
 import { Skeleton } from '../../Skeleton';
 import type { AnyFormApi } from '../../types';
@@ -100,7 +101,10 @@ function BarcodeInput({
         {/* Scan (and Clear) live inside Input.Box so the composite ring
             wraps the whole perceived control — never a sibling house Button
             that the inner-Area ring would leave outside. */}
-        <InputParts.Box testID="barcode-field" disabled={disabled} theme={hasError ? 'error' : undefined}>
+        <InputParts.Box
+          testID="barcode-field"
+          disabled={disabled}
+          theme={hasError ? 'error' : undefined}>
           {barcodeIcon ? <InputParts.Icon adornment="leading">{barcodeIcon}</InputParts.Icon> : null}
           <InputParts.Area
             id={id}
@@ -150,7 +154,7 @@ function BarcodeInput({
               aria-expanded={isScanning || undefined}
               focusVisibleStyle={adornmentRing}
               backgroundColor={isScanning ? formButtonColors.background.active : 'transparent'}
-              {...(!activeScanIcon ? { width: 'auto', paddingHorizontal: '$3' } : undefined)}>
+              {...(activeScanIcon ? undefined : { width: 'auto', paddingHorizontal: '$3' })}>
               {activeScanIcon ? (
                 <InputParts.Icon>{activeScanIcon}</InputParts.Icon>
               ) : isScanning ? (
@@ -165,7 +169,12 @@ function BarcodeInput({
           // The primary format token drives which symbology the preview draws
           // (any `qr` alias → QR matrix); the scanner resolves the same token
           // through the same alias table, so draw and decode stay in lockstep.
-          <BarcodePreview value={value} height={compact ? 24 : 36} moduleWidth={1} format={formats?.[0]} />
+          <BarcodePreview
+            value={value}
+            height={compact ? 24 : 36}
+            moduleWidth={1}
+            format={formats?.[0]}
+          />
         ) : null}
       </InputParts>
       <BarcodeScanner
@@ -180,7 +189,10 @@ function BarcodeInput({
         compact={compact}
       />
       {scanError && (
-        <Text {...knobProps.body} color={formCommonColors.error} fontSize="$2">
+        <Text
+          {...knobProps.body}
+          color={formCommonColors.error}
+          fontSize="$2">
           {scanError}
         </Text>
       )}
@@ -283,8 +295,16 @@ export function Barcode({
   // Render skeleton placeholder
   if (skeleton) {
     return (
-      <FieldLayout id={id} label={label} size={size} knobProps={knobProps}>
-        <Skeleton variant="rounded" width="100%" height={knobProps.sizeToken} />
+      <FieldLayout
+        id={id}
+        label={label}
+        size={size}
+        knobProps={knobProps}>
+        <Skeleton
+          variant="rounded"
+          width="100%"
+          height={knobProps.sizeToken}
+        />
       </FieldLayout>
     );
   }
@@ -324,7 +344,11 @@ export function Barcode({
   }
 
   return (
-    <Field form={resolvedForm} name={name} defaultValue={defaultValue} validators={resolvedValidators}>
+    <Field
+      form={resolvedForm}
+      name={name}
+      defaultValue={defaultValue}
+      validators={resolvedValidators}>
       {(field) => {
         const resolvedError = getFieldError(field, error);
         return (

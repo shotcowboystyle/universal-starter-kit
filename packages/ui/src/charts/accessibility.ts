@@ -84,6 +84,6 @@ export function describeDatum(input: DescribeDatumInput): string {
 }
 
 /** Exact datum text for the independently opened data view, separate from the image name. */
-export function chartDatumText(data: ChartDatum[], formatValue = formatChartValue): Array<[string, string]> {
+export function chartDatumText(data: ChartDatum[], formatValue = formatChartValue): [string, string][] {
   return data.map((datum) => [datum.label.trim(), formatValue(datum.value).trim()]);
 }

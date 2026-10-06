@@ -4,8 +4,9 @@ import type { Meta } from '@storybook/react-native-web-vite';
 import { useEffect, useState } from 'react';
 import { Text, YStack } from 'tamagui';
 
-import { GanttView, type GanttItemMoveRange, type GanttSpanRef, type GanttTask } from './Gantt';
-import { addDays, startOfDay } from './ganttMath';
+import { GanttView } from './Gantt';
+import type { GanttItemMoveRange, GanttSpanRef, GanttTask } from './Gantt';
+import { addDays, startOfDay } from './gantt-math';
 
 // Fixture colors from the sanctioned categorical palette —
 // no raw brand hexes in story data. Intents demonstrate the theme-ramp path.
@@ -41,7 +42,14 @@ export default meta;
 
 export const Default = {
   name: 'Main',
-  render: () => <GanttView tasks={tasks} zoom="week" onItemPress={action('onItemPress')} height={420} />,
+  render: () => (
+    <GanttView
+      tasks={tasks}
+      zoom="week"
+      onItemPress={action('onItemPress')}
+      height={420}
+    />
+  ),
   parameters: {
     docs: {
       description: {
@@ -53,7 +61,14 @@ export const Default = {
 };
 
 export const DayZoom = {
-  render: () => <GanttView tasks={tasks} zoom="day" onItemPress={action('onItemPress')} height={420} />,
+  render: () => (
+    <GanttView
+      tasks={tasks}
+      zoom="day"
+      onItemPress={action('onItemPress')}
+      height={420}
+    />
+  ),
   parameters: {
     docs: {
       description: {
@@ -64,7 +79,14 @@ export const DayZoom = {
 };
 
 export const MonthZoom = {
-  render: () => <GanttView tasks={tasks} zoom="month" onItemPress={action('onItemPress')} height={420} />,
+  render: () => (
+    <GanttView
+      tasks={tasks}
+      zoom="month"
+      onItemPress={action('onItemPress')}
+      height={420}
+    />
+  ),
   parameters: {
     docs: {
       description: {
@@ -80,7 +102,9 @@ function BarDragDemo() {
   const [lastMove, setLastMove] = useState<string | null>(null);
   return (
     <YStack gap="$2">
-      <Text {...{ 'data-testid': 'last-move' }} fontSize="$2">
+      <Text
+        {...{ 'data-testid': 'last-move' }}
+        fontSize="$2">
         {lastMove ??
           'Drag a bar (or its edges) to reschedule it; focused bars step with ArrowLeft/ArrowRight (Shift = 7 days)'}
       </Text>
@@ -168,7 +192,14 @@ const manyTasks: GanttTask[] = Array.from({ length: 16 }, (_, i) => ({
 
 export const StickyHeader = {
   name: 'Sticky Header',
-  render: () => <GanttView tasks={manyTasks} zoom="week" onItemMove={action('onItemMove')} height={320} />,
+  render: () => (
+    <GanttView
+      tasks={manyTasks}
+      zoom="week"
+      onItemMove={action('onItemMove')}
+      height={320}
+    />
+  ),
   parameters: {
     docs: {
       description: {
@@ -202,7 +233,9 @@ function TrackViewDemo() {
   ]);
   return (
     <YStack gap="$2">
-      <Text {...{ 'data-testid': 'as-of' }} fontSize="$2">
+      <Text
+        {...{ 'data-testid': 'as-of' }}
+        fontSize="$2">
         {`As of ${formatAbsoluteDate(asOf)} — drag the handle on the time axis to scrub it`}
       </Text>
       <GanttView
@@ -248,7 +281,12 @@ export const TrackView = {
 };
 
 export const Empty = {
-  render: () => <GanttView tasks={[]} height={420} />,
+  render: () => (
+    <GanttView
+      tasks={[]}
+      height={420}
+    />
+  ),
   parameters: {
     docs: {
       description: {
@@ -261,8 +299,17 @@ export const Empty = {
 export const States = {
   render: () => (
     <YStack gap="$4">
-      <GanttView tasks={[]} isLoading height={300} />
-      <GanttView tasks={[]} error="Tasks failed to load" onRetry={action('onRetry')} height={300} />
+      <GanttView
+        tasks={[]}
+        isLoading
+        height={300}
+      />
+      <GanttView
+        tasks={[]}
+        error="Tasks failed to load"
+        onRetry={action('onRetry')}
+        height={300}
+      />
     </YStack>
   ),
   parameters: {

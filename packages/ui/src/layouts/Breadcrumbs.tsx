@@ -217,7 +217,10 @@ export function Breadcrumbs({ items, onNavigate, label, maxVisible }: Breadcrumb
                     }
                   }) as unknown as () => void
                 }>
-                <Text color={linkColor} fontSize={textSize} userSelect="none">
+                <Text
+                  color={linkColor}
+                  fontSize={textSize}
+                  userSelect="none">
                   …
                 </Text>
               </XStack>
@@ -267,7 +270,10 @@ export function Breadcrumbs({ items, onNavigate, label, maxVisible }: Breadcrumb
   // The landmark is not a control — no tabIndex, no focusWithin ring.
   if (isWeb) {
     return (
-      <nav aria-label={landmark} data-testid="breadcrumbs" data-density={knobProps.density}>
+      <nav
+        aria-label={landmark}
+        data-testid="breadcrumbs"
+        data-density={knobProps.density}>
         {trail}
       </nav>
     );

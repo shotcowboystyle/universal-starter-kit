@@ -63,7 +63,12 @@ describe('DatePicker uses premium patterns', () => {
   it('renders with label and input trigger', async () => {
     const DatePicker = await loadDatePicker();
 
-    const result = renderWithProviders(<DatePicker label="Due Date" placeholder="Select date" />);
+    const result = renderWithProviders(
+      <DatePicker
+        label="Due Date"
+        placeholder="Select date"
+      />,
+    );
 
     const labelEl = result.findTextElement('Due Date');
     expect(labelEl).toBeTruthy();

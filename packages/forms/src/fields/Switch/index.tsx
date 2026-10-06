@@ -1,5 +1,5 @@
-import { useTouchSurface } from '@repo/theme';
 import {
+  useTouchSurface,
   TOUCH_HEIGHT_FLOOR,
   borderRadiusMap,
   contrastRatio,
@@ -17,8 +17,11 @@ import {
 } from '@repo/theme';
 import type { ReactNode } from 'react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import type { ColorTokens, FontSizeTokens, LabelProps, SizeTokens } from 'tamagui';
 import {
+  type ColorTokens,
+  type FontSizeTokens,
+  type LabelProps,
+  type SizeTokens,
   type SwitchProps as TamaguiSwitchProps,
   SwitchStyledContext,
   Label,
@@ -36,12 +39,12 @@ import {
   withStaticProperties,
 } from 'tamagui';
 
-import { commitImmediateField } from '../../ContextualSaveBar/commitImmediateField';
-import { Field, FieldLayout } from '../../fieldLayout';
+import { commitImmediateField } from '../../ContextualSaveBar/commit-immediate-field';
+import { Field, FieldLayout } from '../../FieldLayout';
 import { useFormSaveMode } from '../../Form';
-import { formCommonColors, formControlColors, formSwitchColors } from '../../shared/colorRamps';
-import { pressSlopProps } from '../../shared/pressSlopProps';
-import { useIsInTableCell } from '../../shared/tableCellContext';
+import { formCommonColors, formControlColors, formSwitchColors } from '../../shared/color-ramps';
+import { pressSlopProps } from '../../shared/press-slop-props';
+import { useIsInTableCell } from '../../shared/table-cell-context';
 import {
   clampRadiusInStateProps,
   getElevationWrapperProps,
@@ -54,7 +57,8 @@ import {
 import { Skeleton } from '../../Skeleton';
 import type { AnyFormApi } from '../../types';
 
-import { switchFootprint, type SwitchFootprint } from './footprint';
+import { switchFootprint } from './footprint';
+import type { SwitchFootprint } from './footprint';
 
 /** Pointer travel (px) before a gesture counts as thumb-drag instead of click. */
 const SWITCH_DRAG_INTENT_PX = 10;
@@ -78,7 +82,7 @@ function ensureSwitchKbRingCss() {
   if (!tag) {
     tag = document.createElement('style');
     tag.id = SWITCH_KB_RING_CSS_ID;
-    document.head.appendChild(tag);
+    document.head.append(tag);
   }
   if (tag.textContent !== css) {
     tag.textContent = css;
@@ -282,9 +286,8 @@ const SwitchIconFrame = styled(View, {
   defaultVariants: { placement: 'right' },
 });
 
-const getIconSize = (size: FontSizeTokens, scale: number) => {
-  return (typeof size === 'number' ? size * 0.5 : getFontSize(size as FontSizeTokens)) * scale;
-};
+const getIconSize = (size: FontSizeTokens, scale: number) =>
+  (typeof size === 'number' ? size * 0.5 : getFontSize(size as FontSizeTokens)) * scale;
 
 const SwitchIcon = SwitchIconFrame.styleable<{
   scaleIcon?: number;
@@ -298,9 +301,11 @@ const SwitchIcon = SwitchIconFrame.styleable<{
   const color = getVariable(colorProp || theme[colorProp as any]?.get('web') || theme.color10?.get('web'));
   const iconSize = getIconSize(size as FontSizeTokens, scaleIcon);
 
-  const getThemedIcon = useGetThemedIcon({ size: iconSize, color: color });
+  const getThemedIcon = useGetThemedIcon({ size: iconSize, color });
   return (
-    <SwitchIconFrame ref={ref} {...props}>
+    <SwitchIconFrame
+      ref={ref}
+      {...props}>
       {getThemedIcon(children)}
     </SwitchIconFrame>
   );
@@ -447,7 +452,7 @@ function SwitchControl({
     ensureSwitchKbRingCss();
   }
   const { disabledState, knobProps } = useResolvedKnobs();
-  const outlined = knobProps.outlined;
+  const { outlined } = knobProps;
   const trackOffFill = outlined ? 'transparent' : formSwitchColors.track.off;
   const trackOffBorder = formControlColors.boundary;
   const { thumbInset, thumbSize, travel: dragDistance } = footprint;
@@ -535,7 +540,7 @@ function SwitchControl({
   const displayChecked = snapChecked ?? checked;
   const thumbHandleColor = useLuminanceThumbColor(displayChecked);
   const restingX = displayChecked ? dragDistance : 0;
-  const thumbX = dragX != null ? dragX : restingX;
+  const thumbX = dragX == null ? restingX : dragX;
   const canDrag = isWeb && !disabled && !readOnly;
   const [kbFocus, setKbFocus] = useState(false);
   useLayoutEffect(() => {
@@ -577,7 +582,7 @@ function SwitchControl({
     ...restSwitchProps
   } = (switchProps || {}) as Record<string, any>;
   const kbRingClass = kbFocus ? SWITCH_KB_RING_CLASS : undefined;
-  const frameClassName = [switchClassName, !cellTrack ? kbRingClass : undefined].filter(Boolean).join(' ') || undefined;
+  const frameClassName = [switchClassName, cellTrack ? undefined : kbRingClass].filter(Boolean).join(' ') || undefined;
 
   return (
     <StyledSwitch
@@ -711,7 +716,7 @@ function SwitchControl({
         x={thumbX + thumbInset + (cellTrack ? cellTrack.borderWidth : 0)}
         y={cellTrack ? (cellTrack.frameHeight - thumbSize) / 2 : thumbInset}
         {...(thumbHandleColor ? { backgroundColor: thumbHandleColor } : undefined)}
-        transition={dragX != null ? 'none' : motion}
+        transition={dragX == null ? motion : 'none'}
         {...(thumbHoverStyle && { hoverStyle: thumbHoverStyle })}
         {...(thumbPressStyle && { pressStyle: thumbPressStyle })}
         {...(thumbFocusStyle && { focusStyle: thumbFocusStyle })}
@@ -840,11 +845,11 @@ export function Switch({
   // the frame height so grown targets never overlap sibling rows.
   const targetHeight = inTableCell
     ? SWITCH_CELL_TARGET_HEIGHT
-    : minTargetHeight !== undefined
-      ? Math.max(minTargetHeight, trackHeight)
-      : hydrationTouch && trackHeight < TOUCH_HEIGHT_FLOOR
+    : minTargetHeight === undefined
+      ? hydrationTouch && trackHeight < TOUCH_HEIGHT_FLOOR
         ? TOUCH_HEIGHT_FLOOR
-        : undefined;
+        : undefined
+      : Math.max(minTargetHeight, trackHeight);
   const grownTarget = targetHeight !== undefined;
   const rowMinHeight = !inTableCell && grownTarget ? targetHeight : undefined;
 
@@ -859,13 +864,13 @@ export function Switch({
     const radiusStop = resolveSwitchRadiusStop(pointy, knobProps.borderRadius.borderRadius);
     const thumbPaintedHeight = footprint.thumbSize;
     const trackRadius =
-      overrideRadius != null
-        ? (resolveRadiusValue(overrideRadius) ?? 1000)
-        : resolveRadiusClass('BINARY', radiusStop, { heightPx: trackHeight });
+      overrideRadius == null
+        ? resolveRadiusClass('BINARY', radiusStop, { heightPx: trackHeight })
+        : (resolveRadiusValue(overrideRadius) ?? 1000);
     const thumbRadius =
-      overrideRadius != null
-        ? (resolveRadiusValue(overrideRadius) ?? 1000)
-        : resolveRadiusClass('BINARY', radiusStop, { heightPx: thumbPaintedHeight });
+      overrideRadius == null
+        ? resolveRadiusClass('BINARY', radiusStop, { heightPx: thumbPaintedHeight })
+        : (resolveRadiusValue(overrideRadius) ?? 1000);
 
     const radiusResolution = overrideRadius == null ? radiusResolutionProps('BINARY') : undefined;
     let frameProps: Record<string, any> = {
@@ -885,33 +890,33 @@ export function Switch({
     const pressRaw = stripOutlineFromState(control.pressKnobProps);
     const focusRaw = stripOutlineFromState(control.focusKnobProps);
     const trackHover =
-      overrideRadius != null ? stripRadiusFromStateProps(hoverRaw) : withBinaryStateRadius(hoverRaw, trackHeight);
+      overrideRadius == null ? withBinaryStateRadius(hoverRaw, trackHeight) : stripRadiusFromStateProps(hoverRaw);
     const trackPress =
-      overrideRadius != null ? stripRadiusFromStateProps(pressRaw) : withBinaryStateRadius(pressRaw, trackHeight);
+      overrideRadius == null ? withBinaryStateRadius(pressRaw, trackHeight) : stripRadiusFromStateProps(pressRaw);
     const trackFocus =
-      overrideRadius != null ? stripRadiusFromStateProps(focusRaw) : withBinaryStateRadius(focusRaw, trackHeight);
+      overrideRadius == null ? withBinaryStateRadius(focusRaw, trackHeight) : stripRadiusFromStateProps(focusRaw);
     const thumbHover = withBinaryStateRadius(
-      overrideRadius != null
-        ? undefined
-        : hoverRaw?.borderRadius != null
+      overrideRadius == null
+        ? hoverRaw?.borderRadius != null
           ? { borderRadius: hoverRaw.borderRadius }
-          : undefined,
+          : undefined
+        : undefined,
       thumbPaintedHeight,
     );
     const thumbPress = withBinaryStateRadius(
-      overrideRadius != null
-        ? undefined
-        : pressRaw?.borderRadius != null
+      overrideRadius == null
+        ? pressRaw?.borderRadius != null
           ? { borderRadius: pressRaw.borderRadius }
-          : undefined,
+          : undefined
+        : undefined,
       thumbPaintedHeight,
     );
     const thumbFocus = withBinaryStateRadius(
-      overrideRadius != null
-        ? undefined
-        : focusRaw?.borderRadius != null
+      overrideRadius == null
+        ? focusRaw?.borderRadius != null
           ? { borderRadius: focusRaw.borderRadius }
-          : undefined,
+          : undefined
+        : undefined,
       thumbPaintedHeight,
     );
     const cellTrackRadiusStyle = (state?: Record<string, any>) =>
@@ -1024,7 +1029,10 @@ export function Switch({
 
     if (elevationWrapperProps.elevation && !grownTarget) {
       return (
-        <View {...elevationWrapperProps} borderRadius={trackRadius} {...radiusResolution}>
+        <View
+          {...elevationWrapperProps}
+          borderRadius={trackRadius}
+          {...radiusResolution}>
           {switchElement}
         </View>
       );
@@ -1041,8 +1049,15 @@ export function Switch({
     // (%-width collapses and overflows the next sibling).
     const skeletonStop = resolveSwitchRadiusStop(pointy, knobProps.borderRadius.borderRadius);
     return (
-      <FieldLayout id={id} size={size} knobProps={knobProps} compactSpacing>
-        <XStack {...knobProps.gap} alignItems="center" height={sizeToken}>
+      <FieldLayout
+        id={id}
+        size={size}
+        knobProps={knobProps}
+        compactSpacing>
+        <XStack
+          {...knobProps.gap}
+          alignItems="center"
+          height={sizeToken}>
           <Skeleton
             variant="rounded"
             width={trackWidth}
@@ -1063,7 +1078,7 @@ export function Switch({
   }
 
   if (!resolvedForm || !name) {
-    const resolvedChecked = checked !== undefined ? checked : internalChecked;
+    const resolvedChecked = checked === undefined ? internalChecked : checked;
     return (
       <FieldLayout
         id={id}
@@ -1115,7 +1130,11 @@ export function Switch({
   }
 
   return (
-    <Field form={resolvedForm} name={name} defaultValue={defaultValue} validators={resolvedValidators}>
+    <Field
+      form={resolvedForm}
+      name={name}
+      defaultValue={defaultValue}
+      validators={resolvedValidators}>
       {(field) => {
         const resolvedError = getFieldError(field, error);
         const formLabelColor = resolvedError ? formCommonColors.error : knobProps.textAccentColor;
@@ -1134,7 +1153,7 @@ export function Switch({
               height={sizeToken}
               {...(rowMinHeight !== undefined && { minHeight: rowMinHeight })}>
               {renderSwitch(
-                checked !== undefined ? checked : Boolean(field.state.value),
+                checked === undefined ? Boolean(field.state.value) : checked,
                 (val) => {
                   field.handleChange(val as any);
                   if (saveMode === 'declarative') {

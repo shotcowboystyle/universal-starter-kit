@@ -21,13 +21,15 @@ function CompoundExample({ card = true }: { card?: boolean }) {
     updates: false,
     marketing: false,
   });
-  const entries: Array<[string, string, string]> = [
+  const entries: [string, string, string][] = [
     ['analytics', 'Product analytics', 'Usage metrics that help us improve the product.'],
     ['updates', 'Release updates', 'A short note whenever a new version ships.'],
     ['marketing', 'Marketing emails', 'Occasional tips, offers, and product news.'],
   ];
   return (
-    <YStack gap="$4" maxWidth={400}>
+    <YStack
+      gap="$4"
+      maxWidth={400}>
       <Checkboxes
         values={values}
         onValuesChange={(next) => {
@@ -51,7 +53,9 @@ function CompoundExample({ card = true }: { card?: boolean }) {
                       </Checkboxes.Card.Content>
                     </Checkboxes.Card>
                   ) : (
-                    <XStack gap="$2" alignItems="center">
+                    <XStack
+                      gap="$2"
+                      alignItems="center">
                       <Checkboxes.Checkbox>
                         <Checkboxes.Checkbox.Indicator />
                       </Checkboxes.Checkbox>
@@ -97,9 +101,16 @@ export const ComparisonWithCheckboxGroup: Story = {
         c: false,
       });
       return (
-        <XStack gap="$8" alignItems="flex-start" flexWrap="wrap">
-          <YStack gap="$3" width={280}>
-            <Paragraph size="$2" color="$placeholderColor">
+        <XStack
+          gap="$8"
+          alignItems="flex-start"
+          flexWrap="wrap">
+          <YStack
+            gap="$3"
+            width={280}>
+            <Paragraph
+              size="$2"
+              color="$placeholderColor">
               Checkboxes (compound)
             </Paragraph>
             <Checkboxes
@@ -112,7 +123,9 @@ export const ComparisonWithCheckboxGroup: Story = {
                   {(['a', 'b', 'c'] as const).map((value) => (
                     <Checkboxes.Group.Item key={value}>
                       <Checkboxes.FocusGroup.Item value={value}>
-                        <XStack gap="$2" alignItems="center">
+                        <XStack
+                          gap="$2"
+                          alignItems="center">
                           <Checkboxes.Checkbox>
                             <Checkboxes.Checkbox.Indicator />
                           </Checkboxes.Checkbox>
@@ -125,8 +138,12 @@ export const ComparisonWithCheckboxGroup: Story = {
               </Checkboxes.FocusGroup>
             </Checkboxes>
           </YStack>
-          <YStack gap="$3" width={280}>
-            <Paragraph size="$2" color="$placeholderColor">
+          <YStack
+            gap="$3"
+            width={280}>
+            <Paragraph
+              size="$2"
+              color="$placeholderColor">
               CheckboxGroup (options)
             </Paragraph>
             <CheckboxGroup

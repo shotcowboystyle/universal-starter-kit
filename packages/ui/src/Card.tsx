@@ -1,6 +1,7 @@
 import { Preset, borderRadiusMap, useResolvedKnobs } from '@repo/theme';
 import type { ReactNode } from 'react';
-import { Card as TamaguiCard, type CardProps as TamaguiCardProps, withStaticProperties } from 'tamagui';
+import { Card as TamaguiCard, withStaticProperties } from 'tamagui';
+import type { CardProps as TamaguiCardProps } from 'tamagui';
 
 import { CardFooter } from './CardFooter';
 import { CardHeader } from './CardHeader';
@@ -51,7 +52,7 @@ function hostData(attrs: Record<string, string>): Record<string, unknown> {
   }
   const dataSet: Record<string, string> = {};
   for (const [key, value] of Object.entries(attrs)) {
-    const camel = key.replace(/^data-/, '').replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
+    const camel = key.replace(/^data-/, '').replaceAll(/-([a-z])/g, (_, c: string) => c.toUpperCase());
     dataSet[camel] = value;
   }
   return { dataSet };

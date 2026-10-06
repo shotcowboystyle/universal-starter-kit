@@ -137,7 +137,12 @@ export const Standalone: Story = {
     placeholder: 'Type @ to mention...',
     helperText: 'Mention people with @',
   },
-  render: (args) => <MentionInput {...args} mentions={[userMentions]} />,
+  render: (args) => (
+    <MentionInput
+      {...args}
+      mentions={[userMentions]}
+    />
+  ),
 };
 
 export const Basic: Story = {
@@ -158,7 +163,12 @@ export const Basic: Story = {
 };
 
 export const Disabled: Story = {
-  render: (args) => <MentionInput {...args} mentions={[userMentions]} />,
+  render: (args) => (
+    <MentionInput
+      {...args}
+      mentions={[userMentions]}
+    />
+  ),
   args: {
     label: 'Disabled Mention',
     disabled: true,
@@ -167,7 +177,12 @@ export const Disabled: Story = {
 };
 
 export const WithError: Story = {
-  render: (args) => <MentionInput {...args} mentions={[userMentions]} />,
+  render: (args) => (
+    <MentionInput
+      {...args}
+      mentions={[userMentions]}
+    />
+  ),
   args: {
     label: 'Required Comment',
     error: 'This field is required',
@@ -178,10 +193,27 @@ export const WithError: Story = {
 
 export const Sizes: Story = {
   render: () => (
-    <YStack gap="$4" maxWidth={400}>
-      <MentionInput label="Small" size="$2" mentions={[userMentions]} placeholder="Type @ to mention" />
-      <MentionInput label="Medium (default)" size="$3" mentions={[userMentions]} placeholder="Type @ to mention" />
-      <MentionInput label="Large" size="$4" mentions={[userMentions]} placeholder="Type @ to mention" />
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <MentionInput
+        label="Small"
+        size="$2"
+        mentions={[userMentions]}
+        placeholder="Type @ to mention"
+      />
+      <MentionInput
+        label="Medium (default)"
+        size="$3"
+        mentions={[userMentions]}
+        placeholder="Type @ to mention"
+      />
+      <MentionInput
+        label="Large"
+        size="$4"
+        mentions={[userMentions]}
+        placeholder="Type @ to mention"
+      />
     </YStack>
   ),
 };
@@ -191,7 +223,9 @@ export const Interactive: Story = {
     const InteractiveExample = () => {
       const [value, setValue] = useState('');
       return (
-        <YStack gap="$4" maxWidth={400}>
+        <YStack
+          gap="$4"
+          maxWidth={400}>
           <MentionInput
             label="Comment"
             defaultValue={value}
@@ -236,7 +270,9 @@ export const MultipleTriggersStory: Story = {
             maxHeight={args.maxHeight}
             disabled={args.disabled}
           />
-          <Button form={form as unknown as import('../../types').AnyFormApi} action="submit">
+          <Button
+            form={form as unknown as import('../../types').AnyFormApi}
+            action="submit">
             Post
           </Button>
         </YStack>
@@ -254,7 +290,13 @@ export const MultipleTriggersStory: Story = {
 
 /** Loading placeholder — the skeleton mirrors the field's anatomy. */
 export const SkeletonState: Story = {
-  render: () => <MentionInput label="Comment" mentions={[userMentions]} skeleton />,
+  render: () => (
+    <MentionInput
+      label="Comment"
+      mentions={[userMentions]}
+      skeleton
+    />
+  ),
 };
 
 // >5 users so the mention list clears `select-too-few-options` (UX-P19).

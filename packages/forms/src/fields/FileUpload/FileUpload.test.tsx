@@ -25,7 +25,10 @@ const houseConfig = createTamagui({
 
 function renderWithHouseThemes(ui: ReactElement, scheme: 'light' | 'dark' = 'light') {
   return render(
-    <TamaguiProvider config={houseConfig} defaultTheme={scheme} disableInjectCSS>
+    <TamaguiProvider
+      config={houseConfig}
+      defaultTheme={scheme}
+      disableInjectCSS>
       {ui}
     </TamaguiProvider>,
   );
@@ -60,7 +63,12 @@ async function pickFile(container: Element, file: File) {
 describe('FileUpload', () => {
   it('should render placeholder and upload button text', () => {
     const result = renderWithProviders(
-      <FileUpload label="Attachment" placeholder="Upload your file" buttonText="Pick file" name="attachment" />,
+      <FileUpload
+        label="Attachment"
+        placeholder="Upload your file"
+        buttonText="Pick file"
+        name="attachment"
+      />,
     );
 
     expect(result.findTextElement('Attachment')).toBeDefined();
@@ -72,7 +80,12 @@ describe('FileUpload', () => {
     const onChange = vi.fn();
     const onValueChange = vi.fn();
     const result = renderWithProviders(
-      <FileUpload label="Attachment" name="attachment" onChange={onChange} onValueChange={onValueChange} />,
+      <FileUpload
+        label="Attachment"
+        name="attachment"
+        onChange={onChange}
+        onValueChange={onValueChange}
+      />,
     );
 
     const input = result.container.querySelector("input[type='file']") as HTMLInputElement | null;
@@ -84,14 +97,19 @@ describe('FileUpload', () => {
       }
     });
 
-    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledOnce();
     expect(onChange).toHaveBeenCalledWith(file);
-    expect(onValueChange).toHaveBeenCalledTimes(1);
+    expect(onValueChange).toHaveBeenCalledOnce();
     expect(onValueChange).toHaveBeenCalledWith(file);
   });
 
   it('associates the label with the dropzone (htmlFor resolves, aria-labelledby names it)', () => {
-    const result = renderWithProviders(<FileUpload label="Attachment" name="attachment" />);
+    const result = renderWithProviders(
+      <FileUpload
+        label="Attachment"
+        name="attachment"
+      />,
+    );
 
     const label = result.container.querySelector('label[for]') as HTMLLabelElement | null;
     expect(label?.textContent).toContain('Attachment');
@@ -112,7 +130,12 @@ describe('FileUpload', () => {
   });
 
   it('paints the house ring on keyboard focus and suppresses the UA outline on pointer focus', () => {
-    const result = renderWithProviders(<FileUpload label="Attachment" name="attachment" />);
+    const result = renderWithProviders(
+      <FileUpload
+        label="Attachment"
+        name="attachment"
+      />,
+    );
     const dropzone = result.container.querySelector('[data-file-upload="dropzone"]') as HTMLElement | null;
     expect(dropzone).toBeTruthy();
 
@@ -133,7 +156,12 @@ describe('FileUpload', () => {
   // assertion passed. Measured on the Storybook harness, not read off source.
   // The ring must therefore also win INSIDE the focus-visible layer.
   it('beats its own focus-visible kill — the ring wins in the layer that suppresses it', () => {
-    const { container } = renderWithHouseThemes(<FileUpload label="Attachment" name="attachment" />);
+    const { container } = renderWithHouseThemes(
+      <FileUpload
+        label="Attachment"
+        name="attachment"
+      />,
+    );
     const zone = getZone(container);
     fireEvent.keyDown(document.body, { key: 'Tab', code: 'Tab' });
     fireEvent.focus(zone);
@@ -153,14 +181,25 @@ describe('FileUpload', () => {
   });
 
   it('keeps Choose File out of the tab order so the dropzone is the one stop', () => {
-    const result = renderWithProviders(<FileUpload label="Attachment" name="attachment" buttonText="Pick file" />);
+    const result = renderWithProviders(
+      <FileUpload
+        label="Attachment"
+        name="attachment"
+        buttonText="Pick file"
+      />,
+    );
     const pick = result.findTextElement('Pick file');
     const pickControl = pick?.closest('[role="button"]') as HTMLElement | null;
     expect(pickControl?.getAttribute('tabindex')).toBe('-1');
   });
 
   it('shows a drop overlay on drag enter without changing the dropzone border width', () => {
-    const result = renderWithProviders(<FileUpload label="Attachment" name="attachment" />);
+    const result = renderWithProviders(
+      <FileUpload
+        label="Attachment"
+        name="attachment"
+      />,
+    );
     const dropzone = result.container.querySelector('[data-file-upload="dropzone"]') as HTMLElement | null;
     expect(dropzone).toBeTruthy();
     const restWidth = getComputedStyle(dropzone as HTMLElement).borderTopWidth;
@@ -176,7 +215,12 @@ describe('FileUpload', () => {
   });
 
   it('keeps per-file remove in the tab order after a file is chosen', async () => {
-    const result = renderWithProviders(<FileUpload label="Attachment" name="attachment" />);
+    const result = renderWithProviders(
+      <FileUpload
+        label="Attachment"
+        name="attachment"
+      />,
+    );
     const input = result.container.querySelector("input[type='file']") as HTMLInputElement | null;
     const file = new File(['hello'], 'hello.txt', { type: 'text/plain' });
     await act(async () => {
@@ -201,7 +245,13 @@ describe('FileUpload bento-derived dropzone', () => {
   it.each(['light', 'dark'] as const)(
     'draws the dash 1px DASHED $color9 in the %s scheme (boards: rgb(77,77,77) light / rgb(133,133,133) dark)',
     (scheme) => {
-      const { container } = renderWithHouseThemes(<FileUpload label="Attachment" name="attachment" />, scheme);
+      const { container } = renderWithHouseThemes(
+        <FileUpload
+          label="Attachment"
+          name="attachment"
+        />,
+        scheme,
+      );
       const zone = getZone(container);
       // The dash rides the legible $color9 step, not the near-invisible
       // $borderColor hairline the pre-Bento zone drew.
@@ -221,7 +271,13 @@ describe('FileUpload bento-derived dropzone', () => {
   it.each(['light', 'dark'] as const)(
     'keeps the zone ground transparent at rest in the %s scheme; only the disabled wash paints it',
     (scheme) => {
-      const rest = renderWithHouseThemes(<FileUpload label="Attachment" name="attachment" />, scheme);
+      const rest = renderWithHouseThemes(
+        <FileUpload
+          label="Attachment"
+          name="attachment"
+        />,
+        scheme,
+      );
       const restZone = getZone(rest.container);
       // Transparent ground: no rest-state background atom other than
       // `transparent` (hover/press state atoms are allowed — the held mpo
@@ -229,7 +285,14 @@ describe('FileUpload bento-derived dropzone', () => {
       expect(restZone.className).toMatch(/_bg-transparent/);
       expect(restZone.className).not.toMatch(/_bg-(?!transparent|0hover|0active|0focus)/);
 
-      const disabled = renderWithHouseThemes(<FileUpload label="Attachment" name="attachment" disabled />, scheme);
+      const disabled = renderWithHouseThemes(
+        <FileUpload
+          label="Attachment"
+          name="attachment"
+          disabled
+        />,
+        scheme,
+      );
       const disabledZone = getZone(disabled.container);
       // keepLabel surface wash: $color3 fill on a $color6 edge.
       expect(disabledZone.className).toMatch(/_bg-color3/);
@@ -238,7 +301,12 @@ describe('FileUpload bento-derived dropzone', () => {
   );
 
   it('renders no standalone glyph — the CTA carries the upload mark inside the 44 control', () => {
-    const { container } = renderWithHouseThemes(<FileUpload label="Attachment" name="attachment" />);
+    const { container } = renderWithHouseThemes(
+      <FileUpload
+        label="Attachment"
+        name="attachment"
+      />,
+    );
     const zone = getZone(container);
     // The CTA is the house 44 control (held exception: Bento draws 36/$3).
     const cta = zone.querySelector('[data-mp-button-height]') as HTMLElement;
@@ -255,7 +323,12 @@ describe('FileUpload bento-derived dropzone', () => {
   });
 
   it('renders picked files as in-zone rows: name, bold size line, filled $color12 remove disc (32 painted, hitSlop 44)', async () => {
-    const { container } = renderWithHouseThemes(<FileUpload label="Attachment" name="attachment" />);
+    const { container } = renderWithHouseThemes(
+      <FileUpload
+        label="Attachment"
+        name="attachment"
+      />,
+    );
     await pickFile(container, new File(['hello'], 'hello.txt', { type: 'text/plain' }));
 
     const zone = getZone(container);
@@ -290,7 +363,12 @@ describe('FileUpload bento-derived dropzone', () => {
   });
 
   it('hangs the file list off ONE top hairline — bottom/left/right are 0, not the UA 3px initial', async () => {
-    const { container } = renderWithHouseThemes(<FileUpload label="Attachment" name="attachment" />);
+    const { container } = renderWithHouseThemes(
+      <FileUpload
+        label="Attachment"
+        name="attachment"
+      />,
+    );
     await pickFile(container, new File(['hello'], 'hello.txt', { type: 'text/plain' }));
 
     const zone = getZone(container);
@@ -309,7 +387,13 @@ describe('FileUpload bento-derived dropzone', () => {
   });
 
   it('keeps compact a space-only dial — CTA stays 44 and remove stays nested 32', async () => {
-    const { container } = renderWithHouseThemes(<FileUpload label="Attachment" name="attachment" compact />);
+    const { container } = renderWithHouseThemes(
+      <FileUpload
+        label="Attachment"
+        name="attachment"
+        compact
+      />,
+    );
     const zone = getZone(container);
     const cta = zone.querySelector('[data-mp-button-height]') as HTMLElement;
     expect(cta.getAttribute('data-mp-button-height')).toBe('44');
@@ -326,7 +410,12 @@ describe('FileUpload bento-derived dropzone', () => {
       (URL as any).revokeObjectURL = () => {};
     }
     const { container } = renderWithHouseThemes(
-      <FileUpload label="Attachment" name="attachment" accept="image/*" showPreview />,
+      <FileUpload
+        label="Attachment"
+        name="attachment"
+        accept="image/*"
+        showPreview
+      />,
     );
     await pickFile(container, new File(['fake-png-bytes'], 'diagram.png', { type: 'image/png' }));
 
@@ -364,7 +453,12 @@ describe('FileUpload bento-derived dropzone', () => {
       (URL as any).revokeObjectURL = () => {};
     }
     const { container } = renderWithHouseThemes(
-      <FileUpload label="Attachment" name="attachment" multiple showPreview />,
+      <FileUpload
+        label="Attachment"
+        name="attachment"
+        multiple
+        showPreview
+      />,
     );
     await pickFile(container, new File(['fake-png-bytes'], 'diagram.png', { type: 'image/png' }));
     await pickFile(container, new File(['hello'], 'notes.txt', { type: 'text/plain' }));
@@ -372,7 +466,7 @@ describe('FileUpload bento-derived dropzone', () => {
     const zone = getZone(container);
     const flist = zone.querySelector('[data-file-upload="files"]') as HTMLElement;
     const tiles = flist.querySelectorAll('[data-file-upload="tile"]');
-    expect(tiles.length).toBe(1);
+    expect(tiles).toHaveLength(1);
     // The text file is a row with its bold size line and trailing disc, outside the grid.
     const grid = flist.querySelector('[data-file-upload="tiles"]') as HTMLElement;
     const rowRemove = flist.querySelector('[aria-label="Remove notes.txt"]') as HTMLElement;
@@ -424,7 +518,7 @@ describe('FileUpload transfer lifecycle', () => {
     await waitFor(() => {
       expect(container.querySelector('[aria-label="Remove restore-log.txt"]')).toBeTruthy();
     });
-    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledOnce();
     expect((onChange.mock.calls[0][0] as File).name).toBe('restore-log.txt');
   });
 
@@ -435,7 +529,12 @@ describe('FileUpload transfer lifecycle', () => {
       }
     });
     const { container } = renderWithHouseThemes(
-      <FileUpload label="Attachment" name="attachment" multiple onUpload={onUpload} />,
+      <FileUpload
+        label="Attachment"
+        name="attachment"
+        multiple
+        onUpload={onUpload}
+      />,
     );
 
     await pickFile(container, new File(['ok'], 'compose01.txt', { type: 'text/plain' }));
@@ -469,7 +568,13 @@ describe('FileUpload transfer lifecycle', () => {
       }
     });
     const { container } = renderWithHouseThemes(
-      <FileUpload label="Attachment" name="attachment" multiple onChange={onChange} onUpload={onUpload} />,
+      <FileUpload
+        label="Attachment"
+        name="attachment"
+        multiple
+        onChange={onChange}
+        onUpload={onUpload}
+      />,
     );
 
     await pickFile(container, new File(['ok'], 'kept.txt', { type: 'text/plain' }));
@@ -493,7 +598,7 @@ describe('FileUpload transfer lifecycle', () => {
     expect(container.querySelector('[aria-label="Remove kept.txt"]')).toBeTruthy();
     expect(container.textContent).toContain('kept.txt');
     expect(container.textContent).not.toContain('in-flight.bin');
-    expect(onChange.mock.calls.length).toBe(committedCalls);
+    expect(onChange.mock.calls).toHaveLength(committedCalls);
     hold();
   });
 });

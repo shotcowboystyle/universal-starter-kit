@@ -1,3 +1,3 @@
 export * from './router/index';
-export * from './types';
+export type * from './types';
 export * from './hooks';

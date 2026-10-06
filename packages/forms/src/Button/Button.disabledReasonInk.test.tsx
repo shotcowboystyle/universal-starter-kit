@@ -25,7 +25,8 @@ import { render, cleanup, screen } from '@testing-library/react';
 import { TamaguiProvider, YStack } from 'tamagui';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { Button, type ButtonProps } from './index';
+import { Button } from './index';
+import type { ButtonProps } from './index';
 
 afterEach(cleanup);
 
@@ -47,7 +48,10 @@ const CHANNELS: { name: string; themeName: string; props: Partial<ButtonProps> }
 
 function houseRender(ui: React.ReactElement, scheme: 'light' | 'dark') {
   return render(
-    <TamaguiProvider config={houseConfig.tamagui} defaultTheme={scheme} disableInjectCSS>
+    <TamaguiProvider
+      config={houseConfig.tamagui}
+      defaultTheme={scheme}
+      disableInjectCSS>
       <YStack backgroundColor="$background">{ui}</YStack>
     </TamaguiProvider>,
   );
@@ -73,12 +77,12 @@ function scopeThemeKey(node: HTMLElement, scheme: string): string {
 }
 
 function resolvedInk(node: HTMLElement, scheme: string): { key: string; token: string; ink: string } {
-  const token = node.className.match(/(?:^|\s)_col-(\w+)(?:\s|$)/)?.[1];
+  const token = /(?:^|\s)_col-(\w+)(?:\s|$)/.exec(node.className)?.[1];
   expect(token, `reason carries a colour token class: ${node.className}`).toBeTruthy();
   const key = scopeThemeKey(node, scheme);
   const ink = houseThemes[key]?.[token!];
   expect(ink, `${key}.${token} resolves in the house themes`).toBeTruthy();
-  return { key, token: token!, ink: ink };
+  return { key, token: token!, ink };
 }
 
 describe('Button disabledReason ink (T-HELPER)', () => {
@@ -89,7 +93,11 @@ describe('Button disabledReason ink (T-HELPER)', () => {
         ({ name, props }) => {
           const reason = `Reason ${name}`;
           houseRender(
-            <Button {...props} disabled disabledReason={reason} disabledReasonPlacement={placement}>
+            <Button
+              {...props}
+              disabled
+              disabledReason={reason}
+              disabledReasonPlacement={placement}>
               Add
             </Button>,
             scheme,
@@ -110,7 +118,11 @@ describe('Button disabledReason ink (T-HELPER)', () => {
         ({ name, themeName, props }) => {
           const reason = `Reason ${name}`;
           houseRender(
-            <Button {...props} disabled disabledReason={reason} disabledReasonPlacement={placement}>
+            <Button
+              {...props}
+              disabled
+              disabledReason={reason}
+              disabledReasonPlacement={placement}>
               Add
             </Button>,
             scheme,

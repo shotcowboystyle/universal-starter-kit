@@ -6,14 +6,8 @@ import { cleanup, fireEvent, screen } from '@testing-library/react';
 import * as React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  Timeline,
-  type TimelineEntry,
-  formatRelativeTimestamp,
-  getEntryDisplayName,
-  prettifyAuthorName,
-  threadEntries,
-} from './Timeline';
+import { Timeline, formatRelativeTimestamp, getEntryDisplayName, prettifyAuthorName, threadEntries } from './Timeline';
+import type { TimelineEntry } from './Timeline';
 
 afterEach(cleanup);
 
@@ -140,7 +134,12 @@ describe('timestamp registers (content class picks the register)', () => {
   });
 
   it('formatTimestamp prop ejects the register for every class', () => {
-    renderWithProviders(<Timeline entries={entries} formatTimestamp={() => 'CUSTOM-TS'} />);
+    renderWithProviders(
+      <Timeline
+        entries={entries}
+        formatTimestamp={() => 'CUSTOM-TS'}
+      />,
+    );
     expect(screen.getAllByText('CUSTOM-TS')).toHaveLength(2);
     expect(screen.queryByText('2h ago')).not.toBeInTheDocument();
   });
@@ -183,14 +182,19 @@ describe('Timeline comment section rendering', () => {
   it('renders the feed with feed/article roles and threaded reply content', () => {
     renderWithProviders(<Timeline entries={entries} />);
     expect(screen.getByRole('feed')).toBeInTheDocument();
-    expect(screen.getAllByRole('article').length).toBe(3);
+    expect(screen.getAllByRole('article')).toHaveLength(3);
     expect(screen.getByText('A threaded reply')).toBeInTheDocument();
     expect(screen.getByText('made changes')).toBeInTheDocument();
   });
 
   it('submits a top-level comment through onCommentSubmit', () => {
     const onCommentSubmit = vi.fn();
-    renderWithProviders(<Timeline entries={entries} onCommentSubmit={onCommentSubmit} />);
+    renderWithProviders(
+      <Timeline
+        entries={entries}
+        onCommentSubmit={onCommentSubmit}
+      />,
+    );
     const input = screen.getByPlaceholderText('Add a comment...');
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: 'hello world' } });
@@ -200,7 +204,12 @@ describe('Timeline comment section rendering', () => {
 
   it('opens an inline reply composer and submits with parentId', () => {
     const onCommentSubmit = vi.fn();
-    renderWithProviders(<Timeline entries={entries} onCommentSubmit={onCommentSubmit} />);
+    renderWithProviders(
+      <Timeline
+        entries={entries}
+        onCommentSubmit={onCommentSubmit}
+      />,
+    );
     // Reply on the threaded reply — parentId must be the clicked entry's id
     fireEvent.click(screen.getByRole('button', { name: 'Reply Reply Guy' }));
     const replyInput = screen.getByPlaceholderText('Write a reply...');
@@ -211,7 +220,13 @@ describe('Timeline comment section rendering', () => {
 
   it('calls onReply instead of opening the internal composer when provided', () => {
     const onReply = vi.fn();
-    renderWithProviders(<Timeline entries={entries} onCommentAdded={() => {}} onReply={onReply} />);
+    renderWithProviders(
+      <Timeline
+        entries={entries}
+        onCommentAdded={() => {}}
+        onReply={onReply}
+      />,
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Reply John Doe' }));
     expect(onReply).toHaveBeenCalledWith(expect.objectContaining({ id: 'c1' }));
     expect(screen.queryByPlaceholderText('Write a reply...')).not.toBeInTheDocument();
@@ -219,7 +234,12 @@ describe('Timeline comment section rendering', () => {
 
   it('falls back to onCommentAdded for top-level submits (legacy API)', () => {
     const onCommentAdded = vi.fn();
-    renderWithProviders(<Timeline entries={entries} onCommentAdded={onCommentAdded} />);
+    renderWithProviders(
+      <Timeline
+        entries={entries}
+        onCommentAdded={onCommentAdded}
+      />,
+    );
     const input = screen.getByPlaceholderText('Add a comment...');
     fireEvent.change(input, { target: { value: 'legacy path' } });
     fireEvent.click(screen.getByRole('button', { name: /Comment/ }));
@@ -227,10 +247,22 @@ describe('Timeline comment section rendering', () => {
   });
 
   it('hides the composer when enableAddComment is false or disabled', () => {
-    renderWithProviders(<Timeline entries={entries} enableAddComment={false} onCommentAdded={() => {}} />);
+    renderWithProviders(
+      <Timeline
+        entries={entries}
+        enableAddComment={false}
+        onCommentAdded={() => {}}
+      />,
+    );
     expect(screen.queryByPlaceholderText('Add a comment...')).not.toBeInTheDocument();
     cleanup();
-    renderWithProviders(<Timeline entries={entries} disabled onCommentAdded={() => {}} />);
+    renderWithProviders(
+      <Timeline
+        entries={entries}
+        disabled
+        onCommentAdded={() => {}}
+      />,
+    );
     expect(screen.queryByPlaceholderText('Add a comment...')).not.toBeInTheDocument();
   });
 
@@ -244,7 +276,12 @@ describe('Timeline comment section rendering', () => {
   // the atoms: the transparent eject atoms MUST be present (they vanish if
   // the eject is reverted) and no painted-value atom may remain.
   it('Reply floor pins hover/press backgrounds to transparent', () => {
-    renderWithProviders(<Timeline entries={entries} onCommentSubmit={() => {}} />);
+    renderWithProviders(
+      <Timeline
+        entries={entries}
+        onCommentSubmit={() => {}}
+      />,
+    );
     const reply = screen.getByRole('button', { name: 'Reply John Doe' });
     expect(reply.className).toMatch(/_bg-0hover-transparent/);
     expect(reply.className).toMatch(/_bg-0active-transparent/);

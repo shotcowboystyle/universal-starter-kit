@@ -79,12 +79,20 @@ export function MyComponent() {
 export const CustomStyling: Story = {
   render: () => (
     <YStack gap="$4">
-      <Pre backgroundColor="$gray2" borderRadius="$2" padding="$2">
+      <Pre
+        backgroundColor="$gray2"
+        borderRadius="$2"
+        padding="$2">
         <Text fontFamily="$mono">Light background</Text>
       </Pre>
 
-      <Pre backgroundColor="$gray10" borderRadius="$6" padding="$6">
-        <Text fontFamily="$mono" color="$gray1">
+      <Pre
+        backgroundColor="$gray10"
+        borderRadius="$6"
+        padding="$6">
+        <Text
+          fontFamily="$mono"
+          color="$gray1">
           Dark background with custom padding
         </Text>
       </Pre>

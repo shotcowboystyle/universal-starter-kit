@@ -15,7 +15,9 @@ describe('Form validateOn remapping', () => {
       return null;
     }
     renderWithProviders(
-      <Form validateOn="submit" onSubmit={vi.fn()}>
+      <Form
+        validateOn="submit"
+        onSubmit={vi.fn()}>
         <Probe />
       </Form>,
     );
@@ -29,10 +31,20 @@ describe('Form validateOn remapping', () => {
       return null;
     }
     const result = renderWithProviders(
-      <Form formOptions={{ defaultValues: { name: '' } }} onSubmit={vi.fn()} validateOn="submit">
+      <Form
+        formOptions={{ defaultValues: { name: '' } }}
+        onSubmit={vi.fn()}
+        validateOn="submit">
         <Probe />
-        <Input id="name" name="name" label="Name" required />
-        <Button action="submit" testID="submit-button">
+        <Input
+          id="name"
+          name="name"
+          label="Name"
+          required
+        />
+        <Button
+          action="submit"
+          testID="submit-button">
           Submit
         </Button>
       </Form>,
@@ -60,7 +72,9 @@ describe('Form validateOn remapping', () => {
       return null;
     }
     renderWithProviders(
-      <Form validateOn="blur" onSubmit={vi.fn()}>
+      <Form
+        validateOn="blur"
+        onSubmit={vi.fn()}>
         <Probe />
       </Form>,
     );

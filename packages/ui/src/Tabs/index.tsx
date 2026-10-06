@@ -35,19 +35,19 @@ import {
   useReadableTextOn,
   useResolvedKnobs,
   wasKeyboardFocus,
-  type GroupPosition,
   transitionProps,
 } from '@repo/theme';
+import type { GroupPosition } from '@repo/theme';
 import type { ReactNode } from 'react';
 import React from 'react';
 import type { GetProps, ThemeName } from 'tamagui';
 import { Tabs as TamaguiTabs, Text, Theme, View, YStack, isWeb, styled, withStaticProperties } from 'tamagui';
 
-import { componentColors } from '../componentColors';
-import { useDirection } from '../hooks/useDirection';
+import { componentColors } from '../component-colors';
+import { useDirection } from '../hooks/use-direction';
 import { ScrollView } from '../ScrollView';
 import { useTranslation } from '../shared/i18n';
-import { wrapBareTextChildren } from '../shared/textRidesText';
+import { wrapBareTextChildren } from '../shared/text-rides-text';
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -468,7 +468,7 @@ function TabsRoot({
   const tabHitSlop = pressTargetHitSlop(sizePx);
   const radiusToken = knobProps.borderRadius.borderRadius;
   const outerRadiusToken = knobProps.borderRadiusNested.borderRadius;
-  const transition = knobProps.transition;
+  const { transition } = knobProps;
   const enabledCount = items.length;
   const activeIndex = items.findIndex((i) => i.value === currentValue);
   const activePosition = getGroupPosition(Math.max(0, activeIndex), enabledCount);
@@ -506,7 +506,7 @@ function TabsRoot({
             backgroundColor={selectedTint ?? '$color4'}
             data-tabs-indicator="thumb"
             {...thumbRadius}
-            {...(knobProps.elevation !== undefined ? { elevation: knobProps.elevation } : undefined)}
+            {...(knobProps.elevation === undefined ? undefined : { elevation: knobProps.elevation })}
             {...transitionProps(transition)}
           />
         </Theme>
@@ -526,7 +526,7 @@ function TabsRoot({
       data-size-token={visualSizeToken}
       data-density={knobProps.density}
       data-visual-px={sizePx}
-      {...(!isWeb ? { role: 'tablist' as const } : undefined)}
+      {...(isWeb ? undefined : { role: 'tablist' as const })}
       alignSelf={equalDistribution ? 'stretch' : 'flex-start'}
       minWidth={0}
       contained={!isUnderline && !isBand}
@@ -731,7 +731,9 @@ function TabsRoot({
         data-fade-left={fades.left ? 'true' : undefined}
         data-fade-right={fades.right ? 'true' : undefined}>
         {equalDistribution ? (
-          <View alignSelf="stretch" minWidth={0}>
+          <View
+            alignSelf="stretch"
+            minWidth={0}>
             {tabList}
           </View>
         ) : (
@@ -765,7 +767,9 @@ function TabsRoot({
         The panel host. Under `fill` it is the second link in the chain: it
         grows into what the strip leaves and permits its own child to shrink.
       */}
-      <YStack data-tabs-panels="" {...(fill ? fillProps : undefined)}>
+      <YStack
+        data-tabs-panels=""
+        {...(fill ? fillProps : undefined)}>
         {items.map((item) => {
           if (item.content === undefined) {
             return null;

@@ -8,23 +8,15 @@
  * for `[data-mp-action-role="primary"]` / accent markers (two-primaries warn).
  */
 
-import {
-  Children,
-  Fragment,
-  cloneElement,
-  isValidElement,
-  useEffect,
-  useId,
-  useRef,
-  type ReactElement,
-  type ReactNode,
-} from 'react';
-import { XStack, type GetProps } from 'tamagui';
+import { Children, Fragment, cloneElement, isValidElement, useEffect, useId, useRef } from 'react';
+import type { ReactElement, ReactNode } from 'react';
+import { XStack } from 'tamagui';
+import type { GetProps } from 'tamagui';
 
-import { countActionsInTree } from '../shared/actionScan';
+import { countActionsInTree } from '../shared/action-scan';
 import { useIsInDialogRegion } from '../surfaces';
 
-import { actionDevWarn, warnCancelDisabled, warnDialogTooManyActions } from './devWarn';
+import { actionDevWarn, warnCancelDisabled, warnDialogTooManyActions } from './dev-warn';
 
 export type ActionBarAlign = 'start' | 'end' | 'between';
 
@@ -169,7 +161,7 @@ export function ActionBar({
     // count by construction; free children are counted heuristically.
     if (inDialogRegion) {
       const actionTotal =
-        (primary != null ? 1 : 0) +
+        (primary == null ? 0 : 1) +
         secondaryItems.filter((node) => node != null && node !== false).length +
         (cancel != null && cancel !== false ? 1 : 0) +
         countActionsInTree(children);

@@ -1,5 +1,6 @@
 import { renderWithProviders } from '@repo/test-utils';
-import { Preset, resolveRadiusClass, type Knobs } from '@repo/theme';
+import { Preset, resolveRadiusClass } from '@repo/theme';
+import type { Knobs } from '@repo/theme';
 /**
  * Meter — bounded-quantity display.
  *
@@ -26,8 +27,8 @@ import {
   formatMeterValue,
   resolveMeterRailRadius,
   resolveMeterZone,
-  type MeterZone,
 } from './meter';
+import type { MeterZone } from './meter';
 
 import { Meter } from './index';
 
@@ -43,7 +44,9 @@ function renderMeter(
 ) {
   return renderWithProviders(
     <Theme name={scheme}>
-      <Preset cascade={false} overrides={knobs}>
+      <Preset
+        cascade={false}
+        overrides={knobs}>
         {ui}
       </Preset>
     </Theme>,
@@ -117,16 +120,34 @@ describe('rail radius resolves through resolveRadiusClass DEFAULT', () => {
   });
 
   it('paints the DEFAULT token on the rail, not a literal or BINARY h/2', () => {
-    const { container: none } = renderMeter(<Meter label="Disk" value={5} min={0} max={8} />, 'light', {
-      borderRadius: 'none',
-    });
+    const { container: none } = renderMeter(
+      <Meter
+        label="Disk"
+        value={5}
+        min={0}
+        max={8}
+      />,
+      'light',
+      {
+        borderRadius: 'none',
+      },
+    );
     expect(rail(none).getAttribute('data-meter-radius-class')).toBe('DEFAULT');
     expect(rail(none).getAttribute('data-meter-rail-radius')).toBe('0');
 
     cleanup();
-    const { container: medium } = renderMeter(<Meter label="Disk" value={5} min={0} max={8} />, 'light', {
-      borderRadius: 'medium',
-    });
+    const { container: medium } = renderMeter(
+      <Meter
+        label="Disk"
+        value={5}
+        min={0}
+        max={8}
+      />,
+      'light',
+      {
+        borderRadius: 'medium',
+      },
+    );
     expect(rail(medium).getAttribute('data-meter-rail-radius')).toBe(String(resolveRadiusClass('DEFAULT', 'medium')));
     expect(rail(medium).getAttribute('data-meter-rail-radius')).not.toBe(
       String(resolveRadiusClass('BINARY', 'medium', { heightPx: 11 })),
@@ -144,7 +165,15 @@ describe('render spec at each intent in both schemes', () => {
   for (const scheme of ['light', 'dark'] as const) {
     for (const { zone, value, bounds } of cases) {
       it(`${scheme} ${zone} fill and value ink ride the theme tokens`, () => {
-        const { container } = renderMeter(<Meter label="Disk usage" value={value} unit="GB" {...bounds} />, scheme);
+        const { container } = renderMeter(
+          <Meter
+            label="Disk usage"
+            value={value}
+            unit="GB"
+            {...bounds}
+          />,
+          scheme,
+        );
         const node = rail(container);
         const paint = METER_ZONE_PAINT[zone];
         expect(node.getAttribute('data-meter-zone')).toBe(zone);
@@ -161,7 +190,15 @@ describe('render spec at each intent in both schemes', () => {
 
 describe('Meter a11y and the Progress semantic line', () => {
   it('uses role=meter with declared min/max and never role=progressbar', () => {
-    const { container } = renderMeter(<Meter label="Disk usage" value={6.2} min={0} max={8} unit="GB" />);
+    const { container } = renderMeter(
+      <Meter
+        label="Disk usage"
+        value={6.2}
+        min={0}
+        max={8}
+        unit="GB"
+      />,
+    );
     const node = rail(container);
     expect(node.getAttribute('role')).toBe('meter');
     expect(container.querySelector("[role='progressbar']")).toBeNull();
@@ -174,7 +211,13 @@ describe('Meter a11y and the Progress semantic line', () => {
   });
 
   it('renders the em dash for an unknown level — never an indeterminate animation', () => {
-    renderMeter(<Meter label="Quota" min={0} max={8} />);
+    renderMeter(
+      <Meter
+        label="Quota"
+        min={0}
+        max={8}
+      />,
+    );
     expect(screen.getByText('\u2014')).toBeTruthy();
     const node = document.querySelector("[role='meter']");
     expect(node?.getAttribute('aria-valuenow')).toBeNull();
@@ -188,30 +231,64 @@ describe('Meter a11y and the Progress semantic line', () => {
   });
 
   it('outlined chrome spreads inputSurface — borderWidth is the knob, not a hardcoded 1', () => {
-    const { container: filled } = renderMeter(<Meter label="Disk" value={5} min={0} max={8} />, 'light', {
-      fillStyle: 'filled',
-      borderWidth: 'large',
-    });
+    const { container: filled } = renderMeter(
+      <Meter
+        label="Disk"
+        value={5}
+        min={0}
+        max={8}
+      />,
+      'light',
+      {
+        fillStyle: 'filled',
+        borderWidth: 'large',
+      },
+    );
     expect(rail(filled).getAttribute('data-meter-border-width')).toBe('0');
 
     cleanup();
-    const { container: hairline } = renderMeter(<Meter label="Disk" value={5} min={0} max={8} />, 'light', {
-      fillStyle: 'outlined',
-      borderWidth: 'none',
-    });
+    const { container: hairline } = renderMeter(
+      <Meter
+        label="Disk"
+        value={5}
+        min={0}
+        max={8}
+      />,
+      'light',
+      {
+        fillStyle: 'outlined',
+        borderWidth: 'none',
+      },
+    );
     // outlined + none still draws the small hairline, not 0.
     expect(rail(hairline).getAttribute('data-meter-border-width')).toBe('0.5');
 
     cleanup();
-    const { container: large } = renderMeter(<Meter label="Disk" value={5} min={0} max={8} />, 'light', {
-      fillStyle: 'outlined',
-      borderWidth: 'large',
-    });
+    const { container: large } = renderMeter(
+      <Meter
+        label="Disk"
+        value={5}
+        min={0}
+        max={8}
+      />,
+      'light',
+      {
+        fillStyle: 'outlined',
+        borderWidth: 'large',
+      },
+    );
     expect(rail(large).getAttribute('data-meter-border-width')).toBe('2');
   });
 
   it('loading is a skeleton, not an indeterminate meter', () => {
-    const { container } = renderMeter(<Meter label="Disk usage" min={0} max={8} loading />);
+    const { container } = renderMeter(
+      <Meter
+        label="Disk usage"
+        min={0}
+        max={8}
+        loading
+      />,
+    );
     expect(container.querySelector("[role='meter']")).toBeNull();
     expect(container.querySelector("[role='progressbar']")).toBeNull();
   });
@@ -224,7 +301,13 @@ describe('Meter a11y and the Progress semantic line', () => {
     ] as const) {
       it(`paints ${borderWidth} outline on ${discrete ? 'every segment' : 'the continuous rail'}`, () => {
         const { container } = renderMeter(
-          <Meter label="Disk" value={5} min={0} max={8} segments={discrete} />,
+          <Meter
+            label="Disk"
+            value={5}
+            min={0}
+            max={8}
+            segments={discrete}
+          />,
           'light',
           { fillStyle: 'outlined', borderWidth },
         );

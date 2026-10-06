@@ -1,16 +1,16 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Appearance } from "react-native";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Appearance } from 'react-native';
 
-export type ThemePreference = "light" | "dark" | "system";
+export type ThemePreference = 'light' | 'dark' | 'system';
 
-const THEME_KEY = "theme-preference";
+const THEME_KEY = 'theme-preference';
 
 export async function loadThemePreference(): Promise<ThemePreference> {
   const stored = await AsyncStorage.getItem(THEME_KEY);
-  if (stored === "light" || stored === "dark" || stored === "system") {
+  if (stored === 'light' || stored === 'dark' || stored === 'system') {
     return stored;
   }
-  return "dark";
+  return 'dark';
 }
 
 export async function saveThemePreference(pref: ThemePreference): Promise<void> {
@@ -18,6 +18,6 @@ export async function saveThemePreference(pref: ThemePreference): Promise<void> 
 }
 
 export function applyThemePreference(pref: ThemePreference): void {
-  const colorScheme: "light" | "dark" | null = pref === "system" ? null : pref;
+  const colorScheme: 'light' | 'dark' | null = pref === 'system' ? null : pref;
   Appearance.setColorScheme(colorScheme as Parameters<typeof Appearance.setColorScheme>[0]);
 }

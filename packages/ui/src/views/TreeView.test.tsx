@@ -11,10 +11,11 @@ import { defaultKnobs, Preset, resolveKnobs } from '@repo/theme';
 import { cleanup, fireEvent, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { TreeView, type TreeNode } from './TreeView';
-import { treeDefaultHeight, treeIndentStep } from './treeViewLayout';
+import { treeDefaultHeight, treeIndentStep } from './tree-view-layout';
+import { TreeView } from './TreeView';
+import type { TreeNode } from './TreeView';
 
-const treeViewSource = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'TreeView.tsx'), 'utf8');
+const treeViewSource = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'TreeView.tsx'), 'utf-8');
 
 afterEach(cleanup);
 
@@ -44,7 +45,14 @@ describe('TreeView named exports', () => {
 describe('TreeView knob wiring', () => {
   it('publishes nestedControl px, indent step, and space on the tree', () => {
     const { knobProps } = resolveKnobs(defaultKnobs);
-    renderWithProviders(<TreeView nodes={nodes} expandByDefault ariaLabel="Knob tree" height={400} />);
+    renderWithProviders(
+      <TreeView
+        nodes={nodes}
+        expandByDefault
+        ariaLabel="Knob tree"
+        height={400}
+      />,
+    );
     const tree = screen.getByRole('tree');
     expect(tree.getAttribute('data-nested-px')).toBe(String(knobProps.nestedControl.px));
     expect(tree.getAttribute('data-indent-step')).toBe(String(treeIndentStep(knobProps.nestedControl.px)));
@@ -54,15 +62,28 @@ describe('TreeView knob wiring', () => {
 
   it('default viewport follows nestedControl when height is omitted', () => {
     const nestedPx = resolveKnobs(defaultKnobs).knobProps.nestedControl.px;
-    renderWithProviders(<TreeView nodes={nodes} ariaLabel="Hug tree" />);
+    renderWithProviders(
+      <TreeView
+        nodes={nodes}
+        ariaLabel="Hug tree"
+      />,
+    );
     const tree = screen.getByRole('tree');
     expect(tree.getAttribute('data-viewport-height')).toBe(String(treeDefaultHeight(nestedPx)));
   });
 
   it('compact display steps space without a private compressed pad table', () => {
     renderWithProviders(
-      <Preset cascade={false} overrides={{ space: 'medium' }}>
-        <TreeView nodes={nodes} display="compressed" expandByDefault ariaLabel="Compact tree" height={280} />
+      <Preset
+        cascade={false}
+        overrides={{ space: 'medium' }}>
+        <TreeView
+          nodes={nodes}
+          display="compressed"
+          expandByDefault
+          ariaLabel="Compact tree"
+          height={280}
+        />
       </Preset>,
     );
     const tree = screen.getByRole('tree');
@@ -72,8 +93,15 @@ describe('TreeView knob wiring', () => {
 
   it('stays E-FLAT and SF-TRANSPARENT when elevation and borderWidth are large', () => {
     renderWithProviders(
-      <Preset cascade={false} overrides={{ elevation: 'large', borderWidth: 'large' }}>
-        <TreeView nodes={nodes} expandByDefault ariaLabel="Surface tree" height={400} />
+      <Preset
+        cascade={false}
+        overrides={{ elevation: 'large', borderWidth: 'large' }}>
+        <TreeView
+          nodes={nodes}
+          expandByDefault
+          ariaLabel="Surface tree"
+          height={400}
+        />
       </Preset>,
     );
     const tree = screen.getByRole('tree');
@@ -103,7 +131,14 @@ describe('TreeView selection and keyboard', () => {
   });
 
   it('Home focuses the first row and End the last', () => {
-    renderWithProviders(<TreeView nodes={nodes} expandByDefault ariaLabel="Home end tree" height={400} />);
+    renderWithProviders(
+      <TreeView
+        nodes={nodes}
+        expandByDefault
+        ariaLabel="Home end tree"
+        height={400}
+      />,
+    );
     const tree = screen.getByRole('tree');
     tree.focus();
     fireEvent.keyDown(tree, { key: 'Home' });
@@ -115,7 +150,13 @@ describe('TreeView selection and keyboard', () => {
 
 describe('TreeView empty', () => {
   it('renders EmptyState for an empty node list (Axiom 6: empty ≠ error)', () => {
-    renderWithProviders(<TreeView nodes={[]} ariaLabel="Empty tree" emptyMessage="No files found" />);
+    renderWithProviders(
+      <TreeView
+        nodes={[]}
+        ariaLabel="Empty tree"
+        emptyMessage="No files found"
+      />,
+    );
     expect(screen.getByText('No files found')).toBeInTheDocument();
     expect(screen.queryByRole('tree')).toBeNull();
   });

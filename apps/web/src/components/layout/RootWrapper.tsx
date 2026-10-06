@@ -24,7 +24,9 @@ export default function RootWrapper({ children }: { children: React.ReactNode })
 
   return (
     <>
-      <XStack minHeight="100dvh" testID="sidebar-provider">
+      <XStack
+        minHeight="100dvh"
+        testID="sidebar-provider">
         {mobileOpen && (
           <YStack
             testID="sidebar-backdrop"
@@ -54,7 +56,10 @@ export default function RootWrapper({ children }: { children: React.ReactNode })
             }}
           />
         </YStack>
-        <YStack testID="sidebar-inset" flex={1} minWidth={0}>
+        <YStack
+          testID="sidebar-inset"
+          flex={1}
+          minWidth={0}>
           <Header onToggleSidebar={toggleSidebar} />
           {children}
         </YStack>

@@ -18,7 +18,7 @@ describe('TimeWheels', () => {
       />,
     );
     expect(result.container.querySelector('[data-testid="time-picker-wheels"]')).toBeTruthy();
-    expect(result.container.querySelectorAll('[data-testid="wheel"]').length).toBe(3);
+    expect(result.container.querySelectorAll('[data-testid="wheel"]')).toHaveLength(3);
     expect(result.container.querySelector('[aria-label="AM/PM"]')).toBeTruthy();
   });
 
@@ -34,7 +34,7 @@ describe('TimeWheels', () => {
         onChange={() => {}}
       />,
     );
-    expect(document.querySelectorAll('[data-testid="wheel"]').length).toBe(2);
+    expect(document.querySelectorAll('[data-testid="wheel"]')).toHaveLength(2);
     expect(document.querySelector('[aria-label="AM/PM"]')).toBeNull();
   });
 });

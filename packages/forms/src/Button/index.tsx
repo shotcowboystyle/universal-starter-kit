@@ -12,29 +12,17 @@ import {
   solidPaletteThemes,
   useAccentOnSurface,
   useResolvedKnobs,
-  type RecipeFamilyName,
-  type SizeRecipe,
-  type SizeRecipeRadiusStop,
 } from '@repo/theme';
+import type { RecipeFamilyName, SizeRecipe, SizeRecipeRadiusStop } from '@repo/theme';
 import { getSize } from '@tamagui/get-token';
 import { getElevation, themeableVariants } from '@tamagui/stacks';
-import type { ThemeName } from '@tamagui/web';
-import type { SizeTokens, VariantSpreadExtras } from '@tamagui/web';
+import type { ThemeName, SizeTokens, VariantSpreadExtras } from '@tamagui/web';
 import { Store, useStore } from '@tanstack/react-store';
-import {
-  Children,
-  createElement,
-  isValidElement,
-  useCallback,
-  useId,
-  useState,
-  type ComponentType,
-  type ReactNode,
-} from 'react';
+import { Children, createElement, isValidElement, useCallback, useId, useState } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import type { GestureResponderEvent } from 'react-native';
 import {
   Button as TamaguiButton,
-  type ButtonProps as TamaguiButtonProps,
   SizableText,
   View,
   XStack,
@@ -45,13 +33,14 @@ import {
   isWeb,
   useTheme,
 } from 'tamagui';
+import type { ButtonProps as TamaguiButtonProps } from 'tamagui';
 
-import { formatActionLabel } from '../actionLabel';
-import { getFormSubmission } from '../Form/submissionController';
-import { formButtonColors, formCommonColors } from '../shared/colorRamps';
-import { warnBareDisabled, warnPositiveTabIndex, warnSizeRecipeEscape } from '../shared/devWarn';
-import { useControlGrouped } from '../shared/groupContext';
-import { pressSlopProps } from '../shared/pressSlopProps';
+import { formatActionLabel } from '../action-label';
+import { getFormSubmission } from '../Form/submission-controller';
+import { formButtonColors, formCommonColors } from '../shared/color-ramps';
+import { warnBareDisabled, warnPositiveTabIndex, warnSizeRecipeEscape } from '../shared/dev-warn';
+import { useControlGrouped } from '../shared/group-context';
+import { pressSlopProps } from '../shared/press-slop-props';
 import { useFormField } from '../shared/utils';
 import { Spinner } from '../Spinner';
 import type { AnyFormApi } from '../types';
@@ -429,7 +418,7 @@ export function Button({
   const grouped = useControlGrouped();
   const sizeProp = (props as { size?: SizeTokens | number }).size;
   const resolvedSize = sizeProp ?? knobProps.sizeToken;
-  const densityTight = compact !== undefined ? compact : knobProps.density === 'compact';
+  const densityTight = compact === undefined ? knobProps.density === 'compact' : compact;
   const recipe = resolveButtonSizeRecipe(resolvedSize, buttonDensityFamily(recipeFamily, densityTight));
   const padX = recipe.paddingHorizontal;
   const radiusToken = knobProps.borderRadius.borderRadius;
@@ -640,7 +629,7 @@ export function Button({
               width: visualPx,
               minWidth: visualPx,
               maxWidth: visualPx,
-              borderRadius: 100000,
+              borderRadius: 100_000,
             }
           : {}),
         'data-nested-px': String(visualPx),
@@ -761,7 +750,7 @@ export function Button({
       })}
       onPress={handlePress}
       {...(isWeb ? { onKeyDown: handleKeyDown as unknown as () => void } : undefined)}
-      {...(tabIndex != null ? { tabIndex } : undefined)}
+      {...(tabIndex == null ? undefined : { tabIndex })}
       gap={hasIcon && (resolvedChildren || textContent) ? innerGap : undefined}
       // STD-EJECT-LAST: knob fragments and internal defaults (radius/size/
       // elevation/gap above) sit BEFORE the consumer spread so `{...props}`
@@ -843,7 +832,12 @@ export function Button({
   // host surface, and inside it `$color11` is the intent's on-fill ramp
   // (1.17:1 on the light page under accent).
   const reasonText = explainedDisable ? (
-    <SizableText id={reasonId} size="$2" color={formCommonColors.muted} flexShrink={1} data-mp-disabled-reason="true">
+    <SizableText
+      id={reasonId}
+      size="$2"
+      color={formCommonColors.muted}
+      flexShrink={1}
+      data-mp-disabled-reason="true">
       {disabledReason}
     </SizableText>
   ) : null;
@@ -851,12 +845,19 @@ export function Button({
     return themedButton;
   }
   return disabledReasonPlacement === 'inline' ? (
-    <XStack gap="$2" alignItems="center" flexShrink={1} data-mp-disabled-reason-wrapper="true">
+    <XStack
+      gap="$2"
+      alignItems="center"
+      flexShrink={1}
+      data-mp-disabled-reason-wrapper="true">
       {themedButton}
       {reasonText}
     </XStack>
   ) : (
-    <YStack gap="$1" flexShrink={1} data-mp-disabled-reason-wrapper="true">
+    <YStack
+      gap="$1"
+      flexShrink={1}
+      data-mp-disabled-reason-wrapper="true">
       {themedButton}
       {reasonText}
     </YStack>

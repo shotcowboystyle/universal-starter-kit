@@ -67,7 +67,12 @@ export const ManyLines: Story = {
 export const ZeroLines: Story = {
   args: { lines: 0 },
   render: (args) => (
-    <YStack maxWidth={400} borderWidth={1} borderColor="$color6" borderStyle="dashed" minHeight={24}>
+    <YStack
+      maxWidth={400}
+      borderWidth={1}
+      borderColor="$color6"
+      borderStyle="dashed"
+      minHeight={24}>
       <SkeletonText {...args} />
     </YStack>
   ),
@@ -76,7 +81,12 @@ export const ZeroLines: Story = {
 export const NegativeLines: Story = {
   args: { lines: -3 },
   render: (args) => (
-    <YStack maxWidth={400} borderWidth={1} borderColor="$color6" borderStyle="dashed" minHeight={24}>
+    <YStack
+      maxWidth={400}
+      borderWidth={1}
+      borderColor="$color6"
+      borderStyle="dashed"
+      minHeight={24}>
       <SkeletonText {...args} />
     </YStack>
   ),
@@ -85,7 +95,11 @@ export const NegativeLines: Story = {
 export const CustomMetricsNarrow: Story = {
   args: { lines: 4, gap: '$4', lastLineWidth: '40%', height: 24 },
   render: (args) => (
-    <YStack width={220} borderWidth={1} borderColor="$color6" borderStyle="dashed">
+    <YStack
+      width={220}
+      borderWidth={1}
+      borderColor="$color6"
+      borderStyle="dashed">
       <SkeletonText {...args} />
     </YStack>
   ),

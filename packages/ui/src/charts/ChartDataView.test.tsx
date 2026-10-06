@@ -15,13 +15,21 @@ const data = Array.from({ length: 13 }, (_, index) => ({
 }));
 afterEach(cleanup);
 
-it('opens the complete formatted dataset without expanding the concise chart name', async () => {
+test('opens the complete formatted dataset without expanding the concise chart name', async () => {
   renderWithProviders(
-    <ChartDataView data={data} title="Revenue" valueFormatter={(value) => `USD ${value}`}>
+    <ChartDataView
+      data={data}
+      title="Revenue"
+      valueFormatter={(value) => `USD ${value}`}>
       {({ action, data: series, valueFormatter }) => (
         <YStack>
           <XStack>{action}</XStack>
-          <Sparkline data={series} label="Revenue trend" width={300} valueFormatter={valueFormatter} />
+          <Sparkline
+            data={series}
+            label="Revenue trend"
+            width={300}
+            valueFormatter={valueFormatter}
+          />
         </YStack>
       )}
     </ChartDataView>,
@@ -32,7 +40,7 @@ it('opens the complete formatted dataset without expanding the concise chart nam
   expect(image.querySelector('button')).toBeNull();
   expect(screen.queryByText('USD 13')).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'View data for Revenue' }));
-  expect(await screen.findByText('USD 13')).toBeInTheDocument();
+  await expect(screen.findByText('USD 13')).resolves.toBeInTheDocument();
   expect(document.querySelectorAll('[data-mpo-chart-data-row]')).toHaveLength(13);
   expect(screen.getByText('Region 13')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Close' }));
@@ -41,37 +49,48 @@ it('opens the complete formatted dataset without expanding the concise chart nam
   });
 });
 
-it('normalizes bare sparkline values through the same complete channel', async () => {
+test('normalizes bare sparkline values through the same complete channel', async () => {
   renderWithProviders(
-    <ChartDataView data={[40, 50, 60]} title="Activity">
+    <ChartDataView
+      data={[40, 50, 60]}
+      title="Activity">
       {({ action, data: series, valueFormatter }) => (
         <YStack>
           {action}
-          <Sparkline data={series} width={300} />
+          <Sparkline
+            data={series}
+            width={300}
+          />
         </YStack>
       )}
     </ChartDataView>,
   );
   fireEvent.click(screen.getByRole('button', { name: 'View data for Activity' }));
-  expect(await screen.findByText('60')).toBeInTheDocument();
+  await expect(screen.findByText('60')).resolves.toBeInTheDocument();
   expect(document.querySelectorAll('[data-mpo-chart-data-row]')).toHaveLength(3);
 });
 
-it('supplies a complete data action when the pie legend is hidden', async () => {
-  renderWithProviders(<PieChart data={data} title="Revenue" showLegend={false} />);
+test('supplies a complete data action when the pie legend is hidden', async () => {
+  renderWithProviders(
+    <PieChart
+      data={data}
+      title="Revenue"
+      showLegend={false}
+    />,
+  );
   fireEvent.click(screen.getByRole('button', { name: 'View data for Revenue' }));
-  expect(await screen.findByText('Region 13')).toBeInTheDocument();
+  await expect(screen.findByText('Region 13')).resolves.toBeInTheDocument();
   expect(document.querySelectorAll('[data-mpo-chart-data-row]')).toHaveLength(13);
 });
 
-it('keeps a visible pie legend complete without a dangling data-action association', () => {
+test('keeps a visible pie legend complete without a dangling data-action association', () => {
   renderWithProviders(<ChartCard config={{ id: 'revenue', type: 'pie', title: 'Revenue', data }} />);
   expect(screen.getByText('Region 13')).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'View data for Revenue' })).toBeNull();
   expect(document.querySelector('svg')!.getAttribute('aria-describedby')).toBeNull();
 });
 
-it('keeps a consumer metric press override separate from the data action', async () => {
+test('keeps a consumer metric press override separate from the data action', async () => {
   const configured = vi.fn();
   const consumer = vi.fn();
   renderWithProviders(
@@ -89,7 +108,7 @@ it('keeps a consumer metric press override separate from the data action', async
   fireEvent.click(screen.getByRole('button', { name: 'View data for Revenue' }));
   expect(consumer).not.toHaveBeenCalled();
   expect(configured).not.toHaveBeenCalled();
-  expect(await screen.findByText('Revenue: data')).toBeInTheDocument();
+  await expect(screen.findByText('Revenue: data')).resolves.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Close' }));
   await waitFor(() => {
     expect(screen.queryAllByRole('dialog')).toHaveLength(0);

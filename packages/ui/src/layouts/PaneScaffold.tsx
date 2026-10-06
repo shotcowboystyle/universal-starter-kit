@@ -42,24 +42,15 @@ import {
   useMultiPane,
   useSemanticGaps,
   wasKeyboardFocus,
-  type LayoutSizeClass,
   READING_WIDTH_CH,
 } from '@repo/theme';
-import {
-  Children,
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useId,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react';
+import type { LayoutSizeClass } from '@repo/theme';
+import { Children, createContext, useCallback, useContext, useEffect, useId, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import type { XStackProps, YStackProps } from 'tamagui';
 import { isWeb, XStack, YStack } from 'tamagui';
 
-import { useDirection } from '../hooks/useDirection';
+import { useDirection } from '../hooks/use-direction';
 
 /** Visual sash hit (VS Code sash.size ≈ 4–8). Native expands to 44 via hitSlop. */
 const SASH_VISUAL = 8;
@@ -213,26 +204,7 @@ export function PaneScaffold({
         </YStack>
       </YStack>
     );
-  } else if (!split) {
-    const activePane = activePaneProp ?? 'primary';
-    const shown = activePane === 'secondary' && hasSecondary ? secondary : primary;
-    content = (
-      <YStack
-        flexGrow={1}
-        flexShrink={1}
-        flexBasis="auto"
-        minWidth={0}
-        width="100%"
-        data-testid="pane-scaffold"
-        data-panes="1"
-        data-pane-layout="single"
-        data-orientation={orientation}
-        data-size-class={sizeClass}
-        {...rest}>
-        {shown}
-      </YStack>
-    );
-  } else {
+  } else if (split) {
     content = (
       <XStack
         flexDirection={vertical ? 'column' : 'row'}
@@ -274,12 +246,35 @@ export function PaneScaffold({
               data-testid="pane-primary">
               {primary}
             </YStack>
-            <YStack flex={secondaryFlex} minWidth={0} minHeight={0} data-testid="pane-secondary">
+            <YStack
+              flex={secondaryFlex}
+              minWidth={0}
+              minHeight={0}
+              data-testid="pane-secondary">
               {secondary}
             </YStack>
           </>
         )}
       </XStack>
+    );
+  } else {
+    const activePane = activePaneProp ?? 'primary';
+    const shown = activePane === 'secondary' && hasSecondary ? secondary : primary;
+    content = (
+      <YStack
+        flexGrow={1}
+        flexShrink={1}
+        flexBasis="auto"
+        minWidth={0}
+        width="100%"
+        data-testid="pane-scaffold"
+        data-panes="1"
+        data-pane-layout="single"
+        data-orientation={orientation}
+        data-size-class={sizeClass}
+        {...rest}>
+        {shown}
+      </YStack>
     );
   }
 
@@ -499,7 +494,13 @@ function ResizablePanes({
       onLayout={(e) => {
         sizeRef.current = axisSize(vertical, e.nativeEvent.layout);
       }}>
-      <YStack flexGrow={fraction} flexShrink={1} flexBasis={0} minWidth={0} minHeight={0} data-testid="pane-primary">
+      <YStack
+        flexGrow={fraction}
+        flexShrink={1}
+        flexBasis={0}
+        minWidth={0}
+        minHeight={0}
+        data-testid="pane-primary">
         {primary}
       </YStack>
       <YStack
@@ -537,7 +538,7 @@ function ResizablePanes({
           aria-valuenow={percent}
           aria-label="Resize panes"
           data-testid="pane-sash"
-          {...(!isWeb ? { hitSlop: pressTargetHitSlop(SASH_VISUAL) } : undefined)}
+          {...(isWeb ? undefined : { hitSlop: pressTargetHitSlop(SASH_VISUAL) })}
           {...(kbFocus ? ensureFocusVisibleRing() : undefined)}
           onPointerDown={onSashPointerDown}
           onPointerMove={onSashPointerMove}
@@ -727,7 +728,11 @@ export interface ReadingWidthProps extends YStackProps {
  */
 export function ReadingWidth({ measure = READING_WIDTH_CH, children, ...rest }: ReadingWidthProps) {
   return (
-    <YStack alignSelf="flex-start" {...readingWidthStyle(measure)} data-testid="reading-width" {...rest}>
+    <YStack
+      alignSelf="flex-start"
+      {...readingWidthStyle(measure)}
+      data-testid="reading-width"
+      {...rest}>
       {children}
     </YStack>
   );

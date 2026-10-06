@@ -5,7 +5,7 @@ import { MoonIcon, SunIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useTheme } from 'next-themes';
 
-import { useHydrated } from '@/hooks/useHydrated';
+import { useHydrated } from '@/hooks/use-hydrated';
 
 export default function ThemeToggle() {
   const { setTheme, resolvedTheme } = useTheme();
@@ -16,9 +16,24 @@ export default function ThemeToggle() {
     <DropdownMenu
       placement="bottom-end"
       items={[
-        { label: t('light'), onSelect: () => setTheme('light') },
-        { label: t('dark'), onSelect: () => setTheme('dark') },
-        { label: t('system'), onSelect: () => setTheme('system') },
+        {
+          label: t('light'),
+          onSelect: () => {
+            setTheme('light');
+          },
+        },
+        {
+          label: t('dark'),
+          onSelect: () => {
+            setTheme('dark');
+          },
+        },
+        {
+          label: t('system'),
+          onSelect: () => {
+            setTheme('system');
+          },
+        },
       ]}>
       <Button
         outlined

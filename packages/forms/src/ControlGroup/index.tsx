@@ -6,14 +6,15 @@ import {
   hairline,
   useResolvedKnobs,
 } from '@repo/theme';
-import { Children, isValidElement, useMemo, useState, type ReactElement, type ReactNode } from 'react';
+import { Children, isValidElement, useMemo, useState } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import { SizableText, View, isWeb, styled } from 'tamagui';
 import type { GetProps } from 'tamagui';
 
 import { FocusContext, getInputFrameTransitionProps, InputContext } from '../InputParts';
-import { formCommonColors, formControlColors, formInputColors } from '../shared/colorRamps';
-import { ControlGroupCtx } from '../shared/groupContext';
-import { useIsInTableCell } from '../shared/tableCellContext';
+import { formCommonColors, formControlColors, formInputColors } from '../shared/color-ramps';
+import { ControlGroupCtx } from '../shared/group-context';
+import { useIsInTableCell } from '../shared/table-cell-context';
 import { getElevationWrapperProps } from '../shared/utils';
 
 // ---------------------------------------------------------------------------
@@ -62,7 +63,7 @@ function ensureControlGroupRing() {
   const tag = document.createElement('style');
   tag.id = CONTROL_GROUP_RING_ID;
   tag.textContent = controlGroupRingCss;
-  document.head.appendChild(tag);
+  document.head.append(tag);
 }
 
 function isControlGroupAddon(child: ReactElement): boolean {
@@ -158,7 +159,9 @@ function ControlGroupImpl({ children, orientation = 'horizontal', ...props }: Co
         ? { flex: 1, ...(isVertical ? { minHeight: 0 } : { minWidth: 0 }) }
         : { flexGrow: 0, flexShrink: 0 };
       nodes.push(
-        <GroupPositionContext.Provider key={child.key ?? index} value={position}>
+        <GroupPositionContext.Provider
+          key={child.key ?? index}
+          value={position}>
           <View
             {...flexProps}
             borderRadius={0}
@@ -190,7 +193,9 @@ function ControlGroupImpl({ children, orientation = 'horizontal', ...props }: Co
   if (inTableCell) {
     return (
       <ControlGroupCtx.Provider value={true}>
-        <FocusContext.Provider focused={focused} setFocused={setFocused}>
+        <FocusContext.Provider
+          focused={focused}
+          setFocused={setFocused}>
           <ControlGroupFrame
             {...knobProps.body}
             flexDirection={isVertical ? 'column' : 'row'}
@@ -201,7 +206,10 @@ function ControlGroupImpl({ children, orientation = 'horizontal', ...props }: Co
             data-orientation={orientation}
             {...props}>
             {Children.map(items, (child) => (
-              <View flex={1} minWidth={0} borderRadius={0}>
+              <View
+                flex={1}
+                minWidth={0}
+                borderRadius={0}>
                 {child}
               </View>
             ))}
@@ -213,10 +221,12 @@ function ControlGroupImpl({ children, orientation = 'horizontal', ...props }: Co
 
   return (
     <ControlGroupCtx.Provider value={true}>
-      <FocusContext.Provider focused={focused} setFocused={setFocused}>
+      <FocusContext.Provider
+        focused={focused}
+        setFocused={setFocused}>
         <ControlGroupFrame
           {...knobProps.body}
-          {...(!isVertical ? { size: knobProps.sizeToken } : undefined)}
+          {...(isVertical ? undefined : { size: knobProps.sizeToken })}
           flexDirection={isVertical ? 'column' : 'row'}
           backgroundColor={knobProps.outlined ? 'transparent' : formInputColors.background.base}
           {...knobProps.inputSurface}

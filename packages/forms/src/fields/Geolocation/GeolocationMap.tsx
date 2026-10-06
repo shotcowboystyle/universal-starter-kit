@@ -3,11 +3,11 @@ import { useCallback, useMemo, useState } from 'react';
 import type { LayoutChangeEvent } from 'react-native';
 import { Text, View, YStack } from 'tamagui';
 
-import { formCommonColors } from '../../shared/colorRamps';
+import { formCommonColors } from '../../shared/color-ramps';
 import { t } from '../../shared/t';
 
-import { OSM_TILE_SIZE, latLngFromMapClick, tilesForView, zoomFromDelta } from './mapMath';
-import type { GeolocationMapSurfaceProps } from './mapTypes';
+import { OSM_TILE_SIZE, latLngFromMapClick, tilesForView, zoomFromDelta } from './map-math';
+import type { GeolocationMapSurfaceProps } from './map-types';
 
 function tileSrc(zoom: number, x: number, y: number) {
   if (typeof process !== 'undefined' && process.env.VITEST) {
@@ -123,7 +123,10 @@ export function GeolocationMap({
           // `color` tints the phosphor pin via currentColor; Tamagui applies it
           // on web Views though the RN-flavored View type omits it.
           {...({ color: '$red10' } as Record<string, unknown>)}>
-          <MapPinIcon size={28} weight="fill" />
+          <MapPinIcon
+            size={28}
+            weight="fill"
+          />
         </View>
       ) : null}
 

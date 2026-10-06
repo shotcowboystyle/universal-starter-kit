@@ -26,7 +26,7 @@ const sizes = ['$2', '$3', '$4'] as const;
 function paddingPxFromClass(el: HTMLElement): number | null {
   let found: number | null = null;
   for (const c of String(el.className || '').split(/\s+/)) {
-    const m = c.match(/^_p[lr]-(\d+)px$/);
+    const m = /^_p[lr]-(\d+)px$/.exec(c);
     if (m) {
       found = Number(m[1]);
     }
@@ -36,7 +36,7 @@ function paddingPxFromClass(el: HTMLElement): number | null {
 
 function gapPxFromClass(el: HTMLElement): number | null {
   for (const c of String(el.className || '').split(/\s+/)) {
-    const m = c.match(/^_gap-(\d+)px$/);
+    const m = /^_gap-(\d+)px$/.exec(c);
     if (m) {
       return Number(m[1]);
     }
@@ -46,7 +46,10 @@ function gapPxFromClass(el: HTMLElement): number | null {
 
 function renderProp(size: (typeof sizes)[number]) {
   renderWithProviders(
-    <Button compact size={size} icon={<span>i</span>}>
+    <Button
+      compact
+      size={size}
+      icon={<span>i</span>}>
       Save
     </Button>,
   );
@@ -56,7 +59,9 @@ function renderProp(size: (typeof sizes)[number]) {
 function renderKnob(size: (typeof sizes)[number]) {
   renderWithProviders(
     <Preset overrides={{ density: 'compact' }}>
-      <Button size={size} icon={<span>i</span>}>
+      <Button
+        size={size}
+        icon={<span>i</span>}>
         Save
       </Button>
     </Preset>,
@@ -66,7 +71,9 @@ function renderKnob(size: (typeof sizes)[number]) {
 
 function renderComfortable(size: (typeof sizes)[number]) {
   renderWithProviders(
-    <Button size={size} icon={<span>i</span>}>
+    <Button
+      size={size}
+      icon={<span>i</span>}>
       Save
     </Button>,
   );

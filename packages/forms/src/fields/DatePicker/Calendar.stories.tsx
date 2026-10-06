@@ -36,7 +36,10 @@ type Story = StoryObj<typeof Calendar>;
 export const Baseline: Story = {
   render: (args) => (
     <YStack maxWidth={720}>
-      <Calendar {...args} onDatesChange={action('onDatesChange')} />
+      <Calendar
+        {...args}
+        onDatesChange={action('onDatesChange')}
+      />
     </YStack>
   ),
 };
@@ -45,7 +48,10 @@ export const SingleMode: Story = {
   args: { mode: 'single', showTabs: false },
   render: (args) => (
     <YStack maxWidth={720}>
-      <Calendar {...args} onDatesChange={action('onDatesChange')} />
+      <Calendar
+        {...args}
+        onDatesChange={action('onDatesChange')}
+      />
     </YStack>
   ),
 };
@@ -54,7 +60,10 @@ export const MultipleMode: Story = {
   args: { mode: 'multiple', showTabs: false, limit: 3 },
   render: (args) => (
     <YStack maxWidth={720}>
-      <Calendar {...args} onDatesChange={action('onDatesChange')} />
+      <Calendar
+        {...args}
+        onDatesChange={action('onDatesChange')}
+      />
     </YStack>
   ),
 };
@@ -63,7 +72,10 @@ export const RangeMode: Story = {
   args: { mode: 'range', showTabs: false },
   render: (args) => (
     <YStack maxWidth={720}>
-      <Calendar {...args} onDatesChange={action('onDatesChange')} />
+      <Calendar
+        {...args}
+        onDatesChange={action('onDatesChange')}
+      />
     </YStack>
   ),
 };
@@ -97,7 +109,9 @@ export const ControlledRejection: Story = {
       const [pinned] = useState(() => [new Date(2026, 7, 5), new Date(2026, 7, 12)]);
       const [attempts, setAttempts] = useState(0);
       return (
-        <YStack gap="$4" maxWidth={720}>
+        <YStack
+          gap="$4"
+          maxWidth={720}>
           <Calendar
             mode="range"
             showTabs={false}

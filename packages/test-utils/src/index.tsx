@@ -82,7 +82,7 @@ function createDefaultQueryClient(): QueryClient {
 }
 
 function enhanceRenderResult(result: RenderResult): EnhancedRenderResult {
-  const container = result.container;
+  const { container } = result;
   return {
     ...result,
     getInput: (name?: string) => {
@@ -224,22 +224,18 @@ function enhanceRenderResult(result: RenderResult): EnhancedRenderResult {
       }
       return container.querySelector('[role="switch"]') || container.querySelector('input[type="checkbox"]');
     },
-    getLabel: (text: string) => {
-      return container.querySelector('label')?.textContent?.includes(text)
+    getLabel: (text: string) =>
+      container.querySelector('label')?.textContent?.includes(text)
         ? container.querySelector('label')
         : Array.from(container.querySelectorAll('[role="label"], [aria-label]')).find(
             (el) => el.textContent?.includes(text) || el.getAttribute('aria-label')?.includes(text),
-          );
-    },
-    getError: () => {
-      return (
-        container.querySelector('[role="alert"]') ||
-        container.querySelector('[aria-live="polite"]') ||
-        Array.from(container.querySelectorAll('*')).find(
-          (el) => (el.className?.includes('error') || el.className?.includes('Error')) && el.textContent,
-        )
-      );
-    },
+          ),
+    getError: () =>
+      container.querySelector('[role="alert"]') ||
+      container.querySelector('[aria-live="polite"]') ||
+      Array.from(container.querySelectorAll('*')).find(
+        (el) => (el.className?.includes('error') || el.className?.includes('Error')) && el.textContent,
+      ),
   };
 }
 
@@ -252,8 +248,13 @@ function enhanceRenderResult(result: RenderResult): EnhancedRenderResult {
  */
 export function TestProviders({ children }: { children: ReactNode }) {
   return (
-    <TamaguiProvider config={tamaguiConfig} defaultTheme="light" disableInjectCSS>
-      <YStack flex={1} backgroundColor="$background">
+    <TamaguiProvider
+      config={tamaguiConfig}
+      defaultTheme="light"
+      disableInjectCSS>
+      <YStack
+        flex={1}
+        backgroundColor="$background">
         {children}
       </YStack>
     </TamaguiProvider>
@@ -293,8 +294,13 @@ export function renderWithProviders(ui: ReactElement, options: RenderWithProvide
     // Tamagui provider (outermost standard provider)
     if (tamagui) {
       content = (
-        <TamaguiProvider config={tamaguiConfig} defaultTheme="light" disableInjectCSS>
-          <YStack flex={1} backgroundColor="$background">
+        <TamaguiProvider
+          config={tamaguiConfig}
+          defaultTheme="light"
+          disableInjectCSS>
+          <YStack
+            flex={1}
+            backgroundColor="$background">
             {content}
           </YStack>
         </TamaguiProvider>

@@ -1,16 +1,18 @@
 import type { DeepKeys, DeepValue } from '@tanstack/form-core';
-import { type ComponentProps, useCallback, useEffect, useRef, useState } from 'react';
-import { type Popover, useProps } from 'tamagui';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { ComponentProps } from 'react';
+import { useProps } from 'tamagui';
+import type { Popover } from 'tamagui';
 
-import { Field, FieldLayout } from '../../fieldLayout';
-import type { FormFieldProps } from '../../fieldLayout';
+import { Field, FieldLayout } from '../../FieldLayout';
+import type { FormFieldProps } from '../../FieldLayout';
 import { Input as InputParts } from '../../InputParts';
 import { t } from '../../shared/t';
 import { getFieldError, mergeFieldHandler, useFormField, useResolvedValidators } from '../../shared/utils';
 import { Skeleton } from '../../Skeleton';
 import type { FieldComponentProps, Validator } from '../../types';
 
-import { DatePickerFieldValueSync } from './fieldValueSync';
+import { DatePickerFieldValueSync } from './FieldValueSync';
 import {
   CalendarDays,
   CalendarHeader,
@@ -370,8 +372,16 @@ export function DatePicker<
   // Render skeleton placeholder (after all hooks)
   if (skeleton) {
     return (
-      <FieldLayout id={id} label={label} size={size} knobProps={knobProps}>
-        <Skeleton variant="rounded" width="100%" height={knobProps.sizeToken} />
+      <FieldLayout
+        id={id}
+        label={label}
+        size={size}
+        knobProps={knobProps}>
+        <Skeleton
+          variant="rounded"
+          width="100%"
+          height={knobProps.sizeToken}
+        />
       </FieldLayout>
     );
   }
@@ -411,7 +421,10 @@ export function DatePicker<
           <>
             {/* Form branch displays from `selectedDate` — keep it synced to
                 the live field value (late seeds / programmatic updates). */}
-            <DatePickerFieldValueSync value={field.state.value} onSync={setSelectedDate} />
+            <DatePickerFieldValueSync
+              value={field.state.value}
+              onSync={setSelectedDate}
+            />
             <FieldLayout
               id={id}
               label={label}

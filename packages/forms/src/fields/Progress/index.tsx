@@ -2,8 +2,9 @@ import { Intent } from '@repo/theme';
 import type { KnobProps } from '@repo/theme';
 import { getSize } from '@tamagui/get-token';
 import type { ReactNode } from 'react';
-import type { LabelProps, SizeTokens } from 'tamagui';
 import {
+  type LabelProps,
+  type SizeTokens,
   Progress as TamaguiProgress,
   type ProgressProps as TamaguiProgressProps,
   Text,
@@ -15,10 +16,10 @@ import {
   useTheme,
 } from 'tamagui';
 
-import { Field, FieldLayout, useFieldDescribedBy } from '../../fieldLayout';
-import { formControlColors } from '../../shared/colorRamps';
+import { Field, FieldLayout, useFieldDescribedBy } from '../../FieldLayout';
+import { formControlColors } from '../../shared/color-ramps';
 import { bidiIsolate, t } from '../../shared/t';
-import { useIsInTableCell } from '../../shared/tableCellContext';
+import { useIsInTableCell } from '../../shared/table-cell-context';
 import {
   getElevationWrapperProps,
   getFieldError,
@@ -100,7 +101,12 @@ function indicatorMotion(transition: KnobProps['transition']) {
 function HueFillIndicator({ transition }: { transition: KnobProps['transition'] }) {
   const theme = useTheme();
   const fill = theme.color9?.val;
-  return <ProgressIndicator {...(fill ? { backgroundColor: fill } : undefined)} {...indicatorMotion(transition)} />;
+  return (
+    <ProgressIndicator
+      {...(fill ? { backgroundColor: fill } : undefined)}
+      {...indicatorMotion(transition)}
+    />
+  );
 }
 
 export interface ProgressProps {
@@ -217,7 +223,10 @@ function ProgressTrack({
         // fill the bespoke XP bar used (the "accent" sub-theme is the SOLID
         // ramp, wrong for a fill; same reasoning as Gantt bars / Toast).
         // undefined keeps the styled default (gray form ramp) untouched.
-        <ProgressIndicator backgroundColor={intent === 'accent' ? '$accentBackground' : undefined} {...motion} />
+        <ProgressIndicator
+          backgroundColor={intent === 'accent' ? '$accentBackground' : undefined}
+          {...motion}
+        />
       )}
     </ProgressFrame>
   );
@@ -232,13 +241,19 @@ function ProgressTrack({
       {progressElement}
     </View>
   ) : (
-    <View flex={1} minWidth={0} width="100%">
+    <View
+      flex={1}
+      minWidth={0}
+      width="100%">
       {progressElement}
     </View>
   );
 
   return (
-    <XStack {...knobProps.gap} alignItems="center" width="100%">
+    <XStack
+      {...knobProps.gap}
+      alignItems="center"
+      width="100%">
       {bar}
       {showValue ? (
         <Text
@@ -291,9 +306,22 @@ export function Progress({
   const trackSize = size ?? knobProps.sizeToken;
 
   const skeletonTrack = (
-    <XStack {...knobProps.gap} alignItems="center" width="100%">
-      <Skeleton variant="rounded" width="100%" height={trackHeightPx(trackSize)} flex={1} />
-      {showValue ? <Skeleton variant="text" width={40} /> : null}
+    <XStack
+      {...knobProps.gap}
+      alignItems="center"
+      width="100%">
+      <Skeleton
+        variant="rounded"
+        width="100%"
+        height={trackHeightPx(trackSize)}
+        flex={1}
+      />
+      {showValue ? (
+        <Skeleton
+          variant="text"
+          width={40}
+        />
+      ) : null}
     </XStack>
   );
 
@@ -302,7 +330,11 @@ export function Progress({
       return skeletonTrack;
     }
     return (
-      <FieldLayout id={id} label={label} size={size} knobProps={knobProps}>
+      <FieldLayout
+        id={id}
+        label={label}
+        size={size}
+        knobProps={knobProps}>
         {skeletonTrack}
       </FieldLayout>
     );
@@ -349,7 +381,11 @@ export function Progress({
   }
 
   return (
-    <Field form={resolvedForm} name={name} defaultValue={defaultValue} validators={resolvedValidators}>
+    <Field
+      form={resolvedForm}
+      name={name}
+      defaultValue={defaultValue}
+      validators={resolvedValidators}>
       {(field) => {
         const resolvedError = getFieldError(field, error);
         const track = renderTrack(

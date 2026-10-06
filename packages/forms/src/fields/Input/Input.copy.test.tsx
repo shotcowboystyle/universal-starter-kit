@@ -11,7 +11,14 @@ function copyOf(container: HTMLElement) {
 
 describe('Input copy (CopyField slot)', () => {
   it('copy is a real tab stop and rings its own glyph, not the 44px box', () => {
-    const result = renderWithProviders(<Input copy readOnly label="API token" value="mpo_live_4f2a9c81e0b3" />);
+    const result = renderWithProviders(
+      <Input
+        copy
+        readOnly
+        label="API token"
+        value="mpo_live_4f2a9c81e0b3"
+      />,
+    );
     const input = result.container.querySelector('input') as HTMLInputElement;
     const copy = copyOf(result.container);
     if (!input || !copy) {
@@ -35,7 +42,14 @@ describe('Input copy (CopyField slot)', () => {
   });
 
   it('empty omits the cap so there is one tab stop', () => {
-    const result = renderWithProviders(<Input copy readOnly label="Webhook URL" value="" />);
+    const result = renderWithProviders(
+      <Input
+        copy
+        readOnly
+        label="Webhook URL"
+        value=""
+      />,
+    );
     expect(copyOf(result.container)).toBeNull();
     const input = result.container.querySelector('input') as HTMLInputElement;
     expect(input).not.toBeNull();
@@ -45,7 +59,13 @@ describe('Input copy (CopyField slot)', () => {
 
   it('disabled keeps geometry and drops the second tab stop', () => {
     const result = renderWithProviders(
-      <Input copy readOnly disabled label="API token" value="mpo_live_4f2a9c81e0b3" />,
+      <Input
+        copy
+        readOnly
+        disabled
+        label="API token"
+        value="mpo_live_4f2a9c81e0b3"
+      />,
     );
     const copy = copyOf(result.container);
     if (!copy) {
@@ -56,7 +76,14 @@ describe('Input copy (CopyField slot)', () => {
   });
 
   it('default size stays 44 tall with the copy cap present', () => {
-    const result = renderWithProviders(<Input copy readOnly label="API token" value="mpo_live_4f2a9c81e0b3" />);
+    const result = renderWithProviders(
+      <Input
+        copy
+        readOnly
+        label="API token"
+        value="mpo_live_4f2a9c81e0b3"
+      />,
+    );
     const box = result.container.querySelector("[data-ring-target='box']") as HTMLElement;
     const copy = copyOf(result.container);
     if (!box || !copy) {
@@ -71,8 +98,16 @@ describe('Input copy (CopyField slot)', () => {
       if (token === '$true') {
         continue;
       }
-      const height = sizeRecipeForToken(token).height;
-      const result = renderWithProviders(<Input copy readOnly label="API token" value="secret" size={token} />);
+      const { height } = sizeRecipeForToken(token);
+      const result = renderWithProviders(
+        <Input
+          copy
+          readOnly
+          label="API token"
+          value="secret"
+          size={token}
+        />,
+      );
       const box = result.container.querySelector("[data-ring-target='box']") as HTMLElement;
       const copy = copyOf(result.container);
       if (!box || !copy) {
@@ -84,7 +119,14 @@ describe('Input copy (CopyField slot)', () => {
   });
 
   it('identifier value rides the mono register', () => {
-    const result = renderWithProviders(<Input copy readOnly label="API token" value="mpo_live_4f2a9c81e0b3" />);
+    const result = renderWithProviders(
+      <Input
+        copy
+        readOnly
+        label="API token"
+        value="mpo_live_4f2a9c81e0b3"
+      />,
+    );
     const input = result.container.querySelector('input') as HTMLInputElement;
     if (!input) {
       throw new Error('input missing');
@@ -95,12 +137,18 @@ describe('Input copy (CopyField slot)', () => {
   it('pressing copy writes the value to the clipboard', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     vi.stubGlobal('navigator', {
-      ...(typeof navigator !== 'undefined' ? navigator : {}),
+      ...(typeof navigator === 'undefined' ? {} : navigator),
       clipboard: { writeText },
     });
     const onCopyResult = vi.fn();
     const result = renderWithProviders(
-      <Input copy readOnly label="API token" value="mpo_live_4f2a9c81e0b3" onCopyResult={onCopyResult} />,
+      <Input
+        copy
+        readOnly
+        label="API token"
+        value="mpo_live_4f2a9c81e0b3"
+        onCopyResult={onCopyResult}
+      />,
     );
     const copy = copyOf(result.container);
     if (!copy) {

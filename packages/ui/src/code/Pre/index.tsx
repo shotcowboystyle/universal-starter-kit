@@ -14,5 +14,12 @@ const PreFrame = styled(YStack, {
 
 export const Pre = PreFrame.styleable((props, ref) => {
   const { knobProps } = useResolvedKnobs();
-  return <PreFrame ref={ref} {...knobProps.borderRadius} {...knobProps.panelPadding} {...props} />;
+  return (
+    <PreFrame
+      ref={ref}
+      {...knobProps.borderRadius}
+      {...knobProps.panelPadding}
+      {...props}
+    />
+  );
 });

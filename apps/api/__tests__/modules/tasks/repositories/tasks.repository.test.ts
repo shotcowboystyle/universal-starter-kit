@@ -1,18 +1,18 @@
-import { Types } from "mongoose";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Types } from 'mongoose';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { TaskRepository } from "../../../../src/modules/tasks/repositories/tasks.repository";
+import { TaskRepository } from '../../../../src/modules/tasks/repositories/tasks.repository';
 
-describe("TaskRepository", () => {
+describe('TaskRepository', () => {
   let repository: TaskRepository;
   let mockModel: any;
 
   beforeEach(() => {
     // Correctly define MockModel as a function that mimics a constructor
-    const MockModel = vi.fn().mockImplementation(function (data) {
+    const MockModel = vi.fn().mockImplementation(function MockTaskModel(data) {
       return {
         ...data,
-        save: vi.fn().mockResolvedValue(data)
+        save: vi.fn().mockResolvedValue(data),
       };
     }) as any;
 
@@ -31,13 +31,13 @@ describe("TaskRepository", () => {
     repository = new TaskRepository(mockModel);
   });
 
-  it("should be defined", () => {
+  it('should be defined', () => {
     expect(repository).toBeDefined();
   });
 
-  describe("create", () => {
-    it("should create a task", async () => {
-      const data = { title: "Test Task", project: new Types.ObjectId() };
+  describe('create', () => {
+    it('should create a task', async () => {
+      const data = { title: 'Test Task', project: new Types.ObjectId() };
 
       // The MockModel implementation defined in beforeEach handles the instance creation
       // We can override it if needed, but the default one works for this test
@@ -49,10 +49,10 @@ describe("TaskRepository", () => {
     });
   });
 
-  describe("findByQuery", () => {
-    it("should find tasks by query", async () => {
+  describe('findByQuery', () => {
+    it('should find tasks by query', async () => {
       const query = { project: new Types.ObjectId() };
-      const mockTasks = [{ _id: new Types.ObjectId(), title: "Task 1" }];
+      const mockTasks = [{ _id: new Types.ObjectId(), title: 'Task 1' }];
 
       mockModel.exec.mockResolvedValue(mockTasks);
 
@@ -62,9 +62,9 @@ describe("TaskRepository", () => {
       expect(result).toEqual(mockTasks);
     });
 
-    it("should accept custom sort order", async () => {
+    it('should accept custom sort order', async () => {
       const query = { project: new Types.ObjectId() };
-      const mockTasks = [{ _id: new Types.ObjectId(), title: "Task 1" }];
+      const mockTasks = [{ _id: new Types.ObjectId(), title: 'Task 1' }];
 
       mockModel.exec.mockResolvedValue(mockTasks);
 
@@ -74,10 +74,10 @@ describe("TaskRepository", () => {
     });
   });
 
-  describe("findById", () => {
-    it("should find a task by id", async () => {
+  describe('findById', () => {
+    it('should find a task by id', async () => {
       const taskId = new Types.ObjectId().toHexString();
-      const mockTask = { _id: taskId, title: "Task 1" };
+      const mockTask = { _id: taskId, title: 'Task 1' };
 
       mockModel.findById.mockReturnValue(mockTask);
 
@@ -88,13 +88,13 @@ describe("TaskRepository", () => {
     });
   });
 
-  describe("findByIdPopulated", () => {
-    it("should find a task by id with populated fields", async () => {
+  describe('findByIdPopulated', () => {
+    it('should find a task by id with populated fields', async () => {
       const taskId = new Types.ObjectId().toHexString();
       const mockTask = {
         _id: taskId,
-        title: "Task 1",
-        creator: { name: "Creator", email: "creator@test.com" }
+        title: 'Task 1',
+        creator: { name: 'Creator', email: 'creator@test.com' },
       };
 
       mockModel.exec.mockResolvedValue(mockTask);
@@ -105,27 +105,23 @@ describe("TaskRepository", () => {
     });
   });
 
-  describe("updateById", () => {
-    it("should update a task by id", async () => {
+  describe('updateById', () => {
+    it('should update a task by id', async () => {
       const taskId = new Types.ObjectId().toHexString();
-      const updateData = { title: "Updated Task" };
+      const updateData = { title: 'Updated Task' };
       const mockTask = { _id: taskId, ...updateData };
 
       mockModel.exec.mockResolvedValue(mockTask);
 
       const result = await repository.updateById(taskId, updateData);
 
-      expect(mockModel.findByIdAndUpdate).toHaveBeenCalledWith(
-        taskId,
-        { $set: updateData },
-        { new: true }
-      );
+      expect(mockModel.findByIdAndUpdate).toHaveBeenCalledWith(taskId, { $set: updateData }, { new: true });
       expect(result).toEqual(mockTask);
     });
   });
 
-  describe("deleteById", () => {
-    it("should delete a task by id", async () => {
+  describe('deleteById', () => {
+    it('should delete a task by id', async () => {
       const taskId = new Types.ObjectId().toHexString();
 
       mockModel.exec.mockResolvedValue({ deletedCount: 1 });
@@ -137,8 +133,8 @@ describe("TaskRepository", () => {
     });
   });
 
-  describe("deleteByProjectId", () => {
-    it("should delete all tasks by project id", async () => {
+  describe('deleteByProjectId', () => {
+    it('should delete all tasks by project id', async () => {
       const projectId = new Types.ObjectId().toHexString();
 
       mockModel.exec.mockResolvedValue({ deletedCount: 5 });
@@ -149,7 +145,7 @@ describe("TaskRepository", () => {
       expect(result).toEqual({ deletedCount: 5 });
     });
 
-    it("should return 0 if no tasks deleted", async () => {
+    it('should return 0 if no tasks deleted', async () => {
       const projectId = new Types.ObjectId().toHexString();
 
       mockModel.exec.mockResolvedValue({ deletedCount: 0 });
@@ -160,8 +156,8 @@ describe("TaskRepository", () => {
     });
   });
 
-  describe("decrementOrderAfter", () => {
-    it("should decrement order for tasks after deleted order", async () => {
+  describe('decrementOrderAfter', () => {
+    it('should decrement order for tasks after deleted order', async () => {
       const projectId = new Types.ObjectId();
       const deletedOrder = 5;
 
@@ -171,13 +167,13 @@ describe("TaskRepository", () => {
 
       expect(mockModel.updateMany).toHaveBeenCalledWith(
         { project: projectId, orderInProject: { $gt: deletedOrder } },
-        { $inc: { orderInProject: -1 } }
+        { $inc: { orderInProject: -1 } },
       );
     });
   });
 
-  describe("reorderOnMoveWithinProject", () => {
-    it("should decrement order when moving to higher order", async () => {
+  describe('reorderOnMoveWithinProject', () => {
+    it('should decrement order when moving to higher order', async () => {
       const projectId = new Types.ObjectId();
       const taskId = new Types.ObjectId().toHexString();
       const oldOrder = 2;
@@ -191,13 +187,13 @@ describe("TaskRepository", () => {
         {
           project: projectId,
           orderInProject: { $gt: oldOrder, $lte: newOrder },
-          _id: { $ne: taskId }
+          _id: { $ne: taskId },
         },
-        { $inc: { orderInProject: -1 } }
+        { $inc: { orderInProject: -1 } },
       );
     });
 
-    it("should increment order when moving to lower order", async () => {
+    it('should increment order when moving to lower order', async () => {
       const projectId = new Types.ObjectId();
       const taskId = new Types.ObjectId().toHexString();
       const oldOrder = 5;
@@ -211,15 +207,15 @@ describe("TaskRepository", () => {
         {
           project: projectId,
           orderInProject: { $gte: newOrder, $lt: oldOrder },
-          _id: { $ne: taskId }
+          _id: { $ne: taskId },
         },
-        { $inc: { orderInProject: 1 } }
+        { $inc: { orderInProject: 1 } },
       );
     });
   });
 
-  describe("incrementOrderFrom", () => {
-    it("should increment order for tasks from a position", async () => {
+  describe('incrementOrderFrom', () => {
+    it('should increment order for tasks from a position', async () => {
       const projectId = new Types.ObjectId();
       const fromOrder = 5;
       const excludeTaskId = new Types.ObjectId().toHexString();
@@ -232,25 +228,25 @@ describe("TaskRepository", () => {
         {
           project: projectId,
           orderInProject: { $gte: fromOrder },
-          _id: { $ne: excludeTaskId }
+          _id: { $ne: excludeTaskId },
         },
-        { $inc: { orderInProject: 1 } }
+        { $inc: { orderInProject: 1 } },
       );
     });
   });
 
-  describe("save", () => {
-    it("should save a task document", async () => {
+  describe('save', () => {
+    it('should save a task document', async () => {
       const mockTask = {
         _id: new Types.ObjectId(),
-        title: "Task 1",
-        save: vi.fn().mockResolvedValue({ _id: new Types.ObjectId(), title: "Task 1" })
+        title: 'Task 1',
+        save: vi.fn().mockResolvedValue({ _id: new Types.ObjectId(), title: 'Task 1' }),
       };
 
       const result = await repository.save(mockTask as any);
 
       expect(mockTask.save).toHaveBeenCalled();
-      expect(result).toEqual(expect.objectContaining({ title: "Task 1" }));
+      expect(result).toEqual(expect.objectContaining({ title: 'Task 1' }));
     });
   });
 });

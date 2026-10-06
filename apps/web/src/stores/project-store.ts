@@ -1,12 +1,12 @@
-import type { Project } from "@repo/store";
-import type { StateCreator } from "zustand";
+import type { Project } from '@repo/store';
+import type { StateCreator } from 'zustand';
 
-import { projectApi } from "@/lib/api/projectApi";
+import { projectApi } from '@/lib/api/project-api';
 
-import type { BoardSliceState, ProjectSliceState, UserSliceState } from "./types";
+import type { BoardSliceState, ProjectSliceState, UserSliceState } from './types';
 
 export const createProjectSlice: StateCreator<
-  ProjectSliceState & Pick<UserSliceState, "userId"> & Pick<BoardSliceState, "currentBoardId">,
+  ProjectSliceState & Pick<UserSliceState, 'userId'> & Pick<BoardSliceState, 'currentBoardId'>,
   [],
   [],
   ProjectSliceState
@@ -32,14 +32,14 @@ export const createProjectSlice: StateCreator<
         set({
           projects: projects.map((project) => ({
             ...project,
-            tasks: []
-          }))
+            tasks: [],
+          })),
         });
       } else {
         set({ projects: [] });
       }
     } catch (error) {
-      console.error("Error fetching projects:", error);
+      console.error('Error fetching projects:', error);
       set({ projects: [] });
     } finally {
       set({ isLoadingProjects: false });
@@ -52,7 +52,7 @@ export const createProjectSlice: StateCreator<
     }
 
     try {
-      const { taskApi } = await import("@/lib/api/taskApi");
+      const { taskApi } = await import('@/lib/api/task-api');
       const tasks = await taskApi.getTasks(projectId);
 
       if (!Array.isArray(tasks)) {
@@ -61,14 +61,14 @@ export const createProjectSlice: StateCreator<
 
       set((state) => {
         const updatedProjects = state.projects.map((project) =>
-          project._id === projectId ? { ...project, tasks } : project
+          project._id === projectId ? { ...project, tasks } : project,
         );
         return { projects: updatedProjects };
       });
 
       return tasks;
     } catch (error) {
-      console.error("Error fetching tasks for project:", error);
+      console.error('Error fetching tasks for project:', error);
       return [];
     }
   },
@@ -82,26 +82,24 @@ export const createProjectSlice: StateCreator<
       boardId: string;
       owner: string;
       orderInBoard?: number;
-    }) => Promise<Project>
+    }) => Promise<Project>,
   ) => {
     try {
       const { currentBoardId, userId, projects } = get();
       if (!currentBoardId) {
-        throw new Error("No board selected");
+        throw new Error('No board selected');
       }
       if (!userId) {
-        throw new Error("User not authenticated");
+        throw new Error('User not authenticated');
       }
 
       const currentBoardProjects = projects.filter((p) => {
-        const projectBoardId = typeof p.board === "string" ? p.board : p.board?._id;
+        const projectBoardId = typeof p.board === 'string' ? p.board : p.board?._id;
         return projectBoardId === currentBoardId;
       });
 
       const maxOrder =
-        currentBoardProjects.length > 0
-          ? Math.max(...currentBoardProjects.map((p) => p.orderInBoard ?? 0), -1)
-          : -1;
+        currentBoardProjects.length > 0 ? Math.max(...currentBoardProjects.map((p) => p.orderInBoard ?? 0), -1) : -1;
 
       const orderInBoard = maxOrder + 1;
 
@@ -110,19 +108,19 @@ export const createProjectSlice: StateCreator<
         description,
         boardId: currentBoardId,
         owner: userId,
-        orderInBoard
+        orderInBoard,
       });
 
       if (newProject) {
         set((state) => ({
-          projects: [...state.projects, newProject]
+          projects: [...state.projects, newProject],
         }));
         return newProject._id;
       }
 
-      throw new Error("Failed to create project");
+      throw new Error('Failed to create project');
     } catch (error) {
-      console.error("Error in addProject:", error);
+      console.error('Error in addProject:', error);
       throw error;
     }
   },
@@ -131,7 +129,7 @@ export const createProjectSlice: StateCreator<
     id: string,
     newTitle: string,
     newDescription: string | undefined,
-    updateFn: (id: string, data: { title: string; description?: string }) => Promise<Project>
+    updateFn: (id: string, data: { title: string; description?: string }) => Promise<Project>,
   ) => {
     try {
       set((state) => ({
@@ -141,27 +139,27 @@ export const createProjectSlice: StateCreator<
                 ...project,
                 title: newTitle,
                 description: newDescription ?? project.description ?? null,
-                updatedAt: new Date().toISOString()
+                updatedAt: new Date().toISOString(),
               }
-            : project
-        )
+            : project,
+        ),
       }));
 
-      const userId = get().userId;
+      const { userId } = get();
       if (!userId) {
-        throw new Error("User not authenticated");
+        throw new Error('User not authenticated');
       }
 
       const updateData = {
         title: newTitle,
-        description: newDescription ?? ""
+        description: newDescription ?? '',
       };
 
       await updateFn(id, updateData);
     } catch (error) {
-      console.error("Error updating project:", error);
+      console.error('Error updating project:', error);
       set((state) => ({
-        projects: state.projects.map((project) => (project._id === id ? project : project))
+        projects: state.projects.map((project) => (project._id === id ? project : project)),
       }));
       throw error;
     }
@@ -172,11 +170,11 @@ export const createProjectSlice: StateCreator<
       await deleteFn(id);
 
       set((state) => ({
-        projects: state.projects.filter((project) => project._id !== id)
+        projects: state.projects.filter((project) => project._id !== id),
       }));
     } catch (error) {
-      console.error("Error removing project:", error);
+      console.error('Error removing project:', error);
       throw error;
     }
-  }
+  },
 });

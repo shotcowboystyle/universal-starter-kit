@@ -41,42 +41,91 @@ function cssOf(node: HTMLElement, prop: string): string {
 
 describe('UnsavedChangesDialog', () => {
   it('renders nothing while closed', () => {
-    renderWithProviders(<UnsavedChangesDialog open={false} fieldCount={2} onKeepEditing={noop} onDiscard={noop} />);
+    renderWithProviders(
+      <UnsavedChangesDialog
+        open={false}
+        fieldCount={2}
+        onKeepEditing={noop}
+        onDiscard={noop}
+      />,
+    );
     expect(dialog()).toBeNull();
   });
 
   it('announces as an alertdialog, not a plain dialog, because the choice is destructive', () => {
-    renderWithProviders(<UnsavedChangesDialog open fieldCount={2} onKeepEditing={noop} onDiscard={noop} />);
+    renderWithProviders(
+      <UnsavedChangesDialog
+        open
+        fieldCount={2}
+        onKeepEditing={noop}
+        onDiscard={noop}
+      />,
+    );
     expect(dialog()).toBeTruthy();
     expect(document.body.querySelector('[role="dialog"][data-mp-savebar-guard]')).toBeNull();
   });
 
   it('leads with the question, so the title carries the decision', () => {
-    renderWithProviders(<UnsavedChangesDialog open fieldCount={2} onKeepEditing={noop} onDiscard={noop} />);
+    renderWithProviders(
+      <UnsavedChangesDialog
+        open
+        fieldCount={2}
+        onKeepEditing={noop}
+        onDiscard={noop}
+      />,
+    );
     expect(dialog()?.textContent).toContain('Discard unsaved changes?');
   });
 
   it('uses the singular sentence for exactly one edited field', () => {
-    renderWithProviders(<UnsavedChangesDialog open fieldCount={1} onKeepEditing={noop} onDiscard={noop} />);
+    renderWithProviders(
+      <UnsavedChangesDialog
+        open
+        fieldCount={1}
+        onKeepEditing={noop}
+        onDiscard={noop}
+      />,
+    );
     const text = dialog()?.textContent ?? '';
     expect(text).toContain('1 field on this page has edits');
     expect(text).not.toContain('fields on this page have');
   });
 
   it('uses the plural sentence, with the count interpolated, for more than one', () => {
-    renderWithProviders(<UnsavedChangesDialog open fieldCount={4} onKeepEditing={noop} onDiscard={noop} />);
+    renderWithProviders(
+      <UnsavedChangesDialog
+        open
+        fieldCount={4}
+        onKeepEditing={noop}
+        onDiscard={noop}
+      />,
+    );
     const text = dialog()?.textContent ?? '';
     expect(text).toContain('4 fields on this page have edits');
     expect(text).not.toContain('1 field on this page has');
   });
 
   it('says plainly that leaving discards the edits', () => {
-    renderWithProviders(<UnsavedChangesDialog open fieldCount={2} onKeepEditing={noop} onDiscard={noop} />);
+    renderWithProviders(
+      <UnsavedChangesDialog
+        open
+        fieldCount={2}
+        onKeepEditing={noop}
+        onDiscard={noop}
+      />,
+    );
     expect(dialog()?.textContent).toContain('Leaving discards them');
   });
 
   it('offers both a way back and a way out', () => {
-    renderWithProviders(<UnsavedChangesDialog open fieldCount={2} onKeepEditing={noop} onDiscard={noop} />);
+    renderWithProviders(
+      <UnsavedChangesDialog
+        open
+        fieldCount={2}
+        onKeepEditing={noop}
+        onDiscard={noop}
+      />,
+    );
     expect(button('data-mp-savebar-keep').textContent).toContain('Keep editing');
     expect(button('data-mp-savebar-discard-confirm').textContent).toContain('Discard changes');
   });
@@ -85,10 +134,15 @@ describe('UnsavedChangesDialog', () => {
     const onKeepEditing = vi.fn();
     const onDiscard = vi.fn();
     renderWithProviders(
-      <UnsavedChangesDialog open fieldCount={2} onKeepEditing={onKeepEditing} onDiscard={onDiscard} />,
+      <UnsavedChangesDialog
+        open
+        fieldCount={2}
+        onKeepEditing={onKeepEditing}
+        onDiscard={onDiscard}
+      />,
     );
     fireEvent.click(button('data-mp-savebar-keep'));
-    expect(onKeepEditing).toHaveBeenCalledTimes(1);
+    expect(onKeepEditing).toHaveBeenCalledOnce();
     expect(onDiscard).not.toHaveBeenCalled();
   });
 
@@ -96,10 +150,15 @@ describe('UnsavedChangesDialog', () => {
     const onKeepEditing = vi.fn();
     const onDiscard = vi.fn();
     renderWithProviders(
-      <UnsavedChangesDialog open fieldCount={2} onKeepEditing={onKeepEditing} onDiscard={onDiscard} />,
+      <UnsavedChangesDialog
+        open
+        fieldCount={2}
+        onKeepEditing={onKeepEditing}
+        onDiscard={onDiscard}
+      />,
     );
     fireEvent.click(button('data-mp-savebar-discard-confirm'));
-    expect(onDiscard).toHaveBeenCalledTimes(1);
+    expect(onDiscard).toHaveBeenCalledOnce();
     expect(onKeepEditing).not.toHaveBeenCalled();
   });
 
@@ -107,30 +166,63 @@ describe('UnsavedChangesDialog', () => {
     const onKeepEditing = vi.fn();
     const onDiscard = vi.fn();
     renderWithProviders(
-      <UnsavedChangesDialog open fieldCount={2} onKeepEditing={onKeepEditing} onDiscard={onDiscard} />,
+      <UnsavedChangesDialog
+        open
+        fieldCount={2}
+        onKeepEditing={onKeepEditing}
+        onDiscard={onDiscard}
+      />,
     );
     fireEvent.keyDown(dialog() as HTMLElement, { key: 'Escape', code: 'Escape' });
     expect(onDiscard).not.toHaveBeenCalled();
   });
 
   it("marks the content so the save bar's outside-click guard can find it", () => {
-    renderWithProviders(<UnsavedChangesDialog open fieldCount={2} onKeepEditing={noop} onDiscard={noop} />);
+    renderWithProviders(
+      <UnsavedChangesDialog
+        open
+        fieldCount={2}
+        onKeepEditing={noop}
+        onDiscard={noop}
+      />,
+    );
     expect(dialog()?.hasAttribute('data-mp-savebar-guard')).toBe(true);
   });
 
   it('takes focus itself rather than leaving it behind the overlay', () => {
-    renderWithProviders(<UnsavedChangesDialog open fieldCount={2} onKeepEditing={noop} onDiscard={noop} />);
+    renderWithProviders(
+      <UnsavedChangesDialog
+        open
+        fieldCount={2}
+        onKeepEditing={noop}
+        onDiscard={noop}
+      />,
+    );
     expect(dialog()?.getAttribute('tabindex')).toBe('-1');
   });
 
   it('paints no focus outline on the sheet itself, so the ring stays on the buttons', () => {
-    renderWithProviders(<UnsavedChangesDialog open fieldCount={2} onKeepEditing={noop} onDiscard={noop} />);
+    renderWithProviders(
+      <UnsavedChangesDialog
+        open
+        fieldCount={2}
+        onKeepEditing={noop}
+        onDiscard={noop}
+      />,
+    );
     const outline = cssOf(dialog() as HTMLElement, 'outline-width');
     expect(outline === '' || outline === '0px').toBe(true);
   });
 
   it('caps its width so the sentence never runs the width of a desk monitor', () => {
-    renderWithProviders(<UnsavedChangesDialog open fieldCount={2} onKeepEditing={noop} onDiscard={noop} />);
+    renderWithProviders(
+      <UnsavedChangesDialog
+        open
+        fieldCount={2}
+        onKeepEditing={noop}
+        onDiscard={noop}
+      />,
+    );
     expect(cssOf(dialog() as HTMLElement, 'max-width')).toBe('440px');
   });
 });

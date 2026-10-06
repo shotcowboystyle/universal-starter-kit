@@ -37,16 +37,15 @@ export function createWithLayout<LayoutProps>(
   extraLayouts: WithLayout[] = [],
   layoutProps?: Omit<LayoutProps, 'children'>,
 ): WithLayout {
-  return ((Component: ComponentType<unknown>) => {
-    return flattenLayouts(
+  return ((Component: ComponentType<unknown>) =>
+    flattenLayouts(
       (props: unknown) => (
         <Layout {...(layoutProps as LayoutProps)}>
           <Component {...(props as any)} />
         </Layout>
       ),
       extraLayouts,
-    );
-  }) as WithLayout;
+    )) as WithLayout;
 }
 
 function flattenLayouts<Props>(layout: ComponentType<Props>, [...layouts]: WithLayout[]): ComponentType<Props> {

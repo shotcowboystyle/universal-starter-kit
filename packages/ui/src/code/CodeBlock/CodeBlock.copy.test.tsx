@@ -24,7 +24,7 @@ describe('CodeBlock copy (Input.Button + notify)', () => {
     writeText.mockReset();
     writeText.mockResolvedValue(undefined);
     vi.stubGlobal('navigator', {
-      ...(typeof navigator !== 'undefined' ? navigator : {}),
+      ...(typeof navigator === 'undefined' ? {} : navigator),
       clipboard: { writeText },
     });
     resetToasts();
@@ -62,12 +62,16 @@ describe('CodeBlock copy (Input.Button + notify)', () => {
 
   it('end-cap tracks size while code text stays knob-immune', () => {
     const small = renderWithProviders(
-      <Preset cascade={false} overrides={{ bodyFont: 'serif', fontWeight: 'bold', size: 'small' }}>
+      <Preset
+        cascade={false}
+        overrides={{ bodyFont: 'serif', fontWeight: 'bold', size: 'small' }}>
         <CodeBlock size="$3">{SAMPLE}</CodeBlock>
       </Preset>,
     );
     const large = renderWithProviders(
-      <Preset cascade={false} overrides={{ bodyFont: 'serif', fontWeight: 'bold', size: 'large' }}>
+      <Preset
+        cascade={false}
+        overrides={{ bodyFont: 'serif', fontWeight: 'bold', size: 'large' }}>
         <CodeBlock size="$5">{SAMPLE}</CodeBlock>
       </Preset>,
     );

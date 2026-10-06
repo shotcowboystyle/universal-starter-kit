@@ -29,7 +29,6 @@ import { CheckCircleIcon, InfoIcon, WarningCircleIcon, WarningIcon, XIcon } from
 import { zIndex } from '@repo/forms';
 import {
   Intent,
-  type KnobProps,
   MIN_PRESS_TARGET,
   ensureCompositeFocusRing,
   pressTargetHitSlop,
@@ -38,16 +37,18 @@ import {
   useResolvedKnobs,
   warnBannedErrorWords,
 } from '@repo/theme';
+import type { KnobProps } from '@repo/theme';
 import {
   Toast as TamaguiToast,
   ToastProvider as TamaguiToastProvider,
   ToastViewport as TamaguiToastViewport,
-  type SwipeDirection,
 } from '@tamagui/toast';
+import type { SwipeDirection } from '@tamagui/toast';
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { AccessibilityInfo } from 'react-native';
-import { SizableText, View, XStack, YStack, isWeb, styled, useTheme, type ViewProps } from 'tamagui';
+import { SizableText, View, XStack, YStack, isWeb, styled, useTheme } from 'tamagui';
+import type { ViewProps } from 'tamagui';
 
 import { useTranslation } from '../shared/i18n';
 
@@ -65,11 +66,8 @@ import {
   TOAST_DEFAULT_MS,
   TOAST_ERROR_MS,
   TOAST_WARNING_MS,
-  type ToastActionOptions,
-  type ToastEntry,
-  type ToastIntent,
-  type ToastShowOptions,
 } from './store';
+import type { ToastActionOptions, ToastEntry, ToastIntent, ToastShowOptions } from './store';
 
 export type { ToastActionOptions, ToastEntry, ToastIntent, ToastShowOptions };
 export {
@@ -208,7 +206,7 @@ function ensureToastIntentEdge() {
   const tag = document.createElement('style');
   tag.id = TOAST_FRAME_STYLE_ID;
   tag.textContent = toastIntentEdgeCss;
-  document.head.appendChild(tag);
+  document.head.append(tag);
 }
 
 function paintToastFrame(
@@ -382,7 +380,7 @@ function useToastVisuals(intent: ToastIntent, compact?: boolean) {
   // 4.5:1 on color1/color2.
   const iconColor = (isAccent ? theme.accentColor?.get() : theme.color11?.get()) as string | undefined;
   const accentTextColor = isAccent ? accentOnSurface : '$color11';
-  const size = knobProps.size;
+  const { size } = knobProps;
   const iconPx = iconPxForSize(size);
   const closePx = closePxForSize(size);
   const nestedPx = knobProps.nestedControl.px;
@@ -481,14 +479,29 @@ function ToastBody({
         accessible={false}
         accessibilityElementsHidden
         importantForAccessibility="no">
-        <Icon size={iconPx} weight="fill" color={iconColor} />
+        <Icon
+          size={iconPx}
+          weight="fill"
+          color={iconColor}
+        />
       </View>
-      <YStack flexGrow={1} flexShrink={1} gap="$1" minWidth={0} justifyContent="center">
-        <SizableText {...labelFontProps} fontWeight="600" color="$color12">
+      <YStack
+        flexGrow={1}
+        flexShrink={1}
+        gap="$1"
+        minWidth={0}
+        justifyContent="center">
+        <SizableText
+          {...labelFontProps}
+          fontWeight="600"
+          color="$color12">
           {title}
         </SizableText>
         {description != null && description !== '' && (
-          <SizableText {...bodyFontProps} fontSize={descFontSize as never} color="$color11">
+          <SizableText
+            {...bodyFontProps}
+            fontSize={descFontSize as never}
+            color="$color11">
             {description}
           </SizableText>
         )}
@@ -508,7 +521,11 @@ function ToastActionLabel({ label, color, labelFontProps }: ToastActionLabelProp
   // Measure the TEXT NODE — a wrapping frame's weight is not the label's.
   const inkStyle = isWeb && typeof color === 'string' && !color.startsWith('$') ? { color } : undefined;
   return (
-    <SizableText {...labelFontProps} fontWeight="400" color={color as never} style={inkStyle}>
+    <SizableText
+      {...labelFontProps}
+      fontWeight="400"
+      color={color as never}
+      style={inkStyle}>
       {label}
     </SizableText>
   );
@@ -626,7 +643,11 @@ function ToastInner({
             {...knobProps.borderRadiusNested}
             height={nestedPx}
             minHeight={nestedPx}>
-            <ToastActionLabel label={action.label} color={accentTextColor} labelFontProps={knobProps.label} />
+            <ToastActionLabel
+              label={action.label}
+              color={accentTextColor}
+              labelFontProps={knobProps.label}
+            />
           </ToastActionPill>
         </ToastActionTarget>
       )}
@@ -638,8 +659,13 @@ function ToastInner({
           alignSelf={description ? 'flex-start' : 'center'}
           {...toastClosePressProps(action != null, closeVisual)}
           onPress={() => onDismiss?.()}>
-          <ToastCloseRing className="mp-chip-dismiss-ring" borderRadius={closeRadius}>
-            <XIcon size={closePx} color={iconColor} />
+          <ToastCloseRing
+            className="mp-chip-dismiss-ring"
+            borderRadius={closeRadius}>
+            <XIcon
+              size={closePx}
+              color={iconColor}
+            />
           </ToastCloseRing>
         </ToastCloseTarget>
       )}
@@ -655,7 +681,10 @@ function ToastInner({
 export function Toast({ intent = 'accent', ...props }: ToastProps) {
   return (
     <IntentWrap intent={intent}>
-      <ToastInner intent={intent} {...props} />
+      <ToastInner
+        intent={intent}
+        {...props}
+      />
     </IntentWrap>
   );
 }
@@ -732,7 +761,9 @@ function ToastItemInner({ entry, isTop, compact }: ToastItemProps) {
         bodyFontProps={knobProps.body}
       />
       {entry.action && (
-        <TamaguiToast.Action altText={entry.action.altText ?? entry.action.label} asChild>
+        <TamaguiToast.Action
+          altText={entry.action.altText ?? entry.action.label}
+          asChild>
           <ToastActionTarget
             {...nativeToastControlA11y()}
             className="mp-chip-dismiss"
@@ -745,7 +776,11 @@ function ToastItemInner({ entry, isTop, compact }: ToastItemProps) {
               {...knobProps.borderRadiusNested}
               height={nestedPx}
               minHeight={nestedPx}>
-              <ToastActionLabel label={entry.action.label} color={accentTextColor} labelFontProps={knobProps.label} />
+              <ToastActionLabel
+                label={entry.action.label}
+                color={accentTextColor}
+                labelFontProps={knobProps.label}
+              />
             </ToastActionPill>
           </ToastActionTarget>
         </TamaguiToast.Action>
@@ -758,8 +793,13 @@ function ToastItemInner({ entry, isTop, compact }: ToastItemProps) {
             aria-label={t('Dismiss notification')}
             {...toastClosePressProps(entry.action != null, closeVisual)}
             alignSelf={entry.description ? 'flex-start' : 'center'}>
-            <ToastCloseRing className="mp-chip-dismiss-ring" borderRadius={closeRadius}>
-              <XIcon size={closePx} color={iconColor} />
+            <ToastCloseRing
+              className="mp-chip-dismiss-ring"
+              borderRadius={closeRadius}>
+              <XIcon
+                size={closePx}
+                color={iconColor}
+              />
             </ToastCloseRing>
           </ToastCloseTarget>
         </TamaguiToast.Close>
@@ -855,9 +895,17 @@ export function ToastViewport({
   }
 
   const content = (
-    <TamaguiToastProvider duration={duration} label={label} swipeDirection={placementSwipeDirection(placement)}>
+    <TamaguiToastProvider
+      duration={duration}
+      label={label}
+      swipeDirection={placementSwipeDirection(placement)}>
       {toasts.map((entry) => (
-        <ToastItem key={entry.id} entry={entry} isTop={isTop} compact={compact} />
+        <ToastItem
+          key={entry.id}
+          entry={entry}
+          isTop={isTop}
+          compact={compact}
+        />
       ))}
       <TamaguiToastViewport
         multipleToasts
@@ -881,7 +929,10 @@ export function ToastViewport({
   // paint and hit-test above every toast. position:fixed geometry inside is
   // unaffected — only paint order is contained.
   return (
-    <View position="absolute" zIndex={zIndex.loading} data-testid="toast-layer">
+    <View
+      position="absolute"
+      zIndex={zIndex.loading}
+      data-testid="toast-layer">
       {content}
     </View>
   );

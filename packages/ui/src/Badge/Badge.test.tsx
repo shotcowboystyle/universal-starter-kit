@@ -34,7 +34,9 @@ describe('Badge', () => {
     expect(hidden.container.textContent).toContain('Bell');
 
     const shown = renderWithProviders(
-      <Badge count={0} showZero>
+      <Badge
+        count={0}
+        showZero>
         <Text>Bell</Text>
       </Badge>,
     );
@@ -43,7 +45,9 @@ describe('Badge', () => {
 
   it('renders max+ visually and exposes the exact count to AT (Carbon)', () => {
     const { container } = renderWithProviders(
-      <Badge count={150} max={99}>
+      <Badge
+        count={150}
+        max={99}>
         <Text>Bell</Text>
       </Badge>,
     );
@@ -103,7 +107,9 @@ describe('Badge', () => {
 
   it('hides the indicator when visible is false', () => {
     const { container } = renderWithProviders(
-      <Badge count={5} visible={false}>
+      <Badge
+        count={5}
+        visible={false}>
         <Text>Bell</Text>
       </Badge>,
     );
@@ -112,7 +118,12 @@ describe('Badge', () => {
   });
 
   it('renders 0+ when max is 0 and count is positive', () => {
-    const { container } = renderWithProviders(<Badge count={1} max={0} />);
+    const { container } = renderWithProviders(
+      <Badge
+        count={1}
+        max={0}
+      />,
+    );
     const pill = container.querySelector('[data-badge="count"]');
     expect(pill?.getAttribute('data-overflow')).toBe('true');
     expect(pill?.textContent).toContain('0+');

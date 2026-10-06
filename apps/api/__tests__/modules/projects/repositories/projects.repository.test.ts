@@ -1,18 +1,18 @@
-import { Types } from "mongoose";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Types } from 'mongoose';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ProjectRepository } from "../../../../src/modules/projects/repositories/projects.repository";
+import { ProjectRepository } from '../../../../src/modules/projects/repositories/projects.repository';
 
-describe("ProjectRepository", () => {
+describe('ProjectRepository', () => {
   let repository: ProjectRepository;
   let mockModel: any;
 
   beforeEach(() => {
     // Correctly define MockModel as a function that mimics a constructor
-    const MockModel = vi.fn().mockImplementation(function (data) {
+    const MockModel = vi.fn().mockImplementation(function MockProjectModel(data) {
       return {
         ...data,
-        save: vi.fn().mockResolvedValue(data)
+        save: vi.fn().mockResolvedValue(data),
       };
     }) as any;
 
@@ -35,14 +35,14 @@ describe("ProjectRepository", () => {
     repository = new ProjectRepository(mockModel);
   });
 
-  it("should be defined", () => {
+  it('should be defined', () => {
     expect(repository).toBeDefined();
   });
 
-  describe("findByBoardId", () => {
-    it("should find projects by board id", async () => {
+  describe('findByBoardId', () => {
+    it('should find projects by board id', async () => {
       const boardId = new Types.ObjectId().toHexString();
-      const mockProjects = [{ _id: new Types.ObjectId(), title: "Project 1" }];
+      const mockProjects = [{ _id: new Types.ObjectId(), title: 'Project 1' }];
 
       mockModel.exec.mockResolvedValue(mockProjects);
 
@@ -52,10 +52,10 @@ describe("ProjectRepository", () => {
     });
   });
 
-  describe("findById", () => {
-    it("should find a project by id", async () => {
+  describe('findById', () => {
+    it('should find a project by id', async () => {
       const projectId = new Types.ObjectId().toHexString();
-      const mockProject = { _id: projectId, title: "Project 1" };
+      const mockProject = { _id: projectId, title: 'Project 1' };
 
       mockModel.findById.mockReturnValue(mockProject);
 
@@ -65,13 +65,13 @@ describe("ProjectRepository", () => {
     });
   });
 
-  describe("findByIdPopulated", () => {
-    it("should find a project by id with populated fields", async () => {
+  describe('findByIdPopulated', () => {
+    it('should find a project by id with populated fields', async () => {
       const projectId = new Types.ObjectId().toHexString();
       const mockProject = {
         _id: projectId,
-        title: "Project 1",
-        owner: { name: "Owner", email: "owner@test.com" }
+        title: 'Project 1',
+        owner: { name: 'Owner', email: 'owner@test.com' },
       };
 
       mockModel.exec.mockResolvedValue(mockProject);
@@ -82,9 +82,9 @@ describe("ProjectRepository", () => {
     });
   });
 
-  describe("create", () => {
-    it("should create a project", async () => {
-      const data = { title: "Test Project", board: new Types.ObjectId() };
+  describe('create', () => {
+    it('should create a project', async () => {
+      const data = { title: 'Test Project', board: new Types.ObjectId() };
 
       // Default implementation from beforeEach will handle this
 
@@ -95,10 +95,10 @@ describe("ProjectRepository", () => {
     });
   });
 
-  describe("updateById", () => {
-    it("should update a project by id", async () => {
+  describe('updateById', () => {
+    it('should update a project by id', async () => {
       const projectId = new Types.ObjectId().toHexString();
-      const updateData = { title: "Updated Project" };
+      const updateData = { title: 'Updated Project' };
       const mockProject = { _id: projectId, ...updateData };
 
       mockModel.exec.mockResolvedValue(mockProject);
@@ -108,14 +108,14 @@ describe("ProjectRepository", () => {
       expect(mockModel.findByIdAndUpdate).toHaveBeenCalledWith(
         projectId,
         { $set: updateData },
-        { new: true, runValidators: true }
+        { new: true, runValidators: true },
       );
       expect(result).toEqual(mockProject);
     });
   });
 
-  describe("deleteById", () => {
-    it("should delete a project by id", async () => {
+  describe('deleteById', () => {
+    it('should delete a project by id', async () => {
       const projectId = new Types.ObjectId().toHexString();
 
       mockModel.deleteOne.mockResolvedValue({ deletedCount: 1 });
@@ -127,8 +127,8 @@ describe("ProjectRepository", () => {
     });
   });
 
-  describe("deleteByBoardId", () => {
-    it("should delete all projects by board id", async () => {
+  describe('deleteByBoardId', () => {
+    it('should delete all projects by board id', async () => {
       const boardId = new Types.ObjectId().toHexString();
 
       mockModel.exec.mockResolvedValue({ deletedCount: 5 });
@@ -139,7 +139,7 @@ describe("ProjectRepository", () => {
       expect(result).toEqual({ deletedCount: 5 });
     });
 
-    it("should return 0 if no projects deleted", async () => {
+    it('should return 0 if no projects deleted', async () => {
       const boardId = new Types.ObjectId().toHexString();
 
       mockModel.exec.mockResolvedValue({ deletedCount: 0 });
@@ -150,8 +150,8 @@ describe("ProjectRepository", () => {
     });
   });
 
-  describe("getLastOrderInBoard", () => {
-    it("should return next order when projects exist", async () => {
+  describe('getLastOrderInBoard', () => {
+    it('should return next order when projects exist', async () => {
       const boardId = new Types.ObjectId().toHexString();
 
       mockModel.lean.mockResolvedValue({ orderInBoard: 5 });
@@ -161,7 +161,7 @@ describe("ProjectRepository", () => {
       expect(result).toBe(6);
     });
 
-    it("should return 0 when no projects exist", async () => {
+    it('should return 0 when no projects exist', async () => {
       const boardId = new Types.ObjectId().toHexString();
 
       mockModel.lean.mockResolvedValue(null);
@@ -172,8 +172,8 @@ describe("ProjectRepository", () => {
     });
   });
 
-  describe("decrementOrderAfter", () => {
-    it("should decrement order for projects after deleted order", async () => {
+  describe('decrementOrderAfter', () => {
+    it('should decrement order for projects after deleted order', async () => {
       const boardId = new Types.ObjectId();
       const deletedOrder = 5;
 
@@ -183,13 +183,13 @@ describe("ProjectRepository", () => {
 
       expect(mockModel.updateMany).toHaveBeenCalledWith(
         { board: boardId, orderInBoard: { $gt: deletedOrder } },
-        { $inc: { orderInBoard: -1 } }
+        { $inc: { orderInBoard: -1 } },
       );
     });
   });
 
-  describe("addMember", () => {
-    it("should add a member to a project", async () => {
+  describe('addMember', () => {
+    it('should add a member to a project', async () => {
       const projectId = new Types.ObjectId().toHexString();
       const userId = new Types.ObjectId();
 
@@ -197,15 +197,12 @@ describe("ProjectRepository", () => {
 
       await repository.addMember(projectId, userId);
 
-      expect(mockModel.updateOne).toHaveBeenCalledWith(
-        { _id: projectId },
-        { $addToSet: { members: userId } }
-      );
+      expect(mockModel.updateOne).toHaveBeenCalledWith({ _id: projectId }, { $addToSet: { members: userId } });
     });
   });
 
-  describe("isMember", () => {
-    it("should return true when user is a member", async () => {
+  describe('isMember', () => {
+    it('should return true when user is a member', async () => {
       const projectId = new Types.ObjectId().toHexString();
       const userId = new Types.ObjectId();
 
@@ -216,7 +213,7 @@ describe("ProjectRepository", () => {
       expect(result).toBe(true);
     });
 
-    it("should return false when user is not a member", async () => {
+    it('should return false when user is not a member', async () => {
       const projectId = new Types.ObjectId().toHexString();
       const userId = new Types.ObjectId();
 

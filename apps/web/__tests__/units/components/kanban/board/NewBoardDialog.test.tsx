@@ -4,11 +4,11 @@ import { toast } from 'sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import NewBoardDialog from '@/components/kanban/board/NewBoardDialog';
-import { useBoards } from '@/hooks/useBoards';
+import { useBoards } from '@/hooks/use-boards';
 import { useRouter } from '@/i18n/navigation';
 import { useWorkspaceStore } from '@/stores/workspace-store';
 
-vi.mock('@/hooks/useBoards', () => ({
+vi.mock('@/hooks/use-boards', () => ({
   useBoards: vi.fn(),
 }));
 
@@ -53,7 +53,7 @@ describe('NewBoardDialog', () => {
 
   const openDialog = async () => {
     fireEvent.click(screen.getByText('New Board'));
-    return screen.findByTestId('new-board-dialog-title');
+    return await screen.findByTestId('new-board-dialog-title');
   };
 
   it('renders only the trigger while closed', () => {
@@ -64,7 +64,7 @@ describe('NewBoardDialog', () => {
 
   it('opens the dialog with title, description and the board form', async () => {
     renderDialog();
-    expect(await openDialog()).toHaveTextContent('newBoardTitle');
+    await expect(openDialog()).resolves.toHaveTextContent('newBoardTitle');
     expect(screen.getByText('newBoardDescription')).toBeInTheDocument();
     expect(screen.getByTestId('board-title-input')).toBeInTheDocument();
     expect(screen.getByTestId('cancel-button')).toHaveTextContent('cancel');
@@ -90,7 +90,7 @@ describe('NewBoardDialog', () => {
     await openDialog();
     fireEvent.click(screen.getByTestId('create-button'));
 
-    expect(await screen.findByText('Title is required')).toBeInTheDocument();
+    await expect(screen.findByText('Title is required')).resolves.toBeInTheDocument();
     expect(addBoard).not.toHaveBeenCalled();
   });
 

@@ -2,9 +2,9 @@
 
 import { Form, Input, TextArea } from '@repo/forms';
 import { useTranslations } from 'next-intl';
-import { z } from 'zod';
+import type { z } from 'zod';
 
-import { boardSchema } from '@/types/boardForm';
+import { boardSchema } from '@/types/board-form';
 
 type BoardFormValues = z.infer<typeof boardSchema>;
 

@@ -1,18 +1,26 @@
-import { Text, View, useTheme } from "@tamagui/core";
-import { useLocalSearchParams, useRouter, Stack } from "expo-router";
-import { useState, useEffect } from "react";
-import { useTranslation } from "react-i18next";
-import { Alert, KeyboardAvoidingView, Platform, ActivityIndicator, Pressable, TextInput, ScrollView } from "react-native";
+import { Text, View, useTheme } from '@tamagui/core';
+import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+  Pressable,
+  TextInput,
+  ScrollView,
+} from 'react-native';
 
-import { useCreateBoard, useUpdateBoard, useBoard } from "@/hooks/use-boards";
-import { useAuthStore } from "@/stores/auth";
+import { useCreateBoard, useUpdateBoard, useBoard } from '@/hooks/use-boards';
+import { useAuthStore } from '@/stores/auth';
 
 export default function BoardFormScreen() {
   const { t } = useTranslation();
   const theme = useTheme();
   const router = useRouter();
   const params = useLocalSearchParams<{ boardId?: string }>();
-  const boardId = params.boardId;
+  const { boardId } = params;
   const isEdit = !!boardId;
 
   const { session } = useAuthStore();
@@ -20,13 +28,13 @@ export default function BoardFormScreen() {
   const createMutation = useCreateBoard();
   const updateMutation = useUpdateBoard();
 
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
 
   useEffect(() => {
     if (board && isEdit) {
       setTitle(board.title);
-      setDescription(board.description || "");
+      setDescription(board.description || '');
     }
   }, [board, isEdit]);
 
@@ -43,9 +51,9 @@ export default function BoardFormScreen() {
             router.back();
           },
           onError: (error) => {
-            Alert.alert(t("kanban.actions.error"), error.message);
-          }
-        }
+            Alert.alert(t('kanban.actions.error'), error.message);
+          },
+        },
       );
     } else {
       createMutation.mutate(
@@ -55,9 +63,9 @@ export default function BoardFormScreen() {
             router.back();
           },
           onError: (error) => {
-            Alert.alert(t("kanban.actions.error"), error.message);
-          }
-        }
+            Alert.alert(t('kanban.actions.error'), error.message);
+          },
+        },
       );
     }
   };
@@ -66,40 +74,41 @@ export default function BoardFormScreen() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={{ flex: 1, backgroundColor: theme.background.val }}
-    >
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={{ flex: 1, backgroundColor: theme.background.val }}>
       <Stack.Screen
         options={{
-          title: isEdit ? t("kanban.actions.editBoardTitle") : t("kanban.actions.newBoardTitle"),
-          presentation: "formSheet",
+          title: isEdit ? t('kanban.actions.editBoardTitle') : t('kanban.actions.newBoardTitle'),
+          presentation: 'formSheet',
           sheetGrabberVisible: true,
           headerLeft: () => (
             <Pressable
               onPress={() => {
                 router.back();
-              }}
-            >
-              <Text fontSize={17} color="$primary">
-                {t("kanban.actions.cancel")}
+              }}>
+              <Text
+                fontSize={17}
+                color="$primary">
+                {t('kanban.actions.cancel')}
               </Text>
             </Pressable>
           ),
           headerRight: () => (
-            <Pressable onPress={handleSubmit} disabled={isPending || !title}>
+            <Pressable
+              onPress={handleSubmit}
+              disabled={isPending || !title}>
               {isPending ? (
                 <ActivityIndicator />
               ) : (
                 <Text
                   fontSize={17}
                   fontWeight="600"
-                  color={!title ? "$mutedForeground" : "$primary"}
-                >
-                  {isEdit ? t("kanban.actions.save") : t("kanban.actions.create")}
+                  color={title ? '$primary' : '$mutedForeground'}>
+                  {isEdit ? t('kanban.actions.save') : t('kanban.actions.create')}
                 </Text>
               )}
             </Pressable>
-          )
+          ),
         }}
       />
 
@@ -109,11 +118,12 @@ export default function BoardFormScreen() {
         <ScrollView
           contentInsetAdjustmentBehavior="automatic"
           contentContainerStyle={{ padding: 16, gap: 16 }}
-          keyboardShouldPersistTaps="handled"
-        >
+          keyboardShouldPersistTaps="handled">
           <View gap={8}>
-            <Text fontWeight="600" color="$color">
-              {t("kanban.actions.boardTitleLabel")}
+            <Text
+              fontWeight="600"
+              color="$color">
+              {t('kanban.actions.boardTitleLabel')}
             </Text>
             <TextInput
               style={{
@@ -124,9 +134,9 @@ export default function BoardFormScreen() {
                 padding: 12,
                 fontSize: 16,
                 color: theme.color.val,
-                borderCurve: "continuous"
+                borderCurve: 'continuous',
               }}
-              placeholder={t("kanban.actions.boardTitlePlaceholder")}
+              placeholder={t('kanban.actions.boardTitlePlaceholder')}
               placeholderTextColor={theme.mutedForeground.val}
               value={title}
               onChangeText={setTitle}
@@ -134,8 +144,10 @@ export default function BoardFormScreen() {
           </View>
 
           <View gap={8}>
-            <Text fontWeight="600" color="$color">
-              {t("kanban.actions.descriptionLabel")}
+            <Text
+              fontWeight="600"
+              color="$color">
+              {t('kanban.actions.descriptionLabel')}
             </Text>
             <TextInput
               style={{
@@ -147,10 +159,10 @@ export default function BoardFormScreen() {
                 padding: 12,
                 fontSize: 16,
                 color: theme.color.val,
-                borderCurve: "continuous",
-                textAlignVertical: "top"
+                borderCurve: 'continuous',
+                textAlignVertical: 'top',
               }}
-              placeholder={t("kanban.actions.descriptionPlaceholder")}
+              placeholder={t('kanban.actions.descriptionPlaceholder')}
               placeholderTextColor={theme.mutedForeground.val}
               value={description}
               onChangeText={setDescription}

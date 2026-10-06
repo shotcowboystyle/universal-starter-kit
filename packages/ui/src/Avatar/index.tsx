@@ -13,7 +13,8 @@ import {
 } from '@repo/theme';
 import type { BorderRadius, ControlStateProps } from '@repo/theme';
 import { getSize } from '@tamagui/get-token';
-import { Children, createContext, isValidElement, useContext, type ReactNode } from 'react';
+import { Children, createContext, isValidElement, useContext } from 'react';
+import type { ReactNode } from 'react';
 import type { GetProps, SizeTokens } from 'tamagui';
 import {
   Avatar as TamaguiAvatar,
@@ -25,12 +26,12 @@ import {
   withStaticProperties,
 } from 'tamagui';
 
-import { componentColors } from '../componentColors';
+import { componentColors } from '../component-colors';
 
-import { fallbackTone, getInitials } from './getInitials';
+import { fallbackTone, getInitials } from './get-initials';
 
-export { fallbackTone, fallbackToneIndex, FALLBACK_TONES, getInitials } from './getInitials';
-export type { FallbackTone } from './getInitials';
+export { fallbackTone, fallbackToneIndex, FALLBACK_TONES, getInitials } from './get-initials';
+export type { FallbackTone } from './get-initials';
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -294,11 +295,14 @@ function AvatarRoot({
           : focusVisibleStyle
       }
       hitSlop={pressSlop ?? hitSlopProp}>
-      {children != null ? (
-        children
-      ) : (
+      {children == null ? (
         <>
-          {src ? <TamaguiAvatar.Image src={src} alt={label ?? ''} /> : null}
+          {src ? (
+            <TamaguiAvatar.Image
+              src={src}
+              alt={label ?? ''}
+            />
+          ) : null}
           <TamaguiAvatar.Fallback
             backgroundColor={fallbackBg}
             alignItems="center"
@@ -307,7 +311,10 @@ function AvatarRoot({
             {fallback ??
               (initialsText === '?' ? (
                 <View {...({ color: fallbackFg } as Record<string, unknown>)}>
-                  <UserIcon size={Math.round(visualPx * 0.42)} color="currentColor" />
+                  <UserIcon
+                    size={Math.round(visualPx * 0.42)}
+                    color="currentColor"
+                  />
                 </View>
               ) : (
                 <SizableText
@@ -322,6 +329,8 @@ function AvatarRoot({
               ))}
           </TamaguiAvatar.Fallback>
         </>
+      ) : (
+        children
       )}
     </TamaguiAvatar>
   );
@@ -331,7 +340,11 @@ function AvatarRoot({
   }
 
   return (
-    <View position="relative" width={visualPx} height={visualPx} flexShrink={0}>
+    <View
+      position="relative"
+      width={visualPx}
+      height={visualPx}
+      flexShrink={0}>
       {frame}
       <View
         {...pipShapeProps}
@@ -381,8 +394,12 @@ function AvatarGroup({
       data-avatar-group=""
       data-avatar-overlap={overlap ? 'true' : 'false'}>
       {shown.map((child, index) => (
-        <GroupCtx.Provider key={index} value={{ size, circular, nested, compact, overlap, index, count: total }}>
-          <AvatarGroupItem zIndex={index} marginStart={index > 0 ? -overlapPx : 0}>
+        <GroupCtx.Provider
+          key={index}
+          value={{ size, circular, nested, compact, overlap, index, count: total }}>
+          <AvatarGroupItem
+            zIndex={index}
+            marginStart={index > 0 ? -overlapPx : 0}>
             {child}
           </AvatarGroupItem>
         </GroupCtx.Provider>
@@ -398,7 +415,9 @@ function AvatarGroup({
             index: shown.length,
             count: total,
           }}>
-          <AvatarGroupItem zIndex={shown.length} marginStart={-overlapPx}>
+          <AvatarGroupItem
+            zIndex={shown.length}
+            marginStart={-overlapPx}>
             <AvatarRoot
               initials={overflowLabel}
               fallbackBackgroundColor="$color4"

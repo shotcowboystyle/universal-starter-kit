@@ -224,7 +224,9 @@ export const Vertical: Story = {
 
 export const Sizes: Story = {
   render: () => (
-    <YStack gap="$4" maxWidth={400}>
+    <YStack
+      gap="$4"
+      maxWidth={400}>
       <ToggleGroup
         label="Small"
         size="$2"
@@ -267,7 +269,9 @@ export const Interactive: Story = {
     const InteractiveExample = () => {
       const [value, setValue] = useState('left');
       return (
-        <YStack gap="$4" maxWidth={400}>
+        <YStack
+          gap="$4"
+          maxWidth={400}>
           <ToggleGroup
             label="Text alignment"
             type="single"
@@ -320,9 +324,16 @@ export const Comparison: Story = {
       const [customVal, setCustomVal] = useState('left');
       const [tamaguiVal, setTamaguiVal] = useState('left');
       return (
-        <XStack gap="$6" alignItems="flex-start" padding="$4">
-          <YStack gap="$3" width={300}>
-            <Paragraph size="$2" color="$placeholderColor">
+        <XStack
+          gap="$6"
+          alignItems="flex-start"
+          padding="$4">
+          <YStack
+            gap="$3"
+            width={300}>
+            <Paragraph
+              size="$2"
+              color="$placeholderColor">
               Custom ToggleGroup
             </Paragraph>
             <ToggleGroup
@@ -336,8 +347,12 @@ export const Comparison: Story = {
             />
           </YStack>
 
-          <YStack gap="$3" width={300}>
-            <Paragraph size="$2" color="$placeholderColor">
+          <YStack
+            gap="$3"
+            width={300}>
+            <Paragraph
+              size="$2"
+              color="$placeholderColor">
               Tamagui ToggleGroup
             </Paragraph>
             <TamaguiToggleGroup
@@ -348,7 +363,9 @@ export const Comparison: Story = {
                 action('tamagui.onValueChange')(val);
               }}>
               {alignmentOptions.map((opt) => (
-                <TamaguiToggleGroup.Item key={opt.value} value={opt.value}>
+                <TamaguiToggleGroup.Item
+                  key={opt.value}
+                  value={opt.value}>
                   <SizableText>{opt.label}</SizableText>
                 </TamaguiToggleGroup.Item>
               ))}

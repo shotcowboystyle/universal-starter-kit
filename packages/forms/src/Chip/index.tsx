@@ -10,9 +10,8 @@ import {
   stackRadiusProps,
   useLegibleInkOn,
   useResolvedKnobs,
-  type GroupOrientation,
-  type GroupPosition,
 } from '@repo/theme';
+import type { GroupOrientation, GroupPosition } from '@repo/theme';
 import type { KeyboardEvent, ReactNode } from 'react';
 import { useState } from 'react';
 import type { ColorTokens, GetProps } from 'tamagui';
@@ -377,7 +376,7 @@ function ensureChipFocusRing(): void {
   const tag = document.createElement('style');
   tag.id = CHIP_RING_STYLE_ID;
   tag.textContent = chipFocusRingCss;
-  document.head.appendChild(tag);
+  document.head.append(tag);
 }
 
 // ── Chip Component ────────────────────────────────────────────
@@ -421,12 +420,15 @@ export function Chip({
       return colors.fill;
     }
     switch (variant) {
-      case 'solid':
+      case 'solid': {
         return colors.bg;
-      case 'subtle':
+      }
+      case 'subtle': {
         return colors.bg;
-      case 'outline':
+      }
+      case 'outline': {
         return 'transparent';
+      }
     }
   };
 
@@ -459,7 +461,17 @@ export function Chip({
     typeof children === 'string' || typeof children === 'number'
       ? t('Remove {{label}}', { label: String(children) })
       : t('Remove');
-  const leading = icon !== undefined ? icon : selected ? <CheckIcon size={iconSize} color={glyphInk} /> : null;
+  const leading =
+    icon === undefined ? (
+      selected ? (
+        <CheckIcon
+          size={iconSize}
+          color={glyphInk}
+        />
+      ) : null
+    ) : (
+      icon
+    );
 
   const onBodyKeyDown = ((e: KeyboardEvent) => {
     if ((e.key === 'Enter' || e.key === ' ') && onPress) {
@@ -600,7 +612,10 @@ export function Chip({
             borderRadius={dismissRadius}
             hoverStyle={{ backgroundColor: colors.dismissHover }}
             pressStyle={{ backgroundColor: colors.dismissPress }}>
-            <XIcon size={iconSize} color={glyphInk} />
+            <XIcon
+              size={iconSize}
+              color={glyphInk}
+            />
           </DismissRing>
         </DismissButton>
       )}

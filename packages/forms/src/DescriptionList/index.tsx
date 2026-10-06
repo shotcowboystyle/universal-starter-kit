@@ -14,25 +14,16 @@
  */
 
 import { useResolvedKnobs } from '@repo/theme';
-import {
-  Children,
-  isValidElement,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  type CSSProperties,
-  type ReactElement,
-  type ReactNode,
-  type Ref,
-} from 'react';
+import { Children, isValidElement, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import type { CSSProperties, ReactElement, ReactNode, Ref } from 'react';
 import { Text, View, XStack, YStack, isWeb } from 'tamagui';
 
 import { Button } from '../Button';
-import { LABEL_COLUMN_MAX_CH, LABEL_COLUMN_WIDTH } from '../fieldDefaults';
-import { DescriptionListSlotProvider, FieldDisplay, type FieldDisplayType } from '../FieldDisplay';
+import { LABEL_COLUMN_MAX_CH, LABEL_COLUMN_WIDTH } from '../field-defaults';
+import { DescriptionListSlotProvider, FieldDisplay } from '../FieldDisplay';
+import type { FieldDisplayType } from '../FieldDisplay';
+import { formReadableMaxWidth } from '../form-spacing';
 import { FORM_GRID_COLLAPSE_WIDTH } from '../FormGrid';
-import { formReadableMaxWidth } from '../formSpacing';
 import { t } from '../shared/t';
 
 export type DescriptionListPlacement = 'side' | 'top';
@@ -181,8 +172,14 @@ function TermText({ children }: { children: ReactNode }) {
 
 function ChangeAction({ onChange, label }: { onChange: () => void; label?: string }) {
   return (
-    <View data-mpo-description-list-action="" alignItems="flex-start" justifyContent="flex-end">
-      <Button nested outlined onPress={onChange}>
+    <View
+      data-mpo-description-list-action=""
+      alignItems="flex-start"
+      justifyContent="flex-end">
+      <Button
+        nested
+        outlined
+        onPress={onChange}>
         {label ?? t('Change')}
       </Button>
     </View>
@@ -191,10 +188,11 @@ function ChangeAction({ onChange, label }: { onChange: () => void; label?: strin
 
 function ValueSlot({ row }: { row: DescriptionListItem }) {
   return (
-    <View data-mpo-description-list-value="" minWidth={0} width="100%">
-      {row.children != null ? (
-        row.children
-      ) : (
+    <View
+      data-mpo-description-list-value=""
+      minWidth={0}
+      width="100%">
+      {row.children == null ? (
         <FieldDisplay
           field={row.field ?? 'input'}
           value={row.value}
@@ -204,6 +202,8 @@ function ValueSlot({ row }: { row: DescriptionListItem }) {
           align="left"
           truncate={row.truncate}
         />
+      ) : (
+        row.children
       )}
     </View>
   );
@@ -225,7 +225,10 @@ function DescriptionListRowView({
   quiet?: boolean;
 }) {
   const action = rowHasAction(row) ? (
-    <ChangeAction onChange={row.onChange!} label={row.changeLabel} />
+    <ChangeAction
+      onChange={row.onChange!}
+      label={row.changeLabel}
+    />
   ) : hasActionColumn && isWeb && !stacked ? (
     <View data-mpo-description-list-action="" />
   ) : null;
@@ -267,7 +270,9 @@ function DescriptionListRowView({
         <TermText>{row.term}</TermText>
       </View>
       {action ? <View style={actionStyle}>{action}</View> : null}
-      <View style={valueStyle} paddingTop={rhythm.stackGap as never}>
+      <View
+        style={valueStyle}
+        paddingTop={rhythm.stackGap as never}>
         <ValueSlot row={row} />
       </View>
     </>
@@ -282,7 +287,10 @@ function DescriptionListRowView({
       {action ? <View style={actionStyle}>{action}</View> : null}
     </>
   ) : (
-    <XStack alignItems="flex-start" width="100%" gap={rhythm.columnGap as never}>
+    <XStack
+      alignItems="flex-start"
+      width="100%"
+      gap={rhythm.columnGap as never}>
       <View
         minWidth={0}
         maxWidth={`${purposeMaxCh()}ch` as never}
@@ -290,7 +298,9 @@ function DescriptionListRowView({
         width={`${purposeMaxCh()}ch` as never}>
         <TermText>{row.term}</TermText>
       </View>
-      <View flex={1} minWidth={0}>
+      <View
+        flex={1}
+        minWidth={0}>
         <ValueSlot row={row} />
       </View>
       {action}

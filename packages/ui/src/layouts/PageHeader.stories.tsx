@@ -44,7 +44,9 @@ type Story = StoryObj<typeof PageHeader>;
 
 function HeaderCanvas({ children }: { children: ReactNode }) {
   return (
-    <Screen scroll={false} maxWidth={720}>
+    <Screen
+      scroll={false}
+      maxWidth={720}>
       {children}
       <Paragraph color="$color11">Page body shares the title inset. The hairline is edge-to-edge.</Paragraph>
     </Screen>
@@ -135,7 +137,10 @@ export const NoTitle: Story = {
   args: { title: undefined, subtitle: undefined },
   render: (args) => (
     <HeaderCanvas>
-      <PageHeader {...args} actions={<Button>Only action</Button>} />
+      <PageHeader
+        {...args}
+        actions={<Button>Only action</Button>}
+      />
     </HeaderCanvas>
   ),
 };
@@ -147,7 +152,11 @@ export const LongTitleNarrow: Story = {
       'A long subtitle as well, to make sure supporting copy wraps under the heading without overflowing horizontally',
   },
   render: (args) => (
-    <YStack maxWidth={320} borderWidth={1} borderColor="$color6" borderStyle="dashed">
+    <YStack
+      maxWidth={320}
+      borderWidth={1}
+      borderColor="$color6"
+      borderStyle="dashed">
       <PageHeader
         {...args}
         actions={

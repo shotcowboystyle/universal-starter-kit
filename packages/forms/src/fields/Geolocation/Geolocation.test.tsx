@@ -5,10 +5,10 @@ import { Theme } from 'tamagui';
 import { describe, expect, it, vi, afterEach } from 'vitest';
 
 import { Form } from '../../Form';
-import { TableCellContext } from '../../shared/tableCellContext';
+import { TableCellContext } from '../../shared/table-cell-context';
 
 import type { GeocodeResult, Geocoder } from './geocoder';
-import { GeocoderProvider } from './geocoderContext';
+import { GeocoderProvider } from './geocoder-context';
 
 import { Geolocation, preflightGeolocation } from './index';
 
@@ -90,7 +90,7 @@ function frappeGeoJsonReads(value: string): { lat: number; lng: number } | null 
     if (!feature || typeof feature !== 'object') {
       continue;
     }
-    const geometry = (feature as { geometry?: { type?: unknown; coordinates?: unknown } }).geometry;
+    const { geometry } = feature as { geometry?: { type?: unknown; coordinates?: unknown } };
     if (!geometry || geometry.type !== 'Point' || !Array.isArray(geometry.coordinates)) {
       continue;
     }
@@ -109,20 +109,36 @@ function frappeGeoJsonReads(value: string): { lat: number; lng: number } | null 
 describe('Geolocation', () => {
   describe('without form context', () => {
     it('renders with label', () => {
-      const result = renderWithProviders(<Geolocation label="Location" name="loc" locationIcon={locationIcon} />);
+      const result = renderWithProviders(
+        <Geolocation
+          label="Location"
+          name="loc"
+          locationIcon={locationIcon}
+        />,
+      );
       expect(result.findTextElement('Location')).toBeDefined();
     });
 
     it('renders required label with asterisk', () => {
       const result = renderWithProviders(
-        <Geolocation label="Required" name="req" locationIcon={locationIcon} required />,
+        <Geolocation
+          label="Required"
+          name="req"
+          locationIcon={locationIcon}
+          required
+        />,
       );
       const label = result.container.querySelector('label');
       expect(label?.textContent).toContain('*');
     });
 
     it('renders bare without locationIcon — package default glyph on Locate', () => {
-      const result = renderWithProviders(<Geolocation label="Bare" value={HELSINKI} />);
+      const result = renderWithProviders(
+        <Geolocation
+          label="Bare"
+          value={HELSINKI}
+        />,
+      );
       const locate = result.container.querySelector("[aria-label='Locate']");
       expect(locate).not.toBeNull();
       expect(locate?.querySelector('svg')).not.toBeNull();
@@ -131,7 +147,10 @@ describe('Geolocation', () => {
     it.each(['light', 'dark'] as const)('paints the default Locate glyph with concrete %s ink', (scheme) => {
       const result = renderWithProviders(
         <Theme name={scheme}>
-          <Geolocation label="Location" value={HELSINKI} />
+          <Geolocation
+            label="Location"
+            value={HELSINKI}
+          />
         </Theme>,
       );
       const glyph = result.container.querySelector("[aria-label='Locate'] svg")!;
@@ -142,10 +161,20 @@ describe('Geolocation', () => {
 
     it('preserves explicit Locate glyph paint and an explicit null glyph', () => {
       const result = renderWithProviders(
-        <Geolocation label="Location" value={HELSINKI} locationIcon=<NavigationArrowIcon color="#123456" /> />,
+        <Geolocation
+          label="Location"
+          value={HELSINKI}
+          locationIcon=<NavigationArrowIcon color="#123456" />
+        />,
       );
       expect(result.container.querySelector("[aria-label='Locate'] svg")?.getAttribute('fill')).toBe('#123456');
-      result.rerender(<Geolocation label="Location" value={HELSINKI} locationIcon={null} />);
+      result.rerender(
+        <Geolocation
+          label="Location"
+          value={HELSINKI}
+          locationIcon={null}
+        />,
+      );
       expect(result.container.querySelector("[aria-label='Locate']")).not.toBeNull();
       expect(result.container.querySelector("[aria-label='Locate'] svg")).toBeNull();
     });
@@ -160,7 +189,13 @@ describe('Geolocation', () => {
     });
 
     it('no input control is absolutely positioned over the map surface', () => {
-      const result = renderWithProviders(<Geolocation label="Location" value={HELSINKI} locationIcon={locationIcon} />);
+      const result = renderWithProviders(
+        <Geolocation
+          label="Location"
+          value={HELSINKI}
+          locationIcon={locationIcon}
+        />,
+      );
       const map = result.container.querySelector("[data-testid='geolocation-map']");
       expect(map).not.toBeNull();
       const inputs = [...result.container.querySelectorAll('input')];
@@ -197,7 +232,13 @@ describe('Geolocation', () => {
     });
 
     it('without an injected geocoder, search is disabled and map/manual paths stay', () => {
-      const result = renderWithProviders(<Geolocation label="Location" value={HELSINKI} locationIcon={locationIcon} />);
+      const result = renderWithProviders(
+        <Geolocation
+          label="Location"
+          value={HELSINKI}
+          locationIcon={locationIcon}
+        />,
+      );
       const input = searchInput(result.container);
       expect(input).not.toBeNull();
       expect(input?.disabled || input?.getAttribute('aria-disabled') === 'true').toBeTruthy();
@@ -209,7 +250,12 @@ describe('Geolocation', () => {
     it('a set value renders a reverse-geocoded address, pair subordinate', async () => {
       const reverseGeocode = mockReverse();
       const result = renderWithProviders(
-        <Geolocation label="Location" value={HELSINKI} reverseGeocode={reverseGeocode} locationIcon={locationIcon} />,
+        <Geolocation
+          label="Location"
+          value={HELSINKI}
+          reverseGeocode={reverseGeocode}
+          locationIcon={locationIcon}
+        />,
       );
       await waitFor(() => {
         expect(reverseGeocode).toHaveBeenCalledWith({ lat: 60.16952, lng: 24.93545 });
@@ -222,7 +268,12 @@ describe('Geolocation', () => {
       const geocode = mockGeocode();
       const onChange = vi.fn();
       const result = renderWithProviders(
-        <Geolocation label="Location" geocode={geocode} onChange={onChange} locationIcon={locationIcon} />,
+        <Geolocation
+          label="Location"
+          geocode={geocode}
+          onChange={onChange}
+          locationIcon={locationIcon}
+        />,
       );
       typeSearch(result.container, 'manner');
       await waitFor(() => {
@@ -242,7 +293,11 @@ describe('Geolocation', () => {
     it('Use my current location is the first results row', async () => {
       const geocode = mockGeocode();
       const result = renderWithProviders(
-        <Geolocation label="Location" geocode={geocode} locationIcon={locationIcon} />,
+        <Geolocation
+          label="Location"
+          geocode={geocode}
+          locationIcon={locationIcon}
+        />,
       );
       typeSearch(result.container, 'manner');
       await waitFor(() => {
@@ -258,7 +313,12 @@ describe('Geolocation', () => {
       const geocode = vi.fn().mockResolvedValueOnce([]).mockRejectedValueOnce(new Error('down'));
       const onChange = vi.fn();
       const result = renderWithProviders(
-        <Geolocation label="Location" geocode={geocode} onChange={onChange} locationIcon={locationIcon} />,
+        <Geolocation
+          label="Location"
+          geocode={geocode}
+          onChange={onChange}
+          locationIcon={locationIcon}
+        />,
       );
       typeSearch(result.container, 'mannerheimintei');
       await waitFor(() => {
@@ -292,7 +352,12 @@ describe('Geolocation', () => {
       const geocode = vi.fn().mockRejectedValue(new Error('down'));
       const onChange = vi.fn();
       const result = renderWithProviders(
-        <Geolocation label="Location" geocode={geocode} onChange={onChange} locationIcon={locationIcon} />,
+        <Geolocation
+          label="Location"
+          geocode={geocode}
+          onChange={onChange}
+          locationIcon={locationIcon}
+        />,
       );
       typeSearch(result.container, 'manner');
       await waitFor(() => {
@@ -316,7 +381,12 @@ describe('Geolocation', () => {
       const geocode = mockGeocode();
       const onChange = vi.fn();
       const result = renderWithProviders(
-        <Geolocation label="Location" geocode={geocode} onChange={onChange} locationIcon={locationIcon} />,
+        <Geolocation
+          label="Location"
+          geocode={geocode}
+          onChange={onChange}
+          locationIcon={locationIcon}
+        />,
       );
       typeSearch(result.container, '60.169, 24.935');
       await waitFor(() => {
@@ -334,7 +404,12 @@ describe('Geolocation', () => {
       const reverseGeocode = mockReverse();
       const result = renderWithProviders(
         <TableCellContext.Provider value={{ inTableCell: true, isHeader: false, editable: true }}>
-          <Geolocation label="Location" value={HELSINKI} reverseGeocode={reverseGeocode} locationIcon={locationIcon} />
+          <Geolocation
+            label="Location"
+            value={HELSINKI}
+            reverseGeocode={reverseGeocode}
+            locationIcon={locationIcon}
+          />
         </TableCellContext.Provider>,
       );
       expect(result.container.querySelector("[data-testid='geolocation-map']")).toBeNull();
@@ -349,7 +424,11 @@ describe('Geolocation', () => {
       window.dispatchEvent(new Event('resize'));
       const geocode = mockGeocode();
       const result = renderWithProviders(
-        <Geolocation label="Location" geocode={geocode} locationIcon={locationIcon} />,
+        <Geolocation
+          label="Location"
+          geocode={geocode}
+          locationIcon={locationIcon}
+        />,
       );
       expect(
         result.container.querySelector("[data-testid='geolocation-search-anchor']")?.getAttribute('data-sheet'),
@@ -373,7 +452,13 @@ describe('Geolocation', () => {
     });
 
     it('map frame is the keyboard stop; pick layer is not a tab stop', () => {
-      const result = renderWithProviders(<Geolocation label="Location" value={HELSINKI} locationIcon={locationIcon} />);
+      const result = renderWithProviders(
+        <Geolocation
+          label="Location"
+          value={HELSINKI}
+          locationIcon={locationIcon}
+        />,
+      );
       const map = result.container.querySelector("[data-testid='geolocation-map']");
       const pick = result.container.querySelector("[data-testid='geolocation-map-pick']");
       expect(map?.getAttribute('tabindex')).toBe('0');
@@ -474,13 +559,25 @@ describe('Geolocation', () => {
 
     it('renders with helper text', () => {
       const result = renderWithProviders(
-        <Geolocation label="Location" name="loc" locationIcon={locationIcon} helperText="Pick a point" />,
+        <Geolocation
+          label="Location"
+          name="loc"
+          locationIcon={locationIcon}
+          helperText="Pick a point"
+        />,
       );
       expect(result.findTextElement('Pick a point')).toBeDefined();
     });
 
     it('renders skeleton placeholder as search + map', () => {
-      const result = renderWithProviders(<Geolocation label="Loading" name="l" locationIcon={locationIcon} skeleton />);
+      const result = renderWithProviders(
+        <Geolocation
+          label="Loading"
+          name="l"
+          locationIcon={locationIcon}
+          skeleton
+        />,
+      );
       expect(result.container.querySelector("[data-testid='geolocation-map']")).toBeNull();
       expect(result.container.querySelector("[aria-label='Locate']")).toBeNull();
       expect(result.container.querySelector('input')).toBeNull();
@@ -498,7 +595,13 @@ describe('Geolocation', () => {
 
       it('enabled: Expand opens the map popup (positive control)', async () => {
         const result = renderWithProviders(
-          <Geolocation label="Location" name="loc" locationIcon={locationIcon} expandIcon={expandIcon} value={value} />,
+          <Geolocation
+            label="Location"
+            name="loc"
+            locationIcon={locationIcon}
+            expandIcon={expandIcon}
+            value={value}
+          />,
         );
         press(result.container.querySelector("[aria-label='Expand map']") as Element);
         await waitFor(() => {
@@ -526,7 +629,13 @@ describe('Geolocation', () => {
 
       it('disabled: Coordinates opens no panel', async () => {
         const result = renderWithProviders(
-          <Geolocation label="Location" name="loc" locationIcon={locationIcon} value={value} disabled />,
+          <Geolocation
+            label="Location"
+            name="loc"
+            locationIcon={locationIcon}
+            value={value}
+            disabled
+          />,
         );
         const line = result.container.querySelector("[data-testid='geolocation-coordline']");
         expect(line).not.toBeNull();
@@ -569,7 +678,11 @@ describe('Geolocation', () => {
     it('hands its geocoder to a field that was given none', async () => {
       const result = renderWithProviders(
         <GeocoderProvider geocoder={provided}>
-          <Geolocation label="Location" value={HELSINKI} locationIcon={locationIcon} />
+          <Geolocation
+            label="Location"
+            value={HELSINKI}
+            locationIcon={locationIcon}
+          />
         </GeocoderProvider>,
       );
       await waitFor(() => {
@@ -586,8 +699,18 @@ describe('Geolocation', () => {
       const own = mockReverse({ ...mannerheim, label: 'Own provider', description: undefined });
       const result = renderWithProviders(
         <GeocoderProvider geocoder={provided}>
-          <Geolocation label="Own" value={HELSINKI} reverseGeocode={own} locationIcon={locationIcon} />
-          <Geolocation label="None" value={HELSINKI} geocoder={null} locationIcon={locationIcon} />
+          <Geolocation
+            label="Own"
+            value={HELSINKI}
+            reverseGeocode={own}
+            locationIcon={locationIcon}
+          />
+          <Geolocation
+            label="None"
+            value={HELSINKI}
+            geocoder={null}
+            locationIcon={locationIcon}
+          />
         </GeocoderProvider>,
       );
       const inputs = () =>
@@ -652,7 +775,13 @@ describe('Geolocation', () => {
         geolocation: undefined,
         permissions: undefined,
       });
-      const result = renderWithProviders(<Geolocation label="Location" name="loc" locationIcon={locationIcon} />);
+      const result = renderWithProviders(
+        <Geolocation
+          label="Location"
+          name="loc"
+          locationIcon={locationIcon}
+        />,
+      );
       const button = result.container.querySelector("[aria-label='Use my current location']");
       expect(button).not.toBeNull();
       fireEvent.click(button as Element);
@@ -672,7 +801,13 @@ describe('Geolocation', () => {
           query: vi.fn().mockResolvedValue({ state: 'denied' }),
         },
       });
-      const result = renderWithProviders(<Geolocation label="Location" name="loc" locationIcon={locationIcon} />);
+      const result = renderWithProviders(
+        <Geolocation
+          label="Location"
+          name="loc"
+          locationIcon={locationIcon}
+        />,
+      );
       fireEvent.click(result.container.querySelector("[aria-label='Use my current location']")!);
       await waitFor(() => {
         expect(result.container.textContent).toContain('permission denied');
@@ -699,7 +834,13 @@ describe('Geolocation', () => {
         },
       });
 
-      const result = renderWithProviders(<Geolocation label="Location" name="loc" locationIcon={locationIcon} />);
+      const result = renderWithProviders(
+        <Geolocation
+          label="Location"
+          name="loc"
+          locationIcon={locationIcon}
+        />,
+      );
       fireEvent.click(result.container.querySelector("[aria-label='Use my current location']")!);
 
       await waitFor(() => {
@@ -709,7 +850,7 @@ describe('Geolocation', () => {
       expect(mapControls(result.container)).toEqual([]);
       const retry = result.container.querySelector("[aria-label='Retry location']");
       expect(retry).not.toBeNull();
-      expect(getCurrentPosition).toHaveBeenCalledTimes(1);
+      expect(getCurrentPosition).toHaveBeenCalledOnce();
 
       fireEvent.click(retry as Element);
       await waitFor(() => {
@@ -722,8 +863,14 @@ describe('Geolocation', () => {
   describe('with form context', () => {
     it('renders inside form', () => {
       const result = renderWithProviders(
-        <Form formOptions={{ defaultValues: { loc: JSON.stringify({ lat: 0, lng: 0 }) } }} submitText="Submit">
-          <Geolocation name="loc" label="Location" locationIcon={locationIcon} />
+        <Form
+          formOptions={{ defaultValues: { loc: JSON.stringify({ lat: 0, lng: 0 }) } }}
+          submitText="Submit">
+          <Geolocation
+            name="loc"
+            label="Location"
+            locationIcon={locationIcon}
+          />
         </Form>,
       );
       expect(result.findTextElement('Location')).toBeDefined();
@@ -733,7 +880,11 @@ describe('Geolocation', () => {
   describe('stock Frappe FeatureCollection', () => {
     it('paints a recorded stock value instead of rendering empty', () => {
       const result = renderWithProviders(
-        <Geolocation label="Location" value={stockFrappePoint} locationIcon={locationIcon} />,
+        <Geolocation
+          label="Location"
+          value={stockFrappePoint}
+          locationIcon={locationIcon}
+        />,
       );
       expect(result.container.textContent).toContain('37.77490, -122.41940');
       expect(result.container.textContent).not.toContain('Set location');
@@ -748,7 +899,12 @@ describe('Geolocation', () => {
     it("editing a stock value still reads in Frappe's parser and keeps properties", async () => {
       const onChange = vi.fn();
       const result = renderWithProviders(
-        <Geolocation label="Location" locationIcon={locationIcon} value={stockFrappePoint} onChange={onChange} />,
+        <Geolocation
+          label="Location"
+          locationIcon={locationIcon}
+          value={stockFrappePoint}
+          onChange={onChange}
+        />,
       );
       fireEvent.click(result.container.querySelector("[aria-label='Edit coordinates']") as Element);
       await waitFor(() => {
@@ -772,7 +928,12 @@ describe('Geolocation', () => {
     it('map pick on a stock value writes FeatureCollection, not compact latlng', () => {
       const onChange = vi.fn();
       const result = renderWithProviders(
-        <Geolocation label="Location" value={stockFrappePoint} onChange={onChange} locationIcon={locationIcon} />,
+        <Geolocation
+          label="Location"
+          value={stockFrappePoint}
+          onChange={onChange}
+          locationIcon={locationIcon}
+        />,
       );
       const pick = result.container.querySelector("[data-testid='geolocation-map-pick']") as HTMLElement;
       expect(pick).not.toBeNull();
@@ -804,7 +965,11 @@ describe('Geolocation search opens on intent, not on focus', () => {
 
   it("a focus alone, as a cell editor's focus-into-panel gives, leaves the results closed", async () => {
     const result = renderWithProviders(
-      <Geolocation label="Location" geocode={mockGeocode()} locationIcon={locationIcon} />,
+      <Geolocation
+        label="Location"
+        geocode={mockGeocode()}
+        locationIcon={locationIcon}
+      />,
     );
     const input = searchInput(result.container) as HTMLInputElement;
     input.focus();
@@ -816,7 +981,11 @@ describe('Geolocation search opens on intent, not on focus', () => {
 
   it('a press on the search still opens the results with Use my current location first', async () => {
     const result = renderWithProviders(
-      <Geolocation label="Location" geocode={mockGeocode()} locationIcon={locationIcon} />,
+      <Geolocation
+        label="Location"
+        geocode={mockGeocode()}
+        locationIcon={locationIcon}
+      />,
     );
     fireEvent.click(searchInput(result.container) as HTMLInputElement);
     await waitFor(() => {
@@ -829,7 +998,11 @@ describe('Geolocation search opens on intent, not on focus', () => {
 
   it('ArrowDown on a focused search opens the results', async () => {
     const result = renderWithProviders(
-      <Geolocation label="Location" geocode={mockGeocode()} locationIcon={locationIcon} />,
+      <Geolocation
+        label="Location"
+        geocode={mockGeocode()}
+        locationIcon={locationIcon}
+      />,
     );
     const input = searchInput(result.container) as HTMLInputElement;
     input.focus();

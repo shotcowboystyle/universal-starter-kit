@@ -1,22 +1,22 @@
-import { renderHook, waitFor } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { renderHook, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-import { useAuth } from "@/hooks/use-auth";
-import { authService } from "@/lib/auth/auth-service";
-import { useAuthStore } from "@/stores/auth";
+import { useAuth } from '@/hooks/use-auth';
+import { authService } from '@/lib/auth/auth-service';
+import { useAuthStore } from '@/stores/auth';
 
-import { Wrapper } from "./test-utils";
+import { Wrapper } from './test-utils';
 
-vi.mock("@/lib/auth/auth-service", () => ({
+vi.mock('@/lib/auth/auth-service', () => ({
   authService: {
     getSession: vi.fn(),
     login: vi.fn(),
     logout: vi.fn(),
-    getProfile: vi.fn()
-  }
+    getProfile: vi.fn(),
+  },
 }));
 
-vi.mock("@/stores/auth", () => {
+vi.mock('@/stores/auth', () => {
   const setSession = vi.fn();
   const setUser = vi.fn();
   const clear = vi.fn();
@@ -24,18 +24,18 @@ vi.mock("@/stores/auth", () => {
     useAuthStore: Object.assign(
       vi.fn(() => ({ setSession, setUser, clear })),
       {
-        getState: () => ({ user: { _id: "u1", email: "t@e.com", name: "Test" } })
-      }
-    )
+        getState: () => ({ user: { _id: 'u1', email: 't@e.com', name: 'Test' } }),
+      },
+    ),
   };
 });
 
-describe("useAuth", () => {
+describe('useAuth', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("should return isAuthenticated false when no session", async () => {
+  it('should return isAuthenticated false when no session', async () => {
     vi.mocked(authService.getSession).mockResolvedValue(null);
 
     const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
@@ -49,10 +49,10 @@ describe("useAuth", () => {
     expect(result.current.session).toBeNull();
   });
 
-  it("should return session data when authenticated", async () => {
+  it('should return session data when authenticated', async () => {
     const mockSession = {
-      user: { _id: "1", email: "t@e.com", name: "Test" },
-      accessToken: "tk"
+      user: { _id: '1', email: 't@e.com', name: 'Test' },
+      accessToken: 'tk',
     };
     vi.mocked(authService.getSession).mockResolvedValue(mockSession);
 
@@ -66,7 +66,7 @@ describe("useAuth", () => {
     expect(result.current.session).toEqual(mockSession);
   });
 
-  it("should expose login function", () => {
+  it('should expose login function', () => {
     vi.mocked(authService.getSession).mockResolvedValue(null);
 
     const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
@@ -75,7 +75,7 @@ describe("useAuth", () => {
     expect(result.current.loginMutation).toBeDefined();
   });
 
-  it("should call authService.logout and clear on logout", async () => {
+  it('should call authService.logout and clear on logout', async () => {
     vi.mocked(authService.getSession).mockResolvedValue(null);
     vi.mocked(authService.logout).mockResolvedValue(undefined);
 
@@ -89,8 +89,8 @@ describe("useAuth", () => {
     expect(clear).toHaveBeenCalled();
   });
 
-  it("should return error from loginMutation or sessionQuery", async () => {
-    vi.mocked(authService.getSession).mockRejectedValue(new Error("Session failed"));
+  it('should return error from loginMutation or sessionQuery', async () => {
+    vi.mocked(authService.getSession).mockRejectedValue(new Error('Session failed'));
 
     const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
 
@@ -99,6 +99,6 @@ describe("useAuth", () => {
     });
 
     // retry: false so it should surface the error
-    expect(result.current.error).toBe("Session failed");
+    expect(result.current.error).toBe('Session failed');
   });
 });

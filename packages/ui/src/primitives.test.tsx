@@ -81,7 +81,11 @@ describe('knob-immune primitives on the house barrel', () => {
 
   it('renders LinearGradient with theme-token stops', () => {
     const { container } = renderWithProviders(
-      <pkg.LinearGradient width={80} height={40} colors={['$color4', '$background']} />,
+      <pkg.LinearGradient
+        width={80}
+        height={40}
+        colors={['$color4', '$background']}
+      />,
     );
     expect(container.firstChild).toBeTruthy();
   });
@@ -100,7 +104,9 @@ describe('house AlertDialog surface', () => {
       <AlertDialog defaultOpen>
         <AlertDialog.Portal>
           <AlertDialogOverlay />
-          <AlertDialogContent role="alertdialog" data-testid="house-alertdialog">
+          <AlertDialogContent
+            role="alertdialog"
+            data-testid="house-alertdialog">
             <AlertDialog.Title>Delete customer?</AlertDialog.Title>
             <AlertDialog.Description>This cannot be undone.</AlertDialog.Description>
           </AlertDialogContent>

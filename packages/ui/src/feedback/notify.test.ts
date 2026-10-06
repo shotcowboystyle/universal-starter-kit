@@ -3,7 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getToasts, resetToasts, TOAST_ACTION_MIN_MS } from '../Toast/store';
 
 import { notify } from './notify';
-import { routeNotify, type NotifyEvent } from './route';
+import { routeNotify } from './route';
+import type { NotifyEvent } from './route';
 import { dismissFeedbackByRegion, getFeedback, resetFeedback } from './store';
 
 afterEach(() => {

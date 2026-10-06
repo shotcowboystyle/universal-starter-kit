@@ -8,7 +8,6 @@ import {
   hairline,
   hairlineWidth,
   keyboardFocusRingProps,
-  type KnobProps,
   MIN_PRESS_TARGET,
   pressTargetHitSlop,
   radiusClassProps,
@@ -18,11 +17,13 @@ import {
   useResolvedKnobs,
   wasKeyboardFocus,
 } from '@repo/theme';
+import type { KnobProps } from '@repo/theme';
 import React, { useState, useMemo, useCallback, useEffect, useId, useRef } from 'react';
-import { AnimatePresence, Text, XStack, YStack, isWeb, styled, type YStackProps } from 'tamagui';
+import { AnimatePresence, Text, XStack, YStack, isWeb, styled } from 'tamagui';
+import type { YStackProps } from 'tamagui';
 
-import { componentColors, sectionHeading } from '../componentColors';
-import { useDirection } from '../hooks/useDirection';
+import { componentColors, sectionHeading } from '../component-colors';
+import { useDirection } from '../hooks/use-direction';
 import { ViewSwitcher } from '../layouts/ViewSwitcher';
 import { ScrollView } from '../ScrollView';
 import { useTranslation } from '../shared/i18n';
@@ -42,8 +43,8 @@ import {
   moveRangeToSlot,
   snapMinutes,
   yToMinutes,
-  type CalendarRange,
-} from './calendarMath';
+} from './calendar-math';
+import type { CalendarRange } from './calendar-math';
 
 /**
  * Calendar view type.
@@ -298,7 +299,7 @@ export function computeEventMoveRange(event: CalendarEvent, targetDay: Date): Ca
       d.getMilliseconds(),
     );
   const start = shiftDays(event.start);
-  const end = event.end ? shiftDays(event.end) : new Date(start.getTime());
+  const end = event.end ? shiftDays(event.end) : new Date(start);
   return { start, end };
 }
 
@@ -700,7 +701,10 @@ function SettleGhost({
           boxShadow: LIFT_SHADOW,
         },
       } as any)}>
-      <Text fontSize="$2" numberOfLines={1} color={eventChipTextColor(settle.color, onAccent)}>
+      <Text
+        fontSize="$2"
+        numberOfLines={1}
+        color={eventChipTextColor(settle.color, onAccent)}>
         {settle.title}
       </Text>
     </YStack>
@@ -799,7 +803,7 @@ export function Calendar({
   const monthCellMinHeight = sz === '$3' ? 64 : sz === '$5' ? 96 : 76;
   // Grid-cell inset and chip gap follow the space knob (SP-PAD:
   // the 2px hardcoded inset read as chips bleeding into hairlines).
-  const space = knobProps.space;
+  const { space } = knobProps;
   const cellPad = space === 'small' ? 2 : space === 'large' ? 7 : 4;
   const chipGap = space === 'small' ? 2 : space === 'large' ? 5 : 3;
   // Hard per-row floor: a day cell must fit its day disc plus one event chip
@@ -812,7 +816,7 @@ export function Calendar({
   // They are JS-positioned absolutes, so the physical pair mirrors via the
   // direction source rather than CSS logical props (rtl-audit rule-of-thumb).
   const overlayInset = isRTL ? { left: 2, right: 0 } : { left: 0, right: 2 };
-  const transition = knobProps.transition;
+  const { transition } = knobProps;
   // Layout props (top/height) only tween on web — the RN driver cannot
   // animate layout, so native keeps those jumps instant (Axiom 4 note).
   const webLayoutTransition = isWeb ? transition : undefined;
@@ -983,7 +987,7 @@ export function Calendar({
       const chipEl = e.currentTarget as HTMLElement | undefined;
       const originRect = chipEl?.getBoundingClientRect?.() ?? null;
       const durationMin = event.end
-        ? Math.max(slotMinutes, (event.end.getTime() - event.start.getTime()) / 60000)
+        ? Math.max(slotMinutes, (event.end.getTime() - event.start.getTime()) / 60_000)
         : slotMinutes;
       const grabOffsetMin = mode === 'slot' && originRect ? yToMinutes(e.clientY - originRect.top, hourHeight) : 0;
 
@@ -1570,7 +1574,7 @@ export function Calendar({
       if (editorStateRef.current) {
         return;
       }
-      const key = e.key;
+      const { key } = e;
       const arrows = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
       if (arrows.includes(key)) {
         e.preventDefault?.();
@@ -1685,7 +1689,11 @@ export function Calendar({
         // Wrap custom content so it stays draggable (FrappeCalendar always
         // bridges renderEvent, so drag must not depend on the default chip).
         return (
-          <YStack key={event.id} cursor={webDragEnabled ? 'grab' : undefined} opacity={lifted ? 0.4 : 1} {...dragProps}>
+          <YStack
+            key={event.id}
+            cursor={webDragEnabled ? 'grab' : undefined}
+            opacity={lifted ? 0.4 : 1}
+            {...dragProps}>
             {renderEvent(event)}
           </YStack>
         );
@@ -1783,7 +1791,10 @@ export function Calendar({
         onKeyDown={handleBodyKeyDown as any}
         outlineWidth={0}
         {...{ 'data-calendar-body': view }}>
-        <XStack {...hairline.bottom} borderColor="$borderColor" role="row">
+        <XStack
+          {...hairline.bottom}
+          borderColor="$borderColor"
+          role="row">
           {weekdayHeaders.map((day) => (
             <YStack
               key={day}
@@ -1792,7 +1803,10 @@ export function Calendar({
               alignItems="center"
               role="columnheader"
               {...{ backgroundColor: componentColors.surface.background }}>
-              <Text {...nestedKnobs.label} fontWeight="500" color={knobProps.textAccentColor}>
+              <Text
+                {...nestedKnobs.label}
+                fontWeight="500"
+                color={knobProps.textAccentColor}>
                 {day}
               </Text>
             </YStack>
@@ -1876,7 +1890,9 @@ export function Calendar({
                       }}
                       cursor="pointer"
                       hoverStyle={{ backgroundColor: componentColors.surface.background }}>
-                      <XStack justifyContent="flex-end" paddingInlineEnd="$1">
+                      <XStack
+                        justifyContent="flex-end"
+                        paddingInlineEnd="$1">
                         <DayNumberDisc
                           date={day}
                           today={today}
@@ -1913,13 +1929,20 @@ export function Calendar({
                                 onPress={isWeb ? (e: any) => e?.stopPropagation?.() : undefined}
                                 hoverStyle={{ opacity: 0.7 }}
                                 {...{ 'data-calendar-overflow': String(hiddenCount) }}>
-                                <Text fontSize="$1" color={knobProps.textAccentColor}>
+                                <Text
+                                  fontSize="$1"
+                                  color={knobProps.textAccentColor}>
                                   {withInterp(t('+{{count}} more'), { count: hiddenCount })}
                                 </Text>
                               </XStack>
                             }>
-                            <YStack gap="$1" minWidth={220} {...{ 'data-calendar-overflow-panel': dayKey }}>
-                              <Text {...knobProps.heading} fontSize="$3">
+                            <YStack
+                              gap="$1"
+                              minWidth={220}
+                              {...{ 'data-calendar-overflow-panel': dayKey }}>
+                              <Text
+                                {...knobProps.heading}
+                                fontSize="$3">
                                 {formatDayLong(day)}
                               </Text>
                               {dayEvents.map((event) => renderEventBadge(event, false))}
@@ -1958,7 +1981,7 @@ export function Calendar({
     const start = preview ? preview.start : event.start;
     const end = preview ? preview.end : (event.end ?? event.start);
     const startMin = minutesOfDay(start);
-    const endMin = Math.max(startMin + slotMinutes, startMin + (end.getTime() - start.getTime()) / 60000);
+    const endMin = Math.max(startMin + slotMinutes, startMin + (end.getTime() - start.getTime()) / 60_000);
     const top = minutesToY(startMin, hourHeight);
     const blockHeight = Math.max(MIN_BLOCK_PX, minutesToY(endMin - startMin, hourHeight));
     const widthPct = 100 / layout.columns;
@@ -2008,11 +2031,18 @@ export function Calendar({
             renderEvent(event)
           ) : (
             <>
-              <Text fontSize="$1" fontWeight="600" numberOfLines={1} color={eventChipTextColor(event.color, onAccent)}>
+              <Text
+                fontSize="$1"
+                fontWeight="600"
+                numberOfLines={1}
+                color={eventChipTextColor(event.color, onAccent)}>
                 {event.title}
               </Text>
               {blockHeight >= 34 && (
-                <Text fontSize="$1" numberOfLines={1} color={eventChipTextColor(event.color, onAccent)}>
+                <Text
+                  fontSize="$1"
+                  numberOfLines={1}
+                  color={eventChipTextColor(event.color, onAccent)}>
                   {formatTimeRangeLabel(start, end)}
                 </Text>
               )}
@@ -2039,7 +2069,12 @@ export function Calendar({
                 handleResizePointerDown(event, 'start', e);
               }}
               {...{ 'data-calendar-resize': `start:${event.id}` }}>
-              <YStack width={28} height={3} borderRadius={2} backgroundColor="$accentColor" />
+              <YStack
+                width={28}
+                height={3}
+                borderRadius={2}
+                backgroundColor="$accentColor"
+              />
             </YStack>
             <YStack
               position="absolute"
@@ -2057,7 +2092,12 @@ export function Calendar({
                 handleResizePointerDown(event, 'end', e);
               }}
               {...{ 'data-calendar-resize': `end:${event.id}` }}>
-              <YStack width={28} height={3} borderRadius={2} backgroundColor="$accentColor" />
+              <YStack
+                width={28}
+                height={3}
+                borderRadius={2}
+                backgroundColor="$accentColor"
+              />
             </YStack>
           </>
         )}
@@ -2076,7 +2116,9 @@ export function Calendar({
             zIndex={5}
             pointerEvents="none"
             {...{ 'data-calendar-resize-label': 'true' }}>
-            <Text fontSize="$1" color="$color">
+            <Text
+              fontSize="$1"
+              color="$color">
               {formatTimeRangeLabel(preview.start, preview.end)}
             </Text>
           </YStack>
@@ -2085,305 +2127,341 @@ export function Calendar({
     );
   };
 
-  const renderTimeGrid = (days: Date[]) => {
-    return (
-      <YStack
-        flex={1}
-        role="grid"
-        aria-label={t('Calendar')}
-        tabIndex={0}
-        aria-activedescendant={focusCellId}
-        onFocus={handleBodyFocus}
-        onKeyDown={handleBodyKeyDown as any}
-        outlineWidth={0}
-        {...{ 'data-calendar-body': view }}>
-        {/* Day headers */}
-        <XStack {...hairline.bottom} borderColor="$borderColor">
-          <YStack width={56} />
-          {days.map((day) => (
+  const renderTimeGrid = (days: Date[]) => (
+    <YStack
+      flex={1}
+      role="grid"
+      aria-label={t('Calendar')}
+      tabIndex={0}
+      aria-activedescendant={focusCellId}
+      onFocus={handleBodyFocus}
+      onKeyDown={handleBodyKeyDown as any}
+      outlineWidth={0}
+      {...{ 'data-calendar-body': view }}>
+      {/* Day headers */}
+      <XStack
+        {...hairline.bottom}
+        borderColor="$borderColor">
+        <YStack width={56} />
+        {days.map((day) => (
+          <YStack
+            key={day.toISOString()}
+            flex={1}
+            padding="$2"
+            alignItems="center"
+            minHeight={MIN_PRESS_TARGET}
+            cursor="pointer"
+            {...{ backgroundColor: componentColors.surface.background }}
+            onPress={() => {
+              if (suppressClickRef.current) {
+                return;
+              }
+              onDateSelect?.(day);
+            }}>
+            <Text
+              {...nestedKnobs.label}
+              fontWeight="500"
+              color={knobProps.textAccentColor}>
+              {weekdayNames[day.getDay()]}
+            </Text>
+            <DayNumberDisc
+              date={day}
+              today={isToday(day)}
+              inMonth
+              focused={false}
+              onAccent={onAccent}
+              nestedPx={nestedPx}
+              nestedHitSlop={nestedHitSlop}
+              nestedBox={nestedBox}
+              label={nestedKnobs.label}
+            />
+          </YStack>
+        ))}
+      </XStack>
+
+      {/* All-day / untimed strip (also the day-granularity drop row) */}
+      <XStack
+        {...hairline.bottom}
+        borderColor="$borderColor"
+        minHeight={MIN_PRESS_TARGET}>
+        <YStack
+          width={56}
+          justifyContent="center"
+          alignItems="flex-end"
+          paddingInlineEnd="$2">
+          <Text
+            fontSize="$1"
+            color={knobProps.textAccentColor}>
+            {t('All day')}
+          </Text>
+        </YStack>
+        {days.map((day) => {
+          const dayKey = formatDateKey(day);
+          const dayEvents = (eventsByDate[dayKey] || []).filter((ev) => !isTimedEvent(ev));
+          const isDropTarget = dragGhost !== null && dropTargetKey === dayKey;
+          return (
             <YStack
               key={day.toISOString()}
               flex={1}
-              padding="$2"
-              alignItems="center"
-              minHeight={MIN_PRESS_TARGET}
-              cursor="pointer"
-              {...{ backgroundColor: componentColors.surface.background }}
+              {...hairlineEnd}
+              borderColor="$borderColor"
+              padding="$1"
+              gap="$1"
+              backgroundColor={isDropTarget ? '$accentBackground' : undefined}
+              {...{ 'data-calendar-day': dayKey }}
+              ref={
+                nativeDragEnabled
+                  ? (node: MeasurableDayNode | null) => {
+                      registerDayRef(`allday:${dayKey}`, node);
+                    }
+                  : undefined
+              }
               onPress={() => {
                 if (suppressClickRef.current) {
                   return;
                 }
                 onDateSelect?.(day);
               }}>
-              <Text {...nestedKnobs.label} fontWeight="500" color={knobProps.textAccentColor}>
-                {weekdayNames[day.getDay()]}
-              </Text>
-              <DayNumberDisc
-                date={day}
-                today={isToday(day)}
-                inMonth
-                focused={false}
-                onAccent={onAccent}
-                nestedPx={nestedPx}
-                nestedHitSlop={nestedHitSlop}
-                nestedBox={nestedBox}
-                label={nestedKnobs.label}
-              />
+              {dayEvents.map((event) => renderEventBadge(event, true))}
             </YStack>
-          ))}
-        </XStack>
+          );
+        })}
+      </XStack>
 
-        {/* All-day / untimed strip (also the day-granularity drop row) */}
-        <XStack {...hairline.bottom} borderColor="$borderColor" minHeight={MIN_PRESS_TARGET}>
-          <YStack width={56} justifyContent="center" alignItems="flex-end" paddingInlineEnd="$2">
-            <Text fontSize="$1" color={knobProps.textAccentColor}>
-              {t('All day')}
-            </Text>
+      {/* Time grid body */}
+      <ScrollView
+        ref={timeGridScrollRef}
+        flex={1}
+        scrollEnabled={!scrollLocked}>
+        <XStack>
+          {/* Hour gutter */}
+          <YStack width={56}>
+            {hours.map((hour) => (
+              <YStack
+                key={hour}
+                height={hourHeight}
+                alignItems="flex-end"
+                paddingInlineEnd="$2">
+                <Text
+                  fontSize="$1"
+                  color={knobProps.textAccentColor}>
+                  {formatHour(hour)}
+                </Text>
+              </YStack>
+            ))}
           </YStack>
+
           {days.map((day) => {
             const dayKey = formatDateKey(day);
-            const dayEvents = (eventsByDate[dayKey] || []).filter((ev) => !isTimedEvent(ev));
-            const isDropTarget = dragGhost !== null && dropTargetKey === dayKey;
+            const dayEvents = (eventsByDate[dayKey] || []).filter(isTimedEvent);
+            const blocks = layoutDayBlocks(
+              dayEvents.map((ev) => ({
+                id: ev.id,
+                startMin: minutesOfDay(ev.start),
+                endMin: Math.min(
+                  MINUTES_PER_DAY,
+                  Math.max(
+                    minutesOfDay(ev.start) + slotMinutes,
+                    minutesOfDay(ev.start) + ((ev.end?.getTime() ?? ev.start.getTime()) - ev.start.getTime()) / 60000,
+                  ),
+                ),
+              })),
+            );
+            const byId = new Map(dayEvents.map((ev) => [ev.id, ev]));
+            const isSlotTargetDay = slotTarget?.dayKey === dayKey;
+            const draftHere = createDraft?.dayKey === dayKey ? createDraft : null;
+            const editorHere = editorState?.dayKey === dayKey ? editorState : null;
+            const focusHere = view !== 'month' && focusedDayKey === dayKey;
+
             return (
               <YStack
                 key={day.toISOString()}
                 flex={1}
+                height={gridHeight}
+                position="relative"
                 {...hairlineEnd}
                 borderColor="$borderColor"
-                padding="$1"
-                gap="$1"
-                backgroundColor={isDropTarget ? '$accentBackground' : undefined}
-                {...{ 'data-calendar-day': dayKey }}
+                {...{ 'data-calendar-timecol': dayKey }}
                 ref={
                   nativeDragEnabled
                     ? (node: MeasurableDayNode | null) => {
-                        registerDayRef(`allday:${dayKey}`, node);
+                        registerDayRef(dayKey, node);
                       }
                     : undefined
                 }
-                onPress={() => {
-                  if (suppressClickRef.current) {
-                    return;
+                onPointerDown={
+                  hasDom
+                    ? (e: any) => {
+                        handleGridPointerDown(day, e);
+                      }
+                    : undefined
+                }>
+                {/* Hour lines */}
+                {hours.map((hour) => (
+                  <YStack
+                    key={hour}
+                    height={hourHeight}
+                    {...hairline.bottom}
+                    borderColor={componentColors.divider}
+                    pointerEvents="none"
+                  />
+                ))}
+
+                {/* Timed events */}
+                {blocks.map((block) => {
+                  const event = byId.get(block.id);
+                  if (!event) {
+                    return null;
                   }
-                  onDateSelect?.(day);
-                }}>
-                {dayEvents.map((event) => renderEventBadge(event, true))}
+                  return renderTimedBlock(event, block);
+                })}
+
+                {/* Drop-target slot highlight (ramp tint) */}
+                {isSlotTargetDay && slotTarget && (
+                  <YStack
+                    position="absolute"
+                    {...overlayInset}
+                    top={minutesToY(slotTarget.startMin, hourHeight)}
+                    height={Math.max(MIN_BLOCK_PX, minutesToY(slotTarget.durationMin, hourHeight))}
+                    backgroundColor="$accentBackground"
+                    opacity={0.25}
+                    {...knobProps.borderRadius}
+                    borderWidth={1}
+                    borderColor="$accentColor"
+                    pointerEvents="none"
+                    zIndex={1}
+                    {...{ 'data-calendar-slot-target': 'true' }}
+                  />
+                )}
+
+                {/* Drag-to-create sketch */}
+                {draftHere && !editorHere && (
+                  <YStack
+                    position="absolute"
+                    {...overlayInset}
+                    top={minutesToY(minutesOfDay(draftHere.start), hourHeight)}
+                    height={Math.max(
+                      MIN_BLOCK_PX,
+                      minutesToY((draftHere.end.getTime() - draftHere.start.getTime()) / 60000, hourHeight),
+                    )}
+                    backgroundColor="$accentBackground"
+                    opacity={0.45}
+                    {...knobProps.borderRadius}
+                    borderWidth={1}
+                    borderColor="$accentColor"
+                    pointerEvents="none"
+                    zIndex={4}
+                    transition={webLayoutTransition as any}
+                    {...{ 'data-calendar-create-draft': 'true' }}>
+                    <Text
+                      fontSize="$1"
+                      color="$accentColor"
+                      padding="$1"
+                      numberOfLines={1}>
+                      {formatTimeRangeLabel(draftHere.start, draftHere.end)}
+                    </Text>
+                  </YStack>
+                )}
+
+                {/* Draft block + live-commit editor */}
+                {editorHere && (
+                  <YStack
+                    position="absolute"
+                    {...overlayInset}
+                    top={minutesToY(minutesOfDay(editorHere.start), hourHeight)}
+                    height={Math.max(
+                      MIN_BLOCK_PX + 6,
+                      minutesToY((editorHere.end.getTime() - editorHere.start.getTime()) / 60000, hourHeight),
+                    )}
+                    zIndex={5}>
+                    <FloatingPanel
+                      open
+                      onOpenChange={(open) => {
+                        if (!open) {
+                          commitEditor();
+                        }
+                      }}
+                      fitContent
+                      trigger={
+                        <YStack
+                          {...knobProps.borderRadius}
+                          height="100%"
+                          backgroundColor="$accentBackground"
+                          opacity={0.9}
+                          borderWidth={1}
+                          borderColor="$accentColor"
+                          padding="$1"
+                          overflow="hidden"
+                          {...{ 'data-calendar-editor-block': 'true' }}>
+                          <Text
+                            fontSize="$1"
+                            fontWeight="600"
+                            color="$accentColor"
+                            numberOfLines={1}>
+                            {draftTitle || t('New event')}
+                          </Text>
+                        </YStack>
+                      }>
+                      <YStack
+                        gap="$2"
+                        minWidth={240}
+                        {...{ 'data-calendar-create-editor': 'true' }}>
+                        <Input
+                          label={t('Title')}
+                          placeholder={t('New event')}
+                          value={draftTitle}
+                          onChangeText={setDraftTitle}
+                          inputProps={{ autoFocus: true } as any}
+                        />
+                        <Text
+                          fontSize="$2"
+                          color={knobProps.textAccentColor}>
+                          {`${formatDayLong(editorHere.start)}, ${formatTimeRangeLabel(
+                            editorHere.start,
+                            editorHere.end,
+                          )}`}
+                        </Text>
+                        <Text
+                          fontSize="$1"
+                          color={knobProps.textAccentColor}>
+                          {t('Changes apply when the editor closes')}
+                        </Text>
+                      </YStack>
+                    </FloatingPanel>
+                  </YStack>
+                )}
+
+                {/* Keyboard slot cursor (discrete moves tween — Axiom 4) */}
+                {focusHere && wasKeyboardFocus() && (
+                  <YStack
+                    id={`${calendarId}-slot-cursor`}
+                    {...({ role: 'gridcell' } as any)}
+                    aria-label={`${formatDayLong(day)}, ${formatTimeRangeLabel(
+                      dateAtMinutes(day, focusedSlotMin),
+                      dateAtMinutes(day, focusedSlotMin + slotMinutes),
+                    )}`}
+                    position="absolute"
+                    {...overlayInset}
+                    top={minutesToY(focusedSlotMin, hourHeight)}
+                    height={minutesToY(slotMinutes, hourHeight)}
+                    {...knobProps.borderRadius}
+                    {...keyboardFocusRingProps}
+                    pointerEvents="none"
+                    zIndex={3}
+                    transition={webLayoutTransition as any}
+                    {...{ 'data-calendar-slot-cursor': 'true' }}
+                  />
+                )}
+
+                {/* Now indicator */}
+                {isToday(day) && <NowIndicator hourHeight={hourHeight} />}
               </YStack>
             );
           })}
         </XStack>
-
-        {/* Time grid body */}
-        <ScrollView ref={timeGridScrollRef} flex={1} scrollEnabled={!scrollLocked}>
-          <XStack>
-            {/* Hour gutter */}
-            <YStack width={56}>
-              {hours.map((hour) => (
-                <YStack key={hour} height={hourHeight} alignItems="flex-end" paddingInlineEnd="$2">
-                  <Text fontSize="$1" color={knobProps.textAccentColor}>
-                    {formatHour(hour)}
-                  </Text>
-                </YStack>
-              ))}
-            </YStack>
-
-            {days.map((day) => {
-              const dayKey = formatDateKey(day);
-              const dayEvents = (eventsByDate[dayKey] || []).filter(isTimedEvent);
-              const blocks = layoutDayBlocks(
-                dayEvents.map((ev) => ({
-                  id: ev.id,
-                  startMin: minutesOfDay(ev.start),
-                  endMin: Math.min(
-                    MINUTES_PER_DAY,
-                    Math.max(
-                      minutesOfDay(ev.start) + slotMinutes,
-                      minutesOfDay(ev.start) + ((ev.end?.getTime() ?? ev.start.getTime()) - ev.start.getTime()) / 60000,
-                    ),
-                  ),
-                })),
-              );
-              const byId = new Map(dayEvents.map((ev) => [ev.id, ev]));
-              const isSlotTargetDay = slotTarget?.dayKey === dayKey;
-              const draftHere = createDraft?.dayKey === dayKey ? createDraft : null;
-              const editorHere = editorState?.dayKey === dayKey ? editorState : null;
-              const focusHere = view !== 'month' && focusedDayKey === dayKey;
-
-              return (
-                <YStack
-                  key={day.toISOString()}
-                  flex={1}
-                  height={gridHeight}
-                  position="relative"
-                  {...hairlineEnd}
-                  borderColor="$borderColor"
-                  {...{ 'data-calendar-timecol': dayKey }}
-                  ref={
-                    nativeDragEnabled
-                      ? (node: MeasurableDayNode | null) => {
-                          registerDayRef(dayKey, node);
-                        }
-                      : undefined
-                  }
-                  onPointerDown={
-                    hasDom
-                      ? (e: any) => {
-                          handleGridPointerDown(day, e);
-                        }
-                      : undefined
-                  }>
-                  {/* Hour lines */}
-                  {hours.map((hour) => (
-                    <YStack
-                      key={hour}
-                      height={hourHeight}
-                      {...hairline.bottom}
-                      borderColor={componentColors.divider}
-                      pointerEvents="none"
-                    />
-                  ))}
-
-                  {/* Timed events */}
-                  {blocks.map((block) => {
-                    const event = byId.get(block.id);
-                    if (!event) {
-                      return null;
-                    }
-                    return renderTimedBlock(event, block);
-                  })}
-
-                  {/* Drop-target slot highlight (ramp tint) */}
-                  {isSlotTargetDay && slotTarget && (
-                    <YStack
-                      position="absolute"
-                      {...overlayInset}
-                      top={minutesToY(slotTarget.startMin, hourHeight)}
-                      height={Math.max(MIN_BLOCK_PX, minutesToY(slotTarget.durationMin, hourHeight))}
-                      backgroundColor="$accentBackground"
-                      opacity={0.25}
-                      {...knobProps.borderRadius}
-                      borderWidth={1}
-                      borderColor="$accentColor"
-                      pointerEvents="none"
-                      zIndex={1}
-                      {...{ 'data-calendar-slot-target': 'true' }}
-                    />
-                  )}
-
-                  {/* Drag-to-create sketch */}
-                  {draftHere && !editorHere && (
-                    <YStack
-                      position="absolute"
-                      {...overlayInset}
-                      top={minutesToY(minutesOfDay(draftHere.start), hourHeight)}
-                      height={Math.max(
-                        MIN_BLOCK_PX,
-                        minutesToY((draftHere.end.getTime() - draftHere.start.getTime()) / 60000, hourHeight),
-                      )}
-                      backgroundColor="$accentBackground"
-                      opacity={0.45}
-                      {...knobProps.borderRadius}
-                      borderWidth={1}
-                      borderColor="$accentColor"
-                      pointerEvents="none"
-                      zIndex={4}
-                      transition={webLayoutTransition as any}
-                      {...{ 'data-calendar-create-draft': 'true' }}>
-                      <Text fontSize="$1" color="$accentColor" padding="$1" numberOfLines={1}>
-                        {formatTimeRangeLabel(draftHere.start, draftHere.end)}
-                      </Text>
-                    </YStack>
-                  )}
-
-                  {/* Draft block + live-commit editor */}
-                  {editorHere && (
-                    <YStack
-                      position="absolute"
-                      {...overlayInset}
-                      top={minutesToY(minutesOfDay(editorHere.start), hourHeight)}
-                      height={Math.max(
-                        MIN_BLOCK_PX + 6,
-                        minutesToY((editorHere.end.getTime() - editorHere.start.getTime()) / 60000, hourHeight),
-                      )}
-                      zIndex={5}>
-                      <FloatingPanel
-                        open
-                        onOpenChange={(open) => {
-                          if (!open) {
-                            commitEditor();
-                          }
-                        }}
-                        fitContent
-                        trigger={
-                          <YStack
-                            {...knobProps.borderRadius}
-                            height="100%"
-                            backgroundColor="$accentBackground"
-                            opacity={0.9}
-                            borderWidth={1}
-                            borderColor="$accentColor"
-                            padding="$1"
-                            overflow="hidden"
-                            {...{ 'data-calendar-editor-block': 'true' }}>
-                            <Text fontSize="$1" fontWeight="600" color="$accentColor" numberOfLines={1}>
-                              {draftTitle || t('New event')}
-                            </Text>
-                          </YStack>
-                        }>
-                        <YStack gap="$2" minWidth={240} {...{ 'data-calendar-create-editor': 'true' }}>
-                          <Input
-                            label={t('Title')}
-                            placeholder={t('New event')}
-                            value={draftTitle}
-                            onChangeText={setDraftTitle}
-                            inputProps={{ autoFocus: true } as any}
-                          />
-                          <Text fontSize="$2" color={knobProps.textAccentColor}>
-                            {`${formatDayLong(editorHere.start)}, ${formatTimeRangeLabel(
-                              editorHere.start,
-                              editorHere.end,
-                            )}`}
-                          </Text>
-                          <Text fontSize="$1" color={knobProps.textAccentColor}>
-                            {t('Changes apply when the editor closes')}
-                          </Text>
-                        </YStack>
-                      </FloatingPanel>
-                    </YStack>
-                  )}
-
-                  {/* Keyboard slot cursor (discrete moves tween — Axiom 4) */}
-                  {focusHere && wasKeyboardFocus() && (
-                    <YStack
-                      id={`${calendarId}-slot-cursor`}
-                      {...({ role: 'gridcell' } as any)}
-                      aria-label={`${formatDayLong(day)}, ${formatTimeRangeLabel(
-                        dateAtMinutes(day, focusedSlotMin),
-                        dateAtMinutes(day, focusedSlotMin + slotMinutes),
-                      )}`}
-                      position="absolute"
-                      {...overlayInset}
-                      top={minutesToY(focusedSlotMin, hourHeight)}
-                      height={minutesToY(slotMinutes, hourHeight)}
-                      {...knobProps.borderRadius}
-                      {...keyboardFocusRingProps}
-                      pointerEvents="none"
-                      zIndex={3}
-                      transition={webLayoutTransition as any}
-                      {...{ 'data-calendar-slot-cursor': 'true' }}
-                    />
-                  )}
-
-                  {/* Now indicator */}
-                  {isToday(day) && <NowIndicator hourHeight={hourHeight} />}
-                </YStack>
-              );
-            })}
-          </XStack>
-        </ScrollView>
-      </YStack>
-    );
-  };
+      </ScrollView>
+    </YStack>
+  );
 
   const renderWeekView = () => renderTimeGrid(getWeekDays(currentDate, firstDayOfWeek));
   const renderDayView = () => renderTimeGrid([currentDate]);
@@ -2397,20 +2475,20 @@ export function Calendar({
   // mirrors under RTL so "next" enters from the reading end.
   // `initial={false}` keeps first paint settled (mount is not a jump).
   const physicalDir = navDirectionRef.current * (isRTL ? -1 : 1);
-  const bodyEnterVariant = !transition
-    ? undefined
-    : physicalDir > 0
+  const bodyEnterVariant = transition
+    ? physicalDir > 0
       ? 'fromEnd'
       : physicalDir < 0
         ? 'fromStart'
-        : 'fade';
-  const bodyExitVariant = !transition
-    ? undefined
-    : physicalDir > 0
+        : 'fade'
+    : undefined;
+  const bodyExitVariant = transition
+    ? physicalDir > 0
       ? 'fromStart'
       : physicalDir < 0
         ? 'fromEnd'
-        : 'fade';
+        : 'fade'
+    : undefined;
 
   return (
     <YStack
@@ -2440,14 +2518,24 @@ export function Calendar({
           {...hairline.bottom}
           borderColor="$borderColor">
           {showNavigation && (
-            <XStack gap="$2" alignItems="center">
-              <Button size={knobProps.sizeToken} onPress={goToPrevious} aria-label={t('Previous')}>
+            <XStack
+              gap="$2"
+              alignItems="center">
+              <Button
+                size={knobProps.sizeToken}
+                onPress={goToPrevious}
+                aria-label={t('Previous')}>
                 {'<'}
               </Button>
-              <Button size={knobProps.sizeToken} onPress={goToToday}>
+              <Button
+                size={knobProps.sizeToken}
+                onPress={goToToday}>
                 {t('Today')}
               </Button>
-              <Button size={knobProps.sizeToken} onPress={goToNext} aria-label={t('Next')}>
+              <Button
+                size={knobProps.sizeToken}
+                onPress={goToNext}
+                aria-label={t('Next')}>
                 {'>'}
               </Button>
             </XStack>
@@ -2455,7 +2543,9 @@ export function Calendar({
 
           {/* Period title is the panel's section heading — shared scale;
               family still follows the heading font knob. */}
-          <Text {...knobProps.heading} {...sectionHeading}>
+          <Text
+            {...knobProps.heading}
+            {...sectionHeading}>
             {displayTitle}
           </Text>
 
@@ -2498,8 +2588,14 @@ export function Calendar({
           (keying the presence itself would drop the exit — the old wrapper
           unmounts before it can animate). `fullscreen` keeps both periods
           overlaid during the crossfade instead of stacking in flow. */}
-      <YStack flex={1} overflow="hidden" position="relative">
-        <AnimatePresence initial={false} enterVariant={bodyEnterVariant} exitVariant={bodyExitVariant}>
+      <YStack
+        flex={1}
+        overflow="hidden"
+        position="relative">
+        <AnimatePresence
+          initial={false}
+          enterVariant={bodyEnterVariant}
+          exitVariant={bodyExitVariant}>
           <CalendarSlide
             key={motionKey}
             fullscreen
@@ -2551,7 +2647,10 @@ export function Calendar({
                   elevation: 8,
                 }),
           } as any)}>
-          <Text fontSize="$2" numberOfLines={1} color={eventChipTextColor(dragGhost.event.color, onAccent)}>
+          <Text
+            fontSize="$2"
+            numberOfLines={1}
+            color={eventChipTextColor(dragGhost.event.color, onAccent)}>
             {dragGhost.event.title}
           </Text>
         </YStack>

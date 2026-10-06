@@ -14,7 +14,7 @@ import type React from 'react';
 import { Fragment, useId, useState } from 'react';
 import { Label, Separator, Text, XStack, YStack, isWeb } from 'tamagui';
 
-import { componentColors } from '../componentColors';
+import { componentColors } from '../component-colors';
 import { ScrollView } from '../ScrollView';
 
 export interface SidebarSection {
@@ -85,7 +85,10 @@ export function Sidebar({ sections, width = 250, 'aria-label': ariaLabel = 'Side
           }
         : { borderEndWidth: hairlineWidth })}>
       <ScrollView flex={1}>
-        <YStack {...knobProps.panelPadding} paddingHorizontal={0} {...knobProps.gapLg}>
+        <YStack
+          {...knobProps.panelPadding}
+          paddingHorizontal={0}
+          {...knobProps.gapLg}>
           {sections.map((section, sectionIdx) => {
             const titleId = section.title ? `${headingId}-${sectionIdx}` : undefined;
             return (
@@ -135,7 +138,13 @@ export function Sidebar({ sections, width = 250, 'aria-label': ariaLabel = 'Side
                       : null;
                     return (
                       <Fragment key={itemKey}>
-                        {itemIdx > 0 ? <Separator width="100%" alignSelf="stretch" {...hairline.line} /> : null}
+                        {itemIdx > 0 ? (
+                          <Separator
+                            width="100%"
+                            alignSelf="stretch"
+                            {...hairline.line}
+                          />
+                        ) : null}
                         <XStack
                           data-group-position={position}
                           data-sidebar-row="true"
@@ -193,11 +202,16 @@ export function Sidebar({ sections, width = 250, 'aria-label': ariaLabel = 'Side
                             // `color` sets the icon's inherited color; Tamagui
                             // forwards it at runtime but the RN-flavored View
                             // prop type omits it (house Record cast).
-                            <YStack flexShrink={0} {...({ color: metaInk } as Record<string, unknown>)}>
+                            <YStack
+                              flexShrink={0}
+                              {...({ color: metaInk } as Record<string, unknown>)}>
                               {item.icon}
                             </YStack>
                           ) : null}
-                          <YStack flex={1} minWidth={0} justifyContent="center">
+                          <YStack
+                            flex={1}
+                            minWidth={0}
+                            justifyContent="center">
                             <Text
                               {...knobProps.body}
                               color={ink}
@@ -206,16 +220,23 @@ export function Sidebar({ sections, width = 250, 'aria-label': ariaLabel = 'Side
                               {item.label}
                             </Text>
                             {item.subTitle ? (
-                              <Text {...knobProps.body} color={metaInk} fontSize="$2" numberOfLines={1}>
+                              <Text
+                                {...knobProps.body}
+                                color={metaInk}
+                                fontSize="$2"
+                                numberOfLines={1}>
                                 {item.subTitle}
                               </Text>
                             ) : null}
                           </YStack>
-                          {item.count !== undefined ? (
-                            <Text color={metaInk} fontSize="$2" flexShrink={0}>
+                          {item.count === undefined ? null : (
+                            <Text
+                              color={metaInk}
+                              fontSize="$2"
+                              flexShrink={0}>
                               ({item.count})
                             </Text>
-                          ) : null}
+                          )}
                         </XStack>
                       </Fragment>
                     );

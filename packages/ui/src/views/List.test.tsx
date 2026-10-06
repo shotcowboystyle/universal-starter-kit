@@ -3,16 +3,8 @@ import { defaultKnobs, Preset, resolveKnobs } from '@repo/theme';
 import { cleanup, fireEvent, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import {
-  List,
-  ListRow,
-  ListRowMeta,
-  useListItemState,
-  type ListHotkeys,
-  type ListItemState,
-  type ListProps,
-  type ListRowProps,
-} from './List';
+import { List, ListRow, ListRowMeta, useListItemState } from './List';
+import type { ListHotkeys, ListItemState, ListProps, ListRowProps } from './List';
 
 import * as ViewExports from './index';
 
@@ -68,7 +60,12 @@ describe('ListRow icon — size recipe, not a private pixel table', () => {
       received = size;
       return <span data-testid="probe-icon" />;
     }
-    renderWithProviders(<ListRow icon=<ProbeIcon /> title="Architecture RFC" />);
+    renderWithProviders(
+      <ListRow
+        icon=<ProbeIcon />
+        title="Architecture RFC"
+      />,
+    );
     const expected = resolveKnobs(defaultKnobs).knobProps.controlIcon.width;
     expect(received).toBe(expected);
   });

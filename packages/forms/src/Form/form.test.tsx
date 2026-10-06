@@ -20,7 +20,9 @@ describe('Form', () => {
   describe('basic rendering', () => {
     it('should render form with aria-label', () => {
       const result = renderWithProviders(
-        <Form onSubmit={vi.fn()} aria-label="Test Form">
+        <Form
+          onSubmit={vi.fn()}
+          aria-label="Test Form">
           <YStack>Content</YStack>
         </Form>,
       );
@@ -40,7 +42,9 @@ describe('Form', () => {
             defaultValues: { name: 'John', email: 'john@example.com' },
           }}
           onSubmit={onSubmit}>
-          <Button action="submit" testID="submit-button">
+          <Button
+            action="submit"
+            testID="submit-button">
             Submit
           </Button>
         </Form>,
@@ -74,8 +78,12 @@ describe('Form', () => {
         });
 
         return (
-          <Form form={form} onSubmit={() => {}}>
-            <Button action="submit" testID="submit-button">
+          <Form
+            form={form}
+            onSubmit={() => {}}>
+            <Button
+              action="submit"
+              testID="submit-button">
               Submit
             </Button>
           </Form>
@@ -107,9 +115,18 @@ describe('Form', () => {
             },
           }}
           onSubmit={onSubmit}>
-          <Input name="editable" label="Editable" />
-          <Input name="readOnlyField" label="Read only" readOnly />
-          <Button action="submit" testID="submit-button">
+          <Input
+            name="editable"
+            label="Editable"
+          />
+          <Input
+            name="readOnlyField"
+            label="Read only"
+            readOnly
+          />
+          <Button
+            action="submit"
+            testID="submit-button">
             Submit
           </Button>
         </Form>,
@@ -143,9 +160,18 @@ describe('Form', () => {
             },
           }}
           onSubmit={onSubmit}>
-          <Input name="editable" label="Editable" />
-          <Input name="disabledField" label="Disabled" disabled />
-          <Button action="submit" testID="submit-button">
+          <Input
+            name="editable"
+            label="Editable"
+          />
+          <Input
+            name="disabledField"
+            label="Disabled"
+            disabled
+          />
+          <Button
+            action="submit"
+            testID="submit-button">
             Submit
           </Button>
         </Form>,
@@ -194,7 +220,9 @@ describe('Form', () => {
     it('should handle undefined onSubmit', () => {
       const result = renderWithProviders(
         <Form>
-          <Button action="submit" testID="submit-button">
+          <Button
+            action="submit"
+            testID="submit-button">
             Submit
           </Button>
         </Form>,
@@ -212,7 +240,9 @@ describe('Form', () => {
       const onSubmit = vi.fn().mockResolvedValue(undefined);
       const result = renderWithProviders(
         <Form onSubmit={onSubmit}>
-          <Button action="submit" testID="submit-button">
+          <Button
+            action="submit"
+            testID="submit-button">
             Submit
           </Button>
         </Form>,
@@ -234,7 +264,10 @@ describe('Form', () => {
   describe('accessibility', () => {
     it('should support aria attributes', () => {
       const result = renderWithProviders(
-        <Form onSubmit={vi.fn()} aria-label="Test Form" aria-describedby="form-description">
+        <Form
+          onSubmit={vi.fn()}
+          aria-label="Test Form"
+          aria-describedby="form-description">
           <YStack>Test Content</YStack>
         </Form>,
       );
@@ -261,8 +294,12 @@ describe('Form', () => {
       };
 
       const result = renderWithProviders(
-        <Form formOptions={formOptions} onSubmit={onSubmit}>
-          <Button action="submit" testID="submit-button">
+        <Form
+          formOptions={formOptions}
+          onSubmit={onSubmit}>
+          <Button
+            action="submit"
+            testID="submit-button">
             Submit
           </Button>
         </Form>,
@@ -282,9 +319,18 @@ describe('Form', () => {
     it('renders ErrorSummary with field errors after failed submit', async () => {
       const onSubmit = vi.fn();
       const result = renderWithProviders(
-        <Form formOptions={{ defaultValues: { name: '' } }} onSubmit={onSubmit}>
-          <Input id="name" name="name" label="Name" required />
-          <Button action="submit" testID="submit-button">
+        <Form
+          formOptions={{ defaultValues: { name: '' } }}
+          onSubmit={onSubmit}>
+          <Input
+            id="name"
+            name="name"
+            label="Name"
+            required
+          />
+          <Button
+            action="submit"
+            testID="submit-button">
             Submit
           </Button>
         </Form>,
@@ -320,8 +366,12 @@ describe('Form', () => {
       };
 
       const result = renderWithProviders(
-        <Form formOptions={formOptions} onSubmit={onSubmit}>
-          <Button action="submit" testID="submit-button">
+        <Form
+          formOptions={formOptions}
+          onSubmit={onSubmit}>
+          <Button
+            action="submit"
+            testID="submit-button">
             Submit
           </Button>
         </Form>,
@@ -344,8 +394,12 @@ describe('Form', () => {
     it('should maintain form state between renders', async () => {
       const onSubmit = vi.fn();
       const result = renderWithProviders(
-        <Form formOptions={{ defaultValues: { name: 'Initial' } }} onSubmit={onSubmit}>
-          <Button action="submit" testID="submit-button">
+        <Form
+          formOptions={{ defaultValues: { name: 'Initial' } }}
+          onSubmit={onSubmit}>
+          <Button
+            action="submit"
+            testID="submit-button">
             Submit
           </Button>
         </Form>,
@@ -353,8 +407,12 @@ describe('Form', () => {
 
       // Form state should be maintained after rerender
       result.rerender(
-        <Form formOptions={{ defaultValues: { name: 'Initial' } }} onSubmit={onSubmit}>
-          <Button action="submit" testID="submit-button">
+        <Form
+          formOptions={{ defaultValues: { name: 'Initial' } }}
+          onSubmit={onSubmit}>
+          <Button
+            action="submit"
+            testID="submit-button">
             Submit
           </Button>
         </Form>,
@@ -377,7 +435,9 @@ describe('Form', () => {
     it('owns vertical rhythm from the space recipe, not sizeToken', () => {
       const result = renderWithProviders(
         <Preset overrides={{ size: 'large', space: 'small' }}>
-          <Form onSubmit={vi.fn()} aria-label="Layout Form">
+          <Form
+            onSubmit={vi.fn()}
+            aria-label="Layout Form">
             <YStack>Content</YStack>
           </Form>
         </Preset>,
@@ -390,7 +450,9 @@ describe('Form', () => {
 
     it('compact nested scale steps space without changing size (density≠size)', () => {
       const result = renderWithProviders(
-        <Form compact onSubmit={vi.fn()}>
+        <Form
+          compact
+          onSubmit={vi.fn()}>
           <YStack>Content</YStack>
         </Form>,
       );

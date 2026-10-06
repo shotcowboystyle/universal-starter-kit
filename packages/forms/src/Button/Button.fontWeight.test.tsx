@@ -32,7 +32,7 @@ function inkWeight(el: HTMLElement): string {
     return String(inline);
   }
   for (const cls of String(el.className ?? '').split(/\s+/)) {
-    const match = cls.match(/^_fow-(\d+)$/);
+    const match = /^_fow-(\d+)$/.exec(cls);
     if (match) {
       return match[1];
     }

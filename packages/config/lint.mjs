@@ -84,9 +84,9 @@ import { createRequire } from 'node:module';
 import { dirname, join, relative } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { DRAWING_PRAGMA, isDrawingFile, readDrawingRegistry } from './drawingRegistry.mjs';
+import { DRAWING_PRAGMA, isDrawingFile, readDrawingRegistry } from './drawing-registry.mjs';
 import { findHexEscapes } from './oxlint.mjs';
-import { readHexEscapeRegistry, readSizeRecipeEscapeRegistry } from './specRegistry.mjs';
+import { readHexEscapeRegistry, readSizeRecipeEscapeRegistry } from './spec-registry.mjs';
 
 /**
  * @typedef {{ root?: string, apps?: string, features?: string, public?: string, packages?: string }} ConventionRoots
@@ -192,13 +192,19 @@ const GENERATED_CSS_NAMES = new Set(['tamagui.css', 'tamagui.content.css']);
  * @param {(filePath: string) => void} onFile
  */
 function walkFiles(dir, onFile) {
-  if (!existsSync(dir)) {return;}
+  if (!existsSync(dir)) {
+    return;
+  }
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     if (entry.name.startsWith('.') && entry.name !== '.storybook') {
       // skip VCS / cache dirs; allow .storybook
-      if (entry.isDirectory()) {continue;}
+      if (entry.isDirectory()) {
+        continue;
+      }
     }
-    if (CSS_IGNORE_DIR_NAMES.has(entry.name)) {continue;}
+    if (CSS_IGNORE_DIR_NAMES.has(entry.name)) {
+      continue;
+    }
     if (entry.isDirectory() && CSS_IGNORE_DIR_PREFIXES.some((prefix) => entry.name.startsWith(prefix))) {
       continue;
     }
@@ -213,16 +219,20 @@ function walkFiles(dir, onFile) {
 
 function isCssIgnored(absPath) {
   const rel = relative(APPS_DIR, absPath);
-  if (CSS_IGNORE_PREFIXES.some((prefix) => rel === prefix || rel.startsWith(prefix + '/'))) {
+  if (CSS_IGNORE_PREFIXES.some((prefix) => rel === prefix || rel.startsWith(`${prefix}/`))) {
     return true;
   }
   const parts = rel.split(/[/\\]/);
-  if (CSS_IGNORE_APP_FILES.has(parts.slice(1).join('/'))) {return true;}
+  if (CSS_IGNORE_APP_FILES.has(parts.slice(1).join('/'))) {
+    return true;
+  }
   return GENERATED_CSS_NAMES.has(parts.at(-1) ?? '');
 }
 
 function listAppNames() {
-  if (!existsSync(APPS_DIR)) {return [];}
+  if (!existsSync(APPS_DIR)) {
+    return [];
+  }
   return readdirSync(APPS_DIR, { withFileTypes: true })
     .filter((d) => d.isDirectory() && !d.name.startsWith('.') && d.name !== 'node_modules')
     .map((d) => d.name)
@@ -232,11 +242,17 @@ function listAppNames() {
 function checkCssInApps() {
   /** @type {string[]} */
   const violations = [];
-  if (!existsSync(APPS_DIR)) {return violations;}
+  if (!existsSync(APPS_DIR)) {
+    return violations;
+  }
 
   walkFiles(APPS_DIR, (filePath) => {
-    if (!filePath.endsWith('.css')) {return;}
-    if (isCssIgnored(filePath)) {return;}
+    if (!filePath.endsWith('.css')) {
+      return;
+    }
+    if (isCssIgnored(filePath)) {
+      return;
+    }
     violations.push(relative(ROOT, filePath));
   });
   return violations;
@@ -277,7 +293,7 @@ function readPublicSource(relPath) {
       return '';
     }
   }
-  return existsSync(full) ? readFileSync(full, 'utf8') : '';
+  return existsSync(full) ? readFileSync(full, 'utf-8') : '';
 }
 
 /**
@@ -290,9 +306,13 @@ function readPublicSource(relPath) {
  */
 function sliceBlock(src, marker, end) {
   const start = src.indexOf(marker);
-  if (start === -1) {return '';}
+  if (start === -1) {
+    return '';
+  }
   const open = src.indexOf('{', start);
-  if (open === -1) {return '';}
+  if (open === -1) {
+    return '';
+  }
   const close = src.indexOf(end, open);
   return close === -1 ? '' : src.slice(open, close);
 }
@@ -307,26 +327,36 @@ function keysOfBlock(body, indent) {
   /** @type {string[]} */
   const keys = [];
   const re = new RegExp(`^ {${indent}}([A-Za-z0-9][A-Za-z0-9]*)\\s*:`, 'gm');
-  for (const m of body.matchAll(re)) {keys.push(m[1]);}
+  for (const m of body.matchAll(re)) {
+    keys.push(m[1]);
+  }
   return keys;
 }
 
 /** Source files every token check scans, read once and shared. */
 let sourceFileCache;
 function sourceFiles() {
-  if (sourceFileCache) {return sourceFileCache;}
+  if (sourceFileCache) {
+    return sourceFileCache;
+  }
   /** @type {{ abs: string, rel: string, src: string }[]} */
   const files = [];
   const collect = (filePath) => {
-    if (!/\.(tsx|ts|jsx|js)$/.test(filePath)) {return;}
-    if (/\.(spec|test)\./.test(filePath)) {return;}
+    if (!/\.(tsx|ts|jsx|js)$/.test(filePath)) {
+      return;
+    }
+    if (/\.(spec|test)\./.test(filePath)) {
+      return;
+    }
     files.push({
       abs: filePath,
       rel: relative(ROOT, filePath),
-      src: readFileSync(filePath, 'utf8'),
+      src: readFileSync(filePath, 'utf-8'),
     });
   };
-  for (const dir of [PUBLIC_DIR, APPS_DIR, FEATURES_DIR]) {walkFiles(dir, collect);}
+  for (const dir of [PUBLIC_DIR, APPS_DIR, FEATURES_DIR]) {
+    walkFiles(dir, collect);
+  }
   sourceFileCache = files;
   return files;
 }
@@ -338,7 +368,11 @@ function sourceFiles() {
  */
 function lineAt(src, index) {
   let line = 1;
-  for (let i = 0; i < index; i++) {if (src.charCodeAt(i) === 10) line += 1;}
+  for (let i = 0; i < index; i++) {
+    if (src.charCodeAt(i) === 10) {
+      line += 1;
+    }
+  }
   return line;
 }
 
@@ -353,7 +387,9 @@ function scanLiterals(re, check) {
   for (const { rel, src } of sourceFiles()) {
     for (const m of src.matchAll(re)) {
       const message = check(m);
-      if (message) {violations.push(`${rel}:${lineAt(src, m.index ?? 0)} — ${message}`);}
+      if (message) {
+        violations.push(`${rel}:${lineAt(src, m.index ?? 0)} — ${message}`);
+      }
     }
   }
   return violations;
@@ -373,7 +409,9 @@ function readAnimationTokens() {
   /** @type {Set<string>} */
   const tokens = new Set();
   const src = readPublicSource('theme/src/theme/animations/css.ts');
-  if (!src) {return tokens;}
+  if (!src) {
+    return tokens;
+  }
   tokens.add('none'); // valid non-animating value
   for (const key of keysOfBlock(sliceBlock(src, 'animationConfig =', '} as const'), 2)) {
     tokens.add(key);
@@ -384,7 +422,9 @@ function readAnimationTokens() {
 /** Flag `transition="literal"` / `transition={"literal"}` using an unregistered token. */
 function checkTransitionTokens() {
   const valid = readAnimationTokens();
-  if (!valid.size) {return { violations: [], valid: [], ok: false };}
+  if (!valid.size) {
+    return { violations: [], valid: [], ok: false };
+  }
   // Only string LITERALS directly on the prop — dynamic values (variables,
   // ternaries, knobProps.transition) resolve at runtime and are out of scope.
   const re = /\btransition=(?:"([a-zA-Z0-9]+)"|\{\s*"([a-zA-Z0-9]+)"\s*\})/g;
@@ -409,8 +449,10 @@ function readThemeNames() {
   const names = new Set();
   const builder = tryRequire('@tamagui/theme-builder');
   const stock = tryRequire('@tamagui/themes');
-  const src = readPublicSource('theme/src/theme/createThemes.ts');
-  if (!builder?.createThemes || !stock?.themes || !src) {return names;}
+  const src = readPublicSource('theme/src/theme/create-themes.ts');
+  if (!builder?.createThemes || !stock?.themes || !src) {
+    return names;
+  }
   const ramp = Array.from({ length: 14 }, (_, i) => `hsl(0, 0%, ${i * 7}%)`);
   const palette = { palette: { dark: ramp, light: ramp } };
   /** @type {Record<string, unknown>} */
@@ -425,14 +467,22 @@ function readThemeNames() {
   } catch {
     return new Set();
   }
-  for (const name of Object.keys(stock.themes)) {names.add(name);}
+  for (const name of Object.keys(stock.themes)) {
+    names.add(name);
+  }
   for (const m of sliceBlock(src, 'const grayTheme =', '\n};').matchAll(/^ {2}([a-zA-Z][a-zA-Z0-9_]*)\s*:/gm)) {
     names.add(m[1]);
   }
   /** @type {string[]} */
   const segments = [];
-  for (const name of names) {for (const part of name.split('_').slice(1)) segments.push(part);}
-  for (const segment of segments) {names.add(segment);}
+  for (const name of names) {
+    for (const part of name.split('_').slice(1)) {
+      segments.push(part);
+    }
+  }
+  for (const segment of segments) {
+    names.add(segment);
+  }
   return names;
 }
 
@@ -450,9 +500,11 @@ function readThemeKeys() {
   const builder = tryRequire('@tamagui/theme-builder');
   const stock = tryRequire('@tamagui/themes');
   const colors = tryRequire('@tamagui/colors');
-  const src = readPublicSource('theme/src/theme/createThemes.ts');
-  const builderSrc = readPublicSource('theme/src/theme/defaults/builderOptions.ts');
-  if (!builder?.createThemes || !stock?.themes || !colors || !src || !builderSrc) {return keys;}
+  const src = readPublicSource('theme/src/theme/create-themes.ts');
+  const builderSrc = readPublicSource('theme/src/theme/defaults/builder-options.ts');
+  if (!builder?.createThemes || !stock?.themes || !colors || !src || !builderSrc) {
+    return keys;
+  }
   const ramp = Array.from({ length: 14 }, (_, i) => `hsl(0, 0%, ${i * 7}%)`);
   const palette = { palette: { dark: ramp, light: ramp } };
   try {
@@ -461,19 +513,31 @@ function readThemeKeys() {
       childrenThemes: { warning: palette },
       accent: palette,
     });
-    for (const theme of Object.values(generated)) {for (const k of Object.keys(theme)) keys.add(k);}
+    for (const theme of Object.values(generated)) {
+      for (const k of Object.keys(theme)) {
+        keys.add(k);
+      }
+    }
   } catch {
     return new Set();
   }
   for (const name of ['light', 'dark']) {
-    for (const k of Object.keys(stock.themes[name] ?? {})) {keys.add(k);}
+    for (const k of Object.keys(stock.themes[name] ?? {})) {
+      keys.add(k);
+    }
   }
   for (const m of src.matchAll(/\.\.\.Colors\.([A-Za-z0-9]+)\s*,/g)) {
-    for (const k of Object.keys(colors[m[1]] ?? {})) {keys.add(k);}
+    for (const k of Object.keys(colors[m[1]] ?? {})) {
+      keys.add(k);
+    }
   }
-  for (const k of keysOfBlock(sliceBlock(src, 'export interface Shadows', '\n}'), 2)) {keys.add(k);}
+  for (const k of keysOfBlock(sliceBlock(src, 'export interface Shadows', '\n}'), 2)) {
+    keys.add(k);
+  }
   keys.add('shadowColor');
-  for (const k of keysOfBlock(sliceBlock(builderSrc, 'function getBaseTheme', '\n}'), 4)) {keys.add(k);}
+  for (const k of keysOfBlock(sliceBlock(builderSrc, 'function getBaseTheme', '\n}'), 4)) {
+    keys.add(k);
+  }
   return keys;
 }
 
@@ -492,12 +556,20 @@ function readFontSizeSteps() {
   for (const font of Object.values(cfg?.defaultConfig?.fonts ?? {})) {
     // Bare keys (`1`…`16`, `true`) — checkStyleTokens compares the captured
     // token name without its `$`, same shape keysOfBlock returned.
-    for (const k of Object.keys(font?.size ?? {})) {steps.add(k);}
+    for (const k of Object.keys(font?.size ?? {})) {
+      steps.add(k);
+    }
   }
-  if (steps.size) {return steps;}
+  if (steps.size) {
+    return steps;
+  }
   const src = readPublicSource('theme/src/theme/defaults/fonts.ts');
-  if (!src) {return steps;}
-  for (const k of keysOfBlock(sliceBlock(src, 'const interBaseSizes', '\n};'), 2)) {steps.add(k);}
+  if (!src) {
+    return steps;
+  }
+  for (const k of keysOfBlock(sliceBlock(src, 'const interBaseSizes', '\n};'), 2)) {
+    steps.add(k);
+  }
   return steps;
 }
 
@@ -526,30 +598,42 @@ function checkStyleTokens() {
   if (!helpers?.tokenCategories || !themesPkg?.tokens || !themeKeys.size || !fontSizeSteps.size) {
     return { violations: [], ok: false };
   }
-  const tokens = themesPkg.tokens;
+  const { tokens } = themesPkg;
   const spaceScale = new Set(Object.keys(tokens.space ?? {}));
   /** @type {Map<string, Set<string>>} prop → every `$value` that resolves */
   const byProp = new Map();
   // Props with a scale of their own (radius / size / zIndex / color).
   for (const [category, props] of Object.entries(helpers.tokenCategories)) {
     const resolvable = new Set([...themeKeys, ...Object.keys(tokens[category] ?? {}), ...spaceScale]);
-    for (const prop of Object.keys(props)) {byProp.set(prop, resolvable);}
+    for (const prop of Object.keys(props)) {
+      byProp.set(prop, resolvable);
+    }
   }
   // Every other view style prop lands on the space fallback (padding, margin,
   // gap, inset, border widths, …) — the biggest surface by call-site count.
   const spaceResolvable = new Set([...themeKeys, ...spaceScale]);
   for (const prop of Object.keys(helpers.stylePropsAll ?? {})) {
-    if (byProp.has(prop)) {continue;}
-    if (helpers.stylePropsTextOnly?.[prop]) {continue;}
-    if (helpers.stylePropsTransform?.[prop]) {continue;}
-    if (helpers.stylePropsUnitless?.[prop]) {continue;}
+    if (byProp.has(prop)) {
+      continue;
+    }
+    if (helpers.stylePropsTextOnly?.[prop]) {
+      continue;
+    }
+    if (helpers.stylePropsTransform?.[prop]) {
+      continue;
+    }
+    if (helpers.stylePropsUnitless?.[prop]) {
+      continue;
+    }
     byProp.set(prop, spaceResolvable);
   }
   byProp.set('fontSize', new Set([...themeKeys, ...fontSizeSteps]));
   // Shorthands are the same prop by another name (`bg`, `br`, `fos`, …).
   for (const [short, long] of Object.entries(shorthandsPkg?.shorthands ?? {})) {
     const resolvable = byProp.get(long);
-    if (resolvable) {byProp.set(short, resolvable);}
+    if (resolvable) {
+      byProp.set(short, resolvable);
+    }
   }
   const props = [...byProp.keys()].sort((a, b) => b.length - a.length).join('|');
   const re = new RegExp(`\\b(${props})=(?:"\\$([A-Za-z0-9]+)"|\\{\\s*"\\$([A-Za-z0-9]+)"\\s*\\})`, 'g');
@@ -563,7 +647,9 @@ function checkStyleTokens() {
 /** Flag `theme="literal"` naming a theme that was never built. */
 function checkThemeNames() {
   const valid = readThemeNames();
-  if (!valid.size) {return { violations: [], ok: false };}
+  if (!valid.size) {
+    return { violations: [], ok: false };
+  }
   const re = /\btheme=(?:"([A-Za-z][A-Za-z0-9_]*)"|\{\s*"([A-Za-z][A-Za-z0-9_]*)"\s*\})/g;
   const violations = scanLiterals(re, (m) => {
     const name = m[1] ?? m[2];
@@ -577,7 +663,9 @@ function readIntentNames() {
   /** @type {Set<string>} */
   const names = new Set();
   const src = readPublicSource('theme/src/theme/intents.ts');
-  if (!src) {return names;}
+  if (!src) {
+    return names;
+  }
   for (const m of sliceBlock(src, 'export const defaultIntents', '\n};').matchAll(
     /^ {2}([a-zA-Z][a-zA-Z0-9]*)\s*:\s*\{/gm,
   )) {
@@ -595,7 +683,9 @@ function readIntentNames() {
  */
 function checkIntentTokens() {
   const valid = readIntentNames();
-  if (!valid.size) {return { violations: [], valid: [], ok: false };}
+  if (!valid.size) {
+    return { violations: [], valid: [], ok: false };
+  }
   const call = /useResolvedKnobs\(/g;
   const intentArg = /\bintent:\s*"([A-Za-z0-9]+)"/g;
   /** @type {string[]} */
@@ -607,10 +697,13 @@ function checkIntentTokens() {
       let end = (m.index ?? 0) + m[0].length - 1;
       for (; end < src.length; end++) {
         const c = src[end];
-        if (c === '(') {depth += 1;}
-        else if (c === ')') {
+        if (c === '(') {
+          depth += 1;
+        } else if (c === ')') {
           depth -= 1;
-          if (depth === 0) {break;}
+          if (depth === 0) {
+            break;
+          }
         }
       }
       const args = src.slice((m.index ?? 0) + m[0].length, end);
@@ -643,9 +736,13 @@ function checkAnimationProps() {
   /** @type {string[]} */
   const driverless = [];
   const scan = (filePath) => {
-    if (!/\.(tsx|jsx)$/.test(filePath)) {return;}
-    if (/\.(spec|test|stories)\./.test(filePath)) {return;}
-    const src = readFileSync(filePath, 'utf8');
+    if (!/\.(tsx|jsx)$/.test(filePath)) {
+      return;
+    }
+    if (/\.(spec|test|stories)\./.test(filePath)) {
+      return;
+    }
+    const src = readFileSync(filePath, 'utf-8');
     const rel = relative(ROOT, filePath);
     // Any `…transition`-valued animation key, so prefixed spellings like
     // `ctx.knobProps.transition` are caught too. Deliberately NOT "any value":
@@ -662,13 +759,19 @@ function checkAnimationProps() {
     // truncates the tag and hides everything after it from this check.
     for (const tag of src.matchAll(/<[A-Z][\w.]*(?:\s(?:=>|[^>])*)?>/gs)) {
       const t = tag[0];
-      if (!/\b(enterStyle|exitStyle)=/.test(t)) {continue;}
-      if (/\btransition(?:[=:]|Props\()/.test(t)) {continue;}
+      if (!/\b(enterStyle|exitStyle)=/.test(t)) {
+        continue;
+      }
+      if (/\btransition(?:[=:]|Props\()/.test(t)) {
+        continue;
+      }
       const line = src.slice(0, tag.index).split('\n').length;
       driverless.push(`${rel}:${line} — enter/exitStyle with no \`transition\` driver (LC-24)`);
     }
   };
-  for (const dir of [PUBLIC_DIR, APPS_DIR, FEATURES_DIR]) {walkFiles(dir, scan);}
+  for (const dir of [PUBLIC_DIR, APPS_DIR, FEATURES_DIR]) {
+    walkFiles(dir, scan);
+  }
   return { legacyProp, driverless };
 }
 
@@ -676,7 +779,9 @@ function checkFeaturesTwins() {
   /** @type {string[]} */
   const violations = [];
   for (const name of listAppNames()) {
-    if (FEATURES_TWIN_EXEMPT.has(name)) {continue;}
+    if (FEATURES_TWIN_EXEMPT.has(name)) {
+      continue;
+    }
     const twin = join(FEATURES_DIR, name);
     if (!existsSync(twin) || !statSync(twin).isDirectory()) {
       violations.push(`apps/${name} lacks features/${name} (app ↔ features twin required)`);
@@ -716,12 +821,20 @@ function checkSizeRecipeEscape() {
   /** @type {string[]} */
   const violations = [];
   walkFiles(formsSrc, (filePath) => {
-    if (!/\.(tsx|ts)$/.test(filePath)) {return;}
+    if (!/\.(tsx|ts)$/.test(filePath)) {
+      return;
+    }
     const rel = relative(ROOT, filePath);
-    if (/\.(spec|test|stories)\./.test(rel)) {return;}
-    if (rel.includes('__snapshots__')) {return;}
-    if (!pilotPrefixes.some((prefix) => rel.startsWith(prefix))) {return;}
-    const src = readFileSync(filePath, 'utf8');
+    if (/\.(spec|test|stories)\./.test(rel)) {
+      return;
+    }
+    if (rel.includes('__snapshots__')) {
+      return;
+    }
+    if (!pilotPrefixes.some((prefix) => rel.startsWith(prefix))) {
+      return;
+    }
+    const src = readFileSync(filePath, 'utf-8');
     const lines = src.split('\n');
     for (const m of src.matchAll(re)) {
       const line = lineAt(src, m.index ?? 0);
@@ -732,7 +845,9 @@ function checkSizeRecipeEscape() {
       }
       const previous = lines[line - 2] ?? '';
       const window = `${previous}\n${current}\n${m[0]}`;
-      if (/sizeRecipeEscape|size-recipe-escape:/.test(window)) {continue;}
+      if (/sizeRecipeEscape|size-recipe-escape:/.test(window)) {
+        continue;
+      }
       violations.push(`${rel}:${line} — ${m[1]}={${m[2]}}`);
     }
   });
@@ -769,25 +884,36 @@ export function findSizeRecipeEscapes(src) {
   for (const m of src.matchAll(ESCAPE_PROP_RE)) {
     literalProps.add(m.index);
     const line = lineAt(src, m.index ?? 0);
-    if (isCommentLine(lines[line - 1] ?? '')) {continue;}
+    if (isCommentLine(lines[line - 1] ?? '')) {
+      continue;
+    }
     sites.push({ line, form: 'prop', reason: (m[1] ?? m[2] ?? m[3] ?? '').trim() });
   }
   for (const m of src.matchAll(ESCAPE_ATTR_RE)) {
-    if (literalProps.has(m.index)) {continue;}
+    if (literalProps.has(m.index)) {
+      continue;
+    }
     const line = lineAt(src, m.index ?? 0);
-    if (isCommentLine(lines[line - 1] ?? '')) {continue;}
+    if (isCommentLine(lines[line - 1] ?? '')) {
+      continue;
+    }
     sites.push({ line, form: 'prop', reason: undefined });
   }
   for (const m of src.matchAll(ESCAPE_CALL_RE)) {
     const line = lineAt(src, m.index ?? 0);
-    if (isCommentLine(lines[line - 1] ?? '')) {continue;}
+    if (isCommentLine(lines[line - 1] ?? '')) {
+      continue;
+    }
     let depth = 0;
     let end = (m.index ?? 0) + m[0].length - 1;
     for (; end < src.length; end++) {
-      if (src[end] === '(') {depth += 1;}
-      else if (src[end] === ')') {
+      if (src[end] === '(') {
+        depth += 1;
+      } else if (src[end] === ')') {
         depth -= 1;
-        if (depth === 0) {break;}
+        if (depth === 0) {
+          break;
+        }
       }
     }
     const args = src.slice((m.index ?? 0) + m[0].length, end);
@@ -800,9 +926,13 @@ export function findSizeRecipeEscapes(src) {
     });
   }
   lines.forEach((text, index) => {
-    if (text.trim().startsWith('*')) {return;}
-    const m = text.match(ESCAPE_COMMENT_RE);
-    if (m) {sites.push({ line: index + 1, form: 'comment', reason: m[1].trim() });}
+    if (text.trim().startsWith('*')) {
+      return;
+    }
+    const m = ESCAPE_COMMENT_RE.exec(text);
+    if (m) {
+      sites.push({ line: index + 1, form: 'comment', reason: m[1].trim() });
+    }
   });
   return sites.sort((a, b) => a.line - b.line);
 }
@@ -825,16 +955,26 @@ function checkUndeclaredSizeRecipeEscapes() {
   } catch (error) {
     return [`size-recipe escape registry: ${error instanceof Error ? error.message : error}`];
   }
-  if (!registry.present) {return [];}
+  if (!registry.present) {
+    return [];
+  }
   const declared = new Map();
-  for (const { file, reason } of registry.escapes) {declared.set(`${file}\n${reason}`, false);}
+  for (const { file, reason } of registry.escapes) {
+    declared.set(`${file}\n${reason}`, false);
+  }
   /** @type {string[]} */
   const violations = [];
   const scan = (filePath) => {
-    if (!/\.(tsx|ts|jsx|js)$/.test(filePath) || filePath.endsWith('.d.ts')) {return;}
-    if (/\.(spec|test)\./.test(filePath)) {return;}
-    const src = readFileSync(filePath, 'utf8');
-    if (!src.includes('sizeRecipeEscape') && !src.includes('size-recipe-escape:')) {return;}
+    if (!/\.(tsx|ts|jsx|js)$/.test(filePath) || filePath.endsWith('.d.ts')) {
+      return;
+    }
+    if (/\.(spec|test)\./.test(filePath)) {
+      return;
+    }
+    const src = readFileSync(filePath, 'utf-8');
+    if (!src.includes('sizeRecipeEscape') && !src.includes('size-recipe-escape:')) {
+      return;
+    }
     const rel = relative(ROOT, filePath).replaceAll('\\', '/');
     for (const site of findSizeRecipeEscapes(src)) {
       if (site.reason === undefined || site.reason === '') {
@@ -849,9 +989,13 @@ function checkUndeclaredSizeRecipeEscapes() {
       violations.push(`${rel}:${site.line} — undeclared escape "${site.reason}"`);
     }
   };
-  for (const dir of [PUBLIC_DIR, PACKAGES_DIR, APPS_DIR, FEATURES_DIR]) {walkFiles(dir, scan);}
+  for (const dir of [PUBLIC_DIR, PACKAGES_DIR, APPS_DIR, FEATURES_DIR]) {
+    walkFiles(dir, scan);
+  }
   for (const [key, seen] of declared) {
-    if (seen) {continue;}
+    if (seen) {
+      continue;
+    }
     const [file, reason] = key.split('\n');
     violations.push(`${file} — declared escape "${reason}" has no site in the code (stale row)`);
   }
@@ -876,15 +1020,23 @@ function checkUndeclaredHexEscapes() {
   } catch (error) {
     return [`colour-literal escape registry: ${error instanceof Error ? error.message : error}`];
   }
-  if (!registry.present) {return [];}
+  if (!registry.present) {
+    return [];
+  }
   const declared = new Map();
-  for (const { file, reason } of registry.escapes) {declared.set(`${file}\n${reason}`, false);}
+  for (const { file, reason } of registry.escapes) {
+    declared.set(`${file}\n${reason}`, false);
+  }
   /** @type {string[]} */
   const violations = [];
   const scan = (filePath) => {
-    if (!/\.(tsx|ts|jsx|js)$/.test(filePath) || filePath.endsWith('.d.ts')) {return;}
-    if (/\.(spec|test)\./.test(filePath)) {return;}
-    const src = readFileSync(filePath, 'utf8');
+    if (!/\.(tsx|ts|jsx|js)$/.test(filePath) || filePath.endsWith('.d.ts')) {
+      return;
+    }
+    if (/\.(spec|test)\./.test(filePath)) {
+      return;
+    }
+    const src = readFileSync(filePath, 'utf-8');
     const rel = relative(ROOT, filePath).replaceAll('\\', '/');
     for (const site of findHexEscapes(src)) {
       if (!site.reason) {
@@ -899,9 +1051,13 @@ function checkUndeclaredHexEscapes() {
       violations.push(`${rel}:${site.line} — undeclared escape "${site.reason}"`);
     }
   };
-  for (const dir of [PUBLIC_DIR, PACKAGES_DIR, APPS_DIR, FEATURES_DIR]) {walkFiles(dir, scan);}
+  for (const dir of [PUBLIC_DIR, PACKAGES_DIR, APPS_DIR, FEATURES_DIR]) {
+    walkFiles(dir, scan);
+  }
   for (const [key, seen] of declared) {
-    if (seen) {continue;}
+    if (seen) {
+      continue;
+    }
     const [file, reason] = key.split('\n');
     violations.push(`${file} — declared escape "${reason}" has no comment in the code (stale row)`);
   }
@@ -923,7 +1079,9 @@ function braceExportNames(src) {
     for (const item of m[1].split(',')) {
       const parts = item.trim().split(/\s+as\s+/);
       const name = (parts[1] ?? parts[0] ?? '').trim();
-      if (name) {names.add(name);}
+      if (name) {
+        names.add(name);
+      }
     }
   }
   return names;
@@ -944,13 +1102,15 @@ function checkStoryFileShape() {
   /** @type {string[]} */
   const violations = [];
   const scan = (filePath) => {
-    if (!STORY_FILE_RE.test(filePath)) {return;}
+    if (!STORY_FILE_RE.test(filePath)) {
+      return;
+    }
     const rel = relative(ROOT, filePath);
-    const src = readFileSync(filePath, 'utf8');
+    const src = readFileSync(filePath, 'utf-8');
     const braced = braceExportNames(src);
     const namedMeta =
-      src.match(/^export\s+(?:const|let|var|function|class)\s+meta\b/m) ??
-      (braced.has('meta') ? src.match(/^export\s*\{[^}]*\bmeta\b[^}]*\}/m) : null);
+      /^export\s+(?:const|let|var|function|class)\s+meta\b/m.exec(src) ??
+      (braced.has('meta') ? /^export\s*\{[^}]*\bmeta\b[^}]*\}/m.exec(src) : null);
     const hasDefault = /^export\s+default\b/m.test(src) || braced.has('default');
     const isFactory = /^export\s+(?:const|let|var)\s+meta\b[^=\n]*=\s*[\w$.]+\.meta\s*\(/m.test(src);
     if (namedMeta && hasDefault) {
@@ -965,7 +1125,9 @@ function checkStoryFileShape() {
       violations.push(`${rel} — no default export (classic CSF needs \`export default meta\`)`);
     }
   };
-  for (const dir of [PUBLIC_DIR, PACKAGES_DIR, APPS_DIR, FEATURES_DIR]) {walkFiles(dir, scan);}
+  for (const dir of [PUBLIC_DIR, PACKAGES_DIR, APPS_DIR, FEATURES_DIR]) {
+    walkFiles(dir, scan);
+  }
   return violations;
 }
 
@@ -985,18 +1147,28 @@ function checkUndeclaredDrawings() {
       ok: false,
     };
   }
-  if (!registry.present) {return { violations: [], ok: true };}
+  if (!registry.present) {
+    return { violations: [], ok: true };
+  }
   /** @type {string[]} */
   const violations = [];
   const scan = (filePath) => {
-    if (!/\.(tsx|ts|jsx|js)$/.test(filePath)) {return;}
-    const src = readFileSync(filePath, 'utf8');
-    if (!DRAWING_PRAGMA.test(src)) {return;}
+    if (!/\.(tsx|ts|jsx|js)$/.test(filePath)) {
+      return;
+    }
+    const src = readFileSync(filePath, 'utf-8');
+    if (!DRAWING_PRAGMA.test(src)) {
+      return;
+    }
     const rel = relative(ROOT, filePath);
-    if (isDrawingFile(rel, registry.files) || isDrawingFile(filePath, registry.files)) {return;}
+    if (isDrawingFile(rel, registry.files) || isDrawingFile(filePath, registry.files)) {
+      return;
+    }
     violations.push(`${rel} — // mpo-drawing without a DRAWING Members row in ## Drawing files`);
   };
-  for (const dir of [PUBLIC_DIR, PACKAGES_DIR, APPS_DIR, FEATURES_DIR]) {walkFiles(dir, scan);}
+  for (const dir of [PUBLIC_DIR, PACKAGES_DIR, APPS_DIR, FEATURES_DIR]) {
+    walkFiles(dir, scan);
+  }
   return { violations, ok: true };
 }
 
@@ -1020,20 +1192,28 @@ function checkTsconfigWorkspacePaths() {
   /** @type {string[]} */
   const files = [];
   const featuresTsconfig = join(FEATURES_DIR, 'tsconfig.json');
-  if (existsSync(featuresTsconfig)) {files.push(featuresTsconfig);}
+  if (existsSync(featuresTsconfig)) {
+    files.push(featuresTsconfig);
+  }
   for (const dir of [APPS_DIR, PACKAGES_DIR, PUBLIC_DIR]) {
-    if (!existsSync(dir)) {continue;}
+    if (!existsSync(dir)) {
+      continue;
+    }
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      if (!entry.isDirectory()) {continue;}
+      if (!entry.isDirectory()) {
+        continue;
+      }
       const candidate = join(dir, entry.name, 'tsconfig.json');
-      if (existsSync(candidate)) {files.push(candidate);}
+      if (existsSync(candidate)) {
+        files.push(candidate);
+      }
     }
   }
   for (const file of files) {
-    const src = readFileSync(file, 'utf8');
+    const src = readFileSync(file, 'utf-8');
     // Whole-line comments only: a `//` inside a string (the $schema URL) must
     // survive, and these files are JSONC, not JSON5.
-    const stripped = src.replace(/^[ \t]*\/\/.*$/gm, '');
+    const stripped = src.replaceAll(/^[ \t]*\/\/.*$/gm, '');
     let doc;
     try {
       doc = JSON.parse(stripped);
@@ -1041,16 +1221,22 @@ function checkTsconfigWorkspacePaths() {
       continue;
     }
     const paths = doc?.compilerOptions?.paths;
-    if (!paths || typeof paths !== 'object') {continue;}
+    if (!paths || typeof paths !== 'object') {
+      continue;
+    }
     const extendsField = doc.extends;
     const extendsBase = Array.isArray(extendsField)
       ? extendsField.some((e) => typeof e === 'string' && e.includes('tsconfig.base'))
       : typeof extendsField === 'string' && extendsField.includes('tsconfig.base');
-    if (!extendsBase) {continue;}
-    const decl = src.match(/^[ \t]*"paths"\s*:/m);
+    if (!extendsBase) {
+      continue;
+    }
+    const decl = /^[ \t]*"paths"\s*:/m.exec(src);
     const index = decl?.index ?? 0;
     const before = src.slice(0, index);
-    if (/workspace-paths-escape:/.test(before.split('\n').slice(-3).join('\n'))) {continue;}
+    if (before.split('\n').slice(-3).join('\n').includes('workspace-paths-escape:')) {
+      continue;
+    }
     violations.push(
       `${relative(ROOT, file)}:${lineAt(src, index)} — declares \`compilerOptions.paths\` (${Object.keys(paths).join(', ')}) while extending tsconfig.base`,
     );
@@ -1081,19 +1267,29 @@ const METRO_FALLBACK_EXTS = ['ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs'];
  * @returns {string | null}
  */
 function metroExportTarget(target, conditions) {
-  if (typeof target === 'string') {return target;}
+  if (typeof target === 'string') {
+    return target;
+  }
   if (Array.isArray(target)) {
     for (const item of target) {
       const hit = metroExportTarget(item, conditions);
-      if (hit) {return hit;}
+      if (hit) {
+        return hit;
+      }
     }
     return null;
   }
-  if (!target || typeof target !== 'object') {return null;}
+  if (!target || typeof target !== 'object') {
+    return null;
+  }
   for (const [key, value] of Object.entries(target)) {
-    if (!conditions.has(key)) {continue;}
+    if (!conditions.has(key)) {
+      continue;
+    }
     const hit = metroExportTarget(value, conditions);
-    if (hit) {return hit;}
+    if (hit) {
+      return hit;
+    }
   }
   return null;
 }
@@ -1103,8 +1299,12 @@ function metroExportTarget(target, conditions) {
  * @returns {boolean} true when any condition in the entry is `source`
  */
 function declaresSourceCondition(target) {
-  if (!target || typeof target !== 'object') {return false;}
-  if (Array.isArray(target)) {return target.some(declaresSourceCondition);}
+  if (!target || typeof target !== 'object') {
+    return false;
+  }
+  if (Array.isArray(target)) {
+    return target.some(declaresSourceCondition);
+  }
   return Object.entries(target).some(([key, value]) => key === 'source' || declaresSourceCondition(value));
 }
 
@@ -1114,8 +1314,12 @@ function declaresSourceCondition(target) {
  */
 function hasMetroFallback(pkgRoot, subpath) {
   const base = join(pkgRoot, subpath.replace(/^\.\//, ''));
-  if (METRO_FALLBACK_EXTS.some((ext) => existsSync(`${base}.${ext}`))) {return true;}
-  if (existsSync(join(base, 'package.json'))) {return true;}
+  if (METRO_FALLBACK_EXTS.some((ext) => existsSync(`${base}.${ext}`))) {
+    return true;
+  }
+  if (existsSync(join(base, 'package.json'))) {
+    return true;
+  }
   return METRO_FALLBACK_EXTS.some((ext) => existsSync(join(base, `index.${ext}`)));
 }
 
@@ -1139,31 +1343,47 @@ function checkMetroSubpathFallbacks() {
   /** @type {string[]} */
   const violations = [];
   for (const dir of [PUBLIC_DIR, PACKAGES_DIR]) {
-    if (!existsSync(dir)) {continue;}
+    if (!existsSync(dir)) {
+      continue;
+    }
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      if (!entry.isDirectory()) {continue;}
+      if (!entry.isDirectory()) {
+        continue;
+      }
       const pkgRoot = join(dir, entry.name);
       const pkgJsonPath = join(pkgRoot, 'package.json');
-      if (!existsSync(pkgJsonPath)) {continue;}
+      if (!existsSync(pkgJsonPath)) {
+        continue;
+      }
       let pkg;
       try {
-        pkg = JSON.parse(readFileSync(pkgJsonPath, 'utf8'));
+        pkg = JSON.parse(readFileSync(pkgJsonPath, 'utf-8'));
       } catch {
         continue;
       }
       const exportsMap = pkg?.exports;
-      if (!exportsMap || typeof exportsMap !== 'object' || Array.isArray(exportsMap)) {continue;}
+      if (!exportsMap || typeof exportsMap !== 'object' || Array.isArray(exportsMap)) {
+        continue;
+      }
       const packageFromSource =
         typeof pkg.source === 'string' ||
         (typeof pkg.main === 'string' && /^(\.\/)?src\//.test(pkg.main)) ||
         declaresSourceCondition(exportsMap['.']);
       for (const [subpath, target] of Object.entries(exportsMap)) {
-        if (!subpath.startsWith('./') || subpath.includes('*')) {continue;}
-        if (!packageFromSource && !declaresSourceCondition(target)) {continue;}
-        if (hasMetroFallback(pkgRoot, subpath)) {continue;}
+        if (!subpath.startsWith('./') || subpath.includes('*')) {
+          continue;
+        }
+        if (!packageFromSource && !declaresSourceCondition(target)) {
+          continue;
+        }
+        if (hasMetroFallback(pkgRoot, subpath)) {
+          continue;
+        }
         for (const [platform, conditions] of Object.entries(METRO_PLATFORM_CONDITIONS)) {
           const resolved = metroExportTarget(target, conditions);
-          if (!resolved || !resolved.startsWith('./dist/')) {continue;}
+          if (!resolved || !resolved.startsWith('./dist/')) {
+            continue;
+          }
           violations.push(
             `${relative(ROOT, pkgJsonPath)} — "${subpath}" resolves to ${resolved} on ${platform}, which is unbuilt; add ${relative(ROOT, join(pkgRoot, `${subpath.replace(/^\.\//, '')}.ts`))} re-exporting the source entry`,
           );
@@ -1189,16 +1409,20 @@ function checkMetroSubpathFallbacks() {
  */
 function readReactNativeWebExports() {
   const entry = join(ROOT, 'node_modules', 'react-native-web', 'dist', 'index.js');
-  if (!existsSync(entry)) {return undefined;}
+  if (!existsSync(entry)) {
+    return undefined;
+  }
   /** @type {Set<string>} */
   const names = new Set();
-  for (const clause of readFileSync(entry, 'utf8').matchAll(/export\s*\{([^}]*)\}/g)) {
+  for (const clause of readFileSync(entry, 'utf-8').matchAll(/export\s*\{([^}]*)\}/g)) {
     for (const specifier of clause[1].split(',')) {
       const name = specifier
         .trim()
         .split(/\s+as\s+/)
         .pop();
-      if (name) {names.add(name);}
+      if (name) {
+        names.add(name);
+      }
     }
   }
   return names.size ? names : undefined;
@@ -1245,25 +1469,41 @@ function isUnder(absPath, dir) {
  */
 function checkReactNativeWebExports() {
   const exported = readReactNativeWebExports();
-  if (!exported) {return { ok: false, violations: /** @type {string[]} */ ([]) };}
+  if (!exported) {
+    return { ok: false, violations: /** @type {string[]} */ ([]) };
+  }
   /** @type {string[]} */
   const violations = [];
   for (const { abs, rel, src } of sourceFiles()) {
-    if (!isUnder(abs, PUBLIC_DIR) && !isUnder(abs, FEATURES_DIR)) {continue;}
-    if (NATIVE_ONLY_FILE_RE.test(abs)) {continue;}
-    if (!src.includes('react-native')) {continue;}
+    if (!isUnder(abs, PUBLIC_DIR) && !isUnder(abs, FEATURES_DIR)) {
+      continue;
+    }
+    if (NATIVE_ONLY_FILE_RE.test(abs)) {
+      continue;
+    }
+    if (!src.includes('react-native')) {
+      continue;
+    }
     for (const statement of src.matchAll(REACT_NATIVE_IMPORT_RE)) {
       const clause = statement[1].trim();
-      if (/^type\b/.test(clause)) {continue;}
+      if (/^type\b/.test(clause)) {
+        continue;
+      }
       const named = clause.match(/\{([\s\S]*)\}/);
       // No brace group means a default or `* as ns` import, and a namespace
       // read of a missing name is `undefined`, never a SyntaxError.
-      if (!named) {continue;}
+      if (!named) {
+        continue;
+      }
       for (const specifier of named[1].split(',')) {
         const entry = specifier.trim();
-        if (!entry || /^type\b/.test(entry)) {continue;}
+        if (!entry || /^type\b/.test(entry)) {
+          continue;
+        }
         const name = entry.split(/\s+as\s+/)[0].trim();
-        if (!name || exported.has(name)) {continue;}
+        if (!name || exported.has(name)) {
+          continue;
+        }
         violations.push(`${rel}:${lineAt(src, statement.index ?? 0)} — ${name} (react-native-web exports no ${name})`);
       }
     }
@@ -1287,12 +1527,16 @@ function codeOffsets(src) {
     const char = src[i];
     const next = src[i + 1];
     if (char === '/' && next === '/') {
-      while (i < src.length && src[i] !== '\n') {i++;}
+      while (i < src.length && src[i] !== '\n') {
+        i++;
+      }
       continue;
     }
     if (char === '/' && next === '*') {
       i += 2;
-      while (i < src.length && !(src[i] === '*' && src[i + 1] === '/')) {i++;}
+      while (i < src.length && !(src[i] === '*' && src[i + 1] === '/')) {
+        i++;
+      }
       i += 2;
       continue;
     }
@@ -1342,7 +1586,7 @@ const NODE_BUILTIN_IMPORT_RE =
  * does, so a twin lands in the Vite build too.
  *
  * The replacement is a static `process.env.<KEY>` member read inside a
- * try/catch (packages/platform/src/config/runtimeConfig.ts), or, for an SSR
+ * try/catch (packages/platform/src/config/runtime-config.ts), or, for an SSR
  * flag, `isServer` from @repo/platform, which is split at the
  * FILE level rather than by a bundler define.
  *
@@ -1356,23 +1600,35 @@ const NODE_BUILTIN_IMPORT_RE =
 function checkImportMetaInPublicSource() {
   /** @type {string[]} */
   const violations = [];
-  if (!existsSync(PUBLIC_DIR)) {return violations;}
+  if (!existsSync(PUBLIC_DIR)) {
+    return violations;
+  }
   for (const pkg of readdirSync(PUBLIC_DIR, { withFileTypes: true })) {
-    if (!pkg.isDirectory() || pkg.name.startsWith('.') || pkg.name === 'node_modules') {continue;}
+    if (!pkg.isDirectory() || pkg.name.startsWith('.') || pkg.name === 'node_modules') {
+      continue;
+    }
     walkFiles(join(PUBLIC_DIR, pkg.name, 'src'), (filePath) => {
-      if (!IMPORT_META_SCANNED_RE.test(filePath)) {return;}
-      if (/\.(spec|test)\./.test(filePath)) {return;}
-      const src = readFileSync(filePath, 'utf8');
+      if (!IMPORT_META_SCANNED_RE.test(filePath)) {
+        return;
+      }
+      if (/\.(spec|test)\./.test(filePath)) {
+        return;
+      }
+      const src = readFileSync(filePath, 'utf-8');
       if (!IMPORT_META_RE.test(src)) {
         IMPORT_META_RE.lastIndex = 0;
         return;
       }
       IMPORT_META_RE.lastIndex = 0;
-      if (NODE_BUILTIN_IMPORT_RE.test(src)) {return;}
+      if (NODE_BUILTIN_IMPORT_RE.test(src)) {
+        return;
+      }
       const mask = codeOffsets(src);
       for (const match of src.matchAll(IMPORT_META_RE)) {
         const index = match.index ?? 0;
-        if (mask[index] !== 1) {continue;}
+        if (mask[index] !== 1) {
+          continue;
+        }
         violations.push(`${relative(ROOT, filePath)}:${lineAt(src, index)}`);
       }
     });
@@ -1416,11 +1672,15 @@ function nonCommentOffsets(src) {
     const char = src[i];
     const next = src[i + 1];
     if (char === '/' && next === '/') {
-      while (i < src.length && src[i] !== '\n') {mask[i++] = 0;}
+      while (i < src.length && src[i] !== '\n') {
+        mask[i++] = 0;
+      }
       continue;
     }
     if (char === '/' && next === '*') {
-      while (i < src.length && !(src[i] === '*' && src[i + 1] === '/')) {mask[i++] = 0;}
+      while (i < src.length && !(src[i] === '*' && src[i + 1] === '/')) {
+        mask[i++] = 0;
+      }
       mask[i] = 0;
       mask[i + 1] = 0;
       i += 2;
@@ -1438,23 +1698,37 @@ function nonCommentOffsets(src) {
 function checkGraphVarsCoverage() {
   /** @type {string[]} */
   const violations = [];
-  if (!existsSync(PUBLIC_DIR)) {return violations;}
+  if (!existsSync(PUBLIC_DIR)) {
+    return violations;
+  }
   for (const pkg of readdirSync(PUBLIC_DIR, { withFileTypes: true })) {
-    if (!pkg.isDirectory() || pkg.name.startsWith('.') || pkg.name === 'node_modules') {continue;}
+    if (!pkg.isDirectory() || pkg.name.startsWith('.') || pkg.name === 'node_modules') {
+      continue;
+    }
     walkFiles(join(PUBLIC_DIR, pkg.name, 'src'), (filePath) => {
-      if (!REACT_FLOW_SCANNED_RE.test(filePath)) {return;}
-      const posix = filePath.replace(/\\/g, '/');
-      if (GRAPH_VARS_EXEMPT.some((exempt) => posix.endsWith(exempt))) {return;}
+      if (!REACT_FLOW_SCANNED_RE.test(filePath)) {
+        return;
+      }
+      const posix = filePath.replaceAll('\\', '/');
+      if (GRAPH_VARS_EXEMPT.some((exempt) => posix.endsWith(exempt))) {
+        return;
+      }
       // Specs are exempt for the reason check 10 exempts them: a spec that
       // asserts WHICH classes a variable binds to has to name those classes,
       // and it ships no paint. Nothing else is exempt, including stories.
-      if (/\.(spec|test)\./.test(filePath)) {return;}
-      const src = readFileSync(filePath, 'utf8');
-      if (!src.includes('.react-flow__')) {return;}
+      if (/\.(spec|test)\./.test(filePath)) {
+        return;
+      }
+      const src = readFileSync(filePath, 'utf-8');
+      if (!src.includes('.react-flow__')) {
+        return;
+      }
       const mask = nonCommentOffsets(src);
       for (const match of src.matchAll(REACT_FLOW_SELECTOR_RE)) {
         const index = match.index ?? 0;
-        if (mask[index] !== 1) {continue;}
+        if (mask[index] !== 1) {
+          continue;
+        }
         violations.push(`${relative(ROOT, filePath)}:${lineAt(src, index)} — ${match[0]}`);
       }
     });
@@ -1517,23 +1791,37 @@ function checkStoryForeignControls() {
   /** @type {string[]} */
   const violations = [];
   const scan = (filePath) => {
-    if (!STORY_FILE_RE.test(filePath)) {return;}
+    if (!STORY_FILE_RE.test(filePath)) {
+      return;
+    }
     const rel = relative(ROOT, filePath).replaceAll('\\', '/');
-    if (STORY_HONESTY_EXEMPT_PREFIXES.some((prefix) => rel.startsWith(prefix))) {return;}
-    const src = readFileSync(filePath, 'utf8');
-    if (!src.includes('tamagui')) {return;}
+    if (STORY_HONESTY_EXEMPT_PREFIXES.some((prefix) => rel.startsWith(prefix))) {
+      return;
+    }
+    const src = readFileSync(filePath, 'utf-8');
+    if (!src.includes('tamagui')) {
+      return;
+    }
     /** @type {{ imported: string, alias: string, line: number }[]} */
     const controls = [];
     for (const statement of src.matchAll(TAMAGUI_IMPORT_RE)) {
       const clause = statement[1].trim();
-      if (/^type\b/.test(clause)) {continue;}
-      const named = clause.match(/\{([\s\S]*)\}/);
-      if (!named) {continue;}
+      if (/^type\b/.test(clause)) {
+        continue;
+      }
+      const named = /\{([\s\S]*)\}/.exec(clause);
+      if (!named) {
+        continue;
+      }
       for (const specifier of named[1].split(',')) {
         const entry = specifier.trim();
-        if (!entry || /^type\b/.test(entry)) {continue;}
+        if (!entry || /^type\b/.test(entry)) {
+          continue;
+        }
         const [imported, alias] = entry.split(/\s+as\s+/).map((part) => part.trim());
-        if (!STORY_FOREIGN_CONTROL_PRIMITIVES.has(imported)) {continue;}
+        if (!STORY_FOREIGN_CONTROL_PRIMITIVES.has(imported)) {
+          continue;
+        }
         controls.push({
           imported,
           alias: alias || imported,
@@ -1541,7 +1829,9 @@ function checkStoryForeignControls() {
         });
       }
     }
-    if (!controls.length || STORY_HONESTY_MARKER_RE.test(src)) {return;}
+    if (!controls.length || STORY_HONESTY_MARKER_RE.test(src)) {
+      return;
+    }
     for (const { imported, alias, line } of controls) {
       const shown = alias === imported ? imported : `${imported} as ${alias}`;
       violations.push(
@@ -1549,7 +1839,9 @@ function checkStoryForeignControls() {
       );
     }
   };
-  for (const dir of [PUBLIC_DIR, PACKAGES_DIR, APPS_DIR, FEATURES_DIR]) {walkFiles(dir, scan);}
+  for (const dir of [PUBLIC_DIR, PACKAGES_DIR, APPS_DIR, FEATURES_DIR]) {
+    walkFiles(dir, scan);
+  }
   return violations;
 }
 
@@ -1586,7 +1878,9 @@ export function runConventionChecks(options = {}) {
     console.error(
       'Convention: `animation` is the tamagui 1.x prop — on 2.x it is silently dropped (no animation at all). Use `transition`.\n',
     );
-    for (const msg of animProps.legacyProp) {console.error(`  ${msg}`);}
+    for (const msg of animProps.legacyProp) {
+      console.error(`  ${msg}`);
+    }
     console.error('');
   }
 
@@ -1595,21 +1889,27 @@ export function runConventionChecks(options = {}) {
     console.error(
       'Convention (LC-24): enterStyle/exitStyle without a `transition` on the same element never interpolates — the styles are dead code.\n',
     );
-    for (const msg of animProps.driverless) {console.error(`  ${msg}`);}
+    for (const msg of animProps.driverless) {
+      console.error(`  ${msg}`);
+    }
     console.error('');
   }
 
   if (css.length) {
     failed = true;
     console.error('Convention: .css files are banned under apps/*\n');
-    for (const file of css) {console.error(`  ${file}`);}
+    for (const file of css) {
+      console.error(`  ${file}`);
+    }
     console.error('');
   }
 
   if (twins.length) {
     failed = true;
     console.error('Convention: each product app must have a features/<name> twin\n');
-    for (const msg of twins) {console.error(`  ${msg}`);}
+    for (const msg of twins) {
+      console.error(`  ${msg}`);
+    }
     console.error('');
   }
 
@@ -1618,7 +1918,9 @@ export function runConventionChecks(options = {}) {
     console.error(
       "Convention (SIZE-RECIPE ESCAPE): control chrome (height / minHeight / paddingHorizontal / fontSize) must come from the size recipe, not a numeric literal. Escape with `sizeRecipeEscape` or `// size-recipe-escape: <reason>` on the previous line or same statement, and declare the reason in the spec's `## Size-recipe escapes` table. Pilot: Button/, InputParts/, fields/Select/.\n",
     );
-    for (const msg of sizeRecipeEscape) {console.error(`  ${msg}`);}
+    for (const msg of sizeRecipeEscape) {
+      console.error(`  ${msg}`);
+    }
     console.error('');
   }
 
@@ -1627,7 +1929,9 @@ export function runConventionChecks(options = {}) {
     console.error(
       'Convention (SIZE-RECIPE ESCAPE REGISTRY): every sizeRecipeEscape site must be a row in docs/theme-propagation-spec.md `## Size-recipe escapes`, by file and by the exact reason the code writes. The table is the allowlist; writing another escape cannot widen it. A row whose site is gone fails too.\n',
     );
-    for (const msg of undeclaredEscapes) {console.error(`  ${msg}`);}
+    for (const msg of undeclaredEscapes) {
+      console.error(`  ${msg}`);
+    }
     console.error('');
   }
 
@@ -1636,7 +1940,9 @@ export function runConventionChecks(options = {}) {
     console.error(
       'Convention (COLOUR-LITERAL ESCAPE REGISTRY): a `hex-escape: <reason>` comment exempts its file from mpo-conventions/no-hex-literals, so every one must be a row in docs/theme-propagation-spec.md `## Colour-literal escapes`, by file and by the exact reason the comment writes. Reach for a theme token first; the escape is for surfaces no token reaches. A row whose comment is gone fails too.\n',
     );
-    for (const msg of undeclaredHexEscapes) {console.error(`  ${msg}`);}
+    for (const msg of undeclaredHexEscapes) {
+      console.error(`  ${msg}`);
+    }
     console.error('');
   }
 
@@ -1645,7 +1951,9 @@ export function runConventionChecks(options = {}) {
     console.error(
       'Convention (STORY FILE SHAPE): a story file must be classic CSF (`export default meta`, no named `meta` export) or a CSF factory (`export const meta = preview.meta(...)`). Anything else makes Storybook\'s indexer fail the WHOLE gallery with "CSF: missing default export", and no package build ever sees it.\n',
     );
-    for (const msg of storyShape) {console.error(`  ${msg}`);}
+    for (const msg of storyShape) {
+      console.error(`  ${msg}`);
+    }
     console.error('');
   }
 
@@ -1654,7 +1962,9 @@ export function runConventionChecks(options = {}) {
     console.error(
       'Convention (FOREIGN CONTROL SPECIMEN): a story composes catalog components. A raw control primitive imported from "tamagui" (Input, Button, Checkbox, Switch, Slider, Select, RadioGroup, ToggleGroup, Progress, TextArea) consumes no knobs, so a knob sweep that trusts the story scores the primitive and marks the component checked. Mount the house control from @repo/forms (inside a layout: `<Input><Input.Box><Input.Area /></Input.Box></Input>`), or, when the raw primitive is there on purpose to show the contrast, label that story `parameters: { foreignContrastSpecimen: true }` so the probes skip it. Layout and text primitives (XStack, YStack, Paragraph, Text) are out of scope.\n',
     );
-    for (const msg of storyForeignControls) {console.error(`  ${msg}`);}
+    for (const msg of storyForeignControls) {
+      console.error(`  ${msg}`);
+    }
     console.error('');
   }
 
@@ -1663,7 +1973,9 @@ export function runConventionChecks(options = {}) {
     console.error(
       'Convention (DRAWING REGISTRY): `// mpo-drawing` is only legal on a file listed as a DRAWING member in docs/theme-propagation-spec.md. Adding an undeclared drawing file still fails.\n',
     );
-    for (const msg of undeclaredDrawings.violations) {console.error(`  ${msg}`);}
+    for (const msg of undeclaredDrawings.violations) {
+      console.error(`  ${msg}`);
+    }
     console.error('');
   }
 
@@ -1672,7 +1984,9 @@ export function runConventionChecks(options = {}) {
     console.error(
       "Convention (WORKSPACE PATHS SHADOW): `compilerOptions.paths` REPLACES the map tsconfig.base.json inherits from tamagui-workspace-paths.generated.json, so one local entry hides every `@multiplatform.one/*` mapping from that program. Declare the alias in the target package's `exports` (the generator reads it) instead. Escape with `// workspace-paths-escape: <reason>` above the key.\n",
     );
-    for (const msg of tsconfigPaths) {console.error(`  ${msg}`);}
+    for (const msg of tsconfigPaths) {
+      console.error(`  ${msg}`);
+    }
     console.error('');
   }
 
@@ -1681,7 +1995,9 @@ export function runConventionChecks(options = {}) {
     console.error(
       'Convention (METRO SUBPATH FALLBACK): a subpath export in a source-consumed package must have a `<pkg>/<subpath>.ts` file re-exporting its source entry. Metro resolves the exports map to dist/, finds nothing (public/ is never built), and falls back to a FILE lookup at that path — it never reconsiders `source`, so the first import of the subpath fails the whole bundle. A genuinely built package carries no `source` condition and is skipped.\n',
     );
-    for (const msg of metroFallbacks) {console.error(`  ${msg}`);}
+    for (const msg of metroFallbacks) {
+      console.error(`  ${msg}`);
+    }
     console.error('');
   }
 
@@ -1690,7 +2006,9 @@ export function runConventionChecks(options = {}) {
     console.error(
       'Convention (REACT-NATIVE-WEB EXPORT): a NAMED import from "react-native" must name something react-native-web exports. Every web build aliases react-native to react-native-web, so a name it does not export is a module-evaluation SyntaxError that takes the WHOLE bundle down — every story in the gallery, not just the importing component — and a Platform.OS guard cannot help, because the import fails before any code runs. Read it off a namespace import (`import * as ReactNative from "react-native"`) or move the call into a .native.tsx sibling. `import type { … }` is erased and never counts.\n',
     );
-    for (const msg of rnWebExports.violations) {console.error(`  ${msg}`);}
+    for (const msg of rnWebExports.violations) {
+      console.error(`  ${msg}`);
+    }
     console.error('');
   }
 
@@ -1699,16 +2017,20 @@ export function runConventionChecks(options = {}) {
     console.error(
       "Convention (GRAPH VARS COVERAGE): a `.react-flow__` selector belongs in the token bridge, nowhere else. React Flow reads every paint through `var(--xy-thing, var(--xy-thing-default))`, so the whole surface is settable without touching its stylesheet; a rule written anywhere else wins or loses on specificity instead of on the knob, and the next @xyflow/react upgrade silently changes which. Set the variable in `theme/graphVars.ts`, or put the rule in the package's own `css/` tree (outside `src`) where a reviewer reads it whole. A DOM LOOKUP is the one other legitimate use, and it belongs in `react-flow/xy.ts` beside the rest of the @xyflow contract. A mention inside a comment is fine and is not flagged.\n",
     );
-    for (const msg of graphVars) {console.error(`  ${msg}`);}
+    for (const msg of graphVars) {
+      console.error(`  ${msg}`);
+    }
     console.error('');
   }
 
   if (importMeta.length) {
     failed = true;
     console.error(
-      "Convention (NO import.meta IN public/*/src): `import.meta` is legal only in an ES module. In a CLASSIC script it is a PARSE-time SyntaxError, so no `typeof import.meta` guard and no try/catch around it ever runs — the file never parses and takes its consumers with it, silently. Two bundles execute mpo as a classic script: the vxrn/rolldown native bundle for Hermes, and any Metro bundle for platform=web, which is what an Expo DOM component (`'use dom'`) is. Read a static `process.env.<KEY>` member expression inside try/catch instead (public/platform/src/config/runtimeConfig.ts), or take an SSR flag from `isServer` in @repo/platform. A .web.ts twin is not an escape — One's web build and tamagui-build resolve it like Metro. Node-only build tooling (a file importing a `node:` builtin) and specs are exempt.\n",
+      "Convention (NO import.meta IN public/*/src): `import.meta` is legal only in an ES module. In a CLASSIC script it is a PARSE-time SyntaxError, so no `typeof import.meta` guard and no try/catch around it ever runs — the file never parses and takes its consumers with it, silently. Two bundles execute mpo as a classic script: the vxrn/rolldown native bundle for Hermes, and any Metro bundle for platform=web, which is what an Expo DOM component (`'use dom'`) is. Read a static `process.env.<KEY>` member expression inside try/catch instead (public/platform/src/config/runtime-config.ts), or take an SSR flag from `isServer` in @repo/platform. A .web.ts twin is not an escape — One's web build and tamagui-build resolve it like Metro. Node-only build tooling (a file importing a `node:` builtin) and specs are exempt.\n",
     );
-    for (const msg of importMeta) {console.error(`  ${msg}`);}
+    for (const msg of importMeta) {
+      console.error(`  ${msg}`);
+    }
     console.error('');
   }
 
@@ -1717,7 +2039,9 @@ export function runConventionChecks(options = {}) {
     console.error(
       `Convention: transition="…" must use a registered animation token (${tokens.valid.join(', ')}, or "none"). An unknown token silently disables the animation.\n`,
     );
-    for (const msg of tokens.violations) {console.error(`  ${msg}`);}
+    for (const msg of tokens.violations) {
+      console.error(`  ${msg}`);
+    }
     console.error('');
   }
 
@@ -1726,7 +2050,9 @@ export function runConventionChecks(options = {}) {
     console.error(
       "Convention: a `$token` style literal must resolve — as a theme key ($color11, $borderColor, $accentBackground, a Radix ramp step), as a token in the prop's own scale (radius/size/zIndex/color), or as a space token. None of those matched, so Tamagui drops the prop and the style never applies.\n",
     );
-    for (const msg of styleTokens.violations) {console.error(`  ${msg}`);}
+    for (const msg of styleTokens.violations) {
+      console.error(`  ${msg}`);
+    }
     console.error('');
   }
 
@@ -1735,7 +2061,9 @@ export function runConventionChecks(options = {}) {
     console.error(
       'Convention: theme="…" must name a built theme or sub-theme (a scheme like light/dark, a hue like blue/red/green, a semantic child like error/warning/success, accent, or a state like active/alt1/alt2). An unbuilt name silently inherits the PARENT theme, so the element renders untinted.\n',
     );
-    for (const msg of themeNames.violations) {console.error(`  ${msg}`);}
+    for (const msg of themeNames.violations) {
+      console.error(`  ${msg}`);
+    }
     console.error('');
   }
 
@@ -1744,7 +2072,9 @@ export function runConventionChecks(options = {}) {
     console.error(
       `Convention: useResolvedKnobs({ intent }) must name a registered intent (${intents.valid.join(', ')}). An unknown name merges no overrides, so the component silently renders with its base knobs.\n`,
     );
-    for (const msg of intents.violations) {console.error(`  ${msg}`);}
+    for (const msg of intents.violations) {
+      console.error(`  ${msg}`);
+    }
     console.error('');
   }
 

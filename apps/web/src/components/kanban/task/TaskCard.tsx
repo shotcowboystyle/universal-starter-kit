@@ -9,7 +9,7 @@ import { Calendar1Icon, FileTextIcon, PointerIcon, UserIcon } from 'lucide-react
 import { useTranslations } from 'next-intl';
 import type { ReactNode } from 'react';
 
-import { Task, TaskStatus } from '@/types/dbInterface';
+import type { Task, TaskStatus } from '@/types/db-interface';
 
 import { TaskActions } from './TaskAction';
 
@@ -51,7 +51,7 @@ function getLastField(task: Task): string {
     visibleFields.push('description');
   }
 
-  return visibleFields[visibleFields.length - 1] || '';
+  return visibleFields.at(-1) ?? '';
 }
 
 function InfoRow({ divider, children }: { divider: boolean; children: ReactNode }) {
@@ -80,9 +80,8 @@ export function TaskCard({ task, isOverlay = false, onUpdate, isDragEnabled = fa
     disabled: isOverlay || !isDragEnabled, // Disable drag if not enabled or in overlay
     attributes: {
       roleDescription: 'Task',
-      // @ts-ignore - Adding custom data attributes for debugging
+      // @ts-expect-error - Adding custom data attributes for debugging
       'data-task-id': task?._id,
-      // @ts-ignore - Adding custom data attributes for debugging
       'data-draggable': String(isDragEnabled && !isOverlay),
     },
   });
@@ -136,26 +135,41 @@ export function TaskCard({ task, isOverlay = false, onUpdate, isDragEnabled = fa
                 cursor: 'grab',
                 opacity: 0.5,
               }}>
-              <PointerIcon size={16} aria-hidden />
+              <PointerIcon
+                size={16}
+                aria-hidden
+              />
             </div>
           ) : (
-            <YStack width={64} height={32} />
+            <YStack
+              width={64}
+              height={32}
+            />
           )}
-          <YStack flex={1} marginHorizontal="$2" alignItems="flex-start" gap="$2">
+          <YStack
+            flex={1}
+            marginHorizontal="$2"
+            alignItems="flex-start"
+            gap="$2">
             {task.title ? (
-              <H3 size="$5" fontWeight="500">
+              <H3
+                size="$5"
+                fontWeight="500">
                 {task.title}
               </H3>
             ) : null}
-            <Chip variant="solid" size="$2" color={task.status ? STATUS_COLOR[task.status] : 'gray'}>
+            <Chip
+              variant="solid"
+              size="$2"
+              color={task.status ? STATUS_COLOR[task.status] : 'gray'}>
               {task.status ? statusLabel[task.status] : t('noStatus')}
             </Chip>
           </YStack>
           <TaskActions
             id={task._id}
             title={task.title}
-            description={task.description || undefined}
-            dueDate={task.dueDate || undefined}
+            description={task.description ?? undefined}
+            dueDate={task.dueDate ?? undefined}
             assigneeId={task.assignee?._id}
             status={task.status}
             projectId={task.project}
@@ -166,7 +180,9 @@ export function TaskCard({ task, isOverlay = false, onUpdate, isDragEnabled = fa
         {task.creator && (
           <InfoRow divider={lastField !== 'creator'}>
             <UserIcon {...iconProps} />
-            <Text fontSize="$3" color="$color10">
+            <Text
+              fontSize="$3"
+              color="$color10">
               {t('createdBy', { name: task.creator.name })}
             </Text>
           </InfoRow>
@@ -174,7 +190,9 @@ export function TaskCard({ task, isOverlay = false, onUpdate, isDragEnabled = fa
         {task.lastModifier && (
           <InfoRow divider={lastField !== 'lastModifier'}>
             <UserIcon {...iconProps} />
-            <Text fontSize="$3" color="$color10">
+            <Text
+              fontSize="$3"
+              color="$color10">
               {t('lastModifiedBy', { name: task.lastModifier.name })}
             </Text>
           </InfoRow>
@@ -182,7 +200,9 @@ export function TaskCard({ task, isOverlay = false, onUpdate, isDragEnabled = fa
         {task.assignee && (
           <InfoRow divider={lastField !== 'assignee'}>
             <UserIcon {...iconProps} />
-            <Text fontSize="$3" color="$color10">
+            <Text
+              fontSize="$3"
+              color="$color10">
               {t('assignee', { name: task.assignee.name })}
             </Text>
           </InfoRow>
@@ -190,7 +210,9 @@ export function TaskCard({ task, isOverlay = false, onUpdate, isDragEnabled = fa
         {task.dueDate ? (
           <InfoRow divider={lastField !== 'dueDate'}>
             <Calendar1Icon {...iconProps} />
-            <Text fontSize="$3" color="$color10">
+            <Text
+              fontSize="$3"
+              color="$color10">
               {t('dueDate')}: {format(new Date(task.dueDate), 'yyyy/MM/dd')}
             </Text>
           </InfoRow>
@@ -198,7 +220,10 @@ export function TaskCard({ task, isOverlay = false, onUpdate, isDragEnabled = fa
         {task.description ? (
           <InfoRow divider={false}>
             <FileTextIcon {...iconProps} />
-            <Paragraph fontSize="$3" color="$color10" testID="task-card-description">
+            <Paragraph
+              fontSize="$3"
+              color="$color10"
+              testID="task-card-description">
               {task.description}
             </Paragraph>
           </InfoRow>

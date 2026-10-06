@@ -1,18 +1,24 @@
 import { useUrlState } from '@repo/router';
 import { Preset, useResolvedKnobs } from '@repo/theme';
-import { type FormApi, type FormOptions, useForm } from '@tanstack/react-form';
-import { type FormEvent, type ReactNode, createContext, useContext, useEffect, useMemo, useRef } from 'react';
-import { Form as TamaguiForm, type FormProps as TamaguiFormProps, XStack, YStack, isWeb } from 'tamagui';
+import { useForm } from '@tanstack/react-form';
+import type { FormApi, FormOptions } from '@tanstack/react-form';
+import { createContext, useContext, useEffect, useMemo, useRef } from 'react';
+import type { FormEvent, ReactNode } from 'react';
+import { Form as TamaguiForm, XStack, YStack, isWeb } from 'tamagui';
+import type { FormProps as TamaguiFormProps } from 'tamagui';
 
-import { ContextualSaveBar, type ContextualSaveBarProps } from '../ContextualSaveBar';
-import { ErrorSummary, collectFormFieldErrors, type ErrorSummaryItem } from '../ErrorSummary';
-import { RequiredMarkingContext, mapHouseRequiredMarking } from '../requiredMarking';
+import { ContextualSaveBar } from '../ContextualSaveBar';
+import type { ContextualSaveBarProps } from '../ContextualSaveBar';
+import { ErrorSummary, collectFormFieldErrors } from '../ErrorSummary';
+import type { ErrorSummaryItem } from '../ErrorSummary';
+import { RequiredMarkingContext, mapHouseRequiredMarking } from '../required-marking';
 
-import { getFormSubmission } from './submissionController';
-import { type FormValidateOn, resolveEffectiveValidateOn } from './validateOn';
+import { getFormSubmission } from './submission-controller';
+import { resolveEffectiveValidateOn } from './validate-on';
+import type { FormValidateOn } from './validate-on';
 
-export type { FormValidateOn } from './validateOn';
-export { resolveEffectiveValidateOn, remapValidatorsForTiming, type EffectiveValidateOn } from './validateOn';
+export type { FormValidateOn } from './validate-on';
+export { resolveEffectiveValidateOn, remapValidatorsForTiming, type EffectiveValidateOn } from './validate-on';
 
 export const FormContext = createContext<
   FormApi<any, any, any, any, any, any, any, any, any, any, any, any> | undefined
@@ -103,11 +109,9 @@ function AutoErrorSummary({
   title?: string;
   formElement: HTMLElement | null;
 }) {
-  const Subscribe = (
-    form as unknown as {
-      Subscribe: (props: { selector: (state: any) => any; children: (value: any) => ReactNode }) => ReactNode;
-    }
-  ).Subscribe;
+  const { Subscribe } = form as unknown as {
+    Subscribe: (props: { selector: (state: any) => any; children: (value: any) => ReactNode }) => ReactNode;
+  };
 
   return (
     <Subscribe
@@ -129,7 +133,13 @@ function AutoErrorSummary({
         if (errors.length === 0) {
           return null;
         }
-        return <ErrorSummary errors={errors} title={title} formElement={formElement} />;
+        return (
+          <ErrorSummary
+            errors={errors}
+            title={title}
+            formElement={formElement}
+          />
+        );
       }}
     </Subscribe>
   );
@@ -144,11 +154,9 @@ function FormValidateProvider({
   validateOn: FormValidateOn;
   children: ReactNode;
 }) {
-  const Subscribe = (
-    form as unknown as {
-      Subscribe: (props: { selector: (state: any) => any; children: (value: any) => ReactNode }) => ReactNode;
-    }
-  ).Subscribe;
+  const { Subscribe } = form as unknown as {
+    Subscribe: (props: { selector: (state: any) => any; children: (value: any) => ReactNode }) => ReactNode;
+  };
 
   return (
     <Subscribe selector={(state: any) => state.submissionAttempts ?? 0}>
@@ -228,7 +236,7 @@ export function Form<TFormData extends Record<string, any>, TFormValidator = any
     }
 
     const subscription = form.store.subscribe(() => {
-      const values = form.store.state.values;
+      const { values } = form.store.state;
       setUrlState(values);
     });
 
@@ -294,8 +302,13 @@ export function Form<TFormData extends Record<string, any>, TFormValidator = any
     <FormContext.Provider value={form}>
       <FormSaveModeContext.Provider value={saveMode}>
         <RequiredMarkingContext.Provider value={{ mode: requiredMarkMode }}>
-          <FormValidateProvider form={form} validateOn={validateOn}>
-            <TamaguiForm ref={setFormRef} onSubmit={handleSubmit} {...tamaguiFormProps}>
+          <FormValidateProvider
+            form={form}
+            validateOn={validateOn}>
+            <TamaguiForm
+              ref={setFormRef}
+              onSubmit={handleSubmit}
+              {...tamaguiFormProps}>
               <YStack
                 data-mpo-form-layout=""
                 data-gap={knobProps.gap.gap}
@@ -305,9 +318,13 @@ export function Form<TFormData extends Record<string, any>, TFormValidator = any
                 width="100%"
                 minWidth={0}
                 {...knobProps.gap}
-                {...(tamaguiFormProps.flex != null ? { flex: tamaguiFormProps.flex as never } : {})}>
+                {...(tamaguiFormProps.flex == null ? {} : { flex: tamaguiFormProps.flex as never })}>
                 {showErrorSummary ? (
-                  <AutoErrorSummary form={form} title={errorSummaryTitle} formElement={formElementRef.current} />
+                  <AutoErrorSummary
+                    form={form}
+                    title={errorSummaryTitle}
+                    formElement={formElementRef.current}
+                  />
                 ) : null}
                 {children}
                 {saveBar ? <ContextualSaveBar {...(typeof saveBar === 'object' ? saveBar : {})} /> : null}

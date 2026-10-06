@@ -4,7 +4,8 @@ import type { Meta } from '@storybook/react-native-web-vite';
 import { useState } from 'react';
 import { Text, YStack } from 'tamagui';
 
-import { Calendar, type CalendarEvent, type CalendarEventDraft, type CalendarEventMoveRange } from './Calendar';
+import { Calendar } from './Calendar';
+import type { CalendarEvent, CalendarEventDraft, CalendarEventMoveRange } from './Calendar';
 
 // Fixture colors from the sanctioned categorical palette (chart-palette
 // precedent) — no raw brand hexes in story data.
@@ -64,7 +65,9 @@ function EventDragDemo() {
   const [lastMove, setLastMove] = useState<string | null>(null);
   return (
     <YStack gap="$2">
-      <Text {...{ 'data-testid': 'last-move' }} fontSize="$2">
+      <Text
+        {...{ 'data-testid': 'last-move' }}
+        fontSize="$2">
         {lastMove ?? 'Drag an event chip onto another day'}
       </Text>
       <Calendar
@@ -150,7 +153,9 @@ function TimeGridDemo() {
 
   return (
     <YStack gap="$2">
-      <Text {...{ 'data-testid': 'last-action' }} fontSize="$2">
+      <Text
+        {...{ 'data-testid': 'last-action' }}
+        fontSize="$2">
         {lastAction ?? 'Drag to move, grab an edge to resize, press-drag empty grid to create'}
       </Text>
       <Calendar
@@ -243,7 +248,9 @@ function KeyboardDemo() {
   const [lastSelect, setLastSelect] = useState<string | null>(null);
   return (
     <YStack gap="$2">
-      <Text {...{ 'data-testid': 'last-select' }} fontSize="$2">
+      <Text
+        {...{ 'data-testid': 'last-select' }}
+        fontSize="$2">
         {lastSelect ?? 'Focus the grid, then use arrow keys + Enter'}
       </Text>
       <Calendar
@@ -275,7 +282,13 @@ export const Keyboard = {
 };
 
 export const Empty = {
-  render: () => <Calendar events={[]} initialDate={new Date(2026, 2, 10)} height={500} />,
+  render: () => (
+    <Calendar
+      events={[]}
+      initialDate={new Date(2026, 2, 10)}
+      height={500}
+    />
+  ),
   parameters: {
     docs: {
       description: {

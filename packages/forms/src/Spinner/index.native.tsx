@@ -5,10 +5,11 @@ import { View } from 'tamagui';
 
 import { t } from '../shared/t';
 
+import { spinnerSizePx, spinnerSizeToken } from './spinner-size';
+import type { SpinnerProps } from './spinner-size';
 import { SpinnerGlyph, useSpinnerStroke } from './SpinnerGlyph';
-import { spinnerSizePx, spinnerSizeToken, type SpinnerProps } from './spinnerSize';
 
-export type { SpinnerProps, SpinnerSize } from './spinnerSize';
+export type { SpinnerProps, SpinnerSize } from './spinner-size';
 
 const SPIN_MS = 700;
 
@@ -73,7 +74,10 @@ export function Spinner({ size, color, ...props }: SpinnerProps) {
       data-animation={spinning ? 'spin' : 'none'}
       {...props}>
       <Animated.View style={{ width: px, height: px, transform: [{ rotate }] }}>
-        <SpinnerGlyph color={stroke} size={px} />
+        <SpinnerGlyph
+          color={stroke}
+          size={px}
+        />
       </Animated.View>
     </View>
   );

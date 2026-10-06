@@ -3,7 +3,7 @@ import type { CSSProperties, FocusEvent, ReactNode } from 'react';
 import { useLayoutEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
-import { panelPortalAttribute, registerPanelPortal } from '../shared/panelPortal';
+import { panelPortalAttribute, registerPanelPortal } from '../shared/panel-portal';
 
 export interface PanelPortalProps {
   /** The element the panel opened from: the trigger it attaches to. */
@@ -128,7 +128,11 @@ export function PanelPortal({ anchor, children }: PanelPortalProps) {
     }
   };
   const portal = createPortal(
-    <span ref={portalRef} {...{ [panelPortalAttribute]: '' }} dir={direction} style={{ display: 'contents' }}>
+    <span
+      ref={portalRef}
+      {...{ [panelPortalAttribute]: '' }}
+      dir={direction}
+      style={{ display: 'contents' }}>
       <span
         {...{ [focusGuardAttribute]: '' }}
         tabIndex={0}
@@ -151,7 +155,12 @@ export function PanelPortal({ anchor, children }: PanelPortalProps) {
   );
   return (
     <>
-      <span {...{ [focusGuardAttribute]: '' }} tabIndex={0} style={focusGuardStyle} onFocus={enterPanel} />
+      <span
+        {...{ [focusGuardAttribute]: '' }}
+        tabIndex={0}
+        style={focusGuardStyle}
+        onFocus={enterPanel}
+      />
       {portal}
     </>
   );

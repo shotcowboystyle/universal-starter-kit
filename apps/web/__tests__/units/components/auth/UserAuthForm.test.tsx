@@ -4,8 +4,8 @@ import React from 'react';
 import { expect, vi } from 'vitest';
 
 import UserAuthForm from '@/components/auth/UserAuthForm';
-import { defaultEmail } from '@/constants/demoData';
-import { useAuthForm } from '@/hooks/useAuth';
+import { defaultEmail } from '@/constants/demo-data';
+import { useAuthForm } from '@/hooks/use-auth';
 
 vi.mock('next-intl', () => ({
   useTranslations: vi.fn(() => (key: string) => {
@@ -20,7 +20,7 @@ vi.mock('next-intl', () => ({
 }));
 
 const mockHandleSubmit = vi.fn();
-vi.mock('@/hooks/useAuth', () => ({
+vi.mock('@/hooks/use-auth', () => ({
   useAuthForm: vi.fn(() => ({
     handleSubmit: mockHandleSubmit,
     isLoading: false,

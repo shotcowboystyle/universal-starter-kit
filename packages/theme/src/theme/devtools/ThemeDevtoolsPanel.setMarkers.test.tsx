@@ -25,7 +25,10 @@ function clearThemeCookies() {
 function Shell({ scheme }: { scheme: 'light' | 'dark' }) {
   return (
     <CookiesProvider>
-      <ThemeDevtoolsPanel key={scheme} devtoolsTheme={scheme} />
+      <ThemeDevtoolsPanel
+        key={scheme}
+        devtoolsTheme={scheme}
+      />
     </CookiesProvider>
   );
 }

@@ -5,7 +5,8 @@ import { act, fireEvent } from '@testing-library/react';
 import { useEffect } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { Wizard, useWizard, type WizardFormLike, type WizardStep } from './index';
+import { Wizard, useWizard } from './index';
+import type { WizardFormLike, WizardStep } from './index';
 
 const STEPS: WizardStep[] = [
   { id: 'identity', label: 'Identity', fields: ['name'], fieldLabels: { name: 'Name' } },
@@ -34,7 +35,11 @@ function ClearStep() {
         }}
       />
       <Wizard.Clearable names={['url']}>
-        <Input id="url" name="url" label="URL" />
+        <Input
+          id="url"
+          name="url"
+          label="URL"
+        />
       </Wizard.Clearable>
     </>
   );
@@ -54,7 +59,12 @@ function WizardInner({ onStore, onComplete, labels }: HarnessProps) {
       onCancel={() => undefined}
       onComplete={onComplete}>
       <Wizard.Panel>
-        <Input id="name" name="name" label="Name" required />
+        <Input
+          id="name"
+          name="name"
+          label="Name"
+          required
+        />
       </Wizard.Panel>
       <Wizard.Panel>
         <ClearStep />
@@ -107,7 +117,7 @@ describe('Wizard mounted panels and validation', () => {
     expect(shell.getAttribute('data-wizard-current')).toBe('1');
 
     const hidden = [...container.querySelectorAll('[data-wizard-panel][data-active="false"]')] as HTMLElement[];
-    expect(hidden.length).toBe(2);
+    expect(hidden).toHaveLength(2);
     for (const panel of hidden) {
       expect(panelDisplay(panel) === 'none' || panel.getAttribute('data-active') === 'false').toBe(true);
       expect(panel.isConnected).toBe(true);
@@ -225,14 +235,32 @@ describe('Wizard guardrail-clean at rest', () => {
 
 describe('Wizard states', () => {
   it('draws loading, empty, and error shells', () => {
-    const loading = renderWithProviders(<Wizard steps={STEPS} completeLabel="Restore backup" status="loading" />);
+    const loading = renderWithProviders(
+      <Wizard
+        steps={STEPS}
+        completeLabel="Restore backup"
+        status="loading"
+      />,
+    );
     expect(loading.container.querySelector("[data-wizard-status='loading']")).toBeTruthy();
     expect(loading.container.querySelector('[data-skeleton]')).toBeTruthy();
 
-    const empty = renderWithProviders(<Wizard steps={STEPS} completeLabel="Restore backup" status="empty" />);
+    const empty = renderWithProviders(
+      <Wizard
+        steps={STEPS}
+        completeLabel="Restore backup"
+        status="empty"
+      />,
+    );
     expect(empty.container.querySelector("[data-wizard-status='empty']")).toBeTruthy();
 
-    const error = renderWithProviders(<Wizard steps={STEPS} completeLabel="Restore backup" status="error" />);
+    const error = renderWithProviders(
+      <Wizard
+        steps={STEPS}
+        completeLabel="Restore backup"
+        status="error"
+      />,
+    );
     expect(error.container.querySelector("[data-wizard-status='error']")).toBeTruthy();
   });
 });

@@ -79,7 +79,7 @@ function ensurePulseKeyframes() {
   const style = document.createElement('style');
   style.id = PULSE_STYLE_ID;
   style.textContent = '@keyframes skeleton-pulse{0%{opacity:1}50%{opacity:0.4}100%{opacity:1}}';
-  document.head.appendChild(style);
+  document.head.append(style);
 }
 
 // ── Skeleton Component ────────────────────────────────────────
@@ -137,13 +137,24 @@ export function SkeletonText({
   const { knobProps } = useResolvedKnobs();
   const gap = gapProp ?? skeletonGapMap[knobProps.space] ?? '$2';
   if (lines === 1) {
-    return <Skeleton variant="text" width={lastLineWidth} {...props} />;
+    return (
+      <Skeleton
+        variant="text"
+        width={lastLineWidth}
+        {...props}
+      />
+    );
   }
 
   return (
     <View gap={gap}>
       {Array.from({ length: lines }).map((_, i) => (
-        <Skeleton key={i} variant="text" width={i === lines - 1 ? lastLineWidth : '100%'} {...props} />
+        <Skeleton
+          key={i}
+          variant="text"
+          width={i === lines - 1 ? lastLineWidth : '100%'}
+          {...props}
+        />
       ))}
     </View>
   );
@@ -154,7 +165,14 @@ export function SkeletonText({
 export function SkeletonCircle({ size: sizeProp, ...props }: SkeletonProps & { size?: number }) {
   const { knobProps } = useResolvedKnobs();
   const size = sizeProp ?? skeletonCircleSize(knobProps.sizeToken);
-  return <Skeleton variant="circular" width={size} height={size} {...props} />;
+  return (
+    <Skeleton
+      variant="circular"
+      width={size}
+      height={size}
+      {...props}
+    />
+  );
 }
 
 // ── Attach sub-components ─────────────────────────────────────

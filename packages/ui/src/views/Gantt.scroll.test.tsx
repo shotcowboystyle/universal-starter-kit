@@ -2,8 +2,9 @@ import { renderWithProviders } from '@repo/test-utils';
 import { act, cleanup, fireEvent } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { GanttView, type GanttTask } from './Gantt';
-import { addDays, computeGanttRange, dateToX, rangeDays, startOfDay } from './ganttMath';
+import { GanttView } from './Gantt';
+import type { GanttTask } from './Gantt';
+import { addDays, computeGanttRange, dateToX, rangeDays, startOfDay } from './gantt-math';
 
 // Match the Carousel layout harness: RNW measures through ResizeObserver and
 // a deferred offsetWidth read. Keep prototype patches isolated to this file.
@@ -12,7 +13,7 @@ const resizeCallbacks = new Map<Element, () => void>();
 vi.stubGlobal(
   'ResizeObserver',
   class {
-    private callback: ResizeObserverCallback;
+    private readonly callback: ResizeObserverCallback;
     constructor(callback: ResizeObserverCallback) {
       this.callback = callback;
     }
@@ -55,7 +56,7 @@ const chartWidth = rangeDays(range) * 24;
 const anchorX = dateToX(today, range.start, 24);
 
 async function flushLayout() {
-  await act(async () => new Promise((resolve) => setTimeout(resolve, 0)));
+  await act(async () => await new Promise((resolve) => setTimeout(resolve, 0)));
 }
 
 beforeEach(() => {
@@ -69,7 +70,13 @@ afterEach(() => {
 
 describe('Gantt measured viewport anchoring', () => {
   it('reanchors a narrow LTR mount after layout so the marker is inside the viewport', async () => {
-    renderWithProviders(<GanttView tasks={tasks} initialDate={today} markerDate={today} />);
+    renderWithProviders(
+      <GanttView
+        tasks={tasks}
+        initialDate={today}
+        markerDate={today}
+      />,
+    );
     await flushLayout();
     const left = scrollCalls.at(-1)!;
     expect(left).toBeGreaterThanOrEqual(0);
@@ -80,7 +87,13 @@ describe('Gantt measured viewport anchoring', () => {
 
   it('keeps the narrow RTL marker inside the mirrored viewport', async () => {
     document.documentElement.setAttribute('dir', 'rtl');
-    renderWithProviders(<GanttView tasks={tasks} initialDate={today} markerDate={today} />);
+    renderWithProviders(
+      <GanttView
+        tasks={tasks}
+        initialDate={today}
+        markerDate={today}
+      />,
+    );
     await flushLayout();
     const markerLeft = chartWidth - anchorX - 12 - scrollCalls.at(-1)!;
     expect(markerLeft).toBeGreaterThanOrEqual(0);
@@ -89,7 +102,13 @@ describe('Gantt measured viewport anchoring', () => {
 
   it('retains its pending anchor through a hidden zero-width first layout', async () => {
     viewportWidth = 0;
-    renderWithProviders(<GanttView tasks={tasks} initialDate={today} markerDate={today} />);
+    renderWithProviders(
+      <GanttView
+        tasks={tasks}
+        initialDate={today}
+        markerDate={today}
+      />,
+    );
     await flushLayout();
     viewportWidth = 178;
     for (const notify of resizeCallbacks.values()) {
@@ -103,20 +122,35 @@ describe('Gantt measured viewport anchoring', () => {
 
   it('preserves the desktop anchor inset', async () => {
     viewportWidth = 820;
-    renderWithProviders(<GanttView tasks={tasks} initialDate={today} />);
+    renderWithProviders(
+      <GanttView
+        tasks={tasks}
+        initialDate={today}
+      />,
+    );
     await flushLayout();
     expect(scrollCalls.at(-1)).toBe(anchorX - 180);
   });
 
   it('clamps a range-end anchor to the measured scroll extent', async () => {
     viewportWidth = 820;
-    renderWithProviders(<GanttView tasks={tasks} initialDate={addDays(range.end, -1)} />);
+    renderWithProviders(
+      <GanttView
+        tasks={tasks}
+        initialDate={addDays(range.end, -1)}
+      />,
+    );
     await flushLayout();
     expect(scrollCalls.at(-1)).toBeLessThanOrEqual(chartWidth - viewportWidth);
   });
 
   it('uses the measured viewport for the Today action', async () => {
-    const result = renderWithProviders(<GanttView tasks={tasks} initialDate={range.start} />);
+    const result = renderWithProviders(
+      <GanttView
+        tasks={tasks}
+        initialDate={range.start}
+      />,
+    );
     await flushLayout();
     scrollCalls.length = 0;
     fireEvent.click(result.getByRole('button', { name: 'Today' }));

@@ -24,7 +24,9 @@ describe('resolveKeyboardAvoidingBehavior', () => {
 describe('KeyboardAvoidingWrapper web', () => {
   it('is a passthrough that still renders children', () => {
     const { container } = renderWithProviders(
-      <KeyboardAvoidingWrapper behavior="padding" keyboardVerticalOffset={24}>
+      <KeyboardAvoidingWrapper
+        behavior="padding"
+        keyboardVerticalOffset={24}>
         <span>Field</span>
       </KeyboardAvoidingWrapper>,
     );

@@ -52,7 +52,9 @@ describe('FieldGroup design-law', () => {
 
   it('compact nested scale steps density without reading sizeToken as gap', () => {
     const result = renderWithProviders(
-      <FieldGroup legend="Compact" compact>
+      <FieldGroup
+        legend="Compact"
+        compact>
         <div>field</div>
       </FieldGroup>,
     );

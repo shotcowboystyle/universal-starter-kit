@@ -29,57 +29,114 @@ describe('TimePicker', () => {
 
   describe('without form context', () => {
     it('renders with label and placeholder', () => {
-      const result = renderWithProviders(<TimePicker label="Start time" name="time" placeholder="Pick time" />);
+      const result = renderWithProviders(
+        <TimePicker
+          label="Start time"
+          name="time"
+          placeholder="Pick time"
+        />,
+      );
       expect(result.findTextElement('Start time')).toBeDefined();
       const input = result.container.querySelector('input');
       expect(input?.getAttribute('placeholder')).toBe('Pick time');
     });
 
     it('renders required label with asterisk', () => {
-      const result = renderWithProviders(<TimePicker label="Required" name="req" required />);
+      const result = renderWithProviders(
+        <TimePicker
+          label="Required"
+          name="req"
+          required
+        />,
+      );
       const label = result.container.querySelector('label');
       expect(label?.textContent).toContain('*');
     });
 
     it('renders with helper text', () => {
-      const result = renderWithProviders(<TimePicker label="Time" name="t" helperText="24h format" />);
+      const result = renderWithProviders(
+        <TimePicker
+          label="Time"
+          name="t"
+          helperText="24h format"
+        />,
+      );
       expect(result.findTextElement('24h format')).toBeDefined();
     });
 
     it('renders skeleton placeholder', () => {
-      const result = renderWithProviders(<TimePicker label="Loading" name="l" skeleton />);
+      const result = renderWithProviders(
+        <TimePicker
+          label="Loading"
+          name="l"
+          skeleton
+        />,
+      );
       expect(result.container.querySelector('input')).toBeNull();
     });
 
     it('renders disabled state', () => {
-      const result = renderWithProviders(<TimePicker label="Disabled" name="d" disabled />);
+      const result = renderWithProviders(
+        <TimePicker
+          label="Disabled"
+          name="d"
+          disabled
+        />,
+      );
       const input = result.container.querySelector('input');
       expect(input?.getAttribute('aria-disabled')).toBe('true');
     });
 
     it('renders readOnly state with value', () => {
       const result = renderWithProviders(
-        <TimePicker label="ReadOnly" name="r" readOnly value="14:30" timeFormat="24h" />,
+        <TimePicker
+          label="ReadOnly"
+          name="r"
+          readOnly
+          value="14:30"
+          timeFormat="24h"
+        />,
       );
       const input = result.container.querySelector('input');
       expect(input?.getAttribute('aria-readonly')).toBe('true');
     });
 
     it('displays formatted value in 12h format', () => {
-      const result = renderWithProviders(<TimePicker label="Time" name="t" value="14:30" timeFormat="12h" />);
+      const result = renderWithProviders(
+        <TimePicker
+          label="Time"
+          name="t"
+          value="14:30"
+          timeFormat="12h"
+        />,
+      );
       const input = result.container.querySelector('input');
       expect(input?.getAttribute('value')).toContain('2:30');
     });
 
     it('does not invent a time for invalid values', () => {
-      const result = renderWithProviders(<TimePicker label="Time" name="t" value="25:99" timeFormat="12h" />);
+      const result = renderWithProviders(
+        <TimePicker
+          label="Time"
+          name="t"
+          value="25:99"
+          timeFormat="12h"
+        />,
+      );
       const input = result.container.querySelector('input');
       expect(input?.getAttribute('value')).toBe('');
       expect(result.findTextElement('Invalid time value')).toBeDefined();
     });
 
     it('keeps the ring on the outer box, not the inner field', () => {
-      const result = renderWithProviders(<TimePicker label="Time" name="t" value="14:30" timeFormat="12h" />);
+      const result = renderWithProviders(
+        <TimePicker
+          label="Time"
+          name="t"
+          value="14:30"
+          timeFormat="12h"
+        />,
+      );
       const input = result.container.querySelector('input');
       expect(input?.className).toContain('mp-input-area');
       const box = result.container.querySelector('.mp-composite-ring');
@@ -90,7 +147,13 @@ describe('TimePicker', () => {
     it('opens iOS wheels and treats AM/PM as a third column', async () => {
       const onChange = vi.fn();
       const result = renderWithProviders(
-        <TimePicker label="Time" name="t" value="12:30" timeFormat="12h" onChange={onChange} />,
+        <TimePicker
+          label="Time"
+          name="t"
+          value="12:30"
+          timeFormat="12h"
+          onChange={onChange}
+        />,
       );
       const trigger = result.container.querySelector("input,button,[role='button']");
       expect(trigger).toBeTruthy();
@@ -105,12 +168,18 @@ describe('TimePicker', () => {
       });
       expect(document.querySelector('[data-testid="time-picker-dial"]')).toBeNull();
       const wheels = document.querySelectorAll('[data-testid="wheel"]');
-      expect(wheels.length).toBe(3);
+      expect(wheels).toHaveLength(3);
       expect(document.querySelector('[aria-label="AM/PM"]')).toBeTruthy();
     });
 
     it('shows a clock glyph and placeholder when empty, and no clear', () => {
-      const result = renderWithProviders(<TimePicker label="Time" name="t" placeholder="Pick a time" />);
+      const result = renderWithProviders(
+        <TimePicker
+          label="Time"
+          name="t"
+          placeholder="Pick a time"
+        />,
+      );
       const input = result.container.querySelector('input');
       expect(input?.getAttribute('placeholder')).toBe('Pick a time');
       expect(result.container.querySelector('[data-testid="time-picker-glyph"]')).toBeTruthy();
@@ -118,7 +187,14 @@ describe('TimePicker', () => {
     });
 
     it('shows clear only when a value is set', () => {
-      const result = renderWithProviders(<TimePicker label="Time" name="t" value="14:30" timeFormat="24h" />);
+      const result = renderWithProviders(
+        <TimePicker
+          label="Time"
+          name="t"
+          value="14:30"
+          timeFormat="24h"
+        />,
+      );
       expect(result.container.querySelector('[data-testid="time-picker-clear"]')).toBeTruthy();
     });
   });
@@ -126,8 +202,13 @@ describe('TimePicker', () => {
   describe('with form context', () => {
     it('renders inside form', () => {
       const result = renderWithProviders(
-        <Form formOptions={{ defaultValues: { time: '' } }} submitText="Submit">
-          <TimePicker name="time" label="Meeting time" />
+        <Form
+          formOptions={{ defaultValues: { time: '' } }}
+          submitText="Submit">
+          <TimePicker
+            name="time"
+            label="Meeting time"
+          />
         </Form>,
       );
       expect(result.findTextElement('Meeting time')).toBeDefined();
@@ -159,7 +240,15 @@ describe('TimePicker', () => {
     }
 
     it('unselected period and pip labels stay on the 400/700 weight pair', async () => {
-      await openPanel(<TimePicker label="Time" name="t" value="12:30" timeFormat="12h" onChange={vi.fn()} />);
+      await openPanel(
+        <TimePicker
+          label="Time"
+          name="t"
+          value="12:30"
+          timeFormat="12h"
+          onChange={vi.fn()}
+        />,
+      );
       const panel = document.querySelector('[data-testid="time-picker-panel"]');
       expect(panel).toBeTruthy();
       const weights = new Set<string>();
@@ -169,7 +258,7 @@ describe('TimePicker', () => {
           weights.add(el.style.fontWeight);
         }
         for (const cls of String(el.className ?? '').split(/\s+/)) {
-          const match = cls.match(/(?:^|_)(?:fw|fow|fontWeight)-?(\d+)/i);
+          const match = /(?:^|_)(?:fw|fow|fontWeight)-?(\d+)/i.exec(cls);
           if (match) {
             weights.add(match[1]);
           }

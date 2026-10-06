@@ -17,7 +17,7 @@ import {
   withStaticProperties,
 } from 'tamagui';
 
-import { formSelectedColors } from '../../shared/colorRamps';
+import { formSelectedColors } from '../../shared/color-ramps';
 
 import {
   CheckboxGlyphBox,
@@ -50,7 +50,15 @@ const CheckboxesContext = createStyledContext<{
 
 const FocusGroup = forwardRef<ElementRef<typeof View>, RovingFocusGroupProps>((props, ref) => {
   const { knobProps } = useResolvedKnobs();
-  return <RovingFocusGroup gap={knobProps.gap.gap} focusable outlineWidth={0} {...props} ref={ref} />;
+  return (
+    <RovingFocusGroup
+      gap={knobProps.gap.gap}
+      focusable
+      outlineWidth={0}
+      {...props}
+      ref={ref}
+    />
+  );
 });
 
 const FocusItemContext = createStyledContext({
@@ -93,8 +101,13 @@ const FocusGroupItem = forwardRef<any, RovingFocusItemProps & { value: string }>
   };
 
   return (
-    <FocusItemContext.Provider value={value} kbFocus={kbFocus}>
-      <RovingFocusGroup.Item ref={ref} {...combinedProps} />
+    <FocusItemContext.Provider
+      value={value}
+      kbFocus={kbFocus}>
+      <RovingFocusGroup.Item
+        ref={ref}
+        {...combinedProps}
+      />
     </FocusItemContext.Provider>
   );
 });
@@ -116,7 +129,9 @@ export type CheckboxesProps<K extends string> = {
 const CheckboxesImp = <K extends string>(checkboxesProps: PropsWithChildren<CheckboxesProps<K>>) => {
   const { values, onValuesChange, ...props } = checkboxesProps;
   return (
-    <CheckboxesContext.Provider values={values} onValuesChange={onValuesChange}>
+    <CheckboxesContext.Provider
+      values={values}
+      onValuesChange={onValuesChange}>
       <View {...props} />
     </CheckboxesContext.Provider>
   );
@@ -139,7 +154,7 @@ const CheckboxesCheckbox = TamaguiCheckbox.styleable((checkboxProps, ref) => {
   const hasName =
     (props as Record<string, unknown>)['aria-label'] || (props as Record<string, unknown>)['aria-labelledby'];
   const fallbackName = focusItemValue
-    ? focusItemValue.replace(/[-_]+/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
+    ? focusItemValue.replaceAll(/[-_]+/g, ' ').replace(/^\w/, (c) => c.toUpperCase())
     : undefined;
   const combinedProps = {
     ...(!hasName && fallbackName ? { 'aria-label': fallbackName } : undefined),
@@ -201,7 +216,13 @@ const CheckboxCard = CheckboxCardFrame.styleable<{ unstyled?: boolean; active?: 
 
 const CheckboxCardDescriptionSized = CheckboxCardDescription.styleable((props, ref) => {
   const { knobProps } = useResolvedKnobs();
-  return <CheckboxCardDescription ref={ref} size={getCardDescriptionSize(knobProps.sizeToken)} {...props} />;
+  return (
+    <CheckboxCardDescription
+      ref={ref}
+      size={getCardDescriptionSize(knobProps.sizeToken)}
+      {...props}
+    />
+  );
 });
 
 const CheckboxesIndicator = TamaguiCheckbox.Indicator.styleable((indicatorProps, ref) => {
@@ -210,8 +231,17 @@ const CheckboxesIndicator = TamaguiCheckbox.Indicator.styleable((indicatorProps,
   const { knobProps } = useResolvedKnobs();
   const iconSize = getCheckboxIconSize(getCheckboxGlyphSize(knobProps.sizeToken));
   return (
-    <TamaguiCheckbox.Indicator ref={ref} {...props} pointerEvents="none">
-      {children ?? <CheckRegular size={iconSize} pointerEvents="none" {...(onMark ? { color: onMark } : undefined)} />}
+    <TamaguiCheckbox.Indicator
+      ref={ref}
+      {...props}
+      pointerEvents="none">
+      {children ?? (
+        <CheckRegular
+          size={iconSize}
+          pointerEvents="none"
+          {...(onMark ? { color: onMark } : undefined)}
+        />
+      )}
     </TamaguiCheckbox.Indicator>
   );
 });

@@ -1,5 +1,6 @@
 import type React from 'react';
-import { type ReactNode, createElement } from 'react';
+import { createElement } from 'react';
+import type { ReactNode } from 'react';
 import { renderToString } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -12,8 +13,9 @@ vi.mock('tamagui', () => ({
 import type { ThemeName } from '@tamagui/web';
 
 import { defaultKnobs } from './knobs';
+import { PresetContext } from './preset-context';
+import type { PresetContextValue } from './preset-context';
 import type { Preset } from './preset.types';
-import { PresetContext, type PresetContextValue } from './PresetContext';
 import { defaultPreset } from './presets';
 import { Tint, useTintDepth } from './Tint';
 

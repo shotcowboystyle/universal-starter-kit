@@ -1,12 +1,12 @@
 import constants from 'expo-constants';
 
-import { resolveDevOrigin } from './devOrigin';
+import { resolveDevOrigin } from './dev-origin';
 import type { IConfig } from './types';
 
 export class Config implements IConfig {
   private _config: Record<string, string> = {};
 
-  private _blacklist: Set<string> = new Set([]);
+  private readonly _blacklist = new Set<string>([]);
 
   private _lookupEnv(key: string): string | undefined {
     if (this._blacklist.has(key)) {

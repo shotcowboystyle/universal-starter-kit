@@ -1,5 +1,6 @@
 import type { PropsWithChildren } from 'react';
-import { YStack, type YStackProps } from 'tamagui';
+import { YStack } from 'tamagui';
+import type { YStackProps } from 'tamagui';
 
 import type { SafeAreaEdge, SafeAreaMode } from './insets';
 
@@ -33,7 +34,11 @@ export function SafeAreaWrapper({
   ...stackProps
 }: PropsWithChildren<SafeAreaWrapperProps>) {
   return (
-    <YStack data-testid="safe-area-wrapper" data-safe-area="web" flex={1} {...stackProps}>
+    <YStack
+      data-testid="safe-area-wrapper"
+      data-safe-area="web"
+      flex={1}
+      {...stackProps}>
       {children}
     </YStack>
   );

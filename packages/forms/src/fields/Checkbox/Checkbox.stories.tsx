@@ -51,9 +51,12 @@ export const Main: Story = {
           <Checkbox
             label="Accept terms"
             name="terms"
-            validators={{ onChange: ({ value }) => (!value ? 'Terms are required' : undefined) }}
+            validators={{ onChange: ({ value }) => (value ? undefined : 'Terms are required') }}
           />
-          <Checkbox label="Subscribe to newsletter" name="newsletter" />
+          <Checkbox
+            label="Subscribe to newsletter"
+            name="newsletter"
+          />
           <Button action="submit">Submit</Button>
         </Form>
       );
@@ -97,19 +100,40 @@ export const WithError: Story = {
 
 export const Pointy: Story = {
   render: () => (
-    <YStack gap="$4" maxWidth={400}>
-      <Checkbox label="Pointy (hard angles)" pointy checked={true} />
-      <Checkbox label="Regular (default)" pointy={false} checked={true} />
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <Checkbox
+        label="Pointy (hard angles)"
+        pointy
+        checked={true}
+      />
+      <Checkbox
+        label="Regular (default)"
+        pointy={false}
+        checked={true}
+      />
     </YStack>
   ),
 };
 
 export const Sizes: Story = {
   render: () => (
-    <YStack gap="$4" maxWidth={400}>
-      <Checkbox label="Small" size="$2" />
-      <Checkbox label="Medium (default)" size="$3" />
-      <Checkbox label="Large" size="$4" />
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <Checkbox
+        label="Small"
+        size="$2"
+      />
+      <Checkbox
+        label="Medium (default)"
+        size="$3"
+      />
+      <Checkbox
+        label="Large"
+        size="$4"
+      />
     </YStack>
   ),
 };
@@ -175,9 +199,16 @@ export const Comparison: StoryObj = {
       const [customChecked, setCustomChecked] = useState(false);
       const [tamaguiChecked, setTamaguiChecked] = useState<boolean>(false);
       return (
-        <XStack gap="$6" alignItems="flex-start" padding="$4">
-          <YStack gap="$3" width={250}>
-            <Paragraph size="$2" color="$placeholderColor">
+        <XStack
+          gap="$6"
+          alignItems="flex-start"
+          padding="$4">
+          <YStack
+            gap="$3"
+            width={250}>
+            <Paragraph
+              size="$2"
+              color="$placeholderColor">
               Custom Checkbox
             </Paragraph>
             <Checkbox
@@ -190,11 +221,17 @@ export const Comparison: StoryObj = {
             />
           </YStack>
 
-          <YStack gap="$3" width={250}>
-            <Paragraph size="$2" color="$placeholderColor">
+          <YStack
+            gap="$3"
+            width={250}>
+            <Paragraph
+              size="$2"
+              color="$placeholderColor">
               Tamagui Checkbox
             </Paragraph>
-            <XStack gap="$2" alignItems="center">
+            <XStack
+              gap="$2"
+              alignItems="center">
               <TamaguiCheckbox
                 id="tamagui-cb"
                 checked={tamaguiChecked}
@@ -220,7 +257,9 @@ export const Comparison: StoryObj = {
 
 export const CheckboxGroupBasic: StoryObj = {
   render: () => (
-    <YStack gap="$4" maxWidth={400}>
+    <YStack
+      gap="$4"
+      maxWidth={400}>
       <CheckboxGroup
         label="Features"
         options={[
@@ -250,7 +289,9 @@ export const CheckboxGroupWithForm: StoryObj = {
 
       return (
         <Form form={form}>
-          <YStack gap="$4" maxWidth={400}>
+          <YStack
+            gap="$4"
+            maxWidth={400}>
             <CheckboxGroup
               label="Features"
               name="features"
@@ -285,7 +326,9 @@ export const CheckboxGroupWithForm: StoryObj = {
 
 export const CheckboxGroupHorizontal: StoryObj = {
   render: () => (
-    <YStack gap="$4" maxWidth={600}>
+    <YStack
+      gap="$4"
+      maxWidth={600}>
       <CheckboxGroup
         label="Size"
         orientation="horizontal"
@@ -303,7 +346,9 @@ export const CheckboxGroupHorizontal: StoryObj = {
 
 export const CheckboxGroupWithDisabled: StoryObj = {
   render: () => (
-    <YStack gap="$4" maxWidth={400}>
+    <YStack
+      gap="$4"
+      maxWidth={400}>
       <CheckboxGroup
         label="Options"
         options={[
@@ -323,7 +368,9 @@ export const CheckboxGroupInteractive: StoryObj = {
     const InteractiveExample = () => {
       const [selected, setSelected] = useState<string[]>(['opt1']);
       return (
-        <YStack gap="$4" maxWidth={400}>
+        <YStack
+          gap="$4"
+          maxWidth={400}>
           <CheckboxGroup
             label="Interactive Selection"
             options={[

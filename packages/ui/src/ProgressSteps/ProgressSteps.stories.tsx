@@ -53,8 +53,14 @@ export const Interactive: Story = {
     // only way forward.
     const [current, setCurrent] = useState(1);
     return (
-      <YStack gap="$4" maxWidth={720}>
-        <ProgressSteps steps={demoSteps} current={current} onStepChange={setCurrent} />
+      <YStack
+        gap="$4"
+        maxWidth={720}>
+        <ProgressSteps
+          steps={demoSteps}
+          current={current}
+          onStepChange={setCurrent}
+        />
         <XStack gap="$2">
           <Button
             compact
@@ -137,8 +143,15 @@ export const NonLinear: Story = {
   render: () => {
     const [current, setCurrent] = useState(1);
     return (
-      <YStack gap="$4" maxWidth={720}>
-        <ProgressSteps steps={demoSteps} current={current} linear={false} onStepChange={setCurrent} />
+      <YStack
+        gap="$4"
+        maxWidth={720}>
+        <ProgressSteps
+          steps={demoSteps}
+          current={current}
+          linear={false}
+          onStepChange={setCurrent}
+        />
       </YStack>
     );
   },

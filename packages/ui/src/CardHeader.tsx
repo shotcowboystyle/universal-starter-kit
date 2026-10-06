@@ -1,8 +1,9 @@
 import { useResolvedKnobs } from '@repo/theme';
 import type { ReactNode } from 'react';
-import { Card as TamaguiCard, SizableText, type ViewProps } from 'tamagui';
+import { Card as TamaguiCard, SizableText } from 'tamagui';
+import type { ViewProps } from 'tamagui';
 
-import { wrapBareTextChildren } from './shared/textRidesText';
+import { wrapBareTextChildren } from './shared/text-rides-text';
 
 /**
  * Card.Header title row.
@@ -26,7 +27,7 @@ function hostData(attrs: Record<string, string>): Record<string, unknown> {
   }
   const dataSet: Record<string, string> = {};
   for (const [key, value] of Object.entries(attrs)) {
-    const camel = key.replace(/^data-/, '').replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
+    const camel = key.replace(/^data-/, '').replaceAll(/-([a-z])/g, (_, c: string) => c.toUpperCase());
     dataSet[camel] = value;
   }
   return { dataSet };
@@ -35,7 +36,11 @@ function hostData(attrs: Record<string, string>): Record<string, unknown> {
 export function CardHeader({ children, ...props }: CardHeaderProps) {
   const { knobProps } = useResolvedKnobs({ component: 'Card' });
   return (
-    <TamaguiCard.Header padding={0} {...knobProps.gap} {...hostData({ 'data-slot': 'header' })} {...props}>
+    <TamaguiCard.Header
+      padding={0}
+      {...knobProps.gap}
+      {...hostData({ 'data-slot': 'header' })}
+      {...props}>
       {wrapBareTextChildren(children, (label, key) => (
         <SizableText
           key={key}

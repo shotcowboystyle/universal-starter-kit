@@ -107,7 +107,7 @@ const chromiumSandboxArgs = ['--no-sandbox', '--disable-setuid-sandbox', '--disa
 
 function browserToProject(browser: PlaywrightBrowser): NonNullable<PlaywrightTestConfig['projects']>[number] {
   switch (browser) {
-    case 'chromium':
+    case 'chromium': {
       return {
         name: 'chromium',
         use: {
@@ -115,7 +115,8 @@ function browserToProject(browser: PlaywrightBrowser): NonNullable<PlaywrightTes
           launchOptions: { args: chromiumSandboxArgs },
         },
       };
-    case 'firefox':
+    }
+    case 'firefox': {
       return {
         name: 'firefox',
         use: {
@@ -123,12 +124,14 @@ function browserToProject(browser: PlaywrightBrowser): NonNullable<PlaywrightTes
           launchOptions: { args: chromiumSandboxArgs },
         },
       };
-    case 'webkit':
+    }
+    case 'webkit': {
       return {
         name: 'webkit',
         use: { ...devices['Desktop Safari'] },
       };
-    case 'mobile-chrome':
+    }
+    case 'mobile-chrome': {
       return {
         name: 'Mobile Chrome',
         use: {
@@ -136,11 +139,13 @@ function browserToProject(browser: PlaywrightBrowser): NonNullable<PlaywrightTes
           launchOptions: { args: chromiumSandboxArgs },
         },
       };
-    case 'mobile-safari':
+    }
+    case 'mobile-safari': {
       return {
         name: 'Mobile Safari',
         use: { ...devices['iPhone 12'] },
       };
+    }
   }
 }
 
@@ -183,14 +188,14 @@ export function createPlaywrightConfig(options: CreatePlaywrightConfigOptions = 
     browsers = ['chromium', 'firefox', 'webkit', 'mobile-chrome', 'mobile-safari'],
     retries = isCI ? 2 : 1,
     workers = 1,
-    timeout = 60000,
+    timeout = 60_000,
     fullyParallel = false,
     reporter = 'html',
     headless = true,
     trace = 'on-first-retry',
     screenshot = 'only-on-failure',
-    navigationTimeout = 30000,
-    actionTimeout = 10000,
+    navigationTimeout = 30_000,
+    actionTimeout = 10_000,
     forbidOnly = isCI,
     webServer,
     globalSetup,

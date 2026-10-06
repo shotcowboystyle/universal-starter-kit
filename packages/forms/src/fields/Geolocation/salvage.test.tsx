@@ -3,11 +3,12 @@ import { act, fireEvent, waitFor } from '@testing-library/react';
 import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { TableCellContext } from '../../shared/tableCellContext';
+import { TableCellContext } from '../../shared/table-cell-context';
 
 import type { GeocodeResult } from './geocoder';
 
-import { Geolocation, type GeolocationProps } from './index';
+import { Geolocation } from './index';
+import type { GeolocationProps } from './index';
 
 const place = { lat: 60.16952, lng: 24.93545, label: 'Helsinki' };
 const sydney = { lat: -33.8688, lng: 151.2093, label: 'Sydney' };
@@ -67,6 +68,7 @@ function Controlled(props: GeolocationProps) {
 
 describe('Geolocation salvage regressions', () => {
   afterEach(() => vi.unstubAllGlobals());
+
   it.each([false, true])('does not display a rejected controlled pick as fact (cell=%s)', async (cell) => {
     const onChange = vi.fn();
     const props = {
@@ -89,7 +91,10 @@ describe('Geolocation salvage regressions', () => {
     expect(input(result.container).value).toBe('Sydney');
     result.rerender(
       <TableCellContext.Provider value={{ inTableCell: cell, isHeader: false, editable: false }}>
-        <Geolocation {...props} readOnly />
+        <Geolocation
+          {...props}
+          readOnly
+        />
       </TableCellContext.Provider>,
     );
     const face = result.getByTestId(cell ? 'geolocation-cell-face' : 'geolocation-readonly-address');
@@ -101,7 +106,7 @@ describe('Geolocation salvage regressions', () => {
 
   it("shows the current pair while a new controlled value's address is pending", async () => {
     const pending = deferred<GeocodeResult | null>();
-    const reverseGeocode = vi.fn(({ lat }: { lat: number }) =>
+    const reverseGeocode = vi.fn(async ({ lat }: { lat: number }) =>
       lat === place.lat ? Promise.resolve(place) : pending.promise,
     );
     const props = { value: helsinkiValue, readOnly: true, reverseGeocode, renderMap: boundMap };
@@ -109,7 +114,12 @@ describe('Geolocation salvage regressions', () => {
     await waitFor(() => {
       expect(result.getByTestId('geolocation-readonly-address').textContent).toBe('Helsinki');
     });
-    result.rerender(<Geolocation {...props} value={sydneyValue} />);
+    result.rerender(
+      <Geolocation
+        {...props}
+        value={sydneyValue}
+      />,
+    );
     expect(result.getByTestId('bound-map').textContent).toBe('-33.8688,151.2093');
     expect(result.getByTestId('geolocation-readonly-address').textContent).toBe('-33.86880, 151.20930');
     await waitFor(() => {
@@ -137,7 +147,12 @@ describe('Geolocation salvage regressions', () => {
       expect(document.querySelector("[data-testid='geolocation-result-0']")).not.toBeNull();
     });
     fireEvent.click(document.querySelector("[data-testid='geolocation-result-0']") as Element);
-    result.rerender(<Geolocation {...props} readOnly />);
+    result.rerender(
+      <Geolocation
+        {...props}
+        readOnly
+      />,
+    );
     expect(result.getByTestId('geolocation-readonly-address').textContent).toBe('Helsinki');
     expect(result.getByTestId('bound-map').textContent).toBe('60.16952,24.93545');
   });
@@ -156,21 +171,38 @@ describe('Geolocation salvage regressions', () => {
       expect(document.querySelector("[data-testid='geolocation-result-0']")).not.toBeNull();
     });
     fireEvent.click(document.querySelector("[data-testid='geolocation-result-0']") as Element);
-    result.rerender(<Geolocation {...props} readOnly />);
+    result.rerender(
+      <Geolocation
+        {...props}
+        readOnly
+      />,
+    );
     expect(result.getByTestId('geolocation-readonly-address').textContent).toBe('60.16952, 24.93545');
     result.rerender(<Geolocation {...props} />);
     fireEvent.change(input(result.container), { target: { value: 'another draft' } });
-    result.rerender(<Geolocation {...props} value={sydneyValue} />);
+    result.rerender(
+      <Geolocation
+        {...props}
+        value={sydneyValue}
+      />,
+    );
     expect(input(result.container).value).toBe('another draft');
     expect(result.getByTestId('bound-map').textContent).toBe('-33.8688,151.2093');
-    result.rerender(<Geolocation {...props} value={sydneyValue} readOnly />);
+    result.rerender(
+      <Geolocation
+        {...props}
+        value={sydneyValue}
+        readOnly
+      />,
+    );
     expect(result.getByTestId('geolocation-readonly-address').textContent).toBe('Sydney');
     expect(onChange).toHaveBeenCalledExactlyOnceWith(sydneyValue);
   });
 
   it('preserves a typed draft across new bound coordinates and their reverse response', async () => {
     const pending = deferred<GeocodeResult | null>();
-    const reverseGeocode = ({ lat }: { lat: number }) => (lat === place.lat ? Promise.resolve(place) : pending.promise);
+    const reverseGeocode = async ({ lat }: { lat: number }) =>
+      lat === place.lat ? Promise.resolve(place) : pending.promise;
     const props = {
       value: helsinkiValue,
       geocode: async () => [],
@@ -182,7 +214,12 @@ describe('Geolocation salvage regressions', () => {
       expect(input(result.container).value).toBe('Helsinki');
     });
     fireEvent.change(input(result.container), { target: { value: 'independent draft' } });
-    result.rerender(<Geolocation {...props} value={sydneyValue} />);
+    result.rerender(
+      <Geolocation
+        {...props}
+        value={sydneyValue}
+      />,
+    );
     expect(input(result.container).value).toBe('independent draft');
     await act(async () => {
       pending.resolve(sydney);
@@ -195,7 +232,11 @@ describe('Geolocation salvage regressions', () => {
     async (query) => {
       const onChange = vi.fn();
       const result = renderWithProviders(
-        <Controlled value={original} geocode={async () => [place]} onChange={onChange} />,
+        <Controlled
+          value={original}
+          geocode={async () => [place]}
+          onChange={onChange}
+        />,
       );
       fireEvent.change(input(result.container), { target: { value: query } });
       const selector = query === 'Helsinki' ? 'geolocation-result-0' : 'geolocation-coord-result';
@@ -219,7 +260,7 @@ describe('Geolocation salvage regressions', () => {
 
   it('ignores search responses after the query is cleared', async () => {
     const pending = deferred<GeocodeResult[]>();
-    const geocode = vi.fn(() => pending.promise);
+    const geocode = vi.fn(async () => pending.promise);
     const result = renderWithProviders(<Geolocation geocode={geocode} />);
     fireEvent.change(input(result.container), { target: { value: 'old' } });
     await waitFor(() => {
@@ -234,9 +275,13 @@ describe('Geolocation salvage regressions', () => {
 
   it('ignores reverse responses after clearing a controlled value', async () => {
     const pending = deferred<GeocodeResult | null>();
-    const reverseGeocode = vi.fn(() => pending.promise);
+    const reverseGeocode = vi.fn(async () => pending.promise);
     const result = renderWithProviders(
-      <Controlled value={original} geocode={async () => []} reverseGeocode={reverseGeocode} />,
+      <Controlled
+        value={original}
+        geocode={async () => []}
+        reverseGeocode={reverseGeocode}
+      />,
     );
     await waitFor(() => {
       expect(reverseGeocode).toHaveBeenCalled();
@@ -253,7 +298,11 @@ describe('Geolocation salvage regressions', () => {
   it('leaves a typed query alone when a reverse response arrives', async () => {
     const pending = deferred<GeocodeResult | null>();
     const result = renderWithProviders(
-      <Geolocation value={original} geocode={async () => []} reverseGeocode={() => pending.promise} />,
+      <Geolocation
+        value={original}
+        geocode={async () => []}
+        reverseGeocode={async () => pending.promise}
+      />,
     );
     fireEvent.change(input(result.container), { target: { value: 'Sydney' } });
     await act(async () => {
@@ -275,11 +324,15 @@ describe('Geolocation salvage regressions', () => {
     });
     expect(result.getByTestId('map-center').textContent).toBe('10,0');
   });
+
   it('opens a cell editor with manual coordinates and commits without a provider', async () => {
     const onChange = vi.fn();
     const result = renderWithProviders(
       <TableCellContext.Provider value={{ inTableCell: true, isHeader: false, editable: true }}>
-        <Controlled value={original} onChange={onChange} />
+        <Controlled
+          value={original}
+          onChange={onChange}
+        />
       </TableCellContext.Provider>,
     );
     expect(result.container.querySelector("[data-testid='geolocation-map']")).toBeNull();
@@ -300,7 +353,12 @@ describe('Geolocation salvage regressions', () => {
 
   it('selects a search result with the keyboard', async () => {
     const onChange = vi.fn();
-    const result = renderWithProviders(<Controlled geocode={async () => [place]} onChange={onChange} />);
+    const result = renderWithProviders(
+      <Controlled
+        geocode={async () => [place]}
+        onChange={onChange}
+      />,
+    );
     fireEvent.change(input(result.container), { target: { value: 'Helsinki' } });
     await waitFor(() => {
       expect(document.querySelector("[data-testid='geolocation-result-0']")).not.toBeNull();
@@ -314,9 +372,16 @@ describe('Geolocation salvage regressions', () => {
     });
     expect(document.activeElement).toBe(input(result.container));
   });
+
   it.each(['Enter', ' '])('clears the selected value from the keyboard with %s', async (key) => {
     const onChange = vi.fn();
-    const result = renderWithProviders(<Controlled value={original} geocode={async () => []} onChange={onChange} />);
+    const result = renderWithProviders(
+      <Controlled
+        value={original}
+        geocode={async () => []}
+        onChange={onChange}
+      />,
+    );
     fireEvent.change(input(result.container), { target: { value: 'clear me' } });
     const clear = result.container.querySelector("[aria-label='Clear location']") as HTMLElement;
     expect(clear.tabIndex).toBe(0);
@@ -333,7 +398,10 @@ describe('Geolocation salvage regressions', () => {
   it('keeps the cell editor exposed when its input receives initial focus', async () => {
     const result = renderWithProviders(
       <TableCellContext.Provider value={{ inTableCell: true, isHeader: false, editable: true }}>
-        <Controlled value={original} geocode={async () => [place]} />
+        <Controlled
+          value={original}
+          geocode={async () => [place]}
+        />
       </TableCellContext.Provider>,
     );
     fireEvent.keyDown(result.getByTestId('geolocation-cell-face'), { key: 'Enter' });
@@ -344,6 +412,7 @@ describe('Geolocation salvage regressions', () => {
     expect(document.querySelector("[data-testid='geolocation-results']")).toBeNull();
     expect(document.querySelector("[data-testid='geolocation-map']")).not.toBeNull();
   });
+
   it('does not overwrite Clear with a pending Locate response', async () => {
     let locate!: PositionCallback;
     const getCurrentPosition = vi.fn((callback: PositionCallback) => {
@@ -355,7 +424,13 @@ describe('Geolocation salvage regressions', () => {
       permissions: { query: async () => ({ state: 'granted' }) },
     });
     const onChange = vi.fn();
-    const result = renderWithProviders(<Controlled value={original} geocode={async () => []} onChange={onChange} />);
+    const result = renderWithProviders(
+      <Controlled
+        value={original}
+        geocode={async () => []}
+        onChange={onChange}
+      />,
+    );
     fireEvent.click(result.container.querySelector("[aria-label='Locate']") as Element);
     await waitFor(() => {
       expect(getCurrentPosition).toHaveBeenCalled();
@@ -365,7 +440,7 @@ describe('Geolocation salvage regressions', () => {
     await act(async () => {
       locate({ coords: { latitude: 50, longitude: 30 } } as GeolocationPosition);
     });
-    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledOnce();
     expect(onChange).toHaveBeenLastCalledWith('');
   });
 
@@ -380,7 +455,12 @@ describe('Geolocation salvage regressions', () => {
       permissions: { query: async () => ({ state: 'granted' }) },
     });
     const onChange = vi.fn();
-    const result = renderWithProviders(<Controlled value={original} onChange={onChange} />);
+    const result = renderWithProviders(
+      <Controlled
+        value={original}
+        onChange={onChange}
+      />,
+    );
     fireEvent.click(result.container.querySelector("[aria-label='Locate']") as Element);
     await waitFor(() => {
       expect(onChange).toHaveBeenCalled();
@@ -391,8 +471,14 @@ describe('Geolocation salvage regressions', () => {
     expect(value.features[0].properties).toEqual(JSON.parse(original).features[0].properties);
     expect(value.features[1]).toEqual(JSON.parse(original).features[1]);
   });
+
   it.each([false, true])('pins have explicit theme ink (cell=%s)', (cell) => {
-    const field = <Geolocation value={original} readOnly />;
+    const field = (
+      <Geolocation
+        value={original}
+        readOnly
+      />
+    );
     const result = renderWithProviders(
       cell ? (
         <TableCellContext.Provider value={{ inTableCell: true, isHeader: false, editable: false }}>

@@ -5,9 +5,10 @@ import { XStack } from '@repo/ui';
 import { startOfToday } from 'date-fns';
 import { useTranslations } from 'next-intl';
 
-import { type TaskFormSubmitValues, useTaskForm } from '@/hooks/useTaskForm';
-import { TaskStatus } from '@/types/dbInterface';
-import { TaskFormSchema } from '@/types/taskForm';
+import { useTaskForm } from '@/hooks/use-task-form';
+import type { TaskFormSubmitValues } from '@/hooks/use-task-form';
+import { TaskStatus } from '@/types/db-interface';
+import { TaskFormSchema } from '@/types/task-form';
 
 interface TaskFormProps {
   defaultValues?: TaskFormSubmitValues;
@@ -27,7 +28,9 @@ export function TaskForm({ defaultValues, onSubmit, onCancel, submitLabel = 'Sub
   const t = useTranslations('kanban.task');
 
   return (
-    <Form form={form} testID="task-form">
+    <Form
+      form={form}
+      testID="task-form">
       <Input
         name="title"
         label={t('titleLabel')}
@@ -35,7 +38,12 @@ export function TaskForm({ defaultValues, onSubmit, onCancel, submitLabel = 'Sub
         inputProps={{ testID: 'task-title-input' }}
         validators={{ onSubmit: validateTitle }}
       />
-      <DatePicker name="dueDate" label={t('dueDateLabel')} placeholder={t('pickDate')} minDate={startOfToday()} />
+      <DatePicker
+        name="dueDate"
+        label={t('dueDateLabel')}
+        placeholder={t('pickDate')}
+        minDate={startOfToday()}
+      />
       <Combobox
         name="assigneeId"
         label={t('assignToLabel')}
@@ -67,13 +75,22 @@ export function TaskForm({ defaultValues, onSubmit, onCancel, submitLabel = 'Sub
         placeholder={t('descriptionPlaceholder')}
         textAreaProps={{ testID: 'task-description-input' }}
       />
-      <XStack justifyContent="flex-end" gap="$3">
+      <XStack
+        justifyContent="flex-end"
+        gap="$3">
         {onCancel && (
-          <Button outlined onPress={onCancel} testID="cancel-task-button">
+          <Button
+            outlined
+            onPress={onCancel}
+            testID="cancel-task-button">
             {t('cancel')}
           </Button>
         )}
-        <Button accent action="submit" loading={isSubmitting} testID="submit-task-button">
+        <Button
+          accent
+          action="submit"
+          loading={isSubmitting}
+          testID="submit-task-button">
           {isSubmitting ? t('submitting') : submitLabel}
         </Button>
       </XStack>

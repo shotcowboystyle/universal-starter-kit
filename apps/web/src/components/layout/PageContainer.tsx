@@ -11,7 +11,11 @@ export default function PageContainer({
   scrollable?: boolean;
 }) {
   const content = (
-    <YStack testID="content-area" height="100%" paddingHorizontal="$4" $sm={{ paddingHorizontal: '$6' }}>
+    <YStack
+      testID="content-area"
+      height="100%"
+      paddingHorizontal="$4"
+      $sm={{ paddingHorizontal: '$6' }}>
       {children}
     </YStack>
   );
@@ -19,7 +23,9 @@ export default function PageContainer({
   return (
     <YStack testID="page-container">
       {scrollable ? (
-        <ScrollView testID="scroll-area" height="calc(100dvh - 52px)">
+        <ScrollView
+          testID="scroll-area"
+          height="calc(100dvh - 52px)">
           {content}
         </ScrollView>
       ) : (

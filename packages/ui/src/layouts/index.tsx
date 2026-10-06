@@ -9,7 +9,7 @@ export * from './Attachments';
 export * from './Tags';
 export * from './Timeline';
 export * from './Page';
-export * from './pageHeadingScope';
+export * from './PageHeadingScope';
 export * from './PageTemplates';
 export * from './PaneScaffold';
 // EmptyState is NAMED here rather than left to reach the barrel through

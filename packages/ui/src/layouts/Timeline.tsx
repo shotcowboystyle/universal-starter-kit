@@ -37,15 +37,15 @@ import {
   TextArea,
   XStack,
   YStack,
-  type YStackProps,
   getTokenValue,
   isWeb,
   styled,
 } from 'tamagui';
+import type { YStackProps } from 'tamagui';
 
 import { Avatar } from '../Avatar';
-import { componentColors, sectionHeading } from '../componentColors';
-import { useDirection } from '../hooks/useDirection';
+import { componentColors, sectionHeading } from '../component-colors';
+import { useDirection } from '../hooks/use-direction';
 import { useTranslation } from '../shared/i18n';
 import { bidiIsolate } from '../shared/t';
 import { Skeleton } from '../Skeleton';
@@ -199,18 +199,24 @@ export interface TimelineProps extends Omit<YStackProps, 'children'> {
 
 function getEntryIcon(entry: TimelineEntry, size: number): React.ReactNode {
   switch (entry.type) {
-    case 'comment':
+    case 'comment': {
       return <ChatCircleIcon size={size} />;
-    case 'version':
+    }
+    case 'version': {
       return <PencilSimpleIcon size={size} />;
-    case 'attachment':
+    }
+    case 'attachment': {
       return <PaperclipIcon size={size} />;
-    case 'assignment':
+    }
+    case 'assignment': {
       return <UserPlusIcon size={size} />;
-    case 'info':
+    }
+    case 'info': {
       return <FileTextIcon size={size} />;
-    default:
+    }
+    default: {
       return <ClockIcon size={size} />;
+    }
   }
 }
 
@@ -418,13 +424,34 @@ function TimelineSkeleton({
   loadingLabel: string;
 }) {
   return (
-    <YStack gap={compact ? '$3' : '$4'} width="100%" data-async-skeleton="timeline" aria-busy aria-label={loadingLabel}>
+    <YStack
+      gap={compact ? '$3' : '$4'}
+      width="100%"
+      data-async-skeleton="timeline"
+      aria-busy
+      aria-label={loadingLabel}>
       {Array.from({ length: 3 }).map((_, i) => (
-        <XStack key={i} gap={compact ? '$2' : '$3'} alignItems="flex-start">
-          <Skeleton variant="rounded" width={avatarPx} height={avatarPx} />
-          <YStack flex={1} gap="$1.5" paddingTop={2}>
-            <Skeleton width="35%" height={compact ? 10 : 12} />
-            <Skeleton width="80%" height={compact ? 12 : 14} />
+        <XStack
+          key={i}
+          gap={compact ? '$2' : '$3'}
+          alignItems="flex-start">
+          <Skeleton
+            variant="rounded"
+            width={avatarPx}
+            height={avatarPx}
+          />
+          <YStack
+            flex={1}
+            gap="$1.5"
+            paddingTop={2}>
+            <Skeleton
+              width="35%"
+              height={compact ? 10 : 12}
+            />
+            <Skeleton
+              width="80%"
+              height={compact ? 12 : 14}
+            />
           </YStack>
         </XStack>
       ))}
@@ -486,7 +513,7 @@ export function Timeline({
   const [replyTarget, setReplyTarget] = useState<{ rootId: string; parentId: string } | null>(null);
   const [replyText, setReplyText] = useState('');
 
-  const composerText = commentValue !== undefined ? commentValue : internalValue;
+  const composerText = commentValue === undefined ? internalValue : commentValue;
 
   const {
     noActivity: noActivityLabel = t('No activity yet'),
@@ -601,9 +628,15 @@ export function Timeline({
   const emptyState = renderEmpty ? (
     renderEmpty()
   ) : (
-    <YStack {...(compact ? { padding: '$3' } : knobProps.panelPadding)} alignItems="center" gap="$2" opacity={0.5}>
+    <YStack
+      {...(compact ? { padding: '$3' } : knobProps.panelPadding)}
+      alignItems="center"
+      gap="$2"
+      opacity={0.5}>
       <ClockIcon size={emptyIconSize} />
-      <Text color={knobProps.textAccentColor} fontSize={compact ? '$2' : sz}>
+      <Text
+        color={knobProps.textAccentColor}
+        fontSize={compact ? '$2' : sz}>
         {noActivityLabel}
       </Text>
     </YStack>
@@ -641,35 +674,57 @@ export function Timeline({
   // the earlier `circular` eject, which read Avatar as R-SCALE back when the
   // spec table still classed it that way; the table was the wrong half.
   const renderAvatar = (entry: TimelineEntry, size: string) => (
-    <Avatar size={size as any} name={getEntryDisplayName(entry)} fallbackBackgroundColor="$accentBackground" />
+    <Avatar
+      size={size as any}
+      name={getEntryDisplayName(entry)}
+      fallbackBackgroundColor="$accentBackground"
+    />
   );
 
   const renderVersionChanges = (changes: VersionChange[]) => (
-    <YStack gap="$1" marginTop="$1">
+    <YStack
+      gap="$1"
+      marginTop="$1">
       {changes.slice(0, 5).map((change) => (
-        <XStack key={change.field} gap="$2" flexWrap="wrap">
-          <Text fontSize="$1" color={knobProps.textAccentColor} fontWeight="400">
+        <XStack
+          key={change.field}
+          gap="$2"
+          flexWrap="wrap">
+          <Text
+            fontSize="$1"
+            color={knobProps.textAccentColor}
+            fontWeight="400">
             {change.fieldLabel || change.field}:
           </Text>
           {change.old !== undefined && (
-            <Text fontSize="$1" color={componentColors.semantic.error} textDecorationLine="line-through">
+            <Text
+              fontSize="$1"
+              color={componentColors.semantic.error}
+              textDecorationLine="line-through">
               {String(change.old || '(empty)')}
             </Text>
           )}
           {change.old !== undefined && change.new !== undefined && (
-            <Text fontSize="$1" color={knobProps.textAccentColor}>
+            <Text
+              fontSize="$1"
+              color={knobProps.textAccentColor}>
               →
             </Text>
           )}
           {change.new !== undefined && (
-            <Text fontSize="$1" color={componentColors.semantic.success}>
+            <Text
+              fontSize="$1"
+              color={componentColors.semantic.success}>
               {String(change.new || '(empty)')}
             </Text>
           )}
         </XStack>
       ))}
       {changes.length > 5 && (
-        <Text fontSize="$1" color={knobProps.textAccentColor} fontStyle="italic">
+        <Text
+          fontSize="$1"
+          color={knobProps.textAccentColor}
+          fontStyle="italic">
           +{changes.length - 5} more changes
         </Text>
       )}
@@ -701,9 +756,13 @@ export function Timeline({
     ariaLabel: string;
     avatar: React.ReactNode;
   }) => (
-    <XStack {...knobProps.gap} alignItems="flex-start">
+    <XStack
+      {...knobProps.gap}
+      alignItems="flex-start">
       {avatar}
-      <YStack flex={1} gap="$2">
+      <YStack
+        flex={1}
+        gap="$2">
         <TextArea
           value={value}
           onChangeText={onChange}
@@ -728,7 +787,9 @@ export function Timeline({
           }
         />
         {expanded && (
-          <XStack {...knobProps.gap} justifyContent="flex-end">
+          <XStack
+            {...knobProps.gap}
+            justifyContent="flex-end">
             <Button
               size={compact ? '$2' : '$3'}
               variant="outlined"
@@ -776,7 +837,9 @@ export function Timeline({
       },
       ariaLabel: addCommentLabel,
       avatar: (
-        <Avatar size={avatarSize} backgroundColor={componentColors.interactive.hover}>
+        <Avatar
+          size={avatarSize}
+          backgroundColor={componentColors.interactive.hover}>
           <Avatar.Fallback
             backgroundColor={componentColors.interactive.hover}
             alignItems="center"
@@ -802,7 +865,9 @@ export function Timeline({
       expanded: true,
       ariaLabel: `${replyLabel} ${getEntryDisplayName(parentEntry)}`,
       avatar: (
-        <Avatar size={replyAvatarSize} backgroundColor={componentColors.interactive.hover}>
+        <Avatar
+          size={replyAvatarSize}
+          backgroundColor={componentColors.interactive.hover}>
           <Avatar.Fallback
             backgroundColor={componentColors.interactive.hover}
             alignItems="center"
@@ -822,7 +887,12 @@ export function Timeline({
         aria-label={`${displayName}, ${formatVisibleTimestamp(entry)}`}
         gap={compact ? '$2' : '$3'}
         alignItems="flex-start">
-        <YStack width={columnPx} minHeight={columnPx} alignItems="center" justifyContent="flex-start" zIndex={1}>
+        <YStack
+          width={columnPx}
+          minHeight={columnPx}
+          alignItems="center"
+          justifyContent="flex-start"
+          zIndex={1}>
           {renderAvatar(entry, isReply ? replyAvatarSize : avatarSize)}
         </YStack>
         <YStack
@@ -834,8 +904,14 @@ export function Timeline({
           borderRadius={commentRadius}
           {...containerCapProps('OwnInset', radiusToken, knobProps.space)}
           padding={commentPad}>
-          <XStack gap="$2" alignItems="center" flexWrap="wrap">
-            <Text fontSize={nameFontSize} fontWeight="400" color={componentColors.text.primary}>
+          <XStack
+            gap="$2"
+            alignItems="center"
+            flexWrap="wrap">
+            <Text
+              fontSize={nameFontSize}
+              fontWeight="400"
+              color={componentColors.text.primary}>
               {displayName}
             </Text>
             {renderTimestamp(entry, metaFontSize)}
@@ -912,28 +988,48 @@ export function Timeline({
           {...knobProps.borderRadius}>
           {getEntryIcon(entry, iconSize)}
         </YStack>
-        <YStack flex={1} gap="$0.5" paddingTop={2} minWidth={0}>
-          <XStack gap="$1.5" alignItems="center" flexWrap="wrap">
-            <Text fontSize={systemFontSize} fontWeight="400" color={mutedColor}>
+        <YStack
+          flex={1}
+          gap="$0.5"
+          paddingTop={2}
+          minWidth={0}>
+          <XStack
+            gap="$1.5"
+            alignItems="center"
+            flexWrap="wrap">
+            <Text
+              fontSize={systemFontSize}
+              fontWeight="400"
+              color={mutedColor}>
               {displayName}
             </Text>
             {actionLabel && (
-              <Text fontSize={systemFontSize} color={mutedColor}>
+              <Text
+                fontSize={systemFontSize}
+                color={mutedColor}>
                 {actionLabel}
               </Text>
             )}
             {entry.content && entry.type !== 'info' && (
-              <Text fontSize={systemFontSize} color={mutedColor}>
+              <Text
+                fontSize={systemFontSize}
+                color={mutedColor}>
                 {entry.content}
               </Text>
             )}
-            <Text fontSize={systemFontSize} color={mutedColor} opacity={0.75}>
+            <Text
+              fontSize={systemFontSize}
+              color={mutedColor}
+              opacity={0.75}>
               ·
             </Text>
             {renderTimestamp(entry, systemFontSize)}
           </XStack>
           {entry.content && entry.type === 'info' && (
-            <Text fontSize={systemFontSize} color={mutedColor} fontStyle="italic">
+            <Text
+              fontSize={systemFontSize}
+              color={mutedColor}
+              fontStyle="italic">
               {entry.content}
             </Text>
           )}
@@ -999,16 +1095,22 @@ export function Timeline({
   };
 
   return (
-    <YStack {...knobProps.gap} {...stackProps}>
+    <YStack
+      {...knobProps.gap}
+      {...stackProps}>
       {label && (
-        <XStack alignItems="center" justifyContent="space-between">
+        <XStack
+          alignItems="center"
+          justifyContent="space-between">
           {/* Semantic tag follows headingLevel (default h2); the explicit
               size spreads pin the visual scale at every level. */}
           <LabelTag {...(compact ? { fontSize: '$4', fontWeight: '600' } : sectionHeading)}>{label}</LabelTag>
           {/* Entry count hides on error so the badge can't lie.
               Bidi-isolated so RTL contexts keep "7 entries" in one run. */}
           {entries.length > 0 && !hasError && (
-            <Text fontSize="$2" color={knobProps.textAccentColor}>
+            <Text
+              fontSize="$2"
+              color={knobProps.textAccentColor}>
               {bidiIsolate(`${entries.length} ${entries.length === 1 ? entryLabel : entriesLabel}`)}
             </Text>
           )}
@@ -1026,11 +1128,21 @@ export function Timeline({
         onRetry={onRetry}
         errorTitle={loadFailedLabel}
         loading={
-          showSkeleton ? <TimelineSkeleton compact={compact} avatarPx={columnPx} loadingLabel={t('Loading')} /> : false
+          showSkeleton ? (
+            <TimelineSkeleton
+              compact={compact}
+              avatarPx={columnPx}
+              loadingLabel={t('Loading')}
+            />
+          ) : (
+            false
+          )
         }
         empty={!hasError && entries.length === 0 ? emptyState : false}>
         <YStack paddingTop={canCompose ? '$2' : undefined}>
-          <YStack role="feed" aria-label={label ?? t('Activity feed')}>
+          <YStack
+            role="feed"
+            aria-label={label ?? t('Activity feed')}>
             {feedItems.map((item, index) =>
               item.kind === 'entry'
                 ? renderStackedRow(

@@ -6,11 +6,11 @@ import { chartDatumText, describeChart, describeDatum } from './accessibility';
 import { XAxis, YAxis } from './Axis';
 import { ChartDataFrame } from './ChartDataView';
 import { ChartSurface } from './ChartSurface';
-import { computeCartesianPlot, thinCategories } from './composeChart';
+import { computeCartesianPlot, thinCategories } from './compose-chart';
 import { createLinearScale, createPointScale, formatChartValue, getLinearTicks, valueDomain } from './math';
 import { AreaSeries, LineSeries } from './series';
 import type { ChartCurve, ChartDatum, ChartDatumEvents } from './types';
-import { useChartTheme } from './useChartTheme';
+import { useChartTheme } from './use-chart-theme';
 
 export interface LineChartProps extends ChartDatumEvents, Omit<YStackProps, 'children' | 'width' | 'height'> {
   data: ChartDatum[];
@@ -85,7 +85,11 @@ export function LineChart({
   const interactive = Boolean(onDatumPress || onDatumHoverIn || onDatumHoverOut);
 
   return (
-    <ChartDataFrame data={data} title={title} valueFormatter={valueFormatter} width={width}>
+    <ChartDataFrame
+      data={data}
+      title={title}
+      valueFormatter={valueFormatter}
+      width={width}>
       <ChartSurface
         label={ariaLabel}
         proof={{
@@ -181,5 +185,10 @@ export type AreaChartProps = Omit<LineChartProps, 'showArea'>;
 
 /** Area chart — the LineChart family with the area fill on by default. */
 export function AreaChart(props: AreaChartProps) {
-  return <LineChart showArea {...props} />;
+  return (
+    <LineChart
+      showArea
+      {...props}
+    />
+  );
 }

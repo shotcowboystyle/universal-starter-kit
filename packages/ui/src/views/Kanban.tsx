@@ -11,10 +11,12 @@ import {
 import { useHotkey } from '@tanstack/react-hotkeys';
 import type { RegisterableHotkey } from '@tanstack/react-hotkeys';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import React, { useCallback, useRef, useEffect, useId, useMemo, useState, type ReactNode } from 'react';
-import { AnimatePresence, ListItem, Text, View, XStack, YStack, type YStackProps } from 'tamagui';
+import React, { useCallback, useRef, useEffect, useId, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
+import { AnimatePresence, ListItem, Text, View, XStack, YStack } from 'tamagui';
+import type { YStackProps } from 'tamagui';
 
-import { componentColors } from '../componentColors';
+import { componentColors } from '../component-colors';
 import { AsyncBoundary, useAsyncCount } from '../layouts/AsyncBoundary';
 import { EmptyState } from '../layouts/Page';
 import { ScrollView } from '../ScrollView';
@@ -31,11 +33,13 @@ import {
   keyboardMove,
   resolveDrop,
   siblingOffset,
-  type KanbanAnnouncement,
-  type KanbanBoardColumnSnapshot,
-  type KanbanDropTarget,
-  type RenderedCardMeasurement,
-} from './kanbanDnd';
+} from './kanban-dnd';
+import type {
+  KanbanAnnouncement,
+  KanbanBoardColumnSnapshot,
+  KanbanDropTarget,
+  RenderedCardMeasurement,
+} from './kanban-dnd';
 
 /**
  * A column definition for the Kanban board.
@@ -387,7 +391,7 @@ export function Kanban<T>({
 
   /** Pointer position → drop target. Falls back to the origin slot so drops outside cancel. */
   const hitTest = useCallback((clientX: number, clientY: number, session: DragSession<T>): KanbanDropTarget => {
-    const el = typeof document !== 'undefined' ? document.elementFromPoint(clientX, clientY) : null;
+    const el = typeof document === 'undefined' ? null : document.elementFromPoint(clientX, clientY);
     const columnEl = el?.closest?.('[data-kanban-column]') as HTMLElement | null;
     const columnId = columnEl?.getAttribute('data-kanban-column') ?? null;
     hoverColumnRef.current = columnId;
@@ -826,7 +830,7 @@ export function Kanban<T>({
       // Recompute after the virtualizer applies the scroll so the overlay
       // lands on the final gap rect.
       requestAnimationFrame(() => {
-        const current = dragRef.current;
+        const { current } = dragRef;
         if (!current || current.mode !== 'keyboard') {
           return;
         }
@@ -986,7 +990,10 @@ export function Kanban<T>({
         outlineWidth={0}
         onFocus={handleContainerFocus}
         position="relative">
-        <ScrollView ref={boardScrollRef} horizontal showsHorizontalScrollIndicator={false}>
+        <ScrollView
+          ref={boardScrollRef}
+          horizontal
+          showsHorizontalScrollIndicator={false}>
           <XStack {...knobProps.gap}>
             {columns.map((column, colIndex) => (
               <KanbanColumnView
@@ -1133,7 +1140,9 @@ function KanbanDragOverlay({
         {...(lifted ? LIFT_SHADOW : undefined)}
         overflow="hidden"
         height="100%">
-        <Card height="100%" overflow="hidden">
+        <Card
+          height="100%"
+          overflow="hidden">
           {children}
         </Card>
       </View>
@@ -1276,7 +1285,7 @@ function KanbanColumnView<T>({
     if (!el) {
       return;
     }
-    el.addEventListener('scroll', handleScroll, { passive: true });
+    el.addEventListener('scroll', handleScroll);
     return () => {
       el.removeEventListener('scroll', handleScroll);
     };
@@ -1366,7 +1375,7 @@ function KanbanColumnView<T>({
   // active drag the transition stays on so displacement tweens even while
   // auto-scroll runs.
   const wrapperTransition =
-    drag != null ? knobProps.transition : flipReady && !virtualizer.isScrolling ? knobProps.transition : undefined;
+    drag == null ? (flipReady && !virtualizer.isScrolling ? knobProps.transition : undefined) : knobProps.transition;
 
   return (
     <YStack
@@ -1396,9 +1405,15 @@ function KanbanColumnView<T>({
         }
         iconAfter={
           itemCount !== undefined || renderColumnActions ? (
-            <XStack alignItems="center" {...knobProps.gap}>
+            <XStack
+              alignItems="center"
+              {...knobProps.gap}>
               {itemCount !== undefined && (
-                <Text color={knobProps.textAccentColor} {...knobProps.label} {...knobProps.textWeight} data-async-count>
+                <Text
+                  color={knobProps.textAccentColor}
+                  {...knobProps.label}
+                  {...knobProps.textWeight}
+                  data-async-count>
                   {itemCount}
                 </Text>
               )}
@@ -1422,7 +1437,14 @@ function KanbanColumnView<T>({
         }}
         pointerEvents={drag ? ('none' as any) : undefined}>
         {isEmpty ? (
-          !isDropTarget && <EmptyState compact title={emptyColumnMessage} opacity={0.5} flex={1} />
+          !isDropTarget && (
+            <EmptyState
+              compact
+              title={emptyColumnMessage}
+              opacity={0.5}
+              flex={1}
+            />
+          )
         ) : (
           <View
             style={{
@@ -1578,7 +1600,9 @@ function KanbanColumnView<T>({
                 alignItems="center"
                 justifyContent="center">
                 {isEmpty && (
-                  <Text color={knobProps.textAccentColor} {...knobProps.label}>
+                  <Text
+                    color={knobProps.textAccentColor}
+                    {...knobProps.label}>
                     {t('Drop here')}
                   </Text>
                 )}
@@ -1589,7 +1613,9 @@ function KanbanColumnView<T>({
       </View>
 
       {isLoading && (
-        <YStack {...knobProps.panelPadding} alignItems="center">
+        <YStack
+          {...knobProps.panelPadding}
+          alignItems="center">
           <Spinner size="small" />
         </YStack>
       )}

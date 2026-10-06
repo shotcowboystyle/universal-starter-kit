@@ -20,7 +20,10 @@ vi.mock('react-native-web', async (importOriginal) => {
   return {
     ...native,
     Pressable: ({ accessibilityValue, ...props }: import('react-native').PressableProps) => (
-      <native.Pressable {...props} aria-valuetext={accessibilityValue?.text} />
+      <native.Pressable
+        {...props}
+        aria-valuetext={accessibilityValue?.text}
+      />
     ),
   };
 });
@@ -29,7 +32,9 @@ const picked = new Date(2026, 2, 5, 14, 30);
 vi.mock('../nativeDateTime/OsDateTimeSheet', () => ({
   OsDateTimeSheet: ({ open, onConfirm }: { open: boolean; onConfirm: (date: Date) => void }) =>
     open ? (
-      <div role="dialog" aria-label="OS date and time">
+      <div
+        role="dialog"
+        aria-label="OS date and time">
         <button
           onClick={() => {
             onConfirm(new Date(2026, 2, 5, 14, 30));
@@ -59,7 +64,12 @@ describe('native DatetimePicker ownership', () => {
   it('opens from its full-width native target and commits exactly once', () => {
     const onChange = vi.fn();
     const onValueChange = vi.fn();
-    const result = renderWithProviders(<DatetimePicker onChange={onChange} onValueChange={onValueChange} />);
+    const result = renderWithProviders(
+      <DatetimePicker
+        onChange={onChange}
+        onValueChange={onValueChange}
+      />,
+    );
     const trigger = result.getByRole('button', { name: 'Date and time' });
     expect(getComputedStyle(trigger).width).toBe('100%');
     fireEvent.click(trigger);
@@ -72,7 +82,12 @@ describe('native DatetimePicker ownership', () => {
   });
 
   it('keeps native read-only text undimmed, without a picker press target', () => {
-    const result = renderWithProviders(<DatetimePicker value={picked} readOnly />);
+    const result = renderWithProviders(
+      <DatetimePicker
+        value={picked}
+        readOnly
+      />,
+    );
     const input = result.container.querySelector('input')!;
     expect(input.value).toContain('Mar 5, 2026');
     expect(input.disabled).toBe(false);
@@ -81,13 +96,18 @@ describe('native DatetimePicker ownership', () => {
     fireEvent.click(input);
     expect(result.queryByRole('dialog')).toBeNull();
     for (let el: HTMLElement | null = input; el && el !== result.container; el = el.parentElement) {
-      const opacity = getComputedStyle(el).opacity;
+      const { opacity } = getComputedStyle(el);
       expect(opacity === '' || Number(opacity) === 1).toBe(true);
     }
   });
 
   it('keeps a disabled value visible while declining activation', () => {
-    const result = renderWithProviders(<DatetimePicker value={picked} disabled />);
+    const result = renderWithProviders(
+      <DatetimePicker
+        value={picked}
+        disabled
+      />,
+    );
     const trigger = result.getByRole('button', { name: 'Date and time' });
     expect(trigger.getAttribute('aria-disabled')).toBe('true');
     expect(result.container.querySelector('input')?.value).toContain('Mar 5, 2026');
@@ -99,10 +119,20 @@ describe('native DatetimePicker ownership', () => {
     const onChange = vi.fn();
     const onValueChange = vi.fn();
     const result = renderWithProviders(
-      <DatetimePicker value={null} onChange={onChange} onValueChange={onValueChange} />,
+      <DatetimePicker
+        value={null}
+        onChange={onChange}
+        onValueChange={onValueChange}
+      />,
     );
     expect(result.container.querySelector('input')?.value).toBe('');
-    result.rerender(<DatetimePicker value={picked} onChange={onChange} onValueChange={onValueChange} />);
+    result.rerender(
+      <DatetimePicker
+        value={picked}
+        onChange={onChange}
+        onValueChange={onValueChange}
+      />,
+    );
     await waitFor(() => {
       expect(result.container.querySelector('input')?.value).toContain('Mar 5, 2026');
     });
@@ -121,7 +151,10 @@ describe('native DatetimePicker ownership', () => {
       };
       return (
         <Form form={form}>
-          <DatetimePicker name="when" onChange={onChange} />
+          <DatetimePicker
+            name="when"
+            onChange={onChange}
+          />
         </Form>
       );
     }

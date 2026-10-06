@@ -20,7 +20,7 @@ describe('writeToClipboard', () => {
   });
 
   it('returns true when clipboard write succeeds', async () => {
-    expect(await writeToClipboard('hello')).toBe(true);
+    await expect(writeToClipboard('hello')).resolves.toBe(true);
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith('hello');
   });
 
@@ -30,7 +30,7 @@ describe('writeToClipboard', () => {
         writeText: vi.fn().mockRejectedValue(new Error('denied')),
       },
     });
-    expect(await writeToClipboard('hello')).toBe(false);
+    await expect(writeToClipboard('hello')).resolves.toBe(false);
   });
 });
 
@@ -38,7 +38,7 @@ describe('native writeToClipboard', () => {
   it('writes through the existing React Native clipboard and resolves true', async () => {
     const setString = vi.fn();
     native.clipboard = { setString };
-    expect(await writeNativeClipboard('native copy proof')).toBe(true);
+    await expect(writeNativeClipboard('native copy proof')).resolves.toBe(true);
     expect(setString).toHaveBeenCalledWith('native copy proof');
   });
 
@@ -48,11 +48,11 @@ describe('native writeToClipboard', () => {
         throw new Error('Clipboard unavailable');
       },
     };
-    expect(await writeNativeClipboard('hello')).toBe(false);
+    await expect(writeNativeClipboard('hello')).resolves.toBe(false);
   });
 
   it('returns false if a future native runtime removes Clipboard', async () => {
     native.clipboard = undefined;
-    expect(await writeNativeClipboard('hello')).toBe(false);
+    await expect(writeNativeClipboard('hello')).resolves.toBe(false);
   });
 });

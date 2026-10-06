@@ -7,14 +7,15 @@ import { Text, YStack } from 'tamagui';
 
 import { Button } from '../../Button';
 import { Form } from '../../Form';
-import { TableCellContext } from '../../shared/tableCellContext';
+import { TableCellContext } from '../../shared/table-cell-context';
 
+import { parseGeoValue } from './geo-value';
 import type { GeocodeResult, Geocoder } from './geocoder';
-import { GeocoderProvider } from './geocoderContext';
-import { parseGeoValue } from './geoValue';
-import { createPhotonGeocoder } from './photonGeocoder';
+import { GeocoderProvider } from './geocoder-context';
+import { createPhotonGeocoder } from './photon-geocoder';
 
-import { Geolocation, type GeolocationProps } from './index';
+import { Geolocation } from './index';
+import type { GeolocationProps } from './index';
 
 const meta: Meta<typeof Geolocation> = {
   title: 'Forms/Geolocation',
@@ -55,7 +56,9 @@ export const Main: Story = {
       });
 
       return (
-        <Form form={form} maxWidth={500}>
+        <Form
+          form={form}
+          maxWidth={500}>
           <YStack gap="$4">
             <Geolocation
               label="Delivery Location"
@@ -77,7 +80,12 @@ export const Standalone: Story = {
     label: 'Location',
     helperText: 'Click the map to set a pin, or edit the coordinates below it',
   },
-  render: (args) => <Geolocation {...args} locationIcon=<NavigationArrowIcon size={16} /> />,
+  render: (args) => (
+    <Geolocation
+      {...args}
+      locationIcon=<NavigationArrowIcon size={16} />
+    />
+  ),
 };
 
 /**
@@ -99,7 +107,12 @@ export const Basic: Story = {
     helperText: 'Click the map to set a pin, or edit the coordinates below it',
     onChange: action('onChange'),
   },
-  render: (args) => <Geolocation {...args} locationIcon=<NavigationArrowIcon size={16} /> />,
+  render: (args) => (
+    <Geolocation
+      {...args}
+      locationIcon=<NavigationArrowIcon size={16} />
+    />
+  ),
 };
 
 export const Disabled: Story = {
@@ -117,7 +130,12 @@ export const Disabled: Story = {
     disabled: true,
     onChange: action('onChange'),
   },
-  render: (args) => <Geolocation {...args} locationIcon=<NavigationArrowIcon size={16} /> />,
+  render: (args) => (
+    <Geolocation
+      {...args}
+      locationIcon=<NavigationArrowIcon size={16} />
+    />
+  ),
 };
 
 export const WithError: Story = {
@@ -128,12 +146,19 @@ export const WithError: Story = {
     error: 'Location is required',
     onChange: action('onChange'),
   },
-  render: (args) => <Geolocation {...args} locationIcon=<NavigationArrowIcon size={16} /> />,
+  render: (args) => (
+    <Geolocation
+      {...args}
+      locationIcon=<NavigationArrowIcon size={16} />
+    />
+  ),
 };
 
 export const Sizes: Story = {
   render: () => (
-    <YStack gap="$4" maxWidth={500}>
+    <YStack
+      gap="$4"
+      maxWidth={500}>
       <Text fontWeight="bold">Size $2</Text>
       <Geolocation
         label="Small"
@@ -165,7 +190,9 @@ export const Interactive: Story = {
       const [value, setValue] = useState(JSON.stringify({ lat: 40.7128, lng: -74.006 }));
       const parsed = parseGeoValue(value);
       return (
-        <YStack gap="$4" maxWidth={500}>
+        <YStack
+          gap="$4"
+          maxWidth={500}>
           <Geolocation
             label="Pick Location"
             helperText={`Lat: ${parsed?.lat.toFixed(4) ?? ''}, Lng: ${parsed?.lng.toFixed(4) ?? ''}`}
@@ -176,7 +203,11 @@ export const Interactive: Story = {
             }}
             locationIcon=<NavigationArrowIcon size={16} />
           />
-          <Geolocation label="Disabled" disabled locationIcon=<NavigationArrowIcon size={16} /> />
+          <Geolocation
+            label="Disabled"
+            disabled
+            locationIcon=<NavigationArrowIcon size={16} />
+          />
         </YStack>
       );
     };
@@ -190,7 +221,9 @@ export const WithCoordinates: Story = {
       const [value, setValue] = useState(JSON.stringify({ lat: 37.7749, lng: -122.4194 }));
       const parsed = parseGeoValue(value);
       return (
-        <YStack gap="$4" maxWidth={500}>
+        <YStack
+          gap="$4"
+          maxWidth={500}>
           <Geolocation
             label="Office Location"
             helperText={`Lat: ${parsed?.lat.toFixed(4) ?? ''}, Lng: ${parsed?.lng.toFixed(4) ?? ''}`}
@@ -217,7 +250,9 @@ export const WithExpandButton: Story = {
     const Example = () => {
       const [value, setValue] = useState(JSON.stringify({ lat: 51.5074, lng: -0.1278 }));
       return (
-        <YStack gap="$4" maxWidth={500}>
+        <YStack
+          gap="$4"
+          maxWidth={500}>
           <Geolocation
             label="Delivery Location"
             helperText="Press Expand below the map for a larger view"
@@ -250,7 +285,9 @@ export const ExpandableInForm: Story = {
       });
 
       return (
-        <Form form={form} maxWidth={500}>
+        <Form
+          form={form}
+          maxWidth={500}>
           <YStack gap="$4">
             <Geolocation
               label="Meeting Point"
@@ -270,7 +307,12 @@ export const ExpandableInForm: Story = {
 
 /** Loading placeholder — the skeleton mirrors the field + map anatomy. */
 export const SkeletonState: Story = {
-  render: (args) => <Geolocation {...args} locationIcon=<NavigationArrowIcon size={16} /> />,
+  render: (args) => (
+    <Geolocation
+      {...args}
+      locationIcon=<NavigationArrowIcon size={16} />
+    />
+  ),
   args: { label: 'Location', skeleton: true },
 };
 
@@ -288,7 +330,13 @@ const fakeGeocoder: Geocoder = {
 
 function FakeProviderExample(props: GeolocationProps) {
   const [value, setValue] = useState(props.value ?? '');
-  return <Geolocation {...props} value={value} onChange={setValue} />;
+  return (
+    <Geolocation
+      {...props}
+      value={value}
+      onChange={setValue}
+    />
+  );
 }
 
 export const SearchWithFakeProvider: Story = {
@@ -339,7 +387,13 @@ function DeferredControlledExample() {
   const [readOnly, setReadOnly] = useState(false);
   return (
     <YStack gap="$3">
-      <Geolocation label="Location" value={value} onChange={setProposal} readOnly={readOnly} geocoder={fakeGeocoder} />
+      <Geolocation
+        label="Location"
+        value={value}
+        onChange={setProposal}
+        readOnly={readOnly}
+        geocoder={fakeGeocoder}
+      />
       <Text>The parent holds the current location until it accepts the proposal.</Text>
       <Button
         onPress={() => {
@@ -347,14 +401,14 @@ function DeferredControlledExample() {
         }}>
         {readOnly ? 'Edit search' : 'Show selected fact'}
       </Button>
-      {proposal !== null ? (
+      {proposal === null ? null : (
         <Button
           onPress={() => {
             setValue(proposal);
           }}>
           Accept proposed location
         </Button>
-      ) : null}
+      )}
     </YStack>
   );
 }
@@ -367,12 +421,14 @@ function PendingReverseExample() {
   const [value, setValue] = useState(JSON.stringify({ lat: places[0].lat, lng: places[0].lng }));
   const [readOnly, setReadOnly] = useState(true);
   const [resolvePending, setResolvePending] = useState<(() => void) | null>(null);
-  const reverseGeocode = useCallback<NonNullable<GeolocationProps['reverseGeocode']>>(({ lat }) => {
+  const reverseGeocode = useCallback<NonNullable<GeolocationProps['reverseGeocode']>>(async ({ lat }) => {
     if (lat === places[0].lat) {
       return Promise.resolve(places[0]);
     }
     return new Promise((resolve) => {
-      setResolvePending(() => () => resolve(places[1]));
+      setResolvePending(() => () => {
+        resolve(places[1]);
+      });
     });
   }, []);
   return (
@@ -436,8 +492,13 @@ function LiveField(props: GeolocationProps) {
 export const LiveKeylessSearch: Story = {
   render: () => (
     <GeocoderProvider geocoder={photon}>
-      <YStack gap="$4" maxWidth={500}>
-        <LiveField label="Location" expandIcon=<ArrowsOutIcon size={16} /> />
+      <YStack
+        gap="$4"
+        maxWidth={500}>
+        <LiveField
+          label="Location"
+          expandIcon=<ArrowsOutIcon size={16} />
+        />
       </YStack>
     </GeocoderProvider>
   ),
@@ -447,9 +508,18 @@ export const LiveKeylessSearch: Story = {
 export const LiveKeylessAddress: Story = {
   render: () => (
     <GeocoderProvider geocoder={photon}>
-      <YStack gap="$4" maxWidth={500}>
-        <LiveField label="Office" value={JSON.stringify({ lat: 60.16952, lng: 24.93545 })} />
-        <Geolocation label="Office (read-only)" value={JSON.stringify({ lat: 60.16952, lng: 24.93545 })} readOnly />
+      <YStack
+        gap="$4"
+        maxWidth={500}>
+        <LiveField
+          label="Office"
+          value={JSON.stringify({ lat: 60.16952, lng: 24.93545 })}
+        />
+        <Geolocation
+          label="Office (read-only)"
+          value={JSON.stringify({ lat: 60.16952, lng: 24.93545 })}
+          readOnly
+        />
       </YStack>
     </GeocoderProvider>
   ),

@@ -9,12 +9,13 @@ import type {
 } from 'tamagui';
 import { View, XStack, YStack } from 'tamagui';
 
-import { Field, FieldLayout } from '../../fieldLayout';
+import { Field, FieldLayout } from '../../FieldLayout';
 import { getFieldError, mergeFieldHandler, useFormField, useResolvedValidators } from '../../shared/utils';
 import { Skeleton } from '../../Skeleton';
 import type { AnyFormApi } from '../../types';
 
 import { Checkbox, getCheckboxInlineGap } from './Checkbox';
+import { CheckboxGroupFlatContext } from './checkbox-group-context';
 import { CHECKBOX_TARGET_PX, clampCheckboxGlyphRadius, getCheckboxGlyphSize } from './CheckboxBox';
 import {
   CheckboxCardContent,
@@ -24,7 +25,6 @@ import {
   getCardDescriptionSize,
   getCheckboxCardLayout,
 } from './CheckboxCard';
-import { CheckboxGroupFlatContext } from './checkboxGroupContext';
 
 export interface CheckboxGroupOption {
   label: string;
@@ -133,19 +133,35 @@ export function CheckboxGroup({
     const labelWidths = [88, 64, 76];
     return (
       <CheckboxGroupFlatContext.Provider value={true}>
-        <FieldLayout id={id} label={label} size={size} knobProps={knobProps}>
+        <FieldLayout
+          id={id}
+          label={label}
+          size={size}
+          knobProps={knobProps}>
           <Container gap="$2">
             {Array.from({ length: optionCount }, (_, i) => (
-              <XStack key={i} gap={inlineGap} alignItems="center">
+              <XStack
+                key={i}
+                gap={inlineGap}
+                alignItems="center">
                 {/* Mirror the 44px pressable target box around the glyph */}
                 <View
                   width={CHECKBOX_TARGET_PX}
                   height={CHECKBOX_TARGET_PX}
                   alignItems="center"
                   justifyContent="center">
-                  <Skeleton variant="rounded" width={glyphSize} height={glyphSize} borderRadius={controlRadius} />
+                  <Skeleton
+                    variant="rounded"
+                    width={glyphSize}
+                    height={glyphSize}
+                    borderRadius={controlRadius}
+                  />
                 </View>
-                <Skeleton variant="text" width={labelWidths[i % labelWidths.length]} height={14} />
+                <Skeleton
+                  variant="text"
+                  width={labelWidths[i % labelWidths.length]}
+                  height={14}
+                />
               </XStack>
             ))}
           </Container>
@@ -234,7 +250,9 @@ export function CheckboxGroup({
                     {option.label}
                   </CheckboxCardLabel>
                   {option.description ? (
-                    <CheckboxCardDescription id={descriptionId} size={descriptionSize}>
+                    <CheckboxCardDescription
+                      id={descriptionId}
+                      size={descriptionSize}>
                       {option.description}
                     </CheckboxCardDescription>
                   ) : null}
@@ -305,11 +323,15 @@ export function CheckboxGroup({
 
   return (
     <CheckboxGroupFlatContext.Provider value={true}>
-      <Field form={resolvedForm} name={name} defaultValue={defaultValue ?? []} validators={resolvedValidators}>
+      <Field
+        form={resolvedForm}
+        name={name}
+        defaultValue={defaultValue ?? []}
+        validators={resolvedValidators}>
         {(field) => {
           const resolvedError = getFieldError(field, error);
           const fieldValues = field.state.value ?? [];
-          const currentValues = value !== undefined ? value : fieldValues;
+          const currentValues = value === undefined ? fieldValues : value;
 
           return (
             <FieldLayout

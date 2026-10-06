@@ -2,13 +2,15 @@ import { ToastProvider } from '@tamagui/toast';
 import { useContext, useEffect, useInsertionEffect, useMemo, useRef } from 'react';
 import type { PropsWithChildren } from 'react';
 import { useCookies } from 'react-cookie';
-import { type CreateTamaguiProps, TamaguiProvider, type TamaguiProviderProps, useDidFinishSSR } from 'tamagui';
+import { TamaguiProvider, useDidFinishSSR } from 'tamagui';
+import type { CreateTamaguiProps, TamaguiProviderProps } from 'tamagui';
 
 import { animationDurations } from './animations/css';
 import { getCookieWatchList, readOverridesCookie, readPresetCookie } from './cookies';
-import { CornerSmoothingStyles } from './cornerSmoothing';
+import { CornerSmoothingStyles } from './corner-smoothing';
 import { FontKnobStyles } from './FontKnobStyles';
-import { PresetContext, type PresetContextValue } from './PresetContext';
+import { PresetContext } from './preset-context';
+import type { PresetContextValue } from './preset-context';
 import { defaultPreset } from './presets';
 import { getPreset } from './shared';
 
@@ -80,7 +82,7 @@ export function ThemeProvider<T extends CreateTamaguiProps>({
     if (typeof document === 'undefined' || !hydrated) {
       return;
     }
-    const classList = document.documentElement.classList;
+    const { classList } = document.documentElement;
     const toAdd = `t_${activeTheme}`;
     if (!classList.contains(toAdd)) {
       classList.remove(activeTheme === 'dark' ? 't_light' : 't_dark');
@@ -101,7 +103,7 @@ export function ThemeProvider<T extends CreateTamaguiProps>({
     }
 
     startThemeTransition(() => {
-      const classList = document.documentElement.classList;
+      const { classList } = document.documentElement;
       classList.remove(activeTheme === 'dark' ? 't_light' : 't_dark');
       classList.add(`t_${activeTheme}`);
       document.documentElement.style.colorScheme = activeTheme;
@@ -144,11 +146,15 @@ export function ThemeProvider<T extends CreateTamaguiProps>({
       '  animation-duration: calc(var(--mp-transition) * 1);',
       '}',
     ].join('\n');
-    document.head.appendChild(style);
+    document.head.append(style);
   }, []);
 
   return (
-    <TamaguiProvider {...tamaguiProps} config={config?.tamagui} defaultTheme={activeTheme} disableInjectCSS={false}>
+    <TamaguiProvider
+      {...tamaguiProps}
+      config={config?.tamagui}
+      defaultTheme={activeTheme}
+      disableInjectCSS={false}>
       <ToastProvider>
         <KnobBridge>{children}</KnobBridge>
       </ToastProvider>

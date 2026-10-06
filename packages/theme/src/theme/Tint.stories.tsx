@@ -1,7 +1,8 @@
-import { type ReactNode, useMemo } from 'react';
+import { useMemo } from 'react';
+import type { ReactNode } from 'react';
 import { SizableText, XStack, YStack } from 'tamagui';
 
-import { PresetContext, usePresetContext } from './PresetContext';
+import { PresetContext, usePresetContext } from './preset-context';
 import { defaultPreset } from './presets';
 import { Tint, useTintDepth } from './Tint';
 
@@ -79,7 +80,10 @@ export const altAndDisable = {
   name: 'Alt and disable',
   render: () => (
     <WithDefaultTints>
-      <XStack gap="$4" flexWrap="wrap" alignItems="flex-start">
+      <XStack
+        gap="$4"
+        flexWrap="wrap"
+        alignItems="flex-start">
         <Tint>
           <Swatch label="plain" />
         </Tint>

@@ -1,8 +1,9 @@
 import { action } from '@repo/storybook';
 import type { Meta } from '@storybook/react-native-web-vite';
 
-import { MatrixView, type MatrixRow } from './Matrix';
-import type { MatrixCell } from './matrixMath';
+import { MatrixView } from './Matrix';
+import type { MatrixRow } from './Matrix';
+import type { MatrixCell } from './matrix-math';
 
 const accounts: MatrixRow[] = [
   { id: 'checking', label: 'Checking' },

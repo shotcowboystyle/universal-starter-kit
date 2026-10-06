@@ -154,11 +154,29 @@ export const WithError: Story = {
 export const Sizes: Story = {
   render: () => (
     <YStack gap="$4">
-      <XStack gap="$4" alignItems="flex-end">
-        <ImageField label="Small (32x32)" imageWidth={32} imageHeight={32} />
-        <ImageField label="Medium (48x48)" imageWidth={48} imageHeight={48} />
-        <ImageField label="Large (64x64)" imageWidth={64} imageHeight={64} />
-        <ImageField label="XL (96x96)" imageWidth={96} imageHeight={96} />
+      <XStack
+        gap="$4"
+        alignItems="flex-end">
+        <ImageField
+          label="Small (32x32)"
+          imageWidth={32}
+          imageHeight={32}
+        />
+        <ImageField
+          label="Medium (48x48)"
+          imageWidth={48}
+          imageHeight={48}
+        />
+        <ImageField
+          label="Large (64x64)"
+          imageWidth={64}
+          imageHeight={64}
+        />
+        <ImageField
+          label="XL (96x96)"
+          imageWidth={96}
+          imageHeight={96}
+        />
       </XStack>
     </YStack>
   ),
@@ -167,9 +185,24 @@ export const Sizes: Story = {
 export const RectangularSizes: Story = {
   render: () => (
     <YStack gap="$4">
-      <ImageField label="Banner (200x80)" imageWidth={200} imageHeight={80} placeholder="Banner" />
-      <ImageField label="Logo (160x40)" imageWidth={160} imageHeight={40} placeholder="Logo" />
-      <ImageField label="Thumbnail (120x90)" imageWidth={120} imageHeight={90} placeholder="Thumb" />
+      <ImageField
+        label="Banner (200x80)"
+        imageWidth={200}
+        imageHeight={80}
+        placeholder="Banner"
+      />
+      <ImageField
+        label="Logo (160x40)"
+        imageWidth={160}
+        imageHeight={40}
+        placeholder="Logo"
+      />
+      <ImageField
+        label="Thumbnail (120x90)"
+        imageWidth={120}
+        imageHeight={90}
+        placeholder="Thumb"
+      />
     </YStack>
   ),
 };

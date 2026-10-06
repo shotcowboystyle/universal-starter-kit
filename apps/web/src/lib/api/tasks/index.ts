@@ -1,9 +1,9 @@
 // Core API client
-export { taskApi } from "../taskApi";
+export { taskApi } from '../task-api';
 
 // Types and constants
-export type { CreateTaskInput, UpdateTaskInput } from "@/types/taskApi";
-export { TASK_KEYS } from "@/types/taskApi";
+export type { CreateTaskInput, UpdateTaskInput } from '@/types/task-api';
+export { TASK_KEYS } from '@/types/task-api';
 
 // Query and mutation hooks
-export { useTasks, useTask, useCreateTask, useUpdateTask, useDeleteTask } from "./queries";
+export { useTasks, useTask, useCreateTask, useUpdateTask, useDeleteTask } from './queries';

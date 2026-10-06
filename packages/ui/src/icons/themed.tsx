@@ -13,8 +13,8 @@ export function themed<A extends FC>(Component: A) {
     const { color, disableTheme, size } = useProps(props);
     const theme = useTheme();
     const fromTheme = typeof color === 'string' && color in theme ? theme[color as keyof typeof theme] : undefined;
-    const resolved = fromTheme || color || (!disableTheme ? theme.color : undefined);
-    const colorValue = resolved != null ? getVariable(resolved) : 'currentColor';
+    const resolved = fromTheme || color || (disableTheme ? undefined : theme.color);
+    const colorValue = resolved == null ? 'currentColor' : getVariable(resolved);
     return (
       <Component
         {...props}

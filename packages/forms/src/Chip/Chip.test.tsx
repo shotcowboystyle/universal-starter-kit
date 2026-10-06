@@ -25,7 +25,9 @@ describe('Chip', () => {
   it('disabled chip removes the dismiss affordance', () => {
     const onDismiss = vi.fn();
     const result = renderWithProviders(
-      <Chip disabled onDismiss={onDismiss}>
+      <Chip
+        disabled
+        onDismiss={onDismiss}>
         Locked
       </Chip>,
     );
@@ -105,7 +107,7 @@ describe('Chip', () => {
     const target = result.container.querySelector("[aria-label='Remove Tag']") as HTMLElement;
     expect(target).not.toBeNull();
     fireEvent.click(target);
-    expect(onDismiss).toHaveBeenCalledTimes(1);
+    expect(onDismiss).toHaveBeenCalledOnce();
   });
 
   it('dismiss fires onDismiss on Enter and Space', () => {
@@ -128,7 +130,7 @@ describe('Chip', () => {
     // The ring (and the glyph inside it) is where real pointers land.
     const inner = (target.firstElementChild ?? target) as HTMLElement;
     fireEvent.click(inner);
-    expect(onDismiss).toHaveBeenCalledTimes(1);
+    expect(onDismiss).toHaveBeenCalledOnce();
   });
 
   it('dismiss fires onDismiss on Enter', () => {
@@ -136,7 +138,7 @@ describe('Chip', () => {
     const result = renderWithProviders(<Chip onDismiss={onDismiss}>Tag</Chip>);
     const target = result.container.querySelector("[aria-label='Remove Tag']") as HTMLElement;
     fireEvent.keyDown(target, { key: 'Enter' });
-    expect(onDismiss).toHaveBeenCalledTimes(1);
+    expect(onDismiss).toHaveBeenCalledOnce();
   });
 
   it('display-only chip is not a tab stop', () => {
@@ -172,7 +174,9 @@ describe('Chip', () => {
 
   it('selected chip marks fill, not a selection outline', () => {
     const result = renderWithProviders(
-      <Chip selected variant="outline">
+      <Chip
+        selected
+        variant="outline">
         On
       </Chip>,
     );
@@ -194,12 +198,14 @@ describe('Chip', () => {
     const onPress = vi.fn();
     const onDismiss = vi.fn();
     const result = renderWithProviders(
-      <Chip onPress={onPress} onDismiss={onDismiss}>
+      <Chip
+        onPress={onPress}
+        onDismiss={onDismiss}>
         Tag
       </Chip>,
     );
     fireEvent.click(result.container.querySelector('.mp-chip-body') as HTMLElement);
-    expect(onPress).toHaveBeenCalledTimes(1);
+    expect(onPress).toHaveBeenCalledOnce();
     expect(onDismiss).not.toHaveBeenCalled();
   });
 
@@ -209,7 +215,7 @@ describe('Chip', () => {
     fireEvent.keyDown(result.container.querySelector('.mp-chip-body') as HTMLElement, {
       key: 'Delete',
     });
-    expect(onDismiss).toHaveBeenCalledTimes(1);
+    expect(onDismiss).toHaveBeenCalledOnce();
   });
 
   it('label click on a dismiss-only chip does not dismiss (parent press still works)', () => {
@@ -221,7 +227,9 @@ describe('Chip', () => {
 
   it('stacked groupPosition is declared on the frame', () => {
     const result = renderWithProviders(
-      <Chip groupPosition="first" groupOrientation="horizontal">
+      <Chip
+        groupPosition="first"
+        groupOrientation="horizontal">
         A
       </Chip>,
     );

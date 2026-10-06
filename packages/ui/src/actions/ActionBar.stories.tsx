@@ -5,7 +5,8 @@ import { Paragraph, YStack } from 'tamagui';
 
 import { Card } from '../surfaces';
 
-import { ActionBar, type ActionBarProps } from './ActionBar';
+import { ActionBar } from './ActionBar';
+import type { ActionBarProps } from './ActionBar';
 
 /**
  * Presses land in the story itself rather than the Actions panel: the panel's
@@ -21,7 +22,9 @@ function useLastPressed() {
       setLast(label);
     },
     readout: (
-      <Paragraph size="$2" color="$color11">
+      <Paragraph
+        size="$2"
+        color="$color11">
         {last === null ? 'No action pressed yet.' : `Last pressed: ${last}`}
       </Paragraph>
     ),
@@ -58,12 +61,16 @@ function Basic(args: Partial<ActionBarProps>) {
         <ActionBar
           {...args}
           cancel={
-            <Button chromeless onPress={press('Cancel')}>
+            <Button
+              chromeless
+              onPress={press('Cancel')}>
               Cancel
             </Button>
           }
           primary={
-            <Button accent onPress={press('Save changes')}>
+            <Button
+              accent
+              onPress={press('Save changes')}>
               Save changes
             </Button>
           }
@@ -81,20 +88,28 @@ function FullRow() {
         {readout}
         <ActionBar
           cancel={
-            <Button chromeless onPress={press('Cancel')}>
+            <Button
+              chromeless
+              onPress={press('Cancel')}>
               Cancel
             </Button>
           }
           secondary={[
-            <Button key="draft" onPress={press('Save draft')}>
+            <Button
+              key="draft"
+              onPress={press('Save draft')}>
               Save draft
             </Button>,
-            <Button key="preview" onPress={press('Preview')}>
+            <Button
+              key="preview"
+              onPress={press('Preview')}>
               Preview
             </Button>,
           ]}
           primary={
-            <Button accent onPress={press('Publish')}>
+            <Button
+              accent
+              onPress={press('Publish')}>
               Publish
             </Button>
           }
@@ -117,7 +132,9 @@ export const WithSecondary: Story = {
 
 export const Alignments: Story = {
   render: () => (
-    <YStack gap="$4" maxWidth={520}>
+    <YStack
+      gap="$4"
+      maxWidth={520}>
       {(['start', 'end', 'between'] as const).map((align) => (
         <Card key={align}>
           <YStack gap="$2">
@@ -144,22 +161,24 @@ export const CancelNeverDisabled: Story = {
       },
     },
   },
-  render: () => {
-    return (
-      <Card maxWidth={480}>
-        <ActionBar
-          cancel={
-            <Button chromeless disabled>
-              Cancel
-            </Button>
-          }
-          primary={
-            <Button accent disabled>
-              Save changes
-            </Button>
-          }
-        />
-      </Card>
-    );
-  },
+  render: () => (
+    <Card maxWidth={480}>
+      <ActionBar
+        cancel={
+          <Button
+            chromeless
+            disabled>
+            Cancel
+          </Button>
+        }
+        primary={
+          <Button
+            accent
+            disabled>
+            Save changes
+          </Button>
+        }
+      />
+    </Card>
+  ),
 };

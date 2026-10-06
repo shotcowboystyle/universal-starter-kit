@@ -7,7 +7,7 @@ import { PieChart } from './PieChart';
 
 afterEach(cleanup);
 
-it.each(['regular', 'bold'] as const)('propagates %s body weight to legend labels and values', (fontWeight) => {
+test.each(['regular', 'bold'] as const)('propagates %s body weight to legend labels and values', (fontWeight) => {
   const { container } = renderWithProviders(
     <Preset overrides={{ fontWeight, bodyFont: 'mono' }}>
       <PieChart data={[{ label: 'Enterprise', value: 55 }]} />

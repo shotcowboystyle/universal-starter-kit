@@ -79,7 +79,7 @@ describe('SortableList', () => {
     expect(liveRegion()?.textContent).toBe(beforeBoundary);
 
     fireEvent.keyDown(tuesday, { key: ' ' });
-    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledOnce();
     expect(onChange.mock.calls[0][0].map((r: { id: string }) => r.id)).toEqual(['mon', 'dep', 'ret', 'tue']);
     expect(liveRegion()?.textContent).toBe('Dropped “Tuesday review”, position 4 of 4.');
     expect(document.activeElement?.getAttribute('data-sortable-row')).toBe('tue');
@@ -145,7 +145,7 @@ describe('SortableList', () => {
   });
 
   it('spreads the outer radius fragment on the list frame, not the nested alias', () => {
-    const src = readFileSync(join(here, 'index.tsx'), 'utf8');
+    const src = readFileSync(join(here, 'index.tsx'), 'utf-8');
     expect(src).toContain('{...knobProps.borderRadius}');
     expect(src).not.toContain('knobProps.borderRadiusOuter');
   });

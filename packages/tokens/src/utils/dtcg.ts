@@ -32,7 +32,7 @@ type DTCGTokenGroup<T = string> = {
  * @returns Numeric value
  */
 function parseDesignTokenDimension(value: string): number {
-  return parseInt(value.replace('px', ''), 10);
+  return Number.parseInt(value.replace('px', ''), 10);
 }
 
 /**
@@ -53,7 +53,7 @@ function isToken<T>(value: unknown): value is DTCGToken<T> {
 function transformTokenGroup<TIn, TOut>(
   group: DTCGTokenGroup<TIn>,
   transform: (token: DTCGToken<TIn>) => TOut,
-): Array<[string, TOut]> {
+): [string, TOut][] {
   return Object.entries(group)
     .filter((entry): entry is [string, DTCGToken<TIn>] => {
       const [key, value] = entry;
@@ -100,7 +100,7 @@ function parseDesignTokenShadowGroup(group: DTCGTokenGroup<DTCGShadowValue>): Re
  * @returns Object with numeric weight values
  */
 function parseDesignTokenFontWeightGroup(group: DTCGTokenGroup): Record<string, number> {
-  return Object.fromEntries(transformTokenGroup(group, (token) => parseInt(token.$value, 10)));
+  return Object.fromEntries(transformTokenGroup(group, (token) => Number.parseInt(token.$value, 10)));
 }
 
 /**
@@ -109,7 +109,7 @@ function parseDesignTokenFontWeightGroup(group: DTCGTokenGroup): Record<string, 
  * @returns Object with numeric values
  */
 function parseDesignTokenNumberGroup(group: DTCGTokenGroup): Record<string, number> {
-  return Object.fromEntries(transformTokenGroup(group, (token) => parseFloat(token.$value)));
+  return Object.fromEntries(transformTokenGroup(group, (token) => Number.parseFloat(token.$value)));
 }
 
 export {

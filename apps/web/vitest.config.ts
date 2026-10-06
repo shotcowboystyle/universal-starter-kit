@@ -1,4 +1,4 @@
-import path from 'path';
+import path from 'node:path';
 
 import { createVitestConfig } from '@repo/config/vitest';
 import { mergeConfig } from 'vitest/config';
@@ -10,7 +10,7 @@ const base = createVitestConfig({
   environment: 'jsdom',
   setupFiles: ['@repo/test-utils/setup', './vitest.setup.ts'],
   include: ['__tests__/**/*.test.{ts,tsx}'],
-  exclude: ['__tests__/e2e/**', '**/node_modules/**'],
+  exclude: ['e2e/**', '**/node_modules/**'],
   // Bundle these so they share the single React copy the preset pins.
   inlineDeps: ['zustand', '@testing-library/react', '@testing-library/dom'],
 });

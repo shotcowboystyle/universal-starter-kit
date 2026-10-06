@@ -14,16 +14,21 @@
  * own lane, not this one.
  */
 import { MagnifyingGlassIcon, XIcon } from '@phosphor-icons/react';
-import { useTouchSurface } from '@repo/theme';
-import { MIN_PRESS_TARGET, ensureCompositeFocusRing, pressTargetHitSlop, sizeRecipeForToken } from '@repo/theme';
+import {
+  useTouchSurface,
+  MIN_PRESS_TARGET,
+  ensureCompositeFocusRing,
+  pressTargetHitSlop,
+  sizeRecipeForToken,
+} from '@repo/theme';
 import type { ComponentProps, ReactNode, RefObject } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { LabelProps, SizeTokens, TamaguiElement } from 'tamagui';
 import { View, isWeb } from 'tamagui';
 
-import { Field, FieldLayout } from '../../fieldLayout';
+import { Field, FieldLayout } from '../../FieldLayout';
 import { Input as InputParts } from '../../InputParts';
-import { formCommonColors } from '../../shared/colorRamps';
+import { formCommonColors } from '../../shared/color-ramps';
 import { bidiIsolate, t } from '../../shared/t';
 import {
   getFieldError,
@@ -108,7 +113,7 @@ function ensureSearchInputChrome() {
   const tag = document.createElement('style');
   tag.id = SEARCH_STYLE_ID;
   tag.textContent = searchInputCss;
-  document.head.appendChild(tag);
+  document.head.append(tag);
 }
 
 function focusArea(ref: RefObject<TamaguiElement | null>) {
@@ -408,7 +413,9 @@ export function SearchInput({
               justifyContent="center"
               hoverStyle={{ backgroundColor: '$color4' }}
               pressStyle={{ backgroundColor: '$color5' }}>
-              <InputParts.Icon aria-hidden color={formCommonColors.muted}>
+              <InputParts.Icon
+                aria-hidden
+                color={formCommonColors.muted}>
                 <XIcon size={resolvedIconSize} />
               </InputParts.Icon>
             </View>
@@ -420,9 +427,15 @@ export function SearchInput({
 
   if (skeleton) {
     return (
-      <FieldLayout {...layoutBind} error={error}>
+      <FieldLayout
+        {...layoutBind}
+        error={error}>
         <InputParts size={resolvedSize}>
-          <Skeleton variant="rounded" width="100%" height={visualHeight} />
+          <Skeleton
+            variant="rounded"
+            width="100%"
+            height={visualHeight}
+          />
         </InputParts>
       </FieldLayout>
     );
@@ -430,19 +443,31 @@ export function SearchInput({
 
   if (!resolvedForm || !name) {
     return (
-      <FieldLayout {...layoutBind} error={error} onBlur={onBlur}>
+      <FieldLayout
+        {...layoutBind}
+        error={error}
+        onBlur={onBlur}>
         <InputParts size={resolvedSize}>{renderBox(standaloneText, undefined, !!error)}</InputParts>
       </FieldLayout>
     );
   }
 
   return (
-    <Field form={resolvedForm} name={name} defaultValue={defaultValue} validators={resolvedValidators}>
+    <Field
+      form={resolvedForm}
+      name={name}
+      defaultValue={defaultValue}
+      validators={resolvedValidators}>
       {(field) => {
         const resolvedError = getFieldError(field, error);
         return (
-          <FieldLayout {...layoutBind} error={resolvedError} onBlur={mergeFieldHandler(field, 'handleBlur', onBlur)}>
-            <InputParts size={resolvedSize} {...(resolvedError ? { theme: 'error' } : undefined)}>
+          <FieldLayout
+            {...layoutBind}
+            error={resolvedError}
+            onBlur={mergeFieldHandler(field, 'handleBlur', onBlur)}>
+            <InputParts
+              size={resolvedSize}
+              {...(resolvedError ? { theme: 'error' } : undefined)}>
               {renderBox(
                 String(field.state.value ?? ''),
                 (next) => {

@@ -84,13 +84,15 @@ export const multiStepRegistration: Story = {
     const renderPersonalInfo = () => (
       <FormSection label="Personal Information">
         <YStack ref={focusManagement.containerRef as never}>
-          <FieldGroup legend="Full Name" columns={2}>
+          <FieldGroup
+            legend="Full Name"
+            columns={2}>
             <Input
               form={form as unknown as AnyFormApi}
               name="firstName"
               inputProps={{ placeholder: 'First Name' }}
               validators={{
-                onChange: ({ value }) => (!value ? 'First name is required' : undefined),
+                onChange: ({ value }) => (value ? undefined : 'First name is required'),
               }}
             />
             <Input
@@ -98,7 +100,7 @@ export const multiStepRegistration: Story = {
               name="lastName"
               inputProps={{ placeholder: 'Last Name' }}
               validators={{
-                onChange: ({ value }) => (!value ? 'Last name is required' : undefined),
+                onChange: ({ value }) => (value ? undefined : 'Last name is required'),
               }}
             />
           </FieldGroup>
@@ -129,7 +131,7 @@ export const multiStepRegistration: Story = {
           inputProps={{ placeholder: 'Enter your phone number' }}
           defaultCountry="US"
           validators={{
-            onChange: ({ value }) => (!value ? 'Phone number is required' : undefined),
+            onChange: ({ value }) => (value ? undefined : 'Phone number is required'),
           }}
         />
 
@@ -205,11 +207,15 @@ export const multiStepRegistration: Story = {
           name="agreeToTerms"
           label="I agree to the Terms and Conditions"
           validators={{
-            onChange: ({ value }) => (!value ? 'You must agree to the terms' : undefined),
+            onChange: ({ value }) => (value ? undefined : 'You must agree to the terms'),
           }}
         />
 
-        <Switch form={form as unknown as AnyFormApi} name="marketingEmails" label="Subscribe to marketing emails" />
+        <Switch
+          form={form as unknown as AnyFormApi}
+          name="marketingEmails"
+          label="Subscribe to marketing emails"
+        />
 
         <Input
           form={form as unknown as AnyFormApi}
@@ -263,7 +269,9 @@ export const multiStepRegistration: Story = {
           </Button>
           <form.Subscribe selector={(state) => [state.canSubmit, state.isSubmitting]}>
             {([canSubmit, isSubmitting]) => (
-              <Button action="submit" disabled={!canSubmit || isSubmitting}>
+              <Button
+                action="submit"
+                disabled={!canSubmit || isSubmitting}>
                 {isSubmitting ? 'Submitting...' : 'Complete Registration'}
               </Button>
             )}
@@ -274,7 +282,10 @@ export const multiStepRegistration: Story = {
 
     return (
       <ScrollView>
-        <View padding="$4" maxWidth={600} alignSelf="center">
+        <View
+          padding="$4"
+          maxWidth={600}
+          alignSelf="center">
           <Form form={form as unknown as AnyFormApi}>
             {step === 'personal' && renderPersonalInfo()}
             {step === 'contact' && renderContactPreferences()}
@@ -292,9 +303,16 @@ export const inputComposition: Story = {
 
     return (
       <ScrollView>
-        <View padding="$4" maxWidth={600} alignSelf="center">
-          <FormSection label="Input Composition Patterns" maxWidth="fluid">
-            <FormSection label="Convenience Props (recommended)" maxWidth="fluid">
+        <View
+          padding="$4"
+          maxWidth={600}
+          alignSelf="center">
+          <FormSection
+            label="Input Composition Patterns"
+            maxWidth="fluid">
+            <FormSection
+              label="Convenience Props (recommended)"
+              maxWidth="fluid">
               <Input
                 label="Email"
                 placeholder="you@example.com"
@@ -326,7 +344,11 @@ export const inputComposition: Story = {
                 }
               />
 
-              <Input label="Required Field" placeholder="This field is required" required />
+              <Input
+                label="Required Field"
+                placeholder="This field is required"
+                required
+              />
 
               {/* Error copy states the problem + fix without the
                   banned invalid/error/please words. */}
@@ -363,7 +385,9 @@ export const inputComposition: Story = {
 
             <Separator />
 
-            <FormSection label="Compound Composition (full control)" maxWidth="fluid">
+            <FormSection
+              label="Compound Composition (full control)"
+              maxWidth="fluid">
               <Input>
                 <Input.Label>Custom Styled Label</Input.Label>
                 <Input.Box>
@@ -387,7 +411,9 @@ export const inputComposition: Story = {
                 <Input.Box>
                   <Input.Area placeholder="Something went wrong" />
                 </Input.Box>
-                <Input.Info color="$red11" role="alert">
+                <Input.Info
+                  color="$red11"
+                  role="alert">
                   This value must match the expected format
                 </Input.Info>
               </Input>

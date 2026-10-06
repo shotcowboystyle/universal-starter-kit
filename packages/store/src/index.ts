@@ -1,5 +1,5 @@
 import { useStore as tanstackUseStore } from '@tanstack/react-store';
-import { type Store } from '@tanstack/store';
+import type { Store } from '@tanstack/store';
 
 // Domain types
 export type {
@@ -16,17 +16,17 @@ export type {
 export { TaskStatus } from './types';
 
 // Workspace types (interface only — implementations live in each app)
-export type { WorkspaceState } from './workspaceTypes';
+export type { WorkspaceState } from './workspace-types';
 
 // Auth store (zustand + StorageAdapter)
-export type { StorageAdapter } from './storageAdapter';
-export { createStorage } from './storageAdapter';
-export type { AuthState } from './authStore';
-export { createAuthStore } from './authStore';
+export type { StorageAdapter } from './storage-adapter';
+export { createStorage } from './storage-adapter';
+export type { AuthState } from './auth-store';
+export { createAuthStore } from './auth-store';
 
 // TanStack Store primitives
-export { createStore } from './createStore';
-export type { StoreOptions } from './createStore';
+export { createStore } from './create-store';
+export type { StoreOptions } from './create-store';
 export { storage } from './storage';
 export type { Storage, PersistOptions, PersistStore } from './persist';
 export { createPersistStore } from './persist';

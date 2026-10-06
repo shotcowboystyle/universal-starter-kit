@@ -1,6 +1,7 @@
 import { createI18nConfig, defaultLocale, locales, messages } from '@repo/i18n';
 import { createPreview } from '@repo/storybook';
-import { type ThemeConfig, ThemeProvider, createDefaultThemeConfig } from '@repo/theme';
+import { ThemeProvider, createDefaultThemeConfig } from '@repo/theme';
+import type { ThemeConfig } from '@repo/theme';
 import i18n from 'i18next';
 import type { ReactNode } from 'react';
 import { initReactI18next } from 'react-i18next';
@@ -28,7 +29,9 @@ function AppProvider({
   children?: ReactNode;
 }) {
   return (
-    <ThemeProvider config={{ tamagui: activeThemeConfig.tamagui }} systemTheme={systemTheme}>
+    <ThemeProvider
+      config={{ tamagui: activeThemeConfig.tamagui }}
+      systemTheme={systemTheme}>
       {children}
     </ThemeProvider>
   );

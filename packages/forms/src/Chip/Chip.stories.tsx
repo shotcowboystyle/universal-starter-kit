@@ -4,7 +4,8 @@ import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { useState } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 
-import { Chip, type ChipColor, type ChipSize, type ChipVariantProp } from './index';
+import { Chip } from './index';
+import type { ChipColor, ChipSize, ChipVariantProp } from './index';
 
 const meta: Meta<typeof Chip> = {
   title: 'Forms/Chip',
@@ -34,12 +35,20 @@ export const Variants: Story = {
     return (
       <YStack gap="$3">
         {variants.map((variant) => (
-          <XStack key={variant} gap="$2" alignItems="center">
-            <Text width={80} fontSize="$2" color="$color10">
+          <XStack
+            key={variant}
+            gap="$2"
+            alignItems="center">
+            <Text
+              width={80}
+              fontSize="$2"
+              color="$color10">
               {variant}
             </Text>
             <Chip variant={variant}>Chip</Chip>
-            <Chip variant={variant} color="blue">
+            <Chip
+              variant={variant}
+              color="blue">
               Blue
             </Chip>
           </XStack>
@@ -55,13 +64,22 @@ export const Colors: Story = {
     return (
       <YStack gap="$4">
         {(['subtle', 'outline', 'solid'] as ChipVariantProp[]).map((variant) => (
-          <YStack key={variant} gap="$2">
-            <Text fontWeight="400" fontSize="$2">
+          <YStack
+            key={variant}
+            gap="$2">
+            <Text
+              fontWeight="400"
+              fontSize="$2">
               {variant}
             </Text>
-            <XStack gap="$2" flexWrap="wrap">
+            <XStack
+              gap="$2"
+              flexWrap="wrap">
               {colors.map((color) => (
-                <Chip key={color} variant={variant} color={color}>
+                <Chip
+                  key={color}
+                  variant={variant}
+                  color={color}>
                   {color}
                 </Chip>
               ))}
@@ -77,9 +95,13 @@ export const Sizes: Story = {
   render: () => {
     const sizes: ChipSize[] = ['$2', '$3', '$4', '$5'];
     return (
-      <XStack gap="$2" alignItems="center">
+      <XStack
+        gap="$2"
+        alignItems="center">
         {sizes.map((size) => (
-          <Chip key={size} size={size}>
+          <Chip
+            key={size}
+            size={size}>
             Size {size}
           </Chip>
         ))}
@@ -90,14 +112,27 @@ export const Sizes: Story = {
 
 export const Selected: Story = {
   render: () => (
-    <XStack gap="$2" flexWrap="wrap" alignItems="center">
-      <Chip variant="outline" selected={false} onPress={() => action('press')('idle')}>
+    <XStack
+      gap="$2"
+      flexWrap="wrap"
+      alignItems="center">
+      <Chip
+        variant="outline"
+        selected={false}
+        onPress={() => action('press')('idle')}>
         Idle
       </Chip>
-      <Chip variant="outline" selected onPress={() => action('press')('on')}>
+      <Chip
+        variant="outline"
+        selected
+        onPress={() => action('press')('on')}>
         Selected
       </Chip>
-      <Chip variant="outline" selected onPress={() => action('press')('blue')} color="blue">
+      <Chip
+        variant="outline"
+        selected
+        onPress={() => action('press')('blue')}
+        color="blue">
         Blue selected
       </Chip>
     </XStack>
@@ -113,7 +148,9 @@ export const Filter: Story = {
       Electric: false,
     });
     return (
-      <XStack gap="$2" flexWrap="wrap">
+      <XStack
+        gap="$2"
+        flexWrap="wrap">
         {Object.keys(on).map((label) => (
           <Chip
             key={label}
@@ -132,15 +169,28 @@ export const Filter: Story = {
 
 export const WithIcon: Story = {
   render: () => (
-    <XStack gap="$2" flexWrap="wrap" alignItems="center">
+    <XStack
+      gap="$2"
+      flexWrap="wrap"
+      alignItems="center">
       <Chip icon=<TagIcon />>Tagged</Chip>
-      <Chip icon=<LightningIcon /> color="yellow" variant="solid">
+      <Chip
+        icon=<LightningIcon />
+        color="yellow"
+        variant="solid">
         Electric
       </Chip>
-      <Chip icon=<CheckIcon /> color="green" selected onPress={() => {}}>
+      <Chip
+        icon=<CheckIcon />
+        color="green"
+        selected
+        onPress={() => {}}>
         Ready
       </Chip>
-      <Chip icon=<TagIcon /> onDismiss={() => action('onDismiss')('Tagged')} color="purple">
+      <Chip
+        icon=<TagIcon />
+        onDismiss={() => action('onDismiss')('Tagged')}
+        color="purple">
         Removable
       </Chip>
     </XStack>
@@ -149,12 +199,18 @@ export const WithIcon: Story = {
 
 export const Dismissible: Story = {
   render: () => (
-    <XStack gap="$2" flexWrap="wrap">
+    <XStack
+      gap="$2"
+      flexWrap="wrap">
       <Chip onDismiss={() => action('onDismiss')('React')}>React</Chip>
-      <Chip onDismiss={() => action('onDismiss')('TypeScript')} color="blue">
+      <Chip
+        onDismiss={() => action('onDismiss')('TypeScript')}
+        color="blue">
         TypeScript
       </Chip>
-      <Chip onDismiss={() => action('onDismiss')('Tamagui')} color="purple">
+      <Chip
+        onDismiss={() => action('onDismiss')('Tamagui')}
+        color="purple">
         Tamagui
       </Chip>
     </XStack>
@@ -163,17 +219,31 @@ export const Dismissible: Story = {
 
 export const DismissibleSizes: Story = {
   render: () => (
-    <XStack gap="$2" flexWrap="wrap" alignItems="center">
-      <Chip size="$2" onDismiss={() => action('onDismiss')('$2')}>
+    <XStack
+      gap="$2"
+      flexWrap="wrap"
+      alignItems="center">
+      <Chip
+        size="$2"
+        onDismiss={() => action('onDismiss')('$2')}>
         Size $2
       </Chip>
-      <Chip size="$3" onDismiss={() => action('onDismiss')('$3')} color="blue">
+      <Chip
+        size="$3"
+        onDismiss={() => action('onDismiss')('$3')}
+        color="blue">
         Size $3
       </Chip>
-      <Chip size="$4" onDismiss={() => action('onDismiss')('$4')} color="green">
+      <Chip
+        size="$4"
+        onDismiss={() => action('onDismiss')('$4')}
+        color="green">
         Size $4
       </Chip>
-      <Chip size="$5" onDismiss={() => action('onDismiss')('$5')} color="purple">
+      <Chip
+        size="$5"
+        onDismiss={() => action('onDismiss')('$5')}
+        color="purple">
         Size $5
       </Chip>
     </XStack>
@@ -184,10 +254,15 @@ export const Disabled: Story = {
   render: () => (
     <XStack gap="$2">
       <Chip disabled>Disabled</Chip>
-      <Chip disabled onDismiss={() => {}}>
+      <Chip
+        disabled
+        onDismiss={() => {}}>
         Disabled Dismissible
       </Chip>
-      <Chip disabled selected onPress={() => {}}>
+      <Chip
+        disabled
+        selected
+        onPress={() => {}}>
         Disabled selected
       </Chip>
     </XStack>
@@ -198,13 +273,19 @@ export const Disabled: Story = {
 export const Grouped: Story = {
   render: () => (
     <XStack>
-      <Chip groupPosition="first" variant="outline">
+      <Chip
+        groupPosition="first"
+        variant="outline">
         First
       </Chip>
-      <Chip groupPosition="middle" variant="outline">
+      <Chip
+        groupPosition="middle"
+        variant="outline">
         Middle
       </Chip>
-      <Chip groupPosition="last" variant="outline">
+      <Chip
+        groupPosition="last"
+        variant="outline">
         Last
       </Chip>
     </XStack>
@@ -216,7 +297,9 @@ export const AllStates: Story = {
     <YStack gap="$6">
       <YStack gap="$2">
         <Text fontWeight="400">Variants</Text>
-        <XStack gap="$2" flexWrap="wrap">
+        <XStack
+          gap="$2"
+          flexWrap="wrap">
           <Chip variant="solid">Solid</Chip>
           <Chip variant="subtle">Subtle</Chip>
           <Chip variant="outline">Outline</Chip>
@@ -224,7 +307,9 @@ export const AllStates: Story = {
       </YStack>
       <YStack gap="$2">
         <Text fontWeight="400">Aliases</Text>
-        <XStack gap="$2" flexWrap="wrap">
+        <XStack
+          gap="$2"
+          flexWrap="wrap">
           <Chip variant="filled">Filled</Chip>
           <Chip variant="ghost">Ghost</Chip>
           <Chip variant="outlined">Outlined</Chip>
@@ -234,7 +319,9 @@ export const AllStates: Story = {
         <Text fontWeight="400">Dismissible</Text>
         <XStack gap="$2">
           <Chip onDismiss={() => action('dismiss')()}>Dismissible</Chip>
-          <Chip onDismiss={() => action('dismiss')()} color="blue">
+          <Chip
+            onDismiss={() => action('dismiss')()}
+            color="blue">
             Blue Dismissible
           </Chip>
         </XStack>
@@ -243,7 +330,9 @@ export const AllStates: Story = {
         <Text fontWeight="400">Disabled</Text>
         <XStack gap="$2">
           <Chip disabled>Disabled</Chip>
-          <Chip disabled onDismiss={() => {}}>
+          <Chip
+            disabled
+            onDismiss={() => {}}>
             Disabled with dismiss
           </Chip>
         </XStack>

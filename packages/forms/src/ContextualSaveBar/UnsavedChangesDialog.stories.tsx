@@ -34,7 +34,11 @@ type Story = StoryObj<typeof UnsavedChangesDialog>;
 
 export const Basic: Story = {
   render: (args) => (
-    <UnsavedChangesDialog {...args} onKeepEditing={action('onKeepEditing')} onDiscard={action('onDiscard')} />
+    <UnsavedChangesDialog
+      {...args}
+      onKeepEditing={action('onKeepEditing')}
+      onDiscard={action('onDiscard')}
+    />
   ),
 };
 
@@ -45,7 +49,12 @@ export const Basic: Story = {
  */
 export const SingleField: Story = {
   render: () => (
-    <UnsavedChangesDialog open fieldCount={1} onKeepEditing={action('onKeepEditing')} onDiscard={action('onDiscard')} />
+    <UnsavedChangesDialog
+      open
+      fieldCount={1}
+      onKeepEditing={action('onKeepEditing')}
+      onDiscard={action('onDiscard')}
+    />
   ),
 };
 
@@ -63,7 +72,9 @@ export const ManyFields: Story = {
 /** Closed is a real state: it renders no scrim and nothing takes focus. */
 export const Closed: Story = {
   render: () => (
-    <YStack gap="$3" maxWidth={420}>
+    <YStack
+      gap="$3"
+      maxWidth={420}>
       <Paragraph size="$3">Nothing should paint below this line.</Paragraph>
       <UnsavedChangesDialog
         open={false}
@@ -86,7 +97,10 @@ export const Interactive: Story = {
       const [open, setOpen] = useState(false);
       const [outcome, setOutcome] = useState<string>('nothing yet');
       return (
-        <YStack gap="$4" maxWidth={420} alignItems="flex-start">
+        <YStack
+          gap="$4"
+          maxWidth={420}
+          alignItems="flex-start">
           <Button
             onPress={() => {
               setOpen(true);

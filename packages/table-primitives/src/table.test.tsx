@@ -40,7 +40,7 @@ describe('Table Primitives', () => {
     expect(container.querySelector('thead')).not.toBeNull();
     expect(container.querySelector('tbody')).not.toBeNull();
     expect(container.querySelector('tfoot')).not.toBeNull();
-    expect(container.querySelectorAll('tr').length).toBe(3);
+    expect(container.querySelectorAll('tr')).toHaveLength(3);
     expect(container.querySelector('td')).not.toBeNull();
     expect(container.querySelector('th')).not.toBeNull();
     expect(container.querySelector('caption')).not.toBeNull();
@@ -104,7 +104,7 @@ describe('Table Primitives', () => {
     );
 
     const rows = withIntent.querySelectorAll('tr');
-    expect(rows.length).toBe(4);
+    expect(rows).toHaveLength(4);
 
     expect(withIntent.textContent).toContain('Accent row');
     expect(withIntent.textContent).toContain('Error row');
@@ -453,19 +453,25 @@ describe('Table Primitives', () => {
         <Table.Row key="a">
           <Table.Cell>Ada</Table.Cell>
         </Table.Row>,
-        <Table.Row key="b" error>
+        <Table.Row
+          key="b"
+          error>
           <Table.Cell>Grace</Table.Cell>
         </Table.Row>,
         <Table.Row key="c">
           <Table.Cell>Edsger</Table.Cell>
         </Table.Row>,
-        <Table.Row key="d" backgroundColor="$color4">
+        <Table.Row
+          key="d"
+          backgroundColor="$color4">
           <Table.Cell>Barbara</Table.Cell>
         </Table.Row>,
         <Table.Row key="e">
           <Table.Cell>Alan</Table.Cell>
         </Table.Row>,
-        <Table.Row key="f" backgroundColor={undefined}>
+        <Table.Row
+          key="f"
+          backgroundColor={undefined}>
           <Table.Cell>Frances</Table.Cell>
         </Table.Row>,
       ]);
@@ -506,7 +512,9 @@ describe('Table Primitives', () => {
             tableZebra,
             [
               ...plainRows,
-              <Table.Row key="intent" success>
+              <Table.Row
+                key="intent"
+                success>
                 <Table.Cell>Alan</Table.Cell>
               </Table.Row>,
               <Table.Row key="last">

@@ -1,19 +1,18 @@
 import { CaretDownIcon, GlobeIcon } from '@phosphor-icons/react';
-import { useTouchSurface } from '@repo/theme';
-import { ensureCompositeFocusRing, useGlyphColor } from '@repo/theme';
+import { useTouchSurface, ensureCompositeFocusRing, useGlyphColor } from '@repo/theme';
 import type { DeepKeys, DeepValue } from '@tanstack/form-core';
 import type { ComponentProps, FocusEventHandler, ReactNode } from 'react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { TamaguiElement } from 'tamagui';
+import type { TamaguiElement, Input } from 'tamagui';
 import { isWeb, useProps } from 'tamagui';
-import { Input, Text, View, XStack } from 'tamagui';
+import { Text, View, XStack } from 'tamagui';
 
-import { Field, FieldLayout } from '../../fieldLayout';
-import type { FormFieldProps } from '../../fieldLayout';
+import { Field, FieldLayout } from '../../FieldLayout';
+import type { FormFieldProps } from '../../FieldLayout';
 import { Input as InputParts } from '../../InputParts';
-import { formButtonColors, formCommonColors } from '../../shared/colorRamps';
+import { formButtonColors, formCommonColors } from '../../shared/color-ramps';
 import { t } from '../../shared/t';
-import { useIsInTableCell } from '../../shared/tableCellContext';
+import { useIsInTableCell } from '../../shared/table-cell-context';
 import {
   getFieldError,
   getFieldHeight,
@@ -22,11 +21,10 @@ import {
   useResolvedValidators,
 } from '../../shared/utils';
 import { Skeleton } from '../../Skeleton';
-import type { SimpleFieldApi, Validator } from '../../types';
-import type { FieldComponentProps } from '../../types';
+import type { SimpleFieldApi, Validator, FieldComponentProps } from '../../types';
 import { Combobox } from '../Combobox';
 
-import { dialCodes } from './dialCodes';
+import { dialCodes } from './dial-codes';
 import {
   caretIndexForDigitCount,
   caretSizeForToken,
@@ -69,7 +67,7 @@ function ensurePhoneInputCss() {
   const tag = document.createElement('style');
   tag.id = PHONE_RING_STYLE_ID;
   tag.textContent = phoneInputCss;
-  document.head.appendChild(tag);
+  document.head.append(tag);
 }
 
 export type PhoneInputProps<
@@ -366,7 +364,10 @@ export function PhoneInput<
                   cursor={disabled ? 'not-allowed' : 'pointer'}
                   hoverStyle={disabled ? undefined : { backgroundColor: formButtonColors.background.hover }}>
                   {showFlags ? (
-                    <Text fontSize={flagSize} lineHeight={flagSize + 4} userSelect="none">
+                    <Text
+                      fontSize={flagSize}
+                      lineHeight={flagSize + 4}
+                      userSelect="none">
                       {countryCodeToFlag(code)}
                     </Text>
                   ) : (
@@ -384,14 +385,26 @@ export function PhoneInput<
                     userSelect="none">
                     +{dialOf(code)}
                   </Text>
-                  {inTableCell ? null : <CaretDownIcon size={caretSize} color={glyphColor} />}
+                  {inTableCell ? null : (
+                    <CaretDownIcon
+                      size={caretSize}
+                      color={glyphColor}
+                    />
+                  )}
                 </XStack>
               );
             }}
           />
           {inTableCell ? null : (
-            <View alignSelf="stretch" paddingVertical="$1.5">
-              <View data-testid="phone-divider" width={1} flexGrow={1} backgroundColor={formCommonColors.divider} />
+            <View
+              alignSelf="stretch"
+              paddingVertical="$1.5">
+              <View
+                data-testid="phone-divider"
+                width={1}
+                flexGrow={1}
+                backgroundColor={formCommonColors.divider}
+              />
             </View>
           )}
         </View>
@@ -433,10 +446,18 @@ export function PhoneInput<
         <InputParts size={sizeToken}>
           <InputParts.Box disabled>
             <InputParts.Section>
-              <Skeleton variant="rounded" width={flagSize + 48} height={Math.max(16, controlH - 12)} />
+              <Skeleton
+                variant="rounded"
+                width={flagSize + 48}
+                height={Math.max(16, controlH - 12)}
+              />
             </InputParts.Section>
             <InputParts.Section>
-              <Skeleton variant="rounded" width="100%" height={Math.max(16, controlH - 12)} />
+              <Skeleton
+                variant="rounded"
+                width="100%"
+                height={Math.max(16, controlH - 12)}
+              />
             </InputParts.Section>
           </InputParts.Box>
         </InputParts>

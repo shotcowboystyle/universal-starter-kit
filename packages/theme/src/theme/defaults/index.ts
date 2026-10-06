@@ -1,5 +1,5 @@
 export * from './accent';
 export * from './base';
-export * from './builderOptions';
-export * from './categoryFonts';
+export * from './builder-options';
+export * from './category-fonts';
 export * from './fonts';

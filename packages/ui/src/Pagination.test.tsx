@@ -16,9 +16,8 @@ import {
   CaretLeftIcon,
   CaretRightIcon,
   CheckIcon,
-  type Icon,
-  type IconProps,
 } from '@phosphor-icons/react';
+import type { Icon, IconProps } from '@phosphor-icons/react';
 import { renderWithProviders } from '@repo/test-utils';
 import { Preset } from '@repo/theme';
 import { act, render } from '@testing-library/react';
@@ -55,7 +54,15 @@ const byLabel = (container: HTMLElement, label: string) => {
 };
 
 describe('Pagination directional glyphs (numbered variant)', () => {
-  const renderNumbered = () => renderWithProviders(<Pagination variant="numbered" total={10} page={5} showFirstLast />);
+  const renderNumbered = () =>
+    renderWithProviders(
+      <Pagination
+        variant="numbered"
+        total={10}
+        page={5}
+        showFirstLast
+      />,
+    );
 
   it('points prev/next carets toward their targets in LTR', () => {
     clearDirs();
@@ -95,33 +102,54 @@ describe('Pagination directional glyphs (numbered variant)', () => {
 describe('Pagination directional glyphs (dots variant)', () => {
   it('swaps the prev/next arrows in RTL', () => {
     document.documentElement.dir = 'rtl';
-    const { container } = renderWithProviders(<Pagination total={5} activeIndex={2} />);
+    const { container } = renderWithProviders(
+      <Pagination
+        total={5}
+        activeIndex={2}
+      />,
+    );
     expect(iconPaths(byLabel(container, 'Previous page'))).toBe(refPaths(ArrowRightIcon));
     expect(iconPaths(byLabel(container, 'Next page'))).toBe(refPaths(ArrowLeftIcon));
   });
 
   it('keeps arrows physical in LTR', () => {
     clearDirs();
-    const { container } = renderWithProviders(<Pagination total={5} activeIndex={2} />);
+    const { container } = renderWithProviders(
+      <Pagination
+        total={5}
+        activeIndex={2}
+      />,
+    );
     expect(iconPaths(byLabel(container, 'Previous page'))).toBe(refPaths(ArrowLeftIcon));
     expect(iconPaths(byLabel(container, 'Next page'))).toBe(refPaths(ArrowRightIcon));
   });
 
   it('never mirrors the direction-neutral submit checkmark', () => {
     document.documentElement.dir = 'rtl';
-    const { container } = renderWithProviders(<Pagination total={3} activeIndex={2} isLastStep onSubmit={() => {}} />);
+    const { container } = renderWithProviders(
+      <Pagination
+        total={3}
+        activeIndex={2}
+        isLastStep
+        onSubmit={() => {}}
+      />,
+    );
     expect(iconPaths(byLabel(container, 'Submit'))).toBe(refPaths(CheckIcon));
   });
 
   it('keeps completed-step checkmarks unmirrored in RTL (dots variant)', () => {
     document.documentElement.dir = 'rtl';
     const { container } = renderWithProviders(
-      <Pagination total={4} activeIndex={2} completedSteps={new Set([0, 1])} />,
+      <Pagination
+        total={4}
+        activeIndex={2}
+        completedSteps={new Set([0, 1])}
+      />,
     );
     const dots = container.querySelectorAll('[data-pagination-dot]');
-    expect(dots.length).toBe(4);
+    expect(dots).toHaveLength(4);
     const completedWithCheck = Array.from(dots).filter((dot) => iconPaths(dot) !== '');
-    expect(completedWithCheck.length).toBe(2);
+    expect(completedWithCheck).toHaveLength(2);
     // The dot checkmark renders weight="bold"; the reference must match it.
     for (const dot of completedWithCheck) {
       expect(iconPaths(dot)).toBe(refPaths(CheckIcon, { weight: 'bold' }));
@@ -133,7 +161,14 @@ describe('Pagination summary bidi isolation', () => {
   it('wraps the range summary in FSI…PDI so RTL contexts cannot reorder it', () => {
     clearDirs();
     const { getByText } = renderWithProviders(
-      <Pagination variant="numbered" total={13} page={1} showSummary totalItems={312} pageSize={25} />,
+      <Pagination
+        variant="numbered"
+        total={13}
+        page={1}
+        showSummary
+        totalItems={312}
+        pageSize={25}
+      />,
     );
     // The whole formatted run is isolated — first-strong direction keeps
     // "1–25 of 312" in order inside an RTL paragraph.
@@ -143,7 +178,14 @@ describe('Pagination summary bidi isolation', () => {
   it('isolates the empty-set summary too', () => {
     clearDirs();
     const { getByText } = renderWithProviders(
-      <Pagination variant="numbered" total={1} page={1} showSummary totalItems={0} pageSize={25} />,
+      <Pagination
+        variant="numbered"
+        total={1}
+        page={1}
+        showSummary
+        totalItems={0}
+        pageSize={25}
+      />,
     );
     expect(getByText('\u20680 of 0\u2069')).toBeTruthy();
   });
@@ -160,7 +202,10 @@ describe('Pagination design-law', () => {
   it('animation none publishes data-animation=none (no quick fallback)', () => {
     const { container } = renderWithProviders(
       <Preset overrides={{ animation: 'none' }}>
-        <Pagination total={5} activeIndex={2} />
+        <Pagination
+          total={5}
+          activeIndex={2}
+        />
       </Preset>,
     );
     const nav = container.querySelector('[role="navigation"]') as HTMLElement;
@@ -168,14 +213,24 @@ describe('Pagination design-law', () => {
   });
 
   it('default animation publishes a named transition, not none', () => {
-    const { container } = renderWithProviders(<Pagination total={5} activeIndex={2} />);
+    const { container } = renderWithProviders(
+      <Pagination
+        total={5}
+        activeIndex={2}
+      />,
+    );
     const nav = container.querySelector('[role="navigation"]') as HTMLElement;
     expect(nav.getAttribute('data-animation')).not.toBe('none');
     expect(nav.getAttribute('data-animation')).toBeTruthy();
   });
 
   it('frame publishes data-pad=panel (SP-PAD)', () => {
-    const { container } = renderWithProviders(<Pagination total={5} activeIndex={2} />);
+    const { container } = renderWithProviders(
+      <Pagination
+        total={5}
+        activeIndex={2}
+      />,
+    );
     const nav = container.querySelector('[role="navigation"]') as HTMLElement;
     expect(nav.getAttribute('data-pad')).toBe('panel');
   });

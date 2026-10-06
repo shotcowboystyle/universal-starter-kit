@@ -56,7 +56,9 @@ export const Main: Story = {
       });
 
       return (
-        <Form form={form} maxWidth={400}>
+        <Form
+          form={form}
+          maxWidth={400}>
           <YStack gap="$4">
             <Barcode
               label="Item Barcode"
@@ -80,7 +82,12 @@ export const Standalone: Story = {
     helperText: 'Scan or enter barcode',
     enableScan: true,
   },
-  render: (args) => <Barcode {...args} {...iconProps} />,
+  render: (args) => (
+    <Barcode
+      {...args}
+      {...iconProps}
+    />
+  ),
 };
 
 /**
@@ -102,7 +109,12 @@ export const Basic: Story = {
     helperText: 'Enter or scan a barcode',
     onChange: action('onChange'),
   },
-  render: (args) => <Barcode {...args} {...iconProps} />,
+  render: (args) => (
+    <Barcode
+      {...args}
+      {...iconProps}
+    />
+  ),
 };
 
 export const Disabled: Story = {
@@ -112,7 +124,12 @@ export const Disabled: Story = {
     disabled: true,
     onChange: action('onChange'),
   },
-  render: (args) => <Barcode {...args} {...iconProps} />,
+  render: (args) => (
+    <Barcode
+      {...args}
+      {...iconProps}
+    />
+  ),
 };
 
 export const WithError: Story = {
@@ -123,18 +140,40 @@ export const WithError: Story = {
     error: 'Barcode is required',
     onChange: action('onChange'),
   },
-  render: (args) => <Barcode {...args} {...iconProps} />,
+  render: (args) => (
+    <Barcode
+      {...args}
+      {...iconProps}
+    />
+  ),
 };
 
 export const Sizes: Story = {
   render: () => (
-    <YStack gap="$4" maxWidth={400}>
+    <YStack
+      gap="$4"
+      maxWidth={400}>
       <Text fontWeight="bold">Size $2</Text>
-      <Barcode label="Small" size="$2" {...iconProps} onChange={action('onChange')} />
+      <Barcode
+        label="Small"
+        size="$2"
+        {...iconProps}
+        onChange={action('onChange')}
+      />
       <Text fontWeight="bold">Size $3</Text>
-      <Barcode label="Medium" size="$3" {...iconProps} onChange={action('onChange')} />
+      <Barcode
+        label="Medium"
+        size="$3"
+        {...iconProps}
+        onChange={action('onChange')}
+      />
       <Text fontWeight="bold">Size $4</Text>
-      <Barcode label="Large" size="$4" {...iconProps} onChange={action('onChange')} />
+      <Barcode
+        label="Large"
+        size="$4"
+        {...iconProps}
+        onChange={action('onChange')}
+      />
     </YStack>
   ),
 };
@@ -144,7 +183,9 @@ export const Interactive: Story = {
     const InteractiveExample = () => {
       const [value, setValue] = useState('');
       return (
-        <YStack gap="$4" maxWidth={400}>
+        <YStack
+          gap="$4"
+          maxWidth={400}>
           <Barcode
             label="Scan Product"
             helperText={value ? `Scanned: ${value}` : 'Enter a barcode'}
@@ -175,7 +216,12 @@ export const Interactive: Story = {
 /** Loading placeholder — the skeleton mirrors the field's anatomy. */
 export const SkeletonState: Story = {
   args: { label: 'Product Barcode', skeleton: true },
-  render: (args) => <Barcode {...args} {...iconProps} />,
+  render: (args) => (
+    <Barcode
+      {...args}
+      {...iconProps}
+    />
+  ),
 };
 
 /** Encoded value + trailing scan inside one composite (preview under the box). */
@@ -187,7 +233,12 @@ export const Filled: Story = {
     enableScan: true,
     onChange: action('onChange'),
   },
-  render: (args) => <Barcode {...args} {...iconProps} />,
+  render: (args) => (
+    <Barcode
+      {...args}
+      {...iconProps}
+    />
+  ),
 };
 
 /**
@@ -205,5 +256,10 @@ export const FilledQr: Story = {
     formats: ['qr'],
     onChange: action('onChange'),
   },
-  render: (args) => <Barcode {...args} {...iconProps} />,
+  render: (args) => (
+    <Barcode
+      {...args}
+      {...iconProps}
+    />
+  ),
 };

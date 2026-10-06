@@ -1,7 +1,7 @@
 import { SizableText, XStack, YStack } from 'tamagui';
 
 import { Preset } from './Preset';
-import { useResolvedKnobs } from './useResolvedKnobs';
+import { useResolvedKnobs } from './use-resolved-knobs';
 
 export default {
   title: 'Theme/Preset',
@@ -37,7 +37,9 @@ function Probe({ label }: { label: string }) {
       testID={`preset-probe-${label}`}
       {...attrs}>
       <SizableText>{label}</SizableText>
-      <SizableText color="$color11" fontSize="$2">
+      <SizableText
+        color="$color11"
+        fontSize="$2">
         radius {String(knobProps.borderRadius.borderRadius)}, border {String(knobProps.surface.borderWidth)},{' '}
         {knobProps.outlined ? 'outlined' : 'filled'}
       </SizableText>
@@ -49,7 +51,10 @@ function Probe({ label }: { label: string }) {
 export const main = {
   name: 'Main',
   render: () => (
-    <XStack gap="$4" flexWrap="wrap" alignItems="flex-start">
+    <XStack
+      gap="$4"
+      flexWrap="wrap"
+      alignItems="flex-start">
       <Probe label="inherited" />
       <Preset overrides={{ borderRadius: 'full', borderWidth: 'large' }}>
         <Probe label="full-radius" />
@@ -66,7 +71,10 @@ export const cascade = {
   name: 'Cascade',
   render: () => (
     <Preset overrides={{ borderRadius: 'full' }}>
-      <XStack gap="$4" flexWrap="wrap" alignItems="flex-start">
+      <XStack
+        gap="$4"
+        flexWrap="wrap"
+        alignItems="flex-start">
         <Probe label="parent-full" />
         <Preset overrides={{ borderWidth: 'large' }}>
           <Probe label="child-cascade" />

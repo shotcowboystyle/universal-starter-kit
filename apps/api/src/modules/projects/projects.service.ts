@@ -1,20 +1,16 @@
-import {
-  BadRequestException,
-  Injectable,
-  Logger,
-  NotFoundException,
-  OnModuleInit
-} from "@nestjs/common";
-import { EventEmitter2 } from "eventemitter2";
-import { Types } from "mongoose";
+import type { OnModuleInit } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import type { EventEmitter2 } from 'eventemitter2';
+import { Types } from 'mongoose';
 
-import { BoardDeletedEvent, ProjectDeletedEvent } from "../../common/events";
-import { BoardService } from "../boards/boards.service";
+import type { BoardDeletedEvent } from '../../common/events';
+import { ProjectDeletedEvent } from '../../common/events';
+import type { BoardService } from '../boards/boards.service';
 
-import { CreateProjectDto } from "./dto/create-project.dto";
-import { UpdateProjectDto } from "./dto/update-project.dto";
-import { ProjectRepository } from "./repositories/projects.repository";
-import { Project, ProjectDocument } from "./schemas/projects.schema";
+import type { CreateProjectDto } from './dto/create-project.dto';
+import type { UpdateProjectDto } from './dto/update-project.dto';
+import type { ProjectRepository } from './repositories/projects.repository';
+import type { Project, ProjectDocument } from './schemas/projects.schema';
 
 @Injectable()
 export class ProjectsService implements OnModuleInit {
@@ -23,13 +19,11 @@ export class ProjectsService implements OnModuleInit {
   constructor(
     private readonly projectRepository: ProjectRepository,
     private readonly boardService: BoardService,
-    private readonly eventEmitter: EventEmitter2
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   onModuleInit(): void {
-    this.eventEmitter.on("board.deleted", async (event: BoardDeletedEvent) =>
-      this.handleBoardDeleted(event)
-    );
+    this.eventEmitter.on('board.deleted', async (event: BoardDeletedEvent) => await this.handleBoardDeleted(event));
   }
 
   // Cascade step: triggered by 'board.deleted' event.
@@ -40,7 +34,7 @@ export class ProjectsService implements OnModuleInit {
 
     // Emit project.deleted for each project so TasksService can clean up
     for (const project of projects) {
-      this.eventEmitter.emit("project.deleted", new ProjectDeletedEvent(project._id.toString()));
+      this.eventEmitter.emit('project.deleted', new ProjectDeletedEvent(project._id.toString()));
     }
 
     await this.projectRepository.deleteByBoardId(event.boardId);
@@ -48,17 +42,13 @@ export class ProjectsService implements OnModuleInit {
 
   async findByBoardId(boardId: string): Promise<ProjectDocument[]> {
     if (!Types.ObjectId.isValid(boardId)) {
-      throw new NotFoundException("Invalid board ID");
+      throw new NotFoundException('Invalid board ID');
     }
 
-    return this.projectRepository.findByBoardId(boardId);
+    return await this.projectRepository.findByBoardId(boardId);
   }
 
-  async update(
-    id: string,
-    updateProjectDto: UpdateProjectDto,
-    userId: string
-  ): Promise<ProjectDocument> {
+  async update(id: string, updateProjectDto: UpdateProjectDto, userId: string): Promise<ProjectDocument> {
     this.validateIds(id, userId);
 
     const project = await this.findProjectById(id);
@@ -67,7 +57,7 @@ export class ProjectsService implements OnModuleInit {
 
     const updatedProject = await this.projectRepository.updateById(id, updateData);
     if (!updatedProject) {
-      throw new NotFoundException("Project not found after update");
+      throw new NotFoundException('Project not found after update');
     }
     return updatedProject;
   }
@@ -78,18 +68,18 @@ export class ProjectsService implements OnModuleInit {
     const project = await this.findProjectById(id);
 
     if (project.owner.toString() !== userId.toString()) {
-      throw new BadRequestException("You do not have permission to delete this project");
+      throw new BadRequestException('You do not have permission to delete this project');
     }
 
     const { board: boardId, orderInBoard: deletedOrder } = project;
 
     // Emit event for cascade task deletion
-    this.eventEmitter.emit("project.deleted", new ProjectDeletedEvent(id));
+    this.eventEmitter.emit('project.deleted', new ProjectDeletedEvent(id));
 
     const result = await this.projectRepository.deleteById(id);
 
     if (result.deletedCount === 0) {
-      throw new NotFoundException("Failed to delete project");
+      throw new NotFoundException('Failed to delete project');
     }
 
     // Reorder remaining projects in the same board
@@ -97,7 +87,7 @@ export class ProjectsService implements OnModuleInit {
       await this.projectRepository.decrementOrderAfter(boardId, deletedOrder);
     }
 
-    return { message: "Project deleted successfully" };
+    return { message: 'Project deleted successfully' };
   }
 
   async addMemberIfNotExists(projectId: string, userId: string): Promise<void> {
@@ -135,17 +125,15 @@ export class ProjectsService implements OnModuleInit {
       owner: new Types.ObjectId(owner),
       board: new Types.ObjectId(boardId),
       members: [new Types.ObjectId(owner)],
-      orderInBoard: order
+      orderInBoard: order,
     };
 
     const savedProject = await this.projectRepository.create(projectData);
 
-    const populatedProject = await this.projectRepository.findByIdPopulated(
-      savedProject._id.toString()
-    );
+    const populatedProject = await this.projectRepository.findByIdPopulated(savedProject._id.toString());
 
     if (!populatedProject) {
-      throw new NotFoundException("Project not found after creation");
+      throw new NotFoundException('Project not found after creation');
     }
 
     return populatedProject;
@@ -155,17 +143,17 @@ export class ProjectsService implements OnModuleInit {
 
   private validateIds(id: string, userId: string): void {
     if (!Types.ObjectId.isValid(id)) {
-      throw new BadRequestException("Invalid project ID");
+      throw new BadRequestException('Invalid project ID');
     }
     if (!Types.ObjectId.isValid(userId)) {
-      throw new BadRequestException("Invalid user ID");
+      throw new BadRequestException('Invalid user ID');
     }
   }
 
   private async findProjectById(id: string): Promise<ProjectDocument> {
     const project = await this.projectRepository.findById(id);
     if (!project) {
-      throw new NotFoundException("Project not found");
+      throw new NotFoundException('Project not found');
     }
     return project;
   }
@@ -173,7 +161,7 @@ export class ProjectsService implements OnModuleInit {
   private async checkUpdatePermissions(
     project: ProjectDocument,
     userId: string,
-    updateProjectDto: UpdateProjectDto
+    updateProjectDto: UpdateProjectDto,
   ): Promise<void> {
     const isOwner = project.owner.toString() === userId.toString();
     const isOrderOnly = this.isOrderOnlyUpdate(updateProjectDto);
@@ -182,7 +170,7 @@ export class ProjectsService implements OnModuleInit {
       if (isOrderOnly) {
         await this.verifyBoardMembership(project, userId);
       } else {
-        throw new BadRequestException("You do not have permission to update this project");
+        throw new BadRequestException('You do not have permission to update this project');
       }
     }
   }
@@ -202,7 +190,7 @@ export class ProjectsService implements OnModuleInit {
     const boardId = project.board.toString();
     const board = await this.boardService.findOne(boardId, userId);
     if (!board) {
-      throw new BadRequestException("You do not have permission to reorder projects in this board");
+      throw new BadRequestException('You do not have permission to reorder projects in this board');
     }
   }
 
@@ -225,9 +213,7 @@ export class ProjectsService implements OnModuleInit {
       updateData.orderInBoard = updateProjectDto.orderInBoard;
     }
     if (updateProjectDto.assigneeId !== undefined) {
-      updateData.assignee = updateProjectDto.assigneeId
-        ? new Types.ObjectId(updateProjectDto.assigneeId)
-        : null;
+      updateData.assignee = updateProjectDto.assigneeId ? new Types.ObjectId(updateProjectDto.assigneeId) : null;
     }
 
     return updateData;

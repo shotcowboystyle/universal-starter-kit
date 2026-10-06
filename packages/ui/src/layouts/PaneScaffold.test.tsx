@@ -3,14 +3,8 @@ import { cleanup, fireEvent, screen } from '@testing-library/react';
 import { Paragraph, YStack } from 'tamagui';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  FeedLayout,
-  ListDetailLayout,
-  PaneScaffold,
-  ReadingWidth,
-  SupportingPaneLayout,
-  type PaneScaffoldProps,
-} from './PaneScaffold';
+import { FeedLayout, ListDetailLayout, PaneScaffold, ReadingWidth, SupportingPaneLayout } from './PaneScaffold';
+import type { PaneScaffoldProps } from './PaneScaffold';
 
 import * as Layouts from './index';
 
@@ -37,7 +31,10 @@ function ThreeRegionPage(props: { sizeClass?: 'compact' | 'medium' | 'expanded' 
     <PaneScaffold
       sizeClass={props.sizeClass}
       primary={<Paragraph>Rail</Paragraph>}
-      secondary=<PaneScaffold primary={<Paragraph>Centre</Paragraph>} secondary={<Paragraph>Inspector</Paragraph>} />
+      secondary=<PaneScaffold
+        primary={<Paragraph>Centre</Paragraph>}
+        secondary={<Paragraph>Inspector</Paragraph>}
+      />
     />
   );
 }
@@ -225,7 +222,9 @@ describe('ListDetailLayout', () => {
 describe('SupportingPaneLayout', () => {
   it('stacks the supporting pane on compact instead of hiding it', () => {
     renderWithProviders(
-      <SupportingPaneLayout sizeClass="compact" supporting={<Paragraph>Meta</Paragraph>}>
+      <SupportingPaneLayout
+        sizeClass="compact"
+        supporting={<Paragraph>Meta</Paragraph>}>
         <Paragraph>Body</Paragraph>
       </SupportingPaneLayout>,
     );
@@ -236,7 +235,9 @@ describe('SupportingPaneLayout', () => {
 
   it('renders side-by-side at large', () => {
     renderWithProviders(
-      <SupportingPaneLayout sizeClass="large" supporting={<Paragraph>Meta</Paragraph>}>
+      <SupportingPaneLayout
+        sizeClass="large"
+        supporting={<Paragraph>Meta</Paragraph>}>
         <Paragraph>Body</Paragraph>
       </SupportingPaneLayout>,
     );
@@ -374,7 +375,7 @@ describe('PaneScaffold orientation', () => {
     });
     expect(sash).toHaveAttribute('aria-valuenow', '40');
     fireEvent.keyDown(sash, { key: 'ArrowDown' });
-    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledOnce();
     expect(onChange.mock.calls[0][0]).toBeCloseTo(0.42);
     expect(sash).toHaveAttribute('aria-valuenow', '40');
   });

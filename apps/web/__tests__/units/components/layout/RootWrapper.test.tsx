@@ -10,7 +10,10 @@ vi.mock('@/components/layout/AppSidebar', () => ({
 
 vi.mock('@/components/layout/Header', () => ({
   default: ({ onToggleSidebar }: { onToggleSidebar: () => void }) => (
-    <button data-testid="header" onClick={onToggleSidebar} type="button">
+    <button
+      data-testid="header"
+      onClick={onToggleSidebar}
+      type="button">
       Header
     </button>
   ),
@@ -22,7 +25,9 @@ vi.mock('@/constants/ui', () => ({
 
 vi.mock('sonner', () => ({
   Toaster: (props: { position: string }) => (
-    <div data-testid="toaster" data-position={props.position}>
+    <div
+      data-testid="toaster"
+      data-position={props.position}>
       Toaster
     </div>
   ),

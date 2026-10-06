@@ -31,7 +31,10 @@ describe('AdaptivePopup close is named in the active locale', () => {
     it(lng, async () => {
       await i18next.changeLanguage(lng);
       renderWithProviders(
-        <AdaptivePopup open onOpenChange={vi.fn()} title="Edit Profile">
+        <AdaptivePopup
+          open
+          onOpenChange={vi.fn()}
+          title="Edit Profile">
           <Text>popup body</Text>
         </AdaptivePopup>,
       );

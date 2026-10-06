@@ -5,8 +5,8 @@ import {
   useResolvedKnobs,
   useGlyphColor,
   useTouchSurface,
-  type KnobProps,
 } from '@repo/theme';
+import type { KnobProps } from '@repo/theme';
 import type { KeyboardEvent, MutableRefObject, ReactNode } from 'react';
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import type { LabelProps, SizeTokens } from 'tamagui';
@@ -14,14 +14,15 @@ import { ScrollView, Spinner, Text, View, XStack, YStack, isWeb } from 'tamagui'
 
 import { AdaptivePopup } from '../../AdaptivePopup';
 import { Button } from '../../Button';
-import { Field, FieldLayout } from '../../fieldLayout';
+import { Field, FieldLayout } from '../../FieldLayout';
 import { FloatingPanel, useViewportGtSm } from '../../FloatingPanel';
 import { Input as InputParts } from '../../InputParts';
-import { queryPermissionState, type CapabilityPreflightResult } from '../../shared/capabilityPreflight';
-import { formCommonColors, formInputColors } from '../../shared/colorRamps';
-import { pressSlopProps } from '../../shared/pressSlopProps';
+import { queryPermissionState } from '../../shared/capability-preflight';
+import type { CapabilityPreflightResult } from '../../shared/capability-preflight';
+import { formCommonColors, formInputColors } from '../../shared/color-ramps';
+import { pressSlopProps } from '../../shared/press-slop-props';
 import { t } from '../../shared/t';
-import { useIsInTableCell } from '../../shared/tableCellContext';
+import { useIsInTableCell } from '../../shared/table-cell-context';
 import {
   clampRadiusForLargeComponent,
   getFieldError,
@@ -30,16 +31,16 @@ import {
   useFormField,
   useResolvedValidators,
 } from '../../shared/utils';
-import { zIndex } from '../../shared/zIndex';
+import { zIndex } from '../../shared/z-index';
 import { Skeleton } from '../../Skeleton';
 import type { AnyFormApi } from '../../types';
 
+import { detectGeoShape, formatGeoValue, parseGeoValue } from './geo-value';
 import type { GeocodeFn, GeocodeResult, Geocoder, ReverseGeocodeFn } from './geocoder';
 import { clampLat, clampLng, formatCoordPair, formatPlace, parseLatLngPair, resolveGeocoder } from './geocoder';
-import { useGeocoder } from './geocoderContext';
+import { useGeocoder } from './geocoder-context';
 import { GeolocationMap } from './GeolocationMap';
-import { detectGeoShape, formatGeoValue, parseGeoValue } from './geoValue';
-import { createNativeSearchFocus } from './nativeSearchFocus';
+import { createNativeSearchFocus } from './native-search-focus';
 
 export type {
   GeocodeFn,
@@ -207,9 +208,16 @@ function CoordinatesPanel({
   };
 
   return (
-    <YStack testID="geolocation-coords-panel" gap="$3" minWidth={260} {...knobProps.panelPadding}>
+    <YStack
+      testID="geolocation-coords-panel"
+      gap="$3"
+      minWidth={260}
+      {...knobProps.panelPadding}>
       <YStack gap="$1">
-        <Text fontSize="$1" {...knobProps.body} color={formCommonColors.muted}>
+        <Text
+          fontSize="$1"
+          {...knobProps.body}
+          color={formCommonColors.muted}>
           {t('Lat')}
         </Text>
         <InputParts size={knobProps.sizeToken}>
@@ -228,7 +236,10 @@ function CoordinatesPanel({
         </InputParts>
       </YStack>
       <YStack gap="$1">
-        <Text fontSize="$1" {...knobProps.body} color={formCommonColors.muted}>
+        <Text
+          fontSize="$1"
+          {...knobProps.body}
+          color={formCommonColors.muted}>
           {t('Lng')}
         </Text>
         <InputParts size={knobProps.sizeToken}>
@@ -268,7 +279,11 @@ function ExpandedMapView({
   const { knobProps } = useResolvedKnobs();
 
   return (
-    <YStack flex={1} minHeight={400} borderRadius={knobProps.borderRadius.borderRadius} overflow="hidden">
+    <YStack
+      flex={1}
+      minHeight={400}
+      borderRadius={knobProps.borderRadius.borderRadius}
+      overflow="hidden">
       <GeolocationMap
         lat={lat}
         lng={lng}
@@ -346,11 +361,17 @@ function ResultRow({
       pressStyle={disabled ? undefined : { backgroundColor: '$color3' }}
       onPress={disabled ? undefined : onPress}
       opacity={disabled ? 0.5 : 1}>
-      <Text fontSize="$4" lineHeight={25} color="$color12">
+      <Text
+        fontSize="$4"
+        lineHeight={25}
+        color="$color12">
         {label}
       </Text>
       {description ? (
-        <Text fontSize="$3" lineHeight={24} color={formCommonColors.muted}>
+        <Text
+          fontSize="$3"
+          lineHeight={24}
+          color={formCommonColors.muted}>
           {description}
         </Text>
       ) : null}
@@ -360,8 +381,16 @@ function ResultRow({
 
 function StatusRow({ children, testID }: { children: ReactNode; testID?: string }) {
   return (
-    <XStack testID={testID} minHeight={44} alignItems="center" paddingHorizontal="$3" role="status">
-      <Text fontSize="$4" lineHeight={25} color={formCommonColors.muted}>
+    <XStack
+      testID={testID}
+      minHeight={44}
+      alignItems="center"
+      paddingHorizontal="$3"
+      role="status">
+      <Text
+        fontSize="$4"
+        lineHeight={25}
+        color={formCommonColors.muted}>
         {children}
       </Text>
     </XStack>
@@ -549,7 +578,11 @@ function GeoMapSurface({
         minHeight={COORD_LINE_HEIGHT}
         paddingHorizontal="$2"
         hitSlop={pressTargetHitSlop(COORD_LINE_HEIGHT)}>
-        <Text fontFamily="$mono" fontSize={12} lineHeight={22} color={formCommonColors.muted}>
+        <Text
+          fontFamily="$mono"
+          fontSize={12}
+          lineHeight={22}
+          color={formCommonColors.muted}>
           {hasValue ? formatCoordPair(mapLat, mapLng) : t('Enter coordinates')}
         </Text>
       </XStack>
@@ -584,7 +617,11 @@ function GeoMapSurface({
                   },
                 }
               : {})}>
-            <Text fontFamily="$mono" fontSize={12} lineHeight={22} color={formCommonColors.muted}>
+            <Text
+              fontFamily="$mono"
+              fontSize={12}
+              lineHeight={22}
+              color={formCommonColors.muted}>
               {hasValue ? formatCoordPair(mapLat, mapLng) : t('Enter coordinates')}
             </Text>
           </XStack>
@@ -637,7 +674,7 @@ function GeoMapSurface({
           />
         )}
 
-        {!hasValue ? (
+        {hasValue ? null : (
           <YStack
             testID="geolocation-empty"
             position="absolute"
@@ -649,11 +686,13 @@ function GeoMapSurface({
             alignItems="center"
             justifyContent="center"
             pointerEvents="none">
-            <Text {...knobProps.body} color={formCommonColors.muted}>
+            <Text
+              {...knobProps.body}
+              color={formCommonColors.muted}>
               {t('No location set')}
             </Text>
           </YStack>
-        ) : null}
+        )}
       </YStack>
 
       {locateErrorOpen ? (
@@ -666,22 +705,39 @@ function GeoMapSurface({
           padding="$3"
           gap="$2"
           alignItems="center">
-          <Text {...knobProps.body} color={formCommonColors.error} textAlign="center">
+          <Text
+            {...knobProps.body}
+            color={formCommonColors.error}
+            textAlign="center">
             {locateError}
           </Text>
           <XStack gap="$2">
-            <Button size="$2" onPress={onRetryLocate} aria-label={t('Retry location')}>
+            <Button
+              size="$2"
+              onPress={onRetryLocate}
+              aria-label={t('Retry location')}>
               {t('Retry')}
             </Button>
-            <Button size="$2" onPress={onCloseLocate} aria-label={t('Close location')}>
+            <Button
+              size="$2"
+              onPress={onCloseLocate}
+              aria-label={t('Close location')}>
               {t('Close')}
             </Button>
           </XStack>
         </YStack>
       ) : null}
 
-      <XStack testID="geolocation-map-footer" alignItems="center" flexWrap="wrap" gap="$2">
-        <YStack flexGrow={1} flexShrink={1} flexBasis={0} minWidth={160}>
+      <XStack
+        testID="geolocation-map-footer"
+        alignItems="center"
+        flexWrap="wrap"
+        gap="$2">
+        <YStack
+          flexGrow={1}
+          flexShrink={1}
+          flexBasis={0}
+          minWidth={160}>
           {coordLine}
         </YStack>
         {!readOnly && !locateErrorOpen ? (
@@ -711,7 +767,11 @@ function GeoMapSurface({
       </XStack>
 
       {expandIcon && (
-        <AdaptivePopup open={expanded} onOpenChange={setExpanded} title={t('Select Location')} size="lg">
+        <AdaptivePopup
+          open={expanded}
+          onOpenChange={setExpanded}
+          title={t('Select Location')}
+          size="lg">
           <ExpandedMapView
             lat={mapLat}
             lng={mapLng}
@@ -810,8 +870,17 @@ function CellFace({
       minHeight={44}
       minWidth={0}
       flex={1}>
-      <MapPinIcon size={14} color={glyphColor} />
-      <Text fontSize="$3" lineHeight={24} color="$color12" numberOfLines={1} flex={1} minWidth={0}>
+      <MapPinIcon
+        size={14}
+        color={glyphColor}
+      />
+      <Text
+        fontSize="$3"
+        lineHeight={24}
+        color="$color12"
+        numberOfLines={1}
+        flex={1}
+        minWidth={0}>
         {text}
       </Text>
     </XStack>
@@ -849,7 +918,14 @@ export function Geolocation({
   const resolvedValidators = useResolvedValidators(required, validators, label, name);
   const glyphColor = useGlyphColor();
   const resolvedLocationIcon =
-    locationIcon === undefined ? <NavigationArrowIcon size={16} color={glyphColor} /> : locationIcon;
+    locationIcon === undefined ? (
+      <NavigationArrowIcon
+        size={16}
+        color={glyphColor}
+      />
+    ) : (
+      locationIcon
+    );
   const inTableCell = useIsInTableCell();
   const viewportGtSm = useViewportGtSm();
   const shouldUseSheet = !isWeb || !viewportGtSm;
@@ -967,7 +1043,7 @@ export function Geolocation({
         setLocateError(mapGeolocationError(err));
         setLocatePhase('error');
       },
-      { enableHighAccuracy: true, timeout: 10000 },
+      { enableHighAccuracy: true, timeout: 10_000 },
     );
   }, [closeSearch]);
 
@@ -1272,8 +1348,9 @@ export function Geolocation({
                   setResultsOpen(true);
                 }
               }}
-              {...(!isWeb
-                ? {
+              {...(isWeb
+                ? {}
+                : {
                     onPressIn: () => {
                       activateNativeSearch();
                     },
@@ -1283,8 +1360,7 @@ export function Geolocation({
                     onBlur: () => {
                       nativeSearchFocus.blur(!!opts.sheetHeader, resultsOpen);
                     },
-                  }
-                : {})}
+                  })}
               onFocus={() => {
                 // Web opens on a press, typing or ArrowDown only: a panel
                 // that moves focus in on open (a cell editor, a sheet) must
@@ -1347,7 +1423,7 @@ export function Geolocation({
     resolvedError: string | boolean | undefined = displayError,
   ): ReactNode => {
     const handlers = makeHandlers(currentValue, onValueChange);
-    const coordinates = handlers.coordinates;
+    const { coordinates } = handlers;
     const key = coordinates ? coordinateKey(coordinates) : null;
     const selected = selectedPlaceRef.current;
     const displayAddress =
@@ -1380,7 +1456,9 @@ export function Geolocation({
           fitContent={false}
           contentPadding="none"
           trigger={face}>
-          <YStack minWidth={260} maxWidth={420}>
+          <YStack
+            minWidth={260}
+            maxWidth={420}>
             {renderFormBody(currentValue, onValueChange, true, resolvedError)}
           </YStack>
         </FloatingPanel>
@@ -1390,9 +1468,19 @@ export function Geolocation({
     if (readOnly) {
       return (
         <YStack gap="$2">
-          <XStack testID="geolocation-readonly-address" alignItems="center" gap="$2" minHeight={25}>
-            <MapPinIcon size={14} color={glyphColor} />
-            <Text fontSize="$4" lineHeight={25} color="$color12">
+          <XStack
+            testID="geolocation-readonly-address"
+            alignItems="center"
+            gap="$2"
+            minHeight={25}>
+            <MapPinIcon
+              size={14}
+              color={glyphColor}
+            />
+            <Text
+              fontSize="$4"
+              lineHeight={25}
+              color="$color12">
               {displayAddress ?? t('No location set')}
             </Text>
           </XStack>
@@ -1435,7 +1523,11 @@ export function Geolocation({
             scrollable
             contentPadding="none"
             header={renderSearch(handlers, { sheetHeader: true })}
-            trigger=<View testID="geolocation-sheet-trigger" height={1} width="100%" />>
+            trigger=<View
+              testID="geolocation-sheet-trigger"
+              height={1}
+              width="100%"
+            />>
             <YStack testID="geolocation-results-sheet">{renderResults(handlers)}</YStack>
           </FloatingPanel>
         ) : (
@@ -1451,7 +1543,9 @@ export function Geolocation({
             borderRadius={knobProps.borderRadius.borderRadius}
             overflow="hidden"
             style={{ boxShadow: RESULTS_PANEL_SHADOW }}>
-            <ScrollView keyboardShouldPersistTaps="handled" maxHeight={mapHeight * 1.5}>
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              maxHeight={mapHeight * 1.5}>
               {renderResults(handlers)}
             </ScrollView>
           </YStack>
@@ -1494,10 +1588,22 @@ export function Geolocation({
 
   if (skeleton) {
     return (
-      <FieldLayout id={id} label={label} size={size} knobProps={knobProps}>
+      <FieldLayout
+        id={id}
+        label={label}
+        size={size}
+        knobProps={knobProps}>
         <YStack gap="$2">
-          <Skeleton variant="rounded" width="100%" height={44} />
-          <Skeleton variant="rounded" width="100%" height={mapHeight} />
+          <Skeleton
+            variant="rounded"
+            width="100%"
+            height={44}
+          />
+          <Skeleton
+            variant="rounded"
+            width="100%"
+            height={mapHeight}
+          />
         </YStack>
       </FieldLayout>
     );
@@ -1524,7 +1630,10 @@ export function Geolocation({
         knobProps={knobProps}
         onBlur={fieldBlur ?? onBlur}
         disabled={disabled}>
-        <GeolocationValueSync value={currentValue} runReverse={runReverse} />
+        <GeolocationValueSync
+          value={currentValue}
+          runReverse={runReverse}
+        />
         {renderFormBody(currentValue, onValueChange, false, resolvedError)}
       </FieldLayout>
     );
@@ -1535,7 +1644,11 @@ export function Geolocation({
   }
 
   return (
-    <Field form={resolvedForm} name={name} defaultValue={defaultValue} validators={resolvedValidators}>
+    <Field
+      form={resolvedForm}
+      name={name}
+      defaultValue={defaultValue}
+      validators={resolvedValidators}>
       {(field) => {
         const resolvedError = getFieldError(field, displayError);
         return wrap(

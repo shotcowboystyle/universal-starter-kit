@@ -1,5 +1,6 @@
-import { useTouchSurface, isTouchSurface } from '@repo/theme';
 import {
+  useTouchSurface,
+  isTouchSurface,
   animationConfig,
   borderRadiusMap,
   ensureFocusVisibleRing,
@@ -12,8 +13,9 @@ import {
   type BorderRadius,
 } from '@repo/theme';
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
-import type { LabelProps, SizeTokens } from 'tamagui';
 import {
+  type LabelProps,
+  type SizeTokens,
   type SliderProps as TamaguiSliderProps,
   Slider as TamaguiSlider,
   Paragraph,
@@ -24,8 +26,8 @@ import {
   useTheme,
 } from 'tamagui';
 
-import { Field, FieldLayout, useFieldA11y, useFieldDescribedBy } from '../../fieldLayout';
-import { formCommonColors, formControlColors, formSelectedColors } from '../../shared/colorRamps';
+import { Field, FieldLayout, useFieldA11y, useFieldDescribedBy } from '../../FieldLayout';
+import { formCommonColors, formControlColors, formSelectedColors } from '../../shared/color-ramps';
 import { t } from '../../shared/t';
 import {
   getElevationWrapperProps,
@@ -43,7 +45,7 @@ import {
   hasMinStepsBetween,
   snapSliderValue,
   useSliderJumpMotion,
-} from './jumpMotion';
+} from './jump-motion';
 
 /**
  * Visual rail height. Spectrum ~3px, Apple ~4pt; Material's 16dp track is a
@@ -274,7 +276,7 @@ function SliderControl({
   const railRadius = resolveRadiusClass('BINARY', radiusStop, { heightPx: TRACK_HEIGHT });
 
   // Native jump tween rides transform (FLIP) — the RN driver cannot animate
-  // the thumb's `left` percent (see ./jumpMotion.ts). Web keeps the css
+  // the thumb's `left` percent (see ./jump-motion.ts). Web keeps the css
   // transition session below untouched.
   const trackWidthRef = useRef(0);
   // RENDERED thumb diameter — the same number tamagui's internal x-offset
@@ -534,7 +536,11 @@ function SliderControl({
           // itself — naming it here too doubles the spoken name.
           aria-describedby={describedBy}>
           {elevationWrapperProps.elevation ? (
-            <View {...elevationWrapperProps} width="100%" height="100%" borderRadius={railRadius}>
+            <View
+              {...elevationWrapperProps}
+              width="100%"
+              height="100%"
+              borderRadius={railRadius}>
               <TamaguiSlider.Track {...getTrackProps(outlined, railRadius)}>{trackActive}</TamaguiSlider.Track>
             </View>
           ) : (
@@ -641,7 +647,10 @@ function SliderControl({
               ...(kbThumb === thumbIndex ? { ...thumbFocusRing, 'data-kb-focus': 'true' } : undefined),
             };
             return elevationWrapperProps.elevation && isWeb ? (
-              <View key={thumbIndex} {...elevationWrapperProps} borderRadius={thumbRadius}>
+              <View
+                key={thumbIndex}
+                {...elevationWrapperProps}
+                borderRadius={thumbRadius}>
                 <SliderThumbFrame
                   width={thumbSize}
                   height={thumbSize}
@@ -732,9 +741,20 @@ export function Slider({
   // Render skeleton placeholder
   if (skeleton) {
     return (
-      <FieldLayout id={id} label={label} size={size} knobProps={knobProps}>
-        <XStack height={size || knobProps.sizeToken} alignItems="center" width="100%">
-          <Skeleton variant="rounded" width="100%" height={TRACK_HEIGHT} />
+      <FieldLayout
+        id={id}
+        label={label}
+        size={size}
+        knobProps={knobProps}>
+        <XStack
+          height={size || knobProps.sizeToken}
+          alignItems="center"
+          width="100%">
+          <Skeleton
+            variant="rounded"
+            width="100%"
+            height={TRACK_HEIGHT}
+          />
         </XStack>
       </FieldLayout>
     );
@@ -794,7 +814,11 @@ export function Slider({
   }
 
   return (
-    <Field form={resolvedForm} name={name} defaultValue={defaultValue} validators={resolvedValidators}>
+    <Field
+      form={resolvedForm}
+      name={name}
+      defaultValue={defaultValue}
+      validators={resolvedValidators}>
       {(field) => {
         const resolvedError = getFieldError(field, error);
 
@@ -813,7 +837,7 @@ export function Slider({
             knobProps={knobProps}
             disabled={disabled}>
             {control(
-              value !== undefined ? value : normalizedValue,
+              value === undefined ? normalizedValue : value,
               // Form-integrated is always controlled: field state is the live
               // source and handleChange below closes the loop (ToggleGroup
               // form branch does the same).

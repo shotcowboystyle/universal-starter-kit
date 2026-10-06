@@ -10,11 +10,13 @@ import {
   useResolvedKnobs,
   wasKeyboardFocus,
 } from '@repo/theme';
-import React, { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { ScrollView as RNScrollView } from 'react-native';
-import { Text, XStack, YStack, isWeb, type YStackProps } from 'tamagui';
+import { Text, XStack, YStack, isWeb } from 'tamagui';
+import type { YStackProps } from 'tamagui';
 
-import { componentColors, sectionHeading } from '../componentColors';
+import { componentColors, sectionHeading } from '../component-colors';
 import { AsyncBoundary } from '../layouts/AsyncBoundary';
 import { ViewSwitcher } from '../layouts/ViewSwitcher';
 import { ScrollView } from '../ScrollView';
@@ -22,7 +24,7 @@ import { useTranslation } from '../shared/i18n';
 import { withInterp } from '../shared/t';
 import { Skeleton } from '../Skeleton';
 
-import { formatRangeLabel } from './ganttMath';
+import { formatRangeLabel } from './gantt-math';
 import {
   alignMatrixRange,
   matrixCellIntensity,
@@ -31,13 +33,15 @@ import {
   generateBuckets,
   matrixMaxValue,
   summarizeMatrixCells,
-  type MatrixBucket,
-  type MatrixBucketRule,
-  type MatrixCell,
-  type MatrixCellSummary,
-  type MatrixIntent,
-  type MatrixRange,
-} from './matrixMath';
+} from './matrix-math';
+import type {
+  MatrixBucket,
+  MatrixBucketRule,
+  MatrixCell,
+  MatrixCellSummary,
+  MatrixIntent,
+  MatrixRange,
+} from './matrix-math';
 
 // Same split as the Gantt: the grid canvas needs real scroll events to drive
 // the pinned axis follower, and Tamagui's styled ScrollView does not deliver
@@ -283,7 +287,11 @@ function LegendSwatch({ intensity, fill, empty }: { intensity?: number; fill?: s
       borderColor={componentColors.surface.border}
       {...{ 'data-matrix-legend-swatch': empty ? 'empty' : String(intensity ?? 1) }}>
       {empty ? (
-        <Text fontSize={10} lineHeight={10} color={componentColors.text.subtle} aria-hidden>
+        <Text
+          fontSize={10}
+          lineHeight={10}
+          color={componentColors.text.subtle}
+          aria-hidden>
           ·
         </Text>
       ) : (
@@ -324,13 +332,28 @@ function MatrixSkeleton({
       aria-busy
       aria-label={t('Loading')}
       {...{ 'data-matrix-skeleton': 'true', 'data-async-skeleton': 'matrix' }}>
-      <XStack height={rowHeight} alignItems="center" {...hairline.bottom} borderColor="$borderColor">
-        <XStack width={labelWidth} paddingHorizontal={edgePad}>
-          <Skeleton width={64} height={12} />
+      <XStack
+        height={rowHeight}
+        alignItems="center"
+        {...hairline.bottom}
+        borderColor="$borderColor">
+        <XStack
+          width={labelWidth}
+          paddingHorizontal={edgePad}>
+          <Skeleton
+            width={64}
+            height={12}
+          />
         </XStack>
         {columns.map((column) => (
-          <XStack key={column} width={columnWidth} justifyContent="center">
-            <Skeleton width={Math.max(24, columnWidth - 24)} height={12} />
+          <XStack
+            key={column}
+            width={columnWidth}
+            justifyContent="center">
+            <Skeleton
+              width={Math.max(24, columnWidth - 24)}
+              height={12}
+            />
           </XStack>
         ))}
       </XStack>
@@ -341,11 +364,19 @@ function MatrixSkeleton({
           alignItems="center"
           {...(index < SKELETON_ROWS.length - 1 ? hairline.bottom : null)}
           borderColor={componentColors.divider}>
-          <XStack width={labelWidth} paddingHorizontal={edgePad}>
-            <Skeleton width={labelSkeletonWidth} height={12} />
+          <XStack
+            width={labelWidth}
+            paddingHorizontal={edgePad}>
+            <Skeleton
+              width={labelSkeletonWidth}
+              height={12}
+            />
           </XStack>
           {columns.map((column) => (
-            <XStack key={column} width={columnWidth} justifyContent="center">
+            <XStack
+              key={column}
+              width={columnWidth}
+              justifyContent="center">
               {(column + index) % 3 === 0 ? null : (
                 <Skeleton
                   variant="rounded"
@@ -495,7 +526,11 @@ export function MatrixView({
     <AsyncBoundary
       loading={
         showSkeleton ? (
-          <MatrixSkeleton labelWidth={labelWidth} columnWidth={columnWidth} rowHeight={rowHeight} />
+          <MatrixSkeleton
+            labelWidth={labelWidth}
+            columnWidth={columnWidth}
+            rowHeight={rowHeight}
+          />
         ) : (
           false
         )
@@ -525,7 +560,10 @@ export function MatrixView({
           {...knobProps.gap}
           {...hairline.bottom}
           borderColor="$borderColor">
-          <Text {...knobProps.heading} {...sectionHeading} numberOfLines={1}>
+          <Text
+            {...knobProps.heading}
+            {...sectionHeading}
+            numberOfLines={1}>
             {rangeLabel}
           </Text>
           {showRuleSwitcher && (
@@ -546,7 +584,10 @@ export function MatrixView({
         {/* Pinned axis row: the subject header cell + the bucket header strip
             stay put while rows scroll vertically. The strip follows the grid
             scroller, so headers and cells can never drift apart. */}
-        <XStack {...hairline.bottom} borderColor="$borderColor" {...{ 'data-matrix-axis-row': 'true' }}>
+        <XStack
+          {...hairline.bottom}
+          borderColor="$borderColor"
+          {...{ 'data-matrix-axis-row': 'true' }}>
           <XStack
             width={labelWidth}
             flexShrink={0}
@@ -556,7 +597,10 @@ export function MatrixView({
             {...hairlineEnd}
             borderColor="$borderColor"
             {...{ backgroundColor: componentColors.surface.background }}>
-            <Text {...knobProps.label} color={knobProps.textAccentColor} numberOfLines={1}>
+            <Text
+              {...knobProps.label}
+              color={knobProps.textAccentColor}
+              numberOfLines={1}>
               {subjectLabel ?? t('Subject')}
             </Text>
           </XStack>
@@ -585,7 +629,10 @@ export function MatrixView({
                   borderColor={componentColors.divider}
                   aria-label={bucket.name}
                   {...{ 'data-matrix-column': bucket.key }}>
-                  <Text {...knobProps.label} color={knobProps.textAccentColor} numberOfLines={1}>
+                  <Text
+                    {...knobProps.label}
+                    color={knobProps.textAccentColor}
+                    numberOfLines={1}>
                     {bucket.label}
                   </Text>
                 </XStack>
@@ -613,7 +660,10 @@ export function MatrixView({
                   {...(index === rows.length - 1 ? null : hairline.bottom)}
                   borderColor={componentColors.divider}
                   {...{ 'data-matrix-row-label': row.id }}>
-                  <Text {...knobProps.body} numberOfLines={1} color="$color">
+                  <Text
+                    {...knobProps.body}
+                    numberOfLines={1}
+                    color="$color">
                     {row.label}
                   </Text>
                 </XStack>
@@ -628,7 +678,9 @@ export function MatrixView({
               onScroll={handleCanvasScroll}
               scrollEventThrottle={16}
               style={(isWeb ? scrollerDirection : [{ flex: 1 }, scrollerDirection]) as any}>
-              <YStack width={gridWidth} {...{ 'data-matrix-canvas': 'true' }}>
+              <YStack
+                width={gridWidth}
+                {...{ 'data-matrix-canvas': 'true' }}>
                 {rows.map((row, rowIndex) => (
                   <XStack
                     key={row.id}
@@ -647,7 +699,9 @@ export function MatrixView({
                         value: text,
                       });
                       return (
-                        <CellIntentWrap key={bucket.key} intent={summary?.color ? undefined : summary?.intent}>
+                        <CellIntentWrap
+                          key={bucket.key}
+                          intent={summary?.color ? undefined : summary?.intent}>
                           <MatrixCellBox
                             row={row}
                             bucket={bucket}
@@ -686,28 +740,47 @@ export function MatrixView({
             {...hairline.top}
             borderColor="$borderColor"
             {...{ 'data-matrix-legend': 'true' }}>
-            <XStack alignItems="center" gap="$1.5">
+            <XStack
+              alignItems="center"
+              gap="$1.5">
               <LegendSwatch empty />
-              <Text {...knobProps.label} color={knobProps.textAccentColor}>
+              <Text
+                {...knobProps.label}
+                color={knobProps.textAccentColor}>
                 {t('No data')}
               </Text>
             </XStack>
-            <XStack alignItems="center" gap="$1.5">
-              <Text {...knobProps.label} color={knobProps.textAccentColor}>
+            <XStack
+              alignItems="center"
+              gap="$1.5">
+              <Text
+                {...knobProps.label}
+                color={knobProps.textAccentColor}>
                 {t('Less')}
               </Text>
               {LEGEND_STEPS.map((step) => (
-                <LegendSwatch key={step} intensity={step} />
+                <LegendSwatch
+                  key={step}
+                  intensity={step}
+                />
               ))}
-              <Text {...knobProps.label} color={knobProps.textAccentColor}>
+              <Text
+                {...knobProps.label}
+                color={knobProps.textAccentColor}>
                 {t('More')}
               </Text>
             </XStack>
             {legendItems?.map((item, index) => (
-              <CellIntentWrap key={`${item.label}-${index}`} intent={item.color ? undefined : item.intent}>
-                <XStack alignItems="center" gap="$1.5">
+              <CellIntentWrap
+                key={`${item.label}-${index}`}
+                intent={item.color ? undefined : item.intent}>
+                <XStack
+                  alignItems="center"
+                  gap="$1.5">
                   <LegendSwatch fill={resolveFill(item.color, item.intent)} />
-                  <Text {...knobProps.label} color={knobProps.textAccentColor}>
+                  <Text
+                    {...knobProps.label}
+                    color={knobProps.textAccentColor}>
                     {item.label}
                   </Text>
                 </XStack>

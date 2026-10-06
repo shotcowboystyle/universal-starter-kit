@@ -7,10 +7,10 @@ import { tamaguiPlugin } from '@tamagui/vite-plugin';
 import react from '@vitejs/plugin-react';
 import type { UserConfig } from 'vite';
 
-import { phosphorTokenColorPlugin } from './phosphorTokenColor.ts';
-import { ensureTamaguiWorkspacePaths } from './tamaguiWorkspacePaths.ts';
+import { phosphorTokenColorPlugin } from './phosphor-token-color.ts';
+import { ensureTamaguiWorkspacePaths } from './tamagui-workspace-paths.ts';
 
-const pinReactRequireSetup = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../pinReactRequire.cjs');
+const pinReactRequireSetup = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../pin-react-require.cjs');
 
 /**
  * CJS `require('react')` does not go through Vite aliases. `use-sync-external-store`
@@ -164,7 +164,7 @@ export function createVitestConfig(options: CreateVitestConfigOptions = {}): Use
     tamaguiConfig = './tests/tamagui.config.ts',
     environment = 'jsdom',
     setupFiles = [],
-    testTimeout = 30000,
+    testTimeout = 30_000,
     inlineDeps = [],
     externalDeps = [],
     aliases = {},
@@ -196,7 +196,7 @@ export function createVitestConfig(options: CreateVitestConfigOptions = {}): Use
           return;
         }
         return {
-          code: code.replace(/from ['"]react-native['"]/g, 'from "react-native-web"'),
+          code: code.replaceAll(/from ['"]react-native['"]/g, 'from "react-native-web"'),
           map: null,
         };
       },
@@ -360,7 +360,7 @@ export function createVitestConfig(options: CreateVitestConfigOptions = {}): Use
       __DEV__: true,
       global: 'globalThis',
       // This replaces the `process` identifier in transformed modules. Keep the
-      // MPO_VITEST_* paths on that stub so pinReactRequire.cjs still sees
+      // MPO_VITEST_* paths on that stub so pin-react-require.cjs still sees
       // them if Vite ever transforms the setup file.
       process: JSON.stringify({
         env: {

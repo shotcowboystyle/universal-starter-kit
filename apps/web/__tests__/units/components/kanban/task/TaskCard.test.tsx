@@ -5,7 +5,8 @@ import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TaskCard } from '@/components/kanban/task/TaskCard';
-import { TaskStatus, type Task } from '@/types/dbInterface';
+import { TaskStatus } from '@/types/db-interface';
+import type { Task } from '@/types/db-interface';
 
 // Ensure React is globally available
 globalThis.React = React;
@@ -162,23 +163,43 @@ describe('TaskCard', () => {
   });
 
   it('should render with drag enabled', () => {
-    const { container } = render(<TaskCard task={mockTask} isDragEnabled={true} />);
+    const { container } = render(
+      <TaskCard
+        task={mockTask}
+        isDragEnabled={true}
+      />,
+    );
     expect(container.firstChild).toBeTruthy();
   });
 
   it('should render with drag disabled', () => {
-    const { container } = render(<TaskCard task={mockTask} isDragEnabled={false} />);
+    const { container } = render(
+      <TaskCard
+        task={mockTask}
+        isDragEnabled={false}
+      />,
+    );
     expect(container.firstChild).toBeTruthy();
   });
 
   it('should render as overlay', () => {
-    const { container } = render(<TaskCard task={mockTask} isOverlay={true} />);
+    const { container } = render(
+      <TaskCard
+        task={mockTask}
+        isOverlay={true}
+      />,
+    );
     expect(container.firstChild).toBeTruthy();
   });
 
   it('should call onUpdate callback when provided', () => {
     const mockOnUpdate = vi.fn();
-    const { container } = render(<TaskCard task={mockTask} onUpdate={mockOnUpdate} />);
+    const { container } = render(
+      <TaskCard
+        task={mockTask}
+        onUpdate={mockOnUpdate}
+      />,
+    );
     expect(container.firstChild).toBeTruthy();
   });
 
@@ -207,12 +228,22 @@ describe('TaskCard', () => {
   });
 
   it('should render drag handle when drag is enabled', () => {
-    render(<TaskCard task={mockTask} isDragEnabled={true} />);
+    render(
+      <TaskCard
+        task={mockTask}
+        isDragEnabled={true}
+      />,
+    );
     expect(screen.getByLabelText('drag task: Test Task')).toBeInTheDocument();
   });
 
   it('should not render drag handle when drag is disabled', () => {
-    render(<TaskCard task={mockTask} isDragEnabled={false} />);
+    render(
+      <TaskCard
+        task={mockTask}
+        isDragEnabled={false}
+      />,
+    );
     expect(screen.queryByLabelText('drag task: Test Task')).not.toBeInTheDocument();
   });
 
@@ -228,7 +259,12 @@ describe('TaskCard', () => {
       isDragging: false,
     } as any);
 
-    render(<TaskCard task={mockTask} isDragEnabled={true} />);
+    render(
+      <TaskCard
+        task={mockTask}
+        isDragEnabled={true}
+      />,
+    );
     const card = screen.getByTestId('task-card');
     expect(setNodeRef).toHaveBeenCalledWith(card);
     expect(card.style.transition).toBe('transform 200ms ease');

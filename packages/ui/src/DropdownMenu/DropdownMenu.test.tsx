@@ -15,11 +15,15 @@ function renderMenu(onSelect = vi.fn(), onDelete = vi.fn()) {
       </DropdownMenu.Trigger>
       <DropdownMenu.Content>
         <DropdownMenu.Item onSelect={onSelect}>Edit</DropdownMenu.Item>
-        <DropdownMenu.Item disabled disabledReason="Nothing to duplicate yet">
+        <DropdownMenu.Item
+          disabled
+          disabledReason="Nothing to duplicate yet">
           Duplicate
         </DropdownMenu.Item>
         <DropdownMenu.Separator />
-        <DropdownMenu.Item destructive onSelect={onDelete}>
+        <DropdownMenu.Item
+          destructive
+          onSelect={onDelete}>
           Delete
         </DropdownMenu.Item>
       </DropdownMenu.Content>
@@ -35,7 +39,7 @@ describe('DropdownMenu', () => {
       expect(document.querySelector('[role="menu"]')).toBeTruthy();
     });
     const items = document.querySelectorAll('[role="menuitem"]');
-    expect(items.length).toBe(3);
+    expect(items).toHaveLength(3);
     expect(items[0].textContent).toContain('Edit');
     expect(items[2].textContent).toContain('Delete');
   });
@@ -61,7 +65,7 @@ describe('DropdownMenu', () => {
       el.textContent?.includes('Edit'),
     ) as HTMLElement;
     fireEvent.click(edit);
-    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onSelect).toHaveBeenCalledOnce();
     await waitFor(() => {
       expect(document.querySelector('[role="menu"]')).toBeFalsy();
     });
@@ -81,7 +85,7 @@ describe('DropdownMenu', () => {
     fireEvent.keyDown(menu, { key: 'ArrowDown' });
     expect(document.activeElement).toBe(items[1]);
     fireEvent.keyDown(items[1], { key: 'Enter' });
-    expect(onDelete).toHaveBeenCalledTimes(1);
+    expect(onDelete).toHaveBeenCalledOnce();
     expect(onSelect).not.toHaveBeenCalled();
   });
 
@@ -105,7 +109,9 @@ describe('DropdownMenu', () => {
           <Button>View</Button>
         </DropdownMenu.Trigger>
         <DropdownMenu.Content>
-          <DropdownMenu.CheckboxItem checked={false} onCheckedChange={onCheckedChange}>
+          <DropdownMenu.CheckboxItem
+            checked={false}
+            onCheckedChange={onCheckedChange}>
             Show grid
           </DropdownMenu.CheckboxItem>
         </DropdownMenu.Content>
@@ -124,15 +130,17 @@ describe('DropdownMenu', () => {
 
   it('renders the convenience items=[] API with separators', async () => {
     renderWithProviders(
-      <DropdownMenu defaultOpen items={[{ label: 'One' }, { separator: true }, { label: 'Two', destructive: true }]}>
+      <DropdownMenu
+        defaultOpen
+        items={[{ label: 'One' }, { separator: true }, { label: 'Two', destructive: true }]}>
         <Button>Actions</Button>
       </DropdownMenu>,
     );
     await waitFor(() => {
       expect(document.querySelector('[role="menu"]')).toBeTruthy();
     });
-    expect(document.querySelectorAll('[role="menuitem"]').length).toBe(2);
-    expect(document.querySelectorAll('[role="separator"]').length).toBe(1);
+    expect(document.querySelectorAll('[role="menuitem"]')).toHaveLength(2);
+    expect(document.querySelectorAll('[role="separator"]')).toHaveLength(1);
   });
 
   it('exposes aria-haspopup and aria-expanded on the trigger', async () => {
@@ -156,7 +164,9 @@ describe('DropdownMenu items path — checked entries', () => {
     const onSelect = vi.fn();
     const onCheckedChange = vi.fn();
     renderWithProviders(
-      <DropdownMenu defaultOpen items={[{ key: 'list', label: 'List', checked: false, onSelect, onCheckedChange }]}>
+      <DropdownMenu
+        defaultOpen
+        items={[{ key: 'list', label: 'List', checked: false, onSelect, onCheckedChange }]}>
         <Button>Views</Button>
       </DropdownMenu>,
     );
@@ -167,7 +177,7 @@ describe('DropdownMenu items path — checked entries', () => {
     expect(item.getAttribute('aria-checked')).toBe('false');
     fireEvent.click(item);
     expect(onCheckedChange).toHaveBeenCalledWith(true);
-    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onSelect).toHaveBeenCalledOnce();
   });
 
   it('closes the menu when a checked entry sets closeOnSelect', async () => {
@@ -183,7 +193,7 @@ describe('DropdownMenu items path — checked entries', () => {
       expect(document.querySelector('[role="menuitemcheckbox"]')).toBeTruthy();
     });
     fireEvent.click(document.querySelector('[role="menuitemcheckbox"]') as HTMLElement);
-    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onSelect).toHaveBeenCalledOnce();
     await waitFor(() => {
       expect(document.querySelector('[role="menu"]')).toBeFalsy();
     });
@@ -208,7 +218,7 @@ describe('DropdownMenu items path — checked entries', () => {
       </DropdownMenu>,
     );
     await waitFor(() => {
-      expect(document.querySelectorAll('[role="menuitemcheckbox"]').length).toBe(2);
+      expect(document.querySelectorAll('[role="menuitemcheckbox"]')).toHaveLength(2);
     });
     const rows = Array.from(document.querySelectorAll<HTMLElement>('[role="menuitemcheckbox"]'));
     // CheckboxItem semantics stay intact: aria-checked marks the current view.
@@ -226,7 +236,9 @@ describe('DropdownMenu items path — checked entries', () => {
     // a checkable toggle composes, so the menu MUST stay open.
     const onCheckedChange = vi.fn();
     renderWithProviders(
-      <DropdownMenu defaultOpen items={[{ key: 'grid', label: 'Show grid', checked: true, onCheckedChange }]}>
+      <DropdownMenu
+        defaultOpen
+        items={[{ key: 'grid', label: 'Show grid', checked: true, onCheckedChange }]}>
         <Button>View options</Button>
       </DropdownMenu>,
     );
@@ -244,7 +256,9 @@ describe('DropdownMenu items path — checked entries', () => {
   it('forwards entry-level closeOnSelect=false on plain items', async () => {
     const onSelect = vi.fn();
     renderWithProviders(
-      <DropdownMenu defaultOpen items={[{ key: 'apply', label: 'Apply', closeOnSelect: false, onSelect }]}>
+      <DropdownMenu
+        defaultOpen
+        items={[{ key: 'apply', label: 'Apply', closeOnSelect: false, onSelect }]}>
         <Button>Actions</Button>
       </DropdownMenu>,
     );
@@ -252,7 +266,7 @@ describe('DropdownMenu items path — checked entries', () => {
       expect(document.querySelector('[role="menuitem"]')).toBeTruthy();
     });
     fireEvent.click(document.querySelector('[role="menuitem"]') as HTMLElement);
-    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onSelect).toHaveBeenCalledOnce();
     await new Promise((resolve) => setTimeout(resolve, 400));
     expect(document.querySelector('[role="menu"]')).toBeTruthy();
   });
@@ -303,7 +317,9 @@ describe('DropdownMenu disabledReason', () => {
 
   it('DEV-warns bare-disabled for disabled items without a reason', async () => {
     renderWithProviders(
-      <DropdownMenu defaultOpen items={[{ label: 'Publish', disabled: true }]}>
+      <DropdownMenu
+        defaultOpen
+        items={[{ label: 'Publish', disabled: true }]}>
         <Button>Actions</Button>
       </DropdownMenu>,
     );
@@ -315,7 +331,9 @@ describe('DropdownMenu disabledReason', () => {
 
   it('does not render a reason node for enabled items', async () => {
     renderWithProviders(
-      <DropdownMenu defaultOpen items={[{ label: 'Open', disabledReason: 'unused' }]}>
+      <DropdownMenu
+        defaultOpen
+        items={[{ label: 'Open', disabledReason: 'unused' }]}>
         <Button>Actions</Button>
       </DropdownMenu>,
     );
@@ -368,7 +386,7 @@ describe('DropdownMenu keyboard ring', () => {
     fireEvent.keyDown(trigger, { key: 'ArrowUp' });
     await waitFor(() => {
       const items = document.querySelectorAll('[role="menuitem"]');
-      expect(items.length).toBe(3);
+      expect(items).toHaveLength(3);
       expect(document.activeElement).toBe(items[2]);
     });
   });
@@ -443,7 +461,9 @@ describe('DropdownMenu FloatingPanel cover contract', () => {
     const width = window.innerWidth;
     Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 500 });
     renderWithProviders(
-      <DropdownMenu defaultOpen items={[{ label: 'Edit' }]}>
+      <DropdownMenu
+        defaultOpen
+        items={[{ label: 'Edit' }]}>
         <Button>Actions</Button>
       </DropdownMenu>,
     );
@@ -464,7 +484,9 @@ describe('DropdownMenu FloatingPanel cover contract', () => {
         <DropdownMenu.Trigger asChild>
           <Button>View</Button>
         </DropdownMenu.Trigger>
-        <DropdownMenu.Content maxHeight={240} maxWidth={320}>
+        <DropdownMenu.Content
+          maxHeight={240}
+          maxWidth={320}>
           <DropdownMenu.Item>Col</DropdownMenu.Item>
         </DropdownMenu.Content>
       </DropdownMenu>,
@@ -520,8 +542,8 @@ describe('DropdownMenu.Content onCloseAutoFocus', () => {
       await waitFor(() => {
         expect(document.querySelector('[role="menu"]')).toBeFalsy();
       });
-      await act(() => new Promise((resolve) => setTimeout(resolve, 400)));
-      expect(onCloseAutoFocus).toHaveBeenCalledTimes(1);
+      await act(async () => new Promise((resolve) => setTimeout(resolve, 400)));
+      expect(onCloseAutoFocus).toHaveBeenCalledOnce();
       if (preventRestore) {
         expect(document.activeElement).not.toBe(trigger);
       } else {
@@ -549,7 +571,7 @@ describe('DropdownMenu.Content onCloseAutoFocus', () => {
     await waitFor(() => {
       expect(document.querySelector('[role="menu"]')).toBeFalsy();
     });
-    expect(onCloseAutoFocus).toHaveBeenCalledTimes(1);
+    expect(onCloseAutoFocus).toHaveBeenCalledOnce();
     const event = onCloseAutoFocus.mock.calls[0][0] as {
       preventDefault: () => void;
       defaultPrevented: boolean;
@@ -568,7 +590,9 @@ describe('DropdownMenu.Content onCloseAutoFocus', () => {
     function Harness() {
       const [open, setOpen] = useState(true);
       return (
-        <DropdownMenu open={open} onOpenChange={setOpen}>
+        <DropdownMenu
+          open={open}
+          onOpenChange={setOpen}>
           <DropdownMenu.Trigger asChild>
             <Button>Heading</Button>
           </DropdownMenu.Trigger>
@@ -592,7 +616,7 @@ describe('DropdownMenu.Content onCloseAutoFocus', () => {
     await waitFor(() => {
       expect(document.querySelector('[role="menu"]')).toBeFalsy();
     });
-    expect(onCloseAutoFocus).toHaveBeenCalledTimes(1);
+    expect(onCloseAutoFocus).toHaveBeenCalledOnce();
   });
 
   it('puts Content aria-label on the role=menu node', async () => {

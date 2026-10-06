@@ -8,9 +8,9 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 
-import { houseSyntaxTheme } from './houseSyntaxTheme';
+import { houseSyntaxTheme } from './house-syntax-theme';
 
-export * from './houseSyntaxTheme';
+export * from './house-syntax-theme';
 
 /** A single highlighted token with inline color */
 export interface HighlightToken {
@@ -77,14 +77,15 @@ function plainTextTokens(code: string): HighlightLine[] {
 // of an eager preload.
 let highlighterPromise: Promise<any> | null = null;
 
-function getHighlighter(): Promise<any> {
+async function getHighlighter(): Promise<any> {
   if (!highlighterPromise) {
-    highlighterPromise = Promise.all([import('shiki'), import('shiki/engine/javascript')]).then(([shiki, jsEngine]) =>
-      shiki.createHighlighter({
-        themes: [],
-        langs: [],
-        engine: jsEngine.createJavaScriptRegexEngine(),
-      }),
+    highlighterPromise = Promise.all([import('shiki'), import('shiki/engine/javascript')]).then(
+      async ([shiki, jsEngine]) =>
+        shiki.createHighlighter({
+          themes: [],
+          langs: [],
+          engine: jsEngine.createJavaScriptRegexEngine(),
+        }),
     );
   }
   return highlighterPromise;

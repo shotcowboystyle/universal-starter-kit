@@ -27,40 +27,61 @@ export const Basic: Story = {
 export const Sizes: Story = {
   render: () => (
     <YStack gap="$6">
-      <XStack gap="$6" alignItems="center">
-        <YStack gap="$2" alignItems="center">
+      <XStack
+        gap="$6"
+        alignItems="center">
+        <YStack
+          gap="$2"
+          alignItems="center">
           <Spinner size="small" />
           <Paragraph size="$2">small</Paragraph>
         </YStack>
-        <YStack gap="$2" alignItems="center">
+        <YStack
+          gap="$2"
+          alignItems="center">
           <Spinner size="large" />
           <Paragraph size="$2">large</Paragraph>
         </YStack>
-        <YStack gap="$2" alignItems="center">
-          <Spinner size="small" color="$red10" />
+        <YStack
+          gap="$2"
+          alignItems="center">
+          <Spinner
+            size="small"
+            color="$red10"
+          />
           <Paragraph size="$2">custom color</Paragraph>
         </YStack>
       </XStack>
-      <XStack gap="$6" alignItems="center">
-        <YStack gap="$2" alignItems="center">
+      <XStack
+        gap="$6"
+        alignItems="center">
+        <YStack
+          gap="$2"
+          alignItems="center">
           <Preset overrides={{ size: 'small' }}>
             <Spinner />
           </Preset>
           <Paragraph size="$2">knob small</Paragraph>
         </YStack>
-        <YStack gap="$2" alignItems="center">
+        <YStack
+          gap="$2"
+          alignItems="center">
           <Preset overrides={{ size: 'medium' }}>
             <Spinner />
           </Preset>
           <Paragraph size="$2">knob medium</Paragraph>
         </YStack>
-        <YStack gap="$2" alignItems="center">
+        <YStack
+          gap="$2"
+          alignItems="center">
           <Preset overrides={{ size: 'large' }}>
             <Spinner />
           </Preset>
           <Paragraph size="$2">knob large</Paragraph>
         </YStack>
-        <YStack gap="$2" alignItems="center">
+        <YStack
+          gap="$2"
+          alignItems="center">
           <Preset overrides={{ animation: 'none' }}>
             <Spinner size="large" />
           </Preset>
@@ -76,14 +97,18 @@ export const MountUnmount: Story = {
     const Example = () => {
       const [mounted, setMounted] = useState(true);
       return (
-        <YStack gap="$4" alignItems="flex-start">
+        <YStack
+          gap="$4"
+          alignItems="flex-start">
           <Button
             onPress={() => {
               setMounted((m) => !m);
             }}>
             {mounted ? 'Unmount spinner' : 'Mount spinner'}
           </Button>
-          <XStack height={48} alignItems="center">
+          <XStack
+            height={48}
+            alignItems="center">
             {mounted ? <Spinner size="large" /> : <Paragraph size="$2">unmounted</Paragraph>}
           </XStack>
         </YStack>

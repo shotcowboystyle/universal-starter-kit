@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react';
 import type { GetProps } from 'tamagui';
 import { Paragraph, styled } from 'tamagui';
 
-import { componentColors } from '../../componentColors';
+import { componentColors } from '../../component-colors';
 
 const CodeFrame = styled(Paragraph, {
   name: 'Code',

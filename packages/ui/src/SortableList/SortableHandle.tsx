@@ -11,7 +11,7 @@ import { View } from 'tamagui';
 import { useTranslation } from '../shared/i18n';
 import { withInterp } from '../shared/t';
 
-import { useSortableDragging } from './useSortableRows';
+import { useSortableDragging } from './use-sortable-rows';
 
 const GRIP_PX = 16;
 
@@ -70,7 +70,10 @@ export function SortableHandle({ label, itemId, dragging, compact, onPointerDown
           setKb(false);
         },
       } as Record<string, unknown>)}>
-      <DotsSixVerticalIcon size={GRIP_PX} weight="bold" />
+      <DotsSixVerticalIcon
+        size={GRIP_PX}
+        weight="bold"
+      />
     </View>
   );
 }

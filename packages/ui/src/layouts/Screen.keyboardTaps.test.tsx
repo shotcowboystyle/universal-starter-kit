@@ -12,7 +12,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 
 import { Screen } from './Page';
 
-const houseScrollViews = vi.hoisted(() => [] as Array<Record<string, unknown>>);
+const houseScrollViews = vi.hoisted(() => [] as Record<string, unknown>[]);
 
 vi.mock('../ScrollView', async (importOriginal) => {
   const { forwardRef, createElement } = await import('react');
@@ -30,7 +30,7 @@ afterEach(() => {
   houseScrollViews.length = 0;
 });
 
-it('scrolls through the house ScrollView, which defaults keyboard taps to handled on native', () => {
+test('scrolls through the house ScrollView, which defaults keyboard taps to handled on native', () => {
   renderWithProviders(
     <Screen>
       <span>Page body</span>
@@ -39,7 +39,7 @@ it('scrolls through the house ScrollView, which defaults keyboard taps to handle
   expect(houseScrollViews.length).toBeGreaterThan(0);
 });
 
-it('still hands scrollViewProps to that ScrollView, so a screen can opt back out', () => {
+test('still hands scrollViewProps to that ScrollView, so a screen can opt back out', () => {
   renderWithProviders(
     <Screen scrollViewProps={{ keyboardShouldPersistTaps: 'never' }}>
       <span>Page body</span>
@@ -48,7 +48,7 @@ it('still hands scrollViewProps to that ScrollView, so a screen can opt back out
   expect(houseScrollViews.at(-1)?.keyboardShouldPersistTaps).toBe('never');
 });
 
-it('renders no ScrollView when scroll is off', () => {
+test('renders no ScrollView when scroll is off', () => {
   renderWithProviders(
     <Screen scroll={false}>
       <span>Page body</span>

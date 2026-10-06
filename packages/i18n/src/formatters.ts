@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 
-import { useLanguage } from './useLanguage';
+import { useLanguage } from './use-language';
 
 type DateInput = Date | number | string;
 
@@ -12,18 +12,18 @@ function getRelativeTime(language: string, date: DateInput): string {
     return rtf.format(Math.round(diffMs / 1000), 'second');
   }
   if (abs < 3600) {
-    return rtf.format(Math.round(diffMs / 60000), 'minute');
+    return rtf.format(Math.round(diffMs / 60_000), 'minute');
   }
-  if (abs < 86400) {
-    return rtf.format(Math.round(diffMs / 3600000), 'hour');
+  if (abs < 86_400) {
+    return rtf.format(Math.round(diffMs / 3_600_000), 'hour');
   }
-  if (abs < 2592000) {
-    return rtf.format(Math.round(diffMs / 86400000), 'day');
+  if (abs < 2_592_000) {
+    return rtf.format(Math.round(diffMs / 86_400_000), 'day');
   }
-  if (abs < 31536000) {
-    return rtf.format(Math.round(diffMs / 2592000000), 'month');
+  if (abs < 31_536_000) {
+    return rtf.format(Math.round(diffMs / 2_592_000_000), 'month');
   }
-  return rtf.format(Math.round(diffMs / 31536000000), 'year');
+  return rtf.format(Math.round(diffMs / 31_536_000_000), 'year');
 }
 
 export function createDateFormatter(language: string) {

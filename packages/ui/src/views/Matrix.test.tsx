@@ -3,8 +3,10 @@ import { formatMonthYear } from '@repo/theme';
 import { cleanup, fireEvent, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { MatrixView, type MatrixRow } from './Matrix';
-import { generateBuckets, type MatrixCell } from './matrixMath';
+import { MatrixView } from './Matrix';
+import type { MatrixRow } from './Matrix';
+import { generateBuckets } from './matrix-math';
+import type { MatrixCell } from './matrix-math';
 
 afterEach(cleanup);
 
@@ -31,7 +33,13 @@ const cell = (container: HTMLElement, id: string) =>
 
 describe('MatrixView', () => {
   it("generates the column axis from the rule over the data's range, one row per subject", () => {
-    const { container } = renderWithProviders(<MatrixView rows={rows} cells={cells} rule="month" />);
+    const { container } = renderWithProviders(
+      <MatrixView
+        rows={rows}
+        cells={cells}
+        rule="month"
+      />,
+    );
 
     const columns = Array.from(container.querySelectorAll('[data-matrix-column]'));
     expect(columns.map((el) => el.getAttribute('data-matrix-column'))).toEqual([
@@ -53,7 +61,12 @@ describe('MatrixView', () => {
   it('regenerates the axis when the rule is switched, nothing re-declared', () => {
     const onRuleChange = vi.fn();
     const { container } = renderWithProviders(
-      <MatrixView rows={rows} cells={cells} rule="month" onRuleChange={onRuleChange} />,
+      <MatrixView
+        rows={rows}
+        cells={cells}
+        rule="month"
+        onRuleChange={onRuleChange}
+      />,
     );
 
     fireEvent.click(screen.getByText('Week'));
@@ -88,7 +101,13 @@ describe('MatrixView', () => {
   });
 
   it('a cell carries its folded value and a paint strength; an intent rides the theme ramp', () => {
-    const { container } = renderWithProviders(<MatrixView rows={rows} cells={cells} rule="month" />);
+    const { container } = renderWithProviders(
+      <MatrixView
+        rows={rows}
+        cells={cells}
+        rule="month"
+      />,
+    );
 
     const aJan = cell(container, 'a:2026-01-01');
     expect(aJan.textContent).toBe('10');
@@ -106,7 +125,13 @@ describe('MatrixView', () => {
   });
 
   it('an empty bucket is a different state from a zero', () => {
-    const { container } = renderWithProviders(<MatrixView rows={rows} cells={cells} rule="month" />);
+    const { container } = renderWithProviders(
+      <MatrixView
+        rows={rows}
+        cells={cells}
+        rule="month"
+      />,
+    );
 
     const zero = cell(container, 'b:2026-01-01');
     expect(zero.getAttribute('data-matrix-cell-state')).toBe('zero');
@@ -123,7 +148,12 @@ describe('MatrixView', () => {
 
   it("carries a legend naming the empty state and the ramp, plus the caller's entries", () => {
     const { container } = renderWithProviders(
-      <MatrixView rows={rows} cells={cells} rule="month" legendItems={[{ label: 'Failed import', intent: 'error' }]} />,
+      <MatrixView
+        rows={rows}
+        cells={cells}
+        rule="month"
+        legendItems={[{ label: 'Failed import', intent: 'error' }]}
+      />,
     );
     const legend = container.querySelector('[data-matrix-legend]')!;
     expect(legend).toBeTruthy();
@@ -138,14 +168,24 @@ describe('MatrixView', () => {
 
     cleanup();
     const { container: bare } = renderWithProviders(
-      <MatrixView rows={rows} cells={cells} rule="month" showLegend={false} />,
+      <MatrixView
+        rows={rows}
+        cells={cells}
+        rule="month"
+        showLegend={false}
+      />,
     );
     expect(bare.querySelector('[data-matrix-legend]')).toBeNull();
   });
 
   it('anchors every inset fill to its own swatch or cell, so no fill resolves against the viewport', () => {
     const { container } = renderWithProviders(
-      <MatrixView rows={rows} cells={cells} rule="month" legendItems={[{ label: 'Failed import', intent: 'error' }]} />,
+      <MatrixView
+        rows={rows}
+        cells={cells}
+        rule="month"
+        legendItems={[{ label: 'Failed import', intent: 'error' }]}
+      />,
     );
     const swatches = Array.from(
       container.querySelectorAll('[data-matrix-legend-swatch]:not([data-matrix-legend-swatch="empty"])'),
@@ -164,13 +204,18 @@ describe('MatrixView', () => {
   it('a cell press reports its row, bucket and summary; an empty bucket presses too', () => {
     const onCellPress = vi.fn();
     const { container } = renderWithProviders(
-      <MatrixView rows={rows} cells={cells} rule="month" onCellPress={onCellPress} />,
+      <MatrixView
+        rows={rows}
+        cells={cells}
+        rule="month"
+        onCellPress={onCellPress}
+      />,
     );
 
     const aJan = cell(container, 'a:2026-01-01');
     expect(aJan.getAttribute('role')).toBe('button');
     fireEvent.click(aJan);
-    expect(onCellPress).toHaveBeenCalledTimes(1);
+    expect(onCellPress).toHaveBeenCalledOnce();
     const ref = onCellPress.mock.calls[0][0];
     expect(ref.row.id).toBe('a');
     expect(ref.bucket.key).toBe('2026-01-01');
@@ -192,7 +237,13 @@ describe('MatrixView', () => {
   });
 
   it('without onCellPress a cell is not a control', () => {
-    const { container } = renderWithProviders(<MatrixView rows={rows} cells={cells} rule="month" />);
+    const { container } = renderWithProviders(
+      <MatrixView
+        rows={rows}
+        cells={cells}
+        rule="month"
+      />,
+    );
     expect(cell(container, 'a:2026-01-01').getAttribute('role')).toBeNull();
     expect(container.querySelectorAll('[data-matrix-cell][role="button"]')).toHaveLength(0);
   });
@@ -210,7 +261,13 @@ describe('MatrixView', () => {
       },
     });
     try {
-      const { container } = renderWithProviders(<MatrixView rows={rows} cells={cells} rule="month" />);
+      const { container } = renderWithProviders(
+        <MatrixView
+          rows={rows}
+          cells={cells}
+          rule="month"
+        />,
+      );
 
       const axisRow = container.querySelector('[data-matrix-axis-row]') as HTMLElement;
       const axis = container.querySelector('[data-matrix-axis]') as HTMLElement;
@@ -249,18 +306,37 @@ describe('MatrixView', () => {
   });
 
   it('shows the matrix skeleton while loading with no rows', () => {
-    const { container } = renderWithProviders(<MatrixView rows={[]} cells={[]} isLoading />);
+    const { container } = renderWithProviders(
+      <MatrixView
+        rows={[]}
+        cells={[]}
+        isLoading
+      />,
+    );
     expect(container.querySelector('[data-async-skeleton="matrix"]')).toBeTruthy();
     expect(container.querySelector('[data-matrix-column]')).toBeNull();
   });
 
   it('forbids empty chrome when error is set, and shows the empty state otherwise', () => {
-    renderWithProviders(<MatrixView rows={[]} cells={[]} emptyTitle="No accounts yet" error="Coverage failed" />);
+    renderWithProviders(
+      <MatrixView
+        rows={[]}
+        cells={[]}
+        emptyTitle="No accounts yet"
+        error="Coverage failed"
+      />,
+    );
     expect(screen.queryByText('No accounts yet')).toBeNull();
     expect(screen.getByText('Coverage failed')).toBeInTheDocument();
     cleanup();
 
-    renderWithProviders(<MatrixView rows={[]} cells={[]} emptyTitle="No accounts yet" />);
+    renderWithProviders(
+      <MatrixView
+        rows={[]}
+        cells={[]}
+        emptyTitle="No accounts yet"
+      />,
+    );
     expect(screen.getByText('No accounts yet')).toBeInTheDocument();
   });
 

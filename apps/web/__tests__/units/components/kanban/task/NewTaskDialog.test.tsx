@@ -47,10 +47,15 @@ vi.mock('@/components/kanban/task/TaskForm', () => ({
         });
       }}>
       {children}
-      <button type="button" onClick={onCancel} data-testid="cancel-btn">
+      <button
+        type="button"
+        onClick={onCancel}
+        data-testid="cancel-btn">
         Cancel
       </button>
-      <button type="submit" data-testid="submit-btn">
+      <button
+        type="submit"
+        data-testid="submit-btn">
         Submit
       </button>
     </form>
@@ -129,12 +134,16 @@ describe('NewTaskDialog', () => {
       );
     });
     expect(toast.success).toHaveBeenCalledWith('createSuccess');
-    await waitFor(() => expect(screen.queryByTestId('new-task-dialog')).not.toBeInTheDocument());
+    await waitFor(() => {
+      expect(screen.queryByTestId('new-task-dialog')).not.toBeInTheDocument();
+    });
   });
 
   it('closes the dialog on cancel', async () => {
     await openDialog();
     fireEvent.click(screen.getByTestId('cancel-btn'));
-    await waitFor(() => expect(screen.queryByTestId('new-task-dialog')).not.toBeInTheDocument());
+    await waitFor(() => {
+      expect(screen.queryByTestId('new-task-dialog')).not.toBeInTheDocument();
+    });
   });
 });

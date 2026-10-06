@@ -9,14 +9,14 @@ import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { z } from 'zod';
+import type { z } from 'zod';
 
 import { TaskForm } from '@/components/kanban/task/TaskForm';
 import { useDeleteTask, useTask, useUpdateTask } from '@/lib/api/tasks/queries';
 import { useWorkspaceStore } from '@/stores/workspace-store';
-import { TaskStatus } from '@/types/dbInterface';
-import { TASK_KEYS } from '@/types/taskApi';
-import { TaskFormSchema } from '@/types/taskForm';
+import type { TaskStatus } from '@/types/db-interface';
+import { TASK_KEYS } from '@/types/task-api';
+import type { TaskFormSchema } from '@/types/task-form';
 
 interface TaskActionsProps {
   id: string;
@@ -82,7 +82,7 @@ export function TaskActions({
   const defaultValues = {
     title,
     description: description || '',
-    status: status,
+    status,
     dueDate: dueDate ? new Date(dueDate) : undefined,
     // Prefer the fetched task's assignee so the picker can show the name immediately
     assignee: assigneeId
@@ -302,7 +302,9 @@ export function TaskActions({
   // Loading and error states
   if (isLoadingTask && !isDeleted) {
     return (
-      <Text paddingHorizontal="$2" paddingVertical="$1.5">
+      <Text
+        paddingHorizontal="$2"
+        paddingVertical="$1.5">
         Loading...
       </Text>
     );
@@ -331,7 +333,11 @@ export function TaskActions({
         }}>
         <Dialog.Portal>
           <DialogOverlay key="overlay" />
-          <DialogContent key="content" width="90%" maxWidth={448} testID="edit-task-dialog">
+          <DialogContent
+            key="content"
+            width="90%"
+            maxWidth={448}
+            testID="edit-task-dialog">
             <Dialog.Title size="$7">{t('editTaskTitle')}</Dialog.Title>
             <Dialog.Description>{t('editTaskDescription')}</Dialog.Description>
             <TaskForm
@@ -353,7 +359,9 @@ export function TaskActions({
             label: t('edit'),
             disabled: !canEdit,
             disabledReason: tKanban('noPermission'),
-            onSelect: () => setIsEditDialogOpen(true),
+            onSelect: () => {
+              setIsEditDialogOpen(true);
+            },
           },
           { separator: true },
           {
@@ -361,10 +369,18 @@ export function TaskActions({
             destructive: true,
             disabled: !canDelete,
             disabledReason: tKanban('noPermission'),
-            onSelect: () => setShowDeleteDialog(true),
+            onSelect: () => {
+              setShowDeleteDialog(true);
+            },
           },
         ]}>
-        <Button chromeless size="$2" icon={Ellipsis} aria-label={t('actions')} testID="task-actions-trigger" />
+        <Button
+          chromeless
+          size="$2"
+          icon={Ellipsis}
+          aria-label={t('actions')}
+          testID="task-actions-trigger"
+        />
       </DropdownMenu>
 
       <ConfirmDialog

@@ -20,7 +20,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { SheetModal as NativeSheetModal } from './index.native';
 
-import { SheetModal as WebSheetModal, type SheetModalProps } from './index';
+import { SheetModal as WebSheetModal } from './index';
+import type { SheetModalProps } from './index';
 
 vi.mock('react-native-web', async (importOriginal) => ({
   ...(await importOriginal<typeof import('react-native')>()),
@@ -40,7 +41,11 @@ function classes(element: HTMLElement) {
 
 function renderNative(props: Partial<SheetModalProps> = {}) {
   return renderWithProviders(
-    <NativeSheetModal open onOpenChange={() => {}} header={<Text>Move to project</Text>} {...props}>
+    <NativeSheetModal
+      open
+      onOpenChange={() => {}}
+      header={<Text>Move to project</Text>}
+      {...props}>
       <Text>row</Text>
     </NativeSheetModal>,
   );
@@ -111,7 +116,11 @@ describe('native fill allocates the sheet body', () => {
  */
 function renderWeb(props: Partial<SheetModalProps> = {}) {
   return renderWithProviders(
-    <WebSheetModal open onOpenChange={() => {}} header={<Text>Move to project</Text>} {...props}>
+    <WebSheetModal
+      open
+      onOpenChange={() => {}}
+      header={<Text>Move to project</Text>}
+      {...props}>
       <Text>row</Text>
     </WebSheetModal>,
   );
@@ -133,7 +142,7 @@ describe('web fill opens the body inside the snapped frame', () => {
     const view = renderWeb({ fill: true, scrollable: true });
     const bodies = view.getAllByTestId('sheet-modal-body');
     const scrollers = view.getAllByTestId('sheet-modal-scroll');
-    expect(scrollers.length).toBe(bodies.length);
+    expect(scrollers).toHaveLength(bodies.length);
     for (const body of bodies) {
       expect(body.querySelectorAll('[data-testid="sheet-modal-scroll"]')).toHaveLength(1);
     }

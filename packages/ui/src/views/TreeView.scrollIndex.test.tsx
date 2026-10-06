@@ -32,7 +32,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-it('reports no preparatory index offset while the actual scroll transport is deferred', async () => {
+test('reports no preparatory index offset while the actual scroll transport is deferred', async () => {
   vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(320);
   vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(240);
   vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
@@ -55,13 +55,13 @@ it('reports no preparatory index offset while the actual scroll transport is def
     />,
   );
   await waitFor(() => {
-    expect(observed.list?.getChildContainerDimensions().height).toBe(24000);
+    expect(observed.list?.getChildContainerDimensions().height).toBe(24_000);
   });
   await waitFor(() => {
     expect(change).toHaveBeenCalledWith(0);
   });
   expect(observed.list?.getWindowSize().height).toBe(240);
-  expect(observed.list?.getLayout(99)?.y).toBe(23760);
+  expect(observed.list?.getLayout(99)?.y).toBe(23_760);
   const native = observed.list!.getNativeScrollRef()!;
   const transport = vi.spyOn(native, 'scrollTo').mockImplementation(() => {});
   const scroller = native.getScrollableNode();
@@ -97,7 +97,7 @@ it('reports no preparatory index offset while the actual scroll transport is def
   });
 });
 
-it('positive control: actual scroll delivery reports the transported offset', async () => {
+test('positive control: actual scroll delivery reports the transported offset', async () => {
   vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(320);
   vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(240);
   vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
@@ -120,7 +120,7 @@ it('positive control: actual scroll delivery reports the transported offset', as
     />,
   );
   await waitFor(() => {
-    expect(observed.list?.getChildContainerDimensions().height).toBe(24000);
+    expect(observed.list?.getChildContainerDimensions().height).toBe(24_000);
   });
   await waitFor(() => {
     expect(change).toHaveBeenCalledWith(0);
@@ -156,7 +156,7 @@ function dimensions() {
   });
 }
 
-it.each([false, true])(
+test.each([false, true])(
   'acknowledges index-prepared reveal only after physical delivery (delivered: %s)',
   async (delivered) => {
     dimensions();
@@ -164,10 +164,15 @@ it.each([false, true])(
     const change = vi.fn();
     const complete = vi.fn();
     const tree = renderWithProviders(
-      <TreeView nodes={nodes} height={240} onScrollOffsetChange={change} onRevealComplete={complete} />,
+      <TreeView
+        nodes={nodes}
+        height={240}
+        onScrollOffsetChange={change}
+        onRevealComplete={complete}
+      />,
     );
     await waitFor(() => {
-      expect(observed.list?.getChildContainerDimensions().height).toBe(24000);
+      expect(observed.list?.getChildContainerDimensions().height).toBe(24_000);
     });
     await waitFor(() => {
       expect(change).toHaveBeenCalledWith(0);
@@ -188,7 +193,7 @@ it.each([false, true])(
     const layout = observed.list!.getLayout(visible.startIndex)!;
     expect(offset).toBeGreaterThan(0);
     expect(layout.isHeightMeasured).toBe(true);
-    expect(screen.queryByText(`Row ${visible.startIndex}`)).not.toBeNull();
+    expect(screen.getByText(`Row ${visible.startIndex}`)).not.toBeNull();
     if (delivered) {
       fireEvent.scroll(scroller, { target: { scrollTop: offset } });
       expect(scroller.scrollTop).toBe(offset);
@@ -209,12 +214,12 @@ it.each([false, true])(
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 60));
     });
-    if (!delivered) {
+    if (delivered) {
+      expect(complete).toHaveBeenCalledExactlyOnceWith({ id, requestId: 71 });
+    } else {
       expect(complete).not.toHaveBeenCalled();
       expect(scroller.scrollTop).toBe(0);
       expect(transport).toHaveBeenCalledWith({ x: 0, y: offset, animated: false });
-    } else {
-      expect(complete).toHaveBeenCalledExactlyOnceWith({ id, requestId: 71 });
     }
     fireEvent.scroll(scroller, { target: { scrollTop: offset } });
     await waitFor(() => {
@@ -223,13 +228,19 @@ it.each([false, true])(
   },
 );
 
-it('reveals an observed keyboard destination without a retention callback', async () => {
+test('reveals an observed keyboard destination without a retention callback', async () => {
   dimensions();
   const nodes = Array.from({ length: 100 }, (_, i) => ({ id: `row-${i}`, label: `Row ${i}` }));
   const complete = vi.fn();
-  const tree = renderWithProviders(<TreeView nodes={nodes} height={240} onRevealComplete={complete} />);
+  const tree = renderWithProviders(
+    <TreeView
+      nodes={nodes}
+      height={240}
+      onRevealComplete={complete}
+    />,
+  );
   await waitFor(() => {
-    expect(observed.list?.getChildContainerDimensions().height).toBe(24000);
+    expect(observed.list?.getChildContainerDimensions().height).toBe(24_000);
   });
   const list = observed.list!;
   const native = list.getNativeScrollRef()!;

@@ -33,7 +33,7 @@ import { t } from '../../shared/t';
 
 import { encodeCode128B } from './code128';
 import { QR_QUIET_ZONE_MODULES, encodeQr, qrRowRuns } from './qr';
-import { resolveNativeBarcodeType } from './scannerTypes';
+import { resolveNativeBarcodeType } from './scanner-types';
 
 export type BarcodePreviewSymbology = 'qr' | 'code128';
 
@@ -79,7 +79,12 @@ export interface BarcodePreviewProps {
  * unencodable values and the optional human-readable line under the symbol. */
 function MonoValue({ value }: { value: string }) {
   return (
-    <Text fontFamily="$mono" fontSize="$2" numberOfLines={1} color="$color" flexShrink={1}>
+    <Text
+      fontFamily="$mono"
+      fontSize="$2"
+      numberOfLines={1}
+      color="$color"
+      flexShrink={1}>
       {value}
     </Text>
   );
@@ -205,7 +210,9 @@ function QrPreview({
           backgroundColor="$background"
           aria-hidden>
           {rows.map((runs, rowIndex) => (
-            <XStack key={rowIndex} height={cell}>
+            <XStack
+              key={rowIndex}
+              height={cell}>
               {runs.map((run, runIndex) => (
                 <View
                   key={runIndex}

@@ -38,7 +38,7 @@ function getSeparator(container: HTMLElement): HTMLElement {
   return el as HTMLElement;
 }
 
-const escapeForRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\-]/g, '\\$&');
+const escapeForRegExp = (value: string) => value.replaceAll(/[.*+?^${}()|[\]\\-]/g, '\\$&');
 
 /**
  * Every value Tamagui declared for `property` through one of THIS element's
@@ -55,7 +55,7 @@ function declared(el: HTMLElement, property: string): string[] {
       continue; // cross-origin sheet; nothing of ours lives there
     }
     for (const rule of Array.from(rules ?? [])) {
-      const parsed = (rule.cssText ?? '').match(/^([^{]+)\{([^}]*)\}$/);
+      const parsed = /^([^{]+)\{([^}]*)\}$/.exec(rule.cssText ?? '');
       if (!parsed) {
         continue;
       }
@@ -64,7 +64,7 @@ function declared(el: HTMLElement, property: string): string[] {
       if (!mine) {
         continue;
       }
-      const decl = body.match(new RegExp(`(?:^|[;\\s])${escapeForRegExp(property)}\\s*:\\s*([^;]+)`));
+      const decl = new RegExp(`(?:^|[;\\s])${escapeForRegExp(property)}\\s*:\\s*([^;]+)`).exec(body);
       if (decl) {
         values.push(decl[1].trim());
       }

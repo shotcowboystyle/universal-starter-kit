@@ -48,7 +48,11 @@ function FormCheckbox({ onChange }: { onChange: (checked: unknown) => void }) {
   const form = useForm({ defaultValues: { terms: false } });
   return (
     <Form form={form}>
-      <Checkbox name="terms" label="Accept terms" onChange={onChange} />
+      <Checkbox
+        name="terms"
+        label="Accept terms"
+        onChange={onChange}
+      />
     </Form>
   );
 }
@@ -60,7 +64,12 @@ beforeEach(() => {
 describe('native Checkbox square tap', () => {
   it('hands the standalone frame no handler that would clobber the toggle, and a tap toggles once', () => {
     const onChange = vi.fn();
-    const result = renderWithProviders(<Checkbox label="Accept terms" onChange={onChange} />);
+    const result = renderWithProviders(
+      <Checkbox
+        label="Accept terms"
+        onChange={onChange}
+      />,
+    );
     expect(handlersOnLastFrame()).toEqual([]);
     const box = result.getByRole('checkbox');
     fireEvent.click(box);
@@ -80,7 +89,9 @@ describe('native Checkbox square tap', () => {
 
   it('keeps the compound Checkboxes frame free of them too', () => {
     renderWithProviders(
-      <Checkboxes values={{ email: false }} onValuesChange={() => {}}>
+      <Checkboxes
+        values={{ email: false }}
+        onValuesChange={() => {}}>
         <Checkboxes.FocusGroup>
           <Checkboxes.FocusGroup.Item value="email">
             <Checkboxes.Checkbox aria-label="Email" />

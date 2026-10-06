@@ -49,30 +49,62 @@ afterEach(cleanup);
 describe('Signature', () => {
   describe('without form context', () => {
     it('renders with label', () => {
-      const result = renderWithProviders(<Signature label="Signature" name="sig" clearIcon={clearIcon} />);
+      const result = renderWithProviders(
+        <Signature
+          label="Signature"
+          name="sig"
+          clearIcon={clearIcon}
+        />,
+      );
       expect(result.findTextElement('Signature')).toBeDefined();
     });
 
     it('renders required label with asterisk', () => {
-      const result = renderWithProviders(<Signature label="Required" name="req" clearIcon={clearIcon} required />);
+      const result = renderWithProviders(
+        <Signature
+          label="Required"
+          name="req"
+          clearIcon={clearIcon}
+          required
+        />,
+      );
       const label = result.container.querySelector('label');
       expect(label?.textContent).toContain('*');
     });
 
     it('renders with helper text', () => {
       const result = renderWithProviders(
-        <Signature label="Sign" name="s" clearIcon={clearIcon} helperText="Draw your signature" />,
+        <Signature
+          label="Sign"
+          name="s"
+          clearIcon={clearIcon}
+          helperText="Draw your signature"
+        />,
       );
       expect(result.findTextElement('Draw your signature')).toBeDefined();
     });
 
     it('renders skeleton placeholder', () => {
-      const result = renderWithProviders(<Signature label="Loading" name="l" clearIcon={clearIcon} skeleton />);
+      const result = renderWithProviders(
+        <Signature
+          label="Loading"
+          name="l"
+          clearIcon={clearIcon}
+          skeleton
+        />,
+      );
       expect(result.container.querySelector('svg')).toBeNull();
     });
 
     it('renders disabled state', () => {
-      const result = renderWithProviders(<Signature label="Disabled" name="d" clearIcon={clearIcon} disabled />);
+      const result = renderWithProviders(
+        <Signature
+          label="Disabled"
+          name="d"
+          clearIcon={clearIcon}
+          disabled
+        />,
+      );
       expect(result.findTextElement('Disabled')).toBeDefined();
       expect(getPad(result.container).getAttribute('tabindex')).toBe('-1');
     });
@@ -81,8 +113,14 @@ describe('Signature', () => {
   describe('with form context', () => {
     it('renders inside form', () => {
       const result = renderWithProviders(
-        <Form formOptions={{ defaultValues: { sig: '' } }} submitText="Submit">
-          <Signature name="sig" label="Signature" clearIcon={clearIcon} />
+        <Form
+          formOptions={{ defaultValues: { sig: '' } }}
+          submitText="Submit">
+          <Signature
+            name="sig"
+            label="Signature"
+            clearIcon={clearIcon}
+          />
         </Form>,
       );
       expect(result.findTextElement('Signature')).toBeDefined();
@@ -91,14 +129,25 @@ describe('Signature', () => {
 
   describe('pad anatomy', () => {
     it('associates the label with the pad (htmlFor resolves)', () => {
-      const result = renderWithProviders(<Signature label="Your Signature" name="sig" clearIcon={clearIcon} />);
+      const result = renderWithProviders(
+        <Signature
+          label="Your Signature"
+          name="sig"
+          clearIcon={clearIcon}
+        />,
+      );
       const pad = getPad(result.container);
       expect(pad.getAttribute('tabindex')).toBe('0');
       expect(result.container.textContent).toContain('X');
     });
 
     it('keeps an aria-label fallback when no label is given', () => {
-      const result = renderWithProviders(<Signature name="sig" clearIcon={clearIcon} />);
+      const result = renderWithProviders(
+        <Signature
+          name="sig"
+          clearIcon={clearIcon}
+        />,
+      );
       const pad = result.container.querySelector('[aria-label^="Signature"]') as HTMLElement | null;
       expect(pad).toBeTruthy();
       expect(pad?.getAttribute('tabindex')).toBe('0');
@@ -107,7 +156,13 @@ describe('Signature', () => {
 
   describe('ring anatomy', () => {
     it('is a keyboard tab stop whose pointer focus paints no ring', () => {
-      const result = renderWithProviders(<Signature label="Signature" name="sig" clearIcon={clearIcon} />);
+      const result = renderWithProviders(
+        <Signature
+          label="Signature"
+          name="sig"
+          clearIcon={clearIcon}
+        />,
+      );
       const pad = getPad(result.container);
       expect(pad.getAttribute('tabindex')).toBe('0');
 
@@ -125,7 +180,13 @@ describe('Signature', () => {
     it('clears from the pad via Delete when keyboard-focused', () => {
       const onChange = vi.fn();
       const result = renderWithProviders(
-        <Signature label="Signature" name="sig" value={inkedValue} onChange={onChange} clearIcon={clearIcon} />,
+        <Signature
+          label="Signature"
+          name="sig"
+          value={inkedValue}
+          onChange={onChange}
+          clearIcon={clearIcon}
+        />,
       );
       const pad = getPad(result.container);
       expect(pad.getAttribute('data-signed')).toBe('true');
@@ -139,7 +200,13 @@ describe('Signature', () => {
     it('does not recommit an in-progress stroke after Clear (SB-M-808)', () => {
       const onChange = vi.fn();
       const result = renderWithProviders(
-        <Signature label="Signature" name="sig" value={inkedValue} onChange={onChange} clearIcon={clearIcon} />,
+        <Signature
+          label="Signature"
+          name="sig"
+          value={inkedValue}
+          onChange={onChange}
+          clearIcon={clearIcon}
+        />,
       );
       const svg = result.container.querySelector('svg');
       expect(svg).toBeTruthy();
@@ -167,18 +234,28 @@ describe('design-law', () => {
   });
 
   it('paints the pad from the input surface token, not raw white', () => {
-    const result = renderWithProviders(<Signature label="Signature" name="sig" clearIcon={clearIcon} />);
+    const result = renderWithProviders(
+      <Signature
+        label="Signature"
+        name="sig"
+        clearIcon={clearIcon}
+      />,
+    );
     const pad = getPad(result.container);
     const bg = getComputedStyle(pad).backgroundColor;
     expect(bg).not.toBe('white');
-    expect(bg.replace(/\s/g, '')).not.toMatch(/^rgb\(255,255,255\)$/);
-    expect(bg.replace(/\s/g, '')).not.toMatch(/^#fff(fff)?$/i);
+    expect(bg.replaceAll(/\s/g, '')).not.toMatch(/^rgb\(255,255,255\)$/);
+    expect(bg.replaceAll(/\s/g, '')).not.toMatch(/^#fff(fff)?$/i);
   });
 
   it('elevation knob reaches the pad frame (large-canvas honour, FileUpload sibling)', () => {
     const none = renderWithProviders(
       <Preset overrides={{ elevation: 'none' }}>
-        <Signature label="Signature" name="sig" clearIcon={clearIcon} />
+        <Signature
+          label="Signature"
+          name="sig"
+          clearIcon={clearIcon}
+        />
       </Preset>,
     );
     expect(getPad(none.container).className).not.toMatch(/_bxsh-/);
@@ -186,15 +263,33 @@ describe('design-law', () => {
 
     const large = renderWithProviders(
       <Preset overrides={{ elevation: 'large' }}>
-        <Signature label="Signature" name="sig" clearIcon={clearIcon} />
+        <Signature
+          label="Signature"
+          name="sig"
+          clearIcon={clearIcon}
+        />
       </Preset>,
     );
     expect(getPad(large.container).className).toMatch(/_bxsh-/);
   });
 
   it('derives pad minHeight from the size token, not a 200px canvas', () => {
-    const small = renderWithProviders(<Signature label="Small" name="s" size="$2" clearIcon={clearIcon} />);
-    const large = renderWithProviders(<Signature label="Large" name="l" size="$4" clearIcon={clearIcon} />);
+    const small = renderWithProviders(
+      <Signature
+        label="Small"
+        name="s"
+        size="$2"
+        clearIcon={clearIcon}
+      />,
+    );
+    const large = renderWithProviders(
+      <Signature
+        label="Large"
+        name="l"
+        size="$4"
+        clearIcon={clearIcon}
+      />,
+    );
     const smallH = Number(getPad(small.container).getAttribute('data-min-height'));
     const largeH = Number(getPad(large.container).getAttribute('data-min-height'));
     expect(smallH).toBeGreaterThan(0);
@@ -204,7 +299,13 @@ describe('design-law', () => {
   });
 
   it('applies the body recipe to the legal-pad mark (no hardcoded 700/18)', () => {
-    const result = renderWithProviders(<Signature label="Signature" name="sig" clearIcon={clearIcon} />);
+    const result = renderWithProviders(
+      <Signature
+        label="Signature"
+        name="sig"
+        clearIcon={clearIcon}
+      />,
+    );
     const mark = result.findTextElement('X') as HTMLElement | undefined;
     expect(mark).toBeDefined();
     const weight = getComputedStyle(mark!).fontWeight;
@@ -213,7 +314,13 @@ describe('design-law', () => {
   });
 
   it('supplies a default clear affordance when clearIcon is omitted', () => {
-    const result = renderWithProviders(<Signature label="Signature" name="sig" value={inkedValue} />);
+    const result = renderWithProviders(
+      <Signature
+        label="Signature"
+        name="sig"
+        value={inkedValue}
+      />,
+    );
     expect(result.findTextElement('Clear')).toBeDefined();
     // Pad SVG plus the package-default eraser (house Button is role=button, not <button>).
     expect(result.container.querySelectorAll('svg').length).toBeGreaterThan(1);
@@ -222,7 +329,13 @@ describe('design-law', () => {
   it('does not record ink while readOnly (SB-M-810)', () => {
     const onChange = vi.fn();
     const result = renderWithProviders(
-      <Signature label="Signature" name="sig" readOnly onChange={onChange} clearIcon={clearIcon} />,
+      <Signature
+        label="Signature"
+        name="sig"
+        readOnly
+        onChange={onChange}
+        clearIcon={clearIcon}
+      />,
     );
     const svg = result.container.querySelector('svg');
     expect(svg).toBeTruthy();

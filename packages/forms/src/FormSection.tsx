@@ -2,7 +2,7 @@ import { useResolvedKnobs } from '@repo/theme';
 import type { ReactNode } from 'react';
 import { Text, YStack, isWeb } from 'tamagui';
 
-import { formReadableMaxWidth } from './formSpacing';
+import { formReadableMaxWidth } from './form-spacing';
 
 export interface FormSectionProps {
   /** Section heading / legend. */
@@ -90,7 +90,12 @@ export function FormSection({
             {label}
           </Text>
         ) : (
-          <Text {...knobProps.label} fontWeight="400" color={knobProps.textAccentColor} role="heading" aria-level={3}>
+          <Text
+            {...knobProps.label}
+            fontWeight="400"
+            color={knobProps.textAccentColor}
+            role="heading"
+            aria-level={3}>
             {label}
           </Text>
         )
@@ -136,4 +141,4 @@ export function FormSectionStack({ children, gap }: FormSectionStackProps) {
   );
 }
 
-export { formFieldGap, formReadableMaxWidth, formSectionGap } from './formSpacing';
+export { formFieldGap, formReadableMaxWidth, formSectionGap } from './form-spacing';

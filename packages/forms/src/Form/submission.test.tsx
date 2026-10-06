@@ -29,7 +29,10 @@ describe('shared form submission outcome', () => {
           onSubmit={submit}
           saveBar={{ forceVisible: true, onSaved: saved }}>
           <DirtyProbe />
-          <Input name="name" label="Name" />
+          <Input
+            name="name"
+            label="Name"
+          />
           <button type="submit">Submit HTML</button>
           <Button action="submit">Submit action</Button>
         </Form>,
@@ -53,7 +56,7 @@ describe('shared form submission outcome', () => {
         expect(view.getByText(/Couldn't save/).textContent).toContain(refusal);
       });
       expect((view.getByLabelText('Name') as HTMLInputElement).value).toBe('Edited');
-      expect(submit).toHaveBeenCalledTimes(1);
+      expect(submit).toHaveBeenCalledOnce();
       expect(saved).not.toHaveBeenCalled();
       await act(async () => {
         activate();
@@ -73,14 +76,16 @@ describe('shared form submission outcome', () => {
   it('allows only one transport call when HTML, action and Save activate together', async () => {
     let finish!: () => void;
     const submit = vi.fn(
-      () =>
+      async () =>
         new Promise<void>((resolve) => {
           finish = resolve;
         }),
     );
     const saved = vi.fn();
     const view = renderWithProviders(
-      <Form onSubmit={submit} saveBar={{ forceVisible: true, onSaved: saved }}>
+      <Form
+        onSubmit={submit}
+        saveBar={{ forceVisible: true, onSaved: saved }}>
         <button type="submit">Submit HTML</button>
         <Button action="submit">Submit action</Button>
       </Form>,
@@ -92,12 +97,12 @@ describe('shared form submission outcome', () => {
       fireEvent.keyDown(document, { key: 's', ctrlKey: true });
     });
     await waitFor(() => {
-      expect(submit).toHaveBeenCalledTimes(1);
+      expect(submit).toHaveBeenCalledOnce();
     });
     await act(async () => {
       finish();
     });
-    expect(submit).toHaveBeenCalledTimes(1);
+    expect(submit).toHaveBeenCalledOnce();
     expect(saved).not.toHaveBeenCalled();
   });
 
@@ -115,15 +120,28 @@ describe('shared form submission outcome', () => {
       });
       return (
         <>
-          <Form form={first} saveBar={{ forceVisible: true }} testID="first">
-            <Button action="submit" form={second}>
+          <Form
+            form={first}
+            saveBar={{ forceVisible: true }}
+            testID="first">
+            <Button
+              action="submit"
+              form={second}>
               Target second
             </Button>
           </Form>
-          <Form form={second} saveBar={{ forceVisible: true }} testID="second">
-            <Input name="name" label="Second name" />
+          <Form
+            form={second}
+            saveBar={{ forceVisible: true }}
+            testID="second">
+            <Input
+              name="name"
+              label="Second name"
+            />
           </Form>
-          <Button action="submit" form={second}>
+          <Button
+            action="submit"
+            form={second}>
             Standalone submit
           </Button>
         </>
@@ -153,7 +171,10 @@ describe('shared form submission outcome', () => {
         }}
         onSubmit={submit}
         saveBar={{ forceVisible: true, onSaved: saved }}>
-        <Input name="name" label="Name" />
+        <Input
+          name="name"
+          label="Name"
+        />
       </Form>,
     );
     fireEvent.change(view.getByLabelText('Name'), { target: { value: 'Edited' } });

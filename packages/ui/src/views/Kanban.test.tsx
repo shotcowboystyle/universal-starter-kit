@@ -4,7 +4,8 @@ import { cleanup, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import * as KanbanModule from './Kanban';
-import { Kanban, type KanbanColumn } from './Kanban';
+import { Kanban } from './Kanban';
+import type { KanbanColumn } from './Kanban';
 
 vi.mock('@tanstack/react-virtual', () => ({
   useVirtualizer: (opts: { count: number; estimateSize: () => number }) => {
@@ -66,7 +67,10 @@ describe('Kanban exports', () => {
 describe('Kanban design law', () => {
   it('declares the column status dot as R-PILL and paints it only when color is set', () => {
     const { container } = renderWithProviders(
-      <Kanban columns={columns} renderCard={(item) => <span>{item.title}</span>} />,
+      <Kanban
+        columns={columns}
+        renderCard={(item) => <span>{item.title}</span>}
+      />,
     );
 
     const dots = container.querySelectorAll('[data-radius-part="Kanban column dot"]');
@@ -77,7 +81,10 @@ describe('Kanban design law', () => {
 
   it('does not leak Card dataSet onto the web card host', () => {
     const { container } = renderWithProviders(
-      <Kanban columns={columns} renderCard={(item) => <span>{item.title}</span>} />,
+      <Kanban
+        columns={columns}
+        renderCard={(item) => <span>{item.title}</span>}
+      />,
     );
     const cards = container.querySelectorAll('[data-kanban-card]');
     expect(cards.length).toBeGreaterThan(0);
@@ -89,7 +96,10 @@ describe('Kanban design law', () => {
   it('lets the radius knob reshape cards and column frames', () => {
     const { rerender } = renderWithProviders(
       <Preset overrides={{ borderRadius: 'full' }}>
-        <Kanban columns={columns} renderCard={(item) => <span>{item.title}</span>} />
+        <Kanban
+          columns={columns}
+          renderCard={(item) => <span>{item.title}</span>}
+        />
       </Preset>,
     );
     const fullCard = radiusClassOn(screen.getByText('Task 1'));
@@ -97,7 +107,10 @@ describe('Kanban design law', () => {
 
     rerender(
       <Preset overrides={{ borderRadius: 'none' }}>
-        <Kanban columns={columns} renderCard={(item) => <span>{item.title}</span>} />
+        <Kanban
+          columns={columns}
+          renderCard={(item) => <span>{item.title}</span>}
+        />
       </Preset>,
     );
     const noneCard = radiusClassOn(screen.getByText('Task 1'));
@@ -115,7 +128,10 @@ describe('Kanban design law', () => {
     const columnRadius = (overrides: Parameters<typeof Preset>[0]['overrides']) => {
       renderWithProviders(
         <Preset overrides={overrides}>
-          <Kanban columns={columns} renderCard={(item) => <span>{item.title}</span>} />
+          <Kanban
+            columns={columns}
+            renderCard={(item) => <span>{item.title}</span>}
+          />
         </Preset>,
       );
       const found = radiusClassOn(document.querySelector("[data-kanban-column='todo']"));
@@ -127,7 +143,12 @@ describe('Kanban design law', () => {
   });
 
   it('does not paint raw input-surface borders on the column frame', () => {
-    renderWithProviders(<Kanban columns={columns} renderCard={(item) => <span>{item.title}</span>} />);
+    renderWithProviders(
+      <Kanban
+        columns={columns}
+        renderCard={(item) => <span>{item.title}</span>}
+      />,
+    );
     const column = document.querySelector("[data-kanban-column='todo']") as HTMLElement;
     expect(column).toBeTruthy();
     const className = String(column.className || '');

@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import type { SizeTokens, TransitionProp } from 'tamagui';
 import { View, getVariableValue, isWeb } from 'tamagui';
 
-import { formControlColors, formSelectedColors } from '../../shared/colorRamps';
+import { formControlColors, formSelectedColors } from '../../shared/color-ramps';
 import { clampRadiusForControl } from '../../shared/utils';
 
 /** WCAG 2.5.5 pressable floor. The painted box is smaller and sits inside. */

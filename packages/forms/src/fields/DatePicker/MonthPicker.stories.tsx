@@ -43,7 +43,12 @@ export default meta;
 type Story = StoryObj<typeof MonthPicker>;
 
 export const Baseline: Story = {
-  render: (args) => <MonthPicker {...args} helperText={args.helperText ?? 'Choose a month and year'} />,
+  render: (args) => (
+    <MonthPicker
+      {...args}
+      helperText={args.helperText ?? 'Choose a month and year'}
+    />
+  ),
 };
 
 export const YearRange: Story = {
@@ -94,8 +99,15 @@ export const FormBound: Story = {
       const FormSubscribe = (form as any).Subscribe;
       return (
         <Form form={form}>
-          <YStack gap="$4" maxWidth={480}>
-            <MonthPicker label="Fiscal Period" name={'period' as any} required helperText="Pick a fiscal period" />
+          <YStack
+            gap="$4"
+            maxWidth={480}>
+            <MonthPicker
+              label="Fiscal Period"
+              name={'period' as any}
+              required
+              helperText="Pick a fiscal period"
+            />
             <FormSubscribe selector={(s: any) => [s.values.period]}>
               {([period]: any[]) => <Text>{`form-value:${JSON.stringify(period)}`}</Text>}
             </FormSubscribe>

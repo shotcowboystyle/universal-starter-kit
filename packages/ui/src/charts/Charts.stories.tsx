@@ -50,32 +50,56 @@ export default meta;
 
 export const Bar = {
   render: () => (
-    <YStack maxWidth={560} gap="$4">
-      <BarChart data={monthly} title="Revenue" onDatumPress={action('onDatumPress')} />
+    <YStack
+      maxWidth={560}
+      gap="$4">
+      <BarChart
+        data={monthly}
+        title="Revenue"
+        onDatumPress={action('onDatumPress')}
+      />
     </YStack>
   ),
 };
 
 export const BarCategorical = {
   render: () => (
-    <YStack maxWidth={560} gap="$4">
-      <BarChart data={categories} categorical title="Tickets by status" />
+    <YStack
+      maxWidth={560}
+      gap="$4">
+      <BarChart
+        data={categories}
+        categorical
+        title="Tickets by status"
+      />
     </YStack>
   ),
 };
 
 export const Line = {
   render: () => (
-    <YStack maxWidth={560} gap="$4">
-      <LineChart data={monthly} title="Revenue" onDatumPress={action('onDatumPress')} />
+    <YStack
+      maxWidth={560}
+      gap="$4">
+      <LineChart
+        data={monthly}
+        title="Revenue"
+        onDatumPress={action('onDatumPress')}
+      />
     </YStack>
   ),
 };
 
 export const Area = {
   render: () => (
-    <YStack maxWidth={560} gap="$4">
-      <AreaChart data={monthly} curve="monotone" title="Revenue" />
+    <YStack
+      maxWidth={560}
+      gap="$4">
+      <AreaChart
+        data={monthly}
+        curve="monotone"
+        title="Revenue"
+      />
     </YStack>
   ),
 };
@@ -83,7 +107,11 @@ export const Area = {
 export const Pie = {
   render: () => (
     <YStack maxWidth={560}>
-      <PieChart data={categories} title="Tickets by status" onDatumPress={action('onDatumPress')} />
+      <PieChart
+        data={categories}
+        title="Tickets by status"
+        onDatumPress={action('onDatumPress')}
+      />
     </YStack>
   ),
 };
@@ -91,23 +119,40 @@ export const Pie = {
 export const Donut = {
   render: () => (
     <YStack maxWidth={560}>
-      <PieChart data={categories} donut title="Tickets by status" />
+      <PieChart
+        data={categories}
+        donut
+        title="Tickets by status"
+      />
     </YStack>
   ),
 };
 
 export const GapBoundaries = {
   render: () => (
-    <YStack maxWidth={560} gap="$4">
-      <PieChart data={categories} height={160} title="Pie boundary gaps" />
-      <PieChart data={categories} height={160} donut title="Donut boundary gaps" />
+    <YStack
+      maxWidth={560}
+      gap="$4">
+      <PieChart
+        data={categories}
+        height={160}
+        title="Pie boundary gaps"
+      />
+      <PieChart
+        data={categories}
+        height={160}
+        donut
+        title="Donut boundary gaps"
+      />
     </YStack>
   ),
 };
 
 export const GapThinSlices = {
   render: () => (
-    <YStack maxWidth={560} gap="$4">
+    <YStack
+      maxWidth={560}
+      gap="$4">
       <PieChart
         data={[
           { label: 'Large', value: 9999 },
@@ -128,36 +173,69 @@ export const GapThinSlices = {
 };
 
 export const GapSingleDatum = {
-  render: () => <PieChart data={[{ label: 'Only', value: 100 }]} title="Single full circle" />,
+  render: () => (
+    <PieChart
+      data={[{ label: 'Only', value: 100 }]}
+      title="Single full circle"
+    />
+  ),
 };
 
 export const GapExplicitZero = {
-  render: () => <PieChart data={categories} padAngle={0} title="Explicit touching slices" />,
+  render: () => (
+    <PieChart
+      data={categories}
+      padAngle={0}
+      title="Explicit touching slices"
+    />
+  ),
 };
 
 export const SparklineRow = {
   name: 'Sparkline',
   render: () => (
-    <XStack maxWidth={560} gap="$4" alignItems="center">
-      <ChartDataView data={trend} title="Weekly active">
+    <XStack
+      maxWidth={560}
+      gap="$4"
+      alignItems="center">
+      <ChartDataView
+        data={trend}
+        title="Weekly active">
         {({ action, data }) => (
-          <YStack flex={1} gap="$2">
-            <XStack alignItems="center" justifyContent="space-between">
+          <YStack
+            flex={1}
+            gap="$2">
+            <XStack
+              alignItems="center"
+              justifyContent="space-between">
               <Text fontSize="$2">Weekly active</Text>
               {action}
             </XStack>
-            <Sparkline data={data} title="Weekly active" />
+            <Sparkline
+              data={data}
+              title="Weekly active"
+            />
           </YStack>
         )}
       </ChartDataView>
-      <ChartDataView data={trend} title="No area">
+      <ChartDataView
+        data={trend}
+        title="No area">
         {({ action, data }) => (
-          <YStack flex={1} gap="$2">
-            <XStack alignItems="center" justifyContent="space-between">
+          <YStack
+            flex={1}
+            gap="$2">
+            <XStack
+              alignItems="center"
+              justifyContent="space-between">
               <Text fontSize="$2">No area</Text>
               {action}
             </XStack>
-            <Sparkline data={data} showArea={false} title="Weekly active" />
+            <Sparkline
+              data={data}
+              showArea={false}
+              title="Weekly active"
+            />
           </YStack>
         )}
       </ChartDataView>
@@ -168,7 +246,9 @@ export const SparklineRow = {
 /** Explicit data colors are values, not chrome — they pass through (Axiom 11). */
 export const DataColors = {
   render: () => (
-    <YStack maxWidth={560} gap="$4">
+    <YStack
+      maxWidth={560}
+      gap="$4">
       <BarChart
         data={[
           { label: 'A', value: 30, color: '#8250df' },
@@ -186,8 +266,15 @@ export const DarkScheme = {
     <Theme name="dark">
       <Card maxWidth={560}>
         <YStack gap="$4">
-          <BarChart data={monthly} title="Revenue" />
-          <PieChart data={categories} donut title="Tickets by status" />
+          <BarChart
+            data={monthly}
+            title="Revenue"
+          />
+          <PieChart
+            data={categories}
+            donut
+            title="Tickets by status"
+          />
         </YStack>
       </Card>
     </Theme>
@@ -199,9 +286,18 @@ export const TintRed = {
     <Theme name="red">
       <Card maxWidth={560}>
         <YStack gap="$4">
-          <BarChart data={monthly} title="Revenue" />
-          <LineChart data={monthly} title="Revenue" />
-          <PieChart data={categories} title="Tickets by status" />
+          <BarChart
+            data={monthly}
+            title="Revenue"
+          />
+          <LineChart
+            data={monthly}
+            title="Revenue"
+          />
+          <PieChart
+            data={categories}
+            title="Tickets by status"
+          />
         </YStack>
       </Card>
     </Theme>
@@ -213,8 +309,14 @@ export const TintGray = {
     <Theme name="gray">
       <Card maxWidth={560}>
         <YStack gap="$4">
-          <BarChart data={monthly} title="Revenue" />
-          <PieChart data={categories} title="Tickets by status" />
+          <BarChart
+            data={monthly}
+            title="Revenue"
+          />
+          <PieChart
+            data={categories}
+            title="Tickets by status"
+          />
         </YStack>
       </Card>
     </Theme>
@@ -225,9 +327,17 @@ export const TintGray = {
 export const AnimationNone = {
   render: () => (
     <Preset overrides={{ animation: 'none' }}>
-      <YStack maxWidth={560} gap="$4">
-        <BarChart data={monthly} title="Revenue" />
-        <AreaChart data={monthly} title="Revenue" />
+      <YStack
+        maxWidth={560}
+        gap="$4">
+        <BarChart
+          data={monthly}
+          title="Revenue"
+        />
+        <AreaChart
+          data={monthly}
+          title="Revenue"
+        />
       </YStack>
     </Preset>
   ),
@@ -236,18 +346,35 @@ export const AnimationNone = {
 /** Phone-width column — nothing overflows or clips at 320px. */
 export const NarrowViewport = {
   render: () => (
-    <YStack width={320} gap="$4">
-      <BarChart data={monthly} title="Revenue" />
-      <LineChart data={monthly} title="Revenue" />
-      <PieChart data={categories} donut title="Tickets by status" />
-      <ChartDataView data={trend} title="Weekly active">
+    <YStack
+      width={320}
+      gap="$4">
+      <BarChart
+        data={monthly}
+        title="Revenue"
+      />
+      <LineChart
+        data={monthly}
+        title="Revenue"
+      />
+      <PieChart
+        data={categories}
+        donut
+        title="Tickets by status"
+      />
+      <ChartDataView
+        data={trend}
+        title="Weekly active">
         {({ action, data }) => (
           <YStack gap="$2">
             <XStack justifyContent="space-between">
               <Text>Weekly active</Text>
               {action}
             </XStack>
-            <Sparkline data={data} title="Weekly active" />
+            <Sparkline
+              data={data}
+              title="Weekly active"
+            />
           </YStack>
         )}
       </ChartDataView>
@@ -257,7 +384,10 @@ export const NarrowViewport = {
 
 export const CompleteDataView = {
   render: () => (
-    <YStack width="100%" maxWidth={560} gap="$4">
+    <YStack
+      width="100%"
+      maxWidth={560}
+      gap="$4">
       <BarChart
         data={Array.from({ length: 13 }, (_, index) => ({
           label: `Region ${index + 1}`,
@@ -274,11 +404,17 @@ export const CompleteDataView = {
         title="Daily activity">
         {({ action, data }) => (
           <YStack gap="$2">
-            <XStack alignItems="center" justifyContent="space-between">
+            <XStack
+              alignItems="center"
+              justifyContent="space-between">
               <Text>Daily activity</Text>
               {action}
             </XStack>
-            <Sparkline data={data} title="Daily activity" showArea={false} />
+            <Sparkline
+              data={data}
+              title="Daily activity"
+              showArea={false}
+            />
           </YStack>
         )}
       </ChartDataView>
@@ -296,12 +432,15 @@ function MetricDataHarness({
   const [navigationCount, setNavigationCount] = useState(0);
   const [consumerCount, setConsumerCount] = useState(0);
   return (
-    <YStack width="100%" maxWidth={360} gap="$3">
+    <YStack
+      width="100%"
+      maxWidth={360}
+      gap="$3">
       <KPICard
         config={{
           id: 'revenue',
           title: longTitle ? 'Revenue from annual enterprise subscriptions' : 'Revenue',
-          value: 240000,
+          value: 240_000,
           format: 'currency',
           sparkline: trend,
           onClick: () => {
@@ -325,12 +464,28 @@ export const MetricDataActions = { render: () => <MetricDataHarness /> };
 
 export const GapPatternBackdrop = {
   render: () => (
-    <YStack width="100%" maxWidth={560} gap="$4">
+    <YStack
+      width="100%"
+      maxWidth={560}
+      gap="$4">
       {[false, true].map((donut) => (
-        <YStack key={String(donut)} position="relative" {...chartWebProps({ 'data-mpo-chart-backdrop': 'patterned' })}>
-          <YStack position="absolute" top={0} left={0} width={160} height={160} pointerEvents="none">
+        <YStack
+          key={String(donut)}
+          position="relative"
+          {...chartWebProps({ 'data-mpo-chart-backdrop': 'patterned' })}>
+          <YStack
+            position="absolute"
+            top={0}
+            left={0}
+            width={160}
+            height={160}
+            pointerEvents="none">
             {Array.from({ length: 10 }, (_, index) => (
-              <YStack key={index} height={16} backgroundColor={index % 2 ? '$color5' : '$color2'} />
+              <YStack
+                key={index}
+                height={16}
+                backgroundColor={index % 2 ? '$color5' : '$color2'}
+              />
             ))}
           </YStack>
           <PieChart
@@ -353,18 +508,21 @@ export const FixedWidthData = {
     const data = [
       {
         label: 'International enterprise subscriptions for the previous fiscal year',
-        value: 12345678901234,
+        value: 12_345_678_901_234,
       },
       {
         label: 'Domestic enterprise subscriptions for the current fiscal year',
-        value: 23456789012345,
+        value: 23_456_789_012_345,
       },
       { label: 'Unbroken formatted value', value: 1 },
     ];
     const valueFormatter = (value: number) =>
       value === 1 ? '1'.repeat(120) : `${value.toFixed(2)} USD per reporting quarter`;
     return (
-      <YStack width="100%" maxWidth={900} gap="$4">
+      <YStack
+        width="100%"
+        maxWidth={900}
+        gap="$4">
         <BarChart
           width={300}
           data={data}

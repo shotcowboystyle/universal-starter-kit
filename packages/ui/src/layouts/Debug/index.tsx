@@ -1,11 +1,10 @@
 import type { WithLayout } from '@repo/platform';
-import { createWithLayout } from '@repo/platform';
-import { config } from '@repo/platform';
+import { createWithLayout, config } from '@repo/platform';
 import { OVERLAY_ANCHOR_GAP, radiusClassProps, useResolvedKnobs } from '@repo/theme';
 import type { ComponentType, ReactNode } from 'react';
 import { Circle, Popover, XStack, YStack } from 'tamagui';
 
-import { componentColors } from '../../componentColors';
+import { componentColors } from '../../component-colors';
 import { PopoverContent } from '../../surfaces';
 
 const pipShape = radiusClassProps('R-PILL', 'debug pip');
@@ -40,7 +39,10 @@ export function DebugLayout<DebugViewProps>({
   }
 
   return (
-    <YStack fullscreen pointerEvents="box-none" data-testid="debug-layout-root">
+    <YStack
+      fullscreen
+      pointerEvents="box-none"
+      data-testid="debug-layout-root">
       {children}
       <YStack
         position="absolute"
@@ -49,8 +51,12 @@ export function DebugLayout<DebugViewProps>({
         pointerEvents="box-none"
         zIndex={1}
         {...knobProps.panelPadding}>
-        <XStack data-testid="debug-container" pointerEvents="auto">
-          <Popover placement="bottom" offset={OVERLAY_ANCHOR_GAP}>
+        <XStack
+          data-testid="debug-container"
+          pointerEvents="auto">
+          <Popover
+            placement="bottom"
+            offset={OVERLAY_ANCHOR_GAP}>
             <Popover.Trigger>
               <Circle
                 {...pipShape}
@@ -64,7 +70,10 @@ export function DebugLayout<DebugViewProps>({
               />
             </Popover.Trigger>
             <PopoverContent>
-              <YStack {...knobProps.panelPadding} {...knobProps.gap} {...knobProps.body}>
+              <YStack
+                {...knobProps.panelPadding}
+                {...knobProps.gap}
+                {...knobProps.body}>
                 {DebugView ? <DebugView {...(debugViewProps as any)} /> : null}
               </YStack>
             </PopoverContent>

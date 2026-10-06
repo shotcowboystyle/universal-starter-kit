@@ -6,7 +6,8 @@ import { Paragraph, Text, XStack, YStack } from 'tamagui';
 
 import { Badge } from '../Badge';
 
-import { AsyncBoundary, type AsyncBoundaryLayout } from './AsyncBoundary';
+import { AsyncBoundary } from './AsyncBoundary';
+import type { AsyncBoundaryLayout } from './AsyncBoundary';
 
 const meta: Meta<typeof AsyncBoundary> = {
   title: 'Components/AsyncBoundary',
@@ -38,7 +39,9 @@ export const Data: Story = {
   },
   render: (args) => (
     <AsyncBoundary {...args}>
-      <YStack gap="$2" padding="$3">
+      <YStack
+        gap="$2"
+        padding="$3">
         <Text>Row A</Text>
         <Text>Row B</Text>
         <Text>Row C</Text>
@@ -102,7 +105,10 @@ export const HideBadgesOnFailure: Story = {
       error="Secondary feed unavailable"
       errorTitle="Couldn't load notifications"
       chrome={
-        <XStack gap="$3" padding="$3" alignItems="center">
+        <XStack
+          gap="$3"
+          padding="$3"
+          alignItems="center">
           <Badge count={12}>
             <Text>Inbox</Text>
           </Badge>
@@ -118,8 +124,13 @@ export const InteractiveCycle: Story = {
   render: () => {
     const [status, setStatus] = useState<'loading' | 'empty' | 'error' | 'data'>('loading');
     return (
-      <YStack gap="$3" padding="$3" minHeight={320}>
-        <XStack gap="$2" flexWrap="wrap">
+      <YStack
+        gap="$3"
+        padding="$3"
+        minHeight={320}>
+        <XStack
+          gap="$2"
+          flexWrap="wrap">
           {(['loading', 'empty', 'error', 'data'] as const).map((s) => (
             <Button
               key={s}
@@ -160,8 +171,13 @@ export const KeepPreviousOnRefetch: Story = {
   render: () => {
     const [phase, setPhase] = useState<'data' | 'loading' | 'error'>('data');
     return (
-      <YStack gap="$3" padding="$3" minHeight={320}>
-        <XStack gap="$2" flexWrap="wrap">
+      <YStack
+        gap="$3"
+        padding="$3"
+        minHeight={320}>
+        <XStack
+          gap="$2"
+          flexWrap="wrap">
           {(['data', 'loading', 'error'] as const).map((s) => (
             <Button
               key={s}
@@ -181,7 +197,9 @@ export const KeepPreviousOnRefetch: Story = {
           onRetry={() => {
             setPhase('loading');
           }}>
-          <YStack gap="$2" padding="$3">
+          <YStack
+            gap="$2"
+            padding="$3">
             <Text>Loaded item 1</Text>
             <Text>Loaded item 2</Text>
             <Text>Loaded item 3</Text>

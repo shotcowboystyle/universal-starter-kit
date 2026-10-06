@@ -22,19 +22,22 @@ import {
 
 describe('pie mask preserves a positive interior', () => {
   const slices = (values: number[]) => pieSlices(values.map((value) => ({ value })));
+
   it('accepts ordinary pie and donut slices including a wedge larger than pi', () => {
     expect(canMaskPieSlices(slices([70, 20, 10]), 0, 100)).toBe(true);
     expect(canMaskPieSlices(slices([70, 20, 10]), 55, 100)).toBe(true);
   });
+
   it('keeps the whole original chart when one positive slice is too thin', () => {
     expect(canMaskPieSlices(slices([9999, 1]), 0, 100)).toBe(false);
     expect(canMaskPieSlices(slices([9999, 1]), 55, 100)).toBe(false);
     expect(canMaskPieSlices(slices([50, 50]), 99, 100)).toBe(false);
   });
+
   it('does not erode a single positive full circle or invalid geometry', () => {
     expect(canMaskPieSlices(slices([100]), 0, 100)).toBe(false);
     expect(canMaskPieSlices(slices([0, 100]), 55, 100)).toBe(false);
-    expect(canMaskPieSlices(slices([50, 50]), 0, NaN)).toBe(false);
+    expect(canMaskPieSlices(slices([50, 50]), 0, Number.NaN)).toBe(false);
   });
 });
 

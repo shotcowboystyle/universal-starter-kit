@@ -28,17 +28,17 @@
 import { getConfig } from '@tamagui/web';
 import { useEffect } from 'react';
 
-import { fontCategoryMetrics, flooredLineHeight } from './fontCategoryMetrics';
-import { fontCategoryStacks } from './fontCategoryStacks';
+import { fontCategoryMetrics, flooredLineHeight } from './font-category-metrics';
+import { fontCategoryStacks } from './font-category-stacks';
 import type { FontCategory } from './knobs';
 import { defaultKnobs } from './knobs';
-import { usePresetContext } from './PresetContext';
+import { usePresetContext } from './preset-context';
 
 const STYLE_TAG_ID = 'mp-font-knob-styles';
 
 /**
  * Re-exported so `@repo/theme` consumers keep the historical
- * import path. The table itself lives in `fontCategoryMetrics.ts` because
+ * import path. The table itself lives in `font-category-metrics.ts` because
  * `defaults/fonts.ts` bakes the same floors into the registered category
  * fonts and the two must not drift.
  */
@@ -80,7 +80,7 @@ export function getConfiguredFontFamily(category: FontCategory): string | undefi
   } catch {
     return undefined;
   }
-  const fontsParsed = (config as { fontsParsed?: Record<string, unknown> }).fontsParsed;
+  const { fontsParsed } = config as { fontsParsed?: Record<string, unknown> };
   const font = (fontsParsed?.[`$${category}`] ?? config.fonts?.[category]) as
     | { family?: string | { val?: string } }
     | undefined;
@@ -108,7 +108,7 @@ export function getConfiguredFontTables(scope: 'heading' | 'body'): FontScopeTab
   } catch {
     return undefined;
   }
-  const fontsParsed = (config as { fontsParsed?: Record<string, unknown> }).fontsParsed;
+  const { fontsParsed } = config as { fontsParsed?: Record<string, unknown> };
   const font = (fontsParsed?.[`$${scope}`] ?? config.fonts?.[scope]) as
     | Record<string, Record<string, number | { val?: number }> | undefined>
     | undefined;
@@ -225,7 +225,7 @@ export function FontKnobStyles() {
     if (!tag) {
       tag = document.createElement('style');
       tag.id = STYLE_TAG_ID;
-      document.head.appendChild(tag);
+      document.head.append(tag);
     }
     if (tag.textContent !== css) {
       tag.textContent = css;

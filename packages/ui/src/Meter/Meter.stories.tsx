@@ -52,11 +52,49 @@ export const Default: Story = {
 
 export const Thresholds: Story = {
   render: () => (
-    <YStack gap="$4" maxWidth={360}>
-      <Meter label="Disk usage" value={5} min={0} max={8} low={6.4} high={7.6} optimum={0} unit="GB" />
-      <Meter label="Disk usage" value={6.8} min={0} max={8} low={6.4} high={7.6} optimum={0} unit="GB" />
-      <Meter label="Disk usage" value={7.8} min={0} max={8} low={6.4} high={7.6} optimum={0} unit="GB" />
-      <Meter label="Battery" value={9} min={0} max={100} low={10} high={20} optimum={100} format="percent" />
+    <YStack
+      gap="$4"
+      maxWidth={360}>
+      <Meter
+        label="Disk usage"
+        value={5}
+        min={0}
+        max={8}
+        low={6.4}
+        high={7.6}
+        optimum={0}
+        unit="GB"
+      />
+      <Meter
+        label="Disk usage"
+        value={6.8}
+        min={0}
+        max={8}
+        low={6.4}
+        high={7.6}
+        optimum={0}
+        unit="GB"
+      />
+      <Meter
+        label="Disk usage"
+        value={7.8}
+        min={0}
+        max={8}
+        low={6.4}
+        high={7.6}
+        optimum={0}
+        unit="GB"
+      />
+      <Meter
+        label="Battery"
+        value={9}
+        min={0}
+        max={100}
+        low={10}
+        high={20}
+        optimum={100}
+        format="percent"
+      />
     </YStack>
   ),
 };

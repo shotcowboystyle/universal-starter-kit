@@ -6,11 +6,11 @@ import { chartDatumText, describeChart, describeDatum } from './accessibility';
 import { XAxis, YAxis } from './Axis';
 import { ChartDataFrame } from './ChartDataView';
 import { ChartSurface } from './ChartSurface';
-import { computeCartesianPlot, resolveSeriesFills, thinCategories } from './composeChart';
+import { computeCartesianPlot, resolveSeriesFills, thinCategories } from './compose-chart';
 import { createBandScale, createLinearScale, formatChartValue, getLinearTicks, valueDomain } from './math';
 import { BarSeries } from './series';
 import type { ChartDatum, ChartDatumEvents } from './types';
-import { useChartTheme } from './useChartTheme';
+import { useChartTheme } from './use-chart-theme';
 
 export interface BarChartProps extends ChartDatumEvents, Omit<YStackProps, 'children' | 'width' | 'height'> {
   data: ChartDatum[];
@@ -78,7 +78,11 @@ export function BarChart({
   const interactive = Boolean(onDatumPress || onDatumHoverIn || onDatumHoverOut);
 
   return (
-    <ChartDataFrame data={data} title={title} valueFormatter={valueFormatter} width={width}>
+    <ChartDataFrame
+      data={data}
+      title={title}
+      valueFormatter={valueFormatter}
+      width={width}>
       <ChartSurface
         label={ariaLabel}
         proof={{

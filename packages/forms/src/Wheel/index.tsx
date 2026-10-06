@@ -1,7 +1,8 @@
 import { useResolvedKnobs } from '@repo/theme';
 import type { CSSProperties, ReactNode } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { PanResponder, type GestureResponderEvent } from 'react-native';
+import { PanResponder } from 'react-native';
+import type { GestureResponderEvent } from 'react-native';
 import type { GetProps, SizeTokens } from 'tamagui';
 import { View, getTokens, isWeb, styled, Text } from 'tamagui';
 
@@ -119,7 +120,7 @@ function ensureWheelFocusStyles() {
   style.id = WHEEL_FOCUS_STYLE_ID;
   style.textContent =
     '.mp1-wheel-wrapper:focus-visible { outline: 2px solid var(--outlineColor, var(--c-outlineColor, CanvasText)); outline-offset: -2px; }';
-  document.head.appendChild(style);
+  document.head.append(style);
 }
 
 const wheelMaskStyle: CSSProperties | undefined = isWeb
@@ -399,7 +400,7 @@ export function Wheel<T = string | number>({
       const animate = (currentTime: number) => {
         const elapsed = currentTime - startTime;
         const progress = Math.min(elapsed / duration, 1);
-        const eased = 1 - Math.pow(1 - progress, 3);
+        const eased = 1 - (1 - progress) ** 3;
         const newOffset = startOffset + distance * eased;
         scrollOffsetRef.current = newOffset;
         setScrollOffset(newOffset);
@@ -788,29 +789,36 @@ export function Wheel<T = string | number>({
       let delta = 0;
       switch (e.key) {
         case 'ArrowUp':
-        case 'k':
+        case 'k': {
           delta = -1;
           break;
+        }
         case 'ArrowDown':
-        case 'j':
+        case 'j': {
           delta = 1;
           break;
-        case 'PageUp':
+        }
+        case 'PageUp': {
           delta = -visibleItems;
           break;
-        case 'PageDown':
+        }
+        case 'PageDown': {
           delta = visibleItems;
           break;
-        case 'Home':
+        }
+        case 'Home': {
           snapToIndex(0);
           e.preventDefault();
           return;
-        case 'End':
+        }
+        case 'End': {
           snapToIndex(n - 1);
           e.preventDefault();
           return;
-        default:
+        }
+        default: {
           return;
+        }
       }
 
       e.preventDefault();
@@ -848,13 +856,14 @@ export function Wheel<T = string | number>({
   }, [handleWheel]);
 
   // Cleanup animation on unmount
-  useEffect(() => {
-    return () => {
+  useEffect(
+    () => () => {
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
-    };
-  }, []);
+    },
+    [],
+  );
 
   const renderRows = useMemo(() => {
     if (n === 0) {
@@ -938,7 +947,7 @@ export function Wheel<T = string | number>({
           aria-valuemin={0}
           aria-valuemax={Math.max(0, n - 1)}
           aria-valuenow={selectedIndex}
-          aria-valuetext={items[selectedIndex] !== undefined ? getItemLabel(items[selectedIndex]) : undefined}
+          aria-valuetext={items[selectedIndex] === undefined ? undefined : getItemLabel(items[selectedIndex])}
           aria-disabled={disabled || undefined}
           data-disabled={disabled ? true : undefined}
           style={{

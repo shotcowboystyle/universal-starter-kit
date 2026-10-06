@@ -28,14 +28,22 @@ describe('EmptyState', () => {
   });
 
   it('publishes compact density when compact is set', () => {
-    const { container } = renderWithProviders(<EmptyState compact title="No matching records" />);
+    const { container } = renderWithProviders(
+      <EmptyState
+        compact
+        title="No matching records"
+      />,
+    );
     const frame = container.querySelector('[data-empty-intent]') as HTMLElement;
     expect(frame.getAttribute('data-density')).toBe('compact');
   });
 
   it('renders the title as a heading on the full-page frame', () => {
     const { container } = renderWithProviders(
-      <EmptyState title="Create your first record" description="Records you add will show up here." />,
+      <EmptyState
+        title="Create your first record"
+        description="Records you add will show up here."
+      />,
     );
     expect(container.querySelector('h2')?.textContent).toBe('Create your first record');
     expect(container.textContent).toContain('Records you add will show up here.');
@@ -70,7 +78,10 @@ describe('EmptyState icon well radius (R2e)', () => {
     renderWithProviders(
       <Preset overrides={{ borderRadius }}>
         <>
-          <EmptyState title="Nothing here" icon={<span data-testid="empty-icon">i</span>} />
+          <EmptyState
+            title="Nothing here"
+            icon={<span data-testid="empty-icon">i</span>}
+          />
           <KPICard config={{ id: 'k', title: 'K', value: 1, icon: <span data-testid="kpi-icon">i</span> }} />
         </>
       </Preset>,
@@ -87,7 +98,10 @@ describe('EmptyState icon well radius (R2e)', () => {
   it('squares at radius none rather than staying a circle', () => {
     renderWithProviders(
       <Preset overrides={{ borderRadius: 'none' }}>
-        <EmptyState title="Nothing here" icon={<span data-testid="empty-icon">i</span>} />
+        <EmptyState
+          title="Nothing here"
+          icon={<span data-testid="empty-icon">i</span>}
+        />
       </Preset>,
     );
     const well = screen.getByTestId('empty-icon').parentElement as HTMLElement;

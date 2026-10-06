@@ -39,7 +39,13 @@ import { ConfirmDialog } from './ConfirmDialog';
 
 describe('ConfirmDialog native focus ownership', () => {
   it('leaves native host refs and open focus to the platform', () => {
-    renderWithProviders(<ConfirmDialog open title="Delete project?" body="This cannot be undone." />);
+    renderWithProviders(
+      <ConfirmDialog
+        open
+        title="Delete project?"
+        body="This cannot be undone."
+      />,
+    );
     expect(nativeHost.query).not.toHaveBeenCalled();
     expect(nativeHost.focus).not.toHaveBeenCalled();
     expect(nativeHost.preventDefault).not.toHaveBeenCalled();

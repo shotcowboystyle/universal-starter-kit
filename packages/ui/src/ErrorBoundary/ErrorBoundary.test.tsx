@@ -1,7 +1,7 @@
 import { renderWithProviders } from '@repo/test-utils';
 import { fireEvent, screen } from '@testing-library/react';
 import { H1 } from 'tamagui';
-import { expect, vitest } from 'vitest';
+import { expect, vi } from 'vitest';
 
 import { ErrorBoundary } from './index';
 import * as ErrorBoundaryModule from './index';
@@ -9,9 +9,7 @@ import * as ErrorBoundaryModule from './index';
 const ChildThatThrows = () => {
   throw new Error('Test Error');
 };
-const ChildThatRenders = () => {
-  return <H1>Hello from child!</H1>;
-};
+const ChildThatRenders = () => <H1>Hello from child!</H1>;
 
 function weightClasses(el: Element): string[] {
   return String((el as HTMLElement).className || '')
@@ -68,7 +66,7 @@ describe('ErrorBoundary', () => {
   });
 
   it('should log errors when componentDidCatch is triggered', () => {
-    const spy = vitest.spyOn(console, 'info');
+    const spy = vi.spyOn(console, 'info');
     renderWithProviders(
       <ErrorBoundary>
         <ChildThatThrows />

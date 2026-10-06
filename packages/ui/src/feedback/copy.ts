@@ -4,7 +4,7 @@ import { useCallback, useEffect, useId, useRef } from 'react';
  * Copy confirm channel. Success is a page toast; errors
  * never toast. The glyph does not flip — notify() is the one confirm.
  */
-import { copyToClipboard } from '../hooks/useClipboard';
+import { copyToClipboard } from '../hooks/use-clipboard';
 
 import { notify } from './notify';
 import { dismissFeedbackByRegion } from './store';

@@ -6,9 +6,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Button } from '../../Button';
 import { Form } from '../../Form';
-import { __resetDevWarnSeen } from '../../shared/devWarn';
+import { __resetDevWarnSeen } from '../../shared/dev-warn';
 
-import { Select, type SelectOption } from './index';
+import { Select } from './index';
+import type { SelectOption } from './index';
 
 /** Web panels portal out to the page, so panel text is read from the page. */
 function findInPage(text: string): Element | undefined {
@@ -43,27 +44,48 @@ afterEach(() => {
 describe('Select Components', () => {
   describe('Select', () => {
     it('should display placeholder when no value is selected', () => {
-      renderWithProviders(<Select options={mockOptions} placeholder="Choose an option" />);
+      renderWithProviders(
+        <Select
+          options={mockOptions}
+          placeholder="Choose an option"
+        />,
+      );
 
       // Placeholder should be visible
       expect(findInPage('Choose an option')).toBeDefined();
     });
 
     it('should display selected value', () => {
-      renderWithProviders(<Select options={mockOptions} value="option1" placeholder="Choose an option" />);
+      renderWithProviders(
+        <Select
+          options={mockOptions}
+          value="option1"
+          placeholder="Choose an option"
+        />,
+      );
 
       // Should show the selected option label
       expect(findInPage('Option 1')).toBeDefined();
     });
 
     it('should handle empty options array', () => {
-      renderWithProviders(<Select options={[]} placeholder="No options" />);
+      renderWithProviders(
+        <Select
+          options={[]}
+          placeholder="No options"
+        />,
+      );
 
       expect(findInPage('No options')).toBeDefined();
     });
 
     it('should support custom placeholder', () => {
-      renderWithProviders(<Select options={mockOptions} placeholder="Custom placeholder text" />);
+      renderWithProviders(
+        <Select
+          options={mockOptions}
+          placeholder="Custom placeholder text"
+        />,
+      );
 
       expect(findInPage('Custom placeholder text')).toBeDefined();
     });
@@ -87,7 +109,12 @@ describe('Select Components', () => {
 
       it('should display error message', () => {
         renderWithProviders(
-          <Select label="Choose Option" name="option" options={mockOptions} error="This field is required" />,
+          <Select
+            label="Choose Option"
+            name="option"
+            options={mockOptions}
+            error="This field is required"
+          />,
         );
 
         expect(findInPage('This field is required')).toBeDefined();
@@ -95,7 +122,12 @@ describe('Select Components', () => {
 
       it('should render required label with asterisk', () => {
         const result = renderWithProviders(
-          <Select label="Required Select" name="option" options={mockOptions} required />,
+          <Select
+            label="Required Select"
+            name="option"
+            options={mockOptions}
+            required
+          />,
         );
 
         const label = result.baseElement.querySelector('label');
@@ -127,9 +159,9 @@ describe('Select Components', () => {
             fireEvent.click(dismiss);
           }
         });
-        expect(onChange).toHaveBeenCalledTimes(1);
+        expect(onChange).toHaveBeenCalledOnce();
         expect(onChange).toHaveBeenCalledWith(['option2']);
-        expect(onValueChange).toHaveBeenCalledTimes(1);
+        expect(onValueChange).toHaveBeenCalledOnce();
         expect(onValueChange).toHaveBeenCalledWith(['option2']);
       });
     });
@@ -147,7 +179,11 @@ describe('Select Components', () => {
 
         return (
           <Form form={form}>
-            <Select label="Choose Option" name={name} options={mockOptions} />
+            <Select
+              label="Choose Option"
+              name={name}
+              options={mockOptions}
+            />
             <Button action="submit">Submit</Button>
           </Form>
         );
@@ -175,7 +211,10 @@ describe('Select Components', () => {
         const onSubmit = vi.fn();
         const result = renderWithProviders(
           <YStack>
-            <FormExample defaultValue="option1" onSubmit={onSubmit} />
+            <FormExample
+              defaultValue="option1"
+              onSubmit={onSubmit}
+            />
           </YStack>,
         );
 
@@ -205,7 +244,11 @@ describe('Select Components', () => {
 
           return (
             <Form form={form}>
-              <Select label="Choose Option" name="option" options={mockOptions} />
+              <Select
+                label="Choose Option"
+                name="option"
+                options={mockOptions}
+              />
               <Button action="submit">Submit</Button>
             </Form>
           );
@@ -229,9 +272,13 @@ describe('Select Components', () => {
 
   describe('integration scenarios', () => {
     it('should handle dynamic options', () => {
-      const DynamicSelect = ({ options }: { options: SelectOption[] }) => {
-        return <Select label="Dynamic Select" name="dynamic" options={options} />;
-      };
+      const DynamicSelect = ({ options }: { options: SelectOption[] }) => (
+        <Select
+          label="Dynamic Select"
+          name="dynamic"
+          options={options}
+        />
+      );
 
       const result = renderWithProviders(<DynamicSelect options={mockOptions} />);
 
@@ -249,7 +296,13 @@ describe('Select Components', () => {
 
   describe('accessibility', () => {
     it('should announce selected value to screen readers', () => {
-      renderWithProviders(<Select options={mockOptions} value="option1" aria-label="Test select" />);
+      renderWithProviders(
+        <Select
+          options={mockOptions}
+          value="option1"
+          aria-label="Test select"
+        />,
+      );
 
       expect(findInPage('Option 1')).toBeDefined();
     });
@@ -269,7 +322,12 @@ describe('Select Components', () => {
     });
 
     it('warns when single-select has ≤5 options', () => {
-      renderWithProviders(<Select options={mockOptions} id="short" />);
+      renderWithProviders(
+        <Select
+          options={mockOptions}
+          id="short"
+        />,
+      );
       expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('select-too-few-options'));
     });
 
@@ -278,7 +336,12 @@ describe('Select Components', () => {
         value: `v${i}`,
         label: `Label ${i}`,
       }));
-      renderWithProviders(<Select options={many} id="long" />);
+      renderWithProviders(
+        <Select
+          options={many}
+          id="long"
+        />,
+      );
       expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining('select-too-few-options'));
     });
   });
@@ -298,7 +361,12 @@ describe('Select Components', () => {
     });
 
     it('does not ring the trigger or a row on mouse open', async () => {
-      const result = renderWithProviders(<Select options={many} placeholder="Pick" />);
+      const result = renderWithProviders(
+        <Select
+          options={many}
+          placeholder="Pick"
+        />,
+      );
       const trigger = result.baseElement.querySelector('[data-testid="select-trigger"]') as HTMLElement;
       expect(trigger).toBeTruthy();
       fireEvent.pointerDown(trigger);
@@ -314,7 +382,12 @@ describe('Select Components', () => {
     });
 
     it('paints an inset ring on the keyboard-active row; rows stay square', async () => {
-      const result = renderWithProviders(<Select options={many} placeholder="Pick" />);
+      const result = renderWithProviders(
+        <Select
+          options={many}
+          placeholder="Pick"
+        />,
+      );
       const trigger = result.baseElement.querySelector('[data-testid="select-trigger"]') as HTMLElement;
       fireEvent.keyDown(document, { key: 'ArrowDown' });
       fireEvent.keyDown(trigger, { key: 'ArrowDown' });
@@ -324,7 +397,7 @@ describe('Select Components', () => {
       expect(trigger.getAttribute('data-kb-ring')).not.toBe('true');
       const options = [...result.baseElement.querySelectorAll('[role="option"]')];
       const ringed = options.filter((el) => el.getAttribute('data-kb-ring') === 'true');
-      expect(ringed.length).toBe(1);
+      expect(ringed).toHaveLength(1);
       for (const opt of options) {
         const radius = getComputedStyle(opt).borderRadius;
         expect(radius === '0px' || radius === '0' || radius === '').toBe(true);
@@ -336,7 +409,12 @@ describe('Select Components', () => {
 describe('Select pointer intent', () => {
   it('commits a deliberate cross-row release immediately after keyboard open', async () => {
     const onChange = vi.fn();
-    const result = renderWithProviders(<Select options={mockOptions} onChange={onChange} />);
+    const result = renderWithProviders(
+      <Select
+        options={mockOptions}
+        onChange={onChange}
+      />,
+    );
     const trigger = result.getByTestId('select-trigger');
     fireEvent.keyDown(trigger, { key: 'Enter' });
     const options = await result.findAllByRole('option');
@@ -349,7 +427,12 @@ describe('Select pointer intent', () => {
 
   it('consumes the opening gesture release over the covered row', async () => {
     const onChange = vi.fn();
-    const result = renderWithProviders(<Select options={mockOptions} onChange={onChange} />);
+    const result = renderWithProviders(
+      <Select
+        options={mockOptions}
+        onChange={onChange}
+      />,
+    );
     const trigger = result.getByTestId('select-trigger');
     fireEvent.mouseDown(trigger);
     const options = await result.findAllByRole('option');
@@ -360,7 +443,12 @@ describe('Select pointer intent', () => {
 
   it('does not select when a background drag releases over an option', async () => {
     const onChange = vi.fn();
-    const result = renderWithProviders(<Select options={mockOptions} onChange={onChange} />);
+    const result = renderWithProviders(
+      <Select
+        options={mockOptions}
+        onChange={onChange}
+      />,
+    );
     fireEvent.mouseDown(result.getByTestId('select-trigger'));
     const options = await result.findAllByRole('option');
     fireEvent.mouseUp(options[0]);
@@ -374,7 +462,13 @@ describe('Select pointer intent', () => {
 
   it('toggles a multiple option exactly once on an immediate click', async () => {
     const onChange = vi.fn();
-    const result = renderWithProviders(<Select options={mockOptions} multiple onChange={onChange} />);
+    const result = renderWithProviders(
+      <Select
+        options={mockOptions}
+        multiple
+        onChange={onChange}
+      />,
+    );
     fireEvent.keyDown(result.getByTestId('select-trigger'), { key: 'Enter' });
     const options = await result.findAllByRole('option');
     fireEvent.pointerDown(options[0], { button: 0, pointerId: 1 });

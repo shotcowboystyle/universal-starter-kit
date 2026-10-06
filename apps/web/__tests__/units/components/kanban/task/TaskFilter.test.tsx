@@ -3,7 +3,7 @@ import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TaskFilter } from '@/components/kanban/task/TaskFilter';
-import { TaskStatus } from '@/types/dbInterface';
+import { TaskStatus } from '@/types/db-interface';
 
 vi.mock('@/stores/workspace-store', () => ({
   useWorkspaceStore: vi.fn(),

@@ -6,7 +6,8 @@
  * (`low` / `high` / `optimum`, the HTML <meter> model) and never guessed.
  * The rail is DEFAULT, not BINARY: there is no thumb to square with.
  */
-import { formatNumber, formatPercent, resolveRadiusClass, sizeRecipeForToken, type BorderRadius } from '@repo/theme';
+import { formatNumber, formatPercent, resolveRadiusClass, sizeRecipeForToken } from '@repo/theme';
+import type { BorderRadius } from '@repo/theme';
 
 export type MeterZone = 'ok' | 'warn' | 'critical';
 export type MeterFormat = 'number' | 'percent';

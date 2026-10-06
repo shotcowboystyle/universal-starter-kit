@@ -40,7 +40,13 @@ function chipFrameOf(label: HTMLElement): HTMLElement {
 }
 
 function renderTags() {
-  return renderWithProviders(<Tags tags={tags} onAdd={vi.fn()} onRemove={vi.fn()} />);
+  return renderWithProviders(
+    <Tags
+      tags={tags}
+      onAdd={vi.fn()}
+      onRemove={vi.fn()}
+    />,
+  );
 }
 
 /** The chip-scale visual pill nested inside the wrapper trigger. */
@@ -93,7 +99,11 @@ describe('Tags Add Tag trigger (chip-scale)', () => {
   ] as const)('outlined borderWidth %s resolves to %s, floored only by the resolver', (borderWidth, px) => {
     renderWithProviders(
       <Preset overrides={{ borderWidth, fillStyle: 'outlined' }}>
-        <Tags tags={tags} onAdd={vi.fn()} onRemove={vi.fn()} />
+        <Tags
+          tags={tags}
+          onAdd={vi.fn()}
+          onRemove={vi.fn()}
+        />
       </Preset>,
     );
     const pill = triggerPillOf(screen.getByLabelText('Add Tag'));

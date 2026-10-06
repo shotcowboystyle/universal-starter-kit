@@ -1,4 +1,5 @@
-import { MIN_PRESS_TARGET, resolveRadiusClass, type BorderRadius, type HitSlopInsets } from '@repo/theme';
+import { MIN_PRESS_TARGET, resolveRadiusClass } from '@repo/theme';
+import type { BorderRadius, HitSlopInsets } from '@repo/theme';
 
 import type { DateRange } from '../DatePicker/DateRangePicker';
 
@@ -96,7 +97,7 @@ export function assertAbsoluteDateRange(value: unknown): DateRange {
     return { start: null, end: null };
   }
   if (typeof value !== 'object') {
-    throw new Error('TimeRangeScrubber value must be { start: Date | null; end: Date | null }');
+    throw new TypeError('TimeRangeScrubber value must be { start: Date | null; end: Date | null }');
   }
   const record = value as Record<string, unknown>;
   if (isRelativeDateString(record.start) || isRelativeDateString(record.end)) {
@@ -124,7 +125,7 @@ export function applyQuickRange(range: QuickRange | string, now: Date): DateRang
   if (!Number.isFinite(range.durationMs) || range.durationMs <= 0) {
     throw new Error('TimeRangeScrubber quick range durationMs must be a positive number');
   }
-  return { start: new Date(now.getTime() - range.durationMs), end: new Date(now.getTime()) };
+  return { start: new Date(now.getTime() - range.durationMs), end: new Date(now) };
 }
 
 export function dateRangeKeys(value: DateRange): string[] {

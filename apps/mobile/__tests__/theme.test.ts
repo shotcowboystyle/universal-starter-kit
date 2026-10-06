@@ -1,46 +1,46 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Appearance } from "react-native";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Appearance } from 'react-native';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-import { loadThemePreference, saveThemePreference, applyThemePreference } from "@/lib/theme";
+import { loadThemePreference, saveThemePreference, applyThemePreference } from '@/lib/theme';
 
-vi.mock("@react-native-async-storage/async-storage", () => ({
+vi.mock('@react-native-async-storage/async-storage', () => ({
   default: {
     getItem: vi.fn(),
-    setItem: vi.fn()
-  }
+    setItem: vi.fn(),
+  },
 }));
 
-vi.mock("react-native", () => ({
+vi.mock('react-native', () => ({
   Appearance: {
-    setColorScheme: vi.fn()
-  }
+    setColorScheme: vi.fn(),
+  },
 }));
 
-describe("theme utils", () => {
+describe('theme utils', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("should load theme preference", async () => {
-    vi.mocked(AsyncStorage.getItem).mockResolvedValue("light");
+  it('should load theme preference', async () => {
+    vi.mocked(AsyncStorage.getItem).mockResolvedValue('light');
     const pref = await loadThemePreference();
-    expect(pref).toBe("light");
+    expect(pref).toBe('light');
   });
 
-  it("should return default dark if nothing stored", async () => {
+  it('should return default dark if nothing stored', async () => {
     vi.mocked(AsyncStorage.getItem).mockResolvedValue(null);
     const pref = await loadThemePreference();
-    expect(pref).toBe("dark");
+    expect(pref).toBe('dark');
   });
 
-  it("should save theme preference", async () => {
-    await saveThemePreference("system");
-    expect(AsyncStorage.setItem).toHaveBeenCalledWith("theme-preference", "system");
+  it('should save theme preference', async () => {
+    await saveThemePreference('system');
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith('theme-preference', 'system');
   });
 
-  it("should apply theme preference", () => {
-    applyThemePreference("light");
-    expect(Appearance.setColorScheme).toHaveBeenCalledWith("light");
+  it('should apply theme preference', () => {
+    applyThemePreference('light');
+    expect(Appearance.setColorScheme).toHaveBeenCalledWith('light');
   });
 });

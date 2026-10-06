@@ -95,7 +95,7 @@ export const Standalone: Story = {
     label: 'Upload File',
     helperText: 'Max 10MB',
     accept: '*/*',
-    maxSize: 10485760,
+    maxSize: 10_485_760,
   },
   render: (args) => <FileUpload {...args} />,
 };
@@ -137,10 +137,24 @@ export const WithError: Story = {
 
 export const Sizes: Story = {
   render: () => (
-    <YStack gap="$4" maxWidth={400}>
-      <FileUpload label="Small" size="$2" placeholder="Upload a file" />
-      <FileUpload label="Medium (default)" size="$3" placeholder="Upload a file" />
-      <FileUpload label="Large" size="$4" placeholder="Upload a file" />
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <FileUpload
+        label="Small"
+        size="$2"
+        placeholder="Upload a file"
+      />
+      <FileUpload
+        label="Medium (default)"
+        size="$3"
+        placeholder="Upload a file"
+      />
+      <FileUpload
+        label="Large"
+        size="$4"
+        placeholder="Upload a file"
+      />
     </YStack>
   ),
 };
@@ -150,7 +164,9 @@ export const Interactive: Story = {
     const InteractiveExample = () => {
       const [file, setFile] = useState<File | null>(null);
       return (
-        <YStack gap="$4" maxWidth={400}>
+        <YStack
+          gap="$4"
+          maxWidth={400}>
           <FileUpload
             label="Upload File"
             // @ts-expect-error controlled mode not supported

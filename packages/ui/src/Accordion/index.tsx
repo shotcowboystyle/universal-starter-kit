@@ -15,9 +15,9 @@ import {
   useReadableTextOn,
   useResolvedKnobs,
   wasKeyboardFocus,
-  type GroupPosition,
   transitionProps,
 } from '@repo/theme';
+import type { GroupPosition } from '@repo/theme';
 import type { ReactNode } from 'react';
 import {
   Children,
@@ -29,8 +29,8 @@ import {
   useId,
   useMemo,
   useState,
+  forwardRef,
 } from 'react';
-import { forwardRef } from 'react';
 // tamagui 2.0.0-rc dropped the StackProps alias; YStackProps is the same shape.
 import type { SizeTokens, YStackProps as StackProps, TamaguiElement } from 'tamagui';
 import {
@@ -44,9 +44,9 @@ import {
 } from 'tamagui';
 
 import { AnimateHeight } from '../AnimateHeight';
-import { componentColors } from '../componentColors';
+import { componentColors } from '../component-colors';
 import { themed } from '../icons/themed';
-import { wrapBareTextChildren } from '../shared/textRidesText';
+import { wrapBareTextChildren } from '../shared/text-rides-text';
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -274,7 +274,10 @@ function Chevron({
       aria-hidden
       pointerEvents="none"
       {...transitionProps(transition)}>
-      <ThemedCaretDown color={color} size={size} />
+      <ThemedCaretDown
+        color={color}
+        size={size}
+      />
     </View>
   );
 }
@@ -447,7 +450,12 @@ const AccordionItem = forwardRef<TamaguiElement, AccordionItemProps>(function Ac
 
   return (
     <AccordionItemCtx.Provider value={itemCtx}>
-      <TamaguiAccordion.Item ref={ref} value={value} disabled={disabled} {...variantProps} {...props}>
+      <TamaguiAccordion.Item
+        ref={ref}
+        value={value}
+        disabled={disabled}
+        {...variantProps}
+        {...props}>
         {children}
       </TamaguiAccordion.Item>
     </AccordionItemCtx.Provider>
@@ -509,7 +517,11 @@ const AccordionTrigger = forwardRef<TamaguiElement, AccordionTriggerProps>(funct
     // height cascades into the row texts (and an h1 per section is wrong
     // outline semantics anyway). View ignores `tag`, so use explicit
     // role="heading" + aria-level for AT parity with an h3.
-    <View role="heading" aria-level={headingLevel} margin={0} width="100%">
+    <View
+      role="heading"
+      aria-level={headingLevel}
+      margin={0}
+      width="100%">
       <TamaguiAccordion.Trigger
         {...(isWeb ? { type } : {})}
         ref={ref}
@@ -567,25 +579,39 @@ const AccordionTrigger = forwardRef<TamaguiElement, AccordionTriggerProps>(funct
           transition={knobProps.transition}
         />
         {icon ? (
-          <View alignItems="center" justifyContent="center" flexShrink={0}>
+          <View
+            alignItems="center"
+            justifyContent="center"
+            flexShrink={0}>
             {icon}
           </View>
         ) : null}
         <AccordionTriggerFillCtx.Provider value={item.open ? selectedTint : undefined}>
-          <YStack flex={1} minWidth={0} alignItems="flex-start">
+          <YStack
+            flex={1}
+            minWidth={0}
+            alignItems="flex-start">
             {/* TEXT-RIDES-TEXT: wrap ALL bare string/number children
                 (coalesced runs), not just the singleton case. */}
             {/* Label weight rides the fontWeight knob (400 / 700). Never 500
                 or 600 — those are not house label weights (text-node trap).
                 Selected state is fill, not a heavier weight. */}
             {wrapBareTextChildren(children, (label, key) => (
-              <Text key={key} {...knobProps.label} textAlign="left" color={titleColor}>
+              <Text
+                key={key}
+                {...knobProps.label}
+                textAlign="left"
+                color={titleColor}>
                 {label}
               </Text>
             ))}
             {description != null &&
               wrapBareTextChildren(description, (label, key) => (
-                <Text key={key} {...knobProps.label} textAlign="left" color={descriptionColor}>
+                <Text
+                  key={key}
+                  {...knobProps.label}
+                  textAlign="left"
+                  color={descriptionColor}>
                   {label}
                 </Text>
               ))}
@@ -624,11 +650,17 @@ const AccordionContent = forwardRef<TamaguiElement, AccordionContentProps>(funct
       id={item.contentId}
       aria-labelledby={item.triggerId}
       {...cornerProps}>
-      <YStack {...knobProps.panelPadding} paddingTop={knobProps.gap.gap} {...props}>
+      <YStack
+        {...knobProps.panelPadding}
+        paddingTop={knobProps.gap.gap}
+        {...props}>
         {/* TEXT-RIDES-TEXT: content is a View slot — bare/array string
               children ride a body Text instead of crashing native. */}
         {wrapBareTextChildren(children, (label, key) => (
-          <Text key={key} {...knobProps.body} color={componentColors.text.primary}>
+          <Text
+            key={key}
+            {...knobProps.body}
+            color={componentColors.text.primary}>
             {label}
           </Text>
         ))}

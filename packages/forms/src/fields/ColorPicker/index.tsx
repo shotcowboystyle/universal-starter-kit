@@ -1,12 +1,14 @@
 import { useResolvedKnobs, useChartPalette, normalizeToHex } from '@repo/theme';
 import { Pipette } from '@tamagui/lucide-icons-2';
 import type { DeepKeys, DeepValue } from '@tanstack/form-core';
-import { type ComponentProps, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { type Popover, View, XStack, YStack, isWeb, useProps, useTheme } from 'tamagui';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ComponentProps } from 'react';
+import { View, XStack, YStack, isWeb, useProps, useTheme } from 'tamagui';
+import type { Popover } from 'tamagui';
 
 import { Button } from '../../Button';
-import { Field, FieldLayout } from '../../fieldLayout';
-import type { FormFieldProps } from '../../fieldLayout';
+import { Field, FieldLayout } from '../../FieldLayout';
+import type { FormFieldProps } from '../../FieldLayout';
 import { Input as InputParts } from '../../InputParts';
 import { t } from '../../shared/t';
 import { getFieldError, mergeFieldHandler, useFormField, useResolvedValidators } from '../../shared/utils';
@@ -137,15 +139,18 @@ function rgbToHsl(
   if (d !== 0) {
     s = d / (1 - Math.abs(2 * l - 1));
     switch (max) {
-      case r1:
+      case r1: {
         h = ((g1 - b1) / d + (g1 < b1 ? 6 : 0)) * 60;
         break;
-      case g1:
+      }
+      case g1: {
         h = ((b1 - r1) / d + 2) * 60;
         break;
-      default:
+      }
+      default: {
         h = ((r1 - g1) / d + 4) * 60;
         break;
+      }
     }
   }
 
@@ -382,9 +387,22 @@ function ColorBody({
       {...knobProps.panelPadding}
       data-testid="color-picker-panel"
       data-dismiss-class="compose">
-      <XStack {...knobProps.gap} alignItems="stretch">
-        <SaturationPanel hue={hue} saturation={saturation} value={value} onChangeSV={onChangeSV} size={panelSize} />
-        <HueStrip hue={hue} onChangeHue={onChangeHue} height={panelSize} orientation="vertical" />
+      <XStack
+        {...knobProps.gap}
+        alignItems="stretch">
+        <SaturationPanel
+          hue={hue}
+          saturation={saturation}
+          value={value}
+          onChangeSV={onChangeSV}
+          size={panelSize}
+        />
+        <HueStrip
+          hue={hue}
+          onChangeHue={onChangeHue}
+          height={panelSize}
+          orientation="vertical"
+        />
         {showAlpha && (
           <AlphaStrip
             hue={hue}
@@ -408,7 +426,9 @@ function ColorBody({
         }}
       />
 
-      <XStack {...knobProps.gap} alignItems="center">
+      <XStack
+        {...knobProps.gap}
+        alignItems="center">
         <View
           width={previewSize}
           height={previewSize}
@@ -418,7 +438,9 @@ function ColorBody({
           backgroundColor={selectedColor}
           flexShrink={0}
         />
-        <InputParts size={knobProps.sizeToken} flex={1}>
+        <InputParts
+          size={knobProps.sizeToken}
+          flex={1}>
           <InputParts.Box>
             <InputParts.Area
               value={hexInputValue}
@@ -617,7 +639,9 @@ function ColorPickerControl({
     const displayValue = value || selectedColor || placeholder;
     return (
       <InputParts.Box theme={hasError ? 'error' : undefined}>
-        <View paddingInlineStart="$2" alignSelf="center">
+        <View
+          paddingInlineStart="$2"
+          alignSelf="center">
           <View
             width={CHIP_PX[knobProps.size] ?? 18}
             height={CHIP_PX[knobProps.size] ?? 18}
@@ -778,7 +802,13 @@ export function ColorPicker<
     const cellSize = size || knobProps.sizeToken;
     return (
       <InputParts size={cellSize}>
-        {label && <Skeleton variant="text" width={96} height={14} />}
+        {label && (
+          <Skeleton
+            variant="text"
+            width={96}
+            height={14}
+          />
+        )}
         <Skeleton
           variant="rounded"
           width={cellSize}

@@ -1,7 +1,12 @@
 import { EraserIcon } from '@phosphor-icons/react';
-import { useTouchSurface } from '@repo/theme';
+import {
+  useTouchSurface,
+  ensureFocusVisibleRing,
+  ensureKeyboardModalityTracking,
+  wasKeyboardFocus,
+  transitionProps,
+} from '@repo/theme';
 import type { KnobProps } from '@repo/theme';
-import { ensureFocusVisibleRing, ensureKeyboardModalityTracking, wasKeyboardFocus, transitionProps } from '@repo/theme';
 import { getStroke } from 'perfect-freehand';
 import type { PointerEvent, ReactNode } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -15,8 +20,8 @@ import type { LabelProps, SizeTokens } from 'tamagui';
 import { isWeb, Text, XStack, YStack, styled, useTheme as useTamaguiTheme } from 'tamagui';
 
 import { Button } from '../../Button';
-import { Field, FieldLayout, useFieldDescribedBy } from '../../fieldLayout';
-import { formCommonColors, formInputColors } from '../../shared/colorRamps';
+import { Field, FieldLayout, useFieldDescribedBy } from '../../FieldLayout';
+import { formCommonColors, formInputColors } from '../../shared/color-ramps';
 import { t } from '../../shared/t';
 import {
   clampRadiusForLargeComponent,
@@ -399,7 +404,7 @@ function SignatureCanvasImpl({
       const pressure = (webEvent as any).pressure ?? 0.5;
       return [x, y, pressure];
     }
-    const nativeEvent = (event as GestureResponderEvent).nativeEvent;
+    const { nativeEvent } = event as GestureResponderEvent;
     return [nativeEvent.locationX, nativeEvent.locationY, 0.5];
   }, []);
 
@@ -415,7 +420,7 @@ function SignatureCanvasImpl({
 
       if (isWeb) {
         const target = (event as PointerEvent<SVGSVGElement>).currentTarget;
-        const pointerId = (event as PointerEvent<SVGSVGElement>).pointerId;
+        const { pointerId } = event as PointerEvent<SVGSVGElement>;
         target.setPointerCapture?.(pointerId);
       }
     },
@@ -584,7 +589,7 @@ function SignatureCanvasImpl({
       data-min-height={minHeightPx}
       data-signed={hasInk ? 'true' : 'false'}
       data-keyboard-ring={kbFocus ? 'true' : undefined}
-      {...(!hasLabel ? { 'aria-label': hasInk ? t('Signature, signed') : t('Signature, empty') } : null)}>
+      {...(hasLabel ? null : { 'aria-label': hasInk ? t('Signature, signed') : t('Signature, empty') })}>
       {/* Legal-pad baseline (DocuSign / Adobe Sign): X + rule behind ink. */}
       <XStack
         position="absolute"
@@ -595,10 +600,18 @@ function SignatureCanvasImpl({
         pointerEvents="none"
         opacity={0.55}
         {...knobProps.gap}>
-        <Text color={formCommonColors.muted} fontStyle="italic" {...knobProps.body} {...knobProps.controlType}>
+        <Text
+          color={formCommonColors.muted}
+          fontStyle="italic"
+          {...knobProps.body}
+          {...knobProps.controlType}>
           {t('X')}
         </Text>
-        <YStack flex={1} height={1} backgroundColor={formCommonColors.divider} />
+        <YStack
+          flex={1}
+          height={1}
+          backgroundColor={formCommonColors.divider}
+        />
       </XStack>
       <Svg
         ref={svgRef}
@@ -607,7 +620,13 @@ function SignatureCanvasImpl({
         viewBox={`0 0 ${dimensions.width || 100} ${dimensions.height || 100}`}
         {...(svgProps as any)}>
         {paths.map((d, i) => (
-          <Path key={i} d={d} fill={penColor} stroke={penColor} strokeWidth={1} />
+          <Path
+            key={i}
+            d={d}
+            fill={penColor}
+            stroke={penColor}
+            strokeWidth={1}
+          />
         ))}
       </Svg>
       {/* Hide arm: with nothing drawn (or the field
@@ -622,7 +641,10 @@ function SignatureCanvasImpl({
           pointerEvents="box-none"
           alignItems="flex-end"
           justifyContent="flex-end">
-          <Button size="$2" onPress={handleClear} icon={clearIcon}>
+          <Button
+            size="$2"
+            onPress={handleClear}
+            icon={clearIcon}>
             <Button.Text {...knobProps.body}>{t('Clear')}</Button.Text>
           </Button>
         </XStack>
@@ -707,8 +729,17 @@ export function Signature({
   if (skeleton) {
     const cappedRadius = clampRadiusForLargeComponent(knobProps.borderRadius.borderRadius);
     return (
-      <FieldLayout id={id} label={label} size={size} knobProps={knobProps}>
-        <Skeleton variant="rounded" width="100%" height={minHeightPx} borderRadius={cappedRadius} />
+      <FieldLayout
+        id={id}
+        label={label}
+        size={size}
+        knobProps={knobProps}>
+        <Skeleton
+          variant="rounded"
+          width="100%"
+          height={minHeightPx}
+          borderRadius={cappedRadius}
+        />
       </FieldLayout>
     );
   }
@@ -758,7 +789,11 @@ export function Signature({
   }
 
   return (
-    <Field form={resolvedForm} name={name} defaultValue={defaultValue} validators={resolvedValidators}>
+    <Field
+      form={resolvedForm}
+      name={name}
+      defaultValue={defaultValue}
+      validators={resolvedValidators}>
       {(field) => {
         const resolvedError = getFieldError(field, error);
         return (

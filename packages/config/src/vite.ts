@@ -8,11 +8,11 @@ import type { Plugin, UserConfig } from 'vite';
 import createExternal from 'vite-plugin-external';
 import i18nextLoader from 'vite-plugin-i18next-loader';
 
-import { phosphorTokenColorPlugin } from './phosphorTokenColor.ts';
-import { bakePublicConfig, mergePublicConfigKeys, publicConfigPlugin, readPublicConfigKeys } from './publicConfig.ts';
-import { withSingletonDepAliases } from './singletonDepAliases.ts';
-import { ensureTamaguiWorkspacePaths } from './tamaguiWorkspacePaths.ts';
-import { discoverPublicPackageRoots } from './workspacePublicPackages.ts';
+import { phosphorTokenColorPlugin } from './phosphor-token-color.ts';
+import { bakePublicConfig, mergePublicConfigKeys, publicConfigPlugin, readPublicConfigKeys } from './public-config.ts';
+import { withSingletonDepAliases } from './singleton-dep-aliases.ts';
+import { ensureTamaguiWorkspacePaths } from './tamagui-workspace-paths.ts';
+import { discoverPublicPackageRoots } from './workspace-public-packages.ts';
 
 export interface CreateViteConfigOptions {
   /**
@@ -219,7 +219,7 @@ export function createViteConfig(options: CreateViteConfigOptions = {}): UserCon
     // Bake only the NAMES of the public keys, never a value: this is what lets
     // the SSR node process resolve their values from ITS OWN process.env at
     // request time and publish them into the served document
-    // (@repo/platform runtimeConfig.ts). Values stay out of the
+    // (@repo/platform runtime-config.ts). Values stay out of the
     // image, so one build is deployable to every environment; the names are
     // also the allowlist that keeps a private key from ever being serialized.
     bakePublicConfig(publicConfigKeys);
@@ -511,9 +511,9 @@ export function createViteConfig(options: CreateViteConfigOptions = {}): UserCon
   } satisfies UserConfig;
 }
 
-export { discoverPublicPackageRoots, publicPackageViteSourceAliases } from './workspacePublicPackages.ts';
-export { publicConfigPlugin, readPublicConfigKeys, type PublicConfigPluginOptions } from './publicConfig.ts';
-export { phosphorTokenColorPlugin } from './phosphorTokenColor.ts';
+export { discoverPublicPackageRoots, publicPackageViteSourceAliases } from './workspace-public-packages.ts';
+export { publicConfigPlugin, readPublicConfigKeys, type PublicConfigPluginOptions } from './public-config.ts';
+export { phosphorTokenColorPlugin } from './phosphor-token-color.ts';
 
 /**
  * Aliases react-native to react-native-web in the SSR environment.
@@ -533,7 +533,7 @@ function ssrReactNativeAliasPlugin(): Plugin {
       if (!ssrEnv?.resolve) {
         return;
       }
-      const alias: Array<{ find: string | RegExp; replacement: string }> = ssrEnv.resolve.alias ?? [];
+      const alias: { find: string | RegExp; replacement: string }[] = ssrEnv.resolve.alias ?? [];
       if (!alias.some((a: any) => a.find === 'react-native')) {
         alias.push({ find: 'react-native', replacement: 'react-native-web' });
       }
@@ -677,7 +677,7 @@ function registerNativeSinglePackageInstances(): void {
 
   function versionOf(dir: string): string | null {
     try {
-      const raw = fs.readFileSync(path.join(dir, 'package.json'), 'utf8');
+      const raw = fs.readFileSync(path.join(dir, 'package.json'), 'utf-8');
       return (JSON.parse(raw) as { version?: string }).version ?? null;
     } catch {
       return null;
@@ -978,8 +978,8 @@ function registerNativeWeb3Stub(): void {
   // published tarball).
   const here = path.dirname(new URL(import.meta.url).pathname);
   const shim = [
-    path.resolve(here, 'shims/web3Stub.native.js'),
-    path.resolve(here, '../src/shims/web3Stub.native.js'),
+    path.resolve(here, 'shims/web3-stub.native.js'),
+    path.resolve(here, '../src/shims/web3-stub.native.js'),
   ].find((candidate) => fs.existsSync(candidate));
   if (!shim) {
     return;
@@ -998,7 +998,7 @@ function registerNativeWeb3Stub(): void {
 function findProjectRoot(): string {
   try {
     const { execSync } = require('node:child_process');
-    return execSync('git rev-parse --show-toplevel', { encoding: 'utf8' }).trim();
+    return execSync('git rev-parse --show-toplevel', { encoding: 'utf-8' }).trim();
   } catch {
     return process.cwd();
   }

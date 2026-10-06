@@ -44,7 +44,7 @@ describe('LanguageSwitcher', () => {
   it('lists both languages when opened', async () => {
     renderWithProviders(<LanguageSwitcher />);
     fireEvent.click(screen.getByRole('button'));
-    expect(await screen.findByRole('menuitem', { name: 'English' })).toBeInTheDocument();
+    await expect(screen.findByRole('menuitem', { name: 'English' })).resolves.toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: 'Deutsch' })).toBeInTheDocument();
   });
 

@@ -55,7 +55,13 @@ async function loadColorPicker() {
 describe('ColorPicker', () => {
   it('should handle disabled state', async () => {
     const ColorPicker = await loadColorPicker();
-    const result = renderWithProviders(<ColorPicker label="Color" name="color" disabled />);
+    const result = renderWithProviders(
+      <ColorPicker
+        label="Color"
+        name="color"
+        disabled
+      />,
+    );
     const input = result.container.querySelector('input');
     expect(input).toBeTruthy();
     expect(input?.getAttribute('aria-disabled')).toBe('true');
@@ -70,7 +76,14 @@ describe('ColorPicker', () => {
 
   it('opens popover and updates value from hex input', async () => {
     const ColorPicker = await loadColorPicker();
-    const result = renderWithProviders(<ColorPicker label="Color" name="color" placeholder="Pick a color" showAlpha />);
+    const result = renderWithProviders(
+      <ColorPicker
+        label="Color"
+        name="color"
+        placeholder="Pick a color"
+        showAlpha
+      />,
+    );
 
     const triggerInput = result.container.querySelector('input');
     expect(triggerInput).toBeTruthy();
@@ -103,7 +116,12 @@ describe('ColorPicker', () => {
   it('clears selected value from trigger button', async () => {
     const ColorPicker = await loadColorPicker();
     const result = renderWithProviders(
-      <ColorPicker label="Color" name="color" placeholder="Pick a color" defaultValue="#112233" />,
+      <ColorPicker
+        label="Color"
+        name="color"
+        placeholder="Pick a color"
+        defaultValue="#112233"
+      />,
     );
 
     const input = result.container.querySelector('input');
@@ -147,15 +165,20 @@ describe('ColorPicker', () => {
     await waitFor(() => {
       expect(onChange).toHaveBeenCalledWith('');
     });
-    expect(onChange).toHaveBeenCalledTimes(1);
-    expect(onValueChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledOnce();
+    expect(onValueChange).toHaveBeenCalledOnce();
     expect(onValueChange).toHaveBeenCalledWith('');
   });
 
   it('shows format validation error for unrecognized rgb value', async () => {
     const ColorPicker = await loadColorPicker();
     const result = renderWithProviders(
-      <ColorPicker label="Color" name={undefined as never} format="rgb" defaultValue="not-rgb" />,
+      <ColorPicker
+        label="Color"
+        name={undefined as never}
+        format="rgb"
+        defaultValue="not-rgb"
+      />,
     );
 
     expect(result.findTextElement('Color must be a recognized RGB value')).toBeDefined();
@@ -204,7 +227,13 @@ describe('ColorPicker', () => {
     const ColorPicker = await loadColorPicker();
     const onChange = vi.fn();
     const result = renderWithProviders(
-      <ColorPicker label="Color" name={undefined as never} showAlpha value="#FF0000" onChange={onChange} />,
+      <ColorPicker
+        label="Color"
+        name={undefined as never}
+        showAlpha
+        value="#FF0000"
+        onChange={onChange}
+      />,
     );
     const triggerInput = result.container.querySelector('input');
     await act(async () => {
@@ -226,13 +255,19 @@ describe('ColorPicker', () => {
     });
     const last = onChange.mock.calls.at(-1)?.[0] as string;
     expect(last.toUpperCase().startsWith('#112233')).toBe(true);
-    expect(last.length).toBe(9);
+    expect(last).toHaveLength(9);
   });
 
   it('moves saturation with arrow keys', () => {
     const onChangeSV = vi.fn();
     const result = renderWithProviders(
-      <SaturationPanel hue={0} saturation={50} value={50} onChangeSV={onChangeSV} size={100} />,
+      <SaturationPanel
+        hue={0}
+        saturation={50}
+        value={50}
+        onChangeSV={onChangeSV}
+        size={100}
+      />,
     );
     const slider = result.container.querySelector('[role="slider"][aria-label="Saturation and brightness"]');
     expect(slider).toBeTruthy();
@@ -244,7 +279,12 @@ describe('ColorPicker', () => {
 
   it('paints a vertical hue rail (Polaris)', () => {
     const result = renderWithProviders(
-      <HueStrip hue={210} onChangeHue={() => {}} height={100} orientation="vertical" />,
+      <HueStrip
+        hue={210}
+        onChangeHue={() => {}}
+        height={100}
+        orientation="vertical"
+      />,
     );
     const html = result.container.innerHTML;
     expect(html).toContain('linear-gradient(to bottom, #f00');
@@ -255,7 +295,12 @@ describe('ColorPicker', () => {
   it('does not open when disabled', async () => {
     const ColorPicker = await loadColorPicker();
     const result = renderWithProviders(
-      <ColorPicker label="Color" name={undefined as never} disabled value="#112233" />,
+      <ColorPicker
+        label="Color"
+        name={undefined as never}
+        disabled
+        value="#112233"
+      />,
     );
     const input = result.container.querySelector('input');
     await act(async () => {
@@ -270,9 +315,26 @@ describe('ColorPicker', () => {
     it('web path keeps CSS linear-gradient on saturation / hue / alpha', () => {
       const result = renderWithProviders(
         <>
-          <SaturationPanel hue={210} saturation={80} value={60} onChangeSV={() => {}} size={100} />
-          <HueStrip hue={210} onChangeHue={() => {}} width={100} />
-          <AlphaStrip hue={210} saturation={80} value={60} alpha={50} onChangeAlpha={() => {}} width={100} />
+          <SaturationPanel
+            hue={210}
+            saturation={80}
+            value={60}
+            onChangeSV={() => {}}
+            size={100}
+          />
+          <HueStrip
+            hue={210}
+            onChangeHue={() => {}}
+            width={100}
+          />
+          <AlphaStrip
+            hue={210}
+            saturation={80}
+            value={60}
+            alpha={50}
+            onChangeAlpha={() => {}}
+            width={100}
+          />
         </>,
       );
 
@@ -281,7 +343,7 @@ describe('ColorPicker', () => {
       expect(html).toContain('linear-gradient(to top, #000, transparent)');
       expect(html).toContain(hsvToHex(210, 100, 100));
       expect(html).toMatch(/linear-gradient\(to right, #f00/);
-      expect(result.container.querySelectorAll('[data-testid="expo-linear-gradient"]').length).toBe(0);
+      expect(result.container.querySelectorAll('[data-testid="expo-linear-gradient"]')).toHaveLength(0);
     });
 
     it('native path stacks expo-linear-gradient for saturation, hue, and alpha', async () => {
@@ -289,15 +351,26 @@ describe('ColorPicker', () => {
 
       const result = renderWithProviders(
         <>
-          <SaturationBackground hueColor="#FF0000" width={100} height={100} />
-          <HueBackground width={100} height={14} />
-          <AlphaBackground hex="#00FF00" width={100} height={14} />
+          <SaturationBackground
+            hueColor="#FF0000"
+            width={100}
+            height={100}
+          />
+          <HueBackground
+            width={100}
+            height={14}
+          />
+          <AlphaBackground
+            hex="#00FF00"
+            width={100}
+            height={14}
+          />
         </>,
       );
 
       const grads = result.container.querySelectorAll('[data-testid="expo-linear-gradient"]');
       // sat: 2 layers, hue: 1, alpha: 1
-      expect(grads.length).toBe(4);
+      expect(grads).toHaveLength(4);
 
       const colorLists = [...grads].map((el) => JSON.parse(el.getAttribute('data-colors') || '[]'));
       expect(colorLists).toEqual(
@@ -315,7 +388,7 @@ describe('ColorPicker', () => {
     const here = dirname(fileURLToPath(import.meta.url));
 
     it('consumes FloatingPanel widthMode at-least-trigger (does not reimplement cover)', () => {
-      const source = readFileSync(resolve(here, 'parts.tsx'), 'utf8');
+      const source = readFileSync(resolve(here, 'parts.tsx'), 'utf-8');
       expect(source).toContain('widthMode="at-least-trigger"');
       expect(source).not.toMatch(/^\s*fitContent\s*$/m);
       expect(source).not.toContain('OVERLAY_ATTACH_GAP');
@@ -330,7 +403,12 @@ describe('ColorPicker', () => {
     it('states format errors without banned copy words', async () => {
       const ColorPicker = await loadColorPicker();
       const result = renderWithProviders(
-        <ColorPicker label="Color" name={undefined as never} format="rgb" defaultValue="not-rgb" />,
+        <ColorPicker
+          label="Color"
+          name={undefined as never}
+          format="rgb"
+          defaultValue="not-rgb"
+        />,
       );
       const text = result.container.textContent ?? '';
       expect(text.toLowerCase()).not.toMatch(/\binvalid\b|\bplease\b|\bsorry\b|\boops\b/);
@@ -388,7 +466,12 @@ describe('ColorPicker', () => {
     it('swatches and cursors are square at radius none (R-BINARY)', () => {
       const none = renderWithProviders(
         <Preset overrides={{ borderRadius: 'none' }}>
-          <HueStrip hue={0} onChangeHue={() => {}} height={100} orientation="vertical" />
+          <HueStrip
+            hue={0}
+            onChangeHue={() => {}}
+            height={100}
+            orientation="vertical"
+          />
         </Preset>,
       );
       const handle = none.container.querySelector('[data-testid="color-handle"]') as HTMLElement | null;

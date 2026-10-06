@@ -25,7 +25,9 @@ type Story = StoryObj<typeof LinearGradient>;
 export const Default: Story = {
   name: 'Main',
   render: () => (
-    <YStack maxWidth={420} gap="$3">
+    <YStack
+      maxWidth={420}
+      gap="$3">
       <Text>A fade strip. Stops are the consumer's; the primitive just paints them.</Text>
       <LinearGradient
         width="100%"

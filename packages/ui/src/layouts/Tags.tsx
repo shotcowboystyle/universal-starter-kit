@@ -9,31 +9,12 @@ import {
   wasKeyboardFocus,
 } from '@repo/theme';
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
-import {
-  Input,
-  Label,
-  Popover,
-  Text,
-  View,
-  XStack,
-  YStack,
-  isWeb,
-  styled,
-  type InputProps,
-  type YStackProps,
-} from 'tamagui';
+import { Input, Label, Popover, Text, View, XStack, YStack, isWeb, styled } from 'tamagui';
+import type { InputProps, YStackProps } from 'tamagui';
 
-import {
-  Chip,
-  ChipFrame,
-  ChipText,
-  chipIconSize,
-  chipTextSize,
-  type ChipColor,
-  type ChipSize,
-  type ChipVariant,
-} from '../Chip';
-import { componentColors } from '../componentColors';
+import { Chip, ChipFrame, ChipText, chipIconSize, chipTextSize } from '../Chip';
+import type { ChipColor, ChipSize, ChipVariant } from '../Chip';
+import { componentColors } from '../component-colors';
 import { ScrollView } from '../ScrollView';
 import { useTranslation } from '../shared/i18n';
 import { withInterp } from '../shared/t';
@@ -345,9 +326,15 @@ export function Tags({
   const emptyState = renderEmpty ? (
     renderEmpty()
   ) : (
-    <XStack alignItems="center" gap="$2" opacity={0.5}>
+    <XStack
+      alignItems="center"
+      gap="$2"
+      opacity={0.5}>
       <TagIcon size={compact ? 14 : 16} />
-      <Text color={knobProps.textAccentColor} fontSize={compact ? '$1' : '$2'} {...knobProps.body}>
+      <Text
+        color={knobProps.textAccentColor}
+        fontSize={compact ? '$1' : '$2'}
+        {...knobProps.body}>
         {noTagsLabel}
       </Text>
     </XStack>
@@ -453,7 +440,9 @@ export function Tags({
             handleSelectOption(option);
           }}>
           {option.kind === 'create' ? <PlusIcon size={16} /> : null}
-          <Text {...knobProps.body} color={componentColors.text.primary}>
+          <Text
+            {...knobProps.body}
+            color={componentColors.text.primary}>
             {option.label}
           </Text>
         </XStack>
@@ -473,13 +462,22 @@ export function Tags({
         }}>
         {createOption ? renderRow(createOption, 0) : null}
         {suggestionOptions.length > 0 && (
-          <Text fontSize="$1" color={knobProps.textAccentColor} paddingHorizontal="$3" paddingVertical="$1.5">
+          <Text
+            fontSize="$1"
+            color={knobProps.textAccentColor}
+            paddingHorizontal="$3"
+            paddingVertical="$1.5">
             {suggestionsLabel}
           </Text>
         )}
         {suggestionOptions.map((option, i) => renderRow(option, (createOption ? 1 : 0) + i))}
         {showEmptyMessage && (
-          <Text fontSize="$2" color={knobProps.textAccentColor} textAlign="center" padding="$3" {...knobProps.body}>
+          <Text
+            fontSize="$2"
+            color={knobProps.textAccentColor}
+            textAlign="center"
+            padding="$3"
+            {...knobProps.body}>
             {noAvailableTagsLabel}
           </Text>
         )}
@@ -583,7 +581,9 @@ export function Tags({
               pressStyle={{ backgroundColor: componentColors.interactive.active }}
               {...(addKbFocus ? ensureFocusVisibleRing() : { outlineWidth: 0 })}>
               <PlusIcon size={chipIconSize(chipSize)} />
-              <ChipText size={chipSize} color={knobProps.textAccentColor}>
+              <ChipText
+                size={chipSize}
+                color={knobProps.textAccentColor}>
                 {compact ? '\u200B' : addTagLabel}
               </ChipText>
             </ChipFrame>
@@ -633,13 +633,21 @@ export function Tags({
   );
 
   return (
-    <YStack {...knobProps.gap} {...stackProps}>
+    <YStack
+      {...knobProps.gap}
+      {...stackProps}>
       {label && (
-        <XStack alignItems="center" justifyContent="space-between">
-          <Label {...knobProps.label} fontWeight="400">
+        <XStack
+          alignItems="center"
+          justifyContent="space-between">
+          <Label
+            {...knobProps.label}
+            fontWeight="400">
             {label}
             {maxTags > 0 && (
-              <Text color={knobProps.textAccentColor} fontSize="$2">
+              <Text
+                color={knobProps.textAccentColor}
+                fontSize="$2">
                 {' '}
                 ({tags.length}/{maxTags})
               </Text>
@@ -673,7 +681,10 @@ export function Tags({
                 this the highlight on the active row stops short of the panel
                 edge on both sides instead of spanning it (SP-EDGE).
               */}
-              <ScrollView width="100%" maxHeight={240} contentContainerStyle={{ minWidth: '100%' }}>
+              <ScrollView
+                width="100%"
+                maxHeight={240}
+                contentContainerStyle={{ minWidth: '100%' }}>
                 {renderListboxOrdered()}
               </ScrollView>
             </Popover.Content>

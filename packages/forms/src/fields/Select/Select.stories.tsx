@@ -10,13 +10,14 @@ import { Button } from '../../Button';
 import { useViewportGtSm } from '../../FloatingPanel';
 import { Form } from '../../Form';
 
-import { Select, type SelectOption } from './index';
+import { Select } from './index';
+import type { SelectOption } from './index';
 
 // tamagui v2 types Select.Content as children + scope + FocusScopeProps only,
 // but it still forwards unknown props onto the popper frame — which is where
 // this story needs the z-index to land so the menu clears the Sheet overlay.
 // `as never` used to stand here and made the spread itself a TS2698.
-const raiseAbovePortal: Record<string, unknown> = { zIndex: 200000 };
+const raiseAbovePortal: Record<string, unknown> = { zIndex: 200_000 };
 
 const meta: Meta<typeof Select> = {
   title: 'Forms/Select',
@@ -100,11 +101,24 @@ export const Main: StoryObj<typeof Select> = {
       });
 
       return (
-        <Form form={form} className="max-w-md">
+        <Form
+          form={form}
+          className="max-w-md">
           <YStack gap="$4">
-            <Select label="User Role" name="role" options={roleOptions} placeholder="Select a role" required />
+            <Select
+              label="User Role"
+              name="role"
+              options={roleOptions}
+              placeholder="Select a role"
+              required
+            />
 
-            <Select label="Country" name="country" options={countryOptions} placeholder="Select your country" />
+            <Select
+              label="Country"
+              name="country"
+              options={countryOptions}
+              placeholder="Select your country"
+            />
 
             <Select
               label="Priority"
@@ -206,10 +220,27 @@ export const WithError: Story = {
 
 export const Sizes: Story = {
   render: () => (
-    <YStack gap="$4" maxWidth={400}>
-      <Select label="Small" size="$2" options={sampleOptions} placeholder="Small select" />
-      <Select label="Medium (default)" size="$3" options={sampleOptions} placeholder="Medium select" />
-      <Select label="Large" size="$4" options={sampleOptions} placeholder="Large select" />
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <Select
+        label="Small"
+        size="$2"
+        options={sampleOptions}
+        placeholder="Small select"
+      />
+      <Select
+        label="Medium (default)"
+        size="$3"
+        options={sampleOptions}
+        placeholder="Medium select"
+      />
+      <Select
+        label="Large"
+        size="$4"
+        options={sampleOptions}
+        placeholder="Large select"
+      />
     </YStack>
   ),
 };
@@ -223,7 +254,7 @@ export const DynamicOptions: StoryObj<typeof Select> = {
 
       const getOptions = (category: string): SelectOption[] => {
         switch (category) {
-          case 'fruits':
+          case 'fruits': {
             return [
               { value: 'apple', label: 'Apple' },
               { value: 'banana', label: 'Banana' },
@@ -232,7 +263,8 @@ export const DynamicOptions: StoryObj<typeof Select> = {
               { value: 'grape', label: 'Grape' },
               { value: 'pear', label: 'Pear' },
             ];
-          case 'vegetables':
+          }
+          case 'vegetables': {
             return [
               { value: 'carrot', label: 'Carrot' },
               { value: 'broccoli', label: 'Broccoli' },
@@ -241,7 +273,8 @@ export const DynamicOptions: StoryObj<typeof Select> = {
               { value: 'onion', label: 'Onion' },
               { value: 'pepper', label: 'Pepper' },
             ];
-          case 'grains':
+          }
+          case 'grains': {
             return [
               { value: 'rice', label: 'Rice' },
               { value: 'wheat', label: 'Wheat' },
@@ -250,7 +283,8 @@ export const DynamicOptions: StoryObj<typeof Select> = {
               { value: 'quinoa', label: 'Quinoa' },
               { value: 'millet', label: 'Millet' },
             ];
-          case 'dairy':
+          }
+          case 'dairy': {
             return [
               { value: 'milk', label: 'Milk' },
               { value: 'yogurt', label: 'Yogurt' },
@@ -259,7 +293,8 @@ export const DynamicOptions: StoryObj<typeof Select> = {
               { value: 'cream', label: 'Cream' },
               { value: 'kefir', label: 'Kefir' },
             ];
-          case 'proteins':
+          }
+          case 'proteins': {
             return [
               { value: 'chicken', label: 'Chicken' },
               { value: 'fish', label: 'Fish' },
@@ -268,7 +303,8 @@ export const DynamicOptions: StoryObj<typeof Select> = {
               { value: 'lentils', label: 'Lentils' },
               { value: 'eggs', label: 'Eggs' },
             ];
-          case 'beverages':
+          }
+          case 'beverages': {
             return [
               { value: 'water', label: 'Water' },
               { value: 'coffee', label: 'Coffee' },
@@ -277,8 +313,10 @@ export const DynamicOptions: StoryObj<typeof Select> = {
               { value: 'smoothie', label: 'Smoothie' },
               { value: 'kombucha', label: 'Kombucha' },
             ];
-          default:
+          }
+          default: {
             return [];
+          }
         }
       };
 
@@ -292,7 +330,9 @@ export const DynamicOptions: StoryObj<typeof Select> = {
       ];
 
       return (
-        <YStack gap="$4" padding="$4">
+        <YStack
+          gap="$4"
+          padding="$4">
           <Select
             label="Category"
             name="category"
@@ -348,20 +388,30 @@ export const Comparison: StoryObj<typeof Select> = {
       const viewportGtSm = useViewportGtSm();
       // Same 860 pivot as AdaptivePopup / FloatingPanel / SHC StackOverlaySurface:
       // Dialog/Content on wide, Sheet below OVERLAY_BREAKPOINT. Never Adapt.
-      const isDesktop = typeof window !== 'undefined' ? viewportGtSm : media.sm;
+      const isDesktop = typeof window === 'undefined' ? media.sm : viewportGtSm;
       const selectItems = (
         <TamaguiSelect.Group>
           {sampleOptions.map((option, i) => (
-            <TamaguiSelect.Item key={option.value} value={option.value} index={i}>
+            <TamaguiSelect.Item
+              key={option.value}
+              value={option.value}
+              index={i}>
               <TamaguiSelect.ItemText>{option.label}</TamaguiSelect.ItemText>
             </TamaguiSelect.Item>
           ))}
         </TamaguiSelect.Group>
       );
       return (
-        <XStack gap="$4" alignItems="flex-start" padding="$4">
-          <YStack gap="$2" width={320}>
-            <Paragraph size="$2" color="$placeholderColor">
+        <XStack
+          gap="$4"
+          alignItems="flex-start"
+          padding="$4">
+          <YStack
+            gap="$2"
+            width={320}>
+            <Paragraph
+              size="$2"
+              color="$placeholderColor">
               Custom Select
             </Paragraph>
             <Select
@@ -376,8 +426,12 @@ export const Comparison: StoryObj<typeof Select> = {
             />
           </YStack>
 
-          <YStack gap="$2" width={320}>
-            <Paragraph size="$2" color="$placeholderColor">
+          <YStack
+            gap="$2"
+            width={320}>
+            <Paragraph
+              size="$2"
+              color="$placeholderColor">
               Tamagui Select
             </Paragraph>
             <TamaguiSelect
@@ -389,18 +443,7 @@ export const Comparison: StoryObj<typeof Select> = {
               <TamaguiSelect.Trigger iconAfter={CaretDownIcon}>
                 <TamaguiSelect.Value placeholder="Select an option" />
               </TamaguiSelect.Trigger>
-              {!isDesktop ? (
-                <Sheet modal dismissOnSnapToBottom transition={knobProps.transition}>
-                  <Sheet.Frame>
-                    <Sheet.ScrollView>{selectItems}</Sheet.ScrollView>
-                  </Sheet.Frame>
-                  <Sheet.Overlay
-                    transition={knobProps.transition}
-                    enterStyle={{ opacity: 0 }}
-                    exitStyle={{ opacity: 0 }}
-                  />
-                </Sheet>
-              ) : (
+              {isDesktop ? (
                 <TamaguiSelect.Content {...raiseAbovePortal}>
                   <TamaguiSelect.ScrollUpButton
                     alignItems="center"
@@ -424,6 +467,20 @@ export const Comparison: StoryObj<typeof Select> = {
                     </YStack>
                   </TamaguiSelect.ScrollDownButton>
                 </TamaguiSelect.Content>
+              ) : (
+                <Sheet
+                  modal
+                  dismissOnSnapToBottom
+                  transition={knobProps.transition}>
+                  <Sheet.Frame>
+                    <Sheet.ScrollView>{selectItems}</Sheet.ScrollView>
+                  </Sheet.Frame>
+                  <Sheet.Overlay
+                    transition={knobProps.transition}
+                    enterStyle={{ opacity: 0 }}
+                    exitStyle={{ opacity: 0 }}
+                  />
+                </Sheet>
               )}
             </TamaguiSelect>
           </YStack>

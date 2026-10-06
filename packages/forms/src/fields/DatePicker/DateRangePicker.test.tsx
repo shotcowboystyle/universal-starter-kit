@@ -39,7 +39,12 @@ describe('DateRangePicker', () => {
   it('handles disabled state', async () => {
     const DateRangePicker = await loadDateRangePicker();
     const result = renderWithProviders(
-      <DateRangePicker label="Range" name="range" placeholder="Pick a range" disabled />,
+      <DateRangePicker
+        label="Range"
+        name="range"
+        placeholder="Pick a range"
+        disabled
+      />,
     );
 
     const input = result.container.querySelector('input');
@@ -62,7 +67,12 @@ describe('DateRangePicker', () => {
   // the control had no accessible name at all.
   it('the trigger carries the field id the sibling label resolves to', async () => {
     const DateRangePicker = await loadDateRangePicker();
-    const result = renderWithProviders(<DateRangePicker label="Range" name="range" />);
+    const result = renderWithProviders(
+      <DateRangePicker
+        label="Range"
+        name="range"
+      />,
+    );
     const trigger = result.container.querySelector('[data-testid="date-picker-trigger"]') as HTMLElement;
     const label = result.container.querySelector('label') as HTMLLabelElement;
     expect(trigger?.id).toBeTruthy();
@@ -72,7 +82,13 @@ describe('DateRangePicker', () => {
 
   it('selects a start and end date', async () => {
     const DateRangePicker = await loadDateRangePicker();
-    const result = renderWithProviders(<DateRangePicker label="Range" name="range" placeholder="Pick a range" />);
+    const result = renderWithProviders(
+      <DateRangePicker
+        label="Range"
+        name="range"
+        placeholder="Pick a range"
+      />,
+    );
 
     const trigger = result.container.querySelector("input,button,[role='button']");
     expect(trigger).toBeTruthy();
@@ -123,7 +139,11 @@ describe('DateRangePicker', () => {
         formApi = form as unknown as typeof formApi;
         return (
           <Form form={form}>
-            <DateRangePicker label="Range" name="range" onChange={onChange} />
+            <DateRangePicker
+              label="Range"
+              name="range"
+              onChange={onChange}
+            />
           </Form>
         );
       };
@@ -157,7 +177,11 @@ describe('DateRangePicker', () => {
         formApi = form as unknown as typeof formApi;
         return (
           <Form form={form}>
-            <DateRangePicker label="Range" name="range" onChange={onChange} />
+            <DateRangePicker
+              label="Range"
+              name="range"
+              onChange={onChange}
+            />
           </Form>
         );
       };
@@ -180,7 +204,13 @@ describe('DateRangePicker', () => {
   describe('design law', () => {
     it('renders a skeleton at the control recipe height', async () => {
       const DateRangePicker = await loadDateRangePicker();
-      const result = renderWithProviders(<DateRangePicker label="Loading" name="l" skeleton />);
+      const result = renderWithProviders(
+        <DateRangePicker
+          label="Loading"
+          name="l"
+          skeleton
+        />,
+      );
       expect(result.container.querySelector('input')).toBeNull();
       const skeleton = result.container.querySelector('[data-daterange-skeleton]') as HTMLElement;
       expect(skeleton).toBeTruthy();
@@ -189,7 +219,12 @@ describe('DateRangePicker', () => {
 
     it('rings the outer trigger box, never the inner field', async () => {
       const DateRangePicker = await loadDateRangePicker();
-      const result = renderWithProviders(<DateRangePicker label="Range" name="range" />);
+      const result = renderWithProviders(
+        <DateRangePicker
+          label="Range"
+          name="range"
+        />,
+      );
       const input = result.container.querySelector('input');
       expect(input?.className).toMatch(/mp-input-area/);
       const box = result.container.querySelector('.mp-composite-ring');
@@ -200,7 +235,10 @@ describe('DateRangePicker', () => {
     it('paints range stripes with semantic fill, not a named motion', async () => {
       const DateRangePicker = await loadDateRangePicker();
       const result = renderWithProviders(
-        <DateRangePicker label="Range" value={{ start: new Date(2026, 2, 5), end: new Date(2026, 2, 12) }} />,
+        <DateRangePicker
+          label="Range"
+          value={{ start: new Date(2026, 2, 5), end: new Date(2026, 2, 12) }}
+        />,
       );
       const trigger = result.container.querySelector('[data-testid="date-picker-trigger"]');
       expect(trigger).toBeTruthy();

@@ -172,7 +172,7 @@ export function writePresetCookie(presetName: string): { key: string; value: str
  * Also returns keys to remove (old split cookies that are no longer needed).
  */
 export function writeOverridesCookie(overrides: Partial<Knobs>): {
-  toSet: Array<{ key: string; value: string }>;
+  toSet: { key: string; value: string }[];
   toRemove: string[];
 } {
   const json = JSON.stringify(overrides);
@@ -202,7 +202,7 @@ export function writeOverridesCookie(overrides: Partial<Knobs>): {
  */
 export function computeOverrides(base: Knobs, current: Knobs): Partial<Knobs> {
   const overrides: Partial<Knobs> = {};
-  for (const key of Object.keys(base) as Array<keyof Knobs>) {
+  for (const key of Object.keys(base) as (keyof Knobs)[]) {
     if (current[key] !== base[key]) {
       (overrides as Record<string, unknown>)[key] = current[key];
     }

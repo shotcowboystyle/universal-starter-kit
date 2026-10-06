@@ -7,8 +7,8 @@ const enUS = { locale: 'en-US' } as const;
 
 describe('formatNumber (cardinal register)', () => {
   it('groups thousands — the aggregate that used to render raw', () => {
-    expect(formatNumber(15400, enUS)).toBe('15,400');
-    expect(formatNumber(1234567, enUS)).toBe('1,234,567');
+    expect(formatNumber(15_400, enUS)).toBe('15,400');
+    expect(formatNumber(1_234_567, enUS)).toBe('1,234,567');
   });
 
   it('keeps up to two fraction digits without inventing any', () => {
@@ -19,8 +19,8 @@ describe('formatNumber (cardinal register)', () => {
   });
 
   it('pins fraction digits with precision (fixed-precision columns)', () => {
-    expect(formatNumber(15400, { ...enUS, precision: 2 })).toBe('15,400.00');
-    expect(formatNumber(15400.6, { ...enUS, precision: 0 })).toBe('15,401');
+    expect(formatNumber(15_400, { ...enUS, precision: 2 })).toBe('15,400.00');
+    expect(formatNumber(15_400.6, { ...enUS, precision: 0 })).toBe('15,401');
   });
 
   it('honours a wider maximum for report floats', () => {
@@ -28,7 +28,7 @@ describe('formatNumber (cardinal register)', () => {
   });
 
   it('can drop grouping when a caller owns the layout', () => {
-    expect(formatNumber(15400, { ...enUS, grouping: false })).toBe('15400');
+    expect(formatNumber(15_400, { ...enUS, grouping: false })).toBe('15400');
   });
 
   it('coerces numeric strings — wire values still reach the register', () => {
@@ -46,21 +46,21 @@ describe('formatNumber (cardinal register)', () => {
 
 describe('formatCurrency (money register)', () => {
   it('defaults to two fraction digits so a money column stays aligned', () => {
-    expect(formatCurrency(15400, enUS)).toBe('15,400.00');
-    expect(formatCurrency(15400, { ...enUS, symbol: '$' })).toBe('$15,400.00');
+    expect(formatCurrency(15_400, enUS)).toBe('15,400.00');
+    expect(formatCurrency(15_400, { ...enUS, symbol: '$' })).toBe('$15,400.00');
   });
 
   it('elides a whole-value .00 in the summary-tile variant', () => {
-    expect(formatCurrency(48250, { ...enUS, symbol: '$', fractionDigits: 'auto' })).toBe('$48,250');
+    expect(formatCurrency(48_250, { ...enUS, symbol: '$', fractionDigits: 'auto' })).toBe('$48,250');
   });
 
   it('still shows cents in the summary variant when the value has them', () => {
-    expect(formatCurrency(48250.5, { ...enUS, symbol: '$', fractionDigits: 'auto' })).toBe('$48,250.50');
+    expect(formatCurrency(48_250.5, { ...enUS, symbol: '$', fractionDigits: 'auto' })).toBe('$48,250.50');
   });
 
   it("renders an ISO code through the currency's own symbol placement", () => {
-    expect(formatCurrency(15400, { ...enUS, currency: 'USD' })).toBe('$15,400.00');
-    expect(formatCurrency(15400, { ...enUS, currency: 'EUR' })).toBe('€15,400.00');
+    expect(formatCurrency(15_400, { ...enUS, currency: 'USD' })).toBe('$15,400.00');
+    expect(formatCurrency(15_400, { ...enUS, currency: 'EUR' })).toBe('€15,400.00');
   });
 
   it('resolves a known symbol to its code, prefixes an unknown one', () => {

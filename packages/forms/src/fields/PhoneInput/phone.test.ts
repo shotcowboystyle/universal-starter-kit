@@ -56,7 +56,7 @@ describe('phone helpers', () => {
   });
 
   it('rebases the same national digits onto a new country (SB-M-214)', () => {
-    const national = parsePhone('+15125551234', 'US').national;
+    const { national } = parsePhone('+15125551234', 'US');
     expect(toE164('GB', national)).toBe('+445125551234');
     expect(formatNational('GB', national)).toBe('5125 551 234');
   });

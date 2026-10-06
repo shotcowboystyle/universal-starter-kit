@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BoardActions } from '@/components/kanban/board/BoardActions';
 import { useRouter } from '@/i18n/navigation';
 import { useDeleteBoard, useUpdateBoard } from '@/lib/api/boards/queries';
-import type { Board } from '@/types/dbInterface';
+import type { Board } from '@/types/db-interface';
 
 vi.mock('next-intl', () => ({
   useTranslations: () => (key: string) => key,
@@ -35,7 +35,7 @@ interface MutationOptions {
 
 // Tamagui renders the confirm dialog in a <dialog> element that jsdom treats as
 // hidden for role queries, so locate it directly.
-const findConfirmDialog = () =>
+const findConfirmDialog = async () =>
   waitFor(() => {
     const el = document.querySelector<HTMLElement>('[role="alertdialog"]');
     expect(el).toBeTruthy();
@@ -86,7 +86,9 @@ describe('BoardActions', () => {
   it('uses a custom trigger when children are given', () => {
     renderWithProviders(
       <BoardActions board={mockBoard}>
-        <button type="button" data-testid="custom-trigger">
+        <button
+          type="button"
+          data-testid="custom-trigger">
           Custom Trigger
         </button>
       </BoardActions>,
@@ -144,7 +146,12 @@ describe('BoardActions', () => {
 
   it('deletes the board after confirmation', async () => {
     const onDelete = vi.fn();
-    renderWithProviders(<BoardActions board={mockBoard} onDelete={onDelete} />);
+    renderWithProviders(
+      <BoardActions
+        board={mockBoard}
+        onDelete={onDelete}
+      />,
+    );
     await openMenu();
     fireEvent.click(screen.getByTestId('delete-board-button'));
 

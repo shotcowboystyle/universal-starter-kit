@@ -42,7 +42,12 @@ export default meta;
 type Story = StoryObj<typeof DateRangePicker>;
 
 export const Baseline: Story = {
-  render: (args) => <DateRangePicker {...args} helperText={args.helperText ?? 'Select a start and end date'} />,
+  render: (args) => (
+    <DateRangePicker
+      {...args}
+      helperText={args.helperText ?? 'Select a start and end date'}
+    />
+  ),
 };
 
 export const Disabled: Story = {
@@ -92,8 +97,15 @@ export const FormBound: Story = {
       const FormSubscribe = (form as any).Subscribe;
       return (
         <Form form={form}>
-          <YStack gap="$4" maxWidth={480}>
-            <DateRangePicker label="Trip Dates" name={'range' as any} required helperText="Select trip start and end" />
+          <YStack
+            gap="$4"
+            maxWidth={480}>
+            <DateRangePicker
+              label="Trip Dates"
+              name={'range' as any}
+              required
+              helperText="Select trip start and end"
+            />
             <FormSubscribe selector={(s: any) => [s.values.range]}>
               {([range]: any[]) => <Text>{`form-value:${JSON.stringify(range)}`}</Text>}
             </FormSubscribe>

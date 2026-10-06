@@ -7,9 +7,10 @@ import { Text, XStack, YStack } from 'tamagui';
 import { Button } from '../../Button';
 import { Form } from '../../Form';
 
-import { authorOptions } from './authorOptions';
+import { authorOptions } from './author-options';
 
-import { Combobox, type ComboboxOption } from './index';
+import { Combobox } from './index';
+import type { ComboboxOption } from './index';
 
 const meta: Meta<typeof Combobox> = {
   title: 'Forms/Combobox',
@@ -99,7 +100,9 @@ export const Main: StoryObj<typeof Combobox> = {
 
       return (
         <Form form={form}>
-          <YStack gap="$4" maxWidth={300}>
+          <YStack
+            gap="$4"
+            maxWidth={300}>
             <Combobox
               label="Author"
               name="author"
@@ -166,7 +169,12 @@ export const Creatable: Story = {
     creatable: true,
     options: authorOptions,
   },
-  render: (args) => <Combobox {...args} onCreate={(value) => ({ value, label: value })} />,
+  render: (args) => (
+    <Combobox
+      {...args}
+      onCreate={(value) => ({ value, label: value })}
+    />
+  ),
 };
 
 export const Basic: Story = {
@@ -178,7 +186,9 @@ export const Basic: Story = {
   render: function Render(args) {
     const [value, setValue] = useState<string | undefined>();
     return (
-      <YStack gap="$4" maxWidth={300}>
+      <YStack
+        gap="$4"
+        maxWidth={300}>
         <Combobox
           {...args}
           value={value}
@@ -197,7 +207,9 @@ export const WithLabel: Story = {
   render: function Render() {
     const [value, setValue] = useState<string | undefined>();
     return (
-      <YStack gap="$4" maxWidth={300}>
+      <YStack
+        gap="$4"
+        maxWidth={300}>
         <Combobox
           label="Author"
           helperText="Select an author from the list"
@@ -235,10 +247,27 @@ export const WithError: Story = {
 
 export const Sizes: Story = {
   render: () => (
-    <YStack gap="$4" maxWidth={400}>
-      <Combobox label="Small" size="$2" options={authorOptions} placeholder="Select..." />
-      <Combobox label="Medium (default)" size="$3" options={authorOptions} placeholder="Select..." />
-      <Combobox label="Large" size="$4" options={authorOptions} placeholder="Select..." />
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <Combobox
+        label="Small"
+        size="$2"
+        options={authorOptions}
+        placeholder="Select..."
+      />
+      <Combobox
+        label="Medium (default)"
+        size="$3"
+        options={authorOptions}
+        placeholder="Select..."
+      />
+      <Combobox
+        label="Large"
+        size="$4"
+        options={authorOptions}
+        placeholder="Select..."
+      />
     </YStack>
   ),
 };
@@ -248,7 +277,9 @@ export const Interactive: Story = {
     const InteractiveExample = () => {
       const [value, setValue] = useState<string | undefined>();
       return (
-        <YStack gap="$4" maxWidth={400}>
+        <YStack
+          gap="$4"
+          maxWidth={400}>
           <Combobox
             label="Pick an author"
             options={authorOptions}
@@ -271,11 +302,17 @@ export const CustomTrigger: StoryObj<typeof Combobox> = {
     const CustomTriggerExample = () => {
       const [value, setValue] = useState<string | undefined>();
       return (
-        <YStack gap="$4" maxWidth={300}>
-          <Text fontWeight="bold" color="$colorHover">
+        <YStack
+          gap="$4"
+          maxWidth={300}>
+          <Text
+            fontWeight="bold"
+            color="$colorHover">
             Author picker with custom trigger:
           </Text>
-          <XStack gap="$2" alignItems="center">
+          <XStack
+            gap="$2"
+            alignItems="center">
             <Combobox
               options={authorOptions}
               value={value}
@@ -320,7 +357,9 @@ export const ManyOptions: StoryObj<typeof Combobox> = {
       keywords: `option number ${i + 1}`,
     }));
     return (
-      <YStack gap="$4" maxWidth={300}>
+      <YStack
+        gap="$4"
+        maxWidth={300}>
         <Combobox
           label="Pick an item"
           options={options}

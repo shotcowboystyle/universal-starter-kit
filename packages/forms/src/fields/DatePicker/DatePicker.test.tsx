@@ -57,7 +57,13 @@ describe('DatePicker', () => {
 
     it('should handle disabled state', async () => {
       const DatePicker = await loadDatePicker();
-      const result = renderWithProviders(<DatePicker label="Date" name="date" disabled />);
+      const result = renderWithProviders(
+        <DatePicker
+          label="Date"
+          name="date"
+          disabled
+        />,
+      );
       const input = result.container.querySelector('input');
       expect(input).toBeTruthy();
       expect(input?.getAttribute('aria-disabled')).toBe('true');
@@ -83,7 +89,12 @@ describe('DatePicker', () => {
       const onChange = vi.fn();
       const onValueChange = vi.fn();
       const result = renderWithProviders(
-        <DatePicker label="Date" name="date" onChange={onChange} onValueChange={onValueChange} />,
+        <DatePicker
+          label="Date"
+          name="date"
+          onChange={onChange}
+          onValueChange={onValueChange}
+        />,
       );
 
       const trigger = result.container.querySelector("input,button,[role='button']");
@@ -103,8 +114,8 @@ describe('DatePicker', () => {
         fireEvent.click(dayButtons[0]);
       });
 
-      expect(onChange).toHaveBeenCalledTimes(1);
-      expect(onValueChange).toHaveBeenCalledTimes(1);
+      expect(onChange).toHaveBeenCalledOnce();
+      expect(onValueChange).toHaveBeenCalledOnce();
       expect(onChange.mock.calls[0][0]).toBeInstanceOf(Date);
       expect(onChange.mock.calls[0][0]).toEqual(onValueChange.mock.calls[0][0]);
     });
@@ -124,7 +135,10 @@ describe('DatePicker', () => {
         });
         return (
           <Form form={form}>
-            <DatePicker label="Date" name="date" />
+            <DatePicker
+              label="Date"
+              name="date"
+            />
             <Button action="submit">Submit</Button>
           </Form>
         );
@@ -156,7 +170,7 @@ describe('DatePicker', () => {
       });
 
       await waitFor(() => {
-        expect(onSubmit).toHaveBeenCalledTimes(1);
+        expect(onSubmit).toHaveBeenCalledOnce();
       });
       const submitted = onSubmit.mock.calls[0][0];
       expect(submitted.date).toBeInstanceOf(Date);
@@ -231,7 +245,11 @@ describe('DatePicker', () => {
         });
         return (
           <Form form={form}>
-            <DatePicker label="Date" name="date" defaultValue={new Date(2024, 0, 15)} />
+            <DatePicker
+              label="Date"
+              name="date"
+              defaultValue={new Date(2024, 0, 15)}
+            />
             <Button action="submit">Submit</Button>
           </Form>
         );
@@ -272,14 +290,24 @@ describe('DatePicker', () => {
       const onChange = vi.fn();
       const onValueChange = vi.fn();
       const result = renderWithProviders(
-        <DatePicker label="Due Date" value={null} onChange={onChange} onValueChange={onValueChange} />,
+        <DatePicker
+          label="Due Date"
+          value={null}
+          onChange={onChange}
+          onValueChange={onValueChange}
+        />,
       );
       expect(getDisplayInput(result.container)?.value ?? '').toBe('');
 
       // Late seed: the upstream doc value (frappe wire string) arrives after
       // first paint.
       result.rerender(
-        <DatePicker label="Due Date" value="2026-03-05" onChange={onChange} onValueChange={onValueChange} />,
+        <DatePicker
+          label="Due Date"
+          value="2026-03-05"
+          onChange={onChange}
+          onValueChange={onValueChange}
+        />,
       );
       await waitFor(() => {
         expect(getDisplayInput(result.container)?.value).toBe('Mar 5, 2026');
@@ -297,7 +325,11 @@ describe('DatePicker', () => {
         formApi = form as unknown as typeof formApi;
         return (
           <Form form={form}>
-            <DatePicker label="Due Date" name="date" onChange={onChange} />
+            <DatePicker
+              label="Due Date"
+              name="date"
+              onChange={onChange}
+            />
           </Form>
         );
       };
@@ -322,7 +354,11 @@ describe('DatePicker', () => {
         formApi = form as unknown as typeof formApi;
         return (
           <Form form={form}>
-            <DatePicker label="Due Date" name="date" onChange={onChange} />
+            <DatePicker
+              label="Due Date"
+              name="date"
+              onChange={onChange}
+            />
           </Form>
         );
       };
@@ -359,7 +395,7 @@ describe('DatePicker', () => {
       const days = Array.from({ length: 14 }, (_, i) => new Date(2024, 0, i + 1));
       const weeks = toWeeks(days);
 
-      expect(weeks.length).toBe(2);
+      expect(weeks).toHaveLength(2);
       expect(weeks[0]).toHaveLength(7);
       expect(weeks[1]).toHaveLength(7);
       expect(weeks[0]?.[0]?.getDate()).toBe(1);

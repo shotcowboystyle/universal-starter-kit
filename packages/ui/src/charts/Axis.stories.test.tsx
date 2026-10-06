@@ -12,7 +12,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { XAxis, YAxis } from './Axis';
 import meta, { AxisLineAndTicks, Default, LabelTruncation, WideValueRange } from './Axis.stories';
 import { ChartSurface } from './ChartSurface';
-import { computeCartesianPlot } from './composeChart';
+import { computeCartesianPlot } from './compose-chart';
 import { createBandScale, createLinearScale } from './math';
 
 afterEach(cleanup);
@@ -21,7 +21,10 @@ const categories = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 
 function Frame({ showGrid = true }: { showGrid?: boolean }) {
   return (
-    <ChartSurface label="Axis frame" width={400} height={200}>
+    <ChartSurface
+      label="Axis frame"
+      width={400}
+      height={200}>
       {(size) => {
         const plot = computeCartesianPlot(size, {
           showXAxis: true,
@@ -39,8 +42,16 @@ function Frame({ showGrid = true }: { showGrid?: boolean }) {
         });
         return (
           <>
-            <YAxis plot={plot} scale={yScale} ticks={4} showGrid={showGrid} />
-            <XAxis plot={plot} scale={xScale} />
+            <YAxis
+              plot={plot}
+              scale={yScale}
+              ticks={4}
+              showGrid={showGrid}
+            />
+            <XAxis
+              plot={plot}
+              scale={xScale}
+            />
           </>
         );
       }}

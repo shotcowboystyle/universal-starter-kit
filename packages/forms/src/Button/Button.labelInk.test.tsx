@@ -48,7 +48,10 @@ const WHITE_PAGE_SURFACES = ['background', 'color1'] as const;
 
 function houseRender(ui: React.ReactElement, theme: 'light' | 'dark' = 'light') {
   return render(
-    <TamaguiProvider config={houseConfig.tamagui} defaultTheme={theme} disableInjectCSS>
+    <TamaguiProvider
+      config={houseConfig.tamagui}
+      defaultTheme={theme}
+      disableInjectCSS>
       <YStack backgroundColor="$background">{ui}</YStack>
     </TamaguiProvider>,
   );
@@ -71,12 +74,17 @@ describe('Button outlined intent label ink', () => {
     houseRender(
       <>
         {INTENTS.map((intent) => (
-          <Button key={`o-${intent}`} outlined {...{ [intent]: true }}>
+          <Button
+            key={`o-${intent}`}
+            outlined
+            {...{ [intent]: true }}>
             {`Outlined-${intent}`}
           </Button>
         ))}
         {INTENTS.map((intent) => (
-          <Button key={`s-${intent}`} {...{ [intent]: true }}>
+          <Button
+            key={`s-${intent}`}
+            {...{ [intent]: true }}>
             {`Solid-${intent}`}
           </Button>
         ))}
@@ -102,7 +110,9 @@ describe('Button outlined intent label ink', () => {
       <>
         <Button>Filled-label</Button>
         <Button outlined>Outlined-label</Button>
-        <Button outlined error>
+        <Button
+          outlined
+          error>
           Outlined-error-label
         </Button>
         <Button error>Solid-error-label</Button>
@@ -156,7 +166,7 @@ describe('Button outlined intent label ink', () => {
   // row. This block used to assert the miss, and said in as many words that
   // stepping the palette should break it rather than be re-baselined away.
   //
-  // The palette stepped: `intentInkFloor` in theme/createThemes.ts darkens
+  // The palette stepped: `intentInkFloor` in theme/create-themes.ts darkens
   // light yellow-11 (#9e6c00 -> #996900) and green-11 (#218358 -> #1c8257)
   // by the smallest hue-holding amount that clears the floor here. So the
   // assertion is inverted rather than deleted — the ground and the exact

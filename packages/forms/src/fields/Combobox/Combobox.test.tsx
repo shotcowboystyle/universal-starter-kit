@@ -32,7 +32,11 @@ describe('Combobox', () => {
       for (const width of [500, 1200]) {
         window.innerWidth = width;
         const result = renderWithProviders(
-          <Combobox options={options} aria-label="Country code" trigger={() => <span>Country</span>} />,
+          <Combobox
+            options={options}
+            aria-label="Country code"
+            trigger={() => <span>Country</span>}
+          />,
         );
         const trigger = result.baseElement.querySelector('[role="combobox"]');
         expect(trigger?.getAttribute('aria-label')).toBe('Country code');
@@ -49,7 +53,11 @@ describe('Combobox', () => {
         window.innerWidth = width;
         for (const triggerSizing of [undefined, 'content'] as const) {
           const result = renderWithProviders(
-            <Combobox options={options} triggerSizing={triggerSizing} trigger={() => <span>Country</span>} />,
+            <Combobox
+              options={options}
+              triggerSizing={triggerSizing}
+              trigger={() => <span>Country</span>}
+            />,
           );
           const trigger = result.baseElement.querySelector<HTMLElement>('[data-testid="combobox-trigger"]');
           expect(trigger?.style.width).toBe(triggerSizing === 'content' ? 'auto' : '100%');
@@ -61,35 +69,76 @@ describe('Combobox', () => {
 
   describe('without form context', () => {
     it('renders with label', () => {
-      renderWithProviders(<Combobox label="Fruit" name="fruit" options={options} />);
+      renderWithProviders(
+        <Combobox
+          label="Fruit"
+          name="fruit"
+          options={options}
+        />,
+      );
       expect(findInPage('Fruit')).toBeDefined();
     });
 
     it('renders required label with asterisk', () => {
-      const result = renderWithProviders(<Combobox label="Required" name="req" options={options} required />);
+      const result = renderWithProviders(
+        <Combobox
+          label="Required"
+          name="req"
+          options={options}
+          required
+        />,
+      );
       const label = result.baseElement.querySelector('label');
       expect(label?.textContent).toContain('*');
     });
 
     it('renders with helper text', () => {
-      renderWithProviders(<Combobox label="Fruit" name="fruit" options={options} helperText="Pick a fruit" />);
+      renderWithProviders(
+        <Combobox
+          label="Fruit"
+          name="fruit"
+          options={options}
+          helperText="Pick a fruit"
+        />,
+      );
       expect(findInPage('Pick a fruit')).toBeDefined();
     });
 
     it('renders skeleton placeholder', () => {
-      const result = renderWithProviders(<Combobox label="Loading" name="l" options={options} skeleton />);
+      const result = renderWithProviders(
+        <Combobox
+          label="Loading"
+          name="l"
+          options={options}
+          skeleton
+        />,
+      );
       // No interactive trigger rendered in skeleton mode
       const buttons = result.baseElement.querySelectorAll('button');
-      expect(buttons.length).toBe(0);
+      expect(buttons).toHaveLength(0);
     });
 
     it('renders with pre-selected value', () => {
-      renderWithProviders(<Combobox label="Fruit" name="fruit" options={options} value="apple" />);
+      renderWithProviders(
+        <Combobox
+          label="Fruit"
+          name="fruit"
+          options={options}
+          value="apple"
+        />,
+      );
       expect(findInPage('Apple')).toBeDefined();
     });
 
     it('renders disabled state', () => {
-      renderWithProviders(<Combobox label="Disabled" name="d" options={options} disabled />);
+      renderWithProviders(
+        <Combobox
+          label="Disabled"
+          name="d"
+          options={options}
+          disabled
+        />,
+      );
       expect(findInPage('Disabled')).toBeDefined();
     });
 
@@ -117,9 +166,9 @@ describe('Combobox', () => {
         }
       });
       // Exactly once each — guards against the standalone double-fire bug.
-      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange).toHaveBeenCalledOnce();
       expect(onChange).toHaveBeenCalledWith(['banana']);
-      expect(onValueChange).toHaveBeenCalledTimes(1);
+      expect(onValueChange).toHaveBeenCalledOnce();
       expect(onValueChange).toHaveBeenCalledWith(['banana']);
     });
 
@@ -145,8 +194,14 @@ describe('Combobox', () => {
   describe('with form context', () => {
     it('renders inside form', () => {
       renderWithProviders(
-        <Form formOptions={{ defaultValues: { fruit: '' } }} submitText="Submit">
-          <Combobox name="fruit" label="Fruit" options={options} />
+        <Form
+          formOptions={{ defaultValues: { fruit: '' } }}
+          submitText="Submit">
+          <Combobox
+            name="fruit"
+            label="Fruit"
+            options={options}
+          />
         </Form>,
       );
       expect(findInPage('Fruit')).toBeDefined();
@@ -155,24 +210,52 @@ describe('Combobox', () => {
 
   describe('async contract additions (valueLabel / clearable / searchError / description)', () => {
     it('shows valueLabel in the trigger when the value is not in options', () => {
-      renderWithProviders(<Combobox label="User" options={[]} value="user-001" valueLabel="Jane Doe" />);
+      renderWithProviders(
+        <Combobox
+          label="User"
+          options={[]}
+          value="user-001"
+          valueLabel="Jane Doe"
+        />,
+      );
       expect(findInPage('Jane Doe')).toBeDefined();
     });
 
     it('still shows the placeholder for an unknown value without valueLabel', () => {
-      renderWithProviders(<Combobox label="User" options={[]} value="user-001" placeholder="Pick user" />);
+      renderWithProviders(
+        <Combobox
+          label="User"
+          options={[]}
+          value="user-001"
+          placeholder="Pick user"
+        />,
+      );
       expect(findInPage('Pick user')).toBeDefined();
     });
 
     it('readOnly renders valueLabel for a value missing from options', () => {
-      renderWithProviders(<Combobox label="User" options={[]} value="user-001" valueLabel="Jane Doe" readOnly />);
+      renderWithProviders(
+        <Combobox
+          label="User"
+          options={[]}
+          value="user-001"
+          valueLabel="Jane Doe"
+          readOnly
+        />,
+      );
       expect(findInPage('Jane Doe')).toBeDefined();
     });
 
     it('clearable trigger clears the value through canonical onChange', async () => {
       const onChange = vi.fn();
       const result = renderWithProviders(
-        <Combobox label="Fruit" options={options} value="apple" clearable onChange={onChange} />,
+        <Combobox
+          label="Fruit"
+          options={options}
+          value="apple"
+          clearable
+          onChange={onChange}
+        />,
       );
       const clear = result.baseElement.querySelector('[aria-label="Clear"]');
       expect(clear).toBeTruthy();
@@ -181,13 +264,20 @@ describe('Combobox', () => {
           fireEvent.click(clear);
         }
       });
-      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange).toHaveBeenCalledOnce();
       expect(onChange).toHaveBeenCalledWith('');
     });
 
     it('renders option descriptions in the open dropdown', async () => {
       const withDescriptions = [{ value: 'u1', label: 'user1@x.com', description: 'User One' }];
-      renderWithProviders(<Combobox label="User" options={withDescriptions} open onSearch={() => {}} />);
+      renderWithProviders(
+        <Combobox
+          label="User"
+          options={withDescriptions}
+          open
+          onSearch={() => {}}
+        />,
+      );
       await act(async () => {});
       expect(findInPage('User One')).toBeDefined();
     });
@@ -267,10 +357,17 @@ describe('Combobox', () => {
       it(`${surface}: a created option is listed and selected, and is not offered again`, async () => {
         window.innerWidth = width;
         const onCreate = vi.fn(toTag);
-        renderWithProviders(<Combobox label="Fruit" options={options} creatable onCreate={onCreate} />);
+        renderWithProviders(
+          <Combobox
+            label="Fruit"
+            options={options}
+            creatable
+            onCreate={onCreate}
+          />,
+        );
         const search = await openAndType('Durian');
         await act(async () => fireEvent.keyDown(search, { key: 'Enter' }));
-        expect(onCreate).toHaveBeenCalledTimes(1);
+        expect(onCreate).toHaveBeenCalledOnce();
 
         await openAndType('durian');
         expect(createRow('durian')).toBeUndefined();
@@ -285,7 +382,14 @@ describe('Combobox', () => {
       window.innerWidth = 1200;
       const onChange = vi.fn();
       renderWithProviders(
-        <Combobox label="Fruits" options={options} multiple creatable onCreate={toTag} onChange={onChange} />,
+        <Combobox
+          label="Fruits"
+          options={options}
+          multiple
+          creatable
+          onCreate={toTag}
+          onChange={onChange}
+        />,
       );
       const search = await openAndType('Durian');
       await act(async () => fireEvent.keyDown(search, { key: 'Enter' }));
@@ -296,7 +400,14 @@ describe('Combobox', () => {
     it('a create that the host handles itself still closes a single-value panel', async () => {
       window.innerWidth = 1200;
       const onCreate = vi.fn(() => undefined);
-      renderWithProviders(<Combobox label="Customer" options={options} creatable onCreate={onCreate} />);
+      renderWithProviders(
+        <Combobox
+          label="Customer"
+          options={options}
+          creatable
+          onCreate={onCreate}
+        />,
+      );
       const search = await openAndType('Acme');
       await act(async () => fireEvent.keyDown(search, { key: 'Enter' }));
       expect(onCreate).toHaveBeenCalledWith('Acme');
@@ -310,7 +421,14 @@ describe('Combobox', () => {
       it(`${surface}: a space in the typed text is typed, so a two-word option can be created`, async () => {
         window.innerWidth = width;
         const onCreate = vi.fn(toTag);
-        renderWithProviders(<Combobox label="Author" options={options} creatable onCreate={onCreate} />);
+        renderWithProviders(
+          <Combobox
+            label="Author"
+            options={options}
+            creatable
+            onCreate={onCreate}
+          />,
+        );
         const search = await openAndType('Octavia');
         let typed = false;
         await act(async () => {
@@ -332,7 +450,14 @@ describe('Combobox', () => {
     it('a space after search text is typed, not taken as a pick', async () => {
       window.innerWidth = 1200;
       const onChange = vi.fn();
-      const result = renderWithProviders(<Combobox label="Fruit" options={options} open onChange={onChange} />);
+      const result = renderWithProviders(
+        <Combobox
+          label="Fruit"
+          options={options}
+          open
+          onChange={onChange}
+        />,
+      );
       await act(async () => {});
       const search = result.baseElement.querySelector('input');
       expect(search).toBeTruthy();
@@ -348,7 +473,14 @@ describe('Combobox', () => {
 
   describe('APG combobox', () => {
     it('points aria-activedescendant at the active option id', async () => {
-      const result = renderWithProviders(<Combobox label="Fruit" name="fruit" options={options} open />);
+      const result = renderWithProviders(
+        <Combobox
+          label="Fruit"
+          name="fruit"
+          options={options}
+          open
+        />,
+      );
       await act(async () => {});
       const first = result.baseElement.querySelector('[role="option"]');
       expect(first?.id).toMatch(/-opt-0$/);
@@ -361,7 +493,14 @@ describe('Combobox', () => {
     });
 
     it('trims the filter so leading spaces still match', async () => {
-      const result = renderWithProviders(<Combobox label="Fruit" name="fruit" options={options} open />);
+      const result = renderWithProviders(
+        <Combobox
+          label="Fruit"
+          name="fruit"
+          options={options}
+          open
+        />,
+      );
       await act(async () => {});
       const search = result.baseElement.querySelector('input');
       expect(search).toBeTruthy();
@@ -373,7 +512,14 @@ describe('Combobox', () => {
     });
 
     it('ArrowDown moves activedescendant through ungrouped options', async () => {
-      const result = renderWithProviders(<Combobox label="Fruit" name="fruit" options={options} open />);
+      const result = renderWithProviders(
+        <Combobox
+          label="Fruit"
+          name="fruit"
+          options={options}
+          open
+        />,
+      );
       await act(async () => {});
       const search = result.baseElement.querySelector('input');
       expect(search).toBeTruthy();
@@ -413,7 +559,13 @@ describe('Combobox', () => {
 
     it('renders group headers when multiple is set', async () => {
       const result = renderWithProviders(
-        <Combobox label="Produce" name="produce" options={groupedOptions} multiple open />,
+        <Combobox
+          label="Produce"
+          name="produce"
+          options={groupedOptions}
+          multiple
+          open
+        />,
       );
       await act(async () => {});
       const headers = result.baseElement.querySelectorAll('[data-combobox-group-header]');
@@ -425,7 +577,14 @@ describe('Combobox', () => {
     it('ArrowDown/ArrowUp traverse only selectable rows and skip headers', async () => {
       const onChange = vi.fn();
       const result = renderWithProviders(
-        <Combobox label="Produce" name="produce" options={groupedOptions} multiple open onChange={onChange} />,
+        <Combobox
+          label="Produce"
+          name="produce"
+          options={groupedOptions}
+          multiple
+          open
+          onChange={onChange}
+        />,
       );
       await act(async () => {});
 
@@ -489,14 +648,28 @@ describe('Combobox', () => {
 
       window.innerWidth = 1200;
       const desktop = renderWithProviders(
-        <Combobox label="Produce" name="produce" options={groupedOptions} multiple open />,
+        <Combobox
+          label="Produce"
+          name="produce"
+          options={groupedOptions}
+          multiple
+          open
+        />,
       );
       await act(async () => {});
       const onDesktop = shot(document.body);
       desktop.unmount();
 
       window.innerWidth = 500;
-      renderWithProviders(<Combobox label="Produce" name="produce" options={groupedOptions} multiple open />);
+      renderWithProviders(
+        <Combobox
+          label="Produce"
+          name="produce"
+          options={groupedOptions}
+          multiple
+          open
+        />,
+      );
       await act(async () => {});
       const onSheet = shot(document.body);
 
@@ -511,7 +684,15 @@ describe('Combobox', () => {
     // so arrows land on the row the user sees rather than the source-order row.
     it('sheet ArrowDown follows the rendered row order, not source order', async () => {
       window.innerWidth = 500;
-      renderWithProviders(<Combobox label="Produce" name="produce" options={groupedOptions} multiple open />);
+      renderWithProviders(
+        <Combobox
+          label="Produce"
+          name="produce"
+          options={groupedOptions}
+          multiple
+          open
+        />,
+      );
       await act(async () => {});
 
       const rows = [...document.body.querySelectorAll('[role="option"]')];
@@ -534,14 +715,29 @@ describe('Combobox', () => {
     // gives its list the focus.
     it('the sheet opens with focus in its search, or on its list when the search is hidden', async () => {
       window.innerWidth = 500;
-      const withSearch = renderWithProviders(<Combobox label="Produce" name="produce" options={groupedOptions} open />);
+      const withSearch = renderWithProviders(
+        <Combobox
+          label="Produce"
+          name="produce"
+          options={groupedOptions}
+          open
+        />,
+      );
       await act(async () => {
         await new Promise((resolve) => setTimeout(resolve, 50));
       });
       expect(document.activeElement?.tagName).toBe('INPUT');
       withSearch.unmount();
 
-      renderWithProviders(<Combobox label="Produce" name="produce" options={groupedOptions} open hideSearch />);
+      renderWithProviders(
+        <Combobox
+          label="Produce"
+          name="produce"
+          options={groupedOptions}
+          open
+          hideSearch
+        />,
+      );
       await act(async () => {
         await new Promise((resolve) => setTimeout(resolve, 50));
       });

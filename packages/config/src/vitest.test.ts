@@ -17,7 +17,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { createServer, type ViteDevServer } from 'vite';
+import { createServer } from 'vite';
+import type { ViteDevServer } from 'vite';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 
 import { createVitestConfig } from './vitest.js';
@@ -30,7 +31,7 @@ const fixtureDir = path.resolve(
 const servers: ViteDevServer[] = [];
 
 afterAll(async () => {
-  await Promise.all(servers.map((server) => server.close()));
+  await Promise.all(servers.map(async (server) => server.close()));
 });
 
 /**
@@ -129,8 +130,8 @@ describe('dedupeReact aliases', () => {
       test?: { setupFiles?: string[]; server?: { deps?: { external?: unknown[] } } };
     };
     const files = config.test?.setupFiles ?? [];
-    expect(files.some((file) => file.endsWith('pinReactRequire.cjs'))).toBe(true);
+    expect(files.some((file) => file.endsWith('pin-react-require.cjs'))).toBe(true);
     const external = config.test?.server?.deps?.external ?? [];
-    expect(external.some((entry) => String(entry).endsWith('pinReactRequire.cjs'))).toBe(true);
+    expect(external.some((entry) => String(entry).endsWith('pin-react-require.cjs'))).toBe(true);
   });
 });

@@ -4,7 +4,8 @@ import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { useState } from 'react';
 import { Text, YStack, isWeb } from 'tamagui';
 
-import { ContextMenu, type ContextMenuEntry } from './index';
+import { ContextMenu } from './index';
+import type { ContextMenuEntry } from './index';
 
 const meta: Meta<typeof ContextMenu> = {
   title: 'Components/ContextMenu',
@@ -34,8 +35,13 @@ export const Default: Story = {
   name: 'Main',
   args: { defaultOpen: true },
   render: (args) => (
-    <YStack minHeight={340} paddingTop="$4" alignItems="center">
-      <ContextMenu {...args} items={basicItems}>
+    <YStack
+      minHeight={340}
+      paddingTop="$4"
+      alignItems="center">
+      <ContextMenu
+        {...args}
+        items={basicItems}>
         <Button>Right-click or long-press</Button>
       </ContextMenu>
     </YStack>
@@ -45,20 +51,30 @@ export const Default: Story = {
 export const IconsAndShortcuts: Story = {
   args: { defaultOpen: true },
   render: (args) => (
-    <YStack minHeight={380} paddingTop="$4" alignItems="center">
+    <YStack
+      minHeight={380}
+      paddingTop="$4"
+      alignItems="center">
       <ContextMenu {...args}>
         <ContextMenu.Trigger>
           <Button icon=<DotsThreeVerticalIcon size={16} />>Canvas</Button>
         </ContextMenu.Trigger>
         <ContextMenu.Content>
-          <ContextMenu.Item icon=<PencilSimpleIcon size={16} /> shortcut="⌘E">
+          <ContextMenu.Item
+            icon=<PencilSimpleIcon size={16} />
+            shortcut="⌘E">
             Edit
           </ContextMenu.Item>
-          <ContextMenu.Item icon=<CopyIcon size={16} /> shortcut="⌘C">
+          <ContextMenu.Item
+            icon=<CopyIcon size={16} />
+            shortcut="⌘C">
             Copy
           </ContextMenu.Item>
           <ContextMenu.Separator />
-          <ContextMenu.Item icon=<TrashIcon size={16} /> shortcut="⌫" destructive>
+          <ContextMenu.Item
+            icon=<TrashIcon size={16} />
+            shortcut="⌫"
+            destructive>
             Delete
           </ContextMenu.Item>
         </ContextMenu.Content>
@@ -73,17 +89,24 @@ export const Checkable: Story = {
     const [pinned, setPinned] = useState(true);
     const [hidden, setHidden] = useState(false);
     return (
-      <YStack minHeight={340} paddingTop="$4" alignItems="center">
+      <YStack
+        minHeight={340}
+        paddingTop="$4"
+        alignItems="center">
         <ContextMenu {...args}>
           <ContextMenu.Trigger>
             <Button>Row</Button>
           </ContextMenu.Trigger>
           <ContextMenu.Content>
             <ContextMenu.Label>View</ContextMenu.Label>
-            <ContextMenu.CheckboxItem checked={pinned} onCheckedChange={setPinned}>
+            <ContextMenu.CheckboxItem
+              checked={pinned}
+              onCheckedChange={setPinned}>
               Pinned
             </ContextMenu.CheckboxItem>
-            <ContextMenu.CheckboxItem checked={hidden} onCheckedChange={setHidden}>
+            <ContextMenu.CheckboxItem
+              checked={hidden}
+              onCheckedChange={setHidden}>
               Hidden
             </ContextMenu.CheckboxItem>
           </ContextMenu.Content>
@@ -104,7 +127,9 @@ export const AtThePointer: Story = {
         justifyContent="center"
         backgroundColor="$color2"
         data-testid="context-surface">
-        <Text color="$color11" fontSize="$2">
+        <Text
+          color="$color11"
+          fontSize="$2">
           Right-click anywhere. The menu opens at the pointer and flips at the edges.
         </Text>
       </YStack>
@@ -114,11 +139,17 @@ export const AtThePointer: Story = {
 
 export const Closed: Story = {
   render: () => (
-    <YStack minHeight={200} paddingTop="$4" alignItems="center" gap="$3">
+    <YStack
+      minHeight={200}
+      paddingTop="$4"
+      alignItems="center"
+      gap="$3">
       <ContextMenu items={basicItems}>
         <Button>Right-click me</Button>
       </ContextMenu>
-      <Text color="$color11" fontSize="$2">
+      <Text
+        color="$color11"
+        fontSize="$2">
         Web: right-click. Native: long-press. Same menu.
       </Text>
     </YStack>

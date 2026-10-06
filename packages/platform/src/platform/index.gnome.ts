@@ -13,7 +13,8 @@
 // polyfill stub — inference would answer questions about a fake DOM instead
 // of about GTK.
 
-import { type Platform, getBroadName, getPreciseName, platformBase } from './platformBase';
+import { getBroadName, getPreciseName, platformBase } from './platform-base';
+import type { Platform } from './platform-base';
 
 export const platform: Platform = {
   ...platformBase,
@@ -48,4 +49,4 @@ platform.preciseName = getPreciseName(platform);
 platform.broadName = getBroadName(platform);
 
 export type { Platform };
-export type { PlatformName } from './platformBase';
+export type { PlatformName } from './platform-base';

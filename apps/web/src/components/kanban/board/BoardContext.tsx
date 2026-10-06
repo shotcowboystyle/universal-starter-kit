@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { createContext, useContext, useMemo } from "react";
+import { createContext, useContext, useMemo } from 'react';
 
-import { useAuth } from "@/hooks/useAuth";
-import { useBoards } from "@/hooks/useBoards";
-import { useWorkspaceStore } from "@/stores/workspace-store";
+import { useAuth } from '@/hooks/use-auth';
+import { useBoards } from '@/hooks/use-boards';
+import { useWorkspaceStore } from '@/stores/workspace-store';
 
 interface BoardContextValue {
   currentUserId: string;
@@ -19,7 +19,7 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
   const currentBoardId = useWorkspaceStore((state) => state.currentBoardId);
   const { user: currentUser, isAuthenticated } = useAuth();
   const { myBoards, teamBoards } = useBoards();
-  const currentUserId = currentUser?._id || "";
+  const currentUserId = currentUser?._id || '';
 
   const isBoardOwner = useMemo(() => {
     if (!currentBoardId || !currentUserId || !isAuthenticated) {
@@ -29,8 +29,7 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
     if (!currentBoard) {
       return false;
     }
-    const ownerId =
-      typeof currentBoard.owner === "string" ? currentBoard.owner : currentBoard.owner?._id;
+    const ownerId = typeof currentBoard.owner === 'string' ? currentBoard.owner : currentBoard.owner?._id;
     return ownerId === currentUserId;
   }, [currentBoardId, currentUserId, myBoards, isAuthenticated]);
 
@@ -47,7 +46,7 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo(
     () => ({ currentUserId, isBoardOwner, isBoardMember, isAuthenticated }),
-    [currentUserId, isBoardOwner, isBoardMember, isAuthenticated]
+    [currentUserId, isBoardOwner, isBoardMember, isAuthenticated],
   );
 
   return <BoardContext value={value}>{children}</BoardContext>;
@@ -56,7 +55,7 @@ export function BoardProvider({ children }: { children: React.ReactNode }) {
 export function useBoardContext() {
   const context = useContext(BoardContext);
   if (!context) {
-    throw new Error("useBoardContext must be used within a BoardProvider");
+    throw new Error('useBoardContext must be used within a BoardProvider');
   }
   return context;
 }

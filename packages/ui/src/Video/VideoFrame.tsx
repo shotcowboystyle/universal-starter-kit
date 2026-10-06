@@ -2,7 +2,7 @@ import { useResolvedKnobs } from '@repo/theme';
 import type { ReactNode } from 'react';
 import { Paragraph, YStack, styled } from 'tamagui';
 
-import { wrapBareTextChildren } from '../shared/textRidesText';
+import { wrapBareTextChildren } from '../shared/text-rides-text';
 
 export const VideoFrame = styled(YStack, {
   name: 'Video',
@@ -30,9 +30,15 @@ export function mediaTileFrameProps(knobProps: {
 export function VideoCaption({ children }: { children: ReactNode }) {
   const { knobProps } = useResolvedKnobs({ component: 'Video' });
   return (
-    <Paragraph render="figcaption" color={knobProps.textAccentColor as '$color11'}>
+    <Paragraph
+      render="figcaption"
+      color={knobProps.textAccentColor as '$color11'}>
       {wrapBareTextChildren(children, (label, key) => (
-        <Paragraph key={key} render="span" {...knobProps.body} color={knobProps.textAccentColor as '$color11'}>
+        <Paragraph
+          key={key}
+          render="span"
+          {...knobProps.body}
+          color={knobProps.textAccentColor as '$color11'}>
           {label}
         </Paragraph>
       ))}

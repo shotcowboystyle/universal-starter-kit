@@ -4,9 +4,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { LabelProps, SizeTokens } from 'tamagui';
 import { Paragraph, YStack, XStack, isWeb, useTheme } from 'tamagui';
 
-import { Field, FieldLayout } from '../../fieldLayout';
+import { Field, FieldLayout } from '../../FieldLayout';
 import { Input as InputParts } from '../../InputParts';
-import { formCommonColors } from '../../shared/colorRamps';
+import { formCommonColors } from '../../shared/color-ramps';
 import {
   getFieldError,
   getFieldHeight,
@@ -15,7 +15,7 @@ import {
   useResolvedValidators,
 } from '../../shared/utils';
 import { Skeleton } from '../../Skeleton';
-import { ThemedTextArea } from '../../themedPrimitives';
+import type { ThemedTextArea } from '../../themed-primitives';
 import type { AnyFormApi } from '../../types';
 
 type TamaguiTextAreaProps = ComponentProps<typeof ThemedTextArea>;
@@ -158,9 +158,16 @@ export function TextArea({
   // FieldLayout keeps label/helper anatomy; only the control is the skeleton.
   if (skeleton) {
     return (
-      <FieldLayout {...layoutBind} error={error}>
+      <FieldLayout
+        {...layoutBind}
+        error={error}>
         <InputParts size={resolvedSize}>
-          <Skeleton variant="rounded" width="100%" height={minHeightPx} {...knobProps.containerRadius} />
+          <Skeleton
+            variant="rounded"
+            width="100%"
+            height={minHeightPx}
+            {...knobProps.containerRadius}
+          />
         </InputParts>
       </FieldLayout>
     );
@@ -171,9 +178,9 @@ export function TextArea({
       return null;
     }
     const safeLength = Math.max(0, length);
-    const remaining = maxLength != null ? maxLength - safeLength : undefined;
+    const remaining = maxLength == null ? undefined : maxLength - safeLength;
     const isOverLimit = remaining != null && remaining < 0;
-    const text = maxLength != null ? `${safeLength}/${maxLength}` : `${safeLength} characters`;
+    const text = maxLength == null ? `${safeLength} characters` : `${safeLength}/${maxLength}`;
     const countLabel =
       maxLength == null
         ? `${safeLength} characters`
@@ -213,7 +220,7 @@ export function TextArea({
     ? {
         minHeight: minHeightPx,
         maxHeight: maxHeightPx,
-        ...(autoHeight != null ? { height: autoHeight } : undefined),
+        ...(autoHeight == null ? undefined : { height: autoHeight }),
         overflow: (autoHeight != null && autoHeight >= maxHeightPx ? 'scroll' : 'hidden') as 'scroll' | 'hidden',
       }
     : numberOfLines
@@ -238,7 +245,9 @@ export function TextArea({
   ) => (
     <>
       {showCharacterCount && countPosition.startsWith('top') && renderCount(countFrom(textValue))}
-      <YStack position="relative" width="100%">
+      <YStack
+        position="relative"
+        width="100%">
         <InputParts.Box
           height="auto"
           width="100%"
@@ -277,7 +286,7 @@ export function TextArea({
                   style: {
                     resize: 'none',
                     overflowWrap: 'anywhere',
-                    ...(knobProps.body.fontWeight != null ? { fontWeight: knobProps.body.fontWeight } : undefined),
+                    ...(knobProps.body.fontWeight == null ? undefined : { fontWeight: knobProps.body.fontWeight }),
                     ...(typeof (textAreaProps as { style?: object } | undefined)?.style === 'object'
                       ? (textAreaProps as { style?: object }).style
                       : undefined),
@@ -286,7 +295,7 @@ export function TextArea({
                 }
               : {
                   style: {
-                    ...(knobProps.body.fontWeight != null ? { fontWeight: knobProps.body.fontWeight } : undefined),
+                    ...(knobProps.body.fontWeight == null ? undefined : { fontWeight: knobProps.body.fontWeight }),
                     ...(typeof (textAreaProps as { style?: object } | undefined)?.style === 'object'
                       ? (textAreaProps as { style?: object }).style
                       : undefined),
@@ -294,8 +303,8 @@ export function TextArea({
                   ...(countInside ? { paddingBottom: '$5' } : undefined),
                 })}
             placeholderTextColor={theme.placeholderColor?.val ?? formCommonColors.muted}
-            {...(maxLength != null ? { maxLength } : undefined)}
-            {...(placeholder !== undefined ? { placeholder } : undefined)}
+            {...(maxLength == null ? undefined : { maxLength })}
+            {...(placeholder === undefined ? undefined : { placeholder })}
             disabled={disabled}
             readOnly={!!readOnly}
             {...(disabled ? { cursor: 'not-allowed' as const } : undefined)}
@@ -336,8 +345,13 @@ export function TextArea({
 
   if (!resolvedForm || !name) {
     return (
-      <FieldLayout {...layoutBind} error={error} onBlur={onBlur}>
-        <InputParts size={resolvedSize} {...(error ? { theme: 'error' } : undefined)}>
+      <FieldLayout
+        {...layoutBind}
+        error={error}
+        onBlur={onBlur}>
+        <InputParts
+          size={resolvedSize}
+          {...(error ? { theme: 'error' } : undefined)}>
           {renderTextArea(value ?? defaultValue, undefined, undefined, !!error)}
         </InputParts>
       </FieldLayout>
@@ -345,12 +359,21 @@ export function TextArea({
   }
 
   return (
-    <Field form={resolvedForm} name={name} defaultValue={defaultValue} validators={resolvedValidators}>
+    <Field
+      form={resolvedForm}
+      name={name}
+      defaultValue={defaultValue}
+      validators={resolvedValidators}>
       {(field) => {
         const resolvedError = getFieldError(field, error);
         return (
-          <FieldLayout {...layoutBind} error={resolvedError} onBlur={mergeFieldHandler(field, 'handleBlur', onBlur)}>
-            <InputParts size={resolvedSize} {...(resolvedError ? { theme: 'error' } : undefined)}>
+          <FieldLayout
+            {...layoutBind}
+            error={resolvedError}
+            onBlur={mergeFieldHandler(field, 'handleBlur', onBlur)}>
+            <InputParts
+              size={resolvedSize}
+              {...(resolvedError ? { theme: 'error' } : undefined)}>
               {renderTextArea(
                 field.state.value as string,
                 (text) => {

@@ -60,7 +60,10 @@ describe('ListPageLayout', () => {
 describe('DetailPageLayout', () => {
   it('shows main + aside side-by-side from expanded up (supporting pane)', () => {
     renderWithProviders(
-      <DetailPageLayout sizeClass="expanded" title="Bulbasaur" aside={<Paragraph>Meta</Paragraph>}>
+      <DetailPageLayout
+        sizeClass="expanded"
+        title="Bulbasaur"
+        aside={<Paragraph>Meta</Paragraph>}>
         <Paragraph>Main</Paragraph>
       </DetailPageLayout>,
     );
@@ -73,7 +76,10 @@ describe('DetailPageLayout', () => {
 
   it('stacks the aside below main content on compact (never hidden)', () => {
     renderWithProviders(
-      <DetailPageLayout sizeClass="compact" title="Bulbasaur" aside={<Paragraph>Meta</Paragraph>}>
+      <DetailPageLayout
+        sizeClass="compact"
+        title="Bulbasaur"
+        aside={<Paragraph>Meta</Paragraph>}>
         <Paragraph>Main</Paragraph>
       </DetailPageLayout>,
     );
@@ -98,7 +104,9 @@ describe('DetailPageLayout', () => {
 
   it('renders children directly when no aside is given', () => {
     renderWithProviders(
-      <DetailPageLayout sizeClass="xl" title="Bulbasaur">
+      <DetailPageLayout
+        sizeClass="xl"
+        title="Bulbasaur">
         <Paragraph>Main only</Paragraph>
       </DetailPageLayout>,
     );
@@ -110,7 +118,9 @@ describe('DetailPageLayout', () => {
 describe('SettingsPageLayout', () => {
   it('caps content at the expanded breakpoint by default', () => {
     renderWithProviders(
-      <SettingsPageLayout title="Settings" data-testid="settings-shell">
+      <SettingsPageLayout
+        title="Settings"
+        data-testid="settings-shell">
         <PageSection title="Profile">
           <Paragraph>Fields</Paragraph>
         </PageSection>
@@ -125,7 +135,9 @@ describe('SettingsPageLayout', () => {
 
   it('honors a caller max-width override', () => {
     renderWithProviders(
-      <SettingsPageLayout maxWidth={layoutBreakpoints.large} data-testid="settings-shell">
+      <SettingsPageLayout
+        maxWidth={layoutBreakpoints.large}
+        data-testid="settings-shell">
         <Paragraph>Fields</Paragraph>
       </SettingsPageLayout>,
     );

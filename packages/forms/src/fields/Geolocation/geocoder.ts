@@ -11,10 +11,10 @@
  * This file is the seam and nothing else: no provider, no endpoint, no
  * transport. A provider is whatever a consumer writes against `Geocoder` —
  * an offline gazetteer, their own backend proxy holding a commercial key, or
- * a self-hosted geocoder. See `geocoderSeam.test.tsx` for both shapes.
+ * a self-hosted geocoder. See `geocoder-seam.test.test.tsx` for both shapes.
  */
 
-import type { GeoValue } from './geoValue';
+import type { GeoValue } from './geo-value';
 
 export interface GeocodeResult {
   lat: number;

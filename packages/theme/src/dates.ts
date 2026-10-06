@@ -273,7 +273,7 @@ export function formatTimeOfDay(value: DateInput, options: TimeOfDayFormatOption
   const { locale, minutes = true, hour12 } = options;
   let date: Date | null = null;
   if (typeof value === 'string') {
-    const clock = value.trim().match(CLOCK_TIME);
+    const clock = CLOCK_TIME.exec(value.trim());
     if (clock) {
       const parsed = new Date(2000, 0, 1, Number(clock[1]), Number(clock[2]));
       if (!Number.isNaN(parsed.getTime())) {

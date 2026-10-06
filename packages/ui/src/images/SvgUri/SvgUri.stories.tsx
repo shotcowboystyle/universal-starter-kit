@@ -103,8 +103,16 @@ export const MultipleSvgs = () => (
 export const InvalidUri: Story = {
   render: () => (
     <YStack gap="$4">
-      <SvgUri uri="not-a-valid-url" width={100} height={100} />
-      <SvgUri uri="" width={100} height={100} />
+      <SvgUri
+        uri="not-a-valid-url"
+        width={100}
+        height={100}
+      />
+      <SvgUri
+        uri=""
+        width={100}
+        height={100}
+      />
     </YStack>
   ),
 };

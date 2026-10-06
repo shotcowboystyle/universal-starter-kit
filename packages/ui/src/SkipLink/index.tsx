@@ -1,6 +1,6 @@
 import { zIndex } from '@repo/forms';
 import { FOCUS_RING_MIN_WIDTH, FOCUS_VISIBLE_RING, useResolvedKnobs } from '@repo/theme';
-import { type CSSProperties, type MouseEvent, type ReactNode, type RefObject } from 'react';
+import type { CSSProperties, MouseEvent, ReactNode, RefObject } from 'react';
 import type { GetProps } from 'tamagui';
 import { SizableText, YStack, getTokenValue, isWeb, styled } from 'tamagui';
 
@@ -92,7 +92,7 @@ function ensureSkipLinkStyles() {
   const tag = document.createElement('style');
   tag.id = SKIP_LINK_STYLE_ID;
   tag.textContent = skipLinkCss;
-  document.head.appendChild(tag);
+  document.head.append(tag);
 }
 
 function resolveRadiusPx(token: string | number | undefined): number | undefined {
@@ -150,7 +150,7 @@ export function SkipLink({ targetId, targetRef, children = 'Skip to content', on
     let target: HTMLElement | null = null;
     if (targetRef?.current) {
       event.preventDefault();
-      const current = targetRef.current;
+      const { current } = targetRef;
       if (typeof (current as { focus?: () => void }).focus === 'function') {
         target = current as HTMLElement;
       }
@@ -173,7 +173,7 @@ export function SkipLink({ targetId, targetRef, children = 'Skip to content', on
         typeof radiusPx === 'number'
           ? ({
               borderRadius: radiusPx,
-              ['--mp-skip-link-radius']: `${radiusPx}px`,
+              '--mp-skip-link-radius': `${radiusPx}px`,
             } as CSSProperties)
           : undefined
       }
@@ -182,7 +182,12 @@ export function SkipLink({ targetId, targetRef, children = 'Skip to content', on
         {...knobProps.elevatedSurface}
         borderWidth={Math.max(knobProps.elevatedSurface.borderWidth, 1)}
         elevation={knobProps.elevatedSurface.elevation ?? '$2'}>
-        <SizableText {...knobProps.body} {...knobProps.label} fontWeight="400" color="$color12" whiteSpace="nowrap">
+        <SizableText
+          {...knobProps.body}
+          {...knobProps.label}
+          fontWeight="400"
+          color="$color12"
+          whiteSpace="nowrap">
           {children}
         </SizableText>
       </SkipLinkSurface>

@@ -64,7 +64,11 @@ describe('Button KNOB-TOTALITY — borderRadius knob', () => {
   it('circular ignores the radius knob and keeps its circle at none', () => {
     renderWithProviders(
       <Preset overrides={{ borderRadius: 'none' }}>
-        <Button circular icon={<span>x</span>} aria-label="favorite" />
+        <Button
+          circular
+          icon={<span>x</span>}
+          aria-label="favorite"
+        />
       </Preset>,
     );
     const frame = screen.getByRole('button');

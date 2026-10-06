@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { Paragraph, YStack, XStack } from 'tamagui';
 
 import { Button } from './Button';
-import { Field, FieldLayout } from './fieldLayout';
+import { Field, FieldLayout } from './FieldLayout';
 import { Checkbox } from './fields/Checkbox';
 import { Input } from './fields/Input';
 import { Form } from './Form';
@@ -60,7 +60,10 @@ export const Basic: Story = {
   render: (args) => (
     <YStack maxWidth={360}>
       <FieldLayout {...args}>
-        <Control id={args.id} placeholder="you@example.com" />
+        <Control
+          id={args.id}
+          placeholder="you@example.com"
+        />
       </FieldLayout>
     </YStack>
   ),
@@ -72,7 +75,10 @@ export const MessageOrder: Story = {
     const Example = () => {
       const [showErrors, setShowErrors] = useState(false);
       return (
-        <YStack gap="$4" width="100%" maxWidth={480}>
+        <YStack
+          gap="$4"
+          width="100%"
+          maxWidth={480}>
           <Input
             id="message-top"
             label="Contact"
@@ -108,7 +114,9 @@ export const MessageOrder: Story = {
 
 export const ErrorStates: Story = {
   render: () => (
-    <YStack gap="$6" maxWidth={360}>
+    <YStack
+      gap="$6"
+      maxWidth={360}>
       <FieldLayout
         id="fl-err-string"
         label="String error"
@@ -117,7 +125,11 @@ export const ErrorStates: Story = {
         error="Value must use letters only">
         <Control id="fl-err-string" />
       </FieldLayout>
-      <FieldLayout id="fl-err-bool" label="Boolean error" helperText="Helper should remain visible" error={true}>
+      <FieldLayout
+        id="fl-err-bool"
+        label="Boolean error"
+        helperText="Helper should remain visible"
+        error={true}>
         <Control id="fl-err-bool" />
       </FieldLayout>
       <FieldLayout
@@ -133,20 +145,33 @@ export const ErrorStates: Story = {
 
 export const AnatomyEdgeCases: Story = {
   render: () => (
-    <YStack gap="$6" maxWidth={360}>
-      <FieldLayout id="fl-required" label="Required field" required>
+    <YStack
+      gap="$6"
+      maxWidth={360}>
+      <FieldLayout
+        id="fl-required"
+        label="Required field"
+        required>
         <Control id="fl-required" />
       </FieldLayout>
-      <FieldLayout id="fl-nolabel" helperText="No label means compact $1 gap">
+      <FieldLayout
+        id="fl-nolabel"
+        helperText="No label means compact $1 gap">
         <Control id="fl-nolabel" />
       </FieldLayout>
-      <FieldLayout id="fl-compact" label="Compact spacing" compactSpacing helperText="Compact gap">
+      <FieldLayout
+        id="fl-compact"
+        label="Compact spacing"
+        compactSpacing
+        helperText="Compact gap">
         <Control id="fl-compact" />
       </FieldLayout>
       <FieldLayout
         id="fl-node-label"
         label={
-          <XStack gap="$2" alignItems="center">
+          <XStack
+            gap="$2"
+            alignItems="center">
             <Paragraph fontWeight="700">ReactNode</Paragraph>
             <Paragraph size="$1">(custom node label)</Paragraph>
           </XStack>
@@ -174,8 +199,13 @@ export const FieldWrapper: Story = {
       });
       return (
         <Form form={form}>
-          <YStack gap="$4" maxWidth={360}>
-            <Field form={form} name="username" defaultValue="initial-value">
+          <YStack
+            gap="$4"
+            maxWidth={360}>
+            <Field
+              form={form}
+              name="username"
+              defaultValue="initial-value">
               {(field) => (
                 <FieldLayout
                   id="field-username"
@@ -220,15 +250,21 @@ export const FieldRequiredValidator: Story = {
       });
       return (
         <Form form={form}>
-          <YStack gap="$4" maxWidth={360}>
+          <YStack
+            gap="$4"
+            maxWidth={360}>
             <Field
               form={form}
               name="nickname"
               validators={{
-                onSubmit: ({ value }: { value: unknown }) => (!value ? 'Nickname is required' : undefined),
+                onSubmit: ({ value }: { value: unknown }) => (value ? undefined : 'Nickname is required'),
               }}>
               {(field) => (
-                <FieldLayout id="field-nickname" label="Nickname" required field={field as any}>
+                <FieldLayout
+                  id="field-nickname"
+                  label="Nickname"
+                  required
+                  field={field as any}>
                   <Control
                     id="field-nickname"
                     value={String(field.state.value ?? '')}

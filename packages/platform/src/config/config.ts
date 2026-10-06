@@ -1,10 +1,10 @@
-import { bakedPublicConfig, readRuntimePublicConfig } from './runtimeConfig';
+import { bakedPublicConfig, readRuntimePublicConfig } from './runtime-config';
 import type { IConfig } from './types';
 
 export class Config implements IConfig {
   private _config: Record<string, string> = {};
 
-  private _blacklist: Set<string> = new Set([]);
+  private readonly _blacklist = new Set<string>([]);
 
   private _lookupEnv(key: string): string | undefined {
     if (this._blacklist.has(key)) {
@@ -48,7 +48,7 @@ export class Config implements IConfig {
       //    native, GNOME, static web — are unchanged.
       ...this._reduceConfig(bakedPublicConfig()),
       // 2. RUNTIME: the public payload the SSR document published into the
-      //    browser (see runtimeConfig.ts). Wins over the bake so a redeployed
+      //    browser (see runtime-config.ts). Wins over the bake so a redeployed
       //    container overrides a stale build-time value, and so an image built
       //    with an EMPTY build environment can still be configured per
       //    deployment. `process.env` is not reachable here.

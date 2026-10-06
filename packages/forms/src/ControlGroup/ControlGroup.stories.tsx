@@ -48,7 +48,9 @@ export const Vertical: Story = {
 
 export const ChildCounts: Story = {
   render: () => (
-    <YStack gap="$4" maxWidth={420}>
+    <YStack
+      gap="$4"
+      maxWidth={420}>
       <Paragraph size="$2">empty</Paragraph>
       <ControlGroup>{null}</ControlGroup>
       <Paragraph size="$2">one child</Paragraph>
@@ -84,11 +86,16 @@ export const MixedControls: Story = {
     } satisfies GuardrailSpecimenParameter,
   },
   render: () => (
-    <YStack gap="$4" maxWidth={480}>
+    <YStack
+      gap="$4"
+      maxWidth={480}>
       <ControlGroup>
         <Button>Action</Button>
         <Input.Box>
-          <Input.Area placeholder="type here" flex={1} />
+          <Input.Area
+            placeholder="type here"
+            flex={1}
+          />
         </Input.Box>
         <Button>Go</Button>
       </ControlGroup>
@@ -108,31 +115,45 @@ export const MixedControls: Story = {
 
 export const Connected: Story = {
   render: () => (
-    <YStack gap="$4" maxWidth={480}>
+    <YStack
+      gap="$4"
+      maxWidth={480}>
       <ControlGroup>
         <ControlGroup.Addon>@</ControlGroup.Addon>
         <Input.Box>
-          <Input.Area placeholder="username" flex={1} />
+          <Input.Area
+            placeholder="username"
+            flex={1}
+          />
         </Input.Box>
       </ControlGroup>
       <ControlGroup>
         <ControlGroup.Addon>$</ControlGroup.Addon>
         <Input.Box>
-          <Input.Area placeholder="0.00" flex={1} />
+          <Input.Area
+            placeholder="0.00"
+            flex={1}
+          />
         </Input.Box>
         <ControlGroup.Addon>.00</ControlGroup.Addon>
       </ControlGroup>
       <ControlGroup>
         <ControlGroup.Addon>https://</ControlGroup.Addon>
         <Input.Box>
-          <Input.Area placeholder="example.com/users" flex={1} />
+          <Input.Area
+            placeholder="example.com/users"
+            flex={1}
+          />
         </Input.Box>
         <Button>Go</Button>
       </ControlGroup>
       <ControlGroup>
         <Button>Search</Button>
         <Input.Box>
-          <Input.Area placeholder="query" flex={1} />
+          <Input.Area
+            placeholder="query"
+            flex={1}
+          />
         </Input.Box>
         <Button>Filter</Button>
       </ControlGroup>
@@ -143,7 +164,9 @@ export const Connected: Story = {
 export const RTL: Story = {
   render: () => (
     <div dir="rtl">
-      <YStack maxWidth={420} gap="$4">
+      <YStack
+        maxWidth={420}
+        gap="$4">
         <ControlGroup>
           <Button>الأول</Button>
           <Button>الأوسط</Button>
@@ -152,7 +175,10 @@ export const RTL: Story = {
         <ControlGroup>
           <ControlGroup.Addon>@</ControlGroup.Addon>
           <Input.Box>
-            <Input.Area placeholder="اسم المستخدم" flex={1} />
+            <Input.Area
+              placeholder="اسم المستخدم"
+              flex={1}
+            />
           </Input.Box>
         </ControlGroup>
       </YStack>

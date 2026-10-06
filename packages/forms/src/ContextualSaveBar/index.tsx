@@ -1,24 +1,27 @@
-import { useResolvedKnobs, warnCancelDisabled, type KnobProps } from '@repo/theme';
-import { Store, useStore } from '@tanstack/react-store';
+import { useResolvedKnobs, warnCancelDisabled } from '@repo/theme';
+import type { KnobProps } from '@repo/theme';
+import type { Store } from '@tanstack/react-store';
+import { useStore } from '@tanstack/react-store';
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { AnimatePresence, Text, XStack, isWeb } from 'tamagui';
 
 import { Button } from '../Button';
 import { collectFormFieldErrors } from '../ErrorSummary';
 import { useFormContext } from '../Form';
-import { getFormSubmission } from '../Form/submissionController';
-import { formCommonColors } from '../shared/colorRamps';
+import { getFormSubmission } from '../Form/submission-controller';
+import { formCommonColors } from '../shared/color-ramps';
 import { t } from '../shared/t';
 import { getElevationWrapperProps } from '../shared/utils';
-import { zIndex } from '../shared/zIndex';
+import { zIndex } from '../shared/z-index';
 import { Spinner } from '../Spinner';
 
 import { UnsavedChangesDialog } from './UnsavedChangesDialog';
-import { useUnsavedChangesGuard, type NavigationBlocker, type UseNavigationBlocker } from './useUnsavedChangesGuard';
+import { useUnsavedChangesGuard } from './use-unsaved-changes-guard';
+import type { NavigationBlocker, UseNavigationBlocker } from './use-unsaved-changes-guard';
 
-export { clientKnownIdentity } from './clientKnownIdentity';
-export { commitImmediateField } from './commitImmediateField';
-export type { NavigationBlocker, UseNavigationBlocker } from './useUnsavedChangesGuard';
+export { clientKnownIdentity } from './client-known-identity';
+export { commitImmediateField } from './commit-immediate-field';
+export type { NavigationBlocker, UseNavigationBlocker } from './use-unsaved-changes-guard';
 
 export interface ContextualSaveBarProps {
   /**
@@ -179,7 +182,7 @@ export function ContextualSaveBar({
         return;
       }
       const values = form.store.state.values as Record<string, unknown>;
-      const update = (form as { update?: (opts: { defaultValues: Record<string, unknown> }) => void }).update;
+      const { update } = form as { update?: (opts: { defaultValues: Record<string, unknown> }) => void };
       if (typeof update === 'function') {
         update({ defaultValues: values });
       }
@@ -234,11 +237,11 @@ export function ContextualSaveBar({
   });
 
   const padX = knobProps.panelPadding.padding;
-  const borderWidth = knobProps.borderRadius.borderWidth;
+  const { borderWidth } = knobProps.borderRadius;
   const elevationProps = getElevationWrapperProps(knobProps, elevation);
   const { className: smoothClass, rest: smoothRest } = containerRadiusRest(knobProps);
   const topRadius = knobProps.containerRadius.borderRadius;
-  const transition = knobProps.transition;
+  const { transition } = knobProps;
 
   return (
     <>
@@ -282,7 +285,11 @@ export function ContextualSaveBar({
               ...(isWeb ? { paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))' } : undefined),
               ...(elevationProps.style as object | undefined),
             }}>
-            <XStack flex={copy.failed ? undefined : 1} minWidth={0} alignItems="baseline" gap="$2">
+            <XStack
+              flex={copy.failed ? undefined : 1}
+              minWidth={0}
+              alignItems="baseline"
+              gap="$2">
               <Text
                 role="status"
                 {...knobProps.body}

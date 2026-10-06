@@ -6,8 +6,8 @@ export function withInterp(translated: string, options: Record<string, string | 
   if (!translated.includes('{{')) {
     return translated;
   }
-  return translated.replace(/\{\{(\w+)\}\}/g, (_, key: string) =>
-    options[key] != null ? String(options[key]) : `{{${key}}}`,
+  return translated.replaceAll(/\{\{(\w+)\}\}/g, (_, key: string) =>
+    options[key] == null ? `{{${key}}}` : String(options[key]),
   );
 }
 

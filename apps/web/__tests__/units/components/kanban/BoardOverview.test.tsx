@@ -5,13 +5,13 @@ import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { BoardOverview } from '@/components/kanban/BoardOverview';
-import type { Board } from '@/types/dbInterface';
+import type { Board } from '@/types/db-interface';
 
 // Ensure React is globally available
 globalThis.React = React;
 
 // Mock dependencies
-vi.mock('@/hooks/useBoards', () => ({
+vi.mock('@/hooks/use-boards', () => ({
   useBoards: vi.fn(),
 }));
 
@@ -25,7 +25,7 @@ vi.mock('next/navigation', async (importOriginal) => ({
   useSearchParams: vi.fn(),
 }));
 
-vi.mock('@/lib/auth/authService', () => ({
+vi.mock('@/lib/auth/auth-service', () => ({
   AuthService: {
     getSession: vi.fn(),
   },
@@ -127,7 +127,7 @@ describe('BoardOverview', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
 
-    const { useBoards } = await import('@/hooks/useBoards');
+    const { useBoards } = await import('@/hooks/use-boards');
     const { useRouter, usePathname } = await import('@/i18n/navigation');
     const { useSearchParams } = await import('next/navigation');
 
@@ -145,7 +145,7 @@ describe('BoardOverview', () => {
   });
 
   it('should render loading state when boards are loading', async () => {
-    const { useBoards } = await import('@/hooks/useBoards');
+    const { useBoards } = await import('@/hooks/use-boards');
     vi.mocked(useBoards).mockReturnValue({
       myBoards: [],
       teamBoards: [],
@@ -213,7 +213,7 @@ describe('BoardOverview', () => {
   });
 
   it('should show empty state when no my boards found', async () => {
-    const { useBoards } = await import('@/hooks/useBoards');
+    const { useBoards } = await import('@/hooks/use-boards');
     vi.mocked(useBoards).mockReturnValue({
       myBoards: [],
       teamBoards: mockTeamBoards,
@@ -227,7 +227,7 @@ describe('BoardOverview', () => {
   });
 
   it('should show empty state when no team boards found', async () => {
-    const { useBoards } = await import('@/hooks/useBoards');
+    const { useBoards } = await import('@/hooks/use-boards');
     vi.mocked(useBoards).mockReturnValue({
       myBoards: mockMyBoards,
       teamBoards: [],
@@ -258,9 +258,9 @@ describe('BoardOverview', () => {
 
   it('should handle login success', async () => {
     const { useSearchParams } = await import('next/navigation');
-    const { AuthService } = await import('@/lib/auth/authService');
+    const { AuthService } = await import('@/lib/auth/auth-service');
     const { toast } = await import('sonner');
-    const { useBoards } = await import('@/hooks/useBoards');
+    const { useBoards } = await import('@/hooks/use-boards');
 
     const mockRefresh = vi.fn();
 
@@ -296,7 +296,7 @@ describe('BoardOverview', () => {
 
   it('should handle login error', async () => {
     const { useSearchParams } = await import('next/navigation');
-    const { AuthService } = await import('@/lib/auth/authService');
+    const { AuthService } = await import('@/lib/auth/auth-service');
     const { toast } = await import('sonner');
 
     vi.mocked(useSearchParams).mockReturnValue({
@@ -313,7 +313,7 @@ describe('BoardOverview', () => {
   });
 
   it('should handle visibility change', async () => {
-    const { useBoards } = await import('@/hooks/useBoards');
+    const { useBoards } = await import('@/hooks/use-boards');
     const mockRefresh = vi.fn();
 
     vi.mocked(useBoards).mockReturnValue({
@@ -354,16 +354,16 @@ describe('BoardOverview', () => {
     render(<BoardOverview />);
     fireEvent.click(screen.getByLabelText('My Board 1 actions'));
 
-    expect(await screen.findByTestId('edit-board-button')).toBeInTheDocument();
+    await expect(screen.findByTestId('edit-board-button')).resolves.toBeInTheDocument();
     fireEvent.click(screen.getByTestId('edit-board-button'));
-    expect(await screen.findByText('editBoardTitle')).toBeInTheDocument();
+    await expect(screen.findByText('editBoardTitle')).resolves.toBeInTheDocument();
     expect(mockRouter.push).not.toHaveBeenCalled();
   });
 
   it('opens the new board dialog from the trigger', async () => {
     render(<BoardOverview />);
     fireEvent.click(screen.getByTestId('new-board-trigger'));
-    expect(await screen.findByTestId('new-board-dialog-title')).toHaveTextContent('newBoardTitle');
+    await expect(screen.findByTestId('new-board-dialog-title')).resolves.toHaveTextContent('newBoardTitle');
   });
 
   it('should show 0 projects when board has no projects', () => {

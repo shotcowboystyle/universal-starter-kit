@@ -3,7 +3,8 @@ import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { useState } from 'react';
 import { SizableText, XStack, YStack } from 'tamagui';
 
-import { Alert, type AlertIntent } from './index';
+import { Alert } from './index';
+import type { AlertIntent } from './index';
 
 const meta: Meta<typeof Alert> = {
   title: 'Components/Alert',
@@ -51,9 +52,14 @@ export const Intents: Story = {
       error: { title: 'Save failed', body: 'The server rejected the document. Try again.' },
     };
     return (
-      <YStack gap="$3" maxWidth={640}>
+      <YStack
+        gap="$3"
+        maxWidth={640}>
         {intents.map((intent) => (
-          <Alert key={intent} intent={intent} title={copy[intent].title}>
+          <Alert
+            key={intent}
+            intent={intent}
+            title={copy[intent].title}>
             {copy[intent].body}
           </Alert>
         ))}
@@ -64,8 +70,15 @@ export const Intents: Story = {
 
 export const WithAction: Story = {
   render: () => (
-    <YStack gap="$3" maxWidth={640}>
-      <Alert intent="error" title="Connection lost" actionLabel="Retry" onAction={() => {}} dismissible>
+    <YStack
+      gap="$3"
+      maxWidth={640}>
+      <Alert
+        intent="error"
+        title="Connection lost"
+        actionLabel="Retry"
+        onAction={() => {}}
+        dismissible>
         Changes are no longer syncing to the server.
       </Alert>
       <Alert
@@ -77,7 +90,11 @@ export const WithAction: Story = {
         onSecondaryAction={() => {}}>
         Your trial ends in 3 days.
       </Alert>
-      <Alert intent="success" title="Import finished" actionLabel="View log" onAction={() => {}}>
+      <Alert
+        intent="success"
+        title="Import finished"
+        actionLabel="View log"
+        onAction={() => {}}>
         1,204 records imported, 0 errors.
       </Alert>
     </YStack>
@@ -86,14 +103,27 @@ export const WithAction: Story = {
 
 export const Compact: Story = {
   render: () => (
-    <YStack gap="$2" maxWidth={640}>
-      <Alert compact intent="info" title="Read-only">
+    <YStack
+      gap="$2"
+      maxWidth={640}>
+      <Alert
+        compact
+        intent="info"
+        title="Read-only">
         You are viewing an archived document.
       </Alert>
-      <Alert compact intent="error" dismissible>
+      <Alert
+        compact
+        intent="error"
+        dismissible>
         Amount must be greater than zero.
       </Alert>
-      <Alert compact intent="success" title="Copied" actionLabel="Undo" onAction={() => {}}>
+      <Alert
+        compact
+        intent="success"
+        title="Copied"
+        actionLabel="Undo"
+        onAction={() => {}}>
         Copied to clipboard.
       </Alert>
     </YStack>
@@ -102,10 +132,18 @@ export const Compact: Story = {
 
 export const TitleOnlyAndDescriptionOnly: Story = {
   render: () => (
-    <YStack gap="$3" maxWidth={640}>
-      <Alert intent="warning" title="This record is locked by another user." />
+    <YStack
+      gap="$3"
+      maxWidth={640}>
+      <Alert
+        intent="warning"
+        title="This record is locked by another user."
+      />
       <Alert intent="info">Descriptions can stand alone when a title would be redundant.</Alert>
-      <Alert intent="error" icon={null} title="No icon">
+      <Alert
+        intent="error"
+        icon={null}
+        title="No icon">
         Pass icon={'{null}'} to drop the leading icon.
       </Alert>
     </YStack>
@@ -116,8 +154,13 @@ export const Dismissible: Story = {
   render: () => {
     const [visible, setVisible] = useState(true);
     return (
-      <YStack gap="$3" maxWidth={640}>
-        <Alert intent="info" title="Uncontrolled" dismissible>
+      <YStack
+        gap="$3"
+        maxWidth={640}>
+        <Alert
+          intent="info"
+          title="Uncontrolled"
+          dismissible>
           Dismiss hides this alert via internal state.
         </Alert>
         <Alert
@@ -166,12 +209,20 @@ export const ValidationSummary: Story = {
     };
 
     return (
-      <YStack gap="$4" maxWidth={480}>
+      <YStack
+        gap="$4"
+        maxWidth={480}>
         {errors.length > 0 && (
-          <Alert intent="error" title={`Fix ${errors.length} problem${errors.length > 1 ? 's' : ''} before saving`}>
+          <Alert
+            intent="error"
+            title={`Fix ${errors.length} problem${errors.length > 1 ? 's' : ''} before saving`}>
             <YStack gap="$1">
               {errors.map((e) => (
-                <SizableText key={e} color="$color12" fontSize="$3" lineHeight={20}>
+                <SizableText
+                  key={e}
+                  color="$color12"
+                  fontSize="$3"
+                  lineHeight={20}>
                   • {e}
                 </SizableText>
               ))}
@@ -189,10 +240,22 @@ export const ValidationSummary: Story = {
           />
         )}
         <YStack gap="$3">
-          <Input label="Full name" placeholder="Ada Lovelace" value={name} onChangeText={setName} />
-          <Input label="Email" placeholder="ada@example.com" value={email} onChangeText={setEmail} />
+          <Input
+            label="Full name"
+            placeholder="Ada Lovelace"
+            value={name}
+            onChangeText={setName}
+          />
+          <Input
+            label="Email"
+            placeholder="ada@example.com"
+            value={email}
+            onChangeText={setEmail}
+          />
           <XStack>
-            <Button accent onPress={submit}>
+            <Button
+              accent
+              onPress={submit}>
               Save contact
             </Button>
           </XStack>

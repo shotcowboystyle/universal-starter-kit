@@ -143,7 +143,9 @@ describe('Accordion', () => {
     const onValueChange = vi.fn();
     const result = renderWithProviders(
       <Accordion onValueChange={onValueChange}>
-        <Accordion.Item value="a" disabled>
+        <Accordion.Item
+          value="a"
+          disabled>
           <Accordion.Trigger>Section A</Accordion.Trigger>
           <Accordion.Content>
             <Text>Content A</Text>
@@ -244,6 +246,7 @@ describe('Accordion density — pad and gap move, control height holds', () => {
     expect(atoms(compactTrigger, gap)).not.toEqual(comfortableMeasure.gap);
     expect(atoms(compactTrigger, height)).toEqual(comfortableMeasure.height);
   });
+
   it('survives the animation knob flipping live from none to bouncy', () => {
     const Flip = ({ animation }: { animation: 'none' | 'bouncy' }) => (
       <Preset overrides={{ animation }}>

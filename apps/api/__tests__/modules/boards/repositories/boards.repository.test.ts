@@ -1,18 +1,18 @@
-import { Types } from "mongoose";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Types } from 'mongoose';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { BoardRepository } from "../../../../src/modules/boards/repositories/boards.repository";
+import { BoardRepository } from '../../../../src/modules/boards/repositories/boards.repository';
 
-describe("BoardRepository", () => {
+describe('BoardRepository', () => {
   let repository: BoardRepository;
   let mockModel: any;
 
   beforeEach(() => {
     // Correctly define MockModel as a function that mimics a constructor
-    const MockModel = vi.fn().mockImplementation(function (data) {
+    const MockModel = vi.fn().mockImplementation(function MockBoardModel(data) {
       return {
         ...data,
-        save: vi.fn().mockResolvedValue(data)
+        save: vi.fn().mockResolvedValue(data),
       };
     }) as any;
 
@@ -27,17 +27,17 @@ describe("BoardRepository", () => {
     repository = new BoardRepository(mockModel);
   });
 
-  it("should be defined", () => {
+  it('should be defined', () => {
     expect(repository).toBeDefined();
   });
 
-  describe("create", () => {
-    it("should create a board", async () => {
+  describe('create', () => {
+    it('should create a board', async () => {
       const data = {
-        title: "Test Board",
-        description: "Test Description",
+        title: 'Test Board',
+        description: 'Test Description',
         owner: new Types.ObjectId(),
-        members: [new Types.ObjectId()]
+        members: [new Types.ObjectId()],
       };
 
       // Default implementation handles creation
@@ -49,10 +49,10 @@ describe("BoardRepository", () => {
     });
   });
 
-  describe("findByOwner", () => {
-    it("should find boards by owner", async () => {
+  describe('findByOwner', () => {
+    it('should find boards by owner', async () => {
       const userId = new Types.ObjectId();
-      const mockBoards = [{ _id: new Types.ObjectId(), title: "Board 1" }];
+      const mockBoards = [{ _id: new Types.ObjectId(), title: 'Board 1' }];
 
       mockModel.aggregate.mockResolvedValue(mockBoards);
 
@@ -62,10 +62,10 @@ describe("BoardRepository", () => {
     });
   });
 
-  describe("findByMemberNotOwner", () => {
-    it("should find boards where user is member but not owner", async () => {
+  describe('findByMemberNotOwner', () => {
+    it('should find boards where user is member but not owner', async () => {
       const userId = new Types.ObjectId();
-      const mockBoards = [{ _id: new Types.ObjectId(), title: "Board 1" }];
+      const mockBoards = [{ _id: new Types.ObjectId(), title: 'Board 1' }];
 
       mockModel.aggregate.mockResolvedValue(mockBoards);
 
@@ -75,11 +75,11 @@ describe("BoardRepository", () => {
     });
   });
 
-  describe("findOneWithAccess", () => {
-    it("should find a board with access check", async () => {
+  describe('findOneWithAccess', () => {
+    it('should find a board with access check', async () => {
       const boardId = new Types.ObjectId();
       const userId = new Types.ObjectId();
-      const mockBoard = { _id: boardId, title: "Board 1" };
+      const mockBoard = { _id: boardId, title: 'Board 1' };
 
       mockModel.aggregate.mockResolvedValue([mockBoard]);
 
@@ -88,7 +88,7 @@ describe("BoardRepository", () => {
       expect(result).toEqual(mockBoard);
     });
 
-    it("should return null if board not found", async () => {
+    it('should return null if board not found', async () => {
       const boardId = new Types.ObjectId();
       const userId = new Types.ObjectId();
 
@@ -100,10 +100,10 @@ describe("BoardRepository", () => {
     });
   });
 
-  describe("findById", () => {
-    it("should find a board by id", async () => {
+  describe('findById', () => {
+    it('should find a board by id', async () => {
       const boardId = new Types.ObjectId().toHexString();
-      const mockBoard = { _id: boardId, title: "Board 1" };
+      const mockBoard = { _id: boardId, title: 'Board 1' };
 
       mockModel.exec.mockResolvedValue(mockBoard);
 
@@ -114,27 +114,23 @@ describe("BoardRepository", () => {
     });
   });
 
-  describe("updateById", () => {
-    it("should update a board by id", async () => {
+  describe('updateById', () => {
+    it('should update a board by id', async () => {
       const boardId = new Types.ObjectId().toHexString();
-      const updateData = { title: "Updated Board" };
+      const updateData = { title: 'Updated Board' };
       const mockBoard = { _id: boardId, ...updateData };
 
       mockModel.exec.mockResolvedValue(mockBoard);
 
       const result = await repository.updateById(boardId, updateData);
 
-      expect(mockModel.findByIdAndUpdate).toHaveBeenCalledWith(
-        boardId,
-        { $set: updateData },
-        { new: true }
-      );
+      expect(mockModel.findByIdAndUpdate).toHaveBeenCalledWith(boardId, { $set: updateData }, { new: true });
       expect(result).toEqual(mockBoard);
     });
   });
 
-  describe("deleteById", () => {
-    it("should delete a board by id", async () => {
+  describe('deleteById', () => {
+    it('should delete a board by id', async () => {
       const boardId = new Types.ObjectId().toHexString();
 
       mockModel.deleteOne.mockReturnValue({ exec: vi.fn().mockResolvedValue({ deletedCount: 1 }) });
@@ -146,8 +142,8 @@ describe("BoardRepository", () => {
     });
   });
 
-  describe("addMember", () => {
-    it("should add a member to a board", async () => {
+  describe('addMember', () => {
+    it('should add a member to a board', async () => {
       const boardId = new Types.ObjectId();
       const ownerId = new Types.ObjectId();
       const memberId = new Types.ObjectId();
@@ -155,23 +151,19 @@ describe("BoardRepository", () => {
 
       mockModel.findOneAndUpdate.mockReturnValue({ exec: vi.fn().mockResolvedValue(mockBoard) });
 
-      const result = await repository.addMember(
-        boardId.toHexString(),
-        ownerId.toHexString(),
-        memberId.toHexString()
-      );
+      const result = await repository.addMember(boardId.toHexString(), ownerId.toHexString(), memberId.toHexString());
 
       expect(mockModel.findOneAndUpdate).toHaveBeenCalledWith(
         { _id: new Types.ObjectId(boardId), owner: new Types.ObjectId(ownerId) },
         { $addToSet: { members: new Types.ObjectId(memberId) } },
-        { new: true }
+        { new: true },
       );
       expect(result).toEqual(mockBoard);
     });
   });
 
-  describe("removeMember", () => {
-    it("should remove a member from a board", async () => {
+  describe('removeMember', () => {
+    it('should remove a member from a board', async () => {
       const boardId = new Types.ObjectId();
       const ownerId = new Types.ObjectId();
       const memberId = new Types.ObjectId();
@@ -182,13 +174,13 @@ describe("BoardRepository", () => {
       const result = await repository.removeMember(
         boardId.toHexString(),
         ownerId.toHexString(),
-        memberId.toHexString()
+        memberId.toHexString(),
       );
 
       expect(mockModel.findOneAndUpdate).toHaveBeenCalledWith(
         { _id: new Types.ObjectId(boardId), owner: new Types.ObjectId(ownerId) },
         { $pull: { members: new Types.ObjectId(memberId) } },
-        { new: true }
+        { new: true },
       );
       expect(result).toEqual(mockBoard);
     });

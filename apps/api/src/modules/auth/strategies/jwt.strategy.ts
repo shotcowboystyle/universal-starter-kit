@@ -1,10 +1,10 @@
-import { Injectable, Logger, UnauthorizedException } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
-import { PassportStrategy } from "@nestjs/passport";
-import { Request } from "express";
-import { ExtractJwt, Strategy } from "passport-jwt";
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import type { ConfigService } from '@nestjs/config';
+import { PassportStrategy } from '@nestjs/passport';
+import type { Request } from 'express';
+import { ExtractJwt, Strategy } from 'passport-jwt';
 
-import { UserService } from "../../users/users.service";
+import type { UserService } from '../../users/users.service';
 
 interface JwtPayload {
   sub: string;
@@ -19,15 +19,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   constructor(
     private readonly userService: UserService,
-    configService: ConfigService
+    configService: ConfigService,
   ) {
     super({
-      jwtFromRequest: ExtractJwt.fromExtractors([
-        JwtStrategy.fromCookie,
-        ExtractJwt.fromAuthHeaderAsBearerToken()
-      ]),
+      jwtFromRequest: ExtractJwt.fromExtractors([JwtStrategy.fromCookie, ExtractJwt.fromAuthHeaderAsBearerToken()]),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>("JWT_SECRET")
+      secretOrKey: configService.get<string>('JWT_SECRET'),
     });
   }
 
@@ -44,12 +41,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
       if (!user) {
         this.logger.error(`User not found for ID: ${payload.sub}`);
-        throw new UnauthorizedException("User not found");
+        throw new UnauthorizedException('User not found');
       }
 
       return {
         _id: user._id,
-        email: user.email
+        email: user.email,
       };
     } catch (error: unknown) {
       if (error instanceof UnauthorizedException) {
@@ -58,9 +55,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       if (error instanceof Error) {
         this.logger.error(`Error validating JWT: ${error.message}`, error.stack);
       } else {
-        this.logger.error("Unknown error validating JWT", error);
+        this.logger.error('Unknown error validating JWT', error);
       }
-      throw new UnauthorizedException("Invalid token");
+      throw new UnauthorizedException('Invalid token');
     }
   }
 }

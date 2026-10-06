@@ -83,7 +83,9 @@ export const Main: Story = {
       });
 
       return (
-        <Form form={form} className="max-w-md">
+        <Form
+          form={form}
+          className="max-w-md">
           <YStack gap="$4">
             <RadioGroup
               label="User Role"
@@ -206,8 +208,13 @@ export const WithChildren: Story = {
     <RadioGroup {...args}>
       <YStack gap="$2">
         {sampleOptions.map((option) => (
-          <XStack key={option.value} gap="$2" alignItems="center">
-            <RadioGroup.Item value={option.value} id={option.value}>
+          <XStack
+            key={option.value}
+            gap="$2"
+            alignItems="center">
+            <RadioGroup.Item
+              value={option.value}
+              id={option.value}>
               <RadioGroup.Indicator />
             </RadioGroup.Item>
             <Label htmlFor={option.value}>{option.label}</Label>
@@ -225,7 +232,9 @@ export const WithChildren: Story = {
 export const Pointy: Story = {
   name: 'Identity (always round)',
   render: () => (
-    <YStack gap="$4" maxWidth={400}>
+    <YStack
+      gap="$4"
+      maxWidth={400}>
       <RadioGroup
         label="pointy prop (ignored — disc stays round)"
         pointy
@@ -233,7 +242,11 @@ export const Pointy: Story = {
         defaultValue="option1"
       />
       <Preset overrides={{ borderRadius: 'none' }}>
-        <RadioGroup label="borderRadius none (disc stays round)" options={sampleOptions} defaultValue="option1" />
+        <RadioGroup
+          label="borderRadius none (disc stays round)"
+          options={sampleOptions}
+          defaultValue="option1"
+        />
       </Preset>
     </YStack>
   ),
@@ -259,10 +272,24 @@ export const WithError: Story = {
 
 export const Sizes: Story = {
   render: () => (
-    <YStack gap="$4" maxWidth={400}>
-      <RadioGroup label="Small" size="$2" options={sampleOptions} />
-      <RadioGroup label="Medium (default)" size="$3" options={sampleOptions} />
-      <RadioGroup label="Large" size="$4" options={sampleOptions} />
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <RadioGroup
+        label="Small"
+        size="$2"
+        options={sampleOptions}
+      />
+      <RadioGroup
+        label="Medium (default)"
+        size="$3"
+        options={sampleOptions}
+      />
+      <RadioGroup
+        label="Large"
+        size="$4"
+        options={sampleOptions}
+      />
     </YStack>
   ),
 };
@@ -272,8 +299,15 @@ export const Interactive: Story = {
     const InteractiveExample = () => {
       const [value, setValue] = useState('');
       return (
-        <YStack gap="$4" maxWidth={400}>
-          <RadioGroup label="Select an option" options={sampleOptions} value={value} onValueChange={setValue} />
+        <YStack
+          gap="$4"
+          maxWidth={400}>
+          <RadioGroup
+            label="Select an option"
+            options={sampleOptions}
+            value={value}
+            onValueChange={setValue}
+          />
           <Text>Selected: {value || 'None'}</Text>
         </YStack>
       );
@@ -289,9 +323,16 @@ export const Comparison: Story = {
       const [customVal, setCustomVal] = useState('option1');
       const [tamaguiVal, setTamaguiVal] = useState('option1');
       return (
-        <XStack gap="$6" alignItems="flex-start" padding="$4">
-          <YStack gap="$3" width={250}>
-            <Paragraph size="$2" color="$placeholderColor">
+        <XStack
+          gap="$6"
+          alignItems="flex-start"
+          padding="$4">
+          <YStack
+            gap="$3"
+            width={250}>
+            <Paragraph
+              size="$2"
+              color="$placeholderColor">
               Custom RadioGroup
             </Paragraph>
             <RadioGroup
@@ -304,8 +345,12 @@ export const Comparison: Story = {
             />
           </YStack>
 
-          <YStack gap="$3" width={250}>
-            <Paragraph size="$2" color="$placeholderColor">
+          <YStack
+            gap="$3"
+            width={250}>
+            <Paragraph
+              size="$2"
+              color="$placeholderColor">
               Tamagui RadioGroup
             </Paragraph>
             <TamaguiRadioGroup
@@ -316,8 +361,13 @@ export const Comparison: Story = {
               }}>
               <YStack gap="$2">
                 {sampleOptions.map((option) => (
-                  <XStack key={option.value} gap="$2" alignItems="center">
-                    <TamaguiRadioGroup.Item value={option.value} id={`t-${option.value}`}>
+                  <XStack
+                    key={option.value}
+                    gap="$2"
+                    alignItems="center">
+                    <TamaguiRadioGroup.Item
+                      value={option.value}
+                      id={`t-${option.value}`}>
                       <TamaguiRadioGroup.Indicator />
                     </TamaguiRadioGroup.Item>
                     <Label htmlFor={`t-${option.value}`}>{option.label}</Label>
@@ -335,5 +385,11 @@ export const Comparison: Story = {
 
 /** Loading placeholder — the skeleton mirrors control + label rows. */
 export const SkeletonState: Story = {
-  render: () => <RadioGroup label="Notification Preference" options={sampleOptions} skeleton />,
+  render: () => (
+    <RadioGroup
+      label="Notification Preference"
+      options={sampleOptions}
+      skeleton
+    />
+  ),
 };

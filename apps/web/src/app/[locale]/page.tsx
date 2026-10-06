@@ -33,7 +33,11 @@ export default function RootPage() {
   // Render a loading state while we determine the redirect.
   // This can be replaced with a more sophisticated loading spinner component.
   return (
-    <YStack height="100vh" width="100%" alignItems="center" justifyContent="center">
+    <YStack
+      height="100vh"
+      width="100%"
+      alignItems="center"
+      justifyContent="center">
       <Paragraph>Loading...</Paragraph>
     </YStack>
   );

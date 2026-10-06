@@ -23,11 +23,11 @@ export function coerceToDate(input: unknown): Date | null {
   if (typeof input === 'string') {
     // Forgiving normalize: trim padding and collapse runs of whitespace so
     // pasted values like " 2024-01-15 " or "2024 01 15" parse.
-    const cleaned = input.trim().replace(/\s+/g, ' ');
+    const cleaned = input.trim().replaceAll(/\s+/g, ' ');
     if (cleaned === '') {
       return null;
     }
-    const m = cleaned.match(DATE_ONLY);
+    const m = DATE_ONLY.exec(cleaned);
     if (m) {
       const month = Number(m[2]);
       const day = Number(m[3]);

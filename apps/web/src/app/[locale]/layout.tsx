@@ -1,5 +1,5 @@
 import { Analytics } from '@vercel/analytics/react';
-import { Metadata } from 'next';
+import type { Metadata } from 'next';
 import { hasLocale, NextIntlClientProvider } from 'next-intl';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { Roboto } from 'next/font/google';
@@ -49,10 +49,19 @@ export default async function LocaleLayout({ children, params }: Readonly<Props>
   const messages = await getCachedMessages(locale);
 
   return (
-    <html lang={locale} suppressHydrationWarning>
-      <body className={roboto.className} suppressHydrationWarning>
-        <NextTopLoader color="#2563eb" showSpinner={false} />
-        <NextIntlClientProvider locale={locale} messages={messages}>
+    <html
+      lang={locale}
+      suppressHydrationWarning>
+      <body
+        className={roboto.className}
+        suppressHydrationWarning>
+        <NextTopLoader
+          color="#2563eb"
+          showSpinner={false}
+        />
+        <NextIntlClientProvider
+          locale={locale}
+          messages={messages}>
           {/* Tamagui's styled contexts call Math.random() while rendering and the
               scheme cookie is request data; cacheComponents allows both only
               below a Suspense boundary. */}

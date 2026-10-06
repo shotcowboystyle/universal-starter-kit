@@ -18,18 +18,18 @@ import { Path, Svg } from 'react-native-svg';
 import type { LabelProps, SizeTokens, TransitionProp } from 'tamagui';
 import { getVariable, getVariableValue, isWeb, SizableText, styled, useTheme, View, XStack } from 'tamagui';
 
-import { Field, FieldLayout, useFieldA11y, useFieldDescribedBy } from '../../fieldLayout';
-import { formControlColors, formSelectedColors } from '../../shared/colorRamps';
+import { Field, FieldLayout, useFieldA11y, useFieldDescribedBy } from '../../FieldLayout';
+import { formControlColors, formSelectedColors } from '../../shared/color-ramps';
 import { t } from '../../shared/t';
-import { useIsInTableCell } from '../../shared/tableCellContext';
+import { useIsInTableCell } from '../../shared/table-cell-context';
 import { getFieldError, mergeFieldHandler, useFormField, useResolvedValidators } from '../../shared/utils';
 import { Skeleton } from '../../Skeleton';
 import type { AnyFormApi } from '../../types';
 
-import { filledCount } from './ratingMath';
+import { filledCount } from './rating-math';
 import { StarInk } from './StarInk';
 
-export { filledCount } from './ratingMath';
+export { filledCount } from './rating-math';
 
 /** Visual glyph follows the size token (Material small/medium/large). Floor 16. */
 function starGlyphSize(sizeToken: SizeTokens | string | undefined): number {
@@ -61,7 +61,10 @@ function starPath(size: number, innerRatio = 0.382): string {
 function PointyStar({ size, weight, color }: { size: number; weight: 'fill' | 'regular'; color: string }) {
   const d = starPath(size);
   return (
-    <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+    <Svg
+      width={size}
+      height={size}
+      viewBox={`0 0 ${size} ${size}`}>
       <Path
         d={d}
         // `transparent` rather than `none`: an empty->filled star has to
@@ -128,7 +131,7 @@ function ensureRatingInkStyles() {
   style.textContent = Object.entries(cssTimings)
     .map(([token, timing]) => `.${inkClassName(token)} svg * { transition: fill ${timing}, stroke ${timing}; }`)
     .join('\n');
-  document.head.appendChild(style);
+  document.head.append(style);
 }
 
 const StarWrapper = styled(View, {
@@ -206,7 +209,7 @@ function StarRow({
 
   // Material radio group: one tab stop, arrows move AND select. The stop
   // follows the committed value star, or the focused star while inside.
-  const starRefs = useRef<Array<HTMLElement | null>>([]);
+  const starRefs = useRef<(HTMLElement | null)[]>([]);
   const [focusedStar, setFocusedStar] = useState<number | null>(null);
   const [kbFocusStar, setKbFocusStar] = useState<number | null>(null);
   const tabStopStar = focusedStar ?? Math.min(Math.max(filledStars, 1), Math.max(maxStars, 1));
@@ -223,7 +226,7 @@ function StarRow({
     }
   };
   const handleStarKeyDown = (event: KeyboardEvent, starNumber: number) => {
-    const key = event.key;
+    const { key } = event;
     if (key === 'Enter' || key === ' ' || event.code === 'Space') {
       event.preventDefault();
       event.stopPropagation();
@@ -295,13 +298,13 @@ function StarRow({
       aria-disabled={disabled || undefined}
       aria-readonly={readOnly || undefined}
       aria-describedby={describedBy}
-      {...(!isWeb
-        ? {
+      {...(isWeb
+        ? {}
+        : {
             accessible: true,
             accessibilityLabel: fieldA11y?.label ?? valueLabel,
             accessibilityHint: fieldA11y?.description,
-          }
-        : {})}
+          })}
       data-rating-row
       data-rating-live={live ? 'true' : undefined}
       data-rating-glyph={starSize}
@@ -391,7 +394,7 @@ function StarRow({
                 }
               : {})}
             // RN only exposes plain Views to the a11y tree when `accessible` is set
-            {...(!isWeb ? { accessible: true } : {})}
+            {...(isWeb ? {} : { accessible: true })}
             data-rating-star={isFilled ? 'filled' : 'empty'}
             data-rating-index={starNumber}
             {...(!isWeb && !live ? { transition: motionTransition } : {})}
@@ -415,7 +418,11 @@ function StarRow({
         );
       })}
       {!inTableCell && maxStars > 0 ? (
-        <SizableText {...knobProps.body} aria-hidden userSelect="none" data-rating-value>
+        <SizableText
+          {...knobProps.body}
+          aria-hidden
+          userSelect="none"
+          data-rating-value>
           {valueLabel}
         </SizableText>
       ) : null}
@@ -518,8 +525,14 @@ export function Rating({
   // Render skeleton placeholder
   if (skeleton) {
     return (
-      <FieldLayout id={id} label={inTableCell ? undefined : label} size={size} knobProps={knobProps}>
-        <XStack {...knobProps.gap} alignItems="center">
+      <FieldLayout
+        id={id}
+        label={inTableCell ? undefined : label}
+        size={size}
+        knobProps={knobProps}>
+        <XStack
+          {...knobProps.gap}
+          alignItems="center">
           {Array.from({ length: maxStars }, (_, i) => (
             <Skeleton
               key={i}
@@ -573,7 +586,11 @@ export function Rating({
   }
 
   return (
-    <Field form={resolvedForm} name={name} defaultValue={defaultValue} validators={resolvedValidators}>
+    <Field
+      form={resolvedForm}
+      name={name}
+      defaultValue={defaultValue}
+      validators={resolvedValidators}>
       {(field) => {
         const resolvedError = getFieldError(field, error);
         const fieldValue = field.state.value ?? 0;

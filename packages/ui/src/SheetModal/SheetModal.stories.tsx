@@ -5,11 +5,12 @@ import {
   SheetModal as PublicSheetModal,
   XStack,
   YStack as FixtureStack,
-  type TamaguiElement,
 } from '@repo/ui';
+import type { TamaguiElement } from '@repo/ui';
 import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { useRef, useState } from 'react';
-import { Platform, useWindowDimensions, type LayoutChangeEvent } from 'react-native';
+import { Platform, useWindowDimensions } from 'react-native';
+import type { LayoutChangeEvent } from 'react-native';
 import { Paragraph, SizableText, YStack } from 'tamagui';
 
 import { ActionBar } from '../actions/ActionBar';
@@ -27,7 +28,9 @@ function Harness({
 }) {
   const [open, setOpen] = useState(startOpen);
   return (
-    <YStack minHeight={480} gap="$3">
+    <YStack
+      minHeight={480}
+      gap="$3">
       <Button
         onPress={() => {
           setOpen(true);
@@ -266,7 +269,9 @@ function OwnedBodyFixture({ measured }: { measured: boolean }) {
   };
 
   return (
-    <FixtureStack gap="$3" padding="$3">
+    <FixtureStack
+      gap="$3"
+      padding="$3">
       <FixtureText>{measured ? 'Owned measured viewport' : 'Owned ScrollView'}</FixtureText>
       <Button
         onPress={() => {
@@ -290,7 +295,9 @@ function OwnedBodyFixture({ measured }: { measured: boolean }) {
         Measure after the sheet settles. Close it to read the captured bounds below. Repeat after dragging, scrolling,
         rotating or using the keyboard. A declared size is not a measurement.
       </FixtureText>
-      <FixtureText testID="owned-sheet-readings" selectable>
+      <FixtureText
+        testID="owned-sheet-readings"
+        selectable>
         {JSON.stringify(diagnostics, null, 2)}
       </FixtureText>
       <PublicSheetModal
@@ -304,7 +311,9 @@ function OwnedBodyFixture({ measured }: { measured: boolean }) {
         scrollable={false}
         fill={fill}
         header={
-          <FixtureStack gap="$1" flexShrink={0}>
+          <FixtureStack
+            gap="$1"
+            flexShrink={0}>
             <FixtureText numberOfLines={1}>
               {kind} / {mode} / fill {fill ? 'on' : 'off'}
             </FixtureText>
@@ -317,10 +326,14 @@ function OwnedBodyFixture({ measured }: { measured: boolean }) {
               {readings.tailPresses}
             </FixtureText>
             <XStack gap="$2">
-              <Button flex={1} onPress={measureBounds}>
+              <Button
+                flex={1}
+                onPress={measureBounds}>
                 Measure bounds
               </Button>
-              <Button flex={1} onPress={close}>
+              <Button
+                flex={1}
+                onPress={close}>
                 Close fixture
               </Button>
             </XStack>
@@ -375,16 +388,25 @@ function OwnedBodyFixture({ measured }: { measured: boolean }) {
                   });
                 }}>
                 <FixtureStack gap="$2">
-                  <Input label="Keyboard probe" placeholder="Generic text only" />
+                  <Input
+                    label="Keyboard probe"
+                    placeholder="Generic text only"
+                  />
                   {Array.from({ length: 60 }, (_, index) => (
-                    <FixtureStack key={index} gap="$1" paddingVertical="$2">
+                    <FixtureStack
+                      key={index}
+                      gap="$1"
+                      paddingVertical="$2">
                       <FixtureText>Record {index + 1}</FixtureText>
                       {Array.from({ length: 1 + (index % 4) }, (_, line) => (
                         <FixtureText key={line}>Generic detail {line + 1} for this record.</FixtureText>
                       ))}
                     </FixtureStack>
                   ))}
-                  <FixtureStack ref={tailRef} testID="owned-sheet-tail" collapsable={false}>
+                  <FixtureStack
+                    ref={tailRef}
+                    testID="owned-sheet-tail"
+                    collapsable={false}>
                     <Button
                       onPress={() => {
                         record({ tailPresses: readings.tailPresses + 1 });

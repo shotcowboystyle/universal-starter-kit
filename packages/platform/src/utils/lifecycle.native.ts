@@ -1,4 +1,5 @@
-import { AppState, type AppStateStatus } from 'react-native';
+import { AppState } from 'react-native';
+import type { AppStateStatus } from 'react-native';
 
 export function onAppFocus(callback: () => void): () => void {
   const sub = AppState.addEventListener('change', (state: AppStateStatus) => {

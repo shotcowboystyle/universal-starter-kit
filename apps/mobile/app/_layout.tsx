@@ -1,20 +1,20 @@
-import "@/lib/i18n";
+import '@/lib/i18n';
 
-import { TamaguiProvider, View } from "@tamagui/core";
-import { DarkTheme, ThemeProvider } from "@react-navigation/native";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { Stack, useRouter, useSegments } from "expo-router";
-import { StatusBar } from "expo-status-bar";
-import { useEffect, useState } from "react";
-import { ActivityIndicator, useColorScheme } from "react-native";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { DarkTheme, ThemeProvider } from '@react-navigation/native';
+import { TamaguiProvider, View } from '@tamagui/core';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { Stack, useRouter, useSegments } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, useColorScheme } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-import { useAuth } from "@/hooks/use-auth";
-import { queryClient } from "@/lib/query-client";
-import tamaguiConfig from "@/lib/tamagui/tamagui.config";
-import { applyThemePreference, loadThemePreference } from "@/lib/theme";
+import { useAuth } from '@/hooks/use-auth';
+import { queryClient } from '@/lib/query-client';
+import tamaguiConfig from '@/lib/tamagui/tamagui.config';
+import { applyThemePreference, loadThemePreference } from '@/lib/theme';
 
-export { ErrorBoundary } from "expo-router";
+export { ErrorBoundary } from 'expo-router';
 
 function RootLayoutNav() {
   const segments = useSegments();
@@ -38,18 +38,22 @@ function RootLayoutNav() {
       return;
     }
 
-    const inAuthGroup = segments[0] === "(auth)";
+    const inAuthGroup = segments[0] === '(auth)';
 
     if (!session && !inAuthGroup) {
-      router.replace("/(auth)/login");
+      router.replace('/(auth)/login');
     } else if (session && inAuthGroup) {
-      router.replace("/(tabs)");
+      router.replace('/(tabs)');
     }
   }, [session, segments, isLoading, isNavigationReady, router]);
 
   if (isLoading || !isNavigationReady) {
     return (
-      <View flex={1} alignItems="center" justifyContent="center" backgroundColor="$background">
+      <View
+        flex={1}
+        alignItems="center"
+        justifyContent="center"
+        backgroundColor="$background">
         <ActivityIndicator size="large" />
       </View>
     );
@@ -58,11 +62,26 @@ function RootLayoutNav() {
   return (
     <ThemeProvider value={DarkTheme}>
       <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="boards" options={{ headerShown: false }} />
-        <Stack.Screen name="tasks" options={{ headerShown: false }} />
-        <Stack.Screen name="projects" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="(tabs)"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="(auth)"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="boards"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="tasks"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="projects"
+          options={{ headerShown: false }}
+        />
       </Stack>
       <StatusBar style="light" />
     </ThemeProvider>
@@ -74,7 +93,9 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <TamaguiProvider config={tamaguiConfig} defaultTheme={colorScheme ?? "dark"}>
+      <TamaguiProvider
+        config={tamaguiConfig}
+        defaultTheme={colorScheme ?? 'dark'}>
         <QueryClientProvider client={queryClient}>
           <RootLayoutNav />
         </QueryClientProvider>

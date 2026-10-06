@@ -6,8 +6,8 @@ import { useTranslations } from 'next-intl';
 import React from 'react';
 import * as z from 'zod';
 
-import { defaultEmail } from '@/constants/demoData';
-import { useAuthForm } from '@/hooks/useAuth';
+import { defaultEmail } from '@/constants/demo-data';
+import { useAuthForm } from '@/hooks/use-auth';
 
 const emailSchema = z.email({ message: 'Invalid email address' });
 
@@ -40,12 +40,19 @@ export default function UserAuthForm() {
       />
 
       {displayError ? (
-        <Paragraph color="$red10" data-testid="error-message">
+        <Paragraph
+          color="$red10"
+          data-testid="error-message">
           {displayError}
         </Paragraph>
       ) : null}
 
-      <Button accent action="submit" loading={busy} disabled={busy} data-testid="submit-button">
+      <Button
+        accent
+        action="submit"
+        loading={busy}
+        disabled={busy}
+        data-testid="submit-button">
         {t('continueButton')}
       </Button>
     </Form>

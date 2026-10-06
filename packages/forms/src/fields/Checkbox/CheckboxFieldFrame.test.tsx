@@ -13,7 +13,7 @@ import { cleanup } from '@testing-library/react';
 import { createRef } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { FieldLayout } from '../../fieldLayout';
+import { FieldLayout } from '../../FieldLayout';
 
 import { CheckboxFieldFrame } from './CheckboxFieldFrame';
 
@@ -42,8 +42,16 @@ describe('CheckboxFieldFrame', () => {
   it('links the rendered field message, forwards its ref, and preserves an explicit description', () => {
     const ref = createRef<any>();
     const fixture = (override?: { 'aria-describedby': string | undefined }) => (
-      <FieldLayout id="consent" helperText="Read the terms" error="Accept the terms">
-        <CheckboxFieldFrame id="consent" checked={false} ref={ref} {...override} />
+      <FieldLayout
+        id="consent"
+        helperText="Read the terms"
+        error="Accept the terms">
+        <CheckboxFieldFrame
+          id="consent"
+          checked={false}
+          ref={ref}
+          {...override}
+        />
       </FieldLayout>
     );
     const result = renderWithProviders(fixture());
@@ -76,13 +84,23 @@ describe('CheckboxFieldFrame', () => {
   });
 
   it("overrides Tamagui's size-driven radius back to zero, so the target is never a disc", () => {
-    const { container } = renderWithProviders(<CheckboxFieldFrame checked={false} size="$6" />);
+    const { container } = renderWithProviders(
+      <CheckboxFieldFrame
+        checked={false}
+        size="$6"
+      />,
+    );
     expect(cssOf(frame(container), 'border-top-left-radius') || '0px').toBe('0px');
   });
 
   it('keeps the radius at zero across the size ladder, not only at the default', () => {
     for (const size of ['$2', '$4', '$6'] as const) {
-      const { container } = renderWithProviders(<CheckboxFieldFrame checked={false} size={size} />);
+      const { container } = renderWithProviders(
+        <CheckboxFieldFrame
+          checked={false}
+          size={size}
+        />,
+      );
       expect(cssOf(frame(container), 'border-top-left-radius') || '0px', String(size)).toBe('0px');
       cleanup();
     }
@@ -114,7 +132,13 @@ describe('CheckboxFieldFrame', () => {
   });
 
   it('lets a caller still size the target, because the frame is the hit area', () => {
-    const { container } = renderWithProviders(<CheckboxFieldFrame checked={false} width={44} height={44} />);
+    const { container } = renderWithProviders(
+      <CheckboxFieldFrame
+        checked={false}
+        width={44}
+        height={44}
+      />,
+    );
     const node = frame(container);
     expect(cssOf(node, 'width')).toBe('44px');
     expect(cssOf(node, 'height')).toBe('44px');

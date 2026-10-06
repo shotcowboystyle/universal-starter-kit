@@ -30,7 +30,9 @@ export default meta;
 type Story = StoryObj<typeof Avatar>;
 
 const Caption = ({ children }: { children: string }) => (
-  <SizableText size="$1" color="$color11">
+  <SizableText
+    size="$1"
+    color="$color11">
     {children}
   </SizableText>
 );
@@ -38,8 +40,12 @@ const Caption = ({ children }: { children: string }) => (
 export const Default: Story = {
   name: 'Main',
   render: () => (
-    <YStack gap="$4" padding="$4">
-      <XStack gap="$3" alignItems="center">
+    <YStack
+      gap="$4"
+      padding="$4">
+      <XStack
+        gap="$3"
+        alignItems="center">
         <Avatar name="Ada Lovelace" />
         <Avatar name="Grace Hopper" />
         <Avatar name="Alan Turing" />
@@ -47,32 +53,65 @@ export const Default: Story = {
         <Avatar name="Linus Torvalds" />
         <Avatar />
       </XStack>
-      <XStack gap="$3" alignItems="flex-end">
+      <XStack
+        gap="$3"
+        alignItems="flex-end">
         {(['$1.5', '$2', '$3', '$4', '$6'] as const).map((size) => (
-          <YStack key={size} alignItems="center" gap="$1">
-            <Avatar name="Ada Lovelace" size={size} />
+          <YStack
+            key={size}
+            alignItems="center"
+            gap="$1">
+            <Avatar
+              name="Ada Lovelace"
+              size={size}
+            />
             <Caption>{size}</Caption>
           </YStack>
         ))}
       </XStack>
-      <XStack gap="$4" alignItems="flex-end">
-        <YStack alignItems="center" gap="$1">
+      <XStack
+        gap="$4"
+        alignItems="flex-end">
+        <YStack
+          alignItems="center"
+          gap="$1">
           <Avatar name="Ada Lovelace" />
           <Caption>page</Caption>
         </YStack>
-        <YStack alignItems="center" gap="$1">
-          <Avatar name="Ada Lovelace" nested />
+        <YStack
+          alignItems="center"
+          gap="$1">
+          <Avatar
+            name="Ada Lovelace"
+            nested
+          />
           <Caption>nested</Caption>
         </YStack>
-        <YStack alignItems="center" gap="$1">
-          <Avatar name="Ada Lovelace" compact />
+        <YStack
+          alignItems="center"
+          gap="$1">
+          <Avatar
+            name="Ada Lovelace"
+            compact
+          />
           <Caption>compact</Caption>
         </YStack>
-        <Avatar name="Ada Lovelace" status="online" />
-        <Avatar name="Grace Hopper" status="busy" />
-        <Avatar circular={false} name="Bitspur Labs" />
+        <Avatar
+          name="Ada Lovelace"
+          status="online"
+        />
+        <Avatar
+          name="Grace Hopper"
+          status="busy"
+        />
+        <Avatar
+          circular={false}
+          name="Bitspur Labs"
+        />
       </XStack>
-      <XStack gap="$4" alignItems="center">
+      <XStack
+        gap="$4"
+        alignItems="center">
         <Avatar.Group>
           <Avatar name="Ada Lovelace" />
           <Avatar name="Grace Hopper" />
@@ -80,7 +119,9 @@ export const Default: Story = {
           <Avatar name="Katherine Johnson" />
           <Avatar name="Linus Torvalds" />
         </Avatar.Group>
-        <Avatar.Group circular={false} overlap={false}>
+        <Avatar.Group
+          circular={false}
+          overlap={false}>
           <Avatar name="Core Team" />
           <Avatar name="Ops Bot" />
           <Avatar name="Docs Org" />
@@ -101,11 +142,21 @@ export const WithImage: Story = {
 
 export const Sizes: Story = {
   render: () => (
-    <XStack gap="$3" alignItems="center">
+    <XStack
+      gap="$3"
+      alignItems="center">
       {(['$1.5', '$2', '$3', '$4', '$6'] as const).map((size) => (
-        <YStack key={size} alignItems="center" gap="$1">
-          <Avatar name="Ada Lovelace" size={size} />
-          <SizableText size="$1" color="$color11">
+        <YStack
+          key={size}
+          alignItems="center"
+          gap="$1">
+          <Avatar
+            name="Ada Lovelace"
+            size={size}
+          />
+          <SizableText
+            size="$1"
+            color="$color11">
             {size}
           </SizableText>
         </YStack>
@@ -116,33 +167,58 @@ export const Sizes: Story = {
 
 export const InitialsFallback: Story = {
   render: () => (
-    <XStack gap="$3" alignItems="center">
+    <XStack
+      gap="$3"
+      alignItems="center">
       <Avatar name="Ada Lovelace" />
       <Avatar name="grace.hopper@navy.mil" />
       <Avatar name="X" />
-      <Avatar initials="MP" name="Multiplatform" />
+      <Avatar
+        initials="MP"
+        name="Multiplatform"
+      />
     </XStack>
   ),
 };
 
 export const Nested: Story = {
   render: () => (
-    <XStack gap="$4" alignItems="flex-end">
-      <YStack alignItems="center" gap="$1">
+    <XStack
+      gap="$4"
+      alignItems="flex-end">
+      <YStack
+        alignItems="center"
+        gap="$1">
         <Avatar name="Ada Lovelace" />
-        <SizableText size="$1" color="$color11">
+        <SizableText
+          size="$1"
+          color="$color11">
           page
         </SizableText>
       </YStack>
-      <YStack alignItems="center" gap="$1">
-        <Avatar name="Ada Lovelace" nested />
-        <SizableText size="$1" color="$color11">
+      <YStack
+        alignItems="center"
+        gap="$1">
+        <Avatar
+          name="Ada Lovelace"
+          nested
+        />
+        <SizableText
+          size="$1"
+          color="$color11">
           nested
         </SizableText>
       </YStack>
-      <YStack alignItems="center" gap="$1">
-        <Avatar name="Ada Lovelace" compact />
-        <SizableText size="$1" color="$color11">
+      <YStack
+        alignItems="center"
+        gap="$1">
+        <Avatar
+          name="Ada Lovelace"
+          compact
+        />
+        <SizableText
+          size="$1"
+          color="$color11">
           compact
         </SizableText>
       </YStack>
@@ -160,7 +236,9 @@ export const Group: Story = {
         <Avatar name="Katherine Johnson" />
         <Avatar name="Linus Torvalds" />
       </Avatar.Group>
-      <Avatar.Group circular={false} overlap={false}>
+      <Avatar.Group
+        circular={false}
+        overlap={false}>
         <Avatar name="Core Team" />
         <Avatar name="Ops Bot" />
         <Avatar name="Docs Org" />
@@ -171,9 +249,18 @@ export const Group: Story = {
 
 export const Compound: Story = {
   render: () => (
-    <Avatar circular size="$5" backgroundColor="$blue4">
-      <Avatar.Fallback backgroundColor="$blue4" alignItems="center" justifyContent="center">
-        <SizableText fontSize="$3" color="$blue11" fontWeight="600">
+    <Avatar
+      circular
+      size="$5"
+      backgroundColor="$blue4">
+      <Avatar.Fallback
+        backgroundColor="$blue4"
+        alignItems="center"
+        justifyContent="center">
+        <SizableText
+          fontSize="$3"
+          color="$blue11"
+          fontWeight="600">
           CH
         </SizableText>
       </Avatar.Fallback>

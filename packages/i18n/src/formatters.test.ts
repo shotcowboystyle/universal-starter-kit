@@ -35,7 +35,7 @@ describe('createDateFormatter', () => {
     });
 
     it('handles past dates', () => {
-      const past = Date.now() - 86400 * 1000;
+      const past = Date.now() - 86_400 * 1000;
       const result = formatter.relative(past);
       expect(result).toMatch(/day|yesterday|ago/i);
     });
@@ -46,7 +46,7 @@ describe('createNumberFormatter', () => {
   const formatter = createNumberFormatter('en-US');
 
   it('formats a number with default options', () => {
-    expect(formatter.format(1234567.89)).toBe('1,234,567.89');
+    expect(formatter.format(1_234_567.89)).toBe('1,234,567.89');
   });
 
   it('formats with custom options', () => {
@@ -90,7 +90,7 @@ describe('createCurrencyFormatter', () => {
   });
 
   it('formats large amounts', () => {
-    const result = formatter.format(1000000, 'USD');
+    const result = formatter.format(1_000_000, 'USD');
     expect(result).toContain('1,000,000');
   });
 

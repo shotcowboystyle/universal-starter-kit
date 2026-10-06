@@ -1,9 +1,9 @@
-import { Image } from "expo-image";
-import { useRouter } from "expo-router";
-import { useTranslation } from "react-i18next";
-import { Alert, Pressable } from "react-native";
+import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+import { Alert, Pressable } from 'react-native';
 
-import { useDeleteBoard } from "@/hooks/use-boards";
+import { useDeleteBoard } from '@/hooks/use-boards';
 
 interface BoardActionsProps {
   boardId: string;
@@ -17,29 +17,29 @@ export function BoardActions({ boardId, boardTitle }: BoardActionsProps) {
 
   const handleEdit = () => {
     router.push({
-      pathname: "/boards/form",
-      params: { boardId }
+      pathname: '/boards/form',
+      params: { boardId },
     });
   };
 
   const handleDelete = () => {
     Alert.alert(
-      t("kanban.actions.confirmDeleteTitle", { title: boardTitle }),
-      t("kanban.actions.confirmDeleteDescription"),
+      t('kanban.actions.confirmDeleteTitle', { title: boardTitle }),
+      t('kanban.actions.confirmDeleteDescription'),
       [
-        { text: t("kanban.actions.cancel"), style: "cancel" },
+        { text: t('kanban.actions.cancel'), style: 'cancel' },
         {
-          text: t("kanban.actions.delete"),
-          style: "destructive",
+          text: t('kanban.actions.delete'),
+          style: 'destructive',
           onPress: () => {
             deleteMutation.mutate(boardId, {
               onSuccess: () => {
-                router.replace("/(tabs)");
-              }
+                router.replace('/(tabs)');
+              },
             });
-          }
-        }
-      ]
+          },
+        },
+      ],
     );
   };
 
@@ -47,15 +47,14 @@ export function BoardActions({ boardId, boardTitle }: BoardActionsProps) {
     <Pressable
       onPress={(e) => {
         e.stopPropagation();
-        Alert.alert(t("kanban.actions.actions"), undefined, [
-          { text: t("kanban.actions.edit"), onPress: handleEdit },
-          { text: t("kanban.actions.delete"), onPress: handleDelete, style: "destructive" },
-          { text: t("kanban.actions.cancel"), style: "cancel" }
+        Alert.alert(t('kanban.actions.actions'), undefined, [
+          { text: t('kanban.actions.edit'), onPress: handleEdit },
+          { text: t('kanban.actions.delete'), onPress: handleDelete, style: 'destructive' },
+          { text: t('kanban.actions.cancel'), style: 'cancel' },
         ]);
       }}
       hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-      style={{ padding: 4 }}
-    >
+      style={{ padding: 4 }}>
       <Image
         source="sf:ellipsis"
         style={{ width: 22, height: 22 }}

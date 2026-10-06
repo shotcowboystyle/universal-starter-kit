@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { View, isWeb } from 'tamagui';
 
 import { Input as InputParts } from '../../InputParts';
-import { formCommonColors } from '../../shared/colorRamps';
+import { formCommonColors } from '../../shared/color-ramps';
 import { t } from '../../shared/t';
 import { TimeWheels } from '../../shared/TimeColumn';
 
@@ -30,7 +30,7 @@ export function parseTimeString(value: string): { h: number; m: number; s: numbe
 
 export function toTimeString(h: number, m: number, s?: number): string {
   const base = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-  return s !== undefined ? `${base}:${String(s).padStart(2, '0')}` : base;
+  return s === undefined ? base : `${base}:${String(s).padStart(2, '0')}`;
 }
 
 export function formatTimeDisplay(value: string, format: TimeFormat, showSeconds: boolean): string {
@@ -78,7 +78,10 @@ export function TimePanel({
   const { h, m, s } = parseTimeString(value);
 
   return (
-    <View width="100%" {...knobProps.panelPadding} data-testid="time-picker-panel">
+    <View
+      width="100%"
+      {...knobProps.panelPadding}
+      data-testid="time-picker-panel">
       <TimeWheels
         hour24={h}
         minute={m}
@@ -157,7 +160,9 @@ export function TimePickerInputTrigger({
         onPress={isWeb && !disabled ? onOpen : undefined}
         {...(disabled ? { opacity: 0.5, pointerEvents: 'none' as const } : undefined)}>
         <InputParts.Section data-testid="time-picker-glyph">
-          <InputParts.Icon adornment="leading" color={formCommonColors.muted}>
+          <InputParts.Icon
+            adornment="leading"
+            color={formCommonColors.muted}>
             {clockIcon ?? <ClockIcon />}
           </InputParts.Icon>
         </InputParts.Section>
@@ -190,7 +195,10 @@ export function TimePickerInputTrigger({
         </InputParts.Section>
         {value && isWeb ? (
           <InputParts.Section>
-            <TimePickerClearButton onClear={onClear} disabled={disabled} />
+            <TimePickerClearButton
+              onClear={onClear}
+              disabled={disabled}
+            />
           </InputParts.Section>
         ) : null}
       </InputParts.Box>

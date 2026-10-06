@@ -46,7 +46,7 @@ export const Main: Story = {
     const FormExample = () => {
       const form = useForm({
         defaultValues: {
-          workTime: 28800,
+          workTime: 28_800,
           breakTime: 3600,
         },
         onSubmit: async ({ value }) => {
@@ -55,10 +55,20 @@ export const Main: Story = {
       });
 
       return (
-        <Form form={form} maxWidth={400}>
+        <Form
+          form={form}
+          maxWidth={400}>
           <YStack gap="$4">
-            <Duration label="Work Duration" name="workTime" helperText="How long did you work?" />
-            <Duration label="Break Duration" name="breakTime" helperText="Total break time" />
+            <Duration
+              label="Work Duration"
+              name="workTime"
+              helperText="How long did you work?"
+            />
+            <Duration
+              label="Break Duration"
+              name="breakTime"
+              helperText="Total break time"
+            />
             <Button action="submit">Log Time</Button>
           </YStack>
         </Form>
@@ -110,13 +120,30 @@ export const WithError: Story = {
 
 export const Sizes: Story = {
   render: () => (
-    <YStack gap="$4" maxWidth={300}>
+    <YStack
+      gap="$4"
+      maxWidth={300}>
       <Text fontWeight="bold">Size $2</Text>
-      <Duration label="Small" value={3600} size="$2" onChange={action('onChange')} />
+      <Duration
+        label="Small"
+        value={3600}
+        size="$2"
+        onChange={action('onChange')}
+      />
       <Text fontWeight="bold">Size $3</Text>
-      <Duration label="Medium" value={3600} size="$3" onChange={action('onChange')} />
+      <Duration
+        label="Medium"
+        value={3600}
+        size="$3"
+        onChange={action('onChange')}
+      />
       <Text fontWeight="bold">Size $4</Text>
-      <Duration label="Large" value={3600} size="$4" onChange={action('onChange')} />
+      <Duration
+        label="Large"
+        value={3600}
+        size="$4"
+        onChange={action('onChange')}
+      />
     </YStack>
   ),
 };
@@ -124,7 +151,9 @@ export const Sizes: Story = {
 export const FullWidth: Story = {
   name: 'FullWidth',
   render: () => (
-    <YStack width="100%" gap="$4">
+    <YStack
+      width="100%"
+      gap="$4">
       <Duration
         label="Full width"
         helperText="Clock and segments stay on the left of a stretched box"
@@ -156,7 +185,7 @@ export const WithDays: Story = {
   args: {
     label: 'Resolution Time',
     helperText: 'Days stay first-class (Frappe hide_days off)',
-    value: 100000,
+    value: 100_000,
     hideDays: false,
     showSeconds: true,
     onChange: action('onChange'),
@@ -170,7 +199,9 @@ export const Interactive: Story = {
       const h = Math.floor(value / 3600);
       const m = Math.floor((value % 3600) / 60);
       return (
-        <YStack gap="$4" maxWidth={300}>
+        <YStack
+          gap="$4"
+          maxWidth={300}>
           <Duration
             label="Session Length"
             helperText={`${h}h ${m}m selected`}
@@ -180,7 +211,11 @@ export const Interactive: Story = {
               action('onChange')(v);
             }}
           />
-          <Duration label="Disabled" value={7200} disabled />
+          <Duration
+            label="Disabled"
+            value={7200}
+            disabled
+          />
         </YStack>
       );
     };

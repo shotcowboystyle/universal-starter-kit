@@ -1,5 +1,6 @@
 import { useResolvedKnobs } from '@repo/theme';
-import { Children, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { Children, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { XStack, YStack, isWeb, useMedia } from 'tamagui';
 
 /** Container/media width below which multi-column form grids collapse to 1 col. */
@@ -223,9 +224,14 @@ function FormGridNative({
       data-density={density}
       data-size={size}>
       {rows.map((row, rowIndex) => (
-        <XStack key={rowIndex} {...gapFragment}>
+        <XStack
+          key={rowIndex}
+          {...gapFragment}>
           {row.map((child, colIndex) => (
-            <YStack key={colIndex} flex={1} minWidth={0}>
+            <YStack
+              key={colIndex}
+              flex={1}
+              minWidth={0}>
               {child}
             </YStack>
           ))}

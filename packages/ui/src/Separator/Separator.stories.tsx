@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { Text, XStack, YStack } from 'tamagui';
 
-import { sectionHeading } from '../componentColors';
+import { sectionHeading } from '../component-colors';
 
 import { Separator } from './index';
 
@@ -31,7 +31,9 @@ type Story = StoryObj<typeof Separator>;
 export const Default: Story = {
   name: 'Main',
   render: (args) => (
-    <YStack width={420} gap="$3">
+    <YStack
+      width={420}
+      gap="$3">
       <Text {...sectionHeading}>Group title</Text>
       <Separator {...args} />
       <Text>Content under the rule — the separator paints, it is not a 1px gap.</Text>
@@ -42,7 +44,9 @@ export const Default: Story = {
 export const Quiet: Story = {
   args: { quiet: true },
   render: (args) => (
-    <YStack width={420} gap="$3">
+    <YStack
+      width={420}
+      gap="$3">
       <Separator />
       <Text>Between a default rule…</Text>
       <Separator {...args} />
@@ -54,7 +58,10 @@ export const Quiet: Story = {
 export const Vertical: Story = {
   args: { vertical: true },
   render: (args) => (
-    <XStack height={44} alignItems="center" gap="$3">
+    <XStack
+      height={44}
+      alignItems="center"
+      gap="$3">
       <Text>Start</Text>
       <Separator {...args} />
       <Text>End</Text>

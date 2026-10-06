@@ -35,7 +35,7 @@ describe('ControlGroup', () => {
     );
     expect(radiusClasses(group(result.container))).toEqual(['_btlr-t-radius-12']);
     const inners = result.container.querySelectorAll('[data-mp-group-position]');
-    expect(inners.length).toBe(2);
+    expect(inners).toHaveLength(2);
     for (const node of inners) {
       expect((node as HTMLElement).getAttribute('data-mp-inner-radius')).toBe('0');
     }
@@ -62,8 +62,8 @@ describe('ControlGroup', () => {
       </Preset>,
     );
     const largeWidth = getComputedStyle(group(large.container)!).borderTopWidth;
-    expect(parseFloat(noneWidth || '0')).toBe(0);
-    expect(parseFloat(largeWidth || '0')).toBeGreaterThan(parseFloat(noneWidth || '0'));
+    expect(Number.parseFloat(noneWidth || '0')).toBe(0);
+    expect(Number.parseFloat(largeWidth || '0')).toBeGreaterThan(Number.parseFloat(noneWidth || '0'));
   });
 
   it('addon label is weight 400', () => {

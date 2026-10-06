@@ -1,9 +1,11 @@
 import { TestProviders, renderWithProviders } from '@repo/test-utils';
-import { Preset, resolveRadiusClass, sizeRecipeForToken, type BorderRadius } from '@repo/theme';
+import { Preset, resolveRadiusClass, sizeRecipeForToken } from '@repo/theme';
+import type { BorderRadius } from '@repo/theme';
 import { getSize } from '@tamagui/get-token';
 import { useForm } from '@tanstack/react-form';
 import { act, fireEvent, waitFor } from '@testing-library/react';
-import { getVariableValue, type SizeTokens } from 'tamagui';
+import { getVariableValue } from 'tamagui';
+import type { SizeTokens } from 'tamagui';
 import { describe, expect, it, vi } from 'vitest';
 
 import { Button } from '../../Button';
@@ -17,18 +19,28 @@ describe('OTPInput', () => {
       const result = renderWithProviders(<OTPInput name="otp" />);
 
       const inputs = result.container.querySelectorAll('input');
-      expect(inputs.length).toBe(6); // default length is 6
+      expect(inputs).toHaveLength(6); // default length is 6
     });
 
     it('should render with custom length', () => {
-      const result = renderWithProviders(<OTPInput name="otp" length={6} />);
+      const result = renderWithProviders(
+        <OTPInput
+          name="otp"
+          length={6}
+        />,
+      );
 
       const inputs = result.container.querySelectorAll('input');
-      expect(inputs.length).toBe(6);
+      expect(inputs).toHaveLength(6);
     });
 
     it('should render with label', () => {
-      const result = renderWithProviders(<OTPInput name="otp" label="Enter OTP" />);
+      const result = renderWithProviders(
+        <OTPInput
+          name="otp"
+          label="Enter OTP"
+        />,
+      );
 
       // React Native Web renders labels differently
       const labelElement =
@@ -40,7 +52,12 @@ describe('OTPInput', () => {
     });
 
     it('should render with helper text', () => {
-      const result = renderWithProviders(<OTPInput name="otp" helperText="Enter the code sent to your phone" />);
+      const result = renderWithProviders(
+        <OTPInput
+          name="otp"
+          helperText="Enter the code sent to your phone"
+        />,
+      );
 
       expect(result.findTextElement('Enter the code sent to your phone')).toBeDefined();
     });
@@ -124,7 +141,12 @@ describe('OTPInput', () => {
     });
 
     it('should only accept numeric input when type is number', async () => {
-      const result = renderWithProviders(<OTPInput name="otp" type="numeric" />);
+      const result = renderWithProviders(
+        <OTPInput
+          name="otp"
+          type="numeric"
+        />,
+      );
 
       const inputs = result.container.querySelectorAll('input');
 
@@ -148,7 +170,12 @@ describe('OTPInput', () => {
 
   describe('value handling', () => {
     it('should handle initial value', () => {
-      const result = renderWithProviders(<OTPInput name="otp" value="1234" />);
+      const result = renderWithProviders(
+        <OTPInput
+          name="otp"
+          value="1234"
+        />,
+      );
 
       const inputs = result.container.querySelectorAll('input');
 
@@ -159,7 +186,12 @@ describe('OTPInput', () => {
     });
 
     it('should handle partial value', () => {
-      const result = renderWithProviders(<OTPInput name="otp" value="12" />);
+      const result = renderWithProviders(
+        <OTPInput
+          name="otp"
+          value="12"
+        />,
+      );
 
       const inputs = result.container.querySelectorAll('input');
 
@@ -171,7 +203,12 @@ describe('OTPInput', () => {
 
     it('should handle onChange callback', async () => {
       const onChange = vi.fn();
-      const result = renderWithProviders(<OTPInput name="otp" onChange={onChange} />);
+      const result = renderWithProviders(
+        <OTPInput
+          name="otp"
+          onChange={onChange}
+        />,
+      );
 
       const inputs = result.container.querySelectorAll('input');
 
@@ -192,7 +229,13 @@ describe('OTPInput', () => {
 
     it('should handle onComplete callback', async () => {
       const onComplete = vi.fn();
-      const result = renderWithProviders(<OTPInput name="otp" length={4} onComplete={onComplete} />);
+      const result = renderWithProviders(
+        <OTPInput
+          name="otp"
+          length={4}
+          onComplete={onComplete}
+        />,
+      );
 
       const inputs = result.container.querySelectorAll('input');
 
@@ -216,7 +259,13 @@ describe('OTPInput', () => {
     });
 
     it('should clear value with clearable prop', async () => {
-      const result = renderWithProviders(<OTPInput name="otp" value="1234" clearable />);
+      const result = renderWithProviders(
+        <OTPInput
+          name="otp"
+          value="1234"
+          clearable
+        />,
+      );
 
       const clearButton = result.container.querySelector('[aria-label="Clear"]');
       expect(clearButton).toBeTruthy();
@@ -238,7 +287,12 @@ describe('OTPInput', () => {
 
   describe('styling and theming', () => {
     it('should apply custom separator', () => {
-      const result = renderWithProviders(<OTPInput name="otp" separator="-" />);
+      const result = renderWithProviders(
+        <OTPInput
+          name="otp"
+          separator="-"
+        />,
+      );
 
       // Check for separator text
       const separators = Array.from(result.container.querySelectorAll('*')).filter(
@@ -253,7 +307,10 @@ describe('OTPInput', () => {
       it('should handle value prop', () => {
         const result = renderWithProviders(
           <Form formOptions={{ defaultValues: { otp: '' } }}>
-            <OTPInput name="otp" value="5678" />
+            <OTPInput
+              name="otp"
+              value="5678"
+            />
           </Form>,
         );
 
@@ -267,22 +324,20 @@ describe('OTPInput', () => {
 
       it('should update form value', async () => {
         const onSubmit = vi.fn();
-        const FormExample = () => {
-          return (
-            <Form
-              formOptions={{
-                defaultValues: {
-                  otp: '',
-                },
-              }}
-              onSubmit={async (value) => {
-                await onSubmit(value);
-              }}>
-              <OTPInput name="otp" />
-              <Button action="submit">Submit</Button>
-            </Form>
-          );
-        };
+        const FormExample = () => (
+          <Form
+            formOptions={{
+              defaultValues: {
+                otp: '',
+              },
+            }}
+            onSubmit={async (value) => {
+              await onSubmit(value);
+            }}>
+            <OTPInput name="otp" />
+            <Button action="submit">Submit</Button>
+          </Form>
+        );
 
         const result = renderWithProviders(<FormExample />);
 
@@ -311,22 +366,20 @@ describe('OTPInput', () => {
 
       it('should handle partial input and submit', async () => {
         const onSubmit = vi.fn();
-        const FormExample = () => {
-          return (
-            <Form
-              formOptions={{
-                defaultValues: {
-                  otp: '1234',
-                },
-              }}
-              onSubmit={async (value) => {
-                await onSubmit(value);
-              }}>
-              <OTPInput name="otp" />
-              <Button action="submit">Submit</Button>
-            </Form>
-          );
-        };
+        const FormExample = () => (
+          <Form
+            formOptions={{
+              defaultValues: {
+                otp: '1234',
+              },
+            }}
+            onSubmit={async (value) => {
+              await onSubmit(value);
+            }}>
+            <OTPInput name="otp" />
+            <Button action="submit">Submit</Button>
+          </Form>
+        );
 
         const result = renderWithProviders(<FormExample />);
 
@@ -368,7 +421,11 @@ describe('OTPInput', () => {
 
           return (
             <Form form={form}>
-              <OTPInput label="Verification Code" name="verificationCode" length={6} />
+              <OTPInput
+                label="Verification Code"
+                name="verificationCode"
+                length={6}
+              />
               <Button action="submit">Verify</Button>
             </Form>
           );
@@ -409,7 +466,10 @@ describe('OTPInput', () => {
     it('should handle field with errors', () => {
       const result = renderWithProviders(
         <TestProviders>
-          <OTPInput name="otp" error="Invalid OTP" />
+          <OTPInput
+            name="otp"
+            error="Invalid OTP"
+          />
         </TestProviders>,
       );
 
@@ -420,7 +480,12 @@ describe('OTPInput', () => {
 
   describe('input types', () => {
     it('should accept alphanumeric characters when type is alphanumeric', async () => {
-      const result = renderWithProviders(<OTPInput name="otp" type="alphanumeric" />);
+      const result = renderWithProviders(
+        <OTPInput
+          name="otp"
+          type="alphanumeric"
+        />,
+      );
       const inputs = result.container.querySelectorAll('input');
 
       await act(async () => {
@@ -433,7 +498,13 @@ describe('OTPInput', () => {
 
   describe('accessibility', () => {
     it('should have proper ARIA attributes', () => {
-      const result = renderWithProviders(<OTPInput name="otp" label="Verification Code" required />);
+      const result = renderWithProviders(
+        <OTPInput
+          name="otp"
+          label="Verification Code"
+          required
+        />,
+      );
 
       const inputs = result.container.querySelectorAll('input');
       expect(inputs.length).toBeGreaterThan(0);
@@ -469,7 +540,13 @@ describe('OTPInput', () => {
 
   describe('edge cases', () => {
     it('should handle very long initial value', () => {
-      const result = renderWithProviders(<OTPInput name="otp" value="123456789" length={4} />);
+      const result = renderWithProviders(
+        <OTPInput
+          name="otp"
+          value="123456789"
+          length={4}
+        />,
+      );
 
       const inputs = result.container.querySelectorAll('input');
 
@@ -495,7 +572,12 @@ describe('OTPInput', () => {
 
     it('should handle rapid input changes', async () => {
       const onChange = vi.fn();
-      const result = renderWithProviders(<OTPInput name="otp" onChange={onChange} />);
+      const result = renderWithProviders(
+        <OTPInput
+          name="otp"
+          onChange={onChange}
+        />,
+      );
 
       const inputs = result.container.querySelectorAll('input');
 
@@ -511,7 +593,12 @@ describe('OTPInput', () => {
     });
 
     it('should handle special characters', async () => {
-      const result = renderWithProviders(<OTPInput name="otp" type="alphanumeric" />);
+      const result = renderWithProviders(
+        <OTPInput
+          name="otp"
+          type="alphanumeric"
+        />,
+      );
 
       const inputs = result.container.querySelectorAll('input');
 
@@ -527,7 +614,12 @@ describe('OTPInput', () => {
 
   describe('disabled state', () => {
     it('should handle disabled prop', () => {
-      const result = renderWithProviders(<OTPInput name="otp" disabled />);
+      const result = renderWithProviders(
+        <OTPInput
+          name="otp"
+          disabled
+        />,
+      );
 
       const inputs = result.container.querySelectorAll('input');
       inputs.forEach((input) => {
@@ -540,7 +632,12 @@ describe('OTPInput', () => {
 
   describe('form validation', () => {
     it('should show error state', () => {
-      const result = renderWithProviders(<OTPInput name="otp" error="Code is required" />);
+      const result = renderWithProviders(
+        <OTPInput
+          name="otp"
+          error="Code is required"
+        />,
+      );
 
       const errorElement = Array.from(result.container.querySelectorAll('*')).find((el) =>
         (el as HTMLElement).textContent?.includes('Code is required'),
@@ -549,7 +646,13 @@ describe('OTPInput', () => {
     });
 
     it('should show required indicator', () => {
-      const result = renderWithProviders(<OTPInput name="otp" label="Code" required />);
+      const result = renderWithProviders(
+        <OTPInput
+          name="otp"
+          label="Code"
+          required
+        />,
+      );
 
       // Look for asterisk or required indicator
       const labelElement = Array.from(result.container.querySelectorAll('*')).find(
@@ -561,15 +664,25 @@ describe('OTPInput', () => {
 
   describe('performance', () => {
     it('should handle large length efficiently', () => {
-      const result = renderWithProviders(<OTPInput name="otp" length={10} />);
+      const result = renderWithProviders(
+        <OTPInput
+          name="otp"
+          length={10}
+        />,
+      );
 
       const inputs = result.container.querySelectorAll('input');
-      expect(inputs.length).toBe(10);
+      expect(inputs).toHaveLength(10);
     });
 
     it('should debounce onChange calls', async () => {
       const onChange = vi.fn();
-      const result = renderWithProviders(<OTPInput name="otp" onChange={onChange} />);
+      const result = renderWithProviders(
+        <OTPInput
+          name="otp"
+          onChange={onChange}
+        />,
+      );
 
       const inputs = result.container.querySelectorAll('input');
 
@@ -589,11 +702,14 @@ describe('OTPInput', () => {
     it('should render all digits in small container', () => {
       const result = renderWithProviders(
         <div style={{ width: 220 }}>
-          <OTPInput name="otp" length={6} />
+          <OTPInput
+            name="otp"
+            length={6}
+          />
         </div>,
       );
       const inputs = result.container.querySelectorAll('input');
-      expect(inputs.length).toBe(6);
+      expect(inputs).toHaveLength(6);
     });
   });
 
@@ -606,7 +722,12 @@ describe('OTPInput', () => {
 
     it('fills all cells when the first cell receives the whole code', async () => {
       const onChange = vi.fn();
-      const result = renderWithProviders(<OTPInput name="otp" onChange={onChange} />);
+      const result = renderWithProviders(
+        <OTPInput
+          name="otp"
+          onChange={onChange}
+        />,
+      );
       const inputs = result.container.querySelectorAll('input');
 
       await act(async () => {
@@ -622,7 +743,12 @@ describe('OTPInput', () => {
 
     it('pastes a code out of an SMS sentence', async () => {
       const onChange = vi.fn();
-      const result = renderWithProviders(<OTPInput name="otp" onChange={onChange} />);
+      const result = renderWithProviders(
+        <OTPInput
+          name="otp"
+          onChange={onChange}
+        />,
+      );
       const inputs = result.container.querySelectorAll('input');
       const clipboardData = {
         getData: (type?: string) =>
@@ -639,15 +765,31 @@ describe('OTPInput', () => {
     });
 
     it('keeps six cells when grouping 3+3', () => {
-      const result = renderWithProviders(<OTPInput name="otp" length={6} />);
-      expect(result.container.querySelectorAll('input').length).toBe(6);
+      const result = renderWithProviders(
+        <OTPInput
+          name="otp"
+          length={6}
+        />,
+      );
+      expect(result.container.querySelectorAll('input')).toHaveLength(6);
     });
 
     it('hides the clear control until a digit is entered', () => {
-      const empty = renderWithProviders(<OTPInput name="otp" clearable />);
+      const empty = renderWithProviders(
+        <OTPInput
+          name="otp"
+          clearable
+        />,
+      );
       expect(empty.container.querySelector('[aria-label="Clear"]')).toBeFalsy();
 
-      const filled = renderWithProviders(<OTPInput name="otp" value="12" clearable />);
+      const filled = renderWithProviders(
+        <OTPInput
+          name="otp"
+          value="12"
+          clearable
+        />,
+      );
       expect(filled.container.querySelector('[aria-label="Clear"]')).toBeTruthy();
     });
   });
@@ -665,11 +807,11 @@ describe('OTPInput', () => {
         .split(/\s+/)
         .find((c) => c.startsWith('_btlr-') || /^_br\d/.test(c) || c.startsWith('_br-'));
       if (atom) {
-        const px = atom.match(/(\d+(?:\.\d+)?)px$/);
+        const px = /(\d+(?:\.\d+)?)px$/.exec(atom);
         if (px) {
           return Number.parseFloat(px[1]);
         }
-        const token = atom.match(/t-radius-(\d+)$/);
+        const token = /t-radius-(\d+)$/.exec(atom);
         if (token) {
           const tokenPx: Record<string, number> = {
             '0': 0,

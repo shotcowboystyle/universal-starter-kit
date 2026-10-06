@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { Separator, Text, View, XStack, YStack, useMedia } from 'tamagui';
 
-import { formCommonColors, formInputColors } from '../../shared/colorRamps';
+import { formCommonColors, formInputColors } from '../../shared/color-ramps';
 import { t } from '../../shared/t';
 
 import {
@@ -277,13 +277,14 @@ export function Calendar({
       }
 
       switch (mode) {
-        case 'single':
+        case 'single': {
           setSelectedDates([date]);
           break;
+        }
 
         case 'multiple': {
           const existing = selectedDates.findIndex((d) => isSameDay(d, date));
-          if (existing >= 0) {
+          if (existing !== -1) {
             setSelectedDates(selectedDates.filter((_, i) => i !== existing));
           } else if (selectedDates.length < limit) {
             setSelectedDates([...selectedDates, date].sort((a, b) => a.getTime() - b.getTime()));
@@ -358,7 +359,10 @@ export function Calendar({
                 handleModeChange(m);
               }}
               data-nested-px={px}>
-              <Text {...knobProps.label} {...knobProps.textWeight} fontWeight={mode === m ? '600' : '400'}>
+              <Text
+                {...knobProps.label}
+                {...knobProps.textWeight}
+                fontWeight={mode === m ? '600' : '400'}>
                 {m === 'range' ? t('Range') : m === 'single' ? t('Single') : t('Multiple')}
               </Text>
             </View>

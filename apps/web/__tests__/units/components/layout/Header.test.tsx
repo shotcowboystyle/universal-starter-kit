@@ -39,6 +39,6 @@ describe('Header', () => {
     const onToggleSidebar = vi.fn();
     renderWithProviders(<Header onToggleSidebar={onToggleSidebar} />);
     fireEvent.click(screen.getByRole('button', { name: 'Toggle sidebar' }));
-    expect(onToggleSidebar).toHaveBeenCalledTimes(1);
+    expect(onToggleSidebar).toHaveBeenCalledOnce();
   });
 });

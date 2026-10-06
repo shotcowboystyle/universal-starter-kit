@@ -5,7 +5,7 @@ import { RadioGroup } from './index';
 
 // Mock tamagui's isWeb so the native branch runs on the test host
 // renderer, then read the React Native prop names back off the DOM. The state
-// object itself is pinned in shared/nativeA11y.test.ts — the host stringifies
+// object itself is pinned in shared/native-a-11y.test.ts — the host stringifies
 // it — so what this file proves is that the component reaches the helper with
 // the right role and the right name.
 vi.mock('tamagui', async (importOriginal) => ({
@@ -27,7 +27,13 @@ const names = (container: HTMLElement) =>
 
 describe('native RadioGroup accessibility contract', () => {
   it('makes every option a named control instead of bare StaticText', () => {
-    const { container } = renderWithProviders(<RadioGroup label="Phase" options={phase} value="DEBITS" />);
+    const { container } = renderWithProviders(
+      <RadioGroup
+        label="Phase"
+        options={phase}
+        value="DEBITS"
+      />,
+    );
     expect(names(container)).toEqual([
       ['button', 'CREDITS'],
       ['button', 'DEBITS'],
@@ -36,18 +42,33 @@ describe('native RadioGroup accessibility contract', () => {
   });
 
   it('prefixes a group accessibilityLabel onto each option, because iOS never reads a container', () => {
-    const { container } = renderWithProviders(<RadioGroup accessibilityLabel="Phase" options={phase} value="DEBITS" />);
+    const { container } = renderWithProviders(
+      <RadioGroup
+        accessibilityLabel="Phase"
+        options={phase}
+        value="DEBITS"
+      />,
+    );
     expect(names(container)).toContainEqual(['button', 'Phase, DEBITS']);
   });
 
   it('takes aria-label as an alias, since tamagui never maps it onto native', () => {
-    const { container } = renderWithProviders(<RadioGroup aria-label="Phase" options={phase} value="DEBITS" />);
+    const { container } = renderWithProviders(
+      <RadioGroup
+        aria-label="Phase"
+        options={phase}
+        value="DEBITS"
+      />,
+    );
     expect(names(container)).toContainEqual(['button', 'Phase, DEBITS']);
   });
 
   it('lets an option override its own name', () => {
     const { container } = renderWithProviders(
-      <RadioGroup options={[{ label: '▲', value: 'up', accessibilityLabel: 'Increasing' }]} value="up" />,
+      <RadioGroup
+        options={[{ label: '▲', value: 'up', accessibilityLabel: 'Increasing' }]}
+        value="up"
+      />,
     );
     expect(names(container)).toEqual([['button', 'Increasing']]);
   });

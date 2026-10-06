@@ -1,11 +1,12 @@
-import { useTouchSurface } from '@repo/theme';
-import { formatAbsoluteDate, useResolvedKnobs } from '@repo/theme';
+import { useTouchSurface, formatAbsoluteDate, useResolvedKnobs } from '@repo/theme';
 import type { DeepKeys, DeepValue } from '@tanstack/form-core';
-import { type ComponentProps, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { type Popover, type SizeTokens, Separator, View, useMedia, useProps } from 'tamagui';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ComponentProps } from 'react';
+import { Separator, View, useMedia, useProps } from 'tamagui';
+import type { Popover, SizeTokens } from 'tamagui';
 
-import { Field, FieldLayout } from '../../fieldLayout';
-import type { FormFieldProps } from '../../fieldLayout';
+import { Field, FieldLayout } from '../../FieldLayout';
+import type { FormFieldProps } from '../../FieldLayout';
 import { Input as InputParts } from '../../InputParts';
 import { t } from '../../shared/t';
 import {
@@ -18,7 +19,7 @@ import {
 import { Skeleton } from '../../Skeleton';
 import type { FieldComponentProps, Validator } from '../../types';
 
-import { FieldValueSync } from './fieldValueSync';
+import { FieldValueSync } from './FieldValueSync';
 import {
   CalendarDays,
   CalendarHeader,
@@ -246,7 +247,9 @@ function DualCalendarBody({
   }
 
   return (
-    <View flexDirection="row" {...knobProps.gap}>
+    <View
+      flexDirection="row"
+      {...knobProps.gap}>
       <SingleCalendar
         displayDate={prevMonthDate}
         selectedDates={selectedDates}
@@ -393,10 +396,10 @@ export function MultiDatePicker<
         return;
       }
 
-      const current = selectedDatesRef.current;
+      const { current } = selectedDatesRef;
       const existing = current.findIndex((d) => isSameDay(d, date));
       let next: Date[];
-      if (existing >= 0) {
+      if (existing !== -1) {
         next = current.filter((_, i) => i !== existing);
       } else {
         if (current.length >= limit) {
@@ -498,9 +501,18 @@ export function MultiDatePicker<
   // Render skeleton placeholder (after all hooks)
   if (skeleton) {
     return (
-      <FieldLayout id={id} label={label} size={size} knobProps={knobProps}>
+      <FieldLayout
+        id={id}
+        label={label}
+        size={size}
+        knobProps={knobProps}>
         <InputParts size={resolvedSize}>
-          <Skeleton variant="rounded" width="100%" height={visualHeight} data-multidate-skeleton="" />
+          <Skeleton
+            variant="rounded"
+            width="100%"
+            height={visualHeight}
+            data-multidate-skeleton=""
+          />
         </InputParts>
       </FieldLayout>
     );
@@ -540,7 +552,10 @@ export function MultiDatePicker<
           <>
             {/* Form branch displays from `selectedDates` — keep it synced to
                 the live field value (late seeds / programmatic updates). */}
-            <FieldValueSync value={field.state.value} onSync={adoptExternalValue} />
+            <FieldValueSync
+              value={field.state.value}
+              onSync={adoptExternalValue}
+            />
             <FieldLayout
               id={id}
               label={label}

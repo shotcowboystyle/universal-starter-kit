@@ -9,7 +9,8 @@ import { cleanup, fireEvent, screen } from '@testing-library/react';
 import * as React from 'react';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
-import { Calendar, type CalendarEvent } from './Calendar';
+import { Calendar } from './Calendar';
+import type { CalendarEvent } from './Calendar';
 
 afterEach(cleanup);
 
@@ -17,6 +18,7 @@ const ORIGINAL_TZ = process.env.TZ;
 beforeAll(() => {
   process.env.TZ = 'Asia/Kolkata';
 });
+
 afterAll(() => {
   if (ORIGINAL_TZ === undefined) {
     delete process.env.TZ;
@@ -35,7 +37,14 @@ describe('Calendar TZ + month-boundary fixes', () => {
         color: '#3B82F6',
       },
     ];
-    renderWithProviders(<Calendar events={events} viewType="month" initialDate={new Date(2026, 2, 15)} height={600} />);
+    renderWithProviders(
+      <Calendar
+        events={events}
+        viewType="month"
+        initialDate={new Date(2026, 2, 15)}
+        height={600}
+      />,
+    );
     const badge = screen.getByText('Team Standup');
     // walk up to the day cell and find the day-number text inside it
     let el: HTMLElement | null = badge.parentElement;
@@ -57,7 +66,14 @@ describe('Calendar TZ + month-boundary fixes', () => {
   });
 
   it('SB-M-306: prev/next step months by exactly 1 from a day-31 date', () => {
-    renderWithProviders(<Calendar events={[]} viewType="month" initialDate={new Date(2026, 2, 31)} height={600} />);
+    renderWithProviders(
+      <Calendar
+        events={[]}
+        viewType="month"
+        initialDate={new Date(2026, 2, 31)}
+        height={600}
+      />,
+    );
     // After navigation the period name legitimately appears twice: the header
     // title and the aria-live announcement (Axiom 12) — assert presence, not
     // uniqueness (same pattern as Calendar.motion.test.tsx).

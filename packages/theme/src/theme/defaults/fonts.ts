@@ -3,10 +3,11 @@ import { createInterFont } from '@tamagui/font-inter';
 // `@tamagui/web`, not `tamagui`: createDefaultThemeConfig.test.ts mocks the
 // whole `tamagui` module down to `createTamagui`, and this module is on that
 // spec's import graph.
-import { createFont, type GenericFont } from '@tamagui/web';
+import { createFont } from '@tamagui/web';
+import type { GenericFont } from '@tamagui/web';
 
-import { flooredLineHeight, fontCategoryMetrics } from '../fontCategoryMetrics';
-import { fontCategoryStacks } from '../fontCategoryStacks';
+import { flooredLineHeight, fontCategoryMetrics } from '../font-category-metrics';
+import { fontCategoryStacks } from '../font-category-stacks';
 import type { FontCategory } from '../knobs';
 
 // Default purpose fonts for components that reference $heading / $body
@@ -159,7 +160,7 @@ const interFaces = {
 
 /**
  * Concrete family stacks for each `headingFont`/`bodyFont` category. Alias of
- * the one table in `fontCategoryStacks.ts`, which `FontKnobStyles` also reads
+ * the one table in `font-category-stacks.ts`, which `FontKnobStyles` also reads
  * for its `--f-family` fallback — one stop cannot render two faces.
  */
 export const fontFamilyStacks = fontCategoryStacks;

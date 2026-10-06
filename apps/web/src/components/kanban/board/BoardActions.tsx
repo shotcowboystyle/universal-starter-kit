@@ -5,12 +5,12 @@ import { MoreHorizontal } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import React from 'react';
 import { toast } from 'sonner';
-import { z } from 'zod';
+import type { z } from 'zod';
 
 import { useRouter } from '@/i18n/navigation';
 import { useDeleteBoard, useUpdateBoard } from '@/lib/api/boards/queries';
-import { boardSchema } from '@/types/boardForm';
-import { Board } from '@/types/dbInterface';
+import type { boardSchema } from '@/types/board-form';
+import type { Board } from '@/types/db-interface';
 
 import { BoardForm } from './BoardForm';
 
@@ -115,10 +115,17 @@ export function BoardActions({ board, onDelete, children }: BoardActionsProps) {
 
   return (
     <>
-      <Dialog modal open={editEnable} onOpenChange={setEditEnable}>
+      <Dialog
+        modal
+        open={editEnable}
+        onOpenChange={setEditEnable}>
         <Dialog.Portal>
           <DialogOverlay key="overlay" />
-          <DialogContent key="content" maxWidth={448} width="90%" testID="edit-board-dialog">
+          <DialogContent
+            key="content"
+            maxWidth={448}
+            width="90%"
+            testID="edit-board-dialog">
             <Dialog.Title size="$7">{t('editBoardTitle')}</Dialog.Title>
             <Dialog.Description>{t('editBoardDescription')}</Dialog.Description>
             <BoardForm
@@ -127,11 +134,17 @@ export function BoardActions({ board, onDelete, children }: BoardActionsProps) {
                 description: board.description || '',
               }}
               onSubmit={onSubmit}>
-              <XStack justifyContent="flex-end" gap="$2">
+              <XStack
+                justifyContent="flex-end"
+                gap="$2">
                 <Dialog.Close asChild>
                   <Button outlined>{t('cancel')}</Button>
                 </Dialog.Close>
-                <Button accent action="submit" loading={isSubmitting} testID="save-board-button">
+                <Button
+                  accent
+                  action="submit"
+                  loading={isSubmitting}
+                  testID="save-board-button">
                   {isSubmitting ? t('saving') : t('saveChanges')}
                 </Button>
               </XStack>

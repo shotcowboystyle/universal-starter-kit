@@ -63,7 +63,9 @@ describe('Button density ≠ size', () => {
       resolveButtonSizeRecipe('$4', 'control').height,
     );
     renderWithProviders(
-      <Button compact size="$4">
+      <Button
+        compact
+        size="$4">
         Save
       </Button>,
     );
@@ -85,7 +87,10 @@ describe('Button density ≠ size', () => {
 describe('Button nested scale', () => {
   it('paints nestedControl and does not grow circular chrome to 44', () => {
     renderWithProviders(
-      <Button nested circular aria-label="day">
+      <Button
+        nested
+        circular
+        aria-label="day">
         12
       </Button>,
     );
@@ -99,7 +104,10 @@ describe('Button nested scale', () => {
   it('pads a nested circle 0, so its label fits the 32px box', () => {
     renderWithProviders(
       <>
-        <Button nested circular aria-label="day">
+        <Button
+          nested
+          circular
+          aria-label="day">
           12
         </Button>
         <Button nested>Nested</Button>
@@ -117,7 +125,9 @@ describe('Button nested scale', () => {
 describe('Button RING-ANATOMY + selected fill', () => {
   it('selected is fill (aria-pressed) not an extra outline', () => {
     renderWithProviders(
-      <Button outlined selected>
+      <Button
+        outlined
+        selected>
         On
       </Button>,
     );
@@ -137,6 +147,6 @@ describe('Button RING-ANATOMY + selected fill', () => {
     renderWithProviders(<Button onPress={onPress}>Save</Button>);
     const frame = screen.getByRole('button');
     fireEvent.keyDown(frame, { key: 'Enter' });
-    expect(onPress).toHaveBeenCalledTimes(1);
+    expect(onPress).toHaveBeenCalledOnce();
   });
 });

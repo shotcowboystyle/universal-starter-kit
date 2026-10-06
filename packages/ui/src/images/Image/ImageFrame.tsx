@@ -6,9 +6,8 @@ import {
   stackRadiusProps,
   useGroupPosition,
   useResolvedKnobs,
-  type GroupOrientation,
-  type GroupPosition,
 } from '@repo/theme';
+import type { GroupOrientation, GroupPosition } from '@repo/theme';
 import type { ReactNode } from 'react';
 import { Image as TamaguiImage, View, isWeb } from 'tamagui';
 
@@ -62,7 +61,10 @@ function DefaultFallback({ px }: { px: number }) {
       alignItems="center"
       justifyContent="center"
       backgroundColor="$color3">
-      <ImageIcon size={glyphSize(px)} color={knobProps.textAccentColor} />
+      <ImageIcon
+        size={glyphSize(px)}
+        color={knobProps.textAccentColor}
+      />
     </View>
   );
 }
@@ -201,7 +203,13 @@ export function ImageFrame({
         <>
           {children}
           {showPlaceholder ? (
-            <View position="absolute" top={0} left={0} right={0} bottom={0} pointerEvents="none">
+            <View
+              position="absolute"
+              top={0}
+              left={0}
+              right={0}
+              bottom={0}
+              pointerEvents="none">
               {placeholder === 'blur' && placeholderSrc ? (
                 <TamaguiImage
                   src={placeholderSrc}
@@ -212,7 +220,11 @@ export function ImageFrame({
                   {...(isWeb ? { style: { filter: 'blur(12px)' } } : { blurRadius: 12 })}
                 />
               ) : placeholder === 'blur' || placeholder === 'skeleton' ? (
-                <Skeleton width="100%" height="100%" variant="rounded" />
+                <Skeleton
+                  width="100%"
+                  height="100%"
+                  variant="rounded"
+                />
               ) : (
                 placeholder
               )}
@@ -225,7 +237,11 @@ export function ImageFrame({
 
   if (isWeb && needsHitSlop) {
     return (
-      <View alignItems="center" justifyContent="center" backgroundColor="transparent" {...pressTargetStyle()}>
+      <View
+        alignItems="center"
+        justifyContent="center"
+        backgroundColor="transparent"
+        {...pressTargetStyle()}>
         {painted}
       </View>
     );
@@ -252,7 +268,7 @@ export function mediaFillProps(opts: {
   const heightOnly =
     opts.height != null && opts.width == null && opts.aspectRatio == null && !opts.fill && !opts.thumbnail;
   return {
-    width: constrained ? '100%' : heightOnly ? 'auto' : opts.width != null ? '100%' : undefined,
+    width: constrained ? '100%' : heightOnly ? 'auto' : opts.width == null ? undefined : '100%',
     height: constrained ? '100%' : heightOnly ? '100%' : undefined,
     objectFit: opts.objectFit,
     ...(opts.objectPosition ? { objectPosition: opts.objectPosition } : null),

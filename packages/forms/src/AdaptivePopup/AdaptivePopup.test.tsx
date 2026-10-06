@@ -1,7 +1,8 @@
 import { modelFirstFocusableShow, renderWithProviders } from '@repo/test-utils';
 import { OVERLAY_BREAKPOINT } from '@repo/theme';
 import { fireEvent, waitFor } from '@testing-library/react';
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
+import type { ReactNode } from 'react';
 import { Text } from 'tamagui';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -107,14 +108,24 @@ describe('AdaptivePopup trigger', () => {
   });
 
   it('disabled: a pressable trigger opens nothing', async () => {
-    const result = renderWithProviders(<Harness trigger={<Button>Open Popup</Button>} disabled />);
+    const result = renderWithProviders(
+      <Harness
+        trigger={<Button>Open Popup</Button>}
+        disabled
+      />,
+    );
     press(result.container.querySelector("[role='button']") as Element);
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(dialog()).toBeNull();
   });
 
   it('disabled: keyboard activation opens nothing', async () => {
-    const result = renderWithProviders(<Harness trigger={<Button>Open Popup</Button>} disabled />);
+    const result = renderWithProviders(
+      <Harness
+        trigger={<Button>Open Popup</Button>}
+        disabled
+      />,
+    );
     fireEvent.keyDown(result.container.querySelector("[role='button']") as Element, {
       key: 'Enter',
     });
@@ -168,7 +179,11 @@ describe('AdaptivePopup focus ring', () => {
     function FieldHarness() {
       const [open, setOpen] = useState(false);
       return (
-        <AdaptivePopup open={open} onOpenChange={setOpen} title="Edit Profile" trigger={<Button>Open Popup</Button>}>
+        <AdaptivePopup
+          open={open}
+          onOpenChange={setOpen}
+          title="Edit Profile"
+          trigger={<Button>Open Popup</Button>}>
           <input aria-label="Name" />
         </AdaptivePopup>
       );
@@ -209,7 +224,10 @@ describe('AdaptivePopup focus ring', () => {
     function Untitled() {
       const [open, setOpen] = useState(false);
       return (
-        <AdaptivePopup open={open} onOpenChange={setOpen} trigger={<Button>Open Popup</Button>}>
+        <AdaptivePopup
+          open={open}
+          onOpenChange={setOpen}
+          trigger={<Button>Open Popup</Button>}>
           <Text>body</Text>
         </AdaptivePopup>
       );
@@ -341,7 +359,12 @@ describe('AdaptivePopup face pick (same props, three faces)', () => {
 
   it('size=fullscreen above 640 stays dialog even with face=drawer', async () => {
     setViewportWidth(1440);
-    renderWithProviders(<OpenPopup face="drawer" size="fullscreen" />);
+    renderWithProviders(
+      <OpenPopup
+        face="drawer"
+        size="fullscreen"
+      />,
+    );
     await waitFor(() => {
       expect(surface()).not.toBeNull();
     });
@@ -428,7 +451,12 @@ describe('AdaptivePopup drawer contract (overlay ground)', () => {
   it('width follows sizeToWidth (sm 400 / md 600 / lg 800 / xl 1000)', async () => {
     const widths = { sm: '400', md: '600', lg: '800', xl: '1000' } as const;
     for (const [size, width] of Object.entries(widths)) {
-      const { unmount } = renderWithProviders(<OpenPopup face="drawer" size={size as keyof typeof widths} />);
+      const { unmount } = renderWithProviders(
+        <OpenPopup
+          face="drawer"
+          size={size as keyof typeof widths}
+        />,
+      );
       await waitFor(() => {
         expect(surface()).not.toBeNull();
       });

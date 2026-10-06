@@ -22,7 +22,12 @@ describe('MinusRegular', () => {
   });
 
   it('should accept custom color and size', () => {
-    const { container } = renderWithProviders(<MinusRegular color="red" size={48} />);
+    const { container } = renderWithProviders(
+      <MinusRegular
+        color="red"
+        size={48}
+      />,
+    );
     const line = container.querySelector('line');
     const svg = container.querySelector('svg');
     expect(line).toHaveAttribute('stroke', 'red');

@@ -15,10 +15,10 @@ import { useState } from 'react';
 import type { LabelProps, SizeTokens } from 'tamagui';
 import { SizableText, ToggleGroup as TamaguiToggleGroup, View, isWeb, styled } from 'tamagui';
 
-import { Field, FieldLayout } from '../../fieldLayout';
-import { formButtonColors, formCommonColors, formInputColors } from '../../shared/colorRamps';
-import { warnBareDisabled } from '../../shared/devWarn';
-import { choiceItemA11y, composeA11yName } from '../../shared/nativeA11y';
+import { Field, FieldLayout } from '../../FieldLayout';
+import { formButtonColors, formCommonColors, formInputColors } from '../../shared/color-ramps';
+import { warnBareDisabled } from '../../shared/dev-warn';
+import { choiceItemA11y, composeA11yName } from '../../shared/native-a-11y';
 import {
   getElevationWrapperProps,
   getFieldError,
@@ -66,7 +66,7 @@ const SEGMENT_MOTION_MS: Record<string, number> = {
 /** State recipes may carry border/outline; segments accept FILL only. */
 function segmentFillState(props: { backgroundColor?: unknown } | undefined): { backgroundColor: unknown } | undefined {
   const backgroundColor = props?.backgroundColor;
-  return backgroundColor != null ? { backgroundColor } : undefined;
+  return backgroundColor == null ? undefined : { backgroundColor };
 }
 
 function ToggleItemWithElevation({
@@ -84,12 +84,25 @@ function ToggleItemWithElevation({
     // borders, so the wrapper lays out along the row in BOTH
     // orientations and inherits the segment's place in the run.
     return (
-      <View {...elevationWrapperProps} {...groupedRadius} flexDirection="row" flexGrow={1} flexShrink={0}>
-        <ToggleItemFrame {...props} {...groupedRadius} />
+      <View
+        {...elevationWrapperProps}
+        {...groupedRadius}
+        flexDirection="row"
+        flexGrow={1}
+        flexShrink={0}>
+        <ToggleItemFrame
+          {...props}
+          {...groupedRadius}
+        />
       </View>
     );
   }
-  return <ToggleItemFrame {...props} {...groupedRadius} />;
+  return (
+    <ToggleItemFrame
+      {...props}
+      {...groupedRadius}
+    />
+  );
 }
 
 export interface ToggleGroupOption {
@@ -286,7 +299,7 @@ export function ToggleGroup({
       return undefined;
     }
     const index = uniqueItemReasons.indexOf(reason.trim());
-    return index >= 0 ? `${id}-item-reason-${index}` : undefined;
+    return index !== -1 ? `${id}-item-reason-${index}` : undefined;
   };
   const optionDisabledByValue = (val: string) => Boolean(options?.find((o) => o.value === val)?.disabled);
 
@@ -296,7 +309,11 @@ export function ToggleGroup({
     const segmentH = knobProps.control.height;
     const segmentW = knobProps.control.paddingHorizontal * 2 + 40;
     return (
-      <FieldLayout id={id} label={label} size={size} knobProps={knobProps}>
+      <FieldLayout
+        id={id}
+        label={label}
+        size={size}
+        knobProps={knobProps}>
         <View
           flexDirection={orientation === 'vertical' ? 'column' : 'row'}
           alignSelf="flex-start"
@@ -304,7 +321,13 @@ export function ToggleGroup({
           {...knobProps.borderRadius}
           {...knobProps.inputSurface}>
           {Array.from({ length: optionCount }, (_, i) => (
-            <Skeleton key={i} variant="rectangular" width={segmentW} height={segmentH} data-mp-toggle-skeleton />
+            <Skeleton
+              key={i}
+              variant="rectangular"
+              width={segmentW}
+              height={segmentH}
+              data-mp-toggle-skeleton
+            />
           ))}
         </View>
       </FieldLayout>
@@ -333,7 +356,7 @@ export function ToggleGroup({
     const tabStopIndex =
       focusedIdx >= 0
         ? focusedIdx
-        : firstSelectedEnabled >= 0
+        : firstSelectedEnabled !== -1
           ? firstSelectedEnabled
           : options.findIndex((o) => !(disabled || o.disabled));
     return options.map((option, index) => {
@@ -444,17 +467,17 @@ export function ToggleGroup({
           // The SEGMENTS carry the semantics, never the frame — an
           // `accessible` frame would collapse them into one element and lose
           // which one is chosen, which is the only thing worth announcing.
-          {...(!isWeb
-            ? choiceItemA11y({
+          {...(isWeb
+            ? {
+                ...(option.accessibilityLabel ? { 'aria-label': option.accessibilityLabel } : undefined),
+              }
+            : choiceItemA11y({
                 kind: type === 'multiple' ? 'checkbox' : 'radio',
                 name: composeA11yName(groupA11yName, option.accessibilityLabel ?? option.label),
                 selected,
                 disabled: itemDisabled,
                 hint: option.accessibilityHint ?? accessibilityHint,
-              })
-            : {
-                ...(option.accessibilityLabel ? { 'aria-label': option.accessibilityLabel } : undefined),
-              })}>
+              }))}>
           {option.icon}
           <SizableText
             userSelect="none"
@@ -620,7 +643,11 @@ export function ToggleGroup({
   }
 
   return (
-    <Field form={resolvedForm} name={name} defaultValue={defaultValue} validators={resolvedValidators}>
+    <Field
+      form={resolvedForm}
+      name={name}
+      defaultValue={defaultValue}
+      validators={resolvedValidators}>
       {(field) => {
         const resolvedError = getFieldError(field, error);
         return (
@@ -636,7 +663,7 @@ export function ToggleGroup({
             // See standalone branch — FieldLayout carries dimWhole.
             disabled={disabled}>
             {renderToggleGroup(
-              value !== undefined ? value : field.state.value,
+              value === undefined ? field.state.value : value,
               true,
               (val) => {
                 field.handleChange(val as any);

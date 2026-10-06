@@ -12,9 +12,9 @@ import { View, XStack, isWeb } from 'tamagui';
 
 import { FloatingPanel } from '../../FloatingPanel';
 import { Input as InputParts } from '../../InputParts';
-import { formControlColors } from '../../shared/colorRamps';
+import { formControlColors } from '../../shared/color-ramps';
 import { t } from '../../shared/t';
-import { useIsInTableCell } from '../../shared/tableCellContext';
+import { useIsInTableCell } from '../../shared/table-cell-context';
 
 import { AlphaBackground, HueBackground, SaturationBackground } from './gradients';
 
@@ -38,36 +38,42 @@ export function hsvToRgb(h: number, s: number, v: number) {
   let b: number;
 
   switch (i % 6) {
-    case 0:
+    case 0: {
       r = v1;
       g = t;
       b = p;
       break;
-    case 1:
+    }
+    case 1: {
       r = q;
       g = v1;
       b = p;
       break;
-    case 2:
+    }
+    case 2: {
       r = p;
       g = v1;
       b = t;
       break;
-    case 3:
+    }
+    case 3: {
       r = p;
       g = q;
       b = v1;
       break;
-    case 4:
+    }
+    case 4: {
       r = t;
       g = p;
       b = v1;
       break;
-    default:
+    }
+    default: {
       r = v1;
       g = p;
       b = q;
       break;
+    }
   }
 
   return {
@@ -146,15 +152,18 @@ export function rgbToHsv(r: number, g: number, b: number): { h: number; s: numbe
 
   if (d !== 0) {
     switch (max) {
-      case r1:
+      case r1: {
         h = ((g1 - b1) / d + (g1 < b1 ? 6 : 0)) / 6;
         break;
-      case g1:
+      }
+      case g1: {
         h = ((b1 - r1) / d + 2) / 6;
         break;
-      case b1:
+      }
+      case b1: {
         h = ((r1 - g1) / d + 4) / 6;
         break;
+      }
     }
     h *= 360;
   }
@@ -328,7 +337,13 @@ function ColorHandle({
       padding={1}
       pointerEvents="none"
       zIndex={2}>
-      <View flex={1} borderRadius={inner} borderWidth={2} borderColor="#FFFFFF" backgroundColor={color} />
+      <View
+        flex={1}
+        borderRadius={inner}
+        borderWidth={2}
+        borderColor="#FFFFFF"
+        backgroundColor={color}
+      />
     </View>
   );
 }
@@ -396,21 +411,26 @@ function ColorRail({
       let next = ratio;
       switch (e.key) {
         case 'ArrowRight':
-        case 'ArrowDown':
+        case 'ArrowDown': {
           next = ratio + step;
           break;
+        }
         case 'ArrowLeft':
-        case 'ArrowUp':
+        case 'ArrowUp': {
           next = ratio - step;
           break;
-        case 'Home':
+        }
+        case 'Home': {
           next = 0;
           break;
-        case 'End':
+        }
+        case 'End': {
           next = wrap ? 0 : 1;
           break;
-        default:
+        }
+        default: {
           return;
+        }
       }
       e.preventDefault();
       if (wrap) {
@@ -485,7 +505,7 @@ export function SaturationPanel({ hue, saturation, value, onChangeSV, size = 192
   const { knobProps } = useResolvedKnobs({ compact: true });
   const panelRef = useRef<Measurable | null>(null);
   const handleSize = HANDLE_SIZE;
-  const pointy = knobProps.pointy;
+  const { pointy } = knobProps;
 
   const updateColor = useCallback(
     (clientX: number, clientY: number) => {
@@ -513,26 +533,33 @@ export function SaturationPanel({ hue, saturation, value, onChangeSV, size = 192
       let s = saturation;
       let v = value;
       switch (e.key) {
-        case 'ArrowRight':
+        case 'ArrowRight': {
           s = Math.min(100, s + step);
           break;
-        case 'ArrowLeft':
+        }
+        case 'ArrowLeft': {
           s = Math.max(0, s - step);
           break;
-        case 'ArrowUp':
+        }
+        case 'ArrowUp': {
           v = Math.min(100, v + step);
           break;
-        case 'ArrowDown':
+        }
+        case 'ArrowDown': {
           v = Math.max(0, v - step);
           break;
-        case 'Home':
+        }
+        case 'Home': {
           s = 0;
           break;
-        case 'End':
+        }
+        case 'End': {
           s = 100;
           break;
-        default:
+        }
+        default: {
           return;
+        }
       }
       e.preventDefault();
       onChangeSV(s, v);
@@ -573,9 +600,19 @@ export function SaturationPanel({ hue, saturation, value, onChangeSV, size = 192
         overflow="hidden"
         pointerEvents="none"
         borderRadius={knobProps.borderRadius.borderRadius}>
-        <SaturationBackground hueColor={hueColor} width={size} height={size} />
+        <SaturationBackground
+          hueColor={hueColor}
+          width={size}
+          height={size}
+        />
       </View>
-      <ColorHandle color={current} size={handleSize} x={thumbLeft} y={thumbTop} pointy={pointy} />
+      <ColorHandle
+        color={current}
+        size={handleSize}
+        x={thumbLeft}
+        y={thumbTop}
+        pointy={pointy}
+      />
     </View>
   );
 }
@@ -771,7 +808,12 @@ function SwatchItem({
           transform={[{ rotate: '45deg' }]}
         />
       )}
-      {isSelected ? <Check size={Math.round(size * 0.55)} color={mark ?? '#FFFFFF'} /> : null}
+      {isSelected ? (
+        <Check
+          size={Math.round(size * 0.55)}
+          color={mark ?? '#FFFFFF'}
+        />
+      ) : null}
     </View>
   );
 }
@@ -812,32 +854,39 @@ export function PresetSwatches({ presetColors, selectedColor, onSelect, width }:
         ? {
             onKeyDown: (e: ReactKeyboardEvent) => {
               switch (e.key) {
-                case 'ArrowRight':
+                case 'ArrowRight': {
                   e.preventDefault();
                   moveFocus(focusIndex + 1);
                   break;
-                case 'ArrowLeft':
+                }
+                case 'ArrowLeft': {
                   e.preventDefault();
                   moveFocus(focusIndex - 1);
                   break;
-                case 'ArrowDown':
+                }
+                case 'ArrowDown': {
                   e.preventDefault();
                   moveFocus(focusIndex + cols);
                   break;
-                case 'ArrowUp':
+                }
+                case 'ArrowUp': {
                   e.preventDefault();
                   moveFocus(focusIndex - cols);
                   break;
-                case 'Home':
+                }
+                case 'Home': {
                   e.preventDefault();
                   moveFocus(0);
                   break;
-                case 'End':
+                }
+                case 'End': {
                   e.preventDefault();
                   moveFocus(entries.length - 1);
                   break;
-                default:
+                }
+                default: {
                   break;
+                }
               }
             },
           }

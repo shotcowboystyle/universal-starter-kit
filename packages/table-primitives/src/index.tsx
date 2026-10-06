@@ -19,12 +19,12 @@ import {
   withStaticProperties,
 } from 'tamagui';
 
-import { TableCellContext } from './tableCellContext';
-import { wrapBareTextChildren } from './textRidesText';
+import { TableCellContext } from './table-cell-context';
+import { wrapBareTextChildren } from './text-rides-text';
 
-export { TableCellContext, useIsInTableCell, useTableCellContext } from './tableCellContext';
-export type { TableCellContextValue } from './tableCellContext';
-export { isBareTextChild, wrapBareTextChildren } from './textRidesText';
+export { TableCellContext, useIsInTableCell, useTableCellContext } from './table-cell-context';
+export type { TableCellContextValue } from './table-cell-context';
+export { isBareTextChild, wrapBareTextChildren } from './text-rides-text';
 
 interface AlignCells {
   y: 'center' | 'start' | 'end';
@@ -154,12 +154,10 @@ const Cell = styled(ThemeableStack, {
     },
     // Row-flex axis map: y → alignItems (vertical), x →
     // justifyContent (horizontal).
-    alignCells: (val: AlignCells) => {
-      return {
-        alignItems: val.y === 'center' ? 'center' : `flex-${val.y}`,
-        justifyContent: val.x === 'center' ? 'center' : `flex-${val.x}`,
-      };
-    },
+    alignCells: (val: AlignCells) => ({
+      alignItems: val.y === 'center' ? 'center' : `flex-${val.y}`,
+      justifyContent: val.x === 'center' ? 'center' : `flex-${val.x}`,
+    }),
     cellLocation: {
       first: () => ({}),
       last: () => ({}),
@@ -212,12 +210,10 @@ const HeaderCell = styled(ThemeableStack, {
     },
     // Row-flex axis map: y → alignItems (vertical), x →
     // justifyContent (horizontal).
-    alignHeaderCells: (val: AlignHeaderCells) => {
-      return {
-        alignItems: val.y === 'center' ? 'center' : `flex-${val.y}`,
-        justifyContent: val.x === 'center' ? 'center' : `flex-${val.x}`,
-      };
-    },
+    alignHeaderCells: (val: AlignHeaderCells) => ({
+      alignItems: val.y === 'center' ? 'center' : `flex-${val.y}`,
+      justifyContent: val.x === 'center' ? 'center' : `flex-${val.x}`,
+    }),
     cellHeight: {
       '...size': (name, { tokens, props }) =>
         rowMinimum((props as { displayMode?: DisplayMode }).displayMode, (tokens.size as Record<string, any>)[name]),
@@ -247,7 +243,7 @@ function rampStep(fill: unknown): number | undefined {
   if (typeof fill !== 'string') {
     return undefined;
   }
-  const step = fill.match(/^\$color(\d+)$/);
+  const step = /^\$color(\d+)$/.exec(fill);
   return step ? Number(step[1]) : undefined;
 }
 
@@ -278,7 +274,7 @@ function indexBodyRows(children: React.ReactNode, counter: { next: number }): Re
       return child;
     }
     if (child.type === Fragment) {
-      return <Fragment>{indexBodyRows((child.props as { children?: React.ReactNode }).children, counter)}</Fragment>;
+      return <>{indexBodyRows((child.props as { children?: React.ReactNode }).children, counter)}</>;
     }
     return <BodyRowIndexContext.Provider value={counter.next++}>{child}</BodyRowIndexContext.Provider>;
   });
@@ -389,14 +385,10 @@ const TableComp = styled(ThemeableStack, {
     },
     /** Empty variants to satisfy context-driven props without ts errors on Table */
     cellWidth: {
-      '...size': () => {
-        return {};
-      },
+      '...size': () => ({}),
     },
     cellHeight: {
-      '...size': () => {
-        return {};
-      },
+      '...size': () => ({}),
     },
     alignHeaderCells: (_val) => ({}),
     alignCells: (_val) => ({}),
@@ -458,7 +450,7 @@ export type TableLayout = 'table' | 'cards' | 'auto';
 interface CardRowModel {
   key: string;
   intent?: IntentName;
-  cells: Array<{ key: string; content: React.ReactNode }>;
+  cells: { key: string; content: React.ReactNode }[];
 }
 
 /** Flatten fragments/arrays into a single element list. */
@@ -558,7 +550,9 @@ function TableCardsList({ children, ...props }: { children?: React.ReactNode; [k
       {...viewProps}>
       {caption != null &&
         (typeof caption === 'string' || typeof caption === 'number' ? (
-          <SizableText fontSize={knobProps.sizeToken as FontSizeTokens} color="$color10">
+          <SizableText
+            fontSize={knobProps.sizeToken as FontSizeTokens}
+            color="$color10">
             {caption}
           </SizableText>
         ) : (
@@ -581,7 +575,12 @@ function TableCardsList({ children, ...props }: { children?: React.ReactNode; [k
             {row.cells.map((cell, index) => {
               const label = headerLabels[index];
               return (
-                <ThemeableStack key={cell.key} flexDirection="row" alignItems="center" gap="$2" paddingVertical="$1.5">
+                <ThemeableStack
+                  key={cell.key}
+                  flexDirection="row"
+                  alignItems="center"
+                  gap="$2"
+                  paddingVertical="$1.5">
                   {label != null && (
                     <SizableText
                       fontSize={knobProps.sizeToken as FontSizeTokens}
@@ -592,7 +591,9 @@ function TableCardsList({ children, ...props }: { children?: React.ReactNode; [k
                       {label}
                     </SizableText>
                   )}
-                  <ThemeableStack flex={1} minWidth={0}>
+                  <ThemeableStack
+                    flex={1}
+                    minWidth={0}>
                     <TableCellSurface isHeader={false}>{cell.content}</TableCellSurface>
                   </ThemeableStack>
                 </ThemeableStack>
@@ -601,7 +602,9 @@ function TableCardsList({ children, ...props }: { children?: React.ReactNode; [k
           </ThemeableStack>
         );
         return row.intent ? (
-          <Theme key={row.key} name={row.intent}>
+          <Theme
+            key={row.key}
+            name={row.intent}>
             {card}
           </Theme>
         ) : (
@@ -663,7 +666,12 @@ function ThemedTableBody({ children, ...props }: React.ComponentProps<typeof Tab
 function ThemedTableHead(props: React.ComponentProps<typeof TableHead>) {
   // Head/body rule is a divider, not a control border — hairline on
   // high-DPI (Axiom 15). Explicit consumer props still override.
-  return <TableHead {...hairline.bottom} {...props} />;
+  return (
+    <TableHead
+      {...hairline.bottom}
+      {...props}
+    />
+  );
 }
 
 function ThemedRow({ accent, error, warning, success, ...props }: ThemedRowProps) {
@@ -676,7 +684,7 @@ function ThemedRow({ accent, error, warning, success, ...props }: ThemedRowProps
   // Rows abut, so a slop outset would intersect the neighbour and the
   // painted row is the only press target a pressable row can have.
   const pressFloor =
-    props.onPress != null ? rowMinimum(props.displayMode ?? context.displayMode, MIN_PRESS_TARGET) : null;
+    props.onPress == null ? null : rowMinimum(props.displayMode ?? context.displayMode, MIN_PRESS_TARGET);
 
   // Intent rows must not use the plain <Theme> wrapper: on web it renders a
   // display:contents <span> between <tbody> and <tr>, which is invalid HTML
@@ -710,7 +718,9 @@ function ThemedRow({ accent, error, warning, success, ...props }: ThemedRowProps
 
   if (intent) {
     return (
-      <Theme name={intent} forceClassName={false}>
+      <Theme
+        name={intent}
+        forceClassName={false}>
         {row}
       </Theme>
     );
@@ -721,7 +731,9 @@ function ThemedRow({ accent, error, warning, success, ...props }: ThemedRowProps
 function TableCellSurface({ isHeader, children }: { isHeader: boolean; children: React.ReactNode }) {
   return (
     <TableCellContext.Provider value={{ inTableCell: true, isHeader }}>
-      <Surface size="small" density="compact">
+      <Surface
+        size="small"
+        density="compact">
         <TableCellSurfaceBody isHeader={isHeader}>{children}</TableCellSurfaceBody>
       </Surface>
     </TableCellContext.Provider>

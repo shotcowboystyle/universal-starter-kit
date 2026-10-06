@@ -9,11 +9,12 @@ import {
   useResolvedKnobs,
   wasKeyboardFocus,
 } from '@repo/theme';
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
+import type { ReactNode } from 'react';
 import type { GetProps } from 'tamagui';
 import { SizableText, View, XStack, YStack, isWeb, styled } from 'tamagui';
 
-import { componentColors } from '../componentColors';
+import { componentColors } from '../component-colors';
 import { useTranslation } from '../shared/i18n';
 import { withInterp } from '../shared/t';
 
@@ -180,7 +181,12 @@ export function ProgressSteps({
   const gapToken = knobProps.gap.gap;
 
   return (
-    <StepsRoot role="list" aria-label={t('Progress')} data-density={knobProps.density} data-labels={labels} {...props}>
+    <StepsRoot
+      role="list"
+      aria-label={t('Progress')}
+      data-density={knobProps.density}
+      data-labels={labels}
+      {...props}>
       <XStack
         flexDirection={horizontal ? 'row' : 'column'}
         alignItems={horizontal ? 'flex-start' : 'stretch'}
@@ -238,9 +244,17 @@ export function ProgressSteps({
                   }
                 : undefined)}>
               {kind === 'error' ? (
-                <WarningIcon size={markerIconSize} color={markerFg} weight="bold" />
+                <WarningIcon
+                  size={markerIconSize}
+                  color={markerFg}
+                  weight="bold"
+                />
               ) : kind === 'completed' ? (
-                <CheckIcon size={markerIconSize} color={markerFg} weight="bold" />
+                <CheckIcon
+                  size={markerIconSize}
+                  color={markerFg}
+                  weight="bold"
+                />
               ) : (
                 <SizableText
                   {...knobProps.label}
@@ -288,7 +302,7 @@ export function ProgressSteps({
                 numberOfLines={2}>
                 {step.label}
               </SizableText>
-              {helper != null ? (
+              {helper == null ? null : (
                 <SizableText
                   {...knobProps.body}
                   fontSize="$1"
@@ -297,11 +311,11 @@ export function ProgressSteps({
                   numberOfLines={2}>
                   {helper}
                 </SizableText>
-              ) : null}
+              )}
             </YStack>
           );
 
-          const verticalConnector = !isLast ? (
+          const verticalConnector = isLast ? null : (
             <Connector
               width={connectorThickness}
               flexGrow={1}
@@ -309,10 +323,13 @@ export function ProgressSteps({
               backgroundColor={connectorFill}
               transition={knobProps.transition}
             />
-          ) : null;
+          );
 
-          const horizontalConnector = !isLast ? (
-            <XStack flexGrow={1} paddingTop={(markerPx - connectorThickness) / 2} paddingHorizontal={gapToken}>
+          const horizontalConnector = isLast ? null : (
+            <XStack
+              flexGrow={1}
+              paddingTop={(markerPx - connectorThickness) / 2}
+              paddingHorizontal={gapToken}>
               <Connector
                 flexGrow={1}
                 height={connectorThickness}
@@ -321,17 +338,27 @@ export function ProgressSteps({
                 transition={knobProps.transition}
               />
             </XStack>
-          ) : null;
+          );
 
           const showLabels = labels !== 'hidden';
           const body = horizontal ? (
-            <YStack alignItems="center" flexShrink={0} gap={gapToken}>
+            <YStack
+              alignItems="center"
+              flexShrink={0}
+              gap={gapToken}>
               {markerTarget}
               {showLabels ? labelBlock : null}
             </YStack>
           ) : (
-            <XStack alignItems="stretch" gap={gapToken} minHeight={MIN_PRESS_TARGET}>
-              <YStack alignItems="center" width={MIN_PRESS_TARGET} flexShrink={0} gap={2}>
+            <XStack
+              alignItems="stretch"
+              gap={gapToken}
+              minHeight={MIN_PRESS_TARGET}>
+              <YStack
+                alignItems="center"
+                width={MIN_PRESS_TARGET}
+                flexShrink={0}
+                gap={2}>
                 {markerTarget}
                 {verticalConnector}
               </YStack>

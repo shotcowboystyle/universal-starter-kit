@@ -12,8 +12,8 @@ import {
   getMonthNames,
   getWeekdayNames,
   parseCalendarDate,
-  type DateInput,
 } from './dates';
+import type { DateInput } from './dates';
 
 // Pin locale so assertions don't depend on the host machine.
 const enUS = { locale: 'en-US' } as const;

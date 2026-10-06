@@ -26,9 +26,9 @@ vi.mock('../animations/index', () => ({ animations: {} }));
 
 import { TamaguiProvider, Text } from 'tamagui';
 
-import { createDefaultThemeConfig } from '../createDefaultThemeConfig';
+import { createDefaultThemeConfig } from '../create-default-theme-config';
 import { defaultKnobs } from '../knobs';
-import { resolveKnobs } from '../resolveKnobs';
+import { resolveKnobs } from '../resolve-knobs';
 
 const themeConfig = createDefaultThemeConfig();
 
@@ -74,7 +74,7 @@ function measureLabel(bodyFont: (typeof BODY_STOPS)[number]['stop'], scheme: 'li
   const px = (value: string) => {
     const n = Number.parseFloat(value);
     if (!Number.isFinite(n)) {
-      throw new Error(`unreadable length ${JSON.stringify(value)}`);
+      throw new TypeError(`unreadable length ${JSON.stringify(value)}`);
     }
     return n;
   };
@@ -86,7 +86,7 @@ function measureLabel(bodyFont: (typeof BODY_STOPS)[number]['stop'], scheme: 'li
     host,
     knobs,
     family,
-    firstFamily: family.split(',')[0]?.replace(/['"]/g, '').trim() ?? '',
+    firstFamily: family.split(',')[0]?.replaceAll(/['"]/g, '').trim() ?? '',
     fontSize: px(cs.fontSize),
     lineHeight: cs.lineHeight.trim(),
     lineHeightPx: px(cs.lineHeight),

@@ -51,7 +51,9 @@ export const Main: Story = {
           description="Make changes to your profile here."
           trigger={<Button>Open Popup</Button>}
           footer={
-            <XStack gap="$2" justifyContent="flex-end">
+            <XStack
+              gap="$2"
+              justifyContent="flex-end">
               <Button
                 chromeless
                 onPress={() => {
@@ -68,8 +70,14 @@ export const Main: Story = {
             </XStack>
           }>
           <YStack gap="$3">
-            <Input label="Name" placeholder="Enter your name" />
-            <Input label="Email" placeholder="Enter your email" />
+            <Input
+              label="Name"
+              placeholder="Enter your name"
+            />
+            <Input
+              label="Email"
+              placeholder="Enter your email"
+            />
           </YStack>
         </AdaptivePopup>
       );
@@ -92,7 +100,9 @@ export const Drawer: Story = {
           description="Keep the page in view while you edit."
           trigger={<Button>Open Drawer</Button>}
           footer={
-            <XStack gap="$2" justifyContent="flex-end">
+            <XStack
+              gap="$2"
+              justifyContent="flex-end">
               <Button
                 chromeless
                 onPress={() => {
@@ -109,12 +119,30 @@ export const Drawer: Story = {
             </XStack>
           }>
           <YStack gap="$3">
-            <Input label="Name" placeholder="Enter your name" />
-            <Input label="Email" placeholder="Enter your email" />
-            <Input label="Title" placeholder="Job title" />
-            <Input label="Team" placeholder="Team" />
-            <Input label="Location" placeholder="Location" />
-            <Input label="Notes" placeholder="Notes" />
+            <Input
+              label="Name"
+              placeholder="Enter your name"
+            />
+            <Input
+              label="Email"
+              placeholder="Enter your email"
+            />
+            <Input
+              label="Title"
+              placeholder="Job title"
+            />
+            <Input
+              label="Team"
+              placeholder="Team"
+            />
+            <Input
+              label="Location"
+              placeholder="Location"
+            />
+            <Input
+              label="Notes"
+              placeholder="Notes"
+            />
           </YStack>
         </AdaptivePopup>
       );
@@ -143,7 +171,9 @@ export const Sizes: Story = {
     };
 
     return (
-      <XStack gap="$2" flexWrap="wrap">
+      <XStack
+        gap="$2"
+        flexWrap="wrap">
         <SizeExample size="sm" />
         <SizeExample size="md" />
         <SizeExample size="lg" />
@@ -165,7 +195,12 @@ export const Fullscreen: Story = {
           title="Fullscreen View"
           size="fullscreen"
           trigger={<Button>Open Fullscreen</Button>}>
-          <YStack flex={1} backgroundColor="$color3" borderRadius="$2" padding="$4" gap="$2">
+          <YStack
+            flex={1}
+            backgroundColor="$color3"
+            borderRadius="$2"
+            padding="$4"
+            gap="$2">
             <Text>This content fills the available space.</Text>
             <Text color="$color9">Great for maps, image viewers, or any content that benefits from more space.</Text>
           </YStack>
@@ -217,7 +252,9 @@ export const NoCloseButton: Story = {
           showCloseButton={false}
           trigger={<Button>Delete Item</Button>}
           footer={
-            <XStack gap="$2" justifyContent="flex-end">
+            <XStack
+              gap="$2"
+              justifyContent="flex-end">
               <Button
                 chromeless
                 onPress={() => {

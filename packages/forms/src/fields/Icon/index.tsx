@@ -1,17 +1,18 @@
 import { MagnifyingGlassIcon } from '@phosphor-icons/react';
 import { ensureFocusVisibleRing, useAaSolidFill, useReadableTextOn, useResolvedKnobs } from '@repo/theme';
 import type { DeepKeys, DeepValue } from '@tanstack/form-core';
-import { useCallback, useEffect, useMemo, useRef, useState, type ComponentRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ComponentRef } from 'react';
 import { Pressable as RNPressable } from 'react-native';
 import { Text, View, XStack, YStack, isWeb, useProps } from 'tamagui';
 
-import { Field, FieldLayout } from '../../fieldLayout';
-import type { FormFieldProps } from '../../fieldLayout';
+import { Field, FieldLayout } from '../../FieldLayout';
+import type { FormFieldProps } from '../../FieldLayout';
 import { FloatingPanel, useViewportGtSm } from '../../FloatingPanel';
 import { Input as InputParts } from '../../InputParts';
-import { formCommonColors, formSelectedColors } from '../../shared/colorRamps';
+import { formCommonColors, formSelectedColors } from '../../shared/color-ramps';
 import { t } from '../../shared/t';
-import { useIsInTableCell } from '../../shared/tableCellContext';
+import { useIsInTableCell } from '../../shared/table-cell-context';
 import { getFieldError, mergeFieldHandler, useFormField, useResolvedValidators } from '../../shared/utils';
 import { Skeleton } from '../../Skeleton';
 import type { FieldComponentProps, Validator } from '../../types';
@@ -23,10 +24,10 @@ import {
   isDrawnIconName,
   parseIconOptions,
   resolveIconCatalog,
-  type DrawnIconName,
-} from './drawnSet';
+} from './drawn-set';
+import type { DrawnIconName } from './drawn-set';
 
-export type { DrawnIconName } from './drawnSet';
+export type { DrawnIconName } from './drawn-set';
 export {
   DRAWN_ICON_NAMES,
   DrawnIcon,
@@ -34,7 +35,7 @@ export {
   isDrawnIconName,
   parseIconOptions,
   resolveIconCatalog,
-} from './drawnSet';
+} from './drawn-set';
 
 export type IconProps<
   TParentData = unknown,
@@ -171,7 +172,15 @@ function IconControl({
         alignItems="center"
         justifyContent="center">
         {/* Outside InputParts.Icon, which is what injects a colour. */}
-        {drawn ? <DrawnIcon name={drawn} size={16} color={formCommonColors.text} /> : <EmptyGlyphWell />}
+        {drawn ? (
+          <DrawnIcon
+            name={drawn}
+            size={16}
+            color={formCommonColors.text}
+          />
+        ) : (
+          <EmptyGlyphWell />
+        )}
       </View>
     );
   }
@@ -197,7 +206,14 @@ function IconControl({
           disabled={disabled}
           {...(disabled ? { opacity: 0.5, pointerEvents: 'none' } : undefined)}>
           <InputParts.Icon adornment="leading">
-            {drawn ? <DrawnIcon name={drawn} size={16} /> : <EmptyGlyphWell />}
+            {drawn ? (
+              <DrawnIcon
+                name={drawn}
+                size={16}
+              />
+            ) : (
+              <EmptyGlyphWell />
+            )}
           </InputParts.Icon>
           {!inTableCell && (
             <InputParts.Area
@@ -246,12 +262,18 @@ function IconControl({
                 handleClear();
               }}>
               <InputParts.Icon>
-                <DrawnIcon name="x" size={16} />
+                <DrawnIcon
+                  name="x"
+                  size={16}
+                />
               </InputParts.Icon>
             </InputParts.Button>
           ) : (
             <InputParts.Icon adornment="trailing">
-              <DrawnIcon name="chev-d" size={16} />
+              <DrawnIcon
+                name="chev-d"
+                size={16}
+              />
             </InputParts.Icon>
           )}
         </InputParts.Box>
@@ -292,7 +314,10 @@ function IconControl({
           handleClear();
         }}>
         <InputParts.Icon>
-          <DrawnIcon name="x" size={16} />
+          <DrawnIcon
+            name="x"
+            size={16}
+          />
         </InputParts.Icon>
       </InputParts.Button>
     ) : undefined;
@@ -319,7 +344,12 @@ function IconControl({
         {...({ role: 'listbox' } as Record<string, unknown>)}
         aria-label={t('Icons')}>
         {matches.length === 0 ? (
-          <Text testID="icon-no-results" color={formCommonColors.muted} fontSize="$3" textAlign="center" padding="$4">
+          <Text
+            testID="icon-no-results"
+            color={formCommonColors.muted}
+            fontSize="$3"
+            textAlign="center"
+            padding="$4">
             {t('No icon matches "{{query}}"', { query })}
           </Text>
         ) : (
@@ -355,7 +385,11 @@ function IconControl({
                     backgroundColor={selected ? markFill : 'transparent'}
                     hoverStyle={selected ? undefined : { backgroundColor: '$color3' }}>
                     {/* Outside InputParts.Icon, so the colour is passed here. */}
-                    <DrawnIcon name={name} size={16} color={cellInk} />
+                    <DrawnIcon
+                      name={name}
+                      size={16}
+                      color={cellInk}
+                    />
                     <Text
                       fontFamily="$mono"
                       fontSize={11}
@@ -458,7 +492,13 @@ export function Icon<
   if (skeleton) {
     return (
       <InputParts size={size || knobProps.sizeToken}>
-        {label ? <Skeleton variant="text" width={96} height={14} /> : null}
+        {label ? (
+          <Skeleton
+            variant="text"
+            width={96}
+            height={14}
+          />
+        ) : null}
         <Skeleton
           variant="rounded"
           width={320}

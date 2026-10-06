@@ -1,14 +1,14 @@
-import { Project, TaskStatus } from "@repo/store";
-import { Text, View, useTheme } from "@tamagui/core";
-import { Image } from "expo-image";
-import { Link, router } from "expo-router";
-import { useTranslation } from "react-i18next";
-import { Alert, Pressable } from "react-native";
+import type { Project, TaskStatus } from '@repo/store';
+import { Text, View, useTheme } from '@tamagui/core';
+import { Image } from 'expo-image';
+import { Link, router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
+import { Alert, Pressable } from 'react-native';
 
-import { useDeleteProject } from "@/hooks/use-projects";
-import { useTasks } from "@/hooks/use-tasks";
+import { useDeleteProject } from '@/hooks/use-projects';
+import { useTasks } from '@/hooks/use-tasks';
 
-import { SortableTaskList } from "./sortable-task-list";
+import { SortableTaskList } from './sortable-task-list';
 
 interface ProjectColumnProps {
   project: Project;
@@ -25,19 +25,18 @@ export function ProjectColumn({ project, boardId, statusFilter }: ProjectColumnP
 
   const handleDelete = () => {
     Alert.alert(
-      t("kanban.project.confirmDeleteTitle", { title: project.title }) || "Delete Project",
-      t("kanban.project.confirmDeleteDescription") ||
-        "Are you sure you want to delete this project?",
+      t('kanban.project.confirmDeleteTitle', { title: project.title }) || 'Delete Project',
+      t('kanban.project.confirmDeleteDescription') || 'Are you sure you want to delete this project?',
       [
-        { text: t("common.cancel") || "Cancel", style: "cancel" },
+        { text: t('common.cancel') || 'Cancel', style: 'cancel' },
         {
-          text: t("common.delete") || "Delete",
-          style: "destructive",
+          text: t('common.delete') || 'Delete',
+          style: 'destructive',
           onPress: () => {
             deleteProjectMutation.mutate({ id: project._id, boardId });
-          }
-        }
-      ]
+          },
+        },
+      ],
     );
   };
 
@@ -47,8 +46,7 @@ export function ProjectColumn({ project, boardId, statusFilter }: ProjectColumnP
       borderRadius={12}
       borderWidth={1}
       borderColor="$borderColor"
-      backgroundColor="$secondary"
-    >
+      backgroundColor="$secondary">
       {/* Header */}
       <View
         flexDirection="row"
@@ -57,39 +55,54 @@ export function ProjectColumn({ project, boardId, statusFilter }: ProjectColumnP
         borderBottomWidth={1}
         borderColor="$borderColor"
         backgroundColor="$card"
-        padding={12}
-      >
-        <View flex={1} flexDirection="row" alignItems="center" gap={8}>
-          <Text fontWeight="600" color="$color" numberOfLines={1}>
+        padding={12}>
+        <View
+          flex={1}
+          flexDirection="row"
+          alignItems="center"
+          gap={8}>
+          <Text
+            fontWeight="600"
+            color="$color"
+            numberOfLines={1}>
             {project.title}
           </Text>
-          <View borderRadius={9999} backgroundColor="$secondary" paddingHorizontal={8} paddingVertical={2}>
+          <View
+            borderRadius={9999}
+            backgroundColor="$secondary"
+            paddingHorizontal={8}
+            paddingVertical={2}>
             <Text
               fontSize={12}
               color="$mutedForeground"
-              style={{ fontVariant: ["tabular-nums"] }}
-            >
+              style={{ fontVariant: ['tabular-nums'] }}>
               {statusFilter ? `${tasks.length}/${allTasks.length}` : tasks.length}
             </Text>
           </View>
         </View>
 
-        <Link href={`/projects/new?boardId=${boardId}&projectId=${project._id}`} asChild>
+        <Link
+          href={`/projects/new?boardId=${boardId}&projectId=${project._id}`}
+          asChild>
           <Link.Trigger>
             <Pressable style={{ padding: 4 }}>
-              <Image source="sf:ellipsis" style={{ width: 20, height: 20 }} tintColor="gray" />
+              <Image
+                source="sf:ellipsis"
+                style={{ width: 20, height: 20 }}
+                tintColor="gray"
+              />
             </Pressable>
           </Link.Trigger>
           <Link.Menu>
             <Link.MenuAction
-              title={t("common.edit") || "Edit"}
+              title={t('common.edit') || 'Edit'}
               icon="pencil"
               onPress={() => {
                 router.push(`/projects/new?boardId=${boardId}&projectId=${project._id}`);
               }}
             />
             <Link.MenuAction
-              title={t("common.delete") || "Delete"}
+              title={t('common.delete') || 'Delete'}
               icon="trash"
               destructive
               onPress={handleDelete}
@@ -99,27 +112,36 @@ export function ProjectColumn({ project, boardId, statusFilter }: ProjectColumnP
       </View>
 
       {/* Add Task — positioned above task list for easy access */}
-      <View borderBottomWidth={1} borderColor="$borderColor" backgroundColor="$card" paddingHorizontal={8} paddingVertical={6}>
-        <Link href={`/tasks/new?boardId=${boardId}&projectId=${project._id}`} asChild>
+      <View
+        borderBottomWidth={1}
+        borderColor="$borderColor"
+        backgroundColor="$card"
+        paddingHorizontal={8}
+        paddingVertical={6}>
+        <Link
+          href={`/tasks/new?boardId=${boardId}&projectId=${project._id}`}
+          asChild>
           <Pressable
             style={{
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "center",
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
               gap: 4,
               borderRadius: 8,
               backgroundColor: theme.primaryAlpha10.val,
               padding: 8,
-              borderCurve: "continuous"
-            }}
-          >
+              borderCurve: 'continuous',
+            }}>
             <Image
               source="sf:plus.circle.fill"
               style={{ width: 16, height: 16 }}
               tintColor="gray"
             />
-            <Text fontSize={14} fontWeight="500" color="$color">
-              {t("kanban.task.addNewTask") || "+ Add New Task"}
+            <Text
+              fontSize={14}
+              fontWeight="500"
+              color="$color">
+              {t('kanban.task.addNewTask') || '+ Add New Task'}
             </Text>
           </Pressable>
         </Link>

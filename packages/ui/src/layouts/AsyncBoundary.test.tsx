@@ -49,7 +49,12 @@ describe('AsyncBoundary', () => {
   });
 
   it('shows layout skeleton when loading=true', () => {
-    renderWithProviders(<AsyncBoundary loading layout="list" />);
+    renderWithProviders(
+      <AsyncBoundary
+        loading
+        layout="list"
+      />,
+    );
     expect(document.querySelector('[data-async-skeleton="list"]')).toBeTruthy();
     expect(document.querySelector('[data-async-status="loading"]')).toBeTruthy();
     expect(screen.queryByText('No items found')).toBeNull();
@@ -64,7 +69,9 @@ describe('AsyncBoundary', () => {
     expect(screen.getByText('Ready rows')).toBeInTheDocument();
 
     rerender(
-      <AsyncBoundary loading layout="list">
+      <AsyncBoundary
+        loading
+        layout="list">
         <Text>Ready rows</Text>
       </AsyncBoundary>,
     );
@@ -83,7 +90,12 @@ describe('AsyncBoundary', () => {
       </AsyncBoundary>,
     );
 
-    rerender(<AsyncBoundary loading layout="list" />);
+    rerender(
+      <AsyncBoundary
+        loading
+        layout="list"
+      />,
+    );
 
     expect(screen.getByText('Ready rows')).toBeInTheDocument();
     expect(document.querySelector('[data-async-skeleton]')).toBeNull();
@@ -97,7 +109,10 @@ describe('AsyncBoundary', () => {
     );
 
     rerender(
-      <AsyncBoundary loading keepPrevious={false} layout="list">
+      <AsyncBoundary
+        loading
+        keepPrevious={false}
+        layout="list">
         <Text>Ready rows</Text>
       </AsyncBoundary>,
     );
@@ -109,13 +124,19 @@ describe('AsyncBoundary', () => {
   it('keeps previous data on a refetch error and still offers retry', () => {
     const onRetry = vi.fn();
     const { rerender } = renderWithProviders(
-      <AsyncBoundary layout="list" onRetry={onRetry}>
+      <AsyncBoundary
+        layout="list"
+        onRetry={onRetry}>
         <Text>Ready rows</Text>
       </AsyncBoundary>,
     );
 
     rerender(
-      <AsyncBoundary error="Network unreachable" errorTitle="Couldn't load data" layout="list" onRetry={onRetry}>
+      <AsyncBoundary
+        error="Network unreachable"
+        errorTitle="Couldn't load data"
+        layout="list"
+        onRetry={onRetry}>
         <Text>Ready rows</Text>
       </AsyncBoundary>,
     );
@@ -124,11 +145,17 @@ describe('AsyncBoundary', () => {
     expect(screen.getByText("Couldn't load data")).toBeInTheDocument();
     expect(document.querySelector('[data-async-stale]')).toBeTruthy();
     fireEvent.click(screen.getByText('Retry'));
-    expect(onRetry).toHaveBeenCalledTimes(1);
+    expect(onRetry).toHaveBeenCalledOnce();
   });
 
   it('shows empty chrome only when empty and not error', () => {
-    renderWithProviders(<AsyncBoundary empty emptyTitle="Nothing here" compact />);
+    renderWithProviders(
+      <AsyncBoundary
+        empty
+        emptyTitle="Nothing here"
+        compact
+      />,
+    );
     expect(screen.getByText('Nothing here')).toBeInTheDocument();
     expect(document.querySelector('[data-async-state="empty"]')).toBeTruthy();
     expect(document.querySelector('[data-empty-intent="neutral"]')).toBeTruthy();
@@ -154,9 +181,15 @@ describe('AsyncBoundary', () => {
 
   it('calls onRetry from default error action', () => {
     const onRetry = vi.fn();
-    renderWithProviders(<AsyncBoundary error compact onRetry={onRetry} />);
+    renderWithProviders(
+      <AsyncBoundary
+        error
+        compact
+        onRetry={onRetry}
+      />,
+    );
     fireEvent.click(screen.getByText('Retry'));
-    expect(onRetry).toHaveBeenCalledTimes(1);
+    expect(onRetry).toHaveBeenCalledOnce();
   });
 
   it('hides chrome and Badge counts on error', () => {
@@ -214,7 +247,10 @@ function weightClasses(el: Element): string[] {
 
 function SchemeWrap({ scheme, children }: { scheme: (typeof SCHEMES)[number]; children: ReactNode }) {
   return (
-    <TamaguiProvider config={houseConfig.tamagui} defaultTheme={scheme} disableInjectCSS>
+    <TamaguiProvider
+      config={houseConfig.tamagui}
+      defaultTheme={scheme}
+      disableInjectCSS>
       <YStack backgroundColor="$background">{children}</YStack>
     </TamaguiProvider>
   );
@@ -239,7 +275,14 @@ describe('AsyncBoundary Retry label weight', () => {
     const pin = weightClasses(screen.getByText('Retry-pin'));
     cleanup();
 
-    renderInScheme(scheme, <AsyncBoundary error compact onRetry={() => {}} />);
+    renderInScheme(
+      scheme,
+      <AsyncBoundary
+        error
+        compact
+        onRetry={() => {}}
+      />,
+    );
     expectRetryWeight400(pin);
   });
 
@@ -250,13 +293,19 @@ describe('AsyncBoundary Retry label weight', () => {
 
     const { rerender } = renderInScheme(
       scheme,
-      <AsyncBoundary layout="list" onRetry={() => {}}>
+      <AsyncBoundary
+        layout="list"
+        onRetry={() => {}}>
         <Text>Ready rows</Text>
       </AsyncBoundary>,
     );
     rerender(
       <SchemeWrap scheme={scheme}>
-        <AsyncBoundary error="Network unreachable" errorTitle="Couldn't load data" layout="list" onRetry={() => {}}>
+        <AsyncBoundary
+          error="Network unreachable"
+          errorTitle="Couldn't load data"
+          layout="list"
+          onRetry={() => {}}>
           <Text>Ready rows</Text>
         </AsyncBoundary>
       </SchemeWrap>,
@@ -268,7 +317,12 @@ describe('AsyncBoundary Retry label weight', () => {
 
 describe('AsyncBoundary layout skeletons', () => {
   it.each(['list', 'table', 'kanban', 'dashboard', 'generic'] as const)('renders %s skeleton', (layout) => {
-    renderWithProviders(<AsyncBoundary loading layout={layout} />);
+    renderWithProviders(
+      <AsyncBoundary
+        loading
+        layout={layout}
+      />,
+    );
     expect(document.querySelector(`[data-async-skeleton="${layout}"]`)).toBeTruthy();
   });
 });

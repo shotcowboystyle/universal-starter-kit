@@ -6,7 +6,8 @@ import type { Meta } from '@storybook/react-native-web-vite';
 import { useCallback, useState } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 
-import { Kanban, type KanbanColumn } from './Kanban';
+import { Kanban } from './Kanban';
+import type { KanbanColumn } from './Kanban';
 
 interface Task {
   id: string;
@@ -42,7 +43,10 @@ function TaskCard({ item }: { item: Task }) {
   return (
     <YStack gap="$1">
       <Text fontSize="$3">{item.title}</Text>
-      <Text fontSize="$2" color="$color11" textTransform="capitalize">
+      <Text
+        fontSize="$2"
+        color="$color11"
+        textTransform="capitalize">
         {item.priority}
       </Text>
     </YStack>
@@ -180,7 +184,7 @@ export const Interactive = {
     const removeCard = useCallback(() => {
       setBoard((prev) => {
         const target = prev.findIndex((col) => col.items.length > 0);
-        if (target < 0) {
+        if (target === -1) {
           return prev;
         }
         return prev.map((col, index) => (index === target ? { ...col, items: col.items.slice(1) } : col));
@@ -190,10 +194,14 @@ export const Interactive = {
     return (
       <YStack gap="$2">
         <XStack gap="$2">
-          <Button size="$2" onPress={addCard}>
+          <Button
+            size="$2"
+            onPress={addCard}>
             Add card
           </Button>
-          <Button size="$2" onPress={removeCard}>
+          <Button
+            size="$2"
+            onPress={removeCard}>
             Remove card
           </Button>
         </XStack>

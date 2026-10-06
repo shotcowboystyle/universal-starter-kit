@@ -18,23 +18,49 @@ export default function SignInViewPage() {
       $lg={{ flexDirection: 'row' }}>
       {/* Brand panel stays dark in both schemes; forceClassName keeps the
           server and client theme markup identical during hydration. */}
-      <Theme name="dark" forceClassName>
-        <YStack flex={1} backgroundColor="$background" padding="$8">
-          <XStack alignItems="center" gap="$2">
-            <Presentation size={24} aria-hidden />
-            <Text fontSize="$6" fontWeight="500">
+      <Theme
+        name="dark"
+        forceClassName>
+        <YStack
+          flex={1}
+          backgroundColor="$background"
+          padding="$8">
+          <XStack
+            alignItems="center"
+            gap="$2">
+            <Presentation
+              size={24}
+              aria-hidden
+            />
+            <Text
+              fontSize="$6"
+              fontWeight="500">
               {t('title')}
             </Text>
           </XStack>
         </YStack>
       </Theme>
-      <YStack flex={1} alignItems="center" justifyContent="center" padding="$4" $lg={{ padding: '$8' }}>
-        <YStack width="100%" gap="$5" $sm={{ width: 350 }}>
-          <YStack gap="$2" alignItems="center">
-            <H1 size="$8" textAlign="center">
+      <YStack
+        flex={1}
+        alignItems="center"
+        justifyContent="center"
+        padding="$4"
+        $lg={{ padding: '$8' }}>
+        <YStack
+          width="100%"
+          gap="$5"
+          $sm={{ width: 350 }}>
+          <YStack
+            gap="$2"
+            alignItems="center">
+            <H1
+              size="$8"
+              textAlign="center">
               {t('description')}
             </H1>
-            <Paragraph color="$color10" textAlign="center">
+            <Paragraph
+              color="$color10"
+              textAlign="center">
               {t('formHint')}
             </Paragraph>
           </YStack>

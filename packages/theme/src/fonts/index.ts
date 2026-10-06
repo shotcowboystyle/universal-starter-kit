@@ -1,2 +1,2 @@
-export * from './createFontLoader';
-export * from './types';
+export * from './create-font-loader';
+export type * from './types';

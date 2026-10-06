@@ -20,7 +20,9 @@ const fill = {
 
 export function SaturationBackground({ hueColor }: { hueColor: string; width?: number; height?: number }) {
   return (
-    <View {...fill} overflow="hidden">
+    <View
+      {...fill}
+      overflow="hidden">
       <View
         {...fill}
         style={{

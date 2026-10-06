@@ -3,7 +3,7 @@ export interface Project {
   title: string;
   description: string | null;
   owner: string | UserInfo;
-  members: Array<string | UserInfo>;
+  members: (string | UserInfo)[];
   createdAt: string;
   updatedAt: string;
   tasks: Task[];

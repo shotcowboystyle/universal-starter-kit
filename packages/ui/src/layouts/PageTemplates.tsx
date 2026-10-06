@@ -21,17 +21,13 @@
  * restyles the page; pass `compact` to declare Surface intent for the subtree.
  */
 
-import {
-  defaultMaxPanes,
-  layoutBreakpoints,
-  useLayoutSizeClass,
-  useSemanticGaps,
-  type LayoutSizeClass,
-} from '@repo/theme';
+import { defaultMaxPanes, layoutBreakpoints, useLayoutSizeClass, useSemanticGaps } from '@repo/theme';
+import type { LayoutSizeClass } from '@repo/theme';
 import type { ReactNode } from 'react';
 import { YStack } from 'tamagui';
 
-import { PageHeader, Screen, ScreenToolbar, type ScreenProps } from './Page';
+import { PageHeader, Screen, ScreenToolbar } from './Page';
+import type { ScreenProps } from './Page';
 import { SupportingPaneLayout } from './PaneScaffold';
 
 // ── Shared header slot ─────────────────────────────────────────────────────
@@ -53,7 +49,14 @@ function renderTemplateHeader({ title, subtitle, actions, nav, header }: Templat
   if (!title && !subtitle && !actions && !nav) {
     return null;
   }
-  return <PageHeader title={title} subtitle={subtitle} actions={actions} nav={nav} />;
+  return (
+    <PageHeader
+      title={title}
+      subtitle={subtitle}
+      actions={actions}
+      nav={nav}
+    />
+  );
 }
 
 // ── ListPageLayout ─────────────────────────────────────────────────────────
@@ -84,10 +87,15 @@ export function ListPageLayout({
   ...rest
 }: ListPageLayoutProps) {
   return (
-    <Screen data-canonical="list-page" {...rest}>
+    <Screen
+      data-canonical="list-page"
+      {...rest}>
       {renderTemplateHeader({ title, subtitle, actions, header, nav })}
       {toolbar}
-      <YStack flex={1} minWidth={0} data-testid="list-page-content">
+      <YStack
+        flex={1}
+        minWidth={0}
+        data-testid="list-page-content">
         {children}
       </YStack>
     </Screen>
@@ -145,21 +153,30 @@ export function DetailPageLayout({
   const gaps = useSemanticGaps();
 
   const toolbar =
-    toolbarLeading || toolbarTrailing ? <ScreenToolbar leading={toolbarLeading} trailing={toolbarTrailing} /> : null;
+    toolbarLeading || toolbarTrailing ? (
+      <ScreenToolbar
+        leading={toolbarLeading}
+        trailing={toolbarTrailing}
+      />
+    ) : null;
 
   let body: ReactNode;
   if (aside === null || aside === undefined) {
     body = children;
   } else if (multi) {
     body = (
-      <SupportingPaneLayout sizeClass={sizeClass} supporting={aside}>
+      <SupportingPaneLayout
+        sizeClass={sizeClass}
+        supporting={aside}>
         {children}
       </SupportingPaneLayout>
     );
   } else {
     // Supporting content stays reachable on small viewports (stacked, not hidden).
     body = (
-      <YStack {...gaps.betweenGroups} data-testid="detail-page-stack">
+      <YStack
+        {...gaps.betweenGroups}
+        data-testid="detail-page-stack">
         {children}
         {aside}
       </YStack>
@@ -167,7 +184,9 @@ export function DetailPageLayout({
   }
 
   return (
-    <Screen data-canonical="detail-page" {...rest}>
+    <Screen
+      data-canonical="detail-page"
+      {...rest}>
       {toolbar}
       {renderTemplateHeader({ title, subtitle, actions, header, nav })}
       {body}
@@ -205,7 +224,10 @@ export function SettingsPageLayout({
   ...rest
 }: SettingsPageLayoutProps) {
   return (
-    <Screen data-canonical="settings-page" maxWidth={maxWidth} {...rest}>
+    <Screen
+      data-canonical="settings-page"
+      maxWidth={maxWidth}
+      {...rest}>
       {renderTemplateHeader({ title, subtitle, actions, header, nav })}
       {children}
     </Screen>

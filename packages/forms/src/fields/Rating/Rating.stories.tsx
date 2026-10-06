@@ -53,10 +53,22 @@ export const Main: Story = {
       });
 
       return (
-        <Form form={form} maxWidth={400}>
+        <Form
+          form={form}
+          maxWidth={400}>
           <YStack gap="$4">
-            <Rating label="Quality" name="quality" helperText="Rate the product quality" starIcon={StarIcon} />
-            <Rating label="Service" name="service" helperText="Rate the customer service" starIcon={StarIcon} />
+            <Rating
+              label="Quality"
+              name="quality"
+              helperText="Rate the product quality"
+              starIcon={StarIcon}
+            />
+            <Rating
+              label="Service"
+              name="service"
+              helperText="Rate the customer service"
+              starIcon={StarIcon}
+            />
             <Button action="submit">Submit Review</Button>
           </YStack>
         </Form>
@@ -75,7 +87,12 @@ export const Standalone: Story = {
     value: 0.6,
     maxStars: 5,
   },
-  render: (args) => <Rating {...args} starIcon={StarIcon} />,
+  render: (args) => (
+    <Rating
+      {...args}
+      starIcon={StarIcon}
+    />
+  ),
 };
 
 /**
@@ -138,13 +155,33 @@ export const WithError: Story = {
 
 export const Sizes: Story = {
   render: () => (
-    <YStack gap="$4" maxWidth={300}>
+    <YStack
+      gap="$4"
+      maxWidth={300}>
       <Text fontWeight="bold">Size $2</Text>
-      <Rating label="Small" value={0.6} size="$2" starIcon={StarIcon} onChange={action('onChange')} />
+      <Rating
+        label="Small"
+        value={0.6}
+        size="$2"
+        starIcon={StarIcon}
+        onChange={action('onChange')}
+      />
       <Text fontWeight="bold">Size $3</Text>
-      <Rating label="Medium" value={0.6} size="$3" starIcon={StarIcon} onChange={action('onChange')} />
+      <Rating
+        label="Medium"
+        value={0.6}
+        size="$3"
+        starIcon={StarIcon}
+        onChange={action('onChange')}
+      />
       <Text fontWeight="bold">Size $4</Text>
-      <Rating label="Large" value={0.6} size="$4" starIcon={StarIcon} onChange={action('onChange')} />
+      <Rating
+        label="Large"
+        value={0.6}
+        size="$4"
+        starIcon={StarIcon}
+        onChange={action('onChange')}
+      />
     </YStack>
   ),
 };
@@ -154,7 +191,9 @@ export const Pointy: Story = {
     const PointyExample = () => {
       const [value, setValue] = useState(0.6);
       return (
-        <YStack gap="$4" maxWidth={300}>
+        <YStack
+          gap="$4"
+          maxWidth={300}>
           <Rating
             label="Pointy (explicit prop)"
             helperText="Sharp-pointed stars via the pointy prop"
@@ -183,7 +222,9 @@ export const Interactive: Story = {
     const InteractiveExample = () => {
       const [value, setValue] = useState(0.4);
       return (
-        <YStack gap="$4" maxWidth={300}>
+        <YStack
+          gap="$4"
+          maxWidth={300}>
           <Rating
             label="How would you rate this?"
             helperText="Click a star, or hover to preview"
@@ -194,8 +235,18 @@ export const Interactive: Story = {
             }}
             starIcon={StarIcon}
           />
-          <Rating label="Read only" value={0.8} readOnly starIcon={StarIcon} />
-          <Rating label="Disabled" value={0.8} disabled starIcon={StarIcon} />
+          <Rating
+            label="Read only"
+            value={0.8}
+            readOnly
+            starIcon={StarIcon}
+          />
+          <Rating
+            label="Disabled"
+            value={0.8}
+            disabled
+            starIcon={StarIcon}
+          />
         </YStack>
       );
     };
@@ -205,5 +256,11 @@ export const Interactive: Story = {
 
 /** Loading placeholder — the skeleton mirrors the star row anatomy. */
 export const SkeletonState: Story = {
-  render: () => <Rating label="Rating" skeleton starIcon={StarIcon} />,
+  render: () => (
+    <Rating
+      label="Rating"
+      skeleton
+      starIcon={StarIcon}
+    />
+  ),
 };

@@ -47,8 +47,15 @@ export const ListPage: Story = {
       title="Pokemon"
       subtitle="All records in the collection"
       actions={<Button>New</Button>}
-      toolbar=<ContentBox label="Filter / search toolbar slot" minHeight={48} grow={false} />>
-      <ContentBox label="List content (table / grid) — flex fills the page" minHeight={320} />
+      toolbar=<ContentBox
+        label="Filter / search toolbar slot"
+        minHeight={48}
+        grow={false}
+      />>
+      <ContentBox
+        label="List content (table / grid) — flex fills the page"
+        minHeight={320}
+      />
     </ListPageLayout>
   ),
 };
@@ -61,8 +68,14 @@ export const DetailPage: StoryObj<typeof DetailPageLayout> = {
       subtitle="Pokemon · #0001"
       toolbarLeading={<Button>Back</Button>}
       toolbarTrailing={<Button theme="accent">Edit</Button>}
-      aside=<ContentBox label="Aside (meta / timeline) ⅓" minHeight={240} />>
-      <ContentBox label="Main content ⅔" minHeight={240} />
+      aside=<ContentBox
+        label="Aside (meta / timeline) ⅓"
+        minHeight={240}
+      />>
+      <ContentBox
+        label="Main content ⅔"
+        minHeight={240}
+      />
     </DetailPageLayout>
   ),
 };
@@ -73,23 +86,46 @@ export const DetailPageCompact: StoryObj<typeof DetailPageLayout> = {
       sizeClass="compact"
       title="Bulbasaur"
       toolbarLeading={<Button>Back</Button>}
-      aside=<ContentBox label="Aside — stacked below, never hidden" minHeight={140} />>
-      <ContentBox label="Main content" minHeight={200} />
+      aside=<ContentBox
+        label="Aside — stacked below, never hidden"
+        minHeight={140}
+      />>
+      <ContentBox
+        label="Main content"
+        minHeight={200}
+      />
     </DetailPageLayout>
   ),
 };
 
 export const SettingsPage: StoryObj<typeof SettingsPageLayout> = {
   render: () => (
-    <SettingsPageLayout title="Settings" subtitle="Workspace preferences">
-      <PageSection title="Profile" description="Name, avatar, contact details.">
-        <ContentBox label="Fields (FormGrid slots here)" minHeight={120} />
+    <SettingsPageLayout
+      title="Settings"
+      subtitle="Workspace preferences">
+      <PageSection
+        title="Profile"
+        description="Name, avatar, contact details.">
+        <ContentBox
+          label="Fields (FormGrid slots here)"
+          minHeight={120}
+        />
       </PageSection>
-      <PageSection title="Notifications" description="Choose what you get notified about.">
-        <ContentBox label="Fields" minHeight={120} />
+      <PageSection
+        title="Notifications"
+        description="Choose what you get notified about.">
+        <ContentBox
+          label="Fields"
+          minHeight={120}
+        />
       </PageSection>
-      <PageSection title="Danger zone" surface>
-        <ContentBox label="Destructive actions" minHeight={80} />
+      <PageSection
+        title="Danger zone"
+        surface>
+        <ContentBox
+          label="Destructive actions"
+          minHeight={80}
+        />
       </PageSection>
     </SettingsPageLayout>
   ),

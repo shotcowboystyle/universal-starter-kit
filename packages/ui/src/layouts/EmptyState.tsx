@@ -8,10 +8,12 @@
  * successful empty dataset.
  */
 import { Intent, readingWidthStyle, useResolvedKnobs, warnBannedErrorWords } from '@repo/theme';
-import { useId, type ReactNode } from 'react';
-import { H2, Paragraph, XStack, YStack, isWeb, type YStackProps } from 'tamagui';
+import { useId } from 'react';
+import type { ReactNode } from 'react';
+import { H2, Paragraph, XStack, YStack, isWeb } from 'tamagui';
+import type { YStackProps } from 'tamagui';
 
-import { componentColors } from '../componentColors';
+import { componentColors } from '../component-colors';
 
 export interface EmptyStateProps extends YStackProps {
   title: string;
@@ -84,7 +86,7 @@ export function EmptyState({
       {...wellRadius}
       padding={knobProps.sizeToken as any}
       aria-hidden
-      {...(!isWeb ? { accessibilityElementsHidden: true } : null)}>
+      {...(isWeb ? null : { accessibilityElementsHidden: true })}>
       {icon}
     </YStack>
   ) : null;
@@ -127,7 +129,7 @@ export function EmptyState({
         ? {
             role: isError ? 'alert' : 'status',
             'aria-labelledby': titleId,
-            ...(!isError ? { 'aria-live': 'polite' as const } : null),
+            ...(isError ? null : { 'aria-live': 'polite' as const }),
           }
         : {
             accessibilityRole: isError ? 'alert' : 'text',
@@ -137,7 +139,10 @@ export function EmptyState({
       {...frameGap}
       {...rest}>
       {well && isError ? <Intent name="error">{well}</Intent> : well}
-      <YStack alignItems="center" gap="$1" {...readingWidthStyle()}>
+      <YStack
+        alignItems="center"
+        gap="$1"
+        {...readingWidthStyle()}>
         {titleNode}
         {descriptionLines.map((line, index) => (
           <Paragraph

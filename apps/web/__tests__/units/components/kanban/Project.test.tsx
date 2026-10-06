@@ -5,7 +5,8 @@ import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { BoardContainer, BoardProject } from '@/components/kanban/project/Project';
-import { TaskStatus, type Project, type Task } from '@/types/dbInterface';
+import { TaskStatus } from '@/types/db-interface';
+import type { Project, Task } from '@/types/db-interface';
 
 // Ensure React is globally available
 globalThis.React = React;
@@ -123,7 +124,13 @@ describe('BoardProject', () => {
 
   it('should render project with title', () => {
     render(
-      <BoardProject project={mockProject} tasks={[]} isBoardOwner={true} isBoardMember={true} currentUserId="user-1" />,
+      <BoardProject
+        project={mockProject}
+        tasks={[]}
+        isBoardOwner={true}
+        isBoardMember={true}
+        currentUserId="user-1"
+      />,
     );
 
     expect(screen.getByText('Test Project')).toBeInTheDocument();
@@ -131,7 +138,13 @@ describe('BoardProject', () => {
 
   it('should render project description', () => {
     render(
-      <BoardProject project={mockProject} tasks={[]} isBoardOwner={true} isBoardMember={true} currentUserId="user-1" />,
+      <BoardProject
+        project={mockProject}
+        tasks={[]}
+        isBoardOwner={true}
+        isBoardMember={true}
+        currentUserId="user-1"
+      />,
     );
 
     expect(screen.getByText(/Test Description/)).toBeInTheDocument();
@@ -139,7 +152,13 @@ describe('BoardProject', () => {
 
   it('should render project owner', () => {
     render(
-      <BoardProject project={mockProject} tasks={[]} isBoardOwner={true} isBoardMember={true} currentUserId="user-1" />,
+      <BoardProject
+        project={mockProject}
+        tasks={[]}
+        isBoardOwner={true}
+        isBoardMember={true}
+        currentUserId="user-1"
+      />,
     );
 
     expect(screen.getByText(/John Doe/)).toBeInTheDocument();
@@ -147,7 +166,13 @@ describe('BoardProject', () => {
 
   it('should render project members', () => {
     render(
-      <BoardProject project={mockProject} tasks={[]} isBoardOwner={true} isBoardMember={true} currentUserId="user-1" />,
+      <BoardProject
+        project={mockProject}
+        tasks={[]}
+        isBoardOwner={true}
+        isBoardMember={true}
+        currentUserId="user-1"
+      />,
     );
 
     expect(screen.getByText(/Jane Smith, Bob Johnson/)).toBeInTheDocument();
@@ -171,7 +196,13 @@ describe('BoardProject', () => {
 
   it('should render new task dialog', () => {
     render(
-      <BoardProject project={mockProject} tasks={[]} isBoardOwner={true} isBoardMember={true} currentUserId="user-1" />,
+      <BoardProject
+        project={mockProject}
+        tasks={[]}
+        isBoardOwner={true}
+        isBoardMember={true}
+        currentUserId="user-1"
+      />,
     );
 
     expect(screen.getByTestId('new-task-dialog-project-1')).toBeInTheDocument();
@@ -179,7 +210,13 @@ describe('BoardProject', () => {
 
   it('should render project actions', () => {
     render(
-      <BoardProject project={mockProject} tasks={[]} isBoardOwner={true} isBoardMember={true} currentUserId="user-1" />,
+      <BoardProject
+        project={mockProject}
+        tasks={[]}
+        isBoardOwner={true}
+        isBoardMember={true}
+        currentUserId="user-1"
+      />,
     );
 
     expect(screen.getByTestId('project-actions')).toBeInTheDocument();
@@ -263,7 +300,13 @@ describe('BoardProject', () => {
     } as any);
 
     render(
-      <BoardProject project={mockProject} tasks={[]} isBoardOwner={true} isBoardMember={true} currentUserId="user-1" />,
+      <BoardProject
+        project={mockProject}
+        tasks={[]}
+        isBoardOwner={true}
+        isBoardMember={true}
+        currentUserId="user-1"
+      />,
     );
 
     await waitFor(() => {
@@ -282,7 +325,13 @@ describe('BoardProject', () => {
     } as any);
 
     render(
-      <BoardProject project={mockProject} tasks={[]} isBoardOwner={true} isBoardMember={true} currentUserId="user-1" />,
+      <BoardProject
+        project={mockProject}
+        tasks={[]}
+        isBoardOwner={true}
+        isBoardMember={true}
+        currentUserId="user-1"
+      />,
     );
 
     await waitFor(() => {
@@ -294,7 +343,13 @@ describe('BoardProject', () => {
 
   it('should render with empty tasks array', () => {
     render(
-      <BoardProject project={mockProject} tasks={[]} isBoardOwner={true} isBoardMember={true} currentUserId="user-1" />,
+      <BoardProject
+        project={mockProject}
+        tasks={[]}
+        isBoardOwner={true}
+        isBoardMember={true}
+        currentUserId="user-1"
+      />,
     );
 
     expect(screen.getByText('Test Project')).toBeInTheDocument();
@@ -321,7 +376,13 @@ describe('BoardProject', () => {
 
   it('should render the sortable project container', () => {
     render(
-      <BoardProject project={mockProject} tasks={[]} isBoardOwner={true} isBoardMember={true} currentUserId="user-1" />,
+      <BoardProject
+        project={mockProject}
+        tasks={[]}
+        isBoardOwner={true}
+        isBoardMember={true}
+        currentUserId="user-1"
+      />,
     );
 
     const projectContainer = screen.getByTestId('project-container');

@@ -1,6 +1,7 @@
 import { PaletteIcon } from '@phosphor-icons/react';
 import { ThemeDevtoolsPanel } from '@repo/theme';
-import { Suspense, lazy, useState, type ComponentType } from 'react';
+import { Suspense, lazy, useState } from 'react';
+import type { ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SizableText, Text, YStack } from 'tamagui';
 
@@ -22,7 +23,12 @@ const ScopedPanel = lazy(async (): Promise<{ default: ComponentType<object> }> =
   if (!useUserScheme) {
     return { default: () => <ThemeDevtoolsPanel /> };
   }
-  const Panel = () => <ThemeDevtoolsPanel useUserScheme={useUserScheme} devtoolsTheme={useUserScheme().value} />;
+  const Panel = () => (
+    <ThemeDevtoolsPanel
+      useUserScheme={useUserScheme}
+      devtoolsTheme={useUserScheme().value}
+    />
+  );
   return { default: Panel };
 });
 
@@ -65,10 +71,14 @@ export function ThemePlayground({ testID }: ThemePlaygroundProps) {
         scrollable
         header={
           <YStack>
-            <SizableText size="$6" fontWeight="700">
+            <SizableText
+              size="$6"
+              fontWeight="700">
               {t('Theme playground')}
             </SizableText>
-            <Text fontSize="$2" color="$color10">
+            <Text
+              fontSize="$2"
+              color="$color10">
               {t('Changes restyle the page live')}
             </Text>
           </YStack>

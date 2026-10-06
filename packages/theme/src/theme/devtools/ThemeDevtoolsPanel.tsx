@@ -44,11 +44,10 @@
 
 import { writeToClipboard } from '@repo/platform';
 import { storage } from '@repo/store';
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 
 import {
-  type Knobs,
-  type InteractionState,
   defaultKnobs,
   FillStyle,
   BorderRadius,
@@ -72,11 +71,12 @@ import {
   FormAutofocus,
   interactionStates,
 } from '../knobs';
+import type { Knobs, InteractionState } from '../knobs';
 import { getPresetNames, getPreset } from '../shared';
-import { useTheme } from '../useTheme';
+import { useTheme } from '../use-theme';
 
-import { extractAnimationNames } from './animationOptions';
-import { buildSnapshot } from './buildSnapshot';
+import { extractAnimationNames } from './animation-options';
+import { buildSnapshot } from './build-snapshot';
 import { ColorLineVisualizer } from './ColorLineVisualizer';
 import {
   fillIcon as _fillIcon,
@@ -100,7 +100,7 @@ import {
   timestampStyleIcon as _timestampStyleIcon,
   disabledStyleIcon as _disabledStyleIcon,
   formAutofocusIcon as _formAutofocusIcon,
-} from './knobIcons';
+} from './knob-icons';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -440,7 +440,13 @@ function Dropdown<V extends string | number | boolean>({
           element.style.opacity = '0';
         }
       }}>
-      {onTogglePin && <PinCheckbox pinned={!!pinned} onToggle={onTogglePin} isDark={!!isDark} />}
+      {onTogglePin && (
+        <PinCheckbox
+          pinned={!!pinned}
+          onToggle={onTogglePin}
+          isDark={!!isDark}
+        />
+      )}
       <span style={styles.label}>{label}</span>
       <select
         style={{
@@ -460,12 +466,17 @@ function Dropdown<V extends string | number | boolean>({
           }
         }}>
         {onUnset && (
-          <option value="__unset__" style={optionStyle}>
+          <option
+            value="__unset__"
+            style={optionStyle}>
             unset (inherit)
           </option>
         )}
         {options.map((opt) => (
-          <option key={String(opt)} value={String(opt)} style={optionStyle}>
+          <option
+            key={String(opt)}
+            value={String(opt)}
+            style={optionStyle}>
             {format ? format(opt) : String(opt)}
           </option>
         ))}
@@ -497,7 +508,13 @@ function CollapseButton({ expanded, onToggle, isDark }: { expanded: boolean; onT
         transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
         flexShrink: 0,
       }}>
-      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" role="img" aria-label="Toggle">
+      <svg
+        width="10"
+        height="10"
+        viewBox="0 0 10 10"
+        fill="none"
+        role="img"
+        aria-label="Toggle">
         <title>Toggle state overrides</title>
         <path
           d="M3 1.5l4 3.5-4 3.5"
@@ -558,9 +575,21 @@ function IconGroup<V extends string | number | boolean>({
           element.style.opacity = '0';
         }
       }}>
-      {onTogglePin && <PinCheckbox pinned={!!pinned} onToggle={onTogglePin} isDark={isDark} />}
+      {onTogglePin && (
+        <PinCheckbox
+          pinned={!!pinned}
+          onToggle={onTogglePin}
+          isDark={isDark}
+        />
+      )}
       <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-        {onToggleExpand && <CollapseButton expanded={!!expanded} onToggle={onToggleExpand} isDark={isDark} />}
+        {onToggleExpand && (
+          <CollapseButton
+            expanded={!!expanded}
+            onToggle={onToggleExpand}
+            isDark={isDark}
+          />
+        )}
         <span style={styles.label}>{label}</span>
       </div>
       <div style={styles.iconRow}>
@@ -919,7 +948,7 @@ export function ThemeDevtoolsPanel({
 
   const clearStateOverridesForKeys = useCallback(
     (keys: string[]) => {
-      const current = knobsRef.current;
+      const { current } = knobsRef;
       const partial: Partial<Knobs> = {};
       for (const state of interactionStates) {
         const stateKnobs = { ...current[state] } as Record<string, unknown>;
@@ -1260,7 +1289,7 @@ export function ThemeDevtoolsPanel({
         const settings = raw ? JSON.parse(raw) : {};
         if (settings.theme !== schemeValue) {
           settings.theme = schemeValue;
-          return Promise.resolve(storage.setItem(tanstackDevtoolsSettings, JSON.stringify(settings)));
+          return storage.setItem(tanstackDevtoolsSettings, JSON.stringify(settings));
         }
       })
       .catch(() => {
@@ -1303,7 +1332,7 @@ export function ThemeDevtoolsPanel({
 
   const setStateKnob = useCallback(
     (state: 'hover' | 'press' | 'focus' | 'focusVisible', key: string, value: string) => {
-      const current = knobsRef.current;
+      const { current } = knobsRef;
       setKnobs({
         [state]: { ...current[state], [key]: value === '' ? undefined : value },
       } as Partial<Knobs>);
@@ -1358,7 +1387,10 @@ export function ThemeDevtoolsPanel({
         )}
         {presetOptions.length > 1 && (
           <div style={styles.card}>
-            <button type="button" style={styles.resetBtn} onClick={handleResetToPreset}>
+            <button
+              type="button"
+              style={styles.resetBtn}
+              onClick={handleResetToPreset}>
               Reset to Preset
             </button>
           </div>
@@ -1839,7 +1871,9 @@ export function ThemeDevtoolsPanel({
               opacity: activeProfile ? 1 : 0.6,
             }}>
             {profileNames.map((name) => (
-              <option key={name} value={name}>
+              <option
+                key={name}
+                value={name}>
                 {name || 'profile'}
               </option>
             ))}
@@ -1863,7 +1897,10 @@ export function ThemeDevtoolsPanel({
             onClick={handleCopySnapshot}>
             {copyStatus === 'copied' ? 'Copied!' : copyStatus === 'error' ? 'Failed' : 'Copy Snapshot'}
           </button>
-          <button type="button" style={styles.resetBtn} onClick={handleRandomize}>
+          <button
+            type="button"
+            style={styles.resetBtn}
+            onClick={handleRandomize}>
             Random
           </button>
           <button
@@ -1872,9 +1909,20 @@ export function ThemeDevtoolsPanel({
             onClick={handleToggleAllStates}
             title={allStateKnobsExpanded ? 'Collapse States' : 'Expand States'}
             aria-label={allStateKnobsExpanded ? 'Collapse States' : 'Expand States'}>
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" role="img" aria-label="States">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 16 16"
+              fill="none"
+              role="img"
+              aria-label="States">
               <title>{allStateKnobsExpanded ? 'Collapse States' : 'Expand States'}</title>
-              <path d="M2.5 4.5h7M2.5 8h7M2.5 11.5h7" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+              <path
+                d="M2.5 4.5h7M2.5 8h7M2.5 11.5h7"
+                stroke="currentColor"
+                strokeWidth="1.3"
+                strokeLinecap="round"
+              />
               <path
                 d={allStateKnobsExpanded ? 'M12 10.5l-2-2 2-2' : 'M10 6.5l2 2-2 2'}
                 stroke="currentColor"
@@ -1890,7 +1938,13 @@ export function ThemeDevtoolsPanel({
             onClick={handleApplyDefaults}
             title="Apply Defaults"
             aria-label="Apply Defaults">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" role="img" aria-label="Defaults">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 16 16"
+              fill="none"
+              role="img"
+              aria-label="Defaults">
               <title>Apply Defaults</title>
               <path
                 d="M2.5 4.5h11M2.5 8h11M2.5 11.5h11"
@@ -1898,9 +1952,24 @@ export function ThemeDevtoolsPanel({
                 strokeWidth="1.3"
                 strokeLinecap="round"
               />
-              <circle cx="5" cy="4.5" r="1.2" fill="currentColor" />
-              <circle cx="8" cy="8" r="1.2" fill="currentColor" />
-              <circle cx="11" cy="11.5" r="1.2" fill="currentColor" />
+              <circle
+                cx="5"
+                cy="4.5"
+                r="1.2"
+                fill="currentColor"
+              />
+              <circle
+                cx="8"
+                cy="8"
+                r="1.2"
+                fill="currentColor"
+              />
+              <circle
+                cx="11"
+                cy="11.5"
+                r="1.2"
+                fill="currentColor"
+              />
             </svg>
           </button>
           <button
@@ -1909,9 +1978,20 @@ export function ThemeDevtoolsPanel({
             onClick={handleClearKnobs}
             title="Clear"
             aria-label="Clear">
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" role="img" aria-label="Clear">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 16 16"
+              fill="none"
+              role="img"
+              aria-label="Clear">
               <title>Clear</title>
-              <path d="M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+              <path
+                d="M3.5 3.5l9 9M12.5 3.5l-9 9"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+              />
             </svg>
           </button>
         </div>

@@ -1,5 +1,6 @@
 import type React from 'react';
-import { type ReactNode, createElement } from 'react';
+import { createElement } from 'react';
+import type { ReactNode } from 'react';
 import { renderToString } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -25,10 +26,11 @@ import type { ThemeName } from '@tamagui/web';
 
 import { Intent } from './Intent';
 import { defaultKnobs } from './knobs';
+import { PresetContext } from './preset-context';
+import type { PresetContextValue } from './preset-context';
 import type { Preset as PresetType } from './preset.types';
-import { PresetContext, type PresetContextValue } from './PresetContext';
 import type { ResolvedKnobs } from './recipes';
-import { useResolvedKnobs, useIntentContext } from './useResolvedKnobs';
+import { useResolvedKnobs, useIntentContext } from './use-resolved-knobs';
 
 // ---------------------------------------------------------------------------
 // Helpers

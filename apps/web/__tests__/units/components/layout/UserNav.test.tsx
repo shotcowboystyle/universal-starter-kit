@@ -3,9 +3,9 @@ import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { UserNav } from '@/components/layout/UserNav';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/use-auth';
 
-vi.mock('@/hooks/useAuth', () => ({
+vi.mock('@/hooks/use-auth', () => ({
   useAuth: vi.fn(),
 }));
 
@@ -52,9 +52,9 @@ describe('UserNav', () => {
   it('shows user details and logs out from the menu', async () => {
     renderWithProviders(<UserNav />);
     fireEvent.click(screen.getByRole('button', { name: 'test@example.com' }));
-    expect(await screen.findByText('test')).toBeInTheDocument();
+    await expect(screen.findByText('test')).resolves.toBeInTheDocument();
     expect(screen.getAllByText('test@example.com').length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole('menuitem', { name: 'logOut' }));
-    expect(mockLogout).toHaveBeenCalledTimes(1);
+    expect(mockLogout).toHaveBeenCalledOnce();
   });
 });

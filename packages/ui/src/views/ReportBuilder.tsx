@@ -23,12 +23,13 @@ import {
 } from '@repo/theme';
 import { useHotkey } from '@tanstack/react-hotkeys';
 import React, { useState, useMemo, useCallback, useId, useRef } from 'react';
-import { Text, XStack, YStack, type YStackProps } from 'tamagui';
+import { Text, XStack, YStack } from 'tamagui';
+import type { YStackProps } from 'tamagui';
 
 import { BarChart } from '../charts/BarChart';
-import { componentColors } from '../componentColors';
+import { componentColors } from '../component-colors';
 import { DropdownMenu } from '../DropdownMenu';
-import { useDirection } from '../hooks/useDirection';
+import { useDirection } from '../hooks/use-direction';
 import { AsyncBoundary, AsyncSkeleton, resolveAsyncStatus } from '../layouts/AsyncBoundary';
 import { EmptyState } from '../layouts/Page';
 import { ScrollView } from '../ScrollView';
@@ -83,26 +84,36 @@ function formatCellValue(value: unknown, fieldtype: string): string {
   }
 
   switch (fieldtype) {
-    case 'Check':
+    case 'Check': {
       return value ? 'Yes' : 'No';
-    case 'Currency':
+    }
+    case 'Currency': {
       return formatCurrency(value as number);
-    case 'Float':
+    }
+    case 'Float': {
       return formatNumber(value as number, { maximumFractionDigits: 4 });
-    case 'Int':
+    }
+    case 'Int': {
       return formatNumber(value as number, { maximumFractionDigits: 0 });
-    case 'Percent':
+    }
+    case 'Percent': {
       return formatPercent(value as number, { precision: 1 });
-    case 'Rating':
+    }
+    case 'Rating': {
       return `${formatNumber(Number(value) * 5, { precision: 1 })} / 5`;
-    case 'Date':
+    }
+    case 'Date': {
       return formatAbsoluteDate(value as string);
-    case 'Datetime':
+    }
+    case 'Datetime': {
       return formatAbsoluteDateTime(value as string);
-    case 'Time':
+    }
+    case 'Time': {
       return formatTimeOfDay(value as string);
-    default:
+    }
+    default: {
       return String(value);
+    }
   }
 }
 
@@ -125,15 +136,22 @@ function compareValues(a: unknown, b: unknown, fieldtype: string): number {
   return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' });
 }
 
-function SimpleBarChart({ data, height = 200 }: { data: Array<{ label: string; value: number }>; height?: number }) {
+function SimpleBarChart({ data, height = 200 }: { data: { label: string; value: number }[]; height?: number }) {
   const { knobProps } = useResolvedKnobs();
   if (data.length === 0) {
     return null;
   }
 
   return (
-    <YStack {...knobProps.surface} {...knobProps.containerRadius} {...knobProps.panelPadding} overflow="hidden">
-      <BarChart data={data} height={height} />
+    <YStack
+      {...knobProps.surface}
+      {...knobProps.containerRadius}
+      {...knobProps.panelPadding}
+      overflow="hidden">
+      <BarChart
+        data={data}
+        height={height}
+      />
     </YStack>
   );
 }
@@ -208,7 +226,7 @@ export function ReportBuilder({
   );
 
   const [internalGroupBy, setInternalGroupBy] = useState<GroupByConfig | null>(groupByProp ?? null);
-  const groupBy = groupByProp !== undefined ? groupByProp : internalGroupBy;
+  const groupBy = groupByProp === undefined ? internalGroupBy : groupByProp;
 
   const handleGroupByChange = useCallback(
     (config: GroupByConfig | null) => {
@@ -254,9 +272,10 @@ export function ReportBuilder({
 
     for (const group of Object.values(groups)) {
       switch (groupBy.aggregation) {
-        case 'count':
+        case 'count': {
           group.aggregationValue = group.rows.length;
           break;
+        }
         case 'sum': {
           const field = groupBy.aggregationField;
           group.aggregationValue = field
@@ -299,14 +318,16 @@ export function ReportBuilder({
     [groupEntries],
   );
 
-  const totals = useMemo(() => {
-    return enabledColumns
-      .filter((col) => isNumericFieldType(col.fieldtype))
-      .map((col) => ({
-        col,
-        value: sortedData.reduce((acc, row) => acc + (Number(row[col.fieldname]) || 0), 0),
-      }));
-  }, [enabledColumns, sortedData]);
+  const totals = useMemo(
+    () =>
+      enabledColumns
+        .filter((col) => isNumericFieldType(col.fieldtype))
+        .map((col) => ({
+          col,
+          value: sortedData.reduce((acc, row) => acc + (Number(row[col.fieldname]) || 0), 0),
+        })),
+    [enabledColumns, sortedData],
+  );
 
   const focusItems = useMemo((): FocusItem[] => {
     if (groupBy && groupedData) {
@@ -526,7 +547,11 @@ export function ReportBuilder({
               cycleSort(col.fieldname);
             }}
             hoverStyle={{ backgroundColor: componentColors.interactive.background }}>
-            <Text {...knobProps.label} color="$color" numberOfLines={1} textAlign={cellAlign(col)}>
+            <Text
+              {...knobProps.label}
+              color="$color"
+              numberOfLines={1}
+              textAlign={cellAlign(col)}>
               {col.label}
             </Text>
             <SortIcon
@@ -643,18 +668,32 @@ export function ReportBuilder({
             backgroundColor: isFocused ? '$accentBackground' : componentColors.interactive.hover,
           }}>
           {isCollapsed ? (
-            <CollapsedCaretIcon size={iconPx} weight="bold" />
+            <CollapsedCaretIcon
+              size={iconPx}
+              weight="bold"
+            />
           ) : (
-            <CaretDownIcon size={iconPx} weight="bold" />
+            <CaretDownIcon
+              size={iconPx}
+              weight="bold"
+            />
           )}
-          <Text {...knobProps.label} color="$accentColor" numberOfLines={1}>
+          <Text
+            {...knobProps.label}
+            color="$accentColor"
+            numberOfLines={1}>
             {groupByCol?.label ?? groupBy.field}: {groupKey}
           </Text>
-          <Text {...knobProps.label} color={knobProps.textAccentColor}>
+          <Text
+            {...knobProps.label}
+            color={knobProps.textAccentColor}>
             ({group.rows.length} {group.rows.length === 1 ? t('record') : t('records')})
           </Text>
           <XStack flex={1} />
-          <Text {...knobProps.label} color="$accentColor" numberOfLines={1}>
+          <Text
+            {...knobProps.label}
+            color="$accentColor"
+            numberOfLines={1}>
             {aggDisplay}
           </Text>
         </XStack>
@@ -717,7 +756,10 @@ export function ReportBuilder({
         flexWrap="wrap">
         <DropdownMenu>
           <DropdownMenu.Trigger asChild>
-            <Button size={knobProps.sizeToken} chromeless {...pressTargetStyle()}>
+            <Button
+              size={knobProps.sizeToken}
+              chromeless
+              {...pressTargetStyle()}>
               {t('Columns ({{enabled}}/{{total}})', {
                 enabled: enabledColumns.length,
                 total: columns.length,
@@ -747,7 +789,10 @@ export function ReportBuilder({
 
         <DropdownMenu>
           <DropdownMenu.Trigger asChild>
-            <Button size={knobProps.sizeToken} chromeless {...pressTargetStyle()}>
+            <Button
+              size={knobProps.sizeToken}
+              chromeless
+              {...pressTargetStyle()}>
               {groupByCol ? t('Group by: {{field}}', { field: groupByCol.label }) : t('Group by')}
             </Button>
           </DropdownMenu.Trigger>
@@ -778,7 +823,10 @@ export function ReportBuilder({
         {groupBy && (
           <DropdownMenu>
             <DropdownMenu.Trigger asChild>
-              <Button size={knobProps.sizeToken} chromeless {...pressTargetStyle()}>
+              <Button
+                size={knobProps.sizeToken}
+                chromeless
+                {...pressTargetStyle()}>
                 {aggregationLabels[groupBy.aggregation]}
               </Button>
             </DropdownMenu.Trigger>
@@ -806,7 +854,10 @@ export function ReportBuilder({
         {groupBy && groupBy.aggregation !== 'count' && numericColumns.length > 0 && (
           <DropdownMenu>
             <DropdownMenu.Trigger asChild>
-              <Button size={knobProps.sizeToken} chromeless {...pressTargetStyle()}>
+              <Button
+                size={knobProps.sizeToken}
+                chromeless
+                {...pressTargetStyle()}>
                 {t('of {{field}}', {
                   field: aggregationFieldCol?.label ?? groupBy.aggregationField ?? t('field'),
                 })}
@@ -870,7 +921,10 @@ export function ReportBuilder({
         flex={bounded ? 1 : undefined}
         minHeight={bounded ? 0 : undefined}>
         {isInitialLoading ? (
-          <AsyncSkeleton layout="table" padding={knobProps.panelPadding.padding} />
+          <AsyncSkeleton
+            layout="table"
+            padding={knobProps.panelPadding.padding}
+          />
         ) : (
           <YStack
             ref={gridRef as any}
@@ -911,16 +965,23 @@ export function ReportBuilder({
                 backgroundColor={componentColors.surface.background}
                 {...knobProps.gapLg}
                 flexWrap="wrap">
-                <Text {...knobProps.label} color={knobProps.textAccentColor}>
+                <Text
+                  {...knobProps.label}
+                  color={knobProps.textAccentColor}>
                   {t('Totals')}
                 </Text>
                 {totals.map(({ col, value }) => (
-                  <Text key={col.fieldname} {...knobProps.label} color="$color">
+                  <Text
+                    key={col.fieldname}
+                    {...knobProps.label}
+                    color="$color">
                     {col.label}: <Text {...knobProps.label}>{formatCellValue(value, col.fieldtype)}</Text>
                   </Text>
                 ))}
                 <XStack flex={1} />
-                <Text {...knobProps.label} color={knobProps.textAccentColor}>
+                <Text
+                  {...knobProps.label}
+                  color={knobProps.textAccentColor}>
                   {t('{{count}} row(s)', { count: data.length })}
                 </Text>
               </XStack>

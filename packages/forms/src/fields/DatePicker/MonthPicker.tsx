@@ -1,18 +1,20 @@
 import { useGlyphColor } from '@repo/theme';
 import { ChevronLeft, ChevronRight } from '@tamagui/lucide-icons-2';
 import type { DeepKeys, DeepValue } from '@tanstack/form-core';
-import { type ComponentProps, useCallback, useEffect, useRef, useState } from 'react';
-import { Text, View, useProps, type Popover } from 'tamagui';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { ComponentProps } from 'react';
+import { Text, View, useProps } from 'tamagui';
+import type { Popover } from 'tamagui';
 
-import { Field, FieldLayout } from '../../fieldLayout';
-import type { FormFieldProps } from '../../fieldLayout';
+import { Field, FieldLayout } from '../../FieldLayout';
+import type { FormFieldProps } from '../../FieldLayout';
 import { Input as InputParts } from '../../InputParts';
 import { t } from '../../shared/t';
 import { getFieldError, mergeFieldHandler, useFormField, useResolvedValidators } from '../../shared/utils';
 import { Skeleton } from '../../Skeleton';
 import type { FieldComponentProps, Validator } from '../../types';
 
-import { FieldValueSync } from './fieldValueSync';
+import { FieldValueSync } from './FieldValueSync';
 import {
   CalendarChromeButton,
   CalendarPanelFrame,
@@ -174,7 +176,11 @@ function MonthPickerBody({
         width={px * 7}
         {...animation}
         transition={knobProps.transition}>
-        <View flexDirection="row" width={px * 7} alignItems="center" justifyContent="space-between">
+        <View
+          flexDirection="row"
+          width={px * 7}
+          alignItems="center"
+          justifyContent="space-between">
           <CalendarChromeButton
             onPress={() => {
               if (!prevDisabled) {
@@ -183,7 +189,10 @@ function MonthPickerBody({
             }}
             label={t('Previous year')}>
             <View opacity={prevDisabled ? 0.4 : 1}>
-              <ChevronLeft size={knobProps.controlIcon.width} color={glyphColor} />
+              <ChevronLeft
+                size={knobProps.controlIcon.width}
+                color={glyphColor}
+              />
             </View>
           </CalendarChromeButton>
 
@@ -191,7 +200,10 @@ function MonthPickerBody({
             onPress={() => {
               setViewMode('year');
             }}>
-            <Text color="$color" {...knobProps.label} {...knobProps.textWeight}>
+            <Text
+              color="$color"
+              {...knobProps.label}
+              {...knobProps.textWeight}>
               {year}
             </Text>
           </CalendarTextButton>
@@ -204,7 +216,10 @@ function MonthPickerBody({
             }}
             label={t('Next year')}>
             <View opacity={nextDisabled ? 0.4 : 1}>
-              <ChevronRight size={knobProps.controlIcon.width} color={glyphColor} />
+              <ChevronRight
+                size={knobProps.controlIcon.width}
+                color={glyphColor}
+              />
             </View>
           </CalendarChromeButton>
         </View>
@@ -401,8 +416,16 @@ export function MonthPicker<
   // Render skeleton placeholder (after all hooks)
   if (skeleton) {
     return (
-      <FieldLayout id={id} label={label} size={size} knobProps={knobProps}>
-        <Skeleton variant="rounded" width="100%" height={knobProps.sizeToken} />
+      <FieldLayout
+        id={id}
+        label={label}
+        size={size}
+        knobProps={knobProps}>
+        <Skeleton
+          variant="rounded"
+          width="100%"
+          height={knobProps.sizeToken}
+        />
       </FieldLayout>
     );
   }
@@ -441,7 +464,10 @@ export function MonthPicker<
           <>
             {/* Form branch displays from `selectedValue` — keep it synced to
                 the live field value (late seeds / programmatic updates). */}
-            <FieldValueSync value={field.state.value} onSync={adoptFieldValue} />
+            <FieldValueSync
+              value={field.state.value}
+              onSync={adoptFieldValue}
+            />
             <FieldLayout
               id={id}
               label={label}

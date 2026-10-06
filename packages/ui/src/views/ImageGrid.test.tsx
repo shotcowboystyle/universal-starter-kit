@@ -11,7 +11,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 
 describe('ImageGrid live-media tile', () => {
   it('does not paint a status pip; tile radius stays UNCLAMPED', () => {
-    const src = readFileSync(join(here, 'ImageGrid.tsx'), 'utf8');
+    const src = readFileSync(join(here, 'ImageGrid.tsx'), 'utf-8');
     expect(src).not.toMatch(/capContainerRadius\(|knobProps\.containerRadius|knobProps\.cardSurface/);
     expect(src).toContain('knobProps.borderRadius');
     expect(src).not.toMatch(/data-status-pip|StatusPip|statusPip/);
@@ -28,7 +28,7 @@ describe('ImageGrid live-media tile', () => {
       />,
     );
     const cells = document.querySelectorAll('[role="gridcell"]');
-    expect(cells.length).toBe(2);
+    expect(cells).toHaveLength(2);
     for (const cell of cells) {
       expect(cell.querySelector('[data-status-pip]')).toBeNull();
       expect(cell.getAttribute('data-media-tile')).toBe('image-grid');

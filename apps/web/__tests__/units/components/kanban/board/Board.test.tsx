@@ -4,7 +4,8 @@ import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Board } from '@/components/kanban/board/Board';
-import { TaskStatus, type Project } from '@/types/dbInterface';
+import { TaskStatus } from '@/types/db-interface';
+import type { Project } from '@/types/db-interface';
 
 globalThis.React = React;
 
@@ -12,11 +13,11 @@ const mockUseAuth = vi.fn();
 const mockUseBoards = vi.fn();
 const mockUseWorkspaceStore = vi.fn();
 
-vi.mock('@/hooks/useAuth', () => ({
+vi.mock('@/hooks/use-auth', () => ({
   useAuth: () => mockUseAuth(),
 }));
 
-vi.mock('@/hooks/useBoards', () => ({
+vi.mock('@/hooks/use-boards', () => ({
   useBoards: () => mockUseBoards(),
 }));
 
@@ -24,14 +25,14 @@ vi.mock('@/stores/workspace-store', () => ({
   useWorkspaceStore: (selector: any) => mockUseWorkspaceStore(selector),
 }));
 
-vi.mock('@/lib/api/taskApi', () => ({
+vi.mock('@/lib/api/task-api', () => ({
   taskApi: {
     moveTask: vi.fn(),
     updateTask: vi.fn(),
   },
 }));
 
-vi.mock('@/lib/api/projectApi', () => ({
+vi.mock('@/lib/api/project-api', () => ({
   projectApi: {
     updateProject: vi.fn(),
   },
@@ -202,9 +203,7 @@ describe('Board', () => {
 
     mockUseAuth.mockReturnValue(authState);
     mockUseBoards.mockReturnValue(boardsState);
-    mockUseWorkspaceStore.mockImplementation((selector: any) => {
-      return selector ? selector(workspaceState) : workspaceState;
-    });
+    mockUseWorkspaceStore.mockImplementation((selector: any) => (selector ? selector(workspaceState) : workspaceState));
   };
 
   beforeEach(() => {
@@ -304,7 +303,7 @@ describe('Board', () => {
 
     setupMocks({
       myBoards: [],
-      teamBoards: teamBoards,
+      teamBoards,
       currentBoardId: 'board-2',
     });
 

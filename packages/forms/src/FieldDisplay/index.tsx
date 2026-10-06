@@ -17,19 +17,22 @@
  */
 
 import { CheckIcon, FileIcon, ImageSquareIcon, StarIcon } from '@phosphor-icons/react';
-import { useReadableTextOn, useResolvedKnobs, type KnobProps } from '@repo/theme';
+import { useReadableTextOn, useResolvedKnobs } from '@repo/theme';
+import type { KnobProps } from '@repo/theme';
 import { getSize } from '@tamagui/get-token';
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useContext, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import type { SizeTokens } from 'tamagui';
 import { Image, Text, View, XStack, getVariableValue, isWeb, useTheme } from 'tamagui';
 
-import { Chip, type ChipColor, type ChipSize } from '../Chip';
+import { Chip } from '../Chip';
+import type { ChipColor, ChipSize } from '../Chip';
 import { BarcodePreview } from '../fields/Barcode/BarcodePreview';
-import { useReverseGeocodedLabel } from '../fields/Geolocation/geocoderContext';
-import { parseGeoValue } from '../fields/Geolocation/geoValue';
-import { formControlColors, formSelectedColors } from '../shared/colorRamps';
+import { parseGeoValue } from '../fields/Geolocation/geo-value';
+import { useReverseGeocodedLabel } from '../fields/Geolocation/geocoder-context';
+import { formControlColors, formSelectedColors } from '../shared/color-ramps';
 import { t } from '../shared/t';
-import { useIsInTableCell } from '../shared/tableCellContext';
+import { useIsInTableCell } from '../shared/table-cell-context';
 import { clampRadiusForControl } from '../shared/utils';
 
 import { asText, EMPTY, formatDateText, formatNumericText } from './formatters';
@@ -324,7 +327,9 @@ function InputDisplay({
     );
   }
   return (
-    <TextCell mono={mono} wrap={Boolean(multiline && !inTableCell && !truncate)}>
+    <TextCell
+      mono={mono}
+      wrap={Boolean(multiline && !inTableCell && !truncate)}>
       {text}
     </TextCell>
   );
@@ -345,7 +350,9 @@ function NumericDisplay({ value, fieldProps }: { value: any; fieldProps?: Record
     currency: fieldProps?.currency,
   });
   return (
-    <TextCell mono align={numericAlign}>
+    <TextCell
+      mono
+      align={numericAlign}>
       {formatted}
     </TextCell>
   );
@@ -382,15 +389,22 @@ function ChoiceDisplay({ value, fieldProps }: { value: any; fieldProps?: Record<
   if (value == null || value === '') {
     return <TextCell>{EMPTY}</TextCell>;
   }
-  const options: Array<{ label: string; value: any; color?: string; intent?: string }> = fieldProps?.options ?? [];
+  const options: { label: string; value: any; color?: string; intent?: string }[] = fieldProps?.options ?? [];
   const size = chipSizeFor(knobProps.size);
   const values = Array.isArray(value) ? value : [value];
   return (
-    <XStack alignItems="center" flexWrap="wrap" minWidth={0} {...knobProps.gap}>
+    <XStack
+      alignItems="center"
+      flexWrap="wrap"
+      minWidth={0}
+      {...knobProps.gap}>
       {values.map((item, index) => {
         const opt = options.find((o) => o.value === item || String(o.value) === String(item));
         return (
-          <Chip key={`${String(item)}-${index}`} size={size} color={resolveChipColor(item, fieldProps, opt)}>
+          <Chip
+            key={`${String(item)}-${index}`}
+            size={size}
+            color={resolveChipColor(item, fieldProps, opt)}>
             {opt?.label ?? asText(item)}
           </Chip>
         );
@@ -425,7 +439,11 @@ function BooleanDisplay({ value }: { value: any }) {
       justifyContent="center"
       aria-hidden>
       {marked ? (
-        <CheckIcon size={Math.round(glyphSize * 0.65)} weight="bold" color={onMark ?? knobProps.textAccentColor} />
+        <CheckIcon
+          size={Math.round(glyphSize * 0.65)}
+          weight="bold"
+          color={onMark ?? knobProps.textAccentColor}
+        />
       ) : null}
     </View>
   );
@@ -438,7 +456,10 @@ function ColorDisplay({ value }: { value: any }) {
     return <TextCell>{EMPTY}</TextCell>;
   }
   return (
-    <XStack alignItems="center" minWidth={0} {...knobProps.gap}>
+    <XStack
+      alignItems="center"
+      minWidth={0}
+      {...knobProps.gap}>
       <View
         width={glyphSize}
         height={glyphSize}
@@ -489,7 +510,10 @@ function FileUploadDisplay({ value }: { value: any }) {
         : (files[0]?.name ?? t('1 file'))
       : t('{{count}} files', { count: files.length });
   return (
-    <XStack alignItems="center" minWidth={0} {...knobProps.gap}>
+    <XStack
+      alignItems="center"
+      minWidth={0}
+      {...knobProps.gap}>
       <FileIcon size={glyphSize} />
       <TextCell>{label}</TextCell>
     </XStack>
@@ -514,7 +538,12 @@ function Thumb({ src, alt, knobProps }: { src: string; alt: string; knobProps: K
     );
   }
   return (
-    <View width={px} height={px} {...knobProps.borderRadius} overflow="hidden" backgroundColor="$color3">
+    <View
+      width={px}
+      height={px}
+      {...knobProps.borderRadius}
+      overflow="hidden"
+      backgroundColor="$color3">
       <Image
         src={src}
         alt={alt}
@@ -535,7 +564,13 @@ function ImageDisplay({ value }: { value: any }) {
   if (!src) {
     return <TextCell>{EMPTY}</TextCell>;
   }
-  return <Thumb src={src} alt="" knobProps={knobProps} />;
+  return (
+    <Thumb
+      src={src}
+      alt=""
+      knobProps={knobProps}
+    />
+  );
 }
 
 function BarcodeDisplay({ value, fieldProps }: { value: any; fieldProps?: Record<string, any> }) {
@@ -551,7 +586,11 @@ function BarcodeDisplay({ value, fieldProps }: { value: any; fieldProps?: Record
       ? fieldProps.format
       : undefined;
   return (
-    <XStack alignItems="center" minWidth={0} flexShrink={1} {...knobProps.gap}>
+    <XStack
+      alignItems="center"
+      minWidth={0}
+      flexShrink={1}
+      {...knobProps.gap}>
       <ValueText mono>{text}</ValueText>
       {/* The value is already printed beside the symbol, so an undrawable one
           contributes NOTHING rather than a second copy of the string. At this
@@ -572,7 +611,13 @@ function SignatureDisplay({ value }: { value: any }) {
   const { knobProps } = useDisplayChrome();
   const src = typeof value === 'string' && value.startsWith('data:image') ? value : null;
   if (src) {
-    return <Thumb src={src} alt={t('signed')} knobProps={knobProps} />;
+    return (
+      <Thumb
+        src={src}
+        alt={t('signed')}
+        knobProps={knobProps}
+      />
+    );
   }
   const hasInk = (typeof value === 'string' && value.length > 0) || (Array.isArray(value) && value.length > 0);
   return <TextCell>{hasInk ? t('signed') : EMPTY}</TextCell>;
@@ -617,8 +662,8 @@ function RichTextDisplay({ value }: { value: any }) {
   const text =
     typeof value === 'string'
       ? value
-          .replace(/<[^>]+>/g, ' ')
-          .replace(/\s+/g, ' ')
+          .replaceAll(/<[^>]+>/g, ' ')
+          .replaceAll(/\s+/g, ' ')
           .trim()
       : asText(value);
   if (!text) {
@@ -640,7 +685,11 @@ function MeterDisplay({ value, fieldProps }: { value: any; fieldProps?: Record<s
   const ratio = Math.min(1, Math.max(0, max === 0 ? 0 : num / max));
   const trackHeight = Math.max(4, Math.round(glyphSize / 4));
   return (
-    <XStack alignItems="center" minWidth={0} flex={1} {...knobProps.gap}>
+    <XStack
+      alignItems="center"
+      minWidth={0}
+      flex={1}
+      {...knobProps.gap}>
       <View
         flex={1}
         minWidth={48}
@@ -650,7 +699,11 @@ function MeterDisplay({ value, fieldProps }: { value: any; fieldProps?: Record<s
         backgroundColor={knobProps.outlined ? 'transparent' : formControlColors.background}
         {...knobProps.inputSurface}
         {...knobProps.borderRadius}>
-        <View width={`${Math.round(ratio * 100)}%`} height="100%" backgroundColor={formSelectedColors.mark} />
+        <View
+          width={`${Math.round(ratio * 100)}%`}
+          height="100%"
+          backgroundColor={formSelectedColors.mark}
+        />
       </View>
       <TextCell mono>{formatNumericText(num, { precision: fieldProps?.precision })}</TextCell>
     </XStack>
@@ -712,95 +765,176 @@ export function FieldDisplay({
   switch (field) {
     case 'input':
     case 'mentioninput':
-    case 'phoneinput':
-      body = <InputDisplay value={value} href={fieldProps?.href} />;
+    case 'phoneinput': {
+      body = (
+        <InputDisplay
+          value={value}
+          href={fieldProps?.href}
+        />
+      );
       break;
+    }
 
-    case 'otp':
-      body = <InputDisplay value={value} mono />;
+    case 'otp': {
+      body = (
+        <InputDisplay
+          value={value}
+          mono
+        />
+      );
       break;
+    }
 
-    case 'textarea':
-      body = <InputDisplay value={value} multiline />;
+    case 'textarea': {
+      body = (
+        <InputDisplay
+          value={value}
+          multiline
+        />
+      );
       break;
+    }
 
-    case 'barcode':
-      body = <BarcodeDisplay value={value} fieldProps={fieldProps} />;
+    case 'barcode': {
+      body = (
+        <BarcodeDisplay
+          value={value}
+          fieldProps={fieldProps}
+        />
+      );
       break;
+    }
 
-    case 'stepper':
-      body = <NumericDisplay value={value} fieldProps={fieldProps} />;
+    case 'stepper': {
+      body = (
+        <NumericDisplay
+          value={value}
+          fieldProps={fieldProps}
+        />
+      );
       break;
+    }
 
     case 'slider':
-    case 'progress':
-      body = <MeterDisplay value={value} fieldProps={fieldProps} />;
+    case 'progress': {
+      body = (
+        <MeterDisplay
+          value={value}
+          fieldProps={fieldProps}
+        />
+      );
       break;
+    }
 
-    case 'rating':
-      body = <RatingDisplay value={value} fieldProps={fieldProps} />;
+    case 'rating': {
+      body = (
+        <RatingDisplay
+          value={value}
+          fieldProps={fieldProps}
+        />
+      );
       break;
+    }
 
     case 'select':
     case 'combobox':
     case 'radiogroup':
-    case 'togglegroup':
-      body = <ChoiceDisplay value={value} fieldProps={fieldProps} />;
+    case 'togglegroup': {
+      body = (
+        <ChoiceDisplay
+          value={value}
+          fieldProps={fieldProps}
+        />
+      );
       break;
+    }
 
     case 'checkbox':
-    case 'switch':
+    case 'switch': {
       body = <BooleanDisplay value={value} />;
       break;
+    }
 
     case 'datepicker':
-    case 'multidatepicker':
-      body = <DateDisplay value={value} fieldProps={fieldProps} />;
+    case 'multidatepicker': {
+      body = (
+        <DateDisplay
+          value={value}
+          fieldProps={fieldProps}
+        />
+      );
       break;
+    }
 
     case 'datetimepicker':
-    case 'timepicker':
-      body = <DateDisplay value={value} fieldProps={fieldProps} withTime />;
+    case 'timepicker': {
+      body = (
+        <DateDisplay
+          value={value}
+          fieldProps={fieldProps}
+          withTime
+        />
+      );
       break;
+    }
 
-    case 'daterangepicker':
-      body = <DateRangeDisplay value={value} linkedValue={linkedValue} />;
+    case 'daterangepicker': {
+      body = (
+        <DateRangeDisplay
+          value={value}
+          linkedValue={linkedValue}
+        />
+      );
       break;
+    }
 
-    case 'colorpicker':
+    case 'colorpicker': {
       body = <ColorDisplay value={value} />;
       break;
+    }
 
-    case 'duration':
+    case 'duration': {
       body = <DurationDisplay value={value} />;
       break;
+    }
 
-    case 'fileupload':
+    case 'fileupload': {
       body = <FileUploadDisplay value={value} />;
       break;
+    }
 
-    case 'image':
+    case 'image': {
       body = <ImageDisplay value={value} />;
       break;
+    }
 
-    case 'signature':
+    case 'signature': {
       body = <SignatureDisplay value={value} />;
       break;
+    }
 
-    case 'geolocation':
+    case 'geolocation': {
       body = <GeolocationDisplay value={value} />;
       break;
+    }
 
     case 'richtexteditor':
     case 'markdowneditor':
-    case 'codeeditor':
+    case 'codeeditor': {
       body = <RichTextDisplay value={value} />;
       break;
+    }
 
     case 'custom':
-    default:
-      body = <InputDisplay value={value} href={fieldProps?.href} />;
+    default: {
+      body = (
+        <InputDisplay
+          value={value}
+          href={fieldProps?.href}
+        />
+      );
       break;
+    }
   }
 
   return (

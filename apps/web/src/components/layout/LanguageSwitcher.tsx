@@ -29,10 +29,23 @@ export default function LanguageSwitcher() {
     <DropdownMenu
       placement="bottom-end"
       items={[
-        { label: 'English', onSelect: () => handleLanguageChange('en') },
-        { label: 'Deutsch', onSelect: () => handleLanguageChange('de') },
+        {
+          label: 'English',
+          onSelect: () => {
+            handleLanguageChange('en');
+          },
+        },
+        {
+          label: 'Deutsch',
+          onSelect: () => {
+            handleLanguageChange('de');
+          },
+        },
       ]}>
-      <Button outlined size="$3" disabled={isPending}>
+      <Button
+        outlined
+        size="$3"
+        disabled={isPending}>
         {locale?.toUpperCase()}
       </Button>
     </DropdownMenu>

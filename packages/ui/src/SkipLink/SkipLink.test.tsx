@@ -54,7 +54,9 @@ describe('SkipLink', () => {
     const { container } = renderWithProviders(
       <div>
         <SkipLink targetId="kept">Skip</SkipLink>
-        <div id="kept" tabIndex={-1}>
+        <div
+          id="kept"
+          tabIndex={-1}>
           Kept
         </div>
       </div>,
@@ -78,7 +80,9 @@ describe('SkipLink', () => {
     const onSkip = vi.fn();
     const { container } = renderWithProviders(
       <div>
-        <SkipLink targetId="content-x" onSkip={onSkip}>
+        <SkipLink
+          targetId="content-x"
+          onSkip={onSkip}>
           Skip
         </SkipLink>
         <div id="content-x">X</div>

@@ -7,8 +7,8 @@ import {
   FloatingFocusManager,
 } from '@floating-ui/react';
 import { CaretDownIcon, CheckIcon, MagnifyingGlassIcon, PlusIcon, XIcon } from '@phosphor-icons/react';
-import { useTouchSurface } from '@repo/theme';
 import {
+  useTouchSurface,
   ensureFocusVisibleRing,
   ensureKeyboardModalityTracking,
   keyboardFocusRingProps,
@@ -24,13 +24,14 @@ import type { LabelProps, SizeTokens } from 'tamagui';
 import { Input as TInput, Text, View, XStack, YStack, isWeb, styled, useTheme } from 'tamagui';
 
 import { Button } from '../../Button';
-import { Chip, type ChipProps } from '../../Chip';
-import { Field, FieldLayout, useFieldA11y, useFieldDescribedBy } from '../../fieldLayout';
+import { Chip } from '../../Chip';
+import type { ChipProps } from '../../Chip';
+import { Field, FieldLayout, useFieldA11y, useFieldDescribedBy } from '../../FieldLayout';
 import { Input as InputParts } from '../../InputParts';
-import { formCommonColors, formInputColors, formSelectedColors } from '../../shared/colorRamps';
-import { SyncFocusToOpen, ScrollArrow } from '../../shared/floatingList';
+import { formCommonColors, formInputColors, formSelectedColors } from '../../shared/color-ramps';
+import { SyncFocusToOpen, ScrollArrow } from '../../shared/floating-list';
 import { useTranslation } from '../../shared/i18n';
-import { pickerTriggerContract } from '../../shared/pickerTriggerContract';
+import { pickerTriggerContract } from '../../shared/picker-trigger-contract';
 import {
   getFieldError,
   getFieldHeight,
@@ -53,10 +54,11 @@ import {
   useViewportGtSm,
 } from '../../FloatingPanel';
 import { PanelPortal } from '../../FloatingPanel/PanelPortal';
-import { useIsInTableCell } from '../../shared/tableCellContext';
-import { useDragScroll } from '../../shared/useDragScroll';
-import { zIndex } from '../../shared/zIndex';
-import { orderOptionsBySelected, type SelectedOrder } from '../selectedOrder';
+import { useIsInTableCell } from '../../shared/table-cell-context';
+import { useDragScroll } from '../../shared/use-drag-scroll';
+import { zIndex } from '../../shared/z-index';
+import { orderOptionsBySelected } from '../selected-order';
+import type { SelectedOrder } from '../selected-order';
 
 // ── Styled row ───────────────────────────────────────────────
 
@@ -308,7 +310,7 @@ interface ComboboxItemHandlers {
   textColor: string;
   /** Selected mark, already resolved to a paint. */
   markColor: string;
-  listItemsRef: React.RefObject<Array<HTMLElement | null>>;
+  listItemsRef: React.RefObject<(HTMLElement | null)[]>;
 }
 
 const ComboboxItem = memo(function ComboboxItem({
@@ -390,7 +392,9 @@ const ComboboxItem = memo(function ComboboxItem({
         : undefined)}
       {...transitionProps(ctx.knobProps.transition)}>
       {option.description ? (
-        <YStack flex={1} minWidth={0}>
+        <YStack
+          flex={1}
+          minWidth={0}>
           <Text
             fontFamily={ctx.knobProps.body.fontFamily}
             fontWeight={ctx.knobProps.body.fontWeight}
@@ -416,7 +420,12 @@ const ComboboxItem = memo(function ComboboxItem({
           {option.label}
         </Text>
       )}
-      {isSelected && <CheckIcon size={14} color={ctx.markColor} />}
+      {isSelected && (
+        <CheckIcon
+          size={14}
+          color={ctx.markColor}
+        />
+      )}
     </ComboboxRow>
   );
 });
@@ -504,20 +513,20 @@ function FloatingComboboxCore({
   const glyphColor = useGlyphColor();
   const [internalOpen, setInternalOpen] = useState(false);
   // Use external open state when provided (controlled), otherwise use internal state
-  const open = openProp !== undefined ? openProp : internalOpen;
+  const open = openProp === undefined ? internalOpen : openProp;
   const setOpen = useCallback(
     (nextOpen: boolean) => {
-      if (openProp !== undefined) {
-        onOpenChange?.(nextOpen);
-      } else {
+      if (openProp === undefined) {
         setInternalOpen(nextOpen);
+      } else {
+        onOpenChange?.(nextOpen);
       }
     },
     [openProp, onOpenChange],
   );
   const [internalFilter, setInternalFilter] = useState('');
   // Use external searchValue when provided, otherwise use internal filter
-  const filter = searchValue !== undefined ? searchValue : internalFilter;
+  const filter = searchValue === undefined ? internalFilter : searchValue;
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
   const textColor = knobProps.textAccentColor;
@@ -660,7 +669,7 @@ function FloatingComboboxCore({
     };
   }, [filter, onSearch, open]);
 
-  const listItemsRef = useRef<Array<HTMLElement | null>>([]);
+  const listItemsRef = useRef<(HTMLElement | null)[]>([]);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const listScrollRef = useRef<HTMLElement | null>(null);
   const keyboardNavRef = useRef(false);
@@ -776,7 +785,8 @@ function FloatingComboboxCore({
       const listContentHeight = listScrollElement?.scrollHeight ?? 0;
       const computedStyle = getComputedStyle(dropdownElement);
       const borderHeight =
-        (parseFloat(computedStyle.borderTopWidth) || 0) + (parseFloat(computedStyle.borderBottomWidth) || 0);
+        (Number.parseFloat(computedStyle.borderTopWidth) || 0) +
+        (Number.parseFloat(computedStyle.borderBottomWidth) || 0);
       const contentHeight = searchBarHeight + listContentHeight + borderHeight;
 
       const isDropup = panel.placement.startsWith('top');
@@ -863,12 +873,7 @@ function FloatingComboboxCore({
 
         // For dropdowns: don't move the panel below the trigger
         // For dropups: don't move the panel above where it started
-        if (!isDropup) {
-          // Keep the panel starting at or above the trigger. A non-covering
-          // (multi-select) panel may not grow upward at all — that is what
-          // would swallow the chips.
-          top = coversTrigger ? Math.min(top, triggerTop) : triggerBottom;
-        } else {
+        if (isDropup) {
           // Keep the panel ending at or below the trigger; a non-covering
           // drop-up stops at the trigger's TOP edge.
           const floor = coversTrigger ? triggerBottom : triggerTop;
@@ -876,6 +881,11 @@ function FloatingComboboxCore({
           if (panelBottom < floor) {
             top = floor - height;
           }
+        } else {
+          // Keep the panel starting at or above the trigger. A non-covering
+          // (multi-select) panel may not grow upward at all — that is what
+          // would swallow the chips.
+          top = coversTrigger ? Math.min(top, triggerTop) : triggerBottom;
         }
         searchTopRef.current = top;
 
@@ -1025,13 +1035,13 @@ function FloatingComboboxCore({
       const list = navigableOptionsRef.current;
       const len = list.length + (showCreateOptionRef.current ? 1 : 0);
       const activeIdx = activeIndexRef.current;
-      const n = actualIndex != null ? Number(actualIndex) : null;
+      const n = actualIndex == null ? null : Number(actualIndex);
       const next = n != null && n >= 0 && n < len ? n : activeIdx;
       if (next !== activeIdx) {
         setActiveIndex(next);
       }
     };
-    document.addEventListener('mousemove', onMove, { passive: true });
+    document.addEventListener('mousemove', onMove);
     return () => {
       document.removeEventListener('mousemove', onMove);
     };
@@ -1053,15 +1063,15 @@ function FloatingComboboxCore({
       const el = document.elementFromPoint(pos.x, pos.y);
       const row = el?.closest?.('[data-combobox-index]');
       const idx = row?.getAttribute('data-combobox-index');
-      if (idx != null) {
+      if (idx == null) {
+        setActiveIndex(null);
+      } else {
         const n = Number(idx);
         if (n >= 0 && n < len) {
           setActiveIndex(n);
         } else {
           setActiveIndex(null);
         }
-      } else {
-        setActiveIndex(null);
       }
     } else {
       setActiveIndex(0);
@@ -1132,7 +1142,7 @@ function FloatingComboboxCore({
         const list = navigableOptionsRef.current;
         const len = list.length + (showCreateOptionRef.current ? 1 : 0);
         const activeIdx = activeIndexRef.current;
-        const n = actualIndex != null ? Number(actualIndex) : null;
+        const n = actualIndex == null ? null : Number(actualIndex);
         const next = n != null && n >= 0 && n < len ? n : activeIdx;
         if (next !== activeIdx) {
           setActiveIndex(next);
@@ -1523,8 +1533,13 @@ function FloatingComboboxCore({
           }}
         />
       )}
-      <View paddingInlineEnd="$2" alignSelf="center">
-        <CaretDownIcon size={16} color={glyphColor} />
+      <View
+        paddingInlineEnd="$2"
+        alignSelf="center">
+        <CaretDownIcon
+          size={16}
+          color={glyphColor}
+        />
       </View>
     </InputParts.Box>
   );
@@ -1535,7 +1550,10 @@ function FloatingComboboxCore({
 
       {panel.mounted && (
         <PanelPortal anchor={panel.triggerRef.current}>
-          <FloatingFocusManager context={panel.context} modal={false} initialFocus={-1}>
+          <FloatingFocusManager
+            context={panel.context}
+            modal={false}
+            initialFocus={-1}>
             <YStack
               outlineWidth={0}
               pointerEvents={panel.visible ? 'auto' : 'none'}
@@ -1633,7 +1651,9 @@ function FloatingComboboxCore({
                   arrowScrollDirRef={panel.arrowScrollDirRef}
                 />
                 {searchError ? (
-                  <View {...knobProps.panelPadding} alignItems="center">
+                  <View
+                    {...knobProps.panelPadding}
+                    alignItems="center">
                     <Text
                       color={formCommonColors.error}
                       fontSize="$3"
@@ -1646,7 +1666,10 @@ function FloatingComboboxCore({
                   <Fragment key={filter}>
                     {groupedItems.map((item) =>
                       item.type === 'header' ? (
-                        <GroupHeader key={`header-${item.label}`} color={textColor} data-combobox-group-header="">
+                        <GroupHeader
+                          key={`header-${item.label}`}
+                          color={textColor}
+                          data-combobox-group-header="">
                           {item.label}
                         </GroupHeader>
                       ) : (
@@ -1678,16 +1701,19 @@ function FloatingComboboxCore({
                           createOptionIndex === activeIndex ? formInputColors.background.focus : undefined
                         }
                         hoverStyle={
-                          activeIndex != null
-                            ? {
+                          activeIndex == null
+                            ? undefined
+                            : {
                                 backgroundColor:
                                   createOptionIndex === activeIndex ? formInputColors.background.focus : 'transparent',
                               }
-                            : undefined
                         }
                         onPress={handleCreate}
                         {...transitionProps(knobProps.transition)}>
-                        <PlusIcon size={14} color={knobProps.textAccentColor} />
+                        <PlusIcon
+                          size={14}
+                          color={knobProps.textAccentColor}
+                        />
                         <Text
                           fontFamily={knobProps.body.fontFamily}
                           fontWeight={knobProps.body.fontWeight}
@@ -1712,19 +1738,22 @@ function FloatingComboboxCore({
                     {...listItemRingProps(createOptionIndex === activeIndex && listKeyboardRing)}
                     onPress={handleCreate}
                     hoverStyle={
-                      activeIndex != null
-                        ? {
+                      activeIndex == null
+                        ? { backgroundColor: formInputColors.background.focus }
+                        : {
                             backgroundColor:
                               createOptionIndex === activeIndex ? formInputColors.background.focus : 'transparent',
                           }
-                        : { backgroundColor: formInputColors.background.focus }
                     }
                     backgroundColor={
                       createOptionIndex === activeIndex ? formInputColors.background.focus : 'transparent'
                     }
                     pressStyle={{ backgroundColor: formInputColors.background.focus }}
                     {...transitionProps(knobProps.transition)}>
-                    <PlusIcon size={14} color={knobProps.textAccentColor} />
+                    <PlusIcon
+                      size={14}
+                      color={knobProps.textAccentColor}
+                    />
                     <Text
                       fontFamily={knobProps.body.fontFamily}
                       fontWeight={knobProps.body.fontWeight}
@@ -1737,11 +1766,15 @@ function FloatingComboboxCore({
                 ) : loading ? (
                   // Async search in flight with nothing loaded yet: a bounded
                   // loading row — never a premature "no results".
-                  <View {...knobProps.panelPadding} alignItems="center">
+                  <View
+                    {...knobProps.panelPadding}
+                    alignItems="center">
                     <Spinner size="small" />
                   </View>
                 ) : (
-                  <View {...knobProps.panelPadding} alignItems="center">
+                  <View
+                    {...knobProps.panelPadding}
+                    alignItems="center">
                     <Text
                       color={formCommonColors.muted}
                       fontSize={knobProps.sizeToken}
@@ -1752,7 +1785,9 @@ function FloatingComboboxCore({
                   </View>
                 )}
                 {hasMore && loading && (
-                  <View padding="$2" alignItems="center">
+                  <View
+                    padding="$2"
+                    alignItems="center">
                     <Spinner size="small" />
                   </View>
                 )}
@@ -1791,14 +1826,17 @@ const comboboxSearchHeader = (
     height={knobProps.control.height}
     borderBottomWidth={1}
     borderBottomColor={formCommonColors.divider}>
-    <MagnifyingGlassIcon size={16} color={mutedColor as any} />
+    <MagnifyingGlassIcon
+      size={16}
+      color={mutedColor as any}
+    />
     <TInput
       ref={inputRef as any}
       unstyled
       flex={1}
       placeholder={searchPlaceholder}
       // iOS VoiceOver: name the search box (placeholder alone is value-only).
-      {...(!isWeb ? { accessibilityLabel: searchPlaceholder } : undefined)}
+      {...(isWeb ? undefined : { accessibilityLabel: searchPlaceholder })}
       value={filter}
       onChangeText={setFilter}
       onKeyDown={onKeyDown as any}
@@ -1865,20 +1903,20 @@ function NativeComboboxCore({
   const glyphColor = useGlyphColor();
   const [internalOpen, setInternalOpen] = useState(false);
   // Use external open state when provided (controlled), otherwise use internal state
-  const open = openProp !== undefined ? openProp : internalOpen;
+  const open = openProp === undefined ? internalOpen : openProp;
   const setOpen = useCallback(
     (nextOpen: boolean) => {
-      if (openProp !== undefined) {
-        onOpenChange?.(nextOpen);
-      } else {
+      if (openProp === undefined) {
         setInternalOpen(nextOpen);
+      } else {
+        onOpenChange?.(nextOpen);
       }
     },
     [openProp, onOpenChange],
   );
   const [internalFilter, setInternalFilter] = useState('');
   // Use external searchValue when provided, otherwise use internal filter
-  const filter = searchValue !== undefined ? searchValue : internalFilter;
+  const filter = searchValue === undefined ? internalFilter : searchValue;
   const [activeIndex, setActiveIndex] = useState<number | null>(0);
   const [listKeyboardRing, setListKeyboardRing] = useState(false);
   const setKeyboardNav = useCallback((next: boolean) => {
@@ -2222,7 +2260,9 @@ function NativeComboboxCore({
       // Native sheet: flex={1} inside FloatingPanel ScrollView collapses rows.
     >
       {searchError ? (
-        <View {...knobProps.panelPadding} alignItems="center">
+        <View
+          {...knobProps.panelPadding}
+          alignItems="center">
           <Text
             color={formCommonColors.error}
             fontSize="$3"
@@ -2264,18 +2304,18 @@ function NativeComboboxCore({
                   setKeyboardNav(false);
                   setActiveIndex(i);
                 }}
-                {...(!isWeb ? { pointerEvents: 'none' as const } : {})}
+                {...(isWeb ? {} : { pointerEvents: 'none' as const })}
                 hoverStyle={
-                  activeIndex != null
+                  activeIndex == null
                     ? {
+                        backgroundColor: selected ? formInputColors.background.base : formInputColors.background.focus,
+                      }
+                    : {
                         backgroundColor: active
                           ? formInputColors.background.focus
                           : selected
                             ? formInputColors.background.base
                             : 'transparent',
-                      }
-                    : {
-                        backgroundColor: selected ? formInputColors.background.base : formInputColors.background.focus,
                       }
                 }
                 backgroundColor={
@@ -2283,7 +2323,9 @@ function NativeComboboxCore({
                 }
                 pressStyle={{ backgroundColor: formInputColors.background.focus }}>
                 {option.description ? (
-                  <YStack flex={1} minWidth={0}>
+                  <YStack
+                    flex={1}
+                    minWidth={0}>
                     <Text
                       fontFamily={knobProps.body.fontFamily}
                       fontWeight={knobProps.body.fontWeight}
@@ -2309,13 +2351,20 @@ function NativeComboboxCore({
                     {option.label}
                   </Text>
                 )}
-                {selected && <CheckIcon size={14} color={markColor} />}
+                {selected && (
+                  <CheckIcon
+                    size={14}
+                    color={markColor}
+                  />
+                )}
               </View>
             );
             return (
               <View key={option.value}>
                 {showGroupHeader && (
-                  <GroupHeader color={textColor} data-combobox-group-header="">
+                  <GroupHeader
+                    color={textColor}
+                    data-combobox-group-header="">
                     {option.group}
                   </GroupHeader>
                 )}
@@ -2353,16 +2402,19 @@ function NativeComboboxCore({
                 setActiveIndex(createOptionIndex);
               }}
               hoverStyle={
-                activeIndex != null
-                  ? {
+                activeIndex == null
+                  ? { backgroundColor: formInputColors.background.focus }
+                  : {
                       backgroundColor:
                         createOptionIndex === activeIndex ? formInputColors.background.focus : 'transparent',
                     }
-                  : { backgroundColor: formInputColors.background.focus }
               }
               backgroundColor={createOptionIndex === activeIndex ? formInputColors.background.focus : 'transparent'}
               pressStyle={{ backgroundColor: formInputColors.background.focus }}>
-              <PlusIcon size={14} color={textColor} />
+              <PlusIcon
+                size={14}
+                color={textColor}
+              />
               <Text
                 fontFamily={knobProps.body.fontFamily}
                 fontWeight={knobProps.body.fontWeight}
@@ -2392,15 +2444,18 @@ function NativeComboboxCore({
             setActiveIndex(createOptionIndex);
           }}
           hoverStyle={
-            activeIndex != null
-              ? {
+            activeIndex == null
+              ? { backgroundColor: formInputColors.background.focus }
+              : {
                   backgroundColor: createOptionIndex === activeIndex ? formInputColors.background.focus : 'transparent',
                 }
-              : { backgroundColor: formInputColors.background.focus }
           }
           backgroundColor={createOptionIndex === activeIndex ? formInputColors.background.focus : 'transparent'}
           pressStyle={{ backgroundColor: formInputColors.background.focus }}>
-          <PlusIcon size={14} color={textColor} />
+          <PlusIcon
+            size={14}
+            color={textColor}
+          />
           <Text
             fontFamily={knobProps.body.fontFamily}
             fontWeight={knobProps.body.fontWeight}
@@ -2413,11 +2468,15 @@ function NativeComboboxCore({
       ) : loading ? (
         // Async search in flight with nothing loaded yet: a bounded loading
         // row — never a premature "no results".
-        <View {...knobProps.panelPadding} alignItems="center">
+        <View
+          {...knobProps.panelPadding}
+          alignItems="center">
           <Spinner size="small" />
         </View>
       ) : (
-        <View {...knobProps.panelPadding} alignItems="center">
+        <View
+          {...knobProps.panelPadding}
+          alignItems="center">
           <Text
             color={formCommonColors.muted}
             fontSize={knobProps.sizeToken}
@@ -2428,7 +2487,9 @@ function NativeComboboxCore({
         </View>
       )}
       {hasMore && loading && (
-        <View padding="$2" alignItems="center">
+        <View
+          padding="$2"
+          alignItems="center">
           <Spinner size="small" />
         </View>
       )}
@@ -2447,7 +2508,7 @@ function NativeComboboxCore({
           'aria-controls': listboxId,
           'aria-activedescendant': hideSearch ? activeDescendant : undefined,
           'aria-autocomplete': hideSearch ? ('list' as const) : undefined,
-          'aria-label': ariaLabel ?? (!hasLabel ? placeholder : undefined),
+          'aria-label': ariaLabel ?? (hasLabel ? undefined : placeholder),
           'aria-describedby': describedBy,
           tabIndex: disabled ? -1 : 0,
         }
@@ -2551,8 +2612,13 @@ function NativeComboboxCore({
           </Text>
         )}
       </View>
-      <View paddingInlineEnd="$2" alignSelf="center">
-        <CaretDownIcon size={16} color={glyphColor} />
+      <View
+        paddingInlineEnd="$2"
+        alignSelf="center">
+        <CaretDownIcon
+          size={16}
+          color={glyphColor}
+        />
       </View>
     </InputParts.Box>
   );
@@ -2694,7 +2760,7 @@ export function Combobox({
   const viewportGtSm = useViewportGtSm();
   // Sheet on native and below `$sm` (viewport < 640, OVERLAY_BREAKPOINT).
   // Floating from `$sm` up.
-  const effectiveGtSm = typeof window !== 'undefined' ? viewportGtSm : false;
+  const effectiveGtSm = typeof window === 'undefined' ? false : viewportGtSm;
   const shouldUseSheet = !isWeb || !effectiveGtSm;
   const textColor = knobProps.textAccentColor;
 
@@ -2702,8 +2768,18 @@ export function Combobox({
   if (skeleton) {
     return (
       <InputParts size={sizeProp || knobProps.sizeToken}>
-        {label && <Skeleton variant="text" width="30%" height={14} />}
-        <Skeleton variant="rounded" width="100%" height={knobProps.sizeToken} />
+        {label && (
+          <Skeleton
+            variant="text"
+            width="30%"
+            height={14}
+          />
+        )}
+        <Skeleton
+          variant="rounded"
+          width="100%"
+          height={knobProps.sizeToken}
+        />
       </InputParts>
     );
   }
@@ -2833,7 +2909,11 @@ export function Combobox({
   }
 
   return (
-    <Field form={resolvedForm} name={name} defaultValue={defaultValue} validators={resolvedValidators}>
+    <Field
+      form={resolvedForm}
+      name={name}
+      defaultValue={defaultValue}
+      validators={resolvedValidators}>
       {(field) => {
         const resolvedError = getFieldError(field, error);
         return (

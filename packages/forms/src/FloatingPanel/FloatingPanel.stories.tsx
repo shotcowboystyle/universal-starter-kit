@@ -5,7 +5,7 @@ import { H4, Paragraph, ScrollView, Separator, Text, View, XStack, YStack } from
 
 import { Button } from '../Button';
 import { Select } from '../fields/Select';
-import { formCommonColors } from '../shared/colorRamps';
+import { formCommonColors } from '../shared/color-ramps';
 
 import { FloatingPanel } from './index';
 
@@ -30,7 +30,10 @@ export const Basic: Story = {
   render: () => {
     const [open, setOpen] = useState(false);
     return (
-      <YStack padding="$4" gap="$4" maxWidth={400}>
+      <YStack
+        padding="$4"
+        gap="$4"
+        maxWidth={400}>
         <Paragraph color={formCommonColors.muted}>Click the trigger to open the floating panel.</Paragraph>
         <FloatingPanel
           open={open}
@@ -61,7 +64,10 @@ export const ScrollableContent: Story = {
     const [open, setOpen] = useState(false);
     const items = Array.from({ length: 50 }, (_, i) => `Item ${i + 1}`);
     return (
-      <YStack padding="$4" gap="$4" maxWidth={400}>
+      <YStack
+        padding="$4"
+        gap="$4"
+        maxWidth={400}>
         <Paragraph color={formCommonColors.muted}>
           A scrollable floating panel with many items. Drag the handle to resize.
         </Paragraph>
@@ -95,8 +101,15 @@ export const Disabled: Story = {
   render: () => {
     const [open, setOpen] = useState(false);
     return (
-      <YStack padding="$4" gap="$4" maxWidth={400}>
-        <FloatingPanel open={open} onOpenChange={setOpen} disabled trigger={<Button disabled>Disabled trigger</Button>}>
+      <YStack
+        padding="$4"
+        gap="$4"
+        maxWidth={400}>
+        <FloatingPanel
+          open={open}
+          onOpenChange={setOpen}
+          disabled
+          trigger={<Button disabled>Disabled trigger</Button>}>
           <YStack>
             <Paragraph>You should never see this.</Paragraph>
           </YStack>
@@ -111,7 +124,10 @@ export const FillSizing: Story = {
     const [open, setOpen] = useState(false);
     const items = Array.from({ length: 30 }, (_, i) => `Option ${i + 1}`);
     return (
-      <YStack padding="$4" gap="$4" maxWidth={400}>
+      <YStack
+        padding="$4"
+        gap="$4"
+        maxWidth={400}>
         <Paragraph color={formCommonColors.muted}>
           sizing="fill" opens the panel at maximum available viewport size immediately, without requiring scroll to
           grow. Ideal for calendars, color pickers, and fixed-content panels.
@@ -147,7 +163,10 @@ export const ForceSheet: Story = {
   render: () => {
     const [open, setOpen] = useState(false);
     return (
-      <YStack padding="$4" gap="$4" maxWidth={400}>
+      <YStack
+        padding="$4"
+        gap="$4"
+        maxWidth={400}>
         <Paragraph color={formCommonColors.muted}>
           sheet forces Sheet mode even on desktop (floating panel otherwise).
         </Paragraph>
@@ -180,7 +199,9 @@ function ScrollClipPair({ where }: { where: string }) {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState<string | undefined>(undefined);
   return (
-    <YStack gap="$3" data-testid={`scroll-clip-pair-${where}`}>
+    <YStack
+      gap="$3"
+      data-testid={`scroll-clip-pair-${where}`}>
       <Select
         label={`Select (${where})`}
         placeholder="Pick a fruit"
@@ -190,8 +211,13 @@ function ScrollClipPair({ where }: { where: string }) {
           setValue(Array.isArray(next) ? next[0] : next);
         }}
       />
-      <FloatingPanel open={open} onOpenChange={setOpen} trigger={<Button>{`FloatingPanel (${where})`}</Button>}>
-        <YStack gap="$3" data-testid={`scroll-clip-panel-${where}`}>
+      <FloatingPanel
+        open={open}
+        onOpenChange={setOpen}
+        trigger={<Button>{`FloatingPanel (${where})`}</Button>}>
+        <YStack
+          gap="$3"
+          data-testid={`scroll-clip-panel-${where}`}>
           <H4>Panel {where}</H4>
           <Paragraph>
             This body is taller than the space left in the scroll view, so a clipped panel loses its lower half.
@@ -218,9 +244,17 @@ function ScrollClipPair({ where }: { where: string }) {
  */
 export const InsideScrollView: Story = {
   render: () => (
-    <Preset theme="blue" overrides={{ borderRadius: 'large' }}>
-      <XStack padding="$4" gap="$6" alignItems="flex-start" flexWrap="wrap">
-        <YStack width={320} gap="$2">
+    <Preset
+      theme="blue"
+      overrides={{ borderRadius: 'large' }}>
+      <XStack
+        padding="$4"
+        gap="$6"
+        alignItems="flex-start"
+        flexWrap="wrap">
+        <YStack
+          width={320}
+          gap="$2">
           <Paragraph color={formCommonColors.muted}>Inside a ScrollView</Paragraph>
           <ScrollView
             testID="scroll-clip-scroller"
@@ -228,9 +262,13 @@ export const InsideScrollView: Story = {
             borderWidth={1}
             borderColor="$borderColor"
             borderRadius="$4">
-            <YStack padding="$3" gap="$3">
+            <YStack
+              padding="$3"
+              gap="$3">
               {Array.from({ length: 2 }, (_, i) => (
-                <Paragraph key={i} color={formCommonColors.muted}>
+                <Paragraph
+                  key={i}
+                  color={formCommonColors.muted}>
                   Filler row {i + 1}
                 </Paragraph>
               ))}
@@ -238,9 +276,13 @@ export const InsideScrollView: Story = {
             </YStack>
           </ScrollView>
         </YStack>
-        <YStack width={320} gap="$2">
+        <YStack
+          width={320}
+          gap="$2">
           <Paragraph color={formCommonColors.muted}>Outside, for comparison</Paragraph>
-          <YStack padding="$3" gap="$3">
+          <YStack
+            padding="$3"
+            gap="$3">
             <ScrollClipPair where="outside" />
           </YStack>
         </YStack>

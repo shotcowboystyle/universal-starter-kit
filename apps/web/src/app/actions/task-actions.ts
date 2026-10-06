@@ -1,79 +1,79 @@
-"use server";
+'use server';
 
-import { cookies } from "next/headers";
+import { cookies } from 'next/headers';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 async function getAuthHeaders(): Promise<HeadersInit> {
   const cookieStore = await cookies();
-  const token = cookieStore.get("jwt")?.value;
+  const token = cookieStore.get('jwt')?.value;
   return {
-    "Content-Type": "application/json",
-    ...(token && { Authorization: `Bearer ${token}` })
+    'Content-Type': 'application/json',
+    ...(token && { Authorization: `Bearer ${token}` }),
   };
 }
 
 export async function createTask(data: Record<string, unknown>) {
   const headers = await getAuthHeaders();
   const response = await fetch(`${API_URL}/tasks`, {
-    method: "POST",
+    method: 'POST',
     headers,
-    body: JSON.stringify(data)
+    body: JSON.stringify(data),
   });
   if (!response.ok) {
-    throw new Error("Failed to create task");
+    throw new Error('Failed to create task');
   }
-  return response.json();
+  return await response.json();
 }
 
 export async function updateTask(id: string, data: Record<string, unknown>) {
   const headers = await getAuthHeaders();
   const response = await fetch(`${API_URL}/tasks/${id}`, {
-    method: "PATCH",
+    method: 'PATCH',
     headers,
-    body: JSON.stringify(data)
+    body: JSON.stringify(data),
   });
   if (!response.ok) {
-    throw new Error("Failed to update task");
+    throw new Error('Failed to update task');
   }
-  return response.json();
+  return await response.json();
 }
 
 export async function deleteTask(id: string) {
   const headers = await getAuthHeaders();
   const response = await fetch(`${API_URL}/tasks/${id}`, {
-    method: "DELETE",
-    headers
+    method: 'DELETE',
+    headers,
   });
   if (!response.ok) {
-    throw new Error("Failed to delete task");
+    throw new Error('Failed to delete task');
   }
 }
 
 export async function moveTask(taskId: string, projectId: string, orderInProject: number) {
   const headers = await getAuthHeaders();
   const response = await fetch(`${API_URL}/tasks/${taskId}/move`, {
-    method: "PATCH",
+    method: 'PATCH',
     headers,
     body: JSON.stringify({
       projectId,
-      orderInProject
-    })
+      orderInProject,
+    }),
   });
   if (!response.ok) {
-    throw new Error("Failed to move task");
+    throw new Error('Failed to move task');
   }
-  return response.json();
+  return await response.json();
 }
 
 export async function getTasks(projectId?: string, assigneeId?: string) {
   const headers = await getAuthHeaders();
   const params = new URLSearchParams();
   if (projectId) {
-    params.append("projectId", projectId);
+    params.append('projectId', projectId);
   }
   if (assigneeId) {
-    params.append("assigneeId", assigneeId);
+    params.append('assigneeId', assigneeId);
   }
 
   const query = params.toString();
@@ -81,7 +81,7 @@ export async function getTasks(projectId?: string, assigneeId?: string) {
 
   const response = await fetch(url, { headers });
   if (!response.ok) {
-    throw new Error("Failed to fetch tasks");
+    throw new Error('Failed to fetch tasks');
   }
-  return response.json();
+  return await response.json();
 }

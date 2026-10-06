@@ -19,7 +19,7 @@ vi.mock('react-native-web', async (importOriginal) => ({
 const onOpenChange = vi.fn();
 let dismissCompletion: (result: { finished: boolean }) => void;
 let release: () => void;
-let completions: Array<(result: { finished: boolean }) => void>;
+let completions: ((result: { finished: boolean }) => void)[];
 beforeEach(() => {
   vi.useFakeTimers();
   completions = [];
@@ -55,7 +55,10 @@ afterEach(() => {
 
 function panel(open: boolean) {
   return (
-    <FloatingPanel open={open} onOpenChange={onOpenChange} trigger={<Text>Pick one</Text>}>
+    <FloatingPanel
+      open={open}
+      onOpenChange={onOpenChange}
+      trigger={<Text>Pick one</Text>}>
       <Text>row</Text>
     </FloatingPanel>
   );
@@ -85,20 +88,24 @@ describe('FloatingPanel native presentation lifecycle', () => {
   it('composes native readiness with entrance and ignores late closed or unmounted events', () => {
     const onNativeShow = vi.fn();
     const example = (open: boolean) => (
-      <FloatingPanel open={open} onOpenChange={onOpenChange} onNativeShow={onNativeShow} trigger={<Text>Pick</Text>}>
+      <FloatingPanel
+        open={open}
+        onOpenChange={onOpenChange}
+        onNativeShow={onNativeShow}
+        trigger={<Text>Pick</Text>}>
         <Text>row</Text>
       </FloatingPanel>
     );
     const result = renderWithProviders(example(true));
-    expect(Animated.timing).toHaveBeenCalledTimes(1);
+    expect(Animated.timing).toHaveBeenCalledOnce();
     expect(onNativeShow).not.toHaveBeenCalled();
     const shown = modal.onShow;
     act(() => shown?.());
-    expect(onNativeShow).toHaveBeenCalledTimes(1);
-    expect(Animated.timing).toHaveBeenCalledTimes(1);
+    expect(onNativeShow).toHaveBeenCalledOnce();
+    expect(Animated.timing).toHaveBeenCalledOnce();
     result.rerender(example(false));
     act(() => shown?.());
-    expect(onNativeShow).toHaveBeenCalledTimes(1);
+    expect(onNativeShow).toHaveBeenCalledOnce();
     result.rerender(example(true));
     const nextShown = modal.onShow;
     act(() => nextShown?.());
@@ -110,11 +117,12 @@ describe('FloatingPanel native presentation lifecycle', () => {
 
   it('enters without onShow and ignores onShow for the same presentation', () => {
     renderWithProviders(panel(true));
-    expect(Animated.timing).toHaveBeenCalledTimes(1);
+    expect(Animated.timing).toHaveBeenCalledOnce();
     expect(modal.onShow).toBeTypeOf('function');
     act(() => modal.onShow?.());
-    expect(Animated.timing).toHaveBeenCalledTimes(1);
+    expect(Animated.timing).toHaveBeenCalledOnce();
   });
+
   it('ignores onShow after the presentation closes', () => {
     const { rerender } = renderWithProviders(panel(true));
     const lateShow = modal.onShow;
@@ -124,6 +132,7 @@ describe('FloatingPanel native presentation lifecycle', () => {
     expect(Animated.timing).toHaveBeenCalledTimes(count);
     expect(vi.getTimerCount()).toBe(0);
   });
+
   it('ignores a completed entrance from an earlier presentation', () => {
     const { rerender } = renderWithProviders(panel(true));
     const oldCompletion = completions[0];
@@ -139,6 +148,7 @@ describe('FloatingPanel native presentation lifecycle', () => {
     });
     expect(writes).toHaveBeenCalledWith(0);
   });
+
   it('ignores callbacks after unmount and clears its timer', () => {
     const { unmount } = renderWithProviders(panel(true));
     const lateShow = modal.onShow;
@@ -156,6 +166,7 @@ describe('FloatingPanel native presentation lifecycle', () => {
     expect(Animated.timing).toHaveBeenCalledTimes(count);
     expect(vi.getTimerCount()).toBe(0);
   });
+
   it('does not let an earlier dismiss close a reopened presentation', () => {
     const { rerender } = renderWithProviders(panel(true));
     act(() => {
@@ -169,6 +180,7 @@ describe('FloatingPanel native presentation lifecycle', () => {
     });
     expect(onOpenChange).not.toHaveBeenCalled();
   });
+
   it('closes only after a successful current dismiss', () => {
     renderWithProviders(panel(true));
     act(() => {
@@ -186,6 +198,7 @@ describe('FloatingPanel native presentation lifecycle', () => {
     });
     expect(onOpenChange).toHaveBeenCalledExactlyOnceWith(false);
   });
+
   it('owns only the current StrictMode effect presentation', () => {
     renderWithProviders(panel(true), { reactStrictMode: true });
     expect(completions.length).toBeGreaterThanOrEqual(2);
@@ -199,6 +212,7 @@ describe('FloatingPanel native presentation lifecycle', () => {
     });
     expect(writes).toHaveBeenCalledWith(0);
   });
+
   it('keeps the measured JS-driver workaround', () => {
     renderWithProviders(panel(true));
     expect(Animated.timing).toHaveBeenCalledWith(

@@ -22,7 +22,11 @@ export const main = {
   name: 'Main',
   render: () => (
     <div data-testid="color-line-visualizer">
-      <ColorLineVisualizer knobs={defaultKnobs} isDark={false} themeColors={SAMPLE} />
+      <ColorLineVisualizer
+        knobs={defaultKnobs}
+        isDark={false}
+        themeColors={SAMPLE}
+      />
     </div>
   ),
 };
@@ -31,7 +35,11 @@ export const dark = {
   name: 'Dark',
   render: () => (
     <div data-testid="color-line-visualizer-dark">
-      <ColorLineVisualizer knobs={defaultKnobs} isDark themeColors={SAMPLE} />
+      <ColorLineVisualizer
+        knobs={defaultKnobs}
+        isDark
+        themeColors={SAMPLE}
+      />
     </div>
   ),
 };

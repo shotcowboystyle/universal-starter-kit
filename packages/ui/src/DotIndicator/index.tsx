@@ -8,11 +8,12 @@ import {
   useResolvedKnobs,
   wasKeyboardFocus,
 } from '@repo/theme';
-import { useRef, useState, type KeyboardEvent } from 'react';
+import { useRef, useState } from 'react';
+import type { KeyboardEvent } from 'react';
 import type { GetProps } from 'tamagui';
 import { View, XStack, getTokens, isWeb, styled } from 'tamagui';
 
-import { componentColors } from '../componentColors';
+import { componentColors } from '../component-colors';
 import { useTranslation } from '../shared/i18n';
 import { withInterp } from '../shared/t';
 

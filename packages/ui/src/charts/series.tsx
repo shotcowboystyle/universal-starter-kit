@@ -17,7 +17,7 @@ import {
   luminanceMaskProps,
 } from './svg';
 import type { ChartCurve, ChartDatum, ChartDatumEvents, ChartSize, PixelPoint, PlotArea } from './types';
-import { useChartTheme } from './useChartTheme';
+import { useChartTheme } from './use-chart-theme';
 
 /**
  * Series mark primitives. Marks are pure pixel-space SVG; every series takes
@@ -226,7 +226,12 @@ export interface AreaSeriesProps {
  */
 export function AreaSeries({ points, baseline, color, opacity = 0.18, curve }: AreaSeriesProps) {
   return (
-    <Path {...chartMarkProps('series area')} d={areaPath(points, { baseline, curve })} fill={color} opacity={opacity} />
+    <Path
+      {...chartMarkProps('series area')}
+      d={areaPath(points, { baseline, curve })}
+      fill={color}
+      opacity={opacity}
+    />
   );
 }
 
@@ -262,7 +267,7 @@ export function PieSeries({
   fills,
   ...callbacks
 }: PieSeriesProps) {
-  const instanceId = useId().replace(/[^a-zA-Z0-9_-]/g, '_');
+  const instanceId = useId().replaceAll(/[^a-zA-Z0-9_-]/g, '_');
   const slices = pieSlices(data, { padAngle });
   const maskGaps = padAngle === undefined && canMaskPieSlices(slices, innerRadius, outerRadius);
   const interactive = hasTargets(callbacks);

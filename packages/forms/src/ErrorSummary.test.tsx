@@ -16,7 +16,7 @@ import {
 } from './ErrorSummary';
 import { Input } from './fields/Input';
 import { Form } from './Form';
-import { __resetDevWarnSeen } from './shared/devWarn';
+import { __resetDevWarnSeen } from './shared/dev-warn';
 
 vi.mock('@repo/router', () => ({
   useUrlState: vi.fn(() => [{}, vi.fn()]),
@@ -109,7 +109,7 @@ describe('ErrorSummary', () => {
     expect(summary?.textContent).toContain('Email is incomplete.');
 
     const links = result.container.querySelectorAll("a[href='#name'], a[href='#email']");
-    expect(links.length).toBe(2);
+    expect(links).toHaveLength(2);
   });
 
   it('focuses the summary on appear', async () => {
@@ -149,9 +149,21 @@ describe('Form + ErrorSummary integration', () => {
           defaultValues: { username: '', email: '' },
         }}
         onSubmit={onSubmit}>
-        <Input id="username" name="username" label="Username" required />
-        <Input id="email" name="email" label="Email" required />
-        <Button action="submit" testID="submit-button">
+        <Input
+          id="username"
+          name="username"
+          label="Username"
+          required
+        />
+        <Input
+          id="email"
+          name="email"
+          label="Email"
+          required
+        />
+        <Button
+          action="submit"
+          testID="submit-button">
           Submit
         </Button>
       </Form>,
@@ -177,9 +189,19 @@ describe('Form + ErrorSummary integration', () => {
 
   it('does not render ErrorSummary when showErrorSummary is false', async () => {
     const result = renderWithProviders(
-      <Form showErrorSummary={false} formOptions={{ defaultValues: { username: '' } }} onSubmit={vi.fn()}>
-        <Input id="username" name="username" label="Username" required />
-        <Button action="submit" testID="submit-button">
+      <Form
+        showErrorSummary={false}
+        formOptions={{ defaultValues: { username: '' } }}
+        onSubmit={vi.fn()}>
+        <Input
+          id="username"
+          name="username"
+          label="Username"
+          required
+        />
+        <Button
+          action="submit"
+          testID="submit-button">
           Submit
         </Button>
       </Form>,

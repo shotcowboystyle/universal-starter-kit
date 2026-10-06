@@ -2,7 +2,8 @@ import { Form, Input, Switch, useFormContext } from '@repo/forms';
 import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { useState } from 'react';
 
-import { Wizard, useWizard, type WizardFormLike, type WizardStep } from './index';
+import { Wizard, useWizard } from './index';
+import type { WizardFormLike, WizardStep } from './index';
 
 const steps: WizardStep[] = [
   {
@@ -78,7 +79,12 @@ function ReadyWizard({
       labels={labels}
       onCancel={() => undefined}>
       <Wizard.Panel>
-        <Input id="source" name="source" label="Source" required />
+        <Input
+          id="source"
+          name="source"
+          label="Source"
+          required
+        />
       </Wizard.Panel>
       <Wizard.Panel>
         <DeriveToggle />
@@ -91,10 +97,19 @@ function ReadyWizard({
             required
           />
         </Wizard.Clearable>
-        <Input id="region" name="region" label="Region" required />
+        <Input
+          id="region"
+          name="region"
+          label="Region"
+          required
+        />
       </Wizard.Panel>
       <Wizard.Panel>
-        <Input id="checksums" name="checksums" label="Checksums" />
+        <Input
+          id="checksums"
+          name="checksums"
+          label="Checksums"
+        />
       </Wizard.Panel>
       <Wizard.Panel>
         <Wizard.Review />
@@ -134,11 +149,24 @@ export const Loading: Story = {
       },
     },
   },
-  render: () => <Wizard steps={steps} completeLabel="Restore backup" status="loading" />,
+  render: () => (
+    <Wizard
+      steps={steps}
+      completeLabel="Restore backup"
+      status="loading"
+    />
+  ),
 };
 
 export const Empty: Story = {
-  render: () => <Wizard steps={steps} completeLabel="Restore backup" status="empty" emptyTitle="No restore steps" />,
+  render: () => (
+    <Wizard
+      steps={steps}
+      completeLabel="Restore backup"
+      status="empty"
+      emptyTitle="No restore steps"
+    />
+  ),
 };
 
 export const Error: Story = {
@@ -155,7 +183,9 @@ export const Error: Story = {
 
 export const ValidationError: Story = {
   render: () => (
-    <Form formOptions={{ defaultValues: { source: '', volume: '', region: '' } }} showErrorSummary={false}>
+    <Form
+      formOptions={{ defaultValues: { source: '', volume: '', region: '' } }}
+      showErrorSummary={false}>
       <ReadyWizard defaultCurrent={1} />
     </Form>
   ),

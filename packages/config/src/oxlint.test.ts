@@ -15,7 +15,7 @@ import {
   plugin,
 } from '../oxlint.mjs';
 
-const pkg = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'package.json'), 'utf8')) as {
+const pkg = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'package.json'), 'utf-8')) as {
   exports: Record<string, string | { import?: string; default?: string; types?: string }>;
   files: string[];
 };

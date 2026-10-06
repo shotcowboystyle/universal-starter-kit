@@ -53,7 +53,12 @@ describe('Skeleton — announcer and motion', () => {
     expect(liveBone.className).not.toMatch(/mp-skeleton-static/);
     cleanup();
 
-    const still = renderWithProviders(<Skeleton width={120} animate={false} />);
+    const still = renderWithProviders(
+      <Skeleton
+        width={120}
+        animate={false}
+      />,
+    );
     const stillBone = still.container.querySelector('[data-skeleton]') as HTMLElement;
     expect(stillBone.getAttribute('data-animate')).toBe('false');
     expect(stillBone.className).toMatch(/mp-skeleton-static/);
@@ -63,7 +68,10 @@ describe('Skeleton — announcer and motion', () => {
   it('animation:none stops the pulse even when animate is true', () => {
     const { container } = renderWithProviders(
       <Preset overrides={{ animation: 'none' }}>
-        <Skeleton width={120} animate />
+        <Skeleton
+          width={120}
+          animate
+        />
       </Preset>,
     );
     const bone = container.querySelector('[data-skeleton]') as HTMLElement;
@@ -72,7 +80,12 @@ describe('Skeleton — announcer and motion', () => {
   });
 
   it('never accepts pointer events', () => {
-    const { container } = renderWithProviders(<Skeleton width={80} height={16} />);
+    const { container } = renderWithProviders(
+      <Skeleton
+        width={80}
+        height={16}
+      />,
+    );
     const bone = container.querySelector('[data-skeleton]') as HTMLElement;
     expect(bone.className).toMatch(/_pe-none/);
   });
@@ -107,7 +120,10 @@ describe('Skeleton — radius classes', () => {
   it('text bones ride DEFAULT: square at radius:none, the token at full', () => {
     const none = renderWithProviders(
       <Preset overrides={{ borderRadius: 'none' }}>
-        <Skeleton variant="text" width={120} />
+        <Skeleton
+          variant="text"
+          width={120}
+        />
       </Preset>,
     );
     expect(radiusClasses(none.container.querySelector('[data-skeleton]') as Element)).toEqual(['_btlr-t-radius-0']);
@@ -115,7 +131,10 @@ describe('Skeleton — radius classes', () => {
 
     const full = renderWithProviders(
       <Preset overrides={{ borderRadius: 'full' }}>
-        <Skeleton variant="text" width={120} />
+        <Skeleton
+          variant="text"
+          width={120}
+        />
       </Preset>,
     );
     expect(radiusClasses(full.container.querySelector('[data-skeleton]') as Element)).toEqual(['_btlr-t-radius-12']);
@@ -124,7 +143,11 @@ describe('Skeleton — radius classes', () => {
   it('rounded bones track the radius knob (R-SCALE)', () => {
     const none = renderWithProviders(
       <Preset overrides={{ borderRadius: 'none' }}>
-        <Skeleton variant="rounded" width={80} height={32} />
+        <Skeleton
+          variant="rounded"
+          width={80}
+          height={32}
+        />
       </Preset>,
     );
     expect(radiusClasses(none.container.querySelector('[data-skeleton]') as Element)).toEqual(['_btlr-t-radius-0']);
@@ -132,7 +155,11 @@ describe('Skeleton — radius classes', () => {
 
     const full = renderWithProviders(
       <Preset overrides={{ borderRadius: 'full' }}>
-        <Skeleton variant="rounded" width={80} height={32} />
+        <Skeleton
+          variant="rounded"
+          width={80}
+          height={32}
+        />
       </Preset>,
     );
     expect(radiusClasses(full.container.querySelector('[data-skeleton]') as Element)).toEqual(['_btlr-t-radius-12']);
@@ -141,7 +168,11 @@ describe('Skeleton — radius classes', () => {
   it('circular bones declare R-PILL and stay round at radius:none', () => {
     const { container } = renderWithProviders(
       <Preset overrides={{ borderRadius: 'none' }}>
-        <Skeleton variant="circular" width={40} height={40} />
+        <Skeleton
+          variant="circular"
+          width={40}
+          height={40}
+        />
       </Preset>,
     );
     const bone = container.querySelector('[data-skeleton]') as HTMLElement;
@@ -153,7 +184,11 @@ describe('Skeleton — radius classes', () => {
   it('rectangular bones stay square (no radius class, no R-PILL)', () => {
     const { container } = renderWithProviders(
       <Preset overrides={{ borderRadius: 'full' }}>
-        <Skeleton variant="rectangular" width={80} height={32} />
+        <Skeleton
+          variant="rectangular"
+          width={80}
+          height={32}
+        />
       </Preset>,
     );
     const bone = container.querySelector('[data-skeleton]') as HTMLElement;
@@ -184,7 +219,12 @@ describe('SkeletonText', () => {
   });
 
   it('shortens only the last line when more than one line exists', () => {
-    const { container } = renderWithProviders(<SkeletonText lines={3} lastLineWidth="40%" />);
+    const { container } = renderWithProviders(
+      <SkeletonText
+        lines={3}
+        lastLineWidth="40%"
+      />,
+    );
     const bones = [...container.querySelectorAll('[data-skeleton]')] as HTMLElement[];
     expect(bones).toHaveLength(3);
     expect(bones[0].getAttribute('data-width')).toBe('100%');

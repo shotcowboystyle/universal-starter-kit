@@ -62,10 +62,24 @@ export const Disabled: Story = {
 
 export const Sizes: Story = {
   render: () => (
-    <YStack gap="$4" maxWidth={400}>
-      <CopyField label="API token" value="mpo_live_4f2a9c81e0b3" size="$3" />
-      <CopyField label="API token" value="mpo_live_4f2a9c81e0b3" size="$4" />
-      <CopyField label="API token" value="mpo_live_4f2a9c81e0b3" size="$5" />
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <CopyField
+        label="API token"
+        value="mpo_live_4f2a9c81e0b3"
+        size="$3"
+      />
+      <CopyField
+        label="API token"
+        value="mpo_live_4f2a9c81e0b3"
+        size="$4"
+      />
+      <CopyField
+        label="API token"
+        value="mpo_live_4f2a9c81e0b3"
+        size="$5"
+      />
     </YStack>
   ),
 };

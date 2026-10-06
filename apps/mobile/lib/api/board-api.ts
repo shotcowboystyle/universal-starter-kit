@@ -1,8 +1,8 @@
-import type { Board } from "@repo/store";
+import type { Board } from '@repo/store';
 
-import { API_ROUTES } from "@/constants/routes";
+import { API_ROUTES } from '@/constants/routes';
 
-import { fetchWithAuth } from "./fetch-with-auth";
+import { fetchWithAuth } from './fetch-with-auth';
 
 export interface CreateBoardInput {
   title: string;
@@ -16,29 +16,28 @@ export interface UpdateBoardInput {
 }
 
 export const boardApi = {
-  getBoards: async () =>
-    fetchWithAuth<{ myBoards: Board[]; teamBoards: Board[] }>(API_ROUTES.BOARDS),
-  getBoardById: async (id: string) => fetchWithAuth<Board>(`${API_ROUTES.BOARDS}/${id}`),
+  getBoards: async () => await fetchWithAuth<{ myBoards: Board[]; teamBoards: Board[] }>(API_ROUTES.BOARDS),
+  getBoardById: async (id: string) => await fetchWithAuth<Board>(`${API_ROUTES.BOARDS}/${id}`),
   createBoard: async (input: CreateBoardInput) =>
-    fetchWithAuth<Board>(API_ROUTES.BOARDS, {
-      method: "POST",
-      body: JSON.stringify(input)
+    await fetchWithAuth<Board>(API_ROUTES.BOARDS, {
+      method: 'POST',
+      body: JSON.stringify(input),
     }),
   updateBoard: async (id: string, input: UpdateBoardInput) =>
-    fetchWithAuth<Board>(`${API_ROUTES.BOARDS}/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify(input)
+    await fetchWithAuth<Board>(`${API_ROUTES.BOARDS}/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
     }),
   deleteBoard: async (id: string) =>
-    fetchWithAuth<void>(
+    await fetchWithAuth<void>(
       `${API_ROUTES.BOARDS}/${id}`,
       {
-        method: "DELETE"
+        method: 'DELETE',
       },
-      true
+      true,
     ),
   addBoardMember: async (boardId: string, memberId: string) =>
-    fetchWithAuth<Board>(`${API_ROUTES.BOARDS}/${boardId}/members/${memberId}`, {
-      method: "POST"
-    })
+    await fetchWithAuth<Board>(`${API_ROUTES.BOARDS}/${boardId}/members/${memberId}`, {
+      method: 'POST',
+    }),
 };

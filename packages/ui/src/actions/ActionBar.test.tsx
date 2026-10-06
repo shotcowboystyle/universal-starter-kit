@@ -11,7 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { DialogRegionContext } from '../surfaces';
 
 import { ActionBar } from './ActionBar';
-import { __resetActionDevWarnSeen } from './devWarn';
+import { __resetActionDevWarnSeen } from './dev-warn';
 
 /** Simulates rendering inside a `DialogContent` surface. */
 function inDialogRegion(ui: ReactNode) {
@@ -56,7 +56,16 @@ describe('ActionBar', () => {
   });
 
   it('does not warn for a single primary slot', () => {
-    renderWithProviders(<ActionBar id="ok" primary=<Button accent verb="Save" noun="document" /> />);
+    renderWithProviders(
+      <ActionBar
+        id="ok"
+        primary=<Button
+          accent
+          verb="Save"
+          noun="document"
+        />
+      />,
+    );
     expect(screen.getByText('Save document')).toBeInTheDocument();
     expect(warnSpy).not.toHaveBeenCalled();
   });
@@ -67,7 +76,10 @@ describe('ActionBar', () => {
       <ActionBar
         id="strip"
         cancel={
-          <button type="button" disabled onClick={onClick}>
+          <button
+            type="button"
+            disabled
+            onClick={onClick}>
             Cancel
           </button>
         }
@@ -79,7 +91,7 @@ describe('ActionBar', () => {
     expect(cancelEl.disabled).toBe(false);
     expect(cancelEl.getAttribute('data-mp-cancel-disabled-ignored')).toBe('true');
     fireEvent.click(cancelEl);
-    expect(onClick).toHaveBeenCalledTimes(1);
+    expect(onClick).toHaveBeenCalledOnce();
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('cancel-disabled'));
   });
 
@@ -89,7 +101,10 @@ describe('ActionBar', () => {
       <ActionBar
         id="strip-house"
         cancel={
-          <Button actionRole="chrome" disabled onPress={onPress}>
+          <Button
+            actionRole="chrome"
+            disabled
+            onPress={onPress}>
             Cancel
           </Button>
         }
@@ -97,7 +112,7 @@ describe('ActionBar', () => {
     );
     const cancelEl = screen.getByText('Cancel');
     fireEvent.click(cancelEl);
-    expect(onPress).toHaveBeenCalledTimes(1);
+    expect(onPress).toHaveBeenCalledOnce();
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('cancel-disabled'));
     // Stripping happens before Button renders, so no bare-disabled either.
     expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining('bare-disabled'));

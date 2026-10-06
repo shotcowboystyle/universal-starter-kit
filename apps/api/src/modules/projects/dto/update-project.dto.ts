@@ -1,6 +1,6 @@
-import { IsDateString, IsEnum, IsMongoId, IsOptional, IsString } from "class-validator";
+import { IsDateString, IsEnum, IsMongoId, IsOptional, IsString } from 'class-validator';
 
-import { ProjectStatus } from "../schemas/projects.schema";
+import { ProjectStatus } from '../schemas/projects.schema';
 
 // Re-export for backward compatibility
 export { ProjectStatus };

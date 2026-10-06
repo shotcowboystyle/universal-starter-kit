@@ -1,10 +1,13 @@
 import type { ThemeName } from '@tamagui/web';
-import { type PropsWithChildren, useContext, useMemo } from 'react';
+import { useContext, useMemo } from 'react';
+import type { PropsWithChildren } from 'react';
 import { Theme as TamaguiTheme } from 'tamagui';
 
-import { defaultKnobs, type Knobs } from './knobs';
+import { defaultKnobs } from './knobs';
+import type { Knobs } from './knobs';
+import { PresetContext } from './preset-context';
+import type { PresetContextValue } from './preset-context';
 import type { Preset as PresetType } from './preset.types';
-import { PresetContext, type PresetContextValue } from './PresetContext';
 import { getPreset } from './shared';
 
 export interface PresetProps extends PropsWithChildren {
@@ -59,11 +62,11 @@ export function Preset({ children, preset: presetName, theme, overrides, cascade
 
     if (presetName) {
       base = getPreset(presetName) ?? freshDefault;
-    } else if (!cascade) {
-      // Explicitly non-cascading: always start from defaults
+    } else if (cascade) {
+      // No parent context exists: use defaults
       base = freshDefault;
     } else {
-      // No parent context exists: use defaults
+      // Explicitly non-cascading: always start from defaults
       base = freshDefault;
     }
 

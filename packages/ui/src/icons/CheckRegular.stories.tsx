@@ -33,25 +33,44 @@ function parseSize(size: unknown): number | string {
 
 export const Default: Story = {
   name: 'Main',
-  render: (args) => <CheckRegular color={args.color} size={parseSize(args.size)} />,
+  render: (args) => (
+    <CheckRegular
+      color={args.color}
+      size={parseSize(args.size)}
+    />
+  ),
 };
 
 export const ColorModes: Story = {
   render: () => (
     <YStack gap="$3">
-      <XStack gap="$4" alignItems="center">
+      <XStack
+        gap="$4"
+        alignItems="center">
         <Paragraph width={160}>default (theme color)</Paragraph>
         <CheckRegular size={24} />
       </XStack>
-      <XStack gap="$4" alignItems="center">
+      <XStack
+        gap="$4"
+        alignItems="center">
         <Paragraph width={160}>theme key color10</Paragraph>
-        <CheckRegular size={24} color="color10" />
+        <CheckRegular
+          size={24}
+          color="color10"
+        />
       </XStack>
-      <XStack gap="$4" alignItems="center">
+      <XStack
+        gap="$4"
+        alignItems="center">
         <Paragraph width={160}>theme key color11</Paragraph>
-        <CheckRegular size={24} color="color11" />
+        <CheckRegular
+          size={24}
+          color="color11"
+        />
       </XStack>
-      <XStack gap="$4" alignItems="center">
+      <XStack
+        gap="$4"
+        alignItems="center">
         <Paragraph width={160}>green Theme wrapper</Paragraph>
         <Theme name="green">
           <CheckRegular size={24} />
@@ -63,7 +82,9 @@ export const ColorModes: Story = {
 
 export const Sizes: Story = {
   render: () => (
-    <XStack gap="$4" alignItems="center">
+    <XStack
+      gap="$4"
+      alignItems="center">
       <CheckRegular size={0} />
       <CheckRegular size={12} />
       <CheckRegular size={16} />

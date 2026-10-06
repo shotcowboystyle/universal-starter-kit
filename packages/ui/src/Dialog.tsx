@@ -13,13 +13,10 @@
  * the catalog's localized "Close". An explicit label on the part or on its
  * child still wins. Every other part is the tamagui one.
  */
-import { isValidElement, type ComponentType, type ReactNode } from 'react';
-import {
-  AlertDialog as TamaguiAlertDialog,
-  Dialog as TamaguiDialog,
-  withStaticProperties,
-  type GetProps,
-} from 'tamagui';
+import { isValidElement } from 'react';
+import type { ComponentType, ReactNode } from 'react';
+import { AlertDialog as TamaguiAlertDialog, Dialog as TamaguiDialog, withStaticProperties } from 'tamagui';
+import type { GetProps } from 'tamagui';
 
 import { useTranslation } from './shared/i18n';
 
@@ -65,14 +62,24 @@ function namedByContent<C extends ComponentType<any>>(Part: C, displayName: stri
 
   function LocalizedClose(props: GetProps<C>) {
     const { t } = useTranslation();
-    return <Raw aria-label={t('Close')} {...props} />;
+    return (
+      <Raw
+        aria-label={t('Close')}
+        {...props}
+      />
+    );
   }
 
   function Close(props: GetProps<C>) {
     if (needsCloseName(props)) {
       return <LocalizedClose {...props} />;
     }
-    return <Raw aria-label={undefined} {...props} />;
+    return (
+      <Raw
+        aria-label={undefined}
+        {...props}
+      />
+    );
   }
   Close.displayName = displayName;
   return Close;

@@ -14,7 +14,7 @@ import * as ReactI18next from 'react-i18next';
 export const useTranslation = ((...args: unknown[]) => {
   const impl = (ReactI18next as { useTranslation?: (...args: unknown[]) => unknown }).useTranslation;
   if (typeof impl !== 'function') {
-    throw new Error(
+    throw new TypeError(
       '[@repo/ui] react-i18next is not installed, but a component that ' +
         'translates its built-in copy was rendered. Add react-i18next and i18next to your ' +
         "app's dependencies (they are optional peers so apps that never render these " +

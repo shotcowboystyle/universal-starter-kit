@@ -70,10 +70,24 @@ export const Main: Story = {
 
       return (
         <Form form={form}>
-          <YStack gap="$4" maxWidth={400}>
-            <DatePicker label="Birth Date" name="birthDate" helperText="Select your date of birth" />
-            <DatePicker label="Start Date" name={'startDate' as any} helperText="Select project start date" />
-            <DatePicker label="End Date" name={'endDate' as any} helperText="Select project end date" />
+          <YStack
+            gap="$4"
+            maxWidth={400}>
+            <DatePicker
+              label="Birth Date"
+              name="birthDate"
+              helperText="Select your date of birth"
+            />
+            <DatePicker
+              label="Start Date"
+              name={'startDate' as any}
+              helperText="Select project start date"
+            />
+            <DatePicker
+              label="End Date"
+              name={'endDate' as any}
+              helperText="Select project end date"
+            />
             <Button action="submit">Submit</Button>
           </YStack>
         </Form>
@@ -97,8 +111,13 @@ export const StateContract: Story = {
     const [value, setValue] = useState<string | null>(null);
     const [edits, setEdits] = useState(0);
     return (
-      <YStack gap="$4" maxWidth={400}>
-        <DatePicker label="Saved date" defaultValue="1990-01-01" />
+      <YStack
+        gap="$4"
+        maxWidth={400}>
+        <DatePicker
+          label="Saved date"
+          defaultValue="1990-01-01"
+        />
         <DatePicker
           label="Programmatic date"
           value={value}
@@ -113,8 +132,16 @@ export const StateContract: Story = {
           Load date
         </Button>
         <Text>{`User edits: ${edits}`}</Text>
-        <DatePicker label="Read-only date" value="1990-01-01" readOnly />
-        <DatePicker label="Disabled date" value="1990-01-01" disabled />
+        <DatePicker
+          label="Read-only date"
+          value="1990-01-01"
+          readOnly
+        />
+        <DatePicker
+          label="Disabled date"
+          value="1990-01-01"
+          disabled
+        />
       </YStack>
     );
   },
@@ -147,10 +174,24 @@ export const WithError: Story = {
 
 export const Sizes: Story = {
   render: () => (
-    <YStack gap="$4" maxWidth={400}>
-      <DatePicker label="Small" size="$2" placeholder="Pick a date" />
-      <DatePicker label="Medium (default)" size="$3" placeholder="Pick a date" />
-      <DatePicker label="Large" size="$4" placeholder="Pick a date" />
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <DatePicker
+        label="Small"
+        size="$2"
+        placeholder="Pick a date"
+      />
+      <DatePicker
+        label="Medium (default)"
+        size="$3"
+        placeholder="Pick a date"
+      />
+      <DatePicker
+        label="Large"
+        size="$4"
+        placeholder="Pick a date"
+      />
     </YStack>
   ),
 };
@@ -160,7 +201,9 @@ export const Interactive: Story = {
     const InteractiveExample = () => {
       const [date, setDate] = useState('');
       return (
-        <YStack gap="$4" maxWidth={400}>
+        <YStack
+          gap="$4"
+          maxWidth={400}>
           <DatePicker
             label="Pick a Date"
             value={date}
@@ -223,7 +266,9 @@ export const MonthPickerBasic = {
 
 export const MonthPickerWithYearRange = {
   render: () => (
-    <YStack gap="$4" maxWidth={400}>
+    <YStack
+      gap="$4"
+      maxWidth={400}>
       <MonthPicker
         label="Fiscal Period"
         placeholder="Select fiscal period"
@@ -248,7 +293,9 @@ export const DatetimePickerBasic = {
 
 export const DatetimePicker24Hour = {
   render: () => (
-    <YStack gap="$4" maxWidth={400}>
+    <YStack
+      gap="$4"
+      maxWidth={400}>
       <DatetimePicker
         label="Meeting Time"
         placeholder="Select meeting time"
@@ -261,8 +308,15 @@ export const DatetimePicker24Hour = {
 
 export const DatetimePickerWithSeconds = {
   render: () => (
-    <YStack gap="$4" maxWidth={400}>
-      <DatetimePicker label="Precise Timestamp" placeholder="Select exact time" helperText="With seconds" showSeconds />
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <DatetimePicker
+        label="Precise Timestamp"
+        placeholder="Select exact time"
+        helperText="With seconds"
+        showSeconds
+      />
     </YStack>
   ),
 };

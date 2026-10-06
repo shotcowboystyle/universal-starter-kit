@@ -1,4 +1,5 @@
-import { Table, type TableHeadProps } from '@repo/table-primitives';
+import { Table } from '@repo/table-primitives';
+import type { TableHeadProps } from '@repo/table-primitives';
 
 const TableHead = Table.Head;
 

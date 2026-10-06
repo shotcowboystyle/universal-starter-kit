@@ -30,8 +30,15 @@ const SlideContent = ({ index, color, height = 200 }: { index: number; color: st
   // No slide-owned radius (G-15 story honesty): the Carousel viewport clips
   // slides at the knob radius — a pinned $3 held a 7px arc at
   // borderRadius:none (UX-P06 "Carousel slides br=7").
-  <View backgroundColor={`$${color}3`} height={height} alignItems="center" justifyContent="center">
-    <Text color={`$${color}12`} fontSize="$6" fontWeight="400">
+  <View
+    backgroundColor={`$${color}3`}
+    height={height}
+    alignItems="center"
+    justifyContent="center">
+    <Text
+      color={`$${color}12`}
+      fontSize="$6"
+      fontWeight="400">
       Slide {index + 1}
     </Text>
   </View>
@@ -43,7 +50,11 @@ export const Default: Story = {
     <View width={400}>
       <Carousel onSlideChange={action('onSlideChange')}>
         {colors.slice(0, 4).map((color, i) => (
-          <SlideContent key={i} index={i} color={color} />
+          <SlideContent
+            key={i}
+            index={i}
+            color={color}
+          />
         ))}
       </Carousel>
     </View>
@@ -53,9 +64,15 @@ export const Default: Story = {
 export const WithoutArrows: Story = {
   render: () => (
     <View width={400}>
-      <Carousel showArrows={false} onSlideChange={action('onSlideChange')}>
+      <Carousel
+        showArrows={false}
+        onSlideChange={action('onSlideChange')}>
         {colors.slice(0, 4).map((color, i) => (
-          <SlideContent key={i} index={i} color={color} />
+          <SlideContent
+            key={i}
+            index={i}
+            color={color}
+          />
         ))}
       </Carousel>
     </View>
@@ -65,9 +82,15 @@ export const WithoutArrows: Story = {
 export const WithoutDots: Story = {
   render: () => (
     <View width={400}>
-      <Carousel showDots={false} onSlideChange={action('onSlideChange')}>
+      <Carousel
+        showDots={false}
+        onSlideChange={action('onSlideChange')}>
         {colors.slice(0, 4).map((color, i) => (
-          <SlideContent key={i} index={i} color={color} />
+          <SlideContent
+            key={i}
+            index={i}
+            color={color}
+          />
         ))}
       </Carousel>
     </View>
@@ -77,9 +100,15 @@ export const WithoutDots: Story = {
 export const Looping: Story = {
   render: () => (
     <View width={400}>
-      <Carousel loop onSlideChange={action('onSlideChange')}>
+      <Carousel
+        loop
+        onSlideChange={action('onSlideChange')}>
         {colors.slice(0, 4).map((color, i) => (
-          <SlideContent key={i} index={i} color={color} />
+          <SlideContent
+            key={i}
+            index={i}
+            color={color}
+          />
         ))}
       </Carousel>
     </View>
@@ -89,9 +118,16 @@ export const Looping: Story = {
 export const AutoPlay: Story = {
   render: () => (
     <View width={400}>
-      <Carousel autoPlay={3000} loop onSlideChange={action('onSlideChange')}>
+      <Carousel
+        autoPlay={3000}
+        loop
+        onSlideChange={action('onSlideChange')}>
         {colors.slice(0, 4).map((color, i) => (
-          <SlideContent key={i} index={i} color={color} />
+          <SlideContent
+            key={i}
+            index={i}
+            color={color}
+          />
         ))}
       </Carousel>
     </View>
@@ -101,9 +137,15 @@ export const AutoPlay: Story = {
 export const InitialSlide: Story = {
   render: () => (
     <View width={400}>
-      <Carousel initialSlide={2} onSlideChange={action('onSlideChange')}>
+      <Carousel
+        initialSlide={2}
+        onSlideChange={action('onSlideChange')}>
         {colors.slice(0, 5).map((color, i) => (
-          <SlideContent key={i} index={i} color={color} />
+          <SlideContent
+            key={i}
+            index={i}
+            color={color}
+          />
         ))}
       </Carousel>
     </View>
@@ -118,7 +160,12 @@ export const CustomGap: Story = {
         <View width={400}>
           <Carousel>
             {colors.slice(0, 3).map((color, i) => (
-              <SlideContent key={i} index={i} color={color} height={100} />
+              <SlideContent
+                key={i}
+                index={i}
+                color={color}
+                height={100}
+              />
             ))}
           </Carousel>
         </View>
@@ -128,7 +175,12 @@ export const CustomGap: Story = {
         <View width={400}>
           <Carousel gap="$6">
             {colors.slice(0, 3).map((color, i) => (
-              <SlideContent key={i} index={i} color={color} height={100} />
+              <SlideContent
+                key={i}
+                index={i}
+                color={color}
+                height={100}
+              />
             ))}
           </Carousel>
         </View>
@@ -142,7 +194,9 @@ export const ImageCarousel: Story = {
     <View width={500}>
       <Carousel loop>
         {[1, 2, 3, 4].map((i) => (
-          <View key={i} overflow="hidden">
+          <View
+            key={i}
+            overflow="hidden">
             <Image
               src={`https://picsum.photos/500/300?random=${i}`}
               alt={`Sample landscape photo ${i}`}
@@ -162,13 +216,24 @@ export const CardCarousel: Story = {
     <View width={400}>
       <Carousel>
         {[1, 2, 3, 4].map((i) => (
-          <Card key={i} padding="$4" height={200}>
+          <Card
+            key={i}
+            padding="$4"
+            height={200}>
             <YStack gap="$2">
-              <View width={60} height={60} backgroundColor="$color5" />
-              <Text fontWeight="400" fontSize="$5">
+              <View
+                width={60}
+                height={60}
+                backgroundColor="$color5"
+              />
+              <Text
+                fontWeight="400"
+                fontSize="$5">
                 Card {i}
               </Text>
-              <Text color="$color11" fontSize="$3">
+              <Text
+                color="$color11"
+                fontSize="$3">
                 This is a sample card in the carousel. It demonstrates how cards can be used as slides.
               </Text>
             </YStack>
@@ -182,9 +247,15 @@ export const CardCarousel: Story = {
 export const ManySlides: Story = {
   render: () => (
     <View width={400}>
-      <Carousel loop onSlideChange={action('onSlideChange')}>
+      <Carousel
+        loop
+        onSlideChange={action('onSlideChange')}>
         {Array.from({ length: 10 }).map((_, i) => (
-          <SlideContent key={i} index={i} color={colors[i % colors.length]} />
+          <SlideContent
+            key={i}
+            index={i}
+            color={colors[i % colors.length]}
+          />
         ))}
       </Carousel>
     </View>
@@ -195,7 +266,10 @@ export const SingleSlide: Story = {
   render: () => (
     <View width={400}>
       <Carousel>
-        <SlideContent index={0} color="blue" />
+        <SlideContent
+          index={0}
+          color="blue"
+        />
       </Carousel>
     </View>
   ),
@@ -227,8 +301,13 @@ export const SlideGeometry: Story = {
         {colors.slice(0, 4).map((color, i) => (
           // Fixed-width slide content (the gallery shape that exposed
           // the inflation): content exactly as wide as the viewport.
-          <View key={i} width={400}>
-            <SlideContent index={i} color={color} />
+          <View
+            key={i}
+            width={400}>
+            <SlideContent
+              index={i}
+              color={color}
+            />
           </View>
         ))}
       </Carousel>
@@ -244,7 +323,12 @@ export const AllStates: Story = {
         <View width={350}>
           <Carousel>
             {colors.slice(0, 3).map((color, i) => (
-              <SlideContent key={i} index={i} color={color} height={120} />
+              <SlideContent
+                key={i}
+                index={i}
+                color={color}
+                height={120}
+              />
             ))}
           </Carousel>
         </View>
@@ -255,7 +339,12 @@ export const AllStates: Story = {
         <View width={350}>
           <Carousel showArrows={false}>
             {colors.slice(0, 3).map((color, i) => (
-              <SlideContent key={i} index={i} color={color} height={120} />
+              <SlideContent
+                key={i}
+                index={i}
+                color={color}
+                height={120}
+              />
             ))}
           </Carousel>
         </View>
@@ -266,7 +355,12 @@ export const AllStates: Story = {
         <View width={350}>
           <Carousel showDots={false}>
             {colors.slice(0, 3).map((color, i) => (
-              <SlideContent key={i} index={i} color={color} height={120} />
+              <SlideContent
+                key={i}
+                index={i}
+                color={color}
+                height={120}
+              />
             ))}
           </Carousel>
         </View>
@@ -277,7 +371,12 @@ export const AllStates: Story = {
         <View width={350}>
           <Carousel loop>
             {colors.slice(0, 3).map((color, i) => (
-              <SlideContent key={i} index={i} color={color} height={120} />
+              <SlideContent
+                key={i}
+                index={i}
+                color={color}
+                height={120}
+              />
             ))}
           </Carousel>
         </View>

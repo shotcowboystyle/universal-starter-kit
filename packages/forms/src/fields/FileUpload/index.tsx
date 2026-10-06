@@ -1,15 +1,16 @@
 import { FileIcon, UploadIcon, XIcon } from '@phosphor-icons/react';
-import { useTouchSurface } from '@repo/theme';
-import { ensureFocusVisibleRing, ensureKeyboardModalityTracking, wasKeyboardFocus } from '@repo/theme';
+import { useTouchSurface, ensureFocusVisibleRing, ensureKeyboardModalityTracking, wasKeyboardFocus } from '@repo/theme';
 import type { DeepKeys, DeepValue } from '@tanstack/form-core';
-import { type DragEvent, type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
-import { useProps, type SizeTokens } from 'tamagui';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { DragEvent, ReactNode } from 'react';
+import { useProps } from 'tamagui';
+import type { SizeTokens } from 'tamagui';
 import { Image, isWeb, Text, XStack, YStack, styled } from 'tamagui';
 
 import { Button } from '../../Button';
-import { Field, FieldLayout } from '../../fieldLayout';
-import type { FormFieldProps } from '../../fieldLayout';
-import { formCommonColors, formDropzoneColors, formInputColors } from '../../shared/colorRamps';
+import { Field, FieldLayout } from '../../FieldLayout';
+import type { FormFieldProps } from '../../FieldLayout';
+import { formCommonColors, formDropzoneColors, formInputColors } from '../../shared/color-ramps';
 import { t } from '../../shared/t';
 import {
   clampRadiusForLargeComponent,
@@ -22,10 +23,10 @@ import {
 import { Skeleton } from '../../Skeleton';
 import type { FieldComponentProps, Validator } from '../../types';
 
-import type { NativePickedFile, NativePickerMode } from './filePickerTypes';
+import type { NativePickedFile, NativePickerMode } from './file-picker-types';
 // Platform-split: the web twin is inert, the `.native` twin opens
 // expo-document-picker / expo-image-picker (Geolocation map-surface pattern).
-import { pickFilesNatively } from './nativeFilePicker';
+import { pickFilesNatively } from './native-file-picker';
 
 /** Structured per-file transport error. */
 export interface FileTransferError {
@@ -328,7 +329,7 @@ export function FileUpload<
           if (type.startsWith('.')) {
             return file.name.toLowerCase().endsWith(type.toLowerCase());
           }
-          return file.type.match(type.replace('*', '.*'));
+          return RegExp(type.replace('*', '.*')).exec(file.type);
         });
         if (!isAccepted) {
           return t('File type not accepted. Accepted types: {{types}}', { types: accept });
@@ -693,7 +694,7 @@ export function FileUpload<
     if (!isWeb) {
       // Native picks carry a device URI instead of a blob; tamagui's Image
       // takes it through the same `src` prop the web preview uses.
-      const uri = (file as Partial<NativePickedFile>).uri;
+      const { uri } = file as Partial<NativePickedFile>;
       return uri && file.type?.startsWith('image/') ? uri : null;
     }
     if (file.type.startsWith('image/')) {
@@ -712,8 +713,16 @@ export function FileUpload<
   if (skeleton) {
     const minHeightPx = getFieldHeight((fieldProps.size || knobProps.sizeToken) as SizeTokens, 5, hydrationTouch);
     return (
-      <FieldLayout id={id} label={fieldProps.label} size={fieldProps.size} knobProps={knobProps}>
-        <Skeleton variant="rounded" width="100%" height={minHeightPx} />
+      <FieldLayout
+        id={id}
+        label={fieldProps.label}
+        size={fieldProps.size}
+        knobProps={knobProps}>
+        <Skeleton
+          variant="rounded"
+          width="100%"
+          height={minHeightPx}
+        />
       </FieldLayout>
     );
   }
@@ -748,7 +757,10 @@ export function FileUpload<
     ) : null;
 
   const renderFileMeta = (file: File, preview: string | null, extra?: ReactNode) => (
-    <XStack flex={1} gap="$2" alignItems="center">
+    <XStack
+      flex={1}
+      gap="$2"
+      alignItems="center">
       {preview ? (
         <Image
           borderRadius={cappedRadius}
@@ -761,19 +773,31 @@ export function FileUpload<
           objectFit="cover"
         />
       ) : (
-        <XStack width={rowMediaPx} height={rowMediaPx} justifyContent="center" alignItems="center">
+        <XStack
+          width={rowMediaPx}
+          height={rowMediaPx}
+          justifyContent="center"
+          alignItems="center">
           <FileIcon size={rowGlyphSize} />
         </XStack>
       )}
-      <YStack flex={1} gap="$1">
-        <Text numberOfLines={1} {...knobProps.body}>
+      <YStack
+        flex={1}
+        gap="$1">
+        <Text
+          numberOfLines={1}
+          {...knobProps.body}>
           {file.name}
         </Text>
         {/* Bento (bento-pickers-measured.md §2): the size is a
             SECOND LINE, BOLD, one type step down (the label
             tier — 13/24 at medium). The 700 is the Bento
             treatment, a deliberate eject over the weight knob. */}
-        <Text numberOfLines={1} color={formCommonColors.text} {...knobProps.label} fontWeight="700">
+        <Text
+          numberOfLines={1}
+          color={formCommonColors.text}
+          {...knobProps.label}
+          fontWeight="700">
           {formatFileSize(file.size)}
         </Text>
         {extra}
@@ -954,9 +978,15 @@ export function FileUpload<
               // `color` tints the phosphor glyph via currentColor; Tamagui applies
               // it on web Stacks though the RN-flavored View type omits it.
               {...({ color: formCommonColors.text } as Record<string, unknown>)}>
-              <UploadIcon size={rowMediaPx} aria-hidden />
+              <UploadIcon
+                size={rowMediaPx}
+                aria-hidden
+              />
             </XStack>
-            <Text color={formCommonColors.text} textAlign="center" {...knobProps.body}>
+            <Text
+              color={formCommonColors.text}
+              textAlign="center"
+              {...knobProps.body}>
               {multiple ? t('Drop files to upload') : t('Drop a file to upload')}
             </Text>
           </DropOverlayFrame>
@@ -969,7 +999,9 @@ export function FileUpload<
           alignItems="center"
           justifyContent="center"
           {...knobProps.gap}>
-          <XStack alignItems="center" {...knobProps.gap}>
+          <XStack
+            alignItems="center"
+            {...knobProps.gap}>
             <Button
               onPress={requestFiles}
               disabled={!canInteract}
@@ -986,7 +1018,10 @@ export function FileUpload<
           </XStack>
 
           {selectedFiles.length === 0 && transfers.length === 0 && (
-            <Text color={formCommonColors.muted} textAlign="center" {...knobProps.body}>
+            <Text
+              color={formCommonColors.muted}
+              textAlign="center"
+              {...knobProps.body}>
               {placeholder}
             </Text>
           )}
@@ -1014,26 +1049,27 @@ export function FileUpload<
             // The hairline tracks the frame edge's knob width — one dash voice.
             borderTopWidth={knobProps.borderRadius.borderWidth ?? 1}>
             {imageTiles.length > 0 ? (
-              <UploadTileGridFrame data-file-upload="tiles" {...knobProps.gap} {...knobProps.panelPadding}>
+              <UploadTileGridFrame
+                data-file-upload="tiles"
+                {...knobProps.gap}
+                {...knobProps.panelPadding}>
                 {imageTiles.map(({ file, preview }) => renderImageTile(file, preview, onValueChange))}
               </UploadTileGridFrame>
             ) : null}
-            {fileRows.map(({ file, preview, index }) => {
-              return (
-                <XStack
-                  key={`${file.name}-${index}`}
-                  width="100%"
-                  {...knobProps.gap}
-                  alignItems="center"
-                  justifyContent="space-between"
-                  {...knobProps.panelPadding}>
-                  {renderFileMeta(file, preview)}
-                  {renderRemoveDisc(t('Remove {{name}}', { name: file.name }), () => {
-                    handleFileRemove(file, onValueChange);
-                  })}
-                </XStack>
-              );
-            })}
+            {fileRows.map(({ file, preview, index }) => (
+              <XStack
+                key={`${file.name}-${index}`}
+                width="100%"
+                {...knobProps.gap}
+                alignItems="center"
+                justifyContent="space-between"
+                {...knobProps.panelPadding}>
+                {renderFileMeta(file, preview)}
+                {renderRemoveDisc(t('Remove {{name}}', { name: file.name }), () => {
+                  handleFileRemove(file, onValueChange);
+                })}
+              </XStack>
+            ))}
             {transfers.map((item) => {
               const preview = showPreview ? getFilePreview(item.file) : null;
               const isUploading = item.status === 'uploading';
@@ -1073,17 +1109,23 @@ export function FileUpload<
                       ) : null}
                       {failed ? (
                         <YStack gap="$1">
-                          <Text color={formCommonColors.error} {...knobProps.label}>
+                          <Text
+                            color={formCommonColors.error}
+                            {...knobProps.label}>
                             {failed.problem}
                           </Text>
-                          <Text color={formCommonColors.muted} {...knobProps.label}>
+                          <Text
+                            color={formCommonColors.muted}
+                            {...knobProps.label}>
                             {failed.action}
                           </Text>
                         </YStack>
                       ) : null}
                     </>,
                   )}
-                  <XStack {...knobProps.gap} alignItems="center">
+                  <XStack
+                    {...knobProps.gap}
+                    alignItems="center">
                     {canInteract && failed ? (
                       <Button
                         outlined
@@ -1177,4 +1219,4 @@ export function FileUpload<
  * React Native's FormData accepts for a multipart upload, so a form value can
  * be posted straight through; on web the value stays a DOM `File`.
  */
-export type { NativePickedFile, NativePickerMode } from './filePickerTypes';
+export type { NativePickedFile, NativePickerMode } from './file-picker-types';

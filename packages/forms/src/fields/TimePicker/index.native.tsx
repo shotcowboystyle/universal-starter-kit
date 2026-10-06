@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable as RNPressable } from 'react-native';
 
-import { Field, FieldLayout } from '../../fieldLayout';
+import { Field, FieldLayout } from '../../FieldLayout';
 import { Input as InputParts } from '../../InputParts';
 import { t } from '../../shared/t';
 import { getFieldError, mergeFieldHandler, useFormField, useResolvedValidators } from '../../shared/utils';
@@ -12,14 +12,8 @@ import { Skeleton } from '../../Skeleton';
 import { OsDateTimeSheet } from '../nativeDateTime/OsDateTimeSheet';
 
 import { TimePicker as CatalogTimePicker } from './catalog';
-import {
-  TimePickerInputTrigger,
-  formatTimeDisplay,
-  isValidTimeString,
-  parseTimeString,
-  toTimeString,
-  type TimeFormat,
-} from './parts';
+import { TimePickerInputTrigger, formatTimeDisplay, isValidTimeString, parseTimeString, toTimeString } from './parts';
+import type { TimeFormat } from './parts';
 
 export interface TimePickerProps {
   name?: string;
@@ -164,8 +158,16 @@ export function TimePicker(props: TimePickerProps) {
 
   if (skeleton) {
     return (
-      <FieldLayout id={id} label={label} size={size} knobProps={knobProps}>
-        <Skeleton variant="rounded" width="100%" height={knobProps.sizeToken} />
+      <FieldLayout
+        id={id}
+        label={label}
+        size={size}
+        knobProps={knobProps}>
+        <Skeleton
+          variant="rounded"
+          width="100%"
+          height={knobProps.sizeToken}
+        />
       </FieldLayout>
     );
   }
@@ -191,7 +193,11 @@ export function TimePicker(props: TimePickerProps) {
   }
 
   return (
-    <Field form={resolvedForm} name={name} defaultValue={defaultValue} validators={resolvedValidators}>
+    <Field
+      form={resolvedForm}
+      name={name}
+      defaultValue={defaultValue}
+      validators={resolvedValidators}>
       {(field) => {
         const resolvedError = getFieldError(field, error) || formatError;
         const current = (field.state.value as string | undefined) ?? value;

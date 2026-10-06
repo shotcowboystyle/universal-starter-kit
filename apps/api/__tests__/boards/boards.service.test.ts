@@ -1,10 +1,10 @@
-import { Types } from "mongoose";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Types } from 'mongoose';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { BoardService } from "../../src/modules/boards/boards.service";
-import { BoardRepository } from "../../src/modules/boards/repositories/boards.repository";
+import { BoardService } from '../../src/modules/boards/boards.service';
+import type { BoardRepository } from '../../src/modules/boards/repositories/boards.repository';
 
-describe("BoardService", () => {
+describe('BoardService', () => {
   let service: BoardService;
   let boardRepository: Record<string, ReturnType<typeof vi.fn>>;
   let eventEmitter: { emit: ReturnType<typeof vi.fn> };
@@ -19,27 +19,27 @@ describe("BoardService", () => {
       updateById: vi.fn(),
       deleteById: vi.fn(),
       addMember: vi.fn(),
-      removeMember: vi.fn()
+      removeMember: vi.fn(),
     };
 
     eventEmitter = {
-      emit: vi.fn()
+      emit: vi.fn(),
     };
 
     service = new BoardService(boardRepository as unknown as BoardRepository, eventEmitter as any);
   });
 
-  it("should be defined", () => {
+  it('should be defined', () => {
     expect(service).toBeDefined();
   });
 
-  describe("create", () => {
-    it("should create a board", async () => {
-      const createBoardDto = { title: "Test Board", owner: "60f6e1b3b3f3b3b3b3f3b3b3" };
+  describe('create', () => {
+    it('should create a board', async () => {
+      const createBoardDto = { title: 'Test Board', owner: '60f6e1b3b3f3b3b3b3f3b3b3' };
       const expectedBoard = {
-        title: "Test Board",
-        owner: new Types.ObjectId("60f6e1b3b3f3b3b3b3f3b3b3"),
-        members: [new Types.ObjectId("60f6e1b3b3f3b3b3b3f3b3b3")]
+        title: 'Test Board',
+        owner: new Types.ObjectId('60f6e1b3b3f3b3b3b3f3b3b3'),
+        members: [new Types.ObjectId('60f6e1b3b3f3b3b3b3f3b3b3')],
       };
       boardRepository.create.mockResolvedValue(expectedBoard);
 
@@ -50,9 +50,9 @@ describe("BoardService", () => {
     });
   });
 
-  describe("findAll", () => {
-    it("should find all boards for a user", async () => {
-      const userId = "60f6e1b3b3f3b3b3b3f3b3b3";
+  describe('findAll', () => {
+    it('should find all boards for a user', async () => {
+      const userId = '60f6e1b3b3f3b3b3b3f3b3b3';
 
       await service.findAll(userId);
 
@@ -61,10 +61,10 @@ describe("BoardService", () => {
     });
   });
 
-  describe("findOne", () => {
-    it("should find a board by id", async () => {
-      const boardId = "60f6e1b3b3f3b3b3b3f3b3b4";
-      const userId = "60f6e1b3b3f3b3b3b3f3b3b3";
+  describe('findOne', () => {
+    it('should find a board by id', async () => {
+      const boardId = '60f6e1b3b3f3b3b3b3f3b3b4';
+      const userId = '60f6e1b3b3f3b3b3b3f3b3b3';
       boardRepository.findOneWithAccess.mockResolvedValue({});
 
       await service.findOne(boardId, userId);
@@ -73,11 +73,11 @@ describe("BoardService", () => {
     });
   });
 
-  describe("update", () => {
-    it("should update a board", async () => {
-      const boardId = "60f6e1b3b3f3b3b3b3f3b3b4";
-      const userId = "60f6e1b3b3f3b3b3b3f3b3b3";
-      const updateBoardDto = { title: "Test Board Updated" };
+  describe('update', () => {
+    it('should update a board', async () => {
+      const boardId = '60f6e1b3b3f3b3b3b3f3b3b4';
+      const userId = '60f6e1b3b3f3b3b3b3f3b3b3';
+      const updateBoardDto = { title: 'Test Board Updated' };
       const board = { _id: boardId, owner: { toString: () => userId }, members: [] };
 
       boardRepository.findById.mockResolvedValue(board);
@@ -91,10 +91,10 @@ describe("BoardService", () => {
     });
   });
 
-  describe("remove", () => {
-    it("should remove a board and emit event", async () => {
-      const boardId = "60f6e1b3b3f3b3b3b3f3b3b4";
-      const userId = "60f6e1b3b3f3b3b3b3f3b3b3";
+  describe('remove', () => {
+    it('should remove a board and emit event', async () => {
+      const boardId = '60f6e1b3b3f3b3b3b3f3b3b4';
+      const userId = '60f6e1b3b3f3b3b3b3f3b3b3';
       const board = { _id: boardId, owner: { toString: () => userId }, members: [] };
 
       boardRepository.findById.mockResolvedValue(board);
@@ -103,16 +103,16 @@ describe("BoardService", () => {
       await service.remove(boardId, userId);
 
       expect(boardRepository.findById).toHaveBeenCalledWith(boardId);
-      expect(eventEmitter.emit).toHaveBeenCalledWith("board.deleted", expect.any(Object));
+      expect(eventEmitter.emit).toHaveBeenCalledWith('board.deleted', expect.any(Object));
       expect(boardRepository.deleteById).toHaveBeenCalledWith(boardId);
     });
   });
 
-  describe("addMember", () => {
-    it("should add a member to a board", async () => {
-      const boardId = "60f6e1b3b3f3b3b3b3f3b3b4";
-      const userId = "60f6e1b3b3f3b3b3b3f3b3b3";
-      const memberId = "60f6e1b3b3f3b3b3b3f3b3b5";
+  describe('addMember', () => {
+    it('should add a member to a board', async () => {
+      const boardId = '60f6e1b3b3f3b3b3b3f3b3b4';
+      const userId = '60f6e1b3b3f3b3b3b3f3b3b3';
+      const memberId = '60f6e1b3b3f3b3b3b3f3b3b5';
 
       boardRepository.addMember.mockResolvedValue({});
 
@@ -122,11 +122,11 @@ describe("BoardService", () => {
     });
   });
 
-  describe("removeMember", () => {
-    it("should remove a member from a board", async () => {
-      const boardId = "60f6e1b3b3f3b3b3b3f3b3b4";
-      const userId = "60f6e1b3b3f3b3b3b3f3b3b3";
-      const memberId = "60f6e1b3b3f3b3b3b3f3b3b5";
+  describe('removeMember', () => {
+    it('should remove a member from a board', async () => {
+      const boardId = '60f6e1b3b3f3b3b3b3f3b3b4';
+      const userId = '60f6e1b3b3f3b3b3b3f3b3b3';
+      const memberId = '60f6e1b3b3f3b3b3b3f3b3b5';
 
       boardRepository.removeMember.mockResolvedValue({});
 

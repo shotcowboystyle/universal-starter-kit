@@ -38,14 +38,19 @@ describe('Breadcrumbs', () => {
     }
     // Distinct token from the warning-surface fix: separators ride textAccentColor (AA floor
     // at $color11), not componentColors.text.subtle ($color8).
-    const source = readFileSync(join(import.meta.dirname, 'breadcrumbs.tsx'), 'utf8');
+    const source = readFileSync(join(import.meta.dirname, 'breadcrumbs.tsx'), 'utf-8');
     expect(source).toMatch(/color=\{knobProps\.textAccentColor\}/);
     expect(source).not.toMatch(/color=\{componentColors\.text\.subtle\}/);
   });
 
   it('calls onNavigate from a path crumb and keeps the current page inert', () => {
     const onNavigate = vi.fn();
-    const { container } = renderWithProviders(<Breadcrumbs items={items} onNavigate={onNavigate} />);
+    const { container } = renderWithProviders(
+      <Breadcrumbs
+        items={items}
+        onNavigate={onNavigate}
+      />,
+    );
     fireEvent.click([...container.querySelectorAll('a')].find((el) => el.textContent === 'Home')!);
     expect(onNavigate).toHaveBeenCalledWith('/');
     expect(container.querySelector('[aria-current="page"]')?.textContent).toBe('Settings');

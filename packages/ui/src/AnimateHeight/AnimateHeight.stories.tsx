@@ -17,7 +17,9 @@ const lines = [
 function Collapsible() {
   const [open, setOpen] = useState(false);
   return (
-    <YStack gap="$3" maxWidth={420}>
+    <YStack
+      gap="$3"
+      maxWidth={420}>
       <Button
         onPress={() => {
           setOpen((value) => !value);
@@ -40,7 +42,9 @@ function Collapsible() {
 function Follower() {
   const [count, setCount] = useState(1);
   return (
-    <YStack gap="$3" maxWidth={420}>
+    <YStack
+      gap="$3"
+      maxWidth={420}>
       <Button
         onPress={() => {
           setCount((value) => (value >= lines.length ? 1 : value + 1));

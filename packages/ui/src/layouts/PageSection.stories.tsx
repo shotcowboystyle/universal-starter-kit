@@ -79,9 +79,13 @@ export const LongHeading: Story = {
 export const Nested: Story = {
   args: { surface: true },
   render: (args) => (
-    <PageSection {...args} title="Outer section">
+    <PageSection
+      {...args}
+      title="Outer section">
       <Paragraph>Outer content.</Paragraph>
-      <PageSection {...args} title="Inner section">
+      <PageSection
+        {...args}
+        title="Inner section">
         <Paragraph>Inner content — check for double borders/padding.</Paragraph>
       </PageSection>
     </PageSection>

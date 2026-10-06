@@ -46,7 +46,12 @@ describe('Avatar', () => {
   });
 
   it('respects explicit initials override', () => {
-    const { container } = renderWithProviders(<Avatar name="Ada Lovelace" initials="XX" />);
+    const { container } = renderWithProviders(
+      <Avatar
+        name="Ada Lovelace"
+        initials="XX"
+      />,
+    );
     expect(container.textContent).toContain('XX');
     expect(container.textContent).not.toContain('AL');
   });
@@ -64,8 +69,18 @@ describe('Avatar', () => {
 
   it('keeps size, density, and nested on separate channels', () => {
     const page = renderWithProviders(<Avatar name="Ada Lovelace" />);
-    const nested = renderWithProviders(<Avatar name="Ada Lovelace" nested />);
-    const compact = renderWithProviders(<Avatar name="Ada Lovelace" compact />);
+    const nested = renderWithProviders(
+      <Avatar
+        name="Ada Lovelace"
+        nested
+      />,
+    );
+    const compact = renderWithProviders(
+      <Avatar
+        name="Ada Lovelace"
+        compact
+      />,
+    );
     expect(pxOf(page.container)).toBe(36);
     expect(pxOf(nested.container)).toBe(32);
     // Density is not size. `compact` steps SPACE only (see
@@ -76,18 +91,29 @@ describe('Avatar', () => {
   });
 
   it('lets an explicit size token eject the recipe', () => {
-    const { container } = renderWithProviders(<Avatar name="Ada Lovelace" size="$5" />);
+    const { container } = renderWithProviders(
+      <Avatar
+        name="Ada Lovelace"
+        size="$5"
+      />,
+    );
     expect(pxOf(container)).toBe(52);
   });
 
   it('restores the 44px floor with hitSlop when painted below it', () => {
     const onPress = vi.fn();
-    const { container } = renderWithProviders(<Avatar name="Ada Lovelace" nested onPress={onPress} />);
+    const { container } = renderWithProviders(
+      <Avatar
+        name="Ada Lovelace"
+        nested
+        onPress={onPress}
+      />,
+    );
     const el = container.querySelector('[data-avatar-interactive]');
     expect(el?.getAttribute('data-avatar-px')).toBe('32');
     expect(el?.getAttribute('data-avatar-hitslop')).toBe('6');
     fireEvent.click(el as Element);
-    expect(onPress).toHaveBeenCalledTimes(1);
+    expect(onPress).toHaveBeenCalledOnce();
   });
 });
 
@@ -107,7 +133,9 @@ describe('Avatar.Group', () => {
 
   it('flush square stacks declare no identity circle', () => {
     const { container } = renderWithProviders(
-      <Avatar.Group circular={false} overlap={false}>
+      <Avatar.Group
+        circular={false}
+        overlap={false}>
         <Avatar name="Core Team" />
         <Avatar name="Ops Bot" />
       </Avatar.Group>,
@@ -142,7 +170,12 @@ describe('Avatar identity-shape declaration', () => {
   });
 
   it('drops the declaration when a consumer ejects to circular={false}', () => {
-    const { container } = renderWithProviders(<Avatar name="Ada Lovelace" circular={false} />);
+    const { container } = renderWithProviders(
+      <Avatar
+        name="Ada Lovelace"
+        circular={false}
+      />,
+    );
     expect(declaration(container)).toBeNull();
   });
 });
@@ -158,11 +191,11 @@ function squareFaceRadiusPx(container: HTMLElement): number | undefined {
   if (!token) {
     return undefined;
   }
-  const px = token.match(/^_btlr-(\d+(?:\.\d+)?)px$/);
+  const px = /^_btlr-(\d+(?:\.\d+)?)px$/.exec(token);
   if (px) {
     return Number(px[1]);
   }
-  const bare = token.match(/^_btlr-(\d+(?:\.\d+)?)$/);
+  const bare = /^_btlr-(\d+(?:\.\d+)?)$/.exec(token);
   return bare ? Number(bare[1]) : undefined;
 }
 
@@ -178,7 +211,11 @@ describe('Avatar square face radius (CIRCULAR-AT-FULL)', () => {
   it('resolves full to height/2, not the raw $12 token (50)', () => {
     const { container } = renderWithProviders(
       <Preset overrides={{ borderRadius: 'full' }}>
-        <Avatar name="Bitspur Labs" circular={false} size={FACE} />
+        <Avatar
+          name="Bitspur Labs"
+          circular={false}
+          size={FACE}
+        />
       </Preset>,
     );
     const face = container.querySelector('[data-avatar-px]') as HTMLElement;
@@ -194,7 +231,11 @@ describe('Avatar square face radius (CIRCULAR-AT-FULL)', () => {
     for (const [stop, px] of Object.entries(STOPS)) {
       const { container } = renderWithProviders(
         <Preset overrides={{ borderRadius: stop as keyof typeof STOPS }}>
-          <Avatar name="Bitspur Labs" circular={false} size={FACE} />
+          <Avatar
+            name="Bitspur Labs"
+            circular={false}
+            size={FACE}
+          />
         </Preset>,
       );
       expect(squareFaceRadiusPx(container)).toBe(px);
@@ -205,7 +246,10 @@ describe('Avatar square face radius (CIRCULAR-AT-FULL)', () => {
   it('leaves the circular face on R-IDENTITY — outside the knob', () => {
     const { container } = renderWithProviders(
       <Preset overrides={{ borderRadius: 'full' }}>
-        <Avatar name="Ada Lovelace" size={FACE} />
+        <Avatar
+          name="Ada Lovelace"
+          size={FACE}
+        />
       </Preset>,
     );
     const face = container.querySelector('[data-avatar-px]') as HTMLElement;

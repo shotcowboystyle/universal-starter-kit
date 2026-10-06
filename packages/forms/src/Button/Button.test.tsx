@@ -19,7 +19,7 @@ import { Preset } from '@repo/theme';
 import { cleanup, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { __resetDevWarnSeen } from '../shared/devWarn';
+import { __resetDevWarnSeen } from '../shared/dev-warn';
 
 import { Button } from './index';
 
@@ -36,7 +36,7 @@ function frameRadiusClasses(el: HTMLElement): string[] {
 function paddingPxFromClass(el: HTMLElement): number | null {
   let found: number | null = null;
   for (const c of String(el.className || '').split(/\s+/)) {
-    const m = c.match(/^_px-(\d+)px$/);
+    const m = /^_px-(\d+)px$/.exec(c);
     if (m) {
       found = Number(m[1]);
     }
@@ -115,7 +115,9 @@ describe('Button sizeRecipeEscape', () => {
 
   it('sizeRecipeEscape suppresses the numeric-height warn', () => {
     renderWithProviders(
-      <Button height={40} sizeRecipeEscape="toolbar chrome match">
+      <Button
+        height={40}
+        sizeRecipeEscape="toolbar chrome match">
         Save
       </Button>,
     );

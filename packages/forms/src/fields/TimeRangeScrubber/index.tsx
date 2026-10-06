@@ -8,15 +8,16 @@ import {
   pressTargetHitSlop,
   usePresetContext,
   wasKeyboardFocus,
-  type BorderRadius,
 } from '@repo/theme';
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import type { BorderRadius } from '@repo/theme';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { KeyboardEvent, ReactNode } from 'react';
 import type { LabelProps, SizeTokens } from 'tamagui';
 import { Text, View, XStack, YStack, isWeb, useTheme } from 'tamagui';
 
-import { Field, FieldLayout } from '../../fieldLayout';
+import { Field, FieldLayout } from '../../FieldLayout';
 import { FloatingPanel } from '../../FloatingPanel';
-import { formInputColors } from '../../shared/colorRamps';
+import { formInputColors } from '../../shared/color-ramps';
 import { t } from '../../shared/t';
 import { getFieldError, mergeFieldHandler, useFormField, useResolvedValidators } from '../../shared/utils';
 import { Skeleton } from '../../Skeleton';
@@ -57,12 +58,8 @@ import {
   snapTime,
   stepTime,
   timeToFraction,
-  type ActivitySpan,
-  type QuickRange,
-  type ScrubberSession,
-  type SnapTo,
-  type TimeWindow,
 } from './geometry';
+import type { ActivitySpan, QuickRange, ScrubberSession, SnapTo, TimeWindow } from './geometry';
 
 export type { DateRange } from '../DatePicker/DateRangePicker';
 export {
@@ -188,7 +185,11 @@ function TimeRangeChip({
       data-part={part}
       onPress={disabled ? undefined : onPress}
       hoverStyle={disabled ? undefined : { borderColor: '$borderColorHover' }}>
-      <Text fontSize={12} lineHeight={22} color={selected ? '$color1' : '$color11'} fontFamily="$body">
+      <Text
+        fontSize={12}
+        lineHeight={22}
+        color={selected ? '$color1' : '$color11'}
+        fontFamily="$body">
         {label}
       </Text>
     </View>
@@ -252,7 +253,7 @@ function TimeRangeScrubberControl({
   const radiusStop = useRadiusStop();
   const theme = useTheme();
   const reducedMotion = !transitionToken;
-  const gripSize = getScrubberGripRenderSize(size != null ? String(size) : sizeToken);
+  const gripSize = getScrubberGripRenderSize(size == null ? sizeToken : String(size));
   const gripRadius = resolveScrubberRadius(radiusStop, gripSize);
   const handleRadius = resolveScrubberRadius(radiusStop, Math.min(BRUSH_HANDLE.width, BRUSH_HANDLE.height));
   const bandRadius = resolveScrubberRadius(radiusStop, BRUSH_BAND_HEIGHT);
@@ -423,7 +424,7 @@ function TimeRangeScrubberControl({
     if (locked) {
       return;
     }
-    const key = event.key;
+    const { key } = event;
     if (key === ' ' || key === 'Enter') {
       event.preventDefault();
       if (liftOriginRef.current) {
@@ -514,7 +515,11 @@ function TimeRangeScrubberControl({
   const frameStale = frameAt ? formatDurationMs(scrubTime.getTime() - frameAt.getTime()) : t('none');
 
   const chips = (
-    <XStack alignItems="center" gap={2} flexWrap="wrap" data-part="quick-range-row">
+    <XStack
+      alignItems="center"
+      gap={2}
+      flexWrap="wrap"
+      data-part="quick-range-row">
       {visibleRanges.map((range, index) => (
         <TimeRangeChip
           key={range.label}
@@ -543,7 +548,10 @@ function TimeRangeScrubberControl({
               setMoreOpen(true);
             }}
           />>
-          <YStack gap="$2" data-part="quick-range-menu" padding="$2">
+          <YStack
+            gap="$2"
+            data-part="quick-range-menu"
+            padding="$2">
             {overflowRanges.map((range) => (
               <TimeRangeChip
                 key={range.label}
@@ -562,8 +570,17 @@ function TimeRangeScrubberControl({
   );
 
   return (
-    <YStack gap={7} width="100%" id={id} data-testid="time-range-scrubber" opacity={disabled ? 0.5 : 1}>
-      <XStack alignItems="baseline" gap="$3" justifyContent="flex-end" flexWrap="wrap">
+    <YStack
+      gap={7}
+      width="100%"
+      id={id}
+      data-testid="time-range-scrubber"
+      opacity={disabled ? 0.5 : 1}>
+      <XStack
+        alignItems="baseline"
+        gap="$3"
+        justifyContent="flex-end"
+        flexWrap="wrap">
         <Text
           fontFamily="$mono"
           fontSize={12}
@@ -575,12 +592,19 @@ function TimeRangeScrubberControl({
           {formatRangeReadout(value)}
         </Text>
         {frameAt ? (
-          <Text fontFamily="$mono" fontSize={12} lineHeight={22} color="$color11" data-part="frame-stale">
+          <Text
+            fontFamily="$mono"
+            fontSize={12}
+            lineHeight={22}
+            color="$color11"
+            data-part="frame-stale">
             {`${t('frame')} −${frameStale}`}
           </Text>
         ) : null}
       </XStack>
-      <XStack alignItems="center" gap={7}>
+      <XStack
+        alignItems="center"
+        gap={7}>
         <View
           height={CHIP_HEIGHT}
           width={28}
@@ -594,7 +618,10 @@ function TimeRangeScrubberControl({
           role="button"
           aria-label={t('Earlier window')}
           onPress={locked ? undefined : () => onWindowChange?.(nudgeWindow(windowValue, -1))}>
-          <CaretLeftIcon size={16} color="currentColor" />
+          <CaretLeftIcon
+            size={16}
+            color="currentColor"
+          />
         </View>
         {chips}
         <View
@@ -610,10 +637,18 @@ function TimeRangeScrubberControl({
           role="button"
           aria-label={t('Later window')}
           onPress={locked ? undefined : () => onWindowChange?.(nudgeWindow(windowValue, 1))}>
-          <CaretRightIcon size={16} color="currentColor" />
+          <CaretRightIcon
+            size={16}
+            color="currentColor"
+          />
         </View>
       </XStack>
-      <View ref={railRef as never} data-testid="trs-rail" position="relative" width="100%" minHeight={AXIS_BAND}>
+      <View
+        ref={railRef as never}
+        data-testid="trs-rail"
+        position="relative"
+        width="100%"
+        minHeight={AXIS_BAND}>
         <YStack gap={4}>
           <XStack
             height={CAP_HEIGHT}
@@ -653,8 +688,19 @@ function TimeRangeScrubberControl({
               </Text>
             </View>
           </XStack>
-          <View position="relative" height={AXIS_BAND} data-part="frames-lane">
-            <View position="absolute" left={0} right={0} top="50%" height={1} backgroundColor="$color5" y={-0.5} />
+          <View
+            position="relative"
+            height={AXIS_BAND}
+            data-part="frames-lane">
+            <View
+              position="absolute"
+              left={0}
+              right={0}
+              top="50%"
+              height={1}
+              backgroundColor="$color5"
+              y={-0.5}
+            />
             {activity.length === 0 && frames.length === 0 ? null : (
               <View
                 position="absolute"
@@ -848,7 +894,10 @@ function TimeRangeScrubberControl({
           </View>
         ) : null}
         {keys.length > 0 ? (
-          <View position="relative" height={28} data-part="keys-lane">
+          <View
+            position="relative"
+            height={28}
+            data-part="keys-lane">
             {keys.map((key) => {
               const inside = trailingKeys.some((item) => item.getTime() === key.getTime());
               return (
@@ -973,7 +1022,7 @@ export function TimeRangeScrubber({
     setInternalScrub(scrubProp);
   }, [scrubProp]);
 
-  const value = valueProp !== undefined ? valueProp : internalValue;
+  const value = valueProp === undefined ? internalValue : valueProp;
   const windowValue = windowProp ?? internalWindow;
   const scrubTime = scrubProp ?? internalScrub;
   const liveTransition = knobProps.transition ? String(knobProps.transition) : undefined;
@@ -1002,8 +1051,16 @@ export function TimeRangeScrubber({
 
   if (skeleton) {
     return (
-      <FieldLayout id={id} label={label} size={size} knobProps={knobProps}>
-        <Skeleton variant="rounded" width="100%" height={AXIS_BAND} />
+      <FieldLayout
+        id={id}
+        label={label}
+        size={size}
+        knobProps={knobProps}>
+        <Skeleton
+          variant="rounded"
+          width="100%"
+          height={AXIS_BAND}
+        />
       </FieldLayout>
     );
   }
@@ -1063,10 +1120,14 @@ export function TimeRangeScrubber({
   }
 
   return (
-    <Field form={resolvedForm} name={name} defaultValue={defaultValue} validators={resolvedValidators}>
+    <Field
+      form={resolvedForm}
+      name={name}
+      defaultValue={defaultValue}
+      validators={resolvedValidators}>
       {(field) => {
         const resolvedError = getFieldError(field, error);
-        const fieldValue = (valueProp !== undefined ? valueProp : field.state.value) ?? null;
+        const fieldValue = (valueProp === undefined ? field.state.value : valueProp) ?? null;
         return (
           <FieldLayout
             id={id}

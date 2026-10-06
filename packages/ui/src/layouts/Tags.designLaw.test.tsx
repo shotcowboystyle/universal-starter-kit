@@ -5,7 +5,12 @@ import { Tags } from './Tags';
 
 describe('Tags design law', () => {
   it('paints the field label at weight 400 (§6.1)', () => {
-    const { container } = renderWithProviders(<Tags tags={[{ id: 'alpha', label: 'alpha' }]} label="Topics" />);
+    const { container } = renderWithProviders(
+      <Tags
+        tags={[{ id: 'alpha', label: 'alpha' }]}
+        label="Topics"
+      />,
+    );
     const label = container.querySelector('label') as HTMLElement | null;
     const node = label ?? (container.querySelector('*') as HTMLElement);
     expect(container.textContent).toContain('Topics');

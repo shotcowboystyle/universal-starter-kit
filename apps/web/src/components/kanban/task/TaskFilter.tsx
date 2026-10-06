@@ -50,23 +50,37 @@ export function TaskFilter() {
   const activeStatus = filter.status || 'TOTAL';
 
   return (
-    <XStack width="100%" alignItems="center" gap="$2" flexWrap="wrap" $md={{ justifyContent: 'flex-end' }}>
-      <YStack width="100%" $md={{ width: 300 }}>
+    <XStack
+      width="100%"
+      alignItems="center"
+      gap="$2"
+      flexWrap="wrap"
+      $md={{ justifyContent: 'flex-end' }}>
+      <YStack
+        width="100%"
+        $md={{ width: 300 }}>
         <Input
           placeholder={t('searchPlaceholder')}
           value={filter.search}
-          onChangeText={(search) => setFilter({ search })}
+          onChangeText={(search) => {
+            setFilter({ search });
+          }}
           aria-label={t('searchPlaceholder')}
           inputProps={{ testID: 'search-input' }}
         />
       </YStack>
-      <XStack gap="$2" flexWrap="wrap" testID="status-filter">
+      <XStack
+        gap="$2"
+        flexWrap="wrap"
+        testID="status-filter">
         {statusOptions.map(({ value, label }) => (
           <Chip
             key={value}
             variant="outline"
             selected={activeStatus === value}
-            onPress={() => setFilter({ status: value === 'TOTAL' ? null : value })}>
+            onPress={() => {
+              setFilter({ status: value === 'TOTAL' ? null : value });
+            }}>
             {`${label} ${statusCounts[value]}`}
           </Chip>
         ))}
@@ -76,7 +90,9 @@ export function TaskFilter() {
         <Button
           chromeless
           size="$3"
-          onPress={() => setFilter({ status: null, search: '' })}
+          onPress={() => {
+            setFilter({ status: null, search: '' });
+          }}
           testID="clear-filter-button">
           {t('clearFilter')}
         </Button>

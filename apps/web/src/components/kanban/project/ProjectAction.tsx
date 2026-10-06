@@ -5,11 +5,11 @@ import { MoreHorizontal } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import * as React from 'react';
 import { toast } from 'sonner';
-import { z } from 'zod';
+import type { z } from 'zod';
 
 import { useDeleteProject, useUpdateProject } from '@/lib/api/projects/queries';
 import { useWorkspaceStore } from '@/stores/workspace-store';
-import { projectSchema } from '@/types/projectForm';
+import type { projectSchema } from '@/types/project-form';
 
 import { ProjectForm } from './ProjectForm';
 
@@ -55,7 +55,7 @@ export function ProjectActions({ id, title, description, ownerId }: ProjectActio
             owner: userId,
           };
 
-          return updateProjectMutation.mutateAsync(updateData);
+          return await updateProjectMutation.mutateAsync(updateData);
         },
       );
       toast.success(t('updateSuccess'));
@@ -67,7 +67,7 @@ export function ProjectActions({ id, title, description, ownerId }: ProjectActio
 
   async function onConfirmDelete() {
     try {
-      await removeProject(id, async (projectId) => deleteProjectMutation.mutateAsync(projectId));
+      await removeProject(id, async (projectId) => await deleteProjectMutation.mutateAsync(projectId));
       toast.success(t('deleteSuccess', { title }));
     } catch (error) {
       toast.error(t('deleteFailed', { error: (error as Error).message }));
@@ -76,17 +76,31 @@ export function ProjectActions({ id, title, description, ownerId }: ProjectActio
 
   return (
     <>
-      <Dialog modal open={editEnable} onOpenChange={setEditEnable}>
+      <Dialog
+        modal
+        open={editEnable}
+        onOpenChange={setEditEnable}>
         <Dialog.Portal>
           <DialogOverlay key="overlay" />
-          <DialogContent key="content" maxWidth={480} width="90%" testID="edit-project-dialog">
+          <DialogContent
+            key="content"
+            maxWidth={480}
+            width="90%"
+            testID="edit-project-dialog">
             <Dialog.Title size="$7">{t('editProjectTitle')}</Dialog.Title>
-            <ProjectForm onSubmit={onSubmit} defaultValues={{ title, description }}>
-              <XStack justifyContent="flex-end" gap="$2">
+            <ProjectForm
+              onSubmit={onSubmit}
+              defaultValues={{ title, description }}>
+              <XStack
+                justifyContent="flex-end"
+                gap="$2">
                 <Dialog.Close asChild>
                   <Button outlined>{t('cancel')}</Button>
                 </Dialog.Close>
-                <Button accent action="submit" testID="save-project-button">
+                <Button
+                  accent
+                  action="submit"
+                  testID="save-project-button">
                   {t('save')}
                 </Button>
               </XStack>

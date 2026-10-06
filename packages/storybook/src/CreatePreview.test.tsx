@@ -5,14 +5,17 @@
  * dropped theme really falls back under it and comes back under full.
  */
 
-import { createDefaultThemeConfig, type ThemeConfig, useResolvedKnobs } from '@repo/theme';
+import { createDefaultThemeConfig, useResolvedKnobs } from '@repo/theme';
+import type { ThemeConfig } from '@repo/theme';
 import { act, cleanup, render, screen } from '@testing-library/react';
 import { setUserScheme, useUserScheme } from '@vxrn/color-scheme';
 import type { ReactNode } from 'react';
-import { TamaguiProvider, Theme, type ThemeName, getConfig, useThemeName } from 'tamagui';
+import { TamaguiProvider, Theme, getConfig, useThemeName } from 'tamagui';
+import type { ThemeName } from 'tamagui';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { type Preview, createPreview } from './CreatePreview';
+import { createPreview } from './CreatePreview';
+import type { Preview } from './CreatePreview';
 
 const full = createDefaultThemeConfig({});
 const subset = createDefaultThemeConfig({
@@ -38,7 +41,10 @@ function AppProvider({
   children?: ReactNode;
 }) {
   return (
-    <TamaguiProvider config={themeConfig?.tamagui} defaultTheme={systemTheme} disableInjectCSS>
+    <TamaguiProvider
+      config={themeConfig?.tamagui}
+      defaultTheme={systemTheme}
+      disableInjectCSS>
       {children}
     </TamaguiProvider>
   );
@@ -52,7 +58,9 @@ function Story() {
   return (
     <>
       {(['red', 'error'] as const).map((theme) => (
-        <Theme key={theme} name={theme as ThemeName}>
+        <Theme
+          key={theme}
+          name={theme as ThemeName}>
           <ResolvedName theme={theme} />
         </Theme>
       ))}
@@ -69,7 +77,9 @@ function renderStory(preview: Preview, globals: Record<string, unknown>) {
   const view = render(frameworkDecorator(Story, context(globals)));
   return {
     rerender: (next: Record<string, unknown>) => {
-      act(() => view.rerender(frameworkDecorator(Story, context(next))));
+      act(() => {
+        view.rerender(frameworkDecorator(Story, context(next)));
+      });
     },
   };
 }
@@ -186,7 +196,9 @@ describe('createPreview scheme global reaches useUserScheme', () => {
     return {
       value: () => screen.getByTestId('user-scheme').textContent,
       rerender: (next: Record<string, unknown>) => {
-        act(() => view.rerender(frameworkDecorator(UserScheme, context(next))));
+        act(() => {
+          view.rerender(frameworkDecorator(UserScheme, context(next)));
+        });
       },
     };
   }

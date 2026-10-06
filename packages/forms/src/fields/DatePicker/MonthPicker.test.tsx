@@ -18,18 +18,35 @@ function getMonthButtons(root: ParentNode): HTMLButtonElement[] {
 describe('MonthPicker', () => {
   describe('without form context', () => {
     it('renders with label', () => {
-      const result = renderWithProviders(<MonthPicker label="Month" name="month" />);
+      const result = renderWithProviders(
+        <MonthPicker
+          label="Month"
+          name="month"
+        />,
+      );
       expect(result.findTextElement('Month')).toBeDefined();
     });
 
     it('renders required label with asterisk', () => {
-      const result = renderWithProviders(<MonthPicker label="Required" name="req" required />);
+      const result = renderWithProviders(
+        <MonthPicker
+          label="Required"
+          name="req"
+          required
+        />,
+      );
       const label = result.container.querySelector('label');
       expect(label?.textContent).toContain('*');
     });
 
     it('renders with helper text', () => {
-      const result = renderWithProviders(<MonthPicker label="Month" name="month" helperText="Select a month" />);
+      const result = renderWithProviders(
+        <MonthPicker
+          label="Month"
+          name="month"
+          helperText="Select a month"
+        />,
+      );
       expect(result.findTextElement('Select a month')).toBeDefined();
     });
 
@@ -37,7 +54,12 @@ describe('MonthPicker', () => {
     // field id so the ring wraps the calendar icon and the label focuses
     // the perceived control.
     it('the trigger carries the field id the sibling label resolves to', () => {
-      const result = renderWithProviders(<MonthPicker label="Month" name="month" />);
+      const result = renderWithProviders(
+        <MonthPicker
+          label="Month"
+          name="month"
+        />,
+      );
       const trigger = result.container.querySelector('[data-testid="date-picker-trigger"]') as HTMLElement;
       const label = result.container.querySelector('label') as HTMLLabelElement;
       expect(trigger?.id).toBeTruthy();
@@ -46,26 +68,49 @@ describe('MonthPicker', () => {
     });
 
     it('renders skeleton placeholder', () => {
-      const result = renderWithProviders(<MonthPicker label="Loading" name="l" skeleton />);
+      const result = renderWithProviders(
+        <MonthPicker
+          label="Loading"
+          name="l"
+          skeleton
+        />,
+      );
       const input = result.container.querySelector('input');
       expect(input).toBeNull();
     });
 
     it('renders with placeholder', () => {
-      const result = renderWithProviders(<MonthPicker label="Month" name="month" placeholder="Pick a month" />);
+      const result = renderWithProviders(
+        <MonthPicker
+          label="Month"
+          name="month"
+          placeholder="Pick a month"
+        />,
+      );
       const input = result.container.querySelector('input[placeholder="Pick a month"]');
       expect(input).not.toBeNull();
     });
 
     it('renders with default placeholder when no month selected', () => {
-      const result = renderWithProviders(<MonthPicker label="Month" name="month" />);
+      const result = renderWithProviders(
+        <MonthPicker
+          label="Month"
+          name="month"
+        />,
+      );
       const input = result.container.querySelector('input');
       expect(input).not.toBeNull();
     });
 
     it('fires canonical onChange once when a month is picked', async () => {
       const onChange = vi.fn();
-      const result = renderWithProviders(<MonthPicker label="Month" name="month" onChange={onChange} />);
+      const result = renderWithProviders(
+        <MonthPicker
+          label="Month"
+          name="month"
+          onChange={onChange}
+        />,
+      );
 
       const trigger = result.container.querySelector("input,button,[role='button']");
       expect(trigger).toBeTruthy();
@@ -84,7 +129,7 @@ describe('MonthPicker', () => {
         fireEvent.click(monthButtons[0]);
       });
 
-      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange).toHaveBeenCalledOnce();
       expect(onChange).toHaveBeenCalledWith(
         expect.objectContaining({
           month: expect.any(Number),
@@ -97,8 +142,13 @@ describe('MonthPicker', () => {
   describe('with form context', () => {
     it('renders inside form', () => {
       const result = renderWithProviders(
-        <Form formOptions={{ defaultValues: { month: null } }} submitText="Submit">
-          <MonthPicker name="month" label="Month" />
+        <Form
+          formOptions={{ defaultValues: { month: null } }}
+          submitText="Submit">
+          <MonthPicker
+            name="month"
+            label="Month"
+          />
         </Form>,
       );
       expect(result.findTextElement('Month')).toBeDefined();
@@ -115,7 +165,10 @@ describe('MonthPicker', () => {
         });
         return (
           <Form form={form}>
-            <MonthPicker name="month" label="Month" />
+            <MonthPicker
+              name="month"
+              label="Month"
+            />
             <Button action="submit">Submit</Button>
           </Form>
         );
@@ -144,7 +197,7 @@ describe('MonthPicker', () => {
         }
       });
       await waitFor(() => {
-        expect(onSubmit).toHaveBeenCalledTimes(1);
+        expect(onSubmit).toHaveBeenCalledOnce();
       });
       expect(onSubmit.mock.calls[0][0].month).toEqual(
         expect.objectContaining({
@@ -173,7 +226,11 @@ describe('MonthPicker', () => {
         formApi = form as unknown as typeof formApi;
         return (
           <Form form={form}>
-            <MonthPicker name="month" label="Month" onChange={onChange} />
+            <MonthPicker
+              name="month"
+              label="Month"
+              onChange={onChange}
+            />
           </Form>
         );
       };
@@ -198,7 +255,12 @@ describe('MonthPicker', () => {
         });
         return (
           <Form form={form}>
-            <MonthPicker name="month" label="Month" defaultValue={{ month: 6, year: 2025 }} onChange={onChange} />
+            <MonthPicker
+              name="month"
+              label="Month"
+              defaultValue={{ month: 6, year: 2025 }}
+              onChange={onChange}
+            />
           </Form>
         );
       };
@@ -220,7 +282,12 @@ describe('MonthPicker', () => {
       const LEAK = /does not recognize the `.+` prop on a DOM element|non-boolean attribute|Invalid DOM property/i;
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       try {
-        const result = renderWithProviders(<MonthPicker label="Month" name="month" />);
+        const result = renderWithProviders(
+          <MonthPicker
+            label="Month"
+            name="month"
+          />,
+        );
         const trigger = result.container.querySelector("input,button,[role='button']");
         expect(trigger).toBeTruthy();
         await act(async () => {

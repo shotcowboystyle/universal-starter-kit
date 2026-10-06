@@ -39,7 +39,9 @@ function Harness({ initialOpen }: { initialOpen: boolean }) {
         }}>
         toggle
       </button>
-      <AnimateHeight open={open} testID="animate-height-outer">
+      <AnimateHeight
+        open={open}
+        testID="animate-height-outer">
         <Text>Collapsible body</Text>
       </AnimateHeight>
     </>

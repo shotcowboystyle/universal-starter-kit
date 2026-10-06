@@ -41,11 +41,19 @@ export const Main: Story = {
     const WheelExample = () => {
       const [value, setValue] = useState(5);
       return (
-        <YStack gap="$4" alignItems="center">
-          <Text fontSize="$5" fontWeight="400">
+        <YStack
+          gap="$4"
+          alignItems="center">
+          <Text
+            fontSize="$5"
+            fontWeight="400">
             Selected: {value}
           </Text>
-          <Wheel items={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]} value={value} onChange={setValue} />
+          <Wheel
+            items={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]}
+            value={value}
+            onChange={setValue}
+          />
         </YStack>
       );
     };
@@ -61,11 +69,19 @@ export const TimePicker: Story = {
       const [second, setSecond] = useState(0);
 
       return (
-        <YStack gap="$4" alignItems="center">
-          <Text fontSize="$5" fontWeight="400">
+        <YStack
+          gap="$4"
+          alignItems="center">
+          <Text
+            fontSize="$5"
+            fontWeight="400">
             {pad(hour)}:{pad(minute)}:{pad(second)}
           </Text>
-          <XStack alignItems="center" backgroundColor="$color2" borderRadius="$4" paddingVertical="$2">
+          <XStack
+            alignItems="center"
+            backgroundColor="$color2"
+            borderRadius="$4"
+            paddingVertical="$2">
             <Wheel
               items={hours24.map((h) => ({ value: h, label: pad(h) }))}
               value={hour}
@@ -75,7 +91,11 @@ export const TimePicker: Story = {
               width={72}
               highlightEdges="start"
             />
-            <Text fontSize="$8" fontWeight="400" color="$color11" px="$1">
+            <Text
+              fontSize="$8"
+              fontWeight="400"
+              color="$color11"
+              px="$1">
               :
             </Text>
             <Wheel
@@ -87,7 +107,11 @@ export const TimePicker: Story = {
               width={72}
               highlightEdges="none"
             />
-            <Text fontSize="$8" fontWeight="400" color="$color11" px="$1">
+            <Text
+              fontSize="$8"
+              fontWeight="400"
+              color="$color11"
+              px="$1">
               :
             </Text>
             <Wheel
@@ -114,11 +138,19 @@ export const Hour12Picker: Story = {
       const [ampm, setAmpm] = useState<'AM' | 'PM'>('AM');
 
       return (
-        <YStack gap="$4" alignItems="center">
-          <Text fontSize="$5" fontWeight="400">
+        <YStack
+          gap="$4"
+          alignItems="center">
+          <Text
+            fontSize="$5"
+            fontWeight="400">
             {hour}:00 {ampm}
           </Text>
-          <XStack alignItems="center" backgroundColor="$color2" borderRadius="$4" paddingVertical="$2">
+          <XStack
+            alignItems="center"
+            backgroundColor="$color2"
+            borderRadius="$4"
+            paddingVertical="$2">
             <Wheel
               items={hours12}
               value={hour}
@@ -177,8 +209,12 @@ export const CustomRenderItem: Story = {
       ];
 
       return (
-        <YStack gap="$4" alignItems="center">
-          <Text fontSize="$5" fontWeight="400">
+        <YStack
+          gap="$4"
+          alignItems="center">
+          <Text
+            fontSize="$5"
+            fontWeight="400">
             Selected: {value}
           </Text>
           <Wheel
@@ -190,9 +226,19 @@ export const CustomRenderItem: Story = {
             renderItem={(item, _index, isSelected) => {
               const color = colors.find((c) => c.value === item)!;
               return (
-                <XStack gap="$2" alignItems="center">
-                  <YStack width={20} height={20} borderRadius="$2" backgroundColor={color.hex} />
-                  <Text fontSize="$4" fontWeight="400" color={isSelected ? '$color12' : '$color11'}>
+                <XStack
+                  gap="$2"
+                  alignItems="center">
+                  <YStack
+                    width={20}
+                    height={20}
+                    borderRadius="$2"
+                    backgroundColor={color.hex}
+                  />
+                  <Text
+                    fontSize="$4"
+                    fontWeight="400"
+                    color={isSelected ? '$color12' : '$color11'}>
                     {color.label}
                   </Text>
                 </XStack>
@@ -236,11 +282,19 @@ export const DatePicker: Story = {
       const years = Array.from({ length: 100 }, (_, i) => 2024 - 50 + i);
 
       return (
-        <YStack gap="$4" alignItems="center">
-          <Text fontSize="$5" fontWeight="400">
+        <YStack
+          gap="$4"
+          alignItems="center">
+          <Text
+            fontSize="$5"
+            fontWeight="400">
             {months[month - 1]} {day}, {year}
           </Text>
-          <XStack alignItems="center" backgroundColor="$color2" borderRadius="$4" paddingVertical="$2">
+          <XStack
+            alignItems="center"
+            backgroundColor="$color2"
+            borderRadius="$4"
+            paddingVertical="$2">
             <Wheel
               items={months.map((m, i) => ({ value: i + 1, label: m }))}
               value={month}

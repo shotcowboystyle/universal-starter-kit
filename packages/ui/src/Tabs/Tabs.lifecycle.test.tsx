@@ -43,7 +43,7 @@ function indexFor(element: HTMLElement) {
   if (element.getAttribute('role') !== 'tab') {
     return -1;
   }
-  return Number(element.textContent?.match(/Tab (\d)/)?.[1] ?? 0) - 1;
+  return Number(/Tab (\d)/.exec(element.textContent)?.[1] ?? 0) - 1;
 }
 beforeEach(() => {
   precedingGrowth = 0;
@@ -67,7 +67,12 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 function measured() {
-  const tree = renderWithProviders(<Tabs items={items} value="tab-5" />);
+  const tree = renderWithProviders(
+    <Tabs
+      items={items}
+      value="tab-5"
+    />,
+  );
   const host = tree.container.querySelector('[data-tabs-scroll="true"]') as any;
   const scroll = vi.spyOn(host, 'scrollTo').mockImplementation(() => {});
   act(() => observed.scroll.onLayout({ nativeEvent: { layout: { width: 390 } } }));
@@ -77,9 +82,11 @@ function measured() {
   scroll.mockClear();
   return { ...tree, scroll };
 }
+
 it("uses the primitive's real initial measurement and selection effect", () => {
   measured();
 });
+
 it('refreshes selected position after a preceding label grows without resizing the selected trigger', () => {
   const tree = measured();
   precedingGrowth = 100;

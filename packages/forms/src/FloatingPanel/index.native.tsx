@@ -51,7 +51,8 @@
  */
 
 import { OVERLAY_BREAKPOINT, Surface, useResolvedKnobs } from '@repo/theme';
-import { type ReactNode, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import {
   Animated,
   Easing,
@@ -64,16 +65,17 @@ import {
   StyleSheet,
   useWindowDimensions,
   View as RNView,
-  type GestureResponderEvent,
 } from 'react-native';
+import type { GestureResponderEvent } from 'react-native';
 import { SafeAreaInsetsContext, initialWindowMetrics } from 'react-native-safe-area-context';
 import { View, YStack } from 'tamagui';
 
 import { t } from '../shared/t';
-import { useKeyboardInset } from '../shared/useKeyboardInset';
+import { useKeyboardInset } from '../shared/use-keyboard-inset';
 
-import { placeAtPoint, type PanelBounds, type PanelPoint } from './pointAnchor';
-import { panelViewportPadding } from './useFloatingPanel';
+import { placeAtPoint } from './point-anchor';
+import type { PanelBounds, PanelPoint } from './point-anchor';
+import { panelViewportPadding } from './use-floating-panel';
 
 import type { FloatingPanelProps } from './index';
 
@@ -86,10 +88,10 @@ export {
   panelGrowDuration,
   panelTransition,
   panelViewportPadding,
-} from './useFloatingPanel';
-export type { UseFloatingPanelOptions, UseFloatingPanelReturn } from './useFloatingPanel';
+} from './use-floating-panel';
+export type { UseFloatingPanelOptions, UseFloatingPanelReturn } from './use-floating-panel';
 export type { FloatingPanelProps } from './index';
-export { floatingPanelActionProps, isNestedPanelAction } from './nestedAction';
+export { floatingPanelActionProps, isNestedPanelAction } from './nested-action';
 
 /** Native never has a >sm web viewport; AdaptivePopup uses this to pick Sheet mode. */
 export function useViewportGtSm() {
@@ -219,10 +221,10 @@ export function FloatingPanel({
   // Start OFF-SCREEN. `0` is "fully expanded", so a 0 default paints the
   // sheet at rest for one frame, then onShow jumps it to `travel` and
   // slides it up — Combobox/Select read as open → closed → open.
-  const translateY = useRef(new Animated.Value(10000)).current;
+  const translateY = useRef(new Animated.Value(10_000)).current;
   // The translate the sheet is settled at. Kept in a ref because the pan
   // callbacks are created once and must not close over a stale value.
-  const restRef = useRef(10000);
+  const restRef = useRef(10_000);
   const travelRef = useRef(travel);
   const detentsRef = useRef(detents);
   travelRef.current = travel;
@@ -435,7 +437,7 @@ export function FloatingPanel({
       enter();
     } else {
       setBackdropArmed(false);
-      const parked = travelRef.current || 10000;
+      const parked = travelRef.current || 10_000;
       translateY.setValue(parked);
       restRef.current = parked;
     }
@@ -544,7 +546,10 @@ export function FloatingPanel({
               onPress={handleBackdropPress}
               accessibilityRole="button"
               accessibilityLabel={t('Close')}>
-              <View flex={1} backgroundColor="$shadow6" />
+              <View
+                flex={1}
+                backgroundColor="$shadow6"
+              />
             </Pressable>
             {/*
             Sheet sits above the absoluteFill backdrop in z-order (later sibling).
@@ -608,7 +613,12 @@ export function FloatingPanel({
                     paddingTop: 4,
                     paddingBottom: 12,
                   }}>
-                  <View width={40} height={4} borderRadius={2} backgroundColor="$color8" />
+                  <View
+                    width={40}
+                    height={4}
+                    borderRadius={2}
+                    backgroundColor="$color8"
+                  />
                 </RNView>
                 <YStack
                   padding={framePadding}
@@ -696,7 +706,9 @@ function PointPanel({
           flexShrink={1}
           minHeight={0}
           onAccessibilityEscape={onEscape}>
-          <RNScrollView style={{ flexGrow: 0, flexShrink: 1 }} keyboardShouldPersistTaps="handled">
+          <RNScrollView
+            style={{ flexGrow: 0, flexShrink: 1 }}
+            keyboardShouldPersistTaps="handled">
             {children}
           </RNScrollView>
         </YStack>

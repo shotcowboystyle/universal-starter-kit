@@ -25,7 +25,7 @@ const fewOptions = Array.from({ length: 6 }, (_, i) => ({
 
 /**
  * Long option list: opening the dropdown overflows the floating list, so the
- * sticky top/bottom scroll arrows (`shared/floatingList.tsx` ScrollArrow)
+ * sticky top/bottom scroll arrows (`shared/floating-list.tsx` ScrollArrow)
  * should appear when more content exists in that direction.
  */
 export const LongSelect: Story = {
@@ -46,7 +46,12 @@ export const LongSelect: Story = {
 export const ShortSelect: Story = {
   render: () => (
     <YStack maxWidth={320}>
-      <Select id="fls-short" label="Six options" options={fewOptions} helperText="No arrows expected" />
+      <Select
+        id="fls-short"
+        label="Six options"
+        options={fewOptions}
+        helperText="No arrows expected"
+      />
     </YStack>
   ),
 };

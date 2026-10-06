@@ -8,7 +8,8 @@
  */
 import { renderWithProviders } from '@repo/test-utils';
 import { act, cleanup } from '@testing-library/react';
-import { Animated, PanResponder, type PanResponderCallbacks } from 'react-native';
+import { Animated, PanResponder } from 'react-native';
+import type { PanResponderCallbacks } from 'react-native';
 import { Text } from 'tamagui';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -24,10 +25,10 @@ vi.mock('react-native-web', async (importOriginal) => ({
   Modal: ({ children }: { children: import('react').ReactNode }) => children,
   useWindowDimensions: () => ({ width: 390, height: 844, scale: 3, fontScale: 1 }),
 }));
-vi.mock('../shared/useKeyboardInset', () => ({ useKeyboardInset: () => keyboard.inset }));
+vi.mock('../shared/use-keyboard-inset', () => ({ useKeyboardInset: () => keyboard.inset }));
 
 let pan: PanResponderCallbacks;
-let springs: Array<{ toValue: number; done?: (result: { finished: boolean }) => void }>;
+let springs: { toValue: number; done?: (result: { finished: boolean }) => void }[];
 
 beforeEach(() => {
   keyboard.inset = 0;
@@ -60,7 +61,12 @@ function px(value: string) {
 
 function open(props: Partial<FloatingPanelProps> = {}) {
   const view = renderWithProviders(
-    <FloatingPanel open onOpenChange={() => {}} trigger={<Text>Author</Text>} scrollable {...props}>
+    <FloatingPanel
+      open
+      onOpenChange={() => {}}
+      trigger={<Text>Author</Text>}
+      scrollable
+      {...props}>
       <Text>row</Text>
     </FloatingPanel>,
   );
@@ -126,7 +132,11 @@ describe('a native FloatingPanel sheet at rest on a lower detent', () => {
     settle();
     keyboard.inset = 300;
     view.rerender(
-      <FloatingPanel open onOpenChange={() => {}} trigger={<Text>Author</Text>} scrollable>
+      <FloatingPanel
+        open
+        onOpenChange={() => {}}
+        trigger={<Text>Author</Text>}
+        scrollable>
         <Text>row</Text>
       </FloatingPanel>,
     );

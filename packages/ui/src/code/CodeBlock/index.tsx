@@ -105,7 +105,7 @@ export function CodeBlock({
     },
     [],
   );
-  const transition = knobProps.transition;
+  const { transition } = knobProps;
   const revealAll = () => {
     const node = clampRef.current as unknown as HTMLElement | null;
     const fullHeight = typeof node?.scrollHeight === 'number' ? node.scrollHeight : null;
@@ -134,7 +134,9 @@ export function CodeBlock({
   const capSquare = sizeRecipeForToken(String(codeSize), { touch }).height;
 
   return (
-    <YStack position="relative" marginBottom="$4">
+    <YStack
+      position="relative"
+      marginBottom="$4">
       <ErrorBoundary>
         <YStack
           ref={clampRef}
@@ -155,13 +157,18 @@ export function CodeBlock({
               colors={['$backgroundTransparent', '$background']}
               zIndex={zIndex.localTop}>
               <Spacer flex={1} />
-              <Button onPress={revealAll} alignSelf="center">
+              <Button
+                onPress={revealAll}
+                alignSelf="center">
                 {t('Show more')}
               </Button>
               <Spacer size="$4" />
             </LinearGradient>
           )}
-          <Pre {...knobProps.borderRadius} padding={0} marginBottom={0}>
+          <Pre
+            {...knobProps.borderRadius}
+            padding={0}
+            marginBottom={0}>
             <ScrollView
               style={{ width: '100%' }}
               contentContainerStyle={{ minWidth: '100%' }}
@@ -185,7 +192,11 @@ export function CodeBlock({
             </ScrollView>
           </Pre>
           {showCopy && (
-            <XStack position="absolute" top={0} insetInlineEnd={0} zIndex={zIndex.localTop}>
+            <XStack
+              position="absolute"
+              top={0}
+              insetInlineEnd={0}
+              zIndex={zIndex.localTop}>
               <Input.Button
                 glyphRing
                 size={codeSize}
@@ -211,7 +222,11 @@ export function CodeBlock({
           )}
         </YStack>
       </ErrorBoundary>
-      <NotifyRegion scope="field" region={region} compact />
+      <NotifyRegion
+        scope="field"
+        region={region}
+        compact
+      />
     </YStack>
   );
 }

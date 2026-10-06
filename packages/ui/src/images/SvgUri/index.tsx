@@ -25,7 +25,7 @@ export function SvgUri({
 
     (uri.startsWith('data:')
       ? Promise.resolve(decodeDataUri(uri))
-      : fetch(uri, { signal: controller.signal }).then((res) => {
+      : fetch(uri, { signal: controller.signal }).then(async (res) => {
           if (!res.ok) {
             throw new Error(`Failed to fetch SVG: ${res.status}`);
           }
@@ -95,8 +95,8 @@ export function SvgUri({
       ref={containerRef}
       style={{
         display: 'inline-block',
-        width: width != null ? width : undefined,
-        height: height != null ? height : undefined,
+        width: width == null ? undefined : width,
+        height: height == null ? undefined : height,
         lineHeight: 0,
         color: color || undefined,
       }}

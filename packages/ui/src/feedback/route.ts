@@ -84,7 +84,7 @@ export function routeNotify(event: NotifyEvent): NotifyRoute {
   const base = {
     severity,
     scope,
-    ...(event.region != null ? { region: event.region } : {}),
+    ...(event.region == null ? {} : { region: event.region }),
     toastIntent,
     title,
     body,

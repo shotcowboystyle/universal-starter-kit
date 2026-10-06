@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { parseGeoValue, formatGeoValue } from './geo-value';
 import { clampLat, clampLng, formatCoordPair, formatPlace, parseLatLngPair, resolveGeocoder } from './geocoder';
-import { parseGeoValue, formatGeoValue } from './geoValue';
 
 describe('geocoder seam helpers', () => {
   it('parses and serializes the lat/lng JSON value', () => {

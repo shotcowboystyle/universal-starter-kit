@@ -5,18 +5,20 @@ import {
   useResolvedKnobs,
   wasKeyboardFocus,
 } from '@repo/theme';
-import { useCallback, useId, useRef, useState, type ReactNode } from 'react';
-import { Text, View, XStack, YStack, type YStackProps } from 'tamagui';
+import { useCallback, useId, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
+import { Text, View, XStack, YStack } from 'tamagui';
+import type { YStackProps } from 'tamagui';
 
 import { useTranslation } from '../shared/i18n';
-import { LIFT_SCALE } from '../views/kanbanDnd';
+import { LIFT_SCALE } from '../views/kanban-dnd';
 
 import { SortableHandle, SortableHandleWell } from './SortableHandle';
-import { useSortableRows } from './useSortableRows';
+import { useSortableRows } from './use-sortable-rows';
 
 export { SortableHandle, SortableHandleWell } from './SortableHandle';
-export { SortableSessionProvider, useSortableRows } from './useSortableRows';
-export type { SortableSession, UseSortableRowsOptions } from './useSortableRows';
+export { SortableSessionProvider, useSortableRows } from './use-sortable-rows';
+export type { SortableSession, UseSortableRowsOptions } from './use-sortable-rows';
 
 export type SortableDisabledStyle = 'keepLabel' | 'dimWhole';
 
@@ -100,8 +102,14 @@ export function SortableList<T>({
       id={listId}
       {...stackProps}>
       {items.length === 0 ? (
-        <YStack minHeight={88} alignItems="center" justifyContent="center" opacity={0.5}>
-          <Text {...knobProps.body} color="$color11">
+        <YStack
+          minHeight={88}
+          alignItems="center"
+          justifyContent="center"
+          opacity={0.5}>
+          <Text
+            {...knobProps.body}
+            color="$color11">
             {emptyMessage}
           </Text>
         </YStack>
@@ -159,13 +167,24 @@ export function SortableList<T>({
                   }}
                 />
               ) : enabled ? (
-                <SortableHandleWell itemId={id} compact={compact} />
+                <SortableHandleWell
+                  itemId={id}
+                  compact={compact}
+                />
               ) : null}
-              <XStack flex={1} minWidth={0} alignItems="center" opacity={dimWhole ? 1 : undefined}>
+              <XStack
+                flex={1}
+                minWidth={0}
+                alignItems="center"
+                opacity={dimWhole ? 1 : undefined}>
                 {renderItem ? (
                   renderItem(item, index)
                 ) : (
-                  <Text {...knobProps.body} color="$color12" numberOfLines={1} flex={1}>
+                  <Text
+                    {...knobProps.body}
+                    color="$color12"
+                    numberOfLines={1}
+                    flex={1}>
                     {label}
                   </Text>
                 )}
@@ -194,8 +213,15 @@ export function SortableList<T>({
           pointerEvents="none"
           zIndex={5}
           {...({ 'data-sortable-fly': sortable.session.id } as Record<string, unknown>)}>
-          <XStack alignItems="center" gap="$2" minHeight={MIN_PRESS_TARGET}>
-            <SortableHandle label={sortable.session.label} itemId={sortable.session.id} dragging />
+          <XStack
+            alignItems="center"
+            gap="$2"
+            minHeight={MIN_PRESS_TARGET}>
+            <SortableHandle
+              label={sortable.session.label}
+              itemId={sortable.session.id}
+              dragging
+            />
             <Text {...knobProps.body}>{sortable.session.label}</Text>
           </XStack>
         </View>

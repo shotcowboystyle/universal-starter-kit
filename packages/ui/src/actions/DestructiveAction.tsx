@@ -5,21 +5,18 @@
  * typed `expectedText`). Pass `confirm` to eject to a custom gate.
  */
 
-import { Button, formatActionLabel, type ButtonProps } from '@repo/forms';
-import { useCallback, useState, type ReactNode } from 'react';
+import { Button, formatActionLabel } from '@repo/forms';
+import type { ButtonProps } from '@repo/forms';
+import { useCallback, useState } from 'react';
+import type { ReactNode } from 'react';
 import { Input, Paragraph, YStack } from 'tamagui';
 
 import { ConfirmDialog } from '../feedback/ConfirmDialog';
 import { useTranslation } from '../shared/i18n';
 import { withInterp } from '../shared/t';
 
-import {
-  resolveDestructiveSeverity,
-  severityRequiresConfirm,
-  severityUsesDangerTone,
-  type DestructiveSeverity,
-  type DestructiveSeverityHints,
-} from './severity';
+import { resolveDestructiveSeverity, severityRequiresConfirm, severityUsesDangerTone } from './severity';
+import type { DestructiveSeverity, DestructiveSeverityHints } from './severity';
 
 export interface DestructiveConfirmContext {
   verb: string;
@@ -205,17 +202,21 @@ export function DestructiveAction({
   // Build outside Tamagui <Paragraph>/<Text> children — the compiler extracts those
   // into `{{var}}` placeholders and drops runtime values in unit tests.
   const typedPrompt =
-    dialogCtx.expectedText != null
-      ? withInterp(t('Type "{{text}}" to confirm.'), {
+    dialogCtx.expectedText == null
+      ? null
+      : withInterp(t('Type "{{text}}" to confirm.'), {
           text: dialogCtx.expectedText,
-        })
-      : null;
+        });
 
   const dialogBody =
-    dialogCtx.expectedText != null ? (
+    dialogCtx.expectedText == null ? (
+      consequence
+    ) : (
       <YStack gap="$3">
         {consequence ? <Paragraph size="$3">{consequence}</Paragraph> : null}
-        <Paragraph size="$3" data-mp-confirm-prompt="">
+        <Paragraph
+          size="$3"
+          data-mp-confirm-prompt="">
           {typedPrompt}
         </Paragraph>
         <Input
@@ -230,8 +231,6 @@ export function DestructiveAction({
           width="100%"
         />
       </YStack>
-    ) : (
-      consequence
     );
 
   return (
@@ -267,10 +266,10 @@ export function DestructiveAction({
           }}
           onCancel={closeDialog}
           onOpenChange={(next) => {
-            if (!next) {
-              closeDialog();
-            } else {
+            if (next) {
               setDialogOpen(true);
+            } else {
+              closeDialog();
             }
           }}
         />

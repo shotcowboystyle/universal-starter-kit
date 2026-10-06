@@ -3,11 +3,11 @@ import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Breadcrumbs } from '@/components/layout/Breadcrumbs';
-import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
+import { useBreadcrumbs } from '@/hooks/use-breadcrumbs';
 
 const mockPush = vi.fn();
 
-vi.mock('@/hooks/useBreadcrumbs', () => ({
+vi.mock('@/hooks/use-breadcrumbs', () => ({
   useBreadcrumbs: vi.fn(),
 }));
 

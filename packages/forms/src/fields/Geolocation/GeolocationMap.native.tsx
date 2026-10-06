@@ -7,9 +7,9 @@ import { Text, YStack } from 'tamagui';
 
 import { t } from '../../shared/t';
 
-import { loadExpoMaps } from './expoMapsLoader';
-import { zoomFromDelta } from './mapMath';
-import type { GeolocationMapSurfaceProps } from './mapTypes';
+import { loadExpoMaps } from './expo-maps-loader';
+import { zoomFromDelta } from './map-math';
+import type { GeolocationMapSurfaceProps } from './map-types';
 
 interface MapClickEvent {
   coordinates?: { latitude?: number; longitude?: number };
@@ -39,10 +39,14 @@ function MapFallback({
       justifyContent="center"
       backgroundColor="$backgroundHover"
       gap="$1">
-      <Text color="$color11" fontSize="$2">
+      <Text
+        color="$color11"
+        fontSize="$2">
         {t('Map preview unavailable — requires expo-maps')}
       </Text>
-      <Text color="$color11" fontSize="$1">
+      <Text
+        color="$color11"
+        fontSize="$1">
         {hasValue === false ? t('No location set') : `${lat.toFixed(4)}, ${lng.toFixed(4)}`}
       </Text>
     </YStack>
@@ -89,7 +93,14 @@ export function GeolocationMap({
   }, [lat, lng, zoom]);
 
   if (!maps || (Platform.OS !== 'ios' && Platform.OS !== 'android')) {
-    return <MapFallback lat={lat} lng={lng} minHeight={minHeight} hasValue={hasValue} />;
+    return (
+      <MapFallback
+        lat={lat}
+        lng={lng}
+        minHeight={minHeight}
+        hasValue={hasValue}
+      />
+    );
   }
 
   const interactive = !disabled && !readOnly && typeof onChange === 'function';
@@ -117,7 +128,10 @@ export function GeolocationMap({
   if (Platform.OS === 'ios') {
     const AppleMapsView = maps.AppleMaps.View;
     return (
-      <YStack testID="geolocation-native-map" flex={1} minHeight={minHeight}>
+      <YStack
+        testID="geolocation-native-map"
+        flex={1}
+        minHeight={minHeight}>
         <AppleMapsView
           ref={appleRef}
           style={{ flex: 1 }}
@@ -131,7 +145,10 @@ export function GeolocationMap({
 
   const GoogleMapsView = maps.GoogleMaps.View;
   return (
-    <YStack testID="geolocation-native-map" flex={1} minHeight={minHeight}>
+    <YStack
+      testID="geolocation-native-map"
+      flex={1}
+      minHeight={minHeight}>
       <GoogleMapsView
         ref={googleRef}
         style={{ flex: 1 }}

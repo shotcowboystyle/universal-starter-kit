@@ -10,7 +10,7 @@ import { CardHeader } from './CardHeader';
 import { Card } from './surfaces';
 
 function readSibling(name: string) {
-  return readFileSync(join(import.meta.dirname, name), 'utf8');
+  return readFileSync(join(import.meta.dirname, name), 'utf-8');
 }
 
 function atoms(el: Element | null, prefixes: string[]): string[] {

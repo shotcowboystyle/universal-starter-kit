@@ -1,4 +1,5 @@
-import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import type { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useResolvedKnobs } from '@repo/theme';
 /**
  * OS date/time sheet — iOS spinner/calendar, Android Material dialog.
@@ -14,10 +15,10 @@ import { useCallback, useState } from 'react';
 import { Modal, Pressable, StyleSheet, useColorScheme, Platform } from 'react-native';
 import { Text, View, XStack, YStack, useTheme, useThemeName } from 'tamagui';
 
-import { formCommonColors } from '../../shared/colorRamps';
+import { formCommonColors } from '../../shared/color-ramps';
 import { t } from '../../shared/t';
 
-import { osDateTimeIosDisplay } from './osDateTimeIosDisplay';
+import { osDateTimeIosDisplay } from './os-date-time-ios-display';
 
 export type OsDateTimeMode = 'date' | 'time' | 'datetime';
 
@@ -130,15 +131,21 @@ export function OsDateTimeSheet({ open, value, mode, minDate, maxDate, onCancel,
         mode={pickerMode}
         display="default"
         onChange={handleAndroidChange}
-        minimumDate={mode !== 'time' ? minDate : undefined}
-        maximumDate={mode !== 'time' ? maxDate : undefined}
+        minimumDate={mode === 'time' ? undefined : minDate}
+        maximumDate={mode === 'time' ? undefined : maxDate}
       />
     );
   }
 
   return (
-    <Modal transparent animationType="fade" visible={open} onRequestClose={onCancel}>
-      <Pressable style={styles.modalOverlay} onPress={onCancel}>
+    <Modal
+      transparent
+      animationType="fade"
+      visible={open}
+      onRequestClose={onCancel}>
+      <Pressable
+        style={styles.modalOverlay}
+        onPress={onCancel}>
         <View
           pointerEvents="none"
           position="absolute"
@@ -152,9 +159,16 @@ export function OsDateTimeSheet({ open, value, mode, minDate, maxDate, onCancel,
           onPress={(e) => {
             e.stopPropagation();
           }}>
-          <YStack {...knobProps.elevatedSurface} borderBottomLeftRadius={0} borderBottomRightRadius={0}>
-            <XStack justifyContent="space-between" {...knobProps.panelPadding}>
-              <Pressable onPress={onCancel} accessibilityRole="button">
+          <YStack
+            {...knobProps.elevatedSurface}
+            borderBottomLeftRadius={0}
+            borderBottomRightRadius={0}>
+            <XStack
+              justifyContent="space-between"
+              {...knobProps.panelPadding}>
+              <Pressable
+                onPress={onCancel}
+                accessibilityRole="button">
                 <Text color={formCommonColors.text}>{t('Cancel')}</Text>
               </Pressable>
               {mode === 'datetime' && !showTimePicker ? (
@@ -166,7 +180,9 @@ export function OsDateTimeSheet({ open, value, mode, minDate, maxDate, onCancel,
                   <Text color="$accentBackground">{t('Next')}</Text>
                 </Pressable>
               ) : (
-                <Pressable onPress={confirm} accessibilityRole="button">
+                <Pressable
+                  onPress={confirm}
+                  accessibilityRole="button">
                   <Text color="$accentBackground">{t('Done')}</Text>
                 </Pressable>
               )}
@@ -179,8 +195,8 @@ export function OsDateTimeSheet({ open, value, mode, minDate, maxDate, onCancel,
                 themeVariant={themeVariant}
                 accentColor={accentColor}
                 onChange={handleIOSChange}
-                minimumDate={mode !== 'time' ? minDate : undefined}
-                maximumDate={mode !== 'time' ? maxDate : undefined}
+                minimumDate={mode === 'time' ? undefined : minDate}
+                maximumDate={mode === 'time' ? undefined : maxDate}
                 style={pickerMode === 'time' ? styles.wheel : styles.calendar}
               />
             </YStack>

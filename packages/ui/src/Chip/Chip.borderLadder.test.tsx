@@ -23,7 +23,9 @@ const STOPS = ['none', 'small', 'medium', 'large'] as const;
 function renderAt(stop: (typeof STOPS)[number], outlined = false): string[] {
   const result = renderWithProviders(
     <Preset overrides={{ fillStyle: outlined ? 'outlined' : 'filled', borderWidth: stop }}>
-      <Chip variant="outlined" onPress={() => {}}>
+      <Chip
+        variant="outlined"
+        onPress={() => {}}>
         Fire
       </Chip>
     </Preset>,

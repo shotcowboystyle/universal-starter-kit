@@ -24,7 +24,7 @@ function asVideoElement(node: unknown): HTMLVideoElement | null {
     }
     return node.querySelector('video');
   }
-  const host = (node as { host?: unknown }).host;
+  const { host } = node as { host?: unknown };
   return host ? asVideoElement(host) : null;
 }
 
@@ -347,9 +347,14 @@ export function Video({
   );
 
   return (
-    <VideoFrame render="figure" marginHorizontal={0} marginVertical={knobProps.gapLg.gap} {...knobProps.gap} {...props}>
+    <VideoFrame
+      render="figure"
+      marginHorizontal={0}
+      marginVertical={knobProps.gapLg.gap}
+      {...knobProps.gap}
+      {...props}>
       {mediaStage}
-      {children != null ? <VideoCaption>{children}</VideoCaption> : null}
+      {children == null ? null : <VideoCaption>{children}</VideoCaption>}
     </VideoFrame>
   );
 }

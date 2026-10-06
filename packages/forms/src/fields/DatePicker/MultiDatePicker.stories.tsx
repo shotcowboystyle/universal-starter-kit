@@ -43,7 +43,12 @@ export default meta;
 type Story = StoryObj<typeof MultiDatePicker>;
 
 export const Baseline: Story = {
-  render: (args) => <MultiDatePicker {...args} helperText={args.helperText ?? 'Up to 5 dates'} />,
+  render: (args) => (
+    <MultiDatePicker
+      {...args}
+      helperText={args.helperText ?? 'Up to 5 dates'}
+    />
+  ),
 };
 
 export const Disabled: Story = {
@@ -97,7 +102,9 @@ export const FormBound: Story = {
       const FormSubscribe = (form as any).Subscribe;
       return (
         <Form form={form}>
-          <YStack gap="$4" maxWidth={480}>
+          <YStack
+            gap="$4"
+            maxWidth={480}>
             <MultiDatePicker
               label="Meeting Days"
               name={'dates' as any}

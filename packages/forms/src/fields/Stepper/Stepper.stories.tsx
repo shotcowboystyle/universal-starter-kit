@@ -57,9 +57,27 @@ export const Main: Story = {
       return (
         <Form form={form}>
           <YStack gap="$4">
-            <Stepper label="Quantity" name="quantity" min={1} max={100} buttonPosition="both" />
-            <Stepper label="Price" name="price" step={0.01} precision={2} min={0} />
-            <Stepper label="Discount (%)" name="discount" min={0} max={50} step={5} />
+            <Stepper
+              label="Quantity"
+              name="quantity"
+              min={1}
+              max={100}
+              buttonPosition="both"
+            />
+            <Stepper
+              label="Price"
+              name="price"
+              step={0.01}
+              precision={2}
+              min={0}
+            />
+            <Stepper
+              label="Discount (%)"
+              name="discount"
+              min={0}
+              max={50}
+              step={5}
+            />
             <Button action="submit">Submit</Button>
           </YStack>
         </Form>
@@ -123,10 +141,24 @@ export const WithError: Story = {
 
 export const Sizes: Story = {
   render: () => (
-    <YStack gap="$4" maxWidth={400}>
-      <Stepper label="Small" size="$2" placeholder="Small input" />
-      <Stepper label="Medium (default)" size="$3" placeholder="Medium input" />
-      <Stepper label="Large" size="$4" placeholder="Large input" />
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <Stepper
+        label="Small"
+        size="$2"
+        placeholder="Small input"
+      />
+      <Stepper
+        label="Medium (default)"
+        size="$3"
+        placeholder="Medium input"
+      />
+      <Stepper
+        label="Large"
+        size="$4"
+        placeholder="Large input"
+      />
     </YStack>
   ),
 };
@@ -136,7 +168,9 @@ export const Interactive: Story = {
     const InteractiveExample = () => {
       const [value, setValue] = useState<number | null>(0);
       return (
-        <YStack gap="$4" maxWidth={400}>
+        <YStack
+          gap="$4"
+          maxWidth={400}>
           <Stepper
             label="Quantity"
             value={value}

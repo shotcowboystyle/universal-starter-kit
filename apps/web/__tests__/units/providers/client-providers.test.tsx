@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ClientProviders } from '@/providers/client-providers';
+import { ClientProviders } from '@/providers/ClientProviders';
 import { useAuthStore } from '@/stores/auth-store';
 
 // Mock auth store

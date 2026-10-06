@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Image as TamaguiImage } from 'tamagui';
 
-import { ImageFrame, mediaFillProps, type ImageStatus } from './ImageFrame';
+import { ImageFrame, mediaFillProps } from './ImageFrame';
+import type { ImageStatus } from './ImageFrame';
 import { isThumbnailSize, useResolvedImageSource } from './shared';
 import type { ImageProps } from './types';
 

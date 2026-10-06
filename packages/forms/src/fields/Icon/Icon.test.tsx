@@ -7,7 +7,12 @@ import { DrawnIcon, Icon } from './index';
 
 describe('Icon', () => {
   it('renders an icon control, not an unsupported-type string', () => {
-    const result = renderWithProviders(<Icon label="Workspace icon" value="mail" />);
+    const result = renderWithProviders(
+      <Icon
+        label="Workspace icon"
+        value="mail"
+      />,
+    );
     const text = result.container.textContent ?? '';
     expect(text).not.toMatch(/Unsupported field type/);
     expect(result.container.querySelector('[data-testid="icon-field"]')).toBeTruthy();
@@ -16,14 +21,25 @@ describe('Icon', () => {
   });
 
   it('shows a dashed well when empty', () => {
-    const result = renderWithProviders(<Icon label="Workspace icon" placeholder="Choose an icon" />);
+    const result = renderWithProviders(
+      <Icon
+        label="Workspace icon"
+        placeholder="Choose an icon"
+      />,
+    );
     expect(result.container.querySelector('[data-testid="icon-empty-well"]')).toBeTruthy();
     const input = result.container.querySelector('input');
     expect(input?.getAttribute('placeholder')).toBe('Choose an icon');
   });
 
   it('read-only renders the glyph well without a picker trigger', () => {
-    const result = renderWithProviders(<Icon label="Workspace icon" value="mail" readOnly />);
+    const result = renderWithProviders(
+      <Icon
+        label="Workspace icon"
+        value="mail"
+        readOnly
+      />,
+    );
     expect(result.container.querySelector('[data-testid="icon-field-readonly"]')).toBeTruthy();
     expect(result.container.querySelector('[data-testid="icon-field"]')).toBeNull();
     expect(result.container.textContent ?? '').not.toMatch(/Unsupported field type/);
@@ -32,7 +48,12 @@ describe('Icon', () => {
   it('opens a FloatingPanel grid and commits a drawn-set pick', async () => {
     const onChange = vi.fn();
     const result = renderWithProviders(
-      <Icon label="Workspace icon" value="" placeholder="Choose an icon" onChange={onChange} />,
+      <Icon
+        label="Workspace icon"
+        value=""
+        placeholder="Choose an icon"
+        onChange={onChange}
+      />,
     );
 
     const input = result.container.querySelector('input');
@@ -62,7 +83,13 @@ describe('Icon', () => {
 
   it('uses fixed glyph cells and keeps search and selection working', async () => {
     const onChange = vi.fn();
-    const result = renderWithProviders(<Icon label="Workspace icon" value="mail" onChange={onChange} />);
+    const result = renderWithProviders(
+      <Icon
+        label="Workspace icon"
+        value="mail"
+        onChange={onChange}
+      />,
+    );
     const input = result.container.querySelector('input')!;
     fireEvent.click(input);
     await waitFor(() => {
@@ -86,7 +113,12 @@ describe('Icon', () => {
   });
 
   it('does not paint typed icon glyphs in the trigger', () => {
-    const result = renderWithProviders(<Icon label="Workspace icon" value="mail" />);
+    const result = renderWithProviders(
+      <Icon
+        label="Workspace icon"
+        value="mail"
+      />,
+    );
     const text = result.container.textContent ?? '';
     for (const glyph of ['∨', '∧', '✓', '×', '▸', '☰']) {
       expect(text).not.toContain(glyph);
@@ -95,7 +127,12 @@ describe('Icon', () => {
   });
 
   it('keeps desktop option semantics without adding a second search field', async () => {
-    const result = renderWithProviders(<Icon label="Workspace icon" value="mail" />);
+    const result = renderWithProviders(
+      <Icon
+        label="Workspace icon"
+        value="mail"
+      />,
+    );
     fireEvent.click(result.container.querySelector('input')!);
     await waitFor(() => {
       expect(document.querySelector('[data-testid="icon-panel"]')).toBeTruthy();
@@ -109,7 +146,13 @@ describe('Icon', () => {
     const width = window.innerWidth;
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 500 });
     const onChange = vi.fn();
-    const result = renderWithProviders(<Icon label="Workspace icon" value="mail" onChange={onChange} />);
+    const result = renderWithProviders(
+      <Icon
+        label="Workspace icon"
+        value="mail"
+        onChange={onChange}
+      />,
+    );
     try {
       const input = result.container.querySelector('input')!;
       fireEvent.click(input);
@@ -143,7 +186,12 @@ describe('Icon', () => {
     const width = window.innerWidth;
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 500 });
     const onChange = vi.fn();
-    const result = renderWithProviders(<Icon label="Workspace icon" onChange={onChange} />);
+    const result = renderWithProviders(
+      <Icon
+        label="Workspace icon"
+        onChange={onChange}
+      />,
+    );
     try {
       const input = result.container.querySelector('input')!;
       await act(async () => {
@@ -160,7 +208,7 @@ describe('Icon', () => {
       fireEvent.change(search, { target: { value: 'chev' } });
       fireEvent.click(document.querySelector('[data-testid="icon-option-chev-u"]')!);
       expect(onChange).toHaveBeenCalledWith('chev-u');
-      await act(async () => new Promise((resolve) => setTimeout(resolve, 400)));
+      await act(async () => await new Promise((resolve) => setTimeout(resolve, 400)));
       expect(input).toHaveAttribute('aria-expanded', 'false');
       expect(document.activeElement).toBe(input);
       fireEvent.keyDown(input, { key: 'Enter' });
@@ -182,7 +230,7 @@ describe('Icon', () => {
       return element!;
     });
     fireEvent.click(option);
-    await act(async () => new Promise((resolve) => setTimeout(resolve, 400)));
+    await act(async () => await new Promise((resolve) => setTimeout(resolve, 400)));
     expect(input).toHaveAttribute('aria-expanded', 'false');
     expect(document.activeElement).toBe(input);
   });
@@ -207,7 +255,7 @@ describe('Icon', () => {
     });
     fireEvent.pointerDown(next);
     fireEvent.click(next);
-    await act(async () => new Promise((resolve) => setTimeout(resolve, 400)));
+    await act(async () => await new Promise((resolve) => setTimeout(resolve, 400)));
     expect(input).toHaveAttribute('aria-expanded', 'false');
     expect(document.activeElement).toBe(next);
   });
@@ -222,7 +270,7 @@ describe('Icon', () => {
         expect(document.querySelector('[data-testid="icon-option-mail"]')).toBeTruthy();
       });
       fireEvent.click(document.querySelector('[data-testid="icon-option-mail"]')!);
-      await act(async () => new Promise((resolve) => setTimeout(resolve, 500)));
+      await act(async () => await new Promise((resolve) => setTimeout(resolve, 500)));
       expect(input).toHaveAttribute('aria-expanded', 'false');
       await act(async () => {
         input.blur();
@@ -242,7 +290,13 @@ describe('Icon', () => {
   // and Core Graphics then painted with whatever stroke was last in the
   // context. Every paint has to leave here as a concrete value.
   it('paints the readOnly glyph with a resolved colour, never currentColor', () => {
-    const result = renderWithProviders(<Icon label="Workspace icon" value="mail" readOnly />);
+    const result = renderWithProviders(
+      <Icon
+        label="Workspace icon"
+        value="mail"
+        readOnly
+      />,
+    );
     const svg = result.container.querySelector('svg');
     expect(svg).toBeTruthy();
     const color = svg?.getAttribute('color');
@@ -263,10 +317,22 @@ describe('Icon', () => {
       const { container } = renderWithProviders(
         <Theme name={scheme}>
           <DrawnIcon name="mail" />
-          <DrawnIcon name="mail" color="$color11" />
-          <DrawnIcon name="mail" color="currentColor" />
-          <DrawnIcon name="grip" color="$unknownIconToken" />
-          <DrawnIcon name="mail" color="rebeccapurple" />
+          <DrawnIcon
+            name="mail"
+            color="$color11"
+          />
+          <DrawnIcon
+            name="mail"
+            color="currentColor"
+          />
+          <DrawnIcon
+            name="grip"
+            color="$unknownIconToken"
+          />
+          <DrawnIcon
+            name="mail"
+            color="rebeccapurple"
+          />
         </Theme>,
       );
       const svgs = Array.from(container.querySelectorAll('svg'));

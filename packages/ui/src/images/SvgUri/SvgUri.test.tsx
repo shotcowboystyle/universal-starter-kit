@@ -24,7 +24,13 @@ describe('SvgUri', () => {
   });
 
   it('renders a container div for a valid uri', () => {
-    const { container } = renderWithProviders(<SvgUri uri="https://example.com/icon.svg" width={100} height={100} />);
+    const { container } = renderWithProviders(
+      <SvgUri
+        uri="https://example.com/icon.svg"
+        width={100}
+        height={100}
+      />,
+    );
     const div = container.querySelector('div > div');
     expect(div).toBeInTheDocument();
   });
@@ -33,7 +39,12 @@ describe('SvgUri', () => {
     const fallback = <span data-testid="fallback">Error</span>;
     vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new Error('Network error'));
 
-    const { findByTestId } = renderWithProviders(<SvgUri uri="https://example.com/broken.svg" fallback={fallback} />);
+    const { findByTestId } = renderWithProviders(
+      <SvgUri
+        uri="https://example.com/broken.svg"
+        fallback={fallback}
+      />,
+    );
 
     const fallbackEl = await findByTestId('fallback');
     expect(fallbackEl).toBeInTheDocument();
@@ -43,7 +54,12 @@ describe('SvgUri', () => {
     const onError = vi.fn();
     vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new Error('Network error'));
 
-    renderWithProviders(<SvgUri uri="https://example.com/broken.svg" onError={onError} />);
+    renderWithProviders(
+      <SvgUri
+        uri="https://example.com/broken.svg"
+        onError={onError}
+      />,
+    );
 
     await vi.waitFor(() => {
       expect(onError).toHaveBeenCalled();
@@ -58,7 +74,12 @@ describe('SvgUri', () => {
     );
 
     const onLoad = vi.fn();
-    const { container } = renderWithProviders(<SvgUri uri="https://example.com/icon.svg" onLoad={onLoad} />);
+    const { container } = renderWithProviders(
+      <SvgUri
+        uri="https://example.com/icon.svg"
+        onLoad={onLoad}
+      />,
+    );
 
     await vi.waitFor(() => {
       expect(onLoad).toHaveBeenCalled();
@@ -75,7 +96,12 @@ describe('SvgUri', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(maliciousSvg, { status: 200 }));
 
     const onLoad = vi.fn();
-    const { container } = renderWithProviders(<SvgUri uri="https://example.com/evil.svg" onLoad={onLoad} />);
+    const { container } = renderWithProviders(
+      <SvgUri
+        uri="https://example.com/evil.svg"
+        onLoad={onLoad}
+      />,
+    );
 
     await vi.waitFor(() => {
       expect(onLoad).toHaveBeenCalled();
@@ -91,7 +117,12 @@ describe('SvgUri', () => {
 
     const onLoad = vi.fn();
     const { container } = renderWithProviders(
-      <SvgUri uri="https://example.com/icon.svg" width={48} height={48} onLoad={onLoad} />,
+      <SvgUri
+        uri="https://example.com/icon.svg"
+        width={48}
+        height={48}
+        onLoad={onLoad}
+      />,
     );
 
     await vi.waitFor(() => {
@@ -110,7 +141,11 @@ describe('SvgUri', () => {
 
     const onLoad = vi.fn();
     const { container } = renderWithProviders(
-      <SvgUri uri="https://example.com/icon.svg" accessibilityLabel="Test icon" onLoad={onLoad} />,
+      <SvgUri
+        uri="https://example.com/icon.svg"
+        accessibilityLabel="Test icon"
+        onLoad={onLoad}
+      />,
     );
 
     await vi.waitFor(() => {
@@ -127,7 +162,12 @@ describe('SvgUri', () => {
     const dataUri =
       "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='10' height='10'/%3E%3C/svg%3E";
 
-    const { container } = renderWithProviders(<SvgUri uri={dataUri} onLoad={onLoad} />);
+    const { container } = renderWithProviders(
+      <SvgUri
+        uri={dataUri}
+        onLoad={onLoad}
+      />,
+    );
 
     await vi.waitFor(() => {
       expect(onLoad).toHaveBeenCalled();
@@ -138,8 +178,8 @@ describe('SvgUri', () => {
   });
 
   it('inherits scheme color and does not invent hex chrome', () => {
-    const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'index.tsx'), 'utf8');
-    const native = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'index.native.ts'), 'utf8');
+    const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'index.tsx'), 'utf-8');
+    const native = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'index.native.ts'), 'utf-8');
     expect(src).toContain('getVariable(useTheme().color)');
     expect(src).not.toMatch(/#[0-9A-Fa-f]{3,8}/);
     expect(native).toMatch(/color: ['"]\$color['"]/);

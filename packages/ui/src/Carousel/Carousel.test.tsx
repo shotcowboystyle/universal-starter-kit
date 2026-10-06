@@ -81,7 +81,7 @@ Object.defineProperty(HTMLElement.prototype, 'offsetHeight', {
 });
 
 // react-native-web's scrollTo lands on the DOM node's scroll(); capture it.
-const scrollCalls: Array<{ left?: number; top?: number; behavior?: string }> = [];
+const scrollCalls: { left?: number; top?: number; behavior?: string }[] = [];
 Object.defineProperty(HTMLElement.prototype, 'scroll', {
   configurable: true,
   writable: true,
@@ -163,7 +163,10 @@ describe('Carousel geometry', () => {
     const { container } = renderWithProviders(
       <Carousel gap={0}>
         {[0, 1, 2].map((index) => (
-          <Slide key={index} index={index} />
+          <Slide
+            key={index}
+            index={index}
+          />
         ))}
       </Carousel>,
     );
@@ -180,7 +183,10 @@ describe('Carousel geometry', () => {
     const { container } = renderWithProviders(
       <Carousel gap={0}>
         {[0, 1, 2].map((index) => (
-          <Slide key={index} index={index} />
+          <Slide
+            key={index}
+            index={index}
+          />
         ))}
       </Carousel>,
     );
@@ -197,7 +203,10 @@ describe('Carousel geometry', () => {
     const { container } = renderWithProviders(
       <Carousel gap={16}>
         {[0, 1, 2, 3, 4].map((index) => (
-          <Slide key={index} index={index} />
+          <Slide
+            key={index}
+            index={index}
+          />
         ))}
       </Carousel>,
     );
@@ -213,7 +222,10 @@ describe('Carousel geometry', () => {
     const { container } = renderWithProviders(
       <Carousel gap="$4">
         {[0, 1, 2].map((index) => (
-          <Slide key={index} index={index} />
+          <Slide
+            key={index}
+            index={index}
+          />
         ))}
       </Carousel>,
     );
@@ -226,7 +238,10 @@ describe('Carousel geometry', () => {
     const { container } = renderWithProviders(
       <Carousel gap={16}>
         {[0, 1, 2].map((index) => (
-          <Slide key={index} index={index} />
+          <Slide
+            key={index}
+            index={index}
+          />
         ))}
       </Carousel>,
     );
@@ -244,7 +259,10 @@ describe('Carousel geometry', () => {
     const { container } = renderWithProviders(
       <Carousel gap={16}>
         {[0, 1, 2].map((index) => (
-          <Slide key={index} index={index} />
+          <Slide
+            key={index}
+            index={index}
+          />
         ))}
       </Carousel>,
     );
@@ -270,9 +288,14 @@ describe('Carousel geometry', () => {
 
   it('lands initialSlide at its pitch offset on first measure', async () => {
     renderWithProviders(
-      <Carousel gap={0} initialSlide={2}>
+      <Carousel
+        gap={0}
+        initialSlide={2}>
         {[0, 1, 2, 3].map((index) => (
-          <Slide key={index} index={index} />
+          <Slide
+            key={index}
+            index={index}
+          />
         ))}
       </Carousel>,
     );
@@ -294,7 +317,10 @@ describe('Carousel snaps ride the animation knob', () => {
       <Preset overrides={{ animation: 'none' }}>
         <Carousel gap={0}>
           {[0, 1, 2].map((index) => (
-            <Slide key={index} index={index} />
+            <Slide
+              key={index}
+              index={index}
+            />
           ))}
         </Carousel>
       </Preset>,
@@ -311,7 +337,10 @@ describe('Carousel snaps ride the animation knob', () => {
       // Default knobs: animation "quick" — knobProps.transition is defined.
       <Carousel gap={0}>
         {[0, 1, 2].map((index) => (
-          <Slide key={index} index={index} />
+          <Slide
+            key={index}
+            index={index}
+          />
         ))}
       </Carousel>,
     );
@@ -339,7 +368,10 @@ describe('Carousel ring anatomy, size recipes, 44px floor', () => {
     const { container } = renderWithProviders(
       <Carousel gap={0}>
         {[0, 1, 2].map((index) => (
-          <Slide key={index} index={index} />
+          <Slide
+            key={index}
+            index={index}
+          />
         ))}
       </Carousel>,
     );
@@ -355,7 +387,10 @@ describe('Carousel ring anatomy, size recipes, 44px floor', () => {
     const { container } = renderWithProviders(
       <Carousel gap={0}>
         {[0, 1, 2].map((index) => (
-          <Slide key={index} index={index} />
+          <Slide
+            key={index}
+            index={index}
+          />
         ))}
       </Carousel>,
     );
@@ -380,7 +415,10 @@ describe('Carousel ring anatomy, size recipes, 44px floor', () => {
       <Preset overrides={{ size: 'small' }}>
         <Carousel gap={0}>
           {[0, 1, 2].map((index) => (
-            <Slide key={index} index={index} />
+            <Slide
+              key={index}
+              index={index}
+            />
           ))}
         </Carousel>
       </Preset>,
@@ -400,7 +438,10 @@ describe('Carousel ring anatomy, size recipes, 44px floor', () => {
     const { container } = renderWithProviders(
       <Carousel gap={0}>
         {[0, 1, 2].map((index) => (
-          <Slide key={index} index={index} />
+          <Slide
+            key={index}
+            index={index}
+          />
         ))}
       </Carousel>,
     );
@@ -421,7 +462,10 @@ describe('Carousel ring anatomy, size recipes, 44px floor', () => {
     renderWithProviders(
       <Carousel gap={0}>
         {[0, 1, 2].map((index) => (
-          <Slide key={index} index={index} />
+          <Slide
+            key={index}
+            index={index}
+          />
         ))}
       </Carousel>,
     );
@@ -435,7 +479,7 @@ describe('Carousel ring anatomy, size recipes, 44px floor', () => {
 
 describe('Carousel live-media tile', () => {
   it('does not paint a status pip; viewport radius stays UNCLAMPED', async () => {
-    const src = readFileSync(join(here, 'index.tsx'), 'utf8');
+    const src = readFileSync(join(here, 'index.tsx'), 'utf-8');
     expect(src).not.toMatch(/knobProps\.containerRadius|knobProps\.cardSurface|capContainerRadius\(/);
     expect(src).not.toMatch(/data-status-pip|StatusPip|statusPip/);
     expect(src).toContain('knobProps.borderRadius');
@@ -443,7 +487,10 @@ describe('Carousel live-media tile', () => {
     const { container } = renderWithProviders(
       <Carousel gap={0}>
         {[0, 1, 2].map((index) => (
-          <Slide key={index} index={index} />
+          <Slide
+            key={index}
+            index={index}
+          />
         ))}
       </Carousel>,
     );

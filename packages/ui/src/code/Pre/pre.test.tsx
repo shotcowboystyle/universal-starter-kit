@@ -8,9 +8,13 @@ describe('Pre', () => {
   const defaultProps = {
     children: 'Test content',
   };
-  const renderPre = (props = {}) => {
-    return renderWithProviders(<Pre {...defaultProps} {...props} />);
-  };
+  const renderPre = (props = {}) =>
+    renderWithProviders(
+      <Pre
+        {...defaultProps}
+        {...props}
+      />,
+    );
 
   describe('Basic Rendering', () => {
     it('should render successfully', () => {

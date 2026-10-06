@@ -18,7 +18,12 @@ vi.mock('@repo/platform', async (importOriginal) => ({
   },
 }));
 
-const Icon = themed(({ size }: { size?: string | number }) => <svg width={size} height={size} />);
+const Icon = themed(({ size }: { size?: string | number }) => (
+  <svg
+    width={size}
+    height={size}
+  />
+));
 function Fixture() {
   return (
     <TestProviders>

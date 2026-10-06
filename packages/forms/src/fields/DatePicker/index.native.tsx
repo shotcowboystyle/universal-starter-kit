@@ -9,8 +9,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { Pressable as RNPressable } from 'react-native';
 import { useProps } from 'tamagui';
 
-import { Field, FieldLayout } from '../../fieldLayout';
-import type { FormFieldProps } from '../../fieldLayout';
+import { Field, FieldLayout } from '../../FieldLayout';
+import type { FormFieldProps } from '../../FieldLayout';
 import { Input as InputParts } from '../../InputParts';
 import { t } from '../../shared/t';
 import { getFieldError, mergeFieldHandler, useFormField, useResolvedValidators } from '../../shared/utils';
@@ -19,7 +19,7 @@ import type { FieldComponentProps, Validator } from '../../types';
 import { OsDateTimeSheet } from '../nativeDateTime/OsDateTimeSheet';
 
 import { DatePicker as CatalogDatePicker } from './catalog';
-import { DatePickerFieldValueSync } from './fieldValueSync';
+import { DatePickerFieldValueSync } from './FieldValueSync';
 import { DatePickerInputTrigger, formatDateDisplay } from './parts';
 import { coerceToDate } from './utils';
 
@@ -189,8 +189,16 @@ export function DatePicker<
 
   if (skeleton) {
     return (
-      <FieldLayout id={id} label={label} size={size} knobProps={knobProps}>
-        <Skeleton variant="rounded" width="100%" height={knobProps.sizeToken} />
+      <FieldLayout
+        id={id}
+        label={label}
+        size={size}
+        knobProps={knobProps}>
+        <Skeleton
+          variant="rounded"
+          width="100%"
+          height={knobProps.sizeToken}
+        />
       </FieldLayout>
     );
   }
@@ -225,7 +233,10 @@ export function DatePicker<
         const resolvedError = getFieldError(field, errorProp);
         return (
           <>
-            <DatePickerFieldValueSync value={field.state.value} onSync={setSelectedDate} />
+            <DatePickerFieldValueSync
+              value={field.state.value}
+              onSync={setSelectedDate}
+            />
             <FieldLayout
               id={id}
               label={label}

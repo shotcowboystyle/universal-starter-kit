@@ -1,7 +1,8 @@
 import { action } from '@repo/storybook';
 import { YStack, Text, XStack } from 'tamagui';
 
-import { Timeline, type TimelineEntry } from './Timeline';
+import { Timeline } from './Timeline';
+import type { TimelineEntry } from './Timeline';
 
 export default {
   title: 'Components/Timeline',
@@ -128,7 +129,11 @@ const commentFeedEntries: TimelineEntry[] = [
 ];
 
 export const Comments = () => (
-  <Timeline label="Activity" entries={commentFeedEntries} onCommentSubmit={action('onCommentSubmit')} />
+  <Timeline
+    label="Activity"
+    entries={commentFeedEntries}
+    onCommentSubmit={action('onCommentSubmit')}
+  />
 );
 Comments.parameters = {
   docs: {
@@ -219,7 +224,12 @@ Empty.parameters = {
 };
 
 export const Loading = () => (
-  <Timeline label="Activity" entries={[]} isLoading onCommentSubmit={action('onCommentSubmit')} />
+  <Timeline
+    label="Activity"
+    entries={[]}
+    isLoading
+    onCommentSubmit={action('onCommentSubmit')}
+  />
 );
 Loading.parameters = {
   docs: {
@@ -252,17 +262,23 @@ export const CustomEntryRenderer = () => (
   <Timeline
     entries={sampleEntries}
     renderEntry={(entry: TimelineEntry, defaultContent) => (
-      <YStack key={entry.id} paddingBottom="$2">
+      <YStack
+        key={entry.id}
+        paddingBottom="$2">
         <YStack
           padding="$3"
           gap="$1"
           backgroundColor={entry.type === 'comment' ? '$blue2' : '$gray2'}
           borderRadius="$3">
           <XStack justifyContent="space-between">
-            <Text fontSize="$2" fontWeight="600">
+            <Text
+              fontSize="$2"
+              fontWeight="600">
               {entry.author}
             </Text>
-            <Text fontSize="$1" color="$gray10">
+            <Text
+              fontSize="$1"
+              color="$gray10">
               {entry.type}
             </Text>
           </XStack>
@@ -299,7 +315,10 @@ export const AllStates = () => (
 
     <YStack gap="$2">
       <Text fontWeight="600">Compact</Text>
-      <Timeline entries={sampleEntries.slice(0, 2)} compact />
+      <Timeline
+        entries={sampleEntries.slice(0, 2)}
+        compact
+      />
     </YStack>
   </YStack>
 );

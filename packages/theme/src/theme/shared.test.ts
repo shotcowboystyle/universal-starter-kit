@@ -1,6 +1,7 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 
-import { defaultKnobs, type Knobs } from './knobs';
+import { defaultKnobs } from './knobs';
+import type { Knobs } from './knobs';
 import type { Preset } from './preset.types';
 import { registerPreset, getPreset, getPresetNames, clearPresets, resolveThemeFromPreset } from './shared';
 

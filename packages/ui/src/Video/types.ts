@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { GetProps } from 'tamagui';
 
-import { VideoFrame } from './VideoFrame';
+import type { VideoFrame } from './VideoFrame';
 
 export interface VideoProps extends Omit<GetProps<typeof VideoFrame>, 'children'> {
   /** Media URL. */

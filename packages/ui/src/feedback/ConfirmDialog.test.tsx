@@ -87,7 +87,7 @@ describe('ConfirmDialog', () => {
       />,
     );
     fireEvent.click(buttonByLabel('Yes'));
-    expect(onConfirm).toHaveBeenCalledTimes(1);
+    expect(onConfirm).toHaveBeenCalledOnce();
     expect(onCancel).not.toHaveBeenCalled();
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
@@ -107,7 +107,7 @@ describe('ConfirmDialog', () => {
       />,
     );
     fireEvent.click(buttonByLabel('Cancel'));
-    expect(onCancel).toHaveBeenCalledTimes(1);
+    expect(onCancel).toHaveBeenCalledOnce();
     expect(onConfirm).not.toHaveBeenCalled();
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
@@ -142,17 +142,39 @@ describe('ConfirmDialog', () => {
   });
 
   it('destructive confirm sets data-tone=destructive', () => {
-    renderWithProviders(<ConfirmDialog open title="Delete?" body="Permanent." confirmLabel="Delete" destructive />);
+    renderWithProviders(
+      <ConfirmDialog
+        open
+        title="Delete?"
+        body="Permanent."
+        confirmLabel="Delete"
+        destructive
+      />,
+    );
     expect(alertdialog()?.getAttribute('data-tone')).toBe('destructive');
   });
 
   it('warning confirm sets data-tone=warning', () => {
-    renderWithProviders(<ConfirmDialog open title="Leave?" body="Unsaved." warning confirmLabel="Leave" />);
+    renderWithProviders(
+      <ConfirmDialog
+        open
+        title="Leave?"
+        body="Unsaved."
+        warning
+        confirmLabel="Leave"
+      />,
+    );
     expect(alertdialog()?.getAttribute('data-tone')).toBe('warning');
   });
 
   it('sets aria-modal on the alertdialog (focus-trap host)', () => {
-    renderWithProviders(<ConfirmDialog open title="Modal?" body="Trap focus here." />);
+    renderWithProviders(
+      <ConfirmDialog
+        open
+        title="Modal?"
+        body="Trap focus here."
+      />,
+    );
     const dialog = alertdialog();
     expect(dialog).toBeTruthy();
     expect(dialog?.getAttribute('aria-modal')).toBe('true');
@@ -160,7 +182,12 @@ describe('ConfirmDialog', () => {
 
   it('parks pointer-origin open on the panel, not a control', async () => {
     renderWithProviders(
-      <ConfirmDialog open title="Leave this page?" body="Edits will be discarded." confirmLabel="Continue" />,
+      <ConfirmDialog
+        open
+        title="Leave this page?"
+        body="Edits will be discarded."
+        confirmLabel="Continue"
+      />,
     );
     const dialog = alertdialog();
     expect(dialog).toBeTruthy();
@@ -179,7 +206,11 @@ describe('ConfirmDialog', () => {
 
   it('focuses a body text field on open (typed-confirm text entry)', async () => {
     renderWithProviders(
-      <ConfirmDialog open title="Delete project?" confirmLabel="Delete" destructive>
+      <ConfirmDialog
+        open
+        title="Delete project?"
+        confirmLabel="Delete"
+        destructive>
         <input aria-label="Project name" />
       </ConfirmDialog>,
     );
@@ -226,7 +257,7 @@ describe('ConfirmDialog action rules', () => {
     expect(cancelBtn.getAttribute('aria-disabled')).not.toBe('true');
     expect(cancelBtn.getAttribute('data-mp-cancel-disabled-ignored')).toBeNull();
     fireEvent.click(cancelBtn);
-    expect(onCancel).toHaveBeenCalledTimes(1);
+    expect(onCancel).toHaveBeenCalledOnce();
     expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining('cancel-disabled'));
   });
 
@@ -247,18 +278,25 @@ describe('ConfirmDialog action rules', () => {
     expect(cancelBtn.getAttribute('data-mp-cancel-disabled-ignored')).toBe('true');
     expect(cancelBtn.getAttribute('aria-disabled')).not.toBe('true');
     fireEvent.click(cancelBtn);
-    expect(onCancel).toHaveBeenCalledTimes(1);
+    expect(onCancel).toHaveBeenCalledOnce();
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('cancel-disabled'));
   });
 
   it('DEV warns dialog-too-many-actions when the body smuggles extra actions', () => {
     renderWithProviders(
-      <ConfirmDialog open title="Replace file?" confirmLabel="Replace">
+      <ConfirmDialog
+        open
+        title="Replace file?"
+        confirmLabel="Replace">
         <>
-          <button type="button" onClick={() => {}}>
+          <button
+            type="button"
+            onClick={() => {}}>
             Keep both
           </button>
-          <button type="button" onClick={() => {}}>
+          <button
+            type="button"
+            onClick={() => {}}>
             Open settings
           </button>
         </>
@@ -270,8 +308,14 @@ describe('ConfirmDialog action rules', () => {
 
   it('allowManyActions ejects the max-2 cap', () => {
     renderWithProviders(
-      <ConfirmDialog open allowManyActions title="Replace file?" confirmLabel="Replace">
-        <button type="button" onClick={() => {}}>
+      <ConfirmDialog
+        open
+        allowManyActions
+        title="Replace file?"
+        confirmLabel="Replace">
+        <button
+          type="button"
+          onClick={() => {}}>
           Keep both
         </button>
       </ConfirmDialog>,
@@ -280,7 +324,13 @@ describe('ConfirmDialog action rules', () => {
   });
 
   it('plain confirm/cancel pair stays under the cap (baseline)', () => {
-    renderWithProviders(<ConfirmDialog open title="Save changes?" body="Plain string body." />);
+    renderWithProviders(
+      <ConfirmDialog
+        open
+        title="Save changes?"
+        body="Plain string body."
+      />,
+    );
     expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining('dialog-too-many-actions'));
   });
 
@@ -308,7 +358,14 @@ describe('ConfirmDialog action rules', () => {
   });
 
   it('DEV-warns bare-disabled when confirm is gated without a reason', () => {
-    renderWithProviders(<ConfirmDialog open title="Delete project?" confirmLabel="Delete" confirmDisabled />);
+    renderWithProviders(
+      <ConfirmDialog
+        open
+        title="Delete project?"
+        confirmLabel="Delete"
+        confirmDisabled
+      />,
+    );
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('bare-disabled'));
   });
 });
@@ -342,7 +399,7 @@ describe('notify() blocking → ConfirmDialog', () => {
     expect(alertdialog()?.getAttribute('data-tone')).toBe('destructive');
 
     fireEvent.click(buttonByLabel('Delete'));
-    expect(onPress).toHaveBeenCalledTimes(1);
+    expect(onPress).toHaveBeenCalledOnce();
     await waitFor(() => {
       expect(getFeedback().find((e) => e.surface === 'dialog')).toBeUndefined();
     });

@@ -12,8 +12,12 @@ vi.mock('next-intl', () => ({
 function renderForm(props: Partial<React.ComponentProps<typeof ProjectForm>> = {}) {
   const onSubmit = vi.fn().mockResolvedValue(undefined);
   renderWithProviders(
-    <ProjectForm onSubmit={onSubmit} {...props}>
-      <Button action="submit" testID="submit">
+    <ProjectForm
+      onSubmit={onSubmit}
+      {...props}>
+      <Button
+        action="submit"
+        testID="submit">
         Submit
       </Button>
     </ProjectForm>,
@@ -55,7 +59,7 @@ describe('ProjectForm', () => {
     const { onSubmit } = renderForm();
     fireEvent.click(screen.getByTestId('submit'));
 
-    expect(await screen.findByText('Title is required')).toBeInTheDocument();
+    await expect(screen.findByText('Title is required')).resolves.toBeInTheDocument();
     expect(onSubmit).not.toHaveBeenCalled();
   });
 });

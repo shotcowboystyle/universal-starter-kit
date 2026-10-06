@@ -20,7 +20,7 @@ describe('Tabs TEXT-RIDES-TEXT', () => {
         items={[
           {
             value: 'a',
-            label: ['Section one', count !== 0 ? ` (${count})` : ''],
+            label: ['Section one', count === 0 ? '' : ` (${count})`],
             content: <Text>Body</Text>,
           },
         ]}

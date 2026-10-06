@@ -24,21 +24,17 @@ import {
   layoutBreakpoints,
   resolvePageTitleScale,
   useResolvedKnobs,
-  type PageTitleScale,
 } from '@repo/theme';
+import type { PageTitleScale } from '@repo/theme';
 import type { ReactNode } from 'react';
 import type { ScrollViewProps as TamaguiScrollViewProps, XStackProps, YStackProps } from 'tamagui';
 import { H1, H2, H3, H4, H5, H6, Paragraph, Separator, XStack, YStack, isWeb } from 'tamagui';
 
-import { componentColors, sectionHeading } from '../componentColors';
+import { componentColors, sectionHeading } from '../component-colors';
 import { ScrollView } from '../ScrollView';
 
-import {
-  PageHeadingScope,
-  usePageChromeInset,
-  useRegisterPageHeading,
-  type PageHeadingLevel,
-} from './pageHeadingScope';
+import { PageHeadingScope, usePageChromeInset, useRegisterPageHeading } from './PageHeadingScope';
+import type { PageHeadingLevel } from './PageHeadingScope';
 
 /** Semantic level → tamagui heading component (runtime `tag` is not honored). */
 const PAGE_HEADING_TAGS = { 1: H1, 2: H2, 3: H3, 4: H4, 5: H5, 6: H6 } as const;
@@ -103,7 +99,10 @@ export function Screen({ compact, ...props }: ScreenProps) {
   const density = compact === undefined ? undefined : compact ? 'compact' : 'comfortable';
   return (
     <Surface density={density}>
-      <ScreenInner compact={compact} {...props} />
+      <ScreenInner
+        compact={compact}
+        {...props}
+      />
     </Surface>
   );
 }
@@ -138,7 +137,9 @@ function ScreenInner({
 
   if (!scroll) {
     return (
-      <YStack flex={1} backgroundColor="$background">
+      <YStack
+        flex={1}
+        backgroundColor="$background">
         {inner}
       </YStack>
     );
@@ -273,7 +274,9 @@ export function PageHeader({
       {...(showHairline && nav ? { position: 'relative' as const } : null)}
       {...(nav ? knobProps.gap : null)}
       {...rest}>
-      <YStack {...contentPad} paddingBottom={nav ? 0 : (knobProps.gap.gap as '$4')}>
+      <YStack
+        {...contentPad}
+        paddingBottom={nav ? 0 : (knobProps.gap.gap as '$4')}>
         <XStack
           justifyContent="space-between"
           alignItems={subtitle ? 'flex-start' : 'center'}
@@ -284,18 +287,30 @@ export function PageHeader({
               minWidth:0 lets the H1 wrap and each action wrap below the
               title rather than clip off-canvas. */}
           {titleNode || subtitle ? (
-            <YStack flexGrow={1} flexShrink={1} minWidth={0} gap="$1">
+            <YStack
+              flexGrow={1}
+              flexShrink={1}
+              minWidth={0}
+              gap="$1">
               {titleNode}
               {subtitle ? (
                 // T-HELPER on the shared body fragment — not a local size map.
-                <Paragraph margin={0} {...knobProps.body} color={knobProps.textAccentColor}>
+                <Paragraph
+                  margin={0}
+                  {...knobProps.body}
+                  color={knobProps.textAccentColor}>
                   {subtitle}
                 </Paragraph>
               ) : null}
             </YStack>
           ) : null}
           {actions ? (
-            <XStack {...knobProps.gap} alignItems="center" flexWrap="wrap" flexShrink={1} minWidth={0}>
+            <XStack
+              {...knobProps.gap}
+              alignItems="center"
+              flexWrap="wrap"
+              flexShrink={1}
+              minWidth={0}>
               {actions}
             </XStack>
           ) : null}
@@ -304,10 +319,19 @@ export function PageHeader({
       </YStack>
       {nav && showHairline ? (
         // Sit the tab indicator on the header hairline (Primer / Linear).
-        <YStack position="absolute" left={0} right={0} bottom={0} pointerEvents="none" {...rule} />
+        <YStack
+          position="absolute"
+          left={0}
+          right={0}
+          bottom={0}
+          pointerEvents="none"
+          {...rule}
+        />
       ) : null}
       {nav ? (
-        <YStack width="100%" data-page-header-nav="">
+        <YStack
+          width="100%"
+          data-page-header-nav="">
           {nav}
         </YStack>
       ) : null}
@@ -367,7 +391,10 @@ export function PageSection({
   const headingNode =
     heading ??
     (title ? (
-      <SectionTag margin={0} {...headingFamily} {...sectionHeading}>
+      <SectionTag
+        margin={0}
+        {...headingFamily}
+        {...sectionHeading}>
         {title}
       </SectionTag>
     ) : null);
@@ -388,11 +415,19 @@ export function PageSection({
       <YStack gap="$2">
         {headingNode}
         {description ? (
-          <Paragraph margin={0} {...knobProps.body} color={knobProps.textAccentColor}>
+          <Paragraph
+            margin={0}
+            {...knobProps.body}
+            color={knobProps.textAccentColor}>
             {description}
           </Paragraph>
         ) : null}
-        {divider ? <Separator {...hairline.line} backgroundColor={componentColors.divider} /> : null}
+        {divider ? (
+          <Separator
+            {...hairline.line}
+            backgroundColor={componentColors.divider}
+          />
+        ) : null}
       </YStack>
     ) : null;
 
@@ -401,10 +436,16 @@ export function PageSection({
   // a sibling flips `surface` — only the section CONTENT earns the card's
   // panelPadding inset (the painted surface owns it).
   return (
-    <YStack data-testid="page-section" data-density={knobProps.density} {...knobProps.gap} {...rest}>
+    <YStack
+      data-testid="page-section"
+      data-density={knobProps.density}
+      {...knobProps.gap}
+      {...rest}>
       {headerBlock}
       {surface ? (
-        <YStack {...knobProps.gap} {...surfaceProps}>
+        <YStack
+          {...knobProps.gap}
+          {...surfaceProps}>
           <NestedScale density={knobProps.density}>{children}</NestedScale>
         </YStack>
       ) : (
@@ -456,7 +497,12 @@ export function ScreenToolbar({ leading, trailing, children, ...rest }: ScreenTo
       {...knobProps.panelPadding}
       {...knobProps.gap}
       {...rest}>
-      <XStack {...knobProps.gap} alignItems="center" flexWrap="wrap" flexShrink={1} minWidth={0}>
+      <XStack
+        {...knobProps.gap}
+        alignItems="center"
+        flexWrap="wrap"
+        flexShrink={1}
+        minWidth={0}>
         {leading}
       </XStack>
       {children}

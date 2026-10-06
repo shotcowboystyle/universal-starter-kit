@@ -39,7 +39,12 @@ describe('TextArea', () => {
     it('should handle text changes', async () => {
       const onChangeText = vi.fn();
       const result = renderWithProviders(
-        <TextArea label="Description" name="description" onChangeText={onChangeText} defaultValue="" />,
+        <TextArea
+          label="Description"
+          name="description"
+          onChangeText={onChangeText}
+          defaultValue=""
+        />,
       );
       const textarea = result.getTextArea();
       await act(async () => {
@@ -52,14 +57,25 @@ describe('TextArea', () => {
 
     it('should handle maxLength constraint', () => {
       const result = renderWithProviders(
-        <TextArea label="Description" name="description" defaultValue="" textAreaProps={{ maxLength: 10 }} />,
+        <TextArea
+          label="Description"
+          name="description"
+          defaultValue=""
+          textAreaProps={{ maxLength: 10 }}
+        />,
       );
       const textarea = result.getTextArea();
-      expect(textarea?.getAttribute('maxLength')).toBe('10');
+      expect(textarea?.getAttribute('maxlength')).toBe('10');
     });
 
     it('should render required label with asterisk', () => {
-      const result = renderWithProviders(<TextArea label="Required Field" name="description" required />);
+      const result = renderWithProviders(
+        <TextArea
+          label="Required Field"
+          name="description"
+          required
+        />,
+      );
       // Check that the label contains the text and asterisk
       const label = result.container.querySelector('label');
       expect(label?.textContent).toContain('Required Field');
@@ -83,32 +99,53 @@ describe('TextArea', () => {
 
     it('should handle custom id prop', () => {
       const customId = 'custom-textarea-id';
-      const result = renderWithProviders(<TextArea id={customId} label="Test" defaultValue="" />);
+      const result = renderWithProviders(
+        <TextArea
+          id={customId}
+          label="Test"
+          defaultValue=""
+        />,
+      );
       const textarea = result.getTextArea() as HTMLTextAreaElement;
       expect(textarea?.id).toBe(customId);
     });
 
     it('should handle multiline text', () => {
       const multilineText = 'Line 1\nLine 2\nLine 3';
-      const result = renderWithProviders(<TextArea label="Multiline Text" name="text" defaultValue={multilineText} />);
+      const result = renderWithProviders(
+        <TextArea
+          label="Multiline Text"
+          name="text"
+          defaultValue={multilineText}
+        />,
+      );
       const textarea = result.getTextArea();
       expect(textarea).toHaveValue(multilineText);
     });
 
     it('padX does not exceed padY when styles resolve', () => {
-      const result = renderWithProviders(<TextArea label="Notes" defaultValue="hello" />);
+      const result = renderWithProviders(
+        <TextArea
+          label="Notes"
+          defaultValue="hello"
+        />,
+      );
       const textarea = result.getTextArea() as HTMLTextAreaElement | null;
       expect(textarea).toBeTruthy();
       const cs = textarea ? getComputedStyle(textarea) : null;
-      const padX = cs ? parseFloat(cs.paddingLeft) || 0 : 0;
-      const padY = cs ? parseFloat(cs.paddingTop) || 0 : 0;
+      const padX = cs ? Number.parseFloat(cs.paddingLeft) || 0 : 0;
+      const padY = cs ? Number.parseFloat(cs.paddingTop) || 0 : 0;
       expect(padX).toBeLessThanOrEqual(padY);
     });
 
     it('should handle state transitions', async () => {
       const onChangeText = vi.fn();
       const result = renderWithProviders(
-        <TextArea name="description" defaultValue="Initial text" onChangeText={onChangeText} />,
+        <TextArea
+          name="description"
+          defaultValue="Initial text"
+          onChangeText={onChangeText}
+        />,
       );
       const textarea = result.getTextArea();
 
@@ -127,22 +164,23 @@ describe('TextArea', () => {
   });
 
   describe('with form context', () => {
-    const FormExample = ({ defaultValue = '', name = 'description', onSubmit = async (_value: any) => {} }) => {
-      return (
-        <Form
-          formOptions={{
-            defaultValues: {
-              [name]: defaultValue,
-            },
-          }}
-          onSubmit={async (value) => {
-            await onSubmit(value);
-          }}>
-          <TextArea label="Description" name={name} />
-          <Button action="submit">Submit</Button>
-        </Form>
-      );
-    };
+    const FormExample = ({ defaultValue = '', name = 'description', onSubmit = async (_value: any) => {} }) => (
+      <Form
+        formOptions={{
+          defaultValues: {
+            [name]: defaultValue,
+          },
+        }}
+        onSubmit={async (value) => {
+          await onSubmit(value);
+        }}>
+        <TextArea
+          label="Description"
+          name={name}
+        />
+        <Button action="submit">Submit</Button>
+      </Form>
+    );
 
     it('should render with form context and handle form submission', async () => {
       const onSubmit = vi.fn();
@@ -183,7 +221,12 @@ describe('TextArea', () => {
       const onChangeText = vi.fn();
       const result = renderWithProviders(
         <Form formOptions={{ defaultValues: { description: 'Initial text' } }}>
-          <TextArea label="Description" name="description" disabled onChangeText={onChangeText} />
+          <TextArea
+            label="Description"
+            name="description"
+            disabled
+            onChangeText={onChangeText}
+          />
         </Form>,
       );
       const textarea = result.getTextArea();
@@ -213,7 +256,13 @@ describe('TextArea', () => {
         formApi = form as unknown as typeof formApi;
         return (
           <Form form={form}>
-            <TextArea label="Notes" name="notes" showCount onChange={onChange} onChangeText={onChangeText} />
+            <TextArea
+              label="Notes"
+              name="notes"
+              showCount
+              onChange={onChange}
+              onChangeText={onChangeText}
+            />
           </Form>
         );
       };
@@ -233,10 +282,24 @@ describe('TextArea', () => {
 
     it('standalone controlled: a value arriving after mount updates the count, without onChange', async () => {
       const onChangeText = vi.fn();
-      const result = renderWithProviders(<TextArea label="Notes" value="" showCount onChangeText={onChangeText} />);
+      const result = renderWithProviders(
+        <TextArea
+          label="Notes"
+          value=""
+          showCount
+          onChangeText={onChangeText}
+        />,
+      );
       expect(result.findTextElement('0 characters')).toBeDefined();
 
-      result.rerender(<TextArea label="Notes" value="late value" showCount onChangeText={onChangeText} />);
+      result.rerender(
+        <TextArea
+          label="Notes"
+          value="late value"
+          showCount
+          onChangeText={onChangeText}
+        />,
+      );
       await waitFor(() => {
         expect((result.getTextArea() as HTMLTextAreaElement)?.value).toBe('late value');
         expect(result.findTextElement('10 characters')).toBeDefined();
@@ -247,7 +310,12 @@ describe('TextArea', () => {
 
   describe('ring anatomy and character count', () => {
     it('paints the ring class on the Box; the inner textarea is mp-input-area', () => {
-      const result = renderWithProviders(<TextArea label="Notes" defaultValue="hello" />);
+      const result = renderWithProviders(
+        <TextArea
+          label="Notes"
+          defaultValue="hello"
+        />,
+      );
       const textarea = result.getTextArea() as HTMLTextAreaElement;
       expect(textarea?.className).toMatch(/mp-input-area/);
       expect(textarea?.closest('.mp-composite-ring')).toBeTruthy();
@@ -256,7 +324,12 @@ describe('TextArea', () => {
 
     it('surfaces a live character count when maxLength is set, announced only while focused', async () => {
       const result = renderWithProviders(
-        <TextArea label="Notes" id="notes-count" maxLength={20} defaultValue="hello" />,
+        <TextArea
+          label="Notes"
+          id="notes-count"
+          maxLength={20}
+          defaultValue="hello"
+        />,
       );
       const textarea = result.getTextArea() as HTMLTextAreaElement;
       const count = result.container.querySelector('#notes-count-count');
@@ -281,7 +354,12 @@ describe('TextArea', () => {
 
     it('does not render a count when showCount is explicitly false', () => {
       const result = renderWithProviders(
-        <TextArea label="Notes" maxLength={20} showCount={false} defaultValue="hello" />,
+        <TextArea
+          label="Notes"
+          maxLength={20}
+          showCount={false}
+          defaultValue="hello"
+        />,
       );
       expect(result.container.textContent).not.toContain('5/20');
     });
@@ -301,7 +379,10 @@ describe('TextArea', () => {
         });
         return (
           <Form form={form}>
-            <TextArea label="Description" name="description" />
+            <TextArea
+              label="Description"
+              name="description"
+            />
             <Button action="submit">Submit</Button>
           </Form>
         );
@@ -344,7 +425,12 @@ describe('TextArea', () => {
       const onChange = vi.fn();
       const onChangeText = vi.fn();
       const result = renderWithProviders(
-        <TextArea label="Notes" defaultValue="" onChange={onChange} onChangeText={onChangeText} />,
+        <TextArea
+          label="Notes"
+          defaultValue=""
+          onChange={onChange}
+          onChangeText={onChangeText}
+        />,
       );
       const textarea = result.getTextArea();
       await act(async () => {
@@ -354,8 +440,8 @@ describe('TextArea', () => {
       });
       expect(onChange).toHaveBeenCalledWith('hello');
       expect(onChangeText).toHaveBeenCalledWith('hello');
-      expect(onChange).toHaveBeenCalledTimes(1);
-      expect(onChangeText).toHaveBeenCalledTimes(1);
+      expect(onChange).toHaveBeenCalledOnce();
+      expect(onChangeText).toHaveBeenCalledOnce();
     });
   });
 
@@ -363,7 +449,10 @@ describe('TextArea', () => {
     it('squares at none and rides the token through large; full caps at padding, never a pill', () => {
       const none = renderWithProviders(
         <Preset overrides={{ borderRadius: 'none' }}>
-          <TextArea label="Notes" defaultValue="x" />
+          <TextArea
+            label="Notes"
+            defaultValue="x"
+          />
         </Preset>,
       );
       expect(boxRadiusClasses(none.container)).toEqual(['_btlr-t-radius-0']);
@@ -371,7 +460,10 @@ describe('TextArea', () => {
 
       const small = renderWithProviders(
         <Preset overrides={{ borderRadius: 'small' }}>
-          <TextArea label="Notes" defaultValue="x" />
+          <TextArea
+            label="Notes"
+            defaultValue="x"
+          />
         </Preset>,
       );
       expect(boxRadiusClasses(small.container)).toEqual(['_btlr-t-radius-2']);
@@ -379,7 +471,10 @@ describe('TextArea', () => {
 
       const medium = renderWithProviders(
         <Preset overrides={{ borderRadius: 'medium' }}>
-          <TextArea label="Notes" defaultValue="x" />
+          <TextArea
+            label="Notes"
+            defaultValue="x"
+          />
         </Preset>,
       );
       expect(boxRadiusClasses(medium.container)).toEqual(['_btlr-t-radius-4']);
@@ -387,7 +482,10 @@ describe('TextArea', () => {
 
       const large = renderWithProviders(
         <Preset overrides={{ borderRadius: 'large' }}>
-          <TextArea label="Notes" defaultValue="x" />
+          <TextArea
+            label="Notes"
+            defaultValue="x"
+          />
         </Preset>,
       );
       expect(boxRadiusClasses(large.container)).toEqual(['_btlr-t-radius-6']);
@@ -395,7 +493,10 @@ describe('TextArea', () => {
 
       const full = renderWithProviders(
         <Preset overrides={{ borderRadius: 'full', space: 'medium' }}>
-          <TextArea label="Notes" defaultValue="x" />
+          <TextArea
+            label="Notes"
+            defaultValue="x"
+          />
         </Preset>,
       );
       const fullClasses = boxRadiusClasses(full.container);
@@ -406,7 +507,10 @@ describe('TextArea', () => {
     it('declares the cap on the painted box with the knob stops it resolved', () => {
       const result = renderWithProviders(
         <Preset overrides={{ borderRadius: 'full', space: 'small' }}>
-          <TextArea label="Notes" defaultValue="x" />
+          <TextArea
+            label="Notes"
+            defaultValue="x"
+          />
         </Preset>,
       );
       const box = result.container.querySelector('textarea')?.closest('.mp-composite-ring');
@@ -418,7 +522,10 @@ describe('TextArea', () => {
     it('caps large under space=small at the padding px', () => {
       const result = renderWithProviders(
         <Preset overrides={{ borderRadius: 'large', space: 'small' }}>
-          <TextArea label="Notes" defaultValue="x" />
+          <TextArea
+            label="Notes"
+            defaultValue="x"
+          />
         </Preset>,
       );
       expect(boxRadiusClasses(result.container)).toEqual(['_btlr-13px']);
@@ -428,7 +535,10 @@ describe('TextArea', () => {
       for (const scheme of ['light', 'dark'] as const) {
         const ui = (
           <Preset overrides={{ borderRadius: 'full', space: 'medium' }}>
-            <TextArea label="Notes" defaultValue="x" />
+            <TextArea
+              label="Notes"
+              defaultValue="x"
+            />
           </Preset>
         );
         const result = renderWithProviders(scheme === 'dark' ? <Theme name="dark">{ui}</Theme> : ui);
@@ -442,7 +552,13 @@ describe('TextArea', () => {
 
   describe('skeleton mirrors anatomy', () => {
     it('keeps the real label and skeletons only the control', () => {
-      const result = renderWithProviders(<TextArea label="Description" helperText="Loading notes" skeleton />);
+      const result = renderWithProviders(
+        <TextArea
+          label="Description"
+          helperText="Loading notes"
+          skeleton
+        />,
+      );
       expect(result.findTextElement('Description')).toBeDefined();
       expect(result.container.querySelector('textarea')).toBeNull();
       expect(result.container.querySelector('label')?.textContent).toContain('Description');
@@ -460,7 +576,7 @@ describe('TextArea', () => {
         return String(fromStyle);
       }
       for (const cls of String(html.className ?? '').split(/\s+/)) {
-        const match = cls.match(/(?:^|_)(?:fw|fow|fontWeight)-?(\d+)/i);
+        const match = /(?:^|_)(?:fw|fow|fontWeight)-?(\d+)/i.exec(cls);
         if (match) {
           return match[1];
         }
@@ -484,7 +600,7 @@ describe('TextArea', () => {
       const cls = String(html.className ?? '');
       // Tamagui atomics (`_col-color11`, `_col-color`) — happy-dom often
       // leaves getComputedStyle().color empty for theme tokens.
-      const match = cls.match(/_col-(color\d*)\b/);
+      const match = /_col-(color\d*)\b/.exec(cls);
       if (match) {
         return match[1];
       }
@@ -495,7 +611,11 @@ describe('TextArea', () => {
     it('bold: multiline value rides 700 with its helper (RM-TXT-6)', () => {
       const result = renderWithProviders(
         <Preset overrides={{ fontWeight: 'bold' }}>
-          <TextArea label="Notes" helperText="Be specific" defaultValue="hello" />
+          <TextArea
+            label="Notes"
+            helperText="Be specific"
+            defaultValue="hello"
+          />
         </Preset>,
       );
       const textarea = result.getTextArea() as HTMLTextAreaElement;
@@ -509,12 +629,20 @@ describe('TextArea', () => {
     it('T-VALUE ignores textAccent: value color at low equals high (no inversion)', () => {
       const low = renderWithProviders(
         <Preset overrides={{ textAccent: 'low' }}>
-          <TextArea label="Notes" helperText="Be specific" defaultValue="hello" />
+          <TextArea
+            label="Notes"
+            helperText="Be specific"
+            defaultValue="hello"
+          />
         </Preset>,
       );
       const high = renderWithProviders(
         <Preset overrides={{ textAccent: 'high' }}>
-          <TextArea label="Notes" helperText="Be specific" defaultValue="hello" />
+          <TextArea
+            label="Notes"
+            helperText="Be specific"
+            defaultValue="hello"
+          />
         </Preset>,
       );
       const lowValue = colorToken(low.getTextArea());

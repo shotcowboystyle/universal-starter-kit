@@ -1,13 +1,14 @@
 'use client';
 
-import { Sidebar, type SidebarItem, Text, XStack, YStack } from '@repo/ui';
+import { Sidebar, Text, XStack, YStack } from '@repo/ui';
+import type { SidebarItem } from '@repo/ui';
 import { HomeIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
-import { Icons } from '@/components/layout/Icons';
-import { useBoards } from '@/hooks/useBoards';
+import { Icons } from '@/components/layout/icons';
+import { useBoards } from '@/hooks/use-boards';
 import { usePathname, useRouter } from '@/i18n/navigation';
-import type { Board } from '@/types/dbInterface';
+import type { Board } from '@/types/db-interface';
 
 export default function AppSidebar({ onNavigate }: { onNavigate?: () => void }) {
   const t = useTranslations('sidebar');
@@ -27,12 +28,19 @@ export default function AppSidebar({ onNavigate }: { onNavigate?: () => void }) 
           label: board.title,
           value: board._id,
           active: pathname.endsWith(`/boards/${board._id}`),
-          onPress: () => go(`/boards/${board._id}`),
+          onPress: () => {
+            go(`/boards/${board._id}`);
+          },
         }));
 
   return (
-    <YStack width={250} height="100%">
-      <XStack alignItems="center" gap="$2" padding="$3">
+    <YStack
+      width={250}
+      height="100%">
+      <XStack
+        alignItems="center"
+        gap="$2"
+        padding="$3">
         <YStack
           width={32}
           height={32}
@@ -41,9 +49,15 @@ export default function AppSidebar({ onNavigate }: { onNavigate?: () => void }) 
           borderRadius="$3"
           borderWidth={1}
           borderColor="$borderColor">
-          <Icons.projectLogo size={16} aria-hidden />
+          <Icons.projectLogo
+            size={16}
+            aria-hidden
+          />
         </YStack>
-        <Text fontWeight="600" numberOfLines={1} flex={1}>
+        <Text
+          fontWeight="600"
+          numberOfLines={1}
+          flex={1}>
           {t('title')}
         </Text>
       </XStack>
@@ -55,9 +69,16 @@ export default function AppSidebar({ onNavigate }: { onNavigate?: () => void }) 
               {
                 label: t('overview'),
                 value: 'overview',
-                icon: <HomeIcon size={16} aria-hidden />,
+                icon: (
+                  <HomeIcon
+                    size={16}
+                    aria-hidden
+                  />
+                ),
                 active: pathname.endsWith('/boards'),
-                onPress: () => go('/boards'),
+                onPress: () => {
+                  go('/boards');
+                },
               },
             ],
           },

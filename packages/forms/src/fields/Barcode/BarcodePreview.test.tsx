@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { BarcodePreview, barcodePreviewSymbology } from './BarcodePreview';
 import { countModules, encodeCode128B } from './code128';
 import { QR_QUIET_ZONE_MODULES, encodeQr } from './qr';
-import { resolveHtml5FormatIds, resolveNativeBarcodeTypes } from './scannerTypes';
+import { resolveHtml5FormatIds, resolveNativeBarcodeTypes } from './scanner-types';
 
 /** Rebuild the module string ("1" = bar) from the encoder's runs. */
 function toModuleString(value: string): string | null {
@@ -26,7 +26,7 @@ describe('encodeCode128B', () => {
     const modules = toModuleString('Wikipedia');
     expect(modules).not.toBeNull();
     // 12 symbols: start + 9 data + check + stop → 11*11 + 13 modules
-    expect(modules!.length).toBe(11 * 11 + 13);
+    expect(modules!).toHaveLength(11 * 11 + 13);
     // Check symbol sits at index 10; BARS[88] = 11110010010
     expect(modules!.slice(110, 121)).toBe('11110010010');
   });
@@ -109,7 +109,7 @@ describe('BarcodePreview — qr format', () => {
   /** Nearest Tamagui theme scope above an element (`t_light` / `t_dark`). */
   function themeScope(el: Element | null): string | undefined {
     for (let node = el?.parentElement; node; node = node.parentElement) {
-      const scope = String(node.className).match(/\bt_(light|dark)\b/);
+      const scope = /\bt_(light|dark)\b/.exec(String(node.className));
       if (scope) {
         return scope[1];
       }
@@ -121,8 +121,16 @@ describe('BarcodePreview — qr format', () => {
     for (const scheme of ['light', 'dark'] as const) {
       const result = renderWithProviders(
         <Theme name={scheme}>
-          <BarcodePreview value="SHC-42" format="qr" height={120} />
-          <BarcodePreview value="SKU-001234" format="code128" height={36} />
+          <BarcodePreview
+            value="SHC-42"
+            format="qr"
+            height={120}
+          />
+          <BarcodePreview
+            value="SKU-001234"
+            format="code128"
+            height={36}
+          />
         </Theme>,
       );
       const square = result.container.querySelector('[data-testid="barcode-preview-qr"]') as HTMLElement | null;
@@ -140,7 +148,13 @@ describe('BarcodePreview — qr format', () => {
   });
 
   it('draws the QR matrix canvas-free (labeled image, real module rows)', () => {
-    const result = renderWithProviders(<BarcodePreview value="SKU-001234" format="qr" height={formHeight} />);
+    const result = renderWithProviders(
+      <BarcodePreview
+        value="SKU-001234"
+        format="qr"
+        height={formHeight}
+      />,
+    );
     const preview = result.container.querySelector('[data-testid="barcode-preview"]');
     expect(preview).not.toBeNull();
     expect(preview?.getAttribute('aria-label')).toContain('SKU-001234');
@@ -148,33 +162,61 @@ describe('BarcodePreview — qr format', () => {
     const qrMatrix = result.container.querySelector('[data-testid="barcode-preview-qr"]');
     expect(qrMatrix).not.toBeNull();
     // One row stack per module row of the real symbol.
-    expect(qrMatrix!.children.length).toBe(encodeQr('SKU-001234')!.size);
+    expect(qrMatrix!.children).toHaveLength(encodeQr('SKU-001234')!.size);
   });
 
   it("draws QR for the Frappe fieldtype's qrcode token via the shared alias table", () => {
-    const result = renderWithProviders(<BarcodePreview value="SKU-001234" format="qrcode" height={formHeight} />);
+    const result = renderWithProviders(
+      <BarcodePreview
+        value="SKU-001234"
+        format="qrcode"
+        height={formHeight}
+      />,
+    );
     expect(result.container.querySelector('[data-testid="barcode-preview-qr"]')).not.toBeNull();
   });
 
   it('draws values the 1-D strip cannot encode (the closed asymmetry)', () => {
-    const result = renderWithProviders(<BarcodePreview value="héllo" format="qr" height={formHeight} />);
+    const result = renderWithProviders(
+      <BarcodePreview
+        value="héllo"
+        format="qr"
+        height={formHeight}
+      />,
+    );
     expect(result.container.querySelector('[data-testid="barcode-preview-qr"]')).not.toBeNull();
   });
 
   it('renders nothing for an empty value (host owns the empty state)', () => {
-    const result = renderWithProviders(<BarcodePreview value="" format="qr" />);
+    const result = renderWithProviders(
+      <BarcodePreview
+        value=""
+        format="qr"
+      />,
+    );
     expect(result.container.querySelector('[data-testid="barcode-preview"]')).toBeNull();
   });
 
   it('falls back to honest mono text past version 10 capacity', () => {
     const long = 'x'.repeat(214);
-    const result = renderWithProviders(<BarcodePreview value={long} format="qr" height={formHeight} />);
+    const result = renderWithProviders(
+      <BarcodePreview
+        value={long}
+        format="qr"
+        height={formHeight}
+      />,
+    );
     expect(result.container.querySelector('[data-testid="barcode-preview-qr"]')).toBeNull();
     expect(result.container.textContent).toContain(long);
   });
 
   it('keeps the strip for non-qr formats (unchanged behavior)', () => {
-    const result = renderWithProviders(<BarcodePreview value="SKU-001234" format="code128" />);
+    const result = renderWithProviders(
+      <BarcodePreview
+        value="SKU-001234"
+        format="code128"
+      />,
+    );
     expect(result.container.querySelector('[data-testid="barcode-preview-qr"]')).toBeNull();
     expect(result.container.querySelector('[data-testid="barcode-preview"]')).not.toBeNull();
   });
@@ -214,7 +256,14 @@ describe('BarcodePreview — qr geometry is whole-pixel or nothing', () => {
     // modules and the 120px bound allows 4, so 3 wins: 29 × 3 = 87.
     const value = 'SHC-42';
     expect(totalModules(value)).toBe(29);
-    const square = qrSquare(<BarcodePreview value={value} format="qr" height={120} moduleWidth={3} />);
+    const square = qrSquare(
+      <BarcodePreview
+        value={value}
+        format="qr"
+        height={120}
+        moduleWidth={3}
+      />,
+    );
     expect(square).not.toBeNull();
     expect(edgeOf(square!)).toBe(87);
     expect(px(square!, 'h')).toBe(87);
@@ -227,7 +276,13 @@ describe('BarcodePreview — qr geometry is whole-pixel or nothing', () => {
     const value = 'SHC-COMPOSE01-0417';
     expect(totalModules(value)).toBe(33);
     for (const height of [36, 44, 56]) {
-      const square = qrSquare(<BarcodePreview value={value} format="qr" height={height} />);
+      const square = qrSquare(
+        <BarcodePreview
+          value={value}
+          format="qr"
+          height={height}
+        />,
+      );
       expect(edgeOf(square!)).toBe(33);
       expect(quietOf(square!)).toBe(4);
     }
@@ -235,7 +290,14 @@ describe('BarcodePreview — qr geometry is whole-pixel or nothing', () => {
 
   it('snaps the module DOWN to a whole pixel rather than draw a fractional one', () => {
     // 33 modules under a 96px bound would be 2.909px per module. Snap to 2.
-    const square = qrSquare(<BarcodePreview value="SHC-COMPOSE01-0417" format="qr" height={96} moduleWidth={9} />);
+    const square = qrSquare(
+      <BarcodePreview
+        value="SHC-COMPOSE01-0417"
+        format="qr"
+        height={96}
+        moduleWidth={9}
+      />,
+    );
     expect(edgeOf(square!)).toBe(66);
     expect(quietOf(square!)).toBe(8);
   });
@@ -245,7 +307,12 @@ describe('BarcodePreview — qr geometry is whole-pixel or nothing', () => {
       for (const height of [18, 24, 29, 33, 36, 37, 44, 66, 96, 120]) {
         for (const moduleWidth of [1, 2, 3]) {
           const square = qrSquare(
-            <BarcodePreview value={value} format="qr" height={height} moduleWidth={moduleWidth} />,
+            <BarcodePreview
+              value={value}
+              format="qr"
+              height={height}
+              moduleWidth={moduleWidth}
+            />,
           );
           if (!square) {
             continue;
@@ -266,7 +333,13 @@ describe('BarcodePreview — qr geometry is whole-pixel or nothing', () => {
   it('falls back to honest text under one whole pixel per module', () => {
     // compact (24) cannot hold 33 modules at a whole pixel each.
     const value = 'SHC-COMPOSE01-0417';
-    const result = renderWithProviders(<BarcodePreview value={value} format="qr" height={24} />);
+    const result = renderWithProviders(
+      <BarcodePreview
+        value={value}
+        format="qr"
+        height={24}
+      />,
+    );
     expect(result.container.querySelector('[data-testid="barcode-preview-qr"]')).toBeNull();
     expect(result.container.textContent).toContain(value);
   });
@@ -276,20 +349,38 @@ describe('BarcodePreview — qr geometry is whole-pixel or nothing', () => {
     // one whole pixel each. This is the case that silently shipped unreadable.
     const value = 'SHC-COMPOSE01-BACKUP-2026-08-28';
     expect(totalModules(value)).toBe(37);
-    const result = renderWithProviders(<BarcodePreview value={value} format="qr" height={36} />);
+    const result = renderWithProviders(
+      <BarcodePreview
+        value={value}
+        format="qr"
+        height={36}
+      />,
+    );
     expect(result.container.querySelector('[data-testid="barcode-preview-qr"]')).toBeNull();
     expect(result.container.textContent).toContain(value);
   });
 
   it('draws nothing at all when the host already shows the value (textFallback false)', () => {
     const value = 'SHC-COMPOSE01-0417';
-    const result = renderWithProviders(<BarcodePreview value={value} format="qr" height={24} textFallback={false} />);
+    const result = renderWithProviders(
+      <BarcodePreview
+        value={value}
+        format="qr"
+        height={24}
+        textFallback={false}
+      />,
+    );
     expect(result.container.querySelector('[data-testid="barcode-preview-qr"]')).toBeNull();
     expect(result.container.textContent).not.toContain(value);
   });
 
   it("leaves the 1-D strip's geometry untouched", () => {
-    const result = renderWithProviders(<BarcodePreview value="SKU-001234" height={18} />);
+    const result = renderWithProviders(
+      <BarcodePreview
+        value="SKU-001234"
+        height={18}
+      />,
+    );
     expect(result.container.querySelector('[data-testid="barcode-preview"]')).not.toBeNull();
     expect(result.container.querySelector('[data-testid="barcode-preview-qr"]')).toBeNull();
   });

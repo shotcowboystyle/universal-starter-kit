@@ -10,10 +10,18 @@ export default function NotFound() {
   const router = useRouter();
 
   return (
-    <YStack minHeight="100vh" alignItems="center" justifyContent="center" gap="$4">
+    <YStack
+      minHeight="100vh"
+      alignItems="center"
+      justifyContent="center"
+      gap="$4">
       <H2 size="$10">404</H2>
       <Paragraph color="$color10">{t('notFound')}</Paragraph>
-      <Button accent onPress={() => router.push('/')}>
+      <Button
+        accent
+        onPress={() => {
+          router.push('/');
+        }}>
         {t('goHome')}
       </Button>
     </YStack>

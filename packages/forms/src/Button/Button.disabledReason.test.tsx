@@ -9,7 +9,7 @@ import { renderWithProviders } from '@repo/test-utils';
 import { fireEvent, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { __resetDevWarnSeen } from '../shared/devWarn';
+import { __resetDevWarnSeen } from '../shared/dev-warn';
 
 import { Button } from './index';
 
@@ -28,7 +28,9 @@ describe('Button disabledReason', () => {
 
   it('renders the reason as visible text wired via aria-describedby', () => {
     renderWithProviders(
-      <Button disabled disabledReason="Needs owner approval">
+      <Button
+        disabled
+        disabledReason="Needs owner approval">
         Publish
       </Button>,
     );
@@ -44,7 +46,9 @@ describe('Button disabledReason', () => {
 
   it('switches to aria-disabled and stays keyboard focusable (no dead end)', () => {
     renderWithProviders(
-      <Button disabled disabledReason="Needs owner approval">
+      <Button
+        disabled
+        disabledReason="Needs owner approval">
         Publish
       </Button>,
     );
@@ -57,7 +61,10 @@ describe('Button disabledReason', () => {
   it('swallows presses while explained-disabled', () => {
     const onPress = vi.fn();
     renderWithProviders(
-      <Button disabled disabledReason="Needs owner approval" onPress={onPress}>
+      <Button
+        disabled
+        disabledReason="Needs owner approval"
+        onPress={onPress}>
         Publish
       </Button>,
     );
@@ -68,19 +75,23 @@ describe('Button disabledReason', () => {
   it('does not render the reason (and presses work) when enabled', () => {
     const onPress = vi.fn();
     renderWithProviders(
-      <Button disabledReason="Needs owner approval" onPress={onPress}>
+      <Button
+        disabledReason="Needs owner approval"
+        onPress={onPress}>
         Publish
       </Button>,
     );
     expect(screen.queryByText('Needs owner approval')).toBeNull();
     expect(document.querySelector('[data-mp-disabled-reason-wrapper]')).toBeNull();
     fireEvent.click(screen.getByRole('button'));
-    expect(onPress).toHaveBeenCalledTimes(1);
+    expect(onPress).toHaveBeenCalledOnce();
   });
 
   it('silences bare-disabled when the reason is present', () => {
     renderWithProviders(
-      <Button disabled disabledReason="Needs owner approval">
+      <Button
+        disabled
+        disabledReason="Needs owner approval">
         Publish
       </Button>,
     );
@@ -89,7 +100,9 @@ describe('Button disabledReason', () => {
 
   it('does not attach a hover-only title to the disabled control', () => {
     renderWithProviders(
-      <Button disabled disabledReason="Needs owner approval">
+      <Button
+        disabled
+        disabledReason="Needs owner approval">
         Publish
       </Button>,
     );

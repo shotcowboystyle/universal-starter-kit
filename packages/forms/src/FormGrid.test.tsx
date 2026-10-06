@@ -4,9 +4,9 @@ import { act } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { FieldGroup } from './FieldGroup';
+import { formFieldGap, formReadableMaxWidth, formSectionGap } from './form-spacing';
 import { FORM_GRID_COLLAPSE_WIDTH, FormGrid } from './FormGrid';
 import { FormSection, FormSectionStack } from './FormSection';
-import { formFieldGap, formReadableMaxWidth, formSectionGap } from './formSpacing';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -87,7 +87,9 @@ describe('FormGrid', () => {
   it('caps columns at maxColumns', () => {
     stubContainerWidth(720);
     const result = renderWithProviders(
-      <FormGrid columns={2} maxColumns={1}>
+      <FormGrid
+        columns={2}
+        maxColumns={1}>
         <div>a</div>
         <div>b</div>
       </FormGrid>,
@@ -184,7 +186,9 @@ describe('FieldGroup', () => {
   it('uses FormGrid when columns=2', () => {
     stubContainerWidth(720);
     const result = renderWithProviders(
-      <FieldGroup legend="Name" columns={2}>
+      <FieldGroup
+        legend="Name"
+        columns={2}>
         <div>first</div>
         <div>last</div>
       </FieldGroup>,
@@ -220,7 +224,9 @@ describe('FormSection', () => {
 
   it('allows fluid max width', () => {
     const result = renderWithProviders(
-      <FormSection label="Wide" maxWidth="fluid">
+      <FormSection
+        label="Wide"
+        maxWidth="fluid">
         <div>field</div>
       </FormSection>,
     );
@@ -239,7 +245,7 @@ describe('FormSection', () => {
       </FormSectionStack>,
     );
     expect(result.container.querySelector('[data-mpo-form-section-stack]')).toBeTruthy();
-    expect(result.container.querySelectorAll('[data-mpo-form-section]').length).toBe(2);
+    expect(result.container.querySelectorAll('[data-mpo-form-section]')).toHaveLength(2);
   });
 
   it('renders semantic fieldset + legend on web by default', () => {
@@ -292,7 +298,9 @@ describe('FormSection semantic gaps', () => {
   it('explicit gap props eject from the knob defaults', () => {
     const result = renderWithProviders(
       <FormSectionStack gap="$10">
-        <FormSection label="A" gap="$1">
+        <FormSection
+          label="A"
+          gap="$1">
           <div>1</div>
         </FormSection>
       </FormSectionStack>,

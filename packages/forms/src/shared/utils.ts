@@ -1,10 +1,11 @@
 import type { BorderRadius, ElevationStateProps, KnobProps, KnobRecipe, ResolvedKnobs } from '@repo/theme';
 import { borderRadiusMap, isTouchSurface, resolveRadiusClass, sizeRecipeForToken, useResolvedKnobs } from '@repo/theme';
-import { type ReactNode, useId, useMemo } from 'react';
+import { useId, useMemo } from 'react';
+import type { ReactNode } from 'react';
 import type { SizeTokens } from 'tamagui';
 
 import { useFormContext, useFormValidate } from '../Form';
-import { remapValidatorsForTiming, resolveEffectiveValidateOn } from '../Form/validateOn';
+import { remapValidatorsForTiming, resolveEffectiveValidateOn } from '../Form/validate-on';
 import type { AnyFormApi, SimpleFieldApi } from '../types';
 
 /**
@@ -86,7 +87,7 @@ export function getElevationWrapperProps(
   knobProps: KnobProps,
   elevationRecipe: KnobRecipe<ElevationStateProps>,
 ): Record<string, any> {
-  const elevation = knobProps.elevation;
+  const { elevation } = knobProps;
   if (
     !elevation &&
     !elevationRecipe.hoverKnobProps?.elevation &&
@@ -148,14 +149,14 @@ export function useResolvedValidators(
     if (required) {
       const requiredValidator = ({ value }: { value: unknown }) =>
         isEmpty(value) ? `${typeof label === 'string' ? label : name || 'Field'} is required` : undefined;
-      if (!validators) {
-        resolved = { onSubmit: requiredValidator };
-      } else {
+      if (validators) {
         const existingOnSubmit = validators.onSubmit as ((...args: any[]) => any) | undefined;
         const composedOnSubmit = existingOnSubmit
           ? ({ value }: { value: unknown }) => existingOnSubmit({ value }) ?? requiredValidator({ value })
           : requiredValidator;
         resolved = { ...validators, onSubmit: composedOnSubmit };
+      } else {
+        resolved = { onSubmit: requiredValidator };
       }
     }
     return remapValidatorsForTiming(resolved, effective);

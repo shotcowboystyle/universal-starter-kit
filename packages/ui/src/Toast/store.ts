@@ -27,9 +27,9 @@
 export type ToastIntent = 'accent' | 'success' | 'warning' | 'error';
 
 /** House auto-dismiss for accent/success toasts (one-liner confirmations). */
-export const TOAST_DEFAULT_MS = 5_000;
+export const TOAST_DEFAULT_MS = 5000;
 /** Warnings hold a little longer than confirmations. */
-export const TOAST_WARNING_MS = 8_000;
+export const TOAST_WARNING_MS = 8000;
 /** Error ceiling: persists longer, but still expires unless `sticky`. */
 export const TOAST_ERROR_MS = 12_000;
 /** Minimum auto-dismiss when a toast carries an action (Polaris). */

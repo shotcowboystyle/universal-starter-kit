@@ -40,7 +40,7 @@ describe('Code Component', () => {
       </Preset>,
     );
     const nodes = Array.from(container.querySelectorAll('code'));
-    expect(nodes.length).toBe(2);
+    expect(nodes).toHaveLength(2);
     expect(container.textContent).toContain('const x = 10');
     expect(container.textContent).toContain('inline');
     // Tamagui compiles letterSpacing/fontFamily to atomic classes; happy-dom

@@ -61,10 +61,18 @@ export const Main: Story = {
       });
 
       return (
-        <Form form={form} maxWidth={400}>
+        <Form
+          form={form}
+          maxWidth={400}>
           <YStack gap="$4">
-            <TimePicker label="Start Time" name="startTime" />
-            <TimePicker label="End Time" name="endTime" />
+            <TimePicker
+              label="Start Time"
+              name="startTime"
+            />
+            <TimePicker
+              label="End Time"
+              name="endTime"
+            />
             <Button action="submit">Save Schedule</Button>
           </YStack>
         </Form>
@@ -116,13 +124,30 @@ export const WithError: Story = {
 
 export const Sizes: Story = {
   render: () => (
-    <YStack gap="$4" maxWidth={300}>
+    <YStack
+      gap="$4"
+      maxWidth={300}>
       <Text fontWeight="bold">Size $2</Text>
-      <TimePicker label="Small" value="09:30" size="$2" onChange={action('onChange')} />
+      <TimePicker
+        label="Small"
+        value="09:30"
+        size="$2"
+        onChange={action('onChange')}
+      />
       <Text fontWeight="bold">Size $3</Text>
-      <TimePicker label="Medium" value="09:30" size="$3" onChange={action('onChange')} />
+      <TimePicker
+        label="Medium"
+        value="09:30"
+        size="$3"
+        onChange={action('onChange')}
+      />
       <Text fontWeight="bold">Size $4</Text>
-      <TimePicker label="Large" value="09:30" size="$4" onChange={action('onChange')} />
+      <TimePicker
+        label="Large"
+        value="09:30"
+        size="$4"
+        onChange={action('onChange')}
+      />
     </YStack>
   ),
 };
@@ -171,7 +196,9 @@ export const Interactive: Story = {
     const InteractiveExample = () => {
       const [value, setValue] = useState('09:30');
       return (
-        <YStack gap="$4" maxWidth={300}>
+        <YStack
+          gap="$4"
+          maxWidth={300}>
           <TimePicker
             label="Start Time"
             helperText={`Selected: ${value || 'none'}`}
@@ -190,7 +217,11 @@ export const Interactive: Story = {
               action('onChange')(v);
             }}
           />
-          <TimePicker label="Disabled" value="17:00" disabled />
+          <TimePicker
+            label="Disabled"
+            value="17:00"
+            disabled
+          />
         </YStack>
       );
     };

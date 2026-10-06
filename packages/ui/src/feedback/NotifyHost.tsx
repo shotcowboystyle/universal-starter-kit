@@ -7,15 +7,19 @@
 
 import { zIndex } from '@repo/forms';
 import { useResolvedKnobs } from '@repo/theme';
-import { useMemo, useSyncExternalStore, type ReactNode } from 'react';
+import { useMemo, useSyncExternalStore } from 'react';
+import type { ReactNode } from 'react';
 import { SizableText, YStack } from 'tamagui';
 
-import { Alert, type AlertIntent } from '../Alert';
+import { Alert } from '../Alert';
+import type { AlertIntent } from '../Alert';
 import { useTranslation } from '../shared/i18n';
-import { ToastViewport, type ToastViewportProps } from '../Toast';
+import { ToastViewport } from '../Toast';
+import type { ToastViewportProps } from '../Toast';
 
 import { ConfirmDialog } from './ConfirmDialog';
-import { dismissFeedback, getFeedback, subscribeFeedback, type FeedbackEntry } from './store';
+import { dismissFeedback, getFeedback, subscribeFeedback } from './store';
+import type { FeedbackEntry } from './store';
 
 export interface NotifyHostProps {
   /** Mount ToastViewport (default true). Pass false if the app already mounts one. */
@@ -51,7 +55,12 @@ function NotifyActionLabel({ label, onPress }: { label: string; onPress: () => v
 }
 
 function notifyAction(entry: FeedbackEntry) {
-  return entry.action ? <NotifyActionLabel label={entry.action.label} onPress={entry.action.onPress} /> : undefined;
+  return entry.action ? (
+    <NotifyActionLabel
+      label={entry.action.label}
+      onPress={entry.action.onPress}
+    />
+  ) : undefined;
 }
 
 function BannerStack({ entries }: { entries: FeedbackEntry[] }) {
@@ -141,7 +150,7 @@ export function NotifyRegion({
   const entries = useMemo(
     () =>
       all.filter(
-        (e) => e.surface === 'alert' && e.scope === scope && (region != null ? e.region === region : e.region == null),
+        (e) => e.surface === 'alert' && e.scope === scope && (region == null ? e.region == null : e.region === region),
       ),
     [all, scope, region],
   );
@@ -149,13 +158,16 @@ export function NotifyRegion({
     return null;
   }
   return (
-    <YStack {...knobProps.gap} width="100%" data-density={knobProps.density}>
+    <YStack
+      {...knobProps.gap}
+      width="100%"
+      data-density={knobProps.density}>
       {entries.map((entry) => (
         <Alert
           key={entry.id}
           intent={entry.severity as AlertIntent}
           title={entry.title}
-          {...(compact != null ? { compact } : {})}
+          {...(compact == null ? {} : { compact })}
           dismissible={entry.dismissible}
           onDismiss={() => {
             dismissFeedback(entry.id);
@@ -182,7 +194,7 @@ export function NotifyHost({ toastViewport = true, children }: NotifyHostProps) 
       <BannerStack entries={banners} />
       {children}
       <FeedbackDialog entry={dialog} />
-      {viewportProps != null ? <ToastViewport {...viewportProps} /> : null}
+      {viewportProps == null ? null : <ToastViewport {...viewportProps} />}
     </>
   );
 }

@@ -17,11 +17,12 @@ import {
 } from '@repo/theme';
 import type React from 'react';
 import { useCallback, useState } from 'react';
-import { Text, XStack, isWeb, type XStackProps } from 'tamagui';
+import { Text, XStack, isWeb } from 'tamagui';
+import type { XStackProps } from 'tamagui';
 
-import { componentColors } from './componentColors';
+import { componentColors } from './component-colors';
 import { DotIndicator } from './DotIndicator';
-import { useDirection } from './hooks/useDirection';
+import { useDirection } from './hooks/use-direction';
 import { useTranslation } from './shared/i18n';
 import { bidiIsolate, withInterp } from './shared/t';
 
@@ -179,7 +180,7 @@ export function Pagination({
 
   // Controlled via `page` (1-based) or `activeIndex` (0-based); uncontrolled otherwise.
   const [uncontrolledPage, setUncontrolledPage] = useState(defaultPage ?? 1);
-  const controlledIndex = page != null ? page - 1 : activeIndex;
+  const controlledIndex = page == null ? activeIndex : page - 1;
   const index = controlledIndex ?? uncontrolledPage - 1;
   const currentPage = index + 1;
 
@@ -334,7 +335,9 @@ export function Pagination({
           {bidiIsolate(withInterp(t('{{page}} of {{total}}'), { page: currentPage, total }))}
         </Text>
       ) : isNumbered ? (
-        <XStack alignItems="center" {...knobProps.gap}>
+        <XStack
+          alignItems="center"
+          {...knobProps.gap}>
           {items.map((item) => {
             if (typeof item !== 'number') {
               return (
@@ -427,7 +430,11 @@ export function Pagination({
       )}
 
       {summary && (
-        <Text {...knobProps.body} color={knobProps.textAccentColor} aria-live="polite" userSelect="none">
+        <Text
+          {...knobProps.body}
+          color={knobProps.textAccentColor}
+          aria-live="polite"
+          userSelect="none">
           {summary}
         </Text>
       )}

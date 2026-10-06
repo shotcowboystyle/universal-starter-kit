@@ -17,7 +17,9 @@ const TRANSPARENT = 'rgba(0,0,0,0)';
 export function SaturationBackground({ hueColor, width, height }: { hueColor: string; width: number; height: number }) {
   const box = { width, height };
   return (
-    <RNView style={[styles.host, box]} pointerEvents="none">
+    <RNView
+      style={[styles.host, box]}
+      pointerEvents="none">
       <LinearGradient
         colors={['#FFFFFF', hueColor]}
         start={{ x: 0, y: 0.5 }}
@@ -76,10 +78,17 @@ export function AlphaBackground({
   const box = { width, height };
   const { start, end } = axis(orientation);
   return (
-    <RNView style={[styles.host, box]} pointerEvents="none">
+    <RNView
+      style={[styles.host, box]}
+      pointerEvents="none">
       <RNView style={[StyleSheet.absoluteFill, { backgroundColor: '#E5E5E5' }]} />
       <RNView style={[StyleSheet.absoluteFill, { backgroundColor: '#BBBBBB', opacity: 0.35 }]} />
-      <LinearGradient colors={[TRANSPARENT, hex]} start={start} end={end} style={StyleSheet.absoluteFill} />
+      <LinearGradient
+        colors={[TRANSPARENT, hex]}
+        start={start}
+        end={end}
+        style={StyleSheet.absoluteFill}
+      />
     </RNView>
   );
 }

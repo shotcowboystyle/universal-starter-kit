@@ -1,7 +1,7 @@
 import type { FontSizeTokens, SizeTokens } from 'tamagui';
 import { Paragraph, View, styled } from 'tamagui';
 
-import { formCardColors, formCommonColors } from '../../shared/colorRamps';
+import { formCardColors, formCommonColors } from '../../shared/color-ramps';
 
 /**
  * SELECTION-CARD anatomy: the control sits in a fixed leading slot,

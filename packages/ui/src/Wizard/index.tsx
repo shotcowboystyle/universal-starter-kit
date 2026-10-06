@@ -1,11 +1,5 @@
-import {
-  ErrorSummary,
-  FormSection,
-  focusFieldTarget,
-  focusFirstInvalid,
-  formReadableMaxWidth,
-  type ErrorSummaryItem,
-} from '@repo/forms';
+import { ErrorSummary, FormSection, focusFieldTarget, focusFirstInvalid, formReadableMaxWidth } from '@repo/forms';
+import type { ErrorSummaryItem } from '@repo/forms';
 import { useResolvedKnobs } from '@repo/theme';
 import {
   Children,
@@ -18,14 +12,16 @@ import {
   useMemo,
   useRef,
   useState,
-  type ReactNode,
 } from 'react';
-import { Text, View, XStack, YStack, isWeb, useMedia, type GetProps, type TamaguiElement } from 'tamagui';
+import type { ReactNode } from 'react';
+import { Text, View, XStack, YStack, isWeb, useMedia } from 'tamagui';
+import type { GetProps, TamaguiElement } from 'tamagui';
 
 import { ActionBar } from '../actions/ActionBar';
 import { Button } from '../Button';
 import { EmptyState } from '../layouts/EmptyState';
-import { ProgressSteps, type ProgressStep } from '../ProgressSteps';
+import { ProgressSteps } from '../ProgressSteps';
+import type { ProgressStep } from '../ProgressSteps';
 import { useTranslation } from '../shared/i18n';
 import { bidiIsolate, withInterp } from '../shared/t';
 import { Skeleton } from '../Skeleton';
@@ -173,15 +169,44 @@ const WizardShell = forwardRef<TamaguiElement, GetProps<typeof YStack> & { compa
 function WizardSkeleton() {
   const { knobProps } = useResolvedKnobs();
   return (
-    <YStack {...knobProps.gapLg} width="100%" data-wizard-status="loading">
-      <XStack gap="$3" alignItems="center" width="100%">
-        <Skeleton variant="circular" width={32} height={32} />
-        <Skeleton variant="circular" width={32} height={32} />
-        <Skeleton variant="circular" width={32} height={32} />
+    <YStack
+      {...knobProps.gapLg}
+      width="100%"
+      data-wizard-status="loading">
+      <XStack
+        gap="$3"
+        alignItems="center"
+        width="100%">
+        <Skeleton
+          variant="circular"
+          width={32}
+          height={32}
+        />
+        <Skeleton
+          variant="circular"
+          width={32}
+          height={32}
+        />
+        <Skeleton
+          variant="circular"
+          width={32}
+          height={32}
+        />
       </XStack>
-      <YStack {...knobProps.gap} maxWidth={formReadableMaxWidth} width="100%">
-        <Skeleton variant="rounded" width="100%" height={44} />
-        <Skeleton variant="rounded" width="100%" height={44} />
+      <YStack
+        {...knobProps.gap}
+        maxWidth={formReadableMaxWidth}
+        width="100%">
+        <Skeleton
+          variant="rounded"
+          width="100%"
+          height={44}
+        />
+        <Skeleton
+          variant="rounded"
+          width="100%"
+          height={44}
+        />
       </YStack>
     </YStack>
   );
@@ -190,7 +215,9 @@ function WizardSkeleton() {
 /** Real element (not a fragment) so Children.toArray keeps one child per step. */
 export function WizardPanel({ children }: { children: ReactNode }) {
   return (
-    <YStack data-wizard-panel-body="" width="100%">
+    <YStack
+      data-wizard-panel-body=""
+      width="100%">
       {children}
     </YStack>
   );
@@ -222,12 +249,24 @@ export function WizardReview({ groups }: { groups?: WizardReviewGroup[] }) {
       }));
 
   return (
-    <YStack data-wizard-review="" width="100%" {...knobProps.gap}>
+    <YStack
+      data-wizard-review=""
+      width="100%"
+      {...knobProps.gap}>
       {resolved.map((group, groupIndex) => (
-        <YStack key={group.label} width="100%">
+        <YStack
+          key={group.label}
+          width="100%">
           {groupIndex > 0 ? <WizardRule /> : null}
-          <XStack alignItems="baseline" justifyContent="space-between" gap="$3" width="100%">
-            <Text {...knobProps.label} {...knobProps.heading} color="$color12">
+          <XStack
+            alignItems="baseline"
+            justifyContent="space-between"
+            gap="$3"
+            width="100%">
+            <Text
+              {...knobProps.label}
+              {...knobProps.heading}
+              color="$color12">
               {group.label}
             </Text>
             <Button
@@ -241,13 +280,27 @@ export function WizardReview({ groups }: { groups?: WizardReviewGroup[] }) {
               {editLabel}
             </Button>
           </XStack>
-          <YStack {...knobProps.gap} width="100%">
+          <YStack
+            {...knobProps.gap}
+            width="100%">
             {group.rows.map((row) => (
-              <XStack key={row.name} gap="$4" alignItems="flex-start" width="100%">
-                <Text {...knobProps.body} color="$color10" width={176} flexShrink={0}>
+              <XStack
+                key={row.name}
+                gap="$4"
+                alignItems="flex-start"
+                width="100%">
+                <Text
+                  {...knobProps.body}
+                  color="$color10"
+                  width={176}
+                  flexShrink={0}>
                   {row.label}
                 </Text>
-                <Text {...knobProps.body} color="$color12" flex={1} minWidth={0}>
+                <Text
+                  {...knobProps.body}
+                  color="$color12"
+                  flex={1}
+                  minWidth={0}>
                   {row.value ?? '—'}
                 </Text>
               </XStack>
@@ -289,7 +342,7 @@ function WizardRoot({
   const { knobProps } = useResolvedKnobs(compact === undefined ? undefined : { compact });
   const reactId = useId();
   const shellRef = useRef<TamaguiElement | null>(null);
-  const panelRefs = useRef<Array<HTMLElement | null>>([]);
+  const panelRefs = useRef<(HTMLElement | null)[]>([]);
   const [uncontrolled, setUncontrolled] = useState(defaultCurrent);
   const [maxVisited, setMaxVisited] = useState(defaultCurrent);
   const [returnTo, setReturnTo] = useState<number | null>(null);
@@ -374,7 +427,7 @@ function WizardRoot({
       if (names.length === 0) {
         return [];
       }
-      return collectFieldErrors(names);
+      return await collectFieldErrors(names);
     },
     [collectFieldErrors, steps, t, validateStep],
   );
@@ -385,7 +438,7 @@ function WizardRoot({
     }
     const root = (panelRefs.current[index] ??
       shellRef.current ??
-      (typeof document !== 'undefined' ? document.body : null)) as HTMLElement | null;
+      (typeof document === 'undefined' ? null : document.body)) as HTMLElement | null;
     const first = errors[0];
     const focused = focusFieldTarget(root, { id: first.id ?? first.name, name: first.name });
     if (!focused) {
@@ -482,7 +535,9 @@ function WizardRoot({
 
   if (status === 'loading') {
     return (
-      <WizardShell compact={compact} {...props}>
+      <WizardShell
+        compact={compact}
+        {...props}>
         <WizardSkeleton />
       </WizardShell>
     );
@@ -490,15 +545,25 @@ function WizardRoot({
 
   if (status === 'empty' || steps.length === 0) {
     return (
-      <WizardShell compact={compact} data-wizard-status="empty" {...props}>
-        <EmptyState compact title={emptyTitle ?? t('No steps')} description={emptyDescription} />
+      <WizardShell
+        compact={compact}
+        data-wizard-status="empty"
+        {...props}>
+        <EmptyState
+          compact
+          title={emptyTitle ?? t('No steps')}
+          description={emptyDescription}
+        />
       </WizardShell>
     );
   }
 
   if (status === 'error') {
     return (
-      <WizardShell compact={compact} data-wizard-status="error" {...props}>
+      <WizardShell
+        compact={compact}
+        data-wizard-status="error"
+        {...props}>
         <EmptyState
           compact
           intent="error"
@@ -518,7 +583,9 @@ function WizardRoot({
         data-wizard-current={String(current)}
         {...knobProps.gap}
         {...props}>
-        <YStack data-wizard-rail="" width="100%">
+        <YStack
+          data-wizard-rail=""
+          width="100%">
           <ProgressSteps
             steps={railSteps}
             current={current}
@@ -551,7 +618,9 @@ function WizardRoot({
             />
           </YStack>
         ) : null}
-        <YStack {...knobProps.gapLg} width="100%">
+        <YStack
+          {...knobProps.gapLg}
+          width="100%">
           <YStack width="100%">
             {steps.map((step, index) => {
               const legend = hideLabels ? stepCaption(t, index, steps) : step.label;
@@ -572,7 +641,9 @@ function WizardRoot({
                   maxWidth={formReadableMaxWidth}
                   alignSelf="flex-start"
                   {...knobProps.gap}>
-                  <FormSection label={legend} compact={compact}>
+                  <FormSection
+                    label={legend}
+                    compact={compact}>
                     {panels[index]}
                   </FormSection>
                 </YStack>
@@ -589,14 +660,23 @@ function WizardRoot({
           align={hasLeading ? 'between' : 'end'}
           cancel={
             hasLeading ? (
-              <XStack gap="$2" flexWrap="wrap" alignItems="center">
+              <XStack
+                gap="$2"
+                flexWrap="wrap"
+                alignItems="center">
                 {onCancel ? (
-                  <Button chromeless onPress={onCancel} testID="wizard-cancel">
+                  <Button
+                    chromeless
+                    onPress={onCancel}
+                    testID="wizard-cancel">
                     {resolvedCancel}
                   </Button>
                 ) : null}
                 {current > 0 ? (
-                  <Button outlined onPress={handleBack} testID="wizard-back">
+                  <Button
+                    outlined
+                    onPress={handleBack}
+                    testID="wizard-back">
                     {resolvedBack}
                   </Button>
                 ) : null}

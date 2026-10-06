@@ -1,14 +1,15 @@
 import { OVERLAY_BREAKPOINT, ensureFocusVisibleRing, useResolvedKnobs } from '@repo/theme';
 import { X } from '@tamagui/lucide-icons-2';
-import { useCallback, useRef, type ReactNode } from 'react';
+import { useCallback, useRef } from 'react';
+import type { ReactNode } from 'react';
 import { Dialog, isWeb, Sheet, Unspaced, useMedia, View, VisuallyHidden, XStack, YStack } from 'tamagui';
 
 import { useViewportGtSm } from '../FloatingPanel';
-import { formCommonColors } from '../shared/colorRamps';
-import { DialogShowFocus, useReturnFocusOnClose, useSheetModalFocus } from '../shared/focusManagement';
+import { formCommonColors } from '../shared/color-ramps';
+import { DialogShowFocus, useReturnFocusOnClose, useSheetModalFocus } from '../shared/focus-management';
 import { t } from '../shared/t';
-import { useSheetEscapeDismiss } from '../shared/useSheetEscapeDismiss';
-import { zIndex } from '../shared/zIndex';
+import { useSheetEscapeDismiss } from '../shared/use-sheet-escape-dismiss';
+import { zIndex } from '../shared/z-index';
 
 export interface AdaptivePopupProps {
   /** Controlled open state */
@@ -138,11 +139,14 @@ function PopupCloseButton({ onPress }: { onPress: () => void }) {
       focusStyle={{ outlineWidth: 0 }}
       focusVisibleStyle={ensureFocusVisibleRing()}
       onPress={onPress}
-      {...(!isWeb ? { hitSlop } : {})}
+      {...(isWeb ? {} : { hitSlop })}
       {...(isWeb
         ? { tabIndex: 0, onKeyDown: onKeyDown as unknown as () => void }
         : { accessible: true, accessibilityRole: 'button', accessibilityLabel: t('Close') })}>
-      <X size={glyph} color={formCommonColors.muted} />
+      <X
+        size={glyph}
+        color={formCommonColors.muted}
+      />
     </View>
   );
 }
@@ -176,7 +180,7 @@ export function AdaptivePopup({
   const viewportGtSm = useViewportGtSm();
   // `media.sm` = v5 minWidth 640 (`gtSm` died with the v5 media map)
   // — SSR fallback only; the viewport hook wins on client.
-  const isDesktop = typeof window !== 'undefined' ? viewportGtSm : media.sm;
+  const isDesktop = typeof window === 'undefined' ? media.sm : viewportGtSm;
   const renderedFace = pickAdaptivePopupFace({
     face,
     size,
@@ -250,15 +254,21 @@ export function AdaptivePopup({
   const footerContent = footer && <YStack paddingTop="$2">{footer}</YStack>;
 
   const body = (
-    <YStack flex={size === 'fullscreen' ? 1 : undefined} position="relative" {...knobProps.gap}>
-      {!title ? (
+    <YStack
+      flex={size === 'fullscreen' ? 1 : undefined}
+      position="relative"
+      {...knobProps.gap}>
+      {title ? null : (
         <VisuallyHidden>
           <Dialog.Title>Dialog</Dialog.Title>
         </VisuallyHidden>
-      ) : null}
+      )}
       {headerContent}
       {description ? (
-        <Dialog.Description {...knobProps.body} {...knobProps.label} color={formCommonColors.muted}>
+        <Dialog.Description
+          {...knobProps.body}
+          {...knobProps.label}
+          color={formCommonColors.muted}>
           {description}
         </Dialog.Description>
       ) : (
@@ -351,9 +361,14 @@ export function AdaptivePopup({
         };
     const slideFromEnd = rtl ? -24 : 24;
     return (
-      <Dialog modal open={open} onOpenChange={onOpenChange}>
+      <Dialog
+        modal
+        open={open}
+        onOpenChange={onOpenChange}>
         {trigger && (
-          <Dialog.Trigger asChild disabled={disabled}>
+          <Dialog.Trigger
+            asChild
+            disabled={disabled}>
             <View {...triggerWrap}>{trigger}</View>
           </Dialog.Trigger>
         )}
@@ -416,9 +431,14 @@ export function AdaptivePopup({
   }
 
   return (
-    <Dialog modal open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      modal
+      open={open}
+      onOpenChange={onOpenChange}>
       {trigger && (
-        <Dialog.Trigger asChild disabled={disabled}>
+        <Dialog.Trigger
+          asChild
+          disabled={disabled}>
           <View {...triggerWrap}>{trigger}</View>
         </Dialog.Trigger>
       )}

@@ -3,13 +3,9 @@ import { createElement } from 'react';
 import type { FontSizeTokens, LabelProps as TamaguiLabelProps, SizeTokens } from 'tamagui';
 import { isWeb, Label as TamaguiLabel, YStack } from 'tamagui';
 
-import {
-  formatRequiredMarkSuffix,
-  mapHouseRequiredMarking,
-  useRequiredMarking,
-  type RequiredMarkMode,
-} from '../requiredMarking';
-import { formCommonColors } from '../shared/colorRamps';
+import { formatRequiredMarkSuffix, mapHouseRequiredMarking, useRequiredMarking } from '../required-marking';
+import type { RequiredMarkMode } from '../required-marking';
+import { formCommonColors } from '../shared/color-ramps';
 
 export interface LabelProps extends Omit<TamaguiLabelProps, 'size'> {
   /** Type step. Do not pass a control-height `sizeToken`. */
@@ -99,7 +95,10 @@ export function Label({
       return createElement('h1', { style: { margin: 0, padding: 0 } }, node);
     }
     return (
-      <YStack accessibilityRole="header" margin={0} padding={0}>
+      <YStack
+        accessibilityRole="header"
+        margin={0}
+        padding={0}>
         {node}
       </YStack>
     );

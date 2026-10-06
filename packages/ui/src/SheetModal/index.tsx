@@ -11,7 +11,8 @@
 
 import { zIndex } from '@repo/forms';
 import { useResolvedKnobs, wasKeyboardFocus } from '@repo/theme';
-import { useEffect, useId, useRef, type ReactNode, type RefObject } from 'react';
+import { useEffect, useId, useRef } from 'react';
+import type { ReactNode, RefObject } from 'react';
 import { isWeb, Sheet, View } from 'tamagui';
 
 import { DialogRegionContext, SheetFrame } from '../surfaces';
@@ -174,7 +175,7 @@ export function SheetModal({
   fill = false,
 }: SheetModalProps) {
   const { knobProps } = useResolvedKnobs();
-  const transition = knobProps.transition;
+  const { transition } = knobProps;
   const titleId = useId();
   const frameRef = useRef<HTMLElement | null>(null);
 
@@ -223,14 +224,20 @@ export function SheetModal({
         {...frameRingReset}>
         <DialogRegionContext.Provider value={IN_DIALOG_REGION}>
           {header ? (
-            <View id={titleId} {...(fill ? nonShrinking : null)}>
+            <View
+              id={titleId}
+              {...(fill ? nonShrinking : null)}>
               {header}
             </View>
           ) : null}
           {fill ? (
-            <View testID="sheet-modal-body" {...fillSlot}>
+            <View
+              testID="sheet-modal-body"
+              {...fillSlot}>
               {scrollable ? (
-                <Sheet.ScrollView testID="sheet-modal-scroll" {...fillSlot}>
+                <Sheet.ScrollView
+                  testID="sheet-modal-scroll"
+                  {...fillSlot}>
                   {children}
                 </Sheet.ScrollView>
               ) : (
@@ -242,7 +249,10 @@ export function SheetModal({
           ) : (
             children
           )}
-          <View style={{ height: 'env(safe-area-inset-bottom)' }} {...(fill ? nonShrinking : null)} />
+          <View
+            style={{ height: 'env(safe-area-inset-bottom)' }}
+            {...(fill ? nonShrinking : null)}
+          />
         </DialogRegionContext.Provider>
       </SheetFrame>
     </Sheet>

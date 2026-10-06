@@ -1,27 +1,18 @@
-import { useTouchSurface } from '@repo/theme';
-import { ensureFocusVisibleRing, useResolvedKnobs } from '@repo/theme';
+import { useTouchSurface, ensureFocusVisibleRing, useResolvedKnobs } from '@repo/theme';
 import { getSize } from '@tamagui/get-token';
 import type { DeepKeys, DeepValue } from '@tanstack/form-core';
-import {
-  type ClipboardEvent,
-  type ComponentProps,
-  Fragment,
-  type KeyboardEvent,
-  memo,
-  type RefObject,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
-import { useProps, type SizeTokens, type TamaguiElement } from 'tamagui';
-import { Input, Text, XStack, getVariableValue, isWeb, useDidFinishSSR } from 'tamagui';
+import { Fragment, memo, useCallback, useEffect, useRef, useState } from 'react';
+import type { ClipboardEvent, ComponentProps, KeyboardEvent, RefObject } from 'react';
+import { useProps } from 'tamagui';
+import type { SizeTokens, TamaguiElement } from 'tamagui';
+import type { Input } from 'tamagui';
+import { Text, XStack, getVariableValue, isWeb, useDidFinishSSR } from 'tamagui';
 
 import { Button } from '../../Button';
-import { Field, FieldLayout } from '../../fieldLayout';
-import type { FormFieldProps } from '../../fieldLayout';
+import { Field, FieldLayout } from '../../FieldLayout';
+import type { FormFieldProps } from '../../FieldLayout';
 import { FocusContext, Input as InputParts, InputContext } from '../../InputParts';
-import { formCommonColors, formControlColors, formInputColors } from '../../shared/colorRamps';
+import { formCommonColors, formControlColors, formInputColors } from '../../shared/color-ramps';
 import { t } from '../../shared/t';
 import {
   getFieldHeight,
@@ -31,10 +22,9 @@ import {
   useResolvedValidators,
 } from '../../shared/utils';
 import { Skeleton } from '../../Skeleton';
-import type { Validator } from '../../types';
-import type { FieldComponentProps } from '../../types';
+import type { Validator, FieldComponentProps } from '../../types';
 
-import { ensureOtpCellCss } from './otpCellCss';
+import { ensureOtpCellCss } from './otp-cell-css';
 
 export type OTPInputProps<
   TParentData extends Record<string, unknown> = Record<string, unknown>,
@@ -71,14 +61,18 @@ type OTPType = 'numeric' | 'alphanumeric' | 'password';
 // Get validation pattern based on type
 const getValidationPattern = (inputType: string) => {
   switch (inputType) {
-    case 'numeric':
+    case 'numeric': {
       return /[^0-9]/g;
-    case 'alphanumeric':
+    }
+    case 'alphanumeric': {
       return /[^a-zA-Z0-9]/g;
-    case 'password':
+    }
+    case 'password': {
       return /[^a-zA-Z0-9!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/g;
-    default:
+    }
+    default: {
       return /[^0-9]/g;
+    }
   }
 };
 
@@ -418,7 +412,7 @@ interface OTPCellsRowProps {
   separator?: string;
   clearable: boolean;
   inputProps?: Omit<ComponentProps<typeof Input>, 'value' | 'onChangeText' | 'ref'>;
-  inputRefs: RefObject<Array<HTMLElement | null>>;
+  inputRefs: RefObject<(HTMLElement | null)[]>;
   onDigitChange: (index: number, value: string) => void;
   onKeyPress: (index: number, key: string) => void;
   onPaste: (text: string) => void;
@@ -542,12 +536,18 @@ function OTPCellsRow({
   if (groups) {
     let offset = 0;
     return (
-      <XStack gap={groupGap} alignItems="center" {...rowA11y}>
+      <XStack
+        gap={groupGap}
+        alignItems="center"
+        {...rowA11y}>
         {groups.map((size, gi) => {
           const start = offset;
           offset += size;
           return (
-            <XStack key={`otp-group-${gi}`} gap={cellGap} alignItems="center">
+            <XStack
+              key={`otp-group-${gi}`}
+              gap={cellGap}
+              alignItems="center">
               {Array.from({ length: size }, (_, j) => renderDigit(start + j))}
             </XStack>
           );
@@ -558,12 +558,17 @@ function OTPCellsRow({
   }
 
   return (
-    <XStack gap={cellGap} alignItems="center" {...rowA11y}>
+    <XStack
+      gap={cellGap}
+      alignItems="center"
+      {...rowA11y}>
       {Array.from({ length }, (_, index) => (
         <Fragment key={`digit-${index}`}>
           {renderDigit(index)}
           {separator && index < length - 1 && (
-            <Text {...knobProps.body} color={formCommonColors.muted}>
+            <Text
+              {...knobProps.body}
+              color={formCommonColors.muted}>
               {separator}
             </Text>
           )}
@@ -602,8 +607,8 @@ interface OTPFieldRendererProps {
   clearable: boolean;
   separator?: string;
   inputProps?: Omit<ComponentProps<typeof Input>, 'value' | 'onChangeText' | 'ref'>;
-  fieldProps: Omit<FormFieldProps<Record<string, unknown>, string, unknown, unknown>, 'children' | 'field'>;
-  inputRefs: RefObject<Array<HTMLElement | null>>;
+  fieldProps: Omit<FormFieldProps<Record<string, unknown>, string, unknown>, 'children' | 'field'>;
+  inputRefs: RefObject<(HTMLElement | null)[]>;
   onComplete?: (code: string) => void;
   onChange?: (value: string) => void;
   fieldBlurHandler: (...args: any[]) => void;
@@ -773,7 +778,7 @@ export function OTPInput<
   // Tracked for parity with the previous implementation (focus state is not
   // used for styling — the focused cell paints its own CSS/native ring).
   const [, setFocusedIndex] = useState<number>(autoFocus ? 0 : -1);
-  const inputRefs = useRef<Array<HTMLElement | null>>([]);
+  const inputRefs = useRef<(HTMLElement | null)[]>([]);
 
   // Last code emitted to standalone onChange/onComplete. Prevents re-emitting
   // the same code (SB-T2-10 idle loop when WiredTable rebuilt onChange each render).
@@ -892,7 +897,7 @@ export function OTPInput<
     if (typeof window === 'undefined' || !('OTPCredential' in window)) {
       return;
     }
-    const credentials = navigator.credentials;
+    const { credentials } = navigator;
     if (!credentials?.get) {
       return;
     }
@@ -937,26 +942,45 @@ export function OTPInput<
     // so the skeleton label mirrors the live label's deterministic px height.
     const labelHeight = 16;
     const skeletonCell = (i: number) => (
-      <Skeleton key={i} variant="rounded" width={cellSize} height={cellSize} borderRadius={cellRadius} />
+      <Skeleton
+        key={i}
+        variant="rounded"
+        width={cellSize}
+        height={cellSize}
+        borderRadius={cellRadius}
+      />
     );
     let groupOffset = 0;
     return (
       <InputParts size={cellSize}>
-        {fieldProps.label && <Skeleton variant="text" width={96} height={labelHeight} />}
+        {fieldProps.label && (
+          <Skeleton
+            variant="text"
+            width={96}
+            height={labelHeight}
+          />
+        )}
         {groups ? (
-          <XStack gap={groupGap} alignItems="center">
+          <XStack
+            gap={groupGap}
+            alignItems="center">
             {groups.map((size, gi) => {
               const start = groupOffset;
               groupOffset += size;
               return (
-                <XStack key={`otp-skel-${gi}`} gap={cellGap} alignItems="center">
+                <XStack
+                  key={`otp-skel-${gi}`}
+                  gap={cellGap}
+                  alignItems="center">
                   {Array.from({ length: size }, (_, j) => skeletonCell(start + j))}
                 </XStack>
               );
             })}
           </XStack>
         ) : (
-          <XStack gap={cellGap} alignItems="center">
+          <XStack
+            gap={cellGap}
+            alignItems="center">
             {Array.from({ length }, (_, i) => skeletonCell(i))}
           </XStack>
         )}

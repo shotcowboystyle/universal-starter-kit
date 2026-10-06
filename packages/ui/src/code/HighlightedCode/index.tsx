@@ -11,7 +11,7 @@ import { useResolvedKnobs } from '@repo/theme';
 import type { ReactNode } from 'react';
 import { Text, getTokenValue, isWeb } from 'tamagui';
 
-import { componentColors } from '../../componentColors';
+import { componentColors } from '../../component-colors';
 import type { HighlightLine } from '../Highlighter';
 
 /** Line-number gutter width steps with the size knob. */

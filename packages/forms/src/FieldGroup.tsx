@@ -2,7 +2,8 @@ import { Preset, useResolvedKnobs } from '@repo/theme';
 import type { ReactNode } from 'react';
 import { Text, YStack, isWeb } from 'tamagui';
 
-import { FormGrid, type FormGridColumns } from './FormGrid';
+import { FormGrid } from './FormGrid';
+import type { FormGridColumns } from './FormGrid';
 
 export interface FieldGroupProps {
   /** Visible legend / group label (required — fieldset grouping). */
@@ -37,7 +38,10 @@ export function FieldGroup({ legend, children, columns = 1, gap, compact }: Fiel
   const useFieldset = isWeb;
   const body =
     columns > 1 ? (
-      <FormGrid columns={columns} gap={resolvedGap} compact={compact}>
+      <FormGrid
+        columns={columns}
+        gap={resolvedGap}
+        compact={compact}>
         {children}
       </FormGrid>
     ) : (

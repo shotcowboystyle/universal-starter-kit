@@ -3,14 +3,14 @@ import React, { useImperativeHandle } from 'react';
 import { Platform } from 'react-native';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { loadExpoMaps } from './expoMapsLoader';
+import { loadExpoMaps } from './expo-maps-loader';
 import { GeolocationMap } from './GeolocationMap.native';
 
 import { Geolocation } from './index';
 
 // The optional-peer loader is the mock seam: on-device it try/catch-requires
 // `expo-maps` (Metro optional dependency); here we swap the module wholesale.
-vi.mock('./expoMapsLoader', () => ({
+vi.mock('./expo-maps-loader', () => ({
   loadExpoMaps: vi.fn(() => null),
 }));
 
@@ -62,7 +62,13 @@ describe('GeolocationMap (native)', () => {
     (Platform as AnyProps).OS = 'ios';
     loadExpoMapsMock.mockReturnValue(createMapsMock());
     const onChange = vi.fn();
-    const result = renderWithProviders(<GeolocationMap lat={51.5} lng={-0.12} onChange={onChange} />);
+    const result = renderWithProviders(
+      <GeolocationMap
+        lat={51.5}
+        lng={-0.12}
+        onChange={onChange}
+      />,
+    );
     expect(result.getByTestId('apple-maps-view')).toBeTruthy();
     expect(result.container.querySelector("[data-testid='geolocation-native-map']")).not.toBeNull();
     expect(appleProps?.markers).toEqual([
@@ -78,7 +84,13 @@ describe('GeolocationMap (native)', () => {
     (Platform as AnyProps).OS = 'ios';
     loadExpoMapsMock.mockReturnValue(createMapsMock());
     const onChange = vi.fn();
-    renderWithProviders(<GeolocationMap lat={10} lng={20} onChange={onChange} />);
+    renderWithProviders(
+      <GeolocationMap
+        lat={10}
+        lng={20}
+        onChange={onChange}
+      />,
+    );
     appleProps?.onMapClick?.({ coordinates: { latitude: 12.5, longitude: 99.25 } });
     expect(onChange).toHaveBeenCalledWith(12.5, 99.25);
     // Apple has no long-press pick in expo-maps SDK 55 — tap only.
@@ -89,7 +101,13 @@ describe('GeolocationMap (native)', () => {
     (Platform as AnyProps).OS = 'android';
     loadExpoMapsMock.mockReturnValue(createMapsMock());
     const onChange = vi.fn();
-    const result = renderWithProviders(<GeolocationMap lat={10} lng={20} onChange={onChange} />);
+    const result = renderWithProviders(
+      <GeolocationMap
+        lat={10}
+        lng={20}
+        onChange={onChange}
+      />,
+    );
     expect(result.getByTestId('google-maps-view')).toBeTruthy();
     expect(googleProps?.markers).toEqual([expect.objectContaining({ coordinates: { latitude: 10, longitude: 20 } })]);
     googleProps?.onMapClick?.({ coordinates: { latitude: 1.5, longitude: 2.5 } });
@@ -103,11 +121,25 @@ describe('GeolocationMap (native)', () => {
     loadExpoMapsMock.mockReturnValue(createMapsMock());
     const onChange = vi.fn();
 
-    renderWithProviders(<GeolocationMap lat={10} lng={20} onChange={onChange} disabled />);
+    renderWithProviders(
+      <GeolocationMap
+        lat={10}
+        lng={20}
+        onChange={onChange}
+        disabled
+      />,
+    );
     expect(appleProps?.onMapClick).toBeUndefined();
 
     resetCapturedProps();
-    renderWithProviders(<GeolocationMap lat={10} lng={20} onChange={onChange} readOnly />);
+    renderWithProviders(
+      <GeolocationMap
+        lat={10}
+        lng={20}
+        onChange={onChange}
+        readOnly
+      />,
+    );
     expect(appleProps?.onMapClick).toBeUndefined();
     expect(onChange).not.toHaveBeenCalled();
   });
@@ -115,7 +147,14 @@ describe('GeolocationMap (native)', () => {
   it('omits the value marker when hasValue is false', () => {
     (Platform as AnyProps).OS = 'ios';
     loadExpoMapsMock.mockReturnValue(createMapsMock());
-    renderWithProviders(<GeolocationMap lat={0} lng={0} hasValue={false} onChange={vi.fn()} />);
+    renderWithProviders(
+      <GeolocationMap
+        lat={0}
+        lng={0}
+        hasValue={false}
+        onChange={vi.fn()}
+      />,
+    );
     expect(appleProps?.markers).toEqual([]);
   });
 
@@ -123,7 +162,13 @@ describe('GeolocationMap (native)', () => {
     (Platform as AnyProps).OS = 'ios';
     loadExpoMapsMock.mockReturnValue(createMapsMock());
     const onChange = vi.fn();
-    renderWithProviders(<GeolocationMap lat={10} lng={20} onChange={onChange} />);
+    renderWithProviders(
+      <GeolocationMap
+        lat={10}
+        lng={20}
+        onChange={onChange}
+      />,
+    );
     appleProps?.onMapClick?.({ coordinates: {} });
     appleProps?.onMapClick?.({});
     expect(onChange).not.toHaveBeenCalled();
@@ -133,10 +178,22 @@ describe('GeolocationMap (native)', () => {
     (Platform as AnyProps).OS = 'ios';
     loadExpoMapsMock.mockReturnValue(createMapsMock());
     const onChange = vi.fn();
-    const result = renderWithProviders(<GeolocationMap lat={10} lng={20} onChange={onChange} />);
+    const result = renderWithProviders(
+      <GeolocationMap
+        lat={10}
+        lng={20}
+        onChange={onChange}
+      />,
+    );
     // Initial mount uses the declarative cameraPosition — no imperative call.
     expect(setCameraPosition).not.toHaveBeenCalled();
-    result.rerender(<GeolocationMap lat={11} lng={21} onChange={onChange} />);
+    result.rerender(
+      <GeolocationMap
+        lat={11}
+        lng={21}
+        onChange={onChange}
+      />,
+    );
     expect(setCameraPosition).toHaveBeenCalledWith({
       coordinates: { latitude: 11, longitude: 21 },
       zoom: 13,
@@ -146,7 +203,12 @@ describe('GeolocationMap (native)', () => {
   it('falls back to the placeholder when expo-maps is absent', () => {
     (Platform as AnyProps).OS = 'ios';
     loadExpoMapsMock.mockReturnValue(null);
-    const result = renderWithProviders(<GeolocationMap lat={51.5} lng={-0.12} />);
+    const result = renderWithProviders(
+      <GeolocationMap
+        lat={51.5}
+        lng={-0.12}
+      />,
+    );
     const fallback = result.container.querySelector("[data-testid='geolocation-map-fallback']");
     expect(fallback).not.toBeNull();
     expect(result.container.textContent).toContain('Map preview unavailable');
@@ -157,7 +219,12 @@ describe('GeolocationMap (native)', () => {
   it('falls back to the placeholder on platforms without a native map', () => {
     // Platform.OS stays "web" (react-native-web default in this environment).
     loadExpoMapsMock.mockReturnValue(createMapsMock());
-    const result = renderWithProviders(<GeolocationMap lat={1} lng={2} />);
+    const result = renderWithProviders(
+      <GeolocationMap
+        lat={1}
+        lng={2}
+      />,
+    );
     expect(result.container.querySelector("[data-testid='geolocation-map-fallback']")).not.toBeNull();
     expect(appleProps).toBeNull();
     expect(googleProps).toBeNull();

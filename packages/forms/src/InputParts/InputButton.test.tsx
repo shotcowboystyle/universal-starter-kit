@@ -9,7 +9,9 @@ describe('Input.Button', () => {
     const result = renderWithProviders(
       <Input size="$4">
         <Input.Box size="$4">
-          <Input.Button size="$4" aria-label="cap">
+          <Input.Button
+            size="$4"
+            aria-label="cap">
             x
           </Input.Button>
         </Input.Box>
@@ -25,7 +27,10 @@ describe('Input.Button', () => {
     const result = renderWithProviders(
       <Input size="$4">
         <Input.Box size="$4">
-          <Input.Button glyphRing size="$4" aria-label="Show password">
+          <Input.Button
+            glyphRing
+            size="$4"
+            aria-label="Show password">
             x
           </Input.Button>
         </Input.Box>
@@ -45,7 +50,9 @@ describe('Input.Button', () => {
     const result = renderWithProviders(
       <Input size="$4">
         <Input.Box size="$4">
-          <Input.Button size="$4" aria-label="cap">
+          <Input.Button
+            size="$4"
+            aria-label="cap">
             Scan
           </Input.Button>
         </Input.Box>
@@ -62,11 +69,14 @@ describe('Input.Button', () => {
       if (token === '$true') {
         continue;
       }
-      const height = sizeRecipeForToken(token).height;
+      const { height } = sizeRecipeForToken(token);
       const result = renderWithProviders(
         <Input size={token}>
           <Input.Box size={token}>
-            <Input.Button glyphRing size={token} aria-label={`reveal-${token}`}>
+            <Input.Button
+              glyphRing
+              size={token}
+              aria-label={`reveal-${token}`}>
               x
             </Input.Button>
           </Input.Box>

@@ -33,7 +33,7 @@ describe('Tooltip TEXT-RIDES-TEXT', () => {
 
   it('renders the origin shape `{label}{cond ? suffix : ""}` when the condition is false', () => {
     const count: number = 0;
-    renderWithProviders(<View>{wrapTooltipContent(['Refresh', count !== 0 ? ` (${count})` : ''], {})}</View>);
+    renderWithProviders(<View>{wrapTooltipContent(['Refresh', count === 0 ? '' : ` (${count})`], {})}</View>);
     const content = screen.getByText('Refresh');
     expect(content.tagName).not.toBe('DIV');
   });

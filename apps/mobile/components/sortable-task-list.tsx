@@ -1,9 +1,9 @@
-import { Task } from "@repo/store";
-import { View } from "@tamagui/core";
-import { useState, useEffect, useCallback } from "react";
+import type { Task } from '@repo/store';
+import { View } from '@tamagui/core';
+import { useState, useEffect, useCallback } from 'react';
 
-import { MoveTaskSheet } from "./move-task-sheet";
-import { TaskCard } from "./task-card";
+import { MoveTaskSheet } from './move-task-sheet';
+import { TaskCard } from './task-card';
 
 interface SortableTaskListProps {
   tasks: Task[];
@@ -12,20 +12,13 @@ interface SortableTaskListProps {
   onTaskPress?: (taskId: string) => void;
 }
 
-export function SortableTaskList({
-  tasks,
-  projectId,
-  boardId,
-  onTaskPress: _onTaskPress
-}: SortableTaskListProps) {
+export function SortableTaskList({ tasks, projectId, boardId, onTaskPress: _onTaskPress }: SortableTaskListProps) {
   const [data, setData] = useState<Task[]>(tasks);
   const [moveSheetVisible, setMoveSheetVisible] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
   useEffect(() => {
-    const sortedTasks = [...tasks].sort(
-      (a, b) => (a.orderInProject || 0) - (b.orderInProject || 0)
-    );
+    const sortedTasks = [...tasks].sort((a, b) => (a.orderInProject || 0) - (b.orderInProject || 0));
     setData(sortedTasks);
   }, [tasks]);
 

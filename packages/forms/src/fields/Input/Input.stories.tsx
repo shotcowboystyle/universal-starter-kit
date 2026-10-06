@@ -51,7 +51,12 @@ export const Main: Story = {
       return (
         <Form form={form}>
           <YStack gap="$4">
-            <Input label="First name" name="firstName" placeholder="Jane" required />
+            <Input
+              label="First name"
+              name="firstName"
+              placeholder="Jane"
+              required
+            />
             <Input
               label="Email"
               name="email"
@@ -113,18 +118,36 @@ export const WithError: Story = {
  */
 export const Density: Story = {
   render: () => (
-    <YStack gap="$4" maxWidth={400}>
-      <Input label="Comfortable" placeholder="Default density — 44px box" />
-      <Input compact label="Compact" placeholder="Density step, same size axis" />
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <Input
+        label="Comfortable"
+        placeholder="Default density — 44px box"
+      />
+      <Input
+        compact
+        label="Compact"
+        placeholder="Density step, same size axis"
+      />
     </YStack>
   ),
 };
 
 export const Sizes: Story = {
   render: () => (
-    <YStack gap="$4" maxWidth={400}>
-      <Input label="Default size" placeholder="sizeToken from knobs ($4 / 44px)" />
-      <Input size="$5" label="Size eject large" placeholder="Explicit size, comfortable density" />
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <Input
+        label="Default size"
+        placeholder="sizeToken from knobs ($4 / 44px)"
+      />
+      <Input
+        size="$5"
+        label="Size eject large"
+        placeholder="Explicit size, comfortable density"
+      />
     </YStack>
   ),
 };
@@ -154,7 +177,12 @@ export const Chromeless: Story = {
     chromeless: true,
     placeholder: 'Filter…',
   },
-  render: (args) => <Input leftIcon=<MagnifyingGlassIcon /> {...args} />,
+  render: (args) => (
+    <Input
+      leftIcon=<MagnifyingGlassIcon />
+      {...args}
+    />
+  ),
 };
 
 /** Loading placeholder — the skeleton mirrors the field's anatomy. */
@@ -187,9 +215,16 @@ export const Comparison: StoryObj = {
       const [customVal, setCustomVal] = useState('');
       const [tamaguiVal, setTamaguiVal] = useState('');
       return (
-        <XStack gap="$6" alignItems="flex-start" padding="$4">
-          <YStack gap="$3" width={300}>
-            <Paragraph size="$2" color="$placeholderColor">
+        <XStack
+          gap="$6"
+          alignItems="flex-start"
+          padding="$4">
+          <YStack
+            gap="$3"
+            width={300}>
+            <Paragraph
+              size="$2"
+              color="$placeholderColor">
               Custom Input
             </Paragraph>
             <Input
@@ -202,8 +237,12 @@ export const Comparison: StoryObj = {
             />
           </YStack>
 
-          <YStack gap="$3" width={300}>
-            <Paragraph size="$2" color="$placeholderColor">
+          <YStack
+            gap="$3"
+            width={300}>
+            <Paragraph
+              size="$2"
+              color="$placeholderColor">
               Tamagui Input
             </Paragraph>
             <TamaguiInput
