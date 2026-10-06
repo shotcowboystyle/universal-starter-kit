@@ -12,7 +12,7 @@ import type { ReactNode } from 'react';
 import { Children } from 'react';
 
 /** Bare string/number children are legal only inside Text. */
-export const isBareTextChild = (child: unknown): child is string | number =>
+export const isBareTextChild = (child: ReactNode): child is string | number =>
   typeof child === 'string' || typeof child === 'number';
 
 const coalesceBareTextRuns = (
@@ -20,13 +20,14 @@ const coalesceBareTextRuns = (
   renderLabel: (label: string, key: string) => ReactNode,
 ): ReactNode[] => {
   const out: ReactNode[] = [];
-  let run: string | undefined;
+  let run: string | null = null;
   let runIndex = 0;
   const flushRun = () => {
-    if (run !== undefined && run !== '') {
-      out.push(renderLabel(run, `lc50-run-${runIndex++}`));
+    if (run !== null && run !== '') {
+      out.push(renderLabel(run, `lc50-run-${runIndex}`));
+      runIndex += 1;
     }
-    run = undefined;
+    run = null;
   };
   for (const child of children) {
     if (isBareTextChild(child)) {
@@ -53,8 +54,9 @@ export const wrapBareTextChildren = (
     return renderLabel(String(children));
   }
   if (Array.isArray(children)) {
+    // oxlint-disable-next-line react/no-react-children -- Children.toArray flattens nested arrays, drops empty nodes and assigns the keys the returned array needs
     const flattened = Children.toArray(children);
-    if (flattened.some(isBareTextChild)) {
+    if (flattened.some((child) => isBareTextChild(child))) {
       return coalesceBareTextRuns(flattened, renderLabel);
     }
   }

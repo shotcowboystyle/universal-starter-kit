@@ -1,11 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const fireSpy = vi.fn();
-vi.mock('storybook/actions', () => ({
-  action: vi.fn(() => fireSpy),
-}));
-
 import { action } from './safe-action';
+
+interface CyclicNode {
+  type: string;
+  self?: CyclicNode;
+}
+
+interface FakeElement {
+  $$typeof: symbol;
+  props: { children?: FakeElement };
+}
+
+const { fireSpy } = vi.hoisted(() => ({ fireSpy: vi.fn<(...args: unknown[]) => void>() }));
+vi.mock(import('storybook/actions'), () => ({
+  action: () => fireSpy,
+}));
 
 describe('safeAction (cycle-safe Storybook action)', () => {
   beforeEach(() => {
@@ -19,11 +29,11 @@ describe('safeAction (cycle-safe Storybook action)', () => {
   });
 
   it('breaks circular references instead of letting the channel stringify throw', () => {
-    const node: Record<string, unknown> = { type: 'div' };
+    const node: CyclicNode = { type: 'div' };
     node.self = node;
     const handler = action('onPress');
     handler(node);
-    const [sanitized] = fireSpy.mock.calls[0];
+    const [[sanitized]] = fireSpy.mock.calls;
     expect(sanitized).toStrictEqual({ type: 'div', self: '[Circular]' });
     expect(() => JSON.stringify(sanitized)).not.toThrow();
   });
@@ -31,12 +41,12 @@ describe('safeAction (cycle-safe Storybook action)', () => {
   it('summarizes React elements (the DebugLayout/FrappeListView pageerror shape)', () => {
     // Synthetic press events reference the element graph: element → props →
     // children → … fiber → stateNode closes the circle.
-    const element: Record<string, unknown> = { $$typeof: Symbol.for('react.element'), props: {} };
-    (element.props as Record<string, unknown>).children = element;
+    const element: FakeElement = { $$typeof: Symbol.for('react.element'), props: {} };
+    element.props.children = element;
     const event = { type: 'press', target: element, nativeEvent: { pageX: 1 } };
     const handler = action('onPress');
     handler(event);
-    const [sanitized] = fireSpy.mock.calls[0];
+    const [[sanitized]] = fireSpy.mock.calls;
     expect(sanitized).toStrictEqual({
       type: 'press',
       target: '[ReactElement]',
@@ -63,14 +73,13 @@ describe('safeAction (cycle-safe Storybook action)', () => {
     const deep = { l1: { l2: { l3: { l4: { l5: { l6: { l7: 'bottom' } } } } } } };
     const handler = action('onDeep');
     handler(deep);
-    const [sanitized] = fireSpy.mock.calls[0];
+    const [[sanitized]] = fireSpy.mock.calls;
     expect(JSON.stringify(sanitized)).toContain('[Object]');
     expect(JSON.stringify(sanitized)).not.toContain('bottom');
   });
 
   it('tolerates throwing getters', () => {
-    const trap: Record<string, unknown> = {};
-    Object.defineProperty(trap, 'boom', {
+    const trap = Object.defineProperty({}, 'boom', {
       enumerable: true,
       get() {
         throw new Error('nope');

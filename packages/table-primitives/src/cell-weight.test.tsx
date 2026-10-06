@@ -13,13 +13,11 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { Table } from './index';
 
-afterEach(cleanup);
-
 const classes = (el: Element, prefix: string): string[] =>
-  String(el.className || '')
+  el.className
     .split(' ')
     .filter((c) => c.startsWith(prefix))
-    .sort();
+    .toSorted();
 
 const explicit = (prefix: string, props: Record<string, string>): string[] => {
   renderWithProviders(<RawText {...props}>probe</RawText>);
@@ -47,6 +45,8 @@ const renderTable = (overrides: Record<string, string>) =>
   );
 
 describe('Table.Cell body values follow the text knobs', () => {
+  afterEach(cleanup);
+
   it.each([
     ['regular', '400'],
     ['bold', '700'],
@@ -62,12 +62,9 @@ describe('Table.Cell body values follow the text knobs', () => {
     expect(classes(screen.getByText('42 kg'), '_ff-')).toStrictEqual(expected);
   });
 
-  it('the header label keeps 600 at both knob stops', () => {
+  it.each(['regular', 'bold'])('the header label keeps 600 at the %s knob stop', (fontWeight) => {
     const expected = explicit('_fow-', { fontWeight: '600' });
-    for (const fontWeight of ['regular', 'bold']) {
-      renderTable({ fontWeight });
-      expect(classes(screen.getByText('Weight'), '_fow-'), fontWeight).toStrictEqual(expected);
-      cleanup();
-    }
+    renderTable({ fontWeight });
+    expect(classes(screen.getByText('Weight'), '_fow-')).toStrictEqual(expected);
   });
 });

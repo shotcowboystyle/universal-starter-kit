@@ -8,10 +8,85 @@
 
 import { renderWithProviders } from '@repo/test-utils';
 import { Preset } from '@repo/theme';
+import type { Knobs } from '@repo/theme';
+import type { ComponentProps } from 'react';
 import { Theme } from 'tamagui';
 import { describe, expect, it } from 'vitest';
 
 import { Table, tablePressFill, tableZebraFill } from './index';
+
+const Flip = ({ animation }: { animation: 'none' | 'bouncy' }) => (
+  <Preset overrides={{ animation }}>
+    <Table>
+      <Table.Head>
+        <Table.Row>
+          <Table.HeaderCell>H</Table.HeaderCell>
+        </Table.Row>
+      </Table.Head>
+      <Table.Body>
+        <Table.Row>
+          <Table.Cell>C</Table.Cell>
+        </Table.Row>
+      </Table.Body>
+    </Table>
+  </Preset>
+);
+
+type TableProps = Partial<ComponentProps<typeof Table>>;
+
+const bodyTable = (overrides: Record<string, string>, props: TableProps = {}) =>
+  renderWithProviders(
+    <Preset overrides={overrides as any}>
+      <Table {...props}>
+        <Table.Head>
+          <Table.Row>
+            <Table.HeaderCell>Name</Table.HeaderCell>
+          </Table.Row>
+        </Table.Head>
+        <Table.Body>
+          <Table.Row>
+            <Table.Cell>Plain</Table.Cell>
+          </Table.Row>
+          <Table.Row onPress={() => {}}>
+            <Table.Cell>Pressable</Table.Cell>
+          </Table.Row>
+        </Table.Body>
+      </Table>
+    </Preset>,
+  ).container;
+
+// Token values render as atomic classes (`_h-t-size-3`), which jsdom's
+// computed style cannot resolve, so the knob is read off the class list.
+const atomic = (el: Element | null | undefined, prefix: string) =>
+  [...(el?.classList ?? [])].filter((name) => name.startsWith(`_${prefix}-`));
+
+const zebraTable = (tableZebra: 'on' | 'off', body: React.ReactNode, props: TableProps = {}) =>
+  renderWithProviders(
+    <Preset overrides={{ tableZebra }}>
+      <Table {...props}>
+        <Table.Head>
+          <Table.Row>
+            <Table.HeaderCell>Name</Table.HeaderCell>
+          </Table.Row>
+        </Table.Head>
+        <Table.Body>{body}</Table.Body>
+        <Table.Foot>
+          <Table.Row>
+            <Table.Cell>Total</Table.Cell>
+          </Table.Row>
+        </Table.Foot>
+      </Table>
+    </Preset>,
+  ).container;
+
+const stripes = (container: HTMLElement) =>
+  [...container.querySelectorAll<HTMLElement>('tbody tr')].map((row) => row.dataset.tableZebra);
+const fills = (container: HTMLElement) => [...container.querySelectorAll('tbody tr')].map((row) => atomic(row, 'bg'));
+
+const frameFill = (fillStyle: string) => atomic(bodyTable({ fillStyle }).querySelector('table'), 'bg');
+
+const cardFill = (fillStyle: string) =>
+  atomic(bodyTable({ fillStyle }, { layout: 'cards' }).querySelector('[data-testid="table-card"]'), 'bg');
 
 describe('Table Primitives', () => {
   it('renders real semantic HTML elements (table, thead, tbody, tfoot, tr, td, th, caption)', () => {
@@ -241,40 +316,24 @@ describe('Table Primitives', () => {
       </Preset>,
     );
 
-    expect(none.querySelector('table')?.getAttribute('data-animation')).toBe('none');
-    expect(bouncy.querySelector('table')?.getAttribute('data-animation')).toBe('on');
-    expect(none.querySelector('tr')?.getAttribute('data-animation')).toBe('none');
-    expect(bouncy.querySelector('tr')?.getAttribute('data-animation')).toBe('on');
-    expect(none.querySelector('td')?.getAttribute('data-animation')).toBe('none');
-    expect(bouncy.querySelector('td')?.getAttribute('data-animation')).toBe('on');
+    expect(none.querySelector<HTMLElement>('table')?.dataset.animation).toBe('none');
+    expect(bouncy.querySelector<HTMLElement>('table')?.dataset.animation).toBe('on');
+    expect(none.querySelector<HTMLElement>('tr')?.dataset.animation).toBe('none');
+    expect(bouncy.querySelector<HTMLElement>('tr')?.dataset.animation).toBe('on');
+    expect(none.querySelector<HTMLElement>('td')?.dataset.animation).toBe('none');
+    expect(bouncy.querySelector<HTMLElement>('td')?.dataset.animation).toBe('on');
   });
 
   it('survives the animation knob flipping live from none to bouncy', () => {
-    const Flip = ({ animation }: { animation: 'none' | 'bouncy' }) => (
-      <Preset overrides={{ animation }}>
-        <Table>
-          <Table.Head>
-            <Table.Row>
-              <Table.HeaderCell>H</Table.HeaderCell>
-            </Table.Row>
-          </Table.Head>
-          <Table.Body>
-            <Table.Row>
-              <Table.Cell>C</Table.Cell>
-            </Table.Row>
-          </Table.Body>
-        </Table>
-      </Preset>
-    );
     const { container, rerender } = renderWithProviders(<Flip animation="none" />);
-    expect(container.querySelector('table')?.getAttribute('data-animation')).toBe('none');
+    expect(container.querySelector<HTMLElement>('table')?.dataset.animation).toBe('none');
 
     expect(() => {
       rerender(<Flip animation="bouncy" />);
     }).not.toThrow();
-    expect(container.querySelector('table')?.getAttribute('data-animation')).toBe('on');
-    expect(container.querySelector('tr')?.getAttribute('data-animation')).toBe('on');
-    expect(container.querySelector('td')?.getAttribute('data-animation')).toBe('on');
+    expect(container.querySelector<HTMLElement>('table')?.dataset.animation).toBe('on');
+    expect(container.querySelector<HTMLElement>('tr')?.dataset.animation).toBe('on');
+    expect(container.querySelector<HTMLElement>('td')?.dataset.animation).toBe('on');
   });
 
   it('honours textAccent on header labels and leaves body cells as T-VALUE', () => {
@@ -311,40 +370,14 @@ describe('Table Primitives', () => {
       </Preset>,
     );
 
-    const headerHigh = high.querySelector('th [data-text-accent]')?.getAttribute('data-text-accent');
-    const headerLow = low.querySelector('th [data-text-accent]')?.getAttribute('data-text-accent');
+    const headerHigh = high.querySelector<HTMLElement>('th [data-text-accent]')?.dataset.textAccent;
+    const headerLow = low.querySelector<HTMLElement>('th [data-text-accent]')?.dataset.textAccent;
     expect(headerHigh).toBeTruthy();
     expect(headerLow).toBeTruthy();
     expect(headerHigh).not.toBe(headerLow);
     expect(high.querySelector('td [data-text-accent]')).toBeNull();
     expect(low.querySelector('td [data-text-accent]')).toBeNull();
   });
-
-  const bodyTable = (overrides: Record<string, string>, props: Record<string, unknown> = {}) =>
-    renderWithProviders(
-      <Preset overrides={overrides as any}>
-        <Table {...props}>
-          <Table.Head>
-            <Table.Row>
-              <Table.HeaderCell>Name</Table.HeaderCell>
-            </Table.Row>
-          </Table.Head>
-          <Table.Body>
-            <Table.Row>
-              <Table.Cell>Plain</Table.Cell>
-            </Table.Row>
-            <Table.Row onPress={() => {}}>
-              <Table.Cell>Pressable</Table.Cell>
-            </Table.Row>
-          </Table.Body>
-        </Table>
-      </Preset>,
-    ).container;
-
-  // Token values render as atomic classes (`_h-t-size-3`), which jsdom's
-  // computed style cannot resolve, so the knob is read off the class list.
-  const atomic = (el: Element | null | undefined, prefix: string) =>
-    Array.from(el?.classList ?? []).filter((name) => name.startsWith(`_${prefix}-`));
 
   it('carries the size knob to the row in the table composition, where min-height is inert', () => {
     const heights = (['small', 'medium', 'large'] as const).map((size) => {
@@ -359,7 +392,7 @@ describe('Table Primitives', () => {
 
   it('floors a pressable row at the 44px press target and leaves a plain row to the size knob', () => {
     const rows = bodyTable({ size: 'small', space: 'small' }).querySelectorAll('tbody tr');
-    const [plain, pressable] = Array.from(rows).map((row) => getComputedStyle(row));
+    const [plain, pressable] = [...rows].map((row) => getComputedStyle(row));
     expect(pressable?.height).toBe('44px');
     expect(pressable?.minHeight).toBe('44px');
     expect(plain?.height).toBe('');
@@ -376,46 +409,37 @@ describe('Table Primitives', () => {
   });
 
   it('keeps the frame fill at outlined, the same answer the card list gives (SF-CARD)', () => {
-    const frame = (fillStyle: string) => atomic(bodyTable({ fillStyle }).querySelector('table'), 'bg');
-    expect(frame('filled')).toStrictEqual(['_bg-background']);
-    expect(frame('outlined')).toStrictEqual(frame('filled'));
+    expect(frameFill('filled')).toStrictEqual(['_bg-background']);
+    expect(frameFill('outlined')).toStrictEqual(frameFill('filled'));
 
-    const card = (fillStyle: string) =>
-      atomic(bodyTable({ fillStyle }, { layout: 'cards' }).querySelector('[data-testid="table-card"]'), 'bg');
-    expect(card('filled')).toHaveLength(1);
-    expect(card('outlined')).toStrictEqual(card('filled'));
+    expect(cardFill('filled')).toHaveLength(1);
+    expect(cardFill('outlined')).toStrictEqual(cardFill('filled'));
   });
 
   describe('tableZebra (K4: Table, DataTable, SimpleTable and ChildTable honour it)', () => {
-    const zebraTable = (tableZebra: 'on' | 'off', body: React.ReactNode, props: Record<string, unknown> = {}) =>
-      renderWithProviders(
-        <Preset overrides={{ tableZebra }}>
-          <Table {...props}>
-            <Table.Head>
-              <Table.Row>
-                <Table.HeaderCell>Name</Table.HeaderCell>
-              </Table.Row>
-            </Table.Head>
-            <Table.Body>{body}</Table.Body>
-            <Table.Foot>
-              <Table.Row>
-                <Table.Cell>Total</Table.Cell>
-              </Table.Row>
-            </Table.Foot>
-          </Table>
-        </Preset>,
-      ).container;
-
     const names = ['Ada', 'Grace', 'Edsger', 'Barbara'];
     const plainRows = names.map((name) => (
       <Table.Row key={name}>
         <Table.Cell>{name}</Table.Cell>
       </Table.Row>
     ));
-    const stripes = (container: HTMLElement) =>
-      Array.from(container.querySelectorAll('tbody tr')).map((row) => row.getAttribute('data-table-zebra'));
-    const fills = (container: HTMLElement) =>
-      Array.from(container.querySelectorAll('tbody tr')).map((row) => atomic(row, 'bg'));
+    const cards = (tableZebra: 'on' | 'off') => [
+      ...zebraTable(
+        tableZebra,
+        [
+          ...plainRows,
+          <Table.Row
+            key="intent"
+            success>
+            <Table.Cell>Alan</Table.Cell>
+          </Table.Row>,
+          <Table.Row key="last">
+            <Table.Cell>Frances</Table.Cell>
+          </Table.Row>,
+        ],
+        { layout: 'cards' },
+      ).querySelectorAll<HTMLElement>('[data-testid="table-card"]'),
+    ];
 
     it('stays off by default and paints no body row', () => {
       const container = zebraTable('off', plainRows);
@@ -427,8 +451,8 @@ describe('Table Primitives', () => {
       const container = zebraTable('on', plainRows);
       expect(stripes(container)).toStrictEqual(['even', 'odd', 'even', 'odd']);
       expect(fills(container)).toStrictEqual([[], ['_bg-color2'], [], ['_bg-color2']]);
-      expect(container.querySelector('thead tr')?.hasAttribute('data-table-zebra')).toBe(false);
-      expect(container.querySelector('tfoot tr')?.hasAttribute('data-table-zebra')).toBe(false);
+      expect(container.querySelector<HTMLElement>('thead tr')?.dataset.tableZebra).toBeUndefined();
+      expect(container.querySelector<HTMLElement>('tfoot tr')?.dataset.tableZebra).toBeUndefined();
     });
 
     it('counts rows through arrays and fragments', () => {
@@ -493,7 +517,7 @@ describe('Table Primitives', () => {
         </Table.Row>,
       ]);
       const inner = container.querySelector('tbody table') as HTMLElement;
-      expect(inner.querySelector('thead tr')?.hasAttribute('data-table-zebra')).toBe(false);
+      expect(inner.querySelector<HTMLElement>('thead tr')?.dataset.tableZebra).toBeUndefined();
       expect(stripes(inner)).toStrictEqual(['even', 'odd']);
     });
 
@@ -504,42 +528,10 @@ describe('Table Primitives', () => {
     });
 
     it('stripes odd cards in the card layout and leaves intent cards tinted', () => {
-      const cards = (tableZebra: 'on' | 'off') =>
-        Array.from(
-          zebraTable(
-            tableZebra,
-            [
-              ...plainRows,
-              <Table.Row
-                key="intent"
-                success>
-                <Table.Cell>Alan</Table.Cell>
-              </Table.Row>,
-              <Table.Row key="last">
-                <Table.Cell>Frances</Table.Cell>
-              </Table.Row>,
-            ],
-            { layout: 'cards' },
-          ).querySelectorAll('[data-testid="table-card"]'),
-        );
       const off = cards('off');
       const on = cards('on');
-      expect(off.map((card) => card.getAttribute('data-table-zebra'))).toStrictEqual([
-        'off',
-        'off',
-        'off',
-        'off',
-        'off',
-        'off',
-      ]);
-      expect(on.map((card) => card.getAttribute('data-table-zebra'))).toStrictEqual([
-        'even',
-        'odd',
-        'even',
-        'odd',
-        'even',
-        'odd',
-      ]);
+      expect(off.map((card) => card.dataset.tableZebra)).toStrictEqual(['off', 'off', 'off', 'off', 'off', 'off']);
+      expect(on.map((card) => card.dataset.tableZebra)).toStrictEqual(['even', 'odd', 'even', 'odd', 'even', 'odd']);
       expect(atomic(on[0], 'bg')).toStrictEqual(atomic(off[0], 'bg'));
       expect(atomic(on[1], 'bg')).toStrictEqual(['_bg-color2']);
       expect(atomic(on[3], 'bg')).toStrictEqual(['_bg-color2']);
@@ -550,8 +542,12 @@ describe('Table Primitives', () => {
     describe('the stripe steps one up the ramp from the surface it sits on', () => {
       type Elevation = 'none' | 'small' | 'medium' | 'large';
       const cardFills = (scheme: 'light' | 'dark', elevation?: Elevation) => {
+        const overrides: Partial<Knobs> = { tableZebra: 'on' };
+        if (elevation !== undefined) {
+          overrides.elevation = elevation;
+        }
         const ui = (
-          <Preset overrides={{ tableZebra: 'on', ...(elevation ? { elevation } : {}) }}>
+          <Preset overrides={overrides}>
             <Table layout="cards">
               <Table.Head>
                 <Table.Row>
@@ -563,7 +559,7 @@ describe('Table Primitives', () => {
           </Preset>
         );
         const { container } = renderWithProviders(scheme === 'dark' ? <Theme name="dark">{ui}</Theme> : ui);
-        return Array.from(container.querySelectorAll('[data-testid="table-card"]')).map((card) => atomic(card, 'bg'));
+        return [...container.querySelectorAll('[data-testid="table-card"]')].map((card) => atomic(card, 'bg'));
       };
 
       it("in dark an odd card's background differs from an even card's", () => {
@@ -608,7 +604,7 @@ describe('Table Primitives', () => {
     });
   });
 
-  describe('tablePressFill', () => {
+  describe(tablePressFill, () => {
     it('presses one step above the fill it rests on, never below $color4 and never onto that fill', () => {
       expect(
         [

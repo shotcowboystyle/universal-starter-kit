@@ -8,41 +8,58 @@
  * import { createMockFrappeApp, mockDocList, createMockKeycloakContext } from "@repo/test-utils/mocks";
  *
  * const mockApp = createMockFrappeApp();
- * mockDocList(mockApp, "ToDo", [{ name: "TODO-001", description: "Buy milk" }]);
+ * mockDocList(mockApp, "Note", [{ name: "NOTE-001", description: "Buy milk" }]);
  * ```
  */
 
 import { vi } from 'vitest';
+import type { Mock } from 'vitest';
 
 // ─── Frappe API Mocks ────────────────────────────────────────────────────────
 
+type DocValue = string | number | boolean | null | undefined | DocValue[] | DocData;
+interface DocData {
+  [field: string]: DocValue;
+}
+
+// Wraps a sync impl so it returns a Promise (throws become rejections), like the real async Frappe API.
+const toAsync =
+  <Args extends unknown[], Result>(impl: (...args: Args) => Result) =>
+  // oxlint-disable-next-line eslint/require-await -- the wrapper is async on purpose; the inner impl is sync
+  async (...args: Args) =>
+    impl(...args);
+
+const resolveVoid = toAsync(() => {
+  // Intentionally empty: resolves to undefined.
+});
+
 export interface MockDbModule {
-  getDocList: ReturnType<typeof vi.fn>;
-  getDoc: ReturnType<typeof vi.fn>;
-  createDoc: ReturnType<typeof vi.fn>;
-  updateDoc: ReturnType<typeof vi.fn>;
-  deleteDoc: ReturnType<typeof vi.fn>;
-  getCount: ReturnType<typeof vi.fn>;
-  getValue: ReturnType<typeof vi.fn>;
-  setValue: ReturnType<typeof vi.fn>;
-  exists: ReturnType<typeof vi.fn>;
+  getDocList: Mock;
+  getDoc: Mock;
+  createDoc: Mock;
+  updateDoc: Mock;
+  deleteDoc: Mock;
+  getCount: Mock;
+  getValue: Mock;
+  setValue: Mock;
+  exists: Mock;
 }
 
 export interface MockCallModule {
-  get: ReturnType<typeof vi.fn>;
-  post: ReturnType<typeof vi.fn>;
+  get: Mock;
+  post: Mock;
 }
 
 export interface MockAuthModule {
-  getLoggedInUser: ReturnType<typeof vi.fn>;
-  login: ReturnType<typeof vi.fn>;
-  logout: ReturnType<typeof vi.fn>;
+  getLoggedInUser: Mock;
+  login: Mock;
+  logout: Mock;
 }
 
 export interface MockFileModule {
-  uploadFile: ReturnType<typeof vi.fn>;
-  deleteFile: ReturnType<typeof vi.fn>;
-  getFileURL: ReturnType<typeof vi.fn>;
+  uploadFile: Mock;
+  deleteFile: Mock;
+  getFileURL: Mock;
 }
 
 export interface MockFrappeApp {
@@ -88,66 +105,51 @@ export const createMockFrappeApp = (): MockFrappeApp => ({
 /**
  * Mock `db.getDocList` to return specific data for a doctype.
  */
-export const mockDocList = (mockApp: MockFrappeApp, doctype: string, data: Record<string, any>[]) => {
-  mockApp.db.getDocList.mockImplementation(async (dt: string) => {
-    if (dt === doctype) {
-      return data;
-    }
-    return [];
-  });
+export const mockDocList = (mockApp: MockFrappeApp, doctype: string, data: DocData[]) => {
+  mockApp.db.getDocList.mockImplementation(toAsync((dt: string) => (dt === doctype ? data : [])));
 };
 
 /**
  * Mock `db.getDoc` to return specific data for a doctype + name.
  */
-export const mockGetDoc = (mockApp: MockFrappeApp, doctype: string, name: string, data: Record<string, any>) => {
-  mockApp.db.getDoc.mockImplementation(async (dt: string, n: string) => {
-    if (dt === doctype && n === name) {
-      return data;
-    }
-    return null;
-  });
+export const mockGetDoc = (mockApp: MockFrappeApp, doctype: string, name: string, data: DocData) => {
+  mockApp.db.getDoc.mockImplementation(
+    toAsync((dt: string, n: string) => (dt === doctype && n === name ? data : null)),
+  );
 };
 
 /**
  * Mock `db.createDoc` to return the created document data.
  */
-export const mockCreateDoc = (mockApp: MockFrappeApp, doctype: string, returnData: Record<string, any>) => {
-  mockApp.db.createDoc.mockImplementation(async (dt: string, doc: Record<string, any>) => {
-    if (dt === doctype) {
-      return { ...doc, ...returnData };
-    }
-    return {};
-  });
+export const mockCreateDoc = (mockApp: MockFrappeApp, doctype: string, returnData: DocData) => {
+  mockApp.db.createDoc.mockImplementation(
+    toAsync((dt: string, doc: DocData) => (dt === doctype ? { ...doc, ...returnData } : {})),
+  );
 };
 
 /**
  * Mock `db.updateDoc` to return the updated document data.
  */
-export const mockUpdateDoc = (
-  mockApp: MockFrappeApp,
-  doctype: string,
-  name: string,
-  returnData: Record<string, any>,
-) => {
-  mockApp.db.updateDoc.mockImplementation(async (dt: string, n: string, doc: Record<string, any>) => {
-    if (dt === doctype && n === name) {
-      return { name: n, ...doc, ...returnData };
-    }
-    return {};
-  });
+export const mockUpdateDoc = (mockApp: MockFrappeApp, doctype: string, name: string, returnData: DocData) => {
+  mockApp.db.updateDoc.mockImplementation(
+    toAsync((dt: string, n: string, doc: DocData) =>
+      dt === doctype && n === name ? { name: n, ...doc, ...returnData } : {},
+    ),
+  );
 };
 
 /**
  * Mock `db.deleteDoc` to succeed for a specific doctype + name.
  */
 export const mockDeleteDoc = (mockApp: MockFrappeApp, doctype: string, name: string) => {
-  mockApp.db.deleteDoc.mockImplementation(async (dt: string, n: string) => {
-    if (dt === doctype && n === name) {
-      return { message: 'ok' };
-    }
-    throw new Error(`Document ${dt}/${n} not found`);
-  });
+  mockApp.db.deleteDoc.mockImplementation(
+    toAsync((dt: string, n: string) => {
+      if (dt === doctype && n === name) {
+        return { message: 'ok' };
+      }
+      throw new Error(`Document ${dt}/${n} not found`);
+    }),
+  );
 };
 
 // ─── Keycloak Auth Mocks ─────────────────────────────────────────────────────
@@ -185,11 +187,14 @@ export interface MockKeycloakContext {
   subject: string | undefined;
   email: string | undefined;
   username: string | undefined;
-  login: ReturnType<typeof vi.fn>;
-  logout: ReturnType<typeof vi.fn>;
+  login: Mock;
+  logout: Mock;
   hasRealmRole: (role: string) => boolean;
   hasResourceRole: (role: string, resource?: string) => boolean;
 }
+
+const orDefault = (value: string | undefined, fallback: string | undefined) =>
+  value === undefined || value === '' ? fallback : value;
 
 /**
  * Create a mock Keycloak context for testing components that depend on auth state.
@@ -212,9 +217,9 @@ export const createMockKeycloakContext = (options: MockKeycloakOptions = {}): Mo
     user = {},
   } = options;
 
-  const sub = user.sub || 'mock-user-id';
-  const email = user.email || (authenticated ? 'test@example.com' : undefined);
-  const name = user.name || (authenticated ? 'Test User' : undefined);
+  const sub = user.sub === undefined || user.sub === '' ? 'mock-user-id' : user.sub;
+  const email = orDefault(user.email, authenticated ? 'test@example.com' : undefined);
+  const name = orDefault(user.name, authenticated ? 'Test User' : undefined);
 
   return {
     authenticated,
@@ -234,8 +239,8 @@ export const createMockKeycloakContext = (options: MockKeycloakOptions = {}): Mo
     subject: authenticated ? sub : undefined,
     email: authenticated ? email : undefined,
     username: authenticated ? email : undefined,
-    login: vi.fn().mockResolvedValue(undefined),
-    logout: vi.fn().mockResolvedValue(undefined),
+    login: vi.fn().mockImplementation(resolveVoid),
+    logout: vi.fn().mockImplementation(resolveVoid),
     hasRealmRole: (role: string) => roles.includes(role),
     hasResourceRole: (_role: string, _resource?: string) => false,
   };

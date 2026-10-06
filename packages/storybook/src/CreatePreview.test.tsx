@@ -10,9 +10,10 @@ import type { ThemeConfig } from '@repo/theme';
 import { act, cleanup, render, screen } from '@testing-library/react';
 import { setUserScheme, useUserScheme } from '@vxrn/color-scheme';
 import type { ReactNode } from 'react';
+import type { Globals } from 'storybook/internal/csf';
 import { TamaguiProvider, Theme, getConfig, useThemeName } from 'tamagui';
 import type { ThemeName } from 'tamagui';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createPreview } from './CreatePreview';
 import type { Preview } from './CreatePreview';
@@ -26,7 +27,7 @@ const subset = createDefaultThemeConfig({
 });
 
 const i18n = {
-  instance: { changeLanguage: async () => undefined },
+  instance: { changeLanguage: vi.fn<(lang: string) => Promise<null>>().mockResolvedValue(null) },
   languages: ['en'],
   defaultLanguage: 'en',
 };
@@ -62,15 +63,15 @@ const Story = () => (
   </>
 );
 
-const renderStory = (preview: Preview, globals: Record<string, unknown>) => {
+const renderStory = (preview: Preview, globals: Globals) => {
   const [frameworkDecorator] = preview.decorators ?? [];
-  const context = (next: Record<string, unknown>) => ({
+  const context = (next: Globals) => ({
     globals: { ...preview.initialGlobals, scheme: 'light', ...next },
     parameters: {},
   });
   const view = render(frameworkDecorator(Story, context(globals)));
   return {
-    rerender: (next: Record<string, unknown>) => {
+    rerender: (next: Globals) => {
       act(() => {
         view.rerender(frameworkDecorator(Story, context(next)));
       });
@@ -78,11 +79,22 @@ const renderStory = (preview: Preview, globals: Record<string, unknown>) => {
   };
 };
 
+const Zebra = () => <span data-testid="zebra">{useResolvedKnobs().knobProps.tableZebra}</span>;
+
+const UserScheme = () => <span data-testid="user-scheme">{useUserScheme().value}</span>;
+
+const prefersDark = (dark: boolean) => {
+  const { happyDOM } = window as unknown as {
+    happyDOM: { settings: { device: { prefersColorScheme: string } } };
+  };
+  happyDOM.settings.device.prefersColorScheme = dark ? 'dark' : 'light';
+};
+
 const resolved = (theme: string) => screen.getByTestId(theme).textContent;
 
-afterEach(cleanup);
-
 describe('createPreview tamaguiConfig global', () => {
+  afterEach(cleanup);
+
   const preview = createPreview({ themeConfig: full, themeConfigs: { subset }, i18n, AppProvider });
 
   it('boots on the full config although the subset was created last', () => {
@@ -144,11 +156,11 @@ describe('createPreview with one config', () => {
 });
 
 describe('createPreview tableZebra global', () => {
+  afterEach(cleanup);
+
   const preview = createPreview({ themeConfig: full, i18n, AppProvider });
 
-  const Zebra = () => <span data-testid="zebra">{useResolvedKnobs().knobProps.tableZebra}</span>;
-
-  const renderZebra = (globals: Record<string, unknown>) => {
+  const renderZebra = (globals: Globals) => {
     const [frameworkDecorator] = preview.decorators ?? [];
     render(
       frameworkDecorator(Zebra, {
@@ -174,18 +186,16 @@ describe('createPreview tableZebra global', () => {
 describe('createPreview scheme global reaches useUserScheme', () => {
   const preview = createPreview({ themeConfig: full, i18n, AppProvider, setUserScheme });
 
-  const UserScheme = () => <span data-testid="user-scheme">{useUserScheme().value}</span>;
-
-  const renderUserScheme = (globals: Record<string, unknown>) => {
+  const renderUserScheme = (globals: Globals) => {
     const [frameworkDecorator] = preview.decorators ?? [];
-    const context = (next: Record<string, unknown>) => ({
+    const context = (next: Globals) => ({
       globals: { ...preview.initialGlobals, ...next },
       parameters: {},
     });
     const view = render(frameworkDecorator(UserScheme, context(globals)));
     return {
       value: () => screen.getByTestId('user-scheme').textContent,
-      rerender: (next: Record<string, unknown>) => {
+      rerender: (next: Globals) => {
         act(() => {
           view.rerender(frameworkDecorator(UserScheme, context(next)));
         });
@@ -193,15 +203,9 @@ describe('createPreview scheme global reaches useUserScheme', () => {
     };
   };
 
-  const prefersDark = (dark: boolean) => {
-    const { happyDOM } = window as unknown as {
-      happyDOM: { settings: { device: { prefersColorScheme: string } } };
-    };
-    happyDOM.settings.device.prefersColorScheme = dark ? 'dark' : 'light';
-  };
-
   afterEach(() => {
     prefersDark(false);
+    cleanup();
   });
 
   it('reads dark under scheme:dark and light under scheme:light', () => {

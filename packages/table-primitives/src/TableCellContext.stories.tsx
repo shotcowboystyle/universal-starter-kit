@@ -21,10 +21,8 @@ const Probe = ({ label }: { label: string }) => {
   return (
     <SizableText
       testID={`cell-ctx-${label}`}
-      {...({
-        'data-in-cell': String(inCell),
-        'data-is-header': String(Boolean(ctx.isHeader)),
-      } as Record<string, unknown>)}>
+      data-in-cell={String(inCell)}
+      data-is-header={String(Boolean(ctx.isHeader))}>
       {label}: inCell={String(inCell)} isHeader={String(Boolean(ctx.isHeader))}
     </SizableText>
   );

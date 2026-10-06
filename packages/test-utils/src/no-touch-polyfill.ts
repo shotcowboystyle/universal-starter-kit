@@ -3,6 +3,6 @@
 // Tests model a pointer device unless they opt into touch themselves.
 if (typeof window !== 'undefined') {
   for (let o: object | null = window; o; o = Object.getPrototypeOf(o)) {
-    delete (o as Record<string, unknown>).ontouchstart;
+    Reflect.deleteProperty(o, 'ontouchstart');
   }
 }

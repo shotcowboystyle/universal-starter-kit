@@ -14,35 +14,134 @@
  * ```
  */
 
-// localStorage polyfill FIRST so Tamagui plugin (tamagui-extract) can run during transform
-const _noopStorage = {
+// Imports are hoisted above the polyfills below by the module system anyway;
+// listing them first just says so. no-touch-polyfill must precede any tamagui
+// import: isWebTouchable is read once at module load.
+import './no-touch-polyfill';
+import '@testing-library/jest-dom';
+import './match-media-polyfill';
+
+import { config } from '@tamagui/config';
+import { cleanup } from '@testing-library/react';
+import { createTamagui } from 'tamagui';
+import { afterEach, beforeEach, vi } from 'vitest';
+import type { MockInstance } from 'vitest';
+
+// Hoisted so vi.mock factories (which vitest hoists above imports) can use it.
+const { noop } = vi.hoisted(() => ({
+  noop: () => {
+    // Intentionally empty: test stub.
+  },
+}));
+
+interface AttributeNode extends Node {
+  attributes?: Iterable<{ name: string; value: string }>;
+}
+interface LegacyMatchable extends Node {
+  webkitMatchesSelector?: (selector: string) => boolean;
+  mozMatchesSelector?: (selector: string) => boolean;
+  msMatchesSelector?: (selector: string) => boolean;
+}
+interface AttributePolyfillTarget {
+  prototype: Partial<Pick<Element, 'hasAttribute' | 'getAttribute' | 'setAttribute'>>;
+}
+
+const createNoopStorage = () => ({
   getItem: () => null,
-  setItem: () => {},
-  removeItem: () => {},
-  clear: () => {},
+  setItem: noop,
+  removeItem: noop,
+  clear: noop,
   get length() {
     return 0;
   },
   key: () => null,
+});
+
+// Element.matches polyfill
+const matchesImpl = function matchesImpl(this: LegacyMatchable | null, selector: string) {
+  if (this?.nodeType !== 1) {
+    return false;
+  }
+  if (this.webkitMatchesSelector) {
+    return this.webkitMatchesSelector(selector);
+  }
+  if (this.mozMatchesSelector) {
+    return this.mozMatchesSelector(selector);
+  }
+  if (this.msMatchesSelector) {
+    return this.msMatchesSelector(selector);
+  }
+  for (const match of (this.ownerDocument ?? document).querySelectorAll(selector)) {
+    if (match === this) {
+      return true;
+    }
+  }
+  return false;
 };
-if (typeof globalThis !== 'undefined' && typeof (globalThis as any).localStorage === 'undefined') {
-  Object.defineProperty(globalThis, 'localStorage', { value: _noopStorage, writable: true });
+
+// hasAttribute / getAttribute / setAttribute polyfills for all Node types
+const hasAttributeImpl = function hasAttributeImpl(this: AttributeNode | null, name: string): boolean {
+  if (this?.nodeType !== 1) {
+    return false;
+  }
+  if (this instanceof Element) {
+    return Element.prototype.hasAttribute.call(this, name);
+  }
+  return [...(this.attributes ?? [])].some((attribute) => attribute.name === name);
+};
+
+const getAttributeImpl = function getAttributeImpl(this: AttributeNode | null, name: string): string | null {
+  if (this?.nodeType !== 1) {
+    return null;
+  }
+  if (this instanceof Element) {
+    return Element.prototype.getAttribute.call(this, name);
+  }
+  return [...(this.attributes ?? [])].find((attribute) => attribute.name === name)?.value ?? null;
+};
+
+const setAttributeImpl = function setAttributeImpl(this: Element, name: string, value: string) {
+  if (this.nodeType === 1) {
+    Element.prototype.setAttribute.call(this, name, value);
+  }
+};
+
+const nodeTypeNames = [
+  'Node',
+  'Element',
+  'HTMLElement',
+  'HTMLDivElement',
+  'HTMLSpanElement',
+  'HTMLInputElement',
+  'HTMLButtonElement',
+  'HTMLFormElement',
+  'HTMLLabelElement',
+  'Text',
+  'Comment',
+  'Document',
+  'DocumentFragment',
+];
+
+// localStorage polyfill FIRST so Tamagui plugin (tamagui-extract) can run during transform
+const earlyNoopStorage = createNoopStorage();
+if ((globalThis as any).localStorage === undefined) {
+  Object.defineProperty(globalThis, 'localStorage', { value: earlyNoopStorage, writable: true });
 }
 if (typeof global !== 'undefined' && !('localStorage' in global)) {
-  Object.defineProperty(global, 'localStorage', { value: _noopStorage, writable: true });
+  Object.defineProperty(global, 'localStorage', { value: earlyNoopStorage, writable: true });
 }
 
-// DOM polyfills -- must run BEFORE any imports that use them
+// DOM polyfills
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
   // happy-dom exposes CSSStyleDeclaration index properties as getter-only.
   // Some RN-web/Tamagui render paths can transiently pass array-like style maps
   // during test rendering, which makes React assign style[0], style[1], etc.
   // Defining no-op numeric setters prevents hard crashes in tests.
-  if (typeof CSSStyleDeclaration !== 'undefined' && CSSStyleDeclaration.prototype) {
-    for (let i = 0; i <= 64; i++) {
+  if (typeof CSSStyleDeclaration !== 'undefined') {
+    for (let i = 0; i <= 64; i += 1) {
       const key = String(i);
       const desc = Object.getOwnPropertyDescriptor(CSSStyleDeclaration.prototype, key);
-      if (!desc || desc.set == null) {
+      if (desc?.set == null) {
         Object.defineProperty(CSSStyleDeclaration.prototype, key, {
           configurable: true,
           enumerable: false,
@@ -58,43 +157,16 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
   }
 
   // Fix NodeList.prototype to ensure forEach exists
-  if (typeof NodeList !== 'undefined' && NodeList.prototype) {
-    if (!NodeList.prototype.forEach) {
-      (NodeList.prototype as any).forEach = Array.prototype.forEach;
-    }
+  if (typeof NodeList !== 'undefined' && !('forEach' in NodeList.prototype)) {
+    (NodeList.prototype as any).forEach = Array.prototype.forEach;
   }
 
   // Also add to HTMLCollection
-  if (typeof HTMLCollection !== 'undefined' && HTMLCollection.prototype) {
-    if (!(HTMLCollection.prototype as any).forEach) {
-      (HTMLCollection.prototype as any).forEach = Array.prototype.forEach;
-    }
+  if (typeof HTMLCollection !== 'undefined' && !('forEach' in HTMLCollection.prototype)) {
+    (HTMLCollection.prototype as any).forEach = Array.prototype.forEach;
   }
 
-  // Element.matches polyfill
-  const matchesImpl = function matchesImpl(this: any, selector: string) {
-    if (!this || typeof this !== 'object') {
-      return false;
-    }
-    if (this.nodeType === 1) {
-      if (this.webkitMatchesSelector) {
-        return this.webkitMatchesSelector(selector);
-      }
-      if (this.mozMatchesSelector) {
-        return this.mozMatchesSelector(selector);
-      }
-      if (this.msMatchesSelector) {
-        return this.msMatchesSelector(selector);
-      }
-      const matches = (this.ownerDocument || document).querySelectorAll(selector);
-      let i = matches.length;
-      while (--i >= 0 && matches[i] !== this) {}
-      return i > -1;
-    }
-    return false;
-  };
-
-  if (Element.prototype && !Element.prototype.matches) {
+  if (!('matches' in Element.prototype)) {
     Object.defineProperty(Element.prototype, 'matches', {
       value: matchesImpl,
       writable: true,
@@ -103,7 +175,7 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     });
   }
 
-  if (typeof HTMLElement !== 'undefined' && HTMLElement.prototype && !HTMLElement.prototype.matches) {
+  if (typeof HTMLElement !== 'undefined' && !('matches' in HTMLElement.prototype)) {
     Object.defineProperty(HTMLElement.prototype, 'matches', {
       value: matchesImpl,
       writable: true,
@@ -112,89 +184,35 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     });
   }
 
-  // hasAttribute / getAttribute / setAttribute polyfills for all Node types
-  const hasAttributeImpl = function hasAttributeImpl(this: any, name: string): boolean {
-    if (!this || this.nodeType !== 1) {
-      return false;
-    }
-    if (Element.prototype.hasAttribute && this instanceof Element) {
-      return Element.prototype.hasAttribute.call(this, name);
-    }
-    if (this.attributes) {
-      for (let i = 0; i < this.attributes.length; i++) {
-        if (this.attributes[i].name === name) {
-          return true;
-        }
-      }
-    }
-    return false;
-  };
+  const nodeTypes = nodeTypeNames
+    // SAFETY: each name is a DOM constructor; the AttributePolyfillTarget shape only needs its prototype.
+    .map((name) => (globalThis as any)[name] as AttributePolyfillTarget | undefined)
+    .filter((nodeType) => nodeType != null);
 
-  const getAttributeImpl = function getAttributeImpl(this: any, name: string): string | null {
-    if (!this || this.nodeType !== 1) {
-      return null;
+  for (const { prototype } of nodeTypes) {
+    if (!prototype.hasAttribute) {
+      Object.defineProperty(prototype, 'hasAttribute', {
+        value: hasAttributeImpl,
+        writable: true,
+        configurable: true,
+        enumerable: false,
+      });
     }
-    if (Element.prototype.getAttribute && this instanceof Element) {
-      return Element.prototype.getAttribute.call(this, name);
+    if (!prototype.getAttribute) {
+      Object.defineProperty(prototype, 'getAttribute', {
+        value: getAttributeImpl,
+        writable: true,
+        configurable: true,
+        enumerable: false,
+      });
     }
-    if (this.attributes) {
-      for (let i = 0; i < this.attributes.length; i++) {
-        if (this.attributes[i].name === name) {
-          return this.attributes[i].value;
-        }
-      }
-    }
-    return null;
-  };
-
-  const nodeTypes = (
-    [
-      typeof Node !== 'undefined' && Node,
-      typeof Element !== 'undefined' && Element,
-      typeof HTMLElement !== 'undefined' && HTMLElement,
-      typeof HTMLDivElement !== 'undefined' && HTMLDivElement,
-      typeof HTMLSpanElement !== 'undefined' && HTMLSpanElement,
-      typeof HTMLInputElement !== 'undefined' && HTMLInputElement,
-      typeof HTMLButtonElement !== 'undefined' && HTMLButtonElement,
-      typeof HTMLFormElement !== 'undefined' && HTMLFormElement,
-      typeof HTMLLabelElement !== 'undefined' && HTMLLabelElement,
-      typeof Text !== 'undefined' && Text,
-      typeof Comment !== 'undefined' && Comment,
-      typeof Document !== 'undefined' && Document,
-      typeof DocumentFragment !== 'undefined' && DocumentFragment,
-    ] as (false | (new (...args: any[]) => any))[]
-  ).filter(Boolean) as (new (...args: any[]) => any)[];
-
-  for (const NodeType of nodeTypes) {
-    if ((NodeType as any)?.prototype) {
-      if (!(NodeType as any).prototype.hasAttribute) {
-        Object.defineProperty((NodeType as any).prototype, 'hasAttribute', {
-          value: hasAttributeImpl,
-          writable: true,
-          configurable: true,
-          enumerable: false,
-        });
-      }
-      if (!(NodeType as any).prototype.getAttribute) {
-        Object.defineProperty((NodeType as any).prototype, 'getAttribute', {
-          value: getAttributeImpl,
-          writable: true,
-          configurable: true,
-          enumerable: false,
-        });
-      }
-      if (!(NodeType as any).prototype.setAttribute) {
-        Object.defineProperty((NodeType as any).prototype, 'setAttribute', {
-          value(name: string, value: string) {
-            if (this.nodeType === 1 && Element.prototype.setAttribute) {
-              Element.prototype.setAttribute.call(this, name, value);
-            }
-          },
-          writable: true,
-          configurable: true,
-          enumerable: false,
-        });
-      }
+    if (!prototype.setAttribute) {
+      Object.defineProperty(prototype, 'setAttribute', {
+        value: setAttributeImpl,
+        writable: true,
+        configurable: true,
+        enumerable: false,
+      });
     }
   }
 
@@ -220,29 +238,18 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
   }
 }
 
-// Now safe to import modules that depend on polyfills
-// Must precede any tamagui import: isWebTouchable is read once at module load.
-import './no-touch-polyfill';
-import '@testing-library/jest-dom';
-import './match-media-polyfill';
-
-import { config } from '@tamagui/config';
-import { cleanup } from '@testing-library/react';
-import { createTamagui } from 'tamagui';
-import { afterEach, beforeEach, vi } from 'vitest';
-
 // Patch @floating-ui/react to handle missing forEach in test environment
 try {
   const floatingUiUtils = await import('@floating-ui/react/utils');
-  if (floatingUiUtils?.enableFocusInside) {
+  if ('enableFocusInside' in floatingUiUtils) {
     const originalEnableFocusInside = floatingUiUtils.enableFocusInside;
-    (floatingUiUtils as any).enableFocusInside = (container: any) => {
-      if (!container || !container.querySelectorAll) {
+    (floatingUiUtils as any).enableFocusInside = (container: HTMLElement | null) => {
+      if (container == null || !('querySelectorAll' in container)) {
         return;
       }
       const elements = container.querySelectorAll('[data-tabindex]');
-      if (!elements.forEach) {
-        elements.forEach = Array.prototype.forEach;
+      if (!('forEach' in elements)) {
+        (elements as any).forEach = Array.prototype.forEach;
       }
       originalEnableFocusInside(container);
     };
@@ -255,16 +262,7 @@ try {
 createTamagui(config);
 
 // No-op localStorage for Node/vitest
-const noopStorage = {
-  getItem: () => null,
-  setItem: () => {},
-  removeItem: () => {},
-  clear: () => {},
-  get length() {
-    return 0;
-  },
-  key: () => null,
-};
+const noopStorage = createNoopStorage();
 vi.stubGlobal('localStorage', noopStorage);
 Object.defineProperty(globalThis, 'localStorage', { value: noopStorage, writable: true });
 if (typeof global !== 'undefined') {
@@ -272,20 +270,20 @@ if (typeof global !== 'undefined') {
 }
 
 // BroadcastChannel mock
-if (typeof globalThis !== 'undefined' && typeof (globalThis as any).BroadcastChannel === 'undefined') {
+if ((globalThis as any).BroadcastChannel === undefined) {
   (globalThis as any).BroadcastChannel = class BroadcastChannelMock {
     name: string;
     onmessage: ((event: MessageEvent) => void) | null = null;
     constructor(name: string) {
       this.name = name;
     }
-    postMessage(_message: any) {}
-    close() {}
+    postMessage = noop;
+    close = noop;
   };
 }
 
 // IndexedDB mock
-if (typeof window !== 'undefined' && !window.indexedDB) {
+if (typeof window !== 'undefined' && window.indexedDB == null) {
   Object.defineProperty(window, 'indexedDB', {
     value: {
       open: () => ({ onsuccess: null, onerror: null, onupgradeneeded: null, result: null }),
@@ -298,18 +296,13 @@ if (typeof window !== 'undefined' && !window.indexedDB) {
 // Stub fetch to prevent real network calls
 vi.stubGlobal(
   'fetch',
-  vi.fn(
-    async () =>
-      new Response(JSON.stringify({ data: [] }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      }),
-  ),
+  // oxlint-disable-next-line eslint/require-await -- fetch must return a Promise; async keeps that contract with a sync body
+  vi.fn(async () => Response.json({ data: [] }, { status: 200, headers: { 'Content-Type': 'application/json' } })),
 );
 
 // requestAnimationFrame / cancelAnimationFrame polyfill
-global.requestAnimationFrame = ((callback: FrameRequestCallback): number =>
-  setTimeout(callback, 0) as unknown as number) as typeof window.requestAnimationFrame;
+global.requestAnimationFrame = ((onFrame: FrameRequestCallback): number =>
+  setTimeout(onFrame, 0) as unknown as number) as typeof window.requestAnimationFrame;
 
 global.cancelAnimationFrame = (id: number): void => {
   clearTimeout(id);
@@ -317,11 +310,13 @@ global.cancelAnimationFrame = (id: number): void => {
 
 // ResizeObserver mock
 class MockResizeObserver {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
+  observe = noop;
+  unobserve = noop;
+  disconnect = noop;
 }
 window.ResizeObserver = MockResizeObserver as any;
+
+const noRecords = (): IntersectionObserverEntry[] => [];
 
 // IntersectionObserver mock
 class MockIntersectionObserver implements IntersectionObserver {
@@ -330,12 +325,10 @@ class MockIntersectionObserver implements IntersectionObserver {
   // TS7's dom lib added scrollMargin to the interface.
   readonly scrollMargin: string = '0px';
   readonly thresholds: readonly number[] = [0];
-  observe(): void {}
-  unobserve(): void {}
-  disconnect(): void {}
-  takeRecords(): IntersectionObserverEntry[] {
-    return [];
-  }
+  observe = noop;
+  unobserve = noop;
+  disconnect = noop;
+  takeRecords = noRecords;
 }
 if (typeof window !== 'undefined') {
   Object.defineProperty(window, 'IntersectionObserver', {
@@ -372,13 +365,13 @@ if (typeof DataTransfer === 'undefined') {
       this.data = new Map();
     }
     getData(format: string): string {
-      return this.data.get(format) || '';
+      return this.data.get(format) ?? '';
     }
     setData(format: string, data: string): void {
       this.data.set(format, data);
     }
     clearData(format?: string): void {
-      if (format) {
+      if (format !== undefined && format !== '') {
         this.data.delete(format);
       } else {
         this.data.clear();
@@ -391,11 +384,11 @@ if (typeof DataTransfer === 'undefined') {
 if (typeof ClipboardEvent === 'undefined') {
   (global as any).ClipboardEvent = class ClipboardEvent extends Event {
     clipboardData: any;
-    constructor(type: string, options?: any) {
+    constructor(type: string, options?: ClipboardEventInit) {
       super(type, options);
-      this.clipboardData = options?.clipboardData || {
+      this.clipboardData = options?.clipboardData ?? {
         getData: () => '',
-        setData: () => {},
+        setData: noop,
       };
     }
   };
@@ -414,6 +407,13 @@ Object.defineProperty(global, 'TextEncoder', {
   writable: true,
 });
 
+// The slice of @repo/theme the mock below reads from the real module.
+interface ThemeExports {
+  getLayoutSizeClass: (width: number) => string;
+  defaultMaxPanes: (sizeClass: string) => 1 | 2;
+  layoutBreakpoints: { medium: number };
+}
+
 // Mock @repo/theme as a passthrough partial mock: the REAL module
 // is spread first, so knob/preset resolution (`useResolvedKnobs` / `Preset` /
 // `useSemanticGaps` — specs assert knob totality), DEV-warn guards
@@ -425,12 +425,12 @@ Object.defineProperty(global, 'TextEncoder', {
 // needing different behavior re-register the mock in a later setup file /
 // spec (last `vi.mock` registration for a path wins).
 vi.mock('@repo/theme', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
+  const actual = await importOriginal<ThemeExports>();
 
-  const getSizeClass = actual.getLayoutSizeClass as (width: number) => string;
-  const getPaneBudget = actual.defaultMaxPanes as (sizeClass: string) => 1 | 2;
+  const getSizeClass = actual.getLayoutSizeClass;
+  const getPaneBudget = actual.defaultMaxPanes;
   // Same SSR fallback the real hook uses (layoutBreakpoints.medium).
-  const fallbackWidth = (actual.layoutBreakpoints as { medium: number }).medium;
+  const fallbackWidth = actual.layoutBreakpoints.medium;
   const viewportWidth = () => (typeof window === 'undefined' ? fallbackWidth : window.innerWidth);
 
   return {
@@ -448,7 +448,7 @@ vi.mock('@repo/theme', async (importOriginal) => {
     },
     // Real tracker installs document-level capture listeners backed by module
     // state, leaking "last input was keyboard" across tests in a file; noop.
-    ensureKeyboardModalityTracking: () => {},
+    ensureKeyboardModalityTracking: noop,
     // Pin pointer modality so manual focus-ring painting is deterministic.
     wasKeyboardFocus: () => false,
   };
@@ -456,14 +456,17 @@ vi.mock('@repo/theme', async (importOriginal) => {
 
 // Mock 'one' package
 vi.mock('one', async () => {
-  const { createElement } = await import('react');
+  const { createElement, Fragment } = await import('react');
   return {
     default: {},
     // @repo/router re-exports Link from `one`; render a plain anchor in tests.
+    // oxlint-disable-next-line sonarjs/function-name -- React component mock; PascalCase is the component naming convention
     Link: ({ href, children, ...props }: { href: unknown; children?: React.ReactNode }) =>
       createElement('a', { ...props, href: String(href) }, children),
-    SafeAreaView: ({ children }: { children: React.ReactNode }) => children,
-    Head: ({ children }: { children: React.ReactNode }) => children,
+    // oxlint-disable-next-line sonarjs/function-name -- React component mock; PascalCase is the component naming convention
+    SafeAreaView: ({ children }: { children: React.ReactNode }) => createElement(Fragment, null, children),
+    // oxlint-disable-next-line sonarjs/function-name -- React component mock; PascalCase is the component naming convention
+    Head: ({ children }: { children: React.ReactNode }) => createElement(Fragment, null, children),
     useRouter: () => ({
       push: vi.fn(),
       replace: vi.fn(),
@@ -474,16 +477,20 @@ vi.mock('one', async () => {
 
 // Mock @tamagui/animations-reanimated (used by @repo/theme animations)
 vi.mock('@tamagui/animations-reanimated', () => ({
-  createAnimations: (config: any) => ({
-    ...config,
+  createAnimations: (animationConfig: any) => ({
+    ...animationConfig,
+    // oxlint-disable-next-line sonarjs/no-undefined-assignment -- null would change destructuring-default behavior for consumers
     View: undefined,
+    // oxlint-disable-next-line sonarjs/no-undefined-assignment -- null would change destructuring-default behavior for consumers
     Text: undefined,
     isReactNative: false,
-    animations: config,
-    useAnimatedNumber: (initial: any) => ({ value: initial, setValue: () => {} }),
-    useAnimatedNumberReaction: () => {},
+    animations: animationConfig,
+    useAnimatedNumber: (initial: any) => ({ value: initial, setValue: noop }),
+    useAnimatedNumberReaction: noop,
     useAnimatedNumberStyle: () => ({}),
+    // oxlint-disable-next-line sonarjs/function-name -- React component mock; PascalCase is the component naming convention
     AnimatedView: ({ children }: any) => children,
+    // oxlint-disable-next-line sonarjs/function-name -- React component mock; PascalCase is the component naming convention
     AnimatedText: ({ children }: any) => children,
   }),
 }));
@@ -497,7 +504,7 @@ vi.mock('react-native-reanimated', () => ({
     withTiming: (val: any) => val,
     withSpring: (val: any) => val,
     withDecay: (val: any) => val,
-    withSequence: (...args: any[]) => args[args.length - 1],
+    withSequence: (...args: any[]) => args.at(-1),
     withDelay: (_: any, val: any) => val,
     createAnimatedComponent: (component: any) => component,
     useDerivedValue: (fn: () => any) => ({ value: fn() }),
@@ -514,7 +521,7 @@ vi.mock('react-native-reanimated', () => ({
       bezier: () => (v: any) => v,
     },
     measure: () => null,
-    scrollTo: () => {},
+    scrollTo: noop,
     makeMutable: (init: any) => ({ value: init }),
   },
   useSharedValue: (init: any) => ({ value: init }),
@@ -543,12 +550,16 @@ vi.mock('react-native-reanimated', () => ({
 // components), so no mock is needed.
 
 // Mock @react-navigation/native
-vi.mock('@react-navigation/native', () => ({
-  NavigationContainer: ({ children }: { children: React.ReactNode }) => children,
-  useNavigation: () => ({}),
-  useRoute: () => ({}),
-  useFocusEffect: () => {},
-}));
+vi.mock('@react-navigation/native', async () => {
+  const { createElement, Fragment } = await import('react');
+  return {
+    // oxlint-disable-next-line sonarjs/function-name -- React component mock; PascalCase is the component naming convention
+    NavigationContainer: ({ children }: { children: React.ReactNode }) => createElement(Fragment, null, children),
+    useNavigation: () => ({}),
+    useRoute: () => ({}),
+    useFocusEffect: noop,
+  };
+});
 
 // Cleanup after each test
 // Fix pointer-events: none that Tamagui sets on <html>, which causes
@@ -573,28 +584,19 @@ const ignoredTestWarnings = [
 const originalConsoleWarn = console.warn.bind(console);
 const originalConsoleError = console.error.bind(console);
 const shouldIgnoreTestWarning = (args: unknown[]) => {
-  const message = args
-    .map((arg) => {
-      if (typeof arg === 'string') {
-        return arg;
-      }
-      if (arg instanceof Error) {
-        return arg.message;
-      }
-      return String(arg);
-    })
-    .join(' ');
+  const message = args.map((arg) => (arg instanceof Error ? arg.message : String(arg))).join(' ');
   if (ignoredTestWarnings.some((pattern) => message.includes(pattern))) {
     return true;
   }
 
   // React often logs warnings with printf placeholders:
   // "Received `%s` for a non-boolean attribute `%s`." + substitution args.
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- console args are untyped external input; only a string first arg is a printf template
   const firstArg = typeof args[0] === 'string' ? args[0] : '';
   const hasNonBooleanTemplate = firstArg.includes('non-boolean attribute');
   if (hasNonBooleanTemplate) {
-    const tokens = args.map((arg) => String(arg));
-    if (tokens.includes('editable') || tokens.includes('elevate') || tokens.includes('bordered')) {
+    const tokens = new Set(args.map(String));
+    if (tokens.has('editable') || tokens.has('elevate') || tokens.has('bordered')) {
       return true;
     }
   }
@@ -602,8 +604,8 @@ const shouldIgnoreTestWarning = (args: unknown[]) => {
   return false;
 };
 
-let consoleWarnSpy: ReturnType<typeof vi.spyOn> | null = null;
-let consoleErrorSpy: ReturnType<typeof vi.spyOn> | null = null;
+let consoleWarnSpy: MockInstance<typeof console.warn> | null = null;
+let consoleErrorSpy: MockInstance<typeof console.error> | null = null;
 
 beforeEach(() => {
   Object.defineProperty(globalThis, 'IntersectionObserver', {

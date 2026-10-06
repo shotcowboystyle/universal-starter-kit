@@ -17,18 +17,34 @@ import { action as addonAction } from 'storybook/actions';
 
 const MAX_DEPTH = 5;
 
+type SanitizedArg = bigint | boolean | number | string | symbol | null | undefined | SanitizedArg[] | SanitizedRecord;
+interface SanitizedRecord {
+  [key: string]: SanitizedArg;
+}
+
+/** Own properties of a host object, read by key (reads may throw). */
+interface PropertyBag {
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- values of arbitrary host objects are unknowable; sanitize() parses each one
+  [key: string]: unknown;
+}
+
+// The guards and sanitizers below are the boundary parse for arbitrary action payloads, so their inputs are
+// deliberately untyped; everything they return is a SanitizedArg.
+const isFunction = (value: unknown): value is { readonly name: string } => typeof value === 'function';
+const isObject = (value: unknown): value is object => typeof value === 'object' && value !== null;
+
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- sanitizer boundary
 const summarize = (value: unknown): string | undefined => {
-  if (typeof value === 'function') {
-    return `[Function ${(value as { name?: string }).name || 'anonymous'}]`;
+  if (isFunction(value)) {
+    return `[Function ${value.name === '' ? 'anonymous' : value.name}]`;
   }
-  if (typeof value === 'object' && value !== null) {
-    const obj = value as Record<string, unknown>;
+  if (isObject(value)) {
     // React elements — their props/children graphs reach fibers and cycle.
-    if (obj.$$typeof) {
+    if ('$$typeof' in value && Boolean(value.$$typeof)) {
       return '[ReactElement]';
     }
     // React fibers.
-    if ('stateNode' in obj && 'pendingProps' in obj) {
+    if ('stateNode' in value && 'pendingProps' in value) {
       return '[Fiber]';
     }
     // DOM / host nodes.
@@ -39,13 +55,16 @@ const summarize = (value: unknown): string | undefined => {
   return undefined;
 };
 
-const sanitize = (value: unknown, depth: number, seen: WeakSet<object>): unknown => {
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- sanitizer boundary
+const sanitize = (value: unknown, depth: number, seen: WeakSet<object>): SanitizedArg => {
   const summary = summarize(value);
   if (summary !== undefined) {
     return summary;
   }
-  if (value === null || typeof value !== 'object') {
-    return value;
+  if (!isObject(value)) {
+    // SAFETY: summarize() consumed functions and isObject() rejected objects, so only primitives and null remain.
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- unknown narrowed by the guards above
+    return value as SanitizedArg;
   }
   const obj = value;
   if (seen.has(obj)) {
@@ -59,11 +78,14 @@ const sanitize = (value: unknown, depth: number, seen: WeakSet<object>): unknown
     if (Array.isArray(value)) {
       return value.map((item) => sanitize(item, depth - 1, seen));
     }
-    const out: Record<string, unknown> = {};
+    const out: SanitizedRecord = {};
+    // SAFETY: obj is a non-null object and every key comes from Object.keys(obj), so each read targets an own property.
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- object -> index-signature view for keyed reads
+    const bag = obj as PropertyBag;
     for (const key of Object.keys(obj)) {
-      let item: unknown;
+      let item: PropertyBag[string];
       try {
-        item = (obj as Record<string, unknown>)[key];
+        item = bag[key];
       } catch {
         // Getters on host/proxy objects may throw when read.
         item = '[Unreadable]';
@@ -80,5 +102,7 @@ const sanitize = (value: unknown, depth: number, seen: WeakSet<object>): unknown
 
 export const action = (name: string, options?: Parameters<typeof addonAction>[1]): ReturnType<typeof addonAction> => {
   const fire = addonAction(name, options);
-  return (...args: unknown[]) => fire(...args.map((arg) => sanitize(arg, MAX_DEPTH, new WeakSet())));
+  return (...args: unknown[]) => {
+    fire(...args.map((arg) => sanitize(arg, MAX_DEPTH, new WeakSet())));
+  };
 };

@@ -6,8 +6,9 @@
  */
 
 import { hairline, MIN_PRESS_TARGET, Surface, transitionProps, useResolvedKnobs } from '@repo/theme';
-import { Children, Fragment, createContext, isValidElement, useContext } from 'react';
-import type { FontSizeTokens, SizeTokens } from 'tamagui';
+import { Children, Fragment, createContext, isValidElement, useContext, useMemo } from 'react';
+import type { ComponentProps } from 'react';
+import type { FontSizeTokens, SizeTokens, Variable } from 'tamagui';
 import {
   SizableText,
   Theme,
@@ -20,11 +21,25 @@ import {
 } from 'tamagui';
 
 import { TableCellContext } from './table-cell-context';
-import { wrapBareTextChildren } from './text-rides-text';
+import { isBareTextChild, wrapBareTextChildren } from './text-rides-text';
 
 export { TableCellContext, useIsInTableCell, useTableCellContext } from './table-cell-context';
 export type { TableCellContextValue } from './table-cell-context';
 export { isBareTextChild, wrapBareTextChildren } from './text-rides-text';
+
+type StackProps = ComponentProps<typeof ThemeableStack>;
+type StackDisplay = NonNullable<StackProps['display']>;
+
+// Tamagui forwards `display` to CSS verbatim on web; its prop type just omits the table-* keywords.
+// SAFETY: every caller passes a valid CSS display keyword, which is all the web renderer reads.
+// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- string -> Tamagui's display union
+const cssDisplay = (value: string) => value as StackDisplay;
+
+const tableCellDisplay = cssDisplay('table-cell');
+
+// SAFETY: callers pass the resolved knob token name (e.g. "$4") for the prop they name via the type argument.
+// oxlint-disable-next-line typescript/no-unsafe-type-assertion, typescript/no-unnecessary-type-parameters -- knob values are plain strings; Tamagui props want token unions
+const asToken = <Token extends number | string>(value: string) => value as Token;
 
 interface AlignCells {
   y: 'center' | 'start' | 'end';
@@ -39,25 +54,39 @@ type DisplayMode = 'table' | 'flex';
 // table composition a row minimum has to be written as `height`, which CSS
 // tables treat as a floor the content can still grow past. Flex keeps
 // min-height, because a flex `height` would clip taller content.
+type KnobTransition = ReturnType<typeof useResolvedKnobs>['knobProps']['transition'];
+
+const animationAttr = (transition: KnobTransition) => (transition == null || transition === '' ? 'none' : 'on');
+
 const rowMinimum = (
   displayMode: DisplayMode | undefined,
-  value: unknown,
-): { minHeight: any } | { minHeight: any; height: any } => {
+  value: StackProps['minHeight'],
+): Pick<StackProps, 'height' | 'minHeight'> => {
   const mode = displayMode ?? (isWeb ? 'table' : 'flex');
   return mode === 'table' ? { minHeight: value, height: value } : { minHeight: value };
+};
+
+interface SizeTokenMap {
+  [name: string]: Variable<number> | undefined;
+}
+
+/** Looks up a size token by the variant's runtime name; an unknown name yields no value. */
+const sizeValue = (sizes: SizeTokenMap, name: SizeTokens) => sizes[name];
+
+// `displayMode` rides the table context; variant resolvers receive it among Tamagui's untyped props.
+// oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- Props is whatever Tamagui hands the variant resolver
+const displayModeOf = <Props,>(props: Props): DisplayMode | undefined => {
+  // SAFETY: only a `displayMode` key is read, and its value is checked against the two DisplayMode literals.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- reading one optional key off Tamagui's resolver props
+  const { displayMode } = props as { displayMode?: unknown };
+  return displayMode === 'table' || displayMode === 'flex' ? displayMode : undefined;
 };
 
 const TableContext = createStyledContext<{
   cellWidth: SizeTokens | number;
   cellHeight: SizeTokens | number;
-  alignHeaderCells: {
-    y: 'center' | 'start' | 'end';
-    x: 'center' | 'start' | 'end';
-  };
-  alignCells: {
-    y: 'center' | 'start' | 'end';
-    x: 'center' | 'start' | 'end';
-  };
+  alignHeaderCells: AlignCells;
+  alignCells: AlignCells;
   borderColor: string;
   displayMode: 'table' | 'flex';
 }>({
@@ -87,16 +116,16 @@ const TableContext = createStyledContext<{
 /** Table Components */
 const Row = styled(ThemeableStack, {
   name: 'TableRow',
-  ...({ render: 'tr' } as { render?: string }),
+  render: 'tr',
   role: 'row',
   context: TableContext,
-  display: 'table-row' as any,
+  display: cssDisplay('table-row'),
   variants: {
     displayMode: {
-      table: { display: 'table-row' as any },
+      table: { display: cssDisplay('table-row') },
       flex: {
-        display: 'flex' as any,
-        flexDirection: 'row' as any,
+        display: 'flex',
+        flexDirection: 'row',
         width: '100%',
         alignItems: 'center',
       },
@@ -111,10 +140,10 @@ const Row = styled(ThemeableStack, {
 
 const Cell = styled(ThemeableStack, {
   name: 'TableCell',
-  ...({ render: 'td' } as { render?: string }),
+  render: 'td',
   role: 'cell',
   context: TableContext,
-  display: 'table-cell' as any,
+  display: tableCellDisplay,
   // verticalAlign goes via inline style; Tamagui forwards it to the DOM as a JSX
   // prop otherwise, which React rejects ("React does not recognize verticalAlign").
   style: { verticalAlign: 'middle' },
@@ -131,8 +160,8 @@ const Cell = styled(ThemeableStack, {
   overflow: 'hidden',
   variants: {
     displayMode: {
-      table: { display: 'table-cell' as any, style: { verticalAlign: 'middle' } },
-      flex: { display: 'flex' as any, overflow: 'visible' as any },
+      table: { display: tableCellDisplay, style: { verticalAlign: 'middle' } },
+      flex: { display: 'flex', overflow: 'visible' },
     },
     cellWidth: {
       /** Equal flex for consistency across rows (flex rows size independently) */
@@ -144,13 +173,12 @@ const Cell = styled(ThemeableStack, {
         minWidth: val,
       }),
       '...size': (name, { tokens }) => ({
-        width: (tokens.size as Record<string, any>)[name],
-        minWidth: (tokens.size as Record<string, any>)[name],
+        width: sizeValue(tokens.size, name),
+        minWidth: sizeValue(tokens.size, name),
       }),
     },
     cellHeight: {
-      '...size': (name, { tokens, props }) =>
-        rowMinimum((props as { displayMode?: DisplayMode }).displayMode, (tokens.size as Record<string, any>)[name]),
+      '...size': (name, { tokens, props }) => rowMinimum(displayModeOf(props), sizeValue(tokens.size, name)),
     },
     // Row-flex axis map: y → alignItems (vertical), x →
     // justifyContent (horizontal).
@@ -166,12 +194,15 @@ const Cell = styled(ThemeableStack, {
   } as const,
 });
 
+// `scope` is a DOM attribute Tamagui's style props do not list.
+const headerCellDomProps = { render: 'th', scope: 'col' };
+
 const HeaderCell = styled(ThemeableStack, {
   name: 'TableHeaderCell',
-  ...({ render: 'th', scope: 'col' } as { render?: string; scope: string }),
+  ...headerCellDomProps,
   role: 'columnheader',
   context: TableContext,
-  display: 'table-cell' as any,
+  display: tableCellDisplay,
   // verticalAlign goes via inline style; see TableCell above for context.
   // fontWeight/textAlign neutralize the UA styles a real <th> brings
   // (bold + centered) so header content keeps its pre-migration look;
@@ -189,10 +220,10 @@ const HeaderCell = styled(ThemeableStack, {
   variants: {
     displayMode: {
       table: {
-        display: 'table-cell' as any,
+        display: tableCellDisplay,
         style: { verticalAlign: 'middle', fontWeight: 'normal', textAlign: 'start' },
       },
-      flex: { display: 'flex' as any },
+      flex: { display: 'flex' },
     },
     cellWidth: {
       /** Equal flex for consistency across rows */
@@ -204,8 +235,8 @@ const HeaderCell = styled(ThemeableStack, {
         minWidth: val,
       }),
       '...size': (name, { tokens }) => ({
-        width: (tokens.size as Record<string, any>)[name],
-        minWidth: (tokens.size as Record<string, any>)[name],
+        width: sizeValue(tokens.size, name),
+        minWidth: sizeValue(tokens.size, name),
       }),
     },
     // Row-flex axis map: y → alignItems (vertical), x →
@@ -215,8 +246,7 @@ const HeaderCell = styled(ThemeableStack, {
       justifyContent: val.x === 'center' ? 'center' : `flex-${val.x}`,
     }),
     cellHeight: {
-      '...size': (name, { tokens, props }) =>
-        rowMinimum((props as { displayMode?: DisplayMode }).displayMode, (tokens.size as Record<string, any>)[name]),
+      '...size': (name, { tokens, props }) => rowMinimum(displayModeOf(props), sizeValue(tokens.size, name)),
     },
     cellLocation: {
       first: () => ({}),
@@ -228,7 +258,7 @@ const HeaderCell = styled(ThemeableStack, {
 
 export type TableZebraStripe = 'off' | 'even' | 'odd';
 
-export const tableZebraStripe = (tableZebra: unknown, index: number): TableZebraStripe => {
+export const tableZebraStripe = (tableZebra: string, index: number): TableZebraStripe => {
   if (tableZebra !== 'on') {
     return 'off';
   }
@@ -236,25 +266,25 @@ export const tableZebraStripe = (tableZebra: unknown, index: number): TableZebra
 };
 
 // `$background` is the ramp's first step.
-const rampStep = (fill: unknown): number | undefined => {
+const rampStep = (fill: string | undefined): number | undefined => {
   if (fill === '$background') {
     return 1;
   }
-  if (typeof fill !== 'string') {
+  if (fill === undefined) {
     return undefined;
   }
-  const step = /^\$color(\d+)$/u.exec(fill);
-  return step ? Number(step[1]) : undefined;
+  const step = /^\$color(?<step>\d+)$/u.exec(fill)?.groups?.step;
+  return step === undefined ? undefined : Number(step);
 };
 
 // A card's own fill climbs the ramp with dark elevation, so a fixed
 // $color2 stripe vanishes on a small-elevation dark card.
-export const tableZebraFill = (hostFill: unknown): `$color${number}` =>
+export const tableZebraFill = (hostFill: string | undefined): `$color${number}` =>
   `$color${Math.min((rampStep(hostFill) ?? 1) + 1, 12)}`;
 
 // One step at the foot of the dark ramp is about 4/255 a channel, too faint to
 // read as a press, so the step floors at the old fixed $color4.
-export const tablePressFill = (restFill: unknown): `$color${number}` => {
+export const tablePressFill = (restFill: string | undefined): `$color${number}` => {
   const step = rampStep(restFill);
   if (step === undefined) {
     return '$color4';
@@ -267,38 +297,45 @@ export const tablePressFill = (restFill: unknown): `$color${number}` => {
 
 const BodyRowIndexContext = createContext<number | undefined>(undefined);
 
-const indexBodyRows = (children: React.ReactNode, counter: { next: number }): React.ReactNode =>
+interface ChildrenProps {
+  children?: React.ReactNode;
+}
+
+const indexBodyRows = (children: React.ReactNode, counter: { next: number }): React.ReactNode[] | null | undefined =>
+  // oxlint-disable-next-line react/no-react-children, typescript/promise-function-async -- the callback returns a ReactNode (which merely admits Promise); Children.map keeps element keys and recurses arrays, which the body-row index relies on
   Children.map(children, (child) => {
-    if (!isValidElement(child)) {
+    if (!isValidElement<ChildrenProps>(child)) {
       return child;
     }
     if (child.type === Fragment) {
-      return <>{indexBodyRows((child.props as { children?: React.ReactNode }).children, counter)}</>;
+      return <>{indexBodyRows(child.props.children, counter)}</>;
     }
-    return <BodyRowIndexContext.Provider value={counter.next++}>{child}</BodyRowIndexContext.Provider>;
+    const bodyIndex = counter.next;
+    counter.next += 1;
+    return <BodyRowIndexContext.Provider value={bodyIndex}>{child}</BodyRowIndexContext.Provider>;
   });
 
 const TableBody = styled(ThemeableStack, {
   name: 'TableBody',
-  ...({ render: 'tbody' } as { render?: string }),
+  render: 'tbody',
   role: 'rowgroup',
   context: TableContext,
-  display: 'table-row-group' as any,
+  display: cssDisplay('table-row-group'),
   variants: {
     displayMode: {
-      table: { display: 'table-row-group' as any },
+      table: { display: cssDisplay('table-row-group') },
       flex: {
-        display: 'flex' as any,
-        flexDirection: 'column' as any,
+        display: 'flex',
+        flexDirection: 'column',
         width: '100%',
-        overflowY: 'auto' as any,
+        overflowY: 'auto',
         // basis auto (not flex:1 basis-0): in auto-height parents a basis-0
         // chain resolves to 0 and the body collapses to a scrollbar sliver;
         // basis auto sizes to rows there while still filling sized parents
         // (grow) and scrolling (shrink + minHeight 0).
         flexGrow: 1,
         flexShrink: 1,
-        flexBasis: 'auto' as any,
+        flexBasis: 'auto',
         minHeight: 0,
       },
     },
@@ -307,18 +344,18 @@ const TableBody = styled(ThemeableStack, {
 
 const TableHead = styled(ThemeableStack, {
   name: 'TableHead',
-  ...({ render: 'thead' } as { render?: string }),
+  render: 'thead',
   role: 'rowgroup',
   context: TableContext,
-  display: 'table-header-group' as any,
+  display: cssDisplay('table-header-group'),
   borderBottomWidth: 1,
   borderBottomColor: '$color6',
   variants: {
     displayMode: {
-      table: { display: 'table-header-group' as any },
+      table: { display: cssDisplay('table-header-group') },
       flex: {
-        display: 'flex' as any,
-        flexDirection: 'column' as any,
+        display: 'flex',
+        flexDirection: 'column',
         width: '100%',
         flexShrink: 0,
       },
@@ -328,16 +365,16 @@ const TableHead = styled(ThemeableStack, {
 
 const TableFoot = styled(ThemeableStack, {
   name: 'TableFoot',
-  ...({ render: 'tfoot' } as { render?: string }),
+  render: 'tfoot',
   role: 'rowgroup',
   context: TableContext,
-  display: 'table-footer-group' as any,
+  display: cssDisplay('table-footer-group'),
   variants: {
     displayMode: {
-      table: { display: 'table-footer-group' as any },
+      table: { display: cssDisplay('table-footer-group') },
       flex: {
-        display: 'flex' as any,
-        flexDirection: 'column' as any,
+        display: 'flex',
+        flexDirection: 'column',
         width: '100%',
         flexShrink: 0,
       },
@@ -347,9 +384,9 @@ const TableFoot = styled(ThemeableStack, {
 
 const TableCaption = styled(ThemeableStack, {
   name: 'TableCaption',
-  ...({ render: 'caption' } as { render?: string }),
+  render: 'caption',
   context: TableContext,
-  display: 'table-caption' as any,
+  display: cssDisplay('table-caption'),
   // Real <caption> centers its text by UA default — keep the primitive's
   // pre-migration start alignment (logical, RTL-correct).
   style: { textAlign: 'start' },
@@ -359,10 +396,10 @@ const TableCaption = styled(ThemeableStack, {
 
 const TableComp = styled(ThemeableStack, {
   name: 'Table',
-  ...({ render: 'table' } as { render?: string }),
+  render: 'table',
   role: 'table',
   context: TableContext,
-  display: 'table' as any,
+  display: cssDisplay('table'),
   borderWidth: 1,
   borderColor: '$color6',
   backgroundColor: '$background',
@@ -370,14 +407,14 @@ const TableComp = styled(ThemeableStack, {
   width: '100%',
   variants: {
     displayMode: {
-      table: { display: 'table' as any },
+      table: { display: cssDisplay('table') },
       flex: {
-        display: 'flex' as any,
-        flexDirection: 'column' as any,
+        display: 'flex',
+        flexDirection: 'column',
         // See Body: basis auto so auto-height parents get content height.
         flexGrow: 1,
         flexShrink: 1,
-        flexBasis: 'auto' as any,
+        flexBasis: 'auto',
         minHeight: 0,
       },
     },
@@ -403,7 +440,9 @@ export interface ThemedRowProps extends React.ComponentProps<typeof Row> {
   success?: boolean;
 }
 
-const resolveIntent = (props: ThemedRowProps): IntentName | undefined => {
+const resolveIntent = (
+  props: Pick<ThemedRowProps, 'accent' | 'error' | 'success' | 'warning'>,
+): IntentName | undefined => {
   if (props.accent) {
     return 'accent';
   }
@@ -419,6 +458,15 @@ const resolveIntent = (props: ThemedRowProps): IntentName | undefined => {
   return undefined;
 };
 
+const cellPaddingBySpace = {
+  small: { paddingHorizontal: '$1.5', paddingVertical: '$2' },
+  medium: { paddingHorizontal: '$2', paddingVertical: '$3' },
+  large: { paddingHorizontal: '$3', paddingVertical: '$4' },
+};
+
+const isCellPaddingSpace = (space: string): space is keyof typeof cellPaddingBySpace =>
+  Object.hasOwn(cellPaddingBySpace, space);
+
 /**
  * Row density: the `space` knob scales cell padding (row density)
  * without adding an outer row inset.
@@ -429,14 +477,7 @@ export const getTableCellPadding = (
 ): {
   paddingHorizontal: string;
   paddingVertical: string;
-} => {
-  const map: Record<string, { paddingHorizontal: string; paddingVertical: string }> = {
-    small: { paddingHorizontal: '$1.5', paddingVertical: '$2' },
-    medium: { paddingHorizontal: '$2', paddingVertical: '$3' },
-    large: { paddingHorizontal: '$3', paddingVertical: '$4' },
-  };
-  return map[space] ?? map.medium;
-};
+} => (isCellPaddingSpace(space) ? cellPaddingBySpace[space] : cellPaddingBySpace.medium);
 
 /**
  * Responsive layout mode for the Table primitive.
@@ -455,9 +496,10 @@ interface CardRowModel {
 
 /** Flatten fragments/arrays into a single element list. */
 const flattenChildren = (children: React.ReactNode): React.ReactNode[] =>
+  // oxlint-disable-next-line react/no-react-children -- Children.toArray drops empty nodes and assigns the keys the flattened list needs
   Children.toArray(children).flatMap((child) => {
-    if (isValidElement(child) && child.type === Fragment) {
-      return flattenChildren((child.props as { children?: React.ReactNode }).children);
+    if (isValidElement<ChildrenProps>(child) && child.type === Fragment) {
+      return flattenChildren(child.props.children);
     }
     return [child];
   });
@@ -471,11 +513,25 @@ const ThemedTableHead = (props: React.ComponentProps<typeof TableHead>) => (
   />
 );
 
+/** Tint + theme-scoping class for an intent row; nothing for a plain row. */
+const intentRowProps = (intent: IntentName | undefined) => {
+  if (intent === undefined) {
+    return {};
+  }
+  const base = {
+    backgroundColor: '$color3' as const,
+    // `color: $color` mirrors the inline color the Theme span used
+    // to set, so unstyled text in cells inherits the intent color.
+    color: '$color' as const,
+  };
+  return isWeb ? { ...base, className: `t_${intent}` } : base;
+};
+
 const ThemedRow = ({ accent, error, warning, success, ...props }: ThemedRowProps) => {
   const { knobProps } = useResolvedKnobs();
   const context = TableContext.useStyledContext();
   const motion = transitionProps(knobProps.transition);
-  const intent = resolveIntent({ accent, error, warning, success } as ThemedRowProps);
+  const intent = resolveIntent({ accent, error, warning, success });
   const bodyIndex = useContext(BodyRowIndexContext);
   const stripe = bodyIndex === undefined ? undefined : tableZebraStripe(knobProps.tableZebra, bodyIndex);
   // Rows abut, so a slop outset would intersect the neighbour and the
@@ -495,17 +551,9 @@ const ThemedRow = ({ accent, error, warning, success, ...props }: ThemedRowProps
     <Row
       {...motion}
       {...pressFloor}
-      {...({ 'data-animation': knobProps.transition ? 'on' : 'none' } as Record<string, unknown>)}
-      {...(stripe ? ({ 'data-table-zebra': stripe } as Record<string, unknown>) : {})}
-      {...(intent
-        ? {
-            backgroundColor: '$color3' as const,
-            // `color: $color` mirrors the inline color the Theme span used
-            // to set, so unstyled text in cells inherits the intent color.
-            color: '$color' as const,
-            ...(isWeb ? { className: `t_${intent}` } : {}),
-          }
-        : {})}
+      data-animation={animationAttr(knobProps.transition)}
+      data-table-zebra={stripe}
+      {...intentRowProps(intent)}
       {...props}
       {...(stripe === 'odd' && !intent && props.backgroundColor == null
         ? { backgroundColor: tableZebraFill(knobProps.surface.backgroundColor) }
@@ -534,34 +582,40 @@ const TableCellSurfaceBody = ({ isHeader, children }: { isHeader: boolean; child
   // not just the singleton case. A body cell's value takes bodyFont and
   // fontWeight like any body text; the weight is the last prop so
   // no size or family variant paints the font ramp's weight over it.
-  return wrapBareTextChildren(children, (label, key) => (
+  const labelled = wrapBareTextChildren(children, (label, key) => (
     <SizableText
       key={key}
       {...(isHeader ? {} : body)}
-      fontSize={knobProps.sizeToken as FontSizeTokens}
+      fontSize={asToken<FontSizeTokens>(knobProps.sizeToken)}
       // data-chrome: honour textAccent on labels. Body cells stay T-VALUE
       // (inherit), matching SimpleTable's header vs value split.
       {...(isHeader
         ? {
             color: knobProps.textAccentColor,
-            ...({ 'data-text-accent': String(knobProps.textAccentColor) } as Record<string, unknown>),
+            'data-text-accent': knobProps.textAccentColor,
           }
         : {})}
-      fontWeight={isHeader ? '600' : (bodyWeight as '400')}>
+      fontWeight={isHeader ? '600' : asToken<'400'>(bodyWeight)}>
       {label}
     </SizableText>
   ));
+  // A component must return a concrete element; ReactNode admits Promise.
+  // oxlint-disable-next-line react/jsx-no-useless-fragment -- see above
+  return <>{labelled}</>;
 };
 
-const TableCellSurface = ({ isHeader, children }: { isHeader: boolean; children: React.ReactNode }) => (
-  <TableCellContext.Provider value={{ inTableCell: true, isHeader }}>
-    <Surface
-      size="small"
-      density="compact">
-      <TableCellSurfaceBody isHeader={isHeader}>{children}</TableCellSurfaceBody>
-    </Surface>
-  </TableCellContext.Provider>
-);
+const TableCellSurface = ({ isHeader, children }: { isHeader: boolean; children: React.ReactNode }) => {
+  const cellContext = useMemo(() => ({ inTableCell: true, isHeader }), [isHeader]);
+  return (
+    <TableCellContext.Provider value={cellContext}>
+      <Surface
+        size="small"
+        density="compact">
+        <TableCellSurfaceBody isHeader={isHeader}>{children}</TableCellSurfaceBody>
+      </Surface>
+    </TableCellContext.Provider>
+  );
+};
 
 const ThemedHeaderCell = ({ children, style, ...props }: React.ComponentProps<typeof HeaderCell>) => {
   const { knobProps } = useResolvedKnobs();
@@ -570,17 +624,19 @@ const ThemedHeaderCell = ({ children, style, ...props }: React.ComponentProps<ty
     <HeaderCell
       {...getTableCellPadding(knobProps.space)}
       {...motion}
-      {...({ 'data-animation': knobProps.transition ? 'on' : 'none' } as Record<string, unknown>)}
+      data-animation={animationAttr(knobProps.transition)}
       {...props}
       // Compose (not replace) the inline style so consumer styles (sticky
       // pinned headers) keep the real-<th> UA neutralizers (bold/centered).
-      style={[{ verticalAlign: 'middle', fontWeight: 'normal', textAlign: 'start' }, style as any]}>
+      style={[{ verticalAlign: 'middle', fontWeight: 'normal', textAlign: 'start' }, style]}>
       <TableCellSurface isHeader>{children}</TableCellSurface>
     </HeaderCell>
   );
 };
 
-const ThemedTableBody = ({ children, ...props }: React.ComponentProps<typeof TableBody>) => (
+type WithNodeChildren<Props> = Omit<Props, 'children'> & { children?: React.ReactNode };
+
+const ThemedTableBody = ({ children, ...props }: WithNodeChildren<React.ComponentProps<typeof TableBody>>) => (
   <TableBody {...props}>{indexBodyRows(children, { next: 0 })}</TableBody>
 );
 
@@ -591,11 +647,11 @@ const ThemedCell = ({ children, style, ...props }: React.ComponentProps<typeof C
     <Cell
       {...getTableCellPadding(knobProps.space)}
       {...motion}
-      {...({ 'data-animation': knobProps.transition ? 'on' : 'none' } as Record<string, unknown>)}
+      data-animation={animationAttr(knobProps.transition)}
       {...props}
       // Compose (not replace) the inline style so a consumer style (e.g.
       // sticky pinned cells) keeps the verticalAlign baseline.
-      style={[{ verticalAlign: 'middle' }, style as any]}>
+      style={[{ verticalAlign: 'middle' }, style]}>
       <TableCellSurface isHeader={false}>{children}</TableCellSurface>
     </Cell>
   );
@@ -607,77 +663,86 @@ const ThemedCell = ({ children, style, ...props }: React.ComponentProps<typeof C
  * cells wrapped in custom components are not discovered — those cards render
  * value-only rows (documented limitation of the card layout).
  */
-const extractCardModel = (
-  children: React.ReactNode,
-): {
+type RowElementProps = Pick<ThemedRowProps, 'accent' | 'error' | 'success' | 'warning'> & ChildrenProps;
+
+interface CardModel {
   headerLabels: React.ReactNode[];
   rows: CardRowModel[];
   caption: React.ReactNode;
-} => {
+}
+
+/** First Head row wins per column: `headerLabels[column]` is that column's header content. */
+const collectHeaderLabels = (headChildren: React.ReactNode, headerLabels: React.ReactNode[]) => {
+  for (const rowEl of flattenChildren(headChildren)) {
+    if (isValidElement<ChildrenProps>(rowEl) && rowEl.type === ThemedRow) {
+      for (const [index, cellEl] of flattenChildren(rowEl.props.children).entries()) {
+        if (
+          isValidElement<ChildrenProps>(cellEl) &&
+          cellEl.type === ThemedHeaderCell &&
+          headerLabels[index] === undefined
+        ) {
+          headerLabels[index] = cellEl.props.children;
+        }
+      }
+    }
+  }
+};
+
+const collectBodyRows = (bodyChildren: React.ReactNode, rows: CardRowModel[]) => {
+  for (const rowEl of flattenChildren(bodyChildren)) {
+    if (isValidElement<RowElementProps>(rowEl) && rowEl.type === ThemedRow) {
+      const rowProps = rowEl.props;
+      const cells = flattenChildren(rowProps.children)
+        .filter(
+          (cellEl): cellEl is React.ReactElement<ChildrenProps> =>
+            isValidElement<ChildrenProps>(cellEl) && cellEl.type === ThemedCell,
+        )
+        .map((cellEl, index) => ({
+          key: cellEl.key ?? String(index),
+          content: cellEl.props.children,
+        }));
+      rows.push({
+        key: rowEl.key ?? String(rows.length),
+        intent: resolveIntent(rowProps),
+        cells,
+      });
+    }
+  }
+};
+
+const extractCardModel = (children: React.ReactNode): CardModel => {
   const headerLabels: React.ReactNode[] = [];
   const rows: CardRowModel[] = [];
   let caption: React.ReactNode = null;
 
   for (const section of flattenChildren(children)) {
-    if (!isValidElement(section)) {
-      continue;
-    }
-    const sectionProps = section.props as { children?: React.ReactNode };
-    if (section.type === ThemedTableHead) {
-      for (const rowEl of flattenChildren(sectionProps.children)) {
-        if (!isValidElement(rowEl) || rowEl.type !== ThemedRow) {
-          continue;
-        }
-        flattenChildren((rowEl.props as { children?: React.ReactNode }).children).forEach((cellEl, index) => {
-          if (!isValidElement(cellEl) || cellEl.type !== ThemedHeaderCell) {
-            return;
-          }
-          if (headerLabels[index] === undefined) {
-            headerLabels[index] = (cellEl.props as { children?: React.ReactNode }).children;
-          }
-        });
+    if (isValidElement<ChildrenProps>(section)) {
+      const { children: sectionChildren } = section.props;
+      if (section.type === ThemedTableHead) {
+        collectHeaderLabels(sectionChildren, headerLabels);
+      } else if (section.type === ThemedTableBody) {
+        collectBodyRows(sectionChildren, rows);
+      } else if (section.type === TableCaption) {
+        caption = sectionChildren;
       }
-    } else if (section.type === ThemedTableBody) {
-      for (const rowEl of flattenChildren(sectionProps.children)) {
-        if (!isValidElement(rowEl) || rowEl.type !== ThemedRow) {
-          continue;
-        }
-        const rowProps = rowEl.props as ThemedRowProps;
-        const cells = flattenChildren(rowProps.children)
-          .filter((cellEl): cellEl is React.ReactElement => isValidElement(cellEl) && cellEl.type === ThemedCell)
-          .map((cellEl, index) => ({
-            key: cellEl.key ?? String(index),
-            content: (cellEl.props as { children?: React.ReactNode }).children,
-          }));
-        rows.push({
-          key: rowEl.key ?? String(rows.length),
-          intent: resolveIntent(rowProps),
-          cells,
-        });
-      }
-    } else if (section.type === TableCaption) {
-      caption = sectionProps.children;
+      // Foot content has no card slot — it is omitted in the card layout.
     }
-    // Foot content has no card slot — it is omitted in the card layout.
   }
 
   return { headerLabels, rows, caption };
 };
 
+const tableContextKeys = ['cellWidth', 'cellHeight', 'alignCells', 'alignHeaderCells', 'displayMode', 'style'] as const;
+
 /** Card list rendering for the Table primitive (layout="cards" / narrow auto). */
-const TableCardsList = ({ children, ...props }: { children?: React.ReactNode; [key: string]: any }) => {
+const TableCardsList = ({ children, ...props }: WithNodeChildren<Omit<ThemedTableProps, 'layout'>>) => {
   const { knobProps } = useResolvedKnobs();
   const { headerLabels, rows, caption } = extractCardModel(children);
   // Table-context props have no meaning on the card list — drop them.
-  const {
-    cellWidth: _cellWidth,
-    cellHeight: _cellHeight,
-    alignCells: _alignCells,
-    alignHeaderCells: _alignHeaderCells,
-    displayMode: _displayMode,
-    style: _style,
-    ...viewProps
-  } = props;
+  const viewProps: Omit<typeof props, (typeof tableContextKeys)[number]> = { ...props };
+  for (const key of tableContextKeys) {
+    Reflect.deleteProperty(viewProps, key);
+  }
 
   const motion = transitionProps(knobProps.transition);
   return (
@@ -686,12 +751,12 @@ const TableCardsList = ({ children, ...props }: { children?: React.ReactNode; [k
       {...knobProps.gap}
       {...motion}
       testID="table-cards"
-      {...({ 'data-animation': knobProps.transition ? 'on' : 'none' } as Record<string, unknown>)}
+      data-animation={animationAttr(knobProps.transition)}
       {...viewProps}>
       {caption != null &&
-        (typeof caption === 'string' || typeof caption === 'number' ? (
+        (isBareTextChild(caption) ? (
           <SizableText
-            fontSize={knobProps.sizeToken as FontSizeTokens}
+            fontSize={asToken<FontSizeTokens>(knobProps.sizeToken)}
             color="$color10">
             {caption}
           </SizableText>
@@ -711,7 +776,7 @@ const TableCardsList = ({ children, ...props }: { children?: React.ReactNode; [k
             borderColor="$color6"
             {...(stripe === 'odd' ? { backgroundColor: tableZebraFill(knobProps.cardSurface.backgroundColor) } : {})}
             {...(row.intent ? { backgroundColor: '$color3' as const } : {})}
-            {...({ 'data-table-zebra': stripe } as Record<string, unknown>)}>
+            data-table-zebra={stripe}>
             {row.cells.map((cell, index) => {
               const label = headerLabels[index];
               return (
@@ -723,7 +788,7 @@ const TableCardsList = ({ children, ...props }: { children?: React.ReactNode; [k
                   paddingVertical="$1.5">
                   {label != null && (
                     <SizableText
-                      fontSize={knobProps.sizeToken as FontSizeTokens}
+                      fontSize={asToken<FontSizeTokens>(knobProps.sizeToken)}
                       fontWeight="500"
                       color={knobProps.textAccentColor}
                       width="40%"
@@ -788,8 +853,8 @@ const ThemedTableComp = ({ layout = 'table', ...props }: ThemedTableProps) => {
         {...motion}
         // Size knob sets default row height through the table context; consumer
         // cellHeight (table- or cell-level) still overrides via {...props}.
-        cellHeight={knobProps.sizeToken as SizeTokens}
-        {...({ 'data-animation': knobProps.transition ? 'on' : 'none' } as Record<string, unknown>)}
+        cellHeight={asToken<SizeTokens>(knobProps.sizeToken)}
+        data-animation={animationAttr(knobProps.transition)}
         {...props}
         // borderSpacing 0 neutralizes the real <table> UA default (2px gaps
         // between cells) so the migrated element keeps the div-table look.

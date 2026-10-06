@@ -110,6 +110,8 @@ export default defineConfig({
         'anti-slop/no-chained-type-assertions': 'off',
         'anti-slop/no-module-mocking': 'off',
         'anti-slop/require-safety-comment-for-type-assertion': 'off',
+        // DOM polyfill/mock classes live together in shared setup files.
+        'max-classes-per-file': 'off',
         // Fixtures use loopback/LAN origins (http://localhost, 10.0.0.5) on purpose.
         'sonarjs/no-clear-text-protocols': 'off',
         'sonarjs/no-hardcoded-ip': 'off',
