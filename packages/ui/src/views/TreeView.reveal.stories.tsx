@@ -48,7 +48,8 @@ const RevealFixture = (args: TreeViewProps) => {
   const sequence = useRef(0);
   const reveal = (id: string) => {
     setSelectedId(id);
-    setRevealRequest({ id, requestId: ++sequence.current });
+    sequence.current += 1;
+    setRevealRequest({ id, requestId: sequence.current });
   };
   return (
     <YStack
@@ -190,7 +191,8 @@ const RetainedScrollFixture = (args: TreeViewProps) => {
   const [completion, setCompletion] = useState<string>();
   const sequence = useRef(0);
   const revealLast = () => {
-    setRevealRequest({ id: 'item-499', requestId: ++sequence.current });
+    sequence.current += 1;
+    setRevealRequest({ id: 'item-499', requestId: sequence.current });
   };
   return (
     <YStack

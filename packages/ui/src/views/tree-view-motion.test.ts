@@ -19,7 +19,7 @@ const tree: MotionTreeNode[] = [
 
 const uniform = () => 36;
 
-describe('flattenVisibleIds', () => {
+describe(flattenVisibleIds, () => {
   it('returns only roots when nothing is expanded', () => {
     expect(flattenVisibleIds(tree, new Set())).toStrictEqual(['src', 'readme']);
   });
@@ -42,7 +42,7 @@ describe('flattenVisibleIds', () => {
   });
 });
 
-describe('diffVisibleRows', () => {
+describe(diffVisibleRows, () => {
   it('marks revealed children as entering and pushes rows below down', () => {
     const prev = flattenVisibleIds(tree, new Set(['src']));
     const next = flattenVisibleIds(tree, new Set(['src', 'components']));
@@ -69,17 +69,17 @@ describe('diffVisibleRows', () => {
   });
 
   it('uses per-row heights for offsets', () => {
-    const heights: Record<string, number> = {
-      src: 36,
-      components: 36,
-      button: 48,
-      input: 20,
-      index: 36,
-      readme: 36,
-    };
+    const heights = new Map([
+      ['src', 36],
+      ['components', 36],
+      ['button', 48],
+      ['input', 20],
+      ['index', 36],
+      ['readme', 36],
+    ]);
     const prev = flattenVisibleIds(tree, new Set(['src']));
     const next = flattenVisibleIds(tree, new Set(['src', 'components']));
-    const diff = diffVisibleRows(prev, next, (id) => heights[id]);
+    const diff = diffVisibleRows(prev, next, (id) => heights.get(id) ?? 0);
     expect(diff.deltas.get('index')).toBe(-(48 + 20));
   });
 

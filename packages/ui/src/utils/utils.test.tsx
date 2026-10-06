@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { isTinted, listeners, setTinted, toggleTinted } from './set-tinted';
 import { unwrapText } from './unwrap-text';
 
-describe('setTinted', () => {
+describe(setTinted, () => {
   beforeEach(() => {
     listeners.clear();
     setTinted(true);
@@ -18,7 +18,7 @@ describe('setTinted', () => {
   });
 
   it('should call listeners when isTinted is set', () => {
-    const listener = vi.fn();
+    const listener = vi.fn<(next: boolean) => void>();
     listeners.add(listener);
     setTinted(false);
     expect(listener).toHaveBeenCalledWith(false);
@@ -35,7 +35,7 @@ describe('setTinted', () => {
   });
 
   it('should notify listeners when toggled', () => {
-    const listener = vi.fn();
+    const listener = vi.fn<(next: boolean) => void>();
     listeners.add(listener);
     toggleTinted();
     expect(listener).toHaveBeenCalledWith(false);
@@ -44,13 +44,9 @@ describe('setTinted', () => {
   });
 });
 
-describe('unwrapText', () => {
+describe(unwrapText, () => {
   it('should unwrap children from a Text component', () => {
-    const result = unwrapText(
-      <>
-        <Text>Sample Text</Text>
-      </>,
-    );
+    const result = unwrapText(<Text>Sample Text</Text>);
     expect(result).toHaveLength(1);
   });
 
@@ -60,7 +56,7 @@ describe('unwrapText', () => {
   });
 
   it('should handle undefined children', () => {
-    const result = unwrapText(undefined);
+    const result = unwrapText(null);
     expect(result).toStrictEqual([]);
   });
 });

@@ -159,6 +159,7 @@ Loading.parameters = {
   },
 };
 
+// oxlint-disable-next-line sonarjs/no-globals-shadowing, sonarjs/no-built-in-override -- the export name is the Storybook story id ('Error'); renaming would change it
 export const Error = () => (
   <Attachments
     items={[]}

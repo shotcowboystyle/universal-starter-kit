@@ -13,7 +13,7 @@ import {
 } from '@repo/theme';
 import type { BorderRadius, ControlStateProps } from '@repo/theme';
 import { getSize } from '@tamagui/get-token';
-import { Children, createContext, isValidElement, useContext } from 'react';
+import { Children, createContext, isValidElement, useContext, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import type { GetProps, SizeTokens } from 'tamagui';
 import {
@@ -86,7 +86,7 @@ export interface AvatarGroupProps {
   overlap?: boolean;
 }
 
-interface GroupCtx {
+interface AvatarGroupContext {
   size?: AvatarSize;
   circular: boolean;
   nested: boolean;
@@ -96,10 +96,10 @@ interface GroupCtx {
   count: number;
 }
 
-const GroupCtx = createContext<GroupCtx | null>(null);
+const GroupCtx = createContext<AvatarGroupContext | null>(null);
 
-const identityShapeProps = radiusClassProps('R-IDENTITY', 'Avatar');
-const pipShapeProps = radiusClassProps('R-PILL', 'Avatar status');
+const identityRadiusProps = radiusClassProps('R-IDENTITY', 'Avatar');
+const pipRadiusProps = radiusClassProps('R-PILL', 'Avatar status');
 
 /**
  * Identity-object scale (R-IDENTITY): an avatar is a medallion, not control
@@ -110,11 +110,16 @@ const pipShapeProps = radiusClassProps('R-PILL', 'Avatar status');
  * a 16px legibility floor (the raw $0.5 token is 4px).
  */
 const AVATAR_MIN_PX = 16;
-const AVATAR_KNOB_TOKEN: Record<string, string> = { small: '$2', medium: '$3', large: '$4' };
+const AVATAR_MEDIUM_TOKEN: SizeTokens = '$3';
+const AVATAR_KNOB_TOKEN = new Map<string, SizeTokens>([
+  ['small', '$2'],
+  ['medium', AVATAR_MEDIUM_TOKEN],
+  ['large', '$4'],
+]);
 
-const avatarTokenPx = (token: string): number | undefined => {
-  const resolved = getVariableValue(getSize(token as SizeTokens));
-  return typeof resolved === 'number' && Number.isFinite(resolved) ? Math.max(AVATAR_MIN_PX, resolved) : undefined;
+const avatarTokenPx = (token: SizeTokens): number | undefined => {
+  const resolved: unknown = getVariableValue(getSize(token));
+  return Number.isFinite(resolved) ? Math.max(AVATAR_MIN_PX, Number(resolved)) : undefined;
 };
 
 const STATUS_COLOR: Record<AvatarStatus, string> = {
@@ -127,10 +132,10 @@ const STATUS_COLOR: Record<AvatarStatus, string> = {
 const CUTOUT_BORDER = 2;
 
 const sizeToPx = (size: AvatarSize): number | undefined => {
-  if (typeof size === 'number') {
-    return size;
+  if (Number.isFinite(size)) {
+    return Number(size);
   }
-  return avatarTokenPx(String(size));
+  return avatarTokenPx(size);
 };
 
 /**
@@ -142,6 +147,8 @@ const radiusStopFromToken = (token: string | number | undefined): BorderRadius =
   if (token === 0 || token === '0') {
     return 'none';
   }
+  // SAFETY: borderRadiusMap is keyed exactly by BorderRadius, so its own keys are BorderRadius values.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- Object.keys widens to string[]; keys of a literal-keyed map are its key union
   for (const stop of Object.keys(borderRadiusMap) as BorderRadius[]) {
     if (borderRadiusMap[stop] === token) {
       return stop;
@@ -162,15 +169,15 @@ const resolveVisualPx = (
   sizeKnob: string,
   nestedPx: number,
 ): number => {
-  const mediumPx = avatarTokenPx(AVATAR_KNOB_TOKEN.medium) ?? 36;
+  const mediumPx = avatarTokenPx(AVATAR_MEDIUM_TOKEN) ?? 36;
   if (sizeProp != null) {
     return sizeToPx(sizeProp) ?? mediumPx;
   }
   if (nested) {
     return nestedPx;
   }
-  const knobToken = AVATAR_KNOB_TOKEN[sizeKnob];
-  return (knobToken ? avatarTokenPx(knobToken) : undefined) ?? mediumPx;
+  const knobToken = AVATAR_KNOB_TOKEN.get(sizeKnob);
+  return (knobToken === undefined ? undefined : avatarTokenPx(knobToken)) ?? mediumPx;
 };
 
 const opticalFont = (px: number): SizeTokens => {
@@ -186,21 +193,167 @@ const opticalFont = (px: number): SizeTokens => {
 // The RN/Tamagui `onPress` type is `((event: GestureResponderEvent) => void)
 // | null | undefined`; the ring helper only ever calls it with zero args, so a
 // bottom-arg function type accepts any handler (and null) without a value cast.
-const activateOnEnterSpace = (onPress?: ((...args: never[]) => void) | null) => {
-  if (!onPress) {
-    return undefined;
+const activateOnEnterSpace = (onPress?: ((...args: never[]) => void) | null) =>
+  onPress == null
+    ? undefined
+    : {
+        onKeyDown: (e: { key?: string; preventDefault?: () => void }) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault?.();
+            onPress();
+          }
+        },
+      };
+
+const hasText = (value: string | undefined): value is string => value !== undefined && value !== '';
+
+type FallbackTone = NonNullable<ReturnType<typeof fallbackTone>>;
+
+const resolveFallbackInk = (
+  fallbackColor: string | undefined,
+  onAccent: boolean,
+  onAccentInitials: string | undefined,
+  tone: FallbackTone | undefined,
+) => {
+  if (fallbackColor != null) {
+    return fallbackColor;
   }
+  if (onAccent) {
+    return onAccentInitials ?? '$color';
+  }
+  return tone?.fg ?? componentColors.text.primary;
+};
+
+const resolveFallbackColors = ({
+  backgroundColor,
+  fallbackBackgroundColor,
+  fallbackColor,
+  name,
+  onAccentInitials,
+}: Pick<AvatarProps, 'backgroundColor' | 'fallbackBackgroundColor' | 'fallbackColor' | 'name'> & {
+  onAccentInitials: string | undefined;
+}) => {
+  const hasOwnBackground = hasText(fallbackBackgroundColor) || (backgroundColor != null && backgroundColor !== '');
+  const tone = hasOwnBackground ? undefined : fallbackTone(name);
+  const fallbackBg = backgroundColor ?? fallbackBackgroundColor ?? tone?.bg ?? '$color4';
+  const fallbackFg = resolveFallbackInk(fallbackColor, fallbackBg === '$accentBackground', onAccentInitials, tone);
+  return { fallbackBg, fallbackFg };
+};
+
+const resolveGroupGeometry = (
+  group: AvatarGroupContext | null,
+  circular: boolean,
+  squareRadiusPx: number | undefined,
+) => {
+  if (group == null) {
+    return { position: null, squareFlush: false, stackCorners: null };
+  }
+  const position = getGroupPosition(group.index, group.count);
+  const squareFlush = !group.overlap && !circular;
   return {
-    onKeyDown: (e: { key?: string; preventDefault?: () => void }) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault?.();
-        onPress();
-      }
-    },
+    position,
+    squareFlush,
+    stackCorners: squareFlush ? stackRadiusProps(position, squareRadiusPx, 'horizontal') : null,
   };
 };
 
+const edgeBorderProps = (
+  cutout: boolean,
+  squareFlush: boolean,
+  position: ReturnType<typeof getGroupPosition> | null,
+  borderColor: string | undefined,
+) => {
+  if (cutout) {
+    return { borderWidth: CUTOUT_BORDER, borderColor: '$background' };
+  }
+  return squareFlush && position !== 'first' && position !== 'only' ? { borderStartWidth: 1, borderColor } : undefined;
+};
+
+const mergeGroupDefaults = (
+  group: AvatarGroupContext | null,
+  own: Pick<AvatarProps, 'circular' | 'compact' | 'size'> & { nested: boolean },
+) => ({
+  circular: group == null ? (own.circular ?? true) : group.circular,
+  nested: own.nested || Boolean(group?.nested),
+  compact: own.compact ?? group?.compact,
+  size: own.size ?? group?.size,
+});
+
+const trueAttr = (on: boolean) => (on ? 'true' : undefined);
+
+const resolvePressSlop = (interactive: boolean, visualPx: number) =>
+  interactive && visualPx < MIN_PRESS_TARGET ? pressTargetHitSlop(visualPx) : undefined;
+
+const resolveAccessibleName = (alt: string | undefined, name: string | undefined, interactive: boolean) => ({
+  decorative: !hasText(alt) && !hasText(name) && !interactive,
+  label: alt ?? name ?? (interactive ? 'Avatar' : undefined),
+});
+
+// SAFETY: ControlStateProps is the theme's superset of the style keys tamagui's focusVisibleStyle accepts; ensureFocusVisibleRing only reads outline* keys from it.
+// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- tamagui's focusVisibleStyle outlineOffset type is wider than the theme's ControlStateProps
+const asControlState = (style: AvatarProps['focusVisibleStyle']) => style as ControlStateProps;
+
 // ── Avatar ────────────────────────────────────────────────────
+
+interface AvatarFallbackContentProps {
+  src: string | undefined;
+  label: string | undefined;
+  fallbackBg: NonNullable<AvatarProps['backgroundColor']>;
+  fallbackFg: string;
+  fallback: ReactNode;
+  initialsText: string;
+  visualPx: number;
+  labelProps: ReturnType<typeof useResolvedKnobs>['knobProps']['label'];
+}
+
+const AvatarFallbackContent = ({
+  src,
+  label,
+  fallbackBg,
+  fallbackFg,
+  fallback,
+  initialsText,
+  visualPx,
+  labelProps,
+}: AvatarFallbackContentProps) => {
+  const hasSrc = hasText(src);
+  const initialsNode =
+    initialsText === '?' ? (
+      <View {...{ color: fallbackFg }}>
+        <UserIcon
+          size={Math.round(visualPx * 0.42)}
+          color="currentColor"
+        />
+      </View>
+    ) : (
+      <SizableText
+        {...labelProps}
+        fontSize={opticalFont(visualPx)}
+        fontWeight="600"
+        color={fallbackFg}
+        textAlign="center"
+        userSelect="none">
+        {initialsText}
+      </SizableText>
+    );
+  return (
+    <>
+      {hasSrc ? (
+        <TamaguiAvatar.Image
+          src={src}
+          alt={label ?? ''}
+        />
+      ) : null}
+      <TamaguiAvatar.Fallback
+        backgroundColor={fallbackBg}
+        alignItems="center"
+        justifyContent="center"
+        {...(hasSrc ? { delayMs: 600 } : {})}>
+        {fallback ?? initialsNode}
+      </TamaguiAvatar.Fallback>
+    </>
+  );
+};
 
 const AvatarRoot = ({
   src,
@@ -224,30 +377,26 @@ const AvatarRoot = ({
   ...props
 }: AvatarProps) => {
   const group = useContext(GroupCtx);
-  const circular = group ? group.circular : (circularProp ?? true);
-  const nested = nestedProp || Boolean(group?.nested);
-  const densityCompact = compact ?? group?.compact;
-  const resolvedSizeProp = sizeProp ?? group?.size;
-  const { knobProps } = useResolvedKnobs({ compact: densityCompact });
-  const visualPx = resolveVisualPx(resolvedSizeProp, nested, knobProps.size, knobProps.nestedControl.px);
-  const interactive = typeof onPress === 'function';
-  const pressSlop = interactive && visualPx < MIN_PRESS_TARGET ? pressTargetHitSlop(visualPx) : undefined;
+  const merged = mergeGroupDefaults(group, { circular: circularProp, nested: nestedProp, compact, size: sizeProp });
+  const { circular, nested } = merged;
+  const { knobProps } = useResolvedKnobs({ compact: merged.compact });
+  const visualPx = resolveVisualPx(merged.size, nested, knobProps.size, knobProps.nestedControl.px);
+  const interactive = onPress != null;
+  const pressSlop = resolvePressSlop(interactive, visualPx);
   const onAccentInitials = useReadableTextOn('$accentBackground');
-  const tone = fallbackBackgroundColor || backgroundColor ? undefined : fallbackTone(name);
-  const fallbackBg = backgroundColor ?? fallbackBackgroundColor ?? tone?.bg ?? '$color4';
-  const onAccent = fallbackBg === '$accentBackground';
-  const fallbackFg =
-    fallbackColor ?? (onAccent ? (onAccentInitials ?? '$color') : (tone?.fg ?? componentColors.text.primary));
-  const identityProps = circular ? identityShapeProps : null;
+  const { fallbackBg, fallbackFg } = resolveFallbackColors({
+    backgroundColor,
+    fallbackBackgroundColor,
+    fallbackColor,
+    name,
+    onAccentInitials,
+  });
+  const identityProps = circular ? identityRadiusProps : null;
   const squareRadiusPx = circular ? undefined : squareFaceRadiusPx(knobProps.borderRadius.borderRadius, visualPx);
-  const position = group ? getGroupPosition(group.index, group.count) : undefined;
-  const squareFlush = Boolean(group && !group.overlap && !circular && position);
-  const stackCorners = squareFlush ? stackRadiusProps(position!, squareRadiusPx, 'horizontal') : undefined;
+  const { position, squareFlush, stackCorners } = resolveGroupGeometry(group, circular, squareRadiusPx);
   const cutout = Boolean(group?.overlap);
-  const labeled = Boolean(alt || name);
-  const decorative = !labeled && !interactive;
-  const label = alt ?? name ?? (interactive ? 'Avatar' : undefined);
-  const initialsText = initials ?? (name ? getInitials(name) : '?');
+  const { decorative, label } = resolveAccessibleName(alt, name, interactive);
+  const initialsText = initials ?? (hasText(name) ? getInitials(name) : '?');
   const pipPx = Math.max(8, Math.round(visualPx * 0.28));
 
   const frame = (
@@ -267,11 +416,7 @@ const AvatarRoot = ({
       onPress={onPress}
       {...(!circular && !stackCorners ? { ...knobProps.borderRadius, borderRadius: squareRadiusPx } : undefined)}
       {...stackCorners}
-      {...(cutout
-        ? { borderWidth: CUTOUT_BORDER, borderColor: '$background' }
-        : squareFlush && position !== 'first' && position !== 'only'
-          ? { borderStartWidth: 1, borderColor: knobProps.borderRadius.borderColor }
-          : undefined)}
+      {...edgeBorderProps(cutout, squareFlush, position, knobProps.borderRadius.borderColor)}
       {...identityProps}
       {...props}
       aria-hidden={decorative || undefined}
@@ -281,55 +426,30 @@ const AvatarRoot = ({
       cursor={interactive ? 'pointer' : undefined}
       {...activateOnEnterSpace(onPress)}
       data-avatar-px={visualPx}
-      data-avatar-nested={nested ? 'true' : undefined}
-      data-avatar-interactive={interactive ? 'true' : undefined}
+      data-avatar-nested={trueAttr(nested)}
+      data-avatar-interactive={trueAttr(interactive)}
       data-avatar-hitslop={pressSlop ? String(pressSlop.top) : undefined}
       focusStyle={{ outlineWidth: 0, ...focusStyle }}
       focusVisibleStyle={
         interactive
           ? ensureFocusVisibleRing({
               outlineOffset: -2,
-              ...(focusVisibleStyle as ControlStateProps),
+              ...asControlState(focusVisibleStyle),
             })
           : focusVisibleStyle
       }
       hitSlop={pressSlop ?? hitSlopProp}>
-      {children == null ? (
-        <>
-          {src ? (
-            <TamaguiAvatar.Image
-              src={src}
-              alt={label ?? ''}
-            />
-          ) : null}
-          <TamaguiAvatar.Fallback
-            backgroundColor={fallbackBg}
-            alignItems="center"
-            justifyContent="center"
-            {...(src ? { delayMs: 600 } : {})}>
-            {fallback ??
-              (initialsText === '?' ? (
-                <View {...({ color: fallbackFg } as Record<string, unknown>)}>
-                  <UserIcon
-                    size={Math.round(visualPx * 0.42)}
-                    color="currentColor"
-                  />
-                </View>
-              ) : (
-                <SizableText
-                  {...knobProps.label}
-                  fontSize={opticalFont(visualPx)}
-                  fontWeight="600"
-                  color={fallbackFg}
-                  textAlign="center"
-                  userSelect="none">
-                  {initialsText}
-                </SizableText>
-              ))}
-          </TamaguiAvatar.Fallback>
-        </>
-      ) : (
-        children
+      {children ?? (
+        <AvatarFallbackContent
+          src={src}
+          label={label}
+          fallbackBg={fallbackBg}
+          fallbackFg={fallbackFg}
+          fallback={fallback}
+          initialsText={initialsText}
+          visualPx={visualPx}
+          labelProps={knobProps.label}
+        />
       )}
     </TamaguiAvatar>
   );
@@ -346,7 +466,7 @@ const AvatarRoot = ({
       flexShrink={0}>
       {frame}
       <View
-        {...pipShapeProps}
+        {...pipRadiusProps}
         position="absolute"
         bottom={-1}
         right={-1}
@@ -367,6 +487,39 @@ const AvatarGroupItem = styled(View, {
   flexShrink: 0,
 });
 
+interface AvatarGroupSlotProps extends AvatarGroupContext {
+  zIndex: number;
+  marginStart: number;
+  children: ReactNode;
+}
+
+const AvatarGroupSlot = ({
+  size,
+  circular,
+  nested,
+  compact,
+  overlap,
+  index,
+  count,
+  zIndex,
+  marginStart,
+  children,
+}: AvatarGroupSlotProps) => {
+  const value = useMemo<AvatarGroupContext>(
+    () => ({ size, circular, nested, compact, overlap, index, count }),
+    [size, circular, nested, compact, overlap, index, count],
+  );
+  return (
+    <GroupCtx.Provider value={value}>
+      <AvatarGroupItem
+        zIndex={zIndex}
+        marginStart={marginStart}>
+        {children}
+      </AvatarGroupItem>
+    </GroupCtx.Provider>
+  );
+};
+
 const AvatarGroup = ({
   children,
   max = 4,
@@ -379,6 +532,7 @@ const AvatarGroup = ({
   const { knobProps } = useResolvedKnobs({ compact });
   const visualPx = resolveVisualPx(size, nested, knobProps.size, knobProps.nestedControl.px);
   const overlapPx = overlap ? Math.round(visualPx * 0.32) : 0;
+  // oxlint-disable-next-line react/no-react-children -- toArray flattens fragments/arrays and drops null/boolean children before counting faces
   const items = Children.toArray(children).filter(isValidElement);
   const shown = items.slice(0, Math.max(1, max));
   const extra = items.length - shown.length;
@@ -393,46 +547,48 @@ const AvatarGroup = ({
       data-avatar-group=""
       data-avatar-overlap={overlap ? 'true' : 'false'}>
       {shown.map((child, index) => (
-        <GroupCtx.Provider
+        <AvatarGroupSlot
+          // oxlint-disable-next-line react-doctor/no-array-index-as-key -- the index is the face's stack position (context + zIndex), and faces are never reordered
           key={index}
-          value={{ size, circular, nested, compact, overlap, index, count: total }}>
-          <AvatarGroupItem
-            zIndex={index}
-            marginStart={index > 0 ? -overlapPx : 0}>
-            {child}
-          </AvatarGroupItem>
-        </GroupCtx.Provider>
+          size={size}
+          circular={circular}
+          nested={nested}
+          compact={compact}
+          overlap={overlap}
+          index={index}
+          count={total}
+          zIndex={index}
+          marginStart={index > 0 ? -overlapPx : 0}>
+          {child}
+        </AvatarGroupSlot>
       ))}
       {extra > 0 ? (
-        <GroupCtx.Provider
-          value={{
-            size,
-            circular,
-            nested,
-            compact,
-            overlap,
-            index: shown.length,
-            count: total,
-          }}>
-          <AvatarGroupItem
-            zIndex={shown.length}
-            marginStart={-overlapPx}>
-            <AvatarRoot
-              initials={overflowLabel}
-              fallbackBackgroundColor="$color4"
-              fallbackColor="$color12"
-              circular={circular}
-              nested={nested}
-              compact={compact}
-              size={size}
-            />
-          </AvatarGroupItem>
-        </GroupCtx.Provider>
+        <AvatarGroupSlot
+          size={size}
+          circular={circular}
+          nested={nested}
+          compact={compact}
+          overlap={overlap}
+          index={shown.length}
+          count={total}
+          zIndex={shown.length}
+          marginStart={-overlapPx}>
+          <AvatarRoot
+            initials={overflowLabel}
+            fallbackBackgroundColor="$color4"
+            fallbackColor="$color12"
+            circular={circular}
+            nested={nested}
+            compact={compact}
+            size={size}
+          />
+        </AvatarGroupSlot>
       ) : null}
     </XStack>
   );
 };
 
+// oxlint-disable-next-line react-doctor/only-export-components -- this module also re-exports the pure initials/tone helpers as part of Avatar's public surface
 export const Avatar = withStaticProperties(AvatarRoot, {
   Image: TamaguiAvatar.Image,
   Fallback: TamaguiAvatar.Fallback,

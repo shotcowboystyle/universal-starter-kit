@@ -16,6 +16,9 @@ import { ScrollView } from '../ScrollView';
 import { useTranslation } from '../shared/i18n';
 import { Card } from '../surfaces';
 
+import { webOnlyProps } from './dom-interop';
+import { hasNode, isNonEmpty, isString, orDefault } from './guards';
+
 /**
  * Card sub-titles read at the ONE
  * shared 20px section scale and step through sequential heading levels. A
@@ -170,6 +173,11 @@ export interface ListConfig {
   items: DashboardListItem[];
 }
 
+type DashboardMetricWidgetType = 'kpi' | 'chart' | 'progress';
+type DashboardLinkWidgetType = 'shortcut' | 'list' | 'custom';
+
+export type DashboardWidgetType = DashboardMetricWidgetType | DashboardLinkWidgetType;
+
 /**
  * Dashboard widget configuration.
  *
@@ -179,7 +187,7 @@ export interface ListConfig {
  */
 export interface DashboardWidget {
   id: string;
-  type: 'kpi' | 'chart' | 'custom' | 'progress' | 'shortcut' | 'list';
+  type: DashboardWidgetType;
   colSpan?: number;
   rowSpan?: number;
   kpiConfig?: KPICardConfig;
@@ -214,7 +222,7 @@ export interface DashboardProps extends Omit<YStackProps, 'children'> {
    * Failed load. Wins over empty widgets; KPI/count chrome
    * in `chrome` is suppressed on failure.
    */
-  error?: boolean | string | Error | ReactNode | null;
+  error?: Error | ReactNode;
   /** Retry handler for the default error UI. */
   onRetry?: () => void;
   /** Message when widgets array is empty. */
@@ -260,7 +268,7 @@ const NestedIconWell = ({
     {...radius}
     alignItems="center"
     justifyContent="center"
-    backgroundColor={(color || '$accentBackground') as any}
+    backgroundColor={orDefault(color, '$accentBackground')}
     overflow="hidden"
     data-nested-px={px}>
     {children}
@@ -326,6 +334,7 @@ export interface KPICardProps extends Omit<YStackProps, 'children'> {
  * secondary text, so the caller hands over `knobProps.textAccentColor` —
  * a static tier here could not see the `textAccent` knob.
  */
+// oxlint-disable-next-line react-doctor/only-export-components -- pure helpers exported on the views barrel; co-located with the widgets that use them
 export const resolveTrendColor = (
   trend: TrendDirection | undefined,
   goodDirection: KPICardConfig['goodDirection'],
@@ -353,12 +362,16 @@ export const KPICard = ({ config, ...stackProps }: KPICardProps) => {
   const { px, box } = nested;
   const [dataActionSize, setDataActionSize] = useState({ width: 0, height: 44 });
   const [dataHeaderHeight, setDataHeaderHeight] = useState(44);
-  const hasDataView = Boolean(config.sparkline?.length);
+  const { sparkline } = config;
+  const hasDataView = Boolean(sparkline?.length);
+  const showTrend =
+    config.trend !== undefined ||
+    (config.trendValue !== undefined && config.trendValue !== '' && config.trendValue !== 0);
   const formatMetric = useCallback(
     (num: number) => {
       if (config.format === 'currency') {
         return formatCurrency(num, {
-          symbol: config.currencySymbol || '$',
+          symbol: orDefault(config.currencySymbol, '$'),
           fractionDigits: 'auto',
         });
       }
@@ -370,7 +383,7 @@ export const KPICard = ({ config, ...stackProps }: KPICardProps) => {
     [config.format, config.currencySymbol],
   );
   const formattedValue = useMemo(
-    () => (typeof config.value === 'string' ? config.value : formatMetric(config.value)),
+    () => (isString(config.value) ? config.value : formatMetric(config.value)),
     [config.value, formatMetric],
   );
 
@@ -408,7 +421,7 @@ export const KPICard = ({ config, ...stackProps }: KPICardProps) => {
           flex={1}>
           {config.title}
         </Text>
-        {config.icon ? (
+        {hasNode(config.icon) ? (
           <NestedIconWell
             color={config.color}
             box={box}
@@ -442,7 +455,7 @@ export const KPICard = ({ config, ...stackProps }: KPICardProps) => {
         />
       ) : null}
 
-      {(config.trend || config.trendValue) && (
+      {showTrend && (
         <XStack
           gap="$2"
           alignItems="center"
@@ -466,7 +479,7 @@ export const KPICard = ({ config, ...stackProps }: KPICardProps) => {
       )}
     </>
   );
-  if (!hasDataView) {
+  if (!hasDataView || sparkline === undefined) {
     return (
       <Card
         width="100%"
@@ -480,7 +493,7 @@ export const KPICard = ({ config, ...stackProps }: KPICardProps) => {
   }
   return (
     <ChartDataView
-      data={config.sparkline!}
+      data={sparkline}
       title={config.title}
       valueFormatter={formatMetric}>
       {({ action }) => (
@@ -570,6 +583,44 @@ export const ChartCard = ({ config, colors, headingLevel = 2, ...stackProps }: C
   const dataColors = config.colors ?? colors;
   const showXAxis = config.showLabels !== false;
 
+  const renderChart = () => {
+    if (config.type === 'pie') {
+      return (
+        <PieChart
+          data={config.data}
+          height={config.height}
+          donut={0.5}
+          colors={dataColors}
+          showLegend={config.showLegend}
+          title={config.title}
+        />
+      );
+    }
+    if (config.type === 'line') {
+      return (
+        <LineChart
+          data={config.data}
+          title={config.title}
+          height={config.height}
+          color={dataColors?.[0]}
+          showPoints
+          showXAxis={showXAxis}
+          showYAxis={false}
+        />
+      );
+    }
+    return (
+      <BarChart
+        data={config.data}
+        title={config.title}
+        height={config.height}
+        colors={dataColors}
+        showXAxis={showXAxis}
+        showYAxis={false}
+      />
+    );
+  };
+
   const renderCard = (action?: ReactNode) => (
     <YStack
       {...knobProps.gap}
@@ -592,35 +643,7 @@ export const ChartCard = ({ config, colors, headingLevel = 2, ...stackProps }: C
       <Card
         elevation={knobProps.elevation}
         {...knobProps.surface}>
-        {config.type === 'pie' ? (
-          <PieChart
-            data={config.data}
-            height={config.height}
-            donut={0.5}
-            colors={dataColors}
-            showLegend={config.showLegend}
-            title={config.title}
-          />
-        ) : config.type === 'line' ? (
-          <LineChart
-            data={config.data}
-            title={config.title}
-            height={config.height}
-            color={dataColors?.[0]}
-            showPoints
-            showXAxis={showXAxis}
-            showYAxis={false}
-          />
-        ) : (
-          <BarChart
-            data={config.data}
-            title={config.title}
-            height={config.height}
-            colors={dataColors}
-            showXAxis={showXAxis}
-            showYAxis={false}
-          />
-        )}
+        {renderChart()}
       </Card>
     </YStack>
   );
@@ -645,7 +668,7 @@ export interface ProgressCardProps extends Omit<YStackProps, 'children'> {
 
 export const ProgressCard = ({ config, ...stackProps }: ProgressCardProps) => {
   const { knobProps } = useWidgetChrome();
-  const max = config.max && config.max > 0 ? config.max : 100;
+  const max = config.max !== undefined && config.max > 0 ? config.max : 100;
   const pct = Math.max(0, Math.min(100, (config.value / max) * 100));
   const label = config.format === 'number' ? formatNumber(config.value) : formatPercent(Math.round(pct));
 
@@ -687,7 +710,7 @@ export const ShortcutCard = ({ config, ...stackProps }: ShortcutCardProps) => {
       <XStack
         alignItems="center"
         {...knobProps.gap}>
-        {config.icon ? (
+        {hasNode(config.icon) ? (
           <NestedIconWell
             color={config.color}
             box={box}
@@ -751,43 +774,47 @@ export const ListCard = ({ config, headingLevel = 2, ...stackProps }: ListCardPr
       <Card
         elevation={knobProps.elevation}
         {...knobProps.surface}>
-        {config.items.map((item) => (
-          <XStack
-            key={item.id}
-            height={px}
-            minHeight={px}
-            maxHeight={px}
-            alignItems="center"
-            justifyContent="space-between"
-            {...knobProps.gap}
-            data-nested-px={px}
-            cursor={item.onClick ? 'pointer' : undefined}
-            hitSlop={item.onClick ? hitSlop : undefined}
-            hoverStyle={item.onClick ? control.hoverKnobProps : undefined}
-            pressStyle={item.onClick ? control.pressKnobProps : undefined}
-            focusVisibleStyle={item.onClick ? control.focusVisibleKnobProps : undefined}
-            onPress={item.onClick}
-            role={item.onClick ? 'button' : undefined}>
-            <Text
-              {...knobProps.label}
-              flex={1}
-              numberOfLines={1}>
-              {item.label}
-            </Text>
-            {item.meta ? (
+        {config.items.map((item) => {
+          const handlePress = item.onClick;
+          return (
+            <XStack
+              key={item.id}
+              height={px}
+              minHeight={px}
+              maxHeight={px}
+              alignItems="center"
+              justifyContent="space-between"
+              {...knobProps.gap}
+              data-nested-px={px}
+              cursor={item.onClick ? 'pointer' : undefined}
+              hitSlop={item.onClick ? hitSlop : undefined}
+              hoverStyle={item.onClick ? control.hoverKnobProps : undefined}
+              pressStyle={item.onClick ? control.pressKnobProps : undefined}
+              focusVisibleStyle={item.onClick ? control.focusVisibleKnobProps : undefined}
+              onPress={handlePress}
+              role={item.onClick ? 'button' : undefined}>
               <Text
                 {...knobProps.label}
-                color={knobProps.textAccentColor}>
-                {item.meta}
+                flex={1}
+                numberOfLines={1}>
+                {item.label}
               </Text>
-            ) : null}
-          </XStack>
-        ))}
+              {isNonEmpty(item.meta) ? (
+                <Text
+                  {...knobProps.label}
+                  color={knobProps.textAccentColor}>
+                  {item.meta}
+                </Text>
+              ) : null}
+            </XStack>
+          );
+        })}
       </Card>
     </YStack>
   );
 };
 
+// oxlint-disable-next-line typescript/promise-function-async -- ReactNode includes Promise in React 19's types; this component is synchronous
 const DefaultWidget = ({ widget }: { widget: DashboardWidget }) => {
   switch (widget.type) {
     case 'kpi': {
@@ -853,18 +880,25 @@ export const Dashboard = ({
   const emptyMessage = emptyMessageProp ?? t('No widgets to display');
   const { knobProps } = useResolvedKnobs();
   const gap = gapProp ?? 16;
+  const hasError = Boolean(error);
+
+  // CSS grid props are web-only and absent from the RN-flavored View type;
+  // Tamagui forwards them to the DOM.
+  const gridProps = isWeb
+    ? webOnlyProps({ display: 'grid', gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` })
+    : { marginHorizontal: -gap / 2 };
 
   const header =
-    title || description ? (
+    isNonEmpty(title) || isNonEmpty(description) ? (
       <YStack {...knobProps.gap}>
-        {title && (
+        {isNonEmpty(title) && (
           <H3
             margin={0}
             {...knobProps.heading}>
             {title}
           </H3>
         )}
-        {description && (
+        {isNonEmpty(description) && (
           <Text
             {...knobProps.body}
             {...knobProps.label}
@@ -883,8 +917,8 @@ export const Dashboard = ({
         {...stackProps}>
         {header}
         <AsyncBoundary
-          loading={!error && isLoading && widgets.length === 0}
-          empty={!error && widgets.length === 0}
+          loading={!hasError && isLoading && widgets.length === 0}
+          empty={!hasError && widgets.length === 0}
           error={error}
           onRetry={onRetry}
           layout="dashboard"
@@ -892,16 +926,9 @@ export const Dashboard = ({
           <XStack
             flexWrap="wrap"
             gap={gap}
-            {...(isWeb
-              ? // CSS grid props are web-only and absent from the RN-flavored
-                // View type; Tamagui forwards them to the DOM (house Record cast).
-                ({
-                  display: 'grid',
-                  gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
-                } as Record<string, unknown>)
-              : { marginHorizontal: -gap / 2 })}>
+            {...gridProps}>
             {widgets.map((widget) => {
-              const span = Math.min(widget.colSpan || 1, columns);
+              const span = Math.min(widget.colSpan === undefined || widget.colSpan === 0 ? 1 : widget.colSpan, columns);
               const widthPercent = (span / columns) * 100;
               const adjustedWidth = `calc(${widthPercent}% - ${gap}px)`;
 
@@ -912,7 +939,7 @@ export const Dashboard = ({
                   {...(isWeb
                     ? { gridColumn: `span ${span}`, minWidth: 0, width: '100%' }
                     : {
-                        width: adjustedWidth as any,
+                        width: adjustedWidth,
                         minWidth: 200,
                         marginHorizontal: gap / 2,
                         marginBottom: gap,
@@ -935,6 +962,7 @@ export const Dashboard = ({
 /**
  * Calculate trend direction based on current and previous values.
  */
+// oxlint-disable-next-line react-doctor/only-export-components -- pure helpers exported on the views barrel; co-located with the widgets that use them
 export const calculateTrend = (current: number, previous: number): TrendDirection => {
   if (current > previous) {
     return 'up';
@@ -948,6 +976,7 @@ export const calculateTrend = (current: number, previous: number): TrendDirectio
 /**
  * Calculate percentage change between two values.
  */
+// oxlint-disable-next-line react-doctor/only-export-components -- pure helpers exported on the views barrel; co-located with the widgets that use them
 export const calculatePercentageChange = (current: number, previous: number): string => {
   if (previous === 0) {
     return current > 0 ? '+100%' : '0%';
@@ -960,6 +989,7 @@ export const calculatePercentageChange = (current: number, previous: number): st
 /**
  * Aggregate data for charts.
  */
+// oxlint-disable-next-line react-doctor/only-export-components -- pure helpers exported on the views barrel; co-located with the widgets that use them
 export const aggregateData = <T,>(
   data: T[],
   groupByField: keyof T,
@@ -970,9 +1000,7 @@ export const aggregateData = <T,>(
 
   for (const item of data) {
     const key = String(item[groupByField]);
-    if (!groups[key]) {
-      groups[key] = [];
-    }
+    groups[key] ??= [];
 
     if (operation === 'count') {
       groups[key].push(1);

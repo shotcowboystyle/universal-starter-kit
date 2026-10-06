@@ -17,7 +17,16 @@ import { FlashList } from '@shopify/flash-list';
 import type { FlashListRef } from '@shopify/flash-list';
 import { useHotkey } from '@tanstack/react-hotkeys';
 import type { RegisterableHotkey } from '@tanstack/react-hotkeys';
-import React, { createContext, useCallback, useContext, useId, useRef, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import type { ReactNode } from 'react';
 import { Text, View, XStack, YStack } from 'tamagui';
 import type { YStackProps } from 'tamagui';
@@ -25,6 +34,9 @@ import type { YStackProps } from 'tamagui';
 import { componentColors } from '../component-colors';
 import { AsyncBoundary } from '../layouts/AsyncBoundary';
 import { useTranslation } from '../shared/i18n';
+
+import { useDomRefCallback } from './dom-interop';
+import { isPlainText } from './guards';
 
 /**
  * Configurable hotkey bindings for the List component.
@@ -76,21 +88,26 @@ export interface ListRowProps {
   meta?: ReactNode;
 }
 
-const RowText = ({ children, ...props }: { children: ReactNode } & React.ComponentProps<typeof Text>) => {
+const hasInk = (ink: string | undefined): ink is string => ink !== undefined && ink !== '';
+
+const RowText = ({
+  children,
+  ...props
+}: { children: ReactNode } & Omit<React.ComponentProps<typeof Text>, 'children'>): ReactNode => {
   if (children == null || children === false) {
     return null;
   }
-  if (typeof children === 'string' || typeof children === 'number') {
+  if (isPlainText(children)) {
     return <Text {...props}>{children}</Text>;
   }
-  return <>{children}</>;
+  return children;
 };
 
 /** Trailing Finder/Desk column. Inherits selected fill ink. */
 export const ListRowMeta = ({ children, width, color }: { children: ReactNode; width?: number; color?: string }) => {
   const { knobProps } = useResolvedKnobs();
   const { selected, onAccent } = useListItemState();
-  const resolved = selected && onAccent ? onAccent : (color ?? knobProps.textAccentColor);
+  const resolved = selected && hasInk(onAccent) ? onAccent : (color ?? knobProps.textAccentColor);
   return (
     <Text
       {...knobProps.label}
@@ -109,14 +126,17 @@ export const ListRow = ({ icon, title, subtitle, meta }: ListRowProps) => {
   const { selected, onAccent } = useListItemState();
   // data-chrome family: textAccent = honour (F11). Same channel as house Text —
   // componentColors.text.primary/muted pin $color/$color11 and ignore the knob.
-  const ink = selected && onAccent ? onAccent : knobProps.textAccentColor;
+  const ink = selected && hasInk(onAccent) ? onAccent : knobProps.textAccentColor;
   const iconSize = knobProps.controlIcon.width;
-  const leading = React.isValidElement(icon)
-    ? React.cloneElement(icon as React.ReactElement<{ size?: number; color?: string }>, {
+  const leading = React.isValidElement<{ size?: number; color?: string }>(icon)
+    ? // oxlint-disable-next-line react/no-clone-element -- the icon slot takes any consumer element; size/color must reach it, and a wrapper cannot style a foreign icon's props
+      React.cloneElement(icon, {
         size: iconSize,
         color: 'currentColor',
       })
     : icon;
+  const hasLeading = Boolean(leading);
+  const iconSlotProps = { 'data-list-slot': 'icon', color: ink };
 
   return (
     <XStack
@@ -125,20 +145,20 @@ export const ListRow = ({ icon, title, subtitle, meta }: ListRowProps) => {
       flex={1}
       minWidth={0}
       width="100%">
-      {leading ? (
+      {hasLeading ? (
         <View
           {...knobProps.controlIcon}
           flexShrink={0}
           alignItems="center"
           justifyContent="center"
-          {...({ 'data-list-slot': 'icon', color: ink } as Record<string, unknown>)}>
+          {...iconSlotProps}>
           {leading}
         </View>
       ) : null}
       <YStack
         flex={1}
         minWidth={0}
-        {...({ 'data-list-slot': 'title' } as Record<string, unknown>)}>
+        data-list-slot="title">
         <RowText
           {...knobProps.body}
           {...knobProps.textWeight}
@@ -163,18 +183,106 @@ export const ListRow = ({ icon, title, subtitle, meta }: ListRowProps) => {
           alignItems="center"
           {...knobProps.gap}
           flexShrink={0}
-          {...({ 'data-list-slot': 'meta' } as Record<string, unknown>)}>
-          {typeof meta === 'string' || typeof meta === 'number' ? <ListRowMeta>{meta}</ListRowMeta> : meta}
+          data-list-slot="meta">
+          {isPlainText(meta) ? <ListRowMeta>{meta}</ListRowMeta> : meta}
         </XStack>
       ) : null}
     </XStack>
   );
 };
 
+interface ListHotkeysOptions<T> {
+  overrides: ListHotkeys | undefined;
+  containerRef: React.RefObject<HTMLElement | null>;
+  selectedRef: React.RefObject<number>;
+  items: T[];
+  onItemClick: ((item: T) => void) | undefined;
+  moveSelection: (next: number) => number;
+}
+
+/** Keyboard navigation via @tanstack/react-hotkeys. */
+const useListHotkeys = <T,>({
+  overrides,
+  containerRef,
+  selectedRef,
+  items,
+  onItemClick,
+  moveSelection,
+}: ListHotkeysOptions<T>) => {
+  const hotkeyOpts = { target: containerRef };
+
+  useHotkey(
+    overrides?.next ?? 'ArrowDown',
+    () => {
+      const { current } = selectedRef;
+      moveSelection(current < 0 ? 0 : current + 1);
+    },
+    hotkeyOpts,
+  );
+
+  useHotkey(
+    overrides?.prev ?? 'ArrowUp',
+    () => {
+      const { current } = selectedRef;
+      moveSelection(current < 0 ? items.length - 1 : current - 1);
+    },
+    hotkeyOpts,
+  );
+
+  useHotkey(
+    overrides?.select ?? 'Enter',
+    () => {
+      const { current } = selectedRef;
+      if (current >= 0 && current < items.length) {
+        onItemClick?.(items[current]);
+      }
+    },
+    hotkeyOpts,
+  );
+
+  useHotkey(
+    overrides?.first ?? 'Home',
+    () => {
+      if (items.length > 0) {
+        moveSelection(0);
+      }
+    },
+    hotkeyOpts,
+  );
+
+  useHotkey(
+    overrides?.last ?? 'End',
+    () => {
+      if (items.length > 0) {
+        moveSelection(items.length - 1);
+      }
+    },
+    hotkeyOpts,
+  );
+
+  useHotkey(
+    overrides?.pageDown ?? 'PageDown',
+    () => {
+      const current = selectedRef.current < 0 ? 0 : selectedRef.current;
+      moveSelection(current + 10);
+    },
+    hotkeyOpts,
+  );
+
+  useHotkey(
+    overrides?.pageUp ?? 'PageUp',
+    () => {
+      const current = selectedRef.current < 0 ? 0 : selectedRef.current;
+      moveSelection(current - 10);
+    },
+    hotkeyOpts,
+  );
+};
+
 /**
  * Props for the generic List component.
  *
- * @typeParam T - The item type rendered in the list
+ * @template T - The item type rendered in the list
  */
 export interface ListProps<T> extends Omit<YStackProps, 'children'> {
   /** Array of items to render */
@@ -193,7 +301,7 @@ export interface ListProps<T> extends Omit<YStackProps, 'children'> {
    * Failed load. Wins over empty — never shows empty chrome.
    * Pass a string, Error, custom node, or `true` for the default error UI.
    */
-  error?: boolean | string | Error | ReactNode | null;
+  error?: Error | ReactNode;
   /** Retry handler for the default error UI. */
   onRetry?: () => void;
   /** Estimated size of each item in pixels (default: 56) */
@@ -219,6 +327,131 @@ export interface ListProps<T> extends Omit<YStackProps, 'children'> {
   hotkeys?: ListHotkeys;
 }
 
+const ACCENT_BACKGROUND = '$accentBackground';
+
+interface ListItemShellProps<T> {
+  item: T;
+  index: number;
+  count: number;
+  listId: string;
+  isSelected: boolean;
+  showKeyboardRing: boolean;
+  containerKeyboardFocused: boolean;
+  renderItem: ListProps<T>['renderItem'];
+  onSelect: (index: number) => void;
+  onItemClick: ((item: T) => void) | undefined;
+}
+
+/** One stacked-group row: chrome, selection fill and the per-row state context. */
+const ListItemShell = <T,>({
+  item,
+  index,
+  count,
+  listId,
+  isSelected,
+  showKeyboardRing,
+  containerKeyboardFocused,
+  renderItem,
+  onSelect,
+  onItemClick,
+}: ListItemShellProps<T>) => {
+  const { knobProps } = useResolvedKnobs();
+  const rowPad = knobProps.panelPadding.padding;
+  const onAccent = useReadableTextOn(ACCENT_BACKGROUND);
+  const position = getGroupPosition(index, count);
+  const corners = stackRadiusProps(position, knobProps.containerRadius.borderRadius);
+  const selectedInk = isSelected && hasInk(onAccent) ? { color: onAccent } : undefined;
+  const accentOutline = hasInk(onAccent) ? { outlineColor: onAccent } : undefined;
+  const focused = isSelected && showKeyboardRing;
+  const state = useMemo<ListItemState>(
+    () => ({ selected: isSelected, focused, onAccent }),
+    [isSelected, focused, onAccent],
+  );
+  return (
+    <YStack>
+      {index > 0 ? <View {...hairline.line} /> : null}
+      <XStack
+        id={`${listId}-item-${index}`}
+        data-stack-position={position}
+        {...containerCapProps('StackedRow', knobProps.borderRadius.borderRadius, knobProps.space)}
+        data-list-row
+        data-selected={isSelected ? true : undefined}
+        data-focused={isSelected && containerKeyboardFocused ? true : undefined}
+        minHeight={MIN_PRESS_TARGET}
+        paddingHorizontal={rowPad}
+        paddingVertical={rowPad}
+        alignItems="center"
+        overflow="hidden"
+        // Rows form ONE stacked group: the hover/focus/selection
+        // surface rounds only at the group's outer corners, capped
+        // at the row padding; interiors stay square.
+        // Hairlines sit BETWEEN rows only, never after the last.
+        {...corners}
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui XStack is the cross-platform primitive (no native <li> on RN); role supplies the accessibility semantics
+        role="listitem"
+        // oxlint-disable-next-line jsx-a11y/role-supports-aria-props -- the row is the selectable option of a listbox-style list; aria-selected marks the filled row
+        aria-selected={isSelected}
+        backgroundColor={isSelected ? ACCENT_BACKGROUND : 'transparent'}
+        {...selectedInk}
+        {...(focused
+          ? {
+              ...keyboardFocusRingProps,
+              ...accentOutline,
+            }
+          : { outlineWidth: 0 })}
+        hoverStyle={{
+          backgroundColor: isSelected ? ACCENT_BACKGROUND : componentColors.interactive.background,
+          ...corners,
+        }}
+        pressStyle={{
+          backgroundColor: isSelected ? ACCENT_BACKGROUND : componentColors.interactive.hover,
+          ...corners,
+        }}
+        cursor="pointer"
+        {...transitionProps(knobProps.transition)}
+        onPress={() => {
+          onSelect(index);
+          onItemClick?.(item);
+        }}>
+        <ListItemStateContext.Provider value={state}>{renderItem(item, index, state)}</ListItemStateContext.Provider>
+      </XStack>
+    </YStack>
+  );
+};
+
+const STREAMING_VIEWPORT_ROWS = 10;
+
+interface ListHeightOptions {
+  heightProp: number | undefined;
+  hasMore: boolean;
+  estimateSize: number;
+  measuredContentHeight: number | null;
+  count: number;
+}
+
+/**
+ * No explicit height: hug content when the list is complete (page scrolls,
+ * no dead space / nested scrollbar); cap + scroll internally only while
+ * more pages can stream in (FlashList needs a bounded viewport to
+ * virtualize + fire onEndReached). The cap is a content-derived dial —
+ * ten estimated rows at the active size — not a raw pixel constant.
+ *
+ * The hug height tracks the MEASURED content size once FlashList reports
+ * it: an estimate-derived hug slices the last rows mid-row whenever rows
+ * render taller than the estimate (measured overB 122/148 on
+ * FrappeList/FrappeListView). The estimate is only the
+ * pre-measure first paint.
+ */
+const resolveListHeight = ({ heightProp, hasMore, estimateSize, measuredContentHeight, count }: ListHeightOptions) => {
+  if (heightProp !== undefined) {
+    return heightProp;
+  }
+  if (hasMore) {
+    return estimateSize * STREAMING_VIEWPORT_ROWS;
+  }
+  return measuredContentHeight ?? Math.max(count, 1) * estimateSize + Math.max(count - 1, 0) * hairlineWidth;
+};
+
 /**
  * Generic virtualized list component with keyboard navigation.
  *
@@ -228,7 +461,7 @@ export interface ListProps<T> extends Omit<YStackProps, 'children'> {
  * hairlines sit only BETWEEN rows. Selected = accent fill; keyboard focus =
  * inset ring on that same row. Accepts data purely through props.
  *
- * @typeParam T - The item type rendered in the list
+ * @template T - The item type rendered in the list
  *
  * @example
  * ```tsx
@@ -264,36 +497,25 @@ export const List = <T,>({
   const emptyMessage = emptyMessageProp ?? t('No items found');
   const { knobProps } = useResolvedKnobs();
   const estimateSize = estimateSizeProp ?? Math.max(MIN_PRESS_TARGET, knobProps.control.height);
-  const rowPad = knobProps.panelPadding.padding;
-  const onAccent = useReadableTextOn('$accentBackground');
-  const cornersRadius = knobProps.containerRadius.borderRadius;
-  // No explicit height: hug content when the list is complete (page scrolls,
-  // no dead space / nested scrollbar); cap + scroll internally only while
-  // more pages can stream in (FlashList needs a bounded viewport to
-  // virtualize + fire onEndReached). The cap is a content-derived dial —
-  // ten estimated rows at the active size — not a raw pixel constant.
-  const STREAMING_VIEWPORT_ROWS = 10;
-  const scrollCap = estimateSize * STREAMING_VIEWPORT_ROWS;
-  // The hug height tracks the MEASURED content size once FlashList reports
-  // it: an estimate-derived hug slices the last rows mid-row whenever rows
-  // render taller than the estimate (measured overB 122/148 on
-  // FrappeList/FrappeListView). The estimate is only the
-  // pre-measure first paint.
   const [measuredContentHeight, setMeasuredContentHeight] = useState<number | null>(null);
-  const height =
-    heightProp ??
-    (hasMore
-      ? scrollCap
-      : (measuredContentHeight ??
-        Math.max(items.length, 1) * estimateSize + Math.max(items.length - 1, 0) * hairlineWidth));
+  const height = resolveListHeight({
+    heightProp,
+    hasMore,
+    estimateSize,
+    measuredContentHeight,
+    count: items.length,
+  });
   const listId = useId();
-  const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLElement | null>(null);
+  const viewRef = useDomRefCallback(containerRef);
   const flashListRef = useRef<FlashListRef<T>>(null);
   const isControlled = selectedIndexProp !== undefined;
   const [uncontrolledSelected, setUncontrolledSelected] = useState(defaultSelectedIndex ?? -1);
   const selectedIndex = isControlled ? selectedIndexProp : uncontrolledSelected;
   const selectedRef = useRef(selectedIndex);
-  selectedRef.current = selectedIndex;
+  useLayoutEffect(() => {
+    selectedRef.current = selectedIndex;
+  }, [selectedIndex]);
   const [containerKeyboardFocused, setContainerKeyboardFocused] = useState(false);
   if (typeof document !== 'undefined') {
     ensureKeyboardModalityTracking();
@@ -330,7 +552,7 @@ export const List = <T,>({
   const scrollToIndex = useCallback(
     (index: number) => {
       if (index >= 0 && index < items.length) {
-        flashListRef.current?.scrollToIndex({ index, animated: true });
+        void flashListRef.current?.scrollToIndex({ index, animated: true });
       }
     },
     [items.length],
@@ -347,77 +569,14 @@ export const List = <T,>({
     [commitSelection, items.length, scrollToIndex],
   );
 
-  // Keyboard navigation via @tanstack/react-hotkeys
-  const hotkeyOpts = {
-    target: containerRef as React.RefObject<HTMLElement | null>,
-  };
-
-  useHotkey(
-    hotkeyOverrides?.next ?? 'ArrowDown',
-    () => {
-      const { current } = selectedRef;
-      moveSelection(current < 0 ? 0 : current + 1);
-    },
-    hotkeyOpts,
-  );
-
-  useHotkey(
-    hotkeyOverrides?.prev ?? 'ArrowUp',
-    () => {
-      const { current } = selectedRef;
-      moveSelection(current < 0 ? items.length - 1 : current - 1);
-    },
-    hotkeyOpts,
-  );
-
-  useHotkey(
-    hotkeyOverrides?.select ?? 'Enter',
-    () => {
-      const { current } = selectedRef;
-      if (current >= 0 && current < items.length) {
-        onItemClick?.(items[current]);
-      }
-    },
-    hotkeyOpts,
-  );
-
-  useHotkey(
-    hotkeyOverrides?.first ?? 'Home',
-    () => {
-      if (items.length > 0) {
-        moveSelection(0);
-      }
-    },
-    hotkeyOpts,
-  );
-
-  useHotkey(
-    hotkeyOverrides?.last ?? 'End',
-    () => {
-      if (items.length > 0) {
-        moveSelection(items.length - 1);
-      }
-    },
-    hotkeyOpts,
-  );
-
-  useHotkey(
-    hotkeyOverrides?.pageDown ?? 'PageDown',
-    () => {
-      const current = selectedRef.current < 0 ? 0 : selectedRef.current;
-      moveSelection(current + 10);
-    },
-    hotkeyOpts,
-  );
-
-  useHotkey(
-    hotkeyOverrides?.pageUp ?? 'PageUp',
-    () => {
-      const current = selectedRef.current < 0 ? 0 : selectedRef.current;
-      moveSelection(current - 10);
-    },
-    hotkeyOpts,
-  );
+  useListHotkeys({
+    overrides: hotkeyOverrides,
+    containerRef,
+    selectedRef,
+    items,
+    onItemClick,
+    moveSelection,
+  });
 
   // Handle infinite scroll
   const handleEndReached = useCallback(() => {
@@ -433,9 +592,11 @@ export const List = <T,>({
   const listBody =
     items.length === 0 ? null : (
       <View
-        ref={containerRef as any}
+        ref={viewRef}
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui View is the cross-platform primitive (no native <ul> on RN); role supplies the accessibility semantics
         role="list"
         aria-label={ariaLabel}
+        // oxlint-disable-next-line jsx-a11y/role-supports-aria-props -- the container keeps DOM focus and names the active row through aria-activedescendant (listbox-style pattern)
         aria-activedescendant={effectiveSelected >= 0 ? `${listId}-item-${effectiveSelected}` : undefined}
         tabIndex={0}
         outlineWidth={0}
@@ -458,68 +619,20 @@ export const List = <T,>({
             }
           }}
           keyExtractor={(_, index) => `${listId}-item-${index}`}
-          renderItem={({ item, index }) => {
-            const isSelected = effectiveSelected === index;
-            const position = getGroupPosition(index, items.length);
-            const corners = stackRadiusProps(position, cornersRadius);
-            const state: ListItemState = {
-              selected: isSelected,
-              focused: isSelected && showKeyboardRing,
-              onAccent,
-            };
-            return (
-              <YStack>
-                {index > 0 ? <View {...hairline.line} /> : null}
-                <XStack
-                  id={`${listId}-item-${index}`}
-                  data-stack-position={position}
-                  {...containerCapProps('StackedRow', knobProps.borderRadius.borderRadius, knobProps.space)}
-                  {...({
-                    'data-list-row': true,
-                    ...(isSelected ? { 'data-selected': true } : {}),
-                    ...(isSelected && containerKeyboardFocused ? { 'data-focused': true } : {}),
-                  } as Record<string, unknown>)}
-                  minHeight={MIN_PRESS_TARGET}
-                  paddingHorizontal={rowPad}
-                  paddingVertical={rowPad}
-                  alignItems="center"
-                  overflow="hidden"
-                  // Rows form ONE stacked group: the hover/focus/selection
-                  // surface rounds only at the group's outer corners, capped
-                  // at the row padding; interiors stay square.
-                  // Hairlines sit BETWEEN rows only, never after the last.
-                  {...corners}
-                  role="listitem"
-                  aria-selected={isSelected}
-                  backgroundColor={isSelected ? '$accentBackground' : 'transparent'}
-                  {...(isSelected && onAccent ? { color: onAccent } : {})}
-                  {...(isSelected && showKeyboardRing
-                    ? {
-                        ...keyboardFocusRingProps,
-                        ...(onAccent ? { outlineColor: onAccent } : {}),
-                      }
-                    : { outlineWidth: 0 })}
-                  hoverStyle={{
-                    backgroundColor: isSelected ? '$accentBackground' : componentColors.interactive.background,
-                    ...corners,
-                  }}
-                  pressStyle={{
-                    backgroundColor: isSelected ? '$accentBackground' : componentColors.interactive.hover,
-                    ...corners,
-                  }}
-                  cursor="pointer"
-                  {...transitionProps(knobProps.transition)}
-                  onPress={() => {
-                    commitSelection(index);
-                    onItemClick?.(item);
-                  }}>
-                  <ListItemStateContext.Provider value={state}>
-                    {renderItem(item, index, state)}
-                  </ListItemStateContext.Provider>
-                </XStack>
-              </YStack>
-            );
-          }}
+          renderItem={({ item, index }) => (
+            <ListItemShell
+              item={item}
+              index={index}
+              count={items.length}
+              listId={listId}
+              isSelected={effectiveSelected === index}
+              showKeyboardRing={showKeyboardRing}
+              containerKeyboardFocused={containerKeyboardFocused}
+              renderItem={renderItem}
+              onSelect={commitSelection}
+              onItemClick={onItemClick}
+            />
+          )}
           ListFooterComponent={
             isLoading && items.length > 0 ? (
               <YStack
@@ -533,10 +646,12 @@ export const List = <T,>({
       </View>
     );
 
+  const hasError = Boolean(error);
+
   return (
     <AsyncBoundary
-      loading={!error && isLoading && items.length === 0}
-      empty={!error && items.length === 0}
+      loading={!hasError && isLoading && items.length === 0}
+      empty={!hasError && items.length === 0}
       error={error}
       onRetry={onRetry}
       layout="list"

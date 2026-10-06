@@ -218,54 +218,56 @@ export const Nested: Story = {
   ),
 };
 
-export const Controlled: Story = {
-  render: () => {
-    const [open, setOpen] = useState<string>('billing');
-    return (
-      <YStack
-        gap="$4"
-        maxWidth={520}>
-        <XStack
-          gap="$2"
-          alignItems="center">
-          <Button
-            size="$2"
-            onPress={() => {
-              setOpen('shipping');
-            }}>
-            Open shipping
-          </Button>
-          <Button
-            size="$2"
-            onPress={() => {
-              setOpen('billing');
-            }}>
-            Open billing
-          </Button>
-          <Button
-            size="$2"
-            onPress={() => {
-              setOpen('');
-            }}>
-            Close all
-          </Button>
-          <Text
-            fontSize="$2"
-            color="$color11"
-            data-testid="controlled-value">
-            value: {open || '(none)'}
-          </Text>
-        </XStack>
-        <Accordion
-          type="single"
-          value={open}
-          onValueChange={(next) => {
-            setOpen(next);
-            action('onValueChange')(next);
+const ControlledDemo = () => {
+  const [open, setOpen] = useState<string>('billing');
+  return (
+    <YStack
+      gap="$4"
+      maxWidth={520}>
+      <XStack
+        gap="$2"
+        alignItems="center">
+        <Button
+          size="$2"
+          onPress={() => {
+            setOpen('shipping');
           }}>
-          {demoItems}
-        </Accordion>
-      </YStack>
-    );
-  },
+          Open shipping
+        </Button>
+        <Button
+          size="$2"
+          onPress={() => {
+            setOpen('billing');
+          }}>
+          Open billing
+        </Button>
+        <Button
+          size="$2"
+          onPress={() => {
+            setOpen('');
+          }}>
+          Close all
+        </Button>
+        <Text
+          fontSize="$2"
+          color="$color11"
+          data-testid="controlled-value">
+          value: {open || '(none)'}
+        </Text>
+      </XStack>
+      <Accordion
+        type="single"
+        value={open}
+        onValueChange={(next) => {
+          setOpen(next);
+          action('onValueChange')(next);
+        }}>
+        {demoItems}
+      </Accordion>
+    </YStack>
+  );
+};
+
+export const Controlled: Story = {
+  render: () => <ControlledDemo />,
 };

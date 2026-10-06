@@ -3,15 +3,21 @@ import { formatAbsoluteDateTime } from '@repo/theme';
 // Comment-section behavior: display-name prettify, one-level threading,
 // relative timestamps, and the inline composer submit path.
 import { cleanup, fireEvent, screen } from '@testing-library/react';
-import * as React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { Timeline, formatRelativeTimestamp, getEntryDisplayName, prettifyAuthorName, threadEntries } from './Timeline';
 import type { TimelineEntry } from './Timeline';
 
-afterEach(cleanup);
+const entry = (id: string, parentId?: string, ts = '2026-01-01T00:00:00Z'): TimelineEntry => ({
+  id,
+  type: 'comment',
+  author: 'a@x.com',
+  content: id,
+  timestamp: ts,
+  parentId,
+});
 
-describe('prettifyAuthorName', () => {
+describe(prettifyAuthorName, () => {
   it('prettifies the email local part', () => {
     expect(prettifyAuthorName('john.doe@example.com')).toBe('John Doe');
     expect(prettifyAuthorName('alice@example.com')).toBe('Alice');
@@ -35,16 +41,7 @@ describe('prettifyAuthorName', () => {
   });
 });
 
-describe('threadEntries', () => {
-  const entry = (id: string, parentId?: string, ts = '2026-01-01T00:00:00Z'): TimelineEntry => ({
-    id,
-    type: 'comment',
-    author: 'a@x.com',
-    content: id,
-    timestamp: ts,
-    parentId,
-  });
-
+describe(threadEntries, () => {
   it('groups replies one level under their parent', () => {
     const threads = threadEntries([entry('a'), entry('b'), entry('a1', 'a', '2026-01-02T00:00:00Z')]);
     expect(threads.map((t) => t.entry.id)).toStrictEqual(['a', 'b']);
@@ -81,13 +78,13 @@ describe('threadEntries', () => {
     // cycle: first member promotes to top-level, the other nests under it —
     // every entry stays in the feed
     const rendered = threads.flatMap((t) => [t.entry.id, ...t.replies.map((r) => r.id)]);
-    expect(rendered.sort()).toStrictEqual(['a', 'b', 'c']);
+    expect(rendered.toSorted()).toStrictEqual(['a', 'b', 'c']);
     // true roots keep input order; cycle fallbacks append after them
     expect(threads.map((t) => t.entry.id)).toStrictEqual(['a', 'b']);
   });
 });
 
-describe('formatRelativeTimestamp', () => {
+describe(formatRelativeTimestamp, () => {
   const now = new Date('2026-08-12T12:00:00Z').getTime();
   const at = (msBefore: number) => new Date(now - msBefore).toISOString();
 
@@ -107,6 +104,8 @@ describe('formatRelativeTimestamp', () => {
 });
 
 describe('timestamp registers (content class picks the register)', () => {
+  afterEach(cleanup);
+
   // House knob default is `timestampStyle: "absolute"` (test-utils mock =
   // defaultKnobs) — comment rows must STILL render the relative register.
   const twoHoursAgo = new Date(Date.now() - 2 * 3_600_000).toISOString();
@@ -146,6 +145,8 @@ describe('timestamp registers (content class picks the register)', () => {
 });
 
 describe('Timeline comment section rendering', () => {
+  afterEach(cleanup);
+
   const entries: TimelineEntry[] = [
     {
       id: 'c1',
@@ -188,7 +189,7 @@ describe('Timeline comment section rendering', () => {
   });
 
   it('submits a top-level comment through onCommentSubmit', () => {
-    const onCommentSubmit = vi.fn();
+    const onCommentSubmit = vi.fn<(content: string, options?: { parentId?: string }) => void>();
     renderWithProviders(
       <Timeline
         entries={entries}
@@ -203,7 +204,7 @@ describe('Timeline comment section rendering', () => {
   });
 
   it('opens an inline reply composer and submits with parentId', () => {
-    const onCommentSubmit = vi.fn();
+    const onCommentSubmit = vi.fn<(content: string, options?: { parentId?: string }) => void>();
     renderWithProviders(
       <Timeline
         entries={entries}
@@ -219,7 +220,7 @@ describe('Timeline comment section rendering', () => {
   });
 
   it('calls onReply instead of opening the internal composer when provided', () => {
-    const onReply = vi.fn();
+    const onReply = vi.fn<(entry: TimelineEntry) => void>();
     renderWithProviders(
       <Timeline
         entries={entries}
@@ -233,7 +234,7 @@ describe('Timeline comment section rendering', () => {
   });
 
   it('falls back to onCommentAdded for top-level submits (legacy API)', () => {
-    const onCommentAdded = vi.fn();
+    const onCommentAdded = vi.fn<(content: string) => void>();
     renderWithProviders(
       <Timeline
         entries={entries}

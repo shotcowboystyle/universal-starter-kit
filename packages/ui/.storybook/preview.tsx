@@ -8,7 +8,8 @@ import { initReactI18next } from 'react-i18next';
 
 const themeConfig = createDefaultThemeConfig();
 
-i18n.use(initReactI18next).init({
+// oxlint-disable-next-line import/no-named-as-default-member -- i18next's named `use` trips rules-of-hooks, so the instance method is used
+void i18n.use(initReactI18next).init({
   ...createI18nConfig({
     languages: locales,
     namespaces: ['translation'],

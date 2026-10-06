@@ -12,9 +12,9 @@ import { ThemePlayground as NativeThemePlayground } from './index.native';
 
 import { ThemePlayground } from './index';
 
-afterEach(cleanup);
+describe(ThemePlayground, () => {
+  afterEach(cleanup);
 
-describe('ThemePlayground', () => {
   it('offers a labelled palette toggle, closed until pressed', async () => {
     renderWithProviders(<ThemePlayground testID="playground" />);
     const toggle = await screen.findByTestId('playground', {}, { timeout: 10_000 });

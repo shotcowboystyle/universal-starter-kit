@@ -17,14 +17,24 @@ export interface ThemePlaygroundProps {
  * The panel reads the reader's color scheme through `@vxrn/color-scheme`,
  * an optional peer: without it the panel still opens, minus the scheme row.
  */
+const loadColorScheme = async () => {
+  try {
+    return await import('@vxrn/color-scheme');
+  } catch {
+    // Safe to continue: the peer is optional; without it the panel just omits the scheme row.
+    return null;
+  }
+};
+
 const ScopedPanel = lazy(async (): Promise<{ default: ComponentType<object> }> => {
-  const scheme = await import('@vxrn/color-scheme').catch(() => undefined);
+  const scheme = await loadColorScheme();
   const useUserScheme = scheme?.useUserScheme;
   if (!useUserScheme) {
     return { default: () => <ThemeDevtoolsPanel /> };
   }
   const Panel = () => (
     <ThemeDevtoolsPanel
+      // oxlint-disable-next-line react/hooks -- the panel's API takes the hook itself as a prop and calls it
       useUserScheme={useUserScheme}
       devtoolsTheme={useUserScheme().value}
     />

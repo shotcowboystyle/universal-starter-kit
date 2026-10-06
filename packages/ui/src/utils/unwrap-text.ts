@@ -1,10 +1,9 @@
 import { Children, isValidElement } from 'react';
 import type { ReactNode } from 'react';
 
+const unwrapChild = (child: ReactNode): ReactNode =>
+  isValidElement<{ children?: ReactNode }>(child) && 'children' in child.props ? child.props.children : child;
+
 export const unwrapText = (children: ReactNode): ReactNode[] =>
-  Children.toArray(children).map((x) => {
-    if (isValidElement(x) && x.props && typeof x.props === 'object' && 'children' in x.props) {
-      return x.props.children as ReactNode;
-    }
-    return x;
-  });
+  // oxlint-disable-next-line react/no-react-children -- toArray flattens fragments/arrays and assigns keys, which unwrapText relies on
+  Children.toArray(children).map(unwrapChild);

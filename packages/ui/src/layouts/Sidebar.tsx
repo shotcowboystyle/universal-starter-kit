@@ -10,9 +10,11 @@ import {
   wasKeyboardFocus,
   transitionProps,
 } from '@repo/theme';
+import type { KnobProps } from '@repo/theme';
 import type React from 'react';
 import { Fragment, useId, useState } from 'react';
 import { Label, Separator, Text, XStack, YStack, isWeb } from 'tamagui';
+import type { SizeTokens } from 'tamagui';
 
 import { componentColors } from '../component-colors';
 import { ScrollView } from '../ScrollView';
@@ -44,6 +46,144 @@ export interface SidebarProps {
   'aria-label'?: string;
 }
 
+const ACCENT_FILL = '$accentBackground';
+
+const itemKeyOf = (sectionIdx: number, item: SidebarItem): string =>
+  // oxlint-disable-next-line typescript/no-base-to-string -- value is an opaque `unknown` id; stringified exactly as before to keep existing keys stable
+  `${sectionIdx}:${String(item.value ?? item.label)}`;
+
+const isNonEmpty = (text: string | undefined): text is string => text !== undefined && text !== '';
+
+const rowFill = (active: boolean, corners: ReturnType<typeof stackRadiusProps>) =>
+  ({
+    backgroundColor: active ? ACCENT_FILL : 'transparent',
+    hoverStyle: {
+      backgroundColor: active ? ACCENT_FILL : componentColors.surface.background,
+      ...corners,
+    },
+    pressStyle: {
+      backgroundColor: active ? ACCENT_FILL : componentColors.interactive.background,
+      ...corners,
+    },
+  }) as const;
+
+interface SidebarRowProps {
+  item: SidebarItem;
+  itemIdx: number;
+  itemCount: number;
+  knobProps: KnobProps;
+  rowPad: KnobProps['panelPadding']['padding'];
+  onAccent: ReturnType<typeof useReadableTextOn>;
+}
+
+const SidebarRow = ({ item, itemIdx, itemCount, knobProps, rowPad, onAccent }: SidebarRowProps) => {
+  // Tamagui maps `focusVisibleStyle` onto mouse :focus; track keyboard
+  // modality and paint the inset ring ourselves (ToggleGroup precedent).
+  const [kbFocused, setKbFocused] = useState(false);
+  const hasIcon = Boolean(item.icon);
+  const { onPress: handlePress } = item;
+  const position = getGroupPosition(itemIdx, itemCount);
+  const corners = stackRadiusProps(position, knobProps.borderRadius.borderRadius);
+  const activeInk = item.active === true && onAccent != null && onAccent !== '' ? onAccent : undefined;
+  const ink = activeInk ?? componentColors.text.primary;
+  const metaInk = activeInk ?? knobProps.textAccentColor;
+  const pressable = Boolean(handlePress);
+  const kbRing = kbFocused
+    ? ensureFocusVisibleRing({
+        outlineOffset: -2,
+        outlineColor: activeInk ?? '$outlineColor',
+      })
+    : null;
+  // `color` sets the icon's inherited color; Tamagui forwards it at runtime
+  // but the RN-flavored View prop type omits it, so it rides a spread.
+  const iconInk = { color: metaInk };
+  return (
+    <XStack
+      data-group-position={position}
+      data-sidebar-row="true"
+      data-active={item.active ? true : undefined}
+      aria-current={item.active ? 'page' : undefined}
+      alignItems="center"
+      width="100%"
+      alignSelf="stretch"
+      // SAFETY: sizeToken is a size-knob token name, which is a valid size token key.
+      minHeight={knobProps.sizeToken as SizeTokens}
+      paddingHorizontal={rowPad}
+      overflow="hidden"
+      {...knobProps.gap}
+      {...corners}
+      {...rowFill(item.active === true, corners)}
+      cursor={pressable ? 'pointer' : 'default'}
+      userSelect="none"
+      onPress={handlePress}
+      {...transitionProps(knobProps.transition)}
+      {...(pressable
+        ? {
+            role: 'button' as const,
+            tabIndex: 0,
+            outlineWidth: 0,
+            focusStyle: { outlineWidth: 0 },
+            // Rest and mouse-focus paint no ring.
+            // Keyboard-origin ring also rides focusVisibleStyle
+            // so Tamagui cannot zero outlineWidth on :focus-visible.
+            focusVisibleStyle: kbRing ?? { outlineWidth: 0 },
+            ...(kbRing ?? { outlineWidth: 0 }),
+            onFocus: () => {
+              if (wasKeyboardFocus()) {
+                setKbFocused(true);
+              }
+            },
+            onBlur: () => {
+              setKbFocused(false);
+            },
+            onKeyDown: (e: React.KeyboardEvent) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handlePress?.();
+              }
+            },
+          }
+        : undefined)}>
+      {hasIcon ? (
+        <YStack
+          flexShrink={0}
+          {...iconInk}>
+          {item.icon}
+        </YStack>
+      ) : null}
+      <YStack
+        flex={1}
+        minWidth={0}
+        justifyContent="center">
+        <Text
+          {...knobProps.body}
+          color={ink}
+          fontWeight={item.active ? '600' : '400'}
+          numberOfLines={1}>
+          {item.label}
+        </Text>
+        {isNonEmpty(item.subTitle) ? (
+          <Text
+            {...knobProps.body}
+            color={metaInk}
+            fontSize="$2"
+            numberOfLines={1}>
+            {item.subTitle}
+          </Text>
+        ) : null}
+      </YStack>
+      {item.count === undefined ? null : (
+        <Text
+          color={metaInk}
+          fontSize="$2"
+          flexShrink={0}>
+          ({item.count})
+        </Text>
+      )}
+    </XStack>
+  );
+};
+
 export const Sidebar = ({ sections, width = 250, 'aria-label': ariaLabel = 'Sidebar' }: SidebarProps) => {
   const { knobProps } = useResolvedKnobs();
   const headingId = useId();
@@ -51,20 +191,18 @@ export const Sidebar = ({ sections, width = 250, 'aria-label': ariaLabel = 'Side
   // and count must sit on the accent fill with a luminance-computed foreground
   // (paper/ink whichever reads) — the scheme `$color` ink measured 2.59:1 on
   // the accent. Resolved once (all active rows share the fill).
-  const onAccent = useReadableTextOn('$accentBackground');
+  const onAccent = useReadableTextOn(ACCENT_FILL);
   // SP-EDGE: rows own the horizontal inset (space knob via the panelPadding
   // token); the container contributes none, so row highlights and separators
   // run edge-to-edge across the panel.
   const rowPad = knobProps.panelPadding.padding;
-  // Tamagui maps `focusVisibleStyle` onto mouse :focus; track keyboard
-  // modality and paint the inset ring ourselves (ToggleGroup precedent).
-  const [kbFocusKey, setKbFocusKey] = useState<string | null>(null);
   if (typeof document !== 'undefined') {
     ensureKeyboardModalityTracking();
   }
 
   return (
     <YStack
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui `role` also maps to the native accessibilityRole; a web-only `tag="nav"` would drop the landmark on native
       role="navigation"
       aria-label={ariaLabel}
       width={width}
@@ -80,7 +218,7 @@ export const Sidebar = ({ sections, width = 250, 'aria-label': ariaLabel = 'Side
       {...(isWeb
         ? {
             borderInlineEndWidth: hairlineWidth,
-            borderInlineEndStyle: 'solid' as any,
+            borderInlineEndStyle: 'solid' as const,
             className: 'mp-hairline-ie',
           }
         : { borderEndWidth: hairlineWidth })}>
@@ -90,15 +228,16 @@ export const Sidebar = ({ sections, width = 250, 'aria-label': ariaLabel = 'Side
           paddingHorizontal={0}
           {...knobProps.gapLg}>
           {sections.map((section, sectionIdx) => {
-            const titleId = section.title ? `${headingId}-${sectionIdx}` : undefined;
+            const titleId = isNonEmpty(section.title) ? `${headingId}-${sectionIdx}` : undefined;
             return (
               <YStack
                 key={section.title ?? sectionIdx}
+                // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- none of the suggested tags is a labelled generic group; role also maps to the native accessibilityRole
                 role="group"
                 aria-labelledby={titleId}
                 {...knobProps.gap}
                 width="100%">
-                {section.title ? (
+                {isNonEmpty(section.title) ? (
                   // Align with row text: the inset rides on this slot's
                   // padding so the caption's box starts at the shared row text
                   // edge — padding on the Label itself left the box at the panel
@@ -122,125 +261,25 @@ export const Sidebar = ({ sections, width = 250, 'aria-label': ariaLabel = 'Side
                 ) : null}
 
                 <YStack width="100%">
-                  {section.items.map((item, itemIdx) => {
-                    const position = getGroupPosition(itemIdx, section.items.length);
-                    const corners = stackRadiusProps(position, knobProps.borderRadius.borderRadius);
-                    const itemKey = `${sectionIdx}:${String(item.value ?? item.label)}`;
-                    const ink = item.active && onAccent ? onAccent : componentColors.text.primary;
-                    const metaInk = item.active && onAccent ? onAccent : knobProps.textAccentColor;
-                    const kbFocused = kbFocusKey === itemKey;
-                    const pressable = Boolean(item.onPress);
-                    const kbRing = kbFocused
-                      ? ensureFocusVisibleRing({
-                          outlineOffset: -2,
-                          outlineColor: item.active && onAccent ? onAccent : '$outlineColor',
-                        })
-                      : null;
-                    return (
-                      <Fragment key={itemKey}>
-                        {itemIdx > 0 ? (
-                          <Separator
-                            width="100%"
-                            alignSelf="stretch"
-                            {...hairline.line}
-                          />
-                        ) : null}
-                        <XStack
-                          data-group-position={position}
-                          data-sidebar-row="true"
-                          data-active={item.active ? true : undefined}
-                          aria-current={item.active ? 'page' : undefined}
-                          alignItems="center"
+                  {section.items.map((item, itemIdx) => (
+                    <Fragment key={itemKeyOf(sectionIdx, item)}>
+                      {itemIdx > 0 ? (
+                        <Separator
                           width="100%"
                           alignSelf="stretch"
-                          minHeight={knobProps.sizeToken as any}
-                          paddingHorizontal={rowPad}
-                          overflow="hidden"
-                          {...knobProps.gap}
-                          {...corners}
-                          backgroundColor={item.active ? '$accentBackground' : 'transparent'}
-                          hoverStyle={{
-                            backgroundColor: item.active ? '$accentBackground' : componentColors.surface.background,
-                            ...corners,
-                          }}
-                          pressStyle={{
-                            backgroundColor: item.active ? '$accentBackground' : componentColors.interactive.background,
-                            ...corners,
-                          }}
-                          cursor={pressable ? 'pointer' : 'default'}
-                          userSelect="none"
-                          onPress={item.onPress}
-                          {...transitionProps(knobProps.transition)}
-                          {...(pressable
-                            ? {
-                                role: 'button' as const,
-                                tabIndex: 0,
-                                outlineWidth: 0,
-                                focusStyle: { outlineWidth: 0 },
-                                // Rest and mouse-focus paint no ring.
-                                // Keyboard-origin ring also rides focusVisibleStyle
-                                // so Tamagui cannot zero outlineWidth on :focus-visible.
-                                focusVisibleStyle: kbRing ?? { outlineWidth: 0 },
-                                ...(kbRing ?? { outlineWidth: 0 }),
-                                onFocus: () => {
-                                  if (wasKeyboardFocus()) {
-                                    setKbFocusKey(itemKey);
-                                  }
-                                },
-                                onBlur: () => {
-                                  setKbFocusKey((prev) => (prev === itemKey ? null : prev));
-                                },
-                                onKeyDown: ((e: React.KeyboardEvent) => {
-                                  if (e.key === 'Enter' || e.key === ' ') {
-                                    e.preventDefault();
-                                    item.onPress?.();
-                                  }
-                                }) as unknown as () => void,
-                              }
-                            : undefined)}>
-                          {item.icon ? (
-                            // `color` sets the icon's inherited color; Tamagui
-                            // forwards it at runtime but the RN-flavored View
-                            // prop type omits it (house Record cast).
-                            <YStack
-                              flexShrink={0}
-                              {...({ color: metaInk } as Record<string, unknown>)}>
-                              {item.icon}
-                            </YStack>
-                          ) : null}
-                          <YStack
-                            flex={1}
-                            minWidth={0}
-                            justifyContent="center">
-                            <Text
-                              {...knobProps.body}
-                              color={ink}
-                              fontWeight={item.active ? '600' : '400'}
-                              numberOfLines={1}>
-                              {item.label}
-                            </Text>
-                            {item.subTitle ? (
-                              <Text
-                                {...knobProps.body}
-                                color={metaInk}
-                                fontSize="$2"
-                                numberOfLines={1}>
-                                {item.subTitle}
-                              </Text>
-                            ) : null}
-                          </YStack>
-                          {item.count === undefined ? null : (
-                            <Text
-                              color={metaInk}
-                              fontSize="$2"
-                              flexShrink={0}>
-                              ({item.count})
-                            </Text>
-                          )}
-                        </XStack>
-                      </Fragment>
-                    );
-                  })}
+                          {...hairline.line}
+                        />
+                      ) : null}
+                      <SidebarRow
+                        item={item}
+                        itemIdx={itemIdx}
+                        itemCount={section.items.length}
+                        knobProps={knobProps}
+                        rowPad={rowPad}
+                        onAccent={onAccent}
+                      />
+                    </Fragment>
+                  ))}
                 </YStack>
               </YStack>
             );

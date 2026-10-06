@@ -22,6 +22,8 @@ export interface SafeAreaWrapperProps extends YStackProps {
   mode?: SafeAreaMode;
 }
 
+const DEFAULT_EDGES: SafeAreaEdge[] = ['top', 'bottom', 'left', 'right'];
+
 /**
  * SafeAreaWrapper — native insets.
  *
@@ -30,7 +32,7 @@ export interface SafeAreaWrapperProps extends YStackProps {
  */
 export const SafeAreaWrapper = ({
   children,
-  edges = ['top', 'bottom', 'left', 'right'],
+  edges = DEFAULT_EDGES,
   mode = 'padding',
   ...stackProps
 }: PropsWithChildren<SafeAreaWrapperProps>) => {

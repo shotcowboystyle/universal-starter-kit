@@ -16,15 +16,18 @@ import { PageHeader, PageSection, Screen } from './Page';
 import { PageHeadingScope } from './PageHeadingScope';
 import { Timeline } from './Timeline';
 
-afterEach(cleanup);
-
 const headingSequence = (container: HTMLElement): { level: number; text: string }[] =>
   [...container.querySelectorAll('h1,h2,h3,h4,h5,h6')].map((el) => ({
     level: Number(el.tagName[1]),
     text: (el.textContent ?? '').trim(),
   }));
 
+const multipleH1Warnings = (warn: ReturnType<typeof vi.spyOn>): string[] =>
+  warn.mock.calls.map((call) => String(call[0])).filter((m) => m.includes('multiple-h1'));
+
 describe('heading structure', () => {
+  afterEach(cleanup);
+
   it('Screen + PageHeader renders the page title as the single h1', () => {
     const { container } = renderWithProviders(
       <Screen scroll={false}>
@@ -109,11 +112,9 @@ describe('multiple-h1 DEV warn (PageHeadingScope)', () => {
   });
 
   afterEach(() => {
+    cleanup();
     vi.restoreAllMocks();
   });
-
-  const multipleH1Warnings = (warn: ReturnType<typeof vi.spyOn>): string[] =>
-    warn.mock.calls.map((call) => String(call[0])).filter((m) => m.includes('multiple-h1'));
 
   it('warns when two h1 page headings mount under one Screen', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});

@@ -14,9 +14,10 @@ export const treeRevealExpansion = (
       if (node.id === targetId) {
         return true;
       }
-      if (node.children?.length) {
+      const { children } = node;
+      if (children !== undefined && children.length > 0) {
         ancestors.push(node.id);
-        if (find(node.children)) {
+        if (find(children)) {
           return true;
         }
         ancestors.pop();

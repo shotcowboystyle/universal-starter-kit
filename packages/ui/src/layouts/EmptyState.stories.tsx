@@ -58,6 +58,7 @@ export const Default: Story = {
 };
 
 export const TitleOnly: Story = {
+  // oxlint-disable-next-line sonarjs/no-undefined-assignment -- must be undefined (not null) to override the meta-level default description arg
   args: { description: undefined },
   render: (args) => (
     <PageCanvas>
@@ -116,6 +117,7 @@ export const LongCopyNarrow: Story = {
 };
 
 export const Compact: Story = {
+  // oxlint-disable-next-line sonarjs/no-undefined-assignment -- must be undefined (not null) to override the meta-level default description arg
   args: { title: 'No matching records', description: undefined },
   parameters: {
     docs: {
@@ -162,7 +164,7 @@ export const NoResults: Story = {
   ),
 };
 
-export const Error: Story = {
+const ErrorState: Story = {
   args: {
     title: "Couldn't load records",
     description: 'Check your connection, then try again.',
@@ -188,3 +190,5 @@ export const Error: Story = {
     </PageCanvas>
   ),
 };
+
+export { ErrorState as Error };

@@ -27,7 +27,7 @@ import {
 } from '@repo/theme';
 import type { PageTitleScale } from '@repo/theme';
 import type { ReactNode } from 'react';
-import type { ScrollViewProps as TamaguiScrollViewProps, XStackProps, YStackProps } from 'tamagui';
+import type { ScrollViewProps as TamaguiScrollViewProps, SpaceTokens, XStackProps, YStackProps } from 'tamagui';
 import { H1, H2, H3, H4, H5, H6, Paragraph, Separator, XStack, YStack, isWeb } from 'tamagui';
 
 import { componentColors, sectionHeading } from '../component-colors';
@@ -42,11 +42,40 @@ const PAGE_HEADING_TAGS = { 1: H1, 2: H2, 3: H3, 4: H4, 5: H5, 6: H6 } as const;
 /** `$4` → `$-4` so PageHeader can cancel Screen's panel padding. */
 const negateSpaceToken = (token: string): `$-${string}` => `$-${token.startsWith('$') ? token.slice(1) : token}`;
 
-const knobsFor = (component: string, compact: boolean | undefined) =>
+/** Non-empty string check for optional text props. */
+const hasText = (text: string | null | undefined): text is string => text !== undefined && text !== null && text !== '';
+
+type PageHeaderKnobProps = ReturnType<typeof useResolvedKnobs>['knobProps'];
+
+/** Knob spacing values are always `$n` tokens; this narrows them for Tamagui space props. */
+const isSpaceToken = (value: string): value is SpaceTokens & string => value.startsWith('$');
+
+/** Negative horizontal margin that cancels the Screen's inset, or null when there is none. */
+const bleedProps = (insetToken: string | null) => {
+  if (!hasText(insetToken)) {
+    return null;
+  }
+  const negated = negateSpaceToken(insetToken);
+  return isSpaceToken(negated) ? { marginHorizontal: negated } : null;
+};
+
+/** Horizontal padding that restores the Screen's inset inside a bled header. */
+const insetPaddingProps = (insetToken: string | null) =>
+  hasText(insetToken) && isSpaceToken(insetToken) ? { paddingHorizontal: insetToken } : null;
+
+/** headingFont knob on native: family only; web rethemes through the .font_heading CSS var. */
+const headingFamilyProps = (knobProps: PageHeaderKnobProps) =>
+  isWeb ? null : { fontFamily: knobProps.heading.fontFamily };
+
+const knobsFor = (component: string, { compact }: { compact: boolean | undefined }) =>
   // An omitted override must leave density under the preset's control.
   compact === undefined ? { component } : { component, compact };
 
+/** Hairline rule under PageHeader — container-owned, bleeds to the Screen column. */
+const HEADER_RULE = { ...hairline.bottom, borderColor: componentColors.divider };
+
 /** Nested surfaces step density only; hue remains inherited. */
+// oxlint-disable-next-line typescript/promise-function-async -- ReactNode includes Promise but this is a sync component; `async` would break rendering
 const NestedScale = ({ density, children }: { density: string; children: ReactNode }) => {
   if (density === 'compact') {
     return children;
@@ -62,13 +91,14 @@ const NestedScale = ({ density, children }: { density: string; children: ReactNo
  * Default content cap for page scaffolds — the canonical `xl` breakpoint
  * (layout primitives consume breakpoint tokens, not raw pixels).
  */
+// oxlint-disable-next-line react-doctor/only-export-components -- public layout constant consumed alongside Screen; moving it would change the export path
 export const CONTENT_MAX_WIDTH = layoutBreakpoints.xl;
 
 export interface ScreenProps extends YStackProps {
   /** Wrap content in a ScrollView. Default: true. */
   scroll?: boolean;
   /** Max content width. Default: `CONTENT_MAX_WIDTH` (xl, 1280). Pass 0 to disable. */
-  maxWidth?: number | 0;
+  maxWidth?: number;
   /** Skip the centered max-width container (full-bleed content). */
   bleed?: boolean;
   /** Skip the resolved knob padding (caller controls spacing). */
@@ -89,7 +119,7 @@ const ScreenInner = ({
   compact,
   ...rest
 }: ScreenProps) => {
-  const { knobProps } = useResolvedKnobs(knobsFor('Screen', compact));
+  const { knobProps } = useResolvedKnobs(knobsFor('Screen', { compact }));
 
   const inner = (
     <YStack
@@ -144,7 +174,10 @@ const ScreenInner = ({
  * </Screen>
  */
 export const Screen = ({ compact, ...props }: ScreenProps) => {
-  const density = compact === undefined ? undefined : compact ? 'compact' : 'comfortable';
+  let density: 'compact' | 'comfortable' | undefined;
+  if (compact !== undefined) {
+    density = compact ? 'compact' : 'comfortable';
+  }
   return (
     <Surface density={density}>
       <ScreenInner
@@ -195,6 +228,62 @@ export interface PageHeaderProps extends YStackProps {
   compact?: boolean;
 }
 
+/** Title/subtitle column plus trailing actions. */
+const PageHeaderRow = ({
+  titleNode,
+  subtitle,
+  actions,
+  knobProps,
+}: {
+  titleNode: ReactNode;
+  subtitle: string | undefined;
+  actions: ReactNode;
+  knobProps: PageHeaderKnobProps;
+}) => {
+  const hasTitleNode = Boolean(titleNode);
+  const hasActions = Boolean(actions);
+  return (
+    <XStack
+      justifyContent="space-between"
+      alignItems={hasText(subtitle) ? 'flex-start' : 'center'}
+      flexWrap="wrap"
+      {...knobProps.gap}>
+      {/* Frame containment: title + actions must shrink and wrap at
+        narrow widths instead of painting past the frame. flexShrink:1 +
+        minWidth:0 lets the H1 wrap and each action wrap below the
+        title rather than clip off-canvas. */}
+      {hasTitleNode || hasText(subtitle) ? (
+        <YStack
+          flexGrow={1}
+          flexShrink={1}
+          minWidth={0}
+          gap="$1">
+          {titleNode}
+          {hasText(subtitle) ? (
+            // T-HELPER on the shared body fragment — not a local size map.
+            <Paragraph
+              margin={0}
+              {...knobProps.body}
+              color={knobProps.textAccentColor}>
+              {subtitle}
+            </Paragraph>
+          ) : null}
+        </YStack>
+      ) : null}
+      {hasActions ? (
+        <XStack
+          {...knobProps.gap}
+          alignItems="center"
+          flexWrap="wrap"
+          flexShrink={1}
+          minWidth={0}>
+          {actions}
+        </XStack>
+      ) : null}
+    </XStack>
+  );
+};
+
 /**
  * Standard page header (Polaris Page / Primer PageHeader / Linear).
  *
@@ -217,31 +306,32 @@ export const PageHeader = ({
   children,
   ...rest
 }: PageHeaderProps) => {
-  const { knobProps } = useResolvedKnobs(knobsFor('PageHeader', compact));
+  const { knobProps } = useResolvedKnobs(knobsFor('PageHeader', { compact }));
   const insetToken = usePageChromeInset();
   // Count the built-in title toward the Screen's h1 budget.
   // Custom `heading` nodes have an unknown level and are not registered.
+  const hasCustomHeading = Boolean(heading);
   useRegisterPageHeading({
     level: headingLevel,
     component: 'PageHeader',
     label: title,
-    enabled: !heading && !!title,
+    enabled: !hasCustomHeading && hasText(title),
   });
   // headingFont knob: on web FontKnobStyles (@repo/theme)
   // rethemes all $heading text via the .font_heading --f-family CSS var, which
   // keeps the heading size scale intact. Native has no CSS vars, so the family
   // token is applied directly there (family only — weight/size stay on the
   // heading scale).
-  const headingFamily = isWeb ? null : { fontFamily: knobProps.heading.fontFamily };
+  const headingFamily = headingFamilyProps(knobProps);
   const TitleTag = PAGE_HEADING_TAGS[headingLevel];
   // The page-title step comes from the knob (`moderate` by default), so
   // one dial re-scales every composed screen; `titleScale` is the explicit
   // per-instance eject and resolves through the same table. The semantic tag
   // still follows headingLevel — the step is emphasis, not structure.
-  const titleSize = titleScale ? resolvePageTitleScale(titleScale) : knobProps.pageTitle;
+  const titleSize = titleScale === undefined ? knobProps.pageTitle : resolvePageTitleScale(titleScale);
   const titleNode =
     heading ??
-    (title ? (
+    (hasText(title) ? (
       <TitleTag
         margin={0}
         {...titleSize}
@@ -256,10 +346,11 @@ export const PageHeader = ({
   // there is one hairline — not a second competing line. The header then
   // paints the rule as a pinned edge under the nav instead of a border, so
   // the nav fills the frame down to its bottom edge.
-  const showHairline = Boolean(divider);
-  const rule = { ...hairline.bottom, borderColor: componentColors.divider };
-  const bleed = insetToken ? { marginHorizontal: negateSpaceToken(insetToken) as '$4' } : null;
-  const contentPad = insetToken ? { paddingHorizontal: insetToken as '$4' } : null;
+  const hasNav = Boolean(nav);
+  const bleed = bleedProps(insetToken);
+  const contentPad = insetPaddingProps(insetToken);
+  const gapToken = knobProps.gap.gap;
+  const bottomPad = !hasNav && isSpaceToken(gapToken) ? gapToken : 0;
 
   return (
     <YStack
@@ -267,54 +358,22 @@ export const PageHeader = ({
       data-density={knobProps.density}
       overflow="visible"
       {...bleed}
-      {...(showHairline && !nav ? rule : null)}
-      {...(showHairline && nav ? { position: 'relative' as const } : null)}
-      {...(nav ? knobProps.gap : null)}
+      {...(divider && !hasNav ? HEADER_RULE : null)}
+      {...(divider && hasNav ? { position: 'relative' as const } : null)}
+      {...(hasNav ? knobProps.gap : null)}
       {...rest}>
       <YStack
         {...contentPad}
-        paddingBottom={nav ? 0 : (knobProps.gap.gap as '$4')}>
-        <XStack
-          justifyContent="space-between"
-          alignItems={subtitle ? 'flex-start' : 'center'}
-          flexWrap="wrap"
-          {...knobProps.gap}>
-          {/* Frame containment: title + actions must shrink and wrap at
-              narrow widths instead of painting past the frame. flexShrink:1 +
-              minWidth:0 lets the H1 wrap and each action wrap below the
-              title rather than clip off-canvas. */}
-          {titleNode || subtitle ? (
-            <YStack
-              flexGrow={1}
-              flexShrink={1}
-              minWidth={0}
-              gap="$1">
-              {titleNode}
-              {subtitle ? (
-                // T-HELPER on the shared body fragment — not a local size map.
-                <Paragraph
-                  margin={0}
-                  {...knobProps.body}
-                  color={knobProps.textAccentColor}>
-                  {subtitle}
-                </Paragraph>
-              ) : null}
-            </YStack>
-          ) : null}
-          {actions ? (
-            <XStack
-              {...knobProps.gap}
-              alignItems="center"
-              flexWrap="wrap"
-              flexShrink={1}
-              minWidth={0}>
-              {actions}
-            </XStack>
-          ) : null}
-        </XStack>
+        paddingBottom={bottomPad}>
+        <PageHeaderRow
+          titleNode={titleNode}
+          subtitle={subtitle}
+          actions={actions}
+          knobProps={knobProps}
+        />
         {children}
       </YStack>
-      {nav && showHairline ? (
+      {hasNav && divider ? (
         // Sit the tab indicator on the header hairline (Primer / Linear).
         <YStack
           position="absolute"
@@ -322,10 +381,10 @@ export const PageHeader = ({
           right={0}
           bottom={0}
           pointerEvents="none"
-          {...rule}
+          {...HEADER_RULE}
         />
       ) : null}
-      {nav ? (
+      {hasNav ? (
         <YStack
           width="100%"
           data-page-header-nav="">
@@ -379,15 +438,15 @@ export const PageSection = ({
   children,
   ...rest
 }: PageSectionProps) => {
-  const { knobProps } = useResolvedKnobs(knobsFor('PageSection', compact));
+  const { knobProps } = useResolvedKnobs(knobsFor('PageSection', { compact }));
   // See PageHeader: native-only heading family from the headingFont knob.
-  const headingFamily = isWeb ? null : { fontFamily: knobProps.heading.fontFamily };
+  const headingFamily = headingFamilyProps(knobProps);
   // The sectionHeading spread pins the visual scale, so stepped levels only
   // change the semantic tag.
   const SectionTag = PAGE_HEADING_TAGS[headingLevel];
   const headingNode =
     heading ??
-    (title ? (
+    (hasText(title) ? (
       <SectionTag
         margin={0}
         {...headingFamily}
@@ -398,6 +457,7 @@ export const PageSection = ({
 
   // Soft card surface: complete surface fragment (knob border width) +
   // container-capped radius (Axiom 1) + panel padding — no fixed border.
+  // SAFETY: the knob fragments are spreadable Tamagui style props; only their per-key literal types are wider than YStackProps.
   const surfaceProps: Partial<YStackProps> = surface
     ? ({
         ...knobProps.surface,
@@ -407,11 +467,12 @@ export const PageSection = ({
       } as Partial<YStackProps>)
     : {};
 
+  const hasHeading = Boolean(headingNode);
   const headerBlock =
-    headingNode || description ? (
+    hasHeading || hasText(description) ? (
       <YStack gap="$2">
         {headingNode}
-        {description ? (
+        {hasText(description) ? (
           <Paragraph
             margin={0}
             {...knobProps.body}
@@ -481,7 +542,7 @@ export interface ScreenToolbarProps extends XStackProps {
 export const ScreenToolbar = ({ leading, trailing, children, ...rest }: ScreenToolbarProps) => {
   const { knobProps } = useResolvedKnobs({ component: 'ScreenToolbar' });
   const insetToken = usePageChromeInset();
-  const bleed = insetToken ? { marginHorizontal: negateSpaceToken(insetToken) as '$4' } : null;
+  const bleed = bleedProps(insetToken);
   return (
     <XStack
       data-testid="screen-toolbar"

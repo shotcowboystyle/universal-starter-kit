@@ -5,14 +5,15 @@ import { Text } from 'tamagui';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { Accordion } from './index';
+import type { AccordionProps } from './index';
 
 const atoms = (el: Element, prefixes: string[]): string[] =>
-  String((el as HTMLElement).className || '')
+  (el.getAttribute('class') ?? '')
     .split(' ')
     .filter((c) => prefixes.some((p) => c.startsWith(p)))
-    .sort();
+    .toSorted();
 
-const renderAccordion = (props: Record<string, any> = {}) =>
+const renderAccordion = (props: AccordionProps = {}) =>
   renderWithProviders(
     <Accordion {...props}>
       <Accordion.Item value="a">
@@ -30,9 +31,22 @@ const renderAccordion = (props: Record<string, any> = {}) =>
     </Accordion>,
   );
 
-const getTriggers = (container: HTMLElement) => Array.from(container.querySelectorAll('[aria-expanded]'));
+const getTriggers = (container: HTMLElement) => [...container.querySelectorAll<HTMLElement>('[aria-expanded]')];
 
-describe('Accordion', () => {
+const Flip = ({ animation }: { animation: 'none' | 'bouncy' }) => (
+  <Preset overrides={{ animation }}>
+    <Accordion defaultValue="a">
+      <Accordion.Item value="a">
+        <Accordion.Trigger>Section A</Accordion.Trigger>
+        <Accordion.Content>
+          <Text>Content A</Text>
+        </Accordion.Content>
+      </Accordion.Item>
+    </Accordion>
+  </Preset>
+);
+
+describe(Accordion, () => {
   it('renders headers with collapsed content', () => {
     const result = renderAccordion();
     const triggers = getTriggers(result.container);
@@ -42,7 +56,7 @@ describe('Accordion', () => {
   });
 
   it('opens on click and fires onValueChange', () => {
-    const onValueChange = vi.fn();
+    const onValueChange = vi.fn<(value: string) => void>();
     const result = renderAccordion({ onValueChange });
     const triggers = getTriggers(result.container);
     fireEvent.click(triggers[0]);
@@ -77,7 +91,7 @@ describe('Accordion', () => {
   });
 
   it('controlled value wins and does not self-mutate', () => {
-    const onValueChange = vi.fn();
+    const onValueChange = vi.fn<(value: string) => void>();
     const result = renderAccordion({ value: 'a', onValueChange });
     const triggers = getTriggers(result.container);
     expect(result.container.textContent).toContain('Content A');
@@ -102,15 +116,15 @@ describe('Accordion', () => {
   it('marks first and last stacked-group positions on triggers', () => {
     const result = renderAccordion();
     const triggers = getTriggers(result.container);
-    expect(triggers[0].getAttribute('data-group-position')).toBe('first');
-    expect(triggers[1].getAttribute('data-group-position')).toBe('last');
+    expect(triggers[0].dataset.groupPosition).toBe('first');
+    expect(triggers[1].dataset.groupPosition).toBe('last');
   });
 
   it('marks the open trigger as selected', () => {
     const result = renderAccordion({ defaultValue: 'a' });
     const triggers = getTriggers(result.container);
-    expect(triggers[0].getAttribute('data-selected')).toBe('true');
-    expect(triggers[1].getAttribute('data-selected')).toBeNull();
+    expect(triggers[0].dataset.selected).toBe('true');
+    expect(triggers[1].dataset.selected).toBeUndefined();
   });
 
   it('nested accordion steps density down', () => {
@@ -129,14 +143,14 @@ describe('Accordion', () => {
         </Accordion.Item>
       </Accordion>,
     );
-    const levels = Array.from(result.container.querySelectorAll('[data-accordion-level]'));
-    expect(levels[0]?.getAttribute('data-accordion-level')).toBe('1');
-    expect(levels[1]?.getAttribute('data-accordion-level')).toBe('2');
-    expect(levels[1]?.getAttribute('data-density')).toBe('compact');
+    const levels = [...result.container.querySelectorAll<HTMLElement>('[data-accordion-level]')];
+    expect(levels[0]?.dataset.accordionLevel).toBe('1');
+    expect(levels[1]?.dataset.accordionLevel).toBe('2');
+    expect(levels[1]?.dataset.density).toBe('compact');
   });
 
   it('disabled item does not toggle', () => {
-    const onValueChange = vi.fn();
+    const onValueChange = vi.fn<(value: string) => void>();
     const result = renderWithProviders(
       <Accordion onValueChange={onValueChange}>
         <Accordion.Item
@@ -149,7 +163,7 @@ describe('Accordion', () => {
         </Accordion.Item>
       </Accordion>,
     );
-    const trigger = getTriggers(result.container)[0];
+    const [trigger] = getTriggers(result.container);
     fireEvent.click(trigger);
     expect(onValueChange).not.toHaveBeenCalled();
     expect(result.container.textContent).not.toContain('Content A');
@@ -159,8 +173,8 @@ describe('Accordion', () => {
     const result = renderAccordion({ compact: true });
     const root = result.container.querySelector('[data-testid="accordion"]') as HTMLElement;
     expect(root).not.toBeNull();
-    expect(root.getAttribute('data-density')).toBe('compact');
-    expect(root.getAttribute('data-size')).toBeTruthy();
+    expect(root.dataset.density).toBe('compact');
+    expect(root.dataset.size).toBeTruthy();
   });
 });
 
@@ -169,7 +183,7 @@ describe('Accordion labels — weight 400 on the TEXT NODE', () => {
 
   it('measures the trigger title on the text node, never the row', () => {
     const result = renderAccordion();
-    const trigger = getTriggers(result.container)[0];
+    const [trigger] = getTriggers(result.container);
     const textNode = screen.getByText('Section A');
     expect(textNode).not.toBe(trigger);
     const weight = atoms(textNode, ['_fow-']);
@@ -213,9 +227,9 @@ describe('Accordion density — pad and gap move, control height holds', () => {
       </Preset>,
     );
     const comfortableRoot = comfortable.container.querySelector('[data-testid="accordion"]') as HTMLElement;
-    const comfortableTrigger = getTriggers(comfortable.container)[0];
+    const [comfortableTrigger] = getTriggers(comfortable.container);
     const comfortableMeasure = {
-      density: comfortableRoot.getAttribute('data-density'),
+      density: comfortableRoot.dataset.density,
       padX: atoms(comfortableTrigger, padX),
       gap: atoms(comfortableTrigger, gap),
       height: atoms(comfortableTrigger, height),
@@ -233,9 +247,9 @@ describe('Accordion density — pad and gap move, control height holds', () => {
       </Preset>,
     );
     const compactRoot = compact.container.querySelector('[data-testid="accordion"]') as HTMLElement;
-    const compactTrigger = getTriggers(compact.container)[0];
+    const [compactTrigger] = getTriggers(compact.container);
     expect(comfortableMeasure.density).toBe('comfortable');
-    expect(compactRoot.getAttribute('data-density')).toBe('compact');
+    expect(compactRoot.dataset.density).toBe('compact');
     expect(comfortableMeasure.padX.length).toBeGreaterThan(0);
     expect(atoms(compactTrigger, padX)).not.toStrictEqual(comfortableMeasure.padX);
     expect(comfortableMeasure.gap.length).toBeGreaterThan(0);
@@ -244,18 +258,6 @@ describe('Accordion density — pad and gap move, control height holds', () => {
   });
 
   it('survives the animation knob flipping live from none to bouncy', () => {
-    const Flip = ({ animation }: { animation: 'none' | 'bouncy' }) => (
-      <Preset overrides={{ animation }}>
-        <Accordion defaultValue="a">
-          <Accordion.Item value="a">
-            <Accordion.Trigger>Section A</Accordion.Trigger>
-            <Accordion.Content>
-              <Text>Content A</Text>
-            </Accordion.Content>
-          </Accordion.Item>
-        </Accordion>
-      </Preset>
-    );
     const { container, rerender } = renderWithProviders(<Flip animation="none" />);
     expect(container.textContent).toContain('Content A');
 

@@ -9,13 +9,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { PageHeader } from './Page';
 
-afterEach(cleanup);
-
 const titleFontClasses = (): string[] => {
   const title = screen.getByText('Workspace Settings');
-  return String(title.className || '')
-    .split(' ')
-    .filter((c) => c.startsWith('_fos-') || c.startsWith('_lh-'));
+  return title.className.split(' ').filter((c) => c.startsWith('_fos-') || c.startsWith('_lh-'));
 };
 
 const renderTitle = (node: React.ReactElement): string[] => {
@@ -26,6 +22,8 @@ const renderTitle = (node: React.ReactElement): string[] => {
 };
 
 describe('PageHeader page-title scale', () => {
+  afterEach(cleanup);
+
   it('defaults to the moderate step, not the display H1', () => {
     const byDefault = renderTitle(<PageHeader title="Workspace Settings" />);
     const moderate = renderTitle(

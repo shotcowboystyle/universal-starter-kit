@@ -14,11 +14,13 @@ import { Group, Separator, Text, XStack, isWeb } from 'tamagui';
 import { ScrollView } from '../ScrollView';
 import { useTranslation } from '../shared/i18n';
 
+export type ToolbarActionVariant = 'default' | 'primary' | 'outlined' | 'destructive';
+
 export interface ToolbarAction {
   label: string;
   icon?: React.ComponentType<{ size?: number; color?: string }>;
   onPress: () => void;
-  variant?: 'default' | 'primary' | 'outlined' | 'destructive';
+  variant?: ToolbarActionVariant;
   disabled?: boolean;
   /**
    * Explains why the action is disabled. Flows through the Button
@@ -48,7 +50,7 @@ type ActionCluster = { kind: 'independent'; actions: ToolbarAction[] } | { kind:
 const clusterActions = (actions: ToolbarAction[]): ActionCluster[] => {
   const clusters: ActionCluster[] = [];
   for (const action of actions) {
-    const prev = clusters[clusters.length - 1];
+    const prev = clusters.at(-1);
     if (action.fused) {
       if (prev?.kind === 'fused') {
         prev.actions.push(action);
@@ -77,9 +79,19 @@ const partitionByDestructive = (actions: ToolbarAction[]) => {
   return { neutral, destructive };
 };
 
+const NO_ACTIONS: ToolbarAction[] = [];
+
+// Route emphasis through the intent system (accent/error) instead of
+// hardcoded color themes, so toolbar actions share the app's one solid
+// emphasis language.
+const getButtonIntents = (variant?: string) => ({
+  accent: variant === 'primary',
+  error: variant === 'destructive',
+});
+
 const ToolbarInner = ({
-  primaryActions = [],
-  secondaryActions = [],
+  primaryActions = NO_ACTIONS,
+  secondaryActions = NO_ACTIONS,
   position = 'top',
   loadingLabel: loadingLabelProp,
 }: ToolbarProps) => {
@@ -95,45 +107,40 @@ const ToolbarInner = ({
   const pressFloor = pressTargetStyle();
   const actionHitSlop = pressTargetHitSlop(sizePx);
 
-  // Route emphasis through the intent system (accent/error) instead of
-  // hardcoded color themes, so toolbar actions share the app's one solid
-  // emphasis language.
-  const getButtonIntents = (variant?: string) => ({
-    accent: variant === 'primary',
-    error: variant === 'destructive',
-  });
-
-  const renderAction = (action: ToolbarAction) => (
-    <Button
-      key={action.label}
-      icon={action.icon as any}
-      onPress={action.onPress}
-      disabled={action.disabled}
-      // Busy is derived state, not a bare disable — Button shows the spinner
-      // and skips the bare-disabled warn; loadingLabel stays for SRs.
-      loading={action.loading}
-      aria-label={action.loading ? loadingLabel : undefined}
-      disabledReason={action.disabledReason}
-      disabledReasonPlacement="inline"
-      flexShrink={0}
-      {...getButtonIntents(action.variant)}
-      // Axiom 13 ONE BODY: the Toolbar's `outlined` variant maps to the
-      // Button's canonical boolean `outlined` prop. Passing it as a string
-      // `variant` matched no styled-frame key and silently dissolved.
-      outlined={action.variant === 'outlined'}
-      {...pressFloor}
-      {...(isWeb ? undefined : { hitSlop: actionHitSlop })}>
-      {/* §6.1: action labels measure 400 on the TEXT NODE. */}
-      <Text fontWeight="400">{action.label}</Text>
-    </Button>
-  );
+  const renderAction = (action: ToolbarAction) => {
+    const handlePress = action.onPress;
+    return (
+      <Button
+        key={action.label}
+        icon={action.icon}
+        onPress={handlePress}
+        disabled={action.disabled}
+        // Busy is derived state, not a bare disable — Button shows the spinner
+        // and skips the bare-disabled warn; loadingLabel stays for SRs.
+        loading={action.loading}
+        aria-label={action.loading ? loadingLabel : undefined}
+        disabledReason={action.disabledReason}
+        disabledReasonPlacement="inline"
+        flexShrink={0}
+        {...getButtonIntents(action.variant)}
+        // Axiom 13 ONE BODY: the Toolbar's `outlined` variant maps to the
+        // Button's canonical boolean `outlined` prop. Passing it as a string
+        // `variant` matched no styled-frame key and silently dissolved.
+        outlined={action.variant === 'outlined'}
+        {...pressFloor}
+        {...(isWeb ? undefined : { hitSlop: actionHitSlop })}>
+        {/* §6.1: action labels measure 400 on the TEXT NODE. */}
+        <Text fontWeight="400">{action.label}</Text>
+      </Button>
+    );
+  };
 
   const renderClusters = (actions: ToolbarAction[], region: string) =>
-    clusterActions(actions).map((cluster, index) => {
+    clusterActions(actions).map((cluster) => {
       if (cluster.kind === 'fused') {
         return (
           <Group
-            key={`${region}-fused-${index}`}
+            key={`${region}-fused-${cluster.actions[0].label}`}
             orientation="horizontal"
             flexWrap="nowrap"
             flexShrink={0}
@@ -147,7 +154,7 @@ const ToolbarInner = ({
       }
       return (
         <XStack
-          key={`${region}-independent-${index}`}
+          key={`${region}-independent-${cluster.actions[0].label}`}
           {...knobProps.gap}
           alignItems="center"
           flexWrap="nowrap"

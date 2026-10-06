@@ -59,7 +59,7 @@ export const HeaderOnly: Story = {
 };
 
 export const Empty: Story = {
-  args: { title: undefined, description: undefined },
+  args: { title: '', description: '' },
   render: (args) => <PageSection {...args} />,
 };
 

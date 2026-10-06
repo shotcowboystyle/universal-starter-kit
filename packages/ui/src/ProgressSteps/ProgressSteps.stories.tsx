@@ -30,10 +30,13 @@ export default meta;
 
 type Story = StoryObj<typeof ProgressSteps>;
 
+const ACCOUNT_HELP = 'Email & password';
+const TEAM_HELP = 'Invite coworkers';
+
 const demoSteps = [
-  { id: 'account', label: 'Account', description: 'Email & password' },
+  { id: 'account', label: 'Account', description: ACCOUNT_HELP },
   { id: 'profile', label: 'Profile', description: 'Name & avatar' },
-  { id: 'team', label: 'Team', description: 'Invite coworkers' },
+  { id: 'team', label: 'Team', description: TEAM_HELP },
   { id: 'done', label: 'Done', description: 'Review & finish' },
 ];
 
@@ -45,44 +48,46 @@ export const Default: Story = {
   },
 };
 
+const InteractiveDemo = () => {
+  // Rest mid-range: at step 0 the Back button is bare-disabled at rest
+  // and demos nothing; step 0 stays one click away.
+  // Linear (Material / Orbit): completed steps jump back; Next is the
+  // only way forward.
+  const [current, setCurrent] = useState(1);
+  return (
+    <YStack
+      gap="$4"
+      maxWidth={720}>
+      <ProgressSteps
+        steps={demoSteps}
+        current={current}
+        onStepChange={setCurrent}
+      />
+      <XStack gap="$2">
+        <Button
+          compact
+          disabled={current === 0}
+          onPress={() => {
+            setCurrent((c) => Math.max(0, c - 1));
+          }}>
+          Back
+        </Button>
+        <Button
+          compact
+          accent
+          disabled={current >= demoSteps.length - 1}
+          onPress={() => {
+            setCurrent((c) => Math.min(demoSteps.length - 1, c + 1));
+          }}>
+          Next
+        </Button>
+      </XStack>
+    </YStack>
+  );
+};
+
 export const Interactive: Story = {
-  render: () => {
-    // Rest mid-range: at step 0 the Back button is bare-disabled at rest
-    // and demos nothing; step 0 stays one click away.
-    // Linear (Material / Orbit): completed steps jump back; Next is the
-    // only way forward.
-    const [current, setCurrent] = useState(1);
-    return (
-      <YStack
-        gap="$4"
-        maxWidth={720}>
-        <ProgressSteps
-          steps={demoSteps}
-          current={current}
-          onStepChange={setCurrent}
-        />
-        <XStack gap="$2">
-          <Button
-            compact
-            disabled={current === 0}
-            onPress={() => {
-              setCurrent((c) => Math.max(0, c - 1));
-            }}>
-            Back
-          </Button>
-          <Button
-            compact
-            accent
-            disabled={current >= demoSteps.length - 1}
-            onPress={() => {
-              setCurrent((c) => Math.min(demoSteps.length - 1, c + 1));
-            }}>
-            Next
-          </Button>
-        </XStack>
-      </YStack>
-    );
-  },
+  render: () => <InteractiveDemo />,
 };
 
 export const Vertical: Story = {
@@ -110,49 +115,52 @@ export const Compact: Story = {
   },
 };
 
-export const Error: Story = {
+const ErrorStory: Story = {
   args: {
     steps: [
-      { id: 'account', label: 'Account', description: 'Email & password' },
+      { id: 'account', label: 'Account', description: ACCOUNT_HELP },
       {
         id: 'profile',
         label: 'Profile',
         description: 'Name is required',
         error: true,
       },
-      { id: 'team', label: 'Team', description: 'Invite coworkers' },
+      { id: 'team', label: 'Team', description: TEAM_HELP },
       { id: 'done', label: 'Done', description: 'Review & finish' },
     ],
     current: 1,
   },
 };
+export { ErrorStory as Error };
 
 export const Optional: Story = {
   args: {
     steps: [
-      { id: 'account', label: 'Account', description: 'Email & password' },
+      { id: 'account', label: 'Account', description: ACCOUNT_HELP },
       { id: 'profile', label: 'Profile', optional: true },
-      { id: 'team', label: 'Team', description: 'Invite coworkers' },
+      { id: 'team', label: 'Team', description: TEAM_HELP },
       { id: 'done', label: 'Done' },
     ],
     current: 1,
   },
 };
 
+const NonLinearDemo = () => {
+  const [current, setCurrent] = useState(1);
+  return (
+    <YStack
+      gap="$4"
+      maxWidth={720}>
+      <ProgressSteps
+        steps={demoSteps}
+        current={current}
+        linear={false}
+        onStepChange={setCurrent}
+      />
+    </YStack>
+  );
+};
+
 export const NonLinear: Story = {
-  render: () => {
-    const [current, setCurrent] = useState(1);
-    return (
-      <YStack
-        gap="$4"
-        maxWidth={720}>
-        <ProgressSteps
-          steps={demoSteps}
-          current={current}
-          linear={false}
-          onStepChange={setCurrent}
-        />
-      </YStack>
-    );
-  },
+  render: () => <NonLinearDemo />,
 };

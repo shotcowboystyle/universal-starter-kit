@@ -133,7 +133,9 @@ const PROJECTS = ['Alpha', 'Beta', 'Gamma', 'Delta'] as const;
 const SheetOverKeyboardHarness = (args: Story['args']) => {
   const [open, setOpen] = useState(false);
   const [picks, setPicks] = useState<string[]>([]);
-  const readout = `Picks: ${picks.length}${picks.length ? `, last ${picks[picks.length - 1]}` : ''}`;
+  const lastPick = picks.at(-1);
+  const lastSuffix = lastPick === undefined ? '' : `, last ${lastPick}`;
+  const readout = `Picks: ${picks.length}${lastSuffix}`;
   return (
     <Screen {...args}>
       <PageHeader

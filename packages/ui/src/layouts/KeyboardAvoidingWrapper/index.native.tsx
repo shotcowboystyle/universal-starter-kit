@@ -27,6 +27,12 @@ export interface KeyboardAvoidingWrapperProps extends YStackProps {
   enabled?: boolean;
 }
 
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+});
+
 /**
  * KeyboardAvoidingWrapper — native KeyboardAvoidingView.
  *
@@ -58,9 +64,3 @@ export const KeyboardAvoidingWrapper = ({
     </KeyboardAvoidingView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});

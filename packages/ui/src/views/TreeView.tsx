@@ -24,6 +24,7 @@ import { useHotkey } from '@tanstack/react-hotkeys';
 import type { RegisterableHotkey } from '@tanstack/react-hotkeys';
 import React, { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import type { LayoutChangeEvent, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import { Text, View, XStack, YStack, isWeb, styled } from 'tamagui';
 import type { YStackProps } from 'tamagui';
 
@@ -32,6 +33,8 @@ import { useDirection } from '../hooks/use-direction';
 import { EmptyState } from '../layouts/Page';
 import { useTranslation } from '../shared/i18n';
 
+import { useDomRefCallback, webOnlyProps } from './dom-interop';
+import { hasNode, isNonEmpty } from './guards';
 import { autoScrollVelocity } from './kanban-dnd';
 import {
   applyTreeMove,
@@ -45,17 +48,50 @@ import {
   treeKeyboardLift,
   treeKeyboardMove,
 } from './tree-view-dnd';
-import type { TreeDragAnnouncement, TreeDragSession, TreeDropIndicator, TreeDropTarget } from './tree-view-dnd';
+import type {
+  TreeDragAnnouncement,
+  TreeDragSession,
+  TreeDropIndicator,
+  TreeDropTarget,
+  TreeMoveDirection,
+} from './tree-view-dnd';
 import { TREE_LIFT_SHADOW, treeDefaultHeight, treeEdgeRowPad, treeIndentStep } from './tree-view-layout';
 import { diffVisibleRows, flattenVisibleIds, isEmptyDiff } from './tree-view-motion';
 import { treeRevealExpansion, treeRevealOffset } from './tree-view-reveal';
 
 const DragHandleTarget = styled(View, { name: 'DragHandleTarget' });
 
+const ACCENT_BACKGROUND = '$accentBackground';
+
+const noop = (): void => undefined;
+
+interface ScrollAttempt {
+  target: number;
+  width: number;
+  height: number;
+  contentHeight: number;
+}
+
+/** True when `attempted` already scrolled to `target` at this viewport and content size. */
+const sameScrollAttempt = (
+  attempted: ScrollAttempt | undefined,
+  target: number,
+  bounds: { width: number; height: number; contentHeight: number },
+): boolean => {
+  if (attempted === undefined) {
+    return false;
+  }
+  const sameViewport = attempted.width === bounds.width && attempted.height === bounds.height;
+  return sameViewport && attempted.target === target && attempted.contentHeight === bounds.contentHeight;
+};
+
+/** True for a finite, strictly positive length (NaN and non-finite are unusable). */
+const isPositiveLength = (value: number): boolean => Number.isFinite(value) && value > 0;
+
 /**
  * A node in a tree structure.
  *
- * @typeParam T - Additional data type stored on the node
+ * @template T - Additional data type stored on the node
  */
 export interface TreeNode<T = unknown> {
   /** Unique node identifier */
@@ -99,7 +135,7 @@ export type TreeViewDisplay = 'default' | 'compressed';
 /**
  * Props for the generic TreeView component.
  *
- * @typeParam T - Additional data type stored on the nodes
+ * @template T - Additional data type stored on the nodes
  */
 export interface TreeViewProps<T = unknown> extends Omit<YStackProps, 'children' | 'display'> {
   /** Tree nodes to render */
@@ -230,10 +266,10 @@ interface TreeSettle<T> {
 }
 
 const collectBranchIds = <T,>(items: TreeNode<T>[], into = new Set<string>()): Set<string> => {
-  for (const node of items) {
-    if ((node.children?.length ?? 0) > 0) {
-      into.add(node.id);
-      collectBranchIds(node.children!, into);
+  for (const { id, children } of items) {
+    if (children !== undefined && children.length > 0) {
+      into.add(id);
+      collectBranchIds(children, into);
     }
   }
   return into;
@@ -245,14 +281,73 @@ const findNodePath = <T,>(items: TreeNode<T>[], id: string, trail: string[] = []
     if (node.id === id) {
       return trail;
     }
-    if (node.children?.length) {
+    if (node.children !== undefined && node.children.length > 0) {
       const found = findNodePath(node.children, id, [...trail, node.id]);
-      if (found) {
+      if (found !== null) {
         return found;
       }
     }
   }
   return null;
+};
+
+type TranslateFn = ReturnType<typeof useTranslation>['t'];
+
+const announcementText = (t: TranslateFn, a: TreeDragAnnouncement, parent: string): string => {
+  if (a.type === 'lift') {
+    return t(
+      'Lifted {{node}} in {{parent}}, position {{position}} of {{count}}. Use arrow keys to move, space to drop, escape to cancel.',
+      { ...a, parent },
+    );
+  }
+  if (a.type === 'move') {
+    return t('Moved {{node}} to {{parent}}, position {{position}} of {{count}}.', { ...a, parent });
+  }
+  if (a.type === 'drop') {
+    return t('Dropped {{node}} in {{parent}}, position {{position}} of {{count}}.', { ...a, parent });
+  }
+  return t('Movement cancelled. {{node}} returned to {{parent}}.', { ...a, parent });
+};
+
+/** Armed (FLIP-inverted) rows start offset: entering rows rise in, survivors sit at their previous position. */
+const armedRowOffset = (entering: boolean, delta: number): number => (entering ? ENTER_RISE_PX : delta);
+
+const DRAGGED_ROW_OPACITY = 0.4;
+
+const rowOpacityFor = ({
+  isSettleHidden,
+  armed,
+  entering,
+  inDraggedSubtree,
+}: {
+  isSettleHidden: boolean;
+  armed: boolean;
+  entering: boolean;
+  inDraggedSubtree: boolean;
+}): number => {
+  if (isSettleHidden || (armed && entering)) {
+    return 0;
+  }
+  return inDraggedSubtree ? DRAGGED_ROW_OPACITY : 1;
+};
+
+/** Nest-into parent highlight wins while a drag is active (drop-target affordance). */
+const rowBackground = ({
+  isDropParent,
+  isSelected,
+  containsSelected,
+}: {
+  isDropParent: boolean;
+  isSelected: boolean;
+  containsSelected: boolean;
+}): string => {
+  if (isDropParent) {
+    return componentColors.interactive.background;
+  }
+  if (isSelected) {
+    return ACCENT_BACKGROUND;
+  }
+  return containsSelected ? componentColors.interactive.background : 'transparent';
 };
 
 /** Typeahead window matching menu rows (DropdownMenu) and Finder/VS Code jump-to. */
@@ -280,6 +375,21 @@ const defaultNodeIcon = (hasChildren: boolean, isExpanded: boolean, iconSize: nu
   );
 };
 
+const resolveLeadingIcon = <T,>(
+  node: TreeNode<T>,
+  hasChildren: boolean,
+  isExpanded: boolean,
+  iconSize: number,
+): ReactNode => {
+  if (hasChildren && isExpanded && hasNode(node.iconWhenExpanded)) {
+    return node.iconWhenExpanded;
+  }
+  if (hasNode(node.icon)) {
+    return node.icon;
+  }
+  return defaultNodeIcon(hasChildren, isExpanded, iconSize);
+};
+
 /**
  * Generic virtualized tree view.
  *
@@ -298,8 +408,9 @@ const defaultNodeIcon = (hasChildren: boolean, isExpanded: boolean, iconSize: nu
  * `knobProps.transition`, transform/opacity only. `animation: none` /
  * reduced motion jumps.
  *
- * @typeParam T - Additional data type stored on the nodes
+ * @template T - Additional data type stored on the nodes
  */
+// oxlint-disable-next-line eslint/complexity, react-doctor/no-giant-component -- the view is one component by design: tree state, virtualization bridge, drag-reorder and reveal all share the row/focus model, and splitting would thread ~40 values through props
 export const TreeView = <T = unknown,>({
   nodes,
   renderNode,
@@ -334,8 +445,9 @@ export const TreeView = <T = unknown,>({
   // UX-P02 / Axiom 15: the selected row paints `$accentBackground`; its label
   // must sit on the accent fill with a luminance-computed foreground (the
   // scheme `$color` ink measured 2.59:1 on the accent).
-  const onAccentLabel = useReadableTextOn('$accentBackground');
+  const onAccentLabel = useReadableTextOn(ACCENT_BACKGROUND);
   const { transition } = knobProps;
+  const hasTransition = transition !== undefined && transition !== '';
   const nestedPx = knobProps.nestedControl.px;
   const rowGap = knobProps.control.gap;
   const iconSize = knobProps.controlIcon.width;
@@ -361,21 +473,19 @@ export const TreeView = <T = unknown,>({
   const rowPad = treeEdgeRowPad(knobProps.space);
 
   const treeId = useId();
-  const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLElement | null>(null);
+  const containerViewRef = useDomRefCallback(containerRef);
   const flashListRef = useRef<FlashListRef<FlatNode<T>>>(null);
-  const initialScroll = useRef<
-    | {
-        offset: number;
-        attempted?: { target: number; width: number; height: number; contentHeight: number };
-      }
-    | undefined
-  >(
+  const initialScroll = useRef<{
+    offset: number;
+    attempted?: ScrollAttempt;
+  } | null>(
     initialScrollOffset === undefined
-      ? undefined
+      ? null
       : { offset: Number.isFinite(initialScrollOffset) ? Math.max(0, initialScrollOffset) : 0 },
   );
   const cancelInitialScroll = useCallback(() => {
-    initialScroll.current = undefined;
+    initialScroll.current = null;
   }, []);
   const hasNodes = nodes.length > 0;
   const listInstance = useMemo(
@@ -383,7 +493,7 @@ export const TreeView = <T = unknown,>({
     [hasNodes],
   );
   const scrollActive = useRef(true);
-  const lastReportedOffset = useRef<number | undefined>(undefined);
+  const lastReportedOffset = useRef<number | null>(null);
   const offsetCallback = useRef(onScrollOffsetChange);
   useLayoutEffect(() => {
     offsetCallback.current = onScrollOffsetChange;
@@ -404,7 +514,7 @@ export const TreeView = <T = unknown,>({
     const kb = wasKeyboardFocus();
     setKeyboardRing(kb);
     if (kb) {
-      setFocusedIndex((prev) => (prev < 0 ? 0 : prev));
+      setFocusedIndex((prev) => Math.max(prev, 0));
     }
   }, []);
   const handleContainerBlur = useCallback(() => {
@@ -461,7 +571,7 @@ export const TreeView = <T = unknown,>({
     if (previous.size === expandedIds.size && [...previous].every((id) => expandedIds.has(id))) {
       return;
     }
-    if (transition) {
+    if (hasTransition) {
       const diff = diffVisibleRows(
         flattenVisibleIds(nodes, previous),
         flattenVisibleIds(nodes, expandedIds),
@@ -469,21 +579,24 @@ export const TreeView = <T = unknown,>({
       );
       setMotion(isEmptyDiff(diff) ? null : { phase: 'armed', ...diff });
     } else {
+      // oxlint-disable-next-line react-doctor/no-chain-state-updates -- clearing stale motion when the tween is switched off runs in the same layout pass as the expansion diff
       setMotion(null);
     }
-  }, [expandedIds, nodes, transition, getRowHeight]);
+  }, [expandedIds, nodes, hasTransition, getRowHeight]);
 
   // Release the FLIP one frame after the armed styles paint so the tween
   // runs from the previous layout to the new one.
   useLayoutEffect(() => {
-    if (motion?.phase !== 'armed') {
-      return;
+    let raf: number | undefined;
+    if (motion?.phase === 'armed') {
+      raf = requestAnimationFrame(() => {
+        setMotion((m) => (m && m.phase === 'armed' ? { ...m, phase: 'play' } : m));
+      });
     }
-    const raf = requestAnimationFrame(() => {
-      setMotion((m) => (m && m.phase === 'armed' ? { ...m, phase: 'play' } : m));
-    });
     return () => {
-      cancelAnimationFrame(raf);
+      if (raf !== undefined) {
+        cancelAnimationFrame(raf);
+      }
     };
   }, [motion]);
 
@@ -512,40 +625,32 @@ export const TreeView = <T = unknown,>({
     return result;
   }, [nodes, expandedIds]);
 
-  const revealIntent = useRef<
-    | {
-        id: string;
-        requestId: number;
-        complete: boolean;
-        notifiedExpansion?: ReadonlySet<string>;
-      }
-    | undefined
-  >(undefined);
-  const scrollFrame = useRef<number | undefined>(undefined);
-  const scrollStep = useRef<() => void>(() => {});
+  const revealId = revealRequest?.id;
+  const revealRequestId = revealRequest?.requestId;
+  const revealIntent = useRef<{
+    id: string;
+    requestId: number;
+    complete: boolean;
+    notifiedExpansion?: ReadonlySet<string>;
+  } | null>(null);
+  const scrollFrame = useRef<number | null>(null);
+  const scrollStep = useRef<() => void>(noop);
   const renderedRows = useRef(new Set<string>());
   const scrollBounds = useCallback(() => {
     const list = flashListRef.current;
     if (!scrollActive.current || !listInstance.attached || !listInstance.loaded || !list) {
-      return;
+      return null;
     }
     if (isWeb) {
       const rect = containerRef.current?.getBoundingClientRect();
-      if (!rect || !(rect.width > 0) || !(rect.height > 0)) {
-        return;
+      if (!rect || !isPositiveLength(rect.width) || !isPositiveLength(rect.height)) {
+        return null;
       }
     }
     const viewport = list.getWindowSize();
     const contentHeight = list.getChildContainerDimensions().height + list.getFirstItemOffset();
-    if (
-      !Number.isFinite(viewport.width) ||
-      viewport.width <= 0 ||
-      !Number.isFinite(viewport.height) ||
-      viewport.height <= 0 ||
-      !Number.isFinite(contentHeight) ||
-      contentHeight <= 0
-    ) {
-      return;
+    if (!isPositiveLength(viewport.width) || !isPositiveLength(viewport.height) || !isPositiveLength(contentHeight)) {
+      return null;
     }
     return {
       list,
@@ -563,6 +668,7 @@ export const TreeView = <T = unknown,>({
       if (fromEvent && initialScroll.current?.attempted === undefined && offset !== listInstance.offset) {
         cancelInitialScroll();
       }
+      // oxlint-disable-next-line react/immutability -- listInstance is a per-mount scratchpad for the FlashList bridge, deliberately mutated from callbacks and re-created only when the list mounts or unmounts
       listInstance.offset = offset;
       const bounds = scrollBounds();
       if (!bounds) {
@@ -575,7 +681,7 @@ export const TreeView = <T = unknown,>({
         if (initial.attempted ? Math.abs(bounded - target) >= 1 : bounded !== target) {
           return;
         }
-        initialScroll.current = undefined;
+        initialScroll.current = null;
       }
       if (offsetCallback.current && lastReportedOffset.current !== bounded) {
         lastReportedOffset.current = bounded;
@@ -585,14 +691,14 @@ export const TreeView = <T = unknown,>({
     [cancelInitialScroll, scrollBounds, listInstance],
   );
   const scheduleScroll = useCallback(() => {
-    if (!scrollActive.current || !listInstance.attached || scrollFrame.current !== undefined) {
+    if (!scrollActive.current || !listInstance.attached || scrollFrame.current !== null) {
       return;
     }
     if (!initialScroll.current && (!revealIntent.current || revealIntent.current.complete) && !offsetCallback.current) {
       return;
     }
     scrollFrame.current = requestAnimationFrame(() => {
-      scrollFrame.current = undefined;
+      scrollFrame.current = null;
       if (listInstance.attached) {
         scrollStep.current();
       }
@@ -601,16 +707,17 @@ export const TreeView = <T = unknown,>({
   const attachList = useCallback(
     (list: FlashListRef<FlatNode<T>> | null) => {
       flashListRef.current = list;
+      // oxlint-disable-next-line react/immutability -- listInstance is the per-mount scratchpad for the FlashList bridge; the ref callback records attach/detach on it
       listInstance.attached = list !== null;
       if (!list) {
         listInstance.loaded = false;
         if (initialScroll.current) {
-          initialScroll.current.attempted = undefined;
+          delete initialScroll.current.attempted;
         }
-        if (scrollFrame.current !== undefined) {
+        if (scrollFrame.current !== null) {
           cancelAnimationFrame(scrollFrame.current);
         }
-        scrollFrame.current = undefined;
+        scrollFrame.current = null;
       }
     },
     [listInstance],
@@ -620,24 +727,22 @@ export const TreeView = <T = unknown,>({
     scrollActive.current = true;
     return () => {
       scrollActive.current = false;
-      revealIntent.current = undefined;
-      if (scrollFrame.current !== undefined) {
+      revealIntent.current = null;
+      if (scrollFrame.current !== null) {
         cancelAnimationFrame(scrollFrame.current);
       }
-      scrollFrame.current = undefined;
+      scrollFrame.current = null;
     };
   }, []);
 
   useLayoutEffect(() => {
-    if (!revealRequest) {
-      revealIntent.current = undefined;
-    } else if (
-      revealIntent.current?.id !== revealRequest.id ||
-      revealIntent.current?.requestId !== revealRequest.requestId
-    ) {
+    if (revealId === undefined || revealRequestId === undefined) {
+      revealIntent.current = null;
+    } else if (revealIntent.current?.id !== revealId || revealIntent.current?.requestId !== revealRequestId) {
       cancelInitialScroll();
-      revealIntent.current = { ...revealRequest, complete: false };
+      revealIntent.current = { id: revealId, requestId: revealRequestId, complete: false };
     }
+    // oxlint-disable-next-line eslint/complexity, sonarjs/cognitive-complexity -- one scheduler step: reveal, initial-offset restore and observation share state and must run as a single frame callback
     const step = () => {
       const currentList = flashListRef.current;
       if (currentList) {
@@ -663,13 +768,7 @@ export const TreeView = <T = unknown,>({
         }
         const target = Math.min(initial.offset, bounds.maxOffset);
         const { attempted } = initial;
-        if (
-          !attempted ||
-          attempted.target !== target ||
-          attempted.width !== bounds.width ||
-          attempted.height !== bounds.height ||
-          attempted.contentHeight !== bounds.contentHeight
-        ) {
+        if (!sameScrollAttempt(attempted, target, bounds)) {
           initial.attempted = {
             target,
             width: bounds.width,
@@ -725,6 +824,7 @@ export const TreeView = <T = unknown,>({
         let visible = top < offset + viewport.height && top + layout.height > offset;
         if (!listInstance.indexScrollRequested) {
           const range = list.computeVisibleIndices();
+          // oxlint-disable-next-line eslint/logical-assignment-operators -- React Compiler cannot lower `&&=` (react/todo), so the explicit form stays
           visible = visible && index >= range.startIndex && index <= range.endIndex;
         }
         if (
@@ -749,9 +849,10 @@ export const TreeView = <T = unknown,>({
     expandedIds,
     setExpandedIds,
     flatNodes,
-    revealRequest?.id,
-    revealRequest?.requestId,
+    revealId,
+    revealRequestId,
     onRevealComplete,
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- a viewport height change must re-run the reveal and offset step
     height,
     motion,
     scheduleScroll,
@@ -765,8 +866,9 @@ export const TreeView = <T = unknown,>({
     (index: number) => {
       if (index >= 0 && index < flatNodes.length) {
         cancelInitialScroll();
+        // oxlint-disable-next-line react/immutability -- listInstance is the per-mount FlashList bridge scratchpad; it records that an index scroll was requested
         listInstance.indexScrollRequested = true;
-        flashListRef.current?.scrollToIndex({ index, animated: true });
+        void flashListRef.current?.scrollToIndex({ index, animated: true });
       }
     },
     [flatNodes.length, cancelInitialScroll, listInstance],
@@ -784,7 +886,7 @@ export const TreeView = <T = unknown,>({
   // Carbon: a collapsed ancestor of the selected node inherits a muted
   // "contains selection" fill so the selection is not lost off-screen.
   const collapsedSelectedAncestors = useMemo(() => {
-    if (!selectedId) {
+    if (selectedId === undefined || selectedId === '') {
       return new Set<string>();
     }
     const path = findNodePath(nodes, selectedId);
@@ -807,6 +909,7 @@ export const TreeView = <T = unknown,>({
   // scrolls mid-drag (the ref below is the always-current value).
   const [dragScrollY, setDragScrollY] = useState(0);
   const dragUiRef = useRef<TreeDragUi<T> | null>(null);
+  // oxlint-disable-next-line react/refs -- latest-value ref: handlers must see the committed drag state in the same render pass, never one commit behind
   dragUiRef.current = dragUi;
   const scrollOffsetRef = useRef(0);
   const pointerPosRef = useRef({ x: 0, y: 0 });
@@ -826,7 +929,7 @@ export const TreeView = <T = unknown,>({
   const topOfFlatIndex = useCallback(
     (flatIndex: number): number => {
       let top = 0;
-      for (let i = 0; i < flatIndex && i < flatNodes.length; i++) {
+      for (let i = 0; i < flatIndex && i < flatNodes.length; i += 1) {
         top += getRowHeight(flatNodes[i].node.id);
       }
       return top;
@@ -837,24 +940,7 @@ export const TreeView = <T = unknown,>({
   const announce = useCallback(
     (a: TreeDragAnnouncement) => {
       const parent = a.parent ?? t('top level');
-      const text =
-        a.type === 'lift'
-          ? t(
-              'Lifted {{node}} in {{parent}}, position {{position}} of {{count}}. Use arrow keys to move, space to drop, escape to cancel.',
-              { ...a, parent },
-            )
-          : a.type === 'move'
-            ? t('Moved {{node}} to {{parent}}, position {{position}} of {{count}}.', {
-                ...a,
-                parent,
-              })
-            : a.type === 'drop'
-              ? t('Dropped {{node}} in {{parent}}, position {{position}} of {{count}}.', {
-                  ...a,
-                  parent,
-                })
-              : t('Movement cancelled. {{node}} returned to {{parent}}.', { ...a, parent });
-      setAnnouncement(text);
+      setAnnouncement(announcementText(t, a, parent));
     },
     [t],
   );
@@ -862,7 +948,7 @@ export const TreeView = <T = unknown,>({
   /** Pointer y (client coords) → drop target + indicator, or null over the dragged subtree. */
   const hitTest = useCallback(
     (clientY: number, ui: TreeDragUi<T>): { target: TreeDropTarget; indicator: TreeDropIndicator } | null => {
-      const rect = (containerRef.current as HTMLElement | null)?.getBoundingClientRect?.();
+      const rect = containerRef.current?.getBoundingClientRect();
       if (!rect) {
         return null;
       }
@@ -894,7 +980,7 @@ export const TreeView = <T = unknown,>({
         autoScrollRafRef.current = null;
         return;
       }
-      const rect = (containerRef.current as HTMLElement | null)?.getBoundingClientRect?.();
+      const rect = containerRef.current?.getBoundingClientRect();
       if (rect) {
         const vy = autoScrollVelocity({
           pos: pointerPosRef.current.y,
@@ -932,6 +1018,38 @@ export const TreeView = <T = unknown,>({
 
   // ── Drop / cancel ──────────────────────────────────────────────────────
 
+  /** Where the overlay settles (post-move slot when committing, origin slot otherwise) and the post-move visible order. */
+  const settleDestination = useCallback(
+    (ui: TreeDragUi<T>, to: TreeDropTarget, canCommit: boolean) => {
+      if (!canCommit) {
+        const originFlat = flatNodes.findIndex((f) => f.node.id === ui.session.nodeId);
+        return {
+          expectedIds: null,
+          dest: {
+            x: ui.homeX,
+            y: (originFlat === -1 ? 0 : topOfFlatIndex(originFlat)) - scrollOffsetRef.current,
+          },
+        };
+      }
+      const nextNodes = applyTreeMove(nodes, ui.session.nodeId, to);
+      const expectedIds = flattenVisibleIds(nextNodes, expandedIds);
+      const destFlat = expectedIds.indexOf(ui.session.nodeId);
+      const parentRow = to.parentId === null ? null : (dndRows.find((r) => r.id === to.parentId) ?? null);
+      let top = 0;
+      if (destFlat !== -1) {
+        for (let i = 0; i < destFlat; i += 1) {
+          top += getRowHeight(expectedIds[i]);
+        }
+      } else if (parentRow) {
+        // Moved into a collapsed parent: the row will not be visible —
+        // settle the ghost onto the parent row instead.
+        top = topOfFlatIndex(dndRows.indexOf(parentRow));
+      }
+      return { expectedIds, dest: { x: ui.homeX, y: top - scrollOffsetRef.current } };
+    },
+    [flatNodes, topOfFlatIndex, nodes, expandedIds, dndRows, getRowHeight],
+  );
+
   const endDrag = useCallback(
     (commit: boolean) => {
       const ui = dragUiRef.current;
@@ -947,37 +1065,12 @@ export const TreeView = <T = unknown,>({
 
       // Destination geometry from the post-move layout so the overlay
       // settles exactly onto the row's final slot.
-      let dest: { x: number; y: number } | null = null;
-      let expectedIds: string[] | null = null;
-      if (canCommit) {
-        const nextNodes = applyTreeMove(nodes, ui.session.nodeId, resolved.to);
-        expectedIds = flattenVisibleIds(nextNodes, expandedIds);
-        const destFlat = expectedIds.indexOf(ui.session.nodeId);
-        const parentRow =
-          resolved.to.parentId === null ? null : (dndRows.find((r) => r.id === resolved.to.parentId) ?? null);
-        let top = 0;
-        if (destFlat !== -1) {
-          for (let i = 0; i < destFlat; i++) {
-            top += getRowHeight(expectedIds[i]);
-          }
-        } else if (parentRow) {
-          // Moved into a collapsed parent: the row will not be visible —
-          // settle the ghost onto the parent row instead.
-          top = topOfFlatIndex(dndRows.indexOf(parentRow));
-        }
-        dest = { x: ui.homeX, y: top - scrollOffsetRef.current };
-      } else {
-        const originFlat = flatNodes.findIndex((f) => f.node.id === ui.session.nodeId);
-        dest = {
-          x: ui.homeX,
-          y: (originFlat === -1 ? 0 : topOfFlatIndex(originFlat)) - scrollOffsetRef.current,
-        };
-      }
+      const { dest, expectedIds } = settleDestination(ui, resolved.to, canCommit);
 
       setDragUi(null);
       dragUiRef.current = null;
 
-      if (ui.mode === 'pointer' && dest) {
+      if (ui.mode === 'pointer') {
         setSettle({
           node: ui.node,
           width: ui.width,
@@ -988,7 +1081,7 @@ export const TreeView = <T = unknown,>({
       }
 
       if (canCommit && expectedIds) {
-        if (transition) {
+        if (hasTransition) {
           pendingMoveFlipRef.current = {
             prevIds: flattenVisibleIds(nodes, expandedIds),
             expectedIds,
@@ -1000,18 +1093,7 @@ export const TreeView = <T = unknown,>({
         announce(describeTreeCancel(ui.session, nodes, ui.node.label));
       }
     },
-    [
-      announce,
-      dndRows,
-      expandedIds,
-      flatNodes,
-      getRowHeight,
-      nodes,
-      onNodeMove,
-      stopAutoScroll,
-      topOfFlatIndex,
-      transition,
-    ],
+    [announce, expandedIds, hasTransition, nodes, onNodeMove, settleDestination, stopAutoScroll],
   );
 
   // Arm the move FLIP once the consumer applies the move: surviving rows
@@ -1024,15 +1106,17 @@ export const TreeView = <T = unknown,>({
     }
     const currentIds = flatNodes.map((f) => f.node.id);
     const same = (a: readonly string[], b: readonly string[]) => a.length === b.length && a.every((v, i) => v === b[i]);
+    // Move not applied yet.
     if (same(currentIds, pending.prevIds)) {
       return;
-    } // move not applied yet
+    }
     pendingMoveFlipRef.current = null;
     if (!same(currentIds, pending.expectedIds)) {
       return;
     }
     const diff = diffVisibleRows(pending.prevIds, pending.expectedIds, getRowHeight);
     if (!isEmptyDiff(diff)) {
+      // oxlint-disable-next-line react-doctor/no-chain-state-updates -- arming runs once the consumer's move has rendered; it cannot be folded into the earlier render
       setMotion({ phase: 'armed', ...diff });
     }
   }, [flatNodes, getRowHeight]);
@@ -1041,36 +1125,35 @@ export const TreeView = <T = unknown,>({
   // (mechanical spring-rest detection — no timing constants). With
   // animation=none the position lands in one frame and this exits instantly.
   useEffect(() => {
-    if (!settle) {
-      return;
-    }
-    const el = (containerRef.current as HTMLElement | null)?.querySelector?.(
-      '[data-treeview-overlay]',
-    ) as HTMLElement | null;
-    if (!el || typeof requestAnimationFrame === 'undefined') {
-      setSettle(null);
-      return;
-    }
-    let last: string | null = null;
-    let stableFrames = 0;
     let raf = 0;
-    const check = () => {
-      const current = getComputedStyle(el).transform;
-      if (current === last) {
-        stableFrames += 1;
-      } else {
-        stableFrames = 0;
-        last = current;
-      }
-      if (stableFrames >= 3) {
+    if (settle) {
+      const el = containerRef.current?.querySelector<HTMLElement>('[data-treeview-overlay]');
+      if (!el || typeof requestAnimationFrame === 'undefined') {
         setSettle(null);
-        return;
+      } else {
+        let last: string | null = null;
+        let stableFrames = 0;
+        const check = () => {
+          const current = getComputedStyle(el).transform;
+          if (current === last) {
+            stableFrames += 1;
+          } else {
+            stableFrames = 0;
+            last = current;
+          }
+          if (stableFrames >= 3) {
+            setSettle(null);
+            return;
+          }
+          raf = requestAnimationFrame(check);
+        };
+        raf = requestAnimationFrame(check);
       }
-      raf = requestAnimationFrame(check);
-    };
-    raf = requestAnimationFrame(check);
+    }
     return () => {
-      cancelAnimationFrame(raf);
+      if (raf !== 0) {
+        cancelAnimationFrame(raf);
+      }
     };
   }, [settle]);
 
@@ -1078,8 +1161,8 @@ export const TreeView = <T = unknown,>({
 
   const beginPointerDrag = useCallback(
     (flat: FlatNode<T>, rowEl: HTMLElement, clientX: number, clientY: number): boolean => {
-      const container = containerRef.current as HTMLElement | null;
-      if (!container?.getBoundingClientRect) {
+      const container = containerRef.current;
+      if (container === null) {
         return false;
       }
       const session = treeKeyboardLift(nodes, flat.node.id);
@@ -1118,7 +1201,7 @@ export const TreeView = <T = unknown,>({
   );
 
   const handleDragHandlePointerDown = useCallback(
-    (flat: FlatNode<T>, e: any) => {
+    (flat: FlatNode<T>, e: React.PointerEvent<HTMLElement>) => {
       if (!canReorder || typeof window === 'undefined') {
         return;
       }
@@ -1131,11 +1214,11 @@ export const TreeView = <T = unknown,>({
       sessionCleanupRef.current?.();
       e.stopPropagation?.();
 
-      const handleEl = e.currentTarget as HTMLElement;
-      const rowEl = (handleEl.closest?.('[data-treeview-row]') ?? handleEl) as HTMLElement;
-      const startX = e.clientX as number;
-      const startY = e.clientY as number;
-      const pointerType: string = e.pointerType ?? 'mouse';
+      const handleEl = e.currentTarget;
+      const rowEl = handleEl.closest<HTMLElement>('[data-treeview-row]') ?? handleEl;
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const pointerType = e.pointerType ?? 'mouse';
       let lifted = false;
       let longPressTimer: ReturnType<typeof setTimeout> | null = null;
       let prevUserSelect = '';
@@ -1155,6 +1238,7 @@ export const TreeView = <T = unknown,>({
         document.documentElement.style.cursor = 'grabbing';
       };
 
+      // oxlint-disable eslint/no-use-before-define -- the session handlers reference one another (teardown detaches what onMove/onUp/onCancel call); none runs before all are defined
       const teardown = () => {
         if (longPressTimer !== null) {
           clearTimeout(longPressTimer);
@@ -1192,7 +1276,7 @@ export const TreeView = <T = unknown,>({
             return;
           }
         }
-        const containerRect = (containerRef.current as HTMLElement | null)?.getBoundingClientRect?.();
+        const containerRect = containerRef.current?.getBoundingClientRect();
         const ghost = {
           x: me.clientX - (containerRect?.left ?? 0) - grabOffsetRef.current.x,
           y: me.clientY - (containerRect?.top ?? 0) - grabOffsetRef.current.y,
@@ -1257,10 +1341,12 @@ export const TreeView = <T = unknown,>({
         }
       };
 
+      // oxlint-enable eslint/no-use-before-define
       window.addEventListener('pointermove', onMove);
       window.addEventListener('pointerup', onUp);
       window.addEventListener('pointercancel', onCancel);
       window.addEventListener('keydown', onKey, true);
+      // oxlint-disable-next-line github/require-passive-events -- non-passive on purpose: preventDefault must stop the page scrolling out from under a lifted drag
       window.addEventListener('touchmove', onTouchMove, { passive: false });
       window.addEventListener('contextmenu', onContextMenu, true);
       sessionCleanupRef.current = () => {
@@ -1289,8 +1375,8 @@ export const TreeView = <T = unknown,>({
     if (!canReorder || dragUiRef.current) {
       return false;
     }
-    const flat = flatNodes[focusedIndex];
-    if (!flat) {
+    const flat = focusedIndex < 0 ? undefined : flatNodes.at(focusedIndex);
+    if (flat === undefined) {
       return false;
     }
     const session = treeKeyboardLift(nodes, flat.node.id);
@@ -1318,15 +1404,16 @@ export const TreeView = <T = unknown,>({
   }, [announce, canReorder, dndRows, flatNodes, focusedIndex, getRowHeight, nodes, cancelInitialScroll]);
 
   const moveKeyboardDrag = useCallback(
-    (direction: 'up' | 'down' | 'left' | 'right'): boolean => {
+    (direction: TreeMoveDirection): boolean => {
       const ui = dragUiRef.current;
       if (!ui || ui.mode !== 'keyboard') {
         return false;
       }
       const next = treeKeyboardMove(ui.session, nodes, direction);
+      // Boundary no-op still swallows the key.
       if (next === ui.session) {
         return true;
-      } // boundary no-op still swallows the key
+      }
       const indicator = indicatorForTarget(dndRows, next, next.target);
       const updated: TreeDragUi<T> = { ...ui, session: next, indicator };
       setDragUi(updated);
@@ -1340,9 +1427,7 @@ export const TreeView = <T = unknown,>({
     [announce, dndRows, flatNodes.length, nodes, scrollToIndex],
   );
 
-  const hotkeyOpts = {
-    target: containerRef as React.RefObject<HTMLElement | null>,
-  };
+  const hotkeyOpts = { target: containerRef };
 
   useHotkey(
     hotkeyOverrides?.next ?? 'ArrowDown',
@@ -1415,7 +1500,7 @@ export const TreeView = <T = unknown,>({
         if (flat.hasChildren && flat.isExpanded) {
           setKeyboardRing(true);
           toggleNode(flat.node);
-        } else if (flat.parentId) {
+        } else if (flat.parentId !== null && flat.parentId !== '') {
           const parentIndex = flatNodes.findIndex((f) => f.node.id === flat.parentId);
           if (parentIndex !== -1) {
             focusRow(parentIndex);
@@ -1494,9 +1579,9 @@ export const TreeView = <T = unknown,>({
   );
 
   const handleTreeKeyDown = useCallback(
-    (e: any) => {
-      const key = e?.key as string | undefined;
-      if (!key || key.length !== 1) {
+    (e: React.KeyboardEvent) => {
+      const key: string | undefined = e.key;
+      if (key === undefined || key.length !== 1) {
         return;
       }
       if (e.ctrlKey || e.metaKey || e.altKey) {
@@ -1519,7 +1604,7 @@ export const TreeView = <T = unknown,>({
       const query = state.buffer.toLowerCase();
       const start = focusedIndex >= 0 ? focusedIndex : -1;
       const n = flatNodes.length;
-      for (let i = 1; i <= n; i++) {
+      for (let i = 1; i <= n; i += 1) {
         const idx = (start + i) % n;
         if (flatNodes[idx].node.label.toLowerCase().startsWith(query)) {
           focusRow(idx);
@@ -1541,11 +1626,7 @@ export const TreeView = <T = unknown,>({
   }
 
   const effectiveFocused = focusedIndex >= flatNodes.length ? -1 : focusedIndex;
-  const resolvedAriaLabel =
-    ariaLabel ??
-    (typeof (stackProps as { 'aria-label'?: string })['aria-label'] === 'string'
-      ? (stackProps as { 'aria-label'?: string })['aria-label']
-      : undefined);
+  const resolvedAriaLabel = ariaLabel ?? stackProps['aria-label'];
 
   const overlayNode = dragUi?.mode === 'pointer' ? dragUi.node : settle?.node;
   const overlayHasChildren = (overlayNode?.children?.length ?? 0) > 0;
@@ -1564,7 +1645,7 @@ export const TreeView = <T = unknown,>({
       overflow="hidden"
       {...stackProps}>
       <View
-        ref={containerRef as any}
+        ref={containerViewRef}
         role="tree"
         aria-label={resolvedAriaLabel}
         {...{
@@ -1580,7 +1661,7 @@ export const TreeView = <T = unknown,>({
         aria-activedescendant={effectiveFocused >= 0 ? `${treeId}-node-${effectiveFocused}` : undefined}
         tabIndex={0}
         outlineWidth={0}
-        outlineStyle={'none' as any}
+        outlineStyle="none"
         onFocus={handleContainerFocus}
         onBlur={handleContainerBlur}
         onKeyDown={handleTreeKeyDown}
@@ -1600,6 +1681,7 @@ export const TreeView = <T = unknown,>({
             if (!scrollActive.current || !listInstance.attached) {
               return;
             }
+            // oxlint-disable-next-line react/immutability -- listInstance is the per-mount FlashList bridge scratchpad; onLoad records that the list loaded
             listInstance.loaded = true;
             scheduleScroll();
           }}
@@ -1620,12 +1702,12 @@ export const TreeView = <T = unknown,>({
             keyboardRing,
             collapsedSelectedAncestors,
           }}
-          onScroll={(e: any) => {
+          onScroll={(e: NativeSyntheticEvent<NativeScrollEvent>) => {
             if (!scrollActive.current || !listInstance.attached) {
               return;
             }
-            const y = e?.nativeEvent?.contentOffset?.y;
-            if (typeof y === 'number' && Number.isFinite(y)) {
+            const { y } = e.nativeEvent.contentOffset;
+            if (Number.isFinite(y)) {
               scrollOffsetRef.current = y;
               if (dragUiRef.current) {
                 setDragScrollY(y);
@@ -1635,16 +1717,12 @@ export const TreeView = <T = unknown,>({
             scheduleScroll();
           }}
           scrollEventThrottle={16}
+          // oxlint-disable-next-line eslint/complexity, sonarjs/cognitive-complexity -- one row: selection, focus ring, FLIP motion, drag states and the reorder handle are all derived from the same per-row values
           renderItem={({ item, index }) => {
             const { node, depth, hasChildren, isExpanded } = item;
             const isFocused = effectiveFocused === index;
             const isSelected = selectedId !== undefined && selectedId === node.id;
-            const leadingIcon =
-              hasChildren && isExpanded && node.iconWhenExpanded
-                ? node.iconWhenExpanded
-                : node.icon
-                  ? node.icon
-                  : defaultNodeIcon(hasChildren, isExpanded, nodeIconSize);
+            const leadingIcon = resolveLeadingIcon(node, hasChildren, isExpanded, nodeIconSize);
 
             const containsSelected = collapsedSelectedAncestors.has(node.id);
             const groupPosition = getGroupPosition(index, flatNodes.length);
@@ -1655,7 +1733,7 @@ export const TreeView = <T = unknown,>({
               <Text
                 {...knobProps.body}
                 {...knobProps.label}
-                color={isSelected && onAccentLabel ? onAccentLabel : '$color'}
+                color={isSelected && isNonEmpty(onAccentLabel) ? onAccentLabel : '$color'}
                 numberOfLines={1}
                 flexShrink={1}>
                 {node.label}
@@ -1666,17 +1744,40 @@ export const TreeView = <T = unknown,>({
             const armed = motion?.phase === 'armed';
             const entering = motion?.entering.has(node.id) ?? false;
             const delta = motion?.deltas.get(node.id) ?? 0;
-            const rowY = armed ? (entering ? ENTER_RISE_PX : delta) : 0;
+            const rowY = armed ? armedRowOffset(entering, delta) : 0;
             // Drag states: the lifted subtree dims in place (the ghost is the
             // carried visual); the moved row hides while the overlay settles
             // onto its final slot.
             const inDraggedSubtree = dragUi?.subtree.has(node.id) ?? false;
             const isSettleHidden = settle?.hideId === node.id;
             const isDropParent = dragUi?.indicator?.kind === 'into' && dragUi.indicator.parentId === node.id;
-            const rowOpacity = isSettleHidden ? 0 : armed && entering ? 0 : inDraggedSubtree ? 0.4 : 1;
+            const rowOpacity = rowOpacityFor({ isSettleHidden, armed, entering, inDraggedSubtree });
             // Armed rows apply their inverted offset instantly; everyone else
             // keeps the knob tween (also covers hover/press fills — A-STATE).
             const rowTransition = armed && (entering || delta !== 0) ? 'none' : transition;
+
+            let expansionSlot: ReactNode = null;
+            if (showExpansionArrows) {
+              expansionSlot = hasChildren ? (
+                <View
+                  {...knobProps.controlIcon}
+                  alignItems="center"
+                  justifyContent="center"
+                  pointerEvents="none"
+                  // Indicator only — the row is the toggle target. One
+                  // caret that rotates (transform, knob tween) instead of
+                  // an icon swap, so the state change is continuous.
+                  rotate={isExpanded ? expandedCaretRotation : '0deg'}
+                  transition={transition}>
+                  <CollapsedCaretIcon
+                    size={caretSize}
+                    weight="bold"
+                  />
+                </View>
+              ) : (
+                <View {...knobProps.controlIcon} />
+              );
+            }
 
             return (
               <XStack
@@ -1712,36 +1813,26 @@ export const TreeView = <T = unknown,>({
                 position="relative"
                 y={rowY}
                 opacity={rowOpacity}
-                transition={rowTransition as any}
+                transition={rowTransition}
                 {...stackRadiusProps(groupPosition, knobProps.borderRadius.borderRadius)}
-                onLayout={(e: any) => {
-                  const h = e?.nativeEvent?.layout?.height;
-                  if (typeof h === 'number' && h > 0) {
+                onLayout={(e: LayoutChangeEvent) => {
+                  const { height: h } = e.nativeEvent.layout;
+                  if (h > 0) {
                     rowHeights.current.set(node.id, h);
                   }
                   scheduleScroll();
                 }}
-                backgroundColor={
-                  // Nest-into parent highlight wins while a drag is active
-                  // (drop-target affordance).
-                  isDropParent
-                    ? componentColors.interactive.background
-                    : isSelected
-                      ? '$accentBackground'
-                      : containsSelected
-                        ? componentColors.interactive.background
-                        : 'transparent'
-                }
+                backgroundColor={rowBackground({ isDropParent, isSelected, containsSelected })}
                 // Row hover/press come from the knob state recipes (A-STATE);
                 // selection tint stays sticky underneath them. Focus is the
                 // ring channel — never a second fill.
                 hoverStyle={{
-                  ...(control.hoverKnobProps as any),
-                  ...(isSelected && { backgroundColor: '$accentBackground' }),
+                  ...control.hoverKnobProps,
+                  ...(isSelected && { backgroundColor: ACCENT_BACKGROUND }),
                 }}
                 pressStyle={{
-                  ...(control.pressKnobProps as any),
-                  ...(isSelected && { backgroundColor: '$accentBackground' }),
+                  ...control.pressKnobProps,
+                  ...(isSelected && { backgroundColor: ACCENT_BACKGROUND }),
                 }}
                 // Keyboard ring on the focused row only (activedescendant).
                 // Selected is fill above; selected + keyboard-focused = both.
@@ -1786,27 +1877,7 @@ export const TreeView = <T = unknown,>({
                   </View>
                 ) : null}
 
-                {showExpansionArrows ? (
-                  hasChildren ? (
-                    <View
-                      {...knobProps.controlIcon}
-                      alignItems="center"
-                      justifyContent="center"
-                      pointerEvents="none"
-                      // Indicator only — the row is the toggle target. One
-                      // caret that rotates (transform, knob tween) instead of
-                      // an icon swap, so the state change is continuous.
-                      rotate={isExpanded ? expandedCaretRotation : '0deg'}
-                      transition={transition as any}>
-                      <CollapsedCaretIcon
-                        size={caretSize}
-                        weight="bold"
-                      />
-                    </View>
-                  ) : (
-                    <View {...knobProps.controlIcon} />
-                  )
-                ) : null}
+                {expansionSlot}
 
                 <View
                   {...knobProps.controlIcon}
@@ -1826,6 +1897,7 @@ export const TreeView = <T = unknown,>({
                 {canReorder ? (
                   <DragHandleTarget
                     {...{ 'data-treeview-handle': node.id }}
+                    // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui View is the cross-platform primitive (no native <button> on RN); role supplies the accessibility semantics
                     role="button"
                     aria-label={t('Drag {{label}} to reorder', { label: node.label })}
                     tabIndex={-1}
@@ -1838,14 +1910,16 @@ export const TreeView = <T = unknown,>({
                     hitSlop={pressTargetHitSlop(caretSize)}
                     cursor="grab"
                     opacity={0.6}
-                    transition={transition as any}
+                    transition={transition}
                     hoverStyle={{ opacity: 1 }}
-                    onPress={(e: any) => e?.stopPropagation?.()}
-                    {...{
-                      onPointerDown: (e: any) => {
+                    onPress={(e) => {
+                      e?.stopPropagation?.();
+                    }}
+                    {...webOnlyProps({
+                      onPointerDown: (e) => {
                         handleDragHandlePointerDown(item, e);
                       },
-                    }}>
+                    })}>
                     <DotsSixVerticalIcon
                       size={caretSize}
                       weight="bold"
@@ -1867,13 +1941,14 @@ export const TreeView = <T = unknown,>({
             top={0}
             left={0}
             right={0}
+            // oxlint-disable-next-line react/refs -- row heights live in a ref map by design; the indicator is positioned from the measured rows
             y={topOfFlatIndex(dragUi.indicator.flatIndex) - dragScrollY - 1}
             height={2}
             paddingInlineStart={rowPad.paddingHorizontal}
             paddingInlineEnd={rowPad.paddingHorizontal}
             pointerEvents="none"
             zIndex={999}
-            transition={dragUi.mode === 'keyboard' ? (transition as any) : ('none' as any)}>
+            transition={dragUi.mode === 'keyboard' ? transition : 'none'}>
             <View
               width={dragUi.indicator.depth * indentStep}
               flexShrink={0}
@@ -1882,7 +1957,7 @@ export const TreeView = <T = unknown,>({
               flex={1}
               height={2}
               borderRadius={1}
-              backgroundColor="$accentBackground"
+              backgroundColor={ACCENT_BACKGROUND}
             />
           </XStack>
         )}
@@ -1905,7 +1980,7 @@ export const TreeView = <T = unknown,>({
             height={dragUi?.height ?? settle?.height}
             pointerEvents="none"
             zIndex={1000}
-            transition={dragUi ? ('none' as any) : (transition as any)}>
+            transition={dragUi ? 'none' : transition}>
             <XStack
               alignItems="center"
               height="100%"
@@ -1916,7 +1991,7 @@ export const TreeView = <T = unknown,>({
               borderWidth={1}
               borderColor="$borderColor"
               overflow="hidden"
-              transition={transition as any}
+              transition={transition}
               enterStyle={{ scale: 1 }}
               scale={dragUi ? 1.03 : 1}
               {...(dragUi ? LIFT_SHADOW : undefined)}>

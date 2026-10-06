@@ -4,14 +4,11 @@ import { createThemesBuilder, defaultAccentTheme, defaultBaseTheme, defaultBuild
 import { configWithoutAnimations } from '@tamagui/config';
 import { animationsCSS } from '@tamagui/config/v5-css';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import * as React from 'react';
 import { TamaguiProvider, createTamagui } from 'tamagui';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { Breadcrumbs } from './Breadcrumbs';
 import type { BreadcrumbItem } from './Breadcrumbs';
-import * as Debug from './Debug';
-import * as EmptyStateModule from './EmptyState';
 import { Sidebar } from './Sidebar';
 import type { SidebarSection } from './Sidebar';
 import { Tags } from './Tags';
@@ -20,8 +17,6 @@ import { Toolbar } from './Toolbar';
 import type { ToolbarAction } from './Toolbar';
 import { ViewSwitcher } from './ViewSwitcher';
 import type { ViewOption } from './ViewSwitcher';
-
-import * as Layouts from './index';
 
 // House builder themes for the mark assertion — created at MODULE
 // scope: tamagui registers a config's theme variables globally at
@@ -34,13 +29,28 @@ const houseConfig = createTamagui({
   themes: houseThemes as any,
 });
 
-afterEach(cleanup);
+const Debug = await import('./Debug');
+const EmptyStateModule = await import('./EmptyState');
+const Layouts = await import('./index');
+
+const classesByPrefix = (el: Element, prefix: string) =>
+  el.className
+    .split(' ')
+    .filter((c) => c.startsWith(prefix))
+    .toSorted();
+
+const atoms = (el: Element, prefixes: string[]): string[] =>
+  el.className
+    .split(' ')
+    .filter((c) => prefixes.some((p) => c.startsWith(p)))
+    .toSorted();
 
 describe('Layouts Index', () => {
+  afterEach(cleanup);
+
   it('should export everything from Debug', () => {
-    for (const key of Object.keys(Debug)) {
-      expect(Layouts).toHaveProperty(key);
-      expect(Layouts[key as keyof typeof Layouts]).toBe((Debug as Record<string, unknown>)[key]);
+    for (const [key, value] of Object.entries(Debug)) {
+      expect(Layouts).toHaveProperty(key, value);
     }
   });
 
@@ -92,7 +102,7 @@ describe('Layouts Index', () => {
     // already been loaded — and loading one drags the storybook runtime into a
     // vitest environment that has no preview API (measured: "does not provide
     // an export named 'definePreview'", whole suite fails to collect).
-    const modules = import.meta.glob<Record<string, unknown>>(
+    const modules = import.meta.glob<object>(
       [
         './*.tsx',
         './*/index.tsx',
@@ -130,7 +140,9 @@ describe('Layouts Index', () => {
 // ---------------------------------------------------------------------------
 // Test 1: Sidebar renders sections with ListItem
 // ---------------------------------------------------------------------------
-describe('Sidebar', () => {
+describe(Sidebar, () => {
+  afterEach(cleanup);
+
   it('renders sections and items as ListItem with title and count', () => {
     const sections: SidebarSection[] = [
       {
@@ -161,10 +173,12 @@ describe('Sidebar', () => {
 // ---------------------------------------------------------------------------
 // Test 2: Toolbar action anatomy + callbacks
 // ---------------------------------------------------------------------------
-describe('Toolbar', () => {
+describe(Toolbar, () => {
+  afterEach(cleanup);
+
   it('renders actions from props and calls action callbacks', () => {
-    const onSave = vi.fn();
-    const onDelete = vi.fn();
+    const onSave = vi.fn<() => void>();
+    const onDelete = vi.fn<() => void>();
 
     const primaryActions: ToolbarAction[] = [{ label: 'Save', onPress: onSave, variant: 'primary' }];
     const secondaryActions: ToolbarAction[] = [{ label: 'Delete', onPress: onDelete, variant: 'destructive' }];
@@ -215,14 +229,9 @@ describe('Toolbar', () => {
     // jsdom cannot cascade Tamagui class CSS — measure via atomic classes
     // (tags-trigger.spec idiom). The toolbar button's height class must
     // match a bare size="$3" Button and differ from the ambient default.
-    const classesByPrefix = (el: Element, prefix: string) =>
-      String((el as HTMLElement).className || '')
-        .split(' ')
-        .filter((c) => c.startsWith(prefix))
-        .sort();
     const frameOf = (label: HTMLElement) => {
       let el: HTMLElement | null = label.parentElement;
-      for (let i = 0; i < 8 && el; i++) {
+      for (let i = 0; i < 8 && el; i += 1) {
         if (classesByPrefix(el, '_h-').length > 0) {
           return el;
         }
@@ -273,7 +282,7 @@ describe('Toolbar', () => {
 
   it('explains disabled actions via disabledReason; loading is busy, not bare-disabled', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const onPublish = vi.fn();
+    const onPublish = vi.fn<() => void>();
     renderWithProviders(
       <Toolbar
         primaryActions={[
@@ -307,9 +316,11 @@ describe('Toolbar', () => {
 // ---------------------------------------------------------------------------
 // Test 3: ViewSwitcher renders as ToggleGroup and calls onViewChange
 // ---------------------------------------------------------------------------
-describe('ViewSwitcher', () => {
+describe(ViewSwitcher, () => {
+  afterEach(cleanup);
+
   it('renders view options as ToggleGroup items', () => {
-    const onViewChange = vi.fn();
+    const onViewChange = vi.fn<(view: string) => void>();
 
     const views: ViewOption[] = [
       { type: 'list', label: 'List' },
@@ -357,19 +368,13 @@ describe('ViewSwitcher', () => {
         />
       </TamaguiProvider>,
     );
-    const selected = container.querySelector('[data-state="on"]') as HTMLElement;
-    const idle = container.querySelector('[data-state="off"]') as HTMLElement;
+    const selected = container.querySelector<HTMLElement>('[data-state="on"]')!;
+    const idle = container.querySelector<HTMLElement>('[data-state="off"]')!;
     expect(selected).toBeTruthy();
     expect(idle).toBeTruthy();
     expect(selected.className).toContain(`_bg-hsla${tintDigits}`);
     expect(idle.className).not.toContain(`_bg-hsla${tintDigits}`);
   });
-
-  const atoms = (el: Element, prefixes: string[]): string[] =>
-    String((el as HTMLElement).className || '')
-      .split(' ')
-      .filter((c) => prefixes.some((p) => c.startsWith(p)))
-      .sort();
 
   it('measures the segment label on the text node — never 500 or 600 (§6.1)', () => {
     const views: ViewOption[] = [
@@ -401,19 +406,21 @@ describe('ViewSwitcher', () => {
         onViewChange={() => {}}
       />,
     );
-    const root = container.querySelector('[data-testid="view-switcher"]') as HTMLElement;
+    const root = container.querySelector<HTMLElement>('[data-testid="view-switcher"]')!;
     expect(root).toBeTruthy();
-    expect(root.getAttribute('data-size')).toBeTruthy();
-    expect(root.getAttribute('data-density')).toBeTruthy();
+    expect(root.dataset.size).toBeTruthy();
+    expect(root.dataset.density).toBeTruthy();
   });
 });
 
 // ---------------------------------------------------------------------------
 // Test 4: Breadcrumbs renders items with theme-aware tokens
 // ---------------------------------------------------------------------------
-describe('Breadcrumbs', () => {
+describe(Breadcrumbs, () => {
+  afterEach(cleanup);
+
   it('renders items from props and calls onNavigate', () => {
-    const onNavigate = vi.fn();
+    const onNavigate = vi.fn<(href: string) => void>();
     const items: BreadcrumbItem[] = [
       { label: 'Home', href: '/' },
       { label: 'Products', href: '/products' },
@@ -442,10 +449,12 @@ describe('Breadcrumbs', () => {
 // ---------------------------------------------------------------------------
 // Test 5: Tags render with Button chip patterns
 // ---------------------------------------------------------------------------
-describe('Tags', () => {
+describe(Tags, () => {
+  afterEach(cleanup);
+
   it('renders tag list with chip-styled buttons', () => {
-    const onRemove = vi.fn();
-    const onAdd = vi.fn();
+    const onRemove = vi.fn<(tag: TagItem) => void>();
+    const onAdd = vi.fn<(tagName: string) => void>();
 
     const tags: TagItem[] = [
       { id: 'tag-1', label: 'urgent' },
@@ -471,6 +480,8 @@ describe('Tags', () => {
 // Test 6: Attachments renders items as ListItem with title and subtitle
 // ---------------------------------------------------------------------------
 describe('Attachments', () => {
+  afterEach(cleanup);
+
   it('renders attachment items with file name and size', () => {
     const { Attachments } = Layouts;
     const items = [
@@ -511,7 +522,7 @@ describe('Attachments', () => {
 
   it('error wins over empty and the retry action fires (Axiom 6)', () => {
     const { Attachments } = Layouts;
-    const onRetry = vi.fn();
+    const onRetry = vi.fn<() => void>();
     renderWithProviders(
       <Attachments
         items={[]}
@@ -565,6 +576,8 @@ describe('Attachments', () => {
 // Test 7: Timeline renders entries as ListItem with author and timestamp
 // ---------------------------------------------------------------------------
 describe('Timeline', () => {
+  afterEach(cleanup);
+
   it('renders timeline entries with author names', () => {
     const { Timeline } = Layouts;
     const entries = [
@@ -605,7 +618,7 @@ describe('Timeline', () => {
 
   it('error wins over empty and the retry action fires (Axiom 6)', () => {
     const { Timeline } = Layouts;
-    const onRetry = vi.fn();
+    const onRetry = vi.fn<() => void>();
     renderWithProviders(
       <Timeline
         entries={[]}

@@ -1,6 +1,4 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 
 import { renderWithProviders } from '@repo/test-utils';
 import { Preset } from '@repo/theme';
@@ -10,8 +8,6 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { Attachments } from './Attachments';
 import type { AttachmentItem } from './Attachments';
-
-afterEach(cleanup);
 
 const items: AttachmentItem[] = [
   { id: 'a', fileName: 'restore-log.txt', fileUrl: '/a.txt', fileSize: 12_000 },
@@ -28,6 +24,8 @@ const rowAtoms = (overrides: Partial<Knobs>) => {
 };
 
 describe('Attachments rows are a CONTAINER-CAP stack', () => {
+  afterEach(cleanup);
+
   it('caps the outer corners at the row padding at full', () => {
     const [first, last] = rowAtoms({ borderRadius: 'full', space: 'medium' });
     expect(first).toStrictEqual(expect.arrayContaining(['_borderStartStartRadius-18px', '_borderStartEndRadius-18px']));
@@ -46,10 +44,10 @@ describe('Attachments rows are a CONTAINER-CAP stack', () => {
       </Preset>,
     );
     const declared = screen.getAllByRole('listitem').map((row) => ({
-      container: row.getAttribute('data-constraint-container'),
-      position: row.getAttribute('data-stack-position'),
-      radius: row.getAttribute('data-radius-knob'),
-      space: row.getAttribute('data-space-knob'),
+      container: row.dataset.constraintContainer,
+      position: row.dataset.stackPosition,
+      radius: row.dataset.radiusKnob,
+      space: row.dataset.spaceKnob,
     }));
     expect(declared).toStrictEqual([
       { container: 'StackedRow', position: 'first', radius: 'large', space: 'small' },
@@ -59,9 +57,9 @@ describe('Attachments rows are a CONTAINER-CAP stack', () => {
 
   it('squares every corner at none', () => {
     for (const row of rowAtoms({ borderRadius: 'none' })) {
-      const corners = row.filter((a) => /^_border(Start|End)(Start|End)Radius-(\d+px|t-radius-\d+)$/u.test(a));
+      const corners = row.filter((a) => /^_border(?:Start|End)(?:Start|End)Radius-(?:\d+px|t-radius-\d+)$/u.test(a));
       expect(corners).toHaveLength(4);
-      expect(corners.filter((a) => !/-(0px|t-radius-0)$/u.test(a))).toStrictEqual([]);
+      expect(corners.filter((a) => !/-(?:0px|t-radius-0)$/u.test(a))).toStrictEqual([]);
     }
   });
 });

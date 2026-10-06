@@ -98,10 +98,8 @@ export const useRegisterPageHeading = (args: {
 }): void => {
   const registry = useContext(PageHeadingScopeContext);
   const { level, component, label, enabled = true } = args;
-  useEffect(() => {
-    if (!enabled || level !== 1 || !registry) {
-      return;
-    }
-    return registry.registerH1({ component, label });
-  }, [enabled, level, registry, component, label]);
+  useEffect(
+    () => (enabled && level === 1 && registry !== null ? registry.registerH1({ component, label }) : undefined),
+    [enabled, level, registry, component, label],
+  );
 };

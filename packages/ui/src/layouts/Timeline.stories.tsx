@@ -24,11 +24,14 @@ export default {
   },
 };
 
+const AUTHOR_JOHN = 'john@example.com';
+const AUTHOR_SARAH = 'sarah.chen@acme.com';
+
 const sampleEntries: TimelineEntry[] = [
   {
     id: 'entry-1',
     type: 'version',
-    author: 'john@example.com',
+    author: AUTHOR_JOHN,
     timestamp: '2026-01-24T12:00:00Z',
     changes: [
       { field: 'status', old: 'Draft', new: 'Submitted' },
@@ -46,14 +49,14 @@ const sampleEntries: TimelineEntry[] = [
     id: 'entry-3',
     type: 'comment',
     content: 'Please review the pricing before approval.',
-    author: 'john@example.com',
+    author: AUTHOR_JOHN,
     timestamp: '2026-01-24T10:30:00Z',
   },
   {
     id: 'entry-4',
     type: 'attachment',
     content: 'Added invoice-draft.pdf',
-    author: 'john@example.com',
+    author: AUTHOR_JOHN,
     timestamp: '2026-01-24T09:15:00Z',
   },
   {
@@ -72,7 +75,7 @@ const commentFeedEntries: TimelineEntry[] = [
   {
     id: 'c-1',
     type: 'comment',
-    author: 'sarah.chen@acme.com',
+    author: AUTHOR_SARAH,
     content:
       'I walked the customer through the migration plan this morning. They want the cutover moved to the first week of November.',
     timestamp: minutesAgo(120),
@@ -97,7 +100,7 @@ const commentFeedEntries: TimelineEntry[] = [
   {
     id: 's-1',
     type: 'version',
-    author: 'sarah.chen@acme.com',
+    author: AUTHOR_SARAH,
     timestamp: minutesAgo(60 * 5),
     changes: [
       { field: 'status', fieldLabel: 'Status', old: 'Draft', new: 'In Review' },
@@ -240,6 +243,7 @@ Loading.parameters = {
   },
 };
 
+// oxlint-disable-next-line sonarjs/no-globals-shadowing, sonarjs/no-built-in-override -- the export name is the Storybook story id ('Error'); renaming would change it
 export const Error = () => (
   <Timeline
     label="Activity"

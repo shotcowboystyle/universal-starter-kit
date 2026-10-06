@@ -13,18 +13,16 @@ import { AnimateHeight } from './index';
  * install this controllable observer plus a fixed getBoundingClientRect.
  */
 class FiringResizeObserver {
-  static instances: FiringResizeObserver[] = [];
-  callback: ResizeObserverCallback;
-  constructor(callback: ResizeObserverCallback) {
-    this.callback = callback;
-    FiringResizeObserver.instances.push(this);
+  handler: ResizeObserverCallback;
+  constructor(handler: ResizeObserverCallback) {
+    this.handler = handler;
   }
   observe() {
     // real observers fire an initial measurement on observe
-    this.callback([], this as unknown as ResizeObserver);
+    this.handler([], this as unknown as ResizeObserver);
   }
-  unobserve() {}
-  disconnect() {}
+  unobserve = vi.fn<() => void>();
+  disconnect = vi.fn<() => void>();
 }
 
 const Harness = ({ initialOpen }: { initialOpen: boolean }) => {
@@ -51,7 +49,6 @@ const Harness = ({ initialOpen }: { initialOpen: boolean }) => {
 const originalResizeObserver = window.ResizeObserver;
 
 const installFiringObserver = (height: number) => {
-  FiringResizeObserver.instances = [];
   window.ResizeObserver = FiringResizeObserver as unknown as typeof ResizeObserver;
   vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
     height,
@@ -66,7 +63,7 @@ const installFiringObserver = (height: number) => {
   } as DOMRect);
 };
 
-describe('AnimateHeight', () => {
+describe(AnimateHeight, () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });

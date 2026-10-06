@@ -183,7 +183,7 @@ export const NoResults = {
 };
 
 /** Failed load wins over empty — error chrome with retry, never empty chrome. */
-export const Error = {
+const ErrorStory = {
   render: () => (
     <ImageGrid<ImageItem>
       items={[]}
@@ -194,3 +194,5 @@ export const Error = {
     />
   ),
 };
+
+export { ErrorStory as Error };

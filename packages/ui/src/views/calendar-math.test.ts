@@ -19,7 +19,7 @@ import {
 const day = new Date(2026, 2, 10);
 
 describe('calendarMath', () => {
-  describe('snapMinutes', () => {
+  describe(snapMinutes, () => {
     it('rounds to the increment', () => {
       expect(snapMinutes(44, 30)).toBe(30);
       expect(snapMinutes(46, 30)).toBe(60);
@@ -50,7 +50,7 @@ describe('calendarMath', () => {
     });
   });
 
-  describe('layoutDayBlocks', () => {
+  describe(layoutDayBlocks, () => {
     it('keeps non-overlapping blocks full width', () => {
       const layout = layoutDayBlocks([
         { id: 'a', startMin: 0, endMin: 60 },
@@ -65,7 +65,7 @@ describe('calendarMath', () => {
         { id: 'b', startMin: 570, endMin: 660 },
       ]);
       const a = layout.find((b) => b.id === 'a')!;
-      const b = layout.find((b) => b.id === 'b')!;
+      const b = layout.find((block) => block.id === 'b')!;
       expect(a.columns).toBe(2);
       expect(b.columns).toBe(2);
       expect(a.column).not.toBe(b.column);
@@ -86,7 +86,7 @@ describe('calendarMath', () => {
     });
   });
 
-  describe('moveRangeToSlot', () => {
+  describe(moveRangeToSlot, () => {
     it('preserves the event duration at the target slot', () => {
       const range = moveRangeToSlot(
         { start: new Date(2026, 2, 10, 9, 0), end: new Date(2026, 2, 10, 10, 30) },
@@ -103,7 +103,7 @@ describe('calendarMath', () => {
     });
   });
 
-  describe('computeResizeRange', () => {
+  describe(computeResizeRange, () => {
     const event = { start: new Date(2026, 2, 10, 9, 0), end: new Date(2026, 2, 10, 10, 0) };
 
     it('snaps the end edge to the grid increment', () => {
@@ -126,7 +126,7 @@ describe('calendarMath', () => {
     });
   });
 
-  describe('createRangeFromDrag', () => {
+  describe(createRangeFromDrag, () => {
     it('floors the anchor and ceils the moving edge', () => {
       const range = createRangeFromDrag(day, 9 * 60 + 10, 10 * 60 + 5, 30);
       expect(range.start).toStrictEqual(new Date(2026, 2, 10, 9, 0));

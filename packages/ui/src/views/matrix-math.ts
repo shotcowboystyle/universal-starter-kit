@@ -67,17 +67,17 @@ export interface MatrixCellSummary {
   rowId: string;
   bucketKey: string;
   /** Sum of the defined values, or undefined when no point carried one. */
-  value: number | undefined;
+  value?: number;
   /** Points that landed in the bucket. */
   count: number;
   /** Strongest explicit intensity, or undefined when none was given. */
-  intensity: number | undefined;
+  intensity?: number;
   /** Last defined intent in point order. */
-  intent: MatrixIntent | undefined;
+  intent?: MatrixIntent;
   /** Last defined explicit color in point order. */
-  color: string | undefined;
+  color?: string;
   /** Last defined label in point order. */
-  label: string | undefined;
+  label?: string;
   cells: MatrixCell[];
 }
 
@@ -206,22 +206,17 @@ export const summarizeMatrixCells = (
       summary = {
         rowId: cell.rowId,
         bucketKey,
-        value: undefined,
         count: 0,
-        intensity: undefined,
-        intent: undefined,
-        color: undefined,
-        label: undefined,
         cells: [],
       };
       summaries.set(key, summary);
     }
     summary.count += 1;
     summary.cells.push(cell);
-    if (typeof cell.value === 'number' && Number.isFinite(cell.value)) {
+    if (cell.value !== undefined && Number.isFinite(cell.value)) {
       summary.value = (summary.value ?? 0) + cell.value;
     }
-    if (typeof cell.intensity === 'number' && Number.isFinite(cell.intensity)) {
+    if (cell.intensity !== undefined && Number.isFinite(cell.intensity)) {
       summary.intensity = Math.max(summary.intensity ?? 0, cell.intensity);
     }
     if (cell.intent !== undefined) {

@@ -162,4 +162,5 @@ export { renumberIdx } from './kanban-dnd';
 // Universal chart catalog (d3 math + react-native-svg rendering). Charts are
 // data views; the package barrel star-exports this module, so the charts
 // submodule surfaces through the existing views barrel.
+// oxlint-disable-next-line sonarjs/no-wildcard-import, oxc/no-barrel-file -- the charts catalog is deliberately re-exported whole through the views barrel (see above)
 export * from '../charts';

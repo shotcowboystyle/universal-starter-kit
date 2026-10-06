@@ -53,27 +53,28 @@ export interface AnimateHeightProps extends Omit<StackProps, 'height' | 'childre
  * web the box is already clipped to 0 by then, so the later unmount is
  * invisible.
  */
-const settleTable: Record<string, number> = {
-  snappy: 300,
-  quick: 450,
-  bouncy: 800,
-  medium: 600,
-  tooltip: 700,
-  gentle: 900,
-  slow: 1100,
-  lazy: 1300,
-};
+const settleTable = new Map<TransitionProp, number>([
+  ['snappy', 300],
+  ['quick', 450],
+  ['bouncy', 800],
+  ['medium', 600],
+  ['tooltip', 700],
+  ['gentle', 900],
+  ['slow', 1100],
+  ['lazy', 1300],
+]);
 
 /**
  * Settle time before finalizing (unmounting / releasing a clamp) — token
  * settle + buffer. Exported for siblings that sequence work after a height
  * tween (e.g. CodeBlock's reveal releases its maxHeight clamp on settle).
  */
+// oxlint-disable-next-line react-doctor/only-export-components -- settleMs is a shared pure helper consumed by CodeBlock and forms/Slider; moving it would change the public import path
 export const settleMs = (transition: TransitionProp | undefined): number => {
-  if (!transition) {
+  if (transition == null || transition === '') {
     return 0;
   }
-  const ms = typeof transition === 'string' ? settleTable[transition] : undefined;
+  const ms = settleTable.get(transition);
   // Non-string TransitionProp shapes (arrays/objects) fall back like an
   // unknown token name.
   return (ms ?? 600) + 80;
@@ -113,11 +114,13 @@ const WebAnimateHeight = forwardRef<TamaguiElement, AnimateHeightProps>(function
       // rest). Re-opening mid-exit keeps the existing measurement — the
       // observer will not re-fire for unchanged content — so the effect
       // below retargets it directly and the tween reverses in place.
+      // oxlint-disable-next-line react/refs -- intentional render-phase write inside the usePrevious state-adjust block so children mount in the same commit
       openingRef.current = !exiting;
       if (exiting) {
         setExiting(false);
       }
     } else {
+      // oxlint-disable-next-line react/refs -- intentional render-phase write inside the usePrevious state-adjust block
       openingRef.current = false;
       setExiting(true);
     }
@@ -131,7 +134,7 @@ const WebAnimateHeight = forwardRef<TamaguiElement, AnimateHeightProps>(function
       clearTimeout(unmountTimerRef.current);
       unmountTimerRef.current = null;
     }
-    if (rafRef.current != null && typeof cancelAnimationFrame === 'function') {
+    if (rafRef.current != null) {
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
@@ -161,27 +164,30 @@ const WebAnimateHeight = forwardRef<TamaguiElement, AnimateHeightProps>(function
     [collapsible, open],
   );
   const handleMeasuredRef = useRef(handleMeasured);
-  handleMeasuredRef.current = handleMeasured;
   const transitionRef = useRef(transition);
-  transitionRef.current = transition;
+  // Declared before the observer effect so it runs first and the observer never sees a stale callback.
+  useLayoutEffect(() => {
+    handleMeasuredRef.current = handleMeasured;
+    transitionRef.current = transition;
+  });
 
   // Web: ResizeObserver on the content wrapper — fires on observe (initial
   // measure) and on any intrinsic size change while mounted.
   useLayoutEffect(() => {
-    if (!isWeb || !shouldRenderChildren) {
-      return;
+    const node = innerRef.current;
+    const canObserve = isWeb && shouldRenderChildren && typeof ResizeObserver !== 'undefined';
+    const observer =
+      canObserve && node instanceof HTMLElement
+        ? new ResizeObserver(() => {
+            // getBoundingClientRect keeps fractional text heights exact.
+            handleMeasuredRef.current(node.getBoundingClientRect().height);
+          })
+        : null;
+    if (observer !== null && node instanceof HTMLElement) {
+      observer.observe(node);
     }
-    const node = innerRef.current as unknown as HTMLElement | null;
-    if (!node || typeof ResizeObserver === 'undefined') {
-      return;
-    }
-    const observer = new ResizeObserver(() => {
-      // getBoundingClientRect keeps fractional text heights exact.
-      handleMeasuredRef.current(node.getBoundingClientRect().height);
-    });
-    observer.observe(node);
     return () => {
-      observer.disconnect();
+      observer?.disconnect();
     };
   }, [shouldRenderChildren]);
 
@@ -189,6 +195,7 @@ const WebAnimateHeight = forwardRef<TamaguiElement, AnimateHeightProps>(function
   const onInnerLayout = useCallback((event: LayoutChangeEvent) => {
     handleMeasuredRef.current(event.nativeEvent.layout.height);
   }, []);
+  const innerLayoutProps = isWeb ? {} : { onLayout: onInnerLayout };
 
   // Drive the open/close targets after commit.
   useEffect(() => {
@@ -210,6 +217,7 @@ const WebAnimateHeight = forwardRef<TamaguiElement, AnimateHeightProps>(function
     // non-layout test environments), finalize immediately. The transition is
     // read through a ref at close time only — mid-tween knob changes should
     // not restart the exit timer.
+    // oxlint-disable-next-line react-doctor/no-adjust-state-on-prop-change -- close target must land after commit so the px -> 0 tween starts from the painted height
     setDisplayHeight(0);
     const closeTransition = transitionRef.current;
     const canTween = Boolean(closeTransition) && (measuredRef.current ?? 0) > 0;
@@ -238,7 +246,7 @@ const WebAnimateHeight = forwardRef<TamaguiElement, AnimateHeightProps>(function
           ref={innerRef}
           // keep natural height inside the clipped, height-driven outer
           flexShrink={0}
-          {...(isWeb ? {} : { onLayout: onInnerLayout })}>
+          {...innerLayoutProps}>
           {children}
         </View>
       ) : null}

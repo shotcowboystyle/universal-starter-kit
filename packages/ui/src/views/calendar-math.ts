@@ -29,12 +29,12 @@ export const minutesOfDay = (date: Date): number => date.getHours() * 60 + date.
  * covers the slots the pointer actually crossed.
  */
 export const snapMinutes = (minutes: number, increment: number, mode: 'round' | 'floor' | 'ceil' = 'round'): number => {
-  const step =
-    mode === 'floor'
-      ? Math.floor(minutes / increment)
-      : mode === 'ceil'
-        ? Math.ceil(minutes / increment)
-        : Math.round(minutes / increment);
+  let step = Math.round(minutes / increment);
+  if (mode === 'floor') {
+    step = Math.floor(minutes / increment);
+  } else if (mode === 'ceil') {
+    step = Math.ceil(minutes / increment);
+  }
   const snapped = step * increment;
   return Math.max(0, Math.min(MINUTES_PER_DAY, snapped));
 };
@@ -70,7 +70,7 @@ export interface TimedBlockLayout extends TimedBlockInput {
  * cluster's total column count so widths divide evenly.
  */
 export const layoutDayBlocks = (blocks: readonly TimedBlockInput[]): TimedBlockLayout[] => {
-  const sorted = [...blocks].sort((a, b) => a.startMin - b.startMin || a.endMin - b.endMin);
+  const sorted = blocks.toSorted((a, b) => a.startMin - b.startMin || a.endMin - b.endMin);
   const results: TimedBlockLayout[] = [];
   let cluster: TimedBlockLayout[] = [];
   let clusterEnd = -1;

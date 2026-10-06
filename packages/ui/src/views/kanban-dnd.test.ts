@@ -26,7 +26,7 @@ const H = 80;
 const starts = [0, H, 2 * H];
 const getStart = (i: number) => starts[i];
 
-describe('siblingOffset', () => {
+describe(siblingOffset, () => {
   describe('source column (dragged card at index 1 of [A,B,C])', () => {
     it('gap above A: A and C both make room, C also closes the origin', () => {
       // final layout: [gap, A, C]
@@ -70,12 +70,14 @@ describe('siblingOffset', () => {
   });
 });
 
-describe('gapPosition', () => {
+describe(gapPosition, () => {
   it('source column: gap above, at, and below the origin', () => {
     const base = { sourceIndex: 1, count: 3, size: H, totalSize: 3 * H, getStart };
     expect(gapPosition({ ...base, gapIndex: 0 })).toBe(0);
-    expect(gapPosition({ ...base, gapIndex: 1 })).toBe(H); // origin slot
-    expect(gapPosition({ ...base, gapIndex: 2 })).toBe(2 * H); // end
+    // origin slot
+    expect(gapPosition({ ...base, gapIndex: 1 })).toBe(H);
+    // end
+    expect(gapPosition({ ...base, gapIndex: 2 })).toBe(2 * H);
   });
 
   it('single-card source column keeps the gap at the top', () => {
@@ -99,7 +101,7 @@ describe('gapPosition', () => {
   });
 });
 
-describe('insertionIndexForY', () => {
+describe(insertionIndexForY, () => {
   const items = [
     { index: 0, start: 0, size: H },
     { index: 1, start: H, size: H },
@@ -127,7 +129,7 @@ describe('insertionIndexForY', () => {
   });
 });
 
-describe('uniformInsertionIndex', () => {
+describe(uniformInsertionIndex, () => {
   it('matches the midpoint rule for uniform sizes', () => {
     expect(uniformInsertionIndex(10, H, 3)).toBe(0);
     expect(uniformInsertionIndex(H / 2 + 1, H, 3)).toBe(1);
@@ -142,7 +144,7 @@ describe('uniformInsertionIndex', () => {
   });
 });
 
-describe('autoScrollVelocity', () => {
+describe(autoScrollVelocity, () => {
   const zone = { start: 0, end: 400, edge: 48, maxSpeed: 16 };
 
   it('is zero away from the edges', () => {
@@ -153,7 +155,8 @@ describe('autoScrollVelocity', () => {
     const half = autoScrollVelocity({ ...zone, pos: 24 });
     expect(half).toBeCloseTo(-8);
     expect(autoScrollVelocity({ ...zone, pos: 0 })).toBe(-16);
-    expect(autoScrollVelocity({ ...zone, pos: -20 })).toBe(-16); // past the edge stays saturated
+    // past the edge stays saturated
+    expect(autoScrollVelocity({ ...zone, pos: -20 })).toBe(-16);
     expect(autoScrollVelocity({ ...zone, pos: 376 })).toBeCloseTo(8);
     expect(autoScrollVelocity({ ...zone, pos: 400 })).toBe(16);
   });
@@ -190,7 +193,8 @@ describe('keyboard drag state machine', () => {
     drag = keyboardMove(drag, board, 'up');
     expect(drag.target).toStrictEqual({ columnId: 'todo', index: 0 });
     const clamped = keyboardMove(drag, board, 'up');
-    expect(clamped).toBe(drag); // boundary no-op returns the same session
+    // boundary no-op returns the same session
+    expect(clamped).toBe(drag);
     drag = keyboardMove(drag, board, 'down');
     drag = keyboardMove(drag, board, 'down');
     expect(drag.target).toStrictEqual({ columnId: 'todo', index: 2 });
@@ -201,10 +205,13 @@ describe('keyboard drag state machine', () => {
   it('moves across columns, clamping the index to the destination size', () => {
     let drag = keyboardLift(board, 'todo', 2)!;
     drag = keyboardMove(drag, board, 'right');
-    expect(drag.target).toStrictEqual({ columnId: 'review', index: 2 }); // review holds 2 cards → max 2
+    // review holds 2 cards → max 2
+    expect(drag.target).toStrictEqual({ columnId: 'review', index: 2 });
     drag = keyboardMove(drag, board, 'right');
-    expect(drag.target).toStrictEqual({ columnId: 'done', index: 0 }); // empty column → index 0
-    expect(keyboardMove(drag, board, 'right')).toBe(drag); // last column no-op
+    // empty column → index 0
+    expect(drag.target).toStrictEqual({ columnId: 'done', index: 0 });
+    // last column no-op
+    expect(keyboardMove(drag, board, 'right')).toBe(drag);
     drag = keyboardMove(drag, board, 'left');
     expect(drag.target).toStrictEqual({ columnId: 'review', index: 0 });
   });

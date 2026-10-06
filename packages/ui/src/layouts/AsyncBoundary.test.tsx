@@ -1,6 +1,4 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 
 import { renderWithProviders } from '@repo/test-utils';
 import { createDefaultThemeConfig } from '@repo/theme';
@@ -14,11 +12,16 @@ import { Text as HouseText } from '../Text';
 
 import { AsyncBoundary, resolveAsyncStatus, useAsyncCount, __resetAsyncDevWarnSeen } from './AsyncBoundary';
 
-afterEach(() => {
-  __resetAsyncDevWarnSeen();
-});
+const CountProbe = () => {
+  const count = useAsyncCount(12);
+  return <Text data-testid="count">{count == null ? 'hidden' : String(count)}</Text>;
+};
 
-describe('resolveAsyncStatus', () => {
+describe(resolveAsyncStatus, () => {
+  afterEach(() => {
+    __resetAsyncDevWarnSeen();
+  });
+
   it('prioritizes error over loading and empty', () => {
     expect(resolveAsyncStatus({ error: 'fail', loading: true, empty: true })).toBe('error');
     expect(resolveAsyncStatus({ loading: true, empty: true })).toBe('loading');
@@ -27,7 +30,7 @@ describe('resolveAsyncStatus', () => {
   });
 });
 
-describe('AsyncBoundary', () => {
+describe(AsyncBoundary, () => {
   let warnSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
@@ -35,6 +38,7 @@ describe('AsyncBoundary', () => {
   });
 
   afterEach(() => {
+    __resetAsyncDevWarnSeen();
     warnSpy.mockRestore();
   });
 
@@ -122,7 +126,7 @@ describe('AsyncBoundary', () => {
   });
 
   it('keeps previous data on a refetch error and still offers retry', () => {
-    const onRetry = vi.fn();
+    const onRetry = vi.fn<() => void>();
     const { rerender } = renderWithProviders(
       <AsyncBoundary
         layout="list"
@@ -180,7 +184,7 @@ describe('AsyncBoundary', () => {
   });
 
   it('calls onRetry from default error action', () => {
-    const onRetry = vi.fn();
+    const onRetry = vi.fn<() => void>();
     renderWithProviders(
       <AsyncBoundary
         error
@@ -193,10 +197,6 @@ describe('AsyncBoundary', () => {
   });
 
   it('hides chrome and Badge counts on error', () => {
-    const CountProbe = () => {
-      const count = useAsyncCount(12);
-      return <Text data-testid="count">{count == null ? 'hidden' : String(count)}</Text>;
-    };
     renderWithProviders(
       <AsyncBoundary
         error="boom"
@@ -239,10 +239,10 @@ const houseConfig = createDefaultThemeConfig();
 const SCHEMES = ['light', 'dark'] as const;
 
 const weightClasses = (el: Element): string[] =>
-  String((el as HTMLElement).className || '')
+  el.className
     .split(' ')
     .filter((c) => c.startsWith('_fow-'))
-    .sort();
+    .toSorted();
 
 const SchemeWrap = ({ scheme, children }: { scheme: (typeof SCHEMES)[number]; children: ReactNode }) => (
   <TamaguiProvider
@@ -256,16 +256,30 @@ const SchemeWrap = ({ scheme, children }: { scheme: (typeof SCHEMES)[number]; ch
 const renderInScheme = (scheme: (typeof SCHEMES)[number], ui: ReactElement) =>
   renderWithProviders(<SchemeWrap scheme={scheme}>{ui}</SchemeWrap>);
 
-const expectRetryWeight400 = (pin: string[]) => {
+const retryWeightFacts = () => {
   const node = screen.getByText('Retry');
-  expect(node.tagName).not.toBe('BUTTON');
-  expect(weightClasses(node)).toStrictEqual(pin);
-  expect(node.className).toMatch(/_fow-400\b/u);
-  expect(node.className).not.toMatch(/_fow-500\b/u);
-  expect(node.className).not.toMatch(/_fow-600\b/u);
+  return {
+    isButton: node.tagName === 'BUTTON',
+    weights: weightClasses(node),
+    hasWeight400: /_fow-400\b/u.test(node.className),
+    hasWeight500: /_fow-500\b/u.test(node.className),
+    hasWeight600: /_fow-600\b/u.test(node.className),
+  };
 };
 
+const retryWeight400Facts = (pin: string[]) => ({
+  isButton: false,
+  weights: pin,
+  hasWeight400: true,
+  hasWeight500: false,
+  hasWeight600: false,
+});
+
 describe('AsyncBoundary Retry label weight', () => {
+  afterEach(() => {
+    __resetAsyncDevWarnSeen();
+  });
+
   it.each(SCHEMES)('%s: first-load Retry TEXT NODE is weight 400, never 500/600', (scheme) => {
     renderInScheme(scheme, <HouseText fontWeight="400">Retry-pin</HouseText>);
     const pin = weightClasses(screen.getByText('Retry-pin'));
@@ -279,7 +293,7 @@ describe('AsyncBoundary Retry label weight', () => {
         onRetry={() => {}}
       />,
     );
-    expectRetryWeight400(pin);
+    expect(retryWeightFacts()).toStrictEqual(retryWeight400Facts(pin));
   });
 
   it.each(SCHEMES)('%s: stale-refetch Retry TEXT NODE is weight 400, never 500/600', (scheme) => {
@@ -307,11 +321,15 @@ describe('AsyncBoundary Retry label weight', () => {
       </SchemeWrap>,
     );
 
-    expectRetryWeight400(pin);
+    expect(retryWeightFacts()).toStrictEqual(retryWeight400Facts(pin));
   });
 });
 
 describe('AsyncBoundary layout skeletons', () => {
+  afterEach(() => {
+    __resetAsyncDevWarnSeen();
+  });
+
   it.each(['list', 'table', 'kanban', 'dashboard', 'generic'] as const)('renders %s skeleton', (layout) => {
     renderWithProviders(
       <AsyncBoundary

@@ -46,6 +46,11 @@ export interface GanttSpan {
   end: Date;
 }
 
+export interface GanttSpanEdges {
+  startEdge: Date;
+  endEdge: Date;
+}
+
 /**
  * Normalized paint edges for a task span.
  *
@@ -55,7 +60,7 @@ export interface GanttSpan {
  * time-of-day are exact edges. Degenerate/inverted spans clamp to at least
  * one full day from the start so every task paints a visible bar.
  */
-export const normalizeSpanEdges = (span: GanttSpan): { startEdge: Date; endEdge: Date } => {
+export const normalizeSpanEdges = (span: GanttSpan): GanttSpanEdges => {
   const startEdge = span.start;
   const midnightEnd =
     span.end.getHours() === 0 &&
@@ -371,9 +376,10 @@ export const generateTicks = (
 ): GanttTick[] => {
   const ticks: GanttTick[] = [];
   const totalDays = rangeDays(range);
-  for (let i = 0; i < totalDays; i++) {
+  for (let i = 0; i < totalDays; i += 1) {
     const date = addDays(startOfDay(range.start), i);
     const x = i * pxPerDay;
+    const weekStart = dayDiff(startOfWeek(date, firstDayOfWeek), date) === 0;
     if (zoom === 'day') {
       const monthEdge = date.getDate() === 1 || i === 0;
       ticks.push({
@@ -382,29 +388,24 @@ export const generateTicks = (
         major: true,
         label: monthEdge ? monthDayLabel(date) : dayLabel(date),
       });
-      continue;
-    }
-    if (zoom === 'week') {
-      const weekStart = dayDiff(startOfWeek(date, firstDayOfWeek), date) === 0;
+    } else if (zoom === 'week') {
       ticks.push({
         x,
         date,
         major: weekStart,
         label: weekStart ? monthDayLabel(date) : undefined,
       });
-      continue;
+    } else {
+      const monthStart = date.getDate() === 1;
+      if (monthStart || weekStart) {
+        ticks.push({
+          x,
+          date,
+          major: monthStart,
+          label: monthStart ? monthYearLabel(date) : undefined,
+        });
+      }
     }
-    const monthStart = date.getDate() === 1;
-    const weekStart = dayDiff(startOfWeek(date, firstDayOfWeek), date) === 0;
-    if (!monthStart && !weekStart) {
-      continue;
-    }
-    ticks.push({
-      x,
-      date,
-      major: monthStart,
-      label: monthStart ? monthYearLabel(date) : undefined,
-    });
   }
   return ticks;
 };
@@ -437,23 +438,26 @@ export const formatSpanLabel = (span: GanttSpan): string => {
   return startLabel === endLabel ? startLabel : `${startLabel} – ${endLabel}`;
 };
 
+export interface GanttOpenSpanLabelParts {
+  start?: string;
+  end?: string;
+}
+
 /**
  * The date halves of an open span's label, each absent exactly when its bound
  * is. The WORDS around them belong to the view, which has `t()` — this stays
  * pure and says only what the dates are.
  */
-export const openSpanLabelParts = (span: GanttOpenSpan): { start?: string; end?: string } => {
+export const openSpanLabelParts = (span: GanttOpenSpan): GanttOpenSpanLabelParts => {
   const extent = openSpanExtent(span);
   if (!extent) {
     return {};
   }
   const { startEdge, endEdge } = normalizeSpanEdges(extent);
   const lastDay = addDays(endEdge, -1);
+  const endDay = lastDay.getTime() >= startEdge.getTime() ? lastDay : startEdge;
   return {
     start: span.start === undefined ? undefined : monthDayLabel(startEdge),
-    end:
-      span.end === undefined
-        ? undefined
-        : monthDayLabel(lastDay.getTime() >= startEdge.getTime() ? lastDay : startEdge),
+    end: span.end === undefined ? undefined : monthDayLabel(endDay),
   };
 };

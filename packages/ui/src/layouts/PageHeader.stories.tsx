@@ -100,7 +100,7 @@ export const WithNav: Story = {
 };
 
 export const TitleOnly: Story = {
-  args: { subtitle: undefined },
+  args: { subtitle: '' },
   render: (args) => (
     <HeaderCanvas>
       <PageHeader {...args} />
@@ -114,7 +114,7 @@ export const TitleOnly: Story = {
  * per-instance eject back to the 64px hero scale for one marketing header.
  */
 export const DisplayScale: Story = {
-  args: { titleScale: 'display', subtitle: undefined, divider: false },
+  args: { titleScale: 'display', subtitle: '', divider: false },
   render: (args) => <PageHeader {...args} />,
 };
 
@@ -123,7 +123,7 @@ export const DisplayScale: Story = {
  * inside it, so a marketing surface asks once instead of per header.
  */
 export const HeroPresetSurface: Story = {
-  args: { subtitle: undefined, divider: false },
+  args: { subtitle: '', divider: false },
   render: (args) => (
     <Preset preset="hero">
       <PageHeader {...args} />
@@ -132,7 +132,7 @@ export const HeroPresetSurface: Story = {
 };
 
 export const NoTitle: Story = {
-  args: { title: undefined, subtitle: undefined },
+  args: { title: '', subtitle: '' },
   render: (args) => (
     <HeaderCanvas>
       <PageHeader

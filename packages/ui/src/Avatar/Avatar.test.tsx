@@ -5,9 +5,15 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { Avatar, fallbackTone, fallbackToneIndex, getInitials } from './index';
 
-afterEach(cleanup);
+/** Painted diameter the face publishes on `data-avatar-px`. */
+const pxOf = (container: HTMLElement) =>
+  Number(container.querySelector<HTMLElement>('[data-avatar-px]')?.dataset.avatarPx);
 
-describe('getInitials', () => {
+const declaration = (container: HTMLElement) => container.querySelector<HTMLElement>('[data-radius-class]');
+
+describe(getInitials, () => {
+  afterEach(cleanup);
+
   it('takes first letters of two words', () => {
     expect(getInitials('Ada Lovelace')).toBe('AL');
   });
@@ -25,7 +31,9 @@ describe('getInitials', () => {
   });
 });
 
-describe('fallbackTone', () => {
+describe(fallbackTone, () => {
+  afterEach(cleanup);
+
   it('is stable for the same seed', () => {
     expect(fallbackToneIndex('Ada Lovelace')).toBe(fallbackToneIndex('Ada Lovelace'));
     expect(fallbackTone('Ada Lovelace')).toStrictEqual(fallbackTone('Ada Lovelace'));
@@ -36,9 +44,8 @@ describe('fallbackTone', () => {
   });
 });
 
-describe('Avatar', () => {
-  const pxOf = (container: HTMLElement) =>
-    Number(container.querySelector('[data-avatar-px]')?.getAttribute('data-avatar-px'));
+describe(Avatar, () => {
+  afterEach(cleanup);
 
   it('renders initials from name', () => {
     const { container } = renderWithProviders(<Avatar name="Ada Lovelace" />);
@@ -87,7 +94,7 @@ describe('Avatar', () => {
     // resolveKnobs.applyDensity / compactSpaceMap) — it must not shrink a
     // painted control. Only `nested` and an explicit size token move the face.
     expect(pxOf(compact.container)).toBe(36);
-    expect(nested.container.querySelector('[data-avatar-nested]')?.getAttribute('data-avatar-nested')).toBe('true');
+    expect(nested.container.querySelector<HTMLElement>('[data-avatar-nested]')?.dataset.avatarNested).toBe('true');
   });
 
   it('lets an explicit size token eject the recipe', () => {
@@ -101,7 +108,7 @@ describe('Avatar', () => {
   });
 
   it('restores the 44px floor with hitSlop when painted below it', () => {
-    const onPress = vi.fn();
+    const onPress = vi.fn<() => void>();
     const { container } = renderWithProviders(
       <Avatar
         name="Ada Lovelace"
@@ -109,15 +116,17 @@ describe('Avatar', () => {
         onPress={onPress}
       />,
     );
-    const el = container.querySelector('[data-avatar-interactive]');
-    expect(el?.getAttribute('data-avatar-px')).toBe('32');
-    expect(el?.getAttribute('data-avatar-hitslop')).toBe('6');
-    fireEvent.click(el as Element);
+    const el = container.querySelector<HTMLElement>('[data-avatar-interactive]');
+    expect(el?.dataset.avatarPx).toBe('32');
+    expect(el?.dataset.avatarHitslop).toBe('6');
+    fireEvent.click(el!);
     expect(onPress).toHaveBeenCalledOnce();
   });
 });
 
 describe('Avatar.Group', () => {
+  afterEach(cleanup);
+
   it('overflows extras as +N (Primer stack cap)', () => {
     const { container } = renderWithProviders(
       <Avatar.Group max={2}>
@@ -128,7 +137,7 @@ describe('Avatar.Group', () => {
     );
     expect(container.textContent).toContain('+1');
     expect(container.querySelector('[data-avatar-group]')).toBeTruthy();
-    expect(container.querySelector('[data-avatar-overlap]')?.getAttribute('data-avatar-overlap')).toBe('true');
+    expect(container.querySelector<HTMLElement>('[data-avatar-overlap]')?.dataset.avatarOverlap).toBe('true');
   });
 
   it('flush square stacks declare no identity circle', () => {
@@ -149,13 +158,13 @@ describe('Avatar.Group', () => {
 // contract — the `radius:none` sweep reads it off the DOM and matches it
 // against the registry generated from the spec's radius-class table.
 describe('Avatar identity-shape declaration', () => {
-  const declaration = (container: HTMLElement) => container.querySelector('[data-radius-class]');
+  afterEach(cleanup);
 
   it('declares R-IDENTITY / Avatar while it is a circle', () => {
     const { container } = renderWithProviders(<Avatar name="Ada Lovelace" />);
     const el = declaration(container);
-    expect(el?.getAttribute('data-radius-class')).toBe('R-IDENTITY');
-    expect(el?.getAttribute('data-radius-part')).toBe('Avatar');
+    expect(el?.dataset.radiusClass).toBe('R-IDENTITY');
+    expect(el?.dataset.radiusPart).toBe('Avatar');
   });
 
   it('declares on the compound branch too', () => {
@@ -166,7 +175,7 @@ describe('Avatar identity-shape declaration', () => {
         </Avatar.Fallback>
       </Avatar>,
     );
-    expect(declaration(container)?.getAttribute('data-radius-class')).toBe('R-IDENTITY');
+    expect(declaration(container)?.dataset.radiusClass).toBe('R-IDENTITY');
   });
 
   it('drops the declaration when a consumer ejects to circular={false}', () => {
@@ -185,21 +194,21 @@ describe('Avatar identity-shape declaration', () => {
 // Button.test.tsx. CIRCULAR-AT-FULL writes a px number, not a `$12` token.
 const squareFaceRadiusPx = (container: HTMLElement): number | undefined => {
   const el = container.querySelector('[data-avatar-px]');
-  const token = String(el?.className || '')
-    .split(' ')
-    .find((c) => c.startsWith('_btlr-'));
-  if (!token) {
+  const token = (el?.getAttribute('class') ?? '').split(' ').find((c) => c.startsWith('_btlr-'));
+  if (token === undefined) {
     return undefined;
   }
-  const px = /^_btlr-(\d+(?:\.\d+)?)px$/u.exec(token);
-  if (px) {
-    return Number(px[1]);
+  const px = /^_btlr-(?<value>\d+(?:\.\d+)?)px$/u.exec(token)?.groups?.value;
+  if (px !== undefined) {
+    return Number(px);
   }
-  const bare = /^_btlr-(\d+(?:\.\d+)?)$/u.exec(token);
-  return bare ? Number(bare[1]) : undefined;
+  const bare = /^_btlr-(?<value>\d+(?:\.\d+)?)$/u.exec(token)?.groups?.value;
+  return bare === undefined ? undefined : Number(bare);
 };
 
 describe('Avatar square face radius (CIRCULAR-AT-FULL)', () => {
+  afterEach(cleanup);
+
   const STOPS = {
     none: 0,
     small: 5,
@@ -218,12 +227,12 @@ describe('Avatar square face radius (CIRCULAR-AT-FULL)', () => {
         />
       </Preset>,
     );
-    const face = container.querySelector('[data-avatar-px]') as HTMLElement;
-    expect(face.getAttribute('data-avatar-px')).toBe(String(FACE));
+    const face = container.querySelector<HTMLElement>('[data-avatar-px]')!;
+    expect(face.dataset.avatarPx).toBe(String(FACE));
     const radius = squareFaceRadiusPx(container);
     expect(radius).toBe(FACE / 2);
     expect(radius).not.toBe(50);
-    expect(String(face.className)).not.toMatch(/_btlr-t-radius-12/u);
+    expect(face.className).not.toMatch(/_btlr-t-radius-12/u);
     expect(container.querySelector('[data-radius-class]')).toBeNull();
   });
 
@@ -252,9 +261,9 @@ describe('Avatar square face radius (CIRCULAR-AT-FULL)', () => {
         />
       </Preset>,
     );
-    const face = container.querySelector('[data-avatar-px]') as HTMLElement;
-    expect(face.getAttribute('data-radius-class')).toBe('R-IDENTITY');
+    const face = container.querySelector<HTMLElement>('[data-avatar-px]')!;
+    expect(face.dataset.radiusClass).toBe('R-IDENTITY');
     expect(squareFaceRadiusPx(container)).not.toBe(FACE / 2);
-    expect(String(face.className)).toMatch(/_btlr-100000px/u);
+    expect(face.className).toMatch(/_btlr-100000px/u);
   });
 });

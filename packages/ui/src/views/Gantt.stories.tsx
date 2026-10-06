@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { Text, YStack } from 'tamagui';
 
 import { GanttView } from './Gantt';
-import type { GanttItemMoveRange, GanttSpanRef, GanttTask } from './Gantt';
+import type { GanttItemMoveRange, GanttSpanRef, GanttTask, GanttTaskSpan } from './Gantt';
 import { addDays, startOfDay } from './gantt-math';
 
 // Fixture colors from the sanctioned categorical palette —
@@ -39,6 +39,9 @@ const meta: Meta = {
 };
 
 export default meta;
+
+const retimeSpan = (spans: GanttTaskSpan[], index: number | undefined, range: GanttItemMoveRange): GanttTaskSpan[] =>
+  spans.map((s, i) => (i === index ? { ...s, start: range.start, end: range.end } : s));
 
 export const Default = {
   name: 'Main',
@@ -254,10 +257,7 @@ const TrackViewDemo = () => {
               if (!t.spans) {
                 return { ...t, start: range.start, end: range.end };
               }
-              return {
-                ...t,
-                spans: t.spans.map((s, i) => (i === span?.index ? { ...s, start: range.start, end: range.end } : s)),
-              };
+              return { ...t, spans: retimeSpan(t.spans, span?.index, range) };
             }),
           );
         }}

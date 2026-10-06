@@ -108,7 +108,7 @@ export const NoResults = {
  * Failed load wins over empty — error chrome with Retry replaces the report;
  * the toolbar's column count and the table hide so they can't lie.
  */
-export const Error = {
+const ErrorStory = {
   render: () => (
     <ReportBuilder
       columns={columns}
@@ -118,3 +118,5 @@ export const Error = {
     />
   ),
 };
+
+export { ErrorStory as Error };

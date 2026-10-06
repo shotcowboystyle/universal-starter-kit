@@ -77,11 +77,12 @@ export const locateNode = (
     items: readonly DndTreeNode[],
     parentId: string | null,
   ): { node: DndTreeNode; parentId: string | null; index: number } | null => {
-    for (let i = 0; i < items.length; i++) {
+    for (let i = 0; i < items.length; i += 1) {
       if (items[i].id === id) {
         return { node: items[i], parentId, index: i };
       }
-      const found = items[i].children ? walk(items[i].children!, items[i].id) : null;
+      const { children } = items[i];
+      const found = children == null ? null : walk(children, items[i].id);
       if (found) {
         return found;
       }
@@ -121,13 +122,13 @@ export const subtreeIds = (nodes: readonly DndTreeNode[], id: string): Set<strin
 export const flattenDndRows = (nodes: readonly DndTreeNode[], expandedIds: ReadonlySet<string>): TreeDndRow[] => {
   const result: TreeDndRow[] = [];
   const walk = (items: readonly DndTreeNode[], parentId: string | null, depth: number) => {
-    for (let i = 0; i < items.length; i++) {
+    for (let i = 0; i < items.length; i += 1) {
       const node = items[i];
       const hasChildren = (node.children?.length ?? 0) > 0;
       const isExpanded = hasChildren && expandedIds.has(node.id);
       result.push({ id: node.id, parentId, childIndex: i, depth, hasChildren, isExpanded });
-      if (isExpanded) {
-        walk(node.children!, node.id, depth + 1);
+      if (isExpanded && node.children !== undefined) {
+        walk(node.children, node.id, depth + 1);
       }
     }
   };
@@ -203,8 +204,8 @@ export const treeKeyboardMove = (
       return session;
     }
     const siblings = childrenOf(nodes, target.parentId).filter((c) => c.id !== session.nodeId);
-    const prev = siblings[target.index - 1];
-    if (!prev) {
+    const prev = siblings.at(target.index - 1);
+    if (prev === undefined) {
       return session;
     }
     return {
@@ -293,7 +294,7 @@ const wdChildCountFromRows = (
   let count = 0;
   for (const r of rows) {
     if (r.parentId === parentId && r.id !== session.nodeId) {
-      count++;
+      count += 1;
     }
   }
   return count;
@@ -319,7 +320,7 @@ export const treeDropTargetForY = ({
   let row: TreeDndRow | null = null;
   let rowTop = 0;
   let rowIndex = -1;
-  for (let i = 0; i < rows.length; i++) {
+  for (let i = 0; i < rows.length; i += 1) {
     const h = getHeight(rows[i].id);
     if (localY < top + h) {
       row = rows[i];
@@ -387,14 +388,15 @@ export const indicatorForTarget = (
   target: TreeDropTarget,
 ): TreeDropIndicator => {
   const visibleSiblings: { row: TreeDndRow; flatIndex: number }[] = [];
-  for (let i = 0; i < rows.length; i++) {
+  for (let i = 0; i < rows.length; i += 1) {
     const r = rows[i];
     if (r.parentId === target.parentId && r.id !== session.nodeId) {
       visibleSiblings.push({ row: r, flatIndex: i });
     }
   }
 
-  if (visibleSiblings.length === 0) {
+  const last = visibleSiblings.at(-1);
+  if (last === undefined) {
     return target.parentId === null
       ? { kind: 'line', flatIndex: 0, depth: 0 }
       : { kind: 'into', parentId: target.parentId };
@@ -406,15 +408,31 @@ export const indicatorForTarget = (
   }
 
   // Append position: after the last visible sibling's whole subtree.
-  const last = visibleSiblings[visibleSiblings.length - 1];
   let flatIndex = last.flatIndex + 1;
   while (flatIndex < rows.length && rows[flatIndex].depth > last.row.depth) {
-    flatIndex++;
+    flatIndex += 1;
   }
   return { kind: 'line', flatIndex, depth: last.row.depth };
 };
 
 // ── Move application (immutable) ──────────────────────────────
+
+// SAFETY: a generic `N extends DndTreeNode` tree nests its own node type, so `children` holds `N`s.
+// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- N[] is narrower than DndTreeNode[] only by that nesting contract
+const childNodes = <N extends DndTreeNode>(node: N): N[] => (node.children ?? []) as N[];
+
+const findNode = <N extends DndTreeNode>(items: readonly N[], id: string): N | null => {
+  for (const item of items) {
+    if (item.id === id) {
+      return item;
+    }
+    const found = findNode(childNodes(item), id);
+    if (found !== null) {
+      return found;
+    }
+  }
+  return null;
+};
 
 /**
  * Apply a move to a tree, returning a new tree (nodes untouched on invalid
@@ -431,19 +449,22 @@ export const applyTreeMove = <N extends DndTreeNode>(
     target.parentId !== null &&
     (subtreeIds(nodes, nodeId).has(target.parentId) || !locateNode(nodes, target.parentId))
   ) {
-    return nodes.slice();
+    return [...nodes];
   }
 
-  let moved: N | null = null;
+  const node = findNode(nodes, nodeId);
+  if (node === null) {
+    return [...nodes];
+  }
+
   const remove = (items: readonly N[]): N[] => {
     const result: N[] = [];
     for (const item of items) {
       if (item.id === nodeId) {
-        moved = item;
         continue;
       }
       if (item.children && item.children.length > 0) {
-        const children = remove(item.children as N[]);
+        const children = remove(childNodes(item));
         result.push(children === item.children ? item : { ...item, children });
       } else {
         result.push(item);
@@ -453,10 +474,6 @@ export const applyTreeMove = <N extends DndTreeNode>(
   };
 
   const removed = remove(nodes);
-  if (!moved) {
-    return nodes.slice();
-  }
-  const node = moved as N;
 
   const insertWalk = (items: N[], parentId: string | null): N[] => {
     if (parentId === target.parentId) {
@@ -465,10 +482,10 @@ export const applyTreeMove = <N extends DndTreeNode>(
     }
     return items.map((item) => {
       const isTargetParent = item.id === target.parentId;
-      if (!isTargetParent && !item.children?.length) {
+      if (!isTargetParent && (item.children?.length ?? 0) === 0) {
         return item;
       }
-      const children = insertWalk((item.children ?? []) as N[], item.id);
+      const children = insertWalk(childNodes(item), item.id);
       return children === item.children ? item : { ...item, children };
     });
   };

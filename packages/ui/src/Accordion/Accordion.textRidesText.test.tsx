@@ -36,6 +36,7 @@ describe('Accordion TEXT-RIDES-TEXT', () => {
   });
 
   it('renders array-of-strings description wrapped', () => {
+    // oxlint-disable-next-line typescript/no-inferrable-types -- the annotation widens the literal so the ternary below stays a runtime branch
     const count: number = 0;
     renderWithProviders(
       <Accordion>

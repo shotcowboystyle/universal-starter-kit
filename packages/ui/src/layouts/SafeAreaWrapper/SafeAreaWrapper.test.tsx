@@ -6,11 +6,9 @@ import { applySafeAreaInsets } from './insets';
 
 import { SafeAreaWrapper } from './index';
 
-afterEach(cleanup);
-
 const insets = { top: 47, bottom: 34, left: 0, right: 0 };
 
-describe('applySafeAreaInsets', () => {
+describe(applySafeAreaInsets, () => {
   it('applies padding on every requested edge and zero on the rest', () => {
     expect(applySafeAreaInsets(insets, ['top', 'bottom'], 'padding')).toStrictEqual({
       paddingTop: 47,
@@ -40,6 +38,8 @@ describe('applySafeAreaInsets', () => {
 });
 
 describe('SafeAreaWrapper web', () => {
+  afterEach(cleanup);
+
   it('is a passthrough that still renders children', () => {
     const { container } = renderWithProviders(
       <SafeAreaWrapper
@@ -48,9 +48,9 @@ describe('SafeAreaWrapper web', () => {
         <span>Page body</span>
       </SafeAreaWrapper>,
     );
-    const frame = container.querySelector('[data-testid="safe-area-wrapper"]') as HTMLElement;
+    const frame = container.querySelector<HTMLElement>('[data-testid="safe-area-wrapper"]')!;
     expect(frame).toBeTruthy();
-    expect(frame.getAttribute('data-safe-area')).toBe('web');
+    expect(frame.dataset.safeArea).toBe('web');
     expect(frame.textContent).toContain('Page body');
   });
 
@@ -60,7 +60,7 @@ describe('SafeAreaWrapper web', () => {
         <span>Padded</span>
       </SafeAreaWrapper>,
     );
-    const frame = container.querySelector('[data-testid="safe-area-wrapper"]') as HTMLElement;
+    const frame = container.querySelector<HTMLElement>('[data-testid="safe-area-wrapper"]')!;
     expect(frame.textContent).toContain('Padded');
     const haystack = `${frame.className} ${frame.getAttribute('style') ?? ''}`;
     expect(haystack).toMatch(/_pt-|_pr-|_pb-|_pl-/u);

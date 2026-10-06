@@ -29,7 +29,7 @@ const PaneFill = ({ label, hint, muted }: { label: string; hint?: string; muted?
     justifyContent="center"
     gap="$2">
     <Paragraph fontWeight="600">{label}</Paragraph>
-    {hint ? <HouseText fontSize="$2">{hint}</HouseText> : null}
+    {hint !== undefined && hint !== '' ? <HouseText fontSize="$2">{hint}</HouseText> : null}
   </YStack>
 );
 
@@ -54,7 +54,7 @@ const DemoList = ({ active = 0 }: { active?: number }) => {
             backgroundColor={selected ? '$accentBackground' : 'transparent'}>
             <Text
               fontWeight={selected ? '600' : '400'}
-              color={selected && onAccent ? onAccent : componentColors.text.primary}>
+              color={selected && onAccent != null && onAccent !== '' ? onAccent : componentColors.text.primary}>
               {label}
             </Text>
           </YStack>

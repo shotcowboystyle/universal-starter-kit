@@ -16,7 +16,7 @@ import {
 const knobs = (overrides: Partial<typeof defaultKnobs> = {}) =>
   resolveKnobs({ ...defaultKnobs, ...overrides }).knobProps;
 
-describe('treeEdgeRowPad', () => {
+describe(treeEdgeRowPad, () => {
   it('is the shared SP-EDGE token map (same stops as getTableCellPadding)', () => {
     expect(TREE_EDGE_ROW_PAD.small).toStrictEqual({
       paddingHorizontal: '$1.5',
@@ -40,7 +40,7 @@ describe('treeEdgeRowPad', () => {
   });
 });
 
-describe('treeIndentStep', () => {
+describe(treeIndentStep, () => {
   it('is proportional to nestedControl.px (size), not a space-keyed table', () => {
     const small = knobs({ size: 'small' }).nestedControl.px;
     const medium = knobs({ size: 'medium' }).nestedControl.px;
@@ -52,7 +52,7 @@ describe('treeIndentStep', () => {
   });
 });
 
-describe('treeDefaultHeight', () => {
+describe(treeDefaultHeight, () => {
   it('derives the viewport from nestedControl, not 320/400/480 literals', () => {
     const medium = knobs({ size: 'medium' }).nestedControl.px;
     expect(TREE_VIEWPORT_ROWS).toBe(12.5);
@@ -62,9 +62,9 @@ describe('treeDefaultHeight', () => {
   });
 });
 
-describe('TREE_LIFT_SHADOW', () => {
+describe('TREE_LIFT_SHADOW token', () => {
   it('uses a theme token, not a hex (design-audit inline color)', () => {
     expect(TREE_LIFT_SHADOW.shadowColor).toBe('$shadowColor');
-    expect(String(TREE_LIFT_SHADOW.shadowColor)).not.toMatch(/^#/u);
+    expect(TREE_LIFT_SHADOW.shadowColor).not.toMatch(/^#/u);
   });
 });

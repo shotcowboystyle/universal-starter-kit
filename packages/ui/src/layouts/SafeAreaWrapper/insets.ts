@@ -19,7 +19,7 @@ export const applySafeAreaInsets = (
   insets: SafeAreaInsets,
   edges: SafeAreaEdge[] = ALL_EDGES,
   mode: SafeAreaMode = 'padding',
-): Record<string, number> => {
+) => {
   const edgesSet = new Set(edges);
   if (mode === 'padding') {
     return {

@@ -241,7 +241,7 @@ export const Empty = {
 };
 
 /** Failed load — error chrome with retry wins over empty; KPI chrome hides. */
-export const Error = {
+const ErrorStory = {
   render: () => (
     <Dashboard
       widgets={[]}
@@ -279,3 +279,5 @@ export const Stat = {
     />
   ),
 };
+
+export { ErrorStory as Error };

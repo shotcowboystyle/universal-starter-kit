@@ -8,7 +8,8 @@ import {
   useResolvedKnobs,
   wasKeyboardFocus,
 } from '@repo/theme';
-import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import type React from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Input, Label, Popover, Text, View, XStack, YStack, isWeb, styled } from 'tamagui';
 import type { InputProps, YStackProps } from 'tamagui';
 
@@ -98,95 +99,152 @@ type ListOption =
   | { kind: 'create'; key: 'create'; label: string }
   | { kind: 'suggestion'; key: string; label: string; tag: TagItem };
 
+type ResolvedKnobProps = ReturnType<typeof useResolvedKnobs>['knobProps'];
+
+type TranslateFn = ReturnType<typeof useTranslation>['t'];
+
+const NO_SUGGESTIONS: TagItem[] = [];
+const NO_LABELS: NonNullable<TagsProps['labels']> = {};
+const MAX_SUGGESTIONS = 10;
+const CHIP_COLORS = ['gray', 'red', 'green', 'blue', 'yellow', 'orange', 'purple'] as const satisfies ChipColor[];
+
 // ---------------------------------------------------------------------------
-// Component
+// Pure helpers
 // ---------------------------------------------------------------------------
 
-/**
- * Generic Tags component for displaying and managing tags.
- * Fully data-agnostic -- accepts tags via props and emits callbacks.
- *
- * Polariss Combobox + GitHub TokenInput anatomy: chips live inside one
- * input-surface field (rings that field on text focus). Suggestions
- * are a CONTAINER-CLIP listbox: flat rows, overlay clips corners,
- * keyboard-active row is fill + inset ring (never a border on every sibling).
- */
-export const Tags = ({
+const resolveChipSize = (sizeToken: string, compact = false): ChipSize => {
+  if (compact) {
+    if (sizeToken === '$5') {
+      return '$4';
+    }
+    return sizeToken === '$4' ? '$3' : '$2';
+  }
+  // sizeToken comes from sizeTokenMap in resolve-knobs: $3 | $4 | $5.
+  if (sizeToken === '$3' || sizeToken === '$5') {
+    return sizeToken;
+  }
+  return '$4';
+};
+
+const resolveChipVariant = (variant: TagVariant): ChipVariant => {
+  if (variant === 'filled') {
+    return 'solid';
+  }
+  if (variant === 'outlined') {
+    return 'outline';
+  }
+  if (variant === 'ghost') {
+    return 'subtle';
+  }
+  return variant;
+};
+
+const fieldPadding = (compact = false) =>
+  compact ? ({ horizontal: '$2', vertical: '$1.5' } as const) : ({ horizontal: '$2.5', vertical: '$2' } as const);
+
+// "listbox" is a valid ARIA role but outside RN's `Role` union; forwarded to
+// the DOM node on web. The index signature keeps it out of prop type-checking.
+interface ListboxRoleProps {
+  [prop: string]: 'listbox';
+}
+
+const LISTBOX_ROLE_PROPS: ListboxRoleProps = { role: 'listbox' };
+
+const resolveChipColor = (chipTheme: string | undefined): ChipColor =>
+  CHIP_COLORS.find((color) => color === chipTheme) ?? 'gray';
+
+const resolveTagLabels = (labels: NonNullable<TagsProps['labels']>, t: TranslateFn) => ({
+  addTagLabel: labels.addTag ?? t('Add Tag'),
+  noTagsLabel: labels.noTags ?? t('No tags'),
+  suggestionsLabel: labels.suggestions ?? t('Suggestions'),
+  noAvailableTagsLabel: labels.noAvailableTags ?? t('No available tags'),
+  createTagLabel: labels.createTag ?? ((value: string) => withInterp(t('Create "{{value}}"'), { value })),
+});
+
+const stepActiveIndex = (current: number, count: number, direction: 'down' | 'up'): number => {
+  if (count === 0) {
+    return -1;
+  }
+  if (direction === 'down') {
+    return current < 0 ? 0 : Math.min(current + 1, count - 1);
+  }
+  return current < 0 ? count - 1 : Math.max(current - 1, 0);
+};
+
+interface CanAddArgs {
+  disabled: boolean;
+  enableAdd: boolean;
+  hasOnAdd: boolean;
+  maxTags: number;
+  tagCount: number;
+}
+
+const computeCanAdd = ({ disabled, enableAdd, hasOnAdd, maxTags, tagCount }: CanAddArgs): boolean => {
+  if (disabled || !enableAdd || !hasOnAdd) {
+    return false;
+  }
+  if (maxTags > 0 && tagCount >= maxTags) {
+    return false;
+  }
+  return true;
+};
+
+const filterSuggestions = (suggestions: TagItem[], appliedTagNames: Set<string>, inputValue: string): TagItem[] => {
+  const searchTerm = inputValue.toLowerCase().trim();
+  return suggestions
+    .filter((tag) => {
+      const tagName = tag.label.toLowerCase();
+      if (appliedTagNames.has(tagName)) {
+        return false;
+      }
+      if (searchTerm && !tagName.includes(searchTerm)) {
+        return false;
+      }
+      return true;
+    })
+    .slice(0, MAX_SUGGESTIONS);
+};
+
+// ---------------------------------------------------------------------------
+// Input state (suggestions, keyboard navigation, add/remove)
+// ---------------------------------------------------------------------------
+
+interface TagInputArgs {
+  tags: TagItem[];
+  suggestions: TagItem[];
+  disabled: boolean;
+  enableAdd: boolean;
+  enableRemove: boolean;
+  maxTags: number;
+  onAdd?: (tagName: string) => void;
+  onRemove?: (tag: TagItem) => void;
+  createTagLabel: (value: string) => string;
+}
+
+const useTagInput = ({
   tags,
-  suggestions = [],
-  label,
-  disabled = false,
-  maxTags = 0,
-  onTagClick,
+  suggestions,
+  disabled,
+  enableAdd,
+  enableRemove,
+  maxTags,
   onAdd,
   onRemove,
-  renderEmpty,
-  renderTag,
-  enableAdd = true,
-  enableRemove = true,
-  compact,
-  variant = 'subtle',
-  theme: chipTheme,
-  labels = {},
-  placeholder: placeholderProp,
-  ...stackProps
-}: TagsProps) => {
-  const { t } = useTranslation();
-  const placeholder = placeholderProp ?? t('Add tag...');
-  const { knobProps, disabledState } = useResolvedKnobs();
-  const inputRef = useRef<HTMLInputElement>(null);
-  const listboxId = useId();
-  if (isWeb) {
-    ensureCompositeFocusRing();
-    ensureKeyboardModalityTracking();
-  }
-
-  const chipSize = (
-    compact ? (knobProps.sizeToken === '$5' ? '$4' : knobProps.sizeToken === '$4' ? '$3' : '$2') : knobProps.sizeToken
-  ) as ChipSize;
-
+  createTagLabel,
+}: TagInputArgs) => {
+  const inputRef = useRef<React.ComponentRef<typeof Input>>(null);
   const [inputValue, setInputValue] = useState('');
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-  const [addKbFocus, setAddKbFocus] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [kbNav, setKbNav] = useState(false);
 
-  const {
-    addTag: addTagLabel = t('Add Tag'),
-    noTags: noTagsLabel = t('No tags'),
-    suggestions: suggestionsLabel = t('Suggestions'),
-    noAvailableTags: noAvailableTagsLabel = t('No available tags'),
-    createTag: createTagLabel = (value: string) => withInterp(t('Create "{{value}}"'), { value }),
-  } = labels;
-
   const appliedTagNames = useMemo(() => new Set(tags.map((tag) => tag.label.toLowerCase())), [tags]);
+  const availableSuggestions = useMemo(
+    () => filterSuggestions(suggestions, appliedTagNames, inputValue),
+    [suggestions, appliedTagNames, inputValue],
+  );
 
-  const availableSuggestions = useMemo(() => {
-    const searchTerm = inputValue.toLowerCase().trim();
-    return suggestions
-      .filter((tag) => {
-        const tagName = tag.label.toLowerCase();
-        if (appliedTagNames.has(tagName)) {
-          return false;
-        }
-        if (searchTerm && !tagName.includes(searchTerm)) {
-          return false;
-        }
-        return true;
-      })
-      .slice(0, 10);
-  }, [suggestions, appliedTagNames, inputValue]);
-
-  const canAdd = useMemo(() => {
-    if (disabled || !enableAdd || !onAdd) {
-      return false;
-    }
-    if (maxTags > 0 && tags.length >= maxTags) {
-      return false;
-    }
-    return true;
-  }, [disabled, enableAdd, onAdd, maxTags, tags.length]);
-
+  const canAdd = computeCanAdd({ disabled, enableAdd, hasOnAdd: onAdd != null, maxTags, tagCount: tags.length });
   const trimmedInput = inputValue.trim();
   const canCreate = canAdd && trimmedInput.length > 0 && !appliedTagNames.has(trimmedInput.toLowerCase());
 
@@ -236,136 +294,196 @@ export const Tags = ({
     setActiveIndex(0);
   }, []);
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.nativeEvent?.isComposing) {
-        return;
-      }
-      const count = listOptions.length;
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        setIsPopoverOpen(true);
-        setKbNav(true);
-        setActiveIndex((i) => {
-          if (count === 0) {
-            return -1;
-          }
-          if (i < 0) {
-            return 0;
-          }
-          return Math.min(i + 1, count - 1);
-        });
-        return;
-      }
-      if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        setKbNav(true);
-        setActiveIndex((i) => {
-          if (count === 0) {
-            return -1;
-          }
-          if (i < 0) {
-            return count - 1;
-          }
-          return Math.max(i - 1, 0);
-        });
-        return;
-      }
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        const option = activeIndex >= 0 ? listOptions[activeIndex] : undefined;
-        if (option) {
-          handleSelectOption(option);
-        } else if (trimmedInput) {
-          handleAddTag(trimmedInput);
-        }
-        return;
-      }
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        setIsPopoverOpen(false);
-        setInputValue('');
-        setActiveIndex(-1);
-        return;
-      }
-      if (e.key === 'Backspace' && !inputValue && enableRemove && onRemove && tags.length > 0) {
-        e.preventDefault();
-        onRemove(tags[tags.length - 1]);
-        return;
-      }
-      if (e.key === ',' && trimmedInput) {
-        e.preventDefault();
-        handleAddTag(trimmedInput);
-      }
-    },
-    [
-      listOptions,
-      activeIndex,
-      handleSelectOption,
-      handleAddTag,
-      trimmedInput,
-      inputValue,
-      enableRemove,
-      onRemove,
-      tags,
-    ],
-  );
+  const submitEnter = () => {
+    const option = activeIndex >= 0 ? listOptions[activeIndex] : undefined;
+    if (option) {
+      handleSelectOption(option);
+    } else if (trimmedInput) {
+      handleAddTag(trimmedInput);
+    }
+  };
+
+  const lastTag = tags.at(-1);
+  const canBackspaceRemove = enableRemove && onRemove != null && lastTag !== undefined;
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.nativeEvent?.isComposing) {
+      return;
+    }
+    const count = listOptions.length;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setIsPopoverOpen(true);
+      setKbNav(true);
+      setActiveIndex((i) => stepActiveIndex(i, count, 'down'));
+      return;
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setKbNav(true);
+      setActiveIndex((i) => stepActiveIndex(i, count, 'up'));
+      return;
+    }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      submitEnter();
+      return;
+    }
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      setIsPopoverOpen(false);
+      setInputValue('');
+      setActiveIndex(-1);
+      return;
+    }
+    if (e.key === 'Backspace' && !inputValue && canBackspaceRemove) {
+      e.preventDefault();
+      onRemove(lastTag);
+      return;
+    }
+    if (e.key === ',' && trimmedInput) {
+      e.preventDefault();
+      handleAddTag(trimmedInput);
+    }
+  };
 
   useEffect(() => {
-    if (isPopoverOpen && inputRef.current) {
-      inputRef.current.focus();
+    if (isPopoverOpen) {
+      inputRef.current?.focus();
     }
   }, [isPopoverOpen]);
 
-  useEffect(() => {
-    if (activeIndex >= listOptions.length) {
-      setActiveIndex(listOptions.length === 0 ? -1 : 0);
-    }
-  }, [activeIndex, listOptions.length]);
+  // Keep the active row inside the (possibly shrunken) option list.
+  if (activeIndex >= listOptions.length) {
+    setActiveIndex(listOptions.length === 0 ? -1 : 0);
+  }
 
-  const emptyState = renderEmpty ? (
-    renderEmpty()
-  ) : (
-    <XStack
-      alignItems="center"
-      gap="$2"
-      opacity={0.5}>
-      <TagIcon size={compact ? 14 : 16} />
-      <Text
-        color={knobProps.textAccentColor}
-        fontSize={compact ? '$1' : '$2'}
-        {...knobProps.body}>
-        {noTagsLabel}
-      </Text>
-    </XStack>
+  const openAdd = () => {
+    if (canAdd) {
+      setIsPopoverOpen(true);
+    }
+  };
+
+  const showEmptyMessage = isPopoverOpen && trimmedInput === '' && availableSuggestions.length === 0 && !canCreate;
+  const hasActiveOption = isPopoverOpen && activeIndex >= 0 && listOptions[activeIndex] != null;
+
+  return {
+    inputRef,
+    inputValue,
+    isPopoverOpen,
+    setIsPopoverOpen,
+    activeIndex,
+    setActiveIndex,
+    kbNav,
+    setKbNav,
+    canAdd,
+    listOptions,
+    handleSelectOption,
+    handleInputChange,
+    handleKeyDown,
+    openAdd,
+    showEmptyMessage,
+    hasActiveOption,
+  };
+};
+
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
+
+interface TagsEmptyStateProps {
+  compact?: boolean;
+  label: string;
+  knobProps: ResolvedKnobProps;
+}
+
+const TagsEmptyState = ({ compact, label, knobProps }: TagsEmptyStateProps) => (
+  <XStack
+    alignItems="center"
+    gap="$2"
+    opacity={0.5}>
+    <TagIcon size={compact ? 14 : 16} />
+    <Text
+      color={knobProps.textAccentColor}
+      fontSize={compact ? '$1' : '$2'}
+      {...knobProps.body}>
+      {label}
+    </Text>
+  </XStack>
+);
+
+interface TagsLabelProps {
+  label: string;
+  knobProps: ResolvedKnobProps;
+  maxTags: number;
+  tagCount: number;
+}
+
+const TagsLabel = ({ label, knobProps, maxTags, tagCount }: TagsLabelProps) => (
+  <XStack
+    alignItems="center"
+    justifyContent="space-between">
+    <Label
+      {...knobProps.label}
+      fontWeight="400">
+      {label}
+      {maxTags > 0 && (
+        <Text
+          color={knobProps.textAccentColor}
+          fontSize="$2">
+          {' '}
+          ({tagCount}/{maxTags})
+        </Text>
+      )}
+    </Label>
+  </XStack>
+);
+
+interface TagChipItemProps {
+  tag: TagItem;
+  chipSize: ChipSize;
+  chipVariant: ChipVariant;
+  chipColor: ChipColor;
+  disabled: boolean;
+  enableRemove: boolean;
+  onTagClick?: (tag: TagItem) => void;
+  onRemove?: (tag: TagItem) => void;
+  renderTag?: TagsProps['renderTag'];
+}
+
+// oxlint-disable-next-line typescript/promise-function-async -- returns the consumer's renderTag ReactNode, whose React 19 type includes Promise; the component cannot be async
+const TagChipItem = ({
+  tag,
+  chipSize,
+  chipVariant,
+  chipColor,
+  disabled,
+  enableRemove,
+  onTagClick,
+  onRemove,
+  renderTag,
+}: TagChipItemProps) => {
+  const actions = {
+    onRemove: () => {
+      onRemove?.(tag);
+    },
+  };
+
+  const chip = (
+    <Chip
+      size={chipSize}
+      variant={chipVariant}
+      color={chipColor}
+      disabled={disabled}
+      onDismiss={enableRemove && !disabled && onRemove != null ? actions.onRemove : undefined}>
+      {tag.label}
+    </Chip>
   );
 
-  const chipVariant: ChipVariant =
-    variant === 'filled' ? 'solid' : variant === 'outlined' ? 'outline' : variant === 'ghost' ? 'subtle' : variant;
-
-  const chipColor: ChipColor = (['gray', 'red', 'green', 'blue', 'yellow', 'orange', 'purple'] as const).includes(
-    chipTheme as ChipColor,
-  )
-    ? (chipTheme as ChipColor)
-    : 'gray';
-
-  const renderTagItem = (tag: TagItem) => {
-    const actions = {
-      onRemove: () => onRemove?.(tag),
-    };
-
-    const chip = (
-      <Chip
-        size={chipSize}
-        variant={chipVariant}
-        color={chipColor}
-        disabled={disabled}
-        onDismiss={enableRemove && !disabled && onRemove ? actions.onRemove : undefined}>
-        {tag.label}
-      </Chip>
-    );
-
-    const defaultContent = onTagClick ? (
+  const defaultContent =
+    onTagClick == null ? (
+      <View data-tag-chip="">{chip}</View>
+    ) : (
       <XStack
         key={tag.id}
         cursor="pointer"
@@ -374,126 +492,310 @@ export const Tags = ({
           e.stopPropagation?.();
           onTagClick(tag);
         }}
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui XStack wrapper around a Chip that renders its own dismiss button
         role="button"
         aria-label={tag.label}
         hoverStyle={{ opacity: 0.85 }}
         pressStyle={{ opacity: 0.7 }}>
         {chip}
       </XStack>
-    ) : (
-      <View data-tag-chip="">{chip}</View>
     );
 
-    if (renderTag) {
-      return renderTag(tag, defaultContent, actions);
-    }
+  if (renderTag) {
+    return renderTag(tag, defaultContent, actions);
+  }
 
-    return defaultContent;
-  };
+  return defaultContent;
+};
 
-  const activeOptionId =
-    isPopoverOpen && activeIndex >= 0 && listOptions[activeIndex] ? `${listboxId}-opt-${activeIndex}` : undefined;
+interface TagListboxRowProps {
+  option: ListOption;
+  index: number;
+  isActive: boolean;
+  kbNav: boolean;
+  listboxId: string;
+  knobProps: ResolvedKnobProps;
+  onHover: (index: number) => void;
+  onSelect: (option: ListOption) => void;
+}
 
-  const showEmptyMessage = isPopoverOpen && trimmedInput === '' && availableSuggestions.length === 0 && !canCreate;
+const TagListboxRow = ({
+  option,
+  index,
+  isActive,
+  kbNav,
+  listboxId,
+  knobProps,
+  onHover,
+  onSelect,
+}: TagListboxRowProps) => {
+  const rowRing = isActive && kbNav ? ensureFocusVisibleRing({ outlineOffset: -2 }) : { outlineWidth: 0 as const };
+  const fill = isActive ? componentColors.interactive.hover : 'transparent';
+  const isCreate = option.kind === 'create';
+  return (
+    <XStack
+      {...menuRowFrame}
+      // `menuRowFrame` deliberately leaves vertical sizing to the
+      // consumer; without it the rows collapse to text height while the
+      // "Suggestions" caption above them keeps its own padding, so the
+      // list reads as unevenly spaced.
+      minHeight={knobProps.sizeToken}
+      paddingVertical="$1.5"
+      gap="$2"
+      id={`${listboxId}-opt-${index}`}
+      role={isCreate ? 'button' : 'option'}
+      aria-label={isCreate ? option.label : undefined}
+      aria-selected={isCreate ? undefined : isActive}
+      data-active={isActive || undefined}
+      backgroundColor={fill}
+      hoverStyle={{
+        backgroundColor: componentColors.interactive.hover,
+        borderRadius: 0,
+      }}
+      pressStyle={{
+        backgroundColor: componentColors.interactive.active,
+        borderRadius: 0,
+      }}
+      cursor="pointer"
+      {...rowRing}
+      onMouseEnter={() => {
+        onHover(index);
+      }}
+      onPress={() => {
+        onSelect(option);
+      }}>
+      {isCreate ? <PlusIcon size={16} /> : null}
+      <Text
+        {...knobProps.body}
+        color={componentColors.text.primary}>
+        {option.label}
+      </Text>
+    </XStack>
+  );
+};
 
-  const renderListboxOrdered = () => {
-    const createOption = listOptions.find((o) => o.kind === 'create');
-    const suggestionOptions = listOptions.filter(
-      (o): o is Extract<ListOption, { kind: 'suggestion' }> => o.kind === 'suggestion',
-    );
-    const renderRow = (option: ListOption, index: number) => {
-      const isActive = index === activeIndex;
-      const rowRing = isActive && kbNav ? ensureFocusVisibleRing({ outlineOffset: -2 }) : { outlineWidth: 0 as const };
-      const fill = isActive ? componentColors.interactive.hover : 'transparent';
-      return (
-        <XStack
-          key={option.key}
-          {...menuRowFrame}
-          // `menuRowFrame` deliberately leaves vertical sizing to the
-          // consumer; without it the rows collapse to text height while the
-          // "Suggestions" caption above them keeps its own padding, so the
-          // list reads as unevenly spaced.
-          minHeight={knobProps.sizeToken}
-          paddingVertical="$1.5"
-          gap="$2"
-          id={`${listboxId}-opt-${index}`}
-          role={option.kind === 'create' ? 'button' : 'option'}
-          aria-label={option.kind === 'create' ? option.label : undefined}
-          aria-selected={option.kind === 'suggestion' ? isActive : undefined}
-          data-active={isActive || undefined}
-          backgroundColor={fill}
-          hoverStyle={{
-            backgroundColor: componentColors.interactive.hover,
-            borderRadius: 0,
-          }}
-          pressStyle={{
-            backgroundColor: componentColors.interactive.active,
-            borderRadius: 0,
-          }}
-          cursor="pointer"
-          {...rowRing}
-          onMouseEnter={() => {
-            setKbNav(false);
-            setActiveIndex(index);
-          }}
-          onPress={() => {
-            handleSelectOption(option);
-          }}>
-          {option.kind === 'create' ? <PlusIcon size={16} /> : null}
-          <Text
-            {...knobProps.body}
-            color={componentColors.text.primary}>
-            {option.label}
-          </Text>
-        </XStack>
-      );
-    };
+interface TagListboxProps {
+  listOptions: ListOption[];
+  activeIndex: number;
+  kbNav: boolean;
+  listboxId: string;
+  knobProps: ResolvedKnobProps;
+  suggestionsLabel: string;
+  noAvailableTagsLabel: string;
+  showEmptyMessage: boolean;
+  onHover: (index: number) => void;
+  onSelect: (option: ListOption) => void;
+}
 
-    return (
-      <YStack
-        // "listbox" is a valid ARIA role but outside RN's `Role` union;
-        // forwarded to the DOM node on web (house Record cast).
-        {...({ role: 'listbox' } as Record<string, unknown>)}
-        width="100%"
-        id={listboxId}
-        aria-label={suggestionsLabel}
-        onMouseDown={(e) => {
-          e.preventDefault();
+const TagListbox = ({
+  listOptions,
+  activeIndex,
+  kbNav,
+  listboxId,
+  knobProps,
+  suggestionsLabel,
+  noAvailableTagsLabel,
+  showEmptyMessage,
+  onHover,
+  onSelect,
+}: TagListboxProps) => {
+  const createOption = listOptions.find((o) => o.kind === 'create');
+  const suggestionOptions = listOptions.filter(
+    (o): o is Extract<ListOption, { kind: 'suggestion' }> => o.kind === 'suggestion',
+  );
+  const suggestionOffset = createOption === undefined ? 0 : 1;
+  const renderRow = (option: ListOption, index: number) => (
+    <TagListboxRow
+      key={option.key}
+      option={option}
+      index={index}
+      isActive={index === activeIndex}
+      kbNav={kbNav}
+      listboxId={listboxId}
+      knobProps={knobProps}
+      onHover={onHover}
+      onSelect={onSelect}
+    />
+  );
+
+  return (
+    <YStack
+      {...LISTBOX_ROLE_PROPS}
+      width="100%"
+      id={listboxId}
+      aria-label={suggestionsLabel}
+      onMouseDown={(e) => {
+        e.preventDefault();
+      }}>
+      {createOption === undefined ? null : renderRow(createOption, 0)}
+      {suggestionOptions.length > 0 && (
+        <Text
+          fontSize="$1"
+          color={knobProps.textAccentColor}
+          paddingHorizontal="$3"
+          paddingVertical="$1.5">
+          {suggestionsLabel}
+        </Text>
+      )}
+      {suggestionOptions.map((option, i) => renderRow(option, suggestionOffset + i))}
+      {showEmptyMessage && (
+        <Text
+          fontSize="$2"
+          color={knobProps.textAccentColor}
+          textAlign="center"
+          padding="$3"
+          {...knobProps.body}>
+          {noAvailableTagsLabel}
+        </Text>
+      )}
+    </YStack>
+  );
+};
+
+interface AddTagTriggerProps {
+  label: string;
+  chipSize: ChipSize;
+  compact?: boolean;
+  knobProps: ResolvedKnobProps;
+  onOpen: () => void;
+}
+
+const AddTagTrigger = ({ label, chipSize, compact, knobProps, onOpen }: AddTagTriggerProps) => {
+  const [addKbFocus, setAddKbFocus] = useState(false);
+  return (
+    <Popover.Trigger asChild>
+      <AddTagTarget
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Popover.Trigger asChild injects handlers/ref into this Tamagui View; a native <button> would change the trigger's box and focus behavior
+        role="button"
+        aria-label={label}
+        tabIndex={0}
+        cursor="pointer"
+        alignItems="center"
+        justifyContent="center"
+        flexShrink={0}
+        {...pressTargetStyle()}
+        minWidth={undefined}
+        paddingHorizontal={3}
+        marginHorizontal={-3}
+        outlineWidth={0}
+        focusStyle={{ outlineWidth: 0 }}
+        focusVisibleStyle={{ outlineWidth: 0 }}
+        onPress={(e) => {
+          e.stopPropagation?.();
+          onOpen();
+        }}
+        onFocus={() => {
+          if (wasKeyboardFocus()) {
+            setAddKbFocus(true);
+          }
+        }}
+        onBlur={() => {
+          setAddKbFocus(false);
+        }}
+        onKeyDown={(e: React.KeyboardEvent) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onOpen();
+          }
         }}>
-        {createOption ? renderRow(createOption, 0) : null}
-        {suggestionOptions.length > 0 && (
-          <Text
-            fontSize="$1"
-            color={knobProps.textAccentColor}
-            paddingHorizontal="$3"
-            paddingVertical="$1.5">
-            {suggestionsLabel}
-          </Text>
-        )}
-        {suggestionOptions.map((option, i) => renderRow(option, (createOption ? 1 : 0) + i))}
-        {showEmptyMessage && (
-          <Text
-            fontSize="$2"
-            color={knobProps.textAccentColor}
-            textAlign="center"
-            padding="$3"
-            {...knobProps.body}>
-            {noAvailableTagsLabel}
-          </Text>
-        )}
-      </YStack>
-    );
-  };
+        <ChipFrame
+          size={chipSize}
+          variant="outline"
+          backgroundColor="transparent"
+          {...knobProps.borderRadius}
+          borderColor={componentColors.interactive.border}
+          gap={compact ? 0 : '$1'}
+          hoverStyle={{ backgroundColor: componentColors.interactive.hover }}
+          pressStyle={{ backgroundColor: componentColors.interactive.active }}
+          {...(addKbFocus ? ensureFocusVisibleRing() : { outlineWidth: 0 })}>
+          <PlusIcon size={chipIconSize(chipSize)} />
+          <ChipText
+            size={chipSize}
+            color={knobProps.textAccentColor}>
+            {compact ? '​' : label}
+          </ChipText>
+        </ChipFrame>
+      </AddTagTarget>
+    </Popover.Trigger>
+  );
+};
 
-  const openAdd = useCallback(() => {
-    if (!canAdd) {
-      return;
-    }
-    setIsPopoverOpen(true);
-  }, [canAdd]);
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 
-  const fieldPadH = compact ? ('$2' as const) : ('$2.5' as const);
-  const fieldPadV = compact ? ('$1.5' as const) : ('$2' as const);
+type DefaultedTagsProp = 'suggestions' | 'disabled' | 'maxTags' | 'enableAdd' | 'enableRemove' | 'variant' | 'labels';
+
+type ResolvedTagsProps = Omit<TagsProps, DefaultedTagsProp> & Required<Pick<TagsProps, DefaultedTagsProp>>;
+
+const TagsContent = ({
+  tags,
+  suggestions,
+  label,
+  disabled,
+  maxTags,
+  onTagClick,
+  onAdd,
+  onRemove,
+  renderEmpty,
+  renderTag,
+  enableAdd,
+  enableRemove,
+  compact,
+  variant,
+  theme: chipTheme,
+  labels,
+  placeholder: placeholderProp,
+  ...stackProps
+}: ResolvedTagsProps) => {
+  const { t } = useTranslation();
+  const placeholder = placeholderProp ?? t('Add tag...');
+  const { knobProps, disabledState } = useResolvedKnobs();
+  const listboxId = useId();
+  if (isWeb) {
+    ensureCompositeFocusRing();
+    ensureKeyboardModalityTracking();
+  }
+
+  const chipSize = resolveChipSize(knobProps.sizeToken, compact);
+  const { addTagLabel, noTagsLabel, suggestionsLabel, noAvailableTagsLabel, createTagLabel } = resolveTagLabels(
+    labels,
+    t,
+  );
+  const {
+    inputRef,
+    inputValue,
+    isPopoverOpen,
+    setIsPopoverOpen,
+    activeIndex,
+    setActiveIndex,
+    kbNav,
+    setKbNav,
+    canAdd,
+    listOptions,
+    handleSelectOption,
+    handleInputChange,
+    handleKeyDown,
+    openAdd,
+    showEmptyMessage,
+    hasActiveOption,
+  } = useTagInput({ tags, suggestions, disabled, enableAdd, enableRemove, maxTags, onAdd, onRemove, createTagLabel });
+
+  const emptyState = renderEmpty ? (
+    renderEmpty()
+  ) : (
+    <TagsEmptyState
+      compact={compact}
+      label={noTagsLabel}
+      knobProps={knobProps}
+    />
+  );
+
+  const chipVariant = resolveChipVariant(variant);
+  const chipColor = resolveChipColor(chipTheme);
+  const activeOptionId = hasActiveOption ? `${listboxId}-opt-${activeIndex}` : undefined;
+
+  const pad = fieldPadding(compact);
 
   const field = (
     <XStack
@@ -503,8 +805,8 @@ export const Tags = ({
       gap="$1.5"
       width="100%"
       minHeight={knobProps.sizeToken}
-      paddingHorizontal={fieldPadH}
-      paddingVertical={fieldPadV}
+      paddingHorizontal={pad.horizontal}
+      paddingVertical={pad.vertical}
       backgroundColor={componentColors.surface.background}
       {...knobProps.inputSurface}
       {...knobProps.borderRadius}
@@ -531,72 +833,37 @@ export const Tags = ({
       }}>
       {tags.length === 0 && !enableAdd
         ? emptyState
-        : tags.map((tag) => <React.Fragment key={tag.id}>{renderTagItem(tag)}</React.Fragment>)}
+        : tags.map((tag) => (
+            <TagChipItem
+              key={tag.id}
+              tag={tag}
+              chipSize={chipSize}
+              chipVariant={chipVariant}
+              chipColor={chipColor}
+              disabled={disabled}
+              enableRemove={enableRemove}
+              onTagClick={onTagClick}
+              onRemove={onRemove}
+              renderTag={renderTag}
+            />
+          ))}
 
       {canAdd && (
-        <Popover.Trigger asChild>
-          <AddTagTarget
-            role="button"
-            aria-label={addTagLabel}
-            tabIndex={0}
-            cursor="pointer"
-            alignItems="center"
-            justifyContent="center"
-            flexShrink={0}
-            {...pressTargetStyle()}
-            minWidth={undefined}
-            paddingHorizontal={3}
-            marginHorizontal={-3}
-            outlineWidth={0}
-            focusStyle={{ outlineWidth: 0 }}
-            focusVisibleStyle={{ outlineWidth: 0 }}
-            onPress={(e) => {
-              e.stopPropagation?.();
-              openAdd();
-            }}
-            onFocus={() => {
-              if (wasKeyboardFocus()) {
-                setAddKbFocus(true);
-              }
-            }}
-            onBlur={() => {
-              setAddKbFocus(false);
-            }}
-            onKeyDown={
-              ((e: React.KeyboardEvent) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  openAdd();
-                }
-              }) as unknown as () => void
-            }>
-            <ChipFrame
-              size={chipSize}
-              variant="outline"
-              backgroundColor="transparent"
-              {...knobProps.borderRadius}
-              borderColor={componentColors.interactive.border}
-              gap={compact ? 0 : '$1'}
-              hoverStyle={{ backgroundColor: componentColors.interactive.hover }}
-              pressStyle={{ backgroundColor: componentColors.interactive.active }}
-              {...(addKbFocus ? ensureFocusVisibleRing() : { outlineWidth: 0 })}>
-              <PlusIcon size={chipIconSize(chipSize)} />
-              <ChipText
-                size={chipSize}
-                color={knobProps.textAccentColor}>
-                {compact ? '\u200B' : addTagLabel}
-              </ChipText>
-            </ChipFrame>
-          </AddTagTarget>
-        </Popover.Trigger>
+        <AddTagTrigger
+          label={addTagLabel}
+          chipSize={chipSize}
+          compact={compact}
+          knobProps={knobProps}
+          onOpen={openAdd}
+        />
       )}
 
       {canAdd && (
         <Input
-          ref={inputRef as any}
+          ref={inputRef}
           value={inputValue}
           onChangeText={handleInputChange}
-          onKeyDown={handleKeyDown as unknown as () => void}
+          onKeyDown={handleKeyDown}
           onFocus={() => {
             setIsPopoverOpen(true);
           }}
@@ -620,8 +887,11 @@ export const Tags = ({
           // sat off the chips' optical line.
           fontSize={chipTextSize(chipSize)}
           color={componentColors.text.primary}
+          // SAFETY: textAccentColor is a Tamagui color token string, which placeholderTextColor accepts.
+          // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- textAccentColor is typed `string` but always a theme color token; the prop only accepts the token union
           placeholderTextColor={knobProps.textAccentColor as InputProps['placeholderTextColor']}
           autoComplete="off"
+          // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui Input already renders a native <input>; role adds the combobox semantics
           role="combobox"
           aria-autocomplete="list"
           aria-expanded={isPopoverOpen}
@@ -636,24 +906,13 @@ export const Tags = ({
     <YStack
       {...knobProps.gap}
       {...stackProps}>
-      {label && (
-        <XStack
-          alignItems="center"
-          justifyContent="space-between">
-          <Label
-            {...knobProps.label}
-            fontWeight="400">
-            {label}
-            {maxTags > 0 && (
-              <Text
-                color={knobProps.textAccentColor}
-                fontSize="$2">
-                {' '}
-                ({tags.length}/{maxTags})
-              </Text>
-            )}
-          </Label>
-        </XStack>
+      {label !== undefined && label !== '' && (
+        <TagsLabel
+          label={label}
+          knobProps={knobProps}
+          maxTags={maxTags}
+          tagCount={tags.length}
+        />
       )}
 
       <YStack width="100%">
@@ -685,7 +944,21 @@ export const Tags = ({
                 width="100%"
                 maxHeight={240}
                 contentContainerStyle={{ minWidth: '100%' }}>
-                {renderListboxOrdered()}
+                <TagListbox
+                  listOptions={listOptions}
+                  activeIndex={activeIndex}
+                  kbNav={kbNav}
+                  listboxId={listboxId}
+                  knobProps={knobProps}
+                  suggestionsLabel={suggestionsLabel}
+                  noAvailableTagsLabel={noAvailableTagsLabel}
+                  showEmptyMessage={showEmptyMessage}
+                  onHover={(index) => {
+                    setKbNav(false);
+                    setActiveIndex(index);
+                  }}
+                  onSelect={handleSelectOption}
+                />
               </ScrollView>
             </Popover.Content>
           </Popover>
@@ -696,3 +969,34 @@ export const Tags = ({
     </YStack>
   );
 };
+
+/**
+ * Generic Tags component for displaying and managing tags.
+ * Fully data-agnostic -- accepts tags via props and emits callbacks.
+ *
+ * Polariss Combobox + GitHub TokenInput anatomy: chips live inside one
+ * input-surface field (rings that field on text focus). Suggestions
+ * are a CONTAINER-CLIP listbox: flat rows, overlay clips corners,
+ * keyboard-active row is fill + inset ring (never a border on every sibling).
+ */
+export const Tags = ({
+  suggestions = NO_SUGGESTIONS,
+  disabled = false,
+  maxTags = 0,
+  enableAdd = true,
+  enableRemove = true,
+  variant = 'subtle',
+  labels = NO_LABELS,
+  ...rest
+}: TagsProps) => (
+  <TagsContent
+    {...rest}
+    suggestions={suggestions}
+    disabled={disabled}
+    maxTags={maxTags}
+    enableAdd={enableAdd}
+    enableRemove={enableRemove}
+    variant={variant}
+    labels={labels}
+  />
+);

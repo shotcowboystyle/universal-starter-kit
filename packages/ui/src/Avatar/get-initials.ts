@@ -13,7 +13,7 @@ export const getInitials = (name: string): string => {
     const b = parts[1][0] ?? '';
     return (a + b).toUpperCase();
   }
-  return trimmed.substring(0, 2).toUpperCase();
+  return trimmed.slice(0, 2).toUpperCase();
 };
 
 /**
@@ -33,8 +33,10 @@ export type FallbackTone = (typeof FALLBACK_TONES)[number];
 
 export const fallbackToneIndex = (seed: string): number => {
   let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    hash = (Math.imul(hash, 31) + seed.charCodeAt(i)) | 0;
+  // split('') walks UTF-16 code units; codePointAt(0) of a one-unit string is that unit (same value charCodeAt gave).
+  for (const unit of seed.split('')) {
+    // Math.imul(x, 1) is ToInt32(x), i.e. the int32 wrap the original `| 0` performed.
+    hash = Math.imul(Math.imul(hash, 31) + (unit.codePointAt(0) ?? 0), 1);
   }
   return Math.abs(hash) % FALLBACK_TONES.length;
 };

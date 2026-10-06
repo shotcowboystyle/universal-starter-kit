@@ -65,7 +65,8 @@ export const siblingOffset = ({ index, sourceIndex, gapIndex, size }: SiblingOff
   if (sourceIndex != null) {
     if (index === sourceIndex) {
       return 0;
-    } // the dragged card itself is handled as the ghost
+      // the dragged card itself is handled as the ghost
+    }
     const wdIndex = index > sourceIndex ? index - 1 : index;
     const closeOrigin = index > sourceIndex ? -size : 0;
     const openGap = gapIndex != null && wdIndex >= gapIndex ? size : 0;
@@ -145,7 +146,7 @@ export const insertionIndexForY = ({ localY, items, sourceIndex, count, size }: 
   if (rendered.length === 0 || wdCount <= 0) {
     return 0;
   }
-  const first = rendered[0];
+  const [first] = rendered;
   const base = first.index - (sourceIndex != null && first.index > sourceIndex ? 1 : 0);
   let passed = 0;
   for (const it of rendered) {
@@ -155,7 +156,7 @@ export const insertionIndexForY = ({ localY, items, sourceIndex, count, size }: 
     }
   }
   const index = base + passed;
-  return index < 0 ? 0 : index > wdCount ? wdCount : index;
+  return Math.min(Math.max(index, 0), wdCount);
 };
 
 /**
@@ -167,7 +168,7 @@ export const uniformInsertionIndex = (localY: number, size: number, wdCount: num
     return 0;
   }
   const index = Math.floor(localY / size + 0.5);
-  return index < 0 ? 0 : index > wdCount ? wdCount : index;
+  return Math.min(Math.max(index, 0), wdCount);
 };
 
 // ── Auto-scroll ───────────────────────────────────────────────
@@ -185,6 +186,8 @@ export interface AutoScrollOptions {
   maxSpeed: number;
 }
 
+const clamp01 = (v: number): number => Math.min(Math.max(v, 0), 1);
+
 /**
  * Signed scroll velocity (px/frame) for edge auto-scroll. Speed ramps
  * linearly with proximity to the edge and saturates at `maxSpeed` when the
@@ -199,7 +202,6 @@ export const autoScrollVelocity = ({ pos, start, end, edge, maxSpeed }: AutoScro
   if (effEdge <= 0) {
     return 0;
   }
-  const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
   const dStart = pos - start;
   if (dStart < effEdge) {
     return -maxSpeed * (1 - clamp01(dStart / effEdge));
@@ -285,6 +287,9 @@ export const keyboardMove = (
   };
 };
 
+/** The slice of a keyboard drag a drop resolves from. */
+export type KanbanDropDrag = Pick<KanbanKeyboardDrag, 'sourceColumnId' | 'sourceIndex' | 'target'>;
+
 export interface KanbanDropResult {
   /** False when the card lands exactly where it started. */
   commit: boolean;
@@ -293,9 +298,7 @@ export interface KanbanDropResult {
 }
 
 /** Resolve a drop for the current target (keyboard and pointer share this). */
-export const resolveDrop = (
-  drag: Pick<KanbanKeyboardDrag, 'sourceColumnId' | 'sourceIndex' | 'target'>,
-): KanbanDropResult => {
+export const resolveDrop = (drag: KanbanDropDrag): KanbanDropResult => {
   const { sourceColumnId, sourceIndex, target } = drag;
   return {
     commit: target.columnId !== sourceColumnId || target.index !== sourceIndex,
@@ -305,6 +308,8 @@ export const resolveDrop = (
 };
 
 // ── Screen-reader announcements ───────────────────────────────
+
+export type KanbanDragPhase = 'lift' | 'move' | 'drop';
 
 export type KanbanAnnouncement =
   | { type: 'lift'; card: string; column: string; position: number; count: number }
@@ -318,8 +323,8 @@ export type KanbanAnnouncement =
  * the "position 2 of 3" phrasing of the WAI-ARIA drag pattern.
  */
 export const describeDragState = (
-  type: 'lift' | 'move' | 'drop',
-  drag: Pick<KanbanKeyboardDrag, 'sourceColumnId' | 'sourceIndex' | 'target'>,
+  type: KanbanDragPhase,
+  drag: KanbanDropDrag,
   board: KanbanBoardColumnSnapshot[],
   card: string,
 ): KanbanAnnouncement => {
@@ -369,10 +374,12 @@ export const listBoardSnapshot = (count: number, title = ''): KanbanBoardColumnS
  * `KanbanDropTarget.index`).
  */
 export const applyReorder = <T>(items: readonly T[], from: number, to: number): T[] => {
-  if (from === to || from < 0 || to < 0 || from >= items.length || to > items.length) {
-    return items.slice();
+  const fromOutOfRange = from < 0 || from >= items.length;
+  const toOutOfRange = to < 0 || to > items.length;
+  if (from === to || fromOutOfRange || toOutOfRange) {
+    return [...items];
   }
-  const next = items.slice();
+  const next = [...items];
   const [item] = next.splice(from, 1);
   next.splice(to, 0, item);
   return next;
@@ -382,13 +389,10 @@ export const applyReorder = <T>(items: readonly T[], from: number, to: number): 
 export const renumberIdx = <T extends { idx?: number }>(items: readonly T[]): T[] =>
   items.map((item, i) => ({ ...item, idx: i + 1 }));
 
-export const commitReorder = <T>(
-  items: readonly T[],
-  drag: Pick<KanbanKeyboardDrag, 'sourceColumnId' | 'sourceIndex' | 'target'>,
-): T[] => {
+export const commitReorder = <T>(items: readonly T[], drag: KanbanDropDrag): T[] => {
   const result = resolveDrop(drag);
   if (!result.commit) {
-    return items.slice();
+    return [...items];
   }
   return applyReorder(items, result.from.index, result.to.index);
 };

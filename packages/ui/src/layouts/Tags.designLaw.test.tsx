@@ -11,13 +11,11 @@ describe('Tags design law', () => {
         label="Topics"
       />,
     );
-    const label = container.querySelector('label') as HTMLElement | null;
-    const node = label ?? (container.querySelector('*') as HTMLElement);
+    const label = container.querySelector<HTMLElement>('label');
+    const node = label ?? container.querySelector('*');
     expect(container.textContent).toContain('Topics');
-    if (label) {
-      const weight = label.style.fontWeight || getComputedStyle(label).fontWeight;
-      expect(['400', 'normal', '']).toContain(String(weight));
-    }
+    const weight = label === null ? '' : label.style.fontWeight || getComputedStyle(label).fontWeight;
+    expect(['400', 'normal', '']).toContain(weight);
     expect(node).toBeTruthy();
   });
 });

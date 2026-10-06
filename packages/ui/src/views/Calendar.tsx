@@ -19,8 +19,9 @@ import {
 } from '@repo/theme';
 import type { KnobProps } from '@repo/theme';
 import React, { useState, useMemo, useCallback, useEffect, useId, useRef } from 'react';
+import type { GestureResponderEvent, ScrollView as RNScrollView } from 'react-native';
 import { AnimatePresence, Text, XStack, YStack, isWeb, styled } from 'tamagui';
-import type { YStackProps } from 'tamagui';
+import type { TransitionProp, YStackProps } from 'tamagui';
 
 import { componentColors, sectionHeading } from '../component-colors';
 import { useDirection } from '../hooks/use-direction';
@@ -45,6 +46,8 @@ import {
   yToMinutes,
 } from './calendar-math';
 import type { CalendarRange } from './calendar-math';
+import { holdClickSuppressionUntilRelease, webOnlyProps } from './dom-interop';
+import { orDefault } from './guards';
 
 /**
  * Calendar view type.
@@ -66,6 +69,7 @@ export interface CalendarEvent {
   /** Optional color for the event badge */
   color?: string;
   /** Any additional data */
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- exported event shape: consumers attach their own fields, which only the consumer's renderers read
   [key: string]: unknown;
 }
 
@@ -91,10 +95,27 @@ export interface CalendarEventDraft {
  * borderEndWidth does not compile to working CSS on web — SB-M-1215 pattern,
  * same as Sidebar); native takes the RN logical prop.
  */
+/** Geometry per size-knob step: `$3` compact, `$5` roomy, anything else default. */
+const SIZE_STEPS = {
+  $3: { hourHeight: 48, monthCellMinHeight: 64 },
+  $5: { hourHeight: 80, monthCellMinHeight: 96 },
+  default: { hourHeight: 64, monthCellMinHeight: 76 },
+} as const;
+
+/** Cell inset and chip gap per space-knob step. */
+const SPACE_STEPS = {
+  small: { cellPad: 2, chipGap: 2 },
+  large: { cellPad: 7, chipGap: 5 },
+  default: { cellPad: 4, chipGap: 3 },
+} as const;
+
+const ACCENT_COLOR = '$accentColor';
+const ACCENT_BACKGROUND = '$accentBackground';
+
 const hairlineEnd = isWeb
   ? {
       borderInlineEndWidth: hairlineWidth,
-      borderInlineEndStyle: 'solid' as any,
+      borderInlineEndStyle: 'solid' as const,
       className: 'mp-hairline-ie',
     }
   : { borderEndWidth: hairlineWidth };
@@ -110,7 +131,7 @@ const gridCellEdges = (end: boolean, bottom: boolean) => {
   return {
     ...(end ? hairlineEnd : null),
     borderBottomWidth: bottom ? hairlineWidth : 0,
-    ...(isWeb && className ? { className } : null),
+    ...(isWeb && className !== undefined ? { className } : null),
   };
 };
 
@@ -131,12 +152,13 @@ const gridCellEdges = (end: boolean, bottom: boolean) => {
  * foreground on fills is luminance-COMPUTED, and the computation must match
  * the rendered pixels). Black keeps every sanctioned step-9 solid ≥ 4.5:1.
  */
+// oxlint-disable-next-line react-doctor/only-export-components -- pure helpers exported on the views barrel; co-located with the chips that use them
 export const eventChipTextColor = (bg?: string, onAccent?: string): string => {
-  if (!bg) {
-    return onAccent ?? '$accentColor';
+  if (bg === undefined || bg === '') {
+    return onAccent ?? ACCENT_COLOR;
   }
   if (!bg.startsWith('#')) {
-    return '$accentColor';
+    return ACCENT_COLOR;
   }
   const hex = bg.slice(1);
   const full =
@@ -226,7 +248,7 @@ const getMonthDays = (date: Date, firstDayOfWeek: 0 | 1): Date[] => {
   const totalCells = totalRows * 7;
 
   const days: Date[] = [];
-  for (let i = 0; i < totalCells; i++) {
+  for (let i = 0; i < totalCells; i += 1) {
     days.push(new Date(year, month, 1 - startOffset + i));
   }
   return days;
@@ -243,7 +265,7 @@ const getWeekDays = (date: Date, firstDayOfWeek: 0 | 1): Date[] => {
   const startDate = new Date(date);
   startDate.setDate(date.getDate() - startOffset);
 
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < 7; i += 1) {
     const day = new Date(startDate);
     day.setDate(startDate.getDate() + i);
     days.push(day);
@@ -266,9 +288,92 @@ const addMonths = (date: Date, delta: number): Date => {
 const isSameDay = (d1: Date, d2: Date): boolean =>
   d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
 
+const focusCellIdFor = (calendarId: string, view: CalendarViewType, focusedDayKey: string | null) => {
+  const hasFocus = focusedDayKey !== null && focusedDayKey !== '';
+  const cellId = view === 'month' ? `${calendarId}-day-${focusedDayKey}` : `${calendarId}-slot-cursor`;
+  return hasFocus ? cellId : undefined;
+};
+
+type ArrowKey = 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown';
+
+const ARROW_KEYS = new Set<string>(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']);
+
+const isArrowKey = (key: string): key is ArrowKey => ARROW_KEYS.has(key);
+
+/** Horizontal arrows follow the VISUAL axis: under RTL the next day sits to the left, so left/right swap. */
+const mirrorArrow = (key: ArrowKey, isRTL: boolean): ArrowKey => {
+  if (!isRTL) {
+    return key;
+  }
+  if (key === 'ArrowLeft') {
+    return 'ArrowRight';
+  }
+  return key === 'ArrowRight' ? 'ArrowLeft' : key;
+};
+
+const leavesVisiblePeriod = (view: CalendarViewType, next: Date, currentDate: Date, firstDayOfWeek: 0 | 1): boolean => {
+  if (view === 'month') {
+    return next.getMonth() !== currentDate.getMonth();
+  }
+  if (view === 'week') {
+    return !getWeekDays(currentDate, firstDayOfWeek).map(formatDateKey).includes(formatDateKey(next));
+  }
+  return !isSameDay(next, currentDate);
+};
+
+const monthCellBackground = (isDropTarget: boolean, isCurrentMonth: boolean): string => {
+  if (isDropTarget) {
+    return ACCENT_BACKGROUND;
+  }
+  return isCurrentMonth ? '$background' : componentColors.surface.background;
+};
+
+const isCalendarView = (value: string): value is CalendarViewType =>
+  value === 'month' || value === 'week' || value === 'day';
+
+/** Slide variant for a period switch: forward, backward or a plain fade when the direction is unknown. */
+const slideVariant = (physicalDir: number, forward: string, backward: string): string => {
+  if (physicalDir > 0) {
+    return forward;
+  }
+  return physicalDir < 0 ? backward : 'fade';
+};
+
+const periodKeyFor = (view: CalendarViewType, currentDate: Date, firstDayOfWeek: 0 | 1): string => {
+  if (view === 'month') {
+    return `${currentDate.getFullYear()}-${currentDate.getMonth()}`;
+  }
+  return view === 'week' ? formatDateKey(getWeekDays(currentDate, firstDayOfWeek)[0]) : formatDateKey(currentDate);
+};
+
+/** Keep a press from also reaching the parent cell. */
+const stopPress = (e?: { stopPropagation?: () => void }): void => {
+  e?.stopPropagation?.();
+};
+
+const dayNumberColor = ({
+  today,
+  inMonth,
+  onAccent,
+  mutedInk,
+}: {
+  today: boolean;
+  inMonth: boolean;
+  onAccent: string | undefined;
+  mutedInk: string;
+}): string => {
+  if (today) {
+    return onAccent ?? ACCENT_COLOR;
+  }
+  return inMonth ? '$color' : mutedInk;
+};
+
 const isToday = (date: Date): boolean => isSameDay(date, new Date());
 
 const MS_PER_DAY = 86_400_000;
+
+/** Local midnight of the day containing `d`. */
+const dayStart = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 
 /**
  * Compute the new start/end range for an event dropped on `targetDay`.
@@ -279,10 +384,10 @@ const MS_PER_DAY = 86_400_000;
  * duration.) Events without an `end` get a zero-duration range
  * (`end` equals `start`).
  */
+// oxlint-disable-next-line react-doctor/only-export-components -- pure helpers exported on the views barrel; co-located with the chips that use them
 export const computeEventMoveRange = (event: CalendarEvent, targetDay: Date): CalendarEventMoveRange => {
-  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
   // Round: start-of-day deltas are not exact multiples of 24h across DST.
-  const dayDelta = Math.round((startOfDay(targetDay).getTime() - startOfDay(event.start).getTime()) / MS_PER_DAY);
+  const dayDelta = Math.round((dayStart(targetDay).getTime() - dayStart(event.start).getTime()) / MS_PER_DAY);
   const shiftDays = (d: Date) =>
     new Date(
       d.getFullYear(),
@@ -311,6 +416,7 @@ export interface CalendarDayLayout {
  * Find the day key whose layout contains `(pageX, pageY)`.
  * Used by native drag (no `document.elementFromPoint`).
  */
+// oxlint-disable-next-line react-doctor/only-export-components -- pure helpers exported on the views barrel; co-located with the chips that use them
 export const findDayKeyAtPoint = (
   pageX: number,
   pageY: number,
@@ -325,31 +431,66 @@ export const findDayKeyAtPoint = (
   return null;
 };
 
+/** Pointer (web) or responder (native) handlers an event chip or block spreads on. */
+interface EventDragProps {
+  'data-calendar-event': string;
+  onPointerDown?: (event: React.PointerEvent<HTMLElement>) => void;
+  onStartShouldSetResponder?: () => boolean;
+  onMoveShouldSetResponder?: () => boolean;
+  onResponderTerminationRequest?: () => boolean;
+  onResponderGrant?: (event: GestureResponderEvent) => void;
+  onResponderMove?: (event: GestureResponderEvent) => void;
+  onResponderRelease?: (event: GestureResponderEvent) => void;
+  onResponderTerminate?: () => void;
+}
+
+/** Pass drag handlers through a JSX spread: Tamagui's View prop type omits them, the host view accepts them. */
+const dragSpread = (props: EventDragProps): object => props;
+
+/** The slice of a pointer event the drag/resize/create sessions read. */
+interface PointerLike {
+  button?: number;
+  clientX: number;
+  clientY: number;
+  pointerType?: string;
+  currentTarget?: HTMLElement;
+  stopPropagation?: () => void;
+}
+
 interface MeasurableDayNode {
   measureInWindow?: (cb: (x: number, y: number, width: number, height: number) => void) => void;
 }
 
-const measureDayLayouts = (refs: Map<string, MeasurableDayNode>, cb: (layouts: CalendarDayLayout[]) => void) => {
+const measureEntry = (key: string, node: MeasurableDayNode, layouts: CalendarDayLayout[], settle: () => void) => {
+  if (node.measureInWindow === undefined) {
+    settle();
+    return;
+  }
+  node.measureInWindow((x, y, width, height) => {
+    layouts.push({ key, x, y, width, height });
+    settle();
+  });
+};
+
+const measureDayLayouts = (
+  refs: Map<string, MeasurableDayNode>,
+  onMeasured: (layouts: CalendarDayLayout[]) => void,
+) => {
   const entries = [...refs.entries()];
   if (entries.length === 0) {
-    cb([]);
+    onMeasured([]);
     return;
   }
   const layouts: CalendarDayLayout[] = [];
   let remaining = entries.length;
-  for (const [key, node] of entries) {
-    if (typeof node.measureInWindow !== 'function') {
-      if (--remaining === 0) {
-        cb(layouts);
-      }
-      continue;
+  const settle = () => {
+    remaining -= 1;
+    if (remaining === 0) {
+      onMeasured(layouts);
     }
-    node.measureInWindow((x, y, width, height) => {
-      layouts.push({ key, x, y, width, height });
-      if (--remaining === 0) {
-        cb(layouts);
-      }
-    });
+  };
+  for (const [key, node] of entries) {
+    measureEntry(key, node, layouts, settle);
   }
 };
 
@@ -429,18 +570,18 @@ const DayNumberDisc = ({
       {...radiusClassProps('R-PILL', 'Calendar today marker')}
       alignItems="center"
       justifyContent="center"
-      backgroundColor={today ? '$accentBackground' : 'transparent'}
+      backgroundColor={today ? ACCENT_BACKGROUND : 'transparent'}
       hitSlop={nestedHitSlop}
       {...(focused && wasKeyboardFocus() ? keyboardFocusRingProps : { outlineWidth: 0 })}
       {...(today && { 'data-calendar-today': 'true' })}
-      {...({
+      {...{
         'data-nested-px': nestedPx,
         'data-calendar-day-disc': 'true',
-      } as any)}>
+      }}>
       <Text
         {...label}
         fontWeight={today ? '700' : label.fontWeight}
-        color={today ? (onAccent ?? '$accentColor') : inMonth ? '$color' : knobProps.textAccentColor}
+        color={dayNumberColor({ today, inMonth, onAccent, mutedInk: knobProps.textAccentColor })}
         textAlign="center">
         {date.getDate()}
       </Text>
@@ -513,12 +654,13 @@ const startWebPointerSession = (options: WebPointerSessionOptions): (() => void)
     options.onActivate(pt);
   };
 
+  // oxlint-disable eslint/no-use-before-define -- the session handlers reference one another (teardown detaches what onMove/onUp/onKey call); none runs before all are defined
   const teardown = () => {
     if (ended) {
       return;
     }
     ended = true;
-    if (longPressTimer) {
+    if (longPressTimer !== null) {
       clearTimeout(longPressTimer);
     }
     window.removeEventListener('pointermove', onMove);
@@ -572,11 +714,13 @@ const startWebPointerSession = (options: WebPointerSessionOptions): (() => void)
     cancel();
   };
 
+  // oxlint-enable eslint/no-use-before-define
   if (isTouch) {
     longPressTimer = setTimeout(() => {
       liftArmed = true;
       activate(last);
     }, TOUCH_LONG_PRESS_MS);
+    // oxlint-disable-next-line github/require-passive-events -- non-passive on purpose: preventDefault must stop the page scrolling out from under a lifted drag
     window.addEventListener('touchmove', preventTouchScroll, { passive: false });
   }
 
@@ -648,11 +792,11 @@ const SettleGhost = ({
   onDone,
 }: {
   settle: SettleGhostState;
-  transition: string | undefined;
-  borderRadius: Record<string, unknown>;
+  transition: TransitionProp | undefined;
+  borderRadius: KnobProps['borderRadius'];
   onDone: () => void;
 }) => {
-  const onAccent = useReadableTextOn('$accentBackground');
+  const onAccent = useReadableTextOn(ACCENT_BACKGROUND);
   const [moved, setMoved] = useState(false);
   useEffect(() => {
     // Double rAF so the ghost paints at `from` before the tween retargets it
@@ -674,15 +818,15 @@ const SettleGhost = ({
     <YStack
       pointerEvents="none"
       {...borderRadius}
-      backgroundColor={(settle.color || '$accentBackground') as any}
+      backgroundColor={orDefault(settle.color, ACCENT_BACKGROUND)}
       padding="$1"
-      transition={transition as any}
+      transition={transition}
       x={moved ? settle.to.x - settle.from.x : 0}
       y={moved ? settle.to.y - settle.from.y : 0}
       scale={moved ? 1 : 1.03}
       opacity={moved ? 0.6 : 0.95}
-      {...({
-        'data-calendar-settle-ghost': 'true',
+      {...{ 'data-calendar-settle-ghost': 'true' }}
+      {...webOnlyProps({
         style: {
           position: 'fixed',
           left: settle.from.x,
@@ -691,7 +835,7 @@ const SettleGhost = ({
           maxWidth: 220,
           boxShadow: LIFT_SHADOW,
         },
-      } as any)}>
+      })}>
       <Text
         fontSize="$2"
         numberOfLines={1}
@@ -750,6 +894,7 @@ const CalendarSlide = styled(YStack, {
  * />
  * ```
  */
+// oxlint-disable-next-line eslint/complexity, react-doctor/no-giant-component -- one view: month grid, time grids, drag/resize/create sessions and the editor share the date, layout and focus state
 export const Calendar = ({
   events,
   renderEvent,
@@ -767,6 +912,7 @@ export const Calendar = ({
   firstDayOfWeek = 0,
   slotMinutes = 30,
   ...stackProps
+  // oxlint-disable-next-line sonarjs/cognitive-complexity -- see the complexity note above the component
 }: CalendarProps) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
@@ -777,26 +923,27 @@ export const Calendar = ({
   // UX-P03 / Axiom 15: the today/selected disc paints `$accentBackground`, so
   // its date glyph needs a luminance-computed foreground — `$accentColor` (the
   // deep on-page accent) measured 1.76:1 on the accent fill.
-  const onAccent = useReadableTextOn('$accentBackground');
+  const onAccent = useReadableTextOn(ACCENT_BACKGROUND);
   const calendarId = useId();
   // Directional glyph/geometry source (RTL): slide offsets are physical px,
   // so "next" must be mirrored to enter from the reading-direction end.
   const isRTL = useDirection() === 'rtl';
+  // oxlint-disable-next-line react/purity -- the initial anchor date is the current date by design
   const [currentDate, setCurrentDate] = useState<Date>(initialDate ?? new Date());
   const [view, setView] = useState<CalendarViewType>(initialViewType);
 
   const sz = knobProps.sizeToken;
-  const hourHeight = sz === '$3' ? 48 : sz === '$5' ? 80 : 64;
+  const steps = SIZE_STEPS[sz === '$3' || sz === '$5' ? sz : 'default'];
+  const { hourHeight } = steps;
   // Week-row COMFORT floor, not fixed height: rows flex to share the panel
   // height so a month fits without slicing its last row mid-cell; the floor
   // steps density with the size knob and relaxes before the grid ever
   // slices (see monthRowMinHeight below).
-  const monthCellMinHeight = sz === '$3' ? 64 : sz === '$5' ? 96 : 76;
+  const { monthCellMinHeight } = steps;
   // Grid-cell inset and chip gap follow the space knob (SP-PAD:
   // the 2px hardcoded inset read as chips bleeding into hairlines).
   const { space } = knobProps;
-  const cellPad = space === 'small' ? 2 : space === 'large' ? 7 : 4;
-  const chipGap = space === 'small' ? 2 : space === 'large' ? 5 : 3;
+  const { cellPad, chipGap } = SPACE_STEPS[space === 'small' || space === 'large' ? space : 'default'];
   // Hard per-row floor: a day cell must fit its day disc plus one event chip
   // (content-derived, not a raw px dial).
   const monthRowHardFloor = cellPad * 2 + nestedPx + chipGap + MONTH_CHIP_MIN_PX;
@@ -810,6 +957,7 @@ export const Calendar = ({
   const { transition } = knobProps;
   // Layout props (top/height) only tween on web — the RN driver cannot
   // animate layout, so native keeps those jumps instant (Axiom 4 note).
+  const hasTransition = transition !== undefined && transition !== '';
   const webLayoutTransition = isWeb ? transition : undefined;
 
   // -------------------------------------------------------------------------
@@ -818,12 +966,7 @@ export const Calendar = ({
   const navDirectionRef = useRef(0);
   const hasNavigatedRef = useRef(false);
 
-  const periodKey =
-    view === 'month'
-      ? `${currentDate.getFullYear()}-${currentDate.getMonth()}`
-      : view === 'week'
-        ? formatDateKey(getWeekDays(currentDate, firstDayOfWeek)[0])
-        : formatDateKey(currentDate);
+  const periodKey = periodKeyFor(view, currentDate, firstDayOfWeek);
   const motionKey = `${view}:${periodKey}`;
 
   // -------------------------------------------------------------------------
@@ -889,10 +1032,12 @@ export const Calendar = ({
     layouts: CalendarDayLayout[];
   } | null>(null);
 
+  // oxlint-disable react/refs -- latest-value refs: window-level session handlers must see the committed state in the same render pass, never one commit behind
   slotTargetRef.current = slotTarget;
   resizePreviewRef.current = resizePreview;
   editorStateRef.current = editorState;
   draftTitleRef.current = draftTitle;
+  // oxlint-enable react/refs
 
   const registerDayRef = useCallback((key: string, node: MeasurableDayNode | null) => {
     if (node) {
@@ -923,7 +1068,7 @@ export const Calendar = ({
 
   const beginSettle = useCallback(
     (event: CalendarEvent, from: { x: number; y: number }, to: { x: number; y: number }) => {
-      if (!transition || !hasDom) {
+      if (!hasTransition || !hasDom) {
         return;
       }
       setSettle({
@@ -934,12 +1079,12 @@ export const Calendar = ({
         to,
       });
     },
-    [transition, hasDom],
+    [hasTransition, hasDom],
   );
 
   const commitMoveToKey = useCallback(
     (event: CalendarEvent, key: string | null) => {
-      if (!key) {
+      if (key === null || key === '') {
         return;
       }
       const targetDay = dayKeyToDate(key);
@@ -953,18 +1098,7 @@ export const Calendar = ({
   // ── Web event move drag (day mode: month cells / all-day strip; ──────────
   // ── slot mode: time-grid columns) ─────────────────────────────────────────
   const handleEventPointerDown = useCallback(
-    (
-      event: CalendarEvent,
-      e: {
-        button?: number;
-        clientX: number;
-        clientY: number;
-        pointerType?: string;
-        currentTarget?: unknown;
-        stopPropagation?: () => void;
-      },
-      mode: 'day' | 'slot',
-    ) => {
+    (event: CalendarEvent, e: PointerLike, mode: 'day' | 'slot') => {
       if (!webDragEnabled) {
         return;
       }
@@ -975,7 +1109,7 @@ export const Calendar = ({
       e.stopPropagation?.();
       dragSessionCleanupRef.current?.();
 
-      const chipEl = e.currentTarget as HTMLElement | undefined;
+      const chipEl = e.currentTarget;
       const originRect = chipEl?.getBoundingClientRect?.() ?? null;
       const durationMin = event.end
         ? Math.max(slotMinutes, (event.end.getTime() - event.start.getTime()) / 60_000)
@@ -984,18 +1118,18 @@ export const Calendar = ({
 
       const findDayKey = (x: number, y: number): string | null => {
         const el = document.elementFromPoint?.(x, y);
-        const dayEl = el?.closest?.('[data-calendar-day]');
-        return dayEl?.getAttribute('data-calendar-day') ?? null;
+        const dayEl = el?.closest<HTMLElement>('[data-calendar-day]');
+        return dayEl?.dataset.calendarDay ?? null;
       };
 
       const findSlotTarget = (x: number, y: number) => {
         const el = document.elementFromPoint?.(x, y);
-        const colEl = el?.closest?.('[data-calendar-timecol]') as HTMLElement | null;
+        const colEl = el?.closest<HTMLElement>('[data-calendar-timecol]');
         if (!colEl) {
           return null;
         }
-        const dayKey = colEl.getAttribute('data-calendar-timecol');
-        if (!dayKey) {
+        const dayKey = colEl.dataset.calendarTimecol;
+        if (dayKey === undefined || dayKey === '') {
           return null;
         }
         const rect = colEl.getBoundingClientRect();
@@ -1055,7 +1189,7 @@ export const Calendar = ({
             }
           }
           const dayKey = findDayKey(pt.x, pt.y);
-          if (dayKey) {
+          if (dayKey !== null && dayKey !== '') {
             commitMoveToKey(event, dayKey);
             const cellEl = document.querySelector(`[data-calendar-day="${dayKey}"]`);
             const rect = cellEl?.getBoundingClientRect?.();
@@ -1073,15 +1207,7 @@ export const Calendar = ({
           const ghost = { x: lastPoint.x + 12, y: lastPoint.y + 12 };
           endVisuals();
           // Escape cancel: pointer is still down — keep suppressing until release.
-          suppressClickRef.current = true;
-          window.addEventListener(
-            'pointerup',
-            () =>
-              setTimeout(() => {
-                suppressClickRef.current = false;
-              }, 0),
-            { once: true },
-          );
+          holdClickSuppressionUntilRelease(suppressClickRef);
           if (originRect) {
             beginSettle(event, ghost, { x: originRect.left, y: originRect.top });
           }
@@ -1099,18 +1225,7 @@ export const Calendar = ({
 
   // ── Web event resize (time grid; snap jumps tween) ─────────────────
   const handleResizePointerDown = useCallback(
-    (
-      event: CalendarEvent,
-      edge: 'start' | 'end',
-      e: {
-        button?: number;
-        clientX: number;
-        clientY: number;
-        pointerType?: string;
-        currentTarget?: unknown;
-        stopPropagation?: () => void;
-      },
-    ) => {
+    (event: CalendarEvent, edge: 'start' | 'end', e: PointerLike) => {
       if (!webResizeEnabled) {
         return;
       }
@@ -1120,8 +1235,8 @@ export const Calendar = ({
       e.stopPropagation?.();
       dragSessionCleanupRef.current?.();
 
-      const handleEl = e.currentTarget as HTMLElement | undefined;
-      const colEl = handleEl?.closest?.('[data-calendar-timecol]') as HTMLElement | null;
+      const handleEl = e.currentTarget;
+      const colEl = handleEl?.closest<HTMLElement>('[data-calendar-timecol]');
       const colRect = colEl?.getBoundingClientRect?.();
       if (!colRect) {
         return;
@@ -1162,15 +1277,7 @@ export const Calendar = ({
           setResizePreview(null);
           setScrollLocked(false);
           dragSessionCleanupRef.current = null;
-          suppressClickRef.current = true;
-          window.addEventListener(
-            'pointerup',
-            () =>
-              setTimeout(() => {
-                suppressClickRef.current = false;
-              }, 0),
-            { once: true },
-          );
+          holdClickSuppressionUntilRelease(suppressClickRef);
         },
         onSettled: (activated) => {
           if (!activated) {
@@ -1209,16 +1316,7 @@ export const Calendar = ({
 
   // ── Web drag-to-create on the empty time grid ─────────────────────────────
   const handleGridPointerDown = useCallback(
-    (
-      day: Date,
-      e: {
-        button?: number;
-        clientX: number;
-        clientY: number;
-        pointerType?: string;
-        currentTarget?: unknown;
-      },
-    ) => {
+    (day: Date, e: PointerLike) => {
       if (!hasDom) {
         return;
       }
@@ -1230,7 +1328,7 @@ export const Calendar = ({
       }
       dragSessionCleanupRef.current?.();
 
-      const colEl = e.currentTarget as HTMLElement | undefined;
+      const colEl = e.currentTarget;
       const colRect = colEl?.getBoundingClientRect?.();
       if (!colRect) {
         return;
@@ -1318,22 +1416,18 @@ export const Calendar = ({
       if (!session?.dragging) {
         return;
       }
-      suppressClickRef.current = true;
-      setTimeout(() => {
-        suppressClickRef.current = false;
-      }, 0);
-      if (!opts.commit || opts.pageX === undefined || opts.pageY === undefined) {
+      suppressNextClick();
+      const { pageX, pageY } = opts;
+      if (!opts.commit || pageX === undefined || pageY === undefined) {
         return;
       }
       // Remeasure on release — layouts can be stale if anything shifted.
       measureDayLayouts(dayRefs.current, (layouts) => {
-        const key =
-          findDayKeyAtPoint(opts.pageX!, opts.pageY!, layouts) ??
-          findDayKeyAtPoint(opts.pageX!, opts.pageY!, session.layouts);
+        const key = findDayKeyAtPoint(pageX, pageY, layouts) ?? findDayKeyAtPoint(pageX, pageY, session.layouts);
         commitMoveToKey(session.event, key);
       });
     },
-    [commitMoveToKey],
+    [commitMoveToKey, suppressNextClick],
   );
 
   const handleNativeGrant = useCallback(
@@ -1412,12 +1506,12 @@ export const Calendar = ({
   }, [endNativeSession]);
 
   const getEventDragProps = useCallback(
-    (event: CalendarEvent, mode: 'day' | 'slot' = 'day') => {
-      const base = { 'data-calendar-event': event.id } as Record<string, unknown>;
+    (event: CalendarEvent, mode: 'day' | 'slot' = 'day'): EventDragProps => {
+      const base: EventDragProps = { 'data-calendar-event': event.id };
       if (webDragEnabled) {
         return {
           ...base,
-          onPointerDown: (e: any) => {
+          onPointerDown: (e: React.PointerEvent<HTMLElement>) => {
             handleEventPointerDown(event, e, mode);
           },
         };
@@ -1429,7 +1523,7 @@ export const Calendar = ({
           onStartShouldSetResponder: () => true,
           onMoveShouldSetResponder: () => true,
           onResponderTerminationRequest: () => !nativeSessionRef.current?.dragging,
-          onResponderGrant: (e: any) => {
+          onResponderGrant: (e: GestureResponderEvent) => {
             handleNativeGrant(event, e);
           },
           onResponderMove: handleNativeMove,
@@ -1455,10 +1549,12 @@ export const Calendar = ({
     const grouped: Record<string, CalendarEvent[]> = {};
     for (const event of events) {
       const key = formatDateKey(event.start);
-      if (!grouped[key]) {
-        grouped[key] = [];
+      const bucket = grouped[key];
+      if (bucket === undefined) {
+        grouped[key] = [event];
+      } else {
+        bucket.push(event);
       }
-      grouped[key].push(event);
     }
     return grouped;
   }, [events]);
@@ -1519,8 +1615,7 @@ export const Calendar = ({
     }
     if (view === 'week') {
       const weekDays = getWeekDays(currentDate, firstDayOfWeek);
-      const start = weekDays[0];
-      const end = weekDays[6];
+      const { 0: start, 6: end } = weekDays;
       if (start.getMonth() === end.getMonth()) {
         return `${monthNames[start.getMonth()]} ${start.getDate()} - ${end.getDate()}, ${start.getFullYear()}`;
       }
@@ -1554,20 +1649,15 @@ export const Calendar = ({
 
   const focusedDayKey = focusedDate ? formatDateKey(focusedDate) : null;
 
-  const focusCellId = focusedDayKey
-    ? view === 'month'
-      ? `${calendarId}-day-${focusedDayKey}`
-      : `${calendarId}-slot-cursor`
-    : undefined;
+  const focusCellId = focusCellIdFor(calendarId, view, focusedDayKey);
 
   const handleBodyKeyDown = useCallback(
-    (e: { key: string; preventDefault?: () => void; stopPropagation?: () => void }) => {
+    (e: React.KeyboardEvent) => {
       if (editorStateRef.current) {
         return;
       }
       const { key } = e;
-      const arrows = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
-      if (arrows.includes(key)) {
+      if (isArrowKey(key)) {
         e.preventDefault?.();
         const base = focusedDate ?? currentDate;
         if (!focusedDate) {
@@ -1589,26 +1679,12 @@ export const Calendar = ({
         // Horizontal arrows follow the VISUAL axis (WAI-ARIA grid pattern):
         // under RTL the next day sits to the LEFT, so swap left/right before
         // the direction-agnostic date math in moveFocusDate.
-        const logicalKey =
-          isRTL && key === 'ArrowLeft' ? 'ArrowRight' : isRTL && key === 'ArrowRight' ? 'ArrowLeft' : key;
-        const next = moveFocusDate(base, logicalKey as any, view);
+        const next = moveFocusDate(base, mirrorArrow(key, isRTL), view);
         setFocusedDate(next);
         setAnnouncement(formatDayLong(next));
         // Crossing the visible period navigates it (direction-aware slide).
-        const delta = next.getTime() - base.getTime();
-        if (view === 'month' && next.getMonth() !== currentDate.getMonth()) {
-          navDirectionRef.current = delta > 0 ? 1 : -1;
-          hasNavigatedRef.current = true;
-          setCurrentDate(next);
-        } else if (view === 'week') {
-          const visible = getWeekDays(currentDate, firstDayOfWeek).map(formatDateKey);
-          if (!visible.includes(formatDateKey(next))) {
-            navDirectionRef.current = delta > 0 ? 1 : -1;
-            hasNavigatedRef.current = true;
-            setCurrentDate(next);
-          }
-        } else if (view === 'day' && !isSameDay(next, currentDate)) {
-          navDirectionRef.current = delta > 0 ? 1 : -1;
+        if (leavesVisiblePeriod(view, next, currentDate, firstDayOfWeek)) {
+          navDirectionRef.current = next.getTime() - base.getTime() > 0 ? 1 : -1;
           hasNavigatedRef.current = true;
           setCurrentDate(next);
         }
@@ -1649,28 +1725,27 @@ export const Calendar = ({
   // Shared event chip / block a11y + press wiring
   // -------------------------------------------------------------------------
   const eventA11yProps = useCallback(
-    (event: CalendarEvent) =>
-      ({
-        role: 'button',
-        tabIndex: 0,
-        'aria-label': eventAccessibleLabel(event),
-        outlineWidth: 0,
-        focusStyle: { outlineWidth: 0 },
-        focusVisibleStyle: ensureFocusVisibleRing({ outlineOffset: -2 }),
-        onKeyDown: (ke: any) => {
-          if (ke.key === 'Enter' || ke.key === ' ') {
-            ke.preventDefault?.();
-            ke.stopPropagation?.();
-            onEventClick?.(event);
-          }
-        },
-      }) as Record<string, unknown>,
+    (event: CalendarEvent) => ({
+      role: 'button' as const,
+      tabIndex: 0,
+      'aria-label': eventAccessibleLabel(event),
+      outlineWidth: 0,
+      focusStyle: { outlineWidth: 0 },
+      focusVisibleStyle: ensureFocusVisibleRing({ outlineOffset: -2 }),
+      onKeyDown: (ke: React.KeyboardEvent) => {
+        if (ke.key === 'Enter' || ke.key === ' ') {
+          ke.preventDefault?.();
+          ke.stopPropagation?.();
+          onEventClick?.(event);
+        }
+      },
+    }),
     [onEventClick],
   );
 
   const renderEventBadge = useCallback(
     (event: CalendarEvent, compact = false) => {
-      const dragProps = getEventDragProps(event, 'day') as any;
+      const dragProps = dragSpread(getEventDragProps(event, 'day'));
       const lifted = draggingEventId === event.id;
       if (renderEvent) {
         if (!dragEnabled) {
@@ -1693,7 +1768,7 @@ export const Calendar = ({
         <YStack
           key={event.id}
           {...knobProps.borderRadius}
-          backgroundColor={(event.color || '$accentBackground') as any}
+          backgroundColor={orDefault(event.color, ACCENT_BACKGROUND)}
           padding={compact ? '$1' : '$2'}
           // Month-view chips measured 23px tall — floor the visual
           // box at 24 and fill the rest of the 44 target with hit slop (real
@@ -1712,7 +1787,7 @@ export const Calendar = ({
             nativeDragEnabled
               ? undefined
               : (e) => {
-                  (e as any)?.stopPropagation?.();
+                  e?.stopPropagation?.();
                   if (suppressClickRef.current) {
                     return;
                   }
@@ -1733,6 +1808,7 @@ export const Calendar = ({
       renderEvent,
       onEventClick,
       knobProps.borderRadius,
+      knobProps.body,
       dragEnabled,
       webDragEnabled,
       nativeDragEnabled,
@@ -1748,6 +1824,126 @@ export const Calendar = ({
   // -------------------------------------------------------------------------
   const MONTH_VISIBLE_EVENTS = 3;
 
+  const renderMonthDayCell = (
+    day: Date,
+    dayIndex: number,
+    weekIndex: number,
+    totalWeeks: number,
+    monthRowMinHeight: number,
+  ) => {
+    const isCurrentMonth = day.getMonth() === currentDate.getMonth();
+    const dayKey = formatDateKey(day);
+    const dayEvents = eventsByDate[dayKey] ?? [];
+    const isDropTarget = dragGhost !== null && dropTargetKey === dayKey;
+    const isFocused = focusedDayKey === dayKey;
+    const hiddenCount = dayEvents.length - MONTH_VISIBLE_EVENTS;
+    const today = isToday(day);
+
+    return (
+      <YStack
+        key={day.toISOString()}
+        id={`${calendarId}-day-${dayKey}`}
+        {...webOnlyProps({ role: 'gridcell' })}
+        aria-selected={isFocused || undefined}
+        aria-label={
+          dayEvents.length > 0
+            ? `${formatDayLong(day)}, ${withInterp(t('{{count}} events'), {
+                count: dayEvents.length,
+              })}`
+            : formatDayLong(day)
+        }
+        ref={
+          nativeDragEnabled
+            ? (node: MeasurableDayNode | null) => {
+                registerDayRef(dayKey, node);
+              }
+            : undefined
+        }
+        flex={1}
+        minHeight={monthRowMinHeight}
+        // Interior hairline separators only — the panel frame
+        // owns the outer edge (OPTICS: one device pixel, no
+        // doubled rules at the last column/row).
+        {...gridCellEdges(dayIndex < 6, weekIndex < totalWeeks - 1)}
+        borderColor="$borderColor"
+        backgroundColor={monthCellBackground(isDropTarget, isCurrentMonth)}
+        padding={cellPad}
+        gap={chipGap}
+        outlineWidth={0}
+        {...{ 'data-calendar-day': dayKey }}
+        onPress={() => {
+          if (suppressClickRef.current) {
+            return;
+          }
+          onDateSelect?.(day);
+        }}
+        cursor="pointer"
+        hoverStyle={{ backgroundColor: componentColors.surface.background }}>
+        <XStack
+          justifyContent="flex-end"
+          paddingInlineEnd="$1">
+          <DayNumberDisc
+            date={day}
+            today={today}
+            inMonth={isCurrentMonth}
+            focused={isFocused}
+            onAccent={onAccent}
+            nestedPx={nestedPx}
+            nestedHitSlop={nestedHitSlop}
+            nestedBox={nestedBox}
+            label={nestedKnobs.label}
+          />
+        </XStack>
+        <YStack gap={chipGap}>
+          {dayEvents.slice(0, MONTH_VISIBLE_EVENTS).map((event) => renderEventBadge(event, true))}
+          {hiddenCount > 0 && (
+            <FloatingPanel
+              open={overflowDayKey === dayKey}
+              onOpenChange={(open) => {
+                setOverflowDayKey(open ? dayKey : null);
+              }}
+              widthMode="fit-content"
+              trigger={
+                <XStack
+                  // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui is the cross-platform primitive (no native <button> on RN); role supplies the accessibility semantics
+                  role="button"
+                  aria-label={withInterp(t('Show all {{count}} events'), {
+                    count: dayEvents.length,
+                  })}
+                  cursor="pointer"
+                  paddingInlineStart="$1"
+                  hitSlop={nestedHitSlop}
+                  // Web: keep the "+N more" press from also selecting
+                  // the day cell. Native must not stop propagation —
+                  // the sheet trigger's own press lives on a parent.
+                  onPress={isWeb ? stopPress : undefined}
+                  hoverStyle={{ opacity: 0.7 }}
+                  {...{ 'data-calendar-overflow': String(hiddenCount) }}>
+                  <Text
+                    fontSize="$1"
+                    color={knobProps.textAccentColor}>
+                    {withInterp(t('+{{count}} more'), { count: hiddenCount })}
+                  </Text>
+                </XStack>
+              }>
+              <YStack
+                gap="$1"
+                minWidth={220}
+                {...{ 'data-calendar-overflow-panel': dayKey }}>
+                <Text
+                  {...knobProps.heading}
+                  fontSize="$3">
+                  {formatDayLong(day)}
+                </Text>
+                {dayEvents.map((event) => renderEventBadge(event, false))}
+              </YStack>
+            </FloatingPanel>
+          )}
+        </YStack>
+      </YStack>
+    );
+  };
+
   const renderMonthView = () => {
     const monthDays = getMonthDays(currentDate, firstDayOfWeek);
     const totalWeeks = Math.ceil(monthDays.length / 7);
@@ -1758,7 +1954,7 @@ export const Calendar = ({
     // to the hard floor so the month fits whole. Only below the hard floor
     // does the grid scroll — and then the window is sized to a whole-row
     // boundary, so no week row is sliced mid-row at rest.
-    let monthRowMinHeight = monthCellMinHeight;
+    let monthRowMinHeight: number = monthCellMinHeight;
     if (monthBodyHeight > 0 && totalWeeks * monthCellMinHeight > monthBodyHeight) {
       monthRowMinHeight =
         totalWeeks * monthRowHardFloor <= monthBodyHeight
@@ -1767,7 +1963,7 @@ export const Calendar = ({
     }
 
     const weekdayHeaders: string[] = [];
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 7; i += 1) {
       weekdayHeaders.push(weekdayNames[(firstDayOfWeek + i) % 7]);
     }
 
@@ -1779,12 +1975,13 @@ export const Calendar = ({
         tabIndex={0}
         aria-activedescendant={focusCellId}
         onFocus={handleBodyFocus}
-        onKeyDown={handleBodyKeyDown as any}
+        onKeyDown={handleBodyKeyDown}
         outlineWidth={0}
         {...{ 'data-calendar-body': view }}>
         <XStack
           {...hairline.bottom}
           borderColor="$borderColor"
+          // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui is the cross-platform primitive (no native <tr> on RN); role supplies the accessibility semantics
           role="row">
           {weekdayHeaders.map((day) => (
             <YStack
@@ -1792,6 +1989,7 @@ export const Calendar = ({
               flex={1}
               padding="$2"
               alignItems="center"
+              // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui is the cross-platform primitive (no native <th> on RN); role supplies the accessibility semantics
               role="columnheader"
               {...{ backgroundColor: componentColors.surface.background }}>
               <Text
@@ -1815,7 +2013,7 @@ export const Calendar = ({
             setMonthBodyHeight((prev) => (prev === next ? prev : next));
           }}>
           <YStack flex={1}>
-            {Array.from({ length: totalWeeks }).map((_, weekIndex, weeks) => (
+            {Array.from({ length: totalWeeks }).map((_, weekIndex) => (
               // basis:auto (not flex={1}): rows grow from their content and
               // share only the EXTRA space, so a crowded cell can never be
               // sliced by a fixed row share; scroll engages past the floor.
@@ -1825,125 +2023,11 @@ export const Calendar = ({
                 flexShrink={0}
                 flexBasis="auto"
                 minHeight={monthRowMinHeight}
+                // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui is the cross-platform primitive (no native <tr> on RN); role supplies the accessibility semantics
                 role="row">
-                {monthDays.slice(weekIndex * 7, (weekIndex + 1) * 7).map((day, dayIndex) => {
-                  const isCurrentMonth = day.getMonth() === currentDate.getMonth();
-                  const dayKey = formatDateKey(day);
-                  const dayEvents = eventsByDate[dayKey] || [];
-                  const isDropTarget = dragGhost !== null && dropTargetKey === dayKey;
-                  const isFocused = focusedDayKey === dayKey;
-                  const hiddenCount = dayEvents.length - MONTH_VISIBLE_EVENTS;
-                  const today = isToday(day);
-
-                  return (
-                    <YStack
-                      key={day.toISOString()}
-                      id={`${calendarId}-day-${dayKey}`}
-                      {...({ role: 'gridcell' } as any)}
-                      aria-selected={isFocused || undefined}
-                      aria-label={
-                        dayEvents.length > 0
-                          ? `${formatDayLong(day)}, ${withInterp(t('{{count}} events'), {
-                              count: dayEvents.length,
-                            })}`
-                          : formatDayLong(day)
-                      }
-                      ref={
-                        nativeDragEnabled
-                          ? (node: MeasurableDayNode | null) => {
-                              registerDayRef(dayKey, node);
-                            }
-                          : undefined
-                      }
-                      flex={1}
-                      minHeight={monthRowMinHeight}
-                      // Interior hairline separators only — the panel frame
-                      // owns the outer edge (OPTICS: one device pixel, no
-                      // doubled rules at the last column/row).
-                      {...gridCellEdges(dayIndex < 6, weekIndex < weeks.length - 1)}
-                      borderColor="$borderColor"
-                      backgroundColor={
-                        isDropTarget
-                          ? '$accentBackground'
-                          : isCurrentMonth
-                            ? '$background'
-                            : componentColors.surface.background
-                      }
-                      padding={cellPad}
-                      gap={chipGap}
-                      outlineWidth={0}
-                      {...{ 'data-calendar-day': dayKey }}
-                      onPress={() => {
-                        if (suppressClickRef.current) {
-                          return;
-                        }
-                        onDateSelect?.(day);
-                      }}
-                      cursor="pointer"
-                      hoverStyle={{ backgroundColor: componentColors.surface.background }}>
-                      <XStack
-                        justifyContent="flex-end"
-                        paddingInlineEnd="$1">
-                        <DayNumberDisc
-                          date={day}
-                          today={today}
-                          inMonth={isCurrentMonth}
-                          focused={isFocused}
-                          onAccent={onAccent}
-                          nestedPx={nestedPx}
-                          nestedHitSlop={nestedHitSlop}
-                          nestedBox={nestedBox}
-                          label={nestedKnobs.label}
-                        />
-                      </XStack>
-                      <YStack gap={chipGap}>
-                        {dayEvents.slice(0, MONTH_VISIBLE_EVENTS).map((event) => renderEventBadge(event, true))}
-                        {hiddenCount > 0 && (
-                          <FloatingPanel
-                            open={overflowDayKey === dayKey}
-                            onOpenChange={(open) => {
-                              setOverflowDayKey(open ? dayKey : null);
-                            }}
-                            fitContent
-                            trigger={
-                              <XStack
-                                role="button"
-                                aria-label={withInterp(t('Show all {{count}} events'), {
-                                  count: dayEvents.length,
-                                })}
-                                cursor="pointer"
-                                paddingInlineStart="$1"
-                                hitSlop={nestedHitSlop}
-                                // Web: keep the "+N more" press from also selecting
-                                // the day cell. Native must not stop propagation —
-                                // the sheet trigger's own press lives on a parent.
-                                onPress={isWeb ? (e: any) => e?.stopPropagation?.() : undefined}
-                                hoverStyle={{ opacity: 0.7 }}
-                                {...{ 'data-calendar-overflow': String(hiddenCount) }}>
-                                <Text
-                                  fontSize="$1"
-                                  color={knobProps.textAccentColor}>
-                                  {withInterp(t('+{{count}} more'), { count: hiddenCount })}
-                                </Text>
-                              </XStack>
-                            }>
-                            <YStack
-                              gap="$1"
-                              minWidth={220}
-                              {...{ 'data-calendar-overflow-panel': dayKey }}>
-                              <Text
-                                {...knobProps.heading}
-                                fontSize="$3">
-                                {formatDayLong(day)}
-                              </Text>
-                              {dayEvents.map((event) => renderEventBadge(event, false))}
-                            </YStack>
-                          </FloatingPanel>
-                        )}
-                      </YStack>
-                    </YStack>
-                  );
-                })}
+                {monthDays
+                  .slice(weekIndex * 7, (weekIndex + 1) * 7)
+                  .map((day, dayIndex) => renderMonthDayCell(day, dayIndex, weekIndex, totalWeeks, monthRowMinHeight))}
               </XStack>
             ))}
           </YStack>
@@ -1955,7 +2039,7 @@ export const Calendar = ({
   // -------------------------------------------------------------------------
   // Time grid (week + day views)
   // -------------------------------------------------------------------------
-  const timeGridScrollRef = useRef<any>(null);
+  const timeGridScrollRef = useRef<RNScrollView>(null);
   const gridHeight = 24 * hourHeight;
 
   useEffect(() => {
@@ -1981,7 +2065,7 @@ export const Calendar = ({
     const leftPct = (isRTL ? layout.columns - 1 - layout.column : layout.column) * widthPct;
     const lifted = draggingEventId === event.id;
     const zoneInner = Math.min(RESIZE_ZONE_PX / 2, blockHeight / 2);
-    const dragProps = getEventDragProps(event, 'slot') as any;
+    const dragProps = dragSpread(getEventDragProps(event, 'slot'));
 
     return (
       <YStack
@@ -1989,16 +2073,16 @@ export const Calendar = ({
         position="absolute"
         top={top}
         height={blockHeight}
-        left={`${leftPct}%` as any}
-        width={`${widthPct}%` as any}
+        left={`${leftPct}%`}
+        width={`${widthPct}%`}
         paddingInlineEnd={2}
         zIndex={preview ? 4 : 2}
         // Committed/reverted/snapped geometry jumps tween on web.
-        transition={webLayoutTransition as any}>
+        transition={webLayoutTransition}>
         <YStack
           flex={1}
           {...knobProps.borderRadius}
-          backgroundColor={(event.color || '$accentBackground') as any}
+          backgroundColor={orDefault(event.color, ACCENT_BACKGROUND)}
           padding="$1"
           overflow="hidden"
           opacity={lifted ? 0.4 : 1}
@@ -2011,7 +2095,7 @@ export const Calendar = ({
             nativeDragEnabled
               ? undefined
               : (e) => {
-                  (e as any)?.stopPropagation?.();
+                  e?.stopPropagation?.();
                   if (suppressClickRef.current) {
                     return;
                   }
@@ -2056,9 +2140,11 @@ export const Calendar = ({
               paddingBottom={2}
               opacity={0}
               hoverStyle={{ opacity: 1 }}
-              onPointerDown={(e: any) => {
-                handleResizePointerDown(event, 'start', e);
-              }}
+              {...webOnlyProps({
+                onPointerDown: (e) => {
+                  handleResizePointerDown(event, 'start', e);
+                },
+              })}
               {...{ 'data-calendar-resize': `start:${event.id}` }}>
               <YStack
                 width={28}
@@ -2079,9 +2165,11 @@ export const Calendar = ({
               paddingTop={2}
               opacity={0}
               hoverStyle={{ opacity: 1 }}
-              onPointerDown={(e: any) => {
-                handleResizePointerDown(event, 'end', e);
-              }}
+              {...webOnlyProps({
+                onPointerDown: (e) => {
+                  handleResizePointerDown(event, 'end', e);
+                },
+              })}
               {...{ 'data-calendar-resize': `end:${event.id}` }}>
               <YStack
                 width={28}
@@ -2126,7 +2214,7 @@ export const Calendar = ({
       tabIndex={0}
       aria-activedescendant={focusCellId}
       onFocus={handleBodyFocus}
-      onKeyDown={handleBodyKeyDown as any}
+      onKeyDown={handleBodyKeyDown}
       outlineWidth={0}
       {...{ 'data-calendar-body': view }}>
       {/* Day headers */}
@@ -2188,7 +2276,7 @@ export const Calendar = ({
         </YStack>
         {days.map((day) => {
           const dayKey = formatDateKey(day);
-          const dayEvents = (eventsByDate[dayKey] || []).filter((ev) => !isTimedEvent(ev));
+          const dayEvents = (eventsByDate[dayKey] ?? []).filter((ev) => !isTimedEvent(ev));
           const isDropTarget = dragGhost !== null && dropTargetKey === dayKey;
           return (
             <YStack
@@ -2198,7 +2286,7 @@ export const Calendar = ({
               borderColor="$borderColor"
               padding="$1"
               gap="$1"
-              backgroundColor={isDropTarget ? '$accentBackground' : undefined}
+              backgroundColor={isDropTarget ? ACCENT_BACKGROUND : undefined}
               {...{ 'data-calendar-day': dayKey }}
               ref={
                 nativeDragEnabled
@@ -2244,7 +2332,7 @@ export const Calendar = ({
 
           {days.map((day) => {
             const dayKey = formatDateKey(day);
-            const dayEvents = (eventsByDate[dayKey] || []).filter(isTimedEvent);
+            const dayEvents = (eventsByDate[dayKey] ?? []).filter(isTimedEvent);
             const blocks = layoutDayBlocks(
               dayEvents.map((ev) => ({
                 id: ev.id,
@@ -2280,13 +2368,13 @@ export const Calendar = ({
                       }
                     : undefined
                 }
-                onPointerDown={
-                  hasDom
-                    ? (e: any) => {
+                {...(hasDom
+                  ? webOnlyProps({
+                      onPointerDown: (e) => {
                         handleGridPointerDown(day, e);
-                      }
-                    : undefined
-                }>
+                      },
+                    })
+                  : null)}>
                 {/* Hour lines */}
                 {hours.map((hour) => (
                   <YStack
@@ -2308,7 +2396,7 @@ export const Calendar = ({
                 })}
 
                 {/* Drop-target slot highlight (ramp tint) */}
-                {isSlotTargetDay && slotTarget && (
+                {isSlotTargetDay && slotTarget !== null && (
                   <YStack
                     position="absolute"
                     {...overlayInset}
@@ -2342,7 +2430,7 @@ export const Calendar = ({
                     borderColor="$accentColor"
                     pointerEvents="none"
                     zIndex={4}
-                    transition={webLayoutTransition as any}
+                    transition={webLayoutTransition}
                     {...{ 'data-calendar-create-draft': 'true' }}>
                     <Text
                       fontSize="$1"
@@ -2372,7 +2460,7 @@ export const Calendar = ({
                           commitEditor();
                         }
                       }}
-                      fitContent
+                      widthMode="fit-content"
                       trigger={
                         <YStack
                           {...knobProps.borderRadius}
@@ -2402,7 +2490,7 @@ export const Calendar = ({
                           placeholder={t('New event')}
                           value={draftTitle}
                           onChangeText={setDraftTitle}
-                          inputProps={{ autoFocus: true } as any}
+                          inputProps={{ autoFocus: true }}
                         />
                         <Text
                           fontSize="$2"
@@ -2426,7 +2514,7 @@ export const Calendar = ({
                 {focusHere && wasKeyboardFocus() && (
                   <YStack
                     id={`${calendarId}-slot-cursor`}
-                    {...({ role: 'gridcell' } as any)}
+                    {...webOnlyProps({ role: 'gridcell' })}
                     aria-label={`${formatDayLong(day)}, ${formatTimeRangeLabel(
                       dateAtMinutes(day, focusedSlotMin),
                       dateAtMinutes(day, focusedSlotMin + slotMinutes),
@@ -2439,7 +2527,7 @@ export const Calendar = ({
                     {...keyboardFocusRingProps}
                     pointerEvents="none"
                     zIndex={3}
-                    transition={webLayoutTransition as any}
+                    transition={webLayoutTransition}
                     {...{ 'data-calendar-slot-cursor': 'true' }}
                   />
                 )}
@@ -2465,21 +2553,10 @@ export const Calendar = ({
   // then unmounts the leaving period between frames). Physical direction
   // mirrors under RTL so "next" enters from the reading end.
   // `initial={false}` keeps first paint settled (mount is not a jump).
+  // oxlint-disable-next-line react/refs -- the nav direction is a ref on purpose: it must reflect the latest navigation without causing its own render
   const physicalDir = navDirectionRef.current * (isRTL ? -1 : 1);
-  const bodyEnterVariant = transition
-    ? physicalDir > 0
-      ? 'fromEnd'
-      : physicalDir < 0
-        ? 'fromStart'
-        : 'fade'
-    : undefined;
-  const bodyExitVariant = transition
-    ? physicalDir > 0
-      ? 'fromStart'
-      : physicalDir < 0
-        ? 'fromEnd'
-        : 'fade'
-    : undefined;
+  const bodyEnterVariant = hasTransition ? slideVariant(physicalDir, 'fromEnd', 'fromStart') : undefined;
+  const bodyExitVariant = hasTransition ? slideVariant(physicalDir, 'fromStart', 'fromEnd') : undefined;
 
   return (
     <YStack
@@ -2552,7 +2629,9 @@ export const Calendar = ({
               ]}
               currentView={view}
               onViewChange={(val) => {
-                changeView(val as CalendarViewType);
+                if (isCalendarView(val)) {
+                  changeView(val);
+                }
               }}
             />
           )}
@@ -2585,17 +2664,19 @@ export const Calendar = ({
         position="relative">
         <AnimatePresence
           initial={false}
-          enterVariant={bodyEnterVariant}
-          exitVariant={bodyExitVariant}>
+          custom={{ enterVariant: bodyEnterVariant, exitVariant: bodyExitVariant }}>
           <CalendarSlide
             key={motionKey}
             fullscreen
             x={0}
             opacity={1}
-            transition={transition as any}
+            transition={transition}
             {...{ 'data-calendar-motion': motionKey }}>
+            {/* oxlint-disable-next-line react/refs -- the period renderers only read the session refs inside handlers, never while rendering */}
             {view === 'month' && renderMonthView()}
+            {/* oxlint-disable-next-line react/refs -- see above */}
             {view === 'week' && renderWeekView()}
+            {/* oxlint-disable-next-line react/refs -- see above */}
             {view === 'day' && renderDayView()}
           </CalendarSlide>
         </AnimatePresence>
@@ -2606,38 +2687,36 @@ export const Calendar = ({
         <YStack
           pointerEvents="none"
           {...knobProps.borderRadius}
-          backgroundColor={(dragGhost.event.color || '$accentBackground') as any}
+          backgroundColor={orDefault(dragGhost.event.color, ACCENT_BACKGROUND)}
           padding="$1"
           opacity={0.95}
           scale={1.03}
-          {...({
-            'data-calendar-drag-ghost': true,
-            ...(isWeb
-              ? {
-                  style: {
-                    position: 'fixed',
-                    left: dragGhost.x + 12,
-                    top: dragGhost.y + 12,
-                    // Sheet tier (Axiom 14): the ghost tracks the pointer
-                    // above page content and sticky chrome.
-                    zIndex: zIndex.sheet,
-                    maxWidth: 220,
-                    boxShadow: LIFT_SHADOW,
-                  },
-                }
-              : {
-                  position: 'absolute',
-                  left: dragGhost.x,
-                  top: dragGhost.y,
+          {...{ 'data-calendar-drag-ghost': true }}
+          {...(isWeb
+            ? webOnlyProps({
+                style: {
+                  position: 'fixed',
+                  left: dragGhost.x + 12,
+                  top: dragGhost.y + 12,
+                  // Sheet tier (Axiom 14): the ghost tracks the pointer
+                  // above page content and sticky chrome.
                   zIndex: zIndex.sheet,
                   maxWidth: 220,
-                  shadowColor: '$shadowColor',
-                  shadowOffset: { width: 0, height: 6 },
-                  shadowRadius: 12,
-                  shadowOpacity: 0.3,
-                  elevation: 8,
-                }),
-          } as any)}>
+                  boxShadow: LIFT_SHADOW,
+                },
+              })
+            : {
+                position: 'absolute',
+                left: dragGhost.x,
+                top: dragGhost.y,
+                zIndex: zIndex.sheet,
+                maxWidth: 220,
+                shadowColor: '$shadowColor',
+                shadowOffset: { width: 0, height: 6 },
+                shadowRadius: 12,
+                shadowOpacity: 0.3,
+                elevation: 8,
+              })}>
           <Text
             fontSize="$2"
             numberOfLines={1}
@@ -2652,8 +2731,8 @@ export const Calendar = ({
         <SettleGhost
           key={settle.key}
           settle={settle}
-          transition={transition as any}
-          borderRadius={knobProps.borderRadius as any}
+          transition={transition}
+          borderRadius={knobProps.borderRadius}
           onDone={clearSettle}
         />
       )}

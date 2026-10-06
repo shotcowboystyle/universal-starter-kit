@@ -14,7 +14,8 @@
 import { WarningCircleIcon } from '@phosphor-icons/react';
 import { Button, Spinner } from '@repo/forms';
 import { useResolvedKnobs } from '@repo/theme';
-import { createContext, useContext, useEffect, useRef } from 'react';
+import type { KnobProps } from '@repo/theme';
+import { createContext, useContext, useEffect, useMemo, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { XStack, YStack } from 'tamagui';
 import type { YStackProps } from 'tamagui';
@@ -69,17 +70,17 @@ export interface AsyncBoundaryProps extends Omit<YStackProps, 'children'> {
    * Loading slot. `true` → layout skeleton; custom node replaces it.
    * Boolean false / undefined → not loading.
    */
-  loading?: boolean | ReactNode;
+  loading?: ReactNode;
   /**
    * Empty slot. `true` → default EmptyState; custom node replaces it.
    * Ignored entirely when `error` is set.
    */
-  empty?: boolean | ReactNode;
+  empty?: ReactNode;
   /**
    * Error slot. Truthy string / Error / node / `true` → error UI.
    * Wins over loading and empty.
    */
-  error?: boolean | string | Error | ReactNode | null;
+  error?: Error | ReactNode;
   /** Ready content. Alias of `children`. */
   data?: ReactNode;
   children?: ReactNode;
@@ -115,7 +116,7 @@ export interface AsyncBoundaryProps extends Omit<YStackProps, 'children'> {
 // Helpers
 // ---------------------------------------------------------------------------
 
-const isReactNodeSlot = (value: unknown): value is ReactNode => {
+const isReactNodeSlot = (value: Error | ReactNode): value is ReactNode => {
   if (value == null || typeof value === 'boolean') {
     return false;
   }
@@ -128,24 +129,15 @@ const isReactNodeSlot = (value: unknown): value is ReactNode => {
   return true;
 };
 
-const isActiveError = (error: AsyncBoundaryProps['error']): boolean => {
-  if (error == null || error === false) {
-    return false;
-  }
-  return true;
-};
+const isActiveError = (error: AsyncBoundaryProps['error']): boolean => error != null && error !== false;
 
-const isActiveFlag = (value: boolean | ReactNode | undefined): boolean => {
-  if (value == null || value === false) {
-    return false;
-  }
-  return true;
-};
+const isActiveFlag = (value: ReactNode): boolean => value != null && value !== false;
 
+// oxlint-disable-next-line react-doctor/only-export-components -- status resolver is part of the public AsyncBoundary API and stays beside the component
 export const resolveAsyncStatus = (opts: {
-  loading?: boolean | ReactNode;
-  empty?: boolean | ReactNode;
-  error?: boolean | string | Error | ReactNode | null;
+  loading?: ReactNode;
+  empty?: ReactNode;
+  error?: Error | ReactNode;
 }): AsyncStatus => {
   if (isActiveError(opts.error)) {
     return 'error';
@@ -159,12 +151,15 @@ export const resolveAsyncStatus = (opts: {
   return 'data';
 };
 
-const errorCopy = (
-  error: AsyncBoundaryProps['error'],
-  errorTitle: string,
-  errorDescription?: string,
-): { title: string; description?: string } => {
-  if (typeof error === 'string') {
+interface ErrorCopy {
+  title: string;
+  description?: string;
+}
+
+const isErrorText = (error: AsyncBoundaryProps['error']): error is string => typeof error === 'string';
+
+const errorCopy = (error: AsyncBoundaryProps['error'], errorTitle: string, errorDescription?: string): ErrorCopy => {
+  if (isErrorText(error)) {
     return { title: errorTitle, description: errorDescription ?? error };
   }
   if (error instanceof Error) {
@@ -184,10 +179,12 @@ const asyncDevWarn = (code: string, detail = ''): void => {
     return;
   }
   seenDevWarns.add(key);
-  console.warn(`[AsyncBoundary] ${code}${detail ? ` (${detail})` : ''}`);
+  const suffix = detail === '' ? '' : ` (${detail})`;
+  console.warn(`[AsyncBoundary] ${code}${suffix}`);
 };
 
-/** @internal test helper */
+/** Test helper; not for consumer use. */
+// oxlint-disable-next-line react-doctor/only-export-components, sonarjs/variable-name, sonarjs/function-name -- exported test hook; the leading double underscore marks it test-only and renaming would change the public export
 export const __resetAsyncDevWarnSeen = (): void => {
   seenDevWarns.clear();
 };
@@ -198,6 +195,7 @@ export const __resetAsyncDevWarnSeen = (): void => {
 
 export const AsyncSkeleton = ({ layout = 'generic', ...rest }: { layout?: AsyncBoundaryLayout } & YStackProps) => {
   const { t } = useTranslation();
+  // oxlint-disable-next-line typescript/switch-exhaustiveness-check -- `generic` is the intentional default so an unrecognised layout from untyped callers still paints the generic skeleton
   switch (layout) {
     case 'list': {
       return (
@@ -298,7 +296,7 @@ export const AsyncSkeleton = ({ layout = 'generic', ...rest }: { layout?: AsyncB
           aria-busy
           aria-label={t('Loading')}
           {...rest}>
-          {Array.from({ length: 3 }).map((_, col) => (
+          {Array.from({ length: 3 }).map((_column, col) => (
             <YStack
               key={col}
               width={260}
@@ -316,7 +314,7 @@ export const AsyncSkeleton = ({ layout = 'generic', ...rest }: { layout?: AsyncB
                 />
                 {/* No count badge skeleton — avoid promising a count */}
               </XStack>
-              {Array.from({ length: 3 }).map((_, row) => (
+              {Array.from({ length: 3 }).map((_cell, row) => (
                 <Skeleton
                   key={row}
                   variant="rounded"
@@ -399,6 +397,7 @@ const AsyncPendingBar = () => {
   return (
     <XStack
       data-async-pending="true"
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui `role` also maps to the native accessibilityRole; `<output>` is web-only
       role="status"
       aria-live="polite"
       aria-label={t('Updating...')}
@@ -482,6 +481,127 @@ const defaultErrorBody = ({
   );
 };
 
+interface SettledPaint {
+  kind: 'data' | 'empty';
+  body: ReactNode;
+}
+
+const nextSettledPaint = (
+  previous: SettledPaint | null,
+  status: AsyncStatus,
+  content: ReactNode,
+  emptyBody: ReactNode,
+): SettledPaint | null => {
+  if (status === 'data') {
+    return { kind: 'data', body: content };
+  }
+  if (status === 'empty') {
+    return { kind: 'empty', body: emptyBody };
+  }
+  return previous;
+};
+
+interface AsyncViewArgs {
+  status: AsyncStatus;
+  error: AsyncBoundaryProps['error'];
+  loading: AsyncBoundaryProps['loading'];
+  layout: AsyncBoundaryLayout;
+  content: ReactNode;
+  emptyBody: ReactNode;
+  settled: SettledPaint | null;
+  compact: boolean;
+  errorTitle: string;
+  errorDescription?: string;
+  onRetry?: () => void;
+  retryLabel: string;
+  gap: KnobProps['gap'];
+}
+
+interface AsyncView {
+  body: ReactNode;
+  displayStatus: AsyncStatus;
+  pending: boolean;
+  stale: boolean;
+  showChrome: boolean;
+}
+
+const errorView = (args: AsyncViewArgs): AsyncView => {
+  const { error, settled, content, compact, errorTitle, errorDescription, onRetry, retryLabel, gap } = args;
+  if (isReactNodeSlot(error)) {
+    return { body: error, displayStatus: 'error', pending: false, stale: false, showChrome: false };
+  }
+  if (settled?.kind !== 'data') {
+    return {
+      body: defaultErrorBody({ error, compact, errorTitle, errorDescription, onRetry, retryLabel }),
+      displayStatus: 'error',
+      pending: false,
+      stale: false,
+      showChrome: false,
+    };
+  }
+  const copy = errorCopy(error, errorTitle, errorDescription);
+  const body = (
+    <YStack
+      width="100%"
+      {...gap}>
+      <Alert
+        compact={compact}
+        intent="error"
+        title={copy.title}
+        action={
+          onRetry ? (
+            <Text
+              fontWeight="400"
+              color="$color12"
+              cursor="pointer"
+              userSelect="none"
+              // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui Text with onPress; role also maps to the native accessibilityRole and a nested <button> would change the Alert action markup
+              role="button"
+              tabIndex={0}
+              onPress={onRetry}>
+              {retryLabel}
+            </Text>
+          ) : undefined
+        }>
+        {copy.description}
+      </Alert>
+      {content ?? settled.body}
+    </YStack>
+  );
+  return { body, displayStatus: 'data', pending: false, stale: true, showChrome: true };
+};
+
+const loadingView = (args: AsyncViewArgs): AsyncView => {
+  const { settled, content, loading, layout, gap } = args;
+  if (settled === null) {
+    const body = loading !== true && isReactNodeSlot(loading) ? loading : <AsyncSkeleton layout={layout} />;
+    return { body, displayStatus: 'loading', pending: false, stale: false, showChrome: true };
+  }
+  const kept = settled.kind === 'data' ? (content ?? settled.body) : settled.body;
+  const body = (
+    <YStack
+      width="100%"
+      {...gap}>
+      <AsyncPendingBar />
+      {kept}
+    </YStack>
+  );
+  return { body, displayStatus: settled.kind, pending: true, stale: false, showChrome: true };
+};
+
+const deriveAsyncView = (args: AsyncViewArgs): AsyncView => {
+  if (args.status === 'error') {
+    return errorView(args);
+  }
+  if (args.status === 'loading') {
+    return loadingView(args);
+  }
+  if (args.status === 'empty') {
+    return { body: args.emptyBody, displayStatus: 'empty', pending: false, stale: false, showChrome: true };
+  }
+  return { body: args.content, displayStatus: 'data', pending: false, stale: false, showChrome: true };
+};
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -531,12 +651,10 @@ export const AsyncBoundary = ({
   const retryLabel = t('Retry');
 
   const emptyBody = defaultEmptyBody({ empty, compact, emptyTitle, emptyDescription });
-  const settledRef = useRef<{ kind: 'data' | 'empty'; body: ReactNode } | null>(null);
-  if (status === 'data') {
-    settledRef.current = { kind: 'data', body: content };
-  } else if (status === 'empty') {
-    settledRef.current = { kind: 'empty', body: emptyBody };
-  }
+  const settledRef = useRef<SettledPaint | null>(null);
+  // oxlint-disable-next-line react/refs -- the last settled paint must be readable in this same render; an effect-updated ref would lag one render and flash the skeleton over kept data
+  settledRef.current = nextSettledPaint(settledRef.current, status, content, emptyBody);
+  // oxlint-disable-next-line react/refs -- same synchronous read of the settled paint recorded above
   const settled = keepPrevious ? settledRef.current : null;
 
   useEffect(() => {
@@ -545,88 +663,33 @@ export const AsyncBoundary = ({
     }
   }, [status, empty]);
 
-  let displayStatus: AsyncStatus = status;
-  let pending = false;
-  let stale = false;
-  let body: ReactNode = null;
-  let showChrome = status !== 'error';
-
-  if (status === 'error') {
-    if (isReactNodeSlot(error)) {
-      body = error;
-    } else if (settled?.kind === 'data') {
-      stale = true;
-      displayStatus = 'data';
-      showChrome = true;
-      const copy = errorCopy(error, errorTitle, errorDescription);
-      body = (
-        <YStack
-          width="100%"
-          {...knobProps.gap}>
-          <Alert
-            compact={compact}
-            intent="error"
-            title={copy.title}
-            action={
-              onRetry ? (
-                <Text
-                  fontWeight="400"
-                  color="$color12"
-                  cursor="pointer"
-                  userSelect="none"
-                  role="button"
-                  tabIndex={0}
-                  onPress={onRetry}>
-                  {retryLabel}
-                </Text>
-              ) : undefined
-            }>
-            {copy.description}
-          </Alert>
-          {content ?? settled.body}
-        </YStack>
-      );
-    } else {
-      body = defaultErrorBody({
-        error,
-        compact,
-        errorTitle,
-        errorDescription,
-        onRetry,
-        retryLabel,
-      });
-    }
-  } else if (status === 'loading') {
-    if (settled) {
-      pending = true;
-      displayStatus = settled.kind;
-      showChrome = true;
-      const kept = settled.kind === 'data' ? (content ?? settled.body) : settled.body;
-      body = (
-        <YStack
-          width="100%"
-          {...knobProps.gap}>
-          <AsyncPendingBar />
-          {kept}
-        </YStack>
-      );
-    } else {
-      body = loading !== true && isReactNodeSlot(loading) ? loading : <AsyncSkeleton layout={layout} />;
-    }
-  } else if (status === 'empty') {
-    body = emptyBody;
-  } else {
-    body = content;
-  }
+  const { body, displayStatus, pending, stale, showChrome } = deriveAsyncView({
+    status,
+    error,
+    loading,
+    layout,
+    content,
+    emptyBody,
+    settled,
+    compact,
+    errorTitle,
+    errorDescription,
+    onRetry,
+    retryLabel,
+    gap: knobProps.gap,
+  });
 
   const hideBadges = displayStatus === 'error';
-  const ctx: AsyncBoundaryContextValue = {
-    status: displayStatus,
-    hideBadges,
-    error: error ?? null,
-    pending,
-    stale,
-  };
+  const ctx = useMemo<AsyncBoundaryContextValue>(
+    () => ({
+      status: displayStatus,
+      hideBadges,
+      error: error ?? null,
+      pending,
+      stale,
+    }),
+    [displayStatus, hideBadges, error, pending, stale],
+  );
 
   return (
     <AsyncBoundaryContext.Provider value={ctx}>

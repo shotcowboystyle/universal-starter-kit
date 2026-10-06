@@ -1,6 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 
 import { formatAbsoluteDate, formatDayOfMonth, formatMonthYear } from '@repo/theme';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -19,11 +18,17 @@ import {
 } from './matrix-math';
 import type { MatrixBucketRule, MatrixCell, MatrixCellSummary } from './matrix-math';
 
-const here = dirname(fileURLToPath(import.meta.url));
+const summary = (patch: Partial<MatrixCellSummary>): MatrixCellSummary => ({
+  rowId: 'a',
+  bucketKey: '2026-01-01',
+  count: 1,
+  cells: [],
+  ...patch,
+});
 const d = (y: number, m: number, day: number, h = 0, min = 0) => new Date(y, m, day, h, min);
 
 describe('matrixMath', () => {
-  describe('generateBuckets', () => {
+  describe(generateBuckets, () => {
     it('generates one bucket per month over a year, each ending where the next starts', () => {
       const buckets = generateBuckets({ start: d(2026, 0, 1), end: d(2027, 0, 1) }, 'month');
       expect(buckets).toHaveLength(12);
@@ -41,7 +46,7 @@ describe('matrixMath', () => {
         '2026-11-01',
         '2026-12-01',
       ]);
-      for (let i = 0; i < buckets.length - 1; i++) {
+      for (let i = 0; i < buckets.length - 1; i += 1) {
         expect(buckets[i].end).toStrictEqual(buckets[i + 1].start);
       }
       expect(buckets[11].end).toStrictEqual(d(2027, 0, 1));
@@ -104,7 +109,7 @@ describe('matrixMath', () => {
     });
   });
 
-  describe('computeMatrixRange', () => {
+  describe(computeMatrixRange, () => {
     it('covers exactly the buckets the data spans, with no padding', () => {
       const dates = [d(2026, 1, 3, 9), d(2026, 3, 27, 17)];
       expect(computeMatrixRange(dates, 'month')).toStrictEqual({
@@ -175,7 +180,7 @@ describe('matrixMath', () => {
     });
   });
 
-  describe('summarizeMatrixCells', () => {
+  describe(summarizeMatrixCells, () => {
     it('folds points into their (row, bucket) under the rule: sums values, counts, keeps the last intent', () => {
       const cells: MatrixCell[] = [
         { rowId: 'a', date: d(2026, 0, 12), value: 4 },
@@ -202,18 +207,6 @@ describe('matrixMath', () => {
     });
 
     it('intensity: explicit wins, presence is full, a zero is the floor, values scale against the max', () => {
-      const summary = (patch: Partial<MatrixCellSummary>): MatrixCellSummary => ({
-        rowId: 'a',
-        bucketKey: '2026-01-01',
-        value: undefined,
-        count: 1,
-        intensity: undefined,
-        intent: undefined,
-        color: undefined,
-        label: undefined,
-        cells: [],
-        ...patch,
-      });
       const summaries = [summary({ value: 10 }), summary({ value: 2 }), summary({ value: 0 })];
       expect(matrixMaxValue(summaries)).toBe(10);
       expect(matrixCellIntensity(summary({ value: 10 }), 10)).toBe(1);
@@ -229,7 +222,7 @@ describe('matrixMath', () => {
 
   describe('reuse', () => {
     it('takes every boundary from ganttMath and carries no day arithmetic of its own', () => {
-      const src = readFileSync(join(here, 'matrix-math.ts'), 'utf-8');
+      const src = readFileSync(path.join(import.meta.dirname, 'matrix-math.ts'), 'utf-8');
       expect(src).toMatch(/from ['"]\.\/gantt-math['"]/u);
       expect(src).toContain('generateTicks(');
       expect(src).not.toMatch(/getDate\(\)\s*[+-]/u);

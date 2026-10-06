@@ -11,25 +11,23 @@ import { Preset } from '@repo/theme';
 // jsdom's getComputedStyle cannot cascade Tamagui's class-based CSS, so this
 // asserts on the atomic classes (same approach as Timeline.radius.test.tsx).
 import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
-import * as React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { Tags } from './Tags';
-
-afterEach(cleanup);
+import type { TagItem } from './Tags';
 
 const tags = [{ id: 'tag-1', label: 'urgent' }];
 
 const classesByPrefix = (el: Element, prefixes: string[]): string[] =>
-  String(el.className || '')
+  el.className
     .split(' ')
     .filter((c) => prefixes.some((p) => c.startsWith(p)))
-    .sort();
+    .toSorted();
 
 /** Walk up from the chip label to the ChipFrame (first ancestor with padding classes). */
 const chipFrameOf = (label: HTMLElement): HTMLElement => {
   let el: HTMLElement | null = label.parentElement;
-  for (let i = 0; i < 8 && el; i++) {
+  for (let i = 0; i < 8 && el; i += 1) {
     if (classesByPrefix(el, ['_pt-', '_pl-']).length > 0) {
       return el;
     }
@@ -42,8 +40,8 @@ const renderTags = () =>
   renderWithProviders(
     <Tags
       tags={tags}
-      onAdd={vi.fn()}
-      onRemove={vi.fn()}
+      onAdd={vi.fn<(tagName: string) => void>()}
+      onRemove={vi.fn<(tag: TagItem) => void>()}
     />,
   );
 
@@ -57,6 +55,8 @@ const triggerPillOf = (trigger: HTMLElement): HTMLElement => {
 };
 
 describe('Tags Add Tag trigger (chip-scale)', () => {
+  afterEach(cleanup);
+
   it('trigger pill padding classes match the chip pill exactly', () => {
     renderTags();
     const chip = chipFrameOf(screen.getByText('urgent'));
@@ -99,15 +99,15 @@ describe('Tags Add Tag trigger (chip-scale)', () => {
       <Preset overrides={{ borderWidth, fillStyle: 'outlined' }}>
         <Tags
           tags={tags}
-          onAdd={vi.fn()}
-          onRemove={vi.fn()}
+          onAdd={vi.fn<(tagName: string) => void>()}
+          onRemove={vi.fn<(tag: TagItem) => void>()}
         />
       </Preset>,
     );
     const pill = triggerPillOf(screen.getByLabelText('Add Tag'));
     const chip = chipFrameOf(screen.getByText('urgent'));
     const edges = ['_btw-', '_bbw-', '_blw-', '_brw-'];
-    const expected = edges.map((edge) => `${edge}${px}`).sort();
+    const expected = edges.map((edge) => `${edge}${px}`).toSorted();
     expect(classesByPrefix(pill, edges)).toStrictEqual(expected);
     // The trigger and the chips it sits beside share one box at every stop;
     // a floor on only one of them is what pulled their heights apart.

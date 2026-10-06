@@ -2,6 +2,8 @@ import { Paragraph, YStack } from 'tamagui';
 
 import { Toolbar } from './Toolbar';
 
+const noop = (): void => undefined;
+
 export default {
   title: 'Components/Toolbar',
   component: Toolbar,
@@ -17,12 +19,12 @@ export const Default = () => (
     </Paragraph>
     <Toolbar
       primaryActions={[
-        { label: 'Save', onPress: () => {}, variant: 'primary' },
-        { label: 'Publish', onPress: () => {}, variant: 'default' },
+        { label: 'Save', onPress: noop, variant: 'primary' },
+        { label: 'Publish', onPress: noop, variant: 'default' },
       ]}
       secondaryActions={[
-        { label: 'Discard', onPress: () => {}, variant: 'outlined' },
-        { label: 'Delete', onPress: () => {}, variant: 'destructive' },
+        { label: 'Discard', onPress: noop, variant: 'outlined' },
+        { label: 'Delete', onPress: noop, variant: 'destructive' },
       ]}
     />
   </YStack>
@@ -38,11 +40,11 @@ export const Loading = () => (
       Toolbar with loading state:
     </Paragraph>
     <Toolbar
-      primaryActions={[{ label: 'Saving...', onPress: () => {}, variant: 'primary', loading: true }]}
+      primaryActions={[{ label: 'Saving...', onPress: noop, variant: 'primary', loading: true }]}
       secondaryActions={[
         {
           label: 'Cancel',
-          onPress: () => {},
+          onPress: noop,
           variant: 'outlined',
           disabled: true,
           disabledReason: 'Locked while the save finishes',
@@ -61,14 +63,14 @@ export const FusedSegment = () => (
     </Paragraph>
     <Toolbar
       primaryActions={[
-        { label: 'Day', onPress: () => {}, fused: true },
-        { label: 'Week', onPress: () => {}, fused: true },
-        { label: 'Month', onPress: () => {}, fused: true },
-        { label: 'Refresh', onPress: () => {}, variant: 'outlined' },
+        { label: 'Day', onPress: noop, fused: true },
+        { label: 'Week', onPress: noop, fused: true },
+        { label: 'Month', onPress: noop, fused: true },
+        { label: 'Refresh', onPress: noop, variant: 'outlined' },
       ]}
       secondaryActions={[
-        { label: 'Export', onPress: () => {}, variant: 'outlined' },
-        { label: 'Delete', onPress: () => {}, variant: 'destructive' },
+        { label: 'Export', onPress: noop, variant: 'outlined' },
+        { label: 'Delete', onPress: noop, variant: 'destructive' },
       ]}
     />
   </YStack>
@@ -84,14 +86,14 @@ export const OverflowNarrow = () => (
     borderStyle="dashed">
     <Toolbar
       primaryActions={[
-        { label: 'Save', onPress: () => {}, variant: 'primary' },
-        { label: 'Publish', onPress: () => {} },
-        { label: 'Duplicate', onPress: () => {}, variant: 'outlined' },
-        { label: 'Archive', onPress: () => {}, variant: 'outlined' },
+        { label: 'Save', onPress: noop, variant: 'primary' },
+        { label: 'Publish', onPress: noop },
+        { label: 'Duplicate', onPress: noop, variant: 'outlined' },
+        { label: 'Archive', onPress: noop, variant: 'outlined' },
       ]}
       secondaryActions={[
-        { label: 'Discard', onPress: () => {}, variant: 'outlined' },
-        { label: 'Delete', onPress: () => {}, variant: 'destructive' },
+        { label: 'Discard', onPress: noop, variant: 'outlined' },
+        { label: 'Delete', onPress: noop, variant: 'destructive' },
       ]}
     />
   </YStack>

@@ -42,11 +42,17 @@ interface TemplateHeaderProps {
   header?: ReactNode;
 }
 
+/** Non-empty check for optional text props. */
+const hasText = (text: string | undefined): boolean => text !== undefined && text !== '';
+
+// oxlint-disable-next-line typescript/promise-function-async -- ReactNode includes Promise but this is a sync render helper; `async` would break rendering
 const renderTemplateHeader = ({ title, subtitle, actions, nav, header }: TemplateHeaderProps) => {
   if (header !== undefined) {
     return header;
   }
-  if (!title && !subtitle && !actions && !nav) {
+  const hasActions = Boolean(actions);
+  const hasNav = Boolean(nav);
+  if (!hasText(title) && !hasText(subtitle) && !hasActions && !hasNav) {
     return null;
   }
   return (
@@ -150,13 +156,13 @@ export const DetailPageLayout = ({
   const multi = defaultMaxPanes(sizeClass) >= 2;
   const gaps = useSemanticGaps();
 
-  const toolbar =
-    toolbarLeading || toolbarTrailing ? (
-      <ScreenToolbar
-        leading={toolbarLeading}
-        trailing={toolbarTrailing}
-      />
-    ) : null;
+  const hasToolbar = Boolean(toolbarLeading) || Boolean(toolbarTrailing);
+  const toolbar = hasToolbar ? (
+    <ScreenToolbar
+      leading={toolbarLeading}
+      trailing={toolbarTrailing}
+    />
+  ) : null;
 
   let body: ReactNode;
   if (aside === null || aside === undefined) {

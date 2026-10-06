@@ -74,13 +74,15 @@ const documents: DocumentRow[] = [
   },
 ];
 
+const statusToneColor = (tone: DocumentRow['statusTone']) => {
+  if (tone === 'success') {
+    return componentColors.semantic.success;
+  }
+  return tone === 'warning' ? componentColors.badge.orange : undefined;
+};
+
 const DocumentItem = ({ item }: { item: DocumentRow }) => {
-  const statusColor =
-    item.statusTone === 'success'
-      ? componentColors.semantic.success
-      : item.statusTone === 'warning'
-        ? componentColors.badge.orange
-        : undefined;
+  const statusColor = statusToneColor(item.statusTone);
   return (
     <ListRow
       icon={item.icon}
@@ -149,7 +151,7 @@ export const Empty = {
 };
 
 /** Failed load wins over empty — error chrome with retry, never empty chrome. */
-export const Error = {
+const ErrorStory = {
   render: () => (
     <List<DocumentRow>
       items={[]}
@@ -176,3 +178,5 @@ export const NoResults = {
     />
   ),
 };
+
+export { ErrorStory as Error };
