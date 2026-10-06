@@ -28,16 +28,19 @@ const getRelativeTime = (language: string, date: DateInput): string => {
 
 export const createDateFormatter = (language: string) => ({
   format: (date: DateInput, options?: Intl.DateTimeFormatOptions) =>
+    // oxlint-disable-next-line react-doctor/js-hoist-intl -- options vary per call; the hooks already memoize the formatter per language
     new Intl.DateTimeFormat(language, options).format(new Date(date)),
   relative: (date: DateInput) => getRelativeTime(language, date),
 });
 
 export const createNumberFormatter = (language: string) => ({
+  // oxlint-disable-next-line react-doctor/js-hoist-intl -- options vary per call; the hooks already memoize the formatter per language
   format: (value: number, options?: Intl.NumberFormatOptions) => new Intl.NumberFormat(language, options).format(value),
 });
 
 export const createCurrencyFormatter = (language: string) => ({
   format: (value: number, currency: string, options?: Omit<Intl.NumberFormatOptions, 'style' | 'currency'>) =>
+    // oxlint-disable-next-line react-doctor/js-hoist-intl -- options vary per call; the hooks already memoize the formatter per language
     new Intl.NumberFormat(language, { ...options, style: 'currency', currency }).format(value),
 });
 

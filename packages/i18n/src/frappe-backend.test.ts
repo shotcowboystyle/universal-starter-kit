@@ -5,21 +5,13 @@
  * translation dict to i18next, and surfaces fetch failures as errors.
  */
 
-import type { Services, InitOptions } from 'i18next';
+import type { InitOptions, ReadCallback, Services } from 'i18next';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createFrappeBackend } from './frappe-backend';
 import type { FrappeBackendOptions } from './frappe-backend';
 
 const savedFlag = process.env.VITE_FRAPPE_ENABLED;
-
-afterEach(() => {
-  if (savedFlag === undefined) {
-    delete process.env.VITE_FRAPPE_ENABLED;
-  } else {
-    process.env.VITE_FRAPPE_ENABLED = savedFlag;
-  }
-});
 
 const enabledBackend = () => {
   process.env.VITE_FRAPPE_ENABLED = 'true';
@@ -32,86 +24,89 @@ const initBackend = (backend: ReturnType<typeof createFrappeBackend>, options: F
   backend!.init({} as Services, options, {} as InitOptions);
 };
 
-describe('createFrappeBackend gating', () => {
-  it("returns null when VITE_FRAPPE_ENABLED is not 'true' (tree-shake guard)", () => {
-    process.env.VITE_FRAPPE_ENABLED = 'false';
-    expect(createFrappeBackend()).toBeNull();
-    delete process.env.VITE_FRAPPE_ENABLED;
-    expect(createFrappeBackend()).toBeNull();
-  });
+const mockFetch = (response: Response) => vi.fn<typeof fetch>().mockResolvedValue(response);
 
-  it('returns a backend module when enabled', () => {
-    const backend = enabledBackend();
-    expect(backend.type).toBe('backend');
-    expect(typeof backend.read).toBe('function');
-  });
-});
+interface ReadResult {
+  error: Parameters<ReadCallback>[0];
+  data: Parameters<ReadCallback>[1];
+}
 
-describe('backend read', () => {
-  it('fetches the Frappe translation dict and passes it to the callback', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ message: { Hello: 'నమస్కారం' } }),
-    });
-    const backend = enabledBackend();
-    initBackend(backend, { baseUrl: 'https://erp.example.com', fetch: fetchMock as never });
-
-    const result = await new Promise((resolve, reject) => {
-      backend.read('te', 'common', (err, data) => {
-        err ? reject(err) : resolve(data);
-      });
-    });
-
-    expect(result).toStrictEqual({ Hello: 'నమస్కారం' });
-    expect(fetchMock).toHaveBeenCalledWith('https://erp.example.com/api/method/frappe.translate.get_dict?language=te', {
-      credentials: 'include',
+const readOnce = async (backend: NonNullable<ReturnType<typeof createFrappeBackend>>, language: string) =>
+  // oxlint-disable-next-line promise/avoid-new -- adapts i18next's callback-style backend.read to a promise
+  await new Promise<ReadResult>((resolve) => {
+    backend.read(language, 'common', (error, data) => {
+      resolve({ error, data });
     });
   });
 
-  it('URI-encodes the language in the request', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ message: {} }),
-    });
-    const backend = enabledBackend();
-    initBackend(backend, { fetch: fetchMock as never });
-
-    await new Promise((resolve) => {
-      backend.read('pt BR', 'common', () => {
-        resolve(null);
-      });
-    });
-
-    expect(String(fetchMock.mock.calls[0][0])).toContain('language=pt%20BR');
+describe('frappe backend', () => {
+  afterEach(() => {
+    if (savedFlag === undefined) {
+      Reflect.deleteProperty(process.env, 'VITE_FRAPPE_ENABLED');
+    } else {
+      process.env.VITE_FRAPPE_ENABLED = savedFlag;
+    }
   });
 
-  it('falls back to an empty dict when the response has no message', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({}),
+  describe(createFrappeBackend, () => {
+    it("returns null when VITE_FRAPPE_ENABLED is not 'true' (tree-shake guard)", () => {
+      process.env.VITE_FRAPPE_ENABLED = 'false';
+      expect(createFrappeBackend()).toBeNull();
+      Reflect.deleteProperty(process.env, 'VITE_FRAPPE_ENABLED');
+      expect(createFrappeBackend()).toBeNull();
     });
-    const backend = enabledBackend();
-    initBackend(backend, { fetch: fetchMock as never });
 
-    const result = await new Promise((resolve, reject) => {
-      backend.read('en', 'common', (err, data) => {
-        err ? reject(err) : resolve(data);
-      });
+    it('returns a backend module when enabled', () => {
+      const backend = enabledBackend();
+      expect(backend.type).toBe('backend');
+      expect(backend).toHaveProperty('read', expect.any(Function));
     });
-    expect(result).toStrictEqual({});
   });
 
-  it('surfaces HTTP failures to the callback as errors', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 503 });
-    const backend = enabledBackend();
-    initBackend(backend, { fetch: fetchMock as never });
+  describe('backend read', () => {
+    it('fetches the Frappe translation dict and passes it to the callback', async () => {
+      const fetchMock = mockFetch(Response.json({ message: { Hello: 'నమస్కారం' } }));
+      const backend = enabledBackend();
+      initBackend(backend, { baseUrl: 'https://erp.example.com', fetch: fetchMock });
 
-    const error = await new Promise<Error>((resolve) => {
-      backend.read('en', 'common', (err) => {
-        resolve(err as Error);
-      });
+      const { error, data } = await readOnce(backend, 'te');
+
+      expect(error).toBeNull();
+      expect(data).toStrictEqual({ Hello: 'నమస్కారం' });
+      expect(fetchMock).toHaveBeenCalledWith(
+        'https://erp.example.com/api/method/frappe.translate.get_dict?language=te',
+        { credentials: 'include' },
+      );
     });
-    expect(error).toBeInstanceOf(Error);
-    expect(error.message).toContain('503');
+
+    it('URI-encodes the language in the request', async () => {
+      const fetchMock = mockFetch(Response.json({ message: {} }));
+      const backend = enabledBackend();
+      initBackend(backend, { fetch: fetchMock });
+
+      await readOnce(backend, 'pt BR');
+
+      expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('language=pt%20BR'), expect.anything());
+    });
+
+    it('falls back to an empty dict when the response has no message', async () => {
+      const fetchMock = mockFetch(Response.json({}));
+      const backend = enabledBackend();
+      initBackend(backend, { fetch: fetchMock });
+
+      const { error, data } = await readOnce(backend, 'en');
+      expect(error).toBeNull();
+      expect(data).toStrictEqual({});
+    });
+
+    it('surfaces HTTP failures to the callback as errors', async () => {
+      const fetchMock = mockFetch(new Response(null, { status: 503 }));
+      const backend = enabledBackend();
+      initBackend(backend, { fetch: fetchMock });
+
+      const { error } = await readOnce(backend, 'en');
+      expect(error).toBeInstanceOf(Error);
+      expect(error).toHaveProperty('message', expect.stringContaining('503'));
+    });
   });
 });

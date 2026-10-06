@@ -12,7 +12,7 @@ const opts = {
 // `cookie` header, so hand detectLanguage a server-shaped request instead.
 const makeRequest = (headers: Record<string, string> = {}): Request => ({ headers: new Headers(headers) }) as Request;
 
-describe('parseCookieValue', () => {
+describe(parseCookieValue, () => {
   it('parses a cookie value from a header string', () => {
     expect(parseCookieValue('preferred_language=fr; session=abc', 'preferred_language')).toBe('fr');
   });
@@ -38,7 +38,7 @@ describe('parseCookieValue', () => {
   });
 });
 
-describe('detectLanguage', () => {
+describe(detectLanguage, () => {
   it('returns language from preferred_language cookie', () => {
     const req = makeRequest({ cookie: 'preferred_language=es' });
     expect(detectLanguage(req, opts)).toBe('es');

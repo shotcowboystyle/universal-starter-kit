@@ -12,11 +12,11 @@ const parseAcceptLanguage = (header: string): string[] =>
     .map((part) => {
       const [lang, ...params] = part.trim().split(';');
       const qParam = params.find((p) => p.trim().startsWith('q='));
-      const q = qParam ? Number.parseFloat(qParam.trim().slice(2)) : 1;
+      const q = qParam === undefined ? 1 : Number(qParam.trim().slice(2));
       return { lang: lang.trim(), q };
     })
-    .filter(({ lang }) => lang && lang !== '*')
-    .sort((a, b) => b.q - a.q)
+    .filter(({ lang }) => lang !== '' && lang !== '*')
+    .toSorted((a, b) => b.q - a.q)
     .map(({ lang }) => lang);
 
 /**
@@ -25,25 +25,26 @@ const parseAcceptLanguage = (header: string): string[] =>
  */
 export const detectLanguage = (request: Request, options: DetectLanguageOptions): string => {
   const { supportedLanguages, defaultLanguage } = options;
+  const supported = new Set(supportedLanguages);
 
   // 1. Check preferred_language cookie
   const cookieHeader = request.headers.get('cookie') ?? '';
   const cookieLang = parseCookieValue(cookieHeader, 'preferred_language');
-  if (cookieLang && supportedLanguages.includes(cookieLang)) {
+  if (cookieLang !== null && supported.has(cookieLang)) {
     return cookieLang;
   }
 
   // 2. Parse Accept-Language header with quality values
   const acceptLang = request.headers.get('accept-language');
-  if (acceptLang) {
+  if (acceptLang !== null && acceptLang !== '') {
     const preferred = parseAcceptLanguage(acceptLang);
     for (const lang of preferred) {
-      if (supportedLanguages.includes(lang)) {
+      if (supported.has(lang)) {
         return lang;
       }
       // Try base code (e.g. "es" from "es-ES")
-      const base = lang.split('-')[0];
-      if (base !== lang && supportedLanguages.includes(base)) {
+      const [base] = lang.split('-');
+      if (base !== lang && supported.has(base)) {
         return base;
       }
     }

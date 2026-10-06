@@ -9,4 +9,5 @@ export const messages = { en, de } as const;
 
 export type Messages = typeof en;
 
-export { en, de };
+export { default as de } from './locales/de.json';
+export { default as en } from './locales/en.json';

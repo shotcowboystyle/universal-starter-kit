@@ -16,9 +16,5 @@ export type StorageAdapter = StateStorage;
  * Creates a Zustand-compatible JSON storage wrapper from a StorageAdapter.
  * If no adapter is provided, falls back to localStorage (web default).
  */
-export const createStorage = (adapter?: StorageAdapter) => {
-  if (!adapter) {
-    return undefined;
-  }
-  return createJSONStorage(() => adapter);
-};
+export const createStorage = (adapter?: StorageAdapter) =>
+  adapter == null ? undefined : createJSONStorage(() => adapter);

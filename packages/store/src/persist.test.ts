@@ -7,17 +7,17 @@ const createMockStorage = (): Storage & { data: Map<string, string> } => {
   const data = new Map<string, string>();
   return {
     data,
-    getItem: vi.fn((key: string) => data.get(key) ?? null),
-    setItem: vi.fn((key: string, value: string) => {
+    getItem: vi.fn<Storage['getItem']>((key) => data.get(key) ?? null),
+    setItem: vi.fn<Storage['setItem']>((key, value) => {
       data.set(key, value);
     }),
-    removeItem: vi.fn((key: string) => {
+    removeItem: vi.fn<Storage['removeItem']>((key) => {
       data.delete(key);
     }),
   };
 };
 
-describe('createPersistStore', () => {
+describe(createPersistStore, () => {
   let storage: ReturnType<typeof createMockStorage>;
 
   beforeEach(() => {
@@ -47,7 +47,7 @@ describe('createPersistStore', () => {
   });
 
   it('does not persist before hydration completes', () => {
-    storage.getItem = vi.fn(async () => await new Promise<string | null>(() => {}));
+    vi.mocked(storage.getItem).mockReturnValue(Promise.withResolvers<string | null>().promise);
     const store = createPersistStore({ count: 0 }, { key: 'test', storage });
     store.setState(() => ({ count: 99 }));
     expect(storage.setItem).not.toHaveBeenCalled();
@@ -81,7 +81,7 @@ describe('createPersistStore', () => {
         key: 'custom',
         storage,
         serialize: (state) => `n=${state.n}`,
-        deserialize: (raw) => ({ n: Number.parseInt(raw.split('=')[1]) }),
+        deserialize: (raw) => ({ n: Number(raw.split('=')[1]) }),
       },
     );
     await store.rehydrate();
@@ -99,7 +99,7 @@ describe('createPersistStore', () => {
         key: 'custom',
         storage,
         serialize: (state) => `n=${state.n}`,
-        deserialize: (raw) => ({ n: Number.parseInt(raw.split('=')[1]) }),
+        deserialize: (raw) => ({ n: Number(raw.split('=')[1]) }),
       },
     );
     await store.rehydrate();

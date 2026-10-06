@@ -21,21 +21,25 @@ const createMMKVv4Module = () => {
     },
     remove: (key: string) => data.delete(key),
   };
-  const createMMKV = vi.fn(() => instance);
+  const createMMKV = vi.fn<() => typeof instance>(() => instance);
   return { module: { createMMKV }, createMMKV, data };
 };
+
+const settle = async <T>(value: T): Promise<T> => await Promise.resolve(value);
 
 const createAsyncStorageModule = () => {
   const data = new Map<string, string>();
   return {
     module: {
       default: {
-        getItem: async (key: string) => data.get(key) ?? null,
+        getItem: async (key: string) => await settle(data.get(key) ?? null),
         setItem: async (key: string, value: string) => {
           data.set(key, value);
+          await settle(null);
         },
         removeItem: async (key: string) => {
           data.delete(key);
+          await settle(null);
         },
       },
     },
@@ -62,7 +66,7 @@ const roundTrip = async (
   return { afterSet, afterRemove, missing };
 };
 
-describe('resolveNativeStorage', () => {
+describe(resolveNativeStorage, () => {
   it('picks MMKV via the v4 createMMKV() factory and round-trips values', async () => {
     const mmkv = createMMKVv4Module();
     const resolution = resolveNativeStorage({
@@ -84,10 +88,9 @@ describe('resolveNativeStorage', () => {
   it('regression: a v3-shaped module (MMKV class, no createMMKV) is not treated as usable', () => {
     // react-native-mmkv v4 exports `MMKV` as a type only; the old
     // `new MMKV()` code threw at runtime and silently fell to memory.
-    class FakeV3MMKV {}
     const asyncStorage = createAsyncStorageModule();
     const resolution = resolveNativeStorage({
-      loadMMKV: () => ({ MMKV: FakeV3MMKV }),
+      loadMMKV: () => ({ MMKV: vi.fn<() => void>() }),
       loadAsyncStorage: () => asyncStorage.module,
     });
 
@@ -114,7 +117,7 @@ describe('resolveNativeStorage', () => {
   it('falls back to memory when AsyncStorage has no usable default export', async () => {
     const resolution = resolveNativeStorage({
       loadMMKV: throwing('react-native-mmkv'),
-      loadAsyncStorage: () => ({ default: undefined }),
+      loadAsyncStorage: () => ({ default: null }),
     });
 
     expect(resolution.backend).toBe('memory');
@@ -139,10 +142,10 @@ describe('resolveNativeStorage', () => {
   });
 });
 
-describe('logNativeStorageResolution', () => {
+describe(logNativeStorageResolution, () => {
   it('logs a single info line when MMKV won', () => {
-    const info = vi.fn();
-    const warn = vi.fn();
+    const info = vi.fn<(...data: unknown[]) => void>();
+    const warn = vi.fn<(...data: unknown[]) => void>();
     const mmkv = createMMKVv4Module();
     const resolution = resolveNativeStorage({
       loadMMKV: () => mmkv.module,
@@ -157,8 +160,8 @@ describe('logNativeStorageResolution', () => {
   });
 
   it('warns loudly (once) when persistence degraded to async-storage', () => {
-    const info = vi.fn();
-    const warn = vi.fn();
+    const info = vi.fn<(...data: unknown[]) => void>();
+    const warn = vi.fn<(...data: unknown[]) => void>();
     const asyncStorage = createAsyncStorageModule();
     const resolution = resolveNativeStorage({
       loadMMKV: throwing('react-native-mmkv'),
@@ -175,8 +178,8 @@ describe('logNativeStorageResolution', () => {
   });
 
   it('warns that state will not survive restarts when memory won', () => {
-    const info = vi.fn();
-    const warn = vi.fn();
+    const info = vi.fn<(...data: unknown[]) => void>();
+    const warn = vi.fn<(...data: unknown[]) => void>();
     const resolution = resolveNativeStorage({
       loadMMKV: throwing('react-native-mmkv'),
       loadAsyncStorage: throwing('async-storage'),
@@ -201,9 +204,9 @@ describe('module-level storage export', () => {
     // stub, so a round-trip cannot be asserted here — the injected-loader
     // specs above cover the round-trip contract per backend).
     const { storage } = await import('./index.native');
-    expect(typeof storage.getItem).toBe('function');
-    expect(typeof storage.setItem).toBe('function');
-    expect(typeof storage.removeItem).toBe('function');
+    expect(storage.getItem).toBeTypeOf('function');
+    expect(storage.setItem).toBeTypeOf('function');
+    expect(storage.removeItem).toBeTypeOf('function');
     await expect(Promise.resolve(storage.setItem('spec-key', 'spec-value'))).resolves.not.toThrow();
     await expect(Promise.resolve(storage.removeItem('spec-key'))).resolves.not.toThrow();
   });

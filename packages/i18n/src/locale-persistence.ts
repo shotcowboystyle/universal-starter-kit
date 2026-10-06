@@ -14,9 +14,9 @@ export const persistLanguage = (lang: string): void => {
 /** Parse a single cookie value from a cookie header string. */
 export const parseCookieValue = (cookieHeader: string, name: string): string | null => {
   const match = cookieHeader.split(';').find((c) => c.trim().startsWith(`${name}=`));
-  if (!match) {
+  if (match === undefined) {
     return null;
   }
   const val = match.split('=')[1]?.trim();
-  return val ? decodeURIComponent(val) : null;
+  return val !== undefined && val !== '' ? decodeURIComponent(val) : null;
 };

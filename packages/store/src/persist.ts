@@ -1,9 +1,9 @@
 import { Store } from '@tanstack/store';
 
 export interface Storage {
-  getItem(key: string): string | null | Promise<string | null>;
-  setItem(key: string, value: string): void | Promise<void>;
-  removeItem(key: string): void | Promise<void>;
+  getItem: (key: string) => string | null | Promise<string | null>;
+  setItem: (key: string, value: string) => void | Promise<void>;
+  removeItem: (key: string) => void | Promise<void>;
 }
 
 export interface PersistOptions<TState> {
@@ -14,15 +14,19 @@ export interface PersistOptions<TState> {
 }
 
 export interface PersistStore<TState> extends Store<TState> {
-  rehydrate(): Promise<void>;
-  clearPersistedState(): Promise<void>;
+  rehydrate: () => Promise<void>;
+  clearPersistedState: () => Promise<void>;
 }
 
 export const createPersistStore = <TState>(
   initialState: TState,
   persistOptions: PersistOptions<TState>,
 ): PersistStore<TState> => {
-  const { key, storage, serialize = JSON.stringify, deserialize = JSON.parse } = persistOptions;
+  const { key, storage, serialize = JSON.stringify } = persistOptions;
+  const deserialize =
+    persistOptions.deserialize ??
+    // oxlint-disable-next-line typescript/no-unsafe-return -- SAFETY: default deserializer; the persisted JSON was written by the matching serializer for TState
+    ((raw: string): TState => JSON.parse(raw));
 
   let hydrated = false;
 
@@ -52,9 +56,5 @@ export const createPersistStore = <TState>(
   // Start rehydration immediately
   void rehydrate();
 
-  const persistStore = store as PersistStore<TState>;
-  persistStore.rehydrate = rehydrate;
-  persistStore.clearPersistedState = clearPersistedState;
-
-  return persistStore;
+  return Object.assign(store, { rehydrate, clearPersistedState });
 };

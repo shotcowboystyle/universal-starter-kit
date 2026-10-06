@@ -1,4 +1,4 @@
-import { useStore as tanstackUseStore } from '@tanstack/react-store';
+import { useSelector } from '@tanstack/react-store';
 import type { Store } from '@tanstack/store';
 
 // Domain types
@@ -31,11 +31,10 @@ export { storage } from './storage';
 export type { Storage, PersistOptions, PersistStore } from './persist';
 export { createPersistStore } from './persist';
 export { Store, batch, createStore as createTanStackStore } from '@tanstack/store';
+// oxlint-disable-next-line typescript/no-deprecated -- public export kept for API compatibility; same hook as useSelector with a positional compare argument
 export { useStore as useTanStackStore } from '@tanstack/react-store';
-
-type AnyStore = Store<any>;
 
 export const useStore = <TState, TSelected = TState>(
   store: Store<TState>,
   selector?: (state: TState) => TSelected,
-): TSelected => tanstackUseStore(store as AnyStore, selector ?? ((s) => s as unknown as TSelected));
+): TSelected => useSelector<TState, TSelected>(store, selector);

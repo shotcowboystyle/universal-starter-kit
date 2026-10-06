@@ -20,6 +20,7 @@ const fetchTranslations = async (language: string, options: FrappeBackendOptions
   if (!res.ok) {
     throw new Error(`Frappe translation fetch failed: ${res.status}`);
   }
+  // oxlint-disable-next-line typescript/no-unsafe-assignment -- SAFETY: Frappe's get_dict endpoint responds with { message: Record<string, string> }
   const data: FrappeTranslationResponse = await res.json();
   return data.message ?? {};
 };
@@ -40,14 +41,16 @@ const createFrappeBackend = (): BackendModule<FrappeBackendOptions> | null => {
     init(_services: Services, backendOptions: FrappeBackendOptions, _i18nextOptions: InitOptions) {
       opts = backendOptions ?? {};
     },
-    read(language: string, _namespace: string, callback: ReadCallback) {
-      fetchTranslations(language, opts)
-        .then((translations) => {
-          callback(null, translations);
-        })
-        .catch((err) => {
-          callback(err, null);
-        });
+    read(language: string, _namespace: string, onRead: ReadCallback) {
+      // Not returned: i18next would treat a returned promise as a second result channel
+      const load = async (): Promise<void> => {
+        try {
+          onRead(null, await fetchTranslations(language, opts));
+        } catch (error) {
+          onRead(error instanceof Error ? error : String(error), null);
+        }
+      };
+      void load();
     },
   };
 };

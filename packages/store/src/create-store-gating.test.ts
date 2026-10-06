@@ -14,11 +14,11 @@ const createMockStorage = (): Storage & { data: Map<string, string> } => {
   const data = new Map<string, string>();
   return {
     data,
-    getItem: vi.fn((key: string) => data.get(key) ?? null),
-    setItem: vi.fn((key: string, value: string) => {
+    getItem: vi.fn<Storage['getItem']>((key) => data.get(key) ?? null),
+    setItem: vi.fn<Storage['setItem']>((key, value) => {
       data.set(key, value);
     }),
-    removeItem: vi.fn((key: string) => {
+    removeItem: vi.fn<Storage['removeItem']>((key) => {
       data.delete(key);
     }),
   };
@@ -44,8 +44,8 @@ describe('createStore persistence gating', () => {
     const storage = createMockStorage();
     storage.data.set('settings', JSON.stringify({ n: 42 }));
     const store = createStore({ n: 0 }, { name: 'settings', persist: true, storage }) as PersistStore<{ n: number }>;
-    expect(typeof store.rehydrate).toBe('function');
-    expect(typeof store.clearPersistedState).toBe('function');
+    expect(store.rehydrate).toBeTypeOf('function');
+    expect(store.clearPersistedState).toBeTypeOf('function');
     await store.rehydrate();
     expect(store.state).toStrictEqual({ n: 42 });
     expect(storage.getItem).toHaveBeenCalledWith('settings');
@@ -78,7 +78,7 @@ describe('createStore persistence gating', () => {
       value: {
         getItem: (name: string) => data.get(name) ?? null,
         setItem: (name: string, value: string) => {
-          data.set(name, String(value));
+          data.set(name, value);
         },
         removeItem: (name: string) => {
           data.delete(name);

@@ -32,17 +32,26 @@ export const createAuthStore = (storage?: StorageAdapter) =>
         user: null,
         isLoading: false,
         error: null,
-        setSession: (session) => set({ session }),
-        setUser: (user) => set({ user }),
-        setLoading: (isLoading) => set({ isLoading }),
-        setError: (error) => set({ error }),
-        clear: () =>
+        setSession: (session) => {
+          set({ session });
+        },
+        setUser: (user) => {
+          set({ user });
+        },
+        setLoading: (isLoading) => {
+          set({ isLoading });
+        },
+        setError: (error) => {
+          set({ error });
+        },
+        clear: () => {
           set({
             session: null,
             user: null,
             isLoading: false,
             error: null,
-          }),
+          });
+        },
       }),
       {
         name: 'auth-storage',

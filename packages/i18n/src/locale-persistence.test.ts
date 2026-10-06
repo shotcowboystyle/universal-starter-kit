@@ -4,12 +4,13 @@
  * parser used to boot i18n with the user's language before hydration.
  */
 
+import { deleteCookie } from '@repo/platform';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { getPersistedLanguage, parseCookieValue, persistLanguage } from './locale-persistence';
 
 const clearPreferredLanguageCookie = () => {
-  document.cookie = 'preferred_language=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+  deleteCookie('preferred_language');
 };
 
 describe('persistLanguage / getPersistedLanguage', () => {

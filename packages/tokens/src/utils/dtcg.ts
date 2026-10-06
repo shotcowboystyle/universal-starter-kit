@@ -31,6 +31,7 @@ type DTCGTokenGroup<T = string> = {
  * @param value Dimension string like "16px"
  * @returns Numeric value
  */
+// oxlint-disable-next-line unicorn/prefer-number-coercion -- tolerates unit suffixes (e.g. "100ms"), which Number() would turn into NaN
 const parseDesignTokenDimension = (value: string): number => Number.parseInt(value.replace('px', ''), 10);
 
 /**
@@ -93,6 +94,7 @@ const parseDesignTokenShadowGroup = (group: DTCGTokenGroup<DTCGShadowValue>): Re
  * @returns Object with numeric weight values
  */
 const parseDesignTokenFontWeightGroup = (group: DTCGTokenGroup): Record<string, number> =>
+  // oxlint-disable-next-line unicorn/prefer-number-coercion -- tolerates unit suffixes (e.g. "100ms"), which Number() would turn into NaN
   Object.fromEntries(transformTokenGroup(group, (token) => Number.parseInt(token.$value, 10)));
 
 /**
@@ -101,6 +103,7 @@ const parseDesignTokenFontWeightGroup = (group: DTCGTokenGroup): Record<string, 
  * @returns Object with numeric values
  */
 const parseDesignTokenNumberGroup = (group: DTCGTokenGroup): Record<string, number> =>
+  // oxlint-disable-next-line unicorn/prefer-number-coercion -- tolerates unit suffixes (e.g. "100ms"), which Number() would turn into NaN
   Object.fromEntries(transformTokenGroup(group, (token) => Number.parseFloat(token.$value)));
 
 export {

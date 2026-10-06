@@ -20,23 +20,35 @@ export type NativeStorageBackend = 'mmkv' | 'async-storage' | 'memory';
 
 /** Runtime subset of react-native-mmkv v4's MMKV HybridObject. */
 interface MMKVLike {
-  getString(key: string): string | undefined;
-  set(key: string, value: string): void;
-  remove(key: string): boolean;
+  getString: (key: string) => string | undefined;
+  set: (key: string, value: string) => void;
+  remove: (key: string) => boolean;
 }
 
 interface AsyncStorageLike {
-  getItem(key: string): Promise<string | null>;
-  setItem(key: string, value: string): Promise<void>;
-  removeItem(key: string): Promise<void>;
+  getItem: (key: string) => Promise<string | null>;
+  setItem: (key: string, value: string) => Promise<void>;
+  removeItem: (key: string) => Promise<void>;
 }
+
+/** Whatever a loader produced; its shape is validated before use. */
+export interface LoadedModuleExports {
+  /** react-native-mmkv v4 factory. */
+  createMMKV?: unknown;
+  /** react-native-mmkv v3 class (not usable). */
+  MMKV?: unknown;
+  /** Default export of the async-storage package. */
+  default?: unknown;
+}
+
+export type LoadedModule = LoadedModuleExports | null | undefined;
 
 /** Module loaders, injectable so specs can drive every resolution branch. */
 export interface NativeStorageLoaders {
   /** Load react-native-mmkv (throws when unavailable). */
-  loadMMKV(): unknown;
-  /** Load @react-native-async-storage/async-storage (throws when unavailable). */
-  loadAsyncStorage(): unknown;
+  loadMMKV: () => LoadedModule;
+  /** Load the async-storage package (throws when unavailable). */
+  loadAsyncStorage: () => LoadedModule;
 }
 
 export interface NativeStorageResolution {
@@ -52,18 +64,31 @@ const defaultLoaders: NativeStorageLoaders = {
   // passed-around `require` reference would survive as a bare identifier and
   // crash). Lazy so a genuinely missing native module throws HERE — inside
   // the try/catch — instead of at bundle evaluation.
+  // oxlint-disable-next-line node/global-require, unicorn/prefer-module, typescript/no-unsafe-return -- literal lazy require is required by metro/vxrn (see above)
   loadMMKV: () => require('react-native-mmkv'),
+  // oxlint-disable-next-line node/global-require, unicorn/prefer-module, typescript/no-unsafe-return -- literal lazy require is required by metro/vxrn (see above)
   loadAsyncStorage: () => require('@react-native-async-storage/async-storage'),
+};
+
+const isFunction = (value: unknown): value is () => void => typeof value === 'function';
+
+const isObjectLike = (value: unknown): value is object =>
+  value != null && (typeof value === 'object' || isFunction(value));
+
+const isMMKVModule = (module: LoadedModule): module is { createMMKV: () => MMKVLike } =>
+  module != null && isFunction(module.createMMKV);
+
+const isAsyncStorageModule = (module: LoadedModule): module is { default: AsyncStorageLike } => {
+  const candidate = module?.default;
+  return isObjectLike(candidate) && 'getItem' in candidate && isFunction(candidate.getItem);
 };
 
 export const resolveNativeStorage = (loaders: NativeStorageLoaders = defaultLoaders): NativeStorageResolution => {
   const errors: NativeStorageResolution['errors'] = {};
 
   try {
-    const mmkvModule = loaders.loadMMKV() as {
-      createMMKV?: (configuration?: unknown) => MMKVLike;
-    };
-    if (typeof mmkvModule?.createMMKV !== 'function') {
+    const mmkvModule = loaders.loadMMKV();
+    if (!isMMKVModule(mmkvModule)) {
       // v3 shipped an `MMKV` class; v4 only ships the factory. Anything
       // without createMMKV() is not a usable react-native-mmkv module.
       throw new TypeError('no createMMKV() export (react-native-mmkv v4 API expected)');
@@ -82,27 +107,31 @@ export const resolveNativeStorage = (loaders: NativeStorageLoaders = defaultLoad
         },
       },
     };
-  } catch (err) {
-    errors.mmkv = err;
+  } catch (error) {
+    errors.mmkv = error;
   }
 
   try {
-    const asyncStorageModule = loaders.loadAsyncStorage() as { default?: AsyncStorageLike };
-    const asyncStorage = asyncStorageModule?.default;
-    if (!asyncStorage || typeof asyncStorage.getItem !== 'function') {
+    const asyncStorageModule = loaders.loadAsyncStorage();
+    if (!isAsyncStorageModule(asyncStorageModule)) {
       throw new Error('no usable default export on @react-native-async-storage/async-storage');
     }
+    const asyncStorage = asyncStorageModule.default;
     return {
       backend: 'async-storage',
       errors,
       storage: {
         getItem: async (name: string) => await asyncStorage.getItem(name),
-        setItem: async (name: string, value: string) => await asyncStorage.setItem(name, value),
-        removeItem: async (name: string) => await asyncStorage.removeItem(name),
+        setItem: async (name: string, value: string) => {
+          await asyncStorage.setItem(name, value);
+        },
+        removeItem: async (name: string) => {
+          await asyncStorage.removeItem(name);
+        },
       },
     };
-  } catch (err) {
-    errors.asyncStorage = err;
+  } catch (error) {
+    errors.asyncStorage = error;
   }
 
   const map = new Map<string, string>();
@@ -121,7 +150,8 @@ export const resolveNativeStorage = (loaders: NativeStorageLoaders = defaultLoad
   };
 };
 
-const describeError = (err: unknown): string => (err instanceof Error ? err.message : String(err));
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- receives a caught value, which is unknown by definition
+const describeError = (error: unknown): string => (error instanceof Error ? error.message : String(error));
 
 /**
  * One dev-mode line naming the winning backend — a console.warn when

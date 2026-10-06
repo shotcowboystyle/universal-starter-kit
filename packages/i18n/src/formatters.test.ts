@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { createDateFormatter, createNumberFormatter, createCurrencyFormatter } from './formatters';
 
-describe('createDateFormatter', () => {
+describe(createDateFormatter, () => {
   const formatter = createDateFormatter('en-US');
 
   it('formats a date with default options', () => {
@@ -23,7 +23,7 @@ describe('createDateFormatter', () => {
 
   it('formats a timestamp number', () => {
     const result = formatter.format(0);
-    expect(typeof result).toBe('string');
+    expect(result).toBeTypeOf('string');
     expect(result.length).toBeGreaterThan(0);
   });
 
@@ -42,7 +42,7 @@ describe('createDateFormatter', () => {
   });
 });
 
-describe('createNumberFormatter', () => {
+describe(createNumberFormatter, () => {
   const formatter = createNumberFormatter('en-US');
 
   it('formats a number with default options', () => {
@@ -75,7 +75,7 @@ describe('createNumberFormatter with different locale', () => {
   });
 });
 
-describe('createCurrencyFormatter', () => {
+describe(createCurrencyFormatter, () => {
   const formatter = createCurrencyFormatter('en-US');
 
   it('formats USD currency', () => {

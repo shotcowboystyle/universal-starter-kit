@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createStore } from './create-store';
 
-describe('createStore', () => {
+describe(createStore, () => {
   it('creates a basic store with initial state', () => {
     const store = createStore({ count: 0 });
     expect(store.state).toStrictEqual({ count: 0 });
@@ -16,9 +16,9 @@ describe('createStore', () => {
 
   it('creates a persist store when persist option is true', () => {
     const mockStorage = {
-      getItem: vi.fn().mockReturnValue(null),
-      setItem: vi.fn(),
-      removeItem: vi.fn(),
+      getItem: vi.fn<(key: string) => string | null>().mockReturnValue(null),
+      setItem: vi.fn<(key: string, value: string) => void>(),
+      removeItem: vi.fn<(key: string) => void>(),
     };
     const store = createStore({ n: 0 }, { name: 'test-persist', persist: true, storage: mockStorage });
     expect(store.state).toStrictEqual({ n: 0 });

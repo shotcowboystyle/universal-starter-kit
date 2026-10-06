@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { formatServiceList, waitServices } from './wait';
 
-describe('formatServiceList', () => {
+describe(formatServiceList, () => {
   it('returns single service as-is', () => {
     expect(formatServiceList(['frappe'])).toBe('frappe');
   });
@@ -20,7 +20,7 @@ describe('formatServiceList', () => {
   });
 });
 
-describe('waitServices', () => {
+describe('waitServices constant', () => {
   it('contains the expected service names', () => {
     expect(waitServices).toContain('frappe');
     expect(waitServices).toContain('postgres');
