@@ -33,7 +33,10 @@ export function SearchScreen() {
   const [state, setState] = useUrlState({ q: '' }, { debounceMs: 300 });
   return (
     <>
-      <input value={state.q} onChange={(e) => setState({ q: e.target.value })} />
+      <input
+        value={state.q}
+        onChange={(e) => setState({ q: e.target.value })}
+      />
       <Link href={`/results?q=${encodeURIComponent(state.q)}`}>Search</Link>
     </>
   );

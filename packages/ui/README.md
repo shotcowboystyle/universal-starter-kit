@@ -44,7 +44,10 @@ export function UserCard() {
   return (
     <Card>
       <CardHeader>
-        <Avatar name="Ada Lovelace" src="https://example.com/ada.png" />
+        <Avatar
+          name="Ada Lovelace"
+          src="https://example.com/ada.png"
+        />
       </CardHeader>
       <YStack>
         <Text>Ada Lovelace</Text>
@@ -134,8 +137,15 @@ snapped frame. The grabber, the header and the bottom safe-area spacer stay
 outside the flexible body.
 
 ```tsx
-<SheetModal open={open} onOpenChange={setOpen} fill snapPoint={88} header={<Title />}>
-  <YStack flex={1} minHeight={0}>
+<SheetModal
+  open={open}
+  onOpenChange={setOpen}
+  fill
+  snapPoint={88}
+  header={<Title />}>
+  <YStack
+    flex={1}
+    minHeight={0}>
     <Toolbar />
     <MyVirtualList />
   </YStack>

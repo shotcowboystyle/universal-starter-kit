@@ -2,8 +2,4 @@
 useDefault = true
 
 [allowlist]
-paths = [
-  "node_modules",
-  "pnpm-lock.yaml",
-  ".env.example",
-]
+paths = ["node_modules", "pnpm-lock.yaml", ".env.example"]

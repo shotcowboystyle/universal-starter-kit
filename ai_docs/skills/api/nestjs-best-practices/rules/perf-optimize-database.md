@@ -99,10 +99,7 @@ export class UsersService {
 @Schema({
   timestamps: true,
   // Compound indexes for common query patterns
-  indexes: [
-    { userId: 1, status: 1 },
-    { createdAt: -1 },
-  ],
+  indexes: [{ userId: 1, status: 1 }, { createdAt: -1 }],
 })
 export class Order {
   @Prop({ type: String, index: true }) // Single-field index

@@ -115,9 +115,9 @@ apps/web/
 │       ├── db.ts
 │       ├── demoData.ts     # defaultEmail used in e2e tests
 │       └── common.ts
+├── e2e/
+│   └── login.e2e.ts        # Playwright: load sign-in page, sign in with defaultEmail
 └── __tests__/
-    ├── e2e/
-    │   └── Login.test.ts   # Playwright: load sign-in page, sign in with defaultEmail
     └── units/
         └── proxy.test.ts   # Vitest: middleware exports + config matcher
 ```
@@ -134,6 +134,7 @@ apps/web/
 The middleware (`src/proxy.ts`) guards all non-login routes by checking for a `jwt` or `isAuthenticated` cookie. If missing, it redirects to `/{locale}/login?callbackUrl=...`.
 
 Client-side auth uses two mechanisms in parallel:
+
 - `auth_token` in `localStorage` — attached as `Authorization: Bearer` header by `fetchWithAuth.ts`
 - `jwt` HTTP-only cookie — sent via `credentials: "include"` as a fallback
 
@@ -150,6 +151,7 @@ Client-side auth uses two mechanisms in parallel:
 ### Drag and Drop
 
 `useBoardDnd.ts` handles all DnD logic using `@dnd-kit/core`:
+
 - Task drag over different project columns: optimistic reorder in Zustand store
 - Task drag end: calls `taskApi.moveTask(taskId, projectId, newIndex)` and rolls back on error
 - Project reorder: calls `projectApi.updateProject` for each project whose `orderInBoard` changed
@@ -159,10 +161,10 @@ Client-side auth uses two mechanisms in parallel:
 Query keys live in `src/types/boardApi.ts`, `taskApi.ts`, and `projectApi.ts`:
 
 ```typescript
-BOARD_KEYS.list()          // ["boards", "list"]
-BOARD_KEYS.detail(id)      // ["boards", "detail", id]
-TASK_KEYS.list({ project }) // ["tasks", "list", { project }]
-TASK_KEYS.detail(id)        // ["tasks", "detail", id]
+BOARD_KEYS.list(); // ["boards", "list"]
+BOARD_KEYS.detail(id); // ["boards", "detail", id]
+TASK_KEYS.list({ project }); // ["tasks", "list", { project }]
+TASK_KEYS.detail(id); // ["tasks", "detail", id]
 ```
 
 Always invalidate at the correct key level. `useUpdateTask` includes full optimistic update with rollback via `onMutate`/`onError`.
@@ -175,12 +177,12 @@ Locale routing is handled by `next-intl`. All pages live under `app/[locale]/`. 
 
 ```typescript
 // CORRECT
-import { useRouter, Link, usePathname } from "@/i18n/navigation";
-router.push("/boards");          // locale prepended automatically
+import { useRouter, Link, usePathname } from '@/i18n/navigation';
+router.push('/boards'); // locale prepended automatically
 
 // WRONG
-import { useRouter } from "next/navigation";
-router.push("/en/boards");       // never hardcode locale prefix
+import { useRouter } from 'next/navigation';
+router.push('/en/boards'); // never hardcode locale prefix
 ```
 
 Translations are loaded via `getCachedMessages` (cached for `"days"` using Next.js `"use cache"` directive). The `{appName}` placeholder in translation strings is replaced with `APP_NAME` from `src/constants/ui.ts` at cache-fill time.
@@ -194,8 +196,8 @@ To add a new translation key: edit `packages/i18n/src/locales/en.json` and `de.j
 All data fetching in components uses hooks from `src/lib/api/*/queries.ts`, re-exported via `src/lib/api/*/index.ts`:
 
 ```typescript
-import { useBoards, useCreateBoard } from "@/lib/api/boards";
-import { useTasks, useUpdateTask } from "@/lib/api/tasks";
+import { useBoards, useCreateBoard } from '@/lib/api/boards';
+import { useTasks, useUpdateTask } from '@/lib/api/tasks';
 ```
 
 `useBoards` in `src/hooks/useBoards.ts` is a facade that wraps the raw query and splits the result into `myBoards` / `teamBoards` based on `userId` from `useWorkspaceStore`.
@@ -223,7 +225,7 @@ import { useTasks, useUpdateTask } from "@/lib/api/tasks";
 
 ### E2E tests (Playwright)
 
-- Config: `playwright.config.ts` — `testDir: __tests__/e2e/`
+- Config: `playwright.config.ts` — `testDir: e2e/` (`*.e2e.ts`, kept out of the vitest globs)
 - Browsers: Chromium, Edge, WebKit, Mobile Chrome, Mobile Safari
 - Runs `pnpm dev` as `webServer` if not CI
 - Base URL from `NEXT_PUBLIC_WEB_URL` (default `http://localhost:3000/`)
@@ -266,5 +268,6 @@ Import from `@repo/ui/components/<name>` (package export path), not from relativ
 All env vars accessed via `src/lib/config/env.ts` (`config` export) for server-side use. Client-side public vars (`NEXT_PUBLIC_*`) are accessed directly where needed (e.g., `API_URL` in `src/constants/routes.ts`).
 
 Required for local dev:
+
 - `NEXT_PUBLIC_API_URL` — NestJS API base URL (default: `http://localhost:3001`)
 - `NEXT_PUBLIC_WEB_URL` — web app base URL (default: `http://localhost:3000`)

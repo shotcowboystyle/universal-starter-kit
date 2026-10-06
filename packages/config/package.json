@@ -36,8 +36,8 @@
     "./react-native-config": "./src/react-native.config.cjs",
     "./oxlint": "./oxlint.mjs",
     "./oxlint.json": "./oxlint.json",
-    "./drawingRegistry": "./drawingRegistry.mjs",
-    "./specRegistry": "./specRegistry.mjs",
+    "./drawing-registry": "./drawing-registry.mjs",
+    "./spec-registry": "./spec-registry.mjs",
     "./lint": {
       "types": "./lint.d.ts",
       "default": "./lint.mjs"
@@ -45,8 +45,6 @@
   },
   "scripts": {
     "build": "tsgo --noEmit",
-    "format": "cd ../.. && oxfmt --no-error-on-unmatched-pattern --config .config/oxfmtrc.json packages/config",
-    "lint": "npx oxlint --config ../../.config/oxlintrc.json --fix",
     "test": "vitest run"
   },
   "dependencies": {

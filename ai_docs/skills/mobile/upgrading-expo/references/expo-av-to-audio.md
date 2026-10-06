@@ -24,7 +24,11 @@ async function playSound() {
 }
 
 useEffect(() => {
-  return sound ? () => { sound.unloadAsync(); } : undefined;
+  return sound
+    ? () => {
+        sound.unloadAsync();
+      }
+    : undefined;
 }, [sound]);
 ```
 
@@ -99,23 +103,23 @@ await setAudioModeAsync({
 
 ## API Mapping
 
-| expo-av | expo-audio |
-|---------|------------|
-| `Audio.Sound.createAsync()` | `useAudioPlayer(source)` |
-| `sound.playAsync()` | `player.play()` |
-| `sound.pauseAsync()` | `player.pause()` |
-| `sound.setPositionAsync(ms)` | `player.seekTo(seconds)` |
-| `sound.setVolumeAsync(vol)` | `player.volume = vol` |
-| `sound.setRateAsync(rate)` | `player.playbackRate = rate` |
-| `sound.setIsLoopingAsync(loop)` | `player.loop = loop` |
-| `sound.unloadAsync()` | Automatic via hook |
-| `playbackStatus.positionMillis` | `player.currentTime` (seconds) |
-| `playbackStatus.durationMillis` | `player.duration` (seconds) |
-| `playbackStatus.isPlaying` | `player.playing` |
-| `Audio.Recording.createAsync()` | `useAudioRecorder(preset)` |
-| `Audio.RecordingOptionsPresets.*` | `RecordingPresets.*` |
-| `recording.stopAndUnloadAsync()` | `recorder.stop()` |
-| `recording.getURI()` | `recorder.uri` |
+| expo-av                           | expo-audio                                       |
+| --------------------------------- | ------------------------------------------------ |
+| `Audio.Sound.createAsync()`       | `useAudioPlayer(source)`                         |
+| `sound.playAsync()`               | `player.play()`                                  |
+| `sound.pauseAsync()`              | `player.pause()`                                 |
+| `sound.setPositionAsync(ms)`      | `player.seekTo(seconds)`                         |
+| `sound.setVolumeAsync(vol)`       | `player.volume = vol`                            |
+| `sound.setRateAsync(rate)`        | `player.playbackRate = rate`                     |
+| `sound.setIsLoopingAsync(loop)`   | `player.loop = loop`                             |
+| `sound.unloadAsync()`             | Automatic via hook                               |
+| `playbackStatus.positionMillis`   | `player.currentTime` (seconds)                   |
+| `playbackStatus.durationMillis`   | `player.duration` (seconds)                      |
+| `playbackStatus.isPlaying`        | `player.playing`                                 |
+| `Audio.Recording.createAsync()`   | `useAudioRecorder(preset)`                       |
+| `Audio.RecordingOptionsPresets.*` | `RecordingPresets.*`                             |
+| `recording.stopAndUnloadAsync()`  | `recorder.stop()`                                |
+| `recording.getURI()`              | `recorder.uri`                                   |
 | `Audio.requestPermissionsAsync()` | `AudioModule.requestRecordingPermissionsAsync()` |
 
 ## Key Differences

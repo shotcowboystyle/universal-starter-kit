@@ -37,9 +37,16 @@ function MyForm() {
         }}
       />
 
-      <Input name="password" label="Password" type="password" />
+      <Input
+        name="password"
+        label="Password"
+        type="password"
+      />
 
-      <Checkbox name="remember" label="Remember me" />
+      <Checkbox
+        name="remember"
+        label="Remember me"
+      />
 
       <Button type="submit">Sign In</Button>
     </Form>
@@ -93,7 +100,9 @@ function AdvancedForm() {
   });
 
   return (
-    <Form form={form} syncWithUrl={true}>
+    <Form
+      form={form}
+      syncWithUrl={true}>
       <Input
         name="name"
         label="Name"
@@ -102,7 +111,11 @@ function AdvancedForm() {
         }}
       />
 
-      <Input name="age" label="Age" type="number" />
+      <Input
+        name="age"
+        label="Age"
+        type="number"
+      />
 
       <Button type="submit" />
     </Form>

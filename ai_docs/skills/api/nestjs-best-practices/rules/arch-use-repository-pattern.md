@@ -15,9 +15,7 @@ Create custom repository services to encapsulate complex queries and database lo
 // Complex queries mixed with business logic
 @Injectable()
 export class UsersService {
-  constructor(
-    @InjectModel(User.name) private userModel: Model<User>,
-  ) {}
+  constructor(@InjectModel(User.name) private userModel: Model<User>) {}
 
   async findActiveWithOrders(minOrders: number): Promise<User[]> {
     // Complex aggregation mixed with business logic
@@ -46,9 +44,7 @@ export class UsersService {
 // Custom repository wrapping the Mongoose Model
 @Injectable()
 export class UsersRepository {
-  constructor(
-    @InjectModel(User.name) private userModel: Model<User>,
-  ) {}
+  constructor(@InjectModel(User.name) private userModel: Model<User>) {}
 
   async findById(id: string): Promise<User | null> {
     return this.userModel.findById(id).lean().exec();
@@ -80,10 +76,7 @@ export class UsersRepository {
   }
 
   async updateById(id: string, update: Partial<User>): Promise<User | null> {
-    return this.userModel
-      .findByIdAndUpdate(id, { $set: update }, { new: true })
-      .lean()
-      .exec();
+    return this.userModel.findByIdAndUpdate(id, { $set: update }, { new: true }).lean().exec();
   }
 }
 

@@ -1,16 +1,17 @@
-import path from 'path'
-import { defineConfig } from 'vitest/config'
+import path from 'node:path';
+
+import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
     include: ['apps/api/__tests__/**/*.test.{ts,tsx}', 'apps/web/__tests__/**/*.test.{ts,tsx}'],
-    exclude: ['**/node_modules/**', 'apps/web/__tests__/e2e/**', 'apps/api/database/**', 'packages'],
+    exclude: ['**/node_modules/**', 'apps/web/e2e/**', 'apps/api/database/**', 'packages'],
     setupFiles: [path.resolve(__dirname, './vitest.setup.ts')],
     alias: {
       '@api': path.resolve(__dirname, '../apps/api/src'),
-      '@web': path.resolve(__dirname, '../apps/web/src')
+      '@web': path.resolve(__dirname, '../apps/web/src'),
     },
     coverage: {
       provider: 'v8',
@@ -24,14 +25,14 @@ export default defineConfig({
         '**/.turbo/**',
         '**/.next/**',
         '**/coverage/**',
-        '**/packages/**'
-      ]
-    }
+        '**/packages/**',
+      ],
+    },
   },
   resolve: {
     alias: {
       '@api': path.resolve(__dirname, '../apps/api/src'),
-      '@web': path.resolve(__dirname, '../apps/web/src')
-    }
-  }
-})
+      '@web': path.resolve(__dirname, '../apps/web/src'),
+    },
+  },
+});

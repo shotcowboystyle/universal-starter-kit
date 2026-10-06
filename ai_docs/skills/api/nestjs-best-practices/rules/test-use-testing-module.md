@@ -80,9 +80,7 @@ describe('UsersService', () => {
     }).compile();
 
     service = module.get<UsersService>(UsersService);
-    userModel = module.get<typeof MockUserModel & Model<User>>(
-      getModelToken(User.name),
-    );
+    userModel = module.get<typeof MockUserModel & Model<User>>(getModelToken(User.name));
   });
 
   describe('create', () => {

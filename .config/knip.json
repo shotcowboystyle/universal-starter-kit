@@ -6,10 +6,7 @@
     },
     "apps/api": {
       "project": ["src/**/*.ts", "database/**/*.ts"],
-      "ignoreDependencies": [
-        "@nestjs/schematics",
-        "@nestjs/cli"
-      ]
+      "ignoreDependencies": ["@nestjs/schematics", "@nestjs/cli"]
     },
     "apps/web": {
       "entry": [
@@ -24,10 +21,7 @@
     "apps/mobile": {
       "entry": ["app/**/*.tsx"],
       "project": ["**/*.{ts,tsx}"],
-      "ignoreDependencies": [
-        "@tamagui/metro-plugin",
-        "expo-splash-screen"
-      ]
+      "ignoreDependencies": ["@tamagui/metro-plugin", "expo-splash-screen"]
     },
     "packages/store": {
       "project": ["src/**/*.ts"]

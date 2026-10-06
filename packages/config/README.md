@@ -14,9 +14,7 @@ consuming package's `devDependencies`.
 ```ts
 import { createViteConfig } from '@repo/config/vite';
 
-export default createViteConfig({
-  /* options */
-});
+export default createViteConfig({/* options */});
 ```
 
 ### Vitest
@@ -24,9 +22,7 @@ export default createViteConfig({
 ```ts
 import { createVitestConfig } from '@repo/config/vitest';
 
-export default createVitestConfig({
-  /* options */
-});
+export default createVitestConfig({/* options */});
 ```
 
 ### Storybook
@@ -34,9 +30,7 @@ export default createVitestConfig({
 ```ts
 import { createStorybookViteConfig } from '@repo/config/storybook';
 
-export default createStorybookViteConfig({
-  /* options */
-});
+export default createStorybookViteConfig({/* options */});
 ```
 
 ### Playwright
@@ -44,9 +38,7 @@ export default createStorybookViteConfig({
 ```ts
 import { createPlaywrightConfig } from '@repo/config/playwright';
 
-export default createPlaywrightConfig({
-  /* options */
-});
+export default createPlaywrightConfig({/* options */});
 ```
 
 ### TypeScript

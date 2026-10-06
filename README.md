@@ -21,13 +21,13 @@ A production-grade Kanban application demonstrating monorepo architecture, test-
 
 ### Architectural Evolution
 
-| Aspect                | Before (Monolithic)                        | After (Decoupled Monorepo)                                            | Now (Multi-Platform)                                                | Trade-off Reasoning                                     |
-| --------------------- | ------------------------------------------ | --------------------------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------- |
-| **Team Structure**    | Full-stack developers required             | Specialized Frontend & Backend Teams                                  | **+ Mobile Team with shared domain knowledge**                      | Teams share types/state; onboard faster via shared code |
-| **Development Cycle** | Tightly coupled; one change can impact all | Independent development cycles                                        | **Web & Mobile iterate independently on shared foundations**        | Platform teams move at their own pace                   |
-| **Deployment**        | Single, monolithic deployment              | Independent Frontend/Backend deployment                               | **+ OTA updates for Mobile via Expo**                               | Three independent release channels                      |
-| **Scalability**       | Vertical scaling of the entire app         | Targeted horizontal scaling (e.g., scale only the API service)        | **Same API serves Web & Mobile clients**                            | Single backend; multiple frontends                      |
-| **Technology Stack**  | Locked into Next.js for backend            | Flexible backend choice (Nest.js); can add more services (Go, Python) | **+ React Native (Expo) with Tamagui**                              | Best tool per platform; shared logic layer              |
+| Aspect                | Before (Monolithic)                        | After (Decoupled Monorepo)                                            | Now (Multi-Platform)                                                   | Trade-off Reasoning                                                  |
+| --------------------- | ------------------------------------------ | --------------------------------------------------------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| **Team Structure**    | Full-stack developers required             | Specialized Frontend & Backend Teams                                  | **+ Mobile Team with shared domain knowledge**                         | Teams share types/state; onboard faster via shared code              |
+| **Development Cycle** | Tightly coupled; one change can impact all | Independent development cycles                                        | **Web & Mobile iterate independently on shared foundations**           | Platform teams move at their own pace                                |
+| **Deployment**        | Single, monolithic deployment              | Independent Frontend/Backend deployment                               | **+ OTA updates for Mobile via Expo**                                  | Three independent release channels                                   |
+| **Scalability**       | Vertical scaling of the entire app         | Targeted horizontal scaling (e.g., scale only the API service)        | **Same API serves Web & Mobile clients**                               | Single backend; multiple frontends                                   |
+| **Technology Stack**  | Locked into Next.js for backend            | Flexible backend choice (Nest.js); can add more services (Go, Python) | **+ React Native (Expo) with Tamagui**                                 | Best tool per platform; shared logic layer                           |
 | **Code Reusability**  | Limited to the Next.js app                 | Centralized `ui` & `config` packages                                  | **+ Shared Tamagui `ui`/`forms`/`theme`, `store` and `i18n` packages** | Write once for logic and UI primitives; platform-specific navigation |
 
 ### Code Sharing Strategy
@@ -89,15 +89,15 @@ Most packages are derived from [multiplatform.one](https://multiplatform.one) an
 
 ### Quality Assurance
 
-| Type              | Tool       | Rationale                                     |
-| ----------------- | ---------- | --------------------------------------------- |
-| Unit/Integration  | Vitest     | Faster than Jest, native ESM, simpler config  |
-| E2E               | Playwright | Cross-browser support, lighter than Cypress   |
-| Static Analysis   | SonarQube  | Enterprise-grade quality gates in CI          |
-| Coverage Tracking | Codecov    | Automated PR integration                      |
+| Type              | Tool       | Rationale                                                                 |
+| ----------------- | ---------- | ------------------------------------------------------------------------- |
+| Unit/Integration  | Vitest     | Faster than Jest, native ESM, simpler config                              |
+| E2E               | Playwright | Cross-browser support, lighter than Cypress                               |
+| Static Analysis   | SonarQube  | Enterprise-grade quality gates in CI                                      |
+| Coverage Tracking | Codecov    | Automated PR integration                                                  |
 | Documentation     | Storybook  | Stories exist for the Tamagui catalog; Storybook config is being reworked |
-| Visual Testing    | Storybook  | Planned once the Tamagui Storybook setup is wired |
-| Accessibility     | a11y-addon | WCAG compliance checks during development     |
+| Visual Testing    | Storybook  | Planned once the Tamagui Storybook setup is wired                         |
+| Accessibility     | a11y-addon | WCAG compliance checks during development                                 |
 
 **Testing Strategy:**
 
@@ -109,17 +109,17 @@ Most packages are derived from [multiplatform.one](https://multiplatform.one) an
 
 ### Frontend (Web)
 
-| Type      | Choice                   | Rationale                                               |
-| --------- | ------------------------ | ------------------------------------------------------- |
-| Framework | Next.js (App Router)     | Cache Components (PPR) for mixed static/dynamic content |
-| State     | Zustand (shared)         | 40% less boilerplate than Redux, simpler testing        |
-| Forms     | TanStack Form + Zod      | Type-safe validation, composable schemas                |
-| Database  | MongoDB + Mongoose       | Document model fits board/project/task hierarchy        |
-| DnD       | @dnd-kit                 | Lightweight, accessible, extensible                     |
-| i18n      | next-intl                | App Router native support, auto locale routing          |
-| UI        | Tamagui (`@repo/ui`, `@repo/forms`) | Shared cross-platform design system, tokens and themes |
-| Theme     | next-themes + Tamagui themes | Scheme mirrored to a cookie for SSR                 |
-| Toasts    | sonner                   | Lightweight, accessible notifications                   |
+| Type      | Choice                              | Rationale                                               |
+| --------- | ----------------------------------- | ------------------------------------------------------- |
+| Framework | Next.js (App Router)                | Cache Components (PPR) for mixed static/dynamic content |
+| State     | Zustand (shared)                    | 40% less boilerplate than Redux, simpler testing        |
+| Forms     | TanStack Form + Zod                 | Type-safe validation, composable schemas                |
+| Database  | MongoDB + Mongoose                  | Document model fits board/project/task hierarchy        |
+| DnD       | @dnd-kit                            | Lightweight, accessible, extensible                     |
+| i18n      | next-intl                           | App Router native support, auto locale routing          |
+| UI        | Tamagui (`@repo/ui`, `@repo/forms`) | Shared cross-platform design system, tokens and themes  |
+| Theme     | next-themes + Tamagui themes        | Scheme mirrored to a cookie for SSR                     |
+| Toasts    | sonner                              | Lightweight, accessible notifications                   |
 
 ### Mobile
 
@@ -275,11 +275,15 @@ This pattern enables shared state logic without platform-specific imports leakin
 Both apps style with Tamagui. Mobile uses `@tamagui/core` configured in `apps/mobile/lib/tamagui/tamagui.config.ts`; web consumes the shared catalog from `@repo/ui` and form fields from `@repo/forms`. Components use theme tokens (`$background`, `$color`, ...) rather than hardcoded colors, and `useTheme()` for inline values:
 
 ```tsx
-import { YStack, Text } from "@repo/ui";
+import { YStack, Text } from '@repo/ui';
 
-<YStack flex={1} alignItems="center" justifyContent="center" backgroundColor="$background">
+<YStack
+  flex={1}
+  alignItems="center"
+  justifyContent="center"
+  backgroundColor="$background">
   <Text color="$color">Hello</Text>
-</YStack>
+</YStack>;
 ```
 
 Mobile dark mode is driven by `Appearance.setColorScheme()`. On web, `next-themes` switches the Tamagui theme and mirrors the scheme to a cookie so the server can render the right theme.
@@ -290,7 +294,7 @@ Mobile dark mode is driven by `Appearance.setColorScheme()`. On web, `next-theme
 
 ```typescript
 // packages/i18n — shared translations with {appName} interpolation
-import { messages, locales, defaultLocale } from "@repo/i18n";
+import { messages, locales, defaultLocale } from '@repo/i18n';
 
 // Web (next-intl): replaces {appName} at build time in getCachedMessages()
 // Mobile (i18next): sets defaultVariables: { appName: "Project Manager" }

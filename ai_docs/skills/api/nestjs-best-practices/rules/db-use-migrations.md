@@ -27,9 +27,12 @@ export class User {
 @Injectable()
 export class DatabaseService {
   async addField(): Promise<void> {
-    await this.connection.collection('users').updateMany({}, {
-      $set: { age: 0 },
-    });
+    await this.connection.collection('users').updateMany(
+      {},
+      {
+        $set: { age: 0 },
+      },
+    );
     // No version control, no rollback, inconsistent across envs
   }
 }
@@ -66,10 +69,7 @@ export async function up(connection: Connection): Promise<void> {
   const collection = connection.collection('users');
 
   // Add field with default to handle existing documents
-  await collection.updateMany(
-    { age: { $exists: false } },
-    { $set: { age: null, schemaVersion: 2 } },
-  );
+  await collection.updateMany({ age: { $exists: false } }, { $set: { age: null, schemaVersion: 2 } });
 
   // Add index for frequently queried columns
   await collection.createIndex({ age: 1 });
@@ -91,10 +91,7 @@ export class MigrationService {
     // Track applied migrations in a dedicated collection
     const migrationsColl = this.connection.collection('_migrations');
 
-    const migrations = [
-      await import('./migrations/001-initial'),
-      await import('./migrations/002-add-user-age'),
-    ];
+    const migrations = [await import('./migrations/001-initial'), await import('./migrations/002-add-user-age')];
 
     for (const migration of migrations) {
       const applied = await migrationsColl.findOne({
@@ -118,10 +115,7 @@ export async function up(connection: Connection): Promise<void> {
   const collection = connection.collection('users');
 
   // Step 1: Copy data to new field
-  await collection.updateMany(
-    { fullName: { $exists: false } },
-    [{ $set: { fullName: '$name' } }],
-  );
+  await collection.updateMany({ fullName: { $exists: false } }, [{ $set: { fullName: '$name' } }]);
 
   // Step 2: Remove old field (only after verifying app works)
   // This should be a separate migration deployed after step 1 is confirmed
@@ -136,12 +130,14 @@ export async function down(connection: Connection): Promise<void> {
 // Run migrations on app bootstrap
 // app.module.ts
 @Module({
-  imports: [MongooseModule.forRootAsync({
-    inject: [ConfigService],
-    useFactory: (config: ConfigService) => ({
-      uri: config.get('MONGODB_URI'),
+  imports: [
+    MongooseModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        uri: config.get('MONGODB_URI'),
+      }),
     }),
-  })],
+  ],
 })
 export class AppModule implements OnModuleInit {
   constructor(private migrationService: MigrationService) {}
