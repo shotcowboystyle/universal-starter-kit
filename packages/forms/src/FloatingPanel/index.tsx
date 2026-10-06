@@ -7,9 +7,11 @@ import {
   wasKeyboardFocus,
   ensureKeyboardModalityTracking,
 } from '@repo/theme';
-import type { ReactNode, RefObject, UIEvent } from 'react';
+import type { ComponentProps, ReactNode, Ref, RefObject, UIEvent } from 'react';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
+import type { ScrollViewProps } from 'react-native';
 import { isWeb, Sheet, View, YStack } from 'tamagui';
+import type { TamaguiElement } from 'tamagui';
 
 import { ScrollArrow } from '../shared/floating-list';
 import { useReturnFocusOnClose, useSheetModalFocus } from '../shared/focus-management';
@@ -21,7 +23,7 @@ import type { PanelActionEvent } from './nested-action';
 import { PanelPortal } from './PanelPortal';
 import { contextMenuPoint, pointOpensUp, pointPanelLeft, referenceCornerPoint } from './point-anchor';
 import type { ContextMenuEventLike, PanelPoint } from './point-anchor';
-import { useFloatingPanel, panelTransition, panelViewportPadding } from './use-floating-panel';
+import { parsePx, useFloatingPanel, panelTransition, panelViewportPadding } from './use-floating-panel';
 import type { PanelWidthMode } from './use-floating-panel';
 
 type PointerOpenEvent = PanelActionEvent & { button?: number; target?: unknown };
@@ -130,7 +132,7 @@ export interface FloatingPanelProps {
   /**
    * Props passed to Sheet.ScrollView when scrollable. Use for onScroll (e.g. infinite load).
    */
-  scrollViewProps?: Record<string, unknown>;
+  scrollViewProps?: ScrollViewProps;
   /**
    * Native-only (iOS/Android): explicit VoiceOver/TalkBack name, value, and
    * hint for the sheet trigger Pressable. On native the trigger subtree is
@@ -169,6 +171,12 @@ const panelChromeFocus = {
   focusVisibleStyle: { outlineWidth: 0 },
 } as const;
 
+const noop = () => {
+  // intentionally empty
+};
+
+const isEventHandler = (value: unknown): value is (event: PanelActionEvent) => void => typeof value === 'function';
+
 const useKeyboardFocusIntoPanel = (
   open: boolean,
   frameRef: { current: HTMLElement | null },
@@ -176,7 +184,7 @@ const useKeyboardFocusIntoPanel = (
 ) => {
   useEffect(() => {
     if (!open || !isWeb) {
-      return;
+      return noop;
     }
     const focusFirst = () => {
       const frame = frameRef.current;
@@ -194,6 +202,7 @@ const useKeyboardFocusIntoPanel = (
       if (!first || first === frame) {
         return;
       }
+      // SAFETY: focusVisible is a real FocusOptions member in browsers; the TS DOM lib predates it.
       first.focus({ preventScroll: true, focusVisible: true } as FocusOptions);
     };
     let inner = 0;
@@ -218,22 +227,34 @@ const useKeyboardFocusIntoPanel = (
  * transformed dialog still lays out against that dialog. A `display: contents`
  * node has no box, so its computed `contain` (Tamagui's theme span) is ignored.
  */
-const fixedContainingBlockOrigin = (element: HTMLElement): { top: number; left: number } => {
+const willChangeCaptures = /transform|perspective|filter/u;
+const containCaptures = /paint|layout|strict|content/u;
+
+const isSet = (value: string | undefined, initial: string): boolean =>
+  value !== undefined && value !== '' && value !== initial;
+
+const capturesFixedChildren = (cs: CSSStyleDeclaration): boolean => {
+  const styled = [
+    [cs.transform, 'none'],
+    [cs.perspective, 'none'],
+    [cs.filter, 'none'],
+    [cs.backdropFilter, 'none'],
+    [cs.containerType, 'normal'],
+  ] as const;
+  return (
+    styled.some(([value, initial]) => isSet(value, initial)) ||
+    willChangeCaptures.test(cs.willChange) ||
+    containCaptures.test(cs.contain)
+  );
+};
+
+const fixedContainingBlockOrigin = (element: HTMLElement) => {
   for (let node = element.parentElement; node; node = node.parentElement) {
     const cs = getComputedStyle(node);
     if (cs.display === 'contents') {
       continue;
     }
-    const set = (value: string | undefined, initial: string) => !!value && value !== initial;
-    const captures =
-      set(cs.transform, 'none') ||
-      set(cs.perspective, 'none') ||
-      set(cs.filter, 'none') ||
-      set(cs.backdropFilter, 'none') ||
-      set(cs.containerType, 'normal') ||
-      /transform|perspective|filter/u.test(cs.willChange) ||
-      /paint|layout|strict|content/u.test(cs.contain);
-    if (captures) {
+    if (capturesFixedChildren(cs)) {
       const rect = node.getBoundingClientRect();
       return {
         top: rect.top + node.clientTop - node.scrollTop,
@@ -246,6 +267,12 @@ const fixedContainingBlockOrigin = (element: HTMLElement): { top: number; left: 
 
 const isRtl = (): boolean =>
   isWeb && typeof document !== 'undefined' && document.documentElement.getAttribute('dir') === 'rtl';
+
+const pointPlacementName = ({ dropup, alignEnd }: { dropup: boolean; alignEnd: boolean }): string => {
+  const vertical = dropup ? 'top' : 'bottom';
+  const horizontal = alignEnd ? 'end' : 'start';
+  return `${vertical}-${horizontal}`;
+};
 
 const panelTransformOrigin = (placement: string): string => {
   const rtl = isRtl();
@@ -269,8 +296,9 @@ const overlayFloatBreakpoint = OVERLAY_BREAKPOINT;
  */
 const subscribeViewport = (listener: () => void) => {
   if (!isWeb || typeof window === 'undefined') {
-    return () => {};
+    return noop;
   }
+  // oxlint-disable-next-line github/prefer-observers -- viewport width drives the float/sheet switch, not an element size
   window.addEventListener('resize', listener);
   return () => {
     window.removeEventListener('resize', listener);
@@ -296,7 +324,7 @@ const useParkedFrameInert = (open: boolean, frameRef: RefObject<HTMLElement | nu
       return;
     }
     const frame = frameRef.current;
-    if (!frame || typeof frame.setAttribute !== 'function') {
+    if (!frame || !('setAttribute' in frame)) {
       return;
     }
     if (open) {
@@ -380,16 +408,21 @@ const FloatingPanelSheet = ({
     handleOpenChange(true);
   };
   const isContextMenu = openOn === 'contextmenu';
-  const triggerActivation = isWeb
-    ? isContextMenu
-      ? ({
+  const webTriggerActivation = () =>
+    isContextMenu
+      ? {
           onContextMenu: (event: { preventDefault: () => void }) => {
             event.preventDefault();
             openFromTrigger();
           },
-        } as Record<string, unknown>)
-      : ({ onClickCapture: openFromTrigger } as Record<string, unknown>)
-    : undefined;
+        }
+      : { onClickCapture: openFromTrigger };
+  const triggerActivation = isWeb ? webTriggerActivation() : undefined;
+  const hasHeader = Boolean(header);
+  // SAFETY: Sheet.ScrollView is a Tamagui wrapper over the same RN ScrollView, so RN ScrollViewProps are valid on it.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- Tamagui's prop type is a superset the RN type does not reach
+  const sheetScrollProps = scrollViewProps as ComponentProps<typeof Sheet.ScrollView> | undefined;
+  const sheetFrameDomProps = { ref: sheetFrameRef, tabIndex: -1 };
 
   return (
     <>
@@ -430,7 +463,7 @@ const FloatingPanelSheet = ({
           // Sheet.Frame forwards its ref at runtime; the styled prop type
           // just omits `ref`, hence the cast. tabIndex -1 makes the frame a
           // programmatic focus target without joining the tab order.
-          {...({ ref: sheetFrameRef, tabIndex: -1 } as Record<string, unknown>)}
+          {...sheetFrameDomProps}
           {...knobProps.elevatedSurface}
           borderBottomLeftRadius={0}
           borderBottomRightRadius={0}
@@ -440,8 +473,8 @@ const FloatingPanelSheet = ({
           {header}
           {scrollable ? (
             <Sheet.ScrollView
-              flex={header ? 1 : undefined}
-              {...scrollViewProps}>
+              flex={hasHeader ? 1 : undefined}
+              {...sheetScrollProps}>
               {children}
             </Sheet.ScrollView>
           ) : (
@@ -455,6 +488,7 @@ const FloatingPanelSheet = ({
 
 // ── Web floating panel (desktop) ──────────────────────────────
 
+// oxlint-disable-next-line react-doctor/no-giant-component, eslint/complexity -- one component owns the shared overlay refs; splitting would thread ~10 refs through props
 const FloatingPanelWeb = ({
   open,
   onOpenChange,
@@ -464,6 +498,7 @@ const FloatingPanelWeb = ({
   disabled,
   sizing = 'grow',
   widthMode,
+  // oxlint-disable-next-line typescript/no-deprecated -- the deprecated boolean is still honored for existing callers
   fitContent,
   compact,
   contentPadding = 'default',
@@ -523,14 +558,18 @@ const FloatingPanelWeb = ({
     anchorPointRef.current = null;
   }, [open]);
 
+  const { refs: panelRefs, triggerRef, initializingRef, arrowScrollDirRef, updateArrows, placement, knobProps } = panel;
+
+  /* oxlint-disable react/immutability -- imperative DOM positioning of the floating element, run from effects and handlers */
+  // oxlint-disable-next-line sonarjs/cognitive-complexity, eslint/complexity -- one layout pass over the shared overlay refs (fill and grow modes)
   const repositionOverlay = useCallback(() => {
-    const dropdownElement = panel.refs.floating.current;
-    const trig = panel.triggerRef.current;
+    const dropdownElement = panelRefs.floating.current;
+    const trig = triggerRef.current;
     if (!dropdownElement || !trig) {
       return;
     }
 
-    const isInitial = panel.initializingRef.current;
+    const isInitial = initializingRef.current;
     if (isInitial) {
       dropdownElement.style.transition = 'none';
     }
@@ -540,20 +579,20 @@ const FloatingPanelWeb = ({
     }
 
     const point = isContextMenu ? (anchorPointRef.current ?? referenceCornerPoint(trig, isRtl())) : null;
-    const triggerBounds = point ? { top: point.y, bottom: point.y } : trig.getBoundingClientRect();
+    const triggerBounds = point === null ? trig.getBoundingClientRect() : { top: point.y, bottom: point.y };
     const viewportHeight = window.innerHeight;
     const cs = getComputedStyle(dropdownElement);
-    const borderTopWidth = Number.parseFloat(cs.borderTopWidth) || 0;
-    const borderBottomWidth = Number.parseFloat(cs.borderBottomWidth) || 0;
+    const borderTopWidth = parsePx(cs.borderTopWidth) || 0;
+    const borderBottomWidth = parsePx(cs.borderBottomWidth) || 0;
     const totalBorderWidth = borderTopWidth + borderBottomWidth;
     const scrollContentHeight = dropdownElement.scrollHeight;
     const totalContentHeight = scrollContentHeight + totalBorderWidth;
-    const liveTransition = panel.knobProps.transition ? panelTransition : 'none';
+    const liveTransition = knobProps.transition === undefined ? 'none' : panelTransition;
     const containingBlock = fixedContainingBlockOrigin(dropdownElement);
 
-    let isDropup = panel.placement.startsWith('top');
+    let isDropup = placement.startsWith('top');
     let cssLeft: number | undefined;
-    if (point) {
+    if (point !== null) {
       const bounds = {
         top: panelViewportPadding,
         left: panelViewportPadding,
@@ -580,7 +619,7 @@ const FloatingPanelWeb = ({
     // the trigger's bottom edge (and its bottom with the trigger's top when
     // dropping up) instead of floating 4px clear of it. A context menu opened
     // at a point is a FREE overlay and keeps `OVERLAY_ANCHOR_GAP` from it.
-    const gap = point ? OVERLAY_ANCHOR_GAP : OVERLAY_ATTACH_GAP;
+    const gap = point === null ? OVERLAY_ATTACH_GAP : OVERLAY_ANCHOR_GAP;
     const belowTop = triggerBounds.bottom + gap;
     const aboveBottom = triggerBounds.top - gap;
 
@@ -602,20 +641,16 @@ const FloatingPanelWeb = ({
         void dropdownElement.offsetHeight;
       }
 
-      panel.initializingRef.current = false;
+      initializingRef.current = false;
       void dropdownElement.offsetHeight;
       if (isInitial) {
         dropdownElement.style.transition = liveTransition;
       }
       requestAnimationFrame(() => {
-        if (dropdownElement) {
-          panel.updateArrows(dropdownElement);
-          requestAnimationFrame(() => {
-            if (dropdownElement) {
-              panel.updateArrows(dropdownElement);
-            }
-          });
-        }
+        updateArrows(dropdownElement);
+        requestAnimationFrame(() => {
+          updateArrows(dropdownElement);
+        });
       });
       return;
     }
@@ -659,11 +694,7 @@ const FloatingPanelWeb = ({
     // When grown but content is shorter than viewport: anchor dropdown to bottom (gap above), dropup to top (gap below)
     const availableViewport = viewportHeight - 2 * panelViewportPadding;
     if ((grownRef.current || growUpOnlyRef.current || growDownOnlyRef.current) && height < availableViewport) {
-      if (isDropup) {
-        top = panelViewportPadding;
-      } else {
-        top = viewportHeight - panelViewportPadding - height;
-      }
+      top = isDropup ? panelViewportPadding : viewportHeight - panelViewportPadding - height;
     }
 
     const cssTop = top - containingBlock.top;
@@ -676,32 +707,25 @@ const FloatingPanelWeb = ({
       void dropdownElement.offsetHeight;
     }
 
-    panel.initializingRef.current = false;
+    initializingRef.current = false;
     void dropdownElement.offsetHeight;
     if (isInitial) {
       dropdownElement.style.transition = liveTransition;
     }
     requestAnimationFrame(() => {
-      if (dropdownElement) {
-        panel.updateArrows(dropdownElement);
-        requestAnimationFrame(() => {
-          if (dropdownElement) {
-            panel.updateArrows(dropdownElement);
-          }
-        });
-      }
+      updateArrows(dropdownElement);
+      requestAnimationFrame(() => {
+        updateArrows(dropdownElement);
+      });
     });
-  }, [
-    isFill,
-    isContextMenu,
-    panel.placement,
-    panel.refs,
-    panel.triggerRef,
-    panel.updateArrows,
-    panel.knobProps.transition,
-  ]);
+    // oxlint-disable-next-line react/memo-dependencies -- the other inputs are refs, which are stable and read only when the callback runs
+  }, [isFill, isContextMenu, placement, panelRefs, triggerRef, initializingRef, updateArrows, knobProps.transition]);
 
-  repositionFnRef.current = repositionOverlay;
+  /* oxlint-enable react/immutability */
+
+  useLayoutEffect(() => {
+    repositionFnRef.current = repositionOverlay;
+  }, [repositionOverlay, repositionFnRef]);
 
   const click = useClick(panel.context, {
     event: 'mousedown',
@@ -722,12 +746,14 @@ const FloatingPanelWeb = ({
       return;
     }
     repositionOverlay();
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- panel.y changes when floating-ui moves the panel, which must trigger a re-measure
   }, [open, panel.mounted, repositionOverlay, panel.y]);
 
   useLayoutEffect(() => {
     const content = contentRef.current;
-    if (!open || !panel.mounted || !isFill || !content || typeof ResizeObserver === 'undefined') {
-      return;
+    const canObserve = open && panel.mounted && isFill;
+    if (!canObserve || !content || typeof ResizeObserver === 'undefined') {
+      return noop;
     }
     // Matching the trigger width can rewrap content after the panel's first
     // height measurement. Observe the content, not the clamped viewport, so a
@@ -753,18 +779,21 @@ const FloatingPanelWeb = ({
 
   const handleScroll = useCallback(
     (event: UIEvent) => {
-      const el = event.target as HTMLElement;
-      panel.updateArrows(el);
+      const el = event.target;
+      if (!(el instanceof HTMLElement)) {
+        return;
+      }
+      updateArrows(el);
       if (isFill) {
         return;
       }
-      if (panel.initializingRef.current) {
+      if (initializingRef.current) {
         lastScrollTopRef.current = el.scrollTop;
         return;
       }
-      const arrowDir = panel.arrowScrollDirRef.current;
-      if (arrowDir) {
-        panel.arrowScrollDirRef.current = null;
+      const arrowDir = arrowScrollDirRef.current;
+      if (arrowDir !== null) {
+        arrowScrollDirRef.current = null;
         lastScrollTopRef.current = el.scrollTop;
         if (arrowDir === 'down') {
           growUpOnlyRef.current = true;
@@ -781,11 +810,12 @@ const FloatingPanelWeb = ({
         repositionFnRef.current?.();
       }
     },
-    [isFill, panel.updateArrows],
+    // oxlint-disable-next-line react/memo-dependencies -- the other inputs are refs, which are stable and read only when the event fires
+    [isFill, updateArrows, initializingRef, arrowScrollDirRef],
   );
 
   // animation=none → no CSS tween (same contract as knobProps.transition === undefined)
-  const webTransition = panel.knobProps.transition ? panelTransition : 'none';
+  const webTransition = knobProps.transition === undefined ? 'none' : panelTransition;
 
   // `elevatedSurface` carries a web-only `style: { boxShadow }`.
   // Two `style` props on one element do NOT merge — the later
@@ -840,7 +870,7 @@ const FloatingPanelWeb = ({
       return;
     }
     resetPosition();
-    panel.initializingRef.current = true;
+    initializingRef.current = true;
     repositionOverlay();
   };
 
@@ -850,7 +880,8 @@ const FloatingPanelWeb = ({
   // another trigger, and Escape returns there. Focus the pressed
   // control first so the capture is the trigger, as for a keyboard open.
   const focusTriggerOnPointerOpen = (event: PointerOpenEvent) => {
-    if (open || disabled || isContextMenu || event.button !== 0 || !isWeb) {
+    const isPrimaryPointerOpen = !open && !disabled && !isContextMenu && event.button === 0;
+    if (!isPrimaryPointerOpen || !isWeb) {
       return;
     }
     const reference = panel.triggerRef.current;
@@ -861,30 +892,44 @@ const FloatingPanelWeb = ({
     const pressed = target?.closest<HTMLElement>(PANEL_FOCUSABLE);
     const focusable =
       pressed && reference.contains(pressed) ? pressed : reference.querySelector<HTMLElement>(PANEL_FOCUSABLE);
+    // SAFETY: focusVisible is a real FocusOptions member in browsers; the TS DOM lib predates it.
     focusable?.focus({ preventScroll: true, focusVisible: false } as FocusOptions);
   };
 
-  const referenceProps = getReferenceProps({
+  const referenceInput: Parameters<typeof getReferenceProps>[0] = {
     ref: panel.setReferenceRef,
     onClickCapture: openFromSynthesizedClick,
-    ...(isContextMenu ? { onContextMenu: openFromContextMenu } : {}),
-  });
+  };
+  if (isContextMenu) {
+    referenceInput.onContextMenu = openFromContextMenu;
+  }
+  // oxlint-disable-next-line react/refs -- referenceInput carries the reference ref callback, which floating-ui merges into the props
+  const referenceProps = getReferenceProps(referenceInput);
   // Guard the composed floating-ui openers, after hook handlers are merged.
   // Declining leaves each action's own events and focus defaults intact.
   for (const name of ['onMouseDown', 'onClick', 'onKeyDown', 'onKeyUp'] as const) {
     const handler = referenceProps[name];
-    if (typeof handler === 'function') {
-      referenceProps[name] = (event: PanelActionEvent) => {
+    if (isEventHandler(handler)) {
+      referenceProps[name] = (event: PointerOpenEvent) => {
         if (isNestedPanelAction(event)) {
           return;
         }
         if (name === 'onMouseDown') {
-          focusTriggerOnPointerOpen(event as PointerOpenEvent);
+          focusTriggerOnPointerOpen(event);
         }
         handler(event);
       };
     }
   }
+
+  // The panel is positioned by the previous layout pass: the measured geometry, the width-mode styles written by
+  // floating-ui's size() middleware and the trigger element are all ref state that must be read during render.
+  /* oxlint-disable react/refs -- positioning state is committed into refs by the layout pass and read back on the next render */
+  const overlayStyle = overlayStyleRef.current;
+  const pointPlacement = pointPlacementRef.current;
+  const floatingStyle = panel.floatingStyleRef.current;
+  const anchorElement = triggerRef.current;
+  const placementName = pointPlacement ? pointPlacementName(pointPlacement) : panel.placement;
 
   return (
     <>
@@ -903,31 +948,27 @@ const FloatingPanelWeb = ({
       </View>
 
       {panel.mounted && (
-        <PanelPortal anchor={panel.triggerRef.current}>
+        <PanelPortal anchor={anchorElement}>
           <YStack
             {...getFloatingProps({
               ref: panel.refs.setFloating,
               style: {
                 ...elevatedSurfaceStyle,
                 position: panel.strategy,
-                top: overlayStyleRef.current?.top ?? panel.y ?? 0,
-                left: overlayStyleRef.current?.left ?? panel.x ?? 0,
-                scrollbarWidth: 'none' as any,
+                top: overlayStyle?.top ?? panel.y,
+                left: overlayStyle?.left ?? panel.x,
+                scrollbarWidth: 'none',
                 zIndex: zIndex.dropdown,
                 overflow: 'auto',
-                ...panel.floatingStyleRef.current,
-                ...(overlayStyleRef.current ? { maxHeight: overlayStyleRef.current.maxHeight } : {}),
+                ...floatingStyle,
+                maxHeight: overlayStyle?.maxHeight,
                 opacity: panel.visible ? 1 : 0,
                 // `none`, not scale(1): any transform makes this panel the
                 // containing block of a nested panel's `position: fixed`, which
                 // then positions against this box and is clipped by its scroll.
                 transform: panel.visible ? 'none' : 'scale(0.96)',
                 transition: webTransition,
-                transformOrigin: panelTransformOrigin(
-                  pointPlacementRef.current
-                    ? `${pointPlacementRef.current.dropup ? 'top' : 'bottom'}-${pointPlacementRef.current.alignEnd ? 'end' : 'start'}`
-                    : panel.placement,
-                ),
+                transformOrigin: panelTransformOrigin(placementName),
               },
               onScroll: handleScroll,
               onTransitionEnd: (event) => {
@@ -958,7 +999,9 @@ const FloatingPanelWeb = ({
               arrowScrollDirRef={panel.arrowScrollDirRef}
             />
             <View
-              ref={contentRef as any}
+              // SAFETY: web-only panel, so Tamagui's View resolves to an HTMLElement.
+              // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- RefObject<HTMLElement | null> narrows Ref<TamaguiElement>
+              ref={contentRef as Ref<TamaguiElement>}
               {...(contentPadding === 'none' ? undefined : panel.knobProps.panelPadding)}
               {...(contentPadding === 'none' ? undefined : panel.knobProps.gapLg)}>
               {children}
@@ -975,6 +1018,7 @@ const FloatingPanelWeb = ({
     </>
   );
 };
+/* oxlint-enable react/refs */
 
 export const FloatingPanel = (props: FloatingPanelProps) => {
   // Install modality tracking during render so the Enter that opens

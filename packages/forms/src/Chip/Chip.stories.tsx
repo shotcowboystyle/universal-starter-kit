@@ -7,6 +7,10 @@ import { Text, XStack, YStack } from 'tamagui';
 import { Chip } from './index';
 import type { ChipColor, ChipSize, ChipVariantProp } from './index';
 
+const noop = (): void => {
+  // inert handler: the story only needs the affordance to render
+};
+
 const meta: Meta<typeof Chip> = {
   title: 'Forms/Chip',
   component: Chip,
@@ -139,32 +143,34 @@ export const Selected: Story = {
   ),
 };
 
+const FilterDemo = () => {
+  const [on, setOn] = useState<Record<string, boolean>>({
+    Fire: true,
+    Water: false,
+    Grass: true,
+    Electric: false,
+  });
+  return (
+    <XStack
+      gap="$2"
+      flexWrap="wrap">
+      {Object.keys(on).map((label) => (
+        <Chip
+          key={label}
+          variant="outline"
+          selected={on[label]}
+          onPress={() => {
+            setOn((s) => ({ ...s, [label]: !s[label] }));
+          }}>
+          {label}
+        </Chip>
+      ))}
+    </XStack>
+  );
+};
+
 export const Filter: Story = {
-  render: function FilterDemo() {
-    const [on, setOn] = useState<Record<string, boolean>>({
-      Fire: true,
-      Water: false,
-      Grass: true,
-      Electric: false,
-    });
-    return (
-      <XStack
-        gap="$2"
-        flexWrap="wrap">
-        {Object.keys(on).map((label) => (
-          <Chip
-            key={label}
-            variant="outline"
-            selected={on[label]}
-            onPress={() => {
-              setOn((s) => ({ ...s, [label]: !s[label] }));
-            }}>
-            {label}
-          </Chip>
-        ))}
-      </XStack>
-    );
-  },
+  render: FilterDemo,
 };
 
 export const WithIcon: Story = {
@@ -184,7 +190,7 @@ export const WithIcon: Story = {
         icon=<CheckIcon />
         color="green"
         selected
-        onPress={() => {}}>
+        onPress={noop}>
         Ready
       </Chip>
       <Chip
@@ -256,13 +262,13 @@ export const Disabled: Story = {
       <Chip disabled>Disabled</Chip>
       <Chip
         disabled
-        onDismiss={() => {}}>
+        onDismiss={noop}>
         Disabled Dismissible
       </Chip>
       <Chip
         disabled
         selected
-        onPress={() => {}}>
+        onPress={noop}>
         Disabled selected
       </Chip>
     </XStack>
@@ -332,7 +338,7 @@ export const AllStates: Story = {
           <Chip disabled>Disabled</Chip>
           <Chip
             disabled
-            onDismiss={() => {}}>
+            onDismiss={noop}>
             Disabled with dismiss
           </Chip>
         </XStack>

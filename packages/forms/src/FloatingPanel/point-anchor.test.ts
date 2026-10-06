@@ -7,7 +7,7 @@ import type { PanelBounds } from './point-anchor';
 const bounds: PanelBounds = { top: 10, left: 10, right: 1014, bottom: 758 };
 const gap = OVERLAY_ANCHOR_GAP;
 
-describe('pointPanelLeft', () => {
+describe(pointPanelLeft, () => {
   it("puts the panel's start edge on the point when it fits", () => {
     expect(pointPanelLeft({ x: 300, y: 0 }, 200, bounds)).toStrictEqual({ left: 300, alignEnd: false });
   });
@@ -38,7 +38,7 @@ describe('pointPanelLeft', () => {
   });
 });
 
-describe('pointOpensUp', () => {
+describe(pointOpensUp, () => {
   it('opens down whenever the panel fits below the point', () => {
     expect(pointOpensUp({ x: 0, y: 600 }, 150, bounds, gap)).toBe(false);
   });
@@ -53,7 +53,7 @@ describe('pointOpensUp', () => {
   });
 });
 
-describe('placeAtPoint', () => {
+describe(placeAtPoint, () => {
   it('sits OVERLAY_ANCHOR_GAP below the point, start edge on the point', () => {
     expect(placeAtPoint({ point: { x: 300, y: 200 }, width: 180, height: 120, bounds, gap })).toStrictEqual({
       left: 300,
@@ -92,7 +92,7 @@ describe('placeAtPoint', () => {
   });
 });
 
-describe('contextMenuPoint', () => {
+describe(contextMenuPoint, () => {
   const reference = {
     getBoundingClientRect: () => ({ left: 40, right: 240, top: 100, bottom: 144 }),
   };

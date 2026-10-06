@@ -7,15 +7,30 @@ import { Form } from '../../Form';
 
 import { to12Hour, to24Hour } from './parts';
 
-import * as TimePickerModule from './index';
 import { TimePicker } from './index';
 
-vi.mock('@tamagui/lucide-icons-2', () => ({
+vi.mock(import('@tamagui/lucide-icons-2'), () => ({
   Clock: () => null,
   X: () => null,
 }));
 
-describe('TimePicker', () => {
+const openPanel = async (jsx: ReactElement) => {
+  const result = renderWithProviders(jsx);
+  const trigger = result.container.querySelector("input,button,[role='button']");
+  expect(trigger).toBeTruthy();
+  await act(async () => {
+    if (trigger) {
+      fireEvent.mouseDown(trigger);
+      fireEvent.click(trigger);
+    }
+  });
+  await waitFor(() => {
+    expect(document.querySelector('[data-testid="time-picker-panel"]')).toBeTruthy();
+  });
+  return result;
+};
+
+describe(TimePicker, () => {
   describe('time math', () => {
     it('converts 12 AM/PM without dropping noon or midnight', () => {
       expect(to24Hour(12, 'AM')).toBe(0);
@@ -145,7 +160,7 @@ describe('TimePicker', () => {
     });
 
     it('opens iOS wheels and treats AM/PM as a third column', async () => {
-      const onChange = vi.fn();
+      const onChange = vi.fn<(value: string) => void>();
       const result = renderWithProviders(
         <TimePicker
           label="Time"
@@ -216,29 +231,14 @@ describe('TimePicker', () => {
   });
 
   describe('named exports', () => {
-    it('publishes TimePicker as a named export with no default', () => {
-      expect(typeof TimePickerModule.TimePicker).toBe('function');
-      expect('default' in TimePickerModule).toBe(false);
+    it('publishes TimePicker as a named export with no default', async () => {
+      const timePickerModule = await import('./index');
+      expect(timePickerModule.TimePicker).toBeTypeOf('function');
+      expect('default' in timePickerModule).toBe(false);
     });
   });
 
   describe('design-law', () => {
-    const openPanel = async (jsx: ReactElement) => {
-      const result = renderWithProviders(jsx);
-      const trigger = result.container.querySelector("input,button,[role='button']");
-      expect(trigger).toBeTruthy();
-      await act(async () => {
-        if (trigger) {
-          fireEvent.mouseDown(trigger);
-          fireEvent.click(trigger);
-        }
-      });
-      await waitFor(() => {
-        expect(document.querySelector('[data-testid="time-picker-panel"]')).toBeTruthy();
-      });
-      return result;
-    };
-
     it('unselected period and pip labels stay on the 400/700 weight pair', async () => {
       await openPanel(
         <TimePicker
@@ -246,7 +246,7 @@ describe('TimePicker', () => {
           name="t"
           value="12:30"
           timeFormat="12h"
-          onChange={vi.fn()}
+          onChange={vi.fn<(value: string) => void>()}
         />,
       );
       const panel = document.querySelector('[data-testid="time-picker-panel"]');
@@ -257,8 +257,8 @@ describe('TimePicker', () => {
         if (el.style.fontWeight) {
           weights.add(el.style.fontWeight);
         }
-        for (const cls of String(el.className ?? '').split(/\s+/u)) {
-          const match = /(?:^|_)(?:fw|fow|fontWeight)-?(\d+)/iu.exec(cls);
+        for (const cls of (el.getAttribute('class') ?? '').split(/\s+/u)) {
+          const match = /(?:^|_)(?:fw|fow|fontWeight)-?(?<weight>\d+)/iu.exec(cls);
           if (match) {
             weights.add(match[1]);
           }

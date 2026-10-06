@@ -11,13 +11,13 @@ describe('Input.Button', () => {
         <Input.Box size="$4">
           <Input.Button
             size="$4"
-            aria-label="cap">
+            aria-label="Cap">
             x
           </Input.Button>
         </Input.Box>
       </Input>,
     );
-    const btn = result.container.querySelector("[aria-label='cap']") as HTMLElement;
+    const btn = result.getByLabelText('Cap');
     expect(btn).not.toBeNull();
     expect(btn.className).not.toMatch(/mp-chip-dismiss/u);
     expect(btn.querySelector('.mp-chip-dismiss-ring')).toBeNull();
@@ -36,12 +36,12 @@ describe('Input.Button', () => {
         </Input.Box>
       </Input>,
     );
-    const btn = result.container.querySelector("[aria-label='Show password']") as HTMLElement;
+    const btn = result.getByLabelText('Show password');
     expect(btn).not.toBeNull();
     expect(btn.getAttribute('tabindex')).toBe('0');
     expect(btn.className).toMatch(/mp-chip-dismiss/u);
     expect(btn.className).not.toMatch(/mp-chip-dismiss-ring/u);
-    const ring = btn.querySelector('.mp-chip-dismiss-ring') as HTMLElement;
+    const ring = btn.querySelector<HTMLElement>('.mp-chip-dismiss-ring');
     expect(ring).not.toBeNull();
     expect(btn.contains(ring)).toBe(true);
   });
@@ -52,13 +52,13 @@ describe('Input.Button', () => {
         <Input.Box size="$4">
           <Input.Button
             size="$4"
-            aria-label="cap">
+            aria-label="Cap">
             Scan
           </Input.Button>
         </Input.Box>
       </Input>,
     );
-    const btn = result.container.querySelector("[aria-label='cap']") as HTMLElement;
+    const btn = result.getByLabelText('Cap');
     expect(btn).not.toBeNull();
     expect(btn.textContent).toContain('Scan');
     expect(result.container.querySelector('scan')).toBeNull();
@@ -82,8 +82,8 @@ describe('Input.Button', () => {
           </Input.Box>
         </Input>,
       );
-      const btn = result.container.querySelector(`[aria-label='reveal-${token}']`) as HTMLElement;
-      expect(btn.getAttribute('data-end-cap'), token).toBe(String(height));
+      const btn = result.getByLabelText(`reveal-${token}`);
+      expect(btn.dataset.endCap, token).toBe(String(height));
     }
   });
 });

@@ -6,6 +6,7 @@ import { YStack } from 'tamagui';
 
 import { Button } from '../../Button';
 import { Form } from '../../Form';
+import type { AnyFormApi } from '../../types';
 
 import { MentionInput } from './index';
 import type { MentionConfig } from './index';
@@ -90,45 +91,65 @@ const hashtagMentions: MentionConfig = {
   insertSpace: true,
 };
 
+const FormExample = () => {
+  const form = useForm({
+    defaultValues: {
+      comment: { text: '', mentions: [] },
+      message: { text: '', mentions: [] },
+    },
+    onSubmit: async ({ value }) => {
+      action('onSubmit')(value);
+    },
+  });
+
+  return (
+    <Form form={form}>
+      <YStack gap="$4">
+        <MentionInput
+          label="Comment"
+          name="comment"
+          mentions={[userMentions]}
+          helperText="Type @ to mention team members"
+          onMentionSelect={(mention) => action('mentionSelected')(mention)}
+          placeholder="Type @ to mention someone"
+        />
+        <MentionInput
+          label="Message"
+          name="message"
+          mentions={[userMentions]}
+          helperText="Write a message to your team"
+          placeholder="Type @ to mention someone"
+        />
+        <Button action="submit">Submit</Button>
+      </YStack>
+    </Form>
+  );
+};
+
+const InteractiveExample = () => {
+  const [value, setValue] = useState('');
+  return (
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <MentionInput
+        label="Comment"
+        defaultValue={value}
+        onChange={(val) => {
+          setValue(val.text);
+          action('onChange')(val);
+        }}
+        mentions={[userMentions]}
+        placeholder="Type @ to mention someone"
+        helperText={value ? `Current text: ${value}` : 'Start typing...'}
+      />
+    </YStack>
+  );
+};
+
 export const Main: Story = {
   name: 'Main',
-  render: () => {
-    const FormExample = () => {
-      const form = useForm({
-        defaultValues: {
-          comment: { text: '', mentions: [] },
-          message: { text: '', mentions: [] },
-        },
-        onSubmit: async ({ value }) => {
-          action('onSubmit')(value);
-        },
-      });
-
-      return (
-        <Form form={form}>
-          <YStack gap="$4">
-            <MentionInput
-              label="Comment"
-              name="comment"
-              mentions={[userMentions]}
-              helperText="Type @ to mention team members"
-              onMentionSelect={(mention) => action('mentionSelected')(mention)}
-              placeholder="Type @ to mention someone"
-            />
-            <MentionInput
-              label="Message"
-              name="message"
-              mentions={[userMentions]}
-              helperText="Write a message to your team"
-              placeholder="Type @ to mention someone"
-            />
-            <Button action="submit">Submit</Button>
-          </YStack>
-        </Form>
-      );
-    };
-    return <FormExample />;
-  },
+  render: () => <FormExample />,
 };
 
 export const Standalone: Story = {
@@ -157,8 +178,6 @@ export const Basic: Story = {
     label: 'Comment',
     placeholder: 'Type @ to mention someone',
     disabled: false,
-    minHeight: undefined,
-    maxHeight: undefined,
   },
 };
 
@@ -219,29 +238,7 @@ export const Sizes: Story = {
 };
 
 export const Interactive: Story = {
-  render: () => {
-    const InteractiveExample = () => {
-      const [value, setValue] = useState('');
-      return (
-        <YStack
-          gap="$4"
-          maxWidth={400}>
-          <MentionInput
-            label="Comment"
-            defaultValue={value}
-            onChange={(val) => {
-              setValue(val.text);
-              action('onChange')(val);
-            }}
-            mentions={[userMentions]}
-            placeholder="Type @ to mention someone"
-            helperText={value ? `Current text: ${value}` : 'Start typing...'}
-          />
-        </YStack>
-      );
-    };
-    return <InteractiveExample />;
-  },
+  render: () => <InteractiveExample />,
 };
 
 export const MultipleTriggersStory: Story = {
@@ -271,7 +268,7 @@ export const MultipleTriggersStory: Story = {
             disabled={args.disabled}
           />
           <Button
-            form={form as unknown as import('../../types').AnyFormApi}
+            form={form as unknown as AnyFormApi}
             action="submit">
             Post
           </Button>
@@ -283,7 +280,6 @@ export const MultipleTriggersStory: Story = {
   args: {
     placeholder: 'Type @ to mention users or # for hashtags',
     minHeight: 150,
-    maxHeight: undefined,
     disabled: false,
   },
 };
@@ -298,6 +294,3 @@ export const SkeletonState: Story = {
     />
   ),
 };
-
-// >5 users so the mention list clears `select-too-few-options` (UX-P19).
-const inTableMentionUsers = [...userMentions.data, { id: '6', display: 'Dana Lee', description: 'Support' }];

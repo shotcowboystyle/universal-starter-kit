@@ -12,35 +12,17 @@ import { Skeleton } from '../../Skeleton';
 import { OsDateTimeSheet } from '../nativeDateTime/OsDateTimeSheet';
 
 import { TimePicker as CatalogTimePicker } from './catalog';
-import { TimePickerInputTrigger, formatTimeDisplay, isValidTimeString, parseTimeString, toTimeString } from './parts';
-import type { TimeFormat } from './parts';
+import type { TimePickerProps } from './catalog';
+import {
+  TimePickerInputTrigger,
+  firstError,
+  formatTimeDisplay,
+  isValidTimeString,
+  parseTimeString,
+  toTimeString,
+} from './parts';
 
-export interface TimePickerProps {
-  name?: string;
-  form?: import('../../types').AnyFormApi;
-  validators?: Record<string, unknown>;
-  label?: import('react').ReactNode;
-  labelProps?: Omit<import('tamagui').LabelProps, 'htmlFor' | 'ref'>;
-  helperText?: string;
-  error?: string | boolean;
-  required?: boolean;
-  size?: import('tamagui').SizeTokens;
-  id?: string;
-  value?: string;
-  defaultValue?: string;
-  onChange?: (value: string) => void;
-  onBlur?: (...args: any[]) => void;
-  disabled?: boolean;
-  readOnly?: boolean;
-  timeFormat?: TimeFormat;
-  minuteStep?: number;
-  showSeconds?: boolean;
-  placeholder?: string;
-  clockIcon?: import('react').ReactNode;
-  skeleton?: boolean;
-  compact?: boolean;
-  native?: boolean;
-}
+export type { TimePickerProps } from './catalog';
 
 export type { TimeFormat } from './parts';
 export { formatTimeDisplay, isValidTimeString, parseTimeString, toTimeString } from './parts';
@@ -55,10 +37,9 @@ const timeToDate = (value: string): Date => {
 const dateToTime = (date: Date, showSeconds: boolean): string =>
   toTimeString(date.getHours(), date.getMinutes(), showSeconds ? date.getSeconds() : undefined);
 
-export const TimePicker = (props: TimePickerProps) => {
-  if (props.native === false) {
-    return <CatalogTimePicker {...props} />;
-  }
+type FieldChange = (value: string) => void;
+
+const NativeTimePicker = (props: TimePickerProps) => {
   const {
     name,
     form: formProp,
@@ -88,6 +69,7 @@ export const TimePicker = (props: TimePickerProps) => {
     id: idProp,
     compact,
   });
+  const hasLabel = Boolean(label);
   const resolvedValidators = useResolvedValidators(required, validators, label, name);
   const [open, setOpen] = useState(false);
   const [internalValue, setInternalValue] = useState<string>(() => valueProp ?? defaultValue ?? '');
@@ -95,6 +77,7 @@ export const TimePicker = (props: TimePickerProps) => {
     if (valueProp === undefined) {
       return;
     }
+    // oxlint-disable-next-line react/set-state-in-effect -- adopts the controlled `value` prop into display state
     setInternalValue(valueProp);
   }, [valueProp]);
   const value = internalValue;
@@ -102,7 +85,7 @@ export const TimePicker = (props: TimePickerProps) => {
   const formatError = valueIsInvalid ? t('Invalid time value') : undefined;
 
   const commit = useCallback(
-    (time: string, fieldChange?: (v: unknown) => void) => {
+    (time: string, fieldChange?: FieldChange) => {
       setInternalValue(time);
       fieldChange?.(time);
       onChange?.(time);
@@ -111,18 +94,17 @@ export const TimePicker = (props: TimePickerProps) => {
     [onChange],
   );
 
-  const renderControl = (
-    current: string,
-    hasError?: boolean,
-    fieldChange?: (v: unknown) => void,
-    readonly?: boolean,
-  ) => (
+  const renderControl = (current: string, hasError = false, fieldChange?: FieldChange, readonly = false) => (
     <>
       <RNPressable
-        onPress={() => !disabled && setOpen(true)}
+        onPress={() => {
+          if (!disabled) {
+            setOpen(true);
+          }
+        }}
         disabled={disabled}
         accessibilityRole="button"
-        accessibilityLabel={label ? undefined : t('Time')}
+        accessibilityLabel={hasLabel ? undefined : t('Time')}
         style={{ width: '100%' }}>
         <TimePickerInputTrigger
           value={valueIsInvalid ? '' : formatTimeDisplay(current, timeFormat, showSeconds)}
@@ -131,19 +113,21 @@ export const TimePicker = (props: TimePickerProps) => {
           error={hasError}
           id={id}
           clockIcon={clockIcon}
-          onOpen={() => {}}
+          onOpen={() => {
+            // the surrounding RNPressable opens the OS sheet
+          }}
           onClear={() => {
             commit('', fieldChange);
           }}
-          aria-label={label ? undefined : t('Time')}
+          aria-label={hasLabel ? undefined : t('Time')}
           aria-readonly={readonly || undefined}
-          aria-required={required || undefined}
+          aria-required={required === true || undefined}
           aria-invalid={hasError || undefined}
         />
       </RNPressable>
       <OsDateTimeSheet
         open={open}
-        value={timeToDate(current || '00:00')}
+        value={timeToDate(current === '' ? '00:00' : current)}
         mode="time"
         onCancel={() => {
           setOpen(false);
@@ -171,21 +155,21 @@ export const TimePicker = (props: TimePickerProps) => {
     );
   }
 
-  if (!resolvedForm || !name) {
+  if (!resolvedForm || name === undefined || name === '') {
     return (
       <FieldLayout
         id={id}
         label={label}
         labelProps={labelProps}
-        error={formatError || error}
+        error={firstError(formatError, error)}
         helperText={helperText}
         required={required}
         size={size}
         knobProps={knobProps}
         onBlur={onBlur}
         disabled={disabled}>
-        <InputParts size={size || knobProps.sizeToken}>
-          {renderControl(value, !!(formatError || error), undefined, readOnly)}
+        <InputParts size={size ?? knobProps.sizeToken}>
+          {renderControl(value, Boolean(firstError(formatError, error)), undefined, readOnly)}
         </InputParts>
       </FieldLayout>
     );
@@ -198,7 +182,8 @@ export const TimePicker = (props: TimePickerProps) => {
       defaultValue={defaultValue}
       validators={resolvedValidators}>
       {(field) => {
-        const resolvedError = getFieldError(field, error) || formatError;
+        const resolvedError = firstError(getFieldError(field, error), formatError);
+        // SAFETY: the field is registered under a time name whose value is an 'HH:MM[:SS]' string or unset
         const current = (field.state.value as string | undefined) ?? value;
         return (
           <FieldLayout
@@ -211,8 +196,8 @@ export const TimePicker = (props: TimePickerProps) => {
             size={size}
             knobProps={knobProps}
             disabled={disabled}>
-            <InputParts size={size || knobProps.sizeToken}>
-              {renderControl(current, !!resolvedError, mergeFieldHandler(field, 'handleChange'), readOnly)}
+            <InputParts size={size ?? knobProps.sizeToken}>
+              {renderControl(current, Boolean(resolvedError), mergeFieldHandler(field, 'handleChange'), readOnly)}
             </InputParts>
           </FieldLayout>
         );
@@ -220,3 +205,6 @@ export const TimePicker = (props: TimePickerProps) => {
     </Field>
   );
 };
+
+export const TimePicker = (props: TimePickerProps) =>
+  props.native === false ? <CatalogTimePicker {...props} /> : <NativeTimePicker {...props} />;

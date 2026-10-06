@@ -4,29 +4,30 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { TimePicker } from './index.native';
 
-vi.mock('tamagui', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('tamagui')>()),
+vi.mock(import('tamagui'), async (importOriginal) => ({
+  ...(await importOriginal()),
   isWeb: false,
 }));
 
-vi.mock('../nativeDateTime/OsDateTimeSheet', () => ({
+vi.mock(import('../nativeDateTime/OsDateTimeSheet'), () => ({
   OsDateTimeSheet: ({ open, onConfirm }: { open: boolean; onConfirm: (date: Date) => void }) =>
     open ? (
-      <div
-        role="dialog"
+      <dialog
+        open
         aria-label="OS time">
         <button
+          type="button"
           onClick={() => {
             onConfirm(new Date(2026, 2, 5, 14, 30));
           }}>
           Confirm OS time
         </button>
-      </div>
+      </dialog>
     ) : null,
 }));
 
 const paintedBox = (result: ReturnType<typeof renderWithProviders>) =>
-  result.getByTestId('time-picker-glyph').parentElement as HTMLElement;
+  result.getByTestId('time-picker-glyph').parentElement!;
 
 describe('native TimePicker trigger', () => {
   it('paints the empty trigger across the row with its placeholder', () => {
@@ -44,7 +45,7 @@ describe('native TimePicker trigger', () => {
   });
 
   it('renders a picked time inside the same full-row box', () => {
-    const onChange = vi.fn();
+    const onChange = vi.fn<(value: string) => void>();
     const result = renderWithProviders(<TimePicker onChange={onChange} />);
     fireEvent.click(result.getByRole('button', { name: 'Time' }));
     fireEvent.click(result.getByRole('button', { name: 'Confirm OS time' }));

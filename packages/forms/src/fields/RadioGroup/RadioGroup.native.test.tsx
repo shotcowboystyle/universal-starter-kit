@@ -8,8 +8,8 @@ import { RadioGroup } from './index';
 // object itself is pinned in shared/native-a-11y.test.ts — the host stringifies
 // it — so what this file proves is that the component reaches the helper with
 // the right role and the right name.
-vi.mock('tamagui', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('tamagui')>()),
+vi.mock(import('tamagui'), async (importOriginal) => ({
+  ...(await importOriginal()),
   isWeb: false,
 }));
 
@@ -20,7 +20,7 @@ const phase = [
 ];
 
 const names = (container: HTMLElement) =>
-  Array.from(container.querySelectorAll('[accessibilityrole]')).map((el) => [
+  [...container.querySelectorAll('[accessibilityrole]')].map((el) => [
     el.getAttribute('accessibilityrole'),
     el.getAttribute('accessibilitylabel'),
   ]);

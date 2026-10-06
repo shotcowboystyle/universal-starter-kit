@@ -43,20 +43,20 @@ const PanelHarness = () => {
   );
 };
 
-let innerWidth = 0;
-beforeEach(() => {
-  innerWidth = window.innerWidth;
-  Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 1200 });
-});
-afterEach(() => {
-  Object.defineProperty(window, 'innerWidth', {
-    configurable: true,
-    writable: true,
-    value: innerWidth,
-  });
-});
-
 describe('web panels escape a react-native-web ScrollView', () => {
+  let innerWidth = 0;
+  beforeEach(() => {
+    ({ innerWidth } = window);
+    Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 1200 });
+  });
+  afterEach(() => {
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      writable: true,
+      value: innerWidth,
+    });
+  });
+
   it("a Select's listbox is not a descendant of the scroll node", async () => {
     const result = renderWithProviders(
       <ScrollView
@@ -75,7 +75,7 @@ describe('web panels escape a react-native-web ScrollView', () => {
     await waitFor(() => {
       expect(document.querySelector('[data-testid="select-dropdown"]')).not.toBeNull();
     });
-    const dropdown = document.querySelector('[data-testid="select-dropdown"]') as HTMLElement;
+    const dropdown = document.querySelector<HTMLElement>('[data-testid="select-dropdown"]')!;
     expect(scroller.contains(dropdown)).toBe(false);
     expect(dropdown.closest('[data-fp-portal]')).not.toBeNull();
     const anchor = panelPortalAnchor(dropdown);
@@ -92,11 +92,11 @@ describe('web panels escape a react-native-web ScrollView', () => {
       </ScrollView>,
     );
     const scroller = result.getByTestId('scroller');
-    pointerPress(result.container.querySelector("[role='button']") as Element);
+    pointerPress(result.container.querySelector("[role='button']")!);
     await waitFor(() => {
       expect(document.querySelector('[data-testid="floating-panel-viewport"]')).not.toBeNull();
     });
-    const viewport = document.querySelector('[data-testid="floating-panel-viewport"]') as HTMLElement;
+    const viewport = document.querySelector<HTMLElement>('[data-testid="floating-panel-viewport"]')!;
     expect(scroller.contains(viewport)).toBe(false);
     expect(viewport.style.position).toBe('fixed');
     expect(containsAcrossPanels(scroller, viewport)).toBe(true);
@@ -112,18 +112,18 @@ describe('web panels escape a react-native-web ScrollView', () => {
         </ScrollView>
       </Theme>,
     );
-    pointerPress(result.container.querySelector("[role='button']") as Element);
+    pointerPress(result.container.querySelector("[role='button']")!);
     await waitFor(() => {
       expect(document.querySelector('[data-testid="floating-panel-viewport"]')).not.toBeNull();
     });
-    const viewport = document.querySelector('[data-testid="floating-panel-viewport"]') as HTMLElement;
-    const portal = viewport.closest('[data-fp-portal]') as HTMLElement;
-    const themed = Array.from(portal.querySelectorAll<HTMLElement>('.is_Theme')).filter((el) => el.contains(viewport));
+    const viewport = document.querySelector<HTMLElement>('[data-testid="floating-panel-viewport"]')!;
+    const portal = viewport.closest<HTMLElement>('[data-fp-portal]')!;
+    const themed = [...portal.querySelectorAll<HTMLElement>('.is_Theme')].filter((el) => el.contains(viewport));
     expect(themed.some((el) => /\bt_dark\b/u.test(el.className))).toBe(true);
   });
 });
 
-describe('panelPortalHost', () => {
+describe(panelPortalHost, () => {
   it('mounts inside the nearest modal layer so its focus trap keeps the panel', () => {
     const dialog = document.createElement('div');
     dialog.setAttribute('role', 'dialog');

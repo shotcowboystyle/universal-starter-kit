@@ -6,6 +6,7 @@ import { useForm } from '@tanstack/react-form';
 import { act, fireEvent, render, waitFor } from '@testing-library/react';
 import { TamaguiProvider, YStack, createTamagui } from 'tamagui';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { MockInstance } from 'vitest';
 
 import { Button } from '../../Button';
 import { Form } from '../../Form';
@@ -26,29 +27,71 @@ const houseThemes = createThemesBuilder(defaultBaseTheme, defaultAccentTheme, de
 const houseConfig = createTamagui({
   ...configWithoutAnimations,
   animations: animationsCSS,
-  themes: houseThemes as any,
+  themes: houseThemes,
 });
 
-let consoleErrorSpy: ReturnType<typeof vi.spyOn> | null = null;
-beforeEach(() => {
-  consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
-    const message = args.map(String).join(' ');
-    if (message.includes('React does not recognize the `pressTheme` prop on a DOM element')) {
-      return;
-    }
+const getRadioByValue = (container: ParentNode, value: string) =>
+  [...container.querySelectorAll("[role='radio']")].find((radio) => radio.id.endsWith(`-${value}`));
+
+const classOf = (el: Element) => el.getAttribute('class') ?? '';
+
+const treeHasRing = (el: Element) =>
+  [el, ...el.querySelectorAll('*')].some((node) => classOf(node).includes('outlineWidth-2px'));
+
+type SubmittedValues = Record<string, string>;
+
+const disc = (container: HTMLElement) => container.querySelector<HTMLElement>('[data-radius-part="radio disc"]');
+
+const noopSubmit = async (_value: SubmittedValues): Promise<void> => {
+  // default submit handler for tests that do not assert on submission
+};
+
+interface FormExampleProps {
+  defaultValue?: string;
+  name?: string;
+  onSubmit?: (value: SubmittedValues) => Promise<void> | void;
+}
+
+const FormExample = ({ defaultValue = '', name = 'option', onSubmit = noopSubmit }: FormExampleProps) => {
+  const form = useForm({
+    defaultValues: {
+      [name]: defaultValue,
+    },
+    onSubmit: async ({ value }) => {
+      await onSubmit(value);
+    },
   });
-});
 
-afterEach(() => {
-  consoleErrorSpy?.mockRestore();
-  consoleErrorSpy = null;
-});
+  return (
+    <Form form={form}>
+      <RadioGroup
+        label="Choose Option"
+        name={name}
+        options={mockOptions}
+      />
+      <Button action="submit">Submit</Button>
+    </Form>
+  );
+};
 
 describe('RadioGroup Components', () => {
-  describe('RadioGroup', () => {
+  let consoleErrorSpy: MockInstance<typeof console.error> | null = null;
+  beforeEach(() => {
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {
+      // Silences console.error for the suite, including React's
+      // `pressTheme` prop-on-DOM-element warning.
+    });
+  });
+
+  afterEach(() => {
+    consoleErrorSpy?.mockRestore();
+    consoleErrorSpy = null;
+  });
+
+  describe(RadioGroup, () => {
     describe('without form context', () => {
       it('should display error message', () => {
-        renderWithProviders(
+        const result = renderWithProviders(
           <RadioGroup
             label="Choose Option"
             name="option"
@@ -59,6 +102,7 @@ describe('RadioGroup Components', () => {
         );
 
         // Note: Tamagui Label/Paragraph don't render queryable text in jsdom
+        expect(result.container.querySelectorAll("[role='radio']")).toHaveLength(mockOptions.length);
       });
 
       it('should render required label with asterisk', () => {
@@ -79,14 +123,15 @@ describe('RadioGroup Components', () => {
       });
 
       it('fires canonical onChange and the deprecated onValueChange alias once each', async () => {
-        const onChange = vi.fn();
-        const onValueChange = vi.fn();
+        const onChange = vi.fn<(value: string) => void>();
+        const onValueChange = vi.fn<(value: string) => void>();
         const result = renderWithProviders(
           <RadioGroup
             label="Choose Option"
             name="option"
             options={mockOptions}
             onChange={onChange}
+            // oxlint-disable-next-line typescript/no-deprecated -- the deprecated alias is the behavior under test
             onValueChange={onValueChange}
           />,
         );
@@ -97,16 +142,14 @@ describe('RadioGroup Components', () => {
             fireEvent.click(radio);
           }
         });
-        expect(onChange).toHaveBeenCalledOnce();
-        expect(onChange).toHaveBeenCalledWith('option1');
-        expect(onValueChange).toHaveBeenCalledOnce();
-        expect(onValueChange).toHaveBeenCalledWith('option1');
+        expect(onChange).toHaveBeenCalledExactlyOnceWith('option1');
+        expect(onValueChange).toHaveBeenCalledExactlyOnceWith('option1');
       });
 
       it('clicking the painted glyph still selects', async () => {
         // RadioGlyph is pointerEvents=none so RN presses reach role=radio
         // (same inner-View steal as CheckboxGlyphBox).
-        const onChange = vi.fn();
+        const onChange = vi.fn<(value: string) => void>();
         const result = renderWithProviders(
           <RadioGroup
             label="Choose Option"
@@ -127,32 +170,8 @@ describe('RadioGroup Components', () => {
     });
 
     describe('with form context', () => {
-      const FormExample = ({ defaultValue = '', name = 'option', onSubmit = async (_value: unknown) => {} }) => {
-        const form = useForm({
-          defaultValues: {
-            [name]: defaultValue,
-          },
-          onSubmit: async ({ value }) => {
-            if (onSubmit) {
-              await onSubmit(value);
-            }
-          },
-        });
-
-        return (
-          <Form form={form}>
-            <RadioGroup
-              label="Choose Option"
-              name={name}
-              options={mockOptions}
-            />
-            <Button action="submit">Submit</Button>
-          </Form>
-        );
-      };
-
       it('should render with form context and handle form submission', async () => {
-        const onSubmit = vi.fn();
+        const onSubmit = vi.fn<(value: SubmittedValues) => Promise<void> | void>();
         const result = renderWithProviders(
           <YStack>
             <FormExample onSubmit={onSubmit} />
@@ -172,7 +191,7 @@ describe('RadioGroup Components', () => {
       });
 
       it('should handle form submission with selected value', async () => {
-        const onSubmit = vi.fn();
+        const onSubmit = vi.fn<(value: SubmittedValues) => Promise<void> | void>();
 
         // Simplified test - just form with submit button, no field
         const TestForm = () => {
@@ -211,7 +230,7 @@ describe('RadioGroup Components', () => {
 
     describe('with useForm hook directly', () => {
       it('should handle form submission with useForm', async () => {
-        const onSubmitMock = vi.fn();
+        const onSubmitMock = vi.fn<(value: SubmittedValues) => void>();
         const TestComponent = () => {
           const form = useForm({
             defaultValues: {
@@ -331,18 +350,16 @@ describe('RadioGroup Components', () => {
       // engine seeding lands once meta loads) never displayed. The group must
       // render controlled — and adopting a programmatic value must not emit
       // onChange (a seeded value is not a user edit).
-      const getRadioByValue = (container: ParentNode, value: string) =>
-        [...container.querySelectorAll("[role='radio']")].find((radio) => radio.id.endsWith(`-${value}`));
-
       it('standalone controlled: a value arriving after mount renders checked, without onChange', async () => {
-        const onChange = vi.fn();
-        const onValueChange = vi.fn();
+        const onChange = vi.fn<(value: string) => void>();
+        const onValueChange = vi.fn<(value: string) => void>();
         const result = renderWithProviders(
           <RadioGroup
             label="Status"
             value=""
             options={mockOptions}
             onChange={onChange}
+            // oxlint-disable-next-line typescript/no-deprecated -- the deprecated alias is the behavior under test
             onValueChange={onValueChange}
           />,
         );
@@ -357,6 +374,7 @@ describe('RadioGroup Components', () => {
             value="option2"
             options={mockOptions}
             onChange={onChange}
+            // oxlint-disable-next-line typescript/no-deprecated -- the deprecated alias is the behavior under test
             onValueChange={onValueChange}
           />,
         );
@@ -368,11 +386,14 @@ describe('RadioGroup Components', () => {
       });
 
       it('form-integrated: a field value set after mount renders checked, without onChange', async () => {
-        const onChange = vi.fn();
+        const onChange = vi.fn<(value: string) => void>();
         let formApi: { setFieldValue: (name: 'option', value: string) => void } | undefined;
+        const captureForm = (form: { setFieldValue: (name: 'option', value: string) => void }) => {
+          formApi = form;
+        };
         const TestComponent = () => {
           const form = useForm({ defaultValues: { option: '' } });
-          formApi = form as unknown as typeof formApi;
+          captureForm(form);
           return (
             <Form form={form}>
               <RadioGroup
@@ -396,7 +417,7 @@ describe('RadioGroup Components', () => {
       });
 
       it('still emits exactly once for a real click after a late seed', async () => {
-        const onChange = vi.fn();
+        const onChange = vi.fn<(value: string) => void>();
         const result = renderWithProviders(
           <RadioGroup
             label="Status"
@@ -420,8 +441,7 @@ describe('RadioGroup Components', () => {
             fireEvent.click(radio);
           }
         });
-        expect(onChange).toHaveBeenCalledOnce();
-        expect(onChange).toHaveBeenCalledWith('option2');
+        expect(onChange).toHaveBeenCalledExactlyOnceWith('option2');
       });
     });
 
@@ -469,13 +489,13 @@ describe('RadioGroup Components', () => {
         const labelId = radio?.getAttribute('aria-labelledby');
         const descId = radio?.getAttribute('aria-describedby');
         expect(labelId).toBeTruthy();
-        expect(document.getElementById(labelId!)?.textContent).toBe('Card A');
+        expect(document.querySelector(`#${labelId!}`)?.textContent).toBe('Card A');
         expect(descId).toBeTruthy();
-        expect(document.getElementById(descId!)?.textContent).toBe('Description for A');
+        expect(document.querySelector(`#${descId!}`)?.textContent).toBe('Description for A');
       });
 
       it('radio click in card mode emits onChange with the selected value', () => {
-        const onChange = vi.fn();
+        const onChange = vi.fn<(value: string) => void>();
         const result = renderWithProviders(
           <RadioGroup
             label="Pick"
@@ -491,7 +511,7 @@ describe('RadioGroup Components', () => {
         }
         expect(onChange).toHaveBeenCalledWith('a');
         // last emit wins and must be the selected value (no double-fire revert)
-        expect(onChange.mock.calls[onChange.mock.calls.length - 1][0]).toBe('a');
+        expect(onChange.mock.lastCall?.[0]).toBe('a');
       });
 
       it('keeps index-based ids unique for duplicate option values', () => {
@@ -531,24 +551,20 @@ describe('RadioGroup Components', () => {
         expect(checked).toBeTruthy();
         // Selected = fill: the glyph (not a sibling outline) carries the
         // shared accent mark token ($accentBackground).
-        const marked = Array.from(checked!.querySelectorAll('*')).filter((el) =>
-          (el as HTMLElement).className?.toString().includes('_bg-accentBackg'),
+        const marked = [...checked!.querySelectorAll('*')].filter((el) =>
+          (el.getAttribute('class') ?? '').includes('_bg-accentBackg'),
         );
         expect(marked.length).toBeGreaterThan(0);
         const unchecked = container.querySelector('[role="radio"][aria-checked="false"]');
         expect(unchecked).toBeTruthy();
-        const uncheckedMarked = Array.from(unchecked!.querySelectorAll('*')).filter((el) =>
-          (el as HTMLElement).className?.toString().includes('_bg-accentBackg'),
+        const uncheckedMarked = [...unchecked!.querySelectorAll('*')].filter((el) =>
+          (el.getAttribute('class') ?? '').includes('_bg-accentBackg'),
         );
         expect(uncheckedMarked).toHaveLength(0);
       });
     });
 
     describe('ring anatomy', () => {
-      const classOf = (el: Element) => (el as HTMLElement).className?.toString() ?? '';
-      const treeHasRing = (el: Element) =>
-        [el, ...el.querySelectorAll('*')].some((node) => classOf(node).includes('outlineWidth-2px'));
-
       it('does not paint a ring on every radio at rest', () => {
         const result = renderWithProviders(
           <RadioGroup
@@ -583,9 +599,6 @@ describe('RadioGroup Components', () => {
     });
 
     describe('radio disc identity (R-IDENTITY)', () => {
-      const disc = (container: HTMLElement) => container.querySelector('[data-radius-part="radio disc"]');
-      const classOf = (el: Element) => (el as HTMLElement).className?.toString() ?? '';
-
       it('declares R-IDENTITY / radio disc on the glyph', () => {
         const result = renderWithProviders(
           <RadioGroup
@@ -595,8 +608,8 @@ describe('RadioGroup Components', () => {
           />,
         );
         const el = disc(result.container);
-        expect(el?.getAttribute('data-radius-class')).toBe('R-IDENTITY');
-        expect(el?.getAttribute('data-radius-part')).toBe('radio disc');
+        expect(el?.dataset.radiusClass).toBe('R-IDENTITY');
+        expect(el?.dataset.radiusPart).toBe('radio disc');
       });
 
       it('stays round when pointy is set', () => {
@@ -611,7 +624,7 @@ describe('RadioGroup Components', () => {
         const el = disc(result.container);
         expect(el).toBeTruthy();
         expect(classOf(el!)).toMatch(/1000/u);
-        expect(el?.getAttribute('data-radius-class')).toBe('R-IDENTITY');
+        expect(el?.dataset.radiusClass).toBe('R-IDENTITY');
       });
 
       it('stays round at borderRadius none', () => {
@@ -627,7 +640,7 @@ describe('RadioGroup Components', () => {
         const el = disc(result.container);
         expect(el).toBeTruthy();
         expect(classOf(el!)).toMatch(/1000/u);
-        expect(el?.getAttribute('data-radius-class')).toBe('R-IDENTITY');
+        expect(el?.dataset.radiusClass).toBe('R-IDENTITY');
       });
     });
   });

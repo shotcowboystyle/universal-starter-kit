@@ -11,7 +11,7 @@ import { containsAcrossPanels } from '../shared/panel-portal';
 // React Native defines a `window` global without DOM event methods, so a bare
 // `typeof window` check is not enough — the floating cores mount this hook on
 // native (unused there, but it must not crash).
-const canUseDom = typeof window !== 'undefined' && typeof window.addEventListener === 'function';
+const canUseDom = typeof window !== 'undefined' && 'addEventListener' in window;
 
 /**
  * Snap a floating-ui coordinate to the device pixel grid. A fractional
@@ -25,6 +25,10 @@ const roundToDevicePixel = (value: number): number => {
   return Math.round(value * dpr) / dpr;
 };
 
+const noop = () => {
+  // intentionally empty
+};
+
 export const panelAnimationDuration = 180;
 export const panelGrowDuration = 200;
 export const panelViewportPadding = 10;
@@ -32,7 +36,7 @@ export const panelViewportPadding = 10;
  * ZERO for the FloatingPanel family: the panel attaches to the trigger it
  * was opened from. Aliased to the house token so there is one source
  * (Axiom 5); `OVERLAY_ANCHOR_GAP` still governs FREE overlays. */
-export const panelAnchorOffset = OVERLAY_ATTACH_GAP;
+export { OVERLAY_ATTACH_GAP as panelAnchorOffset } from '@repo/theme';
 
 /**
  * How a panel's width relates to the trigger it opened from.
@@ -102,15 +106,8 @@ export interface UseFloatingPanelOptions {
 
 /** One place that resolves the deprecated boolean onto the three modes, so
  *  the hook and the component cannot disagree about what a consumer meant. */
-export const resolvePanelWidthMode = (
-  widthMode: PanelWidthMode | undefined,
-  fitContent: boolean | undefined,
-): PanelWidthMode => {
-  if (widthMode) {
-    return widthMode;
-  }
-  return fitContent ? 'fit-content' : 'at-least-trigger';
-};
+export const resolvePanelWidthMode = (widthMode: PanelWidthMode | undefined, fitContent = false): PanelWidthMode =>
+  widthMode ?? (fitContent ? 'fit-content' : 'at-least-trigger');
 
 // ── Return type ───────────────────────────────────────────────
 
@@ -130,7 +127,7 @@ export interface UseFloatingPanelReturn {
 
   triggerRef: RefObject<HTMLElement | null>;
   arrowScrollDirRef: RefObject<'up' | 'down' | null>;
-  floatingStyleRef: RefObject<Record<string, any>>;
+  floatingStyleRef: RefObject<Record<string, number>>;
   initializingRef: RefObject<boolean>;
 
   computePlacement: () => void;
@@ -151,16 +148,20 @@ export interface UseFloatingPanelReturn {
 // ── Hook ──────────────────────────────────────────────────────
 
 /** A box paints a corner if it draws a radius, a border or a background. */
+/** Computed lengths carry a unit ("12px"), which `Number()` would turn into NaN. */
+// oxlint-disable-next-line unicorn/prefer-number-coercion -- parseFloat is required to drop the "px" suffix
+export const parsePx = (value: string): number => Number.parseFloat(value);
+
 const paintsACorner = (el: HTMLElement): boolean => {
   const cs = getComputedStyle(el);
-  if (Number.parseFloat(cs.borderTopLeftRadius) > 0) {
+  if (parsePx(cs.borderTopLeftRadius) > 0) {
     return true;
   }
-  if (Number.parseFloat(cs.borderTopWidth) > 0 && cs.borderTopStyle !== 'none') {
+  if (parsePx(cs.borderTopWidth) > 0 && cs.borderTopStyle !== 'none') {
     return true;
   }
   const bg = cs.backgroundColor;
-  return !!bg && bg !== 'transparent' && bg !== 'rgba(0, 0, 0, 0)';
+  return bg !== '' && bg !== 'transparent' && bg !== 'rgba(0, 0, 0, 0)';
 };
 
 /**
@@ -183,15 +184,14 @@ const paintedCornerBox = (root: HTMLElement): HTMLElement | null => {
     return root;
   }
   const rootRect = root.getBoundingClientRect();
-  for (const el of Array.from(root.querySelectorAll<HTMLElement>('*'))) {
+  for (const el of root.querySelectorAll<HTMLElement>('*')) {
     const rect = el.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) {
-      continue;
-    }
-    if (Math.abs(rect.left - rootRect.left) > 1 || Math.abs(rect.top - rootRect.top) > 1) {
-      continue;
-    }
-    if (paintsACorner(el)) {
+    const sharesCorner =
+      rect.width > 0 &&
+      rect.height > 0 &&
+      Math.abs(rect.left - rootRect.left) <= 1 &&
+      Math.abs(rect.top - rootRect.top) <= 1;
+    if (sharesCorner && paintsACorner(el)) {
       return el;
     }
   }
@@ -215,7 +215,7 @@ export const measureDrawnRadius = (el: HTMLElement): number | null => {
   if (!box) {
     return null;
   }
-  const raw = Number.parseFloat(getComputedStyle(box).borderTopLeftRadius);
+  const raw = parsePx(getComputedStyle(box).borderTopLeftRadius);
   if (!Number.isFinite(raw)) {
     return null;
   }
@@ -237,6 +237,7 @@ export const useFloatingPanel = ({
   useAutoUpdate: useAutoUpdateProp = true,
   wheelGrowRef,
   widthMode: widthModeProp,
+  // oxlint-disable-next-line typescript/no-deprecated -- the hook still honors the deprecated boolean for existing callers
   fitContent,
   compact,
   freeOverlay = false,
@@ -249,8 +250,12 @@ export const useFloatingPanel = ({
   // measureDrawnRadius) once measured on open.
   const [measuredRadius, setMeasuredRadius] = useState<number | null>(null);
   const radiusStop = radiusStopFromToken(knobProps.borderRadius.borderRadius);
-  const panelPadPx = getTokenValue(knobProps.panelPadding.padding as Parameters<typeof getTokenValue>[0], 'space');
+  // SAFETY: panelPadding.padding is a space token or 'auto'/'unset'; getTokenValue returns the raw value for non-tokens.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- knob padding is typed wider than getTokenValue's token union
+  const paddingToken = knobProps.panelPadding.padding as Parameters<typeof getTokenValue>[0];
+  const panelPadPx: unknown = getTokenValue(paddingToken, 'space');
   const radiusCap =
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- getTokenValue resolves to a number or a raw string; only numbers are px
     radiusStop && typeof panelPadPx === 'number'
       ? resolveRadiusClass('CONTAINER-CAP', radiusStop, { paddingPx: panelPadPx })
       : undefined;
@@ -270,16 +275,18 @@ export const useFloatingPanel = ({
   // ── Stable refs for callbacks (avoids cascading recreations) ──
 
   const onBeforeOpenRef = useRef(onBeforeOpen);
-  onBeforeOpenRef.current = onBeforeOpen;
   const onOpenChangeRef = useRef(onOpenChange);
-  onOpenChangeRef.current = onOpenChange;
+  useLayoutEffect(() => {
+    onBeforeOpenRef.current = onBeforeOpen;
+    onOpenChangeRef.current = onOpenChange;
+  });
 
   // ── Refs ──────────────────────────────────────────────────
 
   const closingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
   const arrowScrollDirRef = useRef<'up' | 'down' | null>(null);
-  const floatingStyleRef = useRef<Record<string, any>>({});
+  const floatingStyleRef = useRef<Record<string, number>>({});
   const initializingRef = useRef(false);
   const needsSetupRef = useRef(true);
 
@@ -307,11 +314,11 @@ export const useFloatingPanel = ({
 
   const setupForOpen = useCallback(() => {
     computePlacement();
-    if (canUseDom && triggerRef.current) {
+    if (canUseDom && triggerRef.current !== null) {
       setMeasuredRadius(freeOverlay ? null : measureDrawnRadius(triggerRef.current));
     }
     onBeforeOpenRef.current?.();
-    if (closingTimerRef.current) {
+    if (closingTimerRef.current !== null) {
       clearTimeout(closingTimerRef.current);
     }
     floatingStyleRef.current = {};
@@ -327,16 +334,19 @@ export const useFloatingPanel = ({
         setupForOpen();
       }
       needsSetupRef.current = true;
-      requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           setVisible(true);
-        }),
-      );
+        });
+      });
     } else {
+      // oxlint-disable-next-line react/set-state-in-effect -- closing resets the visual state in lock-step with `open`
       setVisible(false);
+      // oxlint-disable-next-line react-doctor/no-adjust-state-on-prop-change -- see setVisible above
       setArrowUp(false);
+      // oxlint-disable-next-line react-doctor/no-adjust-state-on-prop-change -- see setVisible above
       setArrowDown(false);
-      if (closingTimerRef.current) {
+      if (closingTimerRef.current !== null) {
         clearTimeout(closingTimerRef.current);
       }
       closingTimerRef.current = setTimeout(() => {
@@ -347,7 +357,7 @@ export const useFloatingPanel = ({
 
   useEffect(
     () => () => {
-      if (closingTimerRef.current) {
+      if (closingTimerRef.current !== null) {
         clearTimeout(closingTimerRef.current);
       }
     },
@@ -366,6 +376,7 @@ export const useFloatingPanel = ({
     ...(widthMode === 'fit-content'
       ? []
       : [
+          // oxlint-disable-next-line react/refs -- size() is floating-ui middleware that runs outside render; `reference` is a rect, not a ref
           size({
             apply({
               rects: {
@@ -432,16 +443,16 @@ export const useFloatingPanel = ({
 
   useLayoutEffect(() => {
     if (!open || !mounted || !canUseDom) {
-      return;
+      return noop;
     }
     const { scrollY } = window;
     const floatingEl = refs.floating.current;
     if (!floatingEl) {
-      return;
+      return noop;
     }
 
     const preventScroll = (e: WheelEvent) => {
-      if (floatingEl.contains(e.target as Node)) {
+      if (e.target instanceof Node && floatingEl.contains(e.target)) {
         if (wheelGrowRef && Math.abs(e.deltaY) > 0) {
           wheelGrowRef.current = true;
           repositionRef?.current?.();
@@ -482,8 +493,10 @@ export const useFloatingPanel = ({
       window.scrollTo(0, scrollY);
     });
 
+    // oxlint-disable-next-line github/require-passive-events -- the lock must preventDefault page scroll, which a passive listener cannot do
     document.addEventListener('wheel', preventScroll, { passive: false, capture: true });
     document.addEventListener('keydown', preventKeyScroll, { capture: true });
+    // oxlint-disable-next-line github/require-passive-events -- the lock must preventDefault page scroll, which a passive listener cannot do
     document.addEventListener('touchmove', preventTouchScroll, { passive: false, capture: true });
     return () => {
       document.removeEventListener('wheel', preventScroll, { capture: true });
@@ -496,7 +509,7 @@ export const useFloatingPanel = ({
 
   useEffect(() => {
     if (!open || !canUseDom) {
-      return;
+      return noop;
     }
     let rafId = 0;
     const throttled = () => {
@@ -516,7 +529,9 @@ export const useFloatingPanel = ({
         repositionRef?.current?.();
       });
     };
+    // oxlint-disable-next-line github/prefer-observers -- page scroll has no observer equivalent; fixed panel must follow the trigger
     window.addEventListener('scroll', throttled);
+    // oxlint-disable-next-line github/prefer-observers -- viewport resize, not an element resize
     window.addEventListener('resize', throttled);
     return () => {
       window.removeEventListener('scroll', throttled);
@@ -529,10 +544,12 @@ export const useFloatingPanel = ({
 
   // ── Resize sync ───────────────────────────────────────────
 
+  // oxlint-disable-next-line react-doctor/advanced-event-handler-refs -- `update` is floating-ui's stable callback; the listener must follow it
   useLayoutEffect(() => {
     if (!canUseDom) {
-      return;
+      return noop;
     }
+    // oxlint-disable-next-line github/prefer-observers -- viewport resize, not an element resize
     window.addEventListener('resize', update);
     if (open) {
       update();

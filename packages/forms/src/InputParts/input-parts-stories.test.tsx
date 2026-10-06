@@ -9,23 +9,26 @@ import { cleanup } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import * as storiesModule from './InputParts.stories';
-
-afterEach(cleanup);
-
-const meta = storiesModule.default;
-const { Anatomy, FocusRingOnTheBox, Adornments, TrailingButton, MetaReservesOneLine, Info, MultiLine, DisabledBox } =
-  storiesModule;
+import meta, {
+  Adornments,
+  Anatomy,
+  DisabledBox,
+  FocusRingOnTheBox,
+  Info,
+  MetaReservesOneLine,
+  MultiLine,
+  TrailingButton,
+} from './InputParts.stories';
 
 interface StoryLike {
-  render?: (args: Record<string, unknown>) => ReactElement;
+  render?: (args: NonNullable<typeof meta.args>) => ReactElement;
 }
 
 const mount = (story: StoryLike) => {
   if (!story.render) {
     throw new Error('story has no render');
   }
-  return renderWithProviders(story.render({ ...(meta.args as Record<string, unknown>) }));
+  return renderWithProviders(story.render({ ...meta.args }));
 };
 
 const stories = {
@@ -40,6 +43,8 @@ const stories = {
 } as const;
 
 describe('Forms/InputParts stories', () => {
+  afterEach(cleanup);
+
   it("files under its own Forms title, separate from the Input field's", () => {
     expect(meta.title).toBe('Forms/InputParts');
     expect(meta.title).not.toBe('Forms/Input');
@@ -64,7 +69,7 @@ describe('Forms/InputParts stories', () => {
 
   it('Adornments builds three boxes: leading, trailing, and both', () => {
     const { container } = mount(Adornments as StoryLike);
-    const placeholders = Array.from(container.querySelectorAll('input')).map((i) => i.getAttribute('placeholder'));
+    const placeholders = [...container.querySelectorAll('input')].map((i) => i.getAttribute('placeholder'));
     expect(placeholders).toStrictEqual(['Leading icon', 'Trailing icon', 'Both ends']);
   });
 
@@ -83,7 +88,7 @@ describe('Forms/InputParts stories', () => {
     const { container, getByText } = mount(MetaReservesOneLine as StoryLike);
     expect(getByText('Enter at least two characters.')).toBeTruthy();
     // The valid field keeps its helper; the errored one does not add a second line.
-    const helpers = Array.from(container.querySelectorAll('*')).filter(
+    const helpers = [...container.querySelectorAll('*')].filter(
       (el) => el.children.length === 0 && el.textContent === 'Two to thirty characters.',
     );
     expect(helpers).toHaveLength(1);
@@ -108,7 +113,7 @@ describe('Forms/InputParts stories', () => {
 
   it('DisabledBox disables only the second field, leaving the first usable', () => {
     const { container } = mount(DisabledBox as StoryLike);
-    const inputs = Array.from(container.querySelectorAll('input'));
+    const inputs = [...container.querySelectorAll('input')];
     expect(inputs).toHaveLength(2);
     expect(inputs[0].disabled).toBe(false);
     expect(inputs[1].disabled).toBe(true);

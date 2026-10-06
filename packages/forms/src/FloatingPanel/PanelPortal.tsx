@@ -38,6 +38,7 @@ const focusGuardStyle: CSSProperties = {
  * outside-press test treating the panel as its own content; every scroll
  * view between the trigger and that layer is escaped either way.
  */
+// oxlint-disable-next-line react-doctor/only-export-components -- host resolver is shared with tests and non-component callers
 export const panelPortalHost = (anchor: Element | null): HTMLElement | null => {
   if (typeof document === 'undefined') {
     return null;
@@ -55,11 +56,15 @@ const isTabbable = (element: HTMLElement): boolean => {
   return element.getClientRects().length > 0;
 };
 
+const hasPosition = (from: Node, to: Node, flag: number): boolean =>
+  // oxlint-disable-next-line no-bitwise -- compareDocumentPosition returns a bit mask
+  (from.compareDocumentPosition(to) & flag) !== 0;
+
 const tabbablesIn = (root: Element | null): HTMLElement[] => {
   if (!root) {
     return [];
   }
-  return Array.from(root.querySelectorAll<HTMLElement>(tabbableSelector)).filter(isTabbable);
+  return [...root.querySelectorAll<HTMLElement>(tabbableSelector)].filter(isTabbable);
 };
 
 /** Tab order resumes beside the trigger, not at the end of the portal host. */
@@ -71,20 +76,20 @@ const focusBesideAnchor = (anchor: HTMLElement | null, side: 'before' | 'after')
   if (side === 'before' && isTabbable(anchor)) {
     inAnchor.unshift(anchor);
   }
-  const own = side === 'before' ? inAnchor[inAnchor.length - 1] : undefined;
-  if (own) {
+  const own = side === 'before' ? inAnchor.at(-1) : undefined;
+  if (own != null) {
     own.focus();
     return;
   }
   const edge = side === 'before' ? Node.DOCUMENT_POSITION_PRECEDING : Node.DOCUMENT_POSITION_FOLLOWING;
   const page = tabbablesIn(document.body).filter((element) => {
-    if (anchor.contains(element) || !(anchor.compareDocumentPosition(element) & edge)) {
+    if (anchor.contains(element) || !hasPosition(anchor, element, edge)) {
       return false;
     }
     const portal = element.closest(`[${panelPortalAttribute}]`);
-    return !portal || portal.contains(anchor);
+    return portal === null || portal.contains(anchor);
   });
-  (side === 'before' ? page[page.length - 1] : page[0])?.focus();
+  (side === 'before' ? page.at(-1) : page.at(0))?.focus();
 };
 
 /**
@@ -104,10 +109,8 @@ export const PanelPortal = ({ anchor, children }: PanelPortalProps) => {
 
   useLayoutEffect(() => {
     const portal = portalRef.current;
-    if (!portal || !anchor) {
-      return;
-    }
-    return registerPanelPortal(portal, anchor);
+    return portal != null && anchor != null ? registerPanelPortal(portal, anchor) : undefined;
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- host re-keys the portal element, so the registration must re-run
   }, [anchor, host]);
 
   if (!host) {
@@ -117,14 +120,13 @@ export const PanelPortal = ({ anchor, children }: PanelPortalProps) => {
   const enterPanel = (event: FocusEvent<HTMLSpanElement>) => {
     const guard = event.currentTarget;
     const from = event.relatedTarget;
-    const forward =
-      !(from instanceof Node) || Boolean(guard.compareDocumentPosition(from) & Node.DOCUMENT_POSITION_PRECEDING);
+    const forward = !(from instanceof Node) || hasPosition(guard, from, Node.DOCUMENT_POSITION_PRECEDING);
     const inside = tabbablesIn(portalRef.current);
-    const target = forward ? inside[0] : inside[inside.length - 1];
-    if (target) {
-      target.focus();
-    } else {
+    const target = forward ? inside.at(0) : inside.at(-1);
+    if (target == null) {
       focusBesideAnchor(anchor, forward ? 'after' : 'before');
+    } else {
+      target.focus();
     }
   };
   const portal = createPortal(
@@ -135,6 +137,7 @@ export const PanelPortal = ({ anchor, children }: PanelPortalProps) => {
       style={{ display: 'contents' }}>
       <span
         {...{ [focusGuardAttribute]: '' }}
+        // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focus guard must be a tab stop to hand focus into/out of the portal
         tabIndex={0}
         style={focusGuardStyle}
         onFocus={() => {
@@ -144,6 +147,7 @@ export const PanelPortal = ({ anchor, children }: PanelPortalProps) => {
       <TamaguiRoot theme={themeName}>{children}</TamaguiRoot>
       <span
         {...{ [focusGuardAttribute]: '' }}
+        // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focus guard must be a tab stop to hand focus into/out of the portal
         tabIndex={0}
         style={focusGuardStyle}
         onFocus={() => {
@@ -157,6 +161,7 @@ export const PanelPortal = ({ anchor, children }: PanelPortalProps) => {
     <>
       <span
         {...{ [focusGuardAttribute]: '' }}
+        // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focus guard must be a tab stop to hand focus into/out of the portal
         tabIndex={0}
         style={focusGuardStyle}
         onFocus={enterPanel}

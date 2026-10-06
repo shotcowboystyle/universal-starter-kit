@@ -44,6 +44,7 @@ const Harness = ({
         data-testid="anchor-trigger"
         ref={panel.setReferenceRef}
       />
+      {/* oxlint-disable-next-line react/refs -- test harness: the hook's return carries refs, and mounted is plain state */}
       {panel.mounted && (
         <div
           data-testid="anchor-floating"
@@ -113,7 +114,8 @@ describe('FloatingPanel anchoring (cover ruling)', () => {
 
 describe('FloatingPanel width modes', () => {
   it('resolves the deprecated boolean onto the three modes', () => {
-    expect(resolvePanelWidthMode(undefined, undefined)).toBe('at-least-trigger');
+    // oxlint-disable-next-line unicorn/no-useless-undefined -- widthMode is the first positional argument and must be passed as absent
+    expect(resolvePanelWidthMode(undefined)).toBe('at-least-trigger');
     expect(resolvePanelWidthMode(undefined, false)).toBe('at-least-trigger');
     expect(resolvePanelWidthMode(undefined, true)).toBe('fit-content');
     // An explicit mode always wins over the boolean, in both directions.
@@ -225,7 +227,7 @@ const mounted = (el: HTMLElement) => {
 
 describe('FloatingPanel drawn radius', () => {
   afterEach(() => {
-    document.body.innerHTML = '';
+    document.body.replaceChildren();
   });
 
   it('reads the anchor itself when the anchor is the painted control', () => {
@@ -384,13 +386,14 @@ const RadiusHarness = ({ open, compact }: { open: boolean; compact?: boolean }) 
   return (
     <div
       data-testid="radius-trigger"
+      // oxlint-disable-next-line react/refs -- test harness: the hook's return carries refs, and dropdownRadius is a plain value
       data-radius={String(panel.dropdownRadius)}
       ref={panel.setReferenceRef}
     />
   );
 };
 
-const panelRadius = (overrides: Partial<Knobs>, compact?: boolean) => {
+const panelRadius = (overrides: Partial<Knobs>, compact = false) => {
   const result = renderWithProviders(
     <Preset overrides={overrides}>
       <RadiusHarness
@@ -399,7 +402,7 @@ const panelRadius = (overrides: Partial<Knobs>, compact?: boolean) => {
       />
     </Preset>,
   );
-  const radius = result.getByTestId('radius-trigger').getAttribute('data-radius');
+  const { radius } = result.getByTestId('radius-trigger').dataset;
   result.unmount();
   return radius;
 };
@@ -440,7 +443,7 @@ describe('FloatingPanel radius is CONTAINER-CAP on its padding', () => {
       </Preset>,
     );
     await waitFor(() => {
-      expect(anchor.getAttribute('data-radius')).toBe('10');
+      expect(anchor.dataset.radius).toBe('10');
     });
 
     Object.assign(anchor.style, { borderTopLeftRadius: '50px' });
@@ -456,7 +459,7 @@ describe('FloatingPanel radius is CONTAINER-CAP on its padding', () => {
       </Preset>,
     );
     await waitFor(() => {
-      expect(anchor.getAttribute('data-radius')).toBe('18');
+      expect(anchor.dataset.radius).toBe('18');
     });
   });
 });

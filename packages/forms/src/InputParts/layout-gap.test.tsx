@@ -2,11 +2,9 @@ import { renderWithProviders } from '@repo/test-utils';
 import { Preset } from '@repo/theme';
 import { cleanup } from '@testing-library/react';
 import { createRef } from 'react';
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import { Input } from './index';
-
-afterEach(cleanup);
 
 const measure = (size: 'small' | 'medium', space: 'small' | 'large', gap?: number) => {
   const ref = createRef<HTMLElement>();
@@ -33,14 +31,18 @@ const measure = (size: 'small' | 'medium', space: 'small' | 'large', gap?: numbe
   return value;
 };
 
-test('lets space change the multi-slot layout gap at a fixed control size', () => {
-  expect(measure('medium', 'small')).not.toBe(measure('medium', 'large'));
-});
+describe('Input layout gap', () => {
+  afterEach(cleanup);
 
-test('keeps the layout gap stable when only control size changes', () => {
-  expect(measure('small', 'small')).toBe(measure('medium', 'small'));
-});
+  it('lets space change the multi-slot layout gap at a fixed control size', () => {
+    expect(measure('medium', 'small')).not.toBe(measure('medium', 'large'));
+  });
 
-test('preserves the consumer gap eject and forwarded root ref', () => {
-  expect(measure('medium', 'large', 11)).toBe('11px');
+  it('keeps the layout gap stable when only control size changes', () => {
+    expect(measure('small', 'small')).toBe(measure('medium', 'small'));
+  });
+
+  it('preserves the consumer gap eject and forwarded root ref', () => {
+    expect(measure('medium', 'large', 11)).toBe('11px');
+  });
 });

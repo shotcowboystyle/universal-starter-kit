@@ -44,48 +44,49 @@ const meta: Meta<typeof TimePicker> = {
 };
 
 export default meta;
+const TIME_LABEL = 'Time';
+const SELECT_TIME_HINT = 'Select a time';
 type Story = StoryObj<typeof TimePicker>;
+
+const FormExample = () => {
+  const form = useForm({
+    defaultValues: {
+      startTime: '09:00',
+      endTime: '17:00',
+    },
+    onSubmit: async ({ value }) => {
+      action('onSubmit')(value);
+    },
+  });
+
+  return (
+    <Form
+      form={form}
+      maxWidth={400}>
+      <YStack gap="$4">
+        <TimePicker
+          label="Start Time"
+          name="startTime"
+        />
+        <TimePicker
+          label="End Time"
+          name="endTime"
+        />
+        <Button action="submit">Save Schedule</Button>
+      </YStack>
+    </Form>
+  );
+};
 
 export const Main: Story = {
   name: 'Main',
-  render: () => {
-    const FormExample = () => {
-      const form = useForm({
-        defaultValues: {
-          startTime: '09:00',
-          endTime: '17:00',
-        },
-        onSubmit: async ({ value }) => {
-          action('onSubmit')(value);
-        },
-      });
-
-      return (
-        <Form
-          form={form}
-          maxWidth={400}>
-          <YStack gap="$4">
-            <TimePicker
-              label="Start Time"
-              name="startTime"
-            />
-            <TimePicker
-              label="End Time"
-              name="endTime"
-            />
-            <Button action="submit">Save Schedule</Button>
-          </YStack>
-        </Form>
-      );
-    };
-    return <FormExample />;
-  },
+  render: () => <FormExample />,
 };
 
 export const Standalone: Story = {
   args: {
-    label: 'Time',
-    helperText: 'Select a time',
+    label: TIME_LABEL,
+    helperText: SELECT_TIME_HINT,
     value: '14:30',
     timeFormat: '12h',
     minuteStep: 5,
@@ -95,8 +96,8 @@ export const Standalone: Story = {
 
 export const Basic: Story = {
   args: {
-    label: 'Time',
-    helperText: 'Select a time',
+    label: TIME_LABEL,
+    helperText: SELECT_TIME_HINT,
     value: '09:30',
     onChange: action('onChange'),
   },
@@ -104,7 +105,7 @@ export const Basic: Story = {
 
 export const Disabled: Story = {
   args: {
-    label: 'Time',
+    label: TIME_LABEL,
     helperText: 'This field is disabled',
     value: '09:30',
     disabled: true,
@@ -114,8 +115,8 @@ export const Disabled: Story = {
 
 export const WithError: Story = {
   args: {
-    label: 'Time',
-    helperText: 'Select a time',
+    label: TIME_LABEL,
+    helperText: SELECT_TIME_HINT,
     required: true,
     error: 'Time is required',
     onChange: action('onChange'),
@@ -191,42 +192,41 @@ export const OneMinuteStep: Story = {
   },
 };
 
+const InteractiveExample = () => {
+  const [value, setValue] = useState('09:30');
+  return (
+    <YStack
+      gap="$4"
+      maxWidth={300}>
+      <TimePicker
+        label="Start Time"
+        helperText={`Selected: ${value || 'none'}`}
+        value={value}
+        onChange={(v) => {
+          setValue(v);
+          action('onChange')(v);
+        }}
+      />
+      <TimePicker
+        label="24h Format"
+        value={value}
+        timeFormat="24h"
+        onChange={(v) => {
+          setValue(v);
+          action('onChange')(v);
+        }}
+      />
+      <TimePicker
+        label="Disabled"
+        value="17:00"
+        disabled
+      />
+    </YStack>
+  );
+};
+
 export const Interactive: Story = {
-  render: () => {
-    const InteractiveExample = () => {
-      const [value, setValue] = useState('09:30');
-      return (
-        <YStack
-          gap="$4"
-          maxWidth={300}>
-          <TimePicker
-            label="Start Time"
-            helperText={`Selected: ${value || 'none'}`}
-            value={value}
-            onChange={(v) => {
-              setValue(v);
-              action('onChange')(v);
-            }}
-          />
-          <TimePicker
-            label="24h Format"
-            value={value}
-            timeFormat="24h"
-            onChange={(v) => {
-              setValue(v);
-              action('onChange')(v);
-            }}
-          />
-          <TimePicker
-            label="Disabled"
-            value="17:00"
-            disabled
-          />
-        </YStack>
-      );
-    };
-    return <InteractiveExample />;
-  },
+  render: () => <InteractiveExample />,
 };
 
 /** Loading placeholder — the skeleton mirrors the field's anatomy. */

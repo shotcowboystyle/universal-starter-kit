@@ -21,12 +21,12 @@ export interface PanelBounds {
   left: number;
 }
 
-export const pointPanelLeft = (
-  point: PanelPoint,
-  width: number,
-  bounds: PanelBounds,
-  rtl = false,
-): { left: number; alignEnd: boolean } => {
+export interface PointPanelLeft {
+  left: number;
+  alignEnd: boolean;
+}
+
+export const pointPanelLeft = (point: PanelPoint, width: number, bounds: PanelBounds, rtl = false): PointPanelLeft => {
   const towardEnd = rtl ? point.x - width : point.x;
   const towardStart = rtl ? point.x : point.x - width;
   const fits = (left: number) => left >= bounds.left && left + width <= bounds.right;
@@ -121,5 +121,5 @@ export const contextMenuPoint = (
 };
 
 export interface PointReference {
-  getBoundingClientRect(): { left: number; right: number; bottom: number };
+  getBoundingClientRect: () => { left: number; right: number; bottom: number };
 }

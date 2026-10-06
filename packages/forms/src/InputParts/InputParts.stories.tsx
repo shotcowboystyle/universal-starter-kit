@@ -109,43 +109,42 @@ export const Adornments: Story = {
   ),
 };
 
+const TrailingButtonExample = () => {
+  const [secure, setSecure] = useState(true);
+  return (
+    <InputParts width={320}>
+      <InputParts.Label htmlFor="parts-password">Password</InputParts.Label>
+      <InputParts.Box paddingInlineEnd={0}>
+        <InputParts.Area
+          id="parts-password"
+          placeholder="••••••••"
+          secureTextEntry={secure}
+          onChangeText={action('onChangeText')}
+        />
+        <InputParts.Button
+          glyphRing
+          type="button"
+          aria-label={secure ? 'Show password' : 'Hide password'} // gitleaks:allow -- UI label, not a credential
+          onPress={() => {
+            setSecure((prev) => !prev);
+            action('togglePasswordVisibility')(!secure);
+          }}>
+          <InputParts.Icon aria-hidden>
+            <EyeIcon />
+          </InputParts.Icon>
+        </InputParts.Button>
+      </InputParts.Box>
+      <InputParts.Meta helperText={secure ? 'Hidden' : 'Visible'} />
+    </InputParts>
+  );
+};
+
 /**
  * `InputParts.Button` is the pressable end-cap — a reveal toggle, a clear, a
  * copy. It squares off to the control height so the frame stays rectangular.
  */
 export const TrailingButton: Story = {
-  render: () => {
-    const Example = () => {
-      const [secure, setSecure] = useState(true);
-      return (
-        <InputParts width={320}>
-          <InputParts.Label htmlFor="parts-password">Password</InputParts.Label>
-          <InputParts.Box paddingInlineEnd={0}>
-            <InputParts.Area
-              id="parts-password"
-              placeholder="••••••••"
-              secureTextEntry={secure}
-              onChangeText={action('onChangeText')}
-            />
-            <InputParts.Button
-              glyphRing
-              type="button"
-              aria-label={secure ? 'Show password' : 'Hide password'} // gitleaks:allow -- UI label, not a credential
-              onPress={() => {
-                setSecure((prev) => !prev);
-                action('togglePasswordVisibility')(!secure);
-              }}>
-              <InputParts.Icon aria-hidden>
-                <EyeIcon />
-              </InputParts.Icon>
-            </InputParts.Button>
-          </InputParts.Box>
-          <InputParts.Meta helperText={secure ? 'Hidden' : 'Visible'} />
-        </InputParts>
-      );
-    };
-    return <Example />;
-  },
+  render: () => <TrailingButtonExample />,
 };
 
 /**

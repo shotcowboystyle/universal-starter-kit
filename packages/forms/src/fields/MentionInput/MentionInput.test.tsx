@@ -6,13 +6,14 @@ import { describe, expect, it, vi } from 'vitest';
 import { Form } from '../../Form';
 
 import { MentionInput, parseMentionValue } from './index';
+import type { MentionValue } from './index';
 
 /** Web panels portal out to the page, so panel text is read from the page. */
 const findInPage = (text: string): Element | undefined => {
   try {
     return within(document.body).queryByText(text, { exact: false }) ?? undefined;
   } catch {
-    return Array.from(document.body.querySelectorAll('*')).find((el) => el.textContent?.includes(text));
+    return [...document.body.querySelectorAll('*')].find((el) => el.textContent?.includes(text));
   }
 };
 
@@ -42,19 +43,21 @@ const typeTrigger = (textArea: HTMLTextAreaElement, value: string) => {
   fireEvent.select(textArea);
 };
 
-describe('parseMentionValue', () => {
+describe(parseMentionValue, () => {
   it('normalizes strings, objects, and empty input into MentionValue', () => {
     expect(parseMentionValue('hello')).toStrictEqual({ text: 'hello', mentions: [] });
     expect(parseMentionValue({ text: 'hi', mentions: [{ id: 'u1' }] })).toStrictEqual({
       text: 'hi',
       mentions: [{ id: 'u1' }],
     });
-    expect(parseMentionValue(undefined)).toStrictEqual({ text: '', mentions: [] });
-    expect(parseMentionValue(null)).toStrictEqual({ text: '', mentions: [] });
+    expect([undefined, null].map((empty) => parseMentionValue(empty))).toStrictEqual([
+      { text: '', mentions: [] },
+      { text: '', mentions: [] },
+    ]);
   });
 });
 
-describe('MentionInput', () => {
+describe(MentionInput, () => {
   it('should render with label and placeholder', () => {
     const result = renderWithProviders(
       <MentionInput
@@ -76,8 +79,8 @@ describe('MentionInput', () => {
   });
 
   it('fires canonical onChange(MentionValue) and the deprecated onTextChange alias once per change', () => {
-    const onChange = vi.fn();
-    const onTextChange = vi.fn();
+    const onChange = vi.fn<(value: MentionValue) => void>();
+    const onTextChange = vi.fn<(text: string) => void>();
     const result = renderWithProviders(
       <MentionInput
         label="Comment"
@@ -89,6 +92,7 @@ describe('MentionInput', () => {
           },
         ]}
         onChange={onChange}
+        // oxlint-disable-next-line typescript/no-deprecated -- exercising the deprecated alias is the point of this test
         onTextChange={onTextChange}
       />,
     );
@@ -99,10 +103,8 @@ describe('MentionInput', () => {
       fireEvent.change(textArea, { target: { value: 'hello' } });
     }
 
-    expect(onChange).toHaveBeenCalledOnce();
-    expect(onChange).toHaveBeenCalledWith({ text: 'hello', mentions: [] });
-    expect(onTextChange).toHaveBeenCalledOnce();
-    expect(onTextChange).toHaveBeenCalledWith('hello');
+    expect(onChange).toHaveBeenCalledExactlyOnceWith({ text: 'hello', mentions: [] });
+    expect(onTextChange).toHaveBeenCalledExactlyOnceWith('hello');
   });
 
   it('renders defaultValue text on first paint', () => {
@@ -117,7 +119,7 @@ describe('MentionInput', () => {
   });
 
   it('does not emit onChange on mount (seed is not a user edit)', () => {
-    const onChange = vi.fn();
+    const onChange = vi.fn<(value: MentionValue) => void>();
     renderWithProviders(
       <MentionInput
         label="Comment"
@@ -143,8 +145,8 @@ describe('MentionInput', () => {
   });
 
   it('standalone controlled: a value arriving after mount displays without onChange', async () => {
-    const onChange = vi.fn();
-    const onTextChange = vi.fn();
+    const onChange = vi.fn<(value: MentionValue) => void>();
+    const onTextChange = vi.fn<(text: string) => void>();
     const result = renderWithProviders(
       <MentionInput
         label="Comment"
@@ -161,6 +163,7 @@ describe('MentionInput', () => {
         mentions={[userMentions]}
         value="seeded"
         onChange={onChange}
+        // oxlint-disable-next-line typescript/no-deprecated -- exercising the deprecated alias is the point of this test
         onTextChange={onTextChange}
       />,
     );
@@ -172,10 +175,11 @@ describe('MentionInput', () => {
   });
 
   it('form-integrated: a field value set after mount displays without onChange', async () => {
-    const onChange = vi.fn();
+    const onChange = vi.fn<(value: MentionValue) => void>();
     let formApi: { setFieldValue: (name: 'comment', value: { text: string; mentions: unknown[] }) => void } | undefined;
     const TestComponent = () => {
       const form = useForm({ defaultValues: { comment: { text: '', mentions: [] } } });
+      // oxlint-disable-next-line react/globals -- test harness hands the form API out of the render to drive it from the test body
       formApi = form as unknown as typeof formApi;
       return (
         <Form form={form}>
@@ -235,11 +239,12 @@ describe('MentionInput', () => {
     expect(findInPage('Bob')).toBeDefined();
     expect(findInPage('Engineer')).toBeDefined();
     expect(findInPage('Designer')).toBeDefined();
-    expect(findInPage('B')).toBeDefined(); // Bob initials fallback
+    // Bob initials fallback
+    expect(findInPage('B')).toBeDefined();
     // Overlay rows paint nestedControl (32px at medium), not a raw 28.
-    const slots = listbox.querySelectorAll('[data-media-slot]');
+    const slots = listbox.querySelectorAll<HTMLElement>('[data-media-slot]');
     expect(slots).toHaveLength(2);
-    expect(slots[0]?.getAttribute('data-media-slot')).toBe('32');
+    expect(slots[0]?.dataset.mediaSlot).toBe('32');
   });
 
   // Same contract every other FloatingPanel consumer honors, reached by a
@@ -326,7 +331,7 @@ describe('MentionInput', () => {
   });
 
   it('inserts the active suggestion on Tab (GitHub/Slack)', () => {
-    const onChange = vi.fn();
+    const onChange = vi.fn<(value: MentionValue) => void>();
     const result = renderWithProviders(
       <MentionInput
         label="Comment"
@@ -376,18 +381,18 @@ describe('MentionInput', () => {
 
     typeTrigger(textArea, '@');
 
-    const options = result.baseElement.ownerDocument.querySelectorAll('[role="option"]');
+    const options = result.baseElement.ownerDocument.querySelectorAll<HTMLElement>('[role="option"]');
     expect(options).toHaveLength(2);
-    expect(options[0]?.getAttribute('data-keyboard-ring')).toBe('true');
-    expect(options[1]?.getAttribute('data-keyboard-ring')).toBeNull();
+    expect(options[0]?.dataset.keyboardRing).toBe('true');
+    expect(options[1]?.dataset.keyboardRing).toBeUndefined();
 
     fireEvent.mouseEnter(options[1]);
-    expect(options[0]?.getAttribute('data-keyboard-ring')).toBeNull();
-    expect(options[1]?.getAttribute('data-keyboard-ring')).toBeNull();
+    expect(options[0]?.dataset.keyboardRing).toBeUndefined();
+    expect(options[1]?.dataset.keyboardRing).toBeUndefined();
   });
 
   it('deletes the whole mention token on Backspace at its end (Slack)', () => {
-    const onChange = vi.fn();
+    const onChange = vi.fn<(value: MentionValue) => void>();
     const result = renderWithProviders(
       <MentionInput
         label="Comment"

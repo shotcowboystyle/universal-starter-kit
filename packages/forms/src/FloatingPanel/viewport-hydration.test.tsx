@@ -16,36 +16,45 @@ const Fixture = ({ kind }: { kind: string }) => {
   const [open, setOpen] = useState(false);
   const wide = useViewportGtSm();
   const [value, setValue] = useState('Alpha');
-  return (
-    <TestProviders>
-      <span data-wide={String(wide)} />
-      <output>{value}</output>
-      {kind === 'Select' ? (
+  const field = () => {
+    if (kind === 'Select') {
+      return (
         <Select
           aria-label="Choice"
           options={options}
           value={value}
-          onValueChange={(next) => {
+          onChange={(next) => {
             setValue(String(next));
           }}
         />
-      ) : kind === 'Combobox' ? (
+      );
+    }
+    if (kind === 'Combobox') {
+      return (
         <Combobox
           aria-label="Choice"
           options={options}
           value={value}
-          onValueChange={(next) => {
+          onChange={(next) => {
             setValue(String(next));
           }}
         />
-      ) : (
-        <FloatingPanel
-          open={open}
-          onOpenChange={setOpen}
-          trigger={<button type="button">Open</button>}>
-          <span>Panel contents</span>
-        </FloatingPanel>
-      )}
+      );
+    }
+    return (
+      <FloatingPanel
+        open={open}
+        onOpenChange={setOpen}
+        trigger={<button type="button">Open</button>}>
+        <span>Panel contents</span>
+      </FloatingPanel>
+    );
+  };
+  return (
+    <TestProviders>
+      <span data-wide={String(wide)} />
+      <output>{value}</output>
+      {field()}
     </TestProviders>
   );
 };
@@ -62,6 +71,7 @@ describe('viewport hydration', () => {
       writable: true,
     });
     let html: string;
+    // oxlint-disable-next-line unicorn/no-useless-undefined -- server rendering is simulated by removing the window global
     vi.stubGlobal('window', undefined);
     try {
       html = renderToString(<Fixture kind={kind} />);
@@ -69,6 +79,7 @@ describe('viewport hydration', () => {
       vi.stubGlobal('window', browserWindow);
     }
     const container = document.createElement('div');
+    // oxlint-disable-next-line github/no-inner-html -- hydration needs the server-rendered markup injected verbatim
     container.innerHTML = html;
     document.body.append(container);
     const errors: unknown[] = [];
@@ -81,7 +92,7 @@ describe('viewport hydration', () => {
         });
       });
       expect(errors.filter((error) => /hydration|hydrated|didn't match/iu.test(String(error)))).toStrictEqual([]);
-      expect(container.querySelector('[data-wide]')?.getAttribute('data-wide')).toBe(String(width > 640));
+      expect(container.querySelector<HTMLElement>('[data-wide]')?.dataset.wide).toBe(String(width > 640));
       if (width === 1200 && kind !== 'FloatingPanel') {
         const trigger = container.querySelector('[role="combobox"]')!;
         await act(async () => {
@@ -90,6 +101,7 @@ describe('viewport hydration', () => {
           fireEvent.click(trigger, { detail: 1 });
         });
         await waitFor(() => {
+          // oxlint-disable-next-line vitest/no-conditional-expect -- the open/select interaction applies only to the wide Select and Combobox cases of the shared matrix
           expect(document.querySelectorAll('[role="option"]').length).toBeGreaterThan(0);
         });
         const beta = [...document.querySelectorAll('[role="option"]')].find((option) =>
@@ -101,6 +113,7 @@ describe('viewport hydration', () => {
           fireEvent.click(beta, { detail: 1 });
         });
         await waitFor(() => {
+          // oxlint-disable-next-line vitest/no-conditional-expect -- see the option assertion above
           expect(container.querySelector('output')?.textContent).toBe('Beta');
         });
       }
@@ -108,7 +121,7 @@ describe('viewport hydration', () => {
         window.innerWidth = 390;
         fireEvent(window, new Event('resize'));
       });
-      expect(container.querySelector('[data-wide]')?.getAttribute('data-wide')).toBe('false');
+      expect(container.querySelector<HTMLElement>('[data-wide]')?.dataset.wide).toBe('false');
     } finally {
       await act(async () => root?.unmount());
       spy.mockRestore();

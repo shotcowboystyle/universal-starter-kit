@@ -13,8 +13,8 @@ import { TextArea } from '../fields/TextArea';
 import { Input as InputParts } from '../InputParts';
 
 const modality = vi.hoisted(() => ({ touch: true }));
-vi.mock('@repo/platform', async (original) => ({
-  ...(await original<object>()),
+vi.mock(import('@repo/platform'), async (original) => ({
+  ...(await original()),
   get isWebTouchable() {
     return modality.touch && typeof window !== 'undefined';
   },
@@ -51,6 +51,7 @@ describe('touch recipe hydration', () => {
     modality.touch = touch;
     const browserWindow = window;
     let html: string;
+    // oxlint-disable-next-line unicorn/no-useless-undefined -- server rendering is simulated by removing the window global
     vi.stubGlobal('window', undefined);
     try {
       html = renderToString(<Fixture />);
@@ -58,6 +59,7 @@ describe('touch recipe hydration', () => {
       vi.stubGlobal('window', browserWindow);
     }
     const container = document.createElement('div');
+    // oxlint-disable-next-line github/no-inner-html -- hydration needs the server-rendered markup injected verbatim
     container.innerHTML = html;
     document.body.append(container);
     const errors: unknown[] = [];
@@ -70,8 +72,8 @@ describe('touch recipe hydration', () => {
         });
       });
       expect(errors.filter((error) => /hydration|hydrated|didn't match/iu.test(String(error)))).toStrictEqual([]);
-      const heights = [...container.querySelectorAll('[data-visual-height]')].map((el) =>
-        Number(el.getAttribute('data-visual-height')),
+      const heights = [...container.querySelectorAll<HTMLElement>('[data-visual-height]')].map((el) =>
+        Number(el.dataset.visualHeight),
       );
       expect(container.querySelector('[touch]')).toBeNull();
       expect(heights.length).toBeGreaterThanOrEqual(2);

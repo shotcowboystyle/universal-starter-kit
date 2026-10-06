@@ -14,32 +14,29 @@
  * cells wrap into more columns on a wider field instead of stretching.
  */
 import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-const fieldsDir = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'fields');
+const fieldsDir = path.resolve(import.meta.dirname, '..', 'fields');
 
 /** Pickers whose trigger is a form FIELD: the panel may never be narrower. */
-const fieldShapedPickers = ['TimePicker/catalog.tsx', 'ColorPicker/parts.tsx'];
+// Geolocation always resolved to at-least-trigger (it passed `fitContent={false}`); it now says so explicitly.
+const fieldTriggerPickers = ['TimePicker/catalog.tsx', 'ColorPicker/parts.tsx', 'Geolocation/index.tsx'];
 
 /** Field-triggered pickers pinned to the field's width exactly. */
 const matchTriggerPickers = ['Icon/index.tsx'];
 
 const intrinsicGridPickers = ['DatePicker/parts.tsx', 'DatePicker/DatetimePicker.catalog.tsx'];
 
-/** Panels opened from an icon/button trigger, where fit-content is correct. */
-const buttonShapedPickers = ['Geolocation/index.tsx'];
-
-const read = (relative: string): string => readFileSync(resolve(fieldsDir, relative), 'utf-8');
+const read = (relative: string): string => readFileSync(path.resolve(fieldsDir, relative), 'utf-8');
 
 describe('FloatingPanel width contract', () => {
   it.each(intrinsicGridPickers)('%s hugs its calendar grid', (relative) => {
     expect(read(relative)).toContain('widthMode="fit-content"');
   });
 
-  it.each(fieldShapedPickers)('%s declares at-least-trigger', (relative) => {
+  it.each(fieldTriggerPickers)('%s declares at-least-trigger', (relative) => {
     const source = read(relative);
     expect(source).toContain('widthMode="at-least-trigger"');
   });
@@ -48,16 +45,12 @@ describe('FloatingPanel width contract', () => {
     expect(read(relative)).toContain('widthMode="match-trigger"');
   });
 
-  it.each([...fieldShapedPickers, ...matchTriggerPickers])('%s no longer passes the fitContent boolean', (relative) => {
-    const source = read(relative);
-    expect(source).not.toMatch(/^\s*fitContent\s*$/mu);
-    expect(source).not.toMatch(/fitContent=\{?true/u);
-  });
-
-  it.each(buttonShapedPickers)('%s keeps fit-content deliberately', (relative) => {
-    const source = read(relative);
-    // Asserted, not merely tolerated: if this stops being true the exemption
-    // list is stale and someone must re-judge it rather than delete a line.
-    expect(source).toMatch(/fitContent/u);
-  });
+  it.each([...fieldTriggerPickers, ...matchTriggerPickers])(
+    '%s no longer passes the fitContent boolean',
+    (relative) => {
+      const source = read(relative);
+      expect(source).not.toMatch(/^[ \t]*fitContent[ \t]*$/mu);
+      expect(source).not.toMatch(/fitContent=\{?true/u);
+    },
+  );
 });

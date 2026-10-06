@@ -10,32 +10,51 @@ import { TimeWheels } from '../../shared/TimeColumn';
 
 export type TimeFormat = '12h' | '24h';
 
-const timeStringRegex = /^([01]?\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/u;
+const timeStringRegex = /^(?<hour>[01]?\d|2[0-3]):[0-5]\d(?<seconds>:[0-5]\d)?$/u;
 
+// oxlint-disable-next-line react-doctor/only-export-components -- time helpers are co-located with the picker parts by design; consumers import both from './parts'
 export const isValidTimeString = (value: string): boolean => timeStringRegex.test(value.trim());
 
-export const parseTimeString = (value: string): { h: number; m: number; s: number } => {
+type FieldError = string | boolean | undefined;
+
+/** First non-empty error: `primary` unless it is unset/false/empty, then `fallback`. */
+// oxlint-disable-next-line react-doctor/only-export-components -- time helpers are co-located with the picker parts by design; consumers import both from './parts'
+export const firstError = (primary: FieldError, fallback: FieldError): FieldError =>
+  primary === undefined || primary === false || primary === '' ? fallback : primary;
+
+const clampTimePart = (raw: string | undefined, max: number): number => {
+  // oxlint-disable-next-line unicorn/prefer-number-coercion -- parseInt tolerates trailing junk ("12abc" -> 12) where Number() would give NaN
+  const parsed = Number.parseInt(raw === undefined || raw === '' ? '0' : raw, 10);
+  return Math.max(0, Math.min(max, Number.isNaN(parsed) ? 0 : parsed));
+};
+
+// oxlint-disable-next-line react-doctor/only-export-components -- time helpers are co-located with the picker parts by design; consumers import both from './parts'
+export const parseTimeString = (value: string) => {
   if (!value) {
     return { h: 0, m: 0, s: 0 };
   }
   const parts = value.split(':');
   return {
-    h: Math.max(0, Math.min(23, Number.parseInt(parts[0] || '0', 10) || 0)),
-    m: Math.max(0, Math.min(59, Number.parseInt(parts[1] || '0', 10) || 0)),
-    s: Math.max(0, Math.min(59, Number.parseInt(parts[2] || '0', 10) || 0)),
+    h: clampTimePart(parts[0], 23),
+    m: clampTimePart(parts[1], 59),
+    s: clampTimePart(parts[2], 59),
   };
 };
 
+// oxlint-disable-next-line react-doctor/only-export-components -- time helpers are co-located with the picker parts by design; consumers import both from './parts'
 export const toTimeString = (h: number, m: number, s?: number): string => {
   const base = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
   return s === undefined ? base : `${base}:${String(s).padStart(2, '0')}`;
 };
 
-export const to12Hour = (h24: number): { h: number; period: 'AM' | 'PM' } => ({
-  h: h24 % 12 === 0 ? 12 : h24 % 12,
-  period: h24 >= 12 ? 'PM' : 'AM',
-});
+// oxlint-disable-next-line react-doctor/only-export-components -- time helpers are co-located with the picker parts by design; consumers import both from './parts'
+export const to12Hour = (h24: number) =>
+  ({
+    h: h24 % 12 === 0 ? 12 : h24 % 12,
+    period: h24 >= 12 ? 'PM' : 'AM',
+  }) satisfies { h: number; period: 'AM' | 'PM' };
 
+// oxlint-disable-next-line react-doctor/only-export-components -- time helpers are co-located with the picker parts by design; consumers import both from './parts'
 export const formatTimeDisplay = (value: string, format: TimeFormat, showSeconds: boolean): string => {
   if (!value) {
     return '';
@@ -49,6 +68,7 @@ export const formatTimeDisplay = (value: string, format: TimeFormat, showSeconds
   return `${displayH}:${String(m).padStart(2, '0')}${secSuffix} ${period}`;
 };
 
+// oxlint-disable-next-line react-doctor/only-export-components -- time helpers are co-located with the picker parts by design; consumers import both from './parts'
 export const to24Hour = (displayH: number, period: 'AM' | 'PM'): number => {
   const wrapped = ((displayH - 1) % 12) + 1;
   if (period === 'AM') {
@@ -123,6 +143,20 @@ interface TimePickerInputTriggerProps {
   'aria-readonly'?: boolean;
 }
 
+interface TriggerKeyEvent {
+  nativeEvent?: { key?: string };
+  key?: string;
+  preventDefault?: () => void;
+}
+
+const openOnActivationKey = (e: TriggerKeyEvent, onOpen: () => void): void => {
+  const key = e?.nativeEvent?.key ?? e?.key;
+  if (key === 'Enter' || key === ' ' || key === 'Spacebar') {
+    e?.preventDefault?.();
+    onOpen();
+  }
+};
+
 export const TimePickerInputTrigger = ({
   value,
   placeholder,
@@ -173,15 +207,12 @@ export const TimePickerInputTrigger = ({
           aria-required={ariaRequired}
           aria-invalid={ariaInvalid}
           aria-readonly={ariaReadonly}
+          // oxlint-disable-next-line typescript/no-deprecated -- RN TextInput only exposes onKeyPress; onKeyDown/onKeyUp do not exist on native
           onKeyPress={
             disabled
               ? undefined
-              : (e: { nativeEvent?: { key?: string }; key?: string; preventDefault?: () => void }) => {
-                  const key = e?.nativeEvent?.key ?? e?.key;
-                  if (key === 'Enter' || key === ' ' || key === 'Spacebar') {
-                    e?.preventDefault?.();
-                    onOpen();
-                  }
+              : (e: TriggerKeyEvent) => {
+                  openOnActivationKey(e, onOpen);
                 }
           }
         />

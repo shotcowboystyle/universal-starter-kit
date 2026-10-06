@@ -76,11 +76,11 @@ describe('RING-ANATOMY — Box ring, Area never outlines, inset iff clip', () =>
         </Input.Box>
       </Input>,
     );
-    const box = container.querySelector('[data-mp-input-box]');
+    const box = container.querySelector<HTMLElement>('[data-mp-input-box]');
     expect(box).toBeTruthy();
-    expect(box?.getAttribute('data-mp-ring')).toBe('inset');
+    expect(box?.dataset.mpRing).toBe('inset');
     expect(container.querySelector('[data-mp-input-area]')).toBeTruthy();
-    expect(document.getElementById('mp-input-parts-ring-anatomy')?.textContent).toContain('outline: none !important');
+    expect(document.querySelector('#mp-input-parts-ring-anatomy')?.textContent).toContain('outline: none !important');
   });
 
   it('consumer focusVisibleStyle cannot restore an Area outline', () => {
@@ -103,6 +103,7 @@ describe('RING-ANATOMY — Box ring, Area never outlines, inset iff clip', () =>
     const area = container.querySelector('[data-mp-input-area]');
     expect(area).toBeTruthy();
     const cs = area ? getComputedStyle(area) : null;
+    // oxlint-disable-next-line unicorn/prefer-number-coercion -- computed outlineWidth carries a unit suffix (`0px`); Number() would give NaN
     const width = cs ? Number.parseFloat(cs.outlineWidth) || 0 : 0;
     const style = cs?.outlineStyle ?? '';
     expect(style === 'none' || width === 0).toBe(true);
@@ -138,7 +139,7 @@ describe('TEXT-INSET — Area chromeless, keyboard map', () => {
         </Input.Box>
       </Input>,
     );
-    const area = container.querySelector('[data-mp-input-area]') as HTMLInputElement;
+    const area = container.querySelector<HTMLInputElement>('[data-mp-input-area]')!;
     expect(area).toBeTruthy();
     expect(area.inputMode || area.getAttribute('inputmode')).toBe('tel');
     expect(area.getAttribute('autocomplete') === 'tel' || area.autocomplete === 'tel').toBe(true);

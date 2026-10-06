@@ -2,9 +2,9 @@ import { useDismiss, useInteractions } from '@floating-ui/react';
 import { useTouchSurface, ensureFocusVisibleRing, keyboardFocusRingProps, menuRowFrame } from '@repo/theme';
 import type { DeepKeys, DeepValue } from '@tanstack/form-core';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
+import type { ReactElement, UIEvent } from 'react';
 import { useProps, Avatar, Text, XStack, YStack, isWeb, styled } from 'tamagui';
-import type { GetProps, SizeTokens } from 'tamagui';
+import type { GetProps, SizeTokens, TamaguiElement } from 'tamagui';
 
 import { Field, FieldLayout } from '../../FieldLayout';
 import type { FormFieldProps } from '../../FieldLayout';
@@ -24,13 +24,15 @@ import { zIndex } from '../../shared/z-index';
 import { Skeleton } from '../../Skeleton';
 import type { Validator, FieldComponentProps } from '../../types';
 import { TextArea } from '../TextArea';
+import type { TextAreaProps } from '../TextArea';
 
 export interface MentionItem {
   id: string;
   display: string;
   avatar?: string;
   description?: string;
-  metadata?: Record<string, any>;
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- opaque consumer payload carried through selection; no owner type exists
+  metadata?: Record<string, unknown>;
 }
 
 export interface MentionConfig {
@@ -56,17 +58,23 @@ export interface MentionValue {
 }
 
 /** Normalize string / object / empty seeds into the field value. */
+// oxlint-disable-next-line anti-slop/no-unknown-parameters, react-doctor/only-export-components -- boundary parser for untyped form values; exported helper alongside the component
 export const parseMentionValue = (raw: unknown): MentionValue => {
+  // oxlint-disable anti-slop/no-runtime-typeof -- this IS the parse boundary: it classifies an untyped seed
   if (typeof raw === 'string') {
     return { text: raw, mentions: [] };
   }
-  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+  if (raw !== null && typeof raw === 'object' && !Array.isArray(raw)) {
+    // SAFETY: raw is a non-null, non-array object; every property is read as unknown and re-checked below.
     const o = raw as { text?: unknown; mentions?: unknown };
     return {
       text: typeof o.text === 'string' ? o.text : '',
+      // SAFETY: seeds are produced by this component (emit), so a mentions array holds MentionData entries.
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- Array.isArray narrows to any[]; element shape is trusted per the SAFETY note
       mentions: Array.isArray(o.mentions) ? (o.mentions as MentionData[]) : [],
     };
   }
+  // oxlint-enable anti-slop/no-runtime-typeof
   return { text: '', mentions: [] };
 };
 
@@ -84,7 +92,7 @@ const MentionFieldSync = ({
   current: MentionValue;
   disabled: boolean;
   onAdopt: (next: MentionValue) => void;
-  children: ReactNode;
+  children: ReactElement;
 }) => {
   useEffect(() => {
     if (disabled || fieldValue === undefined) {
@@ -94,14 +102,16 @@ const MentionFieldSync = ({
     if (mentionValuesEqual(next, current)) {
       return;
     }
+    // oxlint-disable-next-line react-doctor/no-pass-data-to-parent -- adopts an externally written field value into local state, which is this sync component's job
     onAdopt(next);
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- deps must stay [fieldValue, disabled]; re-running on local edits would revert them to the stale field value
   }, [fieldValue, disabled]);
   return children;
 };
 
 export type MentionInputProps<
-  TParentData = any,
-  TName extends DeepKeys<TParentData> = any,
+  TParentData = object,
+  TName extends DeepKeys<TParentData> = DeepKeys<TParentData>,
   TFieldValidator extends Validator<DeepValue<TParentData, TName>> | undefined = undefined,
   TFormValidator extends Validator<TParentData> | undefined = undefined,
   TData extends DeepValue<TParentData, TName> = DeepValue<TParentData, TName>,
@@ -131,7 +141,7 @@ export type MentionInputProps<
      * mount must display without emitting onChange (create-mode seeding).
      */
     value?: string | MentionValue;
-    textAreaProps?: Record<string, any>;
+    textAreaProps?: TextAreaProps['textAreaProps'];
     /** When true, renders a skeleton placeholder instead of the mention input */
     skeleton?: boolean;
     /** When true, applies compact density (tighter layout gaps; control size unchanged) */
@@ -143,7 +153,11 @@ const zeroWidthSpace = '\u200B';
 
 // One fontSize step below the field size token \u2014 the T-HELPER register for the
 // secondary (role/description) line, matching the shared suggestion-row recipe.
-const helperFontSizeMap: Record<string, string> = { $3: '$2', $4: '$3', $5: '$4' };
+const helperFontSizeMap = new Map<string, string>([
+  ['$3', '$2'],
+  ['$4', '$3'],
+  ['$5', '$4'],
+]);
 
 // The row spans the full menu width and owns ALL padding
 // (the overlay container owns only its border), so the active/hover highlight
@@ -201,7 +215,7 @@ const MentionMatchText = ({ text, query, ...rest }: MentionTextProps & { text: s
 };
 
 const mentionSecondary = (item: MentionItem, trigger: string): string | undefined => {
-  if (item.description) {
+  if (item.description !== undefined && item.description !== '') {
     return item.description;
   }
   if (item.id && item.id !== item.display && SLUG_ID.test(item.id)) {
@@ -221,6 +235,121 @@ const mentionForDelete = (
   return mentions.find((m) => cursor >= m.position && cursor < m.position + m.length);
 };
 
+const isWordBreak = (char: string | undefined, allowSpace: boolean): boolean =>
+  char === '\n' || (char === ' ' && !allowSpace);
+
+const menuDimensionByToken = (token: string, compactValue: number, roomyValue: number): number => {
+  if (token === '$3') {
+    return compactValue;
+  }
+  if (token === '$5') {
+    return roomyValue;
+  }
+  return 200;
+};
+
+/** Shift surviving mentions by the edit; drop those the edit overlapped or corrupted. */
+const shiftMentions = (
+  mentions: MentionData[],
+  editPosition: number,
+  lengthDiff: number,
+  newText: string,
+): MentionData[] => {
+  const next: MentionData[] = [];
+  for (const m of mentions) {
+    const mention = { ...m };
+    const mentionEnd = mention.position + mention.length;
+    if (editPosition >= mentionEnd) {
+      next.push(mention);
+    } else if (editPosition <= mention.position) {
+      mention.position += lengthDiff;
+      const expectedText = `${mention.type}${mention.display}`;
+      const actualText = newText.slice(mention.position, mention.position + mention.length);
+      if (actualText === expectedText) {
+        next.push(mention);
+      }
+    }
+  }
+  return next;
+};
+
+const parsePx = (value: string): number =>
+  // oxlint-disable-next-line unicorn/prefer-number-coercion -- computed styles carry a `px` suffix that Number() would reject
+  Number.parseFloat(value);
+
+const resolveCaretLineHeight = (lineHeight: string, fontSize: string): number => {
+  const parsedLineHeight = parsePx(lineHeight);
+  if (Number.isFinite(parsedLineHeight)) {
+    return parsedLineHeight;
+  }
+  const parsedFontSize = parsePx(fontSize);
+  return Number.isFinite(parsedFontSize) ? parsedFontSize * 1.2 : 18;
+};
+
+/** Measure the caret rect by mirroring the textarea text into an offscreen div. */
+const measureCaretRect = (textAreaElement: HTMLTextAreaElement, text: string, caret: number): DOMRect => {
+  const style = window.getComputedStyle(textAreaElement);
+  const textAreaRect = textAreaElement.getBoundingClientRect();
+  const mirror = document.createElement('div');
+  mirror.style.position = 'absolute';
+  mirror.style.visibility = 'hidden';
+  mirror.style.pointerEvents = 'none';
+  mirror.style.whiteSpace = 'pre-wrap';
+  mirror.style.overflowWrap = 'anywhere';
+  mirror.style.left = '-9999px';
+  mirror.style.top = '0';
+  mirror.style.width = `${textAreaElement.clientWidth}px`;
+  mirror.style.fontFamily = style.fontFamily;
+  mirror.style.fontSize = style.fontSize;
+  mirror.style.fontWeight = style.fontWeight;
+  mirror.style.fontStyle = style.fontStyle;
+  mirror.style.letterSpacing = style.letterSpacing;
+  mirror.style.lineHeight = style.lineHeight;
+  mirror.style.textTransform = style.textTransform;
+  mirror.style.textIndent = style.textIndent;
+  mirror.style.tabSize = style.tabSize;
+  mirror.style.padding = style.padding;
+  mirror.style.border = style.border;
+  mirror.style.boxSizing = style.boxSizing;
+  mirror.textContent = text.slice(0, caret);
+
+  const marker = document.createElement('span');
+  marker.textContent = text[caret] || zeroWidthSpace;
+  mirror.append(marker);
+  document.body.append(mirror);
+
+  try {
+    const markerRect = marker.getBoundingClientRect();
+    const mirrorRect = mirror.getBoundingClientRect();
+    const lineHeight = resolveCaretLineHeight(style.lineHeight, style.fontSize);
+    const relLeft = markerRect.left - mirrorRect.left - textAreaElement.scrollLeft;
+    const relTop = markerRect.top - mirrorRect.top - textAreaElement.scrollTop;
+    return DOMRect.fromRect({
+      x: textAreaRect.left + relLeft,
+      y: textAreaRect.top + relTop,
+      width: 1,
+      height: lineHeight,
+    });
+  } finally {
+    mirror.remove();
+  }
+};
+
+type TextAreaHandle =
+  | HTMLElement
+  | { focus?: () => void; textarea?: HTMLTextAreaElement; _textarea?: HTMLTextAreaElement };
+
+interface MentionSelectionEvent {
+  nativeEvent?: { selection?: { start: number } };
+}
+
+interface MentionKeyEvent {
+  key?: string;
+  nativeEvent?: { key?: string };
+  preventDefault?: () => void;
+}
+
+// oxlint-disable-next-line react-doctor/no-giant-component, eslint/complexity -- single cohesive field; splitting hooks/state across files is out of scope for the lint pass
 export const MentionInput = <
   TParentData,
   TName extends DeepKeys<TParentData>,
@@ -229,6 +358,7 @@ export const MentionInput = <
   TData extends DeepValue<TParentData, TName> = DeepValue<TParentData, TName>,
 >(
   props: MentionInputProps<TParentData, TName, TFieldValidator, TFormValidator, TData>,
+  // oxlint-disable-next-line sonarjs/cognitive-complexity -- see component note above
 ) => {
   const hydrationTouch = useTouchSurface();
   const {
@@ -241,6 +371,7 @@ export const MentionInput = <
     autoResize = false,
     onMentionSelect,
     onChange,
+    // oxlint-disable-next-line typescript/no-deprecated -- deprecated prop is still supported until removal
     onTextChange,
     textAreaProps,
     mode,
@@ -264,13 +395,13 @@ export const MentionInput = <
 
   const { resolvedForm, knobProps, id } = useFormField({ form, id: idProp, compact });
   const resolvedValidators = useResolvedValidators(required, validators, label, name);
-  const resolvedSizeToken = (size || knobProps.sizeToken) as SizeTokens;
+  const resolvedSizeToken: SizeTokens = size ?? knobProps.sizeToken;
   const minHeight = minHeightProp ?? getFieldHeight(resolvedSizeToken, 3, hydrationTouch);
   const maxHeight = maxHeightProp ?? getFieldHeight(resolvedSizeToken, 8, hydrationTouch);
   const minRows = Math.max(1, Math.round(minHeight / 20));
   const maxRows = Math.max(minRows, Math.round(maxHeight / 20));
 
-  const initialValue = parseMentionValue(valueProp === undefined ? defaultValue : valueProp);
+  const initialValue = parseMentionValue(valueProp ?? defaultValue);
   const [text, setText] = useState(initialValue.text);
   const [mentionList, setMentionList] = useState<MentionData[]>(initialValue.mentions);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -282,13 +413,16 @@ export const MentionInput = <
   // inset ring only while the active row was chosen by keyboard/typing.
   const [keyboardHighlight, setKeyboardHighlight] = useState(false);
 
-  const textAreaRef = useRef<any>(null);
+  const textAreaRef = useRef<TextAreaHandle | null>(null);
   const prevCursorRef = useRef(0);
   const prevQueryRef = useRef('');
   const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const fieldRef = useRef<{ handleChange: (value: any) => void } | null>(null);
+  const fieldRef = useRef<{ handleChange: (value: MentionValue) => void } | null>(null);
   const isControlled = valueProp !== undefined;
-  const displayed = isControlled ? parseMentionValue(valueProp) : { text, mentions: mentionList };
+  const displayed = useMemo(
+    () => (isControlled ? parseMentionValue(valueProp) : { text, mentions: mentionList }),
+    [isControlled, valueProp, text, mentionList],
+  );
   const mediaSlot = knobProps.nestedControl.px ?? MEDIA_SLOT_FALLBACK;
 
   const adoptValue = useCallback((next: MentionValue) => {
@@ -329,15 +463,8 @@ export const MentionInput = <
       for (const [trigger, config] of triggerMap) {
         const allowSpace = config.allowSpace ?? false;
         let wordStart = position;
-        while (wordStart > 0) {
-          const char = currentText[wordStart - 1];
-          if (char === '\n') {
-            break;
-          }
-          if (char === ' ' && !allowSpace) {
-            break;
-          }
-          wordStart--;
+        while (wordStart > 0 && !isWordBreak(currentText[wordStart - 1], allowSpace)) {
+          wordStart -= 1;
         }
         const currentWord = currentText.slice(wordStart, position);
         if (currentWord.startsWith(trigger)) {
@@ -366,7 +493,10 @@ export const MentionInput = <
   );
 
   const suggestions = useMemo(
-    () => (showSuggestions && currentTrigger ? getFilteredSuggestions(currentTrigger, searchQuery) : []),
+    () =>
+      showSuggestions && currentTrigger !== null && currentTrigger !== ''
+        ? getFilteredSuggestions(currentTrigger, searchQuery)
+        : [],
     [showSuggestions, currentTrigger, searchQuery, getFilteredSuggestions],
   );
   // GitHub/Slack keep the popup open on a live trigger even when the query
@@ -386,7 +516,7 @@ export const MentionInput = <
         prevQueryRef.current = '';
       }
     },
-    disabled: disabled || readOnly,
+    disabled: disabled === true || readOnly === true,
     fitContent: true,
   });
 
@@ -398,7 +528,7 @@ export const MentionInput = <
 
   useEffect(
     () => () => {
-      if (blurTimeoutRef.current) {
+      if (blurTimeoutRef.current !== null) {
         clearTimeout(blurTimeoutRef.current);
       }
     },
@@ -432,12 +562,8 @@ export const MentionInput = <
     if (typeof document === 'undefined') {
       return null;
     }
-    const current = textAreaRef.current as
-      | HTMLTextAreaElement
-      | { textarea?: HTMLTextAreaElement; _textarea?: HTMLTextAreaElement }
-      | HTMLElement
-      | null;
-    if (!current) {
+    const { current } = textAreaRef;
+    if (current === null) {
       return null;
     }
     if (current instanceof HTMLTextAreaElement) {
@@ -463,31 +589,14 @@ export const MentionInput = <
       // On web the RN onSelectionChange callback never fires, so read the
       // caret straight off the DOM textarea (already updated by input time)
       const webElement = getWebTextAreaElement();
-      const domCaret = webElement && typeof webElement.selectionStart === 'number' ? webElement.selectionStart : null;
+      const domCaret = webElement?.selectionStart ?? null;
       const editPosition = domCaret === null ? prevCursorRef.current : Math.max(0, domCaret - Math.max(0, lengthDiff));
 
-      let nextMentions = displayed.mentions;
-      if (lengthDiff !== 0) {
-        nextMentions = displayed.mentions
-          .map((m) => ({ ...m }))
-          .filter((mention) => {
-            const mentionEnd = mention.position + mention.length;
-            if (editPosition >= mentionEnd) {
-              return true;
-            }
-            if (editPosition <= mention.position) {
-              mention.position += lengthDiff;
-              const expectedText = `${mention.type}${mention.display}`;
-              const actualText = newText.slice(mention.position, mention.position + mention.length);
-              return actualText === expectedText;
-            }
-            return false;
-          });
-      }
+      const nextMentions =
+        lengthDiff === 0 ? displayed.mentions : shiftMentions(displayed.mentions, editPosition, lengthDiff, newText);
 
       emit({ text: newText, mentions: nextMentions });
-      const estimatedCursor =
-        domCaret === null ? Math.max(0, Math.min(editPosition + Math.max(0, lengthDiff), newText.length)) : domCaret;
+      const estimatedCursor = domCaret ?? Math.max(0, Math.min(editPosition + Math.max(0, lengthDiff), newText.length));
       prevCursorRef.current = estimatedCursor;
       setCursorPosition(estimatedCursor);
       updateTriggerState(newText, estimatedCursor);
@@ -496,9 +605,9 @@ export const MentionInput = <
   );
 
   const handleSelectionChange = useCallback(
-    (event: any) => {
-      const selection = event?.nativeEvent?.selection;
-      if (selection) {
+    (event: MentionSelectionEvent) => {
+      const selection = event.nativeEvent?.selection;
+      if (selection !== undefined) {
         prevCursorRef.current = selection.start;
         setCursorPosition(selection.start);
         updateTriggerState(displayed.text, selection.start);
@@ -511,10 +620,10 @@ export const MentionInput = <
   // (clicks, arrow keys, typing), unlike RN's onSelectionChange
   const handleWebSelect = useCallback(() => {
     const el = getWebTextAreaElement();
-    if (!el || typeof el.selectionStart !== 'number') {
+    const position = el?.selectionStart ?? null;
+    if (el === null || position === null) {
       return;
     }
-    const position = el.selectionStart;
     prevCursorRef.current = position;
     setCursorPosition(position);
     updateTriggerState(el.value, position);
@@ -522,7 +631,7 @@ export const MentionInput = <
 
   const insertMention = useCallback(
     (item: MentionItem) => {
-      if (!currentTrigger) {
+      if (currentTrigger === null || currentTrigger === '') {
         return;
       }
       const triggerInfo = checkForTrigger(displayed.text, cursorPosition);
@@ -567,7 +676,7 @@ export const MentionInput = <
           el.focus();
           el.setSelectionRange(newCursorPos, newCursorPos);
         } else {
-          textAreaRef.current?.focus();
+          textAreaRef.current?.focus?.();
         }
       }, 0);
     },
@@ -589,9 +698,12 @@ export const MentionInput = <
       const after = displayed.text.slice(mention.position + mention.length);
       const newText = before + after;
       const removedLen = mention.length;
-      const nextMentions = displayed.mentions
-        .filter((m) => !(m.position === mention.position && m.id === mention.id))
-        .map((m) => (m.position > mention.position ? { ...m, position: m.position - removedLen } : m));
+      const nextMentions: MentionData[] = [];
+      for (const m of displayed.mentions) {
+        if (m.position !== mention.position || m.id !== mention.id) {
+          nextMentions.push(m.position > mention.position ? { ...m, position: m.position - removedLen } : m);
+        }
+      }
       emit({ text: newText, mentions: nextMentions });
       const newCursor = mention.position;
       setCursorPosition(newCursor);
@@ -608,27 +720,8 @@ export const MentionInput = <
     [displayed, emit, updateTriggerState, getWebTextAreaElement],
   );
 
-  const handleKeyDown = useCallback(
-    (event: any) => {
-      const key = event.key || event.nativeEvent?.key;
-      const webElement = getWebTextAreaElement();
-      const caret =
-        webElement && typeof webElement.selectionStart === 'number' ? webElement.selectionStart : cursorPosition;
-
-      // Slack: Backspace/Delete at a mention token eats the whole token.
-      if (key === 'Backspace' || key === 'Delete') {
-        const mention = mentionForDelete(displayed.mentions, caret, key);
-        if (mention) {
-          event.preventDefault?.();
-          removeMention(mention);
-          return;
-        }
-      }
-
-      if (!showSuggestions || !currentTrigger) {
-        return;
-      }
-
+  const handleSuggestionKey = useCallback(
+    (key: string, event: MentionKeyEvent) => {
       if (suggestions.length === 0) {
         if (key === 'Escape') {
           event.preventDefault?.();
@@ -653,8 +746,9 @@ export const MentionInput = <
         case 'Enter':
         case 'Tab': {
           event.preventDefault?.();
-          if (suggestions[selectedIndex]) {
-            insertMention(suggestions[selectedIndex]);
+          const picked = suggestions.at(selectedIndex);
+          if (picked !== undefined) {
+            insertMention(picked);
           }
           break;
         }
@@ -663,22 +757,47 @@ export const MentionInput = <
           setShowSuggestions(false);
           break;
         }
+        default: {
+          break;
+        }
       }
+    },
+    [suggestions, selectedIndex, insertMention],
+  );
+
+  const handleKeyDown = useCallback(
+    (event: MentionKeyEvent) => {
+      const key = (event.key === undefined || event.key === '' ? event.nativeEvent?.key : event.key) ?? '';
+      const caret = getWebTextAreaElement()?.selectionStart ?? cursorPosition;
+
+      // Slack: Backspace/Delete at a mention token eats the whole token.
+      if (key === 'Backspace' || key === 'Delete') {
+        const mention = mentionForDelete(displayed.mentions, caret, key);
+        if (mention) {
+          event.preventDefault?.();
+          removeMention(mention);
+          return;
+        }
+      }
+
+      if (!showSuggestions || currentTrigger === null || currentTrigger === '') {
+        return;
+      }
+
+      handleSuggestionKey(key, event);
     },
     [
       showSuggestions,
       currentTrigger,
-      suggestions,
-      selectedIndex,
-      insertMention,
       displayed,
       cursorPosition,
       removeMention,
       getWebTextAreaElement,
+      handleSuggestionKey,
     ],
   );
 
-  const itemRefs = useRef<(HTMLElement | null)[]>([]);
+  const itemRefs = useRef<(TamaguiElement | null)[]>([]);
 
   // Keep the keyboard-active row in view by measuring the real row, same as
   // Select's controlled-scrolling adjustment (no estimated item height).
@@ -688,7 +807,7 @@ export const MentionInput = <
     }
     const floating = panel.refs.floating.current;
     const item = itemRefs.current[selectedIndex];
-    if (!floating || !item?.getBoundingClientRect) {
+    if (!floating || !item || !('getBoundingClientRect' in item)) {
       return;
     }
     const containerRect = floating.getBoundingClientRect();
@@ -700,7 +819,7 @@ export const MentionInput = <
     }
   }, [selectedIndex, hasSuggestions, panel.refs.floating]);
 
-  const handleBlurInternal = useCallback((..._args: any[]) => {
+  const handleBlurInternal = useCallback(() => {
     blurTimeoutRef.current = setTimeout(() => {
       setShowSuggestions(false);
     }, blurCloseDelayMs);
@@ -708,7 +827,7 @@ export const MentionInput = <
 
   const handleSuggestionPress = useCallback(
     (item: MentionItem) => {
-      if (blurTimeoutRef.current) {
+      if (blurTimeoutRef.current !== null) {
         clearTimeout(blurTimeoutRef.current);
         blurTimeoutRef.current = null;
       }
@@ -717,11 +836,9 @@ export const MentionInput = <
     [insertMention],
   );
 
-  const activeConfig = currentTrigger ? triggerMap.get(currentTrigger) : null;
-  const suggestionsMaxHeight =
-    activeConfig?.menuHeight ?? (knobProps.sizeToken === '$3' ? 160 : knobProps.sizeToken === '$5' ? 240 : 200);
-  const suggestionsMinWidth =
-    activeConfig?.menuWidth ?? (knobProps.sizeToken === '$3' ? 180 : knobProps.sizeToken === '$5' ? 240 : 200);
+  const activeConfig = currentTrigger === null ? null : triggerMap.get(currentTrigger);
+  const suggestionsMaxHeight = activeConfig?.menuHeight ?? menuDimensionByToken(knobProps.sizeToken, 160, 240);
+  const suggestionsMinWidth = activeConfig?.menuWidth ?? menuDimensionByToken(knobProps.sizeToken, 180, 240);
 
   // ── Virtual reference at caret position ────────────────────
 
@@ -734,56 +851,7 @@ export const MentionInput = <
     if (!textAreaElement) {
       return fallback;
     }
-
-    const style = window.getComputedStyle(textAreaElement);
-    const textAreaRect = textAreaElement.getBoundingClientRect();
-    const mirror = document.createElement('div');
-    mirror.style.position = 'absolute';
-    mirror.style.visibility = 'hidden';
-    mirror.style.pointerEvents = 'none';
-    mirror.style.whiteSpace = 'pre-wrap';
-    mirror.style.wordWrap = 'break-word';
-    mirror.style.overflowWrap = 'anywhere';
-    mirror.style.left = '-9999px';
-    mirror.style.top = '0';
-    mirror.style.width = `${textAreaElement.clientWidth}px`;
-    mirror.style.fontFamily = style.fontFamily;
-    mirror.style.fontSize = style.fontSize;
-    mirror.style.fontWeight = style.fontWeight;
-    mirror.style.fontStyle = style.fontStyle;
-    mirror.style.letterSpacing = style.letterSpacing;
-    mirror.style.lineHeight = style.lineHeight;
-    mirror.style.textTransform = style.textTransform;
-    mirror.style.textIndent = style.textIndent;
-    mirror.style.tabSize = style.tabSize;
-    mirror.style.padding = style.padding;
-    mirror.style.border = style.border;
-    mirror.style.boxSizing = style.boxSizing;
-    mirror.textContent = displayed.text.slice(0, cursorPosition);
-
-    const marker = document.createElement('span');
-    marker.textContent = displayed.text[cursorPosition] || zeroWidthSpace;
-    mirror.append(marker);
-    document.body.append(mirror);
-
-    try {
-      const markerRect = marker.getBoundingClientRect();
-      const mirrorRect = mirror.getBoundingClientRect();
-      const parsedLineHeight = Number.parseFloat(style.lineHeight);
-      const parsedFontSize = Number.parseFloat(style.fontSize);
-      const lineHeight = Number.isFinite(parsedLineHeight)
-        ? parsedLineHeight
-        : Number.isFinite(parsedFontSize)
-          ? parsedFontSize * 1.2
-          : 18;
-      const relLeft = markerRect.left - mirrorRect.left - textAreaElement.scrollLeft;
-      const relTop = markerRect.top - mirrorRect.top - textAreaElement.scrollTop;
-      const left = textAreaRect.left + relLeft;
-      const top = textAreaRect.top + relTop;
-      return DOMRect.fromRect({ x: left, y: top, width: 1, height: lineHeight });
-    } finally {
-      document.body.removeChild(mirror);
-    }
+    return measureCaretRect(textAreaElement, displayed.text, cursorPosition);
   }, [getWebTextAreaElement, displayed.text, cursorPosition]);
 
   useEffect(() => {
@@ -800,11 +868,12 @@ export const MentionInput = <
     const rect = getCaretClientRect();
     panel.refs.setReference({ getBoundingClientRect: () => rect });
     panel.update();
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- see note above
   }, [triggerActive, cursorPosition, displayed.text]);
 
   const suggestionListId = `${id}-suggestions`;
-  const selectedOptionId =
-    hasSuggestions && suggestions[selectedIndex] ? `${id}-option-${suggestions[selectedIndex].id}` : undefined;
+  const selectedItem = hasSuggestions ? suggestions.at(selectedIndex) : undefined;
+  const selectedOptionId = selectedItem === undefined ? undefined : `${id}-option-${selectedItem.id}`;
 
   // ── Floating dropdown ──────────────────────────────────────
 
@@ -825,16 +894,16 @@ export const MentionInput = <
             position: panel.strategy,
             top: panel.y ?? 0,
             left: panel.x ?? 0,
-            scrollbarWidth: 'none' as any,
+            scrollbarWidth: 'none',
             zIndex: zIndex.dropdown,
             overflow: 'auto',
             opacity: panel.visible ? 1 : 0,
             transform: panel.visible ? 'scale(1)' : 'scale(0.96)',
-            transition: panel.knobProps.transition ? panelTransition : 'none',
+            transition: panel.knobProps.transition === undefined ? 'none' : panelTransition,
             transformOrigin: panel.placement.startsWith('top') ? 'bottom left' : 'top left',
           },
-          onScroll: (e: any) => {
-            panel.updateArrows(e.target as HTMLElement);
+          onScroll: (e: UIEvent<HTMLElement>) => {
+            panel.updateArrows(e.currentTarget);
           },
         })}
         outlineWidth={0}
@@ -844,6 +913,8 @@ export const MentionInput = <
         padding={0}
         maxHeight={suggestionsMaxHeight}
         minWidth={suggestionsMinWidth}
+        // SAFETY: Tamagui's Role union omits 'listbox'; 'list' is the nearest member and the DOM role attribute is emitted verbatim.
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- literal cast to satisfy Tamagui's narrower Role union
         role={'listbox' as 'list'}
         id={suggestionListId}
         aria-label={t('Suggestions')}>
@@ -864,7 +935,7 @@ export const MentionInput = <
               return (
                 <MentionSuggestionItem
                   key={item.id}
-                  ref={(node: any) => {
+                  ref={(node: TamaguiElement | null) => {
                     itemRefs.current[index] = node;
                   }}
                   selected={active}
@@ -875,6 +946,7 @@ export const MentionInput = <
                     setKeyboardHighlight(false);
                     setSelectedIndex(index);
                   }}
+                  // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui styled XStack row; a native <option> cannot host the row layout
                   role="option"
                   id={optionId}
                   aria-selected={active}
@@ -894,12 +966,12 @@ export const MentionInput = <
                       <Avatar
                         size={mediaSlot}
                         circular>
-                        {item.avatar ? <Avatar.Image src={item.avatar} /> : null}
+                        {item.avatar !== undefined && item.avatar !== '' ? <Avatar.Image src={item.avatar} /> : null}
                         <Avatar.Fallback
                           backgroundColor={formInputColors.background.focus}
                           justifyContent="center"
                           alignItems="center">
-                          <Text fontSize={helperFontSizeMap[knobProps.sizeToken] ?? '$2'}>{item.display[0]}</Text>
+                          <Text fontSize={helperFontSizeMap.get(knobProps.sizeToken) ?? '$2'}>{item.display[0]}</Text>
                         </Avatar.Fallback>
                       </Avatar>
                     </YStack>
@@ -912,11 +984,11 @@ export const MentionInput = <
                       query={searchQuery}
                       {...knobProps.label}
                     />
-                    {secondary ? (
+                    {secondary !== undefined && secondary !== '' ? (
                       <MentionMatchText
                         text={secondary}
                         query={searchQuery}
-                        fontSize={helperFontSizeMap[knobProps.sizeToken] ?? '$2'}
+                        fontSize={helperFontSizeMap.get(knobProps.sizeToken) ?? '$2'}
                         color={formCommonColors.muted}
                         {...knobProps.body}
                       />
@@ -929,10 +1001,11 @@ export const MentionInput = <
               <YStack
                 paddingHorizontal="$3"
                 paddingVertical="$2"
+                // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui YStack layout container; <output> would change styling semantics
                 role="status"
                 aria-live="polite">
                 <Text
-                  fontSize={helperFontSizeMap[knobProps.sizeToken] ?? '$2'}
+                  fontSize={helperFontSizeMap.get(knobProps.sizeToken) ?? '$2'}
                   color={formCommonColors.muted}
                   {...knobProps.body}>
                   {t('No matches')}
@@ -951,7 +1024,8 @@ export const MentionInput = <
 
   // ── TextArea ───────────────────────────────────────────────
 
-  const mentionTextArea = (resolvedError?: string | boolean, fieldBlurHandler?: (...args: any[]) => void) => (
+  type BlurArgs = Parameters<NonNullable<typeof onBlur>>;
+  const mentionTextArea = (resolvedError?: string | boolean, fieldBlurHandler?: (...args: BlurArgs) => void) => (
     <TextArea
       disabled={disabled}
       readOnly={readOnly}
@@ -962,8 +1036,8 @@ export const MentionInput = <
       required={required}
       size={size}
       compact={compact}
-      onBlur={(...args: any[]) => {
-        handleBlurInternal(...args);
+      onBlur={(...args: BlurArgs) => {
+        handleBlurInternal();
         if (fieldBlurHandler) {
           fieldBlurHandler(...args);
         } else {
@@ -971,6 +1045,7 @@ export const MentionInput = <
         }
       }}
       value={displayed.text}
+      // oxlint-disable-next-line typescript/no-deprecated -- TextArea's canonical text callback is still onChangeText
       onChangeText={handleTextChange}
       placeholder={placeholder}
       autoResize={autoResize}
@@ -979,8 +1054,8 @@ export const MentionInput = <
       textAreaRef={textAreaRef}
       textAreaProps={{
         onSelectionChange: handleSelectionChange,
-        ...(isWeb ? { onSelect: handleWebSelect } : {}),
-        onKeyDown: handleKeyDown as any,
+        onSelect: isWeb ? handleWebSelect : undefined,
+        onKeyDown: handleKeyDown,
         'aria-autocomplete': 'list',
         'aria-haspopup': 'listbox',
         'aria-expanded': triggerActive,
@@ -1013,7 +1088,7 @@ export const MentionInput = <
     );
   }
 
-  if (!resolvedForm || !name) {
+  if (resolvedForm === undefined || name === undefined || name === '') {
     return (
       <>
         {mentionTextArea()}
@@ -1024,7 +1099,7 @@ export const MentionInput = <
 
   return (
     <>
-      <Field
+      <Field<object>
         defaultValue={defaultValue}
         form={resolvedForm}
         mode={mode}
