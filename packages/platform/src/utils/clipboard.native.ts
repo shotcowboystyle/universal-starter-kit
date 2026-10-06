@@ -1,6 +1,5 @@
 import { Clipboard } from 'react-native';
 
-// oxlint-disable-next-line eslint/require-await -- stays async to match the web signature (Promise<boolean>) while core Clipboard is synchronous
 export const writeToClipboard = async (text: string): Promise<boolean> => {
   try {
     // Core Clipboard is present in the pinned native runtime. Access stays

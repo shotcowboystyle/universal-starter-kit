@@ -65,7 +65,6 @@ describe('runtime public config', () => {
       const resolved = resolvePublicConfig({
         MARKETPLACE_API_URL: 'https://api.example.org',
         SECRET: 'hunter2',
-        // oxlint-disable-next-line eslint/no-inline-comments -- gitleaks:allow must sit on the same line as the fixture secret
         DATABASE_PASSWORD: 'hunter2', // gitleaks:allow -- test fixture
       });
       expect(resolved).toStrictEqual({ MARKETPLACE_API_URL: 'https://api.example.org' });

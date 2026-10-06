@@ -136,7 +136,6 @@ describe('wait loops', () => {
       expect(pgState.lastConfig).toStrictEqual({
         database: 'postgres',
         host: 'localhost',
-        // oxlint-disable-next-line eslint/no-inline-comments -- gitleaks:allow must sit on the same line as the fixture value
         password: 'postgres', // gitleaks:allow -- test fixture
         port: 5432,
         user: 'postgres',

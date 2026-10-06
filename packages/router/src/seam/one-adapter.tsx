@@ -121,7 +121,7 @@ export const Link = ({ href, replace, children, style, ...rest }: LinkProps): Re
  *  has no nested-layout mounting — every route is its own host page — so
  *  layouts that render <Slot /> contribute chrome only; the child screen is
  *  mounted by the navigation host instead. Renders nothing by design. */
-// oxlint-disable-next-line sonarjs/function-name, anti-slop/no-unsafe-dictionary-type -- React component named after One's <Slot />; accepts One's arbitrary props
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- React component named after One's <Slot />; accepts One's arbitrary props
 export const Slot = (_props: Record<string, unknown>): null => null;
 
 export const useParams = (): NavParams => useRouteParams();
@@ -154,7 +154,7 @@ export const useBlocker = (_shouldBlock?: boolean | (() => boolean)): Blocker =>
 
 /** Inert stand-in for One's route-transition progress bar (SSR-era chrome
  *  with no meaning on a stack host). */
-// oxlint-disable-next-line sonarjs/function-name, anti-slop/no-unsafe-dictionary-type -- React component named after One's <LoadProgressBar />; accepts One's arbitrary props
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- React component named after One's <LoadProgressBar />; accepts One's arbitrary props
 export const LoadProgressBar = (_props: Record<string, unknown>): null => null;
 
 /** One's useMatches returns the matched route chain; the seam mounts one

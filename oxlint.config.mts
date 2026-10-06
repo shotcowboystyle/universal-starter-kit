@@ -55,6 +55,13 @@ export default defineConfig({
     // Keeps the `x == null` idiom; the `=== null` autofix silently drops the undefined check.
     eqeqeq: ['error', 'always', { null: 'ignore' }],
     'no-eq-null': 'off',
+    // promise-function-async already keeps Promise-returning signatures explicitly async;
+    // require-await would then demand a pointless `await` in sync-bodied async functions.
+    'eslint/require-await': 'off',
+    // `// gitleaks:allow` must sit on the same line as the fixture it allows.
+    'eslint/no-inline-comments': ['error', { ignorePattern: 'gitleaks:allow' }],
+    // Reports on the suppression comment itself, doubling every justified rules-of-hooks disable.
+    'react/rule-suppression': 'off',
     // Named function expressions are deliberate: forwardRef/memo display names, stack traces,
     // and `new`-able mocks. The autofix strips the name, so only anonymous callbacks are flagged.
     'prefer-arrow-callback': ['error', { allowNamedFunctions: true }],
@@ -73,6 +80,16 @@ export default defineConfig({
       // so .tsx files (and .ts tests/stories of components) may be either case.
       files: ['**/*.tsx', '**/*.{test,spec,stories}.ts'],
       rules: { 'unicorn/filename-case': ['error', { cases: { kebabCase: true, pascalCase: true } }] },
+    },
+    {
+      // Components and component mocks/shims are PascalCase even when they return null or non-JSX.
+      files: ['**/*.tsx', ...TEST_FILES, 'packages/config/src/shims/**'],
+      rules: { 'sonarjs/function-name': ['error', { format: '^(?:[_a-z][a-zA-Z0-9]*|[A-Z][a-zA-Z0-9]*)$' }] },
+    },
+    {
+      // Mirrors the GTK Adw.NavigationView API (push_by_tag, get_navigation_stack, ...).
+      files: ['packages/router/src/seam/DomNavigationHost.tsx'],
+      rules: { 'sonarjs/function-name': ['error', { format: '^(?:[_a-z][a-zA-Z0-9_]*|[A-Z][a-zA-Z0-9]*)$' }] },
     },
     {
       // Next.js App Router special files are kebab-case: page, layout, not-found, global-error, route.

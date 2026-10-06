@@ -44,7 +44,6 @@ export class DomStackAdapter implements NavStackAdapter {
     this.onChanged = onChanged;
   }
 
-  // oxlint-disable-next-line sonarjs/function-name -- mirrors the Adw.NavigationView method name that NavStackAdapter requires
   push_by_tag(tag: string): void {
     this.stack.push(tag);
     this.onChanged();
@@ -59,7 +58,6 @@ export class DomStackAdapter implements NavStackAdapter {
     return true;
   }
 
-  // oxlint-disable-next-line sonarjs/function-name -- mirrors the Adw.NavigationView method name that NavStackAdapter requires
   pop_to_tag(tag: string): boolean {
     const idx = this.stack.lastIndexOf(tag);
     if (idx === -1 || idx === this.stack.length - 1) {
@@ -70,24 +68,19 @@ export class DomStackAdapter implements NavStackAdapter {
     return true;
   }
 
-  // oxlint-disable-next-line sonarjs/function-name -- mirrors the Adw.NavigationView method name that NavStackAdapter requires
   replace_with_tags(tags: string[]): void {
     this.stack = [...tags];
     this.onChanged();
   }
 
-  // oxlint-disable-next-line sonarjs/function-name -- mirrors the Adw.NavigationView method name that NavStackAdapter requires
   get_navigation_stack(): ReturnType<NavStackAdapter['get_navigation_stack']> {
     const snapshot = this.stack;
     return {
-      // oxlint-disable-next-line sonarjs/function-name -- mirrors the Adw.NavigationView method name that NavStackAdapter requires
       get_n_items: () => snapshot.length,
-      // oxlint-disable-next-line sonarjs/function-name -- mirrors the Adw.NavigationView method name that NavStackAdapter requires
       get_item: (index: number) => {
         if (index < 0 || index >= snapshot.length) {
           return null;
         }
-        // oxlint-disable-next-line sonarjs/function-name -- mirrors Adw.NavigationPage.get_tag
         return { get_tag: () => snapshot[index] ?? null };
       },
     };

@@ -333,7 +333,6 @@ const getChannelEmit = (): ChannelEmit | null => {
   }
 };
 
-// oxlint-disable-next-line sonarjs/function-name -- React component (returns null, so the JSX-based exemption does not apply)
 const AnimationNamesEmitter = () => {
   const emittedRef = useRef(false);
   useEffect(() => {
@@ -355,7 +354,6 @@ const loadActiveSyncModule = async () => {
  * Emits SyncModule.__debug() snapshots to the manager-side Frappe addon panel.
  * Lazily resolves the frappe package — no-op if not installed or no SyncModule exists.
  */
-// oxlint-disable-next-line sonarjs/function-name -- React component (returns null, so the JSX-based exemption does not apply)
 const FrappeDebugEmitter = () => {
   const prevRef = useRef<string>('');
   const syncRef = useRef<SyncModule | null>(null);
@@ -440,7 +438,6 @@ const COLOR_STEP_COUNT = 12;
  * Publishes the resolved `<prefix>1..12` tokens of the surrounding Theme on `event`.
  * With `requireValue`, nothing is emitted until at least one step resolves.
  */
-// oxlint-disable-next-line sonarjs/function-name -- React component (returns null, so the JSX-based exemption does not apply)
 const ColorChannelEmitter = ({
   event,
   prefix = 'color',

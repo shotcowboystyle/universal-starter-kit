@@ -25,7 +25,6 @@ interface DocData {
 // Wraps a sync impl so it returns a Promise (throws become rejections), like the real async Frappe API.
 const toAsync =
   <Args extends unknown[], Result>(impl: (...args: Args) => Result) =>
-  // oxlint-disable-next-line eslint/require-await -- the wrapper is async on purpose; the inner impl is sync
   async (...args: Args) =>
     impl(...args);
 

@@ -12,7 +12,6 @@ const hasObjectUrls = (): boolean =>
   URL.createObjectURL != null &&
   URL.revokeObjectURL != null;
 
-// oxlint-disable-next-line eslint/require-await -- stays async so sync throws surface as rejections, matching the native implementation
 export const saveFile = async (options: FileSaveOptions): Promise<FileSaveResult> => {
   const input = prepareFileSave(options);
   if (!hasDomDownloads() || !hasObjectUrls()) {

@@ -296,7 +296,6 @@ if (typeof window !== 'undefined' && window.indexedDB == null) {
 // Stub fetch to prevent real network calls
 vi.stubGlobal(
   'fetch',
-  // oxlint-disable-next-line eslint/require-await -- fetch must return a Promise; async keeps that contract with a sync body
   vi.fn(async () => Response.json({ data: [] }, { status: 200, headers: { 'Content-Type': 'application/json' } })),
 );
 
@@ -460,12 +459,9 @@ vi.mock('one', async () => {
   return {
     default: {},
     // @repo/router re-exports Link from `one`; render a plain anchor in tests.
-    // oxlint-disable-next-line sonarjs/function-name -- React component mock; PascalCase is the component naming convention
     Link: ({ href, children, ...props }: { href: unknown; children?: React.ReactNode }) =>
       createElement('a', { ...props, href: String(href) }, children),
-    // oxlint-disable-next-line sonarjs/function-name -- React component mock; PascalCase is the component naming convention
     SafeAreaView: ({ children }: { children: React.ReactNode }) => createElement(Fragment, null, children),
-    // oxlint-disable-next-line sonarjs/function-name -- React component mock; PascalCase is the component naming convention
     Head: ({ children }: { children: React.ReactNode }) => createElement(Fragment, null, children),
     useRouter: () => ({
       push: vi.fn(),
@@ -488,9 +484,7 @@ vi.mock('@tamagui/animations-reanimated', () => ({
     useAnimatedNumber: (initial: any) => ({ value: initial, setValue: noop }),
     useAnimatedNumberReaction: noop,
     useAnimatedNumberStyle: () => ({}),
-    // oxlint-disable-next-line sonarjs/function-name -- React component mock; PascalCase is the component naming convention
     AnimatedView: ({ children }: any) => children,
-    // oxlint-disable-next-line sonarjs/function-name -- React component mock; PascalCase is the component naming convention
     AnimatedText: ({ children }: any) => children,
   }),
 }));
@@ -553,7 +547,6 @@ vi.mock('react-native-reanimated', () => ({
 vi.mock('@react-navigation/native', async () => {
   const { createElement, Fragment } = await import('react');
   return {
-    // oxlint-disable-next-line sonarjs/function-name -- React component mock; PascalCase is the component naming convention
     NavigationContainer: ({ children }: { children: React.ReactNode }) => createElement(Fragment, null, children),
     useNavigation: () => ({}),
     useRoute: () => ({}),

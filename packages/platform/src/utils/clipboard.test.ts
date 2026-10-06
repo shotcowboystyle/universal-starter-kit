@@ -12,7 +12,6 @@ const native = vi.hoisted(() => ({
   clipboard: null as ClipboardStub | null,
 }));
 vi.mock(import('react-native'), () => ({
-  // oxlint-disable-next-line sonarjs/function-name -- must match react-native's export name
   get Clipboard() {
     return native.clipboard as never;
   },

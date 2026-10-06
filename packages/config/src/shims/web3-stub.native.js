@@ -17,5 +17,4 @@
  * @param {{ children?: unknown }} props provider props
  * @returns {unknown} the children untouched, or null when there are none
  */
-// oxlint-disable-next-line sonarjs/function-name -- stands in for the real package's exported WalletProvider component, so the PascalCase name is the contract
 export const WalletProvider = ({ children }) => children ?? null;

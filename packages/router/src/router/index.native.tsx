@@ -11,7 +11,6 @@ export { Link, useParams, useRouter } from 'one';
  */
 export const usePathname = (): string => {
   try {
-    // oxlint-disable-next-line react/rule-suppression -- the suppression below is deliberate
     // oxlint-disable-next-line react-hooks/rules-of-hooks -- the try/catch only guards One's unguarded routeInfo read; the hook still runs on every render
     return useOnePathname() ?? '/';
   } catch {

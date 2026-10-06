@@ -28,7 +28,6 @@ const useOptionalRouter = (): OptionalRouter => {
     return {};
   }
   try {
-    // oxlint-disable-next-line react/rule-suppression -- the suppression below is deliberate
     // oxlint-disable-next-line react-hooks/rules-of-hooks -- hasRouter is fixed at module load, so call order is stable; the catch covers a host with no router context
     return { router: useRouter(), params: useParams() };
   } catch {
