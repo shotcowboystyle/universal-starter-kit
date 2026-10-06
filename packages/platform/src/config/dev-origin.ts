@@ -14,14 +14,14 @@ export interface DevOriginSource {
   hostUri?: string;
 }
 
-const loopbackOrigin = /^([a-z][a-z0-9+.-]*:\/\/)(localhost|127\.0\.0\.1)(?=[:/?#]|$)/iu;
+const loopbackOrigin = /^(?<scheme>[a-z][a-z0-9+.-]*:\/\/)(?:localhost|127\.0\.0\.1)(?=[:/?#]|$)/iu;
 
 /** The host part of a `host:port`, `scheme://host:port/path` or `[v6]:port` value. */
 export const devHostFromHostUri = (hostUri: string | undefined): string | undefined => {
-  if (!hostUri) {
+  if (hostUri === undefined || hostUri === '') {
     return undefined;
   }
-  const authority = hostUri.replace(/^[a-z][a-z0-9+.-]*:\/\//iu, '').split(/[/?#]/u, 1)[0];
+  const [authority] = hostUri.replace(/^[a-z][a-z0-9+.-]*:\/\//iu, '').split(/[/?#]/u, 1);
   const host = authority.startsWith('[') ? authority.slice(0, authority.indexOf(']') + 1) : authority.split(':', 1)[0];
   return host || undefined;
 };
@@ -42,8 +42,8 @@ export const resolveDevOrigin = (url: string, source: DevOriginSource = devOrigi
     return url;
   }
   const host = devHostFromHostUri(source.hostUri);
-  if (!host) {
+  if (host === undefined) {
     return url;
   }
-  return url.replace(loopbackOrigin, `$1${host}`);
+  return url.replace(loopbackOrigin, `$<scheme>${host}`);
 };

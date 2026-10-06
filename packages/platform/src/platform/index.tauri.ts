@@ -11,6 +11,7 @@ declare global {
 }
 
 const isIframe = (() => {
+  // oxlint-disable-next-line typescript/no-deprecated -- same @tamagui/constants flag platformBase exposes as isWindowDefined
   if (!isWindowDefined) {
     return false;
   }
@@ -38,5 +39,4 @@ export const platform: Platform = {
 platform.preciseName = getPreciseName(platform);
 platform.broadName = getBroadName(platform);
 
-export type { Platform };
-export type { PlatformName } from './platform-base';
+export type { Platform, PlatformName } from './platform-base';

@@ -4,7 +4,7 @@ import { devHostFromHostUri, resolveDevOrigin } from './dev-origin';
 
 const phone = { isWeb: false, hostUri: '10.0.0.5:3456' };
 
-describe('resolveDevOrigin', () => {
+describe(resolveDevOrigin, () => {
   it('returns the url unchanged on web, even with a hostUri', () => {
     expect(resolveDevOrigin('http://localhost:8000', { isWeb: true, hostUri: '10.0.0.5:3456' })).toBe(
       'http://localhost:8000',
@@ -49,7 +49,7 @@ describe('resolveDevOrigin', () => {
   });
 });
 
-describe('devHostFromHostUri', () => {
+describe(devHostFromHostUri, () => {
   it('takes the host out of host:port', () => {
     expect(devHostFromHostUri('10.0.0.5:3456')).toBe('10.0.0.5');
     expect(devHostFromHostUri('dev.local')).toBe('dev.local');
@@ -65,6 +65,7 @@ describe('devHostFromHostUri', () => {
   });
 
   it('returns undefined for nothing', () => {
+    // oxlint-disable-next-line unicorn/no-useless-undefined -- undefined is the case under test
     expect(devHostFromHostUri(undefined)).toBeUndefined();
     expect(devHostFromHostUri('')).toBeUndefined();
     expect(devHostFromHostUri(':3456')).toBeUndefined();

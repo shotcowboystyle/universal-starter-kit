@@ -2,20 +2,20 @@ export const getCookie = (name: string): string | null => {
   if (typeof document === 'undefined') {
     return null;
   }
-  const match = new RegExp(`(?:^|; )${name.replaceAll(/[.*+?^${}()|[\]\\]/gu, '\\$&')}=([^;]*)`).exec(document.cookie);
+  const match = new RegExp(`(?:^|; )${name.replaceAll(/[.*+?^${}()|[\]\\]/gu, '\\$&')}=([^;]*)`, 'u').exec(
+    document.cookie,
+  );
   return match ? decodeURIComponent(match[1]) : null;
 };
 
-export const setCookie = (
-  name: string,
-  value: string,
-  options: {
-    days?: number;
-    path?: string;
-    sameSite?: 'Strict' | 'Lax' | 'None';
-    secure?: boolean;
-  } = {},
-): void => {
+export interface CookieOptions {
+  days?: number;
+  path?: string;
+  sameSite?: 'Strict' | 'Lax' | 'None';
+  secure?: boolean;
+}
+
+export const setCookie = (name: string, value: string, options: CookieOptions = {}): void => {
   if (typeof document === 'undefined') {
     return;
   }
@@ -28,6 +28,7 @@ export const setCookie = (
   if (secure) {
     cookie += '; Secure';
   }
+  // oxlint-disable-next-line unicorn/no-document-cookie -- the async Cookie Store API is not available on every supported web target
   document.cookie = cookie;
 };
 
@@ -35,5 +36,6 @@ export const deleteCookie = (name: string, path = '/'): void => {
   if (typeof document === 'undefined') {
     return;
   }
+  // oxlint-disable-next-line unicorn/no-document-cookie -- the async Cookie Store API is not available on every supported web target
   document.cookie = `${encodeURIComponent(name)}=; path=${path}; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
 };

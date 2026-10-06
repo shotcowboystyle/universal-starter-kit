@@ -21,10 +21,19 @@ const isIframe = (() => {
   }
 })();
 
-const isWebExtension = !!(
+const isWebExtension =
   (typeof chrome !== 'undefined' && !!chrome?.runtime?.id) ||
-  (typeof browser !== 'undefined' && !!browser?.runtime?.id)
-);
+  (typeof browser !== 'undefined' && !!browser?.runtime?.id);
+
+const hasNextData = (): boolean => {
+  if (!platformBase.isWindowDefined) {
+    return true;
+  }
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- SAFETY: a plain property read of Next's injected global, absent outside Next
+  const nextWindow = window as { __NEXT_DATA__?: unknown };
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- tells an object payload apart from absent or non-object values
+  return typeof nextWindow.__NEXT_DATA__ === 'object';
+};
 
 export const platform: Platform = {
   ...platformBase,
@@ -32,14 +41,11 @@ export const platform: Platform = {
   isFirefoxExtension: typeof browser !== 'undefined' && !!browser?.runtime?.id,
   isIframe,
   isWebExtension,
-  isBrowser: !!(platformBase.isWeb && platformBase.isWindowDefined && !isWebExtension),
-  isNext:
-    platformBase.isWeb &&
-    (!platformBase.isWindowDefined || typeof (window as { __NEXT_DATA__?: unknown }).__NEXT_DATA__ === 'object'),
-  isFirefox: platformBase.isWindowDefined && !!window?.navigator?.userAgent?.toLowerCase().includes('firefox'),
+  isBrowser: platformBase.isWeb && platformBase.isWindowDefined && !isWebExtension,
+  isNext: platformBase.isWeb && hasNextData(),
+  isFirefox: platformBase.isWindowDefined && (window?.navigator?.userAgent?.toLowerCase().includes('firefox') ?? false),
 };
 platform.preciseName = getPreciseName(platform);
 platform.broadName = getBroadName(platform);
 
-export type { Platform };
-export type { PlatformName } from './platform-base';
+export type { Platform, PlatformName } from './platform-base';

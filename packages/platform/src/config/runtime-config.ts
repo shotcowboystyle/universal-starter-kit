@@ -25,6 +25,11 @@
  * returned object.
  */
 
+declare global {
+  // oxlint-disable-next-line sonarjs/variable-name -- the property name is the published global's name
+  var __mp_public_config__: unknown;
+}
+
 /** Global the SSR document publishes the resolved public config under. */
 export const runtimePublicConfigKey = '__mp_public_config__';
 
@@ -53,14 +58,14 @@ export const bakedConfigEnvKey = 'VITE_MP_CONFIG';
  * is ever seen. Where nothing defined the keys and `process` does not exist,
  * the reads throw and the catch returns `{}`.
  */
-const bakedEnv = (): Record<string, string | undefined> => {
+const bakedEnv = (): Map<string, string | undefined> => {
   try {
-    return {
-      VITE_MP_CONFIG: process.env.VITE_MP_CONFIG,
-      VITE_MP_PUBLIC_CONFIG_KEYS: process.env.VITE_MP_PUBLIC_CONFIG_KEYS,
-    };
+    return new Map([
+      ['VITE_MP_CONFIG', process.env.VITE_MP_CONFIG],
+      ['VITE_MP_PUBLIC_CONFIG_KEYS', process.env.VITE_MP_PUBLIC_CONFIG_KEYS],
+    ]);
   } catch {
-    return {};
+    return new Map();
   }
 };
 
@@ -71,16 +76,17 @@ const processEnv = (): Record<string, string | undefined> => {
     if (typeof process === 'undefined') {
       return {};
     }
-    return (process.env || {}) as Record<string, string | undefined>;
+    return process.env ?? {};
   } catch {
     return {};
   }
 };
 
-const readBuildEnv = (key: string): string | undefined => bakedEnv()[key] ?? processEnv()[key];
+const readBuildEnv = (key: string): string | undefined => bakedEnv().get(key) ?? processEnv()[key];
 
+// oxlint-disable-next-line anti-slop/no-unknown-returns -- JSON boundary: callers validate the shape they need
 const parseJson = (raw: string | undefined): unknown => {
-  if (!raw) {
+  if (raw === undefined || raw === '') {
     return undefined;
   }
   try {
@@ -90,13 +96,19 @@ const parseJson = (raw: string | undefined): unknown => {
   }
 };
 
-const stringifyValues = (source: Record<string, unknown>): Record<string, string> =>
-  Object.entries(source).reduce<Record<string, string>>((acc, [key, value]) => {
-    if (typeof value !== 'undefined' && value !== null) {
-      acc[key] = String(value);
+const isPlainObject = (value: unknown): value is object =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const stringifyEntries = (entries: [string, unknown][]): Record<string, string> => {
+  const stringified = new Map<string, string>();
+  for (const [key, value] of entries) {
+    if (value !== undefined && value !== null) {
+      // oxlint-disable-next-line typescript/no-base-to-string -- non-string payload values keep the established String() coercion
+      stringified.set(key, String(value));
     }
-    return acc;
-  }, {});
+  }
+  return Object.fromEntries(stringified);
+};
 
 /**
  * The PUBLIC key allowlist baked at build time. Empty when the app was not
@@ -115,10 +127,10 @@ export const publicConfigKeys = (): string[] => {
 /** Public config values baked into the bundle at BUILD time. */
 export const bakedPublicConfig = (): Record<string, string> => {
   const parsed = parseJson(readBuildEnv(bakedConfigEnvKey));
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+  if (!isPlainObject(parsed)) {
     return {};
   }
-  return stringifyValues(parsed as Record<string, unknown>);
+  return stringifyEntries(Object.entries(parsed));
 };
 
 /**
@@ -130,25 +142,26 @@ export const bakedPublicConfig = (): Record<string, string> => {
  */
 export const resolvePublicConfig = (env: Record<string, string | undefined> = processEnv()): Record<string, string> => {
   const baked = bakedPublicConfig();
-  return publicConfigKeys().reduce<Record<string, string>>((acc, key) => {
+  const resolved = new Map<string, string>();
+  for (const key of publicConfigKeys()) {
     const value = env[key] ?? baked[key];
-    if (typeof value === 'string' && value.length > 0) {
-      acc[key] = value;
+    if (value !== undefined && value.length > 0) {
+      resolved.set(key, value);
     }
-    return acc;
-  }, {});
+  }
+  return Object.fromEntries(resolved);
 };
 
 /** The config the served document published, when there is one. */
 export const readRuntimePublicConfig = (): Record<string, string> | undefined => {
-  const raw = (globalThis as unknown as Record<string, unknown>)[runtimePublicConfigKey];
-  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+  const raw = globalThis[runtimePublicConfigKey];
+  if (!isPlainObject(raw)) {
     return undefined;
   }
-  return stringifyValues(raw as Record<string, unknown>);
+  return stringifyEntries(Object.entries(raw));
 };
 
-const safeJsonStringify = (value: unknown): string =>
+const safeJsonStringify = (value: Record<string, string>): string =>
   JSON.stringify(value ?? {})
     .replaceAll('<', '\\u003c')
     .replaceAll('>', '\\u003e')

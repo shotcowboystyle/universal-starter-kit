@@ -1,31 +1,49 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
+import type { OneRouter } from 'one';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import * as router from '../router';
+import { useParams, useRouter } from '../router';
 
 import { useSearchParams, useTypedSearchParams, useUrlState } from './use-url-state';
 
 // Mock the router module
-vi.mock('../router', () => {
-  const mockSetParams = vi.fn();
-  return {
-    useParams: vi.fn(() => ({})),
-    useRouter: vi.fn(() => ({
-      setParams: mockSetParams,
-    })),
-  };
+vi.mock(import('../router'), () => ({
+  useParams: vi.fn<typeof useParams>(),
+  useRouter: vi.fn<typeof useRouter>(),
+}));
+
+const noop = (): void => {
+  // intentionally empty
+};
+
+const createRouter = (
+  setParams: OneRouter.Router['setParams'] = vi.fn<OneRouter.Router['setParams']>(),
+): OneRouter.Router => ({
+  back: vi.fn<OneRouter.Router['back']>(),
+  canGoBack: vi.fn<OneRouter.Router['canGoBack']>(() => false),
+  push: vi.fn<OneRouter.Router['push']>(),
+  navigate: vi.fn<OneRouter.Router['navigate']>(),
+  replace: vi.fn<OneRouter.Router['replace']>(),
+  dismiss: vi.fn<OneRouter.Router['dismiss']>(),
+  dismissAll: vi.fn<OneRouter.Router['dismissAll']>(),
+  canDismiss: vi.fn<OneRouter.Router['canDismiss']>(() => false),
+  setParams,
+  subscribe: vi.fn<OneRouter.Router['subscribe']>(() => noop),
+  onLoadState: vi.fn<OneRouter.Router['onLoadState']>(() => noop),
 });
 
 // Get the mocked functions
-const mockUseParams = router.useParams as ReturnType<typeof vi.fn>;
-const mockUseRouter = router.useRouter as ReturnType<typeof vi.fn>;
+const mockUseParams = vi.mocked(useParams);
+const mockUseRouter = vi.mocked(useRouter);
 
-describe('useUrlState', () => {
+describe(useUrlState, () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseParams.mockReturnValue({});
+    mockUseRouter.mockReturnValue(createRouter());
   });
 
-  describe('useSearchParams', () => {
+  describe(useSearchParams, () => {
     it('should return current search params', () => {
       mockUseParams.mockReturnValue({ foo: 'bar', baz: 'qux' });
 
@@ -36,8 +54,8 @@ describe('useUrlState', () => {
     });
 
     it('should update search params', () => {
-      const setParamsMock = vi.fn();
-      mockUseRouter.mockReturnValue({ setParams: setParamsMock });
+      const setParamsMock = vi.fn<OneRouter.Router['setParams']>();
+      mockUseRouter.mockReturnValue(createRouter(setParamsMock));
 
       const { result } = renderHook(() => useSearchParams());
       const [, setParams] = result.current;
@@ -50,9 +68,9 @@ describe('useUrlState', () => {
     });
 
     it('should support function updates', () => {
-      const setParamsMock = vi.fn();
+      const setParamsMock = vi.fn<OneRouter.Router['setParams']>();
       mockUseParams.mockReturnValue({ existing: 'value' });
-      mockUseRouter.mockReturnValue({ setParams: setParamsMock });
+      mockUseRouter.mockReturnValue(createRouter(setParamsMock));
 
       const { result } = renderHook(() => useSearchParams());
       const [, setParams] = result.current;
@@ -68,8 +86,8 @@ describe('useUrlState', () => {
     });
 
     it('should debounce updates when specified', async () => {
-      const setParamsMock = vi.fn();
-      mockUseRouter.mockReturnValue({ setParams: setParamsMock });
+      const setParamsMock = vi.fn<OneRouter.Router['setParams']>();
+      mockUseRouter.mockReturnValue(createRouter(setParamsMock));
 
       const { result } = renderHook(() => useSearchParams());
       const [, setParams] = result.current;
@@ -89,7 +107,7 @@ describe('useUrlState', () => {
     });
   });
 
-  describe('useUrlState', () => {
+  describe(useUrlState, () => {
     it('should initialize with default values', () => {
       mockUseParams.mockReturnValue({});
 
@@ -119,9 +137,9 @@ describe('useUrlState', () => {
     });
 
     it('should serialize state to URL params', () => {
-      const setParamsMock = vi.fn();
+      const setParamsMock = vi.fn<OneRouter.Router['setParams']>();
       mockUseParams.mockReturnValue({});
-      mockUseRouter.mockReturnValue({ setParams: setParamsMock });
+      mockUseRouter.mockReturnValue(createRouter(setParamsMock));
 
       const defaultValues = { name: '', age: 0, active: false };
       const { result } = renderHook(() => useUrlState(defaultValues, { debounceMs: 0 }));
@@ -167,7 +185,7 @@ describe('useUrlState', () => {
     });
   });
 
-  describe('useTypedSearchParams', () => {
+  describe(useTypedSearchParams, () => {
     it('should parse params with schema', () => {
       mockUseParams.mockReturnValue({
         page: '2',
@@ -178,11 +196,13 @@ describe('useUrlState', () => {
       const schema = {
         page: {
           default: 1,
-          parse: (value: string | string[] | undefined) => (value ? Number.parseInt(String(value), 10) : 1),
+          parse: (value: string | string[] | undefined) =>
+            value === undefined || value === '' ? 1 : Math.trunc(Number(String(value))),
         },
         limit: {
           default: 20,
-          parse: (value: string | string[] | undefined) => (value ? Number.parseInt(String(value), 10) : 20),
+          parse: (value: string | string[] | undefined) =>
+            value === undefined || value === '' ? 20 : Math.trunc(Number(String(value))),
         },
         search: {
           default: '',

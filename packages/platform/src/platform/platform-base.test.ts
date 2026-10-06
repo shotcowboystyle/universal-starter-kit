@@ -31,7 +31,7 @@ const makePlatform = (overrides: Partial<Platform> = {}): Platform => ({
   ...overrides,
 });
 
-describe('getPreciseName', () => {
+describe(getPreciseName, () => {
   it('returns "unknown" when no flags are true', () => {
     expect(getPreciseName(makePlatform())).toBe('unknown');
   });
@@ -75,7 +75,7 @@ describe('getPreciseName', () => {
   });
 });
 
-describe('getBroadName', () => {
+describe(getBroadName, () => {
   it('returns "unknown" when no flags are true', () => {
     expect(getBroadName(makePlatform())).toBe('unknown');
   });

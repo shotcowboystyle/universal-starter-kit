@@ -110,6 +110,9 @@ export default defineConfig({
         'anti-slop/no-chained-type-assertions': 'off',
         'anti-slop/no-module-mocking': 'off',
         'anti-slop/require-safety-comment-for-type-assertion': 'off',
+        // Fixtures use loopback/LAN origins (http://localhost, 10.0.0.5) on purpose.
+        'sonarjs/no-clear-text-protocols': 'off',
+        'sonarjs/no-hardcoded-ip': 'off',
         'typescript/no-explicit-any': 'off',
         'typescript/no-non-null-assertion': 'off',
         'typescript/no-unsafe-argument': 'off',

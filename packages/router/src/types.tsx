@@ -1,7 +1,7 @@
 import type { OneRouter } from 'one';
 import type { CSSProperties, ReactElement, ReactNode } from 'react';
 
-export type Href = OneRouter.Href<{ __branded__: any }>;
+export type Href = OneRouter.Href;
 export type LoadingState = 'loading' | 'loaded' | 'error';
 export type ResultState = 'success' | 'error';
 export type RootStateListener = (state: ResultState) => void;
@@ -34,6 +34,7 @@ export interface LinkProps {
   children?: ReactNode;
   style?: CSSProperties;
   className?: string;
+  // oxlint-disable-next-line typescript/no-explicit-any, anti-slop/no-unsafe-dictionary-type -- pass-through for arbitrary host link props (DOM attributes, native props)
   [key: string]: any;
 }
 
@@ -41,3 +42,6 @@ export interface LinkComponent {
   (props: LinkProps): ReactElement;
   resolveHref: (href: Href) => string;
 }
+
+// Href may be an object form; String() is the coercion every router implementation already applied.
+export const hrefToString: (href: Href) => string = String;

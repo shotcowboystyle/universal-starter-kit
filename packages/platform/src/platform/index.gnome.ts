@@ -48,5 +48,4 @@ export const platform: Platform = {
 platform.preciseName = getPreciseName(platform);
 platform.broadName = getBroadName(platform);
 
-export type { Platform };
-export type { PlatformName } from './platform-base';
+export type { Platform, PlatformName } from './platform-base';

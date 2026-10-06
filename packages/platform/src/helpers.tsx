@@ -1,6 +1,6 @@
-import type { ComponentType } from 'react';
+import type { Attributes, ComponentType } from 'react';
 
-const isPerformanceNow = typeof performance !== 'undefined' && performance.now;
+const isPerformanceNow = typeof performance !== 'undefined' && 'now' in performance;
 const date = isPerformanceNow ? performance : Date;
 let _previousUnique: number;
 
@@ -16,20 +16,16 @@ export const fastUnique = () => {
   return unique.toString();
 };
 
+const REACT_ELEMENT_KEYS = ['_owner', '_store', 'key', 'props', 'ref', 'type'] as const;
+
+const isString = (value: unknown): value is string => typeof value === 'string';
+
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- JSX children are arbitrary
 export const isText = (children: unknown) => {
   if (Array.isArray(children)) {
-    return (
-      children.length > 1 &&
-      typeof children[0] === 'string' &&
-      '_owner' in children[1] &&
-      '_store' in children[1] &&
-      'key' in children[1] &&
-      'props' in children[1] &&
-      'ref' in children[1] &&
-      'type' in children[1]
-    );
+    return children.length > 1 && isString(children[0]) && REACT_ELEMENT_KEYS.every((key) => key in children[1]);
   }
-  return typeof children === 'string';
+  return isString(children);
 };
 
 const flattenLayouts = <Props,>(layout: ComponentType<Props>, [...layouts]: WithLayout[]): ComponentType<Props> => {
@@ -44,16 +40,21 @@ export const createWithLayout = <LayoutProps,>(
   Layout: ComponentType<LayoutProps>,
   extraLayouts: WithLayout[] = [],
   layoutProps?: Omit<LayoutProps, 'children'>,
-): WithLayout =>
-  ((Component: ComponentType<unknown>) =>
-    flattenLayouts(
-      (props: unknown) => (
-        <Layout {...(layoutProps as LayoutProps)}>
-          <Component {...(props as any)} />
+): WithLayout => {
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- SAFETY: children are supplied by JSX below, so layoutProps (Omit<LayoutProps, 'children'>) completes LayoutProps
+  const fullLayoutProps = layoutProps as LayoutProps;
+  const withLayout: WithLayout = (Component) =>
+    flattenLayouts((props) => {
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- SAFETY: Attributes only adds an optional `key`, which these forwarded props never carry
+      const componentProps = props as Attributes & typeof props;
+      return (
+        <Layout {...fullLayoutProps}>
+          <Component {...componentProps} />
         </Layout>
-      ),
-      extraLayouts,
-    )) as WithLayout;
+      );
+    }, extraLayouts);
+  return withLayout;
+};
 
 export type WithLayout = <Props>(Component: ComponentType<Props>) => ComponentType<Props>;
 

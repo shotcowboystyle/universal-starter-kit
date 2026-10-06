@@ -33,9 +33,15 @@ export interface LoaderProps<Params = Record<string, string | string[] | undefin
   request?: Request;
 }
 
+const noop = (): void => {
+  // intentionally empty
+};
+
+// oxlint-disable-next-line anti-slop/no-unknown-returns, typescript/no-unnecessary-type-parameters -- mirrors One's useLoader<T>(loader): the caller names the loader's data type
 export const useLoader = <T,>(_loader: (...args: never[]) => unknown): T | undefined => {
   const tag = useContext(RouteTagContext);
   const fromRoute = useSyncExternalStore(stackNavigator.subscribe, () => stackNavigator.loaderSnapshot(tag));
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- SAFETY: the route's loader produced this value, and the caller names that loader's data type as T
   return fromRoute as T | undefined;
 };
 
@@ -50,13 +56,13 @@ const ROUTER = {
   back: stackNavigator.back,
   canGoBack: () => stackNavigator.getSnapshot().canGoBack,
   dismiss: (count?: number) => {
-    for (let i = 0; i < (count ?? 1); i++) {
+    for (let i = 0; i < (count ?? 1); i += 1) {
       stackNavigator.back();
     }
   },
   dismissAll: () => {
     const { depth } = stackNavigator.getSnapshot();
-    for (let i = 1; i < depth; i++) {
+    for (let i = 1; i < depth; i += 1) {
       stackNavigator.back();
     }
   },
@@ -64,11 +70,11 @@ const ROUTER = {
   setParams: stackNavigator.setParams,
   subscribe: (listener: (state: 'success' | 'error') => void) => {
     listener('success');
-    return () => {};
+    return noop;
   },
   onLoadState: (listener: (state: 'loading' | 'loaded') => void) => {
     listener('loaded');
-    return () => {};
+    return noop;
   },
 };
 
@@ -84,7 +90,7 @@ export interface LinkProps extends Omit<AnchorHTMLAttributes<HTMLAnchorElement>,
  *  Degrades to rendering children in place when no route manifest is
  *  configured (single-screen entries — no route stack exists there). */
 export const Link = ({ href, replace, children, style, ...rest }: LinkProps): ReactNode => {
-  if (!href || !stackNavigator.isConfigured) {
+  if (href === undefined || href === '' || !stackNavigator.isConfigured) {
     return children ?? null;
   }
   const hrefString = hrefToString(href);
@@ -115,6 +121,7 @@ export const Link = ({ href, replace, children, style, ...rest }: LinkProps): Re
  *  has no nested-layout mounting — every route is its own host page — so
  *  layouts that render <Slot /> contribute chrome only; the child screen is
  *  mounted by the navigation host instead. Renders nothing by design. */
+// oxlint-disable-next-line sonarjs/function-name, anti-slop/no-unsafe-dictionary-type -- React component named after One's <Slot />; accepts One's arbitrary props
 export const Slot = (_props: Record<string, unknown>): null => null;
 
 export const useParams = (): NavParams => useRouteParams();
@@ -133,16 +140,21 @@ export const usePathname = (): string =>
  *  block (in-app navigation confirms dirty transitions itself), so this is
  *  a no-op that always reports "unblocked". Shape matches one/react-router's
  *  useBlocker return. */
-export const useBlocker = (
-  _shouldBlock?: unknown,
-): {
+interface Blocker {
   state: 'unblocked' | 'blocked' | 'proceeding';
   proceed: () => void;
   reset: () => void;
-} => ({ state: 'unblocked', proceed: () => {}, reset: () => {} });
+}
+
+export const useBlocker = (_shouldBlock?: boolean | (() => boolean)): Blocker => ({
+  state: 'unblocked',
+  proceed: noop,
+  reset: noop,
+});
 
 /** Inert stand-in for One's route-transition progress bar (SSR-era chrome
  *  with no meaning on a stack host). */
+// oxlint-disable-next-line sonarjs/function-name, anti-slop/no-unsafe-dictionary-type -- React component named after One's <LoadProgressBar />; accepts One's arbitrary props
 export const LoadProgressBar = (_props: Record<string, unknown>): null => null;
 
 /** One's useMatches returns the matched route chain; the seam mounts one

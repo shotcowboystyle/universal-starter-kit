@@ -1,3 +1,3 @@
-import type { StyleProp as RNStyleProp } from 'react-native';
+import type { ImageStyle, StyleProp as RNStyleProp, TextStyle, ViewStyle } from 'react-native';
 
-export type StyleProp = RNStyleProp<any>;
+export type StyleProp = RNStyleProp<ImageStyle | TextStyle | ViewStyle>;

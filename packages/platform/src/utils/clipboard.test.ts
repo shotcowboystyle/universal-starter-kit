@@ -3,31 +3,38 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { writeToClipboard } from './clipboard';
 import { writeToClipboard as writeNativeClipboard } from './clipboard.native';
 
+interface ClipboardStub {
+  getString: () => Promise<string>;
+  setString: (content: string) => void;
+}
+
 const native = vi.hoisted(() => ({
-  clipboard: undefined as { setString: (text: string) => void } | undefined,
+  clipboard: null as ClipboardStub | null,
 }));
-vi.mock('react-native', () => ({
+vi.mock(import('react-native'), () => ({
+  // oxlint-disable-next-line sonarjs/function-name -- must match react-native's export name
   get Clipboard() {
-    return native.clipboard;
+    return native.clipboard as never;
   },
 }));
 
-describe('writeToClipboard', () => {
+describe(writeToClipboard, () => {
+  const writeText = vi.fn<(text: string) => Promise<void>>();
+
   beforeEach(() => {
-    vi.stubGlobal('navigator', {
-      clipboard: { writeText: vi.fn().mockResolvedValue(undefined) },
-    });
+    writeText.mockReset().mockResolvedValue();
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
   });
 
   it('returns true when clipboard write succeeds', async () => {
     await expect(writeToClipboard('hello')).resolves.toBe(true);
-    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('hello');
+    expect(writeText).toHaveBeenCalledWith('hello');
   });
 
   it('returns false when clipboard write fails', async () => {
     vi.stubGlobal('navigator', {
       clipboard: {
-        writeText: vi.fn().mockRejectedValue(new Error('denied')),
+        writeText: vi.fn<(text: string) => Promise<void>>().mockRejectedValue(new Error('denied')),
       },
     });
     await expect(writeToClipboard('hello')).resolves.toBe(false);
@@ -36,23 +43,24 @@ describe('writeToClipboard', () => {
 
 describe('native writeToClipboard', () => {
   it('writes through the existing React Native clipboard and resolves true', async () => {
-    const setString = vi.fn();
-    native.clipboard = { setString };
+    const setString = vi.fn<(text: string) => void>();
+    native.clipboard = { setString, getString: vi.fn<() => Promise<string>>() };
     await expect(writeNativeClipboard('native copy proof')).resolves.toBe(true);
     expect(setString).toHaveBeenCalledWith('native copy proof');
   });
 
   it('returns false when native copying throws', async () => {
     native.clipboard = {
-      setString: () => {
+      getString: vi.fn<() => Promise<string>>(),
+      setString: vi.fn<(text: string) => void>(() => {
         throw new Error('Clipboard unavailable');
-      },
+      }),
     };
     await expect(writeNativeClipboard('hello')).resolves.toBe(false);
   });
 
   it('returns false if a future native runtime removes Clipboard', async () => {
-    native.clipboard = undefined;
+    native.clipboard = null;
     await expect(writeNativeClipboard('hello')).resolves.toBe(false);
   });
 });

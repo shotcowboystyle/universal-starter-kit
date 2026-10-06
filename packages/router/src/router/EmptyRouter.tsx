@@ -1,7 +1,14 @@
+import { hrefToString } from '../types';
 import type { Href, LinkComponent, Router } from '../types';
 
 // Storybook/test stub router: navigation is a no-op (a logger here would recurse into itself).
-const log = (..._args: unknown[]) => {};
+const noop = (): void => {
+  // intentionally empty
+};
+
+const log = (..._args: unknown[]): void => {
+  // intentionally empty
+};
 
 export const useRouter = (): Router => ({
   back: () => {
@@ -9,13 +16,13 @@ export const useRouter = (): Router => ({
   },
   canGoBack: () => false,
   push: (href: Href) => {
-    log('push', String(href));
+    log('push', hrefToString(href));
   },
   navigate: (href: Href) => {
-    log('navigate', String(href));
+    log('navigate', hrefToString(href));
   },
   replace: (href: Href) => {
-    log('replace', String(href));
+    log('replace', hrefToString(href));
   },
   dismiss: (count?: number) => {
     log('dismiss', count ?? 1);
@@ -29,11 +36,11 @@ export const useRouter = (): Router => ({
   },
   subscribe: (listener) => {
     listener('success');
-    return () => {};
+    return noop;
   },
   onLoadState: (listener) => {
     listener('loaded');
-    return () => {};
+    return noop;
   },
 });
 
@@ -44,11 +51,11 @@ export const useParams = () => ({});
 export const Link: LinkComponent = ({ href, replace, children, ...props }) => {
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    log(replace ? 'replace' : 'push', String(href));
+    log(replace ? 'replace' : 'push', hrefToString(href));
   };
   return (
     <a
-      href={href as string}
+      href={hrefToString(href)}
       onClick={handleClick}
       {...props}>
       {children}
@@ -56,11 +63,8 @@ export const Link: LinkComponent = ({ href, replace, children, ...props }) => {
   );
 };
 
-Link.resolveHref = (href: Href) => href.toString();
+Link.resolveHref = hrefToString;
 
-export const useUrlState = <T extends Record<string, any>>(
+export const useUrlState = <T extends object>(
   defaultValues: T,
-): [T, (newState: Partial<T> | ((prev: T) => Partial<T>)) => void] => {
-  const setState = () => {};
-  return [defaultValues, setState];
-};
+): [T, (newState: Partial<T> | ((prev: T) => Partial<T>)) => void] => [defaultValues, noop];

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DomStackAdapter } from './DomNavigationHost';
 import { hrefToString, stackNavigator } from './navigator';
+import type { RouteLoader } from './navigator';
 
 const ROUTES = [
   { pattern: '/', tag: 'home', title: 'Home' },
@@ -24,7 +25,7 @@ const flush = async (): Promise<void> => {
   await Promise.resolve();
 };
 
-describe('hrefToString', () => {
+describe(hrefToString, () => {
   it('substitutes [param] tokens and appends leftovers as query', () => {
     expect(hrefToString({ pathname: '/pokemon/[id]', params: { id: 'mew' } })).toBe('/pokemon/mew');
     expect(hrefToString({ pathname: '/todos', params: { filter: 'open' } })).toBe('/todos?filter=open');
@@ -143,8 +144,9 @@ describe('StackNavigator', () => {
     // duplicate page as a programming error) — replacing to a page that's
     // already beneath pops the stack to a single occurrence of it.
     const adapter = attachDomHost();
-    stackNavigator.push('/todos');
-    stackNavigator.push('/pokemon/mew');
+    for (const href of ['/todos', '/pokemon/mew']) {
+      stackNavigator.push(href);
+    }
     stackNavigator.replace('/todos');
     expect(stackNavigator.getSnapshot()).toMatchObject({ tag: 'todos', depth: 2 });
     const model = adapter.get_navigation_stack();
@@ -197,7 +199,7 @@ describe('StackNavigator', () => {
 
   it("resolves a queued navigation's loader at apply time, not enqueue time", async () => {
     const log = vi.spyOn(console, 'log').mockImplementation(() => {});
-    const loader = vi.fn(async () => 'fresh');
+    const loader = vi.fn<RouteLoader>(async () => await Promise.resolve('fresh'));
     stackNavigator.configure([ROUTES[0], { pattern: '/todos', tag: 'todos', title: 'Todos', loader }]);
     stackNavigator.push('/todos');
     // Queued — the loader must not run until a host can apply the result.
@@ -234,8 +236,8 @@ describe('StackNavigator', () => {
   });
 
   it('resolves loaders before the host action (loader bridge)', async () => {
-    let resolveLoader: (value: string) => void = () => {};
-    const loader = vi.fn(async () => await new Promise<string>((resolvePromise) => (resolveLoader = resolvePromise)));
+    const { promise, resolve } = Promise.withResolvers<string>();
+    const loader = vi.fn<RouteLoader>(async () => await promise);
     stackNavigator.configure([ROUTES[0], { pattern: '/todos', tag: 'todos', title: 'Todos', loader }]);
     attachDomHost();
 
@@ -245,28 +247,29 @@ describe('StackNavigator', () => {
     expect(stackNavigator.getSnapshot().tag).toBe('home');
     expect(stackNavigator.loaderSnapshot('todos')).toBeUndefined();
 
-    resolveLoader('loaded');
+    resolve('loaded');
     await flush();
     expect(stackNavigator.getSnapshot().tag).toBe('todos');
     expect(stackNavigator.loaderSnapshot('todos')).toBe('loaded');
   });
 
   it('drops a loader navigation superseded by back()', async () => {
-    let resolveLoader: (value: string) => void = () => {};
-    const loader = async () => await new Promise<string>((resolvePromise) => (resolveLoader = resolvePromise));
+    const { promise, resolve } = Promise.withResolvers<string>();
+    const loader: RouteLoader = async () => await promise;
     stackNavigator.configure([ROUTES[0], { pattern: '/todos', tag: 'todos', title: 'Todos', loader }]);
     attachDomHost();
 
     stackNavigator.push('/todos');
-    stackNavigator.back(); // supersedes the in-flight loader navigation
-    resolveLoader('late');
+    // supersedes the in-flight loader navigation
+    stackNavigator.back();
+    resolve('late');
     await flush();
     expect(stackNavigator.getSnapshot().tag).toBe('home');
     expect(stackNavigator.loaderSnapshot('todos')).toBeUndefined();
   });
 
   it('re-runs the loader on param-only navigation to the top route', async () => {
-    const loader = vi.fn(async ({ params }: { params: Record<string, unknown> }) => `doc:${params.id}`);
+    const loader = vi.fn<RouteLoader>(async ({ params }) => await Promise.resolve(`doc:${String(params.id)}`));
     stackNavigator.configure([ROUTES[0], { pattern: '/pokemon/[id]', tag: 'pokemon-detail', title: 'Detail', loader }]);
     const adapter = attachDomHost();
 
@@ -284,7 +287,7 @@ describe('StackNavigator', () => {
   });
 
   it('preload resolves the loader without navigating', async () => {
-    const loader = vi.fn(async () => 'preloaded');
+    const loader = vi.fn<RouteLoader>(async () => await Promise.resolve('preloaded'));
     stackNavigator.configure([{ pattern: '/', tag: 'home', title: 'Home', loader }, ROUTES[1]]);
     await stackNavigator.preload('/');
     expect(stackNavigator.loaderSnapshot('home')).toBe('preloaded');

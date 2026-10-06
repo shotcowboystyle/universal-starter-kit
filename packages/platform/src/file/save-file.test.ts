@@ -1,18 +1,28 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { MockInstance } from 'vitest';
 
 import { FileSaveError, saveFile } from './index';
 
+const options = () => ({
+  bytes: new Uint8Array([0, 255, 13, 10]),
+  filename: 'café.bin',
+  mimeType: 'application/octet-stream',
+});
+
 describe('web byte save', () => {
-  const options = () => ({
-    bytes: new Uint8Array([0, 255, 13, 10]),
-    filename: 'café.bin',
-    mimeType: 'application/octet-stream',
-  });
+  let click: MockInstance<HTMLAnchorElement['click']>;
+  let createObjectURL: MockInstance<(typeof URL)['createObjectURL']>;
+  let revokeObjectURL: MockInstance<(typeof URL)['revokeObjectURL']>;
+
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
-    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:fixture');
-    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {
+      // intentionally empty: no navigation under test
+    });
+    createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:fixture');
+    revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {
+      // intentionally empty: nothing to release under test
+    });
   });
   afterEach(() => {
     vi.runAllTimers();
@@ -24,26 +34,26 @@ describe('web byte save', () => {
   it('requests a download with the exact byte view and filename', async () => {
     const input = options();
     input.bytes = new Uint8Array([99, 0, 255, 13, 10, 88]).subarray(1, 5);
-    vi.mocked(HTMLAnchorElement.prototype.click).mockImplementation(function (this: HTMLAnchorElement) {
+    click.mockImplementation(function assertAnchor(this: HTMLAnchorElement) {
       expect(this.download).toBe('café.bin');
     });
     const result = saveFile(input);
     input.bytes.fill(7);
     await expect(result).resolves.toStrictEqual({ status: 'download-requested' });
-    const blob = vi.mocked(URL.createObjectURL).mock.calls[0][0] as Blob;
-    expect(Array.from(new Uint8Array(await blob.arrayBuffer()))).toStrictEqual([0, 255, 13, 10]);
+    const blob = createObjectURL.mock.calls[0][0] as Blob;
+    expect([...new Uint8Array(await blob.arrayBuffer())]).toStrictEqual([0, 255, 13, 10]);
     expect(blob.type).toBe('application/octet-stream');
-    expect(HTMLAnchorElement.prototype.click).toHaveBeenCalledOnce();
+    expect(click).toHaveBeenCalledOnce();
   });
 
   it('preserves UTF-8 bytes and MIME parameters, including an empty file', async () => {
     const bytes = new TextEncoder().encode('café ☕\n');
     await saveFile({ ...options(), bytes, mimeType: 'text/plain; charset=utf-8' });
-    const blob = vi.mocked(URL.createObjectURL).mock.calls[0][0] as Blob;
+    const blob = createObjectURL.mock.calls[0][0] as Blob;
     await expect(blob.text()).resolves.toBe('café ☕\n');
     expect(blob.type).toBe('text/plain; charset=utf-8');
     await saveFile({ ...options(), bytes: new Uint8Array() });
-    expect((vi.mocked(URL.createObjectURL).mock.calls[1][0] as Blob).size).toBe(0);
+    expect((createObjectURL.mock.calls[1][0] as Blob).size).toBe(0);
   });
 
   it.each(['', '  ', '.', '..', 'a/b', 'a\\b', 'a\u0000b', 'a\nb', 'a\u007Fb'])(
@@ -52,8 +62,8 @@ describe('web byte save', () => {
       await expect(saveFile({ ...options(), filename })).rejects.toMatchObject({
         code: 'invalid-input',
       });
-      expect(URL.createObjectURL).not.toHaveBeenCalled();
-      expect(HTMLAnchorElement.prototype.click).not.toHaveBeenCalled();
+      expect(createObjectURL).not.toHaveBeenCalled();
+      expect(click).not.toHaveBeenCalled();
     },
   );
 
@@ -61,28 +71,29 @@ describe('web byte save', () => {
     await expect(saveFile({ ...options(), mimeType })).rejects.toMatchObject({
       code: 'invalid-input',
     });
-    expect(URL.createObjectURL).not.toHaveBeenCalled();
+    expect(createObjectURL).not.toHaveBeenCalled();
   });
 
   it.each([null, {}, { ...options(), bytes: [1, 2] }])('rejects malformed input %j', async (input) => {
     await expect(saveFile(input as never)).rejects.toBeInstanceOf(FileSaveError);
     await expect(saveFile(input as never)).rejects.toMatchObject({ code: 'invalid-input' });
-    expect(URL.createObjectURL).not.toHaveBeenCalled();
+    expect(createObjectURL).not.toHaveBeenCalled();
   });
 
   it.each(['document', 'Blob', 'URL'])('reports an unavailable %s capability', async (capability) => {
+    // oxlint-disable-next-line unicorn/no-useless-undefined -- stubbing the global to undefined is how the capability is removed
     vi.stubGlobal(capability, undefined);
     await expect(saveFile(options())).rejects.toMatchObject({ code: 'unavailable' });
   });
 
   it('reports activation failure with its original cause and cleans resources', async () => {
     const cause = new Error('download refused');
-    vi.mocked(HTMLAnchorElement.prototype.click).mockImplementation(() => {
+    click.mockImplementation(() => {
       throw cause;
     });
     await expect(saveFile(options())).rejects.toMatchObject({ code: 'write-failed', cause });
     expect(document.querySelector('a')).toBeNull();
     vi.advanceTimersByTime(60_000);
-    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:fixture');
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:fixture');
   });
 });

@@ -19,7 +19,7 @@ describe('synchronous download helpers', () => {
       expect(this.href).toBe('https://example.test/file');
       expect(this.download).toBe('café.txt');
     });
-    expect(downloadFile('https://example.test/file', 'café.txt')).toBeUndefined();
+    downloadFile('https://example.test/file', 'café.txt');
     expect(click).toHaveBeenCalledOnce();
     expect(document.querySelector('a')).toBeNull();
   });
@@ -45,13 +45,15 @@ describe('synchronous download helpers', () => {
         throw new Error('activation refused');
       }
     });
-    if (throws) {
-      expect(() => {
+    const outcome = (() => {
+      try {
         downloadBlob(blob, 'fixture.txt');
-      }).toThrow('activation refused');
-    } else {
-      expect(downloadBlob(blob, 'fixture.txt')).toBeUndefined();
-    }
+        return 'returned';
+      } catch (error) {
+        return error;
+      }
+    })();
+    expect(outcome).toStrictEqual(throws ? new Error('activation refused') : 'returned');
     expect(create).toHaveBeenCalledWith(blob);
     expect(document.querySelector('a')).toBeNull();
     expect(revoke).not.toHaveBeenCalled();

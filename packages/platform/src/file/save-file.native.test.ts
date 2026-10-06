@@ -1,62 +1,59 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { Platform } from '../platform';
+
 const native = vi.hoisted(() => ({
   platform: { isIos: false, isAndroid: true },
-  pick: vi.fn(),
-  loaded: vi.fn(),
+  pick: vi.fn<() => Promise<TestDirectory>>(),
+  loaded: vi.fn<() => void>(),
 }));
-vi.mock('../platform', () => ({ platform: native.platform }));
+vi.mock(import('../platform'), () => ({ platform: native.platform as Platform }));
+
+const options = () => ({
+  bytes: new Uint8Array([0, 255, 13, 10]),
+  filename: 'café.bin',
+  mimeType: 'application/octet-stream; charset=binary',
+});
+
+const createFile = () => ({
+  uri: 'content://provider/child-42',
+  name: 'café (1).bin',
+  write: vi.fn<(bytes: Uint8Array) => void>(),
+  delete: vi.fn<() => void>(),
+});
+type TestFile = ReturnType<typeof createFile>;
+
+const createDirectory = (file: TestFile) => ({
+  uri: 'content://provider/tree/selected',
+  createFile: vi.fn<(name: string, mimeType: string) => TestFile>(() => file),
+  delete: vi.fn<() => void>(),
+});
+type TestDirectory = ReturnType<typeof createDirectory>;
+
+const api = async () => await import('./save-file.native');
 
 describe('native byte save (native boundary modeled)', () => {
-  const options = () => ({
-    bytes: new Uint8Array([0, 255, 13, 10]),
-    filename: 'café.bin',
-    mimeType: 'application/octet-stream; charset=binary',
-  });
-  let file: {
-    uri: string;
-    name: string;
-    write: ReturnType<typeof vi.fn>;
-    delete: ReturnType<typeof vi.fn>;
-  };
-  let directory: {
-    uri: string;
-    createFile: ReturnType<typeof vi.fn>;
-    delete: ReturnType<typeof vi.fn>;
-  };
+  let file: TestFile;
+  let directory: TestDirectory;
   beforeEach(() => {
     vi.resetModules();
-    vi.doMock('expo-file-system', () => {
+    vi.doMock(import('expo-file-system'), () => {
       native.loaded();
-      return { Directory: { pickDirectoryAsync: native.pick } };
+      return { Directory: { pickDirectoryAsync: native.pick } as never };
     });
     vi.clearAllMocks();
     native.platform.isIos = false;
     native.platform.isAndroid = true;
-    file = {
-      uri: 'content://provider/child-42',
-      name: 'café (1).bin',
-      write: vi.fn(),
-      delete: vi.fn(),
-    };
-    directory = {
-      uri: 'content://provider/tree/selected',
-      createFile: vi.fn(() => file),
-      delete: vi.fn(),
-    };
+    file = createFile();
+    directory = createDirectory(file);
     native.pick.mockReset().mockResolvedValue(directory);
   });
-  const api = async () => await import('./save-file.native');
 
   it('loads FileSystem only on invocation and writes the exact snapshot to the provider child', async () => {
     const { saveFile } = await api();
     expect(native.loaded).not.toHaveBeenCalled();
-    let choose!: (value: typeof directory) => void;
-    native.pick.mockReturnValue(
-      new Promise((resolve) => {
-        choose = resolve;
-      }),
-    );
+    const { promise, resolve: choose } = Promise.withResolvers<TestDirectory>();
+    native.pick.mockReturnValue(promise);
     const input = options();
     input.bytes = new Uint8Array([99, 0, 255, 13, 10, 88]).subarray(1, 5);
     const pending = saveFile(input);
@@ -73,7 +70,7 @@ describe('native byte save (native boundary modeled)', () => {
       byteLength: 4,
     });
     expect(directory.createFile).toHaveBeenCalledExactlyOnceWith('café.bin', 'application/octet-stream');
-    expect(Array.from(file.write.mock.calls[0][0])).toStrictEqual([0, 255, 13, 10]);
+    expect([...file.write.mock.calls[0][0]]).toStrictEqual([0, 255, 13, 10]);
     expect(file.delete).not.toHaveBeenCalled();
     expect(directory.delete).not.toHaveBeenCalled();
   });
@@ -97,7 +94,7 @@ describe('native byte save (native boundary modeled)', () => {
 
   it('omits an opaque Android document ID without reading it as a filename', async () => {
     file.uri = 'content://example.documents/tree/root/document/42';
-    const readName = vi.fn(() => '42');
+    const readName = vi.fn<() => string>(() => '42');
     Object.defineProperty(file, 'name', { get: readName });
     const input = { ...options(), filename: 'fixture.bin' };
     const { saveFile } = await api();
@@ -118,7 +115,7 @@ describe('native byte save (native boundary modeled)', () => {
     native.platform.isIos = true;
     native.platform.isAndroid = false;
     directory.uri = 'file:///selected/';
-    const readName = vi.fn(() => 'child-42');
+    const readName = vi.fn<() => string>(() => 'child-42');
     Object.defineProperty(file, 'name', { get: readName });
     const { saveFile } = await api();
     await expect(saveFile(options())).resolves.toStrictEqual({
@@ -159,12 +156,8 @@ describe('native byte save (native boundary modeled)', () => {
   );
 
   it('rejects overlapping requests and accepts a retry once the picker settles', async () => {
-    let choose!: (value: typeof directory) => void;
-    native.pick.mockReturnValueOnce(
-      new Promise((resolve) => {
-        choose = resolve;
-      }),
-    );
+    const { promise, resolve: choose } = Promise.withResolvers<TestDirectory>();
+    native.pick.mockReturnValueOnce(promise);
     const { saveFile } = await api();
     const first = saveFile(options());
     await expect(saveFile(options())).rejects.toMatchObject({ code: 'busy' });

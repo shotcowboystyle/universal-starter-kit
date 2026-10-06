@@ -2,6 +2,7 @@ import { isWeb } from '@repo/platform';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useParams, useRouter } from '../router';
+import type { InputRouteParamsBlank } from '../types';
 
 export type SearchParams = Record<string, string | string[] | undefined>;
 
@@ -13,7 +14,7 @@ export interface SetSearchParamsOptions {
 // The router is optional. Hosts that have none (storybook-expo, expo go) resolve these
 // bindings to undefined, so treat a missing or throwing router as "no url sync" instead
 // of crashing at mount. The branch is decided once at module load, so hook order is stable.
-const hasRouter = typeof useRouter === 'function' && typeof useParams === 'function';
+const hasRouter = Boolean(useRouter) && Boolean(useParams);
 
 const emptyParams: SearchParams = {};
 
@@ -27,10 +28,80 @@ const useOptionalRouter = (): OptionalRouter => {
     return {};
   }
   try {
-    return { router: useRouter(), params: useParams() as SearchParams };
+    // oxlint-disable-next-line react/rule-suppression -- the suppression below is deliberate
+    // oxlint-disable-next-line react-hooks/rules-of-hooks -- hasRouter is fixed at module load, so call order is stable; the catch covers a host with no router context
+    return { router: useRouter(), params: useParams() };
   } catch {
     return {};
   }
+};
+
+// oxlint-disable-next-line anti-slop/no-runtime-typeof, anti-slop/no-unknown-parameters -- caller-supplied generic values have no schema; their runtime kind drives (de)serialization
+const kindOf = (value: unknown) => typeof value;
+
+const isObject = (value: unknown): value is object => kindOf(value) === 'object' && value !== null;
+
+const serializeEntries = (entries: [string, unknown][]): SearchParams => {
+  // Default serialization: convert to string
+  const params = new Map<string, string | string[]>();
+  for (const [key, val] of entries) {
+    if (val === undefined || val === null || val === '') {
+      continue;
+    }
+    if (Array.isArray(val)) {
+      params.set(key, val.map(String));
+    } else if (isObject(val)) {
+      params.set(key, JSON.stringify(val));
+    } else {
+      // oxlint-disable-next-line typescript/no-base-to-string -- objects were handled by the branch above, so val is a primitive here
+      params.set(key, String(val));
+    }
+  }
+  return Object.fromEntries(params);
+};
+
+// oxlint-disable-next-line anti-slop/no-unknown-parameters, anti-slop/no-unknown-returns -- the default's type is only known at runtime
+const deserializeValue = (defaultValue: unknown, value: string | string[] | undefined): unknown => {
+  if (value === undefined) {
+    return defaultValue;
+  }
+  if (Array.isArray(defaultValue)) {
+    return Array.isArray(value) ? value : [value];
+  }
+  const kind = kindOf(defaultValue);
+  if (kind === 'boolean') {
+    return value === 'true';
+  }
+  if (kind === 'number') {
+    return Number(value);
+  }
+  if (isObject(defaultValue)) {
+    try {
+      return JSON.parse(Array.isArray(value) ? value.join(',') : value);
+    } catch {
+      return defaultValue;
+    }
+  }
+  return value;
+};
+
+// Default deserialization: parse JSON for objects
+const defaultDeserialize = <T extends object>(defaultValues: T, params: SearchParams): T => {
+  const defaults = new Map<string, unknown>(Object.entries(defaultValues));
+  const result = new Map<string, unknown>();
+  for (const [key, value] of Object.entries(params)) {
+    if (defaults.has(key)) {
+      result.set(key, deserializeValue(defaults.get(key), value));
+    }
+  }
+  // Fill in missing keys with defaults
+  for (const [key, value] of defaults) {
+    if (!result.has(key)) {
+      result.set(key, value);
+    }
+  }
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- SAFETY: result holds exactly the keys of defaultValues, each parsed against that key's default
+  return Object.fromEntries(result) as T;
 };
 
 /**
@@ -44,44 +115,46 @@ export const useSearchParams = (): [
   const [localParams, setLocalParams] = useState<SearchParams>({});
   const { router, params } = useOptionalRouter();
   const currentParams = params ?? localParams;
-  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Parse current params into a more usable format
   const searchParams = useMemo<SearchParams>(() => {
-    const params: SearchParams = {};
-    Object.entries(currentParams).forEach(([key, value]) => {
+    const parsed: SearchParams = {};
+    for (const [key, value] of Object.entries(currentParams)) {
       if (value !== undefined && value !== null) {
-        params[key] = value;
+        parsed[key] = value;
       }
-    });
-    return params;
+    }
+    return parsed;
   }, [currentParams]);
 
   const setSearchParams = useCallback(
     (newParams: SearchParams | ((prev: SearchParams) => SearchParams), options: SetSearchParamsOptions = {}) => {
-      const { replace: _replace = true, debounceMs = 0 } = options;
+      const { debounceMs = 0 } = options;
 
       const updateParams = () => {
+        // oxlint-disable-next-line anti-slop/no-runtime-typeof -- discriminates a value from its updater function
         const updatedParams = typeof newParams === 'function' ? newParams(searchParams) : newParams;
 
         // Filter out undefined values
         const cleanParams: Record<string, string | string[]> = {};
-        Object.entries(updatedParams).forEach(([key, value]) => {
+        for (const [key, value] of Object.entries(updatedParams)) {
           if (value !== undefined && value !== null && value !== '') {
             cleanParams[key] = value;
           }
-        });
+        }
 
         // Use router.setParams to update the URL, or keep it local when routerless
-        if (router && params) {
-          router.setParams(cleanParams as any);
+        if (router != null && params != null) {
+          // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- SAFETY: One's setParams typing omits array values, but repeated query keys are passed as string[] and every router implementation here accepts them
+          router.setParams(cleanParams as InputRouteParamsBlank);
         } else {
           setLocalParams(cleanParams);
         }
       };
 
       if (debounceMs > 0) {
-        if (debounceTimerRef.current) {
+        if (debounceTimerRef.current !== null) {
           clearTimeout(debounceTimerRef.current);
         }
         debounceTimerRef.current = setTimeout(updateParams, debounceMs);
@@ -95,7 +168,7 @@ export const useSearchParams = (): [
   // Cleanup debounce timer on unmount
   useEffect(
     () => () => {
-      if (debounceTimerRef.current) {
+      if (debounceTimerRef.current !== null) {
         clearTimeout(debounceTimerRef.current);
       }
     },
@@ -109,7 +182,7 @@ export const useSearchParams = (): [
  * Hook for syncing form state with URL parameters
  * Provides automatic serialization/deserialization and debouncing
  */
-export const useUrlState = <T extends Record<string, any>>(
+export const useUrlState = <T extends object>(
   defaultValues: T,
   options: {
     debounceMs?: number;
@@ -117,58 +190,16 @@ export const useUrlState = <T extends Record<string, any>>(
     deserialize?: (params: SearchParams) => T;
   } = {},
 ): [T, (newState: Partial<T> | ((prev: T) => Partial<T>)) => void] => {
-  const {
-    debounceMs = 500,
-    serialize = (value) => {
-      // Default serialization: convert to string
-      const params: SearchParams = {};
-      Object.entries(value).forEach(([key, val]) => {
-        if (val !== undefined && val !== null && val !== '') {
-          if (Array.isArray(val)) {
-            params[key] = val.map(String);
-          } else if (typeof val === 'object') {
-            params[key] = JSON.stringify(val);
-          } else {
-            params[key] = String(val);
-          }
-        }
-      });
-      return params;
-    },
-    deserialize = (params) => {
-      // Default deserialization: parse JSON for objects
-      const result: any = {};
-      Object.entries(params).forEach(([key, value]) => {
-        if (key in defaultValues) {
-          const defaultValue = defaultValues[key];
-          if (value === undefined) {
-            result[key] = defaultValue;
-          } else if (Array.isArray(defaultValue)) {
-            result[key] = Array.isArray(value) ? value : [value];
-          } else if (typeof defaultValue === 'boolean') {
-            result[key] = value === 'true';
-          } else if (typeof defaultValue === 'number') {
-            result[key] = Number(value);
-          } else if (typeof defaultValue === 'object' && defaultValue !== null) {
-            try {
-              result[key] = JSON.parse(String(value));
-            } catch {
-              result[key] = defaultValue;
-            }
-          } else {
-            result[key] = value;
-          }
-        }
-      });
-      // Fill in missing keys with defaults
-      Object.keys(defaultValues).forEach((key) => {
-        if (!(key in result)) {
-          result[key] = defaultValues[key];
-        }
-      });
-      return result as T;
-    },
-  } = options;
+  const { debounceMs = 500 } = options;
+  const { serialize: customSerialize, deserialize: customDeserialize } = options;
+  const serialize = useMemo(
+    () => customSerialize ?? ((value: T) => serializeEntries(Object.entries(value))),
+    [customSerialize],
+  );
+  const deserialize = useMemo(
+    () => customDeserialize ?? ((params: SearchParams) => defaultDeserialize(defaultValues, params)),
+    [customDeserialize, defaultValues],
+  );
 
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -177,6 +208,7 @@ export const useUrlState = <T extends Record<string, any>>(
 
   const setState = useCallback(
     (newState: Partial<T> | ((prev: T) => Partial<T>)) => {
+      // oxlint-disable-next-line anti-slop/no-runtime-typeof -- discriminates a value from its updater function
       const updatedState = typeof newState === 'function' ? newState(currentState) : newState;
 
       const mergedState = { ...currentState, ...updatedState };
@@ -204,17 +236,17 @@ export const useShareableUrl = (): string => {
     const url = new URL(window.location.href);
     url.search = '';
 
-    Object.entries(params).forEach(([key, value]) => {
+    for (const [key, value] of Object.entries(params)) {
       if (value !== undefined && value !== null && value !== '') {
         if (Array.isArray(value)) {
-          value.forEach((v) => {
-            url.searchParams.append(key, String(v));
-          });
+          for (const v of value) {
+            url.searchParams.append(key, v);
+          }
         } else {
-          url.searchParams.set(key, String(value));
+          url.searchParams.set(key, value);
         }
       }
-    });
+    }
 
     return url.toString();
   }, [params]);
@@ -225,7 +257,7 @@ export const useShareableUrl = (): string => {
 /**
  * Hook for parsing URL parameters with type safety
  */
-export const useTypedSearchParams = <T extends Record<string, any>>(schema: {
+export const useTypedSearchParams = <T extends object>(schema: {
   [K in keyof T]: {
     default: T[K];
     parse?: (value: string | string[] | undefined) => T[K];
@@ -234,9 +266,12 @@ export const useTypedSearchParams = <T extends Record<string, any>>(schema: {
   const params = useOptionalRouter().params ?? emptyParams;
 
   const typedParams = useMemo(() => {
-    const result: any = {};
+    const result: Partial<T> = {};
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- SAFETY: Object.keys(schema) yields the schema's own string keys, which are keys of T
+    const keys = Object.keys(schema) as (keyof T & string)[];
 
-    Object.entries(schema).forEach(([key, config]) => {
+    for (const key of keys) {
+      const config = schema[key];
       const rawValue = params[key];
 
       if (config.parse) {
@@ -244,10 +279,12 @@ export const useTypedSearchParams = <T extends Record<string, any>>(schema: {
       } else if (rawValue === undefined) {
         result[key] = config.default;
       } else {
-        result[key] = rawValue;
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- SAFETY: with no parse function the raw URL value is passed through, as the schema contract documents
+        result[key] = rawValue as T[typeof key];
       }
-    });
+    }
 
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- SAFETY: every key of schema (and so of T) was assigned above
     return result as T;
   }, [params, schema]);
 

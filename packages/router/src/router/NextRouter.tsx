@@ -8,7 +8,12 @@ import {
   useSearchParams,
 } from 'next/navigation';
 
+import { hrefToString } from '../types';
 import type { Href, InputRouteParams, InputRouteParamsBlank, LinkComponent, Router } from '../types';
+
+const noop = (): void => {
+  // intentionally empty
+};
 
 export const useRouter = (): Router => {
   const router = useNextRouter();
@@ -20,13 +25,13 @@ export const useRouter = (): Router => {
     },
     canGoBack: () => typeof window !== 'undefined' && window.history.length > 1,
     push: (href: Href) => {
-      router.push(String(href));
+      router.push(hrefToString(href));
     },
     navigate: (href: Href) => {
-      router.push(String(href));
+      router.push(hrefToString(href));
     },
     replace: (href: Href) => {
-      router.replace(String(href));
+      router.replace(hrefToString(href));
     },
     dismiss: () => {
       router.back();
@@ -41,7 +46,7 @@ export const useRouter = (): Router => {
         if (value === undefined || value === null) {
           next.delete(key);
         } else {
-          next.set(key, String(value));
+          next.set(key, value);
         }
       }
       const query = next.toString();
@@ -49,11 +54,11 @@ export const useRouter = (): Router => {
     },
     subscribe: (listener) => {
       listener('success');
-      return () => {};
+      return noop;
     },
     onLoadState: (listener) => {
       listener('loaded');
-      return () => {};
+      return noop;
     },
   };
 };
@@ -63,20 +68,16 @@ export const usePathname = (): string => useNextPathname();
 export const useParams = () => {
   const routeParams = useNextParams() ?? {};
   const searchParams = useSearchParams();
-  const params: Record<string, string | string[] | undefined> = { ...routeParams };
-  for (const [key, value] of searchParams.entries()) {
-    params[key] = value;
-  }
-  return params;
+  return { ...routeParams, ...Object.fromEntries(searchParams.entries()) };
 };
 
 export const Link: LinkComponent = ({ href, replace, children, ...props }) => (
   <NextLink
-    href={String(href)}
+    href={hrefToString(href)}
     replace={replace}
     {...props}>
     {children}
   </NextLink>
 );
 
-Link.resolveHref = (href: Href) => String(href);
+Link.resolveHref = hrefToString;

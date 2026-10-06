@@ -6,32 +6,6 @@ declare global {
   }
 }
 
-const platformOrder = [
-  'Ios',
-  'Android',
-  // Gnome outranks Native: the GTK target reports isNative (it is not a
-  // browser) but "gnome" is the precise answer callers want.
-  'Gnome',
-  'Native',
-  // Tauri outranks Desktop/Web the same way: the webview host reports isWeb
-  // and isDesktop, but "tauri" is the precise answer.
-  'Tauri',
-  'Desktop',
-  'ChromeExtension',
-  'FirefoxExtension',
-  'WebExtension',
-  'Next',
-  'Expo',
-  'Chrome',
-  'Firefox',
-  'Web',
-  'Browser',
-  'Client',
-  'Server',
-  'Iframe',
-  'Storybook',
-];
-
 export type PlatformName =
   | 'ios'
   | 'android'
@@ -54,6 +28,34 @@ export type PlatformName =
   | 'storybook'
   | 'unknown';
 
+type PlatformFlag = Exclude<keyof Platform, 'broadName' | 'preciseName'>;
+
+const platformOrder: { flag: PlatformFlag; name: PlatformName }[] = [
+  { flag: 'isIos', name: 'ios' },
+  { flag: 'isAndroid', name: 'android' },
+  // Gnome outranks Native: the GTK target reports isNative (it is not a
+  // browser) but "gnome" is the precise answer callers want.
+  { flag: 'isGnome', name: 'gnome' },
+  { flag: 'isNative', name: 'native' },
+  // Tauri outranks Desktop/Web the same way: the webview host reports isWeb
+  // and isDesktop, but "tauri" is the precise answer.
+  { flag: 'isTauri', name: 'tauri' },
+  { flag: 'isDesktop', name: 'desktop' },
+  { flag: 'isChromeExtension', name: 'chromeExtension' },
+  { flag: 'isFirefoxExtension', name: 'firefoxExtension' },
+  { flag: 'isWebExtension', name: 'webExtension' },
+  { flag: 'isNext', name: 'next' },
+  { flag: 'isExpo', name: 'expo' },
+  { flag: 'isChrome', name: 'chrome' },
+  { flag: 'isFirefox', name: 'firefox' },
+  { flag: 'isWeb', name: 'web' },
+  { flag: 'isBrowser', name: 'browser' },
+  { flag: 'isClient', name: 'client' },
+  { flag: 'isServer', name: 'server' },
+  { flag: 'isIframe', name: 'iframe' },
+  { flag: 'isStorybook', name: 'storybook' },
+];
+
 export const platformBase = {
   isAndroid: false,
   isBrowser: false,
@@ -70,6 +72,7 @@ export const platformBase = {
   isNative: false,
   isNext: false,
   isServer,
+  // oxlint-disable-next-line typescript/no-deprecated, anti-slop/no-runtime-typeof -- @tamagui/constants' isWindowDefined is the established flag (also re-exported below); typeof tells the preview global apart
   isStorybook: isWindowDefined && typeof window.__STORYBOOK_ADDONS_PREVIEW === 'object',
   isTauri: false,
   isTouchable,
@@ -81,21 +84,20 @@ export const platformBase = {
   broadName: 'unknown',
 } as const;
 
-export const getPreciseName = (platform: Omit<Platform, 'preciseName'>) => {
-  const flags = platform as unknown as Record<string, boolean>;
-  for (const name of platformOrder) {
-    if (flags[`is${name}`]) {
-      return `${name[0].toLowerCase()}${name.slice(1)}` as PlatformName;
+export const getPreciseName = (platform: Omit<Platform, 'preciseName'>): PlatformName => {
+  for (const { flag, name } of platformOrder) {
+    if (platform[flag]) {
+      return name;
     }
   }
   return 'unknown';
 };
 
-export const getBroadName = (platform: Omit<Platform, 'broadName'>) => {
-  const flags = platform as unknown as Record<string, boolean>;
-  for (const name of platformOrder.slice().reverse()) {
-    if (flags[`is${name}`]) {
-      return `${name[0].toLowerCase()}${name.slice(1)}` as PlatformName;
+export const getBroadName = (platform: Omit<Platform, 'broadName'>): PlatformName => {
+  for (let index = platformOrder.length - 1; index >= 0; index -= 1) {
+    const { flag, name } = platformOrder[index];
+    if (platform[flag]) {
+      return name;
     }
   }
   return 'unknown';

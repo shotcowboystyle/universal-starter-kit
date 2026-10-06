@@ -4,14 +4,14 @@ import { Config } from './config';
 import { bakedConfigEnvKey, runtimePublicConfigKey } from './runtime-config';
 
 const setRuntimePayload = (payload: Record<string, string>) => {
-  (globalThis as unknown as Record<string, unknown>)[runtimePublicConfigKey] = payload;
+  globalThis[runtimePublicConfigKey] = payload;
 };
 
 const clearRuntimePayload = () => {
-  delete (globalThis as unknown as Record<string, unknown>)[runtimePublicConfigKey];
+  Reflect.deleteProperty(globalThis, runtimePublicConfigKey);
 };
 
-describe('Config', () => {
+describe(Config, () => {
   beforeEach(() => {
     vi.unstubAllEnvs();
     clearRuntimePayload();
@@ -34,6 +34,7 @@ describe('Config', () => {
     });
 
     it('filters out undefined values from initial config', () => {
+      // oxlint-disable-next-line sonarjs/no-undefined-assignment -- an explicitly undefined value is the case under test
       const c = new Config({ PRESENT: 'yes', MISSING: undefined });
       expect(c.get('PRESENT')).toBe('yes');
       expect(c.get('MISSING')).toBeUndefined();

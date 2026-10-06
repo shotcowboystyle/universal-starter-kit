@@ -69,7 +69,8 @@ export interface RouteLoaderProps {
 /** One-style route loader. On web, One resolves a route's loader before the
  *  client navigation completes; the seam mirrors that contract — see
  *  StackNavigator.navigate(). */
-export type RouteLoader = (props: RouteLoaderProps) => unknown | Promise<unknown>;
+// oxlint-disable-next-line anti-slop/no-unknown-returns -- loader data is route-defined; the seam only stores and hands it back
+export type RouteLoader = (props: RouteLoaderProps) => unknown;
 
 export interface RouteDef {
   /** One-style pattern: "/", "/users", "/users/[id]". */
@@ -103,13 +104,13 @@ export interface NavSnapshot {
  *  GTK target passes its widget straight through; DOM hosts implement the
  *  same protocol over an array (see DomNavigationHost). */
 export interface NavStackAdapter {
-  push_by_tag(tag: string): void;
-  pop(): boolean;
-  pop_to_tag(tag: string): boolean;
-  replace_with_tags(tags: string[]): void;
-  get_navigation_stack(): {
-    get_n_items(): number;
-    get_item(index: number): { get_tag(): string | null } | null;
+  push_by_tag: (tag: string) => void;
+  pop: () => boolean;
+  pop_to_tag: (tag: string) => boolean;
+  replace_with_tags: (tags: string[]) => void;
+  get_navigation_stack: () => {
+    get_n_items: () => number;
+    get_item: (index: number) => { get_tag: () => string | null } | null;
   };
 }
 
@@ -118,8 +119,8 @@ const compileRoute = (def: RouteDef): CompiledRoute => {
     .split('/')
     .filter(Boolean)
     .map((seg) => {
-      const m = /^\[(\.{3})?(.+)\]$/u.exec(seg);
-      return m ? { param: m[2] } : { literal: seg };
+      const param = /^\[(?:\.{3})?(?<param>.+)\]$/u.exec(seg)?.groups?.param;
+      return param === undefined ? { literal: seg } : { param };
     });
   return { ...def, segments };
 };
@@ -128,9 +129,9 @@ const compileRoute = (def: RouteDef): CompiledRoute => {
  *  has zero polyfill-order dependency (GJS entries load it before
  *  polyfills). Repeated keys become arrays. */
 const parseQuery = (query: string | undefined): NavParams => {
-  const params: NavParams = {};
-  if (!query) {
-    return params;
+  const params = new Map<string, string | string[]>();
+  if (query === undefined || query === '') {
+    return {};
   }
   for (const pair of query.split('&')) {
     if (!pair) {
@@ -139,19 +140,20 @@ const parseQuery = (query: string | undefined): NavParams => {
     const eq = pair.indexOf('=');
     const key = decodeURIComponent(eq === -1 ? pair : pair.slice(0, eq));
     const value = eq === -1 ? '' : decodeURIComponent(pair.slice(eq + 1));
-    const prev = params[key];
+    const prev = params.get(key);
     if (prev === undefined) {
-      params[key] = value;
+      params.set(key, value);
     } else if (Array.isArray(prev)) {
       prev.push(value);
     } else {
-      params[key] = [prev, value];
+      params.set(key, [prev, value]);
     }
   }
-  return params;
+  return Object.fromEntries(params);
 };
 
 export const hrefToString = (href: Href): string => {
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- discriminates the string | { pathname } Href union
   if (typeof href === 'string') {
     return href;
   }
@@ -166,7 +168,7 @@ export const hrefToString = (href: Href): string => {
       leftover.push(`${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
     }
   }
-  return leftover.length ? `${path}?${leftover.join('&')}` : path;
+  return leftover.length > 0 ? `${path}?${leftover.join('&')}` : path;
 };
 
 const EMPTY_PARAMS: NavParams = Object.freeze({});
@@ -212,8 +214,8 @@ export class StackNavigator {
     this.visitedTags = new Set();
     this.loaderDataByTag = new Map();
     this.pendingNavigations = [];
-    const root = defs[0];
-    if (root) {
+    if (defs.length > 0) {
+      const [root] = defs;
       this.stackTags = [root.tag];
       this.visitedTags.add(root.tag);
       this.pathnameByTag.set(root.tag, root.pattern);
@@ -228,8 +230,9 @@ export class StackNavigator {
 
   /** The route's last loader result (stable identity until the loader runs
    *  again). undefined when the route has no loader / hasn't resolved. */
+  // oxlint-disable-next-line anti-slop/no-unknown-returns -- loader data is route-defined; the seam only stores and hands it back
   loaderSnapshot(tag: string | null): unknown {
-    if (!tag) {
+    if (tag === null || tag === '') {
       return undefined;
     }
     return this.loaderDataByTag.get(tag);
@@ -263,8 +266,8 @@ export class StackNavigator {
       const data = await hit.route.loader({ path: hit.pathname, params: hit.params });
       this.loaderDataByTag.set(hit.route.tag, data);
       this.rebuildSnapshot();
-    } catch (err) {
-      console.error(`[stack nav] preload loader for ${hit.route.tag} failed: ${String(err)}`);
+    } catch (error) {
+      console.error(`[stack nav] preload loader for ${hit.route.tag} failed: ${String(error)}`);
     }
   }
 
@@ -291,13 +294,15 @@ export class StackNavigator {
 
   subscribe = (fn: () => void): (() => void) => {
     this.listeners.add(fn);
-    return () => this.listeners.delete(fn);
+    return () => {
+      this.listeners.delete(fn);
+    };
   };
 
   getSnapshot = (): NavSnapshot => this.snapshot;
 
   paramsSnapshot(tag: string | null): NavParams {
-    if (!tag) {
+    if (tag === null || tag === '') {
       return EMPTY_PARAMS;
     }
     return this.paramsByTag.get(tag) ?? EMPTY_PARAMS;
@@ -313,7 +318,7 @@ export class StackNavigator {
       }
       const params = parseQuery(query);
       let ok = true;
-      for (let i = 0; i < parts.length; i++) {
+      for (let i = 0; i < parts.length; i += 1) {
         const seg = route.segments[i];
         const part = decodeURIComponent(parts[i]);
         if (seg.literal !== undefined) {
@@ -363,19 +368,21 @@ export class StackNavigator {
       return;
     }
     const { route, pathname, params } = hit;
-    const seq = ++this.navSeq;
+    this.navSeq += 1;
+    const seq = this.navSeq;
     if (route.loader) {
       try {
         const data = await route.loader({ path: pathname, params });
-        if (seq !== this.navSeq) {
-          return;
-        } // superseded by a newer navigation
-        this.loaderDataByTag.set(route.tag, data);
-      } catch (err) {
+        // superseded by a newer navigation
         if (seq !== this.navSeq) {
           return;
         }
-        console.error(`[stack nav] loader for ${route.tag} failed: ${String(err)}`);
+        this.loaderDataByTag.set(route.tag, data);
+      } catch (error) {
+        if (seq !== this.navSeq) {
+          return;
+        }
+        console.error(`[stack nav] loader for ${route.tag} failed: ${String(error)}`);
       }
     }
     // Params/pathname/visited land BEFORE the host action so the target page
@@ -387,10 +394,11 @@ export class StackNavigator {
       // Replace swaps the top NAVIGATION ENTRY (the layer above the
       // permanent manifest root) — see the module design notes for the
       // documented semantics + precedent.
-      const top = this.stackTags[this.stackTags.length - 1];
+      const top = this.stackTags.at(-1);
+      // param-only refresh of the showing page
       if (top === route.tag) {
         return;
-      } // param-only refresh of the showing page
+      }
       if (this.stackTags.length <= 1) {
         // Fresh/empty stack: no navigation entry to discard — land above
         // the root like a push so back affordances survive. replace (not
@@ -423,15 +431,15 @@ export class StackNavigator {
     }
     // Supersede any in-flight loader navigation — its host action must not
     // land after this pop (navigate() re-checks navSeq after its await).
-    this.navSeq++;
+    this.navSeq += 1;
     // The popped signal (same path as the GTK header back button / Esc /
     // back swipe) syncs the mirror.
     this.host.pop();
   };
 
   setParams = (params: Record<string, string>): void => {
-    const top = this.stackTags[this.stackTags.length - 1];
-    if (!top) {
+    const top = this.stackTags.at(-1);
+    if (top === undefined || top === '') {
       return;
     }
     const prev = this.paramsByTag.get(top) ?? {};
@@ -449,13 +457,13 @@ export class StackNavigator {
     // button / Esc / swipe) — supersedes in-flight loader navigations.
     // Safe for the navigation that CAUSED this signal: its navSeq check
     // sits before its host action, never after.
-    this.navSeq++;
+    this.navSeq += 1;
     const model = this.host.get_navigation_stack();
     const tags: string[] = [];
     const count = model.get_n_items();
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < count; i += 1) {
       const tag = model.get_item(i)?.get_tag();
-      if (tag) {
+      if (tag != null && tag !== '') {
         tags.push(tag);
       }
     }
@@ -477,9 +485,9 @@ export class StackNavigator {
   }
 
   private rebuildSnapshot(): void {
-    const tag = this.stackTags[this.stackTags.length - 1] ?? '';
+    const tag = this.stackTags.at(-1) ?? '';
     const route = this.routes.find((r) => r.tag === tag);
-    this.generation++;
+    this.generation += 1;
     this.snapshot = {
       pathname: this.pathnameByTag.get(tag) ?? route?.pattern ?? '/',
       tag,
