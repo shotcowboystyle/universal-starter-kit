@@ -2,6 +2,25 @@ import { Image } from 'expo-image';
 import { Tabs } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
+interface TabIconProps {
+  color: string;
+  size: number;
+}
+
+const OverviewIcon = ({ color, size }: TabIconProps) => (
+  <Image
+    source="sf:rectangle.stack"
+    style={{ width: size, height: size, tintColor: color }}
+  />
+);
+
+const SettingsIcon = ({ color, size }: TabIconProps) => (
+  <Image
+    source="sf:gearshape"
+    style={{ width: size, height: size, tintColor: color }}
+  />
+);
+
 const TabLayout = () => {
   const { t } = useTranslation();
 
@@ -20,24 +39,14 @@ const TabLayout = () => {
         name="index"
         options={{
           title: t('sidebar.overview'),
-          tabBarIcon: ({ color, size }) => (
-            <Image
-              source="sf:rectangle.stack"
-              style={{ width: size, height: size, tintColor: color }}
-            />
-          ),
+          tabBarIcon: OverviewIcon,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: t('settings.title', { defaultValue: 'Settings' }),
-          tabBarIcon: ({ color, size }) => (
-            <Image
-              source="sf:gearshape"
-              style={{ width: size, height: size, tintColor: color }}
-            />
-          ),
+          tabBarIcon: SettingsIcon,
         }}
       />
       <Tabs.Screen

@@ -6,13 +6,17 @@ import { userApi } from '@/lib/api/user-api';
 
 import { Wrapper } from './test-utils';
 
-vi.mock('@/lib/api/user-api', () => ({
-  userApi: {
-    searchUsers: vi.fn(),
-  },
-}));
+vi.mock(import('@/lib/api/user-api'), async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    userApi: {
+      ...actual.userApi,
+      searchUsers: vi.fn<typeof userApi.searchUsers>(),
+    },
+  };
+});
 
-describe('useUsers', () => {
+describe(useUsers, () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

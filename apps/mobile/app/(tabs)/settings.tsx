@@ -1,6 +1,6 @@
 import SegmentedControl from '@react-native-segmented-control/segmented-control';
 import { Text, View, useTheme } from '@tamagui/core';
-import * as Haptics from 'expo-haptics';
+import { selectionAsync } from 'expo-haptics';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useColorScheme, ScrollView, Pressable } from 'react-native';
@@ -25,28 +25,29 @@ const SettingsScreen = () => {
   const [langIndex, setLangIndex] = useState(i18n.language === 'de' ? 1 : 0);
 
   useEffect(() => {
-    loadThemePreference().then((pref) => {
-      setThemeIndex(THEME_OPTIONS.indexOf(pref));
-    });
+    const restoreTheme = async () => {
+      setThemeIndex(THEME_OPTIONS.indexOf(await loadThemePreference()));
+    };
+    void restoreTheme();
   }, []);
 
   const handleThemeChange = useCallback((index: number) => {
     const pref = THEME_OPTIONS[index];
     setThemeIndex(index);
     applyThemePreference(pref);
-    saveThemePreference(pref);
+    void saveThemePreference(pref);
     if (process.env.EXPO_OS === 'ios') {
-      Haptics.selectionAsync();
+      void selectionAsync();
     }
   }, []);
 
   const handleLanguageChange = useCallback((index: number) => {
     const lang = LANGUAGE_CODES[index];
     setLangIndex(index);
-    i18n.changeLanguage(lang);
-    saveLanguagePreference(lang);
+    void i18n.changeLanguage(lang);
+    void saveLanguagePreference(lang);
     if (process.env.EXPO_OS === 'ios') {
-      Haptics.selectionAsync();
+      void selectionAsync();
     }
   }, []);
 
@@ -110,7 +111,9 @@ const SettingsScreen = () => {
 
           {/* Logout Button */}
           <Pressable
-            onPress={logout}
+            onPress={() => {
+              void logout();
+            }}
             style={{ alignItems: 'center', borderRadius: 8, paddingVertical: 10 }}>
             <Text
               fontSize={16}

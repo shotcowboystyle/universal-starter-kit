@@ -24,19 +24,20 @@ const BoardsScreen = () => {
   }, []);
 
   const filteredMyBoards = useMemo(
-    () => (data?.myBoards || []).filter((b) => b.title.toLowerCase().includes(search.toLowerCase())),
+    () => (data?.myBoards ?? []).filter((b) => b.title.toLowerCase().includes(search.toLowerCase())),
     [data?.myBoards, search],
   );
 
   const filteredTeamBoards = useMemo(
-    () => (data?.teamBoards || []).filter((b) => b.title.toLowerCase().includes(search.toLowerCase())),
+    () => (data?.teamBoards ?? []).filter((b) => b.title.toLowerCase().includes(search.toLowerCase())),
     [data?.teamBoards, search],
   );
 
   const showMy = filter === 'all' || filter === 'my';
   const showTeam = filter === 'all' || filter === 'team';
-  const isEmpty =
-    !isLoading && (!showMy || filteredMyBoards.length === 0) && (!showTeam || filteredTeamBoards.length === 0);
+  const myEmpty = !showMy || filteredMyBoards.length === 0;
+  const teamEmpty = !showTeam || filteredTeamBoards.length === 0;
+  const isEmpty = !isLoading && myEmpty && teamEmpty;
 
   const filterLabels: Record<FilterType, string> = {
     all: t('kanban.allBoards'),
@@ -51,7 +52,9 @@ const BoardsScreen = () => {
       contentInsetAdjustmentBehavior="automatic"
       refreshControl=<RefreshControl
         refreshing={isRefetching}
-        onRefresh={refetch}
+        onRefresh={() => {
+          void refetch();
+        }}
       />>
       <Stack.Screen
         options={{

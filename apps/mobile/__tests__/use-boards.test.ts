@@ -6,17 +6,21 @@ import { boardApi } from '@/lib/api/board-api';
 
 import { Wrapper } from './test-utils';
 
-vi.mock('@/lib/api/board-api', () => ({
-  boardApi: {
-    getBoards: vi.fn(),
-    getBoardById: vi.fn(),
-    createBoard: vi.fn(),
-    updateBoard: vi.fn(),
-    deleteBoard: vi.fn(),
-  },
-}));
+vi.mock(import('@/lib/api/board-api'), async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    boardApi: {
+      ...actual.boardApi,
+      getBoards: vi.fn<typeof boardApi.getBoards>(),
+      getBoardById: vi.fn<typeof boardApi.getBoardById>(),
+      createBoard: vi.fn<typeof boardApi.createBoard>(),
+      updateBoard: vi.fn<typeof boardApi.updateBoard>(),
+      deleteBoard: vi.fn<typeof boardApi.deleteBoard>(),
+    },
+  };
+});
 
-describe('useBoards', () => {
+describe(useBoards, () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -32,11 +36,11 @@ describe('useBoards', () => {
     });
 
     expect(result.current.data).toStrictEqual(mockBoards);
-    expect(boardApi.getBoards).toHaveBeenCalled();
+    expect(boardApi.getBoards).toHaveBeenCalledWith();
   });
 });
 
-describe('useBoard', () => {
+describe(useBoard, () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -55,21 +59,21 @@ describe('useBoard', () => {
   });
 
   it('should not fetch when boardId is undefined', () => {
-    const { result } = renderHook(() => useBoard(undefined), { wrapper: Wrapper });
+    const { result } = renderHook(() => useBoard(), { wrapper: Wrapper });
 
     expect(result.current.fetchStatus).toBe('idle');
     expect(boardApi.getBoardById).not.toHaveBeenCalled();
   });
 });
 
-describe('useCreateBoard', () => {
+describe(useCreateBoard, () => {
   it('should call boardApi.createBoard', async () => {
     const newBoard = { _id: 'b2', title: 'New Board' };
     vi.mocked(boardApi.createBoard).mockResolvedValue(newBoard as any);
 
     const { result } = renderHook(() => useCreateBoard(), { wrapper: Wrapper });
 
-    await act(async () => {
+    act(() => {
       result.current.mutate({ title: 'New Board' } as any);
     });
 
@@ -81,14 +85,14 @@ describe('useCreateBoard', () => {
   });
 });
 
-describe('useUpdateBoard', () => {
+describe(useUpdateBoard, () => {
   it('should call boardApi.updateBoard with id and updates', async () => {
     const updated = { _id: 'b1', title: 'Updated' };
     vi.mocked(boardApi.updateBoard).mockResolvedValue(updated as any);
 
     const { result } = renderHook(() => useUpdateBoard(), { wrapper: Wrapper });
 
-    await act(async () => {
+    act(() => {
       result.current.mutate({ id: 'b1', title: 'Updated' } as any);
     });
 
@@ -100,13 +104,13 @@ describe('useUpdateBoard', () => {
   });
 });
 
-describe('useDeleteBoard', () => {
+describe(useDeleteBoard, () => {
   it('should call boardApi.deleteBoard', async () => {
     vi.mocked(boardApi.deleteBoard).mockResolvedValue(undefined as any);
 
     const { result } = renderHook(() => useDeleteBoard(), { wrapper: Wrapper });
 
-    await act(async () => {
+    act(() => {
       result.current.mutate('b1');
     });
 

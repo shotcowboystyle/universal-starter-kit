@@ -1,4 +1,6 @@
-export const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
+const ENV_API_URL = process.env.EXPO_PUBLIC_API_URL;
+
+export const API_URL = ENV_API_URL === undefined || ENV_API_URL === '' ? 'http://localhost:3001' : ENV_API_URL;
 
 export const API_ROUTES = {
   AUTH: {

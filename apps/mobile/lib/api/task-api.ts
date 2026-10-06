@@ -13,10 +13,10 @@ export interface TaskPermissions {
 export const taskApi = {
   getTasks: async (projectId?: string, assigneeId?: string) => {
     const params = new URLSearchParams();
-    if (projectId) {
+    if (projectId !== undefined && projectId !== '') {
       params.append('projectId', projectId);
     }
-    if (assigneeId) {
+    if (assigneeId !== undefined && assigneeId !== '') {
       params.append('assigneeId', assigneeId);
     }
 
@@ -36,7 +36,7 @@ export const taskApi = {
       body: JSON.stringify(input),
     }),
   deleteTask: async (id: string) => {
-    await fetchWithAuth<void>(
+    await fetchWithAuth<null>(
       `${API_ROUTES.TASKS}/${id}`,
       {
         method: 'DELETE',

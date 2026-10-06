@@ -2,6 +2,12 @@ import { createAnimations } from '@tamagui/animations-react-native';
 import { defaultConfig } from '@tamagui/config/v4';
 import { createTamagui, createTokens } from '@tamagui/core';
 
+const PRIMARY = 'hsl(180, 75%, 35%)';
+const PRIMARY_FOREGROUND = 'hsl(180, 10%, 98%)';
+const SECONDARY = 'hsl(180, 20%, 92%)';
+const DESTRUCTIVE_FOREGROUND = 'hsl(0, 10%, 98%)';
+const PRIMARY_DARK = 'hsl(180, 75%, 45%)';
+const SECONDARY_DARK = 'hsl(180, 20%, 18%)';
 const tokens = createTokens({
   color: {
     // Light
@@ -9,17 +15,17 @@ const tokens = createTokens({
     foreground: 'hsl(180, 45%, 5%)',
     muted: 'hsl(180, 25%, 95%)',
     mutedForeground: 'hsl(180, 45%, 25%)',
-    primary: 'hsl(180, 75%, 35%)',
-    primaryForeground: 'hsl(180, 10%, 98%)',
-    secondary: 'hsl(180, 20%, 92%)',
+    primary: PRIMARY,
+    primaryForeground: PRIMARY_FOREGROUND,
+    secondary: SECONDARY,
     secondaryForeground: 'hsl(180, 45%, 30%)',
-    accent: 'hsl(180, 75%, 35%)',
-    accentForeground: 'hsl(180, 10%, 98%)',
+    accent: PRIMARY,
+    accentForeground: PRIMARY_FOREGROUND,
     destructive: 'hsl(0, 85%, 45%)',
-    destructiveForeground: 'hsl(0, 10%, 98%)',
-    border: 'hsl(180, 20%, 92%)',
-    input: 'hsl(180, 20%, 92%)',
-    ring: 'hsl(180, 75%, 35%)',
+    destructiveForeground: DESTRUCTIVE_FOREGROUND,
+    border: SECONDARY,
+    input: SECONDARY,
+    ring: PRIMARY,
     card: 'hsl(180, 35%, 98%)',
     cardForeground: 'hsl(180, 45%, 10%)',
     primaryAlpha10: 'hsla(180, 75%, 35%, 0.1)',
@@ -30,17 +36,17 @@ const tokens = createTokens({
     foregroundDark: 'hsl(180, 20%, 100%)',
     mutedDark: 'hsl(180, 30%, 12%)',
     mutedForegroundDark: 'hsl(180, 25%, 85%)',
-    primaryDark: 'hsl(180, 75%, 45%)',
-    primaryForegroundDark: 'hsl(180, 10%, 98%)',
-    secondaryDark: 'hsl(180, 20%, 18%)',
+    primaryDark: PRIMARY_DARK,
+    primaryForegroundDark: PRIMARY_FOREGROUND,
+    secondaryDark: SECONDARY_DARK,
     secondaryForegroundDark: 'hsl(180, 20%, 70%)',
-    accentDark: 'hsl(180, 75%, 45%)',
-    accentForegroundDark: 'hsl(180, 10%, 98%)',
+    accentDark: PRIMARY_DARK,
+    accentForegroundDark: PRIMARY_FOREGROUND,
     destructiveDark: 'hsl(0, 85%, 60%)',
-    destructiveForegroundDark: 'hsl(0, 10%, 98%)',
-    borderDark: 'hsl(180, 20%, 18%)',
-    inputDark: 'hsl(180, 20%, 18%)',
-    ringDark: 'hsl(180, 75%, 45%)',
+    destructiveForegroundDark: DESTRUCTIVE_FOREGROUND,
+    borderDark: SECONDARY_DARK,
+    inputDark: SECONDARY_DARK,
+    ringDark: PRIMARY_DARK,
     cardDark: 'hsl(180, 35%, 8%)',
     cardForegroundDark: 'hsl(180, 20%, 98%)',
     primaryAlpha10Dark: 'hsla(180, 75%, 45%, 0.1)',
@@ -137,6 +143,6 @@ export default tamaguiConfig;
 
 export type AppConfig = typeof tamaguiConfig;
 declare module '@tamagui/core' {
-  // eslint-disable-next-line -- Required by Tamagui for type augmentation
+  // oxlint-disable-next-line typescript/no-empty-object-type, typescript/no-empty-interface -- Required by Tamagui for type augmentation
   interface TamaguiCustomConfig extends AppConfig {}
 }

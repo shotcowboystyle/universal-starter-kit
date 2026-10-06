@@ -1,42 +1,43 @@
 import { renderHook, waitFor } from '@testing-library/react';
+import type { MockInstance } from 'vitest';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { useAuth } from '@/hooks/use-auth';
-import { authService } from '@/lib/auth/auth-service';
+import type { authService } from '@/lib/auth/auth-service';
 import { useAuthStore } from '@/stores/auth';
 
 import { Wrapper } from './test-utils';
 
-vi.mock('@/lib/auth/auth-service', () => ({
-  authService: {
-    getSession: vi.fn(),
-    login: vi.fn(),
-    logout: vi.fn(),
-    getProfile: vi.fn(),
-  },
+const { mockGetSession, mockLogin, mockLogout, mockGetProfile } = vi.hoisted(() => ({
+  mockGetSession: vi.fn<typeof authService.getSession>(),
+  mockLogin: vi.fn<typeof authService.login>(),
+  mockLogout: vi.fn<typeof authService.logout>(),
+  mockGetProfile: vi.fn<typeof authService.getProfile>(),
 }));
 
-vi.mock('@/stores/auth', () => {
-  const setSession = vi.fn();
-  const setUser = vi.fn();
-  const clear = vi.fn();
+vi.mock(import('@/lib/auth/auth-service'), async (importOriginal) => {
+  const { authService: actual } = await importOriginal();
   return {
-    useAuthStore: Object.assign(
-      vi.fn(() => ({ setSession, setUser, clear })),
-      {
-        getState: () => ({ user: { _id: 'u1', email: 't@e.com', name: 'Test' } }),
-      },
-    ),
+    authService: {
+      ...actual,
+      getSession: mockGetSession,
+      login: mockLogin,
+      logout: mockLogout,
+      getProfile: mockGetProfile,
+    },
   };
 });
 
-describe('useAuth', () => {
+describe(useAuth, () => {
+  let clearSpy: MockInstance<() => void>;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    clearSpy = vi.spyOn(useAuthStore.getState(), 'clear');
   });
 
   it('should return isAuthenticated false when no session', async () => {
-    vi.mocked(authService.getSession).mockResolvedValue(null);
+    mockGetSession.mockResolvedValue(null);
 
     const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
 
@@ -54,7 +55,7 @@ describe('useAuth', () => {
       user: { _id: '1', email: 't@e.com', name: 'Test' },
       accessToken: 'tk',
     };
-    vi.mocked(authService.getSession).mockResolvedValue(mockSession);
+    mockGetSession.mockResolvedValue(mockSession);
 
     const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
 
@@ -67,7 +68,7 @@ describe('useAuth', () => {
   });
 
   it('should expose login function', () => {
-    vi.mocked(authService.getSession).mockResolvedValue(null);
+    mockGetSession.mockResolvedValue(null);
 
     const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
 
@@ -76,21 +77,19 @@ describe('useAuth', () => {
   });
 
   it('should call authService.logout and clear on logout', async () => {
-    vi.mocked(authService.getSession).mockResolvedValue(null);
-    vi.mocked(authService.logout).mockResolvedValue(undefined);
+    mockGetSession.mockResolvedValue(null);
+    mockLogout.mockResolvedValue();
 
     const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
 
     await result.current.logout();
 
-    expect(authService.logout).toHaveBeenCalled();
-    const mockValue = vi.mocked(useAuthStore).mock.results[0]?.value;
-    const { clear } = mockValue ?? {};
-    expect(clear).toHaveBeenCalled();
+    expect(mockLogout).toHaveBeenCalledWith();
+    expect(clearSpy).toHaveBeenCalledWith();
   });
 
   it('should return error from loginMutation or sessionQuery', async () => {
-    vi.mocked(authService.getSession).mockRejectedValue(new Error('Session failed'));
+    mockGetSession.mockRejectedValue(new Error('Session failed'));
 
     const { result } = renderHook(() => useAuth(), { wrapper: Wrapper });
 

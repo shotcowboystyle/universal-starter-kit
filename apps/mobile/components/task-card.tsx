@@ -2,13 +2,14 @@ import type { Task } from '@repo/store';
 import { TaskStatus } from '@repo/store';
 import { Text, View, useTheme } from '@tamagui/core';
 import { format } from 'date-fns';
-import * as Haptics from 'expo-haptics';
+import { ImpactFeedbackStyle, NotificationFeedbackType, impactAsync, notificationAsync } from 'expo-haptics';
 import { Link, router } from 'expo-router';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Pressable } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring, runOnJS } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import { useUpdateTask, useDeleteTask } from '@/hooks/use-tasks';
 
@@ -21,23 +22,29 @@ const SWIPE_THRESHOLD = 60;
 
 const STATUS_ORDER: TaskStatus[] = [TaskStatus.TODO, TaskStatus.IN_PROGRESS, TaskStatus.DONE];
 
+const STATUS_BADGES = {
+  [TaskStatus.TODO]: { bgColor: '$gray500', labelKey: 'kanban.task.statusTodo', fallback: 'Todo' },
+  [TaskStatus.IN_PROGRESS]: { bgColor: '$blue500', labelKey: 'kanban.task.statusInProgress', fallback: 'In Progress' },
+  [TaskStatus.DONE]: { bgColor: '$green500', labelKey: 'kanban.task.statusDone', fallback: 'Done' },
+} as const satisfies Record<TaskStatus, { bgColor: string; labelKey: string; fallback: string }>;
+
+const getCardStyle = (backgroundColor: string) =>
+  ({
+    borderRadius: 12,
+    backgroundColor,
+    padding: 16,
+    marginBottom: 12,
+    gap: 12,
+    borderCurve: 'continuous',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.25)',
+  }) as const;
+
 const StatusBadge = ({ status }: { status: TaskStatus }) => {
   const { t } = useTranslation();
-  let bgColor = '$gray500';
-  let label = t('kanban.task.statusTodo') || 'Todo';
-
-  switch (status) {
-    case 'IN_PROGRESS': {
-      bgColor = '$blue500';
-      label = t('kanban.task.statusInProgress') || 'In Progress';
-      break;
-    }
-    case 'DONE': {
-      bgColor = '$green500';
-      label = t('kanban.task.statusDone') || 'Done';
-      break;
-    }
-  }
+  const { bgColor, labelKey, fallback } = STATUS_BADGES[status];
+  const label = t(labelKey) || fallback;
 
   return (
     <View
@@ -68,15 +75,13 @@ export const TaskCard = ({ task, onMoveToProject }: TaskCardProps) => {
     const nextIndex = (currentIndex + 1) % STATUS_ORDER.length;
     const nextStatus = STATUS_ORDER[nextIndex];
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    void impactAsync(ImpactFeedbackStyle.Medium);
     updateTaskMutation.mutate({ id: task._id, status: nextStatus });
   }, [task._id, task.status, updateTaskMutation]);
 
   const handleMoveTo = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (onMoveToProject) {
-      onMoveToProject();
-    }
+    void impactAsync(ImpactFeedbackStyle.Medium);
+    onMoveToProject?.();
   }, [onMoveToProject]);
 
   const handleDelete = useCallback(() => {
@@ -89,7 +94,7 @@ export const TaskCard = ({ task, onMoveToProject }: TaskCardProps) => {
           text: t('common.delete') || 'Delete',
           style: 'destructive',
           onPress: () => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            void notificationAsync(NotificationFeedbackType.Success);
             deleteTaskMutation.mutate(task._id);
           },
         },
@@ -97,24 +102,25 @@ export const TaskCard = ({ task, onMoveToProject }: TaskCardProps) => {
     );
   }, [t, task.title, task._id, deleteTaskMutation]);
 
+  // oxlint-disable-next-line react/capitalized-calls -- Gesture.Pan() is the RNGH builder, not a component
   const pan = Gesture.Pan()
     .onBegin(() => {
-      context.value = translateX.value;
+      context.set(translateX.get());
     })
     .onUpdate((event) => {
-      translateX.value = event.translationX + context.value;
+      translateX.set(event.translationX + context.get());
     })
     .onEnd(() => {
-      if (translateX.value > SWIPE_THRESHOLD) {
-        runOnJS(cycleStatus)();
-      } else if (translateX.value < -SWIPE_THRESHOLD) {
-        runOnJS(handleMoveTo)();
+      if (translateX.get() > SWIPE_THRESHOLD) {
+        scheduleOnRN(cycleStatus);
+      } else if (translateX.get() < -SWIPE_THRESHOLD) {
+        scheduleOnRN(handleMoveTo);
       }
-      translateX.value = withSpring(0);
+      translateX.set(withSpring(0));
     });
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value }],
+    transform: [{ translateX: translateX.get() }],
   }));
 
   return (
@@ -124,18 +130,7 @@ export const TaskCard = ({ task, onMoveToProject }: TaskCardProps) => {
           href={`/tasks/${task._id}`}
           asChild>
           <Link.Trigger>
-            <Pressable
-              style={{
-                borderRadius: 12,
-                backgroundColor: theme.card.val,
-                padding: 16,
-                marginBottom: 12,
-                gap: 12,
-                borderCurve: 'continuous',
-                borderWidth: 1,
-                borderColor: 'rgba(255, 255, 255, 0.25)',
-                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.25)',
-              }}>
+            <Pressable style={getCardStyle(theme.card.val)}>
               <View
                 flexDirection="row"
                 alignItems="flex-start"
@@ -164,7 +159,7 @@ export const TaskCard = ({ task, onMoveToProject }: TaskCardProps) => {
                     <Text
                       fontSize={12}
                       color="$mutedForeground">
-                      {typeof task.assignee === 'string' ? 'Assigned' : task.assignee.name || task.assignee.email}
+                      {task.assignee.name || task.assignee.email}
                     </Text>
                   )}
                 </View>
@@ -180,23 +175,23 @@ export const TaskCard = ({ task, onMoveToProject }: TaskCardProps) => {
           </Link.Trigger>
           <Link.Menu>
             <Link.MenuAction
-              title={t('common.edit') || 'Edit'}
               icon="pencil"
               onPress={() => {
                 router.push(`/tasks/${task._id}`);
-              }}
-            />
+              }}>
+              {t('common.edit') || 'Edit'}
+            </Link.MenuAction>
             <Link.MenuAction
-              title={t('kanban.task.moveTask') || 'Move task'}
               icon="arrow.right.square"
-              onPress={handleMoveTo}
-            />
+              onPress={handleMoveTo}>
+              {t('kanban.task.moveTask') || 'Move task'}
+            </Link.MenuAction>
             <Link.MenuAction
-              title={t('common.delete') || 'Delete'}
               icon="trash"
               destructive
-              onPress={handleDelete}
-            />
+              onPress={handleDelete}>
+              {t('common.delete') || 'Delete'}
+            </Link.MenuAction>
           </Link.Menu>
         </Link>
       </Animated.View>

@@ -13,14 +13,14 @@ export const PROJECT_KEYS = {
 
 export const useProjects = (boardId?: string) =>
   useQuery({
-    queryKey: PROJECT_KEYS.list(boardId || ''),
+    queryKey: PROJECT_KEYS.list(boardId ?? ''),
     queryFn: async () => {
-      if (!boardId) {
+      if (boardId === undefined || boardId === '') {
         throw new Error('Board ID is required');
       }
       return await projectApi.getProjects(boardId);
     },
-    enabled: !!boardId,
+    enabled: boardId !== undefined && boardId !== '',
   });
 
 export const useCreateProject = () => {
@@ -28,9 +28,10 @@ export const useCreateProject = () => {
   return useMutation({
     mutationFn: projectApi.createProject,
     onSuccess: (newProject) => {
+      // oxlint-disable-next-line anti-slop/no-runtime-typeof -- API returns either a populated board or its id string
       const boardId = typeof newProject.board === 'string' ? newProject.board : newProject.board?._id;
-      if (boardId) {
-        queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.list(boardId) });
+      if (boardId !== undefined && boardId !== '') {
+        void queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.list(boardId) });
       }
     },
   });
@@ -42,11 +43,12 @@ export const useUpdateProject = () => {
     mutationFn: async ({ id, ...updates }: { id: string } & UpdateProjectInput) =>
       await projectApi.updateProject(id, updates),
     onSuccess: (updatedProject) => {
+      // oxlint-disable-next-line anti-slop/no-runtime-typeof -- API returns either a populated board or its id string
       const boardId = typeof updatedProject.board === 'string' ? updatedProject.board : updatedProject.board?._id;
-      if (boardId) {
-        queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.list(boardId) });
+      if (boardId !== undefined && boardId !== '') {
+        void queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.list(boardId) });
       }
-      queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.detail(updatedProject._id) });
+      void queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.detail(updatedProject._id) });
     },
   });
 };
@@ -59,8 +61,8 @@ export const useDeleteProject = () => {
       return { boardId };
     },
     onSuccess: ({ boardId }, { id }) => {
-      if (boardId) {
-        queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.list(boardId) });
+      if (boardId !== undefined && boardId !== '') {
+        void queryClient.invalidateQueries({ queryKey: PROJECT_KEYS.list(boardId) });
       }
       queryClient.removeQueries({ queryKey: PROJECT_KEYS.detail(id) });
     },

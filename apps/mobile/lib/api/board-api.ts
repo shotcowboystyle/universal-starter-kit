@@ -29,7 +29,7 @@ export const boardApi = {
       body: JSON.stringify(input),
     }),
   deleteBoard: async (id: string) => {
-    await fetchWithAuth<void>(
+    await fetchWithAuth<null>(
       `${API_ROUTES.BOARDS}/${id}`,
       {
         method: 'DELETE',

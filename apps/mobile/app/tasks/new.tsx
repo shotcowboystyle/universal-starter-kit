@@ -1,16 +1,48 @@
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { TaskStatus } from '@repo/store';
 import { Text, View, useTheme } from '@tamagui/core';
-import { format } from 'date-fns';
-import * as Haptics from 'expo-haptics';
+import { NotificationFeedbackType, notificationAsync, selectionAsync } from 'expo-haptics';
 import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { KeyboardAvoidingView, Platform, Modal, FlatList, Alert, Pressable, TextInput, ScrollView } from 'react-native';
+import { KeyboardAvoidingView, Platform, Alert, Pressable, TextInput, ScrollView } from 'react-native';
 
+import { AssigneeModal } from '@/components/assignee-modal';
+import { DueDateField } from '@/components/due-date-field';
 import { useCreateTask } from '@/hooks/use-tasks';
 import { useUsers } from '@/hooks/use-users';
+
+const SPACE_BETWEEN = 'space-between';
+
+const STATUS_OPTIONS = [TaskStatus.TODO, TaskStatus.IN_PROGRESS, TaskStatus.DONE] as const;
+
+const STATUS_LABEL_KEYS = {
+  [TaskStatus.TODO]: 'statusTodo',
+  [TaskStatus.IN_PROGRESS]: 'statusInProgress',
+  [TaskStatus.DONE]: 'statusDone',
+} as const satisfies Record<TaskStatus, string>;
+
+const renderHeaderLeft = (label: string, onCancel: () => void) => (
+  <Pressable onPress={onCancel}>
+    <Text
+      fontWeight="500"
+      color="$primary">
+      {label}
+    </Text>
+  </Pressable>
+);
+
+const renderHeaderRight = (label: string, isPending: boolean, onCreate: () => void) => (
+  <Pressable
+    onPress={onCreate}
+    disabled={isPending}>
+    <Text
+      fontWeight="600"
+      color={isPending ? '$mutedForeground' : '$primary'}>
+      {label}
+    </Text>
+  </Pressable>
+);
 
 const NewTaskScreen = () => {
   const { projectId, boardId } = useLocalSearchParams<{ projectId: string; boardId: string }>();
@@ -27,7 +59,6 @@ const NewTaskScreen = () => {
   const [assigneeId, setAssigneeId] = useState<string | null>(null);
   const [dueDate, setDueDate] = useState<Date | null>(null);
 
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [showAssigneeModal, setShowAssigneeModal] = useState(false);
 
   const handleCreate = () => {
@@ -36,14 +67,14 @@ const NewTaskScreen = () => {
       return;
     }
 
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    void notificationAsync(NotificationFeedbackType.Success);
     createTaskMutation.mutate(
       {
         title,
         description,
         status,
-        assignee: assigneeId || undefined,
-        dueDate: dueDate || undefined,
+        assignee: assigneeId ?? undefined,
+        dueDate: dueDate ?? undefined,
         project: projectId,
         board: boardId,
       },
@@ -55,7 +86,8 @@ const NewTaskScreen = () => {
     );
   };
 
-  const assigneeName = users.find((u) => u._id === assigneeId)?.name || 'Unassigned';
+  const assigneeUserName = users.find((u) => u._id === assigneeId)?.name;
+  const assigneeName = assigneeUserName !== undefined && assigneeUserName !== '' ? assigneeUserName : 'Unassigned';
 
   return (
     <KeyboardAvoidingView
@@ -65,29 +97,12 @@ const NewTaskScreen = () => {
         options={{
           title: t('kanban.task.addNewTaskTitle') || 'New Task',
           presentation: 'formSheet',
-          headerLeft: () => (
-            <Pressable
-              onPress={() => {
-                router.back();
-              }}>
-              <Text
-                fontWeight="500"
-                color="$primary">
-                {t('common.cancel') || 'Cancel'}
-              </Text>
-            </Pressable>
-          ),
-          headerRight: () => (
-            <Pressable
-              onPress={handleCreate}
-              disabled={createTaskMutation.isPending}>
-              <Text
-                fontWeight="600"
-                color={createTaskMutation.isPending ? '$mutedForeground' : '$primary'}>
-                {t('common.create') || 'Create'}
-              </Text>
-            </Pressable>
-          ),
+          headerLeft: () =>
+            renderHeaderLeft(t('common.cancel') || 'Cancel', () => {
+              router.back();
+            }),
+          headerRight: () =>
+            renderHeaderRight(t('common.create') || 'Create', createTaskMutation.isPending, handleCreate),
         }}
       />
 
@@ -132,12 +147,12 @@ const NewTaskScreen = () => {
           <View
             flexDirection="row"
             gap={8}>
-            {['TODO', 'IN_PROGRESS', 'DONE'].map((s) => (
+            {STATUS_OPTIONS.map((s) => (
               <Pressable
                 key={s}
                 onPress={() => {
-                  Haptics.selectionAsync();
-                  setStatus(s as TaskStatus);
+                  void selectionAsync();
+                  setStatus(s);
                 }}
                 style={{
                   flex: 1,
@@ -151,9 +166,7 @@ const NewTaskScreen = () => {
                 <Text
                   fontWeight="500"
                   color={status === s ? '$primaryForeground' : '$color'}>
-                  {t(
-                    `kanban.task.${({ TODO: 'statusTodo', IN_PROGRESS: 'statusInProgress', DONE: 'statusDone' } as Record<string, string>)[s]}`,
-                  ) || s.replace('_', ' ')}
+                  {t(`kanban.task.${STATUS_LABEL_KEYS[s]}`) || s.replace('_', ' ')}
                 </Text>
               </Pressable>
             ))}
@@ -175,7 +188,7 @@ const NewTaskScreen = () => {
             style={{
               flexDirection: 'row',
               alignItems: 'center',
-              justifyContent: 'space-between',
+              justifyContent: SPACE_BETWEEN,
               borderRadius: 8,
               borderWidth: 1,
               borderColor: theme.borderColor.val,
@@ -191,80 +204,10 @@ const NewTaskScreen = () => {
           </Pressable>
         </View>
 
-        {/* Due Date */}
-        <View gap={8}>
-          <Text
-            fontSize={14}
-            fontWeight="500"
-            color="$mutedForeground">
-            {t('kanban.task.dueDateLabel') || 'Due Date'}
-          </Text>
-          <Pressable
-            onPress={() => {
-              setShowDatePicker(true);
-            }}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              borderRadius: 8,
-              borderWidth: 1,
-              borderColor: theme.borderColor.val,
-              backgroundColor: theme.card.val,
-              padding: 12,
-            }}>
-            <Text color="$color">{dueDate ? format(dueDate, 'MMM d, yyyy') : 'Set due date'}</Text>
-            <Image
-              source="sf:calendar"
-              style={{ width: 16, height: 16 }}
-              tintColor="gray"
-            />
-          </Pressable>
-          {showDatePicker &&
-            (Platform.OS === 'ios' ? (
-              <View
-                marginTop={8}
-                borderRadius={8}
-                backgroundColor="$card"
-                padding={8}>
-                <DateTimePicker
-                  value={dueDate || new Date()}
-                  mode="date"
-                  display="inline"
-                  minimumDate={new Date()}
-                  onChange={(event, date) => {
-                    if (date) {
-                      setDueDate(date);
-                    }
-                  }}
-                />
-                <Pressable
-                  onPress={() => {
-                    setShowDatePicker(false);
-                  }}
-                  style={{ alignItems: 'center', padding: 8 }}>
-                  <Text
-                    fontWeight="500"
-                    color="$primary">
-                    Done
-                  </Text>
-                </Pressable>
-              </View>
-            ) : (
-              <DateTimePicker
-                value={dueDate || new Date()}
-                mode="date"
-                display="default"
-                minimumDate={new Date()}
-                onChange={(event, date) => {
-                  setShowDatePicker(false);
-                  if (date) {
-                    setDueDate(date);
-                  }
-                }}
-              />
-            ))}
-        </View>
+        <DueDateField
+          dueDate={dueDate}
+          onChange={setDueDate}
+        />
 
         {/* Description */}
         <View gap={8}>
@@ -295,84 +238,18 @@ const NewTaskScreen = () => {
         </View>
       </ScrollView>
 
-      {/* Assignee Modal */}
-      <Modal
+      <AssigneeModal
         visible={showAssigneeModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => {
+        users={users}
+        assigneeId={assigneeId}
+        onSelect={(id) => {
+          setAssigneeId(id);
           setShowAssigneeModal(false);
-        }}>
-        <View
-          flex={1}
-          backgroundColor="$background">
-          <View
-            flexDirection="row"
-            alignItems="center"
-            justifyContent="space-between"
-            borderBottomWidth={1}
-            borderColor="$borderColor"
-            padding={16}>
-            <Text
-              fontSize={18}
-              fontWeight="600"
-              color="$color">
-              Select Assignee
-            </Text>
-            <Pressable
-              onPress={() => {
-                setShowAssigneeModal(false);
-              }}>
-              <Text
-                fontWeight="500"
-                color="$primary">
-                Close
-              </Text>
-            </Pressable>
-          </View>
-          <FlatList
-            data={users}
-            keyExtractor={(item) => item._id}
-            contentContainerStyle={{ padding: 16 }}
-            renderItem={({ item }) => (
-              <Pressable
-                onPress={() => {
-                  setAssigneeId(item._id);
-                  setShowAssigneeModal(false);
-                }}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  borderBottomWidth: 1,
-                  borderColor: theme.borderColor.val,
-                  padding: 16,
-                  backgroundColor: assigneeId === item._id ? theme.secondaryAlpha50.val : undefined,
-                }}>
-                <View>
-                  <Text
-                    fontWeight="500"
-                    color="$color">
-                    {item.name}
-                  </Text>
-                  <Text
-                    fontSize={14}
-                    color="$mutedForeground">
-                    {item.email}
-                  </Text>
-                </View>
-                {assigneeId === item._id && (
-                  <Image
-                    source="sf:checkmark"
-                    style={{ width: 16, height: 16 }}
-                    tintColor="blue"
-                  />
-                )}
-              </Pressable>
-            )}
-          />
-        </View>
-      </Modal>
+        }}
+        onClose={() => {
+          setShowAssigneeModal(false);
+        }}
+      />
     </KeyboardAvoidingView>
   );
 };

@@ -4,16 +4,27 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { loadThemePreference, saveThemePreference, applyThemePreference } from '@/lib/theme';
 
-vi.mock('@react-native-async-storage/async-storage', () => ({
+vi.mock(import('@react-native-async-storage/async-storage'), () => ({
   default: {
-    getItem: vi.fn(),
-    setItem: vi.fn(),
+    getItem: vi.fn<typeof AsyncStorage.getItem>(),
+    setItem: vi.fn<typeof AsyncStorage.setItem>(),
+    removeItem: vi.fn<typeof AsyncStorage.removeItem>(),
+    mergeItem: vi.fn<typeof AsyncStorage.mergeItem>(),
+    clear: vi.fn<typeof AsyncStorage.clear>(),
+    getAllKeys: vi.fn<typeof AsyncStorage.getAllKeys>(),
+    flushGetRequests: vi.fn<typeof AsyncStorage.flushGetRequests>(),
+    multiGet: vi.fn<typeof AsyncStorage.multiGet>(),
+    multiSet: vi.fn<typeof AsyncStorage.multiSet>(),
+    multiRemove: vi.fn<typeof AsyncStorage.multiRemove>(),
+    multiMerge: vi.fn<typeof AsyncStorage.multiMerge>(),
   },
 }));
 
-vi.mock('react-native', () => ({
+vi.mock(import('react-native'), () => ({
   Appearance: {
-    setColorScheme: vi.fn(),
+    setColorScheme: vi.fn<typeof Appearance.setColorScheme>(),
+    getColorScheme: vi.fn<typeof Appearance.getColorScheme>(),
+    addChangeListener: vi.fn<typeof Appearance.addChangeListener>(),
   },
 }));
 

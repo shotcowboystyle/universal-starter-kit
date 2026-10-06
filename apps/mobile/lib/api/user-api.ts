@@ -25,12 +25,12 @@ export const userApi = {
     const response = await fetchWithAuth<{ users: ApiUser[] }>(
       `${API_ROUTES.USERS}/search?username=${encodeURIComponent(username)}`,
     );
-    return (response.users || []).map(transformUserData);
+    return (response.users ?? []).map(transformUserData);
   },
   getUserById: async (id: string) => {
     try {
       const response = await fetchWithAuth<{ user: ApiUser }>(`${API_ROUTES.USERS}/${id}`);
-      return response.user ? transformUserData(response.user) : null;
+      return response.user == null ? null : transformUserData(response.user);
     } catch {
       return null;
     }

@@ -85,6 +85,15 @@ export default defineConfig({
       rules: { 'unicorn/filename-case': 'off' },
     },
     {
+      // Expo / React Native app: Next.js- and SSR-specific react-doctor rules don't apply.
+      files: ['apps/mobile/**'],
+      rules: {
+        'react-doctor/nextjs-error-boundary-missing-use-client': 'off',
+        'react-doctor/nextjs-no-client-side-redirect': 'off',
+        'react-doctor/rendering-hydration-no-flicker': 'off',
+      },
+    },
+    {
       // Tests mock modules and poke at loosely typed fixtures; type-escape rules stay on in source.
       files: TEST_FILES,
       rules: {

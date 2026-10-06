@@ -11,7 +11,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { useAuth } from '@/hooks/use-auth';
 import { queryClient } from '@/lib/query-client';
-import tamaguiConfig from '@/lib/tamagui/tamagui.config';
+import { tamaguiConfig } from '@/lib/tamagui/tamagui.config';
 import { applyThemePreference, loadThemePreference } from '@/lib/theme';
 
 export { ErrorBoundary } from 'expo-router';
@@ -23,16 +23,19 @@ const RootLayoutNav = () => {
   const [isNavigationReady, setIsNavigationReady] = useState(false);
 
   useEffect(() => {
+    // oxlint-disable-next-line react-doctor/no-initialize-state, react/set-state-in-effect -- readiness flag must flip only after first commit
     setIsNavigationReady(true);
   }, []);
 
   // Restore persisted theme preference on mount
   useEffect(() => {
-    loadThemePreference().then((pref) => {
-      applyThemePreference(pref);
-    });
+    const restoreTheme = async () => {
+      applyThemePreference(await loadThemePreference());
+    };
+    void restoreTheme();
   }, []);
 
+  // oxlint-disable-next-line react-doctor/no-effect-chain -- depends on readiness flag set above
   useEffect(() => {
     if (isLoading || !isNavigationReady) {
       return;
@@ -83,6 +86,7 @@ const RootLayoutNav = () => {
           options={{ headerShown: false }}
         />
       </Stack>
+      {/* oxlint-disable-next-line react/style-prop-object -- expo-status-bar style is a string union */}
       <StatusBar style="light" />
     </ThemeProvider>
   );

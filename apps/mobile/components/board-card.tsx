@@ -1,6 +1,6 @@
 import type { Board } from '@repo/store';
 import { Text, View, useTheme } from '@tamagui/core';
-import * as Haptics from 'expo-haptics';
+import { ImpactFeedbackStyle, impactAsync } from 'expo-haptics';
 import { Link } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -29,14 +29,17 @@ export const BoardCard = ({ board, showOwner }: BoardCardProps) => {
   );
 
   const ownerName = useMemo(
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- Board.owner is a string id or populated UserInfo
     () => (typeof board.owner === 'string' ? board.owner : board.owner?.name || 'Unknown'),
     [board.owner],
   );
 
+  const hasDescription = board.description !== undefined && board.description !== '';
+
   const handlePressIn = useCallback(() => {
     setPressed(true);
     if (process.env.EXPO_OS === 'ios') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      void impactAsync(ImpactFeedbackStyle.Light);
     }
   }, []);
 
@@ -89,7 +92,7 @@ export const BoardCard = ({ board, showOwner }: BoardCardProps) => {
           fontSize={14}
           color="$mutedForeground"
           numberOfLines={2}>
-          {board.description || t('kanban.noDescription')}
+          {hasDescription ? board.description : t('kanban.noDescription')}
         </Text>
 
         {/* Metadata — matches web CardContent layout */}

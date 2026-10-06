@@ -3,32 +3,29 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { useTasks, useTask, useCreateTask, useUpdateTask, useDeleteTask, useMoveTask } from '@/hooks/use-tasks';
 import { taskApi } from '@/lib/api/task-api';
+import { useAuthStore } from '@/stores/auth';
 
 import { Wrapper } from './test-utils';
 
-vi.mock('@/lib/api/task-api', () => ({
-  taskApi: {
-    getTasks: vi.fn(),
-    getTaskById: vi.fn(),
-    createTask: vi.fn(),
-    updateTask: vi.fn(),
-    deleteTask: vi.fn(),
-    moveTask: vi.fn(),
-  },
-}));
-
-vi.mock('@/stores/auth', () => ({
-  useAuthStore: Object.assign(
-    vi.fn(() => ({ user: { _id: 'u1', email: 't@e.com', name: 'Test' } })),
-    {
-      getState: () => ({ user: { _id: 'u1', email: 't@e.com', name: 'Test' } }),
+vi.mock(import('@/lib/api/task-api'), async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    taskApi: {
+      ...actual.taskApi,
+      getTasks: vi.fn<typeof taskApi.getTasks>(),
+      getTaskById: vi.fn<typeof taskApi.getTaskById>(),
+      createTask: vi.fn<typeof taskApi.createTask>(),
+      updateTask: vi.fn<typeof taskApi.updateTask>(),
+      deleteTask: vi.fn<typeof taskApi.deleteTask>(),
+      moveTask: vi.fn<typeof taskApi.moveTask>(),
     },
-  ),
-}));
+  };
+});
 
-describe('useTasks', () => {
+describe(useTasks, () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useAuthStore.setState({ user: { _id: 'u1', email: 't@e.com', name: 'Test' } });
   });
 
   it('should fetch tasks by projectId', async () => {
@@ -65,7 +62,7 @@ describe('useTasks', () => {
   });
 });
 
-describe('useTask', () => {
+describe(useTask, () => {
   it('should fetch a single task', async () => {
     const mockTask = { _id: 't1', title: 'Task 1' };
     vi.mocked(taskApi.getTaskById).mockResolvedValue(mockTask as any);
@@ -80,20 +77,20 @@ describe('useTask', () => {
   });
 
   it('should not fetch when taskId is undefined', () => {
-    const { result } = renderHook(() => useTask(undefined), { wrapper: Wrapper });
+    const { result } = renderHook(() => useTask(), { wrapper: Wrapper });
 
     expect(result.current.fetchStatus).toBe('idle');
   });
 });
 
-describe('useCreateTask', () => {
+describe(useCreateTask, () => {
   it('should create task and invalidate queries', async () => {
     const newTask = { _id: 't2', title: 'New', project: 'p1', assignee: null };
     vi.mocked(taskApi.createTask).mockResolvedValue(newTask as any);
 
     const { result } = renderHook(() => useCreateTask(), { wrapper: Wrapper });
 
-    await act(async () => {
+    act(() => {
       result.current.mutate({ title: 'New', projectId: 'p1' } as any);
     });
 
@@ -101,7 +98,7 @@ describe('useCreateTask', () => {
       expect(result.current.isSuccess).toBe(true);
     });
 
-    expect(taskApi.createTask).toHaveBeenCalled();
+    expect(taskApi.createTask).toHaveBeenCalledWith({ title: 'New', projectId: 'p1' }, expect.anything());
   });
 
   it('should handle task with string assignee', async () => {
@@ -110,7 +107,7 @@ describe('useCreateTask', () => {
 
     const { result } = renderHook(() => useCreateTask(), { wrapper: Wrapper });
 
-    await act(async () => {
+    act(() => {
       result.current.mutate({ title: 'New', projectId: 'p1' } as any);
     });
 
@@ -130,7 +127,7 @@ describe('useCreateTask', () => {
 
     const { result } = renderHook(() => useCreateTask(), { wrapper: Wrapper });
 
-    await act(async () => {
+    act(() => {
       result.current.mutate({ title: 'New', projectId: 'p1' } as any);
     });
 
@@ -140,14 +137,14 @@ describe('useCreateTask', () => {
   });
 });
 
-describe('useUpdateTask', () => {
+describe(useUpdateTask, () => {
   it('should inject lastModifier from auth store', async () => {
     const updated = { _id: 't1', title: 'Updated', project: 'p1' };
     vi.mocked(taskApi.updateTask).mockResolvedValue(updated as any);
 
     const { result } = renderHook(() => useUpdateTask(), { wrapper: Wrapper });
 
-    await act(async () => {
+    act(() => {
       result.current.mutate({ id: 't1', title: 'Updated' });
     });
 
@@ -162,13 +159,13 @@ describe('useUpdateTask', () => {
   });
 });
 
-describe('useDeleteTask', () => {
+describe(useDeleteTask, () => {
   it('should delete task', async () => {
     vi.mocked(taskApi.deleteTask).mockResolvedValue(undefined as any);
 
     const { result } = renderHook(() => useDeleteTask(), { wrapper: Wrapper });
 
-    await act(async () => {
+    act(() => {
       result.current.mutate('t1');
     });
 
@@ -180,14 +177,14 @@ describe('useDeleteTask', () => {
   });
 });
 
-describe('useMoveTask', () => {
+describe(useMoveTask, () => {
   it('should move task to another project', async () => {
     const moved = { _id: 't1', project: 'p2' };
     vi.mocked(taskApi.moveTask).mockResolvedValue(moved as any);
 
     const { result } = renderHook(() => useMoveTask(), { wrapper: Wrapper });
 
-    await act(async () => {
+    act(() => {
       result.current.mutate({ taskId: 't1', projectId: 'p2', orderInProject: 0 });
     });
 

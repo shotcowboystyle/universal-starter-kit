@@ -1,27 +1,48 @@
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { TaskStatus } from '@repo/store';
 import { Text, View, useTheme } from '@tamagui/core';
-import { format } from 'date-fns';
-import * as Haptics from 'expo-haptics';
+import { NotificationFeedbackType, notificationAsync, selectionAsync } from 'expo-haptics';
 import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
-  Modal,
-  FlatList,
   Pressable,
   TextInput,
   ScrollView,
 } from 'react-native';
 
+import { AssigneeModal } from '@/components/assignee-modal';
+import { DueDateField } from '@/components/due-date-field';
 import { useTask, useUpdateTask, useDeleteTask } from '@/hooks/use-tasks';
 import { useUsers } from '@/hooks/use-users';
 
+const SPACE_BETWEEN = 'space-between';
+
+const STATUS_OPTIONS = [TaskStatus.TODO, TaskStatus.IN_PROGRESS, TaskStatus.DONE] as const;
+
+const STATUS_LABEL_KEYS = {
+  [TaskStatus.TODO]: 'statusTodo',
+  [TaskStatus.IN_PROGRESS]: 'statusInProgress',
+  [TaskStatus.DONE]: 'statusDone',
+} as const satisfies Record<TaskStatus, string>;
+
+const renderHeaderRight = (label: string, isPending: boolean, onSave: () => void) => (
+  <Pressable
+    onPress={onSave}
+    disabled={isPending}>
+    <Text
+      fontWeight="600"
+      color={isPending ? '$mutedForeground' : '$primary'}>
+      {label}
+    </Text>
+  </Pressable>
+);
+
+// oxlint-disable-next-line react-doctor/prefer-useReducer -- independent form fields, each bound to its own input
 const TaskDetailScreen = () => {
   const { taskId } = useLocalSearchParams<{ taskId: string }>();
   const { t } = useTranslation();
@@ -39,25 +60,25 @@ const TaskDetailScreen = () => {
   const [assigneeId, setAssigneeId] = useState<string | null>(null);
   const [dueDate, setDueDate] = useState<Date | null>(null);
 
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [showAssigneeModal, setShowAssigneeModal] = useState(false);
 
   useEffect(() => {
-    if (task) {
+    if (task != null) {
+      // oxlint-disable-next-line react/set-state-in-effect -- seeds editable form state from fetched task
       setTitle(task.title);
-      setDescription(task.description || '');
-      setStatus(task.status || 'TODO');
-      setAssigneeId(task.assignee ? (typeof task.assignee === 'string' ? task.assignee : task.assignee._id) : null);
-      setDueDate(task.dueDate ? new Date(task.dueDate) : null);
+      setDescription(task.description ?? '');
+      setStatus(task.status);
+      setAssigneeId(task.assignee?._id ?? null);
+      setDueDate(task.dueDate == null ? null : new Date(task.dueDate));
     }
   }, [task]);
 
   const handleSave = () => {
-    if (!taskId) {
+    if (taskId === undefined || taskId === '') {
       return;
     }
 
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    void notificationAsync(NotificationFeedbackType.Success);
     updateTaskMutation.mutate(
       {
         id: taskId,
@@ -75,11 +96,8 @@ const TaskDetailScreen = () => {
     );
   };
 
-  const handleSaveRef = useRef(handleSave);
-  handleSaveRef.current = handleSave;
-
   const handleDelete = () => {
-    if (!taskId) {
+    if (taskId === undefined || taskId === '') {
       return;
     }
 
@@ -92,7 +110,7 @@ const TaskDetailScreen = () => {
           text: t('common.delete') || 'Delete',
           style: 'destructive',
           onPress: () => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            void notificationAsync(NotificationFeedbackType.Success);
             deleteTaskMutation.mutate(taskId, {
               onSuccess: () => {
                 router.back();
@@ -116,7 +134,7 @@ const TaskDetailScreen = () => {
     );
   }
 
-  if (!task) {
+  if (task == null) {
     return (
       <View
         flex={1}
@@ -128,7 +146,8 @@ const TaskDetailScreen = () => {
     );
   }
 
-  const assigneeName = users.find((u) => u._id === assigneeId)?.name || 'Unassigned';
+  const assigneeUserName = users.find((u) => u._id === assigneeId)?.name;
+  const assigneeName = assigneeUserName !== undefined && assigneeUserName !== '' ? assigneeUserName : 'Unassigned';
 
   return (
     <KeyboardAvoidingView
@@ -138,20 +157,7 @@ const TaskDetailScreen = () => {
         options={{
           title: t('kanban.task.editTaskTitle') || 'Edit Task',
           headerBackButtonDisplayMode: 'minimal',
-          headerLeft: undefined,
-          headerRight: () => (
-            <Pressable
-              onPress={() => {
-                handleSaveRef.current();
-              }}
-              disabled={updateTaskMutation.isPending}>
-              <Text
-                fontWeight="600"
-                color={updateTaskMutation.isPending ? '$mutedForeground' : '$primary'}>
-                {t('common.save') || 'Save'}
-              </Text>
-            </Pressable>
-          ),
+          headerRight: () => renderHeaderRight(t('common.save') || 'Save', updateTaskMutation.isPending, handleSave),
         }}
       />
 
@@ -194,12 +200,12 @@ const TaskDetailScreen = () => {
           <View
             flexDirection="row"
             gap={8}>
-            {['TODO', 'IN_PROGRESS', 'DONE'].map((s) => (
+            {STATUS_OPTIONS.map((s) => (
               <Pressable
                 key={s}
                 onPress={() => {
-                  Haptics.selectionAsync();
-                  setStatus(s as TaskStatus);
+                  void selectionAsync();
+                  setStatus(s);
                 }}
                 style={{
                   flex: 1,
@@ -213,9 +219,7 @@ const TaskDetailScreen = () => {
                 <Text
                   fontWeight="500"
                   color={status === s ? '$primaryForeground' : '$color'}>
-                  {t(
-                    `kanban.task.${({ TODO: 'statusTodo', IN_PROGRESS: 'statusInProgress', DONE: 'statusDone' } as Record<string, string>)[s]}`,
-                  ) || s.replace('_', ' ')}
+                  {t(`kanban.task.${STATUS_LABEL_KEYS[s]}`) || s.replace('_', ' ')}
                 </Text>
               </Pressable>
             ))}
@@ -237,7 +241,7 @@ const TaskDetailScreen = () => {
             style={{
               flexDirection: 'row',
               alignItems: 'center',
-              justifyContent: 'space-between',
+              justifyContent: SPACE_BETWEEN,
               borderRadius: 8,
               borderWidth: 1,
               borderColor: theme.borderColor.val,
@@ -253,80 +257,10 @@ const TaskDetailScreen = () => {
           </Pressable>
         </View>
 
-        {/* Due Date */}
-        <View gap={8}>
-          <Text
-            fontSize={14}
-            fontWeight="500"
-            color="$mutedForeground">
-            {t('kanban.task.dueDateLabel') || 'Due Date'}
-          </Text>
-          <Pressable
-            onPress={() => {
-              setShowDatePicker(true);
-            }}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              borderRadius: 8,
-              borderWidth: 1,
-              borderColor: theme.borderColor.val,
-              backgroundColor: theme.card.val,
-              padding: 12,
-            }}>
-            <Text color="$color">{dueDate ? format(dueDate, 'MMM d, yyyy') : 'Set due date'}</Text>
-            <Image
-              source="sf:calendar"
-              style={{ width: 16, height: 16 }}
-              tintColor="gray"
-            />
-          </Pressable>
-          {showDatePicker &&
-            (Platform.OS === 'ios' ? (
-              <View
-                marginTop={8}
-                borderRadius={8}
-                backgroundColor="$card"
-                padding={8}>
-                <DateTimePicker
-                  value={dueDate || new Date()}
-                  mode="date"
-                  display="inline"
-                  minimumDate={new Date()}
-                  onChange={(event, date) => {
-                    if (date) {
-                      setDueDate(date);
-                    }
-                  }}
-                />
-                <Pressable
-                  onPress={() => {
-                    setShowDatePicker(false);
-                  }}
-                  style={{ alignItems: 'center', padding: 8 }}>
-                  <Text
-                    fontWeight="500"
-                    color="$primary">
-                    Done
-                  </Text>
-                </Pressable>
-              </View>
-            ) : (
-              <DateTimePicker
-                value={dueDate || new Date()}
-                mode="date"
-                display="default"
-                minimumDate={new Date()}
-                onChange={(event, date) => {
-                  setShowDatePicker(false);
-                  if (date) {
-                    setDueDate(date);
-                  }
-                }}
-              />
-            ))}
-        </View>
+        <DueDateField
+          dueDate={dueDate}
+          onChange={setDueDate}
+        />
 
         {/* Description */}
         <View gap={8}>
@@ -374,84 +308,18 @@ const TaskDetailScreen = () => {
         </Pressable>
       </ScrollView>
 
-      {/* Assignee Modal */}
-      <Modal
+      <AssigneeModal
         visible={showAssigneeModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => {
+        users={users}
+        assigneeId={assigneeId}
+        onSelect={(id) => {
+          setAssigneeId(id);
           setShowAssigneeModal(false);
-        }}>
-        <View
-          flex={1}
-          backgroundColor="$background">
-          <View
-            flexDirection="row"
-            alignItems="center"
-            justifyContent="space-between"
-            borderBottomWidth={1}
-            borderColor="$borderColor"
-            padding={16}>
-            <Text
-              fontSize={18}
-              fontWeight="600"
-              color="$color">
-              Select Assignee
-            </Text>
-            <Pressable
-              onPress={() => {
-                setShowAssigneeModal(false);
-              }}>
-              <Text
-                fontWeight="500"
-                color="$primary">
-                Close
-              </Text>
-            </Pressable>
-          </View>
-          <FlatList
-            data={users}
-            keyExtractor={(item) => item._id}
-            contentContainerStyle={{ padding: 16 }}
-            renderItem={({ item }) => (
-              <Pressable
-                onPress={() => {
-                  setAssigneeId(item._id);
-                  setShowAssigneeModal(false);
-                }}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  borderBottomWidth: 1,
-                  borderColor: theme.borderColor.val,
-                  padding: 16,
-                  backgroundColor: assigneeId === item._id ? theme.secondaryAlpha50.val : undefined,
-                }}>
-                <View>
-                  <Text
-                    fontWeight="500"
-                    color="$color">
-                    {item.name}
-                  </Text>
-                  <Text
-                    fontSize={14}
-                    color="$mutedForeground">
-                    {item.email}
-                  </Text>
-                </View>
-                {assigneeId === item._id && (
-                  <Image
-                    source="sf:checkmark"
-                    style={{ width: 16, height: 16 }}
-                    tintColor="blue"
-                  />
-                )}
-              </Pressable>
-            )}
-          />
-        </View>
-      </Modal>
+        }}
+        onClose={() => {
+          setShowAssigneeModal(false);
+        }}
+      />
     </KeyboardAvoidingView>
   );
 };

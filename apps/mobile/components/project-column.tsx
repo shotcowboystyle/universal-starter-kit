@@ -20,7 +20,8 @@ export const ProjectColumn = ({ project, boardId, statusFilter }: ProjectColumnP
   const { t } = useTranslation();
   const theme = useTheme();
   const { data: allTasks = [] } = useTasks(project._id);
-  const tasks = statusFilter ? allTasks.filter((task) => task.status === statusFilter) : allTasks;
+  const hasStatusFilter = statusFilter != null;
+  const tasks = hasStatusFilter ? allTasks.filter((task) => task.status === statusFilter) : allTasks;
   const deleteProjectMutation = useDeleteProject();
 
   const handleDelete = () => {
@@ -76,7 +77,7 @@ export const ProjectColumn = ({ project, boardId, statusFilter }: ProjectColumnP
               fontSize={12}
               color="$mutedForeground"
               style={{ fontVariant: ['tabular-nums'] }}>
-              {statusFilter ? `${tasks.length}/${allTasks.length}` : tasks.length}
+              {hasStatusFilter ? `${tasks.length}/${allTasks.length}` : tasks.length}
             </Text>
           </View>
         </View>
@@ -95,18 +96,18 @@ export const ProjectColumn = ({ project, boardId, statusFilter }: ProjectColumnP
           </Link.Trigger>
           <Link.Menu>
             <Link.MenuAction
-              title={t('common.edit') || 'Edit'}
               icon="pencil"
               onPress={() => {
                 router.push(`/projects/new?boardId=${boardId}&projectId=${project._id}`);
-              }}
-            />
+              }}>
+              {t('common.edit') || 'Edit'}
+            </Link.MenuAction>
             <Link.MenuAction
-              title={t('common.delete') || 'Delete'}
               icon="trash"
               destructive
-              onPress={handleDelete}
-            />
+              onPress={handleDelete}>
+              {t('common.delete') || 'Delete'}
+            </Link.MenuAction>
           </Link.Menu>
         </Link>
       </View>

@@ -1,6 +1,6 @@
 import type { Project } from '@repo/store';
 import { Text, View, useTheme } from '@tamagui/core';
-import * as Haptics from 'expo-haptics';
+import { ImpactFeedbackStyle, impactAsync } from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useTranslation } from 'react-i18next';
 import { Modal, ActivityIndicator, Platform, ActionSheetIOS, Pressable, ScrollView } from 'react-native';
@@ -25,7 +25,7 @@ export const MoveTaskSheet = ({ visible, taskId, currentProjectId, boardId, onCl
   const availableProjects = projects.filter((p: Project) => p._id !== currentProjectId);
 
   const handleMove = (targetProjectId: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    void impactAsync(ImpactFeedbackStyle.Medium);
     moveTaskMutation.mutate(
       {
         taskId,
@@ -60,6 +60,78 @@ export const MoveTaskSheet = ({ visible, taskId, currentProjectId, boardId, onCl
     }
     return null;
   }
+
+  const renderBody = () => {
+    if (isLoading) {
+      return (
+        <View
+          alignItems="center"
+          padding={32}>
+          <ActivityIndicator size="large" />
+          <Text
+            marginTop={8}
+            color="$mutedForeground">
+            {t('common.loading') || 'Loading...'}
+          </Text>
+        </View>
+      );
+    }
+    if (availableProjects.length === 0) {
+      return (
+        <View
+          alignItems="center"
+          padding={32}>
+          <Text color="$mutedForeground">{t('kanban.task.noProjectsAvailable') || 'No other projects available'}</Text>
+        </View>
+      );
+    }
+    return (
+      <ScrollView style={{ maxHeight: 300 }}>
+        {availableProjects.map((project) => (
+          <Pressable
+            key={project._id}
+            onPress={() => {
+              handleMove(project._id);
+            }}
+            disabled={moveTaskMutation.isPending}
+            style={({ pressed }) => ({
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              borderBottomWidth: 1,
+              borderColor: theme.borderColor.val,
+              padding: 16,
+              backgroundColor: pressed ? theme.secondaryAlpha50.val : undefined,
+            })}>
+            <View flex={1}>
+              <Text
+                fontWeight="500"
+                color="$color">
+                {project.title}
+              </Text>
+              {project.description != null && project.description !== '' && (
+                <Text
+                  fontSize={14}
+                  color="$mutedForeground"
+                  numberOfLines={1}>
+                  {project.description}
+                </Text>
+              )}
+            </View>
+            {moveTaskMutation.isPending && moveTaskMutation.variables?.projectId === project._id ? (
+              <ActivityIndicator size="small" />
+            ) : (
+              <Image
+                source="sf:chevron.right"
+                style={{ width: 16, height: 16 }}
+                tintColor="gray"
+              />
+            )}
+          </Pressable>
+        ))}
+      </ScrollView>
+    );
+  };
 
   return (
     <Modal
@@ -103,71 +175,7 @@ export const MoveTaskSheet = ({ visible, taskId, currentProjectId, boardId, onCl
             </Pressable>
           </View>
 
-          {isLoading ? (
-            <View
-              alignItems="center"
-              padding={32}>
-              <ActivityIndicator size="large" />
-              <Text
-                marginTop={8}
-                color="$mutedForeground">
-                {t('common.loading') || 'Loading...'}
-              </Text>
-            </View>
-          ) : availableProjects.length === 0 ? (
-            <View
-              alignItems="center"
-              padding={32}>
-              <Text color="$mutedForeground">
-                {t('kanban.task.noProjectsAvailable') || 'No other projects available'}
-              </Text>
-            </View>
-          ) : (
-            <ScrollView style={{ maxHeight: 300 }}>
-              {availableProjects.map((project) => (
-                <Pressable
-                  key={project._id}
-                  onPress={() => {
-                    handleMove(project._id);
-                  }}
-                  disabled={moveTaskMutation.isPending}
-                  style={({ pressed }) => ({
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    borderBottomWidth: 1,
-                    borderColor: theme.borderColor.val,
-                    padding: 16,
-                    backgroundColor: pressed ? theme.secondaryAlpha50.val : undefined,
-                  })}>
-                  <View flex={1}>
-                    <Text
-                      fontWeight="500"
-                      color="$color">
-                      {project.title}
-                    </Text>
-                    {project.description && (
-                      <Text
-                        fontSize={14}
-                        color="$mutedForeground"
-                        numberOfLines={1}>
-                        {project.description}
-                      </Text>
-                    )}
-                  </View>
-                  {moveTaskMutation.isPending && moveTaskMutation.variables?.projectId === project._id ? (
-                    <ActivityIndicator size="small" />
-                  ) : (
-                    <Image
-                      source="sf:chevron.right"
-                      style={{ width: 16, height: 16 }}
-                      tintColor="gray"
-                    />
-                  )}
-                </Pressable>
-              ))}
-            </ScrollView>
-          )}
+          {renderBody()}
         </Pressable>
       </Pressable>
     </Modal>

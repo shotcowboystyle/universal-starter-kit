@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { useAuthStore } from '@/stores/auth';
 
-describe('useAuthStore', () => {
+describe('auth store', () => {
   beforeEach(() => {
     useAuthStore.getState().clear();
     vi.clearAllMocks();
@@ -13,7 +13,7 @@ describe('useAuthStore', () => {
     expect(state.session).toBeNull();
   });
 
-  it('should use secureStorageAdapter indirectly', async () => {
+  it('should use secureStorageAdapter indirectly', () => {
     const mockUser = { _id: '1', email: 't@e.com', name: 'N' };
     const mockSession = { user: mockUser, accessToken: 'token' };
 
@@ -23,6 +23,7 @@ describe('useAuthStore', () => {
     // In zustand persist, it might be async or buffered.
     // Since we mocked SecureStore in setup, we can check if it was called.
     // However, the adapter is used by the persist middleware.
+    expect(useAuthStore.getState().session).toStrictEqual(mockSession);
   });
 
   it('should call setUser', () => {

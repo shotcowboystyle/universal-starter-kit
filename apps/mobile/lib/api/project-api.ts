@@ -31,7 +31,7 @@ export const projectApi = {
       body: JSON.stringify(input),
     }),
   deleteProject: async (id: string) => {
-    await fetchWithAuth<void>(
+    await fetchWithAuth<null>(
       `${API_ROUTES.PROJECTS}/${id}`,
       {
         method: 'DELETE',

@@ -1,4 +1,5 @@
 import { TaskStatus } from '@repo/store';
+import type { Board } from '@repo/store';
 import { Text, View, useTheme } from '@tamagui/core';
 import { Image } from 'expo-image';
 import { Link, useLocalSearchParams, Stack, useRouter } from 'expo-router';
@@ -12,6 +13,51 @@ import { useBoard } from '@/hooks/use-boards';
 import { useProjects } from '@/hooks/use-projects';
 
 const STATUS_FILTERS: (TaskStatus | null)[] = [null, TaskStatus.TODO, TaskStatus.IN_PROGRESS, TaskStatus.DONE];
+
+const NEW_PROJECT_BORDER_COLOR = 'rgba(255, 255, 255, 0.15)';
+
+const getNewProjectButtonStyle = (backgroundColor: string) =>
+  ({
+    flexShrink: 0,
+    height: 34,
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+    borderRadius: 17,
+    borderCurve: 'continuous',
+    borderWidth: 1,
+    borderColor: NEW_PROJECT_BORDER_COLOR,
+    backgroundColor,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  }) as const;
+
+const renderBackButton = (router: ReturnType<typeof useRouter>) => (
+  <Pressable
+    onPress={() => {
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/(tabs)');
+      }
+    }}
+    style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 16, paddingLeft: 8 }}
+    hitSlop={8}>
+    <Image
+      source="sf:chevron.left"
+      style={{ width: 18, height: 22 }}
+      tintColor="hsl(180, 20%, 100%)"
+    />
+  </Pressable>
+);
+
+const renderBoardActions = (board: Board | undefined) =>
+  board === undefined ? null : (
+    <BoardActions
+      boardId={board._id}
+      boardTitle={board.title}
+    />
+  );
 
 const BoardDetailScreen = () => {
   const { boardId } = useLocalSearchParams<{ boardId: string }>();
@@ -36,16 +82,16 @@ const BoardDetailScreen = () => {
   const isRefetching = isBoardRefetching || isProjectsRefetching;
 
   const handleRefresh = () => {
-    refetchBoard();
-    refetchProjects();
+    void refetchBoard();
+    void refetchProjects();
   };
 
   const sortedProjects = useMemo(
-    () => [...projects].sort((a, b) => (a.orderInBoard || 0) - (b.orderInBoard || 0)),
+    () => projects.toSorted((a, b) => (a.orderInBoard ?? 0) - (b.orderInBoard ?? 0)),
     [projects],
   );
 
-  const statusLabels: Record<string, string> = {
+  const statusLabels: Record<TaskStatus | 'ALL', string> = {
     ALL: t('kanban.task.total'),
     TODO: t('kanban.task.statusTodo'),
     IN_PROGRESS: t('kanban.task.statusInProgress'),
@@ -61,32 +107,9 @@ const BoardDetailScreen = () => {
       backgroundColor="$background">
       <Stack.Screen
         options={{
-          title: board?.title || t('kanban.title'),
-          headerLeft: () => (
-            <Pressable
-              onPress={() => {
-                if (router.canGoBack()) {
-                  router.back();
-                } else {
-                  router.replace('/(tabs)');
-                }
-              }}
-              style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 16, paddingLeft: 8 }}
-              hitSlop={8}>
-              <Image
-                source="sf:chevron.left"
-                style={{ width: 18, height: 22 }}
-                tintColor="hsl(180, 20%, 100%)"
-              />
-            </Pressable>
-          ),
-          headerRight: () =>
-            board ? (
-              <BoardActions
-                boardId={board._id}
-                boardTitle={board.title}
-              />
-            ) : null,
+          title: board?.title !== undefined && board.title !== '' ? board.title : t('kanban.title'),
+          headerLeft: () => renderBackButton(router),
+          headerRight: () => renderBoardActions(board),
         }}
       />
 
@@ -145,21 +168,7 @@ const BoardDetailScreen = () => {
             <Link
               href={`/projects/new?boardId=${boardId}`}
               asChild>
-              <Pressable
-                style={{
-                  flexShrink: 0,
-                  height: 34,
-                  justifyContent: 'center',
-                  paddingHorizontal: 14,
-                  borderRadius: 17,
-                  borderCurve: 'continuous',
-                  borderWidth: 1,
-                  borderColor: 'rgba(255, 255, 255, 0.15)',
-                  backgroundColor: cardColor,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 4,
-                }}>
+              <Pressable style={getNewProjectButtonStyle(cardColor)}>
                 <Image
                   source="sf:plus"
                   style={{ width: 12, height: 12 }}

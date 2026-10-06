@@ -3,11 +3,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fetchWithAuth } from '@/lib/api/fetch-with-auth';
 import { taskApi } from '@/lib/api/task-api';
 
-vi.mock('@/lib/api/fetch-with-auth', () => ({
-  fetchWithAuth: vi.fn(),
+vi.mock(import('@/lib/api/fetch-with-auth'), () => ({
+  fetchWithAuth: vi.fn<() => Promise<never>>(),
 }));
 
-describe('taskApi', () => {
+describe('task API', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

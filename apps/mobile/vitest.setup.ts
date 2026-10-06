@@ -1,28 +1,27 @@
 import { vi, afterEach } from 'vitest';
 
 // Define __DEV__ — use type assertion to avoid conflict with global var declaration
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 (globalThis as any).__DEV__ = true;
 
 // Node.js 24+ ships a built-in localStorage that shadows jsdom's Storage
 // implementation. Replace it with a proper in-memory mock.
 const localStorageMock = (() => {
-  let store: Record<string, string> = {};
+  const store = new Map<string, string>();
   return {
-    getItem: (key: string) => store[key] ?? null,
+    getItem: (key: string) => store.get(key) ?? null,
     setItem: (key: string, value: string) => {
-      store[key] = String(value);
+      store.set(key, value);
     },
     removeItem: (key: string) => {
-      delete store[key];
+      store.delete(key);
     },
     clear: () => {
-      store = {};
+      store.clear();
     },
     get length() {
-      return Object.keys(store).length;
+      return store.size;
     },
-    key: (n: number) => Object.keys(store)[n] ?? null,
+    key: (n: number) => [...store.keys()][n] ?? null,
   };
 })();
 Object.defineProperty(globalThis, 'localStorage', {
@@ -104,10 +103,13 @@ vi.mock('expo-router', () => ({
 }));
 
 // Mock react-native-safe-area-context
+const { passthrough } = vi.hoisted(() => ({
+  passthrough: ({ children }: { children: React.ReactElement }) => children,
+}));
 vi.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
-  SafeAreaProvider: ({ children }: { children: React.ReactNode }) => children,
-  SafeAreaView: ({ children }: { children: React.ReactNode }) => children,
+  SafeAreaProvider: passthrough,
+  SafeAreaView: passthrough,
 }));
 
 // Mock i18next and react-i18next

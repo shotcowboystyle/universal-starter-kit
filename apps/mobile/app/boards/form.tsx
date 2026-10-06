@@ -15,13 +15,40 @@ import {
 import { useCreateBoard, useUpdateBoard, useBoard } from '@/hooks/use-boards';
 import { useAuthStore } from '@/stores/auth';
 
+const renderHeaderLeft = (label: string, onCancel: () => void) => (
+  <Pressable onPress={onCancel}>
+    <Text
+      fontSize={17}
+      color="$primary">
+      {label}
+    </Text>
+  </Pressable>
+);
+
+const renderHeaderRight = (label: string, isPending: boolean, canSubmit: boolean, onSubmit: () => void) => (
+  <Pressable
+    onPress={onSubmit}
+    disabled={isPending || !canSubmit}>
+    {isPending ? (
+      <ActivityIndicator />
+    ) : (
+      <Text
+        fontSize={17}
+        fontWeight="600"
+        color={canSubmit ? '$primary' : '$mutedForeground'}>
+        {label}
+      </Text>
+    )}
+  </Pressable>
+);
+
 const BoardFormScreen = () => {
   const { t } = useTranslation();
   const theme = useTheme();
   const router = useRouter();
   const params = useLocalSearchParams<{ boardId?: string }>();
   const { boardId } = params;
-  const isEdit = !!boardId;
+  const isEdit = boardId !== undefined && boardId !== '';
 
   const { session } = useAuthStore();
   const { data: board, isLoading: isBoardLoading } = useBoard(boardId);
@@ -33,8 +60,9 @@ const BoardFormScreen = () => {
 
   useEffect(() => {
     if (board && isEdit) {
+      // oxlint-disable-next-line react/set-state-in-effect -- seeds editable form state from fetched board
       setTitle(board.title);
-      setDescription(board.description || '');
+      setDescription(board.description ?? '');
     }
   }, [board, isEdit]);
 
@@ -81,34 +109,17 @@ const BoardFormScreen = () => {
           title: isEdit ? t('kanban.actions.editBoardTitle') : t('kanban.actions.newBoardTitle'),
           presentation: 'formSheet',
           sheetGrabberVisible: true,
-          headerLeft: () => (
-            <Pressable
-              onPress={() => {
-                router.back();
-              }}>
-              <Text
-                fontSize={17}
-                color="$primary">
-                {t('kanban.actions.cancel')}
-              </Text>
-            </Pressable>
-          ),
-          headerRight: () => (
-            <Pressable
-              onPress={handleSubmit}
-              disabled={isPending || !title}>
-              {isPending ? (
-                <ActivityIndicator />
-              ) : (
-                <Text
-                  fontSize={17}
-                  fontWeight="600"
-                  color={title ? '$primary' : '$mutedForeground'}>
-                  {isEdit ? t('kanban.actions.save') : t('kanban.actions.create')}
-                </Text>
-              )}
-            </Pressable>
-          ),
+          headerLeft: () =>
+            renderHeaderLeft(t('kanban.actions.cancel'), () => {
+              router.back();
+            }),
+          headerRight: () =>
+            renderHeaderRight(
+              isEdit ? t('kanban.actions.save') : t('kanban.actions.create'),
+              isPending,
+              title !== '',
+              handleSubmit,
+            ),
         }}
       />
 

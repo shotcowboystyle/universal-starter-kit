@@ -27,7 +27,9 @@ export const ErrorBoundary = ({ error, retry }: ErrorBoundaryProps) => {
         {error.message || t('error.workspaceError')}
       </Text>
       <Pressable
-        onPress={retry}
+        onPress={() => {
+          void retry();
+        }}
         style={{
           borderRadius: 8,
           backgroundColor: theme.primary.val,

@@ -3,10 +3,19 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { loadLanguagePreference, saveLanguagePreference } from '@/lib/language';
 
-vi.mock('@react-native-async-storage/async-storage', () => ({
+vi.mock(import('@react-native-async-storage/async-storage'), () => ({
   default: {
-    getItem: vi.fn(),
-    setItem: vi.fn(),
+    getItem: vi.fn<typeof AsyncStorage.getItem>(),
+    setItem: vi.fn<typeof AsyncStorage.setItem>(),
+    removeItem: vi.fn<typeof AsyncStorage.removeItem>(),
+    mergeItem: vi.fn<typeof AsyncStorage.mergeItem>(),
+    clear: vi.fn<typeof AsyncStorage.clear>(),
+    getAllKeys: vi.fn<typeof AsyncStorage.getAllKeys>(),
+    flushGetRequests: vi.fn<typeof AsyncStorage.flushGetRequests>(),
+    multiGet: vi.fn<typeof AsyncStorage.multiGet>(),
+    multiSet: vi.fn<typeof AsyncStorage.multiSet>(),
+    multiRemove: vi.fn<typeof AsyncStorage.multiRemove>(),
+    multiMerge: vi.fn<typeof AsyncStorage.multiMerge>(),
   },
 }));
 

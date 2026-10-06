@@ -1,6 +1,6 @@
 import type { Task } from '@repo/store';
 import { View } from '@tamagui/core';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 
 import { MoveTaskSheet } from './move-task-sheet';
 import { TaskCard } from './task-card';
@@ -13,14 +13,10 @@ interface SortableTaskListProps {
 }
 
 export const SortableTaskList = ({ tasks, projectId, boardId, onTaskPress: _onTaskPress }: SortableTaskListProps) => {
-  const [data, setData] = useState<Task[]>(tasks);
   const [moveSheetVisible, setMoveSheetVisible] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
-  useEffect(() => {
-    const sortedTasks = [...tasks].sort((a, b) => (a.orderInProject || 0) - (b.orderInProject || 0));
-    setData(sortedTasks);
-  }, [tasks]);
+  const data = useMemo(() => tasks.toSorted((a, b) => (a.orderInProject ?? 0) - (b.orderInProject ?? 0)), [tasks]);
 
   const handleMoveToProject = useCallback((taskId: string) => {
     setSelectedTaskId(taskId);
@@ -40,7 +36,7 @@ export const SortableTaskList = ({ tasks, projectId, boardId, onTaskPress: _onTa
           />
         ))}
       </View>
-      {selectedTaskId && (
+      {selectedTaskId !== null && selectedTaskId !== '' && (
         <MoveTaskSheet
           visible={moveSheetVisible}
           taskId={selectedTaskId}

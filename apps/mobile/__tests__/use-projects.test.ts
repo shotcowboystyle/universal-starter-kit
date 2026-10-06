@@ -6,16 +6,20 @@ import { projectApi } from '@/lib/api/project-api';
 
 import { Wrapper } from './test-utils';
 
-vi.mock('@/lib/api/project-api', () => ({
-  projectApi: {
-    getProjects: vi.fn(),
-    createProject: vi.fn(),
-    updateProject: vi.fn(),
-    deleteProject: vi.fn(),
-  },
-}));
+vi.mock(import('@/lib/api/project-api'), async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    projectApi: {
+      ...actual.projectApi,
+      getProjects: vi.fn<typeof projectApi.getProjects>(),
+      createProject: vi.fn<typeof projectApi.createProject>(),
+      updateProject: vi.fn<typeof projectApi.updateProject>(),
+      deleteProject: vi.fn<typeof projectApi.deleteProject>(),
+    },
+  };
+});
 
-describe('useProjects', () => {
+describe(useProjects, () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -35,21 +39,21 @@ describe('useProjects', () => {
   });
 
   it('should not fetch when boardId is undefined', () => {
-    const { result } = renderHook(() => useProjects(undefined), { wrapper: Wrapper });
+    const { result } = renderHook(() => useProjects(), { wrapper: Wrapper });
 
     expect(result.current.fetchStatus).toBe('idle');
     expect(projectApi.getProjects).not.toHaveBeenCalled();
   });
 });
 
-describe('useCreateProject', () => {
+describe(useCreateProject, () => {
   it('should create project and invalidate with string board id', async () => {
     const newProject = { _id: 'p2', title: 'New', board: 'b1' };
     vi.mocked(projectApi.createProject).mockResolvedValue(newProject as any);
 
     const { result } = renderHook(() => useCreateProject(), { wrapper: Wrapper });
 
-    await act(async () => {
+    act(() => {
       result.current.mutate({ title: 'New', boardId: 'b1' } as any);
     });
 
@@ -57,7 +61,7 @@ describe('useCreateProject', () => {
       expect(result.current.isSuccess).toBe(true);
     });
 
-    expect(projectApi.createProject).toHaveBeenCalled();
+    expect(projectApi.createProject).toHaveBeenCalledWith({ title: 'New', boardId: 'b1' }, expect.anything());
   });
 
   it('should handle project with object board reference', async () => {
@@ -66,7 +70,7 @@ describe('useCreateProject', () => {
 
     const { result } = renderHook(() => useCreateProject(), { wrapper: Wrapper });
 
-    await act(async () => {
+    act(() => {
       result.current.mutate({ title: 'New', boardId: 'b2' } as any);
     });
 
@@ -76,14 +80,14 @@ describe('useCreateProject', () => {
   });
 });
 
-describe('useUpdateProject', () => {
+describe(useUpdateProject, () => {
   it('should update project with string board', async () => {
     const updated = { _id: 'p1', title: 'Updated', board: 'b1' };
     vi.mocked(projectApi.updateProject).mockResolvedValue(updated as any);
 
     const { result } = renderHook(() => useUpdateProject(), { wrapper: Wrapper });
 
-    await act(async () => {
+    act(() => {
       result.current.mutate({ id: 'p1', title: 'Updated' } as any);
     });
 
@@ -100,7 +104,7 @@ describe('useUpdateProject', () => {
 
     const { result } = renderHook(() => useUpdateProject(), { wrapper: Wrapper });
 
-    await act(async () => {
+    act(() => {
       result.current.mutate({ id: 'p1', title: 'Updated' } as any);
     });
 
@@ -110,13 +114,13 @@ describe('useUpdateProject', () => {
   });
 });
 
-describe('useDeleteProject', () => {
+describe(useDeleteProject, () => {
   it('should delete project with boardId', async () => {
     vi.mocked(projectApi.deleteProject).mockResolvedValue(undefined as any);
 
     const { result } = renderHook(() => useDeleteProject(), { wrapper: Wrapper });
 
-    await act(async () => {
+    act(() => {
       result.current.mutate({ id: 'p1', boardId: 'b1' });
     });
 
@@ -132,7 +136,7 @@ describe('useDeleteProject', () => {
 
     const { result } = renderHook(() => useDeleteProject(), { wrapper: Wrapper });
 
-    await act(async () => {
+    act(() => {
       result.current.mutate({ id: 'p2' });
     });
 
