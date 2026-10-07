@@ -1,4 +1,3 @@
-import { renderWithProviders } from '@repo/test-utils';
 /**
  * CheckboxBox — the painted glyph and the geometry rules around it.
  *
@@ -10,7 +9,9 @@ import { renderWithProviders } from '@repo/test-utils';
  * silently — nothing today would notice if the hit target grew a wash or the
  * glyph started stealing the press.
  */
+import { renderWithProviders } from '@repo/test-utils';
 import { cleanup } from '@testing-library/react';
+import type { FocusEvent as ReactFocusEvent, MouseEvent as ReactMouseEvent } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
@@ -26,8 +27,6 @@ import {
   isCircularCheckboxRadius,
 } from './CheckboxBox';
 
-afterEach(cleanup);
-
 /**
  * Modality is the ONE thing here that has to be stood in for. The real tracker
  * (`@repo/theme/keyboardFocusRing`) installs global document
@@ -38,10 +37,10 @@ afterEach(cleanup);
  * replaced, over `importActual`.
  */
 let keyboardModality = false;
-vi.mock('@repo/theme', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@repo/theme')>();
-  return { ...actual, wasKeyboardFocus: () => keyboardModality };
-});
+vi.mock(import('@repo/theme'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  wasKeyboardFocus: () => keyboardModality,
+}));
 
 const pressKey = () => {
   keyboardModality = true;
@@ -50,9 +49,15 @@ const pressPointer = () => {
   keyboardModality = false;
 };
 
-afterEach(() => {
+const resetEach = () => {
+  cleanup();
   keyboardModality = false;
-});
+};
+
+// SAFETY: the handlers under test only forward the event to the caller; no field of it is ever read.
+const focusEvent = {} as ReactFocusEvent<HTMLDivElement>;
+// SAFETY: the handlers under test only forward the event to the caller; no field of it is ever read.
+const hoverEvent = {} as ReactMouseEvent;
 
 const glyph = (container: HTMLElement): HTMLElement => {
   const node = container.querySelector("[data-checkbox-box='true']");
@@ -71,9 +76,11 @@ const cssOf = (node: HTMLElement, prop: string): string => {
   return getComputedStyle(node).getPropertyValue(prop) || '';
 };
 
-const classesOf = (node: HTMLElement): string => Array.from(node.classList).join(' ');
+const classesOf = (node: HTMLElement): string => [...node.classList].join(' ');
 
 describe('CheckboxBox — the target is 44px and the glyph is smaller', () => {
+  afterEach(resetEach);
+
   it('pins the WCAG 2.5.5 pressable floor at 44px', () => {
     expect(CHECKBOX_TARGET_PX).toBe(44);
   });
@@ -98,10 +105,12 @@ describe('CheckboxBox — the target is 44px and the glyph is smaller', () => {
 });
 
 describe("CheckboxBox — the empty box's edge is the shape", () => {
+  afterEach(resetEach);
+
   it('floors the border at 2px whatever the knob says', () => {
     expect(getCheckboxBoxBorderWidth(1)).toBe(2);
     expect(getCheckboxBoxBorderWidth(0)).toBe(2);
-    expect(getCheckboxBoxBorderWidth(undefined)).toBe(2);
+    expect(getCheckboxBoxBorderWidth()).toBe(2);
     expect(getCheckboxBoxBorderWidth(Number.NaN)).toBe(2);
   });
 
@@ -120,6 +129,8 @@ describe("CheckboxBox — the empty box's edge is the shape", () => {
 });
 
 describe('CheckboxBox — the radius law', () => {
+  afterEach(resetEach);
+
   it('caps every token stop at $2, which is the documented maximum', () => {
     expect(CHECKBOX_GLYPH_MAX_RADIUS_TOKEN).toBe(2);
     expect(clampCheckboxGlyphRadius('$1')).toBe('$1');
@@ -148,7 +159,7 @@ describe('CheckboxBox — the radius law', () => {
     // "$4 (9) already paints as a circle on that box". Asserted as OBSERVED
     // behaviour, deliberately not "fixed" here — which of the two is right is
     // an open design decision, not something to guess at.
-    expect(clampCheckboxGlyphRadius(undefined)).toBe('$4');
+    expect(clampCheckboxGlyphRadius()).toBe('$4');
     // The live caller always passes a resolved knob token, so the gap is in
     // the exported contract, not in what the Checkbox renders today.
   });
@@ -174,6 +185,8 @@ describe('CheckboxBox — the radius law', () => {
 });
 
 describe('CheckboxBox — the 44px frame paints nothing', () => {
+  afterEach(resetEach);
+
   it('is a 44px square with no border, no radius and no fill', () => {
     expect(checkboxTargetFrameProps.width).toBe(CHECKBOX_TARGET_PX);
     expect(checkboxTargetFrameProps.height).toBe(CHECKBOX_TARGET_PX);
@@ -188,7 +201,7 @@ describe('CheckboxBox — the 44px frame paints nothing', () => {
 
   it('keeps every interaction channel transparent, so no wash can wrap the label', () => {
     for (const state of ['hoverStyle', 'pressStyle', 'focusStyle', 'focusVisibleStyle', 'activeStyle'] as const) {
-      const bag = checkboxTargetFrameProps[state] as Record<string, unknown>;
+      const bag = checkboxTargetFrameProps[state];
       expect(bag.backgroundColor, state).toBe('transparent');
       expect(bag.borderColor, state).toBe('transparent');
     }
@@ -198,70 +211,73 @@ describe('CheckboxBox — the 44px frame paints nothing', () => {
 });
 
 describe('CheckboxBox — keyboard-modality focus handlers', () => {
+  afterEach(resetEach);
+
   it('raises kbFocus on a focus that followed a key press', () => {
-    const setKbFocus = vi.fn();
-    const handlers = checkboxKbFocusHandlers(setKbFocus, vi.fn());
+    const setKbFocus = vi.fn<(next: boolean) => void>();
+    const handlers = checkboxKbFocusHandlers(setKbFocus, vi.fn<(next: boolean) => void>());
     pressKey();
-    handlers.onFocus?.({});
+    handlers.onFocus?.(focusEvent);
     expect(setKbFocus).toHaveBeenCalledWith(true);
   });
 
   it('stays quiet on a focus that followed a pointer press', () => {
-    const setKbFocus = vi.fn();
-    const handlers = checkboxKbFocusHandlers(setKbFocus, vi.fn());
+    const setKbFocus = vi.fn<(next: boolean) => void>();
+    const handlers = checkboxKbFocusHandlers(setKbFocus, vi.fn<(next: boolean) => void>());
     pressPointer();
-    handlers.onFocus?.({});
+    handlers.onFocus?.(focusEvent);
     expect(setKbFocus).not.toHaveBeenCalled();
   });
 
   it('always clears kbFocus on blur, whatever the modality was', () => {
-    const setKbFocus = vi.fn();
-    const handlers = checkboxKbFocusHandlers(setKbFocus, vi.fn());
+    const setKbFocus = vi.fn<(next: boolean) => void>();
+    const handlers = checkboxKbFocusHandlers(setKbFocus, vi.fn<(next: boolean) => void>());
     pressPointer();
-    handlers.onBlur?.({});
+    handlers.onBlur?.(focusEvent);
     expect(setKbFocus).toHaveBeenCalledWith(false);
   });
 
   it('tracks hover in and out', () => {
-    const setHovered = vi.fn();
-    const handlers = checkboxKbFocusHandlers(vi.fn(), setHovered);
-    handlers.onHoverIn?.({});
+    const setHovered = vi.fn<(next: boolean) => void>();
+    const handlers = checkboxKbFocusHandlers(vi.fn<(next: boolean) => void>(), setHovered);
+    handlers.onHoverIn?.(hoverEvent);
     expect(setHovered).toHaveBeenLastCalledWith(true);
-    handlers.onHoverOut?.({});
+    handlers.onHoverOut?.(hoverEvent);
     expect(setHovered).toHaveBeenLastCalledWith(false);
   });
 
   it("forwards the caller's own handlers instead of swallowing them", () => {
     const rest = {
-      onFocus: vi.fn(),
-      onBlur: vi.fn(),
-      onHoverIn: vi.fn(),
-      onHoverOut: vi.fn(),
+      onFocus: vi.fn<(event: ReactFocusEvent<HTMLDivElement>) => void>(),
+      onBlur: vi.fn<(event: ReactFocusEvent<HTMLDivElement>) => void>(),
+      onHoverIn: vi.fn<(event: ReactMouseEvent) => void>(),
+      onHoverOut: vi.fn<(event: ReactMouseEvent) => void>(),
     };
-    const handlers = checkboxKbFocusHandlers(vi.fn(), vi.fn(), rest);
-    const event = { id: 1 };
-    handlers.onFocus?.(event);
-    handlers.onBlur?.(event);
-    handlers.onHoverIn?.(event);
-    handlers.onHoverOut?.(event);
-    expect(rest.onFocus).toHaveBeenCalledWith(event);
-    expect(rest.onBlur).toHaveBeenCalledWith(event);
-    expect(rest.onHoverIn).toHaveBeenCalledWith(event);
-    expect(rest.onHoverOut).toHaveBeenCalledWith(event);
+    const handlers = checkboxKbFocusHandlers(vi.fn<(next: boolean) => void>(), vi.fn<(next: boolean) => void>(), rest);
+    handlers.onFocus?.(focusEvent);
+    handlers.onBlur?.(focusEvent);
+    handlers.onHoverIn?.(hoverEvent);
+    handlers.onHoverOut?.(hoverEvent);
+    expect(rest.onFocus).toHaveBeenCalledWith(focusEvent);
+    expect(rest.onBlur).toHaveBeenCalledWith(focusEvent);
+    expect(rest.onHoverIn).toHaveBeenCalledWith(hoverEvent);
+    expect(rest.onHoverOut).toHaveBeenCalledWith(hoverEvent);
   });
 
   it('survives a caller that passes no handlers at all', () => {
-    const handlers = checkboxKbFocusHandlers(vi.fn(), vi.fn());
+    const handlers = checkboxKbFocusHandlers(vi.fn<(next: boolean) => void>(), vi.fn<(next: boolean) => void>());
     expect(() => {
-      handlers.onFocus?.({});
-      handlers.onBlur?.({});
-      handlers.onHoverIn?.({});
-      handlers.onHoverOut?.({});
+      handlers.onFocus?.(focusEvent);
+      handlers.onBlur?.(focusEvent);
+      handlers.onHoverIn?.(hoverEvent);
+      handlers.onHoverOut?.(hoverEvent);
     }).not.toThrow();
   });
 });
 
 describe('CheckboxGlyphBox — the painted box', () => {
+  afterEach(resetEach);
+
   it('marks itself so the boards and the other specs can find it', () => {
     const { container } = renderWithProviders(
       <CheckboxGlyphBox
@@ -298,7 +314,7 @@ describe('CheckboxGlyphBox — the painted box', () => {
         borderRadius={5}
       />,
     );
-    expect(glyph(off.container).getAttribute('data-focus-ring')).toBeNull();
+    expect(glyph(off.container).dataset.focusRing).toBeUndefined();
     cleanup();
     const on = renderWithProviders(
       <CheckboxGlyphBox
@@ -309,7 +325,7 @@ describe('CheckboxGlyphBox — the painted box', () => {
         borderRadius={5}
       />,
     );
-    expect(glyph(on.container).getAttribute('data-focus-ring')).toBe('true');
+    expect(glyph(on.container).dataset.focusRing).toBe('true');
   });
 
   it('is an empty box when idle and drops that transparency when marked', () => {

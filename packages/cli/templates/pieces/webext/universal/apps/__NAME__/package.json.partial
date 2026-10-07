@@ -1,0 +1,23 @@
+{
+  "scripts": {
+    "dev:webext": "NODE_ENV=development sh -c 'tsx webext/prepare.ts & vite build --config vite.config.webext-background.ts --mode development & vite --config vite.config.webext.ts & wait'",
+    "build:webext": "vite build --config vite.config.webext.ts && vite build --config vite.config.webext-background.ts && NODE_ENV=production tsx webext/prepare.ts",
+    "typecheck:webext": "tsc --noEmit -p webext/tsconfig.json"
+  },
+  "dependencies": {
+    "@repo/router": "__MPO_VERSION__",
+    "react-cookie": "^8.1.2",
+    "webextension-polyfill": "^0.12.0"
+  },
+  "devDependencies": {
+    "@repo/config": "__MPO_VERSION__",
+    "@repo/utils": "__MPO_VERSION__",
+    "@repo/vite-plugin-webext": "__MPO_VERSION__",
+    "@tamagui/vite-plugin": "2.7.6",
+    "@tamagui/web": "2.7.6",
+    "@types/chrome": "^0.2.5",
+    "@types/node": "^25.6.0",
+    "dotenv": "^17.4.2",
+    "tsx": "^4.21.0"
+  }
+}

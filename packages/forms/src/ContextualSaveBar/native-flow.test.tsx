@@ -1,11 +1,11 @@
 import { renderWithProviders } from '@repo/test-utils';
-import { expect, it, vi } from 'vitest';
+import { expect, it, vi, test } from 'vitest';
 
 import { Form } from '../Form';
 
 import { ContextualSaveBar } from './index';
 
-vi.mock('tamagui', async (importOriginal) => ({
+vi.mock(import('tamagui'), async (importOriginal) => ({
   ...(await importOriginal<typeof import('tamagui')>()),
   isWeb: false,
 }));

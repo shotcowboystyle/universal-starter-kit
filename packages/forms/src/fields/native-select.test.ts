@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import { shouldUseIosNativeSelect } from './native-select';
 
-describe('shouldUseIosNativeSelect', () => {
+describe(shouldUseIosNativeSelect, () => {
   it('is off unless the field opts in', () => {
-    expect(shouldUseIosNativeSelect({ native: undefined, multiple: false, isWeb: false, os: 'ios' })).toBe(false);
+    expect(shouldUseIosNativeSelect({ multiple: false, isWeb: false, os: 'ios' })).toBe(false);
   });
 
   it('is on for single-select iOS when native is set', () => {

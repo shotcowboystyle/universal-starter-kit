@@ -12,12 +12,12 @@ import type { ReactNode } from 'react';
 import { SizableText, YStack } from 'tamagui';
 
 import { Alert } from '../Alert';
-import type { AlertIntent } from '../Alert';
 import { useTranslation } from '../shared/i18n';
 import { ToastViewport } from '../Toast';
 import type { ToastViewportProps } from '../Toast';
 
 import { ConfirmDialog } from './ConfirmDialog';
+import type { NotifyAction } from './route';
 import { dismissFeedback, getFeedback, subscribeFeedback } from './store';
 import type { FeedbackEntry } from './store';
 
@@ -34,8 +34,9 @@ const useFeedbackEntries = (): FeedbackEntry[] => useSyncExternalStore(subscribe
  * slot plus a text node pinned at 400 is the Notify path (same trap as
  * AsyncBoundary Retry).
  */
-const NotifyActionLabel = ({ label, onPress }: { label: string; onPress: () => void }) => {
+const NotifyActionLabel = ({ action }: { action: NotifyAction }) => {
   const { knobProps } = useResolvedKnobs();
+  const { label, onPress: handlePress } = action;
   return (
     <SizableText
       {...knobProps.body}
@@ -44,21 +45,16 @@ const NotifyActionLabel = ({ label, onPress }: { label: string; onPress: () => v
       color="$color12"
       userSelect="none"
       cursor="pointer"
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui SizableText renders a span; swapping the tag would change layout/styling of the pinned-weight action label
       role="button"
       tabIndex={0}
-      onPress={onPress}>
+      onPress={handlePress}>
       {label}
     </SizableText>
   );
 };
 
-const notifyAction = (entry: FeedbackEntry) =>
-  entry.action ? (
-    <NotifyActionLabel
-      label={entry.action.label}
-      onPress={entry.action.onPress}
-    />
-  ) : undefined;
+const notifyAction = (entry: FeedbackEntry) => (entry.action ? <NotifyActionLabel action={entry.action} /> : undefined);
 
 const BannerStack = ({ entries }: { entries: FeedbackEntry[] }) => {
   // The banner region's stack gap and page inset
@@ -77,7 +73,7 @@ const BannerStack = ({ entries }: { entries: FeedbackEntry[] }) => {
       {entries.map((entry) => (
         <Alert
           key={entry.id}
-          intent={entry.severity as AlertIntent}
+          intent={entry.severity}
           title={entry.title}
           dismissible={entry.dismissible}
           onDismiss={() => {
@@ -162,7 +158,7 @@ export const NotifyRegion = ({
       {entries.map((entry) => (
         <Alert
           key={entry.id}
-          intent={entry.severity as AlertIntent}
+          intent={entry.severity}
           title={entry.title}
           {...(compact == null ? {} : { compact })}
           dismissible={entry.dismissible}
@@ -177,6 +173,13 @@ export const NotifyRegion = ({
   );
 };
 
+const resolveViewportProps = (toastViewport: boolean | ToastViewportProps): ToastViewportProps | null => {
+  if (toastViewport === true) {
+    return {};
+  }
+  return toastViewport === false ? null : toastViewport;
+};
+
 /**
  * App/story root host: page banners, blocking dialog, and (optionally) toast viewport.
  */
@@ -184,7 +187,7 @@ export const NotifyHost = ({ toastViewport = true, children }: NotifyHostProps) 
   const all = useFeedbackEntries();
   const banners = useMemo(() => all.filter((e) => e.surface === 'banner'), [all]);
   const dialog = useMemo(() => all.find((e) => e.surface === 'dialog'), [all]);
-  const viewportProps = toastViewport === true ? {} : toastViewport === false ? null : toastViewport;
+  const viewportProps = resolveViewportProps(toastViewport);
 
   return (
     <>

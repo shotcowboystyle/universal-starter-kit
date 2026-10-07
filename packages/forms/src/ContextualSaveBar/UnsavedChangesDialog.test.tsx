@@ -37,7 +37,7 @@ const cssOf = (node: HTMLElement, prop: string): string => {
   return getComputedStyle(node).getPropertyValue(prop) || '';
 };
 
-describe('UnsavedChangesDialog', () => {
+describe(UnsavedChangesDialog, () => {
   it('renders nothing while closed', () => {
     renderWithProviders(
       <UnsavedChangesDialog
@@ -171,7 +171,7 @@ describe('UnsavedChangesDialog', () => {
         onDiscard={onDiscard}
       />,
     );
-    fireEvent.keyDown(dialog() as HTMLElement, { key: 'Escape', code: 'Escape' });
+    fireEvent.keyDown(dialog()!, { key: 'Escape', code: 'Escape' });
     expect(onDiscard).not.toHaveBeenCalled();
   });
 
@@ -208,7 +208,7 @@ describe('UnsavedChangesDialog', () => {
         onDiscard={noop}
       />,
     );
-    const outline = cssOf(dialog() as HTMLElement, 'outline-width');
+    const outline = cssOf(dialog()!, 'outline-width');
     expect(outline === '' || outline === '0px').toBe(true);
   });
 
@@ -221,7 +221,7 @@ describe('UnsavedChangesDialog', () => {
         onDiscard={noop}
       />,
     );
-    expect(cssOf(dialog() as HTMLElement, 'max-width')).toBe('440px');
+    expect(cssOf(dialog()!, 'max-width')).toBe('440px');
   });
 });
 

@@ -184,39 +184,64 @@ export const ManyTabsOverflow: Story = {
   },
 };
 
-export const Controlled: Story = {
-  render: () => {
-    const [tab, setTab] = React.useState('address');
-    const values = ['details', 'address', 'settings'];
-    return (
-      <YStack gap="$4">
-        <XStack
-          gap="$2"
-          alignItems="center">
-          {values.map((v) => (
-            <Button
-              key={v}
-              size="$2"
-              onPress={() => {
-                setTab(v);
-              }}>
-              go: {v}
-            </Button>
-          ))}
-          <Text
-            color="$color11"
-            fontSize="$2">
-            value={tab}
-          </Text>
-        </XStack>
-        <Tabs
-          items={baseItems.slice(0, 3)}
+const ControlledDemo = () => {
+  const [tab, setTab] = React.useState('address');
+  const values = ['details', 'address', 'settings'];
+  return (
+    <YStack gap="$4">
+      <XStack
+        gap="$2"
+        alignItems="center">
+        {values.map((v) => (
+          <Button
+            key={v}
+            size="$2"
+            onPress={() => {
+              setTab(v);
+            }}>
+            go: {v}
+          </Button>
+        ))}
+        <Text
+          color="$color11"
+          fontSize="$2">
           value={tab}
-          onChange={setTab}
-        />
-      </YStack>
-    );
-  },
+        </Text>
+      </XStack>
+      <Tabs
+        items={baseItems.slice(0, 3)}
+        value={tab}
+        onChange={setTab}
+      />
+    </YStack>
+  );
+};
+
+const Box = ({ children, label }: { children: React.ReactNode; label: string }) => (
+  <YStack
+    gap="$2"
+    flex={1}
+    minWidth={0}>
+    <Text
+      fontSize="$2"
+      color="$color11">
+      {label}
+    </Text>
+    <YStack
+      height={260}
+      minHeight={0}
+      borderWidth={1}
+      borderColor="$color6"
+      borderRadius="$4"
+      padding="$3"
+      overflow="hidden">
+      {children}
+    </YStack>
+  </YStack>
+);
+
+export const Controlled: Story = {
+  render: () => <ControlledDemo />,
 };
 
 export const WithIconsAndBadges: Story = {
@@ -359,28 +384,6 @@ export const FillBoundedParent: Story = {
         ),
       },
     ];
-    const Box = ({ children, label }: { children: React.ReactNode; label: string }) => (
-      <YStack
-        gap="$2"
-        flex={1}
-        minWidth={0}>
-        <Text
-          fontSize="$2"
-          color="$color11">
-          {label}
-        </Text>
-        <YStack
-          height={260}
-          minHeight={0}
-          borderWidth={1}
-          borderColor="$color6"
-          borderRadius="$4"
-          padding="$3"
-          overflow="hidden">
-          {children}
-        </YStack>
-      </YStack>
-    );
     return (
       <XStack
         gap="$4"
@@ -522,68 +525,70 @@ export const EqualSmall: Story = {
   ),
 };
 
+const InitialSixthActiveDemo = (args: React.ComponentProps<typeof Tabs>) => {
+  const [wide, setWide] = React.useState(false);
+  const [fullLabels, setFullLabels] = React.useState(true);
+  const [hidden, setHidden] = React.useState(false);
+  const [mount, setMount] = React.useState(0);
+  const items: TabsItem[] = Array.from({ length: 6 }, (_, index) => ({
+    value: `section-${index + 1}`,
+    label: fullLabels ? `Section ${index + 1} overview` : `${index + 1}`,
+    content: (
+      <Panel
+        title={`Section ${index + 1}`}
+        body="The selected section stays visible when the strip is measured or resized."
+      />
+    ),
+  }));
+  return (
+    <YStack gap="$3">
+      <XStack
+        gap="$2"
+        flexWrap="wrap">
+        <Button
+          onPress={() => {
+            setWide((value) => !value);
+          }}>
+          {wide ? 'Set width to 390px' : 'Set width to 800px'}
+        </Button>
+        <Button
+          onPress={() => {
+            setFullLabels((value) => !value);
+          }}>
+          {fullLabels ? 'Use short labels' : 'Load full labels'}
+        </Button>
+        <Button
+          onPress={() => {
+            setHidden((value) => !value);
+          }}>
+          {hidden ? 'Show strip' : 'Hide strip'}
+        </Button>
+        <Button
+          onPress={() => {
+            setMount((value) => value + 1);
+          }}>
+          Reset to sixth tab
+        </Button>
+      </XStack>
+      <Text color="$color11">
+        Use short labels, then load full labels to change content width. Hide and show the strip to defer usable
+        measurements. Scroll manually after reveal to check that it stays put.
+      </Text>
+      <YStack
+        width={wide ? 800 : 390}
+        maxWidth="100%"
+        display={hidden ? 'none' : 'flex'}>
+        <Tabs
+          key={mount}
+          {...args}
+          items={items}
+        />
+      </YStack>
+    </YStack>
+  );
+};
+
 export const InitialSixthActive: Story = {
   args: { defaultValue: 'section-6', ariaLabel: 'Example sections' },
-  render: (args) => {
-    const [wide, setWide] = React.useState(false);
-    const [fullLabels, setFullLabels] = React.useState(true);
-    const [hidden, setHidden] = React.useState(false);
-    const [mount, setMount] = React.useState(0);
-    const items: TabsItem[] = Array.from({ length: 6 }, (_, index) => ({
-      value: `section-${index + 1}`,
-      label: fullLabels ? `Section ${index + 1} overview` : `${index + 1}`,
-      content: (
-        <Panel
-          title={`Section ${index + 1}`}
-          body="The selected section stays visible when the strip is measured or resized."
-        />
-      ),
-    }));
-    return (
-      <YStack gap="$3">
-        <XStack
-          gap="$2"
-          flexWrap="wrap">
-          <Button
-            onPress={() => {
-              setWide((value) => !value);
-            }}>
-            {wide ? 'Set width to 390px' : 'Set width to 800px'}
-          </Button>
-          <Button
-            onPress={() => {
-              setFullLabels((value) => !value);
-            }}>
-            {fullLabels ? 'Use short labels' : 'Load full labels'}
-          </Button>
-          <Button
-            onPress={() => {
-              setHidden((value) => !value);
-            }}>
-            {hidden ? 'Show strip' : 'Hide strip'}
-          </Button>
-          <Button
-            onPress={() => {
-              setMount((value) => value + 1);
-            }}>
-            Reset to sixth tab
-          </Button>
-        </XStack>
-        <Text color="$color11">
-          Use short labels, then load full labels to change content width. Hide and show the strip to defer usable
-          measurements. Scroll manually after reveal to check that it stays put.
-        </Text>
-        <YStack
-          width={wide ? 800 : 390}
-          maxWidth="100%"
-          display={hidden ? 'none' : 'flex'}>
-          <Tabs
-            key={mount}
-            {...args}
-            items={items}
-          />
-        </YStack>
-      </YStack>
-    );
-  },
+  render: (args) => <InitialSixthActiveDemo {...args} />,
 };

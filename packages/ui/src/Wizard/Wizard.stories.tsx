@@ -44,6 +44,8 @@ export default meta;
 
 type Story = StoryObj<typeof Wizard>;
 
+const noop = (): void => undefined;
+
 const DeriveToggle = () => {
   const { setFieldValue } = useWizard();
   const [derived, setDerived] = useState(false);
@@ -77,7 +79,7 @@ const ReadyWizard = ({
       defaultCurrent={defaultCurrent}
       completeLabel="Restore backup"
       labels={labels}
-      onCancel={() => undefined}>
+      onCancel={noop}>
       <Wizard.Panel>
         <Input
           id="source"
@@ -167,7 +169,8 @@ export const Empty: Story = {
   ),
 };
 
-export const Error: Story = {
+export const ErrorState: Story = {
+  name: 'Error',
   render: () => (
     <Wizard
       steps={steps}

@@ -1,7 +1,7 @@
 import { renderWithProviders } from '@repo/test-utils';
 import { Preset } from '@repo/theme';
 import { useForm } from '@tanstack/react-form';
-import { act, fireEvent, waitFor } from '@testing-library/react';
+import { act, fireEvent, renderHook, waitFor } from '@testing-library/react';
 import { Theme, YStack } from 'tamagui';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -10,16 +10,86 @@ import { Form } from '../../Form';
 
 import { TextArea } from './index';
 
+type TextAreaFormValues = Record<string, string>;
+
+const ignoreSubmit = async (_value: TextAreaFormValues): Promise<void> => {};
+
+const FormExample = ({
+  defaultValue = '',
+  name = 'description',
+  onSubmit = ignoreSubmit,
+}: {
+  defaultValue?: string;
+  name?: string;
+  onSubmit?: (value: TextAreaFormValues) => Promise<void> | void;
+}) => (
+  <Form
+    formOptions={{
+      defaultValues: {
+        [name]: defaultValue,
+      },
+    }}
+    onSubmit={async (value) => {
+      await onSubmit(value);
+    }}>
+    <TextArea
+      label="Description"
+      name={name}
+    />
+    <Button action="submit">Submit</Button>
+  </Form>
+);
+
+// oxlint-disable-next-line unicorn/prefer-number-coercion -- computed lengths carry a "px" suffix, which Number() would turn into NaN
+const cssPx = (length: string): number => Number.parseFloat(length);
+
+/** Resolved font weight of an element: inline/computed style, else the Tamagui atom class. */
+const inkWeight = (el: Element | null): string => {
+  if (!(el instanceof HTMLElement)) {
+    return '';
+  }
+  const fromStyle = el.style.fontWeight || getComputedStyle(el).fontWeight;
+  if (fromStyle !== '' && fromStyle !== 'normal') {
+    return fromStyle;
+  }
+  for (const cls of el.className.split(/\s+/u)) {
+    const weight = /(?:^|_)(?:fw|fow|fontWeight)-?(?<weight>\d+)/iu.exec(cls)?.groups?.weight;
+    if (weight !== undefined) {
+      return weight;
+    }
+  }
+  return fromStyle;
+};
+
+const isBold = (weight: string): boolean => {
+  const n = Math.trunc(Number(weight));
+  if (!Number.isNaN(n)) {
+    return n >= 700;
+  }
+  return weight === 'bold';
+};
+
+const colorToken = (el: Element | null): string => {
+  if (!(el instanceof HTMLElement)) {
+    return '';
+  }
+  // Tamagui atomics (`_col-color11`, `_col-color`) — happy-dom often
+  // leaves getComputedStyle().color empty for theme tokens.
+  const token = /_col-(?<token>color\d*)\b/u.exec(el.className)?.groups?.token;
+  if (token !== undefined) {
+    return token;
+  }
+  return el.style.color || getComputedStyle(el).color || '';
+};
+
 /** Tamagui atomic top-left radius class on the ring box. */
 const boxRadiusClasses = (container: HTMLElement): string[] => {
   const textarea = container.querySelector('textarea');
   const box = textarea?.closest('.mp-composite-ring');
-  return String(box?.className || '')
-    .split(' ')
-    .filter((c) => c.startsWith('_btlr-'));
+  return (box?.className ?? '').split(' ').filter((c) => c.startsWith('_btlr-'));
 };
 
-describe('TextArea', () => {
+describe(TextArea, () => {
   describe('without form context', () => {
     it('should render with label and helper text correctly', () => {
       const result = renderWithProviders(
@@ -37,11 +107,12 @@ describe('TextArea', () => {
     });
 
     it('should handle text changes', async () => {
-      const onChangeText = vi.fn();
+      const onChangeText = vi.fn<(text: string) => void>();
       const result = renderWithProviders(
         <TextArea
           label="Description"
           name="description"
+          // oxlint-disable-next-line typescript/no-deprecated -- the deprecated alias is the behavior under test
           onChangeText={onChangeText}
           defaultValue=""
         />,
@@ -133,17 +204,18 @@ describe('TextArea', () => {
       const textarea = result.getTextArea() as HTMLTextAreaElement | null;
       expect(textarea).toBeTruthy();
       const cs = textarea ? getComputedStyle(textarea) : null;
-      const padX = cs ? Number.parseFloat(cs.paddingLeft) || 0 : 0;
-      const padY = cs ? Number.parseFloat(cs.paddingTop) || 0 : 0;
+      const padX = cs ? cssPx(cs.paddingLeft) || 0 : 0;
+      const padY = cs ? cssPx(cs.paddingTop) || 0 : 0;
       expect(padX).toBeLessThanOrEqual(padY);
     });
 
     it('should handle state transitions', async () => {
-      const onChangeText = vi.fn();
+      const onChangeText = vi.fn<(text: string) => void>();
       const result = renderWithProviders(
         <TextArea
           name="description"
           defaultValue="Initial text"
+          // oxlint-disable-next-line typescript/no-deprecated -- the deprecated alias is the behavior under test
           onChangeText={onChangeText}
         />,
       );
@@ -164,26 +236,8 @@ describe('TextArea', () => {
   });
 
   describe('with form context', () => {
-    const FormExample = ({ defaultValue = '', name = 'description', onSubmit = async (_value: any) => {} }) => (
-      <Form
-        formOptions={{
-          defaultValues: {
-            [name]: defaultValue,
-          },
-        }}
-        onSubmit={async (value) => {
-          await onSubmit(value);
-        }}>
-        <TextArea
-          label="Description"
-          name={name}
-        />
-        <Button action="submit">Submit</Button>
-      </Form>
-    );
-
     it('should render with form context and handle form submission', async () => {
-      const onSubmit = vi.fn();
+      const onSubmit = vi.fn<(value: TextAreaFormValues) => void>();
       const result = renderWithProviders(
         <YStack>
           <FormExample onSubmit={onSubmit} />
@@ -201,9 +255,7 @@ describe('TextArea', () => {
         expect(onSubmit).toHaveBeenCalledWith({ description: '' });
       });
       await act(async () => {
-        if (textarea) {
-          fireEvent.change(textarea, { target: { value: 'Test description' } });
-        }
+        fireEvent.change(textarea, { target: { value: 'Test description' } });
       });
       await act(async () => {
         if (submitButton) {
@@ -218,13 +270,14 @@ describe('TextArea', () => {
     });
 
     it('should handle disabled state in form context', async () => {
-      const onChangeText = vi.fn();
+      const onChangeText = vi.fn<(text: string) => void>();
       const result = renderWithProviders(
         <Form formOptions={{ defaultValues: { description: 'Initial text' } }}>
           <TextArea
             label="Description"
             name="description"
             disabled
+            // oxlint-disable-next-line typescript/no-deprecated -- the deprecated alias is the behavior under test
             onChangeText={onChangeText}
           />
         </Form>,
@@ -236,7 +289,8 @@ describe('TextArea', () => {
         }
       });
       expect(onChangeText).not.toHaveBeenCalled();
-      const isDisabled = textarea?.hasAttribute('disabled') || textarea?.getAttribute('aria-disabled') === 'true';
+      const isDisabled =
+        textarea?.hasAttribute('disabled') === true || textarea?.getAttribute('aria-disabled') === 'true';
       expect(isDisabled).toBeTruthy();
     });
   });
@@ -248,29 +302,25 @@ describe('TextArea', () => {
     // engine seeding, setFieldValue) rendered a stale count. Adopting a
     // programmatic value must not emit onChange.
     it('form-integrated: a field value set after mount displays with a live count, without onChange', async () => {
-      const onChange = vi.fn();
-      const onChangeText = vi.fn();
-      let formApi: { setFieldValue: (name: 'notes', value: string) => void } | undefined;
-      const TestComponent = () => {
-        const form = useForm({ defaultValues: { notes: '' } });
-        formApi = form as unknown as typeof formApi;
-        return (
-          <Form form={form}>
-            <TextArea
-              label="Notes"
-              name="notes"
-              showCount
-              onChange={onChange}
-              onChangeText={onChangeText}
-            />
-          </Form>
-        );
-      };
-      const result = renderWithProviders(<TestComponent />);
+      const onChange = vi.fn<(value: string) => void>();
+      const onChangeText = vi.fn<(text: string) => void>();
+      const { result: formHook } = renderHook(() => useForm({ defaultValues: { notes: '' } }));
+      const result = renderWithProviders(
+        <Form form={formHook.current}>
+          <TextArea
+            label="Notes"
+            name="notes"
+            showCount
+            onChange={onChange}
+            // oxlint-disable-next-line typescript/no-deprecated -- the deprecated alias is the behavior under test
+            onChangeText={onChangeText}
+          />
+        </Form>,
+      );
       expect(result.findTextElement('0 characters')).toBeDefined();
 
       await act(async () => {
-        formApi?.setFieldValue('notes', 'seeded text');
+        formHook.current.setFieldValue('notes', 'seeded text');
       });
       await waitFor(() => {
         expect((result.getTextArea() as HTMLTextAreaElement)?.value).toBe('seeded text');
@@ -281,12 +331,13 @@ describe('TextArea', () => {
     });
 
     it('standalone controlled: a value arriving after mount updates the count, without onChange', async () => {
-      const onChangeText = vi.fn();
+      const onChangeText = vi.fn<(text: string) => void>();
       const result = renderWithProviders(
         <TextArea
           label="Notes"
           value=""
           showCount
+          // oxlint-disable-next-line typescript/no-deprecated -- the deprecated alias is the behavior under test
           onChangeText={onChangeText}
         />,
       );
@@ -297,6 +348,7 @@ describe('TextArea', () => {
           label="Notes"
           value="late value"
           showCount
+          // oxlint-disable-next-line typescript/no-deprecated -- the deprecated alias is the behavior under test
           onChangeText={onChangeText}
         />,
       );
@@ -338,16 +390,12 @@ describe('TextArea', () => {
       expect(textarea?.getAttribute('aria-describedby') ?? '').toContain('notes-count-count');
 
       await act(async () => {
-        if (textarea) {
-          fireEvent.focus(textarea);
-        }
+        fireEvent.focus(textarea);
       });
       expect(count?.getAttribute('aria-live')).toBe('polite');
 
       await act(async () => {
-        if (textarea) {
-          fireEvent.blur(textarea);
-        }
+        fireEvent.focusOut(textarea);
       });
       expect(count?.getAttribute('aria-live')).toBe('off');
     });
@@ -367,7 +415,7 @@ describe('TextArea', () => {
 
   describe('with useForm hook directly', () => {
     it('should handle form submission with useForm', async () => {
-      const onSubmitMock = vi.fn();
+      const onSubmitMock = vi.fn<(value: { description: string }) => void>();
       const TestComponent = () => {
         const form = useForm({
           defaultValues: {
@@ -422,13 +470,14 @@ describe('TextArea', () => {
 
   describe('canonical onChange(value)', () => {
     it('fires onChange with the string; onChangeText alias fires from the same site', async () => {
-      const onChange = vi.fn();
-      const onChangeText = vi.fn();
+      const onChange = vi.fn<(value: string) => void>();
+      const onChangeText = vi.fn<(text: string) => void>();
       const result = renderWithProviders(
         <TextArea
           label="Notes"
           defaultValue=""
           onChange={onChange}
+          // oxlint-disable-next-line typescript/no-deprecated -- the deprecated alias is the behavior under test
           onChangeText={onChangeText}
         />,
       );
@@ -438,10 +487,8 @@ describe('TextArea', () => {
           fireEvent.change(textarea, { target: { value: 'hello' } });
         }
       });
-      expect(onChange).toHaveBeenCalledWith('hello');
-      expect(onChangeText).toHaveBeenCalledWith('hello');
-      expect(onChange).toHaveBeenCalledOnce();
-      expect(onChangeText).toHaveBeenCalledOnce();
+      expect(onChange).toHaveBeenCalledExactlyOnceWith('hello');
+      expect(onChangeText).toHaveBeenCalledExactlyOnceWith('hello');
     });
   });
 
@@ -513,10 +560,10 @@ describe('TextArea', () => {
           />
         </Preset>,
       );
-      const box = result.container.querySelector('textarea')?.closest('.mp-composite-ring');
-      expect(box?.getAttribute('data-constraint-container')).toBe('TextArea');
-      expect(box?.getAttribute('data-radius-knob')).toBe('full');
-      expect(box?.getAttribute('data-space-knob')).toBe('small');
+      const box = result.container.querySelector('textarea')?.closest<HTMLElement>('.mp-composite-ring');
+      expect(box?.dataset.constraintContainer).toBe('TextArea');
+      expect(box?.dataset.radiusKnob).toBe('full');
+      expect(box?.dataset.spaceKnob).toBe('small');
     });
 
     it('caps large under space=small at the padding px', () => {
@@ -544,7 +591,7 @@ describe('TextArea', () => {
         const result = renderWithProviders(scheme === 'dark' ? <Theme name="dark">{ui}</Theme> : ui);
         const classes = boxRadiusClasses(result.container);
         expect(classes, scheme).toStrictEqual(['_btlr-18px']);
-        expect(classes.join(' '), scheme).not.toMatch(/t-radius-(4|12)/u);
+        expect(classes.join(' '), scheme).not.toMatch(/t-radius-(?:4|12)/u);
         result.unmount();
       }
     });
@@ -566,48 +613,6 @@ describe('TextArea', () => {
   });
 
   describe('RM-TXT-6 fontWeight and T-VALUE textAccent', () => {
-    const inkWeight = (el: Element | null): string => {
-      if (!el) {
-        return '';
-      }
-      const html = el as HTMLElement;
-      const fromStyle = html.style.fontWeight || getComputedStyle(html).fontWeight;
-      if (fromStyle && fromStyle !== 'normal' && fromStyle !== '') {
-        return String(fromStyle);
-      }
-      for (const cls of String(html.className ?? '').split(/\s+/u)) {
-        const match = /(?:^|_)(?:fw|fow|fontWeight)-?(\d+)/iu.exec(cls);
-        if (match) {
-          return match[1];
-        }
-      }
-      return String(fromStyle || '');
-    };
-
-    const isBold = (weight: string): boolean => {
-      const n = Number.parseInt(weight, 10);
-      if (!Number.isNaN(n)) {
-        return n >= 700;
-      }
-      return weight === 'bold';
-    };
-
-    const colorToken = (el: Element | null): string => {
-      if (!el) {
-        return '';
-      }
-      const html = el as HTMLElement;
-      const cls = String(html.className ?? '');
-      // Tamagui atomics (`_col-color11`, `_col-color`) — happy-dom often
-      // leaves getComputedStyle().color empty for theme tokens.
-      const match = /_col-(color\d*)\b/u.exec(cls);
-      if (match) {
-        return match[1];
-      }
-      const fromStyle = html.style.color || getComputedStyle(html).color || '';
-      return fromStyle;
-    };
-
     it('bold: multiline value rides 700 with its helper (RM-TXT-6)', () => {
       const result = renderWithProviders(
         <Preset overrides={{ fontWeight: 'bold' }}>

@@ -473,7 +473,7 @@ const TimelineSkeleton = ({
 );
 
 // ---------------------------------------------------------------------------
-// View model shared by the feed subcomponents
+// View model shared by the feed sub-components
 // ---------------------------------------------------------------------------
 
 type ResolvedKnobs = ReturnType<typeof useResolvedKnobs>;
@@ -611,13 +611,13 @@ const TimelineViewContext = createContext<TimelineView | null>(null);
 const useTimelineView = (): TimelineView => {
   const view = useContext(TimelineViewContext);
   if (view === null) {
-    throw new Error('Timeline subcomponents must render inside <Timeline>');
+    throw new Error('Timeline sub-components must render inside <Timeline>');
   }
   return view;
 };
 
 // ---------------------------------------------------------------------------
-// Feed subcomponents
+// Feed sub-components
 // ---------------------------------------------------------------------------
 
 const TimelineTimestamp = ({ entry, fontSize }: { entry: TimelineEntry; fontSize: string }) => {

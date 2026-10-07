@@ -165,7 +165,7 @@ export const CustomGap: Story = {
           width={80}
           fontSize="$2"
           color="$color10">
-          gap="$1"
+          gap=&quot;$1&quot;
         </Text>
         <ControlledDotIndicator
           total={5}
@@ -180,7 +180,7 @@ export const CustomGap: Story = {
           width={80}
           fontSize="$2"
           color="$color10">
-          gap="$2"
+          gap=&quot;$2&quot;
         </Text>
         <ControlledDotIndicator
           total={5}
@@ -195,7 +195,7 @@ export const CustomGap: Story = {
           width={80}
           fontSize="$2"
           color="$color10">
-          gap="$4"
+          gap=&quot;$4&quot;
         </Text>
         <ControlledDotIndicator
           total={5}
@@ -229,45 +229,47 @@ export const Disabled: Story = {
   ),
 };
 
-export const ReadOnly: Story = {
-  render: () => {
-    const [index, setIndex] = useState(2);
-    return (
-      <YStack
-        gap="$4"
-        alignItems="center">
-        <DotIndicator
-          total={5}
-          activeIndex={index}
-        />
+const ReadOnlyDemo = () => {
+  const [index, setIndex] = useState(2);
+  return (
+    <YStack
+      gap="$4"
+      alignItems="center">
+      <DotIndicator
+        total={5}
+        activeIndex={index}
+      />
+      <Text
+        fontSize="$2"
+        color="$color10">
+        Item {index + 1} of 5 (no onChange - read only)
+      </Text>
+      <XStack gap="$2">
         <Text
           fontSize="$2"
-          color="$color10">
-          Item {index + 1} of 5 (no onChange - read only)
+          color="$blue10"
+          cursor="pointer"
+          onPress={() => {
+            setIndex((i) => Math.max(0, i - 1));
+          }}>
+          Prev
         </Text>
-        <XStack gap="$2">
-          <Text
-            fontSize="$2"
-            color="$blue10"
-            cursor="pointer"
-            onPress={() => {
-              setIndex((i) => Math.max(0, i - 1));
-            }}>
-            Prev
-          </Text>
-          <Text
-            fontSize="$2"
-            color="$blue10"
-            cursor="pointer"
-            onPress={() => {
-              setIndex((i) => Math.min(4, i + 1));
-            }}>
-            Next
-          </Text>
-        </XStack>
-      </YStack>
-    );
-  },
+        <Text
+          fontSize="$2"
+          color="$blue10"
+          cursor="pointer"
+          onPress={() => {
+            setIndex((i) => Math.min(4, i + 1));
+          }}>
+          Next
+        </Text>
+      </XStack>
+    </YStack>
+  );
+};
+
+export const ReadOnly: Story = {
+  render: () => <ReadOnlyDemo />,
 };
 
 export const AllStates: Story = {

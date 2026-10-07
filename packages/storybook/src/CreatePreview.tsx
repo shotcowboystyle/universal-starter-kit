@@ -1,4 +1,4 @@
-import type { __getActiveSyncModule } from '@multiplatform.one/frappe';
+import type { __getActiveSyncModule } from '@repo/frappe';
 import { config } from '@repo/platform';
 import {
   BodyFont,
@@ -346,7 +346,7 @@ const AnimationNamesEmitter = () => {
 };
 
 const loadActiveSyncModule = async () => {
-  const { __getActiveSyncModule: getActiveSyncModule } = await import('@multiplatform.one/frappe');
+  const { __getActiveSyncModule: getActiveSyncModule } = await import('@repo/frappe');
   return getActiveSyncModule();
 };
 

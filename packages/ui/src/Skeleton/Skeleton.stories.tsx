@@ -53,7 +53,7 @@ export const Variants: Story = {
             <Skeleton
               variant={variant}
               width={variant === 'circular' ? 48 : 200}
-              height={variant === 'circular' ? 48 : variant === 'text' ? undefined : 48}
+              height={variant === 'text' ? undefined : 48}
             />
           </XStack>
         ))}

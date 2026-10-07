@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { computeRequiredMarkMode, formatRequiredMarkSuffix, mapHouseRequiredMarking } from './required-marking';
 
-describe('mapHouseRequiredMarking', () => {
+describe(mapHouseRequiredMarking, () => {
   it('maps asterisk and minority to asterisk (minority helper)', () => {
     expect(mapHouseRequiredMarking('asterisk')).toBe('asterisk');
     expect(mapHouseRequiredMarking('minority')).toBe('asterisk');
@@ -19,7 +19,7 @@ describe('computeRequiredMarkMode auto', () => {
   });
 });
 
-describe('formatRequiredMarkSuffix', () => {
+describe(formatRequiredMarkSuffix, () => {
   it('asterisk marks required fields', () => {
     expect(formatRequiredMarkSuffix(true, 'asterisk')).toBe(' *');
     expect(formatRequiredMarkSuffix(false, 'asterisk')).toBe('');

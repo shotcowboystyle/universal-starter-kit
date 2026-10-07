@@ -11,13 +11,21 @@ import { renderWithProviders } from '@repo/test-utils';
  */
 import { cleanup } from '@testing-library/react';
 import { createRef } from 'react';
+import type { TamaguiElement } from 'tamagui';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { FieldLayout } from '../../FieldLayout';
 
 import { CheckboxFieldFrame } from './CheckboxFieldFrame';
 
-afterEach(cleanup);
+/** The slice of a Tamagui state style (or the frame's own defaults) this spec reads. */
+interface FrameStateBag {
+  backgroundColor: string;
+  borderColor: string;
+  outlineWidth: number;
+  borderWidth: number;
+  borderRadius: number;
+}
 
 const TRANSPARENT = new Set(['transparent', 'rgba(0, 0, 0, 0)', 'rgba(0,0,0,0)']);
 
@@ -38,9 +46,11 @@ const frame = (container: HTMLElement): HTMLElement => {
   return node as HTMLElement;
 };
 
-describe('CheckboxFieldFrame', () => {
+describe('CheckboxFieldFrame hit target', () => {
+  afterEach(cleanup);
+
   it('links the rendered field message, forwards its ref, and preserves an explicit description', () => {
-    const ref = createRef<any>();
+    const ref = createRef<TamaguiElement>();
     const fixture = (override?: { 'aria-describedby': string | undefined }) => (
       <FieldLayout
         id="consent"
@@ -59,6 +69,7 @@ describe('CheckboxFieldFrame', () => {
     expect(ref.current).toBe(frame(result.container));
     result.rerender(fixture({ 'aria-describedby': 'consumer-description' }));
     expect(frame(result.container).getAttribute('aria-describedby')).toBe('consumer-description');
+    // oxlint-disable-next-line sonarjs/no-undefined-assignment -- an explicit undefined description is the case under test
     result.rerender(fixture({ 'aria-describedby': undefined }));
     expect(frame(result.container).getAttribute('aria-describedby')).toBeNull();
   });
@@ -101,7 +112,7 @@ describe('CheckboxFieldFrame', () => {
           size={size}
         />,
       );
-      expect(cssOf(frame(container), 'border-top-left-radius') || '0px', String(size)).toBe('0px');
+      expect(cssOf(frame(container), 'border-top-left-radius') || '0px', size).toBe('0px');
       cleanup();
     }
   });
@@ -116,14 +127,12 @@ describe('CheckboxFieldFrame', () => {
     // Asserted on the styled definition rather than by simulating five states:
     // these are the exact overrides that keep a wash off the group, and a
     // regression would be someone deleting one of them.
-    const config = (CheckboxFieldFrame as unknown as { staticConfig?: { defaultProps?: Record<string, any> } })
-      .staticConfig;
-    const defaults = config?.defaultProps ?? {};
+    const defaults: Record<string, FrameStateBag> = CheckboxFieldFrame.staticConfig.defaultProps ?? {};
     for (const state of ['hoverStyle', 'pressStyle', 'focusStyle', 'focusVisibleStyle', 'activeStyle']) {
       const bag = defaults[state];
       expect(bag, `${state} must be declared on the frame`).toBeTruthy();
-      expect(TRANSPARENT.has(String(bag.backgroundColor)), state).toBe(true);
-      expect(TRANSPARENT.has(String(bag.borderColor)), state).toBe(true);
+      expect(TRANSPARENT.has(bag.backgroundColor), state).toBe(true);
+      expect(TRANSPARENT.has(bag.borderColor), state).toBe(true);
     }
     expect(defaults.focusStyle.outlineWidth).toBe(0);
     expect(defaults.focusVisibleStyle.outlineWidth).toBe(0);

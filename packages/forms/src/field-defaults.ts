@@ -30,26 +30,28 @@ export const LABEL_COLUMN_MAX_CH = Math.max(
 export const LABEL_COLUMN_WIDTH = `min(max-content, ${LABEL_COLUMN_MAX_CH}ch)` as const;
 
 /** HTML `autocomplete` tokens → purpose keys. */
-const AUTOCOMPLETE_TO_PURPOSE: Record<string, FieldPurpose> = {
-  'postal-code': 'postalCode',
-  postalcode: 'postalCode',
-  zip: 'postalCode',
-  'zip-code': 'postalCode',
-  year: 'year',
-  'bday-year': 'year',
-  'cc-exp-year': 'year',
-  tel: 'phone',
-  'tel-national': 'phone',
-  'tel-local': 'phone',
-  'tel-country-code': 'phone',
-  phone: 'phone',
-  email: 'email',
-  description: 'description',
-};
+const AUTOCOMPLETE_TO_PURPOSE = new Map<string, FieldPurpose>(
+  Object.entries({
+    'postal-code': 'postalCode',
+    postalcode: 'postalCode',
+    zip: 'postalCode',
+    'zip-code': 'postalCode',
+    year: 'year',
+    'bday-year': 'year',
+    'cc-exp-year': 'year',
+    tel: 'phone',
+    'tel-national': 'phone',
+    'tel-local': 'phone',
+    'tel-country-code': 'phone',
+    phone: 'phone',
+    email: 'email',
+    description: 'description',
+  } satisfies Record<string, FieldPurpose>),
+);
 
 const PURPOSE_KEYS = new Set<string>(Object.keys(FIELD_WIDTH_BY_PURPOSE));
 
-export const isFieldPurpose = (value: string | undefined | null): value is FieldPurpose =>
+export const isFieldPurpose = (value?: string | null): value is FieldPurpose =>
   typeof value === 'string' && PURPOSE_KEYS.has(value);
 
 /**
@@ -60,10 +62,11 @@ export const resolveFieldPurpose = (
   purpose?: string | null,
   autoComplete?: string | null,
 ): FieldPurpose | undefined => {
-  if (isFieldPurpose(purpose ?? undefined)) {
-    return purpose as FieldPurpose;
+  const explicitPurpose = purpose ?? undefined;
+  if (isFieldPurpose(explicitPurpose)) {
+    return explicitPurpose;
   }
-  if (!autoComplete) {
+  if (autoComplete == null || autoComplete === '') {
     return undefined;
   }
   const normalized = autoComplete.trim().toLowerCase();
@@ -73,7 +76,7 @@ export const resolveFieldPurpose = (
   if (isFieldPurpose(normalized)) {
     return normalized;
   }
-  return AUTOCOMPLETE_TO_PURPOSE[normalized];
+  return AUTOCOMPLETE_TO_PURPOSE.get(normalized);
 };
 
 /** Character width (or `"full"`) for a purpose / autocomplete pair. */
@@ -90,13 +93,16 @@ export interface FieldWidthStyle {
   width?: string;
 }
 
+type FieldInputMode = 'text' | 'email' | 'tel' | 'numeric' | 'decimal' | 'search' | 'url';
+type FieldKeyboardType = 'default' | 'email-address' | 'phone-pad' | 'number-pad' | 'decimal-pad' | 'numeric' | 'url';
+
 export interface FieldInputProps {
   /** HTML autocomplete token (web) — also feeds RNW textContentType mapping. */
   autoComplete?: string;
   /** HTML inputmode (web keyboard hint). */
-  inputMode?: 'text' | 'email' | 'tel' | 'numeric' | 'decimal' | 'search' | 'url';
+  inputMode?: FieldInputMode;
   /** React Native keyboardType (native keyboard hint). */
-  keyboardType?: 'default' | 'email-address' | 'phone-pad' | 'number-pad' | 'decimal-pad' | 'numeric' | 'url';
+  keyboardType?: FieldKeyboardType;
 }
 
 /**
@@ -124,7 +130,7 @@ const INPUT_PROPS_BY_PURPOSE: Record<FieldPurpose, FieldInputProps> = {
 export const resolveFieldInputProps = (purpose?: string | null, autoComplete?: string | null): FieldInputProps => {
   const resolved = resolveFieldPurpose(purpose, autoComplete);
   const base = resolved ? INPUT_PROPS_BY_PURPOSE[resolved] : {};
-  if (autoComplete) {
+  if (autoComplete != null && autoComplete !== '') {
     return { ...base, autoComplete };
   }
   return { ...base };

@@ -67,58 +67,56 @@ const meta: Meta<typeof Slider> = {
 export default meta;
 type Story = StoryObj<typeof Slider>;
 
+const FormExample = () => {
+  const form = useForm({
+    defaultValues: {
+      brightness: [80],
+      contrast: [50],
+      saturation: [70],
+    },
+    onSubmit: async ({ value }) => {
+      action('onSubmit')(value);
+    },
+  });
+
+  return (
+    <Form
+      form={form}
+      maxWidth={400}>
+      <YStack gap="$4">
+        <Slider
+          label="Brightness"
+          name="brightness"
+          min={0}
+          max={100}
+          helperText="Adjust image brightness"
+        />
+
+        <Slider
+          label="Contrast"
+          name="contrast"
+          min={0}
+          max={100}
+          helperText="Adjust image contrast"
+        />
+
+        <Slider
+          label="Saturation"
+          name="saturation"
+          min={0}
+          max={100}
+          helperText="Adjust color saturation"
+        />
+
+        <Button action="submit">Apply Settings</Button>
+      </YStack>
+    </Form>
+  );
+};
+
 export const Main: Story = {
   name: 'Main',
-  render: () => {
-    const FormExample = () => {
-      const form = useForm({
-        defaultValues: {
-          brightness: [80],
-          contrast: [50],
-          saturation: [70],
-        },
-        onSubmit: async ({ value }) => {
-          action('onSubmit')(value);
-        },
-      });
-
-      return (
-        <Form
-          form={form}
-          maxWidth={400}>
-          <YStack gap="$4">
-            <Slider
-              label="Brightness"
-              name="brightness"
-              min={0}
-              max={100}
-              helperText="Adjust image brightness"
-            />
-
-            <Slider
-              label="Contrast"
-              name="contrast"
-              min={0}
-              max={100}
-              helperText="Adjust image contrast"
-            />
-
-            <Slider
-              label="Saturation"
-              name="saturation"
-              min={0}
-              max={100}
-              helperText="Adjust color saturation"
-            />
-
-            <Button action="submit">Apply Settings</Button>
-          </YStack>
-        </Form>
-      );
-    };
-
-    return <FormExample />;
-  },
+  render: () => <FormExample />,
 };
 
 export const Standalone: Story = {
@@ -212,27 +210,26 @@ export const Sizes: Story = {
   ),
 };
 
+const InteractiveExample = () => {
+  const [value, setValue] = useState([50]);
+  return (
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <Slider
+        label="Adjust Value"
+        value={value}
+        min={0}
+        max={100}
+        onChange={setValue}
+      />
+      <Text>Current value: {value[0]}</Text>
+    </YStack>
+  );
+};
+
 export const Interactive: Story = {
-  render: () => {
-    const InteractiveExample = () => {
-      const [value, setValue] = useState([50]);
-      return (
-        <YStack
-          gap="$4"
-          maxWidth={400}>
-          <Slider
-            label="Adjust Value"
-            value={value}
-            min={0}
-            max={100}
-            onValueChange={setValue}
-          />
-          <Text>Current value: {value[0]}</Text>
-        </YStack>
-      );
-    };
-    return <InteractiveExample />;
-  },
+  render: () => <InteractiveExample />,
 };
 
 /**
@@ -241,6 +238,63 @@ export const Interactive: Story = {
  * visible. Raw primitives here are by design and labeled — knob/contrast probes
  * skip this story via `parameters.foreignContrastSpecimen`.
  */
+const ComparisonExample = () => {
+  const [customVal, setCustomVal] = useState([50]);
+  const [tamaguiVal, setTamaguiVal] = useState([50]);
+  return (
+    <XStack
+      gap="$6"
+      alignItems="flex-start"
+      padding="$4">
+      <YStack
+        gap="$3"
+        width={300}>
+        <Paragraph
+          size="$2"
+          color="$placeholderColor">
+          Custom Slider
+        </Paragraph>
+        <Slider
+          value={customVal}
+          min={0}
+          max={100}
+          onChange={(val) => {
+            setCustomVal(val);
+            action('custom.onValueChange')(val);
+          }}
+        />
+      </YStack>
+
+      <YStack
+        gap="$3"
+        width={300}>
+        <Paragraph
+          size="$2"
+          color="$placeholderColor">
+          Tamagui Slider
+        </Paragraph>
+        <TamaguiSlider
+          value={tamaguiVal}
+          min={0}
+          max={100}
+          onValueChange={(val) => {
+            setTamaguiVal(val);
+            action('tamagui.onValueChange')(val);
+          }}>
+          <TamaguiSlider.Track>
+            <TamaguiSlider.TrackActive />
+          </TamaguiSlider.Track>
+          <TamaguiSlider.Thumb
+            index={0}
+            circular
+            elevate
+          />
+        </TamaguiSlider>
+      </YStack>
+    </XStack>
+  );
+};
+
 export const Comparison: Story = {
   name: 'Foreign contrast specimen (raw tamagui)',
   parameters: {
@@ -255,65 +309,7 @@ export const Comparison: Story = {
       },
     },
   },
-  render: () => {
-    const ComparisonExample = () => {
-      const [customVal, setCustomVal] = useState([50]);
-      const [tamaguiVal, setTamaguiVal] = useState([50]);
-      return (
-        <XStack
-          gap="$6"
-          alignItems="flex-start"
-          padding="$4">
-          <YStack
-            gap="$3"
-            width={300}>
-            <Paragraph
-              size="$2"
-              color="$placeholderColor">
-              Custom Slider
-            </Paragraph>
-            <Slider
-              value={customVal}
-              min={0}
-              max={100}
-              onValueChange={(val) => {
-                setCustomVal(val);
-                action('custom.onValueChange')(val);
-              }}
-            />
-          </YStack>
-
-          <YStack
-            gap="$3"
-            width={300}>
-            <Paragraph
-              size="$2"
-              color="$placeholderColor">
-              Tamagui Slider
-            </Paragraph>
-            <TamaguiSlider
-              value={tamaguiVal}
-              min={0}
-              max={100}
-              onValueChange={(val) => {
-                setTamaguiVal(val);
-                action('tamagui.onValueChange')(val);
-              }}>
-              <TamaguiSlider.Track>
-                <TamaguiSlider.TrackActive />
-              </TamaguiSlider.Track>
-              <TamaguiSlider.Thumb
-                index={0}
-                circular
-                elevate
-              />
-            </TamaguiSlider>
-          </YStack>
-        </XStack>
-      );
-    };
-    return <ComparisonExample />;
-  },
+  render: () => <ComparisonExample />,
 };
 
 /** Loading placeholder — the skeleton mirrors the track anatomy. */

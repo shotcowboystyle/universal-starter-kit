@@ -39,14 +39,14 @@ import { DialogContent, DialogOverlay } from '../surfaces';
 const TAB_STOPS =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"]), [contenteditable="true"]';
 
-const asHtml = (node: unknown): HTMLElement | null => (node instanceof HTMLElement ? node : null);
+const asHtml = (node: TamaguiElement | null): HTMLElement | null => (node instanceof HTMLElement ? node : null);
 
-const panelNode = (ref: unknown): HTMLElement | null => {
+const panelNode = (ref: TamaguiElement | null): HTMLElement | null => {
   const fromRef = asHtml(ref);
   if (fromRef) {
     return fromRef;
   }
-  if (typeof document === 'undefined') {
+  if (!('document' in globalThis)) {
     return null;
   }
   return document.querySelector<HTMLElement>('[data-mp-confirm-dialog]');
@@ -70,16 +70,10 @@ const isTextEntry = (el: HTMLElement): boolean => {
 const firstTabStop = (root: HTMLElement): HTMLElement | null => {
   const nodes = root.querySelectorAll<HTMLElement>(TAB_STOPS);
   for (const el of nodes) {
-    if (el === root) {
-      continue;
+    const skipped = el === root || el.getAttribute('aria-hidden') === 'true' || el.closest('[data-focus-skip]') != null;
+    if (!skipped) {
+      return el;
     }
-    if (el.getAttribute('aria-hidden') === 'true') {
-      continue;
-    }
-    if (typeof el.closest === 'function' && el.closest('[data-focus-skip]')) {
-      continue;
-    }
-    return el;
   }
   return null;
 };
@@ -89,10 +83,23 @@ const applyOpenFocus = (panel: HTMLElement) => {
   const first = firstTabStop(panel);
   const toControl = Boolean(first && (keyboard || isTextEntry(first)));
   const target = toControl && first ? first : panel;
-  target.focus({
+  // `focusVisible` is not yet in lib.dom's FocusOptions.
+  const options: FocusOptions & { focusVisible: boolean } = {
     preventScroll: true,
     focusVisible: keyboard && toControl,
-  } as FocusOptions);
+  };
+  target.focus(options);
+};
+
+// Radix Dialog.Description gets a Paragraph for plain text and a YStack for richer bodies.
+// oxlint-disable-next-line anti-slop/no-runtime-typeof -- ReactNode has no domain discriminant; string/number is exactly the plain-text case
+const isPlainText = (node: ReactNode): boolean => typeof node === 'string' || typeof node === 'number';
+
+const confirmTone = (destructive: boolean, warning: boolean): 'destructive' | 'warning' | 'default' => {
+  if (destructive) {
+    return 'destructive';
+  }
+  return warning ? 'warning' : 'default';
 };
 
 export interface ConfirmDialogProps {
@@ -220,9 +227,6 @@ export const ConfirmDialog = ({
   // frame where the portal ref is not ready in the auto-focus callback.
   useEffect(() => {
     // RN 0.83 also exposes HTMLElement, but native refs have no DOM query API.
-    if (!open || !isWeb) {
-      return;
-    }
     let cancelled = false;
     let frames = 0;
     const run = () => {
@@ -231,14 +235,17 @@ export const ConfirmDialog = ({
       }
       const panel = panelNode(contentRef.current);
       if (!panel) {
-        if (frames++ < 8) {
+        if (frames < 8) {
           requestAnimationFrame(run);
         }
+        frames += 1;
         return;
       }
       applyOpenFocus(panel);
     };
-    run();
+    if (open && isWeb) {
+      run();
+    }
     return () => {
       cancelled = true;
     };
@@ -265,7 +272,7 @@ export const ConfirmDialog = ({
           focusStyle={{ outlineWidth: 0 }}
           focusVisibleStyle={{ outlineWidth: 0 }}
           // Test / automation hook for confirm tone (theme class names vary by runtime).
-          data-tone={destructive ? 'destructive' : warning ? 'warning' : 'default'}
+          data-tone={confirmTone(destructive, warning)}
           data-mp-confirm-dialog=""
           data-density={knobProps.density}
           data-size={knobProps.size}
@@ -286,7 +293,7 @@ export const ConfirmDialog = ({
           </Dialog.Title>
           {description == null ? null : (
             <Dialog.Description asChild>
-              {typeof description === 'string' || typeof description === 'number' ? (
+              {isPlainText(description) ? (
                 <Paragraph
                   {...knobProps.body}
                   {...knobProps.label}

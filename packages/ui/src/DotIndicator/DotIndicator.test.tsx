@@ -27,7 +27,7 @@ const houseConfig = createTamagui({
   themes: houseThemes as any,
 });
 
-describe('DotIndicator', () => {
+describe(DotIndicator, () => {
   it('renders one labeled dot per item with aria-current on the active dot', () => {
     const { container } = renderWithProviders(
       <DotIndicator
@@ -44,7 +44,7 @@ describe('DotIndicator', () => {
   });
 
   it('activates a dot on click', () => {
-    const onChange = vi.fn();
+    const onChange = vi.fn<(index: number) => void>();
     const { container } = renderWithProviders(
       <DotIndicator
         total={3}
@@ -59,7 +59,7 @@ describe('DotIndicator', () => {
   });
 
   it('activates a dot with Enter and Space', () => {
-    const onChange = vi.fn();
+    const onChange = vi.fn<(index: number) => void>();
     const { container } = renderWithProviders(
       <DotIndicator
         total={2}
@@ -87,7 +87,7 @@ describe('DotIndicator', () => {
   });
 
   it('activates a dot with arrows, Home and End', () => {
-    const onChange = vi.fn();
+    const onChange = vi.fn<(index: number) => void>();
     const { container } = renderWithProviders(
       <DotIndicator
         total={5}
@@ -114,7 +114,7 @@ describe('DotIndicator', () => {
         onChange={() => {}}
       />,
     );
-    const target = container.querySelector("[role='button']") as HTMLElement;
+    const target = container.querySelector<HTMLElement>("[role='button']")!;
     fireEvent.focus(target);
     expect(container.querySelector('[data-dot-ring]')).toBeNull();
   });
@@ -134,11 +134,9 @@ describe('DotIndicator', () => {
         variant="pills"
       />,
     );
-    const dotIdle = dotsC.querySelector('[data-dot-state="idle"]') as HTMLElement;
-    const pillIdle = pillsC.querySelector('[data-dot-state="idle"]') as HTMLElement;
-    expect(Number(pillIdle.getAttribute('data-mark-width'))).toBeGreaterThan(
-      Number(dotIdle.getAttribute('data-mark-width')),
-    );
+    const dotIdle = dotsC.querySelector<HTMLElement>('[data-dot-state="idle"]')!;
+    const pillIdle = pillsC.querySelector<HTMLElement>('[data-dot-state="idle"]')!;
+    expect(Number(pillIdle.dataset.markWidth)).toBeGreaterThan(Number(dotIdle.dataset.markWidth));
   });
 
   it('paints bars as ticks wider than tall when unpinned', () => {
@@ -149,8 +147,8 @@ describe('DotIndicator', () => {
         variant="bars"
       />,
     );
-    const idle = container.querySelector('[data-dot-state="idle"]') as HTMLElement;
-    expect(Number(idle.getAttribute('data-mark-width'))).toBeGreaterThan(Number(idle.getAttribute('data-mark-height')));
+    const idle = container.querySelector<HTMLElement>('[data-dot-state="idle"]')!;
+    expect(Number(idle.dataset.markWidth)).toBeGreaterThan(Number(idle.dataset.markHeight));
   });
 
   it('windows long strips to five visible marks', () => {
@@ -177,7 +175,7 @@ describe('DotIndicator', () => {
   });
 
   it('blocks activation when disabled but keeps button semantics', () => {
-    const onChange = vi.fn();
+    const onChange = vi.fn<(index: number) => void>();
     const { container } = renderWithProviders(
       <DotIndicator
         total={2}
@@ -208,8 +206,8 @@ describe('DotIndicator', () => {
         />
       </TamaguiProvider>,
     );
-    const active = container.querySelector('[data-dot-state="active"]') as HTMLElement;
-    const idle = container.querySelector('[data-dot-state="idle"]') as HTMLElement;
+    const active = container.querySelector<HTMLElement>('[data-dot-state="active"]')!;
+    const idle = container.querySelector<HTMLElement>('[data-dot-state="idle"]')!;
     expect(active).toBeTruthy();
     expect(idle).toBeTruthy();
     expect(active.className).toContain('_bg-accentBackg');
@@ -226,7 +224,7 @@ describe('DotIndicator', () => {
     );
     const check = container.querySelector('svg');
     expect(check).toBeTruthy();
-    const fill = check?.getAttribute('color') || check?.getAttribute('fill') || '';
+    const fill = [check?.getAttribute('color'), check?.getAttribute('fill')].find((v) => v != null && v !== '') ?? '';
     expect(fill.toLowerCase()).not.toBe('white');
     expect(fill.toLowerCase()).not.toBe('#ffffff');
     expect(fill.toLowerCase()).not.toBe('#fff');

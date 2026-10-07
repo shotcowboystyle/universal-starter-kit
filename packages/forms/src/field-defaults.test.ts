@@ -11,7 +11,7 @@ import {
   resolveFieldWidth,
 } from './field-defaults';
 
-describe('FIELD_WIDTH_BY_PURPOSE', () => {
+describe('FIELD_WIDTH_BY_PURPOSE table', () => {
   it('maps blueprint purposes to ch widths / full', () => {
     expect(FIELD_WIDTH_BY_PURPOSE).toStrictEqual({
       postalCode: 12,
@@ -28,7 +28,7 @@ describe('FIELD_WIDTH_BY_PURPOSE', () => {
   });
 });
 
-describe('resolveFieldPurpose', () => {
+describe(resolveFieldPurpose, () => {
   it('prefers explicit purpose over autocomplete', () => {
     expect(resolveFieldPurpose('year', 'email')).toBe('year');
   });
@@ -76,11 +76,11 @@ describe('resolveFieldWidth / fieldWidthStyle', () => {
   });
 });
 
-describe('isFieldPurpose', () => {
+describe(isFieldPurpose, () => {
   it('narrows known keys', () => {
     expect(isFieldPurpose('phone')).toBe(true);
     expect(isFieldPurpose('nope')).toBe(false);
-    expect(isFieldPurpose(undefined)).toBe(false);
+    expect(isFieldPurpose()).toBe(false);
   });
 });
 

@@ -1,0 +1,18 @@
+{
+  "scripts": {
+    "build:gnome": "vite build --config vite.config.gnome.ts",
+    "gnome": "pnpm build:gnome && gjs -m ./dist/gnome/main.js interactive",
+    "gnome:capture": "pnpm build:gnome && gjs -m ./dist/gnome/main.js"
+  },
+  "dependencies": {
+    "@react-gnome/animation": "^0.1.0",
+    "@react-gnome/react-native": "^0.1.0",
+    "@react-gnome/react-native-svg": "^0.1.0",
+    "@react-gnome/renderer": "^0.1.0",
+    "@react-gnome/tamagui": "^0.1.0"
+  },
+  "devDependencies": {
+    "@repo/vite-plugin-gnome": "__MPO_VERSION__",
+    "@react-gnome/vite-plugin": "^0.1.0"
+  }
+}

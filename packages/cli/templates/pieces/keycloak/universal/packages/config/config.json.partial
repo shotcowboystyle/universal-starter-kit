@@ -1,0 +1,9 @@
+{
+  "public": [
+    "KEYCLOAK_ENABLED",
+    "KEYCLOAK_BASE_URL",
+    "KEYCLOAK_REALM",
+    "KEYCLOAK_CLIENT_ID",
+    "KEYCLOAK_PUBLIC_CLIENT_ID"
+  ]
+}

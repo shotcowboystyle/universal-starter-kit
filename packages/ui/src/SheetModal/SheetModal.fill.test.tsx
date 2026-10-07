@@ -15,6 +15,7 @@
  */
 import { renderWithProviders } from '@repo/test-utils';
 import { cleanup } from '@testing-library/react';
+import type { ReactElement } from 'react';
 import { Text } from 'tamagui';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -23,13 +24,12 @@ import { SheetModal as NativeSheetModal } from './index.native';
 import { SheetModal as WebSheetModal } from './index';
 import type { SheetModalProps } from './index';
 
-vi.mock('react-native-web', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('react-native')>()),
+vi.mock(import('react-native-web'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  // oxlint-disable-next-line sonarjs/no-undefined-assignment -- the module must report no ActionSheetIOS; null would still be a present export
   ActionSheetIOS: undefined,
-  Modal: ({ children }: { children: import('react').ReactNode }) => children,
+  Modal: ({ children }: { children: ReactElement }) => children,
 }));
-
-afterEach(cleanup);
 
 /** Tamagui emits atomic classes; `flex: 1` is grow+shrink+basis together. */
 const flexOne = ['_fg-1', '_fs-1', '_fb-0px'];
@@ -49,6 +49,8 @@ const renderNative = (props: Partial<SheetModalProps> = {}) =>
   );
 
 describe('native fill allocates the sheet body', () => {
+  afterEach(cleanup);
+
   it('turns the existing cap into a definite frame height only when filling', () => {
     const filled = renderNative({ fill: true }).getByTestId('sheet-modal-frame');
     expect(filled.style.height).not.toBe('');
@@ -123,6 +125,8 @@ const renderWeb = (props: Partial<SheetModalProps> = {}) =>
   );
 
 describe('web fill opens the body inside the snapped frame', () => {
+  afterEach(cleanup);
+
   it('mounts a growing body slot only when filling', () => {
     const filled = renderWeb({ fill: true }).getAllByTestId('sheet-modal-body');
     expect(filled.length).toBeGreaterThan(0);

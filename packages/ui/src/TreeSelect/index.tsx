@@ -31,11 +31,12 @@ import {
 } from '@repo/theme';
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Text, View, XStack, YStack, isWeb } from 'tamagui';
-import type { GetProps } from 'tamagui';
+import type { GetProps, SizeTokens } from 'tamagui';
 
 import { useDirection } from '../hooks/use-direction';
 import { useTranslation } from '../shared/i18n';
 import { Skeleton } from '../Skeleton';
+import { hasNode, isNonEmpty } from '../views/guards';
 import type { TreeNode } from '../views/TreeView';
 
 import { filterForest, findNode, findNodePath, flattenVisible } from './tree-select-model';
@@ -97,6 +98,248 @@ const defaultNodeIcon = (hasChildren: boolean, isExpanded: boolean, iconSize: nu
   );
 };
 
+type SpaceStop = ReturnType<typeof useResolvedKnobs>['knobProps']['space'];
+type BodyProps = ReturnType<typeof useResolvedKnobs>['knobProps']['body'];
+
+const bySpace = (space: SpaceStop, small: number, medium: number, large: number) => {
+  if (space === 'small') {
+    return small;
+  }
+  return space === 'large' ? large : medium;
+};
+
+const expandIconSizeFor = (nestedPx: number) => {
+  if (nestedPx <= 28) {
+    return 14;
+  }
+  return nestedPx >= 36 ? 18 : 16;
+};
+
+const caretRotation = (isExpanded: boolean, isRTL: boolean) => {
+  if (!isExpanded) {
+    return '0deg';
+  }
+  return isRTL ? '-90deg' : '90deg';
+};
+
+interface TreeRowMetrics {
+  nestedPx: number;
+  indentStep: number;
+  expandIconSize: number;
+  nodeIconSize: number;
+  caretSize: number;
+  rowPadX: number;
+  isRTL: boolean;
+  bodyProps: BodyProps;
+}
+
+const TreeRowGuides = ({ depth, metrics }: { depth: number; metrics: TreeRowMetrics }) => {
+  const { rowPadX, indentStep, expandIconSize, isRTL } = metrics;
+  return (
+    <>
+      {Array.from({ length: depth }, (_, guide) => {
+        const inset = rowPadX + guide * indentStep + expandIconSize / 2;
+        return (
+          <View
+            key={`guide-${guide}`}
+            position="absolute"
+            top={0}
+            bottom={0}
+            width={1}
+            pointerEvents="none"
+            backgroundColor="$borderColor"
+            opacity={0.5}
+            {...(isRTL ? { right: inset } : { left: inset })}
+          />
+        );
+      })}
+    </>
+  );
+};
+
+const TreeRowCaret = ({
+  node,
+  isExpanded,
+  metrics,
+  onToggle,
+}: {
+  node: TreeNode;
+  isExpanded: boolean;
+  metrics: TreeRowMetrics;
+  onToggle: (node: TreeNode) => void;
+}) => {
+  const { t } = useTranslation();
+  const { expandIconSize, caretSize, isRTL } = metrics;
+  const CollapsedCaretIcon = isRTL ? CaretLeftIcon : CaretRightIcon;
+  const toggleLabel = isExpanded
+    ? t('Collapse {{label}}', { label: node.label })
+    : t('Expand {{label}}', { label: node.label });
+  return (
+    <View
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a tamagui View in a pressable row, not a standalone <button>
+      role="button"
+      tabIndex={-1}
+      data-treeselect-caret={node.id}
+      aria-label={toggleLabel}
+      // The aria-label above never reaches native.
+      {...(isWeb
+        ? undefined
+        : {
+            accessible: true,
+            accessibilityRole: 'button' as const,
+            accessibilityLabel: toggleLabel,
+          })}
+      width={expandIconSize}
+      height={expandIconSize}
+      alignItems="center"
+      justifyContent="center"
+      rotate={caretRotation(isExpanded, isRTL)}
+      onPress={(e: { stopPropagation?: () => void }) => {
+        e.stopPropagation?.();
+        onToggle(node);
+      }}>
+      <CollapsedCaretIcon
+        size={caretSize}
+        weight="bold"
+      />
+    </View>
+  );
+};
+
+const TreeRow = ({
+  row,
+  selectedId,
+  activeIndex,
+  keyboardRing,
+  treeId,
+  metrics,
+  onCommit,
+  onToggle,
+}: {
+  row: FlatTreeRow;
+  selectedId?: string;
+  activeIndex: number;
+  keyboardRing: boolean;
+  treeId: string;
+  metrics: TreeRowMetrics;
+  onCommit: (node: TreeNode) => void;
+  onToggle: (node: TreeNode) => void;
+}) => {
+  const { node, depth, hasChildren, isExpanded, childCount, index } = row;
+  const { nestedPx, indentStep, expandIconSize, nodeIconSize, rowPadX, bodyProps } = metrics;
+  const isSelected = selectedId === node.id;
+  const isActive = index === activeIndex;
+  const showsExpandedIcon = hasChildren && isExpanded && hasNode(node.iconWhenExpanded);
+  const leadingIcon = showsExpandedIcon
+    ? node.iconWhenExpanded
+    : (node.icon ?? defaultNodeIcon(hasChildren, isExpanded, nodeIconSize));
+  return (
+    <XStack
+      id={`${treeId}-node-${index}`}
+      role="treeitem"
+      tabIndex={-1}
+      aria-expanded={hasChildren ? isExpanded : undefined}
+      aria-selected={isSelected}
+      aria-level={depth + 1}
+      // The aria-* above are web-only. Without the RN spellings
+      // a row is not an accessibility element on iOS, so the whole tree
+      // came back as loose StaticText with no role and no selected state.
+      // `role` is overridden too: RN prefers it over accessibilityRole,
+      // and `treeitem` leaves the element out of the iOS tree the same
+      // way `radio` does (measured, iOS 26.2).
+      {...(isWeb
+        ? undefined
+        : {
+            accessible: true,
+            role: 'button' as const,
+            accessibilityRole: 'button' as const,
+            accessibilityLabel: node.label,
+            accessibilityState: {
+              selected: isSelected,
+              ...(hasChildren ? { expanded: isExpanded } : undefined),
+            },
+          })}
+      data-treeselect-row={node.id}
+      data-treeselect-index={String(index)}
+      data-depth={String(depth)}
+      alignItems="center"
+      minHeight={nestedPx}
+      paddingInlineEnd={rowPadX}
+      paddingInlineStart={rowPadX + depth * indentStep}
+      gap="$2"
+      cursor="pointer"
+      position="relative"
+      backgroundColor={isSelected ? '$color2' : 'transparent'}
+      hoverStyle={keyboardRing ? undefined : { backgroundColor: '$color3' }}
+      {...(isActive && keyboardRing ? keyboardFocusRingProps : undefined)}
+      onPress={(e) => {
+        const target: unknown = e.target;
+        if (isWeb && target instanceof Element && target.closest('[data-treeselect-caret]') !== null) {
+          return;
+        }
+        onCommit(node);
+      }}>
+      {depth > 0 ? (
+        <TreeRowGuides
+          depth={depth}
+          metrics={metrics}
+        />
+      ) : null}
+      {hasChildren ? (
+        <TreeRowCaret
+          node={node}
+          isExpanded={isExpanded}
+          metrics={metrics}
+          onToggle={onToggle}
+        />
+      ) : (
+        <View
+          width={expandIconSize}
+          height={expandIconSize}
+        />
+      )}
+      <View
+        width={nodeIconSize + 2}
+        height={nodeIconSize + 2}
+        alignItems="center"
+        justifyContent="center"
+        flexShrink={0}>
+        {leadingIcon}
+      </View>
+      <Text
+        {...bodyProps}
+        fontSize={13}
+        lineHeight={24}
+        color="$color12"
+        numberOfLines={1}
+        flex={1}
+        minWidth={0}>
+        {node.label}
+      </Text>
+      {hasChildren && childCount > 0 ? (
+        <Text
+          fontFamily="$mono"
+          fontSize={11}
+          lineHeight={21}
+          color="$color8">
+          {childCount}
+        </Text>
+      ) : null}
+      {isSelected ? (
+        <View
+          flexShrink={0}
+          width={14}
+          height={14}>
+          <CheckIcon
+            size={14}
+            weight="bold"
+          />
+        </View>
+      ) : null}
+    </XStack>
+  );
+};
+
 const TreeSelectRows = ({
   rows,
   selectedId,
@@ -114,180 +357,42 @@ const TreeSelectRows = ({
   onCommit: (node: TreeNode) => void;
   onToggle: (node: TreeNode) => void;
 }) => {
-  const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
   const nestedPx = knobProps.nestedControl.px;
-  const indentStep = knobProps.space === 'small' ? 12 : knobProps.space === 'large' ? 20 : 16;
-  const expandIconSize = nestedPx <= 28 ? 14 : nestedPx >= 36 ? 18 : 16;
-  const nodeIconSize = nestedPx <= 28 ? 14 : 18;
-  const caretSize = nestedPx <= 28 ? 12 : 14;
-  const rowPadX = knobProps.space === 'small' ? 6 : knobProps.space === 'large' ? 13 : 8;
   const isRTL = useDirection() === 'rtl';
-  const CollapsedCaretIcon = isRTL ? CaretLeftIcon : CaretRightIcon;
+  const metrics: TreeRowMetrics = {
+    nestedPx,
+    indentStep: bySpace(knobProps.space, 12, 16, 20),
+    expandIconSize: expandIconSizeFor(nestedPx),
+    nodeIconSize: nestedPx <= 28 ? 14 : 18,
+    caretSize: nestedPx <= 28 ? 12 : 14,
+    rowPadX: bySpace(knobProps.space, 6, 8, 13),
+    isRTL,
+    bodyProps: knobProps.body,
+  };
 
   return (
     <YStack
       role="tree"
       data-tree=""
       data-testid="tree-select-tree"
-      data-indent-step={String(indentStep)}
+      data-indent-step={String(metrics.indentStep)}
       data-row-height={String(nestedPx)}
       aria-activedescendant={activeIndex >= 0 ? `${treeId}-node-${activeIndex}` : undefined}
       tabIndex={-1}>
-      {rows.map((row) => {
-        const { node, depth, hasChildren, isExpanded, childCount, index } = row;
-        const isSelected = selectedId === node.id;
-        const isActive = index === activeIndex;
-        const leadingIcon =
-          hasChildren && isExpanded && node.iconWhenExpanded
-            ? node.iconWhenExpanded
-            : (node.icon ?? defaultNodeIcon(hasChildren, isExpanded, nodeIconSize));
-        return (
-          <XStack
-            key={node.id}
-            id={`${treeId}-node-${index}`}
-            role="treeitem"
-            tabIndex={-1}
-            aria-expanded={hasChildren ? isExpanded : undefined}
-            aria-selected={isSelected}
-            aria-level={depth + 1}
-            // The aria-* above are web-only. Without the RN spellings
-            // a row is not an accessibility element on iOS, so the whole tree
-            // came back as loose StaticText with no role and no selected state.
-            // `role` is overridden too: RN prefers it over accessibilityRole,
-            // and `treeitem` leaves the element out of the iOS tree the same
-            // way `radio` does (measured, iOS 26.2).
-            {...(isWeb
-              ? undefined
-              : {
-                  accessible: true,
-                  role: 'button' as const,
-                  accessibilityRole: 'button' as const,
-                  accessibilityLabel: node.label,
-                  accessibilityState: {
-                    selected: isSelected,
-                    ...(hasChildren ? { expanded: isExpanded } : undefined),
-                  },
-                })}
-            data-treeselect-row={node.id}
-            data-treeselect-index={String(index)}
-            data-depth={String(depth)}
-            alignItems="center"
-            minHeight={nestedPx}
-            paddingInlineEnd={rowPadX}
-            paddingInlineStart={rowPadX + depth * indentStep}
-            gap="$2"
-            cursor="pointer"
-            position="relative"
-            backgroundColor={isSelected ? '$color2' : 'transparent'}
-            hoverStyle={keyboardRing ? undefined : { backgroundColor: '$color3' }}
-            {...(isActive && keyboardRing ? keyboardFocusRingProps : undefined)}
-            onPress={(e) => {
-              const { target } = e as unknown as { target?: HTMLElement };
-              if (target?.closest?.('[data-treeselect-caret]')) {
-                return;
-              }
-              onCommit(node);
-            }}>
-            {depth > 0
-              ? Array.from({ length: depth }, (_, guide) => {
-                  const inset = rowPadX + guide * indentStep + expandIconSize / 2;
-                  return (
-                    <View
-                      key={`guide-${guide}`}
-                      position="absolute"
-                      top={0}
-                      bottom={0}
-                      width={1}
-                      pointerEvents="none"
-                      backgroundColor="$borderColor"
-                      opacity={0.5}
-                      {...(isRTL ? { right: inset } : { left: inset })}
-                    />
-                  );
-                })
-              : null}
-            {hasChildren ? (
-              <View
-                role="button"
-                tabIndex={-1}
-                data-treeselect-caret={node.id}
-                aria-label={
-                  isExpanded
-                    ? t('Collapse {{label}}', { label: node.label })
-                    : t('Expand {{label}}', { label: node.label })
-                }
-                // The aria-label above never reaches native.
-                {...(isWeb
-                  ? undefined
-                  : {
-                      accessible: true,
-                      accessibilityRole: 'button' as const,
-                      accessibilityLabel: isExpanded
-                        ? t('Collapse {{label}}', { label: node.label })
-                        : t('Expand {{label}}', { label: node.label }),
-                    })}
-                width={expandIconSize}
-                height={expandIconSize}
-                alignItems="center"
-                justifyContent="center"
-                rotate={isExpanded ? (isRTL ? '-90deg' : '90deg') : '0deg'}
-                onPress={(e: { stopPropagation?: () => void }) => {
-                  e.stopPropagation?.();
-                  onToggle(node);
-                }}>
-                <CollapsedCaretIcon
-                  size={caretSize}
-                  weight="bold"
-                />
-              </View>
-            ) : (
-              <View
-                width={expandIconSize}
-                height={expandIconSize}
-              />
-            )}
-            <View
-              width={nodeIconSize + 2}
-              height={nodeIconSize + 2}
-              alignItems="center"
-              justifyContent="center"
-              flexShrink={0}>
-              {leadingIcon}
-            </View>
-            <Text
-              {...knobProps.body}
-              fontSize={13}
-              lineHeight={24}
-              color="$color12"
-              numberOfLines={1}
-              flex={1}
-              minWidth={0}>
-              {node.label}
-            </Text>
-            {hasChildren && childCount > 0 ? (
-              <Text
-                fontFamily="$mono"
-                fontSize={11}
-                lineHeight={21}
-                color="$color8">
-                {childCount}
-              </Text>
-            ) : null}
-            {isSelected ? (
-              <View
-                flexShrink={0}
-                width={14}
-                height={14}>
-                <CheckIcon
-                  size={14}
-                  weight="bold"
-                />
-              </View>
-            ) : null}
-          </XStack>
-        );
-      })}
+      {rows.map((row) => (
+        <TreeRow
+          key={row.node.id}
+          row={row}
+          selectedId={selectedId}
+          activeIndex={activeIndex}
+          keyboardRing={keyboardRing}
+          treeId={treeId}
+          metrics={metrics}
+          onCommit={onCommit}
+          onToggle={onToggle}
+        />
+      ))}
     </YStack>
   );
 };
@@ -309,9 +414,9 @@ const SearchRow = ({
   onKeyDown: (event: { key: string; preventDefault: () => void }) => void;
   treeId: string;
   activeDescendant?: string;
-  sizeToken: string;
+  sizeToken: SizeTokens;
 }) => (
-  <InputParts size={sizeToken as never}>
+  <InputParts size={sizeToken}>
     <InputParts.Box
       data-search-row=""
       data-testid="tree-select-search"
@@ -328,11 +433,13 @@ const SearchRow = ({
       </InputParts.Section>
       <InputParts.Section>
         <InputParts.Area
-          ref={inputRef as never}
+          ref={(node) => {
+            inputRef.current = isWeb && node instanceof HTMLInputElement ? node : null;
+          }}
           value={value}
           onChangeText={onChange}
           placeholder={placeholder}
-          onKeyDown={onKeyDown as never}
+          onKeyDown={onKeyDown}
           aria-autocomplete="list"
           aria-controls={treeId}
           aria-activedescendant={activeDescendant}
@@ -382,7 +489,7 @@ const Trigger = ({
   accessibilityLabel?: string;
   onToggle: () => void;
   triggerRef: (node: HTMLElement | null) => void;
-  sizeToken: string;
+  sizeToken: SizeTokens;
 }) => {
   const handleKey = (e: { key?: string; preventDefault?: () => void }) => {
     if (disabled) {
@@ -394,11 +501,14 @@ const Trigger = ({
     }
   };
   return (
-    <InputParts size={sizeToken as never}>
+    <InputParts size={sizeToken}>
       <InputParts.Box
-        ref={triggerRef as never}
+        ref={(node) => {
+          triggerRef(isWeb && node instanceof HTMLElement ? node : null);
+        }}
         data-testid="tree-select-trigger"
         data-fp-trigger=""
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role, jsx-a11y/role-has-required-aria-props -- a tamagui pressable box acting as the combobox trigger; the listbox it controls only exists while open
         role="combobox"
         aria-haspopup="tree"
         aria-expanded={open}
@@ -426,7 +536,7 @@ const Trigger = ({
         {...(isWeb
           ? {
               className: 'mp-composite-ring',
-              onKeyDown: handleKey as never,
+              onKeyDown: handleKey,
             }
           : undefined)}
         onPress={disabled ? undefined : onToggle}
@@ -436,7 +546,7 @@ const Trigger = ({
             data-trig-text=""
             flex={1}
             numberOfLines={1}
-            color={display ? '$color12' : formCommonColors.muted}
+            color={isNonEmpty(display) ? '$color12' : formCommonColors.muted}
             paddingHorizontal="$3">
             {display ?? placeholder}
           </Text>
@@ -462,8 +572,8 @@ const useTreeSelectState = (props: {
   const [activeIndex, setActiveIndex] = useState(0);
   const [keyboardRing, setKeyboardRing] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(() => {
-    const next = new Set(defaultExpandedIds ?? []);
-    if (value) {
+    const next = new Set(defaultExpandedIds);
+    if (isNonEmpty(value)) {
       const path = findNodePath(nodes, value);
       if (path) {
         for (const id of path) {
@@ -484,19 +594,21 @@ const useTreeSelectState = (props: {
     return flattenVisible(displayNodes, expanded);
   }, [displayNodes, expandedIds, filtered.expandIds]);
 
-  useEffect(() => {
+  // Reset-on-change belongs in render, not an effect: the stale value never paints.
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    setActiveIndex(0);
     if (!open) {
       setFilter('');
-      setActiveIndex(0);
       setKeyboardRing(false);
-      return;
     }
+  }
+  const [prevFilter, setPrevFilter] = useState(filter);
+  if (filter !== prevFilter) {
+    setPrevFilter(filter);
     setActiveIndex(0);
-  }, [open]);
-
-  useEffect(() => {
-    setActiveIndex(0);
-  }, [filter]);
+  }
 
   const toggle = useCallback((node: TreeNode) => {
     setExpandedIds((prev) => {
@@ -590,7 +702,7 @@ const handleTreeKeys = (args: {
   onClose: () => void;
 }) => {
   const { key, preventDefault, rows, activeIndex, setActiveIndex, setKeyboardRing, toggle, onCommit, onClose } = args;
-  const current = rows[activeIndex];
+  const current: FlatTreeRow | undefined = rows[activeIndex];
   if (key === 'ArrowDown') {
     preventDefault();
     setKeyboardRing(true);
@@ -625,7 +737,7 @@ const handleTreeKeys = (args: {
     }
     return;
   }
-  if (key === 'ArrowLeft' && current) {
+  if (key === 'ArrowLeft' && current != null) {
     preventDefault();
     setKeyboardRing(true);
     if (current.isExpanded) {
@@ -633,7 +745,7 @@ const handleTreeKeys = (args: {
     }
     return;
   }
-  if (key === 'Enter' && current) {
+  if (key === 'Enter' && current != null) {
     preventDefault();
     onCommit(current.node);
     return;
@@ -642,6 +754,52 @@ const handleTreeKeys = (args: {
     preventDefault();
     onClose();
   }
+};
+
+const useTreeSelectHandlers = ({
+  state,
+  onCommit,
+  onOpenChange,
+}: {
+  state: ReturnType<typeof useTreeSelectState>;
+  onCommit: (node: TreeNode) => void;
+  onOpenChange: (open: boolean) => void;
+}) => {
+  const handleCommit = useCallback(
+    (node: TreeNode) => {
+      onCommit(node);
+      onOpenChange(false);
+    },
+    [onCommit, onOpenChange],
+  );
+
+  const handleSearchKeyDown = (event: { key: string; preventDefault: () => void }) => {
+    handleTreeKeys({
+      key: event.key,
+      preventDefault: () => {
+        event.preventDefault();
+      },
+      rows: state.rows,
+      activeIndex: state.activeIndex,
+      setActiveIndex: state.setActiveIndex,
+      setKeyboardRing: state.setKeyboardRing,
+      toggle: state.toggle,
+      onCommit: handleCommit,
+      onClose: () => {
+        onOpenChange(false);
+      },
+    });
+  };
+
+  const handleFilterChange = (next: string) => {
+    state.setFilter(next);
+  };
+
+  const handleToggle = (node: TreeNode) => {
+    state.toggle(node);
+  };
+
+  return { handleCommit, handleSearchKeyDown, handleFilterChange, handleToggle };
 };
 
 const FloatingTreeSelect = ({
@@ -675,7 +833,7 @@ const FloatingTreeSelect = ({
   onOpenChange: (open: boolean) => void;
   onCommit: (node: TreeNode) => void;
   defaultExpandedIds?: string[];
-  sizeToken: string;
+  sizeToken: SizeTokens;
   loading?: boolean;
   accessibilityLabel?: string;
 }) => {
@@ -701,20 +859,23 @@ const FloatingTreeSelect = ({
     const dropdown = panel.refs.floating.current;
     const trigger =
       panel.triggerRef.current ??
-      (dropdown?.ownerDocument.querySelector('[data-testid="tree-select-trigger"]') as HTMLElement | null);
+      dropdown?.ownerDocument.querySelector<HTMLElement>('[data-testid="tree-select-trigger"]');
     if (!dropdown || !trigger) {
       return;
     }
     const triggerBounds = trigger.getBoundingClientRect();
     const { top } = triggerBounds;
+    // oxlint-disable-next-line react/immutability -- imperative positioning of the floating panel's DOM node
     dropdown.style.top = `${top}px`;
     dropdown.style.left = `${triggerBounds.left}px`;
     dropdown.style.minWidth = `${triggerBounds.width}px`;
     const maxAvailable = window.innerHeight - top - panelViewportPadding;
     dropdown.style.maxHeight = `${Math.max(120, maxAvailable)}px`;
     overlayStyle.current = { top };
+    // oxlint-disable-next-line react/preserve-manual-memoization -- deps are the stable ref holders; depending on `panel` would re-run the layout effect every render
   }, [panel.refs.floating, panel.triggerRef]);
 
+  // oxlint-disable-next-line react/refs -- floating-panel reads this ref from its own effects, which run before any effect here could set it
   repositionRef.current = reposition;
 
   useLayoutEffect(() => {
@@ -722,6 +883,7 @@ const FloatingTreeSelect = ({
       return;
     }
     reposition();
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- rows.length is a deliberate extra trigger: the panel must re-measure when the list grows or shrinks
   }, [open, panel.mounted, reposition, state.rows.length]);
 
   useEffect(() => {
@@ -736,33 +898,15 @@ const FloatingTreeSelect = ({
   });
   const { getFloatingProps } = useInteractions([dismiss]);
 
-  const commit = useCallback(
-    (node: TreeNode) => {
-      onCommit(node);
-      onOpenChange(false);
-    },
-    [onCommit, onOpenChange],
-  );
-
-  const onSearchKeyDown = (event: { key: string; preventDefault: () => void }) => {
-    handleTreeKeys({
-      key: event.key,
-      preventDefault: () => {
-        event.preventDefault();
-      },
-      rows: state.rows,
-      activeIndex: state.activeIndex,
-      setActiveIndex: state.setActiveIndex,
-      setKeyboardRing: state.setKeyboardRing,
-      toggle: state.toggle,
-      onCommit: commit,
-      onClose: () => {
-        onOpenChange(false);
-      },
-    });
-  };
+  const { handleCommit, handleSearchKeyDown, handleFilterChange, handleToggle } = useTreeSelectHandlers({
+    state,
+    onCommit,
+    onOpenChange,
+  });
 
   const activeDescendant = open && state.activeIndex >= 0 ? `${treeId}-node-${state.activeIndex}` : undefined;
+  // oxlint-disable-next-line react/refs -- top is written by reposition() in a layout effect and read back on the next render
+  const overlayTop = overlayStyle.current?.top ?? 0;
 
   return (
     <>
@@ -802,24 +946,22 @@ const FloatingTreeSelect = ({
               {...panel.knobProps.elevatedSurface}
               borderRadius={panel.dropdownRadius}
               overflow="hidden"
-              style={
-                {
-                  position: 'fixed',
-                  top: overlayStyle.current?.top ?? 0,
-                  left: 0,
-                  zIndex: zIndex.dropdown,
-                  opacity: panel.visible ? 1 : 0,
-                  transform: panel.visible ? 'scale(1)' : 'scale(0.96)',
-                  transition: panelTransition,
-                  boxSizing: 'border-box',
-                } as Record<string, unknown>
-              }>
+              style={{
+                position: 'fixed',
+                top: overlayTop,
+                left: 0,
+                zIndex: zIndex.dropdown,
+                opacity: panel.visible ? 1 : 0,
+                transform: panel.visible ? 'scale(1)' : 'scale(0.96)',
+                transition: panelTransition,
+                boxSizing: 'border-box',
+              }}>
               <SearchRow
                 value={state.filter}
                 placeholder={searchPlaceholder}
                 inputRef={searchRef}
-                onChange={state.setFilter}
-                onKeyDown={onSearchKeyDown}
+                onChange={handleFilterChange}
+                onKeyDown={handleSearchKeyDown}
                 treeId={treeId}
                 activeDescendant={activeDescendant}
                 sizeToken={sizeToken}
@@ -836,8 +978,8 @@ const FloatingTreeSelect = ({
                   treeId={treeId}
                   emptyMessage={emptyMessage}
                   loading={loading}
-                  onCommit={commit}
-                  onToggle={state.toggle}
+                  onCommit={handleCommit}
+                  onToggle={handleToggle}
                 />
               </YStack>
             </YStack>
@@ -879,7 +1021,7 @@ const SheetTreeSelect = ({
   onOpenChange: (open: boolean) => void;
   onCommit: (node: TreeNode) => void;
   defaultExpandedIds?: string[];
-  sizeToken: string;
+  sizeToken: SizeTokens;
   loading?: boolean;
   accessibilityLabel?: string;
 }) => {
@@ -888,31 +1030,11 @@ const SheetTreeSelect = ({
   const state = useTreeSelectState({ nodes, value, open, defaultExpandedIds });
   const triggerRef = useRef<HTMLElement | null>(null);
 
-  const commit = useCallback(
-    (node: TreeNode) => {
-      onCommit(node);
-      onOpenChange(false);
-    },
-    [onCommit, onOpenChange],
-  );
-
-  const onSearchKeyDown = (event: { key: string; preventDefault: () => void }) => {
-    handleTreeKeys({
-      key: event.key,
-      preventDefault: () => {
-        event.preventDefault();
-      },
-      rows: state.rows,
-      activeIndex: state.activeIndex,
-      setActiveIndex: state.setActiveIndex,
-      setKeyboardRing: state.setKeyboardRing,
-      toggle: state.toggle,
-      onCommit: commit,
-      onClose: () => {
-        onOpenChange(false);
-      },
-    });
-  };
+  const { handleCommit, handleSearchKeyDown, handleFilterChange, handleToggle } = useTreeSelectHandlers({
+    state,
+    onCommit,
+    onOpenChange,
+  });
 
   const activeDescendant = open && state.activeIndex >= 0 ? `${treeId}-node-${state.activeIndex}` : undefined;
 
@@ -946,8 +1068,8 @@ const SheetTreeSelect = ({
         value={state.filter}
         placeholder={searchPlaceholder}
         inputRef={searchRef}
-        onChange={state.setFilter}
-        onKeyDown={onSearchKeyDown}
+        onChange={handleFilterChange}
+        onKeyDown={handleSearchKeyDown}
         treeId={treeId}
         activeDescendant={activeDescendant}
         sizeToken={sizeToken}
@@ -965,13 +1087,71 @@ const SheetTreeSelect = ({
           treeId={treeId}
           emptyMessage={emptyMessage}
           loading={loading}
-          onCommit={commit}
-          onToggle={state.toggle}
+          onCommit={handleCommit}
+          onToggle={handleToggle}
         />
       </YStack>
     </FloatingPanel>
   );
 };
+
+const TreeSelectSkeleton = ({ hasLabel, ...stackProps }: GetProps<typeof YStack> & { hasLabel: boolean }) => (
+  <YStack
+    data-testid="tree-select"
+    {...stackProps}>
+    {hasLabel ? (
+      <Skeleton
+        variant="text"
+        width="30%"
+        height={14}
+      />
+    ) : null}
+    <Skeleton
+      variant="rounded"
+      width="100%"
+      height={44}
+    />
+  </YStack>
+);
+
+const TreeSelectReadOnly = ({
+  id,
+  label,
+  error,
+  helperText,
+  required,
+  knobProps,
+  disabled,
+  displayText,
+  ...stackProps
+}: GetProps<typeof YStack> &
+  Pick<TreeSelectProps, 'label' | 'error' | 'helperText' | 'required'> & {
+    id: string;
+    knobProps: ReturnType<typeof useResolvedKnobs>['knobProps'];
+    disabled: boolean;
+    displayText?: string;
+  }) => (
+  <YStack
+    data-testid="tree-select"
+    width="100%"
+    {...stackProps}>
+    <FieldLayout
+      id={id}
+      label={label}
+      error={error}
+      helperText={helperText}
+      required={required}
+      knobProps={knobProps}
+      disabled={disabled}>
+      <Text
+        paddingVertical="$2"
+        paddingHorizontal="$3"
+        {...knobProps.body}>
+        {displayText ?? '—'}
+      </Text>
+    </FieldLayout>
+  </YStack>
+);
 
 export const TreeSelect = ({
   nodes,
@@ -1012,52 +1192,31 @@ export const TreeSelect = ({
   const viewportGtSm = useViewportGtSm();
   const effectiveGtSm = typeof window === 'undefined' ? false : viewportGtSm;
   const shouldUseSheet = !isWeb || !effectiveGtSm;
-  const selected = value ? findNode(nodes, value) : undefined;
-  const display = selected?.label ?? (value ? (valueLabel ?? value) : undefined);
+  const selected = isNonEmpty(value) ? findNode(nodes, value) : undefined;
+  const display = selected?.label ?? (isNonEmpty(value) ? (valueLabel ?? value) : undefined);
 
   if (skeleton) {
     return (
-      <YStack
-        data-testid="tree-select"
-        {...stackProps}>
-        {label ? (
-          <Skeleton
-            variant="text"
-            width="30%"
-            height={14}
-          />
-        ) : null}
-        <Skeleton
-          variant="rounded"
-          width="100%"
-          height={44}
-        />
-      </YStack>
+      <TreeSelectSkeleton
+        hasLabel={isNonEmpty(label)}
+        {...stackProps}
+      />
     );
   }
 
   if (readOnly) {
     return (
-      <YStack
-        data-testid="tree-select"
-        width="100%"
-        {...stackProps}>
-        <FieldLayout
-          id={id}
-          label={label}
-          error={error}
-          helperText={helperText}
-          required={required}
-          knobProps={knobProps as never}
-          disabled={disabled}>
-          <Text
-            paddingVertical="$2"
-            paddingHorizontal="$3"
-            {...knobProps.body}>
-            {display ?? '—'}
-          </Text>
-        </FieldLayout>
-      </YStack>
+      <TreeSelectReadOnly
+        id={id}
+        label={label}
+        error={error}
+        helperText={helperText}
+        required={required}
+        knobProps={knobProps}
+        disabled={disabled}
+        displayText={display}
+        {...stackProps}
+      />
     );
   }
 
@@ -1075,7 +1234,7 @@ export const TreeSelect = ({
     onOpenChange: setOpen,
     onCommit: (node: TreeNode) => onChange?.(node.id),
     defaultExpandedIds,
-    sizeToken: String(knobProps.sizeToken),
+    sizeToken: knobProps.sizeToken,
     loading,
     accessibilityLabel: accessibilityLabel ?? ariaLabel,
   };
@@ -1093,7 +1252,7 @@ export const TreeSelect = ({
         error={error}
         helperText={helperText}
         required={required}
-        knobProps={knobProps as never}
+        knobProps={knobProps}
         disabled={disabled}>
         {core}
       </FieldLayout>

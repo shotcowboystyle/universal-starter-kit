@@ -51,7 +51,7 @@ export const Default: Story = {
       <Carousel onSlideChange={action('onSlideChange')}>
         {colors.slice(0, 4).map((color, i) => (
           <SlideContent
-            key={i}
+            key={color}
             index={i}
             color={color}
           />
@@ -69,7 +69,7 @@ export const WithoutArrows: Story = {
         onSlideChange={action('onSlideChange')}>
         {colors.slice(0, 4).map((color, i) => (
           <SlideContent
-            key={i}
+            key={color}
             index={i}
             color={color}
           />
@@ -87,7 +87,7 @@ export const WithoutDots: Story = {
         onSlideChange={action('onSlideChange')}>
         {colors.slice(0, 4).map((color, i) => (
           <SlideContent
-            key={i}
+            key={color}
             index={i}
             color={color}
           />
@@ -105,7 +105,7 @@ export const Looping: Story = {
         onSlideChange={action('onSlideChange')}>
         {colors.slice(0, 4).map((color, i) => (
           <SlideContent
-            key={i}
+            key={color}
             index={i}
             color={color}
           />
@@ -124,7 +124,7 @@ export const AutoPlay: Story = {
         onSlideChange={action('onSlideChange')}>
         {colors.slice(0, 4).map((color, i) => (
           <SlideContent
-            key={i}
+            key={color}
             index={i}
             color={color}
           />
@@ -142,7 +142,7 @@ export const InitialSlide: Story = {
         onSlideChange={action('onSlideChange')}>
         {colors.slice(0, 5).map((color, i) => (
           <SlideContent
-            key={i}
+            key={color}
             index={i}
             color={color}
           />
@@ -161,7 +161,7 @@ export const CustomGap: Story = {
           <Carousel>
             {colors.slice(0, 3).map((color, i) => (
               <SlideContent
-                key={i}
+                key={color}
                 index={i}
                 color={color}
                 height={100}
@@ -176,7 +176,7 @@ export const CustomGap: Story = {
           <Carousel gap="$6">
             {colors.slice(0, 3).map((color, i) => (
               <SlideContent
-                key={i}
+                key={color}
                 index={i}
                 color={color}
                 height={100}
@@ -302,7 +302,7 @@ export const SlideGeometry: Story = {
           // Fixed-width slide content (the gallery shape that exposed
           // the inflation): content exactly as wide as the viewport.
           <View
-            key={i}
+            key={color}
             width={400}>
             <SlideContent
               index={i}
@@ -324,7 +324,7 @@ export const AllStates: Story = {
           <Carousel>
             {colors.slice(0, 3).map((color, i) => (
               <SlideContent
-                key={i}
+                key={color}
                 index={i}
                 color={color}
                 height={120}
@@ -340,7 +340,7 @@ export const AllStates: Story = {
           <Carousel showArrows={false}>
             {colors.slice(0, 3).map((color, i) => (
               <SlideContent
-                key={i}
+                key={color}
                 index={i}
                 color={color}
                 height={120}
@@ -356,7 +356,7 @@ export const AllStates: Story = {
           <Carousel showDots={false}>
             {colors.slice(0, 3).map((color, i) => (
               <SlideContent
-                key={i}
+                key={color}
                 index={i}
                 color={color}
                 height={120}
@@ -372,7 +372,7 @@ export const AllStates: Story = {
           <Carousel loop>
             {colors.slice(0, 3).map((color, i) => (
               <SlideContent
-                key={i}
+                key={color}
                 index={i}
                 color={color}
                 height={120}

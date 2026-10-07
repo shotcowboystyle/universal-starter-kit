@@ -82,7 +82,7 @@ export const LineChart = ({
       data,
       formatValue: valueFormatter,
     });
-  const interactive = Boolean(onDatumPress || onDatumHoverIn || onDatumHoverOut);
+  const interactive = onDatumPress !== undefined || onDatumHoverIn !== undefined || onDatumHoverOut !== undefined;
 
   return (
     <ChartDataFrame

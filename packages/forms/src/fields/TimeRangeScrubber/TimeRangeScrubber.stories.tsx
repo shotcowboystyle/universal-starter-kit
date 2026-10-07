@@ -51,46 +51,45 @@ const meta: Meta<typeof TimeRangeScrubber> = {
 export default meta;
 type Story = StoryObj<typeof TimeRangeScrubber>;
 
+const MainExample = () => {
+  const form = useForm({
+    defaultValues: {
+      window: {
+        start: new Date('2026-08-28T14:17:30.000Z'),
+        end: new Date('2026-08-28T14:27:30.000Z'),
+      } as DateRange,
+    },
+    onSubmit: async ({ value }) => {
+      action('onSubmit')(value);
+    },
+  });
+  return (
+    <Form
+      form={form}
+      maxWidth={720}>
+      <YStack gap="$4">
+        <TimeRangeScrubber
+          label="Session review window"
+          name="window"
+          now={NOW}
+          window={WINDOW}
+          frames={FRAMES}
+          keys={KEYS}
+          activity={[
+            { start: WINDOW.start, end: new Date('2026-08-28T14:09:00.000Z'), label: 'editor' },
+            { start: new Date('2026-08-28T14:17:20.000Z'), end: WINDOW.end, label: 'review' },
+          ]}
+          helperText="Brush is the value. The playhead is time, not a frame index."
+        />
+        <Button action="submit">Save range</Button>
+      </YStack>
+    </Form>
+  );
+};
+
 export const Main: Story = {
   name: 'Main',
-  render: () => {
-    const Example = () => {
-      const form = useForm({
-        defaultValues: {
-          window: {
-            start: new Date('2026-08-28T14:17:30.000Z'),
-            end: new Date('2026-08-28T14:27:30.000Z'),
-          } as DateRange,
-        },
-        onSubmit: async ({ value }) => {
-          action('onSubmit')(value);
-        },
-      });
-      return (
-        <Form
-          form={form}
-          maxWidth={720}>
-          <YStack gap="$4">
-            <TimeRangeScrubber
-              label="Session review window"
-              name="window"
-              now={NOW}
-              window={WINDOW}
-              frames={FRAMES}
-              keys={KEYS}
-              activity={[
-                { start: WINDOW.start, end: new Date('2026-08-28T14:09:00.000Z'), label: 'editor' },
-                { start: new Date('2026-08-28T14:17:20.000Z'), end: WINDOW.end, label: 'review' },
-              ]}
-              helperText="Brush is the value. The playhead is time, not a frame index."
-            />
-            <Button action="submit">Save range</Button>
-          </YStack>
-        </Form>
-      );
-    };
-    return <Example />;
-  },
+  render: () => <MainExample />,
 };
 
 export const Dark: Story = {
@@ -134,28 +133,30 @@ export const RadiusNone: Story = {
   ),
 };
 
+const OverflowMenuExample = () => {
+  const [value, setValue] = useState<DateRange | null>(null);
+  return (
+    <YStack
+      gap="$3"
+      maxWidth={420}>
+      <TimeRangeScrubber
+        label="Narrow chip row"
+        now={NOW}
+        window={WINDOW}
+        value={value}
+        onChange={setValue}
+        maxVisibleQuickRanges={2}
+      />
+      <Text
+        fontFamily="$mono"
+        fontSize={12}>
+        {value?.start?.toISOString() ?? '—'} → {value?.end?.toISOString() ?? '—'}
+      </Text>
+    </YStack>
+  );
+};
+
 export const OverflowMenu: Story = {
   name: 'Overflow menu',
-  render: () => {
-    const [value, setValue] = useState<DateRange | null>(null);
-    return (
-      <YStack
-        gap="$3"
-        maxWidth={420}>
-        <TimeRangeScrubber
-          label="Narrow chip row"
-          now={NOW}
-          window={WINDOW}
-          value={value}
-          onChange={setValue}
-          maxVisibleQuickRanges={2}
-        />
-        <Text
-          fontFamily="$mono"
-          fontSize={12}>
-          {value?.start?.toISOString() ?? '—'} → {value?.end?.toISOString() ?? '—'}
-        </Text>
-      </YStack>
-    );
-  },
+  render: () => <OverflowMenuExample />,
 };

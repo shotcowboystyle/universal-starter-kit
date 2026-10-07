@@ -16,7 +16,7 @@ const findInPage = (text: string): Element | undefined => {
   try {
     return within(document.body).queryByText(text, { exact: false }) ?? undefined;
   } catch {
-    return Array.from(document.body.querySelectorAll('*')).find((el) => el.textContent?.includes(text));
+    return [...document.body.querySelectorAll('*')].find((el) => el.textContent?.includes(text));
   }
 };
 
@@ -42,7 +42,7 @@ afterEach(() => {
 });
 
 describe('Select Components', () => {
-  describe('Select', () => {
+  describe(Select, () => {
     it('should display placeholder when no value is selected', () => {
       renderWithProviders(
         <Select
@@ -91,7 +91,7 @@ describe('Select Components', () => {
     });
   });
 
-  describe('Select', () => {
+  describe(Select, () => {
     describe('without form context', () => {
       it('should render with label and helper text', () => {
         renderWithProviders(
@@ -375,9 +375,9 @@ describe('Select Components', () => {
       await waitFor(() => {
         expect(result.baseElement.querySelector('[role="option"]')).toBeTruthy();
       });
-      expect(trigger.getAttribute('data-kb-ring')).not.toBe('true');
+      expect(trigger.dataset.kbRing).not.toBe('true');
       for (const opt of result.baseElement.querySelectorAll('[role="option"]')) {
-        expect(opt.getAttribute('data-kb-ring')).not.toBe('true');
+        expect(opt.dataset.kbRing).not.toBe('true');
       }
     });
 
@@ -394,9 +394,9 @@ describe('Select Components', () => {
       await waitFor(() => {
         expect(result.baseElement.querySelector('[role="option"]')).toBeTruthy();
       });
-      expect(trigger.getAttribute('data-kb-ring')).not.toBe('true');
+      expect(trigger.dataset.kbRing).not.toBe('true');
       const options = [...result.baseElement.querySelectorAll('[role="option"]')];
-      const ringed = options.filter((el) => el.getAttribute('data-kb-ring') === 'true');
+      const ringed = options.filter((el) => el.dataset.kbRing === 'true');
       expect(ringed).toHaveLength(1);
       for (const opt of options) {
         const radius = getComputedStyle(opt).borderRadius;

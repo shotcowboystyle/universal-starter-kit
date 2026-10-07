@@ -23,6 +23,9 @@ export interface FieldGroupProps {
   compact?: boolean;
 }
 
+// Web legend stretched to a full row; `float` is CSS-only so the object is not literal-typed against RN styles.
+const LEGEND_STYLE = { padding: 0, marginBottom: 0, float: 'left', width: '100%' } as const;
+
 /**
  * Groups related fields with a legend (fieldset on web).
  *
@@ -56,7 +59,7 @@ export const FieldGroup = ({ legend, children, columns = 1, gap, compact }: Fiel
       data-field-gap={String(resolvedGap)}
       data-density={knobProps.density}
       data-size={knobProps.size}
-      gap={resolvedGap as never}
+      gap={resolvedGap}
       width="100%"
       minWidth={0}
       {...(useFieldset
@@ -66,7 +69,7 @@ export const FieldGroup = ({ legend, children, columns = 1, gap, compact }: Fiel
               margin: 0,
               minWidth: 0,
               padding: 0,
-            } as Record<string, unknown>,
+            },
           }
         : {})}>
       {useFieldset ? (
@@ -76,7 +79,7 @@ export const FieldGroup = ({ legend, children, columns = 1, gap, compact }: Fiel
           {...knobProps.label}
           fontWeight="400"
           color={knobProps.textAccentColor}
-          style={{ padding: 0, marginBottom: 0, float: 'left', width: '100%' } as never}>
+          style={LEGEND_STYLE}>
           {legend}
         </Text>
       ) : (
@@ -85,6 +88,7 @@ export const FieldGroup = ({ legend, children, columns = 1, gap, compact }: Fiel
           {...knobProps.label}
           fontWeight="400"
           color={knobProps.textAccentColor}
+          // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Text also renders on native, where role + aria-level is the only heading API
           role="heading"
           aria-level={3}>
           {legend}

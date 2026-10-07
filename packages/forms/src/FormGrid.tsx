@@ -2,6 +2,7 @@ import { useResolvedKnobs } from '@repo/theme';
 import { Children, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import { XStack, YStack, isWeb, useMedia } from 'tamagui';
+import type { TamaguiElement } from 'tamagui';
 
 /** Container/media width below which multi-column form grids collapse to 1 col. */
 export const FORM_GRID_COLLAPSE_WIDTH = 480;
@@ -30,7 +31,7 @@ export interface FormGridProps {
 }
 
 const resolveWideColumns = (columns: FormGridColumns, maxColumns: FormGridColumns): FormGridColumns =>
-  Math.min(columns, maxColumns) as FormGridColumns;
+  columns < maxColumns ? columns : maxColumns;
 
 const FormGridWeb = ({
   columns,
@@ -49,14 +50,15 @@ const FormGridWeb = ({
   size: string;
   children: ReactNode;
 }) => {
-  const ref = useRef<HTMLDivElement>(null);
+  const ref = useRef<TamaguiElement>(null);
   const [containerWide, setContainerWide] = useState(true);
 
   useLayoutEffect(() => {
     const el = ref.current;
-    if (!el || columns <= 1) {
+    if (!(el instanceof HTMLElement) || columns <= 1) {
       setContainerWide(true);
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on other paths; a bare return trips consistent-return
+      return undefined;
     }
 
     const update = (width: number) => {
@@ -69,6 +71,7 @@ const FormGridWeb = ({
       const onResize = () => {
         update(el.getBoundingClientRect().width);
       };
+      // oxlint-disable-next-line github/prefer-observers -- fallback branch taken only when ResizeObserver is unavailable
       window.addEventListener('resize', onResize);
       return () => {
         window.removeEventListener('resize', onResize);
@@ -96,7 +99,7 @@ const FormGridWeb = ({
 
   return (
     <YStack
-      ref={ref as never}
+      ref={ref}
       data-mpo-form-grid=""
       data-columns={effectiveColumns}
       data-max-columns={maxColumns}
@@ -134,10 +137,12 @@ const FormGridNative = ({
   // React Native defines a `window` global without DOM event methods or
   // innerWidth, so bare `typeof window` checks are not enough — the resize
   // listener crashed on native ("window.addEventListener is not a function").
+  /* oxlint-disable anti-slop/no-runtime-typeof -- RN's `window` global lacks DOM members; only a runtime typeof probe distinguishes it */
   const canUseDomResize =
     typeof window !== 'undefined' &&
     typeof window.addEventListener === 'function' &&
     typeof window.innerWidth === 'number';
+  /* oxlint-enable anti-slop/no-runtime-typeof */
   // Prefer live viewport width when available; fall back to Tamagui media
   // (`xs` = v5 minWidth 460, nearest key to FORM_GRID_COLLAPSE_WIDTH 480 —
   // the old `gtSm` key died with the v5 media map), which stays
@@ -148,12 +153,14 @@ const FormGridNative = ({
 
   useEffect(() => {
     if (!canUseDomResize) {
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on other paths; a bare return trips consistent-return
+      return undefined;
     }
     const handler = () => {
       setDomViewportWide(window.innerWidth >= FORM_GRID_COLLAPSE_WIDTH);
     };
     handler();
+    // oxlint-disable-next-line github/prefer-observers -- RN/DOM viewport width has no observer API; ResizeObserver tracks elements, not the window
     window.addEventListener('resize', handler);
     return () => {
       window.removeEventListener('resize', handler);
@@ -163,6 +170,7 @@ const FormGridNative = ({
   const viewportWide = canUseDomResize ? domViewportWide : media.xs;
   const effectiveColumns: FormGridColumns = columns <= 1 || !viewportWide ? 1 : columns;
 
+  // oxlint-disable-next-line react/no-react-children -- children are chunked into rows; toArray drops null/boolean and assigns stable keys
   const childArray = Children.toArray(children);
   const rows: ReactNode[][] = [];
   for (let i = 0; i < childArray.length; i += effectiveColumns) {

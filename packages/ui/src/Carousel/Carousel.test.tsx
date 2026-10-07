@@ -7,8 +7,8 @@
  */
 
 import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+import { setTimeout as sleep } from 'node:timers/promises';
 
 import { renderWithProviders } from '@repo/test-utils';
 import { Preset, isTouchSurface, sizeRecipeForToken } from '@repo/theme';
@@ -17,8 +17,6 @@ import { Text, View, getTokens } from 'tamagui';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Carousel } from './index';
-
-const here = dirname(fileURLToPath(import.meta.url));
 
 // ── happy-dom layout plumbing ─────────────────────────────────
 // react-native-web's onLayout rides a module-level ResizeObserver singleton
@@ -49,8 +47,8 @@ vi.stubGlobal(
   'ResizeObserver',
   class {
     record: ObserverRecord;
-    constructor(cb: ResizeObserverCallback) {
-      this.record = { cb, targets: new Set() };
+    constructor(onResize: ResizeObserverCallback) {
+      this.record = { cb: onResize, targets: new Set() };
       observerRecords.push(this.record);
     }
     observe(target: Element) {
@@ -92,7 +90,7 @@ Object.defineProperty(HTMLElement.prototype, 'scroll', {
 /** Flush UIManager.measure's setTimeout(0) so onLayout commits. */
 const flushMeasure = async () => {
   await act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await sleep(0);
   });
 };
 
@@ -119,33 +117,33 @@ const elementCarriesWidth = (node: HTMLElement, widthPx: number): boolean => {
     return true;
   }
   const ruleTexts: string[] = [];
-  for (const styleTag of Array.from(document.querySelectorAll('style'))) {
+  for (const styleTag of document.querySelectorAll('style')) {
     ruleTexts.push(styleTag.textContent ?? '');
   }
   const sheets = [
-    ...Array.from(document.styleSheets),
-    ...Array.from((document as unknown as { adoptedStyleSheets?: CSSStyleSheet[] }).adoptedStyleSheets ?? []),
+    ...document.styleSheets,
+    ...((document as unknown as { adoptedStyleSheets?: CSSStyleSheet[] }).adoptedStyleSheets ?? []),
   ];
   for (const sheet of sheets) {
     try {
-      for (const rule of Array.from(sheet.cssRules)) {
+      for (const rule of sheet.cssRules) {
         ruleTexts.push(rule.cssText);
       }
     } catch {
       // Unreadable sheet — nothing Tamagui inserts is.
     }
   }
-  return Array.from(node.classList).some((className) =>
+  return [...node.classList].some((className) =>
     ruleTexts.some((text) => text.includes(`.${className}`) && text.includes(needle)),
   );
 };
 
 const dots = (container: HTMLElement) => container.querySelectorAll("[role='button'][aria-label^='Go to item']");
 
-beforeEach(() => {
+const resetLayout = () => {
   layoutWidth = 400;
   scrollCalls.length = 0;
-});
+};
 
 const Slide = ({ index }: { index: number }) => (
   <View height={100}>
@@ -154,6 +152,8 @@ const Slide = ({ index }: { index: number }) => (
 );
 
 describe('Carousel geometry', () => {
+  beforeEach(resetLayout);
+
   it('sizes each slide from the measured viewport, never percent-of-track', async () => {
     const { container } = renderWithProviders(
       <Carousel gap={0}>
@@ -212,7 +212,7 @@ describe('Carousel geometry', () => {
 
   it('resolves token gaps into the offset math', async () => {
     const tokenGap = (getTokens().space as Record<string, { val?: number } | undefined>)?.$4?.val;
-    expect(typeof tokenGap).toBe('number');
+    expect(tokenGap).toBeTypeOf('number');
     expect(tokenGap!).toBeGreaterThan(0);
     const { container } = renderWithProviders(
       <Carousel gap="$4">
@@ -262,7 +262,7 @@ describe('Carousel geometry', () => {
       </Carousel>,
     );
     await flushMeasure();
-    const track = container.querySelector('[data-carousel-track]') as HTMLElement;
+    const track = container.querySelector<HTMLElement>('[data-carousel-track]')!;
     expect(track).toBeTruthy();
     Object.defineProperty(track, 'scrollLeft', { configurable: true, value: 2 * (400 + 16) });
     fireEvent.scroll(track);
@@ -307,6 +307,8 @@ describe('Carousel geometry', () => {
 // probe measures). A hardcoded `animated: true` is the violation this locks
 // out.
 describe('Carousel snaps ride the animation knob', () => {
+  beforeEach(resetLayout);
+
   it('jumps (animated: false → behavior auto) on dot click at animation none', async () => {
     const { container } = renderWithProviders(
       <Preset overrides={{ animation: 'none' }}>
@@ -351,12 +353,14 @@ describe('Carousel snaps ride the animation knob', () => {
 // floored at MIN_PRESS_TARGET (44). Embla/Polaris/Apple: halo on the control.
 
 const arrow = (container: HTMLElement, side: 'prev' | 'next') =>
-  container.querySelector(`[data-carousel-arrow='${side}']`) as HTMLElement | null;
+  container.querySelector<HTMLElement>(`[data-carousel-arrow='${side}']`);
 
 const arrowVisual = (container: HTMLElement, side: 'prev' | 'next') =>
-  container.querySelector(`[data-carousel-arrow-visual='${side}']`) as HTMLElement | null;
+  container.querySelector<HTMLElement>(`[data-carousel-arrow-visual='${side}']`);
 
 describe('Carousel ring anatomy, size recipes, 44px floor', () => {
+  beforeEach(resetLayout);
+
   it('keeps the viewport out of the tab order with no outline', async () => {
     const { container } = renderWithProviders(
       <Carousel gap={0}>
@@ -369,7 +373,7 @@ describe('Carousel ring anatomy, size recipes, 44px floor', () => {
       </Carousel>,
     );
     await flushMeasure();
-    const track = container.querySelector('[data-carousel-track]') as HTMLElement;
+    const track = container.querySelector<HTMLElement>('[data-carousel-track]')!;
     expect(track).toBeTruthy();
     expect(track.tabIndex).toBe(-1);
     const style = track.getAttribute('style') ?? '';
@@ -439,7 +443,7 @@ describe('Carousel ring anatomy, size recipes, 44px floor', () => {
       </Carousel>,
     );
     await flushMeasure();
-    const region = container.querySelector("[aria-roledescription='carousel']") as HTMLElement;
+    const region = container.querySelector<HTMLElement>("[aria-roledescription='carousel']")!;
     expect(region).toBeTruthy();
     fireEvent.keyDown(region, { key: 'ArrowRight' });
     expect(scrollCalls.at(-1)).toMatchObject({ left: 400, behavior: 'smooth' });
@@ -463,7 +467,7 @@ describe('Carousel ring anatomy, size recipes, 44px floor', () => {
       </Carousel>,
     );
     await flushMeasure();
-    const sheet = document.getElementById('mp-carousel-arrow-ring');
+    const sheet = document.querySelector('#mp-carousel-arrow-ring');
     expect(sheet?.textContent ?? '').toContain('.mp-carousel-arrow:focus-visible');
     expect(sheet?.textContent ?? '').toContain('.mp-carousel-arrow-visual');
     expect(sheet?.textContent ?? '').not.toContain('[data-carousel-track]');
@@ -471,8 +475,10 @@ describe('Carousel ring anatomy, size recipes, 44px floor', () => {
 });
 
 describe('Carousel live-media tile', () => {
+  beforeEach(resetLayout);
+
   it('does not paint a status pip; viewport radius stays UNCLAMPED', async () => {
-    const src = readFileSync(join(here, 'index.tsx'), 'utf-8');
+    const src = readFileSync(path.join(import.meta.dirname, 'index.tsx'), 'utf-8');
     expect(src).not.toMatch(/knobProps\.containerRadius|knobProps\.cardSurface|capContainerRadius\(/u);
     expect(src).not.toMatch(/data-status-pip|StatusPip|statusPip/u);
     expect(src).toContain('knobProps.borderRadius');

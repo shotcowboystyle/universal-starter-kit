@@ -23,9 +23,9 @@ const inkedValue = encodeSignature([
 ]);
 
 const getPad = (container: HTMLElement): HTMLElement => {
-  const label = container.querySelector('label[for]') as HTMLLabelElement | null;
+  const label = container.querySelector('label[for]');
   const id = label?.htmlFor;
-  const pad = id ? (container.querySelector(`#${CSS.escape(id)}`) as HTMLElement | null) : null;
+  const pad = id ? container.querySelector(`#${CSS.escape(id)}`) : null;
   if (!pad) {
     throw new Error('signature pad not found');
   }
@@ -46,7 +46,7 @@ beforeAll(() => {
 
 afterEach(cleanup);
 
-describe('Signature', () => {
+describe(Signature, () => {
   describe('without form context', () => {
     it('renders with label', () => {
       const result = renderWithProviders(
@@ -148,7 +148,7 @@ describe('Signature', () => {
           clearIcon={clearIcon}
         />,
       );
-      const pad = result.container.querySelector('[aria-label^="Signature"]') as HTMLElement | null;
+      const pad = result.container.querySelector('[aria-label^="Signature"]');
       expect(pad).toBeTruthy();
       expect(pad?.getAttribute('tabindex')).toBe('0');
     });
@@ -168,7 +168,7 @@ describe('Signature', () => {
 
       fireEvent.pointerDown(document);
       fireEvent.focus(pad);
-      expect(pad.getAttribute('data-keyboard-ring')).toBeNull();
+      expect(pad.dataset.keyboardRing).toBeNull();
 
       const svg = result.container.querySelector('svg');
       expect(svg).toBeTruthy();
@@ -189,7 +189,7 @@ describe('Signature', () => {
         />,
       );
       const pad = getPad(result.container);
-      expect(pad.getAttribute('data-signed')).toBe('true');
+      expect(pad.dataset.signed).toBe('true');
 
       fireEvent.keyDown(document, { key: 'Tab' });
       fireEvent.focus(pad);
@@ -215,7 +215,7 @@ describe('Signature', () => {
 
       fireEvent.pointerDown(svg!, { pointerId: 1, clientX: 20, clientY: 20, isPrimary: true });
       fireEvent.pointerMove(svg!, { pointerId: 1, clientX: 40, clientY: 30, isPrimary: true });
-      fireEvent.click(clear as Element);
+      fireEvent.click(clear!);
       fireEvent.pointerUp(svg!, { pointerId: 1, clientX: 40, clientY: 30, isPrimary: true });
       fireEvent.lostPointerCapture(svg!, { pointerId: 1 });
 
@@ -290,8 +290,8 @@ describe('design-law', () => {
         clearIcon={clearIcon}
       />,
     );
-    const smallH = Number(getPad(small.container).getAttribute('data-min-height'));
-    const largeH = Number(getPad(large.container).getAttribute('data-min-height'));
+    const smallH = Number(getPad(small.container).dataset.minHeight);
+    const largeH = Number(getPad(large.container).dataset.minHeight);
     expect(smallH).toBeGreaterThan(0);
     expect(largeH).toBeGreaterThan(smallH);
     expect(smallH).not.toBe(200);
@@ -347,7 +347,7 @@ describe('design-law', () => {
   });
 });
 
-describe('signatureValueToSvg', () => {
+describe(signatureValueToSvg, () => {
   it('returns empty for an empty value', () => {
     expect(signatureValueToSvg('')).toBe('');
   });

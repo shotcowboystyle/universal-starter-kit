@@ -2,20 +2,18 @@
 export const createNativeSearchFocus = () => {
   let dismissed = false;
   return {
-    dismiss() {
+    dismiss: () => {
       dismissed = true;
     },
-    activate() {
+    activate: () => {
       dismissed = false;
     },
-    blur(sheetHeader: boolean, resultsOpen: boolean) {
+    blur: (sheetHeader: boolean, resultsOpen: boolean) => {
       // A later visit by hardware keyboard is deliberate. Modal handoff is not.
       if (!sheetHeader && !resultsOpen) {
         dismissed = false;
       }
     },
-    canOpen(sheetHeader: boolean) {
-      return !sheetHeader && !dismissed;
-    },
+    canOpen: (sheetHeader: boolean) => !sheetHeader && !dismissed,
   };
 };

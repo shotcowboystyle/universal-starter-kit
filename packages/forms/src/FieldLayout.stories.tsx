@@ -68,46 +68,45 @@ export const Basic: Story = {
 };
 
 /** Shared message order with real controls, including the inline checkbox row. */
+const MessageOrderExample = () => {
+  const [showErrors, setShowErrors] = useState(false);
+  return (
+    <YStack
+      gap="$4"
+      width="100%"
+      maxWidth={480}>
+      <Input
+        id="message-top"
+        label="Contact"
+        helperText="Use an address where we can reach you"
+        error={showErrors ? 'Enter a contact address' : undefined}
+      />
+      <Preset overrides={{ fieldLabelPlacement: 'side' }}>
+        <Input
+          id="message-side"
+          label="Office"
+          helperText="Use the office name shown on your account"
+          error={showErrors ? 'Enter your office name' : undefined}
+        />
+      </Preset>
+      <Checkbox
+        id="message-inline"
+        label="Accept terms"
+        helperText="Read the terms before continuing"
+        error={showErrors ? 'Accept the terms to continue' : undefined}
+      />
+      <Button
+        onPress={() => {
+          setShowErrors((shown) => !shown);
+        }}>
+        {showErrors ? 'Show helpers' : 'Show validation'}
+      </Button>
+    </YStack>
+  );
+};
+
 export const MessageOrder: Story = {
-  render: () => {
-    const Example = () => {
-      const [showErrors, setShowErrors] = useState(false);
-      return (
-        <YStack
-          gap="$4"
-          width="100%"
-          maxWidth={480}>
-          <Input
-            id="message-top"
-            label="Contact"
-            helperText="Use an address where we can reach you"
-            error={showErrors ? 'Enter a contact address' : undefined}
-          />
-          <Preset overrides={{ fieldLabelPlacement: 'side' }}>
-            <Input
-              id="message-side"
-              label="Office"
-              helperText="Use the office name shown on your account"
-              error={showErrors ? 'Enter your office name' : undefined}
-            />
-          </Preset>
-          <Checkbox
-            id="message-inline"
-            label="Accept terms"
-            helperText="Read the terms before continuing"
-            error={showErrors ? 'Accept the terms to continue' : undefined}
-          />
-          <Button
-            onPress={() => {
-              setShowErrors((shown) => !shown);
-            }}>
-            {showErrors ? 'Show helpers' : 'Show validation'}
-          </Button>
-        </YStack>
-      );
-    };
-    return <Example />;
-  },
+  render: () => <MessageOrderExample />,
 };
 
 export const ErrorStates: Story = {
@@ -186,98 +185,96 @@ export const AnatomyEdgeCases: Story = {
   ),
 };
 
+const FieldWrapperExample = () => {
+  const form = useForm({
+    defaultValues: { username: 'initial-value' },
+    onSubmit: async ({ value }) => {
+      action('onSubmit')(value);
+    },
+  });
+  return (
+    <Form form={form}>
+      <YStack
+        gap="$4"
+        maxWidth={360}>
+        <Field
+          form={form}
+          name="username"
+          defaultValue="initial-value">
+          {(field) => (
+            <FieldLayout
+              id="field-username"
+              label="Username"
+              helperText="TanStack Field wrapper"
+              field={field as any}>
+              <Control
+                id="field-username"
+                value={field.state.value}
+                onChangeText={(text) => {
+                  field.handleChange(text);
+                }}
+              />
+            </FieldLayout>
+          )}
+        </Field>
+        <XStack gap="$2">
+          <Button action="submit">Submit</Button>
+          <Button
+            onPress={() => {
+              form.reset();
+            }}>
+            Reset
+          </Button>
+        </XStack>
+      </YStack>
+    </Form>
+  );
+};
+
 export const FieldWrapper: Story = {
-  render: () => {
-    const Example = () => {
-      const form = useForm({
-        defaultValues: { username: 'initial-value' },
-        onSubmit: async ({ value }) => {
-          action('onSubmit')(value);
-        },
-      });
-      return (
-        <Form form={form}>
-          <YStack
-            gap="$4"
-            maxWidth={360}>
-            <Field
-              form={form}
-              name="username"
-              defaultValue="initial-value">
-              {(field) => (
-                <FieldLayout
-                  id="field-username"
-                  label="Username"
-                  helperText="TanStack Field wrapper"
-                  field={field as any}>
-                  <Control
-                    id="field-username"
-                    value={String(field.state.value ?? '')}
-                    onChangeText={(text) => {
-                      field.handleChange(text);
-                    }}
-                  />
-                </FieldLayout>
-              )}
-            </Field>
-            <XStack gap="$2">
-              <Button action="submit">Submit</Button>
-              <Button
-                onPress={() => {
-                  form.reset();
-                }}>
-                Reset
-              </Button>
-            </XStack>
-          </YStack>
-        </Form>
-      );
-    };
-    return <Example />;
-  },
+  render: () => <FieldWrapperExample />,
+};
+
+const FieldRequiredValidatorExample = () => {
+  const form = useForm({
+    defaultValues: { nickname: '' },
+    onSubmit: async ({ value }) => {
+      action('onSubmit')(value);
+    },
+  });
+  return (
+    <Form form={form}>
+      <YStack
+        gap="$4"
+        maxWidth={360}>
+        <Field<object, 'nickname', string>
+          form={form}
+          name="nickname"
+          validators={{
+            onSubmit: ({ value }: { value: string }) => (value === '' ? 'Nickname is required' : undefined),
+          }}>
+          {(field) => (
+            <FieldLayout
+              id="field-nickname"
+              label="Nickname"
+              required
+              field={field as any}>
+              <Control
+                id="field-nickname"
+                value={field.state.value}
+                onChangeText={(text) => {
+                  field.handleChange(text);
+                }}
+              />
+            </FieldLayout>
+          )}
+        </Field>
+        <Button action="submit">Submit</Button>
+      </YStack>
+    </Form>
+  );
 };
 
 export const FieldRequiredValidator: Story = {
-  render: () => {
-    const Example = () => {
-      const form = useForm({
-        defaultValues: { nickname: '' },
-        onSubmit: async ({ value }) => {
-          action('onSubmit')(value);
-        },
-      });
-      return (
-        <Form form={form}>
-          <YStack
-            gap="$4"
-            maxWidth={360}>
-            <Field
-              form={form}
-              name="nickname"
-              validators={{
-                onSubmit: ({ value }: { value: unknown }) => (value ? undefined : 'Nickname is required'),
-              }}>
-              {(field) => (
-                <FieldLayout
-                  id="field-nickname"
-                  label="Nickname"
-                  required
-                  field={field as any}>
-                  <Control
-                    id="field-nickname"
-                    value={String(field.state.value ?? '')}
-                    onChangeText={(text) => {
-                      field.handleChange(text);
-                    }}
-                  />
-                </FieldLayout>
-              )}
-            </Field>
-            <Button action="submit">Submit</Button>
-          </YStack>
-        </Form>
-      );
-    };
-    return <Example />;
-  },
+  render: () => <FieldRequiredValidatorExample />,
 };

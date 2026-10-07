@@ -1,6 +1,4 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 
 import { renderWithProviders } from '@repo/test-utils';
 import { act, fireEvent, waitFor } from '@testing-library/react';
@@ -14,12 +12,13 @@ import {
   normalizeFieldError,
   warnBannedErrorWords,
 } from './ErrorSummary';
+import type { ErrorSummaryItem } from './ErrorSummary';
 import { Input } from './fields/Input';
 import { Form } from './Form';
 import { __resetDevWarnSeen } from './shared/dev-warn';
 
-vi.mock('@repo/router', () => ({
-  useUrlState: vi.fn(() => [{}, vi.fn()]),
+vi.mock(import('@repo/router'), () => ({
+  useUrlState: <T extends object>(defaultValues: T): [T, () => void] => [defaultValues, vi.fn<() => void>()],
 }));
 
 describe('formatFieldError / normalizeFieldError', () => {
@@ -45,7 +44,7 @@ describe('formatFieldError / normalizeFieldError', () => {
   });
 });
 
-describe('collectFormFieldErrors', () => {
+describe(collectFormFieldErrors, () => {
   it('collects first error per field and skips empty', () => {
     const items = collectFormFieldErrors({
       email: { errors: ['Enter an email address'] },
@@ -59,7 +58,7 @@ describe('collectFormFieldErrors', () => {
   });
 });
 
-describe('warnBannedErrorWords', () => {
+describe(warnBannedErrorWords, () => {
   beforeEach(() => {
     __resetDevWarnSeen();
     vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -87,7 +86,7 @@ describe('warnBannedErrorWords', () => {
   });
 });
 
-describe('ErrorSummary', () => {
+describe(ErrorSummary, () => {
   it('renders role=alert with title and linked errors', () => {
     const result = renderWithProviders(
       <ErrorSummary
@@ -116,13 +115,13 @@ describe('ErrorSummary', () => {
     const focusSpy = vi.spyOn(HTMLElement.prototype, 'focus');
     renderWithProviders(<ErrorSummary errors={[{ name: 'name', id: 'name', error: 'Enter a full name' }]} />);
     await waitFor(() => {
-      expect(focusSpy).toHaveBeenCalled();
+      expect(focusSpy).toHaveBeenCalledWith();
     });
     focusSpy.mockRestore();
   });
 
   it('invokes onFocusField when a link is activated', () => {
-    const onFocusField = vi.fn();
+    const onFocusField = vi.fn<(item: ErrorSummaryItem) => void>();
     const result = renderWithProviders(
       <form>
         <ErrorSummary
@@ -142,7 +141,7 @@ describe('ErrorSummary', () => {
 
 describe('Form + ErrorSummary integration', () => {
   it('shows ErrorSummary after failed submit and hides when showErrorSummary=false', async () => {
-    const onSubmit = vi.fn();
+    const onSubmit = vi.fn<() => void>();
     const result = renderWithProviders(
       <Form
         formOptions={{
@@ -192,7 +191,7 @@ describe('Form + ErrorSummary integration', () => {
       <Form
         showErrorSummary={false}
         formOptions={{ defaultValues: { username: '' } }}
-        onSubmit={vi.fn()}>
+        onSubmit={vi.fn<() => void>()}>
         <Input
           id="username"
           name="username"

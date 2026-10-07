@@ -62,7 +62,7 @@ const scopeThemeKey = (node: HTMLElement, scheme: string): string => {
     if (!el.classList.contains('is_Theme')) {
       continue;
     }
-    for (const cls of Array.from(el.classList)) {
+    for (const cls of [...el.classList]) {
       if (!cls.startsWith('t_') || cls === 't_sub_theme') {
         continue;
       }

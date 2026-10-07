@@ -7,12 +7,12 @@ import { routeNotify } from './route';
 import type { NotifyEvent } from './route';
 import { dismissFeedbackByRegion, getFeedback, resetFeedback } from './store';
 
-afterEach(() => {
+const resetDelivery = () => {
   resetToasts();
   resetFeedback();
-});
+};
 
-const action = { label: 'Retry', onPress: vi.fn() };
+const action = { label: 'Retry', onPress: vi.fn<() => void>() };
 
 const event = (partial: Partial<NotifyEvent> & Pick<NotifyEvent, 'severity' | 'scope'>): NotifyEvent => ({
   body: 'Something happened.',
@@ -20,6 +20,8 @@ const event = (partial: Partial<NotifyEvent> & Pick<NotifyEvent, 'severity' | 's
 });
 
 describe('routeNotify (routing table)', () => {
+  afterEach(resetDelivery);
+
   it('success → toast (any scope)', () => {
     expect(routeNotify(event({ severity: 'success', scope: 'page' })).surface).toBe('toast');
     expect(routeNotify(event({ severity: 'success', scope: 'field' })).surface).toBe('toast');
@@ -93,6 +95,8 @@ describe('routeNotify (routing table)', () => {
 });
 
 describe('notify() delivery', () => {
+  afterEach(resetDelivery);
+
   it('targets and clears one inline region without disturbing another', () => {
     const route = notify({
       severity: 'error',

@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react';
-import { useCallback, useState } from 'react';
+import type { ResolvedKnobs } from '@repo/theme';
+import type { ComponentProps, ReactNode } from 'react';
+import { useState } from 'react';
 import type {
   CheckedState,
   CheckboxProps as TamaguiCheckboxProps,
@@ -11,6 +12,7 @@ import { View, XStack, YStack } from 'tamagui';
 
 import { Field, FieldLayout } from '../../FieldLayout';
 import { getFieldError, mergeFieldHandler, useFormField, useResolvedValidators } from '../../shared/utils';
+import type { FieldValidators } from '../../shared/utils';
 import { Skeleton } from '../../Skeleton';
 import type { AnyFormApi } from '../../types';
 
@@ -37,7 +39,7 @@ export interface CheckboxGroupOption {
 export interface CheckboxGroupProps {
   name?: string;
   form?: AnyFormApi;
-  validators?: Record<string, unknown>;
+  validators?: FieldValidators;
   label?: ReactNode;
   labelProps?: Omit<LabelProps, 'htmlFor' | 'ref'>;
   helperText?: string;
@@ -56,7 +58,7 @@ export interface CheckboxGroupProps {
   onChange?: (value: string[]) => void;
   /** @deprecated Use `onChange` instead. */
   onValueChange?: (value: string[]) => void;
-  onBlur?: (...args: any[]) => void;
+  onBlur?: ComponentProps<typeof FieldLayout>['onBlur'];
   options?: CheckboxGroupOption[];
   orientation?: 'horizontal' | 'vertical';
   checkboxProps?: Omit<TamaguiCheckboxProps, 'checked' | 'id' | 'onCheckedChange' | 'children'>;
@@ -71,6 +73,238 @@ export interface CheckboxGroupProps {
    */
   card?: boolean;
 }
+
+type KnobProps = ResolvedKnobs['knobProps'];
+
+const hasText = (value: string | undefined): value is string => value !== undefined && value !== '';
+
+const toggleValue = (currentValues: string[], optionValue: string, checked: CheckedState): string[] =>
+  checked === true ? [...currentValues, optionValue] : currentValues.filter((v) => v !== optionValue);
+
+const SKELETON_LABEL_WIDTHS = [88, 64, 76];
+
+interface CheckboxGroupSkeletonProps {
+  id: string;
+  label: ReactNode;
+  size: SizeTokens | undefined;
+  knobProps: KnobProps;
+  optionCount: number;
+  orientation: 'horizontal' | 'vertical';
+}
+
+const CheckboxGroupSkeleton = ({
+  id,
+  label,
+  size,
+  knobProps,
+  optionCount,
+  orientation,
+}: CheckboxGroupSkeletonProps) => {
+  // Mirror the real anatomy: each row is a
+  // 20px control square at the same clamped radius the real Checkbox uses,
+  // then a label bar separated by the real box↔label gap. Label widths are
+  // DETERMINISTIC per index (never %, never random): a percentage width
+  // inside an auto-width horizontal row resolves against a width computed
+  // without it, so the bar paints past the row's edge and fuses with the
+  // next item's square.
+  const Container = orientation === 'horizontal' ? XStack : YStack;
+  const inlineGap = getCheckboxInlineGap(knobProps.space);
+  const controlRadius = clampCheckboxGlyphRadius(knobProps.borderRadius.borderRadius, {
+    pointy: knobProps.pointy,
+  });
+  const glyphSize = getCheckboxGlyphSize(size ?? knobProps.sizeToken);
+  const rows = Array.from({ length: optionCount }, (_, position) => ({
+    position,
+    labelWidth: SKELETON_LABEL_WIDTHS[position % SKELETON_LABEL_WIDTHS.length],
+  }));
+  return (
+    <CheckboxGroupFlatContext.Provider value>
+      <FieldLayout
+        id={id}
+        label={label}
+        size={size}
+        knobProps={knobProps}>
+        <Container gap="$2">
+          {rows.map((row) => (
+            <XStack
+              key={`skeleton-row-${row.position}`}
+              gap={inlineGap}
+              alignItems="center">
+              {/* Mirror the 44px pressable target box around the glyph */}
+              <View
+                width={CHECKBOX_TARGET_PX}
+                height={CHECKBOX_TARGET_PX}
+                alignItems="center"
+                justifyContent="center">
+                <Skeleton
+                  variant="rounded"
+                  width={glyphSize}
+                  height={glyphSize}
+                  borderRadius={controlRadius}
+                />
+              </View>
+              <Skeleton
+                variant="text"
+                width={row.labelWidth}
+                height={14}
+              />
+            </XStack>
+          ))}
+        </Container>
+      </FieldLayout>
+    </CheckboxGroupFlatContext.Provider>
+  );
+};
+
+interface GroupItemProps {
+  option: CheckboxGroupOption;
+  itemId: string;
+  currentValues: string[];
+  emit: (newValues: string[]) => void;
+  size: SizeTokens | undefined;
+  knobProps: KnobProps;
+  disabled: boolean | undefined;
+  readOnly: boolean | undefined;
+  checkboxProps: CheckboxGroupProps['checkboxProps'];
+  disabledState: ResolvedKnobs['disabledState'];
+}
+
+const CheckboxGroupCardItem = ({
+  option,
+  itemId,
+  currentValues,
+  emit,
+  size,
+  knobProps,
+  disabled,
+  readOnly,
+  checkboxProps,
+  disabledState,
+}: GroupItemProps) => {
+  const layout = getCheckboxCardLayout(knobProps.space);
+  const descriptionSize = getCardDescriptionSize(size ?? knobProps.sizeToken);
+  // SAFETY: `knobProps.sizeToken` is a `$N` scale token, a scale SizeTokens and FontSizeTokens share.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- same token scale, wider static type
+  const labelSize = (size ?? knobProps.sizeToken) as FontSizeTokens;
+  const labelId = `${itemId}-label`;
+  const descriptionId = hasText(option.description) ? `${itemId}-description` : undefined;
+  const isChecked = currentValues.includes(option.value);
+  const isDisabled = disabled === true || option.disabled === true;
+  return (
+    <CheckboxCardFrame
+      active={isChecked}
+      {...layout}
+      borderRadius={knobProps.borderRadius.borderRadius}
+      // Selection cards dim as chrome (label rides the card).
+      {...(isDisabled ? disabledState.chromeKnobProps : undefined)}
+      // Whole card toggles. Clicking the checkbox itself fires both
+      // this and the checkbox's own handler; both compute the same
+      // next value from the same render, so the double emit is
+      // idempotent (same pattern as the compound FocusGroup.Item).
+      onPress={() => {
+        if (isDisabled || readOnly) {
+          return;
+        }
+        emit(toggleValue(currentValues, option.value, !isChecked));
+      }}>
+      <Checkbox
+        id={itemId}
+        checked={isChecked}
+        onChange={(checked) => {
+          if (isDisabled || readOnly) {
+            return;
+          }
+          emit(toggleValue(currentValues, option.value, checked));
+        }}
+        disabled={isDisabled}
+        readOnly={readOnly}
+        size={size}
+        checkboxProps={{
+          ...checkboxProps,
+          'aria-labelledby': labelId,
+          ...(descriptionId === undefined ? undefined : { 'aria-describedby': descriptionId }),
+        }}
+      />
+      <CheckboxCardContent>
+        {/* fontWeight after size: the size variant's font weight
+            would otherwise override the styled bold default */}
+        <CheckboxCardLabel
+          id={labelId}
+          size={labelSize}
+          fontWeight="600">
+          {option.label}
+        </CheckboxCardLabel>
+        {hasText(option.description) ? (
+          <CheckboxCardDescription
+            id={descriptionId}
+            size={descriptionSize}>
+            {option.description}
+          </CheckboxCardDescription>
+        ) : null}
+      </CheckboxCardContent>
+    </CheckboxCardFrame>
+  );
+};
+
+const CheckboxGroupRowItem = ({
+  option,
+  itemId,
+  currentValues,
+  emit,
+  size,
+  disabled,
+  readOnly,
+  checkboxProps,
+}: GroupItemProps) => {
+  const isDisabled = disabled === true || option.disabled === true;
+  return (
+    <Checkbox
+      label={option.label}
+      id={itemId}
+      checked={currentValues.includes(option.value)}
+      onChange={(checked) => {
+        if (isDisabled || readOnly) {
+          return;
+        }
+        emit(toggleValue(currentValues, option.value, checked));
+      }}
+      disabled={isDisabled}
+      readOnly={readOnly}
+      size={size}
+      checkboxProps={checkboxProps}
+    />
+  );
+};
+
+interface CheckboxGroupItemsProps extends Omit<GroupItemProps, 'option' | 'itemId'> {
+  id: string;
+  options: CheckboxGroupOption[] | undefined;
+  orientation: 'horizontal' | 'vertical';
+  card: boolean | undefined;
+}
+
+const CheckboxGroupItems = ({ id, options, orientation, card, ...itemProps }: CheckboxGroupItemsProps) => {
+  if (!options) {
+    return null;
+  }
+  const Container = orientation === 'horizontal' ? XStack : YStack;
+  const Item = card ? CheckboxGroupCardItem : CheckboxGroupRowItem;
+  // Include the index so duplicate option values don't produce
+  // duplicate React keys / DOM ids.
+  const items = options.map((option, index) => ({ option, itemId: `${id}-${index}-${option.value}` }));
+  return (
+    <Container gap="$2">
+      {items.map(({ option, itemId }) => (
+        <Item
+          key={itemId}
+          {...itemProps}
+          option={option}
+          itemId={itemId}
+        />
+      ))}
+    </Container>
+  );
+};
 
 export const CheckboxGroup = ({
   name,
@@ -88,6 +322,7 @@ export const CheckboxGroup = ({
   value,
   defaultValue,
   onChange,
+  // oxlint-disable-next-line typescript/no-deprecated -- the documented alias for `onChange` stays wired until it is removed from the API
   onValueChange,
   onBlur,
   options,
@@ -116,192 +351,43 @@ export const CheckboxGroup = ({
   const [internalValues, setInternalValues] = useState<string[]>(defaultValue ?? []);
 
   if (skeleton) {
-    // Mirror the real anatomy: each row is a
-    // 20px control square at the same clamped radius the real Checkbox uses,
-    // then a label bar separated by the real box↔label gap. Label widths are
-    // DETERMINISTIC per index (never %, never random): a percentage width
-    // inside an auto-width horizontal row resolves against a width computed
-    // without it, so the bar paints past the row's edge and fuses with the
-    // next item's square.
-    const optionCount = options?.length ?? 3;
-    const Container = orientation === 'horizontal' ? XStack : YStack;
-    const inlineGap = getCheckboxInlineGap(knobProps.space);
-    const controlRadius = clampCheckboxGlyphRadius(knobProps.borderRadius.borderRadius, {
-      pointy: knobProps.pointy,
-    });
-    const glyphSize = getCheckboxGlyphSize((size || knobProps.sizeToken) as SizeTokens);
-    const labelWidths = [88, 64, 76];
     return (
-      <CheckboxGroupFlatContext.Provider value={true}>
-        <FieldLayout
-          id={id}
-          label={label}
-          size={size}
-          knobProps={knobProps}>
-          <Container gap="$2">
-            {Array.from({ length: optionCount }, (_, i) => (
-              <XStack
-                key={i}
-                gap={inlineGap}
-                alignItems="center">
-                {/* Mirror the 44px pressable target box around the glyph */}
-                <View
-                  width={CHECKBOX_TARGET_PX}
-                  height={CHECKBOX_TARGET_PX}
-                  alignItems="center"
-                  justifyContent="center">
-                  <Skeleton
-                    variant="rounded"
-                    width={glyphSize}
-                    height={glyphSize}
-                    borderRadius={controlRadius}
-                  />
-                </View>
-                <Skeleton
-                  variant="text"
-                  width={labelWidths[i % labelWidths.length]}
-                  height={14}
-                />
-              </XStack>
-            ))}
-          </Container>
-        </FieldLayout>
-      </CheckboxGroupFlatContext.Provider>
+      <CheckboxGroupSkeleton
+        id={id}
+        label={label}
+        size={size}
+        knobProps={knobProps}
+        optionCount={options?.length ?? 3}
+        orientation={orientation}
+      />
     );
   }
 
-  const toggleValue = useCallback((currentValues: string[], optionValue: string, checked: CheckedState) => {
-    if (checked === true) {
-      return [...currentValues, optionValue];
-    }
-    return currentValues.filter((v) => v !== optionValue);
-  }, []);
+  const hasChildren = Boolean(children);
+  const itemsFor = (currentValues: string[], handleChange?: (newValues: string[]) => void) => (
+    <CheckboxGroupItems
+      id={id}
+      options={options}
+      orientation={orientation}
+      card={card}
+      currentValues={currentValues}
+      emit={(newValues) => {
+        handleChange?.(newValues);
+        handleValueChange(newValues);
+      }}
+      size={size}
+      knobProps={knobProps}
+      disabled={disabled}
+      readOnly={readOnly}
+      checkboxProps={checkboxProps}
+      disabledState={disabledState}
+    />
+  );
 
-  const renderItems = (currentValues: string[], handleChange?: (newValues: string[]) => void) => {
-    if (children) {
-      return children;
-    }
-    if (!options) {
-      return null;
-    }
-
-    const Container = orientation === 'horizontal' ? XStack : YStack;
-
-    if (card) {
-      const layout = getCheckboxCardLayout(knobProps.space);
-      const descriptionSize = getCardDescriptionSize(size || knobProps.sizeToken);
-      return (
-        <Container gap="$2">
-          {options.map((option, index) => {
-            // Include the index so duplicate option values don't produce
-            // duplicate React keys / DOM ids.
-            const itemId = `${id}-${index}-${option.value}`;
-            const labelId = `${itemId}-label`;
-            const descriptionId = option.description ? `${itemId}-description` : undefined;
-            const isChecked = currentValues.includes(option.value);
-            const isDisabled = disabled || option.disabled;
-            const emit = (newValues: string[]) => {
-              handleChange?.(newValues);
-              handleValueChange(newValues);
-            };
-            return (
-              <CheckboxCardFrame
-                key={`${index}-${option.value}`}
-                active={isChecked}
-                {...layout}
-                borderRadius={knobProps.borderRadius.borderRadius}
-                // Selection cards dim as chrome (label rides the card).
-                {...(isDisabled ? disabledState.chromeKnobProps : undefined)}
-                // Whole card toggles. Clicking the checkbox itself fires both
-                // this and the checkbox's own handler; both compute the same
-                // next value from the same render, so the double emit is
-                // idempotent (same pattern as the compound FocusGroup.Item).
-                onPress={() => {
-                  if (isDisabled || readOnly) {
-                    return;
-                  }
-                  emit(toggleValue(currentValues, option.value, !isChecked));
-                }}>
-                <Checkbox
-                  id={itemId}
-                  checked={isChecked}
-                  onCheckedChange={(checked) => {
-                    if (isDisabled || readOnly) {
-                      return;
-                    }
-                    emit(toggleValue(currentValues, option.value, checked));
-                  }}
-                  disabled={isDisabled}
-                  readOnly={readOnly}
-                  size={size}
-                  checkboxProps={{
-                    ...checkboxProps,
-                    'aria-labelledby': labelId,
-                    ...(descriptionId && { 'aria-describedby': descriptionId }),
-                  }}
-                />
-                <CheckboxCardContent>
-                  {/* fontWeight after size: the size variant's font weight
-                      would otherwise override the styled bold default */}
-                  <CheckboxCardLabel
-                    id={labelId}
-                    size={(size || knobProps.sizeToken) as FontSizeTokens}
-                    fontWeight="600">
-                    {option.label}
-                  </CheckboxCardLabel>
-                  {option.description ? (
-                    <CheckboxCardDescription
-                      id={descriptionId}
-                      size={descriptionSize}>
-                      {option.description}
-                    </CheckboxCardDescription>
-                  ) : null}
-                </CheckboxCardContent>
-              </CheckboxCardFrame>
-            );
-          })}
-        </Container>
-      );
-    }
-
-    return (
-      <Container gap="$2">
-        {options.map((option, index) => {
-          // Include the index so duplicate option values don't produce
-          // duplicate React keys / DOM ids.
-          const itemId = `${id}-${index}-${option.value}`;
-          const isChecked = currentValues.includes(option.value);
-          const isDisabled = disabled || option.disabled;
-
-          return (
-            <Checkbox
-              key={`${index}-${option.value}`}
-              label={option.label}
-              id={itemId}
-              checked={isChecked}
-              onCheckedChange={(checked) => {
-                if (isDisabled || readOnly) {
-                  return;
-                }
-                const newValues = toggleValue(currentValues, option.value, checked);
-                handleChange?.(newValues);
-                handleValueChange(newValues);
-              }}
-              disabled={isDisabled}
-              readOnly={readOnly}
-              size={size}
-              checkboxProps={checkboxProps}
-            />
-          );
-        })}
-      </Container>
-    );
-  };
-
-  if (!resolvedForm || !name) {
+  if (resolvedForm == null || name === undefined || name === '') {
     const currentValues = value ?? internalValues;
     return (
-      <CheckboxGroupFlatContext.Provider value={true}>
+      <CheckboxGroupFlatContext.Provider value>
         <FieldLayout
           id={id}
           label={label}
@@ -315,14 +401,14 @@ export const CheckboxGroup = ({
           // FieldLayout owns the dimWhole assembly dim (keepLabel pins
           // the sibling label/helper readable) — it needs the disabled state.
           disabled={disabled}>
-          {renderItems(currentValues, setInternalValues)}
+          {hasChildren ? children : itemsFor(currentValues, setInternalValues)}
         </FieldLayout>
       </CheckboxGroupFlatContext.Provider>
     );
   }
 
   return (
-    <CheckboxGroupFlatContext.Provider value={true}>
+    <CheckboxGroupFlatContext.Provider value>
       <Field
         form={resolvedForm}
         name={name}
@@ -331,7 +417,7 @@ export const CheckboxGroup = ({
         {(field) => {
           const resolvedError = getFieldError(field, error);
           const fieldValues = field.state.value ?? [];
-          const currentValues = value === undefined ? fieldValues : value;
+          const currentValues = value ?? fieldValues;
 
           return (
             <FieldLayout
@@ -346,9 +432,11 @@ export const CheckboxGroup = ({
               onBlur={mergeFieldHandler(field, 'handleBlur', onBlur)}
               // See standalone branch — FieldLayout carries dimWhole.
               disabled={disabled}>
-              {renderItems(currentValues, (newValues) => {
-                field.handleChange(newValues as any);
-              })}
+              {hasChildren
+                ? children
+                : itemsFor(currentValues, (newValues) => {
+                    field.handleChange(newValues);
+                  })}
             </FieldLayout>
           );
         }}

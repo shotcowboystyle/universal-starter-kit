@@ -10,15 +10,16 @@ import {
 import type { GroupOrientation, GroupPosition } from '@repo/theme';
 import type { ReactNode } from 'react';
 import { Image as TamaguiImage, View, isWeb } from 'tamagui';
+import type { ViewProps } from 'tamagui';
 
 import { Skeleton } from '../../Skeleton';
 
-import { isThumbnailSize, thumbnailPx as resolveThumbnailPx } from './shared';
-import type { ImagePlaceholder, ImageProps } from './types';
+import { hasThumbnailSize, isNumber, isString, thumbnailPx as resolveThumbnailPx } from './shared';
+import type { ImagePlaceholder, ImageProps, ImageStatus } from './types';
 
-export type ImageStatus = 'loading' | 'loaded' | 'error';
+export type { ImageStatus } from './types';
 
-export interface ImageFrameProps {
+export type ImageFrameProps = Omit<ViewProps, 'children' | 'onPress' | 'disabled'> & {
   children?: ReactNode;
   alt: string;
   fill?: boolean;
@@ -28,11 +29,7 @@ export interface ImageFrameProps {
   groupOrientation?: GroupOrientation;
   thumbnailPx?: number;
   size?: ImageProps['size'];
-  width?: unknown;
-  height?: unknown;
-  aspectRatio?: unknown;
-  borderRadius?: unknown;
-  objectFit?: string;
+  objectFit?: ImageProps['objectFit'];
   objectPosition?: string;
   // Accept the RN/Tamagui `onPress` shape ((event) => void | null | undefined);
   // the frame only ever calls it with zero args, so a bottom-arg type fits.
@@ -43,8 +40,7 @@ export interface ImageFrameProps {
   placeholder?: ImagePlaceholder;
   placeholderSrc?: string;
   fallback?: ReactNode;
-  [key: string]: unknown;
-}
+};
 
 const glyphSize = (px: number): number => Math.max(14, Math.min(28, Math.round(px * 0.42)));
 
@@ -65,6 +61,151 @@ const DefaultFallback = ({ px }: { px: number }) => {
       />
     </View>
   );
+};
+
+const hasText = (value: string | undefined): value is string => value !== undefined && value !== '';
+
+const resolveVisualPx = (
+  thumbnailPx: number | undefined,
+  width: ViewProps['width'],
+  height: ViewProps['height'],
+): number | undefined => {
+  if (thumbnailPx !== undefined) {
+    return thumbnailPx;
+  }
+  return isNumber(width) && isNumber(height) ? Math.min(width, height) : undefined;
+};
+
+const isHeightOnly = (opts: {
+  width: ViewProps['width'];
+  height: ViewProps['height'];
+  aspectRatio: ViewProps['aspectRatio'];
+  square: boolean;
+  fill: boolean;
+}): boolean => {
+  const onlyHeightGiven = opts.height !== undefined && opts.width === undefined && opts.aspectRatio === undefined;
+  return onlyHeightGiven && !opts.square && !opts.fill;
+};
+
+const resolveRadiusValue = (borderRadius: ViewProps['borderRadius'], fallback: string | number | undefined) =>
+  isString(borderRadius) || isNumber(borderRadius) ? borderRadius : fallback;
+
+const pressA11yProps = (opts: {
+  hasPress: boolean;
+  disabled: boolean;
+  alt: string;
+  onKeyDown: (e: { key?: string; preventDefault?: () => void }) => void;
+}) => {
+  if (!opts.hasPress) {
+    return isWeb ? null : { accessible: false };
+  }
+  if (isWeb) {
+    return {
+      role: 'button' as const,
+      tabIndex: opts.disabled ? -1 : 0,
+      'aria-label': opts.alt || undefined,
+      'aria-disabled': opts.disabled || undefined,
+      onKeyDown: opts.onKeyDown,
+    };
+  }
+  return {
+    accessibilityRole: 'button' as const,
+    accessibilityLabel: opts.alt || undefined,
+    accessibilityState: { disabled: opts.disabled },
+  };
+};
+
+const ImagePlaceholderLayer = ({
+  placeholder,
+  placeholderSrc,
+  objectFit,
+}: {
+  placeholder: ImagePlaceholder;
+  placeholderSrc?: string;
+  objectFit: ImageProps['objectFit'];
+}) => {
+  let content: ReactNode = placeholder;
+  if (placeholder === 'blur' && hasText(placeholderSrc)) {
+    content = (
+      <TamaguiImage
+        src={placeholderSrc}
+        alt=""
+        width="100%"
+        height="100%"
+        objectFit={objectFit ?? 'cover'}
+        {...(isWeb ? { style: { filter: 'blur(12px)' } } : { blurRadius: 12 })}
+      />
+    );
+  } else if (placeholder === 'blur' || placeholder === 'skeleton') {
+    content = (
+      <Skeleton
+        width="100%"
+        height="100%"
+        variant="rounded"
+      />
+    );
+  }
+  return (
+    <View
+      position="absolute"
+      top={0}
+      left={0}
+      right={0}
+      bottom={0}
+      pointerEvents="none">
+      {content}
+    </View>
+  );
+};
+
+type KnobControl = ReturnType<typeof useResolvedKnobs>['control'];
+
+const frameSizing = (opts: {
+  fill: boolean;
+  thumbnailPx: number | undefined;
+  width: ViewProps['width'];
+  height: ViewProps['height'];
+  aspectRatio: ViewProps['aspectRatio'];
+}) => {
+  const { fill, thumbnailPx, width, height, aspectRatio } = opts;
+  const square = thumbnailPx != null;
+  const dimensions = square
+    ? { width: thumbnailPx, height: thumbnailPx, aspectRatio: 1 }
+    : { width, height, aspectRatio };
+  const heightOnly = isHeightOnly({ width, height, aspectRatio, square, fill });
+  return {
+    dimensionProps: fill ? null : dimensions,
+    heightOnlyProps: heightOnly ? ({ width: 'auto', alignSelf: 'flex-start' } as const) : null,
+  };
+};
+
+const pressChromeProps = (opts: {
+  interactive: boolean;
+  disabled: boolean;
+  framed: boolean;
+  control: KnobControl;
+  onPress: ImageFrameProps['onPress'];
+  hitSlopPx: number | undefined;
+  minTarget: ReturnType<typeof pressTargetStyle> | undefined;
+}) => {
+  const { interactive, framed, control } = opts;
+  const stateStyle = (framedStyle: ViewProps['hoverStyle'], plainStyle: ViewProps['hoverStyle']) => {
+    const style = framed ? framedStyle : plainStyle;
+    return interactive ? style : undefined;
+  };
+  return {
+    cursor: opts.disabled ? 'not-allowed' : 'pointer',
+    outlineWidth: 0,
+    hoverStyle: stateStyle(control.hoverKnobProps, { opacity: 0.92 }),
+    pressStyle: stateStyle(control.pressKnobProps, { opacity: 0.85 }),
+    focusVisibleStyle: interactive ? control.focusVisibleKnobProps : undefined,
+    // onPress rides in loose (zero-or-event) so callers can forward the
+    // RN/Tamagui handler; re-emit it to the View as an event handler.
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- SAFETY: the frame invokes onPress with zero args, and RN/Tamagui press handlers treat the event as optional
+    onPress: interactive ? (opts.onPress as ViewProps['onPress']) : undefined,
+    ...(opts.hitSlopPx === undefined ? null : { hitSlop: pressTargetHitSlop(opts.hitSlopPx) }),
+    ...opts.minTarget,
+  } as const;
 };
 
 export const ImageFrame = ({
@@ -100,36 +241,22 @@ export const ImageFrame = ({
   const position = groupPosition ?? ctxPosition;
   const nestedPx = knobProps.nestedControl.px;
   const thumbnailPx =
-    thumbnailPxProp ??
-    (size != null && (isThumbnailSize(size) || typeof size === 'number')
-      ? resolveThumbnailPx(size, nestedPx, compact)
-      : undefined);
+    thumbnailPxProp ?? (hasThumbnailSize(size) ? resolveThumbnailPx(size, nestedPx, compact) : undefined);
   const hasPress = Boolean(onPress);
   const interactive = hasPress && !disabled;
-  const visualPx =
-    thumbnailPx ?? (typeof width === 'number' && typeof height === 'number' ? Math.min(width, height) : undefined);
+  const visualPx = resolveVisualPx(thumbnailPx, width, height);
   const needsHitSlop = hasPress && visualPx != null && visualPx < MIN_PRESS_TARGET;
   const minTarget = hasPress && visualPx == null ? pressTargetStyle() : undefined;
 
   // Live-media tile: unclamped scale radius. Never `containerRadius` /
   // `cardSurface` — those carry CONTAINER-CAP padding a tile does not have.
   const radiusToken = knobProps.borderRadius.borderRadius;
-  const radiusValue = (borderRadiusProp as string | number | undefined) ?? radiusToken;
+  const radiusValue = resolveRadiusValue(borderRadiusProp, radiusToken);
   const radiusFragment = position
     ? stackRadiusProps(position, radiusValue, groupOrientation)
     : { ...knobProps.borderRadius, borderRadius: radiusValue };
 
-  const heightOnly =
-    typeof height !== 'undefined' &&
-    typeof width === 'undefined' &&
-    typeof aspectRatio === 'undefined' &&
-    thumbnailPx == null &&
-    !fill;
-
-  const square = thumbnailPx != null;
-  const frameWidth = square ? thumbnailPx : width;
-  const frameHeight = square ? thumbnailPx : height;
-  const frameAspect = square ? 1 : aspectRatio;
+  const { dimensionProps, heightOnlyProps } = frameSizing({ fill, thumbnailPx, width, height, aspectRatio });
   const fallbackPx = visualPx ?? nestedPx;
 
   const showPlaceholder = status === 'loading' && placeholder != null && placeholder !== 'empty' && hasSource;
@@ -145,24 +272,7 @@ export const ImageFrame = ({
     }
   };
 
-  const pressA11y = hasPress
-    ? isWeb
-      ? {
-          role: 'button' as const,
-          tabIndex: disabled ? -1 : 0,
-          'aria-label': alt || undefined,
-          'aria-disabled': disabled || undefined,
-          onKeyDown: handleKeyDown,
-        }
-      : {
-          accessibilityRole: 'button' as const,
-          accessibilityLabel: alt || undefined,
-          accessibilityState: { disabled },
-        }
-    : isWeb
-      ? null
-      : { accessible: false };
-
+  const pressA11y = pressA11yProps({ hasPress, disabled, alt, onKeyDown: handleKeyDown });
   const painted = (
     <View
       data-image-frame=""
@@ -172,24 +282,21 @@ export const ImageFrame = ({
       overflow="hidden"
       position={fill ? 'absolute' : 'relative'}
       {...(fill ? { top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' } : null)}
-      {...(!fill && frameWidth != null ? { width: frameWidth as never } : null)}
-      {...(!fill && frameHeight != null ? { height: frameHeight as never } : null)}
-      {...(!fill && frameAspect != null ? { aspectRatio: frameAspect as never } : null)}
-      {...(heightOnly ? { width: 'auto', alignSelf: 'flex-start' } : null)}
+      {...dimensionProps}
+      {...heightOnlyProps}
       {...radiusFragment}
       {...(framed ? knobProps.surface : { borderWidth: 0 })}
       {...(hasPress
         ? {
-            cursor: disabled ? 'not-allowed' : 'pointer',
-            outlineWidth: 0,
-            hoverStyle: interactive ? (framed ? control.hoverKnobProps : { opacity: 0.92 }) : undefined,
-            pressStyle: interactive ? (framed ? control.pressKnobProps : { opacity: 0.85 }) : undefined,
-            focusVisibleStyle: interactive ? control.focusVisibleKnobProps : undefined,
-            // onPress rides in loose (zero-or-event) so callers can forward the
-            // RN/Tamagui handler; re-emit it to the View as an event handler.
-            onPress: interactive ? (onPress as ((...args: unknown[]) => void) | undefined) : undefined,
-            ...(!isWeb && needsHitSlop ? { hitSlop: pressTargetHitSlop(visualPx ?? nestedPx) } : null),
-            ...minTarget,
+            ...pressChromeProps({
+              interactive,
+              disabled,
+              framed,
+              control,
+              onPress,
+              hitSlopPx: !isWeb && needsHitSlop ? (visualPx ?? nestedPx) : undefined,
+              minTarget,
+            }),
             ...pressA11y,
           }
         : pressA11y)}
@@ -201,32 +308,11 @@ export const ImageFrame = ({
         <>
           {children}
           {showPlaceholder ? (
-            <View
-              position="absolute"
-              top={0}
-              left={0}
-              right={0}
-              bottom={0}
-              pointerEvents="none">
-              {placeholder === 'blur' && placeholderSrc ? (
-                <TamaguiImage
-                  src={placeholderSrc}
-                  alt=""
-                  width="100%"
-                  height="100%"
-                  objectFit={(objectFit as never) ?? 'cover'}
-                  {...(isWeb ? { style: { filter: 'blur(12px)' } } : { blurRadius: 12 })}
-                />
-              ) : placeholder === 'blur' || placeholder === 'skeleton' ? (
-                <Skeleton
-                  width="100%"
-                  height="100%"
-                  variant="rounded"
-                />
-              ) : (
-                placeholder
-              )}
-            </View>
+            <ImagePlaceholderLayer
+              placeholder={placeholder}
+              placeholderSrc={placeholderSrc}
+              objectFit={objectFit}
+            />
           ) : null}
         </>
       )}
@@ -246,30 +332,4 @@ export const ImageFrame = ({
   }
 
   return painted;
-};
-
-export const mediaFillProps = (opts: {
-  fill: boolean;
-  thumbnail: boolean;
-  width?: unknown;
-  height?: unknown;
-  aspectRatio?: unknown;
-  objectFit?: string;
-  objectPosition?: string;
-}): Record<string, unknown> => {
-  const constrained =
-    opts.fill ||
-    opts.thumbnail ||
-    (opts.width != null && opts.height != null) ||
-    (opts.width != null && opts.aspectRatio != null) ||
-    (opts.height != null && opts.aspectRatio != null);
-  const heightOnly =
-    opts.height != null && opts.width == null && opts.aspectRatio == null && !opts.fill && !opts.thumbnail;
-  return {
-    width: constrained ? '100%' : heightOnly ? 'auto' : opts.width == null ? undefined : '100%',
-    height: constrained ? '100%' : heightOnly ? '100%' : undefined,
-    objectFit: opts.objectFit,
-    ...(opts.objectPosition ? { objectPosition: opts.objectPosition } : null),
-    display: 'block',
-  };
 };

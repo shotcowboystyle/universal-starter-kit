@@ -8,10 +8,10 @@ import { formFieldGap, formReadableMaxWidth, formSectionGap } from './form-spaci
 import { FORM_GRID_COLLAPSE_WIDTH, FormGrid } from './FormGrid';
 import { FormSection, FormSectionStack } from './FormSection';
 
-afterEach(() => {
+const restoreStubs = () => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
-});
+};
 
 const stubContainerWidth = (width: number) => {
   vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
@@ -29,12 +29,14 @@ const stubContainerWidth = (width: number) => {
   vi.stubGlobal(
     'ResizeObserver',
     class {
-      cb: ResizeObserverCallback;
-      constructor(cb: ResizeObserverCallback) {
-        this.cb = cb;
+      readonly #notify: ResizeObserverCallback;
+      readonly unobserve = vi.fn<() => void>();
+      readonly disconnect = vi.fn<() => void>();
+      constructor(notify: ResizeObserverCallback) {
+        this.#notify = notify;
       }
       observe(target: Element) {
-        this.cb(
+        this.#notify(
           [
             {
               target,
@@ -47,13 +49,13 @@ const stubContainerWidth = (width: number) => {
           this as unknown as ResizeObserver,
         );
       }
-      unobserve() {}
-      disconnect() {}
     },
   );
 };
 
 describe('formSpacing tokens', () => {
+  afterEach(restoreStubs);
+
   it('encodes section gap larger than field gap', () => {
     expect(formFieldGap).toBe('$4');
     expect(formSectionGap).toBe('$8');
@@ -66,7 +68,9 @@ describe('formSpacing tokens', () => {
   });
 });
 
-describe('FormGrid', () => {
+describe(FormGrid, () => {
+  afterEach(restoreStubs);
+
   it('defaults to a single column', () => {
     const result = renderWithProviders(
       <FormGrid>
@@ -74,14 +78,14 @@ describe('FormGrid', () => {
         <div>b</div>
       </FormGrid>,
     );
-    const grid = result.container.querySelector('[data-mpo-form-grid]');
+    const grid = result.container.querySelector<HTMLElement>('[data-mpo-form-grid]');
     expect(grid).toBeTruthy();
-    expect(grid?.getAttribute('data-columns')).toBe('1');
-    expect(grid?.getAttribute('data-requested-columns')).toBe('1');
-    expect(grid?.getAttribute('data-max-columns')).toBe('2');
-    expect(grid?.getAttribute('data-gap')).toBe('$4');
-    expect(grid?.getAttribute('data-density')).toBe('comfortable');
-    expect(grid?.getAttribute('data-size')).toBe('medium');
+    expect(grid?.dataset.columns).toBe('1');
+    expect(grid?.dataset.requestedColumns).toBe('1');
+    expect(grid?.dataset.maxColumns).toBe('2');
+    expect(grid?.dataset.gap).toBe('$4');
+    expect(grid?.dataset.density).toBe('comfortable');
+    expect(grid?.dataset.size).toBe('medium');
   });
 
   it('caps columns at maxColumns', () => {
@@ -94,9 +98,9 @@ describe('FormGrid', () => {
         <div>b</div>
       </FormGrid>,
     );
-    const grid = result.container.querySelector('[data-mpo-form-grid]');
-    expect(grid?.getAttribute('data-requested-columns')).toBe('1');
-    expect(grid?.getAttribute('data-columns')).toBe('1');
+    const grid = result.container.querySelector<HTMLElement>('[data-mpo-form-grid]');
+    expect(grid?.dataset.requestedColumns).toBe('1');
+    expect(grid?.dataset.columns).toBe('1');
   });
 
   it('uses 2 columns when requested and container is wide', () => {
@@ -110,9 +114,9 @@ describe('FormGrid', () => {
         </FormGrid>,
       );
     });
-    const grid = result.container.querySelector('[data-mpo-form-grid]') as HTMLElement;
-    expect(grid.getAttribute('data-requested-columns')).toBe('2');
-    expect(grid.getAttribute('data-columns')).toBe('2');
+    const grid = result.container.querySelector<HTMLElement>('[data-mpo-form-grid]')!;
+    expect(grid.dataset.requestedColumns).toBe('2');
+    expect(grid.dataset.columns).toBe('2');
     expect(grid.style.gridTemplateColumns).toBe('repeat(2, minmax(0, 1fr))');
   });
 
@@ -127,9 +131,9 @@ describe('FormGrid', () => {
         </FormGrid>,
       );
     });
-    const grid = result.container.querySelector('[data-mpo-form-grid]') as HTMLElement;
-    expect(grid.getAttribute('data-requested-columns')).toBe('2');
-    expect(grid.getAttribute('data-columns')).toBe('1');
+    const grid = result.container.querySelector<HTMLElement>('[data-mpo-form-grid]')!;
+    expect(grid.dataset.requestedColumns).toBe('2');
+    expect(grid.dataset.columns).toBe('1');
     expect(grid.style.gridTemplateColumns).toBe('repeat(1, minmax(0, 1fr))');
   });
 
@@ -141,9 +145,9 @@ describe('FormGrid', () => {
         </FormGrid>
       </Preset>,
     );
-    const grid = result.container.querySelector('[data-mpo-form-grid]');
-    expect(grid?.getAttribute('data-gap')).toBe('$2');
-    expect(grid?.getAttribute('data-size')).toBe('large');
+    const grid = result.container.querySelector<HTMLElement>('[data-mpo-form-grid]');
+    expect(grid?.dataset.gap).toBe('$2');
+    expect(grid?.dataset.size).toBe('large');
   });
 
   it('compact steps space down without reading sizeToken as gap', () => {
@@ -152,10 +156,10 @@ describe('FormGrid', () => {
         <div>a</div>
       </FormGrid>,
     );
-    const grid = result.container.querySelector('[data-mpo-form-grid]');
-    expect(grid?.getAttribute('data-density')).toBe('compact');
-    expect(grid?.getAttribute('data-size')).toBe('medium');
-    expect(grid?.getAttribute('data-gap')).toBe('$2');
+    const grid = result.container.querySelector<HTMLElement>('[data-mpo-form-grid]');
+    expect(grid?.dataset.density).toBe('compact');
+    expect(grid?.dataset.size).toBe('medium');
+    expect(grid?.dataset.gap).toBe('$2');
   });
 
   it('spreads the space-recipe gap fragment (not a raw 16)', () => {
@@ -166,12 +170,14 @@ describe('FormGrid', () => {
         </FormGrid>
       </Preset>,
     );
-    const grid = result.container.querySelector('[data-mpo-form-grid]');
-    expect(grid?.getAttribute('data-gap')).toBe('$5');
+    const grid = result.container.querySelector<HTMLElement>('[data-mpo-form-grid]');
+    expect(grid?.dataset.gap).toBe('$5');
   });
 });
 
-describe('FieldGroup', () => {
+describe(FieldGroup, () => {
+  afterEach(restoreStubs);
+
   it('renders a fieldset legend on web', () => {
     const result = renderWithProviders(
       <FieldGroup legend="Billing">
@@ -194,7 +200,7 @@ describe('FieldGroup', () => {
       </FieldGroup>,
     );
     expect(result.container.querySelector('[data-mpo-form-grid]')).toBeTruthy();
-    expect(result.container.querySelector('[data-mpo-field-group]')?.getAttribute('data-columns')).toBe('2');
+    expect(result.container.querySelector<HTMLElement>('[data-mpo-field-group]')?.dataset.columns).toBe('2');
   });
 
   it('field gap follows space, not size (density≠size)', () => {
@@ -205,13 +211,15 @@ describe('FieldGroup', () => {
         </FieldGroup>
       </Preset>,
     );
-    const group = result.container.querySelector('[data-mpo-field-group]');
-    expect(group?.getAttribute('data-field-gap')).toBe('$2');
-    expect(group?.getAttribute('data-size')).toBe('large');
+    const group = result.container.querySelector<HTMLElement>('[data-mpo-field-group]');
+    expect(group?.dataset.fieldGap).toBe('$2');
+    expect(group?.dataset.size).toBe('large');
   });
 });
 
-describe('FormSection', () => {
+describe(FormSection, () => {
+  afterEach(restoreStubs);
+
   it('renders label and section marker', () => {
     const result = renderWithProviders(
       <FormSection label="Details">
@@ -269,13 +277,13 @@ describe('FormSection semantic gaps', () => {
         </FormSection>
       </FormSectionStack>,
     );
-    const section = result.container.querySelector('[data-mpo-form-section]');
-    const stack = result.container.querySelector('[data-mpo-form-section-stack]');
+    const section = result.container.querySelector<HTMLElement>('[data-mpo-form-section]');
+    const stack = result.container.querySelector<HTMLElement>('[data-mpo-form-section-stack]');
     // knob defaults: gap $4 (within-group), gapLg $5 (between-groups)
-    expect(section?.getAttribute('data-field-gap')).toBe('$4');
-    expect(stack?.getAttribute('data-section-gap')).toBe('$5');
-    const fieldStep = Number(section?.getAttribute('data-field-gap')?.slice(1));
-    const sectionStep = Number(stack?.getAttribute('data-section-gap')?.slice(1));
+    expect(section?.dataset.fieldGap).toBe('$4');
+    expect(stack?.dataset.sectionGap).toBe('$5');
+    const fieldStep = Number(section?.dataset.fieldGap?.slice(1));
+    const sectionStep = Number(stack?.dataset.sectionGap?.slice(1));
     expect(sectionStep).toBeGreaterThan(fieldStep);
   });
 
@@ -289,10 +297,10 @@ describe('FormSection semantic gaps', () => {
         </FormSectionStack>
       </Preset>,
     );
-    const section = result.container.querySelector('[data-mpo-form-section]');
-    const stack = result.container.querySelector('[data-mpo-form-section-stack]');
-    expect(section?.getAttribute('data-field-gap')).toBe('$2');
-    expect(stack?.getAttribute('data-section-gap')).toBe('$3');
+    const section = result.container.querySelector<HTMLElement>('[data-mpo-form-section]');
+    const stack = result.container.querySelector<HTMLElement>('[data-mpo-form-section-stack]');
+    expect(section?.dataset.fieldGap).toBe('$2');
+    expect(stack?.dataset.sectionGap).toBe('$3');
   });
 
   it('explicit gap props eject from the knob defaults', () => {
@@ -305,9 +313,9 @@ describe('FormSection semantic gaps', () => {
         </FormSection>
       </FormSectionStack>,
     );
-    const section = result.container.querySelector('[data-mpo-form-section]');
-    const stack = result.container.querySelector('[data-mpo-form-section-stack]');
-    expect(section?.getAttribute('data-field-gap')).toBe('$1');
-    expect(stack?.getAttribute('data-section-gap')).toBe('$10');
+    const section = result.container.querySelector<HTMLElement>('[data-mpo-form-section]');
+    const stack = result.container.querySelector<HTMLElement>('[data-mpo-form-section-stack]');
+    expect(section?.dataset.fieldGap).toBe('$1');
+    expect(stack?.dataset.sectionGap).toBe('$10');
   });
 });

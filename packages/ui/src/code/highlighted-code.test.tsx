@@ -20,7 +20,7 @@ const tokens: HighlightLine[] = [
   [{ content: 'return x;', color: '#0000ff', fontStyle: 1 }],
 ];
 
-describe('HighlightedCode', () => {
+describe(HighlightedCode, () => {
   it('renders the raw children as fallback while tokens are loading', () => {
     const { container } = renderWithProviders(<HighlightedCode tokens={null}>plain fallback</HighlightedCode>);
     expect(container.textContent).toContain('plain fallback');
@@ -50,7 +50,7 @@ describe('HighlightedCode', () => {
         ]}
       />,
     );
-    const spans = Array.from(container.querySelectorAll('span'));
+    const spans = [...container.querySelectorAll('span')];
     const bold = spans.find((el) => el.textContent === 'boldtok');
     const plain = spans.find((el) => el.textContent === 'plaintok');
     const italic = spans.find((el) => el.textContent === 'italictok');
@@ -89,7 +89,7 @@ describe('HighlightedCode', () => {
     // newline. Theme wrappers (display: contents) share the same text, so
     // take the DEEPEST matching span — the styled line element itself.
     const lineWrapper = (text: string): HTMLElement => {
-      const matches = Array.from(container.querySelectorAll('span')).filter((el) => el.textContent === `${text}\n`);
+      const matches = [...container.querySelectorAll('span')].filter((el) => el.textContent === `${text}\n`);
       const deepest = matches.filter((el) => !matches.some((other) => other !== el && el.contains(other)));
       expect(deepest).toHaveLength(1);
       return deepest[0] as HTMLElement;
@@ -111,7 +111,7 @@ describe('HighlightedCode', () => {
     const gutter = container.querySelector('[data-line-number]') as HTMLElement | null;
     expect(gutter).toBeTruthy();
     expect(gutter?.textContent).toMatch(/1/u);
-    const width = Number.parseFloat(getComputedStyle(gutter!).width);
+    const width = Number(getComputedStyle(gutter!).width.replace(/px$/u, ''));
     expect(width).toBeGreaterThanOrEqual(40);
   });
 
@@ -127,7 +127,7 @@ describe('HighlightedCode', () => {
     const line = container.querySelector('[data-code-font]') as HTMLElement | null;
     expect(line).toBeTruthy();
     expect(container.textContent).toContain('const');
-    expect(line!.getAttribute('data-code-font')).toBe('mono');
+    expect(line!.dataset.codeFont).toBe('mono');
     // The actual pin: bodyFont serif / fontWeight bold must not reach
     // code text, so the line keeps the mono family class.
     expect(line!.className).toContain('font_mono');

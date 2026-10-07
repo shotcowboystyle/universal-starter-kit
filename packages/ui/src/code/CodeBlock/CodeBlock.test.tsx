@@ -8,8 +8,8 @@ import { Pre } from '../Pre';
 
 import { CodeBlock } from './index';
 
-vi.mock('../Highlighter', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../Highlighter')>();
+vi.mock(import('../Highlighter'), async (importOriginal) => {
+  const actual = await importOriginal();
   return {
     ...actual,
     useShikiTokens: (code: string) => code.split('\n').map((line) => [{ content: line }]),
@@ -23,7 +23,7 @@ describe('CodeBlock rendering', () => {
   it('should render Pre + Code combination successfully', () => {
     const { container } = renderWithProviders(
       <Pre>
-        <Code>const test = "hello";</Code>
+        <Code>const test = &quot;hello&quot;;</Code>
       </Pre>,
     );
     const preElement = container.querySelector('pre');
@@ -36,7 +36,7 @@ describe('CodeBlock rendering', () => {
   it('should render with language-specific class', () => {
     const { container } = renderWithProviders(
       <Pre>
-        <Code className="language-typescript">const greeting: string = "hello"</Code>
+        <Code className="language-typescript">const greeting: string = &quot;hello&quot;</Code>
       </Pre>,
     );
     const codeElement = container.querySelector('code');
@@ -47,12 +47,12 @@ describe('CodeBlock rendering', () => {
   it('should update content when changed', () => {
     const { container, rerender } = renderWithProviders(
       <Pre>
-        <Code>const initial = "hello";</Code>
+        <Code>const initial = &quot;hello&quot;;</Code>
       </Pre>,
     );
     rerender(
       <Pre>
-        <Code>const updated = "world";</Code>
+        <Code>const updated = &quot;world&quot;;</Code>
       </Pre>,
     );
     expect(container.textContent).toContain('const updated = "world";');
@@ -84,16 +84,16 @@ function greet() {
   });
 });
 
-describe('CodeBlock', () => {
+describe(CodeBlock, () => {
   it('keeps the copy action reachable at the 44px press floor', () => {
     renderWithProviders(<CodeBlock>const x = 1;</CodeBlock>);
     const button = screen.getByLabelText('Copy to clipboard');
     expect(button).toBeTruthy();
-    expect(button.getAttribute('data-press-min')).toBe(String(MIN_PRESS_TARGET));
+    expect(button.dataset.pressMin).toBe(String(MIN_PRESS_TARGET));
     // Default knob: the glyph-ring end-cap square itself meets the floor
     // (44). Smaller size steps keep the floor by spilling hitSlop instead
     // (CodeBlock.copy.spec covers the 36/52 cap geometry).
-    expect(Number(button.getAttribute('data-end-cap'))).toBeGreaterThanOrEqual(MIN_PRESS_TARGET);
+    expect(Number(button.dataset.endCap)).toBeGreaterThanOrEqual(MIN_PRESS_TARGET);
     const style = getComputedStyle(button);
     expect(style.display).not.toBe('none');
   });

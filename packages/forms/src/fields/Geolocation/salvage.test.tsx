@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { TableCellContext } from '../../shared/table-cell-context';
 
-import type { GeocodeResult } from './geocoder';
+import type { GeocodeFn, GeocodeResult, ReverseGeocodeFn } from './geocoder';
 
 import { Geolocation } from './index';
 import type { GeolocationProps } from './index';
@@ -38,14 +38,20 @@ const original = JSON.stringify({
 });
 
 const input = (container: HTMLElement) =>
-  container.querySelector("[aria-label='Search for a location']") as HTMLInputElement;
+  container.querySelector<HTMLInputElement>("[aria-label='Search for a location']")!;
 const deferred = <T,>() => {
-  let resolve!: (value: T) => void;
-  const promise = new Promise<T>((done) => {
-    resolve = done;
+  let settle!: (value: T) => void;
+  // oxlint-disable-next-line promise/avoid-new -- a test deferred hands its resolver out of the executor
+  const promise = new Promise<T>((resolve) => {
+    settle = resolve;
   });
-  return { promise, resolve };
+  return { promise, resolve: settle };
 };
+
+const editableOutsideCell = { inTableCell: false, isHeader: false, editable: true };
+const editableInCell = { inTableCell: true, isHeader: false, editable: true };
+const readOnlyOutsideCell = { inTableCell: false, isHeader: false, editable: false };
+const readOnlyInCell = { inTableCell: true, isHeader: false, editable: false };
 const Controlled = (props: GeolocationProps) => {
   const [value, setValue] = useState(props.value ?? '');
   return (
@@ -69,7 +75,7 @@ describe('Geolocation salvage regressions', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it.each([false, true])('does not display a rejected controlled pick as fact (cell=%s)', async (cell) => {
-    const onChange = vi.fn();
+    const onChange = vi.fn<(value: string) => void>();
     const props = {
       value: helsinkiValue,
       geocode: async () => [sydney],
@@ -77,7 +83,7 @@ describe('Geolocation salvage regressions', () => {
       renderMap: boundMap,
     };
     const result = renderWithProviders(
-      <TableCellContext.Provider value={{ inTableCell: false, isHeader: false, editable: true }}>
+      <TableCellContext.Provider value={editableOutsideCell}>
         <Geolocation {...props} />
       </TableCellContext.Provider>,
     );
@@ -85,11 +91,11 @@ describe('Geolocation salvage regressions', () => {
     await waitFor(() => {
       expect(document.querySelector("[data-testid='geolocation-result-0']")).not.toBeNull();
     });
-    fireEvent.click(document.querySelector("[data-testid='geolocation-result-0']") as Element);
+    fireEvent.click(document.querySelector("[data-testid='geolocation-result-0']")!);
     expect(onChange).toHaveBeenCalledExactlyOnceWith(sydneyValue);
     expect(input(result.container).value).toBe('Sydney');
     result.rerender(
-      <TableCellContext.Provider value={{ inTableCell: cell, isHeader: false, editable: false }}>
+      <TableCellContext.Provider value={cell ? readOnlyInCell : readOnlyOutsideCell}>
         <Geolocation
           {...props}
           readOnly
@@ -98,14 +104,13 @@ describe('Geolocation salvage regressions', () => {
     );
     const face = result.getByTestId(cell ? 'geolocation-cell-face' : 'geolocation-readonly-address');
     expect(face.textContent).toBe('60.16952, 24.93545');
-    if (!cell) {
-      expect(result.getByTestId('bound-map').textContent).toBe('60.16952,24.93545');
-    }
+    const boundMapText = cell ? null : result.getByTestId('bound-map').textContent;
+    expect(boundMapText).toBe(cell ? null : '60.16952,24.93545');
   });
 
   it("shows the current pair while a new controlled value's address is pending", async () => {
     const pending = deferred<GeocodeResult | null>();
-    const reverseGeocode = vi.fn(async ({ lat }: { lat: number }) =>
+    const reverseGeocode = vi.fn<ReverseGeocodeFn>(async ({ lat }) =>
       lat === place.lat ? await Promise.resolve(place) : await pending.promise,
     );
     const props = { value: helsinkiValue, readOnly: true, reverseGeocode, renderMap: boundMap };
@@ -145,7 +150,7 @@ describe('Geolocation salvage regressions', () => {
     await waitFor(() => {
       expect(document.querySelector("[data-testid='geolocation-result-0']")).not.toBeNull();
     });
-    fireEvent.click(document.querySelector("[data-testid='geolocation-result-0']") as Element);
+    fireEvent.click(document.querySelector("[data-testid='geolocation-result-0']")!);
     result.rerender(
       <Geolocation
         {...props}
@@ -157,7 +162,7 @@ describe('Geolocation salvage regressions', () => {
   });
 
   it('uses a picked address only after delayed acceptance and preserves a later typed draft', async () => {
-    const onChange = vi.fn();
+    const onChange = vi.fn<(value: string) => void>();
     const props = {
       value: helsinkiValue,
       geocode: async () => [sydney],
@@ -169,7 +174,7 @@ describe('Geolocation salvage regressions', () => {
     await waitFor(() => {
       expect(document.querySelector("[data-testid='geolocation-result-0']")).not.toBeNull();
     });
-    fireEvent.click(document.querySelector("[data-testid='geolocation-result-0']") as Element);
+    fireEvent.click(document.querySelector("[data-testid='geolocation-result-0']")!);
     result.rerender(
       <Geolocation
         {...props}
@@ -229,7 +234,7 @@ describe('Geolocation salvage regressions', () => {
   it.each(['Helsinki', '60.16952, 24.93545'])(
     'preserves Frappe features when picking %s and pans the controlled map',
     async (query) => {
-      const onChange = vi.fn();
+      const onChange = vi.fn<(value: string) => void>();
       const result = renderWithProviders(
         <Controlled
           value={original}
@@ -242,13 +247,12 @@ describe('Geolocation salvage regressions', () => {
       await waitFor(() => {
         expect(document.querySelector(`[data-testid='${selector}']`)).not.toBeNull();
       });
-      fireEvent.click(document.querySelector(`[data-testid='${selector}']`) as Element);
+      fireEvent.click(document.querySelector(`[data-testid='${selector}']`)!);
       await waitFor(() => {
         expect(result.getByTestId('map-center').textContent).toBe('60.16952,24.93545');
       });
-      if (query === 'Helsinki') {
-        expect(input(result.container).value).toBe('Helsinki');
-      }
+      const typedValue = query === 'Helsinki' ? input(result.container).value : null;
+      expect(typedValue).toBe(query === 'Helsinki' ? 'Helsinki' : null);
       const value = JSON.parse(onChange.mock.calls[0][0]);
       expect(value.type).toBe('FeatureCollection');
       expect(value.features[0].geometry.coordinates).toStrictEqual([place.lng, place.lat]);
@@ -259,11 +263,11 @@ describe('Geolocation salvage regressions', () => {
 
   it('ignores search responses after the query is cleared', async () => {
     const pending = deferred<GeocodeResult[]>();
-    const geocode = vi.fn(async () => await pending.promise);
+    const geocode = vi.fn<GeocodeFn>(async () => await pending.promise);
     const result = renderWithProviders(<Geolocation geocode={geocode} />);
     fireEvent.change(input(result.container), { target: { value: 'old' } });
     await waitFor(() => {
-      expect(geocode).toHaveBeenCalled();
+      expect(geocode).toHaveBeenCalledWith({ query: 'old' });
     });
     fireEvent.change(input(result.container), { target: { value: '' } });
     await act(async () => {
@@ -274,7 +278,7 @@ describe('Geolocation salvage regressions', () => {
 
   it('ignores reverse responses after clearing a controlled value', async () => {
     const pending = deferred<GeocodeResult | null>();
-    const reverseGeocode = vi.fn(async () => await pending.promise);
+    const reverseGeocode = vi.fn<ReverseGeocodeFn>(async () => await pending.promise);
     const result = renderWithProviders(
       <Controlled
         value={original}
@@ -283,10 +287,10 @@ describe('Geolocation salvage regressions', () => {
       />,
     );
     await waitFor(() => {
-      expect(reverseGeocode).toHaveBeenCalled();
+      expect(reverseGeocode).toHaveBeenCalledWith({ lat: 10, lng: 20 });
     });
     fireEvent.change(input(result.container), { target: { value: 'clear me' } });
-    fireEvent.click(result.container.querySelector("[aria-label='Clear location']") as Element);
+    fireEvent.click(result.container.querySelector("[aria-label='Clear location']")!);
     await act(async () => {
       pending.resolve(place);
     });
@@ -314,20 +318,20 @@ describe('Geolocation salvage regressions', () => {
     const result = renderWithProviders(<Controlled />);
     const trigger = result.container.querySelector("[aria-label='Edit coordinates']");
     expect(trigger).not.toBeNull();
-    fireEvent.click(trigger as Element);
+    fireEvent.click(trigger!);
     await waitFor(() => {
       expect(document.querySelector("[aria-label='Latitude']")).not.toBeNull();
     });
-    fireEvent.change(document.querySelector("[aria-label='Latitude']") as Element, {
+    fireEvent.change(document.querySelector("[aria-label='Latitude']")!, {
       target: { value: '10' },
     });
     expect(result.getByTestId('map-center').textContent).toBe('10,0');
   });
 
   it('opens a cell editor with manual coordinates and commits without a provider', async () => {
-    const onChange = vi.fn();
+    const onChange = vi.fn<(value: string) => void>();
     const result = renderWithProviders(
-      <TableCellContext.Provider value={{ inTableCell: true, isHeader: false, editable: true }}>
+      <TableCellContext.Provider value={editableInCell}>
         <Controlled
           value={original}
           onChange={onChange}
@@ -340,18 +344,18 @@ describe('Geolocation salvage regressions', () => {
     await waitFor(() => {
       expect(document.querySelector("[aria-label='Edit coordinates']")).not.toBeNull();
     });
-    fireEvent.click(document.querySelector("[aria-label='Edit coordinates']") as Element);
+    fireEvent.click(document.querySelector("[aria-label='Edit coordinates']")!);
     await waitFor(() => {
       expect(document.querySelector("[aria-label='Latitude']")).not.toBeNull();
     });
-    fireEvent.change(document.querySelector("[aria-label='Latitude']") as Element, {
+    fireEvent.change(document.querySelector("[aria-label='Latitude']")!, {
       target: { value: '11' },
     });
     expect(JSON.parse(onChange.mock.calls[0][0]).features[0].geometry.coordinates).toStrictEqual([20, 11]);
   });
 
   it('selects a search result with the keyboard', async () => {
-    const onChange = vi.fn();
+    const onChange = vi.fn<(value: string) => void>();
     const result = renderWithProviders(
       <Controlled
         geocode={async () => [place]}
@@ -362,7 +366,7 @@ describe('Geolocation salvage regressions', () => {
     await waitFor(() => {
       expect(document.querySelector("[data-testid='geolocation-result-0']")).not.toBeNull();
     });
-    const row = document.querySelector("[data-testid='geolocation-result-0']") as HTMLElement;
+    const row = document.querySelector<HTMLElement>("[data-testid='geolocation-result-0']")!;
     expect(row.tabIndex).toBe(0);
     fireEvent.keyDown(row, { key: 'Enter' });
     expect(onChange).toHaveBeenCalledWith(JSON.stringify({ lat: place.lat, lng: place.lng }));
@@ -373,7 +377,7 @@ describe('Geolocation salvage regressions', () => {
   });
 
   it.each(['Enter', ' '])('clears the selected value from the keyboard with %s', async (key) => {
-    const onChange = vi.fn();
+    const onChange = vi.fn<(value: string) => void>();
     const result = renderWithProviders(
       <Controlled
         value={original}
@@ -382,7 +386,7 @@ describe('Geolocation salvage regressions', () => {
       />,
     );
     fireEvent.change(input(result.container), { target: { value: 'clear me' } });
-    const clear = result.container.querySelector("[aria-label='Clear location']") as HTMLElement;
+    const clear = result.container.querySelector<HTMLElement>("[aria-label='Clear location']")!;
     expect(clear.tabIndex).toBe(0);
     fireEvent.keyDown(clear, { key });
     expect(onChange).toHaveBeenCalledExactlyOnceWith('');
@@ -396,7 +400,7 @@ describe('Geolocation salvage regressions', () => {
 
   it('keeps the cell editor exposed when its input receives initial focus', async () => {
     const result = renderWithProviders(
-      <TableCellContext.Provider value={{ inTableCell: true, isHeader: false, editable: true }}>
+      <TableCellContext.Provider value={editableInCell}>
         <Controlled
           value={original}
           geocode={async () => [place]}
@@ -407,22 +411,21 @@ describe('Geolocation salvage regressions', () => {
     await waitFor(() => {
       expect(document.querySelector("[aria-label='Search for a location']")).not.toBeNull();
     });
-    fireEvent.focus(document.querySelector("[aria-label='Search for a location']") as Element);
+    fireEvent.focus(document.querySelector("[aria-label='Search for a location']")!);
     expect(document.querySelector("[data-testid='geolocation-results']")).toBeNull();
     expect(document.querySelector("[data-testid='geolocation-map']")).not.toBeNull();
   });
 
   it('does not overwrite Clear with a pending Locate response', async () => {
     let locate!: PositionCallback;
-    const getCurrentPosition = vi.fn((callback: PositionCallback) => {
-      locate = callback;
+    const getCurrentPosition = vi.fn<(onPosition: PositionCallback) => void>((onPosition) => {
+      locate = onPosition;
     });
     vi.stubGlobal('navigator', {
-      ...navigator,
       geolocation: { getCurrentPosition },
       permissions: { query: async () => ({ state: 'granted' }) },
     });
-    const onChange = vi.fn();
+    const onChange = vi.fn<(value: string) => void>();
     const result = renderWithProviders(
       <Controlled
         value={original}
@@ -430,12 +433,12 @@ describe('Geolocation salvage regressions', () => {
         onChange={onChange}
       />,
     );
-    fireEvent.click(result.container.querySelector("[aria-label='Locate']") as Element);
+    fireEvent.click(result.container.querySelector("[aria-label='Locate']")!);
     await waitFor(() => {
-      expect(getCurrentPosition).toHaveBeenCalled();
+      expect(getCurrentPosition).toHaveBeenCalledWith(expect.any(Function), expect.anything(), expect.anything());
     });
     fireEvent.change(input(result.container), { target: { value: 'clear' } });
-    fireEvent.click(result.container.querySelector("[aria-label='Clear location']") as Element);
+    fireEvent.click(result.container.querySelector("[aria-label='Clear location']")!);
     await act(async () => {
       locate({ coords: { latitude: 50, longitude: 30 } } as GeolocationPosition);
     });
@@ -445,24 +448,23 @@ describe('Geolocation salvage regressions', () => {
 
   it('Locate retains the stock Frappe shape and existing features', async () => {
     vi.stubGlobal('navigator', {
-      ...navigator,
       geolocation: {
-        getCurrentPosition: (callback: PositionCallback) => {
-          callback({ coords: { latitude: 50, longitude: 30 } } as GeolocationPosition);
+        getCurrentPosition: (onPosition: PositionCallback) => {
+          onPosition({ coords: { latitude: 50, longitude: 30 } } as GeolocationPosition);
         },
       },
       permissions: { query: async () => ({ state: 'granted' }) },
     });
-    const onChange = vi.fn();
+    const onChange = vi.fn<(value: string) => void>();
     const result = renderWithProviders(
       <Controlled
         value={original}
         onChange={onChange}
       />,
     );
-    fireEvent.click(result.container.querySelector("[aria-label='Locate']") as Element);
+    fireEvent.click(result.container.querySelector("[aria-label='Locate']")!);
     await waitFor(() => {
-      expect(onChange).toHaveBeenCalled();
+      expect(onChange).toHaveBeenCalledWith(expect.any(String));
     });
     const value = JSON.parse(onChange.mock.calls[0][0]);
     expect(value.type).toBe('FeatureCollection');
@@ -479,13 +481,7 @@ describe('Geolocation salvage regressions', () => {
       />
     );
     const result = renderWithProviders(
-      cell ? (
-        <TableCellContext.Provider value={{ inTableCell: true, isHeader: false, editable: false }}>
-          {field}
-        </TableCellContext.Provider>
-      ) : (
-        field
-      ),
+      cell ? <TableCellContext.Provider value={readOnlyInCell}>{field}</TableCellContext.Provider> : field,
     );
     const glyph = result.container.querySelector(
       "[data-testid='geolocation-cell-face'] svg, [data-testid='geolocation-readonly-address'] svg",

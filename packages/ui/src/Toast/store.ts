@@ -121,17 +121,17 @@ const intentDefaultDuration = (intent: ToastIntent): number => {
   return TOAST_DEFAULT_MS;
 };
 
+interface ToastPolicy {
+  duration: number;
+  sticky: boolean;
+  dismissible: boolean;
+}
+
 /**
  * Resolve the expiry + dismissibility policy for a show() payload.
  * Exported for tests — the table above is the contract.
  */
-export const resolveToastPolicy = (
-  options: ToastShowOptions,
-): {
-  duration: number;
-  sticky: boolean;
-  dismissible: boolean;
-} => {
+export const resolveToastPolicy = (options: ToastShowOptions): ToastPolicy => {
   const intent = options.intent ?? 'accent';
   const hasAction = options.action != null;
   const sticky = options.sticky === true || options.duration === 0 || options.duration === Number.POSITIVE_INFINITY;
@@ -163,9 +163,13 @@ export const resolveToastPolicy = (
 
 /** Show a toast. Returns its id (usable with `dismissToast`). */
 export const showToast = (options: ToastShowOptions): string => {
-  const id = options.id ?? `mp-toast-${++counter}`;
+  let { id } = options;
+  if (id === undefined) {
+    counter += 1;
+    id = `mp-toast-${counter}`;
+  }
   const pendingRemoval = removalTimers.get(id);
-  if (pendingRemoval) {
+  if (pendingRemoval !== undefined) {
     clearTimeout(pendingRemoval);
     removalTimers.delete(id);
   }
@@ -241,7 +245,10 @@ const emitViewport = () => {
   }
 };
 
-/** @internal Claim viewport ownership (first claimant renders). */
+/**
+ * Claim viewport ownership (first claimant renders).
+ * @internal
+ */
 export const claimToastViewport = (id: string): void => {
   if (viewportClaimants.includes(id)) {
     return;
@@ -257,7 +264,10 @@ export const claimToastViewport = (id: string): void => {
   emitViewport();
 };
 
-/** @internal Release a claim; the next claimant (if any) takes over. */
+/**
+ * Release a claim; the next claimant (if any) takes over.
+ * @internal
+ */
 export const releaseToastViewport = (id: string): void => {
   if (!viewportClaimants.includes(id)) {
     return;
@@ -266,10 +276,16 @@ export const releaseToastViewport = (id: string): void => {
   emitViewport();
 };
 
-/** @internal Current owning viewport id (undefined while none mounted). */
+/**
+ * Current owning viewport id (undefined while none mounted).
+ * @internal
+ */
 export const getToastViewportOwner = (): string | undefined => viewportClaimants[0];
 
-/** @internal Subscribe to ownership changes (useSyncExternalStore shape). */
+/**
+ * Subscribe to ownership changes (useSyncExternalStore shape).
+ * @internal
+ */
 export const subscribeToastViewport = (listener: () => void): (() => void) => {
   viewportListeners.add(listener);
   return () => {
@@ -277,7 +293,11 @@ export const subscribeToastViewport = (listener: () => void): (() => void) => {
   };
 };
 
-/** @internal test helper */
+/**
+ * Test helper.
+ * @internal
+ */
+// oxlint-disable-next-line sonarjs/variable-name, sonarjs/function-name -- exported test-helper name is consumed by tests
 export const __resetToastViewportRegistry = (): void => {
   viewportClaimants = [];
   warnedDuplicateViewport = false;

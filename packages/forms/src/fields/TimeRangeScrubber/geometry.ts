@@ -53,13 +53,18 @@ export const DEFAULT_QUICK_RANGES: readonly QuickRange[] = [
   { label: '7 d', durationMs: 7 * 24 * 60 * 60 * 1000 },
 ];
 
-const RELATIVE_DATE = /^(now)([+-].+)?$/iu;
+const RELATIVE_DATE = /^now(?:[+-].+)?$/iu;
+
+// Narrowing for values that arrive untyped from consumers (picker state, quick ranges).
+const isString = (value: unknown): value is string => typeof value === 'string';
+
+const isObject = (value: unknown): value is object => typeof value === 'object' && value !== null;
 
 /**
  * Grip diameter. Kin of `getSliderThumbRenderSize`; 16 / 20 / 26 is the
  * D-scrubber proposal (AXIS_BAND stays 44 — touch floor, not a size step).
  */
-export const getScrubberGripRenderSize = (size: ScrubberSize | string | number | undefined): number => {
+export const getScrubberGripRenderSize = (size?: string | number): number => {
   const token = String(size ?? 'medium');
   if (token === 'small' || token === '$1' || token === '$2' || token === '$3') {
     return 16;
@@ -81,40 +86,43 @@ export const rectHitSlop = (width: number, height: number, floor: number = MIN_P
   right: Math.max(0, Math.ceil((floor - width) / 2)),
 });
 
-export const isRelativeDateString = (value: unknown): boolean =>
-  typeof value === 'string' && RELATIVE_DATE.test(value.trim());
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- parse boundary: relative-string detection runs on untyped picker state
+export const isRelativeDateString = (value: unknown): boolean => isString(value) && RELATIVE_DATE.test(value.trim());
 
 /**
  * The value is DateRangePicker's `{ start, end }` — Dates or null, never
  * EUI relative strings (`'now-15m'`).
  */
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- parse boundary: the scrubber value arrives untyped from consumers
 export const assertAbsoluteDateRange = (value: unknown): DateRange => {
   if (value == null) {
     return { start: null, end: null };
   }
-  if (typeof value !== 'object') {
+  if (!isObject(value)) {
     throw new TypeError('TimeRangeScrubber value must be { start: Date | null; end: Date | null }');
   }
-  const record = value as Record<string, unknown>;
-  if (isRelativeDateString(record.start) || isRelativeDateString(record.end)) {
+  const rawStart: unknown = 'start' in value ? value.start : undefined;
+  const rawEnd: unknown = 'end' in value ? value.end : undefined;
+  if (isRelativeDateString(rawStart) || isRelativeDateString(rawEnd)) {
     throw new Error(
       'TimeRangeScrubber rejects relative date strings; emit absolute Date | null so DateRangePicker consumers can hold the value unchanged',
     );
   }
-  const start = record.start == null ? null : record.start;
-  const end = record.end == null ? null : record.end;
+  const start = rawStart ?? null;
+  const end = rawEnd ?? null;
   if (start != null && !(start instanceof Date)) {
-    throw new Error('TimeRangeScrubber start must be Date | null');
+    throw new TypeError('TimeRangeScrubber start must be Date | null');
   }
   if (end != null && !(end instanceof Date)) {
-    throw new Error('TimeRangeScrubber end must be Date | null');
+    throw new TypeError('TimeRangeScrubber end must be Date | null');
   }
   return { start, end };
 };
 
 export const applyQuickRange = (range: QuickRange | string, now: Date): DateRange => {
-  if (typeof range === 'string' || isRelativeDateString(range)) {
-    throw new Error(
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- QuickRange | string has no discriminant; a string (relative or not) is rejected by contract
+  if (typeof range === 'string') {
+    throw new TypeError(
       'TimeRangeScrubber quick ranges write absolute dates { start: now−N, end: now }; relative strings are rejected',
     );
   }
@@ -124,7 +132,7 @@ export const applyQuickRange = (range: QuickRange | string, now: Date): DateRang
   return { start: new Date(now.getTime() - range.durationMs), end: new Date(now) };
 };
 
-export const dateRangeKeys = (value: DateRange): string[] => Object.keys(value).sort();
+export const dateRangeKeys = (value: DateRange): string[] => Object.keys(value).toSorted();
 
 export const timeToFraction = (time: Date, window: TimeWindow): number => {
   const span = window.end.getTime() - window.start.getTime();
@@ -158,19 +166,19 @@ export const snapTime = (time: Date, snapTo: SnapTo, options: { frames?: Date[];
     return time;
   }
   if (snapTo === 'grid') {
-    const step = options.gridStepMs && options.gridStepMs > 0 ? options.gridStepMs : 1000;
+    const step = options.gridStepMs !== undefined && options.gridStepMs > 0 ? options.gridStepMs : 1000;
     return new Date(Math.round(time.getTime() / step) * step);
   }
   const frames = options.frames ?? [];
   if (frames.length === 0) {
     return time;
   }
-  let best = frames[0];
+  let [best] = frames;
   let bestDist = Math.abs(best.getTime() - time.getTime());
-  for (let i = 1; i < frames.length; i++) {
-    const dist = Math.abs(frames[i].getTime() - time.getTime());
+  for (const frame of frames) {
+    const dist = Math.abs(frame.getTime() - time.getTime());
     if (dist < bestDist) {
-      best = frames[i];
+      best = frame;
       bestDist = dist;
     }
   }
@@ -264,7 +272,7 @@ export const resolveScrubberTransition = (
   if (session !== 'jump') {
     return 'none';
   }
-  if (reducedMotion || !jumpToken || jumpToken === 'none') {
+  if (reducedMotion || jumpToken === undefined || jumpToken === '' || jumpToken === 'none') {
     return 'none';
   }
   return 'quick';

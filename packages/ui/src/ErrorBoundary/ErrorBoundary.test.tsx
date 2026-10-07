@@ -1,10 +1,9 @@
 import { renderWithProviders } from '@repo/test-utils';
 import { fireEvent, screen } from '@testing-library/react';
 import { H1 } from 'tamagui';
-import { expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { ErrorBoundary } from './index';
-import * as ErrorBoundaryModule from './index';
 
 const ChildThatThrows = () => {
   throw new Error('Test Error');
@@ -12,12 +11,12 @@ const ChildThatThrows = () => {
 const ChildThatRenders = () => <H1>Hello from child!</H1>;
 
 const weightClasses = (el: Element): string[] =>
-  String((el as HTMLElement).className || '')
+  el.className
     .split(' ')
     .filter((c) => c.startsWith('_fow-'))
-    .sort();
+    .toSorted();
 
-describe('ErrorBoundary', () => {
+describe(ErrorBoundary, () => {
   it('should render children when no error occurs', () => {
     renderWithProviders(
       <ErrorBoundary>
@@ -80,7 +79,8 @@ describe('ErrorBoundary', () => {
     spy.mockRestore();
   });
 
-  it('exposes named ErrorBoundary export and no default', () => {
+  it('exposes named ErrorBoundary export and no default', async () => {
+    const ErrorBoundaryModule = await import('./index');
     expect(ErrorBoundaryModule.ErrorBoundary).toBe(ErrorBoundary);
     expect('default' in ErrorBoundaryModule).toBe(false);
   });

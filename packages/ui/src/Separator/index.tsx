@@ -75,10 +75,11 @@ const SeparatorFrame = styled(View, {
   } as const,
 });
 
-export interface SeparatorProps extends GetProps<typeof SeparatorFrame> {}
+export type SeparatorProps = GetProps<typeof SeparatorFrame>;
 
 export const Separator = ({ vertical, ...props }: SeparatorProps) => (
   <SeparatorFrame
+    // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- SeparatorFrame is a tamagui View (also native); <hr> is not available
     role="separator"
     vertical={vertical}
     // role="separator" is horizontal by default; only vertical must say so.

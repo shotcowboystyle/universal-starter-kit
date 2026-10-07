@@ -10,12 +10,12 @@ describe('Geolocation fake-provider stories', () => {
   it('searches and commits a place through the interactive story', async () => {
     const story = SearchWithFakeProvider;
     const result = renderWithProviders(<>{story.render!(story.args!, {} as never)}</>);
-    const input = result.container.querySelector("[aria-label='Search for a location']") as HTMLInputElement;
+    const input = result.container.querySelector<HTMLInputElement>("[aria-label='Search for a location']")!;
     fireEvent.change(input, { target: { value: 'Sydney' } });
     await waitFor(() => {
       expect(document.querySelector("[data-testid='geolocation-result-0']")).not.toBeNull();
     });
-    fireEvent.click(document.querySelector("[data-testid='geolocation-result-0']") as Element);
+    fireEvent.click(document.querySelector("[data-testid='geolocation-result-0']")!);
     await waitFor(() => {
       expect(input.value).toBe('Sydney, New South Wales, Australia');
     });
@@ -32,7 +32,7 @@ describe('Geolocation fake-provider stories', () => {
   it('renders honest failure from the failing story', async () => {
     const story = FailedFakeProvider;
     const result = renderWithProviders(<>{story.render!(story.args!, {} as never)}</>);
-    fireEvent.change(result.container.querySelector("[aria-label='Search for a location']") as Element, {
+    fireEvent.change(result.container.querySelector("[aria-label='Search for a location']")!, {
       target: { value: 'Sydney' },
     });
     await waitFor(() => {

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { osDateTimeIosDisplay } from './os-date-time-ios-display';
 
-describe('osDateTimeIosDisplay', () => {
+describe(osDateTimeIosDisplay, () => {
   it('uses the iOS 14+ inline calendar for dates', () => {
     expect(osDateTimeIosDisplay('date')).toBe('inline');
   });

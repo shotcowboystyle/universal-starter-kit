@@ -1,26 +1,26 @@
 import { describe, expect, it } from 'vitest';
 
-import { detectGeoShape, formatGeoValue, parseGeoValue } from './geo-value';
+import { detectGeoFormat, formatGeoValue, parseGeoValue } from './geo-value';
 
 /**
  * Recorded stock-Frappe value: what `JSON.stringify(editableLayers.toGeoJSON())`
  * writes for a single circle marker dropped at 37.7749,-122.4194. Leaflet emits
  * GeoJSON order, so coordinates are [lng, lat].
  */
+const stockFrappeFeature = {
+  type: 'Feature',
+  properties: { point_type: 'circle', radius: 10 },
+  geometry: { type: 'Point', coordinates: [-122.4194, 37.7749] },
+};
+
 const stockFrappePoint = JSON.stringify({
   type: 'FeatureCollection',
-  features: [
-    {
-      type: 'Feature',
-      properties: { point_type: 'circle', radius: 10 },
-      geometry: { type: 'Point', coordinates: [-122.4194, 37.7749] },
-    },
-  ],
+  features: [stockFrappeFeature],
 });
 
 const nativePoint = JSON.stringify({ lat: 37.7749, lng: -122.4194 });
 
-describe('parseGeoValue', () => {
+describe(parseGeoValue, () => {
   it('reads the repo-native {lat,lng} shape', () => {
     expect(parseGeoValue(nativePoint)).toStrictEqual({ lat: 37.7749, lng: -122.4194 });
   });
@@ -74,6 +74,7 @@ describe('parseGeoValue', () => {
   });
 
   it('returns null for empty, blank, malformed, and non-finite values', () => {
+    // oxlint-disable-next-line unicorn/no-useless-undefined -- the parameter is required, so an explicit undefined is the case under test
     expect(parseGeoValue(undefined)).toBeNull();
     expect(parseGeoValue('')).toBeNull();
     expect(parseGeoValue('   ')).toBeNull();
@@ -83,19 +84,19 @@ describe('parseGeoValue', () => {
   });
 });
 
-describe('detectGeoShape', () => {
+describe(detectGeoFormat, () => {
   it('reports featurecollection for a stock Frappe value', () => {
-    expect(detectGeoShape(stockFrappePoint)).toBe('featurecollection');
+    expect(detectGeoFormat(stockFrappePoint)).toBe('featurecollection');
   });
 
   it('reports latlng for the repo-native value and for unreadable input', () => {
-    expect(detectGeoShape(nativePoint)).toBe('latlng');
-    expect(detectGeoShape('')).toBe('latlng');
-    expect(detectGeoShape('{not json')).toBe('latlng');
+    expect(detectGeoFormat(nativePoint)).toBe('latlng');
+    expect(detectGeoFormat('')).toBe('latlng');
+    expect(detectGeoFormat('{not json')).toBe('latlng');
   });
 });
 
-describe('formatGeoValue', () => {
+describe(formatGeoValue, () => {
   it('keeps the repo-native shape for a doc that arrived native', () => {
     expect(formatGeoValue({ lat: 1.5, lng: -2.5 }, 'latlng', nativePoint)).toBe(
       JSON.stringify({ lat: 1.5, lng: -2.5 }),
@@ -103,10 +104,11 @@ describe('formatGeoValue', () => {
   });
 
   it('writes a FeatureCollection back when the doc arrived from stock Frappe', () => {
-    const written = JSON.parse(formatGeoValue({ lat: 1.5, lng: -2.5 }, 'featurecollection', stockFrappePoint));
-    expect(written.type).toBe('FeatureCollection');
-    expect(written.features).toHaveLength(1);
-    expect(written.features[0].geometry).toStrictEqual({ type: 'Point', coordinates: [-2.5, 1.5] });
+    const written: unknown = JSON.parse(formatGeoValue({ lat: 1.5, lng: -2.5 }, 'featurecollection', stockFrappePoint));
+    expect(written).toMatchObject({
+      type: 'FeatureCollection',
+      features: [{ geometry: { type: 'Point', coordinates: [-2.5, 1.5] } }],
+    });
   });
 
   it("emits [lng, lat] so stock Frappe's parser reads the edit back", () => {
@@ -115,8 +117,8 @@ describe('formatGeoValue', () => {
   });
 
   it('preserves the feature properties Frappe wrote (point_type/radius)', () => {
-    const written = JSON.parse(formatGeoValue({ lat: 1.5, lng: -2.5 }, 'featurecollection', stockFrappePoint));
-    expect(written.features[0].properties).toStrictEqual({ point_type: 'circle', radius: 10 });
+    const written: unknown = JSON.parse(formatGeoValue({ lat: 1.5, lng: -2.5 }, 'featurecollection', stockFrappePoint));
+    expect(written).toMatchObject({ features: [{ properties: { point_type: 'circle', radius: 10 } }] });
   });
 
   it('does not destroy a drawn Polygon sibling when the point moves', () => {
@@ -137,30 +139,30 @@ describe('formatGeoValue', () => {
     };
     const previous = JSON.stringify({
       type: 'FeatureCollection',
-      features: [polygon, JSON.parse(stockFrappePoint).features[0]],
+      features: [polygon, stockFrappeFeature],
     });
-    const written = JSON.parse(formatGeoValue({ lat: 9, lng: 8 }, 'featurecollection', previous));
-    expect(written.features).toHaveLength(2);
-    expect(written.features[0]).toStrictEqual(polygon);
-    expect(written.features[1].geometry.coordinates).toStrictEqual([8, 9]);
+    const written: unknown = JSON.parse(formatGeoValue({ lat: 9, lng: 8 }, 'featurecollection', previous));
+    expect(written).toMatchObject({
+      features: [polygon, { geometry: { coordinates: [8, 9] } }],
+    });
   });
 
   it('appends a plain marker when the collection had no Point to move', () => {
     const previous = JSON.stringify({ type: 'FeatureCollection', features: [] });
-    const written = JSON.parse(formatGeoValue({ lat: 9, lng: 8 }, 'featurecollection', previous));
-    expect(written.features).toStrictEqual([
-      { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [8, 9] } },
-    ]);
+    const written: unknown = JSON.parse(formatGeoValue({ lat: 9, lng: 8 }, 'featurecollection', previous));
+    expect(written).toStrictEqual({
+      type: 'FeatureCollection',
+      features: [{ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [8, 9] } }],
+    });
   });
 
   it('round-trips: parse a stock value, write it back, parse again', () => {
     const read = parseGeoValue(stockFrappePoint);
     expect(read).toStrictEqual({ lat: 37.7749, lng: -122.4194 });
-    const written = formatGeoValue(
-      read as { lat: number; lng: number },
-      detectGeoShape(stockFrappePoint),
-      stockFrappePoint,
-    );
+    if (read === null) {
+      throw new Error('stock Frappe value must parse');
+    }
+    const written = formatGeoValue(read, detectGeoFormat(stockFrappePoint), stockFrappePoint);
     expect(JSON.parse(written)).toStrictEqual(JSON.parse(stockFrappePoint));
   });
 });

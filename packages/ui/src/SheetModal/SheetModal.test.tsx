@@ -15,7 +15,7 @@ import { mediumDetent, minSheetHeight, resolveSheetDetents } from './detents';
 
 const travel = 600;
 
-describe('resolveSheetDetents', () => {
+describe(resolveSheetDetents, () => {
   it('a plain sheet has exactly one rest: fully expanded', () => {
     expect(resolveSheetDetents({ travel })).toStrictEqual([600]);
   });
@@ -73,12 +73,13 @@ describe('resolveSheetDetents', () => {
     for (const snapPoint of [0, -20, Number.NaN, Number.POSITIVE_INFINITY]) {
       expect(resolveSheetDetents({ travel, snapPoint })).toStrictEqual([600]);
     }
+    // oxlint-disable-next-line sonarjs/no-undefined-assignment -- explicitly passing an undefined snapPoint is the case under test
     expect(resolveSheetDetents({ travel, snapPoint: undefined })).toStrictEqual([600]);
   });
 
   it('always returns descending heights, so the pan release can scan in order', () => {
     const detents = resolveSheetDetents({ travel, scrollable: true, snapPoint: 40 });
-    expect(detents).toStrictEqual([...detents].sort((a, b) => b - a));
+    expect(detents).toStrictEqual(detents.toSorted((a, b) => b - a));
     expect(new Set(detents).size).toBe(detents.length);
   });
 });

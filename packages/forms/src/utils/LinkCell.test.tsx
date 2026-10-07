@@ -9,14 +9,16 @@ import { renderWithProviders as render } from '@repo/test-utils';
 import { Text } from 'tamagui';
 import { describe, expect, it, vi } from 'vitest';
 
+import type { LinkResolver } from '../types';
+
 import { LinkCell } from './LinkCell';
 
-describe('LinkCell', () => {
+describe(LinkCell, () => {
   it('wraps children in a link when the resolver returns an href', () => {
     const { container, getByText } = render(
       <LinkCell
         value="CUST-001"
-        linkResolver={(value) => `/customers/${value}` as never}>
+        linkResolver={(value: string) => `/customers/${value}` as never}>
         <Text>Acme Corp</Text>
       </LinkCell>,
     );
@@ -39,7 +41,7 @@ describe('LinkCell', () => {
   });
 
   it('passes the cell value to the resolver', () => {
-    const resolver = vi.fn(() => null);
+    const resolver = vi.fn<LinkResolver<number>>(() => null);
     render(
       <LinkCell
         value={42}

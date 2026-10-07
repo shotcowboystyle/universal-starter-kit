@@ -16,29 +16,30 @@ const STOPS: BorderRadius[] = ['none', 'small', 'medium', 'large', 'full'];
 const STATE_BAGS = ['hover', 'press', 'focus'] as const;
 const SCHEMES = ['light', 'dark'] as const;
 
-afterEach(cleanup);
-
 const atomPx = (value: string) => Number(value.replace('--', '.'));
+
+// oxlint-disable-next-line unicorn/prefer-number-coercion -- computed and inline lengths carry a "px" suffix, which Number() would turn into NaN
+const cssPx = (length: string): number => Number.parseFloat(length);
 
 const paintedHeight = (el: HTMLElement): number => {
   const rect = el.getBoundingClientRect().height;
   if (rect > 0) {
     return rect;
   }
-  for (const cls of String(el.className || '').split(/\s+/u)) {
-    const m = /^_h-(\d+(?:--\d+)?)px$/u.exec(cls);
-    if (m) {
-      return atomPx(m[1]);
+  for (const cls of el.className.split(/\s+/u)) {
+    const size = /^_h-(?<size>\d+(?:--\d+)?)px$/u.exec(cls)?.groups?.size;
+    if (size !== undefined) {
+      return atomPx(size);
     }
   }
-  if (el.style.height) {
-    const n = Number.parseFloat(el.style.height);
+  if (el.style.height !== '') {
+    const n = cssPx(el.style.height);
     if (n > 0) {
       return n;
     }
   }
-  const cs = Number.parseFloat(getComputedStyle(el).height);
-  return cs > 0 ? cs : 0;
+  const cs = cssPx(getComputedStyle(el).height);
+  return Number.isNaN(cs) ? 0 : Math.max(cs, 0);
 };
 
 /**
@@ -46,19 +47,22 @@ const paintedHeight = (el: HTMLElement): number => {
  * An odd-height part rounds to a half pixel, which tamagui writes with `--` for the dot (`_btlr-14--5px`).
  */
 const paintedRadius = (el: HTMLElement, state?: 'hover' | 'active' | 'focus'): number => {
-  const className = String(el.className || '');
-  const re = state ? new RegExp(`_btlr-0${state}-(\\d+(?:--\\d+)?)px`) : /(?:^|\s)_btlr-(\d+(?:--\d+)?)px(?:\s|$)/u;
-  const m = re.exec(className);
-  if (m) {
-    return atomPx(m[1]);
+  const { className } = el;
+  const re =
+    state === undefined
+      ? /(?:^|\s)_btlr-(?<px>\d+(?:--\d+)?)px(?:\s|$)/u
+      : new RegExp(`_btlr-0${state}-(?<px>\\d+(?:--\\d+)?)px`, 'u');
+  const px = re.exec(className)?.groups?.px;
+  if (px !== undefined) {
+    return atomPx(px);
   }
-  if (!state && el.style.borderRadius) {
-    const n = Number.parseFloat(el.style.borderRadius);
+  if (state === undefined && el.style.borderRadius !== '') {
+    const n = cssPx(el.style.borderRadius);
     if (Number.isFinite(n)) {
       return n;
     }
   }
-  const cs = Number.parseFloat(getComputedStyle(el).borderRadius);
+  const cs = cssPx(getComputedStyle(el).borderRadius);
   return Number.isFinite(cs) ? cs : Number.NaN;
 };
 
@@ -91,50 +95,48 @@ const mountSwitch = (
   );
 
 const parts = (result: ReturnType<typeof renderWithProviders>) => {
-  const track = result.getSwitch();
+  const track = result.getSwitch() as HTMLElement | null;
   expect(track).toBeTruthy();
-  const thumb = track!.querySelector('.is_SwitchThumb') as HTMLElement | null;
+  const thumb = track?.querySelector<HTMLElement>('.is_SwitchThumb');
   expect(thumb).toBeTruthy();
-  return { track: track as HTMLElement, thumb: thumb as HTMLElement };
+  return { track: track!, thumb: thumb! };
 };
 
-describe('Switch BINARY radius (thumb and track are one member)', () => {
-  for (const scheme of SCHEMES) {
-    describe(`${scheme} scheme`, () => {
-      for (const stop of STOPS) {
-        it(`thumb and track measure ${stop === 'none' ? '0' : 'height/2'} at borderRadius:${stop}`, () => {
-          const { track, thumb } = parts(mountSwitch(stop, scheme));
-          expectBinary(track, stop);
-          expectBinary(thumb, stop);
-        });
-      }
+const STOP_CASES = STOPS.map((stop) => ({ stop, measure: stop === 'none' ? '0' : 'height/2' }));
+const STATE_BAG_CASES = STATE_BAGS.flatMap((bag) => STOPS.map((stop) => ({ bag, stop })));
 
-      for (const bag of STATE_BAGS) {
-        const tamaguiState = bag === 'press' ? 'active' : bag;
-        for (const stop of STOPS) {
-          it(`${bag} override bag at ${stop} stays BINARY on thumb and track`, () => {
-            const restStop: BorderRadius = stop === 'none' ? 'full' : 'none';
-            const { track, thumb } = parts(mountSwitch(restStop, scheme, { [bag]: { borderRadius: stop } }));
-            expectBinary(track, restStop);
-            expectBinary(thumb, restStop);
-            expectBinary(track, stop, tamaguiState);
-            expectBinary(thumb, stop, tamaguiState);
-            expect(String(track.className)).not.toMatch(/_btlr-t-radius-[246]/u);
-            expect(String(thumb.className)).not.toMatch(/_btlr-t-radius-[246]/u);
-          });
-        }
-      }
-    });
-  }
+describe.each(SCHEMES)('Switch BINARY radius (thumb and track are one member): %s scheme', (scheme) => {
+  afterEach(cleanup);
+
+  // oxlint-disable-next-line vitest/expect-expect -- the assertions live in expectBinary
+  it.each(STOP_CASES)('thumb and track measure $measure at borderRadius:$stop', ({ stop }) => {
+    const { track, thumb } = parts(mountSwitch(stop, scheme));
+    expectBinary(track, stop);
+    expectBinary(thumb, stop);
+  });
+
+  it.each(STATE_BAG_CASES)('$bag override bag at $stop stays BINARY on thumb and track', ({ bag, stop }) => {
+    const tamaguiState = bag === 'press' ? 'active' : bag;
+    const restStop: BorderRadius = stop === 'none' ? 'full' : 'none';
+    const { track, thumb } = parts(mountSwitch(restStop, scheme, { [bag]: { borderRadius: stop } }));
+    expectBinary(track, restStop);
+    expectBinary(thumb, restStop);
+    expectBinary(track, stop, tamaguiState);
+    expectBinary(thumb, stop, tamaguiState);
+    expect(track.className).not.toMatch(/_btlr-t-radius-[246]/u);
+    expect(thumb.className).not.toMatch(/_btlr-t-radius-[246]/u);
+  });
 });
 
 describe('Switch declares its BINARY class for the constraint audit', () => {
+  afterEach(cleanup);
+
   it('thumb and track carry data-radius-resolution at every stop', () => {
     for (const stop of STOPS) {
       const result = mountSwitch(stop, 'light');
       const { track, thumb } = parts(result);
-      expect(track.getAttribute('data-radius-resolution')).toBe('BINARY');
-      expect(thumb.getAttribute('data-radius-resolution')).toBe('BINARY');
+      expect(track.dataset.radiusResolution).toBe('BINARY');
+      expect(thumb.dataset.radiusResolution).toBe('BINARY');
       result.unmount();
     }
   });
@@ -149,7 +151,7 @@ describe('Switch declares its BINARY class for the constraint audit', () => {
       />,
     );
     const { track, thumb } = parts(result);
-    expect(track.hasAttribute('data-radius-resolution')).toBe(false);
-    expect(thumb.hasAttribute('data-radius-resolution')).toBe(false);
+    expect(track.dataset.radiusResolution).toBeUndefined();
+    expect(thumb.dataset.radiusResolution).toBeUndefined();
   });
 });

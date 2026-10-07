@@ -1,6 +1,7 @@
 import { useTouchSurface, isTouchSurface, sizeRecipeForToken, textFieldInset } from '@repo/theme';
 import type { SizeVariantSpreadFunction } from '@tamagui/web';
 import { TextArea as TamaguiTextArea, isWeb, styled } from 'tamagui';
+import type { GetProps } from 'tamagui';
 
 /**
  * Tamagui's built-in TextArea has a `size` variant that sets `borderRadius`
@@ -21,15 +22,17 @@ import { TextArea as TamaguiTextArea, isWeb, styled } from 'tamagui';
  * that calls `sizeRecipeForToken` rather than the static type-variant map.
  */
 
-const textAreaSizeWithoutRadius: SizeVariantSpreadFunction<any> = (val, extras) => {
+type TextAreaSizeProps = Partial<GetProps<typeof TamaguiTextArea>> & { touch?: boolean };
+
+const textAreaSizeWithoutRadius: SizeVariantSpreadFunction<TextAreaSizeProps> = (val, extras) => {
   const { props } = extras;
-  const recipe = sizeRecipeForToken(String(val || '$true'), {
+  const recipe = sizeRecipeForToken(String(val === '' ? '$true' : val), {
     touch: props.touch ?? (!isWeb && isTouchSurface()),
   });
   const inset = textFieldInset(recipe);
   const lineHeight = Math.round(recipe.fontSize * 1.25);
   const lines = props.rows ?? props.numberOfLines;
-  const height = typeof lines === 'number' ? lines * lineHeight + recipe.gap * 2 : 'auto';
+  const height = lines === undefined || lines === 'unset' ? 'auto' : lines * lineHeight + recipe.gap * 2;
   return {
     fontSize: recipe.fontSize,
     ...(isWeb ? { lineHeight } : undefined),

@@ -52,5 +52,3 @@ const formatCurrency = useFormatCurrency();
 ## License
 
 Apache-2.0
-
-Derived from [multiplatform.one](https://multiplatform.one) (Apache-2.0). See the package LICENSE and the repository NOTICE.

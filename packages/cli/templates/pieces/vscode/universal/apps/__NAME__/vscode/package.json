@@ -1,0 +1,7 @@
+{
+  "name": "@app/__NAME__-vscode-target",
+  "private": true,
+  "description": "Build-time marker for the VS Code target: @tomjs/vite-plugin-vscode reads the nearest package.json (cwd) for `main` (presence check) and `type` (esm/cjs extension-host format). NOT a workspace package (apps/* only matches apps/__NAME__) and NOT the extension manifest — that is generated into dist-vscode by vscode/manifest.ts. The app's own package.json cannot carry `main`: Expo/Metro would treat it as the native app entry.",
+  "type": "module",
+  "main": "dist/extension/index.js"
+}

@@ -39,6 +39,8 @@ const meta: Meta<typeof ErrorSummary> = {
 export default meta;
 type Story = StoryObj<typeof ErrorSummary>;
 
+const EMAIL_REQUIRED = 'Enter an email address';
+
 export const Basic: Story = {
   render: (args) => (
     <YStack maxWidth={520}>
@@ -87,7 +89,7 @@ export const CustomLabels: Story = {
         disableAutoFocus
         title="Check these before continuing"
         errors={[
-          { name: 'email', label: 'Email address', error: 'Enter an email address' },
+          { name: 'email', label: 'Email address', error: EMAIL_REQUIRED },
           { name: 'phone', label: 'Phone number', error: 'Enter a phone number' },
         ]}
         onFocusField={action('onFocusField')}
@@ -127,107 +129,105 @@ export const EmptyRendersNothing: Story = {
  * the caret in the field that caused it. `collectFormFieldErrors` turns
  * TanStack `fieldMeta` into the item list.
  */
+const FocusesTheFieldOnPressExample = () => {
+  const [errors, setErrors] = useState<ReturnType<typeof collectFormFieldErrors>>([]);
+  const form = useForm({
+    defaultValues: { email: '', password: '' },
+    onSubmit: async ({ value }) => {
+      action('onSubmit')(value);
+    },
+  });
+  const submit = () => {
+    const next = collectFormFieldErrors({
+      email: { errors: [form.state.values.email ? undefined : EMAIL_REQUIRED] },
+      password: { errors: [form.state.values.password ? undefined : 'Enter a password'] },
+    });
+    setErrors(next);
+    if (next.length === 0) {
+      void form.handleSubmit();
+    }
+  };
+  return (
+    <Form form={form}>
+      <YStack
+        maxWidth={520}
+        gap="$4">
+        <ErrorSummary
+          errors={errors}
+          disableAutoFocus
+          onFocusField={action('onFocusField')}
+        />
+        <FormSection label="Sign in">
+          <FieldLayout
+            id="email"
+            label="Email">
+            <InputParts>
+              <InputParts.Box>
+                <InputParts.Area
+                  id="email"
+                  placeholder="you@example.com"
+                  onChangeText={(text) => {
+                    form.setFieldValue('email', text);
+                  }}
+                />
+              </InputParts.Box>
+            </InputParts>
+          </FieldLayout>
+          <FieldLayout
+            id="password"
+            label="Password">
+            <InputParts>
+              <InputParts.Box>
+                <InputParts.Area
+                  id="password"
+                  secureTextEntry
+                  onChangeText={(text) => {
+                    form.setFieldValue('password', text);
+                  }}
+                />
+              </InputParts.Box>
+            </InputParts>
+          </FieldLayout>
+        </FormSection>
+        <Button onPress={submit}>Submit</Button>
+      </YStack>
+    </Form>
+  );
+};
+
 export const FocusesTheFieldOnPress: Story = {
-  render: () => {
-    const Example = () => {
-      const [errors, setErrors] = useState<ReturnType<typeof collectFormFieldErrors>>([]);
-      const form = useForm({
-        defaultValues: { email: '', password: '' },
-        onSubmit: async ({ value }) => {
-          action('onSubmit')(value);
-        },
-      });
-      const submit = () => {
-        const next = collectFormFieldErrors({
-          email: { errors: [form.state.values.email ? undefined : 'Enter an email address'] },
-          password: { errors: [form.state.values.password ? undefined : 'Enter a password'] },
-        });
-        setErrors(next);
-        if (next.length === 0) {
-          void form.handleSubmit();
-        }
-      };
-      return (
-        <Form form={form}>
-          <YStack
-            maxWidth={520}
-            gap="$4">
-            <ErrorSummary
-              errors={errors}
-              disableAutoFocus
-              onFocusField={action('onFocusField')}
-            />
-            <FormSection label="Sign in">
-              <FieldLayout
-                id="email"
-                label="Email">
-                <InputParts>
-                  <InputParts.Box>
-                    <InputParts.Area
-                      id="email"
-                      placeholder="you@example.com"
-                      onChangeText={(text) => {
-                        form.setFieldValue('email', text);
-                      }}
-                    />
-                  </InputParts.Box>
-                </InputParts>
-              </FieldLayout>
-              <FieldLayout
-                id="password"
-                label="Password">
-                <InputParts>
-                  <InputParts.Box>
-                    <InputParts.Area
-                      id="password"
-                      secureTextEntry
-                      onChangeText={(text) => {
-                        form.setFieldValue('password', text);
-                      }}
-                    />
-                  </InputParts.Box>
-                </InputParts>
-              </FieldLayout>
-            </FormSection>
-            <Button onPress={submit}>Submit</Button>
-          </YStack>
-        </Form>
-      );
-    };
-    return <Example />;
-  },
+  render: () => <FocusesTheFieldOnPressExample />,
 };
 
 /**
  * `disableAutoFocus` off is the shipping default: the summary steals focus so
  * a screen reader announces it. Toggle the control to feel the difference.
  */
+const AutoFocusOnAppearExample = () => {
+  const [shown, setShown] = useState(false);
+  return (
+    <YStack
+      maxWidth={520}
+      gap="$4">
+      <Button
+        onPress={() => {
+          setShown((prev) => !prev);
+        }}>
+        {shown ? 'Hide the summary' : 'Show the summary'}
+      </Button>
+      {shown ? (
+        <ErrorSummary
+          errors={[
+            { name: 'email', error: EMAIL_REQUIRED },
+            { name: 'postcode', error: 'Enter a postcode' },
+          ]}
+          onFocusField={action('onFocusField')}
+        />
+      ) : null}
+    </YStack>
+  );
+};
+
 export const AutoFocusOnAppear: Story = {
-  render: () => {
-    const Example = () => {
-      const [shown, setShown] = useState(false);
-      return (
-        <YStack
-          maxWidth={520}
-          gap="$4">
-          <Button
-            onPress={() => {
-              setShown((prev) => !prev);
-            }}>
-            {shown ? 'Hide the summary' : 'Show the summary'}
-          </Button>
-          {shown ? (
-            <ErrorSummary
-              errors={[
-                { name: 'email', error: 'Enter an email address' },
-                { name: 'postcode', error: 'Enter a postcode' },
-              ]}
-              onFocusField={action('onFocusField')}
-            />
-          ) : null}
-        </YStack>
-      );
-    };
-    return <Example />;
-  },
+  render: () => <AutoFocusOnAppearExample />,
 };

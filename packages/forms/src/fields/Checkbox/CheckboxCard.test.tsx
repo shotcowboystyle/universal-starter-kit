@@ -20,8 +20,6 @@ import {
   getCheckboxCardLayout,
 } from './CheckboxCard';
 
-afterEach(cleanup);
-
 /**
  * The styled parts paint through Tamagui atomic classes, so the class list is
  * the honest read; `getComputedStyle` only resolves the subset whose CSS this
@@ -31,13 +29,17 @@ const classesOf = (node: Element | null): string => {
   if (!node) {
     throw new Error('expected a rendered node');
   }
-  return Array.from(node.classList).join(' ');
+  return [...node.classList].join(' ');
 };
+
+const num = (token: string) => Number(token.replace('$', ''));
 
 const painted = (container: HTMLElement, marker: string): string =>
   classesOf(container.querySelector(`[class*='${marker}']`));
 
 describe('getCardDescriptionSize — T-HELPER is one step under the field', () => {
+  afterEach(cleanup);
+
   it('maps each field size onto its helper tier', () => {
     expect(getCardDescriptionSize('$1')).toBe('$1');
     expect(getCardDescriptionSize('$2')).toBe('$1');
@@ -53,7 +55,7 @@ describe('getCardDescriptionSize — T-HELPER is one step under the field', () =
   });
 
   it('falls back to $2 for no size and for a size off the ladder', () => {
-    expect(getCardDescriptionSize(undefined)).toBe('$2');
+    expect(getCardDescriptionSize()).toBe('$2');
     expect(getCardDescriptionSize('$9' as never)).toBe('$2');
   });
 
@@ -65,12 +67,14 @@ describe('getCardDescriptionSize — T-HELPER is one step under the field', () =
       ['$6', '$5'],
     ] as const) {
       expect(getCardDescriptionSize(field), field).toBe(helper);
-      expect(Number(String(helper).slice(1))).toBeLessThan(Number(field.slice(1)));
+      expect(Number(helper.slice(1))).toBeLessThan(Number(field.slice(1)));
     }
   });
 });
 
 describe('getCheckboxCardLayout — compact metrics off the space knob', () => {
+  afterEach(cleanup);
+
   it('gives each space stop its own padding and gap', () => {
     expect(getCheckboxCardLayout('none')).toStrictEqual({
       paddingVertical: '$2.5',
@@ -95,37 +99,25 @@ describe('getCheckboxCardLayout — compact metrics off the space knob', () => {
 
   it('grows monotonically from none to large', () => {
     const stops = ['none', 'small', 'large'].map((s) => getCheckboxCardLayout(s));
-    const num = (token: string) => Number(token.replace('$', ''));
     expect(num(stops[0].paddingVertical)).toBeLessThanOrEqual(num(stops[1].paddingVertical));
     expect(num(stops[1].paddingVertical)).toBeLessThan(num(stops[2].paddingVertical));
   });
 });
 
 describe('CheckboxCardFrame — control leading, whole card interactive', () => {
-  it('lays the control out in a row, top-aligned with the first label line', () => {
+  afterEach(cleanup);
+
+  it.each([
+    ['lays the control out in a row, top-aligned with the first label line', ['_fd-row', '_ai-flex-start']],
+    ['reads as pressable across the whole card', ['_fd-row', '_cur-pointer']],
+    ['carries exactly one border at rest, on the $color6 seam', ['_btw-1px', '_btc-color6']],
+    ['moves the border one step up the ramp on hover, and only on hover', ['_btc-0hover-color7', '_btc-color6']],
+  ])('%s', (_title, expectedClasses) => {
     const { container } = renderWithProviders(<CheckboxCardFrame />);
     const card = painted(container, '_fd-row');
-    expect(card).toContain('_fd-row');
-    expect(card).toContain('_ai-flex-start');
-  });
-
-  it('reads as pressable across the whole card', () => {
-    const { container } = renderWithProviders(<CheckboxCardFrame />);
-    expect(painted(container, '_fd-row')).toContain('_cur-pointer');
-  });
-
-  it('carries exactly one border at rest, on the $color6 seam', () => {
-    const { container } = renderWithProviders(<CheckboxCardFrame />);
-    const card = painted(container, '_fd-row');
-    expect(card).toContain('_btw-1px');
-    expect(card).toContain('_btc-color6');
-  });
-
-  it('moves the border one step up the ramp on hover, and only on hover', () => {
-    const { container } = renderWithProviders(<CheckboxCardFrame />);
-    const card = painted(container, '_fd-row');
-    expect(card).toContain('_btc-0hover-color7');
-    expect(card).toContain('_btc-color6');
+    for (const expected of expectedClasses) {
+      expect(card).toContain(expected);
+    }
   });
 
   it('active changes the FILL and leaves the border exactly where it was', () => {
@@ -159,6 +151,8 @@ describe('CheckboxCardFrame — control leading, whole card interactive', () => 
 });
 
 describe('CheckboxCardContent — the text column', () => {
+  afterEach(cleanup);
+
   it('stacks the label over the description and can shrink under a long word', () => {
     const { container } = renderWithProviders(<CheckboxCardContent />);
     const column = painted(container, '_miw-0px');
@@ -169,6 +163,8 @@ describe('CheckboxCardContent — the text column', () => {
 });
 
 describe('CheckboxCardLabel and CheckboxCardDescription', () => {
+  afterEach(cleanup);
+
   it('makes the label the bold, full-contrast first line', () => {
     const { container } = renderWithProviders(<CheckboxCardLabel>Label</CheckboxCardLabel>);
     const label = classesOf(container.querySelector('p'));

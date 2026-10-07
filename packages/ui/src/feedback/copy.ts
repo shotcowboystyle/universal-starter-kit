@@ -24,8 +24,17 @@ export const reportCopy = (ok: boolean, options?: { region?: string }): void => 
   notify({ severity: 'error', scope: 'field', region, body: COPY_FAIL });
 };
 
+const copyQuietly = async (text: string): Promise<boolean> => {
+  try {
+    return await copyToClipboard(text);
+  } catch {
+    // Safe to continue: a failed clipboard write is reported via notify as COPY_FAIL.
+    return false;
+  }
+};
+
 export const copyAndNotify = async (text: string, options?: { region?: string }): Promise<boolean> => {
-  const ok = await copyToClipboard(text).catch(() => false);
+  const ok = await copyQuietly(text);
   reportCopy(ok, options);
   return ok;
 };
@@ -51,7 +60,7 @@ export const useCopyFeedback = () => {
   );
   const copy = useCallback(
     async (text: string) => {
-      const ok = await copyToClipboard(text).catch(() => false);
+      const ok = await copyQuietly(text);
       report(ok);
       return ok;
     },

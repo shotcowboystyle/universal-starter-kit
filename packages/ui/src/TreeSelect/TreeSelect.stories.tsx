@@ -49,51 +49,55 @@ export default meta;
 
 type Story = StoryObj<typeof TreeSelect>;
 
+const DefaultStory = () => {
+  const [value, setValue] = useState('hdfc');
+  return (
+    <YStack
+      width={280}
+      padding="$4">
+      <TreeSelect
+        label="Account"
+        nodes={accounts}
+        value={value}
+        onChange={setValue}
+        placeholder="Select account"
+        searchPlaceholder="Filter accounts"
+        emptyMessage="No matching accounts"
+        defaultExpandedIds={['assets', 'current', 'bank']}
+      />
+    </YStack>
+  );
+};
+
+const OpenStory = () => {
+  const [value, setValue] = useState('hdfc');
+  const [open, setOpen] = useState(true);
+  return (
+    <YStack
+      width={280}
+      padding="$4">
+      <TreeSelect
+        label="Account"
+        nodes={accounts}
+        value={value}
+        onChange={setValue}
+        open={open}
+        onOpenChange={setOpen}
+        placeholder="Select account"
+        searchPlaceholder="Filter accounts"
+        emptyMessage="No matching accounts"
+        defaultExpandedIds={['assets', 'current', 'bank']}
+      />
+    </YStack>
+  );
+};
+
 export const Default: Story = {
-  render: function Render() {
-    const [value, setValue] = useState('hdfc');
-    return (
-      <YStack
-        width={280}
-        padding="$4">
-        <TreeSelect
-          label="Account"
-          nodes={accounts}
-          value={value}
-          onChange={setValue}
-          placeholder="Select account"
-          searchPlaceholder="Filter accounts"
-          emptyMessage="No matching accounts"
-          defaultExpandedIds={['assets', 'current', 'bank']}
-        />
-      </YStack>
-    );
-  },
+  render: () => <DefaultStory />,
 };
 
 export const Open: Story = {
-  render: function Render() {
-    const [value, setValue] = useState('hdfc');
-    const [open, setOpen] = useState(true);
-    return (
-      <YStack
-        width={280}
-        padding="$4">
-        <TreeSelect
-          label="Account"
-          nodes={accounts}
-          value={value}
-          onChange={setValue}
-          open={open}
-          onOpenChange={setOpen}
-          placeholder="Select account"
-          searchPlaceholder="Filter accounts"
-          emptyMessage="No matching accounts"
-          defaultExpandedIds={['assets', 'current', 'bank']}
-        />
-      </YStack>
-    );
-  },
+  render: () => <OpenStory />,
 };
 
 export const Account: Story = Default;

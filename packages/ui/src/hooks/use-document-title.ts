@@ -18,7 +18,12 @@ export interface DocumentTitlePart {
  * Breadcrumb-ordered trail (root → leaf). Plain strings and items with a
  * `label` are accepted; empty / nullish parts are dropped.
  */
-export type DocumentTitleTrail = readonly (DocumentTitlePart | string | null | undefined)[] | null;
+type DocumentTitleLabel = DocumentTitlePart | string;
+type Nullish = null | undefined;
+export type DocumentTitleTrail = readonly (DocumentTitleLabel | Nullish)[] | null;
+
+const isPartObject = (part: DocumentTitleLabel | Nullish): part is DocumentTitlePart | null | undefined =>
+  typeof part === 'object';
 
 /** En dash with hair spaces: "Leaf – Section – App". */
 export const DOCUMENT_TITLE_SEPARATOR = ' – ';
@@ -28,17 +33,21 @@ export const DOCUMENT_TITLE_SEPARATOR = ' – ';
  * unit tests and non-hook callers.
  */
 export const composeDocumentTitle = (
-  trail: DocumentTitleTrail | undefined,
+  trail?: DocumentTitleTrail,
   separator: string = DOCUMENT_TITLE_SEPARATOR,
 ): string => {
   if (!trail) {
     return '';
   }
-  const labels = trail
-    .map((part) => (typeof part === 'string' ? part : (part?.label ?? '')))
-    .map((label) => label.trim())
-    .filter(Boolean);
-  return labels.reverse().join(separator);
+  const labels: string[] = [];
+  for (const part of trail) {
+    const label = (isPartObject(part) ? (part?.label ?? '') : (part ?? '')).trim();
+    if (label !== '') {
+      // unshift builds the reversed (leaf first) order directly.
+      labels.unshift(label);
+    }
+  }
+  return labels.join(separator);
 };
 
 export interface UseDocumentTitleOptions {

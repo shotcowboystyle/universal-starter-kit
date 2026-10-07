@@ -7,13 +7,11 @@ import { isWeb } from 'tamagui';
  * Used after failed submit / ErrorSummary jump links.
  */
 export const focusFirstInvalid = (container: HTMLElement | null | undefined): HTMLElement | null => {
-  if (!isWeb || !container || typeof container.querySelector !== 'function') {
+  if (!isWeb || !container || !('querySelector' in container)) {
     return null;
   }
-  const el = container.querySelector(
-    '[aria-invalid="true"]:not([disabled]):not([aria-disabled="true"])',
-  ) as HTMLElement | null;
-  if (!el || typeof el.focus !== 'function') {
+  const el = container.querySelector<HTMLElement>('[aria-invalid="true"]:not([disabled]):not([aria-disabled="true"])');
+  if (!el || !('focus' in el)) {
     return null;
   }
   el.focus();
@@ -21,11 +19,31 @@ export const focusFirstInvalid = (container: HTMLElement | null | undefined): HT
   return el;
 };
 
+const noCleanup = (): void => undefined;
+
 const cssEscape = (value: string): string => {
-  if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
+  if (typeof CSS !== 'undefined' && 'escape' in CSS) {
     return CSS.escape(value);
   }
   return value.replaceAll(/[^a-zA-Z0-9_-]/gu, '\\$&');
+};
+
+const tryFocus = (el: Element | null | undefined): HTMLElement | null => {
+  if (!(el instanceof HTMLElement)) {
+    return null;
+  }
+  // Prefer a nested focusable control when the match is a wrapper.
+  const nested = el.matches?.(
+    "input, textarea, select, button, [tabindex]:not([tabindex='-1']), [contenteditable='true']",
+  )
+    ? el
+    : el.querySelector?.<HTMLElement>(
+        "input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex='-1'])",
+      );
+  const focusable = nested ?? el;
+  focusable.focus();
+  focusable.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+  return focusable;
 };
 
 /**
@@ -39,27 +57,9 @@ export const focusFieldTarget = (
     return null;
   }
 
-  const tryFocus = (el: Element | null | undefined): HTMLElement | null => {
-    if (!el || !(el instanceof HTMLElement) || typeof el.focus !== 'function') {
-      return null;
-    }
-    // Prefer a nested focusable control when the match is a wrapper.
-    const nested = el.matches?.(
-      "input, textarea, select, button, [tabindex]:not([tabindex='-1']), [contenteditable='true']",
-    )
-      ? el
-      : (el.querySelector?.(
-          "input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex='-1'])",
-        ) as HTMLElement | null);
-    const focusable = nested ?? el;
-    focusable.focus();
-    focusable.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
-    return focusable;
-  };
-
-  if (target.id) {
+  if (target.id !== undefined && target.id !== '') {
     const byId =
-      (typeof document === 'undefined' ? null : document.getElementById(target.id)) ??
+      (typeof document === 'undefined' ? null : document.querySelector(`[id="${cssEscape(target.id)}"]`)) ??
       container.querySelector(`#${cssEscape(target.id)}`);
     const focused = tryFocus(byId);
     if (focused) {
@@ -67,7 +67,7 @@ export const focusFieldTarget = (
     }
   }
 
-  if (target.name) {
+  if (target.name !== undefined && target.name !== '') {
     const byName = container.querySelector(`[name="${cssEscape(target.name)}"]`);
     const focused = tryFocus(byName);
     if (focused) {
@@ -170,13 +170,13 @@ export const useFocusManagement = (options: FocusManagementOptions = {}): FocusM
       return [];
     }
 
-    const elements = containerRef.current.querySelectorAll(focusableSelectors.current.join(', '));
+    const elements = containerRef.current.querySelectorAll<HTMLElement>(focusableSelectors.current.join(', '));
 
-    return (Array.from(elements) as HTMLElement[]).filter((el) => {
+    return [...elements].filter((el) => {
       if (el.tabIndex === -1) {
         return false;
       }
-      if (typeof el.closest === 'function' && el.closest('[data-focus-skip]')) {
+      if (el.closest?.('[data-focus-skip]')) {
         return false;
       }
       return true;
@@ -186,7 +186,7 @@ export const useFocusManagement = (options: FocusManagementOptions = {}): FocusM
   // Focus a specific element
   const focusElement = useCallback(
     (element: HTMLElement) => {
-      if (element && typeof element.focus === 'function') {
+      if (element != null && 'focus' in element) {
         element.focus();
         setFocusedElement(element);
         onFocusChange?.(element);
@@ -250,7 +250,7 @@ export const useFocusManagement = (options: FocusManagementOptions = {}): FocusM
         }
         case 'Home': {
           event.preventDefault();
-          const firstElement = getFocusableElements()[0];
+          const firstElement = getFocusableElements().at(0);
           if (firstElement) {
             focusElement(firstElement);
           }
@@ -259,10 +259,13 @@ export const useFocusManagement = (options: FocusManagementOptions = {}): FocusM
         case 'End': {
           event.preventDefault();
           const focusableElements = getFocusableElements();
-          const lastElement = focusableElements[focusableElements.length - 1];
+          const lastElement = focusableElements.at(-1);
           if (lastElement) {
             focusElement(lastElement);
           }
+          break;
+        }
+        default: {
           break;
         }
       }
@@ -273,8 +276,8 @@ export const useFocusManagement = (options: FocusManagementOptions = {}): FocusM
   // Handle focus events
   const handleFocusIn = useCallback(
     (event: FocusEvent) => {
-      const target = event.target as HTMLElement;
-      if (containerRef.current?.contains(target)) {
+      const { target } = event;
+      if (target instanceof HTMLElement && containerRef.current?.contains(target)) {
         setFocusedElement(target);
         onFocusChange?.(target);
       }
@@ -284,7 +287,7 @@ export const useFocusManagement = (options: FocusManagementOptions = {}): FocusM
 
   const handleFocusOut = useCallback(
     (event: FocusEvent) => {
-      const relatedTarget = event.relatedTarget as HTMLElement;
+      const relatedTarget = event.relatedTarget instanceof Node ? event.relatedTarget : null;
       if (!containerRef.current?.contains(relatedTarget)) {
         setFocusedElement(null);
         onFocusChange?.(null);
@@ -301,17 +304,18 @@ export const useFocusManagement = (options: FocusManagementOptions = {}): FocusM
   // Initialize focus management (web only)
   useEffect(() => {
     if (!isWeb) {
-      return;
+      return noCleanup;
     }
 
     const container = containerRef.current;
     if (!container) {
-      return;
+      return noCleanup;
     }
 
     // Store previously focused element
     if (restoreFocus && typeof document !== 'undefined') {
-      previouslyFocusedElement.current = document.activeElement as HTMLElement;
+      const { activeElement } = document;
+      previouslyFocusedElement.current = activeElement instanceof HTMLElement ? activeElement : null;
     }
 
     // Add event listeners
@@ -326,7 +330,7 @@ export const useFocusManagement = (options: FocusManagementOptions = {}): FocusM
       hasAppliedInitialFocus.current = true;
       focusTimer = setTimeout(() => {
         if (initialFocus === 'first') {
-          const firstElement = getFocusableElements()[0];
+          const firstElement = getFocusableElements().at(0);
           if (firstElement) {
             focusElement(firstElement);
           }
@@ -358,7 +362,7 @@ export const useFocusManagement = (options: FocusManagementOptions = {}): FocusM
   // Restore focus when unmounting (web only)
   useEffect(() => {
     if (!isWeb) {
-      return;
+      return noCleanup;
     }
     return () => {
       if (restoreFocus && previouslyFocusedElement.current) {
@@ -383,7 +387,7 @@ export const useFocusManagement = (options: FocusManagementOptions = {}): FocusM
  */
 export const useOTPFocusManagement = (length: number, _onComplete?: (code: string) => void) => {
   const [focusedIndex, setFocusedIndex] = useState(-1);
-  const inputRefs = useRef<(HTMLInputElement | null)[]>(Array(length).fill(null));
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const focusInput = useCallback(
     (index: number) => {
@@ -449,12 +453,15 @@ export const useSearchableDropdownFocus = <TItem = unknown>(
   onSelect?: (item: TItem) => void,
 ) => {
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [wasOpen, setWasOpen] = useState(isOpen);
 
-  useEffect(() => {
+  // Closing resets the highlight; adjusted during render so it never paints a stale row.
+  if (wasOpen !== isOpen) {
+    setWasOpen(isOpen);
     if (!isOpen) {
       setHighlightedIndex(-1);
     }
-  }, [isOpen]);
+  }
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
@@ -483,6 +490,9 @@ export const useSearchableDropdownFocus = <TItem = unknown>(
         case 'Escape': {
           event.preventDefault();
           setHighlightedIndex(-1);
+          break;
+        }
+        default: {
           break;
         }
       }

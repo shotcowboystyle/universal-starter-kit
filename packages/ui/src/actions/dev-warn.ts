@@ -20,7 +20,8 @@ export const actionDevWarn = (code: ActionDevWarnCode, detail: ActionDevWarnDeta
   devWarn(code, detail);
 };
 
-/** @internal test helper */
+// Test helper; not part of the public API.
+// oxlint-disable-next-line sonarjs/variable-name, sonarjs/function-name -- exported double-underscore reset helper name is consumed by tests across packages
 export const __resetActionDevWarnSeen = (): void => {
   __resetDevWarnSeen();
 };

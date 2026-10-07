@@ -315,6 +315,7 @@ export const UnsafeAndLongContent: Story = {
       <Row label="js url as text">
         <FieldDisplay
           field="input"
+          // oxlint-disable-next-line no-script-url -- this story shows that a javascript: value renders as inert text
           value="javascript:alert(1)"
         />
       </Row>

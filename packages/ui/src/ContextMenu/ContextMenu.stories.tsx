@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Text, YStack, isWeb } from 'tamagui';
 
 import { ContextMenu } from './index';
-import type { ContextMenuEntry } from './index';
+import type { ContextMenuEntry, ContextMenuProps } from './index';
 
 const meta: Meta<typeof ContextMenu> = {
   title: 'Components/ContextMenu',
@@ -83,37 +83,39 @@ export const IconsAndShortcuts: Story = {
   ),
 };
 
+const CheckableStory = (args: ContextMenuProps) => {
+  const [pinned, setPinned] = useState(true);
+  const [hidden, setHidden] = useState(false);
+  return (
+    <YStack
+      minHeight={340}
+      paddingTop="$4"
+      alignItems="center">
+      <ContextMenu {...args}>
+        <ContextMenu.Trigger>
+          <Button>Row</Button>
+        </ContextMenu.Trigger>
+        <ContextMenu.Content>
+          <ContextMenu.Label>View</ContextMenu.Label>
+          <ContextMenu.CheckboxItem
+            checked={pinned}
+            onCheckedChange={setPinned}>
+            Pinned
+          </ContextMenu.CheckboxItem>
+          <ContextMenu.CheckboxItem
+            checked={hidden}
+            onCheckedChange={setHidden}>
+            Hidden
+          </ContextMenu.CheckboxItem>
+        </ContextMenu.Content>
+      </ContextMenu>
+    </YStack>
+  );
+};
+
 export const Checkable: Story = {
   args: { defaultOpen: true },
-  render: (args) => {
-    const [pinned, setPinned] = useState(true);
-    const [hidden, setHidden] = useState(false);
-    return (
-      <YStack
-        minHeight={340}
-        paddingTop="$4"
-        alignItems="center">
-        <ContextMenu {...args}>
-          <ContextMenu.Trigger>
-            <Button>Row</Button>
-          </ContextMenu.Trigger>
-          <ContextMenu.Content>
-            <ContextMenu.Label>View</ContextMenu.Label>
-            <ContextMenu.CheckboxItem
-              checked={pinned}
-              onCheckedChange={setPinned}>
-              Pinned
-            </ContextMenu.CheckboxItem>
-            <ContextMenu.CheckboxItem
-              checked={hidden}
-              onCheckedChange={setHidden}>
-              Hidden
-            </ContextMenu.CheckboxItem>
-          </ContextMenu.Content>
-        </ContextMenu>
-      </YStack>
-    );
-  },
+  render: (args) => <CheckableStory {...args} />,
 };
 
 export const AtThePointer: Story = {

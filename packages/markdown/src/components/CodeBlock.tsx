@@ -1,0 +1,62 @@
+/**
+ * Plain-markdown code block.
+ *
+ * LC-16 wrapper: tokenizing and token rendering come from the canonical
+ * `@repo/ui` code family (`useShikiTokens` +
+ * `HighlightedCode` — one shiki highlighter for the whole app). This file
+ * only owns the markdown-specific container chrome: the block inset (rides
+ * the space knob — SP-PAD, spec CodeBlock frame) and the shared markdown
+ * code color ramp.
+ */
+
+import { Code, HighlightedCode, useShikiTokens, ScrollView } from '@repo/ui';
+import { useResolvedKnobs } from '@repo/theme';
+import { View } from 'tamagui';
+
+import { markdownCodeColors } from '../shared/colorRamps';
+import type { CodeBlockProps } from '../types';
+
+interface CodeBlockInternalProps extends CodeBlockProps {
+  theme?: string | 'auto';
+}
+
+export function CodeBlock({ children, lang, theme: themeProp = 'auto' }: CodeBlockInternalProps) {
+  const { knobProps } = useResolvedKnobs();
+  // "auto" defers to useShikiTokens' default, the house syntax theme, whose
+  // token inks follow the scheme (SB-M-1216, MPO-474).
+  const tokens = useShikiTokens(children, lang ?? 'text', themeProp === 'auto' ? undefined : themeProp);
+
+  return (
+    <View
+      // Full fragment spread (AGENTS.md knob rule) so the cornerSmoothing
+      // class rides along with the outer radius; the fallback keeps the old
+      // default when a Preset override drops the fragment.
+      {...(knobProps.borderRadiusNested ?? { borderRadius: '$4' })}
+      backgroundColor={markdownCodeColors.background.base}
+      borderWidth={knobProps.borderRadius.borderWidth}
+      borderColor={markdownCodeColors.border.base}
+      // SP-PAD (spec CodeBlock frame; LC-18 / UX-P07): the block inset rides
+      // the space knob through the complete panelPadding fragment —
+      // components-CodeBlock parity.
+      {...knobProps.panelPadding}
+      marginVertical="$2"
+      overflow="hidden">
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}>
+        <Code
+          backgroundColor="transparent"
+          borderWidth={0}
+          padding={0}
+          color={markdownCodeColors.text.base}
+          fontSize={knobProps.sizeToken}>
+          <HighlightedCode
+            tokens={tokens}
+            fontSize={knobProps.sizeToken}>
+            {children}
+          </HighlightedCode>
+        </Code>
+      </ScrollView>
+    </View>
+  );
+}

@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ContextMenu } from './index';
 
-const renderOpen = (onSelect = vi.fn()) =>
+const renderOpen = (onSelect = vi.fn<() => void>()) =>
   renderWithProviders(
     <ContextMenu
       defaultOpen
@@ -20,7 +20,7 @@ const renderOpen = (onSelect = vi.fn()) =>
     </ContextMenu>,
   );
 
-describe('ContextMenu', () => {
+describe('ContextMenu component', () => {
   it('opens on contextmenu and not on a primary click', async () => {
     const { getByText } = renderWithProviders(
       <ContextMenu items={[{ label: 'Copy' }]}>
@@ -43,9 +43,9 @@ describe('ContextMenu', () => {
     await waitFor(() => {
       expect(document.querySelector('[role="menu"]')).toBeTruthy();
     });
-    const copy = Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"]')).find((el) =>
+    const copy = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((el) =>
       el.textContent?.includes('Copy'),
-    ) as HTMLElement;
+    )!;
     const selected = document.querySelector<HTMLElement>('[role="menuitemcheckbox"]');
     expect(copy).toBeTruthy();
     expect(selected).toBeTruthy();
@@ -54,28 +54,28 @@ describe('ContextMenu', () => {
     // 44 tall ($4), padX 13 (`$3` → space-3), weight 400 — menuRowFrame.
     expect(copy.className).toMatch(/_pl-t-space-3/u);
     expect(copy.className).toMatch(/_pr-t-space-3/u);
-    expect(copy.getAttribute('data-mp-pad-x')).toBe('13');
-    expect(copy.getAttribute('data-mp-row-height')).toBe('44');
-    expect(copy.getAttribute('data-mp-font-weight')).toBe('400');
+    expect(copy.dataset.mpPadX).toBe('13');
+    expect(copy.dataset.mpRowHeight).toBe('44');
+    expect(copy.dataset.mpFontWeight).toBe('400');
     expect(copy.className).toMatch(/_btlr-0px/u);
 
     // Selected fill is $color2; hover is $color3; check trails the label.
-    expect(selected?.getAttribute('data-mp-selected-fill')).toBe('$color2');
-    expect(copy.getAttribute('data-mp-hover-fill')).toBe('$color3');
-    const check = selected?.querySelector('[data-mp-check]');
-    expect(check?.getAttribute('data-mp-check')).toBe('trailing');
+    expect(selected?.dataset.mpSelectedFill).toBe('$color2');
+    expect(copy.dataset.mpHoverFill).toBe('$color3');
+    const check = selected?.querySelector<HTMLElement>('[data-mp-check]');
+    expect(check?.dataset.mpCheck).toBe('trailing');
     expect(selected?.lastElementChild).toBe(check);
   });
 
   it('selects a plain item and closes (COMMIT)', async () => {
-    const onSelect = vi.fn();
+    const onSelect = vi.fn<() => void>();
     renderOpen(onSelect);
     await waitFor(() => {
       expect(document.querySelector('[role="menu"]')).toBeTruthy();
     });
-    const copy = Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"]')).find((el) =>
+    const copy = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((el) =>
       el.textContent?.includes('Copy'),
-    ) as HTMLElement;
+    )!;
     fireEvent.click(copy);
     expect(onSelect).toHaveBeenCalledOnce();
     await waitFor(() => {
@@ -84,7 +84,7 @@ describe('ContextMenu', () => {
   });
 
   it('keeps a checkable item open (COMPOSE)', async () => {
-    const onCheckedChange = vi.fn();
+    const onCheckedChange = vi.fn<(checked: boolean) => void>();
     renderWithProviders(
       <ContextMenu
         defaultOpen
@@ -95,7 +95,7 @@ describe('ContextMenu', () => {
     await waitFor(() => {
       expect(document.querySelector('[role="menuitemcheckbox"]')).toBeTruthy();
     });
-    fireEvent.click(document.querySelector('[role="menuitemcheckbox"]') as HTMLElement);
+    fireEvent.click(document.querySelector<HTMLElement>('[role="menuitemcheckbox"]')!);
     expect(onCheckedChange).toHaveBeenCalledWith(true);
     expect(document.querySelector('[role="menu"]')).toBeTruthy();
   });
@@ -135,12 +135,12 @@ describe('ContextMenu', () => {
     await waitFor(() => {
       expect(document.querySelector('[role="menu"]')).toBeTruthy();
     });
-    const copy = Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"]')).find((el) =>
+    const copy = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find((el) =>
       el.textContent?.includes('Copy'),
-    ) as HTMLElement;
+    )!;
     fireEvent.focus(copy);
-    expect(copy.getAttribute('data-highlighted')).toBe('true');
-    expect(copy.getAttribute('data-mp-ring-offset')).toBe('0');
+    expect(copy.dataset.highlighted).toBe('true');
+    expect(copy.dataset.mpRingOffset).toBe('0');
   });
 });
 
@@ -149,21 +149,28 @@ describe('ContextMenu', () => {
  * placement math reads is given here. The client rect is the opening frame's,
  * scaled 0.96 as the real one is; only the layout width is the menu's width.
  */
+const isPanel = (el: Element): boolean => el instanceof HTMLElement && 'fpPanel' in el.dataset;
+
 const stubPanelBox = (width: number, height: number) => {
-  const isPanel = (el: Element) => el.hasAttribute('data-fp-panel');
+  // oxlint-disable-next-line typescript/unbound-method -- captured to delegate non-panel elements to the real implementation
   const rect = Element.prototype.getBoundingClientRect;
-  vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function stubPanelBox(this: Element) {
+  vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function panelRect(this: Element) {
     return isPanel(this) ? new DOMRect(0, 0, width * 0.96, height * 0.96) : rect.call(this);
   });
   const offsetWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetWidth');
-  vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function stubPanelBox(this: HTMLElement) {
+  vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockImplementation(function panelOffsetWidth(
+    this: HTMLElement,
+  ) {
     return isPanel(this) ? width : (offsetWidth?.get?.call(this) ?? 0);
   });
   const scrollHeight = Object.getOwnPropertyDescriptor(Element.prototype, 'scrollHeight');
-  vi.spyOn(Element.prototype, 'scrollHeight', 'get').mockImplementation(function stubPanelBox(this: Element) {
+  vi.spyOn(Element.prototype, 'scrollHeight', 'get').mockImplementation(function panelScrollHeight(this: Element) {
     return isPanel(this) ? height : (scrollHeight?.get?.call(this) ?? 0);
   });
 };
+
+/** Pixel length from an inline style value such as `300px`. */
+const pxValue = (value: string): number => Number(value.replace(/px$/u, ''));
 
 const panelBox = () => document.querySelector<HTMLElement>('[data-fp-panel]');
 
@@ -177,7 +184,7 @@ const rightClickAt = async (x: number, y: number) => {
   await waitFor(() => {
     expect(panelBox()?.style.top).toMatch(/px$/u);
   });
-  return panelBox() as HTMLElement;
+  return panelBox()!;
 };
 
 describe('ContextMenu opens at the pointer (layoutTokens.ts free overlay)', () => {
@@ -197,8 +204,8 @@ describe('ContextMenu opens at the pointer (layoutTokens.ts free overlay)', () =
     const x = window.innerWidth - 20;
     const y = window.innerHeight - 20;
     const panel = await rightClickAt(x, y);
-    expect(Number.parseFloat(panel.style.left) + 180).toBe(x);
-    expect(Number.parseFloat(panel.style.top) + Number.parseFloat(panel.style.maxHeight)).toBe(y - OVERLAY_ANCHOR_GAP);
+    expect(pxValue(panel.style.left) + 180).toBe(x);
+    expect(pxValue(panel.style.top) + pxValue(panel.style.maxHeight)).toBe(y - OVERLAY_ANCHOR_GAP);
     expect(panel.style.transformOrigin).toBe('bottom right');
   });
 
@@ -208,7 +215,7 @@ describe('ContextMenu opens at the pointer (layoutTokens.ts free overlay)', () =
     vi.spyOn(document.documentElement, 'clientWidth', 'get').mockReturnValue(clientWidth);
     const x = window.innerWidth - 195;
     const panel = await rightClickAt(x, 200);
-    expect(Number.parseFloat(panel.style.left) + 180).toBe(x);
+    expect(pxValue(panel.style.left) + 180).toBe(x);
   });
 
   it('clamps to the viewport padding when neither side fits', async () => {
@@ -249,13 +256,14 @@ describe('ContextMenu opens at the pointer (layoutTokens.ts free overlay)', () =
         <Button>Target</Button>
       </ContextMenu>,
     );
-    const reference = document.querySelector<HTMLElement>('[data-fp-reference]') as HTMLElement;
+    const reference = document.querySelector<HTMLElement>('[data-fp-reference]')!;
+    // oxlint-disable-next-line typescript/unbound-method -- captured to delegate other elements to the real implementation
     const rect = Element.prototype.getBoundingClientRect;
-    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function keyboardRect(this: Element) {
       if (this === reference) {
         return new DOMRect(40, 100, 200, 44);
       }
-      if (this.hasAttribute('data-fp-panel')) {
+      if (isPanel(this)) {
         return new DOMRect(0, 0, 180, 140);
       }
       return rect.call(this);

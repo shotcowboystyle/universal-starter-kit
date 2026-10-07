@@ -1,6 +1,4 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 
 import { Button } from '@repo/forms';
 import { renderWithProviders } from '@repo/test-utils';
@@ -14,11 +12,12 @@ import { ActionBar } from './ActionBar';
 import { __resetActionDevWarnSeen } from './dev-warn';
 
 /** Simulates rendering inside a `DialogContent` surface. */
+const dialogRegionValue = { inDialogRegion: true };
 const inDialogRegion = (ui: ReactNode) => (
-  <DialogRegionContext.Provider value={{ inDialogRegion: true }}>{ui}</DialogRegionContext.Provider>
+  <DialogRegionContext.Provider value={dialogRegionValue}>{ui}</DialogRegionContext.Provider>
 );
 
-describe('ActionBar', () => {
+describe(ActionBar, () => {
   let warnSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
@@ -40,7 +39,7 @@ describe('ActionBar', () => {
         primary={<Button accent>Save</Button>}
       />,
     );
-    const texts = Array.from(container.querySelectorAll('[role="button"]')).map((el) => el.textContent);
+    const texts = [...container.querySelectorAll('[role="button"]')].map((el) => el.textContent);
     expect(texts).toStrictEqual(['Cancel', 'Draft', 'Save']);
     expect(warnSpy).not.toHaveBeenCalled();
   });
@@ -71,7 +70,7 @@ describe('ActionBar', () => {
   });
 
   it('strips disabled from the cancel slot and warns cancel-disabled', () => {
-    const onClick = vi.fn();
+    const onClick = vi.fn<() => void>();
     const { container } = renderWithProviders(
       <ActionBar
         id="strip"
@@ -86,17 +85,17 @@ describe('ActionBar', () => {
         primary={<Button accent>Save</Button>}
       />,
     );
-    const cancelEl = container.querySelector('button') as HTMLButtonElement;
+    const cancelEl = container.querySelector<HTMLButtonElement>('button')!;
     expect(cancelEl).toBeTruthy();
     expect(cancelEl.disabled).toBe(false);
-    expect(cancelEl.getAttribute('data-mp-cancel-disabled-ignored')).toBe('true');
+    expect(cancelEl.dataset.mpCancelDisabledIgnored).toBe('true');
     fireEvent.click(cancelEl);
     expect(onClick).toHaveBeenCalledOnce();
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('cancel-disabled'));
   });
 
   it('cancel slot with a disabled house Button stays pressable', () => {
-    const onPress = vi.fn();
+    const onPress = vi.fn<() => void>();
     renderWithProviders(
       <ActionBar
         id="strip-house"

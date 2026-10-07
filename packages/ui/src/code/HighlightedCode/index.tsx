@@ -9,19 +9,28 @@
 
 import { useResolvedKnobs } from '@repo/theme';
 import type { ReactNode } from 'react';
+import type { FontSizeTokens, TextProps } from 'tamagui';
 import { Text, getTokenValue, isWeb } from 'tamagui';
 
 import { componentColors } from '../../component-colors';
 import type { HighlightLine } from '../Highlighter';
 
 /** Line-number gutter width steps with the size knob. */
-const lineNumberGutterBySize: Record<string, number> = {
-  $2: 28,
-  $3: 32,
-  $4: 40,
-  $5: 48,
-  $6: 56,
-};
+const lineNumberGutterBySize = new Map<string, number>([
+  ['$2', 28],
+  ['$3', 32],
+  ['$4', 40],
+  ['$5', 48],
+  ['$6', 56],
+]);
+
+const gutterGapToken: Parameters<typeof getTokenValue>[0] = '$2';
+
+const NO_HIGHLIGHT_LINES: number[] = [];
+
+/** Whether shiki's font-style bit field (1=italic, 2=bold) has the flag at `bit` set. */
+const hasFontStyleBit = (fontStyle: number | undefined, bit: number): boolean =>
+  fontStyle !== undefined && Math.floor(fontStyle / 2 ** bit) % 2 === 1;
 
 export interface HighlightedCodeProps {
   /** Array of token lines from shiki */
@@ -33,13 +42,13 @@ export interface HighlightedCodeProps {
   /** Whether to show line numbers */
   showLineNumbers?: boolean;
   /** Font size token */
-  fontSize?: any;
+  fontSize?: FontSizeTokens;
 }
 
 export const HighlightedCode = ({
   tokens,
   children,
-  highlightLines = [],
+  highlightLines = NO_HIGHLIGHT_LINES,
   showLineNumbers = false,
   fontSize,
 }: HighlightedCodeProps) => {
@@ -50,19 +59,21 @@ export const HighlightedCode = ({
   // Gutter width steps with the type scale so a size-knob flip restyles
   // it. $color8 line-number ink fails AA; $color11
   // (text.secondary) is the lowest ramp that stays readable on code surfaces.
-  const gutterWidth = lineNumberGutterBySize[String(resolvedFontSize)] ?? 40;
-  const gutterGap = getTokenValue('$2' as Parameters<typeof getTokenValue>[0], 'space') as number;
+  const gutterWidth = lineNumberGutterBySize.get(String(resolvedFontSize)) ?? 40;
+  const gutterGap = Number(getTokenValue(gutterGapToken, 'space'));
   // While tokens are loading, show the raw children (plain text fallback)
   // — geometry rides the surrounding type scale, not a fixed catalog px.
   if (!tokens) {
+    // oxlint-disable-next-line react/jsx-no-useless-fragment -- children is a ReactNode (may be a Promise); a component must return a ReactElement
     return <>{children}</>;
   }
+  const highlighted = new Set(highlightLines);
 
   return (
     <>
       {tokens.map((line, lineIndex) => {
         const lineNumber = lineIndex + 1;
-        const isHighlighted = highlightLines.includes(lineNumber);
+        const isHighlighted = highlighted.has(lineNumber);
 
         return (
           <Text
@@ -85,7 +96,8 @@ export const HighlightedCode = ({
                 data-line-number=""
                 display="inline-flex"
                 // "end" is web-only CSS; native textAlign has no logical values
-                textAlign={(isWeb ? 'end' : 'right') as any}
+                // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- SAFETY: 'end' is a web-only CSS value that RN-typed textAlign omits; only emitted when isWeb
+                textAlign={(isWeb ? 'end' : 'right') as TextProps['textAlign']}
                 userSelect="none">
                 {lineNumber}
               </Text>
@@ -94,8 +106,8 @@ export const HighlightedCode = ({
               <Text
                 key={tokenIndex}
                 color={token.color}
-                {...(token.fontStyle && token.fontStyle & 1 ? { fontStyle: 'italic' } : {})}
-                {...(token.fontStyle && token.fontStyle & 2 ? { fontWeight: 'bold' } : {})}
+                {...(hasFontStyleBit(token.fontStyle, 0) ? { fontStyle: 'italic' } : {})}
+                {...(hasFontStyleBit(token.fontStyle, 1) ? { fontWeight: 'bold' } : {})}
                 fontFamily="$mono"
                 letterSpacing={0}
                 fontSize={resolvedFontSize}>

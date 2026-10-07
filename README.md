@@ -61,8 +61,6 @@ The monorepo shares business logic across platforms while keeping UI and navigat
 - `@repo/i18n` provides a single source of truth for translation strings (EN/DE), consumed by `next-intl` on Web and `i18next` on Mobile. App-specific text (e.g., app name) uses `{appName}` interpolation resolved at runtime by each platform.
 - `@repo/ui`, `@repo/forms` and `@repo/theme` provide the Tamagui component catalog, form fields (TanStack Form) and theme config used by both apps.
 
-Most packages are derived from [multiplatform.one](https://multiplatform.one) and are Apache-2.0 licensed; each package keeps its `LICENSE`, and the root `NOTICE` file lists the attribution.
-
 ### Features
 
 - Drag-and-drop Kanban with multi-project support (web) / gesture-driven interactions (mobile)

@@ -1,0 +1,64 @@
+## Frappe client (`frappe` piece)
+
+`apps/__NAME__/src/app.ts` wires `createApp({ frappe: … })`: the
+`FrappeProvider` mounts when `FRAPPE_ENABLED=1` and talks to the Frappe server
+at `FRAPPE_URL` (both are `public` env keys in `packages/config/config.json`,
+loaded from `.env` — start from `.env.example`). This piece brings no server
+of its own; add the `frappe-bench` piece for a dev server in docker.
+
+### Running against fixtures, with no server
+
+`createApp` takes a fixture corpus, so the app runs with no server and no
+network. Hand `frappe.fixtures` a `FixtureProvider` in
+`apps/__NAME__/src/app.ts`:
+
+```ts
+import { createApp } from "@repo/core";
+import { InMemoryFixtureProvider } from "@repo/frappe";
+import { themeConfig } from "@package/themes";
+
+const fixtures = new InMemoryFixtureProvider({
+  Customer: [
+    { name: "CUST-0001", doctype: "Customer", customer_name: "Acme" },
+    { name: "CUST-0002", doctype: "Customer", customer_name: "Globex" },
+  ],
+});
+
+export const { AppProvider, useAppConfig, withApp } = createApp({
+  theme: themeConfig,
+  frappe: { fixtures },
+});
+```
+
+`FrappeTable`, `FrappeList` and the other collection-backed components then
+read from the corpus. Writes land in it too, so create/update/delete work for
+the session.
+
+Two things follow from setting `fixtures`:
+
+- the provider mounts without `FRAPPE_ENABLED=1`, and
+- `baseURL` takes no fallback. Only a `baseURL` you pass explicitly is used,
+  so `BASE_URL` cannot quietly point fixture reads at the app's own origin.
+
+Column labels and filter fields come from DocType metadata, which lives in
+the corpus under the `DocType` doctype (the `getdoctype` shape) when you want
+it:
+
+```ts
+const fixtures = new InMemoryFixtureProvider({
+  DocType: [
+    {
+      name: "Customer",
+      doctype: "DocType",
+      fields: [{ fieldname: "customer_name", fieldtype: "Data", label: "Customer Name" }],
+    },
+  ],
+  Customer: [{ name: "CUST-0001", doctype: "Customer", customer_name: "Acme" }],
+});
+```
+
+Leave it out and the table still renders its rows; it just has no
+metadata-derived filter fields.
+
+To point the same app at a real Frappe server again, drop `fixtures` and set
+`FRAPPE_ENABLED=1` + `FRAPPE_URL` in `.env`.

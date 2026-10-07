@@ -73,6 +73,7 @@ export const computeRequiredMarkMode = (
  * Suffix appended to a field label for the given mode.
  * Empty string when the field should not be marked.
  */
+// oxlint-disable-next-line sonarjs/bool-param-default -- positional parameter before a required one; a default would trip default-param-last
 export const formatRequiredMarkSuffix = (required: boolean | undefined, mode: RequiredMarkMode): string => {
   switch (mode) {
     case 'asterisk': {

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { createPhotonGeocoder, photonFeatureToResult } from './photon-geocoder';
+import type { PhotonFetch } from './photon-geocoder';
 
 // Recorded from https://photon.komoot.io on 2026-09-26 (trimmed to the fields
 // the adapter reads). Photon returns one feature per OSM way, so a long street
@@ -58,15 +59,18 @@ const kamppiReverse = {
   ],
 };
 
-const jsonResponse = (body: unknown, status = 200): Response =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
+type PhotonBody =
+  | typeof mannerheimSearch
+  | typeof kamppiReverse
+  | { type: string; features: [] }
+  | { message: string }
+  | { error: string };
 
-describe('createPhotonGeocoder', () => {
+const jsonResponse = (body: PhotonBody, status = 200): Response => Response.json(body, { status });
+
+describe(createPhotonGeocoder, () => {
   it('searches the public instance and maps features to place rows', async () => {
-    const fetch = vi.fn().mockResolvedValue(jsonResponse(mannerheimSearch));
+    const fetch = vi.fn<PhotonFetch>().mockResolvedValue(jsonResponse(mannerheimSearch));
     const geocoder = createPhotonGeocoder({ fetch });
     const results = await geocoder.geocode({ query: ' mannerheimintie ' });
     expect(fetch).toHaveBeenCalledOnce();
@@ -82,7 +86,7 @@ describe('createPhotonGeocoder', () => {
   });
 
   it('reverse geocodes a pair to its nearest place', async () => {
-    const fetch = vi.fn().mockResolvedValue(jsonResponse(kamppiReverse));
+    const fetch = vi.fn<PhotonFetch>().mockResolvedValue(jsonResponse(kamppiReverse));
     const geocoder = createPhotonGeocoder({ fetch });
     const result = await geocoder.reverseGeocode({ lat: 60.16952, lng: 24.93545 });
     expect(fetch.mock.calls[0][0]).toBe('https://photon.komoot.io/reverse?lat=60.16952&lon=24.93545&limit=1');
@@ -95,13 +99,13 @@ describe('createPhotonGeocoder', () => {
   });
 
   it('answers null when nothing is near the pair', async () => {
-    const fetch = vi.fn().mockResolvedValue(jsonResponse({ type: 'FeatureCollection', features: [] }));
+    const fetch = vi.fn<PhotonFetch>().mockResolvedValue(jsonResponse({ type: 'FeatureCollection', features: [] }));
     const geocoder = createPhotonGeocoder({ fetch });
     await expect(geocoder.reverseGeocode({ lat: 0, lng: -160 })).resolves.toBeNull();
   });
 
   it('takes a self-hosted base URL and a language', async () => {
-    const fetch = vi.fn().mockResolvedValue(jsonResponse(mannerheimSearch));
+    const fetch = vi.fn<PhotonFetch>().mockResolvedValue(jsonResponse(mannerheimSearch));
     const geocoder = createPhotonGeocoder({
       fetch,
       baseUrl: 'https://geo.example.test/photon/',
@@ -113,7 +117,7 @@ describe('createPhotonGeocoder', () => {
   });
 
   it('never calls out for a blank query', async () => {
-    const fetch = vi.fn();
+    const fetch = vi.fn<PhotonFetch>();
     const geocoder = createPhotonGeocoder({ fetch });
     await expect(geocoder.geocode({ query: '   ' })).resolves.toStrictEqual([]);
     expect(fetch).not.toHaveBeenCalled();
@@ -121,10 +125,8 @@ describe('createPhotonGeocoder', () => {
 
   it('serves a repeated query and a repeated pair from its cache', async () => {
     const fetch = vi
-      .fn()
-      .mockImplementation(async (url: string) =>
-        jsonResponse(url.includes('/reverse') ? kamppiReverse : mannerheimSearch),
-      );
+      .fn<PhotonFetch>()
+      .mockImplementation(async (url) => jsonResponse(url.includes('/reverse') ? kamppiReverse : mannerheimSearch));
     const geocoder = createPhotonGeocoder({ fetch });
     await geocoder.geocode({ query: 'mannerheimintie' });
     await geocoder.geocode({ query: 'mannerheimintie' });
@@ -137,7 +139,7 @@ describe('createPhotonGeocoder', () => {
 
   it('rejects on an HTTP error and retries it on the next call', async () => {
     const fetch = vi
-      .fn()
+      .fn<PhotonFetch>()
       .mockResolvedValueOnce(jsonResponse({ message: 'busy' }, 503))
       .mockResolvedValueOnce(jsonResponse(mannerheimSearch));
     const geocoder = createPhotonGeocoder({ fetch });
@@ -147,14 +149,15 @@ describe('createPhotonGeocoder', () => {
   });
 
   it('rejects a body that is not a feature collection', async () => {
-    const fetch = vi.fn().mockResolvedValue(jsonResponse({ error: 'bad request' }));
+    const fetch = vi.fn<PhotonFetch>().mockResolvedValue(jsonResponse({ error: 'bad request' }));
     const geocoder = createPhotonGeocoder({ fetch });
     await expect(geocoder.geocode({ query: 'x' })).rejects.toThrow('no feature collection');
   });
 
   it('aborts a request that outlives timeoutMs', async () => {
-    const fetch = vi.fn(
-      async (_url: string, init?: RequestInit) =>
+    const fetch = vi.fn<PhotonFetch>(
+      async (_url, init) =>
+        // oxlint-disable-next-line promise/avoid-new -- the request only settles when the abort event fires, which has no async/await form
         await new Promise<Response>((_resolve, reject) => {
           init?.signal?.addEventListener('abort', () => {
             reject(new Error('aborted'));
@@ -162,14 +165,14 @@ describe('createPhotonGeocoder', () => {
         }),
     );
     const geocoder = createPhotonGeocoder({
-      fetch: fetch as typeof globalThis.fetch,
+      fetch,
       timeoutMs: 20,
     });
     await expect(geocoder.geocode({ query: 'slow' })).rejects.toThrow('aborted');
   });
 });
 
-describe('photonFeatureToResult', () => {
+describe(photonFeatureToResult, () => {
   it('labels an unnamed house by street and number', () => {
     expect(
       photonFeatureToResult({

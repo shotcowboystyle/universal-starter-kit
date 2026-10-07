@@ -168,8 +168,8 @@ export interface CreateViteConfigOptions {
      */
     protoShadow?: boolean;
     /**
-     * When `@multiplatform.one/web3` is NOT installed, redirect the OPTIONAL
-     * `@multiplatform.one/web3/native` import (from core's
+     * When `@repo/web3` is NOT installed, redirect the OPTIONAL
+     * `@repo/web3/native` import (from core's
      * loadWalletProvider.native.ts) to a no-op shim — rolldown otherwise
      * leaves the unresolvable specifier as a bare dynamic `import()` in the
      * classic-script bundle, which Hermes rejects at lazy-compile time.
@@ -709,7 +709,7 @@ const registerNativeProtoShadowFix = (): void => {
 };
 
 /**
- * Redirect the OPTIONAL `@multiplatform.one/web3` native import to a no-op
+ * Redirect the OPTIONAL `@repo/web3` native import to a no-op
  * shim on NATIVE when the package is not installed (see the nativeFixes
  * option docs). Rolldown leaves the unresolvable specifier as a bare dynamic
  * `import()` in the classic-script native bundle — Hermes rejects that at
@@ -724,7 +724,7 @@ const registerNativeWeb3Stub = (): void => {
   }
   try {
     // web3 installed — its real native entry resolves; no stub needed.
-    nodeRequire.resolve('@multiplatform.one/web3', { paths: [findProjectRoot(), process.cwd()] });
+    nodeRequire.resolve('@repo/web3', { paths: [findProjectRoot(), process.cwd()] });
     return;
   } catch {
     // not installed — stub below
@@ -744,7 +744,7 @@ const registerNativeWeb3Stub = (): void => {
   addNativePlugin({
     name,
     resolveId(id: string): string | null {
-      if (id === '@multiplatform.one/web3/native' || id === '@multiplatform.one/web3') {
+      if (id === '@repo/web3/native' || id === '@repo/web3') {
         return shim;
       }
       return null;
@@ -886,7 +886,7 @@ const onePlugins = (
   if (nativeFixes?.protoShadow !== false) {
     registerNativeProtoShadowFix();
   }
-  // Optional-web3 stub for apps that don't install @multiplatform.one/web3
+  // Optional-web3 stub for apps that don't install @repo/web3
   // (auto-skipped when the package resolves).
   if (nativeFixes?.web3Stub !== false) {
     registerNativeWeb3Stub();

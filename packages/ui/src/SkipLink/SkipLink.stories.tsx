@@ -74,6 +74,7 @@ export const Default: Story = {
         <View
           flexGrow={1}
           id="story-main-content"
+          // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui View does not render <main>; role carries the landmark
           role="main"
           aria-label="Main content">
           <YStack gap="$3">

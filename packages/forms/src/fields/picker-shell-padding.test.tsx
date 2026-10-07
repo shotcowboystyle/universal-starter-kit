@@ -6,29 +6,29 @@
 
 import { renderWithProviders } from '@repo/test-utils';
 import React from 'react';
+import type { ComponentProps } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const shellProps: Record<string, unknown>[] = [];
-
-vi.mock('../FloatingPanel', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../FloatingPanel')>();
-  return {
-    ...actual,
-    FloatingPanel: (props: Record<string, unknown>) => {
-      shellProps.push(props);
-      return React.createElement(
-        'div',
-        { 'data-testid': 'shell' },
-        props.trigger as React.ReactNode,
-        props.children as React.ReactNode,
-      );
-    },
-  };
-});
+import type { FloatingPanel } from '../FloatingPanel';
 
 import { ColorPicker } from './ColorPicker';
 import { DatePicker } from './DatePicker';
 import { TimePicker } from './TimePicker';
+
+type ShellProps = ComponentProps<typeof FloatingPanel>;
+
+const shellProps: ShellProps[] = [];
+
+vi.mock(import('../FloatingPanel'), async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    FloatingPanel: (props: ShellProps) => {
+      shellProps.push(props);
+      return React.createElement('div', { 'data-testid': 'shell' }, props.trigger, props.children);
+    },
+  };
+});
 
 describe('picker shells do not pad around the widget', () => {
   beforeEach(() => {

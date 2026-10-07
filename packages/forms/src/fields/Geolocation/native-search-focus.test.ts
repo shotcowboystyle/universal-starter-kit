@@ -24,11 +24,13 @@ describe('native search focus ownership', () => {
 
   it('preserves suppression across modal blur but permits a later hardware focus visit', () => {
     const focus = createNativeSearchFocus();
+    // Not DOM focus: `blur` is the ownership tracker's own event.
+    const { blur } = focus;
     focus.dismiss();
-    focus.blur(true, false);
-    focus.blur(false, true);
+    blur(true, false);
+    blur(false, true);
     expect(focus.canOpen(false)).toBe(false);
-    focus.blur(false, false);
+    blur(false, false);
     expect(focus.canOpen(false)).toBe(true);
     expect(focus.canOpen(true)).toBe(false);
   });

@@ -67,8 +67,8 @@ const houseRender = (ui: ReactElement, scheme: Scheme, knob: boolean) => {
 };
 
 const injectedRuleValue = (className: string, property: string): string => {
-  for (const sheet of Array.from(document.styleSheets)) {
-    for (const rule of Array.from(sheet.cssRules)) {
+  for (const sheet of [...document.styleSheets]) {
+    for (const rule of [...sheet.cssRules]) {
       if (!(rule instanceof CSSStyleRule)) {
         continue;
       }
@@ -87,7 +87,7 @@ const injectedRuleValue = (className: string, property: string): string => {
 /** The innermost Tamagui theme scope painting `el`, e.g. `accent_Button`. */
 const scopeOf = (el: Element): string | null => {
   for (let node: Element | null = el; node; node = node.parentElement) {
-    const names = Array.from(node.classList)
+    const names = [...node.classList]
       .filter((c) => c.startsWith('t_') && c !== 't_sub_theme')
       .map((c) => c.slice(2))
       .filter((c) => c !== 'light' && c !== 'dark');
@@ -121,9 +121,7 @@ const resolveInScope = (value: string, scheme: Scheme, scope: string | null): st
 };
 
 const paintedColor = (el: Element, scheme: Scheme): string => {
-  const cls = Array.from(el.classList).find(
-    (c) => c.startsWith('_col-') && !/^_col-0(hover|active|focus|press)/u.test(c),
-  );
+  const cls = [...el.classList].find((c) => c.startsWith('_col-') && !/^_col-0(hover|active|focus|press)/u.test(c));
   if (!cls) {
     throw new Error(`${el.tagName} carries no _col- class`);
   }

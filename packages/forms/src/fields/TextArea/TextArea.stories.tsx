@@ -39,60 +39,58 @@ const meta: Meta<typeof TextArea> = {
 export default meta;
 type Story = StoryObj<typeof TextArea>;
 
+const FormExample = () => {
+  const form = useForm({
+    defaultValues: {
+      title: '',
+      description: '',
+      notes: 'Some default notes...',
+    },
+    onSubmit: async ({ value }) => {
+      action('onSubmit')(value);
+    },
+  });
+
+  return (
+    <Form
+      form={form}
+      className="max-w-md">
+      <YStack gap="$4">
+        <TextArea
+          label="Title"
+          name="title"
+          textAreaProps={{ placeholder: 'Enter a title' }}
+          required
+        />
+
+        <TextArea
+          label="Description"
+          name="description"
+          textAreaProps={{
+            placeholder: 'Enter a detailed description',
+            numberOfLines: 4,
+          }}
+          helperText="Provide as much detail as possible"
+        />
+
+        <TextArea
+          label="Additional Notes"
+          name="notes"
+          textAreaProps={{
+            placeholder: 'Any additional notes...',
+            numberOfLines: 3,
+          }}
+        />
+
+        <Button action="submit">Save</Button>
+      </YStack>
+    </Form>
+  );
+};
+
 export const Main: Story = {
   name: 'Main',
-  render: () => {
-    const FormExample = () => {
-      const form = useForm({
-        defaultValues: {
-          title: '',
-          description: '',
-          notes: 'Some default notes...',
-        },
-        onSubmit: async ({ value }) => {
-          action('onSubmit')(value);
-        },
-      });
-
-      return (
-        <Form
-          form={form}
-          className="max-w-md">
-          <YStack gap="$4">
-            <TextArea
-              label="Title"
-              name="title"
-              textAreaProps={{ placeholder: 'Enter a title' }}
-              required
-            />
-
-            <TextArea
-              label="Description"
-              name="description"
-              textAreaProps={{
-                placeholder: 'Enter a detailed description',
-                numberOfLines: 4,
-              }}
-              helperText="Provide as much detail as possible"
-            />
-
-            <TextArea
-              label="Additional Notes"
-              name="notes"
-              textAreaProps={{
-                placeholder: 'Any additional notes...',
-                numberOfLines: 3,
-              }}
-            />
-
-            <Button action="submit">Save</Button>
-          </YStack>
-        </Form>
-      );
-    };
-
-    return <FormExample />;
-  },
+  render: () => <FormExample />,
 };
 
 export const Standalone: Story = {
@@ -175,49 +173,48 @@ export const WithMaxLength: Story = {
   },
 };
 
+const AutoResizeExample = () => {
+  const [val, setVal] = useState('');
+  return (
+    <YStack
+      gap="$4"
+      padding="$4"
+      maxWidth={500}>
+      <Paragraph
+        size="$3"
+        fontWeight="bold">
+        Auto-resize TextArea
+      </Paragraph>
+      <Paragraph
+        size="$2"
+        color="$placeholderColor">
+        This textarea grows as you type, up to the maxRows limit (6 rows). Try pasting or typing multiple lines.
+      </Paragraph>
+      <TextArea
+        label="Auto-growing notes"
+        autoResize
+        minRows={2}
+        maxRows={6}
+        value={val}
+        onChange={(text) => {
+          setVal(text);
+          action('onChangeText')(text);
+        }}
+        textAreaProps={{ placeholder: 'Start typing to see it grow...' }}
+        showCount
+      />
+      <TextArea
+        label="Default (no auto-resize)"
+        value={val}
+        onChange={setVal}
+        textAreaProps={{ placeholder: 'Fixed height for comparison' }}
+      />
+    </YStack>
+  );
+};
+
 export const AutoResize: Story = {
-  render: () => {
-    const AutoResizeExample = () => {
-      const [val, setVal] = useState('');
-      return (
-        <YStack
-          gap="$4"
-          padding="$4"
-          maxWidth={500}>
-          <Paragraph
-            size="$3"
-            fontWeight="bold">
-            Auto-resize TextArea
-          </Paragraph>
-          <Paragraph
-            size="$2"
-            color="$placeholderColor">
-            This textarea grows as you type, up to the maxRows limit (6 rows). Try pasting or typing multiple lines.
-          </Paragraph>
-          <TextArea
-            label="Auto-growing notes"
-            autoResize
-            minRows={2}
-            maxRows={6}
-            value={val}
-            onChangeText={(text) => {
-              setVal(text);
-              action('onChangeText')(text);
-            }}
-            textAreaProps={{ placeholder: 'Start typing to see it grow...' }}
-            showCount
-          />
-          <TextArea
-            label="Default (no auto-resize)"
-            value={val}
-            onChangeText={setVal}
-            textAreaProps={{ placeholder: 'Fixed height for comparison' }}
-          />
-        </YStack>
-      );
-    };
-    return <AutoResizeExample />;
-  },
+  render: () => <AutoResizeExample />,
 };
 
 /**
@@ -226,6 +223,53 @@ export const AutoResize: Story = {
  * stays visible. Raw primitives here are by design and labeled — knob/contrast
  * probes skip this story via `parameters.foreignContrastSpecimen`.
  */
+const ComparisonExample = () => {
+  const [customVal, setCustomVal] = useState('');
+  const [tamaguiVal, setTamaguiVal] = useState('');
+  return (
+    <XStack
+      gap="$6"
+      alignItems="flex-start"
+      padding="$4">
+      <YStack
+        gap="$3"
+        width={300}>
+        <Paragraph
+          size="$2"
+          color="$placeholderColor">
+          Custom TextArea
+        </Paragraph>
+        <TextArea
+          textAreaProps={{ placeholder: 'Type here...' }}
+          value={customVal}
+          onChange={(text) => {
+            setCustomVal(text);
+            action('custom.onChangeText')(text);
+          }}
+        />
+      </YStack>
+
+      <YStack
+        gap="$3"
+        width={300}>
+        <Paragraph
+          size="$2"
+          color="$placeholderColor">
+          Tamagui TextArea
+        </Paragraph>
+        <TamaguiTextArea
+          placeholder="Type here..."
+          value={tamaguiVal}
+          onChangeText={(text) => {
+            setTamaguiVal(text);
+            action('tamagui.onChangeText')(text);
+          }}
+        />
+      </YStack>
+    </XStack>
+  );
+};
+
 export const Comparison: Story = {
   name: 'Foreign contrast specimen (raw tamagui)',
   parameters: {
@@ -240,55 +284,7 @@ export const Comparison: Story = {
       },
     },
   },
-  render: () => {
-    const ComparisonExample = () => {
-      const [customVal, setCustomVal] = useState('');
-      const [tamaguiVal, setTamaguiVal] = useState('');
-      return (
-        <XStack
-          gap="$6"
-          alignItems="flex-start"
-          padding="$4">
-          <YStack
-            gap="$3"
-            width={300}>
-            <Paragraph
-              size="$2"
-              color="$placeholderColor">
-              Custom TextArea
-            </Paragraph>
-            <TextArea
-              textAreaProps={{ placeholder: 'Type here...' }}
-              value={customVal}
-              onChangeText={(text) => {
-                setCustomVal(text);
-                action('custom.onChangeText')(text);
-              }}
-            />
-          </YStack>
-
-          <YStack
-            gap="$3"
-            width={300}>
-            <Paragraph
-              size="$2"
-              color="$placeholderColor">
-              Tamagui TextArea
-            </Paragraph>
-            <TamaguiTextArea
-              placeholder="Type here..."
-              value={tamaguiVal}
-              onChangeText={(text) => {
-                setTamaguiVal(text);
-                action('tamagui.onChangeText')(text);
-              }}
-            />
-          </YStack>
-        </XStack>
-      );
-    };
-    return <ComparisonExample />;
-  },
+  render: () => <ComparisonExample />,
 };
 
 /** Loading placeholder — the skeleton mirrors the textarea anatomy. */

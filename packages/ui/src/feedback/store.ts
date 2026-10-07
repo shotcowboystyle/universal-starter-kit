@@ -37,18 +37,18 @@ export const subscribeFeedback = (listener: () => void): (() => void) => {
 };
 
 export const pushFeedback = (entry: Omit<FeedbackEntry, 'id'> & { id?: string }): string => {
-  const id = entry.id ?? `mp-feedback-${++counter}`;
+  let { id } = entry;
+  if (id == null) {
+    counter += 1;
+    id = `mp-feedback-${counter}`;
+  }
   const next: FeedbackEntry = {
     ...entry,
     dismissible: entry.dismissible ?? true,
     id,
   };
   // Dialogs replace any open dialog; banners/alerts stack.
-  if (next.surface === 'dialog') {
-    entries = [...entries.filter((e) => e.surface !== 'dialog'), next];
-  } else {
-    entries = [...entries, next];
-  }
+  entries = next.surface === 'dialog' ? [...entries.filter((e) => e.surface !== 'dialog'), next] : [...entries, next];
   emit();
   return id;
 };

@@ -9,7 +9,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { PresetSwatches } from './parts';
 
-vi.mock('@tamagui/lucide-icons-2', () => ({
+vi.mock(import('@tamagui/lucide-icons-2'), () => ({
   Palette: () => null,
   X: () => null,
   Check: () => null,
@@ -18,7 +18,7 @@ vi.mock('@tamagui/lucide-icons-2', () => ({
 
 const BRAND = ['#1E40AF', '#3B82F6', '#BFDBFE'];
 
-describe('PresetSwatches', () => {
+describe(PresetSwatches, () => {
   it('renders a radiogroup of radios for each preset', () => {
     renderWithProviders(
       <PresetSwatches

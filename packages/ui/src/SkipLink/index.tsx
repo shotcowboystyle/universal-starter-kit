@@ -86,7 +86,7 @@ const ensureSkipLinkStyles = () => {
   if (typeof document === 'undefined') {
     return;
   }
-  if (document.getElementById(SKIP_LINK_STYLE_ID)) {
+  if (document.querySelector(`#${SKIP_LINK_STYLE_ID}`)) {
     return;
   }
   const tag = document.createElement('style');
@@ -96,14 +96,21 @@ const ensureSkipLinkStyles = () => {
 };
 
 const resolveRadiusPx = (token: string | number | undefined): number | undefined => {
-  if (typeof token === 'number' && Number.isFinite(token)) {
-    return token;
+  if (token === undefined) {
+    return undefined;
   }
-  if (typeof token !== 'string' || token.length === 0) {
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- public number | token-string prop; there is no I/O boundary to parse at
+  if (typeof token === 'number') {
+    return Number.isFinite(token) ? token : undefined;
+  }
+  if (token.length === 0) {
     return undefined;
   }
   try {
-    const value = getTokenValue(token as Parameters<typeof getTokenValue>[0], 'radius');
+    // SAFETY: a non-empty string here is a theme radius token name; getTokenValue returns undefined-like values for unknown names, which the numeric check below rejects
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- token names arrive as plain strings from the knob recipe, not as the generated token union
+    const value: unknown = getTokenValue(token as Parameters<typeof getTokenValue>[0], 'radius');
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- getTokenValue's declared union is wider than the numeric px the caller needs
     return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
   } catch {
     return undefined;
@@ -144,22 +151,30 @@ export const SkipLink = ({ targetId, targetRef, children = 'Skip to content', on
   ensureSkipLinkStyles();
 
   const radiusPx = resolveRadiusPx(knobProps.elevatedSurface.borderRadius);
-  const href = targetId ? `#${targetId}` : '#';
+  const hasTargetId = targetId !== undefined && targetId !== '';
+  const href = hasTargetId ? `#${targetId}` : '#';
+
+  const linkStyle: (CSSProperties & { '--mp-skip-link-radius': string }) | undefined =
+    radiusPx === undefined ? undefined : { borderRadius: radiusPx, '--mp-skip-link-radius': `${radiusPx}px` };
 
   const handleActivate = (event: MouseEvent<HTMLAnchorElement>) => {
     let target: HTMLElement | null = null;
-    if (targetRef?.current) {
+    if (targetRef?.current != null) {
       event.preventDefault();
       const { current } = targetRef;
-      if (typeof (current as { focus?: () => void }).focus === 'function') {
+      // oxlint-disable-next-line anti-slop/no-runtime-typeof -- targetRef accepts any focusable-shaped object, so `focus` must be probed at runtime
+      if (typeof current.focus === 'function') {
+        // SAFETY: consumers pass DOM elements (focusSkipTarget needs hasAttribute/classList); the focus probe above only rules out non-focusable refs
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the ref type admits any `{ focus }` shape for native-friendly typing, but web callers always supply an element
         target = current as HTMLElement;
       }
-    } else if (targetId && typeof document !== 'undefined') {
+    } else if (hasTargetId && typeof document !== 'undefined') {
+      // oxlint-disable-next-line unicorn/prefer-query-selector -- targetId is an arbitrary consumer id; querySelector would need CSS escaping and could throw on valid ids
       target = document.getElementById(targetId);
     } else {
       event.preventDefault();
     }
-    if (target) {
+    if (target != null) {
       focusSkipTarget(target);
     }
     onSkip?.(target instanceof HTMLElement ? target : null);
@@ -169,14 +184,7 @@ export const SkipLink = ({ targetId, targetRef, children = 'Skip to content', on
     <a
       className="mp-skip-link"
       href={href}
-      style={
-        typeof radiusPx === 'number'
-          ? ({
-              borderRadius: radiusPx,
-              '--mp-skip-link-radius': `${radiusPx}px`,
-            } as CSSProperties)
-          : undefined
-      }
+      style={linkStyle}
       onClick={handleActivate}>
       <SkipLinkSurface
         {...knobProps.elevatedSurface}

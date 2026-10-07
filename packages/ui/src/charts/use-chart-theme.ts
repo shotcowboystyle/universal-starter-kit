@@ -23,7 +23,7 @@
 
 import { radiusStopFromToken, resolveRadiusClass, useChartPalette, useResolvedKnobs } from '@repo/theme';
 import type { ChartPalette } from '@repo/theme';
-import * as Colors from '@tamagui/colors';
+import { gray, grayDark } from '@tamagui/colors';
 import { useMemo } from 'react';
 import { getConfig, getVariableValue, useTheme as useTamaguiTheme, useThemeName } from 'tamagui';
 import type { TransitionProp } from 'tamagui';
@@ -50,22 +50,20 @@ export interface ChartTheme {
   barCornerRadius: (bandWidth: number, barHeight: number) => number;
 }
 
-const labelFontSizeBySizeToken: Record<string, number> = {
-  $3: 11,
-  $4: 12,
-  $5: 13,
-};
+const labelFontSizeBySizeToken = new Map([
+  ['$3', 11],
+  ['$4', 12],
+  ['$5', 13],
+]);
 
-const resolveFontFamily = (fontToken: unknown): string | undefined => {
-  if (typeof fontToken !== 'string') {
-    return undefined;
-  }
+const resolveFontFamily = (fontToken: string): string | undefined => {
   try {
-    const fonts = getConfig()?.fontsParsed as Record<string, { family?: unknown } | undefined> | undefined;
-    const family = fonts?.[fontToken]?.family;
-    const value = getVariableValue(family as Parameters<typeof getVariableValue>[0]);
+    const { family } = getConfig().fontsParsed[fontToken];
+    const value: unknown = getVariableValue(family);
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- getVariableValue returns `any`; typeof narrows the resolved family to a string
     return typeof value === 'string' ? value : undefined;
   } catch {
+    // Safe to continue: no tamagui config or unknown font token means no resolvable family; callers fall back to the default font.
     return undefined;
   }
 };
@@ -73,20 +71,20 @@ const resolveFontFamily = (fontToken: unknown): string | undefined => {
 export const useChartTheme = (): ChartTheme => {
   const { knobProps } = useResolvedKnobs();
   const palette = useChartPalette();
-  const themeName = useThemeName() as string | undefined;
-  const theme = useTamaguiTheme() as unknown as Record<string, { val?: string } | undefined>;
+  const themeName = useThemeName();
+  const theme: Record<string, { val?: string } | undefined> = useTamaguiTheme();
   const scheme: 'light' | 'dark' = themeName?.startsWith('dark') ? 'dark' : 'light';
 
   // Same last-resort strategy as chartPalette: sanctioned ramp constants,
   // used only when the live theme is unreadable (SSR pre-hydration).
-  const gray = scheme === 'dark' ? Colors.grayDark : Colors.gray;
-  const axisColor = theme.color6?.val ?? gray.gray6;
-  const gridColor = theme.color4?.val ?? gray.gray4;
-  const labelColor = theme.color11?.val ?? gray.gray11;
+  const ramp = scheme === 'dark' ? grayDark : gray;
+  const axisColor = theme.color6?.val ?? ramp.gray6;
+  const gridColor = theme.color4?.val ?? ramp.gray4;
+  const labelColor = theme.color11?.val ?? ramp.gray11;
 
   const bodyFontToken = knobProps.body.fontFamily;
-  const sizeToken = String(knobProps.sizeToken);
-  const radiusToken = String(knobProps.borderRadius.borderRadius);
+  const { sizeToken } = knobProps;
+  const radiusToken = knobProps.borderRadius.borderRadius;
   const { transition } = knobProps;
 
   return useMemo(() => {
@@ -99,7 +97,7 @@ export const useChartTheme = (): ChartTheme => {
       gridColor,
       labelColor,
       labelFontFamily: resolveFontFamily(bodyFontToken),
-      labelFontSize: labelFontSizeBySizeToken[sizeToken] ?? 12,
+      labelFontSize: labelFontSizeBySizeToken.get(sizeToken) ?? 12,
       transition,
       animationEnabled: transition !== null && transition !== undefined,
       barCornerRadius: (bandWidth: number, barHeight: number) =>

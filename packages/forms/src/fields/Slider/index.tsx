@@ -12,8 +12,8 @@ import {
   wasKeyboardFocus,
 } from '@repo/theme';
 import type { BorderRadius } from '@repo/theme';
-import { useEffect, useRef, useState } from 'react';
-import type { KeyboardEvent, ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { ComponentProps, Dispatch, KeyboardEvent, ReactNode, RefObject, SetStateAction } from 'react';
 import { Slider as TamaguiSlider, Paragraph, View, XStack, isWeb, styled, useTheme } from 'tamagui';
 import type { LabelProps, SizeTokens, SliderProps as TamaguiSliderProps } from 'tamagui';
 
@@ -29,6 +29,7 @@ import {
 } from '../../shared/utils';
 import { Skeleton } from '../../Skeleton';
 import type { AnyFormApi } from '../../types';
+import { hasElevationProp, isNumber, isString, themeTokenValue } from '../field-helpers';
 
 import {
   getNextSortedValues,
@@ -37,6 +38,7 @@ import {
   snapSliderValue,
   useSliderJumpMotion,
 } from './jump-motion';
+import type { SliderJumpMotion } from './jump-motion';
 
 /**
  * Visual rail height. Spectrum ~3px, Apple ~4pt; Material's 16dp track is a
@@ -45,10 +47,14 @@ import {
  */
 const TRACK_HEIGHT = 6;
 
+type AnyHandler = NonNullable<ComponentProps<typeof FieldLayout>['onBlur']>;
+
 const radiusStopFromToken = (token: number | string): BorderRadius => {
   if (token === 0 || token === '$0') {
     return 'none';
   }
+  // SAFETY: borderRadiusMap is keyed exactly by the BorderRadius stops.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- Object.keys widens the stop keys to string
   for (const stop of Object.keys(borderRadiusMap) as BorderRadius[]) {
     if (borderRadiusMap[stop] === token) {
       return stop;
@@ -58,7 +64,7 @@ const radiusStopFromToken = (token: number | string): BorderRadius => {
 };
 
 // Track styling helper - returns props to pass to TamaguiSlider.Track
-const getTrackProps = (outlined: boolean | undefined, borderRadius: number) => ({
+const getTrackProps = (borderRadius: number, outlined = false) => ({
   unstyled: false,
   height: TRACK_HEIGHT,
   width: '100%',
@@ -107,7 +113,7 @@ const formatSliderOutput = (values: number[], step: number): string => {
   if (values.length <= 1) {
     return fmt(values[0] ?? 0);
   }
-  return `${fmt(values[0] ?? 0)}–${fmt(values[values.length - 1] ?? 0)}`;
+  return `${fmt(values[0] ?? 0)}–${fmt(values.at(-1) ?? 0)}`;
 };
 
 const JUMP_KEYS = new Set(['Home', 'End', 'PageUp', 'PageDown', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']);
@@ -131,7 +137,7 @@ const valuesEqual = (a: number[] | undefined, b: number[] | undefined) => {
 export interface SliderProps {
   name?: string;
   form?: AnyFormApi;
-  validators?: Record<string, unknown>;
+  validators?: Parameters<typeof useResolvedValidators>[1];
   label?: ReactNode;
   labelProps?: Omit<LabelProps, 'htmlFor' | 'ref'>;
   helperText?: string;
@@ -150,7 +156,7 @@ export interface SliderProps {
   onChange?: (value: number[]) => void;
   /** @deprecated Use `onChange` instead. Kept as an alias for the tamagui name. */
   onValueChange?: (value: number[]) => void;
-  onBlur?: (...args: any[]) => void;
+  onBlur?: AnyHandler;
   min?: number;
   max?: number;
   step?: number;
@@ -191,8 +197,472 @@ interface SliderControlProps {
   elevationWrapperProps: ReturnType<typeof getElevationWrapperProps>;
   sliderProps?: SliderProps['sliderProps'];
   onChangeValues?: (values: number[]) => void;
-  onBlur?: (...args: any[]) => void;
+  onBlur?: AnyHandler;
 }
+
+/** Per-thumb label for a range ("Minimum", "Maximum", "Value 2") — a single thumb has none. */
+const rangePositionLabel = (thumbIndex: number, count: number): string => {
+  if (thumbIndex === 0) {
+    return t('Minimum');
+  }
+  if (thumbIndex === count - 1) {
+    return t('Maximum');
+  }
+  return t('Value {{number}}', { number: thumbIndex + 1 });
+};
+
+const hasText = (value: string | undefined): value is string => value !== undefined && value !== '';
+
+/** An error prop is set when it is a non-empty message or `true`. */
+const isErrorValue = (value: string | boolean | undefined): boolean =>
+  value !== undefined && value !== false && value !== '';
+
+/**
+ * Per-thumb accessible names (values are announced via the aria-valuenow the
+ * thumb already carries). Range sliders name each thumb "Minimum"/"Maximum"
+ * (prefixed with the field label context) — a labelledby pointing at the shared
+ * field label would make all thumbs announce identically, so it is dropped when
+ * a per-thumb label exists (aria-labelledby otherwise wins name computation).
+ */
+const thumbAccessibleLabel = ({
+  thumbIndex,
+  count,
+  ariaLabel,
+  labelText,
+  hasLabel,
+}: {
+  thumbIndex: number;
+  count: number;
+  ariaLabel?: string;
+  labelText?: string;
+  hasLabel: boolean;
+}): string | undefined => {
+  if (count > 1) {
+    const labelContext = ariaLabel ?? labelText;
+    const position = rangePositionLabel(thumbIndex, count);
+    return hasText(labelContext) ? `${labelContext} ${position}` : position;
+  }
+  return ariaLabel ?? labelText ?? (hasLabel ? undefined : t('Slider'));
+};
+
+/**
+ * Native mirror of the web aria wiring: an "adjustable" element per thumb with
+ * the accessible name (id-based aria-labelledby has no native equivalent, so the
+ * label string comes from the field a11y context), current value, helper/error
+ * hint, and step actions.
+ */
+const nativeThumbA11yProps = ({
+  label,
+  hint,
+  min,
+  max,
+  now,
+  disabled,
+  onAdjust,
+}: {
+  label: string;
+  hint?: string;
+  min: number;
+  max: number;
+  now: number;
+  disabled?: boolean;
+  onAdjust: (direction: 1 | -1) => void;
+}) =>
+  isWeb
+    ? undefined
+    : {
+        accessible: true,
+        // Tamagui's Thumb sets role="slider" (web semantics); on this
+        // RN version it shadows accessibilityRole without mapping to
+        // the iOS adjustable trait — clear it so the trait applies.
+        // oxlint-disable-next-line sonarjs/no-undefined-assignment -- an explicit undefined clears the thumb's web role so the adjustable trait applies
+        role: undefined,
+        accessibilityRole: 'adjustable' as const,
+        accessibilityLabel: label,
+        accessibilityHint: hint,
+        accessibilityValue: {
+          min,
+          max,
+          now,
+          text: String(now),
+        },
+        accessibilityState: { disabled: disabled === true },
+        accessibilityActions: A11Y_ADJUSTABLE_ACTIONS,
+        onAccessibilityAction: (event: { nativeEvent: { actionName: string } }) => {
+          if (event.nativeEvent.actionName === 'increment') {
+            onAdjust(1);
+          } else if (event.nativeEvent.actionName === 'decrement') {
+            onAdjust(-1);
+          }
+        },
+      };
+
+/** Ring, fill and keyboard-focus paint shared by every thumb. */
+const buildThumbRingProps = ({
+  thumbFill,
+  thumbIndex,
+  kbThumb,
+  thumbFocusRing,
+  setKbThumb,
+}: {
+  thumbFill: string;
+  thumbIndex: number;
+  kbThumb: number | null;
+  thumbFocusRing: ReturnType<typeof ensureFocusVisibleRing>;
+  setKbThumb: Dispatch<SetStateAction<number | null>>;
+}) => ({
+  outlineWidth: 0,
+  borderWidth: 0,
+  borderColor: 'transparent',
+  backgroundColor: thumbFill,
+  hoverStyle: {
+    backgroundColor: thumbFill,
+    ...(isWeb ? { cursor: 'grab' } : undefined),
+  },
+  pressStyle: {
+    backgroundColor: thumbFill,
+    opacity: 0.92,
+    ...(isWeb ? { cursor: 'grabbing' } : undefined),
+  },
+  focusStyle: { outlineWidth: 0 },
+  focusVisibleStyle: { outlineWidth: 0 },
+  ...(isWeb
+    ? {
+        onFocus: () => {
+          if (wasKeyboardFocus()) {
+            setKbThumb(thumbIndex);
+          } else {
+            setKbThumb((prev) => (prev === thumbIndex ? null : prev));
+          }
+        },
+        onBlur: () => {
+          setKbThumb((prev) => (prev === thumbIndex ? null : prev));
+        },
+      }
+    : undefined),
+  ...(kbThumb === thumbIndex ? { ...thumbFocusRing, 'data-kb-focus': 'true' } : undefined),
+});
+
+/** One thumb. The elevation wrapper is WEB-ONLY — see the note in `SliderThumbPart`. */
+const SliderThumbPart = ({
+  thumbIndex,
+  thumbSize,
+  thumbRadius,
+  elevated,
+  elevationWrapperProps,
+  thumbProps,
+}: {
+  thumbIndex: number;
+  thumbSize: number;
+  thumbRadius: number;
+  elevated: boolean;
+  elevationWrapperProps: ReturnType<typeof getElevationWrapperProps>;
+  thumbProps: ComponentProps<typeof SliderThumbFrame>;
+}) => {
+  const thumb = (
+    <SliderThumbFrame
+      width={thumbSize}
+      height={thumbSize}
+      index={thumbIndex}
+      circular={false}
+      borderRadius={thumbRadius}
+      style={{ borderRadius: thumbRadius }}
+      data-slider-part="thumb"
+      {...thumbProps}
+    />
+  );
+  // The elevation wrapper is WEB-ONLY: on iOS the wrapper is a
+  // zero-height flow view (the thumb inside is absolutely positioned),
+  // and iOS accessibility culls the entire subtree under a zero-rect
+  // ancestor — the thumb was invisible to VoiceOver. The wrapper also
+  // draws nothing on native (a zero-rect casts no shadow; the thumb
+  // carries its own shadow), so dropping it changes no pixels.
+  return elevated ? (
+    <View
+      {...elevationWrapperProps}
+      borderRadius={thumbRadius}>
+      {thumb}
+    </View>
+  ) : (
+    thumb
+  );
+};
+
+/** The rail, wrapped in the elevation surface when the field has one. */
+const SliderRail = ({
+  elevated,
+  elevationWrapperProps,
+  railRadius,
+  outlined,
+  children,
+}: {
+  elevated: boolean;
+  elevationWrapperProps: ReturnType<typeof getElevationWrapperProps>;
+  railRadius: number;
+  outlined?: boolean;
+  children: ReactNode;
+}) =>
+  elevated ? (
+    <View
+      {...elevationWrapperProps}
+      width="100%"
+      height="100%"
+      borderRadius={railRadius}>
+      <TamaguiSlider.Track {...getTrackProps(railRadius, outlined)}>{children}</TamaguiSlider.Track>
+    </View>
+  ) : (
+    <TamaguiSlider.Track {...getTrackProps(railRadius, outlined)}>{children}</TamaguiSlider.Track>
+  );
+
+const isJumpMotionEnabled = (sliderProps: SliderProps['sliderProps']): boolean =>
+  !isWeb && sliderProps?.orientation !== 'vertical' && sliderProps?.dir !== 'rtl';
+
+/** Ring and fill colors resolved at the field's scope (see the notes inline). */
+const useSliderFill = (hasError = false) => {
+  // The thumb renders inside tamagui's t_SliderThumb component
+  // sub-theme, an INVERSE template whose `$outlineColor` clears 3:1 against
+  // its own (inverted) surfaces — but the ring draws on the parent surface,
+  // where it measured 1.05:1 (invisible). Resolve the ring color at the
+  // field's scope instead and pin the LITERAL on the thumb (`.val`, not
+  // `.get()` — the CSS var re-resolves inside the sub-theme).
+  const fieldTheme = useTheme();
+  const thumbFocusRing = ensureFocusVisibleRing({
+    outlineColor: themeTokenValue(fieldTheme, 'outlineColor') ?? '$outlineColor',
+    // Halo: circular thumb. At offset 0 the band is concentric with
+    // the thumb's edge and reads as a fatter thumb rather than a focus ring.
+    outlineOffset: FOCUS_RING_HALO_OFFSET,
+  });
+  // Apple/Material/Spectrum: the filled rail is the value (accent). Pin the
+  // literal so Tamagui's SliderActive sub-theme cannot remap `$accentBackground`
+  // onto a gray that matches the inactive track (the before-state defect).
+  const fillToken = hasError ? formCommonColors.error : formSelectedColors.mark;
+  const fillKey = fillToken.startsWith('$') ? fillToken.slice(1) : fillToken;
+  const themedFill = themeTokenValue(fieldTheme, fillKey);
+  const fillLiteral = hasText(themedFill) ? themedFill : fillToken;
+  // Paper vs ink on the ACTUAL fill, computed at field scope so the
+  // inverse SliderThumb template cannot flip the handle to a same-lightness disc.
+  const thumbColor = useReadableTextOn(fillLiteral);
+  return { thumbFocusRing, fillLiteral, thumbColor };
+};
+
+/** The jump-tween session: arms a short-lived transition for discrete jumps and tracks drag vs jump. */
+const useJumpSession = () => {
+  const [animateJump, setAnimateJump] = useState(false);
+  const sessionRef = useRef<'idle' | 'drag' | 'jump'>('idle');
+  const jumpClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** After a drag ends, ignore the trailing controlled sync so it does not re-tween. */
+  const ignoreJumpUntilRef = useRef(0);
+
+  const clearJumpTimer = useCallback(() => {
+    if (jumpClearRef.current !== null) {
+      clearTimeout(jumpClearRef.current);
+      jumpClearRef.current = null;
+    }
+  }, []);
+
+  const armJump = useCallback(() => {
+    sessionRef.current = 'jump';
+    setAnimateJump(true);
+    clearJumpTimer();
+    jumpClearRef.current = setTimeout(() => {
+      if (sessionRef.current === 'jump') {
+        sessionRef.current = 'idle';
+        setAnimateJump(false);
+      }
+      jumpClearRef.current = null;
+    }, JUMP_MOTION_MS);
+  }, [clearJumpTimer]);
+
+  useEffect(
+    () => () => {
+      clearJumpTimer();
+    },
+    [clearJumpTimer],
+  );
+
+  return { animateJump, setAnimateJump, sessionRef, ignoreJumpUntilRef, clearJumpTimer, armJump };
+};
+
+type JumpSession = ReturnType<typeof useJumpSession>;
+
+type SliderEventProps = Pick<
+  ComponentProps<typeof TamaguiSlider>,
+  'onPointerDown' | 'onSlideStart' | 'onSlideEnd' | 'onKeyDown' | 'onValueChange'
+>;
+
+const sliderAriaProps = ({
+  required,
+  hasError,
+  readOnly,
+}: {
+  required?: boolean;
+  hasError?: boolean;
+  readOnly?: boolean;
+}) => ({
+  ...(readOnly ? { pointerEvents: 'none' as const } : undefined),
+  'aria-required': required ? true : undefined,
+  'aria-invalid': hasError ? true : undefined,
+  'aria-readonly': readOnly ? true : undefined,
+});
+
+/** Pointer, slide, key and value handlers: they drive the jump/drag session and mirror values for VoiceOver. */
+const useSliderEventProps = ({
+  disabled,
+  readOnly,
+  sliderProps,
+  a11yValues,
+  setA11yValues,
+  setNativeValues,
+  setDisplayValues,
+  setKbThumb,
+  jumpMotion,
+  session,
+  currentValuesRef,
+  onChangeValues,
+}: {
+  disabled?: boolean;
+  readOnly?: boolean;
+  sliderProps: SliderProps['sliderProps'];
+  a11yValues: number[] | null;
+  setA11yValues: Dispatch<SetStateAction<number[] | null>>;
+  setNativeValues: Dispatch<SetStateAction<number[]>>;
+  setDisplayValues: Dispatch<SetStateAction<number[]>>;
+  setKbThumb: Dispatch<SetStateAction<number | null>>;
+  jumpMotion: SliderJumpMotion;
+  session: JumpSession;
+  currentValuesRef: RefObject<number[]>;
+  onChangeValues?: (values: number[]) => void;
+}): SliderEventProps => ({
+  onPointerDown: (event) => {
+    // Any pointer session (click, track press, thumb drag)
+    // drops the keyboard ring. Tab-then-drag used to keep :focus-visible
+    // because the thumb never blurs.
+    if (isWeb) {
+      setKbThumb(null);
+    }
+    sliderProps?.onPointerDown?.(event);
+  },
+  onSlideStart: (_event, value, target) => {
+    if (disabled || readOnly) {
+      return;
+    }
+    if (isWeb) {
+      setKbThumb(null);
+    }
+    if (!isWeb && a11yValues) {
+      setA11yValues(null);
+    }
+    if (target === 'track') {
+      jumpMotion.onTrackPress(value);
+      session.armJump();
+    } else {
+      jumpMotion.onDragStart();
+      session.sessionRef.current = 'drag';
+      session.clearJumpTimer();
+      session.setAnimateJump(false);
+    }
+  },
+  onSlideEnd: () => {
+    if (!isWeb) {
+      setNativeValues(currentValuesRef.current);
+    }
+    if (session.sessionRef.current === 'drag') {
+      session.sessionRef.current = 'idle';
+      session.ignoreJumpUntilRef.current = Date.now() + 50;
+    }
+  },
+  onKeyDown: (event: KeyboardEvent) => {
+    if (disabled || readOnly) {
+      return;
+    }
+    if (JUMP_KEYS.has(event.key)) {
+      session.armJump();
+    }
+  },
+  onValueChange: (values) => {
+    // Position tracking first: the jump/drag machine must see every
+    // internal value even when the value-emit below is gated.
+    jumpMotion.onInternalValueChange(values);
+    currentValuesRef.current = values;
+    setDisplayValues(values);
+    // Keep announcements fresh without re-rendering per drag move.
+    if (!isWeb && session.sessionRef.current !== 'drag') {
+      setNativeValues(values);
+    }
+    if (disabled) {
+      return;
+    }
+    onChangeValues?.(values);
+  },
+});
+
+/** The filled part of the rail. */
+const SliderFill = ({
+  fillLiteral,
+  railRadius,
+  transitionProp,
+}: {
+  fillLiteral: string;
+  railRadius: number;
+  transitionProp: string;
+}) => (
+  <TamaguiSlider.TrackActive
+    backgroundColor={fillLiteral}
+    height="100%"
+    // The fill rides the same BINARY radius as the rail it sits in
+    // — never a leftover pill inside a square track.
+    borderRadius={railRadius}
+    style={{ borderRadius: railRadius }}
+    data-slider-part="fill"
+    transition={transitionProp}
+  />
+);
+
+/** The current value (or range) beside the track. */
+const SliderOutput = ({ values, step, isRange }: { values: number[]; step: number; isRange: boolean }) => (
+  <Paragraph
+    size="$2"
+    color={formCommonColors.text}
+    minWidth={isRange ? 56 : 32}
+    textAlign="right"
+    aria-hidden>
+    {formatSliderOutput(values, step)}
+  </Paragraph>
+);
+
+/**
+ * The values after a VoiceOver step on one thumb, or null when nothing moves.
+ * Mirrors tamagui's updateValues semantics: step, snap, clamp, sort, reject
+ * when minStepsBetweenThumbs would be violated.
+ */
+const adjustedValues = ({
+  current,
+  thumbIndex,
+  direction,
+  step,
+  min,
+  max,
+  minStepsBetweenThumbs,
+}: {
+  current: number[];
+  thumbIndex: number;
+  direction: 1 | -1;
+  step: number;
+  min: number;
+  max: number;
+  minStepsBetweenThumbs: number;
+}): number[] | null => {
+  const currentValue = current[thumbIndex];
+  if (currentValue === undefined) {
+    return null;
+  }
+  const next = snapSliderValue(currentValue + direction * step, min, max, step);
+  const nextValues = getNextSortedValues(current, next, thumbIndex);
+  if (!hasMinStepsBetween(nextValues, minStepsBetweenThumbs * step) || valuesEqual(current, nextValues)) {
+    return null;
+  }
+  return nextValues;
+};
 
 /**
  * Jump-only motion: tween thumb + TrackActive only for discrete jumps
@@ -228,37 +698,13 @@ const SliderControl = ({
   if (isWeb) {
     ensureKeyboardModalityTracking();
   }
-  // The thumb renders inside tamagui's t_SliderThumb component
-  // sub-theme, an INVERSE template whose `$outlineColor` clears 3:1 against
-  // its own (inverted) surfaces — but the ring draws on the parent surface,
-  // where it measured 1.05:1 (invisible). Resolve the ring color at the
-  // field's scope instead and pin the LITERAL on the thumb (`.val`, not
-  // `.get()` — the CSS var re-resolves inside the sub-theme).
-  const fieldTheme = useTheme();
-  const thumbFocusRing = ensureFocusVisibleRing({
-    outlineColor: (fieldTheme.outlineColor?.val as string | undefined) ?? '$outlineColor',
-    // Halo: circular thumb. At offset 0 the band is concentric with
-    // the thumb's edge and reads as a fatter thumb rather than a focus ring.
-    outlineOffset: FOCUS_RING_HALO_OFFSET,
-  });
-  // Apple/Material/Spectrum: the filled rail is the value (accent). Pin the
-  // literal so Tamagui's SliderActive sub-theme cannot remap `$accentBackground`
-  // onto a gray that matches the inactive track (the before-state defect).
-  const fillToken = hasError ? formCommonColors.error : formSelectedColors.mark;
-  const fillKey = fillToken.startsWith('$') ? fillToken.slice(1) : fillToken;
-  const fillLiteral = (fieldTheme[fillKey as keyof typeof fieldTheme]?.val as string | undefined) || fillToken;
-  // Paper vs ink on the ACTUAL fill, computed at field scope so the
-  // inverse SliderThumb template cannot flip the handle to a same-lightness disc.
-  const thumbColor = useReadableTextOn(fillLiteral);
-  const [animateJump, setAnimateJump] = useState(false);
+  const { thumbFocusRing, fillLiteral, thumbColor } = useSliderFill(hasError);
+  const session = useJumpSession();
+  const { animateJump, sessionRef, ignoreJumpUntilRef, armJump } = session;
   const [kbThumb, setKbThumb] = useState<number | null>(null);
   const [displayValues, setDisplayValues] = useState<number[]>(sliderValue);
-  const sessionRef = useRef<'idle' | 'drag' | 'jump'>('idle');
-  const jumpClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const paintedRef = useRef(false);
   const prevValueRef = useRef(sliderValue);
-  /** After a drag ends, ignore the trailing controlled sync so it does not re-tween. */
-  const ignoreJumpUntilRef = useRef(0);
 
   // Rail, fill and thumb are one BINARY member — 0 at
   // none, the part's own height/2 at every other stop. Tracks square
@@ -277,7 +723,7 @@ const SliderControl = ({
   // replica 1-4pt off the true rendered position.
   const hydrationTouch = useTouchSurface();
   const thumbSize = getSliderThumbRenderSize(THUMB_SIZE_TOKEN, undefined, hydrationTouch);
-  const jumpMotionEnabled = !isWeb && sliderProps?.orientation !== 'vertical' && sliderProps?.dir !== 'rtl';
+  const jumpMotionEnabled = isJumpMotionEnabled(sliderProps);
   const jumpMotion = useSliderJumpMotion({
     enabled: jumpMotionEnabled,
     min,
@@ -288,7 +734,11 @@ const SliderControl = ({
     minStepsBetweenThumbs: sliderProps?.minStepsBetweenThumbs ?? 0,
     getTrackWidth: () => trackWidthRef.current,
     thumbSize,
-    resolveAnimationConfig: (token) => (animationConfig as Record<string, unknown>)[token],
+    resolveAnimationConfig: (token) => Object.entries(animationConfig).find(([name]) => name === token)?.[1],
+  });
+  const jumpMotionRef = useRef(jumpMotion);
+  useEffect(() => {
+    jumpMotionRef.current = jumpMotion;
   });
 
   // ── Native accessibility (VoiceOver) ────────────────────────────────────
@@ -314,18 +764,16 @@ const SliderControl = ({
       return;
     }
     const current = a11yValues ?? currentValuesRef.current;
-    const currentValue = current[thumbIndex];
-    if (currentValue === undefined) {
-      return;
-    }
-    // Mirror tamagui's updateValues semantics: step, snap, clamp, sort,
-    // reject when minStepsBetweenThumbs would be violated.
-    const next = snapSliderValue(currentValue + direction * step, min, max, step);
-    const nextValues = getNextSortedValues(current, next, thumbIndex);
-    if (!hasMinStepsBetween(nextValues, (sliderProps?.minStepsBetweenThumbs ?? 0) * step)) {
-      return;
-    }
-    if (valuesEqual(current, nextValues)) {
+    const nextValues = adjustedValues({
+      current,
+      thumbIndex,
+      direction,
+      step,
+      min,
+      max,
+      minStepsBetweenThumbs: sliderProps?.minStepsBetweenThumbs ?? 0,
+    });
+    if (nextValues === null) {
       return;
     }
     currentValuesRef.current = nextValues;
@@ -335,32 +783,33 @@ const SliderControl = ({
     onChangeValues?.(nextValues);
   };
 
-  const clearJumpTimer = () => {
-    if (jumpClearRef.current !== null) {
-      clearTimeout(jumpClearRef.current);
-      jumpClearRef.current = null;
+  const eventProps = useSliderEventProps({
+    disabled,
+    readOnly,
+    sliderProps,
+    a11yValues,
+    setA11yValues,
+    setNativeValues,
+    setDisplayValues,
+    setKbThumb,
+    jumpMotion,
+    session,
+    currentValuesRef,
+    onChangeValues,
+  });
+
+  // A genuine external value change adopts the new value as the displayed one
+  // and releases any VoiceOver-held override (native only). Adjusted during
+  // render so the stale value never paints.
+  const [adoptedValue, setAdoptedValue] = useState(sliderValue);
+  if (!valuesEqual(adoptedValue, sliderValue)) {
+    setAdoptedValue(sliderValue);
+    setDisplayValues(sliderValue);
+    if (!isWeb) {
+      setNativeValues(sliderValue);
+      setA11yValues(null);
     }
-  };
-
-  const armJump = () => {
-    sessionRef.current = 'jump';
-    setAnimateJump(true);
-    clearJumpTimer();
-    jumpClearRef.current = setTimeout(() => {
-      if (sessionRef.current === 'jump') {
-        sessionRef.current = 'idle';
-        setAnimateJump(false);
-      }
-      jumpClearRef.current = null;
-    }, JUMP_MOTION_MS);
-  };
-
-  useEffect(
-    () => () => {
-      clearJumpTimer();
-    },
-    [],
-  );
+  }
 
   // Controlled / external value jumps animate; first paint and drag sync do not.
   useEffect(() => {
@@ -373,25 +822,21 @@ const SliderControl = ({
     if (valuesEqual(prev, sliderValue)) {
       return;
     }
-    // A genuine external value change: adopt it as the current value and
-    // release any VoiceOver-held value override (native only).
     currentValuesRef.current = sliderValue;
-    setDisplayValues(sliderValue);
     if (!isWeb) {
-      setNativeValues(sliderValue);
-      setA11yValues(null);
       // Keep the FLIP replica's value mirror current so the next track-press
       // glide computes its origin from the externally-applied position.
-      jumpMotion.onInternalValueChange(sliderValue);
+      jumpMotionRef.current.onInternalValueChange(sliderValue);
     }
     if (sessionRef.current === 'drag') {
       return;
     }
+    // oxlint-disable-next-line react/purity -- Date.now() runs inside an effect, not during render
     if (Date.now() < ignoreJumpUntilRef.current) {
       return;
     }
     armJump();
-  }, [sliderValue]);
+  }, [sliderValue, armJump, sessionRef, ignoreJumpUntilRef, jumpMotionRef, currentValuesRef, paintedRef, prevValueRef]);
 
   const motionTransition = animateJump ? transitionToken : undefined;
   const thumbRadius = resolveRadiusClass('BINARY', radiusStop, {
@@ -405,20 +850,57 @@ const SliderControl = ({
   // fill snaps on native — the gliding thumb is the perceptual anchor).
   const transitionProp = motionTransition ?? 'none';
 
-  const trackActive = (
-    <TamaguiSlider.TrackActive
-      backgroundColor={fillLiteral}
-      height="100%"
-      // The fill rides the same BINARY radius as the rail it sits in
-      // — never a leftover pill inside a square track.
-      borderRadius={railRadius}
-      style={{ borderRadius: railRadius }}
-      data-slider-part="fill"
-      transition={transitionProp}
-    />
-  );
-  const hitHeight = size || sizeToken;
+  const hitHeight = size ?? sizeToken;
   const thumbFill = thumbColor ?? formControlColors.thumb.base;
+  const elevated = hasElevationProp(elevationWrapperProps);
+
+  const renderThumb = (thumbIndex: number) => {
+    const thumbLabel = thumbAccessibleLabel({
+      thumbIndex,
+      count: sliderValue.length,
+      ariaLabel,
+      labelText,
+      hasLabel: hasLabel === true,
+    });
+    const thumbA11y = {
+      'aria-label': thumbLabel,
+      'aria-labelledby': !hasText(thumbLabel) && hasLabel ? `${id}-label` : undefined,
+      'aria-describedby': describedBy,
+    };
+    const thumbValueNow = (a11yValues ?? nativeValues)[thumbIndex] ?? sliderValue[thumbIndex] ?? min;
+    const nativeThumbA11y = nativeThumbA11yProps({
+      label: thumbLabel ?? fieldA11y?.label ?? t('Slider'),
+      hint: fieldA11y?.description,
+      min,
+      max,
+      now: thumbValueNow,
+      disabled,
+      onAdjust: (direction) => {
+        handleA11yAdjust(thumbIndex, direction);
+      },
+    });
+    // Web: string transition session (css driver tweens `left`).
+    // Native: per-property transform transition + FLIP `x` override.
+    const thumbMotionProps = jumpMotionEnabled
+      ? jumpMotion.getThumbMotionProps(thumbIndex)
+      : { transition: transitionProp };
+    return (
+      <SliderThumbPart
+        key={thumbIndex}
+        thumbIndex={thumbIndex}
+        thumbSize={thumbSize}
+        thumbRadius={thumbRadius}
+        elevated={elevated && isWeb}
+        elevationWrapperProps={elevationWrapperProps}
+        thumbProps={{
+          ...buildThumbRingProps({ thumbFill, thumbIndex, kbThumb, thumbFocusRing, setKbThumb }),
+          ...thumbMotionProps,
+          ...thumbA11y,
+          ...nativeThumbA11y,
+        }}
+      />
+    );
+  };
 
   return (
     <XStack
@@ -442,7 +924,6 @@ const SliderControl = ({
           width="100%"
           {...sliderProps}
           disabled={disabled}
-          {...(readOnly ? { pointerEvents: 'none' as const } : undefined)}
           id={id}
           // Controlled when an upstream value drives the slider (value prop /
           // field state) — mount-only `defaultValue` froze late-arriving values
@@ -457,232 +938,33 @@ const SliderControl = ({
           min={min}
           max={max}
           step={step}
-          onPointerDown={(event) => {
-            // Any pointer session (click, track press, thumb drag)
-            // drops the keyboard ring. Tab-then-drag used to keep :focus-visible
-            // because the thumb never blurs.
-            if (isWeb) {
-              setKbThumb(null);
-            }
-            sliderProps?.onPointerDown?.(event);
-          }}
-          onSlideStart={(_event, value, target) => {
-            if (disabled || readOnly) {
-              return;
-            }
-            if (isWeb) {
-              setKbThumb(null);
-            }
-            if (!isWeb && a11yValues) {
-              setA11yValues(null);
-            }
-            if (target === 'track') {
-              jumpMotion.onTrackPress(value);
-              armJump();
-            } else {
-              jumpMotion.onDragStart();
-              sessionRef.current = 'drag';
-              clearJumpTimer();
-              setAnimateJump(false);
-            }
-          }}
-          onSlideEnd={() => {
-            if (!isWeb) {
-              setNativeValues(currentValuesRef.current);
-            }
-            if (sessionRef.current === 'drag') {
-              sessionRef.current = 'idle';
-              ignoreJumpUntilRef.current = Date.now() + 50;
-            }
-          }}
-          onKeyDown={(event: KeyboardEvent) => {
-            if (disabled || readOnly) {
-              return;
-            }
-            if (JUMP_KEYS.has(event.key)) {
-              armJump();
-            }
-          }}
-          onValueChange={(values) => {
-            // Position tracking first: the jump/drag machine must see every
-            // internal value even when the value-emit below is gated.
-            jumpMotion.onInternalValueChange(values);
-            currentValuesRef.current = values;
-            setDisplayValues(values);
-            // Keep announcements fresh without re-rendering per drag move.
-            if (!isWeb && sessionRef.current !== 'drag') {
-              setNativeValues(values);
-            }
-            if (disabled) {
-              return;
-            }
-            onChangeValues?.(values);
-          }}
+          {...eventProps}
           {...(onBlur ? { onBlur } : undefined)}
-          aria-required={required || undefined}
-          aria-invalid={hasError || undefined}
-          aria-readonly={readOnly || undefined}
+          {...sliderAriaProps({ required, hasError, readOnly })}
           aria-label={ariaLabel}
           // Labelled: the sibling Label wires `aria-labelledby` onto this id
           // itself — naming it here too doubles the spoken name.
           aria-describedby={describedBy}>
-          {elevationWrapperProps.elevation ? (
-            <View
-              {...elevationWrapperProps}
-              width="100%"
-              height="100%"
-              borderRadius={railRadius}>
-              <TamaguiSlider.Track {...getTrackProps(outlined, railRadius)}>{trackActive}</TamaguiSlider.Track>
-            </View>
-          ) : (
-            <TamaguiSlider.Track {...getTrackProps(outlined, railRadius)}>{trackActive}</TamaguiSlider.Track>
-          )}
-          {sliderValue.map((_thumbValue, thumbIndex) => {
-            // Per-thumb accessible names (values are announced via the
-            // aria-valuenow the thumb already carries). Range sliders name each
-            // thumb "Minimum"/"Maximum" (prefixed with the field label context)
-            // — a labelledby pointing at the shared field label would make all
-            // thumbs announce identically, so it is dropped when a per-thumb
-            // label exists (aria-labelledby otherwise wins name computation).
-            const isRange = sliderValue.length > 1;
-            const labelContext = ariaLabel ?? labelText;
-            const positionLabel =
-              thumbIndex === 0
-                ? t('Minimum')
-                : thumbIndex === sliderValue.length - 1
-                  ? t('Maximum')
-                  : t('Value {{number}}', { number: thumbIndex + 1 });
-            const thumbLabel = isRange
-              ? labelContext
-                ? `${labelContext} ${positionLabel}`
-                : positionLabel
-              : (ariaLabel ?? labelText ?? (hasLabel ? undefined : t('Slider')));
-            const thumbA11y = {
-              'aria-label': thumbLabel,
-              'aria-labelledby': !thumbLabel && hasLabel ? `${id}-label` : undefined,
-              'aria-describedby': describedBy,
-            };
-            // Native mirror of the web aria wiring: an "adjustable" element per
-            // thumb with the accessible name (id-based aria-labelledby has no
-            // native equivalent, so the label string comes from the field a11y
-            // context), current value, helper/error hint, and step actions.
-            const thumbValueNow = (a11yValues ?? nativeValues)[thumbIndex] ?? sliderValue[thumbIndex] ?? min;
-            const nativeThumbA11y = isWeb
-              ? undefined
-              : {
-                  accessible: true,
-                  // Tamagui's Thumb sets role="slider" (web semantics); on this
-                  // RN version it shadows accessibilityRole without mapping to
-                  // the iOS adjustable trait — clear it so the trait applies.
-                  role: undefined,
-                  accessibilityRole: 'adjustable' as const,
-                  accessibilityLabel: thumbLabel ?? fieldA11y?.label ?? t('Slider'),
-                  accessibilityHint: fieldA11y?.description,
-                  accessibilityValue: {
-                    min,
-                    max,
-                    now: thumbValueNow,
-                    text: String(thumbValueNow),
-                  },
-                  accessibilityState: { disabled: !!disabled },
-                  accessibilityActions: A11Y_ADJUSTABLE_ACTIONS,
-                  onAccessibilityAction: (event: { nativeEvent: { actionName: string } }) => {
-                    if (event.nativeEvent.actionName === 'increment') {
-                      handleA11yAdjust(thumbIndex, 1);
-                    } else if (event.nativeEvent.actionName === 'decrement') {
-                      handleA11yAdjust(thumbIndex, -1);
-                    }
-                  },
-                };
-            // Web: string transition session (css driver tweens `left`).
-            // Native: per-property transform transition + FLIP `x` override.
-            const thumbMotionProps = jumpMotionEnabled
-              ? (jumpMotion.getThumbMotionProps(thumbIndex) as Record<string, unknown>)
-              : { transition: transitionProp };
-            // The elevation wrapper is WEB-ONLY: on iOS the wrapper is a
-            // zero-height flow view (the thumb inside is absolutely positioned),
-            // and iOS accessibility culls the entire subtree under a zero-rect
-            // ancestor — the thumb was invisible to VoiceOver. The wrapper also
-            // draws nothing on native (a zero-rect casts no shadow; the thumb
-            // carries its own shadow), so dropping it changes no pixels.
-            const thumbRingProps = {
-              outlineWidth: 0,
-              borderWidth: 0,
-              borderColor: 'transparent',
-              backgroundColor: thumbFill,
-              hoverStyle: {
-                backgroundColor: thumbFill,
-                ...(isWeb ? { cursor: 'grab' } : undefined),
-              },
-              pressStyle: {
-                backgroundColor: thumbFill,
-                opacity: 0.92,
-                ...(isWeb ? { cursor: 'grabbing' } : undefined),
-              },
-              focusStyle: { outlineWidth: 0 },
-              focusVisibleStyle: { outlineWidth: 0 },
-              ...(isWeb
-                ? {
-                    onFocus: () => {
-                      if (wasKeyboardFocus()) {
-                        setKbThumb(thumbIndex);
-                      } else {
-                        setKbThumb((prev) => (prev === thumbIndex ? null : prev));
-                      }
-                    },
-                    onBlur: () => {
-                      setKbThumb((prev) => (prev === thumbIndex ? null : prev));
-                    },
-                  }
-                : undefined),
-              ...(kbThumb === thumbIndex ? { ...thumbFocusRing, 'data-kb-focus': 'true' } : undefined),
-            };
-            return elevationWrapperProps.elevation && isWeb ? (
-              <View
-                key={thumbIndex}
-                {...elevationWrapperProps}
-                borderRadius={thumbRadius}>
-                <SliderThumbFrame
-                  width={thumbSize}
-                  height={thumbSize}
-                  index={thumbIndex}
-                  circular={false}
-                  borderRadius={thumbRadius}
-                  style={{ borderRadius: thumbRadius }}
-                  data-slider-part="thumb"
-                  {...thumbRingProps}
-                  {...thumbMotionProps}
-                  {...thumbA11y}
-                  {...(nativeThumbA11y as Record<string, unknown> | undefined)}
-                />
-              </View>
-            ) : (
-              <SliderThumbFrame
-                width={thumbSize}
-                height={thumbSize}
-                key={thumbIndex}
-                index={thumbIndex}
-                circular={false}
-                borderRadius={thumbRadius}
-                style={{ borderRadius: thumbRadius }}
-                data-slider-part="thumb"
-                {...thumbRingProps}
-                {...thumbMotionProps}
-                {...thumbA11y}
-                {...(nativeThumbA11y as Record<string, unknown> | undefined)}
-              />
-            );
-          })}
+          <SliderRail
+            elevated={elevated}
+            elevationWrapperProps={elevationWrapperProps}
+            railRadius={railRadius}
+            outlined={outlined}>
+            <SliderFill
+              fillLiteral={fillLiteral}
+              railRadius={railRadius}
+              transitionProp={transitionProp}
+            />
+          </SliderRail>
+          {/* oxlint-disable-next-line react/refs -- renderThumb only hands handlers to the thumbs; the refs they read are touched when a handler runs, never during render */}
+          {sliderValue.map((_thumbValue, thumbIndex) => renderThumb(thumbIndex))}
         </TamaguiSlider>
       </View>
-      <Paragraph
-        size="$2"
-        color={formCommonColors.text}
-        minWidth={sliderValue.length > 1 ? 56 : 32}
-        textAlign="right"
-        aria-hidden>
-        {formatSliderOutput(displayValues, step)}
-      </Paragraph>
+      <SliderOutput
+        values={displayValues}
+        step={step}
+        isRange={sliderValue.length > 1}
+      />
     </XStack>
   );
 };
@@ -703,6 +985,7 @@ export const Slider = ({
   value,
   defaultValue,
   onChange,
+  // oxlint-disable-next-line typescript/no-deprecated -- the deprecated alias is still honoured
   onValueChange,
   onBlur,
   min = 0,
@@ -727,7 +1010,8 @@ export const Slider = ({
   const resolvedValidators = useResolvedValidators(required, validators, label, name);
   const hasLabel = Boolean(label);
   const elevationWrapperProps = getElevationWrapperProps(knobProps, elevation);
-  const transitionToken = (knobProps.transition as string | undefined) || 'quick';
+  const transitionToken =
+    isString(knobProps.transition) && knobProps.transition !== '' ? knobProps.transition : 'quick';
 
   // Render skeleton placeholder
   if (skeleton) {
@@ -738,7 +1022,7 @@ export const Slider = ({
         size={size}
         knobProps={knobProps}>
         <XStack
-          height={size || knobProps.sizeToken}
+          height={size ?? knobProps.sizeToken}
           alignItems="center"
           width="100%">
           <Skeleton
@@ -754,9 +1038,9 @@ export const Slider = ({
   const control = (
     sliderValue: number[],
     isControlled: boolean,
-    handleChange?: (values: number[]) => void,
-    handleBlur?: (...args: any[]) => void,
-    hasError?: boolean,
+    handleChange: ((values: number[]) => void) | undefined,
+    handleBlur: AnyHandler | undefined,
+    hasError: boolean,
   ) => (
     <SliderControl
       id={id}
@@ -770,7 +1054,7 @@ export const Slider = ({
       required={required}
       hasError={hasError}
       hasLabel={hasLabel}
-      labelText={typeof label === 'string' ? label : undefined}
+      labelText={isString(label) ? label : undefined}
       aria-label={ariaLabel}
       size={size}
       sizeToken={knobProps.sizeToken}
@@ -787,7 +1071,7 @@ export const Slider = ({
     />
   );
 
-  if (!resolvedForm || !name) {
+  if (!resolvedForm || name === undefined || name === '') {
     return (
       <FieldLayout
         id={id}
@@ -799,7 +1083,7 @@ export const Slider = ({
         size={size}
         knobProps={knobProps}
         disabled={disabled}>
-        {control(value ?? defaultValue ?? [min], value !== undefined, undefined, onBlur, !!error)}
+        {control(value ?? defaultValue ?? [min], value !== undefined, undefined, onBlur, isErrorValue(error))}
       </FieldLayout>
     );
   }
@@ -813,8 +1097,10 @@ export const Slider = ({
       {(field) => {
         const resolvedError = getFieldError(field, error);
 
-        const formValue = field.state.value;
-        const normalizedValue = Array.isArray(formValue) ? formValue : [(formValue as number) ?? min];
+        const formValue: unknown = field.state.value;
+        const normalizedValue = Array.isArray(formValue)
+          ? formValue.filter(isNumber)
+          : [isNumber(formValue) ? formValue : min];
 
         return (
           <FieldLayout
@@ -828,16 +1114,18 @@ export const Slider = ({
             knobProps={knobProps}
             disabled={disabled}>
             {control(
-              value === undefined ? normalizedValue : value,
+              value ?? normalizedValue,
               // Form-integrated is always controlled: field state is the live
               // source and handleChange below closes the loop (ToggleGroup
               // form branch does the same).
               true,
               (values) => {
-                field.handleChange((values.length > 1 ? values : values[0]) as any);
+                // SAFETY: the field is bound to this slider's value, so handleChange accepts the number or number[] it is given.
+                // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the field API's value type is erased to `never` for a form of unknown shape
+                field.handleChange((values.length > 1 ? values : values[0]) as never);
               },
               mergeFieldHandler(field, 'handleBlur', onBlur),
-              !!resolvedError,
+              isErrorValue(resolvedError),
             )}
           </FieldLayout>
         );

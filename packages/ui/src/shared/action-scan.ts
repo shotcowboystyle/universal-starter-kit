@@ -10,14 +10,25 @@
 import { Children, isValidElement } from 'react';
 import type { ReactNode } from 'react';
 
+interface ActionProbeProps {
+  'data-mp-action-role'?: unknown;
+  actionRole?: unknown;
+  onPress?: unknown;
+  onClick?: unknown;
+  role?: unknown;
+  tag?: unknown;
+  accent?: unknown;
+}
+
 export const elementLooksLikeAction = (node: ReactNode): boolean => {
-  if (!isValidElement(node)) {
+  if (!isValidElement<ActionProbeProps>(node)) {
     return false;
   }
-  const props = node.props as Record<string, unknown>;
+  const { props } = node;
   if (props['data-mp-action-role'] != null || props.actionRole != null) {
     return true;
   }
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- heuristic over consumer-supplied, untyped element props
   if (typeof props.onPress === 'function' || typeof props.onClick === 'function') {
     return true;
   }
@@ -39,13 +50,14 @@ export const elementLooksLikeAction = (node: ReactNode): boolean => {
  */
 export const countActionsInTree = (nodes: ReactNode): number => {
   let count = 0;
+  // oxlint-disable-next-line react/no-react-children, github/array-foreach -- Children.forEach is the only walk that handles every ReactNode shape (arrays, iterables, fragments of holes)
   Children.forEach(nodes, (child) => {
     if (elementLooksLikeAction(child)) {
       count += 1;
       return;
     }
-    if (isValidElement(child)) {
-      const kids = (child.props as { children?: ReactNode }).children;
+    if (isValidElement<{ children?: ReactNode }>(child)) {
+      const kids = child.props.children;
       if (kids != null) {
         count += countActionsInTree(kids);
       }

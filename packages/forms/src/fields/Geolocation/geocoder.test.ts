@@ -1,10 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { parseGeoValue, formatGeoValue } from './geo-value';
+import type { GeocodeFn, ReverseGeocodeFn } from './geocoder';
 import { clampLat, clampLng, formatCoordPair, formatPlace, parseLatLngPair, resolveGeocoder } from './geocoder';
 
 describe('geocoder seam helpers', () => {
   it('parses and serializes the lat/lng JSON value', () => {
+    // oxlint-disable-next-line unicorn/no-useless-undefined -- the parameter is required, so an explicit undefined is the case under test
     expect(parseGeoValue(undefined)).toBeNull();
     expect(parseGeoValue('')).toBeNull();
     expect(parseGeoValue('{')).toBeNull();
@@ -41,9 +43,9 @@ describe('geocoder seam helpers', () => {
   });
 
   it('resolveGeocoder prefers explicit props over a geocoder object', () => {
-    const geocode = vi.fn();
-    const reverseGeocode = vi.fn();
-    const other = { geocode: vi.fn(), reverseGeocode: vi.fn() };
+    const geocode = vi.fn<GeocodeFn>();
+    const reverseGeocode = vi.fn<ReverseGeocodeFn>();
+    const other = { geocode: vi.fn<GeocodeFn>(), reverseGeocode: vi.fn<ReverseGeocodeFn>() };
     const resolved = resolveGeocoder({ geocode, reverseGeocode, geocoder: other });
     expect(resolved.geocode).toBe(geocode);
     expect(resolved.reverseGeocode).toBe(reverseGeocode);

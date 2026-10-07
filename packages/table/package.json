@@ -1,0 +1,104 @@
+{
+  "name": "@repo/table",
+  "version": "0.0.0",
+  "description": "Advanced table components with filtering, pagination, sorting, and URL state management",
+  "license": "Apache-2.0",
+  "source": "src/index.ts",
+  "files": [
+    "dist",
+    "src",
+    "types",
+    "!types/.tsbuildinfo"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "main": "src/index.ts",
+  "module": "src/index.ts",
+  "types": "types/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "source": "./src/index.ts",
+      "react-native": {
+        "types": "./types/index.d.ts",
+        "import": "./dist/esm/index.native.js",
+        "require": "./dist/cjs/index.native.js"
+      },
+      "types": "./types/index.d.ts",
+      "import": "./dist/esm/index.mjs",
+      "require": "./dist/cjs/index.cjs",
+      "default": "./dist/cjs/index.cjs"
+    },
+    "./tableCellContext": {
+      "source": "./src/shims/tableCellContext.ts",
+      "types": "./types/shims/tableCellContext.d.ts",
+      "import": "./src/shims/tableCellContext.ts",
+      "require": "./src/shims/tableCellContext.ts",
+      "default": "./src/shims/tableCellContext.ts"
+    },
+    "./primitives": {
+      "source": "./src/shims/primitives.ts",
+      "types": "./types/shims/primitives.d.ts",
+      "import": "./src/shims/primitives.ts",
+      "require": "./src/shims/primitives.ts",
+      "default": "./src/shims/primitives.ts"
+    }
+  },
+  "scripts": {
+    "build": "rm -rf dist types 2>/dev/null && tamagui-build --ts-project ./tsconfig.build.json --exclude '\\.spec\\.|\\.test\\.|\\.stories\\.'",
+    "test": "vitest run --coverage --coverage.provider=v8 --coverage.reporter=text --coverage.reporter=lcov --coverage.reporter=html",
+    "typecheck": "tsgo --noEmit"
+  },
+  "dependencies": {
+    "@phosphor-icons/react": "catalog:",
+    "@repo/forms": "workspace:*",
+    "@repo/platform": "workspace:*",
+    "@repo/rich-text": "workspace:*",
+    "@repo/router": "workspace:*",
+    "@repo/table-primitives": "workspace:*",
+    "@repo/theme": "workspace:*",
+    "@repo/ui": "workspace:*",
+    "@shopify/flash-list": "^2.3.1",
+    "@tamagui/roving-focus": "catalog:",
+    "@tanstack/react-table": "^8.21.3",
+    "@tanstack/react-virtual": "^3.13.24",
+    "@tanstack/table-core": "^8.21.3",
+    "tamagui": "catalog:"
+  },
+  "devDependencies": {
+    "@repo/config": "workspace:*",
+    "@repo/router": "workspace:*",
+    "@repo/storybook": "workspace:*",
+    "@repo/test-utils": "workspace:*",
+    "@tamagui/build": "catalog:",
+    "@testing-library/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "i18next": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "react-i18next": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "i18next": "^25.0.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-i18next": ">=14",
+    "react-native": ">=0.83.0"
+  },
+  "peerDependenciesMeta": {
+    "i18next": {
+      "optional": true
+    },
+    "react-i18next": {
+      "optional": true
+    },
+    "react-native": {
+      "optional": true
+    }
+  },
+  "module:jsx": "dist/jsx"
+}

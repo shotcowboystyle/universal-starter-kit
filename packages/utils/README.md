@@ -45,5 +45,3 @@ await waitForFrappe(1000); // poll every 1s until BASE_URL/api/method/ping answe
 ## License
 
 Apache-2.0
-
-Derived from [multiplatform.one](https://multiplatform.one) (Apache-2.0). See the package LICENSE and the repository NOTICE.

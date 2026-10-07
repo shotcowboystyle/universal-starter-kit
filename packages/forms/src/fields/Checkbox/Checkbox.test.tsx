@@ -1,11 +1,18 @@
 import { renderWithProviders } from '@repo/test-utils';
-import { createThemesBuilder, defaultAccentTheme, defaultBaseTheme, defaultBuilderOptions, Preset } from '@repo/theme';
-import * as Theme from '@repo/theme';
+import {
+  createThemesBuilder,
+  defaultAccentTheme,
+  defaultBaseTheme,
+  defaultBuilderOptions,
+  Preset,
+  wasKeyboardFocus,
+} from '@repo/theme';
 import { configWithoutAnimations } from '@tamagui/config';
 import { animationsCSS } from '@tamagui/config/v5-css';
 import { act, cleanup, fireEvent, render } from '@testing-library/react';
 import { TamaguiProvider, createTamagui } from 'tamagui';
-import { describe, expect, it, vi } from 'vitest';
+import type { CheckedState } from 'tamagui';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { Form } from '../../Form';
 
@@ -25,7 +32,43 @@ const houseConfig = createTamagui({
   themes: houseThemes as any,
 });
 
-describe('Checkbox', () => {
+vi.mock(import('@repo/theme'), async (importOriginal) => ({
+  ...(await importOriginal()),
+  wasKeyboardFocus: vi.fn<() => boolean>(() => false),
+}));
+
+/** Computed px widths: '' or 'auto' read as 0, anything else keeps its numeric part. */
+const pxOf = (value: string): number => {
+  const parsed = Number(value.replace('px', ''));
+  return Number.isNaN(parsed) ? 0 : parsed;
+};
+
+const isTransparent = (bg: string) => bg === 'transparent' || bg === 'rgba(0, 0, 0, 0)' || bg === 'rgba(0,0,0,0)';
+
+/** Presence + computed visibility of the indicator glyph, not just mount. */
+const expectVisibleGlyph = (checkbox: Element) => {
+  const svg = checkbox.querySelector('svg');
+  expect(svg, 'indicator svg must render inside role=checkbox').toBeTruthy();
+  // phosphor icons draw with <path>; an empty svg means a broken icon import
+  expect(svg!.querySelector('path'), 'indicator svg must have path content').toBeTruthy();
+  let node: Element | null = svg;
+  while (node && node !== checkbox.parentElement) {
+    const style = getComputedStyle(node);
+    expect(style.display, 'indicator ancestry must not be display:none').not.toBe('none');
+    expect(style.visibility, 'indicator ancestry must not be hidden').not.toBe('hidden');
+    if (style.opacity !== '') {
+      expect(Number(style.opacity), 'indicator ancestry must not be transparent').toBeGreaterThan(0.05);
+    }
+    node = node.parentElement;
+  }
+};
+
+const markedDescendants = (root: Element) =>
+  [...root.querySelectorAll('*')].filter((el) => (el.getAttribute('class') ?? '').includes('_bg-accentBackg'));
+
+describe(Checkbox, () => {
+  afterEach(cleanup);
+
   describe('without form context', () => {
     it('renders with label', () => {
       const result = renderWithProviders(
@@ -85,11 +128,12 @@ describe('Checkbox', () => {
     });
 
     it('calls onCheckedChange when clicked', () => {
-      const onCheckedChange = vi.fn();
+      const onCheckedChange = vi.fn<(checked: CheckedState) => void>();
       const result = renderWithProviders(
         <Checkbox
           name="cb"
           defaultValue={false}
+          // oxlint-disable-next-line typescript/no-deprecated -- the deprecated alias is the behavior under test
           onCheckedChange={onCheckedChange}
         />,
       );
@@ -104,7 +148,7 @@ describe('Checkbox', () => {
       // The painted square is pointerEvents=none so RN presses reach the
       // role=checkbox frame (inner View/SVG otherwise steal the responder).
       // jsdom still delivers the click on [data-checkbox-box] via bubbling.
-      const onChange = vi.fn();
+      const onChange = vi.fn<(checked: CheckedState) => void>();
       const result = renderWithProviders(
         <Checkbox
           name="cb"
@@ -113,20 +157,21 @@ describe('Checkbox', () => {
           onChange={onChange}
         />,
       );
-      const box = result.container.querySelector('[data-checkbox-box="true"]');
+      const box = result.container.querySelector<HTMLElement>('[data-checkbox-box="true"]');
       expect(box).toBeTruthy();
       fireEvent.click(box!);
       expect(onChange).toHaveBeenCalledWith(true);
     });
 
     it('fires canonical onChange and the deprecated onCheckedChange alias once each', () => {
-      const onChange = vi.fn();
-      const onCheckedChange = vi.fn();
+      const onChange = vi.fn<(checked: CheckedState) => void>();
+      const onCheckedChange = vi.fn<(checked: CheckedState) => void>();
       const result = renderWithProviders(
         <Checkbox
           name="cb"
           defaultValue={false}
           onChange={onChange}
+          // oxlint-disable-next-line typescript/no-deprecated -- the deprecated alias is the behavior under test
           onCheckedChange={onCheckedChange}
         />,
       );
@@ -134,10 +179,8 @@ describe('Checkbox', () => {
       if (checkbox) {
         fireEvent.click(checkbox);
       }
-      expect(onChange).toHaveBeenCalledOnce();
-      expect(onChange).toHaveBeenCalledWith(true);
-      expect(onCheckedChange).toHaveBeenCalledOnce();
-      expect(onCheckedChange).toHaveBeenCalledWith(true);
+      expect(onChange).toHaveBeenCalledExactlyOnceWith(true);
+      expect(onCheckedChange).toHaveBeenCalledExactlyOnceWith(true);
     });
   });
 
@@ -146,24 +189,6 @@ describe('Checkbox', () => {
   // regressions (renamed/missing icon import rendering null) and
   // stuck-hidden indicators.
   describe('check indicator glyph', () => {
-    /** Presence + computed visibility of the indicator glyph, not just mount. */
-    const expectVisibleGlyph = (checkbox: Element) => {
-      const svg = checkbox.querySelector('svg');
-      expect(svg, 'indicator svg must render inside role=checkbox').toBeTruthy();
-      // phosphor icons draw with <path>; an empty svg means a broken icon import
-      expect(svg!.querySelector('path'), 'indicator svg must have path content').toBeTruthy();
-      let node: Element | null = svg;
-      while (node && node !== checkbox.parentElement) {
-        const style = getComputedStyle(node);
-        expect(style.display, 'indicator ancestry must not be display:none').not.toBe('none');
-        expect(style.visibility, 'indicator ancestry must not be hidden').not.toBe('hidden');
-        if (style.opacity !== '') {
-          expect(Number(style.opacity), 'indicator ancestry must not be transparent').toBeGreaterThan(0.05);
-        }
-        node = node.parentElement;
-      }
-    };
-
     it('renders a visible check glyph when checked', () => {
       const result = renderWithProviders(
         <Checkbox
@@ -220,8 +245,6 @@ describe('Checkbox', () => {
   });
 
   describe('ring anatomy', () => {
-    const isTransparent = (bg: string) => bg === 'transparent' || bg === 'rgba(0, 0, 0, 0)' || bg === 'rgba(0,0,0,0)';
-
     it('idle box is empty (transparent fill); checked is fill, not a thicker border', () => {
       const { container } = render(
         <TamaguiProvider
@@ -238,23 +261,23 @@ describe('Checkbox', () => {
           />
         </TamaguiProvider>,
       );
-      const checkboxes = Array.from(container.querySelectorAll('[role="checkbox"]'));
+      const checkboxes = [...container.querySelectorAll('[role="checkbox"]')];
       const checkedRoot = checkboxes.find((b) => b.getAttribute('aria-checked') === 'true')!;
       const uncheckedRoot = checkboxes.find((b) => b.getAttribute('aria-checked') === 'false')!;
-      const marked = checkedRoot.querySelector('[data-checkbox-box="true"]') as HTMLElement;
-      const idle = uncheckedRoot.querySelector('[data-checkbox-box="true"]') as HTMLElement;
+      const marked = checkedRoot.querySelector<HTMLElement>('[data-checkbox-box="true"]')!;
+      const idle = uncheckedRoot.querySelector<HTMLElement>('[data-checkbox-box="true"]')!;
       expect(marked).toBeTruthy();
       expect(idle).toBeTruthy();
       expect(isTransparent(getComputedStyle(idle).backgroundColor)).toBe(true);
-      const markedBw = Number.parseFloat(getComputedStyle(marked).borderTopWidth) || 0;
-      const idleBw = Number.parseFloat(getComputedStyle(idle).borderTopWidth) || 0;
+      const markedBw = pxOf(getComputedStyle(marked).borderTopWidth);
+      const idleBw = pxOf(getComputedStyle(idle).borderTopWidth);
       expect(idleBw).toBeGreaterThanOrEqual(2);
       expect(markedBw).toBe(idleBw);
-      expect(Number.parseFloat(getComputedStyle(marked).outlineWidth) || 0).toBe(0);
+      expect(pxOf(getComputedStyle(marked).outlineWidth)).toBe(0);
     });
 
     it('keyboard focus rings the box, never the 44px target', async () => {
-      const spy = vi.spyOn(Theme, 'wasKeyboardFocus').mockReturnValue(true);
+      vi.mocked(wasKeyboardFocus).mockReturnValue(true);
       try {
         const result = renderWithProviders(
           <Checkbox
@@ -266,12 +289,12 @@ describe('Checkbox', () => {
         await act(async () => {
           fireEvent.focusIn(checkbox);
         });
-        const box = checkbox.querySelector('[data-checkbox-box="true"]');
-        expect(box?.getAttribute('data-focus-ring')).toBe('true');
-        expect(checkbox.getAttribute('data-focus-ring')).toBeNull();
-        expect(Number.parseFloat(getComputedStyle(checkbox).outlineWidth) || 0).toBe(0);
+        const box = checkbox.querySelector<HTMLElement>('[data-checkbox-box="true"]');
+        expect(box?.dataset.focusRing).toBe('true');
+        expect(checkbox.matches('[data-focus-ring]')).toBe(false);
+        expect(pxOf(getComputedStyle(checkbox).outlineWidth)).toBe(0);
       } finally {
-        spy.mockRestore();
+        vi.mocked(wasKeyboardFocus).mockReturnValue(false);
       }
     });
   });
@@ -293,7 +316,9 @@ describe('Checkbox', () => {
   });
 });
 
-describe('CheckboxGroup', () => {
+describe(CheckboxGroup, () => {
+  afterEach(cleanup);
+
   const options = [
     { label: 'Option A', value: 'a' },
     { label: 'Option B', value: 'b' },
@@ -314,26 +339,25 @@ describe('CheckboxGroup', () => {
   });
 
   it('fires canonical onChange and the deprecated onValueChange alias once each', () => {
-    const onChange = vi.fn();
-    const onValueChange = vi.fn();
+    const onChange = vi.fn<(values: string[]) => void>();
+    const onValueChange = vi.fn<(values: string[]) => void>();
     const result = renderWithProviders(
       <CheckboxGroup
         label="Pick options"
         name="opts"
         options={options}
         onChange={onChange}
+        // oxlint-disable-next-line typescript/no-deprecated -- the deprecated alias is the behavior under test
         onValueChange={onValueChange}
       />,
     );
-    const checkbox = result.container.querySelector("[role='checkbox']");
+    const checkbox = result.container.querySelector<HTMLElement>("[role='checkbox']");
     expect(checkbox).toBeTruthy();
     if (checkbox) {
       fireEvent.click(checkbox);
     }
-    expect(onChange).toHaveBeenCalledOnce();
-    expect(onChange).toHaveBeenCalledWith(['a']);
-    expect(onValueChange).toHaveBeenCalledOnce();
-    expect(onValueChange).toHaveBeenCalledWith(['a']);
+    expect(onChange).toHaveBeenCalledExactlyOnceWith(['a']);
+    expect(onValueChange).toHaveBeenCalledExactlyOnceWith(['a']);
   });
 
   it('renders required label with asterisk', () => {
@@ -417,17 +441,17 @@ describe('CheckboxGroup', () => {
           options={cardOptions}
         />,
       );
-      const checkbox = result.container.querySelector("[role='checkbox']");
+      const checkbox = result.container.querySelector<HTMLElement>("[role='checkbox']");
       const labelId = checkbox?.getAttribute('aria-labelledby');
       const descId = checkbox?.getAttribute('aria-describedby');
       expect(labelId).toBeTruthy();
-      expect(document.getElementById(labelId!)?.textContent).toBe('Card A');
+      expect(document.querySelector(`[id="${labelId}"]`)?.textContent).toBe('Card A');
       expect(descId).toBeTruthy();
-      expect(document.getElementById(descId!)?.textContent).toBe('Description for A');
+      expect(document.querySelector(`[id="${descId}"]`)?.textContent).toBe('Description for A');
     });
 
     it('checkbox click in card mode emits onChange exactly once', () => {
-      const onChange = vi.fn();
+      const onChange = vi.fn<(values: string[]) => void>();
       const result = renderWithProviders(
         <CheckboxGroup
           label="Pick"
@@ -437,13 +461,13 @@ describe('CheckboxGroup', () => {
           onChange={onChange}
         />,
       );
-      const checkbox = result.container.querySelector("[role='checkbox']");
+      const checkbox = result.container.querySelector<HTMLElement>("[role='checkbox']");
       if (checkbox) {
         fireEvent.click(checkbox);
       }
       expect(onChange).toHaveBeenCalledWith(['a']);
       // last emit wins and must be the toggled-on state (no double-fire revert)
-      expect(onChange.mock.calls[onChange.mock.calls.length - 1][0]).toStrictEqual(['a']);
+      expect(onChange.mock.lastCall?.[0]).toStrictEqual(['a']);
     });
 
     it('keeps index-based ids unique for duplicate option values', () => {
@@ -496,9 +520,9 @@ describe('CheckboxGroup', () => {
 
   describe('compound Checkboxes', () => {
     it('keyboard focus rings the box, never the focus-group item', async () => {
-      const spy = vi.spyOn(Theme, 'wasKeyboardFocus').mockReturnValue(true);
+      vi.mocked(wasKeyboardFocus).mockReturnValue(true);
       try {
-        const onValuesChange = vi.fn();
+        const onValuesChange = vi.fn<(values: Record<string, boolean>) => void>();
         const result = renderWithProviders(
           <Checkboxes
             values={{ a: true }}
@@ -516,16 +540,16 @@ describe('CheckboxGroup', () => {
             </Checkboxes.FocusGroup>
           </Checkboxes>,
         );
-        const item = result.container.querySelector('[data-checkbox-focus-item="true"]') as HTMLElement;
+        const item = result.container.querySelector<HTMLElement>('[data-checkbox-focus-item="true"]')!;
         expect(item).toBeTruthy();
         await act(async () => {
           fireEvent.focusIn(item);
         });
-        expect(Number.parseFloat(getComputedStyle(item).outlineWidth) || 0).toBe(0);
-        const box = result.container.querySelector('[data-checkbox-box="true"]');
-        expect(box?.getAttribute('data-focus-ring')).toBe('true');
+        expect(pxOf(getComputedStyle(item).outlineWidth)).toBe(0);
+        const box = result.container.querySelector<HTMLElement>('[data-checkbox-box="true"]');
+        expect(box?.dataset.focusRing).toBe('true');
       } finally {
-        spy.mockRestore();
+        vi.mocked(wasKeyboardFocus).mockReturnValue(false);
       }
     });
   });
@@ -547,32 +571,26 @@ describe('CheckboxGroup', () => {
           />
         </TamaguiProvider>,
       );
-      const boxes = Array.from(container.querySelectorAll('[role="checkbox"]'));
+      const boxes = [...container.querySelectorAll('[role="checkbox"]')];
       expect(boxes).toHaveLength(2);
       const checked = boxes.find((b) => b.getAttribute('aria-checked') === 'true');
       const unchecked = boxes.find((b) => b.getAttribute('aria-checked') === 'false');
       expect(checked).toBeTruthy();
       expect(unchecked).toBeTruthy();
-      const marked = (root: Element) =>
-        Array.from(root.querySelectorAll('*')).filter((el) =>
-          (el as HTMLElement).className?.toString().includes('_bg-accentBackg'),
-        );
-      expect(marked(checked!).length).toBeGreaterThan(0);
-      expect(marked(unchecked!)).toHaveLength(0);
+      expect(markedDescendants(checked!).length).toBeGreaterThan(0);
+      expect(markedDescendants(unchecked!)).toHaveLength(0);
     });
   });
 });
 
 const glyphRadiusClasses = (container: HTMLElement): string[] => {
-  const box = container.querySelector('[data-checkbox-box="true"]');
-  return String(box?.className || '')
-    .split(' ')
-    .filter((c) => c.startsWith('_btlr-'));
+  const box = container.querySelector<HTMLElement>('[data-checkbox-box="true"]');
+  return (box?.getAttribute('class') ?? '').split(' ').filter((c) => c.startsWith('_btlr-'));
 };
 
 const RADIUS_STOPS = ['none', 'small', 'medium', 'large', 'full'] as const;
 
-describe('clampCheckboxGlyphRadius', () => {
+describe(clampCheckboxGlyphRadius, () => {
   it('squares when pointy, even if the token is full', () => {
     expect(clampCheckboxGlyphRadius('$12', { pointy: true })).toBe(0);
     expect(clampCheckboxGlyphRadius('$0')).toBe(0);
@@ -594,31 +612,27 @@ describe('clampCheckboxGlyphRadius', () => {
 });
 
 describe('Checkbox never circular at any radius stop', () => {
-  it('glyph is square at none and capped at $2 through full — never a disc', () => {
-    for (const stop of RADIUS_STOPS) {
-      const result = renderWithProviders(
-        <Preset overrides={{ borderRadius: stop }}>
-          <Checkbox
-            label="Terms"
-            name="t"
-          />
-        </Preset>,
-      );
-      const classes = glyphRadiusClasses(result.container);
-      expect(
-        classes.some((c) => c.includes('100000') || c.includes('radius-12')),
-        `stop ${stop} must not paint a circle: ${classes.join(' ')}`,
-      ).toBe(false);
-      if (stop === 'none') {
-        expect(
-          classes.some((c) => c.includes('radius-0') || c === '_btlr-0px'),
-          `none must be 0, got ${classes.join(' ')}`,
-        ).toBe(true);
-      } else {
-        expect(classes, `stop ${stop}`).toStrictEqual(['_btlr-t-radius-2']);
-      }
-      cleanup();
-    }
+  afterEach(cleanup);
+
+  it.each(RADIUS_STOPS)('glyph is square at none and capped at $2 through full — never a disc (%s)', (stop) => {
+    const result = renderWithProviders(
+      <Preset overrides={{ borderRadius: stop }}>
+        <Checkbox
+          label="Terms"
+          name="t"
+        />
+      </Preset>,
+    );
+    const classes = glyphRadiusClasses(result.container);
+    expect(
+      classes.some((c) => c.includes('100000') || c.includes('radius-12')),
+      `stop ${stop} must not paint a circle: ${classes.join(' ')}`,
+    ).toBe(false);
+    const matchesStop =
+      stop === 'none'
+        ? classes.some((c) => c.includes('radius-0') || c === '_btlr-0px')
+        : classes.length === 1 && classes[0] === '_btlr-t-radius-2';
+    expect(matchesStop, `stop ${stop} painted ${classes.join(' ')}`).toBe(true);
   });
 
   it('compound Checkboxes glyph stays capped at full', () => {
@@ -648,9 +662,7 @@ describe('Checkbox never circular at any radius stop', () => {
       </Preset>,
     );
     const root = result.getCheckbox();
-    const classes = String(root?.className || '')
-      .split(' ')
-      .filter((c) => c.startsWith('_btlr-'));
+    const classes = (root?.getAttribute('class') ?? '').split(' ').filter((c) => c.startsWith('_btlr-'));
     expect(classes.some((c) => c.includes('100000') || c.includes('radius-12'))).toBe(false);
   });
 });

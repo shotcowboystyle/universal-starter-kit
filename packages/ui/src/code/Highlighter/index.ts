@@ -7,17 +7,20 @@
  */
 
 import { createContext, useContext, useEffect, useState } from 'react';
+import type { ThemeInput, ThemedToken } from 'shiki';
 
 import { houseSyntaxTheme } from './house-syntax-theme';
 
-export * from './house-syntax-theme';
+export { houseSyntaxTheme } from './house-syntax-theme';
+export type { HouseSyntaxTheme, HouseSyntaxThemeSetting } from './house-syntax-theme';
 
 /** A single highlighted token with inline color */
 export interface HighlightToken {
   content: string;
   /** A theme token such as `$syntaxBlue` under the house theme, or a named theme's hex */
   color?: string;
-  fontStyle?: number; // 0=normal, 1=italic, 2=bold, 3=bold+italic
+  /** 0=normal, 1=italic, 2=bold, 3=bold+italic */
+  fontStyle?: number;
 }
 
 /** A line of highlighted tokens */
@@ -30,19 +33,55 @@ export interface ShikiContextValue {
 
 export const ShikiContext = createContext<ShikiContextValue>({});
 
-const getHighlighter = async (): Promise<any> => {
-  if (!highlighterPromise) {
-    highlighterPromise = Promise.all([import('shiki'), import('shiki/engine/javascript')]).then(
-      async ([shiki, jsEngine]) =>
-        await shiki.createHighlighter({
-          themes: [],
-          langs: [],
-          engine: jsEngine.createJavaScriptRegexEngine(),
-        }),
-    );
-  }
+// One shared highlighter for the whole app (this replaced a second
+// highlighter stack the markdown package used to ship).
+// Uses shiki's pure-JavaScript regex engine so highlighting works on web,
+// Expo Go, and native without WASM; languages/themes load on demand instead
+// of an eager preload.
+// The slice of shiki's highlighter used here, typed over plain strings:
+// language/theme ids are runtime input, validated by shiki itself.
+interface Highlighter {
+  loadTheme(theme: ThemeInput | string): Promise<void>;
+  loadLanguage(language: string): Promise<void>;
+  getLoadedLanguages(): string[];
+  codeToTokens(code: string, options: { lang: string; theme: string }): { tokens: ThemedToken[][] };
+}
+
+let highlighterPromise: Promise<Highlighter> | undefined;
+
+const createShikiHighlighter = async (): Promise<Highlighter> => {
+  const [shiki, jsEngine] = await Promise.all([import('shiki'), import('shiki/engine/javascript')]);
+  return await shiki.createHighlighter({
+    themes: [],
+    langs: [],
+    engine: jsEngine.createJavaScriptRegexEngine(),
+  });
+};
+
+const getHighlighter = async (): Promise<Highlighter> => {
+  highlighterPromise ??= createShikiHighlighter();
   return await highlighterPromise;
 };
+
+// Unknown languages fall back to plain text in `highlightCode`; theme failures
+// reject into its catch (matching the old shorthand behavior).
+const loadLanguageOrIgnore = async (highlighter: Highlighter, language: string): Promise<void> => {
+  try {
+    await highlighter.loadLanguage(language);
+  } catch {
+    // Safe to continue: an unloadable language is rendered as plain text.
+  }
+};
+
+const rejectAfter = async (ms: number): Promise<never> =>
+  // oxlint-disable-next-line promise/avoid-new -- timeout needs a promise that settles from a timer callback
+  await new Promise<never>((_resolve, reject) => {
+    setTimeout(() => {
+      reject(new Error('shiki import timeout'));
+    }, ms);
+  });
+
+const nonEmpty = (value?: string): string | undefined => (value === '' ? undefined : value);
 
 /** Plain text fallback when shiki is unavailable */
 const plainTextTokens = (code: string): HighlightLine[] => code.split('\n').map((line) => [{ content: line }]);
@@ -58,26 +97,17 @@ export const highlightCode = async (
   theme = houseSyntaxTheme.name,
 ): Promise<HighlightLine[]> => {
   try {
-    const highlighter = await Promise.race([
-      getHighlighter(),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => {
-          reject(new Error('shiki import timeout'));
-        }, 5000),
-      ),
-    ]);
+    const highlighter = await Promise.race([getHighlighter(), rejectAfter(5000)]);
     await Promise.all([
-      highlighter.loadTheme((theme === houseSyntaxTheme.name ? houseSyntaxTheme : theme) as any),
-      // Unknown languages fall back to plain text below; theme failures
-      // reject into the catch (matching the old shorthand behavior).
-      highlighter.loadLanguage(language as any).catch(() => {}),
+      highlighter.loadTheme(theme === houseSyntaxTheme.name ? houseSyntaxTheme : theme),
+      loadLanguageOrIgnore(highlighter, language),
     ]);
     const lang = highlighter.getLoadedLanguages().includes(language) ? language : 'text';
     const result = highlighter.codeToTokens(code, {
-      lang: lang as any,
-      theme: theme as any,
+      lang,
+      theme,
     });
-    return result.tokens.map((line: any[]) =>
+    return result.tokens.map((line) =>
       line.map((token) => ({
         content: token.content,
         color: token.color,
@@ -97,25 +127,27 @@ export const highlightCode = async (
  */
 export const useShikiTokens = (code: string, language: string, theme?: string): HighlightLine[] | null => {
   const ctx = useContext(ShikiContext);
-  const resolvedTheme = theme || ctx.theme || houseSyntaxTheme.name;
+  const resolvedTheme = nonEmpty(theme) ?? nonEmpty(ctx.theme) ?? houseSyntaxTheme.name;
   const [tokens, setTokens] = useState<HighlightLine[] | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
-    highlightCode(code, language, resolvedTheme)
-      .then((result) => {
+    const run = async () => {
+      try {
+        const result = await highlightCode(code, language, resolvedTheme);
         if (!cancelled) {
           setTokens(result);
         }
-      })
-      .catch(() => {
+      } catch {
         // If shiki fails (not installed, unsupported language, etc.),
         // fall back to plain text tokens
         if (!cancelled) {
-          setTokens(code.split('\n').map((line) => [{ content: line }]));
+          setTokens(plainTextTokens(code));
         }
-      });
+      }
+    };
+    void run();
 
     return () => {
       cancelled = true;
@@ -124,10 +156,3 @@ export const useShikiTokens = (code: string, language: string, theme?: string): 
 
   return tokens;
 };
-
-// One shared highlighter for the whole app (this replaced a second
-// highlighter stack the markdown package used to ship).
-// Uses shiki's pure-JavaScript regex engine so highlighting works on web,
-// Expo Go, and native without WASM; languages/themes load on demand instead
-// of an eager preload.
-let highlighterPromise: Promise<any> | null = null;

@@ -1,29 +1,25 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 
 import { renderWithProviders } from '@repo/test-utils';
 import { Preset } from '@repo/theme';
 import { cleanup, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import type { Geocoder } from '../fields/Geolocation/geocoder';
 import { GeocoderProvider } from '../fields/Geolocation/geocoder-context';
 
 import { EMPTY } from './formatters';
 
 import { FieldDisplay } from './index';
 
-afterEach(cleanup);
-
-const frame = (container: HTMLElement) =>
-  container.querySelector("[data-component='FieldDisplay']") as HTMLElement | null;
+const frame = (container: HTMLElement) => container.querySelector<HTMLElement>("[data-component='FieldDisplay']");
 
 const radiusClasses = (el: HTMLElement | null): string[] =>
-  String(el?.className || '')
-    .split(' ')
-    .filter((c) => c.startsWith('_btlr-'));
+  (el?.className ?? '').split(' ').filter((c) => c.startsWith('_btlr-'));
 
-describe('FieldDisplay', () => {
+describe(FieldDisplay, () => {
+  afterEach(cleanup);
+
   it('keeps zero and false as values, empty as the empty mark', () => {
     const zero = renderWithProviders(
       <FieldDisplay
@@ -85,10 +81,12 @@ describe('FieldDisplay', () => {
     const js = renderWithProviders(
       <FieldDisplay
         field="input"
+        // oxlint-disable-next-line no-script-url -- the contract under test is that a javascript: value is never linked
         value="javascript:alert(1)"
       />,
     );
     expect(js.container.querySelector("[role='link']")).toBeNull();
+    // oxlint-disable-next-line no-script-url -- asserting the unsafe value renders as inert text
     expect(js.container.textContent).toContain('javascript:alert(1)');
   });
 
@@ -99,7 +97,7 @@ describe('FieldDisplay', () => {
         value="https://example.com/item"
       />,
     );
-    const link = result.container.querySelector("[role='link']") as HTMLAnchorElement | null;
+    const link = result.container.querySelector("[role='link']");
     expect(link).not.toBeNull();
     expect(link?.getAttribute('href')).toBe('https://example.com/item');
   });
@@ -161,7 +159,7 @@ describe('FieldDisplay', () => {
     );
     const root = frame(result.container);
     expect(root).not.toBeNull();
-    expect(root?.getAttribute('data-field')).toBe('datepicker');
+    expect(root?.dataset.field).toBe('datepicker');
   });
 
   /**
@@ -182,7 +180,8 @@ describe('FieldDisplay', () => {
     );
     expect(result.container.querySelector('[data-testid="barcode-preview-qr"]')).toBeNull();
     expect(result.container.querySelector('canvas')).toBeNull();
-    expect(result.container.textContent?.split('SKU-001234').length).toBe(2); // exactly once
+    // exactly once
+    expect(result.container.textContent?.split('SKU-001234').length).toBe(2);
   });
 
   describe('geolocation', () => {
@@ -208,13 +207,13 @@ describe('FieldDisplay', () => {
     });
 
     it("shows the provider's address in place of the pair", async () => {
-      const reverseGeocode = vi.fn().mockResolvedValue({
+      const reverseGeocode = vi.fn<Geocoder['reverseGeocode']>().mockResolvedValue({
         ...helsinki,
         label: 'Mannerheimintie 3',
         description: 'Kamppi, Helsinki',
       });
       const result = renderWithProviders(
-        <GeocoderProvider geocoder={{ geocode: vi.fn(), reverseGeocode }}>
+        <GeocoderProvider geocoder={{ geocode: vi.fn<Geocoder['geocode']>(), reverseGeocode }}>
           <FieldDisplay
             field="geolocation"
             value={JSON.stringify(helsinki)}
@@ -229,9 +228,9 @@ describe('FieldDisplay', () => {
     });
 
     it('keeps the pair when the provider fails or finds nothing', async () => {
-      const reverseGeocode = vi.fn().mockRejectedValue(new Error('down'));
+      const reverseGeocode = vi.fn<Geocoder['reverseGeocode']>().mockRejectedValue(new Error('down'));
       const result = renderWithProviders(
-        <GeocoderProvider geocoder={{ geocode: vi.fn(), reverseGeocode }}>
+        <GeocoderProvider geocoder={{ geocode: vi.fn<Geocoder['geocode']>(), reverseGeocode }}>
           <FieldDisplay
             field="geolocation"
             value={helsinki}
@@ -239,7 +238,7 @@ describe('FieldDisplay', () => {
         </GeocoderProvider>,
       );
       await waitFor(() => {
-        expect(reverseGeocode).toHaveBeenCalled();
+        expect(reverseGeocode).toHaveBeenCalledWith(helsinki);
       });
       expect(result.container.textContent).toContain('60.1695, 24.9354');
     });

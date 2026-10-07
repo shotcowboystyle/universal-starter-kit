@@ -10,6 +10,7 @@ import { Button } from '../Button';
 import { Input } from '../fields/Input';
 
 import { AdaptivePopup, pickAdaptivePopupFace } from './index';
+import type { AdaptivePopupSize } from './index';
 
 /**
  * The trigger contract, and why every case fires a REAL press rather than
@@ -47,14 +48,74 @@ const press = (el: Element) => {
   fireEvent.click(el);
 };
 
+const settle = async () => {
+  // oxlint-disable-next-line promise/avoid-new -- no promise-returning timer in the DOM; lets pending press handlers run before asserting nothing opened
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, 50);
+  });
+};
+
 const dialog = () => document.querySelector("[role='dialog']");
+
+const FieldHarness = () => {
+  const [open, setOpen] = useState(false);
+  return (
+    <AdaptivePopup
+      open={open}
+      onOpenChange={setOpen}
+      title="Edit Profile"
+      trigger={<Button>Open Popup</Button>}>
+      <input aria-label="Name" />
+    </AdaptivePopup>
+  );
+};
+
+const Untitled = () => {
+  const [open, setOpen] = useState(false);
+  return (
+    <AdaptivePopup
+      open={open}
+      onOpenChange={setOpen}
+      trigger={<Button>Open Popup</Button>}>
+      <Text>body</Text>
+    </AdaptivePopup>
+  );
+};
+
+const RestoreHarness = () => {
+  const [open, setOpen] = useState(false);
+  return (
+    <AdaptivePopup
+      open={open}
+      onOpenChange={setOpen}
+      face="drawer"
+      title="Edit Profile"
+      trigger={<Button>Open Popup</Button>}>
+      <input aria-label="Name" />
+    </AdaptivePopup>
+  );
+};
+
+const FieldPopup = ({ face }: { face: 'dialog' | 'drawer' }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <AdaptivePopup
+      open={open}
+      onOpenChange={setOpen}
+      face={face}
+      title="Edit Profile"
+      trigger={<Button>Open Popup</Button>}>
+      <Input inputProps={{ 'aria-label': 'Name' }} />
+    </AdaptivePopup>
+  );
+};
 
 describe('AdaptivePopup trigger', () => {
   it('a pressable trigger (Button) opens the popup', async () => {
     const result = renderWithProviders(<Harness trigger={<Button>Open Popup</Button>} />);
     const button = result.container.querySelector("[role='button']");
     expect(button).not.toBeNull();
-    press(button as Element);
+    press(button!);
     await waitFor(() => {
       expect(dialog()).not.toBeNull();
     });
@@ -67,12 +128,10 @@ describe('AdaptivePopup trigger', () => {
     // The DEEPEST node carrying the whole string — several ancestors also
     // report `textContent === "Open Popup"`, and pressing one of those would
     // sidestep the very swallow this case exists to catch.
-    const label = Array.from(result.container.querySelectorAll('span')).findLast(
-      (el) => el.textContent === 'Open Popup',
-    );
+    const label = [...result.container.querySelectorAll('span')].findLast((el) => el.textContent === 'Open Popup');
     expect(label).toBeDefined();
     expect(label?.closest("[role='button']")).not.toBeNull();
-    press(label as Element);
+    press(label!);
     await waitFor(() => {
       expect(dialog()).not.toBeNull();
     });
@@ -82,7 +141,7 @@ describe('AdaptivePopup trigger', () => {
   // keyboard activation rides the same path as a pointer press.
   it.each(['Enter', ' '])('keyboard %s on a Button trigger opens the popup', async (key) => {
     const result = renderWithProviders(<Harness trigger={<Button>Open Popup</Button>} />);
-    const button = result.container.querySelector("[role='button']") as Element;
+    const button = result.container.querySelector("[role='button']")!;
     fireEvent.keyDown(button, { key });
     await waitFor(() => {
       expect(dialog()).not.toBeNull();
@@ -94,16 +153,16 @@ describe('AdaptivePopup trigger', () => {
   // opener runs alongside Dialog.Trigger's own bubble-phase toggle.
   it('a non-pressable trigger opens the popup and stays open', async () => {
     const result = renderWithProviders(<Harness trigger={<Text>Open Popup</Text>} />);
-    const label = Array.from(result.container.querySelectorAll('*')).find(
+    const label = [...result.container.querySelectorAll('*')].find(
       (el) => el.textContent === 'Open Popup' && el.children.length === 0,
     );
-    press(label as Element);
+    press(label!);
     await waitFor(() => {
       expect(dialog()).not.toBeNull();
     });
     // Both the capture-phase opener and Dialog.Trigger's own bubble-phase
     // toggle see this press; a toggle-shaped second call would shut it again.
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await settle();
     expect(dialog()).not.toBeNull();
   });
 
@@ -114,8 +173,8 @@ describe('AdaptivePopup trigger', () => {
         disabled
       />,
     );
-    press(result.container.querySelector("[role='button']") as Element);
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    press(result.container.querySelector("[role='button']")!);
+    await settle();
     expect(dialog()).toBeNull();
   });
 
@@ -126,27 +185,27 @@ describe('AdaptivePopup trigger', () => {
         disabled
       />,
     );
-    fireEvent.keyDown(result.container.querySelector("[role='button']") as Element, {
+    fireEvent.keyDown(result.container.querySelector("[role='button']")!, {
       key: 'Enter',
     });
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await settle();
     expect(dialog()).toBeNull();
   });
 });
 
-const surface = () => document.querySelector("[data-testid='adaptive-popup-surface']");
+const surface = () => document.querySelector<HTMLElement>("[data-testid='adaptive-popup-surface']");
 
 describe('AdaptivePopup focus ring', () => {
   it('close names itself and dismisses', async () => {
     const result = renderWithProviders(<Harness trigger={<Button>Open Popup</Button>} />);
-    press(result.container.querySelector("[role='button']") as Element);
+    press(result.container.querySelector("[role='button']")!);
     await waitFor(() => {
       expect(dialog()).not.toBeNull();
     });
-    const close = document.querySelector("[data-testid='adaptive-popup-close']");
+    const close = document.querySelector<HTMLElement>("[data-testid='adaptive-popup-close']");
     expect(close).not.toBeNull();
     expect(close?.getAttribute('aria-label')).toBe('Close');
-    press(close as Element);
+    press(close!);
     await waitFor(() => {
       expect(dialog()).toBeNull();
     });
@@ -154,11 +213,11 @@ describe('AdaptivePopup focus ring', () => {
 
   it('keyboard Enter on close dismisses', async () => {
     const result = renderWithProviders(<Harness trigger={<Button>Open Popup</Button>} />);
-    press(result.container.querySelector("[role='button']") as Element);
+    press(result.container.querySelector("[role='button']")!);
     await waitFor(() => {
       expect(dialog()).not.toBeNull();
     });
-    const close = document.querySelector("[data-testid='adaptive-popup-close']") as HTMLElement;
+    const close = document.querySelector<HTMLElement>("[data-testid='adaptive-popup-close']")!;
     fireEvent.keyDown(close, { key: 'Enter' });
     await waitFor(() => {
       expect(dialog()).toBeNull();
@@ -167,51 +226,40 @@ describe('AdaptivePopup focus ring', () => {
 
   it('close paints at nested density, not the 44px page well', async () => {
     const result = renderWithProviders(<Harness trigger={<Button>Open Popup</Button>} />);
-    press(result.container.querySelector("[role='button']") as Element);
+    press(result.container.querySelector("[role='button']")!);
     await waitFor(() => {
       expect(dialog()).not.toBeNull();
     });
-    const close = document.querySelector("[data-testid='adaptive-popup-close']");
-    const px = Number(close?.getAttribute('data-nested-px'));
+    const close = document.querySelector<HTMLElement>("[data-testid='adaptive-popup-close']");
+    const px = Number(close?.dataset.nestedPx);
     expect(px).toBeGreaterThanOrEqual(24);
     expect(px).toBeLessThan(44);
   });
 
   it('close sits after the body so fields are the first tab stop', async () => {
-    const FieldHarness = () => {
-      const [open, setOpen] = useState(false);
-      return (
-        <AdaptivePopup
-          open={open}
-          onOpenChange={setOpen}
-          title="Edit Profile"
-          trigger={<Button>Open Popup</Button>}>
-          <input aria-label="Name" />
-        </AdaptivePopup>
-      );
-    };
     const result = renderWithProviders(<FieldHarness />);
-    press(result.container.querySelector("[role='button']") as Element);
+    press(result.container.querySelector("[role='button']")!);
     await waitFor(() => {
       expect(dialog()).not.toBeNull();
     });
     const input = dialog()?.querySelector('input');
-    const close = dialog()?.querySelector("[data-testid='adaptive-popup-close']");
+    const close = dialog()?.querySelector<HTMLElement>("[data-testid='adaptive-popup-close']");
     expect(input).not.toBeNull();
     expect(close).not.toBeNull();
-    expect(input!.compareDocumentPosition(close!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const documentOrder = [...dialog()!.querySelectorAll('*')];
+    expect(documentOrder.indexOf(input!)).toBeLessThan(documentOrder.indexOf(close!));
   });
 
   it('the overlay frame suppresses its own ring (panel is not a control)', async () => {
     const result = renderWithProviders(<Harness trigger={<Button>Open Popup</Button>} />);
-    press(result.container.querySelector("[role='button']") as Element);
+    press(result.container.querySelector("[role='button']")!);
     await waitFor(() => {
       expect(dialog()).not.toBeNull();
     });
-    const surface = document.querySelector("[data-testid='adaptive-popup-surface']") as HTMLElement;
-    expect(surface).not.toBeNull();
-    expect(surface.getAttribute('data-adaptive-popup-mode')).toBe('dialog');
-    expect(surface.tabIndex).toBe(-1);
+    const popupSurface = surface()!;
+    expect(popupSurface).not.toBeNull();
+    expect(popupSurface.dataset.adaptivePopupMode).toBe('dialog');
+    expect(popupSurface.tabIndex).toBe(-1);
   });
 
   it('the trigger wrapper is not a tab stop — the painted Button is the ring boundary', () => {
@@ -223,19 +271,8 @@ describe('AdaptivePopup focus ring', () => {
   });
 
   it('omitted title still exposes a dialog name for assistive tech', async () => {
-    const Untitled = () => {
-      const [open, setOpen] = useState(false);
-      return (
-        <AdaptivePopup
-          open={open}
-          onOpenChange={setOpen}
-          trigger={<Button>Open Popup</Button>}>
-          <Text>body</Text>
-        </AdaptivePopup>
-      );
-    };
     const result = renderWithProviders(<Untitled />);
-    press(result.container.querySelector("[role='button']") as Element);
+    press(result.container.querySelector("[role='button']")!);
     await waitFor(() => {
       expect(dialog()).not.toBeNull();
     });
@@ -254,9 +291,9 @@ const setViewportWidth = (width: number) => {
   window.dispatchEvent(new Event('resize'));
 };
 
-afterEach(() => {
+const restoreViewport = () => {
   setViewportWidth(originalInnerWidth);
-});
+};
 
 const OpenPopup = ({
   face,
@@ -264,7 +301,7 @@ const OpenPopup = ({
   footer,
 }: {
   face?: 'dialog' | 'drawer';
-  size?: 'sm' | 'md' | 'lg' | 'xl' | 'fullscreen';
+  size?: AdaptivePopupSize;
   footer?: ReactNode;
 }) => {
   const [open, setOpen] = useState(true);
@@ -283,10 +320,10 @@ const OpenPopup = ({
 };
 
 const shadowClasses = (el: Element): string[] =>
-  String(el.className || '')
+  (el.getAttribute('class') ?? '')
     .split(/\s+/u)
     .filter((c) => c.startsWith('_bxsh-'))
-    .sort();
+    .toSorted();
 
 describe('pickAdaptivePopupFace (C22 / OVERLAY_BREAKPOINT)', () => {
   it('at the overlay breakpoint and below, any face is sheet', () => {
@@ -318,13 +355,15 @@ describe('pickAdaptivePopupFace (C22 / OVERLAY_BREAKPOINT)', () => {
 });
 
 describe('AdaptivePopup face pick (same props, three faces)', () => {
+  afterEach(restoreViewport);
+
   it('above 640, omitted face renders dialog', async () => {
     setViewportWidth(1440);
     renderWithProviders(<OpenPopup />);
     await waitFor(() => {
       expect(surface()).not.toBeNull();
     });
-    expect(surface()?.getAttribute('data-adaptive-popup-mode')).toBe('dialog');
+    expect(surface()?.dataset.adaptivePopupMode).toBe('dialog');
   });
 
   it('above 640, face=drawer renders the edge drawer', async () => {
@@ -333,7 +372,7 @@ describe('AdaptivePopup face pick (same props, three faces)', () => {
     await waitFor(() => {
       expect(surface()).not.toBeNull();
     });
-    expect(surface()?.getAttribute('data-adaptive-popup-mode')).toBe('drawer');
+    expect(surface()?.dataset.adaptivePopupMode).toBe('drawer');
   });
 
   it('at 640, face=drawer renders the existing sheet', async () => {
@@ -342,7 +381,7 @@ describe('AdaptivePopup face pick (same props, three faces)', () => {
     await waitFor(() => {
       expect(surface()).not.toBeNull();
     });
-    expect(surface()?.getAttribute('data-adaptive-popup-mode')).toBe('sheet');
+    expect(surface()?.dataset.adaptivePopupMode).toBe('sheet');
   });
 
   it('at 390, face=drawer renders the existing sheet', async () => {
@@ -351,7 +390,7 @@ describe('AdaptivePopup face pick (same props, three faces)', () => {
     await waitFor(() => {
       expect(surface()).not.toBeNull();
     });
-    expect(surface()?.getAttribute('data-adaptive-popup-mode')).toBe('sheet');
+    expect(surface()?.dataset.adaptivePopupMode).toBe('sheet');
   });
 
   it('size=fullscreen above 640 stays dialog even with face=drawer', async () => {
@@ -365,7 +404,7 @@ describe('AdaptivePopup face pick (same props, three faces)', () => {
     await waitFor(() => {
       expect(surface()).not.toBeNull();
     });
-    expect(surface()?.getAttribute('data-adaptive-popup-mode')).toBe('dialog');
+    expect(surface()?.dataset.adaptivePopupMode).toBe('dialog');
   });
 });
 
@@ -374,26 +413,15 @@ describe('AdaptivePopup drawer contract (overlay ground)', () => {
     setViewportWidth(1440);
   });
 
+  afterEach(restoreViewport);
+
   it('traps focus in the drawer and restores it to the opener on close', async () => {
-    const RestoreHarness = () => {
-      const [open, setOpen] = useState(false);
-      return (
-        <AdaptivePopup
-          open={open}
-          onOpenChange={setOpen}
-          face="drawer"
-          title="Edit Profile"
-          trigger={<Button>Open Popup</Button>}>
-          <input aria-label="Name" />
-        </AdaptivePopup>
-      );
-    };
     const result = renderWithProviders(<RestoreHarness />);
-    const trigger = result.container.querySelector("[role='button']") as HTMLElement;
+    const trigger = result.container.querySelector<HTMLElement>("[role='button']")!;
     trigger.focus();
     press(trigger);
     await waitFor(() => {
-      expect(surface()?.getAttribute('data-adaptive-popup-mode')).toBe('drawer');
+      expect(surface()?.dataset.adaptivePopupMode).toBe('drawer');
     });
     const frame = dialog() as HTMLElement;
     expect(frame.contains(document.activeElement)).toBe(true);
@@ -409,7 +437,7 @@ describe('AdaptivePopup drawer contract (overlay ground)', () => {
   it('Escape dismisses the drawer (AdaptivePopup is not a destructive alertdialog)', async () => {
     renderWithProviders(<OpenPopup face="drawer" />);
     await waitFor(() => {
-      expect(surface()?.getAttribute('data-adaptive-popup-mode')).toBe('drawer');
+      expect(surface()?.dataset.adaptivePopupMode).toBe('drawer');
     });
     fireEvent.keyDown(document, { key: 'Escape', code: 'Escape' });
     await waitFor(() => {
@@ -429,9 +457,9 @@ describe('AdaptivePopup drawer contract (overlay ground)', () => {
     });
     const button = document.querySelector('[data-testid="mpo-button-control"]');
     expect(button).toBeTruthy();
-    expect(surface()?.getAttribute('data-popup-ground')).toBe('$background');
-    const drawerShadow = shadowClasses(surface() as Element);
-    const buttonShadow = shadowClasses(button as Element);
+    expect(surface()?.dataset.popupGround).toBe('$background');
+    const drawerShadow = shadowClasses(surface()!);
+    const buttonShadow = shadowClasses(button!);
     expect(drawerShadow.length, 'drawer paints an overlay shadow').toBeGreaterThan(0);
     expect(buttonShadow, 'a control paints no resting shadow at the default stop').toStrictEqual([]);
   });
@@ -441,25 +469,26 @@ describe('AdaptivePopup drawer contract (overlay ground)', () => {
     await waitFor(() => {
       expect(surface()).not.toBeNull();
     });
-    expect(surface()?.getAttribute('data-drawer-gap')).toBe('0');
-    expect(surface()?.getAttribute('data-drawer-edge')).toBe('inline-end');
+    expect(surface()?.dataset.drawerGap).toBe('0');
+    expect(surface()?.dataset.drawerEdge).toBe('inline-end');
   });
 
-  it('width follows sizeToWidth (sm 400 / md 600 / lg 800 / xl 1000)', async () => {
-    const widths = { sm: '400', md: '600', lg: '800', xl: '1000' } as const;
-    for (const [size, width] of Object.entries(widths)) {
-      const { unmount } = renderWithProviders(
-        <OpenPopup
-          face="drawer"
-          size={size as keyof typeof widths}
-        />,
-      );
-      await waitFor(() => {
-        expect(surface()).not.toBeNull();
-      });
-      expect(surface()?.getAttribute('data-popup-width')).toBe(width);
-      unmount();
-    }
+  it.each([
+    { size: 'sm', width: '400' },
+    { size: 'md', width: '600' },
+    { size: 'lg', width: '800' },
+    { size: 'xl', width: '1000' },
+  ] as const)('width follows sizeToWidth ($size is $width)', async ({ size, width }) => {
+    renderWithProviders(
+      <OpenPopup
+        face="drawer"
+        size={size}
+      />,
+    );
+    await waitFor(() => {
+      expect(surface()).not.toBeNull();
+    });
+    expect(surface()?.dataset.popupWidth).toBe(width);
   });
 
   it('attached-edge corners stay 0 (CONTAINER-CAP on the free edge only)', async () => {
@@ -467,7 +496,7 @@ describe('AdaptivePopup drawer contract (overlay ground)', () => {
     await waitFor(() => {
       expect(surface()).not.toBeNull();
     });
-    expect(surface()?.getAttribute('data-drawer-attached-radius')).toBe('0');
+    expect(surface()?.dataset.drawerAttachedRadius).toBe('0');
   });
 });
 
@@ -478,34 +507,23 @@ describe('AdaptivePopup drawer contract (overlay ground)', () => {
 // no show(), so modelFirstFocusableShow stands in for Chromium's.
 
 describe('AdaptivePopup open focus behind <dialog>.show()', () => {
-  let restoreShow = () => {};
+  const showRestorers: (() => void)[] = [];
   beforeEach(() => {
     setViewportWidth(1440);
-    restoreShow = modelFirstFocusableShow();
+    showRestorers.push(modelFirstFocusableShow());
   });
   afterEach(() => {
-    restoreShow();
+    for (const restore of showRestorers.splice(0)) {
+      restore();
+    }
+    restoreViewport();
   });
-
-  const FieldPopup = ({ face }: { face: 'dialog' | 'drawer' }) => {
-    const [open, setOpen] = useState(false);
-    return (
-      <AdaptivePopup
-        open={open}
-        onOpenChange={setOpen}
-        face={face}
-        title="Edit Profile"
-        trigger={<Button>Open Popup</Button>}>
-        <Input inputProps={{ 'aria-label': 'Name' }} />
-      </AdaptivePopup>
-    );
-  };
 
   it.each(['dialog', 'drawer'] as const)('%s: moves focus off the surface onto the first field', async (face) => {
     const result = renderWithProviders(<FieldPopup face={face} />);
-    press(result.container.querySelector("[role='button']") as Element);
+    press(result.container.querySelector("[role='button']")!);
     await waitFor(() => {
-      expect(surface()?.getAttribute('data-adaptive-popup-mode')).toBe(face);
+      expect(surface()?.dataset.adaptivePopupMode).toBe(face);
     });
     const field = document.querySelector("input[aria-label='Name']");
     expect(field).not.toBeNull();

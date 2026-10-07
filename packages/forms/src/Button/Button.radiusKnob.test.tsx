@@ -77,8 +77,8 @@ describe('Button KNOB-TOTALITY — borderRadius knob', () => {
     // the shape eject must not be re-overridden by the knob channel.
     expect(frame.style.borderRadius).toBe('');
     // The circle is licensed by the spec registry, not inferred.
-    expect(frame.getAttribute('data-radius-class')).toBe('R-IDENTITY');
-    expect(frame.getAttribute('data-radius-part')).toBe('circular Button');
+    expect(frame.dataset.radiusClass).toBe('R-IDENTITY');
+    expect(frame.dataset.radiusPart).toBe('circular Button');
   });
 
   it('default frames do not declare identity (they square at none)', () => {
@@ -88,8 +88,8 @@ describe('Button KNOB-TOTALITY — borderRadius knob', () => {
       </Preset>,
     );
     const frame = screen.getByRole('button');
-    expect(frame.getAttribute('data-radius-class')).toBeNull();
-    expect(frame.getAttribute('data-radius-part')).toBeNull();
+    expect(frame.dataset.radiusClass).toBeNull();
+    expect(frame.dataset.radiusPart).toBeNull();
   });
 
   it('consumer borderRadius prop wins last over the knob fragment', () => {
@@ -109,7 +109,7 @@ describe('Button KNOB-TOTALITY — size and elevation fragments', () => {
         <Button>Save</Button>
       </Preset>,
     );
-    expect(screen.getByRole('button').getAttribute('data-mp-button-height')).toBe('36');
+    expect(screen.getByRole('button').dataset.mpButtonHeight).toBe('36');
     cleanup();
 
     renderWithProviders(
@@ -117,7 +117,7 @@ describe('Button KNOB-TOTALITY — size and elevation fragments', () => {
         <Button>Save</Button>
       </Preset>,
     );
-    expect(screen.getByRole('button').getAttribute('data-mp-button-height')).toBe('52');
+    expect(screen.getByRole('button').dataset.mpButtonHeight).toBe('52');
   });
 
   it('elevation knob reaches the frame (was dropped: styled(View) had no elevation variant)', () => {

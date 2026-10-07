@@ -20,9 +20,11 @@ import {
   valueDomain,
 } from './math';
 
-describe('pie mask preserves a positive interior', () => {
-  const slices = (values: number[]) => pieSlices(values.map((value) => ({ value })));
+const sliceSize = (s: { startAngle: number; endAngle: number }) => s.endAngle - s.startAngle;
 
+const slices = (values: number[]) => pieSlices(values.map((value) => ({ value })));
+
+describe('pie mask preserves a positive interior', () => {
   it('accepts ordinary pie and donut slices including a wedge larger than pi', () => {
     expect(canMaskPieSlices(slices([70, 20, 10]), 0, 100)).toBe(true);
     expect(canMaskPieSlices(slices([70, 20, 10]), 55, 100)).toBe(true);
@@ -48,13 +50,13 @@ describe('charts/math scales', () => {
     expect(scale.bandwidth()).toBeGreaterThan(0);
     // Bands stay inside the range.
     for (const label of ['a', 'b', 'c']) {
-      const x = scale(label) as number;
+      const x = scale(label)!;
       expect(x).toBeGreaterThanOrEqual(0);
       expect(x + scale.bandwidth()).toBeLessThanOrEqual(300);
     }
     // Order preserved.
-    expect(scale('a') as number).toBeLessThan(scale('b') as number);
-    expect(scale('b') as number).toBeLessThan(scale('c') as number);
+    expect(scale('a')!).toBeLessThan(scale('b')!);
+    expect(scale('b')!).toBeLessThan(scale('c')!);
   });
 
   it('point scale spreads categories across the range', () => {
@@ -86,7 +88,7 @@ describe('charts/math scales', () => {
     const scale = createLinearScale({ domain: [0, 870], range: [0, 1] });
     const ticks = getLinearTicks(scale, 4);
     expect(ticks[0]).toBe(0);
-    expect(ticks[ticks.length - 1]).toBeGreaterThanOrEqual(800);
+    expect(ticks.at(-1)).toBeGreaterThanOrEqual(800);
   });
 });
 
@@ -141,13 +143,12 @@ describe('charts/math shape generators', () => {
   });
 
   it('pieSlices preserves input order and covers the full circle', () => {
-    const slices = pieSlices([{ value: 1 }, { value: 3 }, { value: 2 }]);
-    expect(slices.map((s) => s.index)).toStrictEqual([0, 1, 2]);
-    expect(slices[0].startAngle).toBe(0);
-    expect(slices[2].endAngle).toBeCloseTo(Math.PI * 2, 6);
+    const pie = pieSlices([{ value: 1 }, { value: 3 }, { value: 2 }]);
+    expect(pie.map((s) => s.index)).toStrictEqual([0, 1, 2]);
+    expect(pie[0].startAngle).toBe(0);
+    expect(pie[2].endAngle).toBeCloseTo(Math.PI * 2, 6);
     // Angular size follows value share.
-    const size = (s: { startAngle: number; endAngle: number }) => s.endAngle - s.startAngle;
-    expect(size(slices[1])).toBeGreaterThan(size(slices[0]));
+    expect(sliceSize(pie[1])).toBeGreaterThan(sliceSize(pie[0]));
   });
 
   it('arcPath renders a slice; innerRadius produces a donut hole', () => {

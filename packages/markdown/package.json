@@ -1,0 +1,93 @@
+{
+  "name": "@repo/markdown",
+  "version": "0.0.0",
+  "description": "Cross-platform markdown renderer with Shiki syntax highlighting for React and React Native",
+  "license": "Apache-2.0",
+  "source": "src/index.ts",
+  "files": [
+    "dist",
+    "src",
+    "types",
+    "!types/.tsbuildinfo"
+  ],
+  "sideEffects": false,
+  "main": "src/index.ts",
+  "module": "src/index.ts",
+  "types": "types/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "source": "./src/index.ts",
+      "react-native": {
+        "types": "./types/index.d.ts",
+        "import": "./dist/esm/index.native.js",
+        "require": "./dist/cjs/index.native.js"
+      },
+      "types": "./types/index.d.ts",
+      "import": "./dist/esm/index.mjs",
+      "require": "./dist/cjs/index.cjs",
+      "default": "./dist/cjs/index.native.js"
+    },
+    "./mermaid": {
+      "source": "./src/mermaid/index.ts",
+      "react-native": {
+        "types": "./types/mermaid/index.d.ts",
+        "import": "./dist/esm/mermaid/index.native.js",
+        "require": "./dist/cjs/mermaid/index.native.js"
+      },
+      "types": "./types/mermaid/index.d.ts",
+      "import": "./dist/esm/mermaid/index.mjs",
+      "require": "./dist/cjs/mermaid/index.cjs",
+      "default": "./dist/cjs/mermaid/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "rm -rf dist types 2>/dev/null && tamagui-build --ts-project ./tsconfig.build.json --exclude '\\.spec\\.|\\.test\\.|\\.stories\\.'",
+    "test": "vitest run --coverage --coverage.provider=v8 --coverage.reporter=text --coverage.reporter=lcov --coverage.reporter=html",
+    "typecheck": "tsgo --noEmit"
+  },
+  "dependencies": {
+    "@mdx-js/mdx": "^3.1.1",
+    "@mdx-js/react": "^3.1.1",
+    "@repo/platform": "workspace:*",
+    "@repo/router": "workspace:*",
+    "@repo/table-primitives": "workspace:*",
+    "@repo/theme": "workspace:*",
+    "@repo/ui": "workspace:*",
+    "@tamagui/linear-gradient": "catalog:",
+    "@tamagui/react-native-svg": "catalog:",
+    "@tamagui/web": "catalog:",
+    "mermaid": "^11.14.0",
+    "parse-numeric-range": "^1.3.0",
+    "rehype-autolink-headings": "^7.1.0",
+    "rehype-slug": "^6.0.0",
+    "remark-frontmatter": "^5.0.0",
+    "remark-gfm": "^4.0.1",
+    "remark-mdx-frontmatter": "^5.2.0",
+    "remark-parse": "^11.0.0",
+    "shiki": "^4.0.2",
+    "tamagui": "catalog:",
+    "unified": "^11.0.5",
+    "unist-util-visit": "^5.1.0"
+  },
+  "devDependencies": {
+    "@repo/config": "workspace:*",
+    "@repo/storybook": "workspace:*",
+    "@repo/test-utils": "workspace:*",
+    "@tamagui/build": "catalog:",
+    "@testing-library/jest-dom": "catalog:",
+    "@testing-library/react": "catalog:",
+    "@types/mdast": "^4.0.4",
+    "@types/mdx": "^2.0.13",
+    "@vitejs/plugin-react": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "react": "^19.1.0",
+    "react-native": "*"
+  },
+  "module:jsx": "dist/jsx"
+}

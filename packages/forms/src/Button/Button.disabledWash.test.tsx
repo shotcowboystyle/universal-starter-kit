@@ -73,8 +73,8 @@ const houseRender = (ui: ReactElement, scheme: Scheme, disabledStyle: string) =>
   );
 
 const injectedRuleValue = (className: string, property: string): string => {
-  for (const sheet of Array.from(document.styleSheets)) {
-    for (const rule of Array.from(sheet.cssRules)) {
+  for (const sheet of [...document.styleSheets]) {
+    for (const rule of [...sheet.cssRules]) {
       if (!(rule instanceof CSSStyleRule)) {
         continue;
       }
@@ -93,7 +93,7 @@ const injectedRuleValue = (className: string, property: string): string => {
 /** The innermost Tamagui theme scope painting `el`, e.g. `accent_Button`. */
 const scopeOf = (el: Element): string | null => {
   for (let node = el.parentElement; node; node = node.parentElement) {
-    const names = Array.from(node.classList)
+    const names = [...node.classList]
       .filter((c) => c.startsWith('t_') && c !== 't_sub_theme')
       .map((c) => c.slice(2))
       .filter((c) => c !== 'light' && c !== 'dark');
@@ -128,9 +128,7 @@ const resolveInScope = (value: string, scheme: Scheme, scope: string | null): st
 
 /** What `el` paints for one atomic property: `_bg-` → background-color. */
 const painted = (el: Element, prefix: string, property: string, scheme: Scheme): string => {
-  const cls = Array.from(el.classList).find(
-    (c) => c.startsWith(prefix) && !/^_[a-z]+-0(hover|active|focus|press)/u.test(c),
-  );
+  const cls = [...el.classList].find((c) => c.startsWith(prefix) && !/^_[a-z]+-0(hover|active|focus|press)/u.test(c));
   if (!cls) {
     throw new Error(`${el.tagName} carries no ${prefix} class`);
   }
@@ -138,7 +136,7 @@ const painted = (el: Element, prefix: string, property: string, scheme: Scheme):
 };
 
 const opacityOf = (el: Element): number => {
-  const cls = Array.from(el.classList).find((c) => c.startsWith('_o-'));
+  const cls = [...el.classList].find((c) => c.startsWith('_o-'));
   return cls ? Number(injectedRuleValue(cls, 'opacity')) : 1;
 };
 

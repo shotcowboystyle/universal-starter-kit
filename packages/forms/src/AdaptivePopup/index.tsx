@@ -1,7 +1,7 @@
 import { OVERLAY_BREAKPOINT, ensureFocusVisibleRing, useResolvedKnobs } from '@repo/theme';
 import { X } from '@tamagui/lucide-icons-2';
 import { useCallback, useRef } from 'react';
-import type { ReactNode } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent, ReactNode, RefObject } from 'react';
 import { Dialog, isWeb, Sheet, Unspaced, useMedia, View, VisuallyHidden, XStack, YStack } from 'tamagui';
 
 import { useViewportGtSm } from '../FloatingPanel';
@@ -10,6 +10,8 @@ import { DialogShowFocus, useReturnFocusOnClose, useSheetModalFocus } from '../s
 import { t } from '../shared/t';
 import { useSheetEscapeDismiss } from '../shared/use-sheet-escape-dismiss';
 import { zIndex } from '../shared/z-index';
+
+export type AdaptivePopupSize = 'sm' | 'md' | 'lg' | 'xl' | 'fullscreen';
 
 export interface AdaptivePopupProps {
   /** Controlled open state */
@@ -32,7 +34,7 @@ export interface AdaptivePopupProps {
    * - `xl`: 1000px max width
    * - `fullscreen`: fills viewport with padding
    */
-  size?: 'sm' | 'md' | 'lg' | 'xl' | 'fullscreen';
+  size?: AdaptivePopupSize;
   /**
    * Desktop face. `"drawer"` is the edge-anchored companion (C22) above
    * `OVERLAY_BREAKPOINT`. At the breakpoint and below the drawer face does
@@ -48,21 +50,17 @@ export interface AdaptivePopupProps {
   disabled?: boolean;
 }
 
-const sizeToWidth: Record<NonNullable<AdaptivePopupProps['size']>, number | string> = {
-  sm: 400,
-  md: 600,
-  lg: 800,
-  xl: 1000,
-  fullscreen: '95vw',
-};
+const POPUP_WIDTHS = { sm: 400, md: 600, lg: 800, xl: 1000 } as const;
+const FULLSCREEN_WIDTH = '95vw';
+const FULLSCREEN_HEIGHT = '90vh';
 
-const sizeToHeight: Record<NonNullable<AdaptivePopupProps['size']>, number | string> = {
-  sm: 'auto',
-  md: 'auto',
-  lg: 'auto',
-  xl: 'auto',
-  fullscreen: '90vh',
-};
+const widthFor = (size: AdaptivePopupSize): number | string =>
+  size === 'fullscreen' ? FULLSCREEN_WIDTH : POPUP_WIDTHS[size];
+
+const heightFor = (size: AdaptivePopupSize): string => (size === 'fullscreen' ? FULLSCREEN_HEIGHT : 'auto');
+
+/** The drawer is never fullscreen (that size stays dialog-family), so it reads the `md` width then. */
+const drawerWidthFor = (size: AdaptivePopupSize): number => POPUP_WIDTHS[size === 'fullscreen' ? 'md' : size];
 
 export type AdaptivePopupRenderedFace = 'dialog' | 'drawer' | 'sheet';
 
@@ -71,6 +69,7 @@ export type AdaptivePopupRenderedFace = 'dialog' | 'drawer' | 'sheet';
  * `face="drawer"` → edge panel unless `size="fullscreen"` (dialog-family).
  * A panel the user keeps open is SupportingPaneLayout, not this overlay.
  */
+// oxlint-disable-next-line react-doctor/only-export-components -- public face-picking rule consumed by tests and callers alongside the component
 export const pickAdaptivePopupFace = (options: {
   face?: AdaptivePopupProps['face'];
   size?: AdaptivePopupProps['size'];
@@ -113,9 +112,9 @@ const PopupCloseButton = ({ onPress }: { onPress: () => void }) => {
   const { knobProps } = useResolvedKnobs({ compact: true });
   const { px, hitSlop, ...box } = knobProps.nestedControl;
   const glyph = Math.max(12, Math.round(px * 0.5));
-  const onKeyDown = (e: { key?: string; preventDefault?: () => void }) => {
+  const onKeyDown = (e: ReactKeyboardEvent) => {
     if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault?.();
+      e.preventDefault();
       onPress();
     }
   };
@@ -126,6 +125,7 @@ const PopupCloseButton = ({ onPress }: { onPress: () => void }) => {
       top={0}
       right={0}
       zIndex={1}
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui View renders on native too, where role is the only button semantic
       role="button"
       aria-label={t('Close')}
       data-testid="adaptive-popup-close"
@@ -140,7 +140,7 @@ const PopupCloseButton = ({ onPress }: { onPress: () => void }) => {
       onPress={onPress}
       {...(isWeb ? {} : { hitSlop })}
       {...(isWeb
-        ? { tabIndex: 0, onKeyDown: onKeyDown as unknown as () => void }
+        ? { tabIndex: 0, onKeyDown }
         : { accessible: true, accessibilityRole: 'button', accessibilityLabel: t('Close') })}>
       <X
         size={glyph}
@@ -151,7 +151,7 @@ const PopupCloseButton = ({ onPress }: { onPress: () => void }) => {
 };
 
 const focusFirstField = (event: Event) => {
-  const root = event.currentTarget as HTMLElement | null;
+  const root = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
   const field = root?.querySelector<HTMLElement>("input, textarea, select, [contenteditable='true']");
   if (!field) {
     return;
@@ -160,55 +160,94 @@ const focusFirstField = (event: Event) => {
   field.focus({ preventScroll: true });
 };
 
-export const AdaptivePopup = ({
-  open,
-  onOpenChange,
-  trigger,
-  title,
-  description,
-  children,
-  size = 'md',
-  face = 'dialog',
-  showCloseButton = true,
-  footer,
-  disabled,
-}: AdaptivePopupProps) => {
+// oxlint-disable-next-line anti-slop/no-runtime-typeof -- ReactNode has no discriminant; only a string title is usable as an aria-label
+const dialogLabel = (title: ReactNode): string => (typeof title === 'string' ? title : 'Dialog');
+
+interface PopupBodyProps {
+  title: ReactNode;
+  description: ReactNode;
+  footer: ReactNode;
+  size: AdaptivePopupSize;
+  showCloseButton: boolean;
+  onClose: () => void;
+  children: ReactNode;
+}
+
+const PopupBody = ({ title, description, footer, size, showCloseButton, onClose, children }: PopupBodyProps) => {
   const { knobProps } = useResolvedKnobs();
   const { knobProps: nestedKnobs } = useResolvedKnobs({ compact: true });
-  const media = useMedia();
-  const viewportGtSm = useViewportGtSm();
-  // `media.sm` = v5 minWidth 640 (`gtSm` died with the v5 media map)
-  // — SSR fallback only; the viewport hook wins on client.
-  const isDesktop = typeof window === 'undefined' ? media.sm : viewportGtSm;
-  const renderedFace = pickAdaptivePopupFace({
-    face,
-    size,
-    viewportWidth: isDesktop ? OVERLAY_BREAKPOINT + 1 : OVERLAY_BREAKPOINT,
-  });
-  const rtl = readRtl();
-  // Sheet mode only: the desktop Dialog already dismisses via Dismissable.
-  useSheetEscapeDismiss(open && renderedFace === 'sheet', () => {
-    onOpenChange(false);
-  });
-  // Tamagui's focus scope only restores focus when a
-  // Dialog.Trigger lives inside the Dialog — this popup is (also) opened
-  // programmatically, so close dropped focus on <body>. Restore it ourselves;
-  // sheet mode additionally moves focus in and traps Tab (Sheet has no scope).
-  const sheetFrameRef = useRef<HTMLElement | null>(null);
-  useReturnFocusOnClose(open && renderedFace !== 'sheet');
-  useSheetModalFocus(open && renderedFace === 'sheet', sheetFrameRef);
-
-  const maxWidth = sizeToWidth[size];
-  const maxHeight = sizeToHeight[size];
   const closePx = nestedKnobs.nestedControl.px;
-  const drawerWidth = typeof maxWidth === 'number' ? maxWidth : sizeToWidth.md;
-  const { borderRadius: drawerFreeRadius, ...drawerRadiusRest } = knobProps.containerRadius;
+  const hasTitle = Boolean(title);
+  const hasDescription = Boolean(description);
+  const hasFooter = Boolean(footer);
+  const fill = size === 'fullscreen' ? 1 : undefined;
 
+  const headerContent =
+    hasTitle || showCloseButton ? (
+      <Unspaced>
+        <XStack
+          justifyContent="space-between"
+          alignItems="center"
+          paddingRight={showCloseButton ? closePx : undefined}
+          minHeight={showCloseButton ? closePx : undefined}>
+          {hasTitle ? (
+            <YStack flex={1}>
+              <Dialog.Title {...knobProps.heading}>{title}</Dialog.Title>
+            </YStack>
+          ) : null}
+        </XStack>
+      </Unspaced>
+    ) : null;
+
+  const footerContent = hasFooter ? <YStack paddingTop="$2">{footer}</YStack> : null;
+
+  return (
+    <YStack
+      flex={fill}
+      position="relative"
+      {...knobProps.gap}>
+      {hasTitle ? null : (
+        <VisuallyHidden>
+          <Dialog.Title>Dialog</Dialog.Title>
+        </VisuallyHidden>
+      )}
+      {headerContent}
+      {hasDescription ? (
+        <Dialog.Description
+          {...knobProps.body}
+          {...knobProps.label}
+          color={formCommonColors.muted}>
+          {description}
+        </Dialog.Description>
+      ) : (
+        <VisuallyHidden>
+          <Dialog.Description> </Dialog.Description>
+        </VisuallyHidden>
+      )}
+      <YStack flex={fill}>{children}</YStack>
+      {footerContent}
+      {showCloseButton ? <PopupCloseButton onPress={onClose} /> : null}
+    </YStack>
+  );
+};
+
+interface PopupTriggerProps {
+  trigger: ReactNode;
+  disabled: boolean | undefined;
+  onOpenChange: (open: boolean) => void;
+  /** Desktop faces wrap the slot in Dialog.Trigger; the sheet face does not. */
+  inDialog: boolean;
+}
+
+const PopupTrigger = ({ trigger, disabled, onOpenChange, inDialog }: PopupTriggerProps) => {
   const openFromTrigger = useCallback(() => {
     if (!disabled) {
       onOpenChange(true);
     }
   }, [disabled, onOpenChange]);
+  if (trigger === null || trigger === undefined || trigger === false || trigger === '') {
+    return null;
+  }
   // `trigger` is a SLOT: the wrapper below is what opens the popup, so the
   // press has to travel from whatever the consumer put in the slot out to that
   // wrapper. Tamagui's press wrapper calls `e.stopPropagation()` on any
@@ -220,7 +259,7 @@ export const AdaptivePopup = ({
   // click Button synthesizes for Enter/Space. Opening is idempotent
   // (`onOpenChange(true)`, never a toggle), so it composes safely with the
   // bubble-phase path a non-pressable trigger still takes.
-  const triggerActivation = isWeb ? ({ onClickCapture: openFromTrigger } as Record<string, unknown>) : undefined;
+  const triggerActivation = isWeb ? { onClickCapture: openFromTrigger } : undefined;
 
   // The wrapper is a press-relay, not a control. The painted
   // trigger (usually a Button) is the perceived boundary and the only tab stop.
@@ -233,214 +272,197 @@ export const AdaptivePopup = ({
     'data-testid': 'adaptive-popup-trigger',
     ...(isWeb ? { tabIndex: -1, role: 'presentation' as const, ...triggerActivation } : { onPress: openFromTrigger }),
   };
-
-  const headerContent = (title || showCloseButton) && (
-    <Unspaced>
-      <XStack
-        justifyContent="space-between"
-        alignItems="center"
-        paddingRight={showCloseButton ? closePx : undefined}
-        minHeight={showCloseButton ? closePx : undefined}>
-        {title ? (
-          <YStack flex={1}>
-            <Dialog.Title {...knobProps.heading}>{title}</Dialog.Title>
-          </YStack>
-        ) : null}
-      </XStack>
-    </Unspaced>
-  );
-
-  const footerContent = footer && <YStack paddingTop="$2">{footer}</YStack>;
-
-  const body = (
-    <YStack
-      flex={size === 'fullscreen' ? 1 : undefined}
-      position="relative"
-      {...knobProps.gap}>
-      {title ? null : (
-        <VisuallyHidden>
-          <Dialog.Title>Dialog</Dialog.Title>
-        </VisuallyHidden>
-      )}
-      {headerContent}
-      {description ? (
-        <Dialog.Description
-          {...knobProps.body}
-          {...knobProps.label}
-          color={formCommonColors.muted}>
-          {description}
-        </Dialog.Description>
-      ) : (
-        <VisuallyHidden>
-          <Dialog.Description> </Dialog.Description>
-        </VisuallyHidden>
-      )}
-      <YStack flex={size === 'fullscreen' ? 1 : undefined}>{children}</YStack>
-      {footerContent}
-      {showCloseButton ? (
-        <PopupCloseButton
-          onPress={() => {
-            onOpenChange(false);
-          }}
-        />
-      ) : null}
-    </YStack>
-  );
-
-  // Compact: sheet. Regular: modal dialog (form sheet). Drawer is the third
-  // face: edge-anchored companion above the overlay breakpoint. Same 860
-  // pivot as FloatingPanel (useViewportGtSm) — never Tamagui Adapt. Popover
-  // is the wrong desktop primitive here — AdaptivePopup is a titled form
-  // with a footer, not a small anchored bubble (that's FloatingPanel).
-  if (renderedFace === 'sheet') {
-    return (
-      <>
-        {trigger && <View {...triggerWrap}>{trigger}</View>}
-        <Sheet
-          modal
-          open={open}
-          onOpenChange={onOpenChange}
-          dismissOnSnapToBottom
-          dismissOnOverlayPress
-          moveOnKeyboardChange
-          snapPointsMode={size === 'fullscreen' ? 'percent' : 'fit'}
-          snapPoints={size === 'fullscreen' ? [92] : undefined}
-          zIndex={zIndex.sheet}
-          transition={knobProps.transition}>
-          <Sheet.Overlay
-            backgroundColor="$shadow6"
-            transition={knobProps.transition}
-            enterStyle={{ opacity: 0 }}
-            exitStyle={{ opacity: 0 }}
-          />
-          <Sheet.Handle {...({ 'aria-hidden': true } as Record<string, unknown>)} />
-          <Sheet.Frame
-            // Sheet.Frame forwards its ref at runtime; the styled prop type
-            // just omits `ref`, hence the cast. tabIndex -1 makes the frame a
-            // programmatic focus target without joining the tab order.
-            {...({
-              ref: sheetFrameRef,
-              tabIndex: -1,
-            } as Record<string, unknown>)}
-            unstyled
-            position="relative"
-            role="dialog"
-            aria-modal={true}
-            aria-label={typeof title === 'string' ? title : 'Dialog'}
-            data-testid="adaptive-popup-surface"
-            data-adaptive-popup-mode="sheet"
-            {...knobProps.elevatedSurface}
-            borderBottomLeftRadius={0}
-            borderBottomRightRadius={0}
-            {...overlayFrameFocus}
-            {...knobProps.panelPadding}
-            transition={knobProps.transition}>
-            {body}
-          </Sheet.Frame>
-        </Sheet>
-      </>
-    );
+  const wrapped = <View {...triggerWrap}>{trigger}</View>;
+  if (!inDialog) {
+    return wrapped;
   }
+  return (
+    <Dialog.Trigger
+      asChild
+      disabled={disabled}>
+      {wrapped}
+    </Dialog.Trigger>
+  );
+};
 
-  if (renderedFace === 'drawer') {
-    const attached = 0;
-    const free = drawerFreeRadius;
-    const drawerRadius = rtl
-      ? {
-          borderTopLeftRadius: attached,
-          borderBottomLeftRadius: attached,
-          borderTopRightRadius: free,
-          borderBottomRightRadius: free,
-        }
-      : {
-          borderTopRightRadius: attached,
-          borderBottomRightRadius: attached,
-          borderTopLeftRadius: free,
-          borderBottomLeftRadius: free,
-        };
-    const slideFromEnd = rtl ? -24 : 24;
-    return (
-      <Dialog
+interface PopupFaceProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  trigger: ReactNode;
+  disabled: boolean | undefined;
+  size: AdaptivePopupSize;
+  body: ReactNode;
+}
+
+const SheetFace = ({
+  open,
+  onOpenChange,
+  trigger,
+  disabled,
+  size,
+  body,
+  frameRef,
+  label,
+}: PopupFaceProps & { frameRef: RefObject<HTMLElement | null>; label: string }) => {
+  const { knobProps } = useResolvedKnobs();
+  return (
+    <>
+      <PopupTrigger
+        trigger={trigger}
+        disabled={disabled}
+        onOpenChange={onOpenChange}
+        inDialog={false}
+      />
+      <Sheet
         modal
         open={open}
-        onOpenChange={onOpenChange}>
-        {trigger && (
-          <Dialog.Trigger
-            asChild
-            disabled={disabled}>
-            <View {...triggerWrap}>{trigger}</View>
-          </Dialog.Trigger>
-        )}
+        onOpenChange={onOpenChange}
+        dismissOnSnapToBottom
+        dismissOnOverlayPress
+        moveOnKeyboardChange
+        snapPointsMode={size === 'fullscreen' ? 'percent' : 'fit'}
+        snapPoints={size === 'fullscreen' ? [92] : undefined}
+        zIndex={zIndex.sheet}
+        transition={knobProps.transition}>
+        <Sheet.Overlay
+          backgroundColor="$shadow6"
+          transition={knobProps.transition}
+          enterStyle={{ opacity: 0 }}
+          exitStyle={{ opacity: 0 }}
+        />
+        <Sheet.Handle {...{ 'aria-hidden': true }} />
+        <Sheet.Frame
+          // Sheet.Frame forwards its ref at runtime; the styled prop type
+          // just omits `ref`, hence the spread. tabIndex -1 makes the frame a
+          // programmatic focus target without joining the tab order.
+          {...{
+            ref: frameRef,
+            tabIndex: -1,
+          }}
+          unstyled
+          position="relative"
+          // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Sheet.Frame is a Tamagui view that also renders on native; role is its dialog semantic
+          role="dialog"
+          aria-modal={true}
+          aria-label={label}
+          data-testid="adaptive-popup-surface"
+          data-adaptive-popup-mode="sheet"
+          {...knobProps.elevatedSurface}
+          borderBottomLeftRadius={0}
+          borderBottomRightRadius={0}
+          {...overlayFrameFocus}
+          {...knobProps.panelPadding}
+          transition={knobProps.transition}>
+          {body}
+        </Sheet.Frame>
+      </Sheet>
+    </>
+  );
+};
 
-        <Dialog.Portal zIndex={zIndex.dropdown}>
-          <Dialog.Overlay
-            key="overlay"
-            backgroundColor="$shadow6"
-            transition={knobProps.transition}
-            enterStyle={{ opacity: 0 }}
-            exitStyle={{ opacity: 0 }}
-          />
-          <Dialog.Content
-            key="content"
-            unstyled
-            position="fixed"
-            top={0}
-            bottom={0}
-            {...(rtl ? { left: 0 } : { right: 0 })}
-            height="100%"
-            width={drawerWidth}
-            maxHeight="100%"
-            margin={0}
-            x={0}
-            y={0}
-            pointerEvents="auto"
-            tabIndex={-1}
-            data-testid="adaptive-popup-surface"
-            data-adaptive-popup-mode="drawer"
-            data-popup-ground="$background"
-            data-drawer-gap="0"
-            data-drawer-edge="inline-end"
-            data-popup-width={String(drawerWidth)}
-            data-drawer-attached-radius="0"
-            {...knobProps.elevatedSurface}
-            {...drawerRadiusRest}
-            {...drawerRadius}
-            elevate={false}
-            elevation={knobProps.elevatedSurface.elevation}
-            backgroundColor="$background"
-            {...overlayFrameFocus}
-            transition={knobProps.transition}
-            animateOnly={['transform', 'opacity']}
-            enterStyle={{ opacity: 0, x: slideFromEnd }}
-            exitStyle={{ opacity: 0, x: slideFromEnd }}
-            {...knobProps.panelPadding}
-            onOpenAutoFocus={focusFirstField}
-            onCloseAutoFocus={(event) => {
-              // Dialog.Trigger is the wrapper View (tabIndex -1), not
-              // the painted Button. Prevent Radix restoring there so
-              // useReturnFocusOnClose can return to the opener.
-              event.preventDefault();
-            }}>
-            {body}
-            <DialogShowFocus onOpenAutoFocus={focusFirstField} />
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog>
-    );
-  }
-
+const DrawerFace = ({ open, onOpenChange, trigger, disabled, size, body }: PopupFaceProps) => {
+  const { knobProps } = useResolvedKnobs();
+  const rtl = readRtl();
+  const drawerWidth = drawerWidthFor(size);
+  const { borderRadius: drawerFreeRadius, ...drawerRadiusRest } = knobProps.containerRadius;
+  const attached = 0;
+  const free = drawerFreeRadius;
+  const drawerRadius = rtl
+    ? {
+        borderTopLeftRadius: attached,
+        borderBottomLeftRadius: attached,
+        borderTopRightRadius: free,
+        borderBottomRightRadius: free,
+      }
+    : {
+        borderTopRightRadius: attached,
+        borderBottomRightRadius: attached,
+        borderTopLeftRadius: free,
+        borderBottomLeftRadius: free,
+      };
+  const slideFromEnd = rtl ? -24 : 24;
   return (
     <Dialog
       modal
       open={open}
       onOpenChange={onOpenChange}>
-      {trigger && (
-        <Dialog.Trigger
-          asChild
-          disabled={disabled}>
-          <View {...triggerWrap}>{trigger}</View>
-        </Dialog.Trigger>
-      )}
+      <PopupTrigger
+        trigger={trigger}
+        disabled={disabled}
+        onOpenChange={onOpenChange}
+        inDialog
+      />
+
+      <Dialog.Portal zIndex={zIndex.dropdown}>
+        <Dialog.Overlay
+          key="overlay"
+          backgroundColor="$shadow6"
+          transition={knobProps.transition}
+          enterStyle={{ opacity: 0 }}
+          exitStyle={{ opacity: 0 }}
+        />
+        <Dialog.Content
+          key="content"
+          unstyled
+          position="fixed"
+          top={0}
+          bottom={0}
+          {...(rtl ? { left: 0 } : { right: 0 })}
+          height="100%"
+          width={drawerWidth}
+          maxHeight="100%"
+          margin={0}
+          x={0}
+          y={0}
+          pointerEvents="auto"
+          tabIndex={-1}
+          data-testid="adaptive-popup-surface"
+          data-adaptive-popup-mode="drawer"
+          data-popup-ground="$background"
+          data-drawer-gap="0"
+          data-drawer-edge="inline-end"
+          data-popup-width={String(drawerWidth)}
+          data-drawer-attached-radius="0"
+          {...knobProps.elevatedSurface}
+          {...drawerRadiusRest}
+          {...drawerRadius}
+          elevate={false}
+          elevation={knobProps.elevatedSurface.elevation}
+          backgroundColor="$background"
+          {...overlayFrameFocus}
+          transition={knobProps.transition}
+          animateOnly={['transform', 'opacity']}
+          enterStyle={{ opacity: 0, x: slideFromEnd }}
+          exitStyle={{ opacity: 0, x: slideFromEnd }}
+          {...knobProps.panelPadding}
+          onOpenAutoFocus={focusFirstField}
+          onCloseAutoFocus={(event) => {
+            // Dialog.Trigger is the wrapper View (tabIndex -1), not
+            // the painted Button. Prevent Radix restoring there so
+            // useReturnFocusOnClose can return to the opener.
+            event.preventDefault();
+          }}>
+          {body}
+          <DialogShowFocus onOpenAutoFocus={focusFirstField} />
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog>
+  );
+};
+
+const DialogFace = ({ open, onOpenChange, trigger, disabled, size, body }: PopupFaceProps) => {
+  const { knobProps } = useResolvedKnobs();
+  return (
+    <Dialog
+      modal
+      open={open}
+      onOpenChange={onOpenChange}>
+      <PopupTrigger
+        trigger={trigger}
+        disabled={disabled}
+        onOpenChange={onOpenChange}
+        inDialog
+      />
 
       <Dialog.Portal zIndex={zIndex.dropdown}>
         <Dialog.Overlay
@@ -468,8 +490,8 @@ export const AdaptivePopup = ({
           animateOnly={['transform', 'opacity']}
           enterStyle={{ opacity: 0, scale: 0.96, y: -10 }}
           exitStyle={{ opacity: 0, scale: 0.96, y: -10 }}
-          maxWidth={maxWidth}
-          maxHeight={maxHeight}
+          maxWidth={widthFor(size)}
+          maxHeight={heightFor(size)}
           width="90vw"
           {...knobProps.panelPadding}
           onOpenAutoFocus={focusFirstField}
@@ -485,4 +507,74 @@ export const AdaptivePopup = ({
       </Dialog.Portal>
     </Dialog>
   );
+};
+
+export const AdaptivePopup = ({
+  open,
+  onOpenChange,
+  trigger,
+  title,
+  description,
+  children,
+  size = 'md',
+  face = 'dialog',
+  showCloseButton = true,
+  footer,
+  disabled,
+}: AdaptivePopupProps) => {
+  const media = useMedia();
+  const viewportGtSm = useViewportGtSm();
+  // `media.sm` = v5 minWidth 640 (`gtSm` died with the v5 media map)
+  // — SSR fallback only; the viewport hook wins on client.
+  const isDesktop = typeof window === 'undefined' ? media.sm : viewportGtSm;
+  const renderedFace = pickAdaptivePopupFace({
+    face,
+    size,
+    viewportWidth: isDesktop ? OVERLAY_BREAKPOINT + 1 : OVERLAY_BREAKPOINT,
+  });
+  // Sheet mode only: the desktop Dialog already dismisses via Dismissable.
+  useSheetEscapeDismiss(open && renderedFace === 'sheet', () => {
+    onOpenChange(false);
+  });
+  // Tamagui's focus scope only restores focus when a
+  // Dialog.Trigger lives inside the Dialog — this popup is (also) opened
+  // programmatically, so close dropped focus on <body>. Restore it ourselves;
+  // sheet mode additionally moves focus in and traps Tab (Sheet has no scope).
+  const sheetFrameRef = useRef<HTMLElement | null>(null);
+  useReturnFocusOnClose(open && renderedFace !== 'sheet');
+  useSheetModalFocus(open && renderedFace === 'sheet', sheetFrameRef);
+
+  const body = (
+    <PopupBody
+      title={title}
+      description={description}
+      footer={footer}
+      size={size}
+      showCloseButton={showCloseButton}
+      onClose={() => {
+        onOpenChange(false);
+      }}>
+      {children}
+    </PopupBody>
+  );
+  const faceProps = { open, onOpenChange, trigger, disabled, size, body };
+
+  // Compact: sheet. Regular: modal dialog (form sheet). Drawer is the third
+  // face: edge-anchored companion above the overlay breakpoint. Same 860
+  // pivot as FloatingPanel (useViewportGtSm) — never Tamagui Adapt. Popover
+  // is the wrong desktop primitive here — AdaptivePopup is a titled form
+  // with a footer, not a small anchored bubble (that's FloatingPanel).
+  if (renderedFace === 'sheet') {
+    return (
+      <SheetFace
+        {...faceProps}
+        frameRef={sheetFrameRef}
+        label={dialogLabel(title)}
+      />
+    );
+  }
+  if (renderedFace === 'drawer') {
+    return <DrawerFace {...faceProps} />;
+  }
+  return <DialogFace {...faceProps} />;
 };

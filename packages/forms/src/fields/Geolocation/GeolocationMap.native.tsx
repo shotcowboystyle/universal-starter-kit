@@ -101,11 +101,11 @@ export const GeolocationMap = ({
     );
   }
 
-  const interactive = !disabled && !readOnly && typeof onChange === 'function';
+  const interactive = !disabled && !readOnly && onChange !== undefined;
   const handlePick = interactive
     ? (event: MapClickEvent) => {
         const { latitude, longitude } = event?.coordinates ?? {};
-        if (typeof latitude !== 'number' || typeof longitude !== 'number') {
+        if (latitude == null || longitude == null) {
           return;
         }
         onChange?.(latitude, longitude);

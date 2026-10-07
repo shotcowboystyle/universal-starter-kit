@@ -1,0 +1,6 @@
+{
+  "scripts": {
+    "tauri:dev": "pnpm --filter @app/__NAME__ tauri:dev",
+    "tauri:build": "pnpm --filter @app/__NAME__ tauri:build"
+  }
+}

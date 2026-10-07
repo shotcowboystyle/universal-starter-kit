@@ -18,17 +18,21 @@ export interface HouseSyntaxTheme {
   settings: HouseSyntaxThemeSetting[];
 }
 
+const blue = '$syntaxBlue';
+const orange = '$syntaxOrange';
+const green = '$syntaxGreen';
+
 const ink = {
   plain: '$color12',
   muted: '$color11',
   keyword: '$syntaxPurple',
-  name: '$syntaxBlue',
-  constant: '$syntaxBlue',
-  builtin: '$syntaxOrange',
-  variable: '$syntaxOrange',
-  string: '$syntaxGreen',
-  tag: '$syntaxGreen',
-  inserted: '$syntaxGreen',
+  name: blue,
+  constant: blue,
+  builtin: orange,
+  variable: orange,
+  string: green,
+  tag: green,
+  inserted: green,
   deleted: '$syntaxRed',
 } as const;
 

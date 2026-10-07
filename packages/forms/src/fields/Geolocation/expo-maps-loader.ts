@@ -1,4 +1,7 @@
-export type ExpoMapsModule = typeof import('expo-maps');
+// oxlint-disable-next-line sonarjs/no-wildcard-import -- a type-only namespace import is the one way to name the optional peer's module shape without an import() type
+import type * as ExpoMaps from 'expo-maps';
+
+export type ExpoMapsModule = typeof ExpoMaps;
 
 let cached: ExpoMapsModule | null | undefined;
 
@@ -27,12 +30,12 @@ export const loadExpoMaps = (): ExpoMapsModule | null => {
     // too so non-Expo hosts skip straight to the guarded expo-maps probe.
     let hasNativeModule = true;
     try {
+      // oxlint-disable-next-line node/global-require, unicorn/prefer-module, typescript/no-unsafe-type-assertion, anti-slop/require-safety-comment-for-type-assertion -- Metro only treats a require() inside try/catch as an optional dependency; the cast mirrors expo-modules-core's documented export
       const core = require('expo-modules-core') as {
-        requireOptionalNativeModule?: (name: string) => unknown;
+        requireOptionalNativeModule?: (name: string) => object | null | undefined;
       };
       if (core.requireOptionalNativeModule) {
-        const nativeModule = core.requireOptionalNativeModule('ExpoMaps');
-        hasNativeModule = nativeModule !== null && nativeModule !== undefined;
+        hasNativeModule = core.requireOptionalNativeModule('ExpoMaps') != null;
       }
     } catch {
       /* expo-modules-core absent — keep hasNativeModule=true and probe below */
@@ -41,6 +44,7 @@ export const loadExpoMaps = (): ExpoMapsModule | null => {
       cached = null;
       return cached;
     }
+    // oxlint-disable-next-line node/global-require, unicorn/prefer-module, typescript/no-unsafe-type-assertion, anti-slop/require-safety-comment-for-type-assertion -- Metro only treats a require() inside try/catch as an optional dependency; expo-maps' own typings describe what it returns
     const mod = require('expo-maps') as ExpoMapsModule;
     // The JS package can require fine while the NATIVE module is absent
     // (builds without the peer): expo-maps defers namespace initialization

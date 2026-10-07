@@ -33,12 +33,16 @@ import {
 
 import { Toast, ToastViewport, useToast, nativeToastA11y, nativeToastControlA11y } from './index';
 
-afterEach(() => {
+const resetToastState = () => {
   act(() => {
     resetToasts();
     __resetToastViewportRegistry();
   });
-});
+};
+
+const readAccentInk = () => screen.getByTestId('accent-ink').dataset.fg ?? '';
+
+const byTitle = (title: string) => getToasts().find((e) => e.title === title);
 
 const Trigger = (props: Parameters<ReturnType<typeof useToast>['show']>[0]) => {
   const toast = useToast();
@@ -46,6 +50,8 @@ const Trigger = (props: Parameters<ReturnType<typeof useToast>['show']>[0]) => {
 };
 
 describe('native toast accessibility', () => {
+  afterEach(resetToastState);
+
   it('groups text-only content while leaving action and dismiss controls reachable', () => {
     expect(nativeToastA11y('Saved', false, false)).toStrictEqual({
       accessible: true,
@@ -83,6 +89,8 @@ describe('native toast accessibility', () => {
 });
 
 describe('Toast (standalone)', () => {
+  afterEach(resetToastState);
+
   it('renders title, description and role=status', () => {
     renderWithProviders(
       <Toast
@@ -112,7 +120,7 @@ describe('Toast (standalone)', () => {
   });
 
   it('fires onDismiss from the close button', () => {
-    const onDismiss = vi.fn();
+    const onDismiss = vi.fn<() => void>();
     renderWithProviders(
       <Toast
         title="Saved"
@@ -124,7 +132,7 @@ describe('Toast (standalone)', () => {
   });
 
   it('fires the action button', () => {
-    const onPress = vi.fn();
+    const onPress = vi.fn<() => void>();
     renderWithProviders(
       <Toast
         title="Archived"
@@ -165,7 +173,7 @@ describe('Toast (standalone)', () => {
       />,
     );
     const toast = screen.getByTestId('toast');
-    const nestedPx = Number(toast.getAttribute('data-nested-px'));
+    const nestedPx = Number(toast.dataset.nestedPx);
     expect(nestedPx).toBeGreaterThan(0);
     expect(nestedPx).toBeLessThan(44);
     const close = screen.getByLabelText('Dismiss notification');
@@ -182,9 +190,9 @@ describe('Toast (standalone)', () => {
       />,
     );
     const comfortable = screen.getByTestId('toast');
-    expect(comfortable.getAttribute('data-density')).toBe('comfortable');
-    expect(comfortable.getAttribute('data-size')).toBe('medium');
-    const comfortablePx = Number(comfortable.getAttribute('data-nested-px'));
+    expect(comfortable.dataset.density).toBe('comfortable');
+    expect(comfortable.dataset.size).toBe('medium');
+    const comfortablePx = Number(comfortable.dataset.nestedPx);
     rerender(
       <Toast
         title="Saved"
@@ -193,14 +201,16 @@ describe('Toast (standalone)', () => {
       />,
     );
     const compactToast = screen.getByTestId('toast');
-    expect(compactToast.getAttribute('data-density')).toBe('compact');
-    expect(compactToast.getAttribute('data-size')).toBe('medium');
+    expect(compactToast.dataset.density).toBe('compact');
+    expect(compactToast.dataset.size).toBe('medium');
     // nested-px follows size, not density — same size → same nested box
-    expect(Number(compactToast.getAttribute('data-nested-px'))).toBe(comfortablePx);
+    expect(Number(compactToast.dataset.nestedPx)).toBe(comfortablePx);
   });
 });
 
 describe('toast expiry policy (resolveToastPolicy)', () => {
+  afterEach(resetToastState);
+
   it('resolves the house per-intent defaults', () => {
     expect(resolveToastPolicy({ title: 't' }).duration).toBe(TOAST_DEFAULT_MS);
     expect(resolveToastPolicy({ title: 't', intent: 'success' }).duration).toBe(TOAST_DEFAULT_MS);
@@ -255,7 +265,6 @@ describe('toast expiry policy (resolveToastPolicy)', () => {
       showToast({ title: 'Failure', intent: 'error' });
       showToast({ title: 'Pinned', sticky: true });
     });
-    const byTitle = (title: string) => getToasts().find((e) => e.title === title);
     expect(byTitle('Default')?.duration).toBe(TOAST_DEFAULT_MS);
     expect(byTitle('Failure')?.duration).toBe(TOAST_ERROR_MS);
     expect(byTitle('Failure')?.dismissible).toBe(true);
@@ -265,6 +274,8 @@ describe('toast expiry policy (resolveToastPolicy)', () => {
 });
 
 describe('useToast + ToastViewport (imperative)', () => {
+  afterEach(resetToastState);
+
   it('shows a toast in the viewport and stacks multiple', () => {
     renderWithProviders(
       <>
@@ -384,7 +395,7 @@ describe('useToast + ToastViewport (imperative)', () => {
   it('action button runs the callback and closes the toast', () => {
     vi.useFakeTimers();
     try {
-      const onPress = vi.fn();
+      const onPress = vi.fn<() => void>();
       renderWithProviders(<ToastViewport />);
       act(() => {
         showToast({
@@ -469,6 +480,8 @@ describe('useToast + ToastViewport (imperative)', () => {
 });
 
 describe('ToastViewport layering + single-mount contract', () => {
+  afterEach(resetToastState);
+
   it('contains the web viewport in the loading-tier stacking context', () => {
     renderWithProviders(<ToastViewport />);
     act(() => {
@@ -498,6 +511,7 @@ describe('ToastViewport layering + single-mount contract', () => {
 
       // Owner unmounts → the surviving viewport takes over rendering.
       rerender(
+        // oxlint-disable-next-line react/jsx-no-useless-fragment -- keep the Fragment root so the surviving keyed viewport is not remounted
         <>
           <ToastViewport key="second" />
         </>,
@@ -520,6 +534,7 @@ describe('Toast banned-error-word DEV warn', () => {
   afterEach(() => {
     warnSpy.mockRestore();
     __resetDevWarnSeen();
+    resetToastState();
   });
 
   it('warns when title uses banned wording', () => {
@@ -546,10 +561,10 @@ describe('Toast banned-error-word DEV warn', () => {
 });
 
 const classesByPrefix = (el: Element, prefixes: string[]): string[] =>
-  String((el as HTMLElement).className || '')
+  ((el as HTMLElement).className || '')
     .split(' ')
     .filter((c) => prefixes.some((p) => c.startsWith(p)))
-    .sort();
+    .toSorted();
 
 const shadowClasses = (el: Element): string[] => classesByPrefix(el, ['_bxsh-']);
 
@@ -564,9 +579,8 @@ const renderActionWeight = (node: ReactElement): string[] => {
 };
 
 const tokenVal = (theme: ReturnType<typeof useTheme>, key: string): string => {
-  const t = theme as unknown as Record<string, { val?: unknown; get?: () => unknown }>;
-  const raw = t[key]?.val ?? t[key]?.get?.();
-  return typeof raw === 'string' ? raw : '';
+  const t = theme as unknown as Record<string, { val?: string; get?: () => string }>;
+  return t[key]?.val ?? t[key]?.get?.() ?? '';
 };
 
 const TOAST_INTENTS = ['accent', 'success', 'warning', 'error'] as const;
@@ -612,18 +626,11 @@ const AccentInkProbe = () => {
  * `_bg-0active-color5`, so a bare prefix read picks up hover paint and
  * certifies a surface nobody rests on.
  */
+const STATE_ATOM = /^\d*(?:hover|active|focus|press|disabled)/u;
+
 const restAtom = (node: Element, prefix: string): string | undefined => {
-  for (const cls of Array.from(node.classList)) {
-    if (!cls.startsWith(prefix)) {
-      continue;
-    }
-    const value = cls.slice(prefix.length);
-    if (/^\d*(hover|active|focus|press|disabled)/u.test(value)) {
-      continue;
-    }
-    return value;
-  }
-  return undefined;
+  const rest = [...node.classList].find((cls) => cls.startsWith(prefix) && !STATE_ATOM.test(cls.slice(prefix.length)));
+  return rest?.slice(prefix.length);
 };
 
 /** `_o-0--9` is Tamagui's atom for 0.9; no resting atom means no rest dim. */
@@ -644,7 +651,7 @@ const restOpacity = (node: Element): number => {
 const paintedInk = (ink: string, ground: string, alpha: number): string => {
   const f = normalizeToHex(ink);
   const b = normalizeToHex(ground);
-  if (!f || !b) {
+  if (f === null || f === '' || b === null || b === '') {
     return ink;
   }
   if (alpha >= 1) {
@@ -661,6 +668,8 @@ const paintedInk = (ink: string, ground: string, alpha: number): string => {
 };
 
 describe('Toast overlay shadow (standalone === viewport)', () => {
+  afterEach(resetToastState);
+
   it('paints the SAME overlay shadow on both paths, not the $1 control token', () => {
     renderWithProviders(
       <YStack
@@ -738,6 +747,8 @@ describe('Toast overlay shadow (standalone === viewport)', () => {
 });
 
 describe('Toast 3px logical intent edge', () => {
+  afterEach(resetToastState);
+
   it('survives Tamagui style clobber in the style attribute and mirrors under RTL', () => {
     renderWithProviders(
       <Toast
@@ -746,7 +757,7 @@ describe('Toast 3px logical intent edge', () => {
         onDismiss={() => {}}
       />,
     );
-    const toast = screen.getByTestId('toast') as HTMLElement;
+    const toast = screen.getByTestId('toast');
     expect(toast.style.borderInlineStartWidth).toBe('3px');
     expect(toast.style.borderInlineStartStyle).toBe('solid');
     expect(toast.style.borderInlineStartColor).toBeTruthy();
@@ -761,13 +772,15 @@ describe('Toast 3px logical intent edge', () => {
         />
       </div>,
     );
-    const rtl = screen.getByTestId('toast') as HTMLElement;
+    const rtl = screen.getByTestId('toast');
     expect(rtl.style.borderInlineStartWidth).toBe('3px');
     expect(rtl.closest("[dir='rtl']")).not.toBeNull();
   });
 });
 
 describe('Toast data attributes reach the DOM', () => {
+  afterEach(resetToastState);
+
   it('data-testid/data-size/data-density/data-nested-px land on standalone and viewport', () => {
     renderWithProviders(
       <Toast
@@ -776,10 +789,10 @@ describe('Toast data attributes reach the DOM', () => {
       />,
     );
     const standalone = screen.getByTestId('toast');
-    expect(standalone.getAttribute('data-testid')).toBe('toast');
-    expect(standalone.getAttribute('data-size')).toBe('medium');
-    expect(standalone.getAttribute('data-density')).toBe('comfortable');
-    expect(Number(standalone.getAttribute('data-nested-px'))).toBeGreaterThan(0);
+    expect(standalone.dataset.testid).toBe('toast');
+    expect(standalone.dataset.size).toBe('medium');
+    expect(standalone.dataset.density).toBe('comfortable');
+    expect(Number(standalone.dataset.nestedPx)).toBeGreaterThan(0);
     cleanup();
 
     renderWithProviders(<ToastViewport />);
@@ -787,10 +800,10 @@ describe('Toast data attributes reach the DOM', () => {
       showToast({ title: 'Viewport attrs', sticky: true });
     });
     const viewport = screen.getByTestId('toast');
-    expect(viewport.getAttribute('data-testid')).toBe('toast');
-    expect(viewport.getAttribute('data-size')).toBeTruthy();
-    expect(viewport.getAttribute('data-density')).toBeTruthy();
-    expect(viewport.getAttribute('data-nested-px')).toBeTruthy();
+    expect(viewport.dataset.testid).toBe('toast');
+    expect(viewport.dataset.size).toBeTruthy();
+    expect(viewport.dataset.density).toBeTruthy();
+    expect(viewport.dataset.nestedPx).toBeTruthy();
   });
 
   it('size and density knob strips measurably move', () => {
@@ -803,8 +816,8 @@ describe('Toast data attributes reach the DOM', () => {
       </Preset>,
     );
     const large = screen.getByTestId('toast');
-    expect(large.getAttribute('data-size')).toBe('large');
-    const largePx = Number(large.getAttribute('data-nested-px'));
+    expect(large.dataset.size).toBe('large');
+    const largePx = Number(large.dataset.nestedPx);
     cleanup();
 
     renderWithProviders(
@@ -816,8 +829,8 @@ describe('Toast data attributes reach the DOM', () => {
       </Preset>,
     );
     const small = screen.getByTestId('toast');
-    expect(small.getAttribute('data-size')).toBe('small');
-    expect(Number(small.getAttribute('data-nested-px'))).toBeLessThan(largePx);
+    expect(small.dataset.size).toBe('small');
+    expect(Number(small.dataset.nestedPx)).toBeLessThan(largePx);
     cleanup();
 
     renderWithProviders(
@@ -829,13 +842,16 @@ describe('Toast data attributes reach the DOM', () => {
       </Preset>,
     );
     const compact = screen.getByTestId('toast');
-    expect(compact.getAttribute('data-density')).toBe('compact');
-    expect(compact.getAttribute('data-size')).toBe('medium');
+    expect(compact.dataset.density).toBe('compact');
+    expect(compact.dataset.size).toBe('medium');
   });
 });
 
 describe('Toast density moves padX and gap on the host', () => {
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    resetToastState();
+  });
 
   const padX = ['_px-', '_pl-', '_pr-'];
   const gap = ['_gap-'];
@@ -844,7 +860,7 @@ describe('Toast density moves padX and gap on the host', () => {
     renderWithProviders(node);
     const host = screen.getByTestId('toast');
     const measured = {
-      density: host.getAttribute('data-density'),
+      density: host.dataset.density,
       padX: classesByPrefix(host, padX),
       gap: classesByPrefix(host, gap),
     };
@@ -900,6 +916,8 @@ describe('Toast density moves padX and gap on the host', () => {
 });
 
 describe('Toast action label weight and contrast (TEXT NODE)', () => {
+  afterEach(resetToastState);
+
   it('Undo is weight 400 on the TEXT NODE, never 600', () => {
     const action = renderActionWeight(
       <Toast
@@ -944,10 +962,7 @@ describe('Toast action label weight and contrast (TEXT NODE)', () => {
       const groundToken = restAtom(screen.getByTestId('toast'), '_bg-');
       const inkToken = restAtom(screen.getByText(ACTION), '_col-');
       const ground = theme?.[groundToken ?? ''] ?? '';
-      const ink =
-        intent === 'accent'
-          ? (screen.getByTestId('accent-ink').getAttribute('data-fg') ?? '')
-          : (theme?.[inkToken ?? ''] ?? '');
+      const ink = intent === 'accent' ? readAccentInk() : (theme?.[inkToken ?? ''] ?? '');
       const where = `${scheme} ${intent}: ${inkToken ?? '?'} on ${groundToken ?? '?'}`;
       expect(ground, `${where} -- the toast frame paints no resting fill`).toBeTruthy();
       expect(ink, `${where} -- the action label emits no resting ink`).toBeTruthy();

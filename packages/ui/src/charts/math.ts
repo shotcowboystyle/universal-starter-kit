@@ -22,7 +22,7 @@ import {
 } from 'd3-shape';
 import type { CurveFactory } from 'd3-shape';
 
-import type { ChartCurve, PixelPoint } from './types';
+import type { ChartCurve, ChartDatum, PixelPoint } from './types';
 
 // ── Scales ────────────────────────────────────────────────────
 
@@ -260,6 +260,7 @@ export interface PieSlice<T> {
 export const pieSlices = <T extends { value: number }>(data: T[], options?: PieSliceOptions): PieSlice<T>[] => {
   const generator = d3pie<T>()
     .value((d) => d.value)
+    // oxlint-disable-next-line unicorn/no-array-sort -- d3 pie generator's sort(null) disables ordering; not Array#sort
     .sort(null)
     .padAngle(options?.padAngle ?? 0)
     .startAngle(options?.startAngle ?? 0)
@@ -287,13 +288,9 @@ export const canMaskPieSlices = (
   outerRadius: number,
 ): boolean => {
   const positive = slices.filter((slice) => slice.value > 0);
-  if (
-    positive.length < 2 ||
-    !Number.isFinite(innerRadius) ||
-    !Number.isFinite(outerRadius) ||
-    innerRadius < 0 ||
-    outerRadius <= innerRadius
-  ) {
+  const radiiValid =
+    Number.isFinite(innerRadius) && Number.isFinite(outerRadius) && innerRadius >= 0 && outerRadius > innerRadius;
+  if (positive.length < 2 || !radiiValid) {
     return false;
   }
   const radius = (innerRadius + outerRadius) / 2;
@@ -371,4 +368,24 @@ export const truncateLabel = (text: string, fontSize: number, maxWidth: number):
   }
   const budget = Math.max(1, Math.floor(maxWidth / (fontSize * APPROX_CHAR_WIDTH_RATIO)) - 1);
   return `${text.slice(0, budget)}\u2026`;
+};
+
+/** Bare numbers become datums labelled by their 1-based position. */
+export const normalizeChartData = (data: readonly (number | ChartDatum)[]): ChartDatum[] =>
+  data.map((datum, index) =>
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- public `data` props accept bare numbers or datums; typeof is the only discriminator between them
+    typeof datum === 'number' ? { label: String(index + 1), value: datum } : datum,
+  );
+
+/**
+ * Stable React keys from per-item identity strings; repeats get an occurrence
+ * suffix so duplicate labels/values never collide.
+ */
+export const uniqueKeys = (ids: readonly string[]): string[] => {
+  const seen = new Map<string, number>();
+  return ids.map((id) => {
+    const occurrence = (seen.get(id) ?? 0) + 1;
+    seen.set(id, occurrence);
+    return occurrence === 1 ? id : `${id}\u0000${occurrence}`;
+  });
 };

@@ -3,8 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { Tabs } from './index';
 
-vi.mock('@repo/theme', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@repo/theme')>()),
+vi.mock(import('@repo/theme'), async (importOriginal) => ({
+  ...(await importOriginal()),
   useReadableTextOn: () => '#fff',
 }));
 

@@ -10,7 +10,7 @@ import {
 } from '@repo/theme';
 import { useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
-import type { GetProps } from 'tamagui';
+import type { GetProps, TamaguiElement, TransitionProp } from 'tamagui';
 import { View, XStack, getTokens, isWeb, styled } from 'tamagui';
 
 import { componentColors } from '../component-colors';
@@ -71,7 +71,7 @@ export interface DotIndicatorProps {
   /** Painted width of the active dot; defaults to the size knob's geometry */
   activeDotSize?: number | string;
   /** Named transition tweening the active dot's geometry and color */
-  transition?: string;
+  transition?: TransitionProp;
   /**
    * Name of the per-dot state attribute (`active` / `idle`). Hosts that
    * publish their own DOM contract pass theirs — Pagination keeps
@@ -84,11 +84,11 @@ export interface DotIndicatorProps {
 
 // SP-GAP: space knob moves only the inter-item gap;
 // medium keeps the previous $2.
-const dotGapMap: Record<string, string> = {
-  small: '$1',
-  medium: '$2',
-  large: '$3',
-};
+const dotGapMap = new Map([
+  ['small', '$1'],
+  ['medium', '$2'],
+  ['large', '$3'],
+]);
 
 // R-PILL items scale their geometry with the size knob (spec:526-528);
 // medium keeps the previous 8/6/24 geometry.
@@ -97,11 +97,14 @@ const dotGapMap: Record<string, string> = {
 // idiom picks `dot` or `bar`, the size knob picks the row. A host that needs
 // another size pins one (`dotSize`/`activeDotSize`) rather than declaring a
 // second geometry under a variant name.
-const dotGeometryMap: Record<string, { dot: number; bar: number; active: number }> = {
-  $3: { dot: 6, bar: 5, active: 18 },
-  $4: { dot: 8, bar: 6, active: 24 },
-  $5: { dot: 10, bar: 8, active: 30 },
-};
+const dotGapFor = (space: string) => dotGapMap.get(space) ?? '$2';
+
+const DEFAULT_GEOMETRY = { dot: 8, bar: 6, active: 24 };
+const dotGeometryMap = new Map([
+  ['$3', { dot: 6, bar: 5, active: 18 }],
+  ['$4', DEFAULT_GEOMETRY],
+  ['$5', { dot: 10, bar: 8, active: 30 }],
+]);
 
 /**
  * Smallest dot that can legibly hold the completion checkmark. The tick idiom
@@ -117,17 +120,22 @@ const CHECK_MIN_DOT = 8;
 const WINDOW = 5;
 
 /** Resolve a size token (`$0.75`) or raw px to the number the press-target math needs. */
+const tokenPx = (group: 'size' | 'space', key: string): number | undefined => {
+  // SAFETY: Tamagui token groups are objects keyed by token name whose entries carry a numeric `val`; unknown keys read as undefined
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- token groups are typed per known key; arbitrary prop keys need a string-index view
+  const tokens = getTokens()[group] as Record<string, { val?: number } | undefined>;
+  return tokens[key]?.val;
+};
+
 const sizePx = (value: number | string | undefined, fallback: number): number => {
+  if (value === undefined) {
+    return fallback;
+  }
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- public number | token-string prop; there is no I/O boundary to parse at
   if (typeof value === 'number') {
     return value;
   }
-  if (typeof value === 'string') {
-    const token = (getTokens().size as Record<string, { val?: number } | undefined>)?.[value]?.val;
-    if (typeof token === 'number') {
-      return token;
-    }
-  }
-  return fallback;
+  return tokenPx('size', value) ?? fallback;
 };
 
 const idleMarkWidth = (variant: DotVariant, itemSize: number, activeSize: number): number => {
@@ -189,12 +197,12 @@ const windowScale = (index: number, active: number, start: number, end: number, 
   return 0.48;
 };
 
-const isRtl = (node: HTMLElement | null): boolean => {
+const isRtl = (node: Element | null): boolean => {
   if (typeof document === 'undefined') {
     return false;
   }
   const fromNode = node?.closest('[dir]')?.getAttribute('dir');
-  const dir = fromNode || document.documentElement.dir;
+  const dir = fromNode != null && fromNode !== '' ? fromNode : document.documentElement.dir;
   return dir === 'rtl';
 };
 
@@ -242,9 +250,9 @@ const DotTarget = styled(View, {
   // mouse-focus, and :focus-visible paint no ring here — the ring rides the
   // painted mark via FOCUS_VISIBLE_RING when wasKeyboardFocus().
   outlineWidth: 0,
-  outlineStyle: 'none' as any,
-  focusStyle: { outlineWidth: 0, outlineStyle: 'none' as any },
-  focusVisibleStyle: { outlineWidth: 0, outlineStyle: 'none' as any },
+  outlineStyle: 'none' as const,
+  focusStyle: { outlineWidth: 0, outlineStyle: 'none' as const },
+  focusVisibleStyle: { outlineWidth: 0, outlineStyle: 'none' as const },
 });
 
 const Dot = styled(View, {
@@ -282,6 +290,27 @@ const Dot = styled(View, {
   } as const,
 });
 
+const MOTION_STYLE = {
+  transition:
+    'width var(--mp-transition, 200ms) ease, height var(--mp-transition, 200ms) ease, background-color var(--mp-transition, 200ms) ease, transform var(--mp-transition, 200ms) ease',
+};
+
+const dotCursorFor = (interactive: boolean, disabled: boolean) => {
+  if (interactive) {
+    return 'pointer';
+  }
+  return disabled ? 'not-allowed' : 'default';
+};
+
+// Idle chrome steps up the ramp on a rail so the dot still separates from the
+// capsule fill it sits on.
+const restingFillFor = (isCompleted: boolean, rail: boolean) => {
+  if (isCompleted) {
+    return componentColors.indicator.completed;
+  }
+  return rail ? componentColors.indicator.track : componentColors.indicator.inactive;
+};
+
 // ── DotIndicator Component ────────────────────────────────────
 
 export const DotIndicator = ({
@@ -302,14 +331,14 @@ export const DotIndicator = ({
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs();
   const onCompleted = useReadableTextOn(componentColors.indicator.completed);
-  const rootRef = useRef<HTMLElement | null>(null);
+  const rootRef = useRef<TamaguiElement | null>(null);
   const [kbFocusIndex, setKbFocusIndex] = useState<number | null>(null);
   if (isWeb) {
     ensureKeyboardModalityTracking();
   }
   // Consumer gap ejects; otherwise the space knob drives the inter-item gap.
-  const gap = gapProp ?? dotGapMap[knobProps.space] ?? '$2';
-  const geometry = dotGeometryMap[knobProps.sizeToken] ?? dotGeometryMap.$4;
+  const gap = gapProp ?? dotGapFor(knobProps.space);
+  const geometry = dotGeometryMap.get(knobProps.sizeToken) ?? DEFAULT_GEOMETRY;
   // The tick idiom (`bars`) is ONE flag: it picks the scale's thinner metric
   // AND withholds the completion badge, so the name cannot come to mean one
   // thing for size and another for badging.
@@ -322,37 +351,35 @@ export const DotIndicator = ({
 
   // Horizontal slop is capped at just under half the resolved gap so two
   // enlarged targets keep ≥1px of dead space between them.
-  const gapPx = typeof gap === 'number' ? gap : ((getTokens().space as any)?.[gap]?.val ?? 7);
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- `gap` is a public number | token-string prop; there is no I/O boundary to parse at
+  const gapPx = typeof gap === 'number' ? gap : (tokenPx('space', gap) ?? 7);
   const slopX = Math.max(0, Math.floor((gapPx - 1) / 2));
   const outsetY = Math.max(0, Math.ceil((MIN_PRESS_TARGET - itemSize) / 2));
 
   // No onChange means the indicator is read-only (informational), which is
   // different from disabled (interactive but blocked)
-  const interactive = !disabled && !!onChange;
+  const interactive = !disabled && onChange !== undefined;
   const isStep = idiom === 'step';
   const label = isStep ? t('Go to step {{number}}') : t('Go to item {{number}}');
   const currentValue = isStep ? 'step' : 'true';
   // Motion gates on the resolved animation knob (undefined at "none"
   // / prefers-reduced-motion). Host `transition` may name the tween but cannot
   // re-enable motion the knob turned off.
-  const motion = knobProps.transition ? (transition ?? knobProps.transition) : undefined;
+  const motion = knobProps.transition === undefined ? undefined : (transition ?? knobProps.transition);
   // Discrete jumps tween the indicator; the explicit CSS shorthand is
   // the belt-and-suspenders arm for the web driver, which only picks up
   // Tamagui's named transition on some props.
-  const motionStyle = motion
-    ? {
-        transition:
-          'width var(--mp-transition, 200ms) ease, height var(--mp-transition, 200ms) ease, background-color var(--mp-transition, 200ms) ease, transform var(--mp-transition, 200ms) ease',
-      }
-    : undefined;
+  const motionStyle = motion === undefined ? undefined : MOTION_STYLE;
 
   const clampedActive = Math.min(Math.max(0, activeIndex), Math.max(0, total - 1));
   const [winStart, winEnd] = windowRange(clampedActive, total);
 
   const focusMark = (index: number) => {
     requestAnimationFrame(() => {
-      const el = rootRef.current?.querySelector?.(`[data-dot-index="${index}"]`) as HTMLElement | null;
-      el?.focus?.();
+      const root = rootRef.current;
+      if (isWeb && root instanceof HTMLElement) {
+        root.querySelector<HTMLElement>(`[data-dot-index="${index}"]`)?.focus();
+      }
     });
   };
 
@@ -362,9 +389,55 @@ export const DotIndicator = ({
     focusMark(next);
   };
 
+  const handleDotKeyDown = (e: KeyboardEvent, index: number) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onChange?.(index);
+      return;
+    }
+    const rtl = isRtl(e.currentTarget);
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      moveTo(index + (rtl ? -1 : 1));
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      moveTo(index + (rtl ? 1 : -1));
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      moveTo(0);
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      moveTo(total - 1);
+    }
+  };
+
+  const dotCursor = dotCursorFor(interactive, disabled);
+
+  const dotTargetProps = (index: number) => {
+    if (interactive) {
+      return {
+        role: 'button' as const,
+        tabIndex: 0,
+        onFocus: () => {
+          // Native has no pointer-vs-keyboard split; any focus rings.
+          if (!isWeb || wasKeyboardFocus()) {
+            setKbFocusIndex(index);
+          }
+        },
+        onBlur: () => {
+          setKbFocusIndex((prev) => (prev === index ? null : prev));
+        },
+        onKeyDown: (e: KeyboardEvent) => {
+          handleDotKeyDown(e, index);
+        },
+      };
+    }
+    return disabled ? { role: 'button' as const } : undefined;
+  };
+
   return (
     <DotsContainer
-      ref={rootRef as any}
+      ref={rootRef}
       gap={gap}
       rail={rail}
       {...(interactive ? ({ role: 'group' } as const) : undefined)}
@@ -372,7 +445,7 @@ export const DotIndicator = ({
       {Array.from({ length: total }).map((_, index) => {
         const isActive = index === activeIndex;
         // Completion is what a step ALREADY did; the current step outranks it.
-        const isCompleted = !isActive && !!completedSteps?.has(index);
+        const isCompleted = !isActive && completedSteps?.has(index) === true;
         const scale = windowScale(index, clampedActive, winStart, winEnd, total);
         const hidden = scale === 0;
         const baseWidth = isActive ? activeSize : idleWidth;
@@ -381,13 +454,7 @@ export const DotIndicator = ({
         // Only the NON-selected fills are computed here. The selected mark
         // stays on the `active` variant so no later prop can paint over the
         // accent — the failure mode this component was fixed for.
-        const restingFill = isCompleted
-          ? componentColors.indicator.completed
-          : rail
-            ? // Idle chrome steps up the ramp on a rail so the dot still
-              // separates from the capsule fill it sits on.
-              componentColors.indicator.track
-            : componentColors.indicator.inactive;
+        const restingFill = restingFillFor(isCompleted, rail);
         const kbRing = kbFocusIndex === index;
         return (
           <DotTarget
@@ -398,7 +465,7 @@ export const DotIndicator = ({
             marginHorizontal={-slopX}
             marginVertical={-outsetY}
             zIndex={kbRing ? 1 : undefined}
-            cursor={interactive ? 'pointer' : disabled ? 'not-allowed' : 'default'}
+            cursor={dotCursor}
             onPress={
               interactive
                 ? () => {
@@ -407,47 +474,10 @@ export const DotIndicator = ({
                 : undefined
             }
             aria-label={withInterp(label, { number: index + 1 })}
-            {...({ 'data-dot-index': String(index) } as Record<string, unknown>)}
-            {...(hidden ? ({ 'data-dot-hidden': 'true' } as Record<string, unknown>) : undefined)}
-            {...(isActive ? ({ 'aria-current': currentValue } as Record<string, unknown>) : undefined)}
-            {...(interactive
-              ? {
-                  role: 'button' as const,
-                  tabIndex: 0,
-                  onFocus: () => {
-                    // Native has no pointer-vs-keyboard split; any focus rings.
-                    if (!isWeb || wasKeyboardFocus()) {
-                      setKbFocusIndex(index);
-                    }
-                  },
-                  onBlur: () => {
-                    setKbFocusIndex((prev) => (prev === index ? null : prev));
-                  },
-                  onKeyDown: ((e: KeyboardEvent) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      onChange?.(index);
-                      return;
-                    }
-                    const rtl = isRtl(e.currentTarget as unknown as HTMLElement);
-                    if (e.key === 'ArrowRight') {
-                      e.preventDefault();
-                      moveTo(index + (rtl ? -1 : 1));
-                    } else if (e.key === 'ArrowLeft') {
-                      e.preventDefault();
-                      moveTo(index + (rtl ? 1 : -1));
-                    } else if (e.key === 'Home') {
-                      e.preventDefault();
-                      moveTo(0);
-                    } else if (e.key === 'End') {
-                      e.preventDefault();
-                      moveTo(total - 1);
-                    }
-                  }) as unknown as () => void,
-                }
-              : disabled
-                ? { role: 'button' as const }
-                : undefined)}>
+            data-dot-index={String(index)}
+            data-dot-hidden={hidden ? 'true' : undefined}
+            aria-current={isActive ? currentValue : undefined}
+            {...dotTargetProps(index)}>
             <Dot
               active={isActive}
               {...(isActive
@@ -465,12 +495,10 @@ export const DotIndicator = ({
               transition={motion}
               style={motionStyle}
               {...(kbRing ? FOCUS_VISIBLE_RING : { outlineWidth: 0 })}
-              {...({
-                [dotStateAttribute]: isActive ? 'active' : 'idle',
-                'data-mark-width': String(dotWidth),
-                'data-mark-height': String(dotHeight),
-              } as Record<string, unknown>)}
-              {...(kbRing ? ({ 'data-dot-ring': 'true' } as Record<string, unknown>) : undefined)}>
+              {...{ [dotStateAttribute]: isActive ? 'active' : 'idle' }}
+              data-mark-width={String(dotWidth)}
+              data-mark-height={String(dotHeight)}
+              data-dot-ring={kbRing ? 'true' : undefined}>
               {isCompleted && !isTick && itemSize >= CHECK_MIN_DOT && (
                 <CheckIcon
                   size={8}

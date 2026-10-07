@@ -1,6 +1,6 @@
 import type { ScaleBand, ScaleLinear, ScalePoint } from 'd3-scale';
 
-import { formatAxisTick, getLinearTicks, truncateLabel } from './math';
+import { formatAxisTick, getLinearTicks, truncateLabel, uniqueKeys } from './math';
 import { G, Line, SvgText, chartChromeProps } from './svg';
 import type { PlotArea } from './types';
 import { useChartTheme } from './use-chart-theme';
@@ -43,6 +43,7 @@ export const XAxis = ({
   const y = plot.y + plot.height;
   const bandwidth = scale.bandwidth();
   const step = scale.step();
+  const tickKeys = uniqueKeys(values.map(String));
 
   return (
     <G>
@@ -65,7 +66,7 @@ export const XAxis = ({
         const center = position + bandwidth / 2;
         const text = tickFormat ? tickFormat(value, index) : value;
         return (
-          <G key={`${value}-${index}`}>
+          <G key={tickKeys[index]}>
             {showTicks ? (
               <Line
                 {...chartChromeProps('axis')}
@@ -84,7 +85,7 @@ export const XAxis = ({
                 textAnchor="middle"
                 fill={labelColor}
                 fontSize={labelFontSize}
-                {...(labelFontFamily ? { fontFamily: labelFontFamily } : {})}>
+                fontFamily={labelFontFamily === '' ? undefined : labelFontFamily}>
                 {truncateLabel(text, labelFontSize, Math.max(step, bandwidth))}
               </SvgText>
             ) : null}
@@ -126,6 +127,7 @@ export const YAxis = ({
 }: YAxisProps) => {
   const { axisColor, gridColor, labelColor, labelFontFamily, labelFontSize } = useChartTheme();
   const tickNumbers = getLinearTicks(scale, ticks);
+  const tickKeys = uniqueKeys(tickNumbers.map(String));
   // Axis ticks ride the charts package's own density register — the declared
   // exemption to the house number channel (see `formatAxisTick`).
   const format = tickFormat ?? ((value: number) => formatAxisTick(value));
@@ -146,7 +148,7 @@ export const YAxis = ({
       {tickNumbers.map((value, index) => {
         const y = scale(value);
         return (
-          <G key={`${value}-${index}`}>
+          <G key={tickKeys[index]}>
             {showGrid ? (
               <Line
                 {...chartChromeProps('grid')}
@@ -176,7 +178,7 @@ export const YAxis = ({
                 textAnchor="end"
                 fill={labelColor}
                 fontSize={labelFontSize}
-                {...(labelFontFamily ? { fontFamily: labelFontFamily } : {})}>
+                fontFamily={labelFontFamily === '' ? undefined : labelFontFamily}>
                 {format(value, index)}
               </SvgText>
             ) : null}

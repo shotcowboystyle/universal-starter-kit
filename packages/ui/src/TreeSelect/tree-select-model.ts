@@ -52,11 +52,13 @@ export const flattenVisible = <T>(nodes: TreeNode<T>[], expandedIds: Set<string>
   return result;
 };
 
+interface FilteredForest<T> {
+  nodes: TreeNode<T>[];
+  expandIds: Set<string>;
+}
+
 /** Keep matching nodes and their ancestors. Matching parents keep full children. */
-export const filterForest = <T>(
-  nodes: TreeNode<T>[],
-  query: string,
-): { nodes: TreeNode<T>[]; expandIds: Set<string> } => {
+export const filterForest = <T>(nodes: TreeNode<T>[], query: string): FilteredForest<T> => {
   const q = query.trim().toLowerCase();
   if (!q) {
     return { nodes, expandIds: new Set() };
@@ -89,7 +91,7 @@ export const findNode = <T>(nodes: TreeNode<T>[], id: string): TreeNode<T> | und
     if (node.id === id) {
       return node;
     }
-    if (node.children?.length) {
+    if (node.children != null && node.children.length > 0) {
       const found = findNode(node.children, id);
       if (found) {
         return found;
@@ -105,7 +107,7 @@ export const findNodePath = <T>(items: TreeNode<T>[], id: string, trail: string[
     if (node.id === id) {
       return trail;
     }
-    if (node.children?.length) {
+    if (node.children != null && node.children.length > 0) {
       const found = findNodePath(node.children, id, [...trail, node.id]);
       if (found) {
         return found;

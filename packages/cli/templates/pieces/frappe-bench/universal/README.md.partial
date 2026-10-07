@@ -1,0 +1,28 @@
+## Frappe dev bench (`frappe-bench` piece)
+
+`docker/compose.frappe.yaml` runs a dev bench with its MariaDB and Redis:
+
+```bash
+docker compose -f docker/compose.frappe.yaml up -d
+docker compose -f docker/compose.frappe.yaml exec bench bash
+
+# inside the container (first time only)
+bench init --skip-redis-config-generation frappe-bench
+cd frappe-bench
+bench set-config -g db_host mariadb
+bench set-config -g redis_cache redis://redis-cache:6379
+bench set-config -g redis_queue redis://redis-queue:6379
+bench set-config -g redis_socketio redis://redis-queue:6379
+bench new-site __NAME__.localhost \
+  --mariadb-user-host-login-scope=% \
+  --db-root-password frappe --admin-password admin
+bench --site __NAME__.localhost set-config developer_mode 1
+
+# every dev session
+bench start
+```
+
+It serves `http://localhost:8000`. With the `frappe` piece, set
+`FRAPPE_URL=http://__NAME__.localhost:8000` (or keep `http://localhost:8000`
+and make the site the default with `bench use __NAME__.localhost`) and restart
+`pnpm dev`.

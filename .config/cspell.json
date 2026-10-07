@@ -7,7 +7,7 @@
       "name": "packages-words",
       "path": "./cspell-packages.txt",
       "addWords": true,
-      "description": "Domain terms from the packages ported from multiplatform.one"
+      "description": "Domain terms from the packages ported from universal-starter-kit"
     }
   ],
   "dictionaries": ["packages-words"],
@@ -115,9 +115,9 @@
     "tsgolint",
     "Turbopack",
     "turborepo",
-    "Turborepo",
     "typedef",
     "typedefs",
+    "ultracite",
     "unrs",
     "viewports",
     "vitest",

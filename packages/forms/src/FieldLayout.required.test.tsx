@@ -4,6 +4,10 @@ import { describe, expect, it } from 'vitest';
 
 import { FieldLayout } from './FieldLayout';
 import { RequiredMarkingContext } from './required-marking';
+import type { RequiredMarkingContextValue } from './required-marking';
+
+const REQUIRED_MODE: RequiredMarkingContextValue = { mode: 'required' };
+const OPTIONAL_MODE: RequiredMarkingContextValue = { mode: 'optional' };
 
 const labelText = (container: HTMLElement): string => {
   const label = container.querySelector('label');
@@ -25,7 +29,7 @@ describe('FieldLayout required marking', () => {
 
   it('marks minority required via context', () => {
     const { container } = renderWithProviders(
-      <RequiredMarkingContext.Provider value={{ mode: 'required' }}>
+      <RequiredMarkingContext.Provider value={REQUIRED_MODE}>
         <FieldLayout
           id="a"
           label="Code"
@@ -39,7 +43,7 @@ describe('FieldLayout required marking', () => {
 
   it('marks minority optional via context', () => {
     const { container } = renderWithProviders(
-      <RequiredMarkingContext.Provider value={{ mode: 'optional' }}>
+      <RequiredMarkingContext.Provider value={OPTIONAL_MODE}>
         <FieldLayout
           id="a"
           label="Notes"
@@ -53,7 +57,7 @@ describe('FieldLayout required marking', () => {
 
   it('prop requiredMarking overrides context', () => {
     const { container } = renderWithProviders(
-      <RequiredMarkingContext.Provider value={{ mode: 'optional' }}>
+      <RequiredMarkingContext.Provider value={OPTIONAL_MODE}>
         <FieldLayout
           id="a"
           label="Name"
@@ -81,11 +85,12 @@ describe('FieldLayout disabled labels', () => {
         />
       </FieldLayout>,
     );
-    const label = container.querySelector('label') as HTMLElement | null;
+    const label = container.querySelector<HTMLElement>('label');
     expect(label).toBeTruthy();
     expect(label?.textContent).toBe('Account');
     // Contract: FieldLayout forces opacity=1 on wrapper + label (never inherits control dimming).
-    const labelOpacity = label?.style?.opacity || getComputedStyle(label!).opacity;
-    expect(Number(labelOpacity || '1')).toBe(1);
+    const inlineOpacity = label?.style.opacity ?? '';
+    const labelOpacity = inlineOpacity === '' && label !== null ? getComputedStyle(label).opacity : inlineOpacity;
+    expect(Number(labelOpacity === '' ? '1' : labelOpacity)).toBe(1);
   });
 });

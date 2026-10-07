@@ -1,0 +1,3 @@
+
+# GNOME target (mpo init --gnome)
+apps/__NAME__/dist/gnome

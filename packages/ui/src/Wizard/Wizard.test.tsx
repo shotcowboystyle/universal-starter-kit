@@ -1,3 +1,5 @@
+import { setTimeout as sleep } from 'node:timers/promises';
+
 import { Form, Input, Switch, useFormContext } from '@repo/forms';
 import { renderWithProviders } from '@repo/test-utils';
 import { __resetDevWarnSeen } from '@repo/theme';
@@ -7,6 +9,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { Wizard, useWizard } from './index';
 import type { WizardFormLike, WizardStep } from './index';
+
+const noop = (): void => undefined;
 
 const STEPS: WizardStep[] = [
   { id: 'identity', label: 'Identity', fields: ['name'], fieldLabels: { name: 'Name' } },
@@ -56,7 +60,7 @@ const WizardInner = ({ onStore, onComplete, labels }: HarnessProps) => {
       steps={STEPS}
       completeLabel="Restore backup"
       labels={labels ?? 'visible'}
-      onCancel={() => undefined}
+      onCancel={noop}
       onComplete={onComplete}>
       <Wizard.Panel>
         <Input
@@ -76,8 +80,12 @@ const WizardInner = ({ onStore, onComplete, labels }: HarnessProps) => {
   );
 };
 
+interface FormStore {
+  form?: WizardFormLike;
+}
+
 const renderWizard = (props: HarnessProps = {}) => {
-  const store: { form?: WizardFormLike } = {};
+  const store: FormStore = {};
   const view = renderWithProviders(
     <Form
       formOptions={{
@@ -104,60 +112,60 @@ const panelDisplay = (el: Element) => {
 describe('Wizard mounted panels and validation', () => {
   it('wizard probe: fill step 1, advance, return — DOM and store match', async () => {
     const { container, store } = renderWizard();
-    const name = container.querySelector('#name') as HTMLInputElement;
+    const name = container.querySelector<HTMLInputElement>('#name')!;
     expect(name).toBeTruthy();
     fireEvent.change(name, { target: { value: 'Pikachu' } });
     fireEvent.input(name, { target: { value: 'Pikachu' } });
 
     await act(async () => {
-      fireEvent.click(container.querySelector("[data-testid='wizard-primary']") as Element);
+      fireEvent.click(container.querySelector("[data-testid='wizard-primary']")!);
     });
 
-    const shell = container.querySelector('[data-wizard-shell]') as HTMLElement;
-    expect(shell.getAttribute('data-wizard-current')).toBe('1');
+    const shell = container.querySelector<HTMLElement>('[data-wizard-shell]')!;
+    expect(shell.dataset.wizardCurrent).toBe('1');
 
     const hidden = [...container.querySelectorAll('[data-wizard-panel][data-active="false"]')] as HTMLElement[];
     expect(hidden).toHaveLength(2);
     for (const panel of hidden) {
-      expect(panelDisplay(panel) === 'none' || panel.getAttribute('data-active') === 'false').toBe(true);
+      expect(panelDisplay(panel) === 'none' || panel.dataset.active === 'false').toBe(true);
       expect(panel.isConnected).toBe(true);
     }
 
     await act(async () => {
-      fireEvent.click(container.querySelector("[data-testid='wizard-back']") as Element);
+      fireEvent.click(container.querySelector("[data-testid='wizard-back']")!);
     });
 
-    const nameAgain = container.querySelector('#name') as HTMLInputElement;
+    const nameAgain = container.querySelector<HTMLInputElement>('#name')!;
     expect(nameAgain.value).toBe('Pikachu');
     expect(store.form?.getFieldValue?.('name')).toBe('Pikachu');
-    expect(container.querySelector('[data-wizard-shell]')?.getAttribute('data-wizard-current')).toBe('0');
+    expect(container.querySelector<HTMLElement>('[data-wizard-shell]')?.dataset.wizardCurrent).toBe('0');
   });
 
   it('clear probe: derived-value toggle clears visible value and store', async () => {
     const { container, store } = renderWizard();
-    const name = container.querySelector('#name') as HTMLInputElement;
+    const name = container.querySelector<HTMLInputElement>('#name')!;
     fireEvent.change(name, { target: { value: 'Pikachu' } });
     fireEvent.input(name, { target: { value: 'Pikachu' } });
     await act(async () => {
-      fireEvent.click(container.querySelector("[data-testid='wizard-primary']") as Element);
+      fireEvent.click(container.querySelector("[data-testid='wizard-primary']")!);
     });
 
-    const url = container.querySelector('#url') as HTMLInputElement;
+    const url = container.querySelector<HTMLInputElement>('#url')!;
     expect(url.value).toBe('https://old.example');
     expect(store.form?.getFieldValue?.('url')).toBe('https://old.example');
 
-    const derive = container.querySelector('#derive') as HTMLElement;
+    const derive = container.querySelector<HTMLElement>('#derive')!;
     expect(derive).toBeTruthy();
     await act(async () => {
       fireEvent.click(derive);
     });
 
-    const urlAfter = container.querySelector('#url') as HTMLInputElement;
+    const urlAfter = container.querySelector<HTMLInputElement>('#url')!;
     expect(urlAfter.value).toBe('');
     expect(store.form?.getFieldValue?.('url')).toBe('');
 
     await act(async () => {
-      fireEvent.click(container.querySelector("[data-testid='wizard-primary']") as Element);
+      fireEvent.click(container.querySelector("[data-testid='wizard-primary']")!);
     });
     expect({
       name: store.form?.getFieldValue?.('name'),
@@ -167,7 +175,7 @@ describe('Wizard mounted panels and validation', () => {
 
   it('per-step validation blocks advance and focuses the first invalid field', async () => {
     const { container } = renderWizard();
-    const primary = container.querySelector("[data-testid='wizard-primary']") as HTMLButtonElement;
+    const primary = container.querySelector<HTMLButtonElement>("[data-testid='wizard-primary']")!;
     expect(primary.getAttribute('aria-disabled')).not.toBe('true');
     expect(primary.disabled).toBeFalsy();
 
@@ -175,29 +183,29 @@ describe('Wizard mounted panels and validation', () => {
       fireEvent.click(primary);
     });
     await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      await sleep(0);
     });
 
-    expect(container.querySelector('[data-wizard-shell]')?.getAttribute('data-wizard-current')).toBe('0');
+    expect(container.querySelector<HTMLElement>('[data-wizard-shell]')?.dataset.wizardCurrent).toBe('0');
     expect(container.querySelector("[data-testid='error-summary'], [data-error-summary]")).toBeTruthy();
     expect(container.querySelector('[data-step-state="error"]')).toBeTruthy();
 
-    const name = container.querySelector('#name') as HTMLInputElement;
+    const name = container.querySelector<HTMLInputElement>('#name')!;
     expect(document.activeElement === name || document.activeElement?.closest?.('#name')).toBeTruthy();
   });
 
   it('last-step primary is the task verb, never Submit', async () => {
     const { container } = renderWizard();
-    const name = container.querySelector('#name') as HTMLInputElement;
+    const name = container.querySelector<HTMLInputElement>('#name')!;
     fireEvent.change(name, { target: { value: 'Pikachu' } });
     fireEvent.input(name, { target: { value: 'Pikachu' } });
     await act(async () => {
-      fireEvent.click(container.querySelector("[data-testid='wizard-primary']") as Element);
+      fireEvent.click(container.querySelector("[data-testid='wizard-primary']")!);
     });
     await act(async () => {
-      fireEvent.click(container.querySelector("[data-testid='wizard-primary']") as Element);
+      fireEvent.click(container.querySelector("[data-testid='wizard-primary']")!);
     });
-    const primary = container.querySelector("[data-testid='wizard-primary']") as HTMLElement;
+    const primary = container.querySelector<HTMLElement>("[data-testid='wizard-primary']")!;
     expect(primary.textContent).toBe('Restore backup');
     expect(primary.textContent).not.toMatch(/submit/iu);
     expect(container.querySelector('[data-primary]')).toBe(primary);
@@ -215,12 +223,12 @@ describe('Wizard mounted panels and validation', () => {
 describe('Wizard guardrail-clean at rest', () => {
   it('a ready wizard at rest emits zero [theme] guardrail warnings', async () => {
     __resetDevWarnSeen();
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(noop);
+    const error = vi.spyOn(console, 'error').mockImplementation(noop);
     try {
       renderWizard();
       await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 0));
+        await sleep(0);
       });
       const themeWarns = [...warn.mock.calls, ...error.mock.calls]
         .map((args) => String(args[0]))

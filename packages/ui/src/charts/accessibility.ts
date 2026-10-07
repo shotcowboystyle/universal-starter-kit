@@ -32,15 +32,16 @@ export interface DescribeChartInput {
 export const describeChart = (input: DescribeChartInput): string => {
   const { typeLabel, title, data } = input;
   const formatValue = input.formatValue ?? formatChartValue;
-  const head = title ? `${typeLabel}, ${title}` : typeLabel;
+  const head = title !== undefined && title !== '' ? `${typeLabel}, ${title}` : typeLabel;
   if (data.length === 0) {
     return `${head}: no data`;
   }
   if (data.length === 1) {
     return `${head}: 1 data point. ${data[0].label} ${formatValue(data[0].value)}`;
   }
-  let highest = data[0];
-  let lowest = data[0];
+  const [first] = data;
+  let highest = first;
+  let lowest = first;
   let total = 0;
   for (const datum of data) {
     if (datum.value > highest.value) {
@@ -76,7 +77,7 @@ export interface DescribeDatumInput {
 export const describeDatum = (input: DescribeDatumInput): string => {
   const formatValue = input.formatValue ?? formatChartValue;
   const base = `${input.datum.label}: ${formatValue(input.datum.value)}`;
-  if (input.total && input.total > 0) {
+  if (input.total !== undefined && input.total > 0) {
     const share = Math.round((input.datum.value / input.total) * 100);
     return `${base} (${share}%)`;
   }

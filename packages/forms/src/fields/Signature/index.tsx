@@ -434,7 +434,7 @@ const SignatureCanvasImpl = ({
           currentStrokeRef.current = [point];
           return [point];
         }
-        const lastPoint = base[base.length - 1];
+        const lastPoint = base.at(-1);
         if (pointDistance(point, lastPoint) < minPointDistance) {
           return prev ?? base;
         }
@@ -574,9 +574,9 @@ const SignatureCanvasImpl = ({
         setKbFocus(false);
       }}
       onKeyDown={isWeb ? handlePadKeyDown : undefined}
-      aria-required={required || undefined}
-      aria-invalid={hasError || undefined}
-      aria-readonly={readOnly || undefined}
+      aria-required={required ?? undefined}
+      aria-invalid={hasError ?? undefined}
+      aria-readonly={readOnly ?? undefined}
       aria-disabled={disabled || undefined}
       aria-describedby={describedBy}
       aria-keyshortcuts={canDraw ? 'Delete Backspace Escape' : undefined}

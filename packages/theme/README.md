@@ -88,5 +88,3 @@ is the same filter as a pure function over a built matrix.
 ## License
 
 Apache-2.0
-
-Derived from [multiplatform.one](https://multiplatform.one) (Apache-2.0). See the package LICENSE and the repository NOTICE.

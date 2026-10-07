@@ -26,10 +26,7 @@ export const useKeyboardInset = (): number => {
     const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
     const show = Keyboard.addListener(showEvent, (event) => {
-      const screen = event?.endCoordinates;
-      if (!screen) {
-        return;
-      }
+      const screen = event.endCoordinates;
       const windowHeight = Dimensions.get('window').height;
       setInset(Math.max(0, Math.round(windowHeight - screen.screenY)));
     });

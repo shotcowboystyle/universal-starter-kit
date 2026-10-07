@@ -25,6 +25,7 @@ catalog:
   '@tamagui/animations-css': '2.7.6'
   '@tamagui/animations-react-native': '2.7.6'
   '@tamagui/animations-reanimated': '2.7.6'
+  '@tamagui/build': '2.7.6'
   '@tamagui/colors': '2.7.6'
   '@tamagui/config': '2.7.6'
   '@tamagui/constants': '2.7.6'

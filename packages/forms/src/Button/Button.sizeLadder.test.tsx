@@ -73,7 +73,7 @@ const padXPx = (el: HTMLElement): number | null => lastPx(el, /^_px-(\d+)px$/u) 
 const gapPx = (el: HTMLElement): number | null => lastPx(el, /^_gap-(\d+)px$/u);
 
 const labelPx = (el: HTMLElement): number | null => {
-  for (const node of Array.from(el.querySelectorAll('*'))) {
+  for (const node of [...el.querySelectorAll('*')]) {
     const n = lastPx(node, /^_fos-(\d+)px$/u) ?? lastPx(node, /^_fs-(\d+)px$/u);
     if (n != null) {
       return n;

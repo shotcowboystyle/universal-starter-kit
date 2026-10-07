@@ -17,7 +17,7 @@ describe('highlightCode (canonical shiki stack)', () => {
     expect(lines).toHaveLength(1);
     // Real syntax highlighting: more than one token, at least one colored.
     expect(lines[0].length).toBeGreaterThan(1);
-    expect(lines[0].some((token) => token.color)).toBe(true);
+    expect(lines[0].some((token) => token.color !== undefined && token.color !== '')).toBe(true);
     expect(joined(lines)).toBe('const x = 1;');
   });
 

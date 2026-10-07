@@ -251,7 +251,7 @@ export const FilledQr: Story = {
   args: {
     label: 'QR Code',
     helperText: 'Scan or enter a QR value',
-    value: 'https://multiplatform.one',
+    value: 'https://universal-starter-kit',
     enableScan: true,
     formats: ['qr'],
     onChange: action('onChange'),

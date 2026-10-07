@@ -12,7 +12,8 @@ import { zIndex } from '@repo/forms';
 import { MIN_PRESS_TARGET, pressTargetHitSlop, pressTargetStyle, useResolvedKnobs } from '@repo/theme';
 import type { KeyboardEvent, ReactNode } from 'react';
 import { useState, useRef, useCallback, useEffect, Children } from 'react';
-import type { GetProps, ScrollView as TamaguiScrollView } from 'tamagui';
+import type { ViewStyle } from 'react-native';
+import type { GetProps, ScrollView as TamaguiScrollView, TamaguiElement } from 'tamagui';
 import { View, XStack, getTokens, isWeb, styled } from 'tamagui';
 
 import { DotIndicator } from '../DotIndicator';
@@ -22,6 +23,12 @@ import { useTranslation } from '../shared/i18n';
 import { withInterp } from '../shared/t';
 
 // ── Types ─────────────────────────────────────────────────────
+
+// Web-only scroll-snap CSS that react-native-web forwards but ViewStyle omits.
+interface WebTrackStyle extends ViewStyle {
+  scrollSnapType: 'x mandatory';
+  scrollBehavior?: 'auto';
+}
 
 export interface CarouselProps {
   children: ReactNode;
@@ -53,7 +60,7 @@ const ensureCarouselArrowRing = () => {
   if (!isWeb || typeof document === 'undefined') {
     return;
   }
-  if (document.getElementById(ARROW_RING_STYLE_ID)) {
+  if (document.querySelector(`#${ARROW_RING_STYLE_ID}`)) {
     return;
   }
   const tag = document.createElement('style');
@@ -67,6 +74,13 @@ const ensureCarouselArrowRing = () => {
   outline-offset: 2px !important;
 }`;
   document.head.append(tag);
+};
+
+const spaceTokenPx = (token: string): number | undefined => {
+  // SAFETY: getTokens().space is a string-keyed token map whose entries expose a numeric `val`; unknown keys read as undefined
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- token map is typed per known key; arbitrary prop keys need a string index view
+  const space = getTokens().space as Record<string, { val?: number } | undefined>;
+  return space[token]?.val;
 };
 
 const isTypingTarget = (target: EventTarget | null): boolean => {
@@ -143,6 +157,9 @@ const DotsWrapper = styled(View, {
 
 // ── Carousel Component ────────────────────────────────────────
 
+const slideStyle = { scrollSnapAlign: 'start' };
+
+// oxlint-disable-next-line react-doctor/no-giant-component, eslint/complexity -- one cohesive controller (paging, autoplay, RTL, arrows, dots) sharing refs and state; splitting would only thread them through props
 export const Carousel = ({
   children,
   showArrows = true,
@@ -165,10 +182,8 @@ export const Carousel = ({
   const gap = gapProp ?? knobProps.gap.gap;
   // Scroll-offset math needs the gap in px — the slide pitch is
   // slideWidth + gap. Space tokens resolve the way DotIndicator's do.
-  const gapPx =
-    typeof gap === 'number'
-      ? gap
-      : ((getTokens().space as Record<string, { val?: number } | undefined>)?.[gap]?.val ?? 0);
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- `gap` is a public number | token-string prop; there is no I/O boundary to parse at
+  const gapPx = typeof gap === 'number' ? gap : (spaceTokenPx(gap) ?? 0);
   const arrowSize = knobProps.control.height;
   // Arrows are R-BINARY (spec Carousel anatomy): square in the radius `none`
   // world, a full circle at every other value. The fixed 1000 arc was
@@ -184,7 +199,8 @@ export const Carousel = ({
   const [activeIndex, setActiveIndex] = useState(initialSlide);
   const trackRef = useRef<TamaguiScrollView | null>(null);
   const hoverPauseRef = useRef(false);
-  const rootRef = useRef<HTMLElement | null>(null);
+  const rootRef = useRef<TamaguiElement | null>(null);
+  // oxlint-disable-next-line react/no-react-children -- counts slides across fragments/arrays the same way Children.map indexes them
   const slideCount = Children.count(children);
   // SLIDE-VIEWPORT-WIDTH: slides size from the MEASURED scroll viewport,
   // so the measurement is state (slides re-render on measure/resize). On web a
@@ -199,6 +215,10 @@ export const Carousel = ({
   // GOV.UK / WCAG C39: programmatic paging uses behavior auto; no momentum
   // coast. Do not re-read the media query here — the knob already carries it.
   const animateSnaps = Boolean(knobProps.transition);
+  // Defeat inherited `scroll-behavior: smooth` when the knob is off.
+  const trackStyle: WebTrackStyle = animateSnaps
+    ? { scrollSnapType: 'x mandatory' }
+    : { scrollSnapType: 'x mandatory', scrollBehavior: 'auto' };
   const scrollToSlide = useCallback(
     (index: number) => {
       if (!trackRef.current) {
@@ -244,7 +264,7 @@ export const Carousel = ({
   const handleScroll = useCallback(
     (event: { nativeEvent: { contentOffset: { x: number } } }) => {
       const scrollX = event.nativeEvent.contentOffset.x;
-      if (!slideWidth) {
+      if (slideWidth === 0) {
         return;
       }
       const newIndex = Math.round(scrollX / (slideWidth + gapPx));
@@ -266,20 +286,21 @@ export const Carousel = ({
           return;
         }
         const root = rootRef.current;
-        if (isWeb && typeof document !== 'undefined' && root) {
+        if (isWeb && typeof document !== 'undefined' && root instanceof HTMLElement) {
           const active = document.activeElement;
-          if (active && root.contains(active)) {
+          if (active != null && root.contains(active)) {
             return;
           }
         }
         goNext();
       }, autoPlay);
-      return () => {
-        if (autoPlayRef.current) {
-          clearInterval(autoPlayRef.current);
-        }
-      };
     }
+    return () => {
+      if (autoPlayRef.current != null) {
+        clearInterval(autoPlayRef.current);
+      }
+    };
+    // oxlint-disable-next-line react-doctor/prefer-use-effect-event -- goNext must re-arm the interval so each tick pages from the current slide
   }, [autoPlay, goNext, animateSnaps]);
 
   // Anchor the active slide whenever geometry changes: the first measure
@@ -287,9 +308,11 @@ export const Carousel = ({
   // re-measure, or a gap change. Index offsets are only valid at the pitch
   // they were computed for, so re-derive and snap without animating.
   const activeIndexRef = useRef(activeIndex);
-  activeIndexRef.current = activeIndex;
   useEffect(() => {
-    if (!slideWidth || slideCount === 0 || !trackRef.current) {
+    activeIndexRef.current = activeIndex;
+  });
+  useEffect(() => {
+    if (slideWidth === 0 || slideCount === 0 || !trackRef.current) {
       return;
     }
     const index = Math.max(0, Math.min(activeIndexRef.current, slideCount - 1));
@@ -357,6 +380,7 @@ export const Carousel = ({
       transition={knobProps.transition}
       {...(enabled ? undefined : disabledState.chromeKnobProps)}
       onPress={enabled ? onPress : undefined}
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui View is a cross-platform pressable, not a DOM <button>; role plus the keyboard handler below carry the semantics
       role="button"
       aria-label={label}
       aria-disabled={!enabled || undefined}
@@ -364,16 +388,14 @@ export const Carousel = ({
       // focus or Enter/Space activation — supply both. Ring is CSS on
       // the visual, not this hit box and not the viewport.
       tabIndex={enabled ? 0 : -1}
-      onKeyDown={
-        ((e: KeyboardEvent) => {
+      data-carousel-arrow={side}
+      {...{
+        onKeyDown: (e: KeyboardEvent) => {
           if ((e.key === 'Enter' || e.key === ' ') && enabled) {
             e.preventDefault();
             onPress();
           }
-        }) as unknown as () => void
-      }
-      {...({
-        'data-carousel-arrow': side,
+        },
         onHoverIn: () => {
           if (enabled) {
             setHoverSide(side);
@@ -390,7 +412,7 @@ export const Carousel = ({
         onPressOut: () => {
           setPressSide((current) => (current === side ? null : current));
         },
-      } as Record<string, unknown>)}>
+      }}>
       <ArrowVisual
         className="mp-carousel-arrow-visual"
         width={arrowSize}
@@ -401,7 +423,7 @@ export const Carousel = ({
         // Surface is SF-CONTROL; radius stays R-BINARY (after the spread).
         borderRadius={arrowRadius}
         transition={knobProps.transition}
-        {...({ 'data-carousel-arrow-visual': side } as Record<string, unknown>)}>
+        data-carousel-arrow-visual={side}>
         <Glyph {...knobProps.controlIcon} />
       </ArrowVisual>
     </ArrowButton>
@@ -409,23 +431,24 @@ export const Carousel = ({
 
   return (
     <View
-      ref={rootRef as never}
+      ref={rootRef}
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui View does not render <section>; role plus aria-roledescription carry the carousel landmark
       role="region"
       aria-roledescription="carousel"
       aria-label={t('Carousel')}
       data-density={knobProps.density}
       data-size={knobProps.size}
-      onKeyDown={handleRegionKeyDown as unknown as () => void}
-      // Tamagui forwards onHoverIn/onHoverOut at runtime; the RN-flavored View
-      // prop type omits them (house Record cast).
-      {...({
+      // Tamagui forwards onKeyDown/onHoverIn/onHoverOut at runtime; the
+      // RN-flavored View prop type omits them.
+      {...{
+        onKeyDown: handleRegionKeyDown,
         onHoverIn: () => {
           hoverPauseRef.current = true;
         },
         onHoverOut: () => {
           hoverPauseRef.current = false;
         },
-      } as Record<string, unknown>)}>
+      }}>
       {/* Embla: arrows are siblings of the clipping viewport so the
           halo is not severed by overflow:hidden (Apple focus-halo on the
           control, not the scroller). */}
@@ -433,18 +456,12 @@ export const Carousel = ({
         <CarouselContainer
           {...knobProps.borderRadius}
           borderWidth={0}
-          {...({ 'data-media-tile': 'carousel' } as Record<string, unknown>)}>
+          data-media-tile="carousel">
           <ScrollView
             ref={trackRef}
             horizontal
             showsHorizontalScrollIndicator={false}
-            style={
-              {
-                scrollSnapType: 'x mandatory',
-                // Defeat inherited `scroll-behavior: smooth` when the knob is off.
-                ...(animateSnaps ? {} : { scrollBehavior: 'auto' }),
-              } as any
-            }
+            style={trackStyle}
             onScroll={handleScroll}
             scrollEventThrottle={16}
             onLayout={(e) => {
@@ -454,24 +471,26 @@ export const Carousel = ({
             // The viewport is not a control. Never a keyboard stop,
             // never a UA outline — rings live on arrows and dots.
             outlineWidth={0}
-            outlineStyle={'none' as any}
-            focusStyle={{ outlineWidth: 0, outlineStyle: 'none' as any }}
-            focusVisibleStyle={{ outlineWidth: 0, outlineStyle: 'none' as any }}
-            {...({ dataSet: { carouselTrack: 'true' } } as Record<string, unknown>)}>
+            outlineStyle="none"
+            focusStyle={{ outlineWidth: 0, outlineStyle: 'none' }}
+            focusVisibleStyle={{ outlineWidth: 0, outlineStyle: 'none' }}
+            {...{ dataSet: { carouselTrack: 'true' } }}>
             <XStack {...(gapProp == null ? knobProps.gap : { gap: gapProp })}>
+              {/* oxlint-disable-next-line react/no-react-children -- Children.map flattens fragments/arrays so each slide gets its own snap target */}
               {Children.map(children, (child, index) => (
                 <CarouselSlide
+                  // oxlint-disable-next-line react-doctor/no-array-index-as-key -- slides are anonymous children with no id; order is the identity
                   key={index}
                   // Measured-viewport width, never a percentage; slides
                   // stay content-sized only for the pre-measure frame.
                   width={slideWidth > 0 ? slideWidth : undefined}
-                  style={{ scrollSnapAlign: 'start' } as any}
+                  style={slideStyle}
                   aria-roledescription="slide"
                   aria-label={withInterp(t('Slide {{number}} of {{total}}'), {
                     number: index + 1,
                     total: slideCount,
                   })}
-                  {...({ 'data-carousel-slide': index } as Record<string, unknown>)}>
+                  data-carousel-slide={index}>
                   {child}
                 </CarouselSlide>
               ))}
@@ -481,7 +500,9 @@ export const Carousel = ({
 
         {showArrows && slideCount > 1 && (
           <>
+            {/* oxlint-disable-next-line react/refs -- renderArrow only wires goPrev into press handlers; the refs it reaches are read on events, never during render */}
             {renderArrow('prev', prevSide, canGoPrev, t('Previous slide'), PrevGlyph, goPrev)}
+            {/* oxlint-disable-next-line react/refs -- see prev arrow above */}
             {renderArrow('next', nextSide, canGoNext, t('Next slide'), NextGlyph, goNext)}
           </>
         )}
@@ -493,7 +514,7 @@ export const Carousel = ({
             total={slideCount}
             activeIndex={activeIndex}
             onChange={goToSlide}
-            transition={knobProps.transition as string | undefined}
+            transition={knobProps.transition}
           />
         </DotsWrapper>
       )}

@@ -8,7 +8,7 @@ const options = [
   { value: 'cherry', label: 'Cherry' },
 ];
 
-describe('orderOptionsBySelected', () => {
+describe(orderOptionsBySelected, () => {
   it('selected-first pins chosen rows to the top, alphabetically among themselves', () => {
     const ordered = orderOptionsBySelected(options, ['cherry', 'apple'], 'selected-first');
     expect(ordered.map((o) => o.value)).toStrictEqual(['apple', 'cherry', 'banana']);

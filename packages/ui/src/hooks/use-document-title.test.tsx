@@ -10,7 +10,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { composeDocumentTitle, useDocumentTitle } from './use-document-title';
 import type { DocumentTitleTrail } from './use-document-title';
 
-describe('composeDocumentTitle', () => {
+describe(composeDocumentTitle, () => {
   it('reverses a breadcrumb trail into Leaf – Section – App', () => {
     expect(composeDocumentTitle([{ label: 'Desk' }, { label: 'Pokemon' }, { label: 'Pikachu' }])).toBe(
       'Pikachu – Pokemon – Desk',
@@ -24,7 +24,7 @@ describe('composeDocumentTitle', () => {
   it('returns an empty string for empty or missing trails', () => {
     expect(composeDocumentTitle([])).toBe('');
     expect(composeDocumentTitle(null)).toBe('');
-    expect(composeDocumentTitle(undefined)).toBe('');
+    expect(composeDocumentTitle()).toBe('');
   });
 
   it('supports a custom separator', () => {
@@ -38,7 +38,7 @@ describe('composeDocumentTitle', () => {
   });
 });
 
-describe('useDocumentTitle', () => {
+describe(useDocumentTitle, () => {
   beforeEach(() => {
     document.title = 'initial title';
   });

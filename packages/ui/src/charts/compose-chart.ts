@@ -59,7 +59,7 @@ export interface SeriesFillsInput {
  */
 export const resolveSeriesFills = (data: ChartDatum[], palette: ChartPalette, input?: SeriesFillsInput): string[] =>
   data.map((datum, index) => {
-    if (datum.color) {
+    if (datum.color !== undefined && datum.color !== '') {
       return datum.color;
     }
     if (input?.colors && input.colors.length > 0) {

@@ -1,0 +1,110 @@
+{
+  "name": "@repo/rich-text",
+  "version": "0.0.0",
+  "description": "Cross-platform rich text editor with markdown support and syntax highlighting",
+  "license": "Apache-2.0",
+  "source": "src/index.ts",
+  "files": [
+    "dist",
+    "src",
+    "types",
+    "!types/.tsbuildinfo"
+  ],
+  "sideEffects": false,
+  "main": "src/index.ts",
+  "module": "src/index.ts",
+  "types": "types/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "source": "./src/index.ts",
+      "react-native": {
+        "types": "./types/index.d.ts",
+        "import": "./dist/esm/index.native.js",
+        "require": "./dist/cjs/index.native.js",
+        "default": "./dist/esm/index.native.js"
+      },
+      "types": "./types/index.d.ts",
+      "import": "./dist/esm/index.mjs",
+      "require": "./dist/cjs/index.cjs",
+      "default": "./dist/cjs/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "rm -rf dist types 2>/dev/null && tamagui-build --ts-project ./tsconfig.build.json --exclude '\\.spec\\.|\\.test\\.|\\.stories\\.'",
+    "test": "vitest run --coverage --coverage.provider=v8 --coverage.reporter=text --coverage.reporter=lcov --coverage.reporter=html",
+    "typecheck": "tsgo --noEmit"
+  },
+  "dependencies": {
+    "@10play/tentap-editor": "^1.0.1",
+    "@phosphor-icons/react": "catalog:",
+    "@repo/forms": "workspace:*",
+    "@repo/markdown": "workspace:*",
+    "@repo/theme": "workspace:*",
+    "@repo/ui": "workspace:*",
+    "@tamagui/constants": "catalog:",
+    "@tamagui/linear-gradient": "catalog:",
+    "@tanstack/form-core": "^1.29.1",
+    "@tanstack/react-form": "catalog:",
+    "@tiptap/core": "^3.30.0",
+    "@tiptap/extension-character-count": "^3.30.0",
+    "@tiptap/extension-code-block-lowlight": "^3.30.0",
+    "@tiptap/extension-color": "^3.30.0",
+    "@tiptap/extension-details": "^3.30.0",
+    "@tiptap/extension-focus": "^3.30.0",
+    "@tiptap/extension-highlight": "^3.30.0",
+    "@tiptap/extension-image": "^3.30.0",
+    "@tiptap/extension-link": "^3.30.0",
+    "@tiptap/extension-mention": "^3.30.0",
+    "@tiptap/extension-placeholder": "^3.30.0",
+    "@tiptap/extension-subscript": "^3.30.0",
+    "@tiptap/extension-superscript": "^3.30.0",
+    "@tiptap/extension-table": "^3.30.0",
+    "@tiptap/extension-table-cell": "^3.30.0",
+    "@tiptap/extension-table-header": "^3.30.0",
+    "@tiptap/extension-table-row": "^3.30.0",
+    "@tiptap/extension-task-item": "^3.30.0",
+    "@tiptap/extension-task-list": "^3.30.0",
+    "@tiptap/extension-text-align": "^3.30.0",
+    "@tiptap/extension-text-style": "^3.30.0",
+    "@tiptap/extension-typography": "^3.30.0",
+    "@tiptap/extension-underline": "^3.30.0",
+    "@tiptap/pm": "^3.30.0",
+    "@tiptap/react": "^3.30.0",
+    "@tiptap/starter-kit": "^3.30.0",
+    "@tiptap/suggestion": "^3.30.0",
+    "@types/turndown": "^5.0.6",
+    "emojilib": "^2.4.0",
+    "katex": "^0.16.45",
+    "lowlight": "^3.3.0",
+    "marked": "^17.0.6",
+    "tamagui": "catalog:",
+    "turndown": "^7.2.4"
+  },
+  "devDependencies": {
+    "@repo/config": "workspace:*",
+    "@repo/storybook": "workspace:*",
+    "@repo/test-utils": "workspace:*",
+    "@tamagui/build": "catalog:",
+    "@testing-library/jest-dom": "catalog:",
+    "@testing-library/react": "catalog:",
+    "@types/katex": "^0.16.7",
+    "@vitejs/plugin-react": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "i18next": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "i18next": "^25.0.0",
+    "react": "^19.1.0",
+    "react-native": "*"
+  },
+  "peerDependenciesMeta": {
+    "i18next": {
+      "optional": true
+    }
+  },
+  "module:jsx": "dist/jsx"
+}

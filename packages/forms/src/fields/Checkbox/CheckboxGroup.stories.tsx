@@ -45,7 +45,7 @@ export const Basic: Story = {
     <YStack maxWidth={400}>
       <CheckboxGroup
         {...args}
-        onValueChange={action('onValueChange')}
+        onChange={action('onValueChange')}
       />
     </YStack>
   ),
@@ -254,43 +254,42 @@ export const ElevationLarge: Story = {
       <YStack maxWidth={400}>
         <CheckboxGroup
           {...args}
-          onValueChange={action('onValueChange')}
+          onChange={action('onValueChange')}
         />
       </YStack>
     </Preset>
   ),
 };
 
+const RequiredFormExample = () => {
+  const form = useForm({
+    defaultValues: { permissions: [] as string[] },
+    onSubmit: async ({ value }) => {
+      action('onSubmit')(value);
+    },
+  });
+  return (
+    <Form form={form}>
+      <YStack
+        gap="$4"
+        maxWidth={400}>
+        <CheckboxGroup
+          label="Permissions"
+          name="permissions"
+          required
+          options={[
+            { value: 'read', label: 'Read' },
+            { value: 'write', label: 'Write' },
+            { value: 'admin', label: 'Admin' },
+          ]}
+          helperText="Submit empty to trigger required error"
+        />
+        <Button action="submit">Submit</Button>
+      </YStack>
+    </Form>
+  );
+};
+
 export const RequiredForm: Story = {
-  render: () => {
-    const Example = () => {
-      const form = useForm({
-        defaultValues: { permissions: [] as string[] },
-        onSubmit: async ({ value }) => {
-          action('onSubmit')(value);
-        },
-      });
-      return (
-        <Form form={form}>
-          <YStack
-            gap="$4"
-            maxWidth={400}>
-            <CheckboxGroup
-              label="Permissions"
-              name="permissions"
-              required
-              options={[
-                { value: 'read', label: 'Read' },
-                { value: 'write', label: 'Write' },
-                { value: 'admin', label: 'Admin' },
-              ]}
-              helperText="Submit empty to trigger required error"
-            />
-            <Button action="submit">Submit</Button>
-          </YStack>
-        </Form>
-      );
-    };
-    return <Example />;
-  },
+  render: () => <RequiredFormExample />,
 };

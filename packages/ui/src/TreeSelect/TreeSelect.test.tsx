@@ -41,8 +41,9 @@ const mockRect = (el: HTMLElement, rect: { x: number; y: number; width: number; 
     toJSON: () => ({}),
   } as DOMRect;
   el.getBoundingClientRect = () => next;
+  // oxlint-disable-next-line typescript/unbound-method -- saved so it can be invoked with an explicit `this` and restored
   const proto = HTMLElement.prototype.getBoundingClientRect;
-  HTMLElement.prototype.getBoundingClientRect = function mockedTriggerRect() {
+  HTMLElement.prototype.getBoundingClientRect = function getBoundingClientRect() {
     if (this === el || this.closest?.("[data-testid='tree-select-trigger']") === el) {
       return next;
     }
@@ -87,19 +88,19 @@ describe('TreeSelect cover + width', () => {
         open
       />,
     );
-    const trigger = result.baseElement.querySelector('[data-testid="tree-select-trigger"]') as HTMLElement;
+    const trigger = result.baseElement.querySelector<HTMLElement>('[data-testid="tree-select-trigger"]')!;
     expect(trigger).toBeTruthy();
     const restoreRect = mockRect(trigger, { x: 40, y: 80, width: 280, height: 44 });
     window.dispatchEvent(new Event('resize'));
 
     try {
       await waitFor(() => {
-        const panel = result.baseElement.querySelector('[data-testid="tree-select-panel"]') as HTMLElement | null;
+        const panel = result.baseElement.querySelector<HTMLElement>('[data-testid="tree-select-panel"]');
         expect(panel).toBeTruthy();
-        expect(panel?.getAttribute('data-width-mode')).toBe('at-least-trigger');
-        expect(panel?.getAttribute('data-dismiss-class')).toBe('commit');
-        expect(Number.parseFloat(panel?.style.top ?? '')).toBe(80);
-        expect(Number.parseFloat(panel?.style.minWidth ?? '')).toBeGreaterThanOrEqual(280);
+        expect(panel?.dataset.widthMode).toBe('at-least-trigger');
+        expect(panel?.dataset.dismissClass).toBe('commit');
+        expect(Number((panel?.style.top ?? '').replace('px', ''))).toBe(80);
+        expect(Number((panel?.style.minWidth ?? '').replace('px', ''))).toBeGreaterThanOrEqual(280);
       });
     } finally {
       restoreRect();
@@ -119,7 +120,7 @@ describe('TreeSelect one tab stop', () => {
     );
     const closedStops = tabStops(result.baseElement);
     expect(closedStops).toHaveLength(1);
-    expect(closedStops[0]?.getAttribute('data-testid')).toBe('tree-select-trigger');
+    expect(closedStops[0]?.dataset.testid).toBe('tree-select-trigger');
 
     result.rerender(
       <TreeSelect
@@ -134,15 +135,15 @@ describe('TreeSelect one tab stop', () => {
       expect(result.baseElement.querySelector('[data-testid="tree-select-search"]')).toBeTruthy();
     });
     const openRoot = result.baseElement;
-    const search = openRoot.querySelector('[data-testid="tree-select-search"] input') as HTMLElement;
+    const search = openRoot.querySelector<HTMLElement>('[data-testid="tree-select-search"] input')!;
     expect(search).toBeTruthy();
-    const tree = openRoot.querySelector('[role="tree"]') as HTMLElement;
+    const tree = openRoot.querySelector<HTMLElement>('[role="tree"]')!;
     expect(tree?.tabIndex).toBe(-1);
     const carets = [...openRoot.querySelectorAll('[data-treeselect-caret]')];
     for (const caret of carets) {
       expect(caret.getAttribute('tabindex')).toBe('-1');
     }
-    const rows = [...openRoot.querySelectorAll('[data-treeselect-row]')];
+    const rows = [...openRoot.querySelectorAll<HTMLElement>('[data-treeselect-row]')];
     for (const row of rows) {
       expect(row.getAttribute('tabindex')).toBe('-1');
     }
@@ -158,8 +159,8 @@ describe('TreeSelect one tab stop', () => {
 describe('TreeSelect commit vs expand', () => {
   it('row pick commits and closes; caret expand does not', async () => {
     setViewport(1200);
-    const onChange = vi.fn();
-    const onOpenChange = vi.fn();
+    const onChange = vi.fn<(value: string) => void>();
+    const onOpenChange = vi.fn<(open: boolean) => void>();
     const result = renderWithProviders(
       <TreeSelect
         label="Account"
@@ -172,14 +173,14 @@ describe('TreeSelect commit vs expand', () => {
     await waitFor(() => {
       expect(result.baseElement.querySelector('[data-treeselect-caret]')).toBeTruthy();
     });
-    const caret = result.baseElement.querySelector('[data-treeselect-caret]') as HTMLElement;
+    const caret = result.baseElement.querySelector<HTMLElement>('[data-treeselect-caret]')!;
     await act(async () => {
       fireEvent.click(caret);
     });
     expect(onChange).not.toHaveBeenCalled();
     expect(onOpenChange).not.toHaveBeenCalledWith(false);
 
-    const cash = result.baseElement.querySelector('[data-treeselect-row="liabilities"]') as HTMLElement;
+    const cash = result.baseElement.querySelector<HTMLElement>('[data-treeselect-row="liabilities"]')!;
     await act(async () => {
       fireEvent.click(cash);
     });
@@ -202,13 +203,13 @@ describe('TreeSelect sheet at <=640', () => {
     await waitFor(() => {
       expect(desktop.baseElement.querySelector('[data-treeselect-row]')).toBeTruthy();
     });
-    const desktopTree = desktop.baseElement.querySelector('[data-testid="tree-select-tree"]');
-    const desktopRows = [...desktop.baseElement.querySelectorAll('[data-treeselect-row]')].map((el) => ({
-      id: el.getAttribute('data-treeselect-row'),
-      depth: el.getAttribute('data-depth'),
+    const desktopTree = desktop.baseElement.querySelector<HTMLElement>('[data-testid="tree-select-tree"]');
+    const desktopRows = [...desktop.baseElement.querySelectorAll<HTMLElement>('[data-treeselect-row]')].map((el) => ({
+      id: el.dataset.treeselectRow,
+      depth: el.dataset.depth,
     }));
-    const desktopIndent = desktopTree?.getAttribute('data-indent-step');
-    const desktopRowHeight = desktopTree?.getAttribute('data-row-height');
+    const desktopIndent = desktopTree?.dataset.indentStep;
+    const desktopRowHeight = desktopTree?.dataset.rowHeight;
 
     desktop.unmount();
     setViewport(640);
@@ -224,14 +225,14 @@ describe('TreeSelect sheet at <=640', () => {
       expect(mobile.baseElement.querySelector('[data-treeselect-row]')).toBeTruthy();
     });
     expect(mobile.baseElement.querySelector('[data-testid="floating-panel-viewport"]')).toBeNull();
-    const mobileTree = mobile.baseElement.querySelector('[data-testid="tree-select-tree"]');
-    const mobileRows = [...mobile.baseElement.querySelectorAll('[data-treeselect-row]')].map((el) => ({
-      id: el.getAttribute('data-treeselect-row'),
-      depth: el.getAttribute('data-depth'),
+    const mobileTree = mobile.baseElement.querySelector<HTMLElement>('[data-testid="tree-select-tree"]');
+    const mobileRows = [...mobile.baseElement.querySelectorAll<HTMLElement>('[data-treeselect-row]')].map((el) => ({
+      id: el.dataset.treeselectRow,
+      depth: el.dataset.depth,
     }));
     expect(mobileRows).toStrictEqual(desktopRows);
-    expect(mobileTree?.getAttribute('data-indent-step')).toBe(desktopIndent);
-    expect(mobileTree?.getAttribute('data-row-height')).toBe(desktopRowHeight);
+    expect(mobileTree?.dataset.indentStep).toBe(desktopIndent);
+    expect(mobileTree?.dataset.rowHeight).toBe(desktopRowHeight);
   });
 });
 
@@ -249,11 +250,11 @@ describe('TreeSelect empty filter', () => {
     await waitFor(() => {
       expect(result.baseElement.querySelector('[data-testid="tree-select-search"]')).toBeTruthy();
     });
-    const search = result.baseElement.querySelector('[data-testid="tree-select-search"] input') as HTMLInputElement;
+    const search = result.baseElement.querySelector<HTMLInputElement>('[data-testid="tree-select-search"] input')!;
     await act(async () => {
       fireEvent.change(search, { target: { value: 'xyzzy' } });
     });
-    const empty = result.baseElement.querySelector('[data-testid="tree-select-empty"]') as HTMLElement;
+    const empty = result.baseElement.querySelector<HTMLElement>('[data-testid="tree-select-empty"]')!;
     expect(empty).toBeTruthy();
     expect(empty.textContent).toContain('No matching accounts');
     expect(result.baseElement.querySelector('[data-testid="empty-state"]')).toBeNull();

@@ -17,17 +17,21 @@ const AnnounceCtx = createContext(true);
 // ramp. $3/$4 are lossless vs the old handwritten map; $5 moves with the
 // recipe's larger lg type (body 14→16, display 28→32).
 const SKELETON_SIZE_TOKENS = ['$3', '$4', '$5'] as const;
-const skeletonCircleTokenUp: Record<string, string> = { $3: '$4', $4: '$5', $5: '$6' };
+const skeletonCircleTokenUp = new Map([
+  ['$3', '$4'],
+  ['$4', '$5'],
+  ['$5', '$6'],
+]);
 
 const skeletonCircleSize = (sizeToken: string): number =>
-  sizeRecipeForToken(skeletonCircleTokenUp[sizeToken] ?? '$5').height;
+  sizeRecipeForToken(skeletonCircleTokenUp.get(sizeToken) ?? '$5').height;
 
 const SHIMMER_STYLE_ID = '__mp-skeleton-shimmer';
 const ensureShimmerStyles = () => {
   if (!isWeb || typeof document === 'undefined') {
     return;
   }
-  if (document.getElementById(SHIMMER_STYLE_ID)) {
+  if (document.querySelector(`#${SHIMMER_STYLE_ID}`)) {
     return;
   }
   const style = document.createElement('style');
@@ -78,9 +82,29 @@ export interface SkeletonProps extends Omit<GetProps<typeof SkeletonFrame>, 'var
 }
 
 const resolveTextHeight = (sizeToken: string, textSize: SkeletonTextSize) => {
-  const known = (SKELETON_SIZE_TOKENS as readonly string[]).includes(sizeToken) ? sizeToken : '$4';
+  const known = SKELETON_SIZE_TOKENS.some((token) => token === sizeToken) ? sizeToken : '$4';
   const body = sizeRecipeForToken(known).fontSize - 2;
   return textSize === 'display' ? body * 2 : body;
+};
+
+// Decorative bones hide from AT; the announcing root exposes one polite status.
+// Every key is always present so the spread overrides any caller-supplied value.
+const liveRegionProps = (decorative: boolean, accessibleName: string) => ({
+  'aria-hidden': decorative ? true : undefined,
+  role: decorative ? undefined : ('status' as const),
+  'aria-busy': decorative ? undefined : true,
+  'aria-live': decorative ? undefined : ('polite' as const),
+  'aria-label': decorative ? undefined : accessibleName,
+});
+
+const boneRadiusProps = (variant: SkeletonVariant, themedRadius: number | string | undefined) => {
+  if (variant === 'circular') {
+    return { borderRadius: 1000, ...radiusClassProps('R-PILL', 'SkeletonCircle') };
+  }
+  if (variant === 'rectangular') {
+    return { borderRadius: 0 };
+  }
+  return { borderRadius: themedRadius };
 };
 
 export const Skeleton = ({
@@ -114,39 +138,31 @@ export const Skeleton = ({
     .filter(Boolean)
     .join(' ');
 
-  const radiusProps =
-    variant === 'circular'
-      ? { borderRadius: 1000, ...radiusClassProps('R-PILL', 'SkeletonCircle') }
-      : variant === 'rectangular'
-        ? { borderRadius: 0 }
-        : { borderRadius: knobProps.borderRadius.borderRadius };
+  const radiusProps = boneRadiusProps(variant, knobProps.borderRadius.borderRadius);
+  const textHeight = variant === 'text' ? resolveTextHeight(knobProps.sizeToken, 'body') : undefined;
+  let dataHeight: string | undefined;
+  if (height != null) {
+    dataHeight = String(height);
+  } else if (textHeight !== undefined) {
+    dataHeight = String(textHeight);
+  }
 
   return (
     <SkeletonFrame
       variant={variant}
       width={width}
-      height={height ?? (variant === 'text' ? resolveTextHeight(knobProps.sizeToken, 'body') : undefined)}
+      height={height ?? textHeight}
       {...radiusProps}
       {...props}
       {...(isWeb ? { className: boneClass } : undefined)}
-      {...(style ? { style } : undefined)}
+      {...(style == null ? undefined : { style })}
       pointerEvents="none"
       data-skeleton=""
       data-skeleton-variant={variant}
       data-animate={pulsing ? 'true' : 'false'}
       data-width={width == null ? undefined : String(width)}
-      data-height={
-        height == null
-          ? variant === 'text'
-            ? String(resolveTextHeight(knobProps.sizeToken, 'body'))
-            : undefined
-          : String(height)
-      }
-      aria-hidden={decorative ? true : undefined}
-      role={decorative ? undefined : 'status'}
-      aria-busy={decorative ? undefined : true}
-      aria-live={decorative ? undefined : 'polite'}
-      aria-label={decorative ? undefined : (label ?? t('Loading'))}
+      data-height={dataHeight}
+      {...liveRegionProps(decorative, label ?? t('Loading'))}
       accessibilityElementsHidden={decorative}
     />
   );
@@ -173,10 +189,16 @@ export const SkeletonText = ({
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs({ component: 'Skeleton' });
   const shouldAnnounce = useContext(AnnounceCtx);
-  const count = Math.max(0, Math.floor(Number(lines) || 0));
+  const count = Math.max(0, Number.isNaN(lines) ? 0 : Math.floor(lines));
   const lineHeight = height ?? resolveTextHeight(knobProps.sizeToken, textSize);
   const gap = gapProp ?? knobProps.gap.gap;
   const decorative = !shouldAnnounce;
+  const lineWidth = (i: number) => {
+    if (count === 1) {
+      return width ?? lastLineWidth;
+    }
+    return i === count - 1 ? lastLineWidth : '100%';
+  };
 
   if (count === 0) {
     return null;
@@ -190,11 +212,7 @@ export const SkeletonText = ({
         gap={gap}
         data-skeleton-text=""
         data-lines={String(count)}
-        aria-hidden={decorative ? true : undefined}
-        role={decorative ? undefined : 'status'}
-        aria-busy={decorative ? undefined : true}
-        aria-live={decorative ? undefined : 'polite'}
-        aria-label={decorative ? undefined : (label ?? t('Loading'))}>
+        {...liveRegionProps(decorative, label ?? t('Loading'))}>
         {Array.from({ length: count }, (_, i) => (
           <Skeleton
             key={i}
@@ -202,7 +220,7 @@ export const SkeletonText = ({
             animate={animate}
             style={style}
             height={lineHeight}
-            width={count === 1 ? (width ?? lastLineWidth) : i === count - 1 ? lastLineWidth : '100%'}
+            width={lineWidth(i)}
           />
         ))}
       </View>
@@ -237,6 +255,7 @@ export const SkeletonGroup = ({
     <AnnounceCtx.Provider value={false}>
       <View
         {...props}
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui View does not render <output>; role carries the live-region semantics on web and native
         role="status"
         aria-busy={true}
         aria-live="polite"

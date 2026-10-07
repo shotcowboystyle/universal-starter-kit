@@ -54,7 +54,7 @@ const options = [
   { label: 'Right', value: 'right' },
 ];
 
-describe('ToggleGroup', () => {
+describe(ToggleGroup, () => {
   describe('without form context', () => {
     it('renders all options', () => {
       const result = renderWithProviders(
@@ -258,8 +258,8 @@ describe('ToggleGroup', () => {
       // is its palest step (accent11) — the same channel ViewSwitcher takes.
       const tint = houseThemes.light.accent11;
       expect(tint).toBeTruthy();
-      const selected = container.querySelector('[data-state="on"]') as HTMLElement;
-      const idle = container.querySelector('[data-state="off"]') as HTMLElement;
+      const selected = container.querySelector('[data-state="on"]')!;
+      const idle = container.querySelector('[data-state="off"]')!;
       expect(selected).toBeTruthy();
       expect(idle).toBeTruthy();
       expect(selected.className).toContain(`_bg-hsla${hslDigits(tint)}`);
@@ -311,7 +311,7 @@ describe('ToggleGroup', () => {
           defaultValue="left"
         />,
       );
-      const group = container.querySelector('[role="group"]') as HTMLElement;
+      const group = container.querySelector('[role="group"]')!;
       expect(group).toBeTruthy();
       // Ring on the container is the known-bad segmented pattern: square
       // outline over a rounded frame, and it paints on mouse via :focus-within.
@@ -357,7 +357,7 @@ describe('ToggleGroup', () => {
 
   describe('per-segment elevation wrapper', () => {
     const elevationWrapperFor = (segment: HTMLElement): HTMLElement => {
-      const wrapper = segment.parentElement as HTMLElement;
+      const wrapper = segment.parentElement!;
       expect(wrapper?.getAttribute('style') ?? '').toMatch(/box-shadow/u);
       return wrapper;
     };
@@ -413,7 +413,7 @@ describe('ToggleGroup', () => {
           />
         </Preset>,
       );
-      const group = container.querySelector('[role="group"]') as HTMLElement;
+      const group = container.querySelector('[role="group"]')!;
       expect(group).toBeTruthy();
       expect(group.className).not.toMatch(/_bxsh-/u);
       expect(group.getAttribute('style') ?? '').not.toMatch(/box-shadow/u);

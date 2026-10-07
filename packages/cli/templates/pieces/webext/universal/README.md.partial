@@ -1,0 +1,16 @@
+## Browser extension (`mpo init --webext`)
+
+`apps/__NAME__/webext/` is an MV3 extension target (popup + background) that
+mounts the same `features/__NAME__` screens as the web app — extension pages
+have no One server runtime, so the `one` router API rides the
+stack-navigation seam (`@repo/router/seam`).
+
+```bash
+pnpm build:webext   # stage a loadable extension into apps/__NAME__/dist-webext
+pnpm webext         # dev loop: manifest watcher + background watch + views HMR
+```
+
+Load `apps/__NAME__/dist-webext` as an unpacked extension
+(chrome://extensions → Developer mode → Load unpacked; Firefox loads it via
+about:debugging). The manifest lives in code at
+`apps/__NAME__/webext/manifest.ts`.

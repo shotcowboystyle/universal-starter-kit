@@ -38,7 +38,7 @@ import {
   transitionProps,
 } from '@repo/theme';
 import type { GroupPosition } from '@repo/theme';
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import React from 'react';
 import type { GetProps, ThemeName } from 'tamagui';
 import { Tabs as TamaguiTabs, Text, Theme, View, YStack, isWeb, styled, withStaticProperties } from 'tamagui';
@@ -47,7 +47,7 @@ import { componentColors } from '../component-colors';
 import { useDirection } from '../hooks/use-direction';
 import { ScrollView } from '../ScrollView';
 import { useTranslation } from '../shared/i18n';
-import { wrapBareTextChildren } from '../shared/text-rides-text';
+import { isBareTextChild, wrapBareTextChildren } from '../shared/text-rides-text';
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -150,7 +150,7 @@ export const tabsOverflowFades = (
   content: number,
   direction: TabsDirection,
   threshold = 4,
-): { left: boolean; right: boolean } => {
+) => {
   const range = Math.max(content - viewport, 0);
   const minScrollLeft = direction === 'rtl' ? -range : 0;
   const fromLeft = offset - minScrollLeft;
@@ -166,13 +166,9 @@ export const tabsScrollIntoViewX = (
   direction: TabsDirection,
   pad = 32,
 ): number | undefined => {
-  if (
-    ![layout.x, layout.width, layout.height, offset, viewport, content].every(Number.isFinite) ||
-    layout.width <= 0 ||
-    layout.height <= 0 ||
-    viewport <= 0 ||
-    content <= 0
-  ) {
+  const allFinite = [layout.x, layout.width, layout.height, offset, viewport, content].every(Number.isFinite);
+  const allPositive = layout.width > 0 && layout.height > 0 && viewport > 0 && content > 0;
+  if (!allFinite || !allPositive) {
     return undefined;
   }
   const range = Math.max(content - viewport, 0);
@@ -201,7 +197,7 @@ export const tabsScrollIntoViewX = (
  * round (the outer-corner rule adapted to a baseline). Bottoms stay square against the rule.
  * Contained uses the full horizontal stack fragment (or CONTAINER-CLIP).
  */
-const underlineStackRadius = (position: GroupPosition, radius: string | number | undefined) => {
+const underlineStackRadius = (position: GroupPosition, radius: RadiusToken) => {
   const start = position === 'first' || position === 'only';
   const end = position === 'last' || position === 'only';
   const full = stackEdgeRadius(radius, { start, end }, 'horizontal');
@@ -264,9 +260,9 @@ const Trigger = styled(TamaguiTabs.Tab, {
   // Rest and mouse-focus paint no ring. Keyboard ring is applied
   // per-item via keyboardFocusRingProps when wasKeyboardFocus().
   outlineWidth: 0,
-  outlineStyle: 'none' as any,
-  focusStyle: { outlineWidth: 0, outlineStyle: 'none' as any },
-  focusVisibleStyle: { outlineWidth: 0, outlineStyle: 'none' as any },
+  outlineStyle: 'none' as const,
+  focusStyle: { outlineWidth: 0, outlineStyle: 'none' as const },
+  focusVisibleStyle: { outlineWidth: 0, outlineStyle: 'none' as const },
 });
 
 const UnderlineIndicator = styled(View, {
@@ -303,96 +299,143 @@ const TabLabel = styled(Text, {
 
 // ── Tabs Component ────────────────────────────────────────────
 
-const TabsRoot = ({
-  items,
-  value,
-  defaultValue,
-  onChange,
-  variant = 'underline',
-  distribution = 'content',
-  accent,
-  error,
-  warning,
-  success,
-  size,
-  compact,
-  lazyMount = false,
-  fill = false,
-  activationMode = 'automatic',
-  loop = true,
-  disabled = false,
-  ariaLabel,
-}: TabsProps) => {
-  const { t } = useTranslation();
-  const direction = useDirection();
-  const intent =
-    (accent && 'accent') || (error && 'error') || (warning && 'warning') || (success && 'success') || undefined;
-  // Size and density are independent axes: `size` pins height/type;
-  // `compact` still steps spacing (and the default size when `size` is omitted).
-  const { knobProps, disabledState } = useResolvedKnobs({
-    intent,
-    component: 'Tabs',
-    size,
-    compact,
-  });
-  const selectedTint = useAccentTintedSurface();
-  const onSelectedTint = useReadableTextOn(selectedTint);
+type ResolvedKnobs = ReturnType<typeof useResolvedKnobs>;
+type RadiusToken = string | number | undefined;
+type TabBackground = ComponentProps<typeof View>['backgroundColor'];
+type TabLabelColor = ComponentProps<typeof TabLabel>['color'];
 
-  if (isWeb) {
-    ensureKeyboardModalityTracking();
+const initialTabValue = (defaultValue: string | undefined, items: TabsItem[]) => defaultValue ?? items[0]?.value ?? '';
+
+const INTENT_ORDER = ['accent', 'error', 'warning', 'success'] as const;
+
+const resolveIntent = (flags: Record<(typeof INTENT_ORDER)[number], boolean | undefined>) =>
+  INTENT_ORDER.find((name) => flags[name] === true);
+
+const LAYOUT_KEYS = ['x', 'y', 'width', 'height'] as const;
+
+const sameLayout = (prev: TabLayout & { value: string }, layout: TabLayout, tabValue: string) =>
+  prev.value === tabValue && LAYOUT_KEYS.every((key) => prev[key] === layout[key]);
+
+const nextEnabledIndex = (key: string, current: number, count: number, step: number, loop: boolean) => {
+  if (key === 'Home') {
+    return 0;
   }
+  if (key === 'End') {
+    return count - 1;
+  }
+  if (loop) {
+    return (current + step + count) % count;
+  }
+  return Math.max(0, Math.min(count - 1, current + step));
+};
+
+interface TabNavigation {
+  items: TabsItem[];
+  disabled: boolean;
+  direction: TabsDirection;
+  loop: boolean;
+  tabRefs: React.RefObject<Map<string, HTMLElement>>;
+}
+
+const focusAdjacentTab = (event: React.KeyboardEvent, tabValue: string, nav: TabNavigation) => {
+  if (!['Home', 'End', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
+    return;
+  }
+  const enabled = nav.items.filter((item) => !nav.disabled && !item.disabled);
+  if (!enabled.length) {
+    return;
+  }
+  const current = enabled.findIndex((item) => item.value === tabValue);
+  const step = (event.key === 'ArrowRight' ? 1 : -1) * (nav.direction === 'rtl' ? -1 : 1);
+  const next = nextEnabledIndex(event.key, current, enabled.length, step, nav.loop);
+  event.preventDefault();
+  event.stopPropagation();
+  nav.tabRefs.current.get(enabled[next].value)?.focus();
+};
+
+// Web-only edge fades: a scroll-state mask keeps the fade background-agnostic
+const edgeFadeMask = (fades: { left: boolean; right: boolean }): Record<string, string> | undefined => {
+  if (!isWeb || !(fades.left || fades.right)) {
+    return undefined;
+  }
+  const leftStop = fades.left ? 'transparent 0px, black 32px' : 'black 0px';
+  const rightStop = fades.right ? 'black calc(100% - 32px), transparent 100%' : 'black 100%';
+  const mask = `linear-gradient(to right, ${leftStop}, ${rightStop})`;
+  return { maskImage: mask, WebkitMaskImage: mask };
+};
+
+// Roving tabindex (single tab stop): tamagui's vendored roving-focus item
+// hardcodes tabIndex=0 on every tab, making each tab its own Tab stop. Exactly
+// one tab stays in the page tab order — the focused one while focus is in the
+// tablist, else the active one (or the first, when value matches nothing);
+// ArrowLeft/Right move within the tablist.
+const resolveTabStopIndex = (items: TabsItem[], disabled: boolean, focusValue: string | null, currentValue: string) => {
+  const isEnabled = (item: TabsItem) => !(disabled || item.disabled);
+  const hasEnabled = (candidate: string | null) =>
+    candidate !== null && items.some((item) => item.value === candidate && isEnabled(item));
+  if (hasEnabled(focusValue)) {
+    return items.findIndex((item) => item.value === focusValue);
+  }
+  if (hasEnabled(currentValue)) {
+    return items.findIndex((item) => item.value === currentValue);
+  }
+  return items.findIndex(isEnabled);
+};
+
+const clearIfSame = (prev: string | null, tabValue: string) => (prev === tabValue ? null : prev);
+
+const useTabInteractionState = () => {
   // Tab value currently showing the manual keyboard focus ring (see tracker note)
   const [kbFocusValue, setKbFocusValue] = React.useState<string | null>(null);
   const [focusValue, setFocusValue] = React.useState<string | null>(null);
   const [hoverValue, setHoverValue] = React.useState<string | null>(null);
   const [pressValue, setPressValue] = React.useState<string | null>(null);
-
-  const [internalValue, setInternalValue] = React.useState(() => defaultValue ?? items[0]?.value ?? '');
-  const currentValue = value ?? internalValue;
-
-  const [visited, setVisited] = React.useState<ReadonlySet<string>>(() => new Set(currentValue ? [currentValue] : []));
-  React.useEffect(() => {
-    if (!currentValue) {
-      return;
-    }
-    setVisited((prev) => {
-      if (prev.has(currentValue)) {
-        return prev;
+  return {
+    kbFocusValue,
+    focusValue,
+    hoverValue,
+    pressValue,
+    handleFocusTab: (tabValue: string) => {
+      setFocusValue(tabValue);
+      if (wasKeyboardFocus()) {
+        setKbFocusValue(tabValue);
       }
-      const next = new Set(prev);
-      next.add(currentValue);
-      return next;
-    });
-  }, [currentValue]);
-
-  const handleChange = (next: string) => {
-    if (value === undefined) {
-      setInternalValue(next);
-    }
-    onChange?.(next);
+    },
+    handleBlurTab: (tabValue: string) => {
+      setFocusValue((prev) => clearIfSame(prev, tabValue));
+      setKbFocusValue((prev) => clearIfSame(prev, tabValue));
+    },
+    handleHoverTab: (tabValue: string) => {
+      setHoverValue(tabValue);
+    },
+    handleUnhoverTab: (tabValue: string) => {
+      setHoverValue((prev) => clearIfSame(prev, tabValue));
+    },
+    handlePressTab: (tabValue: string) => {
+      setPressValue(tabValue);
+    },
+    handleReleaseTab: (tabValue: string) => {
+      setPressValue((prev) => clearIfSame(prev, tabValue));
+    },
   };
+};
 
+const useTabStripScroll = (
+  currentValue: string,
+  direction: TabsDirection,
+  tabRefs: React.RefObject<Map<string, HTMLElement>>,
+) => {
   // Active tab layout (relative to the list) for the sliding indicator
   const [activeLayout, setActiveLayout] = React.useState<(TabLayout & { value: string }) | null>(null);
   const handleInteraction = (tabValue: string, type: string, layout: TabLayout | null) => {
     if (type !== 'select' || !layout || tabValue !== currentValue) {
       return;
     }
-    setActiveLayout((prev) =>
-      prev &&
-      prev.value === tabValue &&
-      prev.x === layout.x &&
-      prev.y === layout.y &&
-      prev.width === layout.width &&
-      prev.height === layout.height
-        ? prev
-        : { ...layout, value: tabValue },
-    );
+    setActiveLayout((prev) => (prev && sameLayout(prev, layout, tabValue) ? prev : { ...layout, value: tabValue }));
   };
 
   // Overflow tracking for edge fades + keep-active-visible scrolling
   const scrollRef = React.useRef<ScrollView>(null);
-  const tabRefs = React.useRef(new Map<string, HTMLElement>());
   const scrollMetrics = React.useRef({ offset: 0, viewport: 0, content: 0 });
   const [sizeRevision, setSizeRevision] = React.useState(0);
   const [fades, setFades] = React.useState({ left: false, right: false });
@@ -402,9 +445,9 @@ const TabsRoot = ({
     setFades((prev) => (prev.left === next.left && prev.right === next.right ? prev : next));
   };
 
-  const updateScrollSize = (dimension: 'viewport' | 'content', size: number) => {
-    if (!Object.is(scrollMetrics.current[dimension], size)) {
-      scrollMetrics.current[dimension] = size;
+  const updateScrollSize = (dimension: 'viewport' | 'content', extent: number) => {
+    if (!Object.is(scrollMetrics.current[dimension], extent)) {
+      scrollMetrics.current[dimension] = extent;
       if (isWeb) {
         const selected = tabRefs.current.get(currentValue);
         if (selected && selected.offsetWidth > 0 && selected.offsetHeight > 0) {
@@ -431,97 +474,476 @@ const TabsRoot = ({
     if (target !== undefined && Math.abs(target - offset) >= 1) {
       scrollRef.current?.scrollTo({ x: target, animated: true });
     }
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- sizeRevision is a deliberate re-run trigger: scrollMetrics is a ref, so size changes are only visible through it
   }, [activeLayout, currentValue, direction, sizeRevision]);
 
-  const isUnderline = variant === 'underline';
-  const isBand = variant === 'band';
-  const equalDistribution = isBand || distribution === 'equal';
-  const onTabKeyDown = (event: React.KeyboardEvent, value: string) => {
-    if (!['Home', 'End', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
-      return;
-    }
-    const enabled = items.filter((item) => !disabled && !item.disabled);
-    if (!enabled.length) {
-      return;
-    }
-    const current = enabled.findIndex((item) => item.value === value);
-    const step = (event.key === 'ArrowRight' ? 1 : -1) * (direction === 'rtl' ? -1 : 1);
-    const next =
-      event.key === 'Home'
-        ? 0
-        : event.key === 'End'
-          ? enabled.length - 1
-          : loop
-            ? (current + step + enabled.length) % enabled.length
-            : Math.max(0, Math.min(enabled.length - 1, current + step));
-    event.preventDefault();
-    event.stopPropagation();
-    tabRefs.current.get(enabled[next].value)?.focus();
+  return {
+    activeLayout,
+    handleInteraction,
+    scrollRef,
+    fades,
+    handleScroll: (offset: number) => {
+      scrollMetrics.current.offset = offset;
+      updateFades();
+    },
+    handleViewportChange: (width: number) => {
+      updateScrollSize('viewport', width);
+    },
+    handleContentChange: (width: number) => {
+      updateScrollSize('content', width);
+    },
   };
-  const indicatorTheme = (intent ?? 'accent') as ThemeName;
-  // Size recipe owns chrome. Explicit `size` already flowed into
-  // knobProps via useResolvedKnobs. Compact tightens gaps only.
-  // Press floor is hitSlop, never painted minHeight.
-  const visualSizeToken = size ?? knobProps.sizeToken;
-  const sizePx = knobProps.control.height;
-  const slop = Math.max(0, Math.ceil((MIN_PRESS_TARGET - sizePx) / 2));
-  const tabHitSlop = pressTargetHitSlop(sizePx);
-  const radiusToken = knobProps.borderRadius.borderRadius;
-  const outerRadiusToken = knobProps.borderRadiusNested.borderRadius;
-  const { transition } = knobProps;
-  const enabledCount = items.length;
-  const activeIndex = items.findIndex((i) => i.value === currentValue);
-  const activePosition = getGroupPosition(Math.max(0, activeIndex), enabledCount);
-  const thumbRadius = isUnderline ? undefined : stackRadiusProps(activePosition, outerRadiusToken, 'horizontal');
+};
 
-  // Web-only edge fades: a scroll-state mask keeps the fade background-agnostic
-  const maskStyle: Record<string, string> | undefined =
-    isWeb && (fades.left || fades.right)
-      ? (() => {
-          const leftStop = fades.left ? 'transparent 0px, black 32px' : 'black 0px';
-          const rightStop = fades.right ? 'black calc(100% - 32px), transparent 100%' : 'black 100%';
-          const mask = `linear-gradient(to right, ${leftStop}, ${rightStop})`;
-          return { maskImage: mask, WebkitMaskImage: mask };
-        })()
-      : undefined;
+interface TabIndicatorProps {
+  activeLayout: (TabLayout & { value: string }) | null;
+  isBand: boolean;
+  isUnderline: boolean;
+  indicatorTheme: ThemeName;
+  knobProps: ResolvedKnobs['knobProps'];
+  selectedTint: string | undefined;
+  thumbRadius: ReturnType<typeof stackRadiusProps> | undefined;
+}
 
-  const indicator =
-    activeLayout && !isBand ? (
-      isUnderline ? (
-        <Theme name={indicatorTheme}>
-          <UnderlineIndicator
-            x={activeLayout.x}
-            width={activeLayout.width}
-            data-tabs-indicator="underline"
-            {...transitionProps(transition)}
-          />
-        </Theme>
-      ) : (
-        <Theme name={indicatorTheme}>
-          <ThumbIndicator
-            x={activeLayout.x}
-            y={activeLayout.y}
-            width={activeLayout.width}
-            height={activeLayout.height}
-            backgroundColor={selectedTint ?? '$color4'}
-            data-tabs-indicator="thumb"
-            {...thumbRadius}
-            {...(knobProps.elevation === undefined ? undefined : { elevation: knobProps.elevation })}
-            {...transitionProps(transition)}
-          />
-        </Theme>
-      )
-    ) : null;
-
-  if (items.length === 0) {
+const TabIndicator = ({
+  activeLayout,
+  isBand,
+  isUnderline,
+  indicatorTheme,
+  knobProps,
+  selectedTint,
+  thumbRadius,
+}: TabIndicatorProps) => {
+  if (!activeLayout || isBand) {
     return null;
   }
+  const { transition } = knobProps;
+  if (isUnderline) {
+    return (
+      <Theme name={indicatorTheme}>
+        <UnderlineIndicator
+          x={activeLayout.x}
+          width={activeLayout.width}
+          data-tabs-indicator="underline"
+          {...transitionProps(transition)}
+        />
+      </Theme>
+    );
+  }
+  return (
+    <Theme name={indicatorTheme}>
+      <ThumbIndicator
+        x={activeLayout.x}
+        y={activeLayout.y}
+        width={activeLayout.width}
+        height={activeLayout.height}
+        backgroundColor={selectedTint ?? '$color4'}
+        data-tabs-indicator="thumb"
+        {...thumbRadius}
+        {...(knobProps.elevation === undefined ? undefined : { elevation: knobProps.elevation })}
+        {...transitionProps(transition)}
+      />
+    </Theme>
+  );
+};
 
-  const tabListLabel = ariaLabel ?? t('Tabs');
-  const tabList = (
+interface TabPanelsProps {
+  items: TabsItem[];
+  currentValue: string;
+  lazyMount: boolean;
+  visited: ReadonlySet<string>;
+  fill: boolean;
+  panelPadding: ResolvedKnobs['knobProps']['panelPadding'];
+}
+
+const TabPanels = ({ items, currentValue, lazyMount, visited, fill, panelPadding }: TabPanelsProps) => (
+  <>
+    {items.map((item) => {
+      if (item.content === undefined || (lazyMount && !visited.has(item.value))) {
+        return null;
+      }
+      const lazyProps = lazyMount
+        ? { forceMount: true as const, display: item.value === currentValue ? ('flex' as const) : ('none' as const) }
+        : undefined;
+      return (
+        <TamaguiTabs.Content
+          key={item.value}
+          value={item.value}
+          {...lazyProps}
+          {...(fill ? fillProps : undefined)}
+          {...panelPadding}
+          tabIndex={-1}
+          outlineWidth={0}
+          focusStyle={{ outlineWidth: 0 }}
+          focusVisibleStyle={{ outlineWidth: 0 }}>
+          {item.content}
+        </TamaguiTabs.Content>
+      );
+    })}
+  </>
+);
+
+const pickFeedbackBackground = (
+  tabValue: string,
+  pressValue: string | null,
+  hoverValue: string | null,
+): TabBackground => {
+  if (pressValue === tabValue) {
+    return componentColors.interactive.hover;
+  }
+  return hoverValue === tabValue ? componentColors.interactive.background : 'transparent';
+};
+
+const pickTriggerBackground = (
+  isBand: boolean,
+  isActive: boolean,
+  isDisabled: boolean,
+  feedbackBackground: TabBackground,
+): TabBackground => {
+  if (!isBand) {
+    return 'transparent';
+  }
+  if (isActive) {
+    return componentColors.surface.background;
+  }
+  return isDisabled ? 'transparent' : feedbackBackground;
+};
+
+const pickLabelColor = (
+  isDisabled: boolean,
+  isActive: boolean,
+  contained: boolean,
+  onSelectedTint: string | undefined,
+  knobProps: ResolvedKnobs['knobProps'],
+  disabledState: ResolvedKnobs['disabledState'],
+): TabLabelColor => {
+  if (isDisabled) {
+    return disabledState.textKnobProps.color;
+  }
+  if (!isActive) {
+    return knobProps.textAccentColor;
+  }
+  return contained && onSelectedTint != null && onSelectedTint !== '' ? onSelectedTint : componentColors.text.primary;
+};
+
+const pickDisabledChrome = (isDisabled: boolean, isActive: boolean, disabledState: ResolvedKnobs['disabledState']) => {
+  if (!isDisabled) {
+    return {};
+  }
+  return isActive
+    ? disabledState.chromeKnobProps
+    : { ...disabledState.chromeKnobProps, ...disabledState.textKnobProps };
+};
+
+interface TabItemChromeProps {
+  item: TabsItem;
+  variant: TabsVariant;
+  equalDistribution: boolean;
+  isActive: boolean;
+  isDisabled: boolean;
+  kbRing: boolean;
+  feedbackBackground: TabBackground;
+  cornerProps: ReturnType<typeof stackRadiusProps> | ReturnType<typeof underlineStackRadius>;
+  onSelectedTint: string | undefined;
+  knobProps: ResolvedKnobs['knobProps'];
+  disabledState: ResolvedKnobs['disabledState'];
+}
+
+const TabItemChrome = ({
+  item,
+  variant,
+  equalDistribution,
+  isActive,
+  isDisabled,
+  kbRing,
+  feedbackBackground,
+  cornerProps,
+  onSelectedTint,
+  knobProps,
+  disabledState,
+}: TabItemChromeProps) => {
+  const isBand = variant === 'band';
+  const innerBackground = isBand || isActive || isDisabled ? 'transparent' : feedbackBackground;
+  return (
+    <View
+      {...(isBand ? undefined : cornerProps)}
+      // ONE chrome owner: the full control recipe
+      // (height/paddingHorizontal/gap) lives on this inner row —
+      // it also paints hover/press fill, so the pill covers the
+      // padded box. The Trigger stays an unpainted hit target
+      // (spreading the recipe there too doubled the horizontal
+      // padding).
+      {...knobProps.control}
+      // Band columns share width; a minimal inset keeps labels off the edges.
+      paddingHorizontal={isBand ? '$1' : knobProps.control.paddingHorizontal}
+      alignSelf="stretch"
+      flexGrow={equalDistribution ? 1 : undefined}
+      flexShrink={equalDistribution ? 1 : undefined}
+      flexBasis={equalDistribution ? 0 : undefined}
+      minWidth={0}
+      flexDirection="row"
+      alignItems="center"
+      justifyContent="center"
+      backgroundColor={innerBackground}
+      {...(kbRing ? keyboardFocusRingProps : undefined)}>
+      {item.icon}
+      <TabLabel
+        active={isActive}
+        flexShrink={1}
+        minWidth={0}
+        {...knobProps.controlType}
+        fontFamily={knobProps.label.fontFamily}
+        fontWeight={!isBand && isActive ? '700' : knobProps.label.fontWeight}
+        color={pickLabelColor(isDisabled, isActive, variant === 'contained', onSelectedTint, knobProps, disabledState)}>
+        {wrapBareTextChildren(item.label, (label) => label)}
+      </TabLabel>
+      {item.badge}
+    </View>
+  );
+};
+
+interface TabItemTriggerProps {
+  item: TabsItem;
+  itemIndex: number;
+  itemCount: number;
+  variant: TabsVariant;
+  equalDistribution: boolean;
+  isActive: boolean;
+  isDisabled: boolean;
+  isTabStop: boolean;
+  kbRing: boolean;
+  feedbackBackground: TabBackground;
+  radiusToken: RadiusToken;
+  outerRadiusToken: RadiusToken;
+  tabHitSlop: ReturnType<typeof pressTargetHitSlop>;
+  onSelectedTint: string | undefined;
+  knobProps: ResolvedKnobs['knobProps'];
+  disabledState: ResolvedKnobs['disabledState'];
+  tabRefs: React.RefObject<Map<string, HTMLElement>>;
+  onKeyDown: (event: React.KeyboardEvent, tabValue: string) => void;
+  onInteraction: (tabValue: string, type: string, layout: TabLayout | null) => void;
+  onFocusTab: (tabValue: string) => void;
+  onBlurTab: (tabValue: string) => void;
+  onHoverTab: (tabValue: string) => void;
+  onUnhoverTab: (tabValue: string) => void;
+  onPressTab: (tabValue: string) => void;
+  onReleaseTab: (tabValue: string) => void;
+}
+
+const TabItemTrigger = ({
+  item,
+  itemIndex,
+  itemCount,
+  variant,
+  equalDistribution,
+  isActive,
+  isDisabled,
+  isTabStop,
+  kbRing,
+  feedbackBackground,
+  radiusToken,
+  outerRadiusToken,
+  tabHitSlop,
+  onSelectedTint,
+  knobProps,
+  disabledState,
+  tabRefs,
+  onKeyDown,
+  onInteraction,
+  onFocusTab,
+  onBlurTab,
+  onHoverTab,
+  onUnhoverTab,
+  onPressTab,
+  onReleaseTab,
+}: TabItemTriggerProps) => {
+  const isUnderline = variant === 'underline';
+  const isBand = variant === 'band';
+  const position = getGroupPosition(itemIndex, itemCount);
+  const cornerProps = isUnderline
+    ? underlineStackRadius(position, radiusToken)
+    : stackRadiusProps(position, outerRadiusToken, 'horizontal');
+  const nativeLabel = isBareTextChild(item.label) ? String(item.label) : undefined;
+  return (
+    <Trigger
+      value={item.value}
+      ref={(node) => {
+        if (!isWeb) {
+          return;
+        }
+        if (node instanceof HTMLElement) {
+          tabRefs.current.set(item.value, node);
+        } else {
+          tabRefs.current.delete(item.value);
+        }
+      }}
+      flex={equalDistribution ? 1 : undefined}
+      minWidth={0}
+      minHeight={equalDistribution ? MIN_PRESS_TARGET : undefined}
+      borderEndWidth={isBand && itemIndex < itemCount - 1 ? 1 : 0}
+      borderColor={isBand ? componentColors.surface.border : undefined}
+      disabled={isDisabled}
+      // oxlint-disable-next-line sonarjs/no-undefined-assignment -- an explicit undefined must override the aria-controls tamagui computes for a tab with no panel
+      {...(item.content === undefined ? { 'aria-controls': undefined } : undefined)}
+      data-tab-position={position}
+      data-kb-ring={kbRing ? 'true' : undefined}
+      {...(isWeb
+        ? {
+            tabIndex: isDisabled || !isTabStop ? -1 : 0,
+            'aria-label': item.accessibilityLabel,
+            onKeyDownCapture: (event: React.KeyboardEvent) => {
+              onKeyDown(event, item.value);
+            },
+          }
+        : {
+            accessible: true,
+            role: 'button' as const,
+            accessibilityRole: 'button' as const,
+            accessibilityLabel: item.accessibilityLabel ?? nativeLabel,
+            accessibilityState: { selected: isActive, disabled: isDisabled },
+          })}
+      hitSlop={tabHitSlop}
+      onInteraction={(type, layout) => {
+        onInteraction(item.value, type, layout);
+      }}
+      cursor={isDisabled ? 'not-allowed' : 'pointer'}
+      backgroundColor={pickTriggerBackground(isBand, isActive, isDisabled, feedbackBackground)}
+      borderRadius={0}
+      {...pickDisabledChrome(isDisabled, isActive, disabledState)}
+      {...(isWeb
+        ? {
+            onFocusCapture: () => {
+              onFocusTab(item.value);
+            },
+            onBlurCapture: () => {
+              onBlurTab(item.value);
+            },
+            onPointerEnter: () => {
+              onHoverTab(item.value);
+            },
+            onPointerLeave: () => {
+              onUnhoverTab(item.value);
+            },
+            onPointerDown: () => {
+              onPressTab(item.value);
+            },
+            onPointerUp: () => {
+              onReleaseTab(item.value);
+            },
+          }
+        : undefined)}>
+      <TabItemChrome
+        item={item}
+        variant={variant}
+        equalDistribution={equalDistribution}
+        isActive={isActive}
+        isDisabled={isDisabled}
+        kbRing={kbRing}
+        feedbackBackground={feedbackBackground}
+        cornerProps={cornerProps}
+        onSelectedTint={onSelectedTint}
+        knobProps={knobProps}
+        disabledState={disabledState}
+      />
+    </Trigger>
+  );
+};
+
+interface TabStripProps {
+  tabList: ReactNode;
+  variant: TabsVariant;
+  equalDistribution: boolean;
+  fades: { left: boolean; right: boolean };
+  scrollRef: React.RefObject<ScrollView | null>;
+  slop: number;
+  onScrollOffset: (offset: number) => void;
+  onViewportChange: (width: number) => void;
+  onContentChange: (width: number) => void;
+}
+
+const TabStrip = ({
+  tabList,
+  variant,
+  equalDistribution,
+  fades,
+  scrollRef,
+  slop,
+  onScrollOffset,
+  onViewportChange,
+  onContentChange,
+}: TabStripProps) => {
+  const isBand = variant === 'band';
+  const isUnderline = variant === 'underline';
+  const maskStyle = edgeFadeMask(fades);
+  return (
+    <StripWrapper
+      backgroundColor={isBand ? '$color2' : undefined}
+      borderBottomWidth={isBand ? 1 : undefined}
+      borderBottomColor={isBand ? componentColors.surface.border : undefined}
+      {...(isUnderline ? { ...hairline.bottom, borderColor: componentColors.surface.border } : undefined)}
+      data-fade-left={fades.left ? 'true' : undefined}
+      data-fade-right={fades.right ? 'true' : undefined}>
+      {equalDistribution ? (
+        <View
+          alignSelf="stretch"
+          minWidth={0}>
+          {tabList}
+        </View>
+      ) : (
+        <TabStripScroll
+          ref={scrollRef}
+          data-tabs-scroll="true"
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          scrollEventThrottle={16}
+          style={maskStyle}
+          // Slop padding keeps the 44px press floor from being clipped when
+          // the painted tab is smaller than the floor (nested scale).
+          contentContainerStyle={{ paddingVertical: slop }}
+          marginVertical={-slop}
+          onScroll={(e) => {
+            onScrollOffset(e.nativeEvent.contentOffset.x);
+          }}
+          onLayout={(e) => {
+            onViewportChange(e.nativeEvent.layout.width);
+          }}
+          onContentSizeChange={(width) => {
+            onContentChange(width);
+          }}>
+          {tabList}
+        </TabStripScroll>
+      )}
+    </StripWrapper>
+  );
+};
+
+interface TabListFrameProps {
+  children: ReactNode;
+  loop: boolean;
+  ariaLabel: string;
+  variant: TabsVariant;
+  equalDistribution: boolean;
+  visualSizeToken: string;
+  sizePx: number;
+  knobProps: ResolvedKnobs['knobProps'];
+}
+
+const TabListFrame = ({
+  children,
+  loop,
+  ariaLabel,
+  variant,
+  equalDistribution,
+  visualSizeToken,
+  sizePx,
+  knobProps,
+}: TabListFrameProps) => {
+  const isUnderline = variant === 'underline';
+  const isBand = variant === 'band';
+  return (
     <TabsList
       loop={loop}
-      aria-label={tabListLabel}
+      aria-label={ariaLabel}
       data-tabs-list={variant}
       data-size-token={visualSizeToken}
       data-density={knobProps.density}
@@ -539,167 +961,157 @@ const TabsRoot = ({
             // cornerSmoothing class rides along with the radius.
             ...knobProps.borderRadiusNested,
           })}>
-      {indicator}
-      {items.map((item, itemIndex) => {
-        const isActive = item.value === currentValue;
-        const isDisabled = disabled || item.disabled;
-        const position = getGroupPosition(itemIndex, enabledCount);
-        const cornerProps = isUnderline
-          ? underlineStackRadius(position, radiusToken)
-          : stackRadiusProps(position, outerRadiusToken, 'horizontal');
-        // Roving tabindex (single tab stop): tamagui's vendored
-        // roving-focus item hardcodes tabIndex=0 on every tab, making
-        // each tab its own Tab stop. Exactly one tab stays in the page
-        // tab order — the focused one while focus is in the tablist,
-        // else the active one (or the first, when value matches
-        // nothing); ArrowLeft/Right move within the tablist.
-        const anchorValue =
-          (focusValue !== null && items.some((i) => i.value === focusValue && !(disabled || i.disabled))
-            ? focusValue
-            : undefined) ??
-          (items.some((i) => i.value === currentValue && !(disabled || i.disabled))
-            ? currentValue
-            : items.find((i) => !(disabled || i.disabled))?.value);
-        const isTabStop = item.value === anchorValue && itemIndex === items.findIndex((i) => i.value === anchorValue);
-        const kbRing = kbFocusValue === item.value;
-        const feedbackBackground =
-          pressValue === item.value
-            ? componentColors.interactive.hover
-            : hoverValue === item.value
-              ? componentColors.interactive.background
-              : 'transparent';
-        return (
-          <Trigger
-            key={item.value}
-            value={item.value}
-            ref={(node) => {
-              if (!isWeb) {
-                return;
-              }
-              if (node) {
-                tabRefs.current.set(item.value, node as unknown as HTMLElement);
-              } else {
-                tabRefs.current.delete(item.value);
-              }
-            }}
-            flex={equalDistribution ? 1 : undefined}
-            minWidth={0}
-            minHeight={equalDistribution ? MIN_PRESS_TARGET : undefined}
-            borderEndWidth={isBand && itemIndex < items.length - 1 ? 1 : 0}
-            borderColor={isBand ? componentColors.surface.border : undefined}
-            disabled={isDisabled}
-            {...(item.content === undefined ? { 'aria-controls': undefined } : undefined)}
-            data-tab-position={position}
-            data-kb-ring={kbRing ? 'true' : undefined}
-            {...(isWeb
-              ? {
-                  tabIndex: isDisabled ? -1 : isTabStop ? 0 : -1,
-                  'aria-label': item.accessibilityLabel,
-                  onKeyDownCapture: (event: React.KeyboardEvent) => {
-                    onTabKeyDown(event, item.value);
-                  },
-                }
-              : {
-                  accessible: true,
-                  role: 'button' as const,
-                  accessibilityRole: 'button' as const,
-                  accessibilityLabel:
-                    item.accessibilityLabel ??
-                    (typeof item.label === 'string' || typeof item.label === 'number' ? String(item.label) : undefined),
-                  accessibilityState: { selected: isActive, disabled: Boolean(isDisabled) },
-                })}
-            hitSlop={tabHitSlop}
-            onInteraction={(type, layout) => {
-              handleInteraction(item.value, type, layout);
-            }}
-            cursor={isDisabled ? 'not-allowed' : 'pointer'}
-            backgroundColor={
-              isBand
-                ? isActive
-                  ? componentColors.surface.background
-                  : isDisabled
-                    ? 'transparent'
-                    : feedbackBackground
-                : 'transparent'
-            }
-            borderRadius={0}
-            {...(isDisabled
-              ? isActive
-                ? disabledState.chromeKnobProps
-                : { ...disabledState.chromeKnobProps, ...disabledState.textKnobProps }
-              : undefined)}
-            {...(isWeb
-              ? {
-                  onFocusCapture: () => {
-                    setFocusValue(item.value);
-                    if (wasKeyboardFocus()) {
-                      setKbFocusValue(item.value);
-                    }
-                  },
-                  onBlurCapture: () => {
-                    setFocusValue((prev) => (prev === item.value ? null : prev));
-                    setKbFocusValue((prev) => (prev === item.value ? null : prev));
-                  },
-                  onPointerEnter: () => {
-                    setHoverValue(item.value);
-                  },
-                  onPointerLeave: () => {
-                    setHoverValue((prev) => (prev === item.value ? null : prev));
-                  },
-                  onPointerDown: () => {
-                    setPressValue(item.value);
-                  },
-                  onPointerUp: () => {
-                    setPressValue((prev) => (prev === item.value ? null : prev));
-                  },
-                }
-              : undefined)}>
-            <View
-              {...(isBand ? undefined : cornerProps)}
-              // ONE chrome owner: the full control recipe
-              // (height/paddingHorizontal/gap) lives on this inner row —
-              // it also paints hover/press fill, so the pill covers the
-              // padded box. The Trigger stays an unpainted hit target
-              // (spreading the recipe there too doubled the horizontal
-              // padding).
-              {...knobProps.control}
-              // Band columns share width; a minimal inset keeps labels off the edges.
-              paddingHorizontal={isBand ? '$1' : knobProps.control.paddingHorizontal}
-              alignSelf="stretch"
-              flexGrow={equalDistribution ? 1 : undefined}
-              flexShrink={equalDistribution ? 1 : undefined}
-              flexBasis={equalDistribution ? 0 : undefined}
-              minWidth={0}
-              flexDirection="row"
-              alignItems="center"
-              justifyContent="center"
-              backgroundColor={isBand || isActive || isDisabled ? 'transparent' : feedbackBackground}
-              {...(kbRing ? keyboardFocusRingProps : undefined)}>
-              {item.icon}
-              <TabLabel
-                active={isActive}
-                flexShrink={1}
-                minWidth={0}
-                {...knobProps.controlType}
-                fontFamily={knobProps.label.fontFamily}
-                fontWeight={!isBand && isActive ? '700' : knobProps.label.fontWeight}
-                color={
-                  isDisabled
-                    ? disabledState.textKnobProps.color
-                    : isActive
-                      ? variant === 'contained' && onSelectedTint
-                        ? onSelectedTint
-                        : componentColors.text.primary
-                      : knobProps.textAccentColor
-                }>
-                {wrapBareTextChildren(item.label, (label) => label)}
-              </TabLabel>
-              {item.badge}
-            </View>
-          </Trigger>
-        );
-      })}
+      {children}
     </TabsList>
+  );
+};
+
+const TabsRoot = ({
+  items,
+  value,
+  defaultValue,
+  onChange,
+  variant = 'underline',
+  distribution = 'content',
+  accent,
+  error,
+  warning,
+  success,
+  size,
+  compact,
+  lazyMount,
+  fill,
+  activationMode = 'automatic',
+  loop = true,
+  disabled,
+  ariaLabel,
+}: TabsProps) => {
+  const { t } = useTranslation();
+  const direction = useDirection();
+  const intent = resolveIntent({ accent, error, warning, success });
+  // Size and density are independent axes: `size` pins height/type;
+  // `compact` still steps spacing (and the default size when `size` is omitted).
+  const { knobProps, disabledState } = useResolvedKnobs({
+    intent,
+    component: 'Tabs',
+    size,
+    compact,
+  });
+  const selectedTint = useAccentTintedSurface();
+  const onSelectedTint = useReadableTextOn(selectedTint);
+
+  if (isWeb) {
+    ensureKeyboardModalityTracking();
+  }
+  const interaction = useTabInteractionState();
+
+  const [internalValue, setInternalValue] = React.useState(() => initialTabValue(defaultValue, items));
+  const currentValue = value ?? internalValue;
+
+  const [visited, setVisited] = React.useState<ReadonlySet<string>>(() => new Set(currentValue ? [currentValue] : []));
+  React.useEffect(() => {
+    if (!currentValue) {
+      return;
+    }
+    // oxlint-disable-next-line react/set-state-in-effect -- tracks visited panels after commit; deriving it during render would mount lazy panels a pass earlier than before
+    setVisited((prev) => {
+      if (prev.has(currentValue)) {
+        return prev;
+      }
+      const next = new Set(prev);
+      next.add(currentValue);
+      return next;
+    });
+  }, [currentValue]);
+
+  const handleChange = (next: string) => {
+    if (value === undefined) {
+      setInternalValue(next);
+    }
+    onChange?.(next);
+  };
+
+  const tabRefs = React.useRef(new Map<string, HTMLElement>());
+  const strip = useTabStripScroll(currentValue, direction, tabRefs);
+  const { scrollRef } = strip;
+
+  const isUnderline = variant === 'underline';
+  const isBand = variant === 'band';
+  const equalDistribution = isBand || distribution === 'equal';
+  const onTabKeyDown = (event: React.KeyboardEvent, tabValue: string) => {
+    focusAdjacentTab(event, tabValue, { items, disabled: disabled === true, direction, loop, tabRefs });
+  };
+  // SAFETY: intent is one of 'accent' | 'error' | 'warning' | 'success', each a registered theme name
+  const indicatorTheme = (intent ?? 'accent') as ThemeName;
+  // Size recipe owns chrome. Explicit `size` already flowed into
+  // knobProps via useResolvedKnobs. Compact tightens gaps only.
+  // Press floor is hitSlop, never painted minHeight.
+  const visualSizeToken = size ?? knobProps.sizeToken;
+  const sizePx = knobProps.control.height;
+  const slop = Math.max(0, Math.ceil((MIN_PRESS_TARGET - sizePx) / 2));
+  const tabHitSlop = pressTargetHitSlop(sizePx);
+  const radiusToken = knobProps.borderRadius.borderRadius;
+  const outerRadiusToken = knobProps.borderRadiusNested.borderRadius;
+  const enabledCount = items.length;
+  const activeIndex = items.findIndex((i) => i.value === currentValue);
+  const activePosition = getGroupPosition(Math.max(0, activeIndex), enabledCount);
+  const thumbRadius = isUnderline ? undefined : stackRadiusProps(activePosition, outerRadiusToken, 'horizontal');
+  const { fades } = strip;
+
+  if (items.length === 0) {
+    return null;
+  }
+
+  const tabStopIndex = resolveTabStopIndex(items, disabled === true, interaction.focusValue, currentValue);
+  const tabList = (
+    <TabListFrame
+      loop={loop}
+      ariaLabel={ariaLabel ?? t('Tabs')}
+      variant={variant}
+      equalDistribution={equalDistribution}
+      visualSizeToken={visualSizeToken}
+      sizePx={sizePx}
+      knobProps={knobProps}>
+      <TabIndicator
+        activeLayout={strip.activeLayout}
+        isBand={isBand}
+        isUnderline={isUnderline}
+        indicatorTheme={indicatorTheme}
+        knobProps={knobProps}
+        selectedTint={selectedTint}
+        thumbRadius={thumbRadius}
+      />
+      {items.map((item, itemIndex) => (
+        <TabItemTrigger
+          key={item.value}
+          item={item}
+          itemIndex={itemIndex}
+          itemCount={enabledCount}
+          variant={variant}
+          equalDistribution={equalDistribution}
+          isActive={item.value === currentValue}
+          isDisabled={disabled === true || item.disabled === true}
+          isTabStop={itemIndex === tabStopIndex}
+          kbRing={interaction.kbFocusValue === item.value}
+          feedbackBackground={pickFeedbackBackground(item.value, interaction.pressValue, interaction.hoverValue)}
+          radiusToken={radiusToken}
+          outerRadiusToken={outerRadiusToken}
+          tabHitSlop={tabHitSlop}
+          onSelectedTint={onSelectedTint}
+          knobProps={knobProps}
+          disabledState={disabledState}
+          tabRefs={tabRefs}
+          onKeyDown={onTabKeyDown}
+          onInteraction={strip.handleInteraction}
+          onFocusTab={interaction.handleFocusTab}
+          onBlurTab={interaction.handleBlurTab}
+          onHoverTab={interaction.handleHoverTab}
+          onUnhoverTab={interaction.handleUnhoverTab}
+          onPressTab={interaction.handlePressTab}
+          onReleaseTab={interaction.handleReleaseTab}
+        />
+      ))}
+    </TabListFrame>
   );
 
   return (
@@ -723,45 +1135,17 @@ const TabsRoot = ({
       data-size-token={visualSizeToken}
       data-density={knobProps.density}
       data-visual-px={sizePx}>
-      <StripWrapper
-        backgroundColor={isBand ? '$color2' : undefined}
-        borderBottomWidth={isBand ? 1 : undefined}
-        borderBottomColor={isBand ? componentColors.surface.border : undefined}
-        {...(isUnderline ? { ...hairline.bottom, borderColor: componentColors.surface.border } : undefined)}
-        data-fade-left={fades.left ? 'true' : undefined}
-        data-fade-right={fades.right ? 'true' : undefined}>
-        {equalDistribution ? (
-          <View
-            alignSelf="stretch"
-            minWidth={0}>
-            {tabList}
-          </View>
-        ) : (
-          <TabStripScroll
-            ref={scrollRef}
-            data-tabs-scroll="true"
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            scrollEventThrottle={16}
-            style={maskStyle as never}
-            // Slop padding keeps the 44px press floor from being clipped when
-            // the painted tab is smaller than the floor (nested scale).
-            contentContainerStyle={{ paddingVertical: slop }}
-            marginVertical={-slop}
-            onScroll={(e) => {
-              scrollMetrics.current.offset = e.nativeEvent.contentOffset.x;
-              updateFades();
-            }}
-            onLayout={(e) => {
-              updateScrollSize('viewport', e.nativeEvent.layout.width);
-            }}
-            onContentSizeChange={(w) => {
-              updateScrollSize('content', w);
-            }}>
-            {tabList}
-          </TabStripScroll>
-        )}
-      </StripWrapper>
+      <TabStrip
+        tabList={tabList}
+        variant={variant}
+        equalDistribution={equalDistribution}
+        fades={fades}
+        scrollRef={scrollRef}
+        slop={slop}
+        onScrollOffset={strip.handleScroll}
+        onViewportChange={strip.handleViewportChange}
+        onContentChange={strip.handleContentChange}
+      />
 
       {/*
         The panel host. Under `fill` it is the second link in the chain: it
@@ -770,45 +1154,14 @@ const TabsRoot = ({
       <YStack
         data-tabs-panels=""
         {...(fill ? fillProps : undefined)}>
-        {items.map((item) => {
-          if (item.content === undefined) {
-            return null;
-          }
-          const isActive = item.value === currentValue;
-          if (lazyMount) {
-            if (!visited.has(item.value)) {
-              return null;
-            }
-            return (
-              <TamaguiTabs.Content
-                key={item.value}
-                value={item.value}
-                forceMount
-                display={isActive ? 'flex' : 'none'}
-                {...(fill ? fillProps : undefined)}
-                {...knobProps.panelPadding}
-                tabIndex={-1}
-                outlineWidth={0}
-                focusStyle={{ outlineWidth: 0 }}
-                focusVisibleStyle={{ outlineWidth: 0 }}>
-                {item.content}
-              </TamaguiTabs.Content>
-            );
-          }
-          return (
-            <TamaguiTabs.Content
-              key={item.value}
-              value={item.value}
-              {...(fill ? fillProps : undefined)}
-              {...knobProps.panelPadding}
-              tabIndex={-1}
-              outlineWidth={0}
-              focusStyle={{ outlineWidth: 0 }}
-              focusVisibleStyle={{ outlineWidth: 0 }}>
-              {item.content}
-            </TamaguiTabs.Content>
-          );
-        })}
+        <TabPanels
+          items={items}
+          currentValue={currentValue}
+          lazyMount={lazyMount === true}
+          visited={visited}
+          fill={fill === true}
+          panelPadding={knobProps.panelPadding}
+        />
       </YStack>
     </TamaguiTabs>
   );

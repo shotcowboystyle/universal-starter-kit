@@ -23,14 +23,14 @@ import {
   rgbToHsv,
 } from './parts';
 
-vi.mock('@tamagui/lucide-icons-2', () => ({
+vi.mock(import('@tamagui/lucide-icons-2'), () => ({
   Palette: () => null,
   X: () => null,
   Check: () => null,
   Pipette: () => null,
 }));
 
-vi.mock('expo-linear-gradient', () => ({
+vi.mock(import('expo-linear-gradient'), () => ({
   LinearGradient: (props: {
     colors?: string[];
     locations?: number[];
@@ -249,7 +249,7 @@ describe('ColorPicker', () => {
       }
     });
     await waitFor(() => {
-      expect(onChange).toHaveBeenCalled();
+      expect(onChange).toHaveBeenCalledWith();
     });
     const last = onChange.mock.calls.at(-1)?.[0] as string;
     expect(last.toUpperCase().startsWith('#112233')).toBe(true);
@@ -370,7 +370,7 @@ describe('ColorPicker', () => {
       // sat: 2 layers, hue: 1, alpha: 1
       expect(grads).toHaveLength(4);
 
-      const colorLists = [...grads].map((el) => JSON.parse(el.getAttribute('data-colors') || '[]'));
+      const colorLists = [...grads].map((el) => JSON.parse(el.dataset.colors ?? '[]'));
       expect(colorLists).toStrictEqual(
         expect.arrayContaining([
           ['#FFFFFF', '#FF0000'],
@@ -383,7 +383,7 @@ describe('ColorPicker', () => {
   });
 
   describe('design-law 100%', () => {
-    const here = dirname(fileURLToPath(import.meta.url));
+    const here = import.meta.dirname;
 
     it('consumes FloatingPanel widthMode at-least-trigger (does not reimplement cover)', () => {
       const source = readFileSync(resolve(here, 'parts.tsx'), 'utf-8');
@@ -394,7 +394,7 @@ describe('ColorPicker', () => {
 
     it('exports ColorPicker as a named export, not default', async () => {
       const mod = await import('./index');
-      expect(typeof mod.ColorPicker).toBe('function');
+      expect(mod.ColorPicker).toBeTypeOf('function');
       expect('default' in mod).toBe(false);
     });
 
@@ -443,7 +443,7 @@ describe('ColorPicker', () => {
       });
       expect(document.body.querySelector('[aria-label="Hue"]')).toBeTruthy();
       await waitFor(() => {
-        expect(onChange).toHaveBeenCalled();
+        expect(onChange).toHaveBeenCalledWith();
       });
       const first = String(onChange.mock.calls.at(-1)?.[0] ?? '').toUpperCase();
       expect(first.startsWith('#00FF00')).toBe(true);

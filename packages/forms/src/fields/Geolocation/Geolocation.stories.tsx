@@ -39,46 +39,47 @@ const meta: Meta<typeof Geolocation> = {
   },
 };
 
+const PIN_HELPER_TEXT = 'Click the map to set a pin, or edit the coordinates below it';
+
 export default meta;
 type Story = StoryObj<typeof Geolocation>;
 
+const MainFormExample = () => {
+  const form = useForm({
+    defaultValues: {
+      location: JSON.stringify({ lat: 48.8566, lng: 2.3522 }),
+    },
+    onSubmit: async ({ value }) => {
+      action('onSubmit')(value);
+    },
+  });
+
+  return (
+    <Form
+      form={form}
+      maxWidth={500}>
+      <YStack gap="$4">
+        <Geolocation
+          label="Delivery Location"
+          name="location"
+          helperText="Click the map or use Locate to set the delivery pin"
+          locationIcon=<NavigationArrowIcon size={16} />
+        />
+        <Button action="submit">Save Location</Button>
+      </YStack>
+    </Form>
+  );
+};
+
 export const Main: Story = {
   name: 'Main',
-  render: () => {
-    const FormExample = () => {
-      const form = useForm({
-        defaultValues: {
-          location: JSON.stringify({ lat: 48.8566, lng: 2.3522 }),
-        },
-        onSubmit: async ({ value }) => {
-          action('onSubmit')(value);
-        },
-      });
-
-      return (
-        <Form
-          form={form}
-          maxWidth={500}>
-          <YStack gap="$4">
-            <Geolocation
-              label="Delivery Location"
-              name="location"
-              helperText="Click the map or use Locate to set the delivery pin"
-              locationIcon=<NavigationArrowIcon size={16} />
-            />
-            <Button action="submit">Save Location</Button>
-          </YStack>
-        </Form>
-      );
-    };
-    return <FormExample />;
-  },
+  render: () => <MainFormExample />,
 };
 
 export const Standalone: Story = {
   args: {
     label: 'Location',
-    helperText: 'Click the map to set a pin, or edit the coordinates below it',
+    helperText: PIN_HELPER_TEXT,
   },
   render: (args) => (
     <Geolocation
@@ -104,7 +105,7 @@ export const Bare: Story = {
 export const Basic: Story = {
   args: {
     label: 'Location',
-    helperText: 'Click the map to set a pin, or edit the coordinates below it',
+    helperText: PIN_HELPER_TEXT,
     onChange: action('onChange'),
   },
   render: (args) => (
@@ -141,7 +142,7 @@ export const Disabled: Story = {
 export const WithError: Story = {
   args: {
     label: 'Location',
-    helperText: 'Click the map to set a pin, or edit the coordinates below it',
+    helperText: PIN_HELPER_TEXT,
     required: true,
     error: 'Location is required',
     onChange: action('onChange'),
@@ -184,61 +185,59 @@ export const Sizes: Story = {
   ),
 };
 
+const InteractiveExample = () => {
+  const [value, setValue] = useState(JSON.stringify({ lat: 40.7128, lng: -74.006 }));
+  const parsed = parseGeoValue(value);
+  return (
+    <YStack
+      gap="$4"
+      maxWidth={500}>
+      <Geolocation
+        label="Pick Location"
+        helperText={`Lat: ${parsed?.lat.toFixed(4) ?? ''}, Lng: ${parsed?.lng.toFixed(4) ?? ''}`}
+        value={value}
+        onChange={(v) => {
+          setValue(v);
+          action('onChange')(v);
+        }}
+        locationIcon=<NavigationArrowIcon size={16} />
+      />
+      <Geolocation
+        label="Disabled"
+        disabled
+        locationIcon=<NavigationArrowIcon size={16} />
+      />
+    </YStack>
+  );
+};
+
 export const Interactive: Story = {
-  render: () => {
-    const InteractiveExample = () => {
-      const [value, setValue] = useState(JSON.stringify({ lat: 40.7128, lng: -74.006 }));
-      const parsed = parseGeoValue(value);
-      return (
-        <YStack
-          gap="$4"
-          maxWidth={500}>
-          <Geolocation
-            label="Pick Location"
-            helperText={`Lat: ${parsed?.lat.toFixed(4) ?? ''}, Lng: ${parsed?.lng.toFixed(4) ?? ''}`}
-            value={value}
-            onChange={(v) => {
-              setValue(v);
-              action('onChange')(v);
-            }}
-            locationIcon=<NavigationArrowIcon size={16} />
-          />
-          <Geolocation
-            label="Disabled"
-            disabled
-            locationIcon=<NavigationArrowIcon size={16} />
-          />
-        </YStack>
-      );
-    };
-    return <InteractiveExample />;
-  },
+  render: () => <InteractiveExample />,
+};
+
+const WithCoordinatesExample = () => {
+  const [value, setValue] = useState(JSON.stringify({ lat: 37.7749, lng: -122.4194 }));
+  const parsed = parseGeoValue(value);
+  return (
+    <YStack
+      gap="$4"
+      maxWidth={500}>
+      <Geolocation
+        label="Office Location"
+        helperText={`Lat: ${parsed?.lat.toFixed(4) ?? ''}, Lng: ${parsed?.lng.toFixed(4) ?? ''}`}
+        value={value}
+        onChange={(v) => {
+          setValue(v);
+          action('onChange')(v);
+        }}
+        locationIcon=<NavigationArrowIcon size={16} />
+      />
+    </YStack>
+  );
 };
 
 export const WithCoordinates: Story = {
-  render: () => {
-    const Example = () => {
-      const [value, setValue] = useState(JSON.stringify({ lat: 37.7749, lng: -122.4194 }));
-      const parsed = parseGeoValue(value);
-      return (
-        <YStack
-          gap="$4"
-          maxWidth={500}>
-          <Geolocation
-            label="Office Location"
-            helperText={`Lat: ${parsed?.lat.toFixed(4) ?? ''}, Lng: ${parsed?.lng.toFixed(4) ?? ''}`}
-            value={value}
-            onChange={(v) => {
-              setValue(v);
-              action('onChange')(v);
-            }}
-            locationIcon=<NavigationArrowIcon size={16} />
-          />
-        </YStack>
-      );
-    };
-    return <Example />;
-  },
+  render: () => <WithCoordinatesExample />,
 };
 
 // Reads the `disabled` dial so it is reachable on the one story that has an
@@ -272,37 +271,36 @@ export const WithExpandButton: Story = {
   },
 };
 
-export const ExpandableInForm: Story = {
-  render: () => {
-    const FormExample = () => {
-      const form = useForm({
-        defaultValues: {
-          location: JSON.stringify({ lat: 35.6762, lng: 139.6503 }),
-        },
-        onSubmit: async ({ value }) => {
-          action('onSubmit')(value);
-        },
-      });
+const ExpandableFormExample = () => {
+  const form = useForm({
+    defaultValues: {
+      location: JSON.stringify({ lat: 35.6762, lng: 139.6503 }),
+    },
+    onSubmit: async ({ value }) => {
+      action('onSubmit')(value);
+    },
+  });
 
-      return (
-        <Form
-          form={form}
-          maxWidth={500}>
-          <YStack gap="$4">
-            <Geolocation
-              label="Meeting Point"
-              name="location"
-              helperText="Expand the map to see the full area"
-              locationIcon=<NavigationArrowIcon size={16} />
-              expandIcon=<ArrowsOutIcon size={16} />
-            />
-            <Button action="submit">Confirm Location</Button>
-          </YStack>
-        </Form>
-      );
-    };
-    return <FormExample />;
-  },
+  return (
+    <Form
+      form={form}
+      maxWidth={500}>
+      <YStack gap="$4">
+        <Geolocation
+          label="Meeting Point"
+          name="location"
+          helperText="Expand the map to see the full area"
+          locationIcon=<NavigationArrowIcon size={16} />
+          expandIcon=<ArrowsOutIcon size={16} />
+        />
+        <Button action="submit">Confirm Location</Button>
+      </YStack>
+    </Form>
+  );
+};
+
+export const ExpandableInForm: Story = {
+  render: () => <ExpandableFormExample />,
 };
 
 /** Loading placeholder — the skeleton mirrors the field + map anatomy. */
@@ -367,6 +365,8 @@ export const FailedFakeProvider: Story = {
   render: (args) => <FakeProviderExample {...args} />,
 };
 
+const editableCell = { inTableCell: true, isHeader: false, editable: true };
+
 /** Direct cell contract, independent of the table adapter's display formatter. */
 export const CellWithFakeProvider: Story = {
   args: {
@@ -375,7 +375,7 @@ export const CellWithFakeProvider: Story = {
     geocoder: fakeGeocoder,
   },
   render: (args) => (
-    <TableCellContext.Provider value={{ inTableCell: true, isHeader: false, editable: true }}>
+    <TableCellContext.Provider value={editableCell}>
       <FakeProviderExample {...args} />
     </TableCellContext.Provider>
   ),
@@ -417,6 +417,10 @@ export const DeferredControlledSelection: Story = {
   render: () => <DeferredControlledExample />,
 };
 
+const releaseTo = (resolve: (place: GeocodeResult) => void) => () => {
+  resolve(places[1]);
+};
+
 const PendingReverseExample = () => {
   const [value, setValue] = useState(JSON.stringify({ lat: places[0].lat, lng: places[0].lng }));
   const [readOnly, setReadOnly] = useState(true);
@@ -425,10 +429,9 @@ const PendingReverseExample = () => {
     if (lat === places[0].lat) {
       return places[0];
     }
+    // oxlint-disable-next-line promise/avoid-new -- the lookup stays pending until the story's Resolve button is pressed
     return await new Promise((resolve) => {
-      setResolvePending(() => () => {
-        resolve(places[1]);
-      });
+      setResolvePending(() => releaseTo(resolve));
     });
   }, []);
   return (

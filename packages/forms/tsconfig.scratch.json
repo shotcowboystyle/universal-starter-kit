@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [],
+  "files": [
+    "src/FieldDisplay/index.tsx",
+    "src/fields/Checkbox/CheckboxGroup.tsx",
+    "src/fields/Checkbox/index.tsx",
+    "src/DescriptionList/index.tsx",
+    "src/fields/TimeRangeScrubber/index.tsx",
+    "src/fields/Checkbox/Checkbox.test.tsx",
+    "src/fields/TimeRangeScrubber/TimeRangeScrubber.test.tsx",
+    "src/FieldDisplay/FieldDisplay.test.tsx"
+  ]
+}

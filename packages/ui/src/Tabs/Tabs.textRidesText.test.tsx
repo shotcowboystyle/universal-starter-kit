@@ -14,13 +14,12 @@ import { Tabs } from './index';
 
 describe('Tabs TEXT-RIDES-TEXT', () => {
   it('renders array-of-strings labels as one concatenated tab name', () => {
-    const count: number = 3;
     renderWithProviders(
       <Tabs
         items={[
           {
             value: 'a',
-            label: ['Section one', count === 0 ? '' : ` (${count})`],
+            label: ['Section one', ' (3)'],
             content: <Text>Body</Text>,
           },
         ]}

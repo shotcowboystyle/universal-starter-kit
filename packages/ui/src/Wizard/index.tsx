@@ -26,8 +26,20 @@ import { useTranslation } from '../shared/i18n';
 import { bidiIsolate, withInterp } from '../shared/t';
 import { Skeleton } from '../Skeleton';
 
+const asHtmlElement = (node: TamaguiElement | null): HTMLElement | null =>
+  isWeb && node != null && node instanceof HTMLElement ? node : null;
+
+const withFlag = async (setFlag: (on: boolean) => void, task: () => void | Promise<void>): Promise<void> => {
+  setFlag(true);
+  try {
+    await task();
+  } finally {
+    setFlag(false);
+  }
+};
+
 export interface WizardFormLike {
-  validateField?: (name: string, cause?: string) => unknown | Promise<unknown>;
+  validateField?: (name: string, cause?: string) => unknown;
   getFieldMeta?: (name: string) => { errors?: unknown[] } | undefined;
   getFieldValue?: (name: string) => unknown;
   setFieldValue?: (name: string, value: unknown) => void;
@@ -133,6 +145,7 @@ const stepCaption = (t: (key: string) => string, index: number, steps: WizardSte
 const WizardRule = () => (
   <View
     data-wizard-separator=""
+    // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui View must render on native, where <hr> does not exist
     role="separator"
     height={1}
     backgroundColor="$borderColor"
@@ -230,18 +243,21 @@ export const WizardReview = ({ groups }: { groups?: WizardReviewGroup[] }) => {
   const resolved =
     groups ??
     reviewGroups ??
-    steps
-      .map((step, index) => ({ step, index }))
-      .filter(({ step }) => !step.review)
-      .map(({ step, index }) => ({
-        stepIndex: index,
-        label: step.label,
-        rows: (step.fields ?? []).map((name) => ({
-          name,
-          label: step.fieldLabels?.[name] ?? name,
-          value: formatReviewValue(getFieldValue(name)),
-        })),
-      }));
+    steps.flatMap((step, index) =>
+      step.review
+        ? []
+        : [
+            {
+              stepIndex: index,
+              label: step.label,
+              rows: (step.fields ?? []).map((name) => ({
+                name,
+                label: step.fieldLabels?.[name] ?? name,
+                value: formatReviewValue(getFieldValue(name)),
+              })),
+            },
+          ],
+    );
 
   return (
     <YStack
@@ -340,18 +356,19 @@ const WizardRoot = ({
   const panelRefs = useRef<(HTMLElement | null)[]>([]);
   const [uncontrolled, setUncontrolled] = useState(defaultCurrent);
   const [maxVisited, setMaxVisited] = useState(defaultCurrent);
-  const [returnTo, setReturnTo] = useState<number | null>(null);
+  const returnToRef = useRef<number | null>(null);
   const [stepErrors, setStepErrors] = useState<ErrorSummaryItem[]>([]);
   const [completing, setCompleting] = useState(false);
   const [repaintGeneration, setRepaintGeneration] = useState<Record<string, number>>({});
   const current = controlledCurrent ?? uncontrolled;
-  const hideLabels = labels === 'hidden' || (labels !== 'visible' && Boolean(media.xs));
+  const hideLabels = labels === 'hidden' || (labels !== 'visible' && media.xs);
   const lastIndex = Math.max(0, steps.length - 1);
   const isLast = current >= lastIndex;
   const currentStep = steps[current];
   const resolvedCancel = cancelLabel ?? t('Cancel');
   const resolvedBack = backLabel ?? t('Back');
   const resolvedEdit = editLabel ?? t('Edit');
+  // oxlint-disable-next-line react/no-react-children -- panels are caller-provided children; toArray is the only way to index them
   const panels = Children.toArray(children);
 
   const setCurrent = useCallback(
@@ -370,7 +387,7 @@ const WizardRoot = ({
   const goTo = useCallback(
     (index: number, opts?: { returnToReview?: boolean }) => {
       if (opts?.returnToReview) {
-        setReturnTo(lastIndex);
+        returnToRef.current = lastIndex;
       }
       setCurrent(index);
     },
@@ -394,6 +411,7 @@ const WizardRoot = ({
     async (names: readonly string[]): Promise<ErrorSummaryItem[]> => {
       const items: ErrorSummaryItem[] = [];
       for (const name of names) {
+        // oxlint-disable-next-line eslint/no-await-in-loop, react-doctor/async-await-in-loop -- validators run sequentially so error order and form-side effects stay deterministic
         const validated = await Promise.resolve(form?.validateField?.(name, 'submit'));
         const fromMeta = form?.getFieldMeta?.(name)?.errors?.[0];
         const raw = fromMeta ?? (typeof validated === 'string' ? validated : undefined);
@@ -403,6 +421,7 @@ const WizardRoot = ({
         items.push({
           name,
           id: name,
+          // oxlint-disable-next-line typescript/no-base-to-string -- raw is a validator error of unknown shape; String() is the established fallback
           error: typeof raw === 'string' ? raw : String(raw),
           label: currentStep?.fieldLabels?.[name],
         });
@@ -431,10 +450,11 @@ const WizardRoot = ({
     if (!isWeb || errors.length === 0) {
       return;
     }
-    const root = (panelRefs.current[index] ??
-      shellRef.current ??
-      (typeof document === 'undefined' ? null : document.body)) as HTMLElement | null;
-    const first = errors[0];
+    const root =
+      panelRefs.current[index] ??
+      asHtmlElement(shellRef.current) ??
+      (typeof document === 'undefined' ? null : document.body);
+    const [first] = errors;
     const focused = focusFieldTarget(root, { id: first.id ?? first.name, name: first.name });
     if (!focused) {
       focusFirstInvalid(root);
@@ -452,14 +472,14 @@ const WizardRoot = ({
       }
       return;
     }
-    if (returnTo != null) {
-      const target = returnTo;
-      setReturnTo(null);
+    const target = returnToRef.current;
+    if (target != null) {
+      returnToRef.current = null;
       setCurrent(target);
       return;
     }
     setCurrent(Math.min(current + 1, lastIndex));
-  }, [current, focusFirstStepError, lastIndex, returnTo, runStepValidation, setCurrent]);
+  }, [current, focusFirstStepError, lastIndex, runStepValidation, setCurrent]);
 
   const handleComplete = useCallback(async () => {
     const errors = await runStepValidation(current);
@@ -475,12 +495,7 @@ const WizardRoot = ({
     if (!onComplete) {
       return;
     }
-    setCompleting(true);
-    try {
-      await onComplete();
-    } finally {
-      setCompleting(false);
-    }
+    await withFlag(setCompleting, onComplete);
   }, [current, focusFirstStepError, onComplete, runStepValidation]);
 
   const handleBack = useCallback(() => {
@@ -492,9 +507,9 @@ const WizardRoot = ({
       return;
     }
     const panel = panelRefs.current[current];
-    const first = panel?.querySelector(
+    const first = panel?.querySelector<HTMLElement>(
       'input:not([disabled]), textarea:not([disabled]), select:not([disabled])',
-    ) as HTMLElement | null;
+    );
     first?.focus?.();
   }, [current, knobProps.formAutofocus, stepErrors.length]);
 
@@ -519,7 +534,7 @@ const WizardRoot = ({
     optional: step.optional,
     error: index === current && stepErrors.length > 0,
     completed: index !== current && index <= maxVisited,
-    disabled: step.disabled || index > maxVisited,
+    disabled: step.disabled === true || index > maxVisited,
   }));
 
   const nextStep = steps[current + 1];
@@ -608,7 +623,8 @@ const WizardRoot = ({
             <ErrorSummary
               errors={stepErrors}
               disableAutoFocus
-              formElement={shellRef.current as HTMLElement | null}
+              // oxlint-disable-next-line react/refs -- formElement is only read in ErrorSummary handlers/effects after commit, when the ref is set
+              formElement={asHtmlElement(shellRef.current)}
               title={t('There is a problem')}
             />
           </YStack>
@@ -621,9 +637,9 @@ const WizardRoot = ({
               const legend = hideLabels ? stepCaption(t, index, steps) : step.label;
               return (
                 <YStack
-                  key={step.id || index}
+                  key={step.id}
                   ref={(node) => {
-                    panelRefs.current[index] = node as HTMLElement | null;
+                    panelRefs.current[index] = asHtmlElement(node);
                   }}
                   data-wizard-panel=""
                   data-wizard-fields=""
@@ -683,7 +699,9 @@ const WizardRoot = ({
               accent
               data-primary=""
               loading={completing}
-              onPress={isLast ? handleComplete : handleNext}
+              onPress={() => {
+                void (isLast ? handleComplete() : handleNext());
+              }}
               testID="wizard-primary">
               {primaryText}
             </Button>

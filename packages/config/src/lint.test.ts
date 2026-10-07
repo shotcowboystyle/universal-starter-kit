@@ -78,7 +78,7 @@ const pkgTree = (pkg: PackageOverrides) => {
   writeFileSync(path.join(root, 'public', 'pkg', 'src', 'thing.ts'), 'export const thing = 1;\n');
   writeFileSync(
     path.join(root, 'public', 'pkg', 'package.json'),
-    JSON.stringify({ name: '@multiplatform.one/pkg', ...pkg }, null, 2),
+    JSON.stringify({ name: '@repo/pkg', ...pkg }, null, 2),
   );
   return root;
 };

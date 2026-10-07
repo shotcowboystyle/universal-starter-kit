@@ -84,12 +84,12 @@ describe('Button density knob = compact PROP', () => {
   it('compact PROP and density:compact knob land the SAME padX', () => {
     const viaProp = renderProp('$4');
     const propPad = paddingPxFromClass(viaProp);
-    expect(viaProp.getAttribute('data-mp-density')).toBe('compact');
+    expect(viaProp.dataset.mpDensity).toBe('compact');
     expect(propPad).toBe(16);
     cleanup();
 
     const viaKnob = renderKnob('$4');
-    expect(viaKnob.getAttribute('data-mp-density')).toBe('compact');
+    expect(viaKnob.dataset.mpDensity).toBe('compact');
     expect(paddingPxFromClass(viaKnob)).toBe(propPad);
     expect(paddingPxFromClass(viaKnob)).toBe(16);
   });
@@ -106,26 +106,26 @@ describe('Button density knob = compact PROP', () => {
 
   it('height stays 44 at comfortable and compact density stops', () => {
     const comfortable = renderComfortable('$4');
-    expect(comfortable.getAttribute('data-mp-button-height')).toBe('44');
+    expect(comfortable.dataset.mpButtonHeight).toBe('44');
     expect(comfortable.className).toMatch(/_h-44px/u);
     expect(paddingPxFromClass(comfortable)).toBe(18);
     cleanup();
 
     const viaKnob = renderKnob('$4');
-    expect(viaKnob.getAttribute('data-mp-button-height')).toBe('44');
+    expect(viaKnob.dataset.mpButtonHeight).toBe('44');
     expect(viaKnob.className).toMatch(/_h-44px/u);
     cleanup();
 
     const viaProp = renderProp('$4');
-    expect(viaProp.getAttribute('data-mp-button-height')).toBe('44');
+    expect(viaProp.dataset.mpButtonHeight).toBe('44');
     expect(viaProp.className).toMatch(/_h-44px/u);
   });
 
   it('density never changes the painted height at any size step', () => {
     for (const size of sizes) {
-      const relaxed = renderComfortable(size).getAttribute('data-mp-button-height');
+      const relaxed = renderComfortable(size).dataset.mpButtonHeight;
       cleanup();
-      const tight = renderKnob(size).getAttribute('data-mp-button-height');
+      const tight = renderKnob(size).dataset.mpButtonHeight;
       cleanup();
       expect(tight, `height at ${size}`).toBe(relaxed);
     }

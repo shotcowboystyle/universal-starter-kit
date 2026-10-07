@@ -4,7 +4,7 @@ import { useTranslation } from '../shared/i18n';
 
 import { chartDatumText, describeChart } from './accessibility';
 import { ChartSurface } from './ChartSurface';
-import { createLinearScale, createPointScale, valueDomain } from './math';
+import { createLinearScale, createPointScale, normalizeChartData, valueDomain } from './math';
 import { AreaSeries, LineSeries } from './series';
 import type { ChartCurve, ChartDatum } from './types';
 import { useChartTheme } from './use-chart-theme';
@@ -51,9 +51,7 @@ export const Sparkline = ({
   const { t } = useTranslation();
   const { palette } = useChartTheme();
   const stroke = color ?? palette.single;
-  const normalized: ChartDatum[] = data.map((entry, index) =>
-    typeof entry === 'number' ? { label: String(index + 1), value: entry } : entry,
-  );
+  const normalized = normalizeChartData(data);
   const ariaLabel =
     label ??
     describeChart({

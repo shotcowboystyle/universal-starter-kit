@@ -30,37 +30,45 @@ export const useReturnFocusOnClose = (open: boolean) => {
   const prevRef = useRef<HTMLElement | null>(null);
   const wasOpenRef = useRef(false);
   if (canUseDom()) {
+    // oxlint-disable-next-line react/refs -- render-time capture is deliberate; see the file header
     if (open && !wasOpenRef.current) {
-      prevRef.current = document.activeElement as HTMLElement | null;
+      const { activeElement } = document;
+      // oxlint-disable-next-line react/refs -- render-time capture is deliberate; see the file header
+      prevRef.current = activeElement instanceof HTMLElement ? activeElement : null;
     }
+    // oxlint-disable-next-line react/refs -- render-time capture is deliberate; see the file header
     wasOpenRef.current = open;
   }
   useEffect(() => {
-    if (!canUseDom() || !open) {
-      return;
-    }
+    const active = canUseDom() && open;
+    const restore = () => {
+      // Nothing cancels this after unmount, so the document can be gone by
+      // now (a test environment torn down inside the retry window), and
+      // `isConnected` stays true on the detached node.
+      if (!canUseDom()) {
+        return;
+      }
+      const target = prevRef.current;
+      if (!target || !target.isConnected) {
+        return;
+      }
+      if (focusIsDropped()) {
+        // SAFETY: `focusVisible` is a real FocusOptions member in browsers that lib.dom has not typed yet.
+        target.focus({
+          preventScroll: true,
+          focusVisible: wasKeyboardFocus(),
+        } as FocusOptions);
+      }
+    };
     return () => {
-      const restore = () => {
-        // Nothing cancels this after unmount, so the document can be gone by
-        // now (a test environment torn down inside the retry window), and
-        // `isConnected` stays true on the detached node.
-        if (!canUseDom()) {
-          return;
-        }
-        const target = prevRef.current;
-        if (!target || !target.isConnected) {
-          return;
-        }
-        if (focusIsDropped()) {
-          target.focus({
-            preventScroll: true,
-            focusVisible: wasKeyboardFocus(),
-          } as FocusOptions);
-        }
-      };
+      if (!active) {
+        return;
+      }
       // Exit animations unmount the overlay a few frames later; retry after
       // the typical exit window. Both calls are idempotent.
-      requestAnimationFrame(() => requestAnimationFrame(restore));
+      requestAnimationFrame(() => {
+        requestAnimationFrame(restore);
+      });
       setTimeout(restore, 320);
     };
   }, [open]);

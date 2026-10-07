@@ -658,7 +658,7 @@ const ColorPickerControl = ({
           readOnly
           placeholder={placeholder}
           aria-readonly="true"
-          aria-required={required || undefined}
+          aria-required={required ?? undefined}
           aria-invalid={hasError || undefined}
         />
       </InputParts.Box>
@@ -683,7 +683,7 @@ const ColorPickerControl = ({
       // "Color, #EF4444": VO gets the field name + current hex on the native
       // trigger (mirrors the DatePicker/Select triggerA11y pattern).
       triggerA11y={{
-        label: a11yLabel || t('Color'),
+        label: a11yLabel ?? t('Color'),
         value: value || selectedColor || placeholder,
         hint: helperText,
       }}
@@ -709,7 +709,7 @@ const ColorPickerControl = ({
               .filter(Boolean)
               .join(' ') || undefined
           }
-          aria-required={required || undefined}
+          aria-required={required ?? undefined}
           aria-invalid={hasError || undefined}
           inputProps={inputProps}
         />
@@ -803,7 +803,7 @@ export const ColorPicker = <
     // deterministic px width — never % — or it resolves against a width
     // computed without the % child and overflows. Radius matches the live
     // ColorPickerInputTrigger / swatch (`knobProps.borderRadius`).
-    const cellSize = size || knobProps.sizeToken;
+    const cellSize = size ?? knobProps.sizeToken;
     return (
       <InputParts size={cellSize}>
         {label && (
@@ -834,7 +834,7 @@ export const ColorPicker = <
         id={id}
         label={label}
         labelProps={labelProps}
-        error={errorProp || standaloneFormatError}
+        error={errorProp ?? standaloneFormatError}
         helperText={helperText}
         required={required}
         size={size}
@@ -843,7 +843,7 @@ export const ColorPicker = <
         // FieldLayout owns the dimWhole assembly dim (keepLabel pins
         // the sibling label/helper readable) — it needs the disabled state.
         disabled={disabled}>
-        <InputParts size={size || knobProps.sizeToken}>
+        <InputParts size={size ?? knobProps.sizeToken}>
           <ColorPickerControl
             value={effectiveValue}
             format={_format}
@@ -887,7 +887,7 @@ export const ColorPicker = <
             id={id}
             label={label}
             labelProps={labelProps}
-            error={resolvedError || fieldFormatError}
+            error={resolvedError ?? fieldFormatError}
             helperText={helperText}
             required={required}
             size={size}
@@ -895,7 +895,7 @@ export const ColorPicker = <
             onBlur={mergeFieldHandler(field, 'handleBlur', onBlur)}
             // See standalone branch — FieldLayout carries dimWhole.
             disabled={disabled}>
-            <InputParts size={size || knobProps.sizeToken}>
+            <InputParts size={size ?? knobProps.sizeToken}>
               <ColorPickerControl
                 value={fieldValue}
                 format={_format}

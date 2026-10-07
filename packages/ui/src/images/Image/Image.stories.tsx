@@ -238,7 +238,9 @@ export const Pressable: Story = {
     src: SQUARE_IMG,
     alt: 'Open photo',
     size: 'medium',
-    onPress: () => {},
+    onPress: () => {
+      // Story demo: pressing is intentionally a no-op.
+    },
   },
 };
 
@@ -327,7 +329,9 @@ export const Gallery: Story = {
           src={SQUARE_IMG}
           alt="Open photo"
           size="medium"
-          onPress={() => {}}
+          onPress={() => {
+            // Story demo: pressing is intentionally a no-op.
+          }}
           testID="gallery-press"
         />
       </XStack>

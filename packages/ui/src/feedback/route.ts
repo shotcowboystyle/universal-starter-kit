@@ -79,16 +79,16 @@ const toastDuration = (action?: NotifyAction): number | undefined => (action ? T
 export const routeNotify = (event: NotifyEvent): NotifyRoute => {
   const { severity, scope, blocking = false, action, title, body } = event;
   const toastIntent: NotifyToastIntent = severity === 'info' ? 'accent' : severity;
-  const base = {
+  const baseFields = {
     severity,
     scope,
-    ...(event.region == null ? {} : { region: event.region }),
     toastIntent,
     title,
     body,
     action,
     dismissible: event.dismissible ?? true,
   } as const;
+  const base = event.region == null ? baseFields : ({ ...baseFields, region: event.region } as const);
 
   if (blocking && (severity === 'error' || severity === 'warning')) {
     return { ...base, surface: 'dialog', duration: 0 };

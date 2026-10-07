@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 
 import { highlightCode, houseSyntaxTheme } from './index';
 
-const houseInk = /^\$(color11|color12|syntax(Purple|Green|Blue|Orange|Red))$/u;
+const houseInk = /^\$(?:color11|color12|syntax(?:Purple|Green|Blue|Orange|Red))$/u;
 
 const sample = `// Greets a user
 export function greet(user: User, retries = 3): string {
@@ -17,6 +17,9 @@ export function greet(user: User, retries = 3): string {
   console.log(label, true, null);
   return label;
 }`;
+
+const scopesOf = (settings: { scope?: string | string[] }[]) =>
+  settings.map((setting) => [setting.scope ?? []].flat().join(',')).filter(Boolean);
 
 const inkOf = async (code: string, language: string, content: string, theme?: string) => {
   const lines = await highlightCode(code, language, theme);
@@ -61,20 +64,20 @@ describe('the default highlighter theme paints the held syntax tokens', () => {
   });
 
   it('an explicit theme still ejects to its literal palette', { timeout: 30_000 }, async () => {
-    expect((await inkOf(sample, 'typescript', 'export', 'github-light'))?.toLowerCase()).toBe('#d73a49');
+    const ink = await inkOf(sample, 'typescript', 'export', 'github-light');
+    expect(ink?.toLowerCase()).toBe('#d73a49');
   });
 
   it("keeps github-light's scope rules one for one, painted only in house ink", async () => {
-    const githubLight = (await bundledThemes['github-light']()).default;
-    const scopesOf = (settings: { scope?: string | string[] }[]) =>
-      settings.map((setting) => [setting.scope ?? []].flat().join(',')).filter(Boolean);
+    const { default: githubLight } = await bundledThemes['github-light']();
     expect(scopesOf(houseSyntaxTheme.settings)).toStrictEqual(
       scopesOf(githubLight.tokenColors ?? githubLight.settings ?? []),
     );
-    for (const setting of houseSyntaxTheme.settings) {
-      if (setting.settings.foreground) {
-        expect(setting.settings.foreground).toMatch(houseInk);
-      }
+    const foregrounds = houseSyntaxTheme.settings
+      .map((setting) => setting.settings.foreground)
+      .filter((foreground): foreground is string => foreground !== undefined && foreground !== '');
+    for (const foreground of foregrounds) {
+      expect(foreground).toMatch(houseInk);
     }
   });
 });

@@ -24,8 +24,8 @@ const host = vi.hoisted(() => {
   }));
   return { web: true, touch: false };
 });
-vi.mock('@repo/platform', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@repo/platform')>()),
+vi.mock(import('@repo/platform'), async (importOriginal) => ({
+  ...(await importOriginal()),
   get isWeb() {
     return host.web;
   },
@@ -58,27 +58,12 @@ const tabHeights = (root: ParentNode): string[][] =>
   );
 
 let container: HTMLDivElement;
-let root: Root | undefined;
+let root: Root | null = null;
 let errors: unknown[];
 
-beforeEach(() => {
-  host.web = true;
-  host.touch = false;
-  errors = [];
-  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-  vi.spyOn(console, 'error').mockImplementation((...args) => errors.push(args));
-  container = document.createElement('div');
-  document.body.append(container);
-});
-
-afterEach(async () => {
-  if (root) {
-    await act(async () => root?.unmount());
-  }
-  root = undefined;
-  container.remove();
-  vi.restoreAllMocks();
-});
+const setServerHtml = (html: string) => {
+  container.replaceChildren(document.createRange().createContextualFragment(html));
+};
 
 const hydrate = async () => {
   await act(async () => {
@@ -91,8 +76,27 @@ const hydrate = async () => {
 const hydrationErrors = () => errors.filter((error) => /hydration|hydrated|didn't match/iu.test(String(error)));
 
 describe('Tabs sizing through hydration', () => {
+  beforeEach(() => {
+    host.web = true;
+    host.touch = false;
+    errors = [];
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.spyOn(console, 'error').mockImplementation((...args) => errors.push(args));
+    container = document.createElement('div');
+    document.body.append(container);
+  });
+
+  afterEach(async () => {
+    if (root) {
+      await act(async () => root?.unmount());
+    }
+    root = null;
+    container.remove();
+    vi.restoreAllMocks();
+  });
+
   it("keeps the server's pointer-sized tabs through hydration, then adopts the touch floor", async () => {
-    container.innerHTML = renderToString(<Fixture />);
+    setServerHtml(renderToString(<Fixture />));
     const serverTabs = [...container.querySelectorAll('[role="tab"]')];
     const serverHeights = tabHeights(container);
     expect(serverHeights.flat()).not.toHaveLength(0);
@@ -110,7 +114,7 @@ describe('Tabs sizing through hydration', () => {
   });
 
   it('leaves pointer sizing alone on a pointer device', async () => {
-    container.innerHTML = renderToString(<Fixture />);
+    setServerHtml(renderToString(<Fixture />));
     const serverHeights = tabHeights(container);
     await hydrate();
     expect(hydrationErrors()).toStrictEqual([]);
@@ -120,7 +124,7 @@ describe('Tabs sizing through hydration', () => {
   it('sizes native tabs to the touch floor on the first render', () => {
     host.web = false;
     host.touch = true;
-    container.innerHTML = renderToString(<Fixture />);
+    setServerHtml(renderToString(<Fixture />));
     for (const heights of tabHeights(container)) {
       expect(heights).toContain('_h-48px');
     }

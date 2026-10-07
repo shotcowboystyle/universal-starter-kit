@@ -1,0 +1,6 @@
+{
+  "scripts": {
+    "gnome": "pnpm --filter @app/__NAME__ gnome",
+    "gnome:capture": "pnpm --filter @app/__NAME__ gnome:capture"
+  }
+}

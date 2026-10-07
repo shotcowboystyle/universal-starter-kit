@@ -211,7 +211,7 @@ describe(Barcode, () => {
       const result = renderWithProviders(
         <Barcode
           label="QR"
-          value="https://multiplatform.one"
+          value="https://universal-starter-kit"
           formats={['qrcode']}
           barcodeIcon={barcodeIcon}
           scanIcon={scanIcon}

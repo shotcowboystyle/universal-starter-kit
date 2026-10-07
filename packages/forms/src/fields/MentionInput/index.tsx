@@ -1099,7 +1099,7 @@ export const MentionInput = <
 
   return (
     <>
-      <Field<object>
+      <Field
         defaultValue={defaultValue}
         form={resolvedForm}
         mode={mode}

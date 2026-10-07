@@ -36,7 +36,7 @@ describe('Button disabledReason', () => {
     );
     const reason = screen.getByText('Needs owner approval');
     expect(reason).toBeInTheDocument();
-    expect(reason.getAttribute('data-mp-disabled-reason')).toBe('true');
+    expect(reason.dataset.mpDisabledReason).toBe('true');
 
     const button = screen.getByRole('button');
     const describedBy = button.getAttribute('aria-describedby');
@@ -55,7 +55,7 @@ describe('Button disabledReason', () => {
     const button = screen.getByRole('button');
     expect(button.getAttribute('aria-disabled')).toBe('true');
     expect(button.getAttribute('tabindex')).toBe('0');
-    expect(button.getAttribute('data-mp-disabled-explained')).toBe('true');
+    expect(button.dataset.mpDisabledExplained).toBe('true');
   });
 
   it('swallows presses while explained-disabled', () => {

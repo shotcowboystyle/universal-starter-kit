@@ -1,5 +1,6 @@
 import { renderWithProviders } from '@repo/test-utils';
 import { Preset } from '@repo/theme';
+import type { AnyFieldApi } from '@tanstack/react-form';
 import { Input as TamaguiInput } from 'tamagui';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -7,7 +8,7 @@ import { FieldLayout, useFieldDescribedBy } from './FieldLayout';
 import { __resetDevWarnSeen } from './shared/dev-warn';
 
 const classIncludes = (container: HTMLElement, fragment: string): boolean =>
-  Array.from(container.querySelectorAll('[class]')).some((el) => (el.getAttribute('class') ?? '').includes(fragment));
+  [...container.querySelectorAll('[class]')].some((el) => (el.getAttribute('class') ?? '').includes(fragment));
 
 describe('FieldLayout width-by-purpose', () => {
   it('applies maxWidth from purpose', () => {
@@ -147,8 +148,8 @@ describe('FieldLayout disabledStyle house knob', () => {
         </FieldLayout>
       </Preset>,
     );
-    const root = container.querySelector("[data-disabled-style='keepLabel']");
-    expect(root?.getAttribute('data-disabled-dimmed')).toBe('false');
+    const root = container.querySelector<HTMLElement>("[data-disabled-style='keepLabel']");
+    expect(root?.dataset.disabledDimmed).toBe('false');
     expect(container.querySelector('label')?.textContent).toContain('Name');
   });
 
@@ -166,8 +167,8 @@ describe('FieldLayout disabledStyle house knob', () => {
         </FieldLayout>
       </Preset>,
     );
-    const root = container.querySelector("[data-disabled-style='dimWhole']");
-    expect(root?.getAttribute('data-disabled-dimmed')).toBe('true');
+    const root = container.querySelector<HTMLElement>("[data-disabled-style='dimWhole']");
+    expect(root?.dataset.disabledDimmed).toBe('true');
   });
 
   it('does not dim when disabledStyle is dimWhole but control is enabled', () => {
@@ -180,14 +181,15 @@ describe('FieldLayout disabledStyle house knob', () => {
         </FieldLayout>
       </Preset>,
     );
-    const root = container.querySelector("[data-disabled-style='dimWhole']");
-    expect(root?.getAttribute('data-disabled-dimmed')).toBe('false');
+    const root = container.querySelector<HTMLElement>("[data-disabled-style='dimWhole']");
+    expect(root?.dataset.disabledDimmed).toBe('false');
   });
 });
 
-describe('FieldLayout error precedence (Axiom 5 eject-last)', () => {
-  const makeField = (errors: string[]) => ({ state: { meta: { errors } } }) as any;
+// SAFETY: FieldLayout only reads `state.meta.errors` from the field, so a stub carrying exactly that is sufficient.
+const makeField = (errors: string[]) => ({ state: { meta: { errors } } }) as AnyFieldApi;
 
+describe('FieldLayout error precedence (Axiom 5 eject-last)', () => {
   it('explicit error prop wins over field-meta errors', () => {
     const { container } = renderWithProviders(
       <FieldLayout
@@ -244,16 +246,17 @@ describe('FieldLayout error precedence (Axiom 5 eject-last)', () => {
   });
 });
 
-describe('FieldLayout message-before-control anatomy', () => {
-  const Control = () => (
-    <input
-      id="ordered"
-      aria-describedby={useFieldDescribedBy()}
-    />
-  );
+const Control = () => (
+  <input
+    id="ordered"
+    aria-describedby={useFieldDescribedBy()}
+  />
+);
 
-  for (const mode of ['top', 'side', 'compact'] as const) {
-    it(`${mode}: helper and replacement error precede the control and describe only the rendered slot`, () => {
+describe('FieldLayout message-before-control anatomy', () => {
+  it.each(['top', 'side', 'compact'] as const)(
+    '%s: helper and replacement error precede the control and describe only the rendered slot',
+    (mode) => {
       const renderField = (error?: string) => (
         <Preset overrides={{ fieldLabelPlacement: mode === 'side' ? 'side' : 'top' }}>
           <FieldLayout
@@ -270,8 +273,9 @@ describe('FieldLayout message-before-control anatomy', () => {
       const assertSlot = (id: string, text: string) => {
         const input = result.container.querySelector('input')!;
         const message = result.container.querySelector(`#${id}`)!;
+        const documentOrder = [...result.container.querySelectorAll('*')];
         expect(message.textContent).toBe(text);
-        expect(message.compareDocumentPosition(input) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+        expect(documentOrder.indexOf(message)).toBeLessThan(documentOrder.indexOf(input));
         expect(input.getAttribute('aria-describedby')).toBe(id);
         expect(result.container.querySelectorAll("[id$='-description'], [id$='-error']")).toHaveLength(1);
       };
@@ -279,8 +283,8 @@ describe('FieldLayout message-before-control anatomy', () => {
       result.rerender(renderField('Enter an email address'));
       assertSlot('ordered-error', 'Enter an email address');
       expect(result.container.textContent).not.toContain('Use your work address');
-    });
-  }
+    },
+  );
 });
 
 describe('FieldLayout banned-error-word DEV warn', () => {
@@ -333,7 +337,7 @@ describe('FieldLayout design-law', () => {
     const label = container.querySelector('label') as HTMLElement;
     expect(label).toBeTruthy();
     const weight = label.style.fontWeight || getComputedStyle(label).fontWeight;
-    expect(['400', 'normal']).toContain(String(weight));
+    expect(['400', 'normal']).toContain(weight);
   });
 
   it('does not pass a control-height sizeToken to the label', () => {
@@ -361,8 +365,8 @@ describe('FieldLayout design-law', () => {
         </FieldLayout>
       </Preset>,
     );
-    const row = container.querySelector("[data-label-placement='side'][data-gap]");
+    const row = container.querySelector<HTMLElement>("[data-label-placement='side'][data-gap]");
     expect(row).toBeTruthy();
-    expect(row?.getAttribute('data-gap')).toBe('$5');
+    expect(row?.dataset.gap).toBe('$5');
   });
 });

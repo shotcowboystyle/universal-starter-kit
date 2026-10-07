@@ -13,11 +13,11 @@ import {
   useAccentOnSurface,
   useResolvedKnobs,
 } from '@repo/theme';
-import type { RecipeFamilyName, SizeRecipe, SizeRecipeRadiusStop } from '@repo/theme';
+import type { SizeRecipe, SizeRecipeFamilyName, SizeRecipeRadiusStop } from '@repo/theme';
 import { getSize } from '@tamagui/get-token';
 import { getElevation, themeableVariants } from '@tamagui/stacks';
-import type { ThemeName, SizeTokens, VariantSpreadExtras } from '@tamagui/web';
-import { Store, useStore } from '@tanstack/react-store';
+import type { SizeTokens, VariantSpreadExtras } from '@tamagui/web';
+import { Store, useSelector } from '@tanstack/react-store';
 import { Children, createElement, isValidElement, useCallback, useId, useState } from 'react';
 import type { ComponentType, ReactNode } from 'react';
 import type { GestureResponderEvent } from 'react-native';
@@ -41,6 +41,7 @@ import { formButtonColors, formCommonColors } from '../shared/color-ramps';
 import { warnBareDisabled, warnPositiveTabIndex, warnSizeRecipeEscape } from '../shared/dev-warn';
 import { useControlGrouped } from '../shared/group-context';
 import { pressSlopProps } from '../shared/press-slop-props';
+// oxlint-disable-next-line import/no-cycle -- the cycle runs through shared/utils and files outside this directory; it is reported for the owner of those paths
 import { useFormField } from '../shared/utils';
 import { Spinner } from '../Spinner';
 import type { AnyFormApi } from '../types';
@@ -59,15 +60,27 @@ import type { AnyFormApi } from '../types';
  */
 export type ButtonSizeRecipe = SizeRecipe;
 
+// oxlint-disable-next-line react-doctor/only-export-components -- public recipe table consumed by other packages through this module path
 export const buttonSizeRecipes: Record<string, ButtonSizeRecipe> = recipeFamilies.control.recipes;
 
+const isNumber = (value: unknown): value is number =>
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- the single numeric/token discriminator for Tamagui size props, which are `SizeTokens | number`
+  typeof value === 'number';
+
+const isString = (value: unknown): value is string =>
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- the single string discriminator for loosely-typed children and theme values
+  typeof value === 'string';
+
+const hasText = (value: string | undefined): value is string => value !== undefined && value !== '';
+
+// oxlint-disable-next-line react-doctor/only-export-components -- public recipe resolver consumed by other packages through this module path
 export const resolveButtonSizeRecipe = (
   size: SizeTokens | number | undefined,
-  family: RecipeFamilyName = 'control',
+  family: SizeRecipeFamilyName = 'control',
 ): ButtonSizeRecipe => {
   // Arbitrary numeric height: derive pad/font/icon/gap in ratio (the
   // non-enumerable escape the recipe reserves for `sizeRecipeFromHeight`).
-  if (typeof size === 'number') {
+  if (isNumber(size)) {
     return sizeRecipeFromHeight(size, recipeFamilies[family]?.ratios);
   }
   return sizeRecipeForToken(size == null ? '$true' : String(size), { family });
@@ -80,7 +93,8 @@ export const resolveButtonSizeRecipe = (
  * generated table at every token but `$4` — it inverted at `$2`, where
  * `max(8, 7 - 2)` painted a compact Button WIDER than a comfortable one.
  */
-export const buttonDensityFamily = (family: RecipeFamilyName, densityTight: boolean): RecipeFamilyName =>
+// oxlint-disable-next-line react-doctor/only-export-components -- public density helper consumed by other packages through this module path
+export const buttonDensityFamily = (family: SizeRecipeFamilyName, densityTight: boolean): SizeRecipeFamilyName =>
   densityTight ? 'controlCompact' : family;
 
 /**
@@ -88,14 +102,14 @@ export const buttonDensityFamily = (family: RecipeFamilyName, densityTight: bool
  * Resolved from the live token scale — not a handwritten mirror of it.
  */
 const sizeTokenPx = (size: SizeTokens | number | undefined): number => {
-  if (typeof size === 'number') {
+  if (isNumber(size)) {
     return size;
   }
   if (size == null) {
     return MIN_PRESS_TARGET;
   }
-  const resolved = getVariableValue(getSize(size));
-  return typeof resolved === 'number' && Number.isFinite(resolved) ? resolved : MIN_PRESS_TARGET;
+  const resolved: unknown = getVariableValue(getSize(size));
+  return isNumber(resolved) && Number.isFinite(resolved) ? resolved : MIN_PRESS_TARGET;
 };
 
 /** Role within an ActionBar / action region. */
@@ -104,6 +118,15 @@ export type ButtonActionRole = 'primary' | 'secondary' | 'chrome';
 type IconLike = ReactNode | ComponentType<{ size?: number }>;
 
 /** Many call sites pass Phosphor `Icon` (component) instead of `<Icon />`. */
+type IconComponent = ComponentType<{ size?: number }>;
+
+/** Plain function components, or memo/forwardRef objects (identified by their `$$typeof` tag). */
+const isIconComponent = (icon: IconLike): icon is IconComponent => {
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- icons arrive as elements, components or exotic component objects; the typeof tag is the only way to tell them apart
+  const kind = typeof icon;
+  return kind === 'function' || (kind === 'object' && icon !== null && '$$typeof' in icon);
+};
+
 const normalizeButtonIcon = (icon: IconLike | undefined, iconSize: number): ReactNode => {
   if (icon == null || icon === false) {
     return null;
@@ -111,19 +134,13 @@ const normalizeButtonIcon = (icon: IconLike | undefined, iconSize: number): Reac
   if (isValidElement(icon)) {
     return icon;
   }
-  if (typeof icon === 'function') {
+  if (isIconComponent(icon)) {
     return createElement(icon, { size: iconSize });
-  }
-  if (typeof icon === 'object' && icon !== null && '$$typeof' in icon) {
-    return createElement(icon as unknown as ComponentType<{ size?: number }>, { size: iconSize });
   }
   return icon;
 };
 
-const getButtonSized = (val: SizeTokens | number, { props }: VariantSpreadExtras<any>) => {
-  if (!val || props.circular) {
-    return;
-  }
+const sizedFragment = (val: SizeTokens | number) => {
   const recipe = resolveButtonSizeRecipe(val);
   return {
     paddingHorizontal: recipe.paddingHorizontal,
@@ -132,15 +149,45 @@ const getButtonSized = (val: SizeTokens | number, { props }: VariantSpreadExtras
   };
 };
 
+const getButtonSized = (val: SizeTokens | number, { props }: VariantSpreadExtras<{ circular?: boolean }>) =>
+  val === 0 || val === '' || props.circular === true ? undefined : sizedFragment(val);
+
 const textAccentLow = {
   default: formButtonColors.textLow.base,
   hover: formButtonColors.textLow.hover,
   press: formButtonColors.textLow.active,
 } as const;
 
+/** Circular tokens below 44 need an explicit box floor; hitSlop covers native/touch leftovers. */
+const circularFloorFor = (tokenPx: number) =>
+  tokenPx < MIN_PRESS_TARGET
+    ? {
+        width: MIN_PRESS_TARGET,
+        height: MIN_PRESS_TARGET,
+        minWidth: MIN_PRESS_TARGET,
+        minHeight: MIN_PRESS_TARGET,
+        maxWidth: MIN_PRESS_TARGET,
+        maxHeight: MIN_PRESS_TARGET,
+        hitSlop: pressTargetHitSlop(tokenPx),
+      }
+    : { minWidth: MIN_PRESS_TARGET, minHeight: MIN_PRESS_TARGET };
+
+const hoverFillFor = (selectedFill: boolean, outlined: boolean) => {
+  if (selectedFill) {
+    return outlined ? BACKGROUND_HOVER_TOKEN : BACKGROUND_PRESS_TOKEN;
+  }
+  return outlined ? 'transparent' : BACKGROUND_HOVER_TOKEN;
+};
+
+const lowAccentInk = (pressing: boolean, hovering: boolean) => {
+  if (pressing) {
+    return textAccentLow.press;
+  }
+  return hovering ? textAccentLow.hover : textAccentLow.default;
+};
+
 /** TEXT-RIDES-TEXT: bare string/number children are legal only inside Text. */
-const isBareTextChild = (child: unknown): child is string | number =>
-  typeof child === 'string' || typeof child === 'number';
+const isBareTextChild = (child: unknown): child is string | number => isString(child) || isNumber(child);
 
 /**
  * TEXT-RIDES-TEXT (catalog arm): multi-child arrays are the trap — the
@@ -156,13 +203,14 @@ const wrapBareTextChildren = (
   renderLabel: (label: string, key: string) => ReactNode,
 ): ReactNode[] => {
   const out: ReactNode[] = [];
-  let run: string | undefined;
+  let run: string | null = null;
   let runIndex = 0;
   const flushRun = () => {
-    if (run !== undefined && run !== '') {
-      out.push(renderLabel(run, `lc35-run-${runIndex++}`));
+    if (run !== null && run !== '') {
+      out.push(renderLabel(run, `lc35-run-${runIndex}`));
+      runIndex += 1;
     }
-    run = undefined;
+    run = null;
   };
   for (const child of children) {
     if (isBareTextChild(child)) {
@@ -178,6 +226,22 @@ const wrapBareTextChildren = (
 
 const dummyStore = new Store({ isValid: true });
 
+interface ThemeToken {
+  val?: string;
+}
+
+/** The Tamagui theme looked up by token name; entries are resolved Variables carrying `val`. */
+const useThemeTokens = (): Readonly<Record<string, ThemeToken | undefined>> => useTheme();
+
+const RADIUS_STOP_BY_TOKEN = new Map<string, SizeRecipeRadiusStop>(Object.entries(SIZE_RECIPE_RADIUS_TOKEN_TO_STOP));
+
+const INTENT_PRIORITY = ['accent', 'error', 'warning', 'success'] as const;
+
+const BACKGROUND_TOKEN = '$background';
+const BACKGROUND_HOVER_TOKEN = '$backgroundHover';
+const BACKGROUND_PRESS_TOKEN = '$backgroundPress';
+
+// oxlint-disable-next-line react-doctor/only-export-components -- the styled frame is part of this module's public surface (consumed by @repo/ui and tests)
 export const ButtonFrame = styled(View, {
   name: 'Button',
   role: 'button',
@@ -187,14 +251,14 @@ export const ButtonFrame = styled(View, {
   alignItems: 'center',
   flexWrap: 'nowrap',
   flexDirection: 'row',
-  backgroundColor: '$background',
+  backgroundColor: BACKGROUND_TOKEN,
   // Every button carries a 1px
   // border with a TRANSPARENT colour so filled and outlined share identical
   // box geometry — only the outlined variant paints `$borderColor`.
   borderColor: 'transparent',
   outlineWidth: 0,
   hoverStyle: {
-    backgroundColor: '$backgroundHover',
+    backgroundColor: BACKGROUND_HOVER_TOKEN,
   },
   focusStyle: { outlineWidth: 0 },
   variants: {
@@ -208,9 +272,9 @@ export const ButtonFrame = styled(View, {
     },
     selected: {
       true: {
-        backgroundColor: '$backgroundPress',
-        hoverStyle: { backgroundColor: '$backgroundPress' },
-        pressStyle: { backgroundColor: '$backgroundPress' },
+        backgroundColor: BACKGROUND_PRESS_TOKEN,
+        hoverStyle: { backgroundColor: BACKGROUND_PRESS_TOKEN },
+        pressStyle: { backgroundColor: BACKGROUND_PRESS_TOKEN },
       },
     },
     circular: themeableVariants.circular,
@@ -235,7 +299,7 @@ export const ButtonFrame = styled(View, {
     },
   } as const,
   defaultVariants: {
-    size: '$true' as any,
+    size: '$true',
   },
 });
 
@@ -258,7 +322,9 @@ export const ButtonFrame = styled(View, {
  * onto `outlined` — that shim is the documented raw-tamagui compat hatch, and
  * it declares the prop itself rather than inheriting it from here.
  */
-export interface ButtonProps extends Omit<TamaguiButtonProps, 'form' | 'icon' | 'iconAfter' | 'variant'> {
+type ButtonInheritedProps = Omit<Omit<TamaguiButtonProps, 'form' | 'icon'>, 'iconAfter' | 'variant'>;
+
+export interface ButtonProps extends ButtonInheritedProps {
   action?: 'submit' | 'reset';
   form?: AnyFormApi;
   loading?: boolean;
@@ -321,9 +387,10 @@ export interface ButtonProps extends Omit<TamaguiButtonProps, 'form' | 'icon' | 
    * `controlCompact` tightens pad/font/icon/gap at the same height — a theme
    * opt-in, never a per-component tweak. Defaults to `control`.
    */
-  recipeFamily?: RecipeFamilyName;
+  recipeFamily?: SizeRecipeFamilyName;
 }
 
+// oxlint-disable-next-line react-doctor/no-giant-component, eslint/complexity -- one frame whose chrome (intent, disabled wash, density, circular/nested floors, grouping) all derive from the same knob resolution; splitting it would thread ~40 locals through helpers
 export const Button = ({
   children,
   action,
@@ -334,7 +401,7 @@ export const Button = ({
   warning,
   success,
   skeleton = false,
-  outlined,
+  outlined: outlinedProp,
   disabled,
   theme,
   onPress,
@@ -357,13 +424,31 @@ export const Button = ({
   height: heightProp,
   paddingHorizontal: paddingHorizontalProp,
   ...props
+  // oxlint-disable-next-line sonarjs/cognitive-complexity -- see the component-level note
 }: ButtonProps) => {
   const { resolvedForm: formFromHook } = useFormField({ form: formProp });
   const resolvedForm = action ? formFromHook : undefined;
 
+  // Hooks stay above the skeleton early return so the hook order is stable across renders.
+  const [hovering, setHovering] = useState(false);
+  const [pressing, setPressing] = useState(false);
+  const handlePressIn = useCallback(() => {
+    setPressing(true);
+    if (isWeb) {
+      const up = () => {
+        setPressing(false);
+      };
+      document.addEventListener('pointerup', up, { once: true });
+    }
+  }, []);
+  const handlePressOut = useCallback(() => {
+    setPressing(false);
+  }, []);
+  const generatedId = useId();
+
   warnBareDisabled({
     component: 'Button',
-    id: typeof (props as { id?: string }).id === 'string' ? (props as { id?: string }).id : undefined,
+    id: props.id,
     disabled: Boolean(disabled),
     disabledReason,
     // loading / form-invalid are derived — not a bare unexplained disable.
@@ -371,35 +456,33 @@ export const Button = ({
   });
   warnPositiveTabIndex({
     component: 'Button',
-    value: typeof tabIndex === 'number' ? tabIndex : undefined,
+    value: isNumber(tabIndex) ? tabIndex : undefined,
   });
   warnSizeRecipeEscape({
     height: heightProp,
     paddingHorizontal: paddingHorizontalProp,
     sizeRecipeEscape,
     component: 'Button',
-    id: typeof (props as { id?: string }).id === 'string' ? (props as { id?: string }).id : undefined,
+    id: props.id,
   });
-  const sizeRecipeEscaped = typeof sizeRecipeEscape === 'string' && sizeRecipeEscape.trim().length > 0;
+  const sizeRecipeEscaped = sizeRecipeEscape !== undefined && sizeRecipeEscape.trim().length > 0;
   const sizeRecipeEscapeOverride = sizeRecipeEscaped
     ? {
-        ...(typeof heightProp === 'number' ? { height: heightProp } : undefined),
-        ...(typeof paddingHorizontalProp === 'number' ? { paddingHorizontal: paddingHorizontalProp } : undefined),
+        ...(isNumber(heightProp) ? { height: heightProp } : undefined),
+        ...(isNumber(paddingHorizontalProp) ? { paddingHorizontal: paddingHorizontalProp } : undefined),
       }
     : undefined;
   const passthroughSizeProps = {
-    ...(typeof heightProp !== 'number' && heightProp != null ? { height: heightProp } : undefined),
-    ...(typeof paddingHorizontalProp !== 'number' && paddingHorizontalProp != null
+    ...(!isNumber(heightProp) && heightProp != null ? { height: heightProp } : undefined),
+    ...(!isNumber(paddingHorizontalProp) && paddingHorizontalProp != null
       ? { paddingHorizontal: paddingHorizontalProp }
       : undefined),
   };
 
-  const { isValid } = useStore((resolvedForm?.store ?? dummyStore) as Store<{ isValid: boolean }>, (s) => ({
-    isValid: s.isValid ?? true,
-  }));
+  const isValid = useSelector(resolvedForm?.store ?? dummyStore, (s) => s.isValid ?? true);
 
-  const intent =
-    (accent && 'accent') || (error && 'error') || (warning && 'warning') || (success && 'success') || undefined;
+  const intentFlags = { accent, error, warning, success };
+  const intent = INTENT_PRIORITY.find((name) => intentFlags[name] === true);
   // compact is density, not a size step — do not pass it through
   // useResolvedKnobs (size stays on the size axis). The PROP and the
   // density knob share one channel: both pick the recipe FAMILY, the same
@@ -411,20 +494,18 @@ export const Button = ({
   });
   // Ring color resolved OUTSIDE the intent <Theme> wrapper below — the
   // page-scope `$outlineColor` literal (see focusVisibleStyle).
-  const parentScopeTheme = useTheme();
-  const pageOutlineColor = parentScopeTheme.outlineColor?.val as string | undefined;
+  const parentScopeTheme = useThemeTokens();
+  const pageOutlineColor = parentScopeTheme.outlineColor?.val;
   const hostAccentInk = useAccentOnSurface();
   const grouped = useControlGrouped();
-  const sizeProp = (props as { size?: SizeTokens | number }).size;
+  const sizeProp = props.size;
   const resolvedSize = sizeProp ?? knobProps.sizeToken;
-  const densityTight = compact === undefined ? knobProps.density === 'compact' : compact;
+  const densityTight = compact ?? knobProps.density === 'compact';
   const recipe = resolveButtonSizeRecipe(resolvedSize, buttonDensityFamily(recipeFamily, densityTight));
   const padX = recipe.paddingHorizontal;
-  const radiusToken = knobProps.borderRadius.borderRadius;
-  const radiusStop: SizeRecipeRadiusStop | undefined =
-    typeof radiusToken === 'string'
-      ? SIZE_RECIPE_RADIUS_TOKEN_TO_STOP[radiusToken as keyof typeof SIZE_RECIPE_RADIUS_TOKEN_TO_STOP]
-      : undefined;
+  const radiusStop: SizeRecipeRadiusStop | undefined = RADIUS_STOP_BY_TOKEN.get(
+    String(knobProps.borderRadius.borderRadius),
+  );
   const paintedRadius = resolveControlRadius(recipe, radiusStop ?? 'medium');
   const innerGap = paintedRadius.gap;
   if (skeleton) {
@@ -440,7 +521,8 @@ export const Button = ({
     );
   }
 
-  const isDisabled = disabled || loading || (action === 'submit' && resolvedForm && !isValid);
+  const formInvalid = action === 'submit' && resolvedForm != null && !isValid;
+  const isDisabled = disabled === true || loading === true || formInvalid;
 
   const handlePress = (e: GestureResponderEvent) => {
     // Explained disable keeps the frame press-able (aria-disabled, focusable)
@@ -462,6 +544,8 @@ export const Button = ({
   // native Enter/Space activation. Synthesize a real click so activation
   // bubbles exactly like a pointer press (composed asChild triggers included).
   const handleKeyDown = (e: KeyboardEvent) => {
+    // SAFETY: the frame only receives React keyboard events on web, which carry the same key/repeat/defaultPrevented fields the DOM event does.
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- tamagui types onKeyDown with React's event; this handler is typed with the DOM event it actually dispatches
     (onKeyDown as ((e: KeyboardEvent) => void) | undefined)?.(e);
     if (e.defaultPrevented || e.repeat) {
       return;
@@ -469,83 +553,76 @@ export const Button = ({
     if (e.key !== 'Enter' && e.key !== ' ') {
       return;
     }
-    e.preventDefault(); // stop Space scroll / double native synthesis
+    // Stop Space scroll / double native synthesis.
+    e.preventDefault();
     if (isDisabled) {
       return;
     }
-    (e.currentTarget as unknown as HTMLElement | null)?.click?.();
+    const frame = e.currentTarget;
+    if (frame instanceof HTMLElement) {
+      frame.click();
+    }
   };
 
   const activeThemeName = theme ?? intent;
+  // '' behaves like no theme: it is not a real theme name.
+  const themeKey = hasText(activeThemeName) ? activeThemeName : undefined;
   const hostScoped = <T extends object>(fragment: T): T =>
+    // SAFETY: only string values that name a `$token` are swapped for their resolved paint; every key is kept, so the result has the same shape as the input.
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- fromEntries erases the key types of the mapped fragment
     Object.fromEntries(
       Object.entries(fragment).map(([key, value]) => [
         key,
-        typeof value === 'string' && value.startsWith('$')
-          ? (parentScopeTheme[value.slice(1) as keyof typeof parentScopeTheme]?.val ?? value)
-          : value,
+        isString(value) && value.startsWith('$') ? (parentScopeTheme[value.slice(1)]?.val ?? value) : value,
       ]),
     ) as T;
   // A solid-palette theme has no wash tier, so the wash and
   // its ink come from the host scope. Solid-intent ramps keep their own wash,
   // where `$color11` misses 4.5:1 (light warning 4.48, success 4.27) and the
   // hue's `$color12` text step clears it.
-  const washOnHost = Boolean(isDisabled && activeThemeName && solidPaletteThemes.has(activeThemeName));
+  const washOnHost = isDisabled && themeKey !== undefined && solidPaletteThemes.has(themeKey);
   const disabledSurface = washOnHost ? hostScoped(disabledState.surfaceKnobProps) : disabledState.surfaceKnobProps;
+  const solidIntentInk =
+    themeKey !== undefined && solidButtonIntents.has(themeKey) && Boolean(disabledState.textKnobProps.color);
+  const solidIntentDisabledText = solidIntentInk ? { ...disabledState.textKnobProps, color: '$color12' } : undefined;
   const disabledText = washOnHost
     ? hostScoped(disabledState.textKnobProps)
-    : activeThemeName && solidButtonIntents.has(activeThemeName) && disabledState.textKnobProps.color
-      ? { ...disabledState.textKnobProps, color: '$color12' }
-      : disabledState.textKnobProps;
-  outlined = outlined ?? knobProps.outlined;
+    : (solidIntentDisabledText ?? disabledState.textKnobProps);
+  const outlined = outlinedProp ?? knobProps.outlined;
   const isLow = knobProps.textAccent === 'low';
   const isMedium = knobProps.textAccent === 'medium';
   const resolvedBorderWidth = knobProps.borderRadius.borderWidth;
-  const [hovering, setHovering] = useState(false);
-  const [pressing, setPressing] = useState(false);
-  const handlePressIn = useCallback(() => {
-    setPressing(true);
-    if (isWeb) {
-      const up = () => {
-        setPressing(false);
-      };
-      document.addEventListener('pointerup', up, { once: true });
-    }
-  }, []);
-  const handlePressOut = useCallback(() => {
-    setPressing(false);
-  }, []);
-  const textColor = isLow
-    ? pressing
-      ? textAccentLow.press
-      : hovering
-        ? textAccentLow.hover
-        : textAccentLow.default
-    : isMedium
-      ? formCommonColors.text
-      : undefined;
+  const mediumInk = isMedium ? formCommonColors.text : undefined;
+  const textColor = isLow ? lowAccentInk(pressing, hovering) : mediumInk;
   // The outlined+intent frame re-anchors to `$color11` below, which
   // reaches currentColor icons but NOT the label — SizableText re-resolves
   // `$color` from the solid intent sub-theme, the ON-FILL foreground
   // (measured 1.02–1.06:1 on the page in both schemes). At the default
   // textAccent (`high`, textColor undefined) the label must re-anchor to the
   // same readable text tier the frame uses.
-  const outlinedIntentInk = Boolean(outlined && activeThemeName && solidButtonIntents.has(activeThemeName));
+  const outlinedIntentInk = outlined && themeKey !== undefined && solidButtonIntents.has(themeKey);
   // A solid-palette theme (accent) has no readable-on-page step at
   // all, `$color11` included, so an outlined one takes its ink from the host:
   // the accent that clears AA there, or host-scoped text under a textAccent.
-  const outlinedOnHost = Boolean(outlined && activeThemeName && solidPaletteThemes.has(activeThemeName));
-  const outlinedInk = outlinedOnHost ? hostAccentInk : outlinedIntentInk ? '$color11' : undefined;
+  const outlinedOnHost = outlined && themeKey !== undefined && solidPaletteThemes.has(themeKey);
+  const intentInk = outlinedIntentInk ? '$color11' : undefined;
+  const outlinedInk = outlinedOnHost ? hostAccentInk : intentInk;
 
   const resolvedRole: ButtonActionRole | undefined = actionRole ?? (accent ? 'primary' : undefined);
   const labelFromParts = children == null && verb != null ? formatActionLabel({ verb, noun }) : null;
-  const resolvedChildren = children ?? labelFromParts;
-  const ariaPressedProp = (props as { 'aria-pressed'?: boolean | 'true' | 'false' })['aria-pressed'];
+  const resolvedChildren: ReactNode = children ?? labelFromParts;
+  const ariaPressedProp = props['aria-pressed'];
   const isSelected = selected ?? (ariaPressedProp === true || ariaPressedProp === 'true' ? true : undefined);
   const selectedFill = Boolean(isSelected) && !isDisabled;
   const iconSize = nested
     ? Math.min(recipe.iconSize, Math.max(12, Math.round(knobProps.nestedControl.px * 0.45)))
     : recipe.iconSize;
+
+  // Label ink: an explicit text-accent ink wins (host-scoped on a solid palette); otherwise
+  // an outlined intent frame re-anchors the label to its readable tier.
+  const textColorFragment = outlinedOnHost ? hostScoped({ color: textColor }) : { color: textColor };
+  const outlinedInkFragment = hasText(outlinedInk) ? { color: outlinedInk } : undefined;
+  const labelColorFragment = textColor === undefined ? outlinedInkFragment : textColorFragment;
 
   const renderLabelText = (label: string | number, key?: string) => (
     <SizableText
@@ -558,13 +635,7 @@ export const Button = ({
       overflow="hidden"
       {...knobProps.body}
       {...(nested ? knobProps.label : { fontSize: recipe.fontSize })}
-      {...(textColor
-        ? outlinedOnHost
-          ? hostScoped({ color: textColor })
-          : { color: textColor }
-        : outlinedInk
-          ? { color: outlinedInk }
-          : undefined)}
+      {...labelColorFragment}
       // On the washed disabled chrome the label leaves the on-fill
       // foreground for the wash's AA ink (keepLabel keeps >=4.5:1).
       {...(isDisabled ? disabledText : undefined)}
@@ -579,24 +650,31 @@ export const Button = ({
   );
   // TEXT-RIDES-TEXT: wrap ALL bare string/number children — the
   // array path (coalesced runs), not just the singleton case.
+  // oxlint-disable-next-line react/no-react-children -- toArray assigns the stable keys the coalesced label runs rely on
   const flattenedChildren = Array.isArray(resolvedChildren) ? Children.toArray(resolvedChildren) : null;
-  const textContent = loading ? (
-    <Spinner size="small" />
-  ) : isBareTextChild(resolvedChildren) ? (
-    renderLabelText(resolvedChildren)
-  ) : flattenedChildren?.some(isBareTextChild) ? (
-    wrapBareTextChildren(flattenedChildren, renderLabelText)
-  ) : (
-    resolvedChildren
-  );
+  const renderTextContent = (): ReactNode => {
+    if (loading) {
+      return <Spinner size="small" />;
+    }
+    if (isBareTextChild(resolvedChildren)) {
+      return renderLabelText(resolvedChildren);
+    }
+    if (flattenedChildren?.some(isBareTextChild)) {
+      return wrapBareTextChildren(flattenedChildren, renderLabelText);
+    }
+    return resolvedChildren;
+  };
+  const textContent = renderTextContent();
 
-  const hasIcon = icon || iconAfter;
-  const iconElement = icon ? <View flexShrink={0}>{normalizeButtonIcon(icon, iconSize)}</View> : null;
-  const iconAfterElement = iconAfter ? <View flexShrink={0}>{normalizeButtonIcon(iconAfter, iconSize)}</View> : null;
+  const hasIconStart = Boolean(icon);
+  const hasIconEnd = Boolean(iconAfter);
+  const hasIcon = hasIconStart || hasIconEnd;
+  const hasContent = Boolean(resolvedChildren) || Boolean(textContent);
+  const iconElement = hasIconStart ? <View flexShrink={0}>{normalizeButtonIcon(icon, iconSize)}</View> : null;
+  const iconAfterElement = hasIconEnd ? <View flexShrink={0}>{normalizeButtonIcon(iconAfter, iconSize)}</View> : null;
 
-  const explainedDisable = Boolean(disabledReason?.trim()) && Boolean(isDisabled);
-  const generatedId = useId();
-  const reasonId = explainedDisable ? `${(props as { id?: string }).id ?? generatedId}-disabled-reason` : undefined;
+  const explainedDisable = Boolean(disabledReason?.trim()) && isDisabled;
+  const reasonId = explainedDisable ? `${props.id ?? generatedId}-disabled-reason` : undefined;
   const isCircular = Boolean(circular);
   const circularTokenPx = sizeTokenPx(resolvedSize);
   const visualPx = nested ? knobProps.nestedControl.px : recipe.height;
@@ -604,20 +682,7 @@ export const Button = ({
   // sets maxWidth/maxHeight to the token). hitSlop covers native/touch leftovers.
   // Nested circulars skip this — they paint nestedControl and restore press
   // with slop. Page-level toolbar wells keep the 44px painted floor.
-  const circularPressFloor =
-    isCircular && circularTokenPx < MIN_PRESS_TARGET
-      ? {
-          width: MIN_PRESS_TARGET,
-          height: MIN_PRESS_TARGET,
-          minWidth: MIN_PRESS_TARGET,
-          minHeight: MIN_PRESS_TARGET,
-          maxWidth: MIN_PRESS_TARGET,
-          maxHeight: MIN_PRESS_TARGET,
-          hitSlop: pressTargetHitSlop(circularTokenPx),
-        }
-      : isCircular
-        ? { minWidth: MIN_PRESS_TARGET, minHeight: MIN_PRESS_TARGET }
-        : undefined;
+  const circularPressFloor = isCircular ? circularFloorFor(circularTokenPx) : undefined;
   const nestedFloor = nested
     ? {
         height: visualPx,
@@ -630,7 +695,7 @@ export const Button = ({
               maxWidth: visualPx,
               borderRadius: 100_000,
             }
-          : {}),
+          : undefined),
         'data-nested-px': String(visualPx),
         ...pressSlopProps(visualPx, true),
       }
@@ -646,20 +711,20 @@ export const Button = ({
   // elevation, border width, motion, disabled wash) still follows the knobs,
   // and the default/outlined frame goes fully square at `none` via the knob
   // fragment below.
-  const selectedHoverFill = selectedFill
-    ? outlined
-      ? '$backgroundHover'
-      : '$backgroundPress'
-    : outlined
-      ? 'transparent'
-      : '$backgroundHover';
-  const selectedPressFill = selectedFill ? '$backgroundPress' : outlined ? 'transparent' : '$backgroundPress';
-  const restFill = selectedFill ? (outlined ? '$background' : '$backgroundPress') : undefined;
+  const selectedHoverFill = hoverFillFor(selectedFill, outlined);
+  const selectedPressFill = !selectedFill && outlined ? 'transparent' : BACKGROUND_PRESS_TOKEN;
+  const selectedRestFill = outlined ? BACKGROUND_TOKEN : BACKGROUND_PRESS_TOKEN;
+  const restFill = selectedFill ? selectedRestFill : undefined;
+  const floorProps = nested ? nestedFloor : (circularPressFloor ?? pageSlop);
+  const buttonHeightPx = nested || !isCircular ? visualPx : Math.max(circularTokenPx, MIN_PRESS_TARGET);
+  // SAFETY: the frame is a div on web, so it dispatches DOM key events; tamagui's View props only type the native zero-arg signature.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion, anti-slop/no-chained-type-assertions -- bridging the DOM-event handler to the View prop signature
+  const webKeyDownProps = { onKeyDown: handleKeyDown as unknown as () => void };
   const buttonElement = (
     <ButtonFrame
       // An explained disable is aria-disabled (focusable, press
       // swallowed in handlePress) instead of a natively disabled dead end.
-      disabled={explainedDisable ? false : isDisabled || false}
+      disabled={explainedDisable ? false : isDisabled}
       opacity={1}
       transition={knobProps.transition}
       {...knobProps.borderRadius}
@@ -678,7 +743,7 @@ export const Button = ({
       // attribute ("Received `false` for a non-boolean attribute"). Every
       // knob-driven caller passes `knobProps.outlined`, which is a real
       // boolean, so this fired on most screens.
-      outlined={outlined || undefined}
+      outlined={outlined ? true : undefined}
       circular={!nested && isCircular ? true : undefined}
       chromeless={selectedFill ? false : chromeless}
       selected={selectedFill || undefined}
@@ -697,7 +762,7 @@ export const Button = ({
       // Solid-intent sub-themes carry the on-fill foreground as `$color`;
       // outlined frames sit on the page, so re-anchor inherited
       // text/icon color (currentColor) to the hue's readable text tier.
-      {...(outlinedInk ? { color: outlinedInk } : undefined)}
+      {...outlinedInkFragment}
       // DISABLED-VISIBLE: keepLabel washes the chrome (muted fill/
       // border) while label/glyphs re-anchor to the lowest AA text tier
       // (`color` inherits into currentColor icons); dimWhole dims the
@@ -745,12 +810,12 @@ export const Button = ({
       // pagination button).
       focusVisibleStyle={ensureFocusVisibleRing({
         ...control.focusVisibleKnobProps,
-        ...(pageOutlineColor ? { outlineColor: pageOutlineColor } : undefined),
+        ...(hasText(pageOutlineColor) ? { outlineColor: pageOutlineColor } : undefined),
       })}
       onPress={handlePress}
-      {...(isWeb ? { onKeyDown: handleKeyDown as unknown as () => void } : undefined)}
+      {...(isWeb ? webKeyDownProps : undefined)}
       {...(tabIndex == null ? undefined : { tabIndex })}
-      gap={hasIcon && (resolvedChildren || textContent) ? innerGap : undefined}
+      gap={hasIcon && hasContent ? innerGap : undefined}
       // STD-EJECT-LAST: knob fragments and internal defaults (radius/size/
       // elevation/gap above) sit BEFORE the consumer spread so `{...props}`
       // stays the one styling eject. The spreads after it are not defaults:
@@ -763,7 +828,7 @@ export const Button = ({
       {...props}
       {...passthroughSizeProps}
       {...sizeRecipeEscapeOverride}
-      {...(nested ? nestedFloor : isCircular ? circularPressFloor : pageSlop)}
+      {...floorProps}
       {...(selectedFill && !isDisabled
         ? {
             backgroundColor: restFill,
@@ -804,14 +869,13 @@ export const Button = ({
         ? {
             borderWidth: 0,
             borderRadius: 0,
+            // oxlint-disable-next-line sonarjs/no-undefined-assignment -- must override the knob elevation set earlier on the frame; omitting the key would keep it
             elevation: undefined,
             height: '100%',
           }
         : undefined)}
-      {...(resolvedRole ? { 'data-mp-action-role': resolvedRole } : undefined)}
-      data-mp-button-height={String(
-        nested ? visualPx : isCircular ? Math.max(circularTokenPx, MIN_PRESS_TARGET) : visualPx,
-      )}
+      {...(resolvedRole === undefined ? undefined : { 'data-mp-action-role': resolvedRole })}
+      data-mp-button-height={String(buttonHeightPx)}
       data-mp-density={densityTight ? 'compact' : 'comfortable'}
       {...(selectedFill ? { 'aria-pressed': true, 'data-mp-selected': 'true' } : undefined)}>
       {iconElement}
@@ -820,7 +884,7 @@ export const Button = ({
     </ButtonFrame>
   );
 
-  const themedButton = activeThemeName ? <Theme name={activeThemeName}>{buttonElement}</Theme> : buttonElement;
+  const themedButton = themeKey === undefined ? buttonElement : <Theme name={themeKey}>{buttonElement}</Theme>;
 
   // Explain affordance: visible reason adjacent to the control —
   // discoverable by pointer, touch, keyboard, and SR (aria-describedby)

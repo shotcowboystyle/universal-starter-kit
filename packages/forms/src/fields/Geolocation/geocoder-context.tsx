@@ -31,22 +31,23 @@ export const useReverseGeocodedLabel = (pair: { lat: number; lng: number } | nul
   const key = lat === undefined || lng === undefined ? null : `${lat},${lng}`;
   const [resolved, setResolved] = useState<{ key: string; label: string } | null>(null);
   useEffect(() => {
-    if (!geocoder || lat === undefined || lng === undefined || key === null) {
-      return;
-    }
     let live = true;
-    geocoder.reverseGeocode({ lat, lng }).then(
-      (result) => {
+    const lookup = async (active: Geocoder, point: { lat: number; lng: number }, pointKey: string) => {
+      try {
+        const result = await active.reverseGeocode(point);
         if (live) {
-          setResolved(result ? { key, label: formatPlace(result) } : null);
+          setResolved(result ? { key: pointKey, label: formatPlace(result) } : null);
         }
-      },
-      () => {
+      } catch {
+        // Safe to continue: a failed lookup leaves the coordinate pair as the label.
         if (live) {
           setResolved(null);
         }
-      },
-    );
+      }
+    };
+    if (geocoder && lat !== undefined && lng !== undefined && key !== null) {
+      void lookup(geocoder, { lat, lng }, key);
+    }
     return () => {
       live = false;
     };

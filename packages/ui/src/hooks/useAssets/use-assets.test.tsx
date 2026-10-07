@@ -1,25 +1,32 @@
 import { renderHook } from '@testing-library/react';
+import type { useAssets as expoUseAssets } from 'expo-asset';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useAssets as useAssetsNative } from './index.native';
 
 import { useAssets as useAssetsWeb } from './index';
 
+interface MockAsset {
+  height: number;
+  width: number;
+  uri: string;
+}
+
+// oxlint-disable-next-line vitest/prefer-import-in-mock -- the typed factory requires the full Platform module shape; this stand-in only needs `select`
 vi.mock('react-native/Libraries/Utilities/Platform', () => ({
   default: {
-    select: (obj: any) => obj.native,
+    select: (obj: { native: unknown }) => obj.native,
   },
 }));
 
+// oxlint-disable-next-line vitest/prefer-import-in-mock -- the typed factory requires expo Asset instances; plain stand-in assets are enough here
 vi.mock('expo-asset', () => ({
-  useAssets: vi.fn().mockImplementation((modules) => [
-    modules
-      ? modules.map((_m: any) => ({
-          height: 100,
-          width: 200,
-          uri: 'mock-asset-uri',
-        }))
-      : [],
+  useAssets: vi.fn<(modules: number | number[]) => [MockAsset[], null]>().mockImplementation((modules) => [
+    [modules].flat().map(() => ({
+      height: 100,
+      width: 200,
+      uri: 'mock-asset-uri',
+    })),
     null,
   ]),
 }));
@@ -55,7 +62,7 @@ describe('useAssets (Web)', () => {
 
 describe('useAssets (Native)', () => {
   it('should handle single module input', () => {
-    const mockModule = { default: 'test-asset' };
+    const mockModule = { default: 1 };
     const { result } = renderHook(() => useAssetsNative(mockModule));
     expect(result.current).toStrictEqual([
       {
@@ -67,7 +74,7 @@ describe('useAssets (Native)', () => {
   });
 
   it('should handle array of modules', () => {
-    const mockModules = [{ default: 'test1' }, { default: 'test2' }];
+    const mockModules = [{ default: 1 }, { default: 2 }];
     const { result } = renderHook(() => useAssetsNative(mockModules));
     expect(result.current).toStrictEqual([
       {
@@ -89,7 +96,7 @@ describe('useAssets (Native)', () => {
   });
 
   it('should handle non-object input', () => {
-    const { result } = renderHook(() => useAssetsNative('not-an-object'));
+    const { result } = renderHook(() => useAssetsNative(42));
     expect(result.current).toBeDefined();
     expect(result.current).toHaveLength(1);
   });
@@ -105,12 +112,12 @@ describe('useAssets (Native) - Unit Tests for expoUseAssets behavior', () => {
 
   it('should log an error if expoUseAssets returns an error', async () => {
     const testError = new Error('Test error');
-    vi.doMock('expo-asset', () => ({
-      useAssets: vi.fn(() => [null, testError]),
+    vi.doMock(import('expo-asset'), () => ({
+      useAssets: vi.fn<typeof expoUseAssets>(() => [undefined, testError]),
     }));
-    const { useAssets: useAssetsNative } = await import('./index.native');
+    const { useAssets: useAssetsReloaded } = await import('./index.native');
     const loggerSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const { result } = renderHook(() => useAssetsNative('dummy-module'));
+    const { result } = renderHook(() => useAssetsReloaded(7));
     expect(loggerSpy).toHaveBeenCalledWith(testError);
     expect(result.current).toHaveLength(1);
     expect(result.current[0]).toBeUndefined();
@@ -118,14 +125,14 @@ describe('useAssets (Native) - Unit Tests for expoUseAssets behavior', () => {
   });
 
   it('should return an array with undefined when expoUseAssets returns null for assets', async () => {
-    vi.doMock('expo-asset', () => ({
-      useAssets: vi.fn(() => [null, null]),
+    vi.doMock(import('expo-asset'), () => ({
+      useAssets: vi.fn<typeof expoUseAssets>(() => [undefined, undefined]),
     }));
-    const { useAssets: useAssetsNative } = await import('./index.native');
-    const { result } = renderHook(() => useAssetsNative('dummy-module'));
+    const { useAssets: useAssetsReloaded } = await import('./index.native');
+    const { result } = renderHook(() => useAssetsReloaded(7));
     expect(result.current).toHaveLength(1);
     expect(result.current[0]).toBeUndefined();
-    const { result: resultArray } = renderHook(() => useAssetsNative(['mod1', 'mod2']));
+    const { result: resultArray } = renderHook(() => useAssetsReloaded([8, 9]));
     expect(resultArray.current).toHaveLength(2);
     expect(resultArray.current[0]).toBeUndefined();
     expect(resultArray.current[1]).toBeUndefined();
@@ -133,11 +140,12 @@ describe('useAssets (Native) - Unit Tests for expoUseAssets behavior', () => {
 
   it('should correctly map valid assets when expoUseAssets returns assets', async () => {
     const assetMock = { height: 100, width: 200, uri: 'test-uri' };
+    // oxlint-disable-next-line vitest/prefer-import-in-mock -- the typed factory requires expo Asset instances; a plain stand-in asset is enough here
     vi.doMock('expo-asset', () => ({
-      useAssets: vi.fn(() => [[assetMock], null]),
+      useAssets: vi.fn<() => [MockAsset[], null]>(() => [[assetMock], null]),
     }));
-    const { useAssets: useAssetsNative } = await import('./index.native');
-    const { result } = renderHook(() => useAssetsNative('dummy-module'));
+    const { useAssets: useAssetsReloaded } = await import('./index.native');
+    const { result } = renderHook(() => useAssetsReloaded(7));
     expect(result.current).toStrictEqual([
       {
         height: 100,

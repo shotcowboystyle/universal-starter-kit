@@ -1,0 +1,57 @@
+{
+  "name": "@repo/cli",
+  "version": "0.0.0",
+  "description": "universal-starter-kit cli — mpo init clones and prunes the monorepo, mpo update merges it back",
+  "license": "Apache-2.0",
+  "bin": {
+    "create-multiplatform-app": "./bin/createMultiplatformApp.mjs",
+    "mpo": "./bin/multiplatformOne.mjs"
+  },
+  "source": "src/index.ts",
+  "files": [
+    "bin",
+    "lib",
+    "scripts",
+    "src",
+    "templates",
+    "types",
+    "!types/.tsbuildinfo"
+  ],
+  "type": "module",
+  "module": "lib/index.mjs",
+  "types": "types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "import": "./lib/index.mjs"
+    },
+    "./bin/multiplatformOne": {
+      "types": "./types/bin/multiplatformOne.d.ts",
+      "import": "./lib/bin/multiplatformOne.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "rm -rf lib types 2>/dev/null && tsc -p tsconfig.build.json && tsdown && node scripts/stamp-source.mjs",
+    "test": "vitest run",
+    "typecheck": "tsgo --noEmit"
+  },
+  "dependencies": {
+    "@repo/utils": "workspace:*",
+    "commander": "^14.0.3",
+    "dotenv": "catalog:",
+    "inquirer": "^13.4.2",
+    "nano-spawn": "^2.1.0",
+    "yaml": "^2.8.3",
+    "yocto-spinner": "^1.1.0"
+  },
+  "devDependencies": {
+    "@types/inquirer": "^9.0.9",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "engines": {
+    "node": ">= 16.0"
+  }
+}

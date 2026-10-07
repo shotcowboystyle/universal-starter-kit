@@ -155,7 +155,7 @@ const REFERENCE_VECTORS: {
     ],
   },
   {
-    value: 'https://multiplatform.one',
+    value: 'https://universal-starter-kit',
     ecLevel: 'M',
     version: 2,
     mask: 2,

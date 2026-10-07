@@ -1,18 +1,15 @@
 import { act, renderHook } from '@testing-library/react';
-import { vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { copyToClipboard, useClipboard } from './use-clipboard';
 
 import { useAssets } from './index';
 
-const mockWriteText = vi.fn();
+const mockWriteText = vi.fn<(text: string) => Promise<void>>();
 const mockClipboard = { writeText: mockWriteText };
-vi.stubGlobal('navigator', {
-  ...(typeof navigator === 'undefined' ? {} : navigator),
-  clipboard: mockClipboard,
-});
+vi.stubGlobal('navigator', { clipboard: mockClipboard });
 
-describe('useClipboard', () => {
+describe(useClipboard, () => {
   beforeEach(() => {
     mockWriteText.mockClear();
     vi.useFakeTimers();
@@ -32,7 +29,7 @@ describe('useClipboard', () => {
 
   it('should copy text and set hasCopied to true', async () => {
     const testText = 'test text';
-    mockWriteText.mockResolvedValueOnce(undefined);
+    mockWriteText.mockResolvedValueOnce();
     const { result } = renderHook(() => useClipboard(testText));
     await act(async () => {
       await result.current.onCopy();
@@ -44,7 +41,7 @@ describe('useClipboard', () => {
   it('should reset hasCopied after timeout', async () => {
     const testText = 'test text';
     const timeout = 1500;
-    mockWriteText.mockResolvedValueOnce(undefined);
+    mockWriteText.mockResolvedValueOnce();
     const { result } = renderHook(() => useClipboard(testText, { timeout }));
     await act(async () => {
       await result.current.onCopy();
@@ -59,7 +56,7 @@ describe('useClipboard', () => {
   it('should use custom timeout', async () => {
     const testText = 'test text';
     const customTimeout = 3000;
-    mockWriteText.mockResolvedValueOnce(undefined);
+    mockWriteText.mockResolvedValueOnce();
     const { result } = renderHook(() => useClipboard(testText, { timeout: customTimeout }));
     await act(async () => {
       await result.current.onCopy();
@@ -102,16 +99,16 @@ describe('useClipboard', () => {
   });
 });
 
-describe('copyToClipboard', () => {
+describe(copyToClipboard, () => {
   it('should call navigator.clipboard.writeText with provided text', async () => {
     const testText = 'test text';
-    mockWriteText.mockResolvedValueOnce(undefined);
+    mockWriteText.mockResolvedValueOnce();
     await copyToClipboard(testText);
     expect(mockWriteText).toHaveBeenCalledWith(testText);
   });
 });
 
-describe('useAssets', () => {
+describe(useAssets, () => {
   it('should return an array with a single module when passed a single module', () => {
     const mockModule = { default: 'mockedImage' };
     const { result } = renderHook(() => useAssets([mockModule]));
@@ -151,8 +148,8 @@ describe('useAssets', () => {
   });
 
   it('should return an array of modules without default properties', () => {
-    const result = useAssets(['image3', { name: 'image4' }]);
-    expect(result).toStrictEqual(['image3', { name: 'image4' }]);
+    const result = useAssets(['image3', { uri: 'image4' }]);
+    expect(result).toStrictEqual(['image3', { uri: 'image4' }]);
   });
 
   it('should handle an empty array and return an empty array', () => {
@@ -161,7 +158,7 @@ describe('useAssets', () => {
   });
 
   it('should return an array with a mix of valid and invalid modules', () => {
-    const result = useAssets([{ default: 'image1' }, 'image3', { name: 'image4' }]);
-    expect(result).toStrictEqual(['image1', 'image3', { name: 'image4' }]);
+    const result = useAssets([{ default: 'image1' }, 'image3', { uri: 'image4' }]);
+    expect(result).toStrictEqual(['image1', 'image3', { uri: 'image4' }]);
   });
 });

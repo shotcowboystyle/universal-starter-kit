@@ -1,18 +1,16 @@
 import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 
 import { renderWithProviders } from '@repo/test-utils';
 import { fireEvent } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { Image } from './index';
-
-const here = dirname(fileURLToPath(import.meta.url));
+import type { ImageProps } from './index';
 
 const SRC = 'https://example.com/photo.jpg';
 
-describe('Image', () => {
+describe(Image, () => {
   describe('rendering', () => {
     it('renders an img element on web', () => {
       const { container } = renderWithProviders(
@@ -50,6 +48,7 @@ describe('Image', () => {
     it('renders with source prop (object form)', () => {
       const { container } = renderWithProviders(
         <Image
+          // oxlint-disable-next-line typescript/no-deprecated -- exercising the supported RN-style `source` prop
           source={{ uri: SRC }}
           alt="object source"
           width={100}
@@ -64,6 +63,7 @@ describe('Image', () => {
     it('does not leak the RN source object onto the img', () => {
       const { container } = renderWithProviders(
         <Image
+          // oxlint-disable-next-line typescript/no-deprecated -- exercising the supported RN-style `source` prop
           source={{ uri: SRC }}
           alt="object source"
           width={100}
@@ -235,7 +235,7 @@ describe('Image', () => {
 
   describe('event handlers', () => {
     it('accepts onLoad handler', () => {
-      const onLoad = vi.fn();
+      const onLoad = vi.fn<NonNullable<ImageProps['onLoad']>>();
       const { container } = renderWithProviders(
         <Image
           src={SRC}
@@ -248,11 +248,11 @@ describe('Image', () => {
       const img = container.querySelector('img');
       expect(img).toBeInTheDocument();
       fireEvent.load(img!);
-      expect(onLoad).toHaveBeenCalled();
+      expect(onLoad).toHaveBeenCalledWith(expect.anything());
     });
 
     it('accepts onError handler', () => {
-      const onError = vi.fn();
+      const onError = vi.fn<NonNullable<ImageProps['onError']>>();
       const { container } = renderWithProviders(
         <Image
           src={SRC}
@@ -264,7 +264,7 @@ describe('Image', () => {
       );
       const img = container.querySelector('img');
       fireEvent.error(img!);
-      expect(onError).toHaveBeenCalled();
+      expect(onError).toHaveBeenCalledWith(expect.anything());
     });
   });
 
@@ -359,7 +359,7 @@ describe('Image', () => {
 
   describe('focus ring / container clip / 44px', () => {
     it('rings the frame, not the img, when the image is a control', () => {
-      const onPress = vi.fn();
+      const onPress = vi.fn<() => void>();
       const { container } = renderWithProviders(
         <Image
           src={SRC}
@@ -384,6 +384,7 @@ describe('Image', () => {
       const frame = container.querySelector('[data-image-frame]');
       expect(frame).toBeInTheDocument();
       const style = window.getComputedStyle(frame!);
+      // oxlint-disable-next-line unicorn/prefer-number-coercion -- computed CSS lengths carry a unit suffix ("44px"); Number() would return NaN
       expect(Number.parseInt(style.minHeight, 10) >= 44 || style.minHeight === '44px').toBe(true);
     });
 
@@ -404,8 +405,8 @@ describe('Image', () => {
   describe('live-media tile', () => {
     it('does not paint a status pip; frame radius stays UNCLAMPED', () => {
       const src = [
-        readFileSync(join(here, 'index.tsx'), 'utf-8'),
-        readFileSync(join(here, 'ImageFrame.tsx'), 'utf-8'),
+        readFileSync(path.join(import.meta.dirname, 'index.tsx'), 'utf-8'),
+        readFileSync(path.join(import.meta.dirname, 'ImageFrame.tsx'), 'utf-8'),
       ].join('\n');
       expect(src).not.toMatch(/knobProps\.cardSurface|knobProps\.containerRadius|capContainerRadius\(/u);
       expect(src).not.toMatch(/data-status-pip|StatusPip|statusPip/u);

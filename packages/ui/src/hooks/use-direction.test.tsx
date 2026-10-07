@@ -15,9 +15,9 @@ const clearDirs = () => {
   document.body.removeAttribute('dir');
 };
 
-afterEach(clearDirs);
-
 describe('useDirection (web)', () => {
+  afterEach(clearDirs);
+
   it('defaults to ltr when no dir attribute is set', () => {
     clearDirs();
     const { result } = renderHook(() => useDirection());

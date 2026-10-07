@@ -9,33 +9,46 @@ import type { HighlightLine } from './Highlighter';
 const tokens: HighlightLine[] = [[{ content: 'const x = 1;' }]];
 
 const cases: [string, ReactElement][] = [
-  ['Code', <Code>const x = 1;</Code>],
-  ['CodeInline', <CodeInline>npm install</CodeInline>],
-  ['HighlightedCode', <HighlightedCode tokens={tokens} />],
+  ['Code', <Code key="Code">const x = 1;</Code>],
+  ['CodeInline', <CodeInline key="CodeInline">npm install</CodeInline>],
+  [
+    'HighlightedCode',
+    <HighlightedCode
+      key="HighlightedCode"
+      tokens={tokens}
+    />,
+  ],
 ];
 
-const hostProps = (el: Element): Record<string, unknown> => {
+interface HostProps {
+  'data-code-font'?: string;
+}
+
+const hostProps = (el: Element): HostProps => {
   const key = Object.keys(el).find((k) => k.startsWith('__reactProps$'));
-  return key ? ((el as unknown as Record<string, Record<string, unknown>>)[key] ?? {}) : {};
+  if (key === undefined) {
+    return {};
+  }
+  // SAFETY: React stores a host element's props object under its `__reactProps$<id>` expando key.
+  return (el as Element & Record<string, HostProps>)[key] ?? {};
 };
 
 const formatConsoleCall = (args: unknown[]): string => {
   const [format = '', ...substitutions] = args.map(String);
-  let next = 0;
-  return format.replaceAll('%s', () => substitutions[next++] ?? '');
+  return format.replaceAll('%s', () => substitutions.shift() ?? '');
 };
 
-afterEach(() => {
-  vi.unstubAllEnvs();
-});
-
 describe.each(['web', 'native'])('code family host props, TAMAGUI_TARGET=%s', (target) => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it.each(cases)('%s hands the code-font node no dataset prop map', (_name, node) => {
     vi.stubEnv('TAMAGUI_TARGET', target);
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     try {
       const { container } = renderWithProviders(node);
-      const hosts = Array.from(container.querySelectorAll('[data-code-font]'));
+      const hosts = [...container.querySelectorAll('[data-code-font]')];
       expect(hosts.length).toBeGreaterThan(0);
       for (const host of hosts) {
         const props = hostProps(host);

@@ -42,7 +42,7 @@ const configs = {
   }),
 };
 
-const fields: Record<string, ReactElement> = {
+const fields = {
   Input: (
     <Input
       label="Email"
@@ -65,25 +65,28 @@ const fields: Record<string, ReactElement> = {
       error="Enter a length"
     />
   ),
-};
+} satisfies Record<string, ReactElement>;
+
+const cases = Object.entries(configs).flatMap(([configName, config]) =>
+  (['light', 'dark'] as const).flatMap((scheme) =>
+    Object.entries(fields).map(([fieldName, field]) => ({ configName, config, scheme, fieldName, field })),
+  ),
+);
 
 describe('field error tint', () => {
-  for (const [configName, config] of Object.entries(configs)) {
-    for (const scheme of ['light', 'dark'] as const) {
-      for (const [fieldName, field] of Object.entries(fields)) {
-        it(`${fieldName} enters the error theme under the ${configName} config (${scheme})`, () => {
-          const { container } = render(
-            <TamaguiProvider
-              config={config}
-              defaultTheme={scheme}
-              disableInjectCSS>
-              {field}
-            </TamaguiProvider>,
-          );
-          expect(container.querySelector('.t_error')).not.toBeNull();
-          expect(container.querySelector("[class*='t_red']")).toBeNull();
-        });
-      }
-    }
-  }
+  it.each(cases)(
+    '$fieldName enters the error theme under the $configName config ($scheme)',
+    ({ config, scheme, field }) => {
+      const { container } = render(
+        <TamaguiProvider
+          config={config}
+          defaultTheme={scheme}
+          disableInjectCSS>
+          {field}
+        </TamaguiProvider>,
+      );
+      expect(container.querySelector('.t_error')).not.toBeNull();
+      expect(container.querySelector("[class*='t_red']")).toBeNull();
+    },
+  );
 });

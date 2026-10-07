@@ -50,6 +50,8 @@ const ScrollFrame = styled(
   },
 );
 
+// SAFETY: ScrollFrame wraps RN ScrollView, whose props and ref are what tamagui's ScrollView exposes on native; only the handler name differs internally.
+// oxlint-disable-next-line anti-slop/no-chained-type-assertions, typescript/no-unsafe-type-assertion -- the styleable result is structurally the public tamagui ScrollView but not provably assignable (TamaDefer generics)
 export const ScrollView = ScrollFrame.styleable(function ScrollView({ onScroll, ...props }, ref) {
   return (
     <ScrollFrame

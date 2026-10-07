@@ -1,6 +1,4 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 
 import { renderWithProviders } from '@repo/test-utils';
 import { Preset } from '@repo/theme';
@@ -9,9 +7,23 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { FieldGroup } from './FieldGroup';
 
-afterEach(cleanup);
+const legendWeight = (legend: HTMLElement | null): string => {
+  if (legend === null) {
+    return '';
+  }
+  if (legend.style.fontWeight !== '') {
+    return legend.style.fontWeight;
+  }
+  const computed = getComputedStyle(legend).fontWeight;
+  if (computed !== '') {
+    return computed;
+  }
+  return /fw-400|fow-400|font-weight-400/u.test(legend.className) ? '400' : '';
+};
 
 describe('FieldGroup design-law', () => {
+  afterEach(cleanup);
+
   it('renders a semantic fieldset + legend on web', () => {
     const result = renderWithProviders(
       <FieldGroup legend="Billing">
@@ -28,13 +40,9 @@ describe('FieldGroup design-law', () => {
         <div>first</div>
       </FieldGroup>,
     );
-    const legend = result.container.querySelector('[data-mpo-legend]') as HTMLElement | null;
+    const legend = result.container.querySelector<HTMLElement>('[data-mpo-legend]');
     expect(legend).toBeTruthy();
-    const weight =
-      legend?.style.fontWeight ||
-      (legend ? getComputedStyle(legend).fontWeight : '') ||
-      (legend?.className.match(/fw-400|fow-400|font-weight-400/u) ? '400' : '');
-    expect(['400', 'normal']).toContain(String(weight));
+    expect(['400', 'normal']).toContain(legendWeight(legend));
   });
 
   it('field gap follows space, not sizeToken (density≠size)', () => {
@@ -45,9 +53,9 @@ describe('FieldGroup design-law', () => {
         </FieldGroup>
       </Preset>,
     );
-    const group = result.container.querySelector('[data-mpo-field-group]');
-    expect(group?.getAttribute('data-field-gap')).toBe('$2');
-    expect(group?.getAttribute('data-size')).toBe('large');
+    const group = result.container.querySelector<HTMLElement>('[data-mpo-field-group]');
+    expect(group?.dataset.fieldGap).toBe('$2');
+    expect(group?.dataset.size).toBe('large');
   });
 
   it('compact nested scale steps density without reading sizeToken as gap', () => {
@@ -58,9 +66,9 @@ describe('FieldGroup design-law', () => {
         <div>field</div>
       </FieldGroup>,
     );
-    const group = result.container.querySelector('[data-mpo-field-group]');
-    expect(group?.getAttribute('data-density')).toBe('compact');
-    expect(group?.getAttribute('data-size')).toBe('medium');
-    expect(group?.getAttribute('data-field-gap')).toBe('$2');
+    const group = result.container.querySelector<HTMLElement>('[data-mpo-field-group]');
+    expect(group?.dataset.density).toBe('compact');
+    expect(group?.dataset.size).toBe('medium');
+    expect(group?.dataset.fieldGap).toBe('$2');
   });
 });

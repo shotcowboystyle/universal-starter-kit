@@ -111,7 +111,11 @@ export default defineConfig({
     },
     {
       // `shape` here is the CSS `corner-shape` property these modules implement (the barrels re-export them).
-      files: ['packages/theme/src/theme/corner-smoothing*', 'packages/theme/src/index.ts', 'packages/theme/src/theme/index.ts'],
+      files: [
+        'packages/theme/src/theme/corner-smoothing*',
+        'packages/theme/src/index.ts',
+        'packages/theme/src/theme/index.ts',
+      ],
       rules: { 'anti-slop/no-shape-in-symbol-names': 'off' },
     },
     {

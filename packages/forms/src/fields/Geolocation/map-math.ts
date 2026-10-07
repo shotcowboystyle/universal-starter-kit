@@ -41,7 +41,7 @@ export interface MapClickArgs {
 }
 
 /** Convert a click in the map box to WGS84, matching the centered-tile view. */
-export const latLngFromMapClick = (args: MapClickArgs): { lat: number; lng: number } => {
+export const latLngFromMapClick = (args: MapClickArgs) => {
   const { offsetX, offsetY, width, height, lat, lng, zoom } = args;
   const worldX = lngToTile(lng, zoom) + (offsetX - width / 2) / OSM_TILE_SIZE;
   const worldY = latToTile(lat, zoom) + (offsetY - height / 2) / OSM_TILE_SIZE;
@@ -75,8 +75,8 @@ export const tilesForView = (args: {
   const minTy = Math.max(0, Math.floor(cy - height / 2 / OSM_TILE_SIZE));
   const maxTy = Math.min(n - 1, Math.ceil(cy + height / 2 / OSM_TILE_SIZE));
   const tiles: MapTile[] = [];
-  for (let ty = minTy; ty <= maxTy; ty++) {
-    for (let tx = minTx; tx <= maxTx; tx++) {
+  for (let ty = minTy; ty <= maxTy; ty += 1) {
+    for (let tx = minTx; tx <= maxTx; tx += 1) {
       tiles.push({
         tx: wrapTileX(tx, zoom),
         ty,

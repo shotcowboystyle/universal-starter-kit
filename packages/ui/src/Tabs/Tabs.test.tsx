@@ -17,9 +17,17 @@ const clearDirs = () => {
   document.body.removeAttribute('dir');
 };
 
-afterEach(clearDirs);
+const classesOf = (el: Element | null | undefined) => (el?.getAttribute('class') ?? '').split(' ');
 
-describe('Tabs', () => {
+const fillChain = (container: HTMLElement) => ({
+  root: container.querySelector('[data-tabs-variant]'),
+  host: container.querySelector('[data-tabs-panels]'),
+  panel: screen.getByText('Panel one').closest('[role="tabpanel"]'),
+});
+
+describe(Tabs, () => {
+  afterEach(clearDirs);
+
   it('renders a tablist with aria-selected on the active tab', () => {
     renderWithProviders(<Tabs items={items} />);
     expect(screen.getByRole('tablist')).toBeInTheDocument();
@@ -32,7 +40,7 @@ describe('Tabs', () => {
   });
 
   it('switches panels on click and calls onChange (uncontrolled)', () => {
-    const onChange = vi.fn();
+    const onChange = vi.fn<(value: string) => void>();
     renderWithProviders(
       <Tabs
         items={items}
@@ -58,7 +66,7 @@ describe('Tabs', () => {
   });
 
   it('stays controlled: value wins and does not change on its own', () => {
-    const onChange = vi.fn();
+    const onChange = vi.fn<(value: string) => void>();
     renderWithProviders(
       <Tabs
         items={items}
@@ -74,7 +82,7 @@ describe('Tabs', () => {
   });
 
   it('does not activate a disabled tab', () => {
-    const onChange = vi.fn();
+    const onChange = vi.fn<(value: string) => void>();
     renderWithProviders(
       <Tabs
         items={items}
@@ -131,7 +139,7 @@ describe('Tabs', () => {
     );
     const list = screen.getByRole('tablist');
     expect(list).toHaveAttribute('data-size-token', '$5');
-    const comfortableDensity = list.getAttribute('data-density');
+    const comfortableDensity = list.dataset.density;
     rerender(
       <Tabs
         items={items}
@@ -163,10 +171,8 @@ describe('Tabs', () => {
     // subtree may carry the recipe's horizontal padding.
     renderWithProviders(<Tabs items={items} />);
     for (const tab of screen.getAllByRole('tab')) {
-      const padded = [tab, ...Array.from(tab.querySelectorAll('*'))].filter((el) =>
-        String((el as HTMLElement).className || '')
-          .split(' ')
-          .some((c) => c.startsWith('_pl-')),
+      const padded = [tab, ...tab.querySelectorAll('*')].filter((el) =>
+        ((el as HTMLElement).className || '').split(' ').some((c) => c.startsWith('_pl-')),
       );
       expect(padded).toHaveLength(1);
     }
@@ -194,14 +200,7 @@ describe('Tabs', () => {
   // (the idiom above): `_fg-1` grow, `_fb-0px` basis, `_mih-0px` floor.
 
   const growClasses = ['_fg-1', '_fb-0px', '_mih-0px'];
-  const classesOf = (el: Element | null | undefined) => String(el?.getAttribute('class') ?? '').split(' ');
   const grows = (el: Element | null | undefined) => growClasses.every((c) => classesOf(el).includes(c));
-
-  const fillChain = (container: HTMLElement) => ({
-    root: container.querySelector('[data-tabs-variant]'),
-    host: container.querySelector('[data-tabs-panels]'),
-    panel: screen.getByText('Panel one').closest('[role="tabpanel"]'),
-  });
 
   it('fill opens the whole flex chain: root, panel host, and active panel', () => {
     const { container } = renderWithProviders(
@@ -459,7 +458,7 @@ describe('Tabs', () => {
   it('declares writing direction on the root (useDirection)', () => {
     document.documentElement.dir = 'rtl';
     const { container } = renderWithProviders(<Tabs items={items} />);
-    expect(container.querySelector('[data-tabs-dir]')?.getAttribute('data-tabs-dir')).toBe('rtl');
+    expect(container.querySelector<HTMLElement>('[data-tabs-dir]')?.dataset.tabsDir).toBe('rtl');
   });
 });
 
@@ -482,7 +481,7 @@ describe('tabsOverflowFades (rtl-audit U1)', () => {
   });
 });
 
-describe('tabsScrollIntoViewX', () => {
+describe(tabsScrollIntoViewX, () => {
   const layout = { x: 250, y: 0, width: 80, height: 32 };
 
   it('LTR scrolls so a clipped tab lands inside the pad', () => {

@@ -1,9 +1,9 @@
 import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 
 import { renderWithProviders } from '@repo/test-utils';
 import { Circle } from '@tamagui/react-native-svg';
+import { describe, expect, it } from 'vitest';
 
 import { Svg } from './index';
 
@@ -193,8 +193,8 @@ describe('Svg Component', () => {
   });
 
   it('defaults color to the scheme token, not a hardcoded fill', () => {
-    const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'index.ts'), 'utf-8');
-    const stories = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'Svg.stories.tsx'), 'utf-8');
+    const src = readFileSync(path.join(import.meta.dirname, 'index.ts'), 'utf-8');
+    const stories = readFileSync(path.join(import.meta.dirname, 'Svg.stories.tsx'), 'utf-8');
     expect(src).toMatch(/color: ['"]\$color['"]/u);
     expect(src).not.toMatch(/#[0-9A-Fa-f]{3,8}/u);
     expect(stories).not.toMatch(/#[0-9A-Fa-f]{3,8}/u);

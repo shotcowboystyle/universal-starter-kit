@@ -6,7 +6,7 @@ export const withInterp = (translated: string, options: Record<string, string | 
   if (!translated.includes('{{')) {
     return translated;
   }
-  return translated.replaceAll(/\{\{(\w+)\}\}/gu, (_, key: string) =>
+  return translated.replaceAll(/\{\{(?<key>\w+)\}\}/gu, (_, key: string) =>
     options[key] == null ? `{{${key}}}` : String(options[key]),
   );
 };

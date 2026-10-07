@@ -14,11 +14,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { HighlightedCode } from './HighlightedCode';
 import { useShikiTokens } from './Highlighter';
 
-afterEach(cleanup);
-
 const houseConfig = createDefaultThemeConfig();
 // Tamagui keeps a token's first 11 characters in its atomic class and hashes the rest.
-const inkClass = (token: string) => new RegExp(`_col-${token.slice(0, 11)}`);
+const inkClass = (token: string) => new RegExp(`_col-${token.slice(0, 11)}`, 'u');
 
 const Probe = ({ code, language, theme }: { code: string; language: string; theme?: string }) => {
   const tokens = useShikiTokens(code, language, theme);
@@ -26,13 +24,16 @@ const Probe = ({ code, language, theme }: { code: string; language: string; them
 };
 
 const tokenSpan = (container: HTMLElement, text: string) => {
-  const matches = Array.from(container.querySelectorAll('span')).filter((span) => span.textContent === text);
+  const matches = [...container.querySelectorAll('span')].filter((span) => span.textContent === text);
   return matches.find((span) => !matches.some((other) => other !== span && span.contains(other)));
 };
 
 describe('shiki ink is a theme token in both schemes', () => {
-  for (const scheme of ['light', 'dark'] as const) {
-    it(`${scheme}: keyword, string and comment take the held tokens`, async () => {
+  afterEach(cleanup);
+
+  it.each(['light', 'dark'] as const)(
+    '%s: keyword, string and comment take the held tokens',
+    async (scheme) => {
       const { container } = render(
         <TamaguiProvider
           config={houseConfig.tamagui}
@@ -54,6 +55,7 @@ describe('shiki ink is a theme token in both schemes', () => {
       );
       expect(tokenSpan(container, '"hi"')?.className).toMatch(inkClass('syntaxGreen'));
       expect(tokenSpan(container, '// note')?.className).toMatch(inkClass('color11'));
-    }, 35_000);
-  }
+    },
+    35_000,
+  );
 });

@@ -2,7 +2,7 @@ import { MIN_PRESS_TARGET } from '@repo/theme';
 import type { ScaleBand, ScaleLinear } from 'd3-scale';
 import { useId } from 'react';
 
-import { areaPath, arcPath, barPath, linePath, pieSlices, canMaskPieSlices } from './math';
+import { areaPath, arcPath, barPath, linePath, pieSlices, canMaskPieSlices, uniqueKeys } from './math';
 import {
   Circle,
   Defs,
@@ -55,7 +55,10 @@ const targetPropsFor = (callbacks: DatumTargetCallbacks, datum: ChartDatum, inde
 };
 
 const hasTargets = (callbacks: DatumTargetCallbacks): boolean =>
-  Boolean(callbacks.onDatumPress || callbacks.onDatumHoverIn || callbacks.onDatumHoverOut || callbacks.datumLabel);
+  callbacks.onDatumPress !== undefined ||
+  callbacks.onDatumHoverIn !== undefined ||
+  callbacks.onDatumHoverOut !== undefined ||
+  callbacks.datumLabel !== undefined;
 
 // ── Bar ───────────────────────────────────────────────────────
 
@@ -79,6 +82,7 @@ export const BarSeries = ({ data, xScale, yScale, plot, fills, ...callbacks }: B
   const bandwidth = xScale.bandwidth();
   const baseline = yScale(Math.max(0, yScale.domain()[0]));
   const interactive = hasTargets(callbacks);
+  const datumKeys = uniqueKeys(data.map((datum) => datum.label));
 
   return (
     <G>
@@ -93,7 +97,7 @@ export const BarSeries = ({ data, xScale, yScale, plot, fills, ...callbacks }: B
         const radius = barCornerRadius(bandwidth, height);
         const targetWidth = Math.max(bandwidth, MIN_PRESS_TARGET);
         return (
-          <G key={`${datum.label}-${index}`}>
+          <G key={datumKeys[index]}>
             <Path
               {...chartMarkProps(datum.label)}
               {...chartBarProps({ x, y, width: bandwidth, height, radius })}
@@ -167,6 +171,7 @@ export const LineSeries = ({
 }: LineSeriesProps) => {
   const interactive = hasTargets(callbacks);
   const targetRadius = MIN_PRESS_TARGET / 2;
+  const pointKeys = uniqueKeys(points.map((point) => `${point.x},${point.y}`));
   return (
     <G>
       <Path
@@ -179,7 +184,7 @@ export const LineSeries = ({
       {showPoints
         ? points.map((point, index) => (
             <Circle
-              key={`point-${index}`}
+              key={`point-${pointKeys[index]}`}
               {...chartMarkProps(data[index]?.label ?? `point ${index + 1}`)}
               cx={point.x}
               cy={point.y}
@@ -191,7 +196,7 @@ export const LineSeries = ({
       {interactive
         ? points.map((point, index) => (
             <Circle
-              key={`target-${index}`}
+              key={`target-${pointKeys[index]}`}
               cx={clampTargetCenter(point.x, targetRadius, bounds?.width)}
               cy={clampTargetCenter(point.y, targetRadius, bounds?.height)}
               r={targetRadius}

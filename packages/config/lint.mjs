@@ -2129,7 +2129,7 @@ export const runConventionChecks = (options = {}) => {
       undeclaredDrawings.violations,
     ),
     reportViolations(
-      "Convention (WORKSPACE PATHS SHADOW): `compilerOptions.paths` REPLACES the map tsconfig.base.json inherits from tamagui-workspace-paths.generated.json, so one local entry hides every `@multiplatform.one/*` mapping from that program. Declare the alias in the target package's `exports` (the generator reads it) instead. Escape with `// workspace-paths-escape: <reason>` above the key.\n",
+      "Convention (WORKSPACE PATHS SHADOW): `compilerOptions.paths` REPLACES the map tsconfig.base.json inherits from tamagui-workspace-paths.generated.json, so one local entry hides every `@repo/*` mapping from that program. Declare the alias in the target package's `exports` (the generator reads it) instead. Escape with `// workspace-paths-escape: <reason>` above the key.\n",
       tsconfigPaths,
     ),
     reportViolations(

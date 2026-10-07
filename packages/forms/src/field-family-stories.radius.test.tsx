@@ -26,14 +26,12 @@ import { cleanup } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import * as errorSummaryStories from './ErrorSummary.stories';
-import * as fieldGroupStories from './FieldGroup.stories';
-import * as fieldLayoutStories from './FieldLayout.stories';
-import * as fieldsetStories from './Fieldset.stories';
-import * as formGridStories from './FormGrid.stories';
-import * as labelStories from './Label/Label.stories';
-
-afterEach(cleanup);
+import errorSummaryMeta, { FocusesTheFieldOnPress } from './ErrorSummary.stories';
+import fieldGroupMeta, { Basic as FieldGroupBasic } from './FieldGroup.stories';
+import fieldLayoutMeta, { Basic as FieldLayoutBasic } from './FieldLayout.stories';
+import fieldsetMeta, { Default as FieldsetDefault } from './Fieldset.stories';
+import formGridMeta, { Basic as FormGridBasic } from './FormGrid.stories';
+import labelMeta, { WithControl } from './Label/Label.stories';
 
 /** Knob stop -> the radius atom the frame paints: a token `$N`, or px at `medium`. */
 const ladder: Record<BorderRadius, string> = {
@@ -44,96 +42,96 @@ const ladder: Record<BorderRadius, string> = {
   full: '$12',
 };
 const stops = Object.keys(ladder) as BorderRadius[];
+const stopCases = stops.map((stop) => ({ stop, atom: ladder[stop] }));
 
 interface StoryLike {
-  render?: (args: Record<string, unknown>) => ReactElement;
+  // oxlint-disable-next-line anti-slop/no-object-parameters -- one seam for stories of different components; args are always the story meta's own args
+  render?: (args: object) => ReactElement;
 }
 
 const radiusAtom = (cls: string): string | undefined => {
-  const token = /^_btlr-t-radius-(\d+)$/u.exec(cls);
-  if (token) {
-    return `$${token[1]}`;
+  const token = /^_btlr-t-radius-(?<step>\d+)$/u.exec(cls);
+  if (token?.groups !== undefined) {
+    return `$${token.groups.step}`;
   }
-  return /^_btlr-(\d+px)$/u.exec(cls)?.[1];
+  return /^_btlr-(?<px>\d+px)$/u.exec(cls)?.groups?.px;
 };
+
+const classesOf = (el: HTMLElement): string[] => (el.getAttribute('class') ?? '').split(/\s+/u);
 
 /** Every radius token present in the subtree, deduped — the probe's reading. */
 const radiusTokens = (container: HTMLElement): string[] => {
   const found = new Set<string>();
   for (const el of container.querySelectorAll<HTMLElement>('*')) {
-    for (const cls of String(el.className || '').split(/\s+/u)) {
+    for (const cls of classesOf(el)) {
       const radius = radiusAtom(cls);
-      if (radius) {
+      if (radius !== undefined) {
         found.add(radius);
       }
     }
   }
-  return [...found].sort();
+  return [...found].toSorted();
 };
 
-const mountAt = (story: StoryLike, meta: { args?: unknown }, stop: BorderRadius) => {
+const mountAt = (story: StoryLike, meta: { args?: object }, stop: BorderRadius) => {
   if (!story.render) {
     throw new Error('story has no render');
   }
   return renderWithProviders(
-    <Preset overrides={{ borderRadius: stop, elevation: 'none' }}>
-      {story.render({ ...((meta.args ?? {}) as Record<string, unknown>) })}
-    </Preset>,
+    <Preset overrides={{ borderRadius: stop, elevation: 'none' }}>{story.render({ ...meta.args })}</Preset>,
   );
 };
 
 const family = [
   {
     name: 'Forms/FieldLayout',
-    story: fieldLayoutStories.Basic as StoryLike,
-    meta: fieldLayoutStories.default,
+    story: FieldLayoutBasic as StoryLike,
+    meta: fieldLayoutMeta,
   },
   {
     name: 'Forms/FieldGroup',
-    story: fieldGroupStories.Basic as StoryLike,
-    meta: fieldGroupStories.default,
+    story: FieldGroupBasic as StoryLike,
+    meta: fieldGroupMeta,
   },
   {
     name: 'Forms/Fieldset',
-    story: fieldsetStories.Default as StoryLike,
-    meta: fieldsetStories.default,
+    story: FieldsetDefault as StoryLike,
+    meta: fieldsetMeta,
   },
   {
     name: 'Forms/FormGrid',
-    story: formGridStories.Basic as StoryLike,
-    meta: formGridStories.default,
+    story: FormGridBasic as StoryLike,
+    meta: formGridMeta,
   },
 ];
 
 describe('form layout stories mount knob-consuming field chrome', () => {
-  for (const { name, story, meta } of family) {
-    describe(name, () => {
-      // A story that fails to render measures flat on every axis, which reads
-      // exactly like a dead knob. Prove there is a control before believing
-      // anything measured off it.
-      it('renders a text control at all', () => {
-        const { container } = mountAt(story, meta as { args?: unknown }, 'medium');
-        expect(container.querySelectorAll('input').length).toBeGreaterThan(0);
-      });
+  afterEach(cleanup);
 
-      for (const stop of stops) {
-        it(`takes radius ${ladder[stop]} at borderRadius:${stop}`, () => {
-          const { container } = mountAt(story, meta as { args?: unknown }, stop);
-          expect(radiusTokens(container)).toContain(ladder[stop]);
-        });
-      }
-
-      it('moves across all five stops instead of pinning one radius', () => {
-        const signatures = stops.map((stop) => {
-          const result = mountAt(story, meta as { args?: unknown }, stop);
-          const tokens = JSON.stringify(radiusTokens(result.container));
-          cleanup();
-          return tokens;
-        });
-        expect(new Set(signatures).size).toBe(stops.length);
-      });
+  describe.each(family)('$name', ({ story, meta }) => {
+    // A story that fails to render measures flat on every axis, which reads
+    // exactly like a dead knob. Prove there is a control before believing
+    // anything measured off it.
+    it('renders a text control at all', () => {
+      const { container } = mountAt(story, meta, 'medium');
+      expect(container.querySelectorAll('input').length).toBeGreaterThan(0);
     });
-  }
+
+    it.each(stopCases)('takes radius $atom at borderRadius:$stop', ({ stop, atom }) => {
+      const { container } = mountAt(story, meta, stop);
+      expect(radiusTokens(container)).toContain(atom);
+    });
+
+    it('moves across all five stops instead of pinning one radius', () => {
+      const signatures = stops.map((stop) => {
+        const result = mountAt(story, meta, stop);
+        const tokens = JSON.stringify(radiusTokens(result.container));
+        cleanup();
+        return tokens;
+      });
+      expect(new Set(signatures).size).toBe(stops.length);
+    });
+  });
 });
 
 /**
@@ -145,9 +143,9 @@ describe('form layout stories mount knob-consuming field chrome', () => {
 const inputChromeTokens = (container: HTMLElement): string[] =>
   [...container.querySelectorAll<HTMLElement>('input')].map((input) => {
     for (let el = input.parentElement; el && el !== container; el = el.parentElement) {
-      for (const cls of String(el.className || '').split(/\s+/u)) {
+      for (const cls of classesOf(el)) {
         const radius = radiusAtom(cls);
-        if (radius) {
+        if (radius !== undefined) {
           return radius;
         }
       }
@@ -158,27 +156,25 @@ const inputChromeTokens = (container: HTMLElement): string[] =>
 const beside = [
   {
     name: 'Forms/ErrorSummary FocusesTheFieldOnPress',
-    story: errorSummaryStories.FocusesTheFieldOnPress as StoryLike,
-    meta: errorSummaryStories.default,
+    story: FocusesTheFieldOnPress as StoryLike,
+    meta: errorSummaryMeta,
     inputs: 2,
   },
   {
     name: 'Forms/Label WithControl',
-    story: labelStories.WithControl as StoryLike,
-    meta: labelStories.default,
+    story: WithControl as StoryLike,
+    meta: labelMeta,
     inputs: 1,
   },
 ];
 
 describe('stories that mount a text control beside a form part use house chrome', () => {
-  for (const { name, story, meta, inputs } of beside) {
-    describe(name, () => {
-      for (const stop of stops) {
-        it(`wraps every input in chrome at radius ${ladder[stop]} at borderRadius:${stop}`, () => {
-          const { container } = mountAt(story, meta as { args?: unknown }, stop);
-          expect(inputChromeTokens(container)).toStrictEqual(Array(inputs).fill(ladder[stop]));
-        });
-      }
+  afterEach(cleanup);
+
+  describe.each(beside)('$name', ({ story, meta, inputs }) => {
+    it.each(stopCases)('wraps every input in chrome at radius $atom at borderRadius:$stop', ({ stop, atom }) => {
+      const { container } = mountAt(story, meta, stop);
+      expect(inputChromeTokens(container)).toStrictEqual(Array.from({ length: inputs }, () => atom));
     });
-  }
+  });
 });

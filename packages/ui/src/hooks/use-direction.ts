@@ -45,7 +45,9 @@ const readDocumentDirection = (): Direction => {
 
 const subscribe = (onChange: () => void): (() => void) => {
   if (typeof document === 'undefined' || typeof MutationObserver === 'undefined') {
-    return () => {};
+    return () => {
+      // nothing to unsubscribe without a DOM
+    };
   }
   const observer = new MutationObserver(onChange);
   // One observer catches <html dir>, <body dir>, and any nested island —

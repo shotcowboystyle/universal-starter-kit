@@ -2,7 +2,7 @@
  * Action labels are verb (+ optional noun), sentence case, no articles.
  */
 
-const LEADING_ARTICLE = /^(the|a|an)\s+/iu;
+const LEADING_ARTICLE = /^(?:the|a|an)\s+/iu;
 
 export interface ActionLabelParts {
   verb: string;
@@ -46,10 +46,10 @@ export const formatActionLabel = ({ verb, noun }: ActionLabelParts): string => {
   if (!v) {
     return '';
   }
-  if (noun == null || String(noun).trim() === '') {
+  if (noun == null || noun.trim() === '') {
     return v;
   }
-  const n = normalizePart(String(noun));
+  const n = normalizePart(noun);
   if (!n) {
     return v;
   }

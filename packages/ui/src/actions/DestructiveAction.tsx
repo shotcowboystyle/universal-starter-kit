@@ -84,6 +84,17 @@ const buildConfirmContext = (props: {
   };
 };
 
+const isNonEmpty = (value: string | undefined): value is string => value != null && value !== '';
+
+const withPending = async (setPending: (pending: boolean) => void, task: () => void | Promise<void>): Promise<void> => {
+  setPending(true);
+  try {
+    await task();
+  } finally {
+    setPending(false);
+  }
+};
+
 export const DestructiveAction = ({
   verb,
   noun,
@@ -123,24 +134,20 @@ export const DestructiveAction = ({
     confirmationText,
   });
   const useCustomConfirm = Boolean(confirm);
-  const typedMatch = !dialogCtx.expectedText || typedText.trim() === dialogCtx.expectedText;
+  const hasDisabledReason = isNonEmpty(disabledReason);
+  const typedMatch = !isNonEmpty(dialogCtx.expectedText) || typedText.trim() === dialogCtx.expectedText;
 
   const runAction = useCallback(async () => {
-    setPending(true);
-    try {
-      await onAction();
-    } finally {
-      setPending(false);
-    }
-  }, [onAction]);
+    await withPending(setPending, onAction);
+  }, [onAction, setPending]);
 
   const closeDialog = useCallback(() => {
     setDialogOpen(false);
     setTypedText('');
-  }, []);
+  }, [setDialogOpen, setTypedText]);
 
   const handlePress = useCallback(async () => {
-    if (disabled || disabledReason || pending) {
+    if (disabled || isNonEmpty(disabledReason) || pending) {
       return;
     }
     const ctx = buildConfirmContext({
@@ -152,16 +159,12 @@ export const DestructiveAction = ({
     });
     if (needsConfirm) {
       if (confirm) {
-        setPending(true);
-        try {
+        await withPending(setPending, async () => {
           const ok = await confirm(ctx);
-          if (!ok) {
-            return;
+          if (ok) {
+            await onAction();
           }
-          await onAction();
-        } finally {
-          setPending(false);
-        }
+        });
         return;
       }
       setTypedText('');
@@ -180,12 +183,15 @@ export const DestructiveAction = ({
     onAction,
     pending,
     runAction,
+    setDialogOpen,
+    setPending,
+    setTypedText,
     severity,
     verb,
   ]);
 
   const handleDialogConfirm = useCallback(async () => {
-    if (dialogCtx.expectedText && typedText.trim() !== dialogCtx.expectedText) {
+    if (isNonEmpty(dialogCtx.expectedText) && typedText.trim() !== dialogCtx.expectedText) {
       return;
     }
     closeDialog();
@@ -195,9 +201,9 @@ export const DestructiveAction = ({
   const markers = {
     'data-mp-destructive': 'true',
     'data-mp-destructive-severity': severity,
-    ...(needsConfirm && useCustomConfirm ? { 'data-mp-confirmed-upstream': 'true' } : {}),
-    ...(needsConfirm && !useCustomConfirm ? { 'data-mp-confirm-dialog': 'true' } : {}),
-  } as Record<string, string>;
+    'data-mp-confirmed-upstream': needsConfirm && useCustomConfirm ? 'true' : undefined,
+    'data-mp-confirm-dialog': needsConfirm && !useCustomConfirm ? 'true' : undefined,
+  };
 
   // Build outside Tamagui <Paragraph>/<Text> children — the compiler extracts those
   // into `{{var}}` placeholders and drops runtime values in unit tests.
@@ -213,7 +219,7 @@ export const DestructiveAction = ({
       consequence
     ) : (
       <YStack gap="$3">
-        {consequence ? <Paragraph size="$3">{consequence}</Paragraph> : null}
+        {consequence != null && consequence !== '' ? <Paragraph size="$3">{consequence}</Paragraph> : null}
         <Paragraph
           size="$3"
           data-mp-confirm-prompt="">
@@ -243,10 +249,12 @@ export const DestructiveAction = ({
         error={useDanger || undefined}
         // Button renders the explain affordance (aria-disabled +
         // visible reason via aria-describedby) when disabledReason is set.
-        disabled={disabled || Boolean(disabledReason) || undefined}
+        disabled={disabled === true || hasDisabledReason ? true : undefined}
         disabledReason={disabledReason}
-        loading={loading || pending}
-        onPress={handlePress}>
+        loading={loading === true || pending}
+        onPress={() => {
+          void handlePress();
+        }}>
         {label}
       </Button>
       {needsConfirm && !useCustomConfirm ? (
@@ -278,4 +286,4 @@ export const DestructiveAction = ({
   );
 };
 
-export type { DestructiveSeverity };
+export type { DestructiveSeverity } from './severity';

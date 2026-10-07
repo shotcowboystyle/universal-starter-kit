@@ -1,5 +1,5 @@
 import { isTouchSurface, sizeRecipeForToken } from '@repo/theme';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 /**
  * Jump motion for NATIVE: the RN animation driver
@@ -42,6 +42,8 @@ export const NATIVE_JUMP_SETTLE_MS = 550;
  * visible pop (>0.5pt frame delta) across the release boundary.
  */
 export const JUMP_RELEASE_THRESHOLD_PX = 0.25;
+
+const noCleanup = (): void => undefined;
 
 /** Deltas smaller than this are not worth arming a session for. */
 const MIN_JUMP_DELTA_PX = 0.5;
@@ -110,7 +112,7 @@ export const getClosestThumbIndex = (values: number[], next: number): number => 
 export const getNextSortedValues = (values: number[], next: number, atIndex: number): number[] => {
   const nextValues = [...values];
   nextValues[atIndex] = next;
-  return nextValues.sort((a, b) => a - b);
+  return nextValues.toSorted((a, b) => a - b);
 };
 
 /** Mirrors tamagui `hasMinStepsBetweenValues` (rejected clicks never move). */
@@ -118,7 +120,7 @@ export const hasMinStepsBetween = (values: number[], minStepsBetweenValues: numb
   if (minStepsBetweenValues <= 0) {
     return true;
   }
-  for (let i = 0; i < values.length - 1; i++) {
+  for (let i = 0; i < values.length - 1; i += 1) {
     if (values[i + 1] - values[i] < minStepsBetweenValues) {
       return false;
     }
@@ -135,7 +137,7 @@ export const hasMinStepsBetween = (values: number[], minStepsBetweenValues: numb
  * (`$4` is 32, not 44). Radius is not on the recipe; circular vs square
  * does not change diameter.
  */
-export const getSliderThumbRenderSize = (sizeToken: string, _circular?: boolean, touch = isTouchSurface()): number =>
+export const getSliderThumbRenderSize = (sizeToken: string, _circular = false, touch = isTouchSurface()): number =>
   sizeRecipeForToken(sizeToken, { touch }).height;
 
 /**
@@ -187,13 +189,17 @@ export const getJumpDelta = (
 // residual envelope of THIS jump's amplitude is below
 // {@link JUMP_RELEASE_THRESHOLD_PX}.
 
-interface SpringConfigLike {
+/** The slice of an RN animation config the settle math reads. */
+export interface SpringConfigLike {
   type?: string;
   duration?: number;
   damping?: number;
   mass?: number;
   stiffness?: number;
 }
+
+/** An animation token's config: a spring/timing object (RN driver) or a CSS transition string (web driver). */
+export type AnimationConfigLike = SpringConfigLike | string;
 
 interface SpringPhysics {
   /** Natural frequency ωn = √(k/m) in rad/s. */
@@ -240,14 +246,14 @@ const clampSettleMs = (ms: number): number => Math.min(MAX_SETTLE_MS, Math.max(M
  * {@link NATIVE_JUMP_SETTLE_MS}.
  */
 export const getJumpSettleMs = (
-  config: unknown,
+  config: AnimationConfigLike | undefined,
   deltaPx: number,
   thresholdPx: number = JUMP_RELEASE_THRESHOLD_PX,
 ): number => {
-  if (!config || typeof config !== 'object') {
+  if (!(config instanceof Object)) {
     return NATIVE_JUMP_SETTLE_MS;
   }
-  const cfg = config as SpringConfigLike;
+  const cfg = config;
   if (cfg.type === 'timing') {
     return clampSettleMs((cfg.duration ?? 250) + TIMING_SETTLE_BUFFER_MS);
   }
@@ -265,7 +271,7 @@ export const getJumpSettleMs = (
   if (springEnvelopeRatio(physics, hi) > targetRatio) {
     return MAX_SETTLE_MS;
   }
-  for (let i = 0; i < 48; i++) {
+  for (let i = 0; i < 48; i += 1) {
     const mid = (lo + hi) / 2;
     if (springEnvelopeRatio(physics, mid) > targetRatio) {
       lo = mid;
@@ -283,14 +289,18 @@ export const getJumpSettleMs = (
  * in-flight residual into the new delta instead of teleporting the thumb to
  * where the old glide WOULD have ended).
  */
-export const getSpringResidualPx = (config: unknown, deltaPx: number, elapsedMs: number): number => {
+export const getSpringResidualPx = (
+  config: AnimationConfigLike | undefined,
+  deltaPx: number,
+  elapsedMs: number,
+): number => {
   if (elapsedMs <= 0) {
     return deltaPx;
   }
-  if (!config || typeof config !== 'object') {
+  if (!(config instanceof Object)) {
     return 0;
   }
-  const cfg = config as SpringConfigLike;
+  const cfg = config;
   if (cfg.type === 'timing') {
     const duration = cfg.duration ?? 250;
     return elapsedMs >= duration ? 0 : deltaPx * (1 - elapsedMs / duration);
@@ -345,7 +355,7 @@ export interface SliderJumpMotionOptions {
    * release can be scheduled from the spring physics. Missing/unknown configs
    * fall back to {@link NATIVE_JUMP_SETTLE_MS}.
    */
-  resolveAnimationConfig?: (token: string) => unknown;
+  resolveAnimationConfig?: (token: string) => AnimationConfigLike | undefined;
 }
 
 export interface SliderJumpMotion {
@@ -387,7 +397,13 @@ export const useSliderJumpMotion = ({
   /** When the "animate" phase (the actual spring) started, for re-anchoring. */
   const animateStartAtRef = useRef(0);
 
-  const clearTimers = () => {
+  // The release timer reads the token and resolver from here, so a new resolver identity never restarts a session.
+  const settleSourceRef = useRef({ transitionToken, resolveAnimationConfig });
+  useEffect(() => {
+    settleSourceRef.current = { transitionToken, resolveAnimationConfig };
+  });
+
+  const clearTimers = useCallback(() => {
     if (clearTimerRef.current !== null) {
       clearTimeout(clearTimerRef.current);
       clearTimerRef.current = null;
@@ -396,7 +412,7 @@ export const useSliderJumpMotion = ({
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
-  };
+  }, []);
 
   const clearFlip = () => {
     clearTimers();
@@ -409,12 +425,13 @@ export const useSliderJumpMotion = ({
   // JUMP_RELEASE_THRESHOLD_PX of the base (never a visible pop).
   useEffect(() => {
     if (!flip || flip.phase !== 'apply') {
-      return;
+      return noCleanup;
     }
     rafRef.current = requestAnimationFrame(() => {
       rafRef.current = null;
       animateStartAtRef.current = Date.now();
-      const settleMs = getJumpSettleMs(resolveAnimationConfig?.(transitionToken), flip.delta);
+      const source = settleSourceRef.current;
+      const settleMs = getJumpSettleMs(source.resolveAnimationConfig?.(source.transitionToken), flip.delta);
       clearTimerRef.current = setTimeout(() => {
         clearTimerRef.current = null;
         setFlip(null);
@@ -433,7 +450,7 @@ export const useSliderJumpMotion = ({
     () => () => {
       clearTimers();
     },
-    [],
+    [clearTimers],
   );
 
   const onTrackPress = (rawValue: number) => {

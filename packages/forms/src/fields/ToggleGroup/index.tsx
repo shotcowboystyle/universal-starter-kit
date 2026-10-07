@@ -353,19 +353,19 @@ export const ToggleGroup = ({
     // page tab order — the focused one while focus is inside the group, else
     // the first enabled selected one, else the first enabled one; arrows move
     // within the group.
-    const focusedIdx = focusValue ? options.findIndex((o) => o.value === focusValue && !(disabled || o.disabled)) : -1;
-    const firstSelectedEnabled = options.findIndex((o) => isSelected(o.value) && !(disabled || o.disabled));
+    const focusedIdx = focusValue ? options.findIndex((o) => o.value === focusValue && !(disabled ?? o.disabled)) : -1;
+    const firstSelectedEnabled = options.findIndex((o) => isSelected(o.value) && !(disabled ?? o.disabled));
     const tabStopIndex =
       focusedIdx >= 0
         ? focusedIdx
         : firstSelectedEnabled === -1
-          ? options.findIndex((o) => !(disabled || o.disabled))
+          ? options.findIndex((o) => !(disabled ?? o.disabled))
           : firstSelectedEnabled;
     return options.map((option, index) => {
       const groupedRadius = stackRadiusProps(getGroupPosition(index, count), radius, orientation);
       const selected = isSelected(option.value);
       const nextSelected = index < count - 1 && isSelected(options[index + 1].value);
-      const itemDisabled = Boolean(disabled || option.disabled);
+      const itemDisabled = Boolean(disabled ?? option.disabled);
       const itemDescribedBy = option.disabled ? itemReasonIdFor(option.disabledReason) : undefined;
       const isTabStop = index === tabStopIndex;
       const showSeam = index < count - 1 && !selected && !nextSelected;
@@ -579,9 +579,9 @@ export const ToggleGroup = ({
       gap: 0,
       alignSelf: 'flex-start',
       ...(handleBlur ? { onBlur: handleBlur } : undefined),
-      'aria-required': required || undefined,
-      'aria-invalid': hasError || undefined,
-      'aria-readonly': readOnly || undefined,
+      'aria-required': required ?? undefined,
+      'aria-invalid': hasError ?? undefined,
+      'aria-readonly': readOnly ?? undefined,
       // Web reads the attribute, Android reads the RN prop off the
       // container. iOS reads neither, which is why the name is also prefixed
       // onto every segment above.
@@ -665,7 +665,7 @@ export const ToggleGroup = ({
             // See standalone branch — FieldLayout carries dimWhole.
             disabled={disabled}>
             {renderToggleGroup(
-              value === undefined ? field.state.value : value,
+              value ?? field.state.value,
               true,
               (val) => {
                 field.handleChange(val as any);

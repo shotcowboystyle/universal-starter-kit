@@ -1,6 +1,5 @@
+// @vitest-environment jsdom
 /**
- * @vitest-environment jsdom
- *
  * Separator paints a line.
  *
  * What this locks: the house rule paints, at 1 CSS px, in $borderColor, in
@@ -9,10 +8,10 @@
  * colour is how a transparent rule ships, so this spec asserts the painted
  * colour first.
  *
- * (The ticket's "96 of 96 paint nothing" reading was a probe artefact — it
+ * Note: the ticket's "96 of 96 paint nothing" reading was a probe artefact — it
  * read borderTopWidth on a primitive that paints borderBottomWidth. See the
  * component header. The assertions below are unaffected: they are about what
- * the HOUSE rule paints, not about what the raw one did.)
+ * the HOUSE rule paints, not about what the raw one did.
  *
  * jsdom cannot CASCADE Tamagui's class-based CSS, so `getComputedStyle` on the
  * element reads nothing — but Tamagui does INJECT its atomic rules into
@@ -30,15 +29,22 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { Separator } from './index';
 
-afterEach(cleanup);
-
 const getSeparator = (container: HTMLElement): HTMLElement => {
   const el = container.querySelector('[role="separator"]');
   expect(el, "a Separator must render role='separator'").toBeTruthy();
   return el as HTMLElement;
 };
 
-const escapeForRegExp = (value: string) => value.replaceAll(/[.*+?^${}()|[\]\\-]/gu, '\\$&');
+const escapeForRegExp = (value: string) => value.replaceAll(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+
+const readRules = (sheet: CSSStyleSheet): CSSRule[] => {
+  try {
+    return [...sheet.cssRules];
+  } catch {
+    // cross-origin sheet; nothing of ours lives there
+    return [];
+  }
+};
 
 /**
  * Every value Tamagui declared for `property` through one of THIS element's
@@ -46,25 +52,16 @@ const escapeForRegExp = (value: string) => value.replaceAll(/[.*+?^${}()|[\]\\-]
  */
 const declared = (el: HTMLElement, property: string): string[] => {
   const atoms = el.className.split(/\s+/u).filter(Boolean);
+  const declRe = new RegExp(`(?:^|[;\\s])${escapeForRegExp(property)}\\s*:\\s*([^;]+)`, 'u');
   const values: string[] = [];
-  for (const sheet of Array.from(document.styleSheets)) {
-    let rules: CSSRuleList | undefined;
-    try {
-      rules = sheet.cssRules;
-    } catch {
-      continue; // cross-origin sheet; nothing of ours lives there
-    }
-    for (const rule of Array.from(rules ?? [])) {
-      const parsed = /^([^{]+)\{([^}]*)\}$/u.exec(rule.cssText ?? '');
-      if (!parsed) {
-        continue;
-      }
-      const [, selector, body] = parsed;
-      const mine = atoms.some((atom) => new RegExp(`\\.${escapeForRegExp(atom)}(?![\\w-])`).test(selector));
-      if (!mine) {
-        continue;
-      }
-      const decl = new RegExp(`(?:^|[;\\s])${escapeForRegExp(property)}\\s*:\\s*([^;]+)`).exec(body);
+  for (const sheet of document.styleSheets) {
+    for (const rule of readRules(sheet)) {
+      const groups = /^(?<selector>[^{]+)\{(?<body>[^}]*)\}$/u.exec(rule.cssText)?.groups;
+      const decl =
+        groups !== undefined &&
+        atoms.some((atom) => new RegExp(`\\.${escapeForRegExp(atom)}(?![\\w-])`, 'u').test(groups.selector))
+          ? declRe.exec(groups.body)
+          : null;
       if (decl) {
         values.push(decl[1].trim());
       }
@@ -75,9 +72,9 @@ const declared = (el: HTMLElement, property: string): string[] => {
 
 /** Resolve a theme colour Variable to its raw value string. */
 const themeColorVal = (scheme: 'light' | 'dark', key: string): string => {
-  const themes = getConfig().themes as Record<string, Record<string, { val?: unknown }>>;
+  const themes = getConfig().themes as Record<string, Record<string, { val?: string }>>;
   const variable = themes[scheme]?.[key];
-  return String(variable?.val ?? '');
+  return variable?.val ?? '';
 };
 
 const isVisibleColor = (value: string): boolean => {
@@ -92,6 +89,8 @@ const isVisibleColor = (value: string): boolean => {
 };
 
 describe('Separator — painted colour (the regression this component exists for)', () => {
+  afterEach(cleanup);
+
   it('paints its 1px box with the $borderColor token, not a transparent box', () => {
     const { container } = renderWithProviders(<Separator />);
     const separator = getSeparator(container);
@@ -126,6 +125,8 @@ describe('Separator — painted colour (the regression this component exists for
 });
 
 describe('Separator — quiet variant (opacity 0.5, never a lighter colour)', () => {
+  afterEach(cleanup);
+
   it('dims with opacity 0.5 and keeps the exact same paint token', () => {
     const { container } = renderWithProviders(<Separator quiet />);
     const separator = getSeparator(container);
@@ -141,6 +142,8 @@ describe('Separator — quiet variant (opacity 0.5, never a lighter colour)', ()
 });
 
 describe('Separator — vertical (vertical separators are 1px wide)', () => {
+  afterEach(cleanup);
+
   it('is 1px wide, releases the horizontal height, and declares its orientation', () => {
     const { container } = renderWithProviders(<Separator vertical />);
     const separator = getSeparator(container);
@@ -156,6 +159,8 @@ describe('Separator — vertical (vertical separators are 1px wide)', () => {
 });
 
 describe('Separator — never leftover space', () => {
+  afterEach(cleanup);
+
   it('cannot grow or shrink (flex: none discipline on the painting edge)', () => {
     const { container } = renderWithProviders(<Separator />);
     const separator = getSeparator(container);
@@ -167,6 +172,8 @@ describe('Separator — never leftover space', () => {
 });
 
 describe('Separator — consumer eject stays the last word (STD-EJECT-LAST)', () => {
+  afterEach(cleanup);
+
   it('an explicit backgroundColor prop wins over the house paint', () => {
     const { container } = renderWithProviders(<Separator backgroundColor="$red9" />);
     const separator = getSeparator(container);

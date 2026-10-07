@@ -218,7 +218,6 @@ export const readingWidthStyle = (
 
 // ── Min press target ──────────────────────────────────────────
 
-
 /** Touch surfaces — native touchable or web touchable. */
 export const isTouchSurface = (): boolean => isTouchable || isWebTouchable;
 

@@ -1,7 +1,7 @@
 import { useResolvedKnobs } from '@repo/theme';
 import type { KnobProps } from '@repo/theme';
-import type { FieldApi } from '@tanstack/form-core';
 import { Field as TanstackField } from '@tanstack/react-form';
+import type { AnyFieldApi } from '@tanstack/react-form';
 import type { ReactNode } from 'react';
 import { createContext, useContext, useEffect, useMemo } from 'react';
 import { AccessibilityInfo } from 'react-native';
@@ -14,6 +14,7 @@ import { formatRequiredMarkSuffix, mapHouseRequiredMarking, useRequiredMarking }
 import type { RequiredMarkMode } from './required-marking';
 import { formCommonColors } from './shared/color-ramps';
 import { warnBannedErrorWords, warnPlaceholderAsLabel } from './shared/dev-warn';
+import type { FieldValidators } from './shared/utils';
 import type { AnyFormApi, SimpleFieldApi } from './types';
 
 const FieldDescribedByContext = createContext<string | undefined>(undefined);
@@ -38,11 +39,8 @@ export const useFieldA11y = () => useContext(FieldA11yContext);
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 
-const getHelperTextSize = (size?: SizeTokens): FontSizeTokens => {
-  if (!size) {
-    return '$1';
-  }
-  const sizeMap: Record<string, FontSizeTokens> = {
+const HELPER_TEXT_SIZE_MAP = new Map<string, FontSizeTokens>(
+  Object.entries({
     $1: '$1',
     $2: '$1',
     $3: '$2',
@@ -60,8 +58,14 @@ const getHelperTextSize = (size?: SizeTokens): FontSizeTokens => {
     $15: '$14',
     $16: '$15',
     $17: '$16',
-  };
-  return sizeMap[size.toString()] || '$1';
+  } satisfies Record<string, FontSizeTokens>),
+);
+
+const getHelperTextSize = (size?: SizeTokens): FontSizeTokens => {
+  if (size === undefined || size === 0) {
+    return '$1';
+  }
+  return HELPER_TEXT_SIZE_MAP.get(size.toString()) ?? '$1';
 };
 
 // ── FieldLayout ──────────────────────────────────────────────────────────────
@@ -71,31 +75,7 @@ export interface FieldLayoutProps {
   label?: ReactNode;
   labelProps?: Omit<LabelProps, 'htmlFor' | 'ref'>;
   error?: string | boolean;
-  field?: FieldApi<
-    any,
-    any,
-    any,
-    any,
-    any,
-    any,
-    any,
-    any,
-    any,
-    any,
-    any,
-    any,
-    any,
-    any,
-    any,
-    any,
-    any,
-    any,
-    any,
-    any,
-    any,
-    any,
-    any
-  >;
+  field?: AnyFieldApi;
   helperText?: string;
   required?: boolean;
   /**
@@ -110,6 +90,7 @@ export interface FieldLayoutProps {
   disabled?: boolean;
   size?: SizeTokens;
   knobProps?: KnobProps;
+  // oxlint-disable-next-line typescript/no-explicit-any -- ComponentProps<typeof FieldLayout>['onBlur'] is reused by Input/DatePicker as a handler type for blur, change and focus events; any narrower parameter type breaks their assignability
   onBlur?: (...args: any[]) => void;
   /**
    * Use compact spacing between field and helper/error text.
@@ -144,6 +125,110 @@ export interface FieldLayoutProps {
   children: ReactNode;
 }
 
+const firstFieldError = (field: AnyFieldApi | undefined): string | undefined => {
+  const errors = field?.state.meta.errors;
+  return errors !== undefined && errors.length > 0 ? String(errors[0]) : undefined;
+};
+
+const asNonEmptyString = (value: string | boolean | undefined): string | undefined =>
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- `error` is string | boolean | undefined with no discriminant; only a non-empty string is a message
+  typeof value === 'string' && value.length > 0 ? value : undefined;
+
+const isNonEmpty = (value: string | undefined): value is string => value !== undefined && value !== '';
+
+const suffixedId = (id: string | undefined, suffix: string): string | undefined =>
+  isNonEmpty(id) ? `${id}-${suffix}` : undefined;
+
+const describedByFor = (
+  id: string | undefined,
+  errorMessage: string | undefined,
+  helperText: string | undefined,
+): string | undefined => {
+  if (errorMessage !== undefined) {
+    return suffixedId(id, 'error');
+  }
+  return isNonEmpty(helperText) ? suffixedId(id, 'description') : undefined;
+};
+
+const resolveWidthProps = (
+  { maxWidth, width }: Pick<FieldLayoutProps, 'maxWidth' | 'width'>,
+  purpose: string | undefined,
+  autoComplete: string | undefined,
+): Pick<FieldLayoutProps, 'maxWidth' | 'width'> => {
+  // Purpose / autocomplete → default width; explicit maxWidth/width win.
+  const purposeWidth =
+    maxWidth !== undefined || width !== undefined ? undefined : fieldWidthStyle(purpose, autoComplete);
+  const widthProps: Pick<FieldLayoutProps, 'maxWidth' | 'width'> = { ...purposeWidth };
+  if (maxWidth !== undefined) {
+    widthProps.maxWidth = maxWidth;
+  }
+  if (width !== undefined) {
+    widthProps.width = width;
+  }
+  return widthProps;
+};
+
+const resolveMarkMode = (
+  explicit: RequiredMarkMode | undefined,
+  context: ReturnType<typeof useRequiredMarking>,
+  houseMarking: KnobProps['requiredMarking'],
+): RequiredMarkMode => explicit ?? context?.mode ?? mapHouseRequiredMarking(houseMarking);
+
+const a11yLabelFor = (label: ReactNode, requiredSuffix: string, ariaLabel: string | undefined): string | undefined =>
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- ReactNode has no discriminant; only a string label yields an accessible-name string
+  typeof label === 'string' ? `${label}${requiredSuffix}` : ariaLabel;
+
+const resolveDisabledFlags = (disabled = false, disabledStyle: KnobProps['disabledStyle'] = 'keepLabel') => {
+  const isDimWhole = disabledStyle === 'dimWhole';
+  return {
+    disabledStyle,
+    dimWhole: disabled && isDimWhole,
+    keepLabelReadable: disabled && !isDimWhole,
+  };
+};
+
+const isSideLabel = (placement: KnobProps['fieldLabelPlacement'], hasLabel: boolean, compactSpacing = false): boolean =>
+  (placement ?? 'top') === 'side' && hasLabel && !compactSpacing;
+
+const resolveHelperSize = (size: SizeTokens | undefined, knobSize: SizeTokens): FontSizeTokens =>
+  getHelperTextSize(size === undefined || size === 0 ? knobSize : size);
+
+interface FieldLayoutNodeContext {
+  id: string | undefined;
+  helperSize: FontSizeTokens;
+  knobProps: KnobProps;
+}
+
+const renderHelperNode = (
+  { id, helperSize, knobProps }: FieldLayoutNodeContext,
+  helperText: string | undefined,
+  hasError: boolean,
+  keepLabelReadable: boolean,
+) =>
+  isNonEmpty(helperText) && !hasError ? (
+    <Paragraph
+      id={suffixedId(id, 'description')}
+      size={helperSize}
+      {...knobProps.body}
+      color={formCommonColors.text}
+      opacity={keepLabelReadable ? 1 : undefined}>
+      {helperText}
+    </Paragraph>
+  ) : null;
+
+const renderErrorNode = ({ id, helperSize, knobProps }: FieldLayoutNodeContext, errorMessage: string | undefined) =>
+  errorMessage === undefined ? null : (
+    <Paragraph
+      id={suffixedId(id, 'error')}
+      size={helperSize}
+      {...knobProps.body}
+      color={formCommonColors.error}
+      role="alert"
+      aria-live="polite">
+      {errorMessage}
+    </Paragraph>
+  );
+
 export const FieldLayout = ({
   id,
   label,
@@ -169,21 +254,17 @@ export const FieldLayout = ({
   const { knobProps: resolvedKnobs, disabledState } = useResolvedKnobs();
   const knobProps = knobPropsProp ?? resolvedKnobs;
   const markingCtx = useRequiredMarking();
-  const markMode: RequiredMarkMode =
-    requiredMarkingProp ?? markingCtx?.mode ?? mapHouseRequiredMarking(knobProps.requiredMarking);
+  const markMode = resolveMarkMode(requiredMarkingProp, markingCtx, knobProps.requiredMarking);
   const requiredSuffix = formatRequiredMarkSuffix(required, markMode);
   // Axiom 5 eject-last: an explicit consumer `error` prop is an eject and wins
   // over field-meta errors — same contract as getFieldError (shared/utils.ts).
-  const fieldError = field?.state.meta.errors.length ? String(field.state.meta.errors[0]) : undefined;
-  const error = propError ?? fieldError;
-  const errorMessage = typeof error === 'string' && error.length > 0 ? error : undefined;
+  const error = propError ?? firstFieldError(field);
+  const errorMessage = asNonEmptyString(error);
   const hasErrorState = Boolean(error);
-  const helperSize = getHelperTextSize(size || knobProps.sizeToken);
-  const disabledStyle = knobProps.disabledStyle ?? 'keepLabel';
-  const dimWhole = Boolean(_disabled) && disabledStyle === 'dimWhole';
-  const keepLabelReadable = Boolean(_disabled) && disabledStyle !== 'dimWhole';
-  const labelPlacement = knobProps.fieldLabelPlacement ?? 'top';
-  const sideLabel = labelPlacement === 'side' && Boolean(label) && !compactSpacing;
+  const helperSize = resolveHelperSize(size, knobProps.sizeToken);
+  const { disabledStyle, dimWhole, keepLabelReadable } = resolveDisabledFlags(_disabled, knobProps.disabledStyle);
+  const hasLabel = Boolean(label);
+  const sideLabel = isSideLabel(knobProps.fieldLabelPlacement, hasLabel, compactSpacing);
 
   warnPlaceholderAsLabel({
     placeholder,
@@ -192,26 +273,19 @@ export const FieldLayout = ({
     id,
     component: 'FieldLayout',
   });
-  if (errorMessage) {
+  if (errorMessage !== undefined) {
     warnBannedErrorWords(errorMessage, { component: 'FieldLayout', id });
   }
 
   // Use compact gap for inline-label fields (checkbox, switch) or when explicitly requested
-  const useCompact = compactSpacing || !label;
+  const useCompact = compactSpacing === true || !hasLabel;
   const gapProps = useCompact ? { gap: '$1' } : knobProps.gap;
 
-  // Purpose / autocomplete → default width; explicit maxWidth/width win.
-  const purposeWidth =
-    maxWidth !== undefined || width !== undefined ? undefined : fieldWidthStyle(purpose, autoComplete);
-  const widthProps = {
-    ...purposeWidth,
-    ...(maxWidth === undefined ? {} : { maxWidth }),
-    ...(width === undefined ? {} : { width }),
-  };
+  const widthProps = resolveWidthProps({ maxWidth, width }, purpose, autoComplete);
 
-  const describedBy = id ? (errorMessage ? `${id}-error` : helperText ? `${id}-description` : undefined) : undefined;
+  const describedBy = describedByFor(id, errorMessage, helperText);
 
-  const a11yLabel = typeof label === 'string' ? `${label}${requiredSuffix}` : ariaLabel;
+  const a11yLabel = a11yLabelFor(label, requiredSuffix, ariaLabel);
   const a11yDescription = errorMessage ?? helperText;
   const fieldA11y = useMemo<FieldA11y>(
     () => ({ label: a11yLabel, description: a11yDescription, required }),
@@ -221,7 +295,7 @@ export const FieldLayout = ({
   // iOS has no aria-live regions — speak new errors explicitly. Web keeps the
   // role="alert" / aria-live wiring on the error Paragraph below.
   useEffect(() => {
-    if (!isWeb && errorMessage) {
+    if (!isWeb && errorMessage !== undefined) {
       AccessibilityInfo.announceForAccessibility(errorMessage);
     }
   }, [errorMessage]);
@@ -235,9 +309,9 @@ export const FieldLayout = ({
   // House Label owns T-LABEL (weight 400) and must not receive a
   // control-height sizeToken. Required mark is applied once here
   // via the house `required` prop — do not also suffix children.
-  const labelNode = label ? (
+  const labelNode = hasLabel ? (
     <Label
-      id={id ? `${id}-label` : undefined}
+      id={suffixedId(id, 'label')}
       htmlFor={id}
       required={required}
       requiredMarking={requiredMarkingProp}
@@ -249,29 +323,9 @@ export const FieldLayout = ({
     </Label>
   ) : null;
 
-  const helperNode =
-    helperText && !errorMessage ? (
-      <Paragraph
-        id={id ? `${id}-description` : undefined}
-        size={helperSize}
-        {...knobProps.body}
-        color={formCommonColors.text}
-        opacity={keepLabelReadable ? 1 : undefined}>
-        {helperText}
-      </Paragraph>
-    ) : null;
-
-  const errorNode = errorMessage ? (
-    <Paragraph
-      id={id ? `${id}-error` : undefined}
-      size={helperSize}
-      {...knobProps.body}
-      color={formCommonColors.error}
-      role="alert"
-      aria-live="polite">
-      {errorMessage}
-    </Paragraph>
-  ) : null;
+  const nodeContext: FieldLayoutNodeContext = { id, helperSize, knobProps };
+  const helperNode = renderHelperNode(nodeContext, helperText, errorMessage !== undefined, keepLabelReadable);
+  const errorNode = renderErrorNode(nodeContext, errorMessage);
 
   const controlColumn = (
     <YStack
@@ -305,7 +359,7 @@ export const FieldLayout = ({
               {...knobProps.gap}
               width="100%"
               data-label-placement="side"
-              data-gap={String(knobProps.gap.gap)}>
+              data-gap={knobProps.gap.gap}>
               {labelNode}
               {controlColumn}
             </XStack>
@@ -324,7 +378,7 @@ export const FieldLayout = ({
 };
 
 export type FormFieldProps<
-  _TParentData = Record<string, unknown>,
+  _TParentData = object,
   _TName extends string = string,
   _TFieldValidator = unknown,
   _TFormValidator = unknown,
@@ -333,20 +387,18 @@ export type FormFieldProps<
 
 // ── Field (typed TanStack Field wrapper) ──────────────────────────────────────
 
-export interface FieldProps<_TParentData = Record<string, unknown>, TName extends string = string, TValue = unknown> {
+export interface FieldProps<_TParentData = object, TName extends string = string, TValue = unknown> {
   name: TName;
-  form?: AnyFormApi<any>;
+  form?: AnyFormApi;
   defaultValue?: TValue;
   mode?: 'value' | 'array';
   preserveValue?: boolean;
-  validators?: Record<string, unknown>;
+  validators?: FieldValidators;
   children: (field: SimpleFieldApi<TValue>) => ReactNode;
 }
 
-export const Field = TanstackField as <
-  TParentData = Record<string, unknown>,
-  TName extends string = string,
-  TValue = unknown,
->(
+// SAFETY: TanstackField is generic over 23 form/field validator parameters; this narrows it to the single-value surface (FieldProps) that the package's fields use, which is a subset of TanstackField's runtime props.
+// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- re-typing TanStack's 23-parameter Field to the package's simplified FieldProps
+export const Field = TanstackField as <TParentData = object, TName extends string = string, TValue = unknown>(
   props: FieldProps<TParentData, TName, TValue>,
 ) => ReactNode;

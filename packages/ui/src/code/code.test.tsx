@@ -1,9 +1,8 @@
 import { renderWithProviders } from '@repo/test-utils';
 import { Preset } from '@repo/theme';
+import { describe, expect, it } from 'vitest';
 
 import { Code, CodeInline } from './Code/index';
-
-import * as CodeExports from './index';
 
 describe('Code Component', () => {
   it('should render successfully', () => {
@@ -39,20 +38,21 @@ describe('Code Component', () => {
         <CodeInline>inline</CodeInline>
       </Preset>,
     );
-    const nodes = Array.from(container.querySelectorAll('code'));
+    const nodes = [...container.querySelectorAll('code')];
     expect(nodes).toHaveLength(2);
     expect(container.textContent).toContain('const x = 10');
     expect(container.textContent).toContain('inline');
     // Tamagui compiles letterSpacing/fontFamily to atomic classes; happy-dom
     // computed style is often "". The pin is the class contract + no throw.
     for (const node of nodes) {
-      expect(node.getAttribute('data-code-font')).toBe('mono');
+      expect(node.dataset.codeFont).toBe('mono');
     }
   });
 });
 
 describe('code barrel', () => {
-  it('exports the code family as named exports', () => {
+  it('exports the code family as named exports', async () => {
+    const CodeExports = await import('./index');
     for (const name of ['Code', 'CodeInline', 'CodeBlock', 'HighlightedCode', 'Pre', 'highlightCode']) {
       expect(CodeExports).toHaveProperty(name);
     }

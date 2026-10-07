@@ -75,7 +75,7 @@ export const BarChart = ({
   const fills = resolveSeriesFills(data, palette, { color, colors, categorical });
   const format = valueFormatter ?? formatChartValue;
   const ariaLabel = label ?? describeChart({ typeLabel: t('Bar chart'), title, data, formatValue: valueFormatter });
-  const interactive = Boolean(onDatumPress || onDatumHoverIn || onDatumHoverOut);
+  const interactive = onDatumPress !== undefined || onDatumHoverIn !== undefined || onDatumHoverOut !== undefined;
 
   return (
     <ChartDataFrame

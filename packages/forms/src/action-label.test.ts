@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { formatActionLabel } from './action-label';
 
-describe('formatActionLabel', () => {
+describe(formatActionLabel, () => {
   it('formats verb alone in sentence case', () => {
     expect(formatActionLabel({ verb: 'delete' })).toBe('Delete');
     expect(formatActionLabel({ verb: 'Save' })).toBe('Save');

@@ -1,6 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 
 import { renderWithProviders } from '@repo/test-utils';
 import { SIZE_RECIPE_TOKENS, sizeRecipeForToken } from '@repo/theme';
@@ -12,9 +11,9 @@ import { Form } from '../../Form';
 
 import { SearchInput } from './index';
 
-const SEARCH_INPUT_SRC = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'index.tsx'), 'utf-8');
+const SEARCH_INPUT_SRC = readFileSync(path.join(import.meta.dirname, 'index.tsx'), 'utf-8');
 
-describe('SearchInput', () => {
+describe(SearchInput, () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -33,10 +32,10 @@ describe('SearchInput', () => {
   });
 
   it('uses readable glyph ink for search and clear rather than the boundary ramp', () => {
-    let expectedInk = '';
+    const inks: string[] = [];
     const Sample = () => {
       const theme = useTheme();
-      expectedInk = String(theme.color11?.val);
+      inks.push(String(theme.color11?.val));
       return (
         <SearchInput
           placeholder="Search things"
@@ -48,7 +47,7 @@ describe('SearchInput', () => {
     const glyphs = container.querySelectorAll('svg');
     expect(glyphs).toHaveLength(2);
     for (const glyph of glyphs) {
-      expect(glyph.getAttribute('fill')).toBe(expectedInk);
+      expect(glyph.getAttribute('fill')).toBe(inks.at(-1));
     }
   });
 
@@ -64,8 +63,8 @@ describe('SearchInput', () => {
   });
 
   it('fires onChange per keystroke and onSearch after debounce', () => {
-    const onChange = vi.fn();
-    const onSearch = vi.fn();
+    const onChange = vi.fn<(text: string) => void>();
+    const onSearch = vi.fn<(text: string) => void>();
     const result = renderWithProviders(
       <SearchInput
         onChange={onChange}
@@ -83,12 +82,11 @@ describe('SearchInput', () => {
     vi.advanceTimersByTime(299);
     expect(onSearch).not.toHaveBeenCalled();
     vi.advanceTimersByTime(1);
-    expect(onSearch).toHaveBeenCalledWith('abc');
-    expect(onSearch).toHaveBeenCalledOnce();
+    expect(onSearch).toHaveBeenCalledExactlyOnceWith('abc');
   });
 
   it('collapses rapid keystrokes into one onSearch', () => {
-    const onSearch = vi.fn();
+    const onSearch = vi.fn<(text: string) => void>();
     const result = renderWithProviders(
       <SearchInput
         onSearch={onSearch}
@@ -105,12 +103,11 @@ describe('SearchInput', () => {
     vi.advanceTimersByTime(100);
     fireEvent.change(input, { target: { value: 'abc' } });
     vi.advanceTimersByTime(300);
-    expect(onSearch).toHaveBeenCalledOnce();
-    expect(onSearch).toHaveBeenCalledWith('abc');
+    expect(onSearch).toHaveBeenCalledExactlyOnceWith('abc');
   });
 
   it('debounceMs=0 fires onSearch synchronously', () => {
-    const onSearch = vi.fn();
+    const onSearch = vi.fn<(text: string) => void>();
     const result = renderWithProviders(
       <SearchInput
         onSearch={onSearch}
@@ -126,8 +123,8 @@ describe('SearchInput', () => {
   });
 
   it('shows clear button only when there is text; clearing empties and fires immediately', () => {
-    const onChange = vi.fn();
-    const onSearch = vi.fn();
+    const onChange = vi.fn<(text: string) => void>();
+    const onSearch = vi.fn<(text: string) => void>();
     const result = renderWithProviders(
       <SearchInput
         onChange={onChange}
@@ -140,7 +137,7 @@ describe('SearchInput', () => {
     }
     expect(result.container.querySelector("[aria-label='Clear search']")).toBeNull();
     fireEvent.change(input, { target: { value: 'abc' } });
-    const clear = result.container.querySelector("[aria-label='Clear search']");
+    const clear = result.container.querySelector<HTMLElement>("[aria-label='Clear search']");
     if (!clear) {
       throw new Error('clear button not rendered');
     }
@@ -157,7 +154,7 @@ describe('SearchInput', () => {
   it('onClear fires on the clear affordance and on Escape, not on typed emptiness', () => {
     // Consumers (DataTableToolbar) hang side effects like clearFilters off
     // explicit clear intent; backspacing to "" must not trigger it.
-    const onClear = vi.fn();
+    const onClear = vi.fn<() => void>();
     const result = renderWithProviders(<SearchInput onClear={onClear} />);
     const input = result.container.querySelector('input');
     if (!input) {
@@ -168,26 +165,26 @@ describe('SearchInput', () => {
     vi.advanceTimersByTime(1000);
     expect(onClear).not.toHaveBeenCalled();
     fireEvent.change(input, { target: { value: 'abc' } });
-    const clear = result.container.querySelector("[aria-label='Clear search']");
+    const clear = result.container.querySelector<HTMLElement>("[aria-label='Clear search']");
     if (!clear) {
       throw new Error('clear button not rendered');
     }
     fireEvent.click(clear);
-    expect(onClear).toHaveBeenCalledOnce();
+    expect(onClear).toHaveBeenCalledExactlyOnceWith();
     fireEvent.change(input, { target: { value: 'again' } });
     fireEvent.keyDown(input, { key: 'Escape' });
     expect(onClear).toHaveBeenCalledTimes(2);
   });
 
   it('clear button is keyboard-reachable (tabIndex + Enter)', async () => {
-    const onSearch = vi.fn();
+    const onSearch = vi.fn<(text: string) => void>();
     const result = renderWithProviders(
       <SearchInput
         defaultValue="abc"
         onSearch={onSearch}
       />,
     );
-    const clear = result.container.querySelector("[aria-label='Clear search']");
+    const clear = result.container.querySelector<HTMLElement>("[aria-label='Clear search']");
     if (!clear) {
       throw new Error('clear button not rendered');
     }
@@ -210,7 +207,7 @@ describe('SearchInput', () => {
     expect(leading).toBeTruthy();
     expect(leading?.getAttribute('tabindex')).toBe('-1');
     expect(leading?.getAttribute('aria-hidden')).toBe('true');
-    const clear = result.container.querySelector("[aria-label='Clear search']");
+    const clear = result.container.querySelector<HTMLElement>("[aria-label='Clear search']");
     if (!clear) {
       throw new Error('clear button not rendered');
     }
@@ -230,7 +227,7 @@ describe('SearchInput', () => {
   it('restores focus to the searchbox after clear', () => {
     const result = renderWithProviders(<SearchInput defaultValue="abc" />);
     const input = result.container.querySelector('input');
-    const clear = result.container.querySelector("[aria-label='Clear search']");
+    const clear = result.container.querySelector<HTMLElement>("[aria-label='Clear search']");
     if (!input || !clear) {
       throw new Error('input or clear not found');
     }
@@ -239,7 +236,7 @@ describe('SearchInput', () => {
   });
 
   it('Escape clears, Enter flushes the pending search', () => {
-    const onSearch = vi.fn();
+    const onSearch = vi.fn<(text: string) => void>();
     const result = renderWithProviders(
       <SearchInput
         onSearch={onSearch}
@@ -307,21 +304,18 @@ describe('SearchInput', () => {
 
   it('does not fork a SearchInput-only clear ring stylesheet', () => {
     renderWithProviders(<SearchInput defaultValue="abc" />);
-    const chrome = document.getElementById('mp-search-input-chrome')?.textContent ?? '';
+    const chrome = document.querySelector('#mp-search-input-chrome')?.textContent ?? '';
     expect(chrome).not.toMatch(/mp-search-clear/u);
     expect(chrome).toMatch(/mp-search-input/u);
   });
 
   it('default painted box is 44 tall; end-cap is the size-recipe square', () => {
     const result = renderWithProviders(<SearchInput defaultValue="abc" />);
-    const box = result.container.querySelector("[data-ring-target='box']") as HTMLElement;
-    const clear = result.container.querySelector("[aria-label='Clear search']") as HTMLElement;
-    if (!box || !clear) {
-      throw new Error('box or clear not found');
-    }
-    expect(box.getAttribute('data-visual-height')).toBe('44');
-    expect(clear.getAttribute('data-end-cap')).toBe('44');
-    expect(box.getAttribute('data-press-floor')).toBe('box');
+    const box = result.container.querySelector<HTMLElement>("[data-ring-target='box']")!;
+    const clear = result.container.querySelector<HTMLElement>("[aria-label='Clear search']")!;
+    expect(box.dataset.visualHeight).toBe('44');
+    expect(clear.dataset.endCap).toBe('44');
+    expect(box.dataset.pressFloor).toBe('box');
   });
 
   it('end-cap square is generated from the size recipe at every token', () => {
@@ -337,27 +331,24 @@ describe('SearchInput', () => {
           aria-label={`q-${token}`}
         />,
       );
-      const box = result.container.querySelector("[data-ring-target='box']") as HTMLElement;
-      const clear = result.container.querySelector("[aria-label='Clear search']") as HTMLElement;
-      if (!box || !clear) {
-        throw new Error(`anatomy missing at ${token}`);
-      }
-      expect(box.getAttribute('data-visual-height'), token).toBe(String(height));
-      expect(clear.getAttribute('data-end-cap'), token).toBe(String(height));
+      const box = result.container.querySelector<HTMLElement>("[data-ring-target='box']")!;
+      const clear = result.container.querySelector<HTMLElement>("[aria-label='Clear search']")!;
+      expect(box.dataset.visualHeight, token).toBe(String(height));
+      expect(clear.dataset.endCap, token).toBe(String(height));
     }
   });
 
   it('compact steps density and leaves size on the recipe; size ejects height', () => {
     const compact = renderWithProviders(<SearchInput compact />);
-    const compactBox = compact.container.querySelector("[data-ring-target='box']") as HTMLElement;
-    expect(compactBox.getAttribute('data-density')).toBe('compact');
+    const compactBox = compact.container.querySelector<HTMLElement>("[data-ring-target='box']")!;
+    expect(compactBox.dataset.density).toBe('compact');
     // Compact is density only — default size stays the medium recipe.
-    expect(compactBox.getAttribute('data-size')).toBe('$4');
+    expect(compactBox.dataset.size).toBe('$4');
 
     const sized = renderWithProviders(<SearchInput size="$5" />);
-    const sizedBox = sized.container.querySelector("[data-ring-target='box']") as HTMLElement;
-    expect(sizedBox.getAttribute('data-density')).toBe('comfortable');
-    expect(sizedBox.getAttribute('data-size')).toBe('$5');
+    const sizedBox = sized.container.querySelector<HTMLElement>("[data-ring-target='box']")!;
+    expect(sizedBox.dataset.density).toBe('comfortable');
+    expect(sizedBox.dataset.size).toBe('$5');
 
     const both = renderWithProviders(
       <SearchInput
@@ -365,9 +356,9 @@ describe('SearchInput', () => {
         size="$5"
       />,
     );
-    const bothBox = both.container.querySelector("[data-ring-target='box']") as HTMLElement;
-    expect(bothBox.getAttribute('data-density')).toBe('compact');
-    expect(bothBox.getAttribute('data-size')).toBe('$5');
+    const bothBox = both.container.querySelector<HTMLElement>("[data-ring-target='box']")!;
+    expect(bothBox.dataset.density).toBe('compact');
+    expect(bothBox.dataset.size).toBe('$5');
   });
 
   it('renders skeleton without a searchbox', () => {
@@ -394,7 +385,7 @@ describe('SearchInput', () => {
   });
 
   it('form-integrated name keeps onChange(value)', () => {
-    const onChange = vi.fn();
+    const onChange = vi.fn<(text: string) => void>();
     const result = renderWithProviders(
       <Form
         formOptions={{ defaultValues: { q: '' } }}

@@ -7,9 +7,9 @@ import {
   useTouchSurface,
 } from '@repo/theme';
 import type { KnobProps } from '@repo/theme';
-import type { KeyboardEvent, MutableRefObject, ReactNode } from 'react';
+import type { ComponentProps, KeyboardEvent, ReactNode, RefObject } from 'react';
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
-import type { LabelProps, SizeTokens } from 'tamagui';
+import type { LabelProps, SizeTokens, TamaguiElement } from 'tamagui';
 import { ScrollView, Spinner, Text, View, XStack, YStack, isWeb } from 'tamagui';
 
 import { AdaptivePopup } from '../../AdaptivePopup';
@@ -35,7 +35,7 @@ import { zIndex } from '../../shared/z-index';
 import { Skeleton } from '../../Skeleton';
 import type { AnyFormApi } from '../../types';
 
-import { detectGeoShape, formatGeoValue, parseGeoValue } from './geo-value';
+import { detectGeoFormat, formatGeoValue, parseGeoValue } from './geo-value';
 import type { GeocodeFn, GeocodeResult, Geocoder, ReverseGeocodeFn } from './geocoder';
 import { clampLat, clampLng, formatCoordPair, formatPlace, parseLatLngPair, resolveGeocoder } from './geocoder';
 import { useGeocoder } from './geocoder-context';
@@ -52,6 +52,22 @@ export type {
 } from './geocoder';
 export { clampLat, clampLng, formatCoordPair, formatPlace, parseLatLngPair, resolveGeocoder } from './geocoder';
 
+// role="listbox" is a valid ARIA role but outside RN's `Role` union; this web-only
+// bag forwards it to the DOM node without the prop type narrowing it.
+const listboxRoleProps = Object.fromEntries([['role', 'listbox']]);
+
+const noLocationLabel = () => t('No location set');
+
+const SEARCH_STATUS_TEST_ID = 'geolocation-search-status';
+
+/** What the search input exposes on both platforms; `isFocused` exists on the native text input only. */
+interface SearchInputHandle {
+  isFocused?: () => boolean;
+  focus: (options?: FocusOptions) => void;
+}
+
+type AnyHandler = NonNullable<ComponentProps<typeof FieldLayout>['onBlur']>;
+
 type LocatePhase = 'idle' | 'locating' | 'error';
 type SearchStatus = 'idle' | 'searching' | 'results' | 'empty' | 'error';
 interface ResolvedAddress {
@@ -61,7 +77,13 @@ interface ResolvedAddress {
 
 const coordinateKey = ({ lat, lng }: { lat: number; lng: number }): string => `${lat},${lng}`;
 
+/** An error prop is set when it is a non-empty message or `true`. */
+const isErrorValue = (value: string | boolean | undefined): boolean =>
+  value !== undefined && value !== false && value !== '';
+
 const SEARCH_DEBOUNCE_MS = 300;
+const ignoreChange = (_value: string): void => undefined;
+const noCleanup = (): void => undefined;
 const COORD_LINE_HEIGHT = 28;
 const RESULTS_PANEL_SHADOW = '0px 8px 28px rgba(0,0,0,0.12), 0px 2px 6px rgba(0,0,0,0.04)';
 
@@ -72,8 +94,9 @@ const RESULTS_PANEL_SHADOW = '0px 8px 28px rgba(0,0,0,0.12), 0px 2px 6px rgba(0,
  * permission state passes — the prompt happens inside the stable locate
  * surface, never as a locating-flash-then-fail flicker.
  */
+// oxlint-disable-next-line react-doctor/only-export-components -- public preflight helper consumed through this module path (tests, package exports)
 export const preflightGeolocation = async (): Promise<CapabilityPreflightResult> => {
-  if (typeof navigator === 'undefined' || !navigator.geolocation) {
+  if (typeof navigator === 'undefined' || navigator.geolocation == null) {
     const insecure = typeof window !== 'undefined' && !window.isSecureContext;
     return {
       ok: false,
@@ -92,6 +115,15 @@ export const preflightGeolocation = async (): Promise<CapabilityPreflightResult>
   return { ok: true };
 };
 
+/** Runs the preflight and always clears the in-flight flag, even if the preflight throws. */
+const preflightOnce = async (inFlight: { current: boolean }): Promise<CapabilityPreflightResult> => {
+  try {
+    return await preflightGeolocation();
+  } finally {
+    inFlight.current = false;
+  }
+};
+
 const mapGeolocationError = (err: GeolocationPositionError | { message?: string; code?: number }): string => {
   const code = 'code' in err ? err.code : undefined;
   if (code === 1) {
@@ -103,8 +135,12 @@ const mapGeolocationError = (err: GeolocationPositionError | { message?: string;
   if (code === 3) {
     return t('Location request timed out. Try again.');
   }
-  return err.message || t('Failed to get location');
+  const { message } = err;
+  return message !== undefined && message !== '' ? message : t('Failed to get location');
 };
+
+// oxlint-disable-next-line unicorn/prefer-number-coercion -- lenient draft parse: "12e" or "5°" mid-keystroke must read as 12 and 5, which Number() would reject as NaN
+const parseDraftNumber = (text: string): number => Number.parseFloat(text);
 
 /**
  * Parse a coordinate draft. Returns undefined while the user is mid-keystroke
@@ -118,7 +154,7 @@ const tryParseCoord = (text: string, clamp: (n: number) => number): number | und
   if (trimmed.endsWith('.')) {
     return undefined;
   }
-  const n = Number.parseFloat(trimmed);
+  const n = parseDraftNumber(trimmed);
   if (Number.isNaN(n)) {
     return undefined;
   }
@@ -142,20 +178,26 @@ const CoordinatesPanel = ({
   lat: number;
   lng: number;
   onCommit: (lat: number, lng: number) => void;
-  flushRef: MutableRefObject<(() => void) | null>;
+  flushRef: RefObject<(() => void) | null>;
   knobProps: KnobProps;
   required?: boolean;
   hasError?: boolean;
 }) => {
   const [latText, setLatText] = useState(String(lat));
   const [lngText, setLngText] = useState(String(lng));
+  const [boundPair, setBoundPair] = useState({ lat, lng });
   const latTextRef = useRef(latText);
   const lngTextRef = useRef(lngText);
   const committedRef = useRef({ lat, lng });
 
-  useEffect(() => {
+  // A new bound pair replaces the drafts. Adjusted during render so the stale pair never paints.
+  if (boundPair.lat !== lat || boundPair.lng !== lng) {
+    setBoundPair({ lat, lng });
     setLatText(String(lat));
     setLngText(String(lng));
+  }
+
+  useEffect(() => {
     latTextRef.current = String(lat);
     lngTextRef.current = String(lng);
     committedRef.current = { lat, lng };
@@ -173,8 +215,8 @@ const CoordinatesPanel = ({
   );
 
   const flushDraft = useCallback(() => {
-    const rawLat = Number.parseFloat(latTextRef.current);
-    const rawLng = Number.parseFloat(lngTextRef.current);
+    const rawLat = parseDraftNumber(latTextRef.current);
+    const rawLng = parseDraftNumber(lngTextRef.current);
     const nextLat = Number.isNaN(rawLat) ? committedRef.current.lat : clampLat(rawLat);
     const nextLng = Number.isNaN(rawLng) ? committedRef.current.lng : clampLng(rawLng);
     commitPair(nextLat, nextLng);
@@ -227,8 +269,8 @@ const CoordinatesPanel = ({
               placeholder={t('-90 to 90')}
               inputMode="decimal"
               aria-label={t('Latitude')}
-              aria-required={required || undefined}
-              aria-invalid={hasError || undefined}
+              aria-required={required ? true : undefined}
+              aria-invalid={hasError ? true : undefined}
             />
           </InputParts.Box>
         </InputParts>
@@ -249,8 +291,8 @@ const CoordinatesPanel = ({
               placeholder={t('-180 to 180')}
               inputMode="decimal"
               aria-label={t('Longitude')}
-              aria-required={required || undefined}
-              aria-invalid={hasError || undefined}
+              aria-required={required ? true : undefined}
+              aria-invalid={hasError ? true : undefined}
             />
           </InputParts.Box>
         </InputParts>
@@ -320,60 +362,64 @@ const ResultRow = ({
   description?: string;
   onPress: () => void;
   disabled?: boolean;
-}) => (
-  <YStack
-    testID={testID}
-    role="option"
-    aria-selected={false}
-    aria-disabled={disabled || undefined}
-    {...(isWeb
-      ? {
-          tabIndex: disabled ? -1 : 0,
-          onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
-            if (disabled) {
-              return;
-            }
-            if (event.key === 'Enter' || event.key === ' ') {
-              event.preventDefault();
-              onPress();
-            } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-              event.preventDefault();
-              const rows = [
-                ...(event.currentTarget.parentElement?.querySelectorAll<HTMLElement>(
-                  "[role='option']:not([aria-disabled='true'])",
-                ) ?? []),
-              ];
-              const index = rows.indexOf(event.currentTarget);
-              rows[(index + (event.key === 'ArrowDown' ? 1 : -1) + rows.length) % rows.length]?.focus();
-            }
-          },
-        }
-      : {})}
-    minHeight={description ? 62 : 44}
-    justifyContent="center"
-    paddingHorizontal="$3"
-    paddingVertical={description ? '$2' : 0}
-    cursor={disabled ? 'not-allowed' : 'pointer'}
-    hoverStyle={disabled ? undefined : { backgroundColor: '$color3' }}
-    pressStyle={disabled ? undefined : { backgroundColor: '$color3' }}
-    onPress={disabled ? undefined : onPress}
-    opacity={disabled ? 0.5 : 1}>
-    <Text
-      fontSize="$4"
-      lineHeight={25}
-      color="$color12">
-      {label}
-    </Text>
-    {description ? (
+}) => {
+  const hasDescription = description !== undefined && description !== '';
+  return (
+    <YStack
+      testID={testID}
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui YStack is the cross-platform primitive (no native <option> on RN); role supplies the accessibility semantics
+      role="option"
+      aria-selected={false}
+      aria-disabled={disabled ? true : undefined}
+      {...(isWeb
+        ? {
+            tabIndex: disabled ? -1 : 0,
+            onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
+              if (disabled) {
+                return;
+              }
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                onPress();
+              } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                event.preventDefault();
+                const rows = [
+                  ...(event.currentTarget.parentElement?.querySelectorAll<HTMLElement>(
+                    "[role='option']:not([aria-disabled='true'])",
+                  ) ?? []),
+                ];
+                const index = rows.indexOf(event.currentTarget);
+                rows[(index + (event.key === 'ArrowDown' ? 1 : -1) + rows.length) % rows.length]?.focus();
+              }
+            },
+          }
+        : {})}
+      minHeight={hasDescription ? 62 : 44}
+      justifyContent="center"
+      paddingHorizontal="$3"
+      paddingVertical={hasDescription ? '$2' : 0}
+      cursor={disabled ? 'not-allowed' : 'pointer'}
+      hoverStyle={disabled ? undefined : { backgroundColor: '$color3' }}
+      pressStyle={disabled ? undefined : { backgroundColor: '$color3' }}
+      onPress={disabled ? undefined : onPress}
+      opacity={disabled ? 0.5 : 1}>
       <Text
-        fontSize="$3"
-        lineHeight={24}
-        color={formCommonColors.muted}>
-        {description}
+        fontSize="$4"
+        lineHeight={25}
+        color="$color12">
+        {label}
       </Text>
-    ) : null}
-  </YStack>
-);
+      {hasDescription ? (
+        <Text
+          fontSize="$3"
+          lineHeight={24}
+          color={formCommonColors.muted}>
+          {description}
+        </Text>
+      ) : null}
+    </YStack>
+  );
+};
 
 const StatusRow = ({ children, testID }: { children: ReactNode; testID?: string }) => (
   <XStack
@@ -381,6 +427,7 @@ const StatusRow = ({ children, testID }: { children: ReactNode; testID?: string 
     minHeight={44}
     alignItems="center"
     paddingHorizontal="$3"
+    // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui XStack is the cross-platform primitive (no native <output> on RN); role supplies the accessibility semantics
     role="status">
     <Text
       fontSize="$4"
@@ -390,6 +437,17 @@ const StatusRow = ({ children, testID }: { children: ReactNode; testID?: string 
     </Text>
   </XStack>
 );
+
+/** Pairs each result with a key unique among results that share coordinates. */
+const keyResults = (results: GeocodeResult[]) => {
+  const seen = new Map<string, number>();
+  return results.map((result, index) => {
+    const base = coordinateKey(result);
+    const occurrence = seen.get(base) ?? 0;
+    seen.set(base, occurrence + 1);
+    return { key: `${base}:${occurrence}`, result, index };
+  });
+};
 
 const SearchResultsList = ({
   listId,
@@ -418,11 +476,7 @@ const SearchResultsList = ({
       testID="geolocation-results"
       id={listId}
       overflow="hidden"
-      {...(isWeb
-        ? // role="listbox" is a valid ARIA role but outside RN's `Role` union;
-          // this web-only bag forwards it to the DOM node (house Record cast).
-          ({ role: 'listbox' } as Record<string, unknown>)
-        : undefined)}>
+      {...(isWeb ? listboxRoleProps : undefined)}>
       {showLocate ? (
         <ResultRow
           testID="geolocation-use-location"
@@ -431,12 +485,12 @@ const SearchResultsList = ({
           disabled={locateDisabled}
         />
       ) : null}
-      {status === 'searching' ? <StatusRow testID="geolocation-search-status">{t('Searching…')}</StatusRow> : null}
+      {status === 'searching' ? <StatusRow testID={SEARCH_STATUS_TEST_ID}>{t('Searching…')}</StatusRow> : null}
       {status === 'error' ? (
-        <StatusRow testID="geolocation-search-status">{t('Search is unavailable — check your connection')}</StatusRow>
+        <StatusRow testID={SEARCH_STATUS_TEST_ID}>{t('Search is unavailable — check your connection')}</StatusRow>
       ) : null}
       {status === 'empty' && !pair ? (
-        <StatusRow testID="geolocation-search-status">{t('No places match "{{query}}"', { query })}</StatusRow>
+        <StatusRow testID={SEARCH_STATUS_TEST_ID}>{t('No places match "{{query}}"', { query })}</StatusRow>
       ) : null}
       {pair ? (
         <ResultRow
@@ -449,9 +503,9 @@ const SearchResultsList = ({
         />
       ) : null}
       {status === 'results'
-        ? results.map((result, index) => (
+        ? keyResults(results).map(({ key, result, index }) => (
             <ResultRow
-              key={`${result.lat},${result.lng},${index}`}
+              key={key}
               testID={`geolocation-result-${index}`}
               label={result.label}
               description={result.description}
@@ -462,6 +516,320 @@ const SearchResultsList = ({
           ))
         : null}
     </YStack>
+  );
+};
+
+/** The pair a keyboard arrow nudges the pin to, or null for any other key. */
+const nextPositionForKey = (
+  key: string,
+  shiftKey: boolean,
+  from: { lat: number; lng: number },
+): { lat: number; lng: number } | null => {
+  const step = shiftKey ? 0.01 : 0.001;
+  switch (key) {
+    case 'ArrowUp': {
+      return { lat: clampLat(from.lat + step), lng: from.lng };
+    }
+    case 'ArrowDown': {
+      return { lat: clampLat(from.lat - step), lng: from.lng };
+    }
+    case 'ArrowLeft': {
+      return { lat: from.lat, lng: clampLng(from.lng - step) };
+    }
+    case 'ArrowRight': {
+      return { lat: from.lat, lng: clampLng(from.lng + step) };
+    }
+    default: {
+      return null;
+    }
+  }
+};
+
+const CoordLine = ({
+  readOnly,
+  disabled,
+  hasValue,
+  mapLat,
+  mapLng,
+  open,
+  onOpenChange,
+  flushRef,
+  knobProps,
+  required,
+  hasError,
+  onCommit,
+}: {
+  readOnly?: boolean;
+  disabled: boolean;
+  hasValue: boolean;
+  mapLat: number;
+  mapLng: number;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  flushRef: RefObject<(() => void) | null>;
+  knobProps: KnobProps;
+  required?: boolean;
+  hasError?: boolean;
+  onCommit: (lat: number, lng: number) => void;
+}) => {
+  const coordText = (
+    <Text
+      fontFamily="$mono"
+      fontSize={12}
+      lineHeight={22}
+      color={formCommonColors.muted}>
+      {hasValue ? formatCoordPair(mapLat, mapLng) : t('Enter coordinates')}
+    </Text>
+  );
+
+  if (readOnly || disabled) {
+    return (
+      <XStack
+        testID="geolocation-coordline"
+        alignItems="center"
+        minHeight={COORD_LINE_HEIGHT}
+        paddingHorizontal="$2"
+        hitSlop={pressTargetHitSlop(COORD_LINE_HEIGHT)}>
+        {coordText}
+      </XStack>
+    );
+  }
+
+  return (
+    <FloatingPanel
+      open={open}
+      onOpenChange={onOpenChange}
+      disabled={disabled}
+      widthMode="at-least-trigger"
+      sizing="fill"
+      contentPadding="none"
+      trigger={
+        <XStack
+          testID="geolocation-coordline"
+          alignItems="center"
+          minHeight={COORD_LINE_HEIGHT}
+          paddingHorizontal="$2"
+          cursor="pointer"
+          {...pressSlopProps(COORD_LINE_HEIGHT, true)}
+          hoverStyle={{ backgroundColor: '$color3' }}
+          focusVisibleStyle={overlayFocusRing}
+          {...(isWeb
+            ? {
+                tabIndex: 0,
+                role: 'button',
+                'aria-label': t('Edit coordinates'),
+                onKeyDown: (event: KeyboardEvent) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    onOpenChange(true);
+                  }
+                },
+              }
+            : {})}>
+          {coordText}
+        </XStack>
+      }>
+      <CoordinatesPanel
+        lat={mapLat}
+        lng={mapLng}
+        knobProps={knobProps}
+        required={required}
+        hasError={hasError}
+        flushRef={flushRef}
+        onCommit={onCommit}
+      />
+    </FloatingPanel>
+  );
+};
+
+const MapFrame = ({
+  id,
+  knobProps,
+  hasError,
+  interactive,
+  hasValue,
+  mapLat,
+  mapLng,
+  mapHeight,
+  disabled,
+  readOnly,
+  customMap,
+  onMapChange,
+  onKeyDown,
+}: {
+  id?: string;
+  knobProps: KnobProps;
+  hasError?: boolean;
+  interactive: boolean;
+  hasValue: boolean;
+  mapLat: number;
+  mapLng: number;
+  mapHeight: number;
+  disabled: boolean;
+  readOnly?: boolean;
+  customMap: ReactNode;
+  onMapChange: (lat: number, lng: number) => void;
+  onKeyDown: (event: KeyboardEvent) => void;
+}) => (
+  <YStack
+    testID="geolocation-map"
+    id={id}
+    {...knobProps.borderRadius}
+    {...knobProps.inputSurface}
+    borderRadius={clampRadiusForLargeComponent(knobProps.borderRadius.borderRadius)}
+    borderColor={hasError ? formCommonColors.error : formInputColors.border.base}
+    overflow="hidden"
+    height={mapHeight}
+    position="relative"
+    outlineWidth={0}
+    focusStyle={{ outlineWidth: 0 }}
+    focusVisibleStyle={interactive ? overlayFocusRing : { outlineWidth: 0 }}
+    {...(interactive && isWeb
+      ? {
+          tabIndex: 0,
+          role: 'application',
+          'aria-label': t('Location map'),
+          'aria-valuetext': hasValue ? formatCoordPair(mapLat, mapLng) : noLocationLabel(),
+          onKeyDown,
+        }
+      : {})}>
+    {customMap ?? (
+      <GeolocationMap
+        lat={mapLat}
+        lng={mapLng}
+        delta={hasValue ? 0.02 : 40}
+        onChange={onMapChange}
+        disabled={disabled}
+        readOnly={readOnly}
+        hasValue={hasValue}
+      />
+    )}
+
+    {hasValue ? null : (
+      <YStack
+        testID="geolocation-empty"
+        position="absolute"
+        top={0}
+        right={0}
+        bottom={0}
+        left={0}
+        zIndex={2}
+        alignItems="center"
+        justifyContent="center"
+        pointerEvents="none">
+        <Text
+          {...knobProps.body}
+          color={formCommonColors.muted}>
+          {noLocationLabel()}
+        </Text>
+      </YStack>
+    )}
+  </YStack>
+);
+
+const LocateErrorPanel = ({
+  knobProps,
+  message,
+  onRetry,
+  onClose,
+}: {
+  knobProps: KnobProps;
+  message: string | null;
+  onRetry: () => void;
+  onClose: () => void;
+}) => (
+  <YStack
+    testID="geolocation-locate-panel"
+    role="alert"
+    {...knobProps.borderRadius}
+    {...knobProps.inputSurface}
+    borderColor={formInputColors.border.base}
+    padding="$3"
+    gap="$2"
+    alignItems="center">
+    <Text
+      {...knobProps.body}
+      color={formCommonColors.error}
+      textAlign="center">
+      {message}
+    </Text>
+    <XStack gap="$2">
+      <Button
+        size="$2"
+        onPress={onRetry}
+        aria-label={t('Retry location')}>
+        {t('Retry')}
+      </Button>
+      <Button
+        size="$2"
+        onPress={onClose}
+        aria-label={t('Close location')}>
+        {t('Close')}
+      </Button>
+    </XStack>
+  </YStack>
+);
+
+const MapFooter = ({
+  coordLine,
+  showLocate,
+  disabled,
+  locating,
+  hasValue,
+  locationIcon,
+  onUseMyLocation,
+  expandIcon,
+  onExpand,
+}: {
+  coordLine: ReactNode;
+  showLocate: boolean;
+  disabled: boolean;
+  locating: boolean;
+  hasValue: boolean;
+  locationIcon: ReactNode;
+  onUseMyLocation: () => void;
+  expandIcon?: ReactNode;
+  onExpand?: () => void;
+}) => {
+  const useLocationLabel = t('Use my current location');
+  return (
+    <XStack
+      testID="geolocation-map-footer"
+      alignItems="center"
+      flexWrap="wrap"
+      gap="$2">
+      <YStack
+        flexGrow={1}
+        flexShrink={1}
+        flexBasis={0}
+        minWidth={160}>
+        {coordLine}
+      </YStack>
+      {showLocate ? (
+        <Button
+          size="$2"
+          disabled={disabled || locating}
+          onPress={onUseMyLocation}
+          icon={locating ? <Spinner size="small" /> : locationIcon}
+          testID={hasValue ? 'geolocation-locate' : 'geolocation-empty-locate'}
+          aria-label={hasValue ? t('Locate') : useLocationLabel}
+          aria-busy={locating ? true : undefined}
+          hitSlop={pressTargetHitSlop(32)}>
+          <Button.Text>{hasValue ? t('Locate') : useLocationLabel}</Button.Text>
+        </Button>
+      ) : null}
+      {onExpand ? (
+        <Button
+          size="$2"
+          disabled={disabled}
+          onPress={onExpand}
+          icon={expandIcon}
+          aria-label={t('Expand map')}
+          hitSlop={pressTargetHitSlop(32)}>
+          <Button.Text>{t('Expand')}</Button.Text>
+        </Button>
+      ) : null}
+    </XStack>
   );
 };
 
@@ -513,9 +881,15 @@ const GeoMapSurface = ({
   const mapLat = coordinates?.lat ?? 0;
   const mapLng = coordinates?.lng ?? 0;
   const interactive = !disabled && !readOnly;
-  const cappedRadius = clampRadiusForLargeComponent(knobProps.borderRadius.borderRadius);
+  const hasExpandIcon = Boolean(expandIcon);
 
-  const handleExpand = expandIcon ? () => !disabled && setExpanded(true) : undefined;
+  const handleExpand = hasExpandIcon
+    ? () => {
+        if (!disabled) {
+          setExpanded(true);
+        }
+      }
+    : undefined;
 
   const handleCoordsOpenChange = (open: boolean) => {
     if (!open) {
@@ -536,22 +910,12 @@ const GeoMapSurface = ({
     if (!coordinates) {
       return;
     }
-    const step = event.shiftKey ? 0.01 : 0.001;
-    let nextLat = coordinates.lat;
-    let nextLng = coordinates.lng;
-    if (event.key === 'ArrowUp') {
-      nextLat = clampLat(nextLat + step);
-    } else if (event.key === 'ArrowDown') {
-      nextLat = clampLat(nextLat - step);
-    } else if (event.key === 'ArrowLeft') {
-      nextLng = clampLng(nextLng - step);
-    } else if (event.key === 'ArrowRight') {
-      nextLng = clampLng(nextLng + step);
-    } else {
+    const next = nextPositionForKey(event.key, event.shiftKey, coordinates);
+    if (next === null) {
       return;
     }
     event.preventDefault();
-    onMapChange(nextLat, nextLng);
+    onMapChange(next.lat, next.lng);
   };
 
   const customMap = renderMap
@@ -564,203 +928,61 @@ const GeoMapSurface = ({
       })
     : null;
 
-  const coordLine =
-    readOnly || disabled ? (
-      <XStack
-        testID="geolocation-coordline"
-        alignItems="center"
-        minHeight={COORD_LINE_HEIGHT}
-        paddingHorizontal="$2"
-        hitSlop={pressTargetHitSlop(COORD_LINE_HEIGHT)}>
-        <Text
-          fontFamily="$mono"
-          fontSize={12}
-          lineHeight={22}
-          color={formCommonColors.muted}>
-          {hasValue ? formatCoordPair(mapLat, mapLng) : t('Enter coordinates')}
-        </Text>
-      </XStack>
-    ) : (
-      <FloatingPanel
-        open={coordsOpen}
-        onOpenChange={handleCoordsOpenChange}
-        disabled={disabled}
-        fitContent={false}
-        sizing="fill"
-        contentPadding="none"
-        trigger={
-          <XStack
-            testID="geolocation-coordline"
-            alignItems="center"
-            minHeight={COORD_LINE_HEIGHT}
-            paddingHorizontal="$2"
-            cursor="pointer"
-            {...pressSlopProps(COORD_LINE_HEIGHT, true)}
-            hoverStyle={{ backgroundColor: '$color3' }}
-            focusVisibleStyle={overlayFocusRing}
-            {...(isWeb
-              ? {
-                  tabIndex: 0,
-                  role: 'button',
-                  'aria-label': t('Edit coordinates'),
-                  onKeyDown: (event: KeyboardEvent) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault();
-                      setCoordsOpen(true);
-                    }
-                  },
-                }
-              : {})}>
-            <Text
-              fontFamily="$mono"
-              fontSize={12}
-              lineHeight={22}
-              color={formCommonColors.muted}>
-              {hasValue ? formatCoordPair(mapLat, mapLng) : t('Enter coordinates')}
-            </Text>
-          </XStack>
-        }>
-        <CoordinatesPanel
-          lat={mapLat}
-          lng={mapLng}
-          knobProps={knobProps}
-          required={required}
-          hasError={hasError}
-          flushRef={coordsFlushRef}
-          onCommit={onCommitCoordinates}
-        />
-      </FloatingPanel>
-    );
-
   return (
     <YStack gap="$2">
-      <YStack
-        testID="geolocation-map"
+      <MapFrame
         id={id}
-        {...knobProps.borderRadius}
-        {...knobProps.inputSurface}
-        borderRadius={cappedRadius}
-        borderColor={hasError ? formCommonColors.error : formInputColors.border.base}
-        overflow="hidden"
-        height={mapHeight}
-        position="relative"
-        outlineWidth={0}
-        focusStyle={{ outlineWidth: 0 }}
-        focusVisibleStyle={interactive ? overlayFocusRing : { outlineWidth: 0 }}
-        {...(interactive && isWeb
-          ? {
-              tabIndex: 0,
-              role: 'application',
-              'aria-label': t('Location map'),
-              'aria-valuetext': hasValue ? formatCoordPair(mapLat, mapLng) : t('No location set'),
-              onKeyDown: handleMapKeyDown,
-            }
-          : {})}>
-        {customMap ?? (
-          <GeolocationMap
-            lat={mapLat}
-            lng={mapLng}
-            delta={hasValue ? 0.02 : 40}
-            onChange={onMapChange}
-            disabled={disabled}
-            readOnly={readOnly}
-            hasValue={hasValue}
-          />
-        )}
-
-        {hasValue ? null : (
-          <YStack
-            testID="geolocation-empty"
-            position="absolute"
-            top={0}
-            right={0}
-            bottom={0}
-            left={0}
-            zIndex={2}
-            alignItems="center"
-            justifyContent="center"
-            pointerEvents="none">
-            <Text
-              {...knobProps.body}
-              color={formCommonColors.muted}>
-              {t('No location set')}
-            </Text>
-          </YStack>
-        )}
-      </YStack>
+        knobProps={knobProps}
+        hasError={hasError}
+        interactive={interactive}
+        hasValue={hasValue}
+        mapLat={mapLat}
+        mapLng={mapLng}
+        mapHeight={mapHeight}
+        disabled={disabled}
+        readOnly={readOnly}
+        customMap={customMap}
+        onMapChange={onMapChange}
+        onKeyDown={handleMapKeyDown}
+      />
 
       {locateErrorOpen ? (
-        <YStack
-          testID="geolocation-locate-panel"
-          role="alert"
-          {...knobProps.borderRadius}
-          {...knobProps.inputSurface}
-          borderColor={formInputColors.border.base}
-          padding="$3"
-          gap="$2"
-          alignItems="center">
-          <Text
-            {...knobProps.body}
-            color={formCommonColors.error}
-            textAlign="center">
-            {locateError}
-          </Text>
-          <XStack gap="$2">
-            <Button
-              size="$2"
-              onPress={onRetryLocate}
-              aria-label={t('Retry location')}>
-              {t('Retry')}
-            </Button>
-            <Button
-              size="$2"
-              onPress={onCloseLocate}
-              aria-label={t('Close location')}>
-              {t('Close')}
-            </Button>
-          </XStack>
-        </YStack>
+        <LocateErrorPanel
+          knobProps={knobProps}
+          message={locateError}
+          onRetry={onRetryLocate}
+          onClose={onCloseLocate}
+        />
       ) : null}
 
-      <XStack
-        testID="geolocation-map-footer"
-        alignItems="center"
-        flexWrap="wrap"
-        gap="$2">
-        <YStack
-          flexGrow={1}
-          flexShrink={1}
-          flexBasis={0}
-          minWidth={160}>
-          {coordLine}
-        </YStack>
-        {!readOnly && !locateErrorOpen ? (
-          <Button
-            size="$2"
-            disabled={disabled || locating}
-            onPress={onUseMyLocation}
-            icon={locating ? <Spinner size="small" /> : locationIcon}
-            testID={hasValue ? 'geolocation-locate' : 'geolocation-empty-locate'}
-            aria-label={hasValue ? t('Locate') : t('Use my current location')}
-            aria-busy={locating || undefined}
-            hitSlop={pressTargetHitSlop(32)}>
-            <Button.Text>{hasValue ? t('Locate') : t('Use my current location')}</Button.Text>
-          </Button>
-        ) : null}
-        {handleExpand && expandIcon ? (
-          <Button
-            size="$2"
+      <MapFooter
+        coordLine={
+          <CoordLine
+            readOnly={readOnly}
             disabled={disabled}
-            onPress={handleExpand}
-            icon={expandIcon}
-            aria-label={t('Expand map')}
-            hitSlop={pressTargetHitSlop(32)}>
-            <Button.Text>{t('Expand')}</Button.Text>
-          </Button>
-        ) : null}
-      </XStack>
+            hasValue={hasValue}
+            mapLat={mapLat}
+            mapLng={mapLng}
+            open={coordsOpen}
+            onOpenChange={handleCoordsOpenChange}
+            flushRef={coordsFlushRef}
+            knobProps={knobProps}
+            required={required}
+            hasError={hasError}
+            onCommit={onCommitCoordinates}
+          />
+        }
+        showLocate={!readOnly && !locateErrorOpen}
+        disabled={disabled}
+        locating={locating}
+        hasValue={hasValue}
+        locationIcon={locationIcon}
+        onUseMyLocation={onUseMyLocation}
+        expandIcon={expandIcon}
+        onExpand={handleExpand}
+      />
 
-      {expandIcon && (
+      {hasExpandIcon ? (
         <AdaptivePopup
           open={expanded}
           onOpenChange={setExpanded}
@@ -775,7 +997,7 @@ const GeoMapSurface = ({
             hasValue={hasValue}
           />
         </AdaptivePopup>
-      )}
+      ) : null}
     </YStack>
   );
 };
@@ -783,7 +1005,7 @@ const GeoMapSurface = ({
 export interface GeolocationProps {
   name?: string;
   form?: AnyFormApi;
-  validators?: Record<string, unknown>;
+  validators?: Parameters<typeof useResolvedValidators>[1];
   label?: ReactNode;
   labelProps?: Omit<LabelProps, 'htmlFor' | 'ref'>;
   helperText?: string;
@@ -795,7 +1017,7 @@ export interface GeolocationProps {
   value?: string;
   defaultValue?: string;
   onChange?: (value: string) => void;
-  onBlur?: (...args: any[]) => void;
+  onBlur?: AnyHandler;
   disabled?: boolean;
   readOnly?: boolean;
   /**
@@ -838,11 +1060,8 @@ const CellFace = ({
   coordinates: { lat: number; lng: number } | null;
 }) => {
   const glyphColor = useGlyphColor();
-  const text = address
-    ? address
-    : coordinates
-      ? formatCoordPair(coordinates.lat, coordinates.lng)
-      : t('No location set');
+  const coordinatePair = coordinates ? formatCoordPair(coordinates.lat, coordinates.lng) : noLocationLabel();
+  const text = address === null || address === '' ? coordinatePair : address;
   return (
     <XStack
       testID="geolocation-cell-face"
@@ -886,17 +1105,16 @@ const GeolocationValueSync = ({
   runReverse,
 }: {
   value: string;
-  runReverse: (lat?: number, lng?: number) => void;
+  runReverse: (lat?: number, lng?: number) => Promise<void>;
 }) => {
-  const coords = parseGeoValue(value);
-  const key = coords ? coordinateKey(coords) : '';
   useEffect(() => {
     const next = parseGeoValue(value);
-    runReverse(next?.lat, next?.lng);
-  }, [key, value, runReverse]);
+    void runReverse(next?.lat, next?.lng);
+  }, [value, runReverse]);
   return null;
 };
 
+// oxlint-disable-next-line react-doctor/no-giant-component -- search, locate and reverse-geocode share one set of generation refs and handlers; splitting them is a separate refactor
 export const Geolocation = ({
   name,
   form: formProp,
@@ -945,7 +1163,7 @@ export const Geolocation = ({
     reverseGeocode: reverseGeocodeProp,
     geocoder: geocoder === undefined ? (contextGeocoder ?? undefined) : (geocoder ?? undefined),
   });
-  const searchEnabled = Boolean(geocode) && !disabled && !readOnly;
+  const searchEnabled = geocode !== undefined && !disabled && !readOnly;
   const listId = useId();
 
   const [locatePhase, setLocatePhase] = useState<LocatePhase>('idle');
@@ -958,17 +1176,20 @@ export const Geolocation = ({
   const [results, setResults] = useState<GeocodeResult[]>([]);
   const [cellOpen, setCellOpen] = useState(false);
   const preflightingRef = useRef(false);
-  const onValueChangeRef = useRef<(value: string) => void>(() => {});
+  const onValueChangeRef = useRef<(value: string) => void>(ignoreChange);
   // The value being replaced, so an async locate writes back in the
-  // shape the doc arrived in instead of forcing this repo's compact shape.
+  // format the doc arrived in instead of forcing this repo's compact format.
   const currentValueRef = useRef<string>('');
   const searchGenRef = useRef(0);
   const reverseGenRef = useRef(0);
-  const searchRootRef = useRef<HTMLElement | null>(null);
-  const searchInputRef = useRef<HTMLInputElement | null>(null);
-  const sheetSearchInputRef = useRef<HTMLInputElement | null>(null);
+  const searchRootRef = useRef<TamaguiElement | null>(null);
+  const searchInputRef = useRef<SearchInputHandle | null>(null);
+  const sheetSearchInputRef = useRef<SearchInputHandle | null>(null);
   const closingSearchRef = useRef(false);
+  // oxlint-disable-next-line react/hook-use-state -- a per-instance tracker created once; it is never replaced, so there is no setter to name
   const [nativeSearchFocus] = useState(createNativeSearchFocus);
+  // Not DOM focus: the tracker's own blur event, pulled out so it reads as such.
+  const { blur: releaseSearchFocus } = nativeSearchFocus;
   // The input owns return focus. FloatingPanel's delayed restore would run
   // onFocus after dismissal and reopen its own results sheet.
   const skipResultsReturnFocusRef = useRef(true);
@@ -989,23 +1210,37 @@ export const Geolocation = ({
   const queryIsAddressRef = useRef(true);
   const selectedPlaceRef = useRef<{ key: string; place: GeocodeResult } | null>(null);
   const locateGenRef = useRef(0);
-  const interactiveRef = useRef(!disabled && !readOnly);
-  interactiveRef.current = !disabled && !readOnly;
+  const interactive = !disabled && !readOnly;
+  const interactiveRef = useRef(interactive);
+  useEffect(() => {
+    interactiveRef.current = interactive;
+  }, [interactive]);
   const cancelLocate = useCallback(() => {
-    ++locateGenRef.current;
+    locateGenRef.current += 1;
     setLocatePhase('idle');
     setLocateError(null);
   }, []);
-  useEffect(() => {
-    if (disabled || readOnly) {
-      cancelLocate();
+  // Going read-only or disabled drops any locate in flight. The phase resets
+  // during render so no stale error paints; the effect only retires the
+  // generation, which a render must not write.
+  const [wasInteractive, setWasInteractive] = useState(interactive);
+  if (wasInteractive !== interactive) {
+    setWasInteractive(interactive);
+    if (!interactive) {
+      setLocatePhase('idle');
+      setLocateError(null);
     }
-  }, [disabled, readOnly, cancelLocate]);
+  }
+  useEffect(() => {
+    if (!interactive) {
+      locateGenRef.current += 1;
+    }
+  }, [interactive]);
   useEffect(
     () => () => {
-      ++locateGenRef.current;
-      ++reverseGenRef.current;
-      ++searchGenRef.current;
+      locateGenRef.current += 1;
+      reverseGenRef.current += 1;
+      searchGenRef.current += 1;
     },
     [],
   );
@@ -1022,8 +1257,9 @@ export const Geolocation = ({
     if (!interactiveRef.current) {
       return;
     }
-    const gen = ++locateGenRef.current;
-    if (!navigator?.geolocation) {
+    locateGenRef.current += 1;
+    const gen = locateGenRef.current;
+    if (navigator?.geolocation == null) {
       setLocateError(t('Geolocation unavailable: not supported in this browser.'));
       setLocatePhase('error');
       return;
@@ -1040,7 +1276,7 @@ export const Geolocation = ({
         const lat = clampLat(position.coords.latitude);
         const lng = clampLng(position.coords.longitude);
         const previous = currentValueRef.current;
-        onValueChangeRef.current(formatGeoValue({ lat, lng }, detectGeoShape(previous), previous));
+        onValueChangeRef.current(formatGeoValue({ lat, lng }, detectGeoFormat(previous), previous));
         setLocatePhase('idle');
         setLocateError(null);
         closeSearch();
@@ -1065,28 +1301,26 @@ export const Geolocation = ({
       return;
     }
     preflightingRef.current = true;
-    const gen = ++locateGenRef.current;
-    try {
-      const result = await preflightGeolocation();
-      if (gen !== locateGenRef.current || !interactiveRef.current) {
-        return;
-      }
-      if (result.ok) {
-        setPreflightError(undefined);
-        requestPosition();
-      } else {
-        setPreflightError(result.reason);
-        setLocatePhase('idle');
-        setLocateError(null);
-      }
-    } finally {
-      preflightingRef.current = false;
+    locateGenRef.current += 1;
+    const gen = locateGenRef.current;
+    const result = await preflightOnce(preflightingRef);
+    if (gen !== locateGenRef.current || !interactiveRef.current) {
+      return;
+    }
+    if (result.ok) {
+      setPreflightError(undefined);
+      requestPosition();
+    } else {
+      setPreflightError(result.reason);
+      setLocatePhase('idle');
+      setLocateError(null);
     }
   }, [disabled, readOnly, locatePhase, requestPosition]);
 
   const runReverse = useCallback(
     async (lat?: number, lng?: number) => {
-      const gen = ++reverseGenRef.current;
+      reverseGenRef.current += 1;
+      const gen = reverseGenRef.current;
       if (lat === undefined || lng === undefined) {
         selectedPlaceRef.current = null;
         applyAddress(null, queryIsAddressRef.current);
@@ -1101,7 +1335,7 @@ export const Geolocation = ({
       // A new bound pair must not inherit the old address while it resolves.
       // An independent typed query remains a draft across this transition.
       applyAddress(null, queryIsAddressRef.current);
-      if (!reverseGeocode) {
+      if (reverseGeocode === undefined) {
         return;
       }
       try {
@@ -1122,10 +1356,11 @@ export const Geolocation = ({
 
   const runSearch = useCallback(
     async (text: string) => {
-      if (!geocode) {
+      if (geocode === undefined) {
         return;
       }
-      const gen = ++searchGenRef.current;
+      searchGenRef.current += 1;
+      const gen = searchGenRef.current;
       setSearchStatus('searching');
       try {
         const next = await geocode({ query: text });
@@ -1146,40 +1381,37 @@ export const Geolocation = ({
   );
 
   useEffect(() => {
-    ++searchGenRef.current;
+    searchGenRef.current += 1;
     if (!searchEnabled || !resultsOpen) {
-      return;
+      return noCleanup;
     }
     const trimmed = query.trim();
     if (queryIsAddressRef.current) {
-      return;
+      return noCleanup;
     }
-    if (!trimmed) {
+    if (!trimmed || parseLatLngPair(trimmed)) {
+      // oxlint-disable-next-line react/set-state-in-effect -- an empty query or a typed coordinate pair clears the results of the previous query (no search runs for it)
       setSearchStatus('idle');
       setResults([]);
-      return;
-    }
-    if (parseLatLngPair(trimmed)) {
-      setSearchStatus('idle');
-      setResults([]);
-      return;
+      return noCleanup;
     }
     const handle = setTimeout(() => {
       void runSearch(trimmed);
     }, SEARCH_DEBOUNCE_MS);
     return () => {
       clearTimeout(handle);
-      ++searchGenRef.current;
+      searchGenRef.current += 1;
     };
+    // oxlint-disable-next-line react-doctor/prefer-use-effect-event -- a new geocoder identity must restart the debounced search, so runSearch has to stay a dependency
   }, [query, resultsOpen, searchEnabled, runSearch]);
 
   useEffect(() => {
     if (!resultsOpen || shouldUseSheet) {
-      return;
+      return noCleanup;
     }
     const onDoc = (event: MouseEvent) => {
       const root = searchRootRef.current;
-      if (root && event.target instanceof Node && root.contains(event.target)) {
+      if (root instanceof HTMLElement && event.target instanceof Node && root.contains(event.target)) {
         return;
       }
       closeSearch(false);
@@ -1195,6 +1427,7 @@ export const Geolocation = ({
       document.removeEventListener('mousedown', onDoc);
       document.removeEventListener('keydown', onKey);
     };
+    // oxlint-disable-next-line react-doctor/prefer-use-effect-event -- closeSearch is stable (it only depends on the per-instance focus tracker), so the listeners never re-subscribe in practice; useEffectEvent needs React 19.2
   }, [resultsOpen, shouldUseSheet, closeSearch]);
 
   const makeHandlers = useCallback(
@@ -1202,32 +1435,32 @@ export const Geolocation = ({
       onValueChangeRef.current = onValueChange;
       currentValueRef.current = currentValue;
       const coordinates = parseGeoValue(currentValue);
-      const shape = detectGeoShape(currentValue);
+      const format = detectGeoFormat(currentValue);
       const write = (lat: number, lng: number) => {
         cancelLocate();
-        onValueChange(formatGeoValue({ lat: clampLat(lat), lng: clampLng(lng) }, shape, currentValue));
+        onValueChange(formatGeoValue({ lat: clampLat(lat), lng: clampLng(lng) }, format, currentValue));
       };
       return {
         coordinates,
-        onCommitCoordinates: (lat: number, lng: number) => {
+        handleCommitCoordinates: (lat: number, lng: number) => {
           write(lat, lng);
           selectedPlaceRef.current = null;
           queryIsAddressRef.current = true;
         },
-        onMapChange: (lat: number, lng: number) => {
+        handleMapChange: (lat: number, lng: number) => {
           write(lat, lng);
           selectedPlaceRef.current = null;
           queryIsAddressRef.current = true;
         },
-        onUseMyLocation: () => {
+        handleUseMyLocation: () => {
           void startLocate();
         },
-        onRetryLocate: () => {
+        handleRetryLocate: () => {
           requestPosition();
         },
-        onCloseLocate: cancelLocate,
-        onPick: (result: GeocodeResult) => {
-          ++reverseGenRef.current;
+        handleCloseLocate: cancelLocate,
+        handlePick: (result: GeocodeResult) => {
+          reverseGenRef.current += 1;
           const place = { ...result, lat: clampLat(result.lat), lng: clampLng(result.lng) };
           selectedPlaceRef.current = { key: coordinateKey(place), place };
           write(result.lat, result.lng);
@@ -1239,7 +1472,7 @@ export const Geolocation = ({
           setCellOpen(false);
           setSearchStatus('idle');
         },
-        onPickPair: (lat: number, lng: number) => {
+        handlePickPair: (lat: number, lng: number) => {
           write(lat, lng);
           selectedPlaceRef.current = null;
           queryIsAddressRef.current = true;
@@ -1247,10 +1480,10 @@ export const Geolocation = ({
           setCellOpen(false);
           setSearchStatus('idle');
         },
-        onClear: () => {
+        handleClear: () => {
           cancelLocate();
-          ++searchGenRef.current;
-          ++reverseGenRef.current;
+          searchGenRef.current += 1;
+          reverseGenRef.current += 1;
           selectedPlaceRef.current = null;
           onValueChange('');
           applyAddress(null, true);
@@ -1263,24 +1496,22 @@ export const Geolocation = ({
     [startLocate, requestPosition, cancelLocate, applyAddress, closeSearch],
   );
 
+  // SAFETY: knobProps.sizeToken is always a Tamagui size token; the cast only narrows its string type.
   const mapHeight = getFieldHeight((size ?? knobProps.sizeToken) as SizeTokens, compact ? 4 : 5, hydrationTouch);
-  const displayError = error || preflightError;
+  const displayError = isErrorValue(error) ? error : preflightError;
 
   const renderSearch = (
     handlers: ReturnType<typeof makeHandlers>,
     opts: { sheetHeader?: boolean; editingCell?: boolean } = {},
   ) => {
-    const showClear = Boolean(query) && !disabled && !readOnly;
+    const showClear = query !== '' && !disabled && !readOnly;
     const inputRef = opts.sheetHeader ? sheetSearchInputRef : searchInputRef;
     const activateNativeSearch = (focusInput = false) => {
       nativeSearchFocus.activate();
       if (!searchEnabled || opts.editingCell) {
         return;
       }
-      const nativeInput = inputRef.current as unknown as {
-        isFocused?: () => boolean;
-        focus: () => void;
-      } | null;
+      const nativeInput = inputRef.current;
       // Let first focus open the keyboard before mounting the modal. A restored
       // input is already focused, so a deliberate new press must open directly.
       if (nativeInput?.isFocused?.()) {
@@ -1290,7 +1521,7 @@ export const Geolocation = ({
       }
     };
     const clearSearch = () => {
-      handlers.onClear();
+      handlers.handleClear();
       closingSearchRef.current = true;
       if (isWeb) {
         inputRef.current?.focus({ preventScroll: true });
@@ -1298,9 +1529,9 @@ export const Geolocation = ({
       closingSearchRef.current = false;
     };
     return (
-      <InputParts size={size || knobProps.sizeToken}>
+      <InputParts size={size ?? knobProps.sizeToken}>
         <InputParts.Box
-          disabled={disabled || !searchEnabled}
+          disabled={disabled === true || !searchEnabled}
           // Keep the square Clear target pressable across the frame's border.
           style={{ overflow: 'visible' }}
           {...(opts.sheetHeader
@@ -1317,11 +1548,14 @@ export const Geolocation = ({
           </InputParts.Section>
           <InputParts.Section>
             <InputParts.Area
-              ref={inputRef as never}
+              ref={(node) => {
+                inputRef.current = node;
+              }}
               value={query}
-              disabled={disabled || !searchEnabled}
+              disabled={disabled === true || !searchEnabled}
               placeholder={t('Search address or place')}
               aria-label={t('Search for a location')}
+              // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- an <input> carrying role="combobox" is the ARIA 1.2 combobox pattern; the native input has no combobox semantics of its own
               role="combobox"
               aria-haspopup="listbox"
               aria-expanded={resultsOpen}
@@ -1332,7 +1566,7 @@ export const Geolocation = ({
                 if (!isWeb) {
                   nativeSearchFocus.activate();
                 }
-                ++searchGenRef.current;
+                searchGenRef.current += 1;
                 queryIsAddressRef.current = false;
                 setResults([]);
                 setSearchStatus('idle');
@@ -1348,8 +1582,7 @@ export const Geolocation = ({
                   }
                   event.preventDefault();
                   document
-                    .getElementById(listId)
-                    ?.querySelector<HTMLElement>("[role='option']:not([aria-disabled='true'])")
+                    .querySelector<HTMLElement>(`[id="${listId}"] [role='option']:not([aria-disabled='true'])`)
                     ?.focus();
                 }
               }}
@@ -1368,20 +1601,15 @@ export const Geolocation = ({
                       activateNativeSearch(true);
                     },
                     onBlur: () => {
-                      nativeSearchFocus.blur(!!opts.sheetHeader, resultsOpen);
+                      releaseSearchFocus(!!opts.sheetHeader, resultsOpen);
                     },
                   })}
               onFocus={() => {
                 // Web opens on a press, typing or ArrowDown only: a panel
                 // that moves focus in on open (a cell editor, a sheet) must
                 // not drop the idle results over the map.
-                if (
-                  !isWeb &&
-                  searchEnabled &&
-                  !opts.editingCell &&
-                  !closingSearchRef.current &&
-                  nativeSearchFocus.canOpen(!!opts.sheetHeader)
-                ) {
+                const nativeCanOpen = !isWeb && searchEnabled && !opts.editingCell;
+                if (nativeCanOpen && !closingSearchRef.current && nativeSearchFocus.canOpen(!!opts.sheetHeader)) {
                   setResultsOpen(true);
                 }
               }}
@@ -1419,12 +1647,65 @@ export const Geolocation = ({
       query={query.trim()}
       results={results}
       pair={parseLatLngPair(query)}
-      onLocate={handlers.onUseMyLocation}
-      onPick={handlers.onPick}
-      onPickPair={handlers.onPickPair}
-      locateDisabled={disabled || locatePhase === 'locating'}
+      onLocate={handlers.handleUseMyLocation}
+      onPick={handlers.handlePick}
+      onPickPair={handlers.handlePickPair}
+      locateDisabled={disabled === true || locatePhase === 'locating'}
     />
   );
+
+  const renderResultsPanel = (handlers: ReturnType<typeof makeHandlers>): ReactNode => {
+    if (!resultsOpen || !searchEnabled) {
+      return null;
+    }
+    if (shouldUseSheet) {
+      return (
+        <FloatingPanel
+          open={resultsOpen}
+          onOpenChange={(open) => {
+            if (open) {
+              setResultsOpen(true);
+            } else {
+              closeSearch();
+            }
+          }}
+          onNativeShow={() => sheetSearchInputRef.current?.focus()}
+          skipReturnFocusRef={skipResultsReturnFocusRef}
+          sheet
+          sheetFill
+          scrollable
+          contentPadding="none"
+          header={renderSearch(handlers, { sheetHeader: true })}
+          trigger=<View
+            testID="geolocation-sheet-trigger"
+            height={1}
+            width="100%"
+          />>
+          <YStack testID="geolocation-results-sheet">{renderResults(handlers)}</YStack>
+        </FloatingPanel>
+      );
+    }
+    return (
+      <YStack
+        position="absolute"
+        top="100%"
+        left={0}
+        right={0}
+        zIndex={zIndex.dropdown}
+        backgroundColor="$color1"
+        borderWidth={1}
+        borderColor={formInputColors.border.base}
+        borderRadius={knobProps.borderRadius.borderRadius}
+        overflow="hidden"
+        style={{ boxShadow: RESULTS_PANEL_SHADOW }}>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          maxHeight={mapHeight * 1.5}>
+          {renderResults(handlers)}
+        </ScrollView>
+      </YStack>
+    );
+  };
 
   const renderFormBody = (
     currentValue: string,
@@ -1436,10 +1717,10 @@ export const Geolocation = ({
     const { coordinates } = handlers;
     const key = coordinates ? coordinateKey(coordinates) : null;
     const selected = selectedPlaceRef.current;
-    const displayAddress =
-      (selected?.key === key ? formatPlace(selected.place) : null) ??
-      (address?.key === key ? address.label : null) ??
-      (coordinates ? formatCoordPair(coordinates.lat, coordinates.lng) : null);
+    const selectedLabel = selected?.key === key ? formatPlace(selected.place) : null;
+    const resolvedLabel = address?.key === key ? address.label : null;
+    const pairLabel = coordinates ? formatCoordPair(coordinates.lat, coordinates.lng) : null;
+    const displayAddress = selectedLabel ?? resolvedLabel ?? pairLabel;
 
     if (inTableCell && !editingCell) {
       const face = (
@@ -1463,7 +1744,7 @@ export const Geolocation = ({
           open={cellOpen}
           onOpenChange={setCellOpen}
           disabled={disabled}
-          fitContent={false}
+          widthMode="at-least-trigger"
           contentPadding="none"
           trigger={face}>
           <YStack
@@ -1491,18 +1772,18 @@ export const Geolocation = ({
               fontSize="$4"
               lineHeight={25}
               color="$color12">
-              {displayAddress ?? t('No location set')}
+              {displayAddress ?? noLocationLabel()}
             </Text>
           </XStack>
           <GeoMapSurface
             id={id}
             coordinates={coordinates}
-            onCommitCoordinates={handlers.onCommitCoordinates}
-            onUseMyLocation={handlers.onUseMyLocation}
-            onRetryLocate={handlers.onRetryLocate}
-            onCloseLocate={handlers.onCloseLocate}
-            onMapChange={handlers.onMapChange}
-            disabled={!!disabled}
+            onCommitCoordinates={handlers.handleCommitCoordinates}
+            onUseMyLocation={handlers.handleUseMyLocation}
+            onRetryLocate={handlers.handleRetryLocate}
+            onCloseLocate={handlers.handleCloseLocate}
+            onMapChange={handlers.handleMapChange}
+            disabled={disabled === true}
             readOnly
             locatePhase={locatePhase}
             locateError={locateError}
@@ -1511,61 +1792,21 @@ export const Geolocation = ({
             expandIcon={expandIcon}
             renderMap={renderMap}
             required={required}
-            hasError={!!resolvedError}
+            hasError={isErrorValue(resolvedError)}
             mapHeight={mapHeight}
           />
         </YStack>
       );
     }
 
-    const resultsPanel =
-      resultsOpen && searchEnabled ? (
-        shouldUseSheet ? (
-          <FloatingPanel
-            open={resultsOpen}
-            onOpenChange={(open) => {
-              open ? setResultsOpen(true) : closeSearch();
-            }}
-            onNativeShow={() => sheetSearchInputRef.current?.focus()}
-            skipReturnFocusRef={skipResultsReturnFocusRef}
-            sheet
-            sheetFill
-            scrollable
-            contentPadding="none"
-            header={renderSearch(handlers, { sheetHeader: true })}
-            trigger=<View
-              testID="geolocation-sheet-trigger"
-              height={1}
-              width="100%"
-            />>
-            <YStack testID="geolocation-results-sheet">{renderResults(handlers)}</YStack>
-          </FloatingPanel>
-        ) : (
-          <YStack
-            position="absolute"
-            top="100%"
-            left={0}
-            right={0}
-            zIndex={zIndex.dropdown}
-            backgroundColor="$color1"
-            borderWidth={1}
-            borderColor={formInputColors.border.base}
-            borderRadius={knobProps.borderRadius.borderRadius}
-            overflow="hidden"
-            style={{ boxShadow: RESULTS_PANEL_SHADOW }}>
-            <ScrollView
-              keyboardShouldPersistTaps="handled"
-              maxHeight={mapHeight * 1.5}>
-              {renderResults(handlers)}
-            </ScrollView>
-          </YStack>
-        )
-      ) : null;
+    const resultsPanel = renderResultsPanel(handlers);
 
     return (
       <YStack gap="$2">
         <YStack
-          ref={searchRootRef as never}
+          ref={(node) => {
+            searchRootRef.current = node;
+          }}
           position="relative"
           testID="geolocation-search-anchor"
           data-sheet={shouldUseSheet ? 'true' : 'false'}>
@@ -1575,13 +1816,13 @@ export const Geolocation = ({
         <GeoMapSurface
           id={id}
           coordinates={coordinates}
-          onCommitCoordinates={handlers.onCommitCoordinates}
-          onUseMyLocation={handlers.onUseMyLocation}
-          onRetryLocate={handlers.onRetryLocate}
-          onCloseLocate={handlers.onCloseLocate}
-          onMapChange={handlers.onMapChange}
-          disabled={!!disabled}
-          readOnly={!!readOnly}
+          onCommitCoordinates={handlers.handleCommitCoordinates}
+          onUseMyLocation={handlers.handleUseMyLocation}
+          onRetryLocate={handlers.handleRetryLocate}
+          onCloseLocate={handlers.handleCloseLocate}
+          onMapChange={handlers.handleMapChange}
+          disabled={disabled === true}
+          readOnly={false}
           locatePhase={locatePhase}
           locateError={locateError}
           knobProps={knobProps}
@@ -1589,7 +1830,7 @@ export const Geolocation = ({
           expandIcon={expandIcon}
           renderMap={renderMap}
           required={required}
-          hasError={!!resolvedError}
+          hasError={isErrorValue(resolvedError)}
           mapHeight={mapHeight}
         />
       </YStack>
@@ -1623,7 +1864,7 @@ export const Geolocation = ({
     currentValue: string,
     onValueChange: (v: string) => void,
     resolvedError?: string | boolean,
-    fieldBlur?: (...args: any[]) => void,
+    fieldBlur?: AnyHandler,
   ) => {
     const coordinates = parseGeoValue(currentValue);
     const taughtHelper =
@@ -1649,8 +1890,9 @@ export const Geolocation = ({
     );
   };
 
-  if (!resolvedForm || !name) {
-    return wrap(value || '', (v) => onChange?.(v));
+  if (!resolvedForm || name === undefined || name === '') {
+    // oxlint-disable-next-line react/refs -- the field's latest-value and handler refs are written while rendering so async locate/search callbacks always see the current props; they are only read from callbacks
+    return wrap(value ?? '', (v) => onChange?.(v));
   }
 
   return (
@@ -1664,6 +1906,8 @@ export const Geolocation = ({
         return wrap(
           field.state.value || '',
           (v) => {
+            // SAFETY: the field is bound to this component's string value, so handleChange accepts the string it is given.
+            // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the field API's value type is erased to `never` for a form of unknown shape
             field.handleChange(v as never);
             onChange?.(v);
           },

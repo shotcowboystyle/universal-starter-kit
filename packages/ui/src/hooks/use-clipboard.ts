@@ -4,6 +4,14 @@ import { useEvent } from 'tamagui';
 
 export const copyToClipboard = async (text: string) => await writeToClipboard(text);
 
+/** Anything with a `type` (DOM, React or RN events): `onCopy` may be bound straight to a press handler. */
+interface CopyTriggerEvent {
+  type: string;
+}
+
+const isTriggerEvent = (arg: string | CopyTriggerEvent | undefined): arg is CopyTriggerEvent | undefined =>
+  typeof arg === 'object' || arg === undefined;
+
 export interface UseClipboardOptions {
   timeout?: number;
 }
@@ -25,9 +33,15 @@ export const useClipboard = (text = '', options?: UseClipboardOptions) => {
   const [hasCopied, setHasCopied] = useState(false);
   const [hasCopyFailed, setHasCopyFailed] = useState(false);
 
-  const onCopy = useEvent(async (overrideText?: string | unknown) => {
-    const textToCopy = typeof overrideText === 'string' ? overrideText : text;
-    const success = await copyToClipboard(textToCopy).catch(() => false);
+  const onCopy = useEvent(async (overrideText?: string | CopyTriggerEvent) => {
+    const textToCopy = isTriggerEvent(overrideText) ? text : overrideText;
+    let success: boolean;
+    try {
+      success = await copyToClipboard(textToCopy);
+    } catch {
+      // Safe to continue: a denied/failed write is reported through hasCopyFailed.
+      success = false;
+    }
     setHasCopied(success);
     setHasCopyFailed(!success);
     return success;
@@ -35,7 +49,9 @@ export const useClipboard = (text = '', options?: UseClipboardOptions) => {
 
   useEffect(() => {
     if (!hasCopied && !hasCopyFailed) {
-      return;
+      return () => {
+        // nothing scheduled
+      };
     }
     const id = setTimeout(() => {
       setHasCopied(false);

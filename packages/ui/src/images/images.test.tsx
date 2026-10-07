@@ -1,11 +1,12 @@
 import { renderWithProviders } from '@repo/test-utils';
+import { describe, expect, it } from 'vitest';
 
 import { Image } from './Image/index';
 import { Svg } from './Svg/index';
 import { Svg as NativeSvg } from './Svg/index.native';
 import { SvgUri } from './SvgUri/index';
 
-import * as Images from './index';
+import { Image as IndexImage, Svg as IndexSvg, SvgUri as IndexSvgUri } from './index';
 
 describe('Images Module', () => {
   it('should export Image', () => {
@@ -13,6 +14,7 @@ describe('Images Module', () => {
   });
 
   it('should render Image correctly', () => {
+    // oxlint-disable-next-line typescript/no-deprecated -- exercising the supported RN-style `source` prop
     const { container } = renderWithProviders(<Image source={{ uri: 'test-uri' }} />);
     expect(container).toBeDefined();
   });
@@ -36,23 +38,24 @@ describe('Images Module', () => {
   });
 
   it('should export all components from index', () => {
-    expect(Images.Image).toBeDefined();
-    expect(Images.Svg).toBeDefined();
-    expect(Images.SvgUri).toBeDefined();
+    expect(IndexImage).toBeDefined();
+    expect(IndexSvg).toBeDefined();
+    expect(IndexSvgUri).toBeDefined();
   });
 
   it('should render SimpleImage from index correctly', () => {
-    const { container } = renderWithProviders(<Images.Image source={{ uri: 'test-uri' }} />);
+    // oxlint-disable-next-line typescript/no-deprecated -- exercising the supported RN-style `source` prop
+    const { container } = renderWithProviders(<IndexImage source={{ uri: 'test-uri' }} />);
     expect(container).toBeDefined();
   });
 
   it('should render Svg from index correctly', () => {
-    const { container } = renderWithProviders(<Images.Svg />);
+    const { container } = renderWithProviders(<IndexSvg />);
     expect(container).toBeDefined();
   });
 
   it('should render SvgUri from index correctly', () => {
-    const { container } = renderWithProviders(<Images.SvgUri uri="test-uri" />);
+    const { container } = renderWithProviders(<IndexSvgUri uri="test-uri" />);
     expect(container).toBeDefined();
   });
 

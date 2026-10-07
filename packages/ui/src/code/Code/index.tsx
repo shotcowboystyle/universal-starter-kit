@@ -36,6 +36,7 @@ export const Code = CodeFrame.styleable((props, ref) => {
     <CodeFrame
       ref={ref}
       {...knobProps.borderRadius}
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- SAFETY: sizeToken is a `$n` size stop, a valid CodeFrame size variant
       size={knobProps.sizeToken as CodeProps['size']}
       {...props}
       fontFamily="$mono"
@@ -60,7 +61,9 @@ const CodeInlineFrame = styled(Paragraph, {
   // Pin (dial: surrounding prose): 0.9× size / 0.7× leading. Size reaches
   // the chip through context, not sizeToken. Lettered in spec § Code and
   // CodeInline; these ratios are the house metrics already shipping.
+  // SAFETY: percentage strings are valid CSS but not in Tamagui's token-typed fontSize/lineHeight.
   fontSize: '90%' as CSSProperties['fontSize'],
+  // SAFETY: same percentage-string case as fontSize above.
   lineHeight: '70%' as CSSProperties['lineHeight'],
   paddingHorizontal: '0.6%',
   paddingVertical: '0.45%',

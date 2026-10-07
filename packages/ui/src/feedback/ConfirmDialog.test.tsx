@@ -12,16 +12,16 @@ import { getFeedback, resetFeedback } from './store';
 
 import { notify, NotifyHost, NotifyRegion } from './index';
 
-afterEach(() => {
+const resetFeedbackState = () => {
   resetFeedback();
   resetToasts();
-});
+};
 
 /** Dialog portals into document.body — query there, not the RTL container. */
 const root = (): HTMLElement => document.body;
 
-const buttonByLabel = (label: string): Element => {
-  const buttons = Array.from(root().querySelectorAll('[role="button"]'));
+const buttonByLabel = (label: string): HTMLElement => {
+  const buttons = [...root().querySelectorAll<HTMLElement>('[role="button"]')];
   const match = buttons.find((b) => b.textContent?.includes(label));
   if (!match) {
     throw new Error(`No button with label "${label}"`);
@@ -29,9 +29,11 @@ const buttonByLabel = (label: string): Element => {
   return match;
 };
 
-const alertdialog = (): Element | null => root().querySelector('[role="alertdialog"]');
+const alertdialog = (): HTMLElement | null => root().querySelector<HTMLElement>('[role="alertdialog"]');
 
-describe('ConfirmDialog', () => {
+describe(ConfirmDialog, () => {
+  afterEach(resetFeedbackState);
+
   it("inks a disabled destructive label on the error hue's $color12 text step", () => {
     renderWithProviders(
       <ConfirmDialog
@@ -44,7 +46,7 @@ describe('ConfirmDialog', () => {
       />,
     );
     const button = buttonByLabel('Delete');
-    const label = Array.from(button.querySelectorAll('span')).find((node) => node.textContent === 'Delete');
+    const label = [...button.querySelectorAll('span')].find((node) => node.textContent === 'Delete');
     expect(label).toBeTruthy();
     expect(label?.className).toContain('_col-color12');
     expect(label?.className).toContain('_fow-400');
@@ -68,9 +70,9 @@ describe('ConfirmDialog', () => {
   });
 
   it('calls onConfirm and closes on confirm press', () => {
-    const onConfirm = vi.fn();
-    const onCancel = vi.fn();
-    const onOpenChange = vi.fn();
+    const onConfirm = vi.fn<() => void>();
+    const onCancel = vi.fn<() => void>();
+    const onOpenChange = vi.fn<(open: boolean) => void>();
     renderWithProviders(
       <ConfirmDialog
         open
@@ -89,9 +91,9 @@ describe('ConfirmDialog', () => {
   });
 
   it('calls onCancel on cancel press (not onConfirm)', () => {
-    const onConfirm = vi.fn();
-    const onCancel = vi.fn();
-    const onOpenChange = vi.fn();
+    const onConfirm = vi.fn<() => void>();
+    const onCancel = vi.fn<() => void>();
+    const onOpenChange = vi.fn<(open: boolean) => void>();
     renderWithProviders(
       <ConfirmDialog
         open
@@ -109,8 +111,8 @@ describe('ConfirmDialog', () => {
   });
 
   it('Escape cancels', async () => {
-    const onCancel = vi.fn();
-    const onConfirm = vi.fn();
+    const onCancel = vi.fn<() => void>();
+    const onConfirm = vi.fn<() => void>();
     const Harness = () => {
       const [open, setOpen] = useState(true);
       return (
@@ -132,7 +134,7 @@ describe('ConfirmDialog', () => {
     fireEvent.keyDown(target, { key: 'Escape', code: 'Escape', keyCode: 27 });
 
     await waitFor(() => {
-      expect(onCancel).toHaveBeenCalled();
+      expect(onCancel).toHaveBeenCalledWith();
     });
     expect(onConfirm).not.toHaveBeenCalled();
   });
@@ -147,7 +149,7 @@ describe('ConfirmDialog', () => {
         destructive
       />,
     );
-    expect(alertdialog()?.getAttribute('data-tone')).toBe('destructive');
+    expect(alertdialog()?.dataset.tone).toBe('destructive');
   });
 
   it('warning confirm sets data-tone=warning', () => {
@@ -160,7 +162,7 @@ describe('ConfirmDialog', () => {
         confirmLabel="Leave"
       />,
     );
-    expect(alertdialog()?.getAttribute('data-tone')).toBe('warning');
+    expect(alertdialog()?.dataset.tone).toBe('warning');
   });
 
   it('sets aria-modal on the alertdialog (focus-trap host)', () => {
@@ -194,9 +196,7 @@ describe('ConfirmDialog', () => {
       expect(active).toBeTruthy();
       // wasKeyboardFocus is pinned false in test-utils — park on the frame.
       expect(active === dialog || dialog?.contains(active)).toBe(true);
-      if (active && active !== dialog) {
-        expect(active.getAttribute('role')).not.toBe('button');
-      }
+      expect(active?.getAttribute('role')).not.toBe('button');
     });
   });
 
@@ -228,11 +228,12 @@ describe('ConfirmDialog action rules', () => {
   afterEach(() => {
     warnSpy.mockRestore();
     __resetDevWarnSeen();
+    resetFeedbackState();
   });
 
   it('cancel stays enabled while confirm is disabled', () => {
-    const onConfirm = vi.fn();
-    const onCancel = vi.fn();
+    const onConfirm = vi.fn<() => void>();
+    const onCancel = vi.fn<() => void>();
     renderWithProviders(
       <ConfirmDialog
         open
@@ -245,20 +246,20 @@ describe('ConfirmDialog action rules', () => {
       />,
     );
     const confirmBtn = buttonByLabel('Delete');
-    expect(confirmBtn.getAttribute('data-mp-confirm-disabled')).toBe('true');
+    expect(confirmBtn.dataset.mpConfirmDisabled).toBe('true');
     fireEvent.click(confirmBtn);
     expect(onConfirm).not.toHaveBeenCalled();
 
     const cancelBtn = buttonByLabel('Cancel');
     expect(cancelBtn.getAttribute('aria-disabled')).not.toBe('true');
-    expect(cancelBtn.getAttribute('data-mp-cancel-disabled-ignored')).toBeNull();
+    expect(cancelBtn.dataset.mpCancelDisabledIgnored).toBeUndefined();
     fireEvent.click(cancelBtn);
     expect(onCancel).toHaveBeenCalledOnce();
     expect(warnSpy).not.toHaveBeenCalledWith(expect.stringContaining('cancel-disabled'));
   });
 
   it('ignores cancelDisabled: cancel still cancels + cancel-disabled DEV warn', () => {
-    const onCancel = vi.fn();
+    const onCancel = vi.fn<() => void>();
     renderWithProviders(
       <ConfirmDialog
         open
@@ -271,7 +272,7 @@ describe('ConfirmDialog action rules', () => {
       />,
     );
     const cancelBtn = buttonByLabel('Cancel');
-    expect(cancelBtn.getAttribute('data-mp-cancel-disabled-ignored')).toBe('true');
+    expect(cancelBtn.dataset.mpCancelDisabledIgnored).toBe('true');
     expect(cancelBtn.getAttribute('aria-disabled')).not.toBe('true');
     fireEvent.click(cancelBtn);
     expect(onCancel).toHaveBeenCalledOnce();
@@ -331,7 +332,7 @@ describe('ConfirmDialog action rules', () => {
   });
 
   it('explains a gated confirm via confirmDisabledReason', () => {
-    const onConfirm = vi.fn();
+    const onConfirm = vi.fn<() => void>();
     renderWithProviders(
       <ConfirmDialog
         open
@@ -367,8 +368,10 @@ describe('ConfirmDialog action rules', () => {
 });
 
 describe('notify() blocking → ConfirmDialog', () => {
+  afterEach(resetFeedbackState);
+
   it('error+blocking presents a destructive ConfirmDialog via NotifyHost', async () => {
-    const onPress = vi.fn();
+    const onPress = vi.fn<() => void>();
     renderWithProviders(
       <NotifyHost toastViewport={false}>
         <div>host</div>
@@ -392,7 +395,7 @@ describe('notify() blocking → ConfirmDialog', () => {
     expect(root().textContent).toContain('Delete 3 rows?');
     expect(root().textContent).toContain('This cannot be undone.');
     expect(getFeedback()[0]?.surface).toBe('dialog');
-    expect(alertdialog()?.getAttribute('data-tone')).toBe('destructive');
+    expect(alertdialog()?.dataset.tone).toBe('destructive');
 
     fireEvent.click(buttonByLabel('Delete'));
     expect(onPress).toHaveBeenCalledOnce();
@@ -402,7 +405,7 @@ describe('notify() blocking → ConfirmDialog', () => {
   });
 
   it('warning+blocking Cancel dismisses without running action', async () => {
-    const onPress = vi.fn();
+    const onPress = vi.fn<() => void>();
     renderWithProviders(
       <NotifyHost toastViewport={false}>
         <div>host</div>
@@ -432,16 +435,19 @@ describe('notify() blocking → ConfirmDialog', () => {
   });
 });
 
-const atoms = (el: Element, prefixes: string[]): string[] =>
-  String((el as HTMLElement).className || '')
+const atoms = (el: HTMLElement, prefixes: string[]): string[] =>
+  el.className
     .split(' ')
     .filter((c) => prefixes.some((p) => c.startsWith(p)))
-    .sort();
+    .toSorted();
 
-const weightAtoms = (el: Element): string[] => atoms(el, ['_fow-']);
+const weightAtoms = (el: HTMLElement): string[] => atoms(el, ['_fow-']);
 
 describe('ConfirmDialog action labels — weight 400 on the TEXT NODE', () => {
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    resetFeedbackState();
+  });
 
   it('Continue and Cancel are weight 400 on the text node, never the press floor', () => {
     renderWithProviders(<SizableText fontWeight="400">pin-400</SizableText>);
@@ -462,7 +468,7 @@ describe('ConfirmDialog action labels — weight 400 on the TEXT NODE', () => {
     );
 
     for (const label of ['Continue', 'Cancel']) {
-      const floor = buttonByLabel(label) as HTMLElement;
+      const floor = buttonByLabel(label);
       const textNode = screen.getByText(label);
       expect(textNode).not.toBe(floor);
       expect(floor.contains(textNode)).toBe(true);
@@ -473,13 +479,16 @@ describe('ConfirmDialog action labels — weight 400 on the TEXT NODE', () => {
       expect(weight).not.toStrictEqual(explicit600);
       expect(weightAtoms(floor)).toHaveLength(0);
     }
-    expect(alertdialog()?.getAttribute('data-density')).toBeTruthy();
-    expect(alertdialog()?.getAttribute('data-size')).toBeTruthy();
+    expect(alertdialog()?.dataset.density).toBeTruthy();
+    expect(alertdialog()?.dataset.size).toBeTruthy();
   });
 });
 
 describe('NotifyHost action labels — weight 400 on the TEXT NODE', () => {
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    resetFeedbackState();
+  });
 
   it('banner Retry is weight 400 on the text node', () => {
     renderWithProviders(<SizableText fontWeight="400">Retry</SizableText>);
@@ -500,7 +509,7 @@ describe('NotifyHost action labels — weight 400 on the TEXT NODE', () => {
         scope: 'page',
         title: 'Save failed',
         body: 'The server rejected the request.',
-        action: { label: 'Retry', onPress: vi.fn() },
+        action: { label: 'Retry', onPress: vi.fn<() => void>() },
       });
     });
 
@@ -528,7 +537,7 @@ describe('NotifyHost action labels — weight 400 on the TEXT NODE', () => {
         scope: 'section',
         title: 'Address check',
         body: 'Confirm the shipping address.',
-        action: { label: 'Retry', onPress: vi.fn() },
+        action: { label: 'Retry', onPress: vi.fn<() => void>() },
       });
     });
 

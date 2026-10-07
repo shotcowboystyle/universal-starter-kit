@@ -3,25 +3,30 @@ import { useAssets as expoUseAssets } from 'expo-asset';
 
 const logger = console;
 
-type StaticImageData = any;
+export type AssetModule = number | { default: number };
 
-export const useAssets = (modules: any | any[]): (StaticImageData | undefined)[] => {
-  const modulesArr = (Array.isArray(modules) ? modules : [modules]).map((module: any) => {
-    if (typeof module.default !== 'undefined') {
-      return module.default;
-    }
-    return module;
-  });
+interface StaticImageData {
+  height: number | null;
+  src: string;
+  width: number | null;
+}
+
+const isEsmWrapper = (module: AssetModule): module is { default: number } => typeof module === 'object';
+
+const unwrapModule = (module: AssetModule): number => (isEsmWrapper(module) ? module.default : module);
+
+export const useAssets = (modules: AssetModule | AssetModule[]): (StaticImageData | undefined)[] => {
+  const modulesArr = (Array.isArray(modules) ? modules : [modules]).map(unwrapModule);
   const [assets, err] = expoUseAssets(modulesArr);
   if (err) {
     logger.error(err);
   }
   if (!assets) {
-    return Array.from({ length: modulesArr.length });
+    return Array.from<undefined>({ length: modulesArr.length });
   }
   return assets.map((asset: Asset) => ({
-    height: asset.height!,
+    height: asset.height,
     src: asset.uri,
-    width: asset.width!,
+    width: asset.width,
   }));
 };

@@ -8,23 +8,20 @@ import { getToasts, resetToasts } from '../../Toast/store';
 
 import { CodeBlock } from './index';
 
-vi.mock('../Highlighter', () => ({
+vi.mock(import('../Highlighter'), () => ({
   useShikiTokens: (code: string) => code.split('\n').map((line: string) => [{ content: line }]),
 }));
 
-const copyOf = (container: HTMLElement) => container.querySelector("[aria-label='Copy to clipboard']");
+const copyOf = (container: HTMLElement) => container.querySelector<HTMLElement>("[aria-label='Copy to clipboard']");
 
 const SAMPLE = 'export const token = "mpo_live_4f2a…";';
-const writeText = vi.fn();
+const writeText = vi.fn<(text: string) => Promise<void>>();
 
 describe('CodeBlock copy (Input.Button + notify)', () => {
   beforeEach(() => {
     writeText.mockReset();
-    writeText.mockResolvedValue(undefined);
-    vi.stubGlobal('navigator', {
-      ...(typeof navigator === 'undefined' ? {} : navigator),
-      clipboard: { writeText },
-    });
+    writeText.mockResolvedValue();
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
     resetToasts();
     resetFeedback();
   });
@@ -43,7 +40,7 @@ describe('CodeBlock copy (Input.Button + notify)', () => {
     expect(copy.getAttribute('tabindex')).toBe('0');
     expect(copy.className).toMatch(/mp-chip-dismiss/u);
     expect(copy.querySelector('.mp-chip-dismiss-ring')).not.toBeNull();
-    expect(copy.getAttribute('data-end-cap')).toBe('44');
+    expect(copy.dataset.endCap).toBe('44');
     const style = getComputedStyle(copy);
     expect(style.display).not.toBe('none');
   });
@@ -73,15 +70,15 @@ describe('CodeBlock copy (Input.Button + notify)', () => {
         <CodeBlock size="$5">{SAMPLE}</CodeBlock>
       </Preset>,
     );
-    expect(copyOf(small.container)?.getAttribute('data-end-cap')).toBe('36');
-    expect(copyOf(large.container)?.getAttribute('data-end-cap')).toBe('52');
+    expect(copyOf(small.container)?.dataset.endCap).toBe('36');
+    expect(copyOf(large.container)?.dataset.endCap).toBe('52');
 
     for (const result of [small, large]) {
-      const code = result.container.querySelector("[data-register='code']") as HTMLElement | null;
+      const code = result.container.querySelector<HTMLElement>("[data-register='code']");
       if (!code) {
         throw new Error('code node missing');
       }
-      expect(code.getAttribute('data-register')).toBe('code');
+      expect(code.dataset.register).toBe('code');
       const tracking = code.style.letterSpacing || getComputedStyle(code).letterSpacing;
       expect(tracking === '0px' || tracking === '0' || tracking === 'normal').toBe(true);
       expect(result.container.textContent).toContain('export const token');

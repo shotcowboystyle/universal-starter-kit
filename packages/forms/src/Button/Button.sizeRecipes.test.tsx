@@ -30,24 +30,24 @@ describe('Button size recipes', () => {
   it('medium meets the 44 floor natively — no slop, no minHeight', () => {
     renderWithProviders(<Button>Save</Button>);
     const frame = screen.getByRole('button');
-    expect(frame.getAttribute('data-mp-button-height')).toBe('44');
-    expect(frame.getAttribute('data-mp-press-slop')).toBeNull();
+    expect(frame.dataset.mpButtonHeight).toBe('44');
+    expect(frame.dataset.mpPressSlop).toBeNull();
     expect(frame.style.minHeight).not.toBe('44px');
   });
 
   it('sub-44 sizes restore the floor with slop, not minHeight', () => {
     renderWithProviders(<Button size="$2">Save</Button>);
     const frame = screen.getByRole('button');
-    expect(frame.getAttribute('data-mp-button-height')).toBe('28');
-    expect(frame.getAttribute('data-mp-press-slop')).toBe('8');
+    expect(frame.dataset.mpButtonHeight).toBe('28');
+    expect(frame.dataset.mpPressSlop).toBe('8');
     expect(frame.style.minHeight).not.toBe('44px');
   });
 
   it('large paints 52 — already past the floor, no slop', () => {
     renderWithProviders(<Button size="$5">Save</Button>);
     const frame = screen.getByRole('button');
-    expect(frame.getAttribute('data-mp-button-height')).toBe('52');
-    expect(frame.getAttribute('data-mp-press-slop')).toBeNull();
+    expect(frame.dataset.mpButtonHeight).toBe('52');
+    expect(frame.dataset.mpPressSlop).toBeNull();
   });
 });
 
@@ -70,8 +70,8 @@ describe('Button density ≠ size', () => {
       </Button>,
     );
     const frame = screen.getByRole('button');
-    expect(frame.getAttribute('data-mp-button-height')).toBe('44');
-    expect(frame.getAttribute('data-mp-density')).toBe('compact');
+    expect(frame.dataset.mpButtonHeight).toBe('44');
+    expect(frame.dataset.mpDensity).toBe('compact');
   });
 
   it('size large + compact density stays large chrome', () => {
@@ -80,7 +80,7 @@ describe('Button density ≠ size', () => {
         <Button compact>Save</Button>
       </Preset>,
     );
-    expect(screen.getByRole('button').getAttribute('data-mp-button-height')).toBe('52');
+    expect(screen.getByRole('button').dataset.mpButtonHeight).toBe('52');
   });
 });
 
@@ -95,9 +95,9 @@ describe('Button nested scale', () => {
       </Button>,
     );
     const frame = screen.getByRole('button');
-    expect(frame.getAttribute('data-nested-px')).toBe('32');
-    expect(frame.getAttribute('data-mp-button-height')).toBe('32');
-    expect(frame.getAttribute('data-mp-press-slop')).toBe('6');
+    expect(frame.dataset.nestedPx).toBe('32');
+    expect(frame.dataset.mpButtonHeight).toBe('32');
+    expect(frame.dataset.mpPressSlop).toBe('6');
     expect(frame.getAttribute('style') ?? '').not.toMatch(/width:\s*44px/u);
   });
 
@@ -133,7 +133,7 @@ describe('Button RING-ANATOMY + selected fill', () => {
     );
     const frame = screen.getByRole('button');
     expect(frame.getAttribute('aria-pressed')).toBe('true');
-    expect(frame.getAttribute('data-mp-selected')).toBe('true');
+    expect(frame.dataset.mpSelected).toBe('true');
     expect(frame.style.outlineWidth || '').not.toMatch(/[1-9]/u);
   });
 

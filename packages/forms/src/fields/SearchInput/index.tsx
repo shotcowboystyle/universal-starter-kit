@@ -21,7 +21,7 @@ import {
   pressTargetHitSlop,
   sizeRecipeForToken,
 } from '@repo/theme';
-import type { ComponentProps, ReactNode, RefObject } from 'react';
+import type { ComponentProps, KeyboardEvent as ReactKeyboardEvent, ReactNode, RefObject } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { LabelProps, SizeTokens, TamaguiElement } from 'tamagui';
 import { View, isWeb } from 'tamagui';
@@ -37,6 +37,7 @@ import {
   useFormField,
   useResolvedValidators,
 } from '../../shared/utils';
+import type { FieldValidators } from '../../shared/utils';
 import { Skeleton } from '../../Skeleton';
 import type { AnyFormApi } from '../../types';
 
@@ -45,7 +46,7 @@ type AreaProps = ComponentProps<typeof InputParts.Area>;
 export interface SearchInputProps {
   name?: string;
   form?: AnyFormApi;
-  validators?: Record<string, unknown>;
+  validators?: FieldValidators;
   /** Controlled value. Omit for uncontrolled use with defaultValue. */
   value?: string;
   defaultValue?: string;
@@ -81,6 +82,9 @@ export interface SearchInputProps {
   inputProps?: Omit<AreaProps, 'value' | 'id' | 'onChange' | 'onChangeText'>;
 }
 
+/** Data attribute carried as a spread: object-literal `data-*` keys fail excess-property checks. */
+const T_VALUE_ATTRS = { 'data-mp-t-value': 'full' } as const;
+
 const SEARCH_STYLE_ID = 'mp-search-input-chrome';
 
 /** UA search chrome only. Glyph ring is the shared chip-dismiss recipe. */
@@ -107,7 +111,7 @@ const ensureSearchInputChrome = () => {
     return;
   }
   ensureCompositeFocusRing();
-  if (document.getElementById(SEARCH_STYLE_ID)) {
+  if (document.querySelector(`#${SEARCH_STYLE_ID}`)) {
     return;
   }
   const tag = document.createElement('style');
@@ -117,7 +121,100 @@ const ensureSearchInputChrome = () => {
 };
 
 const focusArea = (ref: RefObject<TamaguiElement | null>) => {
-  (ref.current as { focus?: () => void } | null)?.focus?.();
+  ref.current?.focus();
+};
+
+interface ClearButtonProps {
+  visualHeight: number;
+  belowFloor: boolean;
+  iconSize: number;
+  onClear: () => void;
+}
+
+const ClearButton = ({ visualHeight, belowFloor, iconSize, onClear }: ClearButtonProps) => (
+  <View
+    // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- hand-rolled View: TButton swallows className, so the chip-dismiss ring classes cannot ride a button (see header)
+    role="button"
+    tabIndex={0}
+    aria-label={t('Clear search')}
+    className={isWeb ? 'mp-chip-dismiss' : undefined}
+    data-end-cap={visualHeight}
+    width={visualHeight}
+    height={visualHeight}
+    alignItems="center"
+    justifyContent="center"
+    cursor="pointer"
+    outlineWidth={0}
+    focusStyle={{ outlineWidth: 0 }}
+    focusVisibleStyle={{ outlineWidth: 0 }}
+    flexShrink={0}
+    hitSlop={belowFloor ? pressTargetHitSlop(visualHeight) : undefined}
+    onPress={onClear}
+    onKeyDown={(e: ReactKeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        e.stopPropagation();
+        onClear();
+      }
+    }}>
+    <View
+      className={isWeb ? 'mp-chip-dismiss-ring' : undefined}
+      alignItems="center"
+      justifyContent="center"
+      hoverStyle={{ backgroundColor: '$color4' }}
+      pressStyle={{ backgroundColor: '$color5' }}>
+      <InputParts.Icon
+        aria-hidden
+        color={formCommonColors.muted}>
+        <XIcon size={iconSize} />
+      </InputParts.Icon>
+    </View>
+  </View>
+);
+
+/** Debounced `onSearch`: `scheduleSearch` waits `debounceMs` of silence, `fireSearch` runs now. */
+const useDebouncedSearch = (onSearch: ((text: string) => void) | undefined, debounceMs: number) => {
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onSearchRef = useRef(onSearch);
+
+  useEffect(() => {
+    onSearchRef.current = onSearch;
+  });
+
+  useEffect(
+    () => () => {
+      if (timerRef.current !== null) {
+        clearTimeout(timerRef.current);
+      }
+    },
+    [],
+  );
+
+  const fireSearch = useCallback((next: string) => {
+    if (timerRef.current !== null) {
+      clearTimeout(timerRef.current);
+    }
+    timerRef.current = null;
+    onSearchRef.current?.(next);
+  }, []);
+
+  const scheduleSearch = useCallback(
+    (next: string) => {
+      if (debounceMs <= 0) {
+        fireSearch(next);
+        return;
+      }
+      if (timerRef.current !== null) {
+        clearTimeout(timerRef.current);
+      }
+      timerRef.current = setTimeout(() => {
+        fireSearch(next);
+      }, debounceMs);
+    },
+    [debounceMs, fireSearch],
+  );
+
+  return { fireSearch, scheduleSearch };
 };
 
 export const SearchInput = ({
@@ -160,7 +257,7 @@ export const SearchInput = ({
     compact,
   });
   const resolvedValidators = useResolvedValidators(required, validators, label, name);
-  const resolvedSize = (size ?? knobProps.sizeToken) as SizeTokens;
+  const resolvedSize = size ?? knobProps.sizeToken;
   const recipe = sizeRecipeForToken(String(resolvedSize), { touch: hydrationTouch });
   const visualHeight = getFieldHeight(resolvedSize, 1, hydrationTouch);
   const belowFloor = visualHeight < MIN_PRESS_TARGET;
@@ -169,48 +266,15 @@ export const SearchInput = ({
   const standaloneText = isControlled ? value : internalText;
   const inputRef = useRef<TamaguiElement>(null);
 
-  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const onSearchRef = useRef(onSearch);
-  onSearchRef.current = onSearch;
   const onClearRef = useRef(onClear);
-  onClearRef.current = onClear;
+  useEffect(() => {
+    onClearRef.current = onClear;
+  });
+  const { fireSearch, scheduleSearch } = useDebouncedSearch(onSearch, debounceMs);
 
   if (isWeb) {
     ensureSearchInputChrome();
   }
-
-  useEffect(
-    () => () => {
-      if (timerRef.current !== undefined) {
-        clearTimeout(timerRef.current);
-      }
-    },
-    [],
-  );
-
-  const fireSearch = useCallback((next: string) => {
-    if (timerRef.current !== undefined) {
-      clearTimeout(timerRef.current);
-    }
-    timerRef.current = undefined;
-    onSearchRef.current?.(next);
-  }, []);
-
-  const scheduleSearch = useCallback(
-    (next: string) => {
-      if (debounceMs <= 0) {
-        fireSearch(next);
-        return;
-      }
-      if (timerRef.current !== undefined) {
-        clearTimeout(timerRef.current);
-      }
-      timerRef.current = setTimeout(() => {
-        fireSearch(next);
-      }, debounceMs);
-    },
-    [debounceMs, fireSearch],
-  );
 
   const writeText = useCallback(
     (next: string, fieldChange?: (text: string) => void) => {
@@ -240,6 +304,7 @@ export const SearchInput = ({
     [isControlled, onChange, fireSearch],
   );
 
+  const hasLabel = Boolean(label);
   const resolvedIconSize = iconSize ?? recipe.iconSize;
   const boxContract = {
     size: resolvedSize,
@@ -301,15 +366,15 @@ export const SearchInput = ({
         },
       };
 
-  const renderBox = (current: string, fieldChange?: (text: string) => void, hasError?: boolean) => {
+  const renderBox = (current: string, fieldChange?: (text: string) => void, hasError = false) => {
     const showClear = Boolean(clearable && !disabled && !readOnly && current);
-    const areaProps = {
+    const areaProps: AreaProps = {
       id,
       role: 'searchbox',
-      'aria-label': label ? undefined : (ariaLabel ?? t('Search')),
-      'aria-invalid': hasError || undefined,
-      'aria-required': required || undefined,
-      'aria-readonly': readOnly || undefined,
+      'aria-label': hasLabel ? undefined : (ariaLabel ?? t('Search')),
+      'aria-invalid': hasError ? true : undefined,
+      'aria-required': required === true ? true : undefined,
+      'aria-readonly': readOnly === true ? true : undefined,
       type: 'search',
       autoComplete: 'off',
       spellCheck: false,
@@ -324,7 +389,7 @@ export const SearchInput = ({
       // here so SearchInput does not wait on that shared default. Consumer
       // inputProps still eject last.
       color: '$color',
-      'data-mp-t-value': 'full',
+      ...T_VALUE_ATTRS,
       paddingInlineStart: 0,
       paddingInlineEnd: showClear ? 0 : undefined,
       className: isWeb ? 'mp-input-area mp-search-input' : undefined,
@@ -341,7 +406,7 @@ export const SearchInput = ({
         outlineStyle: 'none' as const,
         outlineColor: 'transparent',
       },
-      onKeyDown: (e: KeyboardEvent) => {
+      onKeyDown: (e: ReactKeyboardEvent) => {
         if (e.key === 'Escape') {
           if (!current) {
             return;
@@ -356,7 +421,7 @@ export const SearchInput = ({
         fireSearch(current);
       },
       ...inputProps,
-    } as unknown as AreaProps;
+    };
 
     return (
       <InputParts.Box
@@ -379,47 +444,14 @@ export const SearchInput = ({
           }}
         />
         {showClear ? (
-          <View
-            role="button"
-            tabIndex={0}
-            aria-label={t('Clear search')}
-            className={isWeb ? 'mp-chip-dismiss' : undefined}
-            data-end-cap={visualHeight}
-            width={visualHeight}
-            height={visualHeight}
-            alignItems="center"
-            justifyContent="center"
-            cursor="pointer"
-            outlineWidth={0}
-            focusStyle={{ outlineWidth: 0 }}
-            focusVisibleStyle={{ outlineWidth: 0 }}
-            flexShrink={0}
-            hitSlop={belowFloor ? pressTargetHitSlop(visualHeight) : undefined}
-            onPress={() => {
+          <ClearButton
+            visualHeight={visualHeight}
+            belowFloor={belowFloor}
+            iconSize={resolvedIconSize}
+            onClear={() => {
               clearText(fieldChange);
             }}
-            onKeyDown={
-              ((e: KeyboardEvent) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  clearText(fieldChange);
-                }
-              }) as unknown as () => void
-            }>
-            <View
-              className={isWeb ? 'mp-chip-dismiss-ring' : undefined}
-              alignItems="center"
-              justifyContent="center"
-              hoverStyle={{ backgroundColor: '$color4' }}
-              pressStyle={{ backgroundColor: '$color5' }}>
-              <InputParts.Icon
-                aria-hidden
-                color={formCommonColors.muted}>
-                <XIcon size={resolvedIconSize} />
-              </InputParts.Icon>
-            </View>
-          </View>
+          />
         ) : null}
       </InputParts.Box>
     );
@@ -441,13 +473,13 @@ export const SearchInput = ({
     );
   }
 
-  if (!resolvedForm || !name) {
+  if (resolvedForm == null || name === undefined || name === '') {
     return (
       <FieldLayout
         {...layoutBind}
         error={error}
         onBlur={onBlur}>
-        <InputParts size={resolvedSize}>{renderBox(standaloneText, undefined, !!error)}</InputParts>
+        <InputParts size={resolvedSize}>{renderBox(standaloneText, undefined, Boolean(error))}</InputParts>
       </FieldLayout>
     );
   }
@@ -460,6 +492,7 @@ export const SearchInput = ({
       validators={resolvedValidators}>
       {(field) => {
         const resolvedError = getFieldError(field, error);
+        const hasResolvedError = Boolean(resolvedError);
         return (
           <FieldLayout
             {...layoutBind}
@@ -467,13 +500,13 @@ export const SearchInput = ({
             onBlur={mergeFieldHandler(field, 'handleBlur', onBlur)}>
             <InputParts
               size={resolvedSize}
-              {...(resolvedError ? { theme: 'error' } : undefined)}>
+              {...(hasResolvedError ? { theme: 'error' } : undefined)}>
               {renderBox(
-                String(field.state.value ?? ''),
+                field.state.value ?? '',
                 (next) => {
-                  field.handleChange(next as never);
+                  field.handleChange(next);
                 },
-                !!resolvedError,
+                hasResolvedError,
               )}
             </InputParts>
           </FieldLayout>

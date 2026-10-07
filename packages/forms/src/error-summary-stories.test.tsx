@@ -11,12 +11,8 @@ import { cleanup, fireEvent } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import * as storiesModule from './ErrorSummary.stories';
-
-afterEach(cleanup);
-
-const meta = storiesModule.default;
-const {
+import type { ErrorSummaryProps } from './ErrorSummary';
+import meta, {
   Basic,
   StructuredErrors,
   CustomLabels,
@@ -24,20 +20,22 @@ const {
   EmptyRendersNothing,
   FocusesTheFieldOnPress,
   AutoFocusOnAppear,
-} = storiesModule;
+} from './ErrorSummary.stories';
 
 interface StoryLike {
-  render?: (args: Record<string, unknown>) => ReactElement;
+  render?: (args: Partial<ErrorSummaryProps>) => ReactElement;
 }
 
 const mount = (story: StoryLike) => {
   if (!story.render) {
     throw new Error('story has no render');
   }
-  return renderWithProviders(story.render({ ...(meta.args as Record<string, unknown>) }));
+  return renderWithProviders(story.render({ ...meta.args }));
 };
 
 describe('Forms/ErrorSummary stories', () => {
+  afterEach(cleanup);
+
   it('files under a Forms title so the gallery buckets it with the form surfaces', () => {
     expect(meta.title).toBe('Forms/ErrorSummary');
   });
@@ -52,7 +50,7 @@ describe('Forms/ErrorSummary stories', () => {
 
   it('Basic names the summary by its own heading', () => {
     const { container, getByText } = mount(Basic as StoryLike);
-    const summary = container.querySelector("[data-testid='error-summary']") as HTMLElement;
+    const summary = container.querySelector<HTMLElement>("[data-testid='error-summary']")!;
     const headingId = summary.getAttribute('aria-labelledby');
     expect(headingId).toBeTruthy();
     expect(getByText('There is a problem')).toBeTruthy();
@@ -99,7 +97,7 @@ describe('Forms/ErrorSummary stories', () => {
   it('FocusesTheFieldOnPress links target the ids its fields actually carry', () => {
     const { container, getByText } = mount(FocusesTheFieldOnPress as StoryLike);
     fireEvent.click(getByText('Submit'));
-    const hrefs = Array.from(container.querySelectorAll('a')).map((a) => a.getAttribute('href'));
+    const hrefs = [...container.querySelectorAll('a')].map((a) => a.getAttribute('href'));
     expect(hrefs).toStrictEqual(['#email', '#password']);
     expect(container.querySelector('#email')).toBeTruthy();
     expect(container.querySelector('#password')).toBeTruthy();

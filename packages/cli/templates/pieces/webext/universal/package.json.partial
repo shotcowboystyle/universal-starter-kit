@@ -1,0 +1,6 @@
+{
+  "scripts": {
+    "webext": "pnpm --filter @app/__NAME__ dev:webext",
+    "build:webext": "pnpm --filter @app/__NAME__ build:webext"
+  }
+}

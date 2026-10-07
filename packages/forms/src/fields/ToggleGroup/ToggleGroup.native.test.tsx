@@ -6,7 +6,7 @@ import { ToggleGroup } from './index';
 // Before this the whole segmented control was absent from the iOS
 // tree. See RadioGroup.native.test.tsx for why the state object is pinned in
 // shared/native-a-11y.test.ts rather than here.
-vi.mock('tamagui', async (importOriginal) => ({
+vi.mock(import('tamagui'), async (importOriginal) => ({
   ...(await importOriginal<typeof import('tamagui')>()),
   isWeb: false,
 }));
@@ -18,7 +18,7 @@ const severity = [
 ];
 
 const names = (container: HTMLElement) =>
-  Array.from(container.querySelectorAll('[accessibilityrole]')).map((el) => [
+  [...container.querySelectorAll('[accessibilityrole]')].map((el) => [
     el.getAttribute('accessibilityrole'),
     el.getAttribute('accessibilitylabel'),
   ]);

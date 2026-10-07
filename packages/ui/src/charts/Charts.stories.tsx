@@ -32,6 +32,9 @@ const categories: ChartDatum[] = [
   { label: 'Done', value: 55 },
 ];
 
+const longValueFormatter = (value: number) =>
+  value === 1 ? '1'.repeat(120) : `${value.toFixed(2)} USD per reporting quarter`;
+
 const trend = [4, 6, 5, 9, 7, 11, 10, 14, 12, 16];
 
 const meta: Meta = {
@@ -201,7 +204,7 @@ export const SparklineRow = {
       <ChartDataView
         data={trend}
         title="Weekly active">
-        {({ action, data }) => (
+        {({ action: dataAction, data }) => (
           <YStack
             flex={1}
             gap="$2">
@@ -209,7 +212,7 @@ export const SparklineRow = {
               alignItems="center"
               justifyContent="space-between">
               <Text fontSize="$2">Weekly active</Text>
-              {action}
+              {dataAction}
             </XStack>
             <Sparkline
               data={data}
@@ -221,7 +224,7 @@ export const SparklineRow = {
       <ChartDataView
         data={trend}
         title="No area">
-        {({ action, data }) => (
+        {({ action: dataAction, data }) => (
           <YStack
             flex={1}
             gap="$2">
@@ -229,7 +232,7 @@ export const SparklineRow = {
               alignItems="center"
               justifyContent="space-between">
               <Text fontSize="$2">No area</Text>
-              {action}
+              {dataAction}
             </XStack>
             <Sparkline
               data={data}
@@ -365,11 +368,11 @@ export const NarrowViewport = {
       <ChartDataView
         data={trend}
         title="Weekly active">
-        {({ action, data }) => (
+        {({ action: dataAction, data }) => (
           <YStack gap="$2">
             <XStack justifyContent="space-between">
               <Text>Weekly active</Text>
-              {action}
+              {dataAction}
             </XStack>
             <Sparkline
               data={data}
@@ -402,13 +405,13 @@ export const CompleteDataView = {
           value: index * 3 + 1,
         }))}
         title="Daily activity">
-        {({ action, data }) => (
+        {({ action: dataAction, data }) => (
           <YStack gap="$2">
             <XStack
               alignItems="center"
               justifyContent="space-between">
               <Text>Daily activity</Text>
-              {action}
+              {dataAction}
             </XStack>
             <Sparkline
               data={data}
@@ -516,8 +519,6 @@ export const FixedWidthData = {
       },
       { label: 'Unbroken formatted value', value: 1 },
     ];
-    const valueFormatter = (value: number) =>
-      value === 1 ? '1'.repeat(120) : `${value.toFixed(2)} USD per reporting quarter`;
     return (
       <YStack
         width="100%"
@@ -528,7 +529,7 @@ export const FixedWidthData = {
           data={data}
           title="Fixed width revenue"
           label="Revenue bars"
-          valueFormatter={valueFormatter}
+          valueFormatter={longValueFormatter}
           showXAxis={false}
           showYAxis={false}
         />
@@ -537,7 +538,7 @@ export const FixedWidthData = {
           data={data}
           title="Fixed width trend"
           label="Revenue trend"
-          valueFormatter={valueFormatter}
+          valueFormatter={longValueFormatter}
           showXAxis={false}
           showYAxis={false}
         />

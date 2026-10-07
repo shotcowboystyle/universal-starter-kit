@@ -24,7 +24,7 @@ export const Basic: Story = {
   name: 'Main',
   render: () => (
     <Pre>
-      <Text fontFamily="$mono">const greeting = "Hello, World!";</Text>
+      <Text fontFamily="$mono">const greeting = &quot;Hello, World!&quot;;</Text>
       <Text fontFamily="$mono">console.log(greeting);</Text>
     </Pre>
   ),

@@ -1,8 +1,8 @@
 import { Button } from '@repo/forms';
 import { isWeb } from '@repo/platform';
 import { useResolvedKnobs } from '@repo/theme';
-import { createContext, useContext, useId, useState } from 'react';
-import type { ReactNode } from 'react';
+import { createContext, useContext, useId, useMemo, useState } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import { Dialog, Paragraph, XStack, YStack } from 'tamagui';
 
 import { sectionHeading } from '../component-colors';
@@ -11,8 +11,9 @@ import { useTranslation } from '../shared/i18n';
 import { DialogContent, DialogOverlay } from '../surfaces';
 
 import { describeDatum } from './accessibility';
-import { formatChartValue } from './math';
+import { formatChartValue, normalizeChartData, uniqueKeys } from './math';
 import { chartWebProps } from './svg';
+import type { ChartAttrs } from './svg';
 import type { ChartDatum } from './types';
 
 const ChartDataContext = createContext<{ id: string; triggerId: string } | null>(null);
@@ -33,11 +34,12 @@ export const ChartDataView = ({ data, title, valueFormatter, children }: ChartDa
   const [open, setOpen] = useState(false);
   const id = `mpo-chart-data-${useId().replaceAll(/[^a-zA-Z0-9_-]/gu, '_')}`;
   const triggerId = `${id}-trigger`;
-  const normalized = data.map((datum, index) =>
-    typeof datum === 'number' ? { label: String(index + 1), value: datum } : datum,
-  );
+  const normalized = normalizeChartData(data);
   const format = valueFormatter ?? formatChartValue;
-  const actionLabel = title ? `${t('View data for')} ${title}` : t('View chart data');
+  const rowKeys = uniqueKeys(normalized.map((datum) => datum.label));
+  const contextValue = useMemo(() => ({ id, triggerId }), [id, triggerId]);
+  const hasTitle = title !== undefined && title !== '';
+  const actionLabel = hasTitle ? `${t('View data for')} ${title}` : t('View chart data');
   const action = (
     <Dialog.Trigger asChild>
       <Button
@@ -50,7 +52,7 @@ export const ChartDataView = ({ data, title, valueFormatter, children }: ChartDa
     </Dialog.Trigger>
   );
   return (
-    <ChartDataContext.Provider value={{ id, triggerId }}>
+    <ChartDataContext.Provider value={contextValue}>
       <Dialog
         modal
         open={open}
@@ -67,7 +69,7 @@ export const ChartDataView = ({ data, title, valueFormatter, children }: ChartDa
             <Dialog.Title
               {...knobProps.heading}
               {...sectionHeading}>
-              {title ? `${title}: ${t('data')}` : t('Chart data')}
+              {hasTitle ? `${title}: ${t('data')}` : t('Chart data')}
             </Dialog.Title>
             <Dialog.Description {...knobProps.body}>{`${normalized.length} ${t('data points')}`}</Dialog.Description>
             <ScrollView
@@ -76,7 +78,7 @@ export const ChartDataView = ({ data, title, valueFormatter, children }: ChartDa
               <YStack {...knobProps.gap}>
                 {normalized.map((datum, index) => (
                   <XStack
-                    key={index}
+                    key={rowKeys[index]}
                     alignItems="flex-start"
                     flexWrap="wrap"
                     {...datumKnobs.gap}
@@ -133,7 +135,7 @@ export const ChartDataFrame = ({
   valueFormatter,
   width,
   children,
-}: Omit<ChartDataViewProps, 'children'> & { children: ReactNode; width?: number }) => {
+}: Omit<ChartDataViewProps, 'children'> & { children: ReactElement; width?: number }) => {
   const inherited = useContext(ChartDataContext);
   const { knobProps } = useResolvedKnobs();
   if (inherited) {
@@ -144,7 +146,7 @@ export const ChartDataFrame = ({
       data={data}
       title={title}
       valueFormatter={valueFormatter}>
-      {({ action }) => (
+      {({ action }): ReactElement => (
         <YStack
           minWidth={0}
           width={width ?? '100%'}
@@ -158,7 +160,7 @@ export const ChartDataFrame = ({
   );
 };
 
-export const useChartDataViewProps = (): Record<string, unknown> => {
+export const useChartDataViewProps = (): ChartAttrs => {
   const context = useContext(ChartDataContext);
   if (!context) {
     return {};

@@ -138,6 +138,9 @@ interface Bounds {
 }
 type Reading<T> = T | 'unmeasured' | 'unavailable' | 'invalid';
 type FixtureMode = 'subject' | 'control-240';
+const isMeasured = <T extends object>(reading: Reading<T>): reading is T =>
+  reading !== 'unmeasured' && reading !== 'unavailable' && reading !== 'invalid';
+const readingHeight = (value: Reading<Bounds>) => (isMeasured(value) ? value.height : value);
 interface FixtureReadings {
   frameLayout: Reading<Bounds>;
   toolbarLayout: Reading<Bounds>;
@@ -153,6 +156,8 @@ interface FixtureReadings {
   sample: number;
   tailPresses: number;
 }
+
+type LayoutKey = Extract<keyof FixtureReadings, `${string}Layout`>;
 
 const emptyReadings = (): FixtureReadings => ({
   frameLayout: 'unmeasured',
@@ -181,16 +186,17 @@ const OwnedBodyFixture = ({ measured }: { measured: boolean }) => {
   const [readings, setReadings] = useState(emptyReadings);
   const active = useRef(false);
   const generation = useRef(0);
+  const [presentation, setPresentation] = useState(0);
   const sample = useRef(0);
   const frameRef = useRef<TamaguiElement>(null);
   const viewportRef = useRef<TamaguiElement>(null);
   const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
   const tailRef = useRef<TamaguiElement>(null);
-  const presentation = generation.current;
   const kind = measured ? 'measured' : 'scroll';
 
   const present = (nextMode: FixtureMode, nextFill = false) => {
     generation.current += 1;
+    setPresentation(generation.current);
     sample.current = 0;
     active.current = true;
     setMode(nextMode);
@@ -215,13 +221,14 @@ const OwnedBodyFixture = ({ measured }: { measured: boolean }) => {
   };
 
   const onLayout =
-    (key: 'frameLayout' | 'toolbarLayout' | 'viewportLayout' | 'scrollLayout') =>
+    (key: LayoutKey) =>
     ({ nativeEvent: { layout } }: LayoutChangeEvent) => {
       record({ [key]: bounds(layout.x, layout.y, layout.width, layout.height) });
     };
 
   const measureBounds = () => {
-    const currentSample = ++sample.current;
+    sample.current += 1;
+    const currentSample = sample.current;
     record({
       sample: currentSample,
       frameWindow: 'unmeasured',
@@ -236,7 +243,7 @@ const OwnedBodyFixture = ({ measured }: { measured: boolean }) => {
       ['scrollWindow', scrollRef.current?.getNativeScrollRef?.()],
       ['tailWindow', tailRef.current],
     ] as const) {
-      if (!node || typeof node.measureInWindow !== 'function') {
+      if (!node || !('measureInWindow' in node)) {
         record({ [key]: 'unavailable' });
         continue;
       }
@@ -249,8 +256,7 @@ const OwnedBodyFixture = ({ measured }: { measured: boolean }) => {
   };
 
   const viewport = readings.viewportLayout;
-  const showRows = !measured || (typeof viewport === 'object' && viewport.height > 0);
-  const height = (value: Reading<Bounds>) => (typeof value === 'object' ? value.height : value);
+  const showRows = !measured || (isMeasured(viewport) && viewport.height > 0);
   const diagnostics = {
     kind,
     mode,
@@ -313,11 +319,11 @@ const OwnedBodyFixture = ({ measured }: { measured: boolean }) => {
               {kind} / {mode} / fill {fill ? 'on' : 'off'}
             </FixtureText>
             <FixtureText numberOfLines={1}>
-              Body {height(readings.frameLayout)} / toolbar {height(readings.toolbarLayout)} / viewport{' '}
-              {height(viewport)}
+              Body {readingHeight(readings.frameLayout)} / toolbar {readingHeight(readings.toolbarLayout)} / viewport{' '}
+              {readingHeight(viewport)}
             </FixtureText>
             <FixtureText numberOfLines={1}>
-              Offset {typeof readings.offset === 'object' ? readings.offset.y : readings.offset} / tail presses{' '}
+              Offset {isMeasured(readings.offset) ? readings.offset.y : readings.offset} / tail presses{' '}
               {readings.tailPresses}
             </FixtureText>
             <XStack gap="$2">
@@ -393,7 +399,7 @@ const OwnedBodyFixture = ({ measured }: { measured: boolean }) => {
                       gap="$1"
                       paddingVertical="$2">
                       <FixtureText>Record {index + 1}</FixtureText>
-                      {Array.from({ length: 1 + (index % 4) }, (_, line) => (
+                      {Array.from({ length: 1 + (index % 4) }, (_item, line) => (
                         <FixtureText key={line}>Generic detail {line + 1} for this record.</FixtureText>
                       ))}
                     </FixtureStack>

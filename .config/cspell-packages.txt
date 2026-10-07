@@ -112,6 +112,7 @@ currentcolor
 CUST
 cutover
 d'ivoire
+dagre
 dalloway
 darkcyan
 darkgoldenrod
@@ -134,6 +135,7 @@ darkviolet
 datamatrix
 daterange
 daterangepicker
+debouncer
 dedup
 deeppink
 deepskyblue
@@ -148,6 +150,8 @@ Dismissable
 dismissibility
 Distinguishability
 d’Ivoire
+docname
+doctypes
 dodgerblue
 dogfood
 dppx
@@ -177,6 +181,7 @@ featurecollection
 ficciones
 Fieldnames
 fieldtype
+fieldtypes
 fieldtype's
 flist
 floralwhite
@@ -199,6 +204,7 @@ Golay
 gorhom
 greeen
 greenyellow
+graphnode
 greppable
 Gustave
 Hanya
@@ -231,6 +237,7 @@ Jhumpa
 José
 Junichiro
 Kamppi
+Katex
 Kazuo
 Kenzaburō
 Keskusta
@@ -361,6 +368,8 @@ paleturquoise
 palevioletred
 pamuk
 papayawhip
+parentfield
+parenttype
 pathing
 peachpuff
 peerhash
@@ -397,6 +406,7 @@ recognises
 recolour
 redbox
 redboxes
+relayout
 Renderable's
 reparenting
 repitition
@@ -462,6 +472,7 @@ styleable
 subtheme
 superellipse
 sweepable
+xyflow
 symbologies
 synthesised
 synthesises
@@ -470,7 +481,10 @@ Tama
 Tanaka
 tanizaki
 tauri
+tentap
 teleporting
+testpass
+testuser
 thumbless
 timecol
 tirana

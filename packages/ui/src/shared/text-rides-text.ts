@@ -21,13 +21,14 @@ const coalesceBareTextRuns = (
   renderLabel: (label: string, key: string) => ReactNode,
 ): ReactNode[] => {
   const out: ReactNode[] = [];
-  let run: string | undefined;
+  let run: string | null = null;
   let runIndex = 0;
   const flushRun = () => {
-    if (run !== undefined && run !== '') {
-      out.push(renderLabel(run, `lc50-run-${runIndex++}`));
+    if (run !== null && run !== '') {
+      out.push(renderLabel(run, `lc50-run-${runIndex}`));
+      runIndex += 1;
     }
-    run = undefined;
+    run = null;
   };
   for (const child of children) {
     if (isBareTextChild(child)) {
@@ -50,10 +51,12 @@ export const wrapBareTextChildren = (
   children: ReactNode,
   renderLabel: (label: string, key?: string) => ReactNode,
 ): ReactNode => {
+  // oxlint-disable-next-line anti-slop/no-known-value-widening -- shared guard is exported with an `unknown` parameter; its signature must not change
   if (isBareTextChild(children)) {
     return renderLabel(String(children));
   }
   if (Array.isArray(children)) {
+    // oxlint-disable-next-line react/no-react-children -- toArray flattens nested arrays and assigns the keys the label runs rely on
     const flattened = Children.toArray(children);
     if (flattened.some(isBareTextChild)) {
       return coalesceBareTextRuns(flattened, renderLabel);

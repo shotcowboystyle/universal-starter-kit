@@ -17,7 +17,7 @@ const savebar = (root: ParentNode = document.body): HTMLElement | null =>
   root.querySelector('[data-mp-contextual-savebar]');
 
 const barButton = (label: string, root: ParentNode = document.body): HTMLElement => {
-  const buttons = Array.from(root.querySelectorAll('[role="button"], button'));
+  const buttons = [...root.querySelectorAll('[role="button"], button')];
   const match = buttons.find((b) => b.textContent?.includes(label));
   if (!match) {
     throw new Error(`No button labelled "${label}"`);
@@ -31,7 +31,7 @@ const typeIn = (input: Element, value: string) => {
   fireEvent.change(input, { target: { value } });
 };
 
-describe('ContextualSaveBar', () => {
+describe(ContextualSaveBar, () => {
   it('does not render when the form is clean', () => {
     const result = renderWithProviders(
       <Form
@@ -288,7 +288,9 @@ describe('ContextualSaveBar', () => {
       <Form
         saveBar
         formOptions={{ defaultValues: { name: 'svc' } }}
-        onSubmit={async () => await hang}>
+        onSubmit={async () => {
+          await hang;
+        }}>
         <Input
           name="name"
           label="Service name"
@@ -311,7 +313,7 @@ describe('ContextualSaveBar', () => {
     const discard = barButton('Discard');
     expect(discard.getAttribute('disabled')).toBeNull();
     expect(discard.getAttribute('aria-disabled')).toBeNull();
-    expect(discard.getAttribute('data-disabled')).toBeNull();
+    expect(discard.dataset.disabled).toBeNull();
     finish();
   });
 
@@ -394,7 +396,7 @@ describe('ContextualSaveBar', () => {
     const discard = barButton('Discard');
     expect(discard.getAttribute('disabled')).toBeNull();
     expect(discard.getAttribute('aria-disabled')).toBeNull();
-    expect(discard.getAttribute('data-mp-cancel-disabled-ignored')).toBe('true');
+    expect(discard.dataset.mpCancelDisabledIgnored).toBe('true');
   });
 
   it('CONTAINER-CAP on the top pair only; bottom pair pinned 0 (bottom-docked sheet)', () => {
@@ -411,10 +413,10 @@ describe('ContextualSaveBar', () => {
     );
     const bar = savebar(result.container);
     expect(bar).toBeTruthy();
-    expect(bar?.getAttribute('data-mp-savebar-radius-class')).toBe('CONTAINER-CAP');
-    expect(bar?.getAttribute('data-mp-savebar-dock')).toBe('bottom');
-    expect(bar?.getAttribute('data-mp-savebar-top-radius')).toBe('18');
-    expect(bar?.getAttribute('data-mp-savebar-bottom-radius')).toBe('0');
+    expect(bar?.dataset.mpSavebarRadiusClass).toBe('CONTAINER-CAP');
+    expect(bar?.dataset.mpSavebarDock).toBe('bottom');
+    expect(bar?.dataset.mpSavebarTopRadius).toBe('18');
+    expect(bar?.dataset.mpSavebarBottomRadius).toBe('0');
     const cls = String(bar?.className ?? '');
     expect(cls).not.toMatch(/t-radius-12/u);
     const cs = bar ? getComputedStyle(bar) : null;
@@ -435,8 +437,8 @@ describe('ContextualSaveBar', () => {
       </Preset>,
     );
     const bar = savebar(result.container);
-    expect(bar?.getAttribute('data-mp-savebar-top-radius')).toBe('13');
-    expect(bar?.getAttribute('data-mp-savebar-bottom-radius')).toBe('0');
+    expect(bar?.dataset.mpSavebarTopRadius).toBe('13');
+    expect(bar?.dataset.mpSavebarBottomRadius).toBe('0');
   });
 
   it('none squares the top pair; bottoms stay 0', () => {
@@ -452,18 +454,18 @@ describe('ContextualSaveBar', () => {
       </Preset>,
     );
     const bar = savebar(result.container);
-    expect(bar?.getAttribute('data-mp-savebar-top-radius')).toBe('$0');
-    expect(bar?.getAttribute('data-mp-savebar-bottom-radius')).toBe('0');
+    expect(bar?.dataset.mpSavebarTopRadius).toBe('$0');
+    expect(bar?.dataset.mpSavebarBottomRadius).toBe('0');
   });
 });
 
-describe('clientKnownIdentity', () => {
+describe(clientKnownIdentity, () => {
   it('returns the client-owned identifier', () => {
     expect(clientKnownIdentity('svc-billing-api')).toBe('svc-billing-api');
   });
 
   it('refuses a missing or envelope-dropped identity', () => {
-    expect(() => clientKnownIdentity(undefined)).toThrow(/client-known/iu);
+    expect(() => clientKnownIdentity()).toThrow(/client-known/iu);
     expect(() => clientKnownIdentity('')).toThrow(/client-known/iu);
     expect(() => clientKnownIdentity('undefined')).toThrow(/client-known/iu);
   });

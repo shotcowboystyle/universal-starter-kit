@@ -8,7 +8,7 @@ import { chartDatumText, describeChart, describeDatum } from './accessibility';
 import { ChartDataFrame } from './ChartDataView';
 import { ChartSurface } from './ChartSurface';
 import { resolveSeriesFills } from './compose-chart';
-import { formatChartValue, pieSlices, canMaskPieSlices } from './math';
+import { formatChartValue, pieSlices, canMaskPieSlices, uniqueKeys } from './math';
 import { PieSeries } from './series';
 import { chartDatumTextProps, chartWebProps } from './svg';
 import type { ChartDatum, ChartDatumEvents } from './types';
@@ -50,6 +50,16 @@ const DEFAULT_DONUT_RATIO = 0.55;
  * it never paints past the frame. Inside a legend row the label truncates
  * first (ellipsis); the value is data and never truncates (Axiom 11).
  */
+const resolveInnerRatio = (donut: boolean | number): number => {
+  if (donut === false) {
+    return 0;
+  }
+  if (donut === true) {
+    return DEFAULT_DONUT_RATIO;
+  }
+  return Math.min(Math.max(donut, 0), 0.9);
+};
+
 export const PieChart = ({
   data,
   height = 200,
@@ -70,18 +80,19 @@ export const PieChart = ({
   const { palette } = useChartTheme();
   const fills = resolveSeriesFills(data, palette, { colors, categorical: true });
   const format = valueFormatter ?? formatChartValue;
+  const datumKeys = uniqueKeys(data.map((datum) => datum.label));
   const total = data.reduce((sum, datum) => sum + datum.value, 0);
   const ariaLabel =
     label ??
     describeChart({
-      typeLabel: donut ? t('Donut chart') : t('Pie chart'),
+      typeLabel: donut === false || donut === 0 ? t('Pie chart') : t('Donut chart'),
       title,
       data,
       formatValue: valueFormatter,
       includeShare: true,
     });
-  const interactive = Boolean(onDatumPress || onDatumHoverIn || onDatumHoverOut);
-  const innerRatio = donut === false ? 0 : donut === true ? DEFAULT_DONUT_RATIO : Math.min(Math.max(donut, 0), 0.9);
+  const interactive = onDatumPress !== undefined || onDatumHoverIn !== undefined || onDatumHoverOut !== undefined;
+  const innerRatio = resolveInnerRatio(donut);
 
   const chart = (
     // `flexShrink` + `minWidth 0` let a row parent (e.g. Card.Footer)
@@ -144,7 +155,7 @@ export const PieChart = ({
           {...{ 'data-pie-legend': 'true' }}>
           {data.map((datum, index) => (
             <XStack
-              key={`${datum.label}-${index}`}
+              key={datumKeys[index]}
               {...chartDatumTextProps(index)}
               gap="$2"
               alignItems="center"
@@ -157,7 +168,7 @@ export const PieChart = ({
                 height={12}
                 borderRadius={knobProps.borderRadius.borderRadius}
                 flexShrink={0}
-                backgroundColor={fills[index] as never}
+                backgroundColor={fills[index]}
               />
               {/* The label yields (truncates) before the value — values are
                   data and never truncate (Axiom 11). */}

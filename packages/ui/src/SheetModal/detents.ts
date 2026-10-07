@@ -43,9 +43,9 @@ export const resolveSheetDetents = ({ travel, scrollable, snapPoint }: ResolveSh
   if (scrollable) {
     points.push(Math.round(travel * mediumDetent));
   }
-  if (typeof snapPoint === 'number' && Number.isFinite(snapPoint) && snapPoint > 0) {
+  if (snapPoint !== undefined && Number.isFinite(snapPoint) && snapPoint > 0) {
     points.push(Math.round(travel * (Math.min(snapPoint, 100) / 100)));
   }
   const floor = Math.min(minSheetHeight, travel);
-  return Array.from(new Set(points.filter((h) => h >= floor))).sort((a, b) => b - a);
+  return [...new Set(points.filter((h) => h >= floor))].toSorted((a, b) => b - a);
 };

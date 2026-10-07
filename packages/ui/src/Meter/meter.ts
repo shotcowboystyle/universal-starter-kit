@@ -115,5 +115,5 @@ export const formatMeterValue = (opts: {
   }
   const amount = formatNumber(opts.value);
   const cap = formatNumber(opts.max);
-  return opts.unit ? `${amount} of ${cap} ${opts.unit}` : `${amount} of ${cap}`;
+  return opts.unit !== undefined && opts.unit !== '' ? `${amount} of ${cap} ${opts.unit}` : `${amount} of ${cap}`;
 };

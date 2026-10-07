@@ -12,6 +12,36 @@ import { Form } from '../../Form';
 
 import { Switch } from './index';
 
+type SwitchFormValues = Record<string, boolean>;
+
+const ignoreSubmit = async (_value: SwitchFormValues): Promise<void> => {};
+
+const FormExample = ({
+  defaultValue = false,
+  name = 'switch',
+  onSubmit = ignoreSubmit,
+}: {
+  defaultValue?: boolean;
+  name?: string;
+  onSubmit?: (value: SwitchFormValues) => Promise<void> | void;
+}) => (
+  <Form
+    formOptions={{
+      defaultValues: {
+        [name]: defaultValue,
+      },
+    }}
+    onSubmit={async (value) => {
+      await onSubmit(value);
+    }}>
+    <Switch
+      label="Test Switch"
+      name={name}
+    />
+    <Button action="submit">Submit</Button>
+  </Form>
+);
+
 // House builder themes for the selected-mark assertion — created at MODULE
 // scope: tamagui registers a config's theme variables globally at
 // createTamagui time, and a config created after the first render (inside a
@@ -23,7 +53,7 @@ const houseConfig = createTamagui({
   themes: houseThemes as any,
 });
 
-describe('Switch', () => {
+describe(Switch, () => {
   describe('without form context', () => {
     it('should render with label and helper text correctly', () => {
       const result = renderWithProviders(
@@ -67,7 +97,7 @@ describe('Switch', () => {
     });
 
     it('should handle state transitions', async () => {
-      const onCheckedChange = vi.fn();
+      const onCheckedChange = vi.fn<(checked: boolean) => void>();
       const result = renderWithProviders(
         <Switch
           name="switch"
@@ -89,8 +119,8 @@ describe('Switch', () => {
     });
 
     it('fires canonical onChange and the deprecated onCheckedChange alias once each', async () => {
-      const onChange = vi.fn();
-      const onCheckedChange = vi.fn();
+      const onChange = vi.fn<(checked: boolean) => void>();
+      const onCheckedChange = vi.fn<(checked: boolean) => void>();
       const result = renderWithProviders(
         <Switch
           name="switch"
@@ -105,10 +135,8 @@ describe('Switch', () => {
           fireEvent.click(switchElement);
         }
       });
-      expect(onChange).toHaveBeenCalledOnce();
-      expect(onChange).toHaveBeenCalledWith(true);
-      expect(onCheckedChange).toHaveBeenCalledOnce();
-      expect(onCheckedChange).toHaveBeenCalledWith(true);
+      expect(onChange).toHaveBeenCalledExactlyOnceWith(true);
+      expect(onCheckedChange).toHaveBeenCalledExactlyOnceWith(true);
     });
 
     it('forwards top-level aria-label to the role=switch node', () => {
@@ -146,7 +174,7 @@ describe('Switch', () => {
     });
 
     it('should toggle on via press+drag across the track', async () => {
-      const onCheckedChange = vi.fn();
+      const onCheckedChange = vi.fn<(checked: boolean) => void>();
       const result = renderWithProviders(
         <Switch
           name="switch"
@@ -175,7 +203,7 @@ describe('Switch', () => {
     });
 
     it('should toggle off via press+drag across the track', async () => {
-      const onCheckedChange = vi.fn();
+      const onCheckedChange = vi.fn<(checked: boolean) => void>();
       const result = renderWithProviders(
         <Switch
           name="switch"
@@ -204,7 +232,7 @@ describe('Switch', () => {
     });
 
     it('does not enter drag mode below the drag-intent threshold (mid-flight retargets must not teleport)', async () => {
-      const onCheckedChange = vi.fn();
+      const onCheckedChange = vi.fn<(checked: boolean) => void>();
       const result = renderWithProviders(
         <Switch
           name="switch"
@@ -217,7 +245,7 @@ describe('Switch', () => {
       if (!switchElement) {
         return;
       }
-      const thumb = switchElement.querySelector('.is_SwitchThumb') as HTMLElement;
+      const thumb = switchElement.querySelector<HTMLElement>('.is_SwitchThumb')!;
       expect(thumb).toBeTruthy();
 
       await act(async () => {
@@ -243,7 +271,7 @@ describe('Switch', () => {
     });
 
     it('should not toggle when a drag snaps back below the midpoint', async () => {
-      const onCheckedChange = vi.fn();
+      const onCheckedChange = vi.fn<(checked: boolean) => void>();
       const result = renderWithProviders(
         <Switch
           name="switch"
@@ -285,26 +313,8 @@ describe('Switch', () => {
   });
 
   describe('with form context', () => {
-    const FormExample = ({ defaultValue = false, name = 'switch', onSubmit = async (_value: any) => {} }) => (
-      <Form
-        formOptions={{
-          defaultValues: {
-            [name]: defaultValue,
-          },
-        }}
-        onSubmit={async (value) => {
-          await onSubmit(value);
-        }}>
-        <Switch
-          label="Test Switch"
-          name={name}
-        />
-        <Button action="submit">Submit</Button>
-      </Form>
-    );
-
     it('should render with form context and handle form submission', async () => {
-      const onSubmit = vi.fn();
+      const onSubmit = vi.fn<(value: SwitchFormValues) => void>();
       const result = renderWithProviders(
         <YStack>
           <FormExample onSubmit={onSubmit} />
@@ -335,7 +345,7 @@ describe('Switch', () => {
     });
 
     it('should handle disabled state in form context', async () => {
-      const onCheckedChange = vi.fn();
+      const onCheckedChange = vi.fn<(checked: boolean) => void>();
       const result = renderWithProviders(
         <Form formOptions={{ defaultValues: { switch: false } }}>
           <Switch
@@ -360,7 +370,7 @@ describe('Switch', () => {
 
   describe('with useForm hook directly', () => {
     it('should handle form submission with useForm', async () => {
-      const onSubmitMock = vi.fn();
+      const onSubmitMock = vi.fn<(value: { notifications: boolean }) => void>();
       const TestComponent = () => {
         const form = useForm({
           defaultValues: {
@@ -430,7 +440,7 @@ describe('Switch', () => {
           </YStack>
         </TamaguiProvider>,
       );
-      const switches = Array.from(container.querySelectorAll("[role='switch']"));
+      const switches = [...container.querySelectorAll("[role='switch']")];
       expect(switches).toHaveLength(2);
       const on = switches.find((s) => s.getAttribute('aria-checked') === 'true') as HTMLElement;
       const off = switches.find((s) => s.getAttribute('aria-checked') === 'false') as HTMLElement;
@@ -449,9 +459,9 @@ describe('Switch', () => {
           defaultValue={false}
         />,
       );
-      const switchElement = result.getSwitch();
+      const switchElement = result.getSwitch() as HTMLElement | null;
       expect(switchElement).toBeTruthy();
-      expect(switchElement?.getAttribute('data-kb-focus')).toBeNull();
+      expect(switchElement?.dataset.kbFocus).toBeUndefined();
     });
 
     it('does not use outline as the on/selected channel', () => {
@@ -461,13 +471,13 @@ describe('Switch', () => {
           defaultValue={true}
         />,
       );
-      const switchElement = result.getSwitch();
+      const switchElement = result.getSwitch() as HTMLElement | null;
       expect(switchElement).toBeTruthy();
       if (!switchElement) {
         return;
       }
       expect(switchElement.getAttribute('aria-checked')).toBe('true');
-      expect(switchElement.getAttribute('data-kb-focus')).toBeNull();
+      expect(switchElement.dataset.kbFocus).toBeUndefined();
       const outline = getComputedStyle(switchElement).outlineWidth;
       expect(outline === '0px' || outline === '').toBe(true);
     });

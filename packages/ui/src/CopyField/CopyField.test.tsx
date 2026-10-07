@@ -1,3 +1,5 @@
+import { setTimeout as sleep } from 'node:timers/promises';
+
 import { renderWithProviders } from '@repo/test-utils';
 import { fireEvent } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -10,16 +12,13 @@ import { CopyField } from './index';
 
 const copyOf = (container: HTMLElement) => container.querySelector("[aria-label='Copy to clipboard']");
 
-const writeText = vi.fn();
+const writeText = vi.fn<(text: string) => Promise<void>>();
 
-describe('CopyField', () => {
+describe(CopyField, () => {
   beforeEach(() => {
     writeText.mockReset();
-    writeText.mockResolvedValue(undefined);
-    vi.stubGlobal('navigator', {
-      ...(typeof navigator === 'undefined' ? {} : navigator),
-      clipboard: { writeText },
-    });
+    writeText.mockResolvedValue();
+    vi.stubGlobal('navigator', { clipboard: { writeText } });
     resetToasts();
     resetFeedback();
   });
@@ -63,7 +62,7 @@ describe('CopyField', () => {
     await vi.waitFor(() => {
       expect(getToasts()).toHaveLength(1);
     });
-    const toast = getToasts()[0];
+    const [toast] = getToasts();
     expect(toast?.title).toBe('Copied to clipboard.');
     expect(toast?.intent).toBe('success');
     expect(toast?.description).toBeUndefined();
@@ -94,7 +93,7 @@ describe('CopyField', () => {
       expect(getFeedback()).toHaveLength(1);
     });
     expect(getToasts()).toHaveLength(0);
-    const alert = getFeedback()[0];
+    const [alert] = getFeedback();
     expect(alert?.surface).toBe('alert');
     expect(alert?.severity).toBe('error');
     expect(alert?.scope).toBe('field');
@@ -164,12 +163,8 @@ describe('CopyField', () => {
   });
 
   it('ignores a clipboard result after its field unmounts', async () => {
-    let rejectCopy!: (reason: Error) => void;
-    writeText.mockReturnValue(
-      new Promise((_, reject) => {
-        rejectCopy = reject;
-      }),
-    );
+    const copy = Promise.withResolvers<never>();
+    writeText.mockReturnValue(copy.promise);
     const result = renderWithProviders(
       <CopyField
         label="Token"
@@ -178,8 +173,8 @@ describe('CopyField', () => {
     );
     fireEvent.click(copyOf(result.container)!);
     result.unmount();
-    rejectCopy(new Error('Denied'));
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    copy.reject(new Error('Denied'));
+    await sleep(0);
     expect(getFeedback()).toHaveLength(0);
     expect(getToasts()).toHaveLength(0);
   });

@@ -18,7 +18,8 @@ import {
 } from '@repo/theme';
 import { LinearGradient } from '@tamagui/linear-gradient';
 import { useEffect, useRef, useState } from 'react';
-import type { TamaguiElement } from 'tamagui';
+import type { KeyboardEvent } from 'react';
+import type { FontSizeTokens, TamaguiElement } from 'tamagui';
 import { Spacer, XStack, YStack } from 'tamagui';
 
 import { settleMs } from '../../AnimateHeight';
@@ -36,15 +37,17 @@ import { Pre } from '../Pre';
 const VISIBLE_LINES = 22;
 
 /** Code line-height px per size-token stop — clamp/fade derive from this. */
-const lineHeightBySize: Record<string, number> = {
-  $2: 16,
-  $3: 16,
-  $4: 18,
-  $5: 20,
-  $6: 22,
-};
+const lineHeightBySize = new Map<string, number>([
+  ['$2', 16],
+  ['$3', 16],
+  ['$4', 18],
+  ['$5', 20],
+  ['$6', 22],
+]);
 
-const clampHeightForSize = (sizeToken: string): number => VISIBLE_LINES * (lineHeightBySize[sizeToken] ?? 18);
+const clampHeightForSize = (sizeToken: string): number => VISIBLE_LINES * (lineHeightBySize.get(sizeToken) ?? 18);
+
+const NO_HIGHLIGHT_LINES: number[] = [];
 
 export interface CodeBlockProps {
   /** The code to highlight */
@@ -68,7 +71,7 @@ export const CodeBlock = ({
   language = 'tsx',
   theme,
   showLineNumbers: propShowLineNumbers,
-  highlightLines = [],
+  highlightLines = NO_HIGHLIGHT_LINES,
   disableCopy,
   size,
 }: CodeBlockProps) => {
@@ -78,7 +81,8 @@ export const CodeBlock = ({
   const touch = useTouchSurface();
   // Content type scale follows the size knob (via sizeToken);
   // an explicit size prop ejects.
-  const codeSize = (size ?? knobProps.sizeToken) as any;
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- SAFETY: `size` is documented as a font size token and sizeToken is a `$n` size stop
+  const codeSize = (size ?? knobProps.sizeToken) as FontSizeTokens;
   const codeText = children.trim();
   const tokens = useShikiTokens(codeText, language, theme);
   const clampHeight = clampHeightForSize(String(codeSize));
@@ -93,7 +97,7 @@ export const CodeBlock = ({
   // transition (revealing to intrinsic height cannot tween — the
   // AnimationLab auto-height defect), then releases the clamp once settled.
   const [expandTarget, setExpandTarget] = useState<number | null>(null);
-  const clampRef = useRef<TamaguiElement | null>(null);
+  const clampRef = useRef<(TamaguiElement & { scrollHeight?: number }) | null>(null);
   const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(
     () => () => {
@@ -105,11 +109,11 @@ export const CodeBlock = ({
   );
   const { transition } = knobProps;
   const revealAll = () => {
-    const node = clampRef.current as unknown as HTMLElement | null;
-    const fullHeight = typeof node?.scrollHeight === 'number' ? node.scrollHeight : null;
+    // scrollHeight exists on web DOM nodes only; native elements leave it undefined.
+    const fullHeight = clampRef.current?.scrollHeight ?? null;
     // No tween possible (reduced motion / animation=none, native — the RN
     // driver applies layout props directly — or nothing to grow): reveal now.
-    if (!transition || fullHeight == null || fullHeight <= clampHeight) {
+    if (transition == null || transition === '' || fullHeight == null || fullHeight <= clampHeight) {
       setIsCutoff(false);
       return;
     }
@@ -203,15 +207,13 @@ export const CodeBlock = ({
                 data-press-min={MIN_PRESS_TARGET}
                 hitSlop={capSquare < MIN_PRESS_TARGET ? pressTargetHitSlop(capSquare) : undefined}
                 onPress={activateCopy}
-                onKeyDown={
-                  ((e: KeyboardEvent) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      activateCopy();
-                    }
-                  }) as unknown as () => void
-                }>
+                onKeyDown={(e: KeyboardEvent<HTMLDivElement>) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    activateCopy();
+                  }
+                }}>
                 <Input.Icon aria-hidden>
                   <ClipboardIcon />
                 </Input.Icon>

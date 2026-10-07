@@ -77,8 +77,6 @@ When a task matches conditions below, load the corresponding skill **before writ
 | **Package** | `packages/ui`               | Tamagui component catalog (surfaces, feedback, navigation, layouts, views), cross-platform        |
 | **Package** | `packages/utils`            | Node-only build/dev utilities                                                                     |
 
-Packages derived from [multiplatform.one](https://multiplatform.one) are Apache-2.0 — keep each package `LICENSE` and the root `NOTICE` intact.
-
 **Key tech**: TypeScript strict, PNPM (catalog versions in `pnpm-workspace.yaml`), Turborepo, Vitest, Playwright, Tamagui, TanStack Form, Zustand + TanStack Query, Zod
 
 #### Web UI (Tamagui)

@@ -42,7 +42,7 @@ export interface Geocoder {
   reverseGeocode: ReverseGeocodeFn;
 }
 
-const LAT_LNG_PAIR = /^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/u;
+const LAT_LNG_PAIR = /^\s*(?<lat>-?\d+(?:\.\d+)?)\s*,\s*(?<lng>-?\d+(?:\.\d+)?)\s*$/u;
 
 export const clampLat = (val: number): number => Math.max(-90, Math.min(90, val));
 
@@ -57,8 +57,8 @@ export const parseLatLngPair = (text: string): GeoValue | null => {
   if (!match) {
     return null;
   }
-  const lat = Number.parseFloat(match[1]);
-  const lng = Number.parseFloat(match[2]);
+  const lat = Number(match.groups?.lat);
+  const lng = Number(match.groups?.lng);
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
     return null;
   }
@@ -69,13 +69,15 @@ export const parseLatLngPair = (text: string): GeoValue | null => {
 };
 
 export const formatPlace = (result: Pick<GeocodeResult, 'label' | 'description'>): string =>
-  result.description ? `${result.label}, ${result.description}` : result.label;
+  result.description !== undefined && result.description !== ''
+    ? `${result.label}, ${result.description}`
+    : result.label;
 
 export const resolveGeocoder = (input: {
   geocode?: GeocodeFn;
   reverseGeocode?: ReverseGeocodeFn;
   geocoder?: Geocoder;
-}): { geocode?: GeocodeFn; reverseGeocode?: ReverseGeocodeFn } => ({
+}): Partial<Geocoder> => ({
   geocode: input.geocode ?? input.geocoder?.geocode,
   reverseGeocode: input.reverseGeocode ?? input.geocoder?.reverseGeocode,
 });

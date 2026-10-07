@@ -32,42 +32,43 @@ const meta: Meta<typeof Checkbox> = {
 export default meta;
 type Story = StoryObj<typeof Checkbox>;
 
+const TERMS_LABEL = 'Accept terms';
+
+const FormExample = () => {
+  const form = useForm({
+    defaultValues: {
+      terms: false,
+      newsletter: true,
+    },
+    onSubmit: async ({ value }) => {
+      action('onSubmit')(value);
+    },
+  });
+
+  return (
+    <Form form={form}>
+      <Checkbox
+        label={TERMS_LABEL}
+        name="terms"
+        validators={{ onChange: ({ value }: { value: boolean }) => (value ? undefined : 'Terms are required') }}
+      />
+      <Checkbox
+        label="Subscribe to newsletter"
+        name="newsletter"
+      />
+      <Button action="submit">Submit</Button>
+    </Form>
+  );
+};
+
 export const Main: Story = {
   name: 'Main',
-  render: () => {
-    const FormExample = () => {
-      const form = useForm({
-        defaultValues: {
-          terms: false,
-          newsletter: true,
-        },
-        onSubmit: async ({ value }) => {
-          action('onSubmit')(value);
-        },
-      });
-
-      return (
-        <Form form={form}>
-          <Checkbox
-            label="Accept terms"
-            name="terms"
-            validators={{ onChange: ({ value }) => (value ? undefined : 'Terms are required') }}
-          />
-          <Checkbox
-            label="Subscribe to newsletter"
-            name="newsletter"
-          />
-          <Button action="submit">Submit</Button>
-        </Form>
-      );
-    };
-    return <FormExample />;
-  },
+  render: () => <FormExample />,
 };
 
 export const Standalone: Story = {
   args: {
-    label: 'Accept terms',
+    label: TERMS_LABEL,
     helperText: 'You must accept to continue',
     disabled: false,
     required: false,
@@ -77,7 +78,7 @@ export const Standalone: Story = {
 
 export const Basic: Story = {
   args: {
-    label: 'Accept terms',
+    label: TERMS_LABEL,
     helperText: 'You must accept before continuing',
     defaultValue: false,
   },
@@ -138,7 +139,7 @@ export const Sizes: Story = {
   ),
 };
 
-export const compound = () => {
+const CompoundExample = () => {
   const [values, setValues] = useState({
     analytics: true,
     updates: false,
@@ -192,65 +193,67 @@ export const compound = () => {
   );
 };
 
+export const compound = () => <CompoundExample />;
+
+const ComparisonExample = () => {
+  const [customChecked, setCustomChecked] = useState(false);
+  const [tamaguiChecked, setTamaguiChecked] = useState<boolean>(false);
+  return (
+    <XStack
+      gap="$6"
+      alignItems="flex-start"
+      padding="$4">
+      <YStack
+        gap="$3"
+        width={250}>
+        <Paragraph
+          size="$2"
+          color="$placeholderColor">
+          Custom Checkbox
+        </Paragraph>
+        <Checkbox
+          label={TERMS_LABEL}
+          defaultValue={customChecked}
+          // oxlint-disable-next-line typescript/no-deprecated -- the story demonstrates the Radix-named alias next to Tamagui's own checkbox
+          onCheckedChange={(val) => {
+            setCustomChecked(val !== false);
+            action('custom.onCheckedChange')(val);
+          }}
+        />
+      </YStack>
+
+      <YStack
+        gap="$3"
+        width={250}>
+        <Paragraph
+          size="$2"
+          color="$placeholderColor">
+          Tamagui Checkbox
+        </Paragraph>
+        <XStack
+          gap="$2"
+          alignItems="center">
+          <TamaguiCheckbox
+            id="tamagui-cb"
+            checked={tamaguiChecked}
+            onCheckedChange={(val) => {
+              setTamaguiChecked(val !== false);
+              action('tamagui.onCheckedChange')(val);
+            }}>
+            <TamaguiCheckbox.Indicator>
+              <CheckIcon />
+            </TamaguiCheckbox.Indicator>
+          </TamaguiCheckbox>
+          <Label htmlFor="tamagui-cb">Accept terms</Label>
+        </XStack>
+      </YStack>
+    </XStack>
+  );
+};
+
 export const Comparison: StoryObj = {
   parameters: { foreignContrastSpecimen: true },
-  render: () => {
-    const ComparisonExample = () => {
-      const [customChecked, setCustomChecked] = useState(false);
-      const [tamaguiChecked, setTamaguiChecked] = useState<boolean>(false);
-      return (
-        <XStack
-          gap="$6"
-          alignItems="flex-start"
-          padding="$4">
-          <YStack
-            gap="$3"
-            width={250}>
-            <Paragraph
-              size="$2"
-              color="$placeholderColor">
-              Custom Checkbox
-            </Paragraph>
-            <Checkbox
-              label="Accept terms"
-              defaultValue={customChecked}
-              onCheckedChange={(val) => {
-                setCustomChecked(!!val);
-                action('custom.onCheckedChange')(val);
-              }}
-            />
-          </YStack>
-
-          <YStack
-            gap="$3"
-            width={250}>
-            <Paragraph
-              size="$2"
-              color="$placeholderColor">
-              Tamagui Checkbox
-            </Paragraph>
-            <XStack
-              gap="$2"
-              alignItems="center">
-              <TamaguiCheckbox
-                id="tamagui-cb"
-                checked={tamaguiChecked}
-                onCheckedChange={(val) => {
-                  setTamaguiChecked(!!val);
-                  action('tamagui.onCheckedChange')(val);
-                }}>
-                <TamaguiCheckbox.Indicator>
-                  <CheckIcon />
-                </TamaguiCheckbox.Indicator>
-              </TamaguiCheckbox>
-              <Label htmlFor="tamagui-cb">Accept terms</Label>
-            </XStack>
-          </YStack>
-        </XStack>
-      );
-    };
-    return <ComparisonExample />;
-  },
+  render: () => <ComparisonExample />,
 };
 
 // --- CheckboxGroup Stories ---
@@ -274,54 +277,53 @@ export const CheckboxGroupBasic: StoryObj = {
   ),
 };
 
-export const CheckboxGroupWithForm: StoryObj = {
-  render: () => {
-    const FormExample = () => {
-      const form = useForm({
-        defaultValues: {
-          features: ['notifications'],
-          permissions: [] as string[],
-        },
-        onSubmit: async ({ value }) => {
-          action('onSubmit')(value);
-        },
-      });
+const GroupFormExample = () => {
+  const form = useForm({
+    defaultValues: {
+      features: ['notifications'],
+      permissions: [] as string[],
+    },
+    onSubmit: async ({ value }) => {
+      action('onSubmit')(value);
+    },
+  });
 
-      return (
-        <Form form={form}>
-          <YStack
-            gap="$4"
-            maxWidth={400}>
-            <CheckboxGroup
-              label="Features"
-              name="features"
-              options={[
-                { value: 'notifications', label: 'Push Notifications' },
-                { value: 'emails', label: 'Email Updates' },
-                { value: 'sms', label: 'SMS Alerts' },
-                { value: 'reports', label: 'Weekly Reports' },
-              ]}
-              helperText="Select your preferred features"
-            />
-            <CheckboxGroup
-              label="Permissions"
-              name="permissions"
-              options={[
-                { value: 'read', label: 'Read Access' },
-                { value: 'write', label: 'Write Access' },
-                { value: 'delete', label: 'Delete Access' },
-                { value: 'admin', label: 'Admin Access' },
-              ]}
-              helperText="Select required permissions"
-              required
-            />
-            <Button action="submit">Submit</Button>
-          </YStack>
-        </Form>
-      );
-    };
-    return <FormExample />;
-  },
+  return (
+    <Form form={form}>
+      <YStack
+        gap="$4"
+        maxWidth={400}>
+        <CheckboxGroup
+          label="Features"
+          name="features"
+          options={[
+            { value: 'notifications', label: 'Push Notifications' },
+            { value: 'emails', label: 'Email Updates' },
+            { value: 'sms', label: 'SMS Alerts' },
+            { value: 'reports', label: 'Weekly Reports' },
+          ]}
+          helperText="Select your preferred features"
+        />
+        <CheckboxGroup
+          label="Permissions"
+          name="permissions"
+          options={[
+            { value: 'read', label: 'Read Access' },
+            { value: 'write', label: 'Write Access' },
+            { value: 'delete', label: 'Delete Access' },
+            { value: 'admin', label: 'Admin Access' },
+          ]}
+          helperText="Select required permissions"
+          required
+        />
+        <Button action="submit">Submit</Button>
+      </YStack>
+    </Form>
+  );
+};
+
+export const CheckboxGroupWithForm: StoryObj = {
+  render: () => <GroupFormExample />,
 };
 
 export const CheckboxGroupHorizontal: StoryObj = {
@@ -363,36 +365,35 @@ export const CheckboxGroupWithDisabled: StoryObj = {
   ),
 };
 
+const InteractiveExample = () => {
+  const [selected, setSelected] = useState<string[]>(['opt1']);
+  return (
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <CheckboxGroup
+        label="Interactive Selection"
+        options={[
+          { value: 'opt1', label: 'Option 1' },
+          { value: 'opt2', label: 'Option 2' },
+          { value: 'opt3', label: 'Option 3' },
+        ]}
+        value={selected}
+        onChange={(values) => {
+          setSelected(values);
+          action('onValueChange')(values);
+        }}
+      />
+      <Paragraph size="$2">Selected: {selected.join(', ') || 'None'}</Paragraph>
+    </YStack>
+  );
+};
+
 export const CheckboxGroupInteractive: StoryObj = {
-  render: () => {
-    const InteractiveExample = () => {
-      const [selected, setSelected] = useState<string[]>(['opt1']);
-      return (
-        <YStack
-          gap="$4"
-          maxWidth={400}>
-          <CheckboxGroup
-            label="Interactive Selection"
-            options={[
-              { value: 'opt1', label: 'Option 1' },
-              { value: 'opt2', label: 'Option 2' },
-              { value: 'opt3', label: 'Option 3' },
-            ]}
-            value={selected}
-            onValueChange={(values) => {
-              setSelected(values);
-              action('onValueChange')(values);
-            }}
-          />
-          <Paragraph size="$2">Selected: {selected.join(', ') || 'None'}</Paragraph>
-        </YStack>
-      );
-    };
-    return <InteractiveExample />;
-  },
+  render: () => <InteractiveExample />,
 };
 
 /** Loading placeholder — the skeleton mirrors control + label anatomy. */
 export const SkeletonState: Story = {
-  args: { label: 'Accept terms', skeleton: true },
+  args: { label: TERMS_LABEL, skeleton: true },
 };

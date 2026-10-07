@@ -95,7 +95,7 @@ describe(DropdownMenu, () => {
     await waitFor(() => {
       expect(document.querySelector('[role="menu"]')).toBeTruthy();
     });
-    const menu = document.querySelector('[role="menu"]') as HTMLElement;
+    const menu = document.querySelector('[role="menu"]')!;
     const items = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]:not([aria-disabled="true"])')];
     items[0].focus();
     // ArrowDown skips the disabled item (not in the enabled query) to Delete
@@ -111,7 +111,7 @@ describe(DropdownMenu, () => {
     await waitFor(() => {
       expect(document.querySelector('[role="menu"]')).toBeTruthy();
     });
-    const menu = document.querySelector('[role="menu"]') as HTMLElement;
+    const menu = document.querySelector('[role="menu"]')!;
     const items = [...document.querySelectorAll<HTMLElement>('[role="menuitem"]:not([aria-disabled="true"])')];
     items[0].focus();
     fireEvent.keyDown(menu, { key: 'ArrowUp' });
@@ -137,7 +137,7 @@ describe(DropdownMenu, () => {
     await waitFor(() => {
       expect(document.querySelector('[role="menuitemcheckbox"]')).toBeTruthy();
     });
-    const item = document.querySelector('[role="menuitemcheckbox"]') as HTMLElement;
+    const item = document.querySelector('[role="menuitemcheckbox"]')!;
     expect(item.getAttribute('aria-checked')).toBe('false');
     fireEvent.click(item);
     expect(onCheckedChange).toHaveBeenCalledWith(true);
@@ -190,7 +190,7 @@ describe('DropdownMenu items path — checked entries', () => {
     await waitFor(() => {
       expect(document.querySelector('[role="menuitemcheckbox"]')).toBeTruthy();
     });
-    const item = document.querySelector('[role="menuitemcheckbox"]') as HTMLElement;
+    const item = document.querySelector('[role="menuitemcheckbox"]')!;
     expect(item.getAttribute('aria-checked')).toBe('false');
     fireEvent.click(item);
     expect(onCheckedChange).toHaveBeenCalledWith(true);
@@ -323,7 +323,7 @@ describe('DropdownMenu disabledReason', () => {
     await waitFor(() => {
       expect(document.querySelector('[role="menu"]')).toBeTruthy();
     });
-    const item = document.querySelector('[role="menuitem"]') as HTMLElement;
+    const item = document.querySelector('[role="menuitem"]')!;
     expect(item.getAttribute('aria-disabled')).toBe('true');
     const reason = item.querySelector('[data-mp-disabled-reason]');
     expect(reason?.textContent).toBe('Requires the owner role');
@@ -400,7 +400,7 @@ describe('DropdownMenu keyboard ring', () => {
         <Button>Actions</Button>
       </DropdownMenu>,
     );
-    const trigger = document.querySelector('[aria-haspopup="menu"]') as HTMLElement;
+    const trigger = document.querySelector('[aria-haspopup="menu"]')!;
     trigger.focus();
     fireEvent.keyDown(trigger, { key: 'ArrowUp' });
     await waitFor(() => {
@@ -426,7 +426,7 @@ describe('DropdownMenu FloatingPanel cover contract', () => {
     await waitFor(() => {
       expect(document.querySelector('[role="menu"]')).toBeTruthy();
     });
-    const menu = document.querySelector('[role="menu"]') as HTMLElement;
+    const menu = document.querySelector('[role="menu"]')!;
     expect(menu.dataset.mpWidthMode).toBe('at-least-trigger');
     expect(menu.dataset.dismissClass).toBe('commit');
   });
@@ -498,8 +498,8 @@ describe('DropdownMenu FloatingPanel cover contract', () => {
     await waitFor(() => {
       expect(document.querySelector('[role="menu"]')).toBeTruthy();
     });
-    const menu = document.querySelector('[role="menu"]') as HTMLElement;
-    expect(menu.style.maxHeight || getComputedStyle(menu).maxHeight).toBeTruthy();
+    const menu = document.querySelector('[role="menu"]')!;
+    expect(menu.style.maxHeight ?? getComputedStyle(menu).maxHeight).toBeTruthy();
   });
 
   it('paints the keyboard ring at 2px offset 0 on keyboard focus', async () => {
@@ -542,7 +542,7 @@ describe('DropdownMenu.Content onCloseAutoFocus', () => {
     await waitFor(() => {
       expect(document.querySelector('[role="menuitem"]')).toBeTruthy();
     });
-    const item = document.querySelector('[role="menuitem"]') as HTMLElement;
+    const item = document.querySelector('[role="menuitem"]')!;
     item.focus();
     fireEvent.keyDown(item, { key: 'Escape' });
     await waitFor(() => {

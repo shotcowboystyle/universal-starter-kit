@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { Pre } from './index';
 
-describe('Pre', () => {
+describe(Pre, () => {
   const defaultProps = {
     children: 'Test content',
   };

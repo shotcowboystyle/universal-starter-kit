@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { bidiIsolate, withInterp } from './t';
 
-describe('withInterp', () => {
+describe(withInterp, () => {
   it('no-ops when the translation already interpolated', () => {
     expect(withInterp('7 entries', { count: 7 })).toBe('7 entries');
   });
