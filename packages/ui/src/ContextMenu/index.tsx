@@ -156,7 +156,8 @@ const ContextMenuContent = ({ children }: ContextMenuContentProps) => <>{childre
 const toHtmlElement = (el: TamaguiElement | null): HTMLElement | null =>
   isWeb && el instanceof HTMLElement ? el : null;
 
-const listScrollProps = (maxHeight: number) => (isWeb ? { maxHeight, style: { overflowY: 'auto' } } : { maxHeight });
+const listScrollProps = (maxHeight: number) =>
+  isWeb ? { maxHeight, style: { overflowY: 'auto' as const } } : { maxHeight };
 
 const ContextMenuList = ({ children, maxHeight }: { children?: ReactNode; maxHeight?: number }) => {
   const ctx = useContextMenuContext('Content');
@@ -670,6 +671,7 @@ const ContextMenuRoot = ({
   onOpenChange,
   maxHeight,
   closeOnSelect,
+  // oxlint-disable-next-line sonarjs/cognitive-complexity -- one controller: open state, focus handoff and positioning share the root's refs
 }: ContextMenuProps) => {
   const [open, setOpen] = useControllableState({
     prop: openProp,

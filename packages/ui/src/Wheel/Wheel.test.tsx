@@ -225,7 +225,9 @@ describe('Wheel iOS picker contract', () => {
         itemHeight={36}
       />,
     );
-    const selected = screen.getByTestId('wheel').querySelector('[data-testid="wheel-item"][data-selected="true"]')!;
+    const selected = screen
+      .getByTestId('wheel')
+      .querySelector<HTMLElement>('[data-testid="wheel-item"][data-selected="true"]')!;
     expect(selected).toBeTruthy();
     const translateY = Number(
       /translateY\((?<offset>[-\d.]+)px\)/u.exec(selected.style.transform)?.groups?.offset ?? Number.NaN,
@@ -260,7 +262,7 @@ describe('Wheel iOS picker contract', () => {
       />,
     );
     const wrapper = screen.getByTestId('wheel-wrapper');
-    const row = wrapper.querySelector('[data-testid="wheel-item"][data-index="1"]');
+    const row = wrapper.querySelector<HTMLElement>('[data-testid="wheel-item"][data-index="1"]');
     expect(row).toBeTruthy();
     const translateY = Number(/translateY\((?<offset>[-\d.]+)px\)/u.exec(row!.style.transform)?.groups?.offset ?? 0);
     const rowHeight = Number(row!.style.height.replace(/px$/u, '')) || 32;

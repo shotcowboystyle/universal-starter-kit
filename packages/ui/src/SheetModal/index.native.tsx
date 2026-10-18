@@ -257,9 +257,9 @@ export const SheetModal = ({
     [close, translateY],
   );
 
-  // oxlint-disable-next-line react/refs -- the PanResponder callbacks read refs only when a gesture event fires, never during render
   const panResponder = useMemo(
     () =>
+      // oxlint-disable-next-line react/refs -- the PanResponder callbacks read refs only when a gesture event fires, never during render
       PanResponder.create({
         onStartShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponder: (_evt, g) => Math.abs(g.dy) > 2,

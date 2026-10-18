@@ -24,7 +24,9 @@ const lineNumberGutterBySize = new Map<string, number>([
   ['$6', 56],
 ]);
 
-const gutterGapToken: Parameters<typeof getTokenValue>[0] = '$2';
+// SAFETY: '$2' is a registered space token; getTokenValue's Token union is only a type-level subset of them
+// oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the literal is not part of the generated Token union
+const gutterGapToken = '$2' as Parameters<typeof getTokenValue>[0];
 
 const NO_HIGHLIGHT_LINES: number[] = [];
 

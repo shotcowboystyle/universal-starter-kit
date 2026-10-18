@@ -171,7 +171,7 @@ describe(Accordion, () => {
 
   it('puts data-testid, data-density and data-size on the root', () => {
     const result = renderAccordion({ compact: true });
-    const root = result.container.querySelector('[data-testid="accordion"]')!;
+    const root = result.container.querySelector<HTMLElement>('[data-testid="accordion"]')!;
     expect(root).not.toBeNull();
     expect(root.dataset.density).toBe('compact');
     expect(root.dataset.size).toBeTruthy();
@@ -226,7 +226,7 @@ describe('Accordion density — pad and gap move, control height holds', () => {
         </Accordion>
       </Preset>,
     );
-    const comfortableRoot = comfortable.container.querySelector('[data-testid="accordion"]')!;
+    const comfortableRoot = comfortable.container.querySelector<HTMLElement>('[data-testid="accordion"]')!;
     const [comfortableTrigger] = getTriggers(comfortable.container);
     const comfortableMeasure = {
       density: comfortableRoot.dataset.density,
@@ -246,7 +246,7 @@ describe('Accordion density — pad and gap move, control height holds', () => {
         </Accordion>
       </Preset>,
     );
-    const compactRoot = compact.container.querySelector('[data-testid="accordion"]')!;
+    const compactRoot = compact.container.querySelector<HTMLElement>('[data-testid="accordion"]')!;
     const [compactTrigger] = getTriggers(compact.container);
     expect(comfortableMeasure.density).toBe('comfortable');
     expect(compactRoot.dataset.density).toBe('compact');

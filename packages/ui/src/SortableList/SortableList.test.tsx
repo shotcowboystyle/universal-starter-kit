@@ -55,7 +55,7 @@ describe(SortableList, () => {
     const rows = container.querySelectorAll('[data-sortable-row]');
     expect(rows).toHaveLength(4);
 
-    const tuesday = container.querySelector('[data-sortable-row="tue"]') as HTMLElement;
+    const tuesday = container.querySelector<HTMLElement>('[data-sortable-row="tue"]')!;
     tuesday.focus();
     fireEvent.keyDown(tuesday, { key: ' ' });
     expect(liveRegion()?.getAttribute('aria-live')).toBe('polite');
@@ -84,7 +84,7 @@ describe(SortableList, () => {
   it('cancels a lift with Escape and leaves the list unchanged', () => {
     const onChange = vi.fn<(next: typeof ITEMS) => void>();
     const { container } = renderWithProviders(<Harness onChange={onChange} />);
-    const tuesday = container.querySelector('[data-sortable-row="tue"]') as HTMLElement;
+    const tuesday = container.querySelector<HTMLElement>('[data-sortable-row="tue"]')!;
     tuesday.focus();
     fireEvent.keyDown(tuesday, { key: ' ' });
     fireEvent.keyDown(tuesday, { key: 'ArrowDown' });
@@ -96,7 +96,7 @@ describe(SortableList, () => {
 
   it('paints the grab handle as a focusable with a 2px offset-0 ring well', () => {
     const { container } = renderWithProviders(<Harness />);
-    const handle = container.querySelector('[data-sortable-handle="tue"]') as HTMLElement;
+    const handle = container.querySelector<HTMLElement>('[data-sortable-handle="tue"]')!;
     expect(handle.getAttribute('role')).toBe('button');
     expect(handle.getAttribute('aria-label')).toMatch(/Tuesday review/u);
     expect(handle.tabIndex).toBe(0);

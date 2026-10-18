@@ -7,7 +7,7 @@
  */
 
 import { createContext, useContext, useEffect, useState } from 'react';
-import type { ThemeInput, ThemedToken } from 'shiki';
+import type { BundledLanguage, BundledTheme, ThemedToken } from 'shiki';
 
 import { houseSyntaxTheme } from './house-syntax-theme';
 
@@ -41,21 +41,44 @@ export const ShikiContext = createContext<ShikiContextValue>({});
 // The slice of shiki's highlighter used here, typed over plain strings:
 // language/theme ids are runtime input, validated by shiki itself.
 interface Highlighter {
-  loadTheme(theme: ThemeInput | string): Promise<void>;
-  loadLanguage(language: string): Promise<void>;
-  getLoadedLanguages(): string[];
-  codeToTokens(code: string, options: { lang: string; theme: string }): { tokens: ThemedToken[][] };
+  loadTheme: (theme: string) => Promise<void>;
+  loadLanguage: (language: string) => Promise<void>;
+  getLoadedLanguages: () => string[];
+  codeToTokens: (code: string, options: { lang: string; theme: string }) => { tokens: ThemedToken[][] };
 }
 
 let highlighterPromise: Promise<Highlighter> | undefined;
 
 const createShikiHighlighter = async (): Promise<Highlighter> => {
   const [shiki, jsEngine] = await Promise.all([import('shiki'), import('shiki/engine/javascript')]);
-  return await shiki.createHighlighter({
+  const highlighter = await shiki.createHighlighter({
     themes: [],
     langs: [],
     engine: jsEngine.createJavaScriptRegexEngine(),
   });
+  const isBundledLanguage = (id: string): id is BundledLanguage => Object.hasOwn(shiki.bundledLanguages, id);
+  const isBundledTheme = (id: string): id is BundledTheme => Object.hasOwn(shiki.bundledThemes, id);
+  return {
+    loadTheme: async (theme) => {
+      if (theme === houseSyntaxTheme.name) {
+        await highlighter.loadTheme(houseSyntaxTheme);
+        return;
+      }
+      if (!isBundledTheme(theme)) {
+        throw new Error(`Unknown shiki theme: ${theme}`);
+      }
+      await highlighter.loadTheme(theme);
+    },
+    loadLanguage: async (language) => {
+      if (!isBundledLanguage(language)) {
+        throw new Error(`Unknown shiki language: ${language}`);
+      }
+      await highlighter.loadLanguage(language);
+    },
+    getLoadedLanguages: () => highlighter.getLoadedLanguages(),
+    codeToTokens: (code, { lang, theme }) =>
+      highlighter.codeToTokens(code, { lang: isBundledLanguage(lang) ? lang : 'text', theme }),
+  };
 };
 
 const getHighlighter = async (): Promise<Highlighter> => {
@@ -98,10 +121,7 @@ export const highlightCode = async (
 ): Promise<HighlightLine[]> => {
   try {
     const highlighter = await Promise.race([getHighlighter(), rejectAfter(5000)]);
-    await Promise.all([
-      highlighter.loadTheme(theme === houseSyntaxTheme.name ? houseSyntaxTheme : theme),
-      loadLanguageOrIgnore(highlighter, language),
-    ]);
+    await Promise.all([highlighter.loadTheme(theme), loadLanguageOrIgnore(highlighter, language)]);
     const lang = highlighter.getLoadedLanguages().includes(language) ? language : 'text';
     const result = highlighter.codeToTokens(code, {
       lang,

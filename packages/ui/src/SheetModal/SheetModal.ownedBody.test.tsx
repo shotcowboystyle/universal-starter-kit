@@ -62,12 +62,13 @@ vi.mock(import('@repo/ui'), async (importOriginal) => {
     ScrollView: observed(actual.ScrollView as never) as never,
     SheetModal: (props: SheetModalProps) => {
       hosts.props.set('public-sheet-modal', props);
-      return props.open ? (
+      // Always an element: the real SheetModal never returns null.
+      return (
         <>
-          {props.header}
-          {props.children}
+          {props.open ? props.header : null}
+          {props.open ? props.children : null}
         </>
-      ) : null;
+      );
     },
   };
 });

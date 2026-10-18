@@ -212,7 +212,7 @@ describe('Pagination design-law', () => {
         />
       </Preset>,
     );
-    const nav = container.querySelector('[role="navigation"]') as HTMLElement;
+    const nav = container.querySelector<HTMLElement>('[role="navigation"]')!;
     expect(nav.dataset.animation).toBe('none');
   });
 
@@ -223,7 +223,7 @@ describe('Pagination design-law', () => {
         activeIndex={2}
       />,
     );
-    const nav = container.querySelector('[role="navigation"]') as HTMLElement;
+    const nav = container.querySelector<HTMLElement>('[role="navigation"]')!;
     expect(nav.dataset.animation).not.toBe('none');
     expect(nav.dataset.animation).toBeTruthy();
   });
@@ -235,7 +235,7 @@ describe('Pagination design-law', () => {
         activeIndex={2}
       />,
     );
-    const nav = container.querySelector('[role="navigation"]') as HTMLElement;
+    const nav = container.querySelector<HTMLElement>('[role="navigation"]')!;
     expect(nav.dataset.pad).toBe('panel');
   });
 });

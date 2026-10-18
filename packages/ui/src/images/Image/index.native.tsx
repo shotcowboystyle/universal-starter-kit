@@ -44,6 +44,7 @@ const getDimensionFromStyle = (styleDimension: Dimension): number | undefined =>
   if (direct !== undefined) {
     return direct;
   }
+  // oxlint-disable-next-line typescript/no-unsafe-argument -- Animated nodes type `val` as any; primitiveDimension only accepts numbers and px strings
   return hasVal(styleDimension) ? primitiveDimension(styleDimension.val) : undefined;
 };
 
@@ -96,6 +97,7 @@ const scaledDimension = (
   return other !== undefined && hasRatio(aspectRatio) ? Math.round(scale(other, aspectRatio)) : undefined;
 };
 
+// oxlint-disable-next-line eslint/complexity -- the branches are prop defaults and the RN Image props passed straight through
 export const Image = ({
   alt = '',
   blurRadius,

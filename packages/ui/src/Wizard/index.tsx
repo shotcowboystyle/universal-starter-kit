@@ -39,10 +39,14 @@ const withFlag = async (setFlag: (on: boolean) => void, task: () => void | Promi
 };
 
 export interface WizardFormLike {
+  // oxlint-disable-next-line anti-slop/no-unknown-returns -- the wizard drives any form library; field values have no schema at this layer
   validateField?: (name: string, cause?: string) => unknown;
   getFieldMeta?: (name: string) => { errors?: unknown[] } | undefined;
+  // oxlint-disable-next-line anti-slop/no-unknown-returns -- the wizard drives any form library; field values have no schema at this layer
   getFieldValue?: (name: string) => unknown;
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- the wizard drives any form library; field values have no schema at this layer
   setFieldValue?: (name: string, value: unknown) => void;
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- the wizard drives any form library; field values have no schema at this layer
   state?: { values?: Record<string, unknown> };
 }
 
@@ -106,7 +110,9 @@ interface WizardContextValue {
   current: number;
   steps: WizardStep[];
   goTo: (index: number, opts?: { returnToReview?: boolean }) => void;
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- the wizard drives any form library; field values have no schema at this layer
   setFieldValue: (name: string, value: unknown) => void;
+  // oxlint-disable-next-line anti-slop/no-unknown-returns -- the wizard drives any form library; field values have no schema at this layer
   getFieldValue: (name: string) => unknown;
   repaintGeneration: Record<string, number>;
   editLabel: string;
@@ -123,10 +129,12 @@ export const useWizard = (): WizardContextValue => {
   return ctx;
 };
 
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- review rows render whatever value the form holds
 const formatReviewValue = (value: unknown): string => {
   if (value == null || value === '') {
     return '—';
   }
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- primitives print as-is; anything else is serialized
   if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
     return String(value);
   }
@@ -323,6 +331,7 @@ export const WizardReview = ({ groups }: { groups?: WizardReviewGroup[] }) => {
   );
 };
 
+// oxlint-disable-next-line eslint/complexity, react-doctor/no-giant-component -- one controller: step navigation, validation, review return and form sync share the same state and callbacks
 const WizardRoot = ({
   steps,
   children,
@@ -400,6 +409,7 @@ const WizardRoot = ({
   );
 
   const setFieldValue = useCallback(
+    // oxlint-disable-next-line anti-slop/no-unknown-parameters -- the wizard drives any form library; field values have no schema at this layer
     (name: string, value: unknown) => {
       form?.setFieldValue?.(name, value);
       setRepaintGeneration((prev) => ({ ...prev, [name]: (prev[name] ?? 0) + 1 }));
@@ -414,6 +424,7 @@ const WizardRoot = ({
         // oxlint-disable-next-line eslint/no-await-in-loop, react-doctor/async-await-in-loop -- validators run sequentially so error order and form-side effects stay deterministic
         const validated = await Promise.resolve(form?.validateField?.(name, 'submit'));
         const fromMeta = form?.getFieldMeta?.(name)?.errors?.[0];
+        // oxlint-disable-next-line anti-slop/no-runtime-typeof -- validateField may resolve to an error string or anything else; only a string is a message
         const raw = fromMeta ?? (typeof validated === 'string' ? validated : undefined);
         if (raw == null || raw === false || raw === '') {
           continue;
@@ -421,7 +432,7 @@ const WizardRoot = ({
         items.push({
           name,
           id: name,
-          // oxlint-disable-next-line typescript/no-base-to-string -- raw is a validator error of unknown shape; String() is the established fallback
+          // oxlint-disable-next-line typescript/no-base-to-string, anti-slop/no-runtime-typeof -- raw is a validator error of unknown shape; strings pass through, String() is the established fallback
           error: typeof raw === 'string' ? raw : String(raw),
           label: currentStep?.fieldLabels?.[name],
         });
@@ -712,6 +723,7 @@ const WizardRoot = ({
   );
 };
 
+// oxlint-disable-next-line react-doctor/only-export-components -- compound component: Wizard.Panel/Clearable/Review hang off the root
 export const Wizard = Object.assign(WizardRoot, {
   Panel: WizardPanel,
   Clearable: WizardClearable,

@@ -946,8 +946,10 @@ const FloatingTreeSelect = ({
               {...panel.knobProps.elevatedSurface}
               borderRadius={panel.dropdownRadius}
               overflow="hidden"
+              // oxlint-disable-next-line react/refs -- overlayTop is the layout-effect position read back on the next render (see above)
               style={{
                 position: 'fixed',
+                // oxlint-disable-next-line react/refs -- same overlayTop read as the style prop above
                 top: overlayTop,
                 left: 0,
                 zIndex: zIndex.dropdown,

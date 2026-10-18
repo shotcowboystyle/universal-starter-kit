@@ -208,6 +208,7 @@ const pressChromeProps = (opts: {
   } as const;
 };
 
+// oxlint-disable-next-line eslint/complexity -- one frame resolves size, radius, group position, press target and the placeholder/fallback states from the same props; the branches are mostly prop defaults
 export const ImageFrame = ({
   children,
   alt,
@@ -232,6 +233,7 @@ export const ImageFrame = ({
   placeholderSrc,
   fallback,
   ...props
+  // oxlint-disable-next-line sonarjs/cognitive-complexity -- see the complexity note above the component
 }: ImageFrameProps) => {
   const { knobProps, control, disabledState } = useResolvedKnobs({
     component: 'Image',

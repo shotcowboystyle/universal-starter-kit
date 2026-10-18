@@ -13,9 +13,8 @@ export const isThumbnailSize = <T>(size: T): size is T & ImageThumbnailSize =>
   size === 'extraSmall' || size === 'small' || size === 'medium' || size === 'large';
 
 /** True when `size` is a thumbnail keyword or a px number (the framed-thumbnail mode). */
-export const hasThumbnailSize = (
-  size: ImageThumbnailSize | number | null | undefined,
-): size is ImageThumbnailSize | number => size != null && (isThumbnailSize(size) || isNumber(size));
+export const hasThumbnailSize = (size?: ImageThumbnailSize | number | null): size is ImageThumbnailSize | number =>
+  size != null && (isThumbnailSize(size) || isNumber(size));
 
 export const thumbnailPx = (size: ImageThumbnailSize | number, nestedPx: number, compact: boolean): number => {
   if (isNumber(size)) {

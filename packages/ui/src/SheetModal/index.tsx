@@ -40,7 +40,7 @@ export interface SheetModalProps {
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-const noCleanup = () => {};
+const noCleanup = (): void => undefined;
 
 const IN_DIALOG_REGION = { inDialogRegion: true } as const;
 
@@ -97,11 +97,8 @@ const useSheetFrameFocus = (open: boolean, frameRef: RefObject<TamaguiElement | 
       }
       const ae = document.activeElement;
       const { current } = frameRef;
-      const dropped =
-        !ae ||
-        ae === document.body ||
-        ae === document.documentElement ||
-        (current instanceof HTMLElement && current.contains(ae));
+      const focusLost = !ae || ae === document.body || ae === document.documentElement;
+      const dropped = focusLost || (current instanceof HTMLElement && current.contains(ae));
       if (dropped) {
         prevFocus.focus(focusOptions(wasKeyboardFocus()));
       }

@@ -400,7 +400,7 @@ describe('DropdownMenu keyboard ring', () => {
         <Button>Actions</Button>
       </DropdownMenu>,
     );
-    const trigger = document.querySelector('[aria-haspopup="menu"]')!;
+    const trigger = document.querySelector<HTMLElement>('[aria-haspopup="menu"]')!;
     trigger.focus();
     fireEvent.keyDown(trigger, { key: 'ArrowUp' });
     await waitFor(() => {
@@ -426,7 +426,7 @@ describe('DropdownMenu FloatingPanel cover contract', () => {
     await waitFor(() => {
       expect(document.querySelector('[role="menu"]')).toBeTruthy();
     });
-    const menu = document.querySelector('[role="menu"]')!;
+    const menu = document.querySelector<HTMLElement>('[role="menu"]')!;
     expect(menu.dataset.mpWidthMode).toBe('at-least-trigger');
     expect(menu.dataset.dismissClass).toBe('commit');
   });
@@ -498,7 +498,7 @@ describe('DropdownMenu FloatingPanel cover contract', () => {
     await waitFor(() => {
       expect(document.querySelector('[role="menu"]')).toBeTruthy();
     });
-    const menu = document.querySelector('[role="menu"]')!;
+    const menu = document.querySelector<HTMLElement>('[role="menu"]')!;
     expect(menu.style.maxHeight ?? getComputedStyle(menu).maxHeight).toBeTruthy();
   });
 
@@ -542,7 +542,7 @@ describe('DropdownMenu.Content onCloseAutoFocus', () => {
     await waitFor(() => {
       expect(document.querySelector('[role="menuitem"]')).toBeTruthy();
     });
-    const item = document.querySelector('[role="menuitem"]')!;
+    const item = document.querySelector<HTMLElement>('[role="menuitem"]')!;
     item.focus();
     fireEvent.keyDown(item, { key: 'Escape' });
     await waitFor(() => {

@@ -38,7 +38,6 @@ export const baseIgnorePatterns = [
   'packages/test-utils/**',
   'packages/theme/**',
   'packages/tokens/**',
-  'packages/ui/**',
   'packages/utils/**',
   'packages/vite-plugin-vscode/**',
   'packages/vite-plugin-webext/**',
