@@ -1,7 +1,7 @@
-import { Avatar } from '@repo/ui';
 import { Button } from '@repo/forms';
 import { formatAbsoluteDate, formatCurrency } from '@repo/theme';
 import type { GuardrailSpecimenParameter } from '@repo/theme';
+import { Avatar } from '@repo/ui';
 import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { createColumnHelper } from '@tanstack/react-table';
 import React, { useMemo } from 'react';
@@ -40,6 +40,13 @@ const meta: Meta<typeof DataTable> = {
 
 export default meta;
 type Story = StoryObj<typeof DataTable>;
+
+const LAST_LOGIN_LABEL = 'Last Login';
+const FIRST_NAME_LABEL = 'First Name';
+const SAMPLE_PHONE = '+1234567890';
+
+const statusBackground = { active: '$green5', inactive: '$red5', pending: '$yellow5' } as const;
+const statusColor = { active: '$green11', inactive: '$red11', pending: '$yellow11' } as const;
 
 // Mock Data Types
 interface User extends DataTableData {
@@ -171,12 +178,12 @@ const columns: DataTableColumn<User>[] = [
       const status = info.getValue();
       return (
         <View
-          backgroundColor={status === 'active' ? '$green5' : status === 'inactive' ? '$red5' : '$yellow5'}
+          backgroundColor={statusBackground[status]}
           paddingHorizontal="$2"
           paddingVertical="$1"
           borderRadius="$2">
           <Text
-            color={status === 'active' ? '$green11' : status === 'inactive' ? '$red11' : '$yellow11'}
+            color={statusColor[status]}
             fontSize="$2"
             fontWeight="600"
             textTransform="capitalize">
@@ -196,7 +203,7 @@ const columns: DataTableColumn<User>[] = [
 
   // Last Login Column
   columnHelper.accessor('lastLogin', {
-    header: 'Last Login',
+    header: LAST_LOGIN_LABEL,
     cell: (info) => <Text>{formatAbsoluteDate(info.getValue())}</Text>,
     filterFn: 'includesString',
   }) as DataTableColumn<User>,
@@ -269,10 +276,13 @@ const availableColumns = [
   },
   {
     id: 'lastLogin',
-    label: 'Last Login',
+    label: LAST_LOGIN_LABEL,
     type: 'date' as const,
   },
 ];
+
+const countMatching = (data: User[], key: keyof User, optionValue: string) =>
+  data.filter((item) => String(item[key]).toLowerCase() === optionValue.toLowerCase()).length;
 
 // Story Components
 const AdvancedTableStory = () => {
@@ -282,13 +292,10 @@ const AdvancedTableStory = () => {
     () =>
       availableColumns.map((column) => {
         if (column.options) {
-          const counts = column.options.map((option) => {
-            const count = data.filter((item) => {
-              const value = item[column.id as keyof User];
-              return String(value).toLowerCase() === option.value.toLowerCase();
-            }).length;
-            return { ...option, count };
-          });
+          const counts = column.options.map((option) => ({
+            ...option,
+            count: countMatching(data, column.id as keyof User, option.value),
+          }));
           return { ...column, options: counts };
         }
         return column;
@@ -434,7 +441,7 @@ const basicColumns: DataTableColumn<Person>[] = [
     cell: (info) => info.getValue(),
   }) as DataTableColumn<Person>,
   personColumnHelper.accessor('firstName', {
-    header: 'First Name',
+    header: FIRST_NAME_LABEL,
     cell: (info) => info.getValue(),
   }) as DataTableColumn<Person>,
   personColumnHelper.accessor('lastName', {
@@ -478,7 +485,7 @@ export const Simple: Story = {
 export const Basic: Story = {
   args: {
     data: sampleData,
-    columns: basicColumns as DataTableColumn<Record<string, any>>[],
+    columns: basicColumns as DataTableColumn[],
     // Rest on a middle page so every pagination control renders live —
     // a bare-disabled prev/next at rest trips the `[theme]` guardrail
     // (UX-P19 / DG-ST-03) and demos nothing.
@@ -491,7 +498,7 @@ export const Basic: Story = {
 export const Loading: Story = {
   args: {
     data: sampleData,
-    columns: basicColumns as DataTableColumn<Record<string, any>>[],
+    columns: basicColumns as DataTableColumn[],
     initialState: {
       isLoading: true,
     },
@@ -502,7 +509,7 @@ export const Loading: Story = {
 export const WithPagination: Story = {
   args: {
     data: sampleData,
-    columns: basicColumns as DataTableColumn<Record<string, any>>[],
+    columns: basicColumns as DataTableColumn[],
     enablePagination: true,
     // Middle page: prev AND next stay live at rest (no bare-disabled nav).
     initialState: {
@@ -514,7 +521,7 @@ export const WithPagination: Story = {
 export const WithSorting: Story = {
   args: {
     data: sampleData,
-    columns: basicColumns as DataTableColumn<Record<string, any>>[],
+    columns: basicColumns as DataTableColumn[],
     enableSorting: true,
   },
 };
@@ -522,7 +529,7 @@ export const WithSorting: Story = {
 export const WithFiltering: Story = {
   args: {
     data: sampleData,
-    columns: basicColumns as DataTableColumn<Record<string, any>>[],
+    columns: basicColumns as DataTableColumn[],
     enableFiltering: true,
   },
 };
@@ -538,7 +545,7 @@ export const WithFiltering: Story = {
 export const ExternallyFiltered: Story = {
   args: {
     data: sampleData,
-    columns: basicColumns as DataTableColumn<Record<string, any>>[],
+    columns: basicColumns as DataTableColumn[],
     enableFiltering: false,
     enableSorting: true,
     initialState: {
@@ -556,7 +563,7 @@ export const ExternallyFiltered: Story = {
 export const FullFeatured: Story = {
   args: {
     data: sampleData,
-    columns: basicColumns as DataTableColumn<Record<string, any>>[],
+    columns: basicColumns as DataTableColumn[],
     enableFiltering: true,
     enableSorting: true,
     enablePagination: true,
@@ -570,7 +577,7 @@ export const FullFeatured: Story = {
 export const Compact: Story = {
   args: {
     data: sampleData,
-    columns: basicColumns as DataTableColumn<Record<string, any>>[],
+    columns: basicColumns as DataTableColumn[],
     size: 'sm',
   },
 };
@@ -578,7 +585,7 @@ export const Compact: Story = {
 export const Large: Story = {
   args: {
     data: sampleData,
-    columns: basicColumns as DataTableColumn<Record<string, any>>[],
+    columns: basicColumns as DataTableColumn[],
     size: 'lg',
   },
 };
@@ -590,7 +597,7 @@ export const WithColumnResizing: Story = {
       ...col,
       minSize: 80,
       maxSize: 300,
-    })) as DataTableColumn<Record<string, any>>[],
+    })) as DataTableColumn[],
     enableColumnResizing: true,
   },
 };
@@ -606,7 +613,7 @@ const largeData = Array.from({ length: 10_000 }, (_, i) => ({
 export const WithVirtualization: Story = {
   args: {
     data: largeData,
-    columns: basicColumns as DataTableColumn<Record<string, any>>[],
+    columns: basicColumns as DataTableColumn[],
     enableVirtualization: true,
     virtualizationHeight: 400,
     virtualizationOverscan: 5,
@@ -620,14 +627,14 @@ export const WithColumnPinning: Story = {
       ...col,
       minSize: 80,
       maxSize: 300,
-    })) as DataTableColumn<Record<string, any>>[],
+    })) as DataTableColumn[],
     enableColumnPinning: true,
     maxPinnedColumns: 2,
     enableColumnResizing: true,
   },
 };
 
-function RtlDocument({ children }: { children: React.ReactNode }) {
+const RtlDocument = ({ children }: { children: React.ReactElement }) => {
   React.useEffect(() => {
     const previous = document.documentElement.getAttribute('dir');
     document.documentElement.setAttribute('dir', 'rtl');
@@ -639,8 +646,8 @@ function RtlDocument({ children }: { children: React.ReactNode }) {
       }
     };
   }, []);
-  return <>{children}</>;
-}
+  return children;
+};
 
 export const WithColumnPinningRTL: Story = {
   name: 'With Column Pinning RTL',
@@ -663,7 +670,7 @@ export const WithColumnPinningRTL: Story = {
 export const WithKeyboardNavigation: Story = {
   args: {
     data: sampleData,
-    columns: basicColumns as DataTableColumn<Record<string, any>>[],
+    columns: basicColumns as DataTableColumn[],
     enableKeyboardNavigation: true,
   },
 };
@@ -679,7 +686,7 @@ const expandableData: ExpandablePerson[] = sampleData.map((p, i) => ({
 export const WithRowExpansion: Story = {
   args: {
     data: expandableData,
-    columns: basicColumns as DataTableColumn<Record<string, any>>[],
+    columns: basicColumns as DataTableColumn[],
     enableRowExpansion: true,
     renderSubComponent: (row) => (
       <View
@@ -696,7 +703,7 @@ export const WithRowExpansion: Story = {
 export const Empty: Story = {
   args: {
     data: [],
-    columns: basicColumns as DataTableColumn<Record<string, any>>[],
+    columns: basicColumns as DataTableColumn[],
   },
 };
 
@@ -708,7 +715,7 @@ export const Empty: Story = {
 export const NoResults: Story = {
   args: {
     data: sampleData,
-    columns: basicColumns as DataTableColumn<Record<string, any>>[],
+    columns: basicColumns as DataTableColumn[],
     enableFiltering: true,
     initialState: {
       filters: [
@@ -732,7 +739,7 @@ export const NoResults: Story = {
 export const ErrorWithRetry: Story = {
   args: {
     data: sampleData,
-    columns: basicColumns as DataTableColumn<Record<string, any>>[],
+    columns: basicColumns as DataTableColumn[],
     initialState: {
       error: 'The rows could not be loaded.',
     },
@@ -744,7 +751,7 @@ export const ErrorWithRetry: Story = {
 export const ReadOnly: Story = {
   args: {
     data: sampleData,
-    columns: basicColumns as DataTableColumn<Record<string, any>>[],
+    columns: basicColumns as DataTableColumn[],
     readOnly: true,
     showRowNumbers: true,
   },
@@ -753,7 +760,7 @@ export const ReadOnly: Story = {
 export const WithRowNumbers: Story = {
   args: {
     data: sampleData,
-    columns: basicColumns as DataTableColumn<Record<string, any>>[],
+    columns: basicColumns as DataTableColumn[],
     showRowNumbers: true,
   },
 };
@@ -762,7 +769,7 @@ const selectionBulkActions = [
   {
     id: 'export',
     label: 'Export',
-    onExecute: (items: Record<string, any>[], clear: () => void) => {
+    onExecute: (items: DataTableData[], clear: () => void) => {
       fn()(items);
       clear();
     },
@@ -770,7 +777,7 @@ const selectionBulkActions = [
   {
     id: 'archive',
     label: 'Archive',
-    onExecute: (items: Record<string, any>[], clear: () => void) => {
+    onExecute: (items: DataTableData[], clear: () => void) => {
       fn()(items);
       clear();
     },
@@ -778,7 +785,7 @@ const selectionBulkActions = [
   {
     id: 'tag',
     label: 'Tag',
-    onExecute: (items: Record<string, any>[], clear: () => void) => {
+    onExecute: (items: DataTableData[], clear: () => void) => {
       fn()(items);
       clear();
     },
@@ -786,7 +793,7 @@ const selectionBulkActions = [
   {
     id: 'assign',
     label: 'Assign',
-    onExecute: (items: Record<string, any>[], clear: () => void) => {
+    onExecute: (items: DataTableData[], clear: () => void) => {
       fn()(items);
       clear();
     },
@@ -794,7 +801,7 @@ const selectionBulkActions = [
   {
     id: 'notify',
     label: 'Notify',
-    onExecute: (items: Record<string, any>[], clear: () => void) => {
+    onExecute: (items: DataTableData[], clear: () => void) => {
       fn()(items);
       clear();
     },
@@ -804,7 +811,7 @@ const selectionBulkActions = [
     label: 'Delete',
     variant: 'destructive' as const,
     requiresConfirmation: true,
-    onExecute: (items: Record<string, any>[], clear: () => void) => {
+    onExecute: (items: DataTableData[], clear: () => void) => {
       fn()(items);
       clear();
     },
@@ -815,7 +822,7 @@ const selectionBulkActions = [
 export const WithRowSelection: Story = {
   args: {
     data: sampleData,
-    columns: basicColumns as DataTableColumn<Record<string, any>>[],
+    columns: basicColumns as DataTableColumn[],
     enableRowSelection: true,
     selectAllScope: 'page',
     bulkActions: selectionBulkActions,
@@ -894,12 +901,13 @@ const EditableTableStory = () => {
       padding="$4">
       <DataTable
         data={data}
-        columns={editableColumns as DataTableColumn<Record<string, any>>[]}
-        onDataChange={setData as (data: Record<string, any>[]) => void}
+        columns={editableColumns as DataTableColumn[]}
+        onDataChange={setData as (data: DataTableData[]) => void}
         showAddRow={true}
         showDeleteRow={true}
         showRowNumbers={true}
         defaultRow={{
+          // oxlint-disable-next-line react/purity -- story fixture: each render stamps a fresh id for the next added row
           id: Date.now(),
           name: '',
           quantity: 0,
@@ -933,8 +941,8 @@ export const Disabled: Story = {
     } satisfies GuardrailSpecimenParameter,
   },
   args: {
-    data: editableData as unknown as Record<string, any>[],
-    columns: editableColumns as DataTableColumn<Record<string, any>>[],
+    data: editableData as unknown as DataTableData[],
+    columns: editableColumns as DataTableColumn[],
     disabled: true,
     enableRowSelection: true,
     enableSorting: true,
@@ -990,7 +998,7 @@ const allFieldsData: AllFieldsRow[] = [
     durationField: 3600,
     colorField: '#FF5733',
     ratingField: 4,
-    phoneField: '+1234567890',
+    phoneField: SAMPLE_PHONE,
     currencyField: 1250.5,
     percentField: 75.5,
     linkField: 'DOC-001',
@@ -1128,7 +1136,7 @@ const allFieldsColumns: DataTableColumn<AllFieldsRow>[] = [
     accessorKey: 'phoneField',
     header: 'Phone',
     field: 'phoneinput',
-    fieldProps: { placeholder: '+1234567890' },
+    fieldProps: { placeholder: SAMPLE_PHONE },
   },
   {
     accessorKey: 'currencyField',
@@ -1173,12 +1181,13 @@ const AllFieldTypesEditableStory = () => {
       </YStack>
       <DataTable
         data={data}
-        columns={allFieldsColumns as DataTableColumn<Record<string, any>>[]}
-        onDataChange={setData as (data: Record<string, any>[]) => void}
+        columns={allFieldsColumns as DataTableColumn[]}
+        onDataChange={setData as (data: DataTableData[]) => void}
         showRowNumbers={true}
         showAddRow={true}
         showDeleteRow={true}
         defaultRow={{
+          // oxlint-disable-next-line react/purity -- story fixture: each render stamps a fresh id for the next added row
           id: Date.now(),
           textField: '',
           numberField: 0,
@@ -1227,7 +1236,7 @@ const AllFieldTypesReadOnlyStory = () => (
     </YStack>
     <DataTable
       data={allFieldsData}
-      columns={allFieldsColumns as DataTableColumn<Record<string, any>>[]}
+      columns={allFieldsColumns as DataTableColumn[]}
       readOnly={true}
       showRowNumbers={true}
       aria-label="All field types read-only table"
@@ -1277,8 +1286,8 @@ const TextFieldStory = () => {
       </Text>
       <DataTable
         data={data}
-        columns={textFieldColumns as DataTableColumn<Record<string, any>>[]}
-        onDataChange={setData as (data: Record<string, any>[]) => void}
+        columns={textFieldColumns as DataTableColumn[]}
+        onDataChange={setData as (data: DataTableData[]) => void}
         showRowNumbers={true}
         aria-label="Text field type table"
       />
@@ -1293,7 +1302,7 @@ export const TextField: Story = {
 export const TextFieldReadOnly: Story = {
   args: {
     data: textFieldData,
-    columns: textFieldColumns as DataTableColumn<Record<string, any>>[],
+    columns: textFieldColumns as DataTableColumn[],
     readOnly: true,
     showRowNumbers: true,
   },
@@ -1338,8 +1347,8 @@ const NumberFieldStory = () => {
       </Text>
       <DataTable
         data={data}
-        columns={numberFieldColumns as DataTableColumn<Record<string, any>>[]}
-        onDataChange={setData as (data: Record<string, any>[]) => void}
+        columns={numberFieldColumns as DataTableColumn[]}
+        onDataChange={setData as (data: DataTableData[]) => void}
         showRowNumbers={true}
         aria-label="Number field type table"
       />
@@ -1354,7 +1363,7 @@ export const NumberField: Story = {
 export const NumberFieldReadOnly: Story = {
   args: {
     data: numberFieldData,
-    columns: numberFieldColumns as DataTableColumn<Record<string, any>>[],
+    columns: numberFieldColumns as DataTableColumn[],
     readOnly: true,
     showRowNumbers: true,
   },
@@ -1437,8 +1446,8 @@ const SelectFieldStory = () => {
       </Text>
       <DataTable
         data={data}
-        columns={selectFieldColumns as DataTableColumn<Record<string, any>>[]}
-        onDataChange={setData as (data: Record<string, any>[]) => void}
+        columns={selectFieldColumns as DataTableColumn[]}
+        onDataChange={setData as (data: DataTableData[]) => void}
         showRowNumbers={true}
         aria-label="Select field type table"
       />
@@ -1453,7 +1462,7 @@ export const SelectField: Story = {
 export const SelectFieldReadOnly: Story = {
   args: {
     data: selectFieldData,
-    columns: selectFieldColumns as DataTableColumn<Record<string, any>>[],
+    columns: selectFieldColumns as DataTableColumn[],
     readOnly: true,
     showRowNumbers: true,
   },
@@ -1493,8 +1502,8 @@ const CheckboxFieldStory = () => {
       </Text>
       <DataTable
         data={data}
-        columns={checkboxFieldColumns as DataTableColumn<Record<string, any>>[]}
-        onDataChange={setData as (data: Record<string, any>[]) => void}
+        columns={checkboxFieldColumns as DataTableColumn[]}
+        onDataChange={setData as (data: DataTableData[]) => void}
         showRowNumbers={true}
         aria-label="Checkbox field type table"
       />
@@ -1509,7 +1518,7 @@ export const CheckboxField: Story = {
 export const CheckboxFieldReadOnly: Story = {
   args: {
     data: checkboxFieldData,
-    columns: checkboxFieldColumns as DataTableColumn<Record<string, any>>[],
+    columns: checkboxFieldColumns as DataTableColumn[],
     readOnly: true,
     showRowNumbers: true,
   },
@@ -1549,8 +1558,8 @@ const SwitchFieldStory = () => {
       </Text>
       <DataTable
         data={data}
-        columns={switchFieldColumns as DataTableColumn<Record<string, any>>[]}
-        onDataChange={setData as (data: Record<string, any>[]) => void}
+        columns={switchFieldColumns as DataTableColumn[]}
+        onDataChange={setData as (data: DataTableData[]) => void}
         showRowNumbers={true}
         aria-label="Switch field type table"
       />
@@ -1565,7 +1574,7 @@ export const SwitchField: Story = {
 export const SwitchFieldReadOnly: Story = {
   args: {
     data: switchFieldData,
-    columns: switchFieldColumns as DataTableColumn<Record<string, any>>[],
+    columns: switchFieldColumns as DataTableColumn[],
     readOnly: true,
     showRowNumbers: true,
   },
@@ -1605,8 +1614,8 @@ const DateTimeFieldStory = () => {
       </Text>
       <DataTable
         data={data}
-        columns={dateTimeFieldColumns as DataTableColumn<Record<string, any>>[]}
-        onDataChange={setData as (data: Record<string, any>[]) => void}
+        columns={dateTimeFieldColumns as DataTableColumn[]}
+        onDataChange={setData as (data: DataTableData[]) => void}
         showRowNumbers={true}
         aria-label="Date time field types table"
       />
@@ -1621,7 +1630,7 @@ export const DateTimeField: Story = {
 export const DateTimeFieldReadOnly: Story = {
   args: {
     data: dateTimeFieldData,
-    columns: dateTimeFieldColumns as DataTableColumn<Record<string, any>>[],
+    columns: dateTimeFieldColumns as DataTableColumn[],
     readOnly: true,
     showRowNumbers: true,
   },
@@ -1661,8 +1670,8 @@ const DurationFieldStory = () => {
       </Text>
       <DataTable
         data={data}
-        columns={durationFieldColumns as DataTableColumn<Record<string, any>>[]}
-        onDataChange={setData as (data: Record<string, any>[]) => void}
+        columns={durationFieldColumns as DataTableColumn[]}
+        onDataChange={setData as (data: DataTableData[]) => void}
         showRowNumbers={true}
         aria-label="Duration field type table"
       />
@@ -1677,7 +1686,7 @@ export const DurationField: Story = {
 export const DurationFieldReadOnly: Story = {
   args: {
     data: durationFieldData,
-    columns: durationFieldColumns as DataTableColumn<Record<string, any>>[],
+    columns: durationFieldColumns as DataTableColumn[],
     readOnly: true,
     showRowNumbers: true,
   },
@@ -1717,8 +1726,8 @@ const ColorFieldStory = () => {
       </Text>
       <DataTable
         data={data}
-        columns={colorFieldColumns as DataTableColumn<Record<string, any>>[]}
-        onDataChange={setData as (data: Record<string, any>[]) => void}
+        columns={colorFieldColumns as DataTableColumn[]}
+        onDataChange={setData as (data: DataTableData[]) => void}
         showRowNumbers={true}
         aria-label="Color field type table"
       />
@@ -1733,7 +1742,7 @@ export const ColorField: Story = {
 export const ColorFieldReadOnly: Story = {
   args: {
     data: colorFieldData,
-    columns: colorFieldColumns as DataTableColumn<Record<string, any>>[],
+    columns: colorFieldColumns as DataTableColumn[],
     readOnly: true,
     showRowNumbers: true,
   },
@@ -1773,8 +1782,8 @@ const RatingFieldStory = () => {
       </Text>
       <DataTable
         data={data}
-        columns={ratingFieldColumns as DataTableColumn<Record<string, any>>[]}
-        onDataChange={setData as (data: Record<string, any>[]) => void}
+        columns={ratingFieldColumns as DataTableColumn[]}
+        onDataChange={setData as (data: DataTableData[]) => void}
         showRowNumbers={true}
         aria-label="Rating field type table"
       />
@@ -1789,7 +1798,7 @@ export const RatingField: Story = {
 export const RatingFieldReadOnly: Story = {
   args: {
     data: ratingFieldData,
-    columns: ratingFieldColumns as DataTableColumn<Record<string, any>>[],
+    columns: ratingFieldColumns as DataTableColumn[],
     readOnly: true,
     showRowNumbers: true,
   },
@@ -1804,7 +1813,7 @@ interface PhoneFieldRow {
 }
 
 const phoneFieldData: PhoneFieldRow[] = [
-  { id: 1, mobile: '+1234567890', work: '+0987654321', home: '+1111111111' },
+  { id: 1, mobile: SAMPLE_PHONE, work: '+0987654321', home: '+1111111111' },
   { id: 2, mobile: '+4455667788', work: '+9988776655', home: '+2233445566' },
   { id: 3, mobile: '+1122334455', work: '+6677889900', home: '+3344556677' },
 ];
@@ -1829,8 +1838,8 @@ const PhoneFieldStory = () => {
       </Text>
       <DataTable
         data={data}
-        columns={phoneFieldColumns as DataTableColumn<Record<string, any>>[]}
-        onDataChange={setData as (data: Record<string, any>[]) => void}
+        columns={phoneFieldColumns as DataTableColumn[]}
+        onDataChange={setData as (data: DataTableData[]) => void}
         showRowNumbers={true}
         aria-label="Phone field type table"
       />
@@ -1845,7 +1854,7 @@ export const PhoneField: Story = {
 export const PhoneFieldReadOnly: Story = {
   args: {
     data: phoneFieldData,
-    columns: phoneFieldColumns as DataTableColumn<Record<string, any>>[],
+    columns: phoneFieldColumns as DataTableColumn[],
     readOnly: true,
     showRowNumbers: true,
   },
@@ -1900,8 +1909,8 @@ const CurrencyFieldStory = () => {
       </Text>
       <DataTable
         data={data}
-        columns={currencyFieldColumns as DataTableColumn<Record<string, any>>[]}
-        onDataChange={setData as (data: Record<string, any>[]) => void}
+        columns={currencyFieldColumns as DataTableColumn[]}
+        onDataChange={setData as (data: DataTableData[]) => void}
         showRowNumbers={true}
         aria-label="Currency field type table"
       />
@@ -1916,7 +1925,7 @@ export const CurrencyField: Story = {
 export const CurrencyFieldReadOnly: Story = {
   args: {
     data: currencyFieldData,
-    columns: currencyFieldColumns as DataTableColumn<Record<string, any>>[],
+    columns: currencyFieldColumns as DataTableColumn[],
     readOnly: true,
     showRowNumbers: true,
   },
@@ -1956,8 +1965,8 @@ const PercentFieldStory = () => {
       </Text>
       <DataTable
         data={data}
-        columns={percentFieldColumns as DataTableColumn<Record<string, any>>[]}
-        onDataChange={setData as (data: Record<string, any>[]) => void}
+        columns={percentFieldColumns as DataTableColumn[]}
+        onDataChange={setData as (data: DataTableData[]) => void}
         showRowNumbers={true}
         aria-label="Percent field type table"
       />
@@ -1972,7 +1981,7 @@ export const PercentField: Story = {
 export const PercentFieldReadOnly: Story = {
   args: {
     data: percentFieldData,
-    columns: percentFieldColumns as DataTableColumn<Record<string, any>>[],
+    columns: percentFieldColumns as DataTableColumn[],
     readOnly: true,
     showRowNumbers: true,
   },
@@ -2051,8 +2060,8 @@ const ComboboxFieldStory = () => {
       </Text>
       <DataTable
         data={data}
-        columns={comboboxFieldColumns as DataTableColumn<Record<string, any>>[]}
-        onDataChange={setData as (data: Record<string, any>[]) => void}
+        columns={comboboxFieldColumns as DataTableColumn[]}
+        onDataChange={setData as (data: DataTableData[]) => void}
         showRowNumbers={true}
         aria-label="Combobox field type table"
       />
@@ -2067,7 +2076,7 @@ export const ComboboxField: Story = {
 export const ComboboxFieldReadOnly: Story = {
   args: {
     data: comboboxFieldData,
-    columns: comboboxFieldColumns as DataTableColumn<Record<string, any>>[],
+    columns: comboboxFieldColumns as DataTableColumn[],
     readOnly: true,
     showRowNumbers: true,
   },
@@ -2140,8 +2149,8 @@ const LinkFieldStory = () => {
       </Text>
       <DataTable
         data={data}
-        columns={linkFieldColumns as DataTableColumn<Record<string, any>>[]}
-        onDataChange={setData as (data: Record<string, any>[]) => void}
+        columns={linkFieldColumns as DataTableColumn[]}
+        onDataChange={setData as (data: DataTableData[]) => void}
         showRowNumbers={true}
         aria-label="Link field type table"
       />
@@ -2156,7 +2165,7 @@ export const LinkField: Story = {
 export const LinkFieldReadOnly: Story = {
   args: {
     data: linkFieldData,
-    columns: linkFieldColumns as DataTableColumn<Record<string, any>>[],
+    columns: linkFieldColumns as DataTableColumn[],
     readOnly: true,
     showRowNumbers: true,
   },
@@ -2247,8 +2256,8 @@ const CustomFieldStory = () => {
       </Text>
       <DataTable
         data={data}
-        columns={customFieldColumns as DataTableColumn<Record<string, any>>[]}
-        onDataChange={setData as (data: Record<string, any>[]) => void}
+        columns={customFieldColumns as DataTableColumn[]}
+        onDataChange={setData as (data: DataTableData[]) => void}
         showRowNumbers={true}
         aria-label="Custom field type table"
       />
@@ -2303,7 +2312,7 @@ const searchableColumns: DataTableColumn<SearchableRow>[] = [
 ];
 
 const GlobalSearchStory = () => {
-  const [data] = React.useState(searchableData);
+  const data = searchableData;
 
   return (
     <YStack
@@ -2324,7 +2333,7 @@ const GlobalSearchStory = () => {
       </YStack>
       <DataTable
         data={data}
-        columns={searchableColumns as DataTableColumn<Record<string, any>>[]}
+        columns={searchableColumns as DataTableColumn[]}
         enableGlobalSearch={true}
         enableFiltering={true}
         enableSorting={true}
@@ -2384,7 +2393,7 @@ const ServerSideSearchStory = () => {
       </YStack>
       <DataTable
         data={data}
-        columns={searchableColumns as DataTableColumn<Record<string, any>>[]}
+        columns={searchableColumns as DataTableColumn[]}
         enableGlobalSearch={true}
         manualFiltering={true}
         renderToolbar={(props) => (
@@ -2457,8 +2466,8 @@ const TextareaFieldStory = () => {
       </Text>
       <DataTable
         data={data}
-        columns={textareaFieldColumns as DataTableColumn<Record<string, any>>[]}
-        onDataChange={setData as (data: Record<string, any>[]) => void}
+        columns={textareaFieldColumns as DataTableColumn[]}
+        onDataChange={setData as (data: DataTableData[]) => void}
         showRowNumbers={true}
         aria-label="Textarea field type table"
       />
@@ -2473,7 +2482,7 @@ export const TextareaField: Story = {
 export const TextareaFieldReadOnly: Story = {
   args: {
     data: textareaFieldData,
-    columns: textareaFieldColumns as DataTableColumn<Record<string, any>>[],
+    columns: textareaFieldColumns as DataTableColumn[],
     readOnly: true,
     showRowNumbers: true,
   },
@@ -2523,8 +2532,8 @@ const SignatureFieldStory = () => {
       </Text>
       <DataTable
         data={data}
-        columns={signatureFieldColumns as DataTableColumn<Record<string, any>>[]}
-        onDataChange={setData as (data: Record<string, any>[]) => void}
+        columns={signatureFieldColumns as DataTableColumn[]}
+        onDataChange={setData as (data: DataTableData[]) => void}
         showRowNumbers={true}
         aria-label="Signature field type table"
       />
@@ -2539,7 +2548,7 @@ export const SignatureField: Story = {
 export const SignatureFieldReadOnly: Story = {
   args: {
     data: signatureFieldData,
-    columns: signatureFieldColumns as DataTableColumn<Record<string, any>>[],
+    columns: signatureFieldColumns as DataTableColumn[],
     readOnly: true,
     showRowNumbers: true,
   },
@@ -2579,8 +2588,8 @@ const FileFieldStory = () => {
       </Text>
       <DataTable
         data={data}
-        columns={fileFieldColumns as DataTableColumn<Record<string, any>>[]}
-        onDataChange={setData as (data: Record<string, any>[]) => void}
+        columns={fileFieldColumns as DataTableColumn[]}
+        onDataChange={setData as (data: DataTableData[]) => void}
         showRowNumbers={true}
         aria-label="File field type table"
       />
@@ -2595,7 +2604,7 @@ export const FileField: Story = {
 export const FileFieldReadOnly: Story = {
   args: {
     data: fileFieldData,
-    columns: fileFieldColumns as DataTableColumn<Record<string, any>>[],
+    columns: fileFieldColumns as DataTableColumn[],
     readOnly: true,
     showRowNumbers: true,
   },
@@ -2635,8 +2644,8 @@ const ImageFieldStory = () => {
       </Text>
       <DataTable
         data={data}
-        columns={imageFieldColumns as DataTableColumn<Record<string, any>>[]}
-        onDataChange={setData as (data: Record<string, any>[]) => void}
+        columns={imageFieldColumns as DataTableColumn[]}
+        onDataChange={setData as (data: DataTableData[]) => void}
         showRowNumbers={true}
         aria-label="Image field type table"
       />
@@ -2651,7 +2660,7 @@ export const ImageField: Story = {
 export const ImageFieldReadOnly: Story = {
   args: {
     data: imageFieldData,
-    columns: imageFieldColumns as DataTableColumn<Record<string, any>>[],
+    columns: imageFieldColumns as DataTableColumn[],
     readOnly: true,
     showRowNumbers: true,
   },
@@ -2706,8 +2715,8 @@ const GeolocationFieldStory = () => {
       </Text>
       <DataTable
         data={data}
-        columns={geolocationFieldColumns as DataTableColumn<Record<string, any>>[]}
-        onDataChange={setData as (data: Record<string, any>[]) => void}
+        columns={geolocationFieldColumns as DataTableColumn[]}
+        onDataChange={setData as (data: DataTableData[]) => void}
         showRowNumbers={true}
         aria-label="Geolocation field type table"
       />
@@ -2722,7 +2731,7 @@ export const GeolocationField: Story = {
 export const GeolocationFieldReadOnly: Story = {
   args: {
     data: geolocationFieldData,
-    columns: geolocationFieldColumns as DataTableColumn<Record<string, any>>[],
+    columns: geolocationFieldColumns as DataTableColumn[],
     readOnly: true,
     showRowNumbers: true,
   },
@@ -2762,8 +2771,8 @@ const BarcodeFieldStory = () => {
       </Text>
       <DataTable
         data={data}
-        columns={barcodeFieldColumns as DataTableColumn<Record<string, any>>[]}
-        onDataChange={setData as (data: Record<string, any>[]) => void}
+        columns={barcodeFieldColumns as DataTableColumn[]}
+        onDataChange={setData as (data: DataTableData[]) => void}
         showRowNumbers={true}
         aria-label="Barcode field type table"
       />
@@ -2778,7 +2787,7 @@ export const BarcodeField: Story = {
 export const BarcodeFieldReadOnly: Story = {
   args: {
     data: barcodeFieldData,
-    columns: barcodeFieldColumns as DataTableColumn<Record<string, any>>[],
+    columns: barcodeFieldColumns as DataTableColumn[],
     readOnly: true,
     showRowNumbers: true,
   },
@@ -2823,8 +2832,8 @@ const SliderFieldStory = () => {
       </Text>
       <DataTable
         data={data}
-        columns={sliderFieldColumns as DataTableColumn<Record<string, any>>[]}
-        onDataChange={setData as (data: Record<string, any>[]) => void}
+        columns={sliderFieldColumns as DataTableColumn[]}
+        onDataChange={setData as (data: DataTableData[]) => void}
         showRowNumbers={true}
         aria-label="Slider field type table"
       />
@@ -2839,7 +2848,7 @@ export const SliderField: Story = {
 export const SliderFieldReadOnly: Story = {
   args: {
     data: sliderFieldData,
-    columns: sliderFieldColumns as DataTableColumn<Record<string, any>>[],
+    columns: sliderFieldColumns as DataTableColumn[],
     readOnly: true,
     showRowNumbers: true,
   },
@@ -2879,8 +2888,8 @@ const ProgressFieldStory = () => {
       </Text>
       <DataTable
         data={data}
-        columns={progressFieldColumns as DataTableColumn<Record<string, any>>[]}
-        onDataChange={setData as (data: Record<string, any>[]) => void}
+        columns={progressFieldColumns as DataTableColumn[]}
+        onDataChange={setData as (data: DataTableData[]) => void}
         showRowNumbers={true}
         aria-label="Progress field type table"
       />
@@ -2895,7 +2904,7 @@ export const ProgressField: Story = {
 export const ProgressFieldReadOnly: Story = {
   args: {
     data: progressFieldData,
-    columns: progressFieldColumns as DataTableColumn<Record<string, any>>[],
+    columns: progressFieldColumns as DataTableColumn[],
     readOnly: true,
     showRowNumbers: true,
   },
@@ -2908,7 +2917,7 @@ export const ProgressFieldReadOnly: Story = {
 export const ColumnLayoutEqual: Story = {
   args: {
     data: sampleData,
-    columns: basicColumns as DataTableColumn<Record<string, any>>[],
+    columns: basicColumns as DataTableColumn[],
     columnLayout: 'equal',
     enablePagination: true,
   },
@@ -2917,7 +2926,7 @@ export const ColumnLayoutEqual: Story = {
 export const ColumnLayoutAuto: Story = {
   args: {
     data: sampleData,
-    columns: basicColumns as DataTableColumn<Record<string, any>>[],
+    columns: basicColumns as DataTableColumn[],
     columnLayout: 'auto',
     enablePagination: true,
   },
@@ -3026,7 +3035,7 @@ export const DocumentList: Story = {
 export const CardLayoutAuto: Story = {
   args: {
     data: sampleData,
-    columns: basicColumns as DataTableColumn<Record<string, any>>[],
+    columns: basicColumns as DataTableColumn[],
     layout: 'auto',
     enableGlobalSearch: true,
     enableFiltering: true,
@@ -3044,7 +3053,7 @@ export const CardLayoutAuto: Story = {
 
 /** Only 3 of the 11 user fields are visible columns. */
 const hiddenFilterColumns: DataTableColumn<User>[] = [
-  { accessorKey: 'firstName', header: 'First Name' },
+  { accessorKey: 'firstName', header: FIRST_NAME_LABEL },
   { accessorKey: 'age', header: 'Age', field: 'stepper' },
   {
     accessorKey: 'status',
@@ -3088,7 +3097,7 @@ const hiddenFilterFields = [
   { id: 'role', label: 'Role', type: 'text' as const },
   { id: 'salary', label: 'Salary', type: 'number' as const },
   { id: 'joinDate', label: 'Join Date', type: 'date' as const },
-  { id: 'lastLogin', label: 'Last Login', type: 'date' as const },
+  { id: 'lastLogin', label: LAST_LOGIN_LABEL, type: 'date' as const },
 ];
 
 const HiddenFieldFiltersStory = ({ syncWithUrl = false }: { syncWithUrl?: boolean }) => {
@@ -3161,6 +3170,30 @@ export const CompoundComposition: Story = {
 // ROW PRESS (onRowPress — first-class row activation)
 // ============================================================================
 
+const rowPressColumns: DataTableColumn<User>[] = [
+  { accessorKey: 'firstName', header: FIRST_NAME_LABEL },
+  { accessorKey: 'department', header: 'Department' },
+  {
+    accessorKey: 'salary',
+    header: 'Salary',
+    align: 'right',
+    cell: (info) => (
+      <Text fontWeight="600">{formatCurrency(info.getValue() as number, { symbol: '$', fractionDigits: 'auto' })}</Text>
+    ),
+  },
+  {
+    id: 'row_actions',
+    header: 'Actions',
+    cell: () => (
+      <Button
+        size="$2"
+        onPress={fn()}>
+        Edit
+      </Button>
+    ),
+  },
+];
+
 /**
  * onRowPress makes each row ONE pressable unit (LC-49/LC-50): click/tap
  * anywhere in the row activates, the row set exposes a single roving tab
@@ -3171,38 +3204,10 @@ export const CompoundComposition: Story = {
  */
 const RowPressStory = ({ body }: { body?: 'virtual' | 'list' }) => {
   const data = useMemo(() => generateUsers(8), []);
-  const rowPressColumns = useMemo<DataTableColumn<User>[]>(
-    () => [
-      { accessorKey: 'firstName', header: 'First Name' },
-      { accessorKey: 'department', header: 'Department' },
-      {
-        accessorKey: 'salary',
-        header: 'Salary',
-        align: 'right',
-        cell: (info) => (
-          <Text fontWeight="600">
-            {formatCurrency(info.getValue() as number, { symbol: '$', fractionDigits: 'auto' })}
-          </Text>
-        ),
-      },
-      {
-        id: 'row_actions',
-        header: 'Actions',
-        cell: () => (
-          <Button
-            size="$2"
-            onPress={fn()}>
-            Edit
-          </Button>
-        ),
-      },
-    ],
-    [],
-  );
   return (
     <DataTable
       data={data}
-      columns={rowPressColumns as DataTableColumn<Record<string, any>>[]}
+      columns={rowPressColumns as DataTableColumn[]}
       enableRowSelection
       enableFiltering={false}
       enableGlobalSearch={false}
@@ -3256,6 +3261,38 @@ export const RowPressList: Story = {
 // CUSTOM-CELL ALIGNMENT (DG-TBL-01 for custom renderers)
 // ============================================================================
 
+const alignColumns: DataTableColumn<User>[] = [
+  {
+    id: 'firstName',
+    accessorKey: 'firstName',
+    header: 'Name (left)',
+    cell: (info) => <Text fontWeight="600">{String(info.getValue())}</Text>,
+  },
+  {
+    id: 'age',
+    accessorKey: 'age',
+    header: 'Age (right)',
+    align: 'right',
+    cell: (info) => <Text>{String(info.getValue())}</Text>,
+  },
+  {
+    id: 'salary',
+    accessorKey: 'salary',
+    header: 'Salary (right)',
+    align: 'right',
+    cell: (info) => (
+      <Text fontWeight="600">{formatCurrency(info.getValue() as number, { symbol: '$', fractionDigits: 'auto' })}</Text>
+    ),
+  },
+  {
+    id: 'status',
+    accessorKey: 'status',
+    header: 'Status (center)',
+    align: 'center',
+    cell: (info) => <Text>{String(info.getValue())}</Text>,
+  },
+];
+
 /**
  * Custom `cell` renderers inherit the column `align` through the table's
  * alignment container — no self-alignment. In the semantic-table
@@ -3265,46 +3302,10 @@ export const RowPressList: Story = {
  */
 const CustomCellAlignmentStory = () => {
   const data = useMemo(() => generateUsers(6), []);
-  const alignColumns = useMemo<DataTableColumn<User>[]>(
-    () => [
-      {
-        id: 'firstName',
-        accessorKey: 'firstName',
-        header: 'Name (left)',
-        cell: (info) => <Text fontWeight="600">{String(info.getValue())}</Text>,
-      },
-      {
-        id: 'age',
-        accessorKey: 'age',
-        header: 'Age (right)',
-        align: 'right',
-        cell: (info) => <Text>{String(info.getValue())}</Text>,
-      },
-      {
-        id: 'salary',
-        accessorKey: 'salary',
-        header: 'Salary (right)',
-        align: 'right',
-        cell: (info) => (
-          <Text fontWeight="600">
-            {formatCurrency(info.getValue() as number, { symbol: '$', fractionDigits: 'auto' })}
-          </Text>
-        ),
-      },
-      {
-        id: 'status',
-        accessorKey: 'status',
-        header: 'Status (center)',
-        align: 'center',
-        cell: (info) => <Text>{String(info.getValue())}</Text>,
-      },
-    ],
-    [],
-  );
   return (
     <DataTable
       data={data}
-      columns={alignColumns as DataTableColumn<Record<string, any>>[]}
+      columns={alignColumns as DataTableColumn[]}
       columnLayout="auto"
       enableFiltering={false}
       enableGlobalSearch={false}
@@ -3369,7 +3370,12 @@ const registerBalance: RowAccumulator<Posting, number> = {
   initial: 0,
   reduce: (carried, row) => carried + row.amount,
   derive: (carried) => ({ running: carried }),
-  order: (a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0),
+  order: (a, b) => {
+    if (a.date < b.date) {
+      return -1;
+    }
+    return a.date > b.date ? 1 : 0;
+  },
   total: (carried) => carried,
 };
 
@@ -3408,8 +3414,8 @@ export const RunningBalance: Story = {
   render: () => (
     <DataTable
       data={registerPostings}
-      columns={registerColumns as DataTableColumn<Record<string, any>>[]}
-      rowAccumulator={registerBalance as RowAccumulator<Record<string, any>>}
+      columns={registerColumns as DataTableColumn[]}
+      rowAccumulator={registerBalance as RowAccumulator}
       layout="table"
       columnLayout="auto"
       enableFiltering={false}
@@ -3491,7 +3497,7 @@ export const MoneyColumn: Story = {
   render: () => (
     <DataTable
       data={charges}
-      columns={chargeColumns as DataTableColumn<Record<string, any>>[]}
+      columns={chargeColumns as DataTableColumn[]}
       layout="table"
       columnLayout="auto"
       enablePagination={false}
@@ -3527,6 +3533,7 @@ const declaredWidthColumns: DataTableColumn<(typeof widthRows)[number]>[] = [
 ];
 
 export const ColumnWidthContract: Story = {
+  // oxlint-disable-next-line eslint/func-name-matching -- a capitalized name lets React treat this render function as a component so it may call hooks
   render: function ColumnWidthExample(args) {
     const [columnLayout, setColumnLayout] = React.useState<'equal' | 'scroll' | 'auto'>('scroll');
     const [resizing, setResizing] = React.useState(false);
@@ -3565,7 +3572,7 @@ export const ColumnWidthContract: Story = {
         <DataTable
           {...args}
           data={widthRows}
-          columns={declaredWidthColumns as DataTableColumn<Record<string, any>>[]}
+          columns={declaredWidthColumns as DataTableColumn[]}
           layout="table"
           columnLayout={columnLayout}
           enableColumnResizing={resizing}
@@ -3607,7 +3614,7 @@ const narrowHeaderColumns: DataTableColumn<(typeof narrowHeaderRows)[number]>[] 
 export const NarrowHeaders: Story = {
   args: {
     data: narrowHeaderRows,
-    columns: narrowHeaderColumns as DataTableColumn<Record<string, any>>[],
+    columns: narrowHeaderColumns as DataTableColumn[],
     layout: 'table',
     columnLayout: 'scroll',
     enableSorting: true,

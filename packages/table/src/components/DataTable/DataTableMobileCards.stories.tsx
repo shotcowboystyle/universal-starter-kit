@@ -18,6 +18,7 @@ import { YStack } from 'tamagui';
 import type { DataTableColumn } from '../../types';
 
 import { DataTable } from './index';
+import type { DataTableRootProps } from './index';
 
 const meta: Meta = {
   title: 'Table/DataTableMobileCards',
@@ -57,22 +58,20 @@ const columns: DataTableColumn<Person>[] = [
   { accessorKey: 'email', header: 'Email' },
 ];
 
-function CardTable(props: Record<string, any>) {
-  return (
-    <YStack
-      padding="$4"
-      width="100%"
-      maxWidth={480}>
-      <DataTable
-        data={people}
-        columns={columns}
-        layout="cards"
-        aria-label="People as cards"
-        {...props}
-      />
-    </YStack>
-  );
-}
+const CardTable = (props: Partial<DataTableRootProps<Person>>) => (
+  <YStack
+    padding="$4"
+    width="100%"
+    maxWidth={480}>
+    <DataTable
+      data={people}
+      columns={columns}
+      layout="cards"
+      aria-label="People as cards"
+      {...props}
+    />
+  </YStack>
+);
 
 /** Card anatomy: title header, then one label/value row per remaining column. */
 export const Default = {
@@ -99,7 +98,7 @@ export const Pressable = {
   ),
 };
 
-function DeletableCards() {
+const DeletableCards = () => {
   const [rows, setRows] = useState(people);
   return (
     <YStack
@@ -120,7 +119,7 @@ function DeletableCards() {
       />
     </YStack>
   );
-}
+};
 
 /**
  * Row numbers and the delete affordance share the card header with the title.

@@ -5,7 +5,7 @@ import React from 'react';
 import { Card, Text, XStack, YStack } from 'tamagui';
 
 import { DataTableGrouping } from './index';
-import type { AggregationConfig, GroupingConfig } from './index';
+import type { AggregationConfig, GroupedData, GroupingConfig } from './index';
 
 // Define the data type
 interface SalesRecord {
@@ -19,11 +19,14 @@ interface SalesRecord {
   date: string;
 }
 
+const NORTH_AMERICA = 'North America';
+const TOTAL_REVENUE_LABEL = 'Total Revenue';
+
 // Sample data
 const salesData: SalesRecord[] = [
   {
     id: '1',
-    region: 'North America',
+    region: NORTH_AMERICA,
     category: 'Electronics',
     salesperson: 'Alice',
     quantity: 5,
@@ -33,7 +36,7 @@ const salesData: SalesRecord[] = [
   },
   {
     id: '2',
-    region: 'North America',
+    region: NORTH_AMERICA,
     category: 'Furniture',
     salesperson: 'Alice',
     quantity: 10,
@@ -43,7 +46,7 @@ const salesData: SalesRecord[] = [
   },
   {
     id: '3',
-    region: 'North America',
+    region: NORTH_AMERICA,
     category: 'Electronics',
     salesperson: 'Bob',
     quantity: 8,
@@ -178,7 +181,7 @@ export const WithAggregations = () => {
     {
       column: 'totalRevenue',
       function: 'sum',
-      label: 'Total Revenue',
+      label: TOTAL_REVENUE_LABEL,
     },
     {
       column: 'quantity',
@@ -246,7 +249,7 @@ export const ComprehensiveAggregations = () => {
     {
       column: 'totalRevenue',
       function: 'sum',
-      label: 'Total Revenue',
+      label: TOTAL_REVENUE_LABEL,
     },
     {
       column: 'totalRevenue',
@@ -296,41 +299,58 @@ export const ComprehensiveAggregations = () => {
   );
 };
 
-export const CustomGroupHeaders = () => {
-  const renderGroupHeader = (group: any, level: number) => (
-    <YStack
-      padding="$3"
-      backgroundColor={level === 0 ? '$blue2' : level === 1 ? '$green2' : '$yellow2'}
-      borderRadius="$2"
-      marginBottom="$1">
-      <XStack
-        alignItems="center"
-        justifyContent="space-between">
-        <YStack>
-          <Text
-            fontSize="$4"
-            fontWeight="600">
-            {group.key}
-          </Text>
-          <Text
-            fontSize="$2"
-            color="$gray11">
-            Level {level + 1} • {group.count} items
-          </Text>
-        </YStack>
-        <Text
-          fontSize="$3"
-          fontWeight="500"
-          color="$blue11">
-          {formatCurrency(group.aggregations?.totalRevenue?.sum ?? 0, {
-            symbol: '$',
-            fractionDigits: 'auto',
-          })}
-        </Text>
-      </XStack>
-    </YStack>
-  );
+const GROUP_LEVEL_BACKGROUNDS = ['$blue2', '$green2'];
 
+const renderGroupHeader = (group: GroupedData<SalesRecord>, level: number) => (
+  <YStack
+    padding="$3"
+    backgroundColor={GROUP_LEVEL_BACKGROUNDS[level] ?? '$yellow2'}
+    borderRadius="$2"
+    marginBottom="$1">
+    <XStack
+      alignItems="center"
+      justifyContent="space-between">
+      <YStack>
+        <Text
+          fontSize="$4"
+          fontWeight="600">
+          {group.key}
+        </Text>
+        <Text
+          fontSize="$2"
+          color="$gray11">
+          Level {level + 1} • {group.count} items
+        </Text>
+      </YStack>
+      <Text
+        fontSize="$3"
+        fontWeight="500"
+        color="$blue11">
+        {formatCurrency(group.aggregations.totalRevenue?.sum ?? 0, {
+          symbol: '$',
+          fractionDigits: 'auto',
+        })}
+      </Text>
+    </XStack>
+  </YStack>
+);
+
+const renderGroupFooter = (group: GroupedData<SalesRecord>, _level: number) => (
+  <YStack
+    padding="$2"
+    backgroundColor="$gray2"
+    borderRadius="$2"
+    marginTop="$1">
+    <Text
+      fontSize="$2"
+      color="$gray11"
+      textAlign="center">
+      End of {group.key} group • {group.count} total items
+    </Text>
+  </YStack>
+);
+
+export const CustomGroupHeaders = () => {
   const aggregations: AggregationConfig[] = [
     {
       column: 'totalRevenue',
@@ -365,47 +385,30 @@ export const CustomGroupHeaders = () => {
   );
 };
 
-export const CustomGroupFooters = () => {
-  const renderGroupFooter = (group: any, _level: number) => (
-    <YStack
-      padding="$2"
-      backgroundColor="$gray2"
-      borderRadius="$2"
-      marginTop="$1">
-      <Text
-        fontSize="$2"
-        color="$gray11"
-        textAlign="center">
-        End of {group.key} group • {group.count} total items
-      </Text>
-    </YStack>
-  );
+export const CustomGroupFooters = () => (
+  <YStack
+    gap="$4"
+    padding="$4">
+    <Text
+      fontSize="$4"
+      fontWeight="600">
+      Custom Group Footers
+    </Text>
 
-  return (
-    <YStack
-      gap="$4"
-      padding="$4">
-      <Text
-        fontSize="$4"
-        fontWeight="600">
-        Custom Group Footers
-      </Text>
+    <DataTableGrouping
+      data={salesData}
+      columns={columns}
+      groupBy={['region']}
+      renderGroupFooter={renderGroupFooter}
+    />
 
-      <DataTableGrouping
-        data={salesData}
-        columns={columns}
-        groupBy={['region']}
-        renderGroupFooter={renderGroupFooter}
-      />
-
-      <Text
-        fontSize="$3"
-        color="$gray11">
-        Custom footer content for each group.
-      </Text>
-    </YStack>
-  );
-};
+    <Text
+      fontSize="$3"
+      color="$gray11">
+      Custom footer content for each group.
+    </Text>
+  </YStack>
+);
 
 export const WithGroupingControls = () => {
   const [groupingConfig, setGroupingConfig] = React.useState<GroupingConfig>({
@@ -414,7 +417,7 @@ export const WithGroupingControls = () => {
       {
         column: 'totalRevenue',
         function: 'sum',
-        label: 'Total Revenue',
+        label: TOTAL_REVENUE_LABEL,
       },
     ],
   });
@@ -523,35 +526,43 @@ export const WithGroupingControls = () => {
  * the shot differ on every capture and flapped the visual baseline. Seeding
  * keeps the whole surface under pixel comparison.
  */
-const seededRandom = (seed: number) => () => {
-  seed = (seed + 0x6d_2b_79_f5) | 0;
-  let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-  return ((t ^ (t >>> 14)) >>> 0) / 4_294_967_296;
+const seededRandom = (seed: number) => {
+  let state = seed;
+  return () => {
+    // oxlint-disable-next-line eslint/no-bitwise, unicorn/prefer-math-trunc -- mulberry32 needs int32 wraparound; Math.trunc does not wrap
+    state = (state + 0x6d_2b_79_f5) | 0;
+    // oxlint-disable-next-line eslint/no-bitwise -- mulberry32 is defined in 32-bit integer ops
+    let t = Math.imul(state ^ (state >>> 15), 1 | state);
+    // oxlint-disable-next-line eslint/no-bitwise -- mulberry32 is defined in 32-bit integer ops
+    t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
+    // oxlint-disable-next-line eslint/no-bitwise -- mulberry32 is defined in 32-bit integer ops
+    return ((t ^ (t >>> 14)) >>> 0) / 4_294_967_296;
+  };
 };
 
-export const PerformanceTest = () => {
-  // Generate larger dataset
-  const random = seededRandom(0x5e_ed);
-  const largeDataset = Array.from({ length: 1000 }, (_, i) => ({
-    id: `item-${i + 1}`,
-    region: ['North America', 'Europe', 'Asia Pacific', 'South America'][i % 4],
-    category: ['Electronics', 'Furniture', 'Appliances', 'Books'][i % 4],
-    salesperson: `Person ${(i % 10) + 1}`,
-    quantity: Math.floor(random() * 20) + 1,
-    unitPrice: Math.floor(random() * 1000) + 100,
-    totalRevenue: 0, // Will be calculated
-    date: new Date(Date.now() - random() * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-  })).map((item) => ({
-    ...item,
-    totalRevenue: item.quantity * item.unitPrice,
-  }));
+// Generate larger dataset
+const random = seededRandom(0x5e_ed);
+const largeDataset = Array.from({ length: 1000 }, (_, i) => ({
+  id: `item-${i + 1}`,
+  region: [NORTH_AMERICA, 'Europe', 'Asia Pacific', 'South America'][i % 4],
+  category: ['Electronics', 'Furniture', 'Appliances', 'Books'][i % 4],
+  salesperson: `Person ${(i % 10) + 1}`,
+  quantity: Math.floor(random() * 20) + 1,
+  unitPrice: Math.floor(random() * 1000) + 100,
+  // Will be calculated
+  totalRevenue: 0,
+  date: new Date(Date.now() - random() * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+})).map((item) => ({
+  ...item,
+  totalRevenue: item.quantity * item.unitPrice,
+}));
 
+export const PerformanceTest = () => {
   const aggregations: AggregationConfig[] = [
     {
       column: 'totalRevenue',
       function: 'sum',
-      label: 'Total Revenue',
+      label: TOTAL_REVENUE_LABEL,
     },
     {
       column: 'quantity',

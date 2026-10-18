@@ -64,32 +64,30 @@ const filterableFields: FilterableField[] = [
   },
 ];
 
-function emailContains(value: string): TableFilter {
-  return {
-    id: 'flt-email',
-    columnId: 'email',
-    value: { operator: 'contains', value },
-    label: 'Email',
-  };
-}
+const emailContains = (value: string): TableFilter => ({
+  id: 'flt-email',
+  columnId: 'email',
+  value: { operator: 'contains', value },
+  label: 'Email',
+});
 
-function FilterTable({ initialFilters = [] }: { initialFilters?: TableFilter[] }) {
-  return (
-    <YStack
-      padding="$4"
-      width="100%">
-      <DataTable
-        data={people}
-        columns={columns}
-        filterableFields={filterableFields}
-        enableFiltering
-        enableGlobalSearch
-        initialState={{ filters: initialFilters }}
-        aria-label="People with toolbar filter"
-      />
-    </YStack>
-  );
-}
+const NO_FILTERS: TableFilter[] = [];
+
+const FilterTable = ({ initialFilters = NO_FILTERS }: { initialFilters?: TableFilter[] }) => (
+  <YStack
+    padding="$4"
+    width="100%">
+    <DataTable
+      data={people}
+      columns={columns}
+      filterableFields={filterableFields}
+      enableFiltering
+      enableGlobalSearch
+      initialState={{ filters: initialFilters }}
+      aria-label="People with toolbar filter"
+    />
+  </YStack>
+);
 
 export const Default = {
   name: 'Main',

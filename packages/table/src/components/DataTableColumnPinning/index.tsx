@@ -1,18 +1,65 @@
-import { MIN_PRESS_TARGET, pressTargetHitSlop, pressTargetStyle, useResolvedKnobs } from '@repo/theme';
 import { PushPinIcon } from '@phosphor-icons/react';
-import type { Table as ReactTable } from '@tanstack/react-table';
+import { MIN_PRESS_TARGET, pressTargetHitSlop, pressTargetStyle, useResolvedKnobs } from '@repo/theme';
+import type { ColumnPinningState, Table as ReactTable } from '@tanstack/react-table';
 import { useCallback, useMemo, useState } from 'react';
 import { Text, View, isWeb, styled } from 'tamagui';
 
 import { t } from '../../shared/t';
-import { iconSizeForToken } from '../../utils/chromeIcons';
-import { useDataTableState } from '../DataTable/DataTableStateContext';
+import { iconSizeForToken } from '../../utils/chrome-icons';
+import { useDataTableState } from '../DataTable/data-table-state-context';
 
 // DG-LAY-04 / SP-FIXED: the pin glyph stays small (~22px incl. padding) but the
 // press target is floored at 44×44 via hitSlop; negative margins keep header
 // row height and column flow unchanged (same pattern as ColumnHeaderFilter).
 const PIN_TRIGGER_VISUAL = 22;
 const PIN_TRIGGER_OUTSET = Math.max(0, Math.ceil((MIN_PRESS_TARGET - PIN_TRIGGER_VISUAL) / 2));
+
+type PinSide = 'left' | 'right';
+type PinAction = PinSide | 'unpin' | 'none';
+
+const EMPTY_PINNING: ColumnPinningState = { left: [], right: [] };
+
+const pinSideOf = (pinning: ColumnPinningState, columnId: string): PinSide | undefined => {
+  if ((pinning.left ?? []).includes(columnId)) {
+    return 'left';
+  }
+  if ((pinning.right ?? []).includes(columnId)) {
+    return 'right';
+  }
+  return undefined;
+};
+
+// Next action in the pin cycle (mirrors cyclePin) so the accessible name
+// always announces what pressing will do. A disabled table keeps the
+// button visible but inert (LC-40 keeps the "none" dim treatment).
+const nextPinAction = (
+  disabled: boolean,
+  currentPosition: PinSide | undefined,
+  firstPosition: PinSide,
+  canPin: (position: PinSide) => boolean,
+): PinAction => {
+  const other = firstPosition === 'left' ? 'right' : 'left';
+  if (disabled) {
+    return 'none';
+  }
+  if (currentPosition === undefined) {
+    if (canPin(firstPosition)) {
+      return firstPosition;
+    }
+    return canPin(other) ? other : 'none';
+  }
+  return currentPosition === firstPosition && canPin(other) ? other : 'unpin';
+};
+
+const pinActionLabel = (next: PinAction, columnLabel: string): string => {
+  if (next === 'unpin') {
+    return t('Unpin {{column}} column', { column: columnLabel });
+  }
+  if (next === 'right') {
+    return t('Pin {{column}} column right', { column: columnLabel });
+  }
+  return t('Pin {{column}} column left', { column: columnLabel });
+};
 
 interface DataTableColumnPinningProps<TData> {
   table?: ReactTable<TData>;
@@ -66,11 +113,12 @@ const PinnedIndicator = styled(View, {
 export type StickyColumnProps = React.ComponentProps<typeof StickyColumn>;
 export type PinnedIndicatorProps = React.ComponentProps<typeof PinnedIndicator>;
 
-export function DataTableColumnPinning<TData>(props: DataTableColumnPinningProps<TData>) {
+export const DataTableColumnPinning = <TData,>(props: DataTableColumnPinningProps<TData>) => {
   // Try to consume from DataTableStateContext (compound component pattern)
   const ctx = useDataTableState();
 
   // Resolve values: explicit props override context values
+  // SAFETY: the context table is the same DataTable instance whose rows are TData; the context stores it untyped
   const table = props.table ?? (ctx?.table as ReactTable<TData> | undefined);
 
   if (!table) {
@@ -82,20 +130,14 @@ export function DataTableColumnPinning<TData>(props: DataTableColumnPinningProps
   const { onPinChange, maxPinnedColumns = 3, allowPinning = true, disabled = false } = props;
 
   const { knobProps } = useResolvedKnobs();
-  const iconPx = iconSizeForToken(String(knobProps.sizeToken));
+  const iconPx = iconSizeForToken(knobProps.sizeToken);
 
   // Get fresh table state on each render
-  const pinnedColumns = table.getState().columnPinning || {
-    left: [],
-    right: [],
-  };
+  const pinnedColumns = table.getState().columnPinning ?? EMPTY_PINNING;
 
   const togglePin = useCallback(
     (columnId: string, position?: 'left' | 'right') => {
-      const currentPinning = table.getState().columnPinning || {
-        left: [],
-        right: [],
-      };
+      const currentPinning = table.getState().columnPinning ?? EMPTY_PINNING;
       const isCurrentlyPinnedLeft = (currentPinning.left ?? []).includes(columnId);
       const isCurrentlyPinnedRight = (currentPinning.right ?? []).includes(columnId);
 
@@ -115,14 +157,16 @@ export function DataTableColumnPinning<TData>(props: DataTableColumnPinningProps
             newPinned.left = [...(currentPinning.left ?? []), columnId];
             onPinChange?.(columnId, 'left');
           } else {
-            return; // Don't pin if max limit reached
+            // Don't pin if max limit reached
+            return;
           }
         } else if (position === 'right') {
           if ((currentPinning.right ?? []).length < maxPinnedColumns) {
             newPinned.right = [...(currentPinning.right ?? []), columnId];
             onPinChange?.(columnId, 'right');
           } else {
-            return; // Don't pin if max limit reached
+            // Don't pin if max limit reached
+            return;
           }
         }
       }
@@ -140,15 +184,7 @@ export function DataTableColumnPinning<TData>(props: DataTableColumnPinningProps
   );
 
   const getPinPosition = useCallback(
-    (columnId: string): 'left' | 'right' | undefined => {
-      if ((pinnedColumns.left ?? []).includes(columnId)) {
-        return 'left';
-      }
-      if ((pinnedColumns.right ?? []).includes(columnId)) {
-        return 'right';
-      }
-      return undefined;
-    },
+    (columnId: string): PinSide | undefined => pinSideOf(pinnedColumns, columnId),
     [pinnedColumns],
   );
 
@@ -166,14 +202,10 @@ export function DataTableColumnPinning<TData>(props: DataTableColumnPinningProps
    */
   const cyclePin = useCallback(
     (columnId: string, firstPosition: 'left' | 'right' = 'left') => {
-      const currentPinning = table.getState().columnPinning || { left: [], right: [] };
+      const currentPinning = table.getState().columnPinning ?? EMPTY_PINNING;
       const left = currentPinning.left ?? [];
       const right = currentPinning.right ?? [];
-      const current = left.includes(columnId)
-        ? ('left' as const)
-        : right.includes(columnId)
-          ? ('right' as const)
-          : undefined;
+      const current = pinSideOf(currentPinning, columnId);
       const other = firstPosition === 'left' ? ('right' as const) : ('left' as const);
 
       const set = (next?: 'left' | 'right') => {
@@ -215,35 +247,18 @@ export function DataTableColumnPinning<TData>(props: DataTableColumnPinningProps
       }
 
       const firstPosition = position ?? 'left';
-      const other = firstPosition === 'left' ? ('right' as const) : ('left' as const);
       const currentPosition = getPinPosition(columnId);
       const pinned = currentPosition !== undefined;
-
-      // Next action in the cycle (mirrors cyclePin) so the accessible name
-      // always announces what pressing will do. A disabled table keeps the
-      // button visible but inert (LC-40 keeps the "none" dim treatment).
-      const next: 'left' | 'right' | 'unpin' | 'none' = disabled
-        ? 'none'
-        : currentPosition === undefined
-          ? canPin(firstPosition)
-            ? firstPosition
-            : canPin(other)
-              ? other
-              : 'none'
-          : currentPosition === firstPosition && canPin(other)
-            ? other
-            : 'unpin';
+      const next = nextPinAction(disabled, currentPosition, firstPosition, canPin);
+      const inert = next === 'none';
+      const idleOpacity = pinned ? 1 : 0.7;
 
       // DG-A11Y-06 / Axiom 12: names are differentiated per column and use the
       // human column label (string header) when available, not the raw id.
       const header = table.getColumn(columnId)?.columnDef.header;
+      // oxlint-disable-next-line anti-slop/no-runtime-typeof -- TanStack's header is a string | render-function union; typeof is its discriminant
       const columnLabel = typeof header === 'string' ? header : columnId;
-      const label =
-        next === 'unpin'
-          ? t('Unpin {{column}} column', { column: columnLabel })
-          : next === 'right'
-            ? t('Pin {{column}} column right', { column: columnLabel })
-            : t('Pin {{column}} column left', { column: columnLabel });
+      const label = pinActionLabel(next, columnLabel);
 
       return (
         // LC-54 amendment (2026-08-13): the grown press target NEVER paints —
@@ -252,7 +267,7 @@ export function DataTableColumnPinning<TData>(props: DataTableColumnPinningProps
         // Floor-wide feedback is subtree opacity; the painted hover chrome
         // rides the glyph-scale ring inside (ColumnHeaderFilter anatomy).
         <View
-          cursor={next === 'none' ? 'default' : 'pointer'}
+          cursor={inert ? 'default' : 'pointer'}
           {...pressTargetStyle()}
           alignItems="center"
           justifyContent="center"
@@ -263,19 +278,20 @@ export function DataTableColumnPinning<TData>(props: DataTableColumnPinningProps
           // keeps full strength; the idle affordance rests dimmed. An inert
           // trigger (LC-40: table disabled / both sides maxed) keeps its dim
           // in every state — feedback would promise an action it won't take.
-          opacity={next === 'none' ? 0.4 : pinned ? 1 : 0.7}
-          hoverStyle={{ opacity: next === 'none' ? 0.4 : 1 }}
-          pressStyle={{ opacity: next === 'none' ? 0.4 : 0.9 }}
-          onPress={(e: any) => {
+          opacity={inert ? 0.4 : idleOpacity}
+          hoverStyle={{ opacity: inert ? 0.4 : 1 }}
+          pressStyle={{ opacity: inert ? 0.4 : 0.9 }}
+          onPress={(e) => {
             e?.stopPropagation?.();
-            if (next === 'none') {
+            if (inert) {
               return;
             }
             cyclePin(columnId, firstPosition);
           }}
+          // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui View renders on native too, where role is the only button semantic
           role="button"
           aria-label={label}
-          aria-disabled={next === 'none' || undefined}>
+          aria-disabled={inert || undefined}>
           <View
             padding="$1"
             borderRadius="$2"
@@ -283,7 +299,7 @@ export function DataTableColumnPinning<TData>(props: DataTableColumnPinningProps
             alignItems="center"
             justifyContent="center"
             gap={knobProps.gap.gap}
-            {...(next === 'none' ? undefined : { hoverStyle: { backgroundColor: '$color4' } })}>
+            {...(inert ? undefined : { hoverStyle: { backgroundColor: '$color4' } })}>
             <PushPinIcon
               size={iconPx}
               color={pinned ? 'var(--accentColor)' : 'var(--color10)'}
@@ -304,35 +320,29 @@ export function DataTableColumnPinning<TData>(props: DataTableColumnPinningProps
     [allowPinning, disabled, getPinPosition, canPin, cyclePin, table, iconPx, knobProps],
   );
 
-  const pinnedLeftColumns = useMemo(
-    () => table.getAllColumns().filter((column) => (pinnedColumns.left ?? []).includes(column.id)),
-    [table, pinnedColumns.left],
-  );
+  const pinnedLeftColumns = useMemo(() => {
+    const leftIds = new Set(pinnedColumns.left);
+    return table.getAllColumns().filter((column) => leftIds.has(column.id));
+  }, [table, pinnedColumns.left]);
 
-  const pinnedRightColumns = useMemo(
-    () => table.getAllColumns().filter((column) => (pinnedColumns.right ?? []).includes(column.id)),
-    [table, pinnedColumns.right],
-  );
+  const pinnedRightColumns = useMemo(() => {
+    const rightIds = new Set(pinnedColumns.right);
+    return table.getAllColumns().filter((column) => rightIds.has(column.id));
+  }, [table, pinnedColumns.right]);
 
-  const scrollableColumns = useMemo(
-    () =>
-      table
-        .getAllColumns()
-        .filter(
-          (column) =>
-            !(pinnedColumns.left ?? []).includes(column.id) && !(pinnedColumns.right ?? []).includes(column.id),
-        ),
-    [table, pinnedColumns],
-  );
+  const scrollableColumns = useMemo(() => {
+    const pinnedIds = new Set([...(pinnedColumns.left ?? []), ...(pinnedColumns.right ?? [])]);
+    return table.getAllColumns().filter((column) => !pinnedIds.has(column.id));
+  }, [table, pinnedColumns]);
 
   // Pinned cells are R-NONE/SF-TRANSPARENT like every other cell — they carry
   // only the sticky occlusion fill and their own seam border, so they take the
   // radius-only fragment (D-03); a border-bearing one ringed each pinned cell.
   const ThemedStickyColumn = useCallback(
-    (props: React.ComponentProps<typeof StickyColumn>) => (
+    (stickyProps: React.ComponentProps<typeof StickyColumn>) => (
       <StickyColumn
         {...knobProps.containerRadius}
-        {...props}
+        {...stickyProps}
       />
     ),
     [knobProps.containerRadius],
@@ -351,9 +361,9 @@ export function DataTableColumnPinning<TData>(props: DataTableColumnPinningProps
     StickyColumn: ThemedStickyColumn,
     PinnedIndicator,
   };
-}
+};
 
-export function useColumnPinning<TData>(
+export const useColumnPinning = <TData,>(
   table: ReactTable<TData>,
   options?: {
     maxPinnedColumns?: number;
@@ -363,7 +373,7 @@ export function useColumnPinning<TData>(
       right?: string[];
     };
   },
-) {
+) => {
   const [pinnedState, setPinnedState] = useState({
     left: options?.initialPinnedColumns?.left ?? [],
     right: options?.initialPinnedColumns?.right ?? [],
@@ -417,4 +427,4 @@ export function useColumnPinning<TData>(
     unpinColumn,
     resetPinning,
   };
-}
+};

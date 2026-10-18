@@ -16,7 +16,7 @@
  */
 
 import { Button, FieldDisplay, FloatingPanel } from '@repo/forms';
-import type { FieldDisplayType } from '@repo/forms';
+import type { FieldDisplayProps, FieldDisplayType } from '@repo/forms';
 import { TableCellContext } from '@repo/table-primitives';
 import { useResolvedKnobs } from '@repo/theme';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -25,20 +25,20 @@ import { Text, View, XStack, YStack, isWeb } from 'tamagui';
 
 import { t } from '../../shared/t';
 
-export interface CellModalEditorProps {
+export interface CellModalEditorProps<T> {
   field: FieldDisplayType;
-  value: any;
-  fieldProps?: Record<string, any>;
+  value: T;
+  fieldProps?: FieldDisplayProps['fieldProps'];
   disabled?: boolean;
   readOnly?: boolean;
   /** Commits the staged draft to the row. Fires at most once per session. */
-  onCommit: (value: any) => void;
+  onCommit: (value: T) => void;
   /**
    * Full editor mounted inside the panel, wired to the staged draft: render
    * with `draftValue` and report edits through `onDraftChange` — never
    * straight to the row.
    */
-  children: (draftValue: any, onDraftChange: (value: any) => void) => ReactNode;
+  children: (draftValue: T, onDraftChange: (value: T) => void) => ReactNode;
   /** Title shown in the panel header. */
   title?: string;
   /**
@@ -48,7 +48,10 @@ export interface CellModalEditorProps {
   label?: string;
 }
 
-export function CellModalEditor({
+// The panel is not a table cell: restores full field chrome inside it.
+const OUT_OF_CELL_CONTEXT = { inTableCell: false };
+
+export const CellModalEditor = <T,>({
   field,
   value,
   fieldProps,
@@ -58,18 +61,21 @@ export function CellModalEditor({
   children,
   title,
   label,
-}: CellModalEditorProps) {
+}: CellModalEditorProps<T>) => {
   const { knobProps } = useResolvedKnobs();
   const [open, setOpen] = useState(false);
   // Draft session: exists only while the panel is open, seeded from the
   // committed value so the editor starts at the cell's current value
   // (Axiom 11 VALUE IS DATA).
-  const [draft, setDraft] = useState<{ value: any } | null>(null);
+  const [draft, setDraft] = useState<{ value: T } | null>(null);
   const draftRef = useRef(draft);
+  // oxlint-disable-next-line react/refs -- latest-value ref: close handlers read the current draft synchronously
   draftRef.current = draft;
   const valueRef = useRef(value);
+  // oxlint-disable-next-line react/refs -- latest-value ref: open/close handlers read the current committed value synchronously
   valueRef.current = value;
   const onCommitRef = useRef(onCommit);
+  // oxlint-disable-next-line react/refs -- latest-callback ref: keeps handleOpenChange stable while calling the current onCommit
   onCommitRef.current = onCommit;
   // Escape / Cancel flag the close as a discard before onOpenChange(false)
   // lands; every other close path (Done, outside click) commits.
@@ -109,7 +115,8 @@ export function CellModalEditor({
   // the panel's own Escape listener closes it.
   useEffect(() => {
     if (!open || !isWeb || typeof document === 'undefined') {
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on other paths; a bare return trips consistent-return
+      return undefined;
     }
     const flagEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -127,7 +134,7 @@ export function CellModalEditor({
     handleOpenChange(false);
   }, [handleOpenChange]);
 
-  const handleDraftChange = useCallback((next: any) => {
+  const handleDraftChange = useCallback((next: T) => {
     draftRef.current = { value: next };
     setDraft(draftRef.current);
   }, []);
@@ -193,7 +200,8 @@ export function CellModalEditor({
         <YStack
           flexShrink={1}
           minHeight={0}>
-          <TableCellContext.Provider value={{ inTableCell: false }}>
+          <TableCellContext.Provider value={OUT_OF_CELL_CONTEXT}>
+            {/* oxlint-disable-next-line react/refs -- handleDraftChange writes refs only when the editor emits, never during render */}
             {children(draft ? draft.value : value, handleDraftChange)}
           </TableCellContext.Provider>
         </YStack>
@@ -213,4 +221,4 @@ export function CellModalEditor({
       </YStack>
     </FloatingPanel>
   );
-}
+};

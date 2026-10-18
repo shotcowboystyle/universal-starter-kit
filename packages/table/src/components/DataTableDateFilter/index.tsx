@@ -1,6 +1,3 @@
-import { ScrollView } from '@repo/ui';
-import { Button, DatePicker, FloatingPanel } from '@repo/forms';
-import { formatAbsoluteDate, parseCalendarDate, useResolvedKnobs } from '@repo/theme';
 import {
   CalendarIcon,
   CalendarDotsIcon,
@@ -9,11 +6,14 @@ import {
   ClockIcon,
   XIcon,
 } from '@phosphor-icons/react';
+import { Button, DatePicker, FloatingPanel } from '@repo/forms';
+import { formatAbsoluteDate, parseCalendarDate, useResolvedKnobs } from '@repo/theme';
+import { ScrollView } from '@repo/ui';
 import React, { useState, useMemo } from 'react';
 import { Separator, Text, View, XStack, YStack, getTokens, getVariableValue } from 'tamagui';
 
 import { t } from '../../shared/t';
-import { iconSizeForToken } from '../../utils/chromeIcons';
+import { iconSizeForToken } from '../../utils/chrome-icons';
 
 export type DateFilterOperator =
   | 'is'
@@ -40,8 +40,10 @@ export type DateFilterOperator =
 
 export interface DateFilterValue {
   operator: DateFilterOperator;
-  value?: string; // ISO date string
-  values?: [string, string]; // For range operators
+  /** ISO date string */
+  value?: string;
+  /** For range operators */
+  values?: [string, string];
 }
 
 export interface DateFilterPreset {
@@ -55,12 +57,13 @@ export interface DateFilterPreset {
 
 export interface DataTableDateFilterProps {
   value?: DateFilterValue;
-  onChange?: (value: DateFilterValue | undefined) => void;
+  onChange?: (value?: DateFilterValue) => void;
   placeholder?: string;
   disabled?: boolean;
   showPresets?: boolean;
   customPresets?: DateFilterPreset[];
-  dateFormat?: string; // For display formatting
+  /** For display formatting */
+  dateFormat?: string;
   minDate?: Date;
   maxDate?: Date;
 }
@@ -71,87 +74,321 @@ export interface DataTableDateFilterProps {
 const PRESET_VISIBLE_ROWS = 4;
 const PRESET_ROW_GAP_TOKEN = '$1';
 
-export function DataTableDateFilter({
+const EMPTY_PRESETS: DateFilterPreset[] = [];
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+const bySizeToken = (sz: string, small: number, medium: number, large: number) => {
+  if (sz === '$3') {
+    return small;
+  }
+  if (sz === '$5') {
+    return large;
+  }
+  return medium;
+};
+
+/** LC-40: while disabled, the placeholder tier ($color10) drops below AA on the washed chrome — pin to the lowest AA step. */
+const triggerLabelColor = (disabled: boolean, hasValue: boolean) => {
+  if (disabled) {
+    return '$color11';
+  }
+  return hasValue ? undefined : '$color10';
+};
+
+// House absolute register (LC-12 / DF-14) — one formatter owns every absolute date.
+const formatDate = (dateString: string) => {
+  const formatted = formatAbsoluteDate(dateString, { year: 'always' });
+  return formatted === '' ? dateString : formatted;
+};
+
+// oxlint-disable-next-line eslint/complexity -- one flat label case per filter operator
+const describeDateFilter = (value: DateFilterValue | undefined, placeholder: string) => {
+  if (!value) {
+    return placeholder;
+  }
+
+  const withDate = (label: (date: string) => string) =>
+    value.value !== undefined && value.value !== '' ? label(formatDate(value.value)) : placeholder;
+
+  switch (value.operator) {
+    case 'is': {
+      return withDate((date) => t('Is {{date}}', { date }));
+    }
+    case 'isNot': {
+      return withDate((date) => t('Is not {{date}}', { date }));
+    }
+    case 'isBefore': {
+      return withDate((date) => t('Before {{date}}', { date }));
+    }
+    case 'isAfter': {
+      return withDate((date) => t('After {{date}}', { date }));
+    }
+    case 'isOnOrBefore': {
+      return withDate((date) => t('On or before {{date}}', { date }));
+    }
+    case 'isOnOrAfter': {
+      return withDate((date) => t('On or after {{date}}', { date }));
+    }
+    case 'isBetween': {
+      return value.values
+        ? t('{{start}} - {{end}}', {
+            start: formatDate(value.values[0]),
+            end: formatDate(value.values[1]),
+          })
+        : placeholder;
+    }
+    case 'isToday': {
+      return t('Today');
+    }
+    case 'isYesterday': {
+      return t('Yesterday');
+    }
+    case 'isTomorrow': {
+      return t('Tomorrow');
+    }
+    case 'isThisWeek': {
+      return t('This week');
+    }
+    case 'isLastWeek': {
+      return t('Last week');
+    }
+    case 'isNextWeek': {
+      return t('Next week');
+    }
+    case 'isThisMonth': {
+      return t('This month');
+    }
+    case 'isLastMonth': {
+      return t('Last month');
+    }
+    case 'isNextMonth': {
+      return t('Next month');
+    }
+    case 'isThisYear': {
+      return t('This year');
+    }
+    case 'isLastYear': {
+      return t('Last year');
+    }
+    case 'isNextYear': {
+      return t('Next year');
+    }
+    case 'isEmpty': {
+      return t('Is empty');
+    }
+    case 'isNotEmpty': {
+      return t('Is not empty');
+    }
+    default: {
+      return placeholder;
+    }
+  }
+};
+
+// Built-in date presets
+const makeDefaultPresets = (iconPx: number): DateFilterPreset[] => [
+  {
+    id: 'today',
+    label: t('Today'),
+    operator: 'isToday',
+    icon: <CalendarIcon size={iconPx} />,
+  },
+  {
+    id: 'yesterday',
+    label: t('Yesterday'),
+    operator: 'isYesterday',
+    icon: <CalendarIcon size={iconPx} />,
+  },
+  {
+    id: 'thisWeek',
+    label: t('This Week'),
+    operator: 'isThisWeek',
+    icon: <CalendarDotsIcon size={iconPx} />,
+  },
+  {
+    id: 'thisMonth',
+    label: t('This Month'),
+    operator: 'isThisMonth',
+    icon: <CalendarDotsIcon size={iconPx} />,
+  },
+  {
+    id: 'last7days',
+    label: t('Last 7 Days'),
+    operator: 'isBetween',
+    values: [new Date(Date.now() - 7 * DAY_MS).toISOString(), new Date().toISOString()],
+    icon: <CalendarBlankIcon size={iconPx} />,
+  },
+  {
+    id: 'last30days',
+    label: t('Last 30 Days'),
+    operator: 'isBetween',
+    values: [new Date(Date.now() - 30 * DAY_MS).toISOString(), new Date().toISOString()],
+    icon: <CalendarBlankIcon size={iconPx} />,
+  },
+  {
+    id: 'empty',
+    label: t('Is Empty'),
+    operator: 'isEmpty',
+    icon: <XIcon size={iconPx} />,
+  },
+  {
+    id: 'notEmpty',
+    label: t('Is Not Empty'),
+    operator: 'isNotEmpty',
+    icon: <ClockIcon size={iconPx} />,
+  },
+];
+
+// Date Filter Utilities
+
+const startOfDay = (date: Date): Date => {
+  const day = new Date(date);
+  day.setHours(0, 0, 0, 0);
+  return day;
+};
+
+const endOfDay = (date: Date): Date => {
+  const day = new Date(date);
+  day.setHours(23, 59, 59, 999);
+  return day;
+};
+
+/** The concrete calendar window a date filter covers; a missing side is null. */
+export interface DateFilterRange {
+  start: Date | null;
+  end: Date | null;
+}
+
+/**
+ * Resolve the concrete calendar window a DateFilterValue covers, used to
+ * populate the custom-range DatePickers (spec tasks 7.2/7.3): presets and
+ * relative operators (isToday, isThisWeek, …) resolve against `now` with the
+ * same boundaries applyDateFilter matches on; open-ended operators leave the
+ * missing side null; negations/emptiness have no contiguous window.
+ */
+// oxlint-disable-next-line eslint/complexity -- one flat case per filter operator; splitting the switch would scatter the window table
+export const resolveDateFilterRange = (
+  filterValue: DateFilterValue | undefined,
+  now: Date = new Date(),
+): DateFilterRange => {
+  if (!filterValue) {
+    return { start: null, end: null };
+  }
+  const { operator, value, values } = filterValue;
+  const today = startOfDay(now);
+  const dayWindow = (offsetDays: number) => {
+    const day = new Date(today);
+    day.setDate(day.getDate() + offsetDays);
+    return { start: day, end: endOfDay(day) };
+  };
+  const weekWindow = (offsetWeeks: number) => {
+    // Same week boundaries as applyDateFilter: weeks start on Sunday.
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - today.getDay() + offsetWeeks * 7);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 6);
+    return { start: weekStart, end: endOfDay(weekEnd) };
+  };
+  const monthWindow = (offsetMonths: number) => {
+    const start = new Date(today.getFullYear(), today.getMonth() + offsetMonths, 1);
+    const end = new Date(today.getFullYear(), today.getMonth() + offsetMonths + 1, 0);
+    return { start, end: endOfDay(end) };
+  };
+  const yearWindow = (offsetYears: number) => {
+    const start = new Date(today.getFullYear() + offsetYears, 0, 1);
+    const end = new Date(today.getFullYear() + offsetYears, 11, 31);
+    return { start, end: endOfDay(end) };
+  };
+  // Same day-grid parse applyDateFilter matches on, so the pickers open on the
+  // day a date-only comparand names rather than the UTC instant it would be.
+  // oxlint-disable-next-line typescript/switch-exhaustiveness-check -- negations and emptiness (isNot/isEmpty/isNotEmpty) intentionally share the no-window default
+  switch (operator) {
+    case 'isBetween': {
+      return { start: parseCalendarDate(values?.[0]), end: parseCalendarDate(values?.[1]) };
+    }
+    case 'is': {
+      const date = parseCalendarDate(value);
+      return date ? { start: date, end: date } : { start: null, end: null };
+    }
+    case 'isAfter':
+    case 'isOnOrAfter': {
+      return { start: parseCalendarDate(value), end: null };
+    }
+    case 'isBefore':
+    case 'isOnOrBefore': {
+      return { start: null, end: parseCalendarDate(value) };
+    }
+    case 'isToday': {
+      return dayWindow(0);
+    }
+    case 'isYesterday': {
+      return dayWindow(-1);
+    }
+    case 'isTomorrow': {
+      return dayWindow(1);
+    }
+    case 'isThisWeek': {
+      return weekWindow(0);
+    }
+    case 'isLastWeek': {
+      return weekWindow(-1);
+    }
+    case 'isNextWeek': {
+      return weekWindow(1);
+    }
+    case 'isThisMonth': {
+      return monthWindow(0);
+    }
+    case 'isLastMonth': {
+      return monthWindow(-1);
+    }
+    case 'isNextMonth': {
+      return monthWindow(1);
+    }
+    case 'isThisYear': {
+      return yearWindow(0);
+    }
+    case 'isLastYear': {
+      return yearWindow(-1);
+    }
+    case 'isNextYear': {
+      return yearWindow(1);
+    }
+    default: {
+      return { start: null, end: null };
+    }
+  }
+};
+
+export const DataTableDateFilter = ({
   value,
   onChange,
   placeholder = t('Filter by date...'),
   disabled = false,
   showPresets = true,
-  customPresets = [],
+  customPresets = EMPTY_PRESETS,
   dateFormat: _dateFormat = 'MMM dd, yyyy',
   minDate,
   maxDate,
-}: DataTableDateFilterProps) {
+}: DataTableDateFilterProps) => {
   const { knobProps } = useResolvedKnobs();
   const sz = knobProps.sizeToken;
-  const iconPx = iconSizeForToken(String(sz));
-  const triggerMinWidth = sz === '$3' ? 160 : sz === '$5' ? 240 : 200;
-  const popoverMinWidth = sz === '$3' ? 280 : sz === '$5' ? 360 : 320;
+  const iconPx = iconSizeForToken(sz);
+  const triggerMinWidth = bySizeToken(sz, 160, 200, 240);
+  const popoverMinWidth = bySizeToken(sz, 280, 320, 360);
   // Row height derives from the same size token the preset Buttons render
   // at, so the whole-row window stays exact under every size knob.
   const tokens = getTokens({ prefixed: true });
-  const sizeTokens = tokens.size as Record<string, unknown>;
-  const presetRowHeight = Math.round(getVariableValue(sizeTokens[sz] ?? sizeTokens.$true));
-  const presetRowGap = Math.round(getVariableValue((tokens.space as Record<string, unknown>)[PRESET_ROW_GAP_TOKEN]));
+  const rowHeightValue: unknown = getVariableValue(tokens.size[sz] ?? tokens.size.$true);
+  const rowGapValue: unknown = getVariableValue(tokens.space[PRESET_ROW_GAP_TOKEN]);
+  const presetRowHeight = Math.round(Number(rowHeightValue));
+  const presetRowGap = Math.round(Number(rowGapValue));
   const presetListMaxHeight = PRESET_VISIBLE_ROWS * presetRowHeight + (PRESET_VISIBLE_ROWS - 1) * presetRowGap;
   const [isOpen, setIsOpen] = useState(false);
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
 
-  // Built-in date presets
-  const defaultPresets: DateFilterPreset[] = [
-    {
-      id: 'today',
-      label: t('Today'),
-      operator: 'isToday',
-      icon: <CalendarIcon size={iconPx} />,
-    },
-    {
-      id: 'yesterday',
-      label: t('Yesterday'),
-      operator: 'isYesterday',
-      icon: <CalendarIcon size={iconPx} />,
-    },
-    {
-      id: 'thisWeek',
-      label: t('This Week'),
-      operator: 'isThisWeek',
-      icon: <CalendarDotsIcon size={iconPx} />,
-    },
-    {
-      id: 'thisMonth',
-      label: t('This Month'),
-      operator: 'isThisMonth',
-      icon: <CalendarDotsIcon size={iconPx} />,
-    },
-    {
-      id: 'last7days',
-      label: t('Last 7 Days'),
-      operator: 'isBetween',
-      values: [new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), new Date().toISOString()],
-      icon: <CalendarBlankIcon size={iconPx} />,
-    },
-    {
-      id: 'last30days',
-      label: t('Last 30 Days'),
-      operator: 'isBetween',
-      values: [new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), new Date().toISOString()],
-      icon: <CalendarBlankIcon size={iconPx} />,
-    },
-    {
-      id: 'empty',
-      label: t('Is Empty'),
-      operator: 'isEmpty',
-      icon: <XIcon size={iconPx} />,
-    },
-    {
-      id: 'notEmpty',
-      label: t('Is Not Empty'),
-      operator: 'isNotEmpty',
-      icon: <ClockIcon size={iconPx} />,
-    },
-  ];
-
-  const allPresets = useMemo(() => [...defaultPresets, ...customPresets], [customPresets]);
+  const allPresets = [...makeDefaultPresets(iconPx), ...customPresets];
 
   // LC-21 (owner adjudication 2026-08-12): a filter panel composes multiple
   // picks — selection applies live and never dismisses. The panel closes only
@@ -224,92 +461,6 @@ export function DataTableDateFilter({
     onChange?.();
   };
 
-  // House absolute register (LC-12 / DF-14) — one formatter owns every absolute date.
-  const formatDate = (dateString: string) => {
-    const formatted = formatAbsoluteDate(dateString, { year: 'always' });
-    return formatted === '' ? dateString : formatted;
-  };
-
-  const getDisplayValue = () => {
-    if (!value) {
-      return placeholder;
-    }
-
-    switch (value.operator) {
-      case 'is': {
-        return value.value ? t('Is {{date}}', { date: formatDate(value.value) }) : placeholder;
-      }
-      case 'isNot': {
-        return value.value ? t('Is not {{date}}', { date: formatDate(value.value) }) : placeholder;
-      }
-      case 'isBefore': {
-        return value.value ? t('Before {{date}}', { date: formatDate(value.value) }) : placeholder;
-      }
-      case 'isAfter': {
-        return value.value ? t('After {{date}}', { date: formatDate(value.value) }) : placeholder;
-      }
-      case 'isOnOrBefore': {
-        return value.value ? t('On or before {{date}}', { date: formatDate(value.value) }) : placeholder;
-      }
-      case 'isOnOrAfter': {
-        return value.value ? t('On or after {{date}}', { date: formatDate(value.value) }) : placeholder;
-      }
-      case 'isBetween': {
-        return value.values
-          ? t('{{start}} - {{end}}', {
-              start: formatDate(value.values[0]),
-              end: formatDate(value.values[1]),
-            })
-          : placeholder;
-      }
-      case 'isToday': {
-        return t('Today');
-      }
-      case 'isYesterday': {
-        return t('Yesterday');
-      }
-      case 'isTomorrow': {
-        return t('Tomorrow');
-      }
-      case 'isThisWeek': {
-        return t('This week');
-      }
-      case 'isLastWeek': {
-        return t('Last week');
-      }
-      case 'isNextWeek': {
-        return t('Next week');
-      }
-      case 'isThisMonth': {
-        return t('This month');
-      }
-      case 'isLastMonth': {
-        return t('Last month');
-      }
-      case 'isNextMonth': {
-        return t('Next month');
-      }
-      case 'isThisYear': {
-        return t('This year');
-      }
-      case 'isLastYear': {
-        return t('Last year');
-      }
-      case 'isNextYear': {
-        return t('Next year');
-      }
-      case 'isEmpty': {
-        return t('Is empty');
-      }
-      case 'isNotEmpty': {
-        return t('Is not empty');
-      }
-      default: {
-        return placeholder;
-      }
-    }
-  };
-
   const trigger = (
     <Button
       size={knobProps.sizeToken}
@@ -320,12 +471,10 @@ export function DataTableDateFilter({
       <Text
         flex={1}
         textAlign="left"
-        // LC-40: while disabled, the placeholder tier ($color10) drops
-        // below AA on the washed chrome — pin to the lowest AA step.
-        color={disabled ? '$color11' : value ? undefined : '$color10'}
+        color={triggerLabelColor(disabled, value !== undefined)}
         fontSize="$3"
         numberOfLines={1}>
-        {getDisplayValue()}
+        {describeDateFilter(value, placeholder)}
       </Text>
       <CaretDownIcon size={iconPx} />
     </Button>
@@ -381,7 +530,7 @@ export function DataTableDateFilter({
                       handlePresetSelect(preset);
                     }}
                     {...(activePresetId === preset.id
-                      ? { theme: 'accent' as any, backgroundColor: '$background' }
+                      ? { theme: 'accent' as const, backgroundColor: '$background' }
                       : undefined)}>
                     <Text fontSize="$3">{preset.label}</Text>
                   </Button>
@@ -414,7 +563,7 @@ export function DataTableDateFilter({
               flex={1}
               size={knobProps.sizeToken}
               onPress={() => {
-                handleCustomDateSelect(new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), 'is');
+                handleCustomDateSelect(new Date(Date.now() - DAY_MS).toISOString(), 'is');
               }}>
               {t('Yesterday')}
             </Button>
@@ -432,10 +581,7 @@ export function DataTableDateFilter({
                 flex={1}
                 size={knobProps.sizeToken}
                 onPress={() => {
-                  handleDateRangeSelect(
-                    new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-                    new Date().toISOString(),
-                  );
+                  handleDateRangeSelect(new Date(Date.now() - 7 * DAY_MS).toISOString(), new Date().toISOString());
                 }}>
                 {t('Last 7 days')}
               </Button>
@@ -443,10 +589,7 @@ export function DataTableDateFilter({
                 flex={1}
                 size={knobProps.sizeToken}
                 onPress={() => {
-                  handleDateRangeSelect(
-                    new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-                    new Date().toISOString(),
-                  );
+                  handleDateRangeSelect(new Date(Date.now() - 30 * DAY_MS).toISOString(), new Date().toISOString());
                 }}>
                 {t('Last 30 days')}
               </Button>
@@ -491,132 +634,20 @@ export function DataTableDateFilter({
       </YStack>
     </FloatingPanel>
   );
-}
+};
 
-// Date Filter Utilities
-
-function startOfDay(date: Date): Date {
-  const day = new Date(date);
-  day.setHours(0, 0, 0, 0);
-  return day;
-}
-
-function endOfDay(date: Date): Date {
-  const day = new Date(date);
-  day.setHours(23, 59, 59, 999);
-  return day;
-}
-
-/**
- * Resolve the concrete calendar window a DateFilterValue covers, used to
- * populate the custom-range DatePickers (spec tasks 7.2/7.3): presets and
- * relative operators (isToday, isThisWeek, …) resolve against `now` with the
- * same boundaries applyDateFilter matches on; open-ended operators leave the
- * missing side null; negations/emptiness have no contiguous window.
- */
-export function resolveDateFilterRange(
-  filterValue: DateFilterValue | undefined,
-  now: Date = new Date(),
-): { start: Date | null; end: Date | null } {
-  if (!filterValue) {
-    return { start: null, end: null };
-  }
-  const { operator, value, values } = filterValue;
-  const today = startOfDay(now);
-  // Same day-grid parse applyDateFilter matches on, so the pickers open on the
-  // day a date-only comparand names rather than the UTC instant it would be.
-  const parsed = (iso?: string) => parseCalendarDate(iso);
-  const dayWindow = (offsetDays: number) => {
-    const day = new Date(today);
-    day.setDate(day.getDate() + offsetDays);
-    return { start: day, end: endOfDay(day) };
-  };
-  const weekWindow = (offsetWeeks: number) => {
-    // Same week boundaries as applyDateFilter: weeks start on Sunday.
-    const weekStart = new Date(today);
-    weekStart.setDate(today.getDate() - today.getDay() + offsetWeeks * 7);
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 6);
-    return { start: weekStart, end: endOfDay(weekEnd) };
-  };
-  const monthWindow = (offsetMonths: number) => {
-    const start = new Date(today.getFullYear(), today.getMonth() + offsetMonths, 1);
-    const end = new Date(today.getFullYear(), today.getMonth() + offsetMonths + 1, 0);
-    return { start, end: endOfDay(end) };
-  };
-  const yearWindow = (offsetYears: number) => {
-    const start = new Date(today.getFullYear() + offsetYears, 0, 1);
-    const end = new Date(today.getFullYear() + offsetYears, 11, 31);
-    return { start, end: endOfDay(end) };
-  };
-  switch (operator) {
-    case 'isBetween': {
-      return { start: parsed(values?.[0]), end: parsed(values?.[1]) };
-    }
-    case 'is': {
-      const date = parsed(value);
-      return date ? { start: date, end: date } : { start: null, end: null };
-    }
-    case 'isAfter':
-    case 'isOnOrAfter': {
-      return { start: parsed(value), end: null };
-    }
-    case 'isBefore':
-    case 'isOnOrBefore': {
-      return { start: null, end: parsed(value) };
-    }
-    case 'isToday': {
-      return dayWindow(0);
-    }
-    case 'isYesterday': {
-      return dayWindow(-1);
-    }
-    case 'isTomorrow': {
-      return dayWindow(1);
-    }
-    case 'isThisWeek': {
-      return weekWindow(0);
-    }
-    case 'isLastWeek': {
-      return weekWindow(-1);
-    }
-    case 'isNextWeek': {
-      return weekWindow(1);
-    }
-    case 'isThisMonth': {
-      return monthWindow(0);
-    }
-    case 'isLastMonth': {
-      return monthWindow(-1);
-    }
-    case 'isNextMonth': {
-      return monthWindow(1);
-    }
-    case 'isThisYear': {
-      return yearWindow(0);
-    }
-    case 'isLastYear': {
-      return yearWindow(-1);
-    }
-    case 'isNextYear': {
-      return yearWindow(1);
-    }
-    default: {
-      return { start: null, end: null };
-    }
-  }
-}
-
-export function applyDateFilter<T>(data: T[], columnKey: keyof T, filterValue?: DateFilterValue): T[] {
+export const applyDateFilter = <T,>(data: T[], columnKey: keyof T, filterValue?: DateFilterValue): T[] => {
   if (!filterValue) {
     return data;
   }
 
   const { operator, value, values } = filterValue;
 
+  // oxlint-disable-next-line eslint/complexity, sonarjs/cognitive-complexity -- one flat match case per filter operator
   return data.filter((item) => {
     const itemValue = item[columnKey];
-    if (!itemValue) {
+    const hasValue = Boolean(itemValue);
+    if (!hasValue) {
       return operator === 'isEmpty';
     }
 
@@ -625,6 +656,8 @@ export function applyDateFilter<T>(data: T[], columnKey: keyof T, filterValue?: 
     // previous local day west of UTC, mid-afternoon east of it — while every
     // window below is built from local parts. Parsed apart, the two sides
     // disagree by a day and the filter drops or admits a day of rows.
+    // SAFETY: date columns carry a Date, ISO string or epoch — the DateInput shapes parseCalendarDate accepts; anything else parses to null below.
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- row values are generic T[keyof T]; the column contract makes them date inputs
     const itemDate = parseCalendarDate(itemValue as string);
     if (!itemDate) {
       return false;
@@ -639,7 +672,7 @@ export function applyDateFilter<T>(data: T[], columnKey: keyof T, filterValue?: 
         return on ? itemDate.toDateString() === on.toDateString() : false;
       }
       case 'isNot': {
-        if (!value) {
+        if (value === undefined || value === '') {
           return false;
         }
         const on = parseCalendarDate(value);
@@ -723,29 +756,30 @@ export function applyDateFilter<T>(data: T[], columnKey: keyof T, filterValue?: 
       case 'isNextYear': {
         return itemDate.getFullYear() === today.getFullYear() + 1;
       }
+      // A row reaching the switch has a value (blank rows returned above).
       case 'isEmpty': {
-        return !itemValue;
+        return false;
       }
       case 'isNotEmpty': {
-        return !!itemValue;
+        return true;
       }
       default: {
         return true;
       }
     }
   });
-}
+};
 
 // Hook for Date Filtering
 
-export interface UseDateFilterOptions<T = any> {
+export interface UseDateFilterOptions<T = unknown> {
   data: T[];
   columnKey: keyof T;
   initialFilter?: DateFilterValue;
   onFilterChange?: (filteredData: T[], filter: DateFilterValue | undefined) => void;
 }
 
-export interface UseDateFilterReturn<T = any> {
+export interface UseDateFilterReturn<T = unknown> {
   filteredData: T[];
   filterValue: DateFilterValue | undefined;
   setFilterValue: (value: DateFilterValue | undefined) => void;
@@ -753,12 +787,12 @@ export interface UseDateFilterReturn<T = any> {
   isFiltered: boolean;
 }
 
-export function useDateFilter<T = any>({
+export const useDateFilter = <T,>({
   data,
   columnKey,
   initialFilter,
   onFilterChange,
-}: UseDateFilterOptions<T>): UseDateFilterReturn<T> {
+}: UseDateFilterOptions<T>): UseDateFilterReturn<T> => {
   const [filterValue, setFilterValue] = useState<DateFilterValue | undefined>(initialFilter);
 
   const filteredData = useMemo(() => {
@@ -769,6 +803,7 @@ export function useDateFilter<T = any>({
   }, [data, columnKey, filterValue]);
 
   React.useEffect(() => {
+    // oxlint-disable-next-line react-doctor/no-pass-data-to-parent, react-doctor/no-pass-live-state-to-parent -- onFilterChange is the hook's public notify-after-filter contract
     onFilterChange?.(filteredData, filterValue);
   }, [filteredData, filterValue, onFilterChange]);
 
@@ -783,4 +818,4 @@ export function useDateFilter<T = any>({
     clearFilter,
     isFiltered: !!filterValue,
   };
-}
+};

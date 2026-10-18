@@ -17,6 +17,7 @@ import { Paragraph, YStack } from 'tamagui';
 import type { DataTableColumn } from '../../types';
 
 import { DataTable } from './index';
+import type { DataTableRootProps } from './index';
 
 const meta: Meta = {
   title: 'Table/DataTableCardControls',
@@ -57,22 +58,20 @@ const columns: DataTableColumn<Person>[] = [
   { accessorKey: 'email', header: 'Email' },
 ];
 
-function CardTable(props: Record<string, any>) {
-  return (
-    <YStack
-      padding="$4"
-      width="100%"
-      maxWidth={520}>
-      <DataTable
-        data={people}
-        columns={columns}
-        layout="cards"
-        aria-label="People as cards"
-        {...props}
-      />
-    </YStack>
-  );
-}
+const CardTable = (props: Partial<DataTableRootProps<Person>>) => (
+  <YStack
+    padding="$4"
+    width="100%"
+    maxWidth={520}>
+    <DataTable
+      data={people}
+      columns={columns}
+      layout="cards"
+      aria-label="People as cards"
+      {...props}
+    />
+  </YStack>
+);
 
 /** Default cards keep Filter and Sort together. */
 export const Default = {

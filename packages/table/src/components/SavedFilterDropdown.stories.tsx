@@ -9,7 +9,7 @@ import type { Meta } from '@storybook/react-native-web-vite';
 import { useState } from 'react';
 import { YStack } from 'tamagui';
 
-import type { ParsedFilter } from '../hooks/useSavedFilters';
+import type { ParsedFilter } from '../hooks/use-saved-filters';
 
 import { SavedFilterDropdown } from './SavedFilterDropdown';
 
@@ -54,7 +54,7 @@ const savedFilters: ParsedFilter[] = [
   },
 ];
 
-function DropdownHarness({ initial, disabled = false }: { initial?: ParsedFilter | null; disabled?: boolean }) {
+const DropdownHarness = ({ initial, disabled = false }: { initial?: ParsedFilter | null; disabled?: boolean }) => {
   const [selected, setSelected] = useState<ParsedFilter | null>(initial ?? null);
   return (
     <YStack
@@ -73,7 +73,7 @@ function DropdownHarness({ initial, disabled = false }: { initial?: ParsedFilter
       />
     </YStack>
   );
-}
+};
 
 export const Default = {
   name: 'Main',

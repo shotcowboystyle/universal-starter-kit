@@ -1,15 +1,17 @@
-import i18n from 'i18next';
+import i18n, { t as translate } from 'i18next';
 
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- i18next interpolation bag; callers pass arbitrary interpolation values
 type TOptions = Record<string, unknown>;
 
-function interpolate(template: string, options?: TOptions): string {
-  if (!options) {
+const interpolate = (template: string, options?: TOptions): string => {
+  if (options === undefined) {
     return template;
   }
-  return template.replaceAll(/\{\{(\w+)\}\}/g, (_, key: string) =>
+  return template.replaceAll(/\{\{(?<key>\w+)\}\}/gu, (_, key: string) =>
+    // oxlint-disable-next-line typescript/no-base-to-string -- interpolation values are primitives in practice; stringification matches i18next's own
     options[key] == null ? `{{${key}}}` : String(options[key]),
   );
-}
+};
 
 /**
  * Safe catalog lookup for non-component paths (render callbacks, chrome
@@ -17,12 +19,13 @@ function interpolate(template: string, options?: TOptions): string {
  * the English key with light `{{var}}` interpolation so callers never get
  * `undefined`. Same contract as `forms/src/shared/t.ts`.
  */
-export function t(key: string, options?: TOptions): string {
+export const t = (key: string, options?: TOptions): string => {
   if (i18n?.isInitialized) {
-    const translated: unknown = i18n.t(key, options as never);
+    const translated: unknown = translate(key, options);
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- i18next returns non-strings for returnObjects/missing-key configs; only a non-empty string is usable
     if (typeof translated === 'string' && translated.length > 0) {
       return translated;
     }
   }
   return interpolate(key, options);
-}
+};

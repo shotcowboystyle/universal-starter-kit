@@ -12,7 +12,7 @@ import React, { useState } from 'react';
 import { Card, Text, XStack, YStack } from 'tamagui';
 
 import type { DataTableColumnType, FilterOperator } from '../../types';
-import { defaultOperatorForFilterType, filterOperatorLabel, operatorNeedsNoValue } from '../../utils/filterFields';
+import { defaultOperatorForFilterType, filterOperatorLabel, operatorNeedsNoValue } from '../../utils/filter-fields';
 
 import { FilterOperatorValueEditor } from './index';
 
@@ -62,7 +62,7 @@ interface HarnessProps {
  * caller's state, and the editor only reports changes. The card below is the
  * filter the surface would commit.
  */
-function EditorHarness({ fieldType, options, initialOperator, initialValue = '', heading = false }: HarnessProps) {
+const EditorHarness = ({ fieldType, options, initialOperator, initialValue = '', heading = false }: HarnessProps) => {
   const [operator, setOperator] = useState<FilterOperator>(initialOperator ?? defaultOperatorForFilterType(fieldType));
   const [value, setValue] = useState(initialValue);
 
@@ -117,7 +117,7 @@ function EditorHarness({ fieldType, options, initialOperator, initialValue = '',
       </Card>
     </YStack>
   );
-}
+};
 
 export const Default = () => (
   <YStack padding="$4">

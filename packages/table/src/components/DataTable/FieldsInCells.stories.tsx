@@ -9,7 +9,7 @@ import React from 'react';
 import { fn } from 'storybook/test';
 import { Text, View, YStack, H3 } from 'tamagui';
 
-import type { DataTableColumn, DataTableData } from '../../types';
+import type { DataTableColumn, DataTableData, DataTableProps } from '../../types';
 
 import { DataTable } from './index';
 
@@ -213,17 +213,13 @@ type Story = StoryObj<typeof DataTable>;
  * colorpicker, …) actually persist edits in-story. Committed data is echoed
  * below the table (testID "fields-in-cells-data") for verification.
  */
-function WiredTable<TData extends DataTableData>({
+const WiredTable = <TData extends DataTableData>({
   data: initialData,
   columns: tableColumns,
   onDataChange,
   onCellChange,
   ...rest
-}: {
-  data: TData[];
-  columns: DataTableColumn<TData>[];
-  [key: string]: any;
-}) {
+}: DataTableProps<TData>) => {
   const [data, setData] = React.useState<TData[]>(initialData);
   return (
     <YStack
@@ -253,7 +249,7 @@ function WiredTable<TData extends DataTableData>({
       </Text>
     </YStack>
   );
-}
+};
 
 // These stories demo cell FIELDS on a 3-row single-page fixture; pagination
 // chrome is off so the footer never rests on bare-disabled nav (UX-P19).

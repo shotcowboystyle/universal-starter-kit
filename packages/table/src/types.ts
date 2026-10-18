@@ -1,15 +1,17 @@
 import type { AnyFormApi } from '@repo/forms';
-import type { ColumnDef, ColumnFiltersState, Row } from '@tanstack/react-table';
+import type { ColumnDef, ColumnFiltersState, Row, Table } from '@tanstack/react-table';
 import type React from 'react';
 
-import type { UrlStateStrategy } from './hooks/useDataTable';
-import type { RowAccumulator } from './utils/rowAccumulator';
+import type { UrlStateStrategy } from './hooks/use-data-table';
+import type { RowAccumulator } from './utils/row-accumulator';
 
 // Core Data Types
 
+// oxlint-disable-next-line typescript/no-explicit-any, anti-slop/no-unsafe-dictionary-type -- row records are consumer-defined; every component and consumer column def indexes them with arbitrary value types
 export type DataTableData = Record<string, any>;
 
 /** Bulk action for DataTable selection toolbar (DG-TBL-02). */
+// oxlint-disable-next-line typescript/no-explicit-any -- default keeps consumers' typed onExecute callbacks assignable (unknown would break parameter contravariance)
 export interface BulkAction<T = any> {
   id: string;
   label: string;
@@ -110,6 +112,7 @@ export interface DataTableCellRenderContext {
  */
 export interface DataTableFieldProps {
   /** Options for select/combobox/radiogroup/togglegroup fields */
+  // oxlint-disable-next-line typescript/no-explicit-any -- option values flow into Select/Combobox/RadioGroup/ToggleGroup option types that need concrete values
   options?: { label: string; value: any }[];
   /** Placeholder text */
   placeholder?: string;
@@ -166,15 +169,20 @@ export interface DataTableFieldProps {
    * those states, so the custom presentation must go non-interactive too.
    */
   render?: (
+    // oxlint-disable-next-line typescript/no-explicit-any -- consumer render callbacks type their cell value; unknown would reject them (parameter contravariance)
     value: any,
+    // oxlint-disable-next-line typescript/no-explicit-any -- consumer render callbacks type their row; unknown would reject them (parameter contravariance)
     row: any,
+    // oxlint-disable-next-line typescript/no-explicit-any -- the field component commits values of the column's own type
     onChange: (value: any) => void,
     context?: DataTableCellRenderContext,
   ) => React.ReactNode;
   /** Any additional props to pass to the field component */
+  // oxlint-disable-next-line typescript/no-explicit-any, anti-slop/no-unsafe-dictionary-type -- pass-through bag forwarded verbatim to arbitrary field components
   [key: string]: any;
 }
 
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- default row type is the consumer-defined DataTableData record
 export type DataTableColumn<TData extends DataTableData = DataTableData> = ColumnDef<TData> & {
   accessorKey?: keyof TData;
   filterable?: boolean;
@@ -257,15 +265,19 @@ export type FilterOperator =
 
 export interface FilterValue {
   operator: FilterOperator;
+  // oxlint-disable-next-line typescript/no-explicit-any -- filter operands are compared against arbitrary cell values by filter-utils
   value: any;
-  values?: any[]; // For multi-value operators like "isAnyOf"
+  /** For multi-value operators like "isAnyOf" */
+  // oxlint-disable-next-line typescript/no-explicit-any -- filter operands are compared against arbitrary cell values by filter-utils
+  values?: any[];
 }
 
 export interface TableFilter {
   id: string;
   columnId: string;
   value: FilterValue;
-  label?: string; // Human-readable label for the filter
+  /** Human-readable label for the filter */
+  label?: string;
 }
 
 /**
@@ -279,6 +291,7 @@ export interface FilterableField {
   /** Filter editor type. Defaults to "text". */
   type?: DataTableColumnType;
   /** Options for select-type fields. */
+  // oxlint-disable-next-line typescript/no-explicit-any -- option values flow into Select/Combobox/RadioGroup/ToggleGroup option types that need concrete values
   options?: { label: string; value: any }[];
 }
 
@@ -287,13 +300,15 @@ export interface ResolvedFilterField {
   id: string;
   label: string;
   type: DataTableColumnType;
+  // oxlint-disable-next-line typescript/no-explicit-any -- option values flow into Select/Combobox/RadioGroup/ToggleGroup option types that need concrete values
   options?: { label: string; value: any }[];
 }
 
 export interface FacetedFilterOption {
   label: string;
   value: string | number | boolean;
-  count: number; // Number of items matching this option
+  /** Number of items matching this option */
+  count: number;
 }
 
 // Pagination Types
@@ -332,7 +347,7 @@ export interface PageLoadQuery {
   globalFilter?: string;
 }
 
-export interface PageLoadResult<TData = any> {
+export interface PageLoadResult<TData = unknown> {
   rows: TData[];
   /** Total row count across all pages, when known (enables exact end-of-data). */
   totalCount?: number;
@@ -342,7 +357,7 @@ export interface PageLoadResult<TData = any> {
  * Async page loader contract for infinite mode. Must be side-effect-free per
  * query: the table may call it ahead of time (prefetch) and cache the result.
  */
-export type DataTablePageLoader<TData = any> = (query: PageLoadQuery) => Promise<PageLoadResult<TData>>;
+export type DataTablePageLoader<TData = unknown> = (query: PageLoadQuery) => Promise<PageLoadResult<TData>>;
 
 /** Computed infinite-mode state exposed by useDataTable / DataTableStateContext. */
 export interface DataTableInfiniteState {
@@ -437,7 +452,7 @@ export interface DataTableState {
 
 // Component Props Types
 
-export type { RowAccumulator, RowAccumulatorResult } from './utils/rowAccumulator';
+export type { RowAccumulator, RowAccumulatorResult } from './utils/row-accumulator';
 
 export interface DataTableProps<TData extends DataTableData = DataTableData> {
   data: TData[];
@@ -455,7 +470,7 @@ export interface DataTableProps<TData extends DataTableData = DataTableData> {
    * Must be a STABLE reference (module constant or `useMemo`) — the fold
    * re-runs when its identity changes. The full ordering contract, including
    * what happens when the user sorts on another column, is documented on
-   * `RowAccumulator` in utils/rowAccumulator.ts.
+   * `RowAccumulator` in utils/row-accumulator.ts.
    */
   rowAccumulator?: RowAccumulator<TData>;
 
@@ -671,8 +686,11 @@ export interface DataTableProps<TData extends DataTableData = DataTableData> {
   onCellChange?: (
     rowIndex: number,
     columnId: string,
+    // oxlint-disable-next-line typescript/no-explicit-any -- consumer callbacks type the cell value; unknown would reject them (parameter contravariance)
     value: any,
+    // oxlint-disable-next-line typescript/no-explicit-any -- consumer callbacks type the cell value; unknown would reject them (parameter contravariance)
     previousValue: any,
+    // oxlint-disable-next-line typescript/no-invalid-void-type -- void lets plain side-effect callbacks satisfy the "return false to reject" contract
   ) => boolean | void | Promise<boolean | void>;
 
   // Form integration (alternative to data + onDataChange)
@@ -736,6 +754,8 @@ export interface DataTableToolbarProps {
   isFetching?: boolean;
 }
 
+export type DataTableFilterColumnType = 'text' | 'number' | 'date' | 'boolean' | 'select';
+
 export interface DataTableFiltersProps {
   filters: TableFilter[];
   onFiltersChange: (filters: TableFilter[]) => void;
@@ -745,7 +765,7 @@ export interface DataTableFiltersProps {
   availableColumns: {
     id: string;
     label: string;
-    type: 'text' | 'number' | 'date' | 'boolean' | 'select';
+    type: DataTableFilterColumnType;
     options?: FacetedFilterOption[];
   }[];
 }
@@ -768,7 +788,8 @@ export interface UseDataTableOptions<TData extends DataTableData = DataTableData
 }
 
 export interface UseDataTableReturn<TData extends DataTableData = DataTableData> {
-  table: any; // TanStack Table instance
+  /** TanStack Table instance */
+  table: Table<TData>;
   state: DataTableState;
   actions: {
     setGlobalFilter: (value: string) => void;

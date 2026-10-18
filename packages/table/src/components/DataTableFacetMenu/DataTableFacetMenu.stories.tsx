@@ -44,7 +44,7 @@ const ticketColumns: DataTableColumn<Ticket>[] = [
   { accessorKey: 'tags', header: 'Tags' },
 ];
 
-function countBy(rows: Ticket[], pick: (row: Ticket) => string[]): DataTableFacetOption[] {
+const countBy = (rows: Ticket[], pick: (row: Ticket) => string[]): DataTableFacetOption[] => {
   const counts = new Map<string, number>();
   for (const row of rows) {
     for (const value of pick(row)) {
@@ -53,8 +53,8 @@ function countBy(rows: Ticket[], pick: (row: Ticket) => string[]): DataTableFace
   }
   return [...counts.entries()]
     .map(([value, count]) => ({ value, count }))
-    .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value));
-}
+    .toSorted((a, b) => b.count - a.count || a.value.localeCompare(b.value));
+};
 
 /**
  * The intended composition: facet menus slot into the DataTableToolbar

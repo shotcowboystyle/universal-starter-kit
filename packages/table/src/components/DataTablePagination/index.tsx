@@ -1,4 +1,3 @@
-import { Pagination, getPaginationItems } from '@repo/ui';
 import { Input, Select } from '@repo/forms';
 import {
   ensureCompositeFocusRing,
@@ -8,14 +7,16 @@ import {
   textFieldInset,
   useResolvedKnobs,
 } from '@repo/theme';
+import { Pagination, getPaginationItems } from '@repo/ui';
 import { useMemo, useState } from 'react';
 import type React from 'react';
+import type { LayoutChangeEvent } from 'react-native';
 import { Text, View, XStack, getTokenValue, useMedia } from 'tamagui';
 
 import type { TablePagination, TablePaginationState } from '../../types';
-import { DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE_OPTIONS } from '../../utils/paginationDefaults';
-import { bidiIsolate } from '../../utils/withInterp';
-import { useDataTableState } from '../DataTable/DataTableStateContext';
+import { DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE_OPTIONS } from '../../utils/pagination-defaults';
+import { bidiIsolate } from '../../utils/with-interp';
+import { useDataTableState } from '../DataTable/data-table-state-context';
 
 export interface DataTablePaginationProps {
   pagination?: TablePaginationState;
@@ -32,18 +33,28 @@ export interface DataTablePaginationProps {
   compact?: boolean;
 }
 
-function controlWidth(chars: number, fontSize: number, inset: number, trailingChrome = 0) {
-  // Conservative $body digit width, checked against rendered ink in Storybook.
-  // Include the Box's two hairline borders after its single horizontal inset.
-  return Math.ceil(chars * fontSize * 0.65) + inset * 2 + trailingChrome + 2;
-}
+// Conservative $body digit width, checked against rendered ink in Storybook.
+// Include the Box's two hairline borders after its single horizontal inset.
+const controlWidth = (chars: number, fontSize: number, inset: number, trailingChrome = 0) =>
+  Math.ceil(chars * fontSize * 0.65) + inset * 2 + trailingChrome + 2;
 
-function formatRange(start: number, end: number, total: number) {
+const formatRange = (start: number, end: number, total: number) => {
   if (total === 0) {
     return '0–0 items';
   }
   return `${start}–${end} of ${total} items`;
-}
+};
+
+const noop = (): void => undefined;
+
+const DEFAULT_OPTIONS = [...DEFAULT_PAGE_SIZE_OPTIONS];
+
+type SpaceToken = Parameters<typeof getTokenValue>[0];
+
+const spacePixels = (token: string | number) =>
+  // SAFETY: knob padding/gap values are registered space tokens; getTokenValue's Token union is only a type-level subset of them
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- knob recipes carry token names as plain values, not the generated token union
+  Number(getTokenValue(token as SpaceToken, 'space'));
 
 /**
  * DataTable footer pager. Page navigation is the catalog
@@ -56,7 +67,8 @@ function formatRange(start: number, end: number, total: number) {
  * inside a DataTable stays shrink-wrapped so the table's own range can sit
  * beside it; standalone compact (reports, stories) keeps the range (LC-37).
  */
-export function DataTablePagination(props: DataTablePaginationProps) {
+// oxlint-disable-next-line eslint/complexity, sonarjs/cognitive-complexity, react-doctor/no-giant-component -- the branches are context-vs-prop fallbacks plus the packed/standalone/compact/mobile footer variants
+export const DataTablePagination = (props: DataTablePaginationProps) => {
   const ctx = useDataTableState();
   const insideTable = Boolean(ctx);
 
@@ -86,10 +98,10 @@ export function DataTablePagination(props: DataTablePaginationProps) {
       ? (p: TablePagination) => {
           ctx.actions.setPagination(p);
         }
-      : () => {});
+      : noop);
 
   const {
-    pageSizeOptions = [...DEFAULT_PAGE_SIZE_OPTIONS],
+    pageSizeOptions = DEFAULT_OPTIONS,
     showInfo = true,
     showPageSizeSelector = true,
     showPageJump = true,
@@ -102,13 +114,11 @@ export function DataTablePagination(props: DataTablePaginationProps) {
   // The fields are always compact, independently of the footer's layout.
   const { knobProps: fieldKnobs } = useResolvedKnobs({ compact: true });
   const fieldRecipe = sizeRecipeForToken(knobProps.sizeToken, { touch: isTouchSurface() });
-  const selectInset = Number(
-    getTokenValue(fieldKnobs.panelPadding.padding as Parameters<typeof getTokenValue>[0], 'space'),
-  );
+  const selectInset = spacePixels(fieldKnobs.panelPadding.padding);
   const isMobile = !sm;
   const packed = compact && insideTable;
   const [availableWidth, setAvailableWidth] = useState<number | undefined>();
-  const measureWidth = (event: import('react-native').LayoutChangeEvent) => {
+  const measureWidth = (event: LayoutChangeEvent) => {
     const { width } = event.nativeEvent.layout;
     if (width > 0) {
       setAvailableWidth((previous) => (previous === width ? previous : width));
@@ -150,10 +160,8 @@ export function DataTablePagination(props: DataTablePaginationProps) {
   // An unmeasured host uses the safe simple presentation, including SSR.
   const pageControls = getPaginationItems(totalPages, currentPage).length + 2 + (!compact && !isMobile ? 2 : 0);
   const controlBudget = Math.max(MIN_PRESS_TARGET, knobProps.control.height + knobProps.control.paddingHorizontal * 2);
-  const gapPixels = Number(getTokenValue(knobProps.gap.gap as Parameters<typeof getTokenValue>[0], 'space'));
-  const paddingPixels = packed
-    ? 0
-    : Number(getTokenValue(knobProps.panelPadding.padding as Parameters<typeof getTokenValue>[0], 'space'));
+  const gapPixels = spacePixels(knobProps.gap.gap);
+  const paddingPixels = packed ? 0 : spacePixels(knobProps.panelPadding.padding);
   const measuredBudget = pageControls * controlBudget + Math.max(0, pageControls - 1) * gapPixels + paddingPixels * 2;
   const numberedBudget = Number.isFinite(measuredBudget) ? measuredBudget : Infinity;
   const simplePager = availableWidth === undefined || availableWidth < numberedBudget;
@@ -163,17 +171,19 @@ export function DataTablePagination(props: DataTablePaginationProps) {
     if (pagination.pageSize > 0) {
       sizes.add(pagination.pageSize);
     }
-    return [...sizes].sort((a, b) => a - b);
+    return [...sizes].toSorted((a, b) => a - b);
   }, [pageSizeOptions, pagination.pageSize]);
 
   const showSize = showPageSizeSelector;
   // Compact-inside-DataTable: the table footer already paints the range.
   const showRange = showInfo && !(compact && insideTable);
-  const showJump = showPageJump && showPager && !compact && !isMobile && !simplePager;
+  const roomForJump = !compact && !isMobile && !simplePager;
+  const showJump = showPageJump && showPager && roomForJump;
 
   const [jumpNonce, setJumpNonce] = useState(0);
 
   const commitJump = (pageNumber: string, revertInvalid = false) => {
+    // oxlint-disable-next-line unicorn/prefer-number-coercion -- parseInt's lenient prefix parse ("3 " / "3abc" -> 3, "" -> NaN) is the intended jump-input behavior
     const page = Number.parseInt(pageNumber, 10) - 1;
     if (!Number.isNaN(page) && page >= 0 && page < totalPages) {
       if (page !== pagination.pageIndex) {
@@ -212,16 +222,18 @@ export function DataTablePagination(props: DataTablePaginationProps) {
             Math.max(2, ...sizeOptions.map((n) => String(n).length)),
             fieldKnobs.controlType.fontSize,
             selectInset,
-            fieldRecipe.gap + 16, // Select's fixed 16px caret.
+            // Select's fixed 16px caret.
+            fieldRecipe.gap + 16,
           ),
         )}
         overflow="visible"
         flexShrink={0}
-        {...({ 'data-pagination-control': 'size' } as object)}>
+        data-pagination-control="size">
         <Select
           value={String(pagination.pageSize)}
           onChange={(value) => {
-            if (typeof value === 'string') {
+            if (!Array.isArray(value)) {
+              // oxlint-disable-next-line unicorn/prefer-number-coercion -- keeps parseInt's lenient integer parse of the option value
               handlePageSizeChange(Number.parseInt(value, 10));
             }
           }}
@@ -262,7 +274,7 @@ export function DataTablePagination(props: DataTablePaginationProps) {
         width={Math.max(48, controlWidth(String(totalPages).length, fieldRecipe.fontSize, textFieldInset(fieldRecipe)))}
         overflow="visible"
         flexShrink={0}
-        {...({ 'data-pagination-control': 'jump' } as object)}>
+        data-pagination-control="jump">
         <Input
           key={`${currentPage}-${jumpNonce}`}
           defaultValue={String(currentPage)}
@@ -272,7 +284,7 @@ export function DataTablePagination(props: DataTablePaginationProps) {
             style: { textAlign: 'center' },
             onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => {
               if (e.key === 'Enter') {
-                commitJump((e.target as HTMLInputElement).value, true);
+                commitJump(e.currentTarget.value, true);
               }
             },
           }}
@@ -303,6 +315,7 @@ export function DataTablePagination(props: DataTablePaginationProps) {
   if (packed) {
     return (
       <XStack
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui XStack is not a <fieldset>; role carries the grouping on web and native
         role="group"
         aria-label="Table pagination"
         onLayout={measureWidth}
@@ -325,6 +338,7 @@ export function DataTablePagination(props: DataTablePaginationProps) {
     // bases let the controls overlap while the footer itself still fits.
     // A constrained size cluster can also wrap its label above the field.
     <XStack
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui XStack is not a <fieldset>; role carries the grouping on web and native
       role="group"
       aria-label="Table pagination"
       onLayout={measureWidth}
@@ -370,4 +384,4 @@ export function DataTablePagination(props: DataTablePaginationProps) {
       )}
     </XStack>
   );
-}
+};

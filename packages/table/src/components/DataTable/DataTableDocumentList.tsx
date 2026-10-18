@@ -8,55 +8,56 @@
  * LC-71: selected = fill; keyboard ring rides the row when it is the tab stop.
  */
 
-import { EmptyState } from '@repo/ui';
 import { Checkbox } from '@repo/forms';
 import { TableCellContext } from '@repo/table-primitives';
 import { getGroupPosition, hairline, stackRadiusProps, useResolvedKnobs } from '@repo/theme';
+import { EmptyState } from '@repo/ui';
 import type React from 'react';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View, XStack, YStack } from 'tamagui';
 
-import type { DataTableColumn } from '../../types';
-import { withInterp } from '../../utils/withInterp';
+import type { DataTableData } from '../../types';
+import { withInterp } from '../../utils/with-interp';
 
-import { dataTableChrome, rowIntentProps } from './dataTableChrome';
-import { partitionDocumentListCells } from './documentListSlots';
-import { tableRowStateProps } from './rowStateChrome';
+import { dataTableChrome, rowIntentProps } from './data-table-chrome';
+import type { CardCell, CardRow } from './DataTableMobileCards';
+import { partitionDocumentListCells } from './document-list-slots';
+import { tableRowStateProps } from './row-state-chrome';
 
 /** Subject cell: explicit title role, else first non-action / non-`_` column. */
-export function pickDocumentListTitleCell<TCell extends { id: string; column: { id: string; columnDef: unknown } }>(
-  visibleCells: TCell[],
-): TCell | undefined {
-  const titled = visibleCells.find((cell) => {
-    const { meta } = cell.column.columnDef as DataTableColumn;
-    return meta?.role === 'title';
-  });
-  if (titled) {
+export const pickDocumentListTitleCell = <TCell extends CardCell>(visibleCells: TCell[]): TCell | undefined => {
+  const titled = visibleCells.find((cell) => cell.column.columnDef.meta?.role === 'title');
+  if (titled !== undefined) {
     return titled;
   }
   const content = visibleCells.find((cell) => {
-    const id = String(cell.column.id ?? '');
-    const { meta } = cell.column.columnDef as DataTableColumn;
+    const { id } = cell.column;
+    const { meta } = cell.column.columnDef;
     return !id.startsWith('_') && meta?.role !== 'actions';
   });
   return content ?? visibleCells[0];
-}
+};
 
-export interface DataTableDocumentListProps<TData> {
-  tableRows: any[];
+type ListCellOf<TRow extends CardRow<unknown>> = ReturnType<TRow['getVisibleCells']>[number];
+
+const cellContextValue = { inTableCell: true, isHeader: false };
+
+export interface DataTableDocumentListProps<TData, TRow extends CardRow<TData> = CardRow<TData>> {
+  tableRows: readonly TRow[];
   enableRowSelection?: boolean;
   disabled?: boolean;
   hasActiveFilters: boolean;
-  renderCellContent: (cell: any, rowIndex: number, rowData: TData) => React.ReactNode;
+  renderCellContent: (cell: ListCellOf<TRow>, rowIndex: number, rowData: TData) => React.ReactNode;
   compact?: boolean;
-  selectRowLabel?: (row: any, rowIndex: number) => string;
-  getRowPressProps?: (row: any, rowIndex: number, variant?: 'row' | 'card') => Record<string, any>;
+  selectRowLabel?: (row: TRow, rowIndex: number) => string;
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- open-ended prop bag built by the root and spread onto the row host
+  getRowPressProps?: (row: TRow, rowIndex: number, variant?: 'row' | 'card') => Record<string, unknown>;
   /** In-flight refetch: do not paint empty-state over a blank body. */
   queryInFlight?: boolean;
 }
 
-export function DataTableDocumentList<TData extends Record<string, any>>({
+export const DataTableDocumentList = <TData extends DataTableData, TRow extends CardRow<TData> = CardRow<TData>>({
   tableRows,
   enableRowSelection = false,
   disabled = false,
@@ -66,30 +67,32 @@ export function DataTableDocumentList<TData extends Record<string, any>>({
   selectRowLabel,
   getRowPressProps,
   queryInFlight = false,
-}: DataTableDocumentListProps<TData>) {
+}: DataTableDocumentListProps<TData, TRow>) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs({ component: 'DataTable', compact });
-  const chrome = dataTableChrome(String(knobProps.sizeToken));
+  const chrome = dataTableChrome(knobProps.sizeToken);
   const tableZebraOn = knobProps.tableZebra === 'on';
   const rowPad = knobProps.panelPadding.padding;
 
   const renderRow = useCallback(
-    (row: any, index: number) => {
-      const rowData = row.original as TData;
-      const visibleCells = row.getVisibleCells();
+    (row: TRow, index: number) => {
+      const rowData = row.original;
+      // SAFETY: TRow's getVisibleCells returns ListCellOf<TRow>[]; the method type widens it back to CardCell
+      const visibleCells = row.getVisibleCells() as ListCellOf<TRow>[];
       const titleCell = pickDocumentListTitleCell(visibleCells);
       const { indicators, metas, actions } = partitionDocumentListCells(visibleCells, titleCell);
       const position = getGroupPosition(index, tableRows.length);
-      const corners = stackRadiusProps(position, knobProps.borderRadiusOuter.borderRadius);
-      const selected = Boolean(enableRowSelection && row.getIsSelected?.());
+      const corners = stackRadiusProps(position, knobProps.borderRadiusNested.borderRadius);
+      const selected = enableRowSelection && row.getIsSelected();
       const rowState = tableRowStateProps({
         selected,
         zebraOn: tableZebraOn,
         index,
-        pressable: Boolean(getRowPressProps),
+        pressable: getRowPressProps !== undefined,
       });
 
       return (
+        // oxlint-disable-next-line react-doctor/no-array-index-as-key -- row.id leads the key; index kept so lint-only pass does not change remount behavior
         <View key={`${row.id}-${index}`}>
           {index > 0 ? <View {...hairline.line} /> : null}
           <XStack
@@ -104,15 +107,16 @@ export function DataTableDocumentList<TData extends Record<string, any>>({
             flexDirection="row"
             flexWrap="nowrap"
             width="100%"
-            {...({ 'data-list-wrap': 'nowrap' } as any)}
+            data-list-wrap="nowrap"
             {...corners}
             {...rowState}
             hoverStyle={{
+              // SAFETY: tableRowStateProps always sets hoverStyle to a style object
               ...(rowState.hoverStyle as object),
               ...corners,
             }}
-            {...(getRowPressProps ? (getRowPressProps(row, index, 'row') as any) : {})}
-            {...(rowIntentProps(rowData) as any)}>
+            {...getRowPressProps?.(row, index, 'row')}
+            {...rowIntentProps(rowData)}>
             {enableRowSelection && (
               <Checkbox
                 checked={row.getIsSelected()}
@@ -120,7 +124,7 @@ export function DataTableDocumentList<TData extends Record<string, any>>({
                   if (disabled) {
                     return;
                   }
-                  row.toggleSelected(!!checked);
+                  row.toggleSelected?.(checked !== false);
                 }}
                 disabled={disabled}
                 checkboxProps={{
@@ -138,25 +142,25 @@ export function DataTableDocumentList<TData extends Record<string, any>>({
               minWidth={0}
               gap="$1"
               overflow="hidden">
-              {titleCell ? (
+              {titleCell === undefined ? (
+                <View flex={1} />
+              ) : (
                 <View
                   minWidth={0}
-                  {...({ 'data-list-slot': 'title' } as any)}>
-                  <TableCellContext.Provider value={{ inTableCell: true, isHeader: false }}>
+                  data-list-slot="title">
+                  <TableCellContext.Provider value={cellContextValue}>
                     {renderCellContent(titleCell, index, rowData)}
                   </TableCellContext.Provider>
                 </View>
-              ) : (
-                <View flex={1} />
               )}
-              {metas.map((cell: any) => (
+              {metas.map((cell) => (
                 <View
                   key={cell.id}
                   minWidth={0}
                   opacity={0.7}
                   overflow="hidden"
-                  {...({ 'data-list-slot': 'meta' } as any)}>
-                  <TableCellContext.Provider value={{ inTableCell: true, isHeader: false }}>
+                  data-list-slot="meta">
+                  <TableCellContext.Provider value={cellContextValue}>
                     {renderCellContent(cell, index, rowData)}
                   </TableCellContext.Provider>
                 </View>
@@ -169,12 +173,12 @@ export function DataTableDocumentList<TData extends Record<string, any>>({
                 alignItems="center"
                 flexWrap="nowrap"
                 maxWidth="40%">
-                {indicators.map((cell: any) => (
+                {indicators.map((cell) => (
                   <View
                     key={cell.id}
                     flexShrink={0}
-                    {...({ 'data-list-slot': 'indicator' } as any)}>
-                    <TableCellContext.Provider value={{ inTableCell: true, isHeader: false }}>
+                    data-list-slot="indicator">
+                    <TableCellContext.Provider value={cellContextValue}>
                       {renderCellContent(cell, index, rowData)}
                     </TableCellContext.Provider>
                   </View>
@@ -187,12 +191,12 @@ export function DataTableDocumentList<TData extends Record<string, any>>({
                 gap="$1"
                 alignItems="center"
                 flexWrap="nowrap">
-                {actions.map((cell: any) => (
+                {actions.map((cell) => (
                   <View
                     key={cell.id}
                     flexShrink={0}
-                    {...({ 'data-list-slot': 'actions' } as any)}>
-                    <TableCellContext.Provider value={{ inTableCell: true, isHeader: false }}>
+                    data-list-slot="actions">
+                    <TableCellContext.Provider value={cellContextValue}>
                       {renderCellContent(cell, index, rowData)}
                     </TableCellContext.Provider>
                   </View>
@@ -204,11 +208,12 @@ export function DataTableDocumentList<TData extends Record<string, any>>({
       );
     },
     [
+      chrome.rowPx,
       compact,
       disabled,
       enableRowSelection,
       getRowPressProps,
-      knobProps.borderRadiusOuter.borderRadius,
+      knobProps.borderRadiusNested.borderRadius,
       renderCellContent,
       rowPad,
       selectRowLabel,
@@ -218,26 +223,24 @@ export function DataTableDocumentList<TData extends Record<string, any>>({
     ],
   );
 
+  const emptyState = queryInFlight ? null : (
+    <EmptyState
+      compact
+      backgroundColor="$color1"
+      {...knobProps.borderRadius}
+      aria-live="polite"
+      title={hasActiveFilters ? t('No results found') : t('No data available')}
+    />
+  );
+
   return (
     <View
       flexDirection="column"
       display="flex"
       testID="data-table-list"
-      {...({ 'data-list-layout': 'list' } as any)}
-      {...(getRowPressProps ? ({ 'data-row-press-scope': 'true' } as any) : {})}>
-      {tableRows.length === 0 ? (
-        queryInFlight ? null : (
-          <EmptyState
-            compact
-            backgroundColor="$color1"
-            {...knobProps.borderRadius}
-            aria-live="polite"
-            title={hasActiveFilters ? t('No results found') : t('No data available')}
-          />
-        )
-      ) : (
-        tableRows.map((row: any, index: number) => renderRow(row, index))
-      )}
+      data-list-layout="list"
+      {...(getRowPressProps ? { 'data-row-press-scope': 'true' } : {})}>
+      {tableRows.length === 0 ? emptyState : tableRows.map((row, index) => renderRow(row, index))}
     </View>
   );
-}
+};

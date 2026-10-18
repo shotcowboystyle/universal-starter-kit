@@ -2,7 +2,7 @@ import { Select } from '@repo/forms';
 import { useResolvedKnobs } from '@repo/theme';
 import { useMemo } from 'react';
 
-import type { ParsedFilter } from '../hooks/useSavedFilters';
+import type { ParsedFilter } from '../hooks/use-saved-filters';
 
 export interface SavedFilterDropdownProps {
   filters: ParsedFilter[];
@@ -13,14 +13,14 @@ export interface SavedFilterDropdownProps {
   disabled?: boolean;
 }
 
-export function SavedFilterDropdown({
+export const SavedFilterDropdown = ({
   filters,
   selectedFilter,
   onSelectFilter,
   onDeleteFilter: _onDeleteFilter,
   placeholder = 'Saved Filters',
   disabled = false,
-}: SavedFilterDropdownProps) {
+}: SavedFilterDropdownProps) => {
   const { knobProps } = useResolvedKnobs();
 
   // Convert filters to forms Select options. Hooks must run before the
@@ -42,7 +42,8 @@ export function SavedFilterDropdown({
   return (
     <Select
       value={selectedFilter?.name ?? ''}
-      onValueChange={(value) => {
+      onChange={(value) => {
+        // oxlint-disable-next-line anti-slop/no-runtime-typeof -- single-select emits a string; the string[] arm of the Select callback is the multi-select case
         if (typeof value === 'string') {
           const filter = filters.find((f) => f.name === value);
           onSelectFilter(filter ?? null);
@@ -56,4 +57,4 @@ export function SavedFilterDropdown({
       aria-label="Saved filters"
     />
   );
-}
+};

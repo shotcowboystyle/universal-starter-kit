@@ -10,59 +10,80 @@
  * grid — no parallel state.
  */
 
-import { DropdownMenu } from '@repo/ui';
+import { CaretDownIcon, CaretUpDownIcon } from '@phosphor-icons/react';
 import { Button } from '@repo/forms';
 import { useResolvedKnobs } from '@repo/theme';
-import { CaretDownIcon, CaretUpDownIcon } from '@phosphor-icons/react';
+import { DropdownMenu } from '@repo/ui';
+import type { Column, SortDirection, Table } from '@tanstack/react-table';
+import type React from 'react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View, XStack } from 'tamagui';
 
-import type { DataTableColumnType, FacetedFilterOption } from '../../types';
-import { withInterp } from '../../utils/withInterp';
+import type { DataTableColumnType, DataTableData, FacetedFilterOption } from '../../types';
+import { withInterp } from '../../utils/with-interp';
 import { DataTableFilters } from '../DataTableFilters';
 
-import { dataTableChrome } from './dataTableChrome';
+import { dataTableChrome } from './data-table-chrome';
 
-export interface DataTableCardControlsProps {
+/** One column offered by the card filter builder. */
+export interface CardFilterColumn {
+  id: string;
+  label: string;
+  type: DataTableColumnType;
+  options?: FacetedFilterOption[];
+}
+
+export interface DataTableCardControlsProps<TData extends DataTableData = DataTableData> {
   /** TanStack table instance (from useDataTable). */
-  table: any;
+  table: Table<TData>;
   enableSorting?: boolean;
   enableFiltering?: boolean;
   /** Columns offered by the filter builder (id/label/type). */
-  availableColumns?: {
-    id: string;
-    label: string;
-    type: DataTableColumnType;
-    options?: FacetedFilterOption[];
-  }[];
+  availableColumns?: CardFilterColumn[];
   compact?: boolean;
   /** Table-level disabled state (UX-011): controls render inert + LC-40 visible. */
   disabled?: boolean;
 }
 
 /** Resolve the human label for a TanStack column (string header, else id). */
-function getColumnLabel(column: any): string {
-  return typeof column.columnDef.header === 'string' ? column.columnDef.header : column.id;
-}
+const getColumnLabel = <TData,>(column: Column<TData>): string =>
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- TanStack header is a string or a render function; typeof is the discriminant
+  typeof column.columnDef.header === 'string' ? column.columnDef.header : column.id;
 
-export function DataTableCardSortControl({
+const sortIcon = (sorted: false | SortDirection, iconPx: number): React.ReactNode => {
+  if (sorted === 'asc') {
+    return <CaretDownIcon size={iconPx} />;
+  }
+  if (sorted === 'desc') {
+    return (
+      <CaretDownIcon
+        size={iconPx}
+        style={{ transform: 'rotate(180deg)' }}
+      />
+    );
+  }
+  return <CaretUpDownIcon size={iconPx} />;
+};
+
+const noFilterColumns: CardFilterColumn[] = [];
+
+export const DataTableCardSortControl = <TData extends DataTableData>({
   table,
   compact = false,
   disabled = false,
   contained = false,
-}: Pick<DataTableCardControlsProps, 'table' | 'compact' | 'disabled'> & { contained?: boolean }) {
+}: Pick<DataTableCardControlsProps<TData>, 'table' | 'compact' | 'disabled'> & { contained?: boolean }) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs({ component: 'DataTable', compact });
-  const chrome = dataTableChrome(String(knobProps.sizeToken));
+  const chrome = dataTableChrome(knobProps.sizeToken);
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
-  const sortableColumns = table.getVisibleLeafColumns().filter((col: any) => col.getCanSort());
+  const sortableColumns = table.getVisibleLeafColumns().filter((col) => col.getCanSort());
   const activeSort = table.getState().sorting?.[0];
-  const activeSortColumn = activeSort ? table.getColumn(activeSort.id) : undefined;
-  const sortLabel = activeSortColumn
-    ? `${getColumnLabel(activeSortColumn)} ${activeSort.desc ? '\u2193' : '\u2191'}`
-    : t('Sort');
-  if (!sortableColumns.length) {
+  const activeSortColumn = activeSort === undefined ? undefined : table.getColumn(activeSort.id);
+  const sortArrow = activeSort?.desc ? '\u2193' : '\u2191';
+  const sortLabel = activeSortColumn === undefined ? t('Sort') : `${getColumnLabel(activeSortColumn)} ${sortArrow}`;
+  if (sortableColumns.length === 0) {
     return null;
   }
   const menu = (
@@ -83,7 +104,7 @@ export function DataTableCardSortControl({
             ? {
                 minWidth: 0,
                 maxWidth: '100%' as const,
-                'aria-description': activeSortColumn ? sortLabel : undefined,
+                'aria-description': activeSortColumn === undefined ? undefined : sortLabel,
               }
             : {})}
           disabled={disabled}>
@@ -92,24 +113,13 @@ export function DataTableCardSortControl({
       </DropdownMenu.Trigger>
       <DropdownMenu.Content>
         <DropdownMenu.Label>{t('Sort by')}</DropdownMenu.Label>
-        {sortableColumns.map((column: any) => {
+        {sortableColumns.map((column) => {
           const sorted = column.getIsSorted();
           return (
             <DropdownMenu.Item
               key={column.id}
               closeOnSelect={false}
-              icon={
-                sorted === 'asc' ? (
-                  <CaretDownIcon size={chrome.iconPx} />
-                ) : sorted === 'desc' ? (
-                  <CaretDownIcon
-                    size={chrome.iconPx}
-                    style={{ transform: 'rotate(180deg)' }}
-                  />
-                ) : (
-                  <CaretUpDownIcon size={chrome.iconPx} />
-                )
-              }
+              icon={sortIcon(sorted, chrome.iconPx)}
               aria-label={withInterp(t('Sort by {{column}}', { column: getColumnLabel(column) }), {
                 column: getColumnLabel(column),
               })}
@@ -143,16 +153,16 @@ export function DataTableCardSortControl({
   ) : (
     menu
   );
-}
+};
 
-export function DataTableCardControls({
+export const DataTableCardControls = <TData extends DataTableData>({
   table,
   enableSorting = false,
   enableFiltering = false,
-  availableColumns = [],
+  availableColumns = noFilterColumns,
   compact = false,
   disabled = false,
-}: DataTableCardControlsProps) {
+}: DataTableCardControlsProps<TData>) => {
   const { t } = useTranslation();
   const { disabledState } = useResolvedKnobs({ component: 'DataTable', compact });
   if (!enableSorting && !enableFiltering) {
@@ -185,4 +195,4 @@ export function DataTableCardControls({
       )}
     </XStack>
   );
-}
+};

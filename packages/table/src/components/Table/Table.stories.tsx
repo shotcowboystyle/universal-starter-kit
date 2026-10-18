@@ -7,31 +7,29 @@ export default {
   parameters: { status: { type: 'beta' } },
 };
 
-function MainRender(props: TableProps) {
-  return (
-    <Table {...props}>
-      <Table.Head>
-        <Table.Row>
-          <Table.HeaderCell>Name</Table.HeaderCell>
-          <Table.HeaderCell>Age</Table.HeaderCell>
-          <Table.HeaderCell>City</Table.HeaderCell>
-        </Table.Row>
-      </Table.Head>
-      <Table.Body>
-        <Table.Row>
-          <Table.Cell>John Doe</Table.Cell>
-          <Table.Cell>30</Table.Cell>
-          <Table.Cell>New York</Table.Cell>
-        </Table.Row>
-        <Table.Row>
-          <Table.Cell>Jane Smith</Table.Cell>
-          <Table.Cell>25</Table.Cell>
-          <Table.Cell>Los Angeles</Table.Cell>
-        </Table.Row>
-      </Table.Body>
-    </Table>
-  );
-}
+const MainRender = (props: TableProps) => (
+  <Table {...props}>
+    <Table.Head>
+      <Table.Row>
+        <Table.HeaderCell>Name</Table.HeaderCell>
+        <Table.HeaderCell>Age</Table.HeaderCell>
+        <Table.HeaderCell>City</Table.HeaderCell>
+      </Table.Row>
+    </Table.Head>
+    <Table.Body>
+      <Table.Row>
+        <Table.Cell>John Doe</Table.Cell>
+        <Table.Cell>30</Table.Cell>
+        <Table.Cell>New York</Table.Cell>
+      </Table.Row>
+      <Table.Row>
+        <Table.Cell>Jane Smith</Table.Cell>
+        <Table.Cell>25</Table.Cell>
+        <Table.Cell>Los Angeles</Table.Cell>
+      </Table.Row>
+    </Table.Body>
+  </Table>
+);
 
 export const main = {
   name: 'Main',

@@ -27,9 +27,9 @@ import { DataTableViewOptions } from '../DataTableViewOptions';
 
 import { DataTableRoot } from './DataTableRoot';
 
-export { DataTableContext } from './DataTableContext';
-export { DataTableStateContext, useDataTableState } from './DataTableStateContext';
-export type { DataTableStateContextValue } from './DataTableStateContext';
+export { DataTableContext } from './data-table-context';
+export { DataTableStateContext, useDataTableState } from './data-table-state-context';
+export type { DataTableStateContextValue } from './data-table-state-context';
 export type { DataTableRootProps } from './DataTableRoot';
 
 export const DataTable = withStaticProperties(DataTableRoot, {

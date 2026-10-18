@@ -17,10 +17,11 @@ import { useCallback, useMemo } from 'react';
 import { XStack } from 'tamagui';
 
 import { t } from '../../shared/t';
-import type { FilterValue, ResolvedFilterField } from '../../types';
-import { getFilterChipLabel, isFilterValueShape } from '../../utils/filterFields';
-import type { FilterEditTarget } from '../DataTable/DataTableStateContext';
-import { useDataTableState } from '../DataTable/DataTableStateContext';
+import type { ResolvedFilterField } from '../../types';
+// oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- the guard's name is owned by utils/filterFields; it is aliased to its domain role here
+import { getFilterChipLabel, isFilterValueShape as isFunnelFilterValue } from '../../utils/filter-fields';
+import type { FilterEditTarget } from '../DataTable/data-table-state-context';
+import { useDataTableState } from '../DataTable/data-table-state-context';
 
 import { FilterChip } from './FilterChip';
 
@@ -31,13 +32,17 @@ interface FilterChipModel {
   key: string;
   label: string;
   target: FilterEditTarget;
-  onRemove: () => void;
+  handleRemove: () => void;
 }
 
-export function DataTableFilterChips() {
+const NO_FIELDS: ResolvedFilterField[] = [];
+
+export const DataTableFilterChips = () => {
   const ctx = useDataTableState();
 
-  const fields: ResolvedFilterField[] = ctx?.computed?.filterFields ?? [];
+  // SAFETY: Root publishes the resolved filter fields on computed.filterFields; the context's open `computed` bag types them as any
+  // oxlint-disable-next-line typescript/no-unsafe-assignment -- see SAFETY above
+  const fields: ResolvedFilterField[] = ctx?.computed?.filterFields ?? NO_FIELDS;
   const fieldFor = useCallback((id: string) => fields.find((f) => f.id === id), [fields]);
 
   const chips = useMemo<FilterChipModel[]>(() => {
@@ -52,13 +57,13 @@ export function DataTableFilterChips() {
         key: `advanced-${filter.id}`,
         label,
         target: { kind: 'advanced', filterId: filter.id },
-        onRemove: () => {
+        handleRemove: () => {
           ctx.actions.removeFilter(filter.id);
         },
       });
     }
     for (const columnFilter of ctx.state.columnFilters ?? []) {
-      if (!isFilterValueShape(columnFilter.value)) {
+      if (!isFunnelFilterValue(columnFilter.value)) {
         continue;
       }
       const field = fieldFor(columnFilter.id);
@@ -67,10 +72,11 @@ export function DataTableFilterChips() {
         key: `column-${columnFilter.id}`,
         label,
         target: { kind: 'column', columnId: columnFilter.id },
-        onRemove: () => ctx.table.getColumn(columnFilter.id)?.setFilterValue(undefined),
+        handleRemove: () => ctx.table.getColumn(columnFilter.id)?.setFilterValue(undefined),
       });
     }
     return items;
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- filters/columnFilters stay explicit so chips recompute even if the context object is reused
   }, [ctx, ctx?.state.filters, ctx?.state.columnFilters, fieldFor]);
 
   const handleClearAll = useCallback(() => {
@@ -81,7 +87,7 @@ export function DataTableFilterChips() {
     // Only clear funnel (FilterValue-shaped) column filters — leave faceted /
     // plain-value column filters some other surface may own.
     ctx.table.setColumnFilters((prev: { id: string; value: unknown }[]) =>
-      prev.filter((cf) => !isFilterValueShape(cf.value)),
+      prev.filter((cf) => !isFunnelFilterValue(cf.value)),
     );
   }, [ctx]);
 
@@ -100,7 +106,7 @@ export function DataTableFilterChips() {
         <FilterChip
           key={chip.key}
           label={chip.label}
-          onRemove={chip.onRemove}
+          onRemove={chip.handleRemove}
           onPress={() => ctx.filterUi?.requestEdit(chip.target)}
         />
       ))}
@@ -115,4 +121,4 @@ export function DataTableFilterChips() {
       )}
     </XStack>
   );
-}
+};

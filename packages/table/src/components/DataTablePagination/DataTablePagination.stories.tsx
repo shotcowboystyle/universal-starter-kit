@@ -1,9 +1,9 @@
-import { Card } from '@repo/ui';
 // Catalog Button + Input (LC-56 STORY-HONESTY — no raw interactive primitives).
 import { Button, Input } from '@repo/forms';
 import { action } from '@repo/storybook';
 import type { GuardrailSpecimenParameter } from '@repo/theme';
 import { Preset } from '@repo/theme';
+import { Card } from '@repo/ui';
 import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import React from 'react';
 import { within } from 'storybook/test';
@@ -13,6 +13,21 @@ import type { DataTableColumn, PageLoadQuery, TablePagination, TablePaginationSt
 import { DataTable } from '../DataTable';
 
 import { DataTablePagination } from './';
+import type { DataTablePaginationProps } from './';
+
+const usePaginationDemo = (initial: TablePaginationState) => {
+  const [pagination, setPagination] = React.useState<TablePaginationState>(initial);
+
+  const handlePaginationChange = (newPagination: TablePagination) => {
+    setPagination({
+      ...pagination,
+      ...newPagination,
+    });
+    action('onPaginationChange')(newPagination);
+  };
+
+  return { pagination, handlePaginationChange };
+};
 
 const meta: Meta<typeof DataTablePagination> = {
   title: 'Table/DataTablePagination',
@@ -204,16 +219,8 @@ export const InteractiveDemo: Story = {
     ...Basic.args,
   },
   render: (args) => {
-    const InteractiveDemo = () => {
-      const [pagination, setPagination] = React.useState<TablePaginationState>(samplePagination);
-
-      const handlePaginationChange = (newPagination: TablePagination) => {
-        setPagination({
-          ...pagination,
-          ...newPagination,
-        });
-        action('onPaginationChange')(newPagination);
-      };
+    const InteractiveDemoView = () => {
+      const { pagination, handlePaginationChange } = usePaginationDemo(samplePagination);
 
       return (
         <YStack gap="$4">
@@ -249,7 +256,7 @@ export const InteractiveDemo: Story = {
       );
     };
 
-    return <InteractiveDemo />;
+    return <InteractiveDemoView />;
   },
 };
 
@@ -262,19 +269,11 @@ export const NavigationDemo: Story = {
     },
   },
   render: (args) => {
-    const NavigationDemo = () => {
-      const [pagination, setPagination] = React.useState<TablePaginationState>({
+    const NavigationDemoView = () => {
+      const { pagination, handlePaginationChange } = usePaginationDemo({
         ...samplePagination,
         pageIndex: 5,
       });
-
-      const handlePaginationChange = (newPagination: TablePagination) => {
-        setPagination({
-          ...pagination,
-          ...newPagination,
-        });
-        action('onPaginationChange')(newPagination);
-      };
 
       return (
         <YStack gap="$4">
@@ -316,7 +315,7 @@ export const NavigationDemo: Story = {
               <Button
                 onPress={() => {
                   handlePaginationChange({
-                    pageIndex: Math.min((pagination.totalPages || 1) - 1, pagination.pageIndex + 1),
+                    pageIndex: Math.min((pagination.totalPages ?? 1) - 1, pagination.pageIndex + 1),
                     pageSize: pagination.pageSize,
                   });
                 }}
@@ -327,7 +326,7 @@ export const NavigationDemo: Story = {
               <Button
                 onPress={() => {
                   handlePaginationChange({
-                    pageIndex: (pagination.totalPages || 1) - 1,
+                    pageIndex: (pagination.totalPages ?? 1) - 1,
                     pageSize: pagination.pageSize,
                   });
                 }}
@@ -341,7 +340,7 @@ export const NavigationDemo: Story = {
       );
     };
 
-    return <NavigationDemo />;
+    return <NavigationDemoView />;
   },
 };
 
@@ -350,16 +349,8 @@ export const PageSizeDemo: Story = {
     ...Basic.args,
   },
   render: (args) => {
-    const PageSizeDemo = () => {
-      const [pagination, setPagination] = React.useState<TablePaginationState>(samplePagination);
-
-      const handlePaginationChange = (newPagination: TablePagination) => {
-        setPagination({
-          ...pagination,
-          ...newPagination,
-        });
-        action('onPaginationChange')(newPagination);
-      };
+    const PageSizeDemoView = () => {
+      const { pagination, handlePaginationChange } = usePaginationDemo(samplePagination);
 
       return (
         <YStack gap="$4">
@@ -393,7 +384,7 @@ export const PageSizeDemo: Story = {
       );
     };
 
-    return <PageSizeDemo />;
+    return <PageSizeDemoView />;
   },
 };
 
@@ -402,22 +393,15 @@ export const PageJumpDemo: Story = {
     ...Basic.args,
   },
   render: (args) => {
-    const PageJumpDemo = () => {
-      const [pagination, setPagination] = React.useState<TablePaginationState>({
+    const PageJumpDemoView = () => {
+      const { pagination, handlePaginationChange } = usePaginationDemo({
         ...samplePagination,
         pageIndex: 5,
       });
       const [jumpValue, setJumpValue] = React.useState('');
 
-      const handlePaginationChange = (newPagination: TablePagination) => {
-        setPagination({
-          ...pagination,
-          ...newPagination,
-        });
-        action('onPaginationChange')(newPagination);
-      };
-
       const handlePageJump = (pageNumber: string) => {
+        // oxlint-disable-next-line unicorn/prefer-number-coercion -- mirrors the component's lenient parseInt jump parse
         const page = Number.parseInt(pageNumber, 10) - 1;
         if (!Number.isNaN(page) && page >= 0 && page < (pagination.totalPages ?? 1)) {
           handlePaginationChange({
@@ -472,7 +456,7 @@ export const PageJumpDemo: Story = {
       );
     };
 
-    return <PageJumpDemo />;
+    return <PageJumpDemoView />;
   },
 };
 
@@ -617,14 +601,13 @@ interface DemoRow {
 
 const DEMO_CATEGORIES = ['Alpha', 'Beta', 'Gamma', 'Delta'];
 
-function makeDemoRows(count: number): DemoRow[] {
-  return Array.from({ length: count }, (_, i) => ({
+const makeDemoRows = (count: number): DemoRow[] =>
+  Array.from({ length: count }, (_, i) => ({
     id: i + 1,
     name: `Item ${String(i + 1).padStart(3, '0')}`,
     category: DEMO_CATEGORIES[i % DEMO_CATEGORIES.length],
     price: Math.round(((i * 37) % 500) + 5),
   }));
-}
 
 const demoColumns: DataTableColumn<DemoRow>[] = [
   { accessorKey: 'id', header: 'ID', sortable: true },
@@ -665,9 +648,25 @@ export const InfiniteScroll: Story = {
   ),
 };
 
-async function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+const sleep = async (ms: number) =>
+  // oxlint-disable-next-line promise/avoid-new -- wrapping callback-based setTimeout
+  await new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+
+const neverSettle = (): void => undefined;
+
+const sortLabel = (sort: { id: string; desc: boolean }) => `${sort.id}${sort.desc ? ':desc' : ':asc'}`;
+
+const compareValues = (av: any, bv: any) => {
+  if (av < bv) {
+    return -1;
+  }
+  if (av > bv) {
+    return 1;
+  }
+  return 0;
+};
 
 /**
  * Infinite mode with an async page loader (200 rows, 20/page). The log below
@@ -675,38 +674,38 @@ async function sleep(ms: number) {
  * user is still viewing page N (prefetch-ahead), so appends resolve from
  * cache. Sorting resets accumulation back to page 0.
  */
-function InfiniteLoaderDemo({
+const InfiniteLoaderDemo = ({
   latencyMs,
   holdFromPage,
 }: {
   latencyMs: number;
   /** Pages from this index on are requested and never answered. */
   holdFromPage?: number;
-}) {
+}) => {
   const allRows = React.useMemo(() => makeDemoRows(200), []);
+  // oxlint-disable-next-line react/purity -- story-only log clock; useRef keeps the first render's timestamp
   const startRef = React.useRef(Date.now());
   const [log, setLog] = React.useState<string[]>([]);
 
   const loadPage = React.useCallback(
     async (query: PageLoadQuery) => {
       const elapsed = Date.now() - startRef.current;
-      const sortSuffix = query.sorting.length
-        ? ` sort:${query.sorting.map((s) => `${s.id}${s.desc ? ':desc' : ':asc'}`).join(',')}`
-        : '';
-      const searchSuffix = query.globalFilter ? ` q:${query.globalFilter}` : '';
+      const sortSuffix = query.sorting.length ? ` sort:${query.sorting.map(sortLabel).join(',')}` : '';
+      const search = query.globalFilter;
+      const hasSearch = search !== undefined && search !== '';
+      const searchSuffix = hasSearch ? ` q:${search}` : '';
       setLog((prev) => [...prev, `page-${query.pageIndex} @ ${elapsed}ms${sortSuffix}${searchSuffix}`]);
       if (holdFromPage !== undefined && query.pageIndex >= holdFromPage) {
-        await new Promise(() => {});
+        // oxlint-disable-next-line promise/avoid-new -- a deliberately never-settling request (held page)
+        await new Promise(neverSettle);
       }
       await sleep(latencyMs);
-      const rows = query.globalFilter
-        ? allRows.filter((row) => row.name.toLowerCase().includes(query.globalFilter!.toLowerCase()))
+      const rows = hasSearch
+        ? allRows.filter((row) => row.name.toLowerCase().includes(search.toLowerCase()))
         : [...allRows];
-      for (const sort of [...query.sorting].reverse()) {
+      for (const sort of query.sorting.toReversed()) {
         rows.sort((a: any, b: any) => {
-          const av = a[sort.id];
-          const bv = b[sort.id];
-          const cmp = av < bv ? -1 : av > bv ? 1 : 0;
+          const cmp = compareValues(a[sort.id], b[sort.id]);
           return sort.desc ? -cmp : cmp;
         });
       }
@@ -740,6 +739,7 @@ function InfiniteLoaderDemo({
         <Text fontWeight="600">Loader log (page requests):</Text>
         {log.map((entry, i) => (
           <Text
+            // oxlint-disable-next-line react-doctor/no-array-index-as-key -- the log is append-only, so an entry's index never changes
             key={i}
             fontFamily="$mono"
             fontSize="$2"
@@ -750,7 +750,7 @@ function InfiniteLoaderDemo({
       </YStack>
     </YStack>
   );
-}
+};
 
 export const InfiniteScrollLoader: Story = {
   render: () => <InfiniteLoaderDemo latencyMs={250} />,
@@ -803,24 +803,26 @@ export const InfiniteVirtualized: Story = {
   ),
 };
 
+const NarrowPanelDemo = (args: DataTablePaginationProps) => {
+  const [pagination, setPagination] = React.useState({ pageIndex: 0, pageSize: 25 });
+  return (
+    <YStack width={249}>
+      <DataTablePagination
+        compact
+        pagination={{
+          ...pagination,
+          totalCount: 1000,
+          totalPages: Math.ceil(1000 / pagination.pageSize),
+        }}
+        onPaginationChange={setPagination}
+        {...args}
+      />
+    </YStack>
+  );
+};
+
 export const NarrowPanel: Story = {
-  render: (args) => {
-    const [pagination, setPagination] = React.useState({ pageIndex: 0, pageSize: 25 });
-    return (
-      <YStack width={249}>
-        <DataTablePagination
-          compact
-          pagination={{
-            ...pagination,
-            totalCount: 1000,
-            totalPages: Math.ceil(1000 / pagination.pageSize),
-          }}
-          onPaginationChange={setPagination}
-          {...args}
-        />
-      </YStack>
-    );
-  },
+  render: (args) => <NarrowPanelDemo {...args} />,
 };
 
 export const LargeSpaceNarrow: Story = {

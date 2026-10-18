@@ -73,6 +73,7 @@ type Story = StoryObj<typeof ChildTable>;
 interface HarnessProps {
   rows?: LineItem[];
   onChange?: (rows: LineItem[]) => void;
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Storybook args bag forwarded verbatim to ChildTable; controls own the values
   [key: string]: unknown;
 }
 
@@ -252,6 +253,7 @@ const detailColumns: DataTableColumn<OrderLine>[] = [
   { accessorKey: 'notes', header: 'Notes', field: 'textarea' },
 ];
 
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Storybook args bag forwarded verbatim to ChildTable; controls own the values
 const RowDetailStory = (args: Record<string, unknown>) => {
   const [rows, setRows] = React.useState<OrderLine[]>(orderLines);
   return (

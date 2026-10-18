@@ -39,7 +39,7 @@ export default {
 };
 
 /** Live config state so the popover edits (and the badge count) are real. */
-function ConfigHarness({ initial, disabled = false }: { initial: GroupingConfig; disabled?: boolean }) {
+const ConfigHarness = ({ initial, disabled = false }: { initial: GroupingConfig; disabled?: boolean }) => {
   const [config, setConfig] = useState<GroupingConfig>(initial);
   return (
     <YStack
@@ -71,7 +71,7 @@ function ConfigHarness({ initial, disabled = false }: { initial: GroupingConfig;
       </YStack>
     </YStack>
   );
-}
+};
 
 const emptyConfig: GroupingConfig = { columns: [], aggregations: [] };
 

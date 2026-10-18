@@ -95,7 +95,9 @@ export const Row = {
   ),
 };
 
-function RemovableRow() {
+const withoutLabel = (labels: string[], label: string) => labels.filter((item) => item !== label);
+
+const RemovableRow = () => {
   const [labels, setLabels] = useState(['Email contains corp', 'Department is Engineering', 'Age is greater than 30']);
   return (
     <YStack
@@ -111,7 +113,7 @@ function RemovableRow() {
             label={label}
             onPress={action('press')}
             onRemove={() => {
-              setLabels((current) => current.filter((item) => item !== label));
+              setLabels((current) => withoutLabel(current, label));
             }}
           />
         ))}
@@ -123,7 +125,7 @@ function RemovableRow() {
       </Paragraph>
     </YStack>
   );
-}
+};
 
 /** Dismiss actually removes: press an X and the count drops. */
 export const Removable = {

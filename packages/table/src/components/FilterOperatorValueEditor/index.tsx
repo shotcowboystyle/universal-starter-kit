@@ -12,7 +12,7 @@ import { YStack } from 'tamagui';
 
 import { t } from '../../shared/t';
 import type { DataTableColumnType, FilterOperator } from '../../types';
-import { filterOperatorLabel, operatorNeedsNoValue, operatorsForFilterType } from '../../utils/filterFields';
+import { filterOperatorLabel, operatorNeedsNoValue, operatorsForFilterType } from '../../utils/filter-fields';
 
 export interface FilterOperatorValueEditorProps {
   /** Filter editor type of the field being filtered. */
@@ -22,17 +22,33 @@ export interface FilterOperatorValueEditorProps {
   onOperatorChange: (operator: FilterOperator) => void;
   onValueChange: (value: string) => void;
   /** Options for select-type fields. */
-  options?: { label: string; value: any }[];
+  options?: { label: string; value: unknown }[];
 }
 
-export function FilterOperatorValueEditor({
+// Labels are translated per render so a locale switch applies.
+const getBooleanOptions = () => [
+  { value: 'true', label: t('True') },
+  { value: 'false', label: t('False') },
+];
+
+const valuePlaceholder = (fieldType: DataTableColumnType): string => {
+  if (fieldType === 'date') {
+    return t('YYYY-MM-DD');
+  }
+  if (fieldType === 'money') {
+    return t('0.00');
+  }
+  return t('Enter value...');
+};
+
+export const FilterOperatorValueEditor = ({
   fieldType,
   operator,
   value,
   onOperatorChange,
   onValueChange,
   options,
-}: FilterOperatorValueEditorProps) {
+}: FilterOperatorValueEditorProps) => {
   const operatorOptions = useMemo(
     () =>
       operatorsForFilterType(fieldType).map((op) => ({
@@ -44,11 +60,6 @@ export function FilterOperatorValueEditor({
 
   const needsValueInput = !operatorNeedsNoValue(operator);
 
-  const booleanOptions = [
-    { value: 'true', label: t('True') },
-    { value: 'false', label: t('False') },
-  ];
-
   const selectOptions = useMemo(
     () =>
       options?.map((opt) => ({
@@ -58,13 +69,22 @@ export function FilterOperatorValueEditor({
     [options],
   );
 
+  let pickOptions: { value: string; label: string }[] | undefined;
+  if (fieldType === 'boolean') {
+    pickOptions = getBooleanOptions();
+  } else if (fieldType === 'select' && options) {
+    pickOptions = selectOptions;
+  }
+
   return (
     <>
       <Select
         label={t('Condition')}
         value={operator}
-        onValueChange={(v) => {
-          if (typeof v === 'string') {
+        onChange={(v) => {
+          if (!Array.isArray(v)) {
+            // SAFETY: the single-select's options are exactly operatorOptions, whose values are FilterOperators.
+            // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- Select reports option values as plain strings
             onOperatorChange(v as FilterOperator);
           }
         }}
@@ -73,28 +93,16 @@ export function FilterOperatorValueEditor({
 
       {needsValueInput && (
         <YStack gap="$1">
-          {fieldType === 'boolean' ? (
+          {pickOptions ? (
             <Select
               label={t('Value')}
               value={value}
-              onValueChange={(v) => {
-                if (typeof v === 'string') {
+              onChange={(v) => {
+                if (!Array.isArray(v)) {
                   onValueChange(v);
                 }
               }}
-              options={booleanOptions}
-              placeholder={t('Select...')}
-            />
-          ) : fieldType === 'select' && options ? (
-            <Select
-              label={t('Value')}
-              value={value}
-              onValueChange={(v) => {
-                if (typeof v === 'string') {
-                  onValueChange(v);
-                }
-              }}
-              options={selectOptions}
+              options={pickOptions}
               placeholder={t('Select...')}
             />
           ) : (
@@ -102,9 +110,7 @@ export function FilterOperatorValueEditor({
               label={t('Value')}
               value={value}
               onChangeText={onValueChange}
-              placeholder={
-                fieldType === 'date' ? t('YYYY-MM-DD') : fieldType === 'money' ? t('0.00') : t('Enter value...')
-              }
+              placeholder={valuePlaceholder(fieldType)}
               {...((fieldType === 'number' || fieldType === 'money') && {
                 keyboardType: 'numeric',
               })}
@@ -114,4 +120,4 @@ export function FilterOperatorValueEditor({
       )}
     </>
   );
-}
+};

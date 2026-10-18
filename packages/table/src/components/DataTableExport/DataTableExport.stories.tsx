@@ -4,6 +4,7 @@ import { formatAbsoluteDate, formatNumber } from '@repo/theme';
 import { Card, Text, YStack } from 'tamagui';
 
 import { DataTableExport } from './index';
+import type { ExportOptions } from './index';
 
 // Define the data type
 interface Product {
@@ -236,46 +237,47 @@ export const CustomFormats = () => {
   );
 };
 
-export const WithExportHandler = () => {
-  const handleExport = async (options: any) => {
-    action('export-started')(options);
+const handleExport = async (options: ExportOptions) => {
+  action('export-started')(options);
 
-    // Simulate export process
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+  // Simulate export process
+  // oxlint-disable-next-line promise/avoid-new -- story-only simulated latency; browser setTimeout has no promise form
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, 1000);
+  });
 
-    action('export-completed')(options);
-  };
-
-  return (
-    <YStack
-      gap="$4"
-      padding="$4">
-      <Text
-        fontSize="$4"
-        fontWeight="600">
-        With Custom Export Handler
-      </Text>
-
-      <DataTableExport
-        data={sampleProducts}
-        columns={productColumns}
-        onExport={handleExport}
-        filename="custom-handler-export"
-      />
-
-      <Card
-        padding="$3"
-        borderRadius="$4"
-        backgroundColor="$blue2">
-        <Text
-          fontSize="$3"
-          color="$blue11">
-          This example uses a custom export handler that simulates a longer export process.
-        </Text>
-      </Card>
-    </YStack>
-  );
+  action('export-completed')(options);
 };
+
+export const WithExportHandler = () => (
+  <YStack
+    gap="$4"
+    padding="$4">
+    <Text
+      fontSize="$4"
+      fontWeight="600">
+      With Custom Export Handler
+    </Text>
+
+    <DataTableExport
+      data={sampleProducts}
+      columns={productColumns}
+      onExport={handleExport}
+      filename="custom-handler-export"
+    />
+
+    <Card
+      padding="$3"
+      borderRadius="$4"
+      backgroundColor="$blue2">
+      <Text
+        fontSize="$3"
+        color="$blue11">
+        This example uses a custom export handler that simulates a longer export process.
+      </Text>
+    </Card>
+  </YStack>
+);
 
 export const Disabled = () => (
   <YStack
@@ -325,71 +327,72 @@ export const EmptyData = () => (
   </YStack>
 );
 
-export const LargeDataset = () => {
-  // Generate larger dataset
-  const largeDataset = Array.from({ length: 100 }, (_, i) => ({
-    id: `item-${i + 1}`,
-    name: `Product ${i + 1}`,
-    category: ['Electronics', 'Furniture', 'Appliances', 'Books'][i % 4],
-    price: Math.round((Math.random() * 500 + 10) * 100) / 100,
-    stock: Math.floor(Math.random() * 100),
-    status: Math.random() > 0.1 ? 'active' : 'discontinued',
-    createdAt: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString(),
-  }));
+// oxlint-disable-next-line sonarjs/pseudo-random -- demo data for a story, not security-sensitive
+const demoRandom = () => Math.random();
 
-  return (
-    <YStack
-      gap="$4"
-      padding="$4">
-      <Text
-        fontSize="$4"
-        fontWeight="600">
-        Large Dataset Export
-      </Text>
+// Generate larger dataset
+const largeDataset = Array.from({ length: 100 }, (_, i) => ({
+  id: `item-${i + 1}`,
+  name: `Product ${i + 1}`,
+  category: ['Electronics', 'Furniture', 'Appliances', 'Books'][i % 4],
+  price: Math.round((demoRandom() * 500 + 10) * 100) / 100,
+  stock: Math.floor(demoRandom() * 100),
+  status: demoRandom() > 0.1 ? 'active' : 'discontinued',
+  createdAt: new Date(Date.now() - demoRandom() * 365 * 24 * 60 * 60 * 1000).toISOString(),
+}));
 
-      <Card
-        padding="$3"
-        borderRadius="$4"
-        backgroundColor="$green2">
-        <YStack gap="$2">
-          <Text
-            fontSize="$3"
-            fontWeight="500"
-            color="$green11">
-            Dataset Information:
-          </Text>
-          <Text
-            fontSize="$2"
-            color="$green11">
-            • Total records: {largeDataset.length}
-          </Text>
-          <Text
-            fontSize="$2"
-            color="$green11">
-            • Categories: Electronics, Furniture, Appliances, Books
-          </Text>
-          <Text
-            fontSize="$2"
-            color="$green11">
-            • Price range: $10 - $500
-          </Text>
-        </YStack>
-      </Card>
+export const LargeDataset = () => (
+  <YStack
+    gap="$4"
+    padding="$4">
+    <Text
+      fontSize="$4"
+      fontWeight="600">
+      Large Dataset Export
+    </Text>
 
-      <DataTableExport
-        data={largeDataset}
-        columns={productColumns}
-        filename="large-dataset-export"
-      />
+    <Card
+      padding="$3"
+      borderRadius="$4"
+      backgroundColor="$green2">
+      <YStack gap="$2">
+        <Text
+          fontSize="$3"
+          fontWeight="500"
+          color="$green11">
+          Dataset Information:
+        </Text>
+        <Text
+          fontSize="$2"
+          color="$green11">
+          • Total records: {largeDataset.length}
+        </Text>
+        <Text
+          fontSize="$2"
+          color="$green11">
+          • Categories: Electronics, Furniture, Appliances, Books
+        </Text>
+        <Text
+          fontSize="$2"
+          color="$green11">
+          • Price range: $10 - $500
+        </Text>
+      </YStack>
+    </Card>
 
-      <Text
-        fontSize="$3"
-        color="$gray11">
-        Export performance may vary with larger datasets.
-      </Text>
-    </YStack>
-  );
-};
+    <DataTableExport
+      data={largeDataset}
+      columns={productColumns}
+      filename="large-dataset-export"
+    />
+
+    <Text
+      fontSize="$3"
+      color="$gray11">
+      Export performance may vary with larger datasets.
+    </Text>
+  </YStack>
+);
 
 export const PrintOnly = () => {
   const printOnlyFormats = [
@@ -400,7 +403,8 @@ export const PrintOnly = () => {
       extension: 'csv',
       mimeType: 'text/csv',
       description: 'CSV format',
-      enabled: false, // Disabled
+      // Disabled
+      enabled: false,
     },
     {
       id: 'excel',
@@ -409,7 +413,8 @@ export const PrintOnly = () => {
       extension: 'xlsx',
       mimeType: 'application/vnd.ms-excel',
       description: 'Excel format',
-      enabled: false, // Disabled
+      // Disabled
+      enabled: false,
     },
   ];
 

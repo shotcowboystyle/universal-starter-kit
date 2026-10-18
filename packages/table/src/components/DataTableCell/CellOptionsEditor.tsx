@@ -15,7 +15,7 @@
  */
 
 import { FieldDisplay, FloatingPanel } from '@repo/forms';
-import type { FieldDisplayType } from '@repo/forms';
+import type { FieldDisplayProps, FieldDisplayType } from '@repo/forms';
 import { TableCellContext } from '@repo/table-primitives';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
@@ -23,8 +23,8 @@ import { View, isWeb } from 'tamagui';
 
 export interface CellOptionsEditorProps {
   field: FieldDisplayType;
-  value: any;
-  fieldProps?: Record<string, any>;
+  value: unknown;
+  fieldProps?: FieldDisplayProps['fieldProps'];
   disabled?: boolean;
   /** Accessible name for the chromeless cell trigger (column header). */
   label?: string;
@@ -41,7 +41,12 @@ export interface CellOptionsEditorProps {
   children: (close: () => void) => ReactNode;
 }
 
-export function CellOptionsEditor({
+const OPTION_PICK_SELECTOR = '[role="radio"], [role="checkbox"], [aria-pressed], label';
+
+// The panel is not a table cell: restores full option chrome inside it.
+const OUT_OF_CELL_CONTEXT = { inTableCell: false };
+
+export const CellOptionsEditor = ({
   field,
   value,
   fieldProps,
@@ -49,7 +54,7 @@ export function CellOptionsEditor({
   label,
   dismissOnPick = true,
   children,
-}: CellOptionsEditorProps) {
+}: CellOptionsEditorProps) => {
   const [open, setOpen] = useState(false);
 
   const face = (
@@ -67,7 +72,7 @@ export function CellOptionsEditor({
       {...(disabled
         ? undefined
         : {
-            role: 'button' as any,
+            role: 'button' as const,
             tabIndex: 0,
             'aria-label': label,
             'aria-expanded': open,
@@ -94,8 +99,8 @@ export function CellOptionsEditor({
   const handlePanelPointerUp =
     isWeb && dismissOnPick
       ? (event: { target?: unknown }) => {
-          const target = event?.target as { closest?: (sel: string) => unknown } | null;
-          if (!target?.closest?.('[role="radio"], [role="checkbox"], [aria-pressed], label')) {
+          const { target } = event;
+          if (!(target instanceof Element) || target.closest(OPTION_PICK_SELECTOR) === null) {
             return;
           }
           setTimeout(() => {
@@ -108,11 +113,11 @@ export function CellOptionsEditor({
     <FloatingPanel
       open={open}
       onOpenChange={setOpen}
-      fitContent
+      widthMode="fit-content"
       trigger={face}>
       {/* The panel is not a table cell — restore full option chrome. React
           context flows into the panel because it renders inline (no portal). */}
-      <TableCellContext.Provider value={{ inTableCell: false }}>
+      <TableCellContext.Provider value={OUT_OF_CELL_CONTEXT}>
         <View onPointerUp={handlePanelPointerUp}>
           {children(() => {
             setOpen(false);
@@ -121,4 +126,4 @@ export function CellOptionsEditor({
       </TableCellContext.Provider>
     </FloatingPanel>
   );
-}
+};

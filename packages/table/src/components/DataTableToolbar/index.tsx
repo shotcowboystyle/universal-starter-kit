@@ -1,7 +1,7 @@
-import { DropdownMenu } from '@repo/ui';
+import { CaretDownIcon, FloppyDiskIcon } from '@phosphor-icons/react';
 import { Button, FloatingPanel, Input, SearchInput, Spinner } from '@repo/forms';
 import { hairline, useResolvedKnobs } from '@repo/theme';
-import { CaretDownIcon, FloppyDiskIcon } from '@phosphor-icons/react';
+import { DropdownMenu } from '@repo/ui';
 import { RovingFocusGroup } from '@tamagui/roving-focus';
 import type React from 'react';
 import { useState } from 'react';
@@ -9,8 +9,8 @@ import { XStack, YStack } from 'tamagui';
 
 import { t } from '../../shared/t';
 import type { TableView } from '../../types';
-import { iconSizeForToken } from '../../utils/chromeIcons';
-import { useDataTableState } from '../DataTable/DataTableStateContext';
+import { iconSizeForToken } from '../../utils/chrome-icons';
+import { useDataTableState } from '../DataTable/data-table-state-context';
 import { DataTableExport } from '../DataTableExport';
 import { DataTableCardFilterButton, DataTableFilterButton } from '../DataTableFilterButton';
 
@@ -49,27 +49,27 @@ export interface DataTableToolbarProps {
   compact?: boolean;
 }
 
-export function DataTableToolbar(props: DataTableToolbarProps) {
-  return <ToolbarLayout {...props} />;
-}
+const noop = (): void => undefined;
 
-export function DataTableCardToolbar(props: DataTableToolbarProps) {
-  return (
-    <ToolbarLayout
-      {...props}
-      cardLayout
-    />
-  );
-}
+const searchMaxWidthForToken = (token: string): number => {
+  if (token === '$3') {
+    return 280;
+  }
+  if (token === '$5') {
+    return 400;
+  }
+  return 320;
+};
 
-function ToolbarLayout({ cardLayout = false, ...props }: DataTableToolbarProps & { cardLayout?: boolean }) {
+// oxlint-disable-next-line eslint/complexity, sonarjs/cognitive-complexity, react-doctor/no-giant-component -- one toolbar with prop/context fallbacks, feature flags and the card vs inline layouts
+const ToolbarLayout = ({ cardLayout = false, ...props }: DataTableToolbarProps & { cardLayout?: boolean }) => {
   const ctx = useDataTableState();
 
   const globalFilter = props.globalFilter ?? ctx?.state.globalFilter ?? '';
-  const onGlobalFilterChange = props.onGlobalFilterChange ?? ctx?.actions.setGlobalFilter ?? (() => {});
-  const onClearFilters = props.onClearFilters ?? ctx?.actions.clearFilters ?? (() => {});
-  const onSaveView = props.onSaveView ?? ctx?.actions.saveView ?? (() => {});
-  const onLoadView = props.onLoadView ?? ctx?.actions.loadView ?? (() => {});
+  const onGlobalFilterChange = props.onGlobalFilterChange ?? ctx?.actions.setGlobalFilter ?? noop;
+  const onClearFilters = props.onClearFilters ?? ctx?.actions.clearFilters ?? noop;
+  const onSaveView = props.onSaveView ?? ctx?.actions.saveView ?? noop;
+  const onLoadView = props.onLoadView ?? ctx?.actions.loadView ?? noop;
   const views = props.views ?? ctx?.state.views ?? [];
   const activeViewId = props.activeViewId ?? ctx?.state.activeViewId;
 
@@ -78,7 +78,6 @@ function ToolbarLayout({ cardLayout = false, ...props }: DataTableToolbarProps &
     enableGlobalSearch = true,
     enableFiltering = true,
     enableExport = false,
-    showFilterCount: _showFilterCount = true,
     showViewSelector = true,
     customActions,
     size,
@@ -89,7 +88,8 @@ function ToolbarLayout({ cardLayout = false, ...props }: DataTableToolbarProps &
 
   // Toolbar Filter surface (hidden-column filtering). Needs the compound
   // context — DataTableFilterButton reads fields/actions from it.
-  const showFilterButton = enableFiltering && !!ctx && (ctx.computed?.filterFields?.length ?? 0) > 0;
+  const showFilterButton =
+    enableFiltering && !!ctx && Array.isArray(ctx.computed?.filterFields) && ctx.computed.filterFields.length > 0;
 
   const [showSaveViewDialog, setShowSaveViewDialog] = useState(false);
   const [newViewName, setNewViewName] = useState('');
@@ -106,14 +106,16 @@ function ToolbarLayout({ cardLayout = false, ...props }: DataTableToolbarProps &
 
   const { knobProps } = useResolvedKnobs(size === undefined && compact === undefined ? undefined : { size, compact });
   const sz = knobProps.sizeToken;
-  const iconPx = iconSizeForToken(String(sz));
-  const searchMaxWidth = sz === '$3' ? 280 : sz === '$5' ? 400 : 320;
+  const iconPx = iconSizeForToken(sz);
+  const searchMaxWidth = searchMaxWidthForToken(sz);
   const controlSize = knobProps.sizeToken;
   const searchSize = knobProps.sizeToken;
 
   const showViewPicker = enableViews && showViewSelector && views.length > 0;
   const showSave = enableViews && showViewSelector;
-  const showActionCluster = Boolean((customActions ?? showFilterButton) || showViewPicker || showSave || enableExport);
+  const hasPrimaryActions = Boolean(customActions ?? showFilterButton);
+  const showActionCluster = hasPrimaryActions || showViewPicker || showSave || enableExport;
+  const hasCardPrimary = showFilterButton || Boolean(customActions);
   const hasTrailing = showActionCluster || isFetching;
 
   const viewPickerContent = showViewPicker && (
@@ -223,6 +225,99 @@ function ToolbarLayout({ cardLayout = false, ...props }: DataTableToolbarProps &
   );
   const showSecondary = showViewPicker || showSave || enableExport || isFetching;
 
+  const cardTrailing = (
+    <>
+      {hasCardPrimary && (
+        <RovingFocusGroup
+          orientation="horizontal"
+          loop
+          asChild>
+          <XStack
+            data-table-card-primary=""
+            width="100%"
+            minWidth={0}
+            alignItems="center"
+            flexWrap="nowrap"
+            {...knobProps.gap}>
+            {showFilterButton && (
+              <XStack flexShrink={0}>
+                <DataTableCardFilterButton />
+              </XStack>
+            )}
+            {customActions}
+          </XStack>
+        </RovingFocusGroup>
+      )}
+      {showSecondary && (
+        <RovingFocusGroup
+          orientation="horizontal"
+          loop
+          asChild>
+          <XStack
+            data-table-card-secondary=""
+            width="100%"
+            minWidth={0}
+            flexWrap="wrap"
+            alignItems="center"
+            {...knobProps.gap}>
+            {enableExport && (
+              <XStack
+                maxWidth="100%"
+                minWidth={0}>
+                <DataTableExport />
+              </XStack>
+            )}
+            {viewPicker}
+            {saveView}
+            {isFetching && (
+              <XStack
+                alignItems="center"
+                aria-live="polite"
+                data-table-fetching="true">
+                <Spinner size="small" />
+              </XStack>
+            )}
+          </XStack>
+        </RovingFocusGroup>
+      )}
+    </>
+  );
+  const inlineTrailing = hasTrailing && (
+    <XStack
+      alignItems="center"
+      {...knobProps.gap}
+      flexShrink={0}>
+      {showActionCluster && (
+        <RovingFocusGroup
+          orientation="horizontal"
+          loop
+          asChild>
+          <XStack
+            alignItems="center"
+            {...knobProps.gap}>
+            {showFilterButton && <DataTableFilterButton />}
+
+            {enableExport && <DataTableExport />}
+
+            {customActions}
+
+            {viewPicker}
+            {saveView}
+          </XStack>
+        </RovingFocusGroup>
+      )}
+
+      {isFetching && (
+        <XStack
+          alignItems="center"
+          aria-live="polite"
+          data-table-fetching="true">
+          <Spinner size="small" />
+        </XStack>
+      )}
+    </XStack>
+  );
+
   return (
     <XStack
       alignItems={cardLayout ? 'stretch' : 'center'}
@@ -264,99 +359,16 @@ function ToolbarLayout({ cardLayout = false, ...props }: DataTableToolbarProps &
         </XStack>
       )}
 
-      {cardLayout ? (
-        <>
-          {(showFilterButton || customActions) && (
-            <RovingFocusGroup
-              orientation="horizontal"
-              loop
-              asChild>
-              <XStack
-                data-table-card-primary=""
-                width="100%"
-                minWidth={0}
-                alignItems="center"
-                flexWrap="nowrap"
-                {...knobProps.gap}>
-                {showFilterButton && (
-                  <XStack flexShrink={0}>
-                    <DataTableCardFilterButton />
-                  </XStack>
-                )}
-                {customActions}
-              </XStack>
-            </RovingFocusGroup>
-          )}
-          {showSecondary && (
-            <RovingFocusGroup
-              orientation="horizontal"
-              loop
-              asChild>
-              <XStack
-                data-table-card-secondary=""
-                width="100%"
-                minWidth={0}
-                flexWrap="wrap"
-                alignItems="center"
-                {...knobProps.gap}>
-                {enableExport && (
-                  <XStack
-                    maxWidth="100%"
-                    minWidth={0}>
-                    <DataTableExport />
-                  </XStack>
-                )}
-                {viewPicker}
-                {saveView}
-                {isFetching && (
-                  <XStack
-                    alignItems="center"
-                    aria-live="polite"
-                    data-table-fetching="true">
-                    <Spinner size="small" />
-                  </XStack>
-                )}
-              </XStack>
-            </RovingFocusGroup>
-          )}
-        </>
-      ) : (
-        hasTrailing && (
-          <XStack
-            alignItems="center"
-            {...knobProps.gap}
-            flexShrink={0}>
-            {showActionCluster && (
-              <RovingFocusGroup
-                orientation="horizontal"
-                loop
-                asChild>
-                <XStack
-                  alignItems="center"
-                  {...knobProps.gap}>
-                  {showFilterButton && <DataTableFilterButton />}
-
-                  {enableExport && <DataTableExport />}
-
-                  {customActions}
-
-                  {viewPicker}
-                  {saveView}
-                </XStack>
-              </RovingFocusGroup>
-            )}
-
-            {isFetching && (
-              <XStack
-                alignItems="center"
-                aria-live="polite"
-                data-table-fetching="true">
-                <Spinner size="small" />
-              </XStack>
-            )}
-          </XStack>
-        )
-      )}
+      {cardLayout ? cardTrailing : inlineTrailing}
     </XStack>
   );
-}
+};
+
+export const DataTableToolbar = (props: DataTableToolbarProps) => <ToolbarLayout {...props} />;
+
+export const DataTableCardToolbar = (props: DataTableToolbarProps) => (
+  <ToolbarLayout
+    {...props}
+    cardLayout
+  />
+);

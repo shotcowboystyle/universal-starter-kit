@@ -19,6 +19,7 @@ import { YStack } from 'tamagui';
 import type { DataTableColumn } from '../../types';
 
 import { DataTable } from './index';
+import type { DataTableRootProps } from './index';
 
 const meta: Meta = {
   title: 'Table/DataTableDocumentList',
@@ -83,22 +84,20 @@ const columns: DataTableColumn<Task>[] = [
   { accessorKey: 'status', header: 'Status', meta: { role: 'indicator' } },
 ];
 
-function ListTable(props: Record<string, any>) {
-  return (
-    <YStack
-      padding="$4"
-      width="100%"
-      maxWidth={720}>
-      <DataTable
-        data={tasks}
-        columns={columns}
-        layout="list"
-        aria-label="Tasks as a document list"
-        {...props}
-      />
-    </YStack>
-  );
-}
+const ListTable = (props: Partial<DataTableRootProps<Task>>) => (
+  <YStack
+    padding="$4"
+    width="100%"
+    maxWidth={720}>
+    <DataTable
+      data={tasks}
+      columns={columns}
+      layout="list"
+      aria-label="Tasks as a document list"
+      {...props}
+    />
+  </YStack>
+);
 
 /** Title leads, owner and due stack beneath it, status rides the right edge. */
 export const Default = {

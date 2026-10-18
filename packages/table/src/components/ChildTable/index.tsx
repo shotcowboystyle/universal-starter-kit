@@ -1,16 +1,18 @@
-import { useCallback } from 'react';
-import type { ReactNode } from 'react';
-import { renumberIdx } from "@repo/ui";
 import { FieldLayout, useFormField } from '@repo/forms';
 import type { AnyFormApi } from '@repo/forms';
-import { useProps, YStack } from "tamagui";
-import { TableInput } from "../TableInput";
-import type { ChildCellHidden } from "../TableInput/shared";
-import type { DataTableColumn, DataTableData } from "../../types";
+import { renumberIdx } from '@repo/ui';
+import { useCallback } from 'react';
+import type { ComponentType, ReactNode } from 'react';
+import { useProps, YStack } from 'tamagui';
+
+import type { DataTableColumn, DataTableData } from '../../types';
+import { TableInput } from '../TableInput';
+import type { ChildCellHidden } from '../TableInput/shared';
 
 export interface ChildTableProps<TRow extends DataTableData = DataTableData> {
   name?: string;
   form?: AnyFormApi;
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- passthrough of TableInputProps.validators; the validator shape is owned by TanStack Form
   validators?: Record<string, unknown>;
   value?: TRow[];
   onChange?: (rows: TRow[]) => void;
@@ -46,12 +48,19 @@ export interface ChildTableProps<TRow extends DataTableData = DataTableData> {
   isCellHidden?: ChildCellHidden<TRow>;
 }
 
+type FieldErrors = unknown[] | undefined;
+
+type FormSubscribe = ComponentType<{
+  selector: (state: AnyFormApi['state']) => FieldErrors;
+  children: (errors: FieldErrors) => ReactNode;
+}>;
+
 /**
  * Subscribes to a form field's validation errors so the FieldLayout error
  * slot reflects validators registered by the inner TableInput `<Field>`
  * (which renders below the layout, so its render-prop error can't reach it).
  */
-function ChildTableFieldError({
+const ChildTableFieldError = ({
   form,
   name,
   children,
@@ -59,20 +68,20 @@ function ChildTableFieldError({
   form: AnyFormApi;
   name: string;
   children: (error: string | undefined) => ReactNode;
-}) {
-  const {Subscribe} = (form as any);
+}) => {
+  // SAFETY: forms resolved from <Form>/useForm are React form APIs, which carry the Subscribe component
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- AnyFormApi is the core FormApi type; Subscribe lives on the React extension
+  const { Subscribe } = form as AnyFormApi & { Subscribe: FormSubscribe };
   return (
-    <Subscribe selector={(state: any) => state.fieldMeta?.[name]?.errors}>
-      {(errors: unknown[] | undefined) =>
-        children(errors && errors.length ? String(errors[0]) : undefined)
-      }
+    <Subscribe selector={(state) => state.fieldMeta?.[name]?.errors}>
+      {/* oxlint-disable-next-line typescript/promise-function-async -- React 19's ReactNode union includes a Promise; this render prop is synchronous */}
+      {(errors) => children(errors && errors.length ? String(errors[0]) : undefined)}
     </Subscribe>
   );
-}
+};
 
-export function ChildTable<TRow extends DataTableData = DataTableData>(
-  props: ChildTableProps<TRow>,
-) {
+// oxlint-disable-next-line eslint/complexity -- the branches are prop defaults and the bare/labelled/form-bound layout variants
+export const ChildTable = <TRow extends DataTableData = DataTableData>(props: ChildTableProps<TRow>) => {
   const {
     name,
     form,
@@ -102,15 +111,14 @@ export function ChildTable<TRow extends DataTableData = DataTableData>(
   } = useProps(props);
 
   const { knobProps, id, resolvedForm } = useFormField({ form, id: idProp, compact });
-  const formBound = !!resolvedForm && !!name;
-  const hasLayout = (label ?? error) || helperText ?? required;
+  const formBound = !!resolvedForm && name !== undefined && name !== '';
+  const hasLayout = Boolean(label ?? error ?? helperText ?? required);
   const enableReorder = enableReorderProp ?? !(readOnly ?? disabled);
 
   const emitChange = useCallback(
     (rows: TRow[]) => {
-      const next = rows.some((row) => typeof (row as { idx?: number }).idx === "number")
-        ? renumberIdx(rows)
-        : rows;
+      // oxlint-disable-next-line anti-slop/no-runtime-typeof -- rows are consumer records; only rows carrying a numeric idx opt into renumbering
+      const next = rows.some((row) => typeof row.idx === 'number') ? renumberIdx(rows) : rows;
       onChange?.(next);
     },
     [onChange],
@@ -145,14 +153,21 @@ export function ChildTable<TRow extends DataTableData = DataTableData>(
     />
   );
 
-  if (!hasLayout && !formBound) {return table;}
+  if (!hasLayout && !formBound) {
+    return table;
+  }
 
   // Programmatic label association: the composite control is a named group
   // carrying the FieldLayout id, so `<label htmlFor={id}>` resolves and the
   // tamagui Label auto-wires aria-labelledby onto it (a bare table can't
   // take the field id).
-  const control = label ? (
-    <YStack width="100%" id={id} role="group">
+  const hasLabel = Boolean(label);
+  const control = hasLabel ? (
+    <YStack
+      width="100%"
+      id={id}
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui YStack renders on native too; a <fieldset> would change the web box model
+      role="group">
       {table}
     </YStack>
   ) : (
@@ -166,8 +181,7 @@ export function ChildTable<TRow extends DataTableData = DataTableData>(
       error={resolvedError}
       helperText={helperText}
       required={required}
-      knobProps={knobProps}
-    >
+      knobProps={knobProps}>
       {control}
     </FieldLayout>
   );
@@ -176,11 +190,13 @@ export function ChildTable<TRow extends DataTableData = DataTableData>(
   // (required/custom) in the layout's error slot.
   if (formBound && error === undefined && !skeleton) {
     return (
-      <ChildTableFieldError form={resolvedForm} name={name}>
+      <ChildTableFieldError
+        form={resolvedForm}
+        name={name}>
         {renderLayout}
       </ChildTableFieldError>
     );
   }
 
   return renderLayout(error);
-}
+};

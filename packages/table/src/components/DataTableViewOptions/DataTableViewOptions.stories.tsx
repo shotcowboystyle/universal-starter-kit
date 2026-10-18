@@ -7,6 +7,16 @@ import type { TableView } from '../../types';
 
 import { DataTableViewOptions } from './index';
 
+type Density = 'compact' | 'comfortable' | 'spacious';
+
+const DENSITY_BAR_HEIGHT = { compact: 8, comfortable: 12, spacious: 16 } as const;
+
+const noop = (): void => undefined;
+
+const DEMO_DENSITY: Density = 'comfortable';
+
+const DEMO_PAGE_SIZE = 10;
+
 // Columns definition
 const allColumns = [
   {
@@ -83,7 +93,7 @@ export default {
 
 export const Default = () => {
   const [columnVisibility, setColumnVisibility] = React.useState<Record<string, boolean>>({});
-  const [density, _setDensity] = React.useState<'compact' | 'comfortable' | 'spacious'>('comfortable');
+  const density = DEMO_DENSITY;
 
   return (
     <YStack
@@ -100,11 +110,11 @@ export const Default = () => {
         onColumnVisibilityChange={(columnId, visible) => {
           setColumnVisibility((prev) => ({ ...prev, [columnId]: visible }));
         }}
-        onColumnOrderChange={() => {}}
-        onColumnSizingChange={() => {}}
-        onSaveView={() => {}}
-        onLoadView={() => {}}
-        onResetToDefault={() => {}}
+        onColumnOrderChange={noop}
+        onColumnSizingChange={noop}
+        onSaveView={noop}
+        onLoadView={noop}
+        onResetToDefault={noop}
       />
 
       <Card
@@ -170,7 +180,7 @@ export const Compact = () => {
 };
 
 export const WithPageSizeControls = () => {
-  const [pageSize, _setPageSize] = React.useState(10);
+  const pageSize = DEMO_PAGE_SIZE;
 
   return (
     <YStack
@@ -184,12 +194,12 @@ export const WithPageSizeControls = () => {
 
       <DataTableViewOptions
         columns={transformedColumns}
-        onColumnVisibilityChange={() => {}}
-        onColumnOrderChange={() => {}}
-        onColumnSizingChange={() => {}}
-        onSaveView={() => {}}
-        onLoadView={() => {}}
-        onResetToDefault={() => {}}
+        onColumnVisibilityChange={noop}
+        onColumnOrderChange={noop}
+        onColumnSizingChange={noop}
+        onSaveView={noop}
+        onLoadView={noop}
+        onResetToDefault={noop}
       />
 
       <Card
@@ -206,62 +216,57 @@ export const WithPageSizeControls = () => {
   );
 };
 
-export const ManyColumns = () => {
-  const [_columnVisibility, setColumnVisibility] = React.useState<Record<string, boolean>>({});
+export const ManyColumns = () => (
+  <YStack
+    gap="$4"
+    padding="$4">
+    <Text
+      fontSize="$4"
+      fontWeight="600">
+      Many Columns Example
+    </Text>
 
-  return (
-    <YStack
-      gap="$4"
-      padding="$4">
-      <Text
-        fontSize="$4"
-        fontWeight="600">
-        Many Columns Example
-      </Text>
+    <Card
+      padding="$3"
+      borderRadius="$4"
+      backgroundColor="$green2">
+      <YStack gap="$2">
+        <Text
+          fontSize="$3"
+          fontWeight="500"
+          color="$green11">
+          Available Columns:
+        </Text>
+        <Text
+          fontSize="$2"
+          color="$green11">
+          {transformedColumns.length} total columns to manage visibility
+        </Text>
+      </YStack>
+    </Card>
 
-      <Card
-        padding="$3"
-        borderRadius="$4"
-        backgroundColor="$green2">
-        <YStack gap="$2">
-          <Text
-            fontSize="$3"
-            fontWeight="500"
-            color="$green11">
-            Available Columns:
-          </Text>
-          <Text
-            fontSize="$2"
-            color="$green11">
-            {transformedColumns.length} total columns to manage visibility
-          </Text>
-        </YStack>
-      </Card>
+    <DataTableViewOptions
+      columns={transformedColumns}
+      onColumnVisibilityChange={(columnId, visible) => {
+        action('column-visibility-changed')({ [columnId]: visible });
+      }}
+      onColumnOrderChange={noop}
+      onColumnSizingChange={noop}
+      onSaveView={noop}
+      onLoadView={noop}
+      onResetToDefault={noop}
+    />
 
-      <DataTableViewOptions
-        columns={transformedColumns}
-        onColumnVisibilityChange={(columnId, visible) => {
-          setColumnVisibility((prev) => ({ ...prev, [columnId]: visible }));
-          action('column-visibility-changed')({ [columnId]: visible });
-        }}
-        onColumnOrderChange={() => {}}
-        onColumnSizingChange={() => {}}
-        onSaveView={() => {}}
-        onLoadView={() => {}}
-        onResetToDefault={() => {}}
-      />
-
-      <Text
-        fontSize="$3"
-        color="$gray11">
-        Toggle column visibility to customize your table view.
-      </Text>
-    </YStack>
-  );
-};
+    <Text
+      fontSize="$3"
+      color="$gray11">
+      Toggle column visibility to customize your table view.
+    </Text>
+  </YStack>
+);
 
 export const DensityOptions = () => {
-  const [density, _setDensity] = React.useState<'compact' | 'comfortable' | 'spacious'>('comfortable');
+  const density = DEMO_DENSITY;
 
   return (
     <YStack
@@ -274,13 +279,14 @@ export const DensityOptions = () => {
       </Text>
 
       <DataTableViewOptions
-        columns={transformedColumns.slice(0, 5)} // Limit columns for demo
-        onColumnVisibilityChange={() => {}}
-        onColumnOrderChange={() => {}}
-        onColumnSizingChange={() => {}}
-        onSaveView={() => {}}
-        onLoadView={() => {}}
-        onResetToDefault={() => {}}
+        // Limit columns for demo
+        columns={transformedColumns.slice(0, 5)}
+        onColumnVisibilityChange={noop}
+        onColumnOrderChange={noop}
+        onColumnSizingChange={noop}
+        onSaveView={noop}
+        onLoadView={noop}
+        onResetToDefault={noop}
       />
 
       <Card
@@ -300,7 +306,7 @@ export const DensityOptions = () => {
               <View
                 style={{
                   width: 20,
-                  height: density === 'compact' ? 8 : density === 'comfortable' ? 12 : 16,
+                  height: DENSITY_BAR_HEIGHT[density],
                   backgroundColor: 'var(--color-blue9)',
                   borderRadius: 2,
                 }}
@@ -370,12 +376,12 @@ export const NoDisabledApi = () => (
 
     <DataTableViewOptions
       columns={transformedColumns}
-      onColumnVisibilityChange={() => {}}
-      onColumnOrderChange={() => {}}
-      onColumnSizingChange={() => {}}
-      onSaveView={() => {}}
-      onLoadView={() => {}}
-      onResetToDefault={() => {}}
+      onColumnVisibilityChange={noop}
+      onColumnOrderChange={noop}
+      onColumnSizingChange={noop}
+      onSaveView={noop}
+      onLoadView={noop}
+      onResetToDefault={noop}
     />
 
     <Text
@@ -403,12 +409,12 @@ export const MinimalColumns = () => {
 
       <DataTableViewOptions
         columns={minimalColumns}
-        onColumnVisibilityChange={() => {}}
-        onColumnOrderChange={() => {}}
-        onColumnSizingChange={() => {}}
-        onSaveView={() => {}}
-        onLoadView={() => {}}
-        onResetToDefault={() => {}}
+        onColumnVisibilityChange={noop}
+        onColumnOrderChange={noop}
+        onColumnSizingChange={noop}
+        onSaveView={noop}
+        onLoadView={noop}
+        onResetToDefault={noop}
       />
 
       <Text
@@ -422,8 +428,8 @@ export const MinimalColumns = () => {
 
 export const AllOptionsCombined = () => {
   const [columnVisibility, setColumnVisibility] = React.useState<Record<string, boolean>>({});
-  const [density, _setDensity] = React.useState<'compact' | 'comfortable' | 'spacious'>('comfortable');
-  const [pageSize, _setPageSize] = React.useState(10);
+  const density = DEMO_DENSITY;
+  const pageSize = DEMO_PAGE_SIZE;
 
   return (
     <YStack
@@ -441,11 +447,11 @@ export const AllOptionsCombined = () => {
           setColumnVisibility((prev) => ({ ...prev, [columnId]: visible }));
           action('column-visibility')({ [columnId]: visible });
         }}
-        onColumnOrderChange={() => {}}
-        onColumnSizingChange={() => {}}
-        onSaveView={() => {}}
-        onLoadView={() => {}}
-        onResetToDefault={() => {}}
+        onColumnOrderChange={noop}
+        onColumnSizingChange={noop}
+        onSaveView={noop}
+        onLoadView={noop}
+        onResetToDefault={noop}
       />
 
       <Card
@@ -546,12 +552,12 @@ export const WithSavedViews = () => {
 
       <DataTableViewOptions
         columns={transformedColumns}
-        onColumnVisibilityChange={() => {}}
+        onColumnVisibilityChange={noop}
         views={views}
         activeViewId={activeViewId}
         showViewManagement
         onSaveView={(name) => {
-          const id = name.toLowerCase().replaceAll(/\s+/g, '-');
+          const id = name.toLowerCase().replaceAll(/\s+/gu, '-');
           setViews((prev) => [...prev, { ...savedViews[0], id, name }]);
           setActiveViewId(id);
           action('save-view')(name);
@@ -560,7 +566,7 @@ export const WithSavedViews = () => {
           setActiveViewId(viewId);
           action('load-view')(viewId);
         }}
-        onResetToDefault={() => {}}
+        onResetToDefault={noop}
       />
     </YStack>
   );

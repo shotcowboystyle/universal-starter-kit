@@ -19,20 +19,57 @@
  * gap between cards are what separate one row from the next.
  */
 
-import { EmptyState } from '@repo/ui';
+import { TrashIcon } from '@phosphor-icons/react';
 import { Button, Checkbox } from '@repo/forms';
 import { TableCellContext, tablePressFill, tableZebraFill } from '@repo/table-primitives';
 import { hairline, useResolvedKnobs } from '@repo/theme';
-import { TrashIcon } from '@phosphor-icons/react';
+import { EmptyState } from '@repo/ui';
 import type React from 'react';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, View, VisuallyHidden, XStack } from 'tamagui';
 
-import type { DataTableColumn, DataTableField } from '../../types';
-import { withInterp } from '../../utils/withInterp';
+import type { DataTableData, DataTableField } from '../../types';
+import { withInterp } from '../../utils/with-interp';
 
-import { rowIntentProps } from './dataTableChrome';
+import { rowIntentProps } from './data-table-chrome';
+
+/** The slice of a TanStack column definition the card body reads. */
+export interface CardColumnDef {
+  header?: unknown;
+  id?: string;
+  field?: DataTableField;
+  meta?: { label?: string; role?: string };
+}
+
+/** The slice of a TanStack `Cell` the card body reads. */
+export interface CardCell {
+  id: string;
+  column: { id: string; columnDef: CardColumnDef };
+  // oxlint-disable-next-line anti-slop/no-unknown-returns -- cell values are arbitrary consumer row data; classifyCardField narrows them
+  getValue?: () => unknown;
+}
+
+/** The slice of a TanStack `Row` the card body reads. */
+export interface CardRow<TData> {
+  id: string;
+  original: TData;
+  getVisibleCells: () => CardCell[];
+  getIsSelected: () => boolean;
+  toggleSelected?: (value?: boolean) => void;
+}
+
+type CardCellOf<TRow extends CardRow<unknown>> = ReturnType<TRow['getVisibleCells']>[number];
+
+const cellContextValue = { inTableCell: true, isHeader: false };
+
+/** `data-table-zebra` value for a row: which stripe it sits on, or off. */
+export const rowZebraAttr = (zebraOn: boolean, index: number): 'even' | 'odd' | 'off' => {
+  if (!zebraOn) {
+    return 'off';
+  }
+  return index % 2 === 0 ? 'even' : 'odd';
+};
 
 /**
  * Resolve the human label for a column: `meta.label` → string header →
@@ -40,14 +77,15 @@ import { rowIntentProps } from './dataTableChrome';
  * header is a render function or a bare glyph (the liked heart) — without
  * it a card field row would print the raw column id (`_liked_by`).
  */
-export function getColumnLabel(cell: any): string {
-  const columnDef = cell.column.columnDef as DataTableColumn;
+export const getColumnLabel = (cell: CardCell): string => {
+  const { columnDef } = cell.column;
   const metaLabel = columnDef.meta?.label;
-  if (typeof metaLabel === 'string' && metaLabel) {
+  if (metaLabel !== undefined && metaLabel !== '') {
     return metaLabel;
   }
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- TanStack header is a string or a render function; typeof is the discriminant
   return typeof columnDef.header === 'string' ? columnDef.header : (columnDef.id ?? cell.column.id);
-}
+};
 
 /** Fields that draw their own control, which names itself and needs a target. */
 const selfNamingFields = new Set<DataTableField>([
@@ -66,8 +104,8 @@ const selfNamingFields = new Set<DataTableField>([
 /** Column ids whose value is a state badge. A badge names itself. */
 const indicatorIds = new Set(['status', 'priority', 'workflow_state', 'state']);
 
-const dateLike = /^\d{4}-\d{2}-\d{2}([T ]|$)|^\d{1,2}\/\d{1,2}\/\d{2,4}$/;
-const numberLike = /^[+\-−]?[\d,\s]*\d(\.\d+)?%?$/;
+const dateLike = /^\d{4}-\d{2}-\d{2}(?:[T ]|$)|^\d{1,2}\/\d{1,2}\/\d{2,4}$/u;
+const numberLike = /^[+\-−]?[\d,\s]*\d(?:\.\d+)?%?$/u;
 
 export type CardFieldKind = 'skip' | 'control' | 'bare' | 'figure';
 
@@ -92,32 +130,34 @@ export type CardFieldKind = 'skip' | 'control' | 'bare' | 'figure';
  *            these DO keep their label — inline beside the figure, not in a
  *            40%-wide column of its own.
  */
-export function classifyCardField(cell: any): CardFieldKind {
-  const def = cell.column.columnDef as DataTableColumn;
-  const id = String(cell.column.id ?? '');
+export const classifyCardField = (cell: CardCell): CardFieldKind => {
+  const def = cell.column.columnDef;
+  const { id } = cell.column;
   const role = def.meta?.role;
   if (role === 'hidden' || role === 'skip') {
     return 'skip';
   }
-  if (role === 'actions' || id.startsWith('_') || (def.field && selfNamingFields.has(def.field))) {
+  if (role === 'actions' || id.startsWith('_') || (def.field !== undefined && selfNamingFields.has(def.field))) {
     return 'control';
   }
-  const raw = typeof cell.getValue === 'function' ? cell.getValue() : undefined;
-  if (raw == null || (typeof raw === 'string' && raw.trim() === '')) {
+  const raw = cell.getValue?.();
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- cell values are arbitrary consumer data; typeof is the only discriminant
+  if (raw === null || raw === undefined || (typeof raw === 'string' && raw.trim() === '')) {
     return 'skip';
   }
   if (role === 'indicator' || indicatorIds.has(id)) {
     return 'bare';
   }
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- cell values are arbitrary consumer data; typeof is the only discriminant
   if (typeof raw === 'string') {
     const value = raw.trim();
     return numberLike.test(value) || dateLike.test(value) ? 'figure' : 'bare';
   }
   return 'figure';
-}
+};
 
-export interface DataTableMobileCardsProps<TData> {
-  tableRows: any[];
+export interface DataTableMobileCardsProps<TData, TRow extends CardRow<TData> = CardRow<TData>> {
+  tableRows: readonly TRow[];
   enableRowSelection?: boolean;
   showRowNumbers: boolean;
   showDeleteRow: boolean;
@@ -127,7 +167,7 @@ export interface DataTableMobileCardsProps<TData> {
   dataLength: number;
   minRows: number;
   hasActiveFilters: boolean;
-  renderCellContent: (cell: any, rowIndex: number, rowData: TData) => React.ReactNode;
+  renderCellContent: (cell: CardCellOf<TRow>, rowIndex: number, rowData: TData) => React.ReactNode;
   onDeleteRow: (rowIndex: number) => void;
   selectAllChecked?: boolean;
   selectAllIndeterminate?: boolean;
@@ -137,7 +177,7 @@ export interface DataTableMobileCardsProps<TData> {
    * Accessible name for a row's selection checkbox ("Select row {identity}",
    * built by DataTableRoot so cards and grid share one naming source).
    */
-  selectRowLabel?: (row: any, rowIndex: number) => string;
+  selectRowLabel?: (row: TRow, rowIndex: number) => string;
   /**
    * onRowPress support: press/keyboard/AT props for one pressable row
    * (built by DataTableRoot). Cards live outside the table tree, so they
@@ -145,12 +185,13 @@ export interface DataTableMobileCardsProps<TData> {
    * roving focus, and inner-control isolation as grid rows. The card paints
    * its own press fill, off the fill it rests on (MPO-404).
    */
-  getRowPressProps?: (row: any, rowIndex: number, variant?: 'row' | 'card') => Record<string, any>;
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- open-ended prop bag built by the root and spread onto the card host
+  getRowPressProps?: (row: TRow, rowIndex: number, variant?: 'row' | 'card') => Record<string, unknown>;
   /** In-flight refetch: do not paint empty-state over a blank body. */
   queryInFlight?: boolean;
 }
 
-export function DataTableMobileCards<TData extends Record<string, any>>({
+export const DataTableMobileCards = <TData extends DataTableData, TRow extends CardRow<TData> = CardRow<TData>>({
   tableRows,
   enableRowSelection = false,
   showRowNumbers,
@@ -169,14 +210,14 @@ export function DataTableMobileCards<TData extends Record<string, any>>({
   selectRowLabel,
   getRowPressProps,
   queryInFlight = false,
-}: DataTableMobileCardsProps<TData>) {
+}: DataTableMobileCardsProps<TData, TRow>) => {
   const { t } = useTranslation();
   const { knobProps } = useResolvedKnobs({ component: 'DataTable', compact });
   const tableZebraOn = knobProps.tableZebra === 'on';
 
   const renderCell = useCallback(
-    (cell: any, index: number, rowData: TData) => (
-      <TableCellContext.Provider value={{ inTableCell: true, isHeader: false }}>
+    (cell: CardCellOf<TRow>, index: number, rowData: TData) => (
+      <TableCellContext.Provider value={cellContextValue}>
         {renderCellContent(cell, index, rowData)}
       </TableCellContext.Provider>
     ),
@@ -184,15 +225,17 @@ export function DataTableMobileCards<TData extends Record<string, any>>({
   );
 
   const renderMobileCard = useCallback(
-    (row: any, index: number) => {
-      const rowData = row.original as TData;
-      const visibleCells = row.getVisibleCells();
+    // oxlint-disable-next-line eslint/complexity -- one card's anatomy: header slots plus three optional field sections
+    (row: TRow, index: number) => {
+      const rowData = row.original;
+      // SAFETY: TRow's getVisibleCells returns CardCellOf<TRow>[]; the method type widens it back to CardCell
+      const visibleCells = row.getVisibleCells() as readonly CardCellOf<TRow>[];
       const [titleCell, ...detailCells] = visibleCells;
       const showDelete = showDeleteRow && !readOnly;
 
-      const bare: any[] = [];
-      const figures: any[] = [];
-      const controls: any[] = [];
+      const bare: CardCellOf<TRow>[] = [];
+      const figures: CardCellOf<TRow>[] = [];
+      const controls: CardCellOf<TRow>[] = [];
       for (const cell of detailCells) {
         const kind = classifyCardField(cell);
         if (kind === 'bare') {
@@ -210,16 +253,15 @@ export function DataTableMobileCards<TData extends Record<string, any>>({
 
       return (
         <View
+          // oxlint-disable-next-line react-doctor/no-array-index-as-key -- row.id leads the key; index kept so lint-only pass does not change remount behavior
           key={`${row.id}-${index}`}
           testID="data-table-card"
           {...knobProps.cardSurface}
           backgroundColor={restFill}
-          {...({
-            'data-table-zebra': tableZebraOn ? (index % 2 === 0 ? 'even' : 'odd') : 'off',
-          } as any)}
-          {...(pressProps as any)}
-          {...(pressProps.onPress ? { pressStyle: { backgroundColor: tablePressFill(restFill) } } : {})}
-          {...(rowIntentProps(rowData) as any)}>
+          data-table-zebra={rowZebraAttr(tableZebraOn, index)}
+          {...pressProps}
+          {...(pressProps.onPress === undefined ? {} : { pressStyle: { backgroundColor: tablePressFill(restFill) } })}
+          {...rowIntentProps(rowData)}>
           {/* Card header: selection + primary-column title + row number + delete */}
           <XStack
             alignItems="center"
@@ -239,7 +281,7 @@ export function DataTableMobileCards<TData extends Record<string, any>>({
                   if (disabled) {
                     return;
                   }
-                  row.toggleSelected(!!checked);
+                  row.toggleSelected?.(checked !== false);
                 }}
                 disabled={disabled}
                 checkboxProps={{
@@ -252,17 +294,17 @@ export function DataTableMobileCards<TData extends Record<string, any>>({
                 compact={compact}
               />
             )}
-            {titleCell ? (
+            {titleCell === undefined ? (
+              <View flex={1} />
+            ) : (
               <View
                 flex={1}
                 minWidth={0}
                 aria-label={getColumnLabel(titleCell)}
                 accessibilityLabel={getColumnLabel(titleCell)}
-                {...({ 'data-card-slot': 'title' } as any)}>
+                data-card-slot="title">
                 {renderCell(titleCell, index, rowData)}
               </View>
-            ) : (
-              <View flex={1} />
             )}
             {showRowNumbers && (
               <Text
@@ -296,8 +338,8 @@ export function DataTableMobileCards<TData extends Record<string, any>>({
               flexWrap="wrap"
               alignItems="center"
               gap="$2"
-              {...({ 'data-card-slot': 'meta' } as any)}>
-              {bare.map((cell: any, i: number) => (
+              data-card-slot="meta">
+              {bare.map((cell, i) => (
                 <XStack
                   key={cell.id}
                   alignItems="center"
@@ -334,8 +376,8 @@ export function DataTableMobileCards<TData extends Record<string, any>>({
               alignItems="center"
               gap="$3"
               paddingTop={bare.length > 0 ? '$1.5' : 0}
-              {...({ 'data-card-slot': 'figure' } as any)}>
-              {figures.map((cell: any) => (
+              data-card-slot="figure">
+              {figures.map((cell) => (
                 <XStack
                   key={cell.id}
                   alignItems="center"
@@ -359,12 +401,12 @@ export function DataTableMobileCards<TData extends Record<string, any>>({
           ) : null}
 
           {/* Controls keep a row of their own — they are tap targets. */}
-          {controls.map((cell: any) => (
+          {controls.map((cell) => (
             <View
               key={cell.id}
               paddingTop="$2"
               minWidth={0}
-              {...({ 'data-card-slot': 'control' } as any)}>
+              data-card-slot="control">
               <VisuallyHidden>{`${getColumnLabel(cell)}: `}</VisuallyHidden>
               {renderCell(cell, index, rowData)}
             </View>
@@ -391,6 +433,16 @@ export function DataTableMobileCards<TData extends Record<string, any>>({
     ],
   );
 
+  const emptyState = queryInFlight ? null : (
+    <EmptyState
+      compact
+      backgroundColor="$color1"
+      {...knobProps.borderRadius}
+      aria-live="polite"
+      title={hasActiveFilters ? t('No results found') : t('No data available')}
+    />
+  );
+
   return (
     <View
       flexDirection="column"
@@ -398,7 +450,7 @@ export function DataTableMobileCards<TData extends Record<string, any>>({
       testID="data-table-cards"
       // Roving-focus DOM scope for onRowPress arrow keys (LC-49) — keeps
       // ArrowUp/Down/Home/End inside THIS table's card list.
-      {...(getRowPressProps ? ({ 'data-row-press-scope': 'true' } as any) : {})}>
+      {...(getRowPressProps ? { 'data-row-press-scope': 'true' } : {})}>
       {enableRowSelection && tableRows.length > 0 && (
         <XStack
           alignItems="center"
@@ -426,19 +478,7 @@ export function DataTableMobileCards<TData extends Record<string, any>>({
           </Text>
         </XStack>
       )}
-      {tableRows.length === 0 ? (
-        queryInFlight ? null : (
-          <EmptyState
-            compact
-            backgroundColor="$color1"
-            {...knobProps.borderRadius}
-            aria-live="polite"
-            title={hasActiveFilters ? t('No results found') : t('No data available')}
-          />
-        )
-      ) : (
-        tableRows.map((row: any, index: number) => renderMobileCard(row, index))
-      )}
+      {tableRows.length === 0 ? emptyState : tableRows.map((row, index) => renderMobileCard(row, index))}
     </View>
   );
-}
+};

@@ -64,8 +64,8 @@ function UserTable() {
 
 ## 📦 Package Boundaries
 
-| Package                        | Responsibility                                                                                                                                                                           |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Package           | Responsibility                                                                                                                                                                           |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@repo/table`     | Framework-agnostic table: display, filter, sort, paginate, virtualize, resize, pin, expand, keyboard nav. No Frappe or API assumptions.                                                  |
 | `@repo/frappe-ui` | Frappe integration: FrappeTable wraps DataTable, fetches from Frappe, maps to DataTable props. Uses `manualFiltering`, `manualPagination`, `manualSorting` when `serverSide` is enabled. |
 

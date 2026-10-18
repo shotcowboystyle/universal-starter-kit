@@ -1,19 +1,21 @@
-import { ConfirmDialog, DropdownMenu } from '@repo/ui';
+import { DotsThreeIcon } from '@phosphor-icons/react';
 import { Button, zIndex } from '@repo/forms';
 import { useAccentOnSurface, useResolvedKnobs } from '@repo/theme';
-import { DotsThreeIcon } from '@phosphor-icons/react';
+import { ConfirmDialog, DropdownMenu } from '@repo/ui';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, View, XStack, isWeb, useMedia } from 'tamagui';
 
 import type { BulkAction } from '../../types';
-import { iconSizeForToken } from '../../utils/chromeIcons';
-import { withInterp } from '../../utils/withInterp';
-import { useDataTableState } from '../DataTable/DataTableStateContext';
+import { iconSizeForToken } from '../../utils/chrome-icons';
+import { withInterp } from '../../utils/with-interp';
+import { useDataTableState } from '../DataTable/data-table-state-context';
 
-export type { BulkAction };
+export type { BulkAction } from '../../types';
 
-export interface DataTableBulkActionsProps<T = any> {
+const noop = (): void => undefined;
+
+export interface DataTableBulkActionsProps<T = unknown> {
   selectedItems?: T[];
   onClearSelection?: () => void;
   actions: BulkAction<T>[];
@@ -24,14 +26,56 @@ export interface DataTableBulkActionsProps<T = any> {
   placement?: 'top' | 'bottom';
 }
 
-export function DataTableBulkActions<T = any>(props: DataTableBulkActionsProps<T>) {
+// Bulk Actions Overflow Menu
+
+interface BulkActionsOverflowMenuProps<T = unknown> {
+  actions: BulkAction<T>[];
+  selectedItems: T[];
+  onExecuteAction: (action: BulkAction<T>) => void;
+  isExecuting: string | null;
+}
+
+const BulkActionsOverflowMenu = <T,>({
+  actions,
+  selectedItems: _selectedItems,
+  onExecuteAction,
+  isExecuting,
+}: BulkActionsOverflowMenuProps<T>) => {
+  const { knobProps } = useResolvedKnobs();
+  const iconPx = iconSizeForToken(knobProps.sizeToken);
+  return (
+    <DropdownMenu
+      items={actions.map((action) => ({
+        key: action.id,
+        label: isExecuting === action.id ? '...' : action.label,
+        icon: action.icon,
+        disabled: action.disabled ?? isExecuting === action.id,
+        // DG-ST-03: menu rows explain inline; a running action is explained
+        // as busy rather than dangling bare-disabled.
+        disabledReason: action.disabledReason ?? (isExecuting === action.id ? 'Running...' : undefined),
+        destructive: action.variant === 'destructive',
+        onSelect: () => {
+          onExecuteAction(action);
+        },
+      }))}>
+      <Button
+        size={knobProps.sizeToken}
+        icon={<DotsThreeIcon size={iconPx} />}
+        aria-label="More bulk actions"
+        {...knobProps.borderRadius}
+      />
+    </DropdownMenu>
+  );
+};
+
+// oxlint-disable-next-line eslint/complexity, sonarjs/cognitive-complexity -- the branches are context-vs-prop fallbacks, the scope switch and stacked/sticky layout variants
+export const DataTableBulkActions = <T,>(props: DataTableBulkActionsProps<T>) => {
   // Try to consume from DataTableStateContext (compound component pattern)
-  const ctx = useDataTableState();
+  const ctx = useDataTableState<T>();
 
   // Resolve values: explicit props override context values
   // For BulkActions, the table's row selection model provides selected rows
-  const selectedItems =
-    props.selectedItems ?? (ctx ? (ctx.table.getSelectedRowModel().rows.map((r: any) => r.original) as T[]) : []);
+  const selectedItems = props.selectedItems ?? (ctx ? ctx.table.getSelectedRowModel().rows.map((r) => r.original) : []);
 
   const onClearSelection =
     props.onClearSelection ??
@@ -39,15 +83,9 @@ export function DataTableBulkActions<T = any>(props: DataTableBulkActionsProps<T
       ? () => {
           ctx.table.resetRowSelection();
         }
-      : () => {});
+      : noop);
 
-  const {
-    actions,
-    maxVisibleActions = 5,
-    showSelectionCount = true,
-    selectionKey: _selectionKey = 'id' as keyof T,
-    placement: placementProp,
-  } = props;
+  const { actions, maxVisibleActions = 5, showSelectionCount = true, placement: placementProp } = props;
 
   const [confirmAction, setConfirmAction] = useState<BulkAction<T> | null>(null);
   const [isExecuting, setIsExecuting] = useState<string | null>(null);
@@ -72,13 +110,9 @@ export function DataTableBulkActions<T = any>(props: DataTableBulkActionsProps<T
   // inflates the count.
   const selectAllScope = ctx?.selectAllScope ?? 'page';
   const matchingCount = ctx ? ctx.table.getFilteredRowModel().rows.length : 0;
-  const showSelectAllMatching = Boolean(
-    ctx &&
-    selectAllScope === 'page' &&
-    matchingCount > 0 &&
-    ctx.table.getIsAllPageRowsSelected() &&
-    !ctx.table.getIsAllRowsSelected(),
-  );
+  const scopeOffersExpansion = selectAllScope === 'page' && matchingCount > 0;
+  const showSelectAllMatching =
+    ctx !== null && scopeOffersExpansion && ctx.table.getIsAllPageRowsSelected() && !ctx.table.getIsAllRowsSelected();
 
   // D-15: selection derives from the CORE row model, so it survives filter
   // changes and can include rows the current filter hides. The count stays
@@ -91,6 +125,17 @@ export function DataTableBulkActions<T = any>(props: DataTableBulkActionsProps<T
       ? selectedItems.length - ctx.table.getFilteredSelectedRowModel().rows.length
       : 0;
 
+  const executeAction = async (action: BulkAction<T>) => {
+    setIsExecuting(action.id);
+    try {
+      await action.onExecute(selectedItems, onClearSelection);
+    } catch (error) {
+      // Safe to continue: the failure is logged and the busy state still clears below.
+      console.error('Bulk action failed:', error);
+    }
+    setIsExecuting(null);
+  };
+
   const handleExecuteAction = async (action: BulkAction<T>) => {
     // DG-DX-01/02: a bulk destructive action is at least severity medium
     // (bulk hint), and medium+ requires the confirm gate — so destructive
@@ -101,17 +146,6 @@ export function DataTableBulkActions<T = any>(props: DataTableBulkActionsProps<T
     }
 
     await executeAction(action);
-  };
-
-  const executeAction = async (action: BulkAction<T>) => {
-    setIsExecuting(action.id);
-    try {
-      await action.onExecute(selectedItems, onClearSelection);
-    } catch (error) {
-      console.error('Bulk action failed:', error);
-    } finally {
-      setIsExecuting(null);
-    }
   };
 
   const handleConfirmAction = () => {
@@ -159,7 +193,9 @@ export function DataTableBulkActions<T = any>(props: DataTableBulkActionsProps<T
       {showSelectAllMatching && (
         <Button
           size={knobProps.sizeToken}
-          onPress={() => ctx?.table.toggleAllRowsSelected(true)}
+          onPress={() => {
+            ctx?.table.toggleAllRowsSelected(true);
+          }}
           aria-label={`Select all ${matchingCount} matching rows`}
           {...knobProps.borderRadius}>
           {`Select all ${matchingCount}`}
@@ -193,7 +229,9 @@ export function DataTableBulkActions<T = any>(props: DataTableBulkActionsProps<T
           // executing is derived busy state (spinner), not a bare disable.
           disabledReason={action.disabledReason}
           loading={isExecuting === action.id}
-          onPress={async () => handleExecuteAction(action)}
+          onPress={() => {
+            void handleExecuteAction(action);
+          }}
           {...knobProps.borderRadius}>
           {action.label}
         </Button>
@@ -203,12 +241,16 @@ export function DataTableBulkActions<T = any>(props: DataTableBulkActionsProps<T
         <BulkActionsOverflowMenu
           actions={overflowActions}
           selectedItems={selectedItems}
-          onExecuteAction={handleExecuteAction}
+          onExecuteAction={(action) => {
+            void handleExecuteAction(action);
+          }}
           isExecuting={isExecuting}
         />
       )}
     </XStack>
   );
+
+  const itemPlural = selectedItems.length > 1 ? 's' : '';
 
   return (
     <>
@@ -255,9 +297,7 @@ export function DataTableBulkActions<T = any>(props: DataTableBulkActionsProps<T
         body={
           confirmAction
             ? (confirmAction.confirmMessage ??
-              `Are you sure you want to ${confirmAction.label.toLowerCase()} ${selectedItems.length} item${
-                selectedItems.length > 1 ? 's' : ''
-              }?`)
+              `Are you sure you want to ${confirmAction.label.toLowerCase()} ${selectedItems.length} item${itemPlural}?`)
             : undefined
         }
         confirmLabel={confirmAction?.label}
@@ -269,60 +309,18 @@ export function DataTableBulkActions<T = any>(props: DataTableBulkActionsProps<T
       />
     </>
   );
-}
-
-// Bulk Actions Overflow Menu
-
-interface BulkActionsOverflowMenuProps<T = any> {
-  actions: BulkAction<T>[];
-  selectedItems: T[];
-  onExecuteAction: (action: BulkAction<T>) => void;
-  isExecuting: string | null;
-}
-
-function BulkActionsOverflowMenu<T = any>({
-  actions,
-  selectedItems: _selectedItems,
-  onExecuteAction,
-  isExecuting,
-}: BulkActionsOverflowMenuProps<T>) {
-  const { knobProps } = useResolvedKnobs();
-  const iconPx = iconSizeForToken(String(knobProps.sizeToken));
-  return (
-    <DropdownMenu
-      items={actions.map((action) => ({
-        key: action.id,
-        label: isExecuting === action.id ? '...' : action.label,
-        icon: action.icon,
-        disabled: action.disabled ?? isExecuting === action.id,
-        // DG-ST-03: menu rows explain inline; a running action is explained
-        // as busy rather than dangling bare-disabled.
-        disabledReason: action.disabledReason ?? (isExecuting === action.id ? 'Running...' : undefined),
-        destructive: action.variant === 'destructive',
-        onSelect: () => {
-          onExecuteAction(action);
-        },
-      }))}>
-      <Button
-        size={knobProps.sizeToken}
-        icon={<DotsThreeIcon size={iconPx} />}
-        aria-label="More bulk actions"
-        {...knobProps.borderRadius}
-      />
-    </DropdownMenu>
-  );
-}
+};
 
 // Row Selection Hook
 
-export interface UseRowSelectionOptions<T = any> {
+export interface UseRowSelectionOptions<T = unknown> {
   data: T[];
   selectionKey?: keyof T;
   initialSelection?: T[];
   onSelectionChange?: (selectedItems: T[]) => void;
 }
 
-export interface UseRowSelectionReturn<T = any> {
+export interface UseRowSelectionReturn<T = unknown> {
   selectedItems: T[];
   selectedIds: Set<string | number>;
   isSelected: (item: T) => boolean;
@@ -335,23 +333,30 @@ export interface UseRowSelectionReturn<T = any> {
   selectAll: () => void;
 }
 
-export function useRowSelection<T = any>({
+export const useRowSelection = <T,>({
   data,
+  // SAFETY: rows are keyed by `id` unless the caller names another key; the
+  // default cannot be checked against an unconstrained T.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- conventional default key for an unconstrained row type
   selectionKey = 'id' as keyof T,
   initialSelection = [],
   onSelectionChange,
-}: UseRowSelectionOptions<T>): UseRowSelectionReturn<T> {
+}: UseRowSelectionOptions<T>): UseRowSelectionReturn<T> => {
   const [selectedItems, setSelectedItems] = useState<T[]>(initialSelection);
 
-  const selectedIds = new Set(selectedItems.map((item) => item[selectionKey] as string | number));
+  // SAFETY: the selection key names the row's primitive identifier (string or number).
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- T is unconstrained, so the key's value type is only known by contract
+  const idOf = (item: T) => item[selectionKey] as string | number;
 
-  const isSelected = (item: T): boolean => selectedIds.has(item[selectionKey] as string | number);
+  const selectedIds = new Set(selectedItems.map(idOf));
+
+  const isSelected = (item: T): boolean => selectedIds.has(idOf(item));
 
   const isAllSelected = data.length > 0 && selectedItems.length === data.length;
   const isIndeterminate = selectedItems.length > 0 && selectedItems.length < data.length;
 
   const toggleItem = (item: T) => {
-    const itemId = item[selectionKey] as string | number;
+    const itemId = idOf(item);
     const newSelection = isSelected(item)
       ? selectedItems.filter((selected) => selected[selectionKey] !== itemId)
       : [...selectedItems, item];
@@ -397,7 +402,7 @@ export function useRowSelection<T = any>({
     clearSelection,
     selectAll,
   };
-}
+};
 
 // Bulk Actions Helper
 // Note: Removed hardcoded default actions. Users should define their own actions based on their specific needs.

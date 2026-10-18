@@ -16,78 +16,111 @@ import {
   CaretUpDownIcon,
   PlusIcon,
   TrashIcon,
-} from "@phosphor-icons/react";
-import { Button, Checkbox, Field, useFormField } from "@repo/forms";
-import { flexRender } from "@tanstack/react-table";
-import { useVirtualizer } from "@tanstack/react-virtual";
-import { ensureFocusVisibleRing, useResolvedKnobs } from "@repo/theme";
-import React, { useEffect, useRef, useMemo, useCallback, useState } from "react";
-import { AsyncBoundary, EmptyState, Tooltip, useDirection } from "@repo/ui";
-import type { FontSizeTokens } from "tamagui";
-import { Text, View, isWeb, useMedia } from "tamagui";
-import { useTranslation } from "react-i18next";
-import { useDataTable } from "../../hooks/useDataTable";
-import { useDragScroll } from "../../hooks/useDragScroll";
-import { useDataTableKeyboard } from "../../hooks/useDataTableKeyboard";
-import type {
-  BulkAction,
-  DataTableColumn,
-  DataTableField,
-  DataTableProps,
-  SelectAllScope,
-} from "../../types";
-import { DataTableColumnPinning } from "../DataTableColumnPinning";
-import { DataTablePagination } from "../DataTablePagination";
-import { DataTableCardToolbar, DataTableToolbar } from "../DataTableToolbar";
-import { DataTableBulkActions } from "../DataTableBulkActions";
-import { DataTableCell } from "../DataTableCell";
-import { ColumnHeaderFilter } from "../ColumnHeaderFilter";
-import { DataTableFilterChips } from "../DataTableFilterChips";
-import { Table } from "@repo/table-primitives";
-import { DataTableContext } from "./DataTableContext";
-import { DataTableStateContext } from "./DataTableStateContext";
-import type {
-  DataTableFilterUi,
-  DataTableStateContextValue,
-  FilterEditTarget,
-} from "./DataTableStateContext";
-import { DataTableCardControls, DataTableCardSortControl } from "./DataTableCardControls";
-import { DataTableMobileCards } from "./DataTableMobileCards";
-import { DataTableDocumentList } from "./DataTableDocumentList";
-import { DataTableInfiniteTail } from "./DataTableInfiniteTail";
-import { CellContent } from "./CellContent";
-import { DataTableVirtualized } from "./DataTableVirtualized";
-import { dataTableChrome, resolveDataTableIntent, rowIntentProps } from "./dataTableChrome";
-import { tableCellKeyboardProps, tableRowStateProps } from "./rowStateChrome";
-import { warnColumnWidthIgnored } from "../../shared/devWarn";
-import { alignToFlex, getDefaultColumnAlign } from "../../utils/columnAlign";
-import { mapFieldToFilterType } from "../../utils/filterFields";
-import { INFINITE_TRIGGER_ROWS } from "../../utils/paginationDefaults";
-import { isInteractiveInnerTarget } from "../../utils/rowPress";
-import { bidiIsolate, withInterp } from "../../utils/withInterp";
+} from '@phosphor-icons/react';
+import { Button, Checkbox, Field, useFormField } from '@repo/forms';
+import { Table } from '@repo/table-primitives';
+import { ensureFocusVisibleRing, useResolvedKnobs } from '@repo/theme';
+import { AsyncBoundary, EmptyState, Tooltip, useDirection } from '@repo/ui';
+import { flexRender } from '@tanstack/react-table';
+import type { Cell, ColumnDef, Header, HeaderGroup, Row } from '@tanstack/react-table';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import React, { useEffect, useRef, useMemo, useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Text, View, isWeb, useMedia } from 'tamagui';
+import type { TamaguiElement } from 'tamagui';
+
+import { useDataTable } from '../../hooks/use-data-table';
+import { useDataTableKeyboard } from '../../hooks/use-data-table-keyboard';
+import { useDragScroll } from '../../hooks/use-drag-scroll';
+import { warnColumnWidthIgnored } from '../../shared/dev-warn';
+import type { DataTableColumn, DataTableData, DataTableField, DataTableProps, SelectAllScope } from '../../types';
+import { alignToFlex, getDefaultColumnAlign } from '../../utils/column-align';
+import { mapFieldToFilterType } from '../../utils/filter-fields';
+import { INFINITE_TRIGGER_ROWS } from '../../utils/pagination-defaults';
+import { isInteractiveInnerTarget } from '../../utils/row-press';
+import { bidiIsolate, withInterp } from '../../utils/with-interp';
+import { ColumnHeaderFilter } from '../ColumnHeaderFilter';
+import { DataTableBulkActions } from '../DataTableBulkActions';
+import { DataTableCell } from '../DataTableCell';
+import { DataTableColumnPinning } from '../DataTableColumnPinning';
+import { DataTableFilterChips } from '../DataTableFilterChips';
+import { DataTablePagination } from '../DataTablePagination';
+import { DataTableCardToolbar, DataTableToolbar } from '../DataTableToolbar';
+
+import { CellContent } from './CellContent';
+import { dataTableChrome, resolveDataTableIntent, rowIntentProps } from './data-table-chrome';
+import { DataTableContext } from './data-table-context';
+import { DataTableStateContext } from './data-table-state-context';
+import type { DataTableFilterUi, DataTableStateContextValue, FilterEditTarget } from './data-table-state-context';
+import { DataTableCardControls, DataTableCardSortControl } from './DataTableCardControls';
+import { DataTableDocumentList } from './DataTableDocumentList';
+import { DataTableInfiniteTail } from './DataTableInfiniteTail';
+import { DataTableMobileCards } from './DataTableMobileCards';
+import { DataTableVirtualized } from './DataTableVirtualized';
+import { tableCellKeyboardProps, tableRowStateProps } from './row-state-chrome';
+
+const ROW_PRESS_SELECTOR = '[data-row-press="true"]';
 
 /** Returns the field type for a column, defaulting to "input" */
-function getColumnField(column: DataTableColumn): DataTableField {
-  return column.field ?? "input";
-}
+const getColumnField = (column: DataTableColumn): DataTableField => column.field ?? 'input';
 
 /** Resolve DG-TBL-01 column alignment for a column def. */
-function resolveColumnAlign(column: DataTableColumn) {
-  return getDefaultColumnAlign({
-    id: typeof column.id === "string" ? column.id : undefined,
+const resolveColumnAlign = (column: DataTableColumn) =>
+  getDefaultColumnAlign({
+    id: column.id,
     align: column.align,
     field: getColumnField(column),
     fieldProps: column.fieldProps,
-    meta: column.meta as { align?: "left" | "center" | "right"; role?: string } | undefined,
+    meta: column.meta,
   });
-}
+
+/** A TanStack column def of this table, as the DataTableColumn it was built from. */
+const asDataTableColumn = <T,>(columnDef: ColumnDef<T>): DataTableColumn =>
+  // SAFETY: DataTableRoot builds every TanStack column from its DataTableColumn `columns` prop
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see the SAFETY note above
+  columnDef as DataTableColumn;
+
+/** A column header when it is plain text (it may also be a render function). */
+const headerText = <T,>(header: ColumnDef<T>['header']): string | undefined =>
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- header is a string-or-renderer union; typeof selects the text arm
+  typeof header === 'string' ? header : undefined;
+
+const resolveSizeFromToken = (sizeToken: string): 'sm' | 'md' | 'lg' => {
+  if (sizeToken === '$3') {
+    return 'sm';
+  }
+  if (sizeToken === '$5') {
+    return 'lg';
+  }
+  return 'md';
+};
+
+const CELL_HEIGHT_BY_SIZE = { sm: '$3', md: '$4', lg: '$5' } as const;
+
+type EdgeLocation = 'first' | 'middle' | 'last';
+
+const edgeLocation = (isFirst: boolean, isLast: boolean): EdgeLocation => {
+  if (isFirst) {
+    return 'first';
+  }
+  return isLast ? 'last' : 'middle';
+};
+
+const ARIA_SORT = { asc: 'ascending', desc: 'descending' } as const;
+
+const ariaSortFor = (isSortable: boolean, direction: false | 'asc' | 'desc') => {
+  const sort = direction === false ? 'none' : ARIA_SORT[direction];
+  return isSortable ? sort : undefined;
+};
+
+const CURSOR_POINTER = 'pointer';
+const CURSOR_NOT_ALLOWED = 'not-allowed';
+const PINNED_CELL_BACKGROUND = 'var(--color2)';
 
 // mapFieldToFilterType moved to utils/filterFields (shared with the filter
 // model — LC-16, one mapping).
 
-export interface DataTableRootProps<
-  TData extends Record<string, any> = Record<string, any>,
-> extends DataTableProps<TData> {
+export interface DataTableRootProps<TData extends DataTableData = DataTableData> extends DataTableProps<TData> {
   /** Compound sub-components rendered as children */
   children?: React.ReactNode;
   /** Structural modifier: compact layout */
@@ -101,7 +134,8 @@ export interface DataTableRootProps<
   success?: boolean;
 }
 
-export function DataTableRoot<TData extends Record<string, any> = Record<string, any>>({
+// oxlint-disable-next-line react-doctor/no-giant-component, eslint/complexity -- the root composes every DataTable mode (grid, cards, list, virtualized, form); its parts already live in sibling modules
+export const DataTableRoot = <TData extends DataTableData = DataTableData>({
   data,
   columns,
   initialState,
@@ -121,7 +155,7 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
   enableSorting = true,
   enablePagination = true,
   pageSizeOptions,
-  paginationMode = "pages",
+  paginationMode = 'pages',
   loadPage,
   rowAccumulator,
   enableColumnVisibility = true,
@@ -129,8 +163,8 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
   enableColumnResizing = false,
   enableGlobalSearch = true,
   enableViews = false,
-  columnLayout = "equal",
-  layout = "auto",
+  columnLayout = 'equal',
+  layout = 'auto',
   enableVirtualization = false,
   virtualizationHeight,
   virtualizationOverscan = 5,
@@ -171,40 +205,41 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
   warning,
   success,
   children,
-  "aria-label": ariaLabel,
-  "aria-describedby": ariaDescribedBy,
+  'aria-label': ariaLabel,
+  'aria-describedby': ariaDescribedBy,
   ...props
-}: DataTableRootProps<TData>) {
+  // oxlint-disable-next-line sonarjs/cognitive-complexity -- the branches are prop defaults and per-mode layout switches
+}: DataTableRootProps<TData>) => {
   warnColumnWidthIgnored({ columnLayout, enableColumnResizing, columns });
   const { t } = useTranslation();
   const { sm } = useMedia();
   // Resolved responsive layout: cards below `$sm` (W11 compact class) unless
   // pinned via the `layout` prop. Same table state drives both layouts.
-  const showList = layout === "list";
-  const showCards = !showList && (layout === "cards" || (layout === "auto" && ! sm));
+  const showList = layout === 'list';
+  const showCards = !showList && (layout === 'cards' || (layout === 'auto' && !sm));
   const intent = resolveDataTableIntent({ accent, error, warning, success });
   const { knobProps, disabledState } = useResolvedKnobs({
     intent,
-    component: "DataTable",
+    component: 'DataTable',
     compact,
   });
-  const chrome = dataTableChrome(String(knobProps.sizeToken));
+  const chrome = dataTableChrome(knobProps.sizeToken);
   const rowHeightPx = chrome.rowPx;
   const selectionColWidth = chrome.selectionCol;
   // Collapsed expand-caret points toward inline-end, so it mirrors in RTL via
   // glyph swap (useDirection, Axiom 15); rotation sign flips so expanded
   // still points down.
-  const isRTL = useDirection() === "rtl";
+  const isRTL = useDirection() === 'rtl';
   const ExpandCaretIcon = isRTL ? CaretLeftIcon : CaretRightIcon;
-  const expandedCaretRotation = isRTL ? "rotate(-90deg)" : "rotate(90deg)";
-  const tableZebraOn = knobProps.tableZebra === "on";
-  const bulkBarPlacement = knobProps.bulkBarPlacement === "bottom" ? "bottom" : "top";
+  const expandedCaretRotation = isRTL ? 'rotate(-90deg)' : 'rotate(90deg)';
+  const tableZebraOn = knobProps.tableZebra === 'on';
+  const bulkBarPlacement = knobProps.bulkBarPlacement === 'bottom' ? 'bottom' : 'top';
   // House selectAllScope knob (DG-TBL-03): prop overrides knob; default page.
   const selectAllScope: SelectAllScope =
-    selectAllScopeProp ?? (knobProps.selectAllScope === "filtered" ? "filtered" : "page");
+    selectAllScopeProp ?? (knobProps.selectAllScope === 'filtered' ? 'filtered' : 'page');
   const { resolvedForm } = useFormField({ form: formProp });
 
-  const isFormMode = Boolean(name && resolvedForm);
+  const isFormMode = name !== undefined && name !== '' && Boolean(resolvedForm);
 
   const { table, state, actions, computed } = useDataTable({
     data,
@@ -248,70 +283,62 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
     isFetching: isFetchingProp,
   });
 
-  const resolvedBulkActions = (bulkActions ?? []);
+  const resolvedBulkActions = bulkActions ?? [];
 
   const selectAllChecked =
     enableRowSelection &&
-    (selectAllScope === "filtered"
-      ? table.getIsAllRowsSelected()
-      : table.getIsAllPageRowsSelected());
-  const selectAllIndeterminate =
-    enableRowSelection &&
-    (selectAllScope === "filtered"
-      ? table.getIsSomeRowsSelected() && !table.getIsAllRowsSelected()
-      : table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected());
+    (selectAllScope === 'filtered' ? table.getIsAllRowsSelected() : table.getIsAllPageRowsSelected());
+  let selectAllIndeterminate = false;
+  if (enableRowSelection) {
+    selectAllIndeterminate =
+      selectAllScope === 'filtered'
+        ? table.getIsSomeRowsSelected() && !table.getIsAllRowsSelected()
+        : table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected();
+  }
 
   const toggleSelectAll = useCallback(() => {
-    if (selectAllScope === "filtered") {
+    if (selectAllScope === 'filtered') {
       table.toggleAllRowsSelected();
     } else {
       table.toggleAllPageRowsSelected();
     }
   }, [selectAllScope, table]);
 
-  const resolvedSize: "sm" | "md" | "lg" =
-    size ?? (knobProps.sizeToken === "$3" ? "sm" : knobProps.sizeToken === "$5" ? "lg" : "md");
+  const resolvedSize: 'sm' | 'md' | 'lg' = size ?? resolveSizeFromToken(knobProps.sizeToken);
 
-  const cellHeight = resolvedSize === "sm" ? "$3" : resolvedSize === "lg" ? "$5" : "$4";
+  const cellHeight = CELL_HEIGHT_BY_SIZE[resolvedSize];
 
   const headerGroups = table.getHeaderGroups();
   const rowModelRows = table.getRowModel().rows;
   // Infinite mode reveals accumulated pages only; loader mode's row model is
   // already just the accumulated rows, so the slice is a no-op there.
-  const {infinite} = computed;
+  const { infinite } = computed;
   const tableRows = infinite ? rowModelRows.slice(0, infinite.visibleRowCount) : rowModelRows;
   const heldRowsRef = useRef(tableRows);
   if (tableRows.length > 0) {
     heldRowsRef.current = tableRows;
   }
-  const queryInFlight = Boolean(
-    (state.isFetching ??
-    state.isPlaceholderData) ||
-    infinite?.isAppending ||
-    state.isLoading ??
-    infinite?.isInitialLoading,
-  );
-  const displayRows =
-    tableRows.length > 0
-      ? tableRows
-      : queryInFlight && heldRowsRef.current.length > 0
-        ? heldRowsRef.current
-        : tableRows;
+  const stateInFlight = state.isFetching === true || state.isPlaceholderData === true || state.isLoading === true;
+  const infiniteInFlight = infinite?.isAppending === true || infinite?.isInitialLoading === true;
+  const queryInFlight = stateInFlight || infiniteInFlight;
+  // Hold the last rows on screen while a query is in flight with none yet.
+  const holdPreviousRows = tableRows.length === 0 && queryInFlight && heldRowsRef.current.length > 0;
+  const displayRows = holdPreviousRows ? heldRowsRef.current : tableRows;
   const footerGroups = table.getFooterGroups();
 
-  const hasFooter = footerGroups.some((group: any) =>
-    group.headers.some((header: any) => header.column.columnDef.footer != null),
+  const hasFooter = footerGroups.some((group: HeaderGroup<TData>) =>
+    group.headers.some((header: Header<TData, unknown>) => header.column.columnDef.footer != null),
   );
 
-  const allRowsLength =
-    displayRows.length + headerGroups.length + (hasFooter ? footerGroups.length : 0);
+  const allRowsLength = displayRows.length + headerGroups.length + (hasFooter ? footerGroups.length : 0);
   const rowCounter = useRef(-1);
   rowCounter.current = -1;
+  const rowLocationFor = (rowIndex: number) => edgeLocation(rowIndex === 0, rowIndex === allRowsLength - 1);
 
   const getColSizeProps = useCallback(
     (col: {
       getSize: () => number;
-      getIsPinned?: () => "left" | "right" | false;
+      getIsPinned?: () => 'left' | 'right' | false;
       columnDef: { size?: number; minSize?: number; maxSize?: number };
     }) => {
       const hasExplicitSize = col.columnDef.size != null;
@@ -321,21 +348,23 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
       // the first. min/max clamp the box under any flex resolution.
       const isPinned = enableColumnPinning && Boolean(col.getIsPinned?.());
       if (isPinned) {
-        const size = col.getSize();
+        const pinnedSize = col.getSize();
         return {
-          width: size,
-          minWidth: size,
-          maxWidth: size,
+          width: pinnedSize,
+          minWidth: pinnedSize,
+          maxWidth: pinnedSize,
           flexGrow: 0,
           flexShrink: 0,
-          flexBasis: "auto" as const,
+          flexBasis: 'auto' as const,
         };
       }
-      if (columnLayout === "equal" && !enableColumnResizing) {return {};}
+      if (columnLayout === 'equal' && !enableColumnResizing) {
+        return {};
+      }
       // Scroll layout needs one concrete width per column (from the column
       // def, TanStack default otherwise) so independent flex rows stay
       // aligned while the table grows past its container.
-      if (hasExplicitSize || enableColumnResizing || columnLayout === "scroll") {
+      if (hasExplicitSize || enableColumnResizing || columnLayout === 'scroll') {
         return { width: col.getSize() };
       }
       return {};
@@ -347,27 +376,37 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
   // and the drop-target column in `table.getState().columnOrder`. Native gets
   // no DnD UI for now — apps can call `table.setColumnOrder(...)` directly.
   const dnd = useMemo(() => {
-    if (!enableColumnOrdering || !isWeb) {return null;}
+    if (!enableColumnOrdering || !isWeb) {
+      return null;
+    }
     return {
       onDragStart: (e: React.DragEvent<HTMLElement>, columnId: string) => {
-        e.dataTransfer?.setData("application/x-table-column-id", columnId);
-        if (e.dataTransfer) {e.dataTransfer.effectAllowed = "move";}
+        e.dataTransfer?.setData('application/x-table-column-id', columnId);
+        // oxlint-disable-next-line typescript/strict-boolean-expressions -- synthetic and jsdom drag events can carry no dataTransfer despite the DOM typing
+        if (e.dataTransfer) {
+          e.dataTransfer.effectAllowed = 'move';
+        }
       },
       onDragOver: (e: React.DragEvent<HTMLElement>) => {
         e.preventDefault();
-        if (e.dataTransfer) {e.dataTransfer.dropEffect = "move";}
+        // oxlint-disable-next-line typescript/strict-boolean-expressions -- synthetic and jsdom drag events can carry no dataTransfer despite the DOM typing
+        if (e.dataTransfer) {
+          e.dataTransfer.dropEffect = 'move';
+        }
       },
       onDrop: (e: React.DragEvent<HTMLElement>, targetColumnId: string) => {
         e.preventDefault();
-        const sourceId = e.dataTransfer?.getData("application/x-table-column-id");
-        if (!sourceId || sourceId === targetColumnId) {return;}
+        const sourceId = e.dataTransfer?.getData('application/x-table-column-id');
+        if (!sourceId || sourceId === targetColumnId) {
+          return;
+        }
         const order = table.getAllLeafColumns().map((c) => c.id);
-        const currentOrder = table.getState().columnOrder.length
-          ? [...table.getState().columnOrder]
-          : order;
+        const currentOrder = table.getState().columnOrder.length ? [...table.getState().columnOrder] : order;
         const fromIdx = currentOrder.indexOf(sourceId);
         const toIdx = currentOrder.indexOf(targetColumnId);
-        if (fromIdx === -1 || toIdx === -1) {return;}
+        if (fromIdx === -1 || toIdx === -1) {
+          return;
+        }
         const next = [...currentOrder];
         next.splice(fromIdx, 1);
         next.splice(toIdx, 0, sourceId);
@@ -379,8 +418,7 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
   const bodyScrollRef = useRef<HTMLDivElement>(null);
   // isWeb, not window-presence: RN (Hermes) aliases a window global, but
   // react-virtual needs real DOM scroll elements — keep it inert on native.
-  const isVirtualized =
-    enableVirtualization && virtualizationHeight != null && virtualizationHeight > 0 && isWeb;
+  const isVirtualized = enableVirtualization && virtualizationHeight != null && virtualizationHeight > 0 && isWeb;
 
   // Infinite mode adds one tail row to the virtual count while more pages
   // exist: it renders the appending skeleton and extends the scroll range so
@@ -399,43 +437,58 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
 
   // ---- Infinite mode: load-more triggers ----
 
-  const loadMoreRef = useRef<(() => void) | undefined>();
+  // oxlint-disable-next-line unicorn/no-useless-undefined -- React 19's useRef requires an explicit initial value
+  const loadMoreRef = useRef<(() => void) | undefined>(undefined);
   loadMoreRef.current = infinite?.loadMore;
 
   // Virtualized: append when the last rendered virtual row nears the tail
   // (standard TanStack Virtual infinite pattern — overscan gives lead time).
-  const lastVirtualIndex = virtualItems.length ? virtualItems.at(-1).index : -1;
+  const lastVirtualIndex = virtualItems.at(-1)?.index ?? -1;
+  const hasInfinite = infinite !== undefined;
+  const infiniteExhausted = infinite?.exhausted;
   React.useEffect(() => {
-    if (!infinite || !isVirtualized || infinite.exhausted) {return;}
-    if (lastVirtualIndex < 0) {return;}
+    if (!hasInfinite || !isVirtualized || infiniteExhausted === true) {
+      return;
+    }
+    if (lastVirtualIndex < 0) {
+      return;
+    }
     if (lastVirtualIndex >= tableRows.length - INFINITE_TRIGGER_ROWS) {
       loadMoreRef.current?.();
     }
-  }, [infinite?.exhausted, isVirtualized, lastVirtualIndex, tableRows.length, !!infinite]);
+  }, [infiniteExhausted, isVirtualized, lastVirtualIndex, tableRows.length, hasInfinite]);
 
   // Non-virtualized (grid or card list): IntersectionObserver sentinel below
   // the content. Re-observed on row-count changes so short pages keep loading
   // while the sentinel stays on screen.
-  const sentinelRef = useRef<HTMLElement | null>(null);
+  const sentinelRef = useRef<TamaguiElement | null>(null);
   React.useEffect(() => {
-    if (!infinite || isVirtualized || infinite.exhausted) {return;}
-    if (!isWeb || typeof IntersectionObserver === "undefined") {return;}
     const node = sentinelRef.current;
-    if (!node) {return;}
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {loadMoreRef.current?.();}
-        }
-      },
-      { rootMargin: `${INFINITE_TRIGGER_ROWS * rowHeightPx}px` },
-    );
-    observer.observe(node);
-    return () =>{  observer.disconnect(); };
-  }, [!!infinite, infinite?.exhausted, isVirtualized, tableRows.length]);
+    let observer: IntersectionObserver | null = null;
+    // On web the sentinel View's host is a DOM element.
+    const wantsMore = hasInfinite && !isVirtualized && infiniteExhausted !== true;
+    const hasObserver = isWeb && typeof IntersectionObserver !== 'undefined';
+    const canObserve = wantsMore && hasObserver && node instanceof Element;
+    if (canObserve) {
+      observer = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            if (entry.isIntersecting) {
+              loadMoreRef.current?.();
+            }
+          }
+        },
+        { rootMargin: `${INFINITE_TRIGGER_ROWS * rowHeightPx}px` },
+      );
+      observer.observe(node);
+    }
+    return () => {
+      observer?.disconnect();
+    };
+  }, [hasInfinite, infiniteExhausted, isVirtualized, tableRows.length, rowHeightPx]);
 
-  const isFlexLayout = columnLayout !== "auto";
-  const displayMode = isFlexLayout ? ("flex" as const) : ("table" as const);
+  const isFlexLayout = columnLayout !== 'auto';
+  const displayMode = isFlexLayout ? ('flex' as const) : ('table' as const);
 
   // Column pinning shares the scroll layout's horizontal geometry: the
   // content View is the ONE horizontal scrollport (header + body + footer
@@ -446,7 +499,7 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
   // must be overridden to overflow:visible — otherwise the body scrolls on
   // its own while the header stays put and pinned cells stick to the wrong
   // scrollport (the LTR pinning breakage).
-  const hScroll = isWeb && isFlexLayout && (columnLayout === "scroll" || enableColumnPinning);
+  const hScroll = isWeb && isFlexLayout && (columnLayout === 'scroll' || enableColumnPinning);
   // In the horizontal-overflow modes, body cell content is clipped to the
   // cell box: flex-mode cells default to overflow:visible, so overlong text
   // paints over neighbor cells and bleeds out from under sticky pinned
@@ -454,18 +507,20 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
   const clipBodyCells = hScroll;
 
   const cellFlexProps = useMemo(() => {
-    if (!isFlexLayout) {return {};}
-    if (columnLayout === "scroll") {
+    if (!isFlexLayout) {
+      return {};
+    }
+    if (columnLayout === 'scroll') {
       // flexBasis auto, not the `flex: 0` shorthand: RN expands `flex: 0` to
       // basis 0, which overrides per-column widths and crushes every cell to
       // the minWidth floor (contents then overflow and get clipped).
-      return { flexGrow: 0, flexShrink: 0, flexBasis: "auto" as const, minWidth: 0 };
+      return { flexGrow: 0, flexShrink: 0, flexBasis: 'auto' as const, minWidth: 0 };
     }
     // Same flexBasis trap as the scroll branch above: `flex: 0` expands to
     // basis 0 and the per-column width from getColSizeProps loses, crushing
     // every resizable cell to the min-width floor (content then overlaps).
     if (enableColumnResizing) {
-      return { flexGrow: 0, flexShrink: 0, flexBasis: "auto" as const, minWidth: 0 };
+      return { flexGrow: 0, flexShrink: 0, flexBasis: 'auto' as const, minWidth: 0 };
     }
     return { flex: 1, flexShrink: 1, flexGrow: 1, flexBasis: 0, minWidth: 0 };
   }, [isFlexLayout, columnLayout, enableColumnResizing]);
@@ -474,17 +529,16 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
   // through ColumnHeaderFilter in the headers instead).
   const cardFilterColumns = useMemo(
     () =>
-      columns
-        .filter((col) => (col as any).enableColumnFilter !== false)
-        .map((col) => ({
-          id: (col.id!) || ((col as any).accessorKey as string) || "",
-          label:
-            typeof col.header === "string"
-              ? col.header
-              : (col.id!) || ((col as any).accessorKey as string) || "",
-          type: mapFieldToFilterType(col.field),
-        }))
-        .filter((col) => col.id),
+      columns.flatMap((col) => {
+        if (col.enableColumnFilter === false) {
+          return [];
+        }
+        const id = col.id !== undefined && col.id !== '' ? col.id : String(col.accessorKey ?? '');
+        if (id === '') {
+          return [];
+        }
+        return [{ id, label: headerText(col.header) ?? id, type: mapFieldToFilterType(col.field) }];
+      }),
     [columns],
   );
 
@@ -505,17 +559,21 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
     enabled: enableKeyboardNavigation && !disabled,
     viewportHeight: virtualizationHeight ?? 400,
     onScrollToRow: isVirtualized
-      ? (idx) =>{  virtualizer.scrollToIndex(idx, { align: "auto" }); }
+      ? (idx) => {
+          virtualizer.scrollToIndex(idx, { align: 'auto' });
+        }
       : undefined,
     onRowActivate: enableRowExpansion
       ? (row) => {
-          if (row.getCanExpand()) {row.toggleExpanded();}
+          if (row.getCanExpand()) {
+            row.toggleExpanded();
+          }
         }
       : undefined,
   });
   const [focusedColIndex, setFocusedColIndex] = useState(0);
 
-  const isSSR = typeof window === "undefined";
+  const isSSR = typeof window === 'undefined';
 
   // ---- Row press (onRowPress): the ROW is one pressable unit ----
 
@@ -532,19 +590,19 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
   // checkbox name so "which row is this control for" reads the same
   // everywhere.
   const deriveRowIdentity = useCallback(
-    (row: any): string | undefined => {
-      const fromAccessor = rowLabel?.(row.original as TData);
-      if (fromAccessor) {return fromAccessor;}
+    (row: Row<TData>): string | undefined => {
+      const fromAccessor = rowLabel?.(row.original);
+      if (fromAccessor !== undefined && fromAccessor !== '') {
+        return fromAccessor;
+      }
       let firstCellValue: unknown;
       try {
         firstCellValue = row.getVisibleCells()[0]?.getValue();
       } catch {
-        firstCellValue = undefined;
+        // Safe to continue: a throwing accessor leaves firstCellValue undefined (no identity)
       }
-      if (
-        (typeof firstCellValue === "string" && firstCellValue.length > 0) ||
-        typeof firstCellValue === "number"
-      ) {
+      // oxlint-disable-next-line anti-slop/no-runtime-typeof -- cell values are arbitrary consumer row data; typeof is the parse
+      if ((typeof firstCellValue === 'string' && firstCellValue.length > 0) || typeof firstCellValue === 'number') {
         return String(firstCellValue);
       }
       return undefined;
@@ -554,9 +612,8 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
 
   // Accessible name per pressable row: identity, else positional "Row {{row}}".
   const deriveRowLabel = useCallback(
-    (row: any, rowIndex: number): string =>
-      deriveRowIdentity(row) ??
-      withInterp(t("Row {{row}}", { row: rowIndex + 1 }), { row: rowIndex + 1 }),
+    (row: Row<TData>, rowIndex: number): string =>
+      deriveRowIdentity(row) ?? withInterp(t('Row {{row}}', { row: rowIndex + 1 }), { row: rowIndex + 1 }),
     [deriveRowIdentity, t],
   );
 
@@ -564,16 +621,16 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
   // Bulbasaur", falling back to "Select row 3") so AT and automation can
   // target a specific row's checkbox by name.
   const deriveSelectRowLabel = useCallback(
-    (row: any, rowIndex: number): string => {
+    (row: Row<TData>, rowIndex: number): string => {
       const identity = deriveRowIdentity(row) ?? String(rowIndex + 1);
-      return withInterp(t("Select row {{row}}", { row: identity }), { row: identity });
+      return withInterp(t('Select row {{row}}', { row: identity }), { row: identity });
     },
     [deriveRowIdentity, t],
   );
 
   const activateRowPress = useCallback(
-    (row: any, rowIndex: number) => {
-      onRowPress?.(row.original as TData, rowIndex);
+    (row: Row<TData>, rowIndex: number) => {
+      onRowPress?.(row.original, rowIndex);
     },
     [onRowPress],
   );
@@ -591,29 +648,38 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
    *   within the row set; Shift+Tab exits (no key trap).
    */
   const getRowPressProps = useCallback(
-    (row: any, rowIndex: number, variant: "row" | "card" = "row") => {
-      if (!rowPressActive) {return {};}
-      const handlePress = (event: any) => {
-        if (event?.defaultPrevented) {return;}
+    (row: Row<TData>, rowIndex: number, variant: 'row' | 'card' = 'row') => {
+      if (!rowPressActive) {
+        return {};
+      }
+      const handlePress = (
+        event: { defaultPrevented?: boolean; target?: unknown; nativeEvent?: { target?: unknown } } | undefined,
+      ) => {
+        if (event?.defaultPrevented === true) {
+          return;
+        }
         const targetEl = event?.target ?? event?.nativeEvent?.target;
-        if (isWeb && typeof Element !== "undefined" && targetEl instanceof Element) {
-          const boundary = targetEl.closest('[data-row-press="true"]');
-          if (isInteractiveInnerTarget(targetEl, boundary)) {return;}
+        if (isWeb && typeof Element !== 'undefined' && targetEl instanceof Element) {
+          const boundary = targetEl.closest(ROW_PRESS_SELECTOR);
+          if (isInteractiveInnerTarget(targetEl, boundary)) {
+            return;
+          }
         }
         activateRowPress(row, rowIndex);
       };
       return {
-        "aria-label": deriveRowLabel(row, rowIndex),
+        'aria-label': deriveRowLabel(row, rowIndex),
         onPress: handlePress,
-        cursor: "pointer" as const,
-        ...(variant === "card" ? { role: "button" as const } : {}),
+        cursor: CURSOR_POINTER,
+        // oxlint-disable-next-line anti-slop/no-conditional-empty-object-spread -- non-card rows must not carry a role key at all (the host keeps its own role)
+        ...(variant === 'card' ? { role: 'button' as const } : {}),
+        // oxlint-disable-next-line anti-slop/no-conditional-empty-object-spread -- native/SSR rows omit the web focus props entirely
         ...(isWeb && !isSSR
           ? {
               tabIndex: rowIndex === effectiveRowPressAnchor ? 0 : -1,
               focusVisibleStyle: ensureFocusVisibleRing({ outlineOffset: -2 }),
-              "data-row-press": "true",
-              "data-row-keyboard-focus":
-                rowIndex === effectiveRowPressAnchor && rowPressHasFocus ? "true" : "false",
+              'data-row-press': 'true',
+              'data-row-keyboard-focus': rowIndex === effectiveRowPressAnchor && rowPressHasFocus ? 'true' : 'false',
               onFocus: (e: React.FocusEvent) => {
                 // Only a focused ROW moves the anchor; focus on an inner
                 // control (own tab stop) leaves the roving state alone.
@@ -624,44 +690,52 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
               },
               onBlur: (e: React.FocusEvent) => {
                 const next = e.relatedTarget;
-                if (!(next instanceof Element) || !next.closest('[data-row-press="true"]')) {
+                if (!(next instanceof Element) || !next.closest(ROW_PRESS_SELECTOR)) {
                   setRowPressAnchor(0);
                   setRowPressHasFocus(false);
                 }
               },
               onKeyDown: (e: React.KeyboardEvent) => {
-                if (e.defaultPrevented) {return;}
+                if (e.defaultPrevented) {
+                  return;
+                }
                 // Keys on focused inner controls belong to those controls.
-                if (e.target !== e.currentTarget) {return;}
-                const {key} = e;
-                if (key === "Enter" || key === " " || key === "Spacebar") {
+                if (e.target !== e.currentTarget) {
+                  return;
+                }
+                const { key } = e;
+                if (key === 'Enter' || key === ' ' || key === 'Spacebar') {
                   // preventDefault stops Space page-scroll; stopPropagation
                   // keeps the container-level keyboard nav (Excel mode) from
                   // double-activating the same physical key.
                   e.preventDefault();
                   e.stopPropagation();
-                  if (e.repeat) {return;}
+                  if (e.repeat) {
+                    return;
+                  }
                   activateRowPress(row, rowIndex);
                   return;
                 }
-                if (key === "ArrowDown" || key === "ArrowUp" || key === "Home" || key === "End") {
+                if (key === 'ArrowDown' || key === 'ArrowUp' || key === 'Home' || key === 'End') {
                   e.preventDefault();
                   e.stopPropagation();
-                  const rowEl = e.currentTarget as HTMLElement;
-                  const scope =
-                    rowEl.closest('[data-row-press-scope="true"]') ?? rowEl.ownerDocument;
-                  const pressRows = [...scope.querySelectorAll('[data-row-press="true"]')] as HTMLElement[];
+                  const rowEl = e.currentTarget;
+                  if (!(rowEl instanceof HTMLElement)) {
+                    return;
+                  }
+                  const scope = rowEl.closest('[data-row-press-scope="true"]') ?? rowEl.ownerDocument;
+                  const pressRows = [...scope.querySelectorAll<HTMLElement>(ROW_PRESS_SELECTOR)];
                   const currentIdx = pressRows.indexOf(rowEl);
-                  if (currentIdx === -1) {return;}
-                  const nextIdx =
-                    key === "Home"
-                      ? 0
-                      : key === "End"
-                        ? pressRows.length - 1
-                        : Math.min(
-                            Math.max(currentIdx + (key === "ArrowDown" ? 1 : -1), 0),
-                            pressRows.length - 1,
-                          );
+                  if (currentIdx === -1) {
+                    return;
+                  }
+                  let nextIdx = 0;
+                  if (key === 'End') {
+                    nextIdx = pressRows.length - 1;
+                  } else if (key !== 'Home') {
+                    const step = key === 'ArrowDown' ? 1 : -1;
+                    nextIdx = Math.min(Math.max(currentIdx + step, 0), pressRows.length - 1);
+                  }
                   pressRows[nextIdx]?.focus();
                 }
               },
@@ -669,26 +743,26 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
           : {}),
       };
     },
-    [
-      rowPressActive,
-      deriveRowLabel,
-      activateRowPress,
-      effectiveRowPressAnchor,
-      isSSR,
-      rowPressHasFocus,
-    ],
+    [rowPressActive, deriveRowLabel, activateRowPress, effectiveRowPressAnchor, isSSR, rowPressHasFocus],
   );
 
   const handleCellChange = useCallback(
-    async (rowIndex: number, columnId: string, newValue: any) => {
-      if (readOnly || disabled) {return;}
-      const previousValue = data[rowIndex]?.[columnId];
+    // oxlint-disable-next-line anti-slop/no-unknown-parameters -- a cell value is whatever the column's field editor emits; it is forwarded untouched to the consumer
+    async (rowIndex: number, columnId: string, newValue: unknown) => {
+      if (readOnly || disabled) {
+        return;
+      }
+      const previousValue: unknown = data[rowIndex]?.[columnId];
       // Bail on no-op commits so a field that re-emits the same primitive value
       // (e.g. OTP sync effects) cannot force a new data array every render.
-      if (Object.is(previousValue, newValue)) {return;}
+      if (Object.is(previousValue, newValue)) {
+        return;
+      }
       if (onCellChange) {
         const result = await onCellChange(rowIndex, columnId, newValue, previousValue);
-        if (result === false) {return;}
+        if (result === false) {
+          return;
+        }
       }
       if (!isFormMode && onDataChange) {
         const newData = [...data];
@@ -700,7 +774,12 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
   );
 
   const handleAddRow = useCallback(() => {
-    if (readOnly || disabled || (maxRows && data.length >= maxRows)) {return;}
+    const atMaxRows = maxRows !== undefined && maxRows !== 0 && data.length >= maxRows;
+    if (readOnly || disabled || atMaxRows) {
+      return;
+    }
+    // SAFETY: defaultRow is the consumer's template for a new TData row
+    // oxlint-disable-next-line anti-slop/no-chained-type-assertions, typescript/no-unsafe-type-assertion -- see the SAFETY note above
     const newRow = { ...defaultRow, idx: data.length + 1 } as unknown as TData;
     if (!isFormMode && onDataChange) {
       onDataChange([...data, newRow]);
@@ -709,7 +788,9 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
 
   const handleDeleteRow = useCallback(
     (rowIndex: number) => {
-      if (readOnly || disabled || data.length <= minRows) {return;}
+      if (readOnly || disabled || data.length <= minRows) {
+        return;
+      }
       if (!isFormMode && onDataChange) {
         onDataChange(data.filter((_, idx) => idx !== rowIndex));
       }
@@ -717,14 +798,14 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
     [readOnly, disabled, minRows, data, isFormMode, onDataChange],
   );
 
-  const isCompact = resolvedSize === "sm" || compact;
+  const isCompact = resolvedSize === 'sm' || compact;
   const renderCellContent = useCallback(
-    (cell: any, rowIndex: number, rowData: TData) => {
-      const columnDef = cell.column.columnDef as DataTableColumn;
+    (cell: Cell<TData, unknown>, rowIndex: number, rowData: TData) => {
+      const columnDef = asDataTableColumn(cell.column.columnDef);
       const columnId = cell.column.id;
       const value = cell.getValue();
 
-      if (columnDef.cell && !columnDef.field) {
+      if (Boolean(columnDef.cell) && columnDef.field === undefined) {
         // DG-TBL-01 for CUSTOM cell renderers: the cell box's own
         // justifyContent no-ops in the semantic-table displayMode
         // (display: table-cell is not a flex container), so the column's
@@ -732,7 +813,7 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
         // consumers never self-align. The built-in DataTableCell branch
         // below aligns internally (CellWrapper) and stays unwrapped.
         const customAlign = resolveColumnAlign({
-          ...(columnDef),
+          ...columnDef,
           id: cell.column.id,
         });
         return (
@@ -742,8 +823,7 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
             flexDirection="row"
             alignItems="center"
             justifyContent={alignToFlex(customAlign)}
-            {...({ "data-cell-align": customAlign } as any)}
-          >
+            {...{ 'data-cell-align': customAlign }}>
             <CellContent
               cellDef={columnDef.cell}
               ctx={cell.getContext()}
@@ -755,13 +835,15 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
 
       const columnField = getColumnField(columnDef);
       const dateRangeLinkedColumn = columnDef.fieldProps?.dateRangeLinkedColumn;
-      let linkedValue: any;
-      let onLinkedChange: ((value: any) => void) | undefined;
+      let linkedValue: unknown;
+      // oxlint-disable-next-line anti-slop/no-unknown-parameters -- a cell value is whatever the column's field editor emits; it is forwarded untouched to the consumer
+      let onLinkedChange: ((value: unknown) => void) | undefined;
 
-      if (dateRangeLinkedColumn && rowData) {
+      if (dateRangeLinkedColumn !== undefined && dateRangeLinkedColumn !== '') {
         linkedValue = rowData[dateRangeLinkedColumn];
-        onLinkedChange = (newValue: any) => {
-          handleCellChange(rowIndex, dateRangeLinkedColumn, newValue);
+        // oxlint-disable-next-line anti-slop/no-unknown-parameters -- a cell value is whatever the column's field editor emits; it is forwarded untouched to the consumer
+        onLinkedChange = (newValue: unknown) => {
+          void handleCellChange(rowIndex, dateRangeLinkedColumn, newValue);
         };
       }
 
@@ -770,11 +852,13 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
           value={value}
           field={columnField}
           fieldProps={columnDef.fieldProps}
-          onChange={ async (newValue) => handleCellChange(rowIndex, columnId, newValue)}
+          onChange={(newValue) => {
+            void handleCellChange(rowIndex, columnId, newValue);
+          }}
           readOnly={readOnly}
           disabled={disabled}
           columnId={columnId}
-          columnLabel={typeof columnDef.header === "string" ? columnDef.header : undefined}
+          columnLabel={headerText(columnDef.header)}
           rowIndex={rowIndex}
           rowData={rowData}
           size={knobProps.sizeToken}
@@ -784,31 +868,22 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
         />
       );
     },
-    [
-      handleCellChange,
-      readOnly,
-      disabled,
-      knobProps.sizeToken,
-      knobProps.label.fontSize,
-      isCompact,
-    ],
+    [handleCellChange, readOnly, disabled, knobProps.sizeToken, knobProps.label.fontSize, isCompact],
   );
 
-  const extraColumnsBefore =
-    (enableRowSelection ? 1 : 0) + (showRowNumbers ? 1 : 0) + (enableRowExpansion ? 1 : 0);
+  const extraColumnsBefore = (enableRowSelection ? 1 : 0) + (showRowNumbers ? 1 : 0) + (enableRowExpansion ? 1 : 0);
   const extraColumnsAfter = showDeleteRow && !readOnly ? 1 : 0;
   const excelCellNav = enableKeyboardNavigation && !rowPressActive && !disabled;
-  const gridColCount = Math.max(
-    table.getVisibleLeafColumns().length + extraColumnsBefore + extraColumnsAfter,
-    1,
-  );
+  const gridColCount = Math.max(table.getVisibleLeafColumns().length + extraColumnsBefore + extraColumnsAfter, 1);
   const handleGridKeyDown = useCallback(
     (event: React.KeyboardEvent) => {
-      if (!enableKeyboardNavigation || disabled) {return;}
+      if (!enableKeyboardNavigation || disabled) {
+        return;
+      }
       if (excelCellNav) {
-        if (event.key === "ArrowRight") {
+        if (event.key === 'ArrowRight') {
           setFocusedColIndex((i) => Math.min(i + 1, gridColCount - 1));
-        } else if (event.key === "ArrowLeft") {
+        } else if (event.key === 'ArrowLeft') {
           setFocusedColIndex((i) => Math.max(i - 1, 0));
         }
       }
@@ -819,51 +894,52 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
 
   const getStickyStyle = useCallback(
     (columnId: string) => {
-      if (!enableColumnPinning || !pinning) {return undefined;}
-      const colPinning = table.getState().columnPinning ?? {
-        left: [] as string[],
-        right: [] as string[],
-      };
+      if (!enableColumnPinning || !pinning) {
+        return null;
+      }
+      const colPinning = table.getState().columnPinning ?? { left: [], right: [] };
       const leftPinned = colPinning.left ?? [];
       const rightPinned = colPinning.right ?? [];
       const leftIdx = leftPinned.indexOf(columnId);
       const rightIdx = rightPinned.indexOf(columnId);
+      const sumColumnSizes = (ids: string[]) =>
+        ids.reduce((total, id) => total + (table.getColumn(id)?.getSize() ?? 0), 0);
 
       if (leftIdx !== -1) {
-        let leftOffset = 0;
-        for (let i = 0; i < leftIdx; i++) {
-          const col = table.getColumn(leftPinned[i]);
-          if (col) {leftOffset += col.getSize();}
+        let leftOffset = sumColumnSizes(leftPinned.slice(0, leftIdx));
+        if (enableRowSelection) {
+          leftOffset += selectionColWidth;
         }
-        if (enableRowSelection) {leftOffset += selectionColWidth;}
-        if (enableRowExpansion) {leftOffset += chrome.expandCol;}
-        if (showRowNumbers) {leftOffset += chrome.rowNumberCol;}
+        if (enableRowExpansion) {
+          leftOffset += chrome.expandCol;
+        }
+        if (showRowNumbers) {
+          leftOffset += chrome.rowNumberCol;
+        }
         // Logical inset (RTL backlog #2): TanStack's "left" bucket is the
         // reading-start side, so the sticky offset must flip with direction.
         return {
-          position: "sticky" as const,
+          position: 'sticky' as const,
           insetInlineStart: leftOffset,
           zIndex: 2,
-          backgroundColor: "$color2",
+          backgroundColor: '$color2',
         };
       }
 
       if (rightIdx !== -1) {
-        let rightOffset = 0;
-        for (let i = rightIdx + 1; i < rightPinned.length; i++) {
-          const col = table.getColumn(rightPinned[i]);
-          if (col) {rightOffset += col.getSize();}
+        let rightOffset = sumColumnSizes(rightPinned.slice(rightIdx + 1));
+        if (showDeleteRow && !readOnly) {
+          rightOffset += chrome.deleteCol;
         }
-        if (showDeleteRow && !readOnly) {rightOffset += chrome.deleteCol;}
         return {
-          position: "sticky" as const,
+          position: 'sticky' as const,
           insetInlineEnd: rightOffset,
           zIndex: 2,
-          backgroundColor: "$color2",
+          backgroundColor: '$color2',
         };
       }
 
-      return;
+      return null;
     },
     [
       enableColumnPinning,
@@ -874,6 +950,10 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
       showRowNumbers,
       showDeleteRow,
       readOnly,
+      selectionColWidth,
+      chrome.expandCol,
+      chrome.rowNumberCol,
+      chrome.deleteCol,
     ],
   );
 
@@ -883,16 +963,17 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
     // valid <div> child (React validateDOMNesting + SSR reparenting). The
     // div cells keep role="cell" from the primitive, preserving the
     // roles-based grid semantics.
-    (row: any, rowIndex: number, _isLastRow: boolean, cellElement?: "div") => {
-      const rowData = row.original as TData;
-      const cellRenderProps = cellElement ? ({ render: cellElement } as any) : {};
+    (row: Row<TData>, rowIndex: number, _isLastRow: boolean, cellElement?: 'div') => {
+      const rowData = row.original;
+      const cellRenderProps = cellElement ? { render: cellElement } : {};
       let cellSlot = 0;
       const cellNavProps = () => {
-        const slot = cellSlot++;
-        if (!excelCellNav || !keyboardNav.isNavigating) {return {};}
-        return tableCellKeyboardProps(
-          rowIndex === keyboardNav.focusedRowIndex && slot === focusedColIndex,
-        );
+        const slot = cellSlot;
+        cellSlot += 1;
+        if (!excelCellNav || !keyboardNav.isNavigating) {
+          return {};
+        }
+        return tableCellKeyboardProps(rowIndex === keyboardNav.focusedRowIndex && slot === focusedColIndex);
       };
 
       return (
@@ -902,22 +983,23 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
               {...cellRenderProps}
               {...cellNavProps()}
               cellWidth={selectionColWidth}
-              cellHeight={cellHeight as any}
+              cellHeight={cellHeight}
               cellLocation="first"
-              justifyContent="center"
-            >
+              justifyContent="center">
               <Checkbox
                 checked={row.getIsSelected()}
                 onChange={(checked) => {
-                  if (disabled) {return;}
-                  row.toggleSelected(!!checked);
+                  if (disabled) {
+                    return;
+                  }
+                  row.toggleSelected(checked !== false);
                 }}
                 disabled={disabled}
                 checkboxProps={{
                   // Row identity in the name so repeated per-row actions are
                   // differentiated for screen readers (DG-A11Y-06). The
                   // aria-label rides the role="checkbox" frame itself.
-                  "aria-label": deriveSelectRowLabel(row, rowIndex),
+                  'aria-label': deriveSelectRowLabel(row, rowIndex),
                 }}
                 compact={isCompact}
               />
@@ -929,10 +1011,11 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
               {...cellRenderProps}
               {...cellNavProps()}
               cellWidth={chrome.rowNumberCol}
-              cellHeight={cellHeight as any}
-              cellLocation={enableRowSelection ? "middle" : "first"}
-            >
-              <Text fontSize={knobProps.sizeToken} color="$color10">
+              cellHeight={cellHeight}
+              cellLocation={enableRowSelection ? 'middle' : 'first'}>
+              <Text
+                fontSize={knobProps.sizeToken}
+                color="$color10">
                 {rowIndex + 1}
               </Text>
             </Table.Cell>
@@ -943,27 +1026,27 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
               {...cellRenderProps}
               {...cellNavProps()}
               cellWidth={chrome.expandCol + row.depth * chrome.indent}
-              cellHeight={cellHeight as any}
-              cellLocation={enableRowSelection || showRowNumbers ? "middle" : "first"}
+              cellHeight={cellHeight}
+              cellLocation={enableRowSelection || showRowNumbers ? 'middle' : 'first'}
               paddingLeft={0}
-              paddingRight={0}
-            >
-              <View flexDirection="row" alignItems="center" height="100%">
+              paddingRight={0}>
+              <View
+                flexDirection="row"
+                alignItems="center"
+                height="100%">
                 {row.depth > 0 && (
                   <View
                     flexDirection="row"
                     alignItems="center"
                     height="100%"
-                    width={row.depth * chrome.indent}
-                  >
+                    width={row.depth * chrome.indent}>
                     {Array.from({ length: row.depth }).map((_, i) => (
                       <View
                         key={i}
                         width={chrome.indent}
                         height="100%"
                         alignItems="center"
-                        justifyContent="center"
-                      >
+                        justifyContent="center">
                         <View
                           position="absolute"
                           width={1}
@@ -987,29 +1070,30 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
                 {row.getCanExpand() ? (
                   <View
                     onPress={() => {
-                      if (disabled) {return;}
+                      if (disabled) {
+                        return;
+                      }
                       row.toggleExpanded();
                     }}
-                    cursor={disabled ? "not-allowed" : "pointer"}
+                    cursor={disabled ? CURSOR_NOT_ALLOWED : CURSOR_POINTER}
                     aria-disabled={disabled || undefined}
                     padding="$1"
                     aria-expanded={row.getIsExpanded()}
                     aria-label={
                       row.getIsExpanded()
-                        ? withInterp(t("Collapse row {{row}}", { row: rowIndex + 1 }), {
+                        ? withInterp(t('Collapse row {{row}}', { row: rowIndex + 1 }), {
                             row: rowIndex + 1,
                           })
-                        : withInterp(t("Expand row {{row}}", { row: rowIndex + 1 }), {
+                        : withInterp(t('Expand row {{row}}', { row: rowIndex + 1 }), {
                             row: rowIndex + 1,
                           })
                     }
-                    hoverStyle={{ backgroundColor: "$color4" }}
-                    borderRadius="$2"
-                  >
+                    hoverStyle={{ backgroundColor: '$color4' }}
+                    borderRadius="$2">
                     <ExpandCaretIcon
                       size={chrome.iconPx}
                       style={{
-                        transform: row.getIsExpanded() ? expandedCaretRotation : "none",
+                        transform: row.getIsExpanded() ? expandedCaretRotation : 'none',
                       }}
                     />
                   </View>
@@ -1020,14 +1104,13 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
             </Table.Cell>
           )}
 
-          {row.getVisibleCells().map((cell: any, cellIndex: number) => {
-            const isFirstDataCell =
-              cellIndex === 0 && !enableRowSelection && !showRowNumbers && !enableRowExpansion;
+          {row.getVisibleCells().map((cell: Cell<TData, unknown>, cellIndex: number) => {
+            const isFirstDataCell = cellIndex === 0 && !enableRowSelection && !showRowNumbers && !enableRowExpansion;
             const isLastDataCell = cellIndex === row.getVisibleCells().length - 1 && !showDeleteRow;
-            const cellLocation = isFirstDataCell ? "first" : isLastDataCell ? "last" : "middle";
+            const cellLocation = edgeLocation(isFirstDataCell, isLastDataCell);
             const stickyStyle = getStickyStyle(cell.column.id);
             const columnAlign = resolveColumnAlign({
-              ...(cell.column.columnDef as DataTableColumn),
+              ...asDataTableColumn(cell.column.columnDef),
               id: cell.column.id,
             });
 
@@ -1038,27 +1121,26 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
                 {...cellNavProps()}
                 {...cellFlexProps}
                 {...getColSizeProps(cell.column)}
-                cellHeight={cellHeight as any}
+                cellHeight={cellHeight}
                 cellLocation={cellLocation}
                 justifyContent={alignToFlex(columnAlign)}
                 data-align={columnAlign}
-                {...(clipBodyCells ? { overflow: "hidden" as any } : {})}
+                {...(clipBodyCells ? { overflow: 'hidden' as const } : {})}
                 {...(isWeb && stickyStyle
                   ? {
                       style: {
-                        position: "sticky",
-                        ...("insetInlineStart" in stickyStyle && {
+                        position: 'sticky' as const,
+                        ...('insetInlineStart' in stickyStyle && {
                           insetInlineStart: stickyStyle.insetInlineStart,
                         }),
-                        ...("insetInlineEnd" in stickyStyle && {
+                        ...('insetInlineEnd' in stickyStyle && {
                           insetInlineEnd: stickyStyle.insetInlineEnd,
                         }),
                         zIndex: 2,
-                        backgroundColor: "var(--color2)",
-                      } as React.CSSProperties,
+                        backgroundColor: PINNED_CELL_BACKGROUND,
+                      },
                     }
-                  : {})}
-              >
+                  : {})}>
                 {renderCellContent(cell, rowIndex, rowData)}
               </Table.Cell>
             );
@@ -1069,17 +1151,18 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
               {...cellRenderProps}
               {...cellNavProps()}
               cellWidth={chrome.deleteCol}
-              cellHeight={cellHeight as any}
+              cellHeight={cellHeight}
               cellLocation="last"
-              justifyContent="center"
-            >
+              justifyContent="center">
               <Button
                 chromeless
                 circular
                 icon={TrashIcon}
                 disabled={disabled || data.length <= minRows}
-                onPress={() =>{  handleDeleteRow(rowIndex); }}
-                aria-label={withInterp(t("Delete row {{row}}", { row: rowIndex + 1 }), {
+                onPress={() => {
+                  handleDeleteRow(rowIndex);
+                }}
+                aria-label={withInterp(t('Delete row {{row}}', { row: rowIndex + 1 }), {
                   row: rowIndex + 1,
                 })}
               />
@@ -1089,6 +1172,12 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
       );
     },
     [
+      chrome.indent,
+      chrome.rowNumberCol,
+      chrome.expandCol,
+      chrome.deleteCol,
+      chrome.iconPx,
+      selectionColWidth,
       enableRowSelection,
       showRowNumbers,
       enableRowExpansion,
@@ -1130,22 +1219,27 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
     [table, state, actions, computed, selectAllScope, filterUi],
   );
 
-  const hasCardSort =
-    showCards &&
-    enableSorting &&
-    table.getVisibleLeafColumns().some((column) => column.getCanSort());
+  const hasCardSort = showCards && enableSorting && table.getVisibleLeafColumns().some((column) => column.getCanSort());
   const defaultCardToolbar = showCards && !renderToolbar;
   const ToolbarComponent = defaultCardToolbar ? DataTableCardToolbar : DataTableToolbar;
+  const {
+    setGlobalFilter: handleGlobalFilterChange,
+    clearFilters: handleClearFilters,
+    saveView: handleSaveView,
+    loadView: handleLoadView,
+    setPagination: handlePaginationChange,
+  } = actions;
+  // oxlint-disable-next-line typescript/promise-function-async -- returns ReactNode, which React 19 types to include a Promise; nothing here is async
   const renderToolbarComponent = () => {
     const activeFilterCount = table.getState().columnFilters?.length ?? 0;
 
     if (renderToolbar) {
       return renderToolbar({
-        globalFilter: state.globalFilter ?? "",
-        onGlobalFilterChange: actions.setGlobalFilter,
-        onClearFilters: actions.clearFilters,
-        onSaveView: actions.saveView,
-        onLoadView: actions.loadView,
+        globalFilter: state.globalFilter ?? '',
+        onGlobalFilterChange: handleGlobalFilterChange,
+        onClearFilters: handleClearFilters,
+        onSaveView: handleSaveView,
+        onLoadView: handleLoadView,
         views: state.views,
         activeViewId: state.activeViewId,
         size: knobProps.sizeToken,
@@ -1156,9 +1250,9 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
 
     return (
       <ToolbarComponent
-        globalFilter={state.globalFilter ?? ""}
-        onGlobalFilterChange={actions.setGlobalFilter}
-        onClearFilters={actions.clearFilters}
+        globalFilter={state.globalFilter ?? ''}
+        onGlobalFilterChange={handleGlobalFilterChange}
+        onClearFilters={handleClearFilters}
         customActions={
           defaultCardToolbar && hasCardSort ? (
             <DataTableCardSortControl
@@ -1170,8 +1264,8 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
           ) : undefined
         }
         activeFilterCount={activeFilterCount}
-        onSaveView={actions.saveView}
-        onLoadView={actions.loadView}
+        onSaveView={handleSaveView}
+        onLoadView={handleLoadView}
         views={state.views}
         activeViewId={state.activeViewId}
         enableViews={enableViews}
@@ -1184,12 +1278,13 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
     );
   };
 
+  // oxlint-disable-next-line typescript/promise-function-async -- returns ReactNode, which React 19 types to include a Promise; nothing here is async
   const renderPaginationComponent = () => {
     const resolvedPageSizeOptions = pageSizeOptions ?? [10, 20, 50, 100];
     if (renderPagination) {
       return renderPagination({
         pagination: state.pagination,
-        onPaginationChange: actions.setPagination,
+        onPaginationChange: handlePaginationChange,
         pageSizeOptions: resolvedPageSizeOptions,
       });
     }
@@ -1197,70 +1292,76 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
     return (
       <DataTablePagination
         pagination={state.pagination}
-        onPaginationChange={actions.setPagination}
+        onPaginationChange={handlePaginationChange}
         pageSizeOptions={resolvedPageSizeOptions}
         compact
       />
     );
   };
 
+  // oxlint-disable-next-line eslint/complexity -- one render pass for every layout mode and async state
   const renderInner = (
     tableData: TData[],
     effectiveHandleAddRow: () => void,
     effectiveHandleDeleteRow: (idx: number) => void,
-    _effectiveHandleCellChange: (
-      rowIndex: number,
-      columnId: string,
-      newValue: any,
-    ) => Promise<void>,
+    // oxlint-disable-next-line anti-slop/no-unknown-parameters -- a cell value is whatever the column's field editor emits; it is forwarded untouched to the consumer
+    _effectiveHandleCellChange: (rowIndex: number, columnId: string, newValue: unknown) => Promise<void>,
+    // oxlint-disable-next-line sonarjs/cognitive-complexity -- one render pass for every layout mode and async state
   ) => {
-    const hasToolbar =
-      enableGlobalSearch || enableFiltering || enableViews || (defaultCardToolbar && hasCardSort);
+    const cardSortToolbar = defaultCardToolbar && hasCardSort;
+    const hasToolbar = enableGlobalSearch || enableFiltering || enableViews || cardSortToolbar;
+    // oxlint-disable-next-line react-hooks/rules-of-hooks -- renderInner is called exactly once on every render path, so hook order is stable
     const scrollContainerRef = useRef<HTMLDivElement>(null);
 
     // DF-12 / Axiom 6 HONEST STATE — a height-constrained body clips rows
     // silently: macOS overlay scrollbars paint nothing at rest, so the frame
     // reads "this is all the rows". Track whether rows are cut off below the
     // fold and paint a bottom fade until the user reaches the last row.
+    // oxlint-disable-next-line react-hooks/rules-of-hooks -- renderInner is called exactly once on every render path, so hook order is stable
     const tableBodyRef = useRef<HTMLElement | null>(null);
+    // oxlint-disable-next-line react-hooks/rules-of-hooks -- renderInner is called exactly once on every render path, so hook order is stable
     const [bodyClipped, setBodyClipped] = useState(false);
+    // oxlint-disable-next-line react-hooks/rules-of-hooks, react-doctor/effect-needs-cleanup -- renderInner is called exactly once on every render path, so hook order is stable; the listener is removed by the returned `cleanup`
     useEffect(() => {
-      if (!isWeb || isSSR || showCards) {return;}
       const el = tableBodyRef.current;
-      if (!el) {return;}
-      const update = () => {
-        setBodyClipped(el.scrollHeight - (el.scrollTop + el.clientHeight) > 1);
-      };
-      update();
-      el.addEventListener("scroll", update );
-      const ro = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(update);
-      ro?.observe(el);
+      let cleanup: (() => void) | undefined;
+      if (isWeb && !isSSR && !showCards && el) {
+        const update = () => {
+          setBodyClipped(el.scrollHeight - (el.scrollTop + el.clientHeight) > 1);
+        };
+        update();
+        // oxlint-disable-next-line github/prefer-observers -- the fade tracks scroll position, not visibility; ResizeObserver below covers size changes
+        el.addEventListener('scroll', update);
+        const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(update);
+        ro?.observe(el);
+        cleanup = () => {
+          el.removeEventListener('scroll', update);
+          ro?.disconnect();
+        };
+      }
       return () => {
-        el.removeEventListener("scroll", update);
-        ro?.disconnect();
+        cleanup?.();
       };
+      // oxlint-disable-next-line react-hooks/exhaustive-deps -- re-measure the clip whenever the row count changes
     }, [displayRows.length]);
 
     // Enable drag-to-scroll in the horizontal-overflow modes (scroll layout
     // and column pinning share the content-View scrollport).
+    // oxlint-disable-next-line react-hooks/rules-of-hooks -- renderInner is called exactly once on every render path, so hook order is stable
     useDragScroll(scrollContainerRef, hScroll && !isSSR);
 
     // Visible row range for the footer summary (1-based, clamped to total).
     const rangeTotal = state.pagination.totalCount ?? 0;
-    const rangeStart =
-      rangeTotal === 0 ? 0 : state.pagination.pageIndex * state.pagination.pageSize + 1;
-    const rangeEnd = Math.min(
-      (state.pagination.pageIndex + 1) * state.pagination.pageSize,
-      rangeTotal,
-    );
+    const rangeStart = rangeTotal === 0 ? 0 : state.pagination.pageIndex * state.pagination.pageSize + 1;
+    const rangeEnd = Math.min((state.pagination.pageIndex + 1) * state.pagination.pageSize, rangeTotal);
 
     // W9 / DG-ST-01,02,04 / DG-TBL-06 — first-class async states.
     // Error wins over empty chrome; initial load uses a table-shaped skeleton.
     // A refetch (isFetching / placeholderData) MUST keep the body mounted —
     // skeleton only when there are no rows to hold (first load).
-    const resolvedAriaLabel = ariaLabel ?? t("Data table");
+    const resolvedAriaLabel = ariaLabel ?? t('Data table');
     const isRefetching = queryInFlight;
-    if (state.error) {
+    if (state.error !== undefined && state.error !== '') {
       return (
         <AsyncBoundary
           error={state.error}
@@ -1272,17 +1373,22 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
         />
       );
     }
-    if (
-      (state.isLoading || infinite?.isInitialLoading) &&
-      displayRows.length === 0 &&
-      !state.isFetching &&
-      !state.isPlaceholderData
-    ) {
-      return <AsyncBoundary loading layout="table" aria-label={resolvedAriaLabel} />;
+    const isInitialLoad = state.isLoading === true || infinite?.isInitialLoading === true;
+    const isRefetchingState = state.isFetching === true || state.isPlaceholderData === true;
+    if (isInitialLoad && displayRows.length === 0 && !isRefetchingState) {
+      return (
+        <AsyncBoundary
+          loading
+          layout="table"
+          aria-label={resolvedAriaLabel}
+        />
+      );
     }
 
     return (
-      <DataTableContext.Provider size={resolvedSize} compact={isCompact}>
+      <DataTableContext.Provider
+        size={resolvedSize}
+        compact={isCompact}>
         <DataTableStateContext.Provider value={stateContextValue}>
           <View
             flexDirection="column"
@@ -1297,7 +1403,7 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
             flexShrink={1}
             flexBasis="auto"
             minHeight={0}
-            {...(isWeb && className ? { className } : {})}
+            {...(isWeb && className !== undefined && className !== '' ? { className } : {})}
             aria-label={resolvedAriaLabel}
             aria-describedby={ariaDescribedBy}
             aria-live="polite"
@@ -1314,18 +1420,19 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
             {...(disabled
               ? {
                   ...disabledState.assemblyKnobProps,
-                  cursor: "not-allowed" as const,
-                  ...(isWeb ? ({ inert: true } as any) : { pointerEvents: "none" as const }),
+                  cursor: CURSOR_NOT_ALLOWED,
+                  ...(isWeb ? { inert: true } : { pointerEvents: 'none' as const }),
                 }
               : {})}
-            {...props}
-          >
+            {...props}>
             {/* Toolbar. The width-100% wrapper is the LC-40 carrier for
                 chrome that has no `disabled` API of its own: under keepLabel
                 the chrome fragment dims the region (interaction is already
                 blocked by the root inert). */}
             {hasToolbar && (
-              <View width="100%" {...(disabled ? disabledState.chromeKnobProps : {})}>
+              <View
+                width="100%"
+                {...(disabled ? disabledState.chromeKnobProps : {})}>
                 {renderToolbarComponent()}
               </View>
             )}
@@ -1333,14 +1440,18 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
             {/* Active filter chips — visibility surface for ALL filters,
                 including hidden-column filters (Axiom 6 HONEST STATE) */}
             {enableFiltering && (
-              <View width="100%" {...(disabled ? disabledState.chromeKnobProps : {})}>
+              <View
+                width="100%"
+                {...(disabled ? disabledState.chromeKnobProps : {})}>
                 <DataTableFilterChips />
               </View>
             )}
 
             {/* Auto selection toolbar (DG-TBL-02) — placement from house bulkBarPlacement */}
-            {enableRowSelection && bulkBarPlacement === "top" ? (
-              <View width="100%" {...(disabled ? disabledState.chromeKnobProps : {})}>
+            {enableRowSelection && bulkBarPlacement === 'top' && (
+              <View
+                width="100%"
+                {...(disabled ? disabledState.chromeKnobProps : {})}>
                 <DataTableBulkActions
                   actions={resolvedBulkActions}
                   maxVisibleActions={5}
@@ -1348,13 +1459,13 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
                   placement="top"
                 />
               </View>
-            ) : null}
+            )}
 
             {/* Compound sub-components (children) */}
             {children}
 
             {/* Card List View (layout="cards" or auto below $sm) */}
-            {showList ? (
+            {showList && (
               <DataTableDocumentList
                 tableRows={displayRows}
                 enableRowSelection={enableRowSelection}
@@ -1366,7 +1477,8 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
                 queryInFlight={queryInFlight}
                 {...(rowPressActive ? { getRowPressProps } : {})}
               />
-            ) : showCards ? (
+            )}
+            {!showList && showCards && (
               <>
                 {/* Header affordances (sort / per-column filter) live in the
                     grid headers; the card list restores them here. */}
@@ -1401,16 +1513,17 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
                   {...(rowPressActive ? { getRowPressProps } : {})}
                 />
               </>
-            ) : (
-              /* Table View */
+            )}
+            {/* Table View */}
+            {!showList && !showCards && (
               <View
-                ref={(node: any) => {
-                  if (enableKeyboardNavigation && !isSSR && keyboardNav.containerRef) {
-                    (keyboardNav.containerRef as any).current = node;
+                ref={(node: TamaguiElement | null) => {
+                  // On web the content View's host is a div.
+                  const el = node instanceof HTMLDivElement ? node : null;
+                  if (enableKeyboardNavigation && !isSSR) {
+                    keyboardNav.containerRef.current = el;
                   }
-                  if (scrollContainerRef) {
-                    (scrollContainerRef as any).current = node;
-                  }
+                  scrollContainerRef.current = el;
                 }}
                 flexDirection="column"
                 width="100%"
@@ -1428,98 +1541,85 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
                 // container; the table inside floors at max-content so it
                 // overflows here instead of panning the whole page. With
                 // pinning it is the ONE scrollport sticky cells track.
-                {...(hScroll ? { overflowX: "auto" as any } : {})}
-                aria-label={withInterp(t("{{label}} content", { label: resolvedAriaLabel }), {
+                {...(hScroll ? { overflowX: 'auto' as const } : {})}
+                aria-label={withInterp(t('{{label}} content', { label: resolvedAriaLabel }), {
                   label: resolvedAriaLabel,
                 })}
                 tabIndex={enableKeyboardNavigation && !isSSR ? 0 : undefined}
-                {...({ "data-table-grid": "true" } as any)}
+                {...{ 'data-table-grid': 'true' }}
                 onKeyDown={enableKeyboardNavigation && !isSSR ? handleGridKeyDown : undefined}
-                onPress={
-                  enableKeyboardNavigation && !isSSR ? keyboardNav.handleContainerClick : undefined
-                }
-                onBlur={
-                  enableKeyboardNavigation && !isSSR ? keyboardNav.handleContainerBlur : undefined
-                }
-              >
+                onPress={enableKeyboardNavigation && !isSSR ? keyboardNav.handleContainerClick : undefined}
+                onBlur={enableKeyboardNavigation && !isSSR ? keyboardNav.handleContainerBlur : undefined}>
                 <Table
                   displayMode={displayMode}
-                  alignCells={{ x: "start", y: "center" }}
-                  alignHeaderCells={{ x: "start", y: "center" }}
+                  alignCells={{ x: 'start', y: 'center' }}
+                  alignHeaderCells={{ x: 'start', y: 'center' }}
                   cellHeight={cellHeight}
-                  borderTopLeftRadius={hasToolbar ? 0 : knobProps.borderRadiusOuter.borderRadius}
-                  borderTopRightRadius={hasToolbar ? 0 : knobProps.borderRadiusOuter.borderRadius}
-                  borderBottomLeftRadius={knobProps.borderRadiusOuter.borderRadius}
-                  borderBottomRightRadius={knobProps.borderRadiusOuter.borderRadius}
+                  borderTopLeftRadius={hasToolbar ? 0 : knobProps.borderRadiusNested.borderRadius}
+                  borderTopRightRadius={hasToolbar ? 0 : knobProps.borderRadiusNested.borderRadius}
+                  borderBottomLeftRadius={knobProps.borderRadiusNested.borderRadius}
+                  borderBottomRightRadius={knobProps.borderRadiusNested.borderRadius}
                   marginBottom={0}
                   aria-label={resolvedAriaLabel}
                   aria-rowcount={computed.totalPages * state.pagination.pageSize}
-                  aria-colcount={
-                    table.getVisibleLeafColumns().length + extraColumnsBefore + extraColumnsAfter
-                  }
+                  aria-colcount={table.getVisibleLeafColumns().length + extraColumnsBefore + extraColumnsAfter}
                   width="100%"
-                  {...(hScroll ? { style: { minWidth: "max-content" } } : {})}
+                  {...(hScroll ? { style: { minWidth: 'max-content' } } : {})}
                   // Pinning: the Table must NOT be a scroll container (its
                   // overflow:hidden base makes it one) or sticky cells stick
                   // to it instead of the scrolling content View. Content
                   // fits the max-content box, so nothing needs the clip.
-                  {...(hScroll && enableColumnPinning ? { overflow: "visible" as any } : {})}
+                  {...(hScroll && enableColumnPinning ? { overflow: 'visible' as const } : {})}
                   // Roving-focus DOM scope for onRowPress arrow keys (LC-49).
-                  {...(rowPressActive ? ({ "data-row-press-scope": "true" } as any) : {})}
-                >
+                  {...(rowPressActive ? { 'data-row-press-scope': 'true' } : {})}>
                   {/* Table Header */}
-                  <Table.Head zIndex="$1" aria-label={t("Table headers")}>
-                    {headerGroups.map((headerGroup: any) => {
-                      rowCounter.current++;
+                  <Table.Head
+                    zIndex="$1"
+                    aria-label={t('Table headers')}>
+                    {headerGroups.map((headerGroup: HeaderGroup<TData>) => {
+                      rowCounter.current += 1;
                       return (
                         <Table.Row
                           key={headerGroup.id}
-                          {...({
-                            background: true,
-                            backgroundColor: "$color2",
-                            rowLocation:
-                              rowCounter.current === 0
-                                ? "first"
-                                : rowCounter.current === allRowsLength - 1
-                                  ? "last"
-                                  : "middle",
-                            borderTopRightRadius: hasToolbar
-                              ? "$0"
-                              : knobProps.borderRadiusOuter.borderRadius,
-                            borderTopLeftRadius: hasToolbar
-                              ? "$0"
-                              : knobProps.borderRadiusOuter.borderRadius,
-                            borderBottomLeftRadius: "$0",
-                            borderBottomRightRadius: "$0",
-                            "aria-rowindex": rowCounter.current,
-                          } as any)}
-                        >
+                          // SAFETY: widening only; the legacy `background` flag is forwarded untyped as before
+                          // oxlint-disable-next-line anti-slop/no-known-value-widening -- the themed row props reject a boolean `background`; the flag is kept for parity
+                          {...({ background: true } as object)}
+                          {...{
+                            backgroundColor: '$color2' as const,
+                            rowLocation: rowLocationFor(rowCounter.current),
+                            borderTopRightRadius: hasToolbar ? '$0' : knobProps.borderRadiusNested.borderRadius,
+                            borderTopLeftRadius: hasToolbar ? '$0' : knobProps.borderRadiusNested.borderRadius,
+                            borderBottomLeftRadius: '$0',
+                            borderBottomRightRadius: '$0',
+                            'aria-rowindex': rowCounter.current,
+                          }}>
                           {enableRowSelection && (
                             <Table.HeaderCell
                               cellWidth={selectionColWidth}
-                              cellHeight={cellHeight as any}
+                              cellHeight={cellHeight}
                               cellLocation="first"
-                              justifyContent="center"
-                            >
+                              justifyContent="center">
                               <Checkbox
-                                checked={
-                                  selectAllIndeterminate ? "indeterminate" : selectAllChecked
-                                }
+                                checked={selectAllIndeterminate ? 'indeterminate' : selectAllChecked}
                                 disabled={disabled}
                                 onChange={(checked) => {
-                                  if (disabled || checked === "indeterminate") {return;}
-                                  const shouldSelect =  checked;
+                                  if (disabled || checked === 'indeterminate') {
+                                    return;
+                                  }
+                                  const shouldSelect = checked;
                                   const isAll =
-                                    selectAllScope === "filtered"
+                                    selectAllScope === 'filtered'
                                       ? table.getIsAllRowsSelected()
                                       : table.getIsAllPageRowsSelected();
-                                  if (shouldSelect !== isAll) {toggleSelectAll();}
+                                  if (shouldSelect !== isAll) {
+                                    toggleSelectAll();
+                                  }
                                 }}
                                 checkboxProps={{
-                                  "aria-label":
-                                    selectAllScope === "filtered"
-                                      ? t("Select all matching rows")
-                                      : t("Select all rows on page"),
+                                  'aria-label':
+                                    selectAllScope === 'filtered'
+                                      ? t('Select all matching rows')
+                                      : t('Select all rows on page'),
                                 }}
                                 compact={isCompact}
                               />
@@ -1529,10 +1629,11 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
                           {showRowNumbers && (
                             <Table.HeaderCell
                               cellWidth={chrome.rowNumberCol}
-                              cellHeight={cellHeight as any}
-                              cellLocation={enableRowSelection ? "middle" : "first"}
-                            >
-                              <Text fontSize={knobProps.sizeToken} fontWeight="600">
+                              cellHeight={cellHeight}
+                              cellLocation={enableRowSelection ? 'middle' : 'first'}>
+                              <Text
+                                fontSize={knobProps.sizeToken}
+                                fontWeight="600">
                                 #
                               </Text>
                             </Table.HeaderCell>
@@ -1541,55 +1642,55 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
                           {enableRowExpansion && (
                             <Table.HeaderCell
                               cellWidth={chrome.expandCol}
-                              cellHeight={cellHeight as any}
-                              cellLocation={
-                                enableRowSelection || showRowNumbers ? "middle" : "first"
-                              }
-                            >
+                              cellHeight={cellHeight}
+                              cellLocation={enableRowSelection || showRowNumbers ? 'middle' : 'first'}>
                               <View width={14} />
                             </Table.HeaderCell>
                           )}
 
-                          {headerGroup.headers.map((header: any, headerIndex: number) => {
+                          {/* oxlint-disable-next-line eslint/complexity, sonarjs/cognitive-complexity -- one header cell: sort, resize, pin, filter, and sticky affordances */}
+                          {headerGroup.headers.map((header: Header<TData, unknown>, headerIndex: number) => {
                             const isSortableHeader = header.column.getCanSort();
                             const sortDirection = header.column.getIsSorted();
                             const canResize = enableColumnResizing && header.column.getCanResize();
                             const resizeHandler = canResize ? header.getResizeHandler() : undefined;
                             const colSize = header.getSize();
                             const colMinSize = header.column.columnDef.minSize ?? 0;
-                            const colMaxSize =
-                              header.column.columnDef.maxSize ?? Number.MAX_SAFE_INTEGER;
+                            const colMaxSize = header.column.columnDef.maxSize ?? Number.MAX_SAFE_INTEGER;
                             const stickyStyle = getStickyStyle(header.column.id);
-                            const columnDef = header.column.columnDef as DataTableColumn;
+                            const columnDef = asDataTableColumn(header.column.columnDef);
                             const columnAlign = resolveColumnAlign({
                               ...columnDef,
                               id: header.column.id,
                             });
                             const headerJustify = alignToFlex(columnAlign);
-                            const isRightAligned = columnAlign === "right";
+                            const isRightAligned = columnAlign === 'right';
+                            const resizeColumnName = headerText(columnDef.header) ?? header.column.id;
 
                             const isFirstHeaderCell =
-                              headerIndex === 0 &&
-                              !enableRowSelection &&
-                              !showRowNumbers &&
-                              !enableRowExpansion;
+                              headerIndex === 0 && !enableRowSelection && !showRowNumbers && !enableRowExpansion;
                             const isLastHeaderCell =
-                              headerIndex === headerGroup.headers.length - 1 &&
-                              !(showDeleteRow && !readOnly);
-                            const headerCellLocation = isFirstHeaderCell
-                              ? "first"
-                              : isLastHeaderCell
-                                ? "last"
-                                : "middle";
+                              headerIndex === headerGroup.headers.length - 1 && !(showDeleteRow && !readOnly);
+                            const headerCellLocation = edgeLocation(isFirstHeaderCell, isLastHeaderCell);
+                            let headerCursor = 'default';
+                            if (disabled) {
+                              headerCursor = CURSOR_NOT_ALLOWED;
+                            } else if (isSortableHeader) {
+                              headerCursor = CURSOR_POINTER;
+                            }
+                            let sortTooltip = t('Click to sort (Shift+click for multi-sort)');
+                            if (sortDirection === 'asc') {
+                              sortTooltip = t('Sorted ascending (click to sort descending)');
+                            } else if (sortDirection === 'desc') {
+                              sortTooltip = t('Sorted descending (click to clear)');
+                            }
 
                             return (
                               <Table.HeaderCell
                                 key={header.id}
                                 id={`${header.column.id}-header`}
                                 onPress={
-                                  isSortableHeader && !disabled
-                                    ? header.column.getToggleSortingHandler()
-                                    : undefined
+                                  isSortableHeader && !disabled ? header.column.getToggleSortingHandler() : undefined
                                 }
                                 // Keyboard operability (WCAG 2.1.1): the sort
                                 // control must not be mouse-only — Tab reaches
@@ -1598,14 +1699,11 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
                                 // Disabled tables drop the handlers (the root
                                 // inert already blocks focus on web).
                                 {...(isSortableHeader && !disabled && isWeb
-                                  ? ({
+                                  ? {
                                       tabIndex: 0,
+                                      // oxlint-disable-next-line sonarjs/no-nested-functions -- inline handler of one header cell; hoisting it would split the cell's markup from its behavior
                                       onKeyDown: (e: React.KeyboardEvent) => {
-                                        if (
-                                          e.key === "Enter" ||
-                                          e.key === " " ||
-                                          e.key === "Spacebar"
-                                        ) {
+                                        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
                                           e.preventDefault();
                                           header.column.getToggleSortingHandler()?.(e);
                                         }
@@ -1613,56 +1711,45 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
                                       focusVisibleStyle: ensureFocusVisibleRing({
                                         outlineOffset: -2,
                                       }),
-                                    } as any)
+                                    }
                                   : {})}
-                                cursor={
-                                  disabled
-                                    ? "not-allowed"
-                                    : isSortableHeader
-                                      ? "pointer"
-                                      : "default"
-                                }
+                                cursor={headerCursor}
                                 position="relative"
                                 cellLocation={headerCellLocation}
                                 justifyContent={headerJustify}
                                 data-align={columnAlign}
-                                aria-sort={
-                                  isSortableHeader
-                                    ? sortDirection === "asc"
-                                      ? "ascending"
-                                      : sortDirection === "desc"
-                                        ? "descending"
-                                        : "none"
-                                    : undefined
-                                }
+                                aria-sort={ariaSortFor(isSortableHeader, sortDirection)}
                                 {...(dnd && !disabled
-                                  ? ({
+                                  ? {
                                       draggable: true,
-                                      onDragStart: (e: React.DragEvent<HTMLElement>) =>{ 
-                                        dnd.onDragStart(e, header.column.id); },
+                                      // oxlint-disable-next-line sonarjs/no-nested-functions -- inline handler of one header cell; hoisting it would split the cell's markup from its behavior
+                                      onDragStart: (e: React.DragEvent<HTMLElement>) => {
+                                        dnd.onDragStart(e, header.column.id);
+                                      },
                                       onDragOver: dnd.onDragOver,
-                                      onDrop: (e: React.DragEvent<HTMLElement>) =>{ 
-                                        dnd.onDrop(e, header.column.id); },
-                                    } as any)
+                                      // oxlint-disable-next-line sonarjs/no-nested-functions -- inline handler of one header cell; hoisting it would split the cell's markup from its behavior
+                                      onDrop: (e: React.DragEvent<HTMLElement>) => {
+                                        dnd.onDrop(e, header.column.id);
+                                      },
+                                    }
                                   : {})}
                                 {...cellFlexProps}
                                 {...getColSizeProps(header.column)}
                                 {...(isWeb && stickyStyle
                                   ? {
                                       style: {
-                                        position: "sticky",
-                                        ...("insetInlineStart" in stickyStyle && {
+                                        position: 'sticky' as const,
+                                        ...('insetInlineStart' in stickyStyle && {
                                           insetInlineStart: stickyStyle.insetInlineStart,
                                         }),
-                                        ...("insetInlineEnd" in stickyStyle && {
-                                          insetInlineEnd: (stickyStyle as any).insetInlineEnd,
+                                        ...('insetInlineEnd' in stickyStyle && {
+                                          insetInlineEnd: stickyStyle.insetInlineEnd,
                                         }),
                                         zIndex: 2,
-                                        backgroundColor: "var(--color2)",
-                                      } as React.CSSProperties,
+                                        backgroundColor: PINNED_CELL_BACKGROUND,
+                                      },
                                     }
-                                  : {})}
-                              >
+                                  : {})}>
                                 {/* LC-10 (MPO-336): only the label yields
                                     to a narrow column; the glyphs keep their
                                     size or they paint into the next one. The
@@ -1673,10 +1760,9 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
                                   flexWrap="wrap"
                                   gap="$2"
                                   alignItems="center"
-                                  justifyContent={isRightAligned ? "flex-end" : "space-between"}
+                                  justifyContent={isRightAligned ? 'flex-end' : 'space-between'}
                                   flex={1}
-                                  minWidth={0}
-                                >
+                                  minWidth={0}>
                                   <View
                                     flexDirection="row"
                                     gap="$2"
@@ -1685,46 +1771,36 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
                                     flexShrink={1}
                                     flexBasis="auto"
                                     minWidth={0}
-                                    justifyContent={isRightAligned ? "flex-end" : undefined}
-                                  >
+                                    justifyContent={isRightAligned ? 'flex-end' : undefined}>
                                     <Text
                                       fontSize={knobProps.sizeToken}
                                       userSelect="none"
                                       flexShrink={1}
                                       minWidth={0}
-                                      textAlign={isRightAligned ? "right" : undefined}
+                                      textAlign={isRightAligned ? 'right' : undefined}
                                       data-header-label=""
-                                      {...(isWeb ? { style: { overflowWrap: "anywhere" } } : {})}
-                                    >
+                                      {...(isWeb ? { style: { overflowWrap: 'anywhere' } } : {})}>
                                       {header.isPlaceholder
                                         ? null
-                                        : flexRender(
-                                            header.column.columnDef.header,
-                                            header.getContext(),
-                                          )}
+                                        : flexRender(header.column.columnDef.header, header.getContext())}
                                     </Text>
                                     {isSortableHeader && (
-                                      <Tooltip
-                                        content={
-                                          sortDirection === "asc"
-                                            ? t("Sorted ascending (click to sort descending)")
-                                            : sortDirection === "desc"
-                                              ? t("Sorted descending (click to clear)")
-                                              : t("Click to sort (Shift+click for multi-sort)")
-                                        }
-                                      >
-                                        <View aria-hidden={true} role="presentation" flexShrink={0}>
-                                          {sortDirection === "asc" && (
+                                      <Tooltip content={sortTooltip}>
+                                        <View
+                                          aria-hidden={true}
+                                          role="presentation"
+                                          flexShrink={0}>
+                                          {sortDirection === 'asc' && (
                                             <CaretDownIcon
                                               size={chrome.iconPx}
                                               color="var(--color11)"
                                             />
                                           )}
-                                          {sortDirection === "desc" && (
+                                          {sortDirection === 'desc' && (
                                             <CaretDownIcon
                                               size={chrome.iconPx}
                                               color="var(--color11)"
-                                              style={{ transform: "rotate(180deg)" }}
+                                              style={{ transform: 'rotate(180deg)' }}
                                             />
                                           )}
                                           {sortDirection === false && (
@@ -1741,29 +1817,21 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
                                     flexDirection="row"
                                     gap="$1"
                                     alignItems="center"
-                                    flexShrink={0}
-                                  >
+                                    flexShrink={0}>
                                     {enableFiltering && header.column.getCanFilter() && (
                                       <ColumnHeaderFilter
                                         columnId={header.column.id}
-                                        columnLabel={
-                                          typeof header.column.columnDef.header === "string"
-                                            ? header.column.columnDef.header
-                                            : header.column.id
-                                        }
+                                        columnLabel={headerText(header.column.columnDef.header) ?? header.column.id}
                                         columnType={mapFieldToFilterType(
-                                          getColumnField(
-                                            header.column.columnDef as DataTableColumn,
-                                          ),
+                                          getColumnField(asDataTableColumn(header.column.columnDef)),
                                         )}
                                         filterValue={header.column.getFilterValue()}
-                                        onFilterChange={(value) =>
-                                          header.column.setFilterValue(value)
-                                        }
+                                        // oxlint-disable-next-line sonarjs/no-nested-functions -- inline handler of one header cell; hoisting it would split the cell's markup from its behavior
+                                        onFilterChange={(value) => {
+                                          header.column.setFilterValue(value);
+                                        }}
                                         isFiltered={header.column.getIsFiltered()}
-                                        options={
-                                          (header.column.columnDef).fieldProps?.options
-                                        }
+                                        options={columnDef.fieldProps?.options}
                                       />
                                     )}
                                     {pinning && enableColumnPinning && (
@@ -1784,19 +1852,20 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
                                     cursor="col-resize"
                                     onMouseDown={resizeHandler}
                                     onTouchStart={resizeHandler}
+                                    // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui View is the cross-platform primitive (no <hr> on RN); role supplies the resize-handle semantics
                                     role="separator"
                                     aria-valuenow={colSize}
                                     aria-valuemin={colMinSize}
                                     aria-valuemax={colMaxSize}
                                     aria-label={withInterp(
-                                      t("Resize {{column}} column", {
-                                        column: header.column.columnDef.header ?? header.column.id,
+                                      t('Resize {{column}} column', {
+                                        column: resizeColumnName,
                                       }),
                                       {
-                                        column: header.column.columnDef.header ?? header.column.id,
+                                        column: resizeColumnName,
                                       },
                                     )}
-                                    style={{ touchAction: "none" }}
+                                    style={{ touchAction: 'none' }}
                                     zIndex={10}
                                   />
                                 )}
@@ -1807,7 +1876,7 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
                           {showDeleteRow && !readOnly && (
                             <Table.HeaderCell
                               cellWidth={chrome.deleteCol}
-                              cellHeight={cellHeight as any}
+                              cellHeight={cellHeight}
                               cellLocation="last"
                             />
                           )}
@@ -1823,37 +1892,34 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
                     // keeps the AT grid tree clean: table > rowgroup(thead) +
                     // rowgroup(virtual rows) with no cell-wrapping-rowgroup
                     // noise. aria-label is prohibited on presentation roles.
-                    role={isVirtualized ? "presentation" : "rowgroup"}
-                    aria-label={isVirtualized ? undefined : t("Table data")}
+                    role={isVirtualized ? 'presentation' : 'rowgroup'}
+                    aria-label={isVirtualized ? undefined : t('Table data')}
                     // Pinning: the flex-variant overflowY:auto computes
                     // overflow-x:auto, making the body its own horizontal
                     // scroller — headers (outside it) then never move with
                     // the columns. Visible keeps the sticky chain clean so
                     // the content View is the one scrollport.
                     {...(hScroll && enableColumnPinning
-                      ? { overflowY: "visible" as any, overflowX: "visible" as any }
+                      ? { overflowY: 'visible' as const, overflowX: 'visible' as const }
                       : {})}
-                    ref={(node: any) => {
-                      tableBodyRef.current = node ?? null;
-                    }}
-                  >
-                    {displayRows.length === 0 ? (
+                    ref={(node: TamaguiElement | null) => {
+                      // On web the body's host is a DOM element.
+                      tableBodyRef.current = node instanceof HTMLElement ? node : null;
+                    }}>
+                    {displayRows.length === 0 && (
                       <Table.Row>
                         <Table.Cell>
                           {isRefetching ? null : (
                             <EmptyState
                               compact
                               aria-live="polite"
-                              title={
-                                computed.hasActiveFilters
-                                  ? t("No results found")
-                                  : t("No data available")
-                              }
+                              title={computed.hasActiveFilters ? t('No results found') : t('No data available')}
                             />
                           )}
                         </Table.Cell>
                       </Table.Row>
-                    ) : isVirtualized ? (
+                    )}
+                    {displayRows.length > 0 && isVirtualized && (
                       <Table.Row role="presentation">
                         <Table.Cell
                           role="presentation"
@@ -1865,21 +1931,15 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
                           // real-<table> displayMode the colSpan attribute
                           // now genuinely spans.)
                           cellWidth="auto"
-                          style={
-                            {
-                              display: "block",
-                              overflow: "hidden",
-                              width: "100%",
-                              minWidth: 0,
-                            } as any
-                          }
-                          {...({
-                            colSpan:
-                              table.getVisibleLeafColumns().length +
-                              extraColumnsBefore +
-                              extraColumnsAfter,
-                          } as any)}
-                        >
+                          style={{
+                            display: 'block',
+                            overflow: 'hidden',
+                            width: '100%',
+                            minWidth: 0,
+                          }}
+                          {...{
+                            colSpan: table.getVisibleLeafColumns().length + extraColumnsBefore + extraColumnsAfter,
+                          }}>
                           <DataTableVirtualized
                             virtualItems={virtualItems}
                             totalSize={totalSize}
@@ -1905,54 +1965,63 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
                           />
                         </Table.Cell>
                       </Table.Row>
-                    ) : (
+                    )}
+                    {displayRows.length > 0 && !isVirtualized && (
                       <>
-                        {displayRows.map((row: any, index: number) => {
-                          rowCounter.current++;
+                        {displayRows.map((row: Row<TData>, index: number) => {
+                          rowCounter.current += 1;
                           const isLastRow = index === displayRows.length - 1;
 
                           // Grouped row: render a single header cell spanning all columns
                           // with expand toggle, group label, and item count.
                           if (enableGrouping && row.getIsGrouped?.()) {
                             const colSpan =
-                              table.getVisibleLeafColumns().length +
-                              extraColumnsBefore +
-                              extraColumnsAfter;
+                              table.getVisibleLeafColumns().length + extraColumnsBefore + extraColumnsAfter;
                             const indent = (row.depth ?? 0) * chrome.indent;
                             return (
                               <Table.Row
                                 key={row.id}
                                 backgroundColor="$color3"
                                 flexShrink={0}
-                                aria-rowindex={rowCounter.current}
-                              >
-                                <Table.Cell {...({ colSpan } as any)}>
+                                aria-rowindex={rowCounter.current}>
+                                <Table.Cell {...{ colSpan }}>
                                   <View
                                     flexDirection="row"
                                     alignItems="center"
                                     gap="$2"
                                     paddingInlineStart={indent}
                                     cursor="pointer"
-                                    onPress={() => row.toggleExpanded()}
+                                    onPress={() => {
+                                      row.toggleExpanded();
+                                    }}
                                     // Keyboard/AT contract: expandable group
                                     // header is a toggle button (Enter/Space).
+                                    // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui View is the cross-platform primitive (no native <button> on RN); role supplies the toggle semantics
                                     role="button"
                                     tabIndex={0}
                                     aria-expanded={row.getIsExpanded()}
-                                    {...({
+                                    {...{
                                       onKeyDown: (e: React.KeyboardEvent) => {
-                                        if (e.key === "Enter" || e.key === " ") {
+                                        if (e.key === 'Enter' || e.key === ' ') {
                                           e.preventDefault();
                                           row.toggleExpanded();
                                         }
                                       },
-                                    } as any)}
-                                  >
-                                    <Text fontFamily="$mono" fontSize="$3">
-                                      {row.getIsExpanded() ? "▼" : "▶"}
+                                    }}>
+                                    <Text
+                                      fontFamily="$mono"
+                                      fontSize="$3">
+                                      {row.getIsExpanded() ? '▼' : '▶'}
                                     </Text>
-                                    <Text fontWeight="600">{String(row.groupingValue ?? "—")}</Text>
-                                    <Text color="$placeholderColor" fontSize="$2">
+                                    <Text fontWeight="600">
+                                      {
+                                        // oxlint-disable-next-line typescript/no-base-to-string -- grouping values are the grouped column's primitive cell values
+                                        String(row.groupingValue ?? '—')
+                                      }
+                                    </Text>
+                                    <Text
+                                      color="$placeholderColor"
+                                      fontSize="$2">
                                       ({row.subRows?.length ?? 0})
                                     </Text>
                                   </View>
@@ -1961,58 +2030,49 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
                             );
                           }
 
+                          let zebraAttr = 'off';
+                          if (tableZebraOn) {
+                            zebraAttr = index % 2 === 0 ? 'even' : 'odd';
+                          }
                           const mainRow = (
                             <Table.Row
-                              {...(tableRowStateProps({
-                                selected: Boolean(enableRowSelection && row.getIsSelected?.()),
+                              {...tableRowStateProps({
+                                selected: enableRowSelection && row.getIsSelected(),
                                 keyboardFocused: false,
                                 zebraOn: tableZebraOn,
                                 index,
                                 pressable: rowPressActive,
-                              }) as any)}
-                              {...({ animation: "quick" } as any)}
+                              })}
+                              {...{ animation: 'quick' }}
                               flexShrink={0}
-                              rowLocation={
-                                rowCounter.current === 0
-                                  ? "first"
-                                  : rowCounter.current === allRowsLength - 1
-                                    ? "last"
-                                    : "middle"
-                              }
+                              rowLocation={rowLocationFor(rowCounter.current)}
+                              // oxlint-disable-next-line react-doctor/no-array-index-as-key -- held rows can repeat ids across a refetch; the index suffix keeps keys unique
                               key={`${row.id}-${index}`}
                               aria-rowindex={rowCounter.current}
-                              aria-label={withInterp(t("Row {{row}}", { row: index + 1 }), {
+                              aria-label={withInterp(t('Row {{row}}', { row: index + 1 }), {
                                 row: index + 1,
                               })}
                               tabIndex={-1}
-                              {...({
-                                "data-table-zebra": tableZebraOn
-                                  ? index % 2 === 0
-                                    ? "even"
-                                    : "odd"
-                                  : "off",
-                              } as any)}
-                              {...(getRowPressProps(row, index) as any)}
-                              {...(rowIntentProps(row.original) as any)}
-                            >
+                              {...{
+                                'data-table-zebra': zebraAttr,
+                              }}
+                              {...getRowPressProps(row, index)}
+                              {...rowIntentProps(row.original)}>
                               {renderRowContent(row, index, isLastRow)}
                             </Table.Row>
                           );
 
+                          const showSubComponent = row.getIsExpanded() && (row.subRows?.length ?? 0) === 0;
                           const subRow =
-                            enableRowExpansion &&
-                            renderSubComponent &&
-                            row.getIsExpanded() &&
-                            !row.subRows?.length ? (
-                              <Table.Row key={`${row.id}-sub`} backgroundColor="$color2">
+                            enableRowExpansion && renderSubComponent && showSubComponent ? (
+                              <Table.Row
+                                key={`${row.id}-sub`}
+                                backgroundColor="$color2">
                                 <Table.Cell
-                                  {...({
+                                  {...{
                                     colSpan:
-                                      table.getVisibleLeafColumns().length +
-                                      extraColumnsBefore +
-                                      extraColumnsAfter,
-                                  } as any)}
-                                >
+                                      table.getVisibleLeafColumns().length + extraColumnsBefore + extraColumnsAfter,
+                                  }}>
                                   {renderSubComponent(row)}
                                 </Table.Cell>
                               </Table.Row>
@@ -2035,8 +2095,7 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
                             flexShrink={1}
                             flexGrow={1}
                             flexBasis={0}
-                            minHeight={0}
-                          >
+                            minHeight={0}>
                             {enableRowSelection && (
                               <Table.Cell
                                 cellWidth={selectionColWidth}
@@ -2048,7 +2107,7 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
                             {showRowNumbers && (
                               <Table.Cell
                                 cellWidth={chrome.rowNumberCol}
-                                cellLocation={enableRowSelection ? "middle" : "first"}
+                                cellLocation={enableRowSelection ? 'middle' : 'first'}
                                 padding={0}
                                 minHeight={0}
                               />
@@ -2056,27 +2115,17 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
                             {enableRowExpansion && (
                               <Table.Cell
                                 cellWidth={chrome.expandCol}
-                                cellLocation={
-                                  enableRowSelection || showRowNumbers ? "middle" : "first"
-                                }
+                                cellLocation={enableRowSelection || showRowNumbers ? 'middle' : 'first'}
                                 padding={0}
                                 minHeight={0}
                               />
                             )}
-                            {headerGroups[0]?.headers.map((header: any, headerIndex: number) => {
+                            {headerGroups[0]?.headers.map((header: Header<TData, unknown>, headerIndex: number) => {
                               const isFirstDataCell =
-                                headerIndex === 0 &&
-                                !enableRowSelection &&
-                                !showRowNumbers &&
-                                !enableRowExpansion;
+                                headerIndex === 0 && !enableRowSelection && !showRowNumbers && !enableRowExpansion;
                               const isLastDataCell =
-                                headerIndex === headerGroups[0].headers.length - 1 &&
-                                !(showDeleteRow && !readOnly);
-                              const cellLoc = isFirstDataCell
-                                ? "first"
-                                : isLastDataCell
-                                  ? "last"
-                                  : "middle";
+                                headerIndex === headerGroups[0].headers.length - 1 && !(showDeleteRow && !readOnly);
+                              const cellLoc = edgeLocation(isFirstDataCell, isLastDataCell);
                               return (
                                 <Table.Cell
                                   key={header.id}
@@ -2115,24 +2164,22 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
                       <Table.Row
                         aria-hidden={true}
                         role="presentation"
-                        position={"sticky" as any}
+                        position="sticky"
                         bottom={0}
                         height={0}
                         flexShrink={0}
                         zIndex={2}
                         pointerEvents="none"
-                        {...({ "data-table-clip-affordance": "true" } as any)}
-                      >
+                        {...{ 'data-table-clip-affordance': 'true' }}>
                         <View
-                          {...({ render: "td" } as Record<string, unknown>)}
+                          {...{ render: 'td' }}
                           position="absolute"
                           left={0}
                           right={0}
                           bottom={0}
                           height={28}
                           style={{
-                            background:
-                              "linear-gradient(to bottom, rgba(0,0,0,0), var(--background))",
+                            background: 'linear-gradient(to bottom, rgba(0,0,0,0), var(--background))',
                           }}
                         />
                       </Table.Row>
@@ -2142,35 +2189,33 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
                   {/* Table Footer */}
                   {hasFooter && (
                     <Table.Foot>
-                      {footerGroups.map((footerGroup: any) => (
+                      {footerGroups.map((footerGroup: HeaderGroup<TData>) => (
                         <Table.Row key={footerGroup.id}>
                           {enableRowSelection && (
                             <Table.Cell
                               cellWidth={selectionColWidth}
-                              cellHeight={cellHeight as any}
+                              cellHeight={cellHeight}
                               cellLocation="first"
                             />
                           )}
                           {showRowNumbers && (
                             <Table.Cell
                               cellWidth={chrome.rowNumberCol}
-                              cellHeight={cellHeight as any}
-                              cellLocation={enableRowSelection ? "middle" : "first"}
+                              cellHeight={cellHeight}
+                              cellLocation={enableRowSelection ? 'middle' : 'first'}
                             />
                           )}
                           {enableRowExpansion && (
                             <Table.Cell
                               cellWidth={chrome.expandCol}
-                              cellHeight={cellHeight as any}
-                              cellLocation={
-                                enableRowSelection || showRowNumbers ? "middle" : "first"
-                              }
+                              cellHeight={cellHeight}
+                              cellLocation={enableRowSelection || showRowNumbers ? 'middle' : 'first'}
                             />
                           )}
-                          {footerGroup.headers.map((header: any) => {
+                          {footerGroup.headers.map((header: Header<TData, unknown>) => {
                             const stickyStyle = getStickyStyle(header.column.id);
                             const columnAlign = resolveColumnAlign({
-                              ...(header.column.columnDef as DataTableColumn),
+                              ...asDataTableColumn(header.column.columnDef),
                               id: header.column.id,
                             });
                             return (
@@ -2181,21 +2226,20 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
                                 {...(isWeb && stickyStyle
                                   ? {
                                       style: {
-                                        position: "sticky",
-                                        ...("insetInlineStart" in stickyStyle && {
+                                        position: 'sticky' as const,
+                                        ...('insetInlineStart' in stickyStyle && {
                                           insetInlineStart: stickyStyle.insetInlineStart,
                                         }),
-                                        ...("insetInlineEnd" in stickyStyle && {
+                                        ...('insetInlineEnd' in stickyStyle && {
                                           insetInlineEnd: stickyStyle.insetInlineEnd,
                                         }),
                                         zIndex: 2,
-                                        backgroundColor: "var(--color2)",
-                                      } as React.CSSProperties,
+                                        backgroundColor: PINNED_CELL_BACKGROUND,
+                                      },
                                     }
                                   : {})}
                                 justifyContent={alignToFlex(columnAlign)}
-                                data-align={columnAlign}
-                              >
+                                data-align={columnAlign}>
                                 {header.isPlaceholder ? null : (
                                   <View
                                     width="100%"
@@ -2204,12 +2248,8 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
                                     alignItems="center"
                                     justifyContent={alignToFlex(columnAlign)}
                                     data-cell-align={columnAlign}
-                                    style={isWeb ? { textAlign: columnAlign } : undefined}
-                                  >
-                                    {flexRender(
-                                      header.column.columnDef.footer,
-                                      header.getContext(),
-                                    )}
+                                    style={isWeb ? { textAlign: columnAlign } : undefined}>
+                                    {flexRender(header.column.columnDef.footer, header.getContext())}
                                   </View>
                                 )}
                               </Table.Cell>
@@ -2218,7 +2258,7 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
                           {showDeleteRow && !readOnly && (
                             <Table.Cell
                               cellWidth={chrome.deleteCol}
-                              cellHeight={cellHeight as any}
+                              cellHeight={cellHeight}
                               cellLocation="last"
                             />
                           )}
@@ -2241,20 +2281,21 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
                 sentinel={
                   !isVirtualized && !infinite.exhausted && isWeb ? (
                     <View
-                      // @ts-expect-error web ref for IntersectionObserver
-                      ref={sentinelRef as any}
+                      ref={sentinelRef}
                       height={1}
                       width="100%"
                       aria-hidden
-                      {...({ "data-testid": "infinite-sentinel" } as any)}
+                      {...{ 'data-testid': 'infinite-sentinel' }}
                     />
                   ) : null
                 }
               />
             ) : null}
 
-            {enableRowSelection && bulkBarPlacement === "bottom" ? (
-              <View width="100%" {...(disabled ? disabledState.chromeKnobProps : {})}>
+            {enableRowSelection && bulkBarPlacement === 'bottom' && (
+              <View
+                width="100%"
+                {...(disabled ? disabledState.chromeKnobProps : {})}>
                 <DataTableBulkActions
                   actions={resolvedBulkActions}
                   maxVisibleActions={5}
@@ -2262,7 +2303,7 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
                   placement="bottom"
                 />
               </View>
-            ) : null}
+            )}
 
             {/* Add Row Button */}
             {showAddRow && !readOnly && (
@@ -2271,9 +2312,8 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
                   icon={PlusIcon}
                   disabled={disabled || (maxRows !== undefined && tableData.length >= maxRows)}
                   onPress={effectiveHandleAddRow}
-                  aria-label={t("Add Row")}
-                >
-                  {t("Add Row")}
+                  aria-label={t('Add Row')}>
+                  {t('Add Row')}
                 </Button>
               </View>
             )}
@@ -2287,8 +2327,7 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
                 justifyContent="space-between"
                 flexWrap="wrap"
                 {...knobProps.gap}
-                {...(disabled ? disabledState.chromeKnobProps : {})}
-              >
+                {...(disabled ? disabledState.chromeKnobProps : {})}>
                 {renderPaginationComponent()}
                 {/* DF-12 / Axiom 6: visible range/total — the footer states how
                     many rows exist even when a height-constrained body clips
@@ -2297,13 +2336,12 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
                   fontSize={knobProps.sizeToken}
                   color="$color11"
                   aria-live="polite"
-                  {...({ "data-table-range": "true" } as any)}
-                >
+                  {...{ 'data-table-range': 'true' }}>
                   {/* Bidi-isolated: an RTL paragraph would otherwise reorder
                       the latin/numeric runs ("1–5 of 5" → "of 5 5–1"). */}
                   {bidiIsolate(
                     withInterp(
-                      t("{{start}}–{{end}} of {{total}}", {
+                      t('{{start}}–{{end}} of {{total}}', {
                         start: rangeStart,
                         end: rangeEnd,
                         total: rangeTotal,
@@ -2323,28 +2361,49 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
   // Form mode wrapper
   if (isFormMode) {
     return (
-      <Field form={resolvedForm} name={name!} mode="array">
+      <Field
+        form={resolvedForm}
+        name={name}
+        mode="array">
         {(field) => {
+          // SAFETY: an array-mode DataTable field holds the table's TData rows
+          // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see the SAFETY note above
           const formData = (field.state.value as TData[]) ?? [];
-          const setFormData = (next: TData[]) =>{  field.handleChange(next as any); };
+          const setFormData = (next: TData[]) => {
+            // SAFETY: the next rows replace the field's own TData[] value
+            // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the field API's value type is erased to `never` for a form of unknown shape
+            field.handleChange(next as never);
+          };
 
           return renderInner(
             formData,
             () => {
-              if (readOnly || disabled || (maxRows && formData.length >= maxRows)) {return;}
+              const atMaxRows = maxRows !== undefined && maxRows !== 0 && formData.length >= maxRows;
+              if (readOnly || disabled || atMaxRows) {
+                return;
+              }
+              // SAFETY: defaultRow is the consumer's template for a new TData row
+              // oxlint-disable-next-line anti-slop/no-chained-type-assertions, typescript/no-unsafe-type-assertion -- see the SAFETY note above
               const newRow = { ...defaultRow, idx: formData.length + 1 } as unknown as TData;
               setFormData([...formData, newRow]);
             },
             (idx: number) => {
-              if (readOnly || disabled || formData.length <= minRows) {return;}
+              if (readOnly || disabled || formData.length <= minRows) {
+                return;
+              }
               setFormData(formData.filter((_, i) => i !== idx));
             },
-            async (rowIndex: number, columnId: string, newValue: any) => {
-              if (readOnly || disabled) {return;}
-              const previousValue = formData[rowIndex]?.[columnId];
+            // oxlint-disable-next-line anti-slop/no-unknown-parameters -- a cell value is whatever the column's field editor emits; it is forwarded untouched to the consumer
+            async (rowIndex: number, columnId: string, newValue: unknown) => {
+              if (readOnly || disabled) {
+                return;
+              }
+              const previousValue: unknown = formData[rowIndex]?.[columnId];
               if (onCellChange) {
                 const result = await onCellChange(rowIndex, columnId, newValue, previousValue);
-                if (result === false) {return;}
+                if (result === false) {
+                  return;
+                }
               }
               const newData = [...formData];
               newData[rowIndex] = { ...newData[rowIndex], [columnId]: newValue };
@@ -2358,4 +2417,4 @@ export function DataTableRoot<TData extends Record<string, any> = Record<string,
 
   // Standalone mode
   return renderInner(data, handleAddRow, handleDeleteRow, handleCellChange);
-}
+};

@@ -20,9 +20,10 @@ export interface NativeInfiniteSentinelProps {
   leadPx: number;
 }
 
-export function NativeInfiniteSentinel({ onVisible, leadPx }: NativeInfiniteSentinelProps) {
+export const NativeInfiniteSentinel = ({ onVisible, leadPx }: NativeInfiniteSentinelProps) => {
   const ref = useRef<ComponentRef<typeof View>>(null);
   const onVisibleRef = useRef(onVisible);
+  // oxlint-disable-next-line react/refs -- latest-value ref mirror, read only by the interval callback outside render
   onVisibleRef.current = onVisible;
 
   useEffect(() => {
@@ -52,4 +53,4 @@ export function NativeInfiniteSentinel({ onVisible, leadPx }: NativeInfiniteSent
       testID="infinite-sentinel"
     />
   );
-}
+};

@@ -3,7 +3,7 @@
  * AG Grid style column filtering with operators and value inputs
  */
 
-import { Tooltip } from '@repo/ui';
+import { FunnelIcon } from '@phosphor-icons/react';
 import { Button, FloatingPanel } from '@repo/forms';
 import {
   ensureCompositeFocusRing,
@@ -14,14 +14,14 @@ import {
   useResolvedKnobs,
   useGlyphColor,
 } from '@repo/theme';
-import { FunnelIcon } from '@phosphor-icons/react';
+import { Tooltip } from '@repo/ui';
 import { useState } from 'react';
 import { Text, View, XStack, YStack, styled } from 'tamagui';
 
 import { t } from '../../shared/t';
 import type { DataTableColumnType, FilterOperator } from '../../types';
-import { iconSizeForToken } from '../../utils/chromeIcons';
-import { defaultOperatorForFilterType, operatorNeedsNoValue } from '../../utils/filterFields';
+import { iconSizeForToken } from '../../utils/chrome-icons';
+import { defaultOperatorForFilterType, operatorNeedsNoValue } from '../../utils/filter-fields';
 import { FilterOperatorValueEditor } from '../FilterOperatorValueEditor';
 
 /**
@@ -32,16 +32,27 @@ import { FilterOperatorValueEditor } from '../FilterOperatorValueEditor';
  */
 export type ColumnFilterType = DataTableColumnType;
 
+/** The applied filter this funnel writes through `onFilterChange`. */
+export interface ColumnFilterValue {
+  operator: FilterOperator;
+  value: string | null;
+}
+
+interface AppliedFilter {
+  operator?: FilterOperator;
+  value?: unknown;
+}
+
 export interface ColumnHeaderFilterProps {
   columnId: string;
   columnLabel: string;
   columnType: ColumnFilterType;
-  /** Current filter value for this column */
-  filterValue?: any;
-  /** Callback when filter changes */
-  onFilterChange: (value: any) => void;
+  /** Current filter value for this column (TanStack `column.getFilterValue()`) */
+  filterValue?: unknown;
+  /** Callback when filter changes; called with no value when the filter is cleared */
+  onFilterChange: (value?: ColumnFilterValue) => void;
   /** Options for select-type columns */
-  options?: { label: string; value: any }[];
+  options?: { label: string; value: unknown }[];
   /** Whether the column is currently filtered */
   isFiltered?: boolean;
 }
@@ -52,9 +63,19 @@ export interface ColumnHeaderFilterProps {
 const FILTER_TRIGGER_VISUAL = 22;
 const FILTER_TRIGGER_OUTSET = Math.max(0, Math.ceil((MIN_PRESS_TARGET - FILTER_TRIGGER_VISUAL) / 2));
 
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- this is the parser for TanStack's untyped column filter value
+const readAppliedFilter = (filterValue: unknown): AppliedFilter => {
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- TanStack stores column filter values untyped; this is the read boundary
+  if (filterValue === null || typeof filterValue !== 'object') {
+    return {};
+  }
+  // SAFETY: column filter values are written by this funnel (or the shared toolbar editor) as { operator, value }; both fields are optional on read
+  return filterValue as AppliedFilter;
+};
+
 const FilterTriggerTarget = styled(View, { name: 'FilterTriggerTarget' });
 
-export function ColumnHeaderFilter({
+export const ColumnHeaderFilter = ({
   columnId: _columnId,
   columnLabel,
   columnType,
@@ -62,13 +83,13 @@ export function ColumnHeaderFilter({
   onFilterChange,
   options,
   isFiltered,
-}: ColumnHeaderFilterProps) {
+}: ColumnHeaderFilterProps) => {
   const { knobProps } = useResolvedKnobs();
   const idleColor = useGlyphColor('$color11');
   const activeColor = useAccentOnSurface();
   const glyphColor = isFiltered ? activeColor : idleColor;
   ensureCompositeFocusRing();
-  const iconPx = iconSizeForToken(String(knobProps.sizeToken));
+  const iconPx = iconSizeForToken(knobProps.sizeToken);
   const [open, setOpen] = useState(false);
   const [operator, setOperator] = useState<FilterOperator>(() => defaultOperatorForFilterType(columnType));
   const [value, setValue] = useState<string>('');
@@ -77,8 +98,10 @@ export function ColumnHeaderFilter({
     // Reopening reads the applied filter. External updates while editing
     // leave the current draft alone, including the stay-open Clear flow.
     if (next && !open) {
-      setOperator(filterValue?.operator ?? defaultOperatorForFilterType(columnType));
-      setValue(filterValue?.value == null ? '' : String(filterValue.value));
+      const applied = readAppliedFilter(filterValue);
+      setOperator(applied.operator ?? defaultOperatorForFilterType(columnType));
+      // oxlint-disable-next-line typescript/no-base-to-string -- the stored filter value is a primitive the draft input edits as text
+      setValue(applied.value == null ? '' : String(applied.value));
     }
     setOpen(next);
   };
@@ -127,19 +150,18 @@ export function ColumnHeaderFilter({
         // Shared unpainted press-floor / painted glyph-ring anatomy.
         className="mp-chip-dismiss"
         tabIndex={0}
-        onKeyDown={
-          ((event: { key?: string; preventDefault(): void; stopPropagation(): void }) => {
-            if (event.key !== 'Enter' && event.key !== ' ') {
-              return;
-            }
-            event.preventDefault();
-            event.stopPropagation();
-            handleOpenChange(true);
-          }) as unknown as () => void
-        }
+        onKeyDown={(event) => {
+          if (event.key !== 'Enter' && event.key !== ' ') {
+            return;
+          }
+          event.preventDefault();
+          event.stopPropagation();
+          handleOpenChange(true);
+        }}
         onPress={(e) => {
           e.stopPropagation();
         }}
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui View renders on native too, where role is the only button semantic
         role="button"
         aria-label={`Filter column ${columnLabel}`}
         aria-haspopup="dialog"
@@ -210,4 +232,4 @@ export function ColumnHeaderFilter({
       </YStack>
     </FloatingPanel>
   );
-}
+};

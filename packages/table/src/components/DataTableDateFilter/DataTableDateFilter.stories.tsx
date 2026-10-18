@@ -6,6 +6,19 @@ import { Card, Text, XStack, YStack } from 'tamagui';
 import { DataTableDateFilter, applyDateFilter } from './index';
 import type { DateFilterValue } from './index';
 
+const describeFilterValue = (filterValue?: DateFilterValue) => {
+  if (!filterValue) {
+    return 'No filter applied';
+  }
+  const valuePart = filterValue.value !== undefined && filterValue.value !== '' ? ` - ${filterValue.value}` : '';
+  const rangePart = filterValue.values ? ` - ${filterValue.values.join(' to ')}` : '';
+  return `${filterValue.operator}${valuePart}${rangePart}`;
+};
+
+const JAN_15_10AM = '2024-01-15T10:00:00.000Z';
+
+const STATUS_COLOR = { done: '$green11', 'in-progress': '$blue11', todo: '$gray11' } as const;
+
 // Define the data type
 interface Task {
   id: string;
@@ -21,7 +34,7 @@ const sampleTasks: Task[] = [
     id: '1',
     title: 'Implement user authentication',
     status: 'in-progress',
-    createdAt: '2024-01-15T10:00:00.000Z',
+    createdAt: JAN_15_10AM,
     dueDate: '2024-01-20T17:00:00.000Z',
   },
   {
@@ -41,13 +54,15 @@ const sampleTasks: Task[] = [
     id: '4',
     title: 'Setup CI/CD pipeline',
     status: 'todo',
-    createdAt: new Date().toISOString(), // Today
+    // Today
+    createdAt: new Date().toISOString(),
   },
   {
     id: '5',
     title: 'Database optimization',
     status: 'in-progress',
-    createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // Yesterday
+    // Yesterday
+    createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
   },
 ];
 
@@ -94,9 +109,7 @@ export const Default = () => {
           <Text
             fontSize="$2"
             color="$gray11">
-            {filterValue
-              ? `${filterValue.operator}${filterValue.value ? ` - ${filterValue.value}` : ''}${filterValue.values ? ` - ${filterValue.values.join(' to ')}` : ''}`
-              : 'No filter applied'}
+            {describeFilterValue(filterValue)}
           </Text>
         </YStack>
       </Card>
@@ -154,6 +167,7 @@ export const CustomPresets = () => {
       id: 'thisSprint',
       label: 'This Sprint',
       operator: 'isBetween' as const,
+      // oxlint-disable-next-line react/purity -- the demo sprint window is relative to the moment the story renders
       values: [new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(), new Date().toISOString()] as [
         string,
         string,
@@ -213,8 +227,10 @@ export const Disabled = () => (
 export const WithDateConstraints = () => {
   const [filterValue, setFilterValue] = React.useState<DateFilterValue | undefined>();
 
-  const minDate = new Date(2024, 0, 1); // January 1, 2024
-  const maxDate = new Date(2024, 11, 31); // December 31, 2024
+  // January 1, 2024
+  const minDate = new Date(2024, 0, 1);
+  // December 31, 2024
+  const maxDate = new Date(2024, 11, 31);
 
   return (
     <YStack
@@ -254,7 +270,7 @@ export const DifferentDisplayFormats = () => {
   const filters: { label: string; value: DateFilterValue }[] = [
     {
       label: 'Exact Date',
-      value: { operator: 'is', value: '2024-01-15T10:00:00.000Z' },
+      value: { operator: 'is', value: JAN_15_10AM },
     },
     {
       label: 'Date Range',
@@ -265,7 +281,7 @@ export const DifferentDisplayFormats = () => {
     },
     {
       label: 'Before Date',
-      value: { operator: 'isBefore', value: '2024-01-15T10:00:00.000Z' },
+      value: { operator: 'isBefore', value: JAN_15_10AM },
     },
     {
       label: 'This Week',
@@ -365,7 +381,7 @@ export const WithDataIntegration = () => {
                 </YStack>
                 <Text
                   fontSize="$2"
-                  color={task.status === 'done' ? '$green11' : task.status === 'in-progress' ? '$blue11' : '$gray11'}>
+                  color={STATUS_COLOR[task.status]}>
                   {task.status}
                 </Text>
               </XStack>

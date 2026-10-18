@@ -53,20 +53,18 @@ const labels = [
 ];
 
 /** A narrow frame, so the reason the panel exists is visible: the cell clips. */
-function CellFrame({ children }: { children: React.ReactNode }) {
-  return (
-    <View
-      width={180}
-      borderWidth={1}
-      borderColor="$color6"
-      borderRadius="$2"
-      overflow="hidden">
-      {children}
-    </View>
-  );
-}
+const CellFrame = ({ children }: { children: React.ReactNode }) => (
+  <View
+    width={180}
+    borderWidth={1}
+    borderColor="$color6"
+    borderRadius="$2"
+    overflow="hidden">
+    {children}
+  </View>
+);
 
-function CommitCell() {
+const CommitCell = () => {
   const [value, setValue] = useState('high');
   return (
     <YStack
@@ -82,7 +80,7 @@ function CommitCell() {
           {(close) => (
             <RadioGroup
               value={value}
-              onValueChange={(next: string) => {
+              onChange={(next: string) => {
                 setValue(next);
                 close();
               }}
@@ -97,14 +95,14 @@ function CommitCell() {
         testID="committed-value">{`value: ${value}`}</Paragraph>
     </YStack>
   );
-}
+};
 
 export const Default = {
   name: 'Main',
   render: () => <CommitCell />,
 };
 
-function ComposeCell() {
+const ComposeCell = () => {
   const [value, setValue] = useState<string[]>(['bug']);
   return (
     <YStack
@@ -121,7 +119,7 @@ function ComposeCell() {
           {() => (
             <ToggleGroup
               value={value}
-              onValueChange={(next: string | string[]) => {
+              onChange={(next: string | string[]) => {
                 setValue(Array.isArray(next) ? next : [next]);
               }}
               options={labels}
@@ -136,7 +134,7 @@ function ComposeCell() {
         testID="committed-value">{`value: ${value.join(', ')}`}</Paragraph>
     </YStack>
   );
-}
+};
 
 /** COMPOSE class: `dismissOnPick={false}` keeps the panel open across picks. */
 export const Compose = {

@@ -10,27 +10,49 @@
 import { Skeleton } from '@repo/ui';
 import { Text, View } from 'tamagui';
 
-import { dataTableChrome, rowIntentProps } from './dataTableChrome';
-import { tableRowStateProps } from './rowStateChrome';
+import { dataTableChrome, rowIntentProps } from './data-table-chrome';
+import { rowZebraAttr } from './DataTableMobileCards';
+import { tableRowStateProps } from './row-state-chrome';
 
-export interface DataTableVirtualizedProps {
-  virtualItems: any[];
+/** The slice of a TanStack Virtual item this body reads. */
+export interface VirtualizedItem {
+  index: number;
+  start: number;
+  size: number;
+}
+
+/** The slice of a TanStack `Row` this body reads (data rows and group rows). */
+export interface VirtualizedTableRow {
+  id: string;
+  depth?: number;
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- arbitrary consumer row data; only `_intent` is read, by rowIntentProps
+  original?: Record<string, unknown>;
+  groupingValue?: unknown;
+  subRows?: readonly unknown[];
+  getIsGrouped?: () => boolean;
+  getIsExpanded?: () => boolean;
+  toggleExpanded?: () => void;
+  getIsSelected?: () => boolean;
+}
+
+export interface DataTableVirtualizedProps<TRow extends VirtualizedTableRow = VirtualizedTableRow> {
+  virtualItems: readonly VirtualizedItem[];
   totalSize: number;
   bodyScrollRef: React.RefObject<HTMLDivElement | null>;
   virtualizationHeight: number | undefined;
-  tableRows: any[];
-  headerGroups: any[];
+  tableRows: readonly TRow[];
+  headerGroups: readonly unknown[];
   showRowNumbers: boolean;
   enableRowExpansion: boolean;
   showDeleteRow: boolean;
   readOnly: boolean;
   enableKeyboardNavigation: boolean;
-  keyboardNav: any;
-  getColSizeProps: (col: any) => any;
-  renderRowContent: (row: any, rowIndex: number, isLastRow: boolean, cellElement?: 'div') => React.ReactNode;
+  keyboardNav: unknown;
+  getColSizeProps: (col: never) => object;
+  renderRowContent: (row: TRow, rowIndex: number, isLastRow: boolean, cellElement?: 'div') => React.ReactNode;
   extraColumnsBefore: number;
   extraColumnsAfter: number;
-  table: any;
+  table: unknown;
   /**
    * Infinite mode: the virtual count includes one extra tail row past the
    * loaded rows. It renders a skeleton (append affordance) and extends the
@@ -42,33 +64,26 @@ export interface DataTableVirtualizedProps {
    * (built by DataTableRoot; spread on the row host so virtual rows keep
    * the same activation + roving-focus contract as grid rows).
    */
-  getRowPressProps?: (row: any, rowIndex: number, variant?: 'row' | 'card') => Record<string, any>;
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- open-ended prop bag built by the root and spread onto the row host
+  getRowPressProps?: (row: TRow, rowIndex: number, variant?: 'row' | 'card') => Record<string, unknown>;
   /** LC-65 row estimate — caller passes size-recipe height. */
   rowHeightPx?: number;
   /** The house tableZebra knob, resolved by DataTableRoot. */
   tableZebraOn?: boolean;
 }
 
-export function DataTableVirtualized({
+export const DataTableVirtualized = <TRow extends VirtualizedTableRow>({
   virtualItems,
   totalSize,
   bodyScrollRef,
   virtualizationHeight,
   tableRows,
-  headerGroups,
-  showRowNumbers,
-  enableRowExpansion,
-  showDeleteRow,
-  readOnly,
-  enableKeyboardNavigation: _enableKeyboardNavigation,
-  keyboardNav,
-  getColSizeProps,
   renderRowContent,
   hasInfiniteTail = false,
   getRowPressProps,
   rowHeightPx: rowHeightPxProp,
   tableZebraOn = false,
-}: DataTableVirtualizedProps) {
+}: DataTableVirtualizedProps<TRow>) => {
   const rowHeightPx = rowHeightPxProp ?? dataTableChrome('$4').rowPx;
   return (
     <div
@@ -78,7 +93,8 @@ export function DataTableVirtualized({
         display: 'flex',
         flexDirection: 'column',
       }}
-      ref={bodyScrollRef as any}
+      ref={bodyScrollRef}
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- virtual body is an absolutely positioned div scroller; a real tbody cannot host it
       role="rowgroup">
       <div
         style={{
@@ -87,9 +103,9 @@ export function DataTableVirtualized({
           position: 'relative',
           flexShrink: 0,
         }}>
-        {virtualItems.map((virtualRow: any) => {
+        {virtualItems.map((virtualRow) => {
           const row = tableRows[virtualRow.index];
-          if (!row) {
+          if (row === undefined) {
             // Infinite tail row (index === tableRows.length): bounded append
             // skeleton, never an infinite spinner.
             if (!hasInfiniteTail || virtualRow.index !== tableRows.length) {
@@ -111,7 +127,7 @@ export function DataTableVirtualized({
                 alignItems="center"
                 paddingHorizontal="$2"
                 aria-hidden
-                {...({ 'data-testid': 'infinite-append-skeleton' } as any)}>
+                data-testid="infinite-append-skeleton">
                 <Skeleton
                   width="100%"
                   height={rowHeightPx - 8}
@@ -125,7 +141,7 @@ export function DataTableVirtualized({
           // count) instead of data cells. Without this branch a TanStack
           // group row fell through renderRowContent and painted garbage
           // cells with no way to expand the group.
-          if (row.getIsGrouped?.()) {
+          if (row.getIsGrouped?.() === true) {
             return (
               <View
                 key={row.id}
@@ -141,6 +157,7 @@ export function DataTableVirtualized({
                 flexDirection="row"
                 alignItems="center"
                 backgroundColor="$color3"
+                // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- absolutely positioned virtual row; a real tr is not a valid child of the div scroller
                 role="row"
                 aria-rowindex={virtualRow.index + 1}>
                 <View
@@ -149,23 +166,23 @@ export function DataTableVirtualized({
                   gap="$2"
                   paddingLeft={(row.depth ?? 0) * 16 + 8}
                   cursor="pointer"
-                  onPress={() => row.toggleExpanded()}
+                  onPress={() => row.toggleExpanded?.()}
+                  // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- tamagui View on web and native; a DOM button cannot nest inside the row host
                   role="button"
                   tabIndex={0}
-                  aria-expanded={row.getIsExpanded()}
-                  {...({
-                    onKeyDown: (e: React.KeyboardEvent) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        row.toggleExpanded();
-                      }
-                    },
-                  } as any)}>
+                  aria-expanded={row.getIsExpanded?.()}
+                  onKeyDown={(e: React.KeyboardEvent) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      row.toggleExpanded?.();
+                    }
+                  }}>
                   <Text
                     fontFamily="$mono"
                     fontSize="$3">
-                    {row.getIsExpanded() ? '▼' : '▶'}
+                    {row.getIsExpanded?.() === true ? '▼' : '▶'}
                   </Text>
+                  {/* oxlint-disable-next-line typescript/no-base-to-string -- TanStack types groupingValue as unknown; it is the primitive the grouped accessor returned */}
                   <Text fontWeight="600">{String(row.groupingValue ?? '—')}</Text>
                   <Text
                     color="$placeholderColor"
@@ -190,20 +207,19 @@ export function DataTableVirtualized({
                 minHeight: rowHeightPx,
               }}
               flexDirection="row"
-              {...(tableRowStateProps({
-                selected: Boolean(row.getIsSelected?.()),
+              {...tableRowStateProps({
+                selected: row.getIsSelected?.() === true,
                 keyboardFocused: false,
                 zebraOn: tableZebraOn,
                 index: virtualRow.index,
-                pressable: Boolean(getRowPressProps),
-              }) as any)}
-              {...({
-                'data-table-zebra': tableZebraOn ? (virtualRow.index % 2 === 0 ? 'even' : 'odd') : 'off',
-              } as any)}
+                pressable: getRowPressProps !== undefined,
+              })}
+              data-table-zebra={rowZebraAttr(tableZebraOn, virtualRow.index)}
+              // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- absolutely positioned virtual row; a real tr is not a valid child of the div scroller
               role="row"
               aria-rowindex={virtualRow.index + 1}
-              {...(getRowPressProps ? (getRowPressProps(row, virtualRow.index) as any) : {})}
-              {...(rowIntentProps(row.original) as any)}>
+              {...getRowPressProps?.(row, virtualRow.index)}
+              {...rowIntentProps(row.original)}>
               {/* div cells (role="cell" via the primitive): a real <td> is
                   not a valid child of the absolutely-positioned div rows */}
               {renderRowContent(row, virtualRow.index, isLastRow, 'div')}
@@ -221,4 +237,4 @@ export function DataTableVirtualized({
       />
     </div>
   );
-}
+};

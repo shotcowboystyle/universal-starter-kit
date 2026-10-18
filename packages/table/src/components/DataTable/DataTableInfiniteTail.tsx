@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { Text, View } from 'tamagui';
 
 import type { DataTableInfiniteState } from '../../types';
-import { bidiIsolate, withInterp } from '../../utils/withInterp';
+import { bidiIsolate, withInterp } from '../../utils/with-interp';
 
 export interface DataTableInfiniteTailProps {
   infinite: DataTableInfiniteState;
@@ -20,13 +20,14 @@ export interface DataTableInfiniteTailProps {
   /** False when the virtualizer draws its own skeleton row. */
   showAppendSkeleton: boolean;
   rowHeightPx: number;
-  fontSize: any;
-  gapProps?: Record<string, unknown>;
+  /** The knob size token; it is a valid font-size token name. */
+  fontSize: string;
+  gapProps?: { gap: string };
   /** The platform's load-more trigger; absent once the data is exhausted. */
   sentinel?: ReactNode;
 }
 
-export function DataTableInfiniteTail({
+export const DataTableInfiniteTail = ({
   infinite,
   visibleCount,
   showAppendSkeleton,
@@ -34,8 +35,32 @@ export function DataTableInfiniteTail({
   fontSize,
   gapProps,
   sentinel,
-}: DataTableInfiniteTailProps) {
+}: DataTableInfiniteTailProps) => {
   const { t } = useTranslation();
+  const { totalCount } = infinite;
+  const hasTotal = totalCount !== undefined;
+  let status: string;
+  if (infinite.isAppending) {
+    status = t('Loading more rows…');
+  } else if (infinite.exhausted) {
+    status =
+      hasTotal && totalCount > 0
+        ? bidiIsolate(withInterp(t('All {{count}} rows loaded', { count: totalCount }), { count: totalCount }))
+        : t('End of results');
+  } else if (hasTotal) {
+    status = bidiIsolate(
+      withInterp(t('Showing {{visible}} of {{total}} rows', { visible: visibleCount, total: totalCount }), {
+        visible: visibleCount,
+        total: totalCount,
+      }),
+    );
+  } else {
+    status = bidiIsolate(
+      withInterp(t('Showing {{visible}} rows', { visible: visibleCount }), {
+        visible: visibleCount,
+      }),
+    );
+  }
   return (
     <View
       flexDirection="column"
@@ -48,7 +73,7 @@ export function DataTableInfiniteTail({
           {...gapProps}
           paddingVertical="$2"
           aria-hidden
-          {...({ 'data-testid': 'infinite-append-skeleton' } as any)}>
+          {...{ 'data-testid': 'infinite-append-skeleton' }}>
           {Array.from({ length: 3 }).map((_, i) => (
             <Skeleton
               key={i}
@@ -59,41 +84,18 @@ export function DataTableInfiniteTail({
         </View>
       ) : null}
       <Text
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui Text is the cross-platform primitive (no native <output> on RN); role supplies the live-region semantics
         role="status"
         aria-live="polite"
         textAlign="center"
         paddingVertical="$2"
         fontSize={fontSize}
         color="$color10"
-        {...({ 'data-testid': 'infinite-status' } as any)}>
+        {...{ 'data-testid': 'infinite-status' }}>
         {/* Numeric labels are bidi-isolated so RTL contexts keep
             the interpolated runs in order (FSI…PDI). */}
-        {infinite.isAppending
-          ? t('Loading more rows…')
-          : infinite.exhausted
-            ? typeof infinite.totalCount === 'number' && infinite.totalCount > 0
-              ? bidiIsolate(
-                  withInterp(t('All {{count}} rows loaded', { count: infinite.totalCount }), {
-                    count: infinite.totalCount,
-                  }),
-                )
-              : t('End of results')
-            : typeof infinite.totalCount === 'number'
-              ? bidiIsolate(
-                  withInterp(
-                    t('Showing {{visible}} of {{total}} rows', {
-                      visible: visibleCount,
-                      total: infinite.totalCount,
-                    }),
-                    { visible: visibleCount, total: infinite.totalCount },
-                  ),
-                )
-              : bidiIsolate(
-                  withInterp(t('Showing {{visible}} rows', { visible: visibleCount }), {
-                    visible: visibleCount,
-                  }),
-                )}
+        {status}
       </Text>
     </View>
   );
-}
+};

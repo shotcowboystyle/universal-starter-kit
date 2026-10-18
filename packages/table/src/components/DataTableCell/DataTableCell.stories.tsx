@@ -108,13 +108,14 @@ interface CellSpec {
   columnLabel?: string;
 }
 
-function serialize(value: unknown): string {
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- display boundary: renders whatever a field committed, of any field type
+const serialize = (value: unknown): string => {
   const json = JSON.stringify(value);
   return json ?? 'undefined';
-}
+};
 
 /** One field type: edit cell and read cell share the same committed state. */
-function CellHarness({ field, initialValue, fieldProps, columnLabel }: CellSpec) {
+const CellHarness = ({ field, initialValue, fieldProps, columnLabel }: CellSpec) => {
   const [value, setValue] = React.useState<unknown>(initialValue);
   return (
     <YStack
@@ -179,13 +180,15 @@ function CellHarness({ field, initialValue, fieldProps, columnLabel }: CellSpec)
       </Text>
     </YStack>
   );
-}
+};
 
 const makeCellStory = (spec: CellSpec): Story => ({
   render: () => <CellHarness {...spec} />,
 });
 
 // ── Shared fixtures ───────────────────────────────────────────
+
+const RANGE_START = '2024-11-07';
 
 // DG-CTRL-01: >5 options so select-family cell fixtures don't trip the
 // `select-too-few-options` guardrail (UX-P19).
@@ -217,7 +220,7 @@ const mentionUsers = [
 
 // ── Overview: all 31 field types, read vs edit, one screen ────
 
-function OverviewRow({ field, initialValue, fieldProps }: CellSpec) {
+const OverviewRow = ({ field, initialValue, fieldProps }: CellSpec) => {
   const [value, setValue] = React.useState<unknown>(initialValue);
   return (
     <XStack
@@ -259,7 +262,7 @@ function OverviewRow({ field, initialValue, fieldProps }: CellSpec) {
       </View>
     </XStack>
   );
-}
+};
 
 const overviewSpecs: CellSpec[] = [
   { field: 'input', initialValue: 'acme-website' },
@@ -282,11 +285,11 @@ const overviewSpecs: CellSpec[] = [
   { field: 'timepicker', initialValue: '14:30' },
   {
     field: 'daterangepicker',
-    initialValue: { start: new Date('2024-11-07'), end: new Date('2024-11-15') },
+    initialValue: { start: new Date(RANGE_START), end: new Date('2024-11-15') },
   },
   {
     field: 'multidatepicker',
-    initialValue: [new Date('2024-11-07'), new Date('2024-11-12')],
+    initialValue: [new Date(RANGE_START), new Date('2024-11-12')],
   },
   { field: 'duration', initialValue: 5400 },
   { field: 'colorpicker', initialValue: '#9747ff' },
@@ -367,7 +370,7 @@ const PlaygroundHarness = (args: any) => {
               <DataTableCell
                 {...args}
                 value={value}
-                onChange={(next: unknown) => {
+                onChange={(next) => {
                   setValue(next);
                   args.onChange?.(next);
                 }}
@@ -496,12 +499,12 @@ export const TimePickerField = makeCellStory({
 
 export const DateRangePickerField = makeCellStory({
   field: 'daterangepicker',
-  initialValue: { start: new Date('2024-11-07'), end: new Date('2024-11-15') },
+  initialValue: { start: new Date(RANGE_START), end: new Date('2024-11-15') },
 });
 
 export const MultiDatePickerField = makeCellStory({
   field: 'multidatepicker',
-  initialValue: [new Date('2024-11-07'), new Date('2024-11-12')],
+  initialValue: [new Date(RANGE_START), new Date('2024-11-12')],
 });
 
 export const DurationField = makeCellStory({ field: 'duration', initialValue: 5400 });

@@ -26,7 +26,7 @@ import type { CellModalEditorProps } from './CellModalEditor';
 
 export type { CellModalEditorProps } from './CellModalEditor';
 
-export function CellModalEditor({
+export const CellModalEditor = <T,>({
   field,
   value,
   fieldProps,
@@ -36,16 +36,19 @@ export function CellModalEditor({
   children,
   title,
   label,
-}: CellModalEditorProps) {
+}: CellModalEditorProps<T>) => {
   const { knobProps } = useResolvedKnobs();
   const [open, setOpen] = useState(false);
   // Draft session seeded from the committed value on open (Axiom 11).
-  const [draft, setDraft] = useState<{ value: any } | null>(null);
+  const [draft, setDraft] = useState<{ value: T } | null>(null);
   const draftRef = useRef(draft);
+  // oxlint-disable-next-line react/refs -- latest-value ref: close handlers read the current draft synchronously
   draftRef.current = draft;
   const valueRef = useRef(value);
+  // oxlint-disable-next-line react/refs -- latest-value ref: open/close handlers read the current committed value synchronously
   valueRef.current = value;
   const onCommitRef = useRef(onCommit);
+  // oxlint-disable-next-line react/refs -- latest-callback ref: keeps handleOpenChange stable while calling the current onCommit
   onCommitRef.current = onCommit;
   // Cancel flags the close as a discard; Done and backdrop/back commit.
   const discardRef = useRef(false);
@@ -80,7 +83,7 @@ export function CellModalEditor({
     handleOpenChange(false);
   }, [handleOpenChange]);
 
-  const handleDraftChange = useCallback((next: any) => {
+  const handleDraftChange = useCallback((next: T) => {
     draftRef.current = { value: next };
     setDraft(draftRef.current);
   }, []);
@@ -99,7 +102,9 @@ export function CellModalEditor({
           width="100%"
           paddingHorizontal="$1"
           paddingVertical="$1"
-          {...(label ? { accessibilityLabel: label, accessibilityRole: 'button' as const } : undefined)}>
+          {...(label !== undefined && label !== ''
+            ? { accessibilityLabel: label, accessibilityRole: 'button' as const }
+            : undefined)}>
           <FieldDisplay
             field={field}
             value={value}
@@ -109,7 +114,10 @@ export function CellModalEditor({
       }>
       <YStack {...knobProps.gap}>
         <Text {...knobProps.heading}>{title ?? t('Edit')}</Text>
-        <YStack minHeight={0}>{children(draft ? draft.value : value, handleDraftChange)}</YStack>
+        <YStack minHeight={0}>
+          {/* oxlint-disable-next-line react/refs -- handleDraftChange writes refs only when the editor emits, never during render */}
+          {children(draft ? draft.value : value, handleDraftChange)}
+        </YStack>
         <XStack
           {...knobProps.gap}
           justifyContent="flex-end">
@@ -125,4 +133,4 @@ export function CellModalEditor({
       </YStack>
     </FloatingPanel>
   );
-}
+};

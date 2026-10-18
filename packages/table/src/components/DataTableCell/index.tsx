@@ -8,7 +8,7 @@
  * in standalone mode using value/onValueChange (no form.Field binding).
  */
 
-import { Text } from '@repo/ui';
+import { StarIcon } from '@phosphor-icons/react';
 import {
   // Basic inputs
   Checkbox,
@@ -51,13 +51,14 @@ import {
 } from '@repo/forms';
 import { RichTextEditor } from '@repo/rich-text';
 import { useResolvedKnobs, ensureCompositeFocusRing } from '@repo/theme';
-import { Star } from '@phosphor-icons/react';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Text } from '@repo/ui';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { ComponentProps, KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react';
 import { View, isWeb } from 'tamagui';
 
 import { t } from '../../shared/t';
-import type { DataTableFieldProps, DataTableField } from '../../types';
-import { alignToFlex, getDefaultColumnAlign } from '../../utils/columnAlign';
+import type { DataTableData, DataTableFieldProps, DataTableField } from '../../types';
+import { alignToFlex, getDefaultColumnAlign } from '../../utils/column-align';
 import { formatMoney } from '../../utils/money';
 
 import { CellModalEditor } from './CellModalEditor';
@@ -65,13 +66,14 @@ import { CellOptionsEditor } from './CellOptionsEditor';
 
 export interface DataTableCellProps {
   /** Current cell value */
-  value: any;
+  value: unknown;
   /** Field type - determines which input renders. Defaults to "input" */
   field?: DataTableField;
   /** Props to pass to the field component */
   fieldProps?: DataTableFieldProps;
   /** Callback when value changes */
-  onChange: (value: any) => void;
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- public callback; the committed value's type is set by the column's field type
+  onChange: (value: unknown) => void;
   /** Read-only mode - field is visible but not editable */
   readOnly?: boolean;
   /** Disabled state */
@@ -87,7 +89,7 @@ export interface DataTableCellProps {
   /** Row index for accessibility */
   rowIndex: number;
   /** Row data for custom render */
-  rowData?: any;
+  rowData?: DataTableData;
   /** Size token for field sizing */
   size?: string;
   /** Use compact density (tighter layout gaps; control size unchanged) */
@@ -96,17 +98,465 @@ export interface DataTableCellProps {
    * For linked daterange columns: the value of the linked (end date) column.
    * When set, renders a DateRangePicker with this cell as "from" and linkedValue as "to".
    */
-  linkedValue?: any;
+  linkedValue?: unknown;
   /**
    * For linked daterange columns: callback to update the linked (end date) column.
    */
-  onLinkedChange?: (value: any) => void;
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- public callback; the linked column's value type is set by its field type
+  onLinkedChange?: (value: unknown) => void;
 }
 
-export function DataTableCell({
+/**
+ * The pass-through field props the cell itself reads (accessible names,
+ * inner-element props, icon/size overrides), typed from the field components
+ * they are forwarded to. Everything else in `fieldProps` is spread as-is.
+ */
+interface CellFieldProps extends DataTableFieldProps {
+  'aria-label'?: string;
+  checkboxProps?: ComponentProps<typeof Checkbox>['checkboxProps'];
+  switchProps?: ComponentProps<typeof Switch>['switchProps'];
+  inputProps?: ComponentProps<typeof Stepper>['inputProps'];
+  progressProps?: ComponentProps<typeof Progress>['progressProps'];
+  starIcon?: ComponentProps<typeof Rating>['starIcon'];
+  barcodeIcon?: ComponentProps<typeof Barcode>['barcodeIcon'];
+  scanIcon?: ComponentProps<typeof Barcode>['scanIcon'];
+  stopIcon?: ComponentProps<typeof Barcode>['stopIcon'];
+  accept?: ComponentProps<typeof FileUpload>['accept'];
+  width?: ComponentProps<typeof Signature>['width'];
+  height?: ComponentProps<typeof Signature>['height'];
+  clearIcon?: ComponentProps<typeof Signature>['clearIcon'];
+  locationIcon?: ComponentProps<typeof Geolocation>['locationIcon'];
+  expandIcon?: ComponentProps<typeof Geolocation>['expandIcon'];
+  renderMap?: ComponentProps<typeof Geolocation>['renderMap'];
+  minHeight?: number;
+  textAreaProps?: ComponentProps<typeof TextArea>['textAreaProps'];
+}
+
+type InputInnerProps = ComponentProps<typeof Input>['inputProps'];
+
+interface InlineTextRestProps extends DataTableFieldProps {
+  inputProps?: InputInnerProps;
+}
+
+type DateValue = ComponentProps<typeof DatePicker>['value'];
+type DateRangeValue = ComponentProps<typeof DateRangePicker>['value'];
+type MultiDateValue = ComponentProps<typeof MultiDatePicker>['value'];
+type ToggleValue = ComponentProps<typeof ToggleGroup>['value'];
+type ImageValue = ComponentProps<typeof ImageField>['value'];
+
+const FLEX_START = 'flex-start';
+
+const EMPTY_FIELD_PROPS: DataTableFieldProps = {};
+
+/**
+ * Hands a row value to a field editor typed as that editor's value. A
+ * column's `field` declares the shape of its row values; the cell trusts that
+ * contract (FieldDisplay owns lenient display of malformed values).
+ */
+// oxlint-disable-next-line anti-slop/no-unknown-parameters, typescript/no-unnecessary-type-parameters -- the single trust boundary between untyped row data and each editor's value type
+const asFieldValue = <T,>(value: unknown): T =>
+  // SAFETY: row data is untyped at this boundary; the column's declared field type is the value contract.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- no parse boundary exists for arbitrary row data; the column's field type is the contract
+  value as T;
+
+/** Text form of a cell value: null/undefined read as empty. */
+// oxlint-disable-next-line anti-slop/no-unknown-parameters, typescript/no-base-to-string -- coercion boundary for arbitrary row values; text-entry editors render whatever the row holds as text
+const toCellText = (value: unknown): string => (value == null ? '' : String(value));
+
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- parse boundary: Geolocation row values are serialized text or a coordinates object
+const toGeolocationText = (value: unknown): string => {
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- Geolocation accepts serialized text or a coordinates object; this picks the serialization
+  if (typeof value === 'string') {
+    return value;
+  }
+  const hasValue = Boolean(value);
+  return hasValue ? JSON.stringify(value) : '';
+};
+
+// ─── Internal helpers ─────────────────────────────────────────
+
+// Rating renders 24px stars (~160px for 5 incl gaps) which overlap neighbor
+// columns at typical ~130px cell widths. 16px stars fit.
+const CellStar = (props: { size: number; weight: 'fill' | 'regular'; color: string }) => (
+  <StarIcon
+    {...props}
+    size={16}
+  />
+);
+
+/**
+ * Draft-until-commit wrapper for the inline single-line text editor.
+ * Typing edits a local draft; Enter or blur commits it via onCommit;
+ * Escape restores the pre-edit value without committing. Multiline text
+ * is LC-06 oversized and routes through ModalCell instead.
+ */
+const InlineTextEditor = ({
+  value,
+  onCommit,
+  placeholder,
+  disabled,
+  readOnly,
+  sizeToken,
+  ariaLabel,
+  restProps,
+}: {
+  value: unknown;
+  onCommit: (value: string) => void;
+  placeholder?: string;
+  disabled?: boolean;
+  readOnly?: boolean;
+  sizeToken?: string;
+  /** Accessible name for the chromeless in-cell editor (column header). */
+  ariaLabel?: string;
+  restProps: InlineTextRestProps;
+}) => {
+  const committed = toCellText(value);
+  const [draft, setDraft] = useState(committed);
+  const [prevCommitted, setPrevCommitted] = useState(committed);
+  // The Input field is uncontrolled (value maps to defaultValue), so Escape
+  // has to remount it to push the reverted draft back into the DOM.
+  const [resetKey, setResetKey] = useState(0);
+  const draftRef = useRef(draft);
+  // oxlint-disable-next-line react/refs -- latest-value ref: Enter/blur handlers must read the current draft synchronously
+  draftRef.current = draft;
+  const committedRef = useRef(committed);
+  // oxlint-disable-next-line react/refs -- latest-value ref: Enter/blur handlers must read the current committed value synchronously
+  committedRef.current = committed;
+
+  // External value updates (row edits, story controls) reset the draft.
+  if (prevCommitted !== committed) {
+    setPrevCommitted(committed);
+    setDraft(committed);
+  }
+
+  const commit = useCallback(() => {
+    if (draftRef.current !== committedRef.current) {
+      // Optimistically mark the draft committed so the paired web keydown +
+      // native keypress handlers don't double-fire onCommit for one Enter.
+      committedRef.current = draftRef.current;
+      onCommit(draftRef.current);
+    }
+  }, [onCommit]);
+
+  const cancel = useCallback(() => {
+    if (draftRef.current === committedRef.current) {
+      return;
+    }
+    setDraft(committedRef.current);
+    setResetKey((key) => key + 1);
+  }, []);
+
+  const handleKeyPress = useCallback(
+    (event: { key?: string; nativeEvent?: { key?: string } } | undefined) => {
+      const key = event?.nativeEvent?.key ?? event?.key;
+      if (key === 'Escape') {
+        cancel();
+      } else if (key === 'Enter') {
+        commit();
+      }
+    },
+    [cancel, commit],
+  );
+
+  const { inputProps: userInputProps, ...fieldRest } = restProps;
+
+  return (
+    <Input
+      key={resetKey}
+      value={draft}
+      onChangeText={setDraft}
+      onBlur={commit}
+      placeholder={placeholder}
+      disabled={disabled}
+      readOnly={readOnly}
+      size={sizeToken}
+      {...fieldRest}
+      inputProps={{
+        ...(ariaLabel === undefined ? undefined : { 'aria-label': ariaLabel }),
+        ...userInputProps,
+        // Native fires onKeyPress; the DOM keypress event never fires for
+        // Escape, so web needs onKeyDown to see it.
+        onKeyPress: handleKeyPress,
+        onKeyDown: handleKeyPress,
+        onBlur: commit,
+      }}
+    />
+  );
+};
+
+/**
+ * Draft-until-commit wrapper for multi-step / free-entry picker editors
+ * (Stepper, PhoneInput, OTP, MultiDatePicker). The wrapped field
+ * edits a local draft; the draft only reaches the table's commit when the
+ * user confirms — Enter inside a text input, or focus leaving the cell
+ * (which includes dismissing a picker popover by clicking elsewhere).
+ * Escape discards the draft and remounts the field so uncontrolled editors
+ * (Stepper, PhoneInput) and popover-internal state reset to the committed
+ * value.
+ *
+ * mode="change" (DateRangePicker) passes changes straight through to the
+ * table — that picker only emits complete ranges, which are themselves the
+ * confirm gesture — but keeps Escape-remount so a half-picked range (start
+ * chosen, end pending) is discarded instead of lingering in the trigger.
+ *
+ * The picker popovers/panels render inline (CSS position:fixed, no React
+ * portal), so their key and focus events bubble through this wrapper.
+ * Native has no Escape/focus-out vocabulary; changes pass straight through
+ * (previous behavior).
+ */
+const DraftFieldEditor = <T,>({
+  committed,
+  onCommit,
+  mode = 'confirm',
+  children,
+}: {
+  committed: T;
+  onCommit: (value: T) => void;
+  mode?: 'confirm' | 'change';
+  children: (value: T, onChange: (value: T) => void) => ReactNode;
+}) => {
+  const [draft, setDraft] = useState<{ value: T } | null>(null);
+  const [resetKey, setResetKey] = useState(0);
+  const [prevCommitted, setPrevCommitted] = useState(committed);
+  // An interaction "session" starts on pointer-down inside the cell (or on
+  // the first draft change) and installs document-level listeners: Escape
+  // cancels, pointer-down outside the cell subtree commits. This is needed
+  // because picker popovers close via floating-ui's own document Escape
+  // listener while focus sits on document.body (day buttons aren't focus
+  // targets), so React-tree keydown/blur handlers alone never see those
+  // gestures.
+  const [sessionActive, setSessionActive] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const draftRef = useRef(draft);
+  // oxlint-disable-next-line react/refs -- latest-value ref: document listeners and the blur timer read the current draft synchronously
+  draftRef.current = draft;
+  const committedRef = useRef(committed);
+  // oxlint-disable-next-line react/refs -- latest-value ref: commitDraft compares against the current committed value synchronously
+  committedRef.current = committed;
+  const onCommitRef = useRef(onCommit);
+  // oxlint-disable-next-line react/refs -- latest-callback ref: keeps commit handlers stable while calling the current onCommit
+  onCommitRef.current = onCommit;
+  const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const shownRef = useRef(committed);
+
+  // External value updates (a commit landing, row edits) clear the draft so
+  // the field tracks the new committed value. A value the field did not emit
+  // itself also remounts it: Stepper and PhoneInput only read defaultValue on
+  // mount, and the grid keeps its cells mounted across row commits (MPO-475).
+  if (!Object.is(prevCommitted, committed)) {
+    setPrevCommitted(committed);
+    if (draft) {
+      setDraft(null);
+    }
+    // oxlint-disable-next-line react/refs -- render-phase prop adjustment: remount only for values the field did not emit itself (MPO-475)
+    if (!Object.is(shownRef.current, committed)) {
+      // oxlint-disable-next-line react/refs -- same render-phase adjustment; records the value now shown
+      shownRef.current = committed;
+      setResetKey((key) => key + 1);
+    }
+  }
+
+  const clearBlurTimer = useCallback(() => {
+    if (blurTimerRef.current !== null) {
+      clearTimeout(blurTimerRef.current);
+      blurTimerRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => clearBlurTimer, [clearBlurTimer]);
+
+  const commitDraft = useCallback(() => {
+    clearBlurTimer();
+    const active = draftRef.current;
+    if (!active) {
+      return;
+    }
+    if (!Object.is(active.value, committedRef.current)) {
+      // Optimistically mark the draft committed so the Enter path and the
+      // trailing focus-out timer can't double-fire onCommit for one confirm.
+      committedRef.current = active.value;
+      onCommitRef.current(active.value);
+    }
+    // The draft object itself stays until the committed prop catches up (see
+    // render adjustment above) so controlled fields don't flash the stale
+    // value between the commit and the parent's data update.
+  }, [clearBlurTimer]);
+
+  const cancelDraft = useCallback(() => {
+    clearBlurTimer();
+    setSessionActive(false);
+    draftRef.current = null;
+    setDraft(null);
+    shownRef.current = committedRef.current;
+    // Remount the field: uncontrolled editors and popover-internal state
+    // (DateRange mid-pick) hold edits that no prop change can reset.
+    setResetKey((key) => key + 1);
+  }, [clearBlurTimer]);
+
+  const handleDraftChange = useCallback(
+    (value: T) => {
+      shownRef.current = value;
+      if (mode === 'change') {
+        onCommitRef.current(value);
+        return;
+      }
+      draftRef.current = { value };
+      setDraft(draftRef.current);
+      // Wheel/keyboard edits can create a draft without a pointer-down;
+      // make sure the document listeners are active for it.
+      setSessionActive(true);
+    },
+    [mode],
+  );
+
+  useEffect(() => {
+    if (!isWeb || !sessionActive) {
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on other paths; a bare return trips consistent-return
+      return undefined;
+    }
+    const handleDocKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        cancelDraft();
+      }
+    };
+    const handleDocPointerDown = (event: PointerEvent) => {
+      if (containsAcrossPanels(containerRef.current, event.target)) {
+        return;
+      }
+      setSessionActive(false);
+      commitDraft();
+    };
+    document.addEventListener('keydown', handleDocKeyDown, true);
+    document.addEventListener('pointerdown', handleDocPointerDown, true);
+    return () => {
+      document.removeEventListener('keydown', handleDocKeyDown, true);
+      document.removeEventListener('pointerdown', handleDocPointerDown, true);
+    };
+    // oxlint-disable-next-line react-doctor/prefer-use-effect-event -- cancelDraft/commitDraft are stable useCallbacks; useEffectEvent is not available in the supported React range
+  }, [sessionActive, cancelDraft, commitDraft]);
+
+  if (!isWeb) {
+    return (
+      <>
+        {/* oxlint-disable-next-line react/refs -- the ref is read when the field emits, never during render */}
+        {children(committed, (value: T) => {
+          onCommitRef.current(value);
+        })}
+      </>
+    );
+  }
+
+  const handleKeyDown = (event: ReactKeyboardEvent) => {
+    if (event.key === 'Escape') {
+      cancelDraft();
+      return;
+    }
+    if (event.key === 'Enter' && mode === 'confirm') {
+      const { target } = event;
+      // Only confirm from text inputs — Enter on a popover day button is the
+      // button's activation (toggle), not a confirm.
+      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
+        // Blur first so uncontrolled editors (Stepper) flush their typed
+        // text through onChange before the draft is committed.
+        // oxlint-disable-next-line github/no-blur -- blurring flushes the uncontrolled editor's typed text through onChange before the commit
+        target.blur();
+        commitDraft();
+      }
+    }
+  };
+
+  // A focus-out schedules the commit; a focus-in landing back inside the
+  // cell (popover day buttons, OTP auto-advance, country combobox) cancels
+  // it — so the draft only commits when focus fully leaves the cell.
+  const handleBlur = () => {
+    clearBlurTimer();
+    blurTimerRef.current = setTimeout(() => {
+      blurTimerRef.current = null;
+      commitDraft();
+    }, 0);
+  };
+
+  return (
+    // oxlint-disable-next-line jsx-a11y/no-static-element-interactions -- display:contents event boundary for the wrapped field; the field itself owns role and focus
+    <div
+      key={resetKey}
+      ref={containerRef}
+      style={{ display: 'contents' }}
+      onKeyDown={handleKeyDown}
+      onPointerDownCapture={() => {
+        setSessionActive(true);
+      }}
+      onFocus={mode === 'confirm' ? clearBlurTimer : undefined}
+      onBlur={mode === 'confirm' ? handleBlur : undefined}>
+      {/* oxlint-disable-next-line react/refs -- handleDraftChange writes refs only when the field emits, never during render */}
+      {children(draft ? draft.value : committed, handleDraftChange)}
+    </div>
+  );
+};
+
+const CellWrapper = ({
+  children,
+  justify = FLEX_START,
+  minWidth,
+}: {
+  children: ReactNode;
+  justify?: 'flex-start' | 'flex-end' | 'center';
+  minWidth?: number;
+}) => {
+  // Fields render chromeless inside cells (useIsInTableCell strips the input
+  // frame), so the cell chrome owns the focus affordance. LC-71: one ring on
+  // the perceived control boundary (this wrapper). Keyboard-origin focus
+  // rings via :has(:focus-visible); text-entry also rings on any input
+  // focus (the carve-out). Mouse click on a checkbox/switch paints no ring.
+  // Inner field outlines are suppressed by the composite-ring stylesheet.
+  if (isWeb) {
+    ensureCompositeFocusRing();
+  }
+  // Column + stretch layout so field roots adopt the cell width (input frames
+  // carry minWidth 0 and shrink to fit); maxWidth + a horizontal-only clip
+  // (overflow-x: clip pairs with overflow-y: visible, unlike hidden) catch
+  // anything that still refuses to shrink, so in-cell editors never overlap
+  // neighbor columns. The vertical axis stays visible because several forms
+  // field frames resolve to 0-height boxes and center their content on the
+  // wrapper's midline — a vertical clip would swallow them. flexGrow fills
+  // the TableCell's height so that midline sits at the row center. Popover
+  // and modal editors position with strategy "fixed", which escapes this
+  // clip and keeps their natural width.
+  return (
+    <View
+      flexDirection="column"
+      flexGrow={1}
+      justifyContent="center"
+      alignItems={justify === FLEX_START ? 'stretch' : justify}
+      width="100%"
+      maxWidth="100%"
+      // Per-axis overflow is web-only CSS; RN styles know only `overflow`.
+      {...(isWeb
+        ? {
+            overflowX: 'clip',
+            overflowY: 'visible',
+            className: 'mp-composite-ring mp-composite-ring-deep',
+          }
+        : undefined)}
+      minWidth={minWidth}>
+      {children}
+    </View>
+  );
+};
+
+const ModalCell = (props: ComponentProps<typeof CellModalEditor>) => (
+  <CellWrapper>
+    <CellModalEditor {...props} />
+  </CellWrapper>
+);
+
+// ─── Cell ─────────────────────────────────────────────────────
+
+// oxlint-disable-next-line eslint/complexity, react-doctor/no-giant-component -- one flat dispatch over every field type; each case is a self-contained editor mount
+export const DataTableCell = ({
   value,
   field = 'input',
-  fieldProps = {},
+  fieldProps = EMPTY_FIELD_PROPS,
   onChange,
   readOnly = false,
   disabled = false,
@@ -118,11 +568,12 @@ export function DataTableCell({
   compact,
   linkedValue: _linkedValue,
   onLinkedChange: _onLinkedChange,
-}: DataTableCellProps) {
+  // oxlint-disable-next-line sonarjs/cognitive-complexity -- one flat dispatch over every field type; each case is a self-contained editor mount
+}: DataTableCellProps) => {
   // Cells are always compact unless caller explicitly opts out — table rows
   // are 40-44px tall, so default-sized fields overflow the row.
   const { knobProps } = useResolvedKnobs({ size, compact: compact ?? true });
-  const cellName = (fieldProps as any)['aria-label'] ?? columnLabel ?? columnId;
+  const passthrough: CellFieldProps = fieldProps;
   const {
     options,
     placeholder,
@@ -137,25 +588,31 @@ export function DataTableCell({
     otpLength,
     mentions,
     maxRating,
+    // oxlint-disable-next-line sonarjs/no-unused-vars -- pulled out so it is not spread onto the field component
     dateFormat: _dateFormat,
     timeFormat,
     minDate,
     maxDate,
     allowMultiple,
+    // oxlint-disable-next-line sonarjs/no-unused-vars -- pulled out so it is not spread onto the field component
     dateRangeLinkedColumn: _dateRangeLinkedColumn,
+    // oxlint-disable-next-line sonarjs/no-unused-vars -- pulled out so it is not spread onto the field component
     dateRangeIsEndColumn: _dateRangeIsEndColumn,
     render,
     ...restProps
   } = fieldProps;
+  const cellName = passthrough['aria-label'] ?? columnLabel ?? columnId;
 
   // Keep onChange behind a ref so handleChange's identity stays stable across
   // parent re-renders. WiredTable/DataTable pass a fresh inline onChange every
   // render; fields that sync via useEffect([onChange]) (OTP, Phone, …) would
   // otherwise re-emit and loop (SB-T2-10).
   const onChangeRef = useRef(onChange);
+  // oxlint-disable-next-line react/refs -- latest-callback ref: handleChange stays stable while calling the current onChange (SB-T2-10)
   onChangeRef.current = onChange;
   const handleChange = useCallback(
-    (newValue: any) => {
+    // oxlint-disable-next-line anti-slop/no-unknown-parameters -- receives every field editor's emitted value; forwarded untouched to onChange
+    (newValue: unknown) => {
       if (readOnly || disabled) {
         return;
       }
@@ -174,6 +631,7 @@ export function DataTableCell({
   // must mirror that by going non-interactive (D-18.4 — Axiom 6).
   if (field === 'custom' && render) {
     return (
+      // oxlint-disable-next-line react/refs -- handleChange only reads the ref when invoked from an event, never during render
       <CellWrapper justify={cellJustify}>{render(value, rowData, handleChange, { readOnly, disabled })}</CellWrapper>
     );
   }
@@ -187,8 +645,10 @@ export function DataTableCell({
   // fallback for rows carrying none. Nothing here converts between codes —
   // two currencies are two figures. See utils/money.ts.
   if (field === 'money') {
-    const rowCurrency = currencyField ? (rowData as Record<string, unknown> | undefined)?.[currencyField] : undefined;
-    const resolvedCurrency = typeof rowCurrency === 'string' && rowCurrency ? rowCurrency : currency;
+    const hasCurrencyField = currencyField !== undefined && currencyField !== '';
+    const rowCurrency: unknown = hasCurrencyField ? rowData?.[currencyField] : undefined;
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- row data is untyped; only a non-empty string row value is a currency code
+    const resolvedCurrency = typeof rowCurrency === 'string' && rowCurrency !== '' ? rowCurrency : currency;
     return (
       <CellWrapper justify={cellJustify}>
         <Text
@@ -223,6 +683,7 @@ export function DataTableCell({
   }
 
   // Render appropriate field based on type
+  // oxlint-disable-next-line typescript/switch-exhaustiveness-check -- 'input', render-less 'custom' and any unlisted field fall through to the inline text editor
   switch (field) {
     // ─── Boolean inputs ───────────────────────────────────────
     case 'checkbox': {
@@ -230,14 +691,15 @@ export function DataTableCell({
         <CellWrapper justify="center">
           <Checkbox
             checked={Boolean(value)}
+            // oxlint-disable-next-line typescript/no-deprecated -- the alias fires from the same emit; restProps may carry onChange and must not override the cell handler
             onCheckedChange={handleChange}
             disabled={disabled || readOnly}
             {...restProps}
             // Chromeless in-cell control has no field label — name it from
             // the column header (same fallback chain as select/combobox).
             checkboxProps={{
-              'aria-label': (restProps as any)['aria-label'] ?? columnLabel ?? columnId,
-              ...(restProps as any).checkboxProps,
+              'aria-label': passthrough['aria-label'] ?? columnLabel ?? columnId,
+              ...passthrough.checkboxProps,
             }}
           />
         </CellWrapper>
@@ -255,8 +717,8 @@ export function DataTableCell({
             // Chromeless in-cell control has no field label — name it from
             // the column header (same fallback chain as select/combobox).
             switchProps={{
-              'aria-label': (restProps as any)['aria-label'] ?? columnLabel ?? columnId,
-              ...(restProps as any).switchProps,
+              'aria-label': passthrough['aria-label'] ?? columnLabel ?? columnId,
+              ...passthrough.switchProps,
             }}
           />
         </CellWrapper>
@@ -268,7 +730,8 @@ export function DataTableCell({
       return (
         <CellWrapper>
           <Select
-            value={value != null ? String(value) : ''}
+            value={toCellText(value)}
+            // oxlint-disable-next-line typescript/no-deprecated -- the alias fires from the same emit; restProps may carry onChange and must not override the cell handler
             onValueChange={handleChange}
             options={options ?? []}
             disabled={disabled}
@@ -276,7 +739,7 @@ export function DataTableCell({
             placeholder={placeholder}
             size={knobProps.sizeToken}
             {...restProps}
-            aria-label={(restProps as any)['aria-label'] ?? cellName}
+            aria-label={passthrough['aria-label'] ?? cellName}
           />
         </CellWrapper>
       );
@@ -286,7 +749,8 @@ export function DataTableCell({
       return (
         <CellWrapper>
           <Combobox
-            value={value != null ? String(value) : ''}
+            value={toCellText(value)}
+            // oxlint-disable-next-line typescript/no-deprecated -- the alias fires from the same emit; restProps may carry onChange and must not override the cell handler
             onValueChange={handleChange}
             options={options ?? []}
             disabled={disabled}
@@ -294,7 +758,7 @@ export function DataTableCell({
             placeholder={placeholder}
             size={knobProps.sizeToken}
             {...restProps}
-            aria-label={(restProps as any)['aria-label'] ?? cellName}
+            aria-label={passthrough['aria-label'] ?? cellName}
           />
         </CellWrapper>
       );
@@ -317,7 +781,8 @@ export function DataTableCell({
             label={cellName}>
             {(close) => (
               <RadioGroup
-                value={value != null ? String(value) : ''}
+                value={toCellText(value)}
+                // oxlint-disable-next-line typescript/no-deprecated -- the alias fires from the same emit; restProps may carry onChange and must not override the cell handler
                 onValueChange={(next: string) => {
                   handleChange(next);
                   close();
@@ -335,6 +800,8 @@ export function DataTableCell({
     }
 
     case 'togglegroup': {
+      const toggleValue = asFieldValue<ToggleValue>(value);
+      const toggleValues = Array.isArray(toggleValue) ? toggleValue : [];
       // LC-06: the option strip is wider than a typical column (same clipping
       // class as radiogroup). Face is the current value; options live in an
       // anchored popover (web) / sheet (native). Single-select is COMMIT
@@ -350,10 +817,13 @@ export function DataTableCell({
             dismissOnPick={!allowMultiple}>
             {(close) => (
               <ToggleGroup
-                value={allowMultiple ? (Array.isArray(value) ? value : []) : value}
+                value={allowMultiple ? toggleValues : toggleValue}
+                // oxlint-disable-next-line typescript/no-deprecated -- the alias fires from the same emit; restProps may carry onChange and must not override the cell handler
                 onValueChange={(next: string | string[]) => {
                   handleChange(next);
-                  if (!allowMultiple) close();
+                  if (!allowMultiple) {
+                    close();
+                  }
                 }}
                 options={options ?? []}
                 disabled={disabled || readOnly}
@@ -378,13 +848,13 @@ export function DataTableCell({
         // numeric column collapses the chromeless input to 0pt — invisible
         // AND culled from the a11y tree (iOS strips zero-rect subtrees). Web
         // inputs carry an intrinsic width, so numeric end-alignment stays.
-        <CellWrapper justify={isWeb ? cellJustify : 'flex-start'}>
+        <CellWrapper justify={isWeb ? cellJustify : FLEX_START}>
           <DraftFieldEditor
             committed={value}
             onCommit={handleChange}>
             {(draftValue, onDraftChange) => (
               <Stepper
-                defaultValue={draftValue != null ? Number(draftValue) : undefined}
+                defaultValue={draftValue == null ? undefined : Number(draftValue)}
                 onChange={onDraftChange}
                 min={min}
                 max={max}
@@ -402,8 +872,8 @@ export function DataTableCell({
                 // Chromeless in-cell control has no field label — name it from
                 // the column header (same fallback chain as checkbox/select).
                 inputProps={{
-                  'aria-label': (restProps as any)['aria-label'] ?? columnLabel ?? columnId,
-                  ...(restProps as any).inputProps,
+                  'aria-label': passthrough['aria-label'] ?? columnLabel ?? columnId,
+                  ...passthrough.inputProps,
                 }}
               />
             )}
@@ -422,7 +892,8 @@ export function DataTableCell({
           justify="flex-start"
           minWidth={120}>
           <Slider
-            value={[value != null ? Number(value) : (min ?? 0)]}
+            value={[value == null ? (min ?? 0) : Number(value)]}
+            // oxlint-disable-next-line typescript/no-deprecated -- the alias fires from the same emit; restProps may carry onChange and must not override the cell handler
             onValueChange={
               readOnly
                 ? undefined
@@ -447,14 +918,14 @@ export function DataTableCell({
           justify={cellJustify}
           minWidth={120}>
           <Progress
-            value={value != null ? Number(value) : 0}
+            value={value == null ? 0 : Number(value)}
             size={knobProps.sizeToken}
             {...restProps}
             // Tamagui Progress's size variant pins width/minWidth (~220px),
             // overriding the frame's width="100%" and overflowing narrow
             // columns. progressProps spreads after the size variant, so it
             // wins and the bar adopts the cell width.
-            progressProps={{ width: '100%', minWidth: 0, ...restProps.progressProps }}
+            progressProps={{ width: '100%', minWidth: 0, ...passthrough.progressProps }}
           />
         </CellWrapper>
       );
@@ -474,7 +945,7 @@ export function DataTableCell({
             }}
             disabled={disabled || readOnly}
             maxStars={stars}
-            starIcon={restProps.starIcon ?? CellStar}
+            starIcon={passthrough.starIcon ?? CellStar}
             size={knobProps.sizeToken}
             compact
           />
@@ -487,7 +958,8 @@ export function DataTableCell({
       return (
         <CellWrapper>
           <DatePicker
-            value={value}
+            value={asFieldValue<DateValue>(value)}
+            // oxlint-disable-next-line typescript/no-deprecated -- the alias fires from the same emit; restProps may carry onChange and must not override the cell handler
             onValueChange={handleChange}
             disabled={disabled}
             readOnly={readOnly}
@@ -505,7 +977,8 @@ export function DataTableCell({
       return (
         <CellWrapper>
           <DatetimePicker
-            value={value}
+            value={asFieldValue<DateValue>(value)}
+            // oxlint-disable-next-line typescript/no-deprecated -- the alias fires from the same emit; restProps may carry onChange and must not override the cell handler
             onValueChange={handleChange}
             disabled={disabled}
             readOnly={readOnly}
@@ -524,7 +997,7 @@ export function DataTableCell({
       return (
         <CellWrapper>
           <TimePicker
-            value={value ?? ''}
+            value={asFieldValue<string | undefined>(value) ?? ''}
             onChange={handleChange}
             disabled={disabled}
             placeholder={placeholder ?? t('Select time')}
@@ -544,7 +1017,7 @@ export function DataTableCell({
       return (
         <CellWrapper>
           <DraftFieldEditor
-            committed={value}
+            committed={asFieldValue<DateRangeValue>(value)}
             onCommit={handleChange}
             mode="change">
             {(draftValue, onDraftChange) => (
@@ -570,7 +1043,7 @@ export function DataTableCell({
       return (
         <CellWrapper>
           <DraftFieldEditor
-            committed={value}
+            committed={asFieldValue<MultiDateValue>(value)}
             onCommit={handleChange}>
             {(draftValue, onDraftChange) => (
               <MultiDatePicker
@@ -593,7 +1066,7 @@ export function DataTableCell({
       return (
         <CellWrapper justify={cellJustify}>
           <Duration
-            value={value != null ? Number(value) : 0}
+            value={value == null ? 0 : Number(value)}
             onChange={handleChange}
             disabled={disabled}
             placeholder={placeholder ?? t('Select duration')}
@@ -609,7 +1082,8 @@ export function DataTableCell({
       return (
         <CellWrapper>
           <ColorPicker
-            value={value ?? ''}
+            value={asFieldValue<string | undefined>(value) ?? ''}
+            // oxlint-disable-next-line typescript/no-deprecated -- the alias fires from the same emit; restProps may carry onChange and must not override the cell handler
             onValueChange={handleChange}
             placeholder={placeholder ?? '#000000'}
             disabled={disabled}
@@ -657,9 +1131,9 @@ export function DataTableCell({
         // alignment keeps digit 1 anchored; overflow spills toward the
         // trailing edge where RN leaves it visible. Web keeps center (its
         // CellWrapper clips overflow-x at the cell edge instead).
-        <CellWrapper justify={isWeb ? 'center' : 'flex-start'}>
+        <CellWrapper justify={isWeb ? 'center' : FLEX_START}>
           <DraftFieldEditor
-            committed={value}
+            committed={asFieldValue<string | undefined>(value)}
             onCommit={handleChange}>
             {(draftValue, onDraftChange) => (
               <OTPInput
@@ -690,6 +1164,7 @@ export function DataTableCell({
           {(draftValue, onDraftChange) => (
             <MentionInput
               defaultValue={draftValue ?? ''}
+              // oxlint-disable-next-line typescript/no-deprecated -- the alias fires from the same emit; restProps may carry onChange and must not override the cell handler
               onTextChange={onDraftChange}
               disabled={disabled}
               readOnly={readOnly}
@@ -723,18 +1198,18 @@ export function DataTableCell({
               flexDirection="column"
               {...knobProps.gap}>
               <Barcode
-                value={String(draftValue ?? '')}
+                value={toCellText(draftValue)}
                 onChange={onDraftChange}
                 disabled={disabled}
                 readOnly={readOnly}
                 size={knobProps.sizeToken}
-                barcodeIcon={restProps.barcodeIcon}
-                scanIcon={restProps.scanIcon}
-                stopIcon={restProps.stopIcon}
+                barcodeIcon={passthrough.barcodeIcon}
+                scanIcon={passthrough.scanIcon}
+                stopIcon={passthrough.stopIcon}
                 {...restProps}
               />
               <BarcodePreview
-                value={String(draftValue ?? '')}
+                value={toCellText(draftValue)}
                 height={64}
                 moduleWidth={2}
                 showText
@@ -760,11 +1235,12 @@ export function DataTableCell({
           {(draftValue, onDraftChange) => (
             <FileUpload
               defaultValue={draftValue}
+              // oxlint-disable-next-line typescript/no-deprecated -- the alias fires from the same emit; restProps may carry onChange and must not override the cell handler
               onValueChange={onDraftChange}
               disabled={disabled}
               readOnly={readOnly}
               placeholder={placeholder ?? t('Upload file')}
-              accept={restProps.accept}
+              accept={passthrough.accept}
               size={knobProps.sizeToken}
               {...restProps}
             />
@@ -786,7 +1262,8 @@ export function DataTableCell({
           title={t('Image')}>
           {(draftValue, onDraftChange) => (
             <ImageField
-              value={draftValue}
+              value={asFieldValue<ImageValue>(draftValue)}
+              // oxlint-disable-next-line typescript/no-deprecated -- the alias fires from the same emit; restProps may carry onChange and must not override the cell handler
               onValueChange={onDraftChange}
               disabled={disabled}
               readOnly={readOnly}
@@ -813,13 +1290,13 @@ export function DataTableCell({
           title={t('Signature')}>
           {(draftValue, onDraftChange) => (
             <Signature
-              value={draftValue ?? ''}
+              value={asFieldValue<string | undefined>(draftValue) ?? ''}
               onChange={onDraftChange}
               disabled={disabled}
               size={knobProps.sizeToken}
-              width={restProps.width ?? 600}
-              height={restProps.height ?? 240}
-              clearIcon={restProps.clearIcon}
+              width={passthrough.width ?? 600}
+              height={passthrough.height ?? 240}
+              clearIcon={passthrough.clearIcon}
               {...restProps}
             />
           )}
@@ -840,13 +1317,13 @@ export function DataTableCell({
           title={t('Location')}>
           {(draftValue, onDraftChange) => (
             <Geolocation
-              value={typeof draftValue === 'string' ? draftValue : draftValue ? JSON.stringify(draftValue) : ''}
+              value={toGeolocationText(draftValue)}
               onChange={onDraftChange}
               disabled={disabled}
               size={knobProps.sizeToken}
-              locationIcon={restProps.locationIcon}
-              expandIcon={restProps.expandIcon}
-              renderMap={restProps.renderMap}
+              locationIcon={passthrough.locationIcon}
+              expandIcon={passthrough.expandIcon}
+              renderMap={passthrough.renderMap}
               {...restProps}
             />
           )}
@@ -873,7 +1350,7 @@ export function DataTableCell({
               disabled={disabled}
               readOnly={readOnly}
               placeholder={placeholder ?? t('Write something...')}
-              minHeight={restProps.minHeight ?? 240}
+              minHeight={passthrough.minHeight ?? 240}
               size={knobProps.sizeToken}
               {...restProps}
             />
@@ -895,7 +1372,8 @@ export function DataTableCell({
           title={t('Edit markdown')}>
           {(draftValue, onDraftChange) => (
             <TextArea
-              value={draftValue != null ? String(draftValue) : ''}
+              value={toCellText(draftValue)}
+              // oxlint-disable-next-line typescript/no-deprecated -- the alias fires from the same emit; restProps may carry onChange and must not override the cell handler
               onChangeText={onDraftChange}
               placeholder={placeholder ?? t('Markdown...')}
               disabled={disabled}
@@ -921,7 +1399,8 @@ export function DataTableCell({
           title={t('Edit code')}>
           {(draftValue, onDraftChange) => (
             <TextArea
-              value={draftValue != null ? String(draftValue) : ''}
+              value={toCellText(draftValue)}
+              // oxlint-disable-next-line typescript/no-deprecated -- the alias fires from the same emit; restProps may carry onChange and must not override the cell handler
               onChangeText={onDraftChange}
               placeholder={placeholder ?? t('Code...')}
               disabled={disabled}
@@ -952,7 +1431,8 @@ export function DataTableCell({
           title={t('Edit text')}>
           {(draftValue, onDraftChange) => (
             <TextArea
-              value={draftValue != null ? String(draftValue) : ''}
+              value={toCellText(draftValue)}
+              // oxlint-disable-next-line typescript/no-deprecated -- the alias fires from the same emit; restProps may carry onChange and must not override the cell handler
               onChangeText={onDraftChange}
               placeholder={placeholder}
               disabled={disabled}
@@ -963,8 +1443,8 @@ export function DataTableCell({
                 'aria-label': cellName,
                 // TextArea has no top-level minHeight prop; the modal editor's
                 // taller-than-row height rides the underlying textarea element.
-                minHeight: restProps.minHeight ?? 160,
-                ...(restProps as any).textAreaProps,
+                minHeight: passthrough.minHeight ?? 160,
+                ...passthrough.textAreaProps,
               }}
             />
           )}
@@ -972,7 +1452,6 @@ export function DataTableCell({
       );
     }
 
-    case 'input':
     default: {
       return (
         <CellWrapper justify={cellJustify}>
@@ -983,382 +1462,11 @@ export function DataTableCell({
             disabled={disabled}
             readOnly={readOnly}
             sizeToken={knobProps.sizeToken}
-            ariaLabel={(restProps as any)['aria-label'] ?? columnLabel ?? columnId}
+            ariaLabel={passthrough['aria-label'] ?? columnLabel ?? columnId}
             restProps={restProps}
           />
         </CellWrapper>
       );
     }
   }
-}
-
-// ─── Internal helpers ─────────────────────────────────────────
-
-// Rating renders 24px stars (~160px for 5 incl gaps) which overlap neighbor
-// columns at typical ~130px cell widths. 16px stars fit.
-function CellStar(props: { size: number; weight: 'fill' | 'regular'; color: string }) {
-  return (
-    <Star
-      {...props}
-      size={16}
-    />
-  );
-}
-
-/**
- * Draft-until-commit wrapper for the inline single-line text editor.
- * Typing edits a local draft; Enter or blur commits it via onCommit;
- * Escape restores the pre-edit value without committing. Multiline text
- * is LC-06 oversized and routes through ModalCell instead.
- */
-function InlineTextEditor({
-  value,
-  onCommit,
-  placeholder,
-  disabled,
-  readOnly,
-  sizeToken,
-  ariaLabel,
-  restProps,
-}: {
-  value: any;
-  onCommit: (value: string) => void;
-  placeholder?: string;
-  disabled?: boolean;
-  readOnly?: boolean;
-  sizeToken?: string;
-  /** Accessible name for the chromeless in-cell editor (column header). */
-  ariaLabel?: string;
-  restProps: Record<string, any>;
-}) {
-  const committed = value == null ? '' : String(value);
-  const [draft, setDraft] = useState(committed);
-  const [prevCommitted, setPrevCommitted] = useState(committed);
-  // The Input field is uncontrolled (value maps to defaultValue), so Escape
-  // has to remount it to push the reverted draft back into the DOM.
-  const [resetKey, setResetKey] = useState(0);
-  const draftRef = useRef(draft);
-  draftRef.current = draft;
-  const committedRef = useRef(committed);
-  committedRef.current = committed;
-
-  // External value updates (row edits, story controls) reset the draft.
-  if (prevCommitted !== committed) {
-    setPrevCommitted(committed);
-    setDraft(committed);
-  }
-
-  const commit = useCallback(() => {
-    if (draftRef.current !== committedRef.current) {
-      // Optimistically mark the draft committed so the paired web keydown +
-      // native keypress handlers don't double-fire onCommit for one Enter.
-      committedRef.current = draftRef.current;
-      onCommit(draftRef.current);
-    }
-  }, [onCommit]);
-
-  const cancel = useCallback(() => {
-    if (draftRef.current === committedRef.current) {
-      return;
-    }
-    setDraft(committedRef.current);
-    setResetKey((key) => key + 1);
-  }, []);
-
-  const handleKeyPress = useCallback(
-    (event: any) => {
-      const key = event?.nativeEvent?.key ?? event?.key;
-      if (key === 'Escape') {
-        cancel();
-      } else if (key === 'Enter') {
-        commit();
-      }
-    },
-    [cancel, commit],
-  );
-
-  const { inputProps: userInputProps, ...fieldRest } = restProps;
-
-  return (
-    <Input
-      key={resetKey}
-      value={draft}
-      onChangeText={setDraft}
-      onBlur={commit}
-      placeholder={placeholder}
-      disabled={disabled}
-      readOnly={readOnly}
-      size={sizeToken}
-      {...fieldRest}
-      inputProps={{
-        ...(ariaLabel === undefined ? undefined : { 'aria-label': ariaLabel }),
-        ...userInputProps,
-        // Native fires onKeyPress; the DOM keypress event never fires for
-        // Escape, so web needs onKeyDown to see it.
-        onKeyPress: handleKeyPress,
-        onKeyDown: handleKeyPress,
-        onBlur: commit,
-      }}
-    />
-  );
-}
-
-/**
- * Draft-until-commit wrapper for multi-step / free-entry picker editors
- * (Stepper, PhoneInput, OTP, MultiDatePicker). The wrapped field
- * edits a local draft; the draft only reaches the table's commit when the
- * user confirms — Enter inside a text input, or focus leaving the cell
- * (which includes dismissing a picker popover by clicking elsewhere).
- * Escape discards the draft and remounts the field so uncontrolled editors
- * (Stepper, PhoneInput) and popover-internal state reset to the committed
- * value.
- *
- * mode="change" (DateRangePicker) passes changes straight through to the
- * table — that picker only emits complete ranges, which are themselves the
- * confirm gesture — but keeps Escape-remount so a half-picked range (start
- * chosen, end pending) is discarded instead of lingering in the trigger.
- *
- * The picker popovers/panels render inline (CSS position:fixed, no React
- * portal), so their key and focus events bubble through this wrapper.
- * Native has no Escape/focus-out vocabulary; changes pass straight through
- * (previous behavior).
- */
-function DraftFieldEditor({
-  committed,
-  onCommit,
-  mode = 'confirm',
-  children,
-}: {
-  committed: any;
-  onCommit: (value: any) => void;
-  mode?: 'confirm' | 'change';
-  children: (value: any, onChange: (value: any) => void) => React.ReactNode;
-}) {
-  const [draft, setDraft] = useState<{ value: any } | null>(null);
-  const [resetKey, setResetKey] = useState(0);
-  const [prevCommitted, setPrevCommitted] = useState(committed);
-  // An interaction "session" starts on pointer-down inside the cell (or on
-  // the first draft change) and installs document-level listeners: Escape
-  // cancels, pointer-down outside the cell subtree commits. This is needed
-  // because picker popovers close via floating-ui's own document Escape
-  // listener while focus sits on document.body (day buttons aren't focus
-  // targets), so React-tree keydown/blur handlers alone never see those
-  // gestures.
-  const [sessionActive, setSessionActive] = useState(false);
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const draftRef = useRef(draft);
-  draftRef.current = draft;
-  const committedRef = useRef(committed);
-  committedRef.current = committed;
-  const onCommitRef = useRef(onCommit);
-  onCommitRef.current = onCommit;
-  const blurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const shownRef = useRef(committed);
-
-  // External value updates (a commit landing, row edits) clear the draft so
-  // the field tracks the new committed value. A value the field did not emit
-  // itself also remounts it: Stepper and PhoneInput only read defaultValue on
-  // mount, and the grid keeps its cells mounted across row commits (MPO-475).
-  if (!Object.is(prevCommitted, committed)) {
-    setPrevCommitted(committed);
-    if (draft) {
-      setDraft(null);
-    }
-    if (!Object.is(shownRef.current, committed)) {
-      shownRef.current = committed;
-      setResetKey((key) => key + 1);
-    }
-  }
-
-  const clearBlurTimer = useCallback(() => {
-    if (blurTimerRef.current) {
-      clearTimeout(blurTimerRef.current);
-      blurTimerRef.current = null;
-    }
-  }, []);
-
-  useEffect(() => clearBlurTimer, [clearBlurTimer]);
-
-  const commitDraft = useCallback(() => {
-    clearBlurTimer();
-    const active = draftRef.current;
-    if (!active) {
-      return;
-    }
-    if (!Object.is(active.value, committedRef.current)) {
-      // Optimistically mark the draft committed so the Enter path and the
-      // trailing focus-out timer can't double-fire onCommit for one confirm.
-      committedRef.current = active.value;
-      onCommitRef.current(active.value);
-    }
-    // The draft object itself stays until the committed prop catches up (see
-    // render adjustment above) so controlled fields don't flash the stale
-    // value between the commit and the parent's data update.
-  }, [clearBlurTimer]);
-
-  const cancelDraft = useCallback(() => {
-    clearBlurTimer();
-    setSessionActive(false);
-    draftRef.current = null;
-    setDraft(null);
-    shownRef.current = committedRef.current;
-    // Remount the field: uncontrolled editors and popover-internal state
-    // (DateRange mid-pick) hold edits that no prop change can reset.
-    setResetKey((key) => key + 1);
-  }, [clearBlurTimer]);
-
-  const handleDraftChange = useCallback(
-    (value: any) => {
-      shownRef.current = value;
-      if (mode === 'change') {
-        onCommitRef.current(value);
-        return;
-      }
-      draftRef.current = { value };
-      setDraft(draftRef.current);
-      // Wheel/keyboard edits can create a draft without a pointer-down;
-      // make sure the document listeners are active for it.
-      setSessionActive(true);
-    },
-    [mode],
-  );
-
-  useEffect(() => {
-    if (!isWeb || !sessionActive) {
-      return undefined;
-    }
-    const handleDocKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        cancelDraft();
-      }
-    };
-    const handleDocPointerDown = (event: PointerEvent) => {
-      if (containsAcrossPanels(containerRef.current, event.target)) {
-        return;
-      }
-      setSessionActive(false);
-      commitDraft();
-    };
-    document.addEventListener('keydown', handleDocKeyDown, true);
-    document.addEventListener('pointerdown', handleDocPointerDown, true);
-    return () => {
-      document.removeEventListener('keydown', handleDocKeyDown, true);
-      document.removeEventListener('pointerdown', handleDocPointerDown, true);
-    };
-  }, [sessionActive, cancelDraft, commitDraft]);
-
-  if (!isWeb) {
-    return (
-      <>
-        {children(committed, (value: any) => {
-          onCommitRef.current(value);
-        })}
-      </>
-    );
-  }
-
-  const handleKeyDown = (event: React.KeyboardEvent) => {
-    if (event.key === 'Escape') {
-      cancelDraft();
-      return;
-    }
-    if (event.key === 'Enter' && mode === 'confirm') {
-      const target = event.target as HTMLElement | null;
-      // Only confirm from text inputs — Enter on a popover day button is the
-      // button's activation (toggle), not a confirm.
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
-        // Blur first so uncontrolled editors (Stepper) flush their typed
-        // text through onChange before the draft is committed.
-        target.blur?.();
-        commitDraft();
-      }
-    }
-  };
-
-  // A focus-out schedules the commit; a focus-in landing back inside the
-  // cell (popover day buttons, OTP auto-advance, country combobox) cancels
-  // it — so the draft only commits when focus fully leaves the cell.
-  const handleBlur = () => {
-    clearBlurTimer();
-    blurTimerRef.current = setTimeout(() => {
-      blurTimerRef.current = null;
-      commitDraft();
-    }, 0);
-  };
-
-  return (
-    <div
-      key={resetKey}
-      ref={containerRef}
-      style={{ display: 'contents' }}
-      onKeyDown={handleKeyDown}
-      onPointerDownCapture={() => {
-        setSessionActive(true);
-      }}
-      onFocus={mode === 'confirm' ? clearBlurTimer : undefined}
-      onBlur={mode === 'confirm' ? handleBlur : undefined}>
-      {children(draft ? draft.value : committed, handleDraftChange)}
-    </div>
-  );
-}
-
-function ModalCell(props: React.ComponentProps<typeof CellModalEditor>) {
-  return (
-    <CellWrapper>
-      <CellModalEditor {...props} />
-    </CellWrapper>
-  );
-}
-
-function CellWrapper({
-  children,
-  justify = 'flex-start',
-  gap,
-  minWidth,
-}: {
-  children: React.ReactNode;
-  justify?: 'flex-start' | 'flex-end' | 'center';
-  gap?: string;
-  minWidth?: number;
-}) {
-  // Fields render chromeless inside cells (useIsInTableCell strips the input
-  // frame), so the cell chrome owns the focus affordance. LC-71: one ring on
-  // the perceived control boundary (this wrapper). Keyboard-origin focus
-  // rings via :has(:focus-visible); text-entry also rings on any input
-  // focus (the carve-out). Mouse click on a checkbox/switch paints no ring.
-  // Inner field outlines are suppressed by the composite-ring stylesheet.
-  if (isWeb) {
-    ensureCompositeFocusRing();
-  }
-  // Column + stretch layout so field roots adopt the cell width (input frames
-  // carry minWidth 0 and shrink to fit); maxWidth + a horizontal-only clip
-  // (overflow-x: clip pairs with overflow-y: visible, unlike hidden) catch
-  // anything that still refuses to shrink, so in-cell editors never overlap
-  // neighbor columns. The vertical axis stays visible because several forms
-  // field frames resolve to 0-height boxes and center their content on the
-  // wrapper's midline — a vertical clip would swallow them. flexGrow fills
-  // the TableCell's height so that midline sits at the row center. Popover
-  // and modal editors position with strategy "fixed", which escapes this
-  // clip and keeps their natural width.
-  return (
-    <View
-      flexDirection="column"
-      flexGrow={1}
-      justifyContent="center"
-      alignItems={justify === 'flex-start' ? 'stretch' : justify}
-      width="100%"
-      maxWidth="100%"
-      // Per-axis overflow is web-only CSS; RN styles know only `overflow`.
-      {...(isWeb
-        ? {
-            overflowX: 'clip' as any,
-            overflowY: 'visible' as any,
-            className: 'mp-composite-ring mp-composite-ring-deep',
-          }
-        : undefined)}
-      gap={gap as any}
-      minWidth={minWidth}>
-      {children}
-    </View>
-  );
-}
+};

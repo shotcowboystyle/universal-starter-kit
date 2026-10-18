@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { YStack, XStack, Text } from 'tamagui';
 
 import { ColumnHeaderFilter } from './index';
-import type { ColumnFilterType } from './index';
+import type { ColumnFilterType, ColumnFilterValue } from './index';
 
 const meta: Meta = {
   title: 'Table/ColumnHeaderFilter',
@@ -16,16 +16,16 @@ const meta: Meta = {
 
 export default meta;
 
-function ControlledColumn({
+const ControlledColumn = ({
   initiallyFiltered = false,
   columnType = 'text',
 }: {
   initiallyFiltered?: boolean;
   columnType?: ColumnFilterType;
-}) {
+}) => {
   const label = columnType === 'number' ? 'Amount' : 'Invoice';
   const { knobProps } = useResolvedKnobs();
-  const [filter, setFilter] = useState<{ operator: string; value: string } | undefined>(
+  const [filter, setFilter] = useState<ColumnFilterValue | undefined>(
     initiallyFiltered ? { operator: 'contains', value: 'corp' } : undefined,
   );
   return (
@@ -52,7 +52,7 @@ function ControlledColumn({
       </Text>
     </YStack>
   );
-}
+};
 
 export const Default = {
   name: 'Main',

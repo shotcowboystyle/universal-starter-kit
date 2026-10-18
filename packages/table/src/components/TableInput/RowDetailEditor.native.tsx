@@ -5,15 +5,15 @@
  * commit like "Done".
  */
 
+import { PencilSimpleIcon } from '@phosphor-icons/react';
 import { Button, FloatingPanel } from '@repo/forms';
 import { useResolvedKnobs } from '@repo/theme';
-import { PencilSimpleIcon } from '@phosphor-icons/react';
 import { useCallback, useRef, useState } from 'react';
 import { Text, View, XStack, YStack } from 'tamagui';
 
 import { t } from '../../shared/t';
-import type { DataTableData, DataTableField, DataTableFieldProps } from '../../types';
-import { withInterp } from '../../utils/withInterp';
+import type { DataTableData } from '../../types';
+import { withInterp } from '../../utils/with-interp';
 import { DataTableCell } from '../DataTableCell';
 
 import type { RowDetailEditorProps } from './RowDetailEditor';
@@ -21,7 +21,7 @@ import { changedColumns, columnKey } from './shared';
 
 export type { RowDetailEditorProps } from './RowDetailEditor';
 
-export function RowDetailEditor<TData extends DataTableData>({
+export const RowDetailEditor = <TData extends DataTableData>({
   row,
   rowIndex,
   columns,
@@ -29,14 +29,18 @@ export function RowDetailEditor<TData extends DataTableData>({
   compact,
   isCellHidden,
   onCommit,
-}: RowDetailEditorProps<TData>) {
+}: RowDetailEditorProps<TData>) => {
   const { knobProps } = useResolvedKnobs({ compact });
   const [draft, setDraft] = useState<TData | null>(null);
   const draftRef = useRef(draft);
+  // Latest-value refs: the dialog's open/close callbacks read these after commit, never during render.
+  // oxlint-disable-next-line react/refs -- latest-value ref sync; read only from event handlers
   draftRef.current = draft;
   const rowRef = useRef(row);
+  // oxlint-disable-next-line react/refs -- latest-value ref sync; read only from event handlers
   rowRef.current = row;
   const onCommitRef = useRef(onCommit);
+  // oxlint-disable-next-line react/refs -- latest-value ref sync; read only from event handlers
   onCommitRef.current = onCommit;
   const discardRef = useRef(false);
   const rowNumber = rowIndex + 1;
@@ -69,11 +73,13 @@ export function RowDetailEditor<TData extends DataTableData>({
     handleOpenChange(false);
   }, [handleOpenChange]);
 
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- cell editors emit the raw field value of whatever type the column holds
   const setDraftValue = useCallback((columnId: string, value: unknown) => {
     const { current } = draftRef;
     if (!current) {
       return;
     }
+    // SAFETY: columnId is a key of the row's own columns and value comes from that column's editor
     const next = { ...current, [columnId]: value } as TData;
     draftRef.current = next;
     setDraft(next);
@@ -105,6 +111,7 @@ export function RowDetailEditor<TData extends DataTableData>({
           if (isCellHidden?.(current, columnId, rowIndex)) {
             return null;
           }
+          // oxlint-disable-next-line anti-slop/no-runtime-typeof -- ColumnDef header is a string or a render function; only a string is a label
           const label = typeof col.header === 'string' ? col.header : columnId;
           return (
             <YStack
@@ -112,6 +119,7 @@ export function RowDetailEditor<TData extends DataTableData>({
               {...knobProps.gap}>
               <Text {...knobProps.label}>{label}</Text>
               <DataTableCell
+                // SAFETY: columnId comes from columnKey(col), a key of this row's own columns
                 value={current[columnId as keyof TData]}
                 onChange={(value) => {
                   setDraftValue(columnId, value);
@@ -148,4 +156,4 @@ export function RowDetailEditor<TData extends DataTableData>({
       </YStack>
     </FloatingPanel>
   );
-}
+};

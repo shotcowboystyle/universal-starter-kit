@@ -6,6 +6,7 @@
  * the chip fill; no extra border on the row of siblings.
  */
 
+import { XIcon } from '@phosphor-icons/react';
 import { ChipFrame, ChipText, chipIconSize } from '@repo/forms';
 import type { ChipSize } from '@repo/forms';
 import {
@@ -16,7 +17,6 @@ import {
   pressTargetStyle,
   useResolvedKnobs,
 } from '@repo/theme';
-import { XIcon } from '@phosphor-icons/react';
 import { View, styled, useTheme } from 'tamagui';
 
 import { t } from '../../shared/t';
@@ -49,19 +49,21 @@ const DismissRing = styled(View, {
   hoverStyle: { backgroundColor: '$color5' },
 });
 
-export function FilterChip({ label, onRemove, onPress }: FilterChipProps) {
+export const FilterChip = ({ label, onRemove, onPress }: FilterChipProps) => {
   const { knobProps } = useResolvedKnobs();
   const theme = useTheme();
   if (typeof document !== 'undefined') {
     ensureCompositeFocusRing();
   }
 
+  // SAFETY: the knob size token is drawn from the same $1–$6 size scale Chip accepts; an empty token falls back to $3
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- knobs type the token as a generic size token, Chip narrows it to its own scale
   const resolvedSize = (knobProps.sizeToken as ChipSize) || '$3';
   const iconSize = chipIconSize(resolvedSize);
   const RING_INSET = 2;
   const dismissVisual = iconSize + RING_INSET * 2;
   const dismissOutset = Math.max(0, Math.ceil((MIN_PRESS_TARGET - dismissVisual) / 2));
-  const editable = typeof onPress === 'function';
+  const editable = onPress != null;
 
   return (
     <ChipFrame
@@ -82,12 +84,12 @@ export function FilterChip({ label, onRemove, onPress }: FilterChipProps) {
       onPress={onPress}
       onKeyDown={
         editable
-          ? (((e: KeyboardEvent) => {
+          ? (e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
                 onPress();
               }
-            }) as unknown as () => void)
+            }
           : undefined
       }>
       <ChipText
@@ -97,6 +99,7 @@ export function FilterChip({ label, onRemove, onPress }: FilterChipProps) {
         {label}
       </ChipText>
       <DismissButton
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui View renders on native too, where role is the only button semantic
         role="button"
         aria-label={t('Remove')}
         tabIndex={0}
@@ -110,24 +113,22 @@ export function FilterChip({ label, onRemove, onPress }: FilterChipProps) {
           e.stopPropagation?.();
           onRemove();
         }}
-        onKeyDown={
-          ((e: KeyboardEvent) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              e.stopPropagation();
-              onRemove();
-            }
-          }) as unknown as () => void
-        }>
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            e.stopPropagation();
+            onRemove();
+          }
+        }}>
         <DismissRing
           className="mp-chip-dismiss-ring"
           borderRadius={knobProps.pointy ? 0 : 1000}>
           <XIcon
             size={iconSize}
-            color={theme.color12?.val ?? 'currentColor'}
+            color={String(theme.color12?.val ?? 'currentColor')}
           />
         </DismissRing>
       </DismissButton>
     </ChipFrame>
   );
-}
+};

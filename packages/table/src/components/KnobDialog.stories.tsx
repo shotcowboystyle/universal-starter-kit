@@ -34,7 +34,7 @@ const meta: Meta = {
 
 export default meta;
 
-function DialogHarness({ startOpen = true }: { startOpen?: boolean }) {
+const DialogHarness = ({ startOpen = true }: { startOpen?: boolean }) => {
   const [open, setOpen] = useState(startOpen);
   return (
     <YStack
@@ -60,7 +60,7 @@ function DialogHarness({ startOpen = true }: { startOpen?: boolean }) {
       </KnobDialog>
     </YStack>
   );
-}
+};
 
 export const Default = {
   name: 'Main',

@@ -6,6 +6,10 @@ import { Text, XStack, YStack } from 'tamagui';
 import { DataTableBulkActions, useRowSelection } from './index';
 import type { BulkAction } from './index';
 
+const MARK_COMPLETE = 'mark-complete';
+
+const noop = (): void => undefined;
+
 // Define the data type
 interface Task {
   id: string;
@@ -57,26 +61,26 @@ const sampleTasks: Task[] = [
 // Custom bulk actions
 const customActions: BulkAction<Task>[] = [
   {
-    id: 'mark-complete',
+    id: MARK_COMPLETE,
     label: 'Mark Complete',
-    onExecute: (selectedItems, clearSelection) => {
-      action('mark-complete')(selectedItems);
+    onExecute: (items, clearSelection) => {
+      action(MARK_COMPLETE)(items);
       clearSelection();
     },
   },
   {
     id: 'assign-to-me',
     label: 'Assign to Me',
-    onExecute: (selectedItems, clearSelection) => {
-      action('assign-to-me')(selectedItems);
+    onExecute: (items, clearSelection) => {
+      action('assign-to-me')(items);
       clearSelection();
     },
   },
   {
     id: 'change-priority',
     label: 'Change Priority',
-    onExecute: (selectedItems, clearSelection) => {
-      action('change-priority')(selectedItems);
+    onExecute: (items, clearSelection) => {
+      action('change-priority')(items);
       clearSelection();
     },
   },
@@ -147,8 +151,8 @@ export const WithConfirmation = () => {
       requiresConfirmation: true,
       confirmTitle: 'Delete Selected Tasks',
       confirmMessage: 'Are you sure you want to delete these tasks? This action cannot be undone.',
-      onExecute: (selectedItems, clearSelection) => {
-        action('delete')(selectedItems);
+      onExecute: (items, clearSelection) => {
+        action('delete')(items);
         clearSelection();
       },
     },
@@ -183,24 +187,24 @@ export const ManyActions = () => {
     {
       id: 'archive',
       label: 'Archive',
-      onExecute: (selectedItems, clearSelection) => {
-        action('archive')(selectedItems);
+      onExecute: (items, clearSelection) => {
+        action('archive')(items);
         clearSelection();
       },
     },
     {
       id: 'export-json',
       label: 'Export JSON',
-      onExecute: (selectedItems, clearSelection) => {
-        action('export-json')(selectedItems);
+      onExecute: (items, clearSelection) => {
+        action('export-json')(items);
         clearSelection();
       },
     },
     {
       id: 'duplicate-multiple',
       label: 'Duplicate (x3)',
-      onExecute: (selectedItems, clearSelection) => {
-        action('duplicate-multiple')(selectedItems);
+      onExecute: (items, clearSelection) => {
+        action('duplicate-multiple')(items);
         clearSelection();
       },
     },
@@ -262,8 +266,8 @@ export const DisabledActions = () => {
     {
       id: 'enabled',
       label: 'Enabled Action',
-      onExecute: (selectedItems, clearSelection) => {
-        action('enabled')(selectedItems);
+      onExecute: (items, clearSelection) => {
+        action('enabled')(items);
         clearSelection();
       },
     },
@@ -272,8 +276,8 @@ export const DisabledActions = () => {
       label: 'Disabled Action',
       disabled: true,
       disabledReason: 'Needs the admin role',
-      onExecute: (selectedItems, clearSelection) => {
-        action('disabled')(selectedItems);
+      onExecute: (items, clearSelection) => {
+        action('disabled')(items);
         clearSelection();
       },
     },
@@ -308,10 +312,10 @@ export const WithRowSelectionHook = () => {
 
   const actions: BulkAction<Task>[] = [
     {
-      id: 'mark-complete',
+      id: MARK_COMPLETE,
       label: 'Mark Complete',
-      onExecute: (selectedItems, clearSelection) => {
-        action('mark-complete')(selectedItems);
+      onExecute: (items, clearSelection) => {
+        action(MARK_COMPLETE)(items);
         clearSelection();
       },
     },
@@ -342,7 +346,8 @@ export const WithRowSelectionHook = () => {
             }}>
             <Checkbox
               checked={selection.isSelected(task)}
-              onChange={() => {}} // Handled by onPress
+              // Handled by onPress
+              onChange={noop}
             />
             <YStack flex={1}>
               <Text fontWeight="500">{task.title}</Text>
@@ -376,7 +381,9 @@ export const WithRowSelectionHook = () => {
       {selection.selectedItems.length > 0 && (
         <DataTableBulkActions
           selectedItems={selection.selectedItems}
-          onClearSelection={selection.clearSelection}
+          onClearSelection={() => {
+            selection.clearSelection();
+          }}
           actions={actions}
         />
       )}
@@ -405,7 +412,7 @@ export const EmptyState = () => {
 
       <DataTableBulkActions
         selectedItems={[]}
-        onClearSelection={() => {}}
+        onClearSelection={noop}
         actions={actions}
       />
 

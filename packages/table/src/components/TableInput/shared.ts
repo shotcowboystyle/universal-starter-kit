@@ -9,15 +9,16 @@ let rowIdCounter = 0;
  * are added in the same millisecond (double-click on Add Row); the monotonic
  * suffix keeps ids unique within a session.
  */
-export function generateRowId(): string {
+export const generateRowId = (): string => {
   rowIdCounter += 1;
   return `row-${Date.now()}-${rowIdCounter}`;
-}
+};
 
 /** Rows rendered by the skeleton branch. */
 export const SKELETON_ROW_COUNT = 3;
 
 /** Required-validator emptiness for row arrays (default only catches null/""). */
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- required-validator hook receives the raw field value of any type
 export const isEmptyRows = (value: unknown): boolean =>
   value === null || value === undefined || (Array.isArray(value) && value.length === 0);
 
@@ -40,7 +41,7 @@ const STEPPER_FIELD = 'stepper';
  * Returns the action the grid should take, or null when the event is not ours
  * (textarea, stepper, open listbox, etc.).
  */
-export function childTableKeyAction(
+export const childTableKeyAction = (
   e: {
     key: string;
     shiftKey: boolean;
@@ -58,7 +59,7 @@ export function childTableKeyAction(
     listboxOpen: boolean;
     canAddRow: boolean;
   },
-): { type: 'addRow' } | { type: 'move'; rowIndex: number; columnId: string } | null {
+): { type: 'addRow' } | { type: 'move'; rowIndex: number; columnId: string } | null => {
   if (e.altKey || e.metaKey || e.ctrlKey) {
     return null;
   }
@@ -82,7 +83,7 @@ export function childTableKeyAction(
   if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') {
     return null;
   }
-  if (!ctx.columnId) {
+  if (ctx.columnId === null || ctx.columnId === '') {
     return null;
   }
   const next = e.key === 'ArrowDown' ? ctx.rowIndex + 1 : ctx.rowIndex - 1;
@@ -90,7 +91,7 @@ export function childTableKeyAction(
     return null;
   }
   return { type: 'move', rowIndex: next, columnId: ctx.columnId };
-}
+};
 
 /**
  * Per-row cell visibility (Frappe child `depends_on`, evaluated by the
@@ -104,15 +105,22 @@ export type ChildCellHidden<TData extends DataTableData = DataTableData> = (
 ) => boolean;
 
 /** Row-data key a column reads (accessorKey, else id). */
-export function columnKey<TData extends DataTableData>(col: DataTableColumn<TData>): string {
-  return typeof col.accessorKey === 'string' ? col.accessorKey : (col.id ?? String(col.accessorKey));
-}
+export const columnKey = <TData extends DataTableData>(col: DataTableColumn<TData>): string =>
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- accessorKey is `keyof TData` (string | number | symbol); only a string is used verbatim
+  typeof col.accessorKey === 'string' ? col.accessorKey : (col.id ?? String(col.accessorKey));
 
 /** Column keys whose value differs between two versions of a row. */
-export function changedColumns<TData extends DataTableData>(
+export const changedColumns = <TData extends DataTableData>(
   before: TData,
   after: TData,
   columns: DataTableColumn<TData>[],
-): string[] {
-  return columns.map(columnKey).filter((key) => !Object.is(before[key as keyof TData], after[key as keyof TData]));
-}
+): string[] => {
+  const changed: string[] = [];
+  for (const col of columns) {
+    const key = columnKey(col);
+    if (!Object.is(before[key], after[key])) {
+      changed.push(key);
+    }
+  }
+  return changed;
+};

@@ -6,8 +6,8 @@
  * borderRadius, elevation, and sizing across the table package.
  */
 
-import { Dialog, DialogShowFocus } from '@repo/ui';
 import { useResolvedKnobs } from '@repo/theme';
+import { Dialog, DialogShowFocus } from '@repo/ui';
 import type React from 'react';
 
 export interface KnobDialogProps {
@@ -17,23 +17,21 @@ export interface KnobDialogProps {
   children: React.ReactNode;
 }
 
-export function KnobDialog({ open, onOpenChange, modal = true, children }: KnobDialogProps) {
-  return (
-    <Dialog
-      modal={modal}
-      open={open}
-      onOpenChange={onOpenChange}>
-      {children}
-    </Dialog>
-  );
-}
+export const KnobDialog = ({ open, onOpenChange, modal = true, children }: KnobDialogProps) => (
+  <Dialog
+    modal={modal}
+    open={open}
+    onOpenChange={onOpenChange}>
+    {children}
+  </Dialog>
+);
 
 export interface KnobDialogContentProps {
   children: React.ReactNode;
   minWidth?: number;
 }
 
-export function KnobDialogContent({ children, minWidth }: KnobDialogContentProps) {
+export const KnobDialogContent = ({ children, minWidth }: KnobDialogContentProps) => {
   const { knobProps } = useResolvedKnobs();
 
   return (
@@ -62,13 +60,13 @@ export function KnobDialogContent({ children, minWidth }: KnobDialogContentProps
         exitStyle={{ x: 0, y: 10, opacity: 0, scale: 0.95 }}
         {...knobProps.gapLg}
         elevation={knobProps.elevation}
-        {...(minWidth ? { minWidth } : {})}>
+        {...(minWidth !== undefined && minWidth !== 0 ? { minWidth } : {})}>
         {children}
         <DialogShowFocus />
       </Dialog.Content>
     </Dialog.Portal>
   );
-}
+};
 
 // Re-export Dialog sub-components for convenience
 export const KnobDialogTrigger = Dialog.Trigger;

@@ -137,7 +137,7 @@ export const emptyCards = () => (
  * Row press: the row is one control. Keyboard-origin focus paints one inset
  * ring (LC-71); selected state is fill via `_intent`, never a second outline.
  */
-export const rowPress = () => {
+const RowPressStory = () => {
   const [selected, setSelected] = useState<string | null>('Jane Smith');
   const data = peopleData.map((row) => (row.name === selected ? { ...row, _intent: 'accent' as const } : row));
   return (
@@ -146,13 +146,15 @@ export const rowPress = () => {
       data={data}
       columns={peopleColumns}
       aria-label="People"
-      onRowPress={(row) => {
-        setSelected(row.name);
+      onRowPress={(_row, rowIndex) => {
+        setSelected(data[rowIndex]?.name ?? null);
       }}
-      rowLabel={(row) => row.name}
+      rowLabel={(row) => String(row.name)}
     />
   );
 };
+
+export const rowPress = () => <RowPressStory />;
 
 /** Disabled row press: rows stay visible; activation is inert (LC-40). */
 export const disabledRows = () => (
@@ -162,7 +164,8 @@ export const disabledRows = () => (
     data={peopleData}
     columns={peopleColumns}
     aria-label="People disabled"
+    // oxlint-disable-next-line eslint/no-empty-function -- inert handler: the story shows press is a no-op while disabled
     onRowPress={() => {}}
-    rowLabel={(row) => row.name}
+    rowLabel={(row) => String(row.name)}
   />
 );

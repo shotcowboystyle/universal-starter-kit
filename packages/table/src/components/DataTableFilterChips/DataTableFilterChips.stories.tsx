@@ -61,41 +61,35 @@ const filterableFields: FilterableField[] = [
   },
 ];
 
-function emailContains(value: string): TableFilter {
-  return {
-    id: 'flt-email',
-    columnId: 'email',
-    value: { operator: 'contains', value },
-    label: 'Email',
-  };
-}
+const emailContains = (value: string): TableFilter => ({
+  id: 'flt-email',
+  columnId: 'email',
+  value: { operator: 'contains', value },
+  label: 'Email',
+});
 
-function departmentIs(value: string): TableFilter {
-  return {
-    id: 'flt-department',
-    columnId: 'department',
-    value: { operator: 'is', value },
-    label: 'Department',
-  };
-}
+const departmentIs = (value: string): TableFilter => ({
+  id: 'flt-department',
+  columnId: 'department',
+  value: { operator: 'is', value },
+  label: 'Department',
+});
 
-function ChipTable({ initialFilters }: { initialFilters: TableFilter[] }) {
-  return (
-    <YStack
-      padding="$4"
-      width="100%">
-      <DataTable
-        data={people}
-        columns={columns}
-        filterableFields={filterableFields}
-        enableFiltering
-        enableGlobalSearch
-        initialState={{ filters: initialFilters }}
-        aria-label="People with filter chips"
-      />
-    </YStack>
-  );
-}
+const ChipTable = ({ initialFilters }: { initialFilters: TableFilter[] }) => (
+  <YStack
+    padding="$4"
+    width="100%">
+    <DataTable
+      data={people}
+      columns={columns}
+      filterableFields={filterableFields}
+      enableFiltering
+      enableGlobalSearch
+      initialState={{ filters: initialFilters }}
+      aria-label="People with filter chips"
+    />
+  </YStack>
+);
 
 export const Default = {
   name: 'Main',

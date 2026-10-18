@@ -21,17 +21,17 @@
  * revalidated counts paint in place while the user composes.
  */
 
-import { DropdownMenu } from '@repo/ui';
-import type { DropdownMenuPlacement } from '@repo/ui';
+import { CaretDownIcon } from '@phosphor-icons/react';
 import { Button, Spinner } from '@repo/forms';
 import { useResolvedKnobs } from '@repo/theme';
-import { CaretDownIcon } from '@phosphor-icons/react';
+import { DropdownMenu } from '@repo/ui';
+import type { DropdownMenuPlacement } from '@repo/ui';
 import type { ReactNode } from 'react';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Text, XStack, withStaticProperties } from 'tamagui';
 
 import { t } from '../../shared/t';
-import { iconSizeForToken } from '../../utils/chromeIcons';
+import { iconSizeForToken } from '../../utils/chrome-icons';
 
 export interface DataTableFacetOption {
   /** Raw facet value (user id, tag, status value, …). */
@@ -90,28 +90,26 @@ export interface DataTableFacetMenuItemProps {
  * Rides DropdownMenu.CheckboxItem so the menu stays open on press (COMPOSE)
  * and the row exposes menuitemcheckbox semantics.
  */
-function DataTableFacetMenuItem({
+const DataTableFacetMenuItem = ({
   label,
   count,
   active = false,
   onPress,
   disabled,
   disabledReason,
-}: DataTableFacetMenuItemProps) {
-  return (
-    <DropdownMenu.CheckboxItem
-      checked={active}
-      onCheckedChange={onPress}
-      {...(disabled ? { disabled } : {})}
-      {...(disabledReason ? { disabledReason } : {})}
-      // Trailing muted slot — the count reads as part of the row.
-      {...(typeof count === 'number' ? { shortcut: String(count) } : {})}>
-      {label}
-    </DropdownMenu.CheckboxItem>
-  );
-}
+}: DataTableFacetMenuItemProps) => (
+  <DropdownMenu.CheckboxItem
+    checked={active}
+    onCheckedChange={onPress}
+    {...(disabled ? { disabled } : {})}
+    {...(disabledReason !== undefined && disabledReason !== '' ? { disabledReason } : {})}
+    // Trailing muted slot — the count reads as part of the row.
+    {...(count === undefined ? {} : { shortcut: String(count) })}>
+    {label}
+  </DropdownMenu.CheckboxItem>
+);
 
-function DataTableFacetMenuComponent({
+const DataTableFacetMenuComponent = ({
   label,
   options,
   activeValues,
@@ -122,10 +120,11 @@ function DataTableFacetMenuComponent({
   disabledReason,
   placement = 'bottom-start',
   children,
-}: DataTableFacetMenuProps) {
+}: DataTableFacetMenuProps) => {
   const { knobProps } = useResolvedKnobs();
-  const iconPx = iconSizeForToken(String(knobProps.sizeToken));
-  const active = activeValues ?? [];
+  const iconPx = iconSizeForToken(knobProps.sizeToken);
+  const active = useMemo(() => activeValues ?? [], [activeValues]);
+  const activeSet = useMemo(() => new Set(active), [active]);
   const activeCount = active.length;
 
   const handlePress = useCallback(
@@ -147,20 +146,22 @@ function DataTableFacetMenuComponent({
     [active, onActiveValuesChange, selection],
   );
 
+  const optionList = options ?? [];
+  const showEmpty = optionList.length === 0 && !loading;
   const rows = children ?? (
     <>
-      {(options ?? []).map((option) => (
+      {optionList.map((option) => (
         <DataTableFacetMenuItem
           key={option.value}
           label={option.label ?? option.value}
           count={option.count}
-          active={active.includes(option.value)}
+          active={activeSet.has(option.value)}
           onPress={() => {
             handlePress(option);
           }}
         />
       ))}
-      {(options?.length ?? 0) === 0 && !loading && (
+      {showEmpty && (
         <Text
           {...knobProps.label}
           fontWeight="400"
@@ -185,7 +186,7 @@ function DataTableFacetMenuComponent({
           aria-haspopup="menu"
           aria-label={label}
           {...(disabled ? { disabled } : {})}
-          {...(disabledReason ? { disabledReason } : {})}>
+          {...(disabledReason !== undefined && disabledReason !== '' ? { disabledReason } : {})}>
           {activeCount > 0 ? `${label} (${activeCount})` : label}
         </Button>
       </DropdownMenu.Trigger>
@@ -206,7 +207,7 @@ function DataTableFacetMenuComponent({
       </DropdownMenu.Content>
     </DropdownMenu>
   );
-}
+};
 
 export const DataTableFacetMenu = withStaticProperties(DataTableFacetMenuComponent, {
   Item: DataTableFacetMenuItem,

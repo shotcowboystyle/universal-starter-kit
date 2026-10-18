@@ -24,6 +24,7 @@ import { Text, View, YStack } from 'tamagui';
 import type { DataTableColumn, DataTableData } from '../../types';
 
 import { TableInput } from './index';
+import type { TableInputProps } from './index';
 
 interface LineItem extends DataTableData {
   id: string;
@@ -137,19 +138,16 @@ type Story = StoryObj<typeof TableInput>;
 
 // ── Controlled harness ────────────────────────────────────────
 
-interface HarnessProps {
+interface HarnessProps extends Partial<Omit<TableInputProps<LineItem>, 'data' | 'columns'>> {
   columns?: DataTableColumn<LineItem>[];
   rows?: LineItem[];
-  onChange?: (rows: LineItem[]) => void;
-  onDataChange?: (data: LineItem[]) => void;
-  onCellChange?: (rowIndex: number, columnId: string, value: unknown) => void;
-  [key: string]: any;
 }
 
 const ControlledTableInput = ({
   columns = basicColumns,
   rows = initialRows,
   onChange,
+  // oxlint-disable-next-line typescript/no-deprecated -- the story demonstrates the deprecated alias firing alongside onChange
   onDataChange,
   onCellChange,
   ...rest
@@ -167,6 +165,7 @@ const ControlledTableInput = ({
           setData(next);
           onChange?.(next);
         }}
+        // oxlint-disable-next-line typescript/no-deprecated -- the story demonstrates the deprecated alias firing alongside onChange
         onDataChange={onDataChange}
         onCellChange={onCellChange}
         {...rest}
@@ -264,17 +263,19 @@ export const SkeletonLoading: Story = {
 
 // ── Form integration: the table itself is a field ─────────────
 
+const lineItemsError = (rows: LineItem[]): string | undefined => {
+  if (rows.length === 0) {
+    return 'At least one line item is required';
+  }
+  return rows.some((row) => !row.item) ? 'Every row needs an item name' : undefined;
+};
+
 const InsideFormStory = () => {
   const form = useForm({
     defaultValues: { lineItems: initialRows },
   });
   const [rows, setRows] = React.useState<LineItem[]>(initialRows);
-  const error =
-    rows.length === 0
-      ? 'At least one line item is required'
-      : rows.some((row) => !row.item)
-        ? 'Every row needs an item name'
-        : undefined;
+  const error = lineItemsError(rows);
 
   return (
     <YStack

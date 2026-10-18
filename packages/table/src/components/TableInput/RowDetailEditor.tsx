@@ -13,21 +13,24 @@
  * dropped focus on <body> (MPO-471).
  */
 
-import { DialogContent, DialogOverlay, ScrollView } from '@repo/ui';
+import { PencilSimpleIcon } from '@phosphor-icons/react';
 import { Button } from '@repo/forms';
 import { TableCellContext } from '@repo/table-primitives';
 import { useResolvedKnobs } from '@repo/theme';
-import { PencilSimpleIcon } from '@phosphor-icons/react';
+import { DialogContent, DialogOverlay, ScrollView } from '@repo/ui';
 import { useCallback, useRef, useState } from 'react';
 import { Dialog, Text, XStack, YStack } from 'tamagui';
 
 import { t } from '../../shared/t';
-import type { DataTableColumn, DataTableData, DataTableField, DataTableFieldProps } from '../../types';
-import { withInterp } from '../../utils/withInterp';
+import type { DataTableColumn, DataTableData } from '../../types';
+import { withInterp } from '../../utils/with-interp';
 import { DataTableCell } from '../DataTableCell';
 
 import { changedColumns, columnKey } from './shared';
 import type { ChildCellHidden } from './shared';
+
+/** The detail form renders full-size editors, not in-cell ones. */
+const OUTSIDE_TABLE_CELL = { inTableCell: false };
 
 export interface RowDetailEditorProps<TData extends DataTableData> {
   row: TData;
@@ -40,7 +43,7 @@ export interface RowDetailEditorProps<TData extends DataTableData> {
   onCommit: (row: TData, changed: string[]) => void;
 }
 
-export function RowDetailEditor<TData extends DataTableData>({
+export const RowDetailEditor = <TData extends DataTableData>({
   row,
   rowIndex,
   columns,
@@ -48,14 +51,18 @@ export function RowDetailEditor<TData extends DataTableData>({
   compact,
   isCellHidden,
   onCommit,
-}: RowDetailEditorProps<TData>) {
+}: RowDetailEditorProps<TData>) => {
   const { knobProps } = useResolvedKnobs({ compact });
   const [draft, setDraft] = useState<TData | null>(null);
   const draftRef = useRef(draft);
+  // Latest-value refs: the dialog's open/close callbacks read these after commit, never during render.
+  // oxlint-disable-next-line react/refs -- latest-value ref sync; read only from event handlers
   draftRef.current = draft;
   const rowRef = useRef(row);
+  // oxlint-disable-next-line react/refs -- latest-value ref sync; read only from event handlers
   rowRef.current = row;
   const onCommitRef = useRef(onCommit);
+  // oxlint-disable-next-line react/refs -- latest-value ref sync; read only from event handlers
   onCommitRef.current = onCommit;
   const discardRef = useRef(false);
   const rowNumber = rowIndex + 1;
@@ -88,11 +95,13 @@ export function RowDetailEditor<TData extends DataTableData>({
     handleOpenChange(false);
   }, [handleOpenChange]);
 
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- cell editors emit the raw field value of whatever type the column holds
   const setDraftValue = useCallback((columnId: string, value: unknown) => {
     const { current } = draftRef;
     if (!current) {
       return;
     }
+    // SAFETY: columnId is a key of the row's own columns and value comes from that column's editor
     const next = { ...current, [columnId]: value } as TData;
     draftRef.current = next;
     setDraft(next);
@@ -132,13 +141,14 @@ export function RowDetailEditor<TData extends DataTableData>({
           <ScrollView
             flexShrink={1}
             minHeight={0}>
-            <TableCellContext.Provider value={{ inTableCell: false }}>
+            <TableCellContext.Provider value={OUTSIDE_TABLE_CELL}>
               <YStack {...knobProps.gapLg}>
                 {columns.map((col) => {
                   const columnId = columnKey(col);
                   if (isCellHidden?.(current, columnId, rowIndex)) {
                     return null;
                   }
+                  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- ColumnDef header is a string or a render function; only a string is a label
                   const label = typeof col.header === 'string' ? col.header : columnId;
                   return (
                     <YStack
@@ -146,6 +156,7 @@ export function RowDetailEditor<TData extends DataTableData>({
                       {...knobProps.gap}>
                       <Text {...knobProps.label}>{label}</Text>
                       <DataTableCell
+                        // SAFETY: columnId comes from columnKey(col), a key of this row's own columns
                         value={current[columnId as keyof TData]}
                         onChange={(value) => {
                           setDraftValue(columnId, value);
@@ -187,4 +198,4 @@ export function RowDetailEditor<TData extends DataTableData>({
       </Dialog.Portal>
     </Dialog>
   );
-}
+};

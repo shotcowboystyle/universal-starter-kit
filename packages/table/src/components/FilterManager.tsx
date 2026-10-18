@@ -1,6 +1,6 @@
+import { FloppyDiskIcon, XIcon } from '@phosphor-icons/react';
 import { Button, Checkbox, Input } from '@repo/forms';
 import { useResolvedKnobs } from '@repo/theme';
-import { FloppyDiskIcon, XIcon } from '@phosphor-icons/react';
 import type React from 'react';
 import { useState } from 'react';
 import { Text, XStack, YStack } from 'tamagui';
@@ -17,7 +17,7 @@ import {
 } from './KnobDialog';
 
 export interface FilterManagerProps {
-  currentFilters: [string, string, any][];
+  currentFilters: [string, string, unknown][];
   onSaveFilter: (filterName: string, isGlobal: boolean) => Promise<void> | void;
   disabled?: boolean;
   /**
@@ -36,7 +36,17 @@ export interface FilterManagerProps {
   trigger?: React.ReactNode;
 }
 
-export function FilterManager({
+const dialogMinWidthFor = (sizeToken: string): number => {
+  if (sizeToken === '$3') {
+    return 320;
+  }
+  if (sizeToken === '$5') {
+    return 480;
+  }
+  return 400;
+};
+
+export const FilterManager = ({
   currentFilters,
   onSaveFilter,
   disabled = false,
@@ -44,17 +54,24 @@ export function FilterManager({
   disabledReasonPlacement,
   canCreateGlobal = false,
   trigger,
-}: FilterManagerProps) {
+}: FilterManagerProps) => {
   const { knobProps } = useResolvedKnobs();
   const sz = knobProps.sizeToken;
-  const dialogMinWidth = sz === '$3' ? 320 : sz === '$5' ? 480 : 400;
+  const dialogMinWidth = dialogMinWidthFor(sz);
   const [open, setOpen] = useState(false);
   const [filterName, setFilterName] = useState('');
   const [isGlobal, setIsGlobal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const hasFilters = currentFilters && currentFilters.length > 0;
+  const hasFilters = currentFilters.length > 0;
+  const saveFilterLabel = t('Save Filter');
+  let triggerDisabledReason: string | undefined;
+  if (disabled) {
+    triggerDisabledReason = disabledReason;
+  } else if (!hasFilters) {
+    triggerDisabledReason = t('Apply filters to save them');
+  }
 
   const handleSave = async () => {
     if (!filterName.trim()) {
@@ -70,11 +87,10 @@ export function FilterManager({
       setFilterName('');
       setIsGlobal(false);
       setOpen(false);
-    } catch (error) {
-      setError(error instanceof Error ? error.message : t('Failed to save filter'));
-    } finally {
-      setIsSaving(false);
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : t('Failed to save filter'));
     }
+    setIsSaving(false);
   };
 
   return (
@@ -91,16 +107,16 @@ export function FilterManager({
             // state, so a bare `disabled` here fired the `[theme]
             // bare-disabled` guardrail on every list at load. The reason
             // renders adjacent + aria-describedby (Button contract).
-            disabledReason={disabled ? disabledReason : hasFilters ? undefined : t('Apply filters to save them')}
+            disabledReason={triggerDisabledReason}
             disabledReasonPlacement={disabledReasonPlacement}
             aria-label={t('Save filter')}>
-            {t('Save Filter')}
+            {saveFilterLabel}
           </Button>
         )}
       </KnobDialogTrigger>
 
       <KnobDialogContent minWidth={dialogMinWidth}>
-        <KnobDialogTitle>{t('Save Filter')}</KnobDialogTitle>
+        <KnobDialogTitle>{saveFilterLabel}</KnobDialogTitle>
         <KnobDialogDescription>
           {t('Save the current filter configuration for quick access later.')}
         </KnobDialogDescription>
@@ -118,14 +134,14 @@ export function FilterManager({
             <Checkbox
               label={t('Make this filter global (visible to all users)')}
               checked={isGlobal}
-              onCheckedChange={(checked) => {
+              onChange={(checked) => {
                 setIsGlobal(checked === true);
               }}
               disabled={isSaving}
             />
           )}
 
-          {error && (
+          {error !== null && error !== '' && (
             <Text
               color="$red11"
               fontSize="$2">
@@ -155,9 +171,11 @@ export function FilterManager({
             size={knobProps.sizeToken}
             accent
             icon={FloppyDiskIcon}
-            onPress={handleSave}
+            onPress={() => {
+              void handleSave();
+            }}
             loading={isSaving}>
-            {t('Save Filter')}
+            {saveFilterLabel}
           </Button>
         </XStack>
 
@@ -175,4 +193,4 @@ export function FilterManager({
       </KnobDialogContent>
     </KnobDialog>
   );
-}
+};

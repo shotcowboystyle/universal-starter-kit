@@ -31,11 +31,11 @@
       "default": "./dist/cjs/index.cjs"
     },
     "./tableCellContext": {
-      "source": "./src/shims/tableCellContext.ts",
-      "types": "./types/shims/tableCellContext.d.ts",
-      "import": "./src/shims/tableCellContext.ts",
-      "require": "./src/shims/tableCellContext.ts",
-      "default": "./src/shims/tableCellContext.ts"
+      "source": "./src/shims/table-cell-context.ts",
+      "types": "./types/shims/table-cell-context.d.ts",
+      "import": "./src/shims/table-cell-context.ts",
+      "require": "./src/shims/table-cell-context.ts",
+      "default": "./src/shims/table-cell-context.ts"
     },
     "./primitives": {
       "source": "./src/shims/primitives.ts",

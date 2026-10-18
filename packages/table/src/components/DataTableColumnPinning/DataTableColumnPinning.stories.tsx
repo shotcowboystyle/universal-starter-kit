@@ -1,7 +1,7 @@
+import { PushPinIcon, PushPinSlashIcon, ArrowCounterClockwiseIcon } from '@phosphor-icons/react';
 import { Button } from '@repo/forms';
 import { action } from '@repo/storybook';
 import { formatCurrency, useResolvedKnobs } from '@repo/theme';
-import { PushPinIcon, PushPinSlashIcon, ArrowCounterClockwiseIcon } from '@phosphor-icons/react';
 import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
 import { useState } from 'react';
@@ -29,11 +29,45 @@ interface Person {
  * family. Determinism at the source keeps every pixel under comparison, where
  * a screenshot mask or delay would not.
  */
-const seededRandom = (seed: number) => () => {
-  seed = (seed + 0x6d_2b_79_f5) | 0;
-  let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-  return ((t ^ (t >>> 14)) >>> 0) / 4_294_967_296;
+const seededRandom = (seed: number) => {
+  let state = seed;
+  return () => {
+    // oxlint-disable-next-line eslint/no-bitwise, unicorn/prefer-math-trunc -- mulberry32 needs int32 wrap-around, which Math.trunc does not do
+    state = (state + 0x6d_2b_79_f5) | 0;
+    // oxlint-disable-next-line eslint/no-bitwise -- mulberry32 is defined in 32-bit integer ops
+    let t = Math.imul(state ^ (state >>> 15), 1 | state);
+    // oxlint-disable-next-line eslint/no-bitwise -- mulberry32 is defined in 32-bit integer ops
+    t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
+    // oxlint-disable-next-line eslint/no-bitwise -- mulberry32 is defined in 32-bit integer ops
+    return ((t ^ (t >>> 14)) >>> 0) / 4_294_967_296;
+  };
+};
+
+const PLAIN_BG = '$background';
+
+const performanceColor = (value: number): string => {
+  if (value > 70) {
+    return '$green10';
+  }
+  return value > 40 ? '$yellow10' : '$red10';
+};
+
+const statusColor = (status: Person['status']): string => {
+  if (status === 'active') {
+    return '$green10';
+  }
+  return status === 'inactive' ? '$red10' : '$yellow10';
+};
+
+const pinnedTint = (
+  isPinnedLeft: boolean,
+  isPinnedRight: boolean,
+  tints: { left: string; right: string; none: string },
+): string => {
+  if (isPinnedLeft) {
+    return tints.left;
+  }
+  return isPinnedRight ? tints.right : tints.none;
 };
 
 const generateData = (count: number): Person[] => {
@@ -65,7 +99,7 @@ const columnHelper = createColumnHelper<Person>();
  * outlived `borderRadius:none` on an 8px-tall bar, which reads as an
  * undeclared knob-immune shape.
  */
-function PerformanceBar({ value }: { value: number }) {
+const PerformanceBar = ({ value }: { value: number }) => {
   const { knobProps } = useResolvedKnobs();
   return (
     <XStack
@@ -78,7 +112,7 @@ function PerformanceBar({ value }: { value: number }) {
         {...knobProps.containerRadius}
         overflow="hidden">
         <View
-          backgroundColor={value > 70 ? '$green10' : value > 40 ? '$yellow10' : '$red10'}
+          backgroundColor={performanceColor(value)}
           height="100%"
           width={`${value}%`}
         />
@@ -86,7 +120,7 @@ function PerformanceBar({ value }: { value: number }) {
       <Text fontSize="$1">{value}%</Text>
     </XStack>
   );
-}
+};
 
 const defaultColumns = [
   columnHelper.accessor('id', {
@@ -125,11 +159,7 @@ const defaultColumns = [
   }),
   columnHelper.accessor('status', {
     header: 'Status',
-    cell: (info) => (
-      <Text color={info.getValue() === 'active' ? '$green10' : info.getValue() === 'inactive' ? '$red10' : '$yellow10'}>
-        {info.getValue()}
-      </Text>
-    ),
+    cell: (info) => <Text color={statusColor(info.getValue())}>{info.getValue()}</Text>,
   }),
   columnHelper.accessor('performance', {
     header: 'Performance',
@@ -148,9 +178,11 @@ const meta: Meta<typeof DataTableColumnPinning> = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-function BasicPinningExample() {
+const BasicPinningExample = () => {
+  // oxlint-disable-next-line react/hook-use-state -- rows are a first-render snapshot and never update
   const [data] = useState(defaultData);
 
+  // oxlint-disable-next-line react/incompatible-library -- story harness; TanStack's mutable table instance is the API under demo
   const table = useReactTable({
     data,
     columns: defaultColumns,
@@ -201,6 +233,7 @@ function BasicPinningExample() {
                   const isPinned = pinning.isPinned(header.column.id);
                   const position = pinning.getPinPosition(header.column.id);
                   const headerLabel =
+                    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- TanStack's header is a string | render-function union; typeof is its discriminant
                     typeof header.column.columnDef.header === 'string'
                       ? header.column.columnDef.header
                       : header.column.id;
@@ -212,7 +245,7 @@ function BasicPinningExample() {
                       padding="$2"
                       borderRightWidth={1}
                       borderColor="$borderColor"
-                      backgroundColor={isPinned ? '$gray3' : '$background'}>
+                      backgroundColor={isPinned ? '$gray3' : PLAIN_BG}>
                       <XStack
                         alignItems="center"
                         justifyContent="space-between">
@@ -280,7 +313,7 @@ function BasicPinningExample() {
                       padding="$2"
                       borderRightWidth={1}
                       borderColor="$borderColor"
-                      backgroundColor={isPinned ? '$gray2' : '$background'}>
+                      backgroundColor={isPinned ? '$gray2' : PLAIN_BG}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </View>
                   );
@@ -291,16 +324,18 @@ function BasicPinningExample() {
       </ScrollView>
     </YStack>
   );
-}
+};
 
 export const Basic: Story = {
   name: 'Main',
   render: () => <BasicPinningExample />,
 };
 
-function AdvancedPinningExample() {
+const AdvancedPinningExample = () => {
+  // oxlint-disable-next-line react/hook-use-state -- rows are a first-render snapshot and never update
   const [data] = useState(defaultData);
 
+  // oxlint-disable-next-line react/incompatible-library -- story harness; TanStack's mutable table instance is the API under demo
   const table = useReactTable({
     data,
     columns: defaultColumns,
@@ -371,7 +406,11 @@ function AdvancedPinningExample() {
                         padding="$3"
                         borderRightWidth={1}
                         borderColor="$borderColor"
-                        backgroundColor={isPinnedLeft ? '$blue3' : isPinnedRight ? '$purple3' : '$gray3'}>
+                        backgroundColor={pinnedTint(isPinnedLeft, isPinnedRight, {
+                          left: '$blue3',
+                          right: '$purple3',
+                          none: '$gray3',
+                        })}>
                         <YStack gap="$1">
                           <Text
                             fontWeight="bold"
@@ -438,7 +477,11 @@ function AdvancedPinningExample() {
                         padding="$2"
                         borderRightWidth={1}
                         borderColor="$borderColor"
-                        backgroundColor={isPinnedLeft ? '$blue1' : isPinnedRight ? '$purple1' : '$background'}>
+                        backgroundColor={pinnedTint(isPinnedLeft, isPinnedRight, {
+                          left: '$blue1',
+                          right: '$purple1',
+                          none: PLAIN_BG,
+                        })}>
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </View>
                     );
@@ -451,130 +494,138 @@ function AdvancedPinningExample() {
       </Card>
     </YStack>
   );
-}
+};
 
 export const Advanced: Story = {
   render: () => <AdvancedPinningExample />,
 };
 
-export const MaxPinnedColumns: Story = {
-  render: () => {
-    const [data] = useState(defaultData.slice(0, 10));
-    const table = useReactTable({
-      data,
-      columns: defaultColumns.slice(0, 6),
-      getCoreRowModel: getCoreRowModel(),
-    });
+const MaxPinnedColumnsExample = () => {
+  // oxlint-disable-next-line react/hook-use-state -- rows are a first-render snapshot and never update
+  const [data] = useState(defaultData.slice(0, 10));
+  // oxlint-disable-next-line react/incompatible-library -- story harness; TanStack's mutable table instance is the API under demo
+  const table = useReactTable({
+    data,
+    columns: defaultColumns.slice(0, 6),
+    getCoreRowModel: getCoreRowModel(),
+  });
 
-    const pinning = DataTableColumnPinning({
-      table,
-      maxPinnedColumns: 2,
-      onPinChange: action('onPinChange'),
-    });
+  const pinning = DataTableColumnPinning({
+    table,
+    maxPinnedColumns: 2,
+    onPinChange: action('onPinChange'),
+  });
 
-    return (
-      <YStack
-        padding="$4"
-        gap="$4">
-        <Card>
-          <Card.Header>
-            <H3>Max Pinned Columns (Limited to 2)</H3>
-            <Paragraph>Only 2 columns can be pinned at a time</Paragraph>
-          </Card.Header>
-        </Card>
+  return (
+    <YStack
+      padding="$4"
+      gap="$4">
+      <Card>
+        <Card.Header>
+          <H3>Max Pinned Columns (Limited to 2)</H3>
+          <Paragraph>Only 2 columns can be pinned at a time</Paragraph>
+        </Card.Header>
+      </Card>
 
-        <Card>
-          <YStack
-            padding="$4"
-            gap="$2">
-            {table.getAllColumns().map((column) => (
-              <XStack
-                key={column.id}
-                alignItems="center"
-                justifyContent="space-between"
-                padding="$2"
-                borderRadius="$2"
-                backgroundColor={pinning.isPinned(column.id) ? '$blue3' : '$gray2'}>
-                <Text>{column.id}</Text>
-                <XStack gap="$2">
-                  <Button
-                    size="$2"
-                    onPress={() => {
-                      pinning.togglePin(column.id, 'left');
-                    }}
-                    disabled={!pinning.isPinned(column.id) && !pinning.canPin('left')}>
-                    {pinning.getPinPosition(column.id) === 'left' ? 'Unpin' : 'Pin Left'}
-                  </Button>
-                  <Button
-                    size="$2"
-                    onPress={() => {
-                      pinning.togglePin(column.id, 'right');
-                    }}
-                    disabled={!pinning.isPinned(column.id) && !pinning.canPin('right')}>
-                    {pinning.getPinPosition(column.id) === 'right' ? 'Unpin' : 'Pin Right'}
-                  </Button>
-                </XStack>
+      <Card>
+        <YStack
+          padding="$4"
+          gap="$2">
+          {table.getAllColumns().map((column) => (
+            <XStack
+              key={column.id}
+              alignItems="center"
+              justifyContent="space-between"
+              padding="$2"
+              borderRadius="$2"
+              backgroundColor={pinning.isPinned(column.id) ? '$blue3' : '$gray2'}>
+              <Text>{column.id}</Text>
+              <XStack gap="$2">
+                <Button
+                  size="$2"
+                  onPress={() => {
+                    pinning.togglePin(column.id, 'left');
+                  }}
+                  disabled={!pinning.isPinned(column.id) && !pinning.canPin('left')}>
+                  {pinning.getPinPosition(column.id) === 'left' ? 'Unpin' : 'Pin Left'}
+                </Button>
+                <Button
+                  size="$2"
+                  onPress={() => {
+                    pinning.togglePin(column.id, 'right');
+                  }}
+                  disabled={!pinning.isPinned(column.id) && !pinning.canPin('right')}>
+                  {pinning.getPinPosition(column.id) === 'right' ? 'Unpin' : 'Pin Right'}
+                </Button>
               </XStack>
-            ))}
-          </YStack>
+            </XStack>
+          ))}
+        </YStack>
 
-          <Separator />
+        <Separator />
 
-          <XStack
-            padding="$4"
-            gap="$4">
-            <Text>Left: {pinning.pinnedLeftColumns.length}/2</Text>
-            <Text>Right: {pinning.pinnedRightColumns.length}/2</Text>
-          </XStack>
-        </Card>
-      </YStack>
-    );
-  },
+        <XStack
+          padding="$4"
+          gap="$4">
+          <Text>Left: {pinning.pinnedLeftColumns.length}/2</Text>
+          <Text>Right: {pinning.pinnedRightColumns.length}/2</Text>
+        </XStack>
+      </Card>
+    </YStack>
+  );
+};
+
+export const MaxPinnedColumns: Story = {
+  render: () => <MaxPinnedColumnsExample />,
+};
+
+const DisabledPinningExample = () => {
+  // oxlint-disable-next-line react/hook-use-state -- rows are a first-render snapshot and never update
+  const [data] = useState(defaultData.slice(0, 5));
+  // oxlint-disable-next-line react/incompatible-library -- story harness; TanStack's mutable table instance is the API under demo
+  const table = useReactTable({
+    data,
+    columns: defaultColumns.slice(0, 4),
+    getCoreRowModel: getCoreRowModel(),
+  });
+
+  const pinning = DataTableColumnPinning({
+    table,
+    allowPinning: false,
+  });
+
+  return (
+    <YStack
+      padding="$4"
+      gap="$4">
+      <Card>
+        <Card.Header>
+          <H3>Disabled Column Pinning</H3>
+          <Paragraph>Column pinning is disabled in this example</Paragraph>
+        </Card.Header>
+      </Card>
+
+      <Card>
+        <YStack padding="$4">
+          <Text color="$gray10">Pin buttons are not rendered when allowPinning is false</Text>
+          {table.getAllColumns().map((column) => (
+            <XStack
+              key={column.id}
+              alignItems="center"
+              justifyContent="space-between"
+              padding="$3"
+              borderBottomWidth={1}
+              borderColor="$borderColor">
+              <Text>{column.id}</Text>
+              <pinning.PinButton columnId={column.id} />
+            </XStack>
+          ))}
+        </YStack>
+      </Card>
+    </YStack>
+  );
 };
 
 export const DisabledPinning: Story = {
-  render: () => {
-    const [data] = useState(defaultData.slice(0, 5));
-    const table = useReactTable({
-      data,
-      columns: defaultColumns.slice(0, 4),
-      getCoreRowModel: getCoreRowModel(),
-    });
-
-    const pinning = DataTableColumnPinning({
-      table,
-      allowPinning: false,
-    });
-
-    return (
-      <YStack
-        padding="$4"
-        gap="$4">
-        <Card>
-          <Card.Header>
-            <H3>Disabled Column Pinning</H3>
-            <Paragraph>Column pinning is disabled in this example</Paragraph>
-          </Card.Header>
-        </Card>
-
-        <Card>
-          <YStack padding="$4">
-            <Text color="$gray10">Pin buttons are not rendered when allowPinning is false</Text>
-            {table.getAllColumns().map((column) => (
-              <XStack
-                key={column.id}
-                alignItems="center"
-                justifyContent="space-between"
-                padding="$3"
-                borderBottomWidth={1}
-                borderColor="$borderColor">
-                <Text>{column.id}</Text>
-                <pinning.PinButton columnId={column.id} />
-              </XStack>
-            ))}
-          </YStack>
-        </Card>
-      </YStack>
-    );
-  },
+  render: () => <DisabledPinningExample />,
 };

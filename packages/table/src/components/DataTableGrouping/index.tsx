@@ -1,4 +1,13 @@
-import { useDirection } from '@repo/ui';
+import {
+  ArrowDownIcon,
+  ArrowUpIcon,
+  ChartBarIcon,
+  CaretDownIcon,
+  CaretLeftIcon,
+  CaretRightIcon,
+  MinusIcon,
+  GearIcon,
+} from '@phosphor-icons/react';
 import { Button, FloatingPanel, Select } from '@repo/forms';
 import {
   ensureFocusVisibleRing,
@@ -10,26 +19,14 @@ import {
   useResolvedKnobs,
 } from '@repo/theme';
 import type { GroupPosition } from '@repo/theme';
-import {
-  ArrowDownIcon,
-  ArrowUpIcon,
-  ChartBarIcon,
-  CalculatorIcon,
-  CaretDownIcon,
-  CaretLeftIcon,
-  CaretRightIcon,
-  CaretUpIcon,
-  HashIcon,
-  MinusIcon,
-  PlusIcon,
-  GearIcon,
-} from '@phosphor-icons/react';
+import { useDirection } from '@repo/ui';
+import type { Table } from '@tanstack/react-table';
 import { useCallback, useMemo, useState } from 'react';
 import { Separator, Text, View, XStack, YStack, isWeb } from 'tamagui';
 
-import { iconSizeForToken } from '../../utils/chromeIcons';
-import { getViewLeafRows } from '../../utils/viewData';
-import { useDataTableState } from '../DataTable/DataTableStateContext';
+import { iconSizeForToken } from '../../utils/chrome-icons';
+import { getViewLeafRows } from '../../utils/view-data';
+import { useDataTableState } from '../DataTable/data-table-state-context';
 
 export type AggregationFunction = 'count' | 'sum' | 'avg' | 'min' | 'max' | 'custom';
 
@@ -37,7 +34,8 @@ export interface AggregationConfig {
   column: string;
   function: AggregationFunction;
   label?: string;
-  customFunction?: (values: any[]) => any;
+  // oxlint-disable-next-line typescript/method-signature-style, anti-slop/no-unknown-returns -- method syntax keeps callers' narrower callbacks (e.g. `(values: number[]) => number`) assignable; custom results are arbitrary and formatted at render
+  customFunction?(values: unknown[]): unknown;
 }
 
 export interface GroupingConfig {
@@ -48,25 +46,38 @@ export interface GroupingConfig {
   maxDepth?: number;
 }
 
-export interface GroupedData<T = any> {
+export type GroupingColumnType = 'string' | 'number' | 'date' | 'boolean';
+
+export interface GroupingColumn {
+  accessorKey?: string;
+  header?: string | React.ReactNode;
+  id?: string;
+  type?: GroupingColumnType;
+}
+
+export interface AggregationResult {
+  count?: number;
+  sum?: number;
+  avg?: number;
+  min?: number;
+  max?: number;
+  custom?: unknown;
+}
+
+export interface GroupedData<T = unknown> {
   key: string;
-  value: any;
+  value: unknown;
   count: number;
-  aggregations: Record<string, any>;
+  aggregations: Record<string, AggregationResult>;
   items: T[];
   children?: GroupedData<T>[];
   level: number;
-  path: any[];
+  path: unknown[];
 }
 
-export interface DataTableGroupingProps<T = any> {
+export interface DataTableGroupingProps<T = unknown> {
   data?: T[];
-  columns?: {
-    accessorKey?: string;
-    header?: string | React.ReactNode;
-    id?: string;
-    type?: 'string' | 'number' | 'date' | 'boolean';
-  }[];
+  columns?: GroupingColumn[];
   groupBy?: string[];
   aggregations?: AggregationConfig[];
   onGroupingChange?: (config: GroupingConfig) => void;
@@ -79,42 +90,63 @@ export interface DataTableGroupingProps<T = any> {
 }
 
 const EMPTY_EXPANDED_GROUPS = new Set<string>();
+const EMPTY_GROUP_BY: string[] = [];
+const EMPTY_AGGREGATIONS: AggregationConfig[] = [];
+const EMPTY_COLUMNS: GroupingColumn[] = [];
+const HOVER_BACKGROUND = '$backgroundHover';
 
 // SP-EDGE row density (getTableCellPadding precedent): the space knob moves
 // row padding; medium keeps the previous hardcoded $3/$2 defaults.
-const groupHeaderPaddingMap: Record<string, string> = {
-  small: '$2',
-  medium: '$3',
-  large: '$4',
-};
-const groupItemPaddingMap: Record<string, string> = {
-  small: '$1',
-  medium: '$2',
-  large: '$3',
-};
+const groupHeaderPaddingMap = new Map([
+  ['small', '$2'],
+  ['medium', '$3'],
+  ['large', '$4'],
+]);
+const groupItemPaddingMap = new Map([
+  ['small', '$1'],
+  ['medium', '$2'],
+  ['large', '$3'],
+]);
 
 // Tree indent rides the space knob so nested groups stay flush full-bleed
 // rows (padding, never margin) — AG Grid / Excel / Airtable grouping: the
 // chevron and label step in, the painted row still spans the stack.
-const groupIndentStepMap: Record<string, number> = {
-  small: 12,
-  medium: 16,
-  large: 24,
-};
+const groupIndentStepMap = new Map([
+  ['small', 12],
+  ['medium', 16],
+  ['large', 24],
+]);
 
 // T-VALUE meta text rides one step below the size-knob body scale (LC-18);
 // medium keeps the previous $3.
-const groupMetaSizeMap: Record<string, string> = {
-  $3: '$2',
-  $4: '$3',
-  $5: '$4',
-};
+const groupMetaSizeMap = new Map([
+  ['$3', '$2'],
+  ['$4', '$3'],
+  ['$5', '$4'],
+]);
+
+const popoverMinWidthMap = new Map([
+  ['$3', 320],
+  ['$5', 480],
+]);
+const popoverMaxWidthMap = new Map([
+  ['$3', 400],
+  ['$5', 560],
+]);
+
+const AGGREGATION_FUNCTION_OPTIONS: { value: AggregationFunction; label: string }[] = [
+  { value: 'count', label: 'Count' },
+  { value: 'sum', label: 'Sum' },
+  { value: 'avg', label: 'Average' },
+  { value: 'min', label: 'Minimum' },
+  { value: 'max', label: 'Maximum' },
+];
 
 // Chevron/tree glyphs are control-internal icons (LC-75/LC-79): the
 // generated recipe's icon channel (lossless vs the old $3/$4/$5 map).
 const groupIconSize = (token: string): number => iconSizeForToken(token);
 
-function groupStartRail(borderWidth: number) {
+const groupStartRail = (borderWidth: number) => {
   const width = borderWidth === 0 ? 0 : borderWidth * 4;
   return isWeb
     ? {
@@ -123,21 +155,29 @@ function groupStartRail(borderWidth: number) {
         borderInlineStartColor: '$color6',
       }
     : { borderStartWidth: width, borderStartColor: '$color6' };
-}
+};
 
-function groupIndent(space: string | undefined, level: number): number {
-  return (groupIndentStepMap[space ?? 'medium'] ?? 16) * Math.max(0, level);
-}
+const groupIndent = (space: string | undefined, level: number): number =>
+  (groupIndentStepMap.get(space ?? 'medium') ?? 16) * Math.max(0, level);
 
-function formatCellValue(value: unknown): string {
+// oxlint-disable-next-line anti-slop/no-unknown-parameters, anti-slop/no-unknown-returns -- generic row cells: T is unconstrained, so a field read has no schema at this layer
+const readField = (item: unknown, key: string): unknown =>
+  // SAFETY: grouping rows are caller-supplied records indexed by column accessor key; the value is consumed as unknown.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion, anti-slop/no-unsafe-dictionary-type -- generic row data has no schema at this layer
+  (item as Record<string, unknown>)[key];
+
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- cells of arbitrary row data; there is no parse boundary for a generic table
+const formatCellValue = (value: unknown): string => {
   if (value == null) {
     return '';
   }
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- cell values are arbitrary row data; numbers get the house number format
   if (typeof value === 'number') {
     return Number.isFinite(value) ? formatNumber(value) : '';
   }
+  // oxlint-disable-next-line typescript/no-base-to-string -- arbitrary cell values render through their own string form
   return String(value);
-}
+};
 
 /**
  * Group aggregates are the same number class as the cells they summarise, so
@@ -146,10 +186,12 @@ function formatCellValue(value: unknown): string {
  * by construction; a custom aggregation may return anything, and a
  * non-numeric result passes through as its own text.
  */
-export function formatAggregateValue(value: unknown, agg: AggregationConfig): string {
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- custom aggregations may return anything; this is the render boundary
+export const formatAggregateValue = (value: unknown, agg: AggregationConfig): string => {
   if (value == null) {
     return formatNumber(0);
   }
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- custom aggregation results are untyped; numbers get the house number format
   if (typeof value === 'number') {
     // The aggregation math is NaN-guarded upstream; keep the zero floor so a
     // guard slipping through still reads as a number, not a hole.
@@ -158,16 +200,464 @@ export function formatAggregateValue(value: unknown, agg: AggregationConfig): st
     }
     return agg.function === 'count' ? formatNumber(value, { maximumFractionDigits: 0 }) : formatNumber(value);
   }
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- custom aggregation results are untyped; numeric strings are localized
   if (typeof value === 'string') {
     const asNumber = Number(value);
     return value.trim() !== '' && Number.isFinite(asNumber) ? formatNumber(asNumber) : value;
   }
+  // oxlint-disable-next-line typescript/no-base-to-string -- non-numeric custom results pass through as their own text
   return String(value);
+};
+
+const getGroupKey = (group: GroupedData): string => group.path.join(' → ');
+
+const finiteNumbers = (values: unknown[]): number[] => {
+  const nums: number[] = [];
+  for (const value of values) {
+    const num = Number(value);
+    if (Number.isFinite(num)) {
+      nums.push(num);
+    }
+  }
+  return nums;
+};
+
+const columnsFromTable = <TData,>(table: Table<TData>): GroupingColumn[] =>
+  table.getAllColumns().map((col) => ({
+    id: col.id,
+    accessorKey: col.id,
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- TanStack header is a string or a render function; only strings are labels
+    header: typeof col.columnDef.header === 'string' ? col.columnDef.header : col.id,
+  }));
+
+// Data Grouping Utilities
+
+export const groupData = <T,>(data: T[], groupByColumns: string[], aggregations: AggregationConfig[], maxDepth = 5) => {
+  if (!groupByColumns.length) {
+    return null;
+  }
+
+  const [firstColumn] = groupByColumns;
+  const grouped = new Map<string, { items: T[]; key: unknown; path: unknown[] }>();
+
+  // Group data by the first column. Nullish coalescing (not ||) so falsy
+  // values like 0, false, and "" form their own groups instead of all
+  // collapsing into a shared "null" bucket.
+  for (const item of data) {
+    const firstGroupValue = readField(item, firstColumn);
+    // oxlint-disable-next-line typescript/no-base-to-string -- group keys stringify arbitrary row values by design
+    const key = String(firstGroupValue ?? 'null');
+
+    if (!grouped.has(key)) {
+      grouped.set(key, {
+        items: [],
+        key: firstGroupValue,
+        path: [firstGroupValue],
+      });
+    }
+
+    const bucket = grouped.get(key);
+    if (bucket) {
+      bucket.items.push(item);
+    }
+  }
+
+  // Convert to GroupedData format
+  const result = [...grouped.entries()].map(([key, group]) => {
+    const aggregationsResult: Record<string, AggregationResult> = {};
+
+    // Calculate aggregations
+    for (const agg of aggregations) {
+      const target = aggregationsResult[agg.column] ?? {};
+      aggregationsResult[agg.column] = target;
+
+      const values = group.items.map((item) => readField(item, agg.column)).filter((val) => val != null);
+
+      switch (agg.function) {
+        case 'count': {
+          target.count = group.items.length;
+          break;
+        }
+        case 'sum': {
+          target.sum = values.reduce<number>((acc, val) => acc + (Number(val) || 0), 0);
+          break;
+        }
+        case 'avg': {
+          const total = values.reduce<number>((acc, val) => acc + (Number(val) || 0), 0);
+          target.avg = values.length > 0 ? Math.round((total / values.length) * 100) / 100 : 0;
+          break;
+        }
+        case 'min': {
+          // Skip non-numeric values (e.g. date strings) — one bad value must
+          // not poison the whole aggregate with NaN.
+          const nums = finiteNumbers(values);
+          target.min = nums.length > 0 ? Math.min(...nums) : 0;
+          break;
+        }
+        case 'max': {
+          const nums = finiteNumbers(values);
+          target.max = nums.length > 0 ? Math.max(...nums) : 0;
+          break;
+        }
+        case 'custom': {
+          target.custom = agg.customFunction ? agg.customFunction(values) : null;
+          break;
+        }
+        default: {
+          break;
+        }
+      }
+    }
+
+    const groupedItem: GroupedData<T> = {
+      key,
+      value: group.key,
+      count: group.items.length,
+      aggregations: aggregationsResult,
+      items: group.items,
+      level: 0,
+      path: group.path,
+    };
+
+    // Recursively group children if more columns
+    if (groupByColumns.length > 1 && groupedItem.level < maxDepth - 1) {
+      const childGroups = groupData(group.items, groupByColumns.slice(1), aggregations, maxDepth);
+      if (childGroups) {
+        groupedItem.children = childGroups.map((child) => ({
+          ...child,
+          level: child.level + 1,
+          path: [group.key, ...child.path],
+        }));
+      }
+    }
+
+    return groupedItem;
+  });
+
+  return result;
+};
+
+interface GroupFooterProps<T> {
+  group: GroupedData<T>;
+  level: number;
+  renderCustomFooter: (group: GroupedData<T>, level: number) => React.ReactNode;
 }
 
-export function DataTableGrouping<T = any>(props: DataTableGroupingProps<T>) {
+const GroupFooter = <T,>({ group, level, renderCustomFooter }: GroupFooterProps<T>) => {
+  const { knobProps } = useResolvedKnobs();
+  return <View paddingInlineStart={groupIndent(knobProps.space, level)}>{renderCustomFooter(group, level)}</View>;
+};
+
+interface GroupItemsProps<T> {
+  items: T[];
+  columns?: GroupingColumn[];
+  level: number;
+  stackEnd: boolean;
+}
+
+const GroupItems = <T,>({ items, columns = EMPTY_COLUMNS, level, stackEnd }: GroupItemsProps<T>) => {
+  const { knobProps } = useResolvedKnobs();
+  const metaSize = groupMetaSizeMap.get(knobProps.sizeToken) ?? '$3';
+  const indent = groupIndent(knobProps.space, level);
+  const iconSize = groupIconSize(knobProps.sizeToken);
+  return (
+    <YStack>
+      {items.map((item, index) => {
+        const position = getGroupPosition(index, items.length);
+        const isLast = position === 'last' || position === 'only';
+        const corners = stackEdgeRadius(knobProps.borderRadius.borderRadius, {
+          start: false,
+          end: stackEnd && isLast,
+        });
+        return (
+          // oxlint-disable-next-line react-doctor/no-array-index-as-key -- generic rows carry no guaranteed id; the list is rebuilt from the grouped view
+          <YStack key={index}>
+            {index > 0 ? <View {...hairline.line} /> : null}
+            <XStack
+              {...corners}
+              padding={groupItemPaddingMap.get(knobProps.space) ?? '$2'}
+              paddingInlineStart={indent + iconSize}
+              overflow="hidden"
+              backgroundColor={index % 2 === 0 ? '$background' : '$color2'}
+              hoverStyle={{ backgroundColor: HOVER_BACKGROUND, ...corners }}
+              data-testid="data-table-group-item"
+              data-group-position={position}
+              data-stack-end={stackEnd && isLast ? 'true' : 'false'}>
+              {columns.length > 0 ? (
+                columns.map((column, colIndex) => {
+                  const key = column.accessorKey ?? column.id ?? `col-${colIndex}`;
+                  const value = readField(item, key);
+                  return (
+                    <View
+                      key={key}
+                      flex={1}
+                      minWidth={0}>
+                      <Text
+                        fontSize={metaSize}
+                        numberOfLines={1}>
+                        {formatCellValue(value)}
+                      </Text>
+                    </View>
+                  );
+                })
+              ) : (
+                <Text fontSize={metaSize}>{JSON.stringify(item, null, 2)}</Text>
+              )}
+            </XStack>
+          </YStack>
+        );
+      })}
+    </YStack>
+  );
+};
+
+interface GroupHeaderProps<T> {
+  group: GroupedData<T>;
+  level: number;
+  isExpanded: boolean;
+  hasChildren: boolean;
+  aggregations: AggregationConfig[];
+  showAggregations?: boolean;
+  onToggleExpansion: () => void;
+  renderCustomHeader?: (group: GroupedData<T>, level: number) => React.ReactNode;
+  position?: GroupPosition;
+  stackStart: boolean;
+  stackEnd: boolean;
+}
+
+const GroupHeader = <T,>({
+  group,
+  level,
+  isExpanded,
+  hasChildren,
+  aggregations,
+  showAggregations,
+  onToggleExpansion,
+  renderCustomHeader,
+  position = 'only',
+  stackStart,
+  stackEnd,
+}: GroupHeaderProps<T>) => {
+  const { knobProps } = useResolvedKnobs();
+  const CollapsedCaretIcon = useDirection() === 'rtl' ? CaretLeftIcon : CaretRightIcon;
+  const corners = stackEdgeRadius(knobProps.borderRadius.borderRadius, {
+    start: stackStart,
+    end: stackEnd,
+  });
+  const iconSize = groupIconSize(knobProps.sizeToken);
+  const metaSize = groupMetaSizeMap.get(knobProps.sizeToken) ?? '$3';
+  const indent = groupIndent(knobProps.space, level);
+  // oxlint-disable-next-line typescript/no-base-to-string -- group values are arbitrary row values shown as their own text
+  const label = group.value == null || group.value === '' ? 'No Value' : String(group.value);
+  const countLabel = `${formatNumber(group.count, { maximumFractionDigits: 0 })} item${group.count === 1 ? '' : 's'}`;
+
+  if (renderCustomHeader) {
+    return <View>{renderCustomHeader(group, level)}</View>;
+  }
+
+  return (
+    <XStack
+      {...corners}
+      {...groupStartRail(knobProps.borderRadius.borderWidth || 0)}
+      alignItems="center"
+      gap="$2"
+      minHeight={44}
+      padding={groupHeaderPaddingMap.get(knobProps.space) ?? '$3'}
+      backgroundColor={knobProps.inputBackground}
+      overflow="hidden"
+      cursor="pointer"
+      hoverStyle={{ backgroundColor: HOVER_BACKGROUND, ...corners }}
+      pressStyle={{ backgroundColor: '$backgroundPress', ...corners }}
+      onPress={onToggleExpansion}
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- the header is a full-width XStack flex row (tamagui), not an HTML element; role + keyboard handler make it a button
+      role="button"
+      tabIndex={0}
+      aria-expanded={isExpanded}
+      aria-label={`${label}, ${countLabel}`}
+      outlineWidth={0}
+      focusStyle={{ outlineWidth: 0 }}
+      focusVisibleStyle={ensureFocusVisibleRing({ outlineOffset: -2 })}
+      data-testid="data-table-group-header"
+      data-group-position={position}
+      data-stack-start={stackStart ? 'true' : 'false'}
+      data-stack-end={stackEnd ? 'true' : 'false'}
+      onKeyDown={(e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onToggleExpansion();
+        }
+      }}>
+      <View
+        width={indent + iconSize + 4}
+        alignItems="center"
+        paddingInlineStart={indent}>
+        {hasChildren && (isExpanded ? <CaretDownIcon size={iconSize} /> : <CollapsedCaretIcon size={iconSize} />)}
+      </View>
+
+      <XStack
+        flex={1}
+        alignItems="center"
+        justifyContent="space-between"
+        gap="$3"
+        flexWrap="wrap">
+        <XStack
+          alignItems="center"
+          gap="$2"
+          flexShrink={1}
+          minWidth={0}>
+          <Text
+            {...knobProps.label}
+            fontWeight="400"
+            numberOfLines={1}>
+            {label}
+          </Text>
+          <Text
+            fontSize={metaSize}
+            color="$color11">
+            ({countLabel})
+          </Text>
+        </XStack>
+
+        {showAggregations && aggregations.length > 0 && (
+          <XStack
+            gap="$3"
+            flexWrap="wrap"
+            justifyContent="flex-end">
+            {aggregations.map((agg, index) => {
+              const aggLabel = agg.label ?? `${agg.function}(${agg.column})`;
+              return (
+                <XStack
+                  // oxlint-disable-next-line react-doctor/no-array-index-as-key -- aggregation configs carry no id and the same aggregation may repeat
+                  key={index}
+                  alignItems="baseline"
+                  gap="$1">
+                  <Text
+                    fontSize={metaSize}
+                    color="$color11">
+                    {`${aggLabel}:`}
+                  </Text>
+                  <Text
+                    {...knobProps.label}
+                    fontWeight="400">
+                    {formatAggregateValue(group.aggregations[agg.column]?.[agg.function], agg)}
+                  </Text>
+                </XStack>
+              );
+            })}
+          </XStack>
+        )}
+      </XStack>
+    </XStack>
+  );
+};
+
+interface GroupedDataRendererProps<T> {
+  groupedData: GroupedData<T>[];
+  columns: DataTableGroupingProps<T>['columns'];
+  level: number;
+  /** This level occupies the root stack's leading edge (LC-72). */
+  stackStart: boolean;
+  /** This level occupies the root stack's trailing edge (LC-72). */
+  stackEnd: boolean;
+  aggregations: AggregationConfig[];
+  showAggregations?: boolean;
+  expandedGroups: Set<string>;
+  onToggleExpansion: (groupKey: string) => void;
+  renderGroupHeader?: (group: GroupedData<T>, level: number) => React.ReactNode;
+  renderGroupFooter?: (group: GroupedData<T>, level: number) => React.ReactNode;
+}
+
+const GroupedDataRenderer = <T,>({
+  groupedData,
+  columns,
+  level,
+  stackStart,
+  stackEnd,
+  aggregations,
+  showAggregations,
+  expandedGroups,
+  onToggleExpansion,
+  renderGroupHeader,
+  renderGroupFooter,
+}: GroupedDataRendererProps<T>) => (
+  <YStack>
+    {groupedData.map((group, groupIndex) => {
+      const groupKey = getGroupKey(group);
+      const isExpanded = expandedGroups.has(groupKey);
+      const isExpandable = (group.children?.length ?? 0) > 0 || group.items.length > 0;
+      const position = getGroupPosition(groupIndex, groupedData.length);
+      const isFirst = position === 'first' || position === 'only';
+      const isLast = position === 'last' || position === 'only';
+      // Nested groups sit under a parent header, so they never own the
+      // stack's leading corners. An OPEN header abuts its own content, so
+      // it drops trailing radius even when it is last (accordion corollary).
+      const headerStart = stackStart && isFirst;
+      const headerEnd = stackEnd && isLast && !isExpanded;
+      const childStackEnd = stackEnd && isLast;
+
+      return (
+        <YStack key={groupKey}>
+          {groupIndex > 0 ? <View {...hairline.line} /> : null}
+          <GroupHeader
+            group={group}
+            level={level}
+            isExpanded={isExpanded}
+            hasChildren={isExpandable}
+            aggregations={aggregations}
+            showAggregations={showAggregations ?? true}
+            onToggleExpansion={() => {
+              onToggleExpansion(groupKey);
+            }}
+            renderCustomHeader={renderGroupHeader}
+            position={position}
+            stackStart={headerStart}
+            stackEnd={headerEnd}
+          />
+
+          {isExpanded && (
+            <>
+              <View {...hairline.line} />
+              {group.children && group.children.length > 0 ? (
+                <GroupedDataRenderer
+                  groupedData={group.children}
+                  columns={columns}
+                  level={level + 1}
+                  stackStart={false}
+                  stackEnd={childStackEnd}
+                  aggregations={aggregations}
+                  showAggregations={showAggregations}
+                  expandedGroups={expandedGroups}
+                  onToggleExpansion={onToggleExpansion}
+                  renderGroupHeader={renderGroupHeader}
+                  renderGroupFooter={renderGroupFooter}
+                />
+              ) : (
+                <GroupItems
+                  items={group.items}
+                  columns={columns}
+                  level={level + 1}
+                  stackEnd={childStackEnd}
+                />
+              )}
+            </>
+          )}
+
+          {renderGroupFooter && isExpanded && (
+            <GroupFooter
+              group={group}
+              level={level}
+              renderCustomFooter={renderGroupFooter}
+            />
+          )}
+        </YStack>
+      );
+    })}
+  </YStack>
+);
+
+export const DataTableGrouping = <T = unknown,>(props: DataTableGroupingProps<T>) => {
   // Try to consume from DataTableStateContext (compound component pattern)
-  const ctx = useDataTableState();
+  const ctx = useDataTableState<T>();
 
   // Resolve values: explicit props override context values.
   // Context data is the CURRENT VIEW (filtered + sorted, same source as
@@ -175,22 +665,14 @@ export function DataTableGrouping<T = any>(props: DataTableGroupingProps<T>) {
   // ordered groups and their items by insertion order regardless of the
   // visible sort.
   const data = props.data ?? (ctx ? getViewLeafRows<T>(ctx.table) : []);
-  const columns =
-    props.columns ??
-    (ctx
-      ? ctx.table.getAllColumns().map((col) => ({
-          id: col.id,
-          accessorKey: col.id,
-          header: typeof col.columnDef.header === 'string' ? col.columnDef.header : col.id,
-        }))
-      : []);
+  const columns = props.columns ?? (ctx ? columnsFromTable(ctx.table) : []);
 
   const {
-    groupBy = [],
-    aggregations = [],
+    groupBy = EMPTY_GROUP_BY,
+    aggregations = EMPTY_AGGREGATIONS,
     renderGroupHeader,
     renderGroupFooter,
-    showAggregations = true as boolean,
+    showAggregations = true,
     expandedGroups: expandedGroupsProp,
     onExpandedGroupsChange,
     maxDepth = 5,
@@ -209,6 +691,7 @@ export function DataTableGrouping<T = any>(props: DataTableGroupingProps<T>) {
       return null;
     }
     return groupData(data, groupBy, aggregations, maxDepth);
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- context rows are rebuilt from the live table every render (no stable identity); the memo only saves work when props.data is stable
   }, [data, groupBy, aggregations, maxDepth]);
 
   // Handle group expansion
@@ -248,370 +731,132 @@ export function DataTableGrouping<T = any>(props: DataTableGroupingProps<T>) {
       renderGroupFooter={renderGroupFooter}
     />
   );
+};
+
+// Aggregation Selector Component
+
+interface AggregationSelectorProps {
+  columns: GroupingColumn[];
+  onAddAggregation: (aggregation: AggregationConfig) => void;
 }
 
-interface GroupedDataRendererProps<T = any> {
-  groupedData: GroupedData<T>[];
-  columns: DataTableGroupingProps<T>['columns'];
-  level: number;
-  /** This level occupies the root stack's leading edge (LC-72). */
-  stackStart: boolean;
-  /** This level occupies the root stack's trailing edge (LC-72). */
-  stackEnd: boolean;
-  aggregations: AggregationConfig[];
-  showAggregations?: boolean;
-  expandedGroups: Set<string>;
-  onToggleExpansion: (groupKey: string) => void;
-  renderGroupHeader?: (group: GroupedData<T>, level: number) => React.ReactNode;
-  renderGroupFooter?: (group: GroupedData<T>, level: number) => React.ReactNode;
-}
-
-function GroupedDataRenderer<T = any>({
-  groupedData,
-  columns,
-  level,
-  stackStart,
-  stackEnd,
-  aggregations,
-  showAggregations,
-  expandedGroups,
-  onToggleExpansion,
-  renderGroupHeader,
-  renderGroupFooter,
-}: GroupedDataRendererProps<T>) {
-  return (
-    <YStack>
-      {groupedData.map((group, groupIndex) => {
-        const groupKey = getGroupKey(group);
-        const isExpanded = expandedGroups.has(groupKey);
-        const isExpandable = (group.children?.length ?? 0) > 0 || group.items.length > 0;
-        const position = getGroupPosition(groupIndex, groupedData.length);
-        const isFirst = position === 'first' || position === 'only';
-        const isLast = position === 'last' || position === 'only';
-        // Nested groups sit under a parent header, so they never own the
-        // stack's leading corners. An OPEN header abuts its own content, so
-        // it drops trailing radius even when it is last (accordion corollary).
-        const headerStart = stackStart && isFirst;
-        const headerEnd = stackEnd && isLast && !isExpanded;
-        const childStackEnd = stackEnd && isLast;
-
-        return (
-          <YStack key={groupKey}>
-            {groupIndex > 0 ? <View {...hairline.line} /> : null}
-            <GroupHeader
-              group={group}
-              level={level}
-              isExpanded={isExpanded}
-              hasChildren={isExpandable}
-              aggregations={aggregations}
-              showAggregations={showAggregations ?? true}
-              onToggleExpansion={() => {
-                onToggleExpansion(groupKey);
-              }}
-              renderCustomHeader={renderGroupHeader}
-              position={position}
-              stackStart={headerStart}
-              stackEnd={headerEnd}
-            />
-
-            {isExpanded && (
-              <>
-                <View {...hairline.line} />
-                {group.children && group.children.length > 0 ? (
-                  <GroupedDataRenderer
-                    groupedData={group.children}
-                    columns={columns}
-                    level={level + 1}
-                    stackStart={false}
-                    stackEnd={childStackEnd}
-                    aggregations={aggregations}
-                    showAggregations={showAggregations}
-                    expandedGroups={expandedGroups}
-                    onToggleExpansion={onToggleExpansion}
-                    renderGroupHeader={renderGroupHeader}
-                    renderGroupFooter={renderGroupFooter}
-                  />
-                ) : (
-                  <GroupItems
-                    items={group.items}
-                    columns={columns}
-                    level={level + 1}
-                    stackEnd={childStackEnd}
-                  />
-                )}
-              </>
-            )}
-
-            {renderGroupFooter && isExpanded && (
-              <GroupFooter
-                group={group}
-                level={level}
-                renderCustomFooter={renderGroupFooter}
-              />
-            )}
-          </YStack>
-        );
-      })}
-    </YStack>
-  );
-}
-
-interface GroupHeaderProps<T = any> {
-  group: GroupedData<T>;
-  level: number;
-  isExpanded: boolean;
-  hasChildren: boolean;
-  aggregations: AggregationConfig[];
-  showAggregations?: boolean;
-  onToggleExpansion: () => void;
-  renderCustomHeader?: (group: GroupedData<T>, level: number) => React.ReactNode;
-  position?: GroupPosition;
-  stackStart: boolean;
-  stackEnd: boolean;
-}
-
-function GroupHeader<T = any>({
-  group,
-  level,
-  isExpanded,
-  hasChildren,
-  aggregations,
-  showAggregations,
-  onToggleExpansion,
-  renderCustomHeader,
-  position = 'only',
-  stackStart,
-  stackEnd,
-}: GroupHeaderProps<T>) {
+const AggregationSelector = ({ columns, onAddAggregation }: AggregationSelectorProps) => {
   const { knobProps } = useResolvedKnobs();
-  const CollapsedCaretIcon = useDirection() === 'rtl' ? CaretLeftIcon : CaretRightIcon;
-  const corners = stackEdgeRadius(knobProps.borderRadius.borderRadius, {
-    start: stackStart,
-    end: stackEnd,
-  });
-  const iconSize = groupIconSize(String(knobProps.sizeToken));
-  const metaSize = groupMetaSizeMap[knobProps.sizeToken] ?? '$3';
-  const indent = groupIndent(knobProps.space, level);
-  const label = group.value == null || group.value === '' ? 'No Value' : String(group.value);
-  const countLabel = `${formatNumber(group.count, { maximumFractionDigits: 0 })} item${group.count === 1 ? '' : 's'}`;
+  const [selectedColumn, setSelectedColumn] = useState<string>('');
+  const [selectedFunction, setSelectedFunction] = useState<AggregationFunction>('count');
 
-  if (renderCustomHeader) {
-    return <View>{renderCustomHeader(group, level)}</View>;
-  }
+  // Convert columns to forms Select options
+  const columnOptions = useMemo(
+    () =>
+      columns.map((column) => {
+        const key = column.accessorKey ?? column.id ?? '';
+        return {
+          value: key,
+          // oxlint-disable-next-line anti-slop/no-runtime-typeof -- header is a ReactNode; only string headers are usable as option labels
+          label: typeof column.header === 'string' ? column.header : key,
+        };
+      }),
+    [columns],
+  );
+
+  const handleAdd = () => {
+    if (!selectedColumn) {
+      return;
+    }
+
+    const column = columns.find((col) => (col.accessorKey ?? col.id) === selectedColumn);
+    const aggregation: AggregationConfig = {
+      column: selectedColumn,
+      function: selectedFunction,
+      // oxlint-disable-next-line typescript/no-base-to-string -- headers are strings in practice; a ReactNode header keeps its previous stringification
+      label: `${selectedFunction} of ${String(column?.header ?? selectedColumn)}`,
+    };
+
+    onAddAggregation(aggregation);
+    setSelectedColumn('');
+    setSelectedFunction('count');
+  };
 
   return (
-    <XStack
-      {...corners}
-      {...groupStartRail(Number(knobProps.borderRadius.borderWidth) || 0)}
-      alignItems="center"
-      gap="$2"
-      minHeight={44}
-      padding={groupHeaderPaddingMap[knobProps.space] ?? '$3'}
-      backgroundColor={knobProps.inputBackground}
-      overflow="hidden"
-      cursor="pointer"
-      hoverStyle={{ backgroundColor: '$backgroundHover', ...corners }}
-      pressStyle={{ backgroundColor: '$backgroundPress', ...corners }}
-      onPress={onToggleExpansion}
-      role="button"
-      tabIndex={0}
-      aria-expanded={isExpanded}
-      aria-label={`${label}, ${countLabel}`}
-      outlineWidth={0}
-      focusStyle={{ outlineWidth: 0 }}
-      focusVisibleStyle={ensureFocusVisibleRing({ outlineOffset: -2 })}
-      {...({
-        'data-testid': 'data-table-group-header',
-        'data-group-position': position,
-        'data-stack-start': stackStart ? 'true' : 'false',
-        'data-stack-end': stackEnd ? 'true' : 'false',
-        onKeyDown: (e: React.KeyboardEvent) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            onToggleExpansion();
-          }
-        },
-      } as any)}>
-      <View
-        width={indent + iconSize + 4}
-        alignItems="center"
-        paddingInlineStart={indent}>
-        {hasChildren && (isExpanded ? <CaretDownIcon size={iconSize} /> : <CollapsedCaretIcon size={iconSize} />)}
-      </View>
+    <YStack gap="$2">
+      <Text
+        {...knobProps.label}
+        fontWeight="400">
+        Add Aggregation
+      </Text>
 
       <XStack
-        flex={1}
-        alignItems="center"
-        justifyContent="space-between"
-        gap="$3"
-        flexWrap="wrap">
-        <XStack
-          alignItems="center"
-          gap="$2"
-          flexShrink={1}
-          minWidth={0}>
-          <Text
-            {...knobProps.label}
-            fontWeight="400"
-            numberOfLines={1}>
-            {label}
-          </Text>
-          <Text
-            fontSize={metaSize}
-            color="$color11">
-            ({countLabel})
-          </Text>
-        </XStack>
+        gap="$2"
+        alignItems="flex-end">
+        <View flex={1}>
+          <Select
+            value={selectedColumn}
+            onChange={(v) => {
+              if (!Array.isArray(v)) {
+                setSelectedColumn(v);
+              }
+            }}
+            options={columnOptions}
+            placeholder="Select column..."
+            aria-label="Aggregation column"
+          />
+        </View>
 
-        {showAggregations && aggregations.length > 0 && (
-          <XStack
-            gap="$3"
-            flexWrap="wrap"
-            justifyContent="flex-end">
-            {aggregations.map((agg, index) => (
-              <XStack
-                key={index}
-                alignItems="baseline"
-                gap="$1">
-                <Text
-                  fontSize={metaSize}
-                  color="$color11">
-                  {`${agg.label ?? `${agg.function}(${agg.column})`}:`}
-                </Text>
-                <Text
-                  {...knobProps.label}
-                  fontWeight="400">
-                  {formatAggregateValue(group.aggregations[agg.column]?.[agg.function], agg)}
-                </Text>
-              </XStack>
-            ))}
-          </XStack>
-        )}
+        <View width={140}>
+          <Select
+            value={selectedFunction}
+            onChange={(v) => {
+              const match = AGGREGATION_FUNCTION_OPTIONS.find((option) => option.value === v);
+              if (match) {
+                setSelectedFunction(match.value);
+              }
+            }}
+            options={AGGREGATION_FUNCTION_OPTIONS}
+            aria-label="Aggregation function"
+          />
+        </View>
+
+        <Button
+          size={knobProps.sizeToken}
+          disabled={!selectedColumn}
+          onPress={handleAdd}>
+          Add
+        </Button>
       </XStack>
-    </XStack>
-  );
-}
-
-interface GroupItemsProps<T = any> {
-  items: T[];
-  columns?: {
-    accessorKey?: string;
-    header?: string | React.ReactNode;
-    id?: string;
-  }[];
-  level: number;
-  stackEnd: boolean;
-}
-
-function GroupItems<T = any>({ items, columns = [], level, stackEnd }: GroupItemsProps<T>) {
-  const { knobProps } = useResolvedKnobs();
-  const metaSize = groupMetaSizeMap[knobProps.sizeToken] ?? '$3';
-  const indent = groupIndent(knobProps.space, level);
-  const iconSize = groupIconSize(String(knobProps.sizeToken));
-  return (
-    <YStack>
-      {items.map((item, index) => {
-        const position = getGroupPosition(index, items.length);
-        const isLast = position === 'last' || position === 'only';
-        const corners = stackEdgeRadius(knobProps.borderRadius.borderRadius, {
-          start: false,
-          end: stackEnd && isLast,
-        });
-        return (
-          <YStack key={index}>
-            {index > 0 ? <View {...hairline.line} /> : null}
-            <XStack
-              {...corners}
-              padding={groupItemPaddingMap[knobProps.space] ?? '$2'}
-              paddingInlineStart={indent + iconSize}
-              overflow="hidden"
-              backgroundColor={index % 2 === 0 ? '$background' : '$color2'}
-              hoverStyle={{ backgroundColor: '$backgroundHover', ...corners }}
-              {...({
-                'data-testid': 'data-table-group-item',
-                'data-group-position': position,
-                'data-stack-end': stackEnd && isLast ? 'true' : 'false',
-              } as any)}>
-              {columns.length > 0 ? (
-                columns.map((column, colIndex) => {
-                  const key = column.accessorKey ?? column.id ?? `col-${colIndex}`;
-                  const value = (item as any)[key];
-                  return (
-                    <View
-                      key={key}
-                      flex={1}
-                      minWidth={0}>
-                      <Text
-                        fontSize={metaSize}
-                        numberOfLines={1}>
-                        {formatCellValue(value)}
-                      </Text>
-                    </View>
-                  );
-                })
-              ) : (
-                <Text fontSize={metaSize}>{JSON.stringify(item, null, 2)}</Text>
-              )}
-            </XStack>
-          </YStack>
-        );
-      })}
     </YStack>
   );
-}
-
-interface GroupFooterProps<T = any> {
-  group: GroupedData<T>;
-  level: number;
-  renderCustomFooter: (group: GroupedData<T>, level: number) => React.ReactNode;
-}
-
-function GroupFooter<T = any>({ group, level, renderCustomFooter }: GroupFooterProps<T>) {
-  const { knobProps } = useResolvedKnobs();
-  return <View paddingInlineStart={groupIndent(knobProps.space, level)}>{renderCustomFooter(group, level)}</View>;
-}
+};
 
 // Grouping Configuration Component
 
-export interface DataTableGroupingConfigProps<_T = any> {
-  columns?: {
-    accessorKey?: string;
-    header?: string | React.ReactNode;
-    id?: string;
-    type?: 'string' | 'number' | 'date' | 'boolean';
-  }[];
+export interface DataTableGroupingConfigProps<_T = unknown> {
+  columns?: GroupingColumn[];
   currentConfig: GroupingConfig;
   onConfigChange: (config: GroupingConfig) => void;
   disabled?: boolean;
 }
 
-export function DataTableGroupingConfig<T = any>(props: DataTableGroupingConfigProps<T>) {
+// oxlint-disable-next-line react-doctor/no-giant-component -- one popover body: group-by list, aggregation list and clear-all share the config handlers
+export const DataTableGroupingConfig = <T = unknown,>(props: DataTableGroupingConfigProps<T>) => {
   // Try to consume from DataTableStateContext (compound component pattern)
   const ctx = useDataTableState();
 
   // Resolve values: explicit props override context values
-  const columns =
-    props.columns ??
-    (ctx
-      ? ctx.table.getAllColumns().map((col) => ({
-          id: col.id,
-          accessorKey: col.id,
-          header: typeof col.columnDef.header === 'string' ? col.columnDef.header : col.id,
-        }))
-      : []);
+  const columns = props.columns ?? (ctx ? columnsFromTable(ctx.table) : []);
 
   const { currentConfig, onConfigChange, disabled = false } = props;
 
   const { knobProps } = useResolvedKnobs();
   const sz = knobProps.sizeToken;
-  const popoverMinWidth = sz === '$3' ? 320 : sz === '$5' ? 480 : 400;
-  const popoverMaxWidth = sz === '$3' ? 400 : sz === '$5' ? 560 : 500;
+  const popoverMinWidth = popoverMinWidthMap.get(sz) ?? 400;
+  const popoverMaxWidth = popoverMaxWidthMap.get(sz) ?? 500;
   const [isOpen, setIsOpen] = useState(false);
 
   // Available columns for grouping
+  const groupedColumnKeys = new Set(currentConfig.columns);
   const availableColumns = columns.filter((col) => {
     const key = col.accessorKey ?? col.id ?? '';
-    return key && !currentConfig.columns.includes(key);
+    return key !== '' && !groupedColumnKeys.has(key);
   });
 
   // Available columns for aggregation
@@ -662,7 +907,7 @@ export function DataTableGroupingConfig<T = any>(props: DataTableGroupingConfigP
     onConfigChange({ ...currentConfig, columns: next });
   };
 
-  const iconSize = groupIconSize(String(sz));
+  const iconSize = groupIconSize(sz);
   const radius = knobProps.borderRadius.borderRadius;
 
   const trigger = (
@@ -741,6 +986,7 @@ export function DataTableGroupingConfig<T = any>(props: DataTableGroupingConfigP
               const column = columns.find((col) => (col.accessorKey ?? col.id) === columnKey);
               const position = getGroupPosition(index, currentConfig.columns.length);
               const corners = stackRadiusProps(position, radius);
+              // oxlint-disable-next-line typescript/no-base-to-string -- headers are strings in practice; a ReactNode header keeps its previous stringification
               const label = String(column?.header ?? columnKey);
               return (
                 <YStack key={columnKey}>
@@ -752,8 +998,8 @@ export function DataTableGroupingConfig<T = any>(props: DataTableGroupingConfigP
                     overflow="hidden"
                     backgroundColor="$color2"
                     {...corners}
-                    hoverStyle={{ backgroundColor: '$backgroundHover', ...corners }}
-                    {...({ 'data-group-position': position } as any)}>
+                    hoverStyle={{ backgroundColor: HOVER_BACKGROUND, ...corners }}
+                    data-group-position={position}>
                     <Text
                       fontSize="$3"
                       flex={1}
@@ -843,6 +1089,7 @@ export function DataTableGroupingConfig<T = any>(props: DataTableGroupingConfigP
               const position = getGroupPosition(index, currentConfig.aggregations.length);
               const corners = stackRadiusProps(position, radius);
               return (
+                // oxlint-disable-next-line react-doctor/no-array-index-as-key -- aggregation configs carry no id and the same aggregation may repeat; removal is by index
                 <YStack key={`${agg.function}-${agg.column}-${index}`}>
                   {index > 0 ? <View {...hairline.line} /> : null}
                   <XStack
@@ -852,13 +1099,13 @@ export function DataTableGroupingConfig<T = any>(props: DataTableGroupingConfigP
                     overflow="hidden"
                     backgroundColor="$color2"
                     {...corners}
-                    hoverStyle={{ backgroundColor: '$backgroundHover', ...corners }}
-                    {...({ 'data-group-position': position } as any)}>
+                    hoverStyle={{ backgroundColor: HOVER_BACKGROUND, ...corners }}
+                    data-group-position={position}>
                     <Text
                       fontSize="$3"
                       flex={1}
                       numberOfLines={1}>
-                      {agg.function}({agg.column}){agg.label && ` as "${agg.label}"`}
+                      {agg.function}({agg.column}){agg.label !== undefined && agg.label !== '' && ` as "${agg.label}"`}
                     </Text>
                     <Button
                       size={knobProps.sizeToken}
@@ -900,246 +1147,17 @@ export function DataTableGroupingConfig<T = any>(props: DataTableGroupingConfigP
       </YStack>
     </FloatingPanel>
   );
-}
-
-// Aggregation Selector Component
-
-interface AggregationSelectorProps<_T = any> {
-  columns: {
-    accessorKey?: string;
-    header?: string | React.ReactNode;
-    id?: string;
-    type?: 'string' | 'number' | 'date' | 'boolean';
-  }[];
-  onAddAggregation: (aggregation: AggregationConfig) => void;
-}
-
-function AggregationSelector<T = any>({ columns, onAddAggregation }: AggregationSelectorProps<T>) {
-  const { knobProps } = useResolvedKnobs();
-  const iconPx = groupIconSize(String(knobProps.sizeToken));
-  const [selectedColumn, setSelectedColumn] = useState<string>('');
-  const [selectedFunction, setSelectedFunction] = useState<AggregationFunction>('count');
-
-  const aggregationFunctions: {
-    value: AggregationFunction;
-    label: string;
-    icon: React.ReactNode;
-  }[] = [
-    { value: 'count', label: 'Count', icon: <HashIcon size={iconPx} /> },
-    { value: 'sum', label: 'Sum', icon: <PlusIcon size={iconPx} /> },
-    { value: 'avg', label: 'Average', icon: <CalculatorIcon size={iconPx} /> },
-    { value: 'min', label: 'Minimum', icon: <MinusIcon size={iconPx} /> },
-    { value: 'max', label: 'Maximum', icon: <CaretUpIcon size={iconPx} /> },
-  ];
-
-  // Convert columns to forms Select options
-  const columnOptions = useMemo(
-    () =>
-      columns.map((column) => {
-        const key = column.accessorKey ?? column.id ?? '';
-        return {
-          value: key,
-          label: typeof column.header === 'string' ? column.header : key,
-        };
-      }),
-    [columns],
-  );
-
-  // Convert aggregation functions to forms Select options
-  const functionOptions = useMemo(
-    () =>
-      aggregationFunctions.map((func) => ({
-        value: func.value,
-        label: func.label,
-      })),
-    [],
-  );
-
-  const handleAdd = () => {
-    if (!selectedColumn) {
-      return;
-    }
-
-    const column = columns.find((col) => (col.accessorKey ?? col.id) === selectedColumn);
-    const aggregation: AggregationConfig = {
-      column: selectedColumn,
-      function: selectedFunction,
-      label: `${selectedFunction} of ${column?.header ?? selectedColumn}`,
-    };
-
-    onAddAggregation(aggregation);
-    setSelectedColumn('');
-    setSelectedFunction('count');
-  };
-
-  return (
-    <YStack gap="$2">
-      <Text
-        {...knobProps.label}
-        fontWeight="400">
-        Add Aggregation
-      </Text>
-
-      <XStack
-        gap="$2"
-        alignItems="flex-end">
-        <View flex={1}>
-          <Select
-            value={selectedColumn}
-            onValueChange={(v) => {
-              if (typeof v === 'string') {
-                setSelectedColumn(v);
-              }
-            }}
-            options={columnOptions}
-            placeholder="Select column..."
-            aria-label="Aggregation column"
-          />
-        </View>
-
-        <View width={140}>
-          <Select
-            value={selectedFunction}
-            onValueChange={(v) => {
-              if (typeof v === 'string') {
-                setSelectedFunction(v as AggregationFunction);
-              }
-            }}
-            options={functionOptions}
-            aria-label="Aggregation function"
-          />
-        </View>
-
-        <Button
-          size={knobProps.sizeToken}
-          disabled={!selectedColumn}
-          onPress={handleAdd}>
-          Add
-        </Button>
-      </XStack>
-    </YStack>
-  );
-}
-
-// Data Grouping Utilities
-
-export function groupData<T>(data: T[], groupByColumns: string[], aggregations: AggregationConfig[], maxDepth = 5) {
-  if (!groupByColumns.length) {
-    return null;
-  }
-
-  const grouped = new Map<string, { items: T[]; key: any; path: any[] }>();
-
-  // Group data by the first column. Nullish coalescing (not ||) so falsy
-  // values like 0, false, and "" form their own groups instead of all
-  // collapsing into a shared "null" bucket.
-  data.forEach((item) => {
-    const firstGroupValue = (item as any)[groupByColumns[0]];
-    const key = String(firstGroupValue ?? 'null');
-
-    if (!grouped.has(key)) {
-      grouped.set(key, {
-        items: [],
-        key: firstGroupValue,
-        path: [firstGroupValue],
-      });
-    }
-
-    const groupData = grouped.get(key);
-    if (groupData) {
-      groupData.items.push(item);
-    }
-  });
-
-  // Convert to GroupedData format
-  const result = [...grouped.entries()].map(([key, group]) => {
-    const aggregationsResult: Record<string, any> = {};
-
-    // Calculate aggregations
-    aggregations.forEach((agg) => {
-      aggregationsResult[agg.column] ??= {};
-
-      const values = group.items.map((item) => (item as any)[agg.column]).filter((val) => val != null);
-
-      switch (agg.function) {
-        case 'count': {
-          aggregationsResult[agg.column].count = group.items.length;
-          break;
-        }
-        case 'sum': {
-          aggregationsResult[agg.column].sum = values.reduce((sum, val) => sum + (Number(val) || 0), 0);
-          break;
-        }
-        case 'avg': {
-          const sum = values.reduce((sum, val) => sum + (Number(val) || 0), 0);
-          aggregationsResult[agg.column].avg = values.length > 0 ? Math.round((sum / values.length) * 100) / 100 : 0;
-          break;
-        }
-        case 'min': {
-          // Skip non-numeric values (e.g. date strings) — one bad value must
-          // not poison the whole aggregate with NaN.
-          const nums = values.map(Number).filter(Number.isFinite);
-          aggregationsResult[agg.column].min = nums.length > 0 ? Math.min(...nums) : 0;
-          break;
-        }
-        case 'max': {
-          const nums = values.map(Number).filter(Number.isFinite);
-          aggregationsResult[agg.column].max = nums.length > 0 ? Math.max(...nums) : 0;
-          break;
-        }
-        case 'custom': {
-          aggregationsResult[agg.column].custom = agg.customFunction ? agg.customFunction(values) : null;
-          break;
-        }
-      }
-    });
-
-    const groupedItem: GroupedData<T> = {
-      key,
-      value: group.key,
-      count: group.items.length,
-      aggregations: aggregationsResult,
-      items: group.items,
-      level: 0,
-      path: group.path,
-    };
-
-    // Recursively group children if more columns
-    if (groupByColumns.length > 1 && groupedItem.level < maxDepth - 1) {
-      const childGroups = groupData(group.items, groupByColumns.slice(1), aggregations, maxDepth);
-      if (childGroups) {
-        groupedItem.children = childGroups.map((child) => ({
-          ...child,
-          level: child.level + 1,
-          path: [group.key, ...child.path],
-        }));
-      }
-    }
-
-    return groupedItem;
-  });
-
-  return result;
-}
-
-function getGroupKey(group: GroupedData): string {
-  return group.path.join(' → ');
-}
+};
 
 // Hook for Grouping
 
-export interface UseGroupingOptions<T = any> {
+export interface UseGroupingOptions<T = unknown> {
   data: T[];
-  columns: {
-    accessorKey?: string;
-    header?: string | React.ReactNode;
-    id?: string;
-    type?: 'string' | 'number' | 'date' | 'boolean';
-  }[];
+  columns: GroupingColumn[];
   initialConfig?: Partial<GroupingConfig>;
 }
 
-export interface UseGroupingReturn<T = any> {
+export interface UseGroupingReturn<T = unknown> {
   groupedData: GroupedData<T>[] | null;
   config: GroupingConfig;
   setConfig: (config: GroupingConfig) => void;
@@ -1151,7 +1169,10 @@ export interface UseGroupingReturn<T = any> {
   isGrouped: boolean;
 }
 
-export function useGrouping<T = any>({ data, initialConfig = {} }: UseGroupingOptions<T>): UseGroupingReturn<T> {
+export const useGrouping = <T = unknown,>({
+  data,
+  initialConfig = {},
+}: UseGroupingOptions<T>): UseGroupingReturn<T> => {
   const [config, setConfig] = useState<GroupingConfig>({
     columns: [],
     aggregations: [],
@@ -1189,12 +1210,12 @@ export function useGrouping<T = any>({ data, initialConfig = {} }: UseGroupingOp
 
     const allKeys = new Set<string>();
     const collectKeys = (groups: GroupedData<T>[]) => {
-      groups.forEach((group) => {
+      for (const group of groups) {
         allKeys.add(getGroupKey(group));
         if (group.children) {
           collectKeys(group.children);
         }
-      });
+      }
     };
 
     collectKeys(groupedData);
@@ -1216,4 +1237,4 @@ export function useGrouping<T = any>({ data, initialConfig = {} }: UseGroupingOp
     collapseAll,
     isGrouped: config.columns.length > 0,
   };
-}
+};

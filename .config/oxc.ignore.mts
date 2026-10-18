@@ -33,7 +33,6 @@ export const baseIgnorePatterns = [
   'packages/router/**',
   'packages/store/**',
   'packages/storybook/**',
-  'packages/table/**',
   'packages/table-primitives/**',
   'packages/test-utils/**',
   'packages/theme/**',

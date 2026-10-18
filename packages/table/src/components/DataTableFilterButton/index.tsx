@@ -13,19 +13,38 @@
  * reopen this editor pre-filled via the context filterUi channel.
  */
 
-import { useDirection } from '@repo/ui';
+import { CaretLeftIcon, CaretRightIcon, FunnelIcon } from '@phosphor-icons/react';
 import { Button, FloatingPanel, SearchInput } from '@repo/forms';
 import { keyboardFocusRingProps, useResolvedKnobs, wasKeyboardFocus } from '@repo/theme';
-import { CaretLeftIcon, CaretRightIcon, FunnelIcon } from '@phosphor-icons/react';
+import { useDirection } from '@repo/ui';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Text, View, XStack, YStack } from 'tamagui';
 
+import type { UseTableFilteringReturn } from '../../hooks/use-table-filtering';
 import { t } from '../../shared/t';
 import type { FilterOperator, FilterValue, ResolvedFilterField } from '../../types';
-import { defaultOperatorForFilterType, isFilterValueShape, operatorNeedsNoValue } from '../../utils/filterFields';
-import type { FilterEditTarget } from '../DataTable/DataTableStateContext';
-import { useDataTableState } from '../DataTable/DataTableStateContext';
+import {
+  defaultOperatorForFilterType,
+  // oxlint-disable-next-line anti-slop/no-shape-in-symbol-names -- existing public guard name exported by utils/filterFields
+  isFilterValueShape as isFilterValue,
+  operatorNeedsNoValue,
+} from '../../utils/filter-fields';
+import type { FilterEditTarget } from '../DataTable/data-table-state-context';
+import { useDataTableState } from '../DataTable/data-table-state-context';
 import { FilterOperatorValueEditor } from '../FilterOperatorValueEditor';
+
+/** The advanced-filter actions use-data-table spreads onto the context (from use-table-filtering). */
+type FilterActions = Pick<UseTableFilteringReturn, 'addFilter'> &
+  Partial<Pick<UseTableFilteringReturn, 'updateFilter'>>;
+
+const NO_FIELDS: ResolvedFilterField[] = [];
+
+// role="listbox" is a valid ARIA role but outside RN's `Role` union; this
+// web-only bag forwards it to the DOM node.
+// oxlint-disable-next-line anti-slop/no-known-value-widening -- the index-signature type is what lets the spread bypass RN's narrower Role union
+const LISTBOX_ROLE_PROPS: Record<string, string> = { role: 'listbox' };
+
+const hasText = (text: string | null | undefined): text is string => text !== null && text !== undefined && text !== '';
 
 interface FieldRowProps {
   field: ResolvedFilterField;
@@ -35,10 +54,11 @@ interface FieldRowProps {
   onSelect: (field: ResolvedFilterField) => void;
 }
 
-function FieldRow({ field, highlighted, keyboardHighlight, onSelect }: FieldRowProps) {
+const FieldRow = ({ field, highlighted, keyboardHighlight, onSelect }: FieldRowProps) => {
   const { knobProps } = useResolvedKnobs();
   return (
     <View
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui View renders a div; RN has no option primitive
       role="option"
       id={`filter-field-${field.id}`}
       aria-selected={highlighted}
@@ -68,33 +88,24 @@ function FieldRow({ field, highlighted, keyboardHighlight, onSelect }: FieldRowP
       </Text>
     </View>
   );
-}
+};
 
-function GroupHeader({ children }: { children: string }) {
-  return (
-    <Text
-      fontSize="$1"
-      fontWeight="600"
-      color="$color10"
-      textTransform="uppercase"
-      letterSpacing={0.5}
-      paddingHorizontal="$2.5"
-      paddingTop="$2"
-      paddingBottom="$1">
-      {children}
-    </Text>
-  );
-}
+const GroupHeader = ({ children }: { children: string }) => (
+  <Text
+    fontSize="$1"
+    fontWeight="600"
+    color="$color10"
+    textTransform="uppercase"
+    letterSpacing={0.5}
+    paddingHorizontal="$2.5"
+    paddingTop="$2"
+    paddingBottom="$1">
+    {children}
+  </Text>
+);
 
-export function DataTableFilterButton() {
-  return <FilterButton />;
-}
-
-export function DataTableCardFilterButton() {
-  return <FilterButton contentTrigger />;
-}
-
-function FilterButton({ contentTrigger = false }: { contentTrigger?: boolean }) {
+// oxlint-disable-next-line eslint/complexity, react-doctor/no-giant-component, react-doctor/prefer-useReducer -- two-stage panel (field list / operator editor) sharing one editor session; the branches are stage and edit-target routing
+const FilterButton = ({ contentTrigger = false }: { contentTrigger?: boolean }) => {
   const ctx = useDataTableState();
   const { knobProps } = useResolvedKnobs();
   // "Back to field list" points toward the panel's start edge — directional,
@@ -109,18 +120,25 @@ function FilterButton({ contentTrigger = false }: { contentTrigger?: boolean }) 
   const [operator, setOperator] = useState<FilterOperator>('contains');
   const [value, setValue] = useState('');
   // Existing filter being edited: column funnel target or advanced filter id.
+  // oxlint-disable-next-line react-doctor/rerender-state-only-in-handlers -- the target is reset with the rest of the editor session; keeping it in state keeps the commit callbacks in sync with it
   const [columnTarget, setColumnTarget] = useState<string | null>(null);
   const advancedIdRef = useRef<string | null>(null);
   const [editingExisting, setEditingExisting] = useState(false);
 
-  const fields: ResolvedFilterField[] = ctx?.computed?.filterFields ?? [];
+  // SAFETY: use-data-table publishes its resolved filter fields as computed.filterFields; the context types computed values loosely.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the shared context declares computed extras as an index signature
+  const fields = (ctx?.computed.filterFields as ResolvedFilterField[] | undefined) ?? NO_FIELDS;
   const table = ctx?.table;
+  // SAFETY: use-data-table spreads use-table-filtering's addFilter/updateFilter onto actions.
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the shared context declares addFilter loosely (returns void)
+  const filterActions = ctx?.actions as FilterActions | undefined;
 
   const visibleColumnIds = useMemo(() => {
     if (!table) {
       return new Set<string>();
     }
-    return new Set(table.getVisibleLeafColumns().map((c: any) => c.id as string));
+    return new Set(table.getVisibleLeafColumns().map((c) => c.id));
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- `open` is a deliberate recompute trigger: column visibility mutates inside the stable table instance
   }, [table, open]);
 
   const query = search.trim().toLowerCase();
@@ -152,27 +170,27 @@ function FilterButton({ contentTrigger = false }: { contentTrigger?: boolean }) 
       }
       const noValue = operatorNeedsNoValue(op);
       const filterValue: FilterValue = { operator: op, value: noValue ? null : val };
-      if (columnTarget) {
+      if (hasText(columnTarget)) {
         table?.getColumn(columnTarget)?.setFilterValue(filterValue);
         return;
       }
       const meaningful = noValue || val !== '';
-      if (advancedIdRef.current) {
-        ctx.actions.updateFilter?.(advancedIdRef.current, {
+      if (hasText(advancedIdRef.current)) {
+        filterActions?.updateFilter?.(advancedIdRef.current, {
           columnId: field.id,
           value: filterValue,
           label: field.label,
         });
       } else if (meaningful) {
         advancedIdRef.current =
-          ctx.actions.addFilter({
+          filterActions?.addFilter({
             columnId: field.id,
             value: filterValue,
             label: field.label,
           }) ?? null;
       }
     },
-    [ctx, columnTarget, table],
+    [ctx, columnTarget, table, filterActions],
   );
 
   const handleSelectField = useCallback((field: ResolvedFilterField) => {
@@ -213,7 +231,7 @@ function FilterButton({ contentTrigger = false }: { contentTrigger?: boolean }) 
       // Closing: drop a committed filter whose value ended up empty — an
       // empty-valued filter matches everything and would leave a junk chip.
       const id = advancedIdRef.current;
-      if (id && !operatorNeedsNoValue(operator) && value === '') {
+      if (hasText(id) && !operatorNeedsNoValue(operator) && value === '') {
         ctx?.actions.removeFilter(id);
       }
       resetEditor();
@@ -226,9 +244,9 @@ function FilterButton({ contentTrigger = false }: { contentTrigger?: boolean }) 
   // (stage 1) so the user can compose the next filter; outside click / Escape
   // close.
   const handleRemoveCurrent = useCallback(() => {
-    if (columnTarget) {
+    if (hasText(columnTarget)) {
       table?.getColumn(columnTarget)?.setFilterValue(undefined);
-    } else if (advancedIdRef.current) {
+    } else if (hasText(advancedIdRef.current)) {
       ctx?.actions.removeFilter(advancedIdRef.current);
     }
     advancedIdRef.current = null;
@@ -241,7 +259,8 @@ function FilterButton({ contentTrigger = false }: { contentTrigger?: boolean }) 
     if (!editTarget || !ctx) {
       return;
     }
-    ctx.filterUi?.requestEdit(null); // consume the request
+    // Consume the request.
+    ctx.filterUi?.requestEdit(null);
     const openWith = (field: ResolvedFilterField, filterValue: FilterValue, target: FilterEditTarget) => {
       setActiveField(field);
       setOperator(filterValue.operator);
@@ -260,7 +279,7 @@ function FilterButton({ contentTrigger = false }: { contentTrigger?: boolean }) 
     } else if (editTarget.kind === 'column') {
       const columnFilter = ctx.state.columnFilters.find((cf) => cf.id === editTarget.columnId);
       const field = fields.find((f) => f.id === editTarget.columnId);
-      if (field && columnFilter && isFilterValueShape(columnFilter.value)) {
+      if (field && columnFilter && isFilterValue(columnFilter.value)) {
         openWith(field, columnFilter.value, editTarget);
       }
     } else {
@@ -271,7 +290,7 @@ function FilterButton({ contentTrigger = false }: { contentTrigger?: boolean }) 
 
   // Keyboard navigation over the field list (web).
   const handleListKeyDown = useCallback(
-    (e: KeyboardEvent) => {
+    (e: { key: string; preventDefault: () => void }) => {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
         setHighlightedIndex((i) => Math.min(i + 1, flatList.length - 1));
@@ -280,7 +299,7 @@ function FilterButton({ contentTrigger = false }: { contentTrigger?: boolean }) 
         setHighlightedIndex((i) => Math.max(i - 1, 0));
       } else if (e.key === 'Enter') {
         e.preventDefault();
-        const field = flatList[highlightedIndex];
+        const field = highlightedIndex < 0 ? undefined : flatList.at(highlightedIndex);
         if (field) {
           handleSelectField(field);
         }
@@ -297,8 +316,7 @@ function FilterButton({ contentTrigger = false }: { contentTrigger?: boolean }) 
   }
 
   const activeChipCount =
-    (ctx.state.filters?.length ?? 0) +
-    (ctx.state.columnFilters?.filter((cf) => isFilterValueShape(cf.value)).length ?? 0);
+    (ctx.state.filters?.length ?? 0) + (ctx.state.columnFilters?.filter((cf) => isFilterValue(cf.value)).length ?? 0);
 
   // FloatingPanel owns the trigger press in every mode. This Button used to
   // toggle `open` itself in sheet mode, because the deepest pressable swallows
@@ -330,7 +348,7 @@ function FilterButton({ contentTrigger = false }: { contentTrigger?: boolean }) 
       onOpenChange={handleOpenChange}
       trigger={trigger}
       {...(contentTrigger ? { triggerSizing: 'content' as const } : {})}
-      fitContent
+      widthMode="fit-content"
       scrollable={false}>
       <YStack
         minWidth={280}
@@ -383,7 +401,7 @@ function FilterButton({ contentTrigger = false }: { contentTrigger?: boolean }) 
           // Stage 1 — searchable field list, visible columns first
           <YStack
             {...knobProps.gap}
-            onKeyDown={handleListKeyDown as unknown as () => void}>
+            onKeyDown={handleListKeyDown}>
             <SearchInput
               value={search}
               onChange={(text) => {
@@ -397,12 +415,9 @@ function FilterButton({ contentTrigger = false }: { contentTrigger?: boolean }) 
               aria-label={t('Search fields')}
             />
             <YStack
-              // role="listbox" is a valid ARIA role but outside RN's `Role`
-              // union; this web-only bag forwards it to the DOM node (house
-              // Record cast).
-              {...({ role: 'listbox' } as Record<string, unknown>)}
+              {...LISTBOX_ROLE_PROPS}
               aria-label={t('Filterable fields')}
-              aria-activedescendant={highlightedId ? `filter-field-${highlightedId}` : undefined}
+              aria-activedescendant={hasText(highlightedId) ? `filter-field-${highlightedId}` : undefined}
               tabIndex={0}
               maxHeight={320}
               overflow="scroll"
@@ -416,6 +431,7 @@ function FilterButton({ contentTrigger = false }: { contentTrigger?: boolean }) 
               }}>
               {columnFields.length > 0 && (
                 <YStack
+                  // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui stack renders a div; RN has no fieldset/optgroup primitive
                   role="group"
                   aria-label={t('Columns')}>
                   <GroupHeader>{t('Columns')}</GroupHeader>
@@ -432,6 +448,7 @@ function FilterButton({ contentTrigger = false }: { contentTrigger?: boolean }) 
               )}
               {moreFields.length > 0 && (
                 <YStack
+                  // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui stack renders a div; RN has no fieldset/optgroup primitive
                   role="group"
                   aria-label={t('More fields')}>
                   <GroupHeader>{t('More fields')}</GroupHeader>
@@ -460,4 +477,8 @@ function FilterButton({ contentTrigger = false }: { contentTrigger?: boolean }) 
       </YStack>
     </FloatingPanel>
   );
-}
+};
+
+export const DataTableFilterButton = () => <FilterButton />;
+
+export const DataTableCardFilterButton = () => <FilterButton contentTrigger />;

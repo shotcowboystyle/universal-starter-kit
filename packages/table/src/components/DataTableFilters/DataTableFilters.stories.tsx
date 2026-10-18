@@ -1,6 +1,7 @@
-import { Card } from '@repo/ui';
 import { action } from '@repo/storybook';
+import { Card } from '@repo/ui';
 import type { Meta, StoryObj } from '@storybook/react-native-web-vite';
+import React from 'react';
 import { Text, View, YStack } from 'tamagui';
 
 import type { DataTableColumnType, FacetedFilterOption, TableFilter } from '../../types';
@@ -296,7 +297,7 @@ export const InteractiveDemo: Story = {
     ...Basic.args,
   },
   render: (args) => {
-    const InteractiveDemo = () => {
+    const InteractiveDemoView = () => {
       const [filters, setFilters] = React.useState<TableFilter[]>(sampleFilters);
 
       const handleAddFilter = (filter: Omit<TableFilter, 'id'>) => {
@@ -346,7 +347,7 @@ export const InteractiveDemo: Story = {
       );
     };
 
-    return <InteractiveDemo />;
+    return <InteractiveDemoView />;
   },
 };
 
@@ -373,7 +374,7 @@ export const ErrorStates: Story = {
           borderRadius: '4px',
           color: '#c33',
         }}>
-        Error: Filter references nonexistent column "nonexistent"
+        Error: Filter references nonexistent column &quot;nonexistent&quot;
       </View>
     </View>
   ),
@@ -464,6 +465,3 @@ export const ManyFilters: Story = {
     }),
   },
 };
-
-// Import React for JSX
-import React from 'react';
