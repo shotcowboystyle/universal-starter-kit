@@ -25,7 +25,7 @@ export const builtinEdgeKindNames: readonly BuiltinEdgeKind[] = ['flow', 'data',
  * way — so the kind maps in this package are written the shape a consumer must
  * write too.
  */
-export interface BuiltinEdgeData {
+export type BuiltinEdgeData = {
   /** Control moving. */
   readonly flow: Record<string, never>;
   /** A value moving. */
@@ -34,7 +34,7 @@ export interface BuiltinEdgeData {
   readonly error: { readonly reason?: string };
   /** A branch not always taken. */
   readonly conditional: { readonly when?: string };
-}
+};
 
 export const builtinEdgeKinds: {
   readonly [K in BuiltinEdgeKind]: EdgeKindSpec<BuiltinEdgeData[K]>;

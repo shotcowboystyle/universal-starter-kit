@@ -62,9 +62,13 @@ declare const self: {
 };
 
 function inWorkerScope(): boolean {
+  // `typeof`, not `!== undefined`: outside a worker these globals are
+  // undeclared, and reading an undeclared identifier throws a ReferenceError.
   return (
-    WorkerGlobalScope !== undefined &&
-    self !== undefined &&
+    // oxlint-disable-next-line unicorn/no-typeof-undefined -- see above
+    typeof WorkerGlobalScope !== 'undefined' &&
+    // oxlint-disable-next-line unicorn/no-typeof-undefined -- see above
+    typeof self !== 'undefined' &&
     self instanceof (WorkerGlobalScope as abstract new () => unknown)
   );
 }

@@ -19,15 +19,15 @@ import { parseDocument, serializeDocument } from './serialize';
 // so `interface Nodes` does not satisfy `NodeKindDefs`. That is a TypeScript
 // rule about declaration merging, not a modelling choice, and it bites every
 // consumer the same way — so the spec uses the shape a consumer must use.
-interface Nodes {
+type Nodes = {
   readonly task: { readonly title: string; readonly retries: number };
   readonly gate: { readonly expression: string };
-}
+};
 
-interface Edges {
+type Edges = {
   readonly flow: Record<string, never>;
   readonly error: { readonly reason: string };
-}
+};
 
 /**
  * `parseDocument` reads only which kinds exist, so the spec can hand it the

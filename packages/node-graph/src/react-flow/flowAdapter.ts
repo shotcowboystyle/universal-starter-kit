@@ -41,7 +41,7 @@ import type { Edge, Node } from './xy';
  * does not satisfy `Node<T>` and every call site needs a cast. Same rule that
  * governs the kind maps in `edges/edgeKinds.ts`, and it bites the same way.
  */
-export interface GraphFlowNodeData {
+export type GraphFlowNodeData = {
   readonly kind: string;
   /** The consumer's own node payload. */
   readonly data: unknown;
@@ -49,7 +49,7 @@ export interface GraphFlowNodeData {
   /** `NodeKindSpec.intent`, so a kind can carry a semantic colour. */
   readonly intent?: string;
   readonly locked?: boolean;
-}
+};
 
 export interface FlowMappingOptions {
   /** The resolved `size` knob; picks the per-kind measure row. */

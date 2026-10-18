@@ -74,6 +74,15 @@ describe("worker.generated", () => {
     expect(layoutWorkerBytes).toBeGreaterThan(20_000);
   });
 
+  it("evaluates outside a worker without throwing", () => {
+    // No WorkerGlobalScope or self: the scope probe must use `typeof`, since
+    // reading an undeclared global throws a ReferenceError.
+    const sandbox: Record<string, unknown> = {};
+    sandbox.globalThis = sandbox;
+    vm.createContext(sandbox);
+    expect(() => vm.runInContext(layoutWorkerSource, sandbox)).not.toThrow();
+  });
+
   describe("evaluated in a synthetic worker scope", () => {
     /** Runs the artefact the way a blob Worker would, and returns its outbox. */
     function boot() {

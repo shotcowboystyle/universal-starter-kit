@@ -83,7 +83,7 @@ export function summarizeFrames(deltas: readonly number[]): FrameStats {
     mean,
     p50: percentile(sorted, 0.5),
     p95: percentile(sorted, 0.95),
-    worst: sorted.at(-1),
+    worst: sorted[sorted.length - 1],
     over16_7: over16,
     over33_3: over33,
     fps: mean > 0 ? 1000 / mean : 0,

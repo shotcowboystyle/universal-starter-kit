@@ -48,7 +48,7 @@ function cloneInto(value: unknown, seen: CloneCache): unknown {
   }
 
   if (value instanceof Date) {
-    return new Date(value);
+    return new Date(value.getTime());
   }
   if (value instanceof RegExp) {
     return new RegExp(value.source, value.flags);

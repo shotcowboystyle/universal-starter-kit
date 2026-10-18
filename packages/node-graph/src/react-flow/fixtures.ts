@@ -15,11 +15,11 @@ import { builtinEdgeKinds } from '../edges/edgeKinds';
 import type { GraphDocument, GraphSchema, PortSpec } from '../model/index';
 import { createGraphSchema, defaultRules } from '../model/index';
 
-export interface DemoNodeData {
+export type DemoNodeData = {
   readonly source: { readonly table: string };
   readonly transform: { readonly expression: string };
   readonly sink: { readonly target: string };
-}
+};
 
 const out = (id: string, label: string): PortSpec => ({
   id,
