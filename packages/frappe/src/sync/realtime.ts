@@ -1,15 +1,41 @@
 import type { DbModule } from '../db';
 import type { RealtimeModule } from '../realtime';
 
-import type { NormalizedCache } from './normalizedCache';
+import type { NormalizedCache } from './normalized-cache';
 import type { RehydrationManager } from './rehydration';
-import type { SubscriptionManager } from './subscriptionManager';
+import type { SubscriptionManager } from './subscription-manager';
 import { RealtimeEventType, RehydrationReason } from './types';
 import type { ConnectionConfig, SyncOptions } from './types';
 
+/** Doc reference carried by realtime change/delete events. */
+interface DocRef {
+  doctype: string;
+  name: string;
+}
+
+/** Live socket snapshot returned by {@link RealtimeHandler.getConnectionState}. */
+export interface RealtimeConnectionState {
+  connected: boolean;
+  everConnected: boolean;
+}
+
+// SAFETY: realtime payloads are unvalidated wire data. Every consumer reads the fields inside
+// try/catch (or via optional chaining), so a malformed payload degrades to a logged no-op.
+// oxlint-disable-next-line anti-slop/no-unknown-parameters, typescript/no-unsafe-type-assertion -- see SAFETY above
+const asDocRef = (payload: unknown): DocRef => payload as DocRef;
+
+const joinDoctypeRoom = async (realtime: RealtimeModule, doctype: string): Promise<void> => {
+  try {
+    await realtime.subscribeList(doctype);
+  } catch (error) {
+    // Safe to continue: realtime is best-effort; the CDC backfill catches changes missed without the room.
+    console.warn(`[RealtimeHandler] Failed to join doctype room ${doctype}:`, error);
+  }
+};
+
 export class RealtimeHandler {
   private reconnectAttempts = 0;
-  private reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private hasConnected = false;
   /** Live socket state: true between `connected` and `disconnect` events. */
   private connected = false;
@@ -46,7 +72,6 @@ export class RealtimeHandler {
       exponentialBackoff: options.connectionConfig?.exponentialBackoff ?? true,
     };
     this.setupRealtimeHandlers();
-    this.setupConnectionManagement();
   }
 
   /**
@@ -68,28 +93,33 @@ export class RealtimeHandler {
    * so a doc_update/list_update pair for the same doc costs one fetch.
    */
   private setupRealtimeHandlers() {
-    if (!this.realtime) {
+    const { realtime } = this;
+    if (!realtime) {
       return;
     }
 
-    this.realtime?.on('doc_update', async (payload) => {
+    // The change/delete handlers return their reconcile promise so callers can await settling;
+    // they never reject (fetchAndReconcile and onDocDeleted catch and log).
+    // oxlint-disable-next-line typescript/no-misused-promises, typescript/strict-void-return -- see above
+    void realtime.on('doc_update', async (payload) => {
       if (this.options.onRealtimeEvent) {
         this.options.onRealtimeEvent({
           type: RealtimeEventType.DocUpdate,
           payload,
         });
       }
-      await this.onDocChanged(payload as { doctype: string; name: string });
+      await this.onDocChanged(asDocRef(payload));
     });
 
-    this.realtime?.on('list_update', async (payload) => {
+    // oxlint-disable-next-line typescript/no-misused-promises, typescript/strict-void-return -- awaitable handler, never rejects
+    void realtime.on('list_update', async (payload) => {
       if (this.options.onRealtimeEvent) {
         this.options.onRealtimeEvent({
           type: RealtimeEventType.ListUpdate,
           payload,
         });
       }
-      await this.onDocChanged(payload as { doctype: string; name: string });
+      await this.onDocChanged(asDocRef(payload));
     });
 
     // `doc_deleted` is emitted by the `live` server app's on_trash hook
@@ -99,27 +129,29 @@ export class RealtimeHandler {
     // `doc_changed` remains a forward-compat no-op from the designed wire
     // protocol (src/core/wire.ts); stock frappe never emits it and the
     // dedup map absorbs doubles if a server ever does.
-    this.realtime?.on('doc_changed', async (payload) => {
+    // oxlint-disable-next-line typescript/no-misused-promises, typescript/strict-void-return -- awaitable handler, never rejects
+    void realtime.on('doc_changed', async (payload) => {
       if (this.options.onRealtimeEvent) {
         this.options.onRealtimeEvent({
           type: RealtimeEventType.DocChanged,
           payload,
         });
       }
-      await this.onDocChanged(payload as { doctype: string; name: string });
+      await this.onDocChanged(asDocRef(payload));
     });
 
-    this.realtime?.on('doc_deleted', async (payload) => {
+    // oxlint-disable-next-line typescript/no-misused-promises, typescript/strict-void-return -- awaitable handler, never rejects
+    void realtime.on('doc_deleted', async (payload) => {
       if (this.options.onRealtimeEvent) {
         this.options.onRealtimeEvent({
           type: RealtimeEventType.DocDeleted,
           payload,
         });
       }
-      await this.onDocDeleted(payload as { doctype: string; name: string });
+      await this.onDocDeleted(asDocRef(payload));
     });
 
-    this.realtime?.on('perm_epoch_bump', () => {
+    void realtime.on('perm_epoch_bump', () => {
       if (this.options.onRealtimeEvent) {
         this.options.onRealtimeEvent({ type: RealtimeEventType.PermEpochBump });
       }
@@ -129,25 +161,13 @@ export class RealtimeHandler {
       }
     });
 
-    this.realtime?.on('connected', () => {
+    void realtime.on('connected', () => {
       this.onConnected();
     });
 
-    this.realtime?.on('disconnect', () => {
+    void realtime.on('disconnect', () => {
       this.onDisconnected();
     });
-  }
-
-  /**
-   * Sets up connection management with exponential backoff and jitter.
-   */
-  private setupConnectionManagement() {
-    if (!this.realtime) {
-      return;
-    }
-
-    // Attempt initial connection
-    this.attemptConnection();
   }
 
   /**
@@ -159,9 +179,9 @@ export class RealtimeHandler {
     this.reconnectAttempts = 0;
 
     // Clear any pending reconnection timers
-    if (this.reconnectTimer) {
+    if (this.reconnectTimer !== null) {
       clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = undefined;
+      this.reconnectTimer = null;
     }
 
     if (this.options.onRealtimeEvent) {
@@ -194,24 +214,14 @@ export class RealtimeHandler {
   }
 
   /**
-   * No-op placeholder retained for the disconnect backoff schedule below.
-   * Transport reconnect is owned by Socket.IO inside RealtimeModule; this
-   * layer only tracks attempts for logging / future health hooks.
-   */
-  private attemptConnection() {
-    if (!this.realtime) {
-      return;
-    }
-  }
-
-  /**
    * Schedules a reconnection *watchdog* tick with exponential backoff and jitter.
-   * Does not open sockets — RealtimeModule already reconnects. Kept so disconnect
-   * storms remain observable (and existing unit tests stay meaningful).
+   * Does not open sockets — transport reconnect is owned by Socket.IO inside
+   * RealtimeModule; this layer only counts attempts so disconnect storms remain
+   * observable (and existing unit tests stay meaningful).
    */
   private scheduleReconnection() {
     // Clear any existing timer
-    if (this.reconnectTimer) {
+    if (this.reconnectTimer !== null) {
       clearTimeout(this.reconnectTimer);
     }
 
@@ -220,8 +230,7 @@ export class RealtimeHandler {
     console.debug(`[RealtimeHandler] Scheduling reconnection attempt ${this.reconnectAttempts + 1} in ${delay}ms`);
 
     this.reconnectTimer = setTimeout(() => {
-      this.reconnectAttempts++;
-      this.attemptConnection();
+      this.reconnectAttempts += 1;
     }, delay);
   }
 
@@ -241,6 +250,7 @@ export class RealtimeHandler {
 
     // Apply jitter (±jitter%)
     const jitterRange = delay * this.connectionConfig.reconnectJitter;
+    // oxlint-disable-next-line sonarjs/pseudo-random -- backoff jitter only spreads reconnects; not security-sensitive
     const jitter = (Math.random() * 2 - 1) * jitterRange;
     delay = Math.round(delay + jitter);
 
@@ -262,9 +272,7 @@ export class RealtimeHandler {
     const count = (this.watchedDoctypes.get(doctype) ?? 0) + 1;
     this.watchedDoctypes.set(doctype, count);
     if (count === 1 && this.realtime) {
-      Promise.resolve(this.realtime.subscribeList(doctype)).catch((error) => {
-        console.warn(`[RealtimeHandler] Failed to join doctype room ${doctype}:`, error);
-      });
+      void joinDoctypeRoom(this.realtime, doctype);
     }
   }
 
@@ -297,23 +305,30 @@ export class RealtimeHandler {
    * Concurrent events for the same document (frappe emits doc_update AND
    * list_update per save) share a single in-flight fetch.
    */
-  private async onDocChanged(payload: { doctype: string; name: string }): Promise<void> {
+  private async onDocChanged(payload: DocRef): Promise<void> {
     const key = `${payload?.doctype}\0${payload?.name}`;
     const inflight = this.inflightFetches.get(key);
     if (inflight) {
-      return await inflight;
+      await inflight;
+      return;
     }
-    const fetchPromise = this.fetchAndReconcile(payload).finally(() => {
-      this.inflightFetches.delete(key);
-    });
+    const fetchPromise = this.fetchAndRelease(key, payload);
     this.inflightFetches.set(key, fetchPromise);
-    return await fetchPromise;
+    await fetchPromise;
   }
 
-  private async fetchAndReconcile(payload: { doctype: string; name: string }) {
+  private async fetchAndRelease(key: string, payload: DocRef): Promise<void> {
+    try {
+      await this.fetchAndReconcile(payload);
+    } finally {
+      this.inflightFetches.delete(key);
+    }
+  }
+
+  private async fetchAndReconcile(payload: DocRef) {
     try {
       // Fetch authoritative document to respect permissions and server-only fields
-      const document = await this.db.getDoc<any>(payload.doctype, payload.name);
+      const document = await this.db.getDoc(payload.doctype, payload.name);
       this.normalizedCache.upsert(document);
 
       // Update subscription membership for this document
@@ -333,7 +348,9 @@ export class RealtimeHandler {
       // event exists) — a 404 on the authoritative re-fetch means the document
       // is gone (deleted, or read access revoked): evict it. The tombstone/CDC
       // backfill remains the durable deletion signal for events missed offline.
-      if ((error as { status?: number })?.status === 404) {
+      // SAFETY: rejection values are untyped; optional chaining reads `status` from any shape.
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+      if ((error as { status?: number } | null | undefined)?.status === 404) {
         await this.onDocDeleted(payload);
         return;
       }
@@ -346,7 +363,7 @@ export class RealtimeHandler {
   /**
    * Realtime handler: evicts document from cache and subscriptions.
    */
-  private async onDocDeleted(payload: { doctype: string; name: string }) {
+  private async onDocDeleted(payload: DocRef) {
     try {
       // Evict the deleted document from cache
       this.normalizedCache.remove({
@@ -387,7 +404,7 @@ export class RealtimeHandler {
    * "reconnecting" (was up, dropped) from "never had realtime" (fixtures,
    * SSR, no realtime module).
    */
-  getConnectionState(): { connected: boolean; everConnected: boolean } {
+  getConnectionState(): RealtimeConnectionState {
     return { connected: this.connected, everConnected: this.hasConnected };
   }
 
@@ -395,9 +412,9 @@ export class RealtimeHandler {
    * Disposes of resources and clears timers.
    */
   dispose() {
-    if (this.reconnectTimer) {
+    if (this.reconnectTimer !== null) {
       clearTimeout(this.reconnectTimer);
-      this.reconnectTimer = undefined;
+      this.reconnectTimer = null;
     }
 
     this.unwatchAll();

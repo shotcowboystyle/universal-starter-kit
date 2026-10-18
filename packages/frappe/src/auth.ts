@@ -15,7 +15,8 @@ export class AuthModule {
   }
 
   async getLoggedInUser(): Promise<string> {
-    return (await this.http.get<{ message: string }>('/api/method/frappe.auth.get_logged_user')).payload?.message ?? '';
+    const { payload } = await this.http.get<{ message: string }>('/api/method/frappe.auth.get_logged_user');
+    return payload?.message ?? '';
   }
 
   async logout() {

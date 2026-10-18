@@ -10,7 +10,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { HttpClient } from './core/http';
 import { FrappeError } from './core/types';
-import type { AuthConfig } from './core/types';
+import type { AuthConfig, ListOptions } from './core/types';
 import type { FrappeConnectionConfig } from './pacer';
 
 // ---------------------------------------------------------------------------
@@ -129,6 +129,7 @@ export interface DocTypeField {
   /** For Link fields: comma-separated search fields */
   search_fields?: string;
   idx?: number;
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- the server adds keys across versions; unread keys pass through
   [key: string]: unknown;
 }
 
@@ -147,6 +148,7 @@ export interface DocTypePermission {
   email?: 0 | 1;
   share?: 0 | 1;
   if_owner?: 0 | 1;
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- the server adds keys across versions; unread keys pass through
   [key: string]: unknown;
 }
 
@@ -160,6 +162,7 @@ export interface DocTypeLink {
   is_child_table?: 0 | 1;
   parent_doctype?: string;
   table_fieldname?: string;
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- the server adds keys across versions; unread keys pass through
   [key: string]: unknown;
 }
 
@@ -215,9 +218,11 @@ export interface DocTypeMeta {
   fields: DocTypeField[];
   permissions?: DocTypePermission[];
   links?: DocTypeLink[];
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- workflow state rows carry server keys beyond title/color
   states?: ({ title?: string; color?: string } & Record<string, unknown>)[];
   /** Layout tree parsed from the break fields. `useDocTypeMeta` fills it; a raw getdoctype doc has none. */
   sections?: FormSection[];
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- the server adds keys across versions; unread keys pass through
   [key: string]: unknown;
 }
 
@@ -241,7 +246,7 @@ export interface LinkSearchOptions {
    */
   searchFields?: string[];
   /** Additional Frappe filters (server-side, on top of the doctype's link query) */
-  filters?: Record<string, unknown> | [string, string, unknown][];
+  filters?: ListOptions['filters'];
   /** Maximum results / `page_length` (default 20) */
   limit?: number;
   /**
@@ -290,6 +295,29 @@ interface DocTypeListItem {
 // Utility: parseDependsOn
 // ---------------------------------------------------------------------------
 
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- depends_on expressions read any field of an open frappe doc
+type DocPredicate = (doc: Record<string, unknown>) => boolean;
+
+/** Compiles a `depends_on` JS expression with `doc` bound; a broken expression evaluates to false. */
+const compileDocExpression = (code: string): DocPredicate => {
+  try {
+    // SAFETY: the body is `return !!(...)`, so the compiled function takes `doc` and always returns a boolean.
+    // oxlint-disable-next-line eslint/no-new-func, typescript/no-implied-eval, sonarjs/code-eval, react-doctor/no-eval, typescript/no-unsafe-type-assertion -- depends_on is desk-authored JS from DocType meta, evaluated the way the desk does
+    const fn = new Function('doc', `return !!(${code})`) as DocPredicate;
+    return (doc) => {
+      try {
+        return fn(doc);
+      } catch {
+        // An expression that throws (e.g. reading a missing child row) hides the field, as in the desk.
+        return false;
+      }
+    };
+  } catch {
+    // A syntax error in the meta's expression hides the field rather than breaking the form.
+    return () => false;
+  }
+};
+
 /**
  * Parse a Frappe `depends_on` expression into an evaluable function.
  *
@@ -301,48 +329,25 @@ interface DocTypeListItem {
  * @param expression - The depends_on expression string, or undefined
  * @returns A function that evaluates the expression given a document object
  */
-export function parseDependsOn(expression?: string): (doc: Record<string, unknown>) => boolean {
-  if (!expression) {
+export const parseDependsOn = (expression?: string): DocPredicate => {
+  if (expression === undefined || expression === '') {
     return () => true;
   }
 
   const trimmed = expression.trim();
 
   if (trimmed.startsWith('eval:')) {
-    const code = trimmed.slice(5).trim();
-    try {
-      const fn = new Function('doc', `return !!(${code})`) as (doc: Record<string, unknown>) => boolean;
-      return (doc: Record<string, unknown>) => {
-        try {
-          return fn(doc);
-        } catch {
-          return false;
-        }
-      };
-    } catch {
-      return () => false;
-    }
+    return compileDocExpression(trimmed.slice(5).trim());
   }
 
   // Expression containing "doc." — evaluate as JS (e.g. "doc.status")
   if (trimmed.includes('doc.')) {
-    try {
-      const fn = new Function('doc', `return !!(${trimmed})`) as (doc: Record<string, unknown>) => boolean;
-      return (doc: Record<string, unknown>) => {
-        try {
-          return fn(doc);
-        } catch {
-          return false;
-        }
-      };
-    } catch {
-      return () => false;
-    }
+    return compileDocExpression(trimmed);
   }
 
   // Bare field reference (e.g. "enabled") — truthy check on doc[fieldname]
-  return (doc) => !!doc[trimmed];
-}
+  return (doc) => Boolean(doc[trimmed]);
+};
 
 // ---------------------------------------------------------------------------
 // Utility: parseFormLayout
@@ -363,44 +368,33 @@ export function parseDependsOn(expression?: string): (doc: Record<string, unknow
  * @param fields - Flat list of DocType fields, ordered by field_order or position
  * @returns Structured layout tree of sections and columns
  */
-export function parseFormLayout(fields: DocTypeField[]): FormSection[] {
+export const parseFormLayout = (fields: DocTypeField[]): FormSection[] => {
   const sections: FormSection[] = [];
   let currentSection: FormSection = { columns: [{ fields: [] }] };
   sections.push(currentSection);
 
   for (const field of fields) {
-    switch (field.fieldtype) {
-      case 'Section Break': {
-        currentSection = {
-          label: field.label,
-          collapsible: !!field.collapsible,
-          columns: [{ fields: [] }],
-        };
-        sections.push(currentSection);
-        break;
-      }
-
-      case 'Column Break': {
-        currentSection.columns.push({ fields: [] });
-        break;
-      }
-
-      case 'Tab Break': {
-        currentSection = {
-          label: field.label,
-          tab: true,
-          columns: [{ fields: [] }],
-        };
-        sections.push(currentSection);
-        break;
-      }
-
-      default: {
-        if (!field.hidden) {
-          const lastColumn = currentSection.columns.at(-1);
-          lastColumn?.fields?.push?.(field);
-        }
-        break;
+    if (field.fieldtype === 'Section Break') {
+      currentSection = {
+        label: field.label,
+        collapsible: Boolean(field.collapsible),
+        columns: [{ fields: [] }],
+      };
+      sections.push(currentSection);
+    } else if (field.fieldtype === 'Column Break') {
+      currentSection.columns.push({ fields: [] });
+    } else if (field.fieldtype === 'Tab Break') {
+      currentSection = {
+        label: field.label,
+        tab: true,
+        columns: [{ fields: [] }],
+      };
+      sections.push(currentSection);
+    } else {
+      const isHidden = Boolean(field.hidden);
+      if (!isHidden) {
+        const lastColumn = currentSection.columns.at(-1);
+        lastColumn?.fields?.push?.(field);
       }
     }
   }
@@ -415,25 +409,30 @@ export function parseFormLayout(fields: DocTypeField[]): FormSection[] {
   }
 
   return sections;
-}
+};
 
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-function createHttpClient(config: FrappeConnectionConfig): HttpClient | undefined {
-  if (!config.baseURL) {
+const isNonEmpty = (value: string | null | undefined): value is string => value != null && value !== '';
+
+const createHttpClient = (config: FrappeConnectionConfig): HttpClient | undefined => {
+  if (!isNonEmpty(config.baseURL)) {
     return undefined;
   }
   const authConfig: AuthConfig | undefined = config.auth
     ? {
         useToken: config.auth.useToken,
         token: config.auth.token,
+        // SAFETY: the connection config types `type` loosely for consumers; it is passed through unchanged,
+        // exactly as before, and HttpClient only compares it against AuthType members.
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
         type: config.auth.type as AuthConfig['type'],
       }
     : undefined;
   return new HttpClient(config.baseURL, authConfig);
-}
+};
 
 /**
  * True when requests on this connection reach Frappe as Guest: it names a
@@ -441,19 +440,21 @@ function createHttpClient(config: FrappeConnectionConfig): HttpClient | undefine
  * session cookie names a user. A cookie-only connection names no token
  * source, so it is never judged here.
  */
-async function connectsAsGuest(auth: FrappeConnectionConfig['auth']): Promise<boolean> {
-  if (!auth?.useToken || !auth.token) {
+const connectsAsGuest = async (auth: FrappeConnectionConfig['auth']): Promise<boolean> => {
+  const source = auth?.token;
+  if (!auth?.useToken || source === undefined || source === '') {
     return false;
   }
-  const token = typeof auth.token === 'function' ? await auth.token() : auth.token;
-  if (token) {
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- a token source is a string or a getter; typeof is the discriminant
+  const token = typeof source === 'function' ? await source() : source;
+  if (isNonEmpty(token)) {
     return false;
   }
   const user = getCookie('user_id');
-  return !user || user === 'Guest';
-}
+  return !isNonEmpty(user) || user === 'Guest';
+};
 
-function orderFields(fields: DocTypeField[], fieldOrder: string[]): DocTypeField[] {
+const orderFields = (fields: DocTypeField[], fieldOrder: string[]): DocTypeField[] => {
   const fieldMap = new Map(fields.map((f) => [f.fieldname, f]));
   const ordered: DocTypeField[] = [];
   const seen = new Set<string>();
@@ -474,21 +475,23 @@ function orderFields(fields: DocTypeField[], fieldOrder: string[]): DocTypeField
   }
 
   return ordered;
-}
+};
 
-function parseRawDocTypeMeta(raw: DocTypeMeta): DocTypeMeta {
+const parseRawDocTypeMeta = (raw: DocTypeMeta): DocTypeMeta => {
   const fields = raw.fields.map((field) => ({ ...field }));
 
   // field_order may be a JSON string or an already-parsed array
   let fieldOrder: string[] | undefined;
-  if (typeof raw.field_order === 'string') {
-    try {
-      fieldOrder = JSON.parse(raw.field_order);
-    } catch {
-      fieldOrder = undefined;
-    }
-  } else if (Array.isArray(raw.field_order)) {
+  if (Array.isArray(raw.field_order)) {
     fieldOrder = raw.field_order;
+  } else if (raw.field_order !== undefined) {
+    try {
+      // SAFETY: frappe serializes field_order as a JSON array of fieldnames.
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+      fieldOrder = JSON.parse(raw.field_order) as string[];
+    } catch {
+      // Malformed field_order: keep the fields in their served order.
+    }
   }
 
   const orderedFields = fieldOrder ? orderFields(fields, fieldOrder) : fields;
@@ -501,7 +504,7 @@ function parseRawDocTypeMeta(raw: DocTypeMeta): DocTypeMeta {
     permissions: raw.permissions ?? [],
     sections: parseFormLayout(orderedFields),
   };
-}
+};
 
 /**
  * Cache identity for a connection. A fixtures-only connection has no
@@ -512,8 +515,8 @@ function parseRawDocTypeMeta(raw: DocTypeMeta): DocTypeMeta {
 const fixtureConnectionIds = new WeakMap<object, string>();
 let nextFixtureConnectionId = 0;
 
-function connectionKey(config: FrappeConnectionConfig): string {
-  if (config.baseURL) {
+const connectionKey = (config: FrappeConnectionConfig): string => {
+  if (isNonEmpty(config.baseURL)) {
     return config.baseURL;
   }
   const { fixtures } = config;
@@ -521,24 +524,33 @@ function connectionKey(config: FrappeConnectionConfig): string {
     return '';
   }
   let id = fixtureConnectionIds.get(fixtures);
-  if (!id) {
-    id = `fixtures#${++nextFixtureConnectionId}`;
+  if (id === undefined) {
+    nextFixtureConnectionId += 1;
+    id = `fixtures#${nextFixtureConnectionId}`;
     fixtureConnectionIds.set(fixtures, id);
   }
   return id;
-}
+};
 
 /**
  * Setup pattern for a stable HttpClient ref, following the same pattern
  * used in `useDebouncedSearch` for DbModule.
  */
-function useHttpClientRef(config: FrappeConnectionConfig | undefined): React.RefObject<HttpClient | undefined> {
+const httpConfigKey = (config: FrappeConnectionConfig): string => {
+  const { auth } = config;
+  const tokenFlag = auth?.useToken ? 't' : '';
+  return `${String(config.baseURL)}:${tokenFlag}:${String(auth?.token ?? '')}:${auth?.type ?? ''}`;
+};
+
+const useHttpClientRef = (config: FrappeConnectionConfig | undefined): React.RefObject<HttpClient | undefined> => {
+  // oxlint-disable-next-line unicorn/no-useless-undefined -- React 19's useRef requires an initial value
   const httpRef = useRef<HttpClient | undefined>(undefined);
   const configKeyRef = useRef('');
-  const configKey = config
-    ? `${config.baseURL}:${config.auth?.useToken ? 't' : ''}:${config.auth?.token ?? ''}:${config.auth?.type ?? ''}`
-    : '';
+  const configKey = config ? httpConfigKey(config) : '';
 
+  // The client is rebuilt during render when the connection identity changes, so effects that run this
+  // commit already read the new one. Handlers and effects read these refs; render output never does.
+  /* oxlint-disable react/refs, sonarjs/no-undefined-assignment -- render-synced client cache, see above */
   if (config && configKey !== configKeyRef.current) {
     httpRef.current = createHttpClient(config);
     configKeyRef.current = configKey;
@@ -547,9 +559,107 @@ function useHttpClientRef(config: FrappeConnectionConfig | undefined): React.Ref
     httpRef.current = undefined;
     configKeyRef.current = '';
   }
+  /* oxlint-enable react/refs, sonarjs/no-undefined-assignment */
 
   return httpRef;
-}
+};
+
+/**
+ * Raw meta from the bench: the getdoctype RPC, then the DocType document route
+ * for desk-less sites. `undefined` when neither has it; `null` when
+ * `isCancelled()` turned true while a request was in flight.
+ */
+const fetchServerMeta = async (
+  http: HttpClient,
+  auth: FrappeConnectionConfig['auth'],
+  doctype: string,
+  isCancelled: () => boolean,
+): Promise<DocTypeMeta | undefined | null> => {
+  // Both routes below are closed to Guest, so a signed-out reader
+  // gets the 403 without the request (MPO-322).
+  if (await connectsAsGuest(auth)) {
+    if (isCancelled()) {
+      return null;
+    }
+    throw new FrappeError(`Sign in to load the ${doctype} schema`, 403);
+  }
+
+  // `getdoctype` is the whitelisted RPC the Desk itself loads form
+  // metadata with, and every logged-in user may call it. Reading
+  // `/api/resource/DocType/<name>` instead asks for the DocType
+  // *document*, which only System Manager holds read permission on, so
+  // ordinary users got a 403 PermissionError — and Frappe's
+  // developer-mode traceback rendered into the UI instead of a form.
+  const response = await http.get<{ docs?: DocTypeMeta[] }>('/api/method/frappe.desk.form.load.getdoctype', {
+    doctype,
+  });
+
+  if (isCancelled()) {
+    return null;
+  }
+
+  // docs[0] is the requested doctype; docs[1..] are its child tables.
+  const docs = response.payload?.docs;
+  const fromRpc = docs?.find((doc) => doc?.name === doctype) ?? docs?.[0];
+  if (fromRpc) {
+    return fromRpc;
+  }
+
+  // Sites that expose the REST API without the desk leave the RPC
+  // above unregistered, so it answers with no `docs`. The document
+  // route still serves meta there, and such a site's API clients are
+  // typically System Managers, who may read it.
+  const rest = await http.get<{ data?: DocTypeMeta }>(`/api/resource/DocType/${encodeURIComponent(doctype)}`);
+
+  if (isCancelled()) {
+    return null;
+  }
+
+  return rest.payload?.data;
+};
+
+/** Parsed meta for `doctype` from the fixture corpus or the bench; `null` when cancelled mid-flight. */
+const loadDocTypeMeta = async (
+  config: FrappeConnectionConfig,
+  http: HttpClient | undefined,
+  doctype: string,
+  isCancelled: () => boolean,
+): Promise<DocTypeMeta | null> => {
+  // Fixture hosts (stories/tests) keep the getdoctype-shaped meta doc in
+  // the provider's "DocType" collection — the same convention the
+  // backoffice meta loader uses. Providers that stub only documents fall
+  // through to the network below.
+  let fromFixtures: DocTypeMeta | null = null;
+  if (config.fixtures) {
+    // SAFETY: a fixture "DocType" row is a getdoctype-shaped meta doc; `fields` is checked before it is used.
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+    fromFixtures = (await config.fixtures.getDoc('DocType', doctype)) as DocTypeMeta | null;
+  }
+  if (isCancelled()) {
+    return null;
+  }
+
+  let raw = fromFixtures?.fields ? fromFixtures : undefined;
+
+  if (!raw) {
+    if (!http) {
+      // Fixtures-only host: there is no server behind the corpus, so a
+      // missing DocType entry is the honest end of the road.
+      throw new Error(`DocType "${doctype}" is not in the fixture corpus and no baseURL is configured`);
+    }
+    const fetched = await fetchServerMeta(http, config.auth, doctype, isCancelled);
+    if (fetched === null) {
+      return null;
+    }
+    raw = fetched;
+  }
+
+  if (!raw) {
+    throw new Error(`No data returned for DocType "${doctype}"`);
+  }
+
+  return parseRawDocTypeMeta(raw);
+};
 
 // ---------------------------------------------------------------------------
 // Hook: useDocTypeMeta
@@ -587,19 +697,15 @@ function useHttpClientRef(config: FrappeConnectionConfig | undefined): React.Ref
  * }
  * ```
  */
-export function useDocTypeMeta(
-  config: FrappeConnectionConfig | undefined,
-  doctype: string,
-): {
-  meta: DocTypeMeta | undefined;
-  isLoading: boolean;
-  error: Error | null;
-  refetch: () => void;
-} {
+export const useDocTypeMeta = (config: FrappeConnectionConfig | undefined, doctype: string) => {
   const cacheKey = config ? `${connectionKey(config)}:${doctype}` : '';
 
-  const [meta, setMeta] = useState<DocTypeMeta | undefined>(() => (cacheKey ? metaCache.get(cacheKey) : undefined));
-  const [isLoading, setIsLoading] = useState(() => !!config && !!doctype && !(cacheKey && metaCache.has(cacheKey)));
+  const [meta, setMeta] = useState<DocTypeMeta | undefined>(() =>
+    cacheKey === '' ? undefined : metaCache.get(cacheKey),
+  );
+  const [isLoading, setIsLoading] = useState(
+    () => Boolean(config) && doctype !== '' && !(cacheKey !== '' && metaCache.has(cacheKey)),
+  );
   const [error, setError] = useState<Error | null>(null);
   const [version, setVersion] = useState(0);
 
@@ -607,13 +713,13 @@ export function useDocTypeMeta(
   const prevCacheKeyRef = useRef(cacheKey);
   if (cacheKey !== prevCacheKeyRef.current) {
     prevCacheKeyRef.current = cacheKey;
-    const cached = cacheKey ? metaCache.get(cacheKey) : undefined;
+    const cached = cacheKey === '' ? undefined : metaCache.get(cacheKey);
     if (cached) {
       setMeta(cached);
       setIsLoading(false);
     } else {
       setMeta(undefined);
-      setIsLoading(!!config && !!doctype);
+      setIsLoading(Boolean(config) && doctype !== '');
     }
     setError(null);
   }
@@ -621,109 +727,46 @@ export function useDocTypeMeta(
   const httpRef = useHttpClientRef(config);
 
   useEffect(() => {
-    if (!config || !doctype) {
-      return;
+    if (!config || doctype === '') {
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on other paths; a bare return trips consistent-return
+      return undefined;
     }
 
     const key = `${connectionKey(config)}:${doctype}`;
     // Already have cached data (synchronized during render)
     if (metaCache.has(key)) {
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- see above
+      return undefined;
     }
 
     const http = httpRef.current;
     // No client AND no corpus: nothing can answer, so park rather than
     // dial `undefined` (a fixtures-only host has no baseURL by design).
     if (!http && !config.fixtures) {
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- see above
+      return undefined;
     }
 
     let cancelled = false;
     setIsLoading(true);
     setError(null);
 
-    (async () => {
+    void (async () => {
       try {
-        // Fixture hosts (stories/tests) keep the getdoctype-shaped meta doc in
-        // the provider's "DocType" collection — the same convention the
-        // backoffice meta loader uses. Providers that stub only documents fall
-        // through to the network below.
-        const fromFixtures = config.fixtures
-          ? ((await config.fixtures.getDoc('DocType', doctype)) as DocTypeMeta | null)
-          : null;
-        if (cancelled) {
+        const parsed = await loadDocTypeMeta(config, http, doctype, () => cancelled);
+        if (parsed === null) {
           return;
         }
-
-        let raw = fromFixtures?.fields ? fromFixtures : undefined;
-
-        if (!raw) {
-          if (!http) {
-            // Fixtures-only host: there is no server behind the corpus, so a
-            // missing DocType entry is the honest end of the road.
-            throw new Error(`DocType "${doctype}" is not in the fixture corpus and no baseURL is configured`);
-          }
-
-          // Both routes below are closed to Guest, so a signed-out reader
-          // gets the 403 without the request (MPO-322).
-          if (await connectsAsGuest(config.auth)) {
-            if (cancelled) {
-              return;
-            }
-            throw new FrappeError(`Sign in to load the ${doctype} schema`, 403);
-          }
-
-          // `getdoctype` is the whitelisted RPC the Desk itself loads form
-          // metadata with, and every logged-in user may call it. Reading
-          // `/api/resource/DocType/<name>` instead asks for the DocType
-          // *document*, which only System Manager holds read permission on, so
-          // ordinary users got a 403 PermissionError — and Frappe's
-          // developer-mode traceback rendered into the UI instead of a form.
-          const response = await http.get<{ docs?: DocTypeMeta[] }>('/api/method/frappe.desk.form.load.getdoctype', {
-            doctype,
-          });
-
-          if (cancelled) {
-            return;
-          }
-
-          // docs[0] is the requested doctype; docs[1..] are its child tables.
-          const docs = response.payload?.docs;
-          raw = docs?.find((doc) => doc?.name === doctype) ?? docs?.[0];
-
-          if (!raw) {
-            // Sites that expose the REST API without the desk leave the RPC
-            // above unregistered, so it answers with no `docs`. The document
-            // route still serves meta there, and such a site's API clients are
-            // typically System Managers, who may read it.
-            const rest = await http.get<{ data?: DocTypeMeta }>(`/api/resource/DocType/${encodeURIComponent(doctype)}`);
-
-            if (cancelled) {
-              return;
-            }
-
-            raw = rest.payload?.data;
-          }
-        }
-
-        if (!raw) {
-          throw new Error(`No data returned for DocType "${doctype}"`);
-        }
-
-        const parsed = parseRawDocTypeMeta(raw);
         metaCache.set(key, parsed);
         setMeta(parsed);
-      } catch (error) {
+      } catch (loadError) {
         if (cancelled) {
           return;
         }
-        setError(error instanceof Error ? error : new Error(String(error)));
+        setError(loadError instanceof Error ? loadError : new Error(String(loadError)));
         setMeta(undefined);
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
       }
+      setIsLoading(false);
     })();
 
     return () => {
@@ -735,17 +778,18 @@ export function useDocTypeMeta(
     // effect on every render and, when the request fails (e.g. a Guest calling
     // the login-gated getdoctype RPC → 403, which never populates
     // `metaCache`), spin into an infinite refetch loop.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- keyed on the stable cacheKey on purpose (see above)
   }, [cacheKey, version]);
 
   const refetch = useCallback(() => {
-    if (cacheKey) {
+    if (cacheKey !== '') {
       metaCache.delete(cacheKey);
     }
     setVersion((v) => v + 1);
   }, [cacheKey]);
 
   return { meta, isLoading, error, refetch };
-}
+};
 
 // ---------------------------------------------------------------------------
 // Hook: useLinkSearch
@@ -753,9 +797,10 @@ export function useDocTypeMeta(
 
 /** Raw item shape returned by `frappe.desk.search.search_link` (v13: `results`, v14+: `message`). */
 interface RawSearchLinkItem {
-  value?: string;
-  label?: string;
-  description?: string;
+  // Autoincrement doctypes name their rows with numbers.
+  value?: string | number;
+  label?: string | number;
+  description?: string | number | null;
 }
 
 /**
@@ -790,15 +835,11 @@ interface RawSearchLinkItem {
  * }
  * ```
  */
-export function useLinkSearch(
+export const useLinkSearch = (
   config: FrappeConnectionConfig | undefined,
   doctype: string,
   options?: LinkSearchOptions,
-): {
-  results: LinkSearchResult[];
-  isLoading: boolean;
-  error: Error | null;
-} {
+) => {
   const query = options?.query ?? '';
   const searchFields = options?.searchFields;
   const filters = options?.filters;
@@ -816,38 +857,34 @@ export function useLinkSearch(
 
   useEffect(() => {
     const http = httpRef.current;
-    if (!http || !doctype || !enabled || (!query && !allowEmptyQuery)) {
+    const hasQuery = query !== '' || allowEmptyQuery;
+    if (!http || doctype === '' || !enabled || !hasQuery) {
       setResults([]);
       setIsLoading(false);
       setError(null);
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on other paths; a bare return trips consistent-return
+      return undefined;
     }
 
     let cancelled = false;
     setIsLoading(true);
     setError(null);
 
-    const timer = setTimeout(async () => {
+    const search = async () => {
       try {
-        const params: Record<string, unknown> = {
-          doctype,
-          txt: query,
-          page_length: limit,
-        };
-        if (filters) {
-          params.filters = filters;
-        }
-        if (searchFields?.[0]) {
-          params.searchfield = searchFields[0];
-        }
-        if (referenceDoctype) {
-          params.reference_doctype = referenceDoctype;
-        }
-
+        const [searchField] = searchFields ?? [];
         const response = await http.get<{
           message?: RawSearchLinkItem[];
           results?: RawSearchLinkItem[];
-        }>('/api/method/frappe.desk.search.search_link', params);
+        }>('/api/method/frappe.desk.search.search_link', {
+          doctype,
+          txt: query,
+          page_length: limit,
+          // Unset keys are dropped from the query string.
+          filters,
+          searchfield: isNonEmpty(searchField) ? searchField : undefined,
+          reference_doctype: isNonEmpty(referenceDoctype) ? referenceDoctype : undefined,
+        });
 
         if (cancelled) {
           return;
@@ -863,27 +900,28 @@ export function useLinkSearch(
               item.description === null || item.description === undefined ? undefined : String(item.description),
           })),
         );
-      } catch (error) {
+      } catch (searchError) {
         if (cancelled) {
           return;
         }
-        setError(error instanceof Error ? error : new Error(String(error)));
+        setError(searchError instanceof Error ? searchError : new Error(String(searchError)));
         setResults([]);
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
       }
+      setIsLoading(false);
+    };
+
+    const timer = setTimeout(() => {
+      void search();
     }, debounceMs);
 
     return () => {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [query, doctype, searchFields, filters, limit, allowEmptyQuery, enabled, debounceMs, referenceDoctype]);
+  }, [query, doctype, searchFields, filters, limit, allowEmptyQuery, enabled, debounceMs, referenceDoctype, httpRef]);
 
   return { results, isLoading, error };
-}
+};
 
 // ---------------------------------------------------------------------------
 // Hook: useLinkTitle
@@ -907,45 +945,50 @@ const linkTitleCache = new Map<string, string>();
  * @param name - The linked document name (current field value)
  * @returns `{ title, isLoading }` — `title` is undefined while nothing is known
  */
-export function useLinkTitle(
-  config: FrappeConnectionConfig | undefined,
-  doctype: string,
-  name: string | undefined,
-): { title: string | undefined; isLoading: boolean } {
-  const cacheKey = config && doctype && name ? `${config.baseURL}:${doctype}:${name}` : '';
-  const [title, setTitle] = useState<string | undefined>(() => (cacheKey ? linkTitleCache.get(cacheKey) : undefined));
+export const useLinkTitle = (config: FrappeConnectionConfig | undefined, doctype: string, name: string | undefined) => {
+  const cacheKey = config && doctype !== '' && isNonEmpty(name) ? `${String(config.baseURL)}:${doctype}:${name}` : '';
+  const [title, setTitle] = useState<string | undefined>(() =>
+    cacheKey === '' ? undefined : linkTitleCache.get(cacheKey),
+  );
   const [isLoading, setIsLoading] = useState(false);
 
   const httpRef = useHttpClientRef(config);
 
   useEffect(() => {
-    if (!cacheKey || !name) {
+    if (cacheKey === '' || !isNonEmpty(name)) {
+      // oxlint-disable-next-line react/set-state-in-effect -- clears the title when the link value clears
       setTitle(undefined);
       setIsLoading(false);
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on other paths; a bare return trips consistent-return
+      return undefined;
     }
 
     const cached = linkTitleCache.get(cacheKey);
     if (cached !== undefined) {
       setTitle(cached);
       setIsLoading(false);
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- see above
+      return undefined;
     }
 
     const http = httpRef.current;
     if (!http) {
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- see above
+      return undefined;
     }
 
     let cancelled = false;
     setIsLoading(true);
 
-    (async () => {
+    void (async () => {
       try {
-        const response = await http.get<{ message?: string }>('/api/method/frappe.desk.search.get_link_title', {
-          doctype,
-          docname: name,
-        });
+        const response = await http.get<{ message?: string | number | null }>(
+          '/api/method/frappe.desk.search.get_link_title',
+          {
+            doctype,
+            docname: name,
+          },
+        );
         if (cancelled) {
           return;
         }
@@ -959,24 +1002,40 @@ export function useLinkTitle(
         }
         // Honest fallback: the name itself is always a truthful display value.
         setTitle(name);
-      } finally {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
       }
+      setIsLoading(false);
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [cacheKey, doctype, name]);
+  }, [cacheKey, doctype, name, httpRef]);
 
   return { title, isLoading };
-}
+};
 
 // ---------------------------------------------------------------------------
 // Hook: useDocTypeSearch
 // ---------------------------------------------------------------------------
+
+/** One DocType-list request for `cacheKey`; it fills the cache and clears its in-flight entry when it settles. */
+const fetchDocTypeList = async (http: HttpClient, cacheKey: string): Promise<DocTypeListItem[]> => {
+  try {
+    const response = await http.get<{
+      data?: DocTypeListItem[];
+    }>('/api/resource/DocType', {
+      limit_page_length: 0,
+      // DocType has no `title` column; requesting it makes Frappe reject
+      // the whole query ("Field not permitted in query: title")
+      fields: ['name', 'module'],
+    });
+    const list = response.payload?.data ?? [];
+    docTypeListCache.set(cacheKey, list);
+    return list;
+  } finally {
+    docTypeListFetches.delete(cacheKey);
+  }
+};
 
 /**
  * Search across all DocType names for Awesomebar navigation.
@@ -1003,14 +1062,7 @@ export function useLinkTitle(
  * }
  * ```
  */
-export function useDocTypeSearch(
-  config: FrappeConnectionConfig | undefined,
-  query: string,
-): {
-  results: DocTypeSearchResult[];
-  isLoading: boolean;
-  error: Error | null;
-} {
+export const useDocTypeSearch = (config: FrappeConnectionConfig | undefined, query: string) => {
   const [allDocTypes, setAllDocTypes] = useState<DocTypeListItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -1019,21 +1071,25 @@ export function useDocTypeSearch(
   const cacheKey = config?.baseURL ?? '';
 
   useEffect(() => {
-    if (!cacheKey) {
+    if (cacheKey === '') {
+      // oxlint-disable-next-line react/set-state-in-effect -- clears the list when the connection goes away
       setAllDocTypes([]);
       setIsLoading(false);
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on other paths; a bare return trips consistent-return
+      return undefined;
     }
 
     const cached = docTypeListCache.get(cacheKey);
     if (cached) {
       setAllDocTypes(cached);
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- see above
+      return undefined;
     }
 
     const http = httpRef.current;
     if (!http) {
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- see above
+      return undefined;
     }
 
     let cancelled = false;
@@ -1045,42 +1101,26 @@ export function useDocTypeSearch(
     // the stable cacheKey dep below keeps that from looping.
     let fetchPromise = docTypeListFetches.get(cacheKey);
     if (!fetchPromise) {
-      fetchPromise = http
-        .get<{
-          data?: DocTypeListItem[];
-        }>('/api/resource/DocType', {
-          limit_page_length: 0,
-          // DocType has no `title` column; requesting it makes Frappe reject
-          // the whole query ("Field not permitted in query: title")
-          fields: ['name', 'module'],
-        })
-        .then((response) => {
-          const list = response.payload?.data ?? [];
-          docTypeListCache.set(cacheKey, list);
-          return list;
-        })
-        .finally(() => {
-          docTypeListFetches.delete(cacheKey);
-        });
+      fetchPromise = fetchDocTypeList(http, cacheKey);
       docTypeListFetches.set(cacheKey, fetchPromise);
     }
+    const sharedFetch = fetchPromise;
 
-    fetchPromise
-      .then((list) => {
+    void (async () => {
+      try {
+        const list = await sharedFetch;
         if (!cancelled) {
           setAllDocTypes(list);
         }
-      })
-      .catch((error) => {
+      } catch (fetchError) {
         if (!cancelled) {
-          setError(error instanceof Error ? error : new Error(String(error)));
+          setError(fetchError instanceof Error ? fetchError : new Error(String(fetchError)));
         }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setIsLoading(false);
-        }
-      });
+      }
+      if (!cancelled) {
+        setIsLoading(false);
+      }
+    })();
 
     return () => {
       cancelled = true;
@@ -1092,11 +1132,11 @@ export function useDocTypeSearch(
     // → 403, which never populates `docTypeListCache`), spins into an
     // infinite refetch loop that hammers the bench. Same fix as
     // useDocTypeMeta above.
-  }, [cacheKey]);
+  }, [cacheKey, httpRef]);
 
   // Filter locally for instant results
   const results = useMemo<DocTypeSearchResult[]>(() => {
-    if (!query || allDocTypes.length === 0) {
+    if (query === '' || allDocTypes.length === 0) {
       return [];
     }
 
@@ -1120,4 +1160,4 @@ export function useDocTypeSearch(
   }, [query, allDocTypes]);
 
   return { results, isLoading, error };
-}
+};

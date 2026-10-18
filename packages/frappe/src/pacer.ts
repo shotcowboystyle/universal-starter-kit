@@ -10,7 +10,8 @@ import { DbModule } from './db';
 import type { FixtureProvider } from './fixtures';
 import type { SyncModule } from './sync';
 import { Operation } from './sync/types';
-import { useLiveQuery } from './useLiveQuery';
+import type { SubscriptionQuery } from './sync/types';
+import { useLiveQuery } from './use-live-query';
 
 // ---------------------------------------------------------------------------
 // useDebouncedSearch
@@ -25,7 +26,7 @@ export interface DebouncedSearchOptions<TDoc extends FrappeDocData> {
   /** Fields to return from the search */
   fields?: readonly (keyof TDoc & string)[];
   /** Additional static filters merged into every request */
-  filters?: Record<string, unknown> | [string, string, unknown][];
+  filters?: SubscriptionQuery['filters'];
   /** Maximum results per search (default 20) */
   limit?: number;
   /** Minimum query length before firing a search (default 1) */
@@ -79,19 +80,28 @@ export interface FrappeConnectionConfig {
   fixtures?: FixtureProvider;
 }
 
-function createDbModule(config: FrappeConnectionConfig): DbModule | undefined {
-  if (!config.baseURL) {
-    return undefined;
+const createDbModule = (config: FrappeConnectionConfig): DbModule | null => {
+  if (config.baseURL === undefined || config.baseURL === '') {
+    return null;
   }
   const authConfig: AuthConfig | undefined = config.auth
     ? {
         useToken: config.auth.useToken,
         token: config.auth.token,
+        // SAFETY: the public config takes the auth scheme as a plain string; HttpClient sends it verbatim.
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
         type: config.auth.type as AuthConfig['type'],
       }
     : undefined;
   return new DbModule(new HttpClient(config.baseURL, authConfig));
-}
+};
+
+/** Everything about a connection that changes which DbModule a search uses. */
+const searchConfigKey = (config: FrappeConnectionConfig): string => {
+  const { auth } = config;
+  const tokenFlag = auth?.useToken ? 't' : '';
+  return `${String(config.baseURL)}:${tokenFlag}:${String(auth?.token ?? '')}:${auth?.type ?? ''}`;
+};
 
 /**
  * Debounced search hook for Frappe doctypes.
@@ -99,7 +109,7 @@ function createDbModule(config: FrappeConnectionConfig): DbModule | undefined {
  * Uses TanStack Pacer's `AsyncDebouncer` to debounce user input before
  * firing a `getDocList` API call with a `like` filter.
  *
- * @typeParam TDoc - The Frappe document type
+ * @template TDoc - The Frappe document type
  * @param config - Connection configuration (baseURL, auth), or undefined to disable
  * @param doctype - The Frappe doctype to search
  * @param options - Search options (wait, fields, filters, limit, minLength, searchField)
@@ -123,11 +133,11 @@ function createDbModule(config: FrappeConnectionConfig): DbModule | undefined {
  * }
  * ```
  */
-export function useDebouncedSearch<TDoc extends FrappeDocData>(
+export const useDebouncedSearch = <TDoc extends FrappeDocData>(
   config: FrappeConnectionConfig | undefined,
   doctype: string,
   options?: DebouncedSearchOptions<TDoc>,
-): DebouncedSearchResult<TDoc> {
+): DebouncedSearchResult<TDoc> => {
   const wait = options?.wait ?? 300;
   const fields = options?.fields;
   const limit = options?.limit ?? 20;
@@ -135,24 +145,22 @@ export function useDebouncedSearch<TDoc extends FrappeDocData>(
   const additionalFilters = options?.filters;
   const searchField = options?.searchField ?? 'name';
 
-  const [query, setQueryState] = useState('');
+  const [queryValue, setQueryValue] = useState('');
   const [results, setResults] = useState<FrappeDoc<TDoc>[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
   // Stable DbModule reference
-  const dbRef = useRef<DbModule | undefined>(undefined);
+  const dbRef = useRef<DbModule | null>(null);
   const configKeyRef = useRef('');
-  const configKey = config
-    ? `${config.baseURL}:${config.auth?.useToken ? 't' : ''}:${config.auth?.token ?? ''}:${config.auth?.type ?? ''}`
-    : '';
-  if (config && configKey !== configKeyRef.current) {
-    dbRef.current = createDbModule(config);
+  const configKey = config ? searchConfigKey(config) : '';
+  // Render-phase rebuild keyed on the connection: the debounced search reads
+  // dbRef when it fires, so it always targets the latest connection.
+  /* oxlint-disable react/refs -- keyed render-phase cache read by the debounced callback, not by render output */
+  if (configKey !== configKeyRef.current) {
+    dbRef.current = config ? createDbModule(config) : null;
     configKeyRef.current = configKey;
   }
-  if (!config) {
-    dbRef.current = undefined;
-    configKeyRef.current = '';
-  }
+  /* oxlint-enable react/refs */
 
   const debouncer = useAsyncDebouncer(
     async (searchQuery: string) => {
@@ -179,7 +187,7 @@ export function useDebouncedSearch<TDoc extends FrappeDocData>(
         }
 
         const docs = await db.getDocList<TDoc>(doctype, {
-          fields: fields as readonly string[] | undefined,
+          fields,
           filters: searchFilters,
           limit,
         });
@@ -187,22 +195,21 @@ export function useDebouncedSearch<TDoc extends FrappeDocData>(
       } catch (error) {
         console.error(`[useDebouncedSearch] Search failed for ${doctype}:`, error);
         setResults([]);
-      } finally {
-        setIsSearching(false);
       }
+      setIsSearching(false);
     },
     { wait },
   );
 
   const setQuery = useCallback(
     (newQuery: string) => {
-      setQueryState(newQuery);
+      setQueryValue(newQuery);
       if (newQuery.length < minLength) {
         setResults([]);
         debouncer.cancel();
         return;
       }
-      debouncer.maybeExecute(newQuery);
+      void debouncer.maybeExecute(newQuery);
     },
     [debouncer, minLength],
   );
@@ -212,8 +219,8 @@ export function useDebouncedSearch<TDoc extends FrappeDocData>(
     setIsSearching(false);
   }, [debouncer]);
 
-  return { query, setQuery, results, isSearching, cancel };
-}
+  return { query: queryValue, setQuery, results, isSearching, cancel };
+};
 
 // ---------------------------------------------------------------------------
 // useThrottledPagination
@@ -250,7 +257,7 @@ export interface ThrottledPaginationResult<TDoc extends FrappeDocData> {
  * The `loadMore` callback is throttled using TanStack Pacer to prevent
  * rapid-fire scroll events from over-fetching.
  *
- * @typeParam TDoc - The Frappe document type
+ * @template TDoc - The Frappe document type
  * @param collection - A TanStack DB Collection, or undefined
  * @param options - Pagination options (pageSize, throttleMs)
  * @returns `{ items, loadMore, hasMore, isLoading }`
@@ -274,10 +281,10 @@ export interface ThrottledPaginationResult<TDoc extends FrappeDocData> {
  * }
  * ```
  */
-export function useThrottledPagination<TDoc extends FrappeDocData>(
+export const useThrottledPagination = <TDoc extends FrappeDocData>(
   collection: Collection<TDoc, string> | undefined,
   options?: ThrottledPaginationOptions,
-): ThrottledPaginationResult<TDoc> {
+): ThrottledPaginationResult<TDoc> => {
   const pageSize = options?.pageSize ?? 20;
   const throttleMs = options?.throttleMs ?? 200;
 
@@ -286,7 +293,9 @@ export function useThrottledPagination<TDoc extends FrappeDocData>(
   // Query all items from the collection
   const liveResult = useLiveQuery((q) => (collection ? q.from({ _items: collection }) : null), [collection]);
 
-  const allItems = (liveResult?.data ?? []) as TDoc[];
+  const liveData = liveResult?.data;
+  // SAFETY: the query selects whole rows of a Collection<TDoc>, so each result row is a TDoc.
+  const allItems = useMemo(() => (liveData ?? []) as TDoc[], [liveData]);
 
   const items = useMemo(() => allItems.slice(0, visibleCount), [allItems, visibleCount]);
 
@@ -301,7 +310,7 @@ export function useThrottledPagination<TDoc extends FrappeDocData>(
   );
 
   return { items, loadMore: throttledLoadMore, hasMore, isLoading };
-}
+};
 
 // ---------------------------------------------------------------------------
 // createRateLimitedBatch
@@ -348,7 +357,7 @@ export interface RateLimitedBatchHandle<TDoc extends FrappeDocData> {
  * limits when executing bulk create/update/delete operations against
  * a Frappe backend via SyncModule.
  *
- * @typeParam TDoc - The Frappe document type
+ * @template TDoc - The Frappe document type
  * @param options - Batch configuration (doctype, operation, rate limits, syncModule)
  * @returns `{ add(name, data), execute({ onProgress }) }`
  *
@@ -371,24 +380,24 @@ export interface RateLimitedBatchHandle<TDoc extends FrappeDocData> {
  * });
  * ```
  */
-export function createRateLimitedBatch<TDoc extends FrappeDocData>(
+export const createRateLimitedBatch = <TDoc extends FrappeDocData>(
   options: RateLimitedBatchOptions,
-): RateLimitedBatchHandle<TDoc> {
+): RateLimitedBatchHandle<TDoc> => {
   const { doctype, operation, maxPerSecond = 5, batchSize = 10, syncModule } = options;
 
   const queue: BatchItem<TDoc>[] = [];
 
-  const operationMap: Record<string, Operation> = {
+  const operationMap = {
     create: Operation.Create,
     update: Operation.Update,
     delete: Operation.Delete,
+  } satisfies Record<RateLimitedBatchOptions['operation'], Operation>;
+
+  const add = (name: string, data?: Partial<TDoc>) => {
+    queue.push({ name, data });
   };
 
-  function add(name: string, data?: Partial<TDoc>) {
-    queue.push({ name, data });
-  }
-
-  async function execute(callbacks?: { onProgress?: (completed: number, total: number) => void }) {
+  const execute = async (callbacks?: { onProgress?: (completed: number, total: number) => void }) => {
     const total = queue.length;
     if (total === 0) {
       return;
@@ -406,8 +415,10 @@ export function createRateLimitedBatch<TDoc extends FrappeDocData>(
     const rateLimiter = new AsyncRateLimiter(
       async (batch: BatchItem<TDoc>[]) => {
         const mutations = batch.map((item) => ({
+          // oxlint-disable-next-line sonarjs/pseudo-random -- fallback mutation id for runtimes without randomUUID; uniqueness only, not secrecy
           mutationId: crypto.randomUUID?.() ?? Math.random().toString(36).slice(2),
           operation: operationMap[operation],
+          // SAFETY: doctype + name plus a partial TDoc is the minimal FrappeDocData a mutation carries.
           doc: {
             doctype,
             name: item.name,
@@ -417,8 +428,9 @@ export function createRateLimitedBatch<TDoc extends FrappeDocData>(
 
         // Execute mutations sequentially through SyncModule
         for (const mutation of mutations) {
+          // oxlint-disable-next-line eslint/no-await-in-loop, react-doctor/async-await-in-loop -- mutations are applied in order; progress counts each ack
           await syncModule.mutate(mutation);
-          completed++;
+          completed += 1;
           callbacks?.onProgress?.(completed, total);
         }
       },
@@ -430,12 +442,13 @@ export function createRateLimitedBatch<TDoc extends FrappeDocData>(
 
     // Submit all batches to the rate limiter
     for (const batch of batches) {
+      // oxlint-disable-next-line eslint/no-await-in-loop, react-doctor/async-await-in-loop -- batches go through the rate limiter one at a time by design
       await rateLimiter.maybeExecute(batch);
     }
 
     // Clear the queue
     queue.length = 0;
-  }
+  };
 
   return { add, execute };
-}
+};

@@ -22,7 +22,6 @@ export const baseIgnorePatterns = [
   'packages/cli/**',
   'packages/config/**',
   'packages/desktop/**',
-  'packages/frappe/**',
   'packages/frappe-ui/**',
   'packages/i18n/**',
   'packages/markdown/**',

@@ -1,8 +1,26 @@
+import type { CreateSourceFileOptions, createSourceFile, LanguageService, ScriptTarget, SourceFile } from 'typescript';
+
+interface JsonSchema {
+  $ref?: string;
+  enum?: unknown[];
+  type?: string;
+  properties?: Record<string, JsonSchema | null | undefined>;
+  required?: string[];
+  items?: JsonSchema | null;
+  schema?: { type?: string } | null;
+}
+
 interface OpenAPI {
   components?: {
-    schemas?: Record<string, any>;
+    schemas?: Record<string, JsonSchema | null | undefined>;
   };
-  paths?: Record<string, any>;
+  paths?: Record<string, OpenApiPathItem>;
+}
+
+// Only the path keys are read; the item body is never inspected.
+interface OpenApiPathItem {
+  summary?: string;
+  description?: string;
 }
 
 interface PluginConfig {
@@ -11,31 +29,112 @@ interface PluginConfig {
   cacheTTL?: number;
 }
 
-interface LanguageServiceProxy {
-  getExternalFiles(): string[];
-  getSourceFile(
-    fileName: string,
-    languageVersion: any,
-    _onError?: any,
-    _shouldCreateNewSourceFile?: boolean,
-    _length?: number,
-  ): any;
+type LanguageVersion = ScriptTarget | CreateSourceFileOptions;
+
+interface PluginCreateInfo {
+  config?: PluginConfig | null;
+  languageService: LanguageService;
 }
 
-function init(modules: { typescript: any }) {
+interface LanguageServiceProxy {
+  getExternalFiles: () => string[];
+  getSourceFile: (
+    fileName: string,
+    languageVersion: LanguageVersion,
+    _onError?: (message: string) => void,
+    _shouldCreateNewSourceFile?: boolean,
+    _length?: number,
+  ) => SourceFile | undefined;
+}
+
+const VIRTUAL_FILE = 'frappe-virtual-types.d.ts';
+
+const safe = (s: string): string => s.replaceAll(/[^a-zA-Z0-9_]/gu, '_');
+
+const mapType = (v: JsonSchema | null | undefined): string => {
+  if (!v) {
+    return 'any';
+  }
+  if (v.$ref !== undefined && v.$ref !== '') {
+    return safe(v.$ref.split('/').pop() ?? 'any');
+  }
+  const t = v.type ?? v.schema?.type;
+  if (t === 'string') {
+    return 'string';
+  }
+  if (t === 'integer' || t === 'number') {
+    return 'number';
+  }
+  if (t === 'boolean') {
+    return 'boolean';
+  }
+  if (t === 'array') {
+    return `${mapType(v.items)}[]`;
+  }
+  if (t === 'object') {
+    return 'Record<string, any>';
+  }
+  return 'any';
+};
+
+const collectDoctypes = (paths: Record<string, OpenApiPathItem>): Set<string> => {
+  const doctypes = new Set<string>();
+  for (const p of Object.keys(paths)) {
+    const parts = p.split('/').filter(Boolean);
+    const idx = parts.indexOf('resource');
+    if (idx !== -1 && parts[idx + 1]) {
+      doctypes.add(parts[idx + 1]);
+    }
+  }
+  return doctypes;
+};
+
+const emitSchema = (lines: string[], name: string, schema: JsonSchema | null | undefined): void => {
+  if (schema?.enum) {
+    const members = schema.enum.map((x) => JSON.stringify(x)).join(' | ');
+    lines.push(`  export type ${safe(name)} = ${members}`);
+    return;
+  }
+  if (schema?.type === 'object' && schema.properties) {
+    lines.push(`  export interface ${safe(name)} {`);
+    const rq = new Set(Array.isArray(schema.required) ? schema.required : []);
+    for (const [k, v] of Object.entries(schema.properties)) {
+      const optional = !rq.has(k);
+      lines.push(`    ${safe(k)}${optional ? '?' : ''}: ${mapType(v)}`);
+    }
+    lines.push('  }');
+  }
+};
+
+const emitDTS = (spec: OpenAPI, namespace: string): string => {
+  const lines: string[] = [];
+  lines.push(`declare module "${namespace}" {`);
+  const schemas = spec.components?.schemas ?? {};
+  const doctypeUnion = [...collectDoctypes(spec.paths ?? {})].map((d) => `'${d}'`).join(' | ') || 'string';
+  lines.push(`  export type Doctype = ${doctypeUnion}`);
+  for (const [name, schema] of Object.entries(schemas)) {
+    emitSchema(lines, name, schema);
+  }
+  lines.push('}');
+  return lines.join('\n');
+};
+
+const init = (modules: { typescript: { createSourceFile: typeof createSourceFile } }) => {
   const ts = modules.typescript;
   let openapi: OpenAPI | null = null;
   let ns = '@frappe/types';
   let lastFetch = 0;
   let ttl = 60_000;
 
-  function create(info: any): LanguageServiceProxy {
-    const config: PluginConfig = info.config ?? {};
-    const url = (config.openapiUrl ?? '').toString();
-    ns = (config.namespace ?? ns).toString();
-    ttl = Number(config.cacheTTL ?? ttl);
+  const getExternalFiles = (): string[] => (openapi ? [VIRTUAL_FILE] : []);
 
-    async function ensureOpenAPI() {
+  const create = (info: PluginCreateInfo): LanguageServiceProxy => {
+    const config = info.config ?? {};
+    const url = config.openapiUrl ?? '';
+    ns = config.namespace ?? ns;
+    ttl = config.cacheTTL ?? ttl;
+
+    const ensureOpenAPI = async () => {
       const now = Date.now();
       if (openapi && now - lastFetch < ttl) {
         return;
@@ -45,117 +144,46 @@ function init(modules: { typescript: any }) {
       }
       try {
         const res = await fetch(url);
-        openapi = await res.json();
+        // SAFETY: trusted dev-time OpenAPI document from the user's tsconfig; emitDTS treats every
+        // nested level as optional, so a partial document only yields fewer generated types.
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- tsserver plugins have no schema validator; res.json() is the I/O boundary
+        openapi = (await res.json()) as OpenAPI;
         lastFetch = now;
       } catch {
-        // Silently ignore fetch errors
+        // Safe to continue: generated types stay absent/stale and the next diagnostics pass retries.
       }
-    }
+    };
 
     const proxy = new Proxy(info.languageService, {
-      get(target: any, prop: string) {
+      get(target, prop: keyof LanguageService) {
         if (prop !== 'getSemanticDiagnostics') {
           return target[prop];
         }
-        return async function get(this: any, ...args: any[]) {
+        return async function get(
+          this: LanguageService,
+          ...args: Parameters<LanguageService['getSemanticDiagnostics']>
+        ) {
           await ensureOpenAPI();
           return target.getSemanticDiagnostics.apply(this, args);
         };
       },
     });
 
-    function getExternalFiles(): string[] {
-      return openapi ? ['frappe-virtual-types.d.ts'] : [];
-    }
-
-    function getSourceFile(
-      fileName: string,
-      languageVersion: any,
-      _onError?: any,
-      _shouldCreateNewSourceFile?: boolean,
-      _length?: number,
-    ) {
-      if (fileName === 'frappe-virtual-types.d.ts' && openapi) {
-        const content = emitDTS(openapi, ns);
-        return ts.createSourceFile(fileName, content, languageVersion);
-      }
-      return;
-    }
+    // The trailing tsserver arguments are accepted by the interface but unused here.
+    const getSourceFile = (fileName: string, languageVersion: LanguageVersion) =>
+      fileName === VIRTUAL_FILE && openapi
+        ? ts.createSourceFile(fileName, emitDTS(openapi, ns), languageVersion)
+        : undefined;
 
     return {
       ...proxy,
       getExternalFiles,
       getSourceFile,
     };
-  }
-
-  function emitDTS(spec: OpenAPI, ns: string): string {
-    const lines: string[] = [];
-    lines.push(`declare module "${ns}" {`);
-    const schemas = spec?.components?.schemas ?? {};
-    const paths = spec.paths ?? {};
-    const doctypes = new Set<string>();
-    for (const p of Object.keys(paths)) {
-      const parts = p.split('/').filter(Boolean);
-      const idx = parts.indexOf('resource');
-      if (idx !== -1 && parts[idx + 1]) {
-        doctypes.add(parts[idx + 1]);
-      }
-    }
-    lines.push(`  export type Doctype = ${[...doctypes].map((d) => `'${d}'`).join(' | ') || 'string'}`);
-    for (const [name, schema] of Object.entries(schemas)) {
-      if (schema?.enum) {
-        const members = schema.enum.map((x) => JSON.stringify(x)).join(' | ');
-        lines.push(`  export type ${safe(name)} = ${members}`);
-        continue;
-      }
-      if (schema?.type === 'object' && schema?.properties) {
-        lines.push(`  export interface ${safe(name)} {`);
-        for (const [k, v] of Object.entries(schema?.properties ?? {})) {
-          const t = mapType(v);
-          const rq = Array.isArray(schema?.required) ? schema.required : [];
-          const optional = rq.indexOf(k) === -1;
-          lines.push(`    ${safe(k)}${optional ? '?' : ''}: ${t}`);
-        }
-        lines.push('  }');
-      }
-    }
-    lines.push('}');
-    return lines.join('\n');
-  }
-
-  function safe(s: string): string {
-    return s.replaceAll(/[^a-zA-Z0-9_]/g, '_');
-  }
-
-  function mapType(v: any): string {
-    if (!v) {
-      return 'any';
-    }
-    if (v.$ref) {
-      return safe(v.$ref.split('/').pop() ?? 'any');
-    }
-    const t = v.type ?? v.schema?.type;
-    if (t === 'string') {
-      return 'string';
-    }
-    if (t === 'integer' || t === 'number') {
-      return 'number';
-    }
-    if (t === 'boolean') {
-      return 'boolean';
-    }
-    if (t === 'array') {
-      return `${mapType(v.items)}[]`;
-    }
-    if (t === 'object') {
-      return 'Record<string, any>';
-    }
-    return 'any';
-  }
+  };
 
   return { create };
-}
+};
 
 // Export for ES modules (CJS is handled by the build tool)
 export default init;

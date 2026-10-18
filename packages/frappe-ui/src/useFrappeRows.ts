@@ -19,7 +19,7 @@
  *
  * 2. THE LIMIT. A live bench sends no `limit_page_length` when the
  *    subscription carries no limit, and clamps the page to 20 rows
- *    (frappe `sync/subscriptionManager.ts`); a fixture provider slices only
+ *    (frappe `sync/subscription-manager.ts`); a fixture provider slices only
  *    when asked, so the truncation shows on serve and never in a story.
  *    `limit` therefore defaults to {@link DEFAULT_FRAPPE_ROWS_LIMIT} rather
  *    than being left to each caller. `limit: null` is the explicit opt-out

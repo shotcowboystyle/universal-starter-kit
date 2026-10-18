@@ -4,14 +4,14 @@
  * that froze storybook renderers and OOM'd vitest workers).
  *
  * The protection lives at the shared altitude: the collection cache in
- * `@repo/frappe` (frappeReact.ts) HOLDS an errored entry while
+ * `@repo/frappe` (frappe-react.ts) HOLDS an errored entry while
  * any consumer retains it, so the error-state re-render re-acquires the
  * same entry instead of starting a fresh failing sync; the entry is evicted
  * on LAST release, making retry-by-remount exactly one fresh attempt.
  * FrappeTable/Kanban/Calendar/TreeView/Gantt all consume that one hook —
  * there is no per-view latch (the old attachments.tsx latch is gone).
  *
- * Cache-level pins live in public/frappe/src/frappeReact.spec.ts
+ * Cache-level pins live in public/frappe/src/frappe-react.test.ts
  * ("REGRESSION: an error-state consumer does not loop failing fetches").
  * This spec pins the same contract end-to-end through a real view that was
  * once flagged unprotected: FrappeTable with a down bench.

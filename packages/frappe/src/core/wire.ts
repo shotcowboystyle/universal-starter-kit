@@ -1,3 +1,7 @@
+import type { FrappeDocValue } from '../common/types';
+import type { Filters } from '../sync/filters';
+import { hasField } from '../util';
+
 export interface MutationRequestHeaders {
   'Content-Type': 'application/json';
   'Idempotency-Key'?: string;
@@ -11,7 +15,8 @@ export interface MutationRequestHeaders {
  */
 export interface CreateRequestBody {
   doctype: string;
-  [field: string]: any; // Document fields
+  /** Document fields */
+  [field: string]: FrappeDocValue;
 }
 
 /**
@@ -20,7 +25,7 @@ export interface CreateRequestBody {
 export interface UpdateRequestBody {
   doctype: string;
   name: string;
-  values: Record<string, any>;
+  values: Record<string, FrappeDocValue>;
 }
 
 /**
@@ -39,7 +44,7 @@ export interface ListSinceParams {
   modified_after?: string;
   limit?: number;
   fields?: string[];
-  filters?: any;
+  filters?: Filters;
 }
 
 // Response Types
@@ -56,7 +61,7 @@ export interface DocumentResponse {
   modified_by: string;
   docstatus: 0 | 1 | 2;
   idx?: number;
-  [field: string]: any;
+  [field: string]: FrappeDocValue;
 }
 
 /**
@@ -70,7 +75,7 @@ export interface WireChildTableRow {
   parent: string;
   parenttype: string;
   parentfield: string;
-  [field: string]: any;
+  [field: string]: FrappeDocValue;
 }
 
 /**
@@ -98,7 +103,7 @@ export interface DeleteResponse {
 /**
  * List since (backfill) response
  */
-export interface ListSinceResponse<T = any> {
+export interface ListSinceResponse<T = DocumentResponse> {
   rows: T[];
   checkpoint?: string;
   deleted?: {
@@ -227,7 +232,7 @@ export interface DocUnsubscribeEvent {
 export interface ListSubscribeEvent {
   event: 'list_subscribe';
   doctype: string;
-  filters?: any;
+  filters?: Filters;
 }
 
 /**
@@ -284,7 +289,7 @@ export interface MessageEvent {
   event: 'message';
   message: {
     type?: string;
-    content: any;
+    content: unknown;
   };
 }
 
@@ -419,7 +424,7 @@ export interface DeleteWireContract {
 /**
  * Complete wire protocol contract for list since operation
  */
-export interface ListSinceWireContract<T = any> {
+export interface ListSinceWireContract<T = DocumentResponse> {
   request: {
     method: 'GET';
     endpoint: string;
@@ -442,7 +447,7 @@ export type WireSuccess<T> = T extends { response: { success: infer S } } ? S : 
  * Extract error response types from a wire contract
  */
 export type WireErrors<T> = T extends { response: infer R }
-  ? R extends { success: any }
+  ? R extends { success: unknown }
     ? Exclude<R[keyof R], R['success']>
     : never
   : never;
@@ -450,34 +455,29 @@ export type WireErrors<T> = T extends { response: infer R }
 /**
  * Type guard for conflict error
  */
-export function isConflictError(err: any): err is ConflictErrorResponse {
-  return err?.error === 'VERSION_MISMATCH';
-}
+export const isConflictError = (err: unknown): err is ConflictErrorResponse =>
+  hasField(err, 'error') && err.error === 'VERSION_MISMATCH';
 
 /**
  * Type guard for precondition failed error
  */
-export function isPreconditionFailedError(err: any): err is PreconditionFailedResponse {
-  return err?.error === 'PRECONDITION_FAILED';
-}
+export const isPreconditionFailedError = (err: unknown): err is PreconditionFailedResponse =>
+  hasField(err, 'error') && err.error === 'PRECONDITION_FAILED';
 
 /**
  * Type guard for validation error
  */
-export function isValidationError(err: any): err is ValidationErrorResponse {
-  return err?.exc_type === 'ValidationError';
-}
+export const isValidationError = (err: unknown): err is ValidationErrorResponse =>
+  hasField(err, 'exc_type') && err.exc_type === 'ValidationError';
 
 /**
  * Type guard for permission error
  */
-export function isPermissionError(err: any): err is PermissionErrorResponse {
-  return err?.exc_type === 'PermissionError';
-}
+export const isPermissionError = (err: unknown): err is PermissionErrorResponse =>
+  hasField(err, 'exc_type') && err.exc_type === 'PermissionError';
 
 /**
  * Type guard for not found error
  */
-export function isNotFoundError(err: any): err is NotFoundErrorResponse {
-  return err?.exc_type === 'DoesNotExistError';
-}
+export const isNotFoundError = (err: unknown): err is NotFoundErrorResponse =>
+  hasField(err, 'exc_type') && err.exc_type === 'DoesNotExistError';

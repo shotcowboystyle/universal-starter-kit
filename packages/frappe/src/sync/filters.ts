@@ -22,59 +22,27 @@ export enum FilterOperator {
   NotLike = 'not like',
 }
 
-export type FilterValue = boolean | null | number | string | undefined | unknown | unknown[];
+// oxlint-disable-next-line anti-slop/no-unknown-type-aliases, sonarjs/redundant-type-aliases -- public alias: filter operands are arbitrary wire values (Frappe accepts any JSON)
+export type FilterValue = unknown;
 
-export type FilterTuple = [string, FilterOperator | string, unknown];
+export type FilterTuple = [string, FilterOperator | string, FilterValue];
 
-export type FilterObject = Record<string, unknown>;
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- public API: `{ field: value }` equality filters over arbitrary wire values
+export type FilterObject = Record<string, FilterValue>;
 
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- see FilterObject
 export type Filters = FilterTuple[] | FilterObject | null | undefined;
 
-function normalizeOperator(operator: FilterOperator | string): string {
-  return String(operator).toLowerCase();
-}
+const normalizeOperator = (operator: FilterOperator | string): string => operator.toLowerCase();
 
-export function matchesFilters<Data extends FrappeDocData>(doc: FrappeDoc<Data>, filters: Filters): boolean {
-  if (!filters) {
-    return true;
-  }
-  if (Array.isArray(filters)) {
-    for (const filterTuple of filters) {
-      const [fieldName, operatorRaw, expectedValue] = filterTuple;
-      const documentValue = doc?.[fieldName];
-      const operator = normalizeOperator(operatorRaw);
-      if (!evaluateFilterCondition(documentValue, operator, expectedValue)) {
-        return false;
-      }
-    }
-    return true;
-  }
-  if (typeof filters === 'object') {
-    for (const [fieldName, expectedValue] of Object.entries(filters)) {
-      if (doc?.[fieldName] !== expectedValue) {
-        return false;
-      }
-    }
-    return true;
-  }
-  return true;
-}
+const isOperator = (operator: string, ...enumValues: FilterOperator[]): boolean =>
+  enumValues.some((enumValue) => enumValue.toLowerCase() === operator.toLowerCase());
 
-function isOperator(operator: string, ...enumValues: FilterOperator[]): boolean {
-  return enumValues.some((enumValue) => enumValue.toLowerCase() === operator.toLowerCase());
-}
+const isComparable = (value: FilterValue): value is number | string =>
+  typeof value === 'number' || typeof value === 'string';
 
-function areComparableValues(a: unknown, b: unknown): boolean {
-  return (
-    a != null &&
-    b != null &&
-    (typeof a === 'number' || typeof a === 'string') &&
-    (typeof b === 'number' || typeof b === 'string')
-  );
-}
-
-function compareAsNumbers(a: unknown, b: unknown, comparison: (a: number, b: number) => boolean): boolean {
-  if (!areComparableValues(a, b)) {
+const compareAsNumbers = (a: FilterValue, b: FilterValue, comparison: (a: number, b: number) => boolean): boolean => {
+  if (!isComparable(a) || !isComparable(b)) {
     return false;
   }
   const numberA = Number(a);
@@ -83,89 +51,98 @@ function compareAsNumbers(a: unknown, b: unknown, comparison: (a: number, b: num
     return false;
   }
   return comparison(numberA, numberB);
-}
+};
 
-function evaluateFilterCondition(documentValue: unknown, operator: string, expectedValue: FilterValue): boolean {
-  if (isOperator(operator, FilterOperator.Equals, FilterOperator.DoubleEquals)) {
-    return documentValue === expectedValue;
+const evaluateLikePattern = (documentValue: FilterValue, pattern: FilterValue): boolean => {
+  // oxlint-disable-next-line typescript/no-base-to-string -- LIKE coerces any operand to text, as the server does
+  const patternStr = String(pattern ?? '').toLowerCase();
+  // oxlint-disable-next-line typescript/no-base-to-string -- LIKE coerces any operand to text, as the server does
+  const valueStr = String(documentValue ?? '').toLowerCase();
+  if (patternStr.startsWith('%') && patternStr.endsWith('%')) {
+    return valueStr.includes(patternStr.slice(1, -1));
   }
-  if (isOperator(operator, FilterOperator.NotEquals, FilterOperator.NotEqualsAngle)) {
-    return documentValue !== expectedValue;
+  if (patternStr.startsWith('%')) {
+    return valueStr.endsWith(patternStr.slice(1));
   }
-  if (isOperator(operator, FilterOperator.LessThan)) {
-    return compareAsNumbers(documentValue, expectedValue, (a, b) => a < b);
+  if (patternStr.endsWith('%')) {
+    return valueStr.startsWith(patternStr.slice(0, -1));
   }
-  if (isOperator(operator, FilterOperator.LessThanOrEqual)) {
-    return compareAsNumbers(documentValue, expectedValue, (a, b) => a <= b);
+  return valueStr.includes(patternStr);
+};
+
+const isOperandList = (value: FilterValue): value is FilterValue[] => Array.isArray(value);
+
+const isNullOperand = (expectedValue: FilterValue): boolean => expectedValue === null || expectedValue === 'null';
+
+const isEqual = (documentValue: FilterValue, expectedValue: FilterValue): boolean => documentValue === expectedValue;
+const isNotEqual = (documentValue: FilterValue, expectedValue: FilterValue): boolean => documentValue !== expectedValue;
+
+type ConditionEvaluator = (documentValue: FilterValue, expectedValue: FilterValue) => boolean;
+
+/** Client-side evaluators keyed by lower-cased operator; operators missing here never match. */
+const CONDITION_EVALUATORS = new Map<string, ConditionEvaluator>([
+  [FilterOperator.Equals, isEqual],
+  [FilterOperator.DoubleEquals, isEqual],
+  [FilterOperator.NotEquals, isNotEqual],
+  [FilterOperator.NotEqualsAngle, isNotEqual],
+  [FilterOperator.LessThan, (doc, expected) => compareAsNumbers(doc, expected, (a, b) => a < b)],
+  [FilterOperator.LessThanOrEqual, (doc, expected) => compareAsNumbers(doc, expected, (a, b) => a <= b)],
+  [FilterOperator.GreaterThan, (doc, expected) => compareAsNumbers(doc, expected, (a, b) => a > b)],
+  [FilterOperator.GreaterThanOrEqual, (doc, expected) => compareAsNumbers(doc, expected, (a, b) => a >= b)],
+  [FilterOperator.In, (doc, expected) => isOperandList(expected) && expected.includes(doc)],
+  [FilterOperator.NotIn, (doc, expected) => !isOperandList(expected) || !expected.includes(doc)],
+  [FilterOperator.Like, evaluateLikePattern],
+  [FilterOperator.NotLike, (doc, expected) => !evaluateLikePattern(doc, expected)],
+  [FilterOperator.Is, (doc, expected) => isNullOperand(expected) && (doc === null || doc === undefined)],
+  [FilterOperator.IsNot, (doc, expected) => isNullOperand(expected) && doc !== null && doc !== undefined],
+  [
+    FilterOperator.Between,
+    (doc, expected) => {
+      if (!isOperandList(expected) || expected.length !== 2) {
+        return false;
+      }
+      const [min, max] = expected;
+      return compareAsNumbers(doc, min, (a, b) => a >= b) && compareAsNumbers(doc, max, (a, b) => a <= b);
+    },
+  ],
+]);
+
+const evaluateFilterCondition = (documentValue: FilterValue, operator: string, expectedValue: FilterValue): boolean =>
+  CONDITION_EVALUATORS.get(operator)?.(documentValue, expectedValue) ?? false;
+
+export const matchesFilters = <Data extends FrappeDocData>(doc: FrappeDoc<Data>, filters: Filters): boolean => {
+  if (!filters) {
+    return true;
   }
-  if (isOperator(operator, FilterOperator.GreaterThan)) {
-    return compareAsNumbers(documentValue, expectedValue, (a, b) => a > b);
-  }
-  if (isOperator(operator, FilterOperator.GreaterThanOrEqual)) {
-    return compareAsNumbers(documentValue, expectedValue, (a, b) => a >= b);
-  }
-  if (isOperator(operator, FilterOperator.In)) {
-    return Array.isArray(expectedValue) && expectedValue.includes(documentValue);
-  }
-  if (isOperator(operator, FilterOperator.NotIn)) {
-    return !Array.isArray(expectedValue) || !expectedValue.includes(documentValue);
-  }
-  if (isOperator(operator, FilterOperator.Like)) {
-    return evaluateLikePattern(documentValue, expectedValue, false);
-  }
-  if (isOperator(operator, FilterOperator.NotLike)) {
-    return !evaluateLikePattern(documentValue, expectedValue, false);
-  }
-  if (isOperator(operator, FilterOperator.Is) && (expectedValue === null || expectedValue === 'null')) {
-    return documentValue === null || documentValue === undefined;
-  }
-  if (isOperator(operator, FilterOperator.IsNot) && (expectedValue === null || expectedValue === 'null')) {
-    return documentValue !== null && documentValue !== undefined;
-  }
-  if (isOperator(operator, FilterOperator.Between) && Array.isArray(expectedValue) && expectedValue.length === 2) {
-    const [min, max] = expectedValue;
-    return (
-      compareAsNumbers(documentValue, min, (a, b) => a >= b) && compareAsNumbers(documentValue, max, (a, b) => a <= b)
+  if (Array.isArray(filters)) {
+    return filters.every(([fieldName, operatorRaw, expectedValue]) =>
+      evaluateFilterCondition(doc?.[fieldName], normalizeOperator(operatorRaw), expectedValue),
     );
   }
-  return false;
-}
-
-function evaluateLikePattern(documentValue: unknown, pattern: FilterValue, negate: boolean): boolean {
-  const patternStr = String(pattern ?? '').toLowerCase();
-  const valueStr = String(documentValue ?? '').toLowerCase();
-  let matches = false;
-  if (patternStr.startsWith('%') && patternStr.endsWith('%')) {
-    matches = valueStr.includes(patternStr.slice(1, -1));
-  } else if (patternStr.startsWith('%')) {
-    matches = valueStr.endsWith(patternStr.slice(1));
-  } else if (patternStr.endsWith('%')) {
-    matches = valueStr.startsWith(patternStr.slice(0, -1));
-  } else {
-    matches = valueStr.includes(patternStr);
-  }
-  return negate ? !matches : matches;
-}
+  return Object.entries(filters).every(([fieldName, expectedValue]) => doc?.[fieldName] === expectedValue);
+};
 
 // this is used to determine if the query can use getDoc instead of getAll
-export function extractSingleName(filters: Filters): string | undefined {
+export const extractSingleName = (filters: Filters): string | undefined => {
   if (!filters) {
     return undefined;
   }
   if (Array.isArray(filters)) {
-    if (filters.length === 1) {
-      const [fieldName, operatorRaw, value] = filters[0];
-      const normalizedOperator = normalizeOperator(operatorRaw);
-      if (fieldName === 'name' && isOperator(normalizedOperator, FilterOperator.Equals, FilterOperator.DoubleEquals)) {
-        return typeof value === 'string' ? value : undefined;
-      }
+    if (filters.length !== 1) {
+      return undefined;
     }
-    return;
+    const [[fieldName, operatorRaw, value]] = filters;
+    const normalizedOperator = normalizeOperator(operatorRaw);
+    if (fieldName === 'name' && isOperator(normalizedOperator, FilterOperator.Equals, FilterOperator.DoubleEquals)) {
+      // oxlint-disable-next-line anti-slop/no-runtime-typeof -- filter operands are unparsed wire values; only a string is a doc name
+      return typeof value === 'string' ? value : undefined;
+    }
+    return undefined;
   }
-  if (typeof filters === 'object' && filters.name && typeof filters.name === 'string') {
-    return filters.name;
-  }
-}
+  const { name } = filters;
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- filter operands are unparsed wire values; only a non-empty string is a doc name
+  return typeof name === 'string' && name !== '' ? name : undefined;
+};
 
 /**
  * Validation error for filter fields
@@ -173,6 +150,7 @@ export function extractSingleName(filters: Filters): string | undefined {
 export interface FilterValidationError {
   field: string;
   message: string;
+  // oxlint-disable-next-line sonarjs/max-union-size -- closed set of public error codes
   code: 'unknown_field' | 'invalid_operator' | 'type_mismatch' | 'invalid_value';
 }
 
@@ -242,172 +220,185 @@ const COMPARABLE_FIELD_TYPES = new Set([
 // Valid filter operators
 const VALID_OPERATORS = new Set(Object.values(FilterOperator).map((v) => v.toLowerCase()));
 
+interface ValidationSink {
+  errors: FilterValidationError[];
+  warnings: string[];
+  strict: boolean;
+}
+
+const reportUnknownField = (fieldName: string, sink: ValidationSink): void => {
+  if (sink.strict) {
+    sink.errors.push({
+      field: fieldName,
+      message: `Unknown field "${fieldName}" in doctype schema`,
+      code: 'unknown_field',
+    });
+  } else {
+    sink.warnings.push(`Field "${fieldName}" not found in schema - may be a virtual or custom field`);
+  }
+};
+
+const validateOperandForField = (
+  [fieldName, operator, value]: FilterTuple,
+  fieldType: string,
+  sink: ValidationSink,
+): void => {
+  // Check if LIKE operator makes sense for field type
+  if (isOperator(operator, FilterOperator.Like, FilterOperator.NotLike) && !TEXT_FIELD_TYPES.has(fieldType)) {
+    sink.warnings.push(`LIKE operator on non-text field "${fieldName}" (${fieldType}) may not work as expected`);
+  }
+
+  // Check if comparison operators make sense for field type
+  if (
+    isOperator(
+      operator,
+      FilterOperator.GreaterThan,
+      FilterOperator.LessThan,
+      FilterOperator.GreaterThanOrEqual,
+      FilterOperator.LessThanOrEqual,
+      FilterOperator.Between,
+    ) &&
+    !COMPARABLE_FIELD_TYPES.has(fieldType)
+  ) {
+    sink.warnings.push(
+      `Comparison operator on non-numeric/date field "${fieldName}" (${fieldType}) may not work as expected`,
+    );
+  }
+
+  // Validate value types
+  if (isOperator(operator, FilterOperator.In, FilterOperator.NotIn) && !Array.isArray(value)) {
+    sink.errors.push({
+      field: fieldName,
+      message: `IN/NOT IN operator requires an array value for field "${fieldName}"`,
+      code: 'invalid_value',
+    });
+  }
+
+  if (isOperator(operator, FilterOperator.Between) && (!Array.isArray(value) || value.length !== 2)) {
+    sink.errors.push({
+      field: fieldName,
+      message: `BETWEEN operator requires an array of exactly 2 values for field "${fieldName}"`,
+      code: 'invalid_value',
+    });
+  }
+};
+
+const validateFilterTuple = (
+  [fieldName, operatorRaw, value]: FilterTuple,
+  fieldMap: ReadonlyMap<string, SchemaField>,
+  sink: ValidationSink,
+): void => {
+  const schemaField = fieldMap.get(fieldName);
+  const operator = normalizeOperator(operatorRaw);
+
+  // Check if field exists
+  if (!schemaField && !STANDARD_FIELDS.has(fieldName)) {
+    reportUnknownField(fieldName, sink);
+    return;
+  }
+
+  // Validate operator is valid
+  if (!VALID_OPERATORS.has(operator)) {
+    sink.errors.push({
+      field: fieldName,
+      message: `Invalid operator "${operatorRaw}" for field "${fieldName}"`,
+      code: 'invalid_operator',
+    });
+    return;
+  }
+
+  // Type-specific validations
+  if (schemaField) {
+    validateOperandForField([fieldName, operator, value], schemaField.fieldtype, sink);
+  }
+};
+
 /**
  * Validate filter fields against doctype schema
  */
-export function validateFilters(
+export const validateFilters = (
   filters: Filters,
   schema: SchemaField[],
   options: { strict?: boolean } = {},
-): FilterValidationResult {
-  const errors: FilterValidationError[] = [];
-  const warnings: string[] = [];
-  const { strict = false } = options;
+): FilterValidationResult => {
+  const sink: ValidationSink = { errors: [], warnings: [], strict: options.strict ?? false };
 
   if (!filters) {
-    return { valid: true, errors, warnings };
+    return { valid: true, errors: sink.errors, warnings: sink.warnings };
   }
 
   const fieldMap = new Map(schema.map((f) => [f.fieldname, f]));
 
   if (Array.isArray(filters)) {
     for (const filterTuple of filters) {
-      const [fieldName, operatorRaw, value] = filterTuple;
-      const schemaField = fieldMap.get(fieldName);
-      const operator = normalizeOperator(operatorRaw);
-
-      // Check if field exists
-      if (!schemaField && !STANDARD_FIELDS.has(fieldName)) {
-        if (strict) {
-          errors.push({
-            field: fieldName,
-            message: `Unknown field "${fieldName}" in doctype schema`,
-            code: 'unknown_field',
-          });
-        } else {
-          warnings.push(`Field "${fieldName}" not found in schema - may be a virtual or custom field`);
-        }
-        continue;
-      }
-
-      // Validate operator is valid
-      if (!VALID_OPERATORS.has(operator)) {
-        errors.push({
-          field: fieldName,
-          message: `Invalid operator "${operatorRaw}" for field "${fieldName}"`,
-          code: 'invalid_operator',
-        });
-        continue;
-      }
-
-      // Type-specific validations
-      if (schemaField) {
-        const fieldType = schemaField.fieldtype;
-
-        // Check if LIKE operator makes sense for field type
-        if (isOperator(operator, FilterOperator.Like, FilterOperator.NotLike) && !TEXT_FIELD_TYPES.has(fieldType)) {
-          warnings.push(`LIKE operator on non-text field "${fieldName}" (${fieldType}) may not work as expected`);
-        }
-
-        // Check if comparison operators make sense for field type
-        if (
-          isOperator(
-            operator,
-            FilterOperator.GreaterThan,
-            FilterOperator.LessThan,
-            FilterOperator.GreaterThanOrEqual,
-            FilterOperator.LessThanOrEqual,
-            FilterOperator.Between,
-          ) &&
-          !COMPARABLE_FIELD_TYPES.has(fieldType)
-        ) {
-          warnings.push(
-            `Comparison operator on non-numeric/date field "${fieldName}" (${fieldType}) may not work as expected`,
-          );
-        }
-
-        // Validate value types
-        if (isOperator(operator, FilterOperator.In, FilterOperator.NotIn) && !Array.isArray(value)) {
-          errors.push({
-            field: fieldName,
-            message: `IN/NOT IN operator requires an array value for field "${fieldName}"`,
-            code: 'invalid_value',
-          });
-        }
-
-        if (isOperator(operator, FilterOperator.Between)) {
-          if (!Array.isArray(value) || value.length !== 2) {
-            errors.push({
-              field: fieldName,
-              message: `BETWEEN operator requires an array of exactly 2 values for field "${fieldName}"`,
-              code: 'invalid_value',
-            });
-          }
-        }
-      }
+      validateFilterTuple(filterTuple, fieldMap, sink);
     }
-  } else if (typeof filters === 'object') {
+  } else {
     // Object format - simple equality checks
     for (const fieldName of Object.keys(filters)) {
-      const schemaField = fieldMap.get(fieldName);
-      if (!schemaField && !STANDARD_FIELDS.has(fieldName)) {
-        if (strict) {
-          errors.push({
-            field: fieldName,
-            message: `Unknown field "${fieldName}" in doctype schema`,
-            code: 'unknown_field',
-          });
-        } else {
-          warnings.push(`Field "${fieldName}" not found in schema - may be a virtual or custom field`);
-        }
+      if (!fieldMap.has(fieldName) && !STANDARD_FIELDS.has(fieldName)) {
+        reportUnknownField(fieldName, sink);
       }
     }
   }
 
   return {
-    valid: errors.length === 0,
-    errors,
-    warnings,
+    valid: sink.errors.length === 0,
+    errors: sink.errors,
+    warnings: sink.warnings,
   };
-}
+};
 
 /**
  * Normalize filters to array format
  */
-export function normalizeFilters(filters: Filters): FilterTuple[] {
+export const normalizeFilters = (filters: Filters): FilterTuple[] => {
   if (!filters) {
     return [];
   }
 
   if (Array.isArray(filters)) {
-    return filters as FilterTuple[];
+    return filters;
   }
 
   // Object format -> array of [field, "=", value]
-  return Object.entries(filters).map(([field, value]) => [field, FilterOperator.Equals, value] as FilterTuple);
-}
+  return Object.entries(filters).map(([field, value]): FilterTuple => [field, FilterOperator.Equals, value]);
+};
 
 /**
  * Extract field names from filters for field selection optimization
  */
-export function extractFilterFields(filters: Filters): string[] {
+export const extractFilterFields = (filters: Filters): string[] => {
   if (!filters) {
     return [];
   }
 
   const normalized = normalizeFilters(filters);
   return [...new Set(normalized.map((c) => c[0]))];
-}
+};
 
 /**
  * Build a filter string for display purposes
  */
-export function formatFilter(condition: FilterTuple): string {
-  const [field, operator, value] = condition;
-
-  let displayValue: string;
+const formatFilterValue = (value: FilterValue): string => {
   if (value === null || value === undefined) {
-    displayValue = 'null';
-  } else if (Array.isArray(value)) {
-    displayValue = `[${value.map((v) => JSON.stringify(v)).join(', ')}]`;
-  } else if (typeof value === 'string') {
-    displayValue = JSON.stringify(value);
-  } else {
-    displayValue = String(value);
+    return 'null';
   }
+  if (isOperandList(value)) {
+    return `[${value.map((v) => JSON.stringify(v)).join(', ')}]`;
+  }
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- display formatting of an unparsed wire value; strings are quoted
+  if (typeof value === 'string') {
+    return JSON.stringify(value);
+  }
+  // oxlint-disable-next-line typescript/no-base-to-string -- display only; non-string scalars stringify as-is
+  return String(value);
+};
 
-  return `${field} ${operator} ${displayValue}`;
-}
+export const formatFilter = (condition: FilterTuple): string => {
+  const [field, operator, value] = condition;
+  return `${field} ${operator} ${formatFilterValue(value)}`;
+};
 
 // ---------------------------------------------------------------------------
 // Tree Operator Support
@@ -439,35 +430,32 @@ const SERVER_ONLY_OPERATORS = new Set([
  * }
  * ```
  */
-export function hasServerOnlyOperators(filters: Filters): boolean {
+export const hasServerOnlyOperators = (filters: Filters): boolean => {
   if (!filters) {
     return false;
   }
 
   const normalized = normalizeFilters(filters);
   return normalized.some(([, operator]) => SERVER_ONLY_OPERATORS.has(normalizeOperator(operator)));
-}
+};
 
 /**
  * Check if filters can be evaluated client-side.
  * Returns false if filters contain tree operators or other server-only operators.
  */
-export function canEvaluateClientSide(filters: Filters): boolean {
-  return !hasServerOnlyOperators(filters);
-}
+export const canEvaluateClientSide = (filters: Filters): boolean => !hasServerOnlyOperators(filters);
 
 /**
  * Check if an operator is a tree-related operator.
  * Tree operators are: "ancestors of", "descendants of", "not ancestors of", "not descendants of"
  */
-export function isTreeOperator(operator: FilterOperator | string): boolean {
-  return SERVER_ONLY_OPERATORS.has(normalizeOperator(operator));
-}
+export const isTreeOperator = (operator: FilterOperator | string): boolean =>
+  SERVER_ONLY_OPERATORS.has(normalizeOperator(operator));
 
 /**
  * Get human-readable description of why filters can't be evaluated client-side.
  */
-export function getClientEvaluationBlockers(filters: Filters): string[] {
+export const getClientEvaluationBlockers = (filters: Filters): string[] => {
   if (!filters) {
     return [];
   }
@@ -483,4 +471,4 @@ export function getClientEvaluationBlockers(filters: Filters): string[] {
   }
 
   return blockers;
-}
+};

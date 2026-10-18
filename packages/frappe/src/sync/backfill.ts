@@ -1,48 +1,32 @@
 import type { FrappeDoc, FrappeDocBase, FrappeDocData } from '../common/types';
-import type { DbModule } from '../db';
+import type { BackfillResponse, DbModule } from '../db';
 
 import { matchesFilters } from './filters';
+import type { NormalizedCache } from './normalized-cache';
+import type { VirtualSubscription } from './virtual-page-manager';
+
+/** Checkpoints and cursors are opaque strings; an empty one means "none". */
+const isPresent = (value: string | undefined): value is string => value !== undefined && value !== '';
 
 /**
  * Calculate checkpoint from documents (find max modified timestamp)
  * Uses proper Date parsing for accurate comparison across different timestamp formats
  */
-function calculateCheckpointFromDocs(docs: FrappeDocBase[]): string | undefined {
-  if (docs.length === 0) {
-    return undefined;
-  }
+const calculateCheckpointFromDocs = (docs: FrappeDocBase[]): string | undefined => {
+  let maxTimestamp: string | undefined;
+  let maxTime = Number.NEGATIVE_INFINITY;
 
-  let maxTimestamp = '';
-  let maxDate: Date | null = null;
-
-  for (const doc of docs) {
-    const { modified } = doc;
-    if (!modified) {
-      continue;
-    }
-
-    try {
-      const date = new Date(modified);
-      if (Number.isNaN(date.getTime())) {
-        continue;
-      }
-
-      if (!maxDate || date > maxDate) {
-        maxDate = date;
-        maxTimestamp = modified;
-      }
-    } catch {
-      // Fallback to string comparison if Date parsing fails
-      if (!maxTimestamp || modified > maxTimestamp) {
-        maxTimestamp = modified;
-      }
+  for (const { modified } of docs) {
+    // `== null` also skips a wire null; unparseable timestamps yield NaN and never win.
+    const time = modified == null || modified === '' ? Number.NaN : new Date(modified).getTime();
+    if (!Number.isNaN(time) && time > maxTime) {
+      maxTime = time;
+      maxTimestamp = modified;
     }
   }
 
-  return maxTimestamp || undefined;
-}
-import type { NormalizedCache } from './normalizedCache';
-import type { VirtualSubscription } from './virtualPageManager';
+  return maxTimestamp;
+};
 
 const log = console;
 
@@ -78,6 +62,34 @@ export interface BackfillOptions {
   maxPages?: number;
 }
 
+const determineStrategy = (subscription: VirtualSubscription, reason: BackfillReason): BackfillStrategy => {
+  switch (reason) {
+    case BackfillReason.Initial: {
+      return BackfillStrategy.FullRefresh;
+    }
+    case BackfillReason.Pagination: {
+      return isPresent(subscription.getProgressiveCache().nextCursor)
+        ? BackfillStrategy.CursorFetch
+        : BackfillStrategy.Incremental;
+    }
+    case BackfillReason.DeleteGap: {
+      return BackfillStrategy.GapFill;
+    }
+    case BackfillReason.RemoteCreate:
+    case BackfillReason.RemoteUpdate:
+    case BackfillReason.Rehydration: {
+      return BackfillStrategy.PageOnly;
+    }
+    case BackfillReason.Periodic:
+    case BackfillReason.Recovery: {
+      return isPresent(subscription.checkpoint) ? BackfillStrategy.Incremental : BackfillStrategy.FullRefresh;
+    }
+    default: {
+      return BackfillStrategy.Incremental;
+    }
+  }
+};
+
 export class BackfillManager {
   private readonly activeBackfills = new Map<string, Promise<void>>();
   private readonly backfillQueue = new Map<string, BackfillReason[]>();
@@ -93,9 +105,10 @@ export class BackfillManager {
 
   async backfill(subscription: VirtualSubscription, reason: BackfillReason): Promise<void> {
     const subscriptionId = subscription.id;
-    if (this.activeBackfills.has(subscriptionId)) {
+    const active = this.activeBackfills.get(subscriptionId);
+    if (active) {
       this.queueBackfill(subscriptionId, reason);
-      await this.activeBackfills.get(subscriptionId)!;
+      await active;
       return;
     }
     const backfillPromise = this.performBackfill(subscription, reason);
@@ -111,17 +124,25 @@ export class BackfillManager {
       if (backfillSucceeded) {
         const queued = this.backfillQueue.get(subscriptionId);
         if (queued && queued.length > 0) {
-          const reason = queued.shift()!;
+          const next = queued.shift();
           if (queued.length === 0) {
             this.backfillQueue.delete(subscriptionId);
           }
-          if (reason) {
-            this.backfill(subscription, reason).catch(log.error);
+          if (next !== undefined) {
+            void this.runQueuedBackfill(subscription, next);
           }
         }
       } else {
         this.backfillQueue.delete(subscriptionId);
       }
+    }
+  }
+
+  private async runQueuedBackfill(subscription: VirtualSubscription, reason: BackfillReason): Promise<void> {
+    try {
+      await this.backfill(subscription, reason);
+    } catch (error) {
+      log.error(error);
     }
   }
 
@@ -138,11 +159,12 @@ export class BackfillManager {
       const docs = await this.fetchWithCursor(subscription, 1);
 
       if (docs.length > 0) {
-        const doc = docs[0];
+        const [doc] = docs;
 
         // Update caches using subscription methods
         subscription.processDocuments([doc], this.normalizedCache, {
-          calculateCheckpoint: false, // Single doc doesn't need checkpoint update
+          // Single doc doesn't need checkpoint update
+          calculateCheckpoint: false,
         });
 
         return doc;
@@ -196,7 +218,7 @@ export class BackfillManager {
   }
 
   private async performBackfill(subscription: VirtualSubscription, reason: BackfillReason): Promise<void> {
-    const strategy = this.determineStrategy(subscription, reason);
+    const strategy = determineStrategy(subscription, reason);
     switch (strategy) {
       case BackfillStrategy.FullRefresh: {
         await this.fullRefresh(subscription);
@@ -218,36 +240,8 @@ export class BackfillManager {
         await this.cursorFetch(subscription);
         break;
       }
-    }
-  }
-
-  private determineStrategy(subscription: VirtualSubscription, reason: BackfillReason): BackfillStrategy {
-    switch (reason) {
-      case BackfillReason.Initial: {
-        return BackfillStrategy.FullRefresh;
-      }
-      case BackfillReason.Pagination: {
-        return subscription.getProgressiveCache().nextCursor
-          ? BackfillStrategy.CursorFetch
-          : BackfillStrategy.Incremental;
-      }
-      case BackfillReason.DeleteGap: {
-        return BackfillStrategy.GapFill;
-      }
-      case BackfillReason.RemoteCreate:
-      case BackfillReason.RemoteUpdate:
-      case BackfillReason.Rehydration: {
-        return BackfillStrategy.PageOnly;
-      }
-      case BackfillReason.Periodic: {
-        return subscription.checkpoint ? BackfillStrategy.Incremental : BackfillStrategy.FullRefresh;
-      }
-      case BackfillReason.Recovery: {
-        return subscription.checkpoint ? BackfillStrategy.Incremental : BackfillStrategy.FullRefresh;
-      }
-      default: {
-        return BackfillStrategy.Incremental;
-      }
+      // The cases above cover every BackfillStrategy.
+      // No default
     }
   }
 
@@ -268,7 +262,7 @@ export class BackfillManager {
   }
 
   private async incrementalBackfill(subscription: VirtualSubscription): Promise<void> {
-    if (!subscription.checkpoint) {
+    if (!isPresent(subscription.checkpoint)) {
       await this.fullRefresh(subscription);
       return;
     }
@@ -277,8 +271,9 @@ export class BackfillManager {
       // Drain CDC pages while the server reports truncation (bounded) so
       // catch-up after a long gap is complete, not one page deep.
       const maxPages = this.options.maxPages ?? 20;
-      for (let page = 0; page < maxPages; page++) {
-        const response = await this.db.backfill({
+      for (let page = 0; page < maxPages; page += 1) {
+        // oxlint-disable-next-line eslint/no-await-in-loop -- each page resumes from the previous page's checkpoint
+        const response: BackfillResponse<FrappeDocData> = await this.db.backfill({
           doctype: subscription.query.doctype,
           fields: subscription.query.fields,
           filters: subscription.query.filters,
@@ -286,40 +281,10 @@ export class BackfillManager {
           limit: this.options.pageSize ?? 200,
         });
 
-        // Process deletions using shared utility
-        if ('deleted' in response && Array.isArray(response.deleted)) {
-          const deletedDocIds = (response.deleted as any[])
-            .filter((deletion) => deletion?.name)
-            .map((deletion) => deletion.name);
-
-          if (deletedDocIds.length > 0) {
-            subscription.removeDocuments(deletedDocIds, this.normalizedCache);
-          }
-        }
-
-        // Process updates and creates
-        for (const doc of response.rows) {
-          const exists = subscription.getProgressiveCache().docIds.includes(doc.name);
-          const matches = matchesFilters(doc as FrappeDoc<FrappeDocData>, subscription.query.filters);
-
-          if (exists && !matches) {
-            // Remove - no longer matches
-            subscription.removeDocuments([doc.name], this.normalizedCache);
-          } else if (!exists && matches) {
-            // Add - now matches (but we don't know where)
-            subscription.needsRehydration = true;
-          } else if (exists) {
-            // Update existing
-            this.normalizedCache.upsert(doc);
-          }
-        }
-
-        // Advance the checkpoint: prefer the server's exact resume cursor
-        // ("ts|name"); fall back to the max modified for older servers.
-        subscription.checkpoint = response.checkpoint ?? calculateCheckpointFromDocs(response.rows);
+        this.applyBackfillPage(subscription, response);
 
         const madeProgress = response.rows.length > 0 || (response.deleted?.length ?? 0) > 0;
-        if (!response.has_more || !response.checkpoint || !madeProgress) {
+        if (!response.has_more || !isPresent(response.checkpoint) || !madeProgress) {
           break;
         }
       }
@@ -328,6 +293,45 @@ export class BackfillManager {
       // Fall back to full refresh
       await this.fullRefresh(subscription);
     }
+  }
+
+  /** Applies one CDC page: deletions, then updates/creates, then advances the checkpoint. */
+  private applyBackfillPage(subscription: VirtualSubscription, response: BackfillResponse<FrappeDocData>): void {
+    // Process deletions using shared utility
+    if (Array.isArray(response.deleted)) {
+      const deletedDocIds: string[] = [];
+      for (const deletion of response.deleted) {
+        if (deletion?.name) {
+          deletedDocIds.push(deletion.name);
+        }
+      }
+
+      if (deletedDocIds.length > 0) {
+        subscription.removeDocuments(deletedDocIds, this.normalizedCache);
+      }
+    }
+
+    // Process updates and creates
+    for (const doc of response.rows) {
+      // oxlint-disable-next-line react-doctor/js-set-map-lookups -- docIds shrinks as rows are removed below; a snapshot Set would go stale
+      const exists = subscription.getProgressiveCache().docIds.includes(doc.name);
+      const matches = matchesFilters(doc, subscription.query.filters);
+
+      if (exists && !matches) {
+        // Remove - no longer matches
+        subscription.removeDocuments([doc.name], this.normalizedCache);
+      } else if (!exists && matches) {
+        // Add - now matches (but we don't know where)
+        subscription.needsRehydration = true;
+      } else if (exists) {
+        // Update existing
+        this.normalizedCache.upsert(doc);
+      }
+    }
+
+    // Advance the checkpoint: prefer the server's exact resume cursor
+    // ("ts|name"); fall back to the max modified for older servers.
+    subscription.checkpoint = response.checkpoint ?? calculateCheckpointFromDocs(response.rows);
   }
 
   private async pageBackfill(subscription: VirtualSubscription): Promise<void> {
@@ -399,12 +403,10 @@ export class BackfillManager {
   }
 
   private queueBackfill(subscriptionId: string, reason: BackfillReason): void {
-    if (!this.backfillQueue.has(subscriptionId)) {
-      this.backfillQueue.set(subscriptionId, []);
-    }
-    const queue = this.backfillQueue.get(subscriptionId)!;
+    const queue = this.backfillQueue.get(subscriptionId) ?? [];
     if (!queue.includes(reason)) {
       queue.push(reason);
     }
+    this.backfillQueue.set(subscriptionId, queue);
   }
 }

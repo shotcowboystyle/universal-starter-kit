@@ -9,10 +9,10 @@ import {
   useStoryConfig,
 } from '../../tests/storyFixtures';
 import type { ToDo, ToDoStatus } from '../../tests/storyFixtures';
-import { useFrappeCollection } from '../frappeReact';
+import { useFrappeCollection } from '../frappe-react';
 import type { SyncModule } from '../sync';
 import type { FrappeDebugState } from '../sync/types';
-import { useLiveQuery } from '../useLiveQuery';
+import { useLiveQuery } from '../use-live-query';
 
 import { FrappeDevtoolsPanel } from './FrappeDevtoolsPanel';
 
@@ -36,22 +36,24 @@ export default {
 
 type DevtoolsTheme = 'light' | 'dark';
 
-function useDebugState(syncModule: SyncModule | undefined): FrappeDebugState | undefined {
+const useDebugState = (syncModule: SyncModule | undefined): FrappeDebugState | undefined => {
   const [state, setState] = useState<FrappeDebugState | undefined>();
   useEffect(() => {
     if (!syncModule) {
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on the other path; a bare return trips consistent-return
+      return undefined;
     }
+    // oxlint-disable-next-line react/set-state-in-effect -- re-snapshot when syncModule changes; __debug() returns a fresh object per call, so useSyncExternalStore would loop
     setState(syncModule.__debug());
     return syncModule.subscribeStore(() => {
       setState(syncModule.__debug());
     });
   }, [syncModule]);
   return state;
-}
+};
 
 /** What the panel would show, as text, for platforms without a DOM. */
-function DebugSummary({ syncModule }: { syncModule: SyncModule }) {
+const DebugSummary = ({ syncModule }: { syncModule: SyncModule }) => {
   const state = useDebugState(syncModule);
   if (!state) {
     return null;
@@ -75,9 +77,9 @@ function DebugSummary({ syncModule }: { syncModule: SyncModule }) {
       </Text>
     </YStack>
   );
-}
+};
 
-function PanelFrame({
+const PanelFrame = ({
   syncModule,
   devtoolsTheme,
   height = 440,
@@ -85,7 +87,7 @@ function PanelFrame({
   syncModule: SyncModule;
   devtoolsTheme: DevtoolsTheme;
   height?: number;
-}) {
+}) => {
   if (!isWeb) {
     return (
       <YStack gap="$2">
@@ -114,21 +116,22 @@ function PanelFrame({
       />
     </div>
   );
-}
+};
 
 interface HostProps {
   devtoolsTheme: DevtoolsTheme;
+  // oxlint-disable-next-line sonarjs/todo-tag -- names the Frappe doctype, not a task marker
   /** Open the ToDo subscription (a sidebar row and cached documents). */
   subscribe?: boolean;
   /** Seed one Confirmed, one Pending and one Failed journal entry once the subscription is ready. */
   seed?: boolean;
 }
 
-function PanelHost({ devtoolsTheme, subscribe = true, seed = true }: HostProps) {
+const PanelHost = ({ devtoolsTheme, subscribe = true, seed = true }: HostProps) => {
   const config = useStoryConfig(toDoFixtureData());
   const collection = useFrappeCollection<ToDo>(subscribe ? config : undefined, 'ToDo');
   const { isReady } = useLiveQuery((q) => (collection ? q.from({ todo: collection }) : null), [collection]);
-  const syncModule = useSeededJournal(config, Boolean(isReady), seed);
+  const syncModule: SyncModule | undefined = useSeededJournal(config, isReady, seed);
   if (!syncModule) {
     return <Text fontSize="$2">No SyncModule: getFrappeSyncModule() returns undefined during server rendering.</Text>;
   }
@@ -138,7 +141,7 @@ function PanelHost({ devtoolsTheme, subscribe = true, seed = true }: HostProps) 
       devtoolsTheme={devtoolsTheme}
     />
   );
-}
+};
 
 const nextStatus: Record<ToDoStatus, ToDoStatus> = {
   Open: 'Working',
@@ -147,27 +150,30 @@ const nextStatus: Record<ToDoStatus, ToDoStatus> = {
   Cancelled: 'Open',
 };
 
-function swallow(tx: { isPersisted: { promise: Promise<unknown> } }) {
-  // A rejected write is reported by the journal, not by an unhandled rejection.
-  tx.isPersisted.promise.catch(() => {});
-}
+const swallow = async (tx: { isPersisted: { promise: Promise<unknown> } }): Promise<void> => {
+  try {
+    await tx.isPersisted.promise;
+  } catch {
+    // Safe to ignore: a rejected write is reported by the journal, not by an unhandled rejection.
+  }
+};
 
 /** Drives the collection from buttons so the panel's tabs move while you watch. */
-function InteractiveHost() {
+const InteractiveHost = () => {
   const config = useStoryConfig(toDoFixtureData(5));
   const collection = useFrappeCollection<ToDo>(config, 'ToDo');
   const { data, isReady } = useLiveQuery((q) => (collection ? q.from({ todo: collection }) : null), [collection]);
-  const syncModule = useSeededJournal(config, Boolean(isReady), false);
+  const syncModule: SyncModule | undefined = useSeededJournal(config, isReady, false);
   const [devtoolsTheme, setDevtoolsTheme] = useState<DevtoolsTheme>('light');
   const [inserted, setInserted] = useState(0);
   const rows = (data as ToDo[] | undefined) ?? [];
 
   const update = (name: string) => {
     const row = rows.find((r) => r.name === name);
-    if (!collection || !row) {
+    if (!collection || row === undefined) {
       return;
     }
-    swallow(
+    void swallow(
       collection.update(name, (draft) => {
         draft.status = nextStatus[row.status];
       }),
@@ -179,7 +185,7 @@ function InteractiveHost() {
     }
     const n = inserted + 1;
     setInserted(n);
-    swallow(
+    void swallow(
       collection.insert({
         name: `TODO-NEW-${String(n).padStart(3, '0')}`,
         doctype: 'ToDo',
@@ -193,10 +199,10 @@ function InteractiveHost() {
   };
   const removeLast = () => {
     const last = rows.at(-1);
-    if (!collection || !last) {
+    if (!collection || last === undefined) {
       return;
     }
-    swallow(collection.delete(last.name));
+    void swallow(collection.delete(last.name));
   };
 
   if (!syncModule) {
@@ -264,7 +270,7 @@ function InteractiveHost() {
       />
     </YStack>
   );
-}
+};
 
 /** One subscription, cached documents, and Confirmed + Pending + Failed journal entries, light palette. */
 export const Main = () => <PanelHost devtoolsTheme="light" />;

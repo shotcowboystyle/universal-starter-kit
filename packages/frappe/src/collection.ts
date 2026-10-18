@@ -1,7 +1,6 @@
 import type { CollectionConfig, SyncConfig } from '@tanstack/db';
 import { createCollection } from '@tanstack/db';
 
-import type { FrappeDocData } from './common/types';
 import type { FixtureProvider } from './fixtures';
 import type { SyncModule } from './sync';
 import { defaultPageLength, Operation } from './sync/types';
@@ -10,7 +9,7 @@ import type { SubscriptionQuery } from './sync/types';
 /**
  * Configuration for creating a Frappe-backed TanStack DB collection.
  *
- * @typeParam TDoc - The document type stored in the collection
+ * @template TDoc - The document type stored in the collection
  */
 export interface FrappeCollectionOptionsConfig<_TDoc extends object & { name: string; doctype: string }> {
   /** The Frappe SyncModule instance to use for data sync */
@@ -18,6 +17,7 @@ export interface FrappeCollectionOptionsConfig<_TDoc extends object & { name: st
   /** Fields to subscribe to from the doctype */
   fields?: readonly string[];
   /** Frappe filters to apply to the subscription */
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Frappe filter operands are arbitrary field values, passed through to the server as-is
   filters?: Record<string, unknown> | [string, string, unknown][];
   /** Optional override for the collection id (defaults to doctype) */
   id?: string;
@@ -34,6 +34,7 @@ export interface FrappeCollectionOptionsConfig<_TDoc extends object & { name: st
    * PermissionError/403, bad doctype). Without this the collection just
    * looks empty — consumers should surface an honest error state instead.
    */
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- forwards a caught error, which is untyped by nature
   onSyncError?: (error: unknown) => void;
 }
 
@@ -64,14 +65,21 @@ const externalSyncReleases = new WeakMap<object, () => void>();
  * stopped, or not a Frappe collection) — callers may fall back to
  * `collection.cleanup()` in that case.
  */
-export function releaseFrappeCollectionSync(collection: object): boolean {
+// oxlint-disable-next-line anti-slop/no-object-parameters -- any collection object is a valid WeakMap lookup key; non-Frappe collections just report false
+export const releaseFrappeCollectionSync = (collection: object): boolean => {
   const release = externalSyncReleases.get(collection);
   if (!release) {
     return false;
   }
   release();
   return true;
-}
+};
+
+// Mutation ids only need to be unique per client; Math.random is the
+// fallback for runtimes without crypto.randomUUID (e.g. older Hermes).
+const newMutationId = (): string =>
+  // oxlint-disable-next-line sonarjs/pseudo-random -- uniqueness id, not a security token
+  crypto.randomUUID?.() ?? Math.random().toString(36).slice(2);
 
 /**
  * Creates TanStack DB collection options wired to Frappe's SyncModule.
@@ -86,8 +94,8 @@ export function releaseFrappeCollectionSync(collection: object): boolean {
  * the limit is now always sent rather than left off. Pass `limit: 0` for
  * every row.
  *
- * @typeParam TDoc - The Frappe document type
- * @param doctype - The Frappe doctype name (e.g. "ToDo", "Pokemon")
+ * @template TDoc - The Frappe document type
+ * @param doctype - The Frappe doctype name (e.g. "Note", "Pokemon")
  * @param config - Configuration for the collection
  * @returns A CollectionConfig object suitable for `createCollection()`
  *
@@ -101,17 +109,17 @@ export function releaseFrappeCollectionSync(collection: object): boolean {
  * );
  * ```
  */
-export function frappeCollectionOptions<TDoc extends object & { name: string; doctype: string }>(
+export const frappeCollectionOptions = <TDoc extends object & { name: string; doctype: string }>(
   doctype: string,
   config: FrappeCollectionOptionsConfig<TDoc>,
-): CollectionConfig<TDoc, string> {
+): CollectionConfig<TDoc, string> => {
   const { sync: syncModule, fields, filters, orderBy, limit, onSyncError } = config;
 
   const syncFn: SyncConfig<TDoc, string>['sync'] = (params) => {
     const { begin, write, commit, markReady } = params;
 
-    let subscriptionId: string | undefined;
-    let storeUnsubscribe: (() => void) | undefined;
+    let subscriptionId: string | null = null;
+    let storeUnsubscribe: (() => void) | null = null;
     let lastKnownNames = new Set<string>();
     // Set when the collection is cleaned up while the initial subscribe is
     // still in flight. Without it the continuation would orphan a live
@@ -126,19 +134,20 @@ export function frappeCollectionOptions<TDoc extends object & { name: string; do
       cancelled = true;
       if (storeUnsubscribe) {
         storeUnsubscribe();
-        storeUnsubscribe = undefined;
+        storeUnsubscribe = null;
       }
-      if (subscriptionId) {
+      if (subscriptionId !== null) {
         syncModule.unsubscribe(subscriptionId);
-        subscriptionId = undefined;
+        subscriptionId = null;
       }
     };
-    const syncedCollection = (params as { collection?: object }).collection;
-    if (syncedCollection) {
+    // Typed as required, but tests drive syncFn with partial params.
+    const syncedCollection: object | undefined = params.collection;
+    if (syncedCollection !== undefined) {
       externalSyncReleases.set(syncedCollection, releaseResources);
     }
 
-    async function initSync() {
+    const initSync = async () => {
       try {
         // Subscribe to the SyncModule for this doctype
         const query: SubscriptionQuery = {
@@ -154,14 +163,14 @@ export function frappeCollectionOptions<TDoc extends object & { name: string; do
           syncModule.unsubscribe(result.subscriptionId);
           return;
         }
-        subscriptionId = result.subscriptionId;
+        ({ subscriptionId } = result);
 
         // Seed initial data from the subscription
         const initialDocs = syncModule.getDocsForSubscription<TDoc>(subscriptionId);
         if (initialDocs.length > 0) {
           begin();
           for (const doc of initialDocs) {
-            write({ type: 'insert', value: doc as TDoc });
+            write({ type: 'insert', value: doc });
             lastKnownNames.add(doc.name);
           }
           commit();
@@ -169,21 +178,22 @@ export function frappeCollectionOptions<TDoc extends object & { name: string; do
 
         // Listen for SyncModule store changes and forward to collection
         storeUnsubscribe = syncModule.subscribeStore(() => {
-          if (!subscriptionId) {
+          if (subscriptionId === null) {
             return;
           }
 
           const currentDocs = syncModule.getDocsForSubscription<TDoc>(subscriptionId);
-          const currentNames = new Set(currentDocs.map((d) => d.name));
+          const currentNames = new Set<string>();
 
           begin();
 
           // Upsert current docs
           for (const doc of currentDocs) {
+            currentNames.add(doc.name);
             if (lastKnownNames.has(doc.name)) {
-              write({ type: 'update', value: doc as TDoc });
+              write({ type: 'update', value: doc });
             } else {
-              write({ type: 'insert', value: doc as TDoc });
+              write({ type: 'insert', value: doc });
             }
           }
 
@@ -192,6 +202,8 @@ export function frappeCollectionOptions<TDoc extends object & { name: string; do
             if (!currentNames.has(name)) {
               write({
                 type: 'delete',
+                // SAFETY: TanStack resolves a delete by getKey(value) = value.name; the other TDoc fields are never read.
+                // oxlint-disable-next-line anti-slop/no-chained-type-assertions, typescript/no-unsafe-type-assertion -- see SAFETY above
                 value: { name, doctype } as unknown as TDoc,
               });
             }
@@ -211,13 +223,13 @@ export function frappeCollectionOptions<TDoc extends object & { name: string; do
           markReady();
         }
       }
-    }
+    };
 
-    initSync();
+    void initSync();
 
     // Return cleanup function
     return () => {
-      if (syncedCollection && externalSyncReleases.get(syncedCollection) === releaseResources) {
+      if (syncedCollection !== undefined && externalSyncReleases.get(syncedCollection) === releaseResources) {
         externalSyncReleases.delete(syncedCollection);
       }
       releaseResources();
@@ -232,10 +244,11 @@ export function frappeCollectionOptions<TDoc extends object & { name: string; do
     onInsert: async ({ transaction }) => {
       for (const mutation of transaction.mutations) {
         const doc = mutation.modified;
+        // oxlint-disable-next-line eslint/no-await-in-loop, react-doctor/async-await-in-loop -- mutations must reach the server in transaction order
         await syncModule.mutate({
-          mutationId: crypto.randomUUID?.() ?? Math.random().toString(36).slice(2),
+          mutationId: newMutationId(),
           operation: Operation.Create,
-          doc: { ...doc, doctype } as FrappeDocData,
+          doc: { ...doc, doctype },
         });
       }
     },
@@ -243,27 +256,33 @@ export function frappeCollectionOptions<TDoc extends object & { name: string; do
     onUpdate: async ({ transaction }) => {
       for (const mutation of transaction.mutations) {
         const doc = mutation.changes ?? mutation.modified;
+        // SAFETY: getKey returns doc.name, so every key in this collection is a string.
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
         const name = mutation.key as string;
+        // oxlint-disable-next-line eslint/no-await-in-loop, react-doctor/async-await-in-loop -- mutations must reach the server in transaction order
         await syncModule.mutate({
-          mutationId: crypto.randomUUID?.() ?? Math.random().toString(36).slice(2),
+          mutationId: newMutationId(),
           operation: Operation.Update,
-          doc: { ...doc, doctype, name } as FrappeDocData,
+          doc: { ...doc, doctype, name },
         });
       }
     },
 
     onDelete: async ({ transaction }) => {
       for (const mutation of transaction.mutations) {
+        // SAFETY: getKey returns doc.name, so every key in this collection is a string.
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
         const name = mutation.key as string;
+        // oxlint-disable-next-line eslint/no-await-in-loop, react-doctor/async-await-in-loop -- mutations must reach the server in transaction order
         await syncModule.mutate({
-          mutationId: crypto.randomUUID?.() ?? Math.random().toString(36).slice(2),
+          mutationId: newMutationId(),
           operation: Operation.Delete,
-          doc: { doctype, name } as FrappeDocData,
+          doc: { doctype, name },
         });
       }
     },
   };
-}
+};
 
 /**
  * Creates a TanStack DB Collection backed by a Frappe doctype via SyncModule.
@@ -272,7 +291,7 @@ export function frappeCollectionOptions<TDoc extends object & { name: string; do
  * Without `limit` it reads {@link defaultPageLength} (20) rows in fixture mode
  * and against a live bench alike; `limit: 0` reads every row.
  *
- * @typeParam TDoc - The Frappe document type
+ * @template TDoc - The Frappe document type
  * @param doctype - The Frappe doctype name
  * @param config - Configuration for the collection
  * @returns A TanStack DB Collection instance
@@ -293,12 +312,10 @@ export function frappeCollectionOptions<TDoc extends object & { name: string; do
  * pokemonCollection.insert({ name: "pikachu", doctype: "Pokemon", ... });
  * ```
  */
-export function createFrappeCollection<TDoc extends object & { name: string; doctype: string }>(
+export const createFrappeCollection = <TDoc extends object & { name: string; doctype: string }>(
   doctype: string,
   config: FrappeCollectionOptionsConfig<TDoc>,
-) {
-  return createCollection<TDoc, string>(frappeCollectionOptions<TDoc>(doctype, config));
-}
+) => createCollection<TDoc, string>(frappeCollectionOptions<TDoc>(doctype, config));
 
 /**
  * Configuration for creating a fixture-backed TanStack DB collection.
@@ -310,6 +327,7 @@ export interface FixtureCollectionOptionsConfig<_TDoc extends object & { name: s
   /** Fields to load from the doctype */
   fields?: readonly string[];
   /** Frappe filters to apply */
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Frappe filter operands are arbitrary field values, passed through to the fixture provider as-is
   filters?: Record<string, unknown> | [string, string, unknown][];
   /** Optional override for the collection id */
   id?: string;
@@ -332,10 +350,10 @@ export interface FixtureCollectionOptionsConfig<_TDoc extends object & { name: s
  * the same count a live bench returns for a request with no
  * `limit_page_length`. Pass `limit: 0` for every row.
  */
-export function fixtureCollectionOptions<TDoc extends object & { name: string; doctype: string }>(
+export const fixtureCollectionOptions = <TDoc extends object & { name: string; doctype: string }>(
   doctype: string,
   config: FixtureCollectionOptionsConfig<TDoc>,
-): CollectionConfig<TDoc, string> {
+): CollectionConfig<TDoc, string> => {
   const { fixtures, fields, filters, orderBy, limit, limitStart } = config;
 
   const syncFn: SyncConfig<TDoc, string>['sync'] = (params) => {
@@ -347,18 +365,17 @@ export function fixtureCollectionOptions<TDoc extends object & { name: string; d
     // "cleaned-up" → "ready" status transition) as an unhandled rejection.
     let cancelled = false;
 
-    async function initSync() {
+    const initSync = async () => {
       try {
-        const orderByForFixture =
-          orderBy && !Array.isArray(orderBy)
-            ? { field: orderBy.field, order: String(orderBy.order) }
-            : Array.isArray(orderBy)
-              ? orderBy.map((ob) => ({ field: ob.field, order: String(ob.order) }))
-              : undefined;
+        const orderByForFixture = Array.isArray(orderBy)
+          ? orderBy.map((ob) => ({ field: ob.field, order: ob.order }))
+          : orderBy && { field: orderBy.field, order: orderBy.order };
 
         const docs = await fixtures.getList<TDoc>(doctype, {
           fields,
-          filters: filters as Partial<TDoc> | [string, string, any][] | undefined,
+          // SAFETY: a filter record names TDoc fields; the fixture provider only matches them against row values.
+          // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+          filters: filters as Partial<TDoc> | [string, string, unknown][] | undefined,
           orderBy: orderByForFixture,
           limitStart,
           // Same page length the bench applies to a request that carries no
@@ -373,6 +390,8 @@ export function fixtureCollectionOptions<TDoc extends object & { name: string; d
         if (docs.length > 0) {
           begin();
           for (const doc of docs) {
+            // SAFETY: fixture rows are complete docs; the provider types them Partial only because `fields` may narrow them.
+            // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
             const fullDoc = { ...doc, doctype } as TDoc;
             write({ type: 'insert', value: fullDoc });
           }
@@ -388,9 +407,9 @@ export function fixtureCollectionOptions<TDoc extends object & { name: string; d
           markReady();
         }
       }
-    }
+    };
 
-    initSync();
+    void initSync();
 
     return () => {
       cancelled = true;
@@ -405,6 +424,7 @@ export function fixtureCollectionOptions<TDoc extends object & { name: string; d
     onInsert: async ({ transaction }) => {
       for (const mutation of transaction.mutations) {
         const doc = mutation.modified;
+        // oxlint-disable-next-line eslint/no-await-in-loop, react-doctor/async-await-in-loop -- mutations apply in transaction order
         await fixtures.createDoc(doctype, { ...doc, doctype });
       }
     },
@@ -412,19 +432,25 @@ export function fixtureCollectionOptions<TDoc extends object & { name: string; d
     onUpdate: async ({ transaction }) => {
       for (const mutation of transaction.mutations) {
         const doc = mutation.changes ?? mutation.modified;
+        // SAFETY: getKey returns doc.name, so every key in this collection is a string.
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
         const name = mutation.key as string;
+        // oxlint-disable-next-line eslint/no-await-in-loop, react-doctor/async-await-in-loop -- mutations apply in transaction order
         await fixtures.updateDoc(doctype, name, { ...doc, doctype });
       }
     },
 
     onDelete: async ({ transaction }) => {
       for (const mutation of transaction.mutations) {
+        // SAFETY: getKey returns doc.name, so every key in this collection is a string.
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
         const name = mutation.key as string;
+        // oxlint-disable-next-line eslint/no-await-in-loop, react-doctor/async-await-in-loop -- mutations apply in transaction order
         await fixtures.deleteDoc(doctype, name);
       }
     },
   };
-}
+};
 
 /**
  * Creates a TanStack DB Collection backed by a FixtureProvider.
@@ -432,9 +458,7 @@ export function fixtureCollectionOptions<TDoc extends object & { name: string; d
  * Without `limit` it reads {@link defaultPageLength} (20) rows, matching a
  * live bench; `limit: 0` reads every row.
  */
-export function createFixtureCollection<TDoc extends object & { name: string; doctype: string }>(
+export const createFixtureCollection = <TDoc extends object & { name: string; doctype: string }>(
   doctype: string,
   config: FixtureCollectionOptionsConfig<TDoc>,
-) {
-  return createCollection<TDoc, string>(fixtureCollectionOptions<TDoc>(doctype, config));
-}
+) => createCollection<TDoc, string>(fixtureCollectionOptions<TDoc>(doctype, config));

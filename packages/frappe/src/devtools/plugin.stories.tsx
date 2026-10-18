@@ -3,8 +3,9 @@ import { isWeb, Text, YStack } from 'tamagui';
 
 import { toDoFixtureData, useSeededJournal, useStoryConfig } from '../../tests/storyFixtures';
 import type { ToDo } from '../../tests/storyFixtures';
-import { useFrappeCollection } from '../frappeReact';
-import { useLiveQuery } from '../useLiveQuery';
+import { useFrappeCollection } from '../frappe-react';
+import type { SyncModule } from '../sync';
+import { useLiveQuery } from '../use-live-query';
 
 import { frappeDevtoolsPlugin } from './plugin';
 
@@ -22,11 +23,11 @@ export default {
   },
 };
 
-function PluginHost({ theme }: { theme: 'light' | 'dark' }) {
+const PluginHost = ({ theme }: { theme: 'light' | 'dark' }) => {
   const config = useStoryConfig(toDoFixtureData());
   const collection = useFrappeCollection<ToDo>(config, 'ToDo');
   const { isReady } = useLiveQuery((q) => (collection ? q.from({ todo: collection }) : null), [collection]);
-  const syncModule = useSeededJournal(config, Boolean(isReady));
+  const syncModule: SyncModule | undefined = useSeededJournal(config, isReady);
   const [host, setHost] = useState<HTMLDivElement | null>(null);
   if (!syncModule) {
     return <Text fontSize="$2">No SyncModule: getFrappeSyncModule() returns undefined during server rendering.</Text>;
@@ -61,7 +62,7 @@ function PluginHost({ theme }: { theme: 'light' | 'dark' }) {
       )}
     </YStack>
   );
-}
+};
 
 /** render(host, { theme: "light" }), the way the shell opens the tab. */
 export const Main = () => <PluginHost theme="light" />;

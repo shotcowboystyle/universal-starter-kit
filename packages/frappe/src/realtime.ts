@@ -5,6 +5,7 @@ import { io } from 'socket.io-client';
 import type { AuthConfig } from './core/types';
 import { isBrowser, isGjs } from './util';
 
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- realtime payloads are arbitrary server JSON; each subscriber parses its own event shape
 export type Handler = (payload: unknown) => void;
 
 export enum RealtimePlatform {
@@ -43,11 +44,13 @@ export interface SSEMessageEventLike {
  * SSE transport. The global browser/Node implementation satisfies it, and so
  * do the common polyfills (`eventsource` on npm, `react-native-sse`).
  */
+/* oxlint-disable typescript/method-signature-style -- method syntax keeps listener params bivariant, so global EventSource and polyfills with narrower listener types stay assignable */
 export interface SSEEventSourceLike {
   addEventListener(type: string, listener: (event: SSEMessageEventLike) => void): void;
   removeEventListener(type: string, listener: (event: SSEMessageEventLike) => void): void;
   close(): void;
 }
+/* oxlint-enable typescript/method-signature-style */
 
 export type SSEEventSourceConstructor = new (url: string, init?: { withCredentials?: boolean }) => SSEEventSourceLike;
 
@@ -176,12 +179,40 @@ export interface DocRoom {
 }
 export interface ListRoom {
   doctype: string;
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- Frappe list filters map any fieldname to any filter value
   filters?: Record<string, unknown>;
 }
 
-function docRoomKey(doctype: string, name: string) {
-  return `${doctype}\0${name}`;
-}
+const docRoomKey = (doctype: string, name: string) => `${doctype}\0${name}`;
+
+const detectPlatform = (): RealtimePlatform => {
+  // GJS (GNOME desktop) FIRST: isBrowser() is true there (the sync engine
+  // runs), but the Web classification would be wrong — GJS has no XHR for
+  // a polling-first handshake, and its WebSocket comes from an
+  // entry-installed libsoup polyfill that DOES accept custom handshake
+  // headers (RN-style `{ headers }` third argument). Classify like Node:
+  // websocket-first transports + the extraHeaders auth path.
+  if (isGjs()) {
+    return RealtimePlatform.Node;
+  }
+  // React Native next: RN sets navigator.product === "ReactNative" but no
+  // userAgent, so a UA-only sniff misclassifies RN as Web — skipping the
+  // extraHeaders auth path (sid cookie / Origin) and connecting cookie-auth
+  // sockets as guest. The platform package's static isNative flag is the
+  // canonical signal; the navigator checks are runtime fallbacks (kept for
+  // environments that fake a RN UA, e.g. tests).
+  if (
+    isNative ||
+    (typeof navigator !== 'undefined' &&
+      (navigator.product === 'ReactNative' || navigator.userAgent?.includes('ReactNative')))
+  ) {
+    return RealtimePlatform.ReactNative;
+  }
+  if (!isBrowser()) {
+    return RealtimePlatform.Node;
+  }
+  return RealtimePlatform.Web;
+};
 
 export class RealtimeModule {
   private socket: Socket | undefined;
@@ -191,7 +222,7 @@ export class RealtimeModule {
   /** Tracks events with socket listeners attached to prevent duplicates. */
   private readonly attachedSocketEvents = new Set<string>();
   /** Stored socket event handler references for proper cleanup. */
-  private readonly socketEventHandlers = new Map<string, (payload: unknown) => void>();
+  private readonly socketEventHandlers = new Map<string, Handler>();
   /** Tracks SSE event types with listeners attached to prevent duplicates. */
   private readonly attachedSseEvents = new Set<string>();
   /** Stored SSE listener references for proper cleanup. */
@@ -213,54 +244,26 @@ export class RealtimeModule {
   constructor(config: RealtimeConfig) {
     this.config = {
       ...config,
-      platform: config.platform ?? this.detectPlatform(),
+      platform: config.platform ?? detectPlatform(),
     };
   }
 
-  private detectPlatform() {
-    // GJS (GNOME desktop) FIRST: isBrowser() is true there (the sync engine
-    // runs), but the Web classification would be wrong — GJS has no XHR for
-    // a polling-first handshake, and its WebSocket comes from an
-    // entry-installed libsoup polyfill that DOES accept custom handshake
-    // headers (RN-style `{ headers }` third argument). Classify like Node:
-    // websocket-first transports + the extraHeaders auth path.
-    if (isGjs()) {
-      return RealtimePlatform.Node;
-    }
-    // React Native next: RN sets navigator.product === "ReactNative" but no
-    // userAgent, so a UA-only sniff misclassifies RN as Web — skipping the
-    // extraHeaders auth path (sid cookie / Origin) and connecting cookie-auth
-    // sockets as guest. The platform package's static isNative flag is the
-    // canonical signal; the navigator checks are runtime fallbacks (kept for
-    // environments that fake a RN UA, e.g. tests).
-    if (
-      isNative ||
-      (typeof navigator !== 'undefined' &&
-        (navigator.product === 'ReactNative' || navigator.userAgent?.includes('ReactNative')))
-    ) {
-      return RealtimePlatform.ReactNative;
-    }
-    if (!isBrowser()) {
-      return RealtimePlatform.Node;
-    }
-    return RealtimePlatform.Web;
-  }
-
   private getSocketURL(): string {
-    const base = this.config.baseURL.replace(/\/$/, '');
+    const base = this.config.baseURL.replace(/\/$/u, '');
     // Same-origin override: dial socketBaseURL directly (e.g. the page
     // origin, whose dev server proxies /socket.io to the bench's socketio).
     // The namespace is still siteName — falling back to the baseURL hostname
     // exactly like the derived path below, NOT the socketBaseURL hostname,
     // which would be the dev-server host and never a Frappe site.
-    if (this.config.socketBaseURL) {
-      const socketBase = this.config.socketBaseURL.replace(/\/$/, '');
+    const { socketBaseURL } = this.config;
+    if (socketBaseURL !== undefined && socketBaseURL !== '') {
+      const socketBase = socketBaseURL.replace(/\/$/u, '');
       let { siteName } = this.config;
-      if (!siteName) {
+      if (siteName === undefined || siteName === '') {
         try {
           siteName = new URL(base).hostname;
         } catch {
-          siteName = base.replace(/^https?:\/\//, '').split(/[/:]/)[0];
+          [siteName] = base.replace(/^https?:\/\//u, '').split(/[/:]/u);
         }
       }
       return `${socketBase}/${siteName}`;
@@ -272,7 +275,7 @@ export class RealtimeModule {
       // parse host at construction and never recompute origin from a port
       // assignment — which silently dropped socketPort and pointed the
       // socket at the web server.
-      const port = this.config.socketPort ? String(this.config.socketPort) : url.port;
+      const port = (this.config.socketPort ?? 0) > 0 ? String(this.config.socketPort) : url.port;
       const host = port ? `${url.hostname}:${port}` : url.hostname;
       // The path portion of the URL passed to io() is the Socket.IO
       // namespace — frappe requires it to be the site name (see siteName).
@@ -281,10 +284,10 @@ export class RealtimeModule {
     } catch {
       // Fallback: string manipulation when URL constructor isn't available
       let result = base;
-      if (this.config.socketPort) {
-        result = result.replace(/(:\d+)/, `:${this.config.socketPort}`);
+      if ((this.config.socketPort ?? 0) > 0) {
+        result = result.replace(/:\d+/u, `:${this.config.socketPort}`);
       }
-      const siteName = this.config.siteName ?? result.replace(/^https?:\/\//, '').split(/[/:]/)[0];
+      const siteName = this.config.siteName ?? result.replace(/^https?:\/\//u, '').split(/[/:]/u)[0];
       return `${result}/${siteName}`;
     }
   }
@@ -306,23 +309,25 @@ export class RealtimeModule {
       try {
         authOptions.extraHeaders = { Origin: new URL(this.config.baseURL).origin };
       } catch {
-        authOptions.extraHeaders = { Origin: this.config.baseURL.replace(/\/$/, '') };
+        authOptions.extraHeaders = { Origin: this.config.baseURL.replace(/\/$/u, '') };
       }
     }
-    if (this.config.platform !== RealtimePlatform.Web && this.config.auth?.sessionId) {
+    const sessionIdSource = this.config.auth?.sessionId;
+    if (this.config.platform !== RealtimePlatform.Web && sessionIdSource !== undefined && sessionIdSource !== '') {
       const sessionId =
-        typeof this.config.auth.sessionId === 'function'
-          ? await this.config.auth.sessionId()
-          : this.config.auth.sessionId;
+        // oxlint-disable-next-line anti-slop/no-runtime-typeof -- discriminates the declared `string | getter` AuthConfig union
+        typeof sessionIdSource === 'function' ? await sessionIdSource() : sessionIdSource;
       const Cookie = `sid=${sessionId}`;
       authOptions.extraHeaders = {
         ...authOptions.extraHeaders,
         Cookie,
       };
     }
-    if (this.config.auth?.useToken && this.config.auth.token) {
+    const tokenSource = this.config.auth?.token;
+    if (this.config.auth?.useToken === true && tokenSource !== undefined && tokenSource !== '') {
       const token =
-        typeof this.config.auth.token === 'function' ? await this.config.auth.token() : this.config.auth.token;
+        // oxlint-disable-next-line anti-slop/no-runtime-typeof -- discriminates the declared `string | getter` AuthConfig union
+        typeof tokenSource === 'function' ? await tokenSource() : tokenSource;
       // Skip when the getter resolves empty (signed out): a bare
       // "Bearer " header would fail frappe's auth instead of falling
       // back to guest.
@@ -360,12 +365,14 @@ export class RealtimeModule {
       return;
     }
     if (this.authRefreshInflight) {
-      return await this.authRefreshInflight;
+      await this.authRefreshInflight;
+      return;
     }
     this.authRefreshInflight = (async () => {
       try {
         const authOptions = await this.getAuthOptions();
-        const manager = (socket as { io?: { opts?: Record<string, unknown> } }).io;
+        // Widened: mock sockets in tests may not expose `.io`.
+        const manager: Partial<Socket['io']> | undefined = socket.io;
         if (manager?.opts) {
           Object.assign(manager.opts, authOptions);
         }
@@ -373,10 +380,11 @@ export class RealtimeModule {
         // Keep the previous credentials; the next disconnect/reconnect
         // cycle retries the refresh.
       } finally {
+        // oxlint-disable-next-line sonarjs/no-undefined-assignment -- clears the in-flight slot so the next trigger starts a fresh refresh
         this.authRefreshInflight = undefined;
       }
     })();
-    return await this.authRefreshInflight;
+    await this.authRefreshInflight;
   }
 
   private resolveHealthyWaiters(ok: boolean) {
@@ -394,8 +402,10 @@ export class RealtimeModule {
     if (this.isHealthy()) {
       return true;
     }
+    // oxlint-disable-next-line promise/avoid-new -- bridges a timer and the healthyWaiters callback set; there is no promise API to adopt
     return await new Promise((resolve) => {
       const timer = setTimeout(() => {
+        // oxlint-disable-next-line eslint/no-use-before-define -- read only when the timer fires, after onReady is initialized
         this.healthyWaiters.delete(onReady);
         resolve(false);
       }, timeoutMs);
@@ -500,6 +510,7 @@ export class RealtimeModule {
     try {
       const { sse } = this.config;
       const EventSourceCtor =
+        // SAFETY: EventSource is optional at runtime (React Native, Node < 22); the widened view models that absence.
         sse?.EventSource ?? (globalThis as { EventSource?: SSEEventSourceConstructor }).EventSource;
       if (!EventSourceCtor) {
         throw new Error(
@@ -524,18 +535,20 @@ export class RealtimeModule {
   private async buildSSEURL(): Promise<string> {
     const { sse } = this.config;
     let url: string;
-    if (sse?.url) {
-      url = sse.url;
-    } else if (sse?.path) {
-      const base = this.config.baseURL.replace(/\/$/, '');
-      url = `${base}${sse.path.startsWith('/') ? '' : '/'}${sse.path}`;
-    } else {
+    const sseUrl = sse?.url ?? '';
+    const ssePath = sse?.path ?? '';
+    if (sseUrl !== '') {
+      url = sseUrl;
+    } else if (ssePath === '') {
       throw new Error(
         '[RealtimeModule] transport "sse" requires config.sse.url or config.sse.path. There ' +
           'is no default stream path: SSE endpoints are server-specific (the SHC daemon ' +
           'serves "/api/method/shc.events.stream"; a real Frappe bench has no SSE endpoint ' +
           'at all), so a framework default would only ever 404.',
       );
+    } else {
+      const base = this.config.baseURL.replace(/\/$/u, '');
+      url = `${base}${ssePath.startsWith('/') ? '' : '/'}${ssePath}`;
     }
     const params = Object.entries(this.config.sse?.queryParams ?? {});
     if (params.length === 0) {
@@ -544,11 +557,13 @@ export class RealtimeModule {
     // Built by string concatenation (not the URL constructor) so minimal URL
     // polyfills (GJS) work; getters are re-resolved on every (re)creation so
     // rotated tokens ride the next stream request.
-    const parts: string[] = [];
-    for (const [key, value] of params) {
-      const resolved = typeof value === 'function' ? await value() : value;
-      parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(resolved)}`);
-    }
+    const parts = await Promise.all(
+      params.map(async ([key, value]) => {
+        // oxlint-disable-next-line anti-slop/no-runtime-typeof -- discriminates the declared `string | getter` queryParams union
+        const resolved = typeof value === 'function' ? await value() : value;
+        return `${encodeURIComponent(key)}=${encodeURIComponent(resolved)}`;
+      }),
+    );
     return `${url}${url.includes('?') ? '&' : '?'}${parts.join('&')}`;
   }
 
@@ -636,6 +651,7 @@ export class RealtimeModule {
     }
     const frame: SSEFrame = {
       type,
+      // oxlint-disable-next-line typescript/no-base-to-string -- SSE data is always a string per spec; String() only normalizes loosely typed polyfills
       data: String(event.data),
       lastEventId: event.lastEventId ?? '',
     };
@@ -692,10 +708,10 @@ export class RealtimeModule {
   private softDisconnect(): void {
     if (this.socket) {
       // Prefer removeAllListeners when available (real socket.io); mocks may omit it.
-      if (typeof this.socket.removeAllListeners === 'function') {
-        this.socket.removeAllListeners();
-      }
+      const socket: Partial<Socket> = this.socket;
+      socket.removeAllListeners?.();
       this.socket.disconnect();
+      // oxlint-disable-next-line sonarjs/no-undefined-assignment -- `undefined` is the declared "no socket" state
       this.socket = undefined;
     }
     if (this.eventSource) {
@@ -703,6 +719,7 @@ export class RealtimeModule {
         this.eventSource.removeEventListener(type, listener);
       }
       this.eventSource.close();
+      // oxlint-disable-next-line sonarjs/no-undefined-assignment -- `undefined` is the declared "no stream" state
       this.eventSource = undefined;
     }
     this.attachedSocketEvents.clear();
@@ -746,7 +763,7 @@ export class RealtimeModule {
     // Manager-level safety net: re-resolve before every scheduled reconnect
     // attempt (covers timeouts and transport errors that skip the socket
     // level events above). Mock sockets in tests may not expose `.io`.
-    const manager = (this.socket as { io?: { on?: (ev: string, fn: () => void) => void } }).io;
+    const manager: Partial<Socket['io']> | undefined = this.socket.io;
     manager?.on?.('reconnect_attempt', () => {
       void this.refreshSocketAuth();
     });
@@ -764,7 +781,7 @@ export class RealtimeModule {
       return;
     }
 
-    const handler = (payload: unknown) => {
+    const handler: Handler = (payload) => {
       this.emitToHandlers(event, payload);
     };
     this.socketEventHandlers.set(event, handler);
@@ -788,7 +805,7 @@ export class RealtimeModule {
     this.attachedSocketEvents.delete(event);
   }
 
-  private emitToHandlers(event: string, payload: unknown) {
+  private emitToHandlers(event: string, payload: Parameters<Handler>[0]) {
     const handlerSet = this.handlerMap.get(event);
     if (!handlerSet) {
       return;
@@ -867,7 +884,7 @@ export class RealtimeModule {
    * single room per doctype (`doctype_subscribe`) and does not support
    * filtered list rooms.
    */
-  async subscribeList(doctype: string, filters?: Record<string, unknown>): Promise<void> {
+  async subscribeList(doctype: string, filters?: ListRoom['filters']): Promise<void> {
     this.listRooms.set(doctype, { doctype, filters });
     if (this.isSSE()) {
       this.logSSERoomNoticeOnce();
@@ -949,6 +966,7 @@ export class RealtimeModule {
     }
   }
 
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- forwards any app payload to socket.io's untyped emit
   emit(event: string, data: unknown) {
     if (this.isSSE()) {
       // SSE is one-way (server → client): there is no upstream channel to

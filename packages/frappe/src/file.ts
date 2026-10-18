@@ -18,12 +18,12 @@ export class FileModule {
 
   async uploadFile(file: File | Blob, args: UploadArgs, _onProgress?: (completed: number, total: number) => void) {
     const form = new FormData();
-    form.append('file', file as any);
-    Object.entries(args).forEach(([k, v]) => {
+    form.append('file', file);
+    for (const [k, v] of Object.entries(args)) {
       if (v != null) {
         form.append(k, String(v));
       }
-    });
+    }
     return await this.http.post('/api/method/upload_file', form);
   }
 }

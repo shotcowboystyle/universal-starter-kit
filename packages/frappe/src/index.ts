@@ -6,8 +6,8 @@
  */
 
 // Core Frappe functionality
-export { FrappeApp } from './frappeApp';
-export type { FrappeConfig } from './frappeApp';
+export { FrappeApp } from './frappe-app';
+export type { FrappeConfig } from './frappe-app';
 export {
   frappeDocLoader,
   frappeListLoader,
@@ -18,7 +18,7 @@ export {
   type FrappeRouteLoaderProps,
   type LoadDocListOptions,
   type LoadDocOptions,
-} from './serverLoaders';
+} from './server-loaders';
 export { AuthModule } from './auth';
 export { CallModule } from './call';
 export { DbModule } from './db';
@@ -66,7 +66,7 @@ export {
   useFrappeInfiniteList,
   getFrappeSyncModule,
   __getActiveSyncModule,
-} from './frappeReact';
+} from './frappe-react';
 export type {
   FrappeConnectionState,
   UseFrappeCatchUpResult,
@@ -76,7 +76,7 @@ export type {
   UseInfiniteScrollResult,
   UseFrappeInfiniteListConfig,
   UseFrappeInfiniteListResult,
-} from './frappeReact';
+} from './frappe-react';
 export type { SyncRealtimeEvent, SubscriptionRefreshOptions, SubscriptionRefreshResult } from './sync';
 
 // TanStack Pacer utilities for Frappe
@@ -92,7 +92,7 @@ export type {
 } from './pacer';
 
 // Re-export TanStack DB React hooks (SSR-safe wrapper)
-export { useLiveQuery } from './useLiveQuery';
+export { useLiveQuery } from './use-live-query';
 export { createCollection, createTransaction } from '@tanstack/db';
 
 // Re-export TanStack DB query builder functions
@@ -142,7 +142,8 @@ export {
 } from '@tanstack/pacer';
 
 // Fixture support for testing
-export * from './fixtures';
+export { InMemoryFixtureProvider } from './fixtures';
+export type { FixtureData, FixtureDoc, FixtureProvider } from './fixtures';
 
 // Core infrastructure exports (for advanced users)
 export {
@@ -154,7 +155,7 @@ export {
   clearSSRCookies,
   invalidateCookieCache,
 } from './core/http';
-export { readServerMessages, serverMessageLines } from './core/serverMessages';
+export { readServerMessages, serverMessageLines } from './core/server-messages';
 // FrappeError is a class (runtime value) — consumers catch/instanceof it.
 export { FrappeError } from './core/types';
 export type { AuthConfig, ListOptions, CustomEndpoints, FrappeLiveConfig, WriteStrategy } from './core/types';

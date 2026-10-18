@@ -3,9 +3,9 @@ import { Debouncer } from '@tanstack/pacer';
 import type { FrappeDoc, FrappeDocData } from '../common/types';
 import type { DbModule } from '../db';
 
-import type { MutationJournal } from './mutationJournal';
-import type { NormalizedCache } from './normalizedCache';
-import type { SubscriptionManager } from './subscriptionManager';
+import type { MutationJournal } from './mutation-journal';
+import type { NormalizedCache } from './normalized-cache';
+import type { SubscriptionManager } from './subscription-manager';
 import { Operation, RehydrationReason, RehydrationStrategyType } from './types';
 import type { RehydrationStrategy, RehydrationTask, Subscription } from './types';
 
@@ -31,7 +31,12 @@ export class RehydrationManager {
   /** Queue of pending rehydration tasks, keyed by subscription ID */
   private readonly rehydrationQueue = new Map<string, RehydrationTask>();
   /** Debouncer for batching rehydration queue processing */
-  private readonly processDebouncer = new Debouncer(async () => await this.processQueue(), { wait: 100 });
+  private readonly processDebouncer = new Debouncer(
+    async () => {
+      await this.processQueue();
+    },
+    { wait: 100 },
+  );
   /** Maps temporary IDs to server-assigned IDs for optimistic creates */
   private readonly temporaryIdMap = new Map<string, string>();
   private readonly db: DbModule;
@@ -62,7 +67,6 @@ export class RehydrationManager {
    * @param subscription - The subscription to rehydrate
    * @param reason - The reason for rehydration (affects strategy selection)
    *
-   * @remarks
    * Multiple rehydration requests for the same subscription are coalesced.
    * Higher priority tasks override lower priority ones.
    * Tasks are processed after a delay to batch multiple operations.
@@ -99,13 +103,13 @@ export class RehydrationManager {
    * @param reason - The reason triggering rehydration
    * @returns Strategy with type, priority, and delay
    *
-   * @remarks
    * Strategy selection matrix:
    * - 'create': Fetch item only (low priority, 100ms delay)
    * - 'delete': Full refresh (high priority, 500ms delay)
    * - 'overflow': Full refresh (medium priority, 1000ms delay)
    * - 'uncertain': Full refresh (low priority, 2000ms delay)
    */
+  // oxlint-disable-next-line eslint/class-methods-use-this -- part of the manager's strategy surface; the specs exercise it through the instance
   private determineStrategy(reason: RehydrationReason): RehydrationStrategy {
     switch (reason) {
       case RehydrationReason.Create: {
@@ -113,7 +117,8 @@ export class RehydrationManager {
         return {
           type: RehydrationStrategyType.FetchItemOnly,
           priority: 1,
-          delay: 100, // Quick fetch
+          // Quick fetch
+          delay: 100,
         };
       }
 
@@ -122,7 +127,8 @@ export class RehydrationManager {
         return {
           type: RehydrationStrategyType.FullRefresh,
           priority: 2,
-          delay: 500, // Moderate urgency
+          // Moderate urgency
+          delay: 500,
         };
       }
 
@@ -131,7 +137,8 @@ export class RehydrationManager {
         return {
           type: RehydrationStrategyType.FullRefresh,
           priority: 3,
-          delay: 500, // More urgent
+          // More urgent
+          delay: 500,
         };
       }
 
@@ -140,7 +147,8 @@ export class RehydrationManager {
         return {
           type: RehydrationStrategyType.FullRefresh,
           priority: 2,
-          delay: 1000, // Less urgent
+          // Less urgent
+          delay: 1000,
         };
       }
 
@@ -149,7 +157,8 @@ export class RehydrationManager {
         return {
           type: RehydrationStrategyType.FullRefresh,
           priority: 1,
-          delay: 2000, // Give time for more operations
+          // Give time for more operations
+          delay: 2000,
         };
       }
 
@@ -175,7 +184,6 @@ export class RehydrationManager {
   /**
    * Processes all pending rehydration tasks.
    *
-   * @remarks
    * Tasks are processed in priority order (highest first).
    * Within the same priority, earlier tasks are processed first.
    * Failed tasks remain in the queue for retry.
@@ -195,6 +203,7 @@ export class RehydrationManager {
     let anyExecuted = false;
     for (const task of tasks) {
       try {
+        // oxlint-disable-next-line eslint/no-await-in-loop, react-doctor/async-await-in-loop -- tasks run one at a time in priority order by design
         await this.executeRehydration(task);
         this.rehydrationQueue.delete(task.subscriptionId);
         anyExecuted = true;
@@ -229,10 +238,14 @@ export class RehydrationManager {
         await this.fullPageRefresh(subscription);
         break;
       }
+
+      default: {
+        break;
+      }
     }
 
     // Clear pending rehydration flag
-    subscription.pendingRehydration = undefined;
+    delete subscription.pendingRehydration;
   }
 
   /**
@@ -243,14 +256,15 @@ export class RehydrationManager {
 
     for (const mutation of pendingCreates) {
       const temporaryId = mutation.docname;
-      if (!temporaryId) {
+      if (temporaryId === undefined || temporaryId === '') {
         continue;
       }
 
       // Check if we have the real name mapping
       const realName = this.temporaryIdMap.get(temporaryId);
-      if (realName) {
+      if (realName !== undefined && realName !== '') {
         try {
+          // oxlint-disable-next-line eslint/no-await-in-loop, react-doctor/async-await-in-loop -- sequential fetches keep the request fan-out to one at a time
           const document = await this.db.getDoc(subscription.query.doctype, realName);
           this.cache.upsert(document);
         } catch (error) {
@@ -287,13 +301,12 @@ export class RehydrationManager {
       this.reconcilePage(subscription, docs);
 
       // Update boundaries
-      if (docs.length > 0) {
+      const [firstDoc] = docs;
+      const lastDoc = docs.at(-1);
+      if (firstDoc !== undefined && lastDoc !== undefined) {
         subscription.boundaries = {
-          firstItem: { ...docs[0], doctype } as FrappeDoc<FrappeDocData>,
-          lastItem: {
-            ...docs.at(-1),
-            doctype,
-          } as FrappeDoc<FrappeDocData>,
+          firstItem: { ...firstDoc, doctype },
+          lastItem: { ...lastDoc, doctype },
           offset: subscription.boundaries?.offset ?? 0,
           pageSize: subscription.boundaries?.pageSize ?? limit ?? 20,
         };
@@ -307,8 +320,8 @@ export class RehydrationManager {
   /**
    * Reconciles server state with optimistic changes.
    */
-  private reconcilePage(subscription: Subscription, serverDocs: any[]) {
-    const pendingOps = this.mutationJournal.listPending() || [];
+  private reconcilePage(subscription: Subscription, serverDocs: FrappeDoc<FrappeDocData>[]) {
+    const pendingOps = this.mutationJournal.listPending();
     const reconciledIds = new Set<string>();
     const { doctype } = subscription.query;
 
@@ -327,12 +340,11 @@ export class RehydrationManager {
         // Apply optimistic update on top of fresh server state
         const merged = { ...serverDoc, ...pendingUpdate.entry.values, doctype };
         this.cache.upsert(merged);
-        reconciledIds.add(serverDoc.name);
       } else {
         // Use server state as-is
         this.cache.upsert(serverDoc);
-        reconciledIds.add(serverDoc.name);
       }
+      reconciledIds.add(serverDoc.name);
     }
 
     // Add optimistic creates that belong on this page
@@ -342,7 +354,7 @@ export class RehydrationManager {
 
     for (const { entry } of pendingCreates) {
       const temporaryId = entry.docname;
-      if (temporaryId && !reconciledIds.has(temporaryId)) {
+      if (temporaryId !== undefined && temporaryId !== '' && !reconciledIds.has(temporaryId)) {
         // Check if it should be on this page
         // For now, add it if we're uncertain
         reconciledIds.add(temporaryId);
@@ -355,7 +367,7 @@ export class RehydrationManager {
     );
 
     for (const { entry } of pendingDeletes) {
-      if (entry.docname) {
+      if (entry.docname !== undefined && entry.docname !== '') {
         reconciledIds.delete(entry.docname);
       }
     }
@@ -373,8 +385,7 @@ export class RehydrationManager {
   private getPendingCreates(doctype: string) {
     return this.mutationJournal
       .listPending()
-      .filter(({ entry }) => entry.operation === Operation.Create && entry.doctype === doctype)
-      .map(({ entry }) => entry);
+      .flatMap(({ entry }) => (entry.operation === Operation.Create && entry.doctype === doctype ? [entry] : []));
   }
 
   /**

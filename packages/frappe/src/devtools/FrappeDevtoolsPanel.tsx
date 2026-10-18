@@ -21,7 +21,7 @@ const virtualOverscan = 10;
 // Helpers
 // ---------------------------------------------------------------------------
 
-function relativeTime(ts: number): string {
+const relativeTime = (ts: number): string => {
   const diff = Date.now() - ts;
   if (diff < 1000) {
     return 'just now';
@@ -33,14 +33,16 @@ function relativeTime(ts: number): string {
     return `${Math.floor(diff / 60_000)}m ago`;
   }
   return `${Math.floor(diff / 3_600_000)}h ago`;
-}
+};
 
-function truncate(s: string, max: number): string {
-  return s.length > max ? `${s.slice(0, max)}…` : s;
-}
+const truncate = (s: string, max: number): string => (s.length > max ? `${s.slice(0, max)}…` : s);
 
-function checkpointAge(checkpoint?: string): 'fresh' | 'stale' | 'none' {
-  if (!checkpoint) {
+type CheckpointAge = 'fresh' | 'stale' | 'none';
+type MutationFilter = 'all' | 'pending' | 'confirmed' | 'failed';
+type PanelTab = 'pages' | 'cache' | 'mutations';
+
+const checkpointAge = (checkpoint?: string): CheckpointAge => {
+  if (checkpoint === undefined || checkpoint === '') {
     return 'none';
   }
   try {
@@ -49,19 +51,55 @@ function checkpointAge(checkpoint?: string): 'fresh' | 'stale' | 'none' {
   } catch {
     return 'none';
   }
-}
+};
 
-const opIcons: Record<string, string> = {
+const opIcons = {
   [Operation.Create]: '+',
   [Operation.Update]: '~',
   [Operation.Delete]: '×',
+} satisfies Record<Operation, string>;
+
+const pageButtonBorder = (t: PanelTheme, isCurrent: boolean, cached: boolean): string => {
+  if (isCurrent) {
+    return t.accent;
+  }
+  return cached ? t.border : `${t.border}60`;
+};
+
+const pageButtonBackground = (t: PanelTheme, isCurrent: boolean, cached: boolean): string => {
+  if (isCurrent) {
+    return t.accent;
+  }
+  return cached ? t.bgSubtle : 'transparent';
+};
+
+const pageButtonColor = (t: PanelTheme, isCurrent: boolean, cached: boolean): string => {
+  if (isCurrent) {
+    return '#fff';
+  }
+  return cached ? t.text : `${t.textSecondary}80`;
+};
+
+const operationColor = (t: PanelTheme, operation: Operation): string => {
+  if (operation === Operation.Create) {
+    return t.success;
+  }
+  return operation === Operation.Delete ? t.error : t.warning;
+};
+
+/** Enter/Space activation for clickable rows that carry `role="button"`. */
+const onActivateKey = (activate: () => void) => (e: React.KeyboardEvent) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    activate();
+  }
 };
 
 // ---------------------------------------------------------------------------
 // Virtual scroll hook (simple windowed list)
 // ---------------------------------------------------------------------------
 
-function useVirtualScroll(itemCount: number, containerHeight: number) {
+const useVirtualScroll = (itemCount: number, containerHeight: number) => {
   const [scrollTop, setScrollTop] = useState(0);
   const totalHeight = itemCount * virtualItemHeight;
   const startIdx = Math.max(0, Math.floor(scrollTop / virtualItemHeight) - virtualOverscan);
@@ -73,45 +111,42 @@ function useVirtualScroll(itemCount: number, containerHeight: number) {
   }, []);
 
   return { startIdx, endIdx, totalHeight, onScroll, offsetY: startIdx * virtualItemHeight };
-}
+};
 
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
 
-function StatusDot({ color, size = 8 }: { color: string; size?: number }) {
-  return (
-    <span
-      style={{
-        display: 'inline-block',
-        width: size,
-        height: size,
-        borderRadius: '50%',
-        backgroundColor: color,
-        flexShrink: 0,
-      }}
-    />
-  );
-}
+const StatusDot = ({ color, size = 8 }: { color: string; size?: number }) => (
+  <span
+    style={{
+      display: 'inline-block',
+      width: size,
+      height: size,
+      borderRadius: '50%',
+      backgroundColor: color,
+      flexShrink: 0,
+    }}
+  />
+);
 
-function Badge({ children, bg, color }: { children: React.ReactNode; bg: string; color: string }) {
-  return (
-    <span
-      style={{
-        fontSize: 10,
-        fontFamily: fontMono,
-        padding: '1px 5px',
-        borderRadius: 3,
-        backgroundColor: bg,
-        color,
-        whiteSpace: 'nowrap',
-      }}>
-      {children}
-    </span>
-  );
-}
+const Badge = ({ children, bg, color }: { children: React.ReactNode; bg: string; color: string }) => (
+  // oxlint-disable-next-line react-doctor/no-tiny-text -- devtools panel is intentionally dense; sizes match the surrounding monospace readouts
+  <span
+    style={{
+      fontSize: 10,
+      fontFamily: fontMono,
+      padding: '1px 5px',
+      borderRadius: 3,
+      backgroundColor: bg,
+      color,
+      whiteSpace: 'nowrap',
+    }}>
+    {children}
+  </span>
+);
 
-function TabButton({
+const TabButton = ({
   active,
   onClick,
   children,
@@ -121,32 +156,30 @@ function TabButton({
   onClick: () => void;
   children: React.ReactNode;
   t: PanelTheme;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        fontFamily: fontUi,
-        fontSize: 12,
-        padding: '4px 12px',
-        border: 'none',
-        borderBottom: active ? `2px solid ${t.accent}` : '2px solid transparent',
-        background: 'transparent',
-        color: active ? t.accent : t.textSecondary,
-        cursor: 'pointer',
-        fontWeight: active ? 600 : 400,
-      }}>
-      {children}
-    </button>
-  );
-}
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    style={{
+      fontFamily: fontUi,
+      fontSize: 12,
+      padding: '4px 12px',
+      border: 'none',
+      borderBottom: active ? `2px solid ${t.accent}` : '2px solid transparent',
+      background: 'transparent',
+      color: active ? t.accent : t.textSecondary,
+      cursor: 'pointer',
+      fontWeight: active ? 600 : 400,
+    }}>
+    {children}
+  </button>
+);
 
 // ---------------------------------------------------------------------------
 // Sidebar
 // ---------------------------------------------------------------------------
 
-function Sidebar({
+const Sidebar = ({
   state,
   selected,
   onSelect,
@@ -156,9 +189,13 @@ function Sidebar({
   selected: string | null;
   onSelect: (id: string) => void;
   t: PanelTheme;
-}) {
-  const ageColor = (age: 'fresh' | 'stale' | 'none') =>
-    age === 'fresh' ? t.success : age === 'stale' ? t.warning : t.error;
+}) => {
+  const ageColor = (age: CheckpointAge) => {
+    if (age === 'fresh') {
+      return t.success;
+    }
+    return age === 'stale' ? t.warning : t.error;
+  };
 
   return (
     <div
@@ -203,9 +240,15 @@ function Sidebar({
           return (
             <div
               key={sub.id}
+              // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- the row holds block content (<div>s), which is invalid inside <button>; role/tabIndex/Enter+Space give the same semantics
+              role="button"
+              tabIndex={0}
               onClick={() => {
                 onSelect(sub.id);
               }}
+              onKeyDown={onActivateKey(() => {
+                onSelect(sub.id);
+              })}
               style={{
                 padding: '6px 10px',
                 cursor: 'pointer',
@@ -272,13 +315,13 @@ function Sidebar({
       </div>
     </div>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // Page Navigator
 // ---------------------------------------------------------------------------
 
-function PageNavigator({ sub, syncModule, t }: { sub: DebugSubscription; syncModule: SyncModule; t: PanelTheme }) {
+const PageNavigator = ({ sub, syncModule, t }: { sub: DebugSubscription; syncModule: SyncModule; t: PanelTheme }) => {
   const { pageInfo } = sub;
   if (!pageInfo) {
     return null;
@@ -296,6 +339,7 @@ function PageNavigator({ sub, syncModule, t }: { sub: DebugSubscription; syncMod
   return (
     <div>
       {/* Page info readout */}
+      {/* oxlint-disable-next-line react-doctor/no-tiny-text -- devtools panel is intentionally dense; sizes match the surrounding monospace readouts */}
       <div
         style={{
           display: 'flex',
@@ -330,20 +374,23 @@ function PageNavigator({ sub, syncModule, t }: { sub: DebugSubscription; syncMod
           const island = getIslandForPage(page);
 
           return (
+            // oxlint-disable-next-line github/a11y-no-title-attribute, react-doctor/no-tiny-text -- devtools panel is intentionally dense; sizes match the surrounding monospace readouts; title is a mouse-only provenance hint, the page number is the accessible name
             <button
               type="button"
               key={page}
-              onClick={async () => await syncModule.getPage(sub.id, page)}
+              onClick={() => {
+                void syncModule.getPage(sub.id, page);
+              }}
               title={cached ? `Page ${page} · ${island?.fetchedVia ?? 'cached'}` : `Page ${page} · not cached`}
               style={{
                 width: 24,
                 height: 20,
                 fontSize: 9,
                 fontFamily: fontMono,
-                border: `1px solid ${isCurrent ? t.accent : cached ? t.border : `${t.border}60`}`,
+                border: `1px solid ${pageButtonBorder(t, isCurrent, cached)}`,
                 borderRadius: 3,
-                backgroundColor: isCurrent ? t.accent : cached ? t.bgSubtle : 'transparent',
-                color: isCurrent ? '#fff' : cached ? t.text : `${t.textSecondary}80`,
+                backgroundColor: pageButtonBackground(t, isCurrent, cached),
+                color: pageButtonColor(t, isCurrent, cached),
                 cursor: 'pointer',
                 padding: 0,
                 lineHeight: '20px',
@@ -356,13 +403,13 @@ function PageNavigator({ sub, syncModule, t }: { sub: DebugSubscription; syncMod
       </div>
     </div>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // Progressive Cache View
 // ---------------------------------------------------------------------------
 
-function ProgressiveCacheView({ sub, t }: { sub: DebugSubscription; t: PanelTheme }) {
+const ProgressiveCacheView = ({ sub, t }: { sub: DebugSubscription; t: PanelTheme }) => {
   const docIds = sub.progressiveCache?.docIds ?? [];
   const nextCursor = sub.progressiveCache?.nextCursor;
   const containerRef = useRef<HTMLDivElement>(null);
@@ -426,47 +473,44 @@ function ProgressiveCacheView({ sub, t }: { sub: DebugSubscription; t: PanelThem
       </div>
     </div>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // Pages Tab
 // ---------------------------------------------------------------------------
 
-function PagesTab({ sub, syncModule, t }: { sub: DebugSubscription; syncModule: SyncModule; t: PanelTheme }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <PageNavigator
+const PagesTab = ({ sub, syncModule, t }: { sub: DebugSubscription; syncModule: SyncModule; t: PanelTheme }) => (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <PageNavigator
+      sub={sub}
+      syncModule={syncModule}
+      t={t}
+    />
+    <div>
+      <div
+        style={{
+          fontFamily: fontUi,
+          fontSize: 11,
+          fontWeight: 600,
+          color: t.textSecondary,
+          marginBottom: 4,
+        }}>
+        Progressive Cache ({sub.progressiveCache?.docIds.length ?? 0} entries)
+      </div>
+      <ProgressiveCacheView
         sub={sub}
-        syncModule={syncModule}
         t={t}
       />
-      <div>
-        <div
-          style={{
-            fontFamily: fontUi,
-            fontSize: 11,
-            fontWeight: 600,
-            color: t.textSecondary,
-            marginBottom: 4,
-          }}>
-          Progressive Cache ({sub.progressiveCache?.docIds.length ?? 0} entries)
-        </div>
-        <ProgressiveCacheView
-          sub={sub}
-          t={t}
-        />
-      </div>
     </div>
-  );
-}
+  </div>
+);
 
 // ---------------------------------------------------------------------------
 // Cache Tab
 // ---------------------------------------------------------------------------
 
-function CacheTab({ state, t }: { state: FrappeDebugState; t: PanelTheme }) {
+const CacheTab = ({ state, t }: { state: FrappeDebugState; t: PanelTheme }) => {
   const [selectedDoctype, setSelectedDoctype] = useState<string | null>(null);
-  const [_expandedDoc, setExpandedDoc] = useState<string | null>(null);
 
   const { doctypes } = state.normalizedCache;
 
@@ -483,10 +527,15 @@ function CacheTab({ state, t }: { state: FrappeDebugState; t: PanelTheme }) {
         {doctypes.map((dt) => (
           <div
             key={dt.doctype}
+            // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- the row holds block content (<div>s), which is invalid inside <button>; role/tabIndex/Enter+Space give the same semantics
+            role="button"
+            tabIndex={0}
             onClick={() => {
               setSelectedDoctype(dt.doctype);
-              setExpandedDoc(null);
             }}
+            onKeyDown={onActivateKey(() => {
+              setSelectedDoctype(dt.doctype);
+            })}
             style={{
               padding: '4px 8px',
               cursor: 'pointer',
@@ -517,7 +566,7 @@ function CacheTab({ state, t }: { state: FrappeDebugState; t: PanelTheme }) {
 
       {/* Document detail (placeholder — full inspection requires cache access) */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '0 4px' }}>
-        {!selectedDoctype && (
+        {selectedDoctype === null && (
           <div
             style={{
               fontFamily: fontUi,
@@ -529,7 +578,7 @@ function CacheTab({ state, t }: { state: FrappeDebugState; t: PanelTheme }) {
             Select a doctype to browse cached documents
           </div>
         )}
-        {selectedDoctype && (
+        {selectedDoctype !== null && (
           <div
             style={{
               fontFamily: fontMono,
@@ -549,31 +598,31 @@ function CacheTab({ state, t }: { state: FrappeDebugState; t: PanelTheme }) {
       </div>
     </div>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // Mutations Tab
 // ---------------------------------------------------------------------------
 
-function MutationsTab({ state, t }: { state: FrappeDebugState; t: PanelTheme }) {
-  const [filter, setFilter] = useState<'all' | 'pending' | 'confirmed' | 'failed'>('all');
+const MutationsTab = ({ state, t }: { state: FrappeDebugState; t: PanelTheme }) => {
+  const [filter, setFilter] = useState<MutationFilter>('all');
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const entries: DebugMutationEntry[] = useMemo(() => {
-    let list: DebugMutationEntry[] = [];
-    if (filter === 'all' || filter === 'pending') {
-      list = list.concat(state.mutationJournal.pending);
-    }
-    if (filter === 'all' || filter === 'confirmed') {
-      list = list.concat(state.mutationJournal.confirmed);
-    }
-    if (filter === 'all' || filter === 'failed') {
-      list = list.concat(state.mutationJournal.failed);
-    }
-    return list.sort((a, b) => b.createdAt - a.createdAt);
+    const list: DebugMutationEntry[] = [
+      ...(filter === 'all' || filter === 'pending' ? state.mutationJournal.pending : []),
+      ...(filter === 'all' || filter === 'confirmed' ? state.mutationJournal.confirmed : []),
+      ...(filter === 'all' || filter === 'failed' ? state.mutationJournal.failed : []),
+    ];
+    return list.toSorted((a, b) => b.createdAt - a.createdAt);
   }, [state.mutationJournal, filter]);
 
-  const statusColor = (s: Status) => (s === Status.Pending ? t.pending : s === Status.Confirmed ? t.success : t.error);
+  const statusColor = (s: Status) => {
+    if (s === Status.Pending) {
+      return t.pending;
+    }
+    return s === Status.Confirmed ? t.success : t.error;
+  };
 
   const filters: { key: typeof filter; label: string; count: number }[] = [
     {
@@ -630,15 +679,25 @@ function MutationsTab({ state, t }: { state: FrappeDebugState; t: PanelTheme }) 
       )}
       {entries.map((entry) => {
         const isExpanded = expandedId === entry.id;
+        const hasError = entry.error !== undefined && entry.error !== '';
+        const toggleExpanded = () => {
+          if (hasError) {
+            setExpandedId(isExpanded ? null : entry.id);
+          }
+        };
         return (
+          // oxlint-disable-next-line jsx-a11y/no-static-element-interactions -- role is "button" exactly when the row is actionable (has an error to expand)
           <div
             key={entry.id}
+            role={hasError ? 'button' : undefined}
+            tabIndex={hasError ? 0 : undefined}
             style={{
               padding: '4px 8px',
               borderBottom: `1px solid ${t.border}`,
-              cursor: entry.error ? 'pointer' : 'default',
+              cursor: hasError ? 'pointer' : 'default',
             }}
-            onClick={() => entry.error && setExpandedId(isExpanded ? null : entry.id)}>
+            onClick={toggleExpanded}
+            onKeyDown={onActivateKey(toggleExpanded)}>
             <div
               style={{
                 display: 'flex',
@@ -652,17 +711,14 @@ function MutationsTab({ state, t }: { state: FrappeDebugState; t: PanelTheme }) 
                   width: 14,
                   textAlign: 'center',
                   fontWeight: 700,
-                  color:
-                    entry.operation === Operation.Create
-                      ? t.success
-                      : entry.operation === Operation.Delete
-                        ? t.error
-                        : t.warning,
+                  color: operationColor(t, entry.operation),
                 }}>
                 {opIcons[entry.operation] ?? '?'}
               </span>
               <span style={{ color: t.text }}>{entry.doctype}</span>
-              {entry.docname && <span style={{ color: t.textSecondary }}>{truncate(entry.docname, 20)}</span>}
+              {entry.docname !== undefined && entry.docname !== '' && (
+                <span style={{ color: t.textSecondary }}>{truncate(entry.docname, 20)}</span>
+              )}
               <span style={{ flex: 1 }} />
               <Badge
                 bg={`${statusColor(entry.status)}22`}
@@ -674,7 +730,7 @@ function MutationsTab({ state, t }: { state: FrappeDebugState; t: PanelTheme }) 
               )}
               <span style={{ fontSize: 10, color: t.textSecondary }}>{relativeTime(entry.createdAt)}</span>
             </div>
-            {isExpanded && entry.error && (
+            {isExpanded && hasError && (
               <div
                 style={{
                   marginTop: 4,
@@ -695,38 +751,36 @@ function MutationsTab({ state, t }: { state: FrappeDebugState; t: PanelTheme }) 
       })}
     </div>
   );
-}
+};
 
 // ---------------------------------------------------------------------------
 // Stats Bar (Footer)
 // ---------------------------------------------------------------------------
 
-function StatsBar({ state, t }: { state: FrappeDebugState; t: PanelTheme }) {
-  return (
-    <div
-      style={{
-        padding: '4px 10px',
-        borderTop: `1px solid ${t.border}`,
-        fontFamily: fontMono,
-        fontSize: 10,
-        color: t.textSecondary,
-        display: 'flex',
-        gap: 12,
-        alignItems: 'center',
-        flexWrap: 'wrap',
-      }}>
-      <span>{state.subscriptions.length} subscriptions</span>
-      <span>·</span>
-      <span>{state.normalizedCache.size} cached docs</span>
-      <span>·</span>
-      <span>{state.mutationJournal.pending.length} pending mutations</span>
-      <span>·</span>
-      <span>{state.connection.isLeader ? 'leader' : 'follower'}</span>
-      <span>·</span>
-      <span>{state.connection.isOnline ? 'online' : 'offline'}</span>
-    </div>
-  );
-}
+const StatsBar = ({ state, t }: { state: FrappeDebugState; t: PanelTheme }) => (
+  <div
+    style={{
+      padding: '4px 10px',
+      borderTop: `1px solid ${t.border}`,
+      fontFamily: fontMono,
+      fontSize: 10,
+      color: t.textSecondary,
+      display: 'flex',
+      gap: 12,
+      alignItems: 'center',
+      flexWrap: 'wrap',
+    }}>
+    <span>{state.subscriptions.length} subscriptions</span>
+    <span>·</span>
+    <span>{state.normalizedCache.size} cached docs</span>
+    <span>·</span>
+    <span>{state.mutationJournal.pending.length} pending mutations</span>
+    <span>·</span>
+    <span>{state.connection.isLeader ? 'leader' : 'follower'}</span>
+    <span>·</span>
+    <span>{state.connection.isOnline ? 'online' : 'offline'}</span>
+  </div>
+);
 
 // ---------------------------------------------------------------------------
 // Main Panel
@@ -744,13 +798,14 @@ const emptyState: FrappeDebugState = {
   connection: { socketConnected: false, isLeader: false, isOnline: true },
 };
 
-export function FrappeDevtoolsPanel({ syncModule, devtoolsTheme }: FrappeDevtoolsPanelProps) {
+export const FrappeDevtoolsPanel = ({ syncModule, devtoolsTheme }: FrappeDevtoolsPanelProps) => {
   const t = themes[devtoolsTheme];
   const [state, setState] = useState<FrappeDebugState>(emptyState);
   const [selectedSubId, setSelectedSubId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'pages' | 'cache' | 'mutations'>('pages');
+  const [activeTab, setActiveTab] = useState<PanelTab>('pages');
 
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- re-snapshot when syncModule changes; __debug() returns a fresh object per call, so useSyncExternalStore would loop
     setState(syncModule.__debug());
     return syncModule.subscribeStore(() => {
       setState(syncModule.__debug());
@@ -865,4 +920,4 @@ export function FrappeDevtoolsPanel({ syncModule, devtoolsTheme }: FrappeDevtool
       />
     </div>
   );
-}
+};

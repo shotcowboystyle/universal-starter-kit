@@ -27,6 +27,7 @@ export const defaultPageLength = 20;
 export interface SubscriptionQuery {
   doctype: string;
   fields?: readonly string[];
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- public API: Frappe filter values are arbitrary per-field operands the server validates
   filters?: [string, string, unknown][] | Record<string, unknown>;
   /** Rows per page. Absent means {@link defaultPageLength}; `0` means every row. */
   limit?: number;
@@ -152,6 +153,7 @@ export interface UpdateMutation<Data extends FrappeDocData> {
    * resolve with the updated document to seed the cache; resolving void
    * keeps the optimistic value until the realtime echo reconciles.
    */
+  // oxlint-disable-next-line typescript/no-invalid-void-type -- public API: transports that resolve nothing (inferred `Promise<void>`) must stay assignable
   execute?: () => Promise<FrappeDoc<Data> | void>;
 }
 
@@ -199,7 +201,7 @@ export enum RealtimeEventType {
 export interface SyncCatchUpState {
   readonly refreshing: boolean;
   readonly stale: boolean;
-  readonly error: unknown | null;
+  readonly error: unknown;
 }
 
 export interface SyncOptions {
@@ -295,9 +297,9 @@ export interface SyncOptions {
 }
 
 export interface KVStorage {
-  getItem(key: string): Promise<string | null>;
-  setItem(key: string, value: string): Promise<void>;
-  removeItem(key: string): Promise<void>;
+  getItem: (key: string) => Promise<string | null>;
+  setItem: (key: string, value: string) => Promise<void>;
+  removeItem: (key: string) => Promise<void>;
 }
 
 /** Type of rehydration strategy */

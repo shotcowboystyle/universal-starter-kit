@@ -1,5 +1,15 @@
 import { isNative, isWindowDefined } from '@repo/platform';
 
+// Predicates for raw values with no static contract (response JSON, host globals).
+export const isString = (value: unknown): value is string => typeof value === 'string';
+
+export const isObject = (value: unknown): value is object => typeof value === 'object' && value !== null;
+
+/** True when `value` is an object carrying `key` (own or inherited), so `value[key]` can be read. */
+// oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- the field is read as unknown and narrowed at the call site
+export const hasField = <K extends string>(value: unknown, key: K): value is Record<K, unknown> =>
+  isObject(value) && key in value;
+
 /**
  * True when running under GJS (GNOME JavaScript — the GTK desktop runtime).
  *
@@ -10,19 +20,15 @@ import { isNative, isWindowDefined } from '@repo/platform';
  * would have to deliberately fake the GI namespace). Checked lazily — GJS
  * embeds could in theory construct the global after module init.
  */
-export function isGjs(): boolean {
+export const isGjs = (): boolean => {
   try {
-    const gjsImports = (globalThis as { imports?: { gi?: unknown } }).imports;
-    return (
-      typeof gjsImports === 'object' &&
-      gjsImports !== null &&
-      typeof gjsImports.gi === 'object' &&
-      gjsImports.gi !== null
-    );
+    const gjsImports: unknown = hasField(globalThis, 'imports') ? globalThis.imports : undefined;
+    return hasField(gjsImports, 'gi') && isObject(gjsImports.gi);
   } catch {
+    // A throwing `imports` getter is not GJS's plain namespace object.
     return false;
   }
-}
+};
 
 /**
  * True in any CLIENT runtime — web browser, React Native, or GJS (GNOME) —
@@ -35,6 +41,4 @@ export function isGjs(): boolean {
  * which used to silently disable every collection on iOS/Android, and GJS
  * has no real window either.
  */
-export function isBrowser(): boolean {
-  return isNative || isWindowDefined || isGjs();
-}
+export const isBrowser = (): boolean => isNative || isWindowDefined || isGjs();

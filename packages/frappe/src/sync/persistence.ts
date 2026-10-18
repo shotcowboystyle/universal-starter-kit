@@ -11,43 +11,94 @@ import { Debouncer } from '@tanstack/pacer';
 import type { FrappeDocData } from '../common/types';
 import { isGjs } from '../util';
 
-import type { MutationEngine } from './mutationEngine';
-import type { MutationJournal } from './mutationJournal';
-import type { NormalizedCache } from './normalizedCache';
+import type { MutationEngine } from './mutation-engine';
+import type { MutationJournal, Pending } from './mutation-journal';
+import type { EntityState, NormalizedCache } from './normalized-cache';
 import { IndexedDBKV, PlatformStorageKV } from './storage';
-import type { SubscriptionManager } from './subscriptionManager';
-import type { SyncOptions, KVStorage, Mutation, TabCoordinationConfig, TabMessage } from './types';
+import type { SubscriptionManager } from './subscription-manager';
+import { Operation } from './types';
+import type { SyncOptions, KVStorage, Mutation, Subscription, TabCoordinationConfig, TabMessage } from './types';
 
 /** Safe access to localStorage (undefined in Node/test envs). */
-function getLocalStorage(): Storage | undefined {
+const getLocalStorage = (): Storage | undefined => {
   try {
     return typeof globalThis !== 'undefined' && 'localStorage' in globalThis ? globalThis.localStorage : undefined;
   } catch {
+    // Safe to continue: some sandboxed contexts throw on localStorage access; treat it as absent.
     return undefined;
   }
+};
+
+const VISIBILITY_RESPONSE = 'visibility-response';
+const VISIBILITY_CHECK = 'visibility-check';
+/** A leader that turned hidden keeps leadership for this long before a visible tab takes over. */
+const VISIBILITY_GRACE_MS = 1000;
+
+const hasText = (value: string | undefined): value is string => value !== undefined && value !== '';
+
+const isObjectLike = (value: unknown): value is object => typeof value === 'object' && value !== null;
+
+/** Wire messages come from same-origin tabs running this module; the `type` tag selects the shape. */
+const isTabMessage = (value: unknown): value is TabMessage<FrappeDocData> =>
+  isObjectLike(value) && 'type' in value && typeof value.type === 'string' && value.type !== '';
+
+type VisibilityResponse = Extract<TabMessage<FrappeDocData>, { type: 'visibility-response' }>;
+
+const visibilityResponseOf = (event: MessageEvent): VisibilityResponse | null =>
+  isTabMessage(event.data) && event.data.type === VISIBILITY_RESPONSE ? event.data : null;
+
+/** Fields shared by the persisted snapshot and a leadership handoff; all optional, all unparsed. */
+interface PersistedState {
+  cache?: unknown;
+  journal?: unknown;
+  subs?: unknown;
+  subscriptions?: unknown;
+  temp?: unknown;
+  tempMappings?: unknown;
 }
+
+interface CapturedState {
+  cache: EntityState;
+  journal: ReturnType<MutationJournal['listPending']>;
+  subscriptions: Subscription[];
+  tempMappings: [string, string][];
+}
+
+interface LeaderData {
+  tabId: string;
+  timestamp: number;
+  visibilityState: 'visible' | 'hidden';
+  lastVisibilityChange: number;
+}
+
+type SnapshotSubscription = Parameters<SubscriptionManager['restoreSubscription']>[0];
+
+const generateTabId = (): string =>
+  // oxlint-disable-next-line sonarjs/pseudo-random -- a tab id only needs to be unique among open tabs, not unguessable
+  `tab-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
 
 /**
  * Manages persistence of sync state across sessions with active tab priority leadership.
  */
 export class PersistenceManager {
   private persistenceStorage?: KVStorage;
+  // oxlint-disable-next-line eslint/no-void -- fire-and-forget: save() catches and logs its own failures
   private readonly saveDebouncer = new Debouncer(() => void this.save(), { wait: 50 });
-  private broadcastChannel?: BroadcastChannel;
+  private broadcastChannel: BroadcastChannel | null = null;
 
   // Active tab priority leadership state
   private isLeader = false;
-  private readonly tabId = this.generateTabId();
-  private leaderCheckInterval: ReturnType<typeof setInterval> | undefined;
+  private readonly tabId = generateTabId();
+  private leaderCheckInterval: ReturnType<typeof setInterval> | null = null;
   private visibilityState: 'visible' | 'hidden' = 'visible';
   private lastVisibilityChange = Date.now();
-  private readonly pendingOperations = new Set<Promise<any>>();
+  private readonly pendingOperations = new Set<Promise<unknown>>();
   private acceptingNewWork = true;
   private handoffInProgress = false;
   private readonly tabCoordinationConfig: Required<TabCoordinationConfig>;
   private readonly leaderKey = 'frappe-sync-leader';
   /** Cleanup function returned by the visibility change lifecycle subscription. */
-  private cleanupVisibilityChange?: () => void;
+  private cleanupVisibilityChange: (() => void) | null = null;
   /** Active response timers that need cleanup. */
   private readonly activeResponseTimers = new Set<ReturnType<typeof setTimeout>>();
   /** Flag to prevent operations after destroy. */
@@ -112,7 +163,7 @@ export class PersistenceManager {
     // closure pinned the module's whole sync graph. Fixture-mode consumers
     // (tests, stories) create a SyncModule per fixture set, so the leaked
     // heartbeats accumulated and wedged vitest forks-worker teardown.
-    if (this.options.persistKey && this.tabCoordinationConfig.activeTabPriority) {
+    if (hasText(this.options.persistKey) && this.tabCoordinationConfig.activeTabPriority) {
       this.setupTabCoordination();
     }
   }
@@ -123,14 +174,14 @@ export class PersistenceManager {
    * can re-adopt a restored subscription instead of racing the async load.
    */
   async whenReady(): Promise<void> {
-    return await this.loadPromise;
+    await this.loadPromise;
   }
 
   /**
    * Sets up persistence storage based on environment and options.
    */
   private setupPersistence() {
-    if (!this.options.persistKey) {
+    if (!hasText(this.options.persistKey)) {
       return;
     }
 
@@ -161,7 +212,7 @@ export class PersistenceManager {
    * Handles both simple string messages and structured TabMessage types.
    */
   private setupBroadcastChannel() {
-    if (!this.options.persistKey || typeof BroadcastChannel === 'undefined') {
+    if (!hasText(this.options.persistKey) || typeof BroadcastChannel === 'undefined') {
       return;
     }
 
@@ -171,102 +222,112 @@ export class PersistenceManager {
       return;
     }
 
-    this.broadcastChannel.onmessage = (e) => {
+    // oxlint-disable-next-line unicorn/prefer-add-event-listener -- the manager is the channel's only consumer; one owned handler
+    this.broadcastChannel.onmessage = (e: MessageEvent<unknown> | null) => {
+      const data = e?.data;
       // Simple string control messages ("reset", "backfill") from other tabs
-      if (typeof e?.data === 'string') {
-        if (e.data === 'reset' && this.options.onResetCache) {
-          this.options.onResetCache();
-        }
-        if (e.data === 'backfill' && this.options.onBackfillAll) {
-          this.options.onBackfillAll();
-        }
+      // oxlint-disable-next-line anti-slop/no-runtime-typeof -- the channel carries both string control messages and TabMessage objects
+      if (typeof data === 'string') {
+        this.handleControlMessage(data);
         return;
       }
-
-      // Handle structured TabMessage types
-      const message = e?.data as TabMessage<FrappeDocData> | undefined;
-      if (!message || !message.type) {
-        return;
-      }
-
-      switch (message.type) {
-        case 'visibility-check': {
-          // Respond with our visibility state
-          if (message.fromTab !== this.tabId) {
-            this.broadcastToTabs({
-              type: 'visibility-response',
-              tabId: this.tabId,
-              isVisible: this.visibilityState === 'visible',
-            });
-          }
-          break;
-        }
-
-        case 'leadership-request': {
-          // If we're leader and the requester is visible but we're hidden, yield
-          if (this.isLeader && message.visibilityState === 'visible' && this.visibilityState === 'hidden') {
-            this.initiateGracefulHandoff();
-          }
-          break;
-        }
-
-        case 'leadership-handoff': {
-          // If we're the target of the handoff, become leader
-          if (message.toTab === this.tabId) {
-            // Restore state from handoff if provided
-            if (message.state) {
-              this.restoreStateFromHandoff(message.state);
-            }
-            this.becomeLeader();
-          }
-          break;
-        }
-
-        case 'mutation': {
-          // Relay mutation to local cache for non-leader tabs
-          if (!this.isLeader && message.mutation) {
-            this.handleRemoteMutation(message.mutation);
-          }
-          break;
-        }
-
-        case 'sync-state': {
-          // Sync state update from leader - update local cache
-          if (!this.isLeader && message.state) {
-            this.restoreStateFromHandoff(message.state);
-          }
-          break;
-        }
-
-        case 'heartbeat': {
-          // Could track active tabs here if needed
-          break;
-        }
-
-        case 'visibility-response': {
-          // Handled by findSuccessor and checkForActiveTabs via window.postMessage
-          break;
-        }
+      if (isTabMessage(data)) {
+        this.handleTabMessage(data);
       }
     };
+  }
+
+  private handleControlMessage(data: string) {
+    if (data === 'reset' && this.options.onResetCache) {
+      this.options.onResetCache();
+    }
+    if (data === 'backfill' && this.options.onBackfillAll) {
+      this.options.onBackfillAll();
+    }
+  }
+
+  /** Handles structured TabMessage types. */
+  private handleTabMessage(message: TabMessage<FrappeDocData>) {
+    switch (message.type) {
+      case VISIBILITY_CHECK: {
+        // Respond with our visibility state
+        if (message.fromTab !== this.tabId) {
+          this.broadcastToTabs({
+            type: VISIBILITY_RESPONSE,
+            tabId: this.tabId,
+            isVisible: this.visibilityState === 'visible',
+          });
+        }
+        break;
+      }
+
+      case 'leadership-request': {
+        // If we're leader and the requester is visible but we're hidden, yield
+        if (this.isLeader && message.visibilityState === 'visible' && this.visibilityState === 'hidden') {
+          void this.initiateGracefulHandoff();
+        }
+        break;
+      }
+
+      case 'leadership-handoff': {
+        // If we're the target of the handoff, become leader
+        if (message.toTab === this.tabId) {
+          // Restore state from handoff if provided (restoreStateFromHandoff ignores a missing state)
+          this.restoreStateFromHandoff(message.state);
+          this.becomeLeader();
+        }
+        break;
+      }
+
+      case 'mutation': {
+        // Relay mutation to local cache for non-leader tabs
+        if (!this.isLeader) {
+          this.handleRemoteMutation(message.mutation);
+        }
+        break;
+      }
+
+      case 'sync-state': {
+        // Sync state update from leader - update local cache
+        if (!this.isLeader) {
+          this.restoreStateFromHandoff(message.state);
+        }
+        break;
+      }
+
+      case 'heartbeat': {
+        // Could track active tabs here if needed
+        break;
+      }
+
+      case VISIBILITY_RESPONSE: {
+        // Handled by findSuccessor and checkForActiveTabs via window.postMessage
+        break;
+      }
+
+      // no default
+    }
   }
 
   /**
    * Handles a mutation relayed from another tab.
    * Updates local cache with the mutation's effects.
    */
-  private handleRemoteMutation(mutation: Mutation<FrappeDocData>) {
+  private handleRemoteMutation(mutation: Mutation<FrappeDocData> | undefined) {
     // Apply mutation effects to local normalized cache
-    // This keeps non-leader tabs in sync without making their own API calls
-    if (mutation.doc) {
-      if (mutation.operation === 'delete') {
-        this.normalizedCache.remove({
-          doctype: mutation.doc.doctype,
-          name: mutation.doc.name,
-        });
-      } else {
-        this.normalizedCache.upsert(mutation.doc);
-      }
+    // This keeps non-leader tabs in sync without making their own API calls.
+    // The mutation crossed a tab boundary, so its doc is checked at runtime.
+    const doc = mutation?.doc;
+    if (mutation === undefined || doc === undefined) {
+      return;
+    }
+    if (mutation.operation === Operation.Delete) {
+      this.normalizedCache.remove({
+        doctype: doc.doctype,
+        name: doc.name,
+      });
+    } else {
+      this.normalizedCache.upsert(doc);
     }
   }
 
@@ -275,9 +336,10 @@ export class PersistenceManager {
    * Called by SyncModule after a successful mutation.
    */
   broadcastMutation(mutation: Mutation<FrappeDocData>) {
+    // Only leader broadcasts mutations
     if (!this.isLeader) {
       return;
-    } // Only leader broadcasts mutations
+    }
 
     this.broadcastToTabs({
       type: 'mutation',
@@ -288,39 +350,46 @@ export class PersistenceManager {
   /**
    * Restores state received from a leadership handoff or sync-state message.
    */
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- handoff state crosses the BroadcastChannel; this method is its parse boundary
   private restoreStateFromHandoff(state: unknown) {
-    if (!state || typeof state !== 'object') {
+    if (!isObjectLike(state)) {
       return;
     }
-
-    const handoffState = state as {
-      cache?: unknown;
-      journal?: unknown;
-      subscriptions?: unknown;
-      tempMappings?: unknown;
-    };
+    const handoffState: PersistedState = state;
 
     // Restore cache
-    if (handoffState.cache) {
-      (this.normalizedCache as any).state = handoffState.cache;
+    if (isObjectLike(handoffState.cache)) {
+      // SAFETY: handoff caches are produced by captureState() in another tab, which sends normalizedCache.state.
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+      this.normalizedCache.state = handoffState.cache as EntityState;
     }
 
     // Restore subscriptions
-    if (handoffState.subscriptions && Array.isArray(handoffState.subscriptions)) {
+    if (Array.isArray(handoffState.subscriptions)) {
+      // SAFETY: handoff subscriptions come from captureState() in another tab; entries without an id are skipped.
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+      const handoffSubscriptions = handoffState.subscriptions as (Subscription | null | undefined)[];
       const subscriptions = this.subscriptionManager.getAllSubscriptions();
-      for (const subscription of handoffState.subscriptions) {
-        if (subscription?.id) {
+      for (const subscription of handoffSubscriptions) {
+        if (subscription && hasText(subscription.id)) {
           subscriptions.set(subscription.id, subscription);
         }
       }
     }
 
     // Restore temp mappings
-    if (handoffState.tempMappings && Array.isArray(handoffState.tempMappings)) {
-      const tempMap = this.mutationEngine.getTemporaryIdToRealNameMap();
-      for (const [tempId, realId] of handoffState.tempMappings) {
-        tempMap.set(tempId, realId);
-      }
+    if (Array.isArray(handoffState.tempMappings)) {
+      // SAFETY: handoff temp mappings come from captureState() in another tab, as Map entries.
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+      this.restoreTempMappings(handoffState.tempMappings as [string, string][]);
+    }
+  }
+
+  /** Restores temporary id → real name pairs from a snapshot or handoff. */
+  private restoreTempMappings(mappings: [string, string][]) {
+    const tempMap = this.mutationEngine.getTemporaryIdToRealNameMap();
+    for (const [tempId, realId] of mappings) {
+      tempMap.set(tempId, realId);
     }
   }
 
@@ -328,7 +397,7 @@ export class PersistenceManager {
    * Schedules a debounced save operation.
    */
   scheduleSave() {
-    if (!this.options.persistKey) {
+    if (!hasText(this.options.persistKey)) {
       return;
     }
     this.saveDebouncer.maybeExecute();
@@ -338,7 +407,7 @@ export class PersistenceManager {
    * Persists a snapshot of subscriptions, cache, journal, and temp mappings.
    */
   private async save() {
-    if (!this.options.persistKey || !this.persistenceStorage) {
+    if (!hasText(this.options.persistKey) || !this.persistenceStorage) {
       return;
     }
     try {
@@ -369,61 +438,48 @@ export class PersistenceManager {
    * Loads a previously persisted snapshot if present.
    */
   private async load() {
-    if (!this.options.persistKey || !this.persistenceStorage) {
+    if (!hasText(this.options.persistKey) || !this.persistenceStorage) {
       return;
     }
     try {
       const raw = await this.persistenceStorage.getItem(this.options.persistKey);
-      if (!raw) {
+      if (raw === null || raw === '') {
         return;
       }
-      const snap = JSON.parse(raw);
+      const snap: unknown = JSON.parse(raw);
+      if (!isObjectLike(snap)) {
+        return;
+      }
+      const snapshot: PersistedState = snap;
 
       // Restore cache first so reads have data once subs are reinstated.
-      // Merge per doc instead of replacing state wholesale: anything already
-      // in memory (e.g. an optimistic write that raced ahead of this load)
-      // is newer than the snapshot and wins. Per-doc upsert also keeps the
-      // cache's LRU bookkeeping and maxCacheSize bounds accurate.
-      if (snap?.cache && typeof snap.cache === 'object') {
-        for (const bucket of Object.values(snap.cache as Record<string, unknown>)) {
-          const byId = (bucket as { byId?: Record<string, unknown> } | null)?.byId;
-          if (!byId || typeof byId !== 'object') {
-            continue;
-          }
-          for (const doc of Object.values(byId) as FrappeDocData[]) {
-            if (!doc?.doctype || !doc?.name) {
-              continue;
-            }
-            if (this.normalizedCache.get(doc)) {
-              continue;
-            }
-            this.normalizedCache.upsert(doc, { replace: true });
-          }
-        }
-      }
+      this.restoreCacheFromSnapshot(snapshot);
 
       // Rehydrate subscriptions as dormant "restored" entries: they hold the
       // persisted query, checkpoint, and membership for cache-first
       // re-adoption, and are GC'd if nothing re-adopts them.
-      if (snap?.subs && Array.isArray(snap.subs)) {
-        for (const subscription of snap.subs) {
+      if (Array.isArray(snapshot.subs)) {
+        // SAFETY: save() writes these entries; restoreSubscription validates each id and query itself.
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+        for (const subscription of snapshot.subs as SnapshotSubscription[]) {
           this.subscriptionManager.restoreSubscription(subscription);
         }
       }
 
       // Restore journal entries for replay
-      if (snap?.journal && Array.isArray(snap.journal)) {
-        for (const { id, entry } of snap.journal) {
+      if (Array.isArray(snapshot.journal)) {
+        // SAFETY: save() writes these entries from mutationJournal.listPending().
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+        for (const { id, entry } of snapshot.journal as { id: string; entry: Pending }[]) {
           this.mutationJournal.add(id, entry);
         }
       }
 
       // Restore temporary id remappings for post-create consistency
-      if (snap?.temp && Array.isArray(snap.temp)) {
-        const tempMap = this.mutationEngine.getTemporaryIdToRealNameMap();
-        for (const [tempId, realId] of snap.temp) {
-          tempMap.set(tempId, realId);
-        }
+      if (Array.isArray(snapshot.temp)) {
+        // SAFETY: save() writes these pairs from the temporary-id Map's entries.
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+        this.restoreTempMappings(snapshot.temp as [string, string][]);
       }
     } catch (error) {
       // Loading failures should not break the app
@@ -432,30 +488,56 @@ export class PersistenceManager {
   }
 
   /**
+   * Merges a persisted cache per doc instead of replacing state wholesale:
+   * anything already in memory (e.g. an optimistic write that raced ahead of
+   * this load) is newer than the snapshot and wins. Per-doc upsert also keeps
+   * the cache's LRU bookkeeping and maxCacheSize bounds accurate.
+   */
+  private restoreCacheFromSnapshot({ cache }: PersistedState) {
+    if (!isObjectLike(cache)) {
+      return;
+    }
+    const buckets: unknown[] = Object.values(cache);
+    for (const bucket of buckets) {
+      const byId: unknown = isObjectLike(bucket) && 'byId' in bucket ? bucket.byId : undefined;
+      if (isObjectLike(byId)) {
+        // SAFETY: snapshot caches are written by save() from normalizedCache.state; each doc is checked below.
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+        const docs = Object.values(byId) as (FrappeDocData | null | undefined)[];
+        for (const doc of docs) {
+          const isRestorable = Boolean(doc?.doctype) && Boolean(doc?.name);
+          // get() also refreshes LRU access order, as before.
+          if (doc && isRestorable && this.normalizedCache.get(doc) === undefined) {
+            this.normalizedCache.upsert(doc, { replace: true });
+          }
+        }
+      }
+    }
+  }
+
+  /**
    * Broadcasts a reset message to other tabs.
    */
   broadcastReset() {
-    if (this.broadcastChannel) {
-      this.broadcastChannel.postMessage('reset');
-    }
+    this.postToChannel('reset');
   }
 
   /**
    * Broadcasts a backfill message to other tabs.
    */
   broadcastBackfill() {
-    if (this.broadcastChannel) {
-      this.broadcastChannel.postMessage('backfill');
-    }
+    this.postToChannel('backfill');
   }
 
   /**
    * Broadcasts a generic change message to other tabs.
    */
   broadcastChange() {
-    if (this.broadcastChannel) {
-      this.broadcastChannel.postMessage('changed');
-    }
+    this.postToChannel('changed');
+  }
+
+  private postToChannel(message: string | TabMessage<FrappeDocData>) {
+    this.broadcastChannel?.postMessage(message);
   }
 
   /**
@@ -501,14 +583,14 @@ export class PersistenceManager {
 
     // Check if current leader is expired or if we have priority
     if (
-      !leaderData ||
+      leaderData === null ||
       now - leaderData.timestamp > this.tabCoordinationConfig.leaderTimeout ||
       (this.visibilityState === 'visible' && leaderData.visibilityState === 'hidden')
     ) {
       this.becomeLeader();
     } else {
       // Clear any existing interval before scheduling new one
-      if (this.leaderCheckInterval) {
+      if (this.leaderCheckInterval !== null) {
         clearInterval(this.leaderCheckInterval);
       }
       // Schedule periodic checks
@@ -533,7 +615,7 @@ export class PersistenceManager {
     this.onBecomeLeader();
 
     // Clear any existing interval before starting heartbeat
-    if (this.leaderCheckInterval) {
+    if (this.leaderCheckInterval !== null) {
       clearInterval(this.leaderCheckInterval);
     }
     // Start heartbeat
@@ -553,7 +635,7 @@ export class PersistenceManager {
       return;
     }
 
-    const leaderData = {
+    const leaderData: LeaderData = {
       tabId: this.tabId,
       timestamp: Date.now(),
       visibilityState: this.visibilityState,
@@ -573,7 +655,7 @@ export class PersistenceManager {
   private checkLeadership() {
     const leaderData = this.getLeaderData();
 
-    if (!leaderData) {
+    if (leaderData === null) {
       // No leader - try to become one
       this.tryBecomeLeader();
       return;
@@ -588,23 +670,21 @@ export class PersistenceManager {
         this.isLeader = false;
         this.onLoseLeadership();
       }
-    } else {
+    } else if (
       // We are not leader - check if we should take over
-      if (
-        now - leaderData.timestamp > this.tabCoordinationConfig.leaderTimeout ||
-        (this.visibilityState === 'visible' &&
-          leaderData.visibilityState === 'hidden' &&
-          now - this.lastVisibilityChange > 1000) // Give 1s grace period
-      ) {
-        this.tryBecomeLeader();
-      }
+      now - leaderData.timestamp > this.tabCoordinationConfig.leaderTimeout ||
+      (this.visibilityState === 'visible' &&
+        leaderData.visibilityState === 'hidden' &&
+        now - this.lastVisibilityChange > VISIBILITY_GRACE_MS)
+    ) {
+      this.tryBecomeLeader();
     }
   }
 
   /**
    * Gets current leader data from localStorage.
    */
-  private getLeaderData(): any | null {
+  private getLeaderData(): LeaderData | null {
     const ls = getLocalStorage();
     if (!ls) {
       return null;
@@ -612,8 +692,15 @@ export class PersistenceManager {
 
     try {
       const data = ls.getItem(this.leaderKey);
-      return data ? JSON.parse(data) : null;
+      if (data === null || data === '') {
+        return null;
+      }
+      const parsed: unknown = JSON.parse(data);
+      // SAFETY: the leader key is only written by updateLeaderTimestamp(), as JSON of a LeaderData object.
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
+      return isObjectLike(parsed) ? (parsed as LeaderData) : null;
     } catch {
+      // Safe to continue: unreadable or corrupt leader data means there is no usable leader.
       return null;
     }
   }
@@ -622,12 +709,13 @@ export class PersistenceManager {
    * Evaluates if this tab should take leadership based on visibility priority.
    */
   private evaluateLeadershipPriority() {
+    // Already leader
     if (this.isLeader) {
       return;
-    } // Already leader
+    }
 
     const leaderData = this.getLeaderData();
-    if (!leaderData) {
+    if (leaderData === null) {
       this.tryBecomeLeader();
       return;
     }
@@ -650,7 +738,7 @@ export class PersistenceManager {
     this.checkForActiveTabs((hasActiveTabs) => {
       if (hasActiveTabs) {
         // Initiate graceful handoff
-        this.initiateGracefulHandoff();
+        void this.initiateGracefulHandoff();
       }
       // Otherwise, remain leader even though hidden
     });
@@ -684,7 +772,7 @@ export class PersistenceManager {
     // Find a suitable successor
     const successor = await this.findSuccessor();
 
-    if (successor) {
+    if (successor !== null && successor !== '') {
       // Transfer state
       const state = await this.captureState();
 
@@ -708,7 +796,10 @@ export class PersistenceManager {
    * Waits for all pending operations to complete.
    */
   private async waitForPendingOperations() {
-    const timeout = new Promise((resolve) => setTimeout(resolve, this.tabCoordinationConfig.handoffGracePeriod));
+    // oxlint-disable-next-line promise/avoid-new -- promisifies setTimeout; browser/RN have no timer-promise API
+    const timeout = new Promise((resolve) => {
+      setTimeout(resolve, this.tabCoordinationConfig.handoffGracePeriod);
+    });
 
     const operations = Promise.all(this.pendingOperations);
 
@@ -719,6 +810,7 @@ export class PersistenceManager {
    * Finds a suitable successor for leadership.
    */
   private async findSuccessor(): Promise<string | null> {
+    // oxlint-disable-next-line promise/avoid-new -- bridges the window message listener and response timer into a promise
     return await new Promise((resolve) => {
       if (this.isDestroyed) {
         resolve(null);
@@ -728,10 +820,11 @@ export class PersistenceManager {
       const responses: { tabId: string; isVisible: boolean }[] = [];
 
       const handleResponse = (event: MessageEvent) => {
-        if (event.data?.type === 'visibility-response') {
+        const response = visibilityResponseOf(event);
+        if (response) {
           responses.push({
-            tabId: event.data.tabId,
-            isVisible: event.data.isVisible,
+            tabId: response.tabId,
+            isVisible: response.isVisible,
           });
         }
       };
@@ -741,7 +834,7 @@ export class PersistenceManager {
 
       // Broadcast visibility check
       this.broadcastToTabs({
-        type: 'visibility-check',
+        type: VISIBILITY_CHECK,
         fromTab: this.tabId,
       });
 
@@ -762,31 +855,32 @@ export class PersistenceManager {
   /**
    * Checks if there are other active tabs.
    */
-  private checkForActiveTabs(callback: (hasActive: boolean) => void) {
+  private checkForActiveTabs(onResult: (hasActive: boolean) => void) {
     if (this.isDestroyed) {
-      callback(false);
+      onResult(false);
       return;
     }
 
     const responses: boolean[] = [];
 
     const handleResponse = (event: MessageEvent) => {
-      if (event.data?.type === 'visibility-response') {
-        responses.push(event.data.isVisible);
+      const response = visibilityResponseOf(event);
+      if (response) {
+        responses.push(response.isVisible);
       }
     };
 
     window.addEventListener('message', handleResponse);
 
     this.broadcastToTabs({
-      type: 'visibility-check',
+      type: VISIBILITY_CHECK,
       fromTab: this.tabId,
     });
 
     const responseTimer = setTimeout(() => {
       this.activeResponseTimers.delete(responseTimer);
       window.removeEventListener('message', handleResponse);
-      callback(responses.some((isVisible) => isVisible));
+      onResult(responses.some(Boolean));
     }, 500);
 
     this.activeResponseTimers.add(responseTimer);
@@ -795,7 +889,7 @@ export class PersistenceManager {
   /**
    * Captures current state for handoff.
    */
-  private async captureState(): Promise<any> {
+  private async captureState(): Promise<CapturedState> {
     return {
       cache: this.normalizedCache.state,
       journal: this.mutationJournal.listPending(),
@@ -808,9 +902,7 @@ export class PersistenceManager {
    * Broadcasts message to other tabs.
    */
   private broadcastToTabs(message: TabMessage<FrappeDocData>) {
-    if (this.broadcastChannel) {
-      this.broadcastChannel.postMessage(message);
-    }
+    this.postToChannel(message);
 
     // Fallback to localStorage events
     const ls = getLocalStorage();
@@ -821,7 +913,9 @@ export class PersistenceManager {
         setTimeout(() => {
           ls.removeItem(key);
         }, 100);
-      } catch {}
+      } catch {
+        // Safe to continue: the localStorage fallback is best-effort (quota or private mode may refuse writes).
+      }
     }
   }
 
@@ -843,9 +937,9 @@ export class PersistenceManager {
   private onLoseLeadership() {
     console.debug(`[PersistenceManager] Tab ${this.tabId} lost leadership`);
 
-    if (this.leaderCheckInterval) {
+    if (this.leaderCheckInterval !== null) {
       clearInterval(this.leaderCheckInterval);
-      this.leaderCheckInterval = undefined;
+      this.leaderCheckInterval = null;
     }
 
     if (this.options.onLoseLeadership) {
@@ -854,23 +948,15 @@ export class PersistenceManager {
   }
 
   /**
-   * Generates a unique tab ID.
-   */
-  private generateTabId(): string {
-    return `tab-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
-  }
-
-  /**
    * Tracks a pending operation.
    */
   async trackOperation<T>(operation: Promise<T>): Promise<T> {
     this.pendingOperations.add(operation);
-    operation
-      .finally(() => {
-        this.pendingOperations.delete(operation);
-      })
-      .catch(() => {});
-    return await operation;
+    try {
+      return await operation;
+    } finally {
+      this.pendingOperations.delete(operation);
+    }
   }
 
   /**
@@ -890,9 +976,9 @@ export class PersistenceManager {
     this.saveDebouncer.cancel();
 
     // Clear leader check interval
-    if (this.leaderCheckInterval) {
+    if (this.leaderCheckInterval !== null) {
       clearInterval(this.leaderCheckInterval);
-      this.leaderCheckInterval = undefined;
+      this.leaderCheckInterval = null;
     }
 
     // Clear all active response timers
@@ -903,12 +989,12 @@ export class PersistenceManager {
 
     // Remove visibility change listener
     this.cleanupVisibilityChange?.();
-    this.cleanupVisibilityChange = undefined;
+    this.cleanupVisibilityChange = null;
 
     // Close broadcast channel
     if (this.broadcastChannel) {
       this.broadcastChannel.close();
-      this.broadcastChannel = undefined;
+      this.broadcastChannel = null;
     }
 
     // Clear pending operations

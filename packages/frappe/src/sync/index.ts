@@ -4,16 +4,16 @@ import type { FrappeDoc, FrappeDocData } from '../common/types';
 import type { DbModule } from '../db';
 import type { RealtimeModule } from '../realtime';
 
-import { MutationEngine } from './mutationEngine';
-import { MutationJournal } from './mutationJournal';
-import { NormalizedCache } from './normalizedCache';
+import { MutationEngine } from './mutation-engine';
+import { MutationJournal } from './mutation-journal';
+import type { Pending } from './mutation-journal';
+import { NormalizedCache } from './normalized-cache';
 import { PersistenceManager } from './persistence';
 import { RealtimeHandler } from './realtime';
+import type { RealtimeConnectionState } from './realtime';
 import { RehydrationManager } from './rehydration';
-import type { SubscriptionRefreshOptions, SubscriptionRefreshResult } from './subscriptionManager';
-
-export type { SubscriptionRefreshOptions, SubscriptionRefreshResult } from './subscriptionManager';
-import { SubscriptionManager } from './subscriptionManager';
+import { SubscriptionManager } from './subscription-manager';
+import type { SubscriptionRefreshOptions, SubscriptionRefreshResult } from './subscription-manager';
 import { BackfillScope, Status } from './types';
 import type {
   BackfillArgs,
@@ -27,23 +27,41 @@ import type {
   SubscriptionQuery,
 } from './types';
 
+export type { SubscriptionRefreshOptions, SubscriptionRefreshResult } from './subscription-manager';
+
 /** Realtime event forwarded to `subscribeRealtimeEvents` listeners. */
 export interface SyncRealtimeEvent {
   type: RealtimeEventType;
   payload?: unknown;
 }
 
-function getBrowserJournalStorage(): Storage | undefined {
+const getBrowserJournalStorage = (): Storage | undefined => {
   if (typeof window === 'undefined' || typeof document === 'undefined') {
     return undefined;
   }
   try {
     const storage = window.localStorage;
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- feature-detects a usable Storage; SSR/Node expose an incomplete object
     return typeof storage?.getItem === 'function' && typeof storage.setItem === 'function' ? storage : undefined;
   } catch {
     // Browsers can deny access; Node's Web Storage is not browser-scoped.
     return undefined;
   }
+};
+
+/** Display message for a journal entry's error (entries restored from storage may carry bare values). */
+const describeEntryError = (error: Pending['error']): string | undefined => {
+  if (!error) {
+    return undefined;
+  }
+  // oxlint-disable-next-line typescript/no-base-to-string -- a JSON-restored Error has no `message`; stringify whatever is left
+  return error.message ?? String(error);
+};
+
+interface CatchUpRun {
+  trailing: boolean;
+  attempt: number;
+  promise: Promise<SyncCatchUpState>;
 }
 
 const idleCatchUpState: SyncCatchUpState = Object.freeze({
@@ -114,23 +132,19 @@ export class SyncModule {
   /** Rehydration manager for intelligent subscription updates. */
   private readonly rehydrationManager: RehydrationManager;
   /** Cleanup functions returned by lifecycle subscriptions. */
-  private cleanupFocus?: () => void;
-  private cleanupFocusReplay?: () => void;
-  private cleanupOnlineBackfill?: () => void;
-  private cleanupOnlineReplay?: () => void;
+  private cleanupFocus: (() => void) | null = null;
+  private cleanupFocusReplay: (() => void) | null = null;
+  private cleanupOnlineBackfill: (() => void) | null = null;
+  private cleanupOnlineReplay: (() => void) | null = null;
   /** Timer handle for periodic CDC polling. */
-  private cdcIntervalHandle?: ReturnType<typeof setInterval>;
+  private cdcIntervalHandle: ReturnType<typeof setInterval> | null = null;
   private readonly db: DbModule;
   private readonly realtime?: RealtimeModule;
   private readonly options: SyncOptions;
   private catchUpState = idleCatchUpState;
   private catchUpEpoch = 0;
   private disposed = false;
-  private catchUpRun?: {
-    trailing: boolean;
-    attempt: number;
-    promise: Promise<SyncCatchUpState>;
-  };
+  private catchUpRun: CatchUpRun | null = null;
 
   constructor(db: DbModule, realtime?: RealtimeModule, options: SyncOptions = {}) {
     this.db = db;
@@ -239,9 +253,11 @@ export class SyncModule {
     this.cleanupOnlineBackfill = onOnline(() => {
       void this.catchUp();
     });
-    this.cleanupOnlineReplay = onOnline(async () => await this.replayPending());
+    this.cleanupOnlineReplay = onOnline(() => {
+      void this.replayPending();
+    });
 
-    if (this.options.cdcInterval && this.options.cdcInterval > 0) {
+    if ((this.options.cdcInterval ?? 0) > 0) {
       this.cdcIntervalHandle = setInterval(() => {
         void this.catchUp();
       }, this.options.cdcInterval);
@@ -272,11 +288,14 @@ export class SyncModule {
     // Adopted subscriptions refresh in the background; notify store listeners
     // when the refresh lands (or marks the subscription stale). Never rejects.
     if (result.refresh) {
-      void result.refresh.then(() => {
-        this.emit();
-      });
+      void this.emitAfterRefresh(result.refresh);
     }
     return result;
+  }
+
+  private async emitAfterRefresh(refresh: Promise<unknown>): Promise<void> {
+    await refresh;
+    this.emit();
   }
 
   /**
@@ -353,48 +372,64 @@ export class SyncModule {
       return await this.catchUpRun.promise;
     }
     const epoch = this.catchUpEpoch;
-    const run = { trailing: false, attempt: 0, promise: Promise.resolve(this.catchUpState) };
+    const run: CatchUpRun = { trailing: false, attempt: 0, promise: Promise.resolve(this.catchUpState) };
     this.catchUpRun = run;
-    run.promise = Promise.resolve().then(async () => {
-      let error: unknown = null;
-      const active = () => !this.disposed && this.catchUpEpoch === epoch;
-      do {
-        if (!active()) {
-          return this.catchUpState;
-        }
-        run.trailing = false;
-        error = null;
-        try {
-          if (this.options.catchUpStrategy === 'snapshot') {
-            const results = await this.refreshSubscriptions();
-            const failures = results.filter(
-              (result) =>
-                !result.ok &&
-                this.subscriptionManager.getSubscription(result.subscriptionId) &&
-                !this.subscriptionManager.isRestoredSubscription(result.subscriptionId),
-            );
-            if (failures.length) {
-              error = new AggregateError(
-                failures.map((failure) => failure.error),
-                'Some subscriptions could not refresh. Showing previous data.',
-              );
-            }
-          } else {
-            await this.backfill({ scope: BackfillScope.All });
-          }
-        } catch (error) {
-          error = error;
-        }
-        // Bound a burst to one trailing read, including triggers during that read.
-      } while (active() && run.trailing && run.attempt++ === 0);
-      if (active()) {
-        this.catchUpRun = undefined;
-        this.publishCatchUp({ refreshing: false, stale: error !== null, error });
-      }
-      return this.catchUpState;
-    });
+    run.promise = this.runCatchUp(run, epoch);
     this.publishCatchUp({ ...this.catchUpState, refreshing: true });
     return await run.promise;
+  }
+
+  private async runCatchUp(run: CatchUpRun, epoch: number): Promise<SyncCatchUpState> {
+    // Start on a microtask so catchUp() publishes `refreshing: true` before the first read.
+    await Promise.resolve();
+    const active = () => !this.disposed && this.catchUpEpoch === epoch;
+    let error: SyncCatchUpState['error'] = null;
+    let again = true;
+    while (again) {
+      if (!active()) {
+        return this.catchUpState;
+      }
+      run.trailing = false;
+      // oxlint-disable-next-line eslint/no-await-in-loop -- a trailing read must start after the read it trails
+      error = await this.attemptCatchUp();
+      // Bound a burst to one trailing read, including triggers during that read.
+      again = active() && run.trailing && run.attempt === 0;
+      if (again) {
+        run.attempt += 1;
+      }
+    }
+    if (active()) {
+      this.catchUpRun = null;
+      this.publishCatchUp({ refreshing: false, stale: error !== null, error });
+    }
+    return this.catchUpState;
+  }
+
+  /** One catch-up read; resolves to the failure to publish, or null on success. */
+  private async attemptCatchUp(): Promise<SyncCatchUpState['error']> {
+    try {
+      if (this.options.catchUpStrategy !== 'snapshot') {
+        await this.backfill({ scope: BackfillScope.All });
+        return null;
+      }
+      const results = await this.refreshSubscriptions();
+      const failures = results.filter(
+        (result) =>
+          !result.ok &&
+          this.subscriptionManager.getSubscription(result.subscriptionId) &&
+          !this.subscriptionManager.isRestoredSubscription(result.subscriptionId),
+      );
+      if (failures.length === 0) {
+        return null;
+      }
+      return new AggregateError(
+        failures.map((failure) => failure.error),
+        'Some subscriptions could not refresh. Showing previous data.',
+      );
+    } catch (error) {
+      // Observed, not thrown: catch-up failures surface through getCatchUpState().
+      return error;
+    }
   }
 
   /**
@@ -426,7 +461,7 @@ export class SyncModule {
   getMutationEntries(doctype?: string): DebugMutationEntry[] {
     const entries: DebugMutationEntry[] = [];
     for (const { id, entry } of this.mutationJournal.listPending()) {
-      if (doctype && entry.doctype !== doctype) {
+      if (doctype !== undefined && doctype !== '' && entry.doctype !== doctype) {
         continue;
       }
       entries.push({
@@ -437,7 +472,7 @@ export class SyncModule {
         status: entry.status,
         createdAt: entry.createdAt ?? 0,
         retryCount: entry.retryCount ?? 0,
-        error: entry.error ? ((entry.error as Error).message ?? String(entry.error)) : undefined,
+        error: describeEntryError(entry.error),
       });
     }
     return entries;
@@ -455,7 +490,10 @@ export class SyncModule {
   }
 
   /** Reads a single document from the local cache. */
+  // oxlint-disable-next-line typescript/no-unnecessary-type-parameters -- public API: callers name the doc shape they read
   getDocFromCache<T extends FrappeDocData = FrappeDocData>(doctype: string, name: string): T | undefined {
+    // SAFETY: the cache is keyed by doctype; T is the caller's declared shape for that doctype.
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see SAFETY above
     return this.normalizedCache.get({ doctype, name }) as T | undefined;
   }
 
@@ -553,7 +591,7 @@ export class SyncModule {
    * notified on every flip, so read this inside a `subscribeStore` callback
    * for a reactive indicator.
    */
-  getConnectionState(): { connected: boolean; everConnected: boolean } {
+  getConnectionState(): RealtimeConnectionState {
     return this.realtimeHandler.getConnectionState();
   }
 
@@ -571,8 +609,8 @@ export class SyncModule {
 
   /** Clears subscriptions, cache, journal, and temp id mappings. */
   resetCache() {
-    this.catchUpEpoch++;
-    this.catchUpRun = undefined;
+    this.catchUpEpoch += 1;
+    this.catchUpRun = null;
     this.catchUpState = idleCatchUpState;
     // Leave all realtime doctype rooms alongside dropping the subscriptions
     this.realtimeHandler.unwatchAll();
@@ -607,14 +645,14 @@ export class SyncModule {
     this.cleanupFocusReplay?.();
     this.cleanupOnlineBackfill?.();
     this.cleanupOnlineReplay?.();
-    this.cleanupFocus = undefined;
-    this.cleanupFocusReplay = undefined;
-    this.cleanupOnlineBackfill = undefined;
-    this.cleanupOnlineReplay = undefined;
+    this.cleanupFocus = null;
+    this.cleanupFocusReplay = null;
+    this.cleanupOnlineBackfill = null;
+    this.cleanupOnlineReplay = null;
 
-    if (this.cdcIntervalHandle) {
+    if (this.cdcIntervalHandle !== null) {
       clearInterval(this.cdcIntervalHandle);
-      this.cdcIntervalHandle = undefined;
+      this.cdcIntervalHandle = null;
     }
   }
 
@@ -622,6 +660,7 @@ export class SyncModule {
    * Returns a snapshot of internal state for devtools inspection.
    * Prefixed with __ to signal internal/debug use only.
    */
+  // oxlint-disable-next-line sonarjs/function-name -- public devtools API; the `__` prefix marks it internal
   __debug(): FrappeDebugState {
     const allSubs = this.subscriptionManager.getAllSubscriptions();
     const vpm = this.subscriptionManager.getVirtualPageManager();
@@ -675,7 +714,7 @@ export class SyncModule {
         status: entry.status,
         createdAt: entry.createdAt ?? 0,
         retryCount: entry.retryCount ?? 0,
-        error: entry.error ? ((entry.error as Error).message ?? String(entry.error)) : undefined,
+        error: describeEntryError(entry.error),
       };
       if (entry.status === Status.Pending) {
         pending.push(debugEntry);

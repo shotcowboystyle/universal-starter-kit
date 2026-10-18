@@ -1,6 +1,4 @@
-import { createOptimisticAction as tanstackCreateOptimisticAction } from '@tanstack/db';
-
-export { tanstackCreateOptimisticAction as createOptimisticAction };
+export { createOptimisticAction } from '@tanstack/db';
 
 /**
  * Re-export of TanStack DB's `createOptimisticAction`.
@@ -70,16 +68,18 @@ export { tanstackCreateOptimisticAction as createOptimisticAction };
 export const OPTIMISTIC_TEMP_PREFIX = 'tmp_';
 
 /** Issues a client-only identity for an optimistic record (`tmp_<uuid>`). */
-export function newOptimisticTempId(): string {
+export const newOptimisticTempId = (): string => {
   const id =
-    typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : Math.random().toString(36).slice(2);
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : // oxlint-disable-next-line sonarjs/pseudo-random -- fallback for runtimes without crypto.randomUUID; the id only needs to be locally unique, not unguessable
+        Math.random().toString(36).slice(2);
   return `${OPTIMISTIC_TEMP_PREFIX}${id}`;
-}
+};
 
 /** True when a document name is a client-issued optimistic identity. */
-export function isOptimisticTempId(name: unknown): name is string {
-  return typeof name === 'string' && name.startsWith(OPTIMISTIC_TEMP_PREFIX);
-}
+export const isOptimisticTempId = (name: unknown): name is string =>
+  typeof name === 'string' && name.startsWith(OPTIMISTIC_TEMP_PREFIX);
 
 export interface OptimisticRpcContext {
   /** Client-only identity for the optimistic record (`tmp_<uuid>`). */
@@ -93,6 +93,7 @@ export interface OptimisticRpcOptions<TAck> {
    * The applied record should use `ctx.tempId` as its identity and carry a
    * pending marker for the UI.
    */
+  // oxlint-disable-next-line typescript/no-invalid-void-type -- public API: apply callbacks that return nothing (inferred `void`) must stay assignable
   apply: (ctx: OptimisticRpcContext) => (() => void) | undefined | void;
   /** The server RPC. */
   send: (ctx: OptimisticRpcContext) => Promise<TAck>;
@@ -106,6 +107,7 @@ export interface OptimisticRpcOptions<TAck> {
    * Visible-error surface for the rollback path (house `notify()` or an
    * inline error slot). Runs after the apply-phase undo.
    */
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- receives the raw caught error, which is untyped by nature
   onError?: (error: unknown, ctx: OptimisticRpcContext) => void;
 }
 
@@ -114,7 +116,7 @@ export interface OptimisticRpcOptions<TAck> {
  * apply (local, immediate) → send → reconcile on ack, or undo + onError on
  * failure (the error rethrows).
  */
-export async function runOptimisticRpc<TAck>(options: OptimisticRpcOptions<TAck>): Promise<TAck> {
+export const runOptimisticRpc = async <TAck>(options: OptimisticRpcOptions<TAck>): Promise<TAck> => {
   const ctx: OptimisticRpcContext = { tempId: newOptimisticTempId() };
   const undo = options.apply(ctx) ?? undefined;
   try {
@@ -129,4 +131,4 @@ export async function runOptimisticRpc<TAck>(options: OptimisticRpcOptions<TAck>
     }
     throw error;
   }
-}
+};

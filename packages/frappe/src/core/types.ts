@@ -1,3 +1,4 @@
+import type { FilterObject } from '../sync/filters';
 import type { OrderBy } from '../sync/types';
 
 export enum AuthType {
@@ -26,6 +27,7 @@ export interface RetryConfig {
   maxRetries?: number;
   retryOnNetworkError?: boolean;
   retryStatusCodes?: number[];
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- receives whatever the request threw: a FrappeError or a network error
   shouldRetry?: (err: unknown, attempt: number) => boolean;
 }
 
@@ -71,6 +73,7 @@ export enum HttpMethod {
 export class FrappeError extends Error {
   public readonly status: number;
   public readonly data?: unknown;
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- the raw error response body, kept unparsed for callers to inspect
   constructor(message: string, status: number, data?: unknown) {
     super(message);
     this.name = 'FrappeError';
@@ -84,7 +87,7 @@ export interface ListOptions {
   asDict?: boolean;
   cursor?: string;
   fields?: readonly string[];
-  filters?: [string, string, unknown][] | Record<string, unknown>;
+  filters?: [string, string, unknown][] | FilterObject;
   groupBy?: string;
   limit?: number;
   limitStart?: number;
