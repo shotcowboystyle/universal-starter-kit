@@ -1,4 +1,3 @@
-import { ScrollView, Text, XStack, isWeb } from '@repo/ui';
 import {
   ensureKeyboardModalityTracking,
   keyboardFocusRingProps,
@@ -7,6 +6,7 @@ import {
   useResolvedKnobs,
   wasKeyboardFocus,
 } from '@repo/theme';
+import { ScrollView, Text, XStack, isWeb } from '@repo/ui';
 import { useRef, useState } from 'react';
 
 export interface FacetRailOption {

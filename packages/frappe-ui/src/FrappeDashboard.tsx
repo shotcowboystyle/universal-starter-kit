@@ -1,9 +1,9 @@
-import { Dashboard } from '@repo/ui';
-import type { DashboardWidget } from '@repo/ui';
+import { ArrowsClockwiseIcon } from '@phosphor-icons/react';
 import { Button, Spinner, formCommonColors } from '@repo/forms';
 import { useFrappeDoctypeEvents } from '@repo/frappe';
 import { formatTimeOfDay, useResolvedKnobs } from '@repo/theme';
-import { ArrowsClockwiseIcon } from '@phosphor-icons/react';
+import { Dashboard } from '@repo/ui';
+import type { DashboardWidget } from '@repo/ui';
 import React, { useMemo, useCallback, useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, XStack, YStack, H3 } from 'tamagui';

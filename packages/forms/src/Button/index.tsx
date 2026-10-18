@@ -63,13 +63,9 @@ export type ButtonSizeRecipe = SizeRecipe;
 // oxlint-disable-next-line react-doctor/only-export-components -- public recipe table consumed by other packages through this module path
 export const buttonSizeRecipes: Record<string, ButtonSizeRecipe> = recipeFamilies.control.recipes;
 
-const isNumber = (value: unknown): value is number =>
-  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- the single numeric/token discriminator for Tamagui size props, which are `SizeTokens | number`
-  typeof value === 'number';
+const isNumber = <T,>(value: T): value is T & number => typeof value === 'number';
 
-const isString = (value: unknown): value is string =>
-  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- the single string discriminator for loosely-typed children and theme values
-  typeof value === 'string';
+const isString = (value: unknown): value is string => typeof value === 'string';
 
 const hasText = (value: string | undefined): value is string => value !== undefined && value !== '';
 
@@ -122,9 +118,10 @@ type IconComponent = ComponentType<{ size?: number }>;
 
 /** Plain function components, or memo/forwardRef objects (identified by their `$$typeof` tag). */
 const isIconComponent = (icon: IconLike): icon is IconComponent => {
-  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- icons arrive as elements, components or exotic component objects; the typeof tag is the only way to tell them apart
-  const kind = typeof icon;
-  return kind === 'function' || (kind === 'object' && icon !== null && '$$typeof' in icon);
+  if (typeof icon === 'function') {
+    return true;
+  }
+  return typeof icon === 'object' && icon !== null && '$$typeof' in icon;
 };
 
 const normalizeButtonIcon = (icon: IconLike | undefined, iconSize: number): ReactNode => {
@@ -172,6 +169,10 @@ const circularFloorFor = (tokenPx: number) =>
       }
     : { minWidth: MIN_PRESS_TARGET, minHeight: MIN_PRESS_TARGET };
 
+const BACKGROUND_TOKEN = '$background';
+const BACKGROUND_HOVER_TOKEN = '$backgroundHover';
+const BACKGROUND_PRESS_TOKEN = '$backgroundPress';
+
 const hoverFillFor = (selectedFill: boolean, outlined: boolean) => {
   if (selectedFill) {
     return outlined ? BACKGROUND_HOVER_TOKEN : BACKGROUND_PRESS_TOKEN;
@@ -187,7 +188,8 @@ const lowAccentInk = (pressing: boolean, hovering: boolean) => {
 };
 
 /** TEXT-RIDES-TEXT: bare string/number children are legal only inside Text. */
-const isBareTextChild = (child: unknown): child is string | number => isString(child) || isNumber(child);
+const isBareTextChild = <T,>(child: T): child is T & (string | number) =>
+  typeof child === 'string' || typeof child === 'number';
 
 /**
  * TEXT-RIDES-TEXT (catalog arm): multi-child arrays are the trap — the
@@ -236,10 +238,6 @@ const useThemeTokens = (): Readonly<Record<string, ThemeToken | undefined>> => u
 const RADIUS_STOP_BY_TOKEN = new Map<string, SizeRecipeRadiusStop>(Object.entries(SIZE_RECIPE_RADIUS_TOKEN_TO_STOP));
 
 const INTENT_PRIORITY = ['accent', 'error', 'warning', 'success'] as const;
-
-const BACKGROUND_TOKEN = '$background';
-const BACKGROUND_HOVER_TOKEN = '$backgroundHover';
-const BACKGROUND_PRESS_TOKEN = '$backgroundPress';
 
 // oxlint-disable-next-line react-doctor/only-export-components -- the styled frame is part of this module's public surface (consumed by @repo/ui and tests)
 export const ButtonFrame = styled(View, {
@@ -325,6 +323,7 @@ export const ButtonFrame = styled(View, {
 type ButtonInheritedProps = Omit<Omit<TamaguiButtonProps, 'form' | 'icon'>, 'iconAfter' | 'variant'>;
 
 export interface ButtonProps extends ButtonInheritedProps {
+  children?: ReactNode;
   action?: 'submit' | 'reset';
   form?: AnyFormApi;
   loading?: boolean;
@@ -503,9 +502,7 @@ export const Button = ({
   const densityTight = compact ?? knobProps.density === 'compact';
   const recipe = resolveButtonSizeRecipe(resolvedSize, buttonDensityFamily(recipeFamily, densityTight));
   const padX = recipe.paddingHorizontal;
-  const radiusStop: SizeRecipeRadiusStop | undefined = RADIUS_STOP_BY_TOKEN.get(
-    String(knobProps.borderRadius.borderRadius),
-  );
+  const radiusStop: SizeRecipeRadiusStop | undefined = RADIUS_STOP_BY_TOKEN.get(knobProps.borderRadius.borderRadius);
   const paintedRadius = resolveControlRadius(recipe, radiusStop ?? 'medium');
   const innerGap = paintedRadius.gap;
   if (skeleton) {
@@ -611,6 +608,7 @@ export const Button = ({
   const resolvedRole: ButtonActionRole | undefined = actionRole ?? (accent ? 'primary' : undefined);
   const labelFromParts = children == null && verb != null ? formatActionLabel({ verb, noun }) : null;
   const resolvedChildren: ReactNode = children ?? labelFromParts;
+  // oxlint-disable-next-line typescript/no-unsafe-assignment -- the type-aware linter cannot resolve the inherited Tamagui aria prop type (tsc types it); the value is only compared against literals below
   const ariaPressedProp = props['aria-pressed'];
   const isSelected = selected ?? (ariaPressedProp === true || ariaPressedProp === 'true' ? true : undefined);
   const selectedFill = Boolean(isSelected) && !isDisabled;
@@ -736,7 +734,7 @@ export const Button = ({
       // outlined boxes identical without the filled one showing a ring.
       borderColor={outlined ? '$borderColor' : 'transparent'}
       size={resolvedSize}
-      {...(chromeless ? undefined : knobProps.elevationChrome)}
+      {...(chromeless === undefined || chromeless === false ? knobProps.elevationChrome : undefined)}
       elevation={knobProps.elevation}
       // The frame's `outlined` variant declares only a `true` branch, so a
       // literal `false` is not consumed and React receives it as a DOM
@@ -855,11 +853,11 @@ export const Button = ({
             // Hover/press keep the washed chrome — an aria-disabled
             // control must not light up like a pressable one.
             hoverStyle: {
-              backgroundColor: outlined ? 'transparent' : '$background',
+              backgroundColor: outlined ? 'transparent' : BACKGROUND_TOKEN,
               ...disabledSurface,
             },
             pressStyle: {
-              backgroundColor: outlined ? 'transparent' : '$background',
+              backgroundColor: outlined ? 'transparent' : BACKGROUND_TOKEN,
               ...disabledSurface,
             },
             'data-mp-disabled-explained': 'true',

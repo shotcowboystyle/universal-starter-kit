@@ -344,7 +344,7 @@ describe('FileUpload with a value', () => {
       />,
     );
     expect(result.getButton('Replace')).toBeTruthy();
-    fireEvent.click(result.getButton('Remove') as Element);
+    fireEvent.click(result.getButton('Remove')!);
     expect(onChange).toHaveBeenCalledWith('');
   });
 
@@ -371,7 +371,7 @@ describe('FileUpload with a value', () => {
         onChange={onChange}
       />,
     );
-    fireEvent.click(result.getButton('Remove') as Element);
+    fireEvent.click(result.getButton('Remove')!);
     expect(onChange).not.toHaveBeenCalled();
   });
 

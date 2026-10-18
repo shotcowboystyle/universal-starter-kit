@@ -1,3 +1,4 @@
+import { useResolvedKnobs } from '@repo/theme';
 /**
  * FrappeChartCard — a chart card whose series is a LIVE grouped aggregate.
  *
@@ -26,7 +27,6 @@
  */
 import { AsyncBoundary, Card, Skeleton } from '@repo/ui';
 import type { ChartCardProps, ChartConfig } from '@repo/ui';
-import { useResolvedKnobs } from '@repo/theme';
 import React, { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { YStack } from 'tamagui';

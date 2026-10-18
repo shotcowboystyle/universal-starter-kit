@@ -92,6 +92,7 @@ const defaultContextValues: InputContextValue = {
   touch: !isWeb && isTouchSurface(),
 };
 
+// oxlint-disable-next-line react-doctor/only-export-components -- InputParts is a shared parts module: field components import these contexts, frames and helpers alongside the components
 export const InputContext = createStyledContext<InputContextValue>(defaultContextValues);
 
 /** Square end-cap of recipe.height — generated, never handwritten. */
@@ -140,6 +141,7 @@ const sizeRecipeEndCapFallback = (val: SizeTokens | undefined, extras: { props: 
 // Focus forwarding
 // ---------------------------------------------------------------------------
 
+// oxlint-disable-next-line react-doctor/only-export-components -- InputParts is a shared parts module: field components import these contexts, frames and helpers alongside the components
 export const FocusContext = createStyledContext({
   setFocused: (_val: boolean) => {
     // Default outside Input.Box: nothing to focus-track.
@@ -190,6 +192,7 @@ const inputFrameCssTimings = {
 const isNamedTransition = (name: string): name is keyof typeof inputFrameCssTimings =>
   Object.hasOwn(inputFrameCssTimings, name);
 
+// oxlint-disable-next-line react-doctor/only-export-components -- InputParts is a shared parts module: field components import these contexts, frames and helpers alongside the components
 export const getInputFrameTransitionProps = (
   transition: string | undefined,
 ): { transition: string } | { style: { transition: string } } | undefined => {
@@ -247,6 +250,7 @@ const AREA_NO_OUTLINE = {
 
 type BoxOverflow = 'hidden' | 'visible';
 
+// oxlint-disable-next-line react-doctor/only-export-components -- InputParts is a shared parts module: field components import these contexts, frames and helpers alongside the components
 export const boxRingMode = (overflow: BoxOverflow, paintsRing: boolean): 'inset' | 'outset' | undefined => {
   if (!paintsRing) {
     return undefined;
@@ -254,6 +258,7 @@ export const boxRingMode = (overflow: BoxOverflow, paintsRing: boolean): 'inset'
   return overflow === 'hidden' ? 'inset' : 'outset';
 };
 
+// oxlint-disable-next-line react-doctor/only-export-components -- InputParts is a shared parts module: field components import these contexts, frames and helpers alongside the components
 export const boxRingOffset = (mode: 'inset' | 'outset' | undefined): number =>
   // Both branches are sanctioned offsets: the clipping inset when the
   // Box clips its adornments, the shape halo when it does not.
@@ -293,6 +298,7 @@ input[data-mp-input-area] {
 
 const INPUT_PARTS_RING_STYLE_ID = 'mp-input-parts-ring-anatomy';
 
+// oxlint-disable-next-line react-doctor/only-export-components -- InputParts is a shared parts module: field components import these contexts, frames and helpers alongside the components
 export const ensureInputPartsFocusRing = (): void => {
   if (typeof document === 'undefined') {
     return;
@@ -345,6 +351,7 @@ const webAreaAttrs = (extraClass?: string): WebAreaAttrs | undefined => {
   };
 };
 
+// oxlint-disable-next-line react-doctor/only-export-components -- InputParts is a shared parts module: field components import these contexts, frames and helpers alongside the components
 export const defaultInputGroupStyles = {
   size: '$true',
   fontFamily: '$body',
@@ -771,6 +778,7 @@ const InputGroupImpl = InputGroupFrame.styleable<{
 // Input size variant helper
 // ---------------------------------------------------------------------------
 
+// oxlint-disable-next-line react-doctor/only-export-components -- InputParts is a shared parts module: field components import these contexts, frames and helpers alongside the components
 export const KEYBOARD_TO_INPUT_MODE = {
   'phone-pad': 'tel',
   'number-pad': 'numeric',
@@ -779,6 +787,7 @@ export const KEYBOARD_TO_INPUT_MODE = {
   numeric: 'numeric',
 } as const;
 
+// oxlint-disable-next-line react-doctor/only-export-components -- InputParts is a shared parts module: field components import these contexts, frames and helpers alongside the components
 export const INPUT_MODE_TO_KEYBOARD = {
   tel: 'phone-pad',
   numeric: 'number-pad',
@@ -809,6 +818,7 @@ const isKeyboardType = (value: string): value is keyof typeof KEYBOARD_TO_INPUT_
 const isInputMode = (value: string): value is keyof typeof INPUT_MODE_TO_KEYBOARD =>
   Object.hasOwn(INPUT_MODE_TO_KEYBOARD, value);
 
+// oxlint-disable-next-line react-doctor/only-export-components -- InputParts is a shared parts module: field components import these contexts, frames and helpers alongside the components
 export const mapKeyboardTypeToInputMode = (keyboardType?: string): MappedInputMode | undefined => {
   if (keyboardType === undefined || !isKeyboardType(keyboardType)) {
     return undefined;
@@ -816,6 +826,7 @@ export const mapKeyboardTypeToInputMode = (keyboardType?: string): MappedInputMo
   return KEYBOARD_TO_INPUT_MODE[keyboardType];
 };
 
+// oxlint-disable-next-line react-doctor/only-export-components -- InputParts is a shared parts module: field components import these contexts, frames and helpers alongside the components
 export const mapInputModeToKeyboardType = (inputMode?: string): MappedKeyboardType | undefined => {
   if (inputMode === undefined || !isInputMode(inputMode)) {
     return undefined;
@@ -823,6 +834,7 @@ export const mapInputModeToKeyboardType = (inputMode?: string): MappedKeyboardTy
   return INPUT_MODE_TO_KEYBOARD[inputMode];
 };
 
+// oxlint-disable-next-line react-doctor/only-export-components -- InputParts is a shared parts module: field components import these contexts, frames and helpers alongside the components
 export const inputSizeVariant = (val: SizeTokens | undefined, extras?: { props: { touch?: boolean } }) => {
   const recipe = sizeRecipeForToken(val === undefined || val === '' ? '$true' : String(val), {
     touch: extras?.props.touch ?? (!isWeb && isTouchSurface()),
@@ -1274,6 +1286,7 @@ const InputButtonImpl = InputButton.styleable<{ glyphRing?: boolean }>((buttonPr
 // Input.Icon
 // ---------------------------------------------------------------------------
 
+// oxlint-disable-next-line react-doctor/only-export-components -- InputParts is a shared parts module: field components import these contexts, frames and helpers alongside the components
 export const InputIconFrame = styled(View, {
   name: 'InputIconFrame',
   justifyContent: 'center',
@@ -1336,6 +1349,7 @@ const InputIcon = InputIconFrame.styleable<{
 // Input (root container — provides context, manages theme on error)
 // ---------------------------------------------------------------------------
 
+// oxlint-disable-next-line react-doctor/only-export-components -- InputParts is a shared parts module: field components import these contexts, frames and helpers alongside the components
 export const InputContainerFrame = styled(View, {
   name: 'InputContainerFrame',
   context: InputContext,
@@ -1402,6 +1416,7 @@ const InputLabelFrame = styled(Label, {
   } as const,
 });
 
+// oxlint-disable-next-line react-doctor/only-export-components -- InputParts is a shared parts module: field components import these contexts, frames and helpers alongside the components
 export const InputLabel = InputLabelFrame.styleable((props, ref) => {
   const { knobProps } = useResolvedKnobs();
   return (
@@ -1450,6 +1465,7 @@ const InputInfoFrame = styled(Text, {
   } as const,
 });
 
+// oxlint-disable-next-line react-doctor/only-export-components -- InputParts is a shared parts module: field components import these contexts, frames and helpers alongside the components
 export const InputInfo = InputInfoFrame.styleable((props, ref) => {
   const { knobProps } = useResolvedKnobs();
   return (
@@ -1583,4 +1599,5 @@ const InputCompound = Object.assign(InputContainerImpl, {
   XGroup: Object.assign(InputXGroup, { Item: XGroup.Item }),
 });
 
+// oxlint-disable-next-line react-doctor/only-export-components -- InputParts is a shared parts module: field components import these contexts, frames and helpers alongside the components
 export const Input = InputCompound;

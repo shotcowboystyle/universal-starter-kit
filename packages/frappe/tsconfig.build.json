@@ -1,0 +1,18 @@
+{
+  "extends": "@repo/config/tsconfig/build.json",
+  "compilerOptions": {
+    "baseUrl": "./",
+    "rootDir": "./"
+  },
+  "include": ["src/**/*"],
+  "exclude": [
+    "dist/**/*",
+    "node_modules/**/*",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/**/*.spec.ts",
+    "src/**/*.spec.tsx",
+    "src/**/*.stories.ts",
+    "src/**/*.stories.tsx"
+  ]
+}

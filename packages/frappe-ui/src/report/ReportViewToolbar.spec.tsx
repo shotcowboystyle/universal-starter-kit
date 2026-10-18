@@ -77,7 +77,7 @@ describe('ReportToolbar Save As popover (LC-46 DOM prop hygiene)', () => {
 
     const saveAs = result.findTextElement('Save As…');
     expect(saveAs).toBeDefined();
-    fireEvent.click(saveAs as Element);
+    fireEvent.click(saveAs!);
 
     await waitFor(() => {
       expect(document.querySelector('input[placeholder="New report name"]')).toBeTruthy();

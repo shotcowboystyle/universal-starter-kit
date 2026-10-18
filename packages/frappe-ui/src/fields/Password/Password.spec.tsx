@@ -18,7 +18,7 @@ describe('Password reveal', () => {
         value="hunter2"
       />,
     );
-    const input = result.container.querySelector('input') as HTMLInputElement;
+    const input = result.container.querySelector('input')!;
     const reveal = revealOf(result.container);
     if (!input || !reveal) {
       throw new Error('input or reveal not found');
@@ -46,7 +46,7 @@ describe('Password reveal', () => {
         value="hunter2"
       />,
     );
-    const input = result.container.querySelector('input') as HTMLInputElement;
+    const input = result.container.querySelector('input')!;
     const box = result.container.querySelector("[data-ring-target='box']") as HTMLElement;
     const reveal = revealOf(result.container);
     if (!input || !box || !reveal) {
@@ -102,7 +102,7 @@ describe('Password reveal', () => {
       );
     }
     const result = renderWithProviders(<Harness />);
-    const input = result.container.querySelector('input') as HTMLInputElement;
+    const input = result.container.querySelector('input')!;
     const reveal = revealOf(result.container);
     if (!input || !reveal) {
       throw new Error('input or reveal not found');

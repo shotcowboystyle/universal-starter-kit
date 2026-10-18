@@ -9,8 +9,8 @@
  * a narrow column stays tabbed on a wide screen.
  */
 
-import { Tabs, ScrollView } from '@repo/ui';
 import { layoutBreakpoints, useResolvedKnobs } from '@repo/theme';
+import { Tabs, ScrollView } from '@repo/ui';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { XStack, YStack } from 'tamagui';

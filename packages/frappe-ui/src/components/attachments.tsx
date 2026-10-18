@@ -1,6 +1,6 @@
+import { useFrappeCollection, useLiveQuery } from '@repo/frappe';
 import { Attachments as BaseAttachments } from '@repo/ui';
 import type { AttachmentItem, AttachmentsProps } from '@repo/ui';
-import { useFrappeCollection, useLiveQuery } from '@repo/frappe';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { YStack } from 'tamagui';

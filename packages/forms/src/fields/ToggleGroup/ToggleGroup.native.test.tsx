@@ -7,7 +7,7 @@ import { ToggleGroup } from './index';
 // tree. See RadioGroup.native.test.tsx for why the state object is pinned in
 // shared/native-a-11y.test.ts rather than here.
 vi.mock(import('tamagui'), async (importOriginal) => ({
-  ...(await importOriginal<typeof import('tamagui')>()),
+  ...(await importOriginal()),
   isWeb: false,
 }));
 

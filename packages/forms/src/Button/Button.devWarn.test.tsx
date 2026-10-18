@@ -1,6 +1,4 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 
 import { renderWithProviders } from '@repo/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -46,6 +44,7 @@ describe('Button DEV guardrails', () => {
   it('warns positive-tabindex when tabIndex > 0', () => {
     renderWithProviders(
       <Button
+        // oxlint-disable-next-line jsx-a11y/tabindex-no-positive -- the positive tabIndex is the input under test for the positive-tabindex dev warning
         tabIndex={2}
         disabledReason="n/a">
         Jump

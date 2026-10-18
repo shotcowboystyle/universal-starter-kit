@@ -1,3 +1,7 @@
+import { ArrowLeftIcon, SparkleIcon } from '@phosphor-icons/react';
+import { useDocTypeMeta } from '@repo/frappe';
+import type { Order } from '@repo/frappe';
+import { useResolvedKnobs } from '@repo/theme';
 import {
   AsyncSkeleton,
   Breadcrumbs,
@@ -11,10 +15,6 @@ import {
   useTheme,
 } from '@repo/ui';
 import type { ChartConfig } from '@repo/ui';
-import { useDocTypeMeta } from '@repo/frappe';
-import type { Order } from '@repo/frappe';
-import { useResolvedKnobs } from '@repo/theme';
-import { ArrowLeftIcon, SparkleIcon } from '@phosphor-icons/react';
 import { useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 

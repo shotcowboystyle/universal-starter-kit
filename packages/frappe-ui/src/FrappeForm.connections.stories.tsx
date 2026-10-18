@@ -1,6 +1,6 @@
-import { Chip } from '@repo/ui';
 import { InMemoryFixtureProvider } from '@repo/frappe';
 import { useResolvedKnobs } from '@repo/theme';
+import { Chip } from '@repo/ui';
 import { Text, XStack, YStack } from 'tamagui';
 
 import { rosterFixtureData, rosterPokemonMeta } from '../tests/fixtures/pokemonRoster';

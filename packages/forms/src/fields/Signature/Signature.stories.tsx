@@ -10,6 +10,59 @@ import { Form } from '../../Form';
 
 import { Signature } from './index';
 
+const FormExample = () => {
+  const form = useForm({
+    defaultValues: {
+      signature: '',
+    },
+    onSubmit: async ({ value }) => {
+      action('onSubmit')(value);
+    },
+  });
+
+  return (
+    <Form
+      form={form}
+      maxWidth={520}>
+      <YStack gap="$4">
+        <Signature
+          label="Your Signature"
+          name="signature"
+          helperText="Required for submission"
+          required
+          clearIcon=<EraserIcon size={16} />
+        />
+        <Button action="submit">Submit</Button>
+      </YStack>
+    </Form>
+  );
+};
+
+const InteractiveExample = () => {
+  const [value, setValue] = useState('');
+  return (
+    <YStack
+      gap="$4"
+      maxWidth={520}>
+      <Signature
+        label="Sign Here"
+        helperText={value ? 'Signature captured' : 'Please sign above'}
+        value={value}
+        onChange={(v) => {
+          setValue(v);
+          action('onChange')(v ? '[base64 data]' : '');
+        }}
+        clearIcon=<EraserIcon size={16} />
+      />
+      <Signature
+        label="Disabled Signature"
+        disabled
+        clearIcon=<EraserIcon size={16} />
+      />
+    </YStack>
+  );
+};
+
 const meta: Meta<typeof Signature> = {
   title: 'Forms/Signature',
   component: Signature,
@@ -39,36 +92,7 @@ type Story = StoryObj<typeof Signature>;
 
 export const Main: Story = {
   name: 'Main',
-  render: () => {
-    const FormExample = () => {
-      const form = useForm({
-        defaultValues: {
-          signature: '',
-        },
-        onSubmit: async ({ value }) => {
-          action('onSubmit')(value);
-        },
-      });
-
-      return (
-        <Form
-          form={form}
-          maxWidth={520}>
-          <YStack gap="$4">
-            <Signature
-              label="Your Signature"
-              name="signature"
-              helperText="Required for submission"
-              required
-              clearIcon=<EraserIcon size={16} />
-            />
-            <Button action="submit">Submit</Button>
-          </YStack>
-        </Form>
-      );
-    };
-    return <FormExample />;
-  },
+  render: () => <FormExample />,
 };
 
 export const Standalone: Story = {
@@ -160,33 +184,7 @@ export const Sizes: Story = {
 };
 
 export const Interactive: Story = {
-  render: () => {
-    const InteractiveExample = () => {
-      const [value, setValue] = useState('');
-      return (
-        <YStack
-          gap="$4"
-          maxWidth={520}>
-          <Signature
-            label="Sign Here"
-            helperText={value ? 'Signature captured' : 'Please sign above'}
-            value={value}
-            onChange={(v) => {
-              setValue(v);
-              action('onChange')(v ? '[base64 data]' : '');
-            }}
-            clearIcon=<EraserIcon size={16} />
-          />
-          <Signature
-            label="Disabled Signature"
-            disabled
-            clearIcon=<EraserIcon size={16} />
-          />
-        </YStack>
-      );
-    };
-    return <InteractiveExample />;
-  },
+  render: () => <InteractiveExample />,
 };
 
 export const CustomSize: Story = {

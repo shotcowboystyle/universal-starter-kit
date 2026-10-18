@@ -63,30 +63,30 @@ describe(SchemaWizard, () => {
     const input =
       (container.querySelector('#first_name') as HTMLInputElement | null) ??
       (container.querySelector("[name='first_name']") as HTMLInputElement | null) ??
-      (container.querySelector('input') as HTMLInputElement);
+      container.querySelector('input')!;
     expect(input).toBeTruthy();
     fireEvent.change(input, { target: { value: 'Ada' } });
     fireEvent.input(input, { target: { value: 'Ada' } });
 
     await act(async () => {
-      fireEvent.click(container.querySelector("[data-testid='wizard-primary']") as Element);
+      fireEvent.click(container.querySelector("[data-testid='wizard-primary']")!);
     });
     expect(container.querySelector('[data-wizard-shell]')?.dataset.wizardCurrent).toBe('1');
 
     await act(async () => {
-      fireEvent.click(container.querySelector("[data-testid='wizard-back']") as Element);
+      fireEvent.click(container.querySelector("[data-testid='wizard-back']")!);
     });
     const again =
       (container.querySelector('#first_name') as HTMLInputElement | null) ??
       (container.querySelector("[name='first_name']") as HTMLInputElement | null) ??
-      (container.querySelector('input') as HTMLInputElement);
+      container.querySelector('input')!;
     expect(again.value).toBe('Ada');
   });
 
   it('per-step validation blocks advance and focuses the first invalid field', async () => {
     const { container } = renderWithProviders(<Harness />);
     await act(async () => {
-      fireEvent.click(container.querySelector("[data-testid='wizard-primary']") as Element);
+      fireEvent.click(container.querySelector("[data-testid='wizard-primary']")!);
     });
     expect(container.querySelector('[data-wizard-shell]')?.dataset.wizardCurrent).toBe('0');
     expect(container.querySelector("[data-error-summary], [data-testid='error-summary']")).toBeTruthy();
@@ -115,10 +115,10 @@ describe(SchemaWizard, () => {
       />,
     );
     await act(async () => {
-      fireEvent.click(container.querySelector("[data-testid='wizard-primary']") as Element);
+      fireEvent.click(container.querySelector("[data-testid='wizard-primary']")!);
     });
     await act(async () => {
-      fireEvent.click(container.querySelector("[data-testid='wizard-primary']") as Element);
+      fireEvent.click(container.querySelector("[data-testid='wizard-primary']")!);
     });
     const primary = container.querySelector("[data-testid='wizard-primary']") as HTMLElement;
     expect(primary.textContent).toBe('Restore backup');

@@ -1,6 +1,6 @@
+import { useResolvedKnobs } from '@repo/theme';
 import { AsyncBoundary, ImageGrid, List } from '@repo/ui';
 import type { ImageGridProps, ListProps } from '@repo/ui';
-import { useResolvedKnobs } from '@repo/theme';
 import type React from 'react';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';

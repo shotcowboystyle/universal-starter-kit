@@ -1,6 +1,6 @@
+import { useFrappeCollection, useLiveQuery } from '@repo/frappe';
 import { Tags as BaseTags } from '@repo/ui';
 import type { TagItem, TagsProps } from '@repo/ui';
-import { useFrappeCollection, useLiveQuery } from '@repo/frappe';
 import { useCallback, useMemo } from 'react';
 
 import { useFrappeConfig } from '../FrappeProvider';

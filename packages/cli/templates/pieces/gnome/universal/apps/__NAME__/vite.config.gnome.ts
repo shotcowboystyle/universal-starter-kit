@@ -19,7 +19,6 @@ import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 
-import { gnomePlatformExtensions, tamaguiLinkedAliases, tamaguiPlugin } from '@repo/vite-plugin-gnome';
 import {
   gnomeConditions,
   gnomeDedupe,
@@ -27,6 +26,7 @@ import {
   gnomeExtensions,
   gnomeLinkedAliases,
 } from '@react-gnome/vite-plugin';
+import { gnomePlatformExtensions, tamaguiLinkedAliases, tamaguiPlugin } from '@repo/vite-plugin-gnome';
 import react from '@vitejs/plugin-react';
 import type { Plugin } from 'vite';
 import { defineConfig } from 'vite';

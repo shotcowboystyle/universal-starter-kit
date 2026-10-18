@@ -6,7 +6,7 @@ import {
   wasKeyboardFocus,
   transitionProps,
 } from '@repo/theme';
-import type { KnobProps } from '@repo/theme';
+import type { DisabledSurfaceProps, KnobProps } from '@repo/theme';
 import { getStroke } from 'perfect-freehand';
 import type { PointerEvent, ReactNode } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -16,11 +16,13 @@ import type { GestureResponderEvent, LayoutChangeEvent } from 'react-native';
 // import binds the module object instead of the Svg component. The named
 // export is identical in both react-native-svg and tamagui's web shim.
 import { Path, Svg } from 'react-native-svg';
+import type { SvgProps } from 'react-native-svg';
 import type { LabelProps, SizeTokens } from 'tamagui';
 import { isWeb, Text, XStack, YStack, styled, useTheme as useTamaguiTheme } from 'tamagui';
 
 import { Button } from '../../Button';
 import { Field, FieldLayout, useFieldDescribedBy } from '../../FieldLayout';
+import type { FieldLayoutProps } from '../../FieldLayout';
 import { formCommonColors, formInputColors } from '../../shared/color-ramps';
 import { t } from '../../shared/t';
 import {
@@ -31,63 +33,88 @@ import {
   useFormField,
   useResolvedValidators,
 } from '../../shared/utils';
+import type { FieldValidators } from '../../shared/utils';
 import { Skeleton } from '../../Skeleton';
 import type { AnyFormApi } from '../../types';
 
-// Cross-platform base64 encoding/decoding
-const encodeBase64 = (str: string): string => {
-  if (typeof btoa === 'function') {
-    return btoa(unescape(encodeURIComponent(str)));
+const base64Chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+const base64PadIndex = 64;
+
+// Byte <-> binary string (one char per byte), the format btoa/atob speak.
+const bytesToBinary = (bytes: Uint8Array): string => {
+  let binary = '';
+  for (const byte of bytes) {
+    binary += String.fromCodePoint(byte);
   }
-  // React Native fallback using global Buffer if available, otherwise manual encoding
-  if (typeof Buffer !== 'undefined') {
-    return Buffer.from(str, 'utf-8').toString('base64');
-  }
-  // Manual base64 encoding as last resort
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
-  const bytes = new TextEncoder().encode(str);
+  return binary;
+};
+
+const binaryToBytes = (binary: string): Uint8Array => Uint8Array.from(binary, (char) => char.codePointAt(0) ?? 0);
+
+// Manual base64 encoding as last resort. Bit shifts are written as integer
+// arithmetic (x >> n === floor(x / 2^n), (x & m) << n === (x % (m + 1)) * 2^n
+// for the 0..255 byte range).
+const encodeBase64Manual = (bytes: Uint8Array): string => {
   let result = '';
   for (let i = 0; i < bytes.length; i += 3) {
     const b1 = bytes[i];
     const b2 = bytes[i + 1] ?? 0;
     const b3 = bytes[i + 2] ?? 0;
-    result += chars[b1 >> 2];
-    result += chars[((b1 & 3) << 4) | (b2 >> 4)];
-    result += i + 1 < bytes.length ? chars[((b2 & 15) << 2) | (b3 >> 6)] : '=';
-    result += i + 2 < bytes.length ? chars[b3 & 63] : '=';
+    result += base64Chars[Math.floor(b1 / 4)];
+    result += base64Chars[(b1 % 4) * 16 + Math.floor(b2 / 16)];
+    result += i + 1 < bytes.length ? base64Chars[(b2 % 16) * 4 + Math.floor(b3 / 64)] : '=';
+    result += i + 2 < bytes.length ? base64Chars[b3 % 64] : '=';
   }
   return result;
 };
 
+const decodeBase64Manual = (base64: string): Uint8Array => {
+  const bytes: number[] = [];
+  for (let i = 0; i < base64.length; i += 4) {
+    const e1 = base64Chars.indexOf(base64[i]);
+    const e2 = base64Chars.indexOf(base64[i + 1]);
+    const e3 = base64Chars.indexOf(base64[i + 2]);
+    const e4 = base64Chars.indexOf(base64[i + 3]);
+    bytes.push(e1 * 4 + Math.floor(e2 / 16));
+    if (e3 !== base64PadIndex) {
+      bytes.push((e2 % 16) * 16 + Math.floor(e3 / 4));
+    }
+    if (e4 !== base64PadIndex) {
+      bytes.push((e3 % 4) * 64 + e4);
+    }
+  }
+  return new Uint8Array(bytes);
+};
+
+// Cross-platform base64 encoding/decoding (UTF-8 aware)
+const encodeBase64 = (str: string): string => {
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- feature probe: React Native runtimes may not define the btoa global
+  if (typeof btoa === 'function') {
+    return btoa(bytesToBinary(new TextEncoder().encode(str)));
+  }
+  // React Native fallback using global Buffer if available, otherwise manual encoding
+  if (typeof Buffer !== 'undefined') {
+    return Buffer.from(str, 'utf-8').toString('base64');
+  }
+  return encodeBase64Manual(new TextEncoder().encode(str));
+};
+
 const decodeBase64 = (base64: string): string => {
+  // oxlint-disable-next-line anti-slop/no-runtime-typeof -- feature probe: React Native runtimes may not define the atob global
   if (typeof atob === 'function') {
-    return decodeURIComponent(escape(atob(base64)));
+    return new TextDecoder('utf-8', { fatal: true }).decode(binaryToBytes(atob(base64)));
   }
   // React Native fallback using global Buffer if available
   if (typeof Buffer !== 'undefined') {
     return Buffer.from(base64, 'base64').toString('utf-8');
   }
-  // Manual base64 decoding as last resort
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
-  const bytes: number[] = [];
-  for (let i = 0; i < base64.length; i += 4) {
-    const e1 = chars.indexOf(base64[i]);
-    const e2 = chars.indexOf(base64[i + 1]);
-    const e3 = chars.indexOf(base64[i + 2]);
-    const e4 = chars.indexOf(base64[i + 3]);
-    bytes.push((e1 << 2) | (e2 >> 4));
-    if (e3 !== 64) {
-      bytes.push(((e2 & 15) << 4) | (e3 >> 2));
-    }
-    if (e4 !== 64) {
-      bytes.push(((e3 & 3) << 6) | e4);
-    }
-  }
-  return new TextDecoder().decode(new Uint8Array(bytes));
+  return new TextDecoder().decode(decodeBase64Manual(base64));
 };
 
 type Point = [number, number, number];
 type Stroke = Point[];
+
+const signatureDataPrefix = 'data:application/json;base64,';
 
 // Minimum distance between points - lower = more points = better speed capture
 const minPointDistance = 1;
@@ -99,10 +126,12 @@ const referenceHeight = 200;
 
 // Base options - size is set dynamically based on canvas dimensions for scaling
 const strokeOptionsBase = {
-  thinning: 0.65, // Moderate pressure effect (fast=thin, slow=thick)
+  // Moderate pressure effect (fast=thin, slow=thick)
+  thinning: 0.65,
   smoothing: 0.2,
-  streamline: 0, // No streamline = preserve point spacing for pressure
-  easing: (t: number) => t,
+  // No streamline = preserve point spacing for pressure
+  streamline: 0,
+  easing: (progress: number) => progress,
   start: { taper: 0, cap: true },
   end: { taper: 0, cap: true },
 };
@@ -112,7 +141,7 @@ const normalizeStroke = (stroke: Stroke, width: number, height: number): Stroke 
   if (width <= 0 || height <= 0) {
     return stroke;
   }
-  return stroke.map(([x, y, p]) => [x / width, y / height, p] as Point);
+  return stroke.map(([x, y, p]): Point => [x / width, y / height, p]);
 };
 
 // Denormalize stroke from 0-1 to canvas dimensions
@@ -120,7 +149,7 @@ const denormalizeStroke = (stroke: Stroke, width: number, height: number): Strok
   if (width <= 0 || height <= 0) {
     return stroke;
   }
-  return stroke.map(([x, y, p]) => [x * width, y * height, p] as Point);
+  return stroke.map(([x, y, p]): Point => [x * width, y * height, p]);
 };
 
 // Stroke size scaled to canvas - maintains consistent visual thickness across screen sizes
@@ -130,15 +159,17 @@ const getScaledStrokeSize = (width: number, height: number): number => {
 };
 
 // Calculate distance between two points
-const pointDistance = (p1: Point, p2: Point): number => Math.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2);
+const pointDistance = (p1: Point, p2: Point): number => Math.hypot(p1[0] - p2[0], p1[1] - p2[1]);
 
 // Check if stroke has real stylus pressure (vs mouse/touch default 0.5)
 const hasRealPressure = (points: Stroke): boolean =>
   points.some((p) => p[2] !== undefined && p[2] !== 0.5 && p[2] > 0 && p[2] < 1);
 
 // Fixed thresholds (px) - consistent mapping regardless of stroke
-const slowDistance = 4; // Points closer than this = slow = thick
-const fastDistance = 25; // Points farther than this = fast = thin
+// Points closer than this = slow = thick
+const slowDistance = 4;
+// Points farther than this = fast = thin
+const fastDistance = 25;
 
 // Infer pressure from point spacing: close = slow = thick, far = fast = thin
 const pressureFromSpacing = (points: Stroke): Stroke => {
@@ -149,23 +180,14 @@ const pressureFromSpacing = (points: Stroke): Stroke => {
     return points;
   }
 
-  const distances: number[] = [];
-  for (let i = 0; i < points.length; i++) {
-    const d =
-      i === 0
-        ? points.length > 1
-          ? pointDistance(points[1], points[0])
-          : slowDistance
-        : pointDistance(points[i], points[i - 1]);
-    distances.push(d);
-  }
-
   // Fixed thresholds: d < SLOW = thick, d > FAST = thin, linear between (narrower range)
-  return points.map((p, i) => {
-    const d = distances[i];
-    const t = Math.max(0, Math.min(1, (d - slowDistance) / (fastDistance - slowDistance)));
-    const pressure = 0.7 - t * 0.35; // 0.35 (fast) to 0.7 (slow) - subtler variation
-    return [p[0], p[1], Math.max(0.3, Math.min(0.8, pressure))] as Point;
+  return points.map((p, i): Point => {
+    // The first point borrows the first segment's spacing (length >= 2 here).
+    const d = i === 0 ? pointDistance(points[1], points[0]) : pointDistance(p, points[i - 1]);
+    const speed = Math.max(0, Math.min(1, (d - slowDistance) / (fastDistance - slowDistance)));
+    // 0.35 (fast) to 0.7 (slow) - subtler variation
+    const pressure = 0.7 - speed * 0.35;
+    return [p[0], p[1], Math.max(0.3, Math.min(0.8, pressure))];
   });
 };
 
@@ -177,46 +199,80 @@ const getStrokeOptions = (_points: Stroke, strokeSize: number) => ({
 });
 
 const getSvgPathFromStroke = (stroke: number[][]): string => {
-  if (!stroke.length) {
+  if (stroke.length === 0) {
     return '';
   }
 
-  const d = stroke.reduce(
-    (acc, [x0, y0], i, arr) => {
-      const [x1, y1] = arr[(i + 1) % arr.length];
-      acc.push(x0, y0, (x0 + x1) / 2, (y0 + y1) / 2);
-      return acc;
-    },
-    ['M', ...stroke[0], 'Q'],
-  );
+  const d: (string | number)[] = ['M', ...stroke[0], 'Q'];
+  for (const [i, [x0, y0]] of stroke.entries()) {
+    const [x1, y1] = stroke[(i + 1) % stroke.length];
+    d.push(x0, y0, (x0 + x1) / 2, (y0 + y1) / 2);
+  }
 
   d.push('Z');
   return d.join(' ');
 };
 
-/** Parse signature value (base64 JSON) into normalized strokes. Returns [] if invalid. */
-const parseSignatureValue = (value: string): Stroke[] => {
-  if (!value || !value.startsWith('data:application/json;base64,')) {
-    return [];
+/** Strokes decoded from a stored value; `normalized` is false for the legacy pixel-space format. */
+interface DecodedSignature {
+  strokes: Stroke[];
+  normalized: boolean;
+}
+
+/** Decode a stored signature data URL; undefined when absent or malformed. */
+const decodeSignature = (value: string): DecodedSignature | undefined => {
+  if (!value.startsWith(signatureDataPrefix)) {
+    return undefined;
   }
   try {
-    const base64 = value.replace('data:application/json;base64,', '');
-    const json = decodeBase64(base64);
-    const parsed = JSON.parse(json);
-    if (parsed?.v === 2 && Array.isArray(parsed.s)) {
-      return parsed.s;
+    const payload: unknown = JSON.parse(decodeBase64(value.slice(signatureDataPrefix.length)));
+    if (Array.isArray(payload)) {
+      // SAFETY: the legacy (v1) format stored a bare Stroke[] array in canvas pixels; malformed entries are caught by the caller.
+      // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see the SAFETY note above
+      return { strokes: payload as Stroke[], normalized: false };
     }
-    if (Array.isArray(parsed)) {
-      const allX = parsed.flatMap((s: Stroke) => s.map((p) => p[0]));
-      const allY = parsed.flatMap((s: Stroke) => s.map((p) => p[1]));
-      const maxX = Math.max(...allX, 1);
-      const maxY = Math.max(...allY, 1);
-      return parsed.map((stroke: Stroke) => stroke.map(([x, y, p]) => [x / maxX, y / maxY, p] as Point));
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- boundary parser for the untyped JSON payload decoded from the stored value
+    if (typeof payload !== 'object' || payload === null || !('v' in payload) || !('s' in payload)) {
+      return undefined;
     }
+    if (payload.v !== 2 || !Array.isArray(payload.s)) {
+      return undefined;
+    }
+    // SAFETY: v2 payloads ({ v: 2, s }) are only written by saveStrokes, which serializes normalized Stroke[] under `s`.
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see the SAFETY note above
+    return { strokes: payload.s as Stroke[], normalized: true };
   } catch {
-    // ignore
+    // Safe to continue: a malformed stored value renders as an empty pad
+    return undefined;
   }
-  return [];
+};
+
+/** Normalized strokes of a v2 value; [] for empty, malformed or legacy values. */
+const getV2Strokes = (value: string): Stroke[] => {
+  const decoded = decodeSignature(value);
+  return decoded?.normalized === true ? decoded.strokes : [];
+};
+
+/** Parse signature value (base64 JSON) into normalized strokes. Returns [] if invalid. */
+const parseSignatureValue = (value: string): Stroke[] => {
+  const decoded = decodeSignature(value);
+  if (decoded === undefined) {
+    return [];
+  }
+  if (decoded.normalized) {
+    return decoded.strokes;
+  }
+  try {
+    const legacy = decoded.strokes;
+    const allX = legacy.flatMap((s) => s.map((p) => p[0]));
+    const allY = legacy.flatMap((s) => s.map((p) => p[1]));
+    const maxX = Math.max(...allX, 1);
+    const maxY = Math.max(...allY, 1);
+    return legacy.map((stroke) => stroke.map(([x, y, p]): Point => [x / maxX, y / maxY, p]));
+  } catch {
+    // Safe to continue: malformed legacy strokes render as an empty signature
+    return [];
+  }
 };
 
 /**
@@ -227,6 +283,7 @@ const parseSignatureValue = (value: string): Stroke[] => {
  * @param penColor - Stroke color (default currentColor so the host scheme tints ink)
  * @returns SVG string or empty string if no strokes
  */
+// oxlint-disable-next-line react-doctor/only-export-components -- public helper co-located with Signature; consumers import both from this module
 export const signatureValueToSvg = (value: string, width = 500, height = 200, penColor = 'currentColor'): string => {
   const strokes = parseSignatureValue(value);
   if (strokes.length === 0) {
@@ -280,7 +337,7 @@ interface SignatureCanvasProps {
   penColor: string;
   backgroundColor?: string;
   knobProps: KnobProps;
-  disabledSurface?: Record<string, unknown>;
+  disabledSurface?: DisabledSurfaceProps;
   size?: SizeTokens;
   error?: string | boolean;
   clearIcon: ReactNode;
@@ -288,20 +345,36 @@ interface SignatureCanvasProps {
   hasError?: boolean;
 }
 
-const isPrimaryDrawPointer = (event: GestureResponderEvent | PointerEvent<SVGSVGElement>): boolean => {
-  if (!isWeb) {
+type DrawEvent = GestureResponderEvent | PointerEvent<SVGSVGElement>;
+
+// The pad wires pointer handlers on web and responder handlers on native
+// (see svgProps), so the platform alone tells which event shape arrived.
+const isWebPointerEvent = (_event: DrawEvent): _event is PointerEvent<SVGSVGElement> => isWeb;
+
+const isPrimaryDrawPointer = (event: DrawEvent): boolean => {
+  if (!isWebPointerEvent(event)) {
     return true;
   }
-  const webEvent = event as PointerEvent<SVGSVGElement>;
-  if (!webEvent.isPrimary) {
+  if (!event.isPrimary) {
     return false;
   }
-  if (webEvent.pointerType === 'mouse' && webEvent.button !== 0) {
+  if (event.pointerType === 'mouse' && event.button !== 0) {
     return false;
   }
   return true;
 };
 
+const hasErrorValue = (error: string | boolean | undefined): boolean =>
+  error !== undefined && error !== false && error !== '';
+
+const getPadCursor = (disabled: boolean, readOnly: boolean): 'not-allowed' | 'default' | 'crosshair' => {
+  if (disabled) {
+    return 'not-allowed';
+  }
+  return readOnly ? 'default' : 'crosshair';
+};
+
+// oxlint-disable-next-line react-doctor/no-giant-component, eslint/complexity -- existing pad component; splitting its pointer/keyboard/render wiring is a refactor beyond lint cleanup
 const SignatureCanvasImpl = ({
   id,
   hasLabel,
@@ -332,12 +405,16 @@ const SignatureCanvasImpl = ({
   const currentStrokeRef = useRef<Stroke | null>(null);
   const describedBy = useFieldDescribedBy();
   const aspectRatio = width / height;
+  // SAFETY: knobProps.sizeToken is always a size-token key ($1..$N)
   const resolvedSizeToken = (size ?? knobProps.sizeToken) as SizeTokens;
   const minHeightPx = getFieldHeight(resolvedSizeToken, signatureHeightRows, hydrationTouch);
   const cappedRadius = clampRadiusForLargeComponent(knobProps.borderRadius.borderRadius);
   const canDraw = !disabled && !readOnly;
   const canFocus = !disabled;
-  const hasInk = strokes.length > 0 || !!currentStroke;
+  const hasInk = strokes.length > 0 || currentStroke !== null;
+  const borderColors = hasErrorValue(error)
+    ? { base: formCommonColors.error, hover: formCommonColors.error, focus: formCommonColors.error }
+    : formInputColors.border;
 
   if (isWeb) {
     ensureKeyboardModalityTracking();
@@ -350,24 +427,8 @@ const SignatureCanvasImpl = ({
 
   // Restore strokes from v2 normalized format
   useEffect(() => {
-    if (!value) {
-      setCommittedStrokes([]);
-      return;
-    }
-    if (value.startsWith('data:application/json;base64,')) {
-      try {
-        const base64 = value.replace('data:application/json;base64,', '');
-        const json = decodeBase64(base64);
-        const parsed = JSON.parse(json);
-        if (parsed?.v === 2 && Array.isArray(parsed.s)) {
-          setCommittedStrokes(parsed.s);
-          return;
-        }
-      } catch {
-        // ignore
-      }
-    }
-    setCommittedStrokes([]);
+    // oxlint-disable-next-line react/set-state-in-effect -- local strokes (mirrored in strokesRef for the pointer handlers) must reset when the stored value changes; deriving them from `value` would drop ink when the parent does not feed onChange back
+    setCommittedStrokes(getV2Strokes(value));
   }, [value, setCommittedStrokes]);
 
   const saveStrokes = useCallback(
@@ -379,7 +440,7 @@ const SignatureCanvasImpl = ({
       const payload = { v: 2, s: newStrokes };
       const json = JSON.stringify(payload);
       const base64 = encodeBase64(json);
-      onValueChange(`data:application/json;base64,${base64}`);
+      onValueChange(`${signatureDataPrefix}${base64}`);
     },
     [onValueChange],
   );
@@ -389,22 +450,21 @@ const SignatureCanvasImpl = ({
     setDimensions({ width: w, height: h });
   }, []);
 
-  const getPoint = useCallback((event: GestureResponderEvent | PointerEvent<SVGSVGElement>): Point => {
-    if (isWeb) {
-      const webEvent = event as PointerEvent<SVGSVGElement>;
-      const svg = webEvent.currentTarget;
+  const getPoint = useCallback((event: DrawEvent): Point => {
+    if (isWebPointerEvent(event)) {
+      const svg = event.currentTarget;
       const rect = svg.getBoundingClientRect();
-      const x = webEvent.clientX - rect.left;
-      const y = webEvent.clientY - rect.top;
-      const pressure = (webEvent as any).pressure ?? 0.5;
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      const pressure = event.pressure ?? 0.5;
       return [x, y, pressure];
     }
-    const { nativeEvent } = event as GestureResponderEvent;
+    const { nativeEvent } = event;
     return [nativeEvent.locationX, nativeEvent.locationY, 0.5];
   }, []);
 
   const handleStart = useCallback(
-    (event: GestureResponderEvent | PointerEvent<SVGSVGElement>) => {
+    (event: DrawEvent) => {
       if (!canDraw || !isPrimaryDrawPointer(event)) {
         return;
       }
@@ -413,17 +473,15 @@ const SignatureCanvasImpl = ({
       currentStrokeRef.current = [point];
       setCurrentStroke([point]);
 
-      if (isWeb) {
-        const target = (event as PointerEvent<SVGSVGElement>).currentTarget;
-        const { pointerId } = event as PointerEvent<SVGSVGElement>;
-        target.setPointerCapture?.(pointerId);
+      if (isWebPointerEvent(event)) {
+        event.currentTarget.setPointerCapture?.(event.pointerId);
       }
     },
     [canDraw, getPoint],
   );
 
   const handleMove = useCallback(
-    (event: GestureResponderEvent | PointerEvent<SVGSVGElement>) => {
+    (event: DrawEvent) => {
       if (!isDrawing.current || !canDraw) {
         return;
       }
@@ -435,7 +493,7 @@ const SignatureCanvasImpl = ({
           return [point];
         }
         const lastPoint = base.at(-1);
-        if (pointDistance(point, lastPoint) < minPointDistance) {
+        if (lastPoint !== undefined && pointDistance(point, lastPoint) < minPointDistance) {
           return prev ?? base;
         }
         const next = [...base, point];
@@ -509,13 +567,14 @@ const SignatureCanvasImpl = ({
       })()
     : null;
 
-  const paths = currentPath ? [...completedPaths, currentPath] : completedPaths;
-  const cursor = disabled ? 'not-allowed' : readOnly ? 'default' : 'crosshair';
+  const paths = currentPath === null || currentPath === '' ? completedPaths : [...completedPaths, currentPath];
+  const cursor = getPadCursor(disabled, readOnly === true);
+  const webTabIndex = canFocus ? 0 : -1;
 
   const svgProps = isWeb
     ? {
-        onPointerDown: handleStart as (e: PointerEvent<SVGSVGElement>) => void,
-        onPointerMove: handleMove as (e: PointerEvent<SVGSVGElement>) => void,
+        onPointerDown: handleStart,
+        onPointerMove: handleMove,
         onPointerUp: handleEnd,
         onLostPointerCapture: handleEnd,
         style: {
@@ -529,8 +588,8 @@ const SignatureCanvasImpl = ({
     : {
         onStartShouldSetResponder: () => canDraw,
         onMoveShouldSetResponder: () => canDraw,
-        onResponderGrant: handleStart as (e: GestureResponderEvent) => void,
-        onResponderMove: handleMove as (e: GestureResponderEvent) => void,
+        onResponderGrant: handleStart,
+        onResponderMove: handleMove,
         onResponderRelease: handleEnd,
         onResponderTerminate: handleEnd,
         style: { backgroundColor: 'transparent' },
@@ -548,23 +607,23 @@ const SignatureCanvasImpl = ({
       borderRadius={cappedRadius}
       borderWidth={knobProps.borderRadius.borderWidth}
       elevation={knobProps.elevation}
-      borderColor={error ? formCommonColors.error : formInputColors.border.base}
+      borderColor={borderColors.base}
       aspectRatio={aspectRatio}
       minHeight={minHeightPx}
       cursor={cursor}
-      hoverStyle={disabled ? undefined : { borderColor: error ? formCommonColors.error : formInputColors.border.hover }}
+      hoverStyle={disabled ? undefined : { borderColor: borderColors.hover }}
       focusStyle={{
         outlineWidth: 0,
-        borderColor: error ? formCommonColors.error : formInputColors.border.focus,
+        borderColor: borderColors.focus,
       }}
       focusVisibleStyle={ensureFocusVisibleRing({
         outlineOffset: -2,
-        borderColor: error ? formCommonColors.error : formInputColors.border.focus,
+        borderColor: borderColors.focus,
       })}
       {...frameRing}
       {...transitionProps(knobProps.transition)}
       focusable={canFocus}
-      tabIndex={isWeb ? (canFocus ? 0 : -1) : undefined}
+      tabIndex={isWeb ? webTabIndex : undefined}
       onFocus={() => {
         if (isWeb && wasKeyboardFocus()) {
           setKbFocus(true);
@@ -613,9 +672,12 @@ const SignatureCanvasImpl = ({
         width="100%"
         height="100%"
         viewBox={`0 0 ${dimensions.width || 100} ${dimensions.height || 100}`}
-        {...(svgProps as any)}>
+        // SAFETY: react-native-svg forwards unknown props to the DOM <svg> on web (pointer handlers) and the responder props on native; its SvgProps type omits the web-only pointer events.
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see the SAFETY note above
+        {...(svgProps as SvgProps)}>
         {paths.map((d, i) => (
           <Path
+            // oxlint-disable-next-line react-doctor/no-array-index-as-key -- strokes are positional and carry no stable id; identical strokes would collide on a path-string key
             key={i}
             d={d}
             fill={penColor}
@@ -651,7 +713,7 @@ const SignatureCanvasImpl = ({
 export interface SignatureProps {
   name?: string;
   form?: AnyFormApi;
-  validators?: Record<string, unknown>;
+  validators?: FieldValidators;
   label?: ReactNode;
   labelProps?: Omit<LabelProps, 'htmlFor' | 'ref'>;
   helperText?: string;
@@ -663,7 +725,7 @@ export interface SignatureProps {
   value?: string;
   defaultValue?: string;
   onChange?: (value: string) => void;
-  onBlur?: (...args: any[]) => void;
+  onBlur?: FieldLayoutProps['onBlur'];
   disabled?: boolean;
   readOnly?: boolean;
   /** Canvas width in pixels for aspect ratio (default: size-derived height × 2.5) */
@@ -715,6 +777,7 @@ export const Signature = ({
   });
   const resolvedValidators = useResolvedValidators(required, validators, label, name);
   const tamaguiTheme = useTamaguiTheme();
+  // SAFETY: knobProps.sizeToken is always a size-token key ($1..$N)
   const resolvedSizeToken = (size ?? knobProps.sizeToken) as SizeTokens;
   const minHeightPx = getFieldHeight(resolvedSizeToken, signatureHeightRows, hydrationTouch);
   const padHeight = height ?? minHeightPx;
@@ -739,11 +802,13 @@ export const Signature = ({
     );
   }
 
+  // SAFETY: theme color tokens resolve to CSS color strings
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see the SAFETY note above
   const penColor = penColorProp ?? (tamaguiTheme.color12?.val as string | undefined) ?? 'currentColor';
 
   const canvasProps = {
     id,
-    hasLabel: !!label,
+    hasLabel: Boolean(label),
     disabled: !!disabled,
     readOnly: !!readOnly,
     width: padWidth,
@@ -751,12 +816,12 @@ export const Signature = ({
     penColor,
     backgroundColor: backgroundColorProp,
     knobProps,
-    disabledSurface: disabledState.surfaceKnobProps as Record<string, unknown> | undefined,
+    disabledSurface: disabledState.surfaceKnobProps,
     size,
     clearIcon,
   };
 
-  if (!resolvedForm || !name) {
+  if (resolvedForm === undefined || name === undefined || name === '') {
     return (
       <FieldLayout
         id={id}
@@ -773,11 +838,11 @@ export const Signature = ({
         disabled={disabled}>
         <SignatureCanvasImpl
           {...canvasProps}
-          value={value ?? defaultValue! ?? ''}
+          value={value ?? defaultValue ?? ''}
           onValueChange={(v) => onChange?.(v)}
           error={error}
           required={required}
-          hasError={!!error}
+          hasError={hasErrorValue(error)}
         />
       </FieldLayout>
     );
@@ -808,12 +873,12 @@ export const Signature = ({
               {...canvasProps}
               value={field.state.value ?? ''}
               onValueChange={(v) => {
-                field.handleChange(v as any);
+                field.handleChange(v);
                 onChange?.(v);
               }}
               error={resolvedError}
               required={required}
-              hasError={!!resolvedError}
+              hasError={hasErrorValue(resolvedError)}
             />
           </FieldLayout>
         );

@@ -2,9 +2,9 @@ import '../../tamagui.css';
 import '@tamagui/core/reset.css';
 
 import { AboutScreen, AppLayout, HomeScreen } from '@features/__NAME__';
-import { DomNavigationHost, stackNavigator } from '@repo/router/seam';
 import { createI18nConfig, defaultLanguage, defaultNamespace, languages, namespaces } from '@package/i18n';
 import { resources } from '@package/i18n/resources';
+import { DomNavigationHost, stackNavigator } from '@repo/router/seam';
 import i18next from 'i18next';
 import { StrictMode } from 'react';
 import { CookiesProvider } from 'react-cookie';

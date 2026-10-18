@@ -80,9 +80,7 @@ export function resolveSource(flags: { source?: string; checkout?: string } = {}
     source: url,
     ref,
     origin: 'tag',
-    warning:
-      `this build of @repo/cli carries no source commit (lib/source.json); ` +
-      `scaffolding from ${ref} instead`,
+    warning: `this build of @repo/cli carries no source commit (lib/source.json); ` + `scaffolding from ${ref} instead`,
   };
 }
 

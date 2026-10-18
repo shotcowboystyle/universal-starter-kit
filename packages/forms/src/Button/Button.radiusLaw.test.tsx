@@ -1,6 +1,6 @@
+// @vitest-environment jsdom
+
 /**
- * @vitest-environment jsdom
- *
  * The seeded knob fuzz for the Button frame's radius, judged in
  * jsdom against the Button radius law (default,
  * outlined): honour at none/small/large/full, remap at medium to the
@@ -16,8 +16,6 @@ import { Theme } from 'tamagui';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { Button } from './index';
-
-afterEach(cleanup);
 
 const STOP_PX = { none: 0, small: 5, medium: 9, large: 16, full: 50 } as const;
 const RECIPE_RADIUS = { $2: 5, $3: 7, $4: 9, $6: 16 } as const;
@@ -98,26 +96,26 @@ const COMBOS: Combo[] = [
 
 const lawRadius = (stop: Stop, token: Token): number => (stop === 'medium' ? RECIPE_RADIUS[token] : STOP_PX[stop]);
 
-const RADIUS_TOKEN_PX: Record<string, number> = {
-  '0': 0,
-  '2': 5,
-  '3': 7,
-  '4': 9,
-  '5': 10,
-  '6': 16,
-  '12': 50,
-};
+const RADIUS_TOKEN_PX = new Map<string, number>([
+  ['0', 0],
+  ['2', 5],
+  ['3', 7],
+  ['4', 9],
+  ['5', 10],
+  ['6', 16],
+  ['12', 50],
+]);
 
 const radiusPx = (el: HTMLElement): number | null => {
   let found: number | null = null;
-  for (const c of String(el.className || '').split(/\s+/u)) {
-    const px = /^_btlr-(\d+)px$/u.exec(c);
-    if (px) {
-      found = Number(px[1]);
+  for (const c of el.className.split(/\s+/u)) {
+    const px = /^_btlr-(?<px>\d+)px$/u.exec(c)?.groups?.px;
+    if (px !== undefined) {
+      found = Number(px);
     }
-    const tok = /^_btlr-t-radius-(\d+)$/u.exec(c);
-    if (tok) {
-      found = RADIUS_TOKEN_PX[tok[1]] ?? found;
+    const tok = /^_btlr-t-radius-(?<tok>\d+)$/u.exec(c)?.groups?.tok;
+    if (tok !== undefined) {
+      found = RADIUS_TOKEN_PX.get(tok) ?? found;
     }
   }
   return found;
@@ -140,18 +138,24 @@ const paint = (combo: Combo, scheme: (typeof SCHEMES)[number], token: Token): nu
   return px;
 };
 
+const COMBO_CASES = COMBOS.flatMap((combo, i) => {
+  const expected =
+    combo.borderRadius === 'medium'
+      ? 'the size-recipe radius 5/7/9/16'
+      : `${STOP_PX[combo.borderRadius]}px at every size`;
+  return SCHEMES.map((scheme) => ({
+    combo,
+    scheme,
+    title: `combo ${i + 1} ${scheme}: borderRadius ${combo.borderRadius} paints ${expected}`,
+  }));
+});
+
 describe('Button frame radius: seeded fuzz against the Button radius law', () => {
-  for (const [i, combo] of COMBOS.entries()) {
-    const expected =
-      combo.borderRadius === 'medium'
-        ? 'the size-recipe radius 5/7/9/16'
-        : `${STOP_PX[combo.borderRadius]}px at every size`;
-    for (const scheme of SCHEMES) {
-      it(`combo ${i + 1} ${scheme}: borderRadius ${combo.borderRadius} paints ${expected}`, () => {
-        for (const token of TOKENS) {
-          expect(paint(combo, scheme, token), `${token} ${scheme}`).toBe(lawRadius(combo.borderRadius, token));
-        }
-      });
+  afterEach(cleanup);
+
+  it.each(COMBO_CASES)('$title', ({ combo, scheme }) => {
+    for (const token of TOKENS) {
+      expect(paint(combo, scheme, token), `${token} ${scheme}`).toBe(lawRadius(combo.borderRadius, token));
     }
-  }
+  });
 });

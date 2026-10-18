@@ -1,6 +1,6 @@
+// @vitest-environment jsdom
+
 /**
- * @vitest-environment jsdom
- *
  * Outlined error/warning/success labels
  * re-anchor to `$color11` on the LABEL TEXT NODE. The harness passed this
  * defect for months by reading the frame (`color` inherits) while
@@ -28,8 +28,6 @@ import { TamaguiProvider, YStack } from 'tamagui';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { Button } from './index';
-
-afterEach(cleanup);
 
 const houseConfig = createDefaultThemeConfig();
 const houseThemes = createThemesBuilder(defaultBaseTheme, defaultAccentTheme, defaultBuilderOptions).themes();
@@ -66,6 +64,8 @@ const pageRatio = (ink: string, ground: string, label: string): number =>
   measureContrast({ foreground: ink, background: ground, label }).ratio;
 
 describe('Button outlined intent label ink', () => {
+  afterEach(cleanup);
+
   it.each(SCHEMES)('%s: outlined intent labels emit $color11 on the TEXT NODE, never the on-fill $color', (scheme) => {
     houseRender(
       <>

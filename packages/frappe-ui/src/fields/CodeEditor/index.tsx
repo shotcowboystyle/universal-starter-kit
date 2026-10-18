@@ -15,7 +15,6 @@
  * order, chromeless inside table cells (useIsInTableCell).
  */
 
-import { HighlightedCode, useShikiTokens } from '@repo/ui';
 import {
   Field,
   FieldLayout,
@@ -30,6 +29,7 @@ import {
 } from '@repo/forms';
 import type { AnyFormApi } from '@repo/forms';
 import { sizeRecipeForToken, useResolvedKnobs } from '@repo/theme';
+import { HighlightedCode, useShikiTokens } from '@repo/ui';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';

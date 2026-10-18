@@ -16,7 +16,7 @@ describe('Color design-law — compose forms ColorPicker', () => {
         onChange={vi.fn()}
       />,
     );
-    const input = result.container.querySelector('input') as HTMLInputElement | null;
+    const input = result.container.querySelector('input');
     expect(input).toBeTruthy();
     expect(screen.getByText('Brand')).toBeTruthy();
   });

@@ -1,6 +1,6 @@
+import { StarIcon } from '@phosphor-icons/react';
 import type { FormFieldProps, FieldComponentProps } from '@repo/forms';
 import { Rating as FormsRating } from '@repo/forms';
-import { StarIcon } from '@phosphor-icons/react';
 import type { DeepKeys } from '@tanstack/form-core';
 import { useProps } from 'tamagui';
 

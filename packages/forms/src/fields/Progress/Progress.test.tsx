@@ -396,8 +396,10 @@ describe(Progress, () => {
           value={50}
         />,
       );
-      const bar = container.querySelector("[role='progressbar']") as HTMLElement;
-      expect(bar).toBeTruthy();
+      const bar = container.querySelector<HTMLElement>("[role='progressbar']");
+      if (bar === null) {
+        throw new Error('progressbar not rendered');
+      }
       expect(getComputedStyle(bar).minWidth).toBe('0px');
     });
 
@@ -410,8 +412,10 @@ describe(Progress, () => {
           />
         </Preset>,
       );
-      const bar = container.querySelector("[role='progressbar']") as HTMLElement;
-      expect(bar).toBeTruthy();
+      const bar = container.querySelector<HTMLElement>("[role='progressbar']");
+      if (bar === null) {
+        throw new Error('progressbar not rendered');
+      }
       // jsdom cannot cascade Tamagui class CSS — read the atomic radius class
       // (Button / FieldDisplay precedent): t-radius-0 is the none token.
       const radiusAtoms = bar.className.split(' ').filter((c) => c.startsWith('_btlr-'));
@@ -426,7 +430,10 @@ describe(Progress, () => {
           value={50}
         />,
       );
-      const bar = live.container.querySelector("[role='progressbar']") as HTMLElement;
+      const bar = live.container.querySelector<HTMLElement>("[role='progressbar']");
+      if (bar === null) {
+        throw new Error('progressbar not rendered');
+      }
       const liveHeight = getComputedStyle(bar).height;
 
       const skel = renderWithProviders(

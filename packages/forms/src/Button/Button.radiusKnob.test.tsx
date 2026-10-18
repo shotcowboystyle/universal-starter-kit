@@ -1,6 +1,4 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 
 import { renderWithProviders } from '@repo/test-utils';
 import { Preset } from '@repo/theme';
@@ -25,16 +23,14 @@ import { Button } from './index';
  * `_btlr-100000px`.
  */
 
-afterEach(cleanup);
-
 const frameRadiusClasses = (): string[] => {
   const frame = screen.getByRole('button');
-  return String(frame.className || '')
-    .split(' ')
-    .filter((c) => c.startsWith('_btlr-'));
+  return frame.className.split(' ').filter((c) => c.startsWith('_btlr-'));
 };
 
 describe('Button KNOB-TOTALITY — borderRadius knob', () => {
+  afterEach(cleanup);
+
   it('default variant squares at borderRadius none and follows the scale', () => {
     renderWithProviders(
       <Preset overrides={{ borderRadius: 'none' }}>
@@ -67,7 +63,7 @@ describe('Button KNOB-TOTALITY — borderRadius knob', () => {
         <Button
           circular
           icon={<span>x</span>}
-          aria-label="favorite"
+          aria-label="Favorite"
         />
       </Preset>,
     );
@@ -88,8 +84,8 @@ describe('Button KNOB-TOTALITY — borderRadius knob', () => {
       </Preset>,
     );
     const frame = screen.getByRole('button');
-    expect(frame.dataset.radiusClass).toBeNull();
-    expect(frame.dataset.radiusPart).toBeNull();
+    expect(frame.dataset.radiusClass).toBeUndefined();
+    expect(frame.dataset.radiusPart).toBeUndefined();
   });
 
   it('consumer borderRadius prop wins last over the knob fragment', () => {
@@ -103,6 +99,8 @@ describe('Button KNOB-TOTALITY — borderRadius knob', () => {
 });
 
 describe('Button KNOB-TOTALITY — size and elevation fragments', () => {
+  afterEach(cleanup);
+
   it('size knob drives the recipe height (not the Tamagui token box)', () => {
     renderWithProviders(
       <Preset overrides={{ size: 'small' }}>

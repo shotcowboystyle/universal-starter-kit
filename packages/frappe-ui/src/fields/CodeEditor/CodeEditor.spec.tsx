@@ -8,9 +8,9 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import type { HighlightLine } from '@repo/ui';
 import { TableCellContext } from '@repo/forms';
 import { renderWithProviders } from '@repo/test-utils';
+import type { HighlightLine } from '@repo/ui';
 import { act, cleanup, fireEvent, waitFor } from '@testing-library/react';
 import type React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';

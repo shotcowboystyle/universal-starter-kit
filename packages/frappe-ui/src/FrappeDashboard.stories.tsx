@@ -1,6 +1,6 @@
+import { InMemoryFixtureProvider } from '@repo/frappe';
 import { KPICard, ChartCard } from '@repo/ui';
 import type { DashboardWidget } from '@repo/ui';
-import { InMemoryFixtureProvider } from '@repo/frappe';
 import { Text, YStack } from 'tamagui';
 
 import { FrappeDashboard } from './FrappeDashboard';

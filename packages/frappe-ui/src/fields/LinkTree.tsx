@@ -1,10 +1,10 @@
-import { TreeSelect } from '@repo/ui';
 /**
  * Schema Link whose target DocType is a tree (Account, Item Group, Territory).
  * Loads the forest the same way FrappeTreeView does, then renders TreeSelect.
  */
 import { useDocTypeMeta, useFrappeCollection, useLiveQuery, useLinkTitle } from '@repo/frappe';
 import type { FrappeConnectionConfig } from '@repo/frappe';
+import { TreeSelect } from '@repo/ui';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 

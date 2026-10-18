@@ -1,7 +1,7 @@
+import { WifiSlashIcon } from '@phosphor-icons/react';
 import { useFrappeConnection } from '@repo/frappe';
 import type { FrappeConnectionState, UseFrappeCollectionConfig } from '@repo/frappe';
 import { useResolvedKnobs } from '@repo/theme';
-import { WifiSlashIcon } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { Text, XStack } from 'tamagui';
 

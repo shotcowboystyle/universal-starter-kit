@@ -24,7 +24,7 @@ describe(PresetSwatches, () => {
       <PresetSwatches
         presetColors={BRAND}
         selectedColor="#3B82F6"
-        onSelect={vi.fn()}
+        onSelect={vi.fn<(color: string | null) => void>()}
       />,
     );
     expect(screen.getByRole('radiogroup', { name: 'Color presets' })).toBeTruthy();
@@ -37,7 +37,7 @@ describe(PresetSwatches, () => {
       <PresetSwatches
         presetColors={BRAND}
         selectedColor="#3B82F6"
-        onSelect={vi.fn()}
+        onSelect={vi.fn<(color: string | null) => void>()}
       />,
     );
     const selected = screen.getByRole('radio', { name: 'Color #3B82F6' });
@@ -47,7 +47,7 @@ describe(PresetSwatches, () => {
   });
 
   it('onSelect fires with the hex of the pressed swatch', () => {
-    const onSelect = vi.fn();
+    const onSelect = vi.fn<(color: string | null) => void>();
     renderWithProviders(
       <PresetSwatches
         presetColors={BRAND}
@@ -64,7 +64,7 @@ describe(PresetSwatches, () => {
       <PresetSwatches
         presetColors={[]}
         selectedColor={null}
-        onSelect={vi.fn()}
+        onSelect={vi.fn<(color: string | null) => void>()}
       />,
     );
     expect(container.querySelector('[role="radiogroup"]')).toBeNull();
@@ -72,7 +72,7 @@ describe(PresetSwatches, () => {
   });
 
   it('null entry is the no-color radio and reports null', () => {
-    const onSelect = vi.fn();
+    const onSelect = vi.fn<(color: string | null) => void>();
     renderWithProviders(
       <PresetSwatches
         presetColors={[{ name: 'None', value: null }, '#3B82F6']}

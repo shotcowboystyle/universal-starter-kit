@@ -122,7 +122,9 @@ describe('FrappeTable retry-storm regression (persistently-failing fetch)', () =
 
     // Give a storm every chance: run well past the sync layer's debounce
     // and GC grace windows, then re-check the bound.
-    await act(async () => await new Promise((resolve) => setTimeout(resolve, 300)));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    });
     expect(fixtures.getListCalls).toBe(1);
   });
 
@@ -139,7 +141,9 @@ describe('FrappeTable retry-storm regression (persistently-failing fetch)', () =
     await screen.findByTestId('table-error');
     expect(fixtures.getListCalls).toBe(2);
 
-    await act(async () => await new Promise((resolve) => setTimeout(resolve, 300)));
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    });
     expect(fixtures.getListCalls).toBe(2);
   });
 });

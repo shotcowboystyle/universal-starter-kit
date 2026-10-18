@@ -1,6 +1,6 @@
+import { useResolvedKnobs } from '@repo/theme';
 import { KPICard, Sparkline, Text, XStack, YStack } from '@repo/ui';
 import type { ChartConfig, KPICardConfig } from '@repo/ui';
-import { useResolvedKnobs } from '@repo/theme';
 
 import { ChartCard } from '../ChartCard';
 

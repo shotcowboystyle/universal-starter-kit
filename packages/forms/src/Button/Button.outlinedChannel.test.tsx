@@ -1,6 +1,6 @@
+// @vitest-environment jsdom
+
 /**
- * @vitest-environment jsdom
- *
  * The forms Button's outlined chrome cannot be requested through a
  * channel the component ignores.
  *
@@ -22,11 +22,11 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { Button } from './index';
 
-afterEach(cleanup);
-
 const frame = (): HTMLElement => screen.getByRole('button');
 
 describe('Button outlined channel', () => {
+  afterEach(cleanup);
+
   it('the outlined boolean is the channel, and it paints $borderColor', () => {
     renderWithProviders(<Button outlined>Outlined</Button>);
     expect(frame().className).toMatch(/_btc-borderColor\b/u);

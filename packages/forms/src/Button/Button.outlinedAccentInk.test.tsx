@@ -1,6 +1,6 @@
+// @vitest-environment happy-dom
+
 /**
- * @vitest-environment happy-dom
- *
  * Under fillStyle outlined a `theme="accent"` Button (the portal's
  * Sign in) sits on its host with no fill, and its label kept the accent
  * sub-theme's on-fill `$color`, 1.06:1 on the light page. The accent slot is
@@ -36,8 +36,6 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { Button } from './index';
 import type { ButtonProps } from './index';
 
-afterEach(cleanup);
-
 const houseConfig = createDefaultThemeConfig();
 const houseThemes = createThemesBuilder(defaultBaseTheme, defaultAccentTheme, defaultBuilderOptions).themes();
 
@@ -67,12 +65,9 @@ const houseRender = (ui: ReactElement, scheme: Scheme, knob: boolean) => {
 };
 
 const injectedRuleValue = (className: string, property: string): string => {
-  for (const sheet of [...document.styleSheets]) {
-    for (const rule of [...sheet.cssRules]) {
-      if (!(rule instanceof CSSStyleRule)) {
-        continue;
-      }
-      if (!rule.selectorText.endsWith(`.${className}`)) {
+  for (const sheet of document.styleSheets) {
+    for (const rule of sheet.cssRules) {
+      if (!(rule instanceof CSSStyleRule) || !rule.selectorText.endsWith(`.${className}`)) {
         continue;
       }
       const value = rule.style.getPropertyValue(property);
@@ -92,21 +87,21 @@ const scopeOf = (el: Element): string | null => {
       .map((c) => c.slice(2))
       .filter((c) => c !== 'light' && c !== 'dark');
     if (names.length) {
-      return names.sort((a, b) => b.length - a.length)[0];
+      return names.toSorted((a, b) => b.length - a.length)[0];
     }
   }
   return null;
 };
 
 const resolveInScope = (value: string, scheme: Scheme, scope: string | null): string => {
-  const token = /^var\(--([\w-]+)\)$/u.exec(value)?.[1];
-  if (!token) {
+  const token = /^var\(--(?<token>[\w-]+)\)$/u.exec(value)?.groups?.token;
+  if (token === undefined) {
     return value;
   }
   const chain: string[] = [];
-  if (scope) {
+  if (scope !== null && scope !== '') {
     const parts = scope.split('_');
-    for (let i = parts.length; i > 0; i--) {
+    for (let i = parts.length; i > 0; i -= 1) {
       chain.push(`${scheme}_${parts.slice(0, i).join('_')}`);
     }
   }
@@ -121,47 +116,52 @@ const resolveInScope = (value: string, scheme: Scheme, scope: string | null): st
 };
 
 const paintedColor = (el: Element, scheme: Scheme): string => {
-  const cls = [...el.classList].find((c) => c.startsWith('_col-') && !/^_col-0(hover|active|focus|press)/u.test(c));
-  if (!cls) {
+  const cls = [...el.classList].find((c) => c.startsWith('_col-') && !/^_col-0(?:hover|active|focus|press)/u.test(c));
+  if (cls === undefined) {
     throw new Error(`${el.tagName} carries no _col- class`);
   }
   return resolveInScope(injectedRuleValue(cls, 'color'), scheme, scopeOf(el));
 };
 
-describe("an outlined accent Button's label reads on its host", () => {
-  for (const scheme of SCHEMES) {
-    for (const c of CASES) {
-      it(`${scheme} ${c.name}: label and glyph ink clear 4.5:1 on every host surface`, () => {
-        houseRender(<Button {...c.props}>Sign in</Button>, scheme, c.knob);
-        const label = screen.getByText('Sign in');
-        const frame = label.closest('[role=button]') as Element;
-        for (const [part, el] of [
-          ['label', label],
-          ['frame', frame],
-        ] as const) {
-          const ink = paintedColor(el, scheme);
-          for (const surface of HOST_SURFACES) {
-            const ground = houseThemes[scheme][surface];
-            const { ratio } = measureContrast({ foreground: ink, background: ground });
-            expect(
-              ratio,
-              `${part} ${ink} on ${scheme}.${surface} ${ground}: ${ratio.toFixed(2)}:1`,
-            ).toBeGreaterThanOrEqual(aaTextContrastRatio);
-          }
-        }
-      });
-    }
-  }
+const SCHEME_CASES = SCHEMES.flatMap((scheme) => CASES.map((c) => ({ scheme, ...c })));
 
-  for (const scheme of SCHEMES) {
-    for (const c of [
+const FILLED_CASES = SCHEMES.flatMap((scheme) =>
+  (
+    [
       { name: 'theme="accent"', props: { theme: 'accent' }, knob: false },
       { name: 'accent under the fillStyle outlined knob', props: { accent: true }, knob: true },
-    ] as const) {
-      it(`${scheme}: a filled ${c.name} Button keeps its on-fill label`, () => {
-        houseRender(<Button {...c.props}>Filled</Button>, scheme, c.knob);
-        expect(screen.getByText('Filled').className).toMatch(/_col-color\b/u);
-      });
-    }
-  }
+    ] as const
+  ).map((c) => ({ scheme, ...c })),
+);
+
+describe("an outlined accent Button's label reads on its host", () => {
+  afterEach(cleanup);
+
+  it.each(SCHEME_CASES)(
+    '$scheme $name: label and glyph ink clear 4.5:1 on every host surface',
+    ({ scheme, props, knob }) => {
+      houseRender(<Button {...props}>Sign in</Button>, scheme, knob);
+      const label = screen.getByText('Sign in');
+      const frame = label.closest('[role=button]')!;
+      for (const [part, el] of [
+        ['label', label],
+        ['frame', frame],
+      ] as const) {
+        const ink = paintedColor(el, scheme);
+        for (const surface of HOST_SURFACES) {
+          const ground = houseThemes[scheme][surface];
+          const { ratio } = measureContrast({ foreground: ink, background: ground });
+          expect(
+            ratio,
+            `${part} ${ink} on ${scheme}.${surface} ${ground}: ${ratio.toFixed(2)}:1`,
+          ).toBeGreaterThanOrEqual(aaTextContrastRatio);
+        }
+      }
+    },
+  );
+
+  it.each(FILLED_CASES)('$scheme: a filled $name Button keeps its on-fill label', ({ scheme, props, knob }) => {
+    houseRender(<Button {...props}>Filled</Button>, scheme, knob);
+    expect(screen.getByText('Filled').className).toMatch(/_col-color\b/u);
+  });
 });

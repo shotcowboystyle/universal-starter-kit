@@ -14,8 +14,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { UnsavedChangesDialog } from './UnsavedChangesDialog';
 
-afterEach(cleanup);
-
 const dialog = (): HTMLElement | null => document.body.querySelector('[role="alertdialog"]');
 
 const button = (marker: string): HTMLElement => {
@@ -38,6 +36,8 @@ const cssOf = (node: HTMLElement, prop: string): string => {
 };
 
 describe(UnsavedChangesDialog, () => {
+  afterEach(cleanup);
+
   it('renders nothing while closed', () => {
     renderWithProviders(
       <UnsavedChangesDialog
@@ -129,8 +129,8 @@ describe(UnsavedChangesDialog, () => {
   });
 
   it('calls onKeepEditing, and only that, when the safe button is pressed', () => {
-    const onKeepEditing = vi.fn();
-    const onDiscard = vi.fn();
+    const onKeepEditing = vi.fn<() => void>();
+    const onDiscard = vi.fn<() => void>();
     renderWithProviders(
       <UnsavedChangesDialog
         open
@@ -145,8 +145,8 @@ describe(UnsavedChangesDialog, () => {
   });
 
   it('calls onDiscard, and only that, when the destructive button is pressed', () => {
-    const onKeepEditing = vi.fn();
-    const onDiscard = vi.fn();
+    const onKeepEditing = vi.fn<() => void>();
+    const onDiscard = vi.fn<() => void>();
     renderWithProviders(
       <UnsavedChangesDialog
         open
@@ -161,8 +161,8 @@ describe(UnsavedChangesDialog, () => {
   });
 
   it('treats any dismissal as keep-editing, never as a silent discard', () => {
-    const onKeepEditing = vi.fn();
-    const onDiscard = vi.fn();
+    const onKeepEditing = vi.fn<() => void>();
+    const onDiscard = vi.fn<() => void>();
     renderWithProviders(
       <UnsavedChangesDialog
         open
@@ -184,7 +184,7 @@ describe(UnsavedChangesDialog, () => {
         onDiscard={noop}
       />,
     );
-    expect(dialog()?.hasAttribute('data-mp-savebar-guard')).toBe(true);
+    expect(dialog()?.dataset.mpSavebarGuard).toBeDefined();
   });
 
   it('takes focus itself rather than leaving it behind the overlay', () => {
@@ -225,36 +225,38 @@ describe(UnsavedChangesDialog, () => {
   });
 });
 
+const LeavePage = () => {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          setOpen(true);
+        }}>
+        Leave the page
+      </button>
+      <UnsavedChangesDialog
+        open={open}
+        fieldCount={2}
+        onKeepEditing={() => {
+          setOpen(false);
+        }}
+        onDiscard={() => {
+          setOpen(false);
+        }}
+      />
+    </>
+  );
+};
+
 // Chromium and WebKit's <dialog>.show() focuses the first focusable
 // descendant, and the panel is tabindex=-1, so those two opened on the panel
 // while Firefox and the HTML spec open on Keep editing, the first tab stop.
 // Keep editing is the alertdialog's least destructive action, the one tamagui's
 // AlertDialog.Cancel takes on open, so every browser opens there.
 describe('UnsavedChangesDialog open focus', () => {
-  const LeavePage = () => {
-    const [open, setOpen] = useState(false);
-    return (
-      <>
-        <button
-          type="button"
-          onClick={() => {
-            setOpen(true);
-          }}>
-          Leave the page
-        </button>
-        <UnsavedChangesDialog
-          open={open}
-          fieldCount={2}
-          onKeepEditing={() => {
-            setOpen(false);
-          }}
-          onDiscard={() => {
-            setOpen(false);
-          }}
-        />
-      </>
-    );
-  };
+  afterEach(cleanup);
 
   it('opens on Keep editing', async () => {
     renderWithProviders(<LeavePage />);
@@ -268,7 +270,7 @@ describe('UnsavedChangesDialog open focus', () => {
   });
 
   describe('behind <dialog>.show()', () => {
-    let restoreShow = () => {};
+    let restoreShow: () => void = noop;
     beforeEach(() => {
       restoreShow = modelFirstFocusableShow();
     });

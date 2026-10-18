@@ -15,7 +15,7 @@ const textBoneRadius = (borderRadius: BorderRadius) => {
       />
     </Preset>,
   );
-  const bone = container.querySelector('.is_Skeleton') as HTMLElement;
+  const bone = container.querySelector('.is_Skeleton')!;
   const atoms = bone.className.split(' ').filter((c) => c.startsWith('_btlr-'));
   cleanup();
   return atoms;

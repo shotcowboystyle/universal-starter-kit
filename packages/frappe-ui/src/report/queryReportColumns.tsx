@@ -1,5 +1,5 @@
-import { Text } from '@repo/ui';
 import type { DataTableColumn } from '@repo/table';
+import { Text } from '@repo/ui';
 // Query-report column meta → DataTable columns with fieldtype-aware cells:
 // numerics right-aligned, Date/Datetime trimmed like desk lists, Link cells
 // navigable to the target doc form, HTML values (desk anchor markup)

@@ -41,10 +41,10 @@ stack-navigation seam (`@repo/router/seam`).
 
 ## Which package for what
 
-| Package                         | Owns                                                                                     |
-| ------------------------------- | ---------------------------------------------------------------------------------------- |
+| Package            | Owns                                                                                     |
+| ------------------ | ---------------------------------------------------------------------------------------- |
 | `@repo/theme`      | Knobs, presets, intents, recipes, `useResolvedKnobs`                                     |
-| `@repo/ui` | Catalog UI (layouts, surfaces, feedback, …)                                              |
+| `@repo/ui`         | Catalog UI (layouts, surfaces, feedback, …)                                              |
 | `@repo/forms`      | Fields, Form, InputParts, field contracts, form color ramps                              |
 | `@repo/table`      | DataTable, cells, filters, URL table state                                               |
 | `@repo/frappe-ui`  | Frappe adapters (`FrappeTable`, field registry, the query-report and report-view models) |

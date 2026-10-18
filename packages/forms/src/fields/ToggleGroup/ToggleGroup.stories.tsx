@@ -9,6 +9,131 @@ import { Form } from '../../Form';
 
 import { ToggleGroup } from './index';
 
+const alignmentOptions = [
+  { label: 'Left', value: 'left' },
+  { label: 'Center', value: 'center' },
+  { label: 'Right', value: 'right' },
+];
+
+const FormExample = () => {
+  const form = useForm({
+    defaultValues: {
+      alignment: 'center',
+      features: ['comments'],
+    },
+    onSubmit: async ({ value }) => {
+      action('onSubmit')(value);
+    },
+  });
+
+  return (
+    <Form form={form}>
+      <YStack gap="$4">
+        <ToggleGroup
+          label="Alignment"
+          name="alignment"
+          type="single"
+          options={[
+            { label: 'Left', value: 'left' },
+            { label: 'Center', value: 'center' },
+            { label: 'Right', value: 'right' },
+          ]}
+        />
+        <ToggleGroup
+          label="Enabled features"
+          name="features"
+          type="multiple"
+          options={[
+            { label: 'Comments', value: 'comments' },
+            { label: 'Mentions', value: 'mentions' },
+            { label: 'Attachments', value: 'attachments' },
+          ]}
+        />
+        <Button action="submit">Submit</Button>
+      </YStack>
+    </Form>
+  );
+};
+
+const InteractiveExample = () => {
+  const [value, setValue] = useState('left');
+  return (
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <ToggleGroup
+        label="Text alignment"
+        type="single"
+        value={value}
+        onChange={(val) => {
+          setValue(val as string);
+        }}
+        options={[
+          { label: 'Left', value: 'left' },
+          { label: 'Center', value: 'center' },
+          { label: 'Right', value: 'right' },
+        ]}
+      />
+      <Text>Selected: {value}</Text>
+    </YStack>
+  );
+};
+
+const ComparisonExample = () => {
+  const [customVal, setCustomVal] = useState('left');
+  const [tamaguiVal, setTamaguiVal] = useState('left');
+  return (
+    <XStack
+      gap="$6"
+      alignItems="flex-start"
+      padding="$4">
+      <YStack
+        gap="$3"
+        width={300}>
+        <Paragraph
+          size="$2"
+          color="$placeholderColor">
+          Custom ToggleGroup
+        </Paragraph>
+        <ToggleGroup
+          type="single"
+          value={customVal}
+          options={alignmentOptions}
+          onChange={(val) => {
+            setCustomVal(val as string);
+            action('custom.onChange')(val);
+          }}
+        />
+      </YStack>
+
+      <YStack
+        gap="$3"
+        width={300}>
+        <Paragraph
+          size="$2"
+          color="$placeholderColor">
+          Tamagui ToggleGroup
+        </Paragraph>
+        <TamaguiToggleGroup
+          type="single"
+          value={tamaguiVal}
+          onValueChange={(val) => {
+            setTamaguiVal(val);
+            action('tamagui.onValueChange')(val);
+          }}>
+          {alignmentOptions.map((opt) => (
+            <TamaguiToggleGroup.Item
+              key={opt.value}
+              value={opt.value}>
+              <SizableText>{opt.label}</SizableText>
+            </TamaguiToggleGroup.Item>
+          ))}
+        </TamaguiToggleGroup>
+      </YStack>
+    </XStack>
+  );
+};
+
 const meta: Meta<typeof ToggleGroup> = {
   title: 'Forms/ToggleGroup',
   component: ToggleGroup,
@@ -69,49 +194,7 @@ type Story = StoryObj<typeof ToggleGroup>;
 
 export const Main: Story = {
   name: 'Main',
-  render: () => {
-    const FormExample = () => {
-      const form = useForm({
-        defaultValues: {
-          alignment: 'center',
-          features: ['comments'],
-        },
-        onSubmit: async ({ value }) => {
-          action('onSubmit')(value);
-        },
-      });
-
-      return (
-        <Form form={form}>
-          <YStack gap="$4">
-            <ToggleGroup
-              label="Alignment"
-              name="alignment"
-              type="single"
-              options={[
-                { label: 'Left', value: 'left' },
-                { label: 'Center', value: 'center' },
-                { label: 'Right', value: 'right' },
-              ]}
-            />
-            <ToggleGroup
-              label="Enabled features"
-              name="features"
-              type="multiple"
-              options={[
-                { label: 'Comments', value: 'comments' },
-                { label: 'Mentions', value: 'mentions' },
-                { label: 'Attachments', value: 'attachments' },
-              ]}
-            />
-            <Button action="submit">Submit</Button>
-          </YStack>
-        </Form>
-      );
-    };
-
-    return <FormExample />;
-  },
+  render: () => <FormExample />,
 };
 
 export const Standalone: Story = {
@@ -265,39 +348,8 @@ export const Sizes: Story = {
 };
 
 export const Interactive: Story = {
-  render: () => {
-    const InteractiveExample = () => {
-      const [value, setValue] = useState('left');
-      return (
-        <YStack
-          gap="$4"
-          maxWidth={400}>
-          <ToggleGroup
-            label="Text alignment"
-            type="single"
-            value={value}
-            onValueChange={(val) => {
-              setValue(val as string);
-            }}
-            options={[
-              { label: 'Left', value: 'left' },
-              { label: 'Center', value: 'center' },
-              { label: 'Right', value: 'right' },
-            ]}
-          />
-          <Text>Selected: {value}</Text>
-        </YStack>
-      );
-    };
-    return <InteractiveExample />;
-  },
+  render: () => <InteractiveExample />,
 };
-
-const alignmentOptions = [
-  { label: 'Left', value: 'left' },
-  { label: 'Center', value: 'center' },
-  { label: 'Right', value: 'right' },
-];
 
 /**
  * FOREIGN CONTRAST SPECIMEN: the right column renders the
@@ -319,63 +371,7 @@ export const Comparison: Story = {
       },
     },
   },
-  render: () => {
-    const ComparisonExample = () => {
-      const [customVal, setCustomVal] = useState('left');
-      const [tamaguiVal, setTamaguiVal] = useState('left');
-      return (
-        <XStack
-          gap="$6"
-          alignItems="flex-start"
-          padding="$4">
-          <YStack
-            gap="$3"
-            width={300}>
-            <Paragraph
-              size="$2"
-              color="$placeholderColor">
-              Custom ToggleGroup
-            </Paragraph>
-            <ToggleGroup
-              type="single"
-              value={customVal}
-              options={alignmentOptions}
-              onValueChange={(val) => {
-                setCustomVal(val as string);
-                action('custom.onValueChange')(val);
-              }}
-            />
-          </YStack>
-
-          <YStack
-            gap="$3"
-            width={300}>
-            <Paragraph
-              size="$2"
-              color="$placeholderColor">
-              Tamagui ToggleGroup
-            </Paragraph>
-            <TamaguiToggleGroup
-              type="single"
-              value={tamaguiVal}
-              onValueChange={(val) => {
-                setTamaguiVal(val);
-                action('tamagui.onValueChange')(val);
-              }}>
-              {alignmentOptions.map((opt) => (
-                <TamaguiToggleGroup.Item
-                  key={opt.value}
-                  value={opt.value}>
-                  <SizableText>{opt.label}</SizableText>
-                </TamaguiToggleGroup.Item>
-              ))}
-            </TamaguiToggleGroup>
-          </YStack>
-        </XStack>
-      );
-    };
-    return <ComparisonExample />;
-  },
+  render: () => <ComparisonExample />,
 };
 
 /** Loading placeholder — the skeleton mirrors the segment row anatomy. */

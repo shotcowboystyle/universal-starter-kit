@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { Spinner } from './index';
 
-const status = (container: HTMLElement): HTMLElement => container.querySelector("[role='status']") as HTMLElement;
+const status = (container: HTMLElement): HTMLElement => container.querySelector("[role='status']")!;
 
 describe(Spinner, () => {
   afterEach(cleanup);

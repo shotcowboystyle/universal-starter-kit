@@ -1,6 +1,6 @@
-import { useRegisterPageHeading } from '@repo/ui';
 import { Skeleton } from '@repo/forms';
 import { sizeRecipeEscape, useResolvedKnobs } from '@repo/theme';
+import { useRegisterPageHeading } from '@repo/ui';
 import type React from 'react';
 import { useCallback, useEffect, useId, useState } from 'react';
 import { getTokenValue, H1, H2, H3, H4, Separator, Text, XStack, YStack } from 'tamagui';

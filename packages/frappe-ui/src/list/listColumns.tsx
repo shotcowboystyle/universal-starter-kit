@@ -1,12 +1,12 @@
-import { Avatar, Anchor, Chip, Text, XStack } from '@repo/ui';
-import type { ChipColor } from '@repo/ui';
+import { ChatCircleIcon, HeartIcon } from '@phosphor-icons/react';
 // House control for the like toggle — the icon rides the Button icon slot
 // (LC-53 GLYPH-SLOT) and the sub-44 circular size resolves the press floor
 // through the house channel (LC-54: 44px box + hitSlop).
 import { Button } from '@repo/forms';
 import type { DataTableColumn } from '@repo/table';
 import { formatAbsoluteDateTime } from '@repo/theme';
-import { ChatCircleIcon, HeartIcon } from '@phosphor-icons/react';
+import { Avatar, Anchor, Chip, Text, XStack } from '@repo/ui';
+import type { ChipColor } from '@repo/ui';
 // Meta-driven column builder for the doctype list view (desk ListView
 // parity): subject-led document rows, not a report grid.
 //

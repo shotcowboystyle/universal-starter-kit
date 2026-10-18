@@ -11,25 +11,24 @@ import { cleanup, fireEvent, screen } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import * as storiesModule from './UnsavedChangesDialog.stories';
+import meta, { Basic, SingleField, ManyFields, Closed, Interactive } from './UnsavedChangesDialog.stories';
 
-afterEach(cleanup);
-
-const meta = storiesModule.default;
-const { Basic, SingleField, ManyFields, Closed, Interactive } = storiesModule;
+type StoryArgs = NonNullable<typeof meta.args>;
 
 interface StoryLike {
-  render?: (args: Record<string, unknown>) => ReactElement;
+  render?: (args: StoryArgs) => ReactElement;
 }
 
 const mount = (story: StoryLike) => {
   if (!story.render) {
     throw new Error('story has no render');
   }
-  return renderWithProviders(story.render({ ...(meta.args as Record<string, unknown>) }));
+  return renderWithProviders(story.render({ ...meta.args }));
 };
 
 describe('Forms/ContextualSaveBar/UnsavedChangesDialog stories', () => {
+  afterEach(cleanup);
+
   it('nests under ContextualSaveBar so the gallery keeps it with the bar that raises it', () => {
     expect(meta.title).toBe('Forms/ContextualSaveBar/UnsavedChangesDialog');
   });

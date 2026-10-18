@@ -86,45 +86,44 @@ export const Closed: Story = {
   ),
 };
 
+const InteractiveExample = () => {
+  const [open, setOpen] = useState(false);
+  const [outcome, setOutcome] = useState<string>('nothing yet');
+  return (
+    <YStack
+      gap="$4"
+      maxWidth={420}
+      alignItems="flex-start">
+      <Button
+        onPress={() => {
+          setOpen(true);
+        }}>
+        Leave the page
+      </Button>
+      <Paragraph size="$3">last outcome: {outcome}</Paragraph>
+      <UnsavedChangesDialog
+        open={open}
+        fieldCount={3}
+        onKeepEditing={() => {
+          setOpen(false);
+          setOutcome('kept editing');
+          action('onKeepEditing')();
+        }}
+        onDiscard={() => {
+          setOpen(false);
+          setOutcome('discarded');
+          action('onDiscard')();
+        }}
+      />
+    </YStack>
+  );
+};
+
 /**
  * The live loop. "Keep editing" is the safe path and is also what Escape and
  * `onOpenChange(false)` resolve to; "Discard changes" is the only way to lose
  * the edits, and it is the destructive-styled button.
  */
 export const Interactive: Story = {
-  render: () => {
-    const Example = () => {
-      const [open, setOpen] = useState(false);
-      const [outcome, setOutcome] = useState<string>('nothing yet');
-      return (
-        <YStack
-          gap="$4"
-          maxWidth={420}
-          alignItems="flex-start">
-          <Button
-            onPress={() => {
-              setOpen(true);
-            }}>
-            Leave the page
-          </Button>
-          <Paragraph size="$3">last outcome: {outcome}</Paragraph>
-          <UnsavedChangesDialog
-            open={open}
-            fieldCount={3}
-            onKeepEditing={() => {
-              setOpen(false);
-              setOutcome('kept editing');
-              action('onKeepEditing')();
-            }}
-            onDiscard={() => {
-              setOpen(false);
-              setOutcome('discarded');
-              action('onDiscard')();
-            }}
-          />
-        </YStack>
-      );
-    };
-    return <Example />;
-  },
+  render: () => <InteractiveExample />,
 };

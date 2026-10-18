@@ -215,7 +215,7 @@ describe('DateRangeField controlled value (MPO-137)', () => {
       />,
     );
     await act(async () => {
-      fireEvent.click(result.container.querySelector('[data-testid="date-picker-clear"]') as HTMLElement);
+      fireEvent.click(result.container.querySelector('[data-testid="date-picker-clear"]')!);
     });
     expect(onChange).toHaveBeenCalledWith('');
   });

@@ -219,6 +219,7 @@ const getHoverStyle = (canInteract: boolean, hasError: boolean) =>
 
 const removeLabel = (fileName: string): string => t('Remove {{name}}', { name: fileName });
 
+// oxlint-disable-next-line react-doctor/no-giant-component -- one field owns the upload queue, drop-zone listeners and preview refs; splitting would thread them all through props
 export const FileUpload = <
   TParentData,
   TName extends DeepKeys<TParentData>,

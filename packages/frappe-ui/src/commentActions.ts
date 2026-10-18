@@ -102,7 +102,7 @@ export function useFrappeCommentActions(
                 comment_by: fullname ?? email,
               });
               const payload = response?.payload;
-              const created = (payload?.message ?? payload) as CommentDoc | undefined;
+              const created = payload?.message ?? payload;
               if (!created?.name) {
                 throw new Error('add_comment returned no document');
               }

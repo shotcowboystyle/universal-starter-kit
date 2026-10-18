@@ -2,6 +2,7 @@ import { ensureKeyboardModalityTracking, useResolvedKnobs, warnCancelDisabled, w
 import { useEffect } from 'react';
 import { Dialog, Paragraph, XStack } from 'tamagui';
 
+// oxlint-disable-next-line import/no-cycle -- Form renders the save bar, so any forms import that reaches Form closes the loop; splitting the context out would move exported modules
 import { Button } from '../Button';
 import { formCommonColors } from '../shared/color-ramps';
 import { DialogShowFocus, useReturnFocusOnClose } from '../shared/focus-management';
@@ -22,13 +23,15 @@ export interface UnsavedChangesDialogProps {
  * would carry onto the button after a pointer open; the ring is keyboard-only.
  */
 const focusKeepEditing = (event: Event) => {
-  const root = event.currentTarget as HTMLElement | null;
-  const keep = root?.querySelector<HTMLElement>('[data-mp-savebar-keep]');
+  const root = event.currentTarget;
+  const keep = root instanceof Element ? root.querySelector<HTMLElement>('[data-mp-savebar-keep]') : null;
   if (!keep) {
     return;
   }
   event.preventDefault();
-  keep.focus({ preventScroll: true, focusVisible: wasKeyboardFocus() } as FocusOptions);
+  // `focusVisible` is newer than the DOM lib's FocusOptions; a non-literal skips the excess-property check.
+  const focusOptions = { preventScroll: true, focusVisible: wasKeyboardFocus() };
+  keep.focus(focusOptions);
 };
 
 /**
@@ -69,8 +72,8 @@ export const UnsavedChangesDialog = ({ open, fieldCount, onKeepEditing, onDiscar
           backgroundColor="$background"
           opacity={0.5}
           transition={knobProps.transition}
-          enterStyle={knobProps.transition ? { opacity: 0 } : undefined}
-          exitStyle={knobProps.transition ? { opacity: 0 } : undefined}
+          enterStyle={knobProps.transition === undefined ? undefined : { opacity: 0 }}
+          exitStyle={knobProps.transition === undefined ? undefined : { opacity: 0 }}
         />
         <Dialog.Content
           key="content"

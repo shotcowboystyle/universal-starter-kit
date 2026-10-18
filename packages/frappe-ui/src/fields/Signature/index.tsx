@@ -1,6 +1,6 @@
+import { EraserIcon } from '@phosphor-icons/react';
 import type { FormFieldProps, FieldComponentProps } from '@repo/forms';
 import { Signature as FormsSignature } from '@repo/forms';
-import { EraserIcon } from '@phosphor-icons/react';
 import type { DeepKeys } from '@tanstack/form-core';
 import { useProps } from 'tamagui';
 

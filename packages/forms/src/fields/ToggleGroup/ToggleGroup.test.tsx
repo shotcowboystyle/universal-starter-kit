@@ -20,6 +20,12 @@ import { __resetDevWarnSeen } from '../../shared/dev-warn';
 
 import { ToggleGroup } from './index';
 
+const elevationWrapperFor = (segment: HTMLElement): HTMLElement => {
+  const wrapper = segment.parentElement!;
+  expect(wrapper?.getAttribute('style') ?? '').toMatch(/box-shadow/u);
+  return wrapper;
+};
+
 // The stock test themes carry no accent ramp, so token resolution for the
 // selected mark is invisible under renderWithProviders. Mount the house
 // builder themes (the same ones apps run) to assert the real resolved fill —
@@ -119,14 +125,15 @@ describe(ToggleGroup, () => {
     });
 
     it('fires canonical onChange and the deprecated onValueChange alias once each', () => {
-      const onChange = vi.fn();
-      const onValueChange = vi.fn();
+      const onChange = vi.fn<(value: string | string[]) => void>();
+      const onValueChange = vi.fn<(value: string | string[]) => void>();
       const result = renderWithProviders(
         <ToggleGroup
           label="Alignment"
           name="align"
           options={options}
           onChange={onChange}
+          // oxlint-disable-next-line typescript/no-deprecated -- this test pins the deprecated alias
           onValueChange={onValueChange}
         />,
       );
@@ -135,10 +142,8 @@ describe(ToggleGroup, () => {
       if (center) {
         fireEvent.click(center);
       }
-      expect(onChange).toHaveBeenCalledOnce();
-      expect(onChange).toHaveBeenCalledWith('center');
-      expect(onValueChange).toHaveBeenCalledOnce();
-      expect(onValueChange).toHaveBeenCalledWith('center');
+      expect(onChange).toHaveBeenCalledExactlyOnceWith('center');
+      expect(onValueChange).toHaveBeenCalledExactlyOnceWith('center');
     });
   });
 
@@ -197,7 +202,7 @@ describe(ToggleGroup, () => {
     });
 
     it('explained disabled item renders its reason line, is described by it, and blocks change', () => {
-      const onChange = vi.fn();
+      const onChange = vi.fn<(value: string | string[]) => void>();
       renderWithProviders(
         <ToggleGroup
           label="Alignment"
@@ -349,19 +354,13 @@ describe(ToggleGroup, () => {
       expect(segments.length).toBeGreaterThan(0);
       for (const segment of segments) {
         expect(segment.className).toMatch(/transition|tns-|trs-/iu);
-        expect(segment.style.transitionDuration).toMatch(/\d+ms/u);
+        expect(segment.style.transitionDuration).toMatch(/\dms/u);
         expect(segment.style.transitionDuration).not.toMatch(/^0m?s$/u);
       }
     });
   });
 
   describe('per-segment elevation wrapper', () => {
-    const elevationWrapperFor = (segment: HTMLElement): HTMLElement => {
-      const wrapper = segment.parentElement!;
-      expect(wrapper?.getAttribute('style') ?? '').toMatch(/box-shadow/u);
-      return wrapper;
-    };
-
     // The wrapper only exists to carry a shadow, and the default stop paints
     // none on a control, so these render at elevation medium.
     it("lays the wrapper out as a row so the segment's zero flex-basis sizes width, not height", () => {
@@ -464,12 +463,12 @@ describe(ToggleGroup, () => {
       expect(seams.length).toBeGreaterThan(0);
       for (const seam of seams) {
         expect(seam.className + JSON.stringify(seam.style.cssText)).toMatch(/insetInlineEnd|inset-inline-end/iu);
-        expect(seam.getAttribute('style') ?? '').not.toMatch(/(?:^|;)\s*right\s*:/u);
+        expect(seam.style.right).toBe('');
       }
     });
 
     it('blocks change when readOnly (SB-M-218)', () => {
-      const onChange = vi.fn();
+      const onChange = vi.fn<(value: string | string[]) => void>();
       const result = renderWithProviders(
         <ToggleGroup
           label="Alignment"

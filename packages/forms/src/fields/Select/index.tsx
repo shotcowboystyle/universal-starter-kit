@@ -717,10 +717,10 @@ const FloatingSelectCore = ({
 
   // Sync drag scroll ref with floating ref
   useEffect(() => {
-    // oxlint-disable-next-line react-hooks/exhaustive-deps -- keyed on the floating node itself: it is attached after mount, and a ref's .current is the only signal
     if (panelRefs.floating.current) {
       dragScrollRef.current = panelRefs.floating.current;
     }
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- keyed on the floating node itself: it is attached after mount, and a ref's .current is the only signal
   }, [panelRefs.floating.current, dragScrollRef]);
 
   useEffect(() => {

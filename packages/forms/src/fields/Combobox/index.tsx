@@ -461,7 +461,7 @@ const ComboboxItem = memo(function ComboboxItem({
     <ComboboxRow
       ref={(node: TamaguiElement | null) => {
         // SAFETY: option rows render as DOM nodes on the web panel, the only consumer of listItemsRef.
-        // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- TamaguiElement also admits native views, which never reach this web-only list
+        // oxlint-disable-next-line typescript/no-unsafe-type-assertion, react/immutability -- TamaguiElement also admits native views, which never reach this web-only list; the ref callback registers the row in floating-ui's listRef by design
         ctx.listItemsRef.current[index] = node as HTMLElement | null;
       }}
       {...itemProps}
@@ -577,6 +577,7 @@ interface FloatingComboboxCoreProps {
   onOpenChange?: (open: boolean) => void;
 }
 
+// oxlint-disable-next-line react-doctor/no-giant-component, eslint/complexity -- one component owns the shared overlay refs and keyboard state; splitting would thread ~20 refs through props
 const FloatingComboboxCore = ({
   options,
   value,
@@ -611,6 +612,7 @@ const FloatingComboboxCore = ({
   searchValue,
   open: openProp,
   onOpenChange,
+  // oxlint-disable-next-line sonarjs/cognitive-complexity -- see the component note above
 }: FloatingComboboxCoreProps) => {
   const hydrationTouch = useTouchSurface();
   if (isWeb) {
@@ -643,6 +645,7 @@ const FloatingComboboxCore = ({
 
   const labelCacheRef = useRef<Map<string, string>>(new Map());
   for (const o of options) {
+    // oxlint-disable-next-line react/refs -- label cache keeps labels of options that leave the list (async search) so selected values keep their text
     labelCacheRef.current.set(o.value, o.label);
   }
   const getLabel = useCallback((v: string) => labelCacheRef.current.get(v) ?? v, []);
@@ -652,6 +655,7 @@ const FloatingComboboxCore = ({
       return [];
     }
     const vals = toValueArray(value);
+    // oxlint-disable-next-line react/refs -- label cache keeps labels of options that leave the list (async search) so selected values keep their text
     return vals.toSorted((a, b) => getLabel(a).localeCompare(getLabel(b)));
   }, [multiple, value, getLabel]);
 
@@ -734,6 +738,7 @@ const FloatingComboboxCore = ({
   const hasSearchedRef = useRef(false);
   const sortedFiltered = useMemo(() => {
     if (filter.trim()) {
+      // oxlint-disable-next-line react/refs -- first-open order is pinned in a ref so selecting never reorders the open list
       hasSearchedRef.current = true;
       return filtered;
     }
@@ -745,6 +750,7 @@ const FloatingComboboxCore = ({
     }
     // First open with empty filter (no search yet): compute order with selected at front, store once
     // User searched then cleared: keep natural order.
+    // oxlint-disable-next-line react/refs -- first-open order is pinned in a ref so selecting never reorders the open list
     if (hasSearchedRef.current) {
       return filtered;
     }
@@ -752,6 +758,7 @@ const FloatingComboboxCore = ({
       const current = toValueArray(value);
       initialOrderRef.current = orderOptionsBySelected(filtered, current, selectedOrder);
     }
+    // oxlint-disable-next-line react/refs -- first-open order is pinned in a ref so selecting never reorders the open list
     return initialOrderRef.current;
   }, [filtered, filter, open, multiple, value, selectedOrder]);
 
@@ -802,6 +809,7 @@ const FloatingComboboxCore = ({
   const lastScrollTopRef = useRef(0);
   const growConstraintRef = useRef<'no-up' | 'no-down' | null>(null);
   const filterRef = useRef(filter);
+  // oxlint-disable-next-line react/refs -- latest-value ref mirror, read only by listeners/rAF callbacks outside render
   filterRef.current = filter;
 
   const repositionRef = useRef<(() => void) | null>(null);
@@ -828,6 +836,8 @@ const FloatingComboboxCore = ({
     },
   });
 
+  const { refs: panelRefs, triggerRef: panelTriggerRef, arrowScrollDirRef, updateArrows } = panel;
+
   const { scrollRef: dragScrollRef, dragProps } = useDragScroll({
     direction: 'vertical',
   });
@@ -838,6 +848,7 @@ const FloatingComboboxCore = ({
     if (listScrollRef.current) {
       dragScrollRef.current = listScrollRef.current;
     }
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- `open` re-syncs once the list mounts; react-hooks requires dragScrollRef because it comes from a custom hook
   }, [open, dragScrollRef]);
 
   const justResetFromFilterRef = useRef(false);
@@ -846,32 +857,41 @@ const FloatingComboboxCore = ({
   useEffect(() => {
     if (open) {
       justResetFromFilterRef.current = true;
+      // oxlint-disable-next-line react/set-state-in-effect, react-doctor/no-adjust-state-on-prop-change, react-doctor/no-chain-state-updates -- open/close resets the transient panel state (highlight, filter, keyboard ring) in lock-step with `open`, which may be parent-controlled
       setActiveIndex(0);
       hasSelectedSinceOpenRef.current = false;
     } else {
+      // oxlint-disable-next-line react-doctor/no-adjust-state-on-prop-change, react-doctor/no-chain-state-updates -- open/close resets the transient panel state (highlight, filter, keyboard ring) in lock-step with `open`, which may be parent-controlled
       setInternalFilter('');
+      // oxlint-disable-next-line react-doctor/no-adjust-state-on-prop-change, react-doctor/no-chain-state-updates -- open/close resets the transient panel state (highlight, filter, keyboard ring) in lock-step with `open`, which may be parent-controlled
       setActiveIndex(null);
       lastMousePosRef.current = null;
       initialOrderRef.current = null;
       hasSearchedRef.current = false;
+      // oxlint-disable-next-line react-doctor/no-chain-state-updates -- open/close resets the transient panel state (highlight, filter, keyboard ring) in lock-step with `open`, which may be parent-controlled
       setKeyboardNav(false);
     }
-  }, [open]);
+  }, [open, setKeyboardNav]);
 
   // Document-level Enter/Escape to close (catches keys when focus is on list, not just search)
   const activeIndexRef = useRef(activeIndex);
+  // oxlint-disable-next-line react/refs -- latest-value ref mirror, read only by listeners/rAF callbacks outside render
   activeIndexRef.current = activeIndex;
   const navigableOptionsRef = useRef(navigableOptions);
+  // oxlint-disable-next-line react/refs -- latest-value ref mirror, read only by listeners/rAF callbacks outside render
   navigableOptionsRef.current = navigableOptions;
   const showCreateOptionRef = useRef(showCreateOption);
+  // oxlint-disable-next-line react/refs -- latest-value ref mirror, read only by listeners/rAF callbacks outside render
   showCreateOptionRef.current = showCreateOption;
   const multipleRef = useRef(multiple);
+  // oxlint-disable-next-line react/refs -- latest-value ref mirror, read only by listeners/rAF callbacks outside render
   multipleRef.current = multiple;
 
   const repositionOverlay = useCallback(
+    // oxlint-disable-next-line eslint/complexity, sonarjs/cognitive-complexity -- one imperative positioning pass; splitting would scatter the shared geometry locals
     (source: 'filter' | 'wheel' | 'init') => {
-      const dropdownElement = panel.refs.floating.current;
-      const trigger = panel.triggerRef.current;
+      const dropdownElement = panelRefs.floating.current;
+      const trigger = panelTriggerRef.current;
       const listScrollElement = listScrollRef.current;
       if (!dropdownElement || !trigger) {
         return;
@@ -879,6 +899,7 @@ const FloatingComboboxCore = ({
 
       const suppressTransition = source === 'init' || source === 'filter';
       if (suppressTransition) {
+        // oxlint-disable-next-line react/immutability -- imperative positioning writes the floating element's DOM style from layout callbacks, never during render
         dropdownElement.style.transition = 'none';
       }
 
@@ -950,10 +971,10 @@ const FloatingComboboxCore = ({
         }
         requestAnimationFrame(() => {
           if (listScrollRef.current) {
-            panel.updateArrows(listScrollRef.current);
+            updateArrows(listScrollRef.current);
             requestAnimationFrame(() => {
               if (listScrollRef.current) {
-                panel.updateArrows(listScrollRef.current);
+                updateArrows(listScrollRef.current);
               }
             });
           }
@@ -1016,7 +1037,7 @@ const FloatingComboboxCore = ({
         void dropdownElement.offsetHeight;
         requestAnimationFrame(() => {
           if (listScrollRef.current) {
-            panel.updateArrows(listScrollRef.current);
+            updateArrows(listScrollRef.current);
           }
         });
         return;
@@ -1044,18 +1065,20 @@ const FloatingComboboxCore = ({
       }
       requestAnimationFrame(() => {
         if (listScrollRef.current) {
-          panel.updateArrows(listScrollRef.current);
+          updateArrows(listScrollRef.current);
           requestAnimationFrame(() => {
             if (listScrollRef.current) {
-              panel.updateArrows(listScrollRef.current);
+              updateArrows(listScrollRef.current);
             }
           });
         }
       });
     },
-    [panel.placement, panel.updateArrows, popoverWidth, panel.refs],
+    // oxlint-disable-next-line react/preserve-manual-memoization -- repositionOverlay writes refs and DOM imperatively; the manual memo keeps its identity stable for the layout effect
+    [panel.placement, updateArrows, popoverWidth, panelRefs, panelTriggerRef],
   );
 
+  // oxlint-disable-next-line react/refs -- latest-value ref mirror, read only by listeners/rAF callbacks outside render
   repositionRef.current = () => {
     repositionOverlay('wheel');
   };
@@ -1066,6 +1089,7 @@ const FloatingComboboxCore = ({
     }
     grownRef.current = false;
     repositionOverlay('filter');
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- filtered.length and loading are re-measure triggers for the panel height
   }, [open, panel.mounted, filtered.length, loading, repositionOverlay]);
 
   useEffect(() => {
@@ -1077,16 +1101,17 @@ const FloatingComboboxCore = ({
   const loadMoreTriggeredRef = useRef(false);
 
   const repositionOverlayRef = useRef(repositionOverlay);
+  // oxlint-disable-next-line react/refs -- latest-value ref mirror, read only by listeners/rAF callbacks outside render
   repositionOverlayRef.current = repositionOverlay;
 
   const handleListScroll = useCallback(
     (event: React.UIEvent<HTMLElement>) => {
       const element = event.currentTarget;
-      panel.updateArrows(element);
+      updateArrows(element);
 
-      const arrowDir = panel.arrowScrollDirRef.current;
+      const arrowDir = arrowScrollDirRef.current;
       if (arrowDir) {
-        panel.arrowScrollDirRef.current = null;
+        arrowScrollDirRef.current = null;
         lastScrollTopRef.current = element.scrollTop;
         growConstraintRef.current = arrowDir === 'down' ? 'no-down' : 'no-up';
         repositionOverlayRef.current('wheel');
@@ -1106,7 +1131,7 @@ const FloatingComboboxCore = ({
         }
       }
     },
-    [panel.updateArrows, onLoadMore, hasMore, loading],
+    [updateArrows, arrowScrollDirRef, onLoadMore, hasMore, loading],
   );
 
   useEffect(() => {
@@ -1117,13 +1142,14 @@ const FloatingComboboxCore = ({
     const frame = requestAnimationFrame(() => {
       const scrollElement = listScrollRef.current;
       if (scrollElement) {
-        panel.updateArrows(scrollElement);
+        updateArrows(scrollElement);
       }
     });
     return () => {
       cancelAnimationFrame(frame);
     };
-  }, [open, filtered, panel.updateArrows]);
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- filtered is a trigger: a new list needs its scroll arrows re-measured
+  }, [open, filtered, updateArrows]);
 
   // Track mouse position when open. Use elementFromPoint as primary source for hover - mouseenter
   // lags behind React's async updates. Only sync when cursor is over OUR panel.
@@ -1139,7 +1165,7 @@ const FloatingComboboxCore = ({
       if (keyboardNavRef.current) {
         return;
       }
-      const floating = panel.refs.floating.current;
+      const floating = panelRefs.floating.current;
       if (!floating) {
         return;
       }
@@ -1162,7 +1188,7 @@ const FloatingComboboxCore = ({
     return () => {
       document.removeEventListener('mousemove', onMove);
     };
-  }, [open, panel.refs]);
+  }, [open, panelRefs]);
 
   // When filter/list changes: truncate refs, sync activeIndex with cursor.
   // Typing is keyboard-origin — do not drop the list ring on filter.
@@ -1193,6 +1219,7 @@ const FloatingComboboxCore = ({
     } else {
       setActiveIndex(0);
     }
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- filter is the trigger: the list remounts per query and the highlight re-syncs to the cursor
   }, [filter, navigableOptions.length, showCreateOption]);
 
   const click = useClick(panel.context, { event: 'mousedown', keyboardHandlers: false });
@@ -1241,7 +1268,7 @@ const FloatingComboboxCore = ({
         setOpen(false);
       }
     },
-    [onValueChange, multiple, value, navigableOptions],
+    [onValueChange, multiple, value, navigableOptions, setOpen],
   );
 
   const handleListMouseMove = useCallback(
@@ -1282,15 +1309,33 @@ const FloatingComboboxCore = ({
   const handlersRef = useRef<ComboboxItemHandlers | null>(null);
 
   const handleSelectRef = useRef(handleSelect);
+  // oxlint-disable-next-line react/refs -- latest-value ref mirror, read only by listeners/rAF callbacks outside render
   handleSelectRef.current = handleSelect;
   useEffect(() => {
     if (!open || typeof document === 'undefined') {
       // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on other paths; a bare return trips consistent-return
       return undefined;
     }
+    const commitActive = (key: string) => {
+      const idx = activeIndexRef.current;
+      const list = navigableOptionsRef.current;
+      const createIdx = showCreateOptionRef.current ? list.length : -1;
+      if (idx === createIdx && showCreateOptionRef.current) {
+        handleCreate();
+      } else if (key === 'Enter' && multipleRef.current && hasSelectedSinceOpenRef.current) {
+        setOpen(false);
+      } else if (idx != null && list[idx] !== undefined) {
+        handleSelectRef.current(list[idx], idx);
+        if (key === 'Enter' || !multipleRef.current) {
+          setOpen(false);
+        }
+      } else {
+        setOpen(false);
+      }
+    };
     const onKeyDown = (e: KeyboardEvent) => {
-      const floatingEl = panel.refs.floating.current;
-      const triggerEl = panel.triggerRef.current;
+      const floatingEl = panelRefs.floating.current;
+      const triggerEl = panelTriggerRef.current;
       const target = isNode(e.target) ? e.target : null;
       const inPanel =
         target !== null && (floatingEl?.contains(target) === true || triggerEl?.contains(target) === true);
@@ -1307,29 +1352,16 @@ const FloatingComboboxCore = ({
         }
         e.preventDefault();
         e.stopPropagation();
-        const idx = activeIndexRef.current;
-        const list = navigableOptionsRef.current;
-        const createIdx = showCreateOptionRef.current ? list.length : -1;
-        if (idx === createIdx && showCreateOptionRef.current) {
-          handleCreate();
-        } else if (e.key === 'Enter' && multipleRef.current && hasSelectedSinceOpenRef.current) {
-          setOpen(false);
-        } else if (idx != null && list[idx] !== undefined) {
-          handleSelectRef.current(list[idx], idx);
-          if (e.key === 'Enter' || !multipleRef.current) {
-            setOpen(false);
-          }
-        } else {
-          setOpen(false);
-        }
+        commitActive(e.key);
       }
     };
     document.addEventListener('keydown', onKeyDown, { capture: true });
     return () => {
       document.removeEventListener('keydown', onKeyDown, { capture: true });
     };
-  }, [open, showCreateOption, handleCreate, setOpen]);
+  }, [open, handleCreate, setOpen, panelRefs, panelTriggerRef]);
 
+  // oxlint-disable-next-line react/refs -- floating-ui's prop getter merges the reference ref callback; no ref is read here
   const referenceProps = getReferenceProps({
     ref: panel.setReferenceRef,
     onKeyDown(event: React.KeyboardEvent) {
@@ -1393,6 +1425,7 @@ const FloatingComboboxCore = ({
     [totalNavigableItems, setKeyboardNav],
   );
 
+  // oxlint-disable-next-line react/refs -- latest-value ref mirror, read only by listeners/rAF callbacks outside render
   handlersRef.current = {
     getItemProps,
     onSelect: handleSelect,
@@ -1404,27 +1437,16 @@ const FloatingComboboxCore = ({
   };
 
   const handleSearchKeyDown = useCallback(
+    // oxlint-disable-next-line eslint/complexity -- flat key dispatch, one branch per key
     (event: React.KeyboardEvent) => {
       const isDown = event.key === 'ArrowDown' || event.key === 'j';
       const isUp = event.key === 'ArrowUp' || event.key === 'k';
-      if (isDown) {
+      if (isDown || isUp) {
         event.preventDefault();
         setKeyboardNav(true);
         lastKeyboardNavTimeRef.current = Date.now();
         lastMousePosRef.current = { ...currentMousePosRef.current };
-        setActiveIndex((prev) => {
-          const next = prev == null ? 0 : prev + 1;
-          return next >= totalNavigableItems ? 0 : next;
-        });
-      } else if (isUp) {
-        event.preventDefault();
-        setKeyboardNav(true);
-        lastKeyboardNavTimeRef.current = Date.now();
-        lastMousePosRef.current = { ...currentMousePosRef.current };
-        setActiveIndex((prev) => {
-          const next = prev == null ? totalNavigableItems - 1 : prev - 1;
-          return next < 0 ? totalNavigableItems - 1 : next;
-        });
+        setActiveIndex((prev) => stepActiveIndex(prev, isDown, totalNavigableItems));
       } else if (event.key === 'Home') {
         event.preventDefault();
         setKeyboardNav(true);
@@ -1472,9 +1494,12 @@ const FloatingComboboxCore = ({
       multiple,
       filter,
       setKeyboardNav,
+      setOpen,
     ],
   );
 
+  // Multi-select reorders the list on selection, so a value change re-runs the scroll sync.
+  const multiValueDep = multiple ? value : undefined;
   // Scroll to keep active item in view. Defer to next frame to avoid racing with
   // focus/scroll from useListNavigation and to run after list reorder on selection.
   // Grow dropdown when scrolling via keyboard (same as wheel/hover-arrow).
@@ -1520,7 +1545,8 @@ const FloatingComboboxCore = ({
     return () => {
       cancelAnimationFrame(rafId);
     };
-  }, [activeIndex, multiple ? value : undefined]);
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- multiValueDep is a trigger: multi-select reorders the list on selection, so the scroll sync re-runs
+  }, [activeIndex, multiValueDep]);
 
   const showsValueLabel = !multiple && value !== undefined && value !== '' && hasText(valueLabel);
   const hasSearchError = hasText(searchError);
@@ -1585,6 +1611,7 @@ const FloatingComboboxCore = ({
             maxHeight={getFieldHeight(knobProps.sizeToken, 1, hydrationTouch) * 0.75}
             overflow="hidden"
             overflowX="auto">
+            {/* oxlint-disable-next-line react/refs -- label cache keeps labels of options that leave the list (async search) so selected values keep their text */}
             {selectedValues.map((v) => (
               <Chip
                 key={v}
@@ -1653,7 +1680,8 @@ const FloatingComboboxCore = ({
       {triggerContent}
 
       {panel.mounted && (
-        <PanelPortal anchor={panel.triggerRef.current}>
+        // oxlint-disable-next-line react/refs -- the portal mounts only after the trigger is committed (panel.mounted), so the ref is populated
+        <PanelPortal anchor={panelTriggerRef.current}>
           <FloatingFocusManager
             context={panel.context}
             modal={false}
@@ -1662,7 +1690,7 @@ const FloatingComboboxCore = ({
               outlineWidth={0}
               pointerEvents={panel.visible ? 'auto' : 'none'}
               {...getFloatingProps({
-                ref: panel.refs.setFloating,
+                ref: panelRefs.setFloating,
                 id: listboxId,
               })}
               style={{
@@ -1742,7 +1770,7 @@ const FloatingComboboxCore = ({
                   direction="up"
                   scrollRef={listScrollRef}
                   visible={panel.arrowUp}
-                  arrowScrollDirRef={panel.arrowScrollDirRef}
+                  arrowScrollDirRef={arrowScrollDirRef}
                 />
                 {hasSearchError && (
                   <View
@@ -1897,7 +1925,7 @@ const FloatingComboboxCore = ({
                   direction="down"
                   scrollRef={listScrollRef}
                   visible={panel.arrowDown}
-                  arrowScrollDirRef={panel.arrowScrollDirRef}
+                  arrowScrollDirRef={arrowScrollDirRef}
                 />
               </YStack>
             </YStack>
@@ -1961,6 +1989,7 @@ const comboboxSearchHeader = (
   </XStack>
 );
 
+// oxlint-disable-next-line react-doctor/no-giant-component, eslint/complexity -- sheet-mode twin of FloatingComboboxCore; one component owns the sheet's refs and keyboard state
 const NativeComboboxCore = ({
   options,
   value,
@@ -1993,6 +2022,7 @@ const NativeComboboxCore = ({
   searchValue,
   open: openProp,
   onOpenChange,
+  // oxlint-disable-next-line sonarjs/cognitive-complexity -- see the component note above
 }: FloatingComboboxCoreProps) => {
   const hydrationTouch = useTouchSurface();
   if (isWeb) {
@@ -2044,7 +2074,8 @@ const NativeComboboxCore = ({
     }
     const vals = toValueArray(value);
     return vals.toSorted((a, b) => getLabel(a).localeCompare(getLabel(b)));
-  }, [multiple, value, options]);
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- options is a deliberate trigger: the label cache (a ref) refreshes from new options and the sort must re-run
+  }, [multiple, value, options, getLabel]);
 
   const selectedOption = useMemo(
     () => (multiple ? undefined : options.find((o) => o.value === value)),
@@ -2167,18 +2198,22 @@ const NativeComboboxCore = ({
 
   useEffect(() => {
     if (open) {
+      // oxlint-disable-next-line react-doctor/no-adjust-state-on-prop-change, react-doctor/no-chain-state-updates -- open/close resets the transient panel state (highlight, filter, keyboard ring) in lock-step with `open`, which may be parent-controlled
       setActiveIndex(0);
       requestAnimationFrame(() => (hideSearch ? listRef.current?.focus() : searchInputRef.current?.focus()));
     } else {
+      // oxlint-disable-next-line react-doctor/no-adjust-state-on-prop-change, react-doctor/no-chain-state-updates -- open/close resets the transient panel state (highlight, filter, keyboard ring) in lock-step with `open`, which may be parent-controlled
       setInternalFilter('');
     }
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- runs on open toggles only; hideSearch just picks the focus target at open time
   }, [open]);
 
   useEffect(() => {
     if (open) {
+      // oxlint-disable-next-line react-doctor/no-adjust-state-on-prop-change, react-doctor/no-chain-state-updates -- a new query re-homes the highlight to the first row
       setActiveIndex(0);
     }
-  }, [filter]);
+  }, [filter, open]);
 
   const totalItems = navigableOptions.length + (showCreateOption ? 1 : 0);
   const createOptionIndex = showCreateOption ? navigableOptions.length : -1;
@@ -2199,7 +2234,7 @@ const NativeComboboxCore = ({
         setOpen(false);
       }
     },
-    [onValueChange, multiple, value],
+    [onValueChange, multiple, value, setOpen],
   );
 
   const handleSearchKeyDown = useCallback(
@@ -2286,6 +2321,7 @@ const NativeComboboxCore = ({
       handleSelect,
       multiple,
       setKeyboardNav,
+      setOpen,
     ],
   );
 
@@ -2321,7 +2357,17 @@ const NativeComboboxCore = ({
     return () => {
       document.removeEventListener('keydown', onKeyDown, { capture: true });
     };
-  }, [open, activeIndex, createOptionIndex, showCreateOption, navigableOptions, handleCreate, handleSelect, multiple]);
+  }, [
+    open,
+    activeIndex,
+    createOptionIndex,
+    showCreateOption,
+    navigableOptions,
+    handleCreate,
+    handleSelect,
+    multiple,
+    setOpen,
+  ]);
 
   const handleOpenChange = useCallback(
     (val: boolean) => {
@@ -2330,7 +2376,7 @@ const NativeComboboxCore = ({
         onBlur?.();
       }
     },
-    [onBlur],
+    [onBlur, setOpen],
   );
 
   const searchHeader = hideSearch

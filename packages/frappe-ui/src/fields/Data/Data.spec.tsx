@@ -32,7 +32,7 @@ describe('Data design-law — compose forms Input', () => {
         value="locked"
       />,
     );
-    const input = result.container.querySelector('input') as HTMLInputElement | null;
+    const input = result.container.querySelector('input');
     expect(input?.readOnly ?? input?.getAttribute('aria-readonly')).toBeTruthy();
   });
 });

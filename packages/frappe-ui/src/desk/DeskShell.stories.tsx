@@ -1,7 +1,7 @@
-import { Text, YStack } from '@repo/ui';
 import { InMemoryFixtureProvider } from '@repo/frappe';
 import { action } from '@repo/storybook';
 import { sizeRecipeEscape } from '@repo/theme';
+import { Text, YStack } from '@repo/ui';
 
 import { FrappeProvider } from '../FrappeProvider';
 

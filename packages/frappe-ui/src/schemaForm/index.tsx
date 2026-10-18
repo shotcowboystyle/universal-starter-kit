@@ -11,10 +11,10 @@
  * renderers via the `fieldRegistry`.
  */
 
-import { Card } from '@repo/ui';
 import { RequiredMarkingContext, computeRequiredMarkMode } from '@repo/forms';
 import type { RequiredMarkStrategy } from '@repo/forms';
 import { useResolvedKnobs } from '@repo/theme';
+import { Card } from '@repo/ui';
 import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, XStack, YStack } from 'tamagui';

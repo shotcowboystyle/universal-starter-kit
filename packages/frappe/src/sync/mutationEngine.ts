@@ -751,7 +751,7 @@ export class MutationEngine {
     }) as FrappeDoc<FrappeDocData> | undefined;
     const last = this.normalizedCache.get({
       doctype,
-      name: docIds.at(-1),
+      name: docIds.at(-1) ?? '',
     }) as FrappeDoc<FrappeDocData> | undefined;
 
     if (!first || !last) {

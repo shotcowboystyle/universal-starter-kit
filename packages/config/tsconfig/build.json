@@ -3,9 +3,9 @@
   "display": "Build configuration for workspace packages",
   "extends": "./base.json",
   "compilerOptions": {
-    "outDir": "${configDir}/dist",
-    "declarationDir": "${configDir}/types",
-    "tsBuildInfoFile": "${configDir}/types/.tsbuildinfo",
+    "outDir": "dist",
+    "declarationDir": "types",
+    "tsBuildInfoFile": "types/.tsbuildinfo",
     // Resolve sibling workspace packages through their exports `source`
     // condition (listed first in every @repo exports map) during
     // declaration emission. This keeps emission order-independent — the
@@ -22,8 +22,8 @@
     // import specifier has no extension.
     "paths": {
       "@react-navigation/*": [
-        "${configDir}/node_modules/@react-navigation/*/lib/typescript/src/index",
-        "${configDir}/../../node_modules/@react-navigation/*/lib/typescript/src/index"
+        "node_modules/@react-navigation/*/lib/typescript/src/index",
+        "../../node_modules/@react-navigation/*/lib/typescript/src/index"
       ]
     }
   },
@@ -34,18 +34,18 @@
   // packages publish and emit declarations for) plus root-level ambient
   // @types/ are compiled; package-root dev scaffolding (webview/, scratch/,
   // tests/) stays out.
-  "include": ["${configDir}/src/**/*", "${configDir}/@types/**/*"],
+  "include": ["src/**/*", "@types/**/*"],
   "exclude": [
-    "${configDir}/tests",
-    "${configDir}/types",
-    "${configDir}/dist",
-    "${configDir}/**/*.spec.ts",
-    "${configDir}/**/*.spec.tsx",
-    "${configDir}/**/*.test.ts",
-    "${configDir}/**/*.test.tsx",
-    "${configDir}/**/*.stories.ts",
-    "${configDir}/**/*.stories.tsx",
-    "${configDir}/vitest.config.ts",
-    "${configDir}/vitest.config.mjs"
+    "tests",
+    "types",
+    "dist",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.stories.ts",
+    "**/*.stories.tsx",
+    "vitest.config.ts",
+    "vitest.config.mjs"
   ]
 }

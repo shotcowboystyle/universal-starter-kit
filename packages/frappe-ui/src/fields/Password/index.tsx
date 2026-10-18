@@ -1,15 +1,3 @@
-import type { FormFieldProps, FieldComponentProps } from '@repo/forms';
-import {
-  Field,
-  FieldLayout,
-  Input as FormsInput,
-  Skeleton,
-  getFieldError,
-  mergeFieldHandler,
-  useFormField,
-  useResolvedValidators,
-} from '@repo/forms';
-import { MIN_PRESS_TARGET, isTouchSurface, pressTargetHitSlop, sizeRecipeForToken } from '@repo/theme';
 /**
  * Password — masked Data with a reveal in the end-cap.
  *
@@ -24,6 +12,18 @@ import { MIN_PRESS_TARGET, isTouchSurface, pressTargetHitSlop, sizeRecipeForToke
  * generated end-cap recipe, not a hardcoded square.
  */
 import { EyeIcon, EyeSlashIcon } from '@phosphor-icons/react';
+import type { FormFieldProps, FieldComponentProps } from '@repo/forms';
+import {
+  Field,
+  FieldLayout,
+  Input as FormsInput,
+  Skeleton,
+  getFieldError,
+  mergeFieldHandler,
+  useFormField,
+  useResolvedValidators,
+} from '@repo/forms';
+import { MIN_PRESS_TARGET, isTouchSurface, pressTargetHitSlop, sizeRecipeForToken } from '@repo/theme';
 import type { DeepKeys } from '@tanstack/form-core';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { SizeTokens, TamaguiElement } from 'tamagui';
@@ -69,7 +69,7 @@ function nativeInput(node: unknown, id?: string): HTMLInputElement | null {
   if (typeof document === 'undefined' || !id) {
     return null;
   }
-  return document.querySelector(`#${id}`) as HTMLInputElement | null;
+  return document.querySelector(`#${id}`);
 }
 
 function readSelection(node: unknown, id?: string): Selection | null {

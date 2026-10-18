@@ -167,7 +167,7 @@ export function useFrappeReport(
 
   // Debouncer coalescing filter keystrokes into one refetch.
   const debouncerRef = useRef<AsyncDebouncer<() => Promise<void>> | undefined>();
-  debouncerRef.current ??= new AsyncDebouncer(async () => runFetch(), {
+  debouncerRef.current ??= new AsyncDebouncer(async () => await runFetch(), {
     wait: debounceMs,
   });
   useEffect(() => {

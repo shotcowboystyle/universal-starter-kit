@@ -1,7 +1,7 @@
-import { Card, Text, XStack, YStack } from '@repo/ui';
+import { HeartIcon } from '@phosphor-icons/react';
 import { Button } from '@repo/forms';
 import { useResolvedKnobs } from '@repo/theme';
-import { HeartIcon } from '@phosphor-icons/react';
+import { Card, Text, XStack, YStack } from '@repo/ui';
 import { useTranslation } from 'react-i18next';
 
 import { FacetBadge } from './FacetBadge';

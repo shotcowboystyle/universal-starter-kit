@@ -41,46 +41,45 @@ const meta: Meta<typeof ColorPicker> = {
 export default meta;
 type Story = StoryObj<typeof ColorPicker>;
 
+const FormExample = () => {
+  const form = useForm({
+    defaultValues: {
+      brandColor: '#3B82F6',
+      backgroundColor: '#FFFFFF',
+      textColor: '#000000',
+    },
+    onSubmit: async ({ value }) => {
+      action('onSubmit')(value);
+    },
+  });
+
+  return (
+    <Form form={form}>
+      <YStack gap="$4">
+        <ColorPicker
+          label="Brand Color"
+          name="brandColor"
+          helperText="Choose your primary brand color"
+        />
+        <ColorPicker
+          label="Background Color"
+          name="backgroundColor"
+          helperText="Choose background color"
+        />
+        <ColorPicker
+          label="Text Color"
+          name="textColor"
+          helperText="Choose text color"
+        />
+        <Button action="submit">Submit</Button>
+      </YStack>
+    </Form>
+  );
+};
+
 export const Main: Story = {
   name: 'Main',
-  render: () => {
-    const FormExample = () => {
-      const form = useForm({
-        defaultValues: {
-          brandColor: '#3B82F6',
-          backgroundColor: '#FFFFFF',
-          textColor: '#000000',
-        },
-        onSubmit: async ({ value }) => {
-          action('onSubmit')(value);
-        },
-      });
-
-      return (
-        <Form form={form}>
-          <YStack gap="$4">
-            <ColorPicker
-              label="Brand Color"
-              name="brandColor"
-              helperText="Choose your primary brand color"
-            />
-            <ColorPicker
-              label="Background Color"
-              name="backgroundColor"
-              helperText="Choose background color"
-            />
-            <ColorPicker
-              label="Text Color"
-              name="textColor"
-              helperText="Choose text color"
-            />
-            <Button action="submit">Submit</Button>
-          </YStack>
-        </Form>
-      );
-    };
-    return <FormExample />;
-  },
+  render: () => <FormExample />,
 };
 
 export const Standalone: Story = {
@@ -125,28 +124,27 @@ export const Sizes: Story = {
   ),
 };
 
+const InteractiveExample = () => {
+  const [color, setColor] = useState('#3B82F6');
+  return (
+    <YStack
+      gap="$4"
+      maxWidth={400}>
+      <ColorPicker
+        label="Pick a Color"
+        value={color}
+        onChange={(val: string) => {
+          setColor(val);
+          action('onChange')(val);
+        }}
+        helperText={`Selected: ${color}`}
+      />
+    </YStack>
+  );
+};
+
 export const Interactive: Story = {
-  render: () => {
-    const InteractiveExample = () => {
-      const [color, setColor] = useState('#3B82F6');
-      return (
-        <YStack
-          gap="$4"
-          maxWidth={400}>
-          <ColorPicker
-            label="Pick a Color"
-            value={color}
-            onChange={(val: string) => {
-              setColor(val);
-              action('onChange')(val);
-            }}
-            helperText={`Selected: ${color}`}
-          />
-        </YStack>
-      );
-    };
-    return <InteractiveExample />;
-  },
+  render: () => <InteractiveExample />,
 };
 
 export const WithAlpha: Story = {

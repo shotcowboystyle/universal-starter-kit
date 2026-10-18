@@ -11,13 +11,12 @@ import type { ButtonProps } from './index';
 const pressed = (name: string) => () => action(name)();
 
 const iconOptions = ['none', 'Activity', 'Airplay', 'Download', 'Trash'] as const;
-const icons: Record<string, any> = {
-  none: undefined,
-  Activity,
-  Airplay,
-  Download,
-  Trash,
-};
+const icons = new Map<unknown, ButtonProps['icon']>([
+  ['Activity', Activity],
+  ['Airplay', Airplay],
+  ['Download', Download],
+  ['Trash', Trash],
+]);
 
 const meta: Meta<typeof Button> = {
   title: 'Forms/Button',
@@ -125,8 +124,8 @@ export const Basic: Story = {
   render: ({ icon, iconAfter, ...args }) => (
     <Button
       {...args}
-      icon={icon ? icons[icon as unknown as string] : undefined}
-      iconAfter={iconAfter ? icons[iconAfter as unknown as string] : undefined}
+      icon={icons.get(icon)}
+      iconAfter={icons.get(iconAfter)}
     />
   ),
 };
@@ -284,13 +283,13 @@ export const Anatomy: Story = {
         <Button
           nested
           circular
-          aria-label="day">
+          aria-label="Day">
           12
         </Button>
         <Button
           circular
           icon={Activity}
-          aria-label="toolbar well"
+          aria-label="Toolbar well"
         />
       </XStack>
     </YStack>
@@ -419,7 +418,7 @@ const InsetRow = () => {
   const pageOutlineColor = useTheme().outlineColor?.val as string | undefined;
   const inset = ensureFocusVisibleRing({
     outlineOffset: FOCUS_RING_CLIPPED_OFFSET,
-    ...(pageOutlineColor ? { outlineColor: pageOutlineColor } : undefined),
+    ...(pageOutlineColor !== undefined && pageOutlineColor !== '' ? { outlineColor: pageOutlineColor } : undefined),
   });
   return (
     <XStack

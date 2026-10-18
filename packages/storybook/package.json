@@ -25,6 +25,8 @@
   },
   "devDependencies": {
     "@repo/config": "workspace:*",
+    "@repo/frappe": "workspace:*",
+    "@repo/platform": "workspace:*",
     "@repo/test-utils": "workspace:*",
     "@repo/theme": "workspace:*",
     "@testing-library/jest-dom": "catalog:",

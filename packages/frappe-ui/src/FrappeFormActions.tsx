@@ -1,7 +1,3 @@
-import { Chip } from '@repo/ui';
-import type { ChipColor } from '@repo/ui';
-import { Button } from '@repo/forms';
-import { useResolvedKnobs } from '@repo/theme';
 import {
   ArrowCounterClockwiseIcon,
   CheckCircleIcon,
@@ -11,6 +7,10 @@ import {
   TrashIcon,
   XIcon,
 } from '@phosphor-icons/react';
+import { Button } from '@repo/forms';
+import { useResolvedKnobs } from '@repo/theme';
+import { Chip } from '@repo/ui';
+import type { ChipColor } from '@repo/ui';
 import { useTranslation } from 'react-i18next';
 import { XStack } from 'tamagui';
 

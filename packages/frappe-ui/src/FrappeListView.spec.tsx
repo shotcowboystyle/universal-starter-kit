@@ -180,7 +180,7 @@ describe('FrappeListView design-law (avatar + type)', () => {
     const { container } = renderListView();
     const title = await waitFor(() => {
       const node =
-        (container.querySelector('[data-list-slot="title"]') as HTMLElement | null) ??
+        container.querySelector('[data-list-slot="title"]') ??
         ([...container.querySelectorAll('*')].find(
           (el) => el.textContent === 'Review document' && el.children.length === 0,
         ) as HTMLElement | undefined) ??

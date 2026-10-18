@@ -136,7 +136,9 @@ async function press(root: ParentNode, text: string) {
 }
 
 const lastPick = () => mockState.picks.at(-1);
-const waitForPick = async (predicate: () => void) => await waitFor(predicate, { timeout: 30_000 });
+const waitForPick = async (predicate: () => void) => {
+  await waitFor(predicate, { timeout: 30_000 });
+};
 
 // Warm the graph here, not inside the first `it`: the transform is setup cost
 // (110-155s quiet, past 240s under load), and charging it to an assertion made

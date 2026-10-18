@@ -1,11 +1,11 @@
+import { CurrencyDollarIcon } from '@phosphor-icons/react';
+import { InMemoryFixtureProvider } from '@repo/frappe';
+import { action } from '@repo/storybook';
+import { sizeRecipeEscape } from '@repo/theme';
 // KPICard comes from the components catalog — the frappe-ui barrel
 // re-exports it from there directly (./FrappeDashboard no longer bounces
 // catalog names it does not define).
 import { KPICard } from '@repo/ui';
-import { InMemoryFixtureProvider } from '@repo/frappe';
-import { action } from '@repo/storybook';
-import { sizeRecipeEscape } from '@repo/theme';
-import { CurrencyDollarIcon } from '@phosphor-icons/react';
 import { XStack } from 'tamagui';
 
 import { FrappeKPICard } from './FrappeKPICard';

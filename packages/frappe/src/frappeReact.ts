@@ -777,7 +777,7 @@ export function useFrappePendingMutations(
   doctype?: string,
 ): UseFrappePendingMutationsResult {
   const [entries, setEntries] = useState<DebugMutationEntry[]>(EMPTY_LEDGER);
-  const syncModuleRef = useRef<SyncModule | undefined>();
+  const syncModuleRef = useRef<SyncModule | undefined>(undefined);
   const syncModule = getFrappeSyncModule(config);
 
   useEffect(() => {
@@ -1103,8 +1103,8 @@ export function useFrappeInfiniteList<TDoc extends object & { name: string; doct
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const subscriptionIdRef = useRef<string | undefined>();
-  const syncModuleRef = useRef<SyncModule | undefined>();
+  const subscriptionIdRef = useRef<string | undefined>(undefined);
+  const syncModuleRef = useRef<SyncModule | undefined>(undefined);
 
   // Stable serialised key for filters so we can depend on it in useEffect
   const filtersKey = JSON.stringify(filters);

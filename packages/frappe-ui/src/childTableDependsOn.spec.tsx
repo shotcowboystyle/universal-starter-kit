@@ -60,7 +60,7 @@ describe('child-table per-row depends_on (MPO-22)', () => {
 
   it('hides the cell on the row whose depends_on is false and keeps it on the other', () => {
     renderOrder('Draft');
-    const serials = screen.getAllByLabelText('Serial No') as HTMLInputElement[];
+    const serials = screen.getAllByLabelText('Serial No');
     expect(serials.map((input) => input.value)).toEqual(['SN-1']);
     expect(screen.getAllByLabelText('Item Code')).toHaveLength(2);
   });

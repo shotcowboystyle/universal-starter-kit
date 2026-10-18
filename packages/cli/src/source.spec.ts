@@ -69,7 +69,7 @@ async function listen(server: Server | ReturnType<typeof createTcpServer>): Prom
 }
 
 async function close(server: Server | ReturnType<typeof createTcpServer>): Promise<void> {
-  return await new Promise((resolve) =>
+  await new Promise((resolve) =>
     server.close(() => {
       resolve();
     }),

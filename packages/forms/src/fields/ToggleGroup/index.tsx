@@ -10,7 +10,7 @@ import {
   useReadableTextOn,
   wasKeyboardFocus,
 } from '@repo/theme';
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { useState } from 'react';
 import type { LabelProps, SizeTokens } from 'tamagui';
 import { SizableText, ToggleGroup as TamaguiToggleGroup, View, isWeb, styled } from 'tamagui';
@@ -28,6 +28,10 @@ import {
 } from '../../shared/utils';
 import { Skeleton } from '../../Skeleton';
 import type { AnyFormApi } from '../../types';
+import { hasElevationProp, isString } from '../field-helpers';
+
+type BlurHandler = ComponentProps<typeof FieldLayout>['onBlur'];
+type ToggleValue = string | string[];
 
 // Headless Tamagui item: the stock ToggleFrame paints borderWidth:1 +
 // margin:-1 on EVERY segment (collapsed-border ButtonGroup). Segmented
@@ -52,21 +56,66 @@ const ToggleItemFrame = styled(TamaguiToggleGroup.Item, {
 });
 
 /** Theme animationConfig durations — unstyled ToggleFrame drops Tamagui's transition class. */
-const SEGMENT_MOTION_MS: Record<string, number> = {
-  bouncy: 200,
-  lazy: 600,
-  slow: 500,
-  medium: 250,
-  quick: 100,
-  tooltip: 400,
-  snappy: 80,
-  gentle: 450,
+const SEGMENT_MOTION_MS = new Map([
+  ['bouncy', 200],
+  ['lazy', 600],
+  ['slow', 500],
+  ['medium', 250],
+  ['quick', 100],
+  ['tooltip', 400],
+  ['snappy', 80],
+  ['gentle', 450],
+]);
+
+/** Clears the slot only when it still holds `value`. */
+const clearIfHeld = (prev: string | null, value: string): string | null => (prev === value ? null : prev);
+
+const hasText = (value: string | undefined | null): value is string => (value ?? '') !== '';
+
+/** Seam hairline between unselected neighbours, laid along the run's cross axis. */
+const seamProps = (orientation: 'horizontal' | 'vertical') =>
+  orientation === 'horizontal'
+    ? {
+        ...hairline.vline,
+        top: 8,
+        bottom: 8,
+        insetInlineEnd: 0,
+        flexBasis: hairlineWidth,
+      }
+    : {
+        ...hairline.line,
+        insetInlineStart: 8,
+        insetInlineEnd: 8,
+        bottom: 0,
+        flexBasis: hairlineWidth,
+      };
+
+/**
+ * Single tab stop: the focused segment while focus is inside the group, else
+ * the first enabled selected one, else the first enabled one.
+ */
+/** Roving tab stop is web-only; native has no tab order. */
+const webTabIndex = (isTabStop: boolean) => (isWeb ? { tabIndex: isTabStop ? 0 : -1 } : undefined);
+
+const resolveTabStopIndex = (focusedIdx: number, firstSelectedEnabled: number, firstEnabled: () => number): number => {
+  if (focusedIdx >= 0) {
+    return focusedIdx;
+  }
+  if (firstSelectedEnabled !== -1) {
+    return firstSelectedEnabled;
+  }
+  return firstEnabled();
+};
+
+/** Values present in exactly one of the two selections (multiple mode). */
+const toggledValues = (prev: string[], next: string[]): string[] => {
+  const prevSet = new Set(prev);
+  const nextSet = new Set(next);
+  return [...next.filter((v) => !prevSet.has(v)), ...prev.filter((v) => !nextSet.has(v))];
 };
 
 /** State recipes may carry border/outline; segments accept FILL only. */
-const segmentFillState = (
-  props: { backgroundColor?: unknown } | undefined,
-): { backgroundColor: unknown } | undefined => {
+const segmentFillState = (props: { backgroundColor?: string } | undefined): { backgroundColor: string } | undefined => {
   const backgroundColor = props?.backgroundColor;
   return backgroundColor == null ? undefined : { backgroundColor };
 };
@@ -76,11 +125,11 @@ const ToggleItemWithElevation = ({
   groupedRadius,
   ...props
 }: {
-  elevationWrapperProps: Record<string, any>;
+  elevationWrapperProps: ReturnType<typeof getElevationWrapperProps>;
   value: string;
-  groupedRadius: Record<string, unknown>;
-} & Record<string, any>) => {
-  if (elevationWrapperProps.elevation) {
+  groupedRadius: ReturnType<typeof stackRadiusProps>;
+} & ComponentProps<typeof ToggleItemFrame>) => {
+  if (hasElevationProp(elevationWrapperProps)) {
     // The segment carries flexBasis 0 to share the run. A column wrapper would
     // read that as its HEIGHT and resolve the whole frame to the two 1px
     // borders, so the wrapper lays out along the row in BOTH
@@ -132,7 +181,7 @@ export interface ToggleGroupOption {
 export interface ToggleGroupProps {
   name?: string;
   form?: AnyFormApi;
-  validators?: Record<string, unknown>;
+  validators?: Parameters<typeof useResolvedValidators>[1];
   label?: ReactNode;
   labelProps?: Omit<LabelProps, 'htmlFor' | 'ref'>;
   helperText?: string;
@@ -158,7 +207,7 @@ export interface ToggleGroupProps {
   onChange?: (value: string | string[]) => void;
   /** @deprecated Use `onChange` instead. Kept as an alias for the tamagui name. */
   onValueChange?: (value: string | string[]) => void;
-  onBlur?: (...args: any[]) => void;
+  onBlur?: BlurHandler;
   options?: ToggleGroupOption[];
   orientation?: 'horizontal' | 'vertical';
   children?: ReactNode;
@@ -188,6 +237,7 @@ export interface ToggleGroupProps {
   accessibilityHint?: string;
 }
 
+// oxlint-disable-next-line react-doctor/no-giant-component, eslint/complexity -- one field shell: the standalone and form branches share the segment renderers' closure over id, knobs and focus state
 export const ToggleGroup = ({
   name,
   form: formProp,
@@ -206,6 +256,7 @@ export const ToggleGroup = ({
   value,
   defaultValue,
   onChange,
+  // oxlint-disable-next-line typescript/no-deprecated -- `onValueChange` is a supported alias that must keep firing alongside `onChange`
   onValueChange,
   onBlur,
   options,
@@ -256,7 +307,7 @@ export const ToggleGroup = ({
   const segmentHitSlop = pressTargetHitSlop(knobProps.control.height);
   // Tween fill on the unstyled item via CSS (Tamagui's
   // `transition` token does not emit a class here). animation=none → snap.
-  const motionMs = typeof knobProps.transition === 'string' ? SEGMENT_MOTION_MS[knobProps.transition] : undefined;
+  const motionMs = isString(knobProps.transition) ? SEGMENT_MOTION_MS.get(knobProps.transition) : undefined;
   const segmentMotionStyle =
     isWeb && motionMs != null
       ? {
@@ -288,19 +339,23 @@ export const ToggleGroup = ({
   }
   // Group reason takes the helper slot while disabled (same one-slot rule as
   // error-replaces-helper), riding FieldLayout's aria-describedby wiring.
-  const resolvedHelperText = disabled && disabledReason?.trim() ? disabledReason : helperText;
+  const resolvedHelperText = disabled === true && hasText(disabledReason?.trim()) ? disabledReason : helperText;
   // Item reasons render once each under the group; items point at them via
   // aria-describedby (visible without hover).
-  const uniqueItemReasons = [
-    ...new Set(
-      (options ?? []).filter((o) => o.disabled && o.disabledReason?.trim()).map((o) => o.disabledReason!.trim()),
-    ),
-  ];
+  const itemReasonSet = new Set<string>();
+  for (const o of options ?? []) {
+    const reason = o.disabledReason?.trim();
+    if (o.disabled === true && hasText(reason)) {
+      itemReasonSet.add(reason);
+    }
+  }
+  const uniqueItemReasons = [...itemReasonSet];
   const itemReasonIdFor = (reason: string | undefined): string | undefined => {
-    if (!reason?.trim()) {
+    const trimmed = reason?.trim();
+    if (!hasText(trimmed)) {
       return undefined;
     }
-    const index = uniqueItemReasons.indexOf(reason.trim());
+    const index = uniqueItemReasons.indexOf(trimmed);
     return index === -1 ? undefined : `${id}-item-reason-${index}`;
   };
   const optionDisabledByValue = (val: string) => Boolean(options?.find((o) => o.value === val)?.disabled);
@@ -336,8 +391,56 @@ export const ToggleGroup = ({
     );
   }
 
-  const renderContent = (resolvedValue: string | string[] | undefined) => {
-    if (children) {
+  const hasChildren = Boolean(children);
+  const disabledSurfaceFor = (selected: boolean) =>
+    selected ? disabledState.selectedSurfaceKnobProps : disabledState.surfaceKnobProps;
+  /** Hover/press chrome: disabled wash, else the selected fill, else the recipe (or fallback) fill. */
+  const segmentStateStyle = (
+    selected: boolean,
+    itemDisabled: boolean,
+    activeColors: { backgroundColor: string; borderColor: string; borderWidth: number },
+    recipeFill: { backgroundColor: string } | undefined,
+    fallbackBackground: string,
+  ) => {
+    if (itemDisabled) {
+      return { ...disabledSurfaceFor(selected) };
+    }
+    if (selected) {
+      return { ...activeColors };
+    }
+    return { ...(recipeFill ?? { backgroundColor: fallbackBackground }) };
+  };
+  const webFocusHandlers = (optionValue: string) =>
+    isWeb
+      ? {
+          onFocus: () => {
+            setFocusValue(optionValue);
+            if (wasKeyboardFocus()) {
+              setKbFocusValue(optionValue);
+            }
+          },
+          onBlur: () => {
+            setFocusValue((prev) => clearIfHeld(prev, optionValue));
+            setKbFocusValue((prev) => clearIfHeld(prev, optionValue));
+          },
+        }
+      : undefined;
+  const segmentA11yProps = (option: ToggleGroupOption, selected: boolean, itemDisabled: boolean) => {
+    if (isWeb) {
+      return hasText(option.accessibilityLabel) ? { 'aria-label': option.accessibilityLabel } : undefined;
+    }
+    return choiceItemA11y({
+      kind: type === 'multiple' ? 'checkbox' : 'radio',
+      name: composeA11yName(groupA11yName, option.accessibilityLabel ?? option.label),
+      selected,
+      disabled: itemDisabled,
+      hint: option.accessibilityHint ?? accessibilityHint,
+    });
+  };
+
+  // oxlint-disable-next-line typescript/promise-function-async -- ReactNode includes Promise in React 19 types; this renders synchronously
+  const renderContent = (resolvedValue: ToggleValue | undefined) => {
+    if (hasChildren) {
       return children;
     }
     if (!options) {
@@ -353,14 +456,13 @@ export const ToggleGroup = ({
     // page tab order — the focused one while focus is inside the group, else
     // the first enabled selected one, else the first enabled one; arrows move
     // within the group.
-    const focusedIdx = focusValue ? options.findIndex((o) => o.value === focusValue && !(disabled ?? o.disabled)) : -1;
+    const focusedIdx = hasText(focusValue)
+      ? options.findIndex((o) => o.value === focusValue && !(disabled ?? o.disabled))
+      : -1;
     const firstSelectedEnabled = options.findIndex((o) => isSelected(o.value) && !(disabled ?? o.disabled));
-    const tabStopIndex =
-      focusedIdx >= 0
-        ? focusedIdx
-        : firstSelectedEnabled === -1
-          ? options.findIndex((o) => !(disabled ?? o.disabled))
-          : firstSelectedEnabled;
+    const tabStopIndex = resolveTabStopIndex(focusedIdx, firstSelectedEnabled, () =>
+      options.findIndex((o) => !(disabled ?? o.disabled)),
+    );
     return options.map((option, index) => {
       const groupedRadius = stackRadiusProps(getGroupPosition(index, count), radius, orientation);
       const selected = isSelected(option.value);
@@ -378,16 +480,19 @@ export const ToggleGroup = ({
       };
       const hoverFill = segmentFillState(control.hoverKnobProps);
       const pressFill = segmentFillState(control.pressKnobProps);
+      const selectedLive = selected && !itemDisabled;
+      const focusRing = kbFocusValue === option.value ? keyboardFocusRingProps : { outlineWidth: 0 };
 
       return (
         <ToggleItemWithElevation
+          // oxlint-disable-next-line react-doctor/no-array-index-as-key -- option values may repeat; the index disambiguates the key
           key={`${index}-${option.value}`}
           elevationWrapperProps={elevationWrapperProps}
           groupedRadius={groupedRadius}
           value={option.value}
           id={`${id}-${index}-${option.value}`}
           unstyled
-          {...(isWeb ? { tabIndex: isTabStop ? 0 : -1 } : undefined)}
+          {...webTabIndex(isTabStop)}
           width="auto"
           height={knobProps.control.height}
           hitSlop={segmentHitSlop}
@@ -403,65 +508,36 @@ export const ToggleGroup = ({
           outlineWidth={0}
           transition={knobProps.transition}
           disabled={itemDisabled}
-          {...(itemDescribedBy ? { 'aria-describedby': itemDescribedBy } : undefined)}
+          {...(itemDescribedBy === undefined ? undefined : { 'aria-describedby': itemDescribedBy })}
           // A disabled segment drops the live selected
           // fill so the wash owns the chrome; a SELECTED disabled segment takes
           // the recipe's stronger selected tier (Axiom 6).
-          {...(selected && !itemDisabled ? activeColors : undefined)}
-          {...(itemDisabled
-            ? selected
-              ? disabledState.selectedSurfaceKnobProps
-              : disabledState.surfaceKnobProps
-            : undefined)}
-          {...(readOnly ? { pointerEvents: 'none' as const } : undefined)}
-          hoverStyle={
-            itemDisabled
-              ? selected
-                ? { ...disabledState.selectedSurfaceKnobProps }
-                : { ...disabledState.surfaceKnobProps }
-              : {
-                  ...(selected
-                    ? activeColors
-                    : (hoverFill ?? {
-                        backgroundColor: formButtonColors.background.hover,
-                      })),
-                }
-          }
-          pressStyle={
-            itemDisabled
-              ? selected
-                ? { ...disabledState.selectedSurfaceKnobProps }
-                : { ...disabledState.surfaceKnobProps }
-              : {
-                  ...(selected
-                    ? activeColors
-                    : (pressFill ?? {
-                        backgroundColor: formButtonColors.background.active,
-                      })),
-                }
-          }
+          {...(selectedLive ? activeColors : undefined)}
+          {...(itemDisabled ? disabledSurfaceFor(selected) : undefined)}
+          {...(readOnly === true ? { pointerEvents: 'none' as const } : undefined)}
+          hoverStyle={segmentStateStyle(
+            selected,
+            itemDisabled,
+            activeColors,
+            hoverFill,
+            formButtonColors.background.hover,
+          )}
+          pressStyle={segmentStateStyle(
+            selected,
+            itemDisabled,
+            activeColors,
+            pressFill,
+            formButtonColors.background.active,
+          )}
           // Ring rides the keyboard-focused item (inset, clipped
           // group). Never a selection border. ToggleFrame's focus fill is
           // re-asserted so the accent chip does not grey out on choose.
           focusStyle={{
-            ...(selected && !itemDisabled ? activeColors : undefined),
-            ...(kbFocusValue === option.value ? keyboardFocusRingProps : { outlineWidth: 0 }),
+            ...(selectedLive ? activeColors : undefined),
+            ...focusRing,
           }}
-          focusVisibleStyle={kbFocusValue === option.value ? keyboardFocusRingProps : { outlineWidth: 0 }}
-          {...(isWeb
-            ? {
-                onFocus: () => {
-                  setFocusValue(option.value);
-                  if (wasKeyboardFocus()) {
-                    setKbFocusValue(option.value);
-                  }
-                },
-                onBlur: () => {
-                  setFocusValue((prev) => (prev === option.value ? null : prev));
-                  setKbFocusValue((prev) => (prev === option.value ? null : prev));
-                },
-              }
-            : undefined)}
+          focusVisibleStyle={focusRing}
+          {...webFocusHandlers(option.value)}
           {...(kbFocusValue === option.value ? keyboardFocusRingProps : undefined)}
           // On iOS a styled View is not an accessibility element, so
           // without this block the whole segmented control is absent from the
@@ -469,23 +545,13 @@ export const ToggleGroup = ({
           // The SEGMENTS carry the semantics, never the frame — an
           // `accessible` frame would collapse them into one element and lose
           // which one is chosen, which is the only thing worth announcing.
-          {...(isWeb
-            ? {
-                ...(option.accessibilityLabel ? { 'aria-label': option.accessibilityLabel } : undefined),
-              }
-            : choiceItemA11y({
-                kind: type === 'multiple' ? 'checkbox' : 'radio',
-                name: composeA11yName(groupA11yName, option.accessibilityLabel ?? option.label),
-                selected,
-                disabled: itemDisabled,
-                hint: option.accessibilityHint ?? accessibilityHint,
-              }))}>
+          {...segmentA11yProps(option, selected, itemDisabled)}>
           {option.icon}
           <SizableText
             userSelect="none"
             {...knobProps.controlType}
             {...knobProps.body}
-            {...(selected && !itemDisabled && onSelectedLabel ? { color: onSelectedLabel } : undefined)}
+            {...(selectedLive && hasText(onSelectedLabel) ? { color: onSelectedLabel } : undefined)}
             {...(itemDisabled ? disabledState.textKnobProps : undefined)}
             hoverStyle={text.hoverKnobProps}
             pressStyle={text.pressKnobProps}
@@ -498,21 +564,7 @@ export const ToggleGroup = ({
               position="absolute"
               zIndex={1}
               data-mp-toggle-seam
-              {...(orientation === 'horizontal'
-                ? {
-                    ...hairline.vline,
-                    top: 8,
-                    bottom: 8,
-                    insetInlineEnd: 0,
-                    flexBasis: hairlineWidth,
-                  }
-                : {
-                    ...hairline.line,
-                    insetInlineStart: 8,
-                    insetInlineEnd: 8,
-                    bottom: 0,
-                    flexBasis: hairlineWidth,
-                  })}
+              {...seamProps(orientation)}
             />
           ) : null}
         </ToggleItemWithElevation>
@@ -520,15 +572,42 @@ export const ToggleGroup = ({
     });
   };
 
+  // Web reads the attribute, Android reads the RN prop off the
+  // container. iOS reads neither, which is why the name is also prefixed
+  // onto every segment above.
+  const groupA11yProps = {
+    ...(hasText(groupA11yName) ? { 'aria-label': groupA11yName } : undefined),
+    ...(hasText(ariaLabelledBy) ? { 'aria-labelledby': ariaLabelledBy } : undefined),
+    ...(!isWeb && hasText(groupA11yName)
+      ? { accessibilityLabel: groupA11yName, accessibilityRole: 'radiogroup' as const }
+      : undefined),
+  };
+
+  /** Presses on disabled items never change the value (items stay mounted + explained instead of hiding). */
+  const isBlockedChange = (val: ToggleValue, resolvedValue: ToggleValue | undefined): boolean => {
+    if (disabled === true || readOnly === true) {
+      return true;
+    }
+    if (!options) {
+      return false;
+    }
+    if (type === 'single') {
+      return isString(val) && optionDisabledByValue(val);
+    }
+    const toggled = toggledValues(Array.isArray(resolvedValue) ? resolvedValue : [], Array.isArray(val) ? val : []);
+    return toggled.length === 1 && optionDisabledByValue(toggled[0]);
+  };
+
   const renderToggleGroup = (
-    resolvedValue: string | string[] | undefined,
+    resolvedValue: ToggleValue | undefined,
     isControlled: boolean,
-    handleChange?: (val: string | string[]) => void,
-    handleBlur?: (...args: any[]) => void,
-    hasError?: boolean,
+    handleChange?: (val: ToggleValue) => void,
+    handleBlur?: BlurHandler,
+    hasError = false,
   ) => {
     const emptyValue = type === 'multiple' ? [] : '';
 
+    // oxlint-disable-next-line typescript/no-explicit-any -- tamagui's ToggleGroup props are a single/multiple discriminated union keyed on the runtime `type`; one bag serves both arms
     const toggleProps: any = {
       // The ring rides the focused segment, never the group. A
       // container ring is square over the rounded frame and paints on mouse
@@ -541,32 +620,13 @@ export const ToggleGroup = ({
       // frame. Elevation is the one exception: per-segment shadow
       // wrappers would be cut by the clip.
       borderRadius: knobProps.borderRadius.borderRadius,
-      ...(elevationWrapperProps.elevation ? undefined : { overflow: 'hidden' as const }),
+      ...(hasElevationProp(elevationWrapperProps) ? undefined : { overflow: 'hidden' as const }),
       type,
-      ...(type === 'single' ? { disableDeactivation: true } : {}),
+      ...(type === 'single' ? { disableDeactivation: true } : undefined),
       ...(isControlled ? { value: resolvedValue ?? emptyValue } : { defaultValue: resolvedValue ?? emptyValue }),
-      onValueChange: (val: string | string[]) => {
-        if (disabled || readOnly) {
+      onValueChange: (val: ToggleValue) => {
+        if (isBlockedChange(val, resolvedValue)) {
           return;
-        }
-        // Guard: presses on disabled items never change the value
-        // (items stay mounted + explained instead of hiding).
-        if (options) {
-          if (type === 'single') {
-            if (typeof val === 'string' && optionDisabledByValue(val)) {
-              return;
-            }
-          } else {
-            const prevArr = Array.isArray(resolvedValue) ? resolvedValue : [];
-            const nextArr = Array.isArray(val) ? val : [];
-            const toggled = [
-              ...nextArr.filter((v) => !prevArr.includes(v)),
-              ...prevArr.filter((v) => !nextArr.includes(v)),
-            ];
-            if (toggled.length === 1 && optionDisabledByValue(toggled[0])) {
-              return;
-            }
-          }
         }
         handleChange?.(val);
         handleValueChange(val);
@@ -580,16 +640,9 @@ export const ToggleGroup = ({
       alignSelf: 'flex-start',
       ...(handleBlur ? { onBlur: handleBlur } : undefined),
       'aria-required': required ?? undefined,
-      'aria-invalid': hasError ?? undefined,
+      'aria-invalid': hasError,
       'aria-readonly': readOnly ?? undefined,
-      // Web reads the attribute, Android reads the RN prop off the
-      // container. iOS reads neither, which is why the name is also prefixed
-      // onto every segment above.
-      ...(groupA11yName ? { 'aria-label': groupA11yName } : undefined),
-      ...(ariaLabelledBy ? { 'aria-labelledby': ariaLabelledBy } : undefined),
-      ...(!isWeb && groupA11yName
-        ? { accessibilityLabel: groupA11yName, accessibilityRole: 'radiogroup' as const }
-        : undefined),
+      ...groupA11yProps,
     };
 
     return (
@@ -625,7 +678,7 @@ export const ToggleGroup = ({
     );
   };
 
-  if (!resolvedForm || !name) {
+  if (!resolvedForm || !hasText(name)) {
     return (
       <FieldLayout
         id={id}
@@ -639,7 +692,7 @@ export const ToggleGroup = ({
         // FieldLayout owns the dimWhole assembly dim (keepLabel pins
         // the sibling label/helper readable) — it needs the disabled state.
         disabled={disabled}>
-        {renderToggleGroup(value ?? defaultValue, value !== undefined, undefined, onBlur, !!error)}
+        {renderToggleGroup(value ?? defaultValue, value !== undefined, undefined, onBlur, Boolean(error))}
       </FieldLayout>
     );
   }
@@ -668,10 +721,12 @@ export const ToggleGroup = ({
               value ?? field.state.value,
               true,
               (val) => {
-                field.handleChange(val as any);
+                // SAFETY: the field is bound to this group's string | string[] value, so handleChange accepts the value it is given.
+                // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- the field API's value type is erased to `never` for a form of unknown shape
+                field.handleChange(val as never);
               },
               mergeFieldHandler(field, 'handleBlur', onBlur),
-              !!resolvedError,
+              Boolean(resolvedError),
             )}
           </FieldLayout>
         );

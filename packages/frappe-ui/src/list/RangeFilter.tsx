@@ -1,5 +1,5 @@
-import { Text, XStack, YStack } from '@repo/ui';
 import { useResolvedKnobs } from '@repo/theme';
+import { Text, XStack, YStack } from '@repo/ui';
 import { Suspense, lazy } from 'react';
 import type { ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';

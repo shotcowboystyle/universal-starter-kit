@@ -1,6 +1,4 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 
 import { renderWithProviders } from '@repo/test-utils';
 import { Preset } from '@repo/theme';
@@ -9,9 +7,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { Button, buttonDensityFamily, buttonSizeRecipes, resolveButtonSizeRecipe } from './index';
 
-afterEach(cleanup);
-
 describe('Button size recipes', () => {
+  afterEach(cleanup);
+
   it('medium is the measured 44 / 18 / 14 / 16 / 9 (tamagui.dev $4)', () => {
     // Generated from recipeFamilies.control: fontSize is the recipe's
     // px number (md 14), no longer a drifted font token ("$3" = 13).
@@ -31,7 +29,7 @@ describe('Button size recipes', () => {
     renderWithProviders(<Button>Save</Button>);
     const frame = screen.getByRole('button');
     expect(frame.dataset.mpButtonHeight).toBe('44');
-    expect(frame.dataset.mpPressSlop).toBeNull();
+    expect(frame.dataset.mpPressSlop).toBeUndefined();
     expect(frame.style.minHeight).not.toBe('44px');
   });
 
@@ -47,11 +45,13 @@ describe('Button size recipes', () => {
     renderWithProviders(<Button size="$5">Save</Button>);
     const frame = screen.getByRole('button');
     expect(frame.dataset.mpButtonHeight).toBe('52');
-    expect(frame.dataset.mpPressSlop).toBeNull();
+    expect(frame.dataset.mpPressSlop).toBeUndefined();
   });
 });
 
 describe('Button density ≠ size', () => {
+  afterEach(cleanup);
+
   it('compact tightens pad without shrinking recipe height', () => {
     // Density picks the FAMILY; it never subtracts from the recipe.
     expect(buttonDensityFamily('control', true)).toBe('controlCompact');
@@ -85,12 +85,14 @@ describe('Button density ≠ size', () => {
 });
 
 describe('Button nested scale', () => {
+  afterEach(cleanup);
+
   it('paints nestedControl and does not grow circular chrome to 44', () => {
     renderWithProviders(
       <Button
         nested
         circular
-        aria-label="day">
+        aria-label="Day">
         12
       </Button>,
     );
@@ -107,7 +109,7 @@ describe('Button nested scale', () => {
         <Button
           nested
           circular
-          aria-label="day">
+          aria-label="Day">
           12
         </Button>
         <Button nested>Nested</Button>
@@ -123,6 +125,8 @@ describe('Button nested scale', () => {
 });
 
 describe('Button RING-ANATOMY + selected fill', () => {
+  afterEach(cleanup);
+
   it('selected is fill (aria-pressed) not an extra outline', () => {
     renderWithProviders(
       <Button
@@ -143,7 +147,7 @@ describe('Button RING-ANATOMY + selected fill', () => {
   });
 
   it('keyboard activation still fires on the whole frame', () => {
-    const onPress = vi.fn();
+    const onPress = vi.fn<() => void>();
     renderWithProviders(<Button onPress={onPress}>Save</Button>);
     const frame = screen.getByRole('button');
     fireEvent.keyDown(frame, { key: 'Enter' });

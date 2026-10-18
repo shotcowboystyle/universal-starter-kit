@@ -1,6 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 
 import { renderWithProviders } from '@repo/test-utils';
 import { Preset } from '@repo/theme';
@@ -9,9 +8,7 @@ import { createElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
-  AlphaStrip,
-  HueStrip,
-  SaturationPanel,
+  hexAlphaByte,
   hexToHsv,
   hexToRgb,
   hsvToHex,
@@ -21,7 +18,8 @@ import {
   parseHex,
   rgbToHex,
   rgbToHsv,
-} from './parts';
+} from './color';
+import { AlphaStrip, HueStrip, SaturationPanel } from './parts';
 
 vi.mock(import('@tamagui/lucide-icons-2'), () => ({
   Palette: () => null,
@@ -30,7 +28,8 @@ vi.mock(import('@tamagui/lucide-icons-2'), () => ({
   Pipette: () => null,
 }));
 
-vi.mock(import('expo-linear-gradient'), () => ({
+// oxlint-disable-next-line vitest/prefer-import-in-mock -- the real LinearGradient is a class component; this probe is a function component, so a typed factory cannot be satisfied
+vi.mock('expo-linear-gradient', () => ({
   LinearGradient: (props: {
     colors?: string[];
     locations?: number[];
@@ -48,7 +47,10 @@ vi.mock(import('expo-linear-gradient'), () => ({
     }),
 }));
 
-const loadColorPicker = async () => (await import('./index')).ColorPicker;
+const loadColorPicker = async () => {
+  const mod = await import('./index');
+  return mod.ColorPicker;
+};
 
 describe('ColorPicker', () => {
   it('should handle disabled state', async () => {
@@ -96,7 +98,7 @@ describe('ColorPicker', () => {
       expect(document.body.querySelector('[aria-label="Hue"]')).toBeTruthy();
     });
 
-    const hexInput = document.body.querySelector('input[placeholder="#000000"]') as HTMLInputElement | null;
+    const hexInput = document.body.querySelector('input[placeholder="#000000"]');
     expect(hexInput).toBeTruthy();
 
     await act(async () => {
@@ -140,14 +142,15 @@ describe('ColorPicker', () => {
 
   it('fires canonical onChange and the deprecated onValueChange alias once when cleared', async () => {
     const ColorPicker = await loadColorPicker();
-    const onChange = vi.fn();
-    const onValueChange = vi.fn();
+    const onChange = vi.fn<(value: string) => void>();
+    const onValueChange = vi.fn<(value: string) => void>();
     const result = renderWithProviders(
       <ColorPicker
         label="Color"
         name="color"
         defaultValue="#112233"
         onChange={onChange}
+        // oxlint-disable-next-line typescript/no-deprecated -- exercising the deprecated alias is the point of this test
         onValueChange={onValueChange}
       />,
     );
@@ -164,8 +167,7 @@ describe('ColorPicker', () => {
       expect(onChange).toHaveBeenCalledWith('');
     });
     expect(onChange).toHaveBeenCalledOnce();
-    expect(onValueChange).toHaveBeenCalledOnce();
-    expect(onValueChange).toHaveBeenCalledWith('');
+    expect(onValueChange).toHaveBeenCalledExactlyOnceWith('');
   });
 
   it('shows format validation error for unrecognized rgb value', async () => {
@@ -180,6 +182,27 @@ describe('ColorPicker', () => {
     );
 
     expect(result.findTextElement('Color must be a recognized RGB value')).toBeDefined();
+  });
+
+  it.each([
+    ['rgb', 'rgb( 1 , 2 , 3 )', true],
+    ['rgb', 'rgba(255, 0, 0, .5)', true],
+    ['rgb', 'rgb(1, 2)', false],
+    ['hsl', 'hsl(-120, 100%, 50%)', true],
+    ['hsl', 'hsla(120, 50.5%, 50%, 0.25)', true],
+    ['hsl', 'hsl(120, 50, 50%)', false],
+  ] as const)('accepts %s value %s: %s', async (format, value, valid) => {
+    const ColorPicker = await loadColorPicker();
+    const result = renderWithProviders(
+      <ColorPicker
+        label="Color"
+        name={undefined as never}
+        format={format}
+        defaultValue={value}
+      />,
+    );
+    const message = `Color must be a recognized ${format.toUpperCase()} value`;
+    expect(result.findTextElement(message) === undefined).toBe(valid);
   });
 
   describe('color utilities', () => {
@@ -213,8 +236,7 @@ describe('ColorPicker', () => {
       expect(fromHex.v).toBe(100);
     });
 
-    it('parses 8-digit hex including alpha', async () => {
-      const { parseHex, hexAlphaByte } = await import('./parts');
+    it('parses 8-digit hex including alpha', () => {
       expect(parseHex('#11223344')).toStrictEqual({ r: 17, g: 34, b: 51, alpha: 27 });
       expect(hexAlphaByte(100)).toBe('FF');
       expect(hexAlphaByte(0)).toBe('00');
@@ -223,7 +245,7 @@ describe('ColorPicker', () => {
 
   it('commits 8-digit hex into color + alpha when showAlpha', async () => {
     const ColorPicker = await loadColorPicker();
-    const onChange = vi.fn();
+    const onChange = vi.fn<(value: string) => void>();
     const result = renderWithProviders(
       <ColorPicker
         label="Color"
@@ -242,22 +264,22 @@ describe('ColorPicker', () => {
     await waitFor(() => {
       expect(document.body.querySelector('[aria-label="Opacity"]')).toBeTruthy();
     });
-    const hexInput = document.body.querySelector('input[placeholder="#000000"]') as HTMLInputElement | null;
+    const hexInput = document.body.querySelector('input[placeholder="#000000"]');
     await act(async () => {
       if (hexInput) {
         fireEvent.change(hexInput, { target: { value: '#11223344' } });
       }
     });
     await waitFor(() => {
-      expect(onChange).toHaveBeenCalledWith();
+      expect(onChange).toHaveBeenCalledWith(expect.stringMatching(/^#112233/iu));
     });
-    const last = onChange.mock.calls.at(-1)?.[0] as string;
+    const last = onChange.mock.calls.at(-1)?.[0] ?? '';
     expect(last.toUpperCase().startsWith('#112233')).toBe(true);
     expect(last).toHaveLength(9);
   });
 
   it('moves saturation with arrow keys', () => {
-    const onChangeSV = vi.fn();
+    const onChangeSV = vi.fn<(s: number, v: number) => void>();
     const result = renderWithProviders(
       <SaturationPanel
         hue={0}
@@ -284,6 +306,7 @@ describe('ColorPicker', () => {
         orientation="vertical"
       />,
     );
+    // oxlint-disable-next-line github/no-inner-html -- reads (never writes) the rendered markup to assert the inline gradient CSS
     const html = result.container.innerHTML;
     expect(html).toContain('linear-gradient(to bottom, #f00');
     const rail = result.container.querySelector('[data-testid="color-picker-hue"]');
@@ -336,6 +359,7 @@ describe('ColorPicker', () => {
         </>,
       );
 
+      // oxlint-disable-next-line github/no-inner-html -- reads (never writes) the rendered markup to assert the inline gradient CSS
       const html = result.container.innerHTML;
       expect(html).toContain('linear-gradient(to right, #fff,');
       expect(html).toContain('linear-gradient(to top, #000, transparent)');
@@ -366,7 +390,7 @@ describe('ColorPicker', () => {
         </>,
       );
 
-      const grads = result.container.querySelectorAll('[data-testid="expo-linear-gradient"]');
+      const grads = result.container.querySelectorAll<HTMLElement>('[data-testid="expo-linear-gradient"]');
       // sat: 2 layers, hue: 1, alpha: 1
       expect(grads).toHaveLength(4);
 
@@ -386,9 +410,9 @@ describe('ColorPicker', () => {
     const here = import.meta.dirname;
 
     it('consumes FloatingPanel widthMode at-least-trigger (does not reimplement cover)', () => {
-      const source = readFileSync(resolve(here, 'parts.tsx'), 'utf-8');
+      const source = readFileSync(path.resolve(here, 'parts.tsx'), 'utf-8');
       expect(source).toContain('widthMode="at-least-trigger"');
-      expect(source).not.toMatch(/^\s*fitContent\s*$/mu);
+      expect(source).not.toMatch(/^[ \t]*fitContent[ \t]*$/mu);
       expect(source).not.toContain('OVERLAY_ATTACH_GAP');
     });
 
@@ -409,13 +433,14 @@ describe('ColorPicker', () => {
         />,
       );
       const text = result.container.textContent ?? '';
-      expect(text.toLowerCase()).not.toMatch(/\binvalid\b|\bplease\b|\bsorry\b|\boops\b/u);
+      const words = new Set(text.toLowerCase().split(/[^a-z]+/u));
+      expect(['invalid', 'please', 'sorry', 'oops'].filter((word) => words.has(word))).toStrictEqual([]);
       expect(result.findTextElement('Color must be a recognized RGB value')).toBeDefined();
     });
 
     it('marks the editor host compose so a swatch pick does not dismiss', async () => {
       const ColorPicker = await loadColorPicker();
-      const onChange = vi.fn();
+      const onChange = vi.fn<(value: string) => void>();
       const result = renderWithProviders(
         <ColorPicker
           label="Color"
@@ -443,9 +468,9 @@ describe('ColorPicker', () => {
       });
       expect(document.body.querySelector('[aria-label="Hue"]')).toBeTruthy();
       await waitFor(() => {
-        expect(onChange).toHaveBeenCalledWith();
+        expect(onChange).toHaveBeenCalledWith(expect.stringMatching(/^#00FF00/iu));
       });
-      const first = String(onChange.mock.calls.at(-1)?.[0] ?? '').toUpperCase();
+      const first = (onChange.mock.calls.at(-1)?.[0] ?? '').toUpperCase();
       expect(first.startsWith('#00FF00')).toBe(true);
 
       await act(async () => {
@@ -453,11 +478,7 @@ describe('ColorPicker', () => {
       });
       expect(document.body.querySelector('[aria-label="Hue"]')).toBeTruthy();
       await waitFor(() => {
-        expect(
-          String(onChange.mock.calls.at(-1)?.[0] ?? '')
-            .toUpperCase()
-            .startsWith('#0000FF'),
-        ).toBe(true);
+        expect((onChange.mock.calls.at(-1)?.[0] ?? '').toUpperCase().startsWith('#0000FF')).toBe(true);
       });
     });
 
@@ -472,7 +493,7 @@ describe('ColorPicker', () => {
           />
         </Preset>,
       );
-      const handle = none.container.querySelector('[data-testid="color-handle"]') as HTMLElement | null;
+      const handle = none.container.querySelector('[data-testid="color-handle"]');
       expect(handle).toBeTruthy();
       const radius = getComputedStyle(handle!).borderRadius;
       expect(radius === '0px' || radius === '0').toBe(true);

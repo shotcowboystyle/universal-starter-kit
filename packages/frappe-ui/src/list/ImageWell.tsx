@@ -1,6 +1,6 @@
+import { useResolvedKnobs } from '@repo/theme';
 import { Image, Text, XStack, YStack, isWeb } from '@repo/ui';
 import type { YStackProps } from '@repo/ui';
-import { useResolvedKnobs } from '@repo/theme';
 import { useEffect, useState } from 'react';
 
 export interface ImageWellProps extends Omit<YStackProps, 'children'> {

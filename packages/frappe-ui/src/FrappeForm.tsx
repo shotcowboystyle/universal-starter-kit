@@ -1,18 +1,11 @@
-import {
-  AsyncBoundary,
-  AsyncSkeleton,
-  DetailPageLayout,
-  EmptyState,
-  PageHeader,
-  Tabs,
-} from '@repo/ui';
-import type { TabsItem } from '@repo/ui';
+import { ArrowLeftIcon } from '@phosphor-icons/react';
 import { dialog } from '@repo/desktop';
 import { Button, Input, formCommonColors } from '@repo/forms';
 import { useFrappeCollection, useLiveQuery } from '@repo/frappe';
 import type { DocTypeMeta, FormSection } from '@repo/frappe';
 import { useResolvedKnobs } from '@repo/theme';
-import { ArrowLeftIcon } from '@phosphor-icons/react';
+import { AsyncBoundary, AsyncSkeleton, DetailPageLayout, EmptyState, PageHeader, Tabs } from '@repo/ui';
+import type { TabsItem } from '@repo/ui';
 import type { TFunction } from 'i18next';
 import type React from 'react';
 import { useEffect, useMemo, useState } from 'react';

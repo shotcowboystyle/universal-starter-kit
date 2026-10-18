@@ -1,6 +1,4 @@
-/**
- * @vitest-environment jsdom
- */
+// @vitest-environment jsdom
 
 import { renderWithProviders } from '@repo/test-utils';
 import { screen } from '@testing-library/react';
@@ -38,11 +36,11 @@ describe('Button TEXT-RIDES-TEXT', () => {
   });
 
   it('renders the origin shape `{label}{cond ? suffix : ""}` when the condition is false', () => {
-    const priceDelta: number = 0;
+    const priceDelta = 0;
     renderWithProviders(
       <Button>
         Add
-        {priceDelta === 0 ? '' : ` +$${priceDelta}`}
+        {priceDelta === 0 ? '' : ` +$${String(priceDelta)}`}
       </Button>,
     );
     const label = screen.getByText('Add');
@@ -69,6 +67,6 @@ describe('Button TEXT-RIDES-TEXT', () => {
     expect(label).not.toBe(screen.getByRole('button'));
     expect(badge).toBeInTheDocument();
     expect(screen.getByText('+$1.00')).toBe(badge);
-    expect(label.compareDocumentPosition(badge) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(label.compareDocumentPosition(badge)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 });

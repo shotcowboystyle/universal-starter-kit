@@ -1,4 +1,3 @@
-import { Tags, Text, XStack, isWeb } from '@repo/ui';
 import {
   ensureFocusVisibleRing,
   ensureKeyboardModalityTracking,
@@ -6,6 +5,7 @@ import {
   useResolvedKnobs,
   wasKeyboardFocus,
 } from '@repo/theme';
+import { Tags, Text, XStack, isWeb } from '@repo/ui';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 

@@ -1,3 +1,7 @@
+import { CaretDownIcon, CaretUpDownIcon } from '@phosphor-icons/react';
+import { Input } from '@repo/forms';
+import { Table } from '@repo/table';
+import { ensureFocusVisibleRing, formatCurrency, formatNumber, formatPercent } from '@repo/theme';
 // Desk-parity report spreadsheet: row numbers, sortable column headers, a
 // per-column FILTER ROW under the headers (desk's killer report feature —
 // inputs drive the standard frappe filter pipeline via reportViewModel's
@@ -9,10 +13,6 @@
 // row under its headers today — capability gap flagged to the table
 // workstream; this grid is the interim desk-parity surface.
 import { ScrollView, Text, Tooltip, View, XStack, isWeb } from '@repo/ui';
-import { Input } from '@repo/forms';
-import { Table } from '@repo/table';
-import { ensureFocusVisibleRing, formatCurrency, formatNumber, formatPercent } from '@repo/theme';
-import { CaretDownIcon, CaretUpDownIcon } from '@phosphor-icons/react';
 import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 

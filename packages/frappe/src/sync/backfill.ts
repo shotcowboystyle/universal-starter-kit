@@ -378,7 +378,7 @@ export class BackfillManager {
     // Update caches using subscription methods
     subscription.updateProgressiveCache({
       docIds: [...subscription.getProgressiveCache().docIds, ...docs.map((doc) => doc.name)],
-      nextCursor: docs.length > 0 ? docs.at(-1).name : subscription.getProgressiveCache().nextCursor,
+      nextCursor: docs.length > 0 ? docs.at(-1)?.name : subscription.getProgressiveCache().nextCursor,
       hasMore: docs.length === batchSize,
     });
 

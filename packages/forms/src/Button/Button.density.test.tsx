@@ -1,6 +1,6 @@
+// @vitest-environment jsdom
+
 /**
- * @vitest-environment jsdom
- *
  * The density knob and the `compact` PROP must land the
  * SAME padX. Height stays 44 at both stops — density moves space, not size.
  *
@@ -18,27 +18,25 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { Button, buttonDensityFamily, resolveButtonSizeRecipe } from './index';
 
-afterEach(cleanup);
-
 const sizes = ['$2', '$3', '$4'] as const;
 
 /** Last `_pl-Npx` / `_pr-Npx` class wins (paddingHorizontal expands to both). */
 const paddingPxFromClass = (el: HTMLElement): number | null => {
   let found: number | null = null;
-  for (const c of String(el.className || '').split(/\s+/u)) {
-    const m = /^_p[lr]-(\d+)px$/u.exec(c);
+  for (const c of el.className.split(/\s+/u)) {
+    const m = /^_p[lr]-(?<px>\d+)px$/u.exec(c);
     if (m) {
-      found = Number(m[1]);
+      found = Number(m.groups?.px);
     }
   }
   return found;
 };
 
 const gapPxFromClass = (el: HTMLElement): number | null => {
-  for (const c of String(el.className || '').split(/\s+/u)) {
-    const m = /^_gap-(\d+)px$/u.exec(c);
+  for (const c of el.className.split(/\s+/u)) {
+    const m = /^_gap-(?<px>\d+)px$/u.exec(c);
     if (m) {
-      return Number(m[1]);
+      return Number(m.groups?.px);
     }
   }
   return null;
@@ -81,6 +79,8 @@ const renderComfortable = (size: (typeof sizes)[number]) => {
 };
 
 describe('Button density knob = compact PROP', () => {
+  afterEach(cleanup);
+
   it('compact PROP and density:compact knob land the SAME padX', () => {
     const viaProp = renderProp('$4');
     const propPad = paddingPxFromClass(viaProp);
@@ -133,6 +133,8 @@ describe('Button density knob = compact PROP', () => {
 });
 
 describe('Button density comes from the recipe family', () => {
+  afterEach(cleanup);
+
   it('density picks the family, it does not subtract from the recipe', () => {
     expect(buttonDensityFamily('control', true)).toBe('controlCompact');
     expect(buttonDensityFamily('control', false)).toBe('control');

@@ -1,5 +1,5 @@
-import { Accordion, Card, Chip, Text, XStack, YStack } from '@repo/ui';
 import { useResolvedKnobs } from '@repo/theme';
+import { Accordion, Card, Chip, Text, XStack, YStack } from '@repo/ui';
 import { useTranslation } from 'react-i18next';
 
 import { groupRows, sortRows } from './recordData';

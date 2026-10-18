@@ -1,7 +1,7 @@
 import { containerCapProps, useTouchSurface } from '@repo/theme';
-import type { ComponentProps, ReactNode, Ref } from 'react';
+import type { ComponentProps, FocusEvent, ReactNode, Ref } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { ColorTokens, LabelProps, SizeTokens } from 'tamagui';
+import type { ColorTokens, LabelProps, SizeTokens, TamaguiElement } from 'tamagui';
 import { Paragraph, YStack, XStack, isWeb, useTheme } from 'tamagui';
 
 import { Field, FieldLayout } from '../../FieldLayout';
@@ -71,11 +71,14 @@ const isErrorValue = (value: string | boolean | undefined): boolean =>
   value !== undefined && value !== false && value !== '';
 
 /** Hands a node to a consumer ref of either kind (callback or object). */
-const assignRef = (ref: Ref<unknown> | undefined, node: unknown) => {
-  if (ref instanceof Function) {
-    ref(node);
-  } else if (ref != null) {
+const assignRef = (ref: Ref<unknown> | undefined, node: TamaguiElement | null) => {
+  if (ref == null) {
+    return;
+  }
+  if ('current' in ref) {
     ref.current = node;
+  } else {
+    ref(node);
   }
 };
 
@@ -165,6 +168,7 @@ const resizeStyleFor = ({
   return { numberOfLines: minRows, minHeight: minHeightPx };
 };
 
+// oxlint-disable-next-line react-doctor/no-giant-component, eslint/complexity -- one field shell: the standalone and form branches share the textarea renderer's closure over sizing, count and handlers
 export const TextArea = ({
   name,
   form: formProp,
@@ -181,6 +185,7 @@ export const TextArea = ({
   value,
   defaultValue,
   onChange,
+  // oxlint-disable-next-line typescript/no-deprecated -- `onChangeText` is a supported alias that must keep firing alongside `onChange`
   onChangeText,
   onBlur,
   placeholder,
@@ -204,10 +209,10 @@ export const TextArea = ({
   const [charCount, setCharCount] = useState(() => (value ?? defaultValue ?? '').length);
   const [countLive, setCountLive] = useState(false);
 
-  const textAreaNodeRef = useRef<unknown>(null);
+  const textAreaNodeRef = useRef<TamaguiElement | null>(null);
   // Keeps our own handle for measuring while still handing the node to the consumer's ref.
   const bindTextArea = useCallback(
-    (node: unknown) => {
+    (node: TamaguiElement | null) => {
       textAreaNodeRef.current = node;
       assignRef(textAreaRefProp, node);
     },
@@ -241,11 +246,11 @@ export const TextArea = ({
     setAutoHeight(clamped);
   }, [autoResize, minHeightPx, maxHeightPx]);
 
-  // oxlint-disable-next-line react/exhaustive-effect-dependencies -- the text itself is the trigger: every value change re-measures the box
   useEffect(() => {
     if (autoResize && isWeb) {
       requestAnimationFrame(measureAndResize);
     }
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- the text itself is the trigger: every value change re-measures the box
   }, [autoResize, measureAndResize, value, defaultValue]);
 
   const handleContentSizeChange = useCallback(
@@ -329,7 +334,6 @@ export const TextArea = ({
   // beats the size atomic in the stylesheet, RM-TXT-6).
   const consumerStyleProp = textAreaProps?.style;
   // SAFETY: a consumer `style` reaching a text input is a style object; the registered-style number brand in StyleProp is never passed here.
-  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- StyleProp also admits registered-style numbers and arrays, which cannot be spread by type
   const consumerStyle = (isObjectLike(consumerStyleProp) ? consumerStyleProp : undefined) as object | undefined;
   const bodyFontWeight = knobProps.body.fontWeight;
   const baseStyle = {
@@ -405,7 +409,7 @@ export const TextArea = ({
             {...(hasText(countId) ? { 'aria-describedby': countId } : undefined)}
             id={id}
             {...(isControlled ? { value: textValue } : { defaultValue: textValue })}
-            onFocus={(e) => {
+            onFocus={(e: FocusEvent<HTMLDivElement>) => {
               setCountLive(true);
               textAreaProps?.onFocus?.(e);
             }}
@@ -420,7 +424,7 @@ export const TextArea = ({
               measureAndResize();
             }}
             {...(autoResize && !isWeb ? { onContentSizeChange: handleContentSizeChange } : undefined)}
-            onBlur={(e) => {
+            onBlur={(e: FocusEvent<HTMLDivElement>) => {
               setCountLive(false);
               textAreaProps?.onBlur?.(e);
             }}

@@ -1,7 +1,7 @@
-import { AsyncBoundary, PageSection } from '@repo/ui';
 import { DataTable } from '@repo/table';
 import type { DataTableColumn } from '@repo/table';
 import { useResolvedKnobs } from '@repo/theme';
+import { AsyncBoundary, PageSection } from '@repo/ui';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { YStack } from 'tamagui';

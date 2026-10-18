@@ -1,29 +1,17 @@
 import type { AnyFormApi } from '../types';
 
-type FormDefaults = Record<string, unknown>;
-
 /**
  * A Switch bound to an immediate effect commits on
  * flip. Updating that field's default so `isDirty` stays false means the
  * page-level bar never rises, and a later Discard cannot revert the flip.
  */
+// oxlint-disable-next-line anti-slop/no-unknown-parameters -- public helper over a form of unknown shape; the field's value type is erased
 export const commitImmediateField = (form: AnyFormApi, name: string, value: unknown): void => {
-  const options = form.options as { defaultValues?: FormDefaults };
-  const nextDefaults: FormDefaults = { ...options.defaultValues, [name]: value };
-  const { update } = form as { update?: (opts: { defaultValues: FormDefaults }) => void };
-  if (typeof update === 'function') {
-    update({ defaultValues: nextDefaults });
-  } else {
-    options.defaultValues = nextDefaults;
-  }
-  const { setFieldMeta } = form as {
-    setFieldMeta?: (field: string, updater: (prev: Record<string, unknown>) => unknown) => void;
-  };
-  if (typeof setFieldMeta === 'function') {
-    setFieldMeta(name, (prev) => ({
-      ...prev,
-      isDirty: false,
-      isDefaultValue: true,
-    }));
-  }
+  // oxlint-disable-next-line typescript/no-unsafe-assignment -- AnyFormApi erases the form's data type, so its defaultValues are `any`
+  form.update({ defaultValues: { ...form.options.defaultValues, [name]: value } });
+  form.setFieldMeta(name, (prev) => ({
+    ...prev,
+    isDirty: false,
+    isDefaultValue: true,
+  }));
 };

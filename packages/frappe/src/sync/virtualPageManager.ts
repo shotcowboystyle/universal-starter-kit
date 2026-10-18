@@ -178,7 +178,7 @@ export class VirtualSubscription implements Subscription {
     // Update progressive cache
     this.updateProgressiveCache({
       docIds: docs.map((doc) => doc.name),
-      nextCursor: docs.length > 0 ? docs.at(-1).name : undefined,
+      nextCursor: docs.length > 0 ? docs.at(-1)?.name : undefined,
       lastFetchedAt: new Date(),
     });
 
@@ -429,7 +429,7 @@ export class VirtualPageManager<Data extends FrappeDocData = FrappeDocData> {
     });
     const lastDoc = this.normalizedCache.get({
       doctype: subscription.query.doctype,
-      name: docIds.at(-1),
+      name: docIds.at(-1) ?? '',
     });
 
     if (!firstDoc || !lastDoc) {
@@ -784,7 +784,7 @@ export class VirtualPageManager<Data extends FrappeDocData = FrappeDocData> {
 
       fetchedDocs = [...fetchedDocs, ...res];
       // Update cursor for next batch
-      currentCursor = res.length > 0 ? res.at(-1).name : undefined;
+      currentCursor = res.length > 0 ? res.at(-1)?.name : undefined;
       hasMore = res.length === this.batchSize;
     }
 
@@ -841,7 +841,7 @@ export class VirtualPageManager<Data extends FrappeDocData = FrappeDocData> {
 
       fetchedDocs = [...fetchedDocs, ...response];
       // Update cursor for next batch (server should provide proper cursor)
-      currentCursor = response.length > 0 ? response.at(-1).name : undefined;
+      currentCursor = response.length > 0 ? response.at(-1)?.name : undefined;
       hasMore = response.length === fetchSize && fetchedDocs.length < neededCount;
     }
 
@@ -857,7 +857,7 @@ export class VirtualPageManager<Data extends FrappeDocData = FrappeDocData> {
     const updatedDocIds = [...currentDocIds, ...newDocIds];
     subscription.updateProgressiveCache({
       docIds: updatedDocIds,
-      nextCursor: fetchedDocs.length > 0 ? fetchedDocs.at(-1).name : undefined,
+      nextCursor: fetchedDocs.length > 0 ? fetchedDocs.at(-1)?.name : undefined,
       hasMore,
       lastFetchedAt: new Date(),
     });
@@ -912,7 +912,7 @@ export class VirtualPageManager<Data extends FrappeDocData = FrappeDocData> {
 
     subscription.updateProgressiveCache({
       docIds: currentDocIds,
-      nextCursor: response.length > 0 ? response.at(-1).name : undefined,
+      nextCursor: response.length > 0 ? response.at(-1)?.name : undefined,
       hasMore: response.length === pageSize,
       lastFetchedAt: new Date(),
     });
@@ -953,7 +953,7 @@ export class VirtualPageManager<Data extends FrappeDocData = FrappeDocData> {
     const updatedDocIds = [...subscription.getProgressiveCache().docIds, ...newDocIds];
     subscription.updateProgressiveCache({
       docIds: updatedDocIds,
-      nextCursor: response.length > 0 ? response.at(-1).name : undefined,
+      nextCursor: response.length > 0 ? response.at(-1)?.name : undefined,
       hasMore: response.length === this.batchSize,
       lastFetchedAt: new Date(),
     });
@@ -987,7 +987,7 @@ export class VirtualPageManager<Data extends FrappeDocData = FrappeDocData> {
         continue;
       }
 
-      const last = merged.at(-1);
+      const last = merged.at(-1) ?? { endIndex: 0, startIndex: 0, endPage: 0, startPage: 0, fetchedVia: undefined };
 
       // Check if current overlaps or is adjacent to last
       // Islands are adjacent if endIndex touches startIndex (within 1 index)

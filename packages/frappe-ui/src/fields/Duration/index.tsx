@@ -1,6 +1,6 @@
+import { ClockIcon } from '@phosphor-icons/react';
 import type { DurationProps as FormsDurationProps } from '@repo/forms';
 import { Duration as FormsDuration } from '@repo/forms';
-import { ClockIcon } from '@phosphor-icons/react';
 import { useProps } from 'tamagui';
 
 export type DurationProps = FormsDurationProps;

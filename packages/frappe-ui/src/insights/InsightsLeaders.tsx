@@ -1,7 +1,7 @@
-import { Tabs, Text, XStack, YStack } from '@repo/ui';
 import { DataTable } from '@repo/table';
 import type { DataTableColumn, DataTableData } from '@repo/table';
 import { useResolvedKnobs } from '@repo/theme';
+import { Tabs, Text, XStack, YStack } from '@repo/ui';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 

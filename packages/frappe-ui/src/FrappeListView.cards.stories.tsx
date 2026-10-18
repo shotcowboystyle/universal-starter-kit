@@ -1,6 +1,6 @@
-import { Card, Image } from '@repo/ui';
 import { action } from '@repo/storybook';
 import { useResolvedKnobs } from '@repo/theme';
+import { Card, Image } from '@repo/ui';
 import { Text, YStack } from 'tamagui';
 
 import { createRosterFixtures, rosterPokemonFields, rosterPokemonMeta } from '../tests/fixtures/pokemonRoster';

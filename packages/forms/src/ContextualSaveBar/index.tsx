@@ -1,23 +1,26 @@
 import { useResolvedKnobs, warnCancelDisabled } from '@repo/theme';
 import type { KnobProps } from '@repo/theme';
-import type { Store } from '@tanstack/react-store';
-import { useStore } from '@tanstack/react-store';
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import { useSelector } from '@tanstack/react-store';
+import { useCallback, useEffect, useEffectEvent, useState, useSyncExternalStore } from 'react';
 import { AnimatePresence, Text, XStack, isWeb } from 'tamagui';
 
+// oxlint-disable-next-line import/no-cycle -- Form renders the save bar, so any forms import that reaches Form closes the loop; splitting the context out would move exported modules
 import { Button } from '../Button';
 import { collectFormFieldErrors } from '../ErrorSummary';
+// oxlint-disable-next-line import/no-cycle -- Form renders the save bar, so any forms import that reaches Form closes the loop; splitting the context out would move exported modules
 import { useFormContext } from '../Form';
 import { getFormSubmission } from '../Form/submission-controller';
 import { formCommonColors } from '../shared/color-ramps';
 import { t } from '../shared/t';
+// oxlint-disable-next-line import/no-cycle -- Form renders the save bar, so any forms import that reaches Form closes the loop; splitting the context out would move exported modules
 import { getElevationWrapperProps } from '../shared/utils';
 import { zIndex } from '../shared/z-index';
 import { Spinner } from '../Spinner';
 
+// oxlint-disable-next-line import/no-cycle -- Form renders the save bar, so any forms import that reaches Form closes the loop; splitting the context out would move exported modules
 import { UnsavedChangesDialog } from './UnsavedChangesDialog';
 import { useUnsavedChangesGuard } from './use-unsaved-changes-guard';
-import type { NavigationBlocker, UseNavigationBlocker } from './use-unsaved-changes-guard';
+import type { UseNavigationBlocker } from './use-unsaved-changes-guard';
 
 export { clientKnownIdentity } from './client-known-identity';
 export { commitImmediateField } from './commit-immediate-field';
@@ -35,11 +38,13 @@ export interface ContextualSaveBarProps {
   discardDisabled?: boolean;
   /** Host `useBlocker` (TanStack / one). Seam hosts may pass a no-op. */
   useBlocker?: UseNavigationBlocker;
+  // oxlint-disable-next-line anti-slop/no-unsafe-dictionary-type -- public callback over a form of unknown shape; the bar never reads the values
   onSaved?: (values: Record<string, unknown>) => void;
   /**
    * Fired after a Switch auto-commit in declarative mode.
    * Form reads this; the bar itself does not.
    */
+  // oxlint-disable-next-line anti-slop/no-unknown-parameters -- public callback; the committed field's value type is erased for a form of unknown shape
   onAutoCommit?: (name: string, value: unknown) => void;
   /** Override normal dirty-state copy; saving and failures retain their status. */
   message?: string;
@@ -51,23 +56,28 @@ const dirtyCount = (fieldMeta: FieldMetaMap): number => Object.values(fieldMeta)
 
 const fieldErrorCount = (fieldMeta: FieldMetaMap): number => collectFormFieldErrors(fieldMeta).length;
 
-interface SaveBarStoreState {
-  isDirty?: boolean;
-  isSubmitting?: boolean;
-  fieldMeta?: FieldMetaMap;
-  submissionAttempts?: number;
-  values?: Record<string, unknown>;
-}
-
 const useSaveBarSnapshot = () => {
   const form = useFormContext();
-  return useStore(form.store as unknown as Store<SaveBarStoreState>, (state: SaveBarStoreState) => ({
-    isDirty: Boolean(state.isDirty),
-    isSubmitting: Boolean(state.isSubmitting),
-    fieldMeta: state.fieldMeta ?? {},
-    submissionAttempts: state.submissionAttempts ?? 0,
-    values: state.values ?? {},
+  return useSelector(form.store, (state) => ({
+    isDirty: state.isDirty,
+    isSubmitting: state.isSubmitting,
+    fieldMeta: state.fieldMeta,
+    submissionAttempts: state.submissionAttempts,
+    values: state.values,
   }));
+};
+
+interface StatusCopy {
+  text: string;
+  failed: boolean;
+  qualifier?: string;
+}
+
+const dirtyQualifier = (dirty: number): string | undefined => {
+  if (dirty <= 0) {
+    return undefined;
+  }
+  return dirty === 1 ? t('· 1 field') : t('· {{count}} fields', { count: dirty });
 };
 
 const statusCopy = (args: {
@@ -77,11 +87,11 @@ const statusCopy = (args: {
   submissionAttempts: number;
   dirty: number;
   override?: string;
-}): { text: string; failed: boolean; qualifier?: string } => {
+}): StatusCopy => {
   if (args.isSubmitting) {
     return { text: t('Saving…'), failed: false };
   }
-  if (args.saveError) {
+  if (args.saveError !== null && args.saveError !== '') {
     return {
       text: t("Couldn't save — {{error}} Edits are kept on this page.", {
         error: /[.!?。！？]$/u.test(args.saveError.trimEnd())
@@ -99,12 +109,10 @@ const statusCopy = (args: {
       failed: true,
     };
   }
-  if (args.override) {
+  if (args.override !== undefined && args.override !== '') {
     return { text: args.override, failed: false };
   }
-  const qualifier =
-    args.dirty > 0 ? (args.dirty === 1 ? t('· 1 field') : t('· {{count}} fields', { count: args.dirty })) : undefined;
-  return { text: t('Unsaved changes'), failed: false, qualifier };
+  return { text: t('Unsaved changes'), failed: false, qualifier: dirtyQualifier(args.dirty) };
 };
 
 const barRadius = (knobProps: KnobProps) => {
@@ -118,25 +126,45 @@ const barRadius = (knobProps: KnobProps) => {
 };
 
 const containerRadiusRest = (knobProps: KnobProps) => {
-  const fragment = knobProps.containerRadius as KnobProps['containerRadius'] & {
-    className?: string;
-  };
-  const { className, borderRadius: _topPair, ...rest } = fragment;
+  // oxlint-disable-next-line sonarjs/no-unused-vars -- borderRadius is pulled out only to keep it from the rest spread; barRadius sets the per-corner radii
+  const { className, borderRadius: _topPair, ...rest } = knobProps.containerRadius;
   return { className, rest };
 };
 
+/** Hand focus back to the form when the bar that held it goes away. */
+const restoreFocusToForm = () => {
+  if (!isWeb || typeof document === 'undefined') {
+    return;
+  }
+  const bar = document.querySelector('[data-mp-contextual-savebar]');
+  const active = document.activeElement;
+  if (!bar || !active || !bar.contains(active)) {
+    return;
+  }
+  const formEl = document.querySelector<HTMLElement>('[data-mpo-form-layout]');
+  formEl?.focus?.();
+};
+
+/*
+ * Complexity note: one dock whose layout flips between the single-row status
+ * and the stacked failure view, plus the save/discard/route-leave wiring that
+ * shares the same form snapshot; splitting it would thread that state through props.
+ */
+// oxlint-disable-next-line eslint/complexity -- see the complexity note above
 export const ContextualSaveBar = ({
   forceVisible = false,
   discardDisabled = false,
   useBlocker,
   onSaved,
   message,
+  // oxlint-disable-next-line sonarjs/cognitive-complexity -- see the complexity note above
 }: ContextualSaveBarProps) => {
   const form = useFormContext();
   const { knobProps, elevation } = useResolvedKnobs();
   const snap = useSaveBarSnapshot();
   const submission = getFormSubmission(form);
   const { error: saveError } = useSyncExternalStore(
+    // oxlint-disable-next-line typescript/unbound-method -- subscribe closes over the controller's listener set and never reads `this`
     submission.subscribe,
     submission.getSnapshot,
     submission.getSnapshot,
@@ -152,19 +180,6 @@ export const ContextualSaveBar = ({
     warnCancelDisabled({ disabled: discardDisabled, component: 'ContextualSaveBar' });
   }, [discardDisabled]);
 
-  const restoreFocusToForm = useCallback(() => {
-    if (!isWeb || typeof document === 'undefined') {
-      return;
-    }
-    const bar = document.querySelector('[data-mp-contextual-savebar]');
-    const active = document.activeElement;
-    if (!bar || !active || !bar.contains(active)) {
-      return;
-    }
-    const formEl = document.querySelector<HTMLElement>('[data-mpo-form-layout]');
-    formEl?.focus?.();
-  }, []);
-
   const handleSave = useCallback(async () => {
     if (snap.isSubmitting) {
       return;
@@ -173,22 +188,18 @@ export const ContextualSaveBar = ({
       if ((await submission.submit()) !== 'success') {
         return;
       }
-      const errors = fieldErrorCount((form.store.state.fieldMeta ?? {}) as FieldMetaMap);
-      if (errors > 0) {
+      if (fieldErrorCount(form.store.state.fieldMeta) > 0) {
         return;
       }
-      const values = form.store.state.values as Record<string, unknown>;
-      const { update } = form as { update?: (opts: { defaultValues: Record<string, unknown> }) => void };
-      if (typeof update === 'function') {
-        update({ defaultValues: values });
-      }
+      const { values } = form.store.state;
+      form.update({ defaultValues: values });
       form.reset(values);
       onSaved?.(values);
       restoreFocusToForm();
     } catch (error) {
       submission.reportError(error);
     }
-  }, [form, onSaved, restoreFocusToForm, snap.isSubmitting, submission]);
+  }, [form, onSaved, snap.isSubmitting, submission]);
 
   const handleDiscardCommit = useCallback(() => {
     submission.clearError();
@@ -198,7 +209,7 @@ export const ContextualSaveBar = ({
       blocker.proceed();
     }
     restoreFocusToForm();
-  }, [blocker, form, restoreFocusToForm, submission]);
+  }, [blocker, form, submission]);
 
   const handleKeepEditing = useCallback(() => {
     setDiscardOpen(false);
@@ -207,21 +218,26 @@ export const ContextualSaveBar = ({
     }
   }, [blocker]);
 
+  const onSaveShortcut = useEffectEvent(() => {
+    void handleSave();
+  });
+
   useEffect(() => {
     if (!visible || typeof document === 'undefined') {
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on other paths; a bare return trips consistent-return
+      return undefined;
     }
     const onKey = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
         event.preventDefault();
-        void handleSave();
+        onSaveShortcut();
       }
     };
     document.addEventListener('keydown', onKey);
     return () => {
       document.removeEventListener('keydown', onKey);
     };
-  }, [handleSave, visible]);
+  }, [visible]);
 
   const copy = statusCopy({
     isSubmitting: snap.isSubmitting,
@@ -238,6 +254,8 @@ export const ContextualSaveBar = ({
   const { className: smoothClass, rest: smoothRest } = containerRadiusRest(knobProps);
   const topRadius = knobProps.containerRadius.borderRadius;
   const { transition } = knobProps;
+  const motionStyle = transition === undefined ? undefined : { y: 12, opacity: 0 };
+  const failedWrapStyle = isWeb && copy.failed ? { style: { overflowWrap: 'anywhere' as const } } : {};
 
   return (
     <>
@@ -250,6 +268,7 @@ export const ContextualSaveBar = ({
             data-mp-savebar-radius-class="CONTAINER-CAP"
             data-mp-savebar-top-radius={String(topRadius)}
             data-mp-savebar-bottom-radius="0"
+            // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui XStack is the cross-platform primitive (no <section> on RN); role supplies the landmark
             role="region"
             aria-label={t('Unsaved changes')}
             // Tamagui maps sticky to absolute on native; keep the dock in flow there.
@@ -260,7 +279,7 @@ export const ContextualSaveBar = ({
             flexDirection={copy.failed ? 'column' : 'row'}
             alignItems={copy.failed ? 'stretch' : 'center'}
             paddingTop="$2.5"
-            paddingHorizontal={padX as never}
+            paddingHorizontal={padX}
             paddingBottom="$2.5"
             backgroundColor="$color1"
             borderStyle="solid"
@@ -273,13 +292,13 @@ export const ContextualSaveBar = ({
             className={smoothClass}
             {...knobProps.gap}
             transition={transition}
-            enterStyle={transition ? { y: 12, opacity: 0 } : undefined}
-            exitStyle={transition ? { y: 12, opacity: 0 } : undefined}
+            enterStyle={motionStyle}
+            exitStyle={motionStyle}
             {...elevationProps}
             {...barRadius(knobProps)}
             style={{
               ...(isWeb ? { paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))' } : undefined),
-              ...(elevationProps.style as object | undefined),
+              ...elevationProps.style,
             }}>
             <XStack
               flex={copy.failed ? undefined : 1}
@@ -287,6 +306,7 @@ export const ContextualSaveBar = ({
               alignItems="baseline"
               gap="$2">
               <Text
+                // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Tamagui Text renders on native too, where there is no <output>; role supplies the live region
                 role="status"
                 {...knobProps.body}
                 fontSize="$4"
@@ -295,10 +315,10 @@ export const ContextualSaveBar = ({
                 flexShrink={1}
                 numberOfLines={copy.failed ? undefined : 1}
                 ellipsizeMode={copy.failed ? undefined : 'tail'}
-                {...(isWeb && copy.failed ? { style: { overflowWrap: 'anywhere' } } : {})}>
+                {...failedWrapStyle}>
                 {copy.text}
               </Text>
-              {copy.qualifier ? (
+              {copy.qualifier === undefined ? null : (
                 <Text
                   {...knobProps.body}
                   fontSize="$4"
@@ -307,7 +327,7 @@ export const ContextualSaveBar = ({
                   flexShrink={0}>
                   {copy.qualifier}
                 </Text>
-              ) : null}
+              )}
             </XStack>
             <XStack
               data-mp-savebar-actions=""

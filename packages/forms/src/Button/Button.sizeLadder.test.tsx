@@ -1,6 +1,6 @@
+// @vitest-environment jsdom
+
 /**
- * @vitest-environment jsdom
- *
  * The painted Button, not the recipe source, matches the
  * measured Tamagui v5 table at $2/$3/$4/$6. Radius used to sit on the
  * borderRadius knob (flat 9px); it must step with the size token, and
@@ -14,8 +14,6 @@ import { cleanup, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { Button } from './index';
-
-afterEach(cleanup);
 
 const MEASURED = {
   $2: { paddingHorizontal: 7, fontSize: 12, radius: 5 },
@@ -34,52 +32,53 @@ const KNOB_STOPS = {
 
 const lastPx = (el: Element, re: RegExp): number | null => {
   let found: number | null = null;
-  for (const c of String((el as HTMLElement).className || '').split(/\s+/u)) {
-    const m = c.match(re);
-    if (m) {
-      found = Number(m[1]);
+  for (const c of el.className.split(/\s+/u)) {
+    const px = re.exec(c)?.groups?.px;
+    if (px !== undefined) {
+      found = Number(px);
     }
   }
   return found;
 };
 
-const RADIUS_TOKEN_PX: Record<string, number> = {
-  '0': 0,
-  '2': 5,
-  '3': 7,
-  '4': 9,
-  '5': 10,
-  '6': 16,
-  '12': 50,
-};
+const RADIUS_TOKEN_PX = new Map<string, number>([
+  ['0', 0],
+  ['2', 5],
+  ['3', 7],
+  ['4', 9],
+  ['5', 10],
+  ['6', 16],
+  ['12', 50],
+]);
 
 const radiusPx = (el: HTMLElement): number | null => {
   let found: number | null = null;
-  for (const c of String(el.className || '').split(/\s+/u)) {
-    const px = /^_btlr-(\d+)px$/u.exec(c);
-    if (px) {
-      found = Number(px[1]);
+  for (const c of el.className.split(/\s+/u)) {
+    const px = /^_btlr-(?<px>\d+)px$/u.exec(c)?.groups?.px;
+    if (px !== undefined) {
+      found = Number(px);
     }
-    const tok = /^_btlr-t-radius-(\d+)$/u.exec(c);
-    if (tok) {
-      found = RADIUS_TOKEN_PX[tok[1]] ?? found;
+    const tok = /^_btlr-t-radius-(?<tok>\d+)$/u.exec(c)?.groups?.tok;
+    if (tok !== undefined) {
+      found = RADIUS_TOKEN_PX.get(tok) ?? found;
     }
   }
   return found;
 };
 
-const padXPx = (el: HTMLElement): number | null => lastPx(el, /^_px-(\d+)px$/u) ?? lastPx(el, /^_p[lr]-(\d+)px$/u);
+const padXPx = (el: HTMLElement): number | null =>
+  lastPx(el, /^_px-(?<px>\d+)px$/u) ?? lastPx(el, /^_p[lr]-(?<px>\d+)px$/u);
 
-const gapPx = (el: HTMLElement): number | null => lastPx(el, /^_gap-(\d+)px$/u);
+const gapPx = (el: HTMLElement): number | null => lastPx(el, /^_gap-(?<px>\d+)px$/u);
 
 const labelPx = (el: HTMLElement): number | null => {
-  for (const node of [...el.querySelectorAll('*')]) {
-    const n = lastPx(node, /^_fos-(\d+)px$/u) ?? lastPx(node, /^_fs-(\d+)px$/u);
+  for (const node of el.querySelectorAll('*')) {
+    const n = lastPx(node, /^_fos-(?<px>\d+)px$/u) ?? lastPx(node, /^_fs-(?<px>\d+)px$/u);
     if (n != null) {
       return n;
     }
   }
-  return lastPx(el, /^_fos-(\d+)px$/u) ?? lastPx(el, /^_fs-(\d+)px$/u);
+  return lastPx(el, /^_fos-(?<px>\d+)px$/u) ?? lastPx(el, /^_fs-(?<px>\d+)px$/u);
 };
 
 const renderSize = (size: keyof typeof MEASURED) => {
@@ -94,6 +93,8 @@ const renderSize = (size: keyof typeof MEASURED) => {
 };
 
 describe('painted Button size ladder', () => {
+  afterEach(cleanup);
+
   it('padX, label and radius at $2/$3/$4/$6 match the reference table', () => {
     for (const token of ['$2', '$3', '$4', '$6'] as const) {
       const row = MEASURED[token];

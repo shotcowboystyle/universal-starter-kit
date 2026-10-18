@@ -57,14 +57,13 @@ beforeAll(async () => {
   baseURL = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 });
 
-afterAll(
-  async () =>
-    await new Promise<void>((resolve) =>
-      server.close(() => {
-        resolve();
-      }),
-    ),
-);
+afterAll(async () => {
+  await new Promise<void>((resolve) =>
+    server.close(() => {
+      resolve();
+    }),
+  );
+});
 
 describe('mpo frappe types (MPO-22)', () => {
   it('emits an interface per doctype from getdoctype, child tables included', async () => {

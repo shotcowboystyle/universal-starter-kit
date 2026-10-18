@@ -1,6 +1,6 @@
+// @vitest-environment jsdom
+
 /**
- * @vitest-environment jsdom
- *
  * Hide / explain / upgrade — disabledReason renders a real,
  * hover-free affordance (tooltip-on-disabled is banned).
  */
@@ -41,6 +41,7 @@ describe('Button disabledReason', () => {
     const button = screen.getByRole('button');
     const describedBy = button.getAttribute('aria-describedby');
     expect(describedBy).toBeTruthy();
+    // oxlint-disable-next-line unicorn/prefer-query-selector -- useId ids contain ':' and would need CSS.escape (not implemented in jsdom) as a selector
     expect(document.getElementById(describedBy!)?.textContent).toContain('Needs owner approval');
   });
 
@@ -59,7 +60,7 @@ describe('Button disabledReason', () => {
   });
 
   it('swallows presses while explained-disabled', () => {
-    const onPress = vi.fn();
+    const onPress = vi.fn<() => void>();
     renderWithProviders(
       <Button
         disabled
@@ -73,7 +74,7 @@ describe('Button disabledReason', () => {
   });
 
   it('does not render the reason (and presses work) when enabled', () => {
-    const onPress = vi.fn();
+    const onPress = vi.fn<() => void>();
     renderWithProviders(
       <Button
         disabledReason="Needs owner approval"

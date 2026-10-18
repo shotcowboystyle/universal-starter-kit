@@ -1,3 +1,7 @@
+import { CheckIcon, PlusIcon, XIcon } from '@phosphor-icons/react';
+import { Button, formCommonColors } from '@repo/forms';
+import { useFrappeCollection, useLiveQuery } from '@repo/frappe';
+import { useResolvedKnobs } from '@repo/theme';
 /**
  * FrappeAssignment — assignment (ToDo) management for a single document.
  *
@@ -14,10 +18,6 @@
  * User doctype — stock `search_link` ranking and permissions server-side).
  */
 import { AsyncBoundary, Avatar } from '@repo/ui';
-import { Button, formCommonColors } from '@repo/forms';
-import { useFrappeCollection, useLiveQuery } from '@repo/frappe';
-import { useResolvedKnobs } from '@repo/theme';
-import { CheckIcon, PlusIcon, XIcon } from '@phosphor-icons/react';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, XStack, YStack } from 'tamagui';

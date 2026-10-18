@@ -9,6 +9,7 @@ import { Check, Palette, X } from '@tamagui/lucide-icons-2';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ComponentProps, KeyboardEvent as ReactKeyboardEvent, ReactNode, RefObject } from 'react';
 import { View, XStack, isWeb } from 'tamagui';
+import type { TamaguiElement } from 'tamagui';
 
 import { FloatingPanel } from '../../FloatingPanel';
 import { Input as InputParts } from '../../InputParts';
@@ -16,190 +17,8 @@ import { formControlColors } from '../../shared/color-ramps';
 import { t } from '../../shared/t';
 import { useIsInTableCell } from '../../shared/table-cell-context';
 
+import { hsvToHex } from './color';
 import { AlphaBackground, HueBackground, SaturationBackground } from './gradients';
-
-// ---------------------------------------------------------------------------
-// Color conversion utilities
-// ---------------------------------------------------------------------------
-
-export const hsvToRgb = (h: number, s: number, v: number) => {
-  const h6 = (h / 360) * 6;
-  const s1 = s / 100;
-  const v1 = v / 100;
-
-  const i = Math.floor(h6);
-  const f = h6 - i;
-  const p = v1 * (1 - s1);
-  const q = v1 * (1 - f * s1);
-  const t = v1 * (1 - (1 - f) * s1);
-
-  let r: number;
-  let g: number;
-  let b: number;
-
-  switch (i % 6) {
-    case 0: {
-      r = v1;
-      g = t;
-      b = p;
-      break;
-    }
-    case 1: {
-      r = q;
-      g = v1;
-      b = p;
-      break;
-    }
-    case 2: {
-      r = p;
-      g = v1;
-      b = t;
-      break;
-    }
-    case 3: {
-      r = p;
-      g = q;
-      b = v1;
-      break;
-    }
-    case 4: {
-      r = t;
-      g = p;
-      b = v1;
-      break;
-    }
-    default: {
-      r = v1;
-      g = p;
-      b = q;
-      break;
-    }
-  }
-
-  return {
-    r: Math.round(r * 255),
-    g: Math.round(g * 255),
-    b: Math.round(b * 255),
-  };
-};
-
-export const rgbToHex = (r: number, g: number, b: number): string => {
-  const toHex = (x: number) => {
-    const hex = Math.max(0, Math.min(255, Math.round(x))).toString(16);
-    return hex.length === 1 ? `0${hex}` : hex;
-  };
-  return `#${toHex(r)}${toHex(g)}${toHex(b)}`.toUpperCase();
-};
-
-export const hsvToHex = (h: number, s: number, v: number): string => {
-  const { r, g, b } = hsvToRgb(h, s, v);
-  return rgbToHex(r, g, b);
-};
-
-/** Parse #RGB, #RRGGBB, or #RRGGBBAA. Alpha is 0–100. */
-export const parseHex = (hex: string): { r: number; g: number; b: number; alpha: number } | null => {
-  const raw = hex.startsWith('#') ? hex : `#${hex}`;
-  const short = /^#([a-f\d])([a-f\d])([a-f\d])$/iu.exec(raw);
-  if (short) {
-    return {
-      r: Number.parseInt(short[1] + short[1], 16),
-      g: Number.parseInt(short[2] + short[2], 16),
-      b: Number.parseInt(short[3] + short[3], 16),
-      alpha: 100,
-    };
-  }
-  const six = /^#([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/iu.exec(raw);
-  if (six) {
-    return {
-      r: Number.parseInt(six[1], 16),
-      g: Number.parseInt(six[2], 16),
-      b: Number.parseInt(six[3], 16),
-      alpha: 100,
-    };
-  }
-  const eight = /^#([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/iu.exec(raw);
-  if (eight) {
-    return {
-      r: Number.parseInt(eight[1], 16),
-      g: Number.parseInt(eight[2], 16),
-      b: Number.parseInt(eight[3], 16),
-      alpha: Math.round((Number.parseInt(eight[4], 16) / 255) * 100),
-    };
-  }
-  return null;
-};
-
-export const hexToRgb = (hex: string): { r: number; g: number; b: number } | null => {
-  const parsed = parseHex(hex);
-  if (!parsed) {
-    return null;
-  }
-  return { r: parsed.r, g: parsed.g, b: parsed.b };
-};
-
-export const rgbToHsv = (r: number, g: number, b: number): { h: number; s: number; v: number } => {
-  const r1 = r / 255;
-  const g1 = g / 255;
-  const b1 = b / 255;
-
-  const max = Math.max(r1, g1, b1);
-  const min = Math.min(r1, g1, b1);
-  const d = max - min;
-
-  let h = 0;
-  const s = max === 0 ? 0 : (d / max) * 100;
-  const v = max * 100;
-
-  if (d !== 0) {
-    switch (max) {
-      case r1: {
-        h = ((g1 - b1) / d + (g1 < b1 ? 6 : 0)) / 6;
-        break;
-      }
-      case g1: {
-        h = ((b1 - r1) / d + 2) / 6;
-        break;
-      }
-      case b1: {
-        h = ((r1 - g1) / d + 4) / 6;
-        break;
-      }
-    }
-    h *= 360;
-  }
-
-  return { h: Math.round(h), s: Math.round(s), v: Math.round(v) };
-};
-
-export const hexToHsv = (hex: string): { h: number; s: number; v: number } => {
-  const rgb = hexToRgb(hex);
-  if (!rgb) {
-    return { h: 0, s: 100, v: 100 };
-  }
-  return rgbToHsv(rgb.r, rgb.g, rgb.b);
-};
-
-export const isValidHex = (hex: string): boolean => /^#([a-f\d]{3}|[a-f\d]{6}|[a-f\d]{8})$/iu.test(hex);
-
-/** RGB hex (#RRGGBB). 8-digit input drops the alpha byte (use parseHex for alpha). */
-export const normalizeHex = (hex: string): string => {
-  const parsed = parseHex(hex);
-  if (!parsed) {
-    const normalized = hex.startsWith('#') ? hex : `#${hex}`;
-    return normalized.toUpperCase();
-  }
-  return rgbToHex(parsed.r, parsed.g, parsed.b);
-};
-
-export const hexAlphaByte = (alpha: number): string => {
-  const clamped = Math.max(0, Math.min(100, Math.round(alpha)));
-  return Math.round((clamped / 100) * 255)
-    .toString(16)
-    .padStart(2, '0')
-    .toUpperCase();
-};
-
-export const hexChannelAlpha = (hex: string): number => parseHex(hex)?.alpha ?? 100;
 
 // ---------------------------------------------------------------------------
 // Styled sub-components
@@ -223,8 +42,8 @@ const readPointerGeometry = (
   if (!node) {
     return;
   }
-  if (typeof node.getBoundingClientRect === 'function') {
-    const rect = node.getBoundingClientRect();
+  const rect = node.getBoundingClientRect?.();
+  if (rect) {
     apply(clientX - rect.left, clientY - rect.top, rect.width, rect.height);
     return;
   }
@@ -242,7 +61,8 @@ const useDrag = (onUpdate: (clientX: number, clientY: number) => void) => {
 
   useEffect(() => {
     if (!isDragging || !isWeb) {
-      return;
+      // oxlint-disable-next-line unicorn/no-useless-undefined -- the effect returns a cleanup on other paths; a bare return trips consistent-return
+      return undefined;
     }
     const handleMove = (e: PointerEvent) => {
       e.preventDefault();
@@ -285,10 +105,10 @@ const useDrag = (onUpdate: (clientX: number, clientY: number) => void) => {
     setIsDragging(false);
   }, []);
 
-  return {
-    onPointerDown,
-    ...(isWeb ? {} : { onPointerMove, onPointerUp }),
-  };
+  if (isWeb) {
+    return { onPointerDown };
+  }
+  return { onPointerDown, onPointerMove, onPointerUp };
 };
 
 export type ColorRailOrientation = 'horizontal' | 'vertical';
@@ -296,7 +116,8 @@ export type ColorRailOrientation = 'horizontal' | 'vertical';
 const HANDLE_SIZE = 16;
 const RAIL_THICKNESS = 16;
 
-export const binaryRadius = (pointy: boolean | undefined, size: number): number => (pointy ? 0 : size / 2);
+// oxlint-disable-next-line react-doctor/only-export-components -- radius helper shared with the ColorPicker field, which renders matching swatch chips
+export const binaryRadius = (pointy: boolean, size: number): number => (pointy ? 0 : size / 2);
 
 /**
  * Spectrum ColorHandle: current-color fill, white inner ring + dark outer ring
@@ -374,7 +195,7 @@ const ColorRail = ({
   children: ReactNode;
 }) => {
   const { knobProps } = useResolvedKnobs({ compact: true });
-  const railRef = useRef<Measurable | null>(null);
+  const railRef = useRef<TamaguiElement>(null);
   const vertical = orientation === 'vertical';
   const handleSize = HANDLE_SIZE;
   const thickness = RAIL_THICKNESS;
@@ -402,7 +223,7 @@ const ColorRail = ({
   const handleKeyDown = useCallback(
     (e: ReactKeyboardEvent) => {
       const step = (e.shiftKey ? 10 : 1) / ariaValuemax;
-      let next = ratio;
+      let next: number;
       switch (e.key) {
         case 'ArrowRight':
         case 'ArrowDown': {
@@ -427,12 +248,7 @@ const ColorRail = ({
         }
       }
       e.preventDefault();
-      if (wrap) {
-        next = ((next % 1) + 1) % 1;
-      } else {
-        next = Math.max(0, Math.min(1, next));
-      }
-      onRatioChange(next);
+      onRatioChange(wrap ? ((next % 1) + 1) % 1 : Math.max(0, Math.min(1, next)));
     },
     [ariaValuemax, onRatioChange, ratio, wrap],
   );
@@ -442,7 +258,7 @@ const ColorRail = ({
 
   return (
     <View
-      ref={railRef as never}
+      ref={railRef}
       testID={testID}
       width={width}
       height={height}
@@ -450,6 +266,7 @@ const ColorRail = ({
       cursor="pointer"
       userSelect="none"
       tabIndex={0}
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- the rail is a tamagui View painting a gradient track and handle; a native range input cannot render it
       role="slider"
       aria-orientation={vertical ? 'vertical' : 'horizontal'}
       aria-label={ariaLabel}
@@ -497,7 +314,7 @@ interface SaturationPanelProps {
 
 export const SaturationPanel = ({ hue, saturation, value, onChangeSV, size = 192 }: SaturationPanelProps) => {
   const { knobProps } = useResolvedKnobs({ compact: true });
-  const panelRef = useRef<Measurable | null>(null);
+  const panelRef = useRef<TamaguiElement>(null);
   const handleSize = HANDLE_SIZE;
   const { pointy } = knobProps;
 
@@ -563,7 +380,7 @@ export const SaturationPanel = ({ hue, saturation, value, onChangeSV, size = 192
 
   return (
     <View
-      ref={panelRef as never}
+      ref={panelRef}
       testID="color-picker-area"
       width={size}
       height={size}
@@ -571,6 +388,7 @@ export const SaturationPanel = ({ hue, saturation, value, onChangeSV, size = 192
       cursor="crosshair"
       userSelect="none"
       tabIndex={0}
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a 2D saturation/brightness area has no native input equivalent; role carries the slider semantics
       role="slider"
       aria-label={t('Saturation and brightness')}
       aria-valuemin={0}
@@ -719,17 +537,19 @@ export interface PresetSwatchesProps {
   width?: number;
 }
 
-export const SWATCH_PX: Record<string, number> = {
-  small: 20,
-  medium: 24,
-  large: 28,
-};
+// oxlint-disable-next-line react-doctor/only-export-components -- swatch geometry shared with the ColorPicker field preview
+export const SWATCH_PX = new Map([
+  ['small', 20],
+  ['medium', 24],
+  ['large', 28],
+]);
 
-export const CHIP_PX: Record<string, number> = {
-  small: 14,
-  medium: 18,
-  large: 22,
-};
+// oxlint-disable-next-line react-doctor/only-export-components -- chip geometry shared with the ColorPicker field's read-only chip and eyedropper icon
+export const CHIP_PX = new Map([
+  ['small', 14],
+  ['medium', 18],
+  ['large', 22],
+]);
 
 const SwatchItem = ({
   entry,
@@ -753,9 +573,13 @@ const SwatchItem = ({
   const radius = binaryRadius(pointy, size);
   return (
     <View
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- the swatch is a tamagui View filled with its color; a native radio input cannot render the chip
       role="radio"
       aria-checked={isSelected}
-      aria-label={entry.name ?? (entry.value ? t('Color {{value}}', { value: entry.value }) : t('Remove color'))}
+      aria-label={
+        entry.name ??
+        (entry.value === null || entry.value === '' ? t('Remove color') : t('Color {{value}}', { value: entry.value }))
+      }
       tabIndex={tabIndex}
       width={size}
       height={size}
@@ -819,6 +643,7 @@ export const PresetSwatches = ({ presetColors, selectedColor, onSelect, width }:
     if (!Array.isArray(presetColors)) {
       return [];
     }
+    // oxlint-disable-next-line anti-slop/no-runtime-typeof -- presets mix bare hex strings and { name, value } entries with no discriminant
     return presetColors.map((preset) => (typeof preset === 'string' ? { value: preset } : preset));
   }, [presetColors]);
 
@@ -826,9 +651,9 @@ export const PresetSwatches = ({ presetColors, selectedColor, onSelect, width }:
     return null;
   }
 
-  const swatchSize = SWATCH_PX[knobProps.size] ?? 24;
+  const swatchSize = SWATCH_PX.get(knobProps.size) ?? 24;
   const gapPx = knobProps.control.gap;
-  const cols = Math.max(1, width ? Math.floor((width + gapPx) / (swatchSize + gapPx)) : 8);
+  const cols = Math.max(1, width === undefined || width === 0 ? 8 : Math.floor((width + gapPx) / (swatchSize + gapPx)));
 
   const moveFocus = (next: number) => {
     const clamped = Math.max(0, Math.min(entries.length - 1, next));
@@ -929,6 +754,7 @@ interface ColorPickerInputTriggerProps {
   inputProps?: Omit<ComponentProps<typeof InputParts.Area>, 'value' | 'onChangeText' | 'ref' | 'readOnly'>;
 }
 
+// oxlint-disable-next-line react-doctor/only-export-components -- styleable() returns a forwardRef component the rule cannot see through
 export const ColorPickerInputTrigger = InputParts.Area.styleable<ColorPickerInputTriggerProps>((props, ref) => {
   const { knobProps } = useResolvedKnobs();
   const inTableCell = useIsInTableCell();
@@ -946,7 +772,7 @@ export const ColorPickerInputTrigger = InputParts.Area.styleable<ColorPickerInpu
     'aria-required': ariaRequired,
     'aria-invalid': ariaInvalid,
   } = props;
-  const chip = CHIP_PX[knobProps.size] ?? 18;
+  const chip = CHIP_PX.get(knobProps.size) ?? 18;
   const chipRadius = binaryRadius(knobProps.pointy, chip);
   return (
     <View ref={ref}>
@@ -1016,7 +842,7 @@ interface ColorPickerPopoverShellProps {
   trigger: ReactNode;
   children: ReactNode;
   disabled?: boolean;
-  popoverRef?: RefObject<any>;
+  popoverRef?: RefObject<unknown>;
   /** Native trigger announcement (name / current value / hint) — see FloatingPanel. */
   triggerA11y?: { label?: string; value?: string; hint?: string };
 }

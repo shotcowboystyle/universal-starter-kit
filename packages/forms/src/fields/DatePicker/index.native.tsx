@@ -241,9 +241,7 @@ const NativeDatePicker = (props: DatePickerProps) => {
 export const DatePicker = <
   TParentData,
   TName extends DeepKeys<TParentData>,
-  // oxlint-disable-next-line typescript/no-redundant-type-constituents -- Validator<DeepValue<..>> resolves to any via TanStack's typings; signature must match catalog
   TFieldValidator extends Validator<DeepValue<TParentData, TName>> | undefined = undefined,
-  // oxlint-disable-next-line typescript/no-redundant-type-constituents -- Validator<DeepValue<..>> resolves to any via TanStack's typings; signature must match catalog
   TFormValidator extends Validator<TParentData> | undefined = undefined,
   TData extends DeepValue<TParentData, TName> = DeepValue<TParentData, TName>,
 >(

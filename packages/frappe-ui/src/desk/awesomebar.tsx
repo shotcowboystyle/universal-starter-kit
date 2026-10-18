@@ -100,7 +100,7 @@ async function addRecentSearch(query: string): Promise<void> {
 // ---------------------------------------------------------------------------
 
 function createHttpClientFromConfig(config: { baseURL: string; auth?: FrappeConnectionConfig['auth'] }): HttpClient {
-  return new HttpClient(config.baseURL, config.auth as Parameters<typeof HttpClient.prototype.updateAuth>[0]);
+  return new HttpClient(config.baseURL, config.auth);
 }
 
 function evaluateMath(expr: string): number | null {
@@ -330,7 +330,7 @@ export function Awesomebar({ onNavigate, basePath = '/desk', ...stackProps }: Aw
       if (!isWeb || typeof document === 'undefined') {
         return;
       }
-      const trigger = document.querySelector('[data-awesomebar-trigger]') as HTMLElement | null;
+      const trigger = document.querySelector('[data-awesomebar-trigger]');
       trigger?.click();
     },
     { conflictBehavior: 'allow' },

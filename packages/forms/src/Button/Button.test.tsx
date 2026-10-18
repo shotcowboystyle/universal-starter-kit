@@ -1,6 +1,6 @@
+// @vitest-environment jsdom
+
 /**
- * @vitest-environment jsdom
- *
  * SIZE-RECIPE (Button arm): medium/$4 paints at 44px — since
  * the recipe table IS the measured Tamagui $size ramp ($4/$true = 44), so
  * the recipe fragment and the raw token finally agree. Radius steps with
@@ -23,27 +23,27 @@ import { __resetDevWarnSeen } from '../shared/dev-warn';
 
 import { Button } from './index';
 
-afterEach(cleanup);
-
 const frameRadiusClasses = (el: HTMLElement): string[] =>
-  String(el.className || '')
+  el.className
     .split(' ')
     .filter((c) => c.startsWith('_btlr-'))
-    .sort();
+    .toSorted();
 
 /** Last `_px-Npx` class wins in source order (runtime fragment after `size=`). */
 const paddingPxFromClass = (el: HTMLElement): number | null => {
   let found: number | null = null;
-  for (const c of String(el.className || '').split(/\s+/u)) {
-    const m = /^_px-(\d+)px$/u.exec(c);
-    if (m) {
-      found = Number(m[1]);
+  for (const c of el.className.split(/\s+/u)) {
+    const px = /^_px-(?<px>\d+)px$/u.exec(c)?.groups?.px;
+    if (px !== undefined) {
+      found = Number(px);
     }
   }
   return found;
 };
 
 describe('Button SIZE-RECIPE', () => {
+  afterEach(cleanup);
+
   it('desktop/jsdom medium height is the measured 44 from the recipe, not the token class', () => {
     renderWithProviders(<Button>Save</Button>);
     const frame = screen.getByRole('button');
@@ -87,9 +87,9 @@ describe('Button SIZE-RECIPE', () => {
     const compact = screen.getByRole('button');
     const compactPad = paddingPxFromClass(compact);
     expect(compact.className).toMatch(/_h-44px/u);
-    if (controlPad != null && compactPad != null) {
-      expect(compactPad).toBeLessThan(controlPad);
-    }
+    // Vacuous when jsdom emits no `_px-` class for either frame — the comparison only binds when both resolve.
+    const bothResolved = controlPad != null && compactPad != null;
+    expect(!bothResolved || compactPad < controlPad).toBe(true);
   });
 });
 
@@ -104,6 +104,7 @@ describe('Button sizeRecipeEscape', () => {
   afterEach(() => {
     warnSpy.mockRestore();
     __resetDevWarnSeen();
+    cleanup();
   });
 
   it('warns when numeric height is passed without sizeRecipeEscape', () => {

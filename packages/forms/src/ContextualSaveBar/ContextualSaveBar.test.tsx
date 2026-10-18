@@ -11,7 +11,7 @@ import { Switch } from '../fields/Switch';
 import { Form } from '../Form';
 
 import { clientKnownIdentity, ContextualSaveBar } from './index';
-import type { NavigationBlocker } from './index';
+import type { ContextualSaveBarProps, NavigationBlocker } from './index';
 
 const savebar = (root: ParentNode = document.body): HTMLElement | null =>
   root.querySelector('[data-mp-contextual-savebar]');
@@ -29,6 +29,44 @@ const alertdialog = (): HTMLElement | null => document.body.querySelector('[role
 
 const typeIn = (input: Element, value: string) => {
   fireEvent.change(input, { target: { value } });
+};
+
+const RouteLeaveHarness = () => {
+  const [leaveArmed, setLeaveArmed] = useState(false);
+  const useBlocker = (shouldBlock: boolean): NavigationBlocker => {
+    if (leaveArmed && shouldBlock) {
+      return {
+        state: 'blocked',
+        proceed: () => {
+          setLeaveArmed(false);
+        },
+        reset: () => {
+          setLeaveArmed(false);
+        },
+      };
+    }
+    return { state: 'unblocked', proceed: () => {}, reset: () => {} };
+  };
+  return (
+    <>
+      <button
+        type="button"
+        data-testid="leave"
+        onClick={() => {
+          setLeaveArmed(true);
+        }}>
+        Leave
+      </button>
+      <Form
+        saveBar={{ useBlocker }}
+        formOptions={{ defaultValues: { name: 'svc' } }}>
+        <Input
+          name="name"
+          label="Service name"
+        />
+      </Form>
+    </>
+  );
 };
 
 describe(ContextualSaveBar, () => {
@@ -117,7 +155,7 @@ describe(ContextualSaveBar, () => {
   });
 
   it('does not appear when a Switch auto-commits', async () => {
-    const onAutoCommit = vi.fn();
+    const onAutoCommit = vi.fn<NonNullable<ContextualSaveBarProps['onAutoCommit']>>();
     const result = renderWithProviders(
       <Form
         saveBar={{ onAutoCommit }}
@@ -211,7 +249,7 @@ describe(ContextualSaveBar, () => {
   );
 
   it('clears after Save and after Discard confirm', async () => {
-    const onSubmit = vi.fn();
+    const onSubmit = vi.fn<() => void>();
     const result = renderWithProviders(
       <Form
         saveBar
@@ -280,10 +318,7 @@ describe(ContextualSaveBar, () => {
   });
 
   it('never disables Discard while Save is in flight', async () => {
-    let finish!: () => void;
-    const hang = new Promise<void>((resolve) => {
-      finish = resolve;
-    });
+    const { promise: hang, resolve: finish } = Promise.withResolvers<null>();
     const result = renderWithProviders(
       <Form
         saveBar
@@ -313,50 +348,12 @@ describe(ContextualSaveBar, () => {
     const discard = barButton('Discard');
     expect(discard.getAttribute('disabled')).toBeNull();
     expect(discard.getAttribute('aria-disabled')).toBeNull();
-    expect(discard.dataset.disabled).toBeNull();
-    finish();
+    expect(discard.dataset.disabled).toBeUndefined();
+    finish(null);
   });
 
   it('fires the route-leave guard and Keep editing dismisses it', async () => {
-    const Harness = () => {
-      const [leaveArmed, setLeaveArmed] = useState(false);
-      const useBlocker = (shouldBlock: boolean): NavigationBlocker => {
-        if (leaveArmed && shouldBlock) {
-          return {
-            state: 'blocked',
-            proceed: () => {
-              setLeaveArmed(false);
-            },
-            reset: () => {
-              setLeaveArmed(false);
-            },
-          };
-        }
-        return { state: 'unblocked', proceed: () => {}, reset: () => {} };
-      };
-      return (
-        <>
-          <button
-            type="button"
-            data-testid="leave"
-            onClick={() => {
-              setLeaveArmed(true);
-            }}>
-            Leave
-          </button>
-          <Form
-            saveBar={{ useBlocker }}
-            formOptions={{ defaultValues: { name: 'svc' } }}>
-            <Input
-              name="name"
-              label="Service name"
-            />
-          </Form>
-        </>
-      );
-    };
-
-    const result = renderWithProviders(<Harness />);
+    const result = renderWithProviders(<RouteLeaveHarness />);
     await act(async () => {
       typeIn(result.container.querySelector('input')!, 'svc-billing');
     });
@@ -417,7 +414,7 @@ describe(ContextualSaveBar, () => {
     expect(bar?.dataset.mpSavebarDock).toBe('bottom');
     expect(bar?.dataset.mpSavebarTopRadius).toBe('18');
     expect(bar?.dataset.mpSavebarBottomRadius).toBe('0');
-    const cls = String(bar?.className ?? '');
+    const cls = bar?.className ?? '';
     expect(cls).not.toMatch(/t-radius-12/u);
     const cs = bar ? getComputedStyle(bar) : null;
     expect(cs?.borderBottomLeftRadius === '0px' || cs?.borderBottomLeftRadius === '0').toBe(true);

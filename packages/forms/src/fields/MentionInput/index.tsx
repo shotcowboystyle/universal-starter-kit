@@ -1024,7 +1024,8 @@ export const MentionInput = <
 
   // ── TextArea ───────────────────────────────────────────────
 
-  type BlurArgs = Parameters<NonNullable<typeof onBlur>>;
+  // FieldLayout types onBlur as (...args: any[]); forward the args opaquely.
+  type BlurArgs = unknown[];
   const mentionTextArea = (resolvedError?: string | boolean, fieldBlurHandler?: (...args: BlurArgs) => void) => (
     <TextArea
       disabled={disabled}
@@ -1107,7 +1108,13 @@ export const MentionInput = <
         preserveValue={preserveValue}
         validators={resolvedValidators}>
         {(field) => {
-          fieldRef.current = { handleChange: field.handleChange };
+          fieldRef.current = {
+            handleChange: (value: MentionValue) => {
+              // SAFETY: this field stores the `{ text, mentions }` MentionValue shape; TData is only the caller's declared slot type.
+              // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- see the SAFETY note above
+              field.handleChange(value as TData);
+            },
+          };
           const resolvedError = getFieldError(field, errorProp);
           return (
             <MentionFieldSync

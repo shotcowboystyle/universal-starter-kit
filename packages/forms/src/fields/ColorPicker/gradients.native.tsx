@@ -14,6 +14,15 @@ const HUE_LOCATIONS = [0, 0.17, 0.33, 0.5, 0.67, 0.83, 1] as const;
 
 const TRANSPARENT = 'rgba(0,0,0,0)';
 
+const styles = StyleSheet.create({
+  host: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    overflow: 'hidden',
+  },
+});
+
 export const SaturationBackground = ({
   hueColor,
   width,
@@ -99,12 +108,3 @@ export const AlphaBackground = ({
     </RNView>
   );
 };
-
-const styles = StyleSheet.create({
-  host: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    overflow: 'hidden',
-  },
-});

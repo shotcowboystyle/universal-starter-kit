@@ -56,9 +56,7 @@ Same as: mpo init [name] ...
   try {
     ({ init } = await import(pathToFileURL(libPath).href));
   } catch {
-    throw new Error(
-      'Could not load init. Build @repo/cli first (pnpm --filter @repo/cli build).',
-    );
+    throw new Error('Could not load init. Build @repo/cli first (pnpm --filter @repo/cli build).');
   }
   const services = flagValues(argv, '--service');
   const yes = argv.includes('--yes') || argv.includes('-y');

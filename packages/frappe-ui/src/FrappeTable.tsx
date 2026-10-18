@@ -1,4 +1,3 @@
-import { AsyncBoundary } from '@repo/ui';
 import { FrappeApp, Order, matchesFilters, useDocTypeMeta, useFrappeDoctypeEvents } from '@repo/frappe';
 import { DataTable, FilterManager, SavedFilterDropdown, useSavedFilters } from '@repo/table';
 import type {
@@ -11,6 +10,7 @@ import type {
   PageLoadQuery,
 } from '@repo/table';
 import { useResolvedKnobs } from '@repo/theme';
+import { AsyncBoundary } from '@repo/ui';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { XStack, YStack } from 'tamagui';

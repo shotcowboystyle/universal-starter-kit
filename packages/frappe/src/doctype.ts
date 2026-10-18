@@ -398,7 +398,7 @@ export function parseFormLayout(fields: DocTypeField[]): FormSection[] {
       default: {
         if (!field.hidden) {
           const lastColumn = currentSection.columns.at(-1);
-          lastColumn.fields.push(field);
+          lastColumn?.fields?.push?.(field);
         }
         break;
       }
@@ -533,7 +533,7 @@ function connectionKey(config: FrappeConnectionConfig): string {
  * used in `useDebouncedSearch` for DbModule.
  */
 function useHttpClientRef(config: FrappeConnectionConfig | undefined): React.RefObject<HttpClient | undefined> {
-  const httpRef = useRef<HttpClient | undefined>();
+  const httpRef = useRef<HttpClient | undefined>(undefined);
   const configKeyRef = useRef('');
   const configKey = config
     ? `${config.baseURL}:${config.auth?.useToken ? 't' : ''}:${config.auth?.token ?? ''}:${config.auth?.type ?? ''}`

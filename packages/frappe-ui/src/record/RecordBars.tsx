@@ -1,3 +1,4 @@
+import { sizeRecipeEscape, useResolvedKnobs } from '@repo/theme';
 import {
   BarSeries,
   ChartSurface,
@@ -16,7 +17,6 @@ import {
   useChartTheme,
 } from '@repo/ui';
 import type { ChartDatum } from '@repo/ui';
-import { sizeRecipeEscape, useResolvedKnobs } from '@repo/theme';
 import { useTranslation } from 'react-i18next';
 
 import { childBars } from './recordData';

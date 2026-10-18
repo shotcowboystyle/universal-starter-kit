@@ -1,6 +1,6 @@
+import { FolderOpenIcon } from '@phosphor-icons/react';
 import type { FieldComponentProps, FileUploadHandler, FormFieldProps } from '@repo/forms';
 import { Button, FileUpload } from '@repo/forms';
-import { FolderOpenIcon } from '@phosphor-icons/react';
 import type { DeepKeys } from '@tanstack/form-core';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -14,15 +14,9 @@ const imageAccept = 'image/png,image/jpeg,image/gif,image/webp,image/svg+xml';
 export type FileUploadFieldProps<
   TData extends Record<string, unknown> = Record<string, unknown>,
   TName extends string = string,
-> = Omit<
-  FormFieldProps<TData, TName extends DeepKeys<TData> ? TName : DeepKeys<TData>, unknown>,
-  'children' | 'field'
-> &
+> = Omit<FormFieldProps<TData, TName extends DeepKeys<TData> ? TName : DeepKeys<TData>>, 'children' | 'field'> &
   Partial<
-    Omit<
-      FieldComponentProps<TData, TName extends DeepKeys<TData> ? TName : DeepKeys<TData>, unknown, unknown>,
-      'children'
-    >
+    Omit<FieldComponentProps<TData, TName extends DeepKeys<TData> ? TName : DeepKeys<TData>, unknown>, 'children'>
   > & {
     disabled?: boolean;
     readOnly?: boolean;

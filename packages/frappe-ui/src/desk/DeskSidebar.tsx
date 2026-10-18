@@ -9,11 +9,11 @@
  * Uses the existing Sidebar component internally.
  */
 
-import { Sidebar } from '@repo/ui';
-import type { SidebarSection } from '@repo/ui';
 import { useDocTypeSearch } from '@repo/frappe';
 import type { FrappeConnectionConfig } from '@repo/frappe';
 import { storage } from '@repo/store';
+import { Sidebar } from '@repo/ui';
+import type { SidebarSection } from '@repo/ui';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 

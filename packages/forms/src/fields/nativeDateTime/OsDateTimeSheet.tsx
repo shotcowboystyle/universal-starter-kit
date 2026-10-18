@@ -17,6 +17,7 @@ import { Text, View, XStack, YStack, useTheme, useThemeName } from 'tamagui';
 
 import { formCommonColors } from '../../shared/color-ramps';
 import { t } from '../../shared/t';
+import { themeTokenValue } from '../field-helpers';
 
 import { osDateTimeIosDisplay } from './os-date-time-ios-display';
 
@@ -32,11 +33,20 @@ export interface OsDateTimeSheetProps {
   onConfirm: (value: Date) => void;
 }
 
+const styles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  wheel: { height: 216 },
+  calendar: { height: 360 },
+});
+
 const useNativePickerScheme = (): 'light' | 'dark' => {
   const themeName = useThemeName();
   const osScheme = useColorScheme();
   if (themeName) {
-    return String(themeName).startsWith('dark') ? 'dark' : 'light';
+    return themeName.startsWith('dark') ? 'dark' : 'light';
   }
   return osScheme === 'dark' ? 'dark' : 'light';
 };
@@ -45,7 +55,7 @@ export const OsDateTimeSheet = ({ open, value, mode, minDate, maxDate, onCancel,
   const { knobProps } = useResolvedKnobs();
   const themeVariant = useNativePickerScheme();
   const theme = useTheme();
-  const accentColor = theme.accentBackground?.val;
+  const accentColor = themeTokenValue(theme, 'accentBackground');
   const isIOS = Platform.OS === 'ios';
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [temp, setTemp] = useState(value);
@@ -206,12 +216,3 @@ export const OsDateTimeSheet = ({ open, value, mode, minDate, maxDate, onCancel,
     </Modal>
   );
 };
-
-const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  wheel: { height: 216 },
-  calendar: { height: 360 },
-});

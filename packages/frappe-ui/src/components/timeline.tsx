@@ -1,6 +1,6 @@
+import { FrappeApp, useFrappeCollection, useLiveQuery } from '@repo/frappe';
 import { Timeline as BaseTimeline } from '@repo/ui';
 import type { TimelineEntry, TimelineProps, VersionChange } from '@repo/ui';
-import { FrappeApp, useFrappeCollection, useLiveQuery } from '@repo/frappe';
 import { useCallback, useMemo, useRef } from 'react';
 
 import { useFrappeCommentActions } from '../commentActions';

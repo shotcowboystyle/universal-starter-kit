@@ -9,7 +9,7 @@ import type { FieldSchema } from '../fieldRegistry';
 interface SchemaLike {
   fields: FieldSchema[];
   sections: {
-    columns: Array<{ fields: FieldSchema[] }>;
+    columns: { fields: FieldSchema[] }[];
   }[];
 }
 

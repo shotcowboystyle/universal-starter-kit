@@ -16,11 +16,11 @@
  * panel (no editable empty form / Delete toolbar).
  */
 
-import { DetailPageLayout, PageHeader } from '@repo/ui';
-import type { BreadcrumbItem } from '@repo/ui';
+import { ArrowLeftIcon } from '@phosphor-icons/react';
 import { Button, formCommonColors } from '@repo/forms';
 import { useResolvedKnobs } from '@repo/theme';
-import { ArrowLeftIcon } from '@phosphor-icons/react';
+import { DetailPageLayout, PageHeader } from '@repo/ui';
+import type { BreadcrumbItem } from '@repo/ui';
 import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, YStack } from 'tamagui';

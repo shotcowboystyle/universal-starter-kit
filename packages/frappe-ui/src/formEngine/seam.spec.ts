@@ -23,13 +23,7 @@ import path from 'node:path';
  *     modules directly, so importing the engine never drags SchemaForm,
  *     FrappeTable and the whole table/native stack into a node-ish consumer.
  */
-import type {
-  DocTypeField,
-  DocTypeLink,
-  DocTypeMeta,
-  DocTypePermission,
-  FrappeFieldType,
-} from '@repo/frappe';
+import type { DocTypeField, DocTypeLink, DocTypeMeta, DocTypePermission, FrappeFieldType } from '@repo/frappe';
 import { describe, expect, expectTypeOf, it } from 'vitest';
 
 import type { DocFieldMeta, DocLinkMeta, DocPermissionRule, DoctypeMeta } from './doctypeMeta';

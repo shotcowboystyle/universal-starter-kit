@@ -225,9 +225,7 @@ describe('Wheel iOS picker contract', () => {
         itemHeight={36}
       />,
     );
-    const selected = screen
-      .getByTestId('wheel')
-      .querySelector('[data-testid="wheel-item"][data-selected="true"]') as HTMLElement;
+    const selected = screen.getByTestId('wheel').querySelector('[data-testid="wheel-item"][data-selected="true"]')!;
     expect(selected).toBeTruthy();
     const translateY = Number(
       /translateY\((?<offset>[-\d.]+)px\)/u.exec(selected.style.transform)?.groups?.offset ?? Number.NaN,
@@ -262,7 +260,7 @@ describe('Wheel iOS picker contract', () => {
       />,
     );
     const wrapper = screen.getByTestId('wheel-wrapper');
-    const row = wrapper.querySelector('[data-testid="wheel-item"][data-index="1"]') as HTMLElement | null;
+    const row = wrapper.querySelector('[data-testid="wheel-item"][data-index="1"]');
     expect(row).toBeTruthy();
     const translateY = Number(/translateY\((?<offset>[-\d.]+)px\)/u.exec(row!.style.transform)?.groups?.offset ?? 0);
     const rowHeight = Number(row!.style.height.replace(/px$/u, '')) || 32;
@@ -319,11 +317,9 @@ describe('Wheel design-law', () => {
         visibleItems={5}
       />,
     );
-    const selected = screen
-      .getByTestId('wheel')
-      .querySelector('[data-testid="wheel-item"][data-selected="true"]') as HTMLElement;
+    const selected = screen.getByTestId('wheel').querySelector('[data-testid="wheel-item"][data-selected="true"]')!;
     expect(selected).toBeTruthy();
-    const text = selected.querySelector('[class]') as HTMLElement;
+    const text = selected.querySelector('[class]')!;
     expect(text.className).toMatch(/_fow-(?<weight>400|700|bold)\b/u);
     expect(text.className).not.toMatch(/_fow-600\b/u);
     expect(text.className).not.toMatch(/_fow-500\b/u);
@@ -340,7 +336,7 @@ describe('Wheel design-law', () => {
         />
       </Preset>,
     );
-    const noneFrame = none.container.querySelector('[data-testid="wheel"]') as HTMLElement;
+    const noneFrame = none.container.querySelector('[data-testid="wheel"]')!;
     const noneAtoms = noneFrame.className.split(' ').filter((c) => c.startsWith('_btlr-') && c !== '_btlr-0px');
     none.unmount();
 
@@ -354,7 +350,7 @@ describe('Wheel design-law', () => {
         />
       </Preset>,
     );
-    const fullFrame = full.container.querySelector('[data-testid="wheel"]') as HTMLElement;
+    const fullFrame = full.container.querySelector('[data-testid="wheel"]')!;
     const fullAtoms = fullFrame.className.split(' ').filter((c) => c.startsWith('_btlr-') && c !== '_btlr-0px');
     expect(noneAtoms).toStrictEqual([]);
     expect(fullAtoms).toStrictEqual([]);

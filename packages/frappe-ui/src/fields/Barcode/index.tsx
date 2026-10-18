@@ -1,6 +1,6 @@
+import { BarcodeIcon, CameraIcon, XIcon } from '@phosphor-icons/react';
 import type { FormFieldProps, FieldComponentProps } from '@repo/forms';
 import { Barcode as FormsBarcode } from '@repo/forms';
-import { BarcodeIcon, CameraIcon, XIcon } from '@phosphor-icons/react';
 import type { DeepKeys } from '@tanstack/form-core';
 import { useProps } from 'tamagui';
 

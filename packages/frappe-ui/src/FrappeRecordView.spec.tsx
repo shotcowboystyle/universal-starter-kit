@@ -1,8 +1,8 @@
+import { ArrowSquareOutIcon } from '@phosphor-icons/react';
 import { Order } from '@repo/frappe';
 // FrappeRecordView (MPO-411): a doctype's record page declared from its look,
 // facet, metrics and tabs, the way pokemon's detail page drew itself by hand.
 import { renderWithProviders } from '@repo/test-utils';
-import { ArrowSquareOutIcon } from '@phosphor-icons/react';
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import i18next from 'i18next';
 import { initReactI18next } from 'react-i18next';

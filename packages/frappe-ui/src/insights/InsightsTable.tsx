@@ -1,7 +1,7 @@
-import { Avatar, Text, XStack, YStack } from '@repo/ui';
 import { DataTable } from '@repo/table';
 import type { DataTableColumn, DataTableData } from '@repo/table';
 import { useResolvedKnobs } from '@repo/theme';
+import { Avatar, Text, XStack, YStack } from '@repo/ui';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 

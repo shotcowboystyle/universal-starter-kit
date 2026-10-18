@@ -1,9 +1,3 @@
-import { Attachments, Tags } from '@repo/ui';
-import type { AttachmentItem, TagItem } from '@repo/ui';
-// Catalog Button (LC-56 story honesty): stories compose catalog controls, never raw tamagui ones.
-import { Button, Switch } from '@repo/forms';
-import { InMemoryFixtureProvider } from '@repo/frappe';
-import { action } from '@repo/storybook';
 import {
   BellIcon,
   ChatCircleIcon,
@@ -13,6 +7,12 @@ import {
   TagIcon,
   UsersIcon,
 } from '@phosphor-icons/react';
+// Catalog Button (LC-56 story honesty): stories compose catalog controls, never raw tamagui ones.
+import { Button, Switch } from '@repo/forms';
+import { InMemoryFixtureProvider } from '@repo/frappe';
+import { action } from '@repo/storybook';
+import { Attachments, Tags } from '@repo/ui';
+import type { AttachmentItem, TagItem } from '@repo/ui';
 import React from 'react';
 import { Text, XStack, YStack } from 'tamagui';
 

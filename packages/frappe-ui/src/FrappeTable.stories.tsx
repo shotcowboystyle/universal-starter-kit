@@ -1,8 +1,8 @@
-// Catalog Text (G-15 story honesty / D-05).
-import { Text } from '@repo/ui';
 import { InMemoryFixtureProvider } from '@repo/frappe';
 import { action } from '@repo/storybook';
 import type { DataTableColumn } from '@repo/table';
+// Catalog Text (G-15 story honesty / D-05).
+import { Text } from '@repo/ui';
 
 import { FrappeProvider } from './FrappeProvider';
 import { FrappeStoryProvider } from './frappeStoryTarget';

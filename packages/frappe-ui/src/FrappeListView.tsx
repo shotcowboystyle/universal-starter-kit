@@ -1,5 +1,3 @@
-import { useDocTypeMeta } from "@repo/frappe";
-import { type DataTableColumn,SavedFilterDropdown,useSavedFilters,type ParsedFilter } from "@repo/table";
 import {
   ArrowsClockwiseIcon,
   HeartIcon,
@@ -9,11 +7,12 @@ import {
   PlusIcon,
   SparkleIcon,
   TableIcon,
-} from "@phosphor-icons/react";
-import React, { useState, useMemo, useCallback, useEffect } from "react";
-import { useTranslation } from "react-i18next";
-import { Button, SearchInput, Spinner } from "@repo/forms";
-import { Text, View, XStack, YStack, isWeb, useTheme, type YStackProps } from "tamagui";
+} from '@phosphor-icons/react';
+import { Button, SearchInput, Spinner } from '@repo/forms';
+import { useDocTypeMeta } from '@repo/frappe';
+import { storage } from '@repo/store';
+import { type DataTableColumn, SavedFilterDropdown, useSavedFilters, type ParsedFilter } from '@repo/table';
+import { pressTargetStyle, useResolvedKnobs } from '@repo/theme';
 import {
   AsyncBoundary,
   Avatar,
@@ -26,32 +25,40 @@ import {
   componentColors,
   showToast,
   type ImageGridProps,
-} from "@repo/ui";
-import { pressTargetStyle, useResolvedKnobs } from "@repo/theme";
-import { storage } from "@repo/store";
-import { useFrappeConfig } from "./FrappeProvider";
-import { FrappeList } from './FrappeList';
-import type { FrappeListProps } from './FrappeList';
-import { FrappeNotConfigured } from "./FrappeNotConfigured";
-import { FrappeRowsReader } from './FrappeRowsReader';
-import type { FrappeRowsSnapshot } from './FrappeRowsReader';
-import { FrappeTable } from "./FrappeTable";
-import { useDocRights } from "./formEngine/useDocRights";
-import { frappeRouteHref, useFrappeRouter, useRouteLoaderData } from "./frappeNavigation";
+} from '@repo/ui';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Text, View, XStack, YStack, isWeb, useTheme, type YStackProps } from 'tamagui';
+
+import { useDocRights } from './formEngine/useDocRights';
 import { connectionsFromMeta } from './frappeConnections';
 import type { FrappeConnection } from './frappeConnections';
-import { isPermissionError } from "./liveErrors";
-import { favoritesKey } from "./list/favorites";
-import { RecordCard } from "./list/RecordCard";
+import { FrappeList } from './FrappeList';
+import type { FrappeListProps } from './FrappeList';
+import { frappeRouteHref, useFrappeRouter, useRouteLoaderData } from './frappeNavigation';
+import { FrappeNotConfigured } from './FrappeNotConfigured';
+import { useFrappeConfig } from './FrappeProvider';
+import { FrappeRowsReader } from './FrappeRowsReader';
+import type { FrappeRowsSnapshot } from './FrappeRowsReader';
+import { FrappeTable } from './FrappeTable';
+import { favoritesKey } from './list/favorites';
+import { ListControls } from './list/ListControls';
+import { isListNarrowed, listStateFilters, listStateOrderBy } from './list/listState';
+import type {
+  FrappeListControls,
+  FrappeListFacet,
+  FrappeListFilter,
+  FrappeListRange,
+  FrappeListSort,
+} from './list/listState';
+import { ListToastHost } from './list/ListToastHost';
+import { RecordCard } from './list/RecordCard';
 import { recordTitle } from './list/recordLook';
 import type { FrappeRecordLook } from './list/recordLook';
-import { ListControls } from "./list/ListControls";
-import { isListNarrowed, listStateFilters, listStateOrderBy } from './list/listState';
-import type { FrappeListControls, FrappeListFacet, FrappeListFilter, FrappeListRange, FrappeListSort } from './list/listState';
-import { ListToastHost } from "./list/ListToastHost";
-import { ShufflePanel } from "./list/ShufflePanel";
-import { useListControls } from "./list/useListControls";
-import { recordKeyLabel, useRecordShape } from "./recordShape";
+import { ShufflePanel } from './list/ShufflePanel';
+import { useListControls } from './list/useListControls';
+import { isPermissionError } from './liveErrors';
+import { recordKeyLabel, useRecordShape } from './recordShape';
 import { useConnectionFilters } from './useConnectionFilters';
 import type { FrappeDoctypeFilter } from './useConnectionFilters';
 
@@ -61,7 +68,7 @@ interface ListFieldConfig {
   render?: (value: any, doc: any) => React.ReactNode;
 }
 
-export type ListViewMode = "list" | "table" | "grid";
+export type ListViewMode = 'list' | 'table' | 'grid';
 
 /** What a card needs from the list beyond its row. */
 export interface FrappeListCard {
@@ -89,7 +96,7 @@ export interface FrappeListAction {
 
 export interface FrappeListViewProps<TDoc extends { name: string; doctype: string }> extends Omit<
   YStackProps,
-  "children"
+  'children'
 > {
   doctype: string;
   fields?: readonly (keyof TDoc & string)[];
@@ -120,7 +127,7 @@ export interface FrappeListViewProps<TDoc extends { name: string; doctype: strin
    * the same order and limit (`loadDocList`) so its server page and the live
    * page match; `initialRows` is that server page.
    */
-  orderBy?: FrappeListProps<TDoc>["orderBy"];
+  orderBy?: FrappeListProps<TDoc>['orderBy'];
   limit?: number;
   initialRows?: readonly Partial<TDoc>[];
   /**
@@ -145,7 +152,7 @@ export interface FrappeListViewProps<TDoc extends { name: string; doctype: strin
    */
   look?: FrappeRecordLook<TDoc>;
   /** Card grid: column count, tile rung and media aspect. */
-  gridProps?: Pick<ImageGridProps<Partial<TDoc>>, "columns" | "tileSize" | "mediaAspect">;
+  gridProps?: Pick<ImageGridProps<Partial<TDoc>>, 'columns' | 'tileSize' | 'mediaAspect'>;
   /** Replaces the default empty message in list and card modes. */
   emptyState?: React.ReactNode;
   /**
@@ -202,36 +209,36 @@ export interface FrappeListViewProps<TDoc extends { name: string; doctype: strin
   syncOptions?: Record<string, unknown>;
 }
 
-const storageKeyPrefix = "frappe-listview-";
+const storageKeyPrefix = 'frappe-listview-';
 
 /** Cards whose images load eagerly; the rest wait until they near the viewport. */
 const eagerCards = 6;
 
 // Fieldtypes that structure a form but hold no listable value.
-const layoutFieldtypes = new Set([
-  "Column Break",
-  "Section Break",
-  "Tab Break",
-  "HTML",
-  "Heading",
-  "Fold",
-  "Button",
-]);
+const layoutFieldtypes = new Set(['Column Break', 'Section Break', 'Tab Break', 'HTML', 'Heading', 'Fold', 'Button']);
 
 /**
  * Resolves an image field value to a full URL.
  */
 function resolveImageUrl(value: unknown, baseURL: string): string {
-  if (!value || typeof value !== "string") {return "";}
-  if (value.startsWith("http://") || value.startsWith("https://")) {return value;}
-  if (value.startsWith("/")) {return `${baseURL}${value}`;}
+  if (!value || typeof value !== 'string') {
+    return '';
+  }
+  if (value.startsWith('http://') || value.startsWith('https://')) {
+    return value;
+  }
+  if (value.startsWith('/')) {
+    return `${baseURL}${value}`;
+  }
   return value;
 }
 
 async function getStoredViewMode(doctype: string): Promise<ListViewMode | null> {
   try {
     const stored = await Promise.resolve(storage.getItem(`${storageKeyPrefix}${doctype}`));
-    if (stored === "list" || stored === "table" || stored === "grid") {return stored;}
+    if (stored === 'list' || stored === 'table' || stored === 'grid') {
+      return stored;
+    }
   } catch {
     // storage not available
   }
@@ -254,12 +261,15 @@ async function setStoredViewMode(doctype: string, mode: ListViewMode): Promise<v
  * With neither a bench URL nor a fixture corpus it says Frappe is not
  * configured.
  */
-export function FrappeListView<TDoc extends { name: string; doctype: string }>(
-  props: FrappeListViewProps<TDoc>,
-) {
+export function FrappeListView<TDoc extends { name: string; doctype: string }>(props: FrappeListViewProps<TDoc>) {
   const config = useFrappeConfig();
   if (!(props.baseURL ?? config?.baseURL) && !config?.fixtures) {
-    return <FrappeNotConfigured doctype={props.doctype} page={props.route !== undefined} />;
+    return (
+      <FrappeNotConfigured
+        doctype={props.doctype}
+        page={props.route !== undefined}
+      />
+    );
   }
   return <FrappeListViewBody<TDoc> {...props} />;
 }
@@ -269,7 +279,7 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
   fields,
   connections,
   filters,
-  defaultViewMode = "list",
+  defaultViewMode = 'list',
   viewMode: controlledViewMode,
   onViewModeChange,
   onItemClick: onItemClickProp,
@@ -323,7 +333,7 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
   const finalSyncOptions = syncOptions ?? config?.syncOptions;
 
   if (!finalBaseURL) {
-    throw new Error("FrappeListView requires baseURL prop or FrappeProvider with baseURL");
+    throw new Error('FrappeListView requires baseURL prop or FrappeProvider with baseURL');
   }
 
   const connectionConfig = {
@@ -353,63 +363,60 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
     };
   }, [doctype, defaultViewMode]);
 
-  const {
-    meta,
-    isLoading: isMetaLoading,
-    error: metaError,
-  } = useDocTypeMeta(connectionConfig, doctype);
+  const { meta, isLoading: isMetaLoading, error: metaError } = useDocTypeMeta(connectionConfig, doctype);
 
   const onItemClick =
     onItemClickProp ??
     (route !== undefined && navigate
       ? (doc: Partial<TDoc>) => {
-          if (doc.name) {navigate(frappeRouteHref(route, { mode: "view", name: doc.name }));}
+          if (doc.name) {
+            navigate(frappeRouteHref(route, { mode: 'view', name: doc.name }));
+          }
         }
       : undefined);
   const { rights } = useDocRights(connectionConfig, meta);
   const onAdd = rights.create
     ? (onAddProp ??
       (route !== undefined && navigate
-        ? () =>{  navigate(frappeRouteHref(route, { mode: "create" })); }
+        ? () => {
+            navigate(frappeRouteHref(route, { mode: 'create' }));
+          }
         : undefined))
     : undefined;
   // Meta refused (Guest gets 403) while the rows are readable: the views
   // take their fields from one record instead of collapsing to Name (LC-96).
-  const recordShape = useRecordShape(
-    connectionConfig,
-    doctype,
-    !meta && !isMetaLoading && Boolean(metaError),
-  );
-  const peekedFields = useMemo(
-    () => recordShape.fields?.map((field) => field.fieldname) ?? null,
-    [recordShape.fields],
-  );
+  const recordShape = useRecordShape(connectionConfig, doctype, !meta && !isMetaLoading && Boolean(metaError));
+  const peekedFields = useMemo(() => recordShape.fields?.map((field) => field.fieldname) ?? null, [recordShape.fields]);
 
   // List-view fields: prefer the doctype's in_list_view flags; when a doctype
   // declares none, lead with its first data fields so the list/table still
   // render something useful out of the box.
   const metaListFields = useMemo(() => {
-    if (!meta) {return [];}
+    if (!meta) {
+      return [];
+    }
     const flagged = meta.fields.filter((f) => f.in_list_view);
-    if (flagged.length > 0) {return flagged;}
+    if (flagged.length > 0) {
+      return flagged;
+    }
     return meta.fields
-      .filter((f) => !layoutFieldtypes.has(f.fieldtype) && !f.fieldtype.startsWith("Table"))
+      .filter((f) => !layoutFieldtypes.has(f.fieldtype) && !f.fieldtype.startsWith('Table'))
       .slice(0, 4);
   }, [meta]);
 
   const imageFieldName = useMemo(() => {
     if (meta) {
-      return meta.image_field ?? meta.fields.find((f) => f.fieldtype === "Attach Image")?.fieldname;
+      return meta.image_field ?? meta.fields.find((f) => f.fieldtype === 'Attach Image')?.fieldname;
     }
     return peekedFields?.find((key) => /sprite|image|photo|avatar|logo/i.test(key));
   }, [meta, peekedFields]);
 
   const effectiveFields = useMemo(() => {
-    if (fields) {return fields;}
-    const listFields = meta
-      ? metaListFields.map((f) => f.fieldname).filter((f) => f !== "name")
-      : (peekedFields ?? []);
-    const allFields = ["name", ...listFields] as (keyof TDoc & string)[];
+    if (fields) {
+      return fields;
+    }
+    const listFields = meta ? metaListFields.map((f) => f.fieldname).filter((f) => f !== 'name') : (peekedFields ?? []);
+    const allFields = ['name', ...listFields] as (keyof TDoc & string)[];
     if (imageFieldName && !allFields.includes(imageFieldName as keyof TDoc & string)) {
       allFields.push(imageFieldName as keyof TDoc & string);
     }
@@ -417,7 +424,9 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
   }, [fields, meta, metaListFields, peekedFields, imageFieldName]);
 
   const effectiveDisplayFields = useMemo((): ListFieldConfig[] => {
-    if (displayFields) {return displayFields;}
+    if (displayFields) {
+      return displayFields;
+    }
     if (meta && metaListFields.length > 0) {
       return metaListFields.map((f) => ({
         key: f.fieldname,
@@ -430,7 +439,7 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
         .slice(0, 4)
         .map((key) => ({ key, label: recordKeyLabel(key) }));
     }
-    return [{ key: "name", label: t("Name") }];
+    return [{ key: 'name', label: t('Name') }];
   }, [displayFields, meta, metaListFields, peekedFields, imageFieldName, t]);
 
   const renderListItem = useCallback(
@@ -446,33 +455,46 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
         .map((field) => {
           const value = row[field.key];
           const rendered = field.render ? field.render(value, doc) : value;
-          return rendered === null || rendered === undefined || rendered === ""
-            ? null
-            : (rendered as React.ReactNode);
+          return rendered === null || rendered === undefined || rendered === '' ? null : (rendered as React.ReactNode);
         })
         .filter((part) => part !== null);
-      const imageUrl = imageFieldName ? resolveImageUrl(row[imageFieldName], finalBaseURL) : "";
+      const imageUrl = imageFieldName ? resolveImageUrl(row[imageFieldName], finalBaseURL) : '';
 
-      const titleName = typeof title === "string" ? title : undefined;
+      const titleName = typeof title === 'string' ? title : undefined;
       return (
-        <XStack alignItems="center" flex={1} minWidth={0} width="100%" {...knobProps.gap}>
+        <XStack
+          alignItems="center"
+          flex={1}
+          minWidth={0}
+          width="100%"
+          {...knobProps.gap}>
           {imageUrl ? (
-            <Avatar nested circular src={imageUrl} name={titleName} alt={titleName ?? ""} />
+            <Avatar
+              nested
+              circular
+              src={imageUrl}
+              name={titleName}
+              alt={titleName ?? ''}
+            />
           ) : null}
-          <YStack flex={1} minWidth={0}>
+          <YStack
+            flex={1}
+            minWidth={0}>
             <Text
               {...knobProps.body}
               color={componentColors.text.primary}
               numberOfLines={1}
-              {...({ "data-list-slot": "title" } as Record<string, unknown>)}
-            >
+              {...({ 'data-list-slot': 'title' } as Record<string, unknown>)}>
               {title}
             </Text>
             {subtitleParts.length > 0 && (
-              <Text {...knobProps.body} color={knobProps.textAccentColor} numberOfLines={1}>
+              <Text
+                {...knobProps.body}
+                color={knobProps.textAccentColor}
+                numberOfLines={1}>
                 {subtitleParts.map((part, index) => (
                   <React.Fragment key={index}>
-                    {index > 0 ? " · " : null}
+                    {index > 0 ? ' · ' : null}
                     {part}
                   </React.Fragment>
                 ))}
@@ -486,7 +508,9 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
   );
 
   const effectiveColumns = useMemo((): DataTableColumn<Partial<TDoc>>[] => {
-    if (columns) {return columns;}
+    if (columns) {
+      return columns;
+    }
     if (meta && metaListFields.length > 0) {
       return metaListFields.map(
         (f) =>
@@ -500,18 +524,15 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
       return peekedFields
         .filter((key) => key !== imageFieldName)
         .slice(0, 4)
-        .map(
-          (key) =>
-            ({ accessorKey: key, header: recordKeyLabel(key) }) as DataTableColumn<Partial<TDoc>>,
-        );
+        .map((key) => ({ accessorKey: key, header: recordKeyLabel(key) }) as DataTableColumn<Partial<TDoc>>);
     }
-    return [{ accessorKey: "name" as string, header: t("Name") }] as DataTableColumn<
-      Partial<TDoc>
-    >[];
+    return [{ accessorKey: 'name' as string, header: t('Name') }] as DataTableColumn<Partial<TDoc>>[];
   }, [columns, meta, metaListFields, peekedFields, imageFieldName, t]);
 
   const standardFilterFields = useMemo(() => {
-    if (!meta) {return [];}
+    if (!meta) {
+      return [];
+    }
     return meta.fields.filter((f) => f.in_standard_filter);
   }, [meta]);
 
@@ -529,10 +550,16 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
   );
 
   const searchField = useMemo(() => {
-    if (meta?.title_field) {return meta.title_field;}
-    if (metaListFields.length > 0) {return metaListFields[0].fieldname;}
-    if (peekedFields && peekedFields.length > 0) {return peekedFields[0];}
-    return "name";
+    if (meta?.title_field) {
+      return meta.title_field;
+    }
+    if (metaListFields.length > 0) {
+      return metaListFields[0].fieldname;
+    }
+    if (peekedFields && peekedFields.length > 0) {
+      return peekedFields[0];
+    }
+    return 'name';
   }, [meta, metaListFields, peekedFields]);
 
   // The list's controls (sorts, facets, ranges, favorites, shuffle) own a
@@ -543,14 +570,12 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
     sorts,
     facets,
     ranges,
-    views: hasCards ? ["grid", "list", "table"] : ["list", "table"],
+    views: hasCards ? ['grid', 'list', 'table'] : ['list', 'table'],
     defaultView: defaultViewMode,
   };
-  const hasControls = Boolean(
-    ((sorts?.length ?? facets?.length) ?? ranges?.length) || favorites ?? shuffle,
-  );
+  const hasControls = Boolean(sorts?.length ?? facets?.length ?? ranges?.length ?? favorites ?? shuffle);
   const favoritesStorageKey = favorites
-    ? typeof favorites === "string"
+    ? typeof favorites === 'string'
       ? favorites
       : favoritesKey(doctype)
     : undefined;
@@ -562,19 +587,19 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
     limit,
     favoritesKey: favoritesStorageKey,
     router: urlState ? router : undefined,
-    readBase: Boolean((subtitle ?? facets?.length) ?? ranges?.length),
+    readBase: Boolean(subtitle ?? facets?.length ?? ranges?.length),
   });
   const updateList = list.update;
 
-  const requestedViewMode =
-    controlledViewMode ?? (urlState ? list.state.view : undefined) ?? storedViewMode;
-  const viewMode: ListViewMode =
-    requestedViewMode === "grid" && !hasCards ? "list" : requestedViewMode;
+  const requestedViewMode = controlledViewMode ?? (urlState ? list.state.view : undefined) ?? storedViewMode;
+  const viewMode: ListViewMode = requestedViewMode === 'grid' && !hasCards ? 'list' : requestedViewMode;
 
   const setViewMode = useCallback(
     (mode: ListViewMode) => {
       onViewModeChange?.(mode);
-      if (controlledViewMode !== undefined) {return;}
+      if (controlledViewMode !== undefined) {
+        return;
+      }
       if (urlState) {
         updateList({ view: mode });
         return;
@@ -591,27 +616,21 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
     sorts: sorts?.map((sort) => [sort.value, sort.orderBy]),
   });
   const controlFilters = useMemo(() => {
-    if (!hasControls) {return activeFilters;}
+    if (!hasControls) {
+      return activeFilters;
+    }
     const base = activeFilters
       ? Array.isArray(activeFilters)
         ? activeFilters
-        : Object.entries(activeFilters).map(([field, value]) => [field, "=", value])
+        : Object.entries(activeFilters).map(([field, value]) => [field, '=', value])
       : [];
     return listStateFilters(list.state, listControls, {
       base: base as FrappeListFilter[],
-      search: searchFilter ?? ((query) => [[searchField, "like", `%${query}%`]]),
+      search: searchFilter ?? ((query) => [[searchField, 'like', `%${query}%`]]),
       favorites: list.favorites.favoriteSet,
     });
     // controlsKey stands for the facet and range definitions listControls carries.
-  }, [
-    hasControls,
-    activeFilters,
-    list.state,
-    list.favorites.favoriteSet,
-    searchFilter,
-    searchField,
-    controlsKey,
-  ]);
+  }, [hasControls, activeFilters, list.state, list.favorites.favoriteSet, searchFilter, searchField, controlsKey]);
   const effectiveOrderBy = hasControls
     ? (listStateOrderBy(list.state, listControls, orderBy) as typeof orderBy)
     : orderBy;
@@ -620,8 +639,7 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
   const loaded = useRouteLoaderData(loader) as { rows?: readonly Partial<TDoc>[] } | undefined;
   const initialRows = initialRowsProp ?? loaded?.rows;
   const seedRows =
-    !hasControls ||
-    (!isListNarrowed(list.state) && (!sorts?.length || list.state.sort === sorts[0].value))
+    !hasControls || (!isListNarrowed(list.state) && (!sorts?.length || list.state.sort === sorts[0].value))
       ? initialRows
       : undefined;
 
@@ -637,22 +655,24 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
   // field, merged into the filters useFrappePagination already accepts (the
   // pagination layer has no orFilters plumbing, so one well-chosen field
   // beats none). Table mode keeps DataTable's own client-side global filter.
-  const [searchText, setSearchText] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [searchText, setSearchText] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
   const listFilters = useMemo(() => {
     const query = debouncedSearch.trim();
-    if (!query) {return resolvedFilters;}
-    const searchFilter = [searchField, "like", `%${query}%`] as [
-      keyof TDoc & string,
-      string,
-      unknown,
-    ];
-    if (!resolvedFilters) {return [searchFilter];}
-    if (Array.isArray(resolvedFilters)) {return [...resolvedFilters, searchFilter];}
+    if (!query) {
+      return resolvedFilters;
+    }
+    const searchFilter = [searchField, 'like', `%${query}%`] as [keyof TDoc & string, string, unknown];
+    if (!resolvedFilters) {
+      return [searchFilter];
+    }
+    if (Array.isArray(resolvedFilters)) {
+      return [...resolvedFilters, searchFilter];
+    }
     return [
       ...Object.entries(resolvedFilters).map(
-        ([key, value]) => [key, "=", value] as [keyof TDoc & string, string, unknown],
+        ([key, value]) => [key, '=', value] as [keyof TDoc & string, string, unknown],
       ),
       searchFilter,
     ];
@@ -662,16 +682,16 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
   // render the same chrome as a truly empty doctype — the no-results message
   // names the narrowing context so it can't masquerade as empty.
   const hasProvidedFilters = useMemo(() => {
-    if (!activeFilters) {return false;}
-    return Array.isArray(activeFilters)
-      ? activeFilters.length > 0
-      : Object.keys(activeFilters).length > 0;
+    if (!activeFilters) {
+      return false;
+    }
+    return Array.isArray(activeFilters) ? activeFilters.length > 0 : Object.keys(activeFilters).length > 0;
   }, [activeFilters]);
   const searchQuery = debouncedSearch.trim();
   const noResultsMessage = searchQuery
     ? t('No {{doctype}} records match "{{query}}"', { doctype, query: searchQuery })
     : hasProvidedFilters
-      ? t("No {{doctype}} records match the active filters", { doctype })
+      ? t('No {{doctype}} records match the active filters', { doctype })
       : undefined;
 
   const [refreshKey, setRefreshKey] = useState(0);
@@ -697,17 +717,16 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
     [savedFiltersHook],
   );
 
-  const slug = doctype.toLowerCase().replaceAll(/\s+/g, "-");
+  const slug = doctype.toLowerCase().replaceAll(/\s+/g, '-');
   const searchId = `${slug}-list-search`;
   const resultsId = `${slug}-results`;
   const nameField = titleField ?? meta?.title_field;
 
   const [shuffleOpen, setShuffleOpen] = useState(false);
   const [shuffleRows, setShuffleRows] = useState<Partial<TDoc>[]>([]);
-  const handleShuffleRows = useCallback(
-    (snapshot: FrappeRowsSnapshot<TDoc>) =>{  setShuffleRows(snapshot.rows); },
-    [],
-  );
+  const handleShuffleRows = useCallback((snapshot: FrappeRowsSnapshot<TDoc>) => {
+    setShuffleRows(snapshot.rows);
+  }, []);
   const shuffleOrderKey = JSON.stringify(sorts?.[0]?.orderBy ?? orderBy ?? null);
   const shuffleFiltersKey = JSON.stringify(resolvedFilters ?? null);
   const shuffleFieldsKey = JSON.stringify(effectiveFields);
@@ -724,24 +743,31 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
   const { isFavorite, toggle: toggleStar } = list.favorites;
   const toggleFavorite = useCallback(
     (doc: Partial<TDoc>) => {
-      const {name} = doc;
-      if (!name) {return;}
+      const { name } = doc;
+      if (!name) {
+        return;
+      }
       const starred = isFavorite(name);
       toggleStar(name);
       const titleValue = nameField ? (doc as Record<string, unknown>)[nameField] : undefined;
-      const label = typeof titleValue === "string" && titleValue ? titleValue : name;
+      const label = typeof titleValue === 'string' && titleValue ? titleValue : name;
       showToast(
         starred
           ? {
               id: `${slug}-favorite-${name}`,
-              title: t("{{name}} removed from favorites", { name: label }),
-              intent: "accent",
-              action: { label: t("Undo"), onPress: () =>{  toggleStar(name); } },
+              title: t('{{name}} removed from favorites', { name: label }),
+              intent: 'accent',
+              action: {
+                label: t('Undo'),
+                onPress: () => {
+                  toggleStar(name);
+                },
+              },
             }
           : {
               id: `${slug}-favorite-${name}`,
-              title: t("{{name}} added to favorites", { name: label }),
-              intent: "success",
+              title: t('{{name}} added to favorites', { name: label }),
+              intent: 'success',
             },
       );
     },
@@ -749,11 +775,10 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
   );
 
   const cardFor = (doc: Partial<TDoc>): FrappeListCard => {
-    const name = doc.name ?? "";
+    const name = doc.name ?? '';
     const row = doc as Record<string, unknown>;
     return {
-      href:
-        route !== undefined && name ? frappeRouteHref(route, { mode: "view", name }) : undefined,
+      href: route !== undefined && name ? frappeRouteHref(route, { mode: 'view', name }) : undefined,
       open: () => onItemClick?.(doc),
       facets: Object.fromEntries(
         (facets ?? []).map((facet) => [
@@ -767,14 +792,19 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
       ),
       favorite:
         favoritesStorageKey && name
-          ? { active: isFavorite(name), toggle: () =>{  toggleFavorite(doc); } }
+          ? {
+              active: isFavorite(name),
+              toggle: () => {
+                toggleFavorite(doc);
+              },
+            }
           : undefined,
     };
   };
   const tintFacet = facets?.find((facet) => facet.tint);
   const drawRecordCard = (doc: Partial<TDoc>, index: number) => {
     const card = cardFor(doc);
-    const name = doc.name ?? "";
+    const name = doc.name ?? '';
     const values = tintFacet ? (card.facets[tintFacet.param] ?? []) : [];
     const title = recordTitle(doc, look, nameField);
     return (
@@ -808,44 +838,72 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
   // Document scope adds no tab stop (LC-49); it stands down while the reader
   // types in any editable control or works inside an open overlay.
   useEffect(() => {
-    if (!isWeb || typeof document === "undefined" || !showSearch) {return;}
+    if (!isWeb || typeof document === 'undefined' || !showSearch) {
+      return;
+    }
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "/" || event.metaKey || event.ctrlKey || event.altKey) {return;}
-      if (event.defaultPrevented) {return;}
+      if (event.key !== '/' || event.metaKey || event.ctrlKey || event.altKey) {
+        return;
+      }
+      if (event.defaultPrevented) {
+        return;
+      }
       const target = event.target as HTMLElement | null;
       if (target) {
         const tag = target.tagName;
-        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") {return;}
-        if (target.isContentEditable) {return;}
-        if (target.closest?.('[role="dialog"], [role="menu"], [role="listbox"]')) {return;}
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
+          return;
+        }
+        if (target.isContentEditable) {
+          return;
+        }
+        if (target.closest?.('[role="dialog"], [role="menu"], [role="listbox"]')) {
+          return;
+        }
       }
-      const input = document.querySelector(`#${searchId}`)?.querySelector("input");
-      if (!input) {return;}
+      const input = document.querySelector(`#${searchId}`)?.querySelector('input');
+      if (!input) {
+        return;
+      }
       event.preventDefault();
       input.focus();
       input.select?.();
     };
-    document.addEventListener("keydown", handleKeyDown);
-    return () =>{  document.removeEventListener("keydown", handleKeyDown); };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, [searchId, showSearch]);
 
   const headerOwnsTools = route !== undefined && !showToolbar;
   const pressFor = (action: FrappeListAction) =>
-    action.onPress ?? (action.href && navigate ? () =>{  navigate(action.href!); } : undefined);
+    action.onPress ??
+    (action.href && navigate
+      ? () => {
+          navigate(action.href!);
+        }
+      : undefined);
   const headerActions =
     headerOwnsTools || headerAccessory || actions?.length ? (
-      <XStack {...knobProps.gap} alignItems="center" flexWrap="wrap" flexShrink={1} minWidth={0}>
+      <XStack
+        {...knobProps.gap}
+        alignItems="center"
+        flexWrap="wrap"
+        flexShrink={1}
+        minWidth={0}>
         {headerOwnsTools ? (
-          <Tooltip content={t("Switch views")}>
+          <Tooltip content={t('Switch views')}>
             <XStack>
               <ViewSwitcher
                 views={[
-                  ...(hasCards ? [{ type: "grid", label: t("Cards"), icon: ImageIcon }] : []),
-                  { type: "list", label: t("List"), icon: ListIcon },
-                  { type: "table", label: t("Table"), icon: TableIcon },
+                  ...(hasCards ? [{ type: 'grid', label: t('Cards'), icon: ImageIcon }] : []),
+                  { type: 'list', label: t('List'), icon: ListIcon },
+                  { type: 'table', label: t('Table'), icon: TableIcon },
                 ]}
                 currentView={viewMode}
-                onViewChange={(v) =>{  setViewMode(v as ListViewMode); }}
+                onViewChange={(v) => {
+                  setViewMode(v as ListViewMode);
+                }}
               />
             </XStack>
           </Tooltip>
@@ -861,9 +919,8 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
                   outlined
                   onPress={onPress}
                   icon={Icon ? <Icon size={16} /> : undefined}
-                  $max-sm={{ display: "none" }}
-                  testID={action.testID}
-                >
+                  $max-sm={{ display: 'none' }}
+                  testID={action.testID}>
                   {action.label}
                 </Button>
               </Tooltip>
@@ -874,7 +931,7 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
                 icon={Icon ? <Icon size={16} /> : undefined}
                 display="none"
                 aria-label={action.label}
-                $max-sm={{ display: "flex" }}
+                $max-sm={{ display: 'flex' }}
               />
             </React.Fragment>
           );
@@ -885,18 +942,16 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
               theme="accent"
               onPress={onAdd}
               icon={<PlusIcon size={16} />}
-              $max-sm={{ display: "none" }}
-            >
-              {t("Add {{doctype}}", { doctype })}
+              $max-sm={{ display: 'none' }}>
+              {t('Add {{doctype}}', { doctype })}
             </Button>
             <Button
               theme="accent"
               onPress={onAdd}
               icon={<PlusIcon size={16} />}
               display="none"
-              $max-sm={{ display: "flex" }}
-            >
-              {t("Add")}
+              $max-sm={{ display: 'flex' }}>
+              {t('Add')}
             </Button>
           </>
         ) : null}
@@ -915,7 +970,9 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
         shuffle
           ? {
               open: shuffleOpen,
-              toggle: () =>{  setShuffleOpen((open) => !open); },
+              toggle: () => {
+                setShuffleOpen((open) => !open);
+              },
               panelId: `${slug}-shuffle-panel`,
             }
           : undefined
@@ -924,7 +981,7 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
         shuffle && shuffleOpen && shuffleRows.length > 0 && drawCard ? (
           <ShufflePanel<Partial<TDoc>>
             id={`${slug}-shuffle-panel`}
-            label={t("Surprise me")}
+            label={t('Surprise me')}
             rows={shuffleRows}
             itemLabel={shuffle.label}
             renderPick={(doc) => drawCard(doc, 0)}
@@ -958,7 +1015,9 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
     );
     if (route === undefined) {
       return controlsBand ? (
-        <YStack {...knobProps.gap} flex={viewMode === "grid" ? undefined : 1}>
+        <YStack
+          {...knobProps.gap}
+          flex={viewMode === 'grid' ? undefined : 1}>
           {controlsBand}
           {view}
           {extras}
@@ -975,7 +1034,7 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
         scroll={!surface}
         header={
           <>
-            {controlsBand ? <SkipLink targetId={resultsId}>{t("Skip to results")}</SkipLink> : null}
+            {controlsBand ? <SkipLink targetId={resultsId}>{t('Skip to results')}</SkipLink> : null}
             <PageHeader
               title={title ?? doctype}
               subtitle={subtitle && list.total !== undefined ? subtitle(list.total) : undefined}
@@ -984,8 +1043,7 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
             />
           </>
         }
-        toolbar={controlsBand ?? undefined}
-      >
+        toolbar={controlsBand ?? undefined}>
         {view}
         {extras}
       </ListPageLayout>
@@ -1006,28 +1064,32 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
       }
       title={
         list.state.favoritesOnly
-          ? t("No favorites yet")
+          ? t('No favorites yet')
           : list.state.search.trim()
             ? t('No match for "{{query}}"', { query: list.state.search.trim() })
             : isListNarrowed(list.state)
-              ? t("No {{doctype}} match the active filters", { doctype })
-              : t("No {{doctype}} yet", { doctype })
+              ? t('No {{doctype}} match the active filters', { doctype })
+              : t('No {{doctype}} yet', { doctype })
       }
       description={
         list.state.favoritesOnly
-          ? t("Tap the heart on a record to favorite it.")
+          ? t('Tap the heart on a record to favorite it.')
           : isListNarrowed(list.state)
-            ? t("Try a different search or filter.")
+            ? t('Try a different search or filter.')
             : undefined
       }
       action={
         isListNarrowed(list.state) ? (
-          <Button outlined onPress={list.clear}>
-            {t("Clear filters")}
+          <Button
+            outlined
+            onPress={list.clear}>
+            {t('Clear filters')}
           </Button>
         ) : onAdd ? (
-          <Button theme="accent" onPress={onAdd}>
-            {t("Add your first {{doctype}}", { doctype })}
+          <Button
+            theme="accent"
+            onPress={onAdd}>
+            {t('Add your first {{doctype}}', { doctype })}
           </Button>
         ) : undefined
       }
@@ -1043,18 +1105,21 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
         alignItems="center"
         justifyContent="center"
         gap="$2"
-        {...stackProps}
-      >
+        {...stackProps}>
         <Spinner size="large" />
-        <Text {...knobProps.body} color={knobProps.textAccentColor}>
-          {t("Loading {{doctype}} schema...", { doctype })}
+        <Text
+          {...knobProps.body}
+          color={knobProps.textAccentColor}>
+          {t('Loading {{doctype}} schema...', { doctype })}
         </Text>
       </YStack>,
     );
   }
 
   const renderToolbar = () => {
-    if (!showToolbar) {return null;}
+    if (!showToolbar) {
+      return null;
+    }
 
     return (
       <XStack
@@ -1065,21 +1130,26 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
         // bottom hairline) so it does not paint a second surface.
         borderWidth={0}
         borderBottomWidth={1}
-        borderBottomColor="$borderColor"
-      >
-        <XStack alignItems="center" {...knobProps.gap}>
+        borderBottomColor="$borderColor">
+        <XStack
+          alignItems="center"
+          {...knobProps.gap}>
           <ViewSwitcher
             views={[
-              ...(hasCards ? [{ type: "grid", label: t("Cards") }] : []),
-              { type: "list", label: t("List") },
-              { type: "table", label: t("Table") },
+              ...(hasCards ? [{ type: 'grid', label: t('Cards') }] : []),
+              { type: 'list', label: t('List') },
+              { type: 'table', label: t('Table') },
             ]}
             currentView={viewMode}
-            onViewChange={(v) =>{  setViewMode(v as ListViewMode); }}
+            onViewChange={(v) => {
+              setViewMode(v as ListViewMode);
+            }}
           />
         </XStack>
 
-        <XStack alignItems="center" {...knobProps.gap}>
+        <XStack
+          alignItems="center"
+          {...knobProps.gap}>
           {/* LC-54 (amendment 2026-08-13): house Button, own-box floor — the
               raw tamagui Button + grown transparent target painted its hover
               fill across the escaped 44px floor. `circular` makes the painted
@@ -1091,7 +1161,7 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
             chromeless
             icon={ArrowsClockwiseIcon}
             onPress={handleRefresh}
-            aria-label={t("Refresh")}
+            aria-label={t('Refresh')}
           />
           {onAdd && (
             <Button
@@ -1099,9 +1169,8 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
               theme="accent"
               icon={PlusIcon}
               onPress={onAdd}
-              {...pressTargetStyle()}
-            >
-              {t("Add {{doctype}}", { doctype })}
+              {...pressTargetStyle()}>
+              {t('Add {{doctype}}', { doctype })}
             </Button>
           )}
         </XStack>
@@ -1110,7 +1179,9 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
   };
 
   const renderFilterSidebar = () => {
-    if (!showFilterSidebar) {return null;}
+    if (!showFilterSidebar) {
+      return null;
+    }
 
     return (
       <YStack
@@ -1124,26 +1195,33 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
           ? {
               style: {
                 borderInlineEndWidth: 1,
-                borderInlineEndStyle: "solid",
+                borderInlineEndStyle: 'solid',
                 borderInlineEndColor: theme.borderColor?.get() as string,
               } as any,
             }
-          : { borderEndWidth: 1, borderEndColor: "$borderColor" })}
+          : { borderEndWidth: 1, borderEndColor: '$borderColor' })}
         {...knobProps.panelPadding}
-        {...knobProps.gap}
-      >
-        <Text {...knobProps.label} color={knobProps.textAccentColor}>
-          {t("Filters")}
+        {...knobProps.gap}>
+        <Text
+          {...knobProps.label}
+          color={knobProps.textAccentColor}>
+          {t('Filters')}
         </Text>
         {standardFilterFields.length > 0 && (
           <YStack {...knobProps.gap}>
             {standardFilterFields.map((field) => (
-              <YStack key={field.fieldname} {...knobProps.gap}>
-                <Text {...knobProps.label} color={knobProps.textAccentColor}>
+              <YStack
+                key={field.fieldname}
+                {...knobProps.gap}>
+                <Text
+                  {...knobProps.label}
+                  color={knobProps.textAccentColor}>
                   {field.label ?? field.fieldname}
                 </Text>
-                <Text {...knobProps.body} color={knobProps.textAccentColor}>
-                  {field.fieldtype === "Select" ? field.options ?? "—" : "—"}
+                <Text
+                  {...knobProps.body}
+                  color={knobProps.textAccentColor}>
+                  {field.fieldtype === 'Select' ? (field.options ?? '—') : '—'}
                 </Text>
               </YStack>
             ))}
@@ -1151,8 +1229,10 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
         )}
         {savedFiltersHook.filters.length > 0 && (
           <YStack {...knobProps.gap}>
-            <Text {...knobProps.label} color={knobProps.textAccentColor}>
-              {t("Saved Filters")}
+            <Text
+              {...knobProps.label}
+              color={knobProps.textAccentColor}>
+              {t('Saved Filters')}
             </Text>
             <SavedFilterDropdown
               filters={savedFiltersHook.filters}
@@ -1173,16 +1253,17 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
       alignItems="center"
       {...knobProps.panelPadding}
       borderBottomWidth={1}
-      borderBottomColor="$borderColor"
-    >
-      <View flex={1} id={searchId}>
+      borderBottomColor="$borderColor">
+      <View
+        flex={1}
+        id={searchId}>
         <SearchInput
           value={searchText}
           onChange={setSearchText}
           onSearch={setDebouncedSearch}
           debounceMs={300}
-          placeholder={t("Search...")}
-          aria-label={t("Search {{doctype}}", { doctype })}
+          placeholder={t('Search...')}
+          aria-label={t('Search {{doctype}}', { doctype })}
           compact
           size="$3"
         />
@@ -1191,20 +1272,20 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
   );
 
   const renderContent = () => {
-    if (viewMode === "list" || viewMode === "grid") {
-      const isGrid = viewMode === "grid";
+    if (viewMode === 'list' || viewMode === 'grid') {
+      const isGrid = viewMode === 'grid';
       return (
         <YStack flex={isGrid ? undefined : 1}>
           {showSearch && !hasControls ? renderListSearch() : null}
           <FrappeList
             key={`${viewMode}-${refreshKey}`}
-            layout={isGrid ? "grid" : "list"}
+            layout={isGrid ? 'grid' : 'list'}
             gridProps={gridProps}
             emptyState={emptyState ?? controlsEmptyState}
             pageSize={pageSize}
             onRetry={onRetry ?? handleRefresh}
             doctype={doctype}
-            fields={effectiveFields as readonly ("name" | "doctype")[]}
+            fields={effectiveFields as readonly ('name' | 'doctype')[]}
             filters={listFilters as Partial<{ name: string; doctype: string }>}
             renderItem={
               (isGrid && drawCard ? drawCard : renderListItem) as unknown as (
@@ -1213,20 +1294,14 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
               ) => React.ReactNode
             }
             onItemClick={
-              onItemClick as unknown as
-                | ((item: Partial<{ name: string; doctype: string }>) => void)
-                | undefined
+              onItemClick as unknown as ((item: Partial<{ name: string; doctype: string }>) => void) | undefined
             }
             baseURL={finalBaseURL}
             auth={finalAuth}
             syncOptions={finalSyncOptions}
-            orderBy={
-              effectiveOrderBy as FrappeListProps<{ name: string; doctype: string }>["orderBy"]
-            }
+            orderBy={effectiveOrderBy as FrappeListProps<{ name: string; doctype: string }>['orderBy']}
             limit={limit}
-            initialRows={
-              seedRows as FrappeListProps<{ name: string; doctype: string }>["initialRows"]
-            }
+            initialRows={seedRows as FrappeListProps<{ name: string; doctype: string }>['initialRows']}
             // Only override when narrowing is active: FrappeList's own
             // "No {doctype} records found" stays the true-empty message.
             {...(noResultsMessage ? { emptyMessage: noResultsMessage } : {})}
@@ -1240,7 +1315,7 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
         key={`table-${refreshKey}`}
         doctype={doctype}
         fields={effectiveFields}
-        filters={resolvedFilters as Parameters<typeof FrappeTable<TDoc>>[0]["filters"]}
+        filters={resolvedFilters as Parameters<typeof FrappeTable<TDoc>>[0]['filters']}
         columns={effectiveColumns}
         onRowClick={onItemClick}
         rights={rights}
@@ -1261,26 +1336,32 @@ function FrappeListViewBody<TDoc extends { name: string; doctype: string }>({
           error={linkFilters.error}
           errorTitle={
             isPermissionError(linkFilters.error)
-              ? t("You do not have permission to view {{doctype}}", { doctype })
-              : t("Error loading {{doctype}}", { doctype })
+              ? t('You do not have permission to view {{doctype}}', { doctype })
+              : t('Error loading {{doctype}}', { doctype })
           }
         />
       );
     }
-    if (linkFilters.pending) {return <AsyncBoundary layout="list" loading />;}
+    if (linkFilters.pending) {
+      return (
+        <AsyncBoundary
+          layout="list"
+          loading
+        />
+      );
+    }
     return renderContent();
   };
 
   return asPage(
     <YStack
-      flex={viewMode === "grid" ? undefined : 1}
+      flex={viewMode === 'grid' ? undefined : 1}
       {...(surface ? knobProps.surface : {})}
       {...(surface ? knobProps.containerRadius : {})}
-      overflow={surface ? "hidden" : undefined}
+      overflow={surface ? 'hidden' : undefined}
       testID={`${doctype.toLowerCase()}-list`}
       {...(hasControls ? { id: resultsId } : {})}
-      {...stackProps}
-    >
+      {...stackProps}>
       {renderToolbar()}
       {linkFilters.readers}
       {showFilterSidebar ? (

@@ -17,10 +17,10 @@
  * DeskParity story.
  */
 
-import { Avatar, componentColors, getInitials } from '@repo/ui';
+import { ImageSquareIcon, PlusIcon, UploadIcon, UserIcon, XIcon } from '@phosphor-icons/react';
 import { Button } from '@repo/forms';
 import { useResolvedKnobs } from '@repo/theme';
-import { ImageSquareIcon, PlusIcon, UploadIcon, UserIcon, XIcon } from '@phosphor-icons/react';
+import { Avatar, componentColors, getInitials } from '@repo/ui';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Image, ListItem, Separator, Text, XStack, YStack, isWeb, useTheme } from 'tamagui';

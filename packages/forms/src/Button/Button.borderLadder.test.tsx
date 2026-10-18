@@ -1,6 +1,6 @@
+// @vitest-environment jsdom
+
 /**
- * @vitest-environment jsdom
- *
  * The borderWidth knob reaches an outlined Button. The frame's
  * `outlined` styled variant used to hard-set `borderWidth: 1`, which beat
  * `borderWidth={resolvedBorderWidth}` on Tamagui prop order and pinned every
@@ -20,15 +20,14 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { Button } from './index';
 
-afterEach(cleanup);
-
 const STOPS = ['none', 'small', 'medium', 'large'] as const;
 
 const widthAtoms = (): string[] =>
-  String(screen.getByRole('button').className || '')
-    .split(/\s+/u)
+  screen
+    .getByRole('button')
+    .className.split(/\s+/u)
     .filter((c) => c.startsWith('_btw-'))
-    .sort();
+    .toSorted();
 
 const renderAt = (stop: (typeof STOPS)[number], outlined: boolean): string[] => {
   renderWithProviders(
@@ -42,6 +41,8 @@ const renderAt = (stop: (typeof STOPS)[number], outlined: boolean): string[] => 
 };
 
 describe('Button borderWidth ladder', () => {
+  afterEach(cleanup);
+
   it('outlined walks the ladder: hairline at none and small, 1 at medium, 2 at large', () => {
     expect(renderAt('none', true)).toStrictEqual(['_btw-0--5px']);
     expect(renderAt('small', true)).toStrictEqual(['_btw-0--5px']);

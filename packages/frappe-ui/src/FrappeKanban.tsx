@@ -1,8 +1,8 @@
-import { Kanban, componentColors } from '@repo/ui';
-import type { KanbanColumn as GenericKanbanColumn, KanbanProps } from '@repo/ui';
+import { PlusIcon } from '@phosphor-icons/react';
 import { Button, formCommonColors } from '@repo/forms';
 import { useResolvedKnobs } from '@repo/theme';
-import { PlusIcon } from '@phosphor-icons/react';
+import { Kanban, componentColors } from '@repo/ui';
+import type { KanbanColumn as GenericKanbanColumn, KanbanProps } from '@repo/ui';
 import React, { useMemo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, XStack, YStack } from 'tamagui';

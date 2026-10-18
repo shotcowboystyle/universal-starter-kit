@@ -1,6 +1,6 @@
+import { NavigationArrowIcon } from '@phosphor-icons/react';
 import type { FormFieldProps, FieldComponentProps } from '@repo/forms';
 import { Geolocation as FormsGeolocation } from '@repo/forms';
-import { NavigationArrowIcon } from '@phosphor-icons/react';
 import type { DeepKeys } from '@tanstack/form-core';
 import { useProps } from 'tamagui';
 

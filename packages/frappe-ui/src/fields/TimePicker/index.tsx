@@ -1,6 +1,6 @@
+import { ClockIcon } from '@phosphor-icons/react';
 import type { TimePickerProps as FormsTimePickerProps } from '@repo/forms';
 import { TimePicker as FormsTimePicker } from '@repo/forms';
-import { ClockIcon } from '@phosphor-icons/react';
 import { useProps } from 'tamagui';
 
 export type TimePickerProps = FormsTimePickerProps;

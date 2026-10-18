@@ -16,6 +16,8 @@
  * so knobs and DG-IDN-06 reach the banner.
  */
 
+import { ListIcon, XIcon } from '@phosphor-icons/react';
+import { NARROW_BREAKPOINT, useLayoutSizeClass, useResolvedKnobs } from '@repo/theme';
 import {
   Breadcrumbs,
   Button,
@@ -29,8 +31,6 @@ import {
   useDocumentTitle,
 } from '@repo/ui';
 import type { BreadcrumbItem } from '@repo/ui';
-import { NARROW_BREAKPOINT, useLayoutSizeClass, useResolvedKnobs } from '@repo/theme';
-import { ListIcon, XIcon } from '@phosphor-icons/react';
 import { useHotkey } from '@tanstack/react-hotkeys';
 import type React from 'react';
 import { useCallback, useEffect, useState } from 'react';

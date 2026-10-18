@@ -140,7 +140,7 @@ export function useDebouncedSearch<TDoc extends FrappeDocData>(
   const [isSearching, setIsSearching] = useState(false);
 
   // Stable DbModule reference
-  const dbRef = useRef<DbModule | undefined>();
+  const dbRef = useRef<DbModule | undefined>(undefined);
   const configKeyRef = useRef('');
   const configKey = config
     ? `${config.baseURL}:${config.auth?.useToken ? 't' : ''}:${config.auth?.token ?? ''}:${config.auth?.type ?? ''}`

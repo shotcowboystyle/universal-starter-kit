@@ -1,6 +1,6 @@
-import { Dialog, DialogContent, DialogOverlay, Tabs } from '@repo/ui';
 import { FileUpload } from '@repo/forms';
 import { OVERLAY_BREAKPOINT } from '@repo/theme';
+import { Dialog, DialogContent, DialogOverlay, Tabs } from '@repo/ui';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text, YStack, useWindowDimensions } from 'tamagui';

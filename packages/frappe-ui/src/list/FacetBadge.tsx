@@ -1,5 +1,5 @@
-import { Text, XStack } from '@repo/ui';
 import { hairlineWidth, useResolvedKnobs } from '@repo/theme';
+import { Text, XStack } from '@repo/ui';
 
 export interface FacetBadgeProps {
   label: string;

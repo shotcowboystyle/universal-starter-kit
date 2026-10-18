@@ -95,8 +95,8 @@ export function Date<TData extends Record<string, unknown> = Record<string, unkn
         // `TimePicker` is not generic over the form's data shape, so the
         // three form props are re-cast to its own non-generic surface.
         name={name as TimePickerProps['name']}
-        form={form as TimePickerProps['form']}
-        validators={validators as TimePickerProps['validators']}
+        form={form}
+        validators={validators}
         // The wire shape is what this control already speaks: `HH:mm[:ss]`,
         // 24h. It adopts the string directly, so nothing has to widen the
         // shared date parser to let a Time field display its own value.

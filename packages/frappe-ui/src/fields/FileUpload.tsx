@@ -1,7 +1,7 @@
+import { FileIcon, UploadIcon, XIcon } from '@phosphor-icons/react';
 import { Skeleton } from '@repo/forms';
 import { useFrappeCollection } from '@repo/frappe';
 import { sizeRecipeForToken, useResolvedKnobs } from '@repo/theme';
-import { FileIcon, UploadIcon, XIcon } from '@phosphor-icons/react';
 import type React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';

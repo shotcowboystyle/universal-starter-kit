@@ -1,6 +1,6 @@
+// @vitest-environment jsdom
+
 /**
- * @vitest-environment jsdom
- *
  * The `fontWeight` knob must reach the Button LABEL. A literal
  * `fontWeight="400"` sat after the `knobProps.body` spread and pinned the
  * label at 400 in both schemes, while Input and Select moved to 700 off the
@@ -22,19 +22,17 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { Button } from './index';
 
-afterEach(cleanup);
-
 const SCHEMES = ['light', 'dark'] as const;
 
 const inkWeight = (el: HTMLElement): string => {
   const inline = el.style.fontWeight;
-  if (inline) {
-    return String(inline);
+  if (inline !== '') {
+    return inline;
   }
-  for (const cls of String(el.className ?? '').split(/\s+/u)) {
-    const match = /^_fow-(\d+)$/u.exec(cls);
-    if (match) {
-      return match[1];
+  for (const cls of el.className.split(/\s+/u)) {
+    const weight = /^_fow-(?<weight>\d+)$/u.exec(cls)?.groups?.weight;
+    if (weight !== undefined) {
+      return weight;
     }
   }
   return '';
@@ -48,12 +46,14 @@ const labelNode = (fontWeight: 'regular' | 'bold', scheme: (typeof SCHEMES)[numb
       </Preset>
     </Theme>,
   );
-  const node = screen.getByText(label) as HTMLElement;
+  const node = screen.getByText(label);
   expect(node.tagName).not.toBe('BUTTON');
   return node;
 };
 
 describe('Button fontWeight knob', () => {
+  afterEach(cleanup);
+
   it.each(SCHEMES)('%s: bold takes the label to 700', (scheme) => {
     const node = labelNode('bold', scheme, `bold-${scheme}`);
     expect(inkWeight(node)).toBe('700');

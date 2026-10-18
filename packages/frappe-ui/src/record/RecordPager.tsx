@@ -1,7 +1,7 @@
-import { Avatar, Text, XStack, YStack } from '@repo/ui';
+import { ArrowLeftIcon, ArrowRightIcon } from '@phosphor-icons/react';
 import { Button } from '@repo/forms';
 import { sizeRecipeEscape, useResolvedKnobs } from '@repo/theme';
-import { ArrowLeftIcon, ArrowRightIcon } from '@phosphor-icons/react';
+import { Avatar, Text, XStack, YStack } from '@repo/ui';
 import { useTranslation } from 'react-i18next';
 
 export interface RecordPagerEntry {

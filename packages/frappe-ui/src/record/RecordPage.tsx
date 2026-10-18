@@ -1,3 +1,6 @@
+import { ArrowLeftIcon, HeartIcon } from '@phosphor-icons/react';
+import { Button } from '@repo/forms';
+import { useResolvedKnobs } from '@repo/theme';
 import {
   Breadcrumbs,
   Chip,
@@ -15,9 +18,6 @@ import {
   YStack,
 } from '@repo/ui';
 import type { TimelineEntry } from '@repo/ui';
-import { Button } from '@repo/forms';
-import { useResolvedKnobs } from '@repo/theme';
-import { ArrowLeftIcon, HeartIcon } from '@phosphor-icons/react';
 import type { ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
 

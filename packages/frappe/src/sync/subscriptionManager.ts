@@ -669,7 +669,7 @@ export class SubscriptionManager {
       });
       const lastDoc = this.normalizedCache.get({
         doctype: subscription.query.doctype,
-        name: subscription.docIds.at(-1),
+        name: subscription.docIds.at(-1) ?? '',
       });
 
       if (firstDoc && lastDoc) {

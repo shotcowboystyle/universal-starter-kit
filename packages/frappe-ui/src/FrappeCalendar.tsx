@@ -1,5 +1,3 @@
-import { Calendar, eventChipTextColor } from '@repo/ui';
-import type { CalendarEvent, CalendarEventMoveRange } from '@repo/ui';
 import { Spinner, formCommonColors } from '@repo/forms';
 import {
   formatCalendarDate,
@@ -8,6 +6,8 @@ import {
   useReadableTextOn,
   useResolvedKnobs,
 } from '@repo/theme';
+import { Calendar, eventChipTextColor } from '@repo/ui';
+import type { CalendarEvent, CalendarEventMoveRange } from '@repo/ui';
 import React, { useMemo, useCallback, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
