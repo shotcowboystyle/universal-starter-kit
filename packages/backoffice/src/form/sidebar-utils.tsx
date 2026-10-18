@@ -138,7 +138,7 @@ export async function pickFile(accept?: string): Promise<File | undefined> {
     };
     // Modern browsers fire "cancel" when the dialog is dismissed.
     input.addEventListener('cancel', () => {
-      resolve();
+      resolve(undefined);
       input.remove();
     });
     document.body.append(input);

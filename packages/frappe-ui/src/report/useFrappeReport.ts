@@ -166,7 +166,7 @@ export function useFrappeReport(
   }, []);
 
   // Debouncer coalescing filter keystrokes into one refetch.
-  const debouncerRef = useRef<AsyncDebouncer<() => Promise<void>> | undefined>();
+  const debouncerRef = useRef<AsyncDebouncer<() => Promise<void>> | undefined>(undefined);
   debouncerRef.current ??= new AsyncDebouncer(async () => await runFetch(), {
     wait: debounceMs,
   });
@@ -178,8 +178,8 @@ export function useFrappeReport(
   // Report identity changes (and first mount) run immediately; filter-value
   // changes ride the debouncer so per-keystroke Data filters cost one run.
   // The run key guards actual query changes; captured args ride argsRef.
-  const lastRunKeyRef = useRef<string | undefined>();
-  const lastReportRef = useRef<string | undefined>();
+  const lastRunKeyRef = useRef<string | undefined>(undefined);
+  const lastReportRef = useRef<string | undefined>(undefined);
   useEffect(() => {
     if (!isEnabled || lastRunKeyRef.current === runKey) {
       return;

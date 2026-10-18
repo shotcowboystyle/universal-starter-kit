@@ -400,7 +400,7 @@ export function FrappeReportView({
 
   // Seed DB-defined defaults once per report (uncontrolled mode only —
   // controlled callers own their values).
-  const seededReportRef = useRef<string | undefined>();
+  const seededReportRef = useRef<string | undefined>(undefined);
   useEffect(() => {
     if (isControlled || seededReportRef.current === reportName || !filterDefs.length) {
       return;

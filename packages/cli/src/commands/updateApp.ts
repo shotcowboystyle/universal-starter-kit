@@ -54,7 +54,7 @@ async function resolveSha(spec: SourceSpec): Promise<string | undefined> {
   if (isGitUrl(spec.source)) {
     return undefined;
   }
-  return await gitOut(spec.source, ['rev-parse', '--verify', `${spec.ref}^{commit}`]).catch(() => {});
+  return await gitOut(spec.source, ['rev-parse', '--verify', `${spec.ref}^{commit}`]).catch(() => undefined);
 }
 
 // pnpm-lock.yaml stays pinned to HEAD through the merge, so a merge that

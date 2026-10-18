@@ -96,7 +96,7 @@ function splitIntoTabs(fields: DocFieldMeta[]): LayoutTab[] {
         break;
       }
       default: {
-        currentSection.columns.at(-1).fields.push(field);
+        currentSection.columns.at(-1)!.fields.push(field);
         break;
       }
     }

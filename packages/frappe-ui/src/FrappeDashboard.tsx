@@ -119,7 +119,7 @@ function LiveDashboardContent<TDoc extends { name: string; doctype: string }>({
   // filters/window — never leave the indicator stuck).
   const [isLiveStale, setIsLiveStale] = useState(false);
   const [dataUpdatedAt, setDataUpdatedAt] = useState<Date | undefined>();
-  const staleTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>();
+  const staleTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const clearStaleTimer = useCallback(() => {
     if (staleTimerRef.current) {
       clearTimeout(staleTimerRef.current);
@@ -312,7 +312,7 @@ export function FrappeDashboard<TDoc extends { name: string; doctype: string }>(
         }
       : undefined;
 
-  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>();
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const clearRefreshTimer = useCallback(() => {
     clearTimeout(refreshTimerRef.current);
     refreshTimerRef.current = undefined;

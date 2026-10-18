@@ -12,6 +12,7 @@
 import { Code, HighlightedCode, useShikiTokens, ScrollView } from '@repo/ui';
 import { useResolvedKnobs } from '@repo/theme';
 import { View } from 'tamagui';
+import type { FontSizeTokens } from 'tamagui';
 
 import { markdownCodeColors } from '../shared/colorRamps';
 import type { CodeBlockProps } from '../types';
@@ -52,7 +53,8 @@ export function CodeBlock({ children, lang, theme: themeProp = 'auto' }: CodeBlo
           fontSize={knobProps.sizeToken}>
           <HighlightedCode
             tokens={tokens}
-            fontSize={knobProps.sizeToken}>
+            // SAFETY: sizeToken is always a registered size token ($1-$6), which doubles as a font-size token
+            fontSize={knobProps.sizeToken as FontSizeTokens}>
             {children}
           </HighlightedCode>
         </Code>

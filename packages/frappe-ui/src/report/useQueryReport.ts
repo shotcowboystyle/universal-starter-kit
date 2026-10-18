@@ -127,7 +127,7 @@ export function useQueryReport(reportName: string, options: UseQueryReportOption
   const [filters, setFiltersState] = useState<QueryReportFilters>(() => ({
     ...initialFiltersRef.current,
   }));
-  const seededFor = useRef<string | undefined>();
+  const seededFor = useRef<string | undefined>(undefined);
 
   // The route component is reused across query-report navigations — a
   // report swap resets filters and shows the loading state again.

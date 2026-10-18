@@ -21,7 +21,8 @@ export function buildFolderTree(files: FileBrowserFile[]): TreeNode<FileBrowserF
     ...file,
     name: file.name,
   }));
-  return buildTreeNodes(folders, 'folder', 'file_name') as TreeNode<FileBrowserFile>[];
+  // SAFETY: buildTreeNodes stores each input doc as its node's `data`; the input docs are FileBrowserFiles
+  return buildTreeNodes(folders, 'folder', 'file_name') as unknown as TreeNode<FileBrowserFile>[];
 }
 
 export function breadcrumbItems(folderName: string): { label: string; href: string }[] {

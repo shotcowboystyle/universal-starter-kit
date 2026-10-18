@@ -227,7 +227,7 @@ export function DocFormScreen({
   // Refresh docinfo whenever the live doc's `modified` stamp moves —
   // an external edit usually lands with new versions/comments too.
   const modifiedStamp = typeof form.baseline?.modified === 'string' ? form.baseline.modified : undefined;
-  const stampRef = useRef<string | undefined>();
+  const stampRef = useRef<string | undefined>(undefined);
   useEffect(() => {
     stampRef.current = undefined;
   }, [doctype, name]);

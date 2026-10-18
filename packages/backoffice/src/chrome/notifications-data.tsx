@@ -100,7 +100,7 @@ function useNotificationsSessionUser(fixtureMode: boolean): SessionUserState {
         .catch(() => {
           // Evict failed probes so a later mount can retry.
           sessionUserCache.delete(app);
-          return;
+          return undefined;
         });
       sessionUserCache.set(app, promise);
     }

@@ -29,18 +29,18 @@ import type { ViewConnection } from './connection';
 
 /** Row shape for the per-day aggregate query (closed type — implied index
  * signature keeps it inside the FrappeDocData constraint). */
-interface DayAggregateRow {
+type DayAggregateRow = {
   name: string;
   doctype: string;
   _day?: string;
   _aggregate_value?: number | string;
-}
+};
 
-interface CreationRow {
+type CreationRow = {
   name: string;
   doctype: string;
   creation?: string;
-}
+};
 
 export const WEEKS_WINDOW = 12;
 
@@ -306,7 +306,7 @@ export function useWeeklyCreated(
   }, []);
 
   // Debouncer coalescing bursts of realtime events into one refetch.
-  const debouncerRef = useRef<AsyncDebouncer<() => Promise<void>> | undefined>();
+  const debouncerRef = useRef<AsyncDebouncer<() => Promise<void>> | undefined>(undefined);
   debouncerRef.current ??= new AsyncDebouncer(async () => runFetch(), { wait: REFETCH_DEBOUNCE_MS });
   useEffect(() => () => debouncerRef.current?.cancel(), []);
 

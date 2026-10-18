@@ -102,7 +102,8 @@ export function useFrappeCommentActions(
                 comment_by: fullname ?? email,
               });
               const payload = response?.payload;
-              const created = payload?.message ?? payload;
+              // SAFETY: add_comment answers either `{ message: doc }` or the bare doc; the name check below rejects anything else
+              const created = payload?.message ?? (payload as CommentDoc | undefined);
               if (!created?.name) {
                 throw new Error('add_comment returned no document');
               }

@@ -200,7 +200,7 @@ export function FacetRail({ label, value, options, onChange, testID }: FacetRail
       return;
     }
     if (direction === 'end') {
-      focusAndSelect(options.at(-1).value);
+      focusAndSelect(options.at(-1)!.value);
       return;
     }
     const index = Math.max(

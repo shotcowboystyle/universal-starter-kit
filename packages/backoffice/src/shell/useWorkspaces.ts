@@ -77,7 +77,7 @@ export function useSessionUser(): string | undefined {
     if (!promise) {
       promise = fetchSessionUser(baseURL, auth).catch(() => {
         sessionUserCache.delete(baseURL);
-        return;
+        return undefined;
       });
       sessionUserCache.set(baseURL, promise);
     }

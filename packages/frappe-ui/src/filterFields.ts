@@ -330,7 +330,7 @@ export function draftToTuple(draft: FilterRowDraft, kind: FilterFieldKind): Frap
   }
 }
 
-const SCALAR_OPERATORS: readonly string[] = new Set(['=', '!=', 'like', 'not like', '>', '<', '>=', '<=']);
+const SCALAR_OPERATORS: ReadonlySet<string> = new Set(['=', '!=', 'like', 'not like', '>', '<', '>=', '<=']);
 
 /** Frappe tuple → editable draft (inverse of draftToTuple). */
 export function tupleToDraft(tuple: FrappeFieldFilter): FilterRowDraft {

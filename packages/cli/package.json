@@ -3,6 +3,11 @@
   "version": "0.0.0",
   "description": "universal-starter-kit cli — mpo init clones and prunes the monorepo, mpo update merges it back",
   "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shotcowboystyle/universal-starter-kit.git",
+    "directory": "packages/cli"
+  },
   "bin": {
     "create-multiplatform-app": "./bin/createMultiplatformApp.mjs",
     "mpo": "./bin/multiplatformOne.mjs"

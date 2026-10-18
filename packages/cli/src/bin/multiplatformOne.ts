@@ -762,8 +762,8 @@ program
 
 // One-line errors instead of raw stack traces (matches the
 // create-multiplatform-app bin). Stacks stay available via MPO_DEBUG=1.
-program.parseAsync(process.argv).catch((error: unknown) => {
-  const error = error as Error;
+program.parseAsync(process.argv).catch((caught: unknown) => {
+  const error = caught as Error;
   if (process.env.MPO_DEBUG) console.error(error);
   else console.error(`✖ ${error.message ?? String(error)}`);
   process.exit(1);
@@ -806,8 +806,8 @@ async function waitWithSpinner(services: string[], options: { interval?: number;
         }, timeout);
       }),
     ]);
-  } catch (error) {
-    const error = error;
+  } catch (caught) {
+    const error = caught as Error;
     if (error.message === 'Timeout') {
       spinner.error(`${formatServiceList(unreadyServices)} timed out after ${timeout}ms`);
     } else {

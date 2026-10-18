@@ -238,8 +238,8 @@ export function useFrappeForm<TDoc extends { name: string; doctype: string }>(
   baselineRef.current = baselineDoc;
   // Taken once per create session: effects re-run (StrictMode) must not
   // lose a draft the one-shot stash already handed over.
-  const createDraftRef = useRef<{ doctype: string; values?: Record<string, unknown> }>();
-  const createSeededRef = useRef<string | undefined>();
+  const createDraftRef = useRef<{ doctype: string; values?: Record<string, unknown> } | undefined>(undefined);
+  const createSeededRef = useRef<string | undefined>(undefined);
 
   const finalBaseURL = baseURL ?? config?.baseURL;
   const finalAuth = auth ?? config?.auth;

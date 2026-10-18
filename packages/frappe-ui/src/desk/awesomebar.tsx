@@ -26,6 +26,7 @@ import { Text, View, XStack, isWeb } from 'tamagui';
 import type { XStackProps } from 'tamagui';
 
 import { useFrappeConfig } from '../FrappeProvider';
+import { createHttpClient } from '../formEngine/formActions';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -99,10 +100,6 @@ async function addRecentSearch(query: string): Promise<void> {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function createHttpClientFromConfig(config: { baseURL: string; auth?: FrappeConnectionConfig['auth'] }): HttpClient {
-  return new HttpClient(config.baseURL, config.auth);
-}
-
 function evaluateMath(expr: string): number | null {
   if (!mathRegex.test(expr.trim())) {
     return null;
@@ -167,12 +164,12 @@ export function Awesomebar({ onNavigate, basePath = '/desk', ...stackProps }: Aw
   const matchedCommands = useMemo(() => matchingCommands(query), [query]);
 
   // HttpClient ref for document search
-  const httpRef = useRef<HttpClient | undefined>();
+  const httpRef = useRef<HttpClient | undefined>(undefined);
   const configKeyRef = useRef('');
   if (config?.baseURL) {
     const key = `${config.baseURL}:${config.auth?.useToken ? 't' : ''}:${config.auth?.token ?? ''}:${config.auth?.type ?? ''}`;
     if (key !== configKeyRef.current) {
-      httpRef.current = createHttpClientFromConfig({
+      httpRef.current = createHttpClient({
         baseURL: config.baseURL,
         auth: config.auth,
       });
@@ -330,7 +327,7 @@ export function Awesomebar({ onNavigate, basePath = '/desk', ...stackProps }: Aw
       if (!isWeb || typeof document === 'undefined') {
         return;
       }
-      const trigger = document.querySelector('[data-awesomebar-trigger]');
+      const trigger = document.querySelector<HTMLElement>('[data-awesomebar-trigger]');
       trigger?.click();
     },
     { conflictBehavior: 'allow' },

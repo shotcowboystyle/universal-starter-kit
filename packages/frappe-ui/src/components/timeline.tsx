@@ -212,7 +212,7 @@ export function Timeline({
   // composer only forwarded to the onAddComment prop, and consumers that
   // didn't pass one (FrappeForm) dropped the comment silently.
   const { addComment } = useFrappeCommentActions(connectionConfig, doctype, docname);
-  const sessionUserRef = useRef<string | undefined>();
+  const sessionUserRef = useRef<string | undefined>(undefined);
 
   const resolveSessionUser = useCallback(async (): Promise<string> => {
     if (sessionUserRef.current) {

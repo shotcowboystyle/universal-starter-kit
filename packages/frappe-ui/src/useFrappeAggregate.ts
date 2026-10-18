@@ -306,7 +306,7 @@ export function useFrappeAggregate(
   }, []);
 
   // Debouncer coalescing bursts of realtime events into one refetch.
-  const debouncerRef = useRef<AsyncDebouncer<() => Promise<void>> | undefined>();
+  const debouncerRef = useRef<AsyncDebouncer<() => Promise<void>> | undefined>(undefined);
   debouncerRef.current ??= new AsyncDebouncer(async () => await runFetch(), { wait: debounceMs });
   useEffect(() => {
     debouncerRef.current?.setOptions({ wait: debounceMs });

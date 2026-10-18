@@ -263,7 +263,7 @@ async function autoResolveDependencyConflicts(
   const resolved: { path: string; oid: string }[] = [];
   try {
     for (const file of candidates) {
-      const show = async (commit: string) => await gitOut(projectDir, ['show', `${commit}:${file}`]).catch(() => {});
+      const show = async (commit: string) => await gitOut(projectDir, ['show', `${commit}:${file}`]).catch(() => undefined);
       const [base, ours, theirs] = await Promise.all([show(baseCommit), show(headCommit), show(nextCommit)]);
       if (ours === undefined || theirs === undefined) {
         continue;
